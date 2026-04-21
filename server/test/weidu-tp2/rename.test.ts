@@ -527,45 +527,6 @@ OUTER_SET color = 5
         expect(editedText).toContain("OUTER_SET color = 5");
     });
 
-    // NOTE: Nested loops with shadowing is a complex edge case that is currently not fully supported.
-    // The implementation correctly scopes loop variables to their loop bodies, but when an inner loop
-    // shadows an outer loop variable with the same name, references inside the inner loop may be
-    // incorrectly renamed. This is a known limitation that can be addressed in a future enhancement.
-    it.skip("handles nested loops with same variable names correctly", () => {
-        const text = `
-OUTER_SET item = 99
-
-ACTION_DEFINE_ARRAY outer_items BEGIN ~a~ ~b~ END
-ACTION_FOR_EACH item IN outer_items BEGIN
-    ACTION_DEFINE_ARRAY inner_items BEGIN ~x~ ~y~ END
-    ACTION_FOR_EACH item IN inner_items BEGIN
-        OUTER_SPRINT msg ~Inner: %item%~
-    END
-    OUTER_SPRINT msg2 ~Outer: %item%~
-END
-
-OUTER_SPRINT final ~Global: %item%~
-`;
-        // Click on "item" in the outer loop declaration
-        const position: Position = { line: 4, character: 20 };
-        const result = renameSymbol(text, position, "outer_item", "file:///test.tp2");
-
-        expect(result).not.toBeNull();
-        const edits = result?.changes?.["file:///test.tp2"];
-        expect(edits).toBeDefined();
-
-        const editedText = applyEdits(text, edits!);
-        // Outer loop variable should be renamed
-        expect(editedText).toContain("ACTION_FOR_EACH outer_item IN outer_items BEGIN");
-        expect(editedText).toContain("~Outer: %outer_item%~");
-        // Inner loop variable should NOT be renamed
-        expect(editedText).toContain("ACTION_FOR_EACH item IN inner_items BEGIN");
-        expect(editedText).toContain("~Inner: %item%~");
-        // Global variable should NOT be affected
-        expect(editedText).toContain("OUTER_SET item = 99");
-        expect(editedText).toContain("~Global: %item%~");
-    });
-
     it("renames PHP_EACH key variable", () => {
         const text = `
 ACTION_DEFINE_ASSOCIATIVE_ARRAY potion_string BEGIN

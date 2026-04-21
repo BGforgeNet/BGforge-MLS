@@ -45,6 +45,10 @@ jobs:
       - name: Build
         run: pnpm build
 
+      # E2E needs xvfb and a full Electron host, so it runs only on release tags.
+      # On every PR/push, the webview-bundle tests in client/test/ and the server
+      # stdio smoke test (server/vitest.smoke.config.ts, driven by scripts/test.sh
+      # Phase 3) cover the same surfaces the E2E driver would exercise.
       - name: E2E tests (release only)
         if: startsWith(github.ref, 'refs/tags/')
         run: pnpm test:e2e

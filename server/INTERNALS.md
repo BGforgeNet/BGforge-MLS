@@ -749,6 +749,10 @@ Integration tests live in `test/integration/` and cover SSL, BAF, D, and TP2. Th
 
 The shared LSP connection mock is in `test/integration/setup.ts`, loaded via `setupFiles` in the integration config.
 
+### Coverage scope
+
+Unit coverage uses an allowlist (`vitest.config.ts` `coverage.include`/`exclude`). Parser-dependent code — providers, `weidu-tp2/format/**`, `weidu-tp2/provider.ts`, `weidu-tp2/symbol.ts` — is intentionally excluded and exercised through integration tests (AST-backed assertions against `external/` repos) and grammar corpus tests (`grammars/*/test/corpus`). See the rationale block at the top of `vitest.config.ts`.
+
 ## Adding a New Provider
 
 1. Add language ID to `core/languages.ts`

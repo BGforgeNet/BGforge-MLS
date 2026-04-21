@@ -124,7 +124,7 @@ END
             expect(store.lookup("unstack_armor_bonus")).toBeUndefined();
         });
 
-        it.skip("preserves functions from other files on clear", () => {
+        it("preserves functions from other files on clear", () => {
             // Index two files
             const uri1 = "file:///test1.tph";
             const uri2 = "file:///test2.tph";
