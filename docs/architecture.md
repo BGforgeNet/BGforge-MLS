@@ -539,3 +539,42 @@ are esbuild-bundled to single files with no VSCode dependency.
 `.tssl` and `.td` files are valid TypeScript subsets. TS plugins intercept tsserver to
 suppress false errors and inject engine documentation, giving users full TypeScript
 tooling (type checking, refactoring, go-to-definition) alongside transpiler features.
+
+## Deliberate Non-Consolidations
+
+Previous simplification reviews flagged two targets for collapsing; both were considered
+and rejected. Recorded here so future passes don't re-raise them.
+
+### Three Separate CLIs (format, transpile, bin)
+
+`cli/format`, `cli/transpile`, and `cli/bin` stay as separate bundles. Shared scaffolding
+(argument parsing, file discovery, output modes) is already extracted to `cli/cli-utils.ts`;
+further consolidation was evaluated and costs more than it saves.
+
+- The transpile bundle is ~12 MB (owns `esbuild` + `ts-morph` + transform passes). Format
+  and bin bundles are small. A unified binary would load the transpile toolchain on every
+  `format` or `bin` invocation -- cold-start and install-size regression for the two use
+  cases that don't need it.
+- The three tools do semantically different jobs: text round-trip, source-to-source
+  compilation, binary parsing. The shared surface is already shared at the right layer
+  (`cli-utils.ts`); the per-tool bodies are not duplicated.
+- The transpile CLI is published as `@bgforge/fgtp` with a deliberate name. Folding it
+  into a `bgforge-cli transpile` subcommand would lose that and couple release cadence
+  across tools with different audiences.
+
+### Two Separate TypeScript Plugins (tssl-plugin, td-plugin)
+
+The plugins stay in separate packages. They intercept different tsserver methods and
+have different initialization side effects; merging is mechanically feasible but not
+worthwhile.
+
+- **tssl-plugin** proxies `getSemanticDiagnostics`, `getSuggestionDiagnostics`, and
+  `getQuickInfoAtPosition`; scopes by `.tssl` filename. Purely read-side filtering.
+- **td-plugin** proxies `getCompletionsAtPosition` and also calls `overrideHost()` to
+  inject the TD runtime into the language service host. That host mutation runs once
+  per plugin load; a merged plugin would run it for every TypeScript project, even
+  those with no `.td` files, widening the blast radius of that side effect.
+- The two plugins are loaded side-by-side by tsserver via
+  `contributes.typescriptServerPlugins` -- having them separate costs one extra plugin
+  registration entry, nothing else at runtime. The build pipeline already calls the
+  same `scripts/build-ts-plugin.sh` for both with different args.
