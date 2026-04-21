@@ -41,12 +41,13 @@ import {
     LANG_TYPESCRIPT,
     LANG_WEIDU_BAF,
     LANG_WEIDU_D,
+    LANG_WEIDU_LOG,
     LANG_WEIDU_SLB,
     LANG_WEIDU_SSL,
     LANG_WEIDU_TRA,
     LANG_WEIDU_TP2,
 } from "./core/languages";
-import { weiduLogProvider } from "./weidu-log/provider";
+import { getDefinition as getWeiduLogDefinition } from "./weidu-log/definition";
 import { infinity2daProvider } from "./infinity-2da/provider";
 import { createFormatOnlyProvider } from "./core/format-only-provider";
 import { formatTra } from "./weidu-tra/format";
@@ -182,7 +183,15 @@ connection.onInitialized(async () => {
     registry.register(weiduBafProvider);
     registry.register(weiduDProvider);
     registry.register(weiduTp2Provider);
-    registry.register(weiduLogProvider);
+    registry.register({
+        id: LANG_WEIDU_LOG,
+        async init(): Promise<void> {
+            conlog(`${LANG_WEIDU_LOG} provider initialized`);
+        },
+        definition(text, position, uri) {
+            return getWeiduLogDefinition(text, uri, position);
+        },
+    });
     registry.register(infinity2daProvider);
     registry.register(createFormatOnlyProvider(LANG_WEIDU_TRA, formatTra));
     registry.register(createFormatOnlyProvider(LANG_FALLOUT_MSG, formatMsg));
