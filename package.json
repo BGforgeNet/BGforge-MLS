@@ -568,13 +568,17 @@
         "knip": "knip",
         "knip:prod": "knip --production --workspace server --include files",
         "publish:server": "./scripts/publish-server.sh",
-        "supply-chain:verify": "./scripts/verify-supply-chain.sh"
+        "supply-chain:verify": "./scripts/verify-supply-chain.sh",
+        "test:mutation": "stryker run"
     },
     "dependencies": {
         "zod": "^4.3.6"
     },
     "devDependencies": {
         "@oxlint/plugins": "~1.55.0",
+        "@stryker-mutator/core": "^9.6.1",
+        "@stryker-mutator/typescript-checker": "^9.6.1",
+        "@stryker-mutator/vitest-runner": "^9.6.1",
         "@types/mocha": "^10.0.10",
         "@types/node": "^22.19.17",
         "@vitest/coverage-v8": "^4.1.5",
