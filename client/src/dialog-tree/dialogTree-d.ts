@@ -7,52 +7,7 @@
 import * as vscode from "vscode";
 import { LanguageClient } from "vscode-languageclient/node";
 import { escapeHtml, registerDialogPanel, type DialogPreviewController } from "./shared";
-
-// ---------------------------------------------------------------------------
-// Data model (duplicated from server/src/weidu-d/dialog.ts -- can't cross-import)
-// ---------------------------------------------------------------------------
-
-export type DDialogTarget =
-    | { kind: "goto"; label: string }
-    | { kind: "extern"; file: string; label: string }
-    | { kind: "exit" }
-    | { kind: "copy_trans"; file: string; label: string };
-
-export interface DDialogTransition {
-    line: number;
-    replyText?: string;
-    trigger?: string;
-    action?: string;
-    target: DDialogTarget;
-}
-
-export interface DDialogState {
-    label: string;
-    line: number;
-    sayText: string;
-    trigger?: string;
-    speaker?: string;
-    transitions: DDialogTransition[];
-    blockLabel?: string;
-}
-
-export type DDialogBlockKind = "begin" | "append" | "chain" | "extend" | "interject" | "replace" | "modify";
-
-export interface DDialogBlock {
-    kind: DDialogBlockKind;
-    file: string;
-    line: number;
-    label?: string;
-    actionName?: string;
-    description?: string;
-    stateRefs?: string[];
-}
-
-export interface DDialogData {
-    blocks: DDialogBlock[];
-    states: DDialogState[];
-    messages: Record<string, string>;
-}
+import type { DDialogData, DDialogBlock, DDialogBlockKind, DDialogState, DDialogTransition, DDialogTarget } from "../../../shared/dialog-types";
 
 // ---------------------------------------------------------------------------
 // D-specific helpers
@@ -103,7 +58,7 @@ const STRUCTURAL_KINDS = new Set<DDialogBlockKind>(["begin", "append", "chain", 
 // ---------------------------------------------------------------------------
 
 export function buildDTreeHtml(data: DDialogData): string {
-    const messages = data.messages;
+    const messages = data.messages ?? {};
     const stateMap = new Map(data.states.map((s) => [s.label, s]));
     const rendered = new Set<string>();
     const minDepth = new Map<string, number>();

@@ -1,6 +1,7 @@
 /**
- * Data model types for WeiDU D dialog tree parsing.
- * Used by the dialog parser and the dialog tree webview preview.
+ * Shared data model types for WeiDU D dialog tree parsing.
+ * Used by the server dialog parser and the client dialog tree webview preview.
+ * Single source of truth — both sides import from here.
  */
 
 export type DDialogTarget =
@@ -46,4 +47,6 @@ export interface DDialogBlock {
 export interface DDialogData {
     blocks: DDialogBlock[];
     states: DDialogState[];
+    /** Translation messages keyed by index. Populated by the client before rendering; not set by the server. */
+    messages?: Record<string, string>;
 }

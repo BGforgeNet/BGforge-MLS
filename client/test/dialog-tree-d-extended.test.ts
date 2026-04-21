@@ -10,7 +10,8 @@ import { vi, describe, expect, it } from "vitest";
 vi.mock("vscode", () => ({}));
 vi.mock("vscode-languageclient/node", () => ({}));
 
-import { buildDTreeHtml, type DDialogData, type DDialogBlock, type DDialogState } from "../src/dialog-tree/dialogTree-d";
+import { buildDTreeHtml } from "../src/dialog-tree/dialogTree-d";
+import type { DDialogData, DDialogBlock, DDialogState } from "../../shared/dialog-types";
 
 function makeState(label: string, file: string, overrides: Partial<DDialogState> = {}): DDialogState {
     return { label, line: 1, sayText: `Say ${label}`, speaker: file, transitions: [], ...overrides };

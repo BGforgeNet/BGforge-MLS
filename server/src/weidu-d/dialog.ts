@@ -3,7 +3,7 @@
  * Extracts dialog structure (blocks, states, transitions) for tree visualization.
  *
  * Split into modules:
- * - dialog-types.ts: Data model types
+ * - shared/dialog-types.ts: Data model types (shared with client)
  * - dialog-utils.ts: Text extraction, target resolution, utilities
  * - dialog-modify.ts: Modification block parsers (ALTER_TRANS, etc.)
  * - dialog.ts (this file): Entry point, structural block parsers, state/transition parsers
@@ -12,7 +12,7 @@
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import { parseWithCache, isInitialized } from "./parser";
 import { SyntaxType } from "./tree-sitter.d";
-import type { DDialogBlock, DDialogData, DDialogState, DDialogTransition } from "./dialog-types";
+import type { DDialogBlock, DDialogData, DDialogState, DDialogTransition } from "../../../shared/dialog-types";
 import {
     extractSayText,
     extractSayTextContent,
@@ -37,9 +37,6 @@ import {
     parseSetWeight,
     parseReplaceText,
 } from "./dialog-modify";
-
-// Re-export types so external consumers don't need to change imports
-export type { DDialogData } from "./dialog-types";
 
 // ---------------------------------------------------------------------------
 // Public API

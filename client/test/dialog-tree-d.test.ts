@@ -15,12 +15,14 @@ import {
     renderTargetHtml,
     buildDTreeHtml,
     getBlockStates,
-    type DDialogData,
-    type DDialogState,
-    type DDialogBlock,
-    type DDialogTransition,
-    type DDialogTarget,
 } from "../src/dialog-tree/dialogTree-d";
+import type {
+    DDialogData,
+    DDialogState,
+    DDialogBlock,
+    DDialogTransition,
+    DDialogTarget,
+} from "../../shared/dialog-types";
 
 // ---------------------------------------------------------------------------
 // getResolvedText

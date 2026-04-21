@@ -6,7 +6,7 @@
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import { SyntaxType } from "./tree-sitter.d";
-import type { DDialogTarget } from "./dialog-types";
+import type { DDialogTarget } from "../../../shared/dialog-types";
 
 // ---------------------------------------------------------------------------
 // Text extraction helpers

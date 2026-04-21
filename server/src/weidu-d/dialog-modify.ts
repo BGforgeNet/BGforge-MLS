@@ -5,7 +5,7 @@
  */
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
-import type { DDialogBlock } from "./dialog-types";
+import type { DDialogBlock } from "../../../shared/dialog-types";
 import {
     extractAlterTransParts,
     extractStateRefs,
