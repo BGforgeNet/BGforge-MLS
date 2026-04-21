@@ -549,6 +549,16 @@ are esbuild-bundled to single files with no VSCode dependency.
 suppress false errors and inject engine documentation, giving users full TypeScript
 tooling (type checking, refactoring, go-to-definition) alongside transpiler features.
 
+### Dependency Stability Policy
+
+Dependency bumps stay within the current major version. `pnpm update -r` is run
+periodically to pick up minor and patch releases across the workspace; major bumps
+(including 0.x → 0.y where y > current, which npm treats as breaking) are deferred
+until an explicit, motivated upgrade pass. This trades currency for stability: strict
+mode, `verbatimModuleSyntax`, and the custom TS config make major-bump churn expensive,
+and the extension's user surface is small enough that we gain little from being on the
+absolute newest release of every library.
+
 ## Deliberate Non-Consolidations
 
 Previous simplification reviews flagged two targets for collapsing; both were considered

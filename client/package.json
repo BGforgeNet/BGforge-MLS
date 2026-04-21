@@ -21,8 +21,8 @@
         "vscode-languageserver-protocol": "3.17.3"
     },
     "devDependencies": {
-        "@types/node": "^22.19.13",
-        "@types/vscode": "^1.109.0",
+        "@types/node": "^22.19.17",
+        "@types/vscode": "^1.116.0",
         "@vscode/test-electron": "^2.5.2",
         "glob": "^13.0.6"
     }

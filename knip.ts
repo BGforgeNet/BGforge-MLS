@@ -31,6 +31,8 @@ const config: KnipConfig = {
             // Created at runtime by enum-transform.test.ts, may exist during parallel Knip runs
             ignore: [
                 "**/*.d.ts",
+                // Built JS bundles (knip 6.6+ reports these as unused files otherwise)
+                "out/**",
                 // .ts symlinks created by typecheck-samples.sh, may exist during parallel runs
                 "test/td/*.ts",
                 "test/tbaf/*.ts",
