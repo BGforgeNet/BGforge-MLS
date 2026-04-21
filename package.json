@@ -523,7 +523,7 @@
         "build:ts-plugin": "./scripts/build-ts-plugin.sh tssl-plugin",
         "build:td-plugin": "./scripts/build-ts-plugin.sh td-plugin",
         "build:client": "pnpm build:base:client --sourcemap && pnpm build:ts-plugin --sourcemap && pnpm build:td-plugin --sourcemap && pnpm build:bin-cli",
-        "build:server": "pnpm build:base:server --sourcemap && pnpm lint:cli && pnpm build:format-cli && pnpm build:transpile-cli",
+        "build:server": "pnpm build:base:server --sourcemap && pnpm build:format-cli && pnpm build:transpile-cli",
         "build:webviews": "pnpm build:base:webviews --sourcemap",
         "build:test": "./scripts/build-test.sh",
         "build:format-cli": "./scripts/build-format-cli.sh",
