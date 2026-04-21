@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { clampNumericValue, zodFieldNumber, zodNumericType } from "./binary-format-contract";
 import { decodeOpaqueRange } from "./opaque-range";
+import { opaqueRangeSchema } from "./shared-schemas";
 import { parseWithSchemaValidation } from "./schema-validation";
 import {
     HEADER_SIZE,
@@ -24,13 +25,6 @@ const int32Schema = zodNumericType("int32");
 const uint8Schema = zodNumericType("uint8");
 const uint16Schema = zodNumericType("uint16");
 const uint32Schema = zodNumericType("uint32");
-
-const opaqueRangeSchema = z.strictObject({
-    label: z.string().min(1),
-    offset: z.number().int().min(0),
-    size: z.number().int().min(0),
-    hexChunks: z.array(z.string().regex(/^[0-9a-f]+$/i)),
-});
 
 const mapHeaderSchema = z.strictObject({
     version: uint32Schema,

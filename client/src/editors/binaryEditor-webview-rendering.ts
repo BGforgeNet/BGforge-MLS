@@ -1,5 +1,6 @@
 import type { BinaryEditorNode } from "./binaryEditor-messages";
 import { formatEditableNumberValue } from "./binaryEditor-formatting";
+import { isFlagActive } from "../parsers/flags";
 
 export function createNodeElement(node: BinaryEditorNode): HTMLElement {
     return node.kind === "group" ? createGroupElement(node) : createFieldElement(node);
@@ -201,7 +202,7 @@ function createFlagsInput(
         const checkbox = document.createElement("span");
         checkbox.className = `flag-checkbox ${editable ? "editable" : "readonly"}`.trim();
         const activation = node.flagActivation?.[String(bitValue)] ?? (bitValue === 0 ? "equal" : "set");
-        if (isReadonlyFlagEnabled(bitValue, raw, activation)) {
+        if (isFlagActive(raw, bitValue, activation)) {
             checkbox.classList.add("checked");
         }
         checkbox.setAttribute("role", "checkbox");
@@ -219,21 +220,6 @@ function createFlagsInput(
     }
 
     return container;
-}
-
-function isReadonlyFlagEnabled(
-    bitValue: number,
-    rawValue: number,
-    activation: "set" | "clear" | "equal",
-): boolean {
-    if (activation === "equal") {
-        return rawValue === bitValue;
-    }
-    if (bitValue === 0) {
-        return activation === "clear" ? rawValue !== 0 : rawValue === 0;
-    }
-    const isSet = (rawValue & bitValue) !== 0;
-    return activation === "set" ? isSet : !isSet;
 }
 
 export function renderMessages(container: Element | null, className: string, messages?: string[]): void {

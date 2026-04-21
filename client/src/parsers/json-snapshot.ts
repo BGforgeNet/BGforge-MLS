@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { resolveRawValueFromDisplay, resolveStoredFieldValue } from "./display-lookups";
+import { opaqueRangeSchema } from "./shared-schemas";
 import { formatAdapterRegistry } from "./format-adapter";
 import { buildParsedTreeNode } from "./parsed-tree-codec";
 import { createFieldKey, toSemanticFieldKey } from "./presentation-schema";
@@ -58,13 +59,6 @@ const binaryJsonNodeSchema: z.ZodType<BinaryJsonNode> = z.lazy(() => z.union([
         children: z.array(binaryJsonNodeSchema),
     }),
 ]));
-
-const opaqueRangeSchema = z.strictObject({
-    label: z.string().min(1),
-    offset: z.number().int().min(0),
-    size: z.number().int().min(0),
-    hexChunks: z.array(z.string().regex(/^[0-9a-f]+$/i)),
-});
 
 const binaryJsonDocumentV1Schema = z.strictObject({
     schemaVersion: z.literal(1),

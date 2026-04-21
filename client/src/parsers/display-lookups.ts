@@ -1,3 +1,4 @@
+import { isFlagActive } from "./flags";
 import { resolveFieldPresentation, toNumericOptionMap } from "./presentation-schema";
 
 export function resolveEnumLookup(
@@ -18,18 +19,6 @@ export function resolveFlagLookup(
     return presentation?.presentationType === "flags" ? toNumericOptionMap(presentation.flagOptions) : undefined;
 }
 
-function isFlagActive(rawValue: number, bitValue: number, activation: "set" | "clear" | "equal"): boolean {
-    if (activation === "equal") {
-        return rawValue === bitValue;
-    }
-
-    if (bitValue === 0) {
-        return activation === "clear" ? rawValue !== 0 : rawValue === 0;
-    }
-
-    const isSet = (rawValue & bitValue) !== 0;
-    return activation === "set" ? isSet : !isSet;
-}
 
 function getActiveFlagLabels(
     format: string,
