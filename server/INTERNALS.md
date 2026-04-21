@@ -751,7 +751,7 @@ The shared LSP connection mock is in `test/integration/setup.ts`, loaded via `se
 
 ### Coverage scope
 
-Unit coverage uses an allowlist (`vitest.config.ts` `coverage.include`/`exclude`). Parser-dependent code — providers, `weidu-tp2/format/**`, `weidu-tp2/provider.ts`, `weidu-tp2/symbol.ts` — is intentionally excluded and exercised through integration tests (AST-backed assertions against `external/` repos) and grammar corpus tests (`grammars/*/test/corpus`). See the rationale block at the top of `vitest.config.ts`.
+Unit coverage measures every source file the tests actually import. The only exclusion is `src/**/format/**/*.ts`: those are tree-sitter format sub-modules that operate on parsed AST nodes and are exercised by grammar-corpus tests (`grammars/*/test/corpus`), not unit tests. Top-level format orchestrators (e.g. `infinity-2da/format.ts`, `weidu-tra/format.ts`, `fallout-msg/format.ts`) remain unit-tested and measured.
 
 ## Adding a New Provider
 
