@@ -36,7 +36,7 @@ import {
     REGEX_TRA_INLAY,
     REGEX_TRA_REF,
 } from "./core/patterns";
-import { ProjectTraSettings } from "./settings";
+import type { ProjectTraSettings } from "./settings";
 
 interface TraEntry {
     source: string;

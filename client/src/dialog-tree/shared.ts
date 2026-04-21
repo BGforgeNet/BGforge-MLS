@@ -8,7 +8,8 @@
 
 import * as vscode from "vscode";
 import * as path from "path";
-import { LanguageClient, ExecuteCommandRequest, ExecuteCommandParams } from "vscode-languageclient/node";
+import type { ExecuteCommandParams } from "vscode-languageclient/node";
+import { LanguageClient, ExecuteCommandRequest } from "vscode-languageclient/node";
 import { escapeHtml } from "../utils";
 import { getCachedCssAsset, getCachedHtmlAsset, getCachedJsAsset } from "../webview-assets";
 import { LSP_COMMAND_PARSE_DIALOG } from "../../../shared/protocol";

@@ -7,7 +7,7 @@
  */
 
 import { CallExpression, Expression, FunctionDeclaration, Statement } from "ts-morph";
-import { BAFAction, BAFCondition } from "./ir";
+import type { BAFAction, BAFCondition } from "./ir";
 import type { VarsContext } from "../../common/transpiler-utils";
 
 /** Context for function inlining */

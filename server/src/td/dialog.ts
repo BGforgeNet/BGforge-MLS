@@ -10,7 +10,8 @@ import { extractTraTag } from "../../../transpilers/common/transpiler-utils";
 import { bundle } from "../../../transpilers/common/bundle";
 import { emitD } from "../../../transpilers/td/src/emit";
 import { parse } from "../../../transpilers/td/src/parse";
-import { parseDDialog, DDialogData } from "../weidu-d/dialog";
+import type { DDialogData } from "../weidu-d/dialog";
+import { parseDDialog } from "../weidu-d/dialog";
 import { isInitialized } from "../weidu-d/parser";
 
 // Reused across calls to avoid re-initializing the TypeScript compiler.

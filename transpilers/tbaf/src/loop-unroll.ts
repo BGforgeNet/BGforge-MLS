@@ -10,7 +10,7 @@ import {
     ForStatement,
     SyntaxKind,
 } from "ts-morph";
-import { BAFAction } from "./ir";
+import type { BAFAction } from "./ir";
 import * as utils from "../../common/transpiler-utils";
 import type { TransformerContext } from "./transformer-context";
 import { TranspileError } from "../../common/transpile-error";

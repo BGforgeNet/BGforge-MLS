@@ -1,4 +1,4 @@
-import { ParseOpaqueRange } from "./types";
+import type { ParseOpaqueRange } from "./types";
 
 const OPAQUE_HEX_CHUNK_BYTES = 32;
 

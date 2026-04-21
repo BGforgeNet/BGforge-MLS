@@ -6,12 +6,7 @@
 
 import * as path from "path";
 import { applyHelperFixups } from "../../common/transpiler-utils";
-import {
-    TDConstructType,
-    TDTextType,
-    TDTransitionType,
-    TDEpilogueType,
-    TDPatchOp,
+import type {
     TDScript,
     TDConstruct,
     TDBegin,
@@ -24,6 +19,13 @@ import {
     TDTransitionNext,
     TDChainEpilogue,
     TDInterject,
+} from "./types";
+import {
+    TDConstructType,
+    TDTextType,
+    TDTransitionType,
+    TDEpilogueType,
+    TDPatchOp,
 } from "./types";
 
 const INDENT = "    ";

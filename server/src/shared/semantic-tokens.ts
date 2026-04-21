@@ -1,8 +1,8 @@
+import type { SemanticTokensLegend } from "vscode-languageserver/node";
 import {
     SemanticTokenTypes,
     SemanticTokens,
     SemanticTokensBuilder,
-    SemanticTokensLegend,
 } from "vscode-languageserver/node";
 
 export interface SemanticTokenSpan {

@@ -3,8 +3,8 @@
  * Compiles Fallout SSL scripts without requiring external compile.exe.
  */
 
-import path = require("node:path");
-import fs = require("node:fs");
+import path from "node:path";
+import fs from "node:fs";
 import { conlog } from "../common";
 import { showWarning } from "../user-messages";
 import { fork } from "child_process";

@@ -264,7 +264,7 @@ export interface ErrorNode extends NamedNodeBase {
     hasError: true;
 }
 
-export const enum SyntaxType {
+export enum SyntaxType {
   ERROR = "ERROR",
   AddStateTrigger = "add_state_trigger",
   AddTransAction = "add_trans_action",

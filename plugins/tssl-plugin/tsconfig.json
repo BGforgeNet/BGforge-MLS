@@ -1,13 +1,14 @@
 {
     "extends": "../../tsconfig.base.json",
     "compilerOptions": {
-        "module": "commonjs",
         "lib": ["es2022"],
+        // TS Language Service plugins must use `export = init` (CommonJS module.exports).
+        // verbatimModuleSyntax conflicts with `export =` in CommonJS modules, so it is
+        // disabled here. module/moduleResolution are set to CommonJS for tsserver compatibility.
+        "verbatimModuleSyntax": false,
+        "module": "commonjs",
+        "moduleResolution": "node",
         "allowImportingTsExtensions": true,
-        "resolveJsonModule": true,
-        "esModuleInterop": true,
-        "allowSyntheticDefaultImports": true,
-        "noEmit": true,
         "rootDir": "../..",
         "tsBuildInfoFile": "../../tmp/tssl-plugin.tsbuildinfo"
     },

@@ -2,14 +2,18 @@
 
 import * as path from "path";
 import * as vscode from "vscode";
-import { ConfigurationTarget, ExtensionContext, workspace } from "vscode";
-import {
-    LanguageClient,
+import type { ExtensionContext } from "vscode";
+import { ConfigurationTarget, workspace } from "vscode";
+import type {
     LanguageClientOptions,
     ServerOptions,
+} from "vscode-languageclient/node";
+import {
+    LanguageClient,
     TransportKind,
 } from "vscode-languageclient/node";
-import { ExecuteCommandParams, ExecuteCommandRequest } from "vscode-languageserver-protocol";
+import type { ExecuteCommandParams } from "vscode-languageserver-protocol";
+import { ExecuteCommandRequest } from "vscode-languageserver-protocol";
 import {
     LSP_COMMAND_COMPILE,
     NOTIFICATION_LOAD_FINISHED,

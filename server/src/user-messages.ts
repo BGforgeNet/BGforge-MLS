@@ -8,7 +8,7 @@
  */
 
 import { fileURLToPath } from "node:url";
-import { MessageActionItem } from "vscode-languageserver/node";
+import type { MessageActionItem } from "vscode-languageserver/node";
 import { getConnection } from "./lsp-connection";
 
 /** Regex matching file:// URIs (percent-encoded or plain). */

@@ -1,13 +1,7 @@
 {
     "extends": "../../tsconfig.base.json",
     "compilerOptions": {
-        "skipLibCheck": true,
         "lib": ["es2022"],
-        "module": "commonjs",
-        "moduleResolution": "node",
-        "noEmit": true,
-        "resolveJsonModule": true,
-        "esModuleInterop": true,
         "rootDir": "..",
         "tsBuildInfoFile": "../../tmp/tssl.tsbuildinfo"
     },

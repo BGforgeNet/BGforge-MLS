@@ -5,7 +5,8 @@
  */
 
 import * as path from "path";
-import { BAFAction, BAFBlock, BAFCondition, BAFScript, BAFTopCondition, isOrGroup } from "./ir";
+import type { BAFAction, BAFBlock, BAFCondition, BAFScript, BAFTopCondition } from "./ir";
+import { isOrGroup } from "./ir";
 
 /** Emit a complete BAF script */
 export function emitBAF(script: BAFScript): string {

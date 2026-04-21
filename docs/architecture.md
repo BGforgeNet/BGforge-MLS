@@ -201,6 +201,15 @@ when you need grammars and editor bundles too.
    engine declarations. esbuild externalizes these; they pass through as bare identifiers.
    Libraries must use named re-exports, not `export *`.
 
+### TypeScript configuration
+
+esbuild emits all production code; `tsc` is used for type-checking only (`noEmit: true`).
+`tsconfig.base.json` reflects this with `module: ESNext`, `moduleResolution: bundler`,
+`verbatimModuleSyntax: true`, and `noEmit: true`. Two exceptions override the base:
+scripts run via tsx/Node and need `module: NodeNext`; TS Language Service plugins require
+`module: commonjs` and `verbatimModuleSyntax: false` because tsserver loads them as CJS
+and they use `export = init` syntax.
+
 ## Client Architecture
 
 ### Extension Activation

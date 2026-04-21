@@ -2,7 +2,6 @@
     "extends": "../server/tsconfig.json",
     "compilerOptions": {
         "rootDir": "..",
-        "noEmit": true,
         "allowImportingTsExtensions": true,
         "tsBuildInfoFile": "../tmp/cli.tsbuildinfo"
     },

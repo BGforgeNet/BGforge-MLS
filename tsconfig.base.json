@@ -1,12 +1,19 @@
 {
     "compilerOptions": {
         "target": "es2022",
+        "module": "ESNext",
+        "moduleResolution": "bundler",
         "strict": true,
         "noUnusedLocals": true,
         "noUnusedParameters": true,
         "noImplicitReturns": true,
         "noFallthroughCasesInSwitch": true,
         "noUncheckedIndexedAccess": true,
-        "incremental": true
+        "incremental": true,
+        "noEmit": true,
+        "verbatimModuleSyntax": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "resolveJsonModule": true
     }
 }

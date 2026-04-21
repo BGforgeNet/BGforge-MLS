@@ -22,7 +22,7 @@ import {
     SwitchStatement,
     SyntaxKind,
 } from "ts-morph";
-import { BAFAction, BAFBlock, BAFCondition, BAFScript, BAFTopCondition } from "./ir";
+import type { BAFAction, BAFBlock, BAFCondition, BAFScript, BAFTopCondition } from "./ir";
 import * as utils from "../../common/transpiler-utils";
 import type { VarsContext } from "../../common/transpiler-utils";
 import type { FuncsContext, TransformerContext } from "./transformer-context";

@@ -1,4 +1,4 @@
-import { BinaryParser } from "./types";
+import type { BinaryParser } from "./types";
 
 /**
  * Registry for binary file parsers.

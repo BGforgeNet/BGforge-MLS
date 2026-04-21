@@ -14,7 +14,7 @@ import {
     ReturnStatement,
     SyntaxKind,
 } from "ts-morph";
-import { BAFCondition, BAFOrGroup, BAFTopCondition } from "./ir";
+import type { BAFCondition, BAFOrGroup, BAFTopCondition } from "./ir";
 import { dnfToCnf } from "./cnf";
 import * as utils from "../../common/transpiler-utils";
 import type { TransformerContext } from "./transformer-context";

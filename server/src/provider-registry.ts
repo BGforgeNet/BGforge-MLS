@@ -11,6 +11,7 @@
  * Workspace startup indexing: core/workspace-scanner.ts
  */
 
+import type { SignatureHelp } from "vscode-languageserver/node";
 import {
     CompletionItem,
     DocumentSymbol,
@@ -22,7 +23,6 @@ import {
     Range,
     InlayHint,
     SemanticTokens,
-    SignatureHelp,
     SymbolInformation,
     WorkspaceEdit,
 } from "vscode-languageserver/node";

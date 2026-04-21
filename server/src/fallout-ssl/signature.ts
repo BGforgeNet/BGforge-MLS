@@ -3,7 +3,7 @@
  * Extracts procedure and macro signatures from the current file using tree-sitter.
  */
 
-import { SignatureHelp } from "vscode-languageserver/node";
+import type { SignatureHelp } from "vscode-languageserver/node";
 import { parseWithCache, isInitialized } from "./parser";
 import * as jsdoc from "../shared/jsdoc";
 import { findProcedure, findPrecedingDocComment, extractMacros, extractParams } from "./utils";

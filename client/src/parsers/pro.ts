@@ -1,7 +1,8 @@
 import { BufferReader } from "typed-binary";
-import { BinaryParser, ParseOptions, ParseResult, ParsedGroup, ParsedField, ParsedFieldType } from "./types";
+import type { BinaryParser, ParseOptions, ParseResult, ParsedGroup, ParsedField, ParsedFieldType } from "./types";
 import { createProCanonicalSnapshot } from "./pro-canonical";
 import { serializePro } from "./pro-serializer";
+import type { CritterFieldDef } from "./pro-types";
 import {
     ObjectType, ItemSubType, ScenerySubType, DamageType, MaterialType,
     FRMType, BodyType, KillType, ElevatorType, WeaponAnimCode, StatType, ScriptType,
@@ -9,7 +10,7 @@ import {
     HEADER_SIZE, ITEM_COMMON_SIZE, ITEM_SUBTYPE_OFFSET, ITEM_SUBTYPE_SIZES,
     CRITTER_SIZE, SCENERY_COMMON_SIZE, SCENERY_SUBTYPE_OFFSET, SCENERY_SUBTYPE_SIZES,
     WALL_SIZE, TILE_SIZE, MISC_SIZE,
-    CritterFieldDef, CRITTER_PROPERTIES, CRITTER_BASE_PRIMARY, CRITTER_BASE_SECONDARY,
+    CRITTER_PROPERTIES, CRITTER_BASE_PRIMARY, CRITTER_BASE_SECONDARY,
     CRITTER_BASE_DT, CRITTER_BASE_DR, CRITTER_BONUS_PRIMARY, CRITTER_BONUS_SECONDARY,
     CRITTER_BONUS_DT, CRITTER_BONUS_DR, CRITTER_SKILLS,
 } from "./pro-types";

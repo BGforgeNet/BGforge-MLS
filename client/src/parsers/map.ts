@@ -11,7 +11,7 @@
  * 6. Objects per elevation (variable count)
  */
 
-import { BinaryParser, ParseOpaqueRange, ParseOptions, ParseResult, ParsedGroup, ParsedField, ParsedFieldType } from "./types";
+import type { BinaryParser, ParseOpaqueRange, ParseOptions, ParseResult, ParsedGroup, ParsedField, ParsedFieldType } from "./types";
 import { rebuildMapCanonicalDocument } from "./map-canonical";
 import { serializeMap } from "./map-serializer";
 import { encodeOpaqueRange } from "./opaque-range";

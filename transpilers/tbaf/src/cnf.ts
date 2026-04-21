@@ -6,7 +6,7 @@
  * which needs to be converted to CNF using the distributive law.
  */
 
-import { BAFCondition, BAFOrGroup, BAFTopCondition } from "./ir";
+import type { BAFCondition, BAFOrGroup, BAFTopCondition } from "./ir";
 import { TranspileError } from "../../common/transpile-error";
 
 /** Maximum clauses to generate before erroring (prevents exponential blowup) */

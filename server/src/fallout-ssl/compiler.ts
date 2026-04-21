@@ -19,7 +19,6 @@ import {
     conlog,
     needsShell,
     parseCommandPath,
-    ParseItemList,
     pathToUri,
     removeTmpFile,
     reportCompileResult,
@@ -28,10 +27,11 @@ import {
     tmpDir,
     uriToPath,
 } from "../common";
+import type { ParseItemList } from "../common";
 import type { NormalizedUri } from "../core/normalized-uri";
 import { getConnection, getDocuments } from "../lsp-connection";
 import { showError, showErrorWithActions, showInfo } from "../user-messages";
-import { SSLsettings } from "../settings";
+import type { SSLsettings } from "../settings";
 import { ssl_compile as ssl_builtin_compiler } from "../sslc/ssl_compiler";
 import { REQUEST_SET_BUILT_IN_COMPILER } from "../../../shared/protocol";
 

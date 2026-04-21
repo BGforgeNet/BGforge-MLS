@@ -5,7 +5,7 @@
  */
 
 import * as vscode from "vscode";
-import { BinaryParser, ParseOptions, ParseResult, ParsedField, ParsedGroup } from "../parsers";
+import type { BinaryParser, ParseOptions, ParseResult, ParsedField, ParsedGroup } from "../parsers";
 import { formatAdapterRegistry, type BinaryFormatAdapter } from "../parsers/format-adapter";
 
 /**

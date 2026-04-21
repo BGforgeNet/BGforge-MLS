@@ -1,6 +1,8 @@
 /**
  * TypeScript configuration for all data update scripts.
  * Standalone config (not part of the main build).
+ * Overrides module/moduleResolution to NodeNext because scripts run via tsx/node
+ * (not bundled), requiring Node-compatible module resolution.
  */
 {
     "extends": "../tsconfig.base.json",
@@ -8,12 +10,9 @@
         "lib": ["es2022"],
         "module": "NodeNext",
         "moduleResolution": "NodeNext",
-        "esModuleInterop": true,
         "allowImportingTsExtensions": true,
-        "skipLibCheck": true,
         "outDir": "out",
         "sourceMap": true,
-        "noEmit": true,
         "tsBuildInfoFile": "../tmp/scripts.tsbuildinfo"
     },
     "include": [

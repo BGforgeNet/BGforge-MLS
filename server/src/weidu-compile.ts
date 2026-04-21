@@ -10,8 +10,6 @@ import {
     addFallbackDiagnostic,
     conlog,
     parseCommandPath,
-    ParseItemList,
-    ParseResult,
     pathToUri,
     removeTmpFile,
     reportCompileResult,
@@ -20,8 +18,9 @@ import {
     tmpDir,
     uriToPath,
 } from "./common";
+import type { ParseItemList, ParseResult } from "./common";
 import { showError, showInfo, showWarning } from "./user-messages";
-import { WeiDUsettings } from "./settings";
+import type { WeiDUsettings } from "./settings";
 import type { NormalizedUri } from "./core/normalized-uri";
 
 /** Track in-flight compilations per URI so we can cancel stale ones. */

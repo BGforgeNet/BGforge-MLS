@@ -264,7 +264,7 @@ export interface ErrorNode extends NamedNodeBase {
     hasError: true;
 }
 
-export const enum SyntaxType {
+export enum SyntaxType {
   ERROR = "ERROR",
   ArrayExpr = "array_expr",
   Assignment = "assignment",
