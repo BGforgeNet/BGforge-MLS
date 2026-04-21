@@ -4,8 +4,8 @@
  */
 
 import type { JSdoc } from "../shared/jsdoc";
-import { buildFalloutArgsTable } from "../shared/tooltip-table";
-import { formatDeprecation } from "../shared/tooltip-format";
+import { buildFalloutArgsTable } from "../../../shared/tooltip-table";
+import { formatDeprecation } from "../../../shared/tooltip-format";
 
 /**
  * Convert JSDoc to markdown documentation (Fallout SSL format).

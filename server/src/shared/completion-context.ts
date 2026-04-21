@@ -13,7 +13,7 @@
  */
 
 import { CompletionItem } from "vscode-languageserver/node";
-import { WEIDU_TP2_STANZAS } from "./stanza-names";
+import { WEIDU_TP2_STANZAS } from "../../../shared/stanza-names";
 
 /**
  * Valid completion item categories for WeiDU TP2.

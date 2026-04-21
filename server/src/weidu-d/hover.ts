@@ -14,7 +14,7 @@ import { parseWithCache, isInitialized } from "./parser";
 import { SyntaxType } from "./tree-sitter.d";
 import { findLabelNodeAtPosition, findStateInDialog } from "./state-utils";
 import { parse as parseJSDoc } from "../shared/jsdoc";
-import { buildSignatureBlock } from "../shared/tooltip-format";
+import { buildSignatureBlock } from "../../../shared/tooltip-format";
 
 /**
  * Get hover info for a state label (definition or reference).

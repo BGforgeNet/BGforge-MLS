@@ -6,7 +6,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { CompletionItemKind, MarkupKind } from "vscode-languageserver/node";
 import { SymbolKind, ScopeLevel, SourceType, type CallableSymbol } from "../../src/core/symbol";
 import { CompletionCategory, type CompletionItemWithCategory } from "../../src/shared/completion-context";
-import { WEIDU_TP2_STANZAS } from "../../src/shared/stanza-names";
+import { WEIDU_TP2_STANZAS } from "../../../shared/stanza-names";
 
 // Mock fs.readFileSync before importing the module
 vi.mock("fs", () => ({

@@ -17,7 +17,7 @@
 import fs from "node:fs";
 import { parseArgs } from "node:util";
 import YAML from "yaml";
-import { FALLOUT_SSL_STANZAS } from "./shared/stanza-names.ts";
+import { FALLOUT_SSL_STANZAS } from "../../../shared/stanza-names.ts";
 
 interface YamlItem {
     readonly name: string;

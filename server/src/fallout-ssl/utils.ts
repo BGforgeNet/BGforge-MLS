@@ -11,7 +11,7 @@ import type { CallableSymbol, ConstantSymbol, IndexedSymbol, VariableSymbol } fr
 import { ScopeLevel, SourceType, SymbolKind } from "../core/symbol";
 import * as jsdoc from "../shared/jsdoc";
 import type { SigInfoEx } from "../shared/signature";
-import { buildSignatureBlock } from "../shared/tooltip-format";
+import { buildSignatureBlock } from "../../../shared/tooltip-format";
 import { jsdocToMarkdown } from "./jsdoc-format";
 import { type MacroData, parseMacroParams, buildMacroTooltip, buildMacroCompletion, buildSignatureHelp } from "./macro-utils";
 import { SyntaxType } from "./tree-sitter.d";
@@ -90,7 +90,7 @@ export function extractParams(procNode: Node): ParamInfo[] {
     return result;
 }
 
-import { type SignatureParam, formatSignature } from "../shared/signature-format";
+import { type SignatureParam, formatSignature } from "../../../shared/signature-format";
 
 /**
  * Build procedure signature string from AST params, enriched with optional JSDoc.

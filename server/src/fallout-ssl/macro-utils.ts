@@ -6,10 +6,10 @@
 import { CompletionItem, CompletionItemKind, ParameterInformation } from "vscode-languageserver/node";
 import { MarkupKind } from "vscode-languageserver/node";
 import * as jsdoc from "../shared/jsdoc";
-import { formatSignature } from "../shared/signature-format";
+import { formatSignature } from "../../../shared/signature-format";
 import * as signature from "../shared/signature";
 import { LANG_FALLOUT_SSL_TOOLTIP } from "../core/languages";
-import { buildSignatureBlock } from "../shared/tooltip-format";
+import { buildSignatureBlock } from "../../../shared/tooltip-format";
 import { buildTooltipBase } from "./utils";
 
 /**

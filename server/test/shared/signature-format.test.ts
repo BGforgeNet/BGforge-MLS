@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { formatSignature } from "../../src/shared/signature-format";
+import { formatSignature } from "../../../shared/signature-format";
 
 describe("formatSignature", () => {
     it("returns prefix+name when there are no params", () => {

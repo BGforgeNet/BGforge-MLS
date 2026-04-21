@@ -12,8 +12,8 @@ import { parseHeader, FunctionInfo, VariableInfo } from "./header-parser";
 import type { Symbols } from "../core/symbol-index";
 import { SyntaxType } from "./tree-sitter.d";
 import { stripStringDelimiters, looksLikeConstant } from "./tree-utils";
-import { buildWeiduTable, type VarRow, type VarSection } from "../shared/tooltip-table";
-import { buildSignatureBlock, buildWeiduHoverContent } from "../shared/tooltip-format";
+import { buildWeiduTable, type VarRow, type VarSection } from "../../../shared/tooltip-table";
+import { buildSignatureBlock, buildWeiduHoverContent } from "../../../shared/tooltip-format";
 import { LANG_WEIDU_TP2_TOOLTIP } from "../core/languages";
 
 /** Maximum length for parameter descriptions in hover table. */

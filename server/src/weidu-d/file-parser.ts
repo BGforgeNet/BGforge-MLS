@@ -19,7 +19,7 @@ import { computeDisplayPath, extractFilename } from "../core/location-utils";
 import { type ParseResult, EMPTY_PARSE_RESULT } from "../core/parse-result";
 import { makeRange } from "../core/position-utils";
 import { ScopeLevel, type StateSymbol, SourceType, SymbolKind } from "../core/symbol";
-import { buildSignatureBlock } from "../shared/tooltip-format";
+import { buildSignatureBlock } from "../../../shared/tooltip-format";
 import { LANG_WEIDU_D_TOOLTIP } from "../core/languages";
 import { SyntaxType } from "./tree-sitter.d";
 import { normalizeDialogFile } from "./state-utils";

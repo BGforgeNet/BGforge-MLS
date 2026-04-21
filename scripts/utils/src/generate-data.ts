@@ -14,11 +14,11 @@
 import fs from "node:fs";
 import { parseArgs } from "node:util";
 import YAML from "yaml";
-import { formatSignature } from "./shared/signature-format.ts";
-import { buildSignatureBlock, buildWeiduHoverContent, formatDeprecation } from "./shared/tooltip-format.ts";
-import { buildFalloutArgsTable, buildWeiduTable, type VarRow, type VarSection } from "./shared/tooltip-table.ts";
-import { WEIDU_TP2_CALLABLE_PREFIX } from "./shared/stanza-names.ts";
-import { WEIDU_JSDOC_TYPES } from "./shared/weidu-types.ts";
+import { formatSignature } from "../../../shared/signature-format.ts";
+import { buildSignatureBlock, buildWeiduHoverContent, formatDeprecation } from "../../../shared/tooltip-format.ts";
+import { buildFalloutArgsTable, buildWeiduTable, type VarRow, type VarSection } from "../../../shared/tooltip-table.ts";
+import { WEIDU_TP2_CALLABLE_PREFIX } from "../../../shared/stanza-names.ts";
+import { WEIDU_JSDOC_TYPES } from "../../../shared/weidu-types.ts";
 import { cmpStr } from "./yaml-helpers.ts";
 
 // -- Types --

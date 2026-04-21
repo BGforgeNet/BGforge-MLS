@@ -30,11 +30,11 @@ export default defineConfig({
                 "src/shared/jsdoc.ts",
                 "src/shared/parser-factory.ts",
                 "src/shared/parser-helpers.ts",
-                "src/shared/signature-format.ts",
+                "../shared/signature-format.ts",
                 "src/shared/signature.ts",
                 "src/shared/static-data.ts",
                 "src/shared/text-cache.ts",
-                "src/shared/weidu-types.ts",
+                "../shared/weidu-types.ts",
 
                 // Top-level modules testable with mocks
                 "src/compile.ts",

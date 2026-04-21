@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { buildSignatureBlock, formatDeprecation } from "../../src/shared/tooltip-format";
+import { buildSignatureBlock, formatDeprecation } from "../../../shared/tooltip-format";
 
 describe("buildSignatureBlock", () => {
     it("renders signature in code fence", () => {

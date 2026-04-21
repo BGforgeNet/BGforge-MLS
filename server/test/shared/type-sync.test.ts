@@ -16,7 +16,7 @@ import {
     JSDOC_RETURN_TAGS,
     WEIDU_JSDOC_TYPE_NAMES,
 } from "../../src/shared/jsdoc-types";
-import { WEIDU_JSDOC_TYPES } from "../../src/shared/weidu-types";
+import { WEIDU_JSDOC_TYPES } from "../../../shared/weidu-types";
 import { FALLOUT_JSDOC_TYPES } from "../../src/shared/fallout-types";
 
 const SYNTAXES_DIR = path.resolve(__dirname, "../../../syntaxes");
@@ -24,7 +24,7 @@ const SYNTAXES_DIR = path.resolve(__dirname, "../../../syntaxes");
 /** Extract type names from a regex alternation like \b(array|bool|int)\b in YAML content. */
 function extractTypesFromRegex(content: string, pattern: RegExp): string[] {
     const types = new Set<string>();
-    let match;
+    let match: RegExpExecArray | null;
     const globalPattern = new RegExp(pattern.source, "g");
     while ((match = globalPattern.exec(content)) !== null) {
         const alternation = match[1];
