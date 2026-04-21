@@ -38,8 +38,8 @@ This naming rule applies to YAML stanza/category identifiers only. Tree-sitter g
 For TP2, callable stanza names (`action_functions`, `patch_functions`, `dimorphic_functions`, `action_macros`, `patch_macros`) determine the hover prefix (e.g., "action function", "patch macro").
 
 Source-of-truth note:
-- Canonical stanza/category strings live in [shared/stanza-names.ts](/work/vscode-mls-851c282/shared/stanza-names.ts).
-- TP2 runtime-only completion categories that are not YAML stanzas (for example `action`, `patch`, `vars`) remain in [completion-context.ts](/work/vscode-mls-851c282/server/src/shared/completion-context.ts).
+- Canonical stanza/category strings live in [shared/stanza-names.ts](../../shared/stanza-names.ts).
+- TP2 runtime-only completion categories that are not YAML stanzas (for example `action`, `patch`, `vars`) remain in [completion-context.ts](../src/shared/completion-context.ts).
 - If you rename a stanza-backed TP2 category, update both places in the same change.
 
 ### Item fields
