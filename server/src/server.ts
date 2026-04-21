@@ -28,6 +28,7 @@ import { type NormalizedUri, normalizeUri } from "./core/normalized-uri";
 import { decodeFileUris, showInfo } from "./user-messages";
 import { clearDiagnostics, COMMAND_compile, compile } from "./compile";
 import { getRequest as getSignatureRequest } from "./shared/signature";
+import { makeTimingOptions, timeHandler } from "./shared/time-handler";
 import { parseDialog } from "./dialog";
 import { parseTDDialog } from "./td/dialog";
 import { parseTSSLDialog } from "./tssl/dialog";
@@ -79,6 +80,10 @@ import {
 // --stdio, --node-ipc, --pipe, or --socket=N. Defaults to IPC when
 // launched by VSCode, stdio when launched standalone.
 const connection = createConnection(ProposedFeatures.all);
+
+// Timing options for request latency logging. Built once so the warn closure
+// always references the live connection console.
+const timingOpts = makeTimingOptions(connection.console);
 
 // Create a simple text document manager. The text document manager
 // supports full document sync only
@@ -299,7 +304,7 @@ documents.onDidOpen(async (event) => {
 });
 
 // This handler provides the initial list of the completion items.
-connection.onCompletion((params: CompletionParams) => {
+connection.onCompletion(timeHandler("onCompletion", (params: CompletionParams) => {
     const uri = params.textDocument.uri;
     const textDoc = documents.get(uri);
     if (!textDoc) {
@@ -308,7 +313,7 @@ connection.onCompletion((params: CompletionParams) => {
     const langId = textDoc.languageId;
     const text = textDoc.getText();
     return registry.completion(langId, text, uri, params.position, params.context?.triggerCharacter);
-});
+}, timingOpts));
 
 // This handler resolve additional information for the item selected in
 // the completion list.
@@ -323,7 +328,7 @@ documents.listen(connection);
 // Listen on the connection
 connection.listen();
 
-connection.onHover((textDocumentPosition: TextDocumentPositionParams) => {
+connection.onHover(timeHandler("onHover", (textDocumentPosition: TextDocumentPositionParams) => {
     const uri = textDocumentPosition.textDocument.uri;
     const textDoc = documents.get(uri);
     if (!textDoc) {
@@ -366,7 +371,7 @@ connection.onHover((textDocumentPosition: TextDocumentPositionParams) => {
     const dataHover = registry.hover(langId, uri, symbol, text);
     if (debug) conlog(`[hover] dataHover result=${dataHover ? "found" : "null"}`);
     return dataHover;
-});
+}, timingOpts));
 
 /** Dialog preview handler registry. Maps language/extension to parser + translation language. */
 const dialogHandlers = [
@@ -559,7 +564,7 @@ connection.languages.inlayHint.on((params) => {
     return translation?.getInlayHints(uri, langId, text, params.range) ?? [];
 });
 
-connection.onDefinition((params) => {
+connection.onDefinition(timeHandler("onDefinition", (params) => {
     const textDoc = documents.get(params.textDocument.uri);
     if (!textDoc) {
         return;
@@ -595,9 +600,9 @@ connection.onDefinition((params) => {
     }
 
     return null;
-});
+}, timingOpts));
 
-connection.onReferences((params, token) => {
+connection.onReferences(timeHandler("onReferences", (params, token) => {
     const textDoc = documents.get(params.textDocument.uri);
     if (!textDoc) {
         return [];
@@ -625,7 +630,7 @@ connection.onReferences((params, token) => {
     }
 
     return [];
-});
+}, timingOpts));
 
 connection.onPrepareRename((params) => {
     const textDoc = documents.get(params.textDocument.uri);
@@ -704,26 +709,26 @@ connection.onDocumentFormatting((params) => {
     return result.edits;
 });
 
-connection.onDocumentSymbol((params) => {
+connection.onDocumentSymbol(timeHandler("onDocumentSymbol", (params) => {
     const textDoc = documents.get(params.textDocument.uri);
     if (!textDoc) {
         return [];
     }
     return registry.symbols(textDoc.languageId, textDoc.getText());
-});
+}, timingOpts));
 
-connection.languages.semanticTokens.on((params) => {
+connection.languages.semanticTokens.on(timeHandler("semanticTokens", (params) => {
     const textDoc = documents.get(params.textDocument.uri);
     if (!textDoc) {
         return { data: [] };
     }
 
     return registry.semanticTokens(textDoc.languageId, textDoc.getText(), params.textDocument.uri);
-});
+}, timingOpts));
 
-connection.onWorkspaceSymbol((params, token) => {
+connection.onWorkspaceSymbol(timeHandler("onWorkspaceSymbol", (params, token) => {
     return registry.workspaceSymbols(params.query, token);
-});
+}, timingOpts));
 
 connection.onFoldingRanges((params) => {
     const textDoc = documents.get(params.textDocument.uri);
