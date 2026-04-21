@@ -12,6 +12,10 @@ jobs:
   build:
     name: build
     runs-on: ubuntu-latest
+    outputs:
+      # base64-encoded sha256 digests of release artifacts, consumed by the
+      # SLSA provenance job.  Empty on non-release runs.
+      artifact-subjects: ${{ steps.artifact-hashes.outputs.subjects }}
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -62,6 +66,12 @@ jobs:
           pnpm package
           echo "VSIX_PATH=$(ls dist/*.vsix)" >> "$GITHUB_ENV"
 
+      - name: Generate CycloneDX SBOM (release only)
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          set -euo pipefail
+          pnpm dlx @cyclonedx/cyclonedx-npm --output-file dist/sbom.cdx.json
+
       - name: Build editor bundles (TextMate, Kate, Notepad++, Geany)
         run: pnpm build:editors
 
@@ -100,6 +110,20 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      - name: Compute artifact hashes for SLSA provenance (release only)
+        id: artifact-hashes
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          set -euo pipefail
+          # sha256sum emits "<hash>  <filename>" lines; slsa-github-generator
+          # expects base64(sha256sum-output) as base64-subjects.
+          subjects="$(sha256sum \
+            "${{ steps.publishToOpenVSX.outputs.vsixPath }}" \
+            dist/sbom.cdx.json \
+            dist/*.zip \
+            | base64 -w0)"
+          echo "subjects=$subjects" >> "$GITHUB_OUTPUT"
+
       - name: GitHub Release
         if: "startsWith(github.ref, 'refs/tags/')"
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
@@ -109,3 +133,19 @@ jobs:
           files: |
             ${{ steps.publishToOpenVSX.outputs.vsixPath }}
             dist/*.zip
+            dist/sbom.cdx.json
+
+  provenance:
+    name: SLSA provenance
+    needs: build
+    # Only generate provenance for successful release-tag builds.
+    if: >-
+      needs.build.result == 'success' &&
+      startsWith(github.ref, 'refs/tags/')
+    permissions:
+      id-token: write
+      contents: write
+      actions: read
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0 # tag
+    with:
+      base64-subjects: ${{ needs.build.outputs.artifact-subjects }}

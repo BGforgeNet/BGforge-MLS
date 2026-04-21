@@ -567,7 +567,8 @@
         "lint:shell": "./scripts/lint-shell.sh",
         "knip": "knip",
         "knip:prod": "knip --production --workspace server --include files",
-        "publish:server": "./scripts/publish-server.sh"
+        "publish:server": "./scripts/publish-server.sh",
+        "supply-chain:verify": "./scripts/verify-supply-chain.sh"
     },
     "dependencies": {
         "zod": "^4.3.6"
