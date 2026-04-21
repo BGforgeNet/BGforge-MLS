@@ -13,6 +13,7 @@
  */
 
 import {
+    type CancellationToken,
     type Location,
     type SymbolInformation,
 } from "vscode-languageserver/node";
@@ -364,12 +365,22 @@ export class Symbols {
      * Empty query returns all symbols (capped at maxResults).
      * LSP clients perform their own fuzzy filtering on top of these results.
      */
-    searchWorkspaceSymbols(query: string, maxResults = 500): SymbolInformation[] {
+    searchWorkspaceSymbols(query: string, maxResults = 500, token?: CancellationToken): SymbolInformation[] {
+        if (token?.isCancellationRequested) {
+            return [];
+        }
+
         const lowerQuery = query.toLowerCase();
         const results: SymbolInformation[] = [];
+        let iterCount = 0;
 
         for (const [, symbols] of this.files) {
             for (const symbol of symbols) {
+                // Check cancellation every 64 iterations to avoid tight-loop overhead
+                if (++iterCount % 64 === 0 && token?.isCancellationRequested) {
+                    return results;
+                }
+
                 if (lowerQuery && !symbol.name.toLowerCase().includes(lowerQuery)) {
                     continue;
                 }

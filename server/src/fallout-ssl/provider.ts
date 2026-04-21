@@ -10,7 +10,7 @@
 
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { type CompletionItem, type DocumentSymbol, type FoldingRange, type Location, type Position, type SignatureHelp, type SymbolInformation, type WorkspaceEdit } from "vscode-languageserver/node";
+import { type CancellationToken, type CompletionItem, type DocumentSymbol, type FoldingRange, type Location, type Position, type SignatureHelp, type SymbolInformation, type WorkspaceEdit } from "vscode-languageserver/node";
 import type { NormalizedUri } from "../core/normalized-uri";
 import { type IndexedSymbol, SourceType } from "../core/symbol";
 import { conlog, getLinePrefix } from "../common";
@@ -159,10 +159,11 @@ class FalloutSslProvider implements ProviderBase, FormattingCapability, SymbolCa
         return getLocalDefinition(text, uri, position);
     }
 
-    references(text: string, position: Position, uri: string, includeDeclaration: boolean): Location[] {
+    references(text: string, position: Position, uri: string, includeDeclaration: boolean, _token: CancellationToken): Location[] {
         if (!isInitialized()) {
             return [];
         }
+        // Single-file AST traversal — bounded work; no per-iteration cancellation needed.
         return findReferences(text, position, uri, includeDeclaration, this.fileIndex?.refs);
     }
 
@@ -297,8 +298,8 @@ class FalloutSslProvider implements ProviderBase, FormattingCapability, SymbolCa
         this.fileIndex?.removeFile(uri as NormalizedUri);
     }
 
-    workspaceSymbols(query: string): SymbolInformation[] {
-        return this.fileIndex?.symbols.searchWorkspaceSymbols(query) ?? [];
+    workspaceSymbols(query: string, token: CancellationToken): SymbolInformation[] {
+        return this.fileIndex?.symbols.searchWorkspaceSymbols(query, 500, token) ?? [];
     }
 
     onDocumentClosed(uri: string): void {

@@ -7,6 +7,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 import {
+    CancellationToken,
     CompletionItem,
     CompletionItemKind,
     DocumentSymbol,
@@ -18,7 +19,7 @@ import {
     InlayHint,
     InlayHintKind,
     SemanticTokenTypes,
-    SignatureHelp,
+    type SignatureHelp,
     SemanticTokens,
     SymbolInformation,
     WorkspaceEdit,
@@ -62,12 +63,14 @@ describe("ProviderRegistry", () => {
                 compileOptions: "",
                 outputDirectory: "",
                 headersDirectory: "",
+                compileOnValidate: true,
             },
             weidu: {
                 path: "weidu",
                 gamePath: "",
             },
             validate: "saveAndType",
+            debug: false,
         },
     };
 
@@ -833,7 +836,7 @@ describe("ProviderRegistry", () => {
             const registry = await createRegistry();
             registry.register(createMockProvider("test"));
 
-            expect(registry.workspaceSymbols("query")).toEqual([]);
+            expect(registry.workspaceSymbols("query", CancellationToken.None)).toEqual([]);
         });
 
         it("should aggregate results from multiple providers", async () => {
@@ -855,7 +858,7 @@ describe("ProviderRegistry", () => {
                 workspaceSymbols: vi.fn().mockReturnValue([symbolB]),
             }));
 
-            const results = registry.workspaceSymbols("func");
+            const results = registry.workspaceSymbols("func", CancellationToken.None);
             expect(results).toHaveLength(2);
             expect(results).toContain(symbolA);
             expect(results).toContain(symbolB);
@@ -866,9 +869,9 @@ describe("ProviderRegistry", () => {
             const mockWsSymbols = vi.fn().mockReturnValue([]);
             registry.register(createMockProvider("test", { workspaceSymbols: mockWsSymbols }));
 
-            registry.workspaceSymbols("my_query");
+            registry.workspaceSymbols("my_query", CancellationToken.None);
 
-            expect(mockWsSymbols).toHaveBeenCalledWith("my_query");
+            expect(mockWsSymbols).toHaveBeenCalledWith("my_query", CancellationToken.None);
         });
 
         it("should skip providers that do not implement workspaceSymbols", async () => {
@@ -883,7 +886,7 @@ describe("ProviderRegistry", () => {
                 workspaceSymbols: vi.fn().mockReturnValue([symbol]),
             }));
 
-            const results = registry.workspaceSymbols("");
+            const results = registry.workspaceSymbols("", CancellationToken.None);
             expect(results).toHaveLength(1);
             expect(results[0]).toBe(symbol);
         });
@@ -896,9 +899,9 @@ describe("ProviderRegistry", () => {
             registry.register(createMockProvider("weidu-d", { workspaceSymbols: scoped }));
             registry.register(createMockProvider("weidu-tp2", { workspaceSymbols: other }));
 
-            registry.workspaceSymbols(encodeWorkspaceSymbolQuery("label", "weidu-d"));
+            registry.workspaceSymbols(encodeWorkspaceSymbolQuery("label", "weidu-d"), CancellationToken.None);
 
-            expect(scoped).toHaveBeenCalledWith("label");
+            expect(scoped).toHaveBeenCalledWith("label", CancellationToken.None);
             expect(other).not.toHaveBeenCalled();
         });
 
@@ -910,10 +913,10 @@ describe("ProviderRegistry", () => {
             registry.register(createMockProvider("weidu-d", { workspaceSymbols: scoped }));
             registry.register(createMockProvider("weidu-tp2", { workspaceSymbols: other }));
 
-            registry.workspaceSymbols("label");
+            registry.workspaceSymbols("label", CancellationToken.None);
 
-            expect(scoped).toHaveBeenCalledWith("label");
-            expect(other).toHaveBeenCalledWith("label");
+            expect(scoped).toHaveBeenCalledWith("label", CancellationToken.None);
+            expect(other).toHaveBeenCalledWith("label", CancellationToken.None);
         });
     });
 });

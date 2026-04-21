@@ -597,7 +597,7 @@ connection.onDefinition((params) => {
     return null;
 });
 
-connection.onReferences((params) => {
+connection.onReferences((params, token) => {
     const textDoc = documents.get(params.textDocument.uri);
     if (!textDoc) {
         return [];
@@ -612,12 +612,13 @@ connection.onReferences((params) => {
     }
 
     // Try provider references first (AST-based, e.g. variable/function references)
-    const providerResult = registry.references(langId, text, params.position, uri, params.context.includeDeclaration);
+    const providerResult = registry.references(langId, text, params.position, uri, params.context.includeDeclaration, token);
     if (providerResult.length > 0) {
         return providerResult;
     }
 
     // Try translation references (for tra/msg files — find usages across consumer files)
+    // Translation lookup is a single-file index lookup — bounded work, no token check needed.
     const traResult = translation?.getReferences(uri, langId, params.position, params.context.includeDeclaration);
     if (traResult && traResult.length > 0) {
         return traResult;
@@ -720,8 +721,8 @@ connection.languages.semanticTokens.on((params) => {
     return registry.semanticTokens(textDoc.languageId, textDoc.getText(), params.textDocument.uri);
 });
 
-connection.onWorkspaceSymbol((params) => {
-    return registry.workspaceSymbols(params.query);
+connection.onWorkspaceSymbol((params, token) => {
+    return registry.workspaceSymbols(params.query, token);
 });
 
 connection.onFoldingRanges((params) => {

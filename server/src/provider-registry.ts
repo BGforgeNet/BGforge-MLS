@@ -11,7 +11,7 @@
  * Workspace startup indexing: core/workspace-scanner.ts
  */
 
-import type { SignatureHelp } from "vscode-languageserver/node";
+import type { CancellationToken, SignatureHelp } from "vscode-languageserver/node";
 import {
     CompletionItem,
     DocumentSymbol,
@@ -134,18 +134,23 @@ class ProviderRegistry {
     /**
      * Search workspace symbols across all providers.
      * Aggregates results from every provider that implements workspaceSymbols.
+     * Returns empty immediately when the token is already cancelled.
      */
-    workspaceSymbols(query: string): SymbolInformation[] {
+    workspaceSymbols(query: string, token: CancellationToken): SymbolInformation[] {
+        if (token.isCancellationRequested) {
+            return [];
+        }
+
         const decoded = decodeWorkspaceSymbolQuery(query);
         if (decoded.languageId) {
             const provider = this.get(decoded.languageId);
-            return provider?.workspaceSymbols?.(decoded.query) ?? [];
+            return provider?.workspaceSymbols?.(decoded.query, token) ?? [];
         }
 
         const results: SymbolInformation[] = [];
         for (const provider of this.providers.values()) {
             if (provider.workspaceSymbols) {
-                results.push(...provider.workspaceSymbols(decoded.query));
+                results.push(...provider.workspaceSymbols(decoded.query, token));
             }
         }
         return results;
@@ -168,11 +173,15 @@ class ProviderRegistry {
         return null;
     }
 
-    references(langId: string, text: string, position: Position, uri: string, includeDeclaration: boolean): Location[] {
+    references(langId: string, text: string, position: Position, uri: string, includeDeclaration: boolean, token: CancellationToken): Location[] {
+        if (token.isCancellationRequested) {
+            return [];
+        }
+
         const normUri = normalizeUri(uri);
         const provider = this.get(langId);
         if (provider?.references) {
-            return provider.references(text, position, normUri, includeDeclaration);
+            return provider.references(text, position, normUri, includeDeclaration, token);
         }
         return [];
     }

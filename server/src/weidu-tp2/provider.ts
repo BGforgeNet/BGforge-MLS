@@ -6,7 +6,7 @@
  * User-defined functions and variables from .tph headers are handled by header-parser.
  */
 
-import { type CompletionItem, CompletionItemKind, type DocumentSymbol, type FoldingRange, type Location, type Position, type SymbolInformation, type WorkspaceEdit, InsertTextFormat } from "vscode-languageserver/node";
+import { type CancellationToken, type CompletionItem, CompletionItemKind, type DocumentSymbol, type FoldingRange, type Location, type Position, type SymbolInformation, type WorkspaceEdit, InsertTextFormat } from "vscode-languageserver/node";
 import { extname } from "path";
 import { fileURLToPath } from "url";
 import { conlog, getLinePrefix } from "../common";
@@ -371,8 +371,8 @@ class WeiduTp2Provider implements ProviderBase, FormattingCapability, SymbolCapa
         this.fileIndex?.removeFile(uri as NormalizedUri);
     }
 
-    workspaceSymbols(query: string): SymbolInformation[] {
-        return this.fileIndex?.symbols.searchWorkspaceSymbols(query) ?? [];
+    workspaceSymbols(query: string, token: CancellationToken): SymbolInformation[] {
+        return this.fileIndex?.symbols.searchWorkspaceSymbols(query, 500, token) ?? [];
     }
 
     onDocumentClosed(uri: string): void {
@@ -409,10 +409,11 @@ class WeiduTp2Provider implements ProviderBase, FormattingCapability, SymbolCapa
         return tp2FoldingRanges(text);
     }
 
-    references(text: string, position: Position, uri: string, includeDeclaration: boolean): Location[] {
+    references(text: string, position: Position, uri: string, includeDeclaration: boolean, _token: CancellationToken): Location[] {
         if (!isInitialized()) {
             return [];
         }
+        // Single-file AST traversal — bounded work; no per-iteration cancellation needed.
         return findReferences(text, position, uri, includeDeclaration, this.fileIndex?.refs);
     }
 

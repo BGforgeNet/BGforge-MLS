@@ -11,6 +11,7 @@
  */
 
 import type {
+    CancellationToken,
     CompletionItem,
     DocumentSymbol,
     FoldingRange,
@@ -104,7 +105,7 @@ export interface FoldingCapability {
 
 export interface NavigationCapability {
     definition?(text: string, position: Position, uri: string): Location | null;
-    references?(text: string, position: Position, uri: string, includeDeclaration: boolean): Location[];
+    references?(text: string, position: Position, uri: string, includeDeclaration: boolean, token: CancellationToken): Location[];
 }
 
 export interface RenameCapability {
@@ -152,5 +153,5 @@ export interface InlayHintCapability {
 }
 
 export interface WorkspaceSymbolCapability {
-    workspaceSymbols(query: string): SymbolInformation[];
+    workspaceSymbols(query: string, token: CancellationToken): SymbolInformation[];
 }

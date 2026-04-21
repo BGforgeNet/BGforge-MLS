@@ -5,7 +5,7 @@
  * Uses unified Symbols storage for completion and hover data.
  */
 
-import type { CompletionItem, DocumentSymbol, FoldingRange, Location, Position } from "vscode-languageserver/node";
+import type { CancellationToken, CompletionItem, DocumentSymbol, FoldingRange, Location, Position, SymbolInformation } from "vscode-languageserver/node";
 import { conlog } from "../common";
 import type { NormalizedUri } from "../core/normalized-uri";
 import { EXT_WEIDU_D, LANG_WEIDU_D } from "../core/languages";
@@ -100,10 +100,11 @@ class WeiduDProvider implements ProviderBase, FormattingCapability, SymbolCapabi
         return getDefinition(text, uri, position);
     }
 
-    references(text: string, position: Position, uri: string, includeDeclaration: boolean): Location[] {
+    references(text: string, position: Position, uri: string, includeDeclaration: boolean, _token: CancellationToken): Location[] {
         if (!isInitialized()) {
             return [];
         }
+        // Single-file AST traversal — bounded work; no per-iteration cancellation needed.
         return findReferences(text, position, uri, includeDeclaration, this.fileIndex?.refs);
     }
 
@@ -123,8 +124,8 @@ class WeiduDProvider implements ProviderBase, FormattingCapability, SymbolCapabi
         return getStaticCompletions(this.fileIndex?.symbols);
     }
 
-    workspaceSymbols(query: string) {
-        return this.fileIndex?.symbols.searchWorkspaceSymbols(query) ?? [];
+    workspaceSymbols(query: string, token: CancellationToken): SymbolInformation[] {
+        return this.fileIndex?.symbols.searchWorkspaceSymbols(query, 500, token) ?? [];
     }
 
     reloadFileData(uri: string, text: string): void {
