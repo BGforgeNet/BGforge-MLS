@@ -35,19 +35,23 @@ import { Translation } from "./translation";
 import {
     EXT_TD,
     EXT_TSSL,
+    LANG_FALLOUT_MSG,
+    LANG_FALLOUT_SCRIPTS_LST,
     LANG_FALLOUT_SSL,
     LANG_TYPESCRIPT,
     LANG_WEIDU_BAF,
     LANG_WEIDU_D,
     LANG_WEIDU_SLB,
     LANG_WEIDU_SSL,
+    LANG_WEIDU_TRA,
     LANG_WEIDU_TP2,
 } from "./core/languages";
 import { weiduLogProvider } from "./weidu-log/provider";
 import { infinity2daProvider } from "./infinity-2da/provider";
-import { weiduTraProvider } from "./weidu-tra/provider";
-import { falloutMsgProvider } from "./fallout-msg/provider";
-import { falloutScriptsLstProvider } from "./fallout-scripts-lst/provider";
+import { createFormatOnlyProvider } from "./core/format-only-provider";
+import { formatTra } from "./weidu-tra/format";
+import { formatMsg } from "./fallout-msg/format";
+import { formatScriptsLst } from "./fallout-scripts-lst/format";
 import { falloutWorldmapProvider } from "./fallout-worldmap/provider";
 import { parserManager } from "./core/parser-manager";
 import { registry } from "./provider-registry";
@@ -180,9 +184,9 @@ connection.onInitialized(async () => {
     registry.register(weiduTp2Provider);
     registry.register(weiduLogProvider);
     registry.register(infinity2daProvider);
-    registry.register(weiduTraProvider);
-    registry.register(falloutMsgProvider);
-    registry.register(falloutScriptsLstProvider);
+    registry.register(createFormatOnlyProvider(LANG_WEIDU_TRA, formatTra));
+    registry.register(createFormatOnlyProvider(LANG_FALLOUT_MSG, formatMsg));
+    registry.register(createFormatOnlyProvider(LANG_FALLOUT_SCRIPTS_LST, formatScriptsLst));
 
     // Register language aliases (languages that share data with parent providers)
     registry.registerAlias(LANG_WEIDU_SLB, LANG_WEIDU_BAF);
