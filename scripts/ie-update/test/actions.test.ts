@@ -96,6 +96,31 @@ describe("actionDescAbsoluteUrls", () => {
         expect(result).not.toContain("{% assign");
     });
 
+    it("resolves trigger_link includes when action URL ends in actions.htm", () => {
+        // Cover the if-branch in replaceTriggerLinkIncludes where the URL ends with *actions.htm
+        const gamesWithHtm: IESDPGame[] = [
+            {
+                name: "bg2",
+                ids: "/files/ids/bg2",
+                "2da": "/files/2da/bg2",
+                actions: "/scripting/actions/bg2actions.htm",
+            },
+        ];
+        const desc = [
+            "Acts like ",
+            "{% assign text = \"<code>True()</code>\" -%} ",
+            "{%- assign anchor = \"0x4023\" -%} ",
+            "{%- include trigger_link.html %}",
+            ".",
+        ].join("");
+
+        const result = actionDescAbsoluteUrls(desc, gamesWithHtm, "bg2", BASE_URL);
+
+        // The trigger URL should replace 'actions.htm' with 'triggers.htm'
+        expect(result).toContain("triggers.htm#0x4023");
+        expect(result).not.toContain("actions.htm");
+    });
+
     it("preserves indentation inside fenced code blocks", () => {
         const desc = [
             "Example:",

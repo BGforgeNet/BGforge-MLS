@@ -8,9 +8,12 @@ import path from "node:path";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
     checkCompletion,
+    decodeHtmlEntities,
     dumpCompletion,
     dumpDefinition,
     dumpHighlight,
+    htmlInlineToText,
+    normalizeHtmlFragment,
     stripLiquid,
 } from "../src/ie/common.ts";
 import YAML from "yaml";
@@ -126,6 +129,50 @@ describe("dumpHighlight", () => {
         expect(stanza.patterns).toBeDefined();
         // Longer names should come first
         expect(stanza.patterns[0].match).toContain("LONGER_NAME");
+    });
+});
+
+describe("decodeHtmlEntities", () => {
+    it("decodes hex numeric character references (&#x...;)", () => {
+        expect(decodeHtmlEntities("&#x41;")).toBe("A");
+        expect(decodeHtmlEntities("&#x4F;")).toBe("O");
+    });
+
+    it("decodes decimal numeric character references (&#...;)", () => {
+        expect(decodeHtmlEntities("&#65;")).toBe("A");
+        expect(decodeHtmlEntities("&#79;")).toBe("O");
+    });
+
+    it("passes through unknown named entities unchanged", () => {
+        expect(decodeHtmlEntities("&unknown;")).toBe("&unknown;");
+    });
+});
+
+describe("htmlInlineToText", () => {
+    it("strips tags and decodes entities", () => {
+        expect(htmlInlineToText("<code>&#x41;</code>")).toBe("A");
+    });
+});
+
+describe("normalizeHtmlFragment compactBlankLines: false", () => {
+    it("trims without collapsing blank lines when compactBlankLines is false", () => {
+        const html = "  hello  ";
+        const result = normalizeHtmlFragment(html, {
+            resolveHref: (h: string) => h,
+            compactBlankLines: false,
+        });
+        // Should trim but not compact blank lines
+        expect(result).toBe("hello");
+    });
+
+    it("preserves multiple blank lines when compactBlankLines is false", () => {
+        const html = "line1<br /><br /><br />line2";
+        const result = normalizeHtmlFragment(html, {
+            resolveHref: (h: string) => h,
+            compactBlankLines: false,
+        });
+        // Three <br> = three newlines — not collapsed
+        expect(result).toContain("\n\n\n");
     });
 });
 

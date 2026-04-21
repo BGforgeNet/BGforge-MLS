@@ -629,3 +629,99 @@ describe("generateCompletion params field (WeiDU)", () => {
         expect(params.intVar[1]!.required).toBeFalsy();
     });
 });
+
+// -- loadData validation error branches --
+
+describe("loadData validation errors", () => {
+    let tmpDir: string;
+    const TMP_BASE = "tmp";
+
+    beforeEach(() => {
+        tmpDir = fs.mkdtempSync(path.join(TMP_BASE, ".loaddata-err-test-"));
+    });
+
+    afterEach(() => {
+        fs.rmSync(tmpDir, { recursive: true });
+    });
+
+    it("throws when stanza has no items array", () => {
+        const yaml = `stanza1:\n  type: 3\n  items: "not-an-array"\n`;
+        const f = path.join(tmpDir, "bad.yml");
+        fs.writeFileSync(f, yaml, "utf8");
+        expect(() => loadData([f])).toThrow("items");
+    });
+
+    it("throws when input is not an object", () => {
+        // YAML top-level is a scalar, not an object
+        const yaml = `"just a string"\n`;
+        const f = path.join(tmpDir, "bad.yml");
+        fs.writeFileSync(f, yaml, "utf8");
+        expect(() => loadData([f])).toThrow();
+    });
+});
+
+// -- generateHover: skip identical content branch --
+
+describe("generateHover skip-identical branch", () => {
+    it("skips duplicate hover entries with identical content across stanzas", () => {
+        // Two stanzas with the same item name and same content -> keep one
+        const data = {
+            stanza1: { type: 3, items: [{ name: "foo", detail: "foo()" }] },
+            stanza2: { type: 3, items: [{ name: "foo", detail: "foo()" }] },
+        };
+        const result = generateHover(data, "lang");
+        expect(result["foo"]).toBeDefined();
+        // Should contain only one copy, not two merged with separator
+        expect(result["foo"]!.contents.value).not.toContain("---");
+    });
+});
+
+// -- generateSignatures: getCategoryPrefix unknown type --
+
+describe("generateSignatures getCategoryPrefix", () => {
+    it("emits no prefix for unknown WeiDU type", () => {
+        const data = {
+            dimorphic_functions: {
+                type: 3,
+                items: [{
+                    name: "MY_FUNC",
+                    type: "dimorphic",
+                    doc: "does things",
+                    args: [{ name: "x", type: "unknowntype", doc: "x val" }],
+                }],
+            },
+        };
+        const result = generateSignatures(data, "weidu-tp2-tooltip");
+        // No INT_VAR or STR_VAR prefix for unknown type
+        expect(result["MY_FUNC"]!.parameters[0]!.documentation.value).toContain("unknowntype x");
+        expect(result["MY_FUNC"]!.parameters[0]!.documentation.value).not.toContain("INT_VAR");
+        expect(result["MY_FUNC"]!.parameters[0]!.documentation.value).not.toContain("STR_VAR");
+    });
+});
+
+// -- sortDataItems: tiebreaker by detail --
+
+describe("loadData sort tiebreaker", () => {
+    let tmpDir: string;
+    const TMP_BASE = "tmp";
+
+    beforeEach(() => {
+        tmpDir = fs.mkdtempSync(path.join(TMP_BASE, ".sort-tb-test-"));
+    });
+
+    afterEach(() => {
+        fs.rmSync(tmpDir, { recursive: true });
+    });
+
+    it("breaks ties by detail when names are equal", () => {
+        // Two items with same name but different detail should be stable-sorted by detail
+        const yaml = `stanza:\n  type: 3\n  items:\n    - name: foo\n      detail: "foo(b)"\n    - name: foo\n      detail: "foo(a)"\n`;
+        const f = path.join(tmpDir, "a.yml");
+        fs.writeFileSync(f, yaml, "utf8");
+        const data = loadData([f]);
+        const items = data["stanza"]!.items;
+        // detail "foo(a)" < "foo(b)" so it should come first
+        expect(items[0]!.detail).toBe("foo(a)");
+        expect(items[1]!.detail).toBe("foo(b)");
+    });
+});

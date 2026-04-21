@@ -149,6 +149,70 @@ other:
     });
 });
 
+describe("sortYamlStanzasAndItems error branches", () => {
+    it("throws on invalid YAML", () => {
+        expect(() => sortYamlStanzasAndItems("key: [unclosed")).toThrow();
+    });
+
+    it("throws when top-level is not a mapping", () => {
+        expect(() => sortYamlStanzasAndItems("- item1\n- item2\n")).toThrow("Expected top-level YAML document to be a mapping");
+    });
+});
+
+describe("sortYamlSequenceByPath error branches", () => {
+    it("throws on invalid YAML", () => {
+        expect(() => sortYamlSequenceByPath("key: [unclosed", ["key"], "name")).toThrow();
+    });
+
+    it("throws when top-level is not a mapping", () => {
+        expect(() => sortYamlSequenceByPath("- item\n", ["key"], "name")).toThrow("Expected top-level YAML document to be a mapping");
+    });
+
+    it("returns source unchanged when path length is zero", () => {
+        const input = `a:\n  type: 1\n`;
+        expect(sortYamlSequenceByPath(input, [], "name")).toBe(input);
+    });
+
+    it("returns source unchanged when parent is not a map", () => {
+        // path points to a non-map parent (scalar value)
+        const input = `a: scalar\n`;
+        const result = sortYamlSequenceByPath(input, ["a", "missing", "items"], "name");
+        expect(result).toBe(input);
+    });
+
+    it("returns source unchanged when target is not a sequence", () => {
+        const input = `a:\n  items: scalar\n`;
+        const result = sortYamlSequenceByPath(input, ["a", "items"], "name");
+        expect(result).toBe(input);
+    });
+
+    it("returns source unchanged when sequence has 1 item", () => {
+        const input = `a:\n  items:\n    - name: only\n`;
+        const result = sortYamlSequenceByPath(input, ["a", "items"], "name");
+        expect(result).toBe(input);
+    });
+});
+
+describe("sortSequenceInAllMapEntries error branches", () => {
+    it("throws on invalid YAML", () => {
+        expect(() => sortSequenceInAllMapEntries("key: [unclosed", [], "patterns", "match")).toThrow();
+    });
+
+    it("throws when top-level is not a mapping", () => {
+        expect(() => sortSequenceInAllMapEntries("- item\n", [], "patterns", "match")).toThrow("Expected top-level YAML document to be a mapping");
+    });
+
+    it("handles empty mapPath (operates on top-level map)", () => {
+        const input = `alpha:\n  patterns:\n    - match: z\n    - match: a\n`;
+        const result = sortSequenceInAllMapEntries(input, [], "patterns", "match");
+        expect(result).toContain("- match: a");
+        const lines = result.split("\n");
+        const aIdx = lines.findIndex((l) => l.includes("match: a"));
+        const zIdx = lines.findIndex((l) => l.includes("match: z"));
+        expect(aIdx).toBeLessThan(zIdx);
+    });
+});
+
 describe("sortSequenceInAllMapEntries", () => {
     it("sorts patterns within every repository stanza without reordering stanzas", () => {
         const input = `repository:
