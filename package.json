@@ -4,6 +4,7 @@
     "description": "BGforge multilanguage server",
     "version": "3.7.0",
     "type": "module",
+    "packageManager": "pnpm@10.33.0",
     "author": "BGforge",
     "repository": {
         "type": "git",
