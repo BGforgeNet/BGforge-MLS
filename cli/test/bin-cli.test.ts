@@ -336,7 +336,7 @@ describe("bin CLI integration", () => {
             expect(original.equals(recreated)).toBe(true);
         });
 
-        it("rejects loading ambiguous MAP JSON without --graceful-map", () => {
+        it("loads ambiguous MAP JSON without --graceful-map (loader infers from opaque ranges)", () => {
             const mapFile = path.join(RP_MAPS, "sfsheng.map");
             if (!fs.existsSync(mapFile)) return;
 
@@ -348,9 +348,11 @@ describe("bin CLI integration", () => {
 
             const tmpJson = path.join(tmpDir, "sfsheng.map.json");
             const loadResult = run(tmpJson, "--load");
-            expect(loadResult.code).toBe(1);
-            expect(loadResult.stderr).toContain("Validation failed");
-            expect(loadResult.stderr).toContain("overflow");
+            expect(loadResult.code).toBe(0);
+
+            const original = fs.readFileSync(mapFile);
+            const recreated = fs.readFileSync(tmpMap);
+            expect(original.equals(recreated)).toBe(true);
         });
 
         it("writes opaque MAP ranges as short hex chunks for readable diffs", () => {
