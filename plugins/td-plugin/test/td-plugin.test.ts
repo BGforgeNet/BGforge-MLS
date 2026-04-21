@@ -277,5 +277,40 @@ describe("TD plugin", () => {
             // Should be the original, unwrapped language service
             expect(service).toBe(info.languageService);
         });
+
+        it("resolves runtime via npm path when VSIX path is absent", async () => {
+            const { existsSync } = await import("fs");
+            // First call (VSIX path) fails; second call (npm path) succeeds
+            vi.mocked(existsSync).mockReturnValueOnce(false).mockReturnValueOnce(true);
+
+            const freshPlugin = init(MOCK_TS_MODULES);
+            const info = createMockInfo(["/project/dialog.td"]);
+            const service = freshPlugin.create(info);
+
+            // Runtime found via npm path — plugin should be active (proxy, not original)
+            expect(service).not.toBe(info.languageService);
+        });
+    });
+
+    describe("TD names filtering with empty runtime", () => {
+        it("skips filtering in non-.td files when runtime names set is empty", async () => {
+            const { readFileSync } = await import("fs");
+            // readFileSync throws so loadTdNames returns an empty Set (catch branch)
+            vi.mocked(readFileSync).mockImplementationOnce(() => {
+                throw new Error("read error");
+            });
+
+            const freshPlugin = init(MOCK_TS_MODULES);
+            const entries: MockCompletionEntry[] = [
+                { name: "myFunction", kind: "function" },
+                { name: "begin", kind: "function" },
+            ];
+            const info = createMockInfo(["/project/script.tssl"], {}, makeCompletionResult(entries));
+            const service = freshPlugin.create(info);
+
+            // With an empty names set, filtering is skipped and result is returned as-is
+            const result = service.getCompletionsAtPosition("/project/script.tssl", 0, undefined!);
+            expect(result!.entries).toHaveLength(2);
+        });
     });
 });
