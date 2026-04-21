@@ -269,6 +269,25 @@ describe("weidu-d/rename", () => {
             expect(result).toBeNull();
         });
 
+        it("returns null when cursor is on EXTERN label pointing to an external dialog not present in file", () => {
+            // Cursor on "ext_state" in EXTERN ~OTHER_DIALOG~ ext_state.
+            // findLabelNodeAtPosition returns dialogFile="other_dialog", but the file has
+            // no BEGIN ~OTHER_DIALOG~ block, so findAllDialogLabelRefs returns empty →
+            // refs.length === 0 → returns null.
+            const text = [
+                "BEGIN ~DIALOG~",
+                "",
+                "IF ~~ THEN BEGIN s1",
+                "    SAY ~Hello~",
+                "    IF ~~ THEN EXTERN ~OTHER_DIALOG~ ext_state",
+                "END",
+            ].join("\n");
+            // "ext_state" is at line 4: "    IF ~~ THEN EXTERN ~OTHER_DIALOG~ ext_state"
+            //  character: 37 (after "    IF ~~ THEN EXTERN ~OTHER_DIALOG~ ")
+            const result = renameSymbol(text, { line: 4, character: 39 }, "renamed", URI);
+            expect(result).toBeNull();
+        });
+
         it("returns null when no definition exists", () => {
             const text = [
                 "BEGIN ~DIALOG~",

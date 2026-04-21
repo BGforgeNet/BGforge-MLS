@@ -90,4 +90,33 @@ describe("weidu-log/definition", () => {
         expect(result).not.toBeNull();
         expect(result?.uri).toBe(pathToUri(tp2File));
     });
+
+    it("returns null when cursor line is beyond the text (line 20 branch)", () => {
+        const text = "~ALTERNATIVES/SETUP-ALTERNATIVES.TP2~ #0 #0 // Alternatives: v12";
+        // Line 5 doesn't exist in single-line text
+        const position: Position = { line: 5, character: 0 };
+        const result = getDefinition(text, logUri, position);
+        expect(result).toBeNull();
+    });
+
+    it("returns null when mod directory does not exist (readdirSync throws, line 76)", () => {
+        const text = "~NO_SUCH_DIR/SETUP.TP2~ #0 #0 // missing";
+        const position: Position = { line: 0, character: 5 };
+        const result = getDefinition(text, logUri, position);
+        // NO_SUCH_DIR doesn't exist so readdirSync throws → returns null
+        expect(result).toBeNull();
+    });
+
+    it("returns null when resolved path is a directory not a file (line 90 branch)", () => {
+        // The mod directory itself is not a file
+        // Create a nested dir that resolves but isFile() returns false
+        const nestedDir = path.join(tmpDir, "NESTED_MOD");
+        fs.mkdirSync(nestedDir, { recursive: true });
+
+        const text = `~NESTED_MOD~ #0 #0 // nested dir`;
+        const position: Position = { line: 0, character: 5 };
+        const result = getDefinition(text, logUri, position);
+        // NESTED_MOD resolves to a directory, not a file → returns null
+        expect(result).toBeNull();
+    });
 });

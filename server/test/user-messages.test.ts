@@ -49,4 +49,14 @@ describe("decodeFileUris", () => {
         const msg = "See https://example.com/docs for help";
         expect(decodeFileUris(msg)).toBe(msg);
     });
+
+    it("returns malformed file URI unchanged when fileURLToPath throws (catch branch)", () => {
+        // A URI like file:///invalid%ZZpath matches the regex but fileURLToPath throws.
+        // The catch block returns the original URI unchanged.
+        const malformed = "file:///invalid%ZZpath";
+        const msg = `See ${malformed} for details`;
+        const result = decodeFileUris(msg);
+        // The URI should be passed through unchanged since it can't be decoded
+        expect(result).toContain(malformed);
+    });
 });

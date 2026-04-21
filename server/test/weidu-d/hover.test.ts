@@ -142,4 +142,36 @@ describe("weidu-d/hover", () => {
         const result = getStateLabelHover(text, "s1", URI, { line: 3, character: 17 });
         expect(result.handled).toBe(false);
     });
+
+    it("returns notHandled when label is a GOTO to an undefined state (no definition found)", () => {
+        // The cursor is on "missing_state" in GOTO, but there is no state definition for it.
+        // findStateInDialog returns null → line 48 return HR.notHandled()
+        const text = [
+            "BEGIN ~DIALOG~",
+            "",
+            "IF ~~ THEN BEGIN s1",
+            "    SAY ~Hello~",
+            "    IF ~~ THEN GOTO missing_state",
+            "END",
+        ].join("\n");
+
+        // "missing_state" at line 4, starts at char 20
+        const result = getStateLabelHover(text, "missing_state", URI, { line: 4, character: 22 });
+        expect(result.handled).toBe(false);
+    });
+
+    it("returns notHandled when JSDoc comment has no description body", () => {
+        // A JSDoc with only the delimiters and no text — jsdoc.desc is falsy → line 60
+        const text = [
+            "BEGIN ~DIALOG~",
+            "",
+            "/***/",
+            "IF ~~ THEN BEGIN empty_jsdoc",
+            "    SAY ~Hello~",
+            "END",
+        ].join("\n");
+
+        const result = getStateLabelHover(text, "empty_jsdoc", URI, { line: 3, character: 22 });
+        expect(result.handled).toBe(false);
+    });
 });

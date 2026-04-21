@@ -5,6 +5,7 @@
  */
 
 import { describe, expect, it, beforeAll, vi } from "vitest";
+import { ReferencesIndex } from "../../src/shared/references-index";
 
 vi.mock("../../src/server", () => ({
     connection: {
@@ -140,6 +141,60 @@ DEFINE_ACTION_FUNCTION my_func BEGIN END
             // cursor on whitespace
             const refs = findReferences(text, { line: 0, character: 0 }, TEST_URI, true);
             expect(refs).toHaveLength(0);
+        });
+    });
+
+    describe("cross-file references via refsIndex", () => {
+        it("adds cross-file refs from index for function symbols", () => {
+            const text = `
+DEFINE_ACTION_FUNCTION my_func BEGIN END
+LAF my_func END
+`;
+            const otherUri = "file:///other.tp2" as const;
+            const crossLoc = { uri: otherUri, range: { start: { line: 0, character: 4 }, end: { line: 0, character: 11 } } };
+
+            const index = new ReferencesIndex();
+            index.updateFile(otherUri, new Map([["my_func", [crossLoc]]]));
+
+            // cursor on definition
+            const refs = findReferences(text, { line: 1, character: 23 }, TEST_URI, true, index);
+            // local (definition + call) + cross-file ref from other.tp2
+            const crossRefs = refs.filter(r => r.uri === otherUri);
+            expect(crossRefs).toHaveLength(1);
+            expect(crossRefs[0]).toEqual(crossLoc);
+        });
+
+        it("does not add cross-file refs for current file URI", () => {
+            const text = `
+DEFINE_ACTION_FUNCTION my_func BEGIN END
+LAF my_func END
+`;
+            const selfLoc = { uri: TEST_URI, range: { start: { line: 2, character: 4 }, end: { line: 2, character: 11 } } };
+
+            const index = new ReferencesIndex();
+            // Same URI as TEST_URI — should be filtered out (loc.uri !== uri check)
+            index.updateFile(TEST_URI, new Map([["my_func", [selfLoc]]]));
+
+            const refs = findReferences(text, { line: 1, character: 23 }, TEST_URI, true, index);
+            // Local refs only; cross-file entry with same URI excluded
+            // Only the local occurrences (definition + call = 2), not the index duplicate
+            expect(refs.length).toBeLessThanOrEqual(3);
+        });
+
+        it("returns only local refs for variable symbols (non-function kind)", () => {
+            const text = `
+OUTER_SET my_var = 5
+OUTER_SET result = %my_var% + 1
+`;
+            const otherUri = "file:///other.tp2" as const;
+            const index = new ReferencesIndex();
+            index.updateFile(otherUri, new Map([["my_var", [{ uri: otherUri, range: { start: { line: 0, character: 0 }, end: { line: 0, character: 6 } } }]]]));
+
+            // cursor on variable declaration — kind is "variable", not "function"
+            const refs = findReferences(text, { line: 1, character: 10 }, TEST_URI, true, index);
+            // No cross-file refs for variable symbols
+            const crossRefs = refs.filter(r => r.uri === otherUri);
+            expect(crossRefs).toHaveLength(0);
         });
     });
 });

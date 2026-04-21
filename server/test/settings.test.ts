@@ -66,6 +66,40 @@ describe("settings", () => {
         });
     });
 
+    describe("shouldValidateOnSave()", () => {
+        it('returns true for "save" mode', async () => {
+            const { shouldValidateOnSave } = await import("../src/settings");
+            expect(shouldValidateOnSave("save")).toBe(true);
+        });
+
+        it('returns true for "saveAndType" mode', async () => {
+            const { shouldValidateOnSave } = await import("../src/settings");
+            expect(shouldValidateOnSave("saveAndType")).toBe(true);
+        });
+
+        it('returns false for "type" mode', async () => {
+            const { shouldValidateOnSave } = await import("../src/settings");
+            expect(shouldValidateOnSave("type")).toBe(false);
+        });
+    });
+
+    describe("shouldValidateOnChange()", () => {
+        it('returns true for "type" mode', async () => {
+            const { shouldValidateOnChange } = await import("../src/settings");
+            expect(shouldValidateOnChange("type")).toBe(true);
+        });
+
+        it('returns true for "saveAndType" mode', async () => {
+            const { shouldValidateOnChange } = await import("../src/settings");
+            expect(shouldValidateOnChange("saveAndType")).toBe(true);
+        });
+
+        it('returns false for "save" mode', async () => {
+            const { shouldValidateOnChange } = await import("../src/settings");
+            expect(shouldValidateOnChange("save")).toBe(false);
+        });
+    });
+
     describe("project()", () => {
         beforeEach(() => {
             mockReadFileSync.mockReset();

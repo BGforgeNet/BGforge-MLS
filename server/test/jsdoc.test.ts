@@ -552,6 +552,47 @@ describe("jsdoc.parse", () => {
         });
     });
 
+    describe("buildParamInfoMap()", () => {
+        it("returns empty map when jsdoc is undefined", () => {
+            const map = jsdoc.buildParamInfoMap(undefined);
+            expect(map.size).toBe(0);
+        });
+
+        it("returns empty map when jsdoc has no args", () => {
+            const map = jsdoc.buildParamInfoMap({ desc: "no args" });
+            expect(map.size).toBe(0);
+        });
+
+        it("maps args with description only", () => {
+            const map = jsdoc.buildParamInfoMap({
+                args: [{ name: "count", type: "int", description: "Item count" }],
+            });
+            expect(map.get("count")).toEqual({ description: "Item count" });
+        });
+
+        it("maps args with required flag only", () => {
+            const map = jsdoc.buildParamInfoMap({
+                args: [{ name: "name", type: "string", required: true }],
+            });
+            expect(map.get("name")).toEqual({ required: true });
+        });
+
+        it("maps args with both description and required", () => {
+            const map = jsdoc.buildParamInfoMap({
+                args: [{ name: "id", type: "int", description: "The id", required: true }],
+            });
+            expect(map.get("id")).toEqual({ description: "The id", required: true });
+        });
+
+        it("skips args with neither description nor required", () => {
+            // arg has no description and no required flag → not added to map
+            const map = jsdoc.buildParamInfoMap({
+                args: [{ name: "unused", type: "int" }],
+            });
+            expect(map.has("unused")).toBe(false);
+        });
+    });
+
     describe("unnamed return mode (default)", () => {
         it("existing unnamed @return tests are unaffected by returnMode option", () => {
             const input = `/**

@@ -10,6 +10,7 @@ import {
     stripCommentsTra,
     stripCommentsFalloutMsg,
     stripComments2da,
+    stripCommentsFalloutScriptsLst,
     validateFormatting,
 } from "../../src/shared/format-utils";
 
@@ -373,6 +374,17 @@ describe("shared/format-utils", () => {
         it("should preserve all tokens", () => {
             const input = "  COL1 COL2\nROW1  val1 val2";
             expect(stripComments2da(input)).toBe(input);
+        });
+    });
+
+    describe("stripCommentsFalloutScriptsLst()", () => {
+        it("returns the input unchanged (no stripping needed for scripts.lst)", () => {
+            const input = "SCRIPT_SOME_PROC  // comment\nSCRIPT_OTHER";
+            expect(stripCommentsFalloutScriptsLst(input)).toBe(input);
+        });
+
+        it("returns empty string for empty input", () => {
+            expect(stripCommentsFalloutScriptsLst("")).toBe("");
         });
     });
 });

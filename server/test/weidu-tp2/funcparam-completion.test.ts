@@ -309,4 +309,72 @@ LAM my_macro
 
         expect(hasParamCompletions).toBe(false);
     });
+
+    it("provides RET_ARRAY parameter completions", () => {
+        const headerText = `
+DEFINE_PATCH_FUNCTION get_arrays
+    RET_ARRAY
+        output_list
+        error_list
+BEGIN
+END
+`;
+        const headerUri = "file:///lib.tph";
+        weiduTp2Provider.reloadFileData?.(headerUri, headerText);
+
+        const text = `
+COPY ~file.bcs~ ~override~
+    LPF get_arrays RET_ARRAY  END
+`;
+        const uri = "file:///test.tp2";
+        const position: Position = { line: 2, character: 30 }; // After "RET_ARRAY "
+
+        const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
+        const filteredItems = weiduTp2Provider.filterCompletions?.(allItems, text, position, uri) ?? [];
+
+        const outputItem = filteredItems.find((item) => item.label === "output_list");
+        const errorItem = filteredItems.find((item) => item.label === "error_list");
+
+        expect(outputItem).toBeDefined();
+        expect(outputItem?.insertText).toBe("output_list = ");
+
+        expect(errorItem).toBeDefined();
+        expect(errorItem?.insertText).toBe("error_list = ");
+    });
+
+    it("includes description in completion documentation when JSDoc @param has description", () => {
+        const headerText = `
+/**
+ * A function with a documented parameter.
+ * @param {int} item_count - Number of items to process
+ */
+DEFINE_ACTION_FUNCTION documented_func
+    INT_VAR
+        item_count = 0
+BEGIN
+END
+`;
+        const headerUri = "file:///lib.tph";
+        weiduTp2Provider.reloadFileData?.(headerUri, headerText);
+
+        const text = `
+LAF documented_func
+INT_VAR
+
+END
+`;
+        const uri = "file:///test.tp2";
+        const position: Position = { line: 3, character: 0 }; // Inside INT_VAR section
+
+        const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
+        const filteredItems = weiduTp2Provider.filterCompletions?.(allItems, text, position, uri) ?? [];
+
+        const countItem = filteredItems.find((item) => item.label === "item_count");
+        expect(countItem).toBeDefined();
+
+        // Documentation should contain the description from JSDoc
+        const doc = countItem?.documentation;
+        const docValue = doc && typeof doc === "object" && "value" in doc ? doc.value : "";
+        expect(docValue).toContain("Number of items to process");
+    });
 });

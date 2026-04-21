@@ -2,17 +2,19 @@
  * Tests for shared/folding-ranges.ts - tree-sitter based folding range extraction.
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { FoldingRangeKind } from "vscode-languageserver/node";
-import { getFoldingRanges } from "../../src/shared/folding-ranges";
+import { getFoldingRanges, createFoldingRangesProvider } from "../../src/shared/folding-ranges";
+
+interface MockNode {
+    type: string;
+    startPosition: { row: number };
+    endPosition: { row: number };
+    children: MockNode[];
+}
 
 /** Minimal tree-sitter node mock for testing. */
-function mockNode(
-    type: string,
-    startRow: number,
-    endRow: number,
-    children: ReturnType<typeof mockNode>[] = [],
-): { type: string; startPosition: { row: number }; endPosition: { row: number }; children: ReturnType<typeof mockNode>[] } {
+function mockNode(type: string, startRow: number, endRow: number, children: MockNode[] = []): MockNode {
     return {
         type,
         startPosition: { row: startRow },
@@ -160,5 +162,52 @@ describe("shared/folding-ranges", () => {
         // Only comment should fold
         expect(result).toHaveLength(1);
         expect(result[0].kind).toBe(FoldingRangeKind.Comment);
+    });
+});
+
+describe("shared/folding-ranges — createFoldingRangesProvider", () => {
+    const blockTypes = new Set(["procedure", "if_stmt"]);
+
+    function makeRoot(children: ReturnType<typeof mockNode>[] = []) {
+        return mockNode("program", 0, 10, children);
+    }
+
+    it("returns empty array when parser is not initialized", () => {
+        const isInitialized = vi.fn().mockReturnValue(false);
+        const parseWithCache = vi.fn();
+        const provider = createFoldingRangesProvider(isInitialized, parseWithCache as never, blockTypes);
+
+        expect(provider("some text")).toEqual([]);
+        expect(parseWithCache).not.toHaveBeenCalled();
+    });
+
+    it("returns empty array when parseWithCache returns null", () => {
+        const isInitialized = vi.fn().mockReturnValue(true);
+        const parseWithCache = vi.fn().mockReturnValue(null);
+        const provider = createFoldingRangesProvider(isInitialized, parseWithCache as never, blockTypes);
+
+        expect(provider("some text")).toEqual([]);
+    });
+
+    it("returns folding ranges for a parsed tree", () => {
+        const root = makeRoot([mockNode("procedure", 1, 5)]);
+        const isInitialized = vi.fn().mockReturnValue(true);
+        const parseWithCache = vi.fn().mockReturnValue({ rootNode: root });
+        const provider = createFoldingRangesProvider(isInitialized, parseWithCache as never, blockTypes);
+
+        const result = provider("procedure text");
+
+        expect(result).toHaveLength(1);
+        expect(result[0]).toEqual({ startLine: 1, endLine: 5 });
+    });
+
+    it("passes text argument to parseWithCache", () => {
+        const isInitialized = vi.fn().mockReturnValue(true);
+        const parseWithCache = vi.fn().mockReturnValue(null);
+        const provider = createFoldingRangesProvider(isInitialized, parseWithCache as never, blockTypes);
+
+        provider("the document text");
+
+        expect(parseWithCache).toHaveBeenCalledWith("the document text");
     });
 });

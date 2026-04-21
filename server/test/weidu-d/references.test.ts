@@ -102,6 +102,42 @@ EXTEND_TOP ~MYMOD~ target
         });
     });
 
+    describe("REPLACE_STATE_TRIGGER and SET_WEIGHT refs", () => {
+        it("finds REPLACE_STATE_TRIGGER reference to a state label", () => {
+            const text = `
+BEGIN ~MYMOD~
+  IF ~True()~ THEN BEGIN target
+    SAY ~Hello~
+  END
+
+REPLACE_STATE_TRIGGER ~MYMOD~ target ~NewTrigger()~
+`;
+            // cursor on "target" in BEGIN definition (line 2, char 28)
+            const refs = findReferences(text, { line: 2, character: 28 }, TEST_URI, true);
+            // definition + REPLACE_STATE_TRIGGER = 2
+            expect(refs.length).toBeGreaterThanOrEqual(2);
+            const hasReplaceRef = refs.some(r => r.range.start.line === 6);
+            expect(hasReplaceRef).toBe(true);
+        });
+
+        it("finds SET_WEIGHT reference to a state label", () => {
+            const text = `
+BEGIN ~MYMOD~
+  IF ~True()~ THEN BEGIN my_state
+    SAY ~Hello~
+  END
+
+SET_WEIGHT ~MYMOD~ my_state #50
+`;
+            // cursor on "my_state" in BEGIN definition (line 2, char 28)
+            const refs = findReferences(text, { line: 2, character: 28 }, TEST_URI, true);
+            // definition + SET_WEIGHT = 2
+            expect(refs.length).toBeGreaterThanOrEqual(2);
+            const hasSetWeightRef = refs.some(r => r.range.start.line === 6);
+            expect(hasSetWeightRef).toBe(true);
+        });
+    });
+
     describe("edge cases", () => {
         it("returns empty for position not on a label", () => {
             const text = `
@@ -148,6 +184,28 @@ BEGIN ~MYMOD~
             // No local definition, but cross-file index has the definition in other.d
             expect(refs).toHaveLength(1);
             expect(refs[0].uri).toBe(OTHER_URI);
+        });
+
+        it("merges local refs with cross-file refs when local definition exists and refsIndex provided (line 62)", () => {
+            const text = `
+BEGIN ~MYMOD~
+  IF ~True()~ THEN BEGIN state1
+    SAY ~Hello~
+    IF ~~ THEN GOTO state1
+  END
+`;
+            const OTHER_URI = "file:///other.d";
+            const crossLoc = { uri: OTHER_URI, range: { start: { line: 0, character: 0 }, end: { line: 0, character: 6 } } };
+            const index = new ReferencesIndex();
+            // "mymod:state1" key (normalizeDialogFile lowercases)
+            index.updateFile(OTHER_URI, new Map([["mymod:state1", [crossLoc]]]));
+
+            // cursor on "state1" definition — local definition exists
+            const refs = findReferences(text, { line: 2, character: 28 }, TEST_URI, true, index);
+            // local (def + GOTO) + cross-file = 3
+            const crossRefs = refs.filter(r => r.uri === OTHER_URI);
+            expect(crossRefs).toHaveLength(1);
+            expect(crossRefs[0]).toEqual(crossLoc);
         });
     });
 });

@@ -122,6 +122,37 @@ describe("findLabelNodeAtPosition", () => {
         expect(result!.dialogFile).toBe("other");
     });
 
+    it("finds COPY_TRANS state reference", () => {
+        // COPY_TRANS appears as a transition inside a state block
+        const text = [
+            "BEGIN ~DIALOG~",
+            "",
+            "IF ~~ THEN BEGIN s1",
+            "    SAY ~Hi~",
+            "    COPY_TRANS ~OTHER~ target_state",
+            "END",
+        ].join("\n");
+        const root = parse(text);
+        // "target_state" in COPY_TRANS at line 4
+        const result = findLabelNodeAtPosition(root, { line: 4, character: 25 });
+
+        expect(result).not.toBeNull();
+        expect(result!.labelNode.text).toBe("target_state");
+        expect(result!.dialogFile).toBe("other");
+    });
+
+    it("finds ADD_STATE_TRIGGER state field (non-ExtendAction TOP_LEVEL type)", () => {
+        // ADD_STATE_TRIGGER has a "state" field — exercises the else-branch of ExtendAction check
+        const text = "ADD_STATE_TRIGGER ~DIALOG~ my_state ~True()~\n";
+        const root = parse(text);
+        // "my_state" in ADD_STATE_TRIGGER
+        const result = findLabelNodeAtPosition(root, { line: 0, character: 30 });
+
+        expect(result).not.toBeNull();
+        expect(result!.labelNode.text).toBe("my_state");
+        expect(result!.dialogFile).toBe("dialog");
+    });
+
     it("returns null for non-label positions", () => {
         const root = parse("BEGIN ~DIALOG~\n\nIF ~~ THEN BEGIN s1\n    SAY ~Hello~\nEND\n");
         const result = findLabelNodeAtPosition(root, { line: 3, character: 5 });

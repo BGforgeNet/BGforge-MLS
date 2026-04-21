@@ -199,5 +199,25 @@ max_line_length = invalid
 
             expect(result.maxLineLength).toBeNull();
         });
+
+        it("walks up to parent directory when settings not fully found", () => {
+            // First directory has only indent_size, second has max_line_length
+            mockExistsSync.mockReturnValue(true);
+            mockReadFileSync
+                .mockReturnValueOnce(`
+[*]
+indent_size = 2
+`)
+                .mockReturnValueOnce(`
+[*]
+max_line_length = 100
+`);
+
+            const result = getEditorconfigSettings("/parent/child/file.txt");
+
+            expect(result.indentSize).toBe(2);
+            // Walked up and found max_line_length in parent
+            expect(result.maxLineLength).toBe(100);
+        });
     });
 });

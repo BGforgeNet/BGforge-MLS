@@ -168,4 +168,32 @@ procedure bar begin end
     it("returns empty array for empty text", () => {
         expect(getDocumentSymbols("")).toEqual([]);
     });
+
+    it("returns macro symbols for #define constants", () => {
+        const text = `#define MAX_ITEMS 100`;
+        const symbols = getDocumentSymbols(text);
+        // Macros are returned as Constant symbols
+        const macro = symbols.find(s => s.name === "MAX_ITEMS");
+        expect(macro).toBeDefined();
+        expect(macro!.kind).toBe(SymbolKind.Constant);
+    });
+
+    it("returns macro symbols for parameterized #define (Method kind)", () => {
+        const text = `#define CLAMP(x, min, max) (x < min ? min : (x > max ? max : x))`;
+        const symbols = getDocumentSymbols(text);
+        const macro = symbols.find(s => s.name === "CLAMP");
+        expect(macro).toBeDefined();
+        expect(macro!.kind).toBe(SymbolKind.Method);
+    });
+
+    it("returns macro and procedure symbols together", () => {
+        const text = `
+#define SPEED 3
+procedure run begin end
+`;
+        const symbols = getDocumentSymbols(text);
+        const names = symbols.map(s => s.name);
+        expect(names).toContain("SPEED");
+        expect(names).toContain("run");
+    });
 });

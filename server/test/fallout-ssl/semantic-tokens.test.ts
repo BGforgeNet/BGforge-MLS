@@ -106,4 +106,16 @@ end
 
         expect(tokenTexts(text)).toEqual(["value"]);
     });
+
+    it("emits no tokens for parameterless procedures (early return branch in collectProcedureParameterReferences)", () => {
+        // A procedure with no parameter list exercises the !paramsNode branch (line 50)
+        const text = `
+procedure startup begin
+    display_msg(1);
+end
+`;
+        const spans = getSemanticTokenSpans(text);
+        // No parameters → no parameter semantic tokens emitted
+        expect(spans).toHaveLength(0);
+    });
 });

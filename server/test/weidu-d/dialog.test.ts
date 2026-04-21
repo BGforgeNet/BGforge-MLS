@@ -473,5 +473,135 @@ END
                 expect(b.file).toBe("wsmith01");
             }
         });
+
+        it("parses ALTER_TRANS with no change block (empty description)", () => {
+            // ALTER_TRANS with only state refs and an empty changes block
+            // This exercises the extractAlterTransParts() return "" branch
+            const text = `
+ALTER_TRANS wsmith01
+BEGIN 10 END
+BEGIN 0 END
+BEGIN
+END
+`;
+            const result = parseDDialog(text);
+
+            expect(result.blocks).toHaveLength(1);
+            expect(result.blocks[0]!.kind).toBe("modify");
+            expect(result.blocks[0]!.actionName).toBe("ALTER_TRANS");
+            // No AlterTransChange children → description is undefined
+            expect(result.blocks[0]!.description).toBeUndefined();
+        });
+
+        it("parses ADD_TRANS_ACTION as modify block", () => {
+            const text = `
+ADD_TRANS_ACTION wsmith01 BEGIN 5 END BEGIN 1 END ~PlaySong(5)~
+`;
+            const result = parseDDialog(text);
+
+            expect(result.blocks).toHaveLength(1);
+            expect(result.blocks[0]!.kind).toBe("modify");
+            expect(result.blocks[0]!.actionName).toBe("ADD_TRANS_ACTION");
+            expect(result.blocks[0]!.file).toBe("wsmith01");
+        });
+
+        it("parses ADD_TRANS_TRIGGER as modify block", () => {
+            const text = `
+ADD_TRANS_TRIGGER wsmith01 5 1 ~PartyGoldGT(100)~
+`;
+            const result = parseDDialog(text);
+
+            expect(result.blocks).toHaveLength(1);
+            expect(result.blocks[0]!.kind).toBe("modify");
+            expect(result.blocks[0]!.actionName).toBe("ADD_TRANS_TRIGGER");
+        });
+
+        it("parses SET_WEIGHT as modify block", () => {
+            // SET_WEIGHT filename stateLabel #weight (weight uses # prefix)
+            const text = `
+SET_WEIGHT wsmith01 5 #100
+`;
+            const result = parseDDialog(text);
+
+            expect(result.blocks).toHaveLength(1);
+            expect(result.blocks[0]!.kind).toBe("modify");
+            expect(result.blocks[0]!.actionName).toBe("SET_WEIGHT");
+        });
+
+        it("parses EXTEND_TOP block with no additional transitions", () => {
+            // EXTEND_TOP with only state ref and empty transitions — exercises
+            // the false branch of (transitions.length > 0) in parseExtendAction
+            const text = `
+EXTEND_TOP DIALOG 5
+END
+`;
+            const result = parseDDialog(text);
+
+            expect(result.blocks).toHaveLength(1);
+            expect(result.blocks[0]!.kind).toBe("extend");
+            // No transitions means no states added
+            expect(result.states).toHaveLength(0);
+        });
+
+        it("parses REPLACE_SAY as modify block", () => {
+            const text = `
+REPLACE_SAY DIALOG 3 ~New text here~
+`;
+            const result = parseDDialog(text);
+
+            expect(result.blocks).toHaveLength(1);
+            expect(result.blocks[0]!.kind).toBe("modify");
+            expect(result.blocks[0]!.actionName).toBe("REPLACE_SAY");
+            expect(result.blocks[0]!.file).toBe("DIALOG");
+        });
+
+        it("parses ADD_STATE_TRIGGER as modify block", () => {
+            const text = `
+ADD_STATE_TRIGGER DIALOG 4 ~Global("Quest","GLOBAL",1)~
+`;
+            const result = parseDDialog(text);
+
+            expect(result.blocks).toHaveLength(1);
+            expect(result.blocks[0]!.kind).toBe("modify");
+            expect(result.blocks[0]!.actionName).toBe("ADD_STATE_TRIGGER");
+        });
+
+        it("CHAIN with multiple text segments auto-links states (line 402 branch)", () => {
+            // Two chain_text segments with no explicit transitions between them.
+            // flattenChain auto-adds a GOTO from the first to the second (line 402).
+            const text = `
+CHAIN DIALOG chainlabel
+~First text~
+~Second text~
+EXIT
+`;
+            const result = parseDDialog(text);
+
+            // Both chain text segments should become states
+            const chainStates = result.states.filter(s => s.blockLabel === "chainlabel");
+            expect(chainStates.length).toBeGreaterThanOrEqual(2);
+
+            // The first state must have an auto-added GOTO transition to the second
+            const firstState = chainStates[0]!;
+            expect(firstState.transitions).toHaveLength(1);
+            expect(firstState.transitions[0]!.target.kind).toBe("goto");
+        });
+
+        it("CHAIN with BRANCH transitions (parseChainBranch branch)", () => {
+            // BRANCH inside a CHAIN adds conditional speaker transitions.
+            // This exercises parseChainBranch (lines 436-444 in dialog.ts).
+            const text = `
+CHAIN DIALOG chainbranch
+~Intro text~
+BRANCH ~Global("x","GLOBAL",1)~ BEGIN END
+EXIT
+`;
+            const result = parseDDialog(text);
+
+            expect(result.blocks).toHaveLength(1);
+            expect(result.blocks[0]!.kind).toBe("chain");
+            // States should be produced from the chain text segments
+            expect(result.states.length).toBeGreaterThanOrEqual(1);
+        });
     });
 });

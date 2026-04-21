@@ -16,7 +16,7 @@ vi.mock("../../src/lsp-connection", () => ({
 }));
 
 import { initParser } from "../../src/fallout-ssl/parser";
-import { ScopeKind } from "../../src/fallout-ssl/scope-kinds";
+import { ScopeKind, assertNeverScope } from "../../src/fallout-ssl/scope-kinds";
 import { findContainingProcedure, isLocalToProc } from "../../src/fallout-ssl/symbol-definitions";
 import { getSymbolScope } from "../../src/fallout-ssl/symbol-scope";
 import { parseWithCache } from "../../src/fallout-ssl/parser";
@@ -359,6 +359,15 @@ end
             expect(result!.scope).toBe("file");
             expect(result!.name).toBe("global_val");
         });
+    });
+});
+
+describe("fallout-ssl/scope-kinds assertNeverScope()", () => {
+    it("throws with the unhandled scope value in the message", () => {
+        // assertNeverScope is an exhaustive-check helper; calling it with any value
+        // via a type cast exercises the function body (line 23 in scope-kinds.ts).
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional type cast to test the runtime guard
+        expect(() => assertNeverScope("unknown-scope" as never)).toThrow("Unhandled ScopeKind: unknown-scope");
     });
 });
 

@@ -211,6 +211,28 @@ end
             const def = findDefinitionNode(tree!.rootNode, "nonexistent");
             expect(def).toBeNull();
         });
+
+        it("finds foreach loop variable", () => {
+            const text = `
+procedure foo begin
+    foreach (item in mylist) begin end
+end
+`;
+            const tree = parseWithCache(text);
+            expect(tree).not.toBeNull();
+
+            const def = findDefinitionNode(tree!.rootNode, "item");
+            expect(def).not.toBeNull();
+        });
+
+        it("finds export variable declaration", () => {
+            const text = `export variable my_export := 0;`;
+            const tree = parseWithCache(text);
+            expect(tree).not.toBeNull();
+
+            const def = findDefinitionNode(tree!.rootNode, "my_export");
+            expect(def).not.toBeNull();
+        });
     });
 
     describe("isLocalDefinition()", () => {
