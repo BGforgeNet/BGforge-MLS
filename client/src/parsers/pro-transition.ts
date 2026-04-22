@@ -65,14 +65,14 @@ function buildObjectTypeTransitionBytes(currentBytes: Uint8Array, objectType: nu
     const header = headerSchema.read(reader(currentBytes));
     headerSchema.write(writer(nextBytes), {
         ...header,
-        objectTypeAndId: ((objectType & 0xFF) << 24) | (header.objectTypeAndId & 0x00FF_FFFF),
+        objectTypeAndId: ((objectType & 0xFF) << 24) | (header.objectTypeAndId & 0x00_FF_FF_FF),
     });
 
     if (objectType === 0) {
         itemCommonSchema.write(writer(nextBytes, HEADER_SIZE), {
             flagsExt: 0,
             attackModes: 0,
-            scriptId: 0xFFFF_FFFF,
+            scriptId: 0xFF_FF_FF_FF,
             subType: 0,
             materialId: 0,
             size: 0,
@@ -85,7 +85,7 @@ function buildObjectTypeTransitionBytes(currentBytes: Uint8Array, objectType: nu
         sceneryCommonSchema.write(writer(nextBytes, HEADER_SIZE), {
             wallLightFlags: 0,
             actionFlags: 0,
-            scriptId: 0xFFFF_FFFF,
+            scriptId: 0xFF_FF_FF_FF,
             subType: 0,
             materialId: 0,
             soundId: 0,

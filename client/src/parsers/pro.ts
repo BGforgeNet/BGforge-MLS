@@ -173,7 +173,7 @@ function fieldsFromDefs(
  */
 function parseHeader(data: HeaderData, errors: string[]): ParsedGroup {
     const objectType = (data.objectTypeAndId >> 24) & 0xFF;
-    const objectId = data.objectTypeAndId & 0x00FFFFFF;
+    const objectId = data.objectTypeAndId & 0x00_FF_FF_FF;
     const frmType = (data.frmTypeAndId >> 24) & 0xFF;
     const frmId = data.frmTypeAndId & 0x00_FF_FF_FF;
 
@@ -406,7 +406,7 @@ function parseScenery(
         }
         case 1: { // Stairs
             const stairs: StairsData = stairsSchema.read(reader(data, SCENERY_SUBTYPE_OFFSET));
-            const destTile = stairs.destTileAndElevation & 0x3FFFFFF;
+            const destTile = stairs.destTileAndElevation & 0x3_FF_FF_FF;
             const destElev = (stairs.destTileAndElevation >> 26) & 0x3F;
             groups.push(group("Stairs Properties", [
                 field("Dest Tile", destTile, 0x29, 4, "uint32"),
@@ -426,7 +426,7 @@ function parseScenery(
         case 3: // Ladder Bottom
         case 4: { // Ladder Top
             const ladder: LadderData = ladderSchema.read(reader(data, SCENERY_SUBTYPE_OFFSET));
-            const destTile = ladder.destTileAndElevation & 0x3FFFFFF;
+            const destTile = ladder.destTileAndElevation & 0x3_FF_FF_FF;
             const destElev = (ladder.destTileAndElevation >> 26) & 0x3F;
             groups.push(group("Ladder Properties", [
                 field("Dest Tile", destTile, 0x29, 4, "uint32"),

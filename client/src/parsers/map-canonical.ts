@@ -644,9 +644,9 @@ function serializeTiles(view: DataView, header: z.infer<typeof mapHeaderSchema>,
         const tileElevation = tilesByElevation.get(elevation);
         for (const tile of tileElevation?.tiles ?? []) {
             const word = ((tile.roofFlags & 0x0F) << 28)
-                | ((tile.roofTileId & 0x0FFF) << 16)
+                | ((tile.roofTileId & 0x0F_FF) << 16)
                 | ((tile.floorFlags & 0x0F) << 12)
-                | (tile.floorTileId & 0x0FFF);
+                | (tile.floorTileId & 0x0F_FF);
             writeUint32(view, offset + tile.index * 4, word);
         }
         offset += TILE_DATA_SIZE_PER_ELEVATION;

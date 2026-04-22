@@ -40,7 +40,7 @@ describe("binary-format-contract", () => {
         expect(orientationSchema.safeParse(6).success).toBe(false);
 
         const destTileSchema = zodFieldNumber("pro", "pro.stairsProperties.destTile", "uint32");
-        expect(destTileSchema.safeParse(0x03FF_FFFF).success).toBe(true);
+        expect(destTileSchema.safeParse(0x03_FF_FF_FF).success).toBe(true);
         expect(destTileSchema.safeParse(0x04_00_00_00).success).toBe(false);
     });
 });

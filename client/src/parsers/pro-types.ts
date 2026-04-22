@@ -276,7 +276,7 @@ export const ITEM_SUBTYPE_SIZES: Record<number, number> = {
     5: 12,  // Misc Item
     6: 4,   // Key
 };
-export const CRITTER_SIZE = 0x1A0; // 416 bytes
+export const CRITTER_SIZE = 0x1_A0; // 416 bytes
 export const SCENERY_COMMON_SIZE = 0x11; // 17 bytes (0x18-0x28 inclusive)
 export const SCENERY_SUBTYPE_OFFSET = HEADER_SIZE + SCENERY_COMMON_SIZE; // 0x29
 export const SCENERY_SUBTYPE_SIZES: Record<number, number> = {
@@ -374,7 +374,7 @@ export const CRITTER_BONUS_DT: CritterFieldDef[] = [
     ["Normal", "dtNormalBonus", 0x1_00, "int32"],
     ["Laser", "dtLaserBonus", 0x1_04, "int32"],
     ["Fire", "dtFireBonus", 0x1_08, "int32"],
-    ["Plasma", "dtPlasmaBonus", 0x10C, "int32"],
+    ["Plasma", "dtPlasmaBonus", 0x1_0C, "int32"],
     ["Electrical", "dtElectricalBonus", 0x1_10, "int32"],
     ["EMP", "dtEmpBonus", 0x1_14, "int32"],
     ["Explosive", "dtExplosiveBonus", 0x1_18, "int32"],
@@ -385,30 +385,30 @@ export const CRITTER_BONUS_DR: CritterFieldDef[] = [
     ["Laser", "drLaserBonus", 0x1_20, "int32"],
     ["Fire", "drFireBonus", 0x1_24, "int32"],
     ["Plasma", "drPlasmaBonus", 0x1_28, "int32"],
-    ["Electrical", "drElectricalBonus", 0x12C, "int32"],
+    ["Electrical", "drElectricalBonus", 0x1_2C, "int32"],
     ["EMP", "drEmpBonus", 0x1_30, "int32"],
     ["Explosive", "drExplosiveBonus", 0x1_34, "int32"],
     ["Radiation", "drRadiationBonus", 0x1_38, "int32"],
-    ["Poison", "drPoisonBonus", 0x13C, "int32"],
+    ["Poison", "drPoisonBonus", 0x1_3C, "int32"],
 ];
 
 export const CRITTER_SKILLS: CritterFieldDef[] = [
     ["Small Guns", "skillSmallGuns", 0x1_48, "int32"],
-    ["Big Guns", "skillBigGuns", 0x14C, "int32"],
+    ["Big Guns", "skillBigGuns", 0x1_4C, "int32"],
     ["Energy Weapons", "skillEnergyWeapons", 0x1_50, "int32"],
     ["Unarmed", "skillUnarmed", 0x1_54, "int32"],
     ["Melee", "skillMelee", 0x1_58, "int32"],
-    ["Throwing", "skillThrowing", 0x15C, "int32"],
+    ["Throwing", "skillThrowing", 0x1_5C, "int32"],
     ["First Aid", "skillFirstAid", 0x1_60, "int32"],
     ["Doctor", "skillDoctor", 0x1_64, "int32"],
     ["Sneak", "skillSneak", 0x1_68, "int32"],
-    ["Lockpick", "skillLockpick", 0x16C, "int32"],
+    ["Lockpick", "skillLockpick", 0x1_6C, "int32"],
     ["Steal", "skillSteal", 0x1_70, "int32"],
     ["Traps", "skillTraps", 0x1_74, "int32"],
     ["Science", "skillScience", 0x1_78, "int32"],
-    ["Repair", "skillRepair", 0x17C, "int32"],
+    ["Repair", "skillRepair", 0x1_7C, "int32"],
     ["Speech", "skillSpeech", 0x1_80, "int32"],
     ["Barter", "skillBarter", 0x1_84, "int32"],
     ["Gambling", "skillGambling", 0x1_88, "int32"],
-    ["Outdoorsman", "skillOutdoorsman", 0x18C, "int32"],
+    ["Outdoorsman", "skillOutdoorsman", 0x1_8C, "int32"],
 ];

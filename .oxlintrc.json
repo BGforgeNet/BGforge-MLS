@@ -88,6 +88,14 @@
         // EventEmitter, not EventTarget, as the base class).
         "unicorn/prefer-event-target": "off",
 
+        // Sequential-condition ternaries (`a ? X : b ? Y : Z`) are used
+        // idiomatically in the codebase for short classification chains
+        // (enum-like lookups, type-narrowing fallbacks). Forbidding them
+        // outright is churn; the equivalent if/else-chain is less compact
+        // without being clearer.
+        "no-nested-ternary": "off",
+        "unicorn/no-nested-ternary": "off",
+
         // `.at(-1)` is modern but slower than `arr[arr.length - 1]` in hot
         // parser paths; keep both idioms legal.
         "unicorn/prefer-at": "off",
@@ -225,7 +233,21 @@
         // the alternatives either mutate the input (usually wrong) or have
         // equivalent perf (`Object.assign`). Spreading to produce a fresh
         // object is the idiomatic copy-on-write pattern here.
-        "oxc/no-map-spread": "off"
+        "oxc/no-map-spread": "off",
+
+        // Same rationale as `oxc/no-map-spread`: the accumulator spread is
+        // an intentional copy-on-write in the data-loading scripts.
+        "oxc/no-accumulating-spread": "off",
+
+        // Tree-sitter byte-offset traversal walks the string by index so it
+        // can count column/row advances; converting to `for-of` would hide
+        // the position tracking.
+        "typescript/prefer-for-of": "off",
+
+        // Closure-over-loop-var is safe here: the loop declares `const`
+        // bindings inside the body, so the closed-over values don't leak
+        // across iterations.
+        "no-loop-func": "off"
     },
     "overrides": [
         {
