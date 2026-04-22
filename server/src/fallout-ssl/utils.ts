@@ -7,8 +7,15 @@ import type { Node } from "web-tree-sitter";
 import { CompletionItemKind, MarkupKind, Position } from "vscode-languageserver/node";
 import { LANG_FALLOUT_SSL_TOOLTIP } from "../core/languages";
 import { makeRange } from "../core/position-utils";
-import type { CallableSymbol, ConstantSymbol, IndexedSymbol, VariableSymbol } from "../core/symbol";
-import { ScopeLevel, SourceType, SymbolKind } from "../core/symbol";
+import {
+    type CallableSymbol,
+    type ConstantSymbol,
+    type IndexedSymbol,
+    type VariableSymbol,
+    ScopeLevel,
+    SourceType,
+    SymbolKind,
+} from "../core/symbol";
 import * as jsdoc from "../shared/jsdoc";
 import type { SigInfoEx } from "../shared/signature";
 import { buildSignatureBlock } from "../../../shared/tooltip-format";

@@ -2,8 +2,8 @@ import { BufferReader } from "typed-binary";
 import type { BinaryParser, ParseOptions, ParseResult, ParsedGroup, ParsedField, ParsedFieldType } from "./types";
 import { createProCanonicalSnapshot } from "./pro-canonical";
 import { serializePro } from "./pro-serializer";
-import type { CritterFieldDef } from "./pro-types";
 import {
+    type CritterFieldDef,
     ObjectType, ItemSubType, ScenerySubType, DamageType, MaterialType,
     FRMType, BodyType, KillType, ElevatorType, WeaponAnimCode, StatType, ScriptType,
     HeaderFlags, ItemFlagsExt, WallLightFlags, ActionFlags, ContainerFlags, CritterFlags,

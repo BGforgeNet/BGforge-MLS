@@ -17,8 +17,7 @@ import {
     makeBlockScalar,
     YAML_DUMP_OPTIONS,
 } from "../../../utils/src/yaml-helpers.ts";
-import type { CompletionItem, IEData } from "./types.ts";
-import { COMPLETION_TYPE_CONSTANT } from "./types.ts";
+import { type CompletionItem, type IEData, COMPLETION_TYPE_CONSTANT } from "./types.ts";
 
 export { cmpStr, findFiles, litscal };
 

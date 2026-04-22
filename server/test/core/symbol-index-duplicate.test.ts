@@ -5,8 +5,7 @@
 
 import { describe, expect, it, beforeEach } from "vitest";
 import { Symbols } from "../../src/core/symbol-index";
-import { SymbolKind, ScopeLevel, SourceType } from "../../src/core/symbol";
-import type { ConstantSymbol } from "../../src/core/symbol";
+import { type ConstantSymbol, SymbolKind, ScopeLevel, SourceType } from "../../src/core/symbol";
 import { CompletionItemKind, MarkupKind } from "vscode-languageserver/node";
 
 describe("symbol-index duplicate handling", () => {

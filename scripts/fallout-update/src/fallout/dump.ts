@@ -9,8 +9,8 @@
 import fs from "node:fs";
 import YAML, { Document, YAMLMap, YAMLSeq, isMap } from "yaml";
 import { makeBlockScalar, YAML_DUMP_OPTIONS } from "../../../utils/src/yaml-helpers.ts";
-import type { FalloutCompletionItem } from "./types.ts";
 import {
+    type FalloutCompletionItem,
     COMPLETION_TYPE_CONSTANT,
     COMPLETION_TYPE_FUNCTION,
     SFALL_FUNCTIONS_STANZA,

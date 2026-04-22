@@ -17,8 +17,12 @@ import {
 } from "./variable-symbols";
 import { FUNCTION_CALL_TYPES } from "./callable-symbols";
 import { isSameNode, stripStringDelimiters } from "./tree-utils";
-import type { SymbolInfo, SyntheticPercentVarNode } from "./symbol-discovery";
-import { isShadowedByInnerLoop, isVariableRefInDeclarationContext } from "./symbol-discovery";
+import {
+    type SymbolInfo,
+    type SyntheticPercentVarNode,
+    isShadowedByInnerLoop,
+    isVariableRefInDeclarationContext,
+} from "./symbol-discovery";
 
 // ============================================
 // Types

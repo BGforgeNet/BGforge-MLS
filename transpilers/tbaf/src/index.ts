@@ -11,8 +11,7 @@ import { applyHelperFixups } from "../../common/transpiler-utils";
 import { createTranspiler, type TranspilerEvent } from "../../common/transpiler-pipeline";
 import { bundle } from "../../common/bundle";
 import { emitBAF } from "./emit";
-import type { BAFScript } from "./ir";
-import { isOrGroup } from "./ir";
+import { type BAFScript, isOrGroup } from "./ir";
 import { TBAFTransformer } from "./transform";
 
 const tbaf = createTranspiler<string>({

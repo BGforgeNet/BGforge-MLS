@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it, beforeAll } from "vitest";
-import { parseHeaderVariables } from "../../src/weidu-tp2/header-parser";
+import { parseHeaderVariables, parseFile } from "../../src/weidu-tp2/header-parser";
 import { initParser } from "../../src/weidu-tp2/parser";
 
 beforeAll(async () => {
@@ -209,8 +209,6 @@ END`;
 // Symbol conversion tests - verifies IndexedSymbol output
 // These tests ensure hover content includes all JSDoc features
 // =============================================================================
-
-import { parseFile } from "../../src/weidu-tp2/header-parser";
 
 /** Extract symbols only (convenience wrapper). */
 const parseHeaderToSymbols = (...args: Parameters<typeof parseFile>) => [...parseFile(...args).symbols];

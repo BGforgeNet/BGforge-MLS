@@ -31,8 +31,7 @@ import {
 import type { VarsContext } from "../../common/transpiler-utils";
 import { resolveStringExpr, parseBooleanOption, parseRequiredNumber } from "./parse-helpers";
 import { TranspileError } from "../../common/transpile-error";
-import { processExtendStatements, processStateStatement, transformFunctionToState } from "./state-transitions";
-import type { FuncsContext } from "./state-transitions";
+import { type FuncsContext, processExtendStatements, processStateStatement, transformFunctionToState } from "./state-transitions";
 import { processChainStatements } from "./chain-processing";
 
 /**

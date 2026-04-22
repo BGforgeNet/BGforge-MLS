@@ -11,8 +11,7 @@ import { EXT_TD, EXT_TBAF, EXT_TSSL } from "../../../transpilers/common/extensio
 import { transpile as transpileTBAF } from "../../../transpilers/tbaf/src/index";
 import { transpile as transpileTD } from "../../../transpilers/td/src/index";
 import { transpile as transpileTSSL, createBatchState, type TranspileBatchState } from "../../../transpilers/tssl/src/index";
-import type { FileResult, OutputMode } from "../../cli-utils";
-import { parseCliArgs, runCli, safeProcess, reportDiff } from "../../cli-utils";
+import { type FileResult, type OutputMode, parseCliArgs, runCli, safeProcess, reportDiff } from "../../cli-utils";
 
 type TranspileType = "td" | "tbaf" | "tssl";
 

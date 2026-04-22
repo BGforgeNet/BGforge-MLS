@@ -9,8 +9,7 @@ import type { CancellationToken, CompletionItem, DocumentSymbol, FoldingRange, L
 import { conlog } from "../common";
 import type { NormalizedUri } from "../core/normalized-uri";
 import { EXT_WEIDU_D, LANG_WEIDU_D } from "../core/languages";
-import type { IndexedSymbol } from "../core/symbol";
-import { SourceType } from "../core/symbol";
+import { type IndexedSymbol, SourceType } from "../core/symbol";
 import { FileIndex } from "../core/file-index";
 import { loadStaticSymbols } from "../core/static-loader";
 import { type FormatResult, type LanguageProvider, type ProviderContext, type ProviderBase, type FormattingCapability, type SymbolCapability, type FoldingCapability, type NavigationCapability, type RenameCapability, type HoverCapability, type CompletionCapability, type DataCapability, type CompilationCapability, type IndexingCapability, type FeatureGateCapability, type WorkspaceSymbolCapability } from "../language-provider";

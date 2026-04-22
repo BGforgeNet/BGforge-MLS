@@ -1,5 +1,5 @@
-import type { ServerCapabilities } from "vscode-languageserver/node";
 import {
+    type ServerCapabilities,
     TextDocumentSyncKind,
 } from "vscode-languageserver/node";
 import { semanticTokensLegend } from "./shared/semantic-tokens";

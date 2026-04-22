@@ -52,8 +52,9 @@ import {
     EXT_INFINITY_2DA,
     FILENAME_FALLOUT_SCRIPTS_LST,
 } from "../../../server/src/core/languages";
-import type { FileResult, OutputMode } from "../../cli-utils";
 import {
+    type FileResult,
+    type OutputMode,
     parseCliArgs,
     runCli,
     safeProcess,

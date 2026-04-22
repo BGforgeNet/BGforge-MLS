@@ -5,8 +5,7 @@
 
 import * as vscode from "vscode";
 import * as path from "path";
-import type { BinaryParser, ParseResult } from "../parsers";
-import { parserRegistry } from "../parsers";
+import { type BinaryParser, type ParseResult, parserRegistry } from "../parsers";
 import { formatAdapterRegistry } from "../parsers/format-adapter";
 import { createSemanticFieldKeyFromId } from "../parsers/presentation-schema";
 import { getSnapshotPath } from "../parsers/json-snapshot-path";
@@ -14,8 +13,7 @@ import { loadBinaryJsonSnapshot } from "../parsers/json-snapshot";
 import { escapeHtml } from "../utils";
 import { getCachedCssAsset, getCachedHtmlAsset, getCachedJsAsset } from "../webview-assets";
 import { BinaryDocument } from "./binaryEditor-document";
-import type { BinaryEditorTreeState } from "./binaryEditor-tree";
-import { buildBinaryEditorTreeState } from "./binaryEditor-tree";
+import { type BinaryEditorTreeState, buildBinaryEditorTreeState } from "./binaryEditor-tree";
 import { validateFieldEdit } from "./binaryEditor-validation";
 import type { WebviewToExtension, ExtensionToWebview, InitMessage } from "./binaryEditor-messages";
 import { resolveDisplayValue, resolveEnumLookup, resolveFlagLookup } from "./binaryEditor-lookups";

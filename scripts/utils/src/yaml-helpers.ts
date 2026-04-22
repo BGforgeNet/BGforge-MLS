@@ -5,8 +5,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import type { Document, Scalar } from "yaml";
-import { isScalar, Scalar as ScalarClass } from "yaml";
+import { type Document, type Scalar, isScalar, Scalar as ScalarClass } from "yaml";
 
 /** A highlight pattern entry for tmLanguage YAML. */
 export interface HighlightPattern {

@@ -15,6 +15,7 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import {
+    type ParseItemList,
     addFallbackDiagnostic,
     conlog,
     needsShell,
@@ -27,7 +28,6 @@ import {
     tmpDir,
     uriToPath,
 } from "../common";
-import type { ParseItemList } from "../common";
 import type { NormalizedUri } from "../core/normalized-uri";
 import { getConnection, getDocuments } from "../lsp-connection";
 import { showError, showErrorWithActions, showInfo } from "../user-messages";

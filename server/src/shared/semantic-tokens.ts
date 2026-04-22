@@ -1,5 +1,5 @@
-import type { SemanticTokensLegend } from "vscode-languageserver/node";
 import {
+    type SemanticTokensLegend,
     SemanticTokenTypes,
     SemanticTokens,
     SemanticTokensBuilder,

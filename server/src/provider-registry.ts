@@ -11,8 +11,9 @@
  * Workspace startup indexing: core/workspace-scanner.ts
  */
 
-import type { CancellationToken, SignatureHelp } from "vscode-languageserver/node";
 import {
+    type CancellationToken,
+    type SignatureHelp,
     CompletionItem,
     DocumentSymbol,
     FileChangeType,
@@ -26,8 +27,12 @@ import {
     SymbolInformation,
     WorkspaceEdit,
 } from "vscode-languageserver/node";
-import type { FormatResult, LanguageProvider, ProviderContext } from "./language-provider";
-import { HoverResult } from "./language-provider";
+import {
+    type FormatResult,
+    type LanguageProvider,
+    type ProviderContext,
+    HoverResult,
+} from "./language-provider";
 import { conlog } from "./common";
 import { validLocationOrNull } from "./core/location-utils";
 import { normalizeUri } from "./core/normalized-uri";

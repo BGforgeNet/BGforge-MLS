@@ -16,8 +16,7 @@ vi.mock("../../src/server", () => ({
     },
 }));
 
-import { parseDDialog } from "../../src/weidu-d/dialog";
-import type { DDialogData } from "../../src/weidu-d/dialog";
+import { type DDialogData, parseDDialog } from "../../src/weidu-d/dialog";
 import { initParser } from "../../src/weidu-d/parser";
 
 const SAMPLES_DIR = path.resolve(__dirname, "../../../grammars/weidu-d/test/samples");

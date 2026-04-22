@@ -8,7 +8,7 @@
 import { join } from "node:path";
 import { describe, expect, it, beforeAll } from "vitest";
 import { FoldingRangeKind, type Position } from "vscode-languageserver/node";
-import { initParser } from "../../src/fallout-ssl/parser";
+import { initParser, isInitialized, parseWithCache } from "../../src/fallout-ssl/parser";
 import { getDocumentSymbols } from "../../src/fallout-ssl/symbol";
 import { getLocalDefinition } from "../../src/fallout-ssl/definition";
 import { findReferences } from "../../src/fallout-ssl/references";
@@ -17,7 +17,6 @@ import { getLocalSignature } from "../../src/fallout-ssl/signature";
 import { getSslCompletionContext, SslCompletionContext } from "../../src/fallout-ssl/completion-context";
 import { getLocalSymbols } from "../../src/fallout-ssl/local-symbols";
 import { createFoldingRangesProvider } from "../../src/shared/folding-ranges";
-import { isInitialized, parseWithCache } from "../../src/fallout-ssl/parser";
 import { formatDocument } from "../../src/fallout-ssl/format/core";
 import { parseFile } from "../../src/fallout-ssl/header-parser";
 import { FileIndex } from "../../src/core/file-index";

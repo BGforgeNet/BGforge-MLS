@@ -5,8 +5,7 @@
 
 import { describe, expect, it } from "vitest";
 import { jsdocToMarkdown } from "../../src/fallout-ssl/jsdoc-format";
-import { parse } from "../../src/shared/jsdoc";
-import type { JSdoc } from "../../src/shared/jsdoc";
+import { parse, type JSdoc } from "../../src/shared/jsdoc";
 
 describe("jsdocToMarkdown", () => {
     describe("args formatting", () => {

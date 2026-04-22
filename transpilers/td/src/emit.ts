@@ -6,21 +6,19 @@
 
 import * as path from "path";
 import { applyHelperFixups } from "../../common/transpiler-utils";
-import type {
-    TDScript,
-    TDConstruct,
-    TDBegin,
-    TDAppend,
-    TDExtend,
-    TDChain,
-    TDState,
-    TDText,
-    TDTransition,
-    TDTransitionNext,
-    TDChainEpilogue,
-    TDInterject,
-} from "./types";
 import {
+    type TDScript,
+    type TDConstruct,
+    type TDBegin,
+    type TDAppend,
+    type TDExtend,
+    type TDChain,
+    type TDState,
+    type TDText,
+    type TDTransition,
+    type TDTransitionNext,
+    type TDChainEpilogue,
+    type TDInterject,
     TDConstructType,
     TDTextType,
     TDTransitionType,

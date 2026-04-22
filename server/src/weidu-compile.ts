@@ -7,6 +7,8 @@ import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 import {
+    type ParseItemList,
+    type ParseResult,
     addFallbackDiagnostic,
     conlog,
     parseCommandPath,
@@ -18,7 +20,6 @@ import {
     tmpDir,
     uriToPath,
 } from "./common";
-import type { ParseItemList, ParseResult } from "./common";
 import { showError, showInfo, showWarning } from "./user-messages";
 import type { WeiDUsettings } from "./settings";
 import type { NormalizedUri } from "./core/normalized-uri";

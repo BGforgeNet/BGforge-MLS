@@ -9,6 +9,9 @@ import path from "node:path";
 import { parseArgs } from "node:util";
 import YAML, { isMap } from "yaml";
 import {
+    type ActionItem,
+    type CompletionItem,
+    type IESDPGame,
     actionDesc,
     actionDetail,
     appendUnique,
@@ -21,11 +24,6 @@ import {
     validateActionItem,
     validateArray,
     validateIESDPGame,
-} from "./ie/index.ts";
-import type {
-    ActionItem,
-    CompletionItem,
-    IESDPGame,
 } from "./ie/index.ts";
 
 /** IESDP base URL for documentation links */

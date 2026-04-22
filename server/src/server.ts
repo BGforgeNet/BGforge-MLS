@@ -6,13 +6,11 @@
 
 import { fileURLToPath } from "node:url";
 import { TextDocument } from "vscode-languageserver-textdocument";
-import type {
-    CompletionParams,
-    InitializeParams,
-    InitializeResult,
-    TextDocumentPositionParams,
-} from "vscode-languageserver/node";
 import {
+    type CompletionParams,
+    type InitializeParams,
+    type InitializeResult,
+    type TextDocumentPositionParams,
     CompletionItem,
     createConnection,
     DidChangeConfigurationNotification,
@@ -60,8 +58,7 @@ import { falloutWorldmapProvider } from "./fallout-worldmap/provider";
 import { parserManager } from "./core/parser-manager";
 import { registry } from "./provider-registry";
 import * as settings from "./settings";
-import type { MLSsettings } from "./settings";
-import { defaultSettings, normalizeSettings, shouldValidateOnChange, shouldValidateOnSave } from "./settings";
+import { type MLSsettings, defaultSettings, normalizeSettings, shouldValidateOnChange, shouldValidateOnSave } from "./settings";
 import { weiduBafProvider } from "./weidu-baf/provider";
 import { weiduDProvider } from "./weidu-d/provider";
 import { weiduTp2Provider } from "./weidu-tp2/provider";

@@ -17,8 +17,7 @@ import type { Symbols } from "../core/symbol-index";
 import { parseWithCache, isInitialized } from "./parser";
 import { findIdentifierAtPosition, findIdentifierNodeAtPosition, isLocalDefinition, makeRange } from "./utils";
 import { ScopeKind } from "./scope-kinds";
-import { getSymbolScope } from "./symbol-scope";
-import type { SslSymbolScope } from "./symbol-scope";
+import { type SslSymbolScope, getSymbolScope } from "./symbol-scope";
 import { isFileScopeDef } from "./symbol-definitions";
 import { findScopedReferences } from "./reference-finder";
 

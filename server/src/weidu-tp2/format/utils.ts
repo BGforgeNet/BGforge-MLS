@@ -16,8 +16,7 @@ import {
     CollectedItemType,
 } from "./types";
 import { SyntaxType } from "../tree-sitter.d";
-import type { WeiduToken } from "../../shared/format-utils";
-import { tokenizeWeidu, WeiduTokenType, normalizeWhitespaceWeidu } from "../../shared/format-utils";
+import { type WeiduToken, tokenizeWeidu, WeiduTokenType, normalizeWhitespaceWeidu } from "../../shared/format-utils";
 
 // ============================================
 // Type lookup sets (O(1) instead of O(n) array includes)

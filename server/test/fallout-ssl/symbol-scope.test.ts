@@ -15,11 +15,10 @@ vi.mock("../../src/lsp-connection", () => ({
     initLspConnection: vi.fn(),
 }));
 
-import { initParser } from "../../src/fallout-ssl/parser";
+import { initParser, parseWithCache } from "../../src/fallout-ssl/parser";
 import { ScopeKind, assertNeverScope } from "../../src/fallout-ssl/scope-kinds";
 import { findContainingProcedure, isLocalToProc } from "../../src/fallout-ssl/symbol-definitions";
 import { getSymbolScope } from "../../src/fallout-ssl/symbol-scope";
-import { parseWithCache } from "../../src/fallout-ssl/parser";
 
 beforeAll(async () => {
     await initParser();

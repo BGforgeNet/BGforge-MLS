@@ -13,7 +13,7 @@
  */
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
-import { Location } from "vscode-languageserver/node";
+import { Location, CompletionItemKind, type Hover, type MarkupContent } from "vscode-languageserver/node";
 import { computeDisplayPath, extractFilename } from "../core/location-utils";
 import { type ParseResult, EMPTY_PARSE_RESULT } from "../core/parse-result";
 import { makeRange } from "../core/position-utils";
@@ -422,7 +422,6 @@ function extractVarParams(node: SyntaxNode, target: ParamInfo[]): void {
 // ============================================
 
 import { type CallableSymbol, type VariableSymbol, type IndexedSymbol, type CallableInfo, type VariableInfoData, SymbolKind, ScopeLevel, SourceType, CallableContext, CallableDefType, DeclarationKind } from "../core/symbol";
-import { CompletionItemKind, type Hover, type MarkupContent } from "vscode-languageserver/node";
 import { CompletionCategory, type Tp2CompletionItem } from "./completion/types";
 import { buildFunctionHover, buildVariableHover } from "./hover";
 

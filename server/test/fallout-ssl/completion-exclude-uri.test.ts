@@ -5,8 +5,7 @@
 
 import { describe, expect, it, beforeAll, vi } from "vitest";
 import type { CompletionItem } from "vscode-languageserver/node";
-import type { IndexedSymbol } from "../../src/core/symbol";
-import { SourceType } from "../../src/core/symbol";
+import { type IndexedSymbol, SourceType } from "../../src/core/symbol";
 import { FileIndex } from "../../src/core/file-index";
 
 vi.mock("../../src/lsp-connection", () => ({

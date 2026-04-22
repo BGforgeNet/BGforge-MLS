@@ -5,8 +5,7 @@
  */
 
 import { TextDocument } from "vscode-languageserver-textdocument";
-import type { Connection } from "vscode-languageserver/node";
-import { TextDocuments } from "vscode-languageserver/node";
+import { type Connection, TextDocuments } from "vscode-languageserver/node";
 
 let connection: Connection | undefined;
 let documents: TextDocuments<TextDocument> | undefined;

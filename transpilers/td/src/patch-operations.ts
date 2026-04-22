@@ -43,8 +43,7 @@ import {
     expressionToAction,
     expressionToText,
 } from "./expression-eval";
-import { transformFunctionToState } from "./state-transitions";
-import type { FuncsContext } from "./state-transitions";
+import { type FuncsContext, transformFunctionToState } from "./state-transitions";
 
 /**
  * Transform alterTrans(filename, states, transitions, changes).
