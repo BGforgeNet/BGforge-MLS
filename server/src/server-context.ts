@@ -20,7 +20,7 @@ interface ClientCapabilityFlags {
 }
 
 /** Session-scoped state container populated once by onInitialize. */
-export interface ServerContext {
+interface ServerContext {
     readonly capabilities: ClientCapabilityFlags;
     readonly workspaceRoot: string | undefined;
     readonly projectSettings: ProjectSettings;
