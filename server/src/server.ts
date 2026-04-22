@@ -63,6 +63,7 @@ import { weiduBafProvider } from "./weidu-baf/provider";
 import { weiduDProvider } from "./weidu-d/provider";
 import { weiduTp2Provider } from "./weidu-tp2/provider";
 import { initLspConnection } from "./lsp-connection";
+import { initServerContext, getServerContext, tryGetServerContext, updateServerSettings } from "./server-context";
 import { initSettingsService } from "./settings-service";
 import { getServerCapabilities } from "./server-capabilities";
 import { UriDebouncer } from "./core/uri-debouncer";
@@ -89,16 +90,6 @@ const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 // Initialize the LSP connection holder for modules that need it
 initLspConnection(connection, documents);
 
-let hasConfigurationCapability = false;
-let hasWorkspaceFolderCapability = false;
-let hasFileWatchingCapability = false;
-
-let workspaceRoot: string | undefined;
-let projectSettings: settings.ProjectSettings;
-
-// Initialized in onInitialized, undefined until then
-let translation: Translation | undefined;
-
 // Resolves when onInitialized completes, so handlers that depend on
 // providers being ready can await it (fixes the onDidOpen race).
 let resolveInitialized: () => void;
@@ -121,19 +112,30 @@ function logCompileError(err: unknown) {
     conlog(`Compilation error: ${err}`);
 }
 
+// Capability flags captured in onInitialize, consumed in onInitialized.
+// Plain object so both handlers share a reference without module-level lets.
+const capabilityFlags = {
+    configuration: false,
+    workspaceFolders: false,
+    fileWatching: false,
+};
+
+// Workspace root captured in onInitialize, consumed in onInitialized.
+let workspaceRoot: string | undefined;
+
 connection.onInitialize((params: InitializeParams) => {
     conlog("onInitialize started");
-    const capabilities = params.capabilities;
+    const caps = params.capabilities;
     // Does the client support the `workspace/configuration` request?
     // If not, we fall back using global settings.
-    hasConfigurationCapability = Boolean(capabilities.workspace?.configuration);
-    hasWorkspaceFolderCapability = Boolean(capabilities.workspace?.workspaceFolders);
-    hasFileWatchingCapability = Boolean(capabilities.workspace?.didChangeWatchedFiles?.dynamicRegistration);
+    capabilityFlags.configuration = Boolean(caps.workspace?.configuration);
+    capabilityFlags.workspaceFolders = Boolean(caps.workspace?.workspaceFolders);
+    capabilityFlags.fileWatching = Boolean(caps.workspace?.didChangeWatchedFiles?.dynamicRegistration);
 
     const result: InitializeResult = {
         capabilities: getServerCapabilities(),
     };
-    if (hasWorkspaceFolderCapability) {
+    if (capabilityFlags.workspaceFolders) {
         result.capabilities.workspace = {
             workspaceFolders: {
                 supported: true,
@@ -148,21 +150,31 @@ connection.onInitialize((params: InitializeParams) => {
     return result;
 });
 
-export let globalSettings: MLSsettings = defaultSettings;
-
 connection.onInitialized(async () => {
     conlog("onInitialized started");
-    if (hasConfigurationCapability) {
+    if (capabilityFlags.configuration) {
         // Register for all configuration changes.
         await connection.client.register(DidChangeConfigurationNotification.type, undefined);
     }
-    globalSettings = normalizeSettings(await connection.workspace.getConfiguration({ section: "bgforge" }));
+    const initialSettings = normalizeSettings(await connection.workspace.getConfiguration({ section: "bgforge" }));
     // load data
-    projectSettings = settings.project(workspaceRoot);
+    const projectSettings = settings.project(workspaceRoot);
 
     // Initialize translation service
-    translation = new Translation(projectSettings.translation, workspaceRoot);
+    const translation = new Translation(projectSettings.translation, workspaceRoot);
     await translation.init();
+
+    initServerContext({
+        capabilities: {
+            configuration: capabilityFlags.configuration,
+            workspaceFolders: capabilityFlags.workspaceFolders,
+            fileWatching: capabilityFlags.fileWatching,
+        },
+        workspaceRoot,
+        projectSettings,
+        settings: initialSettings,
+        translation,
+    });
 
     // Reload translation files for open documents
     for (const document of documents.all()) {
@@ -202,14 +214,14 @@ connection.onInitialized(async () => {
 
     await registry.init({
         workspaceRoot,
-        settings: globalSettings,
+        settings: initialSettings,
         getDocumentText: (uri) => documents.get(uri)?.getText(),
     });
 
     // Register file watchers for header files
     // NOTE: For standalone LSP usage (e.g., Claude Code) where client may not support
     // file watching, consider adding chokidar-based fallback in the future.
-    if (hasFileWatchingCapability) {
+    if (capabilityFlags.fileWatching) {
         const watchPatterns = registry.getWatchPatterns();
         if (watchPatterns.length > 0) {
             await connection.client.register(DidChangeWatchedFilesNotification.type, {
@@ -229,18 +241,24 @@ const documentSettings: Map<string, Thenable<MLSsettings>> = new Map();
 
 connection.onDidChangeConfiguration(async (change) => {
     conlog("did change configuration");
-    if (hasConfigurationCapability) {
+    // LSP event ordering is uncertain — this may fire before onInitialized completes.
+    const serverCtx = tryGetServerContext();
+    if (!serverCtx) {
+        return;
+    }
+    if (serverCtx.capabilities.configuration) {
         // Reset all cached document settings
         documentSettings.clear();
         // Fetch fresh global settings and push to providers (e.g., debug flag)
         const freshSettings = normalizeSettings(await connection.workspace.getConfiguration({ section: "bgforge" }));
-        globalSettings = freshSettings;
+        updateServerSettings(freshSettings);
         registry.updateSettings(freshSettings);
     } else {
         // change.settings is typed as any by vscode-languageserver
         const bgforge = change.settings?.bgforge as unknown;
-        globalSettings = normalizeSettings(bgforge ?? defaultSettings);
-        registry.updateSettings(globalSettings);
+        const freshSettings = normalizeSettings(bgforge ?? defaultSettings);
+        updateServerSettings(freshSettings);
+        registry.updateSettings(freshSettings);
     }
 });
 
@@ -258,8 +276,9 @@ documents.onDidClose((e) => {
 });
 
 export function getDocumentSettings(resource: string): Thenable<MLSsettings> {
-    if (!hasConfigurationCapability) {
-        return Promise.resolve(globalSettings);
+    const serverCtx = tryGetServerContext();
+    if (!serverCtx?.capabilities.configuration) {
+        return Promise.resolve(serverCtx?.settings ?? defaultSettings);
     }
     let result = documentSettings.get(resource);
     if (!result) {
@@ -288,10 +307,10 @@ documents.onDidOpen(async (event) => {
     registry.reloadFileData(langId, uri, text);
 
     // Reload translation data if it's a translation file
-    translation?.reloadFile(uri, langId, text);
+    getServerContext().translation.reloadFile(uri, langId, text);
 
     // Update consumer reverse index for consumer files
-    translation?.reloadConsumer(uri, text, langId);
+    getServerContext().translation.reloadConsumer(uri, text, langId);
 });
 
 // This handler provides the initial list of the completion items.
@@ -328,7 +347,7 @@ connection.onHover(timeHandler("onHover", (textDocumentPosition: TextDocumentPos
     const langId = textDoc.languageId;
     const text = textDoc.getText();
     const symbol = symbolAtPosition(text, textDocumentPosition.position);
-    const debug = globalSettings.debug;
+    const { debug } = getServerContext().settings;
 
     if (!symbol) {
         if (debug) conlog(`[hover] no symbol at position in ${uri}`);
@@ -344,7 +363,7 @@ connection.onHover(timeHandler("onHover", (textDocumentPosition: TextDocumentPos
     }
 
     // Check translation hover first (for @123 or NOption(123) references)
-    const translationHover = translation?.getHover(uri, langId, symbol, text);
+    const translationHover = getServerContext().translation.getHover(uri, langId, symbol, text);
     if (translationHover) {
         if (debug) conlog(`[hover] translation hover returned`);
         return translationHover;
@@ -413,7 +432,7 @@ connection.onExecuteCommand(async (params) => {
                 return null;
             }
             const dialogData = await handler.parse(uri, text);
-            const messages = translation?.getMessages(uri, text, handler.translationLangId) ?? {};
+            const messages = getServerContext().translation.getMessages(uri, text, handler.translationLangId);
             return { ...dialogData, messages };
         } catch (e) {
             conlog("parseDialog error: " + e);
@@ -479,10 +498,10 @@ documents.onDidSave(async (change) => {
     }
 
     // Reload translation data if it's a translation file
-    translation?.reloadFile(uri, langId, text);
+    tryGetServerContext()?.translation.reloadFile(uri, langId, text);
 
     // Update consumer reverse index for consumer files
-    translation?.reloadConsumer(uri, text, langId);
+    tryGetServerContext()?.translation.reloadConsumer(uri, text, langId);
 
     const normUri = normalizeUri(uri);
 
@@ -514,8 +533,8 @@ documents.onDidChangeContent(async (event) => {
     // Debounced to avoid excessive reloads during rapid typing.
     fileReloadDebouncer.schedule(normUri, () => {
         registry.reloadFileData(langId, uri, text);
-        translation?.reloadFile(uri, langId, text);
-        translation?.reloadConsumer(uri, text, langId);
+        tryGetServerContext()?.translation.reloadFile(uri, langId, text);
+        tryGetServerContext()?.translation.reloadConsumer(uri, text, langId);
         if (isHeaderFile(uri)) {
             connection.languages.semanticTokens.refresh();
         }
@@ -554,7 +573,7 @@ connection.languages.inlayHint.on((params) => {
     }
 
     // Fall back to translation-based inlay hints
-    return translation?.getInlayHints(uri, langId, text, params.range) ?? [];
+    return getServerContext().translation.getInlayHints(uri, langId, text, params.range);
 });
 
 connection.onDefinition(timeHandler("onDefinition", (params) => {
@@ -581,7 +600,7 @@ connection.onDefinition(timeHandler("onDefinition", (params) => {
 
     // Try translation definition (mstr/tra/@123 references -> .msg/.tra files)
     if (symbol) {
-        const traResult = translation?.getDefinition(uri, langId, symbol, text);
+        const traResult = getServerContext().translation.getDefinition(uri, langId, symbol, text);
         if (traResult) {
             return traResult;
         }
@@ -617,7 +636,7 @@ connection.onReferences(timeHandler("onReferences", (params, token) => {
 
     // Try translation references (for tra/msg files — find usages across consumer files)
     // Translation lookup is a single-file index lookup — bounded work, no token check needed.
-    const traResult = translation?.getReferences(uri, langId, params.position, params.context.includeDeclaration);
+    const traResult = getServerContext().translation.getReferences(uri, langId, params.position, params.context.includeDeclaration);
     if (traResult && traResult.length > 0) {
         return traResult;
     }

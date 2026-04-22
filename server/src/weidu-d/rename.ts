@@ -113,6 +113,9 @@ export function renameSymbol(
  * Cache the last prepareRename result to avoid double AST traversal.
  * LSP calls prepareRename then rename sequentially — the second call
  * reuses the refs found by the first if the text hasn't changed.
+ *
+ * Request-scoped memoisation: safe as module state because LSP callbacks are
+ * sequential — prepareRename always runs to completion before rename is invoked.
  */
 let lastPrepareResult: {
     readonly text: string;

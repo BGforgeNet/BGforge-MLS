@@ -153,7 +153,9 @@ function sendDiagnostics(uri: string, outputText: string, tmpUri: string) {
     sendParseResult(parseResult, uri, tmpUri);
 }
 
-let successfulCompilerPath: string | null = null;
+// Mutable-field-of-const: avoids a module-level `let` while still allowing
+// the cached value to be updated and reset (for tests via _resetCompilerCache).
+const compilerPathCache: { path: string | null } = { path: null };
 
 /** Track in-flight compilations per URI so we can cancel stale ones. */
 const activeCompiles = new Map<NormalizedUri, AbortController>();
@@ -164,11 +166,11 @@ const activeCompiles = new Map<NormalizedUri, AbortController>();
  * must call this in beforeEach to avoid cross-test contamination.
  */
 export function _resetCompilerCache() {
-    successfulCompilerPath = null;
+    compilerPathCache.path = null;
 }
 
 async function checkExternalCompiler(compilePath: string) {
-    if (compilePath === successfulCompilerPath) {
+    if (compilePath === compilerPathCache.path) {
         return true;
     }
 
@@ -180,7 +182,7 @@ async function checkExternalCompiler(compilePath: string) {
             if (err) {
                 resolve(false);
             } else {
-                successfulCompilerPath = compilePath;
+                compilerPathCache.path = compilePath;
                 resolve(true);
             }
         });

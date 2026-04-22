@@ -18,6 +18,9 @@ import { findBeginEndBoundaries } from "./position";
  * Module-level storage for enriched function params context.
  * Set by detectFunctionCallContext when cursor is in funcParams context.
  * Retrieved by getFuncParamsContext() for parameter completion.
+ *
+ * Request-scoped memoisation: safe as module state because LSP callbacks are
+ * sequential — a new completion request always overwrites this before it reads it.
  */
 let lastFuncParamsContext: FuncParamsContext | null = null;
 
