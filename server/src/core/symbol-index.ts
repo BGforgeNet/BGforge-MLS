@@ -413,11 +413,12 @@ export class Symbols {
         const lowerQuery = query.toLowerCase();
         const results: SymbolInformation[] = [];
         let iterCount = 0;
+        // Tight enough to yield fast on cancel for large workspaces, loose enough to avoid measurable overhead.
+        const CANCEL_CHECK_INTERVAL = 16;
 
         for (const [, symbols] of this.files) {
             for (const symbol of symbols) {
-                // Check cancellation every 64 iterations to avoid tight-loop overhead
-                if (++iterCount % 64 === 0 && token?.isCancellationRequested) {
+                if (++iterCount % CANCEL_CHECK_INTERVAL === 0 && token?.isCancellationRequested) {
                     return results;
                 }
 
