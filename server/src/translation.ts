@@ -396,11 +396,11 @@ export class Translation {
             if (errors.length > 0) {
                 conlog(errors);
             }
-            results.map((x) => {
+            for (const x of results) {
                 for (const [key, value] of x) {
                     traData.set(key, value);
                 }
-            });
+            }
         }
         return traData;
     }
@@ -471,7 +471,7 @@ export class Translation {
             const hover: Hover = {
                 contents: {
                     kind: "markdown",
-                    value: "```bgforge-mls-string\n" + `${str}` + "\n```",
+                    value: `\`\`\`bgforge-mls-string\n${str}\n\`\`\``,
                 },
             };
             const inlay = this.stringToInlay(str);

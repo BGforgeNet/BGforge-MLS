@@ -252,9 +252,6 @@ end
             const refs = findReferences(text, { line: 1, character: 10 }, TEST_URI, true, index);
             // Local refs only; same-URI cross-file entry excluded
             expect(refs.length).toBeGreaterThan(0);
-            // No duplicates from index
-            const indexDupes = refs.filter(r => r.uri === TEST_URI &&
-                r.range.start.line === 3 && r.range.start.character === 4);
             // The index entry is excluded; the local occurrence at that line would be from AST traversal
             expect(refs.length).toBeLessThanOrEqual(3);
         });

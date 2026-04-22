@@ -580,10 +580,10 @@ describe("fallout-ssl compiler", () => {
             // The first compile's signal gets aborted by the second; we mock that scenario
             // by having the compiler resolve but checking signal.aborted in the path.
             // Since AbortController interaction is internal, we test via two overlapping calls.
-            mockBuiltinCompiler.mockImplementation(async ({ signal }: { signal: AbortSignal }) => {
+            mockBuiltinCompiler.mockImplementation(async (_opts: { signal: AbortSignal }) => {
                 // Yield so the second compile can abort this one
                 await new Promise<void>((resolve) => { setTimeout(resolve, 0); });
-                // At this point signal may be aborted if second compile ran
+                // signal may be aborted if the second compile ran by now
                 return { stdout: "", returnCode: 0 };
             });
 

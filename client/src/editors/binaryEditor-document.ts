@@ -247,7 +247,7 @@ export class BinaryDocument implements vscode.CustomDocument {
 }
 
 function cloneParseResult(parseResult: ParseResult): ParseResult {
-    const cloned = JSON.parse(JSON.stringify(parseResult)) as ParseResult;
+    const cloned = structuredClone(parseResult);
     if (parseResult.sourceData) {
         cloned.sourceData = new Uint8Array(parseResult.sourceData);
     }

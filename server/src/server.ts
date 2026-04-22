@@ -126,8 +126,8 @@ connection.onInitialize((params: InitializeParams) => {
     const capabilities = params.capabilities;
     // Does the client support the `workspace/configuration` request?
     // If not, we fall back using global settings.
-    hasConfigurationCapability = Boolean(capabilities.workspace && !!capabilities.workspace.configuration);
-    hasWorkspaceFolderCapability = Boolean(capabilities.workspace && !!capabilities.workspace.workspaceFolders);
+    hasConfigurationCapability = Boolean(capabilities.workspace?.configuration);
+    hasWorkspaceFolderCapability = Boolean(capabilities.workspace?.workspaceFolders);
     hasFileWatchingCapability = Boolean(capabilities.workspace?.didChangeWatchedFiles?.dynamicRegistration);
 
     const result: InitializeResult = {
@@ -492,7 +492,8 @@ documents.onDidSave(async (change) => {
         return;
     }
 
-    const validate = (await getDocumentSettings(uri)).validate;
+    const settings = await getDocumentSettings(uri);
+    const validate = settings.validate;
     if (shouldValidateOnSave(validate)) {
         // Cancel any pending debounced compile for this URI — save takes priority
         // and must not race with a stale onDidChangeContent compilation.
@@ -528,7 +529,8 @@ documents.onDidChangeContent(async (event) => {
 
     clearDiagnostics(uri);
 
-    const validate = (await getDocumentSettings(uri)).validate;
+    const settings = await getDocumentSettings(uri);
+    const validate = settings.validate;
     if (shouldValidateOnChange(validate)) {
         compileDebouncer.schedule(normUri, () => {
             void compile(uri, langId, false, text).catch(logCompileError);

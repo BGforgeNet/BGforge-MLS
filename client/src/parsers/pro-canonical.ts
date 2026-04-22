@@ -361,7 +361,7 @@ const proCanonicalDocumentSchema = z.strictObject({
         case 0:
             if (!sections.itemProperties) {
                 ctx.addIssue({ code: "custom", path: ["sections", "itemProperties"], message: "itemProperties is required for item PRO snapshots" });
-                return;
+                break;
             }
             switch (sections.itemProperties.subType) {
                 case 0:
@@ -397,7 +397,7 @@ const proCanonicalDocumentSchema = z.strictObject({
         case 2:
             if (!sections.sceneryProperties) {
                 ctx.addIssue({ code: "custom", path: ["sections", "sceneryProperties"], message: "sceneryProperties is required for scenery PRO snapshots" });
-                return;
+                break;
             }
             switch (sections.sceneryProperties.subType) {
                 case 0:
