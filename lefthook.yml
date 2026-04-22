@@ -1,0 +1,17 @@
+# Pre-commit static checks. Mirrors the fast gates in scripts/test.sh Phase 1
+# (sans unit tests) so CI-breaking issues like unused exports, type errors,
+# and lint regressions fail locally before a commit lands.
+
+pre-commit:
+  parallel: true
+  commands:
+    knip:
+      run: pnpm knip
+    knip-prod:
+      run: pnpm knip:prod
+    oxlint:
+      run: pnpm exec oxlint
+    typecheck-server:
+      run: pnpm exec tsc --noEmit --project server/tsconfig.json
+    typecheck-client:
+      run: pnpm exec tsc --noEmit --project client/tsconfig.json
