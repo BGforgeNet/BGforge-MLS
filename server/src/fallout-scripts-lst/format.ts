@@ -72,7 +72,7 @@ export function formatScriptsLst(rawText: string): FormatResult {
         : rawLines;
 
     // Parse lines; track which can be formatted and collect column widths
-    const parsed: Array<ParsedLine | null> = lines.map(parseLine);
+    const parsed: Array<ParsedLine | null> = lines.map(line => parseLine(line));
 
     let maxFilenameWidth = 0;
     let maxCommentWidth = 0;

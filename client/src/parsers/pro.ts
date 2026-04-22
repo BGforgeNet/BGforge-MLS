@@ -175,7 +175,7 @@ function parseHeader(data: HeaderData, errors: string[]): ParsedGroup {
     const objectType = (data.objectTypeAndId >> 24) & 0xFF;
     const objectId = data.objectTypeAndId & 0x00FFFFFF;
     const frmType = (data.frmTypeAndId >> 24) & 0xFF;
-    const frmId = data.frmTypeAndId & 0x00_ff_ff_ff;
+    const frmId = data.frmTypeAndId & 0x00_FF_FF_FF;
 
     return group("Header", [
         enumField("Object Type", objectType, ObjectType, 0x00, 1, errors),
@@ -371,7 +371,7 @@ function parseCritter(data: CritterData, errors: string[]): ParsedGroup[] {
             enumField("Body Type", data.bodyType, BodyType, 0x1_90, 4, errors),
             field("Experience Value", data.expValue, 0x1_94, 4, "uint32"),
             enumField("Kill Type", data.killType, KillType, 0x1_98, 4, errors),
-            enumField("Damage Type", data.damageType, DamageType, 0x1_9c, 4, errors),
+            enumField("Damage Type", data.damageType, DamageType, 0x1_9C, 4, errors),
         ]),
     ];
 }

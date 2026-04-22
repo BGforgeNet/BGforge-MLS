@@ -83,11 +83,11 @@ import { createWebviewState, registerNode, resetState } from "./binaryEditor-web
         sidebarEl?.classList.add("hidden");
     }
 
-    window.addEventListener("error", (event) => {
+    globalThis.addEventListener("error", (event) => {
         showFatalError(event.message || "Unhandled binary editor error", event.error);
     });
 
-    window.addEventListener("unhandledrejection", (event) => {
+    globalThis.addEventListener("unhandledrejection", (event) => {
         const reason = event.reason;
         const message = reason instanceof Error ? reason.message : String(reason);
         showFatalError(message || "Unhandled binary editor promise rejection", reason);

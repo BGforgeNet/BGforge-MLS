@@ -84,7 +84,7 @@ export function buildTreeHtml(data: DialogData): string {
     const entryPointNames = data.entryPoints.filter((name) => name.startsWith("Node"));
     const entries = entryPointNames
         .map((name) => nodeMap.get(name))
-        .filter((n): n is DialogNode => Boolean(n));
+        .filter((n): n is DialogNode => n !== undefined);
 
     // First pass: compute minimum depth for each node (closest to root wins)
     const minDepth = new Map<string, number>();

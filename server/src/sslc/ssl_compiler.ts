@@ -37,7 +37,7 @@ export async function ssl_compile(opts: {
     let cmdArgs = opts.options
         .split(" ")
         .map((s) => s.trim())
-        .filter((s) => s);
+        .filter(Boolean);
 
     if (opts.headersDir) {
         if (cmdArgs.some((s) => s.startsWith("-I"))) {

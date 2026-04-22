@@ -34,7 +34,7 @@ function loadFixtures(subDir: string): Array<{ name: string; proPath: string; js
 }
 
 const GOOD_DIRS = ["misc", "walls", "tiles", "critters", "scenery", "items"];
-const goodFixtures = GOOD_DIRS.flatMap(loadFixtures);
+const goodFixtures = GOOD_DIRS.flatMap(dir => loadFixtures(dir));
 
 describe("PRO parser - good fixtures", () => {
     it.each(goodFixtures)("parses $name correctly", ({ proPath, jsonPath }) => {

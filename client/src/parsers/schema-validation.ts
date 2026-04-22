@@ -15,7 +15,7 @@ class SchemaValidationError extends Error {
 
     constructor(context: string, issues: readonly SchemaValidationIssue[]) {
         const details = issues.map((issue) => {
-            const path = issue.path.length > 0 ? issue.path.map((segment) => String(segment)).join(".") : "<root>";
+            const path = issue.path.length > 0 ? issue.path.map(String).join(".") : "<root>";
             return `${path}: ${issue.message} (actual=${JSON.stringify(issue.actual)})`;
         }).join("; ");
         super(`${context}: ${details}`);

@@ -144,7 +144,7 @@ export function loadStaticSymbols(langId: string): IndexedSymbol[] {
         return [];
     }
 
-    return items.map(convertToSymbol);
+    return items.map(item => convertToSymbol(item));
 }
 
 /**

@@ -102,7 +102,7 @@ function loadProFiles(subDir: string): Array<{ name: string; path: string }> {
 }
 
 const GOOD_DIRS = ["misc", "walls", "tiles", "critters", "scenery", "items"];
-const fixtures = GOOD_DIRS.flatMap(loadProFiles);
+const fixtures = GOOD_DIRS.flatMap(dir => loadProFiles(dir));
 
 describe("PRO round-trip via schemas (read -> write -> byte-identical)", () => {
     it.each(fixtures)("$name round-trips to identical bytes", ({ path: proPath }) => {

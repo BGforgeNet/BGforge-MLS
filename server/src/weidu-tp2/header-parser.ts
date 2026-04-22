@@ -250,9 +250,6 @@ function extractVariableInfo(node: SyntaxNode, uri: string): VariableInfo | null
             declarationKind = DeclarationKind.Sprint;
             inferredType = "string";
             break;
-        case SyntaxType.PatchReadByte:
-        case SyntaxType.PatchReadShort:
-        case SyntaxType.PatchReadLong:
         default:
             declarationKind = DeclarationKind.Set;
             inferredType = "int";

@@ -130,7 +130,7 @@ describe("generateUdlXml", () => {
                     });
                 } catch (e) {
                     const stderr = (e as { stderr?: Buffer }).stderr?.toString() ?? "";
-                    throw new Error(`XSD validation failed for ${lang.name}:\n${stderr}`);
+                    throw new Error(`XSD validation failed for ${lang.name}:\n${stderr}`, { cause: e });
                 }
             }
         } finally {
@@ -158,7 +158,7 @@ describe("generateUdlXml", () => {
                     });
                 } catch (e) {
                     const stderr = (e as { stderr?: Buffer }).stderr?.toString() ?? "";
-                    throw new Error(`XSD validation failed for static file ${file}:\n${stderr}`);
+                    throw new Error(`XSD validation failed for static file ${file}:\n${stderr}`, { cause: e });
                 }
             }
         } finally {

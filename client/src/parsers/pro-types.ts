@@ -381,7 +381,7 @@ export const CRITTER_BONUS_DT: CritterFieldDef[] = [
 ];
 
 export const CRITTER_BONUS_DR: CritterFieldDef[] = [
-    ["Normal", "drNormalBonus", 0x1_1c, "int32"],
+    ["Normal", "drNormalBonus", 0x1_1C, "int32"],
     ["Laser", "drLaserBonus", 0x1_20, "int32"],
     ["Fire", "drFireBonus", 0x1_24, "int32"],
     ["Plasma", "drPlasmaBonus", 0x1_28, "int32"],

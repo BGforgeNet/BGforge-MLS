@@ -106,7 +106,7 @@ function formatCallExpr(node: SyntaxNode): string {
     const funcName = func?.text ?? "";
 
     const argNodes = node.childrenForFieldName("args");
-    const args = argNodes.map(formatArgument);
+    const args = argNodes.map(arg => formatArgument(arg));
 
     return funcName + "(" + args.join(", ") + ")";
 }

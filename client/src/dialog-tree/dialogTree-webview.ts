@@ -147,11 +147,11 @@
         sidebar?.classList.add("hidden");
     }
 
-    window.addEventListener("error", (event) => {
+    globalThis.addEventListener("error", (event) => {
         showFatalError(event.message || "Unhandled dialog preview error", event.error);
     });
 
-    window.addEventListener("unhandledrejection", (event) => {
+    globalThis.addEventListener("unhandledrejection", (event) => {
         const reason = event.reason;
         const message = reason instanceof Error ? reason.message : String(reason);
         showFatalError(message || "Unhandled dialog preview promise rejection", reason);

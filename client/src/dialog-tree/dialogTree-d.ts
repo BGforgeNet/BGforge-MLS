@@ -216,7 +216,7 @@ export function buildDTreeHtml(data: DDialogData): string {
 
         // Render modify blocks as compact entries
         if (modifyBlocks.length > 0) {
-            const modifyHtml = modifyBlocks.map(renderModifyBlock).join("");
+            const modifyHtml = modifyBlocks.map(block => renderModifyBlock(block)).join("");
             innerParts.push(`<details class="node">
                 <summary><span class="codicon codicon-tools"></span> <span class="block-header">Modifications</span> <span class="speaker-label">(${modifyBlocks.length})</span></summary>
                 <div class="children">${modifyHtml}</div>

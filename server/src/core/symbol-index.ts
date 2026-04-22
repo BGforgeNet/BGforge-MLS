@@ -332,7 +332,7 @@ export class Symbols {
      * Use for go-to-definition on function calls.
      */
     lookupAllCallables(name: string, context?: QueryContext): CallableSymbol[] {
-        return this.lookupAll(name, context).filter(isCallableSymbol);
+        return this.lookupAll(name, context).filter((s): s is CallableSymbol => isCallableSymbol(s));
     }
 
     /**
@@ -350,7 +350,7 @@ export class Symbols {
      * Returns matches sorted by scope precedence, narrowed to VariableSymbol[].
      */
     lookupAllVariables(name: string, context?: QueryContext): VariableSymbol[] {
-        return this.lookupAll(name, context).filter(isVariableSymbol);
+        return this.lookupAll(name, context).filter((s): s is VariableSymbol => isVariableSymbol(s));
     }
 
     // -------------------------------------------------------------------------
