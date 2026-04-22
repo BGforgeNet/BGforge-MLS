@@ -114,7 +114,8 @@ export function evaluateCondition(
     } catch (e) {
         throw new Error(
             `Cannot evaluate loop condition "${condition}" with ${loopVar}=${value}. ` +
-            `Substituted: "${substituted}". Error: ${e instanceof Error ? e.message : e}`
+            `Substituted: "${substituted}". Error: ${e instanceof Error ? e.message : e}`,
+            { cause: e },
         );
     }
 }

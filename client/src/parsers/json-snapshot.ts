@@ -259,6 +259,6 @@ export function loadBinaryJsonSnapshot(
         return { parseResult: fromBinaryJsonDocument(document) };
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        throw new Error(`Invalid JSON snapshot: ${message}`);
+        throw new Error(`Invalid JSON snapshot: ${message}`, { cause: error });
     }
 }

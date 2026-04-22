@@ -215,7 +215,13 @@
         // (extension side) and `vscode.postMessage()` from
         // `acquireVsCodeApi()` (webview side) are not the browser's
         // `window.postMessage`; neither takes a `targetOrigin`.
-        "unicorn/require-post-message-target-origin": "off"
+        "unicorn/require-post-message-target-origin": "off",
+
+        // Rule pushes away from `.map(x => ({ ...x, extra }))` for perf, but
+        // the alternatives either mutate the input (usually wrong) or have
+        // equivalent perf (`Object.assign`). Spreading to produce a fresh
+        // object is the idiomatic copy-on-write pattern here.
+        "oxc/no-map-spread": "off"
     },
     "overrides": [
         {
