@@ -3,6 +3,7 @@
  */
 
 import type { ParsedField, ParsedFieldType, ParsedGroup } from "./types";
+import { HEADER_SIZE } from "./map-schemas";
 
 export const MAP_OBJECT_BASE_SIZE = 0x48;
 export const MAP_OBJECT_DATA_HEADER_SIZE = 0x0C;
@@ -15,7 +16,7 @@ const FIRST_EXIT_GRID_PID = 0x5_00_00_10;
 const LAST_EXIT_GRID_PID = 0x5_00_00_17;
 export const HEADER_PADDING_OFFSET = 0x3C;
 export const HEADER_PADDING_SIZE = 176;
-export const HEADER_OPAQUE_END = 444; // HEADER_SIZE from map-schemas
+export const HEADER_OPAQUE_END = HEADER_SIZE;
 
 export function field(
     name: string,
