@@ -227,6 +227,13 @@ activate()
   +-> Start server (server/out/server.js)
 ```
 
+**VSCode engine floor (1.73):** The extension requires VSCode 1.73 or later. The
+binding constraint is `vscode.l10n.t()` in `client/src/indicator.ts`, which was
+introduced in VSCode 1.73 (November 2022). Earlier APIs used by the extension —
+`vscode.CustomEditorProvider` (1.46) and the `semanticTokenTypes` contribution
+point (1.43) — are all satisfied by 1.73. The floor should be raised if a feature
+requiring a later release is added.
+
 ### TypeScript Language Service Plugins
 
 Plugins intercept tsserver calls for transpiler files. They run inside the tsserver

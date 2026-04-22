@@ -10,7 +10,7 @@
         "url": "https://github.com/BGforgeNet/BGforge-MLS/client"
     },
     "engines": {
-        "vscode": "^1.69.2"
+        "vscode": "^1.73.0"
     },
     "scripts": {
         "test": "./scripts/test.sh"
