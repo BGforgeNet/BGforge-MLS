@@ -480,4 +480,32 @@ describe("runProcess", () => {
         expect(err).toBeTruthy();
         expect((err as NodeJS.ErrnoException).code).toBe("ABORT_ERR");
     });
+
+    it("passes timeout option to execFile when provided", async () => {
+        mockExecFile.mockImplementation((...args: unknown[]) => {
+            const lastArg = args[args.length - 1];
+            if (typeof lastArg === "function") {
+                (lastArg as (err: null, stdout: string, stderr: string) => void)(null, "ok", "");
+            }
+        });
+
+        await runProcess("echo", ["hello"], ".", undefined, 5000);
+
+        const options = mockExecFile.mock.calls[0][2] as { timeout?: number };
+        expect(options.timeout).toBe(5000);
+    });
+
+    it("uses default timeout of 60000ms when no timeout provided", async () => {
+        mockExecFile.mockImplementation((...args: unknown[]) => {
+            const lastArg = args[args.length - 1];
+            if (typeof lastArg === "function") {
+                (lastArg as (err: null, stdout: string, stderr: string) => void)(null, "ok", "");
+            }
+        });
+
+        await runProcess("echo", ["hello"], ".");
+
+        const options = mockExecFile.mock.calls[0][2] as { timeout?: number };
+        expect(options.timeout).toBe(60_000);
+    });
 });

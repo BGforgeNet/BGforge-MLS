@@ -23,6 +23,9 @@ export async function ssl_compile(opts: {
     headersDir: string;
     interactive: boolean;
     signal?: AbortSignal;
+    /** Wall-clock timeout in ms. Defaults to 60 000 ms. On expiry the child is
+     *  killed and the function resolves with returnCode 1 and a timeout message. */
+    timeoutMs?: number;
 }) {
     if (!isSslcAvailable()) {
         const msg = "Built-in SSL compiler not available. Install the sslc-emscripten-noderawfs package or configure an external compiler path in settings.";
@@ -87,11 +90,30 @@ export async function ssl_compile(opts: {
         stderr.push(text);
     });
 
+    const timeoutMs = opts.timeoutMs ?? 60_000;
+
     return new Promise<{
         returnCode: number;
         stdout: string;
         stderr: string;
-    }>((resolve, _reject) => {
+    }>((resolve) => {
+        let settled = false;
+
+        function settle(result: { returnCode: number; stdout: string; stderr: string }) {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            resolve(result);
+        }
+
+        // Kill on wall-clock timeout; resolve with an error result.
+        const timer = setTimeout(() => {
+            const msg = `Built-in compiler timed out after ${timeoutMs}ms`;
+            conlog(msg);
+            if (!p.killed) p.kill();
+            settle({ returnCode: 1, stdout: stdout.join(""), stderr: msg });
+        }, timeoutMs);
+
         // Handle fork failures (e.g., ENOENT when compiler module is missing).
         // Without this, the promise would never resolve if fork fails before "close".
         p.on("error", (err) => {
@@ -116,7 +138,7 @@ export async function ssl_compile(opts: {
                     stderr.join("") +
                     "\n",
             );
-            resolve({
+            settle({
                 returnCode: code !== null ? code : 1, // If code is null, assume error
                 stdout: stdout.join(""),
                 stderr: stderr.join(""),

@@ -338,18 +338,22 @@ export async function removeTmpFile(tmpPath: string) {
     }
 }
 
-/** Run an external process and return a promise that resolves when it finishes. */
+/** Run an external process and return a promise that resolves when it finishes.
+ *  timeoutMs defaults to 60 000 ms — long enough for real sslc/weidu compiles on
+ *  slow machines, short enough to surface hangs. Node kills the child on timeout
+ *  and calls back with err.killed === true + err.signal === "SIGTERM". */
 export function runProcess(
     executable: string,
     args: readonly string[],
     cwd: string,
     signal?: AbortSignal,
+    timeoutMs = 60_000,
 ): Promise<{ err: cp.ExecFileException | null; stdout: string }> {
     const shell = needsShell(executable);
     conlog(`${executable} ${args.join(" ")}`);
 
     return new Promise((resolve) => {
-        cp.execFile(executable, [...args], { cwd, shell, signal }, (err, stdout: string, stderr: string) => {
+        cp.execFile(executable, [...args], { cwd, shell, signal, timeout: timeoutMs }, (err, stdout: string, stderr: string) => {
             conlog("stdout: " + stdout);
             if (stderr) {
                 conlog("stderr: " + stderr);
