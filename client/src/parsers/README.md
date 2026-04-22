@@ -7,7 +7,10 @@ Extensible system for parsing binary file formats.
 - `types.ts` - Interfaces: `BinaryParser`, `ParseResult`, `ParsedGroup`, `ParsedField`
 - `registry.ts` - `ParserRegistry` maps file extensions to parsers
 - `index.ts` - Exports and registers all parsers
-- `pro-canonical.ts` / `map-canonical.ts` - Canonical machine data models used for JSON snapshots and serialization
+- `pro-canonical-schemas.ts` / `map-canonical-schemas.ts` - Zod schemas and types for canonical data models
+- `pro-canonical-reader.ts` / `map-canonical-reader.ts` - Display-tree readers that rebuild canonical documents
+- `pro-canonical-writer.ts` / `map-canonical-writer.ts` - Binary serializers from canonical documents
+- `pro-canonical.ts` / `map-canonical.ts` - Barrel re-exports preserving the public surface
 - `pro-json-snapshot.ts` / `map-json-snapshot.ts` - Format-specific snapshot adapters
 - `presentation-schema.ts` - Format-specific presentation metadata for labels, enum/flag options, numeric formatting, and editability
 
@@ -30,7 +33,7 @@ Use this end-to-end checklist when adding a new binary format to avoid missing o
 
 2. Canonical model and serializer
 
-- Add `client/src/parsers/<format>-canonical.ts` with a strict schema (`zod`), rebuild helpers, and serializer.
+- Add `client/src/parsers/<format>-canonical-schemas.ts` (zod schema + types), `<format>-canonical-reader.ts` (rebuild helpers), and `<format>-canonical-writer.ts` (serializer); expose via a `<format>-canonical.ts` barrel.
 - Ensure parser output populates `ParseResult.document` with the canonical document.
 - Ensure serializer prefers canonical document data over display tree data.
 
