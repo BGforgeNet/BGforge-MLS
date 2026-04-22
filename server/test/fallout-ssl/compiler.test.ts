@@ -412,10 +412,10 @@ describe("fallout-ssl compiler", () => {
 
             await compile("file:///project/test.ssl", settings, false, "code");
 
-            const compileCalls = mockExecFile.mock.calls.filter(
+            const compileCall = mockExecFile.mock.calls.find(
                 (call: unknown[]) => !(call[1] as string[]).some((a: string) => a === "--version")
             );
-            const args = compileCalls[0][1] as string[];
+            const args = compileCall![1] as string[];
             const outIndex = args.indexOf("-o");
             expect(outIndex).toBeGreaterThanOrEqual(0);
             expect(args[outIndex + 1]).toMatch(/bgforge-mls\/tmp-[0-9a-f]{8}-test\.int$/);

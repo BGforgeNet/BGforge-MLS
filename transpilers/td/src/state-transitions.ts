@@ -72,6 +72,10 @@ interface PendingTransition {
     ref: TDTransition | undefined;
 }
 
+function makePendingTransition(): PendingTransition {
+    return { ref: undefined };
+}
+
 // =========================================================================
 // State Processing
 // =========================================================================
@@ -122,7 +126,7 @@ function processStateStatement(
     state: TDState,
     vars: VarsContext,
     funcs: FuncsContext,
-    pending: PendingTransition = { ref: undefined },
+    pending: PendingTransition = makePendingTransition(),
 ) {
     if (stmt.isKind(SyntaxKind.ExpressionStatement)) {
         const expr = stmt.getExpression();

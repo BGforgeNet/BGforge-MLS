@@ -17,6 +17,7 @@ const FIXTURES = path.resolve("client/testFixture/proto");
 function jsonClean(obj: unknown): unknown {
     // Intentional JSON round-trip: drops `undefined` values to match the
     // deserialised fixture shape. `structuredClone` would preserve them.
+    // eslint-disable-next-line unicorn/prefer-structured-clone
     return JSON.parse(JSON.stringify(obj));
 }
 

@@ -81,7 +81,7 @@ export function findScopedReferences(rootNode: Node, symbolInfo: SslSymbolScope)
     const searchRoot = resolveSearchRoot(symbolInfo, rootNode);
 
     if (symbolInfo.definitionNode) {
-        function visitResolved(node: Node): void {
+        const visitResolved = (node: Node): void => {
             if (node.type === SyntaxType.Identifier) {
                 if (node.id === symbolInfo.definitionNode!.id) {
                     refs.push(node);
@@ -96,7 +96,7 @@ export function findScopedReferences(rootNode: Node, symbolInfo: SslSymbolScope)
             for (const child of node.children) {
                 visitResolved(child);
             }
-        }
+        };
 
         visitResolved(searchRoot);
         return refs;

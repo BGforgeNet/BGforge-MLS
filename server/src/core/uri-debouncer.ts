@@ -6,8 +6,11 @@
 
 export class UriDebouncer<K extends string = string> {
     private readonly timers = new Map<K, ReturnType<typeof setTimeout>>();
+    private readonly delayMs: number;
 
-    constructor(private readonly delayMs: number) {}
+    constructor(delayMs: number) {
+        this.delayMs = delayMs;
+    }
 
     /** Schedule fn to run after delayMs. Cancels any pending call for the same key. */
     schedule(key: K, fn: () => void): void {

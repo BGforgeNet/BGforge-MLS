@@ -492,8 +492,8 @@ documents.onDidSave(async (change) => {
         return;
     }
 
-    const settings = await getDocumentSettings(uri);
-    const validate = settings.validate;
+    const docSettings = await getDocumentSettings(uri);
+    const validate = docSettings.validate;
     if (shouldValidateOnSave(validate)) {
         // Cancel any pending debounced compile for this URI — save takes priority
         // and must not race with a stale onDidChangeContent compilation.
@@ -529,8 +529,8 @@ documents.onDidChangeContent(async (event) => {
 
     clearDiagnostics(uri);
 
-    const settings = await getDocumentSettings(uri);
-    const validate = settings.validate;
+    const docSettings = await getDocumentSettings(uri);
+    const validate = docSettings.validate;
     if (shouldValidateOnChange(validate)) {
         compileDebouncer.schedule(normUri, () => {
             void compile(uri, langId, false, text).catch(logCompileError);
