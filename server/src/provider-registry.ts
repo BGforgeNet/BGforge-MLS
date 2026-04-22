@@ -68,6 +68,9 @@ class ProviderRegistry {
         this.context = context;
         for (const provider of this.providers.values()) {
             try {
+                // Sequential init is intentional: providers share tree-sitter
+                // resources and data-loading must happen one at a time.
+                // eslint-disable-next-line no-await-in-loop
                 await provider.init(context);
             } catch (error) {
                 conlog(`Failed to initialize provider ${provider.id}: ${error}`);

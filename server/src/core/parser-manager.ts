@@ -69,6 +69,9 @@ class ParserManager {
         // crashing the server.
         for (const parser of this.parsers.values()) {
             try {
+                // Tree-sitter WASM init must be sequential — parallel init
+                // causes WASM memory corruption on some runtimes.
+                // eslint-disable-next-line no-await-in-loop
                 await parser.module.init();
             } catch (error) {
                 conlog(`Failed to initialize ${parser.name} parser: ${error}`);

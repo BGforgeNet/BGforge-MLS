@@ -382,7 +382,7 @@ describe("fallout-ssl compiler", () => {
                 .then(() => { resolved = true; });
 
             // Let microtasks run
-            await new Promise((r) => setTimeout(r, 0));
+            await new Promise((r) => { setTimeout(r, 0); });
             expect(resolved).toBe(false);
             expect(capturedCallback).toBeDefined();
 
@@ -582,7 +582,7 @@ describe("fallout-ssl compiler", () => {
             // Since AbortController interaction is internal, we test via two overlapping calls.
             mockBuiltinCompiler.mockImplementation(async ({ signal }: { signal: AbortSignal }) => {
                 // Yield so the second compile can abort this one
-                await new Promise<void>((resolve) => setTimeout(resolve, 0));
+                await new Promise<void>((resolve) => { setTimeout(resolve, 0); });
                 // At this point signal may be aborted if second compile ran
                 return { stdout: "", returnCode: 0 };
             });

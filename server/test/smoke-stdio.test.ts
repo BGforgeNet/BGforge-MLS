@@ -82,10 +82,13 @@ async function waitForFile(filePath: string, timeoutMs = 10_000): Promise<void> 
     const start = Date.now();
     while (Date.now() - start < timeoutMs) {
         try {
+            // Polling loop — the await is the polling mechanism itself.
+            // eslint-disable-next-line no-await-in-loop
             await access(filePath);
             return;
         } catch {
-            await new Promise(resolve => setTimeout(resolve, 50));
+            // eslint-disable-next-line no-await-in-loop
+            await new Promise(resolve => { setTimeout(resolve, 50); });
         }
     }
     throw new Error(`Timed out waiting for file ${filePath}`);
@@ -234,7 +237,7 @@ begin("DIALOG", [start]);
         });
 
         await waitForFile(outputPath);
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => { setTimeout(resolve, 200); });
 
         expect(stdout, `Unexpected raw stdout during stdio compile. stderr:\n${stderr}`).not.toContain(
             `Transpiled to ${outputPath}`,

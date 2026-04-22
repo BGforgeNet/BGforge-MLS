@@ -44,6 +44,9 @@ export async function scanWorkspaceFiles(
             const extWithoutDot = ext.startsWith(".") ? ext.slice(1) : ext;
             const files = findFiles(workspaceRoot, extWithoutDot);
 
+            // Per-extension loop; inner Promise.allSettled already parallelizes
+            // the file scan within each extension.
+            // eslint-disable-next-line no-await-in-loop
             const results = await Promise.allSettled(
                 files.map(async (relativePath) => {
                     const absolutePath = join(workspaceRoot, relativePath);

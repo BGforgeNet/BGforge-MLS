@@ -133,6 +133,9 @@ export async function runCli(options: RunOptions): Promise<void> {
         let changed = 0, unchanged = 0;
 
         for (const file of files) {
+            // Sequential processing — CLI mode needs deterministic output and
+            // early exit on first mismatch in check mode.
+            // eslint-disable-next-line no-await-in-loop
             const result = await processFile(file, args.mode);
             if (result === "error") process.exit(1);
             if (result === "changed") {

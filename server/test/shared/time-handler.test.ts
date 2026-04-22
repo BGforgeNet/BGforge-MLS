@@ -36,7 +36,7 @@ describe("shared/time-handler", () => {
         it("async handler exceeding threshold logs the correct message", async () => {
             vi.useFakeTimers();
             const slowFn = (): Promise<string> =>
-                new Promise((resolve) => setTimeout(() => resolve("done"), 60));
+                new Promise((resolve) => { setTimeout(() => resolve("done"), 60); });
             const handler = timeHandler("slowOp", slowFn, { warn: warnSpy, thresholdMs: 50 });
             const promise = handler();
             await vi.runAllTimersAsync();

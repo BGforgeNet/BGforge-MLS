@@ -84,6 +84,10 @@
         // TS lib target predates it. Re-enable when lib is bumped.
         "unicorn/no-array-sort": "off",
 
+        // False positive when mocking Node.js `child_process` (which uses
+        // EventEmitter, not EventTarget, as the base class).
+        "unicorn/prefer-event-target": "off",
+
         // `.at(-1)` is modern but slower than `arr[arr.length - 1]` in hot
         // parser paths; keep both idioms legal.
         "unicorn/prefer-at": "off",

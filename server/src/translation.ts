@@ -389,6 +389,9 @@ export class Translation {
 
         for (const ext of extensions) {
             const traFiles = findFiles(traDir, ext);
+            // Sequential per extension is intentional: later extensions can
+            // override entries from earlier ones, so ordering matters.
+            // eslint-disable-next-line no-await-in-loop
             const { results, errors } = await this.loadFiles(traDir, traFiles, ext);
             if (errors.length > 0) {
                 conlog(errors);

@@ -248,7 +248,7 @@ describe("weidu-compile", () => {
                 .then(() => { resolved = true; });
 
             // Let microtasks run
-            await new Promise((r) => setTimeout(r, 0));
+            await new Promise((r) => { setTimeout(r, 0); });
             expect(resolved).toBe(false);
             expect(capturedCallback).toBeDefined();
 
