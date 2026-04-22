@@ -69,6 +69,24 @@ interface QueryOptions {
     limit?: number;
 }
 
+/**
+ * Constructor options for Symbols.
+ */
+interface SymbolsOptions {
+    /**
+     * Maximum number of files to retain in the index.
+     *
+     * When the limit is exceeded the least-recently-updated file is evicted
+     * (Map insertion order — mirroring text-cache.ts).  2000 files is a
+     * generous upper bound for typical workspaces; keeps memory bounded while
+     * allowing large mod projects to stay fully indexed during a session.
+     */
+    maxFiles?: number;
+}
+
+/** Default cap — enough for large workspaces, bounded against runaway growth. */
+const DEFAULT_MAX_FILES = 2000;
+
 // =============================================================================
 // Symbols
 // =============================================================================
@@ -84,8 +102,11 @@ export class Symbols {
     // Primary storage
     // -------------------------------------------------------------------------
 
-    /** Per-file symbol storage: uri -> symbols */
+    /** Per-file symbol storage: uri -> symbols (insertion order = LRU order) */
     private readonly files: Map<NormalizedUri, readonly IndexedSymbol[]> = new Map();
+
+    /** Maximum number of files retained; oldest-inserted is evicted on overflow. */
+    private readonly maxFiles: number;
 
     /** Static symbols (built-in, from YAML/JSON) */
     private staticSymbols: readonly IndexedSymbol[] = [];
@@ -97,6 +118,10 @@ export class Symbols {
     /** Name -> Symbols (multiple symbols can share a name across scopes) */
     private readonly byName: Map<string, IndexedSymbol[]> = new Map();
 
+    constructor(options?: SymbolsOptions) {
+        this.maxFiles = options?.maxFiles ?? DEFAULT_MAX_FILES;
+    }
+
     // -------------------------------------------------------------------------
     // Storage operations
     // -------------------------------------------------------------------------
@@ -104,17 +129,32 @@ export class Symbols {
     /**
      * Update all symbols for a file.
      * Replaces any existing symbols for that file.
+     *
+     * Re-inserting a URI that already exists moves it to the most-recently-used
+     * position in the LRU order, so it is not the next eviction candidate.
+     * When the file count exceeds maxFiles the least-recently-updated file is
+     * removed (Map insertion order, mirroring text-cache.ts).
      */
     updateFile(uri: NormalizedUri, symbols: readonly IndexedSymbol[]): void {
-        // Remove old symbols from indices
+        // Remove old symbols from indices (and from files Map to refresh LRU order)
         this.removeFileFromIndices(uri);
+        this.files.delete(uri);
 
-        // Store new symbols
+        // Store new symbols (re-insertion moves uri to end = most-recent)
         this.files.set(uri, symbols);
 
         // Add to indices
         for (const symbol of symbols) {
             this.addToNameIndex(symbol);
+        }
+
+        // Evict oldest entry when over capacity (Map.keys() yields insertion order)
+        if (this.files.size > this.maxFiles) {
+            const oldestKey = this.files.keys().next().value;
+            if (oldestKey !== undefined) {
+                this.removeFileFromIndices(oldestKey);
+                this.files.delete(oldestKey);
+            }
         }
     }
 
