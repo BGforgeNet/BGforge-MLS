@@ -21,7 +21,7 @@ function createGroupElement(node: BinaryEditorNode): HTMLElement {
     const nameEl = document.createElement("span");
     nameEl.className = "group-name";
     nameEl.textContent = node.name;
-    headerEl.appendChild(nameEl);
+    headerEl.append(nameEl);
 
     const contentEl = document.createElement("div");
     contentEl.className = "group-content";
@@ -44,9 +44,9 @@ function createFieldElement(node: BinaryEditorNode): HTMLElement {
     const nameEl = document.createElement("span");
     nameEl.className = "field-name";
     nameEl.textContent = `${node.name}:`;
-    fieldEl.appendChild(nameEl);
+    fieldEl.append(nameEl);
 
-    fieldEl.appendChild(createFieldValueElement(node));
+    fieldEl.append(createFieldValueElement(node));
 
     const metaEl = document.createElement("span");
     metaEl.className = "field-meta";
@@ -54,21 +54,21 @@ function createFieldElement(node: BinaryEditorNode): HTMLElement {
     const offsetEl = document.createElement("span");
     offsetEl.className = "field-offset";
     offsetEl.textContent = `[${formatOffset(node.offset)}]`;
-    metaEl.appendChild(offsetEl);
+    metaEl.append(offsetEl);
 
     const typeEl = document.createElement("span");
     typeEl.className = "field-type";
     typeEl.textContent = node.valueType ?? "";
-    metaEl.appendChild(typeEl);
+    metaEl.append(typeEl);
 
-    fieldEl.appendChild(metaEl);
+    fieldEl.append(metaEl);
 
     const errorEl = document.createElement("span");
     errorEl.className = "field-error";
     if (node.fieldId) {
         errorEl.dataset.errorFor = node.fieldId;
     }
-    fieldEl.appendChild(errorEl);
+    fieldEl.append(errorEl);
 
     return fieldEl;
 }
@@ -163,7 +163,7 @@ function createEnumSelect(
         option.value = String(numericKey);
         option.textContent = formatEnumDisplayValue(value, numericKey);
         option.selected = numericKey === raw;
-        select.appendChild(option);
+        select.append(option);
     }
 
     return select;
@@ -187,7 +187,7 @@ function createFlagsInput(
         zeroState.dataset.zeroStateFor = fieldId;
         zeroState.textContent = zeroFlagLabel;
         zeroState.classList.toggle("hidden", raw !== 0);
-        container.appendChild(zeroState);
+        container.append(zeroState);
     }
 
     for (const [bit, name] of Object.entries(flagDefs)) {
@@ -216,7 +216,7 @@ function createFlagsInput(
         }
 
         label.append(checkbox, document.createTextNode(name));
-        container.appendChild(label);
+        container.append(label);
     }
 
     return container;
@@ -237,9 +237,9 @@ export function renderMessages(container: Element | null, className: string, mes
     for (const message of messages) {
         const line = document.createElement("div");
         line.textContent = message;
-        wrapper.appendChild(line);
+        wrapper.append(line);
     }
-    container.appendChild(wrapper);
+    container.append(wrapper);
 }
 
 function formatEnumDisplayValue(label: string, rawValue: number): string {

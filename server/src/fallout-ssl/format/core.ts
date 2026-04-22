@@ -494,7 +494,7 @@ export function formatBlock(node: SyntaxNode, depth: number): string {
         const nextChild = children[i + 1]; // undefined at end
         const prevChild = children[i - 1]; // undefined at start
 
-        if (child.text.match(BEGIN_END_REGEX)) {
+        if (BEGIN_END_REGEX.test(child.text)) {
             return;
         }
 

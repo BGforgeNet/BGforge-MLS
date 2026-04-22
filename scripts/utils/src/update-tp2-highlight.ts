@@ -69,10 +69,7 @@ export function buildHighlightPatterns(
     return stanza.items
         .filter((item) => /^\w/.test(item.name))
         .filter((item) => !skipCatchall || !UPPER_CASE_CATCHALL.test(item.name))
-        .map((item): HighlightPattern => ({
-            match: `\\b(${item.name})\\b`,
-            ...(item.deprecated !== undefined ? { name: "invalid.deprecated.bgforge" } : {}),
-        }))
+        .map((item): HighlightPattern => (({match:`\\b(${item.name})\\b`, ...(item.deprecated!==undefined?{name:`invalid.deprecated.bgforge`}:{})})))
         .sort((a, b) => cmpStr(a.match, b.match));
 }
 

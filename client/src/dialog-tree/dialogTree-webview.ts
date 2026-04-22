@@ -137,7 +137,7 @@
         wrapper.className = "errors";
         const line = document.createElement("div");
         line.textContent = detail;
-        wrapper.appendChild(line);
+        wrapper.append(line);
 
         tree.replaceChildren();
         tree.classList.remove("hidden");

@@ -142,10 +142,10 @@ function validateDataFile(data: unknown, source: string): DataFile {
         }
         const stanza = value as Record<string, unknown>;
         if (typeof stanza["type"] !== "number") {
-            throw new Error(`Expected numeric 'type' in stanza '${key}' of ${source}`);
+            throw new TypeError(`Expected numeric 'type' in stanza '${key}' of ${source}`);
         }
         if (!Array.isArray(stanza["items"])) {
-            throw new Error(`Expected 'items' array in stanza '${key}' of ${source}`);
+            throw new TypeError(`Expected 'items' array in stanza '${key}' of ${source}`);
         }
         result[key] = stanza as unknown as DataStanza;
     }
@@ -294,12 +294,7 @@ function buildCompletionParams(item: DataItem): CompletionParams | undefined {
 function mapArgsToRows(args: readonly DataArg[], category: "int" | "str"): readonly VarRow[] {
     return args
         .filter((a) => WEIDU_JSDOC_TYPES.get(a.type)?.category === category)
-        .map((a) => ({
-            type: a.type,
-            name: a.name,
-            ...(a.required ? { required: true } : a.default !== undefined ? { default: a.default } : {}),
-            ...(a.doc ? { description: a.doc } : {}),
-        }));
+        .map((a) => (({type:a.type,name:a.name, ...(a.required?{required:true}:a.default!==undefined?{default:a.default}:{}), ...(a.doc?{description:a.doc}:{})})));
 }
 
 /** Build the WeiDU param table string from a data item's args and rets. */

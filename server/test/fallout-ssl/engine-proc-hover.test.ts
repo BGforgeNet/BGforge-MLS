@@ -29,7 +29,9 @@ end
         const symbol = lookupLocalSymbol("map_enter_p_proc", text, TEST_URI);
 
         expect(symbol).toBeDefined();
-        const value = (symbol?.hover?.contents as { value: string }).value;
+        const contents = symbol?.hover?.contents;
+        expect(contents).toBeDefined();
+        const value = (contents as { value: string }).value;
 
         // Engine doc must be present
         expect(value).toContain("Called once by the engine");
@@ -49,7 +51,9 @@ end
         const symbol = lookupLocalSymbol("map_enter_p_proc", text, TEST_URI);
 
         expect(symbol).toBeDefined();
-        const value = (symbol?.hover?.contents as { value: string }).value;
+        const contents = symbol?.hover?.contents;
+        expect(contents).toBeDefined();
+        const value = (contents as { value: string }).value;
 
         // User JSDoc must be present
         expect(value).toContain("My custom description.");
@@ -73,7 +77,9 @@ end
         const symbol = lookupLocalSymbol("my_custom_proc", text, TEST_URI);
 
         expect(symbol).toBeDefined();
-        const value = (symbol?.hover?.contents as { value: string }).value;
+        const contents = symbol?.hover?.contents;
+        expect(contents).toBeDefined();
+        const value = (contents as { value: string }).value;
 
         // No engine doc, no separator
         expect(value).not.toContain("Called once by the engine");
@@ -89,7 +95,9 @@ end
         const symbol = lookupLocalSymbol("map_exit_p_proc", text, TEST_URI);
 
         expect(symbol).toBeDefined();
-        const value = (symbol?.hover?.contents as { value: string }).value;
+        const contents = symbol?.hover?.contents;
+        expect(contents).toBeDefined();
+        const value = (contents as { value: string }).value;
 
         expect(value).toContain("Called when the player leaves the map");
     });
@@ -103,7 +111,9 @@ end
         const symbol = lookupLocalSymbol("start", text, TEST_URI);
 
         expect(symbol).toBeDefined();
-        const value = (symbol?.hover?.contents as { value: string }).value;
+        const contents = symbol?.hover?.contents;
+        expect(contents).toBeDefined();
+        const value = (contents as { value: string }).value;
 
         expect(value).toContain("Called by the engine when the script is first run");
     });

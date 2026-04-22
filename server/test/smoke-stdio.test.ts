@@ -159,7 +159,7 @@ describe("LSP stdio smoke test", () => {
             const timer = setTimeout(() => {
                 proc!.kill("SIGKILL");
                 resolve(null);
-            }, 5_000);
+            }, 5000);
             proc!.on("exit", (code) => {
                 clearTimeout(timer);
                 resolve(code);

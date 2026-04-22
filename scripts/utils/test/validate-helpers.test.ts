@@ -87,7 +87,7 @@ describe("optionalBoolean", () => {
 describe("validateArray", () => {
     const mockValidator = (item: unknown, context: string): string => {
         if (typeof item !== "string") {
-            throw new Error(`Expected string in ${context}`);
+            throw new TypeError(`Expected string in ${context}`);
         }
         return item;
     };

@@ -19,24 +19,24 @@ interface NumericRange {
 
 const NUMERIC_TYPE_RANGES: Record<NumericTypeName, NumericRange> = {
     uint8: { min: 0, max: 0xFF },
-    uint16: { min: 0, max: 0xFFFF },
-    uint24: { min: 0, max: 0xFFFFFF },
-    uint32: { min: 0, max: 0xFFFFFFFF },
+    uint16: { min: 0, max: 0xFF_FF },
+    uint24: { min: 0, max: 0xFF_FF_FF },
+    uint32: { min: 0, max: 0xFF_FF_FF_FF },
     int8: { min: -128, max: 127 },
-    int16: { min: -32768, max: 32767 },
-    int24: { min: -8388608, max: 8388607 },
-    int32: { min: -2147483648, max: 2147483647 },
+    int16: { min: -32_768, max: 32_767 },
+    int24: { min: -8_388_608, max: 8_388_607 },
+    int32: { min: -2_147_483_648, max: 2_147_483_647 },
 };
 
 const DOMAIN_RANGES: Record<BinaryFormat, Readonly<Record<string, NumericRange>>> = {
     pro: {
         "pro.header.lightRadius": { min: 0, max: 8 },
-        "pro.header.lightIntensity": { min: 0, max: 65536 },
+        "pro.header.lightIntensity": { min: 0, max: 65_536 },
         "pro.doorProperties.walkThrough": { min: 0, max: 1 },
-        "pro.stairsProperties.destTile": { min: 0, max: 0x03ff_ffff },
-        "pro.stairsProperties.destElevation": { min: 0, max: 0x3f },
-        "pro.ladderProperties.destTile": { min: 0, max: 0x03ff_ffff },
-        "pro.ladderProperties.destElevation": { min: 0, max: 0x3f },
+        "pro.stairsProperties.destTile": { min: 0, max: 0x03FF_FFFF },
+        "pro.stairsProperties.destElevation": { min: 0, max: 0x3F },
+        "pro.ladderProperties.destTile": { min: 0, max: 0x03FF_FFFF },
+        "pro.ladderProperties.destElevation": { min: 0, max: 0x3F },
     },
     map: {
         "map.header.defaultElevation": { min: 0, max: 2 },

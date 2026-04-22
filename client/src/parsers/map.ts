@@ -34,8 +34,8 @@ const PID_TYPE_ITEM = 0;
 const PID_TYPE_CRITTER = 1;
 const PID_TYPE_SCENERY = 2;
 const PID_TYPE_MISC = 5;
-const FIRST_EXIT_GRID_PID = 0x5000010;
-const LAST_EXIT_GRID_PID = 0x5000017;
+const FIRST_EXIT_GRID_PID = 0x5_00_00_10;
+const LAST_EXIT_GRID_PID = 0x5_00_00_17;
 const HEADER_PADDING_OFFSET = 0x3C;
 const HEADER_PADDING_SIZE = 176;
 const HEADER_OPAQUE_END = HEADER_SIZE;
@@ -416,14 +416,14 @@ function parseExitGridFields(data: Uint8Array, offset: number): ParsedField[] {
 }
 
 function objectTypeName(pid: number): string {
-    switch ((pid >>> 24) & 0xff) {
+    switch ((pid >>> 24) & 0xFF) {
         case PID_TYPE_ITEM: return "Item";
         case PID_TYPE_CRITTER: return "Critter";
         case PID_TYPE_SCENERY: return "Scenery";
         case 3: return "Wall";
         case 4: return "Tile";
         case PID_TYPE_MISC: return "Misc";
-        default: return `Type${(pid >>> 24) & 0xff}`;
+        default: return `Type${(pid >>> 24) & 0xFF}`;
     }
 }
 
@@ -446,7 +446,7 @@ function parseObjectAt(data: Uint8Array, offset: number, index: string, header: 
     }
 
     const { fields: baseFields, pid } = parseObjectBaseFields(data, offset);
-    const pidType = (pid >>> 24) & 0xff;
+    const pidType = (pid >>> 24) & 0xFF;
     let currentOffset = offset + MAP_OBJECT_BASE_SIZE;
 
     const inventoryLength = int32Field("Inventory Length", data, currentOffset);
@@ -745,7 +745,7 @@ function scoreParsedTail(
     scriptErrors: string[],
     objectsGroup: ParsedGroup
 ): number {
-    let score = -scriptErrors.length * 100000;
+    let score = -scriptErrors.length * 100_000;
     score += (6 - scriptTypeCount) * 5;
 
     const totalObjectsEntry = objectsGroup.fields.find((entry) => !("fields" in entry) && entry.name === "Total Objects");

@@ -91,11 +91,9 @@ end
             const uri = "file:///test.ssl";
             // Cursor on "MAX_VALUE" in condition
             const position: Position = { line: 4, character: 14 };
-            const result = getLocalDefinition(text, uri, position);
-
             // Result depends on whether grammar parses preprocessor as definition
             // Just verify it doesn't crash
-            expect(result === null || result !== null).toBe(true);
+            expect(() => getLocalDefinition(text, uri, position)).not.toThrow();
         });
 
         it("finds macro parameter definition from macro body usage", () => {

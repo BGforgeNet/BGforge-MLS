@@ -40,8 +40,8 @@ export function parseEditableNumberValue(text: string, numericFormat: NumericFor
             return Number.NaN;
         }
 
-        if (valueType?.startsWith("int") && parsed >= 0x8000_0000) {
-            return parsed - 0x1_0000_0000;
+        if (valueType?.startsWith("int") && parsed >= 0x80_00_00_00) {
+            return parsed - 0x1_00_00_00_00;
         }
 
         return parsed;

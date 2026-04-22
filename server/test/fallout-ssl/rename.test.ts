@@ -177,11 +177,9 @@ end
             const uri = "file:///test.ssl";
             // Cursor on "MAX_ITEMS" in define
             const position: Position = { line: 1, character: 10 };
-            const result = renameSymbol(text, position, "ITEM_LIMIT", uri);
-
             // Result depends on whether grammar parses preprocessor properly
             // Just verify it doesn't crash
-            expect(result === null || result !== null).toBe(true);
+            expect(() => renameSymbol(text, position, "ITEM_LIMIT", uri)).not.toThrow();
         });
 
         it("only renames the specific symbol, not similarly named ones", () => {

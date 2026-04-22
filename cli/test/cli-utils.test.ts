@@ -92,7 +92,8 @@ describe("safeProcess", () => {
 
     it("handles non-Error throws", async () => {
         const result = await safeProcess("bad.txt", () => {
-            throw "string error"; // eslint-disable-line @typescript-eslint/only-throw-error
+            // eslint-disable-next-line @typescript-eslint/only-throw-error, no-throw-literal
+            throw "string error";
         });
         expect(result).toBe("error");
         expect(stderrSpy).toHaveBeenCalledWith("bad.txt: string error");

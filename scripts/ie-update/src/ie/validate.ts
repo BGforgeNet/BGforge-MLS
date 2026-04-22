@@ -35,7 +35,7 @@ export { assertArray, assertObject, optionalBoolean, optionalString, requireStri
 function requireNumber(record: Record<string, unknown>, field: string, context: string): number {
     const value = record[field];
     if (typeof value !== "number") {
-        throw new Error(`Missing or invalid '${field}' (expected number) in ${context}`);
+        throw new TypeError(`Missing or invalid '${field}' (expected number) in ${context}`);
     }
     return value;
 }
@@ -49,7 +49,7 @@ function optionalNumber(record: Record<string, unknown>, field: string, context:
         return undefined;
     }
     if (typeof value !== "number") {
-        throw new Error(`Invalid '${field}' (expected number) in ${context}`);
+        throw new TypeError(`Invalid '${field}' (expected number) in ${context}`);
     }
     return value;
 }
@@ -66,7 +66,7 @@ function optionalNumberOrBoolean(
         return undefined;
     }
     if (typeof value !== "number" && typeof value !== "boolean") {
-        throw new Error(`Invalid '${field}' (expected number or boolean) in ${context}`);
+        throw new TypeError(`Invalid '${field}' (expected number or boolean) in ${context}`);
     }
     return value;
 }
@@ -88,7 +88,7 @@ export function validateActionItem(data: unknown, context: string): ActionItem {
     let alias: number | boolean | undefined;
     if (rawAlias !== undefined) {
         if (typeof rawAlias !== "number" && typeof rawAlias !== "boolean") {
-            throw new Error(`Invalid 'alias' (expected number or boolean) in ${context}`);
+            throw new TypeError(`Invalid 'alias' (expected number or boolean) in ${context}`);
         }
         alias = rawAlias;
     }
@@ -159,7 +159,7 @@ function validateFuncParam(data: unknown, context: string): FuncParam {
     let defaultVal: string | number | undefined;
     if (rawDefault !== undefined) {
         if (typeof rawDefault !== "string" && typeof rawDefault !== "number") {
-            throw new Error(`Invalid 'default' (expected string or number) in ${context}`);
+            throw new TypeError(`Invalid 'default' (expected string or number) in ${context}`);
         }
         defaultVal = rawDefault;
     }
@@ -211,7 +211,7 @@ export function validateFuncData(data: unknown, context: string): FuncData {
         const dr = assertObject(rawDefaults, `${context}.defaults`);
         const entries = Object.entries(dr).map(([key, value]) => {
             if (typeof value !== "string") {
-                throw new Error(`Invalid default '${key}' (expected string) in ${context}.defaults`);
+                throw new TypeError(`Invalid default '${key}' (expected string) in ${context}.defaults`);
             }
             return [key, value] as const;
         });

@@ -52,8 +52,8 @@ function makeParseResult(): ParseResult {
                         { name: "FRM Type", value: "Background", offset: 8, size: 1, type: "enum", rawValue: 5 },
                         { name: "FRM ID", value: 9, offset: 9, size: 3, type: "uint24" },
                         { name: "Light Radius", value: 8, offset: 12, size: 4, type: "uint32" },
-                        { name: "Light Intensity", value: 65536, offset: 16, size: 4, type: "uint32" },
-                        { name: "Flags", value: "LightThru", offset: 20, size: 4, type: "flags", rawValue: 536870912 },
+                        { name: "Light Intensity", value: 65_536, offset: 16, size: 4, type: "uint32" },
+                        { name: "Flags", value: "LightThru", offset: 20, size: 4, type: "flags", rawValue: 536_870_912 },
                     ],
                 },
                 {

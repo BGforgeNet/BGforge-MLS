@@ -115,7 +115,7 @@ function scriptFields(
     errors: string[]
 ): [ParsedField, ParsedField] {
     // -1 (0xFFFFFFFF) means no script
-    if (value === 0xFFFFFFFF) {
+    if (value === 0xFF_FF_FF_FF) {
         return [
             field("Script Type", -1, offset, 1, "int8"),
             field("Script ID", -1, offset + 1, 3, "int24"),
@@ -123,7 +123,7 @@ function scriptFields(
     }
 
     const scriptType = (value >> 24) & 0xFF;
-    const scriptId = value & 0x00FFFFFF;
+    const scriptId = value & 0x00_FF_FF_FF;
     const typeName = ScriptType[scriptType];
 
     if (typeName === undefined) {
@@ -172,10 +172,10 @@ function fieldsFromDefs(
  * Parse header into structured format
  */
 function parseHeader(data: HeaderData, errors: string[]): ParsedGroup {
-    const objectType = (data.objectTypeAndId >> 24) & 0xff;
-    const objectId = data.objectTypeAndId & 0x00ffffff;
-    const frmType = (data.frmTypeAndId >> 24) & 0xff;
-    const frmId = data.frmTypeAndId & 0x00ffffff;
+    const objectType = (data.objectTypeAndId >> 24) & 0xFF;
+    const objectId = data.objectTypeAndId & 0x00FFFFFF;
+    const frmType = (data.frmTypeAndId >> 24) & 0xFF;
+    const frmId = data.frmTypeAndId & 0x00_ff_ff_ff;
 
     return group("Header", [
         enumField("Object Type", objectType, ObjectType, 0x00, 1, errors),
@@ -183,7 +183,7 @@ function parseHeader(data: HeaderData, errors: string[]): ParsedGroup {
         field("Text ID", data.textId, 0x04, 4, "uint32"),
         enumField("FRM Type", frmType, FRMType, 0x08, 1, errors),
         field("FRM ID", frmId, 0x09, 3, "uint24"),
-        field("Light Radius", data.lightRadius, 0x0c, 4, "uint32", "0-8 hexes"),
+        field("Light Radius", data.lightRadius, 0x0C, 4, "uint32", "0-8 hexes"),
         field("Light Intensity", data.lightIntensity, 0x10, 4, "uint32", "0-65536"),
         flagsField("Flags", data.flags, HeaderFlags, 0x14, 4),
     ]);
@@ -352,15 +352,15 @@ function parseCritter(data: CritterData, errors: string[]): ParsedGroup[] {
         group("Critter Properties", [
             field("Flags Ext", `0x${data.flagsExt.toString(16).padStart(8, "0")}`, 0x18, 4, "flags", undefined, data.flagsExt),
             ...fieldsFromDefs(CRITTER_PROPERTIES, critterData, errors),
-            flagsField("Critter Flags", data.critterFlags, CritterFlags, 0x2c, 4),
+            flagsField("Critter Flags", data.critterFlags, CritterFlags, 0x2C, 4),
         ]),
         group("Base Primary Stats", fieldsFromDefs(CRITTER_BASE_PRIMARY, critterData, errors)),
         group("Base Secondary Stats", fieldsFromDefs(CRITTER_BASE_SECONDARY, critterData, errors)),
         group("Base Damage Threshold", fieldsFromDefs(CRITTER_BASE_DT, critterData, errors), false),
         group("Base Damage Resistance", fieldsFromDefs(CRITTER_BASE_DR, critterData, errors), false),
         group("Demographics", [
-            field("Age", data.age, 0xb4, 4, "int32"),
-            field("Gender", data.gender === 0 ? "Male" : "Female", 0xb8, 4, "enum", undefined, data.gender),
+            field("Age", data.age, 0xB4, 4, "int32"),
+            field("Gender", data.gender === 0 ? "Male" : "Female", 0xB8, 4, "enum", undefined, data.gender),
         ]),
         group("Bonus Primary Stats", fieldsFromDefs(CRITTER_BONUS_PRIMARY, critterData, errors), false),
         group("Bonus Secondary Stats", fieldsFromDefs(CRITTER_BONUS_SECONDARY, critterData, errors), false),
@@ -368,10 +368,10 @@ function parseCritter(data: CritterData, errors: string[]): ParsedGroup[] {
         group("Bonus Damage Resistance", fieldsFromDefs(CRITTER_BONUS_DR, critterData, errors), false),
         group("Skills", fieldsFromDefs(CRITTER_SKILLS, critterData, errors)),
         group("Final Properties", [
-            enumField("Body Type", data.bodyType, BodyType, 0x190, 4, errors),
-            field("Experience Value", data.expValue, 0x194, 4, "uint32"),
-            enumField("Kill Type", data.killType, KillType, 0x198, 4, errors),
-            enumField("Damage Type", data.damageType, DamageType, 0x19c, 4, errors),
+            enumField("Body Type", data.bodyType, BodyType, 0x1_90, 4, errors),
+            field("Experience Value", data.expValue, 0x1_94, 4, "uint32"),
+            enumField("Kill Type", data.killType, KillType, 0x1_98, 4, errors),
+            enumField("Damage Type", data.damageType, DamageType, 0x1_9c, 4, errors),
         ]),
     ];
 }
@@ -388,8 +388,8 @@ function parseScenery(
 
     groups.push(group("Scenery Properties", [
         flagsField("Wall Light Flags", scenery.wallLightFlags, WallLightFlags, 0x18, 2),
-        flagsField("Action Flags", scenery.actionFlags, ActionFlags, 0x1a, 2),
-        ...scriptFields(scenery.scriptId, 0x1c, errors),
+        flagsField("Action Flags", scenery.actionFlags, ActionFlags, 0x1A, 2),
+        ...scriptFields(scenery.scriptId, 0x1C, errors),
         enumField("Sub Type", scenery.subType, ScenerySubType, 0x20, 4, errors),
         enumField("Material", scenery.materialId, MaterialType, 0x24, 4, errors),
         field("Sound ID", scenery.soundId, 0x28, 1, "uint8"),
@@ -400,18 +400,18 @@ function parseScenery(
             const door: DoorData = doorSchema.read(reader(data, SCENERY_SUBTYPE_OFFSET));
             groups.push(group("Door Properties", [
                 field("Walk Through", door.walkThruFlag === 0 ? "No" : "Yes", 0x29, 4, "enum"),
-                field("Unknown", door.unknown, 0x2d, 4, "uint32"),
+                field("Unknown", door.unknown, 0x2D, 4, "uint32"),
             ]));
             break;
         }
         case 1: { // Stairs
             const stairs: StairsData = stairsSchema.read(reader(data, SCENERY_SUBTYPE_OFFSET));
-            const destTile = stairs.destTileAndElevation & 0x3ffffff;
-            const destElev = (stairs.destTileAndElevation >> 26) & 0x3f;
+            const destTile = stairs.destTileAndElevation & 0x3FFFFFF;
+            const destElev = (stairs.destTileAndElevation >> 26) & 0x3F;
             groups.push(group("Stairs Properties", [
                 field("Dest Tile", destTile, 0x29, 4, "uint32"),
                 field("Dest Elevation", destElev, 0x29, 4, "uint32"),
-                field("Dest Map", stairs.destMap, 0x2d, 4, "uint32"),
+                field("Dest Map", stairs.destMap, 0x2D, 4, "uint32"),
             ]));
             break;
         }
@@ -419,15 +419,15 @@ function parseScenery(
             const elevator: ElevatorData = elevatorSchema.read(reader(data, SCENERY_SUBTYPE_OFFSET));
             groups.push(group("Elevator Properties", [
                 enumField("Elevator Type", elevator.elevatorType, ElevatorType, 0x29, 4, errors),
-                field("Elevator Level", elevator.elevatorLevel, 0x2d, 4, "uint32"),
+                field("Elevator Level", elevator.elevatorLevel, 0x2D, 4, "uint32"),
             ]));
             break;
         }
         case 3: // Ladder Bottom
         case 4: { // Ladder Top
             const ladder: LadderData = ladderSchema.read(reader(data, SCENERY_SUBTYPE_OFFSET));
-            const destTile = ladder.destTileAndElevation & 0x3ffffff;
-            const destElev = (ladder.destTileAndElevation >> 26) & 0x3f;
+            const destTile = ladder.destTileAndElevation & 0x3FFFFFF;
+            const destElev = (ladder.destTileAndElevation >> 26) & 0x3F;
             groups.push(group("Ladder Properties", [
                 field("Dest Tile", destTile, 0x29, 4, "uint32"),
                 field("Dest Elevation", destElev, 0x29, 4, "uint32"),
@@ -452,8 +452,8 @@ function parseScenery(
 function parseWall(data: WallData, errors: string[]): ParsedGroup {
     return group("Wall Properties", [
         flagsField("Wall Light Flags", data.wallLightFlags, WallLightFlags, 0x18, 2),
-        flagsField("Action Flags", data.actionFlags, ActionFlags, 0x1a, 2),
-        ...scriptFields(data.scriptId, 0x1c, errors),
+        flagsField("Action Flags", data.actionFlags, ActionFlags, 0x1A, 2),
+        ...scriptFields(data.scriptId, 0x1C, errors),
         enumField("Material", data.materialId, MaterialType, 0x20, 4, errors),
     ]);
 }
@@ -521,7 +521,7 @@ class ProParser implements BinaryParser {
 
         // Parse header to determine type
         const header: HeaderData = headerSchema.read(reader(data));
-        const objectType = (header.objectTypeAndId >> 24) & 0xff;
+        const objectType = (header.objectTypeAndId >> 24) & 0xFF;
 
         // Validate file size based on object type
         let expectedSize: number;

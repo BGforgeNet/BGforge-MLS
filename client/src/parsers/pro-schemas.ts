@@ -30,9 +30,9 @@ class Uint24Schema extends Schema<number> {
     }
 
     write(output: ISerialOutput, value: number): void {
-        output.writeUint8((value >> 16) & 0xff);
-        output.writeUint8((value >> 8) & 0xff);
-        output.writeUint8(value & 0xff);
+        output.writeUint8((value >> 16) & 0xFF);
+        output.writeUint8((value >> 8) & 0xFF);
+        output.writeUint8(value & 0xFF);
     }
 
     measure(_: number | typeof MaxValue, measurer?: IMeasurer): IMeasurer {

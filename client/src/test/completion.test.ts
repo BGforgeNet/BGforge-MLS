@@ -35,7 +35,7 @@ async function testCompletion(
     expectedCompletionList.items.forEach((expectedItem) => {
         // we always return full list, so...
         const filteredList = actualCompletionList.items.filter((item) => {
-            return expectedItem.label == item.label ? true : false;
+            return expectedItem.label === item.label;
         });
         const actualItem = filteredList[0];
         assert.ok(actualItem, `Expected item ${expectedItem.label} not found`);

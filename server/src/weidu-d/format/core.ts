@@ -95,7 +95,7 @@ function normalizeLineComment(text: string): string {
 // Normalize inline comment: ensure 2 spaces before //, 1 space after
 function normalizeInlineComment(line: string): string {
     const idx = line.indexOf("//");
-    if (idx < 0) return line;
+    if (idx === -1) return line;
 
     const code = line.slice(0, idx).trimEnd();
     const comment = line.slice(idx + 2).trimStart();
@@ -151,7 +151,7 @@ function normalizeTransitionText(text: string): string {
 // Get line length excluding comment
 function codeLengthOf(line: string): number {
     const idx = line.indexOf("//");
-    return idx >= 0 ? line.slice(0, idx).trimEnd().length : line.length;
+    return idx !== -1 ? line.slice(0, idx).trimEnd().length : line.length;
 }
 
 // Get text offset from node start to a child node

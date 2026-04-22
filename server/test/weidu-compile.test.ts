@@ -437,10 +437,10 @@ describe("weidu-compile", () => {
         it("parses LEXER ERROR with degenerate column range (1-0)", async () => {
             const output =
                 "[tmp.tp2] LEXER ERROR at line 66 column 1-0\n" +
-                "Near Text: \ufffd\n" +
+                "Near Text: \uFFFD\n" +
                 "\tinvalid character\n\n" +
                 "[tmp.tp2]  ERROR at line 66 column 1-0\n" +
-                "Near Text: \ufffd\n";
+                "Near Text: \uFFFD\n";
 
             setupExecFile({ code: 1 }, output);
 
@@ -450,7 +450,7 @@ describe("weidu-compile", () => {
             expect(parseResult.errors).toHaveLength(1);
             expect(parseResult.errors[0].line).toBe(66);
             // WeiDU's verbatim output preserved, including replacement characters
-            expect(parseResult.errors[0].message).toContain("Near Text: \ufffd");
+            expect(parseResult.errors[0].message).toContain("Near Text: \uFFFD");
         });
 
         it("clamps column 0 to avoid negative LSP character offset", async () => {

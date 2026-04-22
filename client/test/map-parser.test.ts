@@ -255,16 +255,16 @@ describe("MAP parser - real maps", () => {
         const roofField = findFieldByName(tileFields, "Tile 0 Roof");
         const roofFlagsField = findFieldByName(tileFields, "Tile 0 Roof Flags");
 
-        floorField.value = 0x234;
+        floorField.value = 0x2_34;
         floorFlagsField.value = 0x5;
-        roofField.value = 0x678;
+        roofField.value = 0x6_78;
         roofFlagsField.value = 0x9;
         (result as ParseResult).document = undefined;
 
         const serialized = mapParser.serialize!(result);
         const view = new DataView(serialized.buffer, serialized.byteOffset, serialized.byteLength);
 
-        expect(view.getUint32(240, false)).toBe(0x9678_5234);
+        expect(view.getUint32(240, false)).toBe(0x96_78_52_34);
     });
 
     it("serializes from the canonical MAP document instead of the display tree when present", () => {
@@ -339,7 +339,7 @@ describe("MAP parser - real maps", () => {
         expect(firstObject).toBeDefined();
         expect(findFieldByName(firstObject!.fields, "Rotation").rawValue).toBe(0);
         expect(findFieldByName(firstObject!.fields, "Elevation").rawValue).toBe(0);
-        expect(findFieldByName(firstObject!.fields, "PID").value).toBe(83886092);
+        expect(findFieldByName(firstObject!.fields, "PID").value).toBe(83_886_092);
         expect(findFieldByName(firstObject!.fields, "SID").value).toBe(-1);
         expect(findFieldByName(firstObject!.fields, "Field 74").value).toBe(0);
     });

@@ -423,7 +423,7 @@ export class Symbols {
         if (!existing) return;
 
         const index = existing.indexOf(symbol);
-        if (index >= 0) {
+        if (index !== -1) {
             existing.splice(index, 1);
             if (existing.length === 0) {
                 this.byName.delete(symbol.name);

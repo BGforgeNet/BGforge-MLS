@@ -19,7 +19,7 @@ export function assertObject(data: unknown, context: string): Record<string, unk
  */
 export function assertArray(data: unknown, context: string): readonly unknown[] {
     if (!Array.isArray(data)) {
-        throw new Error(`Expected array in ${context}, got ${typeof data}`);
+        throw new TypeError(`Expected array in ${context}, got ${typeof data}`);
     }
     return data as readonly unknown[];
 }
@@ -30,7 +30,7 @@ export function assertArray(data: unknown, context: string): readonly unknown[] 
 export function requireString(record: Record<string, unknown>, field: string, context: string): string {
     const value = record[field];
     if (typeof value !== "string") {
-        throw new Error(`Missing or invalid '${field}' (expected string) in ${context}`);
+        throw new TypeError(`Missing or invalid '${field}' (expected string) in ${context}`);
     }
     return value;
 }
@@ -44,7 +44,7 @@ export function optionalString(record: Record<string, unknown>, field: string, c
         return undefined;
     }
     if (typeof value !== "string") {
-        throw new Error(`Invalid '${field}' (expected string) in ${context}`);
+        throw new TypeError(`Invalid '${field}' (expected string) in ${context}`);
     }
     return value;
 }
@@ -58,7 +58,7 @@ export function optionalBoolean(record: Record<string, unknown>, field: string, 
         return undefined;
     }
     if (typeof value !== "boolean") {
-        throw new Error(`Invalid '${field}' (expected boolean) in ${context}`);
+        throw new TypeError(`Invalid '${field}' (expected boolean) in ${context}`);
     }
     return value;
 }

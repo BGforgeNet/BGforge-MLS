@@ -40,7 +40,7 @@ export async function ssl_compile(opts: {
         .filter((s) => s);
 
     if (opts.headersDir) {
-        if (cmdArgs.find((s) => s.startsWith("-I"))) {
+        if (cmdArgs.some((s) => s.startsWith("-I"))) {
             if (opts.interactive) {
                 showWarning(
                     "Warning: -I switch is used but it will be ignored",

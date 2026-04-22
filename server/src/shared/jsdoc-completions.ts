@@ -114,14 +114,7 @@ function getJsdocTagCompletions(): CompletionItem[] {
     return [...ALL_JSDOC_TAG_NAMES].map((name) => {
         const expectsType = TAGS_WITH_TYPE.has(name);
         const suffix = expectsType ? " " : "";
-        return {
-            label: `@${name}`,
-            insertText: `${name}${suffix}`,
-            filterText: name,
-            kind: CompletionItemKind.Keyword,
-            detail: TAG_DETAILS.get(name) ?? name,
-            ...(expectsType ? { command: RETRIGGER_CMD } : {}),
-        };
+        return {label:`@${name}`,insertText:`${name}${suffix}`,filterText:name,kind:CompletionItemKind.Keyword,detail:TAG_DETAILS.get(name)??name, ...(expectsType?{command:RETRIGGER_CMD}:{})};
     });
 }
 

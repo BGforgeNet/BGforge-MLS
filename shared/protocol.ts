@@ -31,7 +31,7 @@ export function decodeWorkspaceSymbolQuery(query: string): { languageId?: string
 
     const rest = query.slice(WORKSPACE_SYMBOL_SCOPE_PREFIX.length);
     const separator = rest.indexOf(":");
-    if (separator < 0) {
+    if (separator === -1) {
         return { query };
     }
 

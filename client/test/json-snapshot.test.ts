@@ -173,7 +173,7 @@ describe("json-snapshot", () => {
                         fields: [
                             { name: "Version", value: "Fallout 2", rawValue: 20, offset: 0, size: 4, type: "enum" },
                             { name: "Filename", value: "artemple", offset: 4, size: 16, type: "string" },
-                            { name: "Default Position", value: 20100, offset: 20, size: 4, type: "int32" },
+                            { name: "Default Position", value: 20_100, offset: 20, size: 4, type: "int32" },
                             { name: "Default Elevation", value: "0", rawValue: 0, offset: 24, size: 4, type: "enum" },
                             { name: "Default Orientation", value: "NE", rawValue: 0, offset: 28, size: 4, type: "enum" },
                             { name: "Num Local Vars", value: 1, offset: 32, size: 4, type: "int32" },
@@ -247,7 +247,7 @@ describe("json-snapshot", () => {
         expect(snapshot.document.header).toMatchObject({
             version: 20,
             filename: "artemple",
-            defaultPosition: 20100,
+            defaultPosition: 20_100,
         });
         expect(snapshot.document.globalVariables).toEqual([11]);
         expect(snapshot.document.localVariables).toEqual([22]);
@@ -271,7 +271,7 @@ describe("json-snapshot", () => {
                         fields: [
                             { name: "Version", value: "Fallout 2", rawValue: 20, offset: 0, size: 4, type: "enum" },
                             { name: "Filename", value: "artemple", offset: 4, size: 16, type: "string" },
-                            { name: "Default Position", value: 20100, offset: 20, size: 4, type: "int32" },
+                            { name: "Default Position", value: 20_100, offset: 20, size: 4, type: "int32" },
                             { name: "Default Elevation", value: "0", rawValue: 0, offset: 24, size: 4, type: "enum" },
                             { name: "Default Orientation", value: "NE", rawValue: 0, offset: 28, size: 4, type: "enum" },
                             { name: "Num Local Vars", value: 0, offset: 32, size: 4, type: "int32" },
@@ -341,8 +341,8 @@ describe("json-snapshot", () => {
                     frmType: 5,
                     frmId: 9,
                     lightRadius: 8,
-                    lightIntensity: 65536,
-                    flags: 536870912,
+                    lightIntensity: 65_536,
+                    flags: 536_870_912,
                 },
                 sections: {
                     miscProperties: {
@@ -375,8 +375,8 @@ describe("json-snapshot", () => {
                     frmType: 5,
                     frmId: 9,
                     lightRadius: 8,
-                    lightIntensity: 65536,
-                    flags: 536870912,
+                    lightIntensity: 65_536,
+                    flags: 536_870_912,
                 },
                 sections: {
                     miscProperties: {
@@ -404,8 +404,8 @@ describe("json-snapshot", () => {
                     frmType: 5,
                     frmId: 9,
                     lightRadius: 9,
-                    lightIntensity: 65536,
-                    flags: 536870912,
+                    lightIntensity: 65_536,
+                    flags: 536_870_912,
                 },
                 sections: {
                     miscProperties: {

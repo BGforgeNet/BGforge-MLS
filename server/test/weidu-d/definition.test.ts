@@ -62,11 +62,9 @@ END
             const uri = "file:///test.d";
             // Cursor on "state2" in GOTO within REPLY
             const position: Position = { line: 5, character: 38 };
-            const result = getDefinition(text, uri, position);
-
             // This depends on specific grammar support for REPLY transitions
             // Just verify it doesn't crash
-            expect(result === null || result !== null).toBe(true);
+            expect(() => getDefinition(text, uri, position)).not.toThrow();
         });
 
         it("returns null when cursor is not on a state reference", () => {
@@ -118,11 +116,9 @@ END
             const uri = "file:///test.d";
             // Cursor on "1" in GOTO - position may vary based on grammar
             const position: Position = { line: 5, character: 22 };
-            const result = getDefinition(text, uri, position);
-
             // The grammar may or may not support numeric labels as references
             // Just verify it doesn't crash and returns a sensible result
-            expect(result === null || result !== null).toBe(true);
+            expect(() => getDefinition(text, uri, position)).not.toThrow();
         });
 
         it("handles CHAIN syntax without crashing", () => {
@@ -138,8 +134,7 @@ END
 `;
             const chainUri = "file:///chain.d";
             // Even if no state references are found, it should not crash
-            const result = getDefinition(chainText, chainUri, { line: 0, character: 0 });
-            expect(result === null || result !== null).toBe(true);
+            expect(() => getDefinition(chainText, chainUri, { line: 0, character: 0 })).not.toThrow();
         });
 
         it("returns null when parser not initialized with bad text", () => {

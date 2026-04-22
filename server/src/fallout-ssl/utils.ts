@@ -363,7 +363,7 @@ export function extractMacros(root: Node): MacroData[] {
 
         let params: string[] | undefined;
         let hasParams = false;
-        let actualBody = bodyText.trimStart();
+        const actualBody = bodyText.trimStart();
 
         if (paramsNode) {
             params = parseMacroParams(paramsNode.text);

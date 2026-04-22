@@ -30,7 +30,7 @@ function optionalStringOrNumber(
         return undefined;
     }
     if (typeof value !== "string" && typeof value !== "number") {
-        throw new Error(`Invalid '${field}' (expected string or number) in ${context}`);
+        throw new TypeError(`Invalid '${field}' (expected string or number) in ${context}`);
     }
     return value;
 }

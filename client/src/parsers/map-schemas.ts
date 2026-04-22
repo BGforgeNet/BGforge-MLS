@@ -56,7 +56,7 @@ export function getScriptType(sid: number): number {
     return (sid >>> 24) & 0xF;
 }
 
-export const TILES_PER_ELEVATION = 10000;
+export const TILES_PER_ELEVATION = 10_000;
 export const TILE_DATA_SIZE_PER_ELEVATION = TILES_PER_ELEVATION * 4;
 
 interface TilePair {
@@ -70,9 +70,9 @@ export function parseTilePair(data: Uint8Array, offset: number): TilePair {
     const view = new DataView(data.buffer, data.byteOffset + offset, 4);
     const word = view.getUint32(0, false);
     return {
-        floorTileId: word & 0xFFF,
+        floorTileId: word & 0xF_FF,
         floorFlags: (word >> 12) & 0xF,
-        roofTileId: (word >> 16) & 0xFFF,
+        roofTileId: (word >> 16) & 0xF_FF,
         roofFlags: (word >> 28) & 0xF,
     };
 }

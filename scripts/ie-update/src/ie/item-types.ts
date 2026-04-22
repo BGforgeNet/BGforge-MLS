@@ -32,7 +32,7 @@ export function getItemTypes(iesdpFileFormatsDir: string): readonly ItemType[] {
             return acc;
         }
         if (Number.isNaN(Number(item.code))) {
-            throw new Error(`Invalid item type code '${item.code}' for '${item.type}' in ${sourceFile}`);
+            throw new TypeError(`Invalid item type code '${item.code}' for '${item.type}' in ${sourceFile}`);
         }
         return [...acc, { id: iid, desc: item.type, value: item.code }];
     }, []);

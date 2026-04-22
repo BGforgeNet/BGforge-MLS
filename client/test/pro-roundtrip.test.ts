@@ -39,7 +39,7 @@ function roundTrip(input: Uint8Array): Uint8Array {
     const header = headerSchema.read(reader(input));
     headerSchema.write(writer(output), header);
 
-    const objectType = (header.objectTypeAndId >> 24) & 0xff;
+    const objectType = (header.objectTypeAndId >> 24) & 0xFF;
 
     switch (objectType) {
         case 0: { // Item
@@ -139,8 +139,8 @@ describe("PRO round-trip via serializer (parse -> serialize -> byte-identical)",
             throw new Error("Expected Text ID field");
         }
 
-        textId.value = 999999;
-        textId.rawValue = 999999;
+        textId.value = 999_999;
+        textId.rawValue = 999_999;
 
         const output = proParser.serialize!(parsed);
         expect(Buffer.from(output).equals(Buffer.from(input))).toBe(true);

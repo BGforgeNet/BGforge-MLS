@@ -25,43 +25,43 @@ describe("validateNumericRange", () => {
 
     it("accepts valid uint16 values", () => {
         expect(validateNumericRange(0, "uint16")).toBeUndefined();
-        expect(validateNumericRange(65535, "uint16")).toBeUndefined();
+        expect(validateNumericRange(65_535, "uint16")).toBeUndefined();
     });
 
     it("rejects out-of-range uint16 values", () => {
         expect(validateNumericRange(-1, "uint16")).toBeDefined();
-        expect(validateNumericRange(65536, "uint16")).toBeDefined();
+        expect(validateNumericRange(65_536, "uint16")).toBeDefined();
     });
 
     it("accepts valid uint24 values", () => {
         expect(validateNumericRange(0, "uint24")).toBeUndefined();
-        expect(validateNumericRange(0xFFFFFF, "uint24")).toBeUndefined();
+        expect(validateNumericRange(0xFF_FF_FF, "uint24")).toBeUndefined();
     });
 
     it("rejects out-of-range uint24 values", () => {
         expect(validateNumericRange(-1, "uint24")).toBeDefined();
-        expect(validateNumericRange(0x1000000, "uint24")).toBeDefined();
+        expect(validateNumericRange(0x1_00_00_00, "uint24")).toBeDefined();
     });
 
     it("accepts valid uint32 values", () => {
         expect(validateNumericRange(0, "uint32")).toBeUndefined();
-        expect(validateNumericRange(0xFFFFFFFF, "uint32")).toBeUndefined();
+        expect(validateNumericRange(0xFF_FF_FF_FF, "uint32")).toBeUndefined();
     });
 
     it("rejects out-of-range uint32 values", () => {
         expect(validateNumericRange(-1, "uint32")).toBeDefined();
-        expect(validateNumericRange(0x100000000, "uint32")).toBeDefined();
+        expect(validateNumericRange(0x1_00_00_00_00, "uint32")).toBeDefined();
     });
 
     it("accepts valid int32 values", () => {
         expect(validateNumericRange(0, "int32")).toBeUndefined();
-        expect(validateNumericRange(-2147483648, "int32")).toBeUndefined();
-        expect(validateNumericRange(2147483647, "int32")).toBeUndefined();
+        expect(validateNumericRange(-2_147_483_648, "int32")).toBeUndefined();
+        expect(validateNumericRange(2_147_483_647, "int32")).toBeUndefined();
     });
 
     it("rejects out-of-range int32 values", () => {
-        expect(validateNumericRange(-2147483649, "int32")).toBeDefined();
-        expect(validateNumericRange(2147483648, "int32")).toBeDefined();
+        expect(validateNumericRange(-2_147_483_649, "int32")).toBeDefined();
+        expect(validateNumericRange(2_147_483_648, "int32")).toBeDefined();
     });
 
     it("rejects non-integer values", () => {

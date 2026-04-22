@@ -125,11 +125,9 @@ end
  */
 #define ADD(a, b) ((a) + (b))
 `;
-            const result = getLocalSignature(text, "ADD", 0);
-
             // Result depends on grammar parsing preprocessor nodes
             // Just verify it doesn't crash
-            expect(result === null || result !== null).toBe(true);
+            expect(() => getLocalSignature(text, "ADD", 0)).not.toThrow();
         });
 
         it("returns null for constant macro (no params)", () => {

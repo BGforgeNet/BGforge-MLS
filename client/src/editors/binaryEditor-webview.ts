@@ -206,9 +206,9 @@ import { createWebviewState, registerNode, resetState } from "./binaryEditor-web
         const fragment = document.createDocumentFragment();
         for (const node of message.rootChildren) {
             registerNode(state, node);
-            fragment.appendChild(createNodeElement(node));
+            fragment.append(createNodeElement(node));
         }
-        treeEl.appendChild(fragment);
+        treeEl.append(fragment);
 
         for (const node of message.rootChildren) {
             if (node.kind === "group" && node.expanded) {
@@ -232,9 +232,9 @@ import { createWebviewState, registerNode, resetState } from "./binaryEditor-web
         const fragment = document.createDocumentFragment();
         for (const child of children) {
             registerNode(state, child);
-            fragment.appendChild(createNodeElement(child));
+            fragment.append(createNodeElement(child));
         }
-        contentEl.appendChild(fragment);
+        contentEl.append(fragment);
         state.childrenLoaded.add(nodeId);
         state.loadingChildren.delete(nodeId);
 

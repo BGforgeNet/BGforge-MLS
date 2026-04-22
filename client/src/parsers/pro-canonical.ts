@@ -48,8 +48,8 @@ const uint24Schema = zodNumericType("uint24");
 const uint32Schema = zodNumericType("uint32");
 
 const scriptRefSchema = z.strictObject({
-    type: z.number().int().min(-1).max(0xff),
-    id: z.number().int().min(-1).max(0x00ff_ffff),
+    type: z.number().int().min(-1).max(0xFF),
+    id: z.number().int().min(-1).max(0x00FF_FFFF),
 });
 
 const unsignedDamageThresholdSchema = z.strictObject({
@@ -446,13 +446,13 @@ function writer(data: Uint8Array, offset = 0): BufferWriter {
 
 function packScriptId(script: { type: number; id: number }): number {
     if (script.type === -1 && script.id === -1) {
-        return 0xffff_ffff;
+        return 0xFFFF_FFFF;
     }
-    return ((script.type & 0xff) << 24) | (script.id & 0x00ff_ffff);
+    return ((script.type & 0xFF) << 24) | (script.id & 0x00FF_FFFF);
 }
 
 function packDestTileAndElevation(destTile: number, destElevation: number): number {
-    return ((destElevation & 0x3f) << 26) | (destTile & 0x03ff_ffff);
+    return ((destElevation & 0x3F) << 26) | (destTile & 0x03FF_FFFF);
 }
 
 function getGroup(root: ParsedGroup, groupName: string): ParsedGroup {
@@ -889,9 +889,9 @@ export function serializeProCanonicalSnapshot(snapshot: ProCanonicalSnapshot): U
 
     const data = new Uint8Array(size);
     headerSchema.write(writer(data), {
-        objectTypeAndId: ((header.objectType & 0xff) << 24) | (header.objectId & 0x00ff_ffff),
+        objectTypeAndId: ((header.objectType & 0xFF) << 24) | (header.objectId & 0x00FF_FFFF),
         textId: header.textId,
-        frmTypeAndId: ((header.frmType & 0xff) << 24) | (header.frmId & 0x00ff_ffff),
+        frmTypeAndId: ((header.frmType & 0xFF) << 24) | (header.frmId & 0x00FF_FFFF),
         lightRadius: header.lightRadius,
         lightIntensity: header.lightIntensity,
         flags: header.flags,

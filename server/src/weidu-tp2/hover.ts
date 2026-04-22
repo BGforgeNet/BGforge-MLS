@@ -402,7 +402,7 @@ function truncateDesc(desc: string): string {
 function extractFilename(uri: string): string {
     const path = uri.replace(/^file:\/\//, "");
     const lastSlash = path.lastIndexOf("/");
-    return lastSlash >= 0 ? path.slice(lastSlash + 1) : path;
+    return lastSlash !== -1 ? path.slice(lastSlash + 1) : path;
 }
 
 /**

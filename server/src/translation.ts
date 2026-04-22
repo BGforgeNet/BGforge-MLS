@@ -80,13 +80,13 @@ function isTraRef(word: string, langId: string, filePath?: string): boolean {
     if (langId === LANG_TYPESCRIPT && filePath) {
         const ext = path.extname(filePath).toLowerCase();
         if (ext === EXT_TSSL) {
-            return !!word.match(REGEX_MSG_HOVER);
+            return Boolean(word.match(REGEX_MSG_HOVER));
         }
         if (ext === EXT_TBAF || ext === EXT_TD) {
-            return !!word.match(REGEX_TRANSPILER_TRA_HOVER);
+            return Boolean(word.match(REGEX_TRANSPILER_TRA_HOVER));
         }
         // Regular .ts file - check all patterns, format determined by @tra comment
-        return !!word.match(REGEX_MSG_HOVER) || !!word.match(REGEX_TRANSPILER_TRA_HOVER);
+        return Boolean(word.match(REGEX_MSG_HOVER)) || Boolean(word.match(REGEX_TRANSPILER_TRA_HOVER));
     }
 
     // For other languages, check the language arrays

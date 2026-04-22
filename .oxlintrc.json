@@ -1,11 +1,221 @@
 {
     "jsPlugins": ["./.oxlint/oxlint-plugin-no-showmessage.mjs"],
-    "rules": {
+    "categories": {
         "correctness": "error",
         "suspicious": "error",
         "pedantic": "error",
         "perf": "error",
         "style": "error"
+    },
+    "rules": {
+        // `== null` / `!= null` is the idiomatic null-or-undefined check
+        // and is used throughout the codebase. Keep `eqeqeq` on for every
+        // other comparison.
+        "eqeqeq": ["error", "always", { "null": "ignore" }],
+
+        // Domain: codebase parses binary formats (Fallout .pro/.map, bit offsets,
+        // PID constants). Numeric literals ARE the spec — extracting them hurts
+        // readability instead of helping.
+        "no-magic-numbers": "off",
+
+        // Object-key order carries meaning here: tree-sitter node orderings,
+        // grammar rules, snippet stanzas, and data tables are grouped by
+        // feature. Alphabetizing destroys that grouping.
+        "sort-keys": "off",
+
+        // Arbitrary numeric caps — block-count, file length, param count,
+        // identifier length. No evidence any instance is actually a problem;
+        // the cap is the problem.
+        "max-statements": "off",
+        "max-lines-per-function": "off",
+        "max-lines": "off",
+        "max-params": "off",
+        "id-length": "off",
+
+        // Pure style preference; no correctness value.
+        "func-style": "off",
+        "no-ternary": "off",
+        "capitalized-comments": "off",
+        "no-inline-comments": "off",
+        "prefer-destructuring": "off",
+        "no-continue": "off",
+        "init-declarations": "off",
+        "unicorn/switch-case-braces": "off",
+
+        // `filename-case` would force a repo-wide rename without an
+        // established convention — out of scope for a lint upgrade.
+        "unicorn/filename-case": "off",
+
+        // `null` is required by surfaces we interoperate with (JSON payloads,
+        // LSP protocol, some tree-sitter APIs). Blanket ban doesn't fit.
+        "unicorn/no-null": "off",
+
+        // `document.getElementById` is clearer and faster than the
+        // `.querySelector('#id')` equivalent; the rule's premise doesn't hold.
+        "unicorn/prefer-query-selector": "off",
+
+        // `x | 0` is a deliberate perf idiom in parser hot paths; `Math.trunc`
+        // is not equivalent at the bytecode level.
+        "unicorn/prefer-math-trunc": "off",
+
+        // Member-order churn with no autofix in oxlint. Imports are grouped
+        // by origin (external → internal → types), not alphabetized within
+        // braces.
+        "sort-imports": "off",
+
+        // Project style: bare-statement `if`/`else`/`for` bodies are used
+        // deliberately. Forcing braces across hundreds of call sites is
+        // churn, not safety.
+        "curly": "off",
+
+        // Template-vs-concat is a preference, not a correctness concern.
+        // The codebase uses both intentionally.
+        "prefer-template": "off",
+
+        // Arbitrary nesting cap with no bug rationale; parsers and tree
+        // walkers legitimately nest deep.
+        "max-depth": "off",
+
+        // `utf8` vs `utf-8` cosmetic; both are recognized by Node and the
+        // DOM. Not worth the churn.
+        "unicorn/text-encoding-identifier-case": "off",
+
+        // Rule pushes `.toSorted()` (ES2023) in places where the project's
+        // TS lib target predates it. Re-enable when lib is bumped.
+        "unicorn/no-array-sort": "off",
+
+        // `.at(-1)` is modern but slower than `arr[arr.length - 1]` in hot
+        // parser paths; keep both idioms legal.
+        "unicorn/prefer-at": "off",
+
+        // `String.raw` rewrite is cosmetic.
+        "unicorn/prefer-string-raw": "off",
+
+        // `.slice` vs `.substring` — both are fine; no correctness value.
+        "unicorn/prefer-string-slice": "off",
+
+        // Top-level await forces a module-boundary shape change that isn't
+        // always desirable (e.g., CLI entrypoints where errors should be
+        // caught and translated).
+        "unicorn/prefer-top-level-await": "off",
+
+        // Readability preference; `if (!x)` is idiomatic in this codebase.
+        "no-negated-condition": "off",
+
+        // `async` without `await` is used deliberately to make interfaces
+        // uniformly Promise-returning (e.g., provider methods where some
+        // impls are sync).
+        "require-await": "off",
+
+        // Autofix is buggy in oxlint 1.61: rewrote `charCodeAt`→`codePointAt`
+        // (not equivalent — return types differ), leaving callers broken.
+        "unicorn/prefer-code-point": "off",
+
+        // Autofix is buggy: rewrites array literal to `new Set(...)` without
+        // updating the type annotation, breaking typecheck.
+        "unicorn/prefer-set-has": "off",
+
+        // Autofix is buggy: renames `catch (e)` parameter but misses
+        // references to `e` elsewhere in scope (e.g. `{ cause: e }`).
+        "unicorn/catch-error-name": "off",
+
+        // Autofix rewrites `import { X }` to `import type { X }` based on
+        // type-position usage, but misses runtime usages (class
+        // constructors, static members) and breaks the build.
+        "typescript/consistent-type-imports": "off",
+
+        // `.replaceAll()` requires ES2021 lib target; the project's current
+        // lib is older (server/src/bin/dump.ts errors on it).
+        "unicorn/prefer-string-replace-all": "off",
+
+        // Autofix strips `undefined` from typed calls like
+        // `vi.fn().mockResolvedValue(undefined)` even though the type
+        // signature requires the argument. Broken across test mocks.
+        "unicorn/no-useless-undefined": "off",
+
+        // Noisy: flags `"${x}"` patterns inside docs, regex examples, and
+        // intentionally-literal strings. False-positive rate too high.
+        "no-template-curly-in-string": "off",
+
+        // `T[]` and `Array<T>` are both idiomatic; forcing one is churn.
+        "typescript/array-type": "off",
+
+        // Auto-numbered enums are intentional in tree-sitter wrappers and
+        // flag sets; explicit initializers would add noise without value.
+        "typescript/prefer-enum-initializers": "off",
+
+        // Explicit annotations are often deliberate self-documentation,
+        // especially on public APIs.
+        "typescript/no-inferrable-types": "off",
+
+        // Flattening `if/else` to `?:` is a style preference.
+        "unicorn/prefer-ternary": "off",
+
+        // False positives with closures that intentionally capture scope.
+        "unicorn/consistent-function-scoping": "off",
+
+        // Collapsing `else { if ... }` is style churn.
+        "unicorn/no-lonely-if": "off",
+        "no-lonely-if": "off",
+
+        // `const x: Map<K, V> = new Map()` vs `const x = new Map<K, V>()`
+        // both have legitimate uses.
+        "typescript/consistent-generic-constructors": "off",
+
+        // `{}` is used deliberately in generic bounds and duck-typed
+        // positions; blanket ban doesn't fit.
+        "typescript/ban-types": "off",
+
+        // `if (arr.length)` is idiomatic and unambiguous in this codebase.
+        "unicorn/explicit-length-check": "off",
+
+        // Rule pushes `.toSorted()`/`.toReversed()` (ES2023), same lib
+        // constraint as `unicorn/no-array-sort`.
+        "unicorn/no-immediate-mutation": "off",
+        "unicorn/no-array-reverse": "off",
+
+        // `.apply()` is sometimes clearer than spread, especially when
+        // forwarding an existing array-like.
+        "unicorn/prefer-spread": "off",
+
+        // Early-return vs. else-branch is a readability preference.
+        "no-else-return": "off",
+
+        // Brace-vs-expression body is a style preference.
+        "arrow-body-style": "off",
+
+        // `x = x + 1` vs `x += 1` is style churn.
+        "operator-assignment": "off",
+
+        // `{ foo: foo }` vs `{ foo }` is style churn.
+        "object-shorthand": "off",
+
+        // Empty interfaces are used as markers and for declaration merging.
+        "typescript/no-empty-interface": "off",
+
+        // Rule bans TODO/FIXME comments; these are useful tracking markers.
+        "no-warning-comments": "off",
+
+        // False positives on project-specific constructors whose names
+        // don't match the plugin's heuristic (e.g. branded-type factories).
+        "new-cap": "off",
+
+        // Parameter ordering is sometimes dictated by external APIs or
+        // readability (required before optional).
+        "default-param-last": "off",
+
+        // `type` vs `interface` is a style preference.
+        "typescript/consistent-type-definitions": "off",
+
+        // Anonymous function expressions are used deliberately in callbacks
+        // and factories.
+        "func-names": "off",
+
+        // False positive for VS Code extensions: `webview.postMessage()`
+        // (extension side) and `vscode.postMessage()` from
+        // `acquireVsCodeApi()` (webview side) are not the browser's
+        // `window.postMessage`; neither takes a `targetOrigin`.
+        "unicorn/require-post-message-target-origin": "off"
     },
     "overrides": [
         {

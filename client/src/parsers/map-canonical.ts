@@ -83,7 +83,7 @@ const mapScriptExtentSchema = z.strictObject({
 });
 
 const mapScriptSectionSchema = z.strictObject({
-    type: z.number().int().min(0).max(0xff),
+    type: z.number().int().min(0).max(0xFF),
     count: int32Schema,
     extents: z.array(mapScriptExtentSchema),
 });
@@ -402,7 +402,7 @@ function parseScriptSection(group: ParsedGroup): z.infer<typeof mapScriptSection
 }
 
 function objectKindFromPid(pid: number): z.infer<typeof mapObjectSchema>["kind"] {
-    switch ((pid >>> 24) & 0xff) {
+    switch ((pid >>> 24) & 0xFF) {
         case PID_TYPE_ITEM:
             return "item";
         case PID_TYPE_CRITTER:
@@ -561,7 +561,7 @@ export function rebuildMapCanonicalDocument(parseResult: ParseResult): MapCanoni
         .map((entry) => parseTileElevation(entry));
 
     const scripts = parseResult.root.fields
-        .filter((entry): entry is ParsedGroup => isGroup(entry) && / Scripts$/.test(entry.name))
+        .filter((entry): entry is ParsedGroup => isGroup(entry) && entry.name.endsWith(' Scripts'))
         .map((entry) => parseScriptSection(entry));
 
     const objects = parseObjects(getGroup(parseResult.root, "Objects Section"));
@@ -643,10 +643,10 @@ function serializeTiles(view: DataView, header: z.infer<typeof mapHeaderSchema>,
 
         const tileElevation = tilesByElevation.get(elevation);
         for (const tile of tileElevation?.tiles ?? []) {
-            const word = ((tile.roofFlags & 0x0f) << 28)
-                | ((tile.roofTileId & 0x0fff) << 16)
-                | ((tile.floorFlags & 0x0f) << 12)
-                | (tile.floorTileId & 0x0fff);
+            const word = ((tile.roofFlags & 0x0F) << 28)
+                | ((tile.roofTileId & 0x0FFF) << 16)
+                | ((tile.floorFlags & 0x0F) << 12)
+                | (tile.floorTileId & 0x0FFF);
             writeUint32(view, offset + tile.index * 4, word);
         }
         offset += TILE_DATA_SIZE_PER_ELEVATION;
@@ -718,7 +718,7 @@ function serializeScripts(view: DataView, scripts: z.infer<typeof mapScriptSecti
 
 function objectSerializedLength(object: z.infer<typeof mapObjectSchema>): number {
     let length = MAP_OBJECT_BASE_SIZE + MAP_OBJECT_DATA_HEADER_SIZE;
-    const pidType = (object.base.pid >>> 24) & 0xff;
+    const pidType = (object.base.pid >>> 24) & 0xFF;
     if (pidType === PID_TYPE_CRITTER) {
         length += 44;
     } else {
@@ -762,7 +762,7 @@ function serializeMapObject(view: DataView, object: z.infer<typeof mapObjectSche
     writeInt32(view, currentOffset + 8, object.inventoryHeader.inventoryPointer);
     currentOffset += MAP_OBJECT_DATA_HEADER_SIZE;
 
-    const pidType = (object.base.pid >>> 24) & 0xff;
+    const pidType = (object.base.pid >>> 24) & 0xFF;
     if (pidType === PID_TYPE_CRITTER) {
         const critterData = object.critterData;
         if (!critterData) {

@@ -129,15 +129,9 @@ connection.onInitialize((params: InitializeParams) => {
     const capabilities = params.capabilities;
     // Does the client support the `workspace/configuration` request?
     // If not, we fall back using global settings.
-    hasConfigurationCapability = !!(
-        capabilities.workspace && !!capabilities.workspace.configuration
-    );
-    hasWorkspaceFolderCapability = !!(
-        capabilities.workspace && !!capabilities.workspace.workspaceFolders
-    );
-    hasFileWatchingCapability = !!(
-        capabilities.workspace?.didChangeWatchedFiles?.dynamicRegistration
-    );
+    hasConfigurationCapability = Boolean(capabilities.workspace && !!capabilities.workspace.configuration);
+    hasWorkspaceFolderCapability = Boolean(capabilities.workspace && !!capabilities.workspace.workspaceFolders);
+    hasFileWatchingCapability = Boolean(capabilities.workspace?.didChangeWatchedFiles?.dynamicRegistration);
 
     const result: InitializeResult = {
         capabilities: getServerCapabilities(),

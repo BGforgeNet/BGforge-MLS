@@ -78,7 +78,7 @@ function extractInlineFunctionsFromSource(source: SourceFile, result: Map<string
         const params = func.getParameters().map(p => p.getName());
 
         let targetFunc: string | undefined;
-        let inlineArgs: InlineArg[] = [];
+        const inlineArgs: InlineArg[] = [];
 
         // Helper to extract call info
         const extractCallInfo = (call: Node) => {

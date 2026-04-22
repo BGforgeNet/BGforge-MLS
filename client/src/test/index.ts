@@ -12,7 +12,7 @@ export async function run(): Promise<void> {
         ui: "tdd",
         color: true,
     });
-    mocha.timeout(100000);
+    mocha.timeout(100_000);
 
     const testsRoot = __dirname;
 

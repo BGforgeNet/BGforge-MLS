@@ -42,7 +42,7 @@ export function decodeOpaqueRange(range: ParseOpaqueRange): Uint8Array {
 
             const byte = Number.parseInt(hexChunk.slice(index, index + 2), 16);
             if (Number.isNaN(byte)) {
-                throw new Error(`Opaque range "${range.label}" contains invalid hex data`);
+                throw new TypeError(`Opaque range "${range.label}" contains invalid hex data`);
             }
             bytes[writeOffset] = byte;
             writeOffset += 1;

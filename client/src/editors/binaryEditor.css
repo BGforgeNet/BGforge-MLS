@@ -13,8 +13,8 @@
     --tree-meta-col: 18ch;
     --tree-col-gap: 16px;
     --tree-reserved-width: calc(
-        var(--indent-size) + 16px + var(--tree-name-col) + var(--tree-value-col) +
-            var(--tree-meta-col) + (var(--tree-col-gap) * 2) + 24px
+        var(--indent-size) + 16px + var(--tree-name-col) + var(--tree-value-col) + var(--tree-meta-col) +
+            (var(--tree-col-gap) * 2) + 24px
     );
 }
 
