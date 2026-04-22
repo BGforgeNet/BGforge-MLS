@@ -79,14 +79,14 @@ function parseWeiduOutput(text: string) {
 
                 errors.push({
                     uri: pathToUri(matchUri),
-                    line: parseInt(matchLine),
+                    line: parseInt(matchLine, 10),
                     // WeiDU usually emits 1-based start columns (column 1-10), but sometimes
                     // 0-based (column 0-5) for tokens at the start of a line. Clamp to
                     // 0 so we never produce an invalid negative LSP character offset.
                     // End column is kept as-is: WeiDU's end already aligns with LSP's
                     // exclusive end (e.g. "column 1-10" → LSP start=0, end=10).
-                    columnStart: Math.max(0, parseInt(matchColStart) - 1),
-                    columnEnd: parseInt(matchColEnd),
+                    columnStart: Math.max(0, parseInt(matchColStart, 10) - 1),
+                    columnEnd: parseInt(matchColEnd, 10),
                     message,
                 });
             }

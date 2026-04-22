@@ -119,9 +119,9 @@ function parseCompileOutput(text: string, uri: string) {
 
             errors.push({
                 uri: pathToUri(resolveMatchFilePath(matchFile, fileDir)),
-                line: parseInt(matchLine),
+                line: parseInt(matchLine, 10),
                 columnStart: 0,
-                columnEnd: parseInt(matchCol || "1") - 1,
+                columnEnd: parseInt(matchCol || "1", 10) - 1,
                 message: matchMsg,
             });
         }
@@ -133,11 +133,11 @@ function parseCompileOutput(text: string, uri: string) {
             const matchMsg = match[4];
             if (!matchFile || !matchLine || !matchMsg) continue;
 
-            const line = parseInt(matchLine);
+            const line = parseInt(matchLine, 10);
             warnings.push({
                 uri: pathToUri(resolveMatchFilePath(matchFile, fileDir)),
                 line,
-                columnStart: parseInt(matchCol || "0"),
+                columnStart: parseInt(matchCol || "0", 10),
                 columnEnd: textDocument.offsetAt({ line, character: 0 }) - 1,
                 message: matchMsg,
             });

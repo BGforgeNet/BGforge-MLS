@@ -52,7 +52,7 @@ function field(
     return { name, value, offset, size, type, description, rawValue };
 }
 
-function group(
+function makeGroup(
     name: string,
     fields: (ParsedField | ParsedGroup)[],
     expanded = true,
@@ -99,7 +99,7 @@ function enumField(
 function parseHeaderSection(data: Uint8Array, errors: string[]): ParsedGroup {
     const header = parseHeader(data);
 
-    return group("Header", [
+    return makeGroup("Header", [
         enumField("Version", header.version, MapVersion, 0x00, 4, errors),
         field("Filename", header.filename, 0x04, 16, "string"),
         field("Default Position", header.defaultPosition, 0x14, 4, "int32"),
@@ -144,7 +144,7 @@ function parseVariablesSection(data: Uint8Array, header: MapHeader): ParsedGroup
         const globalVarFields: ParsedField[] = globalVars.map((val, i) =>
             field(`Global Var ${i}`, val, HEADER_SIZE + i * 4, 4, "int32")
         );
-        groups.push(group("Global Variables", globalVarFields));
+        groups.push(makeGroup("Global Variables", globalVarFields));
     }
 
     if (localVars.length > 0) {
@@ -152,7 +152,7 @@ function parseVariablesSection(data: Uint8Array, header: MapHeader): ParsedGroup
         const localVarFields: ParsedField[] = localVars.map((val, i) =>
             field(`Local Var ${i}`, val, localOffset + i * 4, 4, "int32")
         );
-        groups.push(group("Local Variables", localVarFields));
+        groups.push(makeGroup("Local Variables", localVarFields));
     }
 
     return groups;
@@ -197,7 +197,7 @@ function parseTiles(
         }
 
         if (tileFields.length > 0) {
-            elevTiles.push(group(`Elevation ${elev} Tiles`, tileFields));
+            elevTiles.push(makeGroup(`Elevation ${elev} Tiles`, tileFields));
         }
         tiles.set(elev, elevTiles);
         currentOffset += TILE_DATA_SIZE_PER_ELEVATION;
@@ -297,11 +297,11 @@ function parseScripts(
         ];
 
         if (count === 0) {
-            scripts.push(group(`${ScriptType[scriptType] ?? `Type${scriptType}`} Scripts`, scriptEntries));
+            scripts.push(makeGroup(`${ScriptType[scriptType] ?? `Type${scriptType}`} Scripts`, scriptEntries));
             continue;
         }
         if (currentOffset >= data.length) {
-            scripts.push(group(`${ScriptType[scriptType] ?? `Type${scriptType}`} Scripts`, scriptEntries));
+            scripts.push(makeGroup(`${ScriptType[scriptType] ?? `Type${scriptType}`} Scripts`, scriptEntries));
             break;
         }
         const extentCount = Math.ceil(count / 16);
@@ -316,7 +316,7 @@ function parseScripts(
                     break;
                 }
 
-                extentFields.push(group(`Slot ${slotIndex}`, entry.fields));
+                extentFields.push(makeGroup(`Slot ${slotIndex}`, entry.fields));
                 currentOffset = entry.offset;
             }
 
@@ -331,10 +331,10 @@ function parseScripts(
             );
             currentOffset += 8;
 
-            scriptEntries.push(group(`Extent ${extentIndex}`, extentFields));
+            scriptEntries.push(makeGroup(`Extent ${extentIndex}`, extentFields));
         }
 
-        scripts.push(group(`${ScriptType[scriptType] ?? `Type${scriptType}`} Scripts`, scriptEntries));
+        scripts.push(makeGroup(`${ScriptType[scriptType] ?? `Type${scriptType}`} Scripts`, scriptEntries));
     }
 
     return { scripts, offset: currentOffset };
@@ -440,7 +440,7 @@ function parseObjectAt(data: Uint8Array, offset: number, index: string, header: 
         errors.push(`Object ${index} truncated at offset 0x${offset.toString(16)}`);
         return {
             complete: false,
-            group: group(`Object ${index}`, [noteField("TODO", "Truncated object data", offset)], true),
+            group: makeGroup(`Object ${index}`, [noteField("TODO", "Truncated object data", offset)], true),
             offset: data.length,
         };
     }
@@ -456,7 +456,7 @@ function parseObjectAt(data: Uint8Array, offset: number, index: string, header: 
 
     const objectFields: (ParsedField | ParsedGroup)[] = [
         ...baseFields,
-        group("Inventory Header", [inventoryLength, inventoryCapacity, inventoryPointer]),
+        makeGroup("Inventory Header", [inventoryLength, inventoryCapacity, inventoryPointer]),
     ];
 
     if (pidType === PID_TYPE_CRITTER) {
@@ -465,12 +465,12 @@ function parseObjectAt(data: Uint8Array, offset: number, index: string, header: 
             objectFields.push(noteField("TODO", "Truncated critter payload", currentOffset));
             return {
                 complete: false,
-                group: group(`Object ${index} (${objectTypeName(pid)})`, objectFields),
+                group: makeGroup(`Object ${index} (${objectTypeName(pid)})`, objectFields),
                 offset: data.length,
             };
         }
 
-        objectFields.push(group("Critter Data", parseCritterDataFields(data, currentOffset)));
+        objectFields.push(makeGroup("Critter Data", parseCritterDataFields(data, currentOffset)));
         currentOffset += 44;
     } else {
         if (currentOffset + 4 > data.length) {
@@ -478,12 +478,12 @@ function parseObjectAt(data: Uint8Array, offset: number, index: string, header: 
             objectFields.push(noteField("TODO", "Truncated object flags", currentOffset));
             return {
                 complete: false,
-                group: group(`Object ${index} (${objectTypeName(pid)})`, objectFields),
+                group: makeGroup(`Object ${index} (${objectTypeName(pid)})`, objectFields),
                 offset: data.length,
             };
         }
 
-        objectFields.push(group("Object Data", [uint32Field("Data Flags", data, currentOffset)]));
+        objectFields.push(makeGroup("Object Data", [uint32Field("Data Flags", data, currentOffset)]));
         currentOffset += 4;
 
         if (pidType === PID_TYPE_MISC && isExitGridPid(pid)) {
@@ -492,12 +492,12 @@ function parseObjectAt(data: Uint8Array, offset: number, index: string, header: 
                 objectFields.push(noteField("TODO", "Truncated exit grid payload", currentOffset));
                 return {
                     complete: false,
-                    group: group(`Object ${index} (${objectTypeName(pid)})`, objectFields),
+                    group: makeGroup(`Object ${index} (${objectTypeName(pid)})`, objectFields),
                     offset: data.length,
                 };
             }
 
-            objectFields.push(group("Exit Grid", parseExitGridFields(data, currentOffset)));
+            objectFields.push(makeGroup("Exit Grid", parseExitGridFields(data, currentOffset)));
             currentOffset += 16;
         } else if (pidType === PID_TYPE_ITEM || pidType === PID_TYPE_SCENERY) {
             objectFields.push(noteField(
@@ -507,7 +507,7 @@ function parseObjectAt(data: Uint8Array, offset: number, index: string, header: 
             ));
             return {
                 complete: false,
-                group: group(`Object ${index} (${objectTypeName(pid)})`, objectFields),
+                group: makeGroup(`Object ${index} (${objectTypeName(pid)})`, objectFields),
                 offset: currentOffset,
             };
         }
@@ -520,7 +520,7 @@ function parseObjectAt(data: Uint8Array, offset: number, index: string, header: 
             objectFields.push(noteField("TODO", "Truncated inventory entry", currentOffset));
             return {
                 complete: false,
-                group: group(`Object ${index} (${objectTypeName(pid)})`, [...objectFields, ...inventoryGroups]),
+                group: makeGroup(`Object ${index} (${objectTypeName(pid)})`, [...objectFields, ...inventoryGroups]),
                 offset: data.length,
             };
         }
@@ -529,13 +529,13 @@ function parseObjectAt(data: Uint8Array, offset: number, index: string, header: 
         currentOffset += 4;
 
         const nestedObject = parseObjectAt(data, currentOffset, `${index}.${inventoryIndex}`, header, errors);
-        inventoryGroups.push(group(`Inventory Entry ${inventoryIndex}`, [quantityField, nestedObject.group]));
+        inventoryGroups.push(makeGroup(`Inventory Entry ${inventoryIndex}`, [quantityField, nestedObject.group]));
         currentOffset = nestedObject.offset;
 
         if (!nestedObject.complete) {
             return {
                 complete: false,
-                group: group(`Object ${index} (${objectTypeName(pid)})`, [...objectFields, ...inventoryGroups]),
+                group: makeGroup(`Object ${index} (${objectTypeName(pid)})`, [...objectFields, ...inventoryGroups]),
                 offset: currentOffset,
             };
         }
@@ -543,7 +543,7 @@ function parseObjectAt(data: Uint8Array, offset: number, index: string, header: 
 
     return {
         complete: true,
-        group: group(`Object ${index} (${objectTypeName(pid)})`, [...objectFields, ...inventoryGroups]),
+        group: makeGroup(`Object ${index} (${objectTypeName(pid)})`, [...objectFields, ...inventoryGroups]),
         offset: currentOffset,
     };
 }
@@ -557,7 +557,7 @@ function parseObjects(
     if (currentOffset >= data.length) {
         return {
             offset: currentOffset,
-            group: group("Objects Section", [
+            group: makeGroup("Objects Section", [
                 field("Total Objects", 0, currentOffset, 0, "int32"),
             ]),
         };
@@ -567,7 +567,7 @@ function parseObjects(
         errors.push(`Object section truncated at offset 0x${currentOffset.toString(16)}`);
         return {
             offset: data.length,
-            group: group("Objects Section", [noteField("TODO", "Truncated object section header", currentOffset)]),
+            group: makeGroup("Objects Section", [noteField("TODO", "Truncated object section header", currentOffset)]),
         };
     }
 
@@ -580,8 +580,8 @@ function parseObjects(
     for (let elev = 0; elev < 3; elev++) {
         if (currentOffset + 4 > data.length) {
             errors.push(`Elevation ${elev} object count truncated at offset 0x${currentOffset.toString(16)}`);
-            sectionFields.push(group(`Elevation ${elev} Objects`, [noteField("TODO", "Truncated elevation object count", currentOffset)]));
-            return { offset: data.length, group: group("Objects Section", sectionFields) };
+            sectionFields.push(makeGroup(`Elevation ${elev} Objects`, [noteField("TODO", "Truncated elevation object count", currentOffset)]));
+            return { offset: data.length, group: makeGroup("Objects Section", sectionFields) };
         }
 
         const countField = int32Field("Object Count", data, currentOffset);
@@ -608,7 +608,7 @@ function parseObjects(
             }
         }
 
-        sectionFields.push(group(`Elevation ${elev} Objects`, elevationFields));
+        sectionFields.push(makeGroup(`Elevation ${elev} Objects`, elevationFields));
         if (stoppedEarly) {
             break;
         }
@@ -630,12 +630,12 @@ function parseObjects(
 
         return {
             offset: data.length,
-            group: group("Objects Section", sectionFields),
+            group: makeGroup("Objects Section", sectionFields),
             opaqueTailOffset: currentOffset,
         };
     }
 
-    return { offset: data.length, group: group("Objects Section", sectionFields) };
+    return { offset: data.length, group: makeGroup("Objects Section", sectionFields) };
 }
 
 function findFirstObjectGroup(group: ParsedGroup): ParsedGroup | undefined {
@@ -671,11 +671,11 @@ function fieldNumber(objectGroup: ParsedGroup, name: string): number | undefined
 }
 
 function buildOpaqueObjectsGroup(offset: number): ParsedGroup {
-    return group("Objects Section", [
+    return makeGroup("Objects Section", [
         field("Total Objects", 0, offset, 0, "int32"),
-        group("Elevation 0 Objects", [field("Object Count", 0, offset + 4, 0, "int32")]),
-        group("Elevation 1 Objects", [field("Object Count", 0, offset + 8, 0, "int32")]),
-        group("Elevation 2 Objects", [field("Object Count", 0, offset + 12, 0, "int32")]),
+        makeGroup("Elevation 0 Objects", [field("Object Count", 0, offset + 4, 0, "int32")]),
+        makeGroup("Elevation 1 Objects", [field("Object Count", 0, offset + 8, 0, "int32")]),
+        makeGroup("Elevation 2 Objects", [field("Object Count", 0, offset + 12, 0, "int32")]),
         noteField(
             "TODO",
             `Unable to confidently decode object section: script/object boundary is ambiguous near offset 0x${offset.toString(16)}; preserving remaining bytes opaquely`,
@@ -829,7 +829,7 @@ class MapParser implements BinaryParser {
         return {
             format: this.id,
             formatName: this.name,
-            root: group("MAP File", []),
+            root: makeGroup("MAP File", []),
             errors: [message],
         };
     }
@@ -970,7 +970,7 @@ class MapParser implements BinaryParser {
         const result: ParseResult = {
             format: this.id,
             formatName: this.name,
-            root: group("MAP File", rootFields),
+            root: makeGroup("MAP File", rootFields),
             opaqueRanges: opaqueRanges.length > 0 ? opaqueRanges : undefined,
             errors: errors.length > 0 ? errors : undefined,
         };

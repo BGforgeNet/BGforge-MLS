@@ -133,16 +133,16 @@ function buildProcedureSignature(
  */
 export function buildTooltipBase(
     signature: string,
-    jsdoc: jsdoc.JSdoc | null,
+    jsdocData: jsdoc.JSdoc | null,
     filePath?: string,
     engineDoc?: string,
 ): string {
     let markdown = buildSignatureBlock(signature, LANG_FALLOUT_SSL_TOOLTIP, filePath);
-    if (jsdoc) {
-        markdown += jsdocToMarkdown(jsdoc);
+    if (jsdocData) {
+        markdown += jsdocToMarkdown(jsdocData);
     }
     if (engineDoc) {
-        if (jsdoc) {
+        if (jsdocData) {
             // Separate engine doc from user JSDoc with a horizontal rule.
             markdown += "\n\n---\n\n";
         } else {

@@ -496,23 +496,23 @@ function functionInfoToSymbol(func: FunctionInfo, displayPath?: string | null): 
         description: func.jsdoc?.desc,
         params: func.params ? {
             intVar: func.params.intVar.map(p => {
-                const jsdoc = jsdocArgs.get(p.name);
+                const jsdocArg = jsdocArgs.get(p.name);
                 return {
                     name: p.name,
-                    type: jsdoc?.type ?? "int",
+                    type: jsdocArg?.type ?? "int",
                     defaultValue: p.defaultValue,
-                    description: jsdoc?.description,
-                    required: jsdoc?.required,
+                    description: jsdocArg?.description,
+                    required: jsdocArg?.required,
                 };
             }),
             strVar: func.params.strVar.map(p => {
-                const jsdoc = jsdocArgs.get(p.name);
+                const jsdocArg = jsdocArgs.get(p.name);
                 return {
                     name: p.name,
-                    type: jsdoc?.type ?? "string",
+                    type: jsdocArg?.type ?? "string",
                     defaultValue: p.defaultValue,
-                    description: jsdoc?.description,
-                    required: jsdoc?.required,
+                    description: jsdocArg?.description,
+                    required: jsdocArg?.required,
                 };
             }),
             ret: func.params.ret,

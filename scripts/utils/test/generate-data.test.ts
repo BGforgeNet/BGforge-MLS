@@ -634,7 +634,6 @@ describe("generateCompletion params field (WeiDU)", () => {
 
 describe("loadData validation errors", () => {
     let tmpDir: string;
-    const TMP_BASE = "tmp";
 
     beforeEach(() => {
         tmpDir = fs.mkdtempSync(path.join(TMP_BASE, ".loaddata-err-test-"));
@@ -703,7 +702,6 @@ describe("generateSignatures getCategoryPrefix", () => {
 
 describe("loadData sort tiebreaker", () => {
     let tmpDir: string;
-    const TMP_BASE = "tmp";
 
     beforeEach(() => {
         tmpDir = fs.mkdtempSync(path.join(TMP_BASE, ".sort-tb-test-"));

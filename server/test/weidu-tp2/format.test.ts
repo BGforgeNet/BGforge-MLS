@@ -648,7 +648,7 @@ DEFINE_ACTION_MACRO macro1 BEGIN END
 describe("definition: getDefinition", () => {
     // Lazy-load modules after parser initialization
     let getDefinition: typeof import("../../src/weidu-tp2/definition").getDefinition;
-    let parseHeaderToSymbols: (...args: Parameters<typeof parseFile>) => IndexedSymbol[];
+    let lazyParseHeaderToSymbols: (...args: Parameters<typeof parseFile>) => IndexedSymbol[];
     let SymbolsClass: typeof import("../../src/core/symbol-index").Symbols;
 
     beforeAll(async () => {
@@ -657,7 +657,7 @@ describe("definition: getDefinition", () => {
         const headerMod = await import("../../src/weidu-tp2/header-parser");
         const symbolMod = await import("../../src/core/symbol-index");
         getDefinition = defMod.getDefinition;
-        parseHeaderToSymbols = (...args: Parameters<typeof parseFile>) => [...headerMod.parseFile(...args).symbols];
+        lazyParseHeaderToSymbols = (...args: Parameters<typeof parseFile>) => [...headerMod.parseFile(...args).symbols];
         SymbolsClass = symbolMod.Symbols;
     });
 
@@ -680,7 +680,7 @@ BEGIN @1
         // Index a header file in Symbols
         const mockStore = new SymbolsClass();
         const headerCode = `DEFINE_ACTION_FUNCTION header_func BEGIN END`;
-        const parsedSymbols = parseHeaderToSymbols("file:///header.tph", headerCode);
+        const parsedSymbols = lazyParseHeaderToSymbols("file:///header.tph", headerCode);
         mockStore.updateFile("file:///header.tph", parsedSymbols);
 
         // Main file calls the function
