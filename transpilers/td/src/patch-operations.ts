@@ -8,7 +8,6 @@
 
 import {
     CallExpression,
-    Expression,
     FunctionDeclaration,
     Node,
     SyntaxKind,
@@ -36,6 +35,7 @@ import {
     parseStateList,
     parseNumberArray,
     parseUnless,
+    getCallArg,
 } from "./parse-helpers";
 import { TranspileError } from "../../common/transpile-error";
 import {
@@ -54,9 +54,9 @@ function transformAlterTrans(call: CallExpression, vars: VarsContext): TDConstru
         throw TranspileError.fromNode(call, `alterTrans() requires 4 arguments`);
     }
 
-    const filename = resolveStringExpr(args[0] as Expression, vars);
-    const states = parseStateList(args[1] as Expression, vars);
-    const transitions = parseNumberArray(args[2] as Expression);
+    const filename = resolveStringExpr(getCallArg(args, 0, call), vars);
+    const states = parseStateList(getCallArg(args, 1, call), vars);
+    const transitions = parseNumberArray(getCallArg(args, 2, call));
     const changesObj = args[3];
 
     if (!Node.isObjectLiteralExpression(changesObj)) {
@@ -106,10 +106,10 @@ function transformAddStateTrigger(call: CallExpression, vars: VarsContext): TDCo
         throw TranspileError.fromNode(call, `addStateTrigger() requires at least 3 arguments`);
     }
 
-    const filename = resolveStringExpr(args[0] as Expression, vars);
-    const states = parseStateList(args[1] as Expression, vars);
-    const trigger = expressionToTrigger(args[2] as Expression, vars);
-    const unless = args[3] ? parseUnless(args[3] as Expression) : undefined;
+    const filename = resolveStringExpr(getCallArg(args, 0, call), vars);
+    const states = parseStateList(getCallArg(args, 1, call), vars);
+    const trigger = expressionToTrigger(getCallArg(args, 2, call), vars);
+    const unless = args[3] ? parseUnless(getCallArg(args, 3, call)) : undefined;
 
     const operation: TDAddStateTrigger = {
         op: TDPatchOp.AddStateTrigger,
@@ -131,9 +131,9 @@ function transformAddTransTrigger(call: CallExpression, vars: VarsContext): TDCo
         throw TranspileError.fromNode(call, `addTransTrigger() requires at least 3 arguments`);
     }
 
-    const filename = resolveStringExpr(args[0] as Expression, vars);
-    const states = parseStateList(args[1] as Expression, vars);
-    const trigger = expressionToTrigger(args[2] as Expression, vars);
+    const filename = resolveStringExpr(getCallArg(args, 0, call), vars);
+    const states = parseStateList(getCallArg(args, 1, call), vars);
+    const trigger = expressionToTrigger(getCallArg(args, 2, call), vars);
 
     let transitions: number[] | undefined;
     let unless: string | undefined;
@@ -179,11 +179,11 @@ function transformAddTransAction(call: CallExpression, vars: VarsContext): TDCon
         throw TranspileError.fromNode(call, `addTransAction() requires at least 4 arguments`);
     }
 
-    const filename = resolveStringExpr(args[0] as Expression, vars);
-    const states = parseStateList(args[1] as Expression, vars);
-    const transitions = parseNumberArray(args[2] as Expression);
-    const action = expressionToAction(args[3] as Expression, vars);
-    const unless = args[4] ? parseUnless(args[4] as Expression) : undefined;
+    const filename = resolveStringExpr(getCallArg(args, 0, call), vars);
+    const states = parseStateList(getCallArg(args, 1, call), vars);
+    const transitions = parseNumberArray(getCallArg(args, 2, call));
+    const action = expressionToAction(getCallArg(args, 3, call), vars);
+    const unless = args[4] ? parseUnless(getCallArg(args, 4, call)) : undefined;
 
     const operation: TDAddTransAction = {
         op: TDPatchOp.AddTransAction,
@@ -212,13 +212,12 @@ function transformReplaceTrans(
         throw TranspileError.fromNode(call, `${funcName}() requires at least 5 arguments`);
     }
 
-    const filename = resolveStringExpr(args[0] as Expression, vars);
-    const states = parseStateList(args[1] as Expression, vars);
-    const transitions = parseNumberArray(args[2] as Expression);
-    // Safe: args.length >= 5 validated above
-    const oldText = utils.resolveStringLiteral(args[3] as Expression);
-    const newText = utils.resolveStringLiteral(args[4] as Expression);
-    const unless = args[5] ? parseUnless(args[5] as Expression) : undefined;
+    const filename = resolveStringExpr(getCallArg(args, 0, call), vars);
+    const states = parseStateList(getCallArg(args, 1, call), vars);
+    const transitions = parseNumberArray(getCallArg(args, 2, call));
+    const oldText = utils.resolveStringLiteral(getCallArg(args, 3, call));
+    const newText = utils.resolveStringLiteral(getCallArg(args, 4, call));
+    const unless = args[5] ? parseUnless(getCallArg(args, 5, call)) : undefined;
 
     const operation: TDReplaceTrans = {
         op,
@@ -248,22 +247,21 @@ function transformReplaceText(
         throw TranspileError.fromNode(call, `${funcName}() requires at least 3 arguments`);
     }
 
-    const filenamesArg = args[0];
+    const filenamesArg = getCallArg(args, 0, call);
     let filenames: string[];
 
     // Can be a single string or array of strings
-    if (Node.isStringLiteral(filenamesArg) || filenamesArg?.getKind() === SyntaxKind.StringLiteral) {
-        filenames = [resolveStringExpr(filenamesArg as Expression, vars)];
+    if (Node.isStringLiteral(filenamesArg) || filenamesArg.getKind() === SyntaxKind.StringLiteral) {
+        filenames = [resolveStringExpr(filenamesArg, vars)];
     } else if (Node.isArrayLiteralExpression(filenamesArg)) {
-        filenames = filenamesArg.getElements().map((e) => resolveStringExpr(e as Expression, vars));
+        filenames = filenamesArg.getElements().map((e) => resolveStringExpr(e, vars));
     } else {
         throw TranspileError.fromNode(call, `${funcName}() first argument must be a string or array of strings`);
     }
 
-    // Safe: args.length >= 3 validated above
-    const oldText = utils.resolveStringLiteral(args[1] as Expression);
-    const newText = utils.resolveStringLiteral(args[2] as Expression);
-    const unless = args[3] ? parseUnless(args[3] as Expression) : undefined;
+    const oldText = utils.resolveStringLiteral(getCallArg(args, 1, call));
+    const newText = utils.resolveStringLiteral(getCallArg(args, 2, call));
+    const unless = args[3] ? parseUnless(getCallArg(args, 3, call)) : undefined;
 
     const operation: TDReplaceText = {
         op,
@@ -285,9 +283,9 @@ function transformSetWeight(call: CallExpression, vars: VarsContext): TDConstruc
         throw TranspileError.fromNode(call, `setWeight() requires 3 arguments`);
     }
 
-    const filename = resolveStringExpr(args[0] as Expression, vars);
-    const state = resolveStringExpr(args[1] as Expression, vars);
-    const weight = Number(args[2]!.getText());
+    const filename = resolveStringExpr(getCallArg(args, 0, call), vars);
+    const state = resolveStringExpr(getCallArg(args, 1, call), vars);
+    const weight = Number(getCallArg(args, 2, call).getText());
 
     const operation: TDSetWeight = {
         op: TDPatchOp.SetWeight,
@@ -308,9 +306,9 @@ function transformReplaceSay(call: CallExpression, vars: VarsContext): TDConstru
         throw TranspileError.fromNode(call, `replaceSay() requires 3 arguments`);
     }
 
-    const filename = resolveStringExpr(args[0] as Expression, vars);
-    const state = resolveStringExpr(args[1] as Expression, vars);
-    const text = expressionToText(args[2] as Expression, vars);
+    const filename = resolveStringExpr(getCallArg(args, 0, call), vars);
+    const state = resolveStringExpr(getCallArg(args, 1, call), vars);
+    const text = expressionToText(getCallArg(args, 2, call), vars);
 
     const operation: TDReplaceSay = {
         op: TDPatchOp.ReplaceSay,
@@ -331,10 +329,10 @@ function transformReplaceStateTrigger(call: CallExpression, vars: VarsContext): 
         throw TranspileError.fromNode(call, `replaceStateTrigger() requires at least 3 arguments`);
     }
 
-    const filename = resolveStringExpr(args[0] as Expression, vars);
-    const states = parseStateList(args[1] as Expression, vars);
-    const trigger = expressionToTrigger(args[2] as Expression, vars);
-    const unless = args[3] ? parseUnless(args[3] as Expression) : undefined;
+    const filename = resolveStringExpr(getCallArg(args, 0, call), vars);
+    const states = parseStateList(getCallArg(args, 1, call), vars);
+    const trigger = expressionToTrigger(getCallArg(args, 2, call), vars);
+    const unless = args[3] ? parseUnless(getCallArg(args, 3, call)) : undefined;
 
     const operation: TDReplaceStateTrigger = {
         op: TDPatchOp.ReplaceStateTrigger,
@@ -361,7 +359,7 @@ function transformReplace(
         throw TranspileError.fromNode(call, `replace() requires 2 arguments`);
     }
 
-    const filename = resolveStringExpr(args[0] as Expression, vars);
+    const filename = resolveStringExpr(getCallArg(args, 0, call), vars);
     const statesObj = args[1];
 
     if (!Node.isObjectLiteralExpression(statesObj)) {
@@ -379,8 +377,10 @@ function transformReplace(
                 throw TranspileError.fromNode(call, `replace() state ${stateNum} must be a function`);
             }
 
-            // FunctionExpression has similar structure to FunctionDeclaration for our parsing needs
-            // We need to cast to access methods like getName(), getBody() which exist on both
+            // FunctionExpression and FunctionDeclaration are distinct class hierarchies in ts-morph
+            // despite sharing getName()/getBody() via NameableNode/BodiedNode mixins.
+            // transformFunctionToState() takes FunctionDeclaration and cannot be widened without
+            // changing its public signature; the cast is safe because only getName()/getBody() are used.
             const funcDecl = funcExpr as unknown as FunctionDeclaration;
             const state = transformFunctionToState(funcDecl, vars, funcs);
 

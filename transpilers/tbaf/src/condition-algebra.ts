@@ -10,8 +10,6 @@ import {
     Expression,
     FunctionDeclaration,
     Node,
-    PrefixUnaryExpression,
-    ReturnStatement,
     SyntaxKind,
 } from "ts-morph";
 import type { BAFCondition, BAFOrGroup, BAFTopCondition } from "./ir";
@@ -79,9 +77,8 @@ function transformConditionExpr(ctx: TransformerContext, expr: Expression): BAFT
 
     // Handle negation
     if (Node.isPrefixUnaryExpression(expr)) {
-        const prefixExpr = expr as PrefixUnaryExpression;
-        if (prefixExpr.getOperatorToken() === SyntaxKind.ExclamationToken) {
-            const operand = prefixExpr.getOperand();
+        if (expr.getOperatorToken() === SyntaxKind.ExclamationToken) {
+            const operand = expr.getOperand();
             // Check if it's a negated call
             if (Node.isCallExpression(operand)) {
                 const funcName = operand.getExpression().getText();
@@ -157,9 +154,8 @@ function buildOrGroup(ctx: TransformerContext, expr: Expression): BAFOrGroup {
  */
 function exprToCondition(ctx: TransformerContext, expr: Expression): BAFCondition {
     if (Node.isPrefixUnaryExpression(expr)) {
-        const prefixExpr = expr as PrefixUnaryExpression;
-        if (prefixExpr.getOperatorToken() === SyntaxKind.ExclamationToken) {
-            const operand = prefixExpr.getOperand();
+        if (expr.getOperatorToken() === SyntaxKind.ExclamationToken) {
+            const operand = expr.getOperand();
             if (Node.isCallExpression(operand)) {
                 const funcName = operand.getExpression().getText();
                 const funcDecl = ctx.funcs.get(funcName);
@@ -197,10 +193,12 @@ function inlineFunctionConditions(ctx: TransformerContext, call: CallExpression,
     const body = funcDecl.getBody()?.asKindOrThrow(SyntaxKind.Block);
     if (!body) return [ctx.trueCondition()];
 
-    const returnStmt = body.getStatements().find(s => s.isKind(SyntaxKind.ReturnStatement));
+    const returnStmt = body.getStatements()
+        .find(s => s.isKind(SyntaxKind.ReturnStatement))
+        ?.asKind(SyntaxKind.ReturnStatement);
     if (!returnStmt) return [ctx.trueCondition()];
 
-    const returnExpr = (returnStmt as ReturnStatement).getExpression();
+    const returnExpr = returnStmt.getExpression();
     if (!returnExpr) return [ctx.trueCondition()];
 
     // Substitute params in return expression text
@@ -299,10 +297,9 @@ function invertExpression(ctx: TransformerContext, expr: Expression): BAFTopCond
     }
 
     if (Node.isPrefixUnaryExpression(expr)) {
-        const prefixExpr = expr as PrefixUnaryExpression;
-        if (prefixExpr.getOperatorToken() === SyntaxKind.ExclamationToken) {
+        if (expr.getOperatorToken() === SyntaxKind.ExclamationToken) {
             // !!a → a (double negation)
-            const operand = prefixExpr.getOperand();
+            const operand = expr.getOperand();
             if (Node.isCallExpression(operand)) {
                 const funcName = operand.getExpression().getText();
                 const funcDecl = ctx.funcs.get(funcName);

@@ -75,6 +75,8 @@ const config: KnipConfig = {
         "scripts/**",
         // custom oxlint plugin (referenced in .oxlintrc.json, not imported by code)
         ".oxlint/**",
+        // git worktrees created by AI agents for isolated task execution
+        ".claude/**",
     ],
     ignoreDependencies: [
         // icon font used via CSS classes in dialogTree.ts (e.g. "codicon codicon-references")

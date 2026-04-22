@@ -269,6 +269,27 @@ function parseRequiredNumber(arg: Node, context: string, lineNumber: number): nu
     return value;
 }
 
+/**
+ * Retrieve a call argument narrowed to Expression with bounds and type guards.
+ *
+ * ts-morph's getArguments() returns Node[] even though call arguments are always
+ * Expression nodes — the loose return type is a known API limitation. This helper
+ * performs an explicit bounds check and a Node.isExpression() runtime guard so
+ * callers avoid scattered `args[N] as Expression` casts throughout patch-operations.
+ */
+function getCallArg(args: readonly Node[], index: number, callExpr: Node): Expression {
+    const arg = args[index];
+    if (arg === undefined) {
+        throw TranspileError.fromNode(callExpr, `Expected argument at index ${index}`);
+    }
+    // Node.isExpression() is ts-morph's own type guard — if this ever fails
+    // it indicates a ts-morph API contract violation, not user input error.
+    if (!Node.isExpression(arg)) {
+        throw TranspileError.fromNode(callExpr, `Argument at index ${index} is not an expression`);
+    }
+    return arg;
+}
+
 export {
     evaluateExpression,
     resolveArrayElements,
@@ -281,4 +302,5 @@ export {
     parseBooleanOption,
     parseStringOption,
     parseRequiredNumber,
+    getCallArg,
 };
