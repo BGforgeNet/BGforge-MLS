@@ -6,7 +6,7 @@
  * BGFORGE_LSP_SLOW_MS environment variable (parsed once at module load).
  */
 
-/** Default slow-request threshold in milliseconds. */
+/** Default slow-request threshold in milliseconds. See docs/architecture.md#latency-budgets for per-operation targets. */
 const ENV_THRESHOLD_MS = parseInt(process.env["BGFORGE_LSP_SLOW_MS"] ?? "", 10);
 export const DEFAULT_THRESHOLD_MS: number = Number.isFinite(ENV_THRESHOLD_MS) ? ENV_THRESHOLD_MS : 50;
 

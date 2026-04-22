@@ -34,6 +34,7 @@ High-level architecture of the BGforge MLS extension. For server-specific detail
   - [Integration Tests](#integration-tests)
   - [E2E Tests](#e2e-tests)
 - [Extension Packaging](#extension-packaging)
+- [Latency Budgets](#latency-budgets)
 - [Key Design Decisions](#key-design-decisions)
 
 ## System Overview
@@ -519,6 +520,47 @@ and rationale.
 **Validation**: `scripts/test-package-deps.ts` runs in CI and catches missing
 `.vscodeignore` entries by scanning build scripts, source code, and `package.json`
 contributes. See [docs/ignore-files.md](ignore-files.md#packaging-notes) for details.
+
+## Latency Budgets
+
+The server wraps hot LSP handlers with `timeHandler` (in `server/src/shared/time-handler.ts`).
+When a handler exceeds the threshold it logs a `[lsp-timing]` warning to the LSP console.
+The threshold is `DEFAULT_THRESHOLD_MS = 50` ms and can be overridden at startup via the
+`BGFORGE_LSP_SLOW_MS` environment variable.
+
+The threshold is a per-request, per-call budget — not an aggregate. A single request that
+takes longer than 50 ms triggers a warning regardless of prior request history.
+
+Handlers currently wrapped: `onCompletion`, `onHover`, `onDefinition`, `onReferences`,
+`onDocumentSymbol`, `semanticTokens`, `onWorkspaceSymbol`.
+
+### Per-Operation Targets
+
+No measured baselines exist in the repo yet. The targets below are initial values derived
+from the default threshold; refine them once real baselines are captured in CI or profiling
+sessions. If a new provider is added, re-measure all wrapped handlers with the new language
+loaded and update this table.
+
+| Operation | Budget | Notes |
+|-----------|--------|-------|
+| Completion (`onCompletion`) | 50 ms | Responses are pre-computed O(1) lookups; budget is the threshold. |
+| Hover (`onHover`) | 50 ms | Same O(1) lookup model. |
+| Definition / References (`onDefinition`, `onReferences`) | 50 ms | May walk include graph; budget is the threshold. |
+| Workspace symbol (`onWorkspaceSymbol`) | 50 ms | Iterates all indexed symbols; cancellation checked periodically. |
+| Document symbol (`onDocumentSymbol`) | 50 ms | Per-file tree traversal; budget is the threshold. |
+| Server startup (provider initialization) | Not wrapped | Sequential WASM loads; not currently measured by `timeHandler`. |
+
+The startup path is not wrapped because providers initialize sequentially by design (see
+[Sequential Provider Initialization](#sequential-provider-initialization)) and the
+initialization latency is dominated by WASM load time, which is not actionable per request.
+
+### When to Revisit
+
+- A new provider is added: re-measure all hot paths with the new language loaded.
+- A new data file or YAML source is significantly larger than existing ones: re-check
+  `onCompletion` and `onHover` budgets.
+- A stricter SLO is adopted project-wide: update `DEFAULT_THRESHOLD_MS` and this table
+  together so the code and docs stay in sync.
 
 ## Key Design Decisions
 
