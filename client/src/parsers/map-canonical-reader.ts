@@ -242,7 +242,7 @@ function objectKindFromPid(pid: number): z.infer<typeof mapObjectSchema>["kind"]
     }
 }
 
-export function parseMapObject(group: ParsedGroup): z.infer<typeof mapObjectSchema> {
+function parseMapObject(group: ParsedGroup): z.infer<typeof mapObjectSchema> {
     const inventoryHeader = getOptionalGroup(group, "Inventory Header");
     const objectData = getOptionalGroup(group, "Object Data");
     const critterData = getOptionalGroup(group, "Critter Data");

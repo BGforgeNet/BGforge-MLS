@@ -45,7 +45,7 @@ export function parseHeaderSection(data: Uint8Array, errors: string[]): ParsedGr
     ]);
 }
 
-export function parseVariables(data: Uint8Array, header: MapHeader): { globalVars: number[]; localVars: number[]; offset: number } {
+function parseVariables(data: Uint8Array, header: MapHeader): { globalVars: number[]; localVars: number[]; offset: number } {
     let offset = HEADER_SIZE;
 
     const globalVars: number[] = [];
@@ -139,7 +139,7 @@ export function parseTiles(
     return { tiles, offset: currentOffset, skippedRange };
 }
 
-export function parseScriptEntryFields(
+function parseScriptEntryFields(
     data: Uint8Array,
     currentOffset: number,
     label: string,

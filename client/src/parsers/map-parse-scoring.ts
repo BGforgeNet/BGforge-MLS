@@ -11,7 +11,7 @@ import {
     PID_TYPE_MISC,
 } from "./map-parse-helpers";
 
-export function findFirstObjectGroup(group: ParsedGroup): ParsedGroup | undefined {
+function findFirstObjectGroup(group: ParsedGroup): ParsedGroup | undefined {
     for (const entry of group.fields) {
         if (!("fields" in entry)) {
             continue;
@@ -44,14 +44,14 @@ export function buildOpaqueObjectsGroup(offset: number): ParsedGroup {
     ]);
 }
 
-export function objectCountNumbers(objectsGroup: ParsedGroup): number[] {
+function objectCountNumbers(objectsGroup: ParsedGroup): number[] {
     return objectsGroup.fields
         .filter((entry): entry is ParsedGroup => "fields" in entry && /^Elevation \d+ Objects$/.test(entry.name))
         .map((entry) => fieldNumber(entry, "Object Count"))
         .filter((value): value is number => value !== undefined);
 }
 
-export function hasTodoNote(group: ParsedGroup): boolean {
+function hasTodoNote(group: ParsedGroup): boolean {
     return group.fields.some((entry) => !("fields" in entry) && entry.name === "TODO");
 }
 

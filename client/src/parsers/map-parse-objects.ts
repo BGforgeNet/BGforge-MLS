@@ -25,13 +25,13 @@ import {
     PID_TYPE_SCENERY,
 } from "./map-parse-helpers";
 
-export type ParsedObjectResult = {
+type ParsedObjectResult = {
     complete: boolean;
     group: ParsedGroup;
     offset: number;
 };
 
-export function parseObjectBaseFields(data: Uint8Array, offset: number): { fields: ParsedField[]; pid: number } {
+function parseObjectBaseFields(data: Uint8Array, offset: number): { fields: ParsedField[]; pid: number } {
     const pidFieldOffset = offset + 44;
     const pidView = new DataView(data.buffer, data.byteOffset + pidFieldOffset, 4);
     const pid = pidView.getInt32(0, false);
@@ -63,7 +63,7 @@ export function parseObjectBaseFields(data: Uint8Array, offset: number): { field
     };
 }
 
-export function parseCritterDataFields(data: Uint8Array, offset: number): ParsedField[] {
+function parseCritterDataFields(data: Uint8Array, offset: number): ParsedField[] {
     return [
         int32Field("Reaction", data, offset + 0),
         int32Field("Damage Last Turn", data, offset + 4),
@@ -79,7 +79,7 @@ export function parseCritterDataFields(data: Uint8Array, offset: number): Parsed
     ];
 }
 
-export function parseExitGridFields(data: Uint8Array, offset: number): ParsedField[] {
+function parseExitGridFields(data: Uint8Array, offset: number): ParsedField[] {
     return [
         int32Field("Destination Map", data, offset + 0),
         int32Field("Destination Tile", data, offset + 4),
@@ -88,7 +88,7 @@ export function parseExitGridFields(data: Uint8Array, offset: number): ParsedFie
     ];
 }
 
-export function parseObjectAt(data: Uint8Array, offset: number, index: string, header: MapHeader, errors: string[]): ParsedObjectResult {
+function parseObjectAt(data: Uint8Array, offset: number, index: string, header: MapHeader, errors: string[]): ParsedObjectResult {
     void header;
 
     if (offset + MAP_OBJECT_BASE_SIZE + MAP_OBJECT_DATA_HEADER_SIZE > data.length) {

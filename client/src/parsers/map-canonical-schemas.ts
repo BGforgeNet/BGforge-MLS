@@ -10,11 +10,7 @@ import { TILES_PER_ELEVATION } from "./map-schemas";
 
 export const MAP_OBJECT_BASE_SIZE = 0x48;
 export const MAP_OBJECT_DATA_HEADER_SIZE = 0x0C;
-export const PID_TYPE_ITEM = 0;
 export const PID_TYPE_CRITTER = 1;
-export const PID_TYPE_SCENERY = 2;
-export const PID_TYPE_WALL = 3;
-export const PID_TYPE_TILE = 4;
 export const PID_TYPE_MISC = 5;
 
 const int32Schema = zodNumericType("int32");
@@ -37,7 +33,7 @@ export const mapHeaderSchema = z.strictObject({
     timestamp: uint32Schema,
 });
 
-export const mapTileSchema = z.strictObject({
+const mapTileSchema = z.strictObject({
     index: z.number().int().min(0).max(TILES_PER_ELEVATION - 1),
     floorTileId: uint16Schema,
     floorFlags: uint8Schema,
@@ -72,7 +68,7 @@ export const mapScriptSlotSchema = z.strictObject({
     legacyField0x50: int32Schema,
 });
 
-export const mapScriptExtentSchema = z.strictObject({
+const mapScriptExtentSchema = z.strictObject({
     slots: z.array(mapScriptSlotSchema),
     extentLength: int32Schema,
     extentNext: int32Schema,
@@ -105,13 +101,13 @@ export const mapObjectBaseSchema = z.strictObject({
     scriptIndex: int32Schema,
 });
 
-export const mapInventoryHeaderSchema = z.strictObject({
+const mapInventoryHeaderSchema = z.strictObject({
     inventoryLength: int32Schema,
     inventoryCapacity: int32Schema,
     inventoryPointer: int32Schema,
 });
 
-export const mapCritterDataSchema = z.strictObject({
+const mapCritterDataSchema = z.strictObject({
     reaction: int32Schema,
     damageLastTurn: int32Schema,
     combatManeuver: int32Schema,
@@ -125,18 +121,18 @@ export const mapCritterDataSchema = z.strictObject({
     poison: int32Schema,
 });
 
-export const mapObjectDataSchema = z.strictObject({
+const mapObjectDataSchema = z.strictObject({
     dataFlags: uint32Schema,
 });
 
-export const mapExitGridSchema = z.strictObject({
+const mapExitGridSchema = z.strictObject({
     destinationMap: int32Schema,
     destinationTile: int32Schema,
     destinationElevation: zodFieldNumber("map", "map.objects.elevations[].objects[].exitGrid.destinationElevation", "int32"),
     destinationRotation: zodFieldNumber("map", "map.objects.elevations[].objects[].exitGrid.destinationRotation", "int32"),
 });
 
-export interface MapCanonicalObject {
+interface MapCanonicalObject {
     kind: "item" | "critter" | "scenery" | "wall" | "tile" | "misc" | "unknown";
     base: z.infer<typeof mapObjectBaseSchema>;
     inventoryHeader: z.infer<typeof mapInventoryHeaderSchema>;
@@ -146,7 +142,7 @@ export interface MapCanonicalObject {
     inventory: Array<{ quantity: number; object: MapCanonicalObject }>;
 }
 
-export const mapInventoryEntrySchema: z.ZodType<{ quantity: number; object: MapCanonicalObject }> = z.lazy(() => z.strictObject({
+const mapInventoryEntrySchema: z.ZodType<{ quantity: number; object: MapCanonicalObject }> = z.lazy(() => z.strictObject({
     quantity: int32Schema,
     object: mapObjectSchema,
 }));
@@ -161,7 +157,7 @@ export const mapObjectSchema: z.ZodType<MapCanonicalObject> = z.lazy(() => z.str
     inventory: z.array(mapInventoryEntrySchema),
 }));
 
-export const mapObjectElevationSchema = z.strictObject({
+const mapObjectElevationSchema = z.strictObject({
     elevation: z.number().int().min(0).max(2),
     objectCount: int32Schema,
     objects: z.array(mapObjectSchema),

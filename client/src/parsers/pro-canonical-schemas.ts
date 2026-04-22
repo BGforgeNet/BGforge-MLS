@@ -12,12 +12,12 @@ const uint16Schema = zodNumericType("uint16");
 const uint24Schema = zodNumericType("uint24");
 const uint32Schema = zodNumericType("uint32");
 
-export const scriptRefSchema = z.strictObject({
+const scriptRefSchema = z.strictObject({
     type: z.number().int().min(-1).max(0xFF),
     id: z.number().int().min(-1).max(0x00_FF_FF_FF),
 });
 
-export const unsignedDamageThresholdSchema = z.strictObject({
+const unsignedDamageThresholdSchema = z.strictObject({
     normal: uint32Schema,
     laser: uint32Schema,
     fire: uint32Schema,
