@@ -68,7 +68,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         run: |
           set -euo pipefail
-          pnpm dlx @cyclonedx/cyclonedx-npm --output-file dist/sbom.cdx.json
+          pnpm dlx @cyclonedx/cyclonedx-npm@4.2.1 --output-file dist/sbom.cdx.json
 
       - name: Build editor bundles (TextMate, Kate, Notepad++, Geany)
         run: pnpm build:editors
