@@ -608,6 +608,98 @@ mode, `verbatimModuleSyntax`, and the custom TS config make major-bump churn exp
 and the extension's user surface is small enough that we gain little from being on the
 absolute newest release of every library.
 
+### Scope-Aware Symbol Lookup
+
+Symbol resolution respects language visibility rules automatically (SSL procedure scope,
+TP2 first-assignment-wins, D dialog-scoped composite keys). Lookups never cross scope
+boundaries, so features don't need to post-filter results.
+
+### File-Level Index Granularity
+
+Edits update only the changed file's entry in the symbol and references indexes, not the
+whole workspace. Keeps incremental updates cheap on large mod repos.
+
+### Fallthrough Resolution Pattern
+
+Features try resolution sources in order: local AST -> static data index -> translation
+service. Each step returns `undefined` to continue to the next source or `null` to stop.
+This keeps language-specific precedence rules explicit at call sites rather than baked
+into shared helpers.
+
+### Intentional Per-Language Implementations
+
+Several features have separate implementations per provider that may look like duplication
+but are intentionally language-specific. Shared infrastructure lives in `server/src/shared/`;
+the per-language bodies encode genuinely different semantics:
+
+| Feature                    | Why per-language                                                                                                                                                                                                                                                                                                                                                     |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Definition finders         | Different scoping models (SSL procedures vs TP2 functions vs D state labels)                                                                                                                                                                                                                                                                                         |
+| Document symbol extraction | Different construct types and scoping: SSL has explicit `variable` declarations, TP2 uses first-assignment-wins deduplication. Both show params/vars as children. TP2 uses `hasError` guard to skip error-recovery artifacts; icon assignment uses shared `looksLikeConstant()` heuristic (cross-linked: `symbol.ts`, `hover.ts`, `tree-utils.ts`, `tmLanguage.yml`) |
+| Rename                     | SSL is workspace-wide via ReferencesIndex; TP2 is single-file with %var% handling                                                                                                                                                                                                                                                                                    |
+| Reference finders          | SSL has procedure scope shadows; TP2 has synthetic string nodes; D uses dialog-scoped composite keys                                                                                                                                                                                                                                                                 |
+| Call-site extractors       | SSL indexes all identifiers; TP2 indexes only function/macro names (case-sensitive); D uses dialog:label composite keys                                                                                                                                                                                                                                              |
+| Folding block type sets    | Language-specific node types, passed as parameters to shared `getFoldingRanges()`                                                                                                                                                                                                                                                                                    |
+| Comment stripping          | `stripCommentsWeidu()` handles `~string~` delimiters; `stripCommentsFalloutSsl()` does not                                                                                                                                                                                                                                                                           |
+
+### Tree-Sitter Error Recovery Defense
+
+Tree-sitter error recovery can fabricate structurally valid nodes from broken input.
+When the user is mid-typing a keyword (e.g. `COPY_EXISTN` instead of `COPY_EXISTING`),
+error recovery may produce a `patch_assignment` node with a phantom zero-width `=`
+operator. Without protection, this creates spurious variable completions with wrong
+types.
+
+Two defense layers prevent this:
+
+1. **`isPhantomAssignment()`** (`tree-utils.ts`) -- rejects assignment nodes where the
+   operator has zero width (inserted by error recovery, not present in source). Applied
+   in both `localCompletion()` and `extractVariables()`.
+2. **`excludeWord`** (`provider.ts`) -- excludes the word at cursor from local completions
+   in all paths, not just declaration sites. Prevents self-referencing completion even if
+   layer 1 is bypassed by future error recovery changes.
+
+Design limitation: layer 1 relies on observed tree-sitter behavior (zero-width phantom
+operators), not a documented guarantee. Layer 2 provides backup. Both must fail for a
+regression to occur. See `isPhantomAssignment()` JSDoc for alternatives considered.
+
+Only TP2 is affected because it has bare assignment syntax (`foo = 5` without a keyword).
+Other providers (SSL, BAF, D) don't have bare assignment grammar rules, so error recovery
+cannot produce phantom assignment nodes for them.
+
+Document symbols (`symbol.ts`) use a separate defense: `node.hasError` guards on all
+variable-extracting code paths (`extractFileLevelVars`, `collectBodyVars`). This skips
+nodes where tree-sitter's error recovery inserted phantom tokens. The guard still recurses
+into children, so valid variables inside an ACTION_IF with partial errors are still
+collected.
+
+### URI Normalization (Gateway Pattern)
+
+On Windows, VSCode and Node's `pathToFileURL()` produce different percent-encodings for
+the same file (e.g., `%21` vs `!`, `%3A` vs `:`). Using raw URI strings as Map/Set keys
+causes silent mismatches when the same file enters via different paths (LSP at runtime
+vs `pathToUri` at startup).
+
+The `NormalizedUri` branded type (`core/normalized-uri.ts`) canonicalizes `file://` URIs
+via a `fileURLToPath` -> `pathToFileURL` round-trip. `ProviderRegistry` normalizes all
+URIs at the gateway before passing to providers.
+
+The branded type is enforced at storage boundaries: `Symbols.files`,
+`ReferencesIndex.files`, `FileIndex` methods, debounce maps in `server.ts`, and
+`activeCompiles` maps in compilers all use `Map<NormalizedUri, ...>`. `pathToUri()`
+returns `NormalizedUri` since it produces canonical encoding. Providers cast at the
+boundary where they pass URIs to storage (`uri as NormalizedUri`), documented with a
+comment explaining the gateway guarantee.
+
+### User-Facing Message Wrappers
+
+All user-visible messages (`showInformationMessage`, `showWarningMessage`,
+`showErrorMessage`) go through wrappers in `user-messages.ts` that auto-decode
+`file://` URIs to human-readable paths. A custom oxlint rule
+(`.oxlint/oxlint-plugin-no-showmessage.ts`) enforces this -- direct
+`connection.window.show*Message()` calls in server code produce lint errors.
+Debug logs intentionally keep raw URIs to preserve diagnostic ability.
+
 ## Deliberate Non-Consolidations
 
 Previous simplification reviews flagged two targets for collapsing; both were considered
