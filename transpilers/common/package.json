@@ -4,7 +4,7 @@
     "private": true,
     "description": "Shared transpiler utilities (internal, not published)",
     "devDependencies": {
-        "esbuild-wasm": "^0.24.2",
+        "esbuild-wasm": "^0.28.0",
         "ts-morph": "^24.0.0"
     }
 }

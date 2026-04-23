@@ -40,7 +40,7 @@
     ],
     "dependencies": {
         "@supercharge/promise-pool": "^2.4.0",
-        "esbuild-wasm": "^0.24.2",
+        "esbuild-wasm": "^0.28.0",
         "fast-glob": "^3.3.3",
         "ini": "^6.0.0",
         "ts-morph": "^24.0.0",
