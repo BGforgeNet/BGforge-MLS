@@ -75,7 +75,6 @@ describe("shared/parser-factory", () => {
 
             expect(module).toHaveProperty("parseWithCache");
             expect(module).toHaveProperty("invalidateCache");
-            expect(module).toHaveProperty("getCacheStats");
         });
 
         it("should return null from parseWithCache when not initialized", () => {
@@ -84,14 +83,6 @@ describe("shared/parser-factory", () => {
             const result = module.parseWithCache("test content");
 
             expect(result).toBeNull();
-        });
-
-        it("should have zero cache stats initially", () => {
-            const module = createCachedParserModule("test.wasm", "Test");
-
-            const stats = module.getCacheStats();
-
-            expect(stats).toEqual({ hits: 0, misses: 0, size: 0 });
         });
 
         it("should invalidate cache without error", () => {

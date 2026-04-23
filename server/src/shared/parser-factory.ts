@@ -19,8 +19,6 @@ interface CachedParserModule extends ParserModule {
     parseWithCache(text: string): Tree | null;
     /** Invalidate cache for specific text or all entries if text not provided. */
     invalidateCache(text?: string): void;
-    /** Get cache stats for debugging/monitoring. */
-    getCacheStats(): { hits: number; misses: number; size: number };
 }
 
 let treeSitterInitialized = false;
@@ -85,8 +83,6 @@ export function createCachedParserModule(
 
     // LRU-style cache: Map maintains insertion order, we delete oldest on overflow
     const cache = new Map<string, Tree>();
-    let hits = 0;
-    let misses = 0;
 
     return {
         ...base,
@@ -101,7 +97,6 @@ export function createCachedParserModule(
             // Check cache
             const cached = cache.get(key);
             if (cached) {
-                hits++;
                 // Move to end (most recently used) by reinserting
                 cache.delete(key);
                 cache.set(key, cached);
@@ -109,7 +104,6 @@ export function createCachedParserModule(
             }
 
             // Parse and cache
-            misses++;
             const tree = base.getParser().parse(text);
             if (tree) {
                 // Evict oldest entry if at capacity
@@ -131,10 +125,6 @@ export function createCachedParserModule(
                 const key = djb2HashHex(text);
                 cache.delete(key);
             }
-        },
-
-        getCacheStats(): { hits: number; misses: number; size: number } {
-            return { hits, misses, size: cache.size };
         },
     };
 }
