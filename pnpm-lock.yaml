@@ -114,7 +114,7 @@ importers:
         specifier: ^22.19.17
         version: 22.19.17
       '@types/vscode':
-        specifier: ^1.116.0
+        specifier: ^1.73.0
         version: 1.116.0
       '@vscode/test-electron':
         specifier: ^2.5.2
