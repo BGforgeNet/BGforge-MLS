@@ -8,8 +8,6 @@
 .gitattributes
 .github/
 .gitignore
-.prettierignore
-.prettierrc.yaml
 .reports/
 .vscode/
 .vscode-test/
