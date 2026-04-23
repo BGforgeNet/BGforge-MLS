@@ -611,8 +611,7 @@
         ],
         "overrides": {
             "mocha>diff": ">=8.0.3",
-            "mocha>serialize-javascript": ">=7.0.5",
-            "yauzl": ">=3.2.1"
+            "mocha>serialize-javascript": ">=7.0.5"
         }
     }
 }
