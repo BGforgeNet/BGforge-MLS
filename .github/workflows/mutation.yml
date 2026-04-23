@@ -34,7 +34,7 @@ jobs:
 
       - name: Run mutation tests
         run: pnpm test:mutation
-        continue-on-error: true
+        continue-on-error: false
 
       - name: Upload mutation report
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
