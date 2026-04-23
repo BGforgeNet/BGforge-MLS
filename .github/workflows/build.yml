@@ -43,7 +43,7 @@ jobs:
         run: pnpm build:grammar
 
       - name: Test
-        run: pnpm test
+        run: pnpm test:all
 
       - name: Build
         run: pnpm build
