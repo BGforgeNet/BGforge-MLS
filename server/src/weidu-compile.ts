@@ -4,7 +4,6 @@
  */
 
 import * as crypto from "crypto";
-import * as fs from "fs";
 import * as path from "path";
 import {
     type ParseItemList,
@@ -14,13 +13,13 @@ import {
     errorMessage,
     parseCommandPath,
     pathToUri,
-    removeTmpFile,
     reportCompileResult,
     runProcess,
     sendParseResult,
     tmpDir,
     uriToPath,
 } from "./common";
+import { compileWithTmpFile } from "./core/compile-with-tmp-file";
 import { showError, showInfo, showWarning } from "./user-messages";
 import type { WeiDUsettings } from "./settings";
 import type { NormalizedUri } from "./core/normalized-uri";
@@ -152,58 +151,51 @@ export async function compile(uri: NormalizedUri, settings: WeiDUsettings, inter
     // parse
     conlog(`parsing ${baseName}...`);
 
-    // Cancel any in-flight compilation for this URI before starting a new one
-    activeCompiles.get(uri)?.abort();
-    const controller = new AbortController();
-    activeCompiles.set(uri, controller);
+    await compileWithTmpFile({
+        uri,
+        tmpPath: tmpFile,
+        text,
+        activeCompiles,
+        run: async (signal) => {
+            const allArgs = [...weiduPrefixArgs, ...weiduArgs, weiduType, tmpFile];
+            const { err, stdout } = await runProcess(weiduPath, allArgs, cwdTo, signal);
 
-    try {
-        await fs.promises.writeFile(tmpFile, text);
-        const allArgs = [...weiduPrefixArgs, ...weiduArgs, weiduType, tmpFile];
-        const { err, stdout } = await runProcess(weiduPath, allArgs, cwdTo, controller.signal);
-
-        // Skip stale results if this compile was cancelled by a newer one
-        if (controller.signal.aborted) {
-            return;
-        }
-
-        let parseResult = parseWeiduOutput(stdout);
-
-        // Replace tmp file path with the original basename in diagnostic messages
-        parseResult = {
-            ...parseResult,
-            errors: parseResult.errors.map((e) => ({ ...e, message: e.message.replaceAll(tmpFile, baseName) })),
-            warnings: parseResult.warnings.map((w) => ({ ...w, message: w.message.replaceAll(tmpFile, baseName) })),
-        };
-
-        let showedSpecificError = false;
-        if (err && parseResult.errors.length === 0) {
-            if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-                showError(`WeiDU not found at '${weiduPath}'. Check bgforge.mls.weidu.path setting.`);
-                showedSpecificError = true;
+            if (signal.aborted) {
+                return;
             }
-            parseResult = addFallbackDiagnostic(
-                parseResult,
-                err,
-                pathToUri(filePath),
-                stdout.replaceAll(tmpFile, baseName),
-            );
-        }
 
-        // Skip generic message when we already showed a specific one (e.g. ENOENT)
-        if (!showedSpecificError) {
-            reportCompileResult(
-                parseResult,
-                interactive,
-                `Successfully parsed ${baseName}.`,
-                `Failed to parse ${baseName}!`,
-            );
-        }
+            let parseResult = parseWeiduOutput(stdout);
 
-        // Always send diagnostics: clears stale errors on success, reports new ones on failure
-        sendParseResult(parseResult, uri, tmpUri);
-    } finally {
-        activeCompiles.delete(uri);
-        await removeTmpFile(tmpFile);
-    }
+            parseResult = {
+                ...parseResult,
+                errors: parseResult.errors.map((e) => ({ ...e, message: e.message.replaceAll(tmpFile, baseName) })),
+                warnings: parseResult.warnings.map((w) => ({ ...w, message: w.message.replaceAll(tmpFile, baseName) })),
+            };
+
+            let showedSpecificError = false;
+            if (err && parseResult.errors.length === 0) {
+                if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+                    showError(`WeiDU not found at '${weiduPath}'. Check bgforge.mls.weidu.path setting.`);
+                    showedSpecificError = true;
+                }
+                parseResult = addFallbackDiagnostic(
+                    parseResult,
+                    err,
+                    pathToUri(filePath),
+                    stdout.replaceAll(tmpFile, baseName),
+                );
+            }
+
+            if (!showedSpecificError) {
+                reportCompileResult(
+                    parseResult,
+                    interactive,
+                    `Successfully parsed ${baseName}.`,
+                    `Failed to parse ${baseName}!`,
+                );
+            }
+
+            sendParseResult(parseResult, uri, tmpUri);
+        },
+    });
 }
