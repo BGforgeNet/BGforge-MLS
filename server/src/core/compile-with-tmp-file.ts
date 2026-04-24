@@ -18,7 +18,7 @@ import * as fs from "fs";
 import { removeTmpFile } from "../common";
 import type { NormalizedUri } from "./normalized-uri";
 
-export interface CompileWithTmpFileParams {
+interface CompileWithTmpFileParams {
     /** Normalized URI of the source document being compiled. Used as activeCompiles key. */
     uri: NormalizedUri;
     /** Absolute filesystem path where `text` is written before `run`. */
