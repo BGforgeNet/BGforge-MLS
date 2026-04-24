@@ -114,9 +114,8 @@ describe("bin CLI integration", () => {
             fs.writeFileSync(tmpJson, '{"wrong": "content"}\n');
 
             const { stderr } = run(tmpPro, "--check");
-            expect(stderr).toContain("Line ");
-            expect(stderr).toContain("    -");
-            expect(stderr).toContain("    +");
+            expect(stderr).toContain("  - ");
+            expect(stderr).toContain("  + ");
         });
 
         it("exits 1 when JSON snapshot is missing", () => {

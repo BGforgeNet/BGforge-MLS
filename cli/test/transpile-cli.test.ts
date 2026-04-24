@@ -98,7 +98,8 @@ describe("transpile CLI integration", () => {
             fs.writeFileSync(tmpD, "// old output\n");
 
             const { stderr } = run(tmpTd, "--check");
-            expect(stderr).toContain("Line ");
+            expect(stderr).toContain("  - ");
+            expect(stderr).toContain("  + ");
         });
     });
 

@@ -24,32 +24,32 @@ describe("reportDiff", () => {
         expect(stderrSpy).toHaveBeenCalledWith("DIFF: test.txt");
     });
 
-    it("shows changed lines with line numbers", () => {
+    it("shows changed lines with prefixes", () => {
         reportDiff("f.txt", "line1\nline2\nline3", "line1\nchanged\nline3");
-        expect(stderrSpy).toHaveBeenCalledWith("  Line 2:");
-        expect(stderrSpy).toHaveBeenCalledWith("    - line2");
-        expect(stderrSpy).toHaveBeenCalledWith("    + changed");
+        expect(stderrSpy).toHaveBeenCalledWith("  - line2");
+        expect(stderrSpy).toHaveBeenCalledWith("  + changed");
     });
 
     it("handles added lines (actual longer than expected)", () => {
         reportDiff("f.txt", "a", "a\nb");
-        expect(stderrSpy).toHaveBeenCalledWith("  Line 2:");
-        expect(stderrSpy).toHaveBeenCalledWith("    - (missing)");
-        expect(stderrSpy).toHaveBeenCalledWith("    + b");
+        expect(stderrSpy).toHaveBeenCalledWith("  + b");
+        expect(stderrSpy).not.toHaveBeenCalledWith(expect.stringContaining("(missing)"));
     });
 
     it("handles removed lines (expected longer than actual)", () => {
         reportDiff("f.txt", "a\nb", "a");
-        expect(stderrSpy).toHaveBeenCalledWith("  Line 2:");
-        expect(stderrSpy).toHaveBeenCalledWith("    - b");
-        expect(stderrSpy).toHaveBeenCalledWith("    + (missing)");
+        expect(stderrSpy).toHaveBeenCalledWith("  - b");
+        expect(stderrSpy).not.toHaveBeenCalledWith(expect.stringContaining("(missing)"));
     });
 
     it("only reports differing lines", () => {
         reportDiff("f.txt", "same\ndiff\nsame", "same\nother\nsame");
-        const lineCalls = stderrSpy.mock.calls.filter((c: unknown[]) => String(c[0]).includes("Line"));
-        expect(lineCalls).toHaveLength(1);
-        expect(lineCalls[0]![0]).toBe("  Line 2:");
+        const changeCalls = stderrSpy.mock.calls.filter(
+            (c: unknown[]) => String(c[0]).startsWith("  - ") || String(c[0]).startsWith("  + "),
+        );
+        expect(changeCalls).toHaveLength(2);
+        expect(changeCalls[0]![0]).toBe("  - diff");
+        expect(changeCalls[1]![0]).toBe("  + other");
     });
 });
 

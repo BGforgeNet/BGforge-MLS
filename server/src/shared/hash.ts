@@ -1,6 +1,6 @@
 /**
  * Shared djb2 hash function for cache keys.
- * Used by text-cache and parser-factory to avoid re-parsing unchanged content.
+ * Used by text-cache to avoid re-parsing unchanged content.
  */
 
 /**
@@ -13,12 +13,4 @@ export function djb2Hash(text: string): number {
         hash = ((hash << 5) + hash + text.charCodeAt(i)) >>> 0;
     }
     return hash;
-}
-
-/**
- * djb2 hash returning a hex string key.
- * Suitable for Map cache keys where string keys are preferred.
- */
-export function djb2HashHex(text: string): string {
-    return djb2Hash(text).toString(16);
 }

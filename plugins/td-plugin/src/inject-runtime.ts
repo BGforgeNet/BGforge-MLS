@@ -37,17 +37,35 @@ export function resolveRuntimePath(): RuntimeResolution {
 }
 
 /**
- * Extract all declared identifier names from source text.
- * Matches both explicit (`declare function X`) and implicit (`interface X`,
- * `type X`) declarations. Anchored to line start to skip JSDoc comment text.
+ * Extract top-level declared identifier names from a .d.ts source text.
+ * Walks the TypeScript AST so multi-declarator `var` statements and
+ * nested-generic `type` aliases are handled correctly.
  */
-function extractDeclaredNames(content: string): ReadonlySet<string> {
+function extractDeclaredNames(content: string, tsModule: typeof ts): ReadonlySet<string> {
+    const sourceFile = tsModule.createSourceFile(
+        "td-runtime.d.ts",
+        content,
+        tsModule.ScriptTarget.ES2020,
+        false,
+        tsModule.ScriptKind.TS,
+    );
     const names = new Set<string>();
-    const re = /^[ \t]*(?:declare\s+)?(?:function|interface|type|var|const|let|class|enum)\s+(\w+)/gm;
-    let match;
-    while ((match = re.exec(content)) !== null) {
-        const name = match[1];
-        if (name !== undefined) names.add(name);
+    for (const stmt of sourceFile.statements) {
+        if (
+            tsModule.isFunctionDeclaration(stmt) ||
+            tsModule.isInterfaceDeclaration(stmt) ||
+            tsModule.isTypeAliasDeclaration(stmt) ||
+            tsModule.isClassDeclaration(stmt) ||
+            tsModule.isEnumDeclaration(stmt)
+        ) {
+            if (stmt.name) names.add(stmt.name.text);
+        } else if (tsModule.isVariableStatement(stmt)) {
+            for (const decl of stmt.declarationList.declarations) {
+                if (tsModule.isIdentifier(decl.name)) {
+                    names.add(decl.name.text);
+                }
+            }
+        }
     }
     return names;
 }
@@ -56,10 +74,10 @@ function extractDeclaredNames(content: string): ReadonlySet<string> {
  * Load TD runtime names from the resolved runtime file.
  * Returns the set of declared names, or an empty set on error.
  */
-export function loadTdNames(runtimePath: string): ReadonlySet<string> {
+export function loadTdNames(runtimePath: string, tsModule: typeof ts): ReadonlySet<string> {
     try {
         const content = fs.readFileSync(runtimePath, "utf-8");
-        return extractDeclaredNames(content);
+        return extractDeclaredNames(content, tsModule);
     } catch {
         return new Set();
     }

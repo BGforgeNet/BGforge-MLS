@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import type ts from "typescript";
+import tsModule, { type default as ts } from "typescript";
 
 const FAKE_RUNTIME_PATH = "/ext/server/out/td-runtime.d.ts";
 const FAKE_RUNTIME_CONTENT = [
@@ -35,10 +35,11 @@ import init from "../src/index";
 // Helpers
 // ---------------------------------------------------------------------------
 
+// Real TypeScript module: inject-runtime uses createSourceFile / SyntaxKind /
+// isFunctionDeclaration / etc. to parse the runtime .d.ts, and the host
+// override reads ScriptTarget.ES2020 for the compilation settings.
 const MOCK_TS_MODULES = {
-    typescript: {
-        ScriptTarget: { ES2020: 7 },
-    } as unknown as typeof ts,
+    typescript: tsModule as unknown as typeof ts,
 };
 
 interface MockHost {

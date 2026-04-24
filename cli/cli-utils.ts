@@ -6,6 +6,8 @@
 
 import * as fs from "fs";
 import * as path from "path";
+import cac from "cac";
+import { diffLines } from "diff";
 import { TranspileError } from "../transpilers/common/transpile-error";
 
 export type FileResult = "changed" | "unchanged" | "error";
@@ -19,19 +21,30 @@ export interface CliArgs {
 }
 
 export function parseCliArgs(helpText: string): CliArgs | null {
-    const args = process.argv.slice(2);
+    const cli = cac();
+    cli.command("[target]", "File or directory to process")
+        .option("--save", "Write output to files")
+        .option("--check", "Check output without writing")
+        .option("--save-and-check", "Write output and check for changes")
+        .option("-r, --recursive", "Process directories recursively")
+        .option("-q, --quiet", "Suppress informational output")
+        .action(() => {});
+    cli.help(() => [{ title: helpText, body: "" }]);
+    cli.parse(process.argv, { run: false });
 
-    if (args.length === 0 || args.includes("--help") || args.includes("-h")) {
+    if (cli.options.help) {
         console.log(helpText);
         process.exit(0);
     }
 
-    const target = args.find((a) => !a.startsWith("-"));
-    const save = args.includes("--save");
-    const check = args.includes("--check");
-    const saveAndCheck = args.includes("--save-and-check");
-    const recursive = args.includes("-r") || args.includes("--recursive");
-    const quiet = args.includes("-q") || args.includes("--quiet");
+    const target = cli.args[0] as string | undefined;
+    const { save, check, saveAndCheck, recursive, quiet } = cli.options as {
+        save: boolean;
+        check: boolean;
+        saveAndCheck: boolean;
+        recursive: boolean;
+        quiet: boolean;
+    };
 
     if (!target) {
         console.error("Error: No file or directory specified");
@@ -45,7 +58,7 @@ export function parseCliArgs(helpText: string): CliArgs | null {
 
     const mode: OutputMode = saveAndCheck ? "save-and-check" : save ? "save" : check ? "check" : "stdout";
 
-    return { target, mode, recursive, quiet };
+    return { target, mode, recursive: recursive ?? false, quiet: quiet ?? false };
 }
 
 export function findFiles(dir: string, extensions: readonly string[]): string[] {
@@ -64,17 +77,15 @@ export function findFiles(dir: string, extensions: readonly string[]): string[] 
     return files;
 }
 
-/** Prints a compact line-by-line diff between expected and actual content. */
+/** Prints a unified-diff style block between expected and actual content. */
 export function reportDiff(label: string, expected: string, actual: string): void {
     console.error(`DIFF: ${label}`);
-    const expectedLines = expected.split("\n");
-    const actualLines = actual.split("\n");
-    const maxLines = Math.max(expectedLines.length, actualLines.length);
-    for (let i = 0; i < maxLines; i++) {
-        if (expectedLines[i] !== actualLines[i]) {
-            console.error(`  Line ${i + 1}:`);
-            console.error(`    - ${expectedLines[i] ?? "(missing)"}`);
-            console.error(`    + ${actualLines[i] ?? "(missing)"}`);
+    const parts = diffLines(expected, actual);
+    for (const p of parts) {
+        if (!p.added && !p.removed) continue;
+        const prefix = p.added ? "+" : "-";
+        for (const line of p.value.split("\n")) {
+            if (line !== "") console.error(`  ${prefix} ${line}`);
         }
     }
 }

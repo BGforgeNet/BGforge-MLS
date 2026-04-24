@@ -95,6 +95,8 @@
         "@vitest/coverage-v8": "^4.1.5",
         "@vscode/codicons": "^0.0.44",
         "@vscode/vsce": "^3.9.1",
+        "cac": "^7.0.0",
+        "diff": "^9.0.0",
         "esbuild": "^0.28.0",
         "knip": "^6.6.0",
         "mocha": "^11.7.5",

@@ -78,9 +78,8 @@ describe("format CLI integration", () => {
             const file = path.join(tmpDir, "diff.baf");
             fs.writeFileSync(file, input);
             const { stderr } = run(file, "--check");
-            expect(stderr).toContain("Line ");
-            expect(stderr).toContain("    -");
-            expect(stderr).toContain("    +");
+            expect(stderr).toContain("  - ");
+            expect(stderr).toContain("  + ");
         });
     });
 

@@ -23,7 +23,7 @@ function init(modules: { typescript: typeof ts }): ts.server.PluginModule {
     /** TD runtime names, used to filter them OUT of non-.td file completions. */
     function getTdNames(): ReadonlySet<string> {
         if (tdNames === undefined) {
-            tdNames = loadTdNames(runtime.path);
+            tdNames = loadTdNames(runtime.path, modules.typescript);
         }
         return tdNames;
     }

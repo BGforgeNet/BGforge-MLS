@@ -6,7 +6,7 @@
 import { Parser, Language, Tree } from "web-tree-sitter";
 import * as path from "path";
 import * as fs from "fs";
-import { djb2HashHex } from "./hash";
+import QuickLRU from "quick-lru";
 
 interface ParserModule {
     init(): Promise<void>;
@@ -81,8 +81,7 @@ export function createCachedParserModule(
 ): CachedParserModule {
     const base = createParserModule(wasmFileName, name);
 
-    // LRU-style cache: Map maintains insertion order, we delete oldest on overflow
-    const cache = new Map<string, Tree>();
+    const cache = new QuickLRU<string, Tree>({ maxSize: maxCacheSize });
 
     return {
         ...base,
@@ -92,28 +91,15 @@ export function createCachedParserModule(
                 return null;
             }
 
-            const key = djb2HashHex(text);
-
-            // Check cache
-            const cached = cache.get(key);
+            const cached = cache.get(text);
             if (cached) {
-                // Move to end (most recently used) by reinserting
-                cache.delete(key);
-                cache.set(key, cached);
                 return cached;
             }
 
             // Parse and cache
             const tree = base.getParser().parse(text);
             if (tree) {
-                // Evict oldest entry if at capacity
-                if (cache.size >= maxCacheSize) {
-                    const oldestKey = cache.keys().next().value;
-                    if (oldestKey !== undefined) {
-                        cache.delete(oldestKey);
-                    }
-                }
-                cache.set(key, tree);
+                cache.set(text, tree);
             }
             return tree;
         },
@@ -122,8 +108,7 @@ export function createCachedParserModule(
             if (text === undefined) {
                 cache.clear();
             } else {
-                const key = djb2HashHex(text);
-                cache.delete(key);
+                cache.delete(text);
             }
         },
     };
