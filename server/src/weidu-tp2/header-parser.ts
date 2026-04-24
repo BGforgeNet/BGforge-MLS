@@ -129,54 +129,86 @@ export function parseHeaderVariables(text: string, uri: string): VariableInfo[] 
     return extractVariables(tree.rootNode, uri);
 }
 
-/**
- * Extract function/macro definitions from AST root.
- */
-function extractFunctions(root: SyntaxNode, uri: string): FunctionInfo[] {
-    const functions: FunctionInfo[] = [];
-
-    for (let i = 0; i < root.childCount; i++) {
-        const node = root.child(i);
-        if (!node || !FUNCTION_DEF_TYPES.has(node.type as SyntaxType)) {
-            continue;
-        }
-
-        const info = extractFunctionInfo(node, uri);
-        if (info) {
-            functions.push(info);
-        }
-    }
-
-    return functions;
+interface ExtractAllResult {
+    functions: FunctionInfo[];
+    variables: VariableInfo[];
+    refs: ReadonlyMap<string, readonly Location[]>;
 }
 
 /**
- * Extract file-scope variable definitions from the AST.
- * Recurses into control flow but skips function/macro bodies (separate scope in WeiDU).
+ * Single-walk extraction of function defs, variables, and function/call refs.
+ * Replaces three separate tree walks for hot-path performance.
+ *
+ * Rules preserved from the original three passes:
+ * - Functions: top-level (direct root children) matching FUNCTION_DEF_TYPES only.
+ * - Variables: any depth, but not inside function/macro bodies (separate WeiDU scope).
+ * - Refs: any depth including inside function/macro bodies; covers both def and call nodes.
  */
-function extractVariables(root: SyntaxNode, uri: string): VariableInfo[] {
+function extractAll(root: SyntaxNode, uri: string): ExtractAllResult {
+    const functions: FunctionInfo[] = [];
     const variables: VariableInfo[] = [];
+    const refs = new Map<string, Location[]>();
 
-    function visit(node: SyntaxNode): void {
-        if (VARIABLE_TYPES.has(node.type as SyntaxType) && !isPhantomAssignment(node)) {
-            const info = extractVariableInfo(node, uri);
-            if (info) {
-                variables.push(info);
-            }
+    const addRef = (name: string, loc: Location): void => {
+        let locs = refs.get(name);
+        if (!locs) {
+            locs = [];
+            refs.set(name, locs);
         }
+        locs.push(loc);
+    };
 
-        // Don't recurse into function/macro bodies - they are separate scopes
+    // Top-level function and macro defs (direct root children only).
+    for (let i = 0; i < root.childCount; i++) {
+        const node = root.child(i);
+        if (!node) continue;
         if (FUNCTION_DEF_TYPES.has(node.type as SyntaxType)) {
-            return;
-        }
-
-        for (const child of node.children) {
-            visit(child);
+            const info = extractFunctionInfo(node, uri);
+            if (info) functions.push(info);
         }
     }
 
-    visit(root);
-    return variables;
+    // Recursive visit for variables and refs.
+    function visit(node: SyntaxNode, inFunctionBody: boolean): void {
+        const type = node.type as SyntaxType;
+
+        if (FUNCTION_DEF_TYPES.has(type)) {
+            const nameNode = node.childForFieldName("name");
+            if (nameNode) {
+                const name = stripStringDelimiters(nameNode.text);
+                addRef(name, { uri, range: makeRange(nameNode) });
+            }
+            // Variables inside function/macro bodies are not file-scope.
+            for (const child of node.children) visit(child, true);
+            return;
+        }
+
+        if (FUNCTION_CALL_TYPES.has(type)) {
+            const nameNode = node.childForFieldName("name");
+            if (nameNode) {
+                const name = stripStringDelimiters(nameNode.text);
+                addRef(name, { uri, range: makeRange(nameNode) });
+            }
+        } else if (!inFunctionBody && VARIABLE_TYPES.has(type) && !isPhantomAssignment(node)) {
+            const info = extractVariableInfo(node, uri);
+            if (info) variables.push(info);
+        }
+
+        for (const child of node.children) visit(child, inFunctionBody);
+    }
+
+    visit(root, false);
+
+    return { functions, variables, refs };
+}
+
+// Backwards-compatible helpers for non-hot callers (parseHeader / parseHeaderVariables).
+function extractFunctions(root: SyntaxNode, uri: string): FunctionInfo[] {
+    return extractAll(root, uri).functions;
+}
+
+function extractVariables(root: SyntaxNode, uri: string): VariableInfo[] {
+    return extractAll(root, uri).variables;
 }
 
 /**
@@ -616,11 +648,7 @@ export function parseFile(uri: string, text: string, options?: string | ParseSym
         return EMPTY_PARSE_RESULT;
     }
 
-    const root = tree.rootNode;
-
-    // --- Symbols ---
-    const functions = extractFunctions(root, uri);
-    const variables = extractVariables(root, uri);
+    const { functions, variables, refs } = extractAll(tree.rootNode, uri);
 
     // Handle backwards compatibility: options can be workspaceRoot string
     const opts: ParseSymbolsOptions = typeof options === "string" ? { workspaceRoot: options } : (options ?? {});
@@ -641,53 +669,5 @@ export function parseFile(uri: string, text: string, options?: string | ParseSym
         }));
     }
 
-    // --- References: collect function/macro def and call sites ---
-    const refs = collectFunctionRefs(root, uri);
-
     return { symbols, refs };
-}
-
-/**
- * Collect function/macro definition and call sites from the AST.
- * Variable references are not indexed -- they are scoped to functions/loops
- * and handled by single-file findReferences.
- */
-function collectFunctionRefs(root: SyntaxNode, uri: string): ReadonlyMap<string, readonly Location[]> {
-    const refs = new Map<string, Location[]>();
-
-    function addRef(name: string, loc: Location): void {
-        let locs = refs.get(name);
-        if (!locs) {
-            locs = [];
-            refs.set(name, locs);
-        }
-        locs.push(loc);
-    }
-
-    function visit(node: SyntaxNode): void {
-        // Function/macro definitions
-        if (FUNCTION_DEF_TYPES.has(node.type as SyntaxType)) {
-            const nameNode = node.childForFieldName("name");
-            if (nameNode) {
-                const name = stripStringDelimiters(nameNode.text);
-                addRef(name, { uri, range: makeRange(nameNode) });
-            }
-        }
-
-        // Function/macro calls (mutually exclusive with def types)
-        else if (FUNCTION_CALL_TYPES.has(node.type as SyntaxType)) {
-            const nameNode = node.childForFieldName("name");
-            if (nameNode) {
-                const name = stripStringDelimiters(nameNode.text);
-                addRef(name, { uri, range: makeRange(nameNode) });
-            }
-        }
-
-        for (const child of node.children) {
-            visit(child);
-        }
-    }
-
-    visit(root);
-    return refs;
 }

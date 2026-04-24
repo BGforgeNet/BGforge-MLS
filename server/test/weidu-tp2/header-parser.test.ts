@@ -583,6 +583,30 @@ END`;
         });
     });
 
+    describe("parseFile refs output", () => {
+        it("returns functions, variables, and call-site refs from a single input", () => {
+            const testUri = "file:///test/mod.tp2";
+            const text = `\
+OUTER_SET counter = 1
+OUTER_SPRINT label ~hello~
+
+DEFINE_ACTION_FUNCTION greet BEGIN
+  ACTION_IF FILE_EXISTS ~x~ BEGIN
+    LAF greet END
+  END
+END
+`;
+            const result = parseFile(testUri, text);
+
+            const names = result.symbols.map((s) => s.name);
+            expect(names).toEqual(expect.arrayContaining(["greet", "counter", "label"]));
+
+            const greetRefs = result.refs.get("greet") ?? [];
+            // def site + call site
+            expect(greetRefs.length).toBe(2);
+        });
+    });
+
     describe("callable symbol params include JSDoc data", () => {
         it("includes @arg descriptions in callable.params", () => {
             const input = `
