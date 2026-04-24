@@ -21,7 +21,7 @@ import { isHeaderFile } from "./core/location-utils";
 import { type NormalizedUri, normalizeUri } from "./core/normalized-uri";
 import { showInfo } from "./user-messages";
 import { clearDiagnostics, COMMAND_compile, compile } from "./compile";
-import { makeTimingOptions, timeHandler } from "./shared/time-handler";
+import { makeTimingOptions } from "./shared/time-handler";
 import { parseDialog } from "./dialog";
 import { parseTDDialog } from "./td/dialog";
 import { parseTSSLDialog } from "./tssl/dialog";
@@ -76,6 +76,7 @@ import * as definitionHandler from "./handlers/definition";
 import * as formattingHandler from "./handlers/formatting";
 import * as hoverHandler from "./handlers/hover";
 import * as referencesHandler from "./handlers/references";
+import * as semanticTokensHandler from "./handlers/semantic-tokens";
 import * as signatureHandler from "./handlers/signature";
 import * as symbolsHandler from "./handlers/symbols";
 
@@ -591,20 +592,7 @@ formattingHandler.register(handlerCtx);
 
 symbolsHandler.register(handlerCtx);
 
-connection.languages.semanticTokens.on(
-    timeHandler(
-        "semanticTokens",
-        (params) => {
-            const textDoc = documents.get(params.textDocument.uri);
-            if (!textDoc) {
-                return { data: [] };
-            }
-
-            return registry.semanticTokens(textDoc.languageId, textDoc.getText(), params.textDocument.uri);
-        },
-        timingOpts,
-    ),
-);
+semanticTokensHandler.register(handlerCtx);
 
 connection.onFoldingRanges((params) => {
     const textDoc = documents.get(params.textDocument.uri);
