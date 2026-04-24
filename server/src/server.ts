@@ -7,10 +7,8 @@
 import { fileURLToPath } from "node:url";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import {
-    type CompletionParams,
     type InitializeParams,
     type InitializeResult,
-    CompletionItem,
     createConnection,
     DidChangeConfigurationNotification,
     DidChangeWatchedFilesNotification,
@@ -75,6 +73,7 @@ import { UriDebouncer } from "./core/uri-debouncer";
 import { LSP_COMMAND_PARSE_DIALOG, NOTIFICATION_LOAD_FINISHED, VSCODE_COMMAND_COMPILE } from "../../shared/protocol";
 import type { HandlerContext } from "./handlers/context";
 import { createRenameSuppression } from "./handlers/rename-suppression";
+import * as completionHandler from "./handlers/completion";
 import * as hoverHandler from "./handlers/hover";
 
 // Create a connection for the server.
@@ -336,30 +335,6 @@ documents.onDidOpen(async (event) => {
     ctx.translation.reloadConsumer(uri, text, langId);
 });
 
-// This handler provides the initial list of the completion items.
-connection.onCompletion(
-    timeHandler(
-        "onCompletion",
-        (params: CompletionParams) => {
-            const uri = params.textDocument.uri;
-            const textDoc = documents.get(uri);
-            if (!textDoc) {
-                return [];
-            }
-            const langId = textDoc.languageId;
-            const text = textDoc.getText();
-            return registry.completion(langId, text, uri, params.position, params.context?.triggerCharacter);
-        },
-        timingOpts,
-    ),
-);
-
-// This handler resolve additional information for the item selected in
-// the completion list.
-connection.onCompletionResolve((item: CompletionItem): CompletionItem => {
-    return item;
-});
-
 // Make the text document manager listen on the connection
 // for open, change and close text document events
 documents.listen(connection);
@@ -367,6 +342,7 @@ documents.listen(connection);
 // Listen on the connection
 connection.listen();
 
+completionHandler.register(handlerCtx);
 hoverHandler.register(handlerCtx);
 
 /** Dialog preview handler registry. Maps language/extension to parser + translation language. */
