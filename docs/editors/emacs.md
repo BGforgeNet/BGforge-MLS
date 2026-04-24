@@ -5,15 +5,15 @@ Setup guide for using BGforge MLS with Emacs 29+.
 - [Prerequisites](#prerequisites)
 - [File type detection](#file-type-detection)
 - [Tree-sitter highlighting (Emacs 29+)](#tree-sitter-highlighting-emacs-29)
-  - [Compile grammars](#compile-grammars)
-  - [Font-lock rules](#font-lock-rules)
+    - [Compile grammars](#compile-grammars)
+    - [Font-lock rules](#font-lock-rules)
 - [Language server](#language-server)
-  - [eglot (built-in, Emacs 29+)](#eglot-built-in-emacs-29)
-  - [lsp-mode](#lsp-mode)
+    - [eglot (built-in, Emacs 29+)](#eglot-built-in-emacs-29)
+    - [lsp-mode](#lsp-mode)
 - [TypeScript plugins (TSSL/TD)](#typescript-plugins-tssltd)
 - [Settings](#settings)
-  - [eglot settings](#eglot-settings)
-  - [lsp-mode settings](#lsp-mode-settings)
+    - [eglot settings](#eglot-settings)
+    - [lsp-mode settings](#lsp-mode-settings)
 
 ## Prerequisites
 

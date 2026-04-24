@@ -1,23 +1,13 @@
 {
     "extends": "../tsconfig.base.json",
     "compilerOptions": {
-        "lib": [
-            "es2022"
-        ],
+        "lib": ["es2022"],
         "sourceMap": true,
         "allowImportingTsExtensions": true,
         "rootDir": "..",
         "outDir": "out",
         "tsBuildInfoFile": "../tmp/server.tsbuildinfo"
     },
-    "include": [
-        "src",
-        "../shared",
-        "../transpilers"
-    ],
-    "exclude": [
-        "node_modules",
-        ".vscode-test",
-        "test"
-    ]
+    "include": ["src", "../shared", "../transpilers"],
+    "exclude": ["node_modules", ".vscode-test", "test"]
 }

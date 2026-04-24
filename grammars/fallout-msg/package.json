@@ -1,30 +1,30 @@
 {
-  "name": "tree-sitter-fallout-msg",
-  "version": "0.1.0",
-  "description": "Fallout message file (.msg) grammar for tree-sitter",
-  "type": "module",
-  "license": "",
-  "author": {
-    "name": "BGforge",
-    "email": "dev@bgforge.net",
-    "url": "https://bgforge.net/"
-  },
-  "keywords": [
-    "tree-sitter",
-    "msg",
-    "fallout"
-  ],
-  "files": [
-    "grammar.js",
-    "tree-sitter.json",
-    "src/**",
-    "*.wasm",
-    "queries/**"
-  ],
-  "scripts": {
-    "build": "tree-sitter generate && tree-sitter build --wasm",
-    "test": "../../scripts/test-grammar.sh fallout-msg",
-    "lint": "oxlint grammar.js",
-    "playground": "tree-sitter playground"
-  }
+    "name": "tree-sitter-fallout-msg",
+    "version": "0.1.0",
+    "description": "Fallout message file (.msg) grammar for tree-sitter",
+    "keywords": [
+        "fallout",
+        "msg",
+        "tree-sitter"
+    ],
+    "license": "",
+    "author": {
+        "name": "BGforge",
+        "email": "dev@bgforge.net",
+        "url": "https://bgforge.net/"
+    },
+    "files": [
+        "grammar.js",
+        "tree-sitter.json",
+        "src/**",
+        "*.wasm",
+        "queries/**"
+    ],
+    "type": "module",
+    "scripts": {
+        "build": "tree-sitter generate && tree-sitter build --wasm",
+        "test": "../../scripts/test-grammar.sh fallout-msg",
+        "lint": "oxlint grammar.js",
+        "playground": "tree-sitter playground"
+    }
 }

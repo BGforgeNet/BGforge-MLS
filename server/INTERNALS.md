@@ -334,41 +334,41 @@ Lookup precedence (highest to lowest): Loop > Function > File > Workspace > Glob
 
 ```typescript
 interface LanguageProvider {
-  id: string;
+    id: string;
 
-  // Lifecycle
-  init(context: ProviderContext): Promise<void>;
+    // Lifecycle
+    init(context: ProviderContext): Promise<void>;
 
-  // Gate: suppress features in comments
-  shouldProvideFeatures?(text, position): boolean;
+    // Gate: suppress features in comments
+    shouldProvideFeatures?(text, position): boolean;
 
-  // AST-based features (parse current document)
-  format?(text, uri): FormatResult;
-  symbols?(text): DocumentSymbol[];
-  foldingRanges?(text): FoldingRange[];
-  definition?(text, position, uri): Location | null;
-  hover?(text, symbol, uri, position): HoverResult; // discriminated union
-  filterCompletions?(items, text, position, uri, trigger?): CompletionItem[];
-  localSignature?(text, symbol, paramIndex): SignatureHelp | null;
-  rename?(text, position, newName, uri): WorkspaceEdit | null;
-  prepareRename?(text, position): { range; placeholder } | null;
-  inlayHints?(text, uri, range): InlayHint[];
-  workspaceSymbols?(query): SymbolInformation[];
+    // AST-based features (parse current document)
+    format?(text, uri): FormatResult;
+    symbols?(text): DocumentSymbol[];
+    foldingRanges?(text): FoldingRange[];
+    definition?(text, position, uri): Location | null;
+    hover?(text, symbol, uri, position): HoverResult; // discriminated union
+    filterCompletions?(items, text, position, uri, trigger?): CompletionItem[];
+    localSignature?(text, symbol, paramIndex): SignatureHelp | null;
+    rename?(text, position, newName, uri): WorkspaceEdit | null;
+    prepareRename?(text, position): { range; placeholder } | null;
+    inlayHints?(text, uri, range): InlayHint[];
+    workspaceSymbols?(query): SymbolInformation[];
 
-  // Data features (unified symbol resolution)
-  resolveSymbol?(name, text, uri): IndexedSymbol | undefined; // single lookup entry point
-  getCompletions?(uri): CompletionItem[];
-  getSignature?(uri, symbol, paramIndex): SignatureHelp | null;
-  getSymbolDefinition?(symbol): Location | null;
+    // Data features (unified symbol resolution)
+    resolveSymbol?(name, text, uri): IndexedSymbol | undefined; // single lookup entry point
+    getCompletions?(uri): CompletionItem[];
+    getSignature?(uri, symbol, paramIndex): SignatureHelp | null;
+    getSymbolDefinition?(symbol): Location | null;
 
-  // File watching
-  indexExtensions?: string[];
-  reloadFileData?(uri, text): void;
-  onWatchedFileDeleted?(uri): void;
-  onDocumentClosed?(uri): void;
+    // File watching
+    indexExtensions?: string[];
+    reloadFileData?(uri, text): void;
+    onWatchedFileDeleted?(uri): void;
+    onDocumentClosed?(uri): void;
 
-  // Compilation
-  compile?(uri, text, interactive): Promise<void>;
+    // Compilation
+    compile?(uri, text, interactive): Promise<void>;
 }
 ```
 
@@ -429,18 +429,18 @@ This copies the generated `tree-sitter.d.ts` to `server/src/{lang}/`.
 
 ## Feature Matrix
 
-| Provider    | Completion | Hover | Signature | Definition | References | Format | Symbols | Workspace Symbols | Rename | Inlay | Folding | Diagnostics | JSDoc | Semantic Tokens |
-| ----------- | :--------: | :---: | :-------: | :--------: | :--------: | :----: | :-----: | :---------------: | :----: | :---: | :-----: | :---------: | :---: | :-------------: |
-| fallout-ssl |     Y      |   Y   |     Y     |     Y      |     Y      |   Y    |    Y    |         Y         |   Y    | .msg  |    Y    |      Y      |   Y   |        Y        |
-| weidu-baf   |     Y      |   Y   |           |    n/a     |    n/a     |   Y    |         |        n/a        |  n/a   | .tra  |    Y    |      Y      |  n/a  |                 |
-| weidu-d     |     Y      |   Y   |           |     Y      |     Y      |   Y    |    Y    |         Y         |   Y    | .tra  |    Y    |      Y      |   Y   |                 |
-| weidu-tp2   |     Y      |   Y   |           |     Y      |     Y      |   Y    |    Y    |         Y         |   Y    | .tra  |    Y    |      Y      |   Y   |        Y        |
-| weidu-log   |    n/a     |  n/a  |    n/a    |     Y      |    n/a     |  n/a   |   n/a   |        n/a        |  n/a   |  n/a  |   n/a   |     n/a     |  n/a  |       n/a       |
-| worldmap    |     Y      |   Y   |    n/a    |    n/a     |    n/a     |  n/a   |   n/a   |        n/a        |  n/a   |  n/a  |   n/a   |     n/a     |  n/a  |       n/a       |
-| weidu-tra   |            |   Y   |           |     Y      |     Y      |   Y    |         |                   |        |       |         |             |       |                 |
-| fallout-msg |            |   Y   |           |     Y      |     Y      |   Y    |         |                   |        |       |         |             |       |                 |
-| infinity-2da|            |       |           |            |            |   Y    |         |                   |        |       |         |             |       |        Y        |
-| scripts-lst |            |       |           |            |            |   Y    |         |                   |        |       |         |             |       |                 |
+| Provider     | Completion | Hover | Signature | Definition | References | Format | Symbols | Workspace Symbols | Rename | Inlay | Folding | Diagnostics | JSDoc | Semantic Tokens |
+| ------------ | :--------: | :---: | :-------: | :--------: | :--------: | :----: | :-----: | :---------------: | :----: | :---: | :-----: | :---------: | :---: | :-------------: |
+| fallout-ssl  |     Y      |   Y   |     Y     |     Y      |     Y      |   Y    |    Y    |         Y         |   Y    | .msg  |    Y    |      Y      |   Y   |        Y        |
+| weidu-baf    |     Y      |   Y   |           |    n/a     |    n/a     |   Y    |         |        n/a        |  n/a   | .tra  |    Y    |      Y      |  n/a  |                 |
+| weidu-d      |     Y      |   Y   |           |     Y      |     Y      |   Y    |    Y    |         Y         |   Y    | .tra  |    Y    |      Y      |   Y   |                 |
+| weidu-tp2    |     Y      |   Y   |           |     Y      |     Y      |   Y    |    Y    |         Y         |   Y    | .tra  |    Y    |      Y      |   Y   |        Y        |
+| weidu-log    |    n/a     |  n/a  |    n/a    |     Y      |    n/a     |  n/a   |   n/a   |        n/a        |  n/a   |  n/a  |   n/a   |     n/a     |  n/a  |       n/a       |
+| worldmap     |     Y      |   Y   |    n/a    |    n/a     |    n/a     |  n/a   |   n/a   |        n/a        |  n/a   |  n/a  |   n/a   |     n/a     |  n/a  |       n/a       |
+| weidu-tra    |            |   Y   |           |     Y      |     Y      |   Y    |         |                   |        |       |         |             |       |                 |
+| fallout-msg  |            |   Y   |           |     Y      |     Y      |   Y    |         |                   |        |       |         |             |       |                 |
+| infinity-2da |            |       |           |            |            |   Y    |         |                   |        |       |         |             |       |        Y        |
+| scripts-lst  |            |       |           |            |            |   Y    |         |                   |        |       |         |             |       |                 |
 
 ## Request Routing
 

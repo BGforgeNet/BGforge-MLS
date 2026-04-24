@@ -9,23 +9,23 @@ TSSL is a TypeScript subset that transpiles to Fallout SSL (Star-Trek Scripting 
 **Top-level `const`** becomes `#define` (compile-time constant):
 
 ```typescript
-const MY_VALUE = 42;         // → #define MY_VALUE 42
-const MSG_HELLO = 100;       // → #define MSG_HELLO 100
+const MY_VALUE = 42; // → #define MY_VALUE 42
+const MSG_HELLO = 100; // → #define MSG_HELLO 100
 ```
 
 **`let`** becomes `variable` (runtime variable):
 
 ```typescript
-let count = 0;               // → variable count = 0;
-let name: string;            // → variable name;
+let count = 0; // → variable count = 0;
+let name: string; // → variable name;
 ```
 
 **`const` inside a function** also becomes `variable` (same as `let`):
 
 ```typescript
 function example() {
-    const x = 5;             // → variable x = 5;
-    let y = 10;              // → variable y = 10;
+    const x = 5; // → variable x = 5;
+    let y = 10; // → variable y = 10;
 }
 ```
 
@@ -69,9 +69,9 @@ function get_hp(who: CritterPtr): number {
 **`call` keyword:** User-defined functions (defined in the same file or bundled imports) called as standalone statements get the `call` keyword automatically. External engine functions do not:
 
 ```typescript
-my_proc();                   // → call my_proc();    (user-defined, gets call)
-debug_msg("hello");          // → debug_msg("hello"); (external, no call)
-let x = get_hp(dude_obj);   // → variable x = get_hp(dude_obj);  (assignment, no call)
+my_proc(); // → call my_proc();    (user-defined, gets call)
+debug_msg("hello"); // → debug_msg("hello"); (external, no call)
+let x = get_hp(dude_obj); // → variable x = get_hp(dude_obj);  (assignment, no call)
 ```
 
 ### Control Flow
@@ -152,7 +152,7 @@ switch (x) {
         // ...
         break;
     default:
-        // ...
+    // ...
 }
 // → switch (x) begin case 1: ... case 2: ... default: ... end
 ```
@@ -163,22 +163,22 @@ switch (x) {
 
 The transpiler converts TypeScript operators to SSL equivalents:
 
-| TypeScript | SSL | Description |
-|---|---|---|
-| `&&` | `and` | Logical AND |
-| `\|\|` | `or` | Logical OR |
-| `!` | `not` | Logical NOT |
-| `&` | `bwand` | Bitwise AND |
-| `\|` | `bwor` | Bitwise OR |
-| `^` | `bxor` | Bitwise XOR |
-| `~` | `bnot` | Bitwise NOT |
+| TypeScript | SSL     | Description |
+| ---------- | ------- | ----------- |
+| `&&`       | `and`   | Logical AND |
+| `\|\|`     | `or`    | Logical OR  |
+| `!`        | `not`   | Logical NOT |
+| `&`        | `bwand` | Bitwise AND |
+| `\|`       | `bwor`  | Bitwise OR  |
+| `^`        | `bxor`  | Bitwise XOR |
+| `~`        | `bnot`  | Bitwise NOT |
 
 Operators that pass through unchanged: `==`, `!=`, `<`, `>`, `<=`, `>=`, `+`, `-`, `*`, `/`, `%`, `=`, `+=`, `-=`, `*=`, `/=`, `++`, `--`.
 
 **Ternary operator** is supported:
 
 ```typescript
-const result = (x > 0) ? a : b;
+const result = x > 0 ? a : b;
 // → #define result (x > 0) ? a : b
 ```
 
@@ -224,7 +224,7 @@ function get_stat(who: CritterPtr, stat: number): number {
 **Zero-arg inline functions:** At call sites, parentheses are stripped:
 
 ```typescript
-const t = dude_tile();       // → dude_tile  (no parens in output)
+const t = dude_tile(); // → dude_tile  (no parens in output)
 ```
 
 The `@inline` tag must appear in a JSDoc comment (`/** @inline */`), not a regular comment.
@@ -246,7 +246,7 @@ const m = map({ [PID_MINIGUN]: 9, [PID_SHOTGUN]: 5 });
 Array literals pass through:
 
 ```typescript
-const arr = [1, 2, 3];      // → [1, 2, 3]
+const arr = [1, 2, 3]; // → [1, 2, 3]
 ```
 
 Object literals require **computed property keys** when using constants:
@@ -261,8 +261,8 @@ See [Gotchas](#gotchas-and-pitfalls) for why non-computed keys don't work.
 ### Element and Property Access
 
 ```typescript
-arr[i]                       // → arr[i]
-obj[key]                     // → obj[key]
+arr[i]; // → arr[i]
+obj[key]; // → obj[key]
 ```
 
 ### Imports
@@ -313,7 +313,9 @@ Both `.tra` and `.msg` extensions are accepted. This emits `/** @tra mymod.tra *
 TypeScript reserves the `typeof` keyword, so use `sfall_typeof()` instead:
 
 ```typescript
-if (sfall_typeof(x) == 2) { /* string */ }
+if (sfall_typeof(x) == 2) {
+    /* string */
+}
 // → if (typeof(x) == 2) then begin ... end
 ```
 
@@ -324,7 +326,7 @@ The transpiler replaces all `sfall_typeof` occurrences with `typeof` in the outp
 esbuild strips `.0` from float literals (e.g., `1.0` becomes `1`). To force float division in SSL, use `FLOAT1`:
 
 ```typescript
-const ratio = FLOAT1 * a / b;
+const ratio = (FLOAT1 * a) / b;
 // → #define ratio 1.0 * a / b
 ```
 
@@ -341,7 +343,9 @@ These 27 function names are recognized as engine entry points and preserved from
 Functions passed to `register_hook_proc` or `register_hook_proc_spec` are also preserved from tree-shaking:
 
 ```typescript
-function on_combat_turn(event: number) { /* ... */ }
+function on_combat_turn(event: number) {
+    /* ... */
+}
 register_hook_proc(HOOK_COMBATTURN, on_combat_turn);
 ```
 
@@ -354,7 +358,9 @@ JSDoc comments on functions are preserved as SSL comments in the output:
  * Initialize the script.
  * @param mode The init mode
  */
-function init(mode: number) { /* ... */ }
+function init(mode: number) {
+    /* ... */
+}
 // JSDoc is preserved above the procedure in SSL output
 ```
 
@@ -364,13 +370,13 @@ JSDoc is extracted before bundling (since esbuild strips it), so it works on the
 
 These produce explicit transpiler errors:
 
-| Syntax | Error |
-|---|---|
-| `try/catch/finally` | "try/catch is not supported in SSL" |
-| `Object.keys(...)`, `Array.from(...)`, etc. | "Object/Array/... is not available in SSL runtime" |
-| `JSON.parse(...)`, `Math.floor(...)`, etc. | Same -- all 13 forbidden globals |
-| `let list = 0` or `let map = 0` | "Variable name 'list'/'map' conflicts with folib export" |
-| foreach destructuring != 2 elements | "foreach destructuring must have exactly 2 elements" |
+| Syntax                                      | Error                                                    |
+| ------------------------------------------- | -------------------------------------------------------- |
+| `try/catch/finally`                         | "try/catch is not supported in SSL"                      |
+| `Object.keys(...)`, `Array.from(...)`, etc. | "Object/Array/... is not available in SSL runtime"       |
+| `JSON.parse(...)`, `Math.floor(...)`, etc.  | Same -- all 13 forbidden globals                         |
+| `let list = 0` or `let map = 0`             | "Variable name 'list'/'map' conflicts with folib export" |
+| foreach destructuring != 2 elements         | "foreach destructuring must have exactly 2 elements"     |
 
 **Forbidden globals** (full list): `Object`, `Array`, `JSON`, `Math`, `Date`, `Promise`, `Map`, `Set`, `WeakMap`, `WeakSet`, `Symbol`, `Reflect`, `Proxy`. None of these exist in the SSL runtime. The only runtime data structures are sfall lists and sfall maps, created with folib's `list()` and `map()` helpers.
 
@@ -380,21 +386,21 @@ These produce explicit transpiler errors:
 
 These produce broken output or are silently ignored -- no explicit error:
 
-| Syntax | What Happens |
-|---|---|
-| Arrow functions `() => {}` | Broken output (not recognized as function) |
-| Template literals `` `${x}` `` | Broken output |
-| Optional chaining `x?.y` | Broken output |
-| Nullish coalescing `x ?? y` | Broken output |
-| Spread `...arr` | Broken output |
-| Exponentiation `x ** y` | Broken output |
-| Destructuring (except for-of 2-element) | Broken output |
-| `instanceof` | Broken output |
-| `new Foo()` | Broken output |
-| `await` / `async` | Broken output |
-| `yield` / generators | Broken output |
-| Classes (runtime use) | Silently ignored (type-only use is fine) |
-| Decorators (runtime) | Silently ignored |
+| Syntax                                  | What Happens                               |
+| --------------------------------------- | ------------------------------------------ |
+| Arrow functions `() => {}`              | Broken output (not recognized as function) |
+| Template literals `` `${x}` ``          | Broken output                              |
+| Optional chaining `x?.y`                | Broken output                              |
+| Nullish coalescing `x ?? y`             | Broken output                              |
+| Spread `...arr`                         | Broken output                              |
+| Exponentiation `x ** y`                 | Broken output                              |
+| Destructuring (except for-of 2-element) | Broken output                              |
+| `instanceof`                            | Broken output                              |
+| `new Foo()`                             | Broken output                              |
+| `await` / `async`                       | Broken output                              |
+| `yield` / generators                    | Broken output                              |
+| Classes (runtime use)                   | Silently ignored (type-only use is fine)   |
+| Decorators (runtime)                    | Silently ignored                           |
 
 ## Gotchas and Pitfalls
 
@@ -405,13 +411,13 @@ All `let` variables are hoisted to function scope, including their initializers.
 ```typescript
 // WRONG: assignment hoisted, runs once
 for (const pid of pids) {
-    let divisor = 100;       // → variable divisor = 100; at function top!
+    let divisor = 100; // → variable divisor = 100; at function top!
 }
 
 // CORRECT: separate declaration from assignment
-let divisor: number;         // Declaration hoisted (fine)
+let divisor: number; // Declaration hoisted (fine)
 for (const pid of pids) {
-    divisor = 100;           // Assignment stays in loop body
+    divisor = 100; // Assignment stays in loop body
 }
 ```
 
@@ -420,8 +426,9 @@ for (const pid of pids) {
 External functions (from `.d.ts` or folib) with zero arguments have their parentheses stripped in the output. You must still write parentheses in TSSL to call them:
 
 ```typescript
-if (game_loaded()) { }       // → if (game_loaded) then begin ... end
-game_loaded                   // Wrong: this is a reference, not a call
+if (game_loaded()) {
+} // → if (game_loaded) then begin ... end
+game_loaded; // Wrong: this is a reference, not a call
 ```
 
 ### Map Access Semantics
@@ -436,8 +443,10 @@ For sfall maps, `map[key]` and `scan_array(map, key)` are different operations:
 SSL has no `undefined`. Missing map keys return `0`:
 
 ```typescript
-if (map[key] == 0) { }       // Correct: missing keys return 0
-if (map[key] == undefined) { } // Wrong: undefined doesn't exist
+if (map[key] == 0) {
+} // Correct: missing keys return 0
+if (map[key] == undefined) {
+} // Wrong: undefined doesn't exist
 ```
 
 The only runtime data structures are sfall lists (flat arrays) and sfall maps (key-value stores), created with folib's `list()` and `map()` helpers. There are no objects, classes, or other data structures at runtime. TypeScript classes and interfaces are type-only -- they exist for compile-time checking but produce nothing in the SSL output.
@@ -447,8 +456,8 @@ The only runtime data structures are sfall lists (flat arrays) and sfall maps (k
 Object literals with non-computed keys turn constants into string literals:
 
 ```typescript
-const x = { [PID_MINIGUN]: 9 };   // Correct: PID_MINIGUN stays a constant
-const x = { PID_MINIGUN: 9 };     // Wrong: becomes "PID_MINIGUN": 9
+const x = { [PID_MINIGUN]: 9 }; // Correct: PID_MINIGUN stays a constant
+const x = { PID_MINIGUN: 9 }; // Wrong: becomes "PID_MINIGUN": 9
 ```
 
 Always use `[CONSTANT]` syntax for object keys.
@@ -462,8 +471,8 @@ Importing the same function from different module paths causes esbuild to rename
 esbuild optimizes `1.0` to `1`, losing the float type in SSL. Use the `FLOAT1` constant to force float context:
 
 ```typescript
-const ratio = FLOAT1 * a / b;     // → 1.0 * a / b  (float division)
-const ratio = 1.0 * a / b;        // → 1 * a / b    (integer division!)
+const ratio = (FLOAT1 * a) / b; // → 1.0 * a / b  (float division)
+const ratio = (1.0 * a) / b; // → 1 * a / b    (integer division!)
 ```
 
 ## Compilation

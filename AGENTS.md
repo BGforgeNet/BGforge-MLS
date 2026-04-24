@@ -22,7 +22,7 @@ Release builds produce a CycloneDX SBOM (`dist/sbom.cdx.json`) attached to the G
 - **Do not change documentation structure just to satisfy a checker.** Never add fake headings, placeholder sections, or other invented doc structure solely to make anchors pass. Fix the link target, remove the bad link, or add a real section only when the document genuinely needs it.
 - **After completing a milestone, run the full verification pass and review the result.** Default milestone close-out is: run `pnpm build:all`, run `pnpm test:all`, then do a brief self-review of the diff for regressions, dead code, and stale references.
 - **Rebuild TextMate grammars after editing YAML sources.** After modifying any `syntaxes/*.tmLanguage.yml` file, run `scripts/syntaxes-to-json.sh` to regenerate the compiled JSON before testing or committing. **Never hand-edit `syntaxes/*.tmLanguage.json` files** — they are fully generated from the YAML sources and any manual edits will be overwritten.
-- **Do not hand-edit auto-generated TextMate stanzas.** Several stanzas across `syntaxes/*.tmLanguage.yml` are generated from `server/data/*.yml` via `generate-data.sh` — see `docs/data-pipeline.md` for the full list. Edit the YAML data source, then regenerate. Auto-generated stanzas are marked with a `# Auto-generated` comment.
+- **Do not hand-edit auto-generated TextMate stanzas.** Several stanzas across `syntaxes/*.tmLanguage.yml` are generated from `server/data/*.yml` via `generate-data.sh` — see `docs/data-pipeline.md` for the full list. Edit the YAML data source, then regenerate. Auto-generated stanzas are marked with a `# Auto-generated` comment. Because both the `.yml` sources (generator-maintained stanzas) and `.json` outputs (emitted by `yaml2json.ts`) are generator-owned, `syntaxes/*.tmLanguage.{yml,json}` are excluded from `oxfmt` via `.oxfmtrc.json`; running `oxfmt` on them would be undone on the next regen.
 - **Sort YAML data files with the existing script.** To sort `server/data/*.yml` files, use `pnpm exec tsx scripts/utils/src/sort-yaml-stanzas-and-items.ts <file>`. Do not write custom sorting code. See `scripts/README.md` for all available script utilities.
 - **Changelog entries must be user-facing only.** Document new features, bug fixes, and behavior changes. Never include implementation details such as refactoring, test additions, code quality improvements, or internal constants. Users care about what changed, not how it was implemented.
 
@@ -161,18 +161,18 @@ See `server/INTERNALS.md` for the full feature matrix and cross-language feature
 
 ## Documentation Index
 
-| Area               | Key Files                                                                                              |
-| ------------------ | ------------------------------------------------------------------------------------------------------ |
-| Architecture       | `docs/architecture.md`, `server/INTERNALS.md`                                                          |
-| Contributing       | `CONTRIBUTING.md`                                                                                      |
-| Settings           | `docs/settings.md`                                                                                     |
-| Changelog          | `docs/changelog.md`                                                                                    |
-| Editor setup       | `docs/editors/` (neovim, emacs, helix, zed, kate, sublime, jetbrains, geany, notepadpp)                |
-| TS plugins         | `docs/editors/typescript-plugins.md`                                                                   |
+| Area               | Key Files                                                                                                             |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| Architecture       | `docs/architecture.md`, `server/INTERNALS.md`                                                                         |
+| Contributing       | `CONTRIBUTING.md`                                                                                                     |
+| Settings           | `docs/settings.md`                                                                                                    |
+| Changelog          | `docs/changelog.md`                                                                                                   |
+| Editor setup       | `docs/editors/` (neovim, emacs, helix, zed, kate, sublime, jetbrains, geany, notepadpp)                               |
+| TS plugins         | `docs/editors/typescript-plugins.md`                                                                                  |
 | Transpiler guides  | `transpilers/tssl/docs/`, `transpilers/tbaf/docs/`, `transpilers/td/docs/` (each has README, writing guide, llms.txt) |
-| Server npm package | `server/README.md`                                                                                     |
-| Data files         | `server/data/README.md`                                                                                |
-| Data pipeline      | `docs/data-pipeline.md`                                                                                |
-| Grammars           | `grammars/README.md` + per-grammar READMEs                                                             |
-| Build scripts      | `scripts/README.md`                                                                                    |
-| Packaging          | `docs/ignore-files.md`                                                                                 |
+| Server npm package | `server/README.md`                                                                                                    |
+| Data files         | `server/data/README.md`                                                                                               |
+| Data pipeline      | `docs/data-pipeline.md`                                                                                               |
+| Grammars           | `grammars/README.md` + per-grammar READMEs                                                                            |
+| Build scripts      | `scripts/README.md`                                                                                                   |
+| Packaging          | `docs/ignore-files.md`                                                                                                |

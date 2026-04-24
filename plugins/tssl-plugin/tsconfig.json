@@ -12,7 +12,5 @@
         "rootDir": "../..",
         "tsBuildInfoFile": "../../tmp/tssl-plugin.tsbuildinfo"
     },
-    "include": [
-        "src"
-    ]
+    "include": ["src"]
 }

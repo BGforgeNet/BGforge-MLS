@@ -2,10 +2,7 @@
     "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
     "packageManager": "pnpm",
     "testRunner": "vitest",
-    "mutate": [
-        "transpilers/*/src/**/*.ts",
-        "!transpilers/*/src/**/*.test.ts"
-    ],
+    "mutate": ["transpilers/*/src/**/*.ts", "!transpilers/*/src/**/*.test.ts"],
     "checkers": ["typescript"],
     "tsconfigFile": "tsconfig.base.json",
     "coverageAnalysis": "perTest",

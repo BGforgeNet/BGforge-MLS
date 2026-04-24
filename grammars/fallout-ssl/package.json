@@ -1,34 +1,34 @@
 {
-  "name": "tree-sitter-ssl",
-  "version": "0.1.0",
-  "description": "Fallout 2 Star-Trek Scripting Language grammar for tree-sitter",
-  "type": "module",
-  "license": "",
-  "author": {
-    "name": "BGforge",
-    "email": "dev@bgforge.net",
-    "url": "https://bgforge.net/"
-  },
-  "keywords": [
-    "tree-sitter",
-    "ssl",
-    "fallout"
-  ],
-  "files": [
-    "grammar.js",
-    "tree-sitter.json",
-    "src/**",
-    "*.wasm",
-    "queries/**"
-  ],
-  "scripts": {
-    "build": "tree-sitter generate && tree-sitter build --wasm",
-    "generate:types": "pnpm exec dts-tree-sitter . | sed 's/export const enum /export enum /' > src/tree-sitter.d.ts && cp src/tree-sitter.d.ts ../../server/src/fallout-ssl/tree-sitter.d.ts",
-    "test": "../../scripts/test-grammar.sh fallout-ssl",
-    "lint": "oxlint grammar.js",
-    "playground": "tree-sitter playground"
-  },
-  "devDependencies": {
-    "@asgerf/dts-tree-sitter": "^0.21.0"
-  }
+    "name": "tree-sitter-ssl",
+    "version": "0.1.0",
+    "description": "Fallout 2 Star-Trek Scripting Language grammar for tree-sitter",
+    "keywords": [
+        "fallout",
+        "ssl",
+        "tree-sitter"
+    ],
+    "license": "",
+    "author": {
+        "name": "BGforge",
+        "email": "dev@bgforge.net",
+        "url": "https://bgforge.net/"
+    },
+    "files": [
+        "grammar.js",
+        "tree-sitter.json",
+        "src/**",
+        "*.wasm",
+        "queries/**"
+    ],
+    "type": "module",
+    "scripts": {
+        "build": "tree-sitter generate && tree-sitter build --wasm",
+        "generate:types": "pnpm exec dts-tree-sitter . | sed 's/export const enum /export enum /' > src/tree-sitter.d.ts && cp src/tree-sitter.d.ts ../../server/src/fallout-ssl/tree-sitter.d.ts",
+        "test": "../../scripts/test-grammar.sh fallout-ssl",
+        "lint": "oxlint grammar.js",
+        "playground": "tree-sitter playground"
+    },
+    "devDependencies": {
+        "@asgerf/dts-tree-sitter": "^0.21.0"
+    }
 }

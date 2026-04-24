@@ -1,17 +1,17 @@
 keywords:
-  type: 14 #keyword
-  items:
-    - name: END
+    type: 14 #keyword
+    items:
+        - name: END
 
-    # - name: OR  # defined as a trigger in weidu-baf-iesdp.yml
-    - name: GLOBAL
+        # - name: OR  # defined as a trigger in weidu-baf-iesdp.yml
+        - name: GLOBAL
 
-    - name: IF
+        - name: IF
 
-    - name: LOCALS
+        - name: LOCALS
 
-    - name: MYAREA
+        - name: MYAREA
 
-    - name: RESPONSE
+        - name: RESPONSE
 
-    - name: THEN
+        - name: THEN

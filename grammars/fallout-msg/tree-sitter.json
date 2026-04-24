@@ -1,43 +1,41 @@
 {
-  "$schema": "https://tree-sitter.github.io/tree-sitter/assets/schemas/config.schema.json",
-  "grammars": [
-    {
-      "name": "fallout_msg",
-      "camelcase": "FalloutMsg",
-      "title": "Fallout MSG",
-      "scope": "source.fallout-msg",
-      "file-types": [
-        "msg"
-      ],
-      "injection-regex": "^fallout[_-]?msg$",
-      "class-name": "TreeSitterFalloutMsg",
-      "highlights": "queries/highlights.scm"
-    }
-  ],
-  "metadata": {
-    "version": "0.1.0",
-    "license": "-",
-    "description": "Fallout message file (.msg)",
-    "authors": [
-      {
-        "name": "BGforge",
-        "email": "dev@bgforge.net",
-        "url": "https://bgforge.net/"
-      }
+    "$schema": "https://tree-sitter.github.io/tree-sitter/assets/schemas/config.schema.json",
+    "grammars": [
+        {
+            "name": "fallout_msg",
+            "camelcase": "FalloutMsg",
+            "title": "Fallout MSG",
+            "scope": "source.fallout-msg",
+            "file-types": ["msg"],
+            "injection-regex": "^fallout[_-]?msg$",
+            "class-name": "TreeSitterFalloutMsg",
+            "highlights": "queries/highlights.scm"
+        }
     ],
-    "links": {
-      "repository": "https://github.com/BGforgeNet/bgforge-mls",
-      "funding": ""
+    "metadata": {
+        "version": "0.1.0",
+        "license": "-",
+        "description": "Fallout message file (.msg)",
+        "authors": [
+            {
+                "name": "BGforge",
+                "email": "dev@bgforge.net",
+                "url": "https://bgforge.net/"
+            }
+        ],
+        "links": {
+            "repository": "https://github.com/BGforgeNet/bgforge-mls",
+            "funding": ""
+        }
+    },
+    "bindings": {
+        "c": false,
+        "go": false,
+        "java": false,
+        "node": true,
+        "python": false,
+        "rust": false,
+        "swift": false,
+        "zig": false
     }
-  },
-  "bindings": {
-    "c": false,
-    "go": false,
-    "java": false,
-    "node": true,
-    "python": false,
-    "rust": false,
-    "swift": false,
-    "zig": false
-  }
 }

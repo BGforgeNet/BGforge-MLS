@@ -20,11 +20,11 @@ Controls what git tracks. Most build output is ignored; checked-in data JSONs ar
 
 These JSON files are generated from `server/data/*.yml` by `generate-data.sh` but are checked in so that tests and typechecks work on a clean checkout without a build step.
 
-| Pattern                             | Contents                                             |
-| ----------------------------------- | ---------------------------------------------------- |
-| `!server/out/completion.*.json`     | Autocomplete item lists (one per language)           |
-| `!server/out/hover.*.json`          | Hover documentation (one per language)               |
-| `!server/out/signature.*.json`      | Signature help parameter hints                       |
+| Pattern                                         | Contents                                             |
+| ----------------------------------------------- | ---------------------------------------------------- |
+| `!server/out/completion.*.json`                 | Autocomplete item lists (one per language)           |
+| `!server/out/hover.*.json`                      | Hover documentation (one per language)               |
+| `!server/out/signature.*.json`                  | Signature help parameter hints                       |
 | `!server/out/fallout-ssl-engine-proc-docs.json` | Engine procedure docs for the TSSL TypeScript plugin |
 
 ### Generated source

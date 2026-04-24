@@ -1,43 +1,41 @@
 {
-  "$schema": "https://tree-sitter.github.io/tree-sitter/assets/schemas/config.schema.json",
-  "grammars": [
-    {
-      "name": "weidu_tra",
-      "camelcase": "WeiduTra",
-      "title": "WeiDU TRA",
-      "scope": "source.weidu-tra",
-      "file-types": [
-        "tra"
-      ],
-      "injection-regex": "^(weidu[_-]?)?tra$",
-      "class-name": "TreeSitterWeiduTra",
-      "highlights": "queries/highlights.scm"
-    }
-  ],
-  "metadata": {
-    "version": "0.1.0",
-    "license": "-",
-    "description": "WeiDU translation file (.tra)",
-    "authors": [
-      {
-        "name": "BGforge",
-        "email": "dev@bgforge.net",
-        "url": "https://bgforge.net/"
-      }
+    "$schema": "https://tree-sitter.github.io/tree-sitter/assets/schemas/config.schema.json",
+    "grammars": [
+        {
+            "name": "weidu_tra",
+            "camelcase": "WeiduTra",
+            "title": "WeiDU TRA",
+            "scope": "source.weidu-tra",
+            "file-types": ["tra"],
+            "injection-regex": "^(weidu[_-]?)?tra$",
+            "class-name": "TreeSitterWeiduTra",
+            "highlights": "queries/highlights.scm"
+        }
     ],
-    "links": {
-      "repository": "https://github.com/BGforgeNet/bgforge-mls",
-      "funding": ""
+    "metadata": {
+        "version": "0.1.0",
+        "license": "-",
+        "description": "WeiDU translation file (.tra)",
+        "authors": [
+            {
+                "name": "BGforge",
+                "email": "dev@bgforge.net",
+                "url": "https://bgforge.net/"
+            }
+        ],
+        "links": {
+            "repository": "https://github.com/BGforgeNet/bgforge-mls",
+            "funding": ""
+        }
+    },
+    "bindings": {
+        "c": false,
+        "go": false,
+        "java": false,
+        "node": true,
+        "python": false,
+        "rust": false,
+        "swift": false,
+        "zig": false
     }
-  },
-  "bindings": {
-    "c": false,
-    "go": false,
-    "java": false,
-    "node": true,
-    "python": false,
-    "rust": false,
-    "swift": false,
-    "zig": false
-  }
 }

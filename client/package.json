@@ -1,17 +1,14 @@
 {
     "name": "bgforge-mls-client",
-    "description": "BGforge MLS client",
-    "author": "BGforge",
-    "license": "SEE LICENSE IN LICENSE.txt",
     "version": "3.7.0",
-    "publisher": "BGforge",
+    "description": "BGforge MLS client",
+    "license": "SEE LICENSE IN LICENSE.txt",
+    "author": "BGforge",
     "repository": {
         "type": "git",
         "url": "https://github.com/BGforgeNet/BGforge-MLS/client"
     },
-    "engines": {
-        "vscode": "^1.73.0"
-    },
+    "publisher": "BGforge",
     "scripts": {
         "test": "./scripts/test.sh"
     },
@@ -25,5 +22,8 @@
         "@types/vscode": "^1.73.0",
         "@vscode/test-electron": "^2.5.2",
         "glob": "^13.0.6"
+    },
+    "engines": {
+        "vscode": "^1.73.0"
     }
 }

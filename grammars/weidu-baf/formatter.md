@@ -31,17 +31,20 @@ END
 ### 3. Comment Handling
 
 **Inline comments** (same line as code):
+
 ```baf
 ActionID("param")  // This is preserved on the same line
 ```
 
 **Standalone comments** (own line):
+
 ```baf
 // This is a standalone comment
 IF
 ```
 
 **Block comments** (multi-line preserved):
+
 ```baf
 /*
  * Multi-line block comment
@@ -58,11 +61,13 @@ Unlike D or TP2, BAF doesn't need line wrapping logic. The format is inherently 
 ### Basic IF/THEN Block
 
 **Input:**
+
 ```baf
 IF     ActionID("param1")   ActionID2("param2")   THEN   RESPONSE   #100   ActionID3("param3")   END
 ```
 
 **Formatted:**
+
 ```baf
 IF
     ActionID("param1")

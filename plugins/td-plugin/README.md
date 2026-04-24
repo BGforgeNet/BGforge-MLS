@@ -21,8 +21,8 @@ Uses the current `host.getScriptFileNames()` (not a stale pre-override reference
 
 ## Source files
 
-| File | Purpose |
-|------|---------|
+| File           | Purpose                                              |
+| -------------- | ---------------------------------------------------- |
 | `src/index.ts` | Plugin entry point, host overrides, completion proxy |
 
 ## Build

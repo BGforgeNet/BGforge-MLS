@@ -8,13 +8,13 @@ D files define Infinity Engine dialogues for WeiDU modding.
 
 ### String Types
 
-| Type | Example | Status |
-|------|---------|--------|
-| Double quote | `"text"` | Supported |
-| Tilde | `~text~` | Supported |
-| Percent | `%text%` | Not supported (conflicts with variable refs) |
-| Five tildes | `~~~~~text~~~~~` | Not supported (regex limitation) |
-| Concatenation | `"a" ^ "b"` | Not supported |
+| Type          | Example          | Status                                       |
+| ------------- | ---------------- | -------------------------------------------- |
+| Double quote  | `"text"`         | Supported                                    |
+| Tilde         | `~text~`         | Supported                                    |
+| Percent       | `%text%`         | Not supported (conflicts with variable refs) |
+| Five tildes   | `~~~~~text~~~~~` | Not supported (regex limitation)             |
+| Concatenation | `"a" ^ "b"`      | Not supported                                |
 
 ### D Actions
 
@@ -109,13 +109,13 @@ COPY_TRANS_LATE [SAFE] filename stateLabel
 
 ### Text (Player-Visible Strings)
 
-| Form | Example | Status |
-|------|---------|--------|
-| String | `~text~` | Supported |
-| String + sound | `~text~ [sound]` | Not supported |
-| Male/female | `~male~ [m.wav] ~female~ [f.wav]` | Not supported |
-| Forced ref | `!123 ~text~` | Not supported |
-| Reference | `@123`, `#123` | Supported |
+| Form           | Example                           | Status        |
+| -------------- | --------------------------------- | ------------- |
+| String         | `~text~`                          | Supported     |
+| String + sound | `~text~ [sound]`                  | Not supported |
+| Male/female    | `~male~ [m.wav] ~female~ [f.wav]` | Not supported |
+| Forced ref     | `!123 ~text~`                     | Not supported |
+| Reference      | `@123`, `#123`                    | Supported     |
 
 ### Identifiers and Labels
 
@@ -130,12 +130,12 @@ EXTERN ~RR#VEND~ ~13~             // string as state label
 
 ### References
 
-| Type | Example | Description |
-|------|---------|-------------|
-| TRA ref | `@123` | Translation file reference |
-| TLK ref | `#123` | DIALOG.TLK string reference |
-| Variable | `%varname%` | WeiDU variable (allows `#` in name) |
-| AT var | `(AT "var")` | Variable TRA reference |
+| Type     | Example      | Description                         |
+| -------- | ------------ | ----------------------------------- |
+| TRA ref  | `@123`       | Translation file reference          |
+| TLK ref  | `#123`       | DIALOG.TLK string reference         |
+| Variable | `%varname%`  | WeiDU variable (allows `#` in name) |
+| AT var   | `(AT "var")` | Variable TRA reference              |
 
 ### Comments
 
@@ -155,17 +155,20 @@ UNLESS ~regexp~   // Skip if element matches
 ## Supported D Actions
 
 ### Create/Append
+
 - `BEGIN`
 - `APPEND` / `APPEND_EARLY`
 - `EXTEND_TOP` / `EXTEND_BOTTOM`
 - `REPLACE`
 
 ### Chain/Interject
+
 - `CHAIN`
 - `INTERJECT`
 - `INTERJECT_COPY_TRANS` / `INTERJECT_COPY_TRANS2` / `INTERJECT_COPY_TRANS3` / `INTERJECT_COPY_TRANS4`
 
 ### Modify Existing
+
 - `ALTER_TRANS`
 - `ADD_STATE_TRIGGER`
 - `ADD_TRANS_TRIGGER`
@@ -175,6 +178,7 @@ UNLESS ~regexp~   // Skip if element matches
 - `REPLACE_STATE_TRIGGER`
 
 ### Replace Text
+
 - `REPLACE_ACTION_TEXT` / `REPLACE_ACTION_TEXT_REGEXP`
 - `REPLACE_ACTION_TEXT_PROCESS` / `R_A_T_P_R`
 - `REPLACE_TRANS_TRIGGER`
@@ -184,16 +188,19 @@ UNLESS ~regexp~   // Skip if element matches
 ## Not Supported
 
 ### String Types
+
 - `%text%` - conflicts with `%variable%` refs
 - `~~~~~text~~~~~` - five tildes (regex limitation)
 - `String ^ String` - concatenation
 
 ### Text Features
+
 - `String [WAVEFILE]` - sound file attachment
 - `String [WAVEFILE] String [WAVEFILE]` - male/female variants
 - `!integer text` - forced string reference
 
 ### Legacy (WeiDU doc says "avoid")
+
 - `APPENDI` - use `APPEND` instead
 - `CHAIN2` - use `CHAIN` instead
 

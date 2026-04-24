@@ -20,12 +20,12 @@ Add to your project's `tsconfig.json`:
 
 ```json
 {
-  "compilerOptions": {
-    "plugins": [
-      { "name": "/path/to/@bgforge/mls-server/out/tssl-plugin" },
-      { "name": "/path/to/@bgforge/mls-server/out/td-plugin" }
-    ]
-  }
+    "compilerOptions": {
+        "plugins": [
+            { "name": "/path/to/@bgforge/mls-server/out/tssl-plugin" },
+            { "name": "/path/to/@bgforge/mls-server/out/td-plugin" }
+        ]
+    }
 }
 ```
 

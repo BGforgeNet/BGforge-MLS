@@ -19,6 +19,7 @@ Decorative separator comments (`//////`) are preserved without adding space afte
 ```
 
 **Not** formatted to:
+
 ```d
 // /////////////////////////////////////////////////////////////////////
 // This stays as-is

@@ -76,11 +76,13 @@ At context boundaries, completions show items from both adjacent contexts.
 **Definition:** Positions where **multiple completion contexts are simultaneously valid** - you cannot determine which single context you're in based on grammar position alone.
 
 **What this means:**
+
 - Cannot decide between `action` vs `patch` vs `when` vs `componentFlag` vs `flag` vs `prologue`
 - Must suggest completions from all valid contexts at that position
 - Results from grammar rules with optional elements (`*`, `+`) allowing zero or transitions
 
 **What this is NOT:**
+
 - ❌ Multiple syntactic choices within same context (e.g., ELSE vs next action - both are in action context)
 - ❌ Optional parameters (e.g., INT_VAR vs STR_VAR in function - all in function definition context)
 - ❌ Keyword aliases (e.g., PHP_EACH vs PATCH_PHP_EACH - same context, same meaning)
@@ -92,69 +94,86 @@ At context boundaries, completions show items from both adjacent contexts.
 **The 8 ambiguous positions:**
 
 #### 1. Empty Component
+
 ```tp2
 BEGIN @123
   [cursor, nothing below]
 ```
+
 Valid: `componentFlag` OR `action` OR end component
 Reason: `componentFlag*` and `action*` both allow zero
 
 #### 2. After COPY File Pairs
+
 ```tp2
 COPY ~a~ ~b~
   [cursor]
 ```
+
 Valid: `patch` OR `when` OR end COPY (continue with actions)
 
 Note: Only unambiguous if patch-only or when-only keyword appears below:
+
 - `REPLACE_TEXTUALLY` below → `patch` context only
 - `BUT_ONLY` below → `when` context only
 - `IF ~foo~` below → still ambiguous (could be `PATCH_IF` or when `IF`)
 - Another `COPY` below → still ambiguous (first COPY not ended yet)
 
 #### 3. After COPY Patches
+
 ```tp2
 COPY ~a~ ~b~
   REPLACE_TEXTUALLY ...
   [cursor]
 ```
+
 Valid: More patches OR `when` OR end COPY
 
 #### 4. After COPY When Conditions
+
 ```tp2
 COPY ~a~ ~b~
   BUT_ONLY
   [cursor]
 ```
+
 Valid: More when conditions (`when*` allows multiples) OR end COPY
 
 #### 5. After Prologue
+
 ```tp2
 BACKUP ~mymod~
 AUTHOR ~me~
 [cursor]
 ```
+
 Valid: More prologue (SUPPORT) OR start flags (AUTO_TRA, etc.)
 
 #### 6. Between Flags and Language
+
 ```tp2
 AUTO_TRA ~foo~
 [cursor]
 LANGUAGE ~English~ ...
 ```
+
 Valid: More flags (`flag*`) OR start language (`language+`)
 
 #### 7. After Languages
+
 ```tp2
 LANGUAGE ~English~ ~en~ ~english.tra~
 [cursor]
 ```
+
 Valid: More languages (`language+` allows multiples) OR start components OR end file
 
 #### 8. Empty .tpa/.tph File
+
 ```tp2
 [cursor, empty file]
 ```
+
 Valid: `action` (default for .tpa/.tph) OR `file` (if component structure added)
 
 ---
@@ -369,15 +388,15 @@ condition ? then_value : else_value
 
 #### Variable Checks
 
-| Expression                      | Description                     |
-| ------------------------------- | ------------------------------- |
-| `VARIABLE_IS_SET var`           | Variable is defined             |
-| `IS_AN_INT var`                 | Variable is integer             |
-| `STRING_LENGTH string`          | String length                   |
-| `EVALUATE_BUFFER var`           | Evaluate variables in string    |
-| `VARIABLE_IS_IN_ARRAY array`    | Variable exists in array        |
-| `DEFINED_AS_FUNCTION var`       | Name is defined as a function   |
-| `DEFINED_AS_INLINED var`        | Name is defined as inlined file |
+| Expression                   | Description                     |
+| ---------------------------- | ------------------------------- |
+| `VARIABLE_IS_SET var`        | Variable is defined             |
+| `IS_AN_INT var`              | Variable is integer             |
+| `STRING_LENGTH string`       | String length                   |
+| `EVALUATE_BUFFER var`        | Evaluate variables in string    |
+| `VARIABLE_IS_IN_ARRAY array` | Variable exists in array        |
+| `DEFINED_AS_FUNCTION var`    | Name is defined as a function   |
+| `DEFINED_AS_INLINED var`     | Name is defined as inlined file |
 
 #### Script Validation
 

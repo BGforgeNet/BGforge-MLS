@@ -5,36 +5,36 @@ Tree-sitter grammar for Fallout 2 Star-Trek Scripting Language (SSL).
 ## Table of Contents
 
 - [Syntax Reference](#syntax-reference)
-  - [Source File](#source-file)
-  - [Preprocessor](#preprocessor)
-  - [Procedures](#procedures)
-  - [Variables](#variables)
-    - [Variable Scoping Rules](#variable-scoping-rules)
-  - [Statements](#statements)
-    - [If Statement](#if-statement)
-    - [While Loop](#while-loop)
-    - [For Loop](#for-loop-sfall)
-    - [Foreach Loop](#foreach-loop-sfall)
-    - [Switch Statement](#switch-statement)
-    - [Return Statement](#return-statement)
-    - [Break/Continue](#breakcontinue-sfall)
-    - [Call Statement](#call-statement)
-    - [Assignment](#assignment)
-    - [Expression Statement](#expression-statement)
-  - [Blocks](#blocks)
-  - [Expressions](#expressions)
-    - [Ternary Expression](#ternary-expression-sfall)
-    - [Binary Operators](#binary-operators)
-    - [Unary Operators](#unary-operators)
-    - [Function Call](#function-call)
-    - [Subscript Access](#subscript-access-sfall)
-    - [Member Access](#member-access-sfall)
-    - [Procedure Reference](#procedure-reference)
-    - [Array Literal](#array-literal-sfall)
-    - [Map Literal](#map-literal-sfall)
-    - [Parenthesized Expression](#parenthesized-expression)
-  - [Terminals](#terminals)
-  - [Comments](#comments)
+    - [Source File](#source-file)
+    - [Preprocessor](#preprocessor)
+    - [Procedures](#procedures)
+    - [Variables](#variables)
+        - [Variable Scoping Rules](#variable-scoping-rules)
+    - [Statements](#statements)
+        - [If Statement](#if-statement)
+        - [While Loop](#while-loop)
+        - [For Loop](#for-loop-sfall)
+        - [Foreach Loop](#foreach-loop-sfall)
+        - [Switch Statement](#switch-statement)
+        - [Return Statement](#return-statement)
+        - [Break/Continue](#breakcontinue-sfall)
+        - [Call Statement](#call-statement)
+        - [Assignment](#assignment)
+        - [Expression Statement](#expression-statement)
+    - [Blocks](#blocks)
+    - [Expressions](#expressions)
+        - [Ternary Expression](#ternary-expression-sfall)
+        - [Binary Operators](#binary-operators)
+        - [Unary Operators](#unary-operators)
+        - [Function Call](#function-call)
+        - [Subscript Access](#subscript-access-sfall)
+        - [Member Access](#member-access-sfall)
+        - [Procedure Reference](#procedure-reference)
+        - [Array Literal](#array-literal-sfall)
+        - [Map Literal](#map-literal-sfall)
+        - [Parenthesized Expression](#parenthesized-expression)
+    - [Terminals](#terminals)
+    - [Comments](#comments)
 - [Operator Precedence](#operator-precedence-high-to-low)
 - [Notes](#notes)
 
@@ -105,6 +105,7 @@ grammar does not handle it and will produce a parse error:
 Full support would require duplicating the statement grammar for macro context.
 
 Token-pasted call expressions are parsed as `token_paste_identifier` nodes:
+
 ```
 (call_expr
   func: (token_paste_identifier
@@ -117,12 +118,14 @@ Token-pasted call expressions are parsed as `token_paste_identifier` nodes:
 ### Procedures
 
 Forward declaration:
+
 ```ssl
 procedure name;
 procedure name(variable arg1, variable arg2);
 ```
 
 Definition:
+
 ```ssl
 procedure name begin
     // statements
@@ -140,6 +143,7 @@ Function calls and compound expressions are not valid parameter defaults.
 ### Variables
 
 Global variables:
+
 ```ssl
 variable name;
 variable name = value;
@@ -162,6 +166,7 @@ import variable name;
 ```
 
 Export declaration:
+
 ```ssl
 export variable name;
 export variable name = value;
@@ -205,6 +210,7 @@ end
 ### Statements
 
 #### If Statement
+
 ```ssl
 if condition then statement;
 
@@ -225,6 +231,7 @@ else
 ```
 
 #### While Loop
+
 ```ssl
 while condition do statement;
 
@@ -234,6 +241,7 @@ end
 ```
 
 #### For Loop (sfall)
+
 ```ssl
 for (init; condition; update) begin
     // statements
@@ -250,6 +258,7 @@ end
 ```
 
 #### Foreach Loop (sfall)
+
 ```ssl
 foreach item in array begin
     // statements
@@ -271,6 +280,7 @@ end
 ```
 
 #### Switch Statement
+
 ```ssl
 switch value begin
     case VALUE1:
@@ -283,12 +293,14 @@ end
 ```
 
 #### Return Statement
+
 ```ssl
 return;
 return value;
 ```
 
 #### Break/Continue (sfall)
+
 ```ssl
 while condition do begin
     if done then break;
@@ -297,6 +309,7 @@ end
 ```
 
 #### Call Statement
+
 ```ssl
 call procedure_name;
 call procedure_name(arg1, arg2);
@@ -304,6 +317,7 @@ call procedure_name in ticks;    // delayed call
 ```
 
 #### Assignment
+
 ```ssl
 variable = value;
 variable = value;
@@ -315,6 +329,7 @@ array[index] = value;
 ```
 
 #### Expression Statement
+
 ```ssl
 function_call(args);
 MACRO_NAME
@@ -334,6 +349,7 @@ Keywords `begin` and `end` are case-insensitive.
 ### Expressions
 
 #### Ternary Expression (sfall)
+
 ```ssl
 value_if_true if condition else value_if_false
 ```
@@ -341,22 +357,26 @@ value_if_true if condition else value_if_false
 #### Binary Operators
 
 Logical (precedence low to high):
+
 - `or` - logical OR
 - `orelse` - short-circuit OR (sfall)
 - `and` - logical AND
 - `andalso` - short-circuit AND (sfall)
 
 Bitwise:
+
 - `bwor` - bitwise OR
 - `bwxor` - bitwise XOR
 - `bwand` - bitwise AND
 
 Comparison:
+
 - `==`, `!=` - equality
 - `in` - membership test (sfall): `expr in array`
 - `<`, `>`, `<=`, `>=` - relational
 
 Arithmetic:
+
 - `+`, `-` - addition, subtraction
 - `*`, `/`, `%` - multiplication, division, modulo
 - `^` - exponentiation
@@ -371,23 +391,28 @@ All logical and bitwise operators are case-insensitive.
 - `++`, `--` - increment/decrement (pre and post)
 
 #### Function Call
+
 ```ssl
 function_name(arg1, arg2, ...)
 ```
 
 Inside macro bodies, the function name may use `##` token pasting:
+
 ```ssl
 animate_##type##_to_tile(dist)   // parsed as token_paste_identifier
 ```
 
 #### Subscript Access (sfall)
+
 ```ssl
 array[index]
 map["key"]
 ```
 
 #### Member Access (sfall)
+
 Dot notation for accessing named array fields:
+
 ```ssl
 obj.field
 obj.field = value;
@@ -396,17 +421,20 @@ obj.list[5].value
 ```
 
 #### Procedure Reference
+
 ```ssl
 @procedure_name
 ```
 
 #### Array Literal (sfall)
+
 ```ssl
 [1, 2, 3]
 []
 ```
 
 #### Map Literal (sfall)
+
 ```ssl
 {"key": value, "key2": value2}
 {0: "value", 1: "other"}
@@ -414,6 +442,7 @@ obj.list[5].value
 ```
 
 #### Parenthesized Expression
+
 ```ssl
 (expression)
 ```
@@ -421,11 +450,13 @@ obj.list[5].value
 ### Terminals
 
 #### Identifier
+
 ```
 [a-zA-Z_][a-zA-Z0-9_]*
 ```
 
 #### Number
+
 ```ssl
 42          // integer
 3.14        // float
@@ -434,12 +465,14 @@ obj.list[5].value
 ```
 
 #### Boolean
+
 ```ssl
 true
 false
 ```
 
 #### String
+
 ```ssl
 "string content"
 ```
@@ -459,21 +492,21 @@ false
 
 ## Operator Precedence (high to low)
 
-| Precedence | Operators |
-|------------|-----------|
-| 12 | `()` function call, `[]` subscript, `.` member access |
-| 11 | `not`, `bnot`, `-` (unary), `++`, `--` |
-| 10 | `^` exponentiation |
-| 9 | `*`, `/`, `%` |
-| 8 | `+`, `-` |
-| 7 | `<`, `>`, `<=`, `>=` |
-| 6 | `==`, `!=`, `in` |
-| 5 | `bwand` |
-| 4 | `bwxor` |
-| 3 | `bwor` |
-| 2 | `and`, `andalso` |
-| 1 | `or`, `orelse` |
-| -1 | ternary `x if c else y` |
+| Precedence | Operators                                             |
+| ---------- | ----------------------------------------------------- |
+| 12         | `()` function call, `[]` subscript, `.` member access |
+| 11         | `not`, `bnot`, `-` (unary), `++`, `--`                |
+| 10         | `^` exponentiation                                    |
+| 9          | `*`, `/`, `%`                                         |
+| 8          | `+`, `-`                                              |
+| 7          | `<`, `>`, `<=`, `>=`                                  |
+| 6          | `==`, `!=`, `in`                                      |
+| 5          | `bwand`                                               |
+| 4          | `bwxor`                                               |
+| 3          | `bwor`                                                |
+| 2          | `and`, `andalso`                                      |
+| 1          | `or`, `orelse`                                        |
+| -1         | ternary `x if c else y`                               |
 
 ## Notes
 

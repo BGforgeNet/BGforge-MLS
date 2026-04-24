@@ -8,11 +8,7 @@ const rule = defineRule({
         },
     },
     create(context) {
-        const restrictedMethods = [
-            "showInformationMessage",
-            "showWarningMessage",
-            "showErrorMessage",
-        ];
+        const restrictedMethods = ["showInformationMessage", "showWarningMessage", "showErrorMessage"];
         const messages = {
             showInformationMessage:
                 "Use showInfo() from user-messages.ts instead of connection.window.showInformationMessage(). It auto-decodes file:// URIs.",

@@ -1,22 +1,22 @@
 {
-  "schemaVersion": 1,
-  "format": "pro",
-  "formatName": "Fallout PRO (Prototype)",
-  "document": {
-    "header": {
-      "objectType": 5,
-      "objectId": 2,
-      "textId": 200,
-      "frmType": 5,
-      "frmId": 7,
-      "lightRadius": 8,
-      "lightIntensity": 65536,
-      "flags": 0
-    },
-    "sections": {
-      "miscProperties": {
-        "unknown": 0
-      }
+    "schemaVersion": 1,
+    "format": "pro",
+    "formatName": "Fallout PRO (Prototype)",
+    "document": {
+        "header": {
+            "objectType": 5,
+            "objectId": 2,
+            "textId": 200,
+            "frmType": 5,
+            "frmId": 7,
+            "lightRadius": 8,
+            "lightIntensity": 65536,
+            "flags": 0
+        },
+        "sections": {
+            "miscProperties": {
+                "unknown": 0
+            }
+        }
     }
-  }
 }

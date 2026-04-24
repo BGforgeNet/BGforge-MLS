@@ -4,13 +4,13 @@ Setup guide for using BGforge MLS with Zed.
 
 - [Prerequisites](#prerequisites)
 - [Extension](#extension)
-  - [extension.toml](#extensiontoml)
-  - [Cargo.toml](#cargotoml)
-  - [src/lib.rs](#srclibrs)
-  - [Language definitions](#language-definitions)
-  - [Tree-sitter grammars](#tree-sitter-grammars)
-  - [Highlight queries](#highlight-queries)
-  - [Install](#install)
+    - [extension.toml](#extensiontoml)
+    - [Cargo.toml](#cargotoml)
+    - [src/lib.rs](#srclibrs)
+    - [Language definitions](#language-definitions)
+    - [Tree-sitter grammars](#tree-sitter-grammars)
+    - [Highlight queries](#highlight-queries)
+    - [Install](#install)
 - [TypeScript plugins (TSSL/TD)](#typescript-plugins-tssltd)
 - [Settings](#settings)
 
@@ -181,9 +181,9 @@ Fallout Worldmap has no `path_suffixes` to avoid matching all `.txt` files. Use 
 
 ```json
 {
-  "file_types": {
-    "Fallout Worldmap": ["**/worldmap.txt"]
-  }
+    "file_types": {
+        "Fallout Worldmap": ["**/worldmap.txt"]
+    }
 }
 ```
 
@@ -253,25 +253,25 @@ Zed passes LSP settings via the `lsp` section in user or project settings (`~/.c
 
 ```json
 {
-  "lsp": {
-    "bgforge-mls": {
-      "settings": {
-        "bgforge": {
-          "validate": "saveAndType",
-          "falloutSSL": {
-            "compilePath": "",
-            "compileOptions": "-q -p -l -O2 -d -s -n",
-            "outputDirectory": "",
-            "headersDirectory": ""
-          },
-          "weidu": {
-            "path": "weidu",
-            "gamePath": ""
-          }
+    "lsp": {
+        "bgforge-mls": {
+            "settings": {
+                "bgforge": {
+                    "validate": "saveAndType",
+                    "falloutSSL": {
+                        "compilePath": "",
+                        "compileOptions": "-q -p -l -O2 -d -s -n",
+                        "outputDirectory": "",
+                        "headersDirectory": ""
+                    },
+                    "weidu": {
+                        "path": "weidu",
+                        "gamePath": ""
+                    }
+                }
+            }
         }
-      }
     }
-  }
 }
 ```
 

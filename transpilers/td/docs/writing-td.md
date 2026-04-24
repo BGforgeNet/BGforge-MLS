@@ -36,8 +36,8 @@ begin("MYDLG", [greeting, quest]);
 States can be passed as an array or as rest arguments:
 
 ```typescript
-begin("MYDLG", greeting, quest);           // rest args
-begin("MYDLG", [greeting, quest]);         // array
+begin("MYDLG", greeting, quest); // rest args
+begin("MYDLG", [greeting, quest]); // array
 ```
 
 Inline states with `state()`:
@@ -132,8 +132,8 @@ Set the SAY text for the state. Variadic form creates multisay (random selection
 
 ```typescript
 function myState() {
-    say(tra(1));                          // single text
-    say(tra(1), tra(2), tra(3));          // multisay: SAY @1 = @2 = @3
+    say(tra(1)); // single text
+    say(tra(1), tra(2), tra(3)); // multisay: SAY @1 = @2 = @3
 }
 ```
 
@@ -157,7 +157,7 @@ Copy all transitions from another state. This copying takes place before all oth
 function myState() {
     say(tra(1));
     copyTrans("OTHERDLG", "otherState");
-    copyTrans("OTHERDLG", "otherState", { safe: true });  // suppress warnings
+    copyTrans("OTHERDLG", "otherState", { safe: true }); // suppress warnings
 }
 ```
 
@@ -172,7 +172,9 @@ The builder pattern: `reply().action().goTo()`:
 ```typescript
 function myState() {
     say(tra(1));
-    reply(tra(2)).action(SetGlobal("quest", "GLOBAL", 1)).goTo(nextState);
+    reply(tra(2))
+        .action(SetGlobal("quest", "GLOBAL", 1))
+        .goTo(nextState);
     reply(tra(3)).exit();
     reply(tra(4)).extern("OTHERDLG", "otherState");
 }
@@ -180,18 +182,18 @@ function myState() {
 
 Full chain API:
 
-| Method | Description |
-|--------|-------------|
-| `reply(text)` | Player says this text |
-| `.action(...actions)` | Execute engine actions |
-| `.journal(text)` | Add journal entry |
-| `.solvedJournal(text)` | Add solved journal entry |
-| `.unsolvedJournal(text)` | Add unsolved journal entry |
-| `.flags(n)` | Set transition feature flags |
-| `.goTo(target)` | Go to another state in same dialog |
-| `.exit()` | End conversation |
-| `.extern(dialog, state)` | Go to state in another dialog |
-| `.copyTransLate(dialog, state)` | Copy transitions (late binding) |
+| Method                          | Description                        |
+| ------------------------------- | ---------------------------------- |
+| `reply(text)`                   | Player says this text              |
+| `.action(...actions)`           | Execute engine actions             |
+| `.journal(text)`                | Add journal entry                  |
+| `.solvedJournal(text)`          | Add solved journal entry           |
+| `.unsolvedJournal(text)`        | Add unsolved journal entry         |
+| `.flags(n)`                     | Set transition feature flags       |
+| `.goTo(target)`                 | Go to another state in same dialog |
+| `.exit()`                       | End conversation                   |
+| `.extern(dialog, state)`        | Go to state in another dialog      |
+| `.copyTransLate(dialog, state)` | Copy transitions (late binding)    |
 
 Terminals (`.goTo()`, `.exit()`, `.extern()`, `.copyTransLate()`) end the chain.
 
@@ -238,9 +240,9 @@ function myState() {
 `goTo()` accepts a state label (string), numeric index, or function reference:
 
 ```typescript
-goTo(nextState);          // function reference -> label "nextState"
-goTo("nextState");        // string label
-goTo(5);                  // numeric state index
+goTo(nextState); // function reference -> label "nextState"
+goTo("nextState"); // string label
+goTo(5); // numeric state index
 ```
 
 When using a function reference, the function is **automatically collected** -- if it's not already listed in `begin()`/`append()`, the transpiler automatically includes it (see [Automatic State Collection](#automatic-state-collection)).
@@ -254,7 +256,9 @@ function myState() {
     say(tra(1));
 
     if (Global("quest", "GLOBAL", 0)) {
-        reply(tra(2)).action(SetGlobal("quest", "GLOBAL", 1)).goTo(questStart);
+        reply(tra(2))
+            .action(SetGlobal("quest", "GLOBAL", 1))
+            .goTo(questStart);
     }
 
     if (Global("quest", "GLOBAL", 1)) {
@@ -305,7 +309,7 @@ chain("SPEAKER1", "chainLabel", () => {
 
     from("SPEAKER2");
     say(tra(2));
-    say(tra(3));          // multisay continuation
+    say(tra(3)); // multisay continuation
 
     from("SPEAKER1");
     say(tra(4));
@@ -317,16 +321,12 @@ chain("SPEAKER1", "chainLabel", () => {
 With entry trigger:
 
 ```typescript
-chain(
-    Global("quest", "GLOBAL", 1) && See("Imoen2"),
-    "BJKLSY", "myChain",
-    () => {
-        say(tra(1));
-        from("IMOEN2J");
-        say(tra(2));
-        exit();
-    }
-);
+chain(Global("quest", "GLOBAL", 1) && See("Imoen2"), "BJKLSY", "myChain", () => {
+    say(tra(1));
+    from("IMOEN2J");
+    say(tra(2));
+    exit();
+});
 ```
 
 **`from(speaker)`** -- Switch speaker. Subsequent `say()` calls use this speaker.
@@ -386,12 +386,19 @@ One-shot interjections guarded by a global variable (set once, never repeated).
 Creates a chain guarded by a global variable, with an explicit exit point:
 
 ```typescript
-interject("ENTERDLG", "enterState", "MyInterjectVar", () => {
-    from("IMOEN2J");
-    say(tra(1));
-    from("MINSC");
-    say(tra(2));
-}, "EXITDLG", "exitState");
+interject(
+    "ENTERDLG",
+    "enterState",
+    "MyInterjectVar",
+    () => {
+        from("IMOEN2J");
+        say(tra(1));
+        from("MINSC");
+        say(tra(2));
+    },
+    "EXITDLG",
+    "exitState",
+);
 ```
 
 ### `interjectCopyTrans()`
@@ -416,8 +423,8 @@ Like `interjectCopyTrans`, but actions in the entry state's transitions are pres
 Maps to `@N` in D output. References a line in the `.tra` file:
 
 ```typescript
-say(tra(1));           // -> SAY @1
-reply(tra(2));         // -> ++ @2 ...
+say(tra(1)); // -> SAY @1
+reply(tra(2)); // -> ++ @2 ...
 ```
 
 With sound: `tra(1, { sound: "MYSOUND" })` -> `@1 [MYSOUND]`.
@@ -427,7 +434,7 @@ With sound: `tra(1, { sound: "MYSOUND" })` -> `@1 [MYSOUND]`.
 Maps to `#N` in D output. References an entry in the game's dialog.tlk:
 
 ```typescript
-say(tlk(12345));       // -> SAY #12345
+say(tlk(12345)); // -> SAY #12345
 ```
 
 ### `tlkForced(n, text)` -- Forced TLK Reference
@@ -439,7 +446,7 @@ Maps to `!N` in D output.
 Plain strings become tilde-delimited text:
 
 ```typescript
-say("Hello world");    // -> SAY ~Hello world~
+say("Hello world"); // -> SAY ~Hello world~
 ```
 
 ### Male/Female Variants
@@ -569,7 +576,7 @@ function state1() {
     say(tra(1));
     if (PartyHasItem("SWORD01")) {
         reply(tra(2));
-        setQuestStage(1);       // Inlined: action(SetGlobal("quest", "GLOBAL", 1)); goTo(nextState);
+        setQuestStage(1); // Inlined: action(SetGlobal("quest", "GLOBAL", 1)); goTo(nextState);
     }
 }
 ```
@@ -579,7 +586,8 @@ function state1() {
 Functions with no parameters are state functions. Their name becomes the state label:
 
 ```typescript
-function greeting() {     // -> state label "greeting"
+function greeting() {
+    // -> state label "greeting"
     say(tra(1));
     exit();
 }
@@ -629,12 +637,12 @@ When you pass functions to `begin()` or `append()`, the transpiler follows all `
 ```typescript
 function start() {
     say(tra(1));
-    goTo(middle);     // middle is auto-collected
+    goTo(middle); // middle is auto-collected
 }
 
 function middle() {
     say(tra(2));
-    goTo(ending);     // ending is auto-collected
+    goTo(ending); // ending is auto-collected
 }
 
 function ending() {
@@ -642,7 +650,7 @@ function ending() {
     exit();
 }
 
-begin("MYDLG", [start]);  // Only start listed, but middle and ending are auto-collected
+begin("MYDLG", [start]); // Only start listed, but middle and ending are auto-collected
 ```
 
 Functions with parameters are skipped (they're helpers, not states). Numeric `goTo` targets (state indices) are skipped.
@@ -695,7 +703,9 @@ BAF uses dot-separated `[x.y]` notation for coordinate points. In TD actions, us
 ```typescript
 function myState() {
     say(tra(1));
-    reply(tra(2)).action(CreateCreature("ccguard2", [2791, 831], 6)).exit();
+    reply(tra(2))
+        .action(CreateCreature("ccguard2", [2791, 831], 6))
+        .exit();
 }
 // -> DO ~CreateCreature("ccguard2",[2791.831],6)~ EXIT
 ```

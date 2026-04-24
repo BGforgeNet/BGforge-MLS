@@ -1,142 +1,142 @@
 {
-  "schemaVersion": 1,
-  "format": "pro",
-  "formatName": "Fallout PRO (Prototype)",
-  "document": {
-    "header": {
-      "objectType": 1,
-      "objectId": 53,
-      "textId": 5300,
-      "frmType": 1,
-      "frmId": 120,
-      "lightRadius": 0,
-      "lightIntensity": 0,
-      "flags": 536870912
-    },
-    "sections": {
-      "critterProperties": {
-        "flagsExt": 24576,
-        "script": {
-          "type": -1,
-          "id": -1
+    "schemaVersion": 1,
+    "format": "pro",
+    "formatName": "Fallout PRO (Prototype)",
+    "document": {
+        "header": {
+            "objectType": 1,
+            "objectId": 53,
+            "textId": 5300,
+            "frmType": 1,
+            "frmId": 120,
+            "lightRadius": 0,
+            "lightIntensity": 0,
+            "flags": 536870912
         },
-        "headFrmId": -1,
-        "aiPacket": 15,
-        "teamNumber": 1,
-        "critterFlags": 2
-      },
-      "basePrimaryStats": {
-        "strength": 4,
-        "perception": 7,
-        "endurance": 3,
-        "charisma": 3,
-        "intelligence": 4,
-        "agility": 6,
-        "luck": 5
-      },
-      "baseSecondaryStats": {
-        "hitPoints": 25,
-        "actionPoints": 8,
-        "armorClass": 6,
-        "unarmedDamage": 0,
-        "meleeDamage": 1,
-        "carryWeight": 125,
-        "sequence": 14,
-        "healingRate": 1,
-        "criticalChance": 5,
-        "betterCriticals": 0
-      },
-      "baseDamageThreshold": {
-        "normal": 0,
-        "laser": 0,
-        "fire": 0,
-        "plasma": 0,
-        "electrical": 0,
-        "emp": 0,
-        "explosive": 0
-      },
-      "baseDamageResistance": {
-        "normal": 0,
-        "laser": 0,
-        "fire": 0,
-        "plasma": 0,
-        "electrical": 0,
-        "emp": 0,
-        "explosive": 0,
-        "radiation": 6,
-        "poison": 15
-      },
-      "demographics": {
-        "age": 25,
-        "gender": 1
-      },
-      "bonusPrimaryStats": {
-        "strength": 0,
-        "perception": 0,
-        "endurance": 0,
-        "charisma": 0,
-        "intelligence": 0,
-        "agility": 0,
-        "luck": 0
-      },
-      "bonusSecondaryStats": {
-        "hitPoints": 0,
-        "actionPoints": 0,
-        "armorClass": 0,
-        "unarmedDamage": 0,
-        "meleeDamage": 0,
-        "carryWeight": 0,
-        "sequence": 0,
-        "healingRate": 0,
-        "criticalChance": 0,
-        "betterCriticals": 0
-      },
-      "bonusDamageThreshold": {
-        "normal": 0,
-        "laser": 0,
-        "fire": 0,
-        "plasma": 0,
-        "electrical": 0,
-        "emp": 0,
-        "explosive": 0
-      },
-      "bonusDamageResistance": {
-        "normal": 0,
-        "laser": 0,
-        "fire": 0,
-        "plasma": 0,
-        "electrical": 0,
-        "emp": 500,
-        "explosive": 0,
-        "radiation": 0,
-        "poison": 0
-      },
-      "skills": {
-        "skillSmallGuns": 0,
-        "skillBigGuns": 0,
-        "skillEnergyWeapons": 0,
-        "skillUnarmed": 0,
-        "skillMelee": 0,
-        "skillThrowing": 54,
-        "skillFirstAid": 0,
-        "skillDoctor": 0,
-        "skillSneak": 0,
-        "skillLockpick": 0,
-        "skillSteal": 0,
-        "skillTraps": 0,
-        "skillScience": 0,
-        "skillRepair": 0,
-        "skillSpeech": 0,
-        "skillBarter": 0,
-        "skillGambling": 0,
-        "skillOutdoorsman": 0
-      },
-      "finalProperties": {
-        "bodyType": 0,
-        "expValue": 30,
-        "killType": 2,
-        "damageType": 0
-      }
+        "sections": {
+            "critterProperties": {
+                "flagsExt": 24576,
+                "script": {
+                    "type": -1,
+                    "id": -1
+                },
+                "headFrmId": -1,
+                "aiPacket": 15,
+                "teamNumber": 1,
+                "critterFlags": 2
+            },
+            "basePrimaryStats": {
+                "strength": 4,
+                "perception": 7,
+                "endurance": 3,
+                "charisma": 3,
+                "intelligence": 4,
+                "agility": 6,
+                "luck": 5
+            },
+            "baseSecondaryStats": {
+                "hitPoints": 25,
+                "actionPoints": 8,
+                "armorClass": 6,
+                "unarmedDamage": 0,
+                "meleeDamage": 1,
+                "carryWeight": 125,
+                "sequence": 14,
+                "healingRate": 1,
+                "criticalChance": 5,
+                "betterCriticals": 0
+            },
+            "baseDamageThreshold": {
+                "normal": 0,
+                "laser": 0,
+                "fire": 0,
+                "plasma": 0,
+                "electrical": 0,
+                "emp": 0,
+                "explosive": 0
+            },
+            "baseDamageResistance": {
+                "normal": 0,
+                "laser": 0,
+                "fire": 0,
+                "plasma": 0,
+                "electrical": 0,
+                "emp": 0,
+                "explosive": 0,
+                "radiation": 6,
+                "poison": 15
+            },
+            "demographics": {
+                "age": 25,
+                "gender": 1
+            },
+            "bonusPrimaryStats": {
+                "strength": 0,
+                "perception": 0,
+                "endurance": 0,
+                "charisma": 0,
+                "intelligence": 0,
+                "agility": 0,
+                "luck": 0
+            },
+            "bonusSecondaryStats": {
+                "hitPoints": 0,
+                "actionPoints": 0,
+                "armorClass": 0,
+                "unarmedDamage": 0,
+                "meleeDamage": 0,
+                "carryWeight": 0,
+                "sequence": 0,
+                "healingRate": 0,
+                "criticalChance": 0,
+                "betterCriticals": 0
+            },
+            "bonusDamageThreshold": {
+                "normal": 0,
+                "laser": 0,
+                "fire": 0,
+                "plasma": 0,
+                "electrical": 0,
+                "emp": 0,
+                "explosive": 0
+            },
+            "bonusDamageResistance": {
+                "normal": 0,
+                "laser": 0,
+                "fire": 0,
+                "plasma": 0,
+                "electrical": 0,
+                "emp": 500,
+                "explosive": 0,
+                "radiation": 0,
+                "poison": 0
+            },
+            "skills": {
+                "skillSmallGuns": 0,
+                "skillBigGuns": 0,
+                "skillEnergyWeapons": 0,
+                "skillUnarmed": 0,
+                "skillMelee": 0,
+                "skillThrowing": 54,
+                "skillFirstAid": 0,
+                "skillDoctor": 0,
+                "skillSneak": 0,
+                "skillLockpick": 0,
+                "skillSteal": 0,
+                "skillTraps": 0,
+                "skillScience": 0,
+                "skillRepair": 0,
+                "skillSpeech": 0,
+                "skillBarter": 0,
+                "skillGambling": 0,
+                "skillOutdoorsman": 0
+            },
+            "finalProperties": {
+                "bodyType": 0,
+                "expValue": 30,
+                "killType": 2,
+                "damageType": 0
+            }
+        }
     }
-  }
 }

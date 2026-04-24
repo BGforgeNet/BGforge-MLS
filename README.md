@@ -17,11 +17,9 @@ Originally a VS Code extension, it now also works with various other editors. Se
 - **Screenshots**: [completion](#infinity-engine-highlighting-and-completion), [hover](#fallout-highlighting-and-hovers), [error reporting](#error-reporting), [dialog tree preview](#dialog-tree-preview).
 - [**Forum**](https://forums.bgforge.net/viewforum.php?f=35)
 
-
 ## Languages
 
 Supported languages: Fallout SSL (`.ssl`, `.h`), WeiDU BAF/SSL (`.baf`, `.ssl`, `.slb`), WeiDU D (`.d`), WeiDU TP2 (`.tp2`, `.tpa`, `.tph`, `.tpp`). Features include completion, hover, go-to-definition, find references, formatting, symbols, rename, inlay hints, diagnostics, folding, and dialog preview. For the full per-language feature matrix, see [`server/INTERNALS.md`](server/INTERNALS.md#feature-matrix).
-
 
 ## Transpilers
 
@@ -43,16 +41,17 @@ They bring the TypeScript type system, many TypeScript features, and better tool
 
 ## Other formats
 
-| Format / Extensions | Highlighting | Completion | Hover | GoTo | References | Formatting |
-| ------------------- | :----------: | :--------: | :---: | :--: | :--------: | :--------: |
-| Fallout worldmap.txt | ✓ | ✓ | ✓ |     |   |   |
-| Fallout MSG              | ✓ |   |   |     | ✓ | ✓ |
-| Fallout scripts.lst             | ✓ |   |   |     |   | ✓ |
-| WeiDU TRA                | ✓ |   |   |     | ✓ | ✓ |
-| WeiDU.log           | ✓ |   |   | tp2 |   |   |
-| Infinity 2DA             | ✓ |   |   |     |   | ✓ |
+| Format / Extensions  | Highlighting | Completion | Hover | GoTo | References | Formatting |
+| -------------------- | :----------: | :--------: | :---: | :--: | :--------: | :--------: |
+| Fallout worldmap.txt |      ✓       |     ✓      |   ✓   |      |            |            |
+| Fallout MSG          |      ✓       |            |       |      |     ✓      |     ✓      |
+| Fallout scripts.lst  |      ✓       |            |       |      |            |     ✓      |
+| WeiDU TRA            |      ✓       |            |       |      |     ✓      |     ✓      |
+| WeiDU.log            |      ✓       |            |       | tp2  |            |            |
+| Infinity 2DA         |      ✓       |            |       |      |            |     ✓      |
 
 ### Binary formats
+
 Fallout PRO and MAP files have a built-in [binary editor](#binary-editor) with JSON dump/load support.
 
 ## Installation
@@ -70,8 +69,8 @@ Fallout PRO and MAP files have a built-in [binary editor](#binary-editor) with J
 - `CTRL+R`: compile a Fallout `.ssl` file or parse a WeiDU file, reporting [errors](#error-reporting) if any.
 - `CTRL+SHIFT+V`: open [dialog tree preview](#dialog-tree-preview) (SSL, TSSL, D, TD files).
 - Standard VS Code hotkeys:
-  - `CTRL+SHIFT+O`: document symbols
-  - `CTRL+T`: workspace symbols
+    - `CTRL+SHIFT+O`: document symbols
+    - `CTRL+T`: workspace symbols
 
 ## Screenshots
 

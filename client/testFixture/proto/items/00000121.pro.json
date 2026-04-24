@@ -1,42 +1,42 @@
 {
-  "schemaVersion": 1,
-  "format": "pro",
-  "formatName": "Fallout PRO (Prototype)",
-  "document": {
-    "header": {
-      "objectType": 0,
-      "objectId": 121,
-      "textId": 12100,
-      "frmType": 0,
-      "frmId": 1,
-      "lightRadius": 0,
-      "lightIntensity": 0,
-      "flags": 2684354568
-    },
-    "sections": {
-      "itemProperties": {
-        "flagsExt": 160,
-        "attackModes": 0,
-        "script": {
-          "type": -1,
-          "id": -1
+    "schemaVersion": 1,
+    "format": "pro",
+    "formatName": "Fallout PRO (Prototype)",
+    "document": {
+        "header": {
+            "objectType": 0,
+            "objectId": 121,
+            "textId": 12100,
+            "frmType": 0,
+            "frmId": 1,
+            "lightRadius": 0,
+            "lightIntensity": 0,
+            "flags": 2684354568
         },
-        "subType": 4,
-        "materialId": 1,
-        "size": 0,
-        "weight": 2,
-        "cost": 100,
-        "inventoryFrmId": 117440618,
-        "soundId": 48
-      },
-      "ammoStats": {
-        "caliber": 12,
-        "quantity": 20,
-        "acModifier": 0,
-        "drModifier": 0,
-        "damageMultiplier": 1,
-        "damageDivisor": 1
-      }
+        "sections": {
+            "itemProperties": {
+                "flagsExt": 160,
+                "attackModes": 0,
+                "script": {
+                    "type": -1,
+                    "id": -1
+                },
+                "subType": 4,
+                "materialId": 1,
+                "size": 0,
+                "weight": 2,
+                "cost": 100,
+                "inventoryFrmId": 117440618,
+                "soundId": 48
+            },
+            "ammoStats": {
+                "caliber": 12,
+                "quantity": 20,
+                "acModifier": 0,
+                "drModifier": 0,
+                "damageMultiplier": 1,
+                "damageDivisor": 1
+            }
+        }
     }
-  }
 }

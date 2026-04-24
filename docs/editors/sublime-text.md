@@ -31,7 +31,7 @@ name: Fallout SSL
 file_extensions: [ssl, h]
 scope: source.fallout-ssl
 contexts:
-  main: []
+    main: []
 ```
 
 Repeat for each language (`weidu-baf`/`baf`, `weidu-d`/`d`, `weidu-tp2`/`tp2 tpa tph tpp`, `fallout-worldmap-txt`/no extension).
@@ -48,13 +48,13 @@ Open `Preferences > Package Settings > LSP > Settings` and add:
 
 ```json
 {
-  "clients": {
-    "bgforge-mls": {
-      "enabled": true,
-      "command": ["bgforge-mls-server", "--stdio"],
-      "selector": "source.fallout-ssl | source.weidu-baf | source.weidu-tp2 | source.weidu-d | source.fallout-worldmap-txt"
+    "clients": {
+        "bgforge-mls": {
+            "enabled": true,
+            "command": ["bgforge-mls-server", "--stdio"],
+            "selector": "source.fallout-ssl | source.weidu-baf | source.weidu-tp2 | source.weidu-d | source.fallout-worldmap-txt"
+        }
     }
-  }
 }
 ```
 
@@ -68,22 +68,22 @@ Open `Preferences > Package Settings > LSP > Settings` and add settings under th
 
 ```json
 {
-  "clients": {
-    "bgforge-mls": {
-      "enabled": true,
-      "command": ["bgforge-mls-server", "--stdio"],
-      "selector": "source.fallout-ssl | source.weidu-baf | source.weidu-tp2 | source.weidu-d | source.fallout-worldmap-txt",
-      "settings": {
-        "bgforge.validate": "saveAndType",
-        "bgforge.falloutSSL.compilePath": "",
-        "bgforge.falloutSSL.compileOptions": "-q -p -l -O2 -d -s -n",
-        "bgforge.falloutSSL.outputDirectory": "",
-        "bgforge.falloutSSL.headersDirectory": "",
-        "bgforge.weidu.path": "weidu",
-        "bgforge.weidu.gamePath": ""
-      }
+    "clients": {
+        "bgforge-mls": {
+            "enabled": true,
+            "command": ["bgforge-mls-server", "--stdio"],
+            "selector": "source.fallout-ssl | source.weidu-baf | source.weidu-tp2 | source.weidu-d | source.fallout-worldmap-txt",
+            "settings": {
+                "bgforge.validate": "saveAndType",
+                "bgforge.falloutSSL.compilePath": "",
+                "bgforge.falloutSSL.compileOptions": "-q -p -l -O2 -d -s -n",
+                "bgforge.falloutSSL.outputDirectory": "",
+                "bgforge.falloutSSL.headersDirectory": "",
+                "bgforge.weidu.path": "weidu",
+                "bgforge.weidu.gamePath": ""
+            }
+        }
     }
-  }
 }
 ```
 

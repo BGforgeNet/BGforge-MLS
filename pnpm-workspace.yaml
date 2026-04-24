@@ -1,10 +1,10 @@
 packages:
-  - client
-  - server
-  - grammars/*
-  - cli/*
-  - plugins/*
-  - transpilers/common
-  - transpilers/tssl
-  - transpilers/tbaf
-  - transpilers/td
+    - client
+    - server
+    - grammars/*
+    - cli/*
+    - plugins/*
+    - transpilers/common
+    - transpilers/tssl
+    - transpilers/tbaf
+    - transpilers/td

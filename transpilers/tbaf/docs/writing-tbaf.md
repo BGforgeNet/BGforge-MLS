@@ -184,11 +184,13 @@ if (!See(Player1)) {
 BAF conditions are a list of AND clauses, where each clause is a single condition or an OR group. The transpiler converts `else` branches by negating the prior conditions:
 
 **Simple cases work directly:**
+
 - `A && B` -- two AND conditions
 - `A || B` -- one OR(2) group
 - `A && (B || C)` -- one AND condition plus one OR(2) group
 
 **`else` branch negation:**
+
 - `else` after `if (A && B)` becomes `OR(2) !A !B`
 - `else` after `if (A || B)` becomes `!A !B` (two AND conditions)
 
@@ -386,15 +388,15 @@ Don't wrap them in quotes yourself -- they are quoted automatically.
 
 ## Forbidden Syntax
 
-| Syntax | Reason |
-|--------|--------|
-| `default` in `switch` | BAF cannot express "none of the above" |
-| Negating complex OR groups | Too complex to represent in BAF conditions |
-| Arrow functions `() => {}` | Not supported |
-| Classes, `async`/`await` | No runtime constructs in BAF |
-| `try`/`catch`/`finally` | No error handling in BAF |
-| Template literals `` `${x}` `` | Not supported |
-| Object literals | Not meaningful in BAF context |
+| Syntax                         | Reason                                     |
+| ------------------------------ | ------------------------------------------ |
+| `default` in `switch`          | BAF cannot express "none of the above"     |
+| Negating complex OR groups     | Too complex to represent in BAF conditions |
+| Arrow functions `() => {}`     | Not supported                              |
+| Classes, `async`/`await`       | No runtime constructs in BAF               |
+| `try`/`catch`/`finally`        | No error handling in BAF                   |
+| Template literals `` `${x}` `` | Not supported                              |
+| Object literals                | Not meaningful in BAF context              |
 
 ## Gotchas and Pitfalls
 

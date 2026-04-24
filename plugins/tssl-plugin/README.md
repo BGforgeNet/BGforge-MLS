@@ -18,11 +18,11 @@ Only active for `.tssl` files; passes through unchanged for other file types.
 
 ## Source files
 
-| File | Purpose |
-|------|---------|
-| `src/index.ts` | Plugin entry point, Proxy setup |
+| File                        | Purpose                                    |
+| --------------------------- | ------------------------------------------ |
+| `src/index.ts`              | Plugin entry point, Proxy setup            |
 | `src/filter-diagnostics.ts` | TS6133 identifier extraction and filtering |
-| `src/engine-proc-hover.ts` | Engine procedure hover doc injection |
+| `src/engine-proc-hover.ts`  | Engine procedure hover doc injection       |
 
 ## Build
 

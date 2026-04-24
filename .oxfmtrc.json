@@ -1,4 +1,4 @@
 {
     "tabWidth": 4,
-    "ignorePatterns": ["**/*.ts"]
+    "ignorePatterns": ["**/*.ts", "syntaxes/*.tmLanguage.json", "syntaxes/*.tmLanguage.yml", "server/out/*.json"]
 }

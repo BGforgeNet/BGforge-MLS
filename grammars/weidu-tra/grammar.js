@@ -12,46 +12,45 @@
 // @ts-check
 
 export default grammar({
-  name: "weidu_tra",
+    name: "weidu_tra",
 
-  extras: ($) => [/\s/, $.comment, $.block_comment],
+    extras: ($) => [/\s/, $.comment, $.block_comment],
 
-  externals: ($) => [$.tilde_string],
+    externals: ($) => [$.tilde_string],
 
-  conflicts: ($) => [],
+    conflicts: ($) => [],
 
-  rules: {
-    source_file: ($) => repeat($.entry),
+    rules: {
+        source_file: ($) => repeat($.entry),
 
-    // @number = string [female_string] [sound_ref]
-    entry: ($) =>
-      seq(
-        "@",
-        field("number", $.number),
-        "=",
-        field("text", $._string),
-        optional(field("female_text", $._string)),
-        optional(field("sound", $.sound_ref))
-      ),
+        // @number = string [female_string] [sound_ref]
+        entry: ($) =>
+            seq(
+                "@",
+                field("number", $.number),
+                "=",
+                field("text", $._string),
+                optional(field("female_text", $._string)),
+                optional(field("sound", $.sound_ref)),
+            ),
 
-    number: () => /-?\d+/,
+        number: () => /-?\d+/,
 
-    // Use _string (hidden) to wrap the actual string rules. This ensures
-    // tree-sitter processes extras before attempting the external scanner.
-    _string: ($) =>
-      choice($.tilde_string, $.double_string),
+        // Use _string (hidden) to wrap the actual string rules. This ensures
+        // tree-sitter processes extras before attempting the external scanner.
+        _string: ($) => choice($.tilde_string, $.double_string),
 
-    // tilde_string is handled entirely by the external scanner:
-    // matches both ~text~ and ~~~~~text~~~~~
+        // tilde_string is handled entirely by the external scanner:
+        // matches both ~text~ and ~~~~~text~~~~~
 
-    // "text" — double-quote delimited, can span multiple lines
-    double_string: () => token(seq('"', /[^"]*/, '"')),
+        // "text" — double-quote delimited, can span multiple lines
+        double_string: () => token(seq('"', /[^"]*/, '"')),
 
-    // [SOUNDREF]
-    sound_ref: () => seq("[", /\w+/, "]"),
+        // [SOUNDREF]
+        sound_ref: () => seq("[", /\w+/, "]"),
 
-    comment: () => token(seq("//", /[^\n]*/)),
+        comment: () => token(seq("//", /[^\n]*/)),
 
-    block_comment: () => token(seq("/*", /[^*]*\*+([^/*][^*]*\*+)*/, "/")),
-  },
+        block_comment: () => token(seq("/*", /[^*]*\*+([^/*][^*]*\*+)*/, "/")),
+    },
 });

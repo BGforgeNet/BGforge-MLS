@@ -1,35 +1,35 @@
 {
-  "name": "tree-sitter-weidu-d",
-  "version": "0.1.0",
-  "description": "WeiDU D (dialog) grammar for tree-sitter",
-  "type": "module",
-  "license": "",
-  "author": {
-    "name": "BGforge",
-    "email": "dev@bgforge.net",
-    "url": "https://bgforge.net/"
-  },
-  "keywords": [
-    "tree-sitter",
-    "weidu-d",
-    "weidu",
-    "infinity-engine"
-  ],
-  "files": [
-    "grammar.js",
-    "tree-sitter.json",
-    "src/**",
-    "*.wasm",
-    "queries/**"
-  ],
-  "scripts": {
-    "build": "tree-sitter generate && tree-sitter build --wasm",
-    "generate:types": "pnpm exec dts-tree-sitter . | sed 's/export const enum /export enum /' > src/tree-sitter.d.ts && cp src/tree-sitter.d.ts ../../server/src/weidu-d/tree-sitter.d.ts",
-    "test": "../../scripts/test-grammar.sh weidu-d",
-    "lint": "oxlint grammar.js",
-    "playground": "tree-sitter playground"
-  },
-  "devDependencies": {
-    "@asgerf/dts-tree-sitter": "^0.21.0"
-  }
+    "name": "tree-sitter-weidu-d",
+    "version": "0.1.0",
+    "description": "WeiDU D (dialog) grammar for tree-sitter",
+    "keywords": [
+        "infinity-engine",
+        "tree-sitter",
+        "weidu",
+        "weidu-d"
+    ],
+    "license": "",
+    "author": {
+        "name": "BGforge",
+        "email": "dev@bgforge.net",
+        "url": "https://bgforge.net/"
+    },
+    "files": [
+        "grammar.js",
+        "tree-sitter.json",
+        "src/**",
+        "*.wasm",
+        "queries/**"
+    ],
+    "type": "module",
+    "scripts": {
+        "build": "tree-sitter generate && tree-sitter build --wasm",
+        "generate:types": "pnpm exec dts-tree-sitter . | sed 's/export const enum /export enum /' > src/tree-sitter.d.ts && cp src/tree-sitter.d.ts ../../server/src/weidu-d/tree-sitter.d.ts",
+        "test": "../../scripts/test-grammar.sh weidu-d",
+        "lint": "oxlint grammar.js",
+        "playground": "tree-sitter playground"
+    },
+    "devDependencies": {
+        "@asgerf/dts-tree-sitter": "^0.21.0"
+    }
 }

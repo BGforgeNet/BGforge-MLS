@@ -46,6 +46,7 @@ END
 ```
 
 **Compound conditions:**
+
 ```tp2
 IF (FILE_EXISTS ~file1~ OR FILE_EXISTS ~file2~) BEGIN
     // Content
@@ -55,6 +56,7 @@ END
 ### 4. Copy Actions
 
 **Basic copy:**
+
 ```tp2
 COPY ~source~ ~destination~
     SAY name VALUE ~text~
@@ -65,6 +67,7 @@ END
 ```
 
 **Copy with patches:**
+
 ```tp2
 COPY ~file~ ~file~
     PATCH_IF (condition) BEGIN
@@ -76,6 +79,7 @@ END
 ### 5. Functions
 
 **Function definitions:**
+
 ```tp2
 FUNCTION MyFunction
     INPUT variable
@@ -87,6 +91,7 @@ END
 ```
 
 **Function calls:**
+
 ```tp2
 SOLVE my_function (INPUT var1 OUTPUT var2)
 ```
@@ -109,17 +114,20 @@ END
 ### 7. Comment Handling
 
 **Inline comments:** Two spaces before `//`:
+
 ```tp2
 COPY ~file~ ~file~  // Comment on same line
 ```
 
 **Standalone comments:**
+
 ```tp2
 // This is a standalone comment
 COPY ~file~ ~file~
 ```
 
 **Block comments:** Preserved exactly:
+
 ```tp2
 /*
  * Multi-line comment
@@ -146,6 +154,7 @@ All string types are preserved exactly:
 ### Complete Component
 
 **Input:**
+
 ```tp2
 BEGIN ~My Component~
 COPY ~file1~ ~file1~
@@ -157,6 +166,7 @@ END
 ```
 
 **Formatted:**
+
 ```tp2
 BEGIN ~My Component~
     COPY ~file1~ ~file1~

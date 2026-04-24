@@ -3,15 +3,15 @@
 # and lint regressions fail locally before a commit lands.
 
 pre-commit:
-  parallel: true
-  commands:
-    knip:
-      run: pnpm knip
-    knip-prod:
-      run: pnpm knip:prod
-    oxlint:
-      run: pnpm exec oxlint
-    typecheck-server:
-      run: pnpm exec tsc --noEmit --project server/tsconfig.json
-    typecheck-client:
-      run: pnpm exec tsc --noEmit --project client/tsconfig.json
+    parallel: true
+    commands:
+        knip:
+            run: pnpm knip
+        knip-prod:
+            run: pnpm knip:prod
+        oxlint:
+            run: pnpm exec oxlint
+        typecheck-server:
+            run: pnpm exec tsc --noEmit --project server/tsconfig.json
+        typecheck-client:
+            run: pnpm exec tsc --noEmit --project client/tsconfig.json

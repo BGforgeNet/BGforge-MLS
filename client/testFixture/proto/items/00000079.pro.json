@@ -1,53 +1,53 @@
 {
-  "schemaVersion": 1,
-  "format": "pro",
-  "formatName": "Fallout PRO (Prototype)",
-  "document": {
-    "header": {
-      "objectType": 0,
-      "objectId": 79,
-      "textId": 7900,
-      "frmType": 0,
-      "frmId": 46,
-      "lightRadius": 0,
-      "lightIntensity": 0,
-      "flags": 2684354568
-    },
-    "sections": {
-      "itemProperties": {
-        "flagsExt": 168,
-        "attackModes": 5,
-        "script": {
-          "type": -1,
-          "id": -1
+    "schemaVersion": 1,
+    "format": "pro",
+    "formatName": "Fallout PRO (Prototype)",
+    "document": {
+        "header": {
+            "objectType": 0,
+            "objectId": 79,
+            "textId": 7900,
+            "frmType": 0,
+            "frmId": 46,
+            "lightRadius": 0,
+            "lightIntensity": 0,
+            "flags": 2684354568
         },
-        "subType": 3,
-        "materialId": 1,
-        "size": 1,
-        "weight": 1,
-        "cost": 35,
-        "inventoryFrmId": 117440571,
-        "soundId": 48
-      },
-      "weaponStats": {
-        "animCode": 0,
-        "minDamage": 1,
-        "maxDamage": 1,
-        "damageType": 0,
-        "maxRange1": 15,
-        "maxRange2": 0,
-        "projectilePid": 83886104,
-        "minStrength": 0,
-        "apCost1": 1,
-        "apCost2": 0,
-        "criticalFail": 0,
-        "perk": 59,
-        "rounds": 0,
-        "caliber": 0,
-        "ammoPid": -1,
-        "maxAmmo": 0,
-        "soundId": 52
-      }
+        "sections": {
+            "itemProperties": {
+                "flagsExt": 168,
+                "attackModes": 5,
+                "script": {
+                    "type": -1,
+                    "id": -1
+                },
+                "subType": 3,
+                "materialId": 1,
+                "size": 1,
+                "weight": 1,
+                "cost": 35,
+                "inventoryFrmId": 117440571,
+                "soundId": 48
+            },
+            "weaponStats": {
+                "animCode": 0,
+                "minDamage": 1,
+                "maxDamage": 1,
+                "damageType": 0,
+                "maxRange1": 15,
+                "maxRange2": 0,
+                "projectilePid": 83886104,
+                "minStrength": 0,
+                "apCost1": 1,
+                "apCost2": 0,
+                "criticalFail": 0,
+                "perk": 59,
+                "rounds": 0,
+                "caliber": 0,
+                "ammoPid": -1,
+                "maxAmmo": 0,
+                "soundId": 52
+            }
+        }
     }
-  }
 }

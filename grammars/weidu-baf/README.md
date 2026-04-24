@@ -77,17 +77,17 @@ END
 
 Functions can take various argument types:
 
-| Type | Example | Description |
-|------|---------|-------------|
-| String (double quote) | `"text"` | Standard string |
-| String (tilde) | `~text~` | Alternative string delimiter |
-| Number | `123`, `-5`, `0xFF` | Integer (decimal or hex) |
-| Identifier | `GLOBAL`, `Myself` | Symbolic constant |
-| Object reference | `[PC]`, `[ANYONE]` | Special object |
-| Point | `[100.200]` | Coordinates x.y |
-| TRA reference | `@123` | Translation string reference |
-| Variable reference | `%varname%` | WeiDU variable substitution |
-| Nested call | `LastSeenBy(Myself)` | Function as argument |
+| Type                  | Example              | Description                  |
+| --------------------- | -------------------- | ---------------------------- |
+| String (double quote) | `"text"`             | Standard string              |
+| String (tilde)        | `~text~`             | Alternative string delimiter |
+| Number                | `123`, `-5`, `0xFF`  | Integer (decimal or hex)     |
+| Identifier            | `GLOBAL`, `Myself`   | Symbolic constant            |
+| Object reference      | `[PC]`, `[ANYONE]`   | Special object               |
+| Point                 | `[100.200]`          | Coordinates x.y              |
+| TRA reference         | `@123`               | Translation string reference |
+| Variable reference    | `%varname%`          | WeiDU variable substitution  |
+| Nested call           | `LastSeenBy(Myself)` | Function as argument         |
 
 ### Strings
 
@@ -199,6 +199,7 @@ See [formatter.md](./formatter.md) for complete documentation on the WeiDU BAF f
 ### Token Boundaries
 
 `tra_ref` and `variable_ref` use `token()` to prevent whitespace inside:
+
 - `@ 123` - invalid (space)
 - `@123` - valid
 - `% var %` - invalid (spaces)

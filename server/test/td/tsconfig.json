@@ -6,8 +6,5 @@
         "skipLibCheck": true,
         "allowUnusedLabels": true
     },
-    "files": [
-        "td-runtime.d.ts",
-        "td-engine-stubs.d.ts"
-    ]
+    "files": ["td-runtime.d.ts", "td-engine-stubs.d.ts"]
 }

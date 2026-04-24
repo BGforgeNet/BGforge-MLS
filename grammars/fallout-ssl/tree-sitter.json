@@ -1,43 +1,41 @@
 {
-  "$schema": "https://tree-sitter.github.io/tree-sitter/assets/schemas/config.schema.json",
-  "grammars": [
-    {
-      "name": "ssl",
-      "camelcase": "SSL",
-      "title": "SSL",
-      "scope": "source.fallout-ssl",
-      "file-types": [
-        "ssl"
-      ],
-      "injection-regex": "^ssl$",
-      "class-name": "TreeSitterSsl",
-      "highlights": "queries/highlights.scm"
-    }
-  ],
-  "metadata": {
-    "version": "0.1.0",
-    "license": "-",
-    "description": "Fallout 2 Star-Trek Scripting Language",
-    "authors": [
-      {
-        "name": "BGforge",
-        "email": "dev@bgforge.net",
-        "url": "https://bgforge.net/"
-      }
+    "$schema": "https://tree-sitter.github.io/tree-sitter/assets/schemas/config.schema.json",
+    "grammars": [
+        {
+            "name": "ssl",
+            "camelcase": "SSL",
+            "title": "SSL",
+            "scope": "source.fallout-ssl",
+            "file-types": ["ssl"],
+            "injection-regex": "^ssl$",
+            "class-name": "TreeSitterSsl",
+            "highlights": "queries/highlights.scm"
+        }
     ],
-    "links": {
-      "repository": "https://github.com/tree-sitter/tree-sitter-ssl",
-      "funding": ""
+    "metadata": {
+        "version": "0.1.0",
+        "license": "-",
+        "description": "Fallout 2 Star-Trek Scripting Language",
+        "authors": [
+            {
+                "name": "BGforge",
+                "email": "dev@bgforge.net",
+                "url": "https://bgforge.net/"
+            }
+        ],
+        "links": {
+            "repository": "https://github.com/tree-sitter/tree-sitter-ssl",
+            "funding": ""
+        }
+    },
+    "bindings": {
+        "c": false,
+        "go": false,
+        "java": false,
+        "node": true,
+        "python": false,
+        "rust": false,
+        "swift": false,
+        "zig": false
     }
-  },
-  "bindings": {
-    "c": false,
-    "go": false,
-    "java": false,
-    "node": true,
-    "python": false,
-    "rust": false,
-    "swift": false,
-    "zig": false
-  }
 }

@@ -1,10 +1,26 @@
 {
     "name": "@bgforge/fgtp",
-    "description": "CLI transpiler for TSSL, TBAF, and TD files",
     "version": "3.7.0",
-    "author": "BGforge",
+    "description": "CLI transpiler for TSSL, TBAF, and TD files",
+    "keywords": [
+        "cli",
+        "fallout",
+        "infinity-engine",
+        "modding",
+        "transpiler",
+        "weidu"
+    ],
+    "homepage": "https://github.com/BGforgeNet/BGforge-MLS",
+    "bugs": {
+        "url": "https://github.com/BGforgeNet/BGforge-MLS/issues"
+    },
     "license": "SEE LICENSE IN LICENSE.txt",
-    "main": "out/transpile.js",
+    "author": "BGforge",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/BGforgeNet/BGforge-MLS",
+        "directory": "cli/transpile"
+    },
     "bin": {
         "fgtp": "out/transpile.js"
     },
@@ -14,30 +30,14 @@
         "README.md",
         "LICENSE.txt"
     ],
-    "engines": {
-        "node": ">=18"
-    },
+    "main": "out/transpile.js",
     "publishConfig": {
         "access": "public"
     },
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/BGforgeNet/BGforge-MLS",
-        "directory": "cli/transpile"
-    },
-    "homepage": "https://github.com/BGforgeNet/BGforge-MLS",
-    "bugs": {
-        "url": "https://github.com/BGforgeNet/BGforge-MLS/issues"
-    },
-    "keywords": [
-        "transpiler",
-        "cli",
-        "fallout",
-        "weidu",
-        "infinity-engine",
-        "modding"
-    ],
     "dependencies": {
         "esbuild": "^0.27.7"
+    },
+    "engines": {
+        "node": ">=18"
     }
 }

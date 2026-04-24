@@ -10,29 +10,29 @@ High-level architecture of the BGforge MLS extension. For server-specific detail
 - [System Overview](#system-overview)
 - [Repository Layout](#repository-layout)
 - [Build System](#build-system)
-  - [Build Targets](#build-targets)
-  - [Build Pipeline](#build-pipeline)
-  - [Key Build Constraints](#key-build-constraints)
+    - [Build Targets](#build-targets)
+    - [Build Pipeline](#build-pipeline)
+    - [Key Build Constraints](#key-build-constraints)
 - [Client Architecture](#client-architecture)
-  - [Extension Activation](#extension-activation)
-  - [TypeScript Language Service Plugins](#typescript-language-service-plugins)
-  - [Webview Panels](#webview-panels)
+    - [Extension Activation](#extension-activation)
+    - [TypeScript Language Service Plugins](#typescript-language-service-plugins)
+    - [Webview Panels](#webview-panels)
 - [Server Architecture](#server-architecture)
-  - [Providers](#providers)
-  - [Transpilers](#transpilers)
+    - [Providers](#providers)
+    - [Transpilers](#transpilers)
 - [CLI Tools](#cli-tools)
-  - [Format CLI](#format-cli)
-  - [Transpile CLI](#transpile-cli)
-  - [Binary CLI](#binary-cli)
-  - [Shared CLI Infrastructure](#shared-cli-infrastructure)
+    - [Format CLI](#format-cli)
+    - [Transpile CLI](#transpile-cli)
+    - [Binary CLI](#binary-cli)
+    - [Shared CLI Infrastructure](#shared-cli-infrastructure)
 - [Grammar Architecture](#grammar-architecture)
-  - [Tree-Sitter Grammars](#tree-sitter-grammars)
-  - [TextMate Grammars](#textmate-grammars)
+    - [Tree-Sitter Grammars](#tree-sitter-grammars)
+    - [TextMate Grammars](#textmate-grammars)
 - [Data Pipeline](#data-pipeline)
 - [Test Architecture](#test-architecture)
-  - [Server Unit Tests](#server-unit-tests)
-  - [Integration Tests](#integration-tests)
-  - [E2E Tests](#e2e-tests)
+    - [Server Unit Tests](#server-unit-tests)
+    - [Integration Tests](#integration-tests)
+    - [E2E Tests](#e2e-tests)
 - [Extension Packaging](#extension-packaging)
 - [Latency Budgets](#latency-budgets)
 - [Key Design Decisions](#key-design-decisions)
@@ -159,18 +159,18 @@ All bundles use **esbuild** (not tsc). The monorepo uses **pnpm workspaces**.
 
 ### Build Targets
 
-| Target | Input | Output | Notes |
-|--------|-------|--------|-------|
-| Client | `client/src/extension.ts` | `client/out/extension.js` | CJS, `vscode` external |
-| Server | `server/src/server.ts` | `server/out/server.js` | CJS, patches `import_meta` for WASM |
-| TSSL Plugin | `plugins/tssl-plugin/src/index.ts` | `node_modules/bgforge-tssl-plugin/index.js` | CJS, standalone |
-| TD Plugin | `plugins/td-plugin/src/index.ts` | `node_modules/bgforge-td-plugin/index.js` | CJS, standalone |
-| Webviews | `client/src/{dialog,binary}-webview.ts` | `client/out/*.js` | Browser context |
-| Format CLI | `cli/format/src/cli.ts` | `cli/format/out/format-cli.js` | CJS + WASM files |
-| Transpile CLI | `cli/transpile/src/cli.ts` | `cli/transpile/out/transpile.js` | CJS |
-| Binary CLI | `cli/bin/src/cli.ts` | `cli/bin/out/bin-cli.js` | CJS |
-| Grammars | `grammars/*/grammar.js` | `grammars/*/*.wasm` -> `server/out/` | tree-sitter build --wasm |
-| TextMate | `syntaxes/*.tmLanguage.yml` | `syntaxes/*.tmLanguage.json` | YAML -> JSON conversion |
+| Target        | Input                                   | Output                                      | Notes                               |
+| ------------- | --------------------------------------- | ------------------------------------------- | ----------------------------------- |
+| Client        | `client/src/extension.ts`               | `client/out/extension.js`                   | CJS, `vscode` external              |
+| Server        | `server/src/server.ts`                  | `server/out/server.js`                      | CJS, patches `import_meta` for WASM |
+| TSSL Plugin   | `plugins/tssl-plugin/src/index.ts`      | `node_modules/bgforge-tssl-plugin/index.js` | CJS, standalone                     |
+| TD Plugin     | `plugins/td-plugin/src/index.ts`        | `node_modules/bgforge-td-plugin/index.js`   | CJS, standalone                     |
+| Webviews      | `client/src/{dialog,binary}-webview.ts` | `client/out/*.js`                           | Browser context                     |
+| Format CLI    | `cli/format/src/cli.ts`                 | `cli/format/out/format-cli.js`              | CJS + WASM files                    |
+| Transpile CLI | `cli/transpile/src/cli.ts`              | `cli/transpile/out/transpile.js`            | CJS                                 |
+| Binary CLI    | `cli/bin/src/cli.ts`                    | `cli/bin/out/bin-cli.js`                    | CJS                                 |
+| Grammars      | `grammars/*/grammar.js`                 | `grammars/*/*.wasm` -> `server/out/`        | tree-sitter build --wasm            |
+| TextMate      | `syntaxes/*.tmLanguage.yml`             | `syntaxes/*.tmLanguage.json`                | YAML -> JSON conversion             |
 
 ### Build Pipeline
 
@@ -247,12 +247,12 @@ process, not the extension host.
 
 Two webview-based features, each with a host-side and browser-side module:
 
-| Feature | Host Module | Webview Module | Trigger |
-|---------|------------|---------------|---------|
-| Dialog Tree (SSL) | `dialog-tree/dialogTree.ts` | `dialogTree-webview.ts` | Ctrl+Shift+V in SSL |
-| Dialog Tree (D/TD) | `dialog-tree/dialogTree-d.ts` | `dialogTree-webview.ts` | Ctrl+Shift+V in D/TD |
-| Dialog Tree (TSSL) | `dialog-tree/dialogTree.ts` | `dialogTree-webview.ts` | Ctrl+Shift+V in TSSL |
-| Binary Editor | `editors/binaryEditor.ts` | `binaryEditor-webview.ts` | Open .pro or .map file |
+| Feature            | Host Module                   | Webview Module            | Trigger                |
+| ------------------ | ----------------------------- | ------------------------- | ---------------------- |
+| Dialog Tree (SSL)  | `dialog-tree/dialogTree.ts`   | `dialogTree-webview.ts`   | Ctrl+Shift+V in SSL    |
+| Dialog Tree (D/TD) | `dialog-tree/dialogTree-d.ts` | `dialogTree-webview.ts`   | Ctrl+Shift+V in D/TD   |
+| Dialog Tree (TSSL) | `dialog-tree/dialogTree.ts`   | `dialogTree-webview.ts`   | Ctrl+Shift+V in TSSL   |
+| Binary Editor      | `editors/binaryEditor.ts`     | `binaryEditor-webview.ts` | Open .pro or .map file |
 
 Binary editor design choice:
 
@@ -301,14 +301,14 @@ Each provider implements `ProviderBase` plus relevant capability interfaces from
 `Partial<>` intersection of all capabilities — providers declare explicit `implements` clauses
 for compile-time enforcement:
 
-| Provider | Completion | Hover | Signature | Definition | References | Format | Symbols | Workspace Symbols | Rename | Inlay | Folding | Diagnostics | JSDoc |
-|----------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| fallout-ssl | x | x | x | x | x | x | x | x | x | .msg | x | sslc | x |
-| fallout-worldmap | x | x | | | | | | | | | | | |
-| weidu-baf | x | x | | | | x | | | | .tra | x | weidu | |
-| weidu-d | x | x | | x | x | x | x | x | x | .tra | x | weidu | x |
-| weidu-log | | | | x | | | | | | | | | |
-| weidu-tp2 | x | x | | x | x | x | x | x | x | .tra | x | weidu | x |
+| Provider         | Completion | Hover | Signature | Definition | References | Format | Symbols | Workspace Symbols | Rename | Inlay | Folding | Diagnostics | JSDoc |
+| ---------------- | :--------: | :---: | :-------: | :--------: | :--------: | :----: | :-----: | :---------------: | :----: | :---: | :-----: | :---------: | :---: |
+| fallout-ssl      |     x      |   x   |     x     |     x      |     x      |   x    |    x    |         x         |   x    | .msg  |    x    |    sslc     |   x   |
+| fallout-worldmap |     x      |   x   |           |            |            |        |         |                   |        |       |         |             |       |
+| weidu-baf        |     x      |   x   |           |            |            |   x    |         |                   |        | .tra  |    x    |    weidu    |       |
+| weidu-d          |     x      |   x   |           |     x      |     x      |   x    |    x    |         x         |   x    | .tra  |    x    |    weidu    |   x   |
+| weidu-log        |            |       |           |     x      |            |        |         |                   |        |       |         |             |       |
+| weidu-tp2        |     x      |   x   |           |     x      |     x      |   x    |    x    |         x         |   x    | .tra  |    x    |    weidu    |   x   |
 
 ### Transpilers
 
@@ -349,28 +349,28 @@ structured IR (`BAFBlock/Condition/Action`) with condition algebra (boolean to
 CNF conversion for BAF OR groups). TD has the richest IR (20+ construct types)
 with state machines, method chain parsing, and dual-pass orphan detection.
 
-| Transpiler | Input | Output | Key Features |
-|------------|-------|--------|-------------|
-| TSSL | `.tssl` | `.ssl` | const/let, loops, functions, enum pre-transform |
-| TBAF | `.tbaf` | `.baf` | for/for-of, arrays, spread, destructuring, function inlining, point tuples |
-| TD | `.td` | `.d` | All TBAF features + conditionals, method chains, transitive state collection, orphan warnings, dialog preview |
+| Transpiler | Input   | Output | Key Features                                                                                                  |
+| ---------- | ------- | ------ | ------------------------------------------------------------------------------------------------------------- |
+| TSSL       | `.tssl` | `.ssl` | const/let, loops, functions, enum pre-transform                                                               |
+| TBAF       | `.tbaf` | `.baf` | for/for-of, arrays, spread, destructuring, function inlining, point tuples                                    |
+| TD         | `.td`   | `.d`   | All TBAF features + conditionals, method chains, transitive state collection, orphan warnings, dialog preview |
 
 **TD module structure** (`transpilers/td/src/`):
 
-| Module | Purpose |
-|--------|---------|
-| `index.ts` | Entry point, bundling, orphan detection on original source |
-| `parse.ts` | AST walker: ts-morph AST -> IR |
-| `parse-helpers.ts` | Utility functions (evaluate, resolve, validate) |
-| `expression-eval.ts` | Expression -> trigger/action/text conversion |
-| `chain-parsing.ts` | Method chain transition parsing |
-| `chain-processing.ts` | Chain body processing (from/fromWhen/say) |
-| `state-transitions.ts` | State/transition processing, loop unrolling |
-| `state-resolution.ts` | Post-parse BFS transitive collection, orphan detection |
-| `patch-operations.ts` | Patch operation transforms (ALTER_TRANS, etc.) |
-| `emit.ts` | IR -> D text serialization |
-| `types.ts` | IR types (TDScript, TDConstruct, TDState, TDSay, etc.) |
-| `td-runtime.d.ts` | TypeScript declarations for TD API |
+| Module                 | Purpose                                                    |
+| ---------------------- | ---------------------------------------------------------- |
+| `index.ts`             | Entry point, bundling, orphan detection on original source |
+| `parse.ts`             | AST walker: ts-morph AST -> IR                             |
+| `parse-helpers.ts`     | Utility functions (evaluate, resolve, validate)            |
+| `expression-eval.ts`   | Expression -> trigger/action/text conversion               |
+| `chain-parsing.ts`     | Method chain transition parsing                            |
+| `chain-processing.ts`  | Chain body processing (from/fromWhen/say)                  |
+| `state-transitions.ts` | State/transition processing, loop unrolling                |
+| `state-resolution.ts`  | Post-parse BFS transitive collection, orphan detection     |
+| `patch-operations.ts`  | Patch operation transforms (ALTER_TRANS, etc.)             |
+| `emit.ts`              | IR -> D text serialization                                 |
+| `types.ts`             | IR types (TDScript, TDConstruct, TDState, TDSay, etc.)     |
+| `td-runtime.d.ts`      | TypeScript declarations for TD API                         |
 
 `dialog.ts` (dialog tree preview, `parseTDDialog`) lives in `server/src/td/` — it depends on tree-sitter parsers and LSP infrastructure and was not extracted.
 
@@ -419,6 +419,7 @@ Snapshot contract:
 ### Shared CLI Infrastructure
 
 `cli/cli-utils.ts` provides:
+
 - Argument parsing (`--save`, `--check`, `-r`, `-q`)
 - File discovery (single file or recursive directory scan)
 - Diff reporting (colorized, for `--check` failures)
@@ -436,6 +437,7 @@ WASM rationale, and type generation details.
 
 TextMate grammars (in `syntaxes/`) provide syntax highlighting. Source is YAML,
 converted to JSON at build time. Includes:
+
 - 11 primary language grammars
 - 4 tooltip grammars (hover rendering)
 - 3 injection grammars (comments, strings, docstrings)
@@ -465,16 +467,16 @@ core/static-loader.ts                   Runtime loading into Symbols index
 
 YAML data files (~1.7 MB total):
 
-| File | Contents |
-|------|----------|
-| `fallout-ssl-base.yml` | Fallout SSL functions, variables, constants |
-| `fallout-ssl-sfall.yml` | Sfall extension library |
-| `weidu-baf-base.yml` | BAF triggers and actions |
-| `weidu-baf-ids.yml` | IDS file entries (auto-generated) |
-| `weidu-baf-iesdp.yml` | IESDP triggers and actions |
-| `weidu-d-base.yml` | D file functions |
-| `weidu-tp2-base.yml` | TP2 functions and macros |
-| `fallout-worldmap-txt.yml` | Worldmap key-value pairs |
+| File                       | Contents                                    |
+| -------------------------- | ------------------------------------------- |
+| `fallout-ssl-base.yml`     | Fallout SSL functions, variables, constants |
+| `fallout-ssl-sfall.yml`    | Sfall extension library                     |
+| `weidu-baf-base.yml`       | BAF triggers and actions                    |
+| `weidu-baf-ids.yml`        | IDS file entries (auto-generated)           |
+| `weidu-baf-iesdp.yml`      | IESDP triggers and actions                  |
+| `weidu-d-base.yml`         | D file functions                            |
+| `weidu-tp2-base.yml`       | TP2 functions and macros                    |
+| `fallout-worldmap-txt.yml` | Worldmap key-value pairs                    |
 
 ## Test Architecture
 
@@ -510,12 +512,12 @@ and rationale.
 
 **Runtime dependencies** that must ship in the VSIX:
 
-| Dependency | Location | Why not bundled |
-|------------|----------|-----------------|
+| Dependency                | Location               | Why not bundled                       |
+| ------------------------- | ---------------------- | ------------------------------------- |
 | sslc-emscripten-noderawfs | `server/node_modules/` | Loaded via `fork()`, separate process |
-| esbuild-wasm | `server/node_modules/` | esbuild `--external`, WASM binary |
-| bgforge-tssl-plugin | `node_modules/` | Loaded by tsserver by package name |
-| bgforge-td-plugin | `node_modules/` | Loaded by tsserver by package name |
+| esbuild-wasm              | `server/node_modules/` | esbuild `--external`, WASM binary     |
+| bgforge-tssl-plugin       | `node_modules/`        | Loaded by tsserver by package name    |
+| bgforge-td-plugin         | `node_modules/`        | Loaded by tsserver by package name    |
 
 **Validation**: `scripts/test-package-deps.ts` runs in CI and catches missing
 `.vscodeignore` entries by scanning build scripts, source code, and `package.json`
@@ -541,14 +543,14 @@ from the default threshold; refine them once real baselines are captured in CI o
 sessions. If a new provider is added, re-measure all wrapped handlers with the new language
 loaded and update this table.
 
-| Operation | Budget | Notes |
-|-----------|--------|-------|
-| Completion (`onCompletion`) | 50 ms | Responses are pre-computed O(1) lookups; budget is the threshold. |
-| Hover (`onHover`) | 50 ms | Same O(1) lookup model. |
-| Definition / References (`onDefinition`, `onReferences`) | 50 ms | May walk include graph; budget is the threshold. |
-| Workspace symbol (`onWorkspaceSymbol`) | 50 ms | Iterates all indexed symbols; cancellation checked periodically. |
-| Document symbol (`onDocumentSymbol`) | 50 ms | Per-file tree traversal; budget is the threshold. |
-| Server startup (provider initialization) | Not wrapped | Sequential WASM loads; not currently measured by `timeHandler`. |
+| Operation                                                | Budget      | Notes                                                             |
+| -------------------------------------------------------- | ----------- | ----------------------------------------------------------------- |
+| Completion (`onCompletion`)                              | 50 ms       | Responses are pre-computed O(1) lookups; budget is the threshold. |
+| Hover (`onHover`)                                        | 50 ms       | Same O(1) lookup model.                                           |
+| Definition / References (`onDefinition`, `onReferences`) | 50 ms       | May walk include graph; budget is the threshold.                  |
+| Workspace symbol (`onWorkspaceSymbol`)                   | 50 ms       | Iterates all indexed symbols; cancellation checked periodically.  |
+| Document symbol (`onDocumentSymbol`)                     | 50 ms       | Per-file tree traversal; budget is the threshold.                 |
+| Server startup (provider initialization)                 | Not wrapped | Sequential WASM loads; not currently measured by `timeHandler`.   |
 
 The startup path is not wrapped because providers initialize sequentially by design (see
 [Sequential Provider Initialization](#sequential-provider-initialization)) and the

@@ -11,38 +11,38 @@
 // @ts-check
 
 export default grammar({
-  name: "fallout_msg",
+    name: "fallout_msg",
 
-  extras: ($) => [/\s/],
+    extras: ($) => [/\s/],
 
-  rules: {
-    source_file: ($) => repeat(choice($.entry, $.comment)),
+    rules: {
+        source_file: ($) => repeat(choice($.entry, $.comment)),
 
-    // {number}{audio}{text}
-    // Text can span multiple lines — closing } terminates.
-    entry: ($) =>
-      seq(
-        "{",
-        field("number", $.number),
-        "}",
-        "{",
-        field("audio", optional($.audio)),
-        "}",
-        "{",
-        field("text", optional($.text)),
-        "}"
-      ),
+        // {number}{audio}{text}
+        // Text can span multiple lines — closing } terminates.
+        entry: ($) =>
+            seq(
+                "{",
+                field("number", $.number),
+                "}",
+                "{",
+                field("audio", optional($.audio)),
+                "}",
+                "{",
+                field("text", optional($.text)),
+                "}",
+            ),
 
-    number: () => /\d+/,
+        number: () => /\d+/,
 
-    // Audio filename (non-empty content between second pair of braces)
-    audio: () => /[^}]+/,
+        // Audio filename (non-empty content between second pair of braces)
+        audio: () => /[^}]+/,
 
-    // Message text — may contain newlines, terminated by }
-    text: () => /[^}]+/,
+        // Message text — may contain newlines, terminated by }
+        text: () => /[^}]+/,
 
-    // Anything outside {n}{a}{t} entries is a comment.
-    // Matches one or more characters that don't start an entry.
-    comment: () => /[^{\s][^{]*/,
-  },
+        // Anything outside {n}{a}{t} entries is a comment.
+        // Matches one or more characters that don't start an entry.
+        comment: () => /[^{\s][^{]*/,
+    },
 });

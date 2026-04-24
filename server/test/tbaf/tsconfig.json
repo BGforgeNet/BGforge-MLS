@@ -5,7 +5,5 @@
         "lib": ["ES2015"],
         "skipLibCheck": true
     },
-    "files": [
-        "tbaf-runtime.d.ts"
-    ]
+    "files": ["tbaf-runtime.d.ts"]
 }

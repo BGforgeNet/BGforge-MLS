@@ -36,12 +36,12 @@ Add a server in `Settings > Configure Kate > LSP Client > User Server Settings`:
 
 ```json
 {
-  "servers": {
-    "ssl": {
-      "command": ["bgforge-mls-server", "--stdio"],
-      "highlightingModeRegex": "^(Fallout SSL|WeiDU BAF|WeiDU D|WeiDU TP2|Fallout-Worldmap)$"
+    "servers": {
+        "ssl": {
+            "command": ["bgforge-mls-server", "--stdio"],
+            "highlightingModeRegex": "^(Fallout SSL|WeiDU BAF|WeiDU D|WeiDU TP2|Fallout-Worldmap)$"
+        }
     }
-  }
 }
 ```
 
@@ -57,27 +57,27 @@ Kate sends settings via `workspace/configuration` (requires Kate 25.08+). Add to
 
 ```json
 {
-  "servers": {
-    "ssl": {
-      "command": ["bgforge-mls-server", "--stdio"],
-      "highlightingModeRegex": "^(Fallout SSL|WeiDU BAF|WeiDU D|WeiDU TP2|Fallout-Worldmap)$",
-      "settings": {
-        "bgforge": {
-          "validate": "saveAndType",
-          "falloutSSL": {
-            "compilePath": "",
-            "compileOptions": "-q -p -l -O2 -d -s -n",
-            "outputDirectory": "",
-            "headersDirectory": ""
-          },
-          "weidu": {
-            "path": "weidu",
-            "gamePath": ""
-          }
+    "servers": {
+        "ssl": {
+            "command": ["bgforge-mls-server", "--stdio"],
+            "highlightingModeRegex": "^(Fallout SSL|WeiDU BAF|WeiDU D|WeiDU TP2|Fallout-Worldmap)$",
+            "settings": {
+                "bgforge": {
+                    "validate": "saveAndType",
+                    "falloutSSL": {
+                        "compilePath": "",
+                        "compileOptions": "-q -p -l -O2 -d -s -n",
+                        "outputDirectory": "",
+                        "headersDirectory": ""
+                    },
+                    "weidu": {
+                        "path": "weidu",
+                        "gamePath": ""
+                    }
+                }
+            }
         }
-      }
     }
-  }
 }
 ```
 

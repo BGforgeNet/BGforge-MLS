@@ -4,33 +4,33 @@ Step-by-step guide for converting existing Fallout SSL scripts to TSSL.
 
 ## Quick Reference
 
-| SSL | TSSL | Notes |
-|---|---|---|
-| `#include "headers/sfall/sfall.h"` | `import { func } from "folib/sfall"` | Import specific functions |
-| `#include "headers/custom.h"` | `// #include "headers/custom.h"` | Magic comment for non-folib headers |
-| `#define MY_VALUE 42` | `const MY_VALUE = 42` | Becomes `#define` in output |
-| `#define macro(x) func(x, 1)` | `/** @inline */ function macro(x) { return func(x, 1); }` | Becomes `#define` macro |
-| `#define macro (expr)` | `/** @inline */ function macro() { return expr; }` | Zero-arg macro |
-| `procedure name begin ... end` | `function name() { ... }` | |
-| `procedure name(variable x) begin ... end` | `function name(x: number) { ... }` | Types optional but recommended |
-| `variable x;` | `let x: number;` | Declaration without initializer |
-| `variable x := 5;` | `let x = 5;` | Declaration with initializer |
-| `if cond then begin ... end` | `if (cond) { ... }` | Parentheses required |
-| `while cond do begin ... end` | `while (cond) { ... }` | |
-| `for (i = 0; i < n; i++) begin ... end` | `for (let i = 0; i < n; i++) { ... }` | |
-| `foreach k: v in arr begin ... end` | `for (const [k, v] of arr as [K, V][]) { ... }` | Cast for type safety |
-| `foreach x in arr begin ... end` | `for (const x of arr) { ... }` | |
-| `switch x begin case 1: ... end` | `switch (x) { case 1: ... break; }` | |
-| `x and y` | `x && y` | Auto-converted |
-| `x or y` | `x \|\| y` | Auto-converted |
-| `not x` | `!x` | Auto-converted |
-| `x bwand y` | `x & y` | Auto-converted |
-| `x bwor y` | `x \| y` | Auto-converted |
-| `x bxor y` | `x ^ y` | Auto-converted |
-| `bnot x` | `~x` | Auto-converted |
-| `typeof(x)` | `sfall_typeof(x)` | `typeof` is a TS keyword |
-| `game_loaded` | `game_loaded()` | Zero-arg functions need parens |
-| `call my_proc;` | `my_proc();` | `call` added automatically for user-defined functions |
+| SSL                                        | TSSL                                                      | Notes                                                 |
+| ------------------------------------------ | --------------------------------------------------------- | ----------------------------------------------------- |
+| `#include "headers/sfall/sfall.h"`         | `import { func } from "folib/sfall"`                      | Import specific functions                             |
+| `#include "headers/custom.h"`              | `// #include "headers/custom.h"`                          | Magic comment for non-folib headers                   |
+| `#define MY_VALUE 42`                      | `const MY_VALUE = 42`                                     | Becomes `#define` in output                           |
+| `#define macro(x) func(x, 1)`              | `/** @inline */ function macro(x) { return func(x, 1); }` | Becomes `#define` macro                               |
+| `#define macro (expr)`                     | `/** @inline */ function macro() { return expr; }`        | Zero-arg macro                                        |
+| `procedure name begin ... end`             | `function name() { ... }`                                 |                                                       |
+| `procedure name(variable x) begin ... end` | `function name(x: number) { ... }`                        | Types optional but recommended                        |
+| `variable x;`                              | `let x: number;`                                          | Declaration without initializer                       |
+| `variable x := 5;`                         | `let x = 5;`                                              | Declaration with initializer                          |
+| `if cond then begin ... end`               | `if (cond) { ... }`                                       | Parentheses required                                  |
+| `while cond do begin ... end`              | `while (cond) { ... }`                                    |                                                       |
+| `for (i = 0; i < n; i++) begin ... end`    | `for (let i = 0; i < n; i++) { ... }`                     |                                                       |
+| `foreach k: v in arr begin ... end`        | `for (const [k, v] of arr as [K, V][]) { ... }`           | Cast for type safety                                  |
+| `foreach x in arr begin ... end`           | `for (const x of arr) { ... }`                            |                                                       |
+| `switch x begin case 1: ... end`           | `switch (x) { case 1: ... break; }`                       |                                                       |
+| `x and y`                                  | `x && y`                                                  | Auto-converted                                        |
+| `x or y`                                   | `x \|\| y`                                                | Auto-converted                                        |
+| `not x`                                    | `!x`                                                      | Auto-converted                                        |
+| `x bwand y`                                | `x & y`                                                   | Auto-converted                                        |
+| `x bwor y`                                 | `x \| y`                                                  | Auto-converted                                        |
+| `x bxor y`                                 | `x ^ y`                                                   | Auto-converted                                        |
+| `bnot x`                                   | `~x`                                                      | Auto-converted                                        |
+| `typeof(x)`                                | `sfall_typeof(x)`                                         | `typeof` is a TS keyword                              |
+| `game_loaded`                              | `game_loaded()`                                           | Zero-arg functions need parens                        |
+| `call my_proc;`                            | `my_proc();`                                              | `call` added automatically for user-defined functions |
 
 ## Step-by-Step Conversion
 
@@ -38,10 +38,10 @@ Step-by-step guide for converting existing Fallout SSL scripts to TSSL.
 
 Map each SSL header to the corresponding [folib](https://github.com/BGforgeNet/folib) module:
 
-| SSL Header | folib Module |
-|---|---|
-| `sfall/sfall.h` | `folib/sfall` |
-| `sfall/define_lite.h` | `folib/sfall/define_lite` |
+| SSL Header             | folib Module               |
+| ---------------------- | -------------------------- |
+| `sfall/sfall.h`        | `folib/sfall`              |
+| `sfall/define_lite.h`  | `folib/sfall/define_lite`  |
 | `sfall/command_lite.h` | `folib/sfall/command_lite` |
 
 ```ssl
@@ -148,9 +148,9 @@ let name = "test";
 **Important:** If the variable is inside a loop and needs to reset each iteration, separate declaration from assignment:
 
 ```typescript
-let count: number;           // Declaration at function level
+let count: number; // Declaration at function level
 for (const x of items) {
-    count = 0;               // Assignment in loop body
+    count = 0; // Assignment in loop body
 }
 ```
 
@@ -185,15 +185,15 @@ These SSL keywords have no TSSL equivalent. The curly braces replace them:
 
 ### 8. Replace SSL operators with TS operators
 
-| SSL | TSSL |
-|---|---|
-| `and` | `&&` |
-| `or` | `\|\|` |
-| `not` | `!` |
-| `bwand` | `&` |
-| `bwor` | `\|` |
-| `bxor` | `^` |
-| `bnot` | `~` |
+| SSL     | TSSL   |
+| ------- | ------ |
+| `and`   | `&&`   |
+| `or`    | `\|\|` |
+| `not`   | `!`    |
+| `bwand` | `&`    |
+| `bwor`  | `\|`   |
+| `bxor`  | `^`    |
+| `bnot`  | `~`    |
 
 ```ssl
 // Before
@@ -340,7 +340,7 @@ ratio = 1.0 * a / b;
 ```typescript
 // TSSL
 let ratio: number;
-ratio = FLOAT1 * a / b;
+ratio = (FLOAT1 * a) / b;
 ```
 
 `FLOAT1` is needed because esbuild strips `.0` from float literals.

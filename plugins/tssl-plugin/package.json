@@ -1,8 +1,8 @@
 {
     "name": "@bgforge/tssl-plugin",
-    "description": "TypeScript Language Service Plugin for TSSL files - suppresses false TS6133 errors and adds engine procedure hover docs",
     "version": "3.0.0",
     "private": true,
+    "description": "TypeScript Language Service Plugin for TSSL files - suppresses false TS6133 errors and adds engine procedure hover docs",
     "devDependencies": {
         "@types/node": "^22.19.17",
         "typescript": "^5.9.3",

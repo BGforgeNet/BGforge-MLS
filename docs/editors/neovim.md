@@ -6,8 +6,8 @@ Setup guide for using BGforge MLS with Neovim 0.11+.
 - [File type detection](#file-type-detection)
 - [Language server](#language-server)
 - [Tree-sitter highlighting](#tree-sitter-highlighting)
-  - [Parser registration](#parser-registration)
-  - [Manual query installation](#manual-query-installation)
+    - [Parser registration](#parser-registration)
+    - [Manual query installation](#manual-query-installation)
 - [TypeScript plugins (TSSL/TD)](#typescript-plugins-tssltd)
 - [Settings](#settings)
 

@@ -1,33 +1,33 @@
 {
-  "schemaVersion": 1,
-  "format": "pro",
-  "formatName": "Fallout PRO (Prototype)",
-  "document": {
-    "header": {
-      "objectType": 2,
-      "objectId": 108,
-      "textId": 10800,
-      "frmType": 2,
-      "frmId": 314,
-      "lightRadius": 0,
-      "lightIntensity": 0,
-      "flags": 2684387344
-    },
-    "sections": {
-      "sceneryProperties": {
-        "wallLightFlags": 0,
-        "actionFlags": 0,
-        "script": {
-          "type": -1,
-          "id": -1
+    "schemaVersion": 1,
+    "format": "pro",
+    "formatName": "Fallout PRO (Prototype)",
+    "document": {
+        "header": {
+            "objectType": 2,
+            "objectId": 108,
+            "textId": 10800,
+            "frmType": 2,
+            "frmId": 314,
+            "lightRadius": 0,
+            "lightIntensity": 0,
+            "flags": 2684387344
         },
-        "subType": 5,
-        "materialId": 3,
-        "soundId": 48
-      },
-      "genericProperties": {
-        "unknown": 3435973836
-      }
+        "sections": {
+            "sceneryProperties": {
+                "wallLightFlags": 0,
+                "actionFlags": 0,
+                "script": {
+                    "type": -1,
+                    "id": -1
+                },
+                "subType": 5,
+                "materialId": 3,
+                "soundId": 48
+            },
+            "genericProperties": {
+                "unknown": 3435973836
+            }
+        }
     }
-  }
 }

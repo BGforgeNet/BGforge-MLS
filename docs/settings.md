@@ -6,21 +6,21 @@ All settings are under the `bgforge` namespace.
 
 ## General
 
-| Setting                    | Default | Description                                                                                                                          |
-| -------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `bgforge.validate`         | `saveAndType`  | When validation runs: `manual` = only when invoked explicitly, `save` = on save, `type` = while editing, `saveAndType` = on both save and edit. `type`/`saveAndType` are disk-intensive and debounced at 300ms. |
-| `bgforge.binaryEditor.autoDumpJson` | `false` | Whether saving a file in the binary editor should also write a JSON snapshot next to it. |
-| `bgforge.debug`            | `false` | Enable debug logging in the Output panel (BGforge MLS channel)                                                                       |
+| Setting                             | Default       | Description                                                                                                                                                                                                     |
+| ----------------------------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bgforge.validate`                  | `saveAndType` | When validation runs: `manual` = only when invoked explicitly, `save` = on save, `type` = while editing, `saveAndType` = on both save and edit. `type`/`saveAndType` are disk-intensive and debounced at 300ms. |
+| `bgforge.binaryEditor.autoDumpJson` | `false`       | Whether saving a file in the binary editor should also write a JSON snapshot next to it.                                                                                                                        |
+| `bgforge.debug`                     | `false`       | Enable debug logging in the Output panel (BGforge MLS channel)                                                                                                                                                  |
 
 ## Fallout SSL
 
-| Setting                               | Default                 | Description                                                                                                  |
-| ------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `bgforge.falloutSSL.compilePath`      | `""`                    | Path to sslc compiler. Drop exe into system PATH and enter filename, or use full path. Empty = use built-in. |
-| `bgforge.falloutSSL.compileOptions`   | `-q -p -l -O2 -d -s -n` | Compiler flags                                                                                               |
-| `bgforge.falloutSSL.outputDirectory`  | `""`                    | Output directory for compiled scripts (default: next to source)                                              |
-| `bgforge.falloutSSL.headersDirectory` | `""`                    | Additional headers directory (workspace is always scanned)                                                   |
-| `bgforge.falloutSSL.compileOnValidate` | `true`                 | When enabled, validation on save/edit also writes the compiled `.int`. Disable to validate without overwriting output. |
+| Setting                                | Default                 | Description                                                                                                            |
+| -------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `bgforge.falloutSSL.compilePath`       | `""`                    | Path to sslc compiler. Drop exe into system PATH and enter filename, or use full path. Empty = use built-in.           |
+| `bgforge.falloutSSL.compileOptions`    | `-q -p -l -O2 -d -s -n` | Compiler flags                                                                                                         |
+| `bgforge.falloutSSL.outputDirectory`   | `""`                    | Output directory for compiled scripts (default: next to source)                                                        |
+| `bgforge.falloutSSL.headersDirectory`  | `""`                    | Additional headers directory (workspace is always scanned)                                                             |
+| `bgforge.falloutSSL.compileOnValidate` | `true`                  | When enabled, validation on save/edit also writes the compiled `.int`. Disable to validate without overwriting output. |
 
 ## WeiDU
 

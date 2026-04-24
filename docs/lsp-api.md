@@ -22,12 +22,12 @@ Compile or validate the current document, depending on language and settings.
 
 ```json
 {
-  "command": "bgforge.compile",
-  "arguments": [
-    {
-      "uri": "file:///path/to/script.ssl"
-    }
-  ]
+    "command": "bgforge.compile",
+    "arguments": [
+        {
+            "uri": "file:///path/to/script.ssl"
+        }
+    ]
 }
 ```
 
@@ -54,12 +54,12 @@ Typical call:
 
 ```json
 {
-  "command": "bgforge.parseDialog",
-  "arguments": [
-    {
-      "uri": "file:///path/to/dialog.d"
-    }
-  ]
+    "command": "bgforge.parseDialog",
+    "arguments": [
+        {
+            "uri": "file:///path/to/dialog.d"
+        }
+    ]
 }
 ```
 
@@ -100,7 +100,7 @@ Params:
 
 ```json
 {
-  "uri": "file:///path/to/script.ssl"
+    "uri": "file:///path/to/script.ssl"
 }
 ```
 
@@ -133,7 +133,7 @@ The server accepts ordinary standard LSP `workspace/symbol` requests:
 
 ```json
 {
-  "query": "foo"
+    "query": "foo"
 }
 ```
 
@@ -143,7 +143,7 @@ The VS Code client can also opt into language-scoped results by encoding the act
 
 ```json
 {
-  "query": "bgforge-ws:weidu-d:foo"
+    "query": "bgforge-ws:weidu-d:foo"
 }
 ```
 

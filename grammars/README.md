@@ -4,14 +4,14 @@ See also: [CONTRIBUTING.md](../CONTRIBUTING.md) | [docs/architecture.md](../docs
 
 Six tree-sitter grammars for the supported languages. Four are used by the LSP server for parsing (formatting, symbols, etc.), two are highlight-only for external editors.
 
-| Grammar | Language | Used By |
-|---------|----------|---------|
-| `fallout-ssl` | Fallout SSL (.ssl, .h) | LSP provider (format, symbols, definition, rename, etc.) |
-| `weidu-baf` | WeiDU BAF (.baf) | LSP provider (format, folding) |
-| `weidu-d` | WeiDU D (.d) | LSP provider (format, symbols, definition, folding) |
-| `weidu-tp2` | WeiDU TP2 (.tp2/.tpa/.tph/.tpp) | LSP provider (format, symbols, definition, rename, etc.) |
-| `fallout-msg` | Fallout MSG (.msg) | Highlighting only (Neovim, Helix, Zed, Emacs) |
-| `weidu-tra` | WeiDU TRA (.tra) | Highlighting only (Neovim, Helix, Zed, Emacs) |
+| Grammar       | Language                        | Used By                                                  |
+| ------------- | ------------------------------- | -------------------------------------------------------- |
+| `fallout-ssl` | Fallout SSL (.ssl, .h)          | LSP provider (format, symbols, definition, rename, etc.) |
+| `weidu-baf`   | WeiDU BAF (.baf)                | LSP provider (format, folding)                           |
+| `weidu-d`     | WeiDU D (.d)                    | LSP provider (format, symbols, definition, folding)      |
+| `weidu-tp2`   | WeiDU TP2 (.tp2/.tpa/.tph/.tpp) | LSP provider (format, symbols, definition, rename, etc.) |
+| `fallout-msg` | Fallout MSG (.msg)              | Highlighting only (Neovim, Helix, Zed, Emacs)            |
+| `weidu-tra`   | WeiDU TRA (.tra)                | Highlighting only (Neovim, Helix, Zed, Emacs)            |
 
 ## Building
 

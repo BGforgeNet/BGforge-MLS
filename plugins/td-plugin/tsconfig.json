@@ -11,10 +11,6 @@
         "allowImportingTsExtensions": true,
         "tsBuildInfoFile": "../../tmp/td-plugin.tsbuildinfo"
     },
-    "include": [
-        "src"
-    ],
-    "exclude": [
-        "test"
-    ]
+    "include": ["src"],
+    "exclude": ["test"]
 }

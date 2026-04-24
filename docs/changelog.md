@@ -63,8 +63,8 @@ Fix standalone LSP package publish after repository rename.
 ## 3.3.0
 
 - New: semantic highlighting
-  - Fallout SSL: function, macro parameters.
-  - WeiDU TP2: function parameters, loop vars, JSdoc types.
+    - Fallout SSL: function, macro parameters.
+    - WeiDU TP2: function parameters, loop vars, JSdoc types.
 - WeiDU: translation references (`@NNN`) styling unified across BAF, D, and TP2.
 - Textmate highlighting: Fallout SSL, WeiDU TP2, BAF, D are updated to match intellisense data more closely.
 - Fallout SSL: header macros definitions are no longer shipped with LSP.
@@ -75,23 +75,27 @@ Fix standalone LSP package publish after repository rename.
 ### Formatter Improvements
 
 **WeiDU D formatter:**
+
 - Fixed comment preservation:
-  - Decorative separator comments (`//////`) no longer have space added.
-  - Block comments preserve all internal whitespace exactly.
-  - Trailing comments stay on the same line as code.
+    - Decorative separator comments (`//////`) no longer have space added.
+    - Block comments preserve all internal whitespace exactly.
+    - Trailing comments stay on the same line as code.
 - Fixed multi-line tilde string formatting in transitions.
 - Fixed blank line preservation between comments and code blocks.
 
 **WeiDU TP2:**
+
 - Fixed formatter mangling of string literals containing newlines.
 - Fixed `INCLUDE` failing to parse when multiple files are provided.
 
 ### Data Updates
 
 **Infinity Engine:**
+
 - BAF trigger definitions are now pulled from IESDP.
 
 **Fallout (sfall):**
+
 - Updated sfall data.
 
 ### Core Improvements
@@ -274,33 +278,33 @@ Added a no-edit warning to `BAF` files generated from `TBAF`.
 ## 2.2.0
 
 - Fallout
-  - Sfall data updated to 4.4.5.1.
+    - Sfall data updated to 4.4.5.1.
 - IE
-  - IESDP data update as of 2025.01.26.
-  - Initial TBAF support.
-  - BAF parse now works with [older weidu](https://github.com/WeiDUorg/weidu/issues/237).
+    - IESDP data update as of 2025.01.26.
+    - Initial TBAF support.
+    - BAF parse now works with [older weidu](https://github.com/WeiDUorg/weidu/issues/237).
 
 ## 2.1.11
 
 - Fallout
-  - Sfall data updated to 4.4.4.
-  - Added `variable` to completion.
-  - Tooltips now show function arguments, even if they are missing from JSdoc comment.
+    - Sfall data updated to 4.4.4.
+    - Added `variable` to completion.
+    - Tooltips now show function arguments, even if they are missing from JSdoc comment.
 - IE
-  - IESDP data update as of 2024.08.15.
+    - IESDP data update as of 2024.08.15.
 
 ## 2.1.10
 
 - Fallout
-  - Updated `is_success`, `is_critical` description ([related](https://github.com/BGforgeNet/Fallout2_Unofficial_Patch/issues/112)).
-  - Sfall data updated to 4.4.1.
-  - `unsigned int` renamed to `uint` in tooltips.
-  - Updated `start_gdialog` description to include usage with sfall.
-  - Macros are marked as such in tooltips.
-  - Fixed some macros erroneously recognized as constants.
-  - Enabled displaying return type for macro as specified in its docstring.
+    - Updated `is_success`, `is_critical` description ([related](https://github.com/BGforgeNet/Fallout2_Unofficial_Patch/issues/112)).
+    - Sfall data updated to 4.4.1.
+    - `unsigned int` renamed to `uint` in tooltips.
+    - Updated `start_gdialog` description to include usage with sfall.
+    - Macros are marked as such in tooltips.
+    - Fixed some macros erroneously recognized as constants.
+    - Enabled displaying return type for macro as specified in its docstring.
 - IE
-  - IESDP data update as of 2024.04.21.
+    - IESDP data update as of 2024.04.21.
 
 ## 2.1.9
 
@@ -317,12 +321,12 @@ Fixed compile/parse issue introduced in 2.1.6.
 ## 2.1.6
 
 - Fallout
-  - Sfall data update as of 4.4.2.
+    - Sfall data update as of 4.4.2.
 - IE
-  - Added `WEIDU_EXECUTABLE`, `ADD_PROJECTILE` to intellisense.
-  - Added `STR_CMP`, `WRITE_ASCIIL`, additional value operators to highlighting.
-  - Variables in trarefs are also highlighted now.
-  - IESDP data update as of 2024.02.24.
+    - Added `WEIDU_EXECUTABLE`, `ADD_PROJECTILE` to intellisense.
+    - Added `STR_CMP`, `WRITE_ASCIIL`, additional value operators to highlighting.
+    - Variables in trarefs are also highlighted now.
+    - IESDP data update as of 2024.02.24.
 
 ## 2.1.5
 
@@ -413,66 +417,66 @@ Fixed crash on mod directory open on Windows.
 ## 1.16.3
 
 - IE
-  - Only include BG2/EE `spell.ids` defines from IElib, as some of IWD spells clash with those.
-  - Added missing `STRING_COMPARE_REGEXP` to syntax highlighting.
+    - Only include BG2/EE `spell.ids` defines from IElib, as some of IWD spells clash with those.
+    - Added missing `STRING_COMPARE_REGEXP` to syntax highlighting.
 - Fallout
-  - Update headers to RPU v26, sfall v4.3.3.1.
-  - Note Smooth Talker for `giQ_Option` tooltip.
+    - Update headers to RPU v26, sfall v4.3.3.1.
+    - Note Smooth Talker for `giQ_Option` tooltip.
 
 ## 1.16.2
 
 - IE
-  - Added missing "GTIMES.IDS" and "LOCAL_SET/LOCAL_TEXT_SPRINT/LOCAL_SPRINT".
-  - Added some missing WeiDU control keywords,
+    - Added missing "GTIMES.IDS" and "LOCAL_SET/LOCAL_TEXT_SPRINT/LOCAL_SPRINT".
+    - Added some missing WeiDU control keywords,
 
 ## 1.16.1
 
 - Fallout
-  - Added `start_gialog`/`start_gdialog` synonyms.
-  - Added notes about visibility and `move_to` during fallout [game load](https://github.com/sfall-team/sfall/issues/380).
+    - Added `start_gialog`/`start_gdialog` synonyms.
+    - Added notes about visibility and `move_to` during fallout [game load](https://github.com/sfall-team/sfall/issues/380).
 - IE
-  - Fixed typo in `CLERIC_FAVOR_OR_ILMATER`.
-  - Added some missing `tp2-vars` to autocompletion.
-  - Added one missing spell to `spell-ids-iwdee`.
-  - Allow more char types in weidu var names.
-  - Added some missing STO-related functions.
+    - Fixed typo in `CLERIC_FAVOR_OR_ILMATER`.
+    - Added some missing `tp2-vars` to autocompletion.
+    - Added one missing spell to `spell-ids-iwdee`.
+    - Allow more char types in weidu var names.
+    - Added some missing STO-related functions.
 
 ## 1.16.0
 
 - Fallout
-  - Updated [RPU](https://github.com/BGforgeNet/Fallout2_Restoration_Project) defines to v21, [sfall](https://github.com/phobos2077/sfall) to 4.3.0.2.
-  - Clarified `set_obj_visibility` description.
+    - Updated [RPU](https://github.com/BGforgeNet/Fallout2_Restoration_Project) defines to v21, [sfall](https://github.com/phobos2077/sfall) to 4.3.0.2.
+    - Clarified `set_obj_visibility` description.
 - IE
-  - Updated [IESDP](https://gibberlings3.github.io/iesdp/) and [IElib](https://ielib.bgforge.net/) defines.
-  - Added custom [icon theme](https://github.com/BGforgeNet/BGforge-MLS/blob/master/docs/icon-theme.md).
-  - Added rudimentary gcc [preprocessing](https://forums.bgforge.net/viewtopic.php?f=35&t=334) support.
+    - Updated [IESDP](https://gibberlings3.github.io/iesdp/) and [IElib](https://ielib.bgforge.net/) defines.
+    - Added custom [icon theme](https://github.com/BGforgeNet/BGforge-MLS/blob/master/docs/icon-theme.md).
+    - Added rudimentary gcc [preprocessing](https://forums.bgforge.net/viewtopic.php?f=35&t=334) support.
 
 ## 1.15.3
 
 - Fallout
-  - Updated data from upstream.
-  - Added more preprocessor directives: highlighting, completion, indentation.
-  - Moved comments higher in highlighting for better performance.
+    - Updated data from upstream.
+    - Added more preprocessor directives: highlighting, completion, indentation.
+    - Moved comments higher in highlighting for better performance.
 - IE
-  - Updated data from upstream.
-  - Fixed highlighting for var names with `-`.
+    - Updated data from upstream.
+    - Fixed highlighting for var names with `-`.
 
 ## 1.15.2
 
 - Fallout
-  - Fixed displaying source files for dynamically loaded defines.
+    - Fixed displaying source files for dynamically loaded defines.
 - IE
-  - WeiDU is now searched in system PATH by default.
+    - WeiDU is now searched in system PATH by default.
 
 ## 1.15.1
 
 - IE
-  - Added `LAF`, `LPM`, `LPF` and `LAM` to tooltips.
-  - For `LAUNCH_ACTION_MACRO`, `LAUNCH_PATCH_MACRO` set proper action/patch color.
-  - Fixed color of `DEFINE_ACTION_MACRO`, `DEFINE_PATCH_MACRO`. Properly color `DEFINE_ACTION_FUNCTION`, `DEFINE_PATCH_FUNCTION` when `BEGIN` is on the same line.
-  - Updated defines from upstream.
+    - Added `LAF`, `LPM`, `LPF` and `LAM` to tooltips.
+    - For `LAUNCH_ACTION_MACRO`, `LAUNCH_PATCH_MACRO` set proper action/patch color.
+    - Fixed color of `DEFINE_ACTION_MACRO`, `DEFINE_PATCH_MACRO`. Properly color `DEFINE_ACTION_FUNCTION`, `DEFINE_PATCH_FUNCTION` when `BEGIN` is on the same line.
+    - Updated defines from upstream.
 - Fallout
-  - Updated defines from upstream.
+    - Updated defines from upstream.
 
 ## 1.15.0
 
@@ -486,51 +490,51 @@ Fixed 1.14.0 packaging issue.
 ## 1.14.0
 
 - IE:
-  - Added support for `TPA`, `TPH`, `TPP` `BAF` and `D` parsing with new WeiDU v247.
-  - New keywords from WeiDU v247.
-  - More details for some WeiDU constants.
-  - Updated IESDP defines.
+    - Added support for `TPA`, `TPH`, `TPP` `BAF` and `D` parsing with new WeiDU v247.
+    - New keywords from WeiDU v247.
+    - More details for some WeiDU constants.
+    - Updated IESDP defines.
 - Fallout:
-  - Updated RPU and sfall defines.
+    - Updated RPU and sfall defines.
 
 ## 1.13.0
 
 - General:
-  - Added a custom theme to allow futher tailoring of the style.
+    - Added a custom theme to allow futher tailoring of the style.
 - IE:
-  - Added support for importing file formats from IESDP.
-  - Clearly separated actions from patches, coloring them differently.
-  - Changed tp2 values to be italic blue to distinguish them from actions.
-  - IElib and IESDP constants now display type in tooltip, IElib ones also display value.
-  - Known IElib functions are now colored according to their type, even if invocation is wrong.
-  - Duplicate constants removed from completion.
+    - Added support for importing file formats from IESDP.
+    - Clearly separated actions from patches, coloring them differently.
+    - Changed tp2 values to be italic blue to distinguish them from actions.
+    - IElib and IESDP constants now display type in tooltip, IElib ones also display value.
+    - Known IElib functions are now colored according to their type, even if invocation is wrong.
+    - Duplicate constants removed from completion.
 - Fallout:
-  - Updated RP and sfall defines.
+    - Updated RP and sfall defines.
 
 ## 1.12.0
 
 - IE:
-  - Added weidu's `GET_OFFSET_ARRAY/2` predefined sets to completion.
-  - Added support for [IElib](https://ielib.bgforge.net) functions.
-  - Fixed IElib's constants coloring inside associative array declarations.
+    - Added weidu's `GET_OFFSET_ARRAY/2` predefined sets to completion.
+    - Added support for [IElib](https://ielib.bgforge.net) functions.
+    - Fixed IElib's constants coloring inside associative array declarations.
 
 ## 1.11.0
 
 - IE:
-  - Updated [IElib](https://github.com/BGforgeNet/BGforge-MLS-IElib) and [IESDP](https://iesdp.bgforge.net) defines.
-  - Added WeiDU's `REM`.
+    - Updated [IElib](https://github.com/BGforgeNet/BGforge-MLS-IElib) and [IESDP](https://iesdp.bgforge.net) defines.
+    - Added WeiDU's `REM`.
 
 ## 1.10.0
 
 - General:
-  - Switched all helper scripts to Ruamel for YAML.
+    - Switched all helper scripts to Ruamel for YAML.
 - IE:
-  - Added WeiDU's `LOCAL_SET`, `LOCAL_SPRINT`, `WITH`, `DEFAULT`, multuple `SOURCE_*` vars.
-  - Fixed `TargetBlock`/`TriggerBlock` highlighting in SSL.
-  - Updated [IElib](https://github.com/BGforgeNet/BGforge-MLS-IElib) and [IESDP](https://iesdp.bgforge.net) defines.
-  - Fixed error in WeiDU completion formatting, which was breaking some completion items.
+    - Added WeiDU's `LOCAL_SET`, `LOCAL_SPRINT`, `WITH`, `DEFAULT`, multuple `SOURCE_*` vars.
+    - Fixed `TargetBlock`/`TriggerBlock` highlighting in SSL.
+    - Updated [IElib](https://github.com/BGforgeNet/BGforge-MLS-IElib) and [IESDP](https://iesdp.bgforge.net) defines.
+    - Fixed error in WeiDU completion formatting, which was breaking some completion items.
 - Fallout:
-  - Updated sfall and [RPU](https://github.com/BGforgeNet/Fallout2_Restoration_Project) defines.
+    - Updated sfall and [RPU](https://github.com/BGforgeNet/Fallout2_Restoration_Project) defines.
 
 ## 1.9.1
 
@@ -540,110 +544,110 @@ Fixed 1.14.0 packaging issue.
 ## 1.9.0
 
 - General:
-  - Switched to `@types/vscode` for tests, removed old unused dependencies, bumped minimal VScode version.
+    - Switched to `@types/vscode` for tests, removed old unused dependencies, bumped minimal VScode version.
 - IE:
-  - Fixed dashes/quotes in function names breaking highlighting.
-  - Fixed dashes in SLB `TARGET` breaking highlighting.
-  - Added support for array construct highlighting.
+    - Fixed dashes/quotes in function names breaking highlighting.
+    - Fixed dashes in SLB `TARGET` breaking highlighting.
+    - Added support for array construct highlighting.
 - Fallout:
-  - Updated RP defines.
+    - Updated RP defines.
 
 ## 1.8.0
 
 - Common:
-  - Fixed hovers display/highlight.
+    - Fixed hovers display/highlight.
 - IE:
-  - Added `WRITE_ASCIIL`, `WRITE_ASCIIT`, `WRITE_ASCIIE`, `BUT_ONLY`, `STR_EQ`, `STR_CMP`, `R_B_B`, `ON_MISMATCH` aliases.
-  - Added text defines, in particular spell names.
-  - Added support for partial syntax: inlined BAF scripts.
-  - Added `kit.ids` defines.
-  - Added some hidden script actions.
-  - Added completion for BAF actions (BG2/EE only).
-  - Fixed shorted highlighting keys overriding longer ones in some cases.
-  - Fixed highlighting of unbalanced `%`s for [IElib](https://github.com/BGforgeNet/BGforge-MLS-IElib) defines.
+    - Added `WRITE_ASCIIL`, `WRITE_ASCIIT`, `WRITE_ASCIIE`, `BUT_ONLY`, `STR_EQ`, `STR_CMP`, `R_B_B`, `ON_MISMATCH` aliases.
+    - Added text defines, in particular spell names.
+    - Added support for partial syntax: inlined BAF scripts.
+    - Added `kit.ids` defines.
+    - Added some hidden script actions.
+    - Added completion for BAF actions (BG2/EE only).
+    - Fixed shorted highlighting keys overriding longer ones in some cases.
+    - Fixed highlighting of unbalanced `%`s for [IElib](https://github.com/BGforgeNet/BGforge-MLS-IElib) defines.
 - Fallout:
-  - Loaded aliased defines from RP.
-  - Allowed empty arg list for ssl function invocation.
-  - Allowed whitespace between function name and parentheses.
-  - Updated sfall defines to version 4.2.3+develop.
+    - Loaded aliased defines from RP.
+    - Allowed empty arg list for ssl function invocation.
+    - Allowed whitespace between function name and parentheses.
+    - Updated sfall defines to version 4.2.3+develop.
 
 ## 1.7.0
 
 - IE:
-  - Added colorization for [IElib](https://github.com/BGforgeNet/BGforge-MLS-IElib) defines.
+    - Added colorization for [IElib](https://github.com/BGforgeNet/BGforge-MLS-IElib) defines.
 - Fallout:
-  - Fixed colorization bug when procedure begins on the next line.
+    - Fixed colorization bug when procedure begins on the next line.
 
 ## 1.6.0
 
 - IE:
-  - More symbolic references.
-  - Added support for hexadecimal numbers in BAF and D files.
-  - Removed '(?i)' from triggers: everything is case sensitive now.
-  - Colored ELSE and THIS.
-    Fallout:
-  - Updated definitions: sfall 4.2.2, RPU 12.
+    - More symbolic references.
+    - Added support for hexadecimal numbers in BAF and D files.
+    - Removed '(?i)' from triggers: everything is case sensitive now.
+    - Colored ELSE and THIS.
+      Fallout:
+    - Updated definitions: sfall 4.2.2, RPU 12.
 
 ## 1.5.4
 
 - IE:
-  - Fixed highlighting for double variable references.
+    - Fixed highlighting for double variable references.
 
 ## 1.5.3
 
 - IE:
-  - Added highlighting for double variable references (`EVAL ~%%my%_var%~`).
+    - Added highlighting for double variable references (`EVAL ~%%my%_var%~`).
 
 ## 1.5.2
 
 - IE:
-  - Really really fixed macro invocation highlighting.
+    - Really really fixed macro invocation highlighting.
 
 ## 1.5.1
 
 - IE:
-  - Really fixed macro invocation highlighting.
+    - Really fixed macro invocation highlighting.
 
 ## 1.5.0
 
 - IE:
-  - Added support for Sword Coast Stratagems Scripting Language.
-  - Fixed macro invocation highlighting.
-  - Added vars highlighting in tra strings.
-  - Added many more IDS tokens.
+    - Added support for Sword Coast Stratagems Scripting Language.
+    - Fixed macro invocation highlighting.
+    - Added vars highlighting in tra strings.
+    - Added many more IDS tokens.
 
 ## 1.4.0
 
 - IE:
-  - Added syntax highlighting for IWD:EE `spell.ids` tokens.
-  - Fixed `PLAYER1-PLAYER6` highlighing in `tra` files.
+    - Added syntax highlighting for IWD:EE `spell.ids` tokens.
+    - Fixed `PLAYER1-PLAYER6` highlighing in `tra` files.
 
 ## 1.3.0
 
 - IE:
-  - Added `2da` syntax highlighting.
+    - Added `2da` syntax highlighting.
 
 ## 1.2.0
 
 - WeiDU:
-  - Added `tra` syntax highlighting.
+    - Added `tra` syntax highlighting.
 - Fallout:
-  - Added `msg` syntax highlighting.
-  - Added missing `ifndef`, `endif`, `%`.
+    - Added `msg` syntax highlighting.
+    - Added missing `ifndef`, `endif`, `%`.
 
 ## 1.1.0
 
 - WeiDU:
-  - Fixed line breaks in `CLONE_EFFECT`.
-  - Fixed highlighting in `LAF`/`LPF` invocation when strings contain keywords or names contain variables.
-  - Fixed variable highlighing in function definition.
-  - Added missing `ALTER_ITEM_HEADER`, `INNER_PATCH`.
+    - Fixed line breaks in `CLONE_EFFECT`.
+    - Fixed highlighting in `LAF`/`LPF` invocation when strings contain keywords or names contain variables.
+    - Fixed variable highlighing in function definition.
+    - Added missing `ALTER_ITEM_HEADER`, `INNER_PATCH`.
 - Fallout SSL:
-  - Added highlighting for defines (constants, variables, defines with variables, procedures) from [sfall](https://github.com/phobos2077/sfall/) and [RPU](https://github.com/BGforgeNet/Fallout2_Restoration_Project) headers.
-  - Added support for automatic update of defines sfall/RPU headers.
-  - Added LVARs highlighting.
-  - Added descriptions for builtin procedures (`map_enter_p_proc`, etc).
-  - Fixed `obj_being_used_with` description.
+    - Added highlighting for defines (constants, variables, defines with variables, procedures) from [sfall](https://github.com/phobos2077/sfall/) and [RPU](https://github.com/BGforgeNet/Fallout2_Restoration_Project) headers.
+    - Added support for automatic update of defines sfall/RPU headers.
+    - Added LVARs highlighting.
+    - Added descriptions for builtin procedures (`map_enter_p_proc`, etc).
+    - Fixed `obj_being_used_with` description.
 
 ## 1.0.9
 

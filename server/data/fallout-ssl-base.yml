@@ -1,1800 +1,1800 @@
 base_functions:
-  type: 3
-  items:
-    - name: AddNamedEvent
-      detail: void AddNamedEvent(ObjectPtr name, Procedure proc)
-      doc: |-
-        Adds named handler (proc) for event (name). Can be signaled only once, and removed afterwards.
+    type: 3
+    items:
+        - name: AddNamedEvent
+          detail: void AddNamedEvent(ObjectPtr name, Procedure proc)
+          doc: |-
+              Adds named handler (proc) for event (name). Can be signaled only once, and removed afterwards.
 
-    - name: AddNamedHandler
-      detail: void AddNamedHandler(ObjectPtr name, Procedure proc)
-      doc: |-
-        Adds named handler (proc) for event (name). Can be signaled many times.
+        - name: AddNamedHandler
+          detail: void AddNamedHandler(ObjectPtr name, Procedure proc)
+          doc: |-
+              Adds named handler (proc) for event (name). Can be signaled many times.
 
-    - name: ClearNamed
-      detail: void ClearNamed(string event)
-      doc: |-
-        Removes all handlers for named event.
+        - name: ClearNamed
+          detail: void ClearNamed(string event)
+          doc: |-
+              Removes all handlers for named event.
 
-    - name: SignalNamed
-      detail: void SignalNamed(string event)
-      doc: |-
-        Calls events and/or handler for given name (event). See AddNamedEvent and AddNamedHandler to add handlers. This basically just calls the appropriate procedures.
+        - name: SignalNamed
+          detail: void SignalNamed(string event)
+          doc: |-
+              Calls events and/or handler for given name (event). See AddNamedEvent and AddNamedHandler to add handlers. This basically just calls the appropriate procedures.
 
-    - name: action_being_used
-      detail: int action_being_used
-      doc: |-
-        Returns the current skill being used on a script object.
+        - name: action_being_used
+          detail: int action_being_used
+          doc: |-
+              Returns the current skill being used on a script object.
 
-    - name: add_mult_objs_to_inven
-      detail: void add_mult_objs_to_inven(ObjectPtr who, ObjectPtr item, int count)
-      doc: |-
-        Adds (count) instances of an object (item) to another object's (who's) inventory. Note that this only works with objects of type Item.
+        - name: add_mult_objs_to_inven
+          detail: void add_mult_objs_to_inven(ObjectPtr who, ObjectPtr item, int count)
+          doc: |-
+              Adds (count) instances of an object (item) to another object's (who's) inventory. Note that this only works with objects of type Item.
 
-    - name: add_obj_to_inven
-      detail: void add_obj_to_inven(ObjectPtr who, ObjectPtr item)
-      doc: |-
-        Adds an object (item) to another object's (who's) inventory. Note that this only works with objects of type Item.
+        - name: add_obj_to_inven
+          detail: void add_obj_to_inven(ObjectPtr who, ObjectPtr item)
+          doc: |-
+              Adds an object (item) to another object's (who's) inventory. Note that this only works with objects of type Item.
 
-    - name: add_timer_event
-      detail: void add_timer_event(ObjectPtr obj, int time, int info)
-      doc: |-
-        Adds a timed event call to the queue, at a given time offset, to call an object's (obj) script. Info is used to let scripts differentiate between timed event calls so that they can be hooked in multiple times. Info is read back by the script using the fixed_param operator. Note that time is in ticks (you can use game_ticks(seconds_num) to get the time in ticks from time in seconds).
+        - name: add_timer_event
+          detail: void add_timer_event(ObjectPtr obj, int time, int info)
+          doc: |-
+              Adds a timed event call to the queue, at a given time offset, to call an object's (obj) script. Info is used to let scripts differentiate between timed event calls so that they can be hooked in multiple times. Info is read back by the script using the fixed_param operator. Note that time is in ticks (you can use game_ticks(seconds_num) to get the time in ticks from time in seconds).
 
-    - name: anim
-      detail: void anim(ObjectPtr who, int anim, int direction)
-      doc: |-
-        Sets up a single-frame animation (anim) for the object (who) that runs in the given direction.
+        - name: anim
+          detail: void anim(ObjectPtr who, int anim, int direction)
+          doc: |-
+              Sets up a single-frame animation (anim) for the object (who) that runs in the given direction.
 
-    - name: anim_action_frame
-      detail: int anim_action_frame(ObjectPtr who, int frame)
-      doc: |-
-        Returns the action frame of the given art frame on a given object (who). This can be used as the delay in an animation registration sequence.
+        - name: anim_action_frame
+          detail: int anim_action_frame(ObjectPtr who, int frame)
+          doc: |-
+              Returns the action frame of the given art frame on a given object (who). This can be used as the delay in an animation registration sequence.
 
-    - name: anim_busy
-      detail: bool anim_busy(ObjectPtr who)
-      doc: |-
-        Returns True if object (who) is currently animating, otherwise False. This can be used to determine if a given object has completed an animation.
+        - name: anim_busy
+          detail: bool anim_busy(ObjectPtr who)
+          doc: |-
+              Returns True if object (who) is currently animating, otherwise False. This can be used to determine if a given object has completed an animation.
 
-    - name: animate_move_obj_to_tile
-      detail: void animate_move_obj_to_tile(ObjectPtr who, int tile, int speed)
-      doc: |-
-        Sets up an animation for a critter (who) to walk to a given tile (hex) at a given speed (speed). Speed (walk/run) can also have a flag attached (see define.h) to force the object (who) to stop it's current animation (for instance, if it was already walking somewhere) and then walk/run to the new location (tile).
+        - name: animate_move_obj_to_tile
+          detail: void animate_move_obj_to_tile(ObjectPtr who, int tile, int speed)
+          doc: |-
+              Sets up an animation for a critter (who) to walk to a given tile (hex) at a given speed (speed). Speed (walk/run) can also have a flag attached (see define.h) to force the object (who) to stop it's current animation (for instance, if it was already walking somewhere) and then walk/run to the new location (tile).
 
-    # Source: sslc extra.c only. Compiler-recognized token with arity 0; no reliable user-facing docs found.
-    # - name: animate_jump
-    #   detail: void animate_jump()
+        # Source: sslc extra.c only. Compiler-recognized token with arity 0; no reliable user-facing docs found.
+        # - name: animate_jump
+        #   detail: void animate_jump()
 
-    - name: animate_rotation
-      detail: void animate_rotation(int direction)
-      doc: |-
-        (Fallout 2 only) Changes the orientation (facing) of the self-object to the given direction (0-5).
+        - name: animate_rotation
+          detail: void animate_rotation(int direction)
+          doc: |-
+              (Fallout 2 only) Changes the orientation (facing) of the self-object to the given direction (0-5).
 
-    - name: animate_run_to_tile
-      detail: void animate_run_to_tile(int tile)
-      doc: |-
-        (Fallout 2 only) Sets up an animation for the self-object to RUN to a given tile (hex).
+        - name: animate_run_to_tile
+          detail: void animate_run_to_tile(int tile)
+          doc: |-
+              (Fallout 2 only) Sets up an animation for the self-object to RUN to a given tile (hex).
 
-    - name: animate_set_frame
-      detail: void animate_set_frame(int newFrame)
-      doc: |-
-        Changes the current animation frame of the self-object to the given frame # (newFrame). This can be used to make lights go to broken lights or to alarm/siren lights, for example. Should be used in place of animate_stand for 2-frame anims.
+        - name: animate_set_frame
+          detail: void animate_set_frame(int newFrame)
+          doc: |-
+              Changes the current animation frame of the self-object to the given frame # (newFrame). This can be used to make lights go to broken lights or to alarm/siren lights, for example. Should be used in place of animate_stand for 2-frame anims.
 
-    - name: animate_stand
-      detail: void animate_stand
-      doc: |-
-        Sets up an animation for the currently focused object (self) to run it's stand animation. This can be used to open doors, open container items (Refridgerator, for example) or to run a critter's fidget animation.
+        - name: animate_stand
+          detail: void animate_stand
+          doc: |-
+              Sets up an animation for the currently focused object (self) to run it's stand animation. This can be used to open doors, open container items (Refridgerator, for example) or to run a critter's fidget animation.
 
-    - name: animate_stand_obj
-      detail: void animate_stand_obj
-      doc: |-
-        Sets up an animation for an object (obj) to run it's stand animation. This can be used to open doors, open container items (refridgerator, for example) or to run a critter's fidget animation.
+        - name: animate_stand_obj
+          detail: void animate_stand_obj
+          doc: |-
+              Sets up an animation for an object (obj) to run it's stand animation. This can be used to open doors, open container items (refridgerator, for example) or to run a critter's fidget animation.
 
-    - name: animate_stand_reverse
-      detail: void animate_stand_reverse
-      doc: |-
-        Sets up an animation for the currently focused object (self) to run it's stand animation in reverse. This is used only for non-critters, to cause them to close (close doors, open containers, etc.
+        - name: animate_stand_reverse
+          detail: void animate_stand_reverse
+          doc: |-
+              Sets up an animation for the currently focused object (self) to run it's stand animation in reverse. This is used only for non-critters, to cause them to close (close doors, open containers, etc.
 
-    - name: animate_stand_reverse_obj
-      detail: void animate_stand_reverse_obj(ObjectPtr obj)
-      doc: |-
-        Sets up an animation for an object (obj) to run it's stand animation in reverse. This is used only for non-critters, to cause them to close (close doors, open containers, etc.)
+        - name: animate_stand_reverse_obj
+          detail: void animate_stand_reverse_obj(ObjectPtr obj)
+          doc: |-
+              Sets up an animation for an object (obj) to run it's stand animation in reverse. This is used only for non-critters, to cause them to close (close doors, open containers, etc.)
 
-    - name: art_anim
-      detail: void art_anim(int fid)
-      doc: |-
-        Returns the animation that this fid represents (ANIM_stand, ANIM_pickup, etc.)
+        - name: art_anim
+          detail: void art_anim(int fid)
+          doc: |-
+              Returns the animation that this fid represents (ANIM_stand, ANIM_pickup, etc.)
 
-    - name: attack
-      detail: void attack(ObjectPtr who)
-      doc: |-
-        Causes the focused object (self) to attempt to attack an object (who). This is a macro to attack_complex().
+        - name: attack
+          detail: void attack(ObjectPtr who)
+          doc: |-
+              Causes the focused object (self) to attempt to attack an object (who). This is a macro to attack_complex().
 
-    - name: attack_complex
-      detail: void attack_complex(ObjectPtr who, int called_shot, int num_attacks, int bonus, int min_damage, int max_damage, int attacker_results, int target_results
-      doc: |-
-        Causes the current object (self - must be a critter) to attempt to attack a critter (who) with various parameters modifying the combat: called_shot - 0/1/specific means none/random/specific (head, torso, etc.) num_attacks - the # of extra attacks the self object gets before the target bonus - the bonus to hit the target on the first turn only min_damage - the minimum damage that will be done the first attack max_damage - the maximum damage that will be done the first attack attacker_results - what state the attacker ends in after the first attack target_results - what state the target ends in after the first attack
+        - name: attack_complex
+          detail: void attack_complex(ObjectPtr who, int called_shot, int num_attacks, int bonus, int min_damage, int max_damage, int attacker_results, int target_results
+          doc: |-
+              Causes the current object (self - must be a critter) to attempt to attack a critter (who) with various parameters modifying the combat: called_shot - 0/1/specific means none/random/specific (head, torso, etc.) num_attacks - the # of extra attacks the self object gets before the target bonus - the bonus to hit the target on the first turn only min_damage - the minimum damage that will be done the first attack max_damage - the maximum damage that will be done the first attack attacker_results - what state the attacker ends in after the first attack target_results - what state the target ends in after the first attack
 
-    - name: attack_setup
-      detail: void attack_setup(ObjectPtr who, ObjectPtr victim)
-      doc: |-
-        Sets up an attack from who on victim, without expecting this script to be involved. Can be used to setup attacks on critters from the map script.
+        - name: attack_setup
+          detail: void attack_setup(ObjectPtr who, ObjectPtr victim)
+          doc: |-
+              Sets up an attack from who on victim, without expecting this script to be involved. Can be used to setup attacks on critters from the map script.
 
-    # Source: sslc extra.c only. Compiler-recognized token with arity 3; no reliable user-facing docs found.
-    # - name: barter_asking
-    #   detail: void barter_asking(?, ?, ?)
+        # Source: sslc extra.c only. Compiler-recognized token with arity 3; no reliable user-facing docs found.
+        # - name: barter_asking
+        #   detail: void barter_asking(?, ?, ?)
 
-    # Source: sslc extra.c only. Compiler-recognized token with arity 3; no reliable user-facing docs found.
-    # - name: barter_offer
-    #   detail: void barter_offer(?, ?, ?)
+        # Source: sslc extra.c only. Compiler-recognized token with arity 3; no reliable user-facing docs found.
+        # - name: barter_offer
+        #   detail: void barter_offer(?, ?, ?)
 
-    - name: car_current_town
-      detail: int car_current_town
-      doc: |-
-        Returns the current town area the car can be found at. Area #'s can be found in scripts/headers/maps.h
+        - name: car_current_town
+          detail: int car_current_town
+          doc: |-
+              Returns the current town area the car can be found at. Area #'s can be found in scripts/headers/maps.h
 
-    - name: car_give_gas
-      detail: int car_give_gas(int amount)
-      doc: |-
-        (Fallout 2 only) Gives the car a given amount of gas.
+        - name: car_give_gas
+          detail: int car_give_gas(int amount)
+          doc: |-
+              (Fallout 2 only) Gives the car a given amount of gas.
 
-    - name: car_give_to_party
-      detail: int car_give_to_party
-      doc: |-
-        Gives the car to the party, and takes them to the worldmap.
+        - name: car_give_to_party
+          detail: int car_give_to_party
+          doc: |-
+              Gives the car to the party, and takes them to the worldmap.
 
-    - name: combat_difficulty
-      detail: int combat_difficulty
-      doc: |-
-        Returns the current Combat difficulty level of the game (defined in the options screen). Value is 0-2.
+        - name: combat_difficulty
+          detail: int combat_difficulty
+          doc: |-
+              Returns the current Combat difficulty level of the game (defined in the options screen). Value is 0-2.
 
-    - name: combat_is_initialized
-      detail: int combat_is_initialized
-      doc: |-
-        Returns True if the system is currently in combat mode, False otherwise.
+        - name: combat_is_initialized
+          detail: int combat_is_initialized
+          doc: |-
+              Returns True if the system is currently in combat mode, False otherwise.
 
-    - name: create_object
-      detail: ObjectPtr create_object(int pid, int tile_num, int elev)
-      doc: |-
-        Creates a new object of prototype (pid), placing it at a given tile number and at a given elevation (0-2). If the prototype indicates a script should be attached, then it will be.
+        - name: create_object
+          detail: ObjectPtr create_object(int pid, int tile_num, int elev)
+          doc: |-
+              Creates a new object of prototype (pid), placing it at a given tile number and at a given elevation (0-2). If the prototype indicates a script should be attached, then it will be.
 
-    - name: create_object_sid
-      detail: ObjectPtr create_object_sid(int pid, int tile_num, int elev, int sid)
-      doc: |-
-        Creates a new object of prototype (pid), placing it at a given tile # and at a given elevation (0-2). If sid is not -1, then it indicates that the default script should be overriden by this new script #.
+        - name: create_object_sid
+          detail: ObjectPtr create_object_sid(int pid, int tile_num, int elev, int sid)
+          doc: |-
+              Creates a new object of prototype (pid), placing it at a given tile # and at a given elevation (0-2). If sid is not -1, then it indicates that the default script should be overriden by this new script #.
 
-    - name: critter_add_trait
-      detail: int critter_add_trait(ObjectPtr who, int trait_type, int trait, int amount)
-      doc: |-
-        Adds a particular trait (trait) of a given type (trait_type) to a particular critter (who). Possible traits under the SPECIAL system are limited to Perks, Traits, Object-instance information (such as team #'s, ai-packet #'s, etc.)
+        - name: critter_add_trait
+          detail: int critter_add_trait(ObjectPtr who, int trait_type, int trait, int amount)
+          doc: |-
+              Adds a particular trait (trait) of a given type (trait_type) to a particular critter (who). Possible traits under the SPECIAL system are limited to Perks, Traits, Object-instance information (such as team #'s, ai-packet #'s, etc.)
 
-    - name: critter_attempt_placement
-      detail: int critter_attempt_placement(ObjectPtr who, int hex, int elev)
-      doc: |-
-        Attempts to place a critter at a given destination hex & elevation (0-2), if it fails, then it tries to find a nearby hex that is that is as near as possible to the start hex. No LONGER checks to see if the hex is visible on-screen.
+        - name: critter_attempt_placement
+          detail: int critter_attempt_placement(ObjectPtr who, int hex, int elev)
+          doc: |-
+              Attempts to place a critter at a given destination hex & elevation (0-2), if it fails, then it tries to find a nearby hex that is that is as near as possible to the start hex. No LONGER checks to see if the hex is visible on-screen.
 
-    - name: critter_damage
-      detail: void critter_damage(ObjectPtr who, int dmg_amount)
-      doc: |-
-        - Macro: `critter_dmg(who, amount, (DMG_normal_dam BWOR DMG_NOANIMATE))`
-        - Inflicts damage on a critter (who) of a given amount, killing it if necessary. Normal damage, no animation.
+        - name: critter_damage
+          detail: void critter_damage(ObjectPtr who, int dmg_amount)
+          doc: |-
+              - Macro: `critter_dmg(who, amount, (DMG_normal_dam BWOR DMG_NOANIMATE))`
+              - Inflicts damage on a critter (who) of a given amount, killing it if necessary. Normal damage, no animation.
 
-    - name: critter_dmg
-      detail: void critter_dmg(ObjectPtr who, int dmg_amount, int flags)
-      doc: |-
-        Inflicts damage on a critter (who) of a given amount, killing it if necessary. Use `DMG_*` flags to customize behaviour.
+        - name: critter_dmg
+          detail: void critter_dmg(ObjectPtr who, int dmg_amount, int flags)
+          doc: |-
+              Inflicts damage on a critter (who) of a given amount, killing it if necessary. Use `DMG_*` flags to customize behaviour.
 
-    - name: critter_heal
-      detail: void critter_heal(ObjectPtr who, int amount)
-      doc: |-
-        Heals a critter for a given amount (if given a value above their MaxHP will go up to their maximum HP). [Note: can also input negative amounts, causing the critter to be hurt for that amount. This is useful because it bypasses all resistances and thresholds
+        - name: critter_heal
+          detail: void critter_heal(ObjectPtr who, int amount)
+          doc: |-
+              Heals a critter for a given amount (if given a value above their MaxHP will go up to their maximum HP). [Note: can also input negative amounts, causing the critter to be hurt for that amount. This is useful because it bypasses all resistances and thresholds
 
-    - name: critter_injure
-      detail: int critter_injure(ObjectPtr who, int how)
-      doc: |-
-        Injures a given critter (who) by crippling given limbs/body parts (defined by DAM_CRIP_ARM_LEFT, DAM_BLIND, etc. in define.h)
+        - name: critter_injure
+          detail: int critter_injure(ObjectPtr who, int how)
+          doc: |-
+              Injures a given critter (who) by crippling given limbs/body parts (defined by DAM_CRIP_ARM_LEFT, DAM_BLIND, etc. in define.h)
 
-    - name: critter_inven_obj
-      detail: ObjectPtr critter_inven_obj(ObjectPtr who, int where)
-      doc: |-
-        Returns a pointer to an object that is in a given spot (NULL if none).
-        The appropriate values for where are: `INVEN_TYPE_WORN`, `INVEN_TYPE_RIGHT_HAND`, and `INVEN_TYPE_LEFT_HAND`.
-      deprecated: Use `critter_inven_obj2` instead
+        - name: critter_inven_obj
+          detail: ObjectPtr critter_inven_obj(ObjectPtr who, int where)
+          doc: |-
+              Returns a pointer to an object that is in a given spot (NULL if none).
+              The appropriate values for where are: `INVEN_TYPE_WORN`, `INVEN_TYPE_RIGHT_HAND`, and `INVEN_TYPE_LEFT_HAND`.
+          deprecated: Use `critter_inven_obj2` instead
 
-    - name: critter_is_fleeing
-      detail: int critter_is_fleeing(ObjectPtr who)
-      doc: |-
-        Returns True if the critter object (who) has its FLEE flag set.
+        - name: critter_is_fleeing
+          detail: int critter_is_fleeing(ObjectPtr who)
+          doc: |-
+              Returns True if the critter object (who) has its FLEE flag set.
 
-    - name: critter_mod_skill
-      type: int
-      args:
-        - name: who
-          type: ObjectPtr
-          doc: Must be `dude_obj`. Will not work on other critters.
-        - name: skill
+        - name: critter_mod_skill
           type: int
-          doc: "`SKILL_*` from `define.h`"
-        - name: amount
-          type: int
-          doc: Can be negative.
-      doc: |-
-        Modifies a given skill in a given critter object by a given amount.
-
-        Note that for tagged skills, the amount will be rounded down to the closest even number.
-
-    - name: critter_rm_trait
-      detail: int critter_rm_trait(ObjectPtr who, int trait_type, int trait, int amount)
-      doc: |-
-        Removes a particular trait (trait) of a given type (trait_type) from a particular critter (who).
-
-    - name: critter_set_flee_state
-      detail: int critter_set_flee_state(ObjectPtr who, bool flee_on
-      doc: |-
-        Sets the FLEE flag on or off. This controls whether the critter flees during combat.
-
-    - name: critter_skill_level
-      detail: int critter_skill_level(ObjectPtr who, int skillNum)
-      doc: |-
-        Returns the current skill level of a particular object's (who) skill (skillNum).
-
-    - name: critter_state
-      detail: int critter_state(ObjectPtr who)
-      doc: |-
-        Returns the state of a given critter object (from combat data), used to determine if a critter is dead, unconscious, etc.
-
-    - name: critter_stop_attacking
-      detail: int critter_stop_attacking(ObjectPtr who)
-      doc: |-
-        Flags the critter object (who) as no longer wishing to be active in combat.
-
-    - name: cur_map_index
-      detail: int cur_map_index
-      doc: |-
-        Returns the index # of the current map, to be matched with the define-constant in define.h.
-
-    - name: cur_town
-      detail: int cur_town
-      doc: |-
-        Returns the index # of the current town, to be matched with the define-constant in define.h.
-
-    - name: days_since_visited
-      detail: int days_since_visited
-      doc: |-
-        Returns the number of days since this map was last visited, or (-1) if it has never been visited before.
-
-    - name: debug_msg
-      detail: void debug_msg(string text)
-      doc: |-
-        Prints a string to the debug monitor. Should be used exclusively for debug information, instead of display_msg()! The user will never see these messages unless they have debugging enabled and activated. If they have debugging enabled and DEBUGLOG set, the messages will only show up in debug.log file.
-
-    - name: destroy_mult_objs
-      detail: int destroy_mult_objs(ObjectPtr item, int count)
-      doc: |-
-        Destroys count number of instances of an item object. This function will figure out which inventory this item is in (if it isn't on the ground). If it is on the ground, of course, there is only one instance of this object, so only one will be destroyed.
-
-    - name: destroy_object
-      detail: int destroy_object(ObjectPtr obj)
-      doc: |-
-        Destroys an object (obj), which will call its script in the destroy_proc section if the object is *NOT* the calling object.
-
-    - name: dialogue_reaction
-      detail: void dialogue_reaction(int mood)
-      doc: |-
-        Set up a reaction animation in the dialogue system.
-
-    - name: dialogue_system_enter
-      detail: void dialogue_system_enter
-      doc: |-
-        Tells the dialog system that this object is requesting the talk system. This is used when the script wants to start dialog instead of waiting for the player to initiate it. The script will be called back in its talk_proc section.
-
-    - name: difficulty_level
-      detail: int difficulty_level
-      doc: |-
-        Returns the current Game difficulty level of the game (defined in the options screen).
-
-    - name: display_msg
-      detail: void display_msg(string message)
-      doc: |-
-        Displays a string on the in-game PDA display (lower-left hand corner).
-
-    - name: do_check
-      detail: int do_check(ObjectPtr who, int check, int modifier)
-      doc: |-
-        Do a check/test-roll versus one of the various basic traits (strength, perception, etc.). Note: these cannot generate Critical Success or Critical Failure as they are a basic X==Y check.
-
-    - name: drop_obj
-      detail: drop_obj(ObjectPtr obj)
-      doc: |-
-        Causes the critter self-object to remove a given object (obj) from it's inventory and place it on the ground at its hex. This animates the self_obj.
-
-    - name: drug_influence
-      detail: int drug_influence(ObjectPtr who)
-      doc: |-
-        Returns True if a given critter object (who) is currently under any drug influences, False otherwise.
-
-    - name: dude_obj
-      detail: ObjectPtr dude_obj
-      doc: |-
-        Returns a pointer to the dude object (the player).
-
-    - name: elevation
-      detail: int elevation(ObjectPtr obj)
-      doc: |-
-        Returns object's elevation
-
-    - name: end_dialogue
-      detail: void end_dialogue
-      doc: |-
-        Terminates the dialogue system.
-
-    - name: endgame_movie
-      detail: void endgame_movie
-      doc: |-
-        Plays the endgame movie.
-
-    - name: endgame_slideshow
-      detail: void endgame_slideshow
-      doc: |-
-        Plays the endgame slideshow. The slideshow will fade in to its palette, so it is proper to call gfade_out(1) and then expect this command to fix the palette for you.
-
-    - name: explosion
-      detail: int explosion
-      doc: |-
-        Sets up an explosion at a given tile number (where) on a given elevation, that will cause damage in a radius.
-
-    - name: fixed_param
-      detail: int fixed_param
-      doc: |-
-        Returns the value of the scripts fixed parameter. This is used with add_timer_event, for instance, to pass the info parameter back to the script.
-
-    - name: float_msg
-      detail: void float_msg(ObjectPtr who, string message, int type)
-      doc: |-
-        Attempts to create a floating-text message (str) attached to an object (who) using colors dictated by type. There are two special types, WARNING and SEQUENTIAL. WARNING is used to print a message centered on the screen (such as for end-of-quest notifications), and SEQUENTIAL will cycle through the colors, in an attempt to give critters different-colored messages to differentiate them.
-
-    - name: floor
-      detail: int floor(int/float value)
-      doc: |-
-        Works properly for positive values, but for negative ones functions like `ceil` (rounds up instead of down).
-      deprecated: Use `floor2` instead
-
-    - name: gSay_End
-      detail: void gSay_End(uint var_index)
-      doc: |-
-        Ends a dialog sequence, which will bring up the sequence (actually display it).
-
-    - name: gSay_Message
-      detail: void gSay_Message(int msg_list, int msg_num, int reaction)
-      doc: |-
-        Sets up a sayMessage, which is a reply with just a [Done] option. The msg_list determines which message file to look in, and the msg_num determines which line to use from the file.
-
-    - name: gSay_Option
-      detail: gSay_Option(int msg_list, int msg_num, procedure target,  int reaction)
-      doc: |-
-        Sets up an option-choice for a reply block, getting the string from the message file (msg_list) and message number (msg_num), which will cause a given reaction (reaction), and if chosen will jump to the given (target) procedure.
-
-    - name: gSay_Reply
-      detail: gSay_Reply(int msg_list, int msg_num)
-      doc: |-
-        Sets up a reply block (what the *CRITTER* says).
-
-    - name: gSay_Start
-      detail: void gSay_Start
-      doc: |-
-        Starts a new dialog sequence.
-
-    - name: game_ticks
-      detail: int game_ticks(int seconds)
-      doc: |-
-        Returns the number of game ticks equal to a given # of seconds.
-
-    - name: game_time
-      detail: int game_time
-      doc: |-
-        Returns the current game time in ticks.
-
-    - name: game_time_advance
-      detail: void game_time_advance(int amount)
-      doc: |-
-        Advances the current game time by (amount) ticks.
-
-    - name: game_time_hour
-      detail: int game_time_hour
-      doc: |-
-        Returns the current hour of the day in a normal format, but without the colon. For example, the current starting game time is 721 (which is 7:21 am).
-
-    - name: game_time_in_seconds
-      detail: int game_time_in_seconds
-      doc: |-
-        Returns the current game time in seconds (game_time / 10).
-
-    - name: game_ui_disable
-      detail: void game_ui_disable
-      doc: |-
-        Disables game user-interface input from the player (to ‘lock-out' the player). You *MUST* make sure to re-enable the UI at some point afterwards.
-
-    - name: game_ui_enable
-      detail: void game_ui_enable
-      doc: |-
-        Re-enables game user-interface input from the player. This *MUST* be called relatively soon after disabling the UI or the player will be stuck, unable to do anything.
-
-    - name: game_ui_is_disabled
-      detail: int game_ui_is_disabled
-      doc: |-
-        Returns True if the game UI is currently disabled (the player is currently ‘locked-out'), and False otherwise.
-
-    - name: gdialog_barter
-      detail: int gdialog_barter
-      doc: |-
-        Tells the dialog system to switch to the barter screen. (Sets the barter modifier to 0).
-
-    - name: gdialog_mod_barter
-      detail: int gdialog_mod_barter(int modifier)
-      doc: |-
-        Tells the dialog system to switch to the barter screen, using a given modifier (+/- percent).
-
-    - name: gdialog_set_barter_mod
-      detail: void gdialog_set_barter_mod(int modifier)
-      doc: |-
-        Sets the current modifier for barter to a given percentage (modifier). Used to make barter easier/harder, even if the player initiates barter (as opposed to the script starting it.)
-
-    - name: get_critter_stat
-      detail: int get_critter_stat(ObjectPtr who, int stat)
-      doc: |-
-        Returns the value of a desired attribute/stat in a critter object (who).
-
-    - name: get_day
-      detail: int get_day
-      doc: |-
-        Returns the current day of the month.
-
-    - name: get_month
-      detail: int get_month
-      doc: |-
-        Returns the current month of the year.
-
-    - name: get_pc_stat
-      detail: get_pc_stat(int pcStat)
-      doc: |-
-        Returns the value of a desired pc-only stat of the obj_dude. These are found in define.h all starting with 'PCSTAT_'.
-
-    - name: get_poison
-      detail: int get_poison(ObjectPtr who)
-      doc: |-
-        (Fallout 2 only) Returns the value of a given critters' (who) poison level.
-
-    - name: gfade_in
-      detail: void gfade_in(int time)
-      doc: |-
-        Does a palette fade to black. The time parameter is currently not actually used.
-
-    - name: gfade_out
-      detail: void gfade_out(int time)
-      doc: |-
-        Does a palette fade from black to the game palette. The time parameter is currently not actually used.
-
-    - name: giQ_Option
-      detail: void giQ_Option(int iq_test, int msg_list, int msg_num, procedure target, int reaction)
-      doc: |-
-        Sets up an option-choice for a reply block if the player's IQ statistic is equal to or greater than a given value (iq_test), getting the string from the message file (msg_list) and message number (msg_num), which will cause a given reaction (reaction), and if chosen will jump to the given (target) procedure.
-        This is the only function that automatically accounts for Smooth Talker perk.
-
-    - name: give_exp_points
-      detail: void give_exp_points
-      doc: |-
-        Adds experience points (points) to the player's total. These points may then be used by the player to enhance skills, etc.
-
-    - name: global_var
-      detail: int global_var(int var_index)
-      doc: |-
-        Returns the value of a global variable # (var_index).
-
-    - name: goto_xy
-      detail: void goto_xy(int map)
-      doc: |-
-        Unknown - moves the character to the specific map?
-
-    - name: has_skill
-      detail: int has_skill(ObjectPtr who, int skill)
-      doc: |-
-        Returns the level of the skill (0-17) of the target critter. (0 to 200 for Fallout 1), (0 to 300 for Fallout 2)
-
-    - name: has_trait
-      detail: int has_trait(int trait_type, ObjectPtr who, int trait
-      doc: |-
-        Returns the value of a given critter object's (who) trait of a given trait_type (see define.h). This can be used to determine if the player has a particular Perk, AI Packet, team num, current rotation, or Trait (finesse, bruiser, etc.).
-
-    - name: how_much
-      detail: int how_much(int val)
-      doc: |-
-        Returns the value of a completed skill vs. skill contest (how much the rolls differed by). This requires that you first call one of the contest roll commands, such as roll_vs_skill, skill_contest, etc.
-
-    # Source: sfall_script_editor opcodes.txt full signature + short description;
-    # also recognized by sslc extra.c with arity 3 and referenced by RP/sfall header macros.
-    - name: inven_cmds
-      detail: ObjectPtr inven_cmds(ObjectPtr who, int inven_cmd, int slotNum)
-      doc: |-
-        Returns a pointer to the object in the inventory.
-
-    - name: inven_count
-      detail: int inven_count(ObjectPtr what)
-      doc: |-
-        Returns the count of how many inventory slots are filled on a given object (what).
-
-    - name: inven_ptr
-      detail: ObjectPtr inven(ObjectPtr what, int slotNum)
-      doc: |-
-        Returns a pointer to the object in slot # (slotNum) in a given object (what).
-
-    - name: inven_unwield
-      detail: void inven_unwield(ObjectPtr who)
-      doc: |-
-        Attempts to cause a critter to unwield any wielded weapons/items. If animations are currently disabled, it will just instantly change the art.
-
-    - name: is_critical
-      detail: bool is_critical(int rollResult)
-      doc: |-
-        Returns `True` if a given contest roll result is a critical result, otherwise `False`.
-
-    - name: is_loading_game
-      detail: bool is_loading_game
-      doc: |-
-        Returns True if the game is currently loading, False otherwise. This is used so that bad things don't happen on game load because a script is doing map_enter setup stuff.
-
-    - name: is_skill_tagged
-      detail: bool is_skill_tagged(int skillNum)
-      doc: |-
-        Returns True if a given skill is tagged.
-
-    - name: is_success
-      detail: int is_success(int rollResult)
-      doc: |-
-        Return `True` if a given contest roll result value is a success (including critical success), otherwise `False`.
-
-    - name: item_caps_adjust
-      detail: int item_caps_adjust(ObjectPtr obj, int amount)
-      doc: |-
-        Modifies the current caps count in an object (obj) by a given amount (amount). Can be positive or negative.
-
-    - name: item_caps_total
-      detail: int item_caps_total(ObjectPtr obj)
-      doc: |-
-        Returns the current caps total in a given object's (obj) inventory.
-
-    - name: jam_lock
-      detail: int jam_lock(ObjectPtr lockableObj)
-      doc: |-
-        Jams a lock, which prevents the player from picking the lock for approximately 24 hours. Meant to be used when a player critically fails to pick a lock.
-
-    - name: kill_critter
-      detail: void kill_critter(ObjectPtr who, int death_frame)
-      doc: |-
-        Kills a critter (obj) outright, placing it in the chosen death frame. Note: this does NOT animate the critter, and does NOT refresh the screen! It is meant to be used in scripts run when entering/exiting a map (map_init/map_exit).
-
-    - name: kill_critter_type
-      detail: void kill_critter_type(int pid)
-      doc: |-
-        Kills all critters of a given type (pid) outright. NOTE: This can result in the 'frozen bodies' issue! kill_critter should always be used instead if possible, for this reason. Frozen bodies causes no actual gameplay issues, but it looks unrealistic and ridiculous.
-
-    - name: language_filter_is_on
-      detail: bool language_filter_is_on
-      doc: |-
-        Returns True if the language filter is currently filtering harsh language, False otherwise.
-
-    - name: load_map
-      detail: void load_map(string map_name, int start_location)
-      doc: |-
-        Loads a new map (map_name), removing all scripts currently running and passing on the entrance location (start_location) to the new map's map_init script. Can also use the number representing the map in the map list (for example, between 0 to 64 in Fallout 1)
-
-    - name: local_var
-      detail: int local_var(uint var_index)
-      doc: |-
-        Returns the value of a local variable of given index # (var_index). If the user is not allowed local vars up to this number in the list of critters, this can generate errors.
-
-    - name: map_first_run
-      detail: bool map_first_run
-      doc: |-
-        Returns True if the current map is being run for the first time (in other words, this map was not loaded from a save-game).
-
-    - name: map_is_known
-      detail: bool map_is_known(int mapIndex)
-      doc: |-
-        Returns True if a given map index is known, False otherwise.
-
-    - name: map_known
-      detail: bool map_known(int mapNum)
-      doc: |-
-        Returns True if a given map # (mapNum) is known, False otherwise.
-
-    - name: map_var
-      detail: int map_var(uint var_index)
-      doc: |-
-        Returns the value of a map-global variable of a given index # (var_index).
-
-    # Source: existing commented data; also recognized by sslc extra.c with arity 0.
-    # No-op stub in the engine. Keep commented out.
-    # - name: make_daytime
-    #   detail: void make_daytime()
-    #   doc: |-
-    #     No-op stub in the engine. Does nothing when called.
-    - name: mark_area_known
-      detail: void mark_area_known(int areaType, int areaIndex, int known)
-      doc: |-
-        Marks a town area or map location on the world map. The areaType parameter selects whether to mark by area (MARK_TYPE_TOWN) or by map index (MARK_TYPE_MAP). The areaIndex identifies the area or map, and known sets the state (MARK_STATE_KNOWN or MARK_STATE_VISITED).
-
-    - name: message_str
-      detail: char* message_str(int list, int msg_num)
-      doc: |-
-        Returns a string from the message module for a given list and a given # (msg_num).
-
-    - name: metarule
-      detail: int metarule(int rule, int param)
-      doc: |-
-        General engine query function supporting ~27 different rules. The rule parameter selects the operation (e.g. METARULE_SIGNAL_END_GAME, METARULE_TEST_FIRSTRUN, METARULE_IS_LOADGAME, METARULE_PARTY_COUNT, etc.), and param provides additional data for that rule. Returns an integer result depending on the rule.
-
-    - name: metarule3
-      detail: int metarule3(int rule, int param1, int param2, int param3)
-      doc: |-
-        Extended engine query function supporting ~12 rules that require multiple parameters. Used for operations like clearing timed events (METARULE3_CLR_FIXED_TIMED_EVENTS), querying kill counts (METARULE3_KILL_COUNT), worldmap subtile operations, and critter iteration.
-
-    - name: move_obj_inven_to_obj
-      detail: move_obj_inven_to_obj(ObjectPtr srcObj, ObjectPtr destObj)
-      doc: |-
-        Moves an object's (srcObj) entire inventory into another object's (destObj) inventory.
-
-    - name: move_to
-      detail: int move_to(ObjectPtr obj, int tile_num, int elev)
-      doc: |-
-        Immediately moves object `obj` to the given tile number and elevation (0-2) on the current map.
-        Using this to change elevations during loading an in-combat save will lead to a crash. If `move_to` called in `map_enter_p_proc`, wrap in `not_is_loading_game` to avoid the crash.
-
-    - name: obj_art_fid
-      detail: int obj_art_fid(ObjectPtr obj)
-      doc: |-
-        Returns the fid # (used to index art) of a given object (obj).
-
-    - name: obj_being_used_with
-      detail: ObjectPtr obj_being_used_with
-      doc: |-
-        Returns a pointer to the object being used on another object.
-
-    - name: obj_can_hear_obj
-      detail: bool obj_can_hear_obj(ObjectPtr src_obj, ObjectPtr dst_obj)
-      doc: |-
-        Returns True if the source object (src_obj) is capable of hearing the destination object (dst_obj). This includes distance factors, current activity (standing/walking/running), and skill use (stealth/etc.).
-
-    - name: obj_can_see_obj
-      detail: bool obj_can_see_obj(ObjectPtr src_obj, ObjectPtr dst_obj)
-      doc: |-
-        Returns True if the source object (src_obj) has line-of-sight (LOS) with the destination object (dst_obj). This also takes into account perception & stealth rolls of the objects are critters.
-
-    - name: obj_carrying_pid_obj
-      detail: ObjectPtr obj_carrying_pid_obj(ObjectPtr who, int pid)
-      doc: |-
-        Returns an Object pointer to an instance of an object of type pid if an object (who) is carrying an object of that type.
-
-    - name: obj_close
-      detail: void obj_close(ObjectPtr what)
-      doc: |-
-        Attempts to close a given object (what) if it is of an openable type.
-
-    - name: obj_drop_everything
-      detail: void obj_drop_everything(ObjectPtr who)
-      doc: |-
-        Causes a critter object (who) to drop all objects in it's inventory and drop it on the ground at its feet.
-
-    - name: obj_is_carrying_obj_pid
-      detail: int obj_is_carrying_obj_pid(ObjectPtr obj, in pid)
-      doc: |-
-        Returns the quantity of objects with matching prototype index #'s (pid) carried in the inventory of another object (obj).
-
-    - name: obj_is_locked
-      detail: bool obj_is_locked(ObjectPtr what)
-      doc: |-
-        Returns True if a given object (what) is a locked object, False if it is unlocked or not a lockable object.
-
-    - name: obj_is_open
-      detail: bool obj_is_open(ObjectPtr what)
-      doc: |-
-        Returns True if a given object (what) is an open object, False if it is closed or not an openable object.
-
-    - name: obj_is_visible_flag
-      detail: bool obj_is_visible_flag(ObjectPtr who)
-      doc: |-
-        (Fallout 2 only) Returns True if a given object (who) is turned on (visible), False otherwise.
-
-    - name: obj_item_subtype
-      detail: int obj_item_subtype(ObjectPtr item_obj)
-      doc: |-
-        Returns the subtype of an object of type 'item'. Examples would be food, armor, weapons, etc.
-
-    - name: obj_lock
-      detail: void obj_lock(ObjectPtr what)
-      doc: |-
-        Attempts to lock a given object (what) if it is of a lockable type.
-
-    - name: obj_name
-      detail: string obj_name(ObjectPtr obj)
-      doc: |-
-        Returns a string representing the name of the given object (what).
-
-    - name: obj_on_screen
-      detail: bool obj_on_screen(ObjectPtr what)
-      doc: |-
-        Returns True if a given object (what) is currently being drawn on-screen, False if it is not.
-
-    - name: obj_open
-      detail: void obj_open(ObjectPtr what)
-      doc: |-
-        Attempts to open a given object (what) if it is of an openable type.
-
-    - name: obj_pid
-      detail: int obj_pid(ObjectPtr obj)
-      doc: |-
-        Returns the prototype id # (pid) of an object (obj).
-
-    - name: obj_set_light_level
-      detail: void obj_set_light_level(ObjectPtr obj, int intensity, int distance)
-      doc: |-
-        Set the light level for an object to a given intensity (0-100, percentage of possible maximum intensity), and distance of light in hexes (0-8).
-
-    - name: obj_type
-      detail: int obj_type(ObjectPtr obj)
-      doc: |-
-        Returns the type of an object (obj). This would be ‘Item', ‘Wall', ‘Scenery', etc.
-
-    - name: obj_unlock
-      detail: void obj_unlock(ObjectPtr what)
-      doc: |-
-        Attempts to unlock a given object (what) if it is of a lockable type.
-
-    - name: override_map_start
-      detail: void override_map_start(int x, int y, int elev, int rot)
-      doc: |-
-        Used when loading a new map, this forces the player (obj_dude) to start at a particular location (x/y), elevation (0-2) and rotation (0-5) when first coming up.
-
-    - name: party_add
-      detail: void party_add(ObjectPtr who)
-      doc: |-
-        Adds a given critter (who) into the list of party members. This will also setup those objects so that they will not be saved in maps, and certain other things.
-
-    - name: party_member_count
-      detail: int party_member_count(bool countHidden)
-      doc: |-
-        Returns the count of the currently in-party party members. (countHidden) determines whether or not to count the hidden members (hangers-on).
-
-    - name: party_member_obj
-      detail: ObjectPtr party_member_obj(int pid)
-      doc: |-
-        Returns an ObjectPtr to a party member that matches a given pid. If that critter isn't currently a member of the party, then it will return NULL.
-
-    - name: party_remove
-      detail: void party_remove(ObjectPtr who)
-      doc: |-
-        Removes a given critter (who) from the list of party members. This will also change those objects so that certain object- and map-level things will respond differently to them.
-
-    - name: pickup_obj
-      detail: void pickup_obj(ObjectPtr obj)
-      doc: |-
-        Causes the critter self-object to animate and attempt to pick up a given object (obj). If used in regard to a critter, this flag is pinged when a steal detect fails. In other words when detected stealing, pickup_obj is called for the person you were stealing from.
-
-    - name: play_gmovie
-      detail: void play_gmovie(int movieNum)
-      doc: |-
-        Plays one of the Fallout movies (full-screen, compressed, etc.).
-
-    - name: play_sfx
-      detail: play_sfx (string sfxFileName)
-      doc: |-
-        Starts a new sound effect to be played on the queue.
-
-    - name: poison
-      detail: void poison(ObjectPtr who, int amount)
-      doc: |-
-        Modifies the critter's poison level by a given amount, which can be negative
-
-    - name: proto_data
-      detail: int proto_data(int pid, int data_member)
-      doc: |-
-        Returns the value (can be int or string) of a data-member of a given prototype (pid).
-
-    - name: radiation_dec
-      detail: void radiation_dec(ObjectPtr who, int amount)
-      doc: |-
-        Decrements a critter's radiation counter by a given amount. NOTE: This should only be done to the player (obj_dude) in Fallout due to design restrictions!
-
-    - name: radiation_inc
-      detail: void radiation_inc(ObjectPtr who, int amount)
-      doc: |-
-        Increments a critter's radiation counter by a given amount. NOTE: This should only be done to the player (obj_dude) in Fallout due to design restrictions!
-
-    - name: random
-      detail: int random(int min, int max)
-      doc: |-
-        Returns a random value between (min) and (max), inclusive.
-
-    # Source: sslc extra.c only. Compiler-recognized token with arity 3; no reliable user-facing docs found.
-    # - name: reaction
-    #   detail: int reaction(?, ?, ?)
-
-    - name: reaction_influence
-      detail: int reaction_influence(int param1, int param2, int param3)
-      doc: |-
-        Influences NPC reaction level. Returns the result of the internal reaction influence calculation.
-
-    - name: reg_anim_animate
-      detail: void reg_anim_animate(ObjectPtr what, int anim, int delay)
-      doc: |-
-        Adds a single, in-place animation on an object (what) to an animation sequence-list, at a given delay from the previous animation (delay should always be -1)!
-
-    - name: reg_anim_animate_forever
-      detail: void reg_anim_animate_forever(ObjectPtr what, int anim, int delay)
-      doc: |-
-        Adds a single, in-place animation on an object (what) to an animation sequence-list, at a given delay from the previous animation (delay should always be -1)! This animation will animate continuously until something in the system interrupts it. To be used *very* sparingly, for instance Gizmo's sign and the ‘pray' signs in the children of the cathedral (which will have to be toned down).
-
-    - name: reg_anim_animate_reverse
-      detail: void reg_anim_animate_reverse(ObjectPtr what, int anim, int delay)
-      doc: |-
-        Adds a single, in-place reversed animation on an object (what) to an animation sequence-list, at a given delay from the previous animation (delay should always be -1)! reg_anim_begin void Anim Tells the system to start an animation sequence-list.
-
-    - name: reg_anim_begin
-      detail: void reg_anim_begin
-      doc: |-
-        Starts an animation registration sequence. All animation registrations (reg_anim_animate, reg_anim_obj_move_to_tile, etc.) must be placed between reg_anim_begin and reg_anim_end calls.
-
-    - name: reg_anim_clear
-      detail: void reg_anim_clear(ObjectPtr object)
-      doc: |-
-        Terminates all animations that are currently registered for a given object.
-
-    - name: reg_anim_end
-      detail: void reg_anim_end
-      doc: |-
-        Activates the animation sequence-list. Without this call the animation will never occur. Note: All animation sequences must be registered at ONCE! In other words, you cannot let the script end and finish registering the animations later.
-
-    # Source: sfall_script_editor opcodes.txt full signature + short description;
-    # also recognized by sslc extra.c with arity 2 and used by RP animation helper macros.
-    - name: reg_anim_func
-      detail: void reg_anim_func(int par1, int par2)
-      doc: |-
-        Works with a list of animations.
-
-    - name: reg_anim_obj_move_to_obj
-      detail: void reg_anim_obj_move_to_obj(ObjectPtr who, ObjectPtr dest_obj, int delay)
-      doc: |-
-        Adds an animation to cause a critter object (who) to attempt to walk to another object (dest_obj) at a given delay from the previous animation (delay should always be -1)!
-
-    - name: reg_anim_obj_move_to_tile
-      detail: void reg_anim_obj_move_to_tile(ObjectPtr who, int dest_tile, int delay)
-      doc: |-
-        Adds an animation to cause a critter object (who) to attempt to walk to a given destination tile number (dest_tile) at a given delay from the previous animation (delay should always be -1)!
-
-    - name: reg_anim_obj_run_to_obj
-      detail: void reg_anim_obj_run_to_obj(ObjectPtr who, ObjectPtr dest_obj, int delay)
-      doc: |-
-        Adds an animation to cause a critter object (who) to attempt to run to another object (dest_obj) at a given delay from the previous animation (delay should always be -1)!
-
-    - name: reg_anim_obj_run_to_tile
-      detail: void reg_anim_obj_run_to_tile(ObjectPtr who, int dest_tile, int delay)
-      doc: |-
-        Adds an animation to cause a critter object (who) to attempt to run to a given destination tile number (dest_tile) at a given delay from the previous animation (delay should always be -1)!
-
-    - name: reg_anim_play_sfx
-      detail: void reg_anim_play_sfx(ObjectPtr who, string sfx_name, int delay)
-      doc: |-
-        Adds an animation to cause an object (who) to attempt to play a given sound effect (sfx_name) at a given delay from the previous animation.
-
-    - name: rm_fixed_timer_event
-      detail: void rm_fixed_timer_event(ObjectPtr who, int fixed_val)
-      doc: |-
-        Removes (clears) all timer events hooked to a given object's (obj) script that have a given fixed_value (fixed_val).
-
-    - name: rm_mult_objs_from_inven
-      detail: int rm_mult_objs_from_inven(ObjectPtr who, ObjectPtr obj, int count)
-      doc: |-
-        Removes (count) instances of an object (obj) from another object's (who's) inventory. Note: this leaves the removed object in at location (0,1) on the map! You must call move_to(...) to place it back on the map. NOTE: This function returns the actual count that was removed (if you attempted to remove more instances than existed). You *MUST* store this value in a variable (though you don't have to actually do anything with it).
-
-    - name: rm_obj_from_inven
-      detail: void rm_obj_from_inven(ObjectPtr who, ObjectPtr obj)
-      doc: |-
-        Removes an object (obj) from another object's (who's) inventory. NOTE: this leaves the removed object in at location (0,1) on the map! You must call move_to(...) to place it back on the map.
-
-    - name: rm_timer_event
-      detail: void rm_timer_event(ObjectPtr obj)
-      doc: |-
-        Removes (clears) all timer events hooked to a given object's (obj) script.
-
-    - name: roll_dice
-      detail: Critter roll_dice(obj Critter, int skill)
-      doc: |-
-        Returns the value of the completed dice roll. NOTE: Avellone says this is unimplemented.
-
-    - name: roll_vs_skill
-      detail: int roll_vs_skill(ObjectPtr who, int skill, int modifier)
-      doc: |-
-        Returns the value of a completed skill roll made upon an object's (who's) skill level with a given skill, and modified by a given amount (may be zero). This value may then be passed to is_success and is_critical to determine the appropriate states, and the how_much call can be used to determine the difference succeeded or failed by.
-
-    - name: rotation_to_tile
-      detail: int rotation_to_tile(int srcTile, int destTile)
-      doc: |-
-        Returns the rotation (0...5) to face a particular tile (destTile) from a particular tile (srcTile).
-
-    - name: running_burning_guy
-      detail: int running_burning_guy
-      doc: |-
-        Returns the setting for the running-burning-guy in the game (defined in the options screen).
-
-    - name: scr_return
-      detail: void scr_return
-      doc: |-
-        Sets the return value for a scripts C-engine node, to be used by C code.
-
-    - name: script_action
-      detail: int script_action
-      doc: |-
-        Returns the action that has activated this script. Examples include requests for the description of an object (description_proc), notifications of a spatial script being activated by something hitting its boundary (spatial_proc), or a critter being given its heartbeat (critter_proc, in other words being told to move).
-
-    - name: script_overrides
-      detail: void script_overrides
-      doc: |-
-        Tells the C-engine that the script will override default behavior for the object. What this means is that the C-engine will not attempt to do things that it would normally do, in expectation that the script will handle those things itself. This is an IMPORTANT command! It is commonly used for the general player actions upon objects, such as looking at them (requesting a description), using them (opening doors, for example), or using items ON them (using a picklock or a key on a door lock).
-
-    - name: self_obj
-      detail: ObjectPtr self_obj
-      doc: |-
-        Returns a pointer to the object connected to this script.
-
-    - name: set_critter_stat
-      detail: int set_critter_stat(ObjectPtr who, int stat, int mod)
-      doc: |-
-        DOES NOT SET THE STAT.
-
-        **Modifies** attribute `stat` in critter `who` by value `mod`.
-
-    - name: set_exit_grids
-      detail: void set_exit_grids(elevation markElev, int mapID, int elevation, int tileNum, int rotation)
-      doc: |-
-        Sets all exit grids on a given elevation (markElev) to point to a destination mapID (may be -1 which means stay on this map), elevation, tileNum, and rotation.
-
-    - name: set_global_var
-      detail: void set_global_var(uint var_index, int value)
-      doc: |-
-        Sets the value of a global variable (var_index) to a given (value).
-
-    - name: set_light_level
-      detail: void set_light_level(int level).
-      doc: |-
-        Sets the ambient light level (1-100). The range is Full Darkness to Full Daylight. NOTE: level is NOT percentange, full darkness is not black screen. set_light_level(0) actually corresponds to 25% brightness, and as level increases, brightness makes 2 huge jumps in the middle (49-51). Thus, certain brightness levels simply cannot be set.
-
-    - name: set_local_var
-      detail: void set_local_var(uint var_index, int value)
-      doc: |-
-        Sets the value of a local variable (var_index) to a given (value).
-
-    - name: set_map_music
-      detail: void set_map_music(int mapID, string sound_path);
-      doc: |-
-        Sets the map background music to the sound file at path.
-
-    - name: set_map_start
-      detail: void set_map_start(int x, int y, int elev, int rot)
-      doc: |-
-        Sets the start location & rotation (0-5) for the next time this map is entered (loaded & run).
-
-    - name: set_map_var
-      detail: void set_map_var(uint var_index, int value)
-      doc: |-
-        Sets the value of a map-global variable (var_index) to a given (value).
-
-    - name: set_obj_visibility
-      detail: void set_obj_visibility(ObjectPtr obj, bool visibility)
-      doc: |-
-        Sets the `OBJ_OFF` flag for an object (makes it not drawn).
-        Notes:
-          - Visibility arg is _inverted_: `set_obj_visibility(who, true)` makes object invisible.
-          - Does not work when loading game.
-
-    - name: sfx_build_ambient_name
-      detail: string sfx_build_ambient_name(int ambientType, int ambientSubtype)
-      doc: |-
-        Constructs and returns a sound effect filename for ambient sounds based on the type and subtype parameters.
-
-    - name: sfx_build_char_name
-      detail: string sfx_build_char_name(int charType, int animType, int animFrame)
-      doc: |-
-        Constructs and returns a sound effect filename for character animations based on character type, animation type, and frame.
-
-    - name: sfx_build_interface_name
-      detail: string sfx_build_interface_name(int interfaceId, int actionType)
-      doc: |-
-        Constructs and returns a sound effect filename for interface interactions based on interface ID and action type.
-
-    - name: sfx_build_item_name
-      detail: string sfx_build_item_name(int itemType, int actionType, int itemVariant)
-      doc: |-
-        Constructs and returns a sound effect filename for item interactions based on item type, action type, and variant.
-
-    - name: sfx_build_open_name
-      detail: string sfx_build_open_name(int openType, int actionType)
-      doc: |-
-        Constructs and returns a sound effect filename for opening/closing interactions based on type and action.
-
-    - name: sfx_build_scenery_name
-      detail: string sfx_build_scenery_name(int sceneryType, int actionType, int sceneryVariant)
-      doc: |-
-        Constructs and returns a sound effect filename for scenery interactions based on scenery type, action type, and variant.
-
-    - name: sfx_build_weapon_name
-      detail: string sfx_build_weapon_name(int weaponType, int actionType, int range, int hit)
-      doc: |-
-        Constructs and returns a sound effect filename for weapon fire and impact sounds based on weapon type, action type, range, and hit parameters.
-
-    - name: signal_end_game
-      detail: void signal_end_game
-      doc: |-
-        Tells the system that a script is indicating the game should be ended. This will return the player to the main-menu.
-
-    - name: skill_contest
-      detail: int skill_contest(int skill)
-      doc: |-
-        (Fallout 2 only) Returns the value of a completed skill vs skill contest (to run through is_success & is_critical).
-
-    - name: source_obj
-      detail: ObjectPtr source_obj
-      doc: |-
-        Returns a pointer to the source object (activator) for this action. The source object for a pickup_proc (pickup an object script_action) would be the critter picking the object up, for instance.
-
-    # https://github.com/sfall-team/sfall/blob/a89e6723552c39a4522c8572260f1ca1ec3cc924/artifacts/ddraw.ini#L733
-    # https://github.com/alexbatalov/fallout2-ce/blob/31afb4d56817a7473c949aafd9070bd3a26a9d7b/src/interpreter_extra.cc#L1897
-    - name: start_gdialog
-      detail: void start_gdialog(int msgFileNum, ObjectPtr who, int mood, int headNum, int backgroundIdx)
-      doc: |-
-        Start the dialogue system focusing on a critter `who` and in a given `mood`.
-        This call sets up the appropriate dialog windows, head art, etc.
-        If this call is not made before the normal dialog calls (`sayReply`, `sayMessage`, `sayOption`, etc.) then the dialog windows will not come up, and only grey boxes will appear with the text.
-
-        `mood` argument is unused in vanilla. Instead, the function checks LVAR 0 of the script:
-        - `LVAR > 10` - good reaction (happy head).
-        - `-10 > LVAR >= 10` - neutral.
-        - Else, angry head.
-
-        If sfall is installed, and `StartGDialogFix` is enabled, argument `mood` does work:
-        - If `mood == -1`, use vanilla behaviour (check LVAR 0).
-        - Else, use argument value. Same thresholds apply.
-
-    - name: target_obj
-      detail: ObjectPtr target_obj
-      doc: |-
-        Returns a pointer to the target object for this action. The target object is what is being acted upon.
-
-    - name: terminate_combat
-      detail: void terminate_combat
-      doc: |-
-        Combat Tells the combat system to terminate prematurely. USE WITH CAUTION. This doesn't prevent another (or even the SAME) script from re-starting combat, so make sure you turn off any hostile flags, etc.
-
-    - name: tile_contains_obj_pid
-      detail: bool tile_contains_obj_pid(int tile, int elev, int pid)
-      doc: |-
-        Returns True if a particular tile contains an object with a matching prototype index # (obj pid).
-
-    - name: tile_contains_pid_obj
-      detail: ObjectPtr tile_contains_pid_obj(int tile, int elev, int pid)
-      doc: |-
-        Returns a pointer to the first object that matches a particular pid # that is on a particular tile and elevation.
-
-    - name: tile_distance
-      detail: int tile_distance(int tile1, int tile2)
-      doc: |-
-        Returns the tile distance between two tile #'s
-
-    - name: tile_distance_objs
-      detail: int tile_distance_objs(ObjectPtr obj1, ObjectPtr obj2)
-      doc: |-
-        Returns the tile distance between two objects (between their tile #'s).
-
-    - name: tile_in_tile_rect
-      detail: int tile_in_tile_rect(int tile1, int tile2, int tile3, int tile4, int tile5)
-      doc: |-
-        Tests whether a tile falls within a rectangular region defined by the coordinate parameters. Returns 1 if the tile is inside the rectangle, 0 otherwise.
-
-    - name: tile_is_visible
-      detail: bool tile_is_visible(int tile)
-      doc: |-
-        Returns True if a given hex (tile) is currently visible, i.e. an object on it could conceivably be displayed on-screen. This includes hexes that may technically have bases that are off-screen, but on whom objects could exist that would bound into the actual display area.
-
-    - name: tile_num
-      detail: int tile_num(ObjectPtr obj)
-      doc: |-
-        Returns the tile number of object (obj).
-
-    - name: tile_num_in_direction
-      detail: int tile_num_in_direction(int start_tile, int direction, int distance)
-      doc: |-
-        Returns the tile number of a tile offset from a starting tile in a given direction (0-5, the next tile in that direction).
-
-    - name: tokenize
-      detail: void tokenize(string str, string delimiter, int prevToken)
-      doc: |-
-        Extracts the next token from a string using the given delimiter character. The prevToken parameter tracks position across successive calls to iterate through all tokens.
-
-    - name: town_known
-      detail: bool town_known(int townArea)
-      doc: |-
-        Returns True if a given town area (townArea) is known, False otherwise.
-
-    - name: town_map
-      detail: void town_map
-      doc: |-
-        (Fallout 1 only) Sends a request for the game engine to bring up the Town Map screen, for the player to go to different locations in an area (different areas in Vault13, for example).
-
-    # Source: sslc extra.c only. Compiler-recognized token with arity 4; no reliable user-facing docs found.
-    # - name: turn_off_objs_in_area
-    #   detail: void turn_off_objs_in_area(?, ?, ?, ?)
-
-    # Source: sslc extra.c only. Compiler-recognized token with arity 4; no reliable user-facing docs found.
-    # - name: turn_on_objs_in_area
-    #   detail: void turn_on_objs_in_area(?, ?, ?, ?)
-
-    - name: use_obj
-      detail: void use_obj(ObjectPtr obj)
-      doc: |-
-        Use a usable object
-
-    - name: use_obj_on_obj
-      detail: ObjectPtr use_obj_on_obj(ObjectPtr item, ObjectPtr targetObj)
-      doc: |-
-        Attempt to use an item object on a target object (targetObj). This could be used to have a critter use a Stimpack on the player, for instance, or to use a key on a door.
-
-    - name: using_skill
-      detail: bool using_skill(ObjectPtr who, int skill)
-      doc: |-
-        Returns True if an active skill is being used, False otherwise. Examples of active skills are Stealth and First Aid.
-
-    - name: violence_level_setting
-      detail: int violence_level_setting
-      doc: |-
-        (Fallout 2 only) Returns the current setting of the violence level. See define.h for values.
-
-    - name: wield_obj
-      detail: void wield_obj(ObjectPtr obj)
-      doc: |-
-        Sets up an animation causing a critter (self_obj) to wield an object (obj) in that critters' inventory. This puts that object in the critter's hand.
-
-    - name: wield_obj_critter
-      detail: void wield_obj_critter(ObjectPtr who, ObjectPtr obj)
-      doc: |-
-        Sets up an animation causing a critter (who) to wield an object (obj) in that critters' inventory. This puts that object in the critter's hand.
-
-    - name: wm_area_set_pos
-      detail: void wm_area_set_pos(int areaIdx, int xPos, int yPos)
-      doc: |-
-        Sets the World Map coordinates for a given area/town (areaIdx) to a given x and y position.
-
-    - name: world_map
-      detail: void world_map
-      doc: |-
-        Sends a request for the game engine to bring up the World Map screen, for the player to move around to different locations.
-
-    - name: world_map_x_pos
-      detail: int world_map_x_pos
-      doc: |-
-        Returns the current X position of the party on the World Map.
-
-    - name: world_map_y_pos
-      detail: int world_map_y_pos
-      doc: |-
-        Returns the current Y position of the party on the World Map.
+          args:
+              - name: who
+                type: ObjectPtr
+                doc: Must be `dude_obj`. Will not work on other critters.
+              - name: skill
+                type: int
+                doc: "`SKILL_*` from `define.h`"
+              - name: amount
+                type: int
+                doc: Can be negative.
+          doc: |-
+              Modifies a given skill in a given critter object by a given amount.
+
+              Note that for tagged skills, the amount will be rounded down to the closest even number.
+
+        - name: critter_rm_trait
+          detail: int critter_rm_trait(ObjectPtr who, int trait_type, int trait, int amount)
+          doc: |-
+              Removes a particular trait (trait) of a given type (trait_type) from a particular critter (who).
+
+        - name: critter_set_flee_state
+          detail: int critter_set_flee_state(ObjectPtr who, bool flee_on
+          doc: |-
+              Sets the FLEE flag on or off. This controls whether the critter flees during combat.
+
+        - name: critter_skill_level
+          detail: int critter_skill_level(ObjectPtr who, int skillNum)
+          doc: |-
+              Returns the current skill level of a particular object's (who) skill (skillNum).
+
+        - name: critter_state
+          detail: int critter_state(ObjectPtr who)
+          doc: |-
+              Returns the state of a given critter object (from combat data), used to determine if a critter is dead, unconscious, etc.
+
+        - name: critter_stop_attacking
+          detail: int critter_stop_attacking(ObjectPtr who)
+          doc: |-
+              Flags the critter object (who) as no longer wishing to be active in combat.
+
+        - name: cur_map_index
+          detail: int cur_map_index
+          doc: |-
+              Returns the index # of the current map, to be matched with the define-constant in define.h.
+
+        - name: cur_town
+          detail: int cur_town
+          doc: |-
+              Returns the index # of the current town, to be matched with the define-constant in define.h.
+
+        - name: days_since_visited
+          detail: int days_since_visited
+          doc: |-
+              Returns the number of days since this map was last visited, or (-1) if it has never been visited before.
+
+        - name: debug_msg
+          detail: void debug_msg(string text)
+          doc: |-
+              Prints a string to the debug monitor. Should be used exclusively for debug information, instead of display_msg()! The user will never see these messages unless they have debugging enabled and activated. If they have debugging enabled and DEBUGLOG set, the messages will only show up in debug.log file.
+
+        - name: destroy_mult_objs
+          detail: int destroy_mult_objs(ObjectPtr item, int count)
+          doc: |-
+              Destroys count number of instances of an item object. This function will figure out which inventory this item is in (if it isn't on the ground). If it is on the ground, of course, there is only one instance of this object, so only one will be destroyed.
+
+        - name: destroy_object
+          detail: int destroy_object(ObjectPtr obj)
+          doc: |-
+              Destroys an object (obj), which will call its script in the destroy_proc section if the object is *NOT* the calling object.
+
+        - name: dialogue_reaction
+          detail: void dialogue_reaction(int mood)
+          doc: |-
+              Set up a reaction animation in the dialogue system.
+
+        - name: dialogue_system_enter
+          detail: void dialogue_system_enter
+          doc: |-
+              Tells the dialog system that this object is requesting the talk system. This is used when the script wants to start dialog instead of waiting for the player to initiate it. The script will be called back in its talk_proc section.
+
+        - name: difficulty_level
+          detail: int difficulty_level
+          doc: |-
+              Returns the current Game difficulty level of the game (defined in the options screen).
+
+        - name: display_msg
+          detail: void display_msg(string message)
+          doc: |-
+              Displays a string on the in-game PDA display (lower-left hand corner).
+
+        - name: do_check
+          detail: int do_check(ObjectPtr who, int check, int modifier)
+          doc: |-
+              Do a check/test-roll versus one of the various basic traits (strength, perception, etc.). Note: these cannot generate Critical Success or Critical Failure as they are a basic X==Y check.
+
+        - name: drop_obj
+          detail: drop_obj(ObjectPtr obj)
+          doc: |-
+              Causes the critter self-object to remove a given object (obj) from it's inventory and place it on the ground at its hex. This animates the self_obj.
+
+        - name: drug_influence
+          detail: int drug_influence(ObjectPtr who)
+          doc: |-
+              Returns True if a given critter object (who) is currently under any drug influences, False otherwise.
+
+        - name: dude_obj
+          detail: ObjectPtr dude_obj
+          doc: |-
+              Returns a pointer to the dude object (the player).
+
+        - name: elevation
+          detail: int elevation(ObjectPtr obj)
+          doc: |-
+              Returns object's elevation
+
+        - name: end_dialogue
+          detail: void end_dialogue
+          doc: |-
+              Terminates the dialogue system.
+
+        - name: endgame_movie
+          detail: void endgame_movie
+          doc: |-
+              Plays the endgame movie.
+
+        - name: endgame_slideshow
+          detail: void endgame_slideshow
+          doc: |-
+              Plays the endgame slideshow. The slideshow will fade in to its palette, so it is proper to call gfade_out(1) and then expect this command to fix the palette for you.
+
+        - name: explosion
+          detail: int explosion
+          doc: |-
+              Sets up an explosion at a given tile number (where) on a given elevation, that will cause damage in a radius.
+
+        - name: fixed_param
+          detail: int fixed_param
+          doc: |-
+              Returns the value of the scripts fixed parameter. This is used with add_timer_event, for instance, to pass the info parameter back to the script.
+
+        - name: float_msg
+          detail: void float_msg(ObjectPtr who, string message, int type)
+          doc: |-
+              Attempts to create a floating-text message (str) attached to an object (who) using colors dictated by type. There are two special types, WARNING and SEQUENTIAL. WARNING is used to print a message centered on the screen (such as for end-of-quest notifications), and SEQUENTIAL will cycle through the colors, in an attempt to give critters different-colored messages to differentiate them.
+
+        - name: floor
+          detail: int floor(int/float value)
+          doc: |-
+              Works properly for positive values, but for negative ones functions like `ceil` (rounds up instead of down).
+          deprecated: Use `floor2` instead
+
+        - name: gSay_End
+          detail: void gSay_End(uint var_index)
+          doc: |-
+              Ends a dialog sequence, which will bring up the sequence (actually display it).
+
+        - name: gSay_Message
+          detail: void gSay_Message(int msg_list, int msg_num, int reaction)
+          doc: |-
+              Sets up a sayMessage, which is a reply with just a [Done] option. The msg_list determines which message file to look in, and the msg_num determines which line to use from the file.
+
+        - name: gSay_Option
+          detail: gSay_Option(int msg_list, int msg_num, procedure target,  int reaction)
+          doc: |-
+              Sets up an option-choice for a reply block, getting the string from the message file (msg_list) and message number (msg_num), which will cause a given reaction (reaction), and if chosen will jump to the given (target) procedure.
+
+        - name: gSay_Reply
+          detail: gSay_Reply(int msg_list, int msg_num)
+          doc: |-
+              Sets up a reply block (what the *CRITTER* says).
+
+        - name: gSay_Start
+          detail: void gSay_Start
+          doc: |-
+              Starts a new dialog sequence.
+
+        - name: game_ticks
+          detail: int game_ticks(int seconds)
+          doc: |-
+              Returns the number of game ticks equal to a given # of seconds.
+
+        - name: game_time
+          detail: int game_time
+          doc: |-
+              Returns the current game time in ticks.
+
+        - name: game_time_advance
+          detail: void game_time_advance(int amount)
+          doc: |-
+              Advances the current game time by (amount) ticks.
+
+        - name: game_time_hour
+          detail: int game_time_hour
+          doc: |-
+              Returns the current hour of the day in a normal format, but without the colon. For example, the current starting game time is 721 (which is 7:21 am).
+
+        - name: game_time_in_seconds
+          detail: int game_time_in_seconds
+          doc: |-
+              Returns the current game time in seconds (game_time / 10).
+
+        - name: game_ui_disable
+          detail: void game_ui_disable
+          doc: |-
+              Disables game user-interface input from the player (to ‘lock-out' the player). You *MUST* make sure to re-enable the UI at some point afterwards.
+
+        - name: game_ui_enable
+          detail: void game_ui_enable
+          doc: |-
+              Re-enables game user-interface input from the player. This *MUST* be called relatively soon after disabling the UI or the player will be stuck, unable to do anything.
+
+        - name: game_ui_is_disabled
+          detail: int game_ui_is_disabled
+          doc: |-
+              Returns True if the game UI is currently disabled (the player is currently ‘locked-out'), and False otherwise.
+
+        - name: gdialog_barter
+          detail: int gdialog_barter
+          doc: |-
+              Tells the dialog system to switch to the barter screen. (Sets the barter modifier to 0).
+
+        - name: gdialog_mod_barter
+          detail: int gdialog_mod_barter(int modifier)
+          doc: |-
+              Tells the dialog system to switch to the barter screen, using a given modifier (+/- percent).
+
+        - name: gdialog_set_barter_mod
+          detail: void gdialog_set_barter_mod(int modifier)
+          doc: |-
+              Sets the current modifier for barter to a given percentage (modifier). Used to make barter easier/harder, even if the player initiates barter (as opposed to the script starting it.)
+
+        - name: get_critter_stat
+          detail: int get_critter_stat(ObjectPtr who, int stat)
+          doc: |-
+              Returns the value of a desired attribute/stat in a critter object (who).
+
+        - name: get_day
+          detail: int get_day
+          doc: |-
+              Returns the current day of the month.
+
+        - name: get_month
+          detail: int get_month
+          doc: |-
+              Returns the current month of the year.
+
+        - name: get_pc_stat
+          detail: get_pc_stat(int pcStat)
+          doc: |-
+              Returns the value of a desired pc-only stat of the obj_dude. These are found in define.h all starting with 'PCSTAT_'.
+
+        - name: get_poison
+          detail: int get_poison(ObjectPtr who)
+          doc: |-
+              (Fallout 2 only) Returns the value of a given critters' (who) poison level.
+
+        - name: gfade_in
+          detail: void gfade_in(int time)
+          doc: |-
+              Does a palette fade to black. The time parameter is currently not actually used.
+
+        - name: gfade_out
+          detail: void gfade_out(int time)
+          doc: |-
+              Does a palette fade from black to the game palette. The time parameter is currently not actually used.
+
+        - name: giQ_Option
+          detail: void giQ_Option(int iq_test, int msg_list, int msg_num, procedure target, int reaction)
+          doc: |-
+              Sets up an option-choice for a reply block if the player's IQ statistic is equal to or greater than a given value (iq_test), getting the string from the message file (msg_list) and message number (msg_num), which will cause a given reaction (reaction), and if chosen will jump to the given (target) procedure.
+              This is the only function that automatically accounts for Smooth Talker perk.
+
+        - name: give_exp_points
+          detail: void give_exp_points
+          doc: |-
+              Adds experience points (points) to the player's total. These points may then be used by the player to enhance skills, etc.
+
+        - name: global_var
+          detail: int global_var(int var_index)
+          doc: |-
+              Returns the value of a global variable # (var_index).
+
+        - name: goto_xy
+          detail: void goto_xy(int map)
+          doc: |-
+              Unknown - moves the character to the specific map?
+
+        - name: has_skill
+          detail: int has_skill(ObjectPtr who, int skill)
+          doc: |-
+              Returns the level of the skill (0-17) of the target critter. (0 to 200 for Fallout 1), (0 to 300 for Fallout 2)
+
+        - name: has_trait
+          detail: int has_trait(int trait_type, ObjectPtr who, int trait
+          doc: |-
+              Returns the value of a given critter object's (who) trait of a given trait_type (see define.h). This can be used to determine if the player has a particular Perk, AI Packet, team num, current rotation, or Trait (finesse, bruiser, etc.).
+
+        - name: how_much
+          detail: int how_much(int val)
+          doc: |-
+              Returns the value of a completed skill vs. skill contest (how much the rolls differed by). This requires that you first call one of the contest roll commands, such as roll_vs_skill, skill_contest, etc.
+
+        # Source: sfall_script_editor opcodes.txt full signature + short description;
+        # also recognized by sslc extra.c with arity 3 and referenced by RP/sfall header macros.
+        - name: inven_cmds
+          detail: ObjectPtr inven_cmds(ObjectPtr who, int inven_cmd, int slotNum)
+          doc: |-
+              Returns a pointer to the object in the inventory.
+
+        - name: inven_count
+          detail: int inven_count(ObjectPtr what)
+          doc: |-
+              Returns the count of how many inventory slots are filled on a given object (what).
+
+        - name: inven_ptr
+          detail: ObjectPtr inven(ObjectPtr what, int slotNum)
+          doc: |-
+              Returns a pointer to the object in slot # (slotNum) in a given object (what).
+
+        - name: inven_unwield
+          detail: void inven_unwield(ObjectPtr who)
+          doc: |-
+              Attempts to cause a critter to unwield any wielded weapons/items. If animations are currently disabled, it will just instantly change the art.
+
+        - name: is_critical
+          detail: bool is_critical(int rollResult)
+          doc: |-
+              Returns `True` if a given contest roll result is a critical result, otherwise `False`.
+
+        - name: is_loading_game
+          detail: bool is_loading_game
+          doc: |-
+              Returns True if the game is currently loading, False otherwise. This is used so that bad things don't happen on game load because a script is doing map_enter setup stuff.
+
+        - name: is_skill_tagged
+          detail: bool is_skill_tagged(int skillNum)
+          doc: |-
+              Returns True if a given skill is tagged.
+
+        - name: is_success
+          detail: int is_success(int rollResult)
+          doc: |-
+              Return `True` if a given contest roll result value is a success (including critical success), otherwise `False`.
+
+        - name: item_caps_adjust
+          detail: int item_caps_adjust(ObjectPtr obj, int amount)
+          doc: |-
+              Modifies the current caps count in an object (obj) by a given amount (amount). Can be positive or negative.
+
+        - name: item_caps_total
+          detail: int item_caps_total(ObjectPtr obj)
+          doc: |-
+              Returns the current caps total in a given object's (obj) inventory.
+
+        - name: jam_lock
+          detail: int jam_lock(ObjectPtr lockableObj)
+          doc: |-
+              Jams a lock, which prevents the player from picking the lock for approximately 24 hours. Meant to be used when a player critically fails to pick a lock.
+
+        - name: kill_critter
+          detail: void kill_critter(ObjectPtr who, int death_frame)
+          doc: |-
+              Kills a critter (obj) outright, placing it in the chosen death frame. Note: this does NOT animate the critter, and does NOT refresh the screen! It is meant to be used in scripts run when entering/exiting a map (map_init/map_exit).
+
+        - name: kill_critter_type
+          detail: void kill_critter_type(int pid)
+          doc: |-
+              Kills all critters of a given type (pid) outright. NOTE: This can result in the 'frozen bodies' issue! kill_critter should always be used instead if possible, for this reason. Frozen bodies causes no actual gameplay issues, but it looks unrealistic and ridiculous.
+
+        - name: language_filter_is_on
+          detail: bool language_filter_is_on
+          doc: |-
+              Returns True if the language filter is currently filtering harsh language, False otherwise.
+
+        - name: load_map
+          detail: void load_map(string map_name, int start_location)
+          doc: |-
+              Loads a new map (map_name), removing all scripts currently running and passing on the entrance location (start_location) to the new map's map_init script. Can also use the number representing the map in the map list (for example, between 0 to 64 in Fallout 1)
+
+        - name: local_var
+          detail: int local_var(uint var_index)
+          doc: |-
+              Returns the value of a local variable of given index # (var_index). If the user is not allowed local vars up to this number in the list of critters, this can generate errors.
+
+        - name: map_first_run
+          detail: bool map_first_run
+          doc: |-
+              Returns True if the current map is being run for the first time (in other words, this map was not loaded from a save-game).
+
+        - name: map_is_known
+          detail: bool map_is_known(int mapIndex)
+          doc: |-
+              Returns True if a given map index is known, False otherwise.
+
+        - name: map_known
+          detail: bool map_known(int mapNum)
+          doc: |-
+              Returns True if a given map # (mapNum) is known, False otherwise.
+
+        - name: map_var
+          detail: int map_var(uint var_index)
+          doc: |-
+              Returns the value of a map-global variable of a given index # (var_index).
+
+        # Source: existing commented data; also recognized by sslc extra.c with arity 0.
+        # No-op stub in the engine. Keep commented out.
+        # - name: make_daytime
+        #   detail: void make_daytime()
+        #   doc: |-
+        #     No-op stub in the engine. Does nothing when called.
+        - name: mark_area_known
+          detail: void mark_area_known(int areaType, int areaIndex, int known)
+          doc: |-
+              Marks a town area or map location on the world map. The areaType parameter selects whether to mark by area (MARK_TYPE_TOWN) or by map index (MARK_TYPE_MAP). The areaIndex identifies the area or map, and known sets the state (MARK_STATE_KNOWN or MARK_STATE_VISITED).
+
+        - name: message_str
+          detail: char* message_str(int list, int msg_num)
+          doc: |-
+              Returns a string from the message module for a given list and a given # (msg_num).
+
+        - name: metarule
+          detail: int metarule(int rule, int param)
+          doc: |-
+              General engine query function supporting ~27 different rules. The rule parameter selects the operation (e.g. METARULE_SIGNAL_END_GAME, METARULE_TEST_FIRSTRUN, METARULE_IS_LOADGAME, METARULE_PARTY_COUNT, etc.), and param provides additional data for that rule. Returns an integer result depending on the rule.
+
+        - name: metarule3
+          detail: int metarule3(int rule, int param1, int param2, int param3)
+          doc: |-
+              Extended engine query function supporting ~12 rules that require multiple parameters. Used for operations like clearing timed events (METARULE3_CLR_FIXED_TIMED_EVENTS), querying kill counts (METARULE3_KILL_COUNT), worldmap subtile operations, and critter iteration.
+
+        - name: move_obj_inven_to_obj
+          detail: move_obj_inven_to_obj(ObjectPtr srcObj, ObjectPtr destObj)
+          doc: |-
+              Moves an object's (srcObj) entire inventory into another object's (destObj) inventory.
+
+        - name: move_to
+          detail: int move_to(ObjectPtr obj, int tile_num, int elev)
+          doc: |-
+              Immediately moves object `obj` to the given tile number and elevation (0-2) on the current map.
+              Using this to change elevations during loading an in-combat save will lead to a crash. If `move_to` called in `map_enter_p_proc`, wrap in `not_is_loading_game` to avoid the crash.
+
+        - name: obj_art_fid
+          detail: int obj_art_fid(ObjectPtr obj)
+          doc: |-
+              Returns the fid # (used to index art) of a given object (obj).
+
+        - name: obj_being_used_with
+          detail: ObjectPtr obj_being_used_with
+          doc: |-
+              Returns a pointer to the object being used on another object.
+
+        - name: obj_can_hear_obj
+          detail: bool obj_can_hear_obj(ObjectPtr src_obj, ObjectPtr dst_obj)
+          doc: |-
+              Returns True if the source object (src_obj) is capable of hearing the destination object (dst_obj). This includes distance factors, current activity (standing/walking/running), and skill use (stealth/etc.).
+
+        - name: obj_can_see_obj
+          detail: bool obj_can_see_obj(ObjectPtr src_obj, ObjectPtr dst_obj)
+          doc: |-
+              Returns True if the source object (src_obj) has line-of-sight (LOS) with the destination object (dst_obj). This also takes into account perception & stealth rolls of the objects are critters.
+
+        - name: obj_carrying_pid_obj
+          detail: ObjectPtr obj_carrying_pid_obj(ObjectPtr who, int pid)
+          doc: |-
+              Returns an Object pointer to an instance of an object of type pid if an object (who) is carrying an object of that type.
+
+        - name: obj_close
+          detail: void obj_close(ObjectPtr what)
+          doc: |-
+              Attempts to close a given object (what) if it is of an openable type.
+
+        - name: obj_drop_everything
+          detail: void obj_drop_everything(ObjectPtr who)
+          doc: |-
+              Causes a critter object (who) to drop all objects in it's inventory and drop it on the ground at its feet.
+
+        - name: obj_is_carrying_obj_pid
+          detail: int obj_is_carrying_obj_pid(ObjectPtr obj, in pid)
+          doc: |-
+              Returns the quantity of objects with matching prototype index #'s (pid) carried in the inventory of another object (obj).
+
+        - name: obj_is_locked
+          detail: bool obj_is_locked(ObjectPtr what)
+          doc: |-
+              Returns True if a given object (what) is a locked object, False if it is unlocked or not a lockable object.
+
+        - name: obj_is_open
+          detail: bool obj_is_open(ObjectPtr what)
+          doc: |-
+              Returns True if a given object (what) is an open object, False if it is closed or not an openable object.
+
+        - name: obj_is_visible_flag
+          detail: bool obj_is_visible_flag(ObjectPtr who)
+          doc: |-
+              (Fallout 2 only) Returns True if a given object (who) is turned on (visible), False otherwise.
+
+        - name: obj_item_subtype
+          detail: int obj_item_subtype(ObjectPtr item_obj)
+          doc: |-
+              Returns the subtype of an object of type 'item'. Examples would be food, armor, weapons, etc.
+
+        - name: obj_lock
+          detail: void obj_lock(ObjectPtr what)
+          doc: |-
+              Attempts to lock a given object (what) if it is of a lockable type.
+
+        - name: obj_name
+          detail: string obj_name(ObjectPtr obj)
+          doc: |-
+              Returns a string representing the name of the given object (what).
+
+        - name: obj_on_screen
+          detail: bool obj_on_screen(ObjectPtr what)
+          doc: |-
+              Returns True if a given object (what) is currently being drawn on-screen, False if it is not.
+
+        - name: obj_open
+          detail: void obj_open(ObjectPtr what)
+          doc: |-
+              Attempts to open a given object (what) if it is of an openable type.
+
+        - name: obj_pid
+          detail: int obj_pid(ObjectPtr obj)
+          doc: |-
+              Returns the prototype id # (pid) of an object (obj).
+
+        - name: obj_set_light_level
+          detail: void obj_set_light_level(ObjectPtr obj, int intensity, int distance)
+          doc: |-
+              Set the light level for an object to a given intensity (0-100, percentage of possible maximum intensity), and distance of light in hexes (0-8).
+
+        - name: obj_type
+          detail: int obj_type(ObjectPtr obj)
+          doc: |-
+              Returns the type of an object (obj). This would be ‘Item', ‘Wall', ‘Scenery', etc.
+
+        - name: obj_unlock
+          detail: void obj_unlock(ObjectPtr what)
+          doc: |-
+              Attempts to unlock a given object (what) if it is of a lockable type.
+
+        - name: override_map_start
+          detail: void override_map_start(int x, int y, int elev, int rot)
+          doc: |-
+              Used when loading a new map, this forces the player (obj_dude) to start at a particular location (x/y), elevation (0-2) and rotation (0-5) when first coming up.
+
+        - name: party_add
+          detail: void party_add(ObjectPtr who)
+          doc: |-
+              Adds a given critter (who) into the list of party members. This will also setup those objects so that they will not be saved in maps, and certain other things.
+
+        - name: party_member_count
+          detail: int party_member_count(bool countHidden)
+          doc: |-
+              Returns the count of the currently in-party party members. (countHidden) determines whether or not to count the hidden members (hangers-on).
+
+        - name: party_member_obj
+          detail: ObjectPtr party_member_obj(int pid)
+          doc: |-
+              Returns an ObjectPtr to a party member that matches a given pid. If that critter isn't currently a member of the party, then it will return NULL.
+
+        - name: party_remove
+          detail: void party_remove(ObjectPtr who)
+          doc: |-
+              Removes a given critter (who) from the list of party members. This will also change those objects so that certain object- and map-level things will respond differently to them.
+
+        - name: pickup_obj
+          detail: void pickup_obj(ObjectPtr obj)
+          doc: |-
+              Causes the critter self-object to animate and attempt to pick up a given object (obj). If used in regard to a critter, this flag is pinged when a steal detect fails. In other words when detected stealing, pickup_obj is called for the person you were stealing from.
+
+        - name: play_gmovie
+          detail: void play_gmovie(int movieNum)
+          doc: |-
+              Plays one of the Fallout movies (full-screen, compressed, etc.).
+
+        - name: play_sfx
+          detail: play_sfx (string sfxFileName)
+          doc: |-
+              Starts a new sound effect to be played on the queue.
+
+        - name: poison
+          detail: void poison(ObjectPtr who, int amount)
+          doc: |-
+              Modifies the critter's poison level by a given amount, which can be negative
+
+        - name: proto_data
+          detail: int proto_data(int pid, int data_member)
+          doc: |-
+              Returns the value (can be int or string) of a data-member of a given prototype (pid).
+
+        - name: radiation_dec
+          detail: void radiation_dec(ObjectPtr who, int amount)
+          doc: |-
+              Decrements a critter's radiation counter by a given amount. NOTE: This should only be done to the player (obj_dude) in Fallout due to design restrictions!
+
+        - name: radiation_inc
+          detail: void radiation_inc(ObjectPtr who, int amount)
+          doc: |-
+              Increments a critter's radiation counter by a given amount. NOTE: This should only be done to the player (obj_dude) in Fallout due to design restrictions!
+
+        - name: random
+          detail: int random(int min, int max)
+          doc: |-
+              Returns a random value between (min) and (max), inclusive.
+
+        # Source: sslc extra.c only. Compiler-recognized token with arity 3; no reliable user-facing docs found.
+        # - name: reaction
+        #   detail: int reaction(?, ?, ?)
+
+        - name: reaction_influence
+          detail: int reaction_influence(int param1, int param2, int param3)
+          doc: |-
+              Influences NPC reaction level. Returns the result of the internal reaction influence calculation.
+
+        - name: reg_anim_animate
+          detail: void reg_anim_animate(ObjectPtr what, int anim, int delay)
+          doc: |-
+              Adds a single, in-place animation on an object (what) to an animation sequence-list, at a given delay from the previous animation (delay should always be -1)!
+
+        - name: reg_anim_animate_forever
+          detail: void reg_anim_animate_forever(ObjectPtr what, int anim, int delay)
+          doc: |-
+              Adds a single, in-place animation on an object (what) to an animation sequence-list, at a given delay from the previous animation (delay should always be -1)! This animation will animate continuously until something in the system interrupts it. To be used *very* sparingly, for instance Gizmo's sign and the ‘pray' signs in the children of the cathedral (which will have to be toned down).
+
+        - name: reg_anim_animate_reverse
+          detail: void reg_anim_animate_reverse(ObjectPtr what, int anim, int delay)
+          doc: |-
+              Adds a single, in-place reversed animation on an object (what) to an animation sequence-list, at a given delay from the previous animation (delay should always be -1)! reg_anim_begin void Anim Tells the system to start an animation sequence-list.
+
+        - name: reg_anim_begin
+          detail: void reg_anim_begin
+          doc: |-
+              Starts an animation registration sequence. All animation registrations (reg_anim_animate, reg_anim_obj_move_to_tile, etc.) must be placed between reg_anim_begin and reg_anim_end calls.
+
+        - name: reg_anim_clear
+          detail: void reg_anim_clear(ObjectPtr object)
+          doc: |-
+              Terminates all animations that are currently registered for a given object.
+
+        - name: reg_anim_end
+          detail: void reg_anim_end
+          doc: |-
+              Activates the animation sequence-list. Without this call the animation will never occur. Note: All animation sequences must be registered at ONCE! In other words, you cannot let the script end and finish registering the animations later.
+
+        # Source: sfall_script_editor opcodes.txt full signature + short description;
+        # also recognized by sslc extra.c with arity 2 and used by RP animation helper macros.
+        - name: reg_anim_func
+          detail: void reg_anim_func(int par1, int par2)
+          doc: |-
+              Works with a list of animations.
+
+        - name: reg_anim_obj_move_to_obj
+          detail: void reg_anim_obj_move_to_obj(ObjectPtr who, ObjectPtr dest_obj, int delay)
+          doc: |-
+              Adds an animation to cause a critter object (who) to attempt to walk to another object (dest_obj) at a given delay from the previous animation (delay should always be -1)!
+
+        - name: reg_anim_obj_move_to_tile
+          detail: void reg_anim_obj_move_to_tile(ObjectPtr who, int dest_tile, int delay)
+          doc: |-
+              Adds an animation to cause a critter object (who) to attempt to walk to a given destination tile number (dest_tile) at a given delay from the previous animation (delay should always be -1)!
+
+        - name: reg_anim_obj_run_to_obj
+          detail: void reg_anim_obj_run_to_obj(ObjectPtr who, ObjectPtr dest_obj, int delay)
+          doc: |-
+              Adds an animation to cause a critter object (who) to attempt to run to another object (dest_obj) at a given delay from the previous animation (delay should always be -1)!
+
+        - name: reg_anim_obj_run_to_tile
+          detail: void reg_anim_obj_run_to_tile(ObjectPtr who, int dest_tile, int delay)
+          doc: |-
+              Adds an animation to cause a critter object (who) to attempt to run to a given destination tile number (dest_tile) at a given delay from the previous animation (delay should always be -1)!
+
+        - name: reg_anim_play_sfx
+          detail: void reg_anim_play_sfx(ObjectPtr who, string sfx_name, int delay)
+          doc: |-
+              Adds an animation to cause an object (who) to attempt to play a given sound effect (sfx_name) at a given delay from the previous animation.
+
+        - name: rm_fixed_timer_event
+          detail: void rm_fixed_timer_event(ObjectPtr who, int fixed_val)
+          doc: |-
+              Removes (clears) all timer events hooked to a given object's (obj) script that have a given fixed_value (fixed_val).
+
+        - name: rm_mult_objs_from_inven
+          detail: int rm_mult_objs_from_inven(ObjectPtr who, ObjectPtr obj, int count)
+          doc: |-
+              Removes (count) instances of an object (obj) from another object's (who's) inventory. Note: this leaves the removed object in at location (0,1) on the map! You must call move_to(...) to place it back on the map. NOTE: This function returns the actual count that was removed (if you attempted to remove more instances than existed). You *MUST* store this value in a variable (though you don't have to actually do anything with it).
+
+        - name: rm_obj_from_inven
+          detail: void rm_obj_from_inven(ObjectPtr who, ObjectPtr obj)
+          doc: |-
+              Removes an object (obj) from another object's (who's) inventory. NOTE: this leaves the removed object in at location (0,1) on the map! You must call move_to(...) to place it back on the map.
+
+        - name: rm_timer_event
+          detail: void rm_timer_event(ObjectPtr obj)
+          doc: |-
+              Removes (clears) all timer events hooked to a given object's (obj) script.
+
+        - name: roll_dice
+          detail: Critter roll_dice(obj Critter, int skill)
+          doc: |-
+              Returns the value of the completed dice roll. NOTE: Avellone says this is unimplemented.
+
+        - name: roll_vs_skill
+          detail: int roll_vs_skill(ObjectPtr who, int skill, int modifier)
+          doc: |-
+              Returns the value of a completed skill roll made upon an object's (who's) skill level with a given skill, and modified by a given amount (may be zero). This value may then be passed to is_success and is_critical to determine the appropriate states, and the how_much call can be used to determine the difference succeeded or failed by.
+
+        - name: rotation_to_tile
+          detail: int rotation_to_tile(int srcTile, int destTile)
+          doc: |-
+              Returns the rotation (0...5) to face a particular tile (destTile) from a particular tile (srcTile).
+
+        - name: running_burning_guy
+          detail: int running_burning_guy
+          doc: |-
+              Returns the setting for the running-burning-guy in the game (defined in the options screen).
+
+        - name: scr_return
+          detail: void scr_return
+          doc: |-
+              Sets the return value for a scripts C-engine node, to be used by C code.
+
+        - name: script_action
+          detail: int script_action
+          doc: |-
+              Returns the action that has activated this script. Examples include requests for the description of an object (description_proc), notifications of a spatial script being activated by something hitting its boundary (spatial_proc), or a critter being given its heartbeat (critter_proc, in other words being told to move).
+
+        - name: script_overrides
+          detail: void script_overrides
+          doc: |-
+              Tells the C-engine that the script will override default behavior for the object. What this means is that the C-engine will not attempt to do things that it would normally do, in expectation that the script will handle those things itself. This is an IMPORTANT command! It is commonly used for the general player actions upon objects, such as looking at them (requesting a description), using them (opening doors, for example), or using items ON them (using a picklock or a key on a door lock).
+
+        - name: self_obj
+          detail: ObjectPtr self_obj
+          doc: |-
+              Returns a pointer to the object connected to this script.
+
+        - name: set_critter_stat
+          detail: int set_critter_stat(ObjectPtr who, int stat, int mod)
+          doc: |-
+              DOES NOT SET THE STAT.
+
+              **Modifies** attribute `stat` in critter `who` by value `mod`.
+
+        - name: set_exit_grids
+          detail: void set_exit_grids(elevation markElev, int mapID, int elevation, int tileNum, int rotation)
+          doc: |-
+              Sets all exit grids on a given elevation (markElev) to point to a destination mapID (may be -1 which means stay on this map), elevation, tileNum, and rotation.
+
+        - name: set_global_var
+          detail: void set_global_var(uint var_index, int value)
+          doc: |-
+              Sets the value of a global variable (var_index) to a given (value).
+
+        - name: set_light_level
+          detail: void set_light_level(int level).
+          doc: |-
+              Sets the ambient light level (1-100). The range is Full Darkness to Full Daylight. NOTE: level is NOT percentange, full darkness is not black screen. set_light_level(0) actually corresponds to 25% brightness, and as level increases, brightness makes 2 huge jumps in the middle (49-51). Thus, certain brightness levels simply cannot be set.
+
+        - name: set_local_var
+          detail: void set_local_var(uint var_index, int value)
+          doc: |-
+              Sets the value of a local variable (var_index) to a given (value).
+
+        - name: set_map_music
+          detail: void set_map_music(int mapID, string sound_path);
+          doc: |-
+              Sets the map background music to the sound file at path.
+
+        - name: set_map_start
+          detail: void set_map_start(int x, int y, int elev, int rot)
+          doc: |-
+              Sets the start location & rotation (0-5) for the next time this map is entered (loaded & run).
+
+        - name: set_map_var
+          detail: void set_map_var(uint var_index, int value)
+          doc: |-
+              Sets the value of a map-global variable (var_index) to a given (value).
+
+        - name: set_obj_visibility
+          detail: void set_obj_visibility(ObjectPtr obj, bool visibility)
+          doc: |-
+              Sets the `OBJ_OFF` flag for an object (makes it not drawn).
+              Notes:
+                - Visibility arg is _inverted_: `set_obj_visibility(who, true)` makes object invisible.
+                - Does not work when loading game.
+
+        - name: sfx_build_ambient_name
+          detail: string sfx_build_ambient_name(int ambientType, int ambientSubtype)
+          doc: |-
+              Constructs and returns a sound effect filename for ambient sounds based on the type and subtype parameters.
+
+        - name: sfx_build_char_name
+          detail: string sfx_build_char_name(int charType, int animType, int animFrame)
+          doc: |-
+              Constructs and returns a sound effect filename for character animations based on character type, animation type, and frame.
+
+        - name: sfx_build_interface_name
+          detail: string sfx_build_interface_name(int interfaceId, int actionType)
+          doc: |-
+              Constructs and returns a sound effect filename for interface interactions based on interface ID and action type.
+
+        - name: sfx_build_item_name
+          detail: string sfx_build_item_name(int itemType, int actionType, int itemVariant)
+          doc: |-
+              Constructs and returns a sound effect filename for item interactions based on item type, action type, and variant.
+
+        - name: sfx_build_open_name
+          detail: string sfx_build_open_name(int openType, int actionType)
+          doc: |-
+              Constructs and returns a sound effect filename for opening/closing interactions based on type and action.
+
+        - name: sfx_build_scenery_name
+          detail: string sfx_build_scenery_name(int sceneryType, int actionType, int sceneryVariant)
+          doc: |-
+              Constructs and returns a sound effect filename for scenery interactions based on scenery type, action type, and variant.
+
+        - name: sfx_build_weapon_name
+          detail: string sfx_build_weapon_name(int weaponType, int actionType, int range, int hit)
+          doc: |-
+              Constructs and returns a sound effect filename for weapon fire and impact sounds based on weapon type, action type, range, and hit parameters.
+
+        - name: signal_end_game
+          detail: void signal_end_game
+          doc: |-
+              Tells the system that a script is indicating the game should be ended. This will return the player to the main-menu.
+
+        - name: skill_contest
+          detail: int skill_contest(int skill)
+          doc: |-
+              (Fallout 2 only) Returns the value of a completed skill vs skill contest (to run through is_success & is_critical).
+
+        - name: source_obj
+          detail: ObjectPtr source_obj
+          doc: |-
+              Returns a pointer to the source object (activator) for this action. The source object for a pickup_proc (pickup an object script_action) would be the critter picking the object up, for instance.
+
+        # https://github.com/sfall-team/sfall/blob/a89e6723552c39a4522c8572260f1ca1ec3cc924/artifacts/ddraw.ini#L733
+        # https://github.com/alexbatalov/fallout2-ce/blob/31afb4d56817a7473c949aafd9070bd3a26a9d7b/src/interpreter_extra.cc#L1897
+        - name: start_gdialog
+          detail: void start_gdialog(int msgFileNum, ObjectPtr who, int mood, int headNum, int backgroundIdx)
+          doc: |-
+              Start the dialogue system focusing on a critter `who` and in a given `mood`.
+              This call sets up the appropriate dialog windows, head art, etc.
+              If this call is not made before the normal dialog calls (`sayReply`, `sayMessage`, `sayOption`, etc.) then the dialog windows will not come up, and only grey boxes will appear with the text.
+
+              `mood` argument is unused in vanilla. Instead, the function checks LVAR 0 of the script:
+              - `LVAR > 10` - good reaction (happy head).
+              - `-10 > LVAR >= 10` - neutral.
+              - Else, angry head.
+
+              If sfall is installed, and `StartGDialogFix` is enabled, argument `mood` does work:
+              - If `mood == -1`, use vanilla behaviour (check LVAR 0).
+              - Else, use argument value. Same thresholds apply.
+
+        - name: target_obj
+          detail: ObjectPtr target_obj
+          doc: |-
+              Returns a pointer to the target object for this action. The target object is what is being acted upon.
+
+        - name: terminate_combat
+          detail: void terminate_combat
+          doc: |-
+              Combat Tells the combat system to terminate prematurely. USE WITH CAUTION. This doesn't prevent another (or even the SAME) script from re-starting combat, so make sure you turn off any hostile flags, etc.
+
+        - name: tile_contains_obj_pid
+          detail: bool tile_contains_obj_pid(int tile, int elev, int pid)
+          doc: |-
+              Returns True if a particular tile contains an object with a matching prototype index # (obj pid).
+
+        - name: tile_contains_pid_obj
+          detail: ObjectPtr tile_contains_pid_obj(int tile, int elev, int pid)
+          doc: |-
+              Returns a pointer to the first object that matches a particular pid # that is on a particular tile and elevation.
+
+        - name: tile_distance
+          detail: int tile_distance(int tile1, int tile2)
+          doc: |-
+              Returns the tile distance between two tile #'s
+
+        - name: tile_distance_objs
+          detail: int tile_distance_objs(ObjectPtr obj1, ObjectPtr obj2)
+          doc: |-
+              Returns the tile distance between two objects (between their tile #'s).
+
+        - name: tile_in_tile_rect
+          detail: int tile_in_tile_rect(int tile1, int tile2, int tile3, int tile4, int tile5)
+          doc: |-
+              Tests whether a tile falls within a rectangular region defined by the coordinate parameters. Returns 1 if the tile is inside the rectangle, 0 otherwise.
+
+        - name: tile_is_visible
+          detail: bool tile_is_visible(int tile)
+          doc: |-
+              Returns True if a given hex (tile) is currently visible, i.e. an object on it could conceivably be displayed on-screen. This includes hexes that may technically have bases that are off-screen, but on whom objects could exist that would bound into the actual display area.
+
+        - name: tile_num
+          detail: int tile_num(ObjectPtr obj)
+          doc: |-
+              Returns the tile number of object (obj).
+
+        - name: tile_num_in_direction
+          detail: int tile_num_in_direction(int start_tile, int direction, int distance)
+          doc: |-
+              Returns the tile number of a tile offset from a starting tile in a given direction (0-5, the next tile in that direction).
+
+        - name: tokenize
+          detail: void tokenize(string str, string delimiter, int prevToken)
+          doc: |-
+              Extracts the next token from a string using the given delimiter character. The prevToken parameter tracks position across successive calls to iterate through all tokens.
+
+        - name: town_known
+          detail: bool town_known(int townArea)
+          doc: |-
+              Returns True if a given town area (townArea) is known, False otherwise.
+
+        - name: town_map
+          detail: void town_map
+          doc: |-
+              (Fallout 1 only) Sends a request for the game engine to bring up the Town Map screen, for the player to go to different locations in an area (different areas in Vault13, for example).
+
+        # Source: sslc extra.c only. Compiler-recognized token with arity 4; no reliable user-facing docs found.
+        # - name: turn_off_objs_in_area
+        #   detail: void turn_off_objs_in_area(?, ?, ?, ?)
+
+        # Source: sslc extra.c only. Compiler-recognized token with arity 4; no reliable user-facing docs found.
+        # - name: turn_on_objs_in_area
+        #   detail: void turn_on_objs_in_area(?, ?, ?, ?)
+
+        - name: use_obj
+          detail: void use_obj(ObjectPtr obj)
+          doc: |-
+              Use a usable object
+
+        - name: use_obj_on_obj
+          detail: ObjectPtr use_obj_on_obj(ObjectPtr item, ObjectPtr targetObj)
+          doc: |-
+              Attempt to use an item object on a target object (targetObj). This could be used to have a critter use a Stimpack on the player, for instance, or to use a key on a door.
+
+        - name: using_skill
+          detail: bool using_skill(ObjectPtr who, int skill)
+          doc: |-
+              Returns True if an active skill is being used, False otherwise. Examples of active skills are Stealth and First Aid.
+
+        - name: violence_level_setting
+          detail: int violence_level_setting
+          doc: |-
+              (Fallout 2 only) Returns the current setting of the violence level. See define.h for values.
+
+        - name: wield_obj
+          detail: void wield_obj(ObjectPtr obj)
+          doc: |-
+              Sets up an animation causing a critter (self_obj) to wield an object (obj) in that critters' inventory. This puts that object in the critter's hand.
+
+        - name: wield_obj_critter
+          detail: void wield_obj_critter(ObjectPtr who, ObjectPtr obj)
+          doc: |-
+              Sets up an animation causing a critter (who) to wield an object (obj) in that critters' inventory. This puts that object in the critter's hand.
+
+        - name: wm_area_set_pos
+          detail: void wm_area_set_pos(int areaIdx, int xPos, int yPos)
+          doc: |-
+              Sets the World Map coordinates for a given area/town (areaIdx) to a given x and y position.
+
+        - name: world_map
+          detail: void world_map
+          doc: |-
+              Sends a request for the game engine to bring up the World Map screen, for the player to move around to different locations.
+
+        - name: world_map_x_pos
+          detail: int world_map_x_pos
+          doc: |-
+              Returns the current X position of the party on the World Map.
+
+        - name: world_map_y_pos
+          detail: int world_map_y_pos
+          doc: |-
+              Returns the current Y position of the party on the World Map.
 
 engine_procedures:
-  type: 3 # function
-  items:
-    - name: barter_init_p_proc
-      detail: void barter_init_p_proc
-      doc: |-
-        Called when the barter screen is initialized.
+    type: 3 # function
+    items:
+        - name: barter_init_p_proc
+          detail: void barter_init_p_proc
+          doc: |-
+              Called when the barter screen is initialized.
 
-    - name: barter_p_proc
-      detail: void barter_p_proc
-      doc: |-
-        Called when the player initiates bartering with the critter.
+        - name: barter_p_proc
+          detail: void barter_p_proc
+          doc: |-
+              Called when the player initiates bartering with the critter.
 
-    - name: combat_is_over_p_proc
-      detail: void combat_is_over_p_proc
-      doc: |-
-        Called every time before combat ends.
+        - name: combat_is_over_p_proc
+          detail: void combat_is_over_p_proc
+          doc: |-
+              Called every time before combat ends.
 
-    - name: combat_is_starting_p_proc
-      detail: void combat_is_starting_p_proc
-      doc: |-
-        Called every time before the start of combat.
+        - name: combat_is_starting_p_proc
+          detail: void combat_is_starting_p_proc
+          doc: |-
+              Called every time before the start of combat.
 
-    - name: combat_p_proc
-      detail: void combat_p_proc
-      doc: |-
-        Called in combat (every turn?). The specific combat event number is passed via `fixed_param`.
+        - name: combat_p_proc
+          detail: void combat_p_proc
+          doc: |-
+              Called in combat (every turn?). The specific combat event number is passed via `fixed_param`.
 
-    - name: create_p_proc
-      detail: void create_p_proc
-      doc: |-
-        Called when the object is first created on the map.
+        - name: create_p_proc
+          detail: void create_p_proc
+          doc: |-
+              Called when the object is first created on the map.
 
-    - name: critter_p_proc
-      detail: void critter_p_proc
-      doc: |-
-        This procedure is called every "heartbeat", which means it's run ten times each second, except during combat.
-        Note: if this procedure is not present in the script, errors can occur, and the first encountered procedure may be treated as this handler.
+        - name: critter_p_proc
+          detail: void critter_p_proc
+          doc: |-
+              This procedure is called every "heartbeat", which means it's run ten times each second, except during combat.
+              Note: if this procedure is not present in the script, errors can occur, and the first encountered procedure may be treated as this handler.
 
-    - name: damage_p_proc
-      detail: void damage_p_proc
-      doc: |-
-        Called when the critter takes damage. The amount of damage received is passed via `fixed_param`.
-        Note: not called if the damage is fully absorbed by armor.
+        - name: damage_p_proc
+          detail: void damage_p_proc
+          doc: |-
+              Called when the critter takes damage. The amount of damage received is passed via `fixed_param`.
+              Note: not called if the damage is fully absorbed by armor.
 
-    - name: description_p_proc
-      detail: void description_p_proc
-      doc: |-
-        Called when the player inspects the object (binoculars). By default, the description from the prototype object is shown.
-        Note: must use `script_overrides` to prevent simultaneous execution with the default description.
+        - name: description_p_proc
+          detail: void description_p_proc
+          doc: |-
+              Called when the player inspects the object (binoculars). By default, the description from the prototype object is shown.
+              Note: must use `script_overrides` to prevent simultaneous execution with the default description.
 
-    - name: destroy_p_proc
-      detail: void destroy_p_proc
-      doc: |-
-        Called on death of the critter or destruction of the object (except when using `destroy_object(self_obj)`).
+        - name: destroy_p_proc
+          detail: void destroy_p_proc
+          doc: |-
+              Called on death of the critter or destruction of the object (except when using `destroy_object(self_obj)`).
 
-    - name: drop_p_proc
-      detail: void drop_p_proc
-      doc: |-
-        Called when the self-object is dropped to the ground.
+        - name: drop_p_proc
+          detail: void drop_p_proc
+          doc: |-
+              Called when the self-object is dropped to the ground.
 
-    - name: is_dropping_p_proc
-      detail: void is_dropping_p_proc
-      doc: |-
-        Called when trying to drop an object.
+        - name: is_dropping_p_proc
+          detail: void is_dropping_p_proc
+          doc: |-
+              Called when trying to drop an object.
 
-    - name: look_at_p_proc
-      detail: void look_at_p_proc
-      doc: |-
-        Called when the player passes the cursor over any object. By default, the prototype name of the object is displayed.
-        Note: must use `script_overrides` to prevent simultaneous execution with the default name display.
+        - name: look_at_p_proc
+          detail: void look_at_p_proc
+          doc: |-
+              Called when the player passes the cursor over any object. By default, the prototype name of the object is displayed.
+              Note: must use `script_overrides` to prevent simultaneous execution with the default name display.
 
-    - name: map_enter_p_proc
-      detail: void map_enter_p_proc
-      doc: |-
-        Called once by the engine each time the map is entered from another map. It is not run when the elevation is changed.
+        - name: map_enter_p_proc
+          detail: void map_enter_p_proc
+          doc: |-
+              Called once by the engine each time the map is entered from another map. It is not run when the elevation is changed.
 
-    - name: map_exit_p_proc
-      detail: void map_exit_p_proc
-      doc: |-
-        Called when the player leaves the map.
+        - name: map_exit_p_proc
+          detail: void map_exit_p_proc
+          doc: |-
+              Called when the player leaves the map.
 
-    - name: map_update_p_proc
-      detail: void map_update_p_proc
-      doc: |-
-        Called every 250 game ticks (1 tick = 1/10 second, so roughly every 25 seconds). It is also called each time you exit a dialogue, each time you exit the pipboy screen and each time you use an item. In addition to that, it is run once when you enter the map, and, seemingly, twice when you change elevation.
+        - name: map_update_p_proc
+          detail: void map_update_p_proc
+          doc: |-
+              Called every 250 game ticks (1 tick = 1/10 second, so roughly every 25 seconds). It is also called each time you exit a dialogue, each time you exit the pipboy screen and each time you use an item. In addition to that, it is run once when you enter the map, and, seemingly, twice when you change elevation.
 
-    - name: pickup_p_proc
-      detail: void pickup_p_proc
-      doc: |-
-        In object scripts, called when a critter tries to pick up this item.
-        For container objects, called when a critter tries to open them or steal something.
-        In critter scripts, called when someone tries to steal from this critter.
+        - name: pickup_p_proc
+          detail: void pickup_p_proc
+          doc: |-
+              In object scripts, called when a critter tries to pick up this item.
+              For container objects, called when a critter tries to open them or steal something.
+              In critter scripts, called when someone tries to steal from this critter.
 
-    - name: push_p_proc
-      detail: void push_p_proc
-      doc: |-
-        Called when trying to push the object.
+        - name: push_p_proc
+          detail: void push_p_proc
+          doc: |-
+              Called when trying to push the object.
 
-    - name: spatial_p_proc
-      detail: void spatial_p_proc
-      doc: |-
-        Called when an object passes over the self-object's spatial trigger area.
+        - name: spatial_p_proc
+          detail: void spatial_p_proc
+          doc: |-
+              Called when an object passes over the self-object's spatial trigger area.
 
-    - name: start
-      detail: void start
-      doc: |-
-        Called by the engine when the script is first run or the game object is first created, then never again, unless specifically called from somewhere else.
+        - name: start
+          detail: void start
+          doc: |-
+              Called by the engine when the script is first run or the game object is first created, then never again, unless specifically called from somewhere else.
 
-    - name: talk_p_proc
-      detail: void talk_p_proc
-      doc: |-
-        Called when the player tries to initiate dialogue with the critter.
+        - name: talk_p_proc
+          detail: void talk_p_proc
+          doc: |-
+              Called when the player tries to initiate dialogue with the critter.
 
-    - name: timed_event_p_proc
-      detail: void timed_event_p_proc
-      doc: |-
-        This procedure is called by the function `add_timer_event(ObjectPtr obj, int time, int fixed_param)`.
-        `ObjectPtr` points to the object whose script's `timed_event_p_proc` procedure you want to access.
-        Time is the number of game ticks (1 game tick = 1/10 seconds) you want to pass before the `timed_event_p_proc` is called.
-        `fixed_param` is a variable you can set to differentiate between various timed events.
-        In `timed_event_p_proc`, you can check the value of `fixed_param` against whatever number you used when calling `add_timer_event`.
-        This allows for multiple uses of `timed_event_p_proc` in the same script.
+        - name: timed_event_p_proc
+          detail: void timed_event_p_proc
+          doc: |-
+              This procedure is called by the function `add_timer_event(ObjectPtr obj, int time, int fixed_param)`.
+              `ObjectPtr` points to the object whose script's `timed_event_p_proc` procedure you want to access.
+              Time is the number of game ticks (1 game tick = 1/10 seconds) you want to pass before the `timed_event_p_proc` is called.
+              `fixed_param` is a variable you can set to differentiate between various timed events.
+              In `timed_event_p_proc`, you can check the value of `fixed_param` against whatever number you used when calling `add_timer_event`.
+              This allows for multiple uses of `timed_event_p_proc` in the same script.
 
-    - name: use_ad_on_p_proc
-      detail: void use_ad_on_p_proc
-      doc: |-
-        Called when an advantage is used on the object.
+        - name: use_ad_on_p_proc
+          detail: void use_ad_on_p_proc
+          doc: |-
+              Called when an advantage is used on the object.
 
-    - name: use_disad_on_p_proc
-      detail: void use_disad_on_p_proc
-      doc: |-
-        Called when a disadvantage is used on the object.
+        - name: use_disad_on_p_proc
+          detail: void use_disad_on_p_proc
+          doc: |-
+              Called when a disadvantage is used on the object.
 
-    - name: use_obj_on_p_proc
-      detail: void use_obj_on_p_proc
-      doc: |
-        Called when:
-        - A critter uses an object on another critter. (Or themselves).
-        - A critter uses an object from inventory screen AND this object does not have "Use" action flag set and it's not active flare or explosive.
-        - Player or AI uses any drug.
-        The parameter `obj_being_used_with` receives a pointer to the object that was used.
+        - name: use_obj_on_p_proc
+          detail: void use_obj_on_p_proc
+          doc: |
+              Called when:
+              - A critter uses an object on another critter. (Or themselves).
+              - A critter uses an object from inventory screen AND this object does not have "Use" action flag set and it's not active flare or explosive.
+              - Player or AI uses any drug.
+              The parameter `obj_being_used_with` receives a pointer to the object that was used.
 
-    - name: use_p_proc
-      detail: void use_p_proc
-      doc: |
-        Called when:
-        - A critter uses an object from inventory which have "Use" action flag set or it's an active flare or dynamite.
-        - Player uses an object from main interface.
-        Use `source_obj` to get the object being used. Note: not called for some item types when working with inventory.
+        - name: use_p_proc
+          detail: void use_p_proc
+          doc: |
+              Called when:
+              - A critter uses an object from inventory which have "Use" action flag set or it's an active flare or dynamite.
+              - Player uses an object from main interface.
+              Use `source_obj` to get the object being used. Note: not called for some item types when working with inventory.
 
-    - name: use_skill_on_p_proc
-      detail: void use_skill_on_p_proc
-      doc: |-
-        Called when a skill is used on the object. The skill number is passed via `action_being_used` (see DEFINE.H, Skill Equates).
+        - name: use_skill_on_p_proc
+          detail: void use_skill_on_p_proc
+          doc: |-
+              Called when a skill is used on the object. The skill number is passed via `action_being_used` (see DEFINE.H, Skill Equates).
 
 key_functions:
-  type: 3
-  items:
-    - name: AddKey
-      detail: void AddKey(int key, Procedure proc)
-      doc: |-
-        Registers a keyboard handler procedure for a given key. When the key is pressed, the associated procedure is called.
+    type: 3
+    items:
+        - name: AddKey
+          detail: void AddKey(int key, Procedure proc)
+          doc: |-
+              Registers a keyboard handler procedure for a given key. When the key is pressed, the associated procedure is called.
 
-    - name: DeleteKey
-      detail: void DeleteKey(int key)
-      doc: |-
-        Removes a previously registered keyboard handler for the given key.
+        - name: DeleteKey
+          detail: void DeleteKey(int key)
+          doc: |-
+              Removes a previously registered keyboard handler for the given key.
 
 keywords:
-  type: 14 # keyword
-  items:
-    - name: begin
+    type: 14 # keyword
+    items:
+        - name: begin
 
-    - name: else
+        - name: else
 
-    - name: end
+        - name: end
 
-    - name: if
+        - name: if
 
-    - name: procedure
+        - name: procedure
 
-    - name: then
+        - name: then
 
-    - name: variable
+        - name: variable
 
 movie_functions:
-  type: 3
-  items:
-    - name: MovieFlags
-      detail: void MovieFlags(int flags)
-      doc: |-
-        Sets playback flags for the next movie to be played with PlayMovie or PlayMovieRect.
+    type: 3
+    items:
+        - name: MovieFlags
+          detail: void MovieFlags(int flags)
+          doc: |-
+              Sets playback flags for the next movie to be played with PlayMovie or PlayMovieRect.
 
-    # Source: sslc parselib.c only. Compiler-recognized token with arity 2.
-    # Full parameter types/names are not documented in current repo sources, so keep commented out.
-    # - name: PlayMovieAlpha
-    #   detail: void PlayMovieAlpha(?, ?)
+        # Source: sslc parselib.c only. Compiler-recognized token with arity 2.
+        # Full parameter types/names are not documented in current repo sources, so keep commented out.
+        # - name: PlayMovieAlpha
+        #   detail: void PlayMovieAlpha(?, ?)
 
-    - name: PlayMovie
-      detail: void PlayMovie(string filename)
-      doc: |-
-        Plays a movie file full-screen and waits for completion.
+        - name: PlayMovie
+          detail: void PlayMovie(string filename)
+          doc: |-
+              Plays a movie file full-screen and waits for completion.
 
-    # Source: sslc parselib.c only. Compiler-recognized token with arity 6.
-    # Full parameter types/names are not documented in current repo sources, so keep commented out.
-    # - name: PlayMovieAlphaRect
-    #   detail: void PlayMovieAlphaRect(?, ?, ?, ?, ?, ?)
+        # Source: sslc parselib.c only. Compiler-recognized token with arity 6.
+        # Full parameter types/names are not documented in current repo sources, so keep commented out.
+        # - name: PlayMovieAlphaRect
+        #   detail: void PlayMovieAlphaRect(?, ?, ?, ?, ?, ?)
 
-    - name: PlayMovieRect
-      detail: void PlayMovieRect(string filename, int x, int y, int width, int height)
-      doc: |-
-        Plays a movie file within a specified rectangular area on screen.
+        - name: PlayMovieRect
+          detail: void PlayMovieRect(string filename, int x, int y, int width, int height)
+          doc: |-
+              Plays a movie file within a specified rectangular area on screen.
 
-    - name: StopMovie
-      detail: void StopMovie
-      doc: |-
-        Stops the currently playing movie.
+        - name: StopMovie
+          detail: void StopMovie
+          doc: |-
+              Stops the currently playing movie.
 
 preprocessor_directives:
-  type: 14 # keyword
-  # Completion provider doesn't trigger on # character by default.
-  # It's possible to modifye trigger characters, however what will require additional filtering based on language id and the actual word.
-  # For now it's easier to just type a few more charactes to get a suggestion.
-  # Or call it manually with ctrl-space.
-  items:
-    - name: "define"
+    type: 14 # keyword
+    # Completion provider doesn't trigger on # character by default.
+    # It's possible to modifye trigger characters, however what will require additional filtering based on language id and the actual word.
+    # For now it's easier to just type a few more charactes to get a suggestion.
+    # Or call it manually with ctrl-space.
+    items:
+        - name: "define"
 
-    # - name: "#if"
-    - name: "elif"
+        # - name: "#if"
+        - name: "elif"
 
-    # - name: "#else"
-    - name: "endif"
+        # - name: "#else"
+        - name: "endif"
 
-    - name: "ifdef"
+        - name: "ifdef"
 
-    - name: "ifndef"
+        - name: "ifndef"
 
-    - name: "include"
+        - name: "include"
 
-    - name: "undef"
+        - name: "undef"
 
 say_functions:
-  type: 3
-  items:
-    - name: SayBorder
-      detail: void SayBorder(int x, int y)
-      doc: |-
-        Sets the border dimensions for the dialog window.
+    type: 3
+    items:
+        - name: SayBorder
+          detail: void SayBorder(int x, int y)
+          doc: |-
+              Sets the border dimensions for the dialog window.
 
-    - name: SayEnd
-      detail: void SayEnd
-      doc: |-
-        Ends the current dialog sequence and enters a wait state for player input.
+        - name: SayEnd
+          detail: void SayEnd
+          doc: |-
+              Ends the current dialog sequence and enters a wait state for player input.
 
-    - name: SayGetLastPos
-      detail: int SayGetLastPos
-      doc: |-
-        Returns the exit point (last position) of the most recent dialog interaction.
+        - name: SayGetLastPos
+          detail: int SayGetLastPos
+          doc: |-
+              Returns the exit point (last position) of the most recent dialog interaction.
 
-    - name: SayGotoReply
-      detail: void SayGotoReply(string label)
-      doc: |-
-        Jumps to a labeled reply target within the dialog tree.
+        - name: SayGotoReply
+          detail: void SayGotoReply(string label)
+          doc: |-
+              Jumps to a labeled reply target within the dialog tree.
 
-    - name: SayMessage
-      detail: void SayMessage(string text1, string text2)
-      doc: |-
-        Displays a dialog message with two text fields. The message is shown with a timeout.
+        - name: SayMessage
+          detail: void SayMessage(string text1, string text2)
+          doc: |-
+              Displays a dialog message with two text fields. The message is shown with a timeout.
 
-    - name: SayMessageTimeout
-      detail: void SayMessageTimeout(int timeout)
-      doc: |-
-        Sets the display duration in milliseconds for dialog messages shown with SayMessage.
+        - name: SayMessageTimeout
+          detail: void SayMessageTimeout(int timeout)
+          doc: |-
+              Sets the display duration in milliseconds for dialog messages shown with SayMessage.
 
-    - name: SayOption
-      detail: void SayOption(string text, string proc)
-      doc: |-
-        Adds a selectable dialog option with the given text and callback procedure name.
+        - name: SayOption
+          detail: void SayOption(string text, string proc)
+          doc: |-
+              Adds a selectable dialog option with the given text and callback procedure name.
 
-    - name: SayOptionColor
-      detail: void SayOptionColor(int r, int g, int b)
-      doc: |-
-        Sets the text color for dialog options using RGB values.
+        - name: SayOptionColor
+          detail: void SayOptionColor(int r, int g, int b)
+          doc: |-
+              Sets the text color for dialog options using RGB values.
 
-    - name: SayOptionFlags
-      detail: void SayOptionFlags(int flags)
-      doc: |-
-        Sets formatting flags for dialog option text.
+        - name: SayOptionFlags
+          detail: void SayOptionFlags(int flags)
+          doc: |-
+              Sets formatting flags for dialog option text.
 
-    - name: SayOptionWindow
-      detail: void SayOptionWindow(int x, int y, int width, int height, string filename)
-      doc: |-
-        Configures the display window for dialog options with position, size, and background image.
+        - name: SayOptionWindow
+          detail: void SayOptionWindow(int x, int y, int width, int height, string filename)
+          doc: |-
+              Configures the display window for dialog options with position, size, and background image.
 
-    - name: SayQuit
-      detail: void SayQuit
-      doc: |-
-        Immediately quits the dialog system, closing all dialog windows.
+        - name: SayQuit
+          detail: void SayQuit
+          doc: |-
+              Immediately quits the dialog system, closing all dialog windows.
 
-    - name: SayReply
-      detail: void SayReply(string label, string text)
-      doc: |-
-        Adds a reply entry to the dialog with the given label and text content.
+        - name: SayReply
+          detail: void SayReply(string label, string text)
+          doc: |-
+              Adds a reply entry to the dialog with the given label and text content.
 
-    - name: SayReplyColor
-      detail: void SayReplyColor(int r, int g, int b)
-      doc: |-
-        Sets the text color for dialog replies using RGB values.
+        - name: SayReplyColor
+          detail: void SayReplyColor(int r, int g, int b)
+          doc: |-
+              Sets the text color for dialog replies using RGB values.
 
-    - name: SayReplyFlags
-      detail: void SayReplyFlags(int flags)
-      doc: |-
-        Sets formatting flags for dialog reply text.
+        - name: SayReplyFlags
+          detail: void SayReplyFlags(int flags)
+          doc: |-
+              Sets formatting flags for dialog reply text.
 
-    - name: SayReplyTitle
-      detail: void SayReplyTitle(string title)
-      doc: |-
-        Sets the title text displayed in the reply section of the dialog.
+        - name: SayReplyTitle
+          detail: void SayReplyTitle(string title)
+          doc: |-
+              Sets the title text displayed in the reply section of the dialog.
 
-    - name: SayReplyWindow
-      detail: void SayReplyWindow(int x, int y, int width, int height, string filename)
-      doc: |-
-        Configures the display window for dialog replies with position, size, and background image.
+        - name: SayReplyWindow
+          detail: void SayReplyWindow(int x, int y, int width, int height, string filename)
+          doc: |-
+              Configures the display window for dialog replies with position, size, and background image.
 
-    - name: SayRestart
-      detail: void SayRestart
-      doc: |-
-        Restarts the dialog system from the beginning.
+        - name: SayRestart
+          detail: void SayRestart
+          doc: |-
+              Restarts the dialog system from the beginning.
 
-    - name: SayScrollDown
-      detail: void SayScrollDown(int x, int y, string normal, string hover, string pressed, string disabled)
-      doc: |-
-        Configures the scroll-down button for the dialog window with position and graphics for each button state.
+        - name: SayScrollDown
+          detail: void SayScrollDown(int x, int y, string normal, string hover, string pressed, string disabled)
+          doc: |-
+              Configures the scroll-down button for the dialog window with position and graphics for each button state.
 
-    - name: SayScrollUp
-      detail: void SayScrollUp(int x, int y, string normal, string hover, string pressed, string disabled)
-      doc: |-
-        Configures the scroll-up button for the dialog window with position and graphics for each button state.
+        - name: SayScrollUp
+          detail: void SayScrollUp(int x, int y, string normal, string hover, string pressed, string disabled)
+          doc: |-
+              Configures the scroll-up button for the dialog window with position and graphics for each button state.
 
-    - name: SaySetSpacing
-      detail: void SaySetSpacing(int spacing)
-      doc: |-
-        Sets the vertical line spacing in pixels between dialog entries.
+        - name: SaySetSpacing
+          detail: void SaySetSpacing(int spacing)
+          doc: |-
+              Sets the vertical line spacing in pixels between dialog entries.
 
-    - name: SayStart
-      detail: void SayStart
-      doc: |-
-        Initiates a new dialog sequence from the beginning.
+        - name: SayStart
+          detail: void SayStart
+          doc: |-
+              Initiates a new dialog sequence from the beginning.
 
-    - name: SayStartPos
-      detail: void SayStartPos(int position)
-      doc: |-
-        Initiates a new dialog sequence starting at the specified position index.
+        - name: SayStartPos
+          detail: void SayStartPos(int position)
+          doc: |-
+              Initiates a new dialog sequence starting at the specified position index.
 
 sound_functions:
-  type: 3
-  items:
-    - name: SetOneOptPause
-      detail: void SetOneOptPause(int flag)
-      doc: |-
-        Toggles the pause-on-focus-loss behavior for media playback. When flag is non-zero, media pauses when the game loses focus.
+    type: 3
+    items:
+        - name: SetOneOptPause
+          detail: void SetOneOptPause(int flag)
+          doc: |-
+              Toggles the pause-on-focus-loss behavior for media playback. When flag is non-zero, media pauses when the game loses focus.
 
-    - name: SoundDelete
-      detail: void SoundDelete(int handle)
-      doc: |-
-        Frees and releases a sound resource identified by the given handle.
+        - name: SoundDelete
+          detail: void SoundDelete(int handle)
+          doc: |-
+              Frees and releases a sound resource identified by the given handle.
 
-    - name: SoundPause
-      detail: void SoundPause(int handle)
-      doc: |-
-        Pauses playback of the sound identified by the given handle.
+        - name: SoundPause
+          detail: void SoundPause(int handle)
+          doc: |-
+              Pauses playback of the sound identified by the given handle.
 
-    - name: SoundPlay
-      detail: int SoundPlay(string filename, int flags)
-      doc: |-
-        Plays a sound file with the specified flags and returns a handle that can be used with SoundPause, SoundResume, SoundStop, SoundRewind, and SoundDelete.
+        - name: SoundPlay
+          detail: int SoundPlay(string filename, int flags)
+          doc: |-
+              Plays a sound file with the specified flags and returns a handle that can be used with SoundPause, SoundResume, SoundStop, SoundRewind, and SoundDelete.
 
-    - name: SoundResume
-      detail: void SoundResume(int handle)
-      doc: |-
-        Resumes playback of a previously paused sound identified by the given handle.
+        - name: SoundResume
+          detail: void SoundResume(int handle)
+          doc: |-
+              Resumes playback of a previously paused sound identified by the given handle.
 
-    - name: SoundRewind
-      detail: void SoundRewind(int handle)
-      doc: |-
-        Rewinds the sound identified by the given handle back to the beginning.
+        - name: SoundRewind
+          detail: void SoundRewind(int handle)
+          doc: |-
+              Rewinds the sound identified by the given handle back to the beginning.
 
-    - name: SoundStop
-      detail: void SoundStop(int handle)
-      doc: |-
-        Stops playback of the sound identified by the given handle.
+        - name: SoundStop
+          detail: void SoundStop(int handle)
+          doc: |-
+              Stops playback of the sound identified by the given handle.
 
 window_functions:
-  type: 3
-  items:
-    - name: ActivateRegion
-      detail: void ActivateRegion(string name, int flag)
-      doc: |-
-        Enables or disables a named screen region. When flag is non-zero, the region is activated; when zero, it is deactivated.
+    type: 3
+    items:
+        - name: ActivateRegion
+          detail: void ActivateRegion(string name, int flag)
+          doc: |-
+              Enables or disables a named screen region. When flag is non-zero, the region is activated; when zero, it is deactivated.
 
-    - name: AddButton
-      detail: void AddButton(string name, int x, int y, int width, int height)
-      doc: |-
-        Creates a button with the given name at the specified position and size in the currently selected window.
+        - name: AddButton
+          detail: void AddButton(string name, int x, int y, int width, int height)
+          doc: |-
+              Creates a button with the given name at the specified position and size in the currently selected window.
 
-    - name: AddButtonFlag
-      detail: void AddButtonFlag(string name, int flag)
-      doc: |-
-        Sets a flag attribute on the named button.
+        - name: AddButtonFlag
+          detail: void AddButtonFlag(string name, int flag)
+          doc: |-
+              Sets a flag attribute on the named button.
 
-    - name: AddButtonGFX
-      detail: void AddButtonGFX(string name, string hover, string normal, string pressed)
-      doc: |-
-        Sets the graphics for button states: hover, normal, and pressed appearances.
+        - name: AddButtonGFX
+          detail: void AddButtonGFX(string name, string hover, string normal, string pressed)
+          doc: |-
+              Sets the graphics for button states: hover, normal, and pressed appearances.
 
-    - name: AddButtonProc
-      detail: void AddButtonProc(string name, Procedure hover, Procedure press, Procedure release, Procedure move)
-      doc: |-
-        Assigns callback procedures to a button for hover, press, release, and mouse-move events.
+        - name: AddButtonProc
+          detail: void AddButtonProc(string name, Procedure hover, Procedure press, Procedure release, Procedure move)
+          doc: |-
+              Assigns callback procedures to a button for hover, press, release, and mouse-move events.
 
-    - name: AddButtonRightProc
-      detail: void AddButtonRightProc(string name, Procedure press, Procedure release)
-      doc: |-
-        Assigns right-click callback procedures to a button for press and release events.
+        - name: AddButtonRightProc
+          detail: void AddButtonRightProc(string name, Procedure press, Procedure release)
+          doc: |-
+              Assigns right-click callback procedures to a button for press and release events.
 
-    - name: AddButtonText
-      detail: void AddButtonText(string name, string text)
-      doc: |-
-        Sets the text label displayed on the named button.
+        - name: AddButtonText
+          detail: void AddButtonText(string name, string text)
+          doc: |-
+              Sets the text label displayed on the named button.
 
-    - name: AddRegion
-      detail: void AddRegion(string name, ...)
-      doc: |-
-        Creates a named polygon region in the current window from a variable number of coordinate points.
+        - name: AddRegion
+          detail: void AddRegion(string name, ...)
+          doc: |-
+              Creates a named polygon region in the current window from a variable number of coordinate points.
 
-    - name: AddRegionFlag
-      detail: void AddRegionFlag(string name, int flag)
-      doc: |-
-        Sets a flag attribute on the named region.
+        - name: AddRegionFlag
+          detail: void AddRegionFlag(string name, int flag)
+          doc: |-
+              Sets a flag attribute on the named region.
 
-    - name: AddRegionProc
-      detail: void AddRegionProc(string name, Procedure enter, Procedure exit, Procedure hover, Procedure click)
-      doc: |-
-        Assigns callback procedures to a region for mouse enter, exit, hover, and click events.
+        - name: AddRegionProc
+          detail: void AddRegionProc(string name, Procedure enter, Procedure exit, Procedure hover, Procedure click)
+          doc: |-
+              Assigns callback procedures to a region for mouse enter, exit, hover, and click events.
 
-    - name: AddRegionRightProc
-      detail: void AddRegionRightProc(string name, Procedure press, Procedure release)
-      doc: |-
-        Assigns right-click callback procedures to a region for press and release events.
+        - name: AddRegionRightProc
+          detail: void AddRegionRightProc(string name, Procedure press, Procedure release)
+          doc: |-
+              Assigns right-click callback procedures to a region for press and release events.
 
-    - name: CheckRegion
-      detail: int CheckRegion(string name)
-      doc: |-
-        Returns whether a named region exists in the current window.
+        - name: CheckRegion
+          detail: int CheckRegion(string name)
+          doc: |-
+              Returns whether a named region exists in the current window.
 
-    - name: CreateWin
-      detail: void CreateWin(string name, int x, int y, int width, int height)
-      doc: |-
-        Creates a new window with the given name at the specified position and size. Coordinates are scaled to the current screen resolution.
+        - name: CreateWin
+          detail: void CreateWin(string name, int x, int y, int width, int height)
+          doc: |-
+              Creates a new window with the given name at the specified position and size. Coordinates are scaled to the current screen resolution.
 
-    - name: DeleteButton
-      detail: void DeleteButton(string name)
-      doc: |-
-        Removes the named button from the current window.
+        - name: DeleteButton
+          detail: void DeleteButton(string name)
+          doc: |-
+              Removes the named button from the current window.
 
-    - name: DeleteRegion
-      detail: void DeleteRegion(string name)
-      doc: |-
-        Removes the named region from the current window.
+        - name: DeleteRegion
+          detail: void DeleteRegion(string name)
+          doc: |-
+              Removes the named region from the current window.
 
-    - name: DeleteWin
-      detail: void DeleteWin(string name)
-      doc: |-
-        Deletes the named window and frees its resources.
+        - name: DeleteWin
+          detail: void DeleteWin(string name)
+          doc: |-
+              Deletes the named window and frees its resources.
 
-    - name: DisplayGFX
-      detail: void DisplayGFX(string filename, int x, int y, int width, int height)
-      doc: |-
-        Displays an image file at the specified position and size within the current window.
+        - name: DisplayGFX
+          detail: void DisplayGFX(string filename, int x, int y, int width, int height)
+          doc: |-
+              Displays an image file at the specified position and size within the current window.
 
-    - name: DisplayRaw
-      detail: void DisplayRaw(string filename)
-      doc: |-
-        Displays an image file in raw format in the currently selected window, without palette conversion.
+        - name: DisplayRaw
+          detail: void DisplayRaw(string filename)
+          doc: |-
+              Displays an image file in raw format in the currently selected window, without palette conversion.
 
-    - name: FadeIn
-      detail: void FadeIn(int duration)
-      doc: |-
-        Fades the screen in from black over the given duration.
+        - name: FadeIn
+          detail: void FadeIn(int duration)
+          doc: |-
+              Fades the screen in from black over the given duration.
 
-    - name: FadeOut
-      detail: void FadeOut(int duration)
-      doc: |-
-        Fades the screen out to black over the given duration.
+        - name: FadeOut
+          detail: void FadeOut(int duration)
+          doc: |-
+              Fades the screen out to black over the given duration.
 
-    - name: FillRect
-      detail: void FillRect(int x, int y, int width, int height, int r, int g, int b)
-      doc: |-
-        Fills a rectangle at the specified position and size with the given RGB color in the current window.
+        - name: FillRect
+          detail: void FillRect(int x, int y, int width, int height, int r, int g, int b)
+          doc: |-
+              Fills a rectangle at the specified position and size with the given RGB color in the current window.
 
-    - name: FillWin
-      detail: void FillWin(int r, int g, int b)
-      doc: |-
-        Fills the entire current window with the specified RGB color.
+        - name: FillWin
+          detail: void FillWin(int r, int g, int b)
+          doc: |-
+              Fills the entire current window with the specified RGB color.
 
-    - name: FillWin3x3
-      detail: void FillWin3x3(string filename)
-      doc: |-
-        Fills the current window using a 3x3 tile pattern loaded from the specified image file.
+        - name: FillWin3x3
+          detail: void FillWin3x3(string filename)
+          doc: |-
+              Fills the current window using a 3x3 tile pattern loaded from the specified image file.
 
-    - name: GotoXY
-      detail: void GotoXY(int x, int y)
-      doc: |-
-        Sets the text cursor position within the current window.
+        - name: GotoXY
+          detail: void GotoXY(int x, int y)
+          doc: |-
+              Sets the text cursor position within the current window.
 
-    - name: HideMouse
-      detail: void HideMouse
-      doc: |-
-        Hides the mouse cursor.
+        - name: HideMouse
+          detail: void HideMouse
+          doc: |-
+              Hides the mouse cursor.
 
-    - name: LoadPaletteTable
-      detail: void LoadPaletteTable(string path)
-      doc: |-
-        Loads a color palette table from the specified file path.
+        - name: LoadPaletteTable
+          detail: void LoadPaletteTable(string path)
+          doc: |-
+              Loads a color palette table from the specified file path.
 
-    - name: MouseShape
-      detail: void MouseShape(string filename, int x, int y)
-      doc: |-
-        Loads a custom mouse cursor graphic from the specified file and sets the hotspot offset.
+        - name: MouseShape
+          detail: void MouseShape(string filename, int x, int y)
+          doc: |-
+              Loads a custom mouse cursor graphic from the specified file and sets the hotspot offset.
 
-    - name: PrintRect
-      detail: void PrintRect(string value, int param, int alignment)
-      doc: |-
-        Prints a value within a rectangle in the current window with the specified alignment.
+        - name: PrintRect
+          detail: void PrintRect(string value, int param, int alignment)
+          doc: |-
+              Prints a value within a rectangle in the current window with the specified alignment.
 
-    - name: RefreshMouse
-      detail: void RefreshMouse(Procedure proc)
-      doc: |-
-        Updates screen regions and executes the given callback procedure.
+        - name: RefreshMouse
+          detail: void RefreshMouse(Procedure proc)
+          doc: |-
+              Updates screen regions and executes the given callback procedure.
 
-    - name: ResizeWin
-      detail: void ResizeWin(string name, int x, int y, int width, int height)
-      doc: |-
-        Resizes the named window to the specified position and dimensions. Coordinates are scaled to the current screen resolution.
+        - name: ResizeWin
+          detail: void ResizeWin(string name, int x, int y, int width, int height)
+          doc: |-
+              Resizes the named window to the specified position and dimensions. Coordinates are scaled to the current screen resolution.
 
-    - name: ScaleWin
-      detail: void ScaleWin(string name, int x, int y, int width, int height)
-      doc: |-
-        Scales the named window to the specified position and dimensions.
+        - name: ScaleWin
+          detail: void ScaleWin(string name, int x, int y, int width, int height)
+          doc: |-
+              Scales the named window to the specified position and dimensions.
 
-    - name: SelectFileList
-      detail: void SelectFileList(string pattern, string title)
-      doc: |-
-        Opens a file picker dialog with the given file pattern and title.
+        - name: SelectFileList
+          detail: void SelectFileList(string pattern, string title)
+          doc: |-
+              Opens a file picker dialog with the given file pattern and title.
 
-    - name: SelectWin
-      detail: void SelectWin(string name)
-      doc: |-
-        Selects the named window as the current target for subsequent drawing and widget operations.
+        - name: SelectWin
+          detail: void SelectWin(string name)
+          doc: |-
+              Selects the named window as the current target for subsequent drawing and widget operations.
 
-    - name: SetFont
-      detail: void SetFont(int fontId)
-      doc: |-
-        Sets the current text font for the active window.
+        - name: SetFont
+          detail: void SetFont(int fontId)
+          doc: |-
+              Sets the current text font for the active window.
 
-    # Source: existing commented data; sslc parselib.c recognizes it as a 4-procedure callback registration.
-    # Not implemented in the engine (no-op). Keep commented out.
-    # - name: SetGlobalMouseFunc
-    #   detail: void SetGlobalMouseFunc(Procedure a, Procedure b, Procedure c, Procedure d)
-    #   doc: |-
-    #     Registers a global mouse function handler. Not implemented in the engine (no-op).
+        # Source: existing commented data; sslc parselib.c recognizes it as a 4-procedure callback registration.
+        # Not implemented in the engine (no-op). Keep commented out.
+        # - name: SetGlobalMouseFunc
+        #   detail: void SetGlobalMouseFunc(Procedure a, Procedure b, Procedure c, Procedure d)
+        #   doc: |-
+        #     Registers a global mouse function handler. Not implemented in the engine (no-op).
 
-    - name: SetHighlightColor
-      detail: void SetHighlightColor(int r, int g, int b)
-      doc: |-
-        Sets the text highlight (selection) color using RGB values for the active window.
+        - name: SetHighlightColor
+          detail: void SetHighlightColor(int r, int g, int b)
+          doc: |-
+              Sets the text highlight (selection) color using RGB values for the active window.
 
-    - name: SetTextColor
-      detail: void SetTextColor(int r, int g, int b)
-      doc: |-
-        Sets the text color using RGB values for the active window.
+        - name: SetTextColor
+          detail: void SetTextColor(int r, int g, int b)
+          doc: |-
+              Sets the text color using RGB values for the active window.
 
-    - name: SetTextFlags
-      detail: void SetTextFlags(int flags)
-      doc: |-
-        Sets text formatting flags (such as alignment and wrapping) for the active window.
+        - name: SetTextFlags
+          detail: void SetTextFlags(int flags)
+          doc: |-
+              Sets text formatting flags (such as alignment and wrapping) for the active window.
 
-    - name: ShowMouse
-      detail: void ShowMouse
-      doc: |-
-        Shows the mouse cursor.
+        - name: ShowMouse
+          detail: void ShowMouse
+          doc: |-
+              Shows the mouse cursor.
 
-    - name: ShowWin
-      detail: void ShowWin
-      doc: |-
-        Redraws and displays the currently selected window.
+        - name: ShowWin
+          detail: void ShowWin
+          doc: |-
+              Redraws and displays the currently selected window.
 
-    - name: display
-      detail: void display(string filename)
-      doc: |-
-        Displays an image file in the currently selected window.
+        - name: display
+          detail: void display(string filename)
+          doc: |-
+              Displays an image file in the currently selected window.
 
-    - name: format
-      detail: void format(string text, int x, int y, int width, int height, int alignment)
-      doc: |-
-        Formats and displays text within a specified rectangle in the current window, with the given alignment.
+        - name: format
+          detail: void format(string text, int x, int y, int width, int height, int alignment)
+          doc: |-
+              Formats and displays text within a specified rectangle in the current window, with the given alignment.
 
-    - name: print
-      detail: void print(string value)
-      doc: |-
-        Prints a value to the current window at the text cursor position.
+        - name: print
+          detail: void print(string value)
+          doc: |-
+              Prints a value to the current window at the text cursor position.

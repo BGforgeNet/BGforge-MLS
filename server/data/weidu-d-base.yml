@@ -1,208 +1,208 @@
 actions:
-  type: 3 # function
-  items:
-    - name: ADD_STATE_TRIGGER
-      detail: "ADD_STATE_TRIGGER filename stateNumber stateTriggerString [ stateNumber list ] \tdActionWhen list"
-      doc: This instructs WeiDU to add the stateTriggerString to all of the states with the given stateNumbers in the file filename.DLG (which must already exist). This is handy for adding extra conditions to an existing dialogue state.
+    type: 3 # function
+    items:
+        - name: ADD_STATE_TRIGGER
+          detail: "ADD_STATE_TRIGGER filename stateNumber stateTriggerString [ stateNumber list ] \tdActionWhen list"
+          doc: This instructs WeiDU to add the stateTriggerString to all of the states with the given stateNumbers in the file filename.DLG (which must already exist). This is handy for adding extra conditions to an existing dialogue state.
 
-    - name: ADD_TRANS_ACTION
-      detail: ADD_TRANS_ACTION filename BEGIN stateNumber list END BEGIN transNumber list END transActionString dActionWhen list
-      doc: This instructs WeiDU to add the transActionString to all of the actions in all the transitions in all of the states specified by the stateNumber list and the transNumber list. You may use state labels in the stateNumber list. If the transNumber list is empty, the text added to all transitions on all listed states. Note that the BEGIN and END keywords must be present, even if you specify an empty list of transNumbers. The "first" transition is number 0. Any out-of-bounds transNumbers are silently ignored. The transActionString is prepended to any existing action text on a per-transition, per-state basis.
+        - name: ADD_TRANS_ACTION
+          detail: ADD_TRANS_ACTION filename BEGIN stateNumber list END BEGIN transNumber list END transActionString dActionWhen list
+          doc: This instructs WeiDU to add the transActionString to all of the actions in all the transitions in all of the states specified by the stateNumber list and the transNumber list. You may use state labels in the stateNumber list. If the transNumber list is empty, the text added to all transitions on all listed states. Note that the BEGIN and END keywords must be present, even if you specify an empty list of transNumbers. The "first" transition is number 0. Any out-of-bounds transNumbers are silently ignored. The transActionString is prepended to any existing action text on a per-transition, per-state basis.
 
-    - name: ADD_TRANS_TRIGGER
-      detail: ADD_TRANS_TRIGGER filename stateNumber transTriggerString [ moreStateNumbers list ] [ DO transNumber list ] dActionWhen list
-      doc: This instructs WeiDU to add the transTriggerString to all of the transitions in all of the states with the given stateNumbers in the file filename.DLG (which must already exist). This is often used in conjunction with EXTEND_BOTTOM to make a new branch in an existing state. Use ADD_TRANS_TRIGGER to add the negation of some predicate to all of the existing transitions, then use EXTEND_BOTTOM to add a transition with that predicate to that state. If a list of transNumbers is specified, only those transitions will have transTriggerString added to them. If such a list is not specified, every transition in every specified state will be modified. Note that the "first" transition is number 0.
+        - name: ADD_TRANS_TRIGGER
+          detail: ADD_TRANS_TRIGGER filename stateNumber transTriggerString [ moreStateNumbers list ] [ DO transNumber list ] dActionWhen list
+          doc: This instructs WeiDU to add the transTriggerString to all of the transitions in all of the states with the given stateNumbers in the file filename.DLG (which must already exist). This is often used in conjunction with EXTEND_BOTTOM to make a new branch in an existing state. Use ADD_TRANS_TRIGGER to add the negation of some predicate to all of the existing transitions, then use EXTEND_BOTTOM to add a transition with that predicate to that state. If a list of transNumbers is specified, only those transitions will have transTriggerString added to them. If such a list is not specified, every transition in every specified state will be modified. Note that the "first" transition is number 0.
 
-    - name: ALTER_TRANS
-      detail: ALTER_TRANS filename BEGIN stateNumber list END BEGIN transNumber list END BEGIN changeWhat changeInto list END
-      doc: Fine altering of a single transition. See the ALTER_TRANS tutorial.
+        - name: ALTER_TRANS
+          detail: ALTER_TRANS filename BEGIN stateNumber list END BEGIN transNumber list END BEGIN changeWhat changeInto list END
+          doc: Fine altering of a single transition. See the ALTER_TRANS tutorial.
 
-    - name: APPEND
-      detail: APPEND [ IF_FILE_EXISTS ] filename state list END
-      doc: This tells WeiDU to place the given states at the end of the already-existing dialogue filename.DLG. If there is IF_FILE_EXISTS and the file doesn't exists, this action is skipped.
+        - name: APPEND
+          detail: APPEND [ IF_FILE_EXISTS ] filename state list END
+          doc: This tells WeiDU to place the given states at the end of the already-existing dialogue filename.DLG. If there is IF_FILE_EXISTS and the file doesn't exists, this action is skipped.
 
-    - name: APPEND_EARLY
-      detail: APPEND_EARLY [ IF_FILE_EXISTS ] filename state list END
-      doc: Works like APPEND, but the states are added early on in the compilation timeline (just after BEGIN is processed). Thus they can be the targets for INTERJECT_COPY_TRANS and friends.
+        - name: APPEND_EARLY
+          detail: APPEND_EARLY [ IF_FILE_EXISTS ] filename state list END
+          doc: Works like APPEND, but the states are added early on in the compilation timeline (just after BEGIN is processed). Thus they can be the targets for INTERJECT_COPY_TRANS and friends.
 
-    - name: BEGIN
-      detail: BEGIN filename [ nonPausing ] state list
-      doc: BEGIN tells WeiDU that you are creating a new DLG file from scratch. Any existing DLG file with the same name will be overwritten. The new DLG file contains exactly the states in the list. If you set nonPausing to a non-zero integer, the game will not "stop time" while the conversation takes place. By default time stops during conversations.
+        - name: BEGIN
+          detail: BEGIN filename [ nonPausing ] state list
+          doc: BEGIN tells WeiDU that you are creating a new DLG file from scratch. Any existing DLG file with the same name will be overwritten. The new DLG file contains exactly the states in the list. If you set nonPausing to a non-zero integer, the game will not "stop time" while the conversation takes place. By default time stops during conversations.
 
-    - name: CHAIN
-      detail: |-
-        CHAIN
-          [ IF [ WEIGHT #weight ] stateTriggerString THEN ]
-          [ IF_FILE_EXISTS ] entryFilename entryLabel
-          chainText list
-          chainEpilogue
-      doc: This instructs WeiDU to make a long conversation in which the PC can say nothing. This is useful when you want the NPCs to talk among themselves for a long time. It and its friends, INTERJECT and INTERJECT_COPY_TRANS can incredible time-savers when you're writing non-trivial dialogue. See the examples for ideas. CHAIN will only append to existing dialogues. You cannot use CHAIN to create a new DLG. If the entryFilename file is missing and there is IF_FILE_EXISTS, the whole CHAIN is not compiled.
+        - name: CHAIN
+          detail: |-
+              CHAIN
+                [ IF [ WEIGHT #weight ] stateTriggerString THEN ]
+                [ IF_FILE_EXISTS ] entryFilename entryLabel
+                chainText list
+                chainEpilogue
+          doc: This instructs WeiDU to make a long conversation in which the PC can say nothing. This is useful when you want the NPCs to talk among themselves for a long time. It and its friends, INTERJECT and INTERJECT_COPY_TRANS can incredible time-savers when you're writing non-trivial dialogue. See the examples for ideas. CHAIN will only append to existing dialogues. You cannot use CHAIN to create a new DLG. If the entryFilename file is missing and there is IF_FILE_EXISTS, the whole CHAIN is not compiled.
 
-    - name: EXTEND_BOTTOM
-      detail: "EXTEND_BOTTOM filename stateNumber list [ #positionNumber ] transition list END"
-      doc: Behaves just like EXTEND_TOP but adds the transitions to the bottom of the list instead.
+        - name: EXTEND_BOTTOM
+          detail: "EXTEND_BOTTOM filename stateNumber list [ #positionNumber ] transition list END"
+          doc: Behaves just like EXTEND_TOP but adds the transitions to the bottom of the list instead.
 
-    - name: EXTEND_TOP
-      detail: "EXTEND_TOP filename stateLabel list [ #positionNumber ] transition list END"
-      doc: "This instructs WeiDU to add the transitions in list to the top of the transition list for the specified states in filename.DLG (which must already exist).If a positionNumber is given, WeiDU to insert the transitions just between already-existing transitions #positionNumber and #positionNumber+1 in the given states for the given file. The first transition is number 1."
+        - name: EXTEND_TOP
+          detail: "EXTEND_TOP filename stateLabel list [ #positionNumber ] transition list END"
+          doc: "This instructs WeiDU to add the transitions in list to the top of the transition list for the specified states in filename.DLG (which must already exist).If a positionNumber is given, WeiDU to insert the transitions just between already-existing transitions #positionNumber and #positionNumber+1 in the given states for the given file. The first transition is number 1."
 
-    - name: INTERJECT
-      detail: INTERJECT entryFilename entryLabel globalVariable chainText list chainEpilogue
-      doc: Behaves like CHAIN except that all of the chainText is additionally guarded by the transition predicate Global("globalVariable","GLOBAL",0) and accompanied by the action SetGlobal("globalVariable","GLOBAL",1). If you pick globalVariable to be unique, this will ensure that the chainText is only ever seen once per game. This is useful for making interjections.
+        - name: INTERJECT
+          detail: INTERJECT entryFilename entryLabel globalVariable chainText list chainEpilogue
+          doc: Behaves like CHAIN except that all of the chainText is additionally guarded by the transition predicate Global("globalVariable","GLOBAL",0) and accompanied by the action SetGlobal("globalVariable","GLOBAL",1). If you pick globalVariable to be unique, this will ensure that the chainText is only ever seen once per game. This is useful for making interjections.
 
-    - name: INTERJECT_COPY_TRANS
-      detail: INTERJECT_COPY_TRANS [ SAFE ] entryFilename entryLabel globalVariable chainText list
-      doc: This behaves just like INTERJECT except that the exitFilename and exitLabel are not present. Instead, whenever the dialogue would pass out of the chainText it follows a copy of the transitions that were at the state with stateLabel originally. This is convenient for making quick interjections from NPCs that do not actually change the true flow of the conversation. See the transition COPY_TRANS and the INTERJECT_COPY_TRANS tutorial for more information about this idea. If SAFE is specified, INTERJECT_COPY_TRANS will not warn about potentially unsafe uses (use this if you know it is safe).
+        - name: INTERJECT_COPY_TRANS
+          detail: INTERJECT_COPY_TRANS [ SAFE ] entryFilename entryLabel globalVariable chainText list
+          doc: This behaves just like INTERJECT except that the exitFilename and exitLabel are not present. Instead, whenever the dialogue would pass out of the chainText it follows a copy of the transitions that were at the state with stateLabel originally. This is convenient for making quick interjections from NPCs that do not actually change the true flow of the conversation. See the transition COPY_TRANS and the INTERJECT_COPY_TRANS tutorial for more information about this idea. If SAFE is specified, INTERJECT_COPY_TRANS will not warn about potentially unsafe uses (use this if you know it is safe).
 
-    - name: INTERJECT_COPY_TRANS2
-      detail: INTERJECT_COPY_TRANS2 [ SAFE ] entryFilename entryLabel globalVariable chainText list
-      doc: This works just like INTERJECT_COPY_TRANS, except that any actions taken in the transitions of the state specified by entryFilename and entryLabel are preserved and kept with the speaker associated with entryFilename (rather than being mistakenly performed by your new speaker). See the INTERJECT_COPY_TRANS2 tutorial.
+        - name: INTERJECT_COPY_TRANS2
+          detail: INTERJECT_COPY_TRANS2 [ SAFE ] entryFilename entryLabel globalVariable chainText list
+          doc: This works just like INTERJECT_COPY_TRANS, except that any actions taken in the transitions of the state specified by entryFilename and entryLabel are preserved and kept with the speaker associated with entryFilename (rather than being mistakenly performed by your new speaker). See the INTERJECT_COPY_TRANS2 tutorial.
 
-    - name: INTERJECT_COPY_TRANS3
-      detail: INTERJECT_COPY_TRANS3 [ SAFE ] entryFilename entryLabel globalVariable chainText list
-      doc: This works just like INTERJECT_COPY_TRANS, except that all states in chainText get a link in the entry state, rather than only the first one. Expecting documentation.
+        - name: INTERJECT_COPY_TRANS3
+          detail: INTERJECT_COPY_TRANS3 [ SAFE ] entryFilename entryLabel globalVariable chainText list
+          doc: This works just like INTERJECT_COPY_TRANS, except that all states in chainText get a link in the entry state, rather than only the first one. Expecting documentation.
 
-    - name: INTERJECT_COPY_TRANS4
-      detail: INTERJECT_COPY_TRANS4 [ SAFE ] entryFilename entryLabel globalVariable chainText list
-      doc: This is either INTERJECT_COPY_TRANS3 with INTERJECT_COPY_TRANS2-style action handling, or INTERJECT_COPY_TRANS2 with the extended INTERJECT_COPY_TRANS3 state creation rules, depending at how you look at it.
+        - name: INTERJECT_COPY_TRANS4
+          detail: INTERJECT_COPY_TRANS4 [ SAFE ] entryFilename entryLabel globalVariable chainText list
+          doc: This is either INTERJECT_COPY_TRANS3 with INTERJECT_COPY_TRANS2-style action handling, or INTERJECT_COPY_TRANS2 with the extended INTERJECT_COPY_TRANS3 state creation rules, depending at how you look at it.
 
-    - name: REPLACE
-      detail: REPLACE filename state list END
-      doc: This instructs WeiDU to load filename.DLG and replace some of its states with the new ones described in the state list. All of the states should have numeric stateLabels (e.g., "5" or "67"). A new state with label X will replace the old state number X.
+        - name: REPLACE
+          detail: REPLACE filename state list END
+          doc: This instructs WeiDU to load filename.DLG and replace some of its states with the new ones described in the state list. All of the states should have numeric stateLabels (e.g., "5" or "67"). A new state with label X will replace the old state number X.
 
-    - name: REPLACE_ACTION_TEXT
-      detail: REPLACE_ACTION_TEXT filename oldText newText [ moreFilenames ] dActionWhen list
-      doc: This instructs WeiDU to destructively replace every occurrence of oldText (which may be a regexp) in the stateActionStrings of filename.DLG (which must exist). This should only be used to patch or workaround existing dialogues. Never use this if you can help it.
+        - name: REPLACE_ACTION_TEXT
+          detail: REPLACE_ACTION_TEXT filename oldText newText [ moreFilenames ] dActionWhen list
+          doc: This instructs WeiDU to destructively replace every occurrence of oldText (which may be a regexp) in the stateActionStrings of filename.DLG (which must exist). This should only be used to patch or workaround existing dialogues. Never use this if you can help it.
 
-    - name: REPLACE_ACTION_TEXT_PROCESS
-      detail: REPLACE_ACTION_TEXT_PROCESS filename oldText newText [ moreFilenames ] dActionWhen list
-      doc: "This instructs WeiDU to destructively replace every occurrence of oldText (which may be a regexp) in the stateActionStrings of filename.DLG (which must exist) with newText. However, newText is first compiled as a BAF action list. In particular, this means that replacing with commands like: ~DisplayString(Myself,@123)~ ... will do what you expect. This should only be used to patch or workaround existing dialogues. Never use this if you can help it."
+        - name: REPLACE_ACTION_TEXT_PROCESS
+          detail: REPLACE_ACTION_TEXT_PROCESS filename oldText newText [ moreFilenames ] dActionWhen list
+          doc: "This instructs WeiDU to destructively replace every occurrence of oldText (which may be a regexp) in the stateActionStrings of filename.DLG (which must exist) with newText. However, newText is first compiled as a BAF action list. In particular, this means that replacing with commands like: ~DisplayString(Myself,@123)~ ... will do what you expect. This should only be used to patch or workaround existing dialogues. Never use this if you can help it."
 
-    - name: REPLACE_ACTION_TEXT_PROCESS_REGEXP
-      detail: REPLACE_ACTION_TEXT_PROCESS_REGEXP filenameRegexp oldText newText [ moreFilenameRegexps ] dActionWhen list
-      doc: Just like REPLACE_ACTION_TEXT_PROCESS, but the filenames are regexps. The .DLG is implied. R_A_T_P_R is shorthand for REPLACE_ACTION_TEXT_PROCESS_REGEXP.
+        - name: REPLACE_ACTION_TEXT_PROCESS_REGEXP
+          detail: REPLACE_ACTION_TEXT_PROCESS_REGEXP filenameRegexp oldText newText [ moreFilenameRegexps ] dActionWhen list
+          doc: Just like REPLACE_ACTION_TEXT_PROCESS, but the filenames are regexps. The .DLG is implied. R_A_T_P_R is shorthand for REPLACE_ACTION_TEXT_PROCESS_REGEXP.
 
-    - name: REPLACE_ACTION_TEXT_REGEXP
-      detail: REPLACE_ACTION_TEXT_REGEXP filenameRegexp oldText newText [ moreFilenameRegexps ] dActionWhen list
-      doc: Just like REPLACE_ACTION_TEXT but the filenames are regexps. The .DLG is implied, do not include it in your regexps.
+        - name: REPLACE_ACTION_TEXT_REGEXP
+          detail: REPLACE_ACTION_TEXT_REGEXP filenameRegexp oldText newText [ moreFilenameRegexps ] dActionWhen list
+          doc: Just like REPLACE_ACTION_TEXT but the filenames are regexps. The .DLG is implied, do not include it in your regexps.
 
-    - name: REPLACE_SAY
-      detail: REPLACE_SAY filename stateLabel sayText
-      doc: This instructs WeiDU to destructively change the sayText of the given state in filename.DLG (which must exist). This should only be used to patch or workaround existing dialogues. Never use REPLACE_SAY if you can help it.
+        - name: REPLACE_SAY
+          detail: REPLACE_SAY filename stateLabel sayText
+          doc: This instructs WeiDU to destructively change the sayText of the given state in filename.DLG (which must exist). This should only be used to patch or workaround existing dialogues. Never use REPLACE_SAY if you can help it.
 
-    - name: REPLACE_STATE_TRIGGER
-      detail: "REPLACE_STATE_TRIGGER filename stateNumber stateTriggerString [ stateNumber list ] \tdActionWhen list"
-      doc: This instructs WeiDU to destructively set the stateTriggerString of all of the states with the given stateNumbers in the file filename.DLG (which must already exist). It should be used with caution.
+        - name: REPLACE_STATE_TRIGGER
+          detail: "REPLACE_STATE_TRIGGER filename stateNumber stateTriggerString [ stateNumber list ] \tdActionWhen list"
+          doc: This instructs WeiDU to destructively set the stateTriggerString of all of the states with the given stateNumbers in the file filename.DLG (which must already exist). It should be used with caution.
 
-    - name: REPLACE_TRANS_ACTION
-      detail: REPLACE_TRANS_ACTION filename BEGIN stateNumber list END BEGIN transNumber list END oldText newText dActionWhen list
-      doc: This instructs WeiDU to replace all instances of oldText in newText to all of the actions in all the transitions in all of the states specified by the stateNumber list and the transNumber list. You may use state labels in the stateNumber list. If the transNumber list is empty, the text added to all transitions on all listed states. Note that the BEGIN and END keywords must be present, even if you specify an empty list of transNumbers. The "first" transition is number 0. Any out-of-bounds transNumbers are silently ignored.
+        - name: REPLACE_TRANS_ACTION
+          detail: REPLACE_TRANS_ACTION filename BEGIN stateNumber list END BEGIN transNumber list END oldText newText dActionWhen list
+          doc: This instructs WeiDU to replace all instances of oldText in newText to all of the actions in all the transitions in all of the states specified by the stateNumber list and the transNumber list. You may use state labels in the stateNumber list. If the transNumber list is empty, the text added to all transitions on all listed states. Note that the BEGIN and END keywords must be present, even if you specify an empty list of transNumbers. The "first" transition is number 0. Any out-of-bounds transNumbers are silently ignored.
 
-    - name: REPLACE_TRANS_TRIGGER
-      detail: REPLACE_TRANS_TRIGGER filename BEGIN stateNumber list END BEGIN transNumber list END oldText newText dActionWhen list
-      doc: This instructs WeiDU to replace all instances of oldText in newText to all of the triggers in all of the transitions in all of the states specified by the stateNumber list and the transNumber list. You may use state labels in the stateNumber list. If the transNumber list is empty, the text added to all transitions on all listed states. Note that the BEGIN and END keywords must be present, even if you specify an empty list of transNumbers. The "first" transition is number 0. Any out-of-bounds transNumbers are silently ignored.
+        - name: REPLACE_TRANS_TRIGGER
+          detail: REPLACE_TRANS_TRIGGER filename BEGIN stateNumber list END BEGIN transNumber list END oldText newText dActionWhen list
+          doc: This instructs WeiDU to replace all instances of oldText in newText to all of the triggers in all of the transitions in all of the states specified by the stateNumber list and the transNumber list. You may use state labels in the stateNumber list. If the transNumber list is empty, the text added to all transitions on all listed states. Note that the BEGIN and END keywords must be present, even if you specify an empty list of transNumbers. The "first" transition is number 0. Any out-of-bounds transNumbers are silently ignored.
 
-    - name: REPLACE_TRIGGER_TEXT
-      detail: REPLACE_TRIGGER_TEXT filename oldText newText dActionWhen list
-      doc: This instructs WeiDU to destructively replace every occurrence of oldText (which may be a regexp) in the stateTriggerStrings and transTriggerStrings of filename.DLG (which must exist). This should only be used to patch or workaround existing dialogues. Never use this if you can help it.
+        - name: REPLACE_TRIGGER_TEXT
+          detail: REPLACE_TRIGGER_TEXT filename oldText newText dActionWhen list
+          doc: This instructs WeiDU to destructively replace every occurrence of oldText (which may be a regexp) in the stateTriggerStrings and transTriggerStrings of filename.DLG (which must exist). This should only be used to patch or workaround existing dialogues. Never use this if you can help it.
 
-    - name: REPLACE_TRIGGER_TEXT_REGEXP
-      detail: REPLACE_TRIGGER_TEXT_REGEXP filenameRegexp oldText newText dActionWhen list
-      doc: Just like REPLACE_TRIGGER_TEXT but the filename is a regexp. The .DLG is implied.
+        - name: REPLACE_TRIGGER_TEXT_REGEXP
+          detail: REPLACE_TRIGGER_TEXT_REGEXP filenameRegexp oldText newText dActionWhen list
+          doc: Just like REPLACE_TRIGGER_TEXT but the filename is a regexp. The .DLG is implied.
 
-    - name: R_A_T_P_R
-      detail: R_A_T_P_R filenameRegexp oldText newText [ moreFilenameRegexps ] dActionWhen list
-      doc: Just like REPLACE_ACTION_TEXT_PROCESS, but the filenames are regexps. The .DLG is implied. R_A_T_P_R is shorthand for REPLACE_ACTION_TEXT_PROCESS_REGEXP (to avoid undue scrollbars in the readme on a 1024x768 monitor).
+        - name: R_A_T_P_R
+          detail: R_A_T_P_R filenameRegexp oldText newText [ moreFilenameRegexps ] dActionWhen list
+          doc: Just like REPLACE_ACTION_TEXT_PROCESS, but the filenames are regexps. The .DLG is implied. R_A_T_P_R is shorthand for REPLACE_ACTION_TEXT_PROCESS_REGEXP (to avoid undue scrollbars in the readme on a 1024x768 monitor).
 
-    - name: SET_WEIGHT
-      detail: "SET_WEIGHT filename stateLabel #stateWeight"
-      doc: This instructs WeiDU to destructively change the WEIGHT of the given state in filename.DLG (which must exist). This should only be used to patch or workaround existing dialogues. Never use SET_WEIGHT if you can help it.
+        - name: SET_WEIGHT
+          detail: "SET_WEIGHT filename stateLabel #stateWeight"
+          doc: This instructs WeiDU to destructively change the WEIGHT of the given state in filename.DLG (which must exist). This should only be used to patch or workaround existing dialogues. Never use SET_WEIGHT if you can help it.
 
 chain_epilogue:
-  type: 14 #keyword
-  items:
-    - name: COPY_TRANS
-      detail: COPY_TRANS [ SAFE ] filename stateNumber
-      doc: At the end of the CHAIN text, copy all transitions from the given state in the given file. This is useful for interjections (see INTERJECT). If SAFE is specified, CHAIN will not warn about potentially unsafe uses of COPY_TRANS (use this if you know it is safe).
+    type: 14 #keyword
+    items:
+        - name: COPY_TRANS
+          detail: COPY_TRANS [ SAFE ] filename stateNumber
+          doc: At the end of the CHAIN text, copy all transitions from the given state in the given file. This is useful for interjections (see INTERJECT). If SAFE is specified, CHAIN will not warn about potentially unsafe uses of COPY_TRANS (use this if you know it is safe).
 
-    - name: COPY_TRANS_LATE
-      detail: COPY_TRANS_LATE [ SAFE ] filename stateNumber
-      doc: Same as above, but only copy after all the other D Actions have been applied.
+        - name: COPY_TRANS_LATE
+          detail: COPY_TRANS_LATE [ SAFE ] filename stateNumber
+          doc: Same as above, but only copy after all the other D Actions have been applied.
 
-    # END, EXIT, EXTERN are also chain epilogue keywords, but their docs are
-    # merged into keywords.END and trans_next.EXIT/EXTERN to avoid duplicate
-    # completion entries.
-    # - name: END
-    #   detail: END transition list
-    #   doc: Execute the given transitions after the final state in the CHAIN.
-    # - name: EXIT
-    #   detail: EXIT
-    #   doc: At the end of the CHAIN text, exit the dialogue.
-    # - name: EXTERN
-    #   detail: EXTERN filename stateNumber
-    #   doc: Transfer to the given state in the given dialogue file.
+        # END, EXIT, EXTERN are also chain epilogue keywords, but their docs are
+        # merged into keywords.END and trans_next.EXIT/EXTERN to avoid duplicate
+        # completion entries.
+        # - name: END
+        #   detail: END transition list
+        #   doc: Execute the given transitions after the final state in the CHAIN.
+        # - name: EXIT
+        #   detail: EXIT
+        #   doc: At the end of the CHAIN text, exit the dialogue.
+        # - name: EXTERN
+        #   detail: EXTERN filename stateNumber
+        #   doc: Transfer to the given state in the given dialogue file.
 
 keywords:
-  type: 14 #keyword
-  items:
-    - name: BRANCH
-      detail: BRANCH transTriggerString BEGIN chain_speaker list END
-      doc: Like chain text, except that the first transTriggerString is appended to all existing dialogue units.
+    type: 14 #keyword
+    items:
+        - name: BRANCH
+          detail: BRANCH transTriggerString BEGIN chain_speaker list END
+          doc: Like chain text, except that the first transTriggerString is appended to all existing dialogue units.
 
-    - name: END
-      detail: END
-      doc: |-
-        Block terminator for APPEND, EXTEND_TOP, EXTEND_BOTTOM, state, ALTER_TRANS, and other constructs.
+        - name: END
+          detail: END
+          doc: |-
+              Block terminator for APPEND, EXTEND_TOP, EXTEND_BOTTOM, state, ALTER_TRANS, and other constructs.
 
-        ---
-        Chain epilogue: `END transition list` — execute the given transitions after the final state in the CHAIN.
+              ---
+              Chain epilogue: `END transition list` — execute the given transitions after the final state in the CHAIN.
 
-    - name: GLOBAL
+        - name: GLOBAL
 
-    - name: IF_FILE_EXISTS
+        - name: IF_FILE_EXISTS
 
-    - name: LOCALS
+        - name: LOCALS
 
-    - name: MYAREA
+        - name: MYAREA
 
-    - name: nonPausing
+        - name: nonPausing
 
-    - name: OR
+        - name: OR
 
-    - name: RESPONSE
+        - name: RESPONSE
 
-    - name: SAFE
+        - name: SAFE
 
-    - name: THEN
+        - name: THEN
 
-    - name: WEIGHT
+        - name: WEIGHT
 
 # D format is quirky, it's hard to figure out the context.
 # Items with same label and different usages are temporarily placed here, their docs joined.
 multi:
-  type: 14 #keyword
-  items:
-    - name: IF
-      detail: IF
-      doc: |-
-        Transition: `IF transTriggerString [ THEN ] transFeature list transNext`
+    type: 14 #keyword
+    items:
+        - name: IF
+          detail: IF
+          doc: |-
+              Transition: `IF transTriggerString [ THEN ] transFeature list transNext`
 
-        If the transTriggerString evaluates to true or is empty, this transition is viable. If it contains no replyText within its transFeature list, it is immediately taken. Otherwise, the replyText is presented as an option to the user. If the transition is taken, any actions in the transFeature list are performed and the dialogue flows to the point indicated by the transNext. transitions are evaluated in "reverse order".
+              If the transTriggerString evaluates to true or is empty, this transition is viable. If it contains no replyText within its transFeature list, it is immediately taken. Otherwise, the replyText is presented as an option to the user. If the transition is taken, any actions in the transFeature list are performed and the dialogue flows to the point indicated by the transNext. transitions are evaluated in "reverse order".
 
-        ---
-        Action condition: `IF String`.
+              ---
+              Action condition: `IF String`.
 
-        The action is processed if the element being altered/replaced/added to contains a substring matching against the String regexp.
+              The action is processed if the element being altered/replaced/added to contains a substring matching against the String regexp.
 
-        ---
-        State: `IF [ WEIGHT #weightNumber ] stateTriggerString [ THEN ] [ BEGIN ] stateLabel SAY sayText [ = sayText ... ] transition list END`
+              ---
+              State: `IF [ WEIGHT #weightNumber ] stateTriggerString [ THEN ] [ BEGIN ] stateLabel SAY sayText [ = sayText ... ] transition list END`
 
-        [Online documentation](https://weidu.org/~thebigg/README-WeiDU.html#state)
+              [Online documentation](https://weidu.org/~thebigg/README-WeiDU.html#state)
 
-  #     # can't show this for all +'s
-  #     - name: +
-  #       detail: + stateLabel
-  #       doc: This is a synonym for GOTO.
+    #     # can't show this for all +'s
+    #     - name: +
+    #       detail: + stateLabel
+    #       doc: This is a synonym for GOTO.
 
 # # this is hard...
 # chain_text:
@@ -247,106 +247,106 @@ multi:
 #       doc: The last definition of the translation string (with value defined by a variable) given in any TRA file should be used.
 
 say_text:
-  type: 14 #keyword
-  items:
-    - name: text
-      detail: text
-      doc: sayText and replyText are both text.
+    type: 14 #keyword
+    items:
+        - name: text
+          detail: text
+          doc: sayText and replyText are both text.
 
 state:
-  type: 14 #keyword
-  items:
-    - name: APPENDI
-      detail: APPENDI filename state list END
-      doc: This is legacy syntax that behaves just like the D Action APPEND but is considered a state. Avoid it.
+    type: 14 #keyword
+    items:
+        - name: APPENDI
+          detail: APPENDI filename state list END
+          doc: This is legacy syntax that behaves just like the D Action APPEND but is considered a state. Avoid it.
 
-    - name: CHAIN2
-      detail: CHAIN2 entryFilename entryLabel chain2Text list exitFilename exitLabel
-      doc: This is legacy syntax that behaves somewhat like the D Action CHAIN but is considered a state. In addition, chain2Text is slightly different from chainText. Avoid this construction.
+        - name: CHAIN2
+          detail: CHAIN2 entryFilename entryLabel chain2Text list exitFilename exitLabel
+          doc: This is legacy syntax that behaves somewhat like the D Action CHAIN but is considered a state. In addition, chain2Text is slightly different from chainText. Avoid this construction.
 
-    - name: SAY
-      detail: "SAY sayText [ = sayText ... ]"
-      doc: The creature then says all of the associated sayText.
+        - name: SAY
+          detail: "SAY sayText [ = sayText ... ]"
+          doc: The creature then says all of the associated sayText.
 
 string:
-  type: 14 #keyword
-  items:
-    - name: ^
-      detail: "String ^ String"
-      doc: String literal concatenation. The second string is appended to the first string. No whitespace is added. Thus "hello" ^ "World" is the same as "helloWorld".
+    type: 14 #keyword
+    items:
+        - name: ^
+          detail: "String ^ String"
+          doc: String literal concatenation. The second string is appended to the first string. No whitespace is added. Thus "hello" ^ "World" is the same as "helloWorld".
 
 trans_feature:
-  type: 14 #keyword
-  items:
-    - name: DO
-      detail: DO stateActionString
-      doc: If this transition is taken, the stateActionString is executed.
+    type: 14 #keyword
+    items:
+        - name: DO
+          detail: DO stateActionString
+          doc: If this transition is taken, the stateActionString is executed.
 
-    - name: FLAGS
-      detail: FLAGS integer
-      doc: This allows you to set the features associated with a transition directly using the binary format of DLG files.
+        - name: FLAGS
+          detail: FLAGS integer
+          doc: This allows you to set the features associated with a transition directly using the binary format of DLG files.
 
-    - name: JOURNAL
-      detail: JOURNAL text
-      doc: If this transition is taken, the text is added to the PC's journal.
+        - name: JOURNAL
+          detail: JOURNAL text
+          doc: If this transition is taken, the text is added to the PC's journal.
 
-    - name: REPLY
-      detail: REPLY replyText
-      doc: If this transition is taken, the PC says the replyText.
+        - name: REPLY
+          detail: REPLY replyText
+          doc: If this transition is taken, the PC says the replyText.
 
-    - name: SOLVED_JOURNAL
-      detail: SOLVED_JOURNAL text
-      doc: If this transition is taken, the text is added to the "solved" section of the PC's journal.
+        - name: SOLVED_JOURNAL
+          detail: SOLVED_JOURNAL text
+          doc: If this transition is taken, the text is added to the "solved" section of the PC's journal.
 
-    - name: UNSOLVED_JOURNAL
-      detail: UNSOLVED_JOURNAL text
-      doc: If this transition is taken, the text is added to the "unsolved" section of the PC's journal.
+        - name: UNSOLVED_JOURNAL
+          detail: UNSOLVED_JOURNAL text
+          doc: If this transition is taken, the text is added to the "unsolved" section of the PC's journal.
 
 trans_next:
-  type: 14 #keyword
-  items:
-    - name: EXIT
-      detail: EXIT
-      doc: |-
-        The conversation ends.
+    type: 14 #keyword
+    items:
+        - name: EXIT
+          detail: EXIT
+          doc: |-
+              The conversation ends.
 
-        ---
-        Chain epilogue: at the end of the CHAIN text, exit the dialogue.
+              ---
+              Chain epilogue: at the end of the CHAIN text, exit the dialogue.
 
-    - name: EXTERN
-      detail: EXTERN [ IF_FILE_EXISTS ] filename stateLabel
-      doc: |-
-        The dialogue continues at the state with label stateLabel in the file filename.DLG. The whole transition is not compiled if there's IF_FILE_EXISTS and the file filename doesn't exist.
+        - name: EXTERN
+          detail: EXTERN [ IF_FILE_EXISTS ] filename stateLabel
+          doc: |-
+              The dialogue continues at the state with label stateLabel in the file filename.DLG. The whole transition is not compiled if there's IF_FILE_EXISTS and the file filename doesn't exist.
 
-        ---
-        Chain epilogue: `EXTERN filename stateNumber` — transfer to the given state in the given dialogue file.
+              ---
+              Chain epilogue: `EXTERN filename stateNumber` — transfer to the given state in the given dialogue file.
 
-    - name: GOTO
-      detail: GOTO stateLabel
-      doc: The dialogue continues at the state with label stateLabel in the same DLG file as the current state.
+        - name: GOTO
+          detail: GOTO stateLabel
+          doc: The dialogue continues at the state with label stateLabel in the same DLG file as the current state.
 
 transition:
-  type: 14 #keyword
-  items:
-    - name: +
-      detail: + [ transTriggerString ] + replyText transFeature list transNext
-      doc: This abbreviated syntax for transitions that would contain REPLY (which is by far the most common case) allows you to save yourself some time and typing. It behaves like the full form above.
+    type: 14 #keyword
+    items:
+        - name: +
+          detail: + [ transTriggerString ] + replyText transFeature list transNext
+          doc: This abbreviated syntax for transitions that would contain REPLY (which is by far the most common case) allows you to save yourself some time and typing. It behaves like the full form above.
 
-    - name: COPY_TRANS
-      detail: COPY_TRANS [ SAFE ] filename stateLabel
-      doc: "This instructs WeiDU to copy all of the transitions from the state with the given stateLabel in filename.DLG. This copying takes place before all other D Actions. For example, this is a valid transition list: IF ~Before()~ THEN GOTO my_state COPY_TRANS PLAYER1 33 IF ~After()~ THEN EXTERN SOLA 55 If SAFE is specified, COPY_TRANS will not warn about potentially unsafe uses (use this if you know it is safe)."
+        - name: COPY_TRANS
+          detail: COPY_TRANS [ SAFE ] filename stateLabel
+          doc: "This instructs WeiDU to copy all of the transitions from the state with the given stateLabel in filename.DLG. This copying takes place before all other D Actions. For example, this is a valid transition list: IF ~Before()~ THEN GOTO my_state COPY_TRANS PLAYER1 33 IF ~After()~ THEN EXTERN SOLA 55 If SAFE is specified, COPY_TRANS will not warn about potentially unsafe uses (use this if you know it is safe)."
 
-    - name: COPY_TRANS_LATE
-      detail: COPY_TRANS_LATE [ SAFE ] filename stateLabel
-      doc: Same as COPY_TRANS, but is invoked after all other D Actions.
+        - name: COPY_TRANS_LATE
+          detail: COPY_TRANS_LATE [ SAFE ] filename stateLabel
+          doc: Same as COPY_TRANS, but is invoked after all other D Actions.
 
 when:
-  type: 14 #keyword
-  items:
-    - name: IF
-      detail: IF String
-      doc: The action is processed if the element being altered/replaced/added to contains a substring matching against the String regexp.
+    type: 14 #keyword
+    items:
+        - name: IF
+          detail: IF String
+          doc: The action is processed if the element being altered/replaced/added to contains a substring matching against the String regexp.
 
-    - name: UNLESS
-      detail: UNLESS String
-      doc: The action is not processed if the element being altered/replaced/added to contains a substring matching against the String regexp.
+        - name: UNLESS
+          detail: UNLESS String
+          doc: The action is not processed if the element being altered/replaced/added to contains a substring matching against the String regexp.

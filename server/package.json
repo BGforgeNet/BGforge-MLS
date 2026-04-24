@@ -1,10 +1,26 @@
 {
     "name": "@bgforge/mls-server",
-    "description": "LSP server for Fallout SSL, WeiDU (BAF/D/TP2), and related modding languages",
     "version": "3.7.0",
-    "author": "BGforge",
+    "description": "LSP server for Fallout SSL, WeiDU (BAF/D/TP2), and related modding languages",
+    "keywords": [
+        "fallout",
+        "infinity-engine",
+        "language-server",
+        "lsp",
+        "modding",
+        "weidu"
+    ],
+    "homepage": "https://github.com/BGforgeNet/BGforge-MLS",
+    "bugs": {
+        "url": "https://github.com/BGforgeNet/BGforge-MLS/issues"
+    },
     "license": "SEE LICENSE IN LICENSE.txt",
-    "main": "out/server.js",
+    "author": "BGforge",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/BGforgeNet/BGforge-MLS",
+        "directory": "server"
+    },
     "bin": {
         "bgforge-mls-server": "out/server.js"
     },
@@ -13,31 +29,12 @@
         "!out/*.map",
         "LICENSE.txt"
     ],
-    "engines": {
-        "node": ">=18"
-    },
+    "main": "out/server.js",
     "scripts": {
         "test": "./scripts/test.sh",
         "test:unit": "vitest run",
         "test:integration": "vitest run --config vitest.integration.config.ts"
     },
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/BGforgeNet/BGforge-MLS",
-        "directory": "server"
-    },
-    "homepage": "https://github.com/BGforgeNet/BGforge-MLS",
-    "bugs": {
-        "url": "https://github.com/BGforgeNet/BGforge-MLS/issues"
-    },
-    "keywords": [
-        "lsp",
-        "language-server",
-        "fallout",
-        "weidu",
-        "infinity-engine",
-        "modding"
-    ],
     "dependencies": {
         "@supercharge/promise-pool": "^2.4.0",
         "esbuild-wasm": "^0.28.0",
@@ -50,13 +47,16 @@
         "web-tree-sitter": "^0.26.8",
         "yaml": "^2.8.3"
     },
-    "optionalDependencies": {
-        "sslc-emscripten-noderawfs": "https://github.com/sfall-team/sslc/releases/download/2026-02-07-11-20-26/wasm-emscripten-node-noderawfs.tar.gz"
-    },
     "devDependencies": {
         "@types/ini": "^4.1.1",
         "@types/node": "^22.19.17",
         "fast-check": "^4.7.0",
         "vitest": "^4.1.5"
+    },
+    "optionalDependencies": {
+        "sslc-emscripten-noderawfs": "https://github.com/sfall-team/sslc/releases/download/2026-02-07-11-20-26/wasm-emscripten-node-noderawfs.tar.gz"
+    },
+    "engines": {
+        "node": ">=18"
     }
 }
