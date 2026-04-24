@@ -47,10 +47,7 @@ export async function compileWithTmpFile(params: CompileWithTmpFileParams): Prom
         activeCompiles.delete(uri);
         await removeTmpFile(tmpPath);
         if (extraCleanupPaths) {
-            for (const extra of extraCleanupPaths) {
-                // eslint-disable-next-line no-await-in-loop
-                await removeTmpFile(extra);
-            }
+            await Promise.all(extraCleanupPaths.map((extra) => removeTmpFile(extra)));
         }
     }
 }
