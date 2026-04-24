@@ -29,7 +29,7 @@ Originally a VS Code extension, it now also works with various other editors. Se
 | Find references   |      ✓       |                        |    ✓    |               ✓                |
 | Formatting        |      ✓       |           ✓            |    ✓    |               ✓                |
 | Document symbols  |      ✓       |                        |    ✓    |               ✓                |
-| Workspace symbols |      ✓       |                        |         |               ✓                |
+| Workspace symbols |      ✓       |                        |    ✓    |               ✓                |
 | Semantic tokens   |      ✓       |                        |         |               ✓                |
 | Rename            |      ✓       |                        |    ✓    |           Same file            |
 | Inlay hints       |    `.msg`    |         `.tra`         | `.tra`  |             `.tra`             |
