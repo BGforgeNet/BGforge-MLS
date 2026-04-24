@@ -77,6 +77,7 @@ import * as formattingHandler from "./handlers/formatting";
 import * as hoverHandler from "./handlers/hover";
 import * as referencesHandler from "./handlers/references";
 import * as signatureHandler from "./handlers/signature";
+import * as symbolsHandler from "./handlers/symbols";
 
 // Create a connection for the server.
 // createConnection() auto-detects transport from process.argv:
@@ -588,19 +589,7 @@ connection.onShutdown(() => {
 
 formattingHandler.register(handlerCtx);
 
-connection.onDocumentSymbol(
-    timeHandler(
-        "onDocumentSymbol",
-        (params) => {
-            const textDoc = documents.get(params.textDocument.uri);
-            if (!textDoc) {
-                return [];
-            }
-            return registry.symbols(textDoc.languageId, textDoc.getText());
-        },
-        timingOpts,
-    ),
-);
+symbolsHandler.register(handlerCtx);
 
 connection.languages.semanticTokens.on(
     timeHandler(
@@ -612,16 +601,6 @@ connection.languages.semanticTokens.on(
             }
 
             return registry.semanticTokens(textDoc.languageId, textDoc.getText(), params.textDocument.uri);
-        },
-        timingOpts,
-    ),
-);
-
-connection.onWorkspaceSymbol(
-    timeHandler(
-        "onWorkspaceSymbol",
-        (params, token) => {
-            return registry.workspaceSymbols(params.query, token);
         },
         timingOpts,
     ),
