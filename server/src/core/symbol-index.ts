@@ -114,6 +114,56 @@ export class Symbols {
     /** Name -> Symbols (multiple symbols can share a name across scopes) */
     private readonly byName: Map<string, IndexedSymbol[]> = new Map();
 
+    /**
+     * Materialised flat list of all symbols (file + static, excluding Navigation
+     * which is workspace-search-only). Rebuilt lazily on first read after any
+     * mutation that could affect its contents.
+     *
+     * Two hot callers hit this: query({}) from completion handlers (per keystroke)
+     * and searchWorkspaceSymbols (per Ctrl+T keystroke). Before this cache, both
+     * rebuilt the list on every call by iterating the files Map.
+     */
+    private allSymbolsCache: IndexedSymbol[] | null = null;
+
+    /**
+     * Same as allSymbolsCache but *including* Navigation symbols. Used only by
+     * searchWorkspaceSymbols, which surfaces navigation entries.
+     */
+    private allSymbolsWithNavCache: IndexedSymbol[] | null = null;
+
+    private invalidateAllSymbolsCache(): void {
+        this.allSymbolsCache = null;
+        this.allSymbolsWithNavCache = null;
+    }
+
+    private getAllSymbolsNoNav(): readonly IndexedSymbol[] {
+        if (this.allSymbolsCache === null) {
+            const flat: IndexedSymbol[] = [];
+            for (const symbols of this.files.values()) {
+                for (const symbol of symbols) {
+                    if (symbol.source.type !== SourceType.Navigation) {
+                        flat.push(symbol);
+                    }
+                }
+            }
+            flat.push(...this.staticSymbols);
+            this.allSymbolsCache = flat;
+        }
+        return this.allSymbolsCache;
+    }
+
+    private getAllSymbolsWithNav(): readonly IndexedSymbol[] {
+        if (this.allSymbolsWithNavCache === null) {
+            const flat: IndexedSymbol[] = [];
+            for (const symbols of this.files.values()) {
+                for (const symbol of symbols) flat.push(symbol);
+            }
+            // Static is not included here — searchWorkspaceSymbols skips it.
+            this.allSymbolsWithNavCache = flat;
+        }
+        return this.allSymbolsWithNavCache;
+    }
+
     constructor(options?: SymbolsOptions) {
         this.maxFiles = options?.maxFiles ?? DEFAULT_MAX_FILES;
     }
@@ -152,6 +202,8 @@ export class Symbols {
                 this.files.delete(oldestKey);
             }
         }
+
+        this.invalidateAllSymbolsCache();
     }
 
     /**
@@ -160,6 +212,7 @@ export class Symbols {
     clearFile(uri: NormalizedUri): void {
         this.removeFileFromIndices(uri);
         this.files.delete(uri);
+        this.invalidateAllSymbolsCache();
     }
 
     /**
@@ -188,6 +241,8 @@ export class Symbols {
         for (const symbol of symbols) {
             this.addToNameIndex(symbol);
         }
+
+        this.invalidateAllSymbolsCache();
     }
 
     // -------------------------------------------------------------------------
@@ -244,23 +299,24 @@ export class Symbols {
      * See compareScopePrecedence() for how lookup() handles this via URI tiebreaker.
      */
     query(options: QueryOptions): readonly IndexedSymbol[] {
-        let results: IndexedSymbol[] = [];
+        let results: IndexedSymbol[];
 
-        // Collect all symbols (respecting excludeUri, excluding navigation-only)
-        for (const [fileUri, symbols] of this.files) {
-            if (options.excludeUri && fileUri === options.excludeUri) {
-                continue; // Skip excluded file - local completion handles it
-            }
-            for (const symbol of symbols) {
-                // Navigation symbols are for workspace search only, not completion
-                if (symbol.source.type !== SourceType.Navigation) {
-                    results.push(symbol);
+        if (options.excludeUri) {
+            // excludeUri requires per-file iteration (the cache is pre-flattened).
+            results = [];
+            for (const [fileUri, symbols] of this.files) {
+                if (fileUri === options.excludeUri) continue;
+                for (const symbol of symbols) {
+                    if (symbol.source.type !== SourceType.Navigation) {
+                        results.push(symbol);
+                    }
                 }
             }
+            results.push(...this.staticSymbols);
+        } else {
+            results = [...this.getAllSymbolsNoNav()];
         }
-        results.push(...this.staticSymbols);
 
-        // Apply filters
         if (options.prefix) {
             const prefix = options.prefix.toLowerCase();
             results = results.filter((s) => s.name.toLowerCase().startsWith(prefix));
@@ -272,11 +328,11 @@ export class Symbols {
         }
 
         if (options.uri) {
-            // Filter to file symbols + static (static is visible everywhere)
-            results = results.filter((s) => s.source.uri === options.uri || s.source.type === SourceType.Static);
+            results = results.filter(
+                (s) => s.source.uri === options.uri || s.source.type === SourceType.Static,
+            );
         }
 
-        // Apply limit
         if (options.limit && results.length > options.limit) {
             results = results.slice(0, options.limit);
         }
@@ -397,41 +453,29 @@ export class Symbols {
      * LSP clients perform their own fuzzy filtering on top of these results.
      */
     searchWorkspaceSymbols(query: string, maxResults = 500, token?: CancellationToken): SymbolInformation[] {
-        if (token?.isCancellationRequested) {
-            return [];
-        }
+        if (token?.isCancellationRequested) return [];
 
         const lowerQuery = query.toLowerCase();
         const results: SymbolInformation[] = [];
         let iterCount = 0;
-        // Tight enough to yield fast on cancel for large workspaces, loose enough to avoid measurable overhead.
         const CANCEL_CHECK_INTERVAL = 16;
 
-        for (const [, symbols] of this.files) {
-            for (const symbol of symbols) {
-                if (++iterCount % CANCEL_CHECK_INTERVAL === 0 && token?.isCancellationRequested) {
-                    return results;
-                }
-
-                if (lowerQuery && !symbol.name.toLowerCase().includes(lowerQuery)) {
-                    continue;
-                }
-                if (!symbol.location) continue;
-
-                results.push({
-                    name: symbol.name,
-                    kind: symbolKindToVscodeKind(symbol.kind),
-                    containerName: symbol.source.displayPath,
-                    location: {
-                        uri: symbol.location.uri,
-                        range: symbol.location.range,
-                    },
-                });
-
-                if (results.length >= maxResults) {
-                    return results;
-                }
+        for (const symbol of this.getAllSymbolsWithNav()) {
+            if (++iterCount % CANCEL_CHECK_INTERVAL === 0 && token?.isCancellationRequested) {
+                return results;
             }
+
+            if (lowerQuery && !symbol.name.toLowerCase().includes(lowerQuery)) continue;
+            if (!symbol.location) continue;
+
+            results.push({
+                name: symbol.name,
+                kind: symbolKindToVscodeKind(symbol.kind),
+                containerName: symbol.source.displayPath,
+                location: { uri: symbol.location.uri, range: symbol.location.range },
+            });
+
+            if (results.length >= maxResults) return results;
         }
 
         return results;

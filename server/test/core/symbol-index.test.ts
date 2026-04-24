@@ -409,6 +409,43 @@ describe("Symbols", () => {
             // File symbols with matching URI are excluded
             expect(result.find((s) => s.name === "foo_var")).toBeUndefined();
         });
+
+        it("query({}) returns identical results across calls and invalidates on update", () => {
+            const symbols = new Symbols();
+            for (let f = 0; f < 5; f++) {
+                const uri = `file:///mod/f${f}.tp2`;
+                symbols.updateFile(uri, [
+                    createSymbol({ name: `a${f}`, source: { type: SourceType.Workspace, uri } }),
+                    createSymbol({ name: `b${f}`, source: { type: SourceType.Workspace, uri } }),
+                ]);
+            }
+            symbols.loadStatic([
+                createSymbol({ name: "static1", source: { type: SourceType.Static, uri: null } }),
+                createSymbol({ name: "static2", source: { type: SourceType.Static, uri: null } }),
+            ]);
+
+            const first = [...symbols.query({})].map((s) => s.name).sort();
+            const second = [...symbols.query({})].map((s) => s.name).sort();
+            expect(second).toEqual(first);
+
+            // Invalidate by update: results change accordingly.
+            const uri0 = "file:///mod/f0.tp2";
+            symbols.updateFile(uri0, [createSymbol({ name: "new_only", source: { type: SourceType.Workspace, uri: uri0 } })]);
+            const third = [...symbols.query({})].map((s) => s.name);
+            expect(third).not.toContain("a0");
+            expect(third).toContain("new_only");
+        });
+
+        it("searchWorkspaceSymbols returns consistent results across calls", () => {
+            const symbols = new Symbols();
+            for (let f = 0; f < 3; f++) {
+                const uri = `file:///mod/f${f}.tp2`;
+                symbols.updateFile(uri, [createSymbol({ name: `fn_${f}`, source: { type: SourceType.Workspace, uri } })]);
+            }
+            const first = symbols.searchWorkspaceSymbols("fn").map((s) => s.name).sort();
+            const second = symbols.searchWorkspaceSymbols("fn").map((s) => s.name).sort();
+            expect(second).toEqual(first);
+        });
     });
 
     // =========================================================================
