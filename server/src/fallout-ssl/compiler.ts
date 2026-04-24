@@ -11,7 +11,6 @@
 
 import * as cp from "child_process";
 import * as crypto from "crypto";
-import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import {
@@ -22,13 +21,13 @@ import {
     needsShell,
     parseCommandPath,
     pathToUri,
-    removeTmpFile,
     reportCompileResult,
     runProcess,
     sendParseResult,
     tmpDir,
     uriToPath,
 } from "../common";
+import { compileWithTmpFile } from "../core/compile-with-tmp-file";
 import type { NormalizedUri } from "../core/normalized-uri";
 import { getConnection, getDocuments } from "../lsp-connection";
 import { showError, showErrorWithActions, showInfo } from "../user-messages";
@@ -232,94 +231,90 @@ export async function compile(uri: NormalizedUri, sslSettings: SSLsettings, inte
     }
     conlog(`compiling ${baseName}...`);
 
-    // Cancel any in-flight compilation for this URI before starting a new one
-    activeCompiles.get(uri)?.abort();
-    const controller = new AbortController();
-    activeCompiles.set(uri, controller);
+    const extraCleanupPaths = shouldWriteOutput ? [] : [dstPath];
 
     // Errors from the compiler (e.g. WASM crash) propagate to callers.
     // Fire-and-forget call sites (server.ts onDidSave/onDidChangeContent) use
     // `void compile(...).catch(...)` to log and swallow rejections. Awaited
     // call sites (e.g. TSSL transpile chain) catch and report them explicitly.
-    // The finally block guarantees tmp file cleanup in both cases.
-    try {
-        await fs.promises.writeFile(tmpPath, text);
-        let useBuiltInCompiler = !sslSettings.compilePath;
+    // compileWithTmpFile guarantees tmp file cleanup in both cases.
+    await compileWithTmpFile({
+        uri,
+        tmpPath,
+        text,
+        activeCompiles,
+        extraCleanupPaths,
+        run: async (signal) => {
+            let useBuiltInCompiler = !sslSettings.compilePath;
 
-        if (!useBuiltInCompiler && !(await checkExternalCompiler(sslSettings.compilePath))) {
-            if (!interactive) {
-                useBuiltInCompiler = true;
-            } else {
-                const response = await showErrorWithActions(
-                    `Failed to run '${sslSettings.compilePath}'! Switch to built-in compiler?`,
-                    { title: "Switch", id: "switch" },
-                    { title: "Cancel", id: "cancel" },
-                );
-                if (response?.id === "switch") {
+            if (!useBuiltInCompiler && !(await checkExternalCompiler(sslSettings.compilePath))) {
+                if (!interactive) {
                     useBuiltInCompiler = true;
-                    try {
-                        await getConnection().sendRequest(REQUEST_SET_BUILT_IN_COMPILER, { uri });
-                    } catch (err) {
-                        conlog(`Failed to persist built-in compiler switch: ${errorMessage(err)}`, "warn");
-                    }
                 } else {
+                    const response = await showErrorWithActions(
+                        `Failed to run '${sslSettings.compilePath}'! Switch to built-in compiler?`,
+                        { title: "Switch", id: "switch" },
+                        { title: "Cancel", id: "cancel" },
+                    );
+                    if (response?.id === "switch") {
+                        useBuiltInCompiler = true;
+                        try {
+                            await getConnection().sendRequest(REQUEST_SET_BUILT_IN_COMPILER, { uri });
+                        } catch (err) {
+                            conlog(`Failed to persist built-in compiler switch: ${errorMessage(err)}`, "warn");
+                        }
+                    } else {
+                        return;
+                    }
+                }
+            }
+
+            if (useBuiltInCompiler) {
+                const { stdout, returnCode } = await ssl_builtin_compiler({
+                    interactive,
+                    cwd: cwdTo,
+                    inputFileName: TMP_SSL_NAME,
+                    outputFileName: dstPath,
+                    options: sslSettings.compileOptions,
+                    headersDir: sslSettings.headersDirectory,
+                    signal,
+                });
+                if (signal.aborted) {
                     return;
                 }
-            }
-        }
-
-        if (useBuiltInCompiler) {
-            const { stdout, returnCode } = await ssl_builtin_compiler({
-                interactive,
-                cwd: cwdTo,
-                inputFileName: TMP_SSL_NAME,
-                outputFileName: dstPath,
-                options: sslSettings.compileOptions,
-                headersDir: sslSettings.headersDirectory,
-                signal: controller.signal,
-            });
-            if (controller.signal.aborted) {
+                if (returnCode === 0) {
+                    if (interactive) {
+                        showInfo(`Compiled ${baseName}.`);
+                    }
+                } else {
+                    if (interactive) {
+                        showError(`Failed to compile ${baseName}!`);
+                    }
+                }
+                sendDiagnostics(uri, stdout, tmpUri);
                 return;
             }
-            if (returnCode === 0) {
-                if (interactive) {
-                    showInfo(`Compiled ${baseName}.`);
-                }
-            } else {
-                if (interactive) {
-                    showError(`Failed to compile ${baseName}!`);
-                }
+
+            const { err, stdout } = await runExternalCompiler(
+                sslSettings.compilePath,
+                compileOptions,
+                cwdTo,
+                dstPath,
+                signal,
+            );
+
+            if (signal.aborted) {
+                return;
             }
-            sendDiagnostics(uri, stdout, tmpUri);
-            return;
-        }
 
-        const { err, stdout } = await runExternalCompiler(
-            sslSettings.compilePath,
-            compileOptions,
-            cwdTo,
-            dstPath,
-            controller.signal,
-        );
+            let parseResult = parseCompileOutput(stdout, uri);
 
-        // Skip stale results if this compile was cancelled by a newer one
-        if (controller.signal.aborted) {
-            return;
-        }
+            if (err && parseResult.errors.length === 0) {
+                parseResult = addFallbackDiagnostic(parseResult, err, pathToUri(filepath), stdout);
+            }
 
-        let parseResult = parseCompileOutput(stdout, uri);
-
-        if (err && parseResult.errors.length === 0) {
-            parseResult = addFallbackDiagnostic(parseResult, err, pathToUri(filepath), stdout);
-        }
-
-        reportCompileResult(parseResult, interactive, `Compiled ${baseName}.`, `Failed to compile ${baseName}!`);
-        sendParseResult(parseResult, uri, tmpUri);
-    } finally {
-        activeCompiles.delete(uri);
-        await removeTmpFile(tmpPath);
-        if (!shouldWriteOutput) {
-            await removeTmpFile(dstPath);
-        }
-    }
+            reportCompileResult(parseResult, interactive, `Compiled ${baseName}.`, `Failed to compile ${baseName}!`);
+            sendParseResult(parseResult, uri, tmpUri);
+        },
+    });
 }
