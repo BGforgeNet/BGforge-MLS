@@ -55,7 +55,7 @@ function findSectionAncestor(
     keywordNode: SyntaxNode,
     ancestorType: string,
     boundaryNode: SyntaxNode,
-    fallbackType?: string
+    fallbackType?: string,
 ): SyntaxNode | null {
     let ancestor: SyntaxNode | null = keywordNode.parent;
     while (ancestor && ancestor !== boundaryNode && ancestor.type !== ancestorType) {
@@ -87,7 +87,9 @@ function findSectionAncestor(
  */
 function findKeywordNodes(funcCallNode: SyntaxNode, cursorOffset: number): KeywordSearchResult {
     return searchKeywordNodes(funcCallNode, cursorOffset, funcCallNode, {
-        sectionNode: null, sectionType: null, keywordPosition: -1,
+        sectionNode: null,
+        sectionType: null,
+        keywordPosition: -1,
     });
 }
 
@@ -113,8 +115,8 @@ function searchKeywordNodes(
                 result = {
                     sectionType: ParamSection.IntVar,
                     keywordPosition: searchNode.endIndex,
-                    sectionNode: findSectionAncestor(searchNode, SyntaxType.IntVarCall, funcCallNode)
-                        ?? acc.sectionNode,
+                    sectionNode:
+                        findSectionAncestor(searchNode, SyntaxType.IntVarCall, funcCallNode) ?? acc.sectionNode,
                 };
             } else if (text === "STR_VAR") {
                 // Bug fix: With error recovery, STR_VAR might not have a str_var_call ancestor yet.
@@ -122,23 +124,22 @@ function searchKeywordNodes(
                 result = {
                     sectionType: ParamSection.StrVar,
                     keywordPosition: searchNode.endIndex,
-                    sectionNode: findSectionAncestor(
-                        searchNode, SyntaxType.StrVarCall, funcCallNode, SyntaxType.IntVarCall
-                    ) ?? acc.sectionNode,
+                    sectionNode:
+                        findSectionAncestor(searchNode, SyntaxType.StrVarCall, funcCallNode, SyntaxType.IntVarCall) ??
+                        acc.sectionNode,
                 };
             } else if (text === "RET") {
                 result = {
                     sectionType: ParamSection.Ret,
                     keywordPosition: searchNode.endIndex,
-                    sectionNode: findSectionAncestor(searchNode, SyntaxType.RetCall, funcCallNode)
-                        ?? acc.sectionNode,
+                    sectionNode: findSectionAncestor(searchNode, SyntaxType.RetCall, funcCallNode) ?? acc.sectionNode,
                 };
             } else {
                 result = {
                     sectionType: ParamSection.RetArray,
                     keywordPosition: searchNode.endIndex,
-                    sectionNode: findSectionAncestor(searchNode, SyntaxType.RetArrayCall, funcCallNode)
-                        ?? acc.sectionNode,
+                    sectionNode:
+                        findSectionAncestor(searchNode, SyntaxType.RetArrayCall, funcCallNode) ?? acc.sectionNode,
                 };
             }
         }
@@ -289,10 +290,15 @@ function findCallItemAtCursor(funcCallNode: SyntaxNode, cursorOffset: number): S
         const type = node.type;
 
         // Check if this is a call_item or decl type
-        const isParamNode = type === SyntaxType.IntVarCallItem || type === SyntaxType.StrVarCallItem ||
-            type === SyntaxType.RetCallItem || type === SyntaxType.RetArrayCallItem ||
-            type === SyntaxType.IntVarDecl || type === SyntaxType.StrVarDecl ||
-            type === SyntaxType.RetDecl || type === SyntaxType.RetArrayDecl;
+        const isParamNode =
+            type === SyntaxType.IntVarCallItem ||
+            type === SyntaxType.StrVarCallItem ||
+            type === SyntaxType.RetCallItem ||
+            type === SyntaxType.RetArrayCallItem ||
+            type === SyntaxType.IntVarDecl ||
+            type === SyntaxType.StrVarDecl ||
+            type === SyntaxType.RetDecl ||
+            type === SyntaxType.RetArrayDecl;
 
         if (isParamNode) {
             // Check if cursor is within this node (inclusive of endIndex boundary)
@@ -388,8 +394,12 @@ export function detectFunctionDefContext(node: SyntaxNode, cursorOffset: number)
     const type = node.type;
 
     // Function/macro definitions: detect param context only
-    if (type === SyntaxType.ActionDefinePatchFunction || type === SyntaxType.ActionDefinePatchMacro ||
-        type === SyntaxType.ActionDefineFunction || type === SyntaxType.ActionDefineMacro) {
+    if (
+        type === SyntaxType.ActionDefinePatchFunction ||
+        type === SyntaxType.ActionDefinePatchMacro ||
+        type === SyntaxType.ActionDefineFunction ||
+        type === SyntaxType.ActionDefineMacro
+    ) {
         return detectFunctionDefinitionContext(node, cursorOffset);
     }
 
@@ -405,15 +415,17 @@ export function detectFunctionDefContext(node: SyntaxNode, cursorOffset: number)
  * @param cursorOffset Byte offset of cursor
  * @returns Context array if cursor is in param position, null otherwise
  */
-function detectFunctionDefinitionContext(
-    node: SyntaxNode,
-    cursorOffset: number,
-): CompletionContext[] | null {
+function detectFunctionDefinitionContext(node: SyntaxNode, cursorOffset: number): CompletionContext[] | null {
     const boundaries = findBeginEndBoundaries(node, true);
     const { beginEnd, functionNameEnd } = boundaries;
 
     // If cursor is AFTER function name but BEFORE BEGIN -> funcParamName/funcParamValue context
-    if (functionNameEnd && functionNameEnd > 0 && cursorOffset > functionNameEnd && (beginEnd < 0 || cursorOffset < beginEnd)) {
+    if (
+        functionNameEnd &&
+        functionNameEnd > 0 &&
+        cursorOffset > functionNameEnd &&
+        (beginEnd < 0 || cursorOffset < beginEnd)
+    ) {
         const callItem = findCallItemAtCursor(node, cursorOffset);
         if (callItem) {
             return [detectParamNameOrValue(callItem, cursorOffset)];

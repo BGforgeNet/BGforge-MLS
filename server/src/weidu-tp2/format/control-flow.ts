@@ -37,12 +37,7 @@ import {
     isControlFlowBodyContent,
 } from "./utils";
 import { SyntaxType } from "../tree-sitter.d";
-import {
-    formatForLoopHeader,
-    formatForLoop,
-    formatForEach,
-    formatAssociativeArray,
-} from "./format-loops";
+import { formatForLoopHeader, formatForLoop, formatForEach, formatAssociativeArray } from "./format-loops";
 
 // ============================================
 // Types
@@ -139,7 +134,7 @@ function formatCondition(
     prefix: string,
     indent: string,
     contIndent: string,
-    lineLimit: number
+    lineLimit: number,
 ): string[] {
     if (!conditionNode) {
         return [indent + prefix];
@@ -147,9 +142,7 @@ function formatCondition(
 
     // Normalize whitespace and strip spaces inside parentheses to match what
     // the split output produces (AST node texts don't have those spaces)
-    const condText = normalizeWhitespace(conditionNode.text)
-        .replace(/\(\s+/g, "(")
-        .replace(/\s+\)/g, ")");
+    const condText = normalizeWhitespace(conditionNode.text).replace(/\(\s+/g, "(").replace(/\s+\)/g, ")");
     const fullLine = indent + prefix + " " + condText;
 
     if (fullLine.length <= lineLimit) {
@@ -164,7 +157,11 @@ function formatCondition(
     // Unwrap value node to get to the actual expression
     if (exprNode.type === SyntaxType.Value && exprNode.children.length > 0) {
         for (const child of exprNode.children) {
-            if (child.type === SyntaxType.BinaryExpr || child.type === SyntaxType.ParenExpr || child.type === SyntaxType.UnaryExpr) {
+            if (
+                child.type === SyntaxType.BinaryExpr ||
+                child.type === SyntaxType.ParenExpr ||
+                child.type === SyntaxType.UnaryExpr
+            ) {
                 exprNode = child;
                 break;
             }
@@ -227,7 +224,7 @@ function outputBeginAndEnterBody(
     child: SyntaxNode,
     indent: string,
     contIndent: string,
-    lineLimit: number
+    lineLimit: number,
 ): void {
     // Handle ELSE BEGIN case
     if (state.afterElse && state.lines.length > 0) {
@@ -302,7 +299,7 @@ function handleControlFlowComment(
     child: SyntaxNode,
     state: ControlFlowParseState,
     indent: string,
-    bodyIndent: string
+    bodyIndent: string,
 ): void {
     if (state.inBody) {
         const rowToCheck = state.beginRow >= 0 ? state.beginRow : state.lastContentRow;
@@ -335,7 +332,7 @@ function formatTryBlock(
     node: SyntaxNode,
     ctx: FormatContext,
     depth: number,
-    formatNode: (node: SyntaxNode, ctx: FormatContext, depth: number) => string
+    formatNode: (node: SyntaxNode, ctx: FormatContext, depth: number) => string,
 ): string {
     const indent = ctx.indent.repeat(depth);
     const bodyIndent = ctx.indent.repeat(depth + 1);
@@ -396,11 +393,15 @@ export function formatControlFlow(
     node: SyntaxNode,
     ctx: FormatContext,
     depth: number,
-    formatNode: (node: SyntaxNode, ctx: FormatContext, depth: number) => string
+    formatNode: (node: SyntaxNode, ctx: FormatContext, depth: number) => string,
 ): string {
     // Report if control flow node has no children (malformed)
     if (node.children.length === 0) {
-        throwFormatError(`Empty control flow node '${node.type}'`, node.startPosition.row + 1, node.startPosition.column + 1);
+        throwFormatError(
+            `Empty control flow node '${node.type}'`,
+            node.startPosition.row + 1,
+            node.startPosition.column + 1,
+        );
     }
     // Handle FOR loops specially
     const forHeader = formatForLoopHeader(node);
@@ -537,7 +538,7 @@ export function formatMatchCase(
     node: SyntaxNode,
     ctx: FormatContext,
     depth: number,
-    formatNode: (node: SyntaxNode, ctx: FormatContext, depth: number) => string
+    formatNode: (node: SyntaxNode, ctx: FormatContext, depth: number) => string,
 ): string {
     const indent = ctx.indent.repeat(depth);
     const bodyIndent = ctx.indent.repeat(depth + 1);

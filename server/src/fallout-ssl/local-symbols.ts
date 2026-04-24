@@ -11,7 +11,16 @@
 import type { IndexedSymbol } from "../core/symbol";
 import { TextCache } from "../shared/text-cache";
 import { parseWithCache, isInitialized } from "./parser";
-import { extractProcedures, extractMacros, findPrecedingDocComment, makeRange, extractParams, buildProcedureSymbol, buildMacroSymbol, buildVariableSymbol } from "./utils";
+import {
+    extractProcedures,
+    extractMacros,
+    findPrecedingDocComment,
+    makeRange,
+    extractParams,
+    buildProcedureSymbol,
+    buildMacroSymbol,
+    buildVariableSymbol,
+} from "./utils";
 import * as jsdoc from "../shared/jsdoc";
 import { SyntaxType } from "./tree-sitter.d";
 // Generated from server/data/fallout-ssl-base.yml by generate-data.sh.

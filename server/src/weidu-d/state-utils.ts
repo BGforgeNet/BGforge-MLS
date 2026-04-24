@@ -221,7 +221,7 @@ export function findStateInDialog(root: SyntaxNode, dialogFile: string, labelNam
         if (node.type === SyntaxType.BeginAction || node.type === SyntaxType.AppendAction) {
             const fileNode = node.childForFieldName("file");
             if (fileNode && normalizeDialogFile(fileNode.text) === dialogFile) {
-                const match = findStateDefinitions(node).find(s => s.name === labelName);
+                const match = findStateDefinitions(node).find((s) => s.name === labelName);
                 if (match) {
                     return match;
                 }

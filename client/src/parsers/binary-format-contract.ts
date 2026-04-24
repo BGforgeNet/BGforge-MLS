@@ -2,15 +2,7 @@ import { z } from "zod";
 
 type BinaryFormat = "pro" | "map";
 
-type NumericTypeName =
-    | "uint8"
-    | "uint16"
-    | "uint24"
-    | "uint32"
-    | "int8"
-    | "int16"
-    | "int24"
-    | "int32";
+type NumericTypeName = "uint8" | "uint16" | "uint24" | "uint32" | "int8" | "int16" | "int24" | "int32";
 
 interface NumericRange {
     readonly min: number;
@@ -18,10 +10,10 @@ interface NumericRange {
 }
 
 const NUMERIC_TYPE_RANGES: Record<NumericTypeName, NumericRange> = {
-    uint8: { min: 0, max: 0xFF },
-    uint16: { min: 0, max: 0xFF_FF },
-    uint24: { min: 0, max: 0xFF_FF_FF },
-    uint32: { min: 0, max: 0xFF_FF_FF_FF },
+    uint8: { min: 0, max: 0xff },
+    uint16: { min: 0, max: 0xff_ff },
+    uint24: { min: 0, max: 0xff_ff_ff },
+    uint32: { min: 0, max: 0xff_ff_ff_ff },
     int8: { min: -128, max: 127 },
     int16: { min: -32_768, max: 32_767 },
     int24: { min: -8_388_608, max: 8_388_607 },
@@ -33,10 +25,10 @@ const DOMAIN_RANGES: Record<BinaryFormat, Readonly<Record<string, NumericRange>>
         "pro.header.lightRadius": { min: 0, max: 8 },
         "pro.header.lightIntensity": { min: 0, max: 65_536 },
         "pro.doorProperties.walkThrough": { min: 0, max: 1 },
-        "pro.stairsProperties.destTile": { min: 0, max: 0x03_FF_FF_FF },
-        "pro.stairsProperties.destElevation": { min: 0, max: 0x3F },
-        "pro.ladderProperties.destTile": { min: 0, max: 0x03_FF_FF_FF },
-        "pro.ladderProperties.destElevation": { min: 0, max: 0x3F },
+        "pro.stairsProperties.destTile": { min: 0, max: 0x03_ff_ff_ff },
+        "pro.stairsProperties.destElevation": { min: 0, max: 0x3f },
+        "pro.ladderProperties.destTile": { min: 0, max: 0x03_ff_ff_ff },
+        "pro.ladderProperties.destElevation": { min: 0, max: 0x3f },
     },
     map: {
         "map.header.defaultElevation": { min: 0, max: 2 },

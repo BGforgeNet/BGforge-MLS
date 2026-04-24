@@ -1,7 +1,7 @@
 /**
  * Core formatting logic for WeiDU BAF files.
  * Shared between LSP server and CLI.
- * 
+ *
  * For formatter behavior and examples, see:
  * {@link https://github.com/bgforge/vscode-mls/tree/master/grammars/weidu-baf/formatter.md}
  */
@@ -56,12 +56,7 @@ function normalizeComment(text: string): string {
 }
 
 // Helper: append inline comment or push standalone comment
-function handleComment(
-    result: string[],
-    child: SyntaxNode,
-    lastNodeRow: number,
-    indent: string,
-): void {
+function handleComment(result: string[], child: SyntaxNode, lastNodeRow: number, indent: string): void {
     if (lastNodeRow === child.startPosition.row && result.length > 0) {
         result[result.length - 1] += INLINE_COMMENT_SPACING + normalizeComment(child.text);
     } else {
@@ -106,7 +101,7 @@ function formatCallExpr(node: SyntaxNode): string {
     const funcName = func?.text ?? "";
 
     const argNodes = node.childrenForFieldName("args");
-    const args = argNodes.map(arg => formatArgument(arg));
+    const args = argNodes.map((arg) => formatArgument(arg));
 
     return funcName + "(" + args.join(", ") + ")";
 }

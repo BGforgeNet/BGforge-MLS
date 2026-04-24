@@ -10,20 +10,14 @@
 import fs from "node:fs";
 import path from "node:path";
 import YAML, { Document, YAMLMap, YAMLSeq, isMap, isScalar } from "yaml";
-import {
-    cmpStr,
-    findFiles,
-    litscal,
-    makeBlockScalar,
-    YAML_DUMP_OPTIONS,
-} from "../../../utils/src/yaml-helpers.ts";
+import { cmpStr, findFiles, litscal, makeBlockScalar, YAML_DUMP_OPTIONS } from "../../../utils/src/yaml-helpers.ts";
 import { type CompletionItem, type IEData, COMPLETION_TYPE_CONSTANT } from "./types.ts";
 
 export { cmpStr, findFiles, litscal };
 
 const HTML_ENTITY_MAP: Readonly<Record<string, string>> = {
     nbsp: " ",
-    quot: "\"",
+    quot: '"',
     apos: "'",
     lt: "<",
     gt: ">",
@@ -37,8 +31,8 @@ const HTML_ENTITY_MAP: Readonly<Record<string, string>> = {
     hellip: "...",
     lsquo: "'",
     rsquo: "'",
-    ldquo: "\"",
-    rdquo: "\"",
+    ldquo: '"',
+    rdquo: '"',
 };
 
 export interface NormalizeHtmlFragmentOptions {
@@ -71,11 +65,7 @@ function sortLongerFirst(a: string, b: string): number {
  * (matching Python's LiteralScalarString for action/function docs).
  * When false, only multiline doc values get block style (for offset docs).
  */
-export function createItemsSeq(
-    doc: Document,
-    items: readonly CompletionItem[],
-    forceBlockDoc = false,
-): YAMLSeq {
+export function createItemsSeq(doc: Document, items: readonly CompletionItem[], forceBlockDoc = false): YAMLSeq {
     const seq = new YAMLSeq();
     for (const item of items) {
         const map = new YAMLMap();
@@ -83,9 +73,7 @@ export function createItemsSeq(
         map.add(doc.createPair("detail", item.detail));
         // Strip trailing whitespace from each line of the doc
         const cleanDoc = item.doc.replace(/ +$/gm, "");
-        const docValue = forceBlockDoc || cleanDoc.includes("\n")
-            ? makeBlockScalar(doc, cleanDoc)
-            : cleanDoc;
+        const docValue = forceBlockDoc || cleanDoc.includes("\n") ? makeBlockScalar(doc, cleanDoc) : cleanDoc;
         map.add(doc.createPair("doc", docValue));
         if (item.type !== undefined) {
             map.add(doc.createPair("type", item.type));
@@ -203,9 +191,9 @@ export function dumpHighlight(fpath: string, iedata: IEData): void {
         const sortedNames = [...itemNames].sort(sortLongerFirst);
 
         const wordPatterns = sortedNames.map((name) => ({ match: `\\b(${name})\\b` }));
-        const patternsSeq = doc.createNode(isStringCategory
-            ? [...sortedNames.map((n) => ({ match: `(%${n}%)` })), ...wordPatterns]
-            : wordPatterns);
+        const patternsSeq = doc.createNode(
+            isStringCategory ? [...sortedNames.map((n) => ({ match: `(%${n}%)` })), ...wordPatterns] : wordPatterns,
+        );
 
         if (isMap(stanzaNode)) {
             stanzaNode.set("patterns", patternsSeq);
@@ -224,11 +212,7 @@ export function dumpHighlight(fpath: string, iedata: IEData): void {
  * @param items - Map of constant name to hex value
  * @param structuresDir - Path to ielib/structures
  */
-export function dumpDefinition(
-    prefix: string,
-    items: Map<string, string>,
-    structuresDir: string
-): void {
+export function dumpDefinition(prefix: string, items: Map<string, string>, structuresDir: string): void {
     const outputDir = path.join(structuresDir, prefix.toLowerCase().replaceAll("_", ""));
     const outputFile = path.join(outputDir, "iesdp.tpp");
     fs.mkdirSync(outputDir, { recursive: true });
@@ -253,10 +237,7 @@ export function stripLiquid(text: string): string {
  * This is intentionally not a general HTML renderer; callers provide href resolution
  * and any source-specific preprocessing.
  */
-export function normalizeHtmlFragment(
-    html: string,
-    options: NormalizeHtmlFragmentOptions
-): string {
+export function normalizeHtmlFragment(html: string, options: NormalizeHtmlFragmentOptions): string {
     let result = options.preprocess?.(html) ?? html;
 
     result = result.replace(/<a\s+href="([^"]*)">([\s\S]*?)<\/a>/gi, (_m, href: string, inner: string) => {
@@ -265,7 +246,10 @@ export function normalizeHtmlFragment(
     });
 
     result = result.replace(/<code>(\[[\s\S]*?\]\([\s\S]*?\))<\/code>/gi, "$1");
-    result = result.replace(/<code>([\s\S]*?)<\/code>/gi, (_m, inner: string) => `\`${decodeHtmlEntities(inner.trim())}\``);
+    result = result.replace(
+        /<code>([\s\S]*?)<\/code>/gi,
+        (_m, inner: string) => `\`${decodeHtmlEntities(inner.trim())}\``,
+    );
     result = result.replace(/<br\s*\/?>/gi, "\n");
     result = result.replace(/<\/?(?:div|p|span|strong|em)>/gi, "");
     result = result.replace(/<sup>([\s\S]*?)<\/sup>/gi, (_m, inner: string) => decodeHtmlEntities(inner));

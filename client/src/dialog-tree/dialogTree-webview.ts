@@ -13,7 +13,12 @@
     // Values read from DOM properties (.id, .textContent) are browser-decoded,
     // so they must be re-escaped before insertion into innerHTML strings.
     function escapeHtml(text: string): string {
-        return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+        return text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
     }
 
     // Simple debounce helper
@@ -105,7 +110,13 @@
     const expandAllBtn = document.getElementById("expandAll");
     const collapseAllBtn = document.getElementById("collapseAll");
 
-    if (searchInputEl === null || searchResultsEl === null || treeEl === null || expandAllBtn === null || collapseAllBtn === null) {
+    if (
+        searchInputEl === null ||
+        searchResultsEl === null ||
+        treeEl === null ||
+        expandAllBtn === null ||
+        collapseAllBtn === null
+    ) {
         throw new Error("Required DOM elements not found");
     }
     const searchInput = searchInputEl as HTMLInputElement;
@@ -120,9 +131,7 @@
         }
         fatalErrorShown = true;
 
-        const detail = error instanceof Error
-            ? `${message}\n${error.stack ?? error.message}`
-            : message;
+        const detail = error instanceof Error ? `${message}\n${error.stack ?? error.message}` : message;
         console.error("Dialog preview runtime error:", error ?? message);
         vscode.postMessage({
             type: "runtimeError",
@@ -202,7 +211,9 @@
             // Element.textContent is always string at runtime (never null for elements)
             const textContent = itemEl.textContent!;
             // Also search in title attributes (contains type/msgId like "NLowOption(873)")
-            const titles = Array.from(itemEl.querySelectorAll("[title]")).map(el => el.getAttribute("title") || "").join(" ");
+            const titles = Array.from(itemEl.querySelectorAll("[title]"))
+                .map((el) => el.getAttribute("title") || "")
+                .join(" ");
             const fullText = textContent + " " + titles;
             if (fullText.toLowerCase().includes(lowerQuery)) {
                 // Find parent node name
@@ -214,7 +225,13 @@
                 // Build display text including the type from title
                 const typeTitle = itemEl.querySelector(".codicon[title]")?.getAttribute("title") || "";
                 const displayText = typeTitle ? `${typeTitle}: ${textContent.trim()}` : textContent.trim();
-                results.push({ type: "item", text: displayText, parentName: parentName, parentId: parentNode?.id, msgText });
+                results.push({
+                    type: "item",
+                    text: displayText,
+                    parentName: parentName,
+                    parentId: parentNode?.id,
+                    msgText,
+                });
             }
         });
 
@@ -232,11 +249,15 @@
             const typeTitle = summary.querySelector(".codicon[title]")?.getAttribute("title") || "";
             // For D dialog say text (no typeTitle), check .reply class to preserve reply color in results
             const isReply = msgTextEl.classList.contains("reply");
-            const displayText = typeTitle
-                ? `${typeTitle}: ${fulltext}`
-                : isReply ? `Reply: ${fulltext}` : fulltext;
+            const displayText = typeTitle ? `${typeTitle}: ${fulltext}` : isReply ? `Reply: ${fulltext}` : fulltext;
 
-            results.push({ type: "item", text: displayText, parentName: nodeName, parentId: nodeEl?.id, msgText: htmlEl.textContent!.trim() });
+            results.push({
+                type: "item",
+                text: displayText,
+                parentName: nodeName,
+                parentId: nodeEl?.id,
+                msgText: htmlEl.textContent!.trim(),
+            });
         });
 
         // Render flat results - store item text in data-text for finding the specific item.
@@ -244,9 +265,11 @@
         searchResults.innerHTML = results
             .map((r) => {
                 if (r.type === "node") {
-                    return `<div class="result" data-target="${escapeHtml(r.id ?? "")}">`
-                        + `<span class="codicon codicon-symbol-method"></span> `
-                        + `<span class="node-name">${escapeHtml(r.name ?? "")}</span></div>`;
+                    return (
+                        `<div class="result" data-target="${escapeHtml(r.id ?? "")}">` +
+                        `<span class="codicon codicon-symbol-method"></span> ` +
+                        `<span class="node-name">${escapeHtml(r.name ?? "")}</span></div>`
+                    );
                 } else {
                     const prefix = r.parentName ? `<span class="desc">${escapeHtml(r.parentName)}:</span> ` : "";
                     const text = r.text ?? "";
@@ -261,8 +284,10 @@
                     } else {
                         cls = "option-neutral";
                     }
-                    return `<div class="result" data-target="${escapeHtml(r.parentId ?? "")}" data-text="${escapeHtml(r.msgText ?? "")}">`
-                        + `${prefix}<span class="${cls}">${escapeHtml(text)}</span></div>`;
+                    return (
+                        `<div class="result" data-target="${escapeHtml(r.parentId ?? "")}" data-text="${escapeHtml(r.msgText ?? "")}">` +
+                        `${prefix}<span class="${cls}">${escapeHtml(text)}</span></div>`
+                    );
                 }
             })
             .join("");
@@ -376,12 +401,16 @@
     searchInput.addEventListener("input", debouncedFilter);
 
     // Update alignment and tooltips when details are toggled
-    document.addEventListener("toggle", (e) => {
-        if ((e.target as HTMLElement).tagName === "DETAILS") {
-            alignSiblingMsgTexts();
-            updateOverflowTooltips();
-        }
-    }, true);
+    document.addEventListener(
+        "toggle",
+        (e) => {
+            if ((e.target as HTMLElement).tagName === "DETAILS") {
+                alignSiblingMsgTexts();
+                updateOverflowTooltips();
+            }
+        },
+        true,
+    );
 
     // Ctrl+F or / focuses search, Escape clears
     document.addEventListener("keydown", (e) => {
@@ -391,7 +420,13 @@
             searchInput.select();
         }
         // "/" focuses search (vim-style) when not already typing in an input/textarea
-        if (e.key === "/" && !(document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement)) {
+        if (
+            e.key === "/" &&
+            !(
+                document.activeElement instanceof HTMLInputElement ||
+                document.activeElement instanceof HTMLTextAreaElement
+            )
+        ) {
             e.preventDefault();
             searchInput.focus();
             searchInput.select();

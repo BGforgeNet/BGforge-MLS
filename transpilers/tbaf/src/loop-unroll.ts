@@ -5,11 +5,7 @@
  * Supports array destructuring, nested arrays, and variable substitution.
  */
 
-import {
-    ForOfStatement,
-    ForStatement,
-    SyntaxKind,
-} from "ts-morph";
+import { ForOfStatement, ForStatement, SyntaxKind } from "ts-morph";
 import type { BAFAction } from "./ir";
 import * as utils from "../../common/transpiler-utils";
 import type { TransformerContext } from "./transformer-context";
@@ -25,7 +21,10 @@ function unrollForOf(ctx: TransformerContext, forOf: ForOfStatement, onIteration
     const elements = ctx.resolveArrayElements(arrayExpr);
 
     if (!elements) {
-        throw TranspileError.fromNode(arrayExpr, `Cannot unroll for-of: array expression "${arrayExpr.getText()}" is not resolvable`);
+        throw TranspileError.fromNode(
+            arrayExpr,
+            `Cannot unroll for-of: array expression "${arrayExpr.getText()}" is not resolvable`,
+        );
     }
 
     const initializer = forOf.getInitializer();
@@ -62,7 +61,10 @@ function unrollForOf(ctx: TransformerContext, forOf: ForOfStatement, onIteration
         }
     } else {
         // Simple variable: const item of array
-        const loopVar = initializer.getText().replace(/^const\s+/, "").replace(/^let\s+/, "");
+        const loopVar = initializer
+            .getText()
+            .replace(/^const\s+/, "")
+            .replace(/^let\s+/, "");
 
         for (const element of elements) {
             ctx.vars.set(loopVar, element);
@@ -116,8 +118,8 @@ function unrollFor(ctx: TransformerContext, forStmt: ForStatement, onIteration: 
         if (iterations >= utils.MAX_LOOP_ITERATIONS) {
             throw new TranspileError(
                 `Loop exceeded maximum ${utils.MAX_LOOP_ITERATIONS} iterations. ` +
-                `This likely indicates an infinite loop or a design issue. ` +
-                `BAF scripts should not need many iterations.`
+                    `This likely indicates an infinite loop or a design issue. ` +
+                    `BAF scripts should not need many iterations.`,
             );
         }
         ctx.vars.set(loopVar, current.toString());
@@ -153,9 +155,4 @@ function unrollForAsActions(ctx: TransformerContext, forStmt: ForStatement): BAF
     return actions;
 }
 
-export {
-    unrollForOf,
-    unrollFor,
-    unrollForOfAsActions,
-    unrollForAsActions,
-};
+export { unrollForOf, unrollFor, unrollForOfAsActions, unrollForAsActions };

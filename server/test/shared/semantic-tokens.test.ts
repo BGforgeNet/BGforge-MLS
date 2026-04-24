@@ -3,7 +3,12 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { encodeSemanticTokens, RESREF_TOKEN_TYPE, INT_TOKEN_TYPE, type SemanticTokenSpan } from "../../src/shared/semantic-tokens";
+import {
+    encodeSemanticTokens,
+    RESREF_TOKEN_TYPE,
+    INT_TOKEN_TYPE,
+    type SemanticTokenSpan,
+} from "../../src/shared/semantic-tokens";
 
 describe("shared/semantic-tokens", () => {
     describe("encodeSemanticTokens()", () => {

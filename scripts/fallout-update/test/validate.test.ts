@@ -13,10 +13,7 @@ import {
 
 describe("validateSfallFunction", () => {
     it("validates a minimal function", () => {
-        const result = validateSfallFunction(
-            { name: "func", detail: "void func()" },
-            "test",
-        );
+        const result = validateSfallFunction({ name: "func", detail: "void func()" }, "test");
         expect(result.name).toBe("func");
         expect(result.detail).toBe("void func()");
     });
@@ -42,10 +39,7 @@ describe("validateSfallFunction", () => {
     });
 
     it("accepts string opcode", () => {
-        const result = validateSfallFunction(
-            { name: "func", detail: "void func()", opcode: "0x8156" },
-            "test",
-        );
+        const result = validateSfallFunction({ name: "func", detail: "void func()", opcode: "0x8156" }, "test");
         expect(result.opcode).toBe("0x8156");
     });
 
@@ -63,31 +57,25 @@ describe("validateSfallFunction", () => {
     });
 
     it("throws on invalid doc type", () => {
-        expect(() => validateSfallFunction(
-            { name: "x", detail: "y", doc: 42 },
-            "test",
-        )).toThrow("Invalid 'doc'");
+        expect(() => validateSfallFunction({ name: "x", detail: "y", doc: 42 }, "test")).toThrow("Invalid 'doc'");
     });
 
     it("throws on invalid opcode type", () => {
-        expect(() => validateSfallFunction(
-            { name: "x", detail: "y", opcode: true },
-            "test",
-        )).toThrow("Invalid 'opcode'");
+        expect(() => validateSfallFunction({ name: "x", detail: "y", opcode: true }, "test")).toThrow(
+            "Invalid 'opcode'",
+        );
     });
 
     it("throws on invalid unsafe type", () => {
-        expect(() => validateSfallFunction(
-            { name: "x", detail: "y", unsafe: "yes" },
-            "test",
-        )).toThrow("Invalid 'unsafe'");
+        expect(() => validateSfallFunction({ name: "x", detail: "y", unsafe: "yes" }, "test")).toThrow(
+            "Invalid 'unsafe'",
+        );
     });
 
     it("throws on invalid args (not array)", () => {
-        expect(() => validateSfallFunction(
-            { name: "x", detail: "y", args: "not-array" },
-            "test",
-        )).toThrow("Expected array");
+        expect(() => validateSfallFunction({ name: "x", detail: "y", args: "not-array" }, "test")).toThrow(
+            "Expected array",
+        );
     });
 });
 
@@ -106,10 +94,7 @@ describe("validateSfallCategory", () => {
     });
 
     it("validates a category without items", () => {
-        const result = validateSfallCategory(
-            { name: "Cat" },
-            "test",
-        );
+        const result = validateSfallCategory({ name: "Cat" }, "test");
         expect(result.items).toBeUndefined();
     });
 
@@ -118,28 +103,19 @@ describe("validateSfallCategory", () => {
     });
 
     it("throws on invalid items (not array)", () => {
-        expect(() => validateSfallCategory(
-            { name: "Cat", items: "invalid" },
-            "test",
-        )).toThrow("Expected array");
+        expect(() => validateSfallCategory({ name: "Cat", items: "invalid" }, "test")).toThrow("Expected array");
     });
 });
 
 describe("validateSfallHook", () => {
     it("validates a minimal hook", () => {
-        const result = validateSfallHook(
-            { name: "TestHook", doc: "A test hook." },
-            "test",
-        );
+        const result = validateSfallHook({ name: "TestHook", doc: "A test hook." }, "test");
         expect(result.name).toBe("TestHook");
         expect(result.doc).toBe("A test hook.");
     });
 
     it("validates a hook with optional fields", () => {
-        const result = validateSfallHook(
-            { name: "TestHook", doc: "Docs", id: "1", filename: "hooks.yml" },
-            "test",
-        );
+        const result = validateSfallHook({ name: "TestHook", doc: "Docs", id: "1", filename: "hooks.yml" }, "test");
         expect(result.id).toBe("1");
         expect(result.filename).toBe("hooks.yml");
     });
@@ -155,11 +131,7 @@ describe("validateSfallHook", () => {
 
 describe("validateArray", () => {
     it("validates an array of items", () => {
-        const result = validateArray(
-            [{ name: "h", doc: "d" }],
-            validateSfallHook,
-            "test",
-        );
+        const result = validateArray([{ name: "h", doc: "d" }], validateSfallHook, "test");
         expect(result).toHaveLength(1);
     });
 
@@ -168,10 +140,8 @@ describe("validateArray", () => {
     });
 
     it("throws with indexed context on item error", () => {
-        expect(() => validateArray(
-            [{ name: "h", doc: "d" }, { name: 42 }],
-            validateSfallHook,
-            "test",
-        )).toThrow("test[1]");
+        expect(() => validateArray([{ name: "h", doc: "d" }, { name: 42 }], validateSfallHook, "test")).toThrow(
+            "test[1]",
+        );
     });
 });

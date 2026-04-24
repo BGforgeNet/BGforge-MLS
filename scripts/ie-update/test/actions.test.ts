@@ -3,13 +3,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import {
-    actionAliasDesc,
-    actionDesc,
-    actionDescAbsoluteUrls,
-    actionDetail,
-    appendUnique,
-} from "../src/ie/actions.ts";
+import { actionAliasDesc, actionDesc, actionDescAbsoluteUrls, actionDetail, appendUnique } from "../src/ie/actions.ts";
 import type { ActionItem, IESDPGame } from "../src/ie/types.ts";
 
 const GAMES: IESDPGame[] = [
@@ -57,15 +51,13 @@ describe("actionDescAbsoluteUrls", () => {
     });
 
     it("throws for unknown game", () => {
-        expect(() => actionDescAbsoluteUrls("test", GAMES, "nonexistent", BASE_URL)).toThrow(
-            "Game not found"
-        );
+        expect(() => actionDescAbsoluteUrls("test", GAMES, "nonexistent", BASE_URL)).toThrow("Game not found");
     });
 
     it("normalizes mixed HTML docs into markdown-friendly text", () => {
         const desc = [
-            "Use <a href=\"../../file_formats/ie_formats/cre_v1.htm\"><code>CRE</code></a> and ",
-            "<code><a href=\"../../files/ids/bgee/xequip.htm#EQUIP\">EQUIP</a></code>.",
+            'Use <a href="../../file_formats/ie_formats/cre_v1.htm"><code>CRE</code></a> and ',
+            '<code><a href="../../files/ids/bgee/xequip.htm#EQUIP">EQUIP</a></code>.',
             "The 8<sup>th</sup> slot uses &quot;quoted&quot; text.",
         ].join("");
 
@@ -74,7 +66,7 @@ describe("actionDescAbsoluteUrls", () => {
         expect(result).toContain("[CRE](https://gibberlings3.github.io/iesdp/file_formats/ie_formats/cre_v1.htm)");
         expect(result).toContain("[EQUIP](https://gibberlings3.github.io/iesdp/files/ids/bgee/xequip.htm#EQUIP)");
         expect(result).toContain("8th");
-        expect(result).toContain("\"quoted\" text.");
+        expect(result).toContain('"quoted" text.');
         expect(result).not.toContain("<a ");
         expect(result).not.toContain("<code>");
         expect(result).not.toContain("&quot;");
@@ -83,15 +75,17 @@ describe("actionDescAbsoluteUrls", () => {
     it("resolves trigger_link includes to trigger page links", () => {
         const desc = [
             "Acts like ",
-            "{% assign text = \"<code>Heard()</code>\" -%} ",
-            "{%- assign anchor = \"0x002F\" -%} ",
+            '{% assign text = "<code>Heard()</code>" -%} ',
+            '{%- assign anchor = "0x002F" -%} ',
             "{%- include trigger_link.html %}",
             ".",
         ].join("");
 
         const result = actionDescAbsoluteUrls(desc, GAMES, "bgee", BASE_URL);
 
-        expect(result).toContain("[Heard()](https://gibberlings3.github.io/iesdp/scripting/triggers/bgeetriggers.htm#0x002F)");
+        expect(result).toContain(
+            "[Heard()](https://gibberlings3.github.io/iesdp/scripting/triggers/bgeetriggers.htm#0x002F)",
+        );
         expect(result).not.toContain("trigger_link.html");
         expect(result).not.toContain("{% assign");
     });
@@ -108,8 +102,8 @@ describe("actionDescAbsoluteUrls", () => {
         ];
         const desc = [
             "Acts like ",
-            "{% assign text = \"<code>True()</code>\" -%} ",
-            "{%- assign anchor = \"0x4023\" -%} ",
+            '{% assign text = "<code>True()</code>" -%} ',
+            '{%- assign anchor = "0x4023" -%} ',
             "{%- include trigger_link.html %}",
             ".",
         ].join("");
@@ -144,7 +138,9 @@ describe("actionDescAbsoluteUrls", () => {
 
         const result = actionDescAbsoluteUrls(desc, GAMES, "bg2", BASE_URL);
 
-        expect(result).toContain("```\nIF\n  True()\nTHEN\n  RESPONSE #100\n    ActionOverride(Player1,Face(10))\nEND\n```");
+        expect(result).toContain(
+            "```\nIF\n  True()\nTHEN\n  RESPONSE #100\n    ActionOverride(Player1,Face(10))\nEND\n```",
+        );
     });
 });
 
@@ -166,9 +162,7 @@ describe("actionDesc", () => {
 });
 
 describe("appendUnique", () => {
-    const existing: ActionItem[] = [
-        { n: 1, name: "ActionA", bg2: 1 },
-    ];
+    const existing: ActionItem[] = [{ n: 1, name: "ActionA", bg2: 1 }];
 
     it("appends new unique actions", () => {
         const newActions: ActionItem[] = [{ n: 2, name: "ActionB", bg2: 1 }];

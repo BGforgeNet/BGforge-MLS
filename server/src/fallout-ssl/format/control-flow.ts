@@ -9,7 +9,6 @@ import { getCtx, normalizeComment, formatNode, formatBlock } from "./core";
 import { formatExpression } from "./expressions";
 import { SyntaxType } from "../tree-sitter.d";
 
-
 export function formatIfStmt(node: SyntaxNode, depth: number, isElseIf: boolean = false): string {
     const ctx = getCtx();
     const cond = node.childForFieldName("cond");
@@ -18,7 +17,7 @@ export function formatIfStmt(node: SyntaxNode, depth: number, isElseIf: boolean 
     const thenIsBlock = thenBranch?.type === SyntaxType.Block;
 
     // Find "then" keyword to get its row for trailing comment detection
-    const thenKeyword = node.children.find(c => c.type === "then");
+    const thenKeyword = node.children.find((c) => c.type === "then");
     const thenRow = thenKeyword?.startPosition.row ?? -1;
 
     // Collect comments between then and else early (needed for trailing comment handling)
@@ -27,8 +26,10 @@ export function formatIfStmt(node: SyntaxNode, depth: number, isElseIf: boolean 
     if (elseBranch) {
         for (const child of node.children) {
             if (child.type === SyntaxType.Comment || child.type === SyntaxType.LineComment) {
-                if (child.startPosition.row >= (thenBranch?.endPosition.row ?? 0) &&
-                    child.startPosition.row < elseBranch.startPosition.row) {
+                if (
+                    child.startPosition.row >= (thenBranch?.endPosition.row ?? 0) &&
+                    child.startPosition.row < elseBranch.startPosition.row
+                ) {
                     elseComments.push(normalizeComment(child.text));
                 }
             }
@@ -36,9 +37,12 @@ export function formatIfStmt(node: SyntaxNode, depth: number, isElseIf: boolean 
     }
     // Find trailing comment on "if ... then" line (same row as then, after then keyword)
     for (const child of node.children) {
-        if ((child.type === SyntaxType.Comment || child.type === SyntaxType.LineComment) &&
+        if (
+            (child.type === SyntaxType.Comment || child.type === SyntaxType.LineComment) &&
             child.startPosition.row === thenRow &&
-            thenKeyword && child.startPosition.column > thenKeyword.endPosition.column) {
+            thenKeyword &&
+            child.startPosition.column > thenKeyword.endPosition.column
+        ) {
             thenTrailingComment = ctx.indent + normalizeComment(child.text);
             break;
         }
@@ -74,7 +78,7 @@ export function formatIfStmt(node: SyntaxNode, depth: number, isElseIf: boolean 
     }
 
     if (elseBranch) {
-        const elseSep = (thenIsBlock && elseComments.length === 0) ? " " : "\n" + ctx.indent.repeat(depth);
+        const elseSep = thenIsBlock && elseComments.length === 0 ? " " : "\n" + ctx.indent.repeat(depth);
 
         if (elseBranch.type === SyntaxType.IfStmt) {
             result += elseSep + "else " + formatIfStmt(elseBranch, depth, true);
@@ -145,8 +149,8 @@ export function formatForeachStmt(node: SyntaxNode, depth: number): string {
     const varNode = node.childForFieldName("var");
     const keyNode = node.childForFieldName("key");
     const valueNode = node.childForFieldName("value");
-    const hasVariable = node.children.some(c => c.text === "variable");
-    const hasParens = node.children.some(c => c.text === "(");
+    const hasVariable = node.children.some((c) => c.text === "variable");
+    const hasParens = node.children.some((c) => c.text === "(");
     const iter = node.childForFieldName("iter");
     const body = node.childForFieldName("body");
 
@@ -202,8 +206,8 @@ function formatClauseBody(node: SyntaxNode, depth: number, skipTypes: Set<string
 
     for (const child of node.children) {
         if (skipTypes.has(child.type)) continue;
-        if (skipPos && child.startPosition.row === skipPos.row &&
-            child.startPosition.column === skipPos.column) continue;
+        if (skipPos && child.startPosition.row === skipPos.row && child.startPosition.column === skipPos.column)
+            continue;
 
         const formatted = formatNode(child, depth + 1);
         if (formatted.trim()) {

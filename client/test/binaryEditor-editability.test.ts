@@ -21,15 +21,15 @@ describe("binaryEditor-editability", () => {
     it("uses presentation schema editability rules for MAP fields", () => {
         expect(isEditableFieldForFormat("map", "map.header.version", makeField("Version", "uint32"))).toBe(false);
         expect(isEditableFieldForFormat("map", "map.header.filename", makeField("Filename", "string"))).toBe(false);
-        expect(isEditableFieldForFormat(
-            "map",
-            "map.objects.elevations[].objects[].inventoryHeader.inventoryPointer",
-            makeField("Inventory Pointer", "uint32"),
-        )).toBe(false);
-        expect(isEditableFieldForFormat(
-            "map",
-            "map.objects.elevations[].objects[].base.pid",
-            makeField("PID", "uint32"),
-        )).toBe(true);
+        expect(
+            isEditableFieldForFormat(
+                "map",
+                "map.objects.elevations[].objects[].inventoryHeader.inventoryPointer",
+                makeField("Inventory Pointer", "uint32"),
+            ),
+        ).toBe(false);
+        expect(
+            isEditableFieldForFormat("map", "map.objects.elevations[].objects[].base.pid", makeField("PID", "uint32")),
+        ).toBe(true);
     });
 });

@@ -238,9 +238,7 @@ export function getDetail(item: DataItem, includeTypes = true, stanzaName?: stri
 function getFalloutDoc(item: DataItem): string {
     let doc = "";
     if (item.args !== undefined) {
-        const table = buildFalloutArgsTable(
-            item.args.map((a) => ({ name: a.name, description: a.doc }))
-        );
+        const table = buildFalloutArgsTable(item.args.map((a) => ({ name: a.name, description: a.doc })));
         if (table) {
             doc += table + "\n";
         }
@@ -283,7 +281,7 @@ function buildCompletionParams(item: DataItem): CompletionParams | undefined {
         }
     }
 
-    const ret = (item.rets ?? []).map(r => r.name);
+    const ret = (item.rets ?? []).map((r) => r.name);
 
     // retArray is not representable in the YAML data format; always empty for built-ins.
     // User-defined functions (from .tph headers) populate retArray via header-parser.ts.
@@ -294,7 +292,12 @@ function buildCompletionParams(item: DataItem): CompletionParams | undefined {
 function mapArgsToRows(args: readonly DataArg[], category: "int" | "str"): readonly VarRow[] {
     return args
         .filter((a) => WEIDU_JSDOC_TYPES.get(a.type)?.category === category)
-        .map((a) => (({type:a.type,name:a.name, ...(a.required?{required:true}:a.default!==undefined?{default:a.default}:{}), ...(a.doc?{description:a.doc}:{})})));
+        .map((a) => ({
+            type: a.type,
+            name: a.name,
+            ...(a.required ? { required: true } : a.default !== undefined ? { default: a.default } : {}),
+            ...(a.doc ? { description: a.doc } : {}),
+        }));
 }
 
 /** Build the WeiDU param table string from a data item's args and rets. */
@@ -347,13 +350,15 @@ export function generateCompletion(data: DataFile, tooltipLangId: string): reado
             let documentation: MarkupContent | undefined;
             if (isWeiduFormat(item)) {
                 const paramTable = getWeiduParamTable(item);
-                documentation = markdown(buildWeiduHoverContent({
-                    signature: detail,
-                    langId: tooltipLangId,
-                    description: item.doc,
-                    paramTable: paramTable || undefined,
-                    deprecated: item.deprecated,
-                }));
+                documentation = markdown(
+                    buildWeiduHoverContent({
+                        signature: detail,
+                        langId: tooltipLangId,
+                        description: item.doc,
+                        paramTable: paramTable || undefined,
+                        deprecated: item.deprecated,
+                    }),
+                );
             } else {
                 const doc = getFalloutDoc(item);
                 if (detail !== label || doc !== "") {
@@ -367,7 +372,7 @@ export function generateCompletion(data: DataFile, tooltipLangId: string): reado
             }
 
             const deprecated = item.deprecated ?? false;
-            const tags = deprecated ? [COMPLETION_TAG_DEPRECATED] as const : undefined;
+            const tags = deprecated ? ([COMPLETION_TAG_DEPRECATED] as const) : undefined;
             const params = isWeiduFormat(item) ? buildCompletionParams(item) : undefined;
 
             const completionItem: CompletionResult = {
@@ -398,7 +403,12 @@ export function generateHover(data: DataFile, langId: string): Record<string, Ho
     for (const [stanzaName, stanza] of Object.entries(sortedData)) {
         for (const item of stanza.items) {
             // Skip items with no data besides the name
-            if (item.detail === undefined && item.doc === undefined && item.args === undefined && item.rets === undefined) {
+            if (
+                item.detail === undefined &&
+                item.doc === undefined &&
+                item.args === undefined &&
+                item.rets === undefined
+            ) {
                 continue;
             }
 
@@ -458,13 +468,13 @@ export function generateSignatures(data: DataFile, langId: string): Record<strin
             const weidu = isWeiduFormat(item);
             const label = getDetail(item, false);
             const parameters: SignatureParam[] = item.args.map((arg) => {
-                const categoryPrefix = weidu
-                    ? getCategoryPrefix(arg.type)
-                    : "";
+                const categoryPrefix = weidu ? getCategoryPrefix(arg.type) : "";
                 const docStr = arg.doc ?? "";
                 return {
                     label: arg.name,
-                    documentation: markdown(`${buildSignatureBlock(`${categoryPrefix}${arg.type} ${arg.name}`, langId)}\n${docStr}`),
+                    documentation: markdown(
+                        `${buildSignatureBlock(`${categoryPrefix}${arg.type} ${arg.name}`, langId)}\n${docStr}`,
+                    ),
                 };
             });
 
@@ -504,8 +514,15 @@ function main(): void {
     const signatureFile = values.signature;
     const tooltipLangId = values["tooltip-lang"];
 
-    if (inputYaml === undefined || hoverFile === undefined || completionFile === undefined || tooltipLangId === undefined) {
-        console.error("Usage: generate-data -i <yaml...> --completion <path> --hover <path> --tooltip-lang <id> [--signature <path>]");
+    if (
+        inputYaml === undefined ||
+        hoverFile === undefined ||
+        completionFile === undefined ||
+        tooltipLangId === undefined
+    ) {
+        console.error(
+            "Usage: generate-data -i <yaml...> --completion <path> --hover <path> --tooltip-lang <id> [--signature <path>]",
+        );
         process.exit(1);
     }
 

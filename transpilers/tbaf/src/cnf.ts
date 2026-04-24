@@ -48,7 +48,7 @@ export function dnfToCnf(terms: BAFTopCondition[][], maxClauses = MAX_CNF_CLAUSE
         if (resultSize > maxClauses) {
             throw new TranspileError(
                 `Condition inversion would produce ${resultSize}+ clauses (limit: ${maxClauses}). ` +
-                    `Simplify the condition or avoid negating complex AND expressions.`
+                    `Simplify the condition or avoid negating complex AND expressions.`,
             );
         }
     }

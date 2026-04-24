@@ -418,7 +418,19 @@ function extractVarParams(node: SyntaxNode, target: ParamInfo[]): void {
 // Symbol conversion for unified Symbols
 // ============================================
 
-import { type CallableSymbol, type VariableSymbol, type IndexedSymbol, type CallableInfo, type VariableInfoData, SymbolKind, ScopeLevel, SourceType, CallableContext, CallableDefType, DeclarationKind } from "../core/symbol";
+import {
+    type CallableSymbol,
+    type VariableSymbol,
+    type IndexedSymbol,
+    type CallableInfo,
+    type VariableInfoData,
+    SymbolKind,
+    ScopeLevel,
+    SourceType,
+    CallableContext,
+    CallableDefType,
+    DeclarationKind,
+} from "../core/symbol";
 import { CompletionCategory, type Tp2CompletionItem } from "./completion/types";
 import { buildFunctionHover, buildVariableHover } from "./hover";
 
@@ -430,13 +442,9 @@ import { buildFunctionHover, buildVariableHover } from "./hover";
  */
 function getCompletionCategory(context: CallableContext, dtype: CallableDefType): CompletionCategory {
     if (dtype === CallableDefType.Macro) {
-        return context === CallableContext.Action
-            ? CompletionCategory.ActionMacros
-            : CompletionCategory.PatchMacros;
+        return context === CallableContext.Action ? CompletionCategory.ActionMacros : CompletionCategory.PatchMacros;
     }
-    return context === CallableContext.Action
-        ? CompletionCategory.ActionFunctions
-        : CompletionCategory.PatchFunctions;
+    return context === CallableContext.Action ? CompletionCategory.ActionFunctions : CompletionCategory.PatchFunctions;
 }
 
 /** Helper to extract MarkupContent from hover contents */
@@ -446,7 +454,6 @@ function extractMarkupContent(contents: Hover["contents"]): MarkupContent | unde
     }
     return undefined;
 }
-
 
 /**
  * Convert FunctionInfo to CallableSymbol for unified index storage.
@@ -460,9 +467,8 @@ function functionInfoToSymbol(func: FunctionInfo, displayPath?: string | null): 
     const doc = extractMarkupContent(hover.contents);
 
     // For completion labelDetails, show path only if displayPath is not null
-    const completionDescription = displayPath === null
-        ? undefined
-        : (displayPath ?? extractFilename(func.location.uri));
+    const completionDescription =
+        displayPath === null ? undefined : (displayPath ?? extractFilename(func.location.uri));
 
     const completion: Tp2CompletionItem = {
         label: func.name,
@@ -491,30 +497,32 @@ function functionInfoToSymbol(func: FunctionInfo, displayPath?: string | null): 
         context: func.context,
         dtype: func.dtype,
         description: func.jsdoc?.desc,
-        params: func.params ? {
-            intVar: func.params.intVar.map(p => {
-                const jsdocArg = jsdocArgs.get(p.name);
-                return {
-                    name: p.name,
-                    type: jsdocArg?.type ?? "int",
-                    defaultValue: p.defaultValue,
-                    description: jsdocArg?.description,
-                    required: jsdocArg?.required,
-                };
-            }),
-            strVar: func.params.strVar.map(p => {
-                const jsdocArg = jsdocArgs.get(p.name);
-                return {
-                    name: p.name,
-                    type: jsdocArg?.type ?? "string",
-                    defaultValue: p.defaultValue,
-                    description: jsdocArg?.description,
-                    required: jsdocArg?.required,
-                };
-            }),
-            ret: func.params.ret,
-            retArray: func.params.retArray,
-        } : undefined,
+        params: func.params
+            ? {
+                  intVar: func.params.intVar.map((p) => {
+                      const jsdocArg = jsdocArgs.get(p.name);
+                      return {
+                          name: p.name,
+                          type: jsdocArg?.type ?? "int",
+                          defaultValue: p.defaultValue,
+                          description: jsdocArg?.description,
+                          required: jsdocArg?.required,
+                      };
+                  }),
+                  strVar: func.params.strVar.map((p) => {
+                      const jsdocArg = jsdocArgs.get(p.name);
+                      return {
+                          name: p.name,
+                          type: jsdocArg?.type ?? "string",
+                          defaultValue: p.defaultValue,
+                          description: jsdocArg?.description,
+                          required: jsdocArg?.required,
+                      };
+                  }),
+                  ret: func.params.ret,
+                  retArray: func.params.retArray,
+              }
+            : undefined,
     };
 
     return {
@@ -544,13 +552,10 @@ function variableInfoToSymbol(varInfo: VariableInfo, displayPath?: string | null
     const doc = extractMarkupContent(hover.contents);
 
     // For completion labelDetails, show path only if displayPath is not null
-    const completionDescription = displayPath === null
-        ? undefined
-        : (displayPath ?? extractFilename(varInfo.location.uri));
+    const completionDescription =
+        displayPath === null ? undefined : (displayPath ?? extractFilename(varInfo.location.uri));
 
-    const completionKind = looksLikeConstant(varInfo.name)
-        ? CompletionItemKind.Constant
-        : CompletionItemKind.Variable;
+    const completionKind = looksLikeConstant(varInfo.name) ? CompletionItemKind.Constant : CompletionItemKind.Variable;
 
     const completion: Tp2CompletionItem = {
         label: varInfo.name,
@@ -601,11 +606,7 @@ interface ParseSymbolsOptions {
  * @param text File content
  * @param options Options or workspaceRoot string (for backwards compatibility)
  */
-export function parseFile(
-    uri: string,
-    text: string,
-    options?: string | ParseSymbolsOptions,
-): ParseResult {
+export function parseFile(uri: string, text: string, options?: string | ParseSymbolsOptions): ParseResult {
     if (!isInitialized()) {
         return EMPTY_PARSE_RESULT;
     }
@@ -622,21 +623,19 @@ export function parseFile(
     const variables = extractVariables(root, uri);
 
     // Handle backwards compatibility: options can be workspaceRoot string
-    const opts: ParseSymbolsOptions = typeof options === "string"
-        ? { workspaceRoot: options }
-        : (options ?? {});
+    const opts: ParseSymbolsOptions = typeof options === "string" ? { workspaceRoot: options } : (options ?? {});
 
     const displayPath = opts.skipPath ? null : computeDisplayPath(uri, opts.workspaceRoot);
 
     let symbols: IndexedSymbol[] = [
-        ...functions.map(func => functionInfoToSymbol(func, displayPath)),
-        ...variables.map(varInfo => variableInfoToSymbol(varInfo, displayPath)),
+        ...functions.map((func) => functionInfoToSymbol(func, displayPath)),
+        ...variables.map((varInfo) => variableInfoToSymbol(varInfo, displayPath)),
     ];
 
     // Remap source type when called for non-header files (e.g., Navigation for Ctrl+T)
     const overrideType = opts.sourceType;
     if (overrideType !== undefined && overrideType !== SourceType.Workspace) {
-        symbols = symbols.map(s => ({
+        symbols = symbols.map((s) => ({
             ...s,
             source: { ...s.source, type: overrideType },
         }));

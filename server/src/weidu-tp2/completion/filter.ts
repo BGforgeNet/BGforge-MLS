@@ -20,14 +20,14 @@ import type { CompletionItem } from "vscode-languageserver/node";
 import { CompletionCategory, CompletionContext, type Tp2CompletionItem } from "./types";
 
 /** Categories that require a specific context to appear (excluded from general/empty context). */
-const CONTEXT_REQUIRED_CATEGORIES = new Set<CompletionCategory>([
-    CompletionCategory.FuncVarKeyword,
-]);
+const CONTEXT_REQUIRED_CATEGORIES = new Set<CompletionCategory>([CompletionCategory.FuncVarKeyword]);
 
 /** All name contexts (function/macro name positions). */
 const ALL_NAME_CONTEXTS: CompletionContext[] = [
-    CompletionContext.LafName, CompletionContext.LpfName,
-    CompletionContext.LamName, CompletionContext.LpmName,
+    CompletionContext.LafName,
+    CompletionContext.LpfName,
+    CompletionContext.LamName,
+    CompletionContext.LpmName,
 ];
 
 /**
@@ -43,24 +43,81 @@ const ALL_NAME_CONTEXTS: CompletionContext[] = [
 const CATEGORY_EXCLUSIONS: Partial<Record<CompletionCategory, CompletionContext[]>> = {
     // Group A: Callable type restrictions in name contexts
     // ActionFunctions: show in LafName + general, exclude from LpfName/LamName/LpmName
-    [CompletionCategory.ActionFunctions]: [CompletionContext.LpfName, CompletionContext.LamName, CompletionContext.LpmName, CompletionContext.FuncParamName, CompletionContext.FuncParamValue],
+    [CompletionCategory.ActionFunctions]: [
+        CompletionContext.LpfName,
+        CompletionContext.LamName,
+        CompletionContext.LpmName,
+        CompletionContext.FuncParamName,
+        CompletionContext.FuncParamValue,
+    ],
     // PatchFunctions: show in LpfName + general, exclude from LafName/LamName/LpmName
-    [CompletionCategory.PatchFunctions]: [CompletionContext.LafName, CompletionContext.LamName, CompletionContext.LpmName, CompletionContext.FuncParamName, CompletionContext.FuncParamValue],
+    [CompletionCategory.PatchFunctions]: [
+        CompletionContext.LafName,
+        CompletionContext.LamName,
+        CompletionContext.LpmName,
+        CompletionContext.FuncParamName,
+        CompletionContext.FuncParamValue,
+    ],
     // ActionMacros: show in LamName + general, exclude from LafName/LpfName/LpmName
-    [CompletionCategory.ActionMacros]: [CompletionContext.LafName, CompletionContext.LpfName, CompletionContext.LpmName, CompletionContext.FuncParamName, CompletionContext.FuncParamValue],
+    [CompletionCategory.ActionMacros]: [
+        CompletionContext.LafName,
+        CompletionContext.LpfName,
+        CompletionContext.LpmName,
+        CompletionContext.FuncParamName,
+        CompletionContext.FuncParamValue,
+    ],
     // PatchMacros: show in LpmName + general, exclude from LafName/LpfName/LamName
-    [CompletionCategory.PatchMacros]: [CompletionContext.LafName, CompletionContext.LpfName, CompletionContext.LamName, CompletionContext.FuncParamName, CompletionContext.FuncParamValue],
+    [CompletionCategory.PatchMacros]: [
+        CompletionContext.LafName,
+        CompletionContext.LpfName,
+        CompletionContext.LamName,
+        CompletionContext.FuncParamName,
+        CompletionContext.FuncParamValue,
+    ],
     // DimorphicFunctions: show in LafName + LpfName + general, exclude from LamName/LpmName
-    [CompletionCategory.DimorphicFunctions]: [CompletionContext.LamName, CompletionContext.LpmName, CompletionContext.FuncParamName, CompletionContext.FuncParamValue],
+    [CompletionCategory.DimorphicFunctions]: [
+        CompletionContext.LamName,
+        CompletionContext.LpmName,
+        CompletionContext.FuncParamName,
+        CompletionContext.FuncParamValue,
+    ],
 
     // Non-callable categories: excluded from all name contexts
-    [CompletionCategory.Prologue]: [...ALL_NAME_CONTEXTS, CompletionContext.FuncParamName, CompletionContext.FuncParamValue],
-    [CompletionCategory.Flag]: [...ALL_NAME_CONTEXTS, CompletionContext.FuncParamName, CompletionContext.FuncParamValue],
-    [CompletionCategory.Component]: [...ALL_NAME_CONTEXTS, CompletionContext.FuncParamName, CompletionContext.FuncParamValue],
-    [CompletionCategory.ComponentFlag]: [...ALL_NAME_CONTEXTS, CompletionContext.FuncParamName, CompletionContext.FuncParamValue],
-    [CompletionCategory.Language]: [...ALL_NAME_CONTEXTS, CompletionContext.FuncParamName, CompletionContext.FuncParamValue],
-    [CompletionCategory.Action]: [...ALL_NAME_CONTEXTS, CompletionContext.FuncParamName, CompletionContext.FuncParamValue],
-    [CompletionCategory.Patch]: [...ALL_NAME_CONTEXTS, CompletionContext.FuncParamName, CompletionContext.FuncParamValue],
+    [CompletionCategory.Prologue]: [
+        ...ALL_NAME_CONTEXTS,
+        CompletionContext.FuncParamName,
+        CompletionContext.FuncParamValue,
+    ],
+    [CompletionCategory.Flag]: [
+        ...ALL_NAME_CONTEXTS,
+        CompletionContext.FuncParamName,
+        CompletionContext.FuncParamValue,
+    ],
+    [CompletionCategory.Component]: [
+        ...ALL_NAME_CONTEXTS,
+        CompletionContext.FuncParamName,
+        CompletionContext.FuncParamValue,
+    ],
+    [CompletionCategory.ComponentFlag]: [
+        ...ALL_NAME_CONTEXTS,
+        CompletionContext.FuncParamName,
+        CompletionContext.FuncParamValue,
+    ],
+    [CompletionCategory.Language]: [
+        ...ALL_NAME_CONTEXTS,
+        CompletionContext.FuncParamName,
+        CompletionContext.FuncParamValue,
+    ],
+    [CompletionCategory.Action]: [
+        ...ALL_NAME_CONTEXTS,
+        CompletionContext.FuncParamName,
+        CompletionContext.FuncParamValue,
+    ],
+    [CompletionCategory.Patch]: [
+        ...ALL_NAME_CONTEXTS,
+        CompletionContext.FuncParamName,
+        CompletionContext.FuncParamValue,
+    ],
     [CompletionCategory.Constants]: [...ALL_NAME_CONTEXTS, CompletionContext.FuncParamName],
     [CompletionCategory.Vars]: [...ALL_NAME_CONTEXTS, CompletionContext.FuncParamName],
     [CompletionCategory.Value]: [...ALL_NAME_CONTEXTS, CompletionContext.FuncParamName],
@@ -102,10 +159,10 @@ export { CATEGORY_EXCLUSIONS, VALID_CONTEXTS };
 export function filterItemsByContext(items: Tp2CompletionItem[], contexts: CompletionContext[]): CompletionItem[] {
     // No contexts = show everything except context-required categories
     if (contexts.length === 0) {
-        return items.filter(item => item.category === undefined || !CONTEXT_REQUIRED_CATEGORIES.has(item.category));
+        return items.filter((item) => item.category === undefined || !CONTEXT_REQUIRED_CATEGORIES.has(item.category));
     }
 
-    return items.filter(item => !isItemExcluded(item, contexts));
+    return items.filter((item) => !isItemExcluded(item, contexts));
 }
 
 /**
@@ -128,5 +185,5 @@ function isItemExcluded(item: Tp2CompletionItem, contexts: CompletionContext[]):
         return false;
     }
 
-    return contexts.every(ctx => exclusions.includes(ctx));
+    return contexts.every((ctx) => exclusions.includes(ctx));
 }

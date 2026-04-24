@@ -34,7 +34,9 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
     private readonly documentSubscriptions = new Map<BinaryDocument, vscode.Disposable[]>();
     private readonly treeStates = new Map<BinaryDocument, BinaryEditorTreeState>();
 
-    private readonly _onDidChangeCustomDocument = new vscode.EventEmitter<vscode.CustomDocumentEditEvent<BinaryDocument>>();
+    private readonly _onDidChangeCustomDocument = new vscode.EventEmitter<
+        vscode.CustomDocumentEditEvent<BinaryDocument>
+    >();
     readonly onDidChangeCustomDocument = this._onDidChangeCustomDocument.event;
 
     constructor(context: vscode.ExtensionContext) {
@@ -61,14 +63,16 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
         subscriptions.push(doc.onDidChange((e) => this._onDidChangeCustomDocument.fire(e)));
 
         // Clean up subscriptions when document is disposed
-        subscriptions.push(doc.onDidDispose(() => {
-            const subs = this.documentSubscriptions.get(doc);
-            if (subs) {
-                for (const sub of subs) sub.dispose();
-                this.documentSubscriptions.delete(doc);
-            }
-            this.treeStates.delete(doc);
-        }));
+        subscriptions.push(
+            doc.onDidDispose(() => {
+                const subs = this.documentSubscriptions.get(doc);
+                if (subs) {
+                    for (const sub of subs) sub.dispose();
+                    this.documentSubscriptions.delete(doc);
+                }
+                this.treeStates.delete(doc);
+            }),
+        );
 
         this.documentSubscriptions.set(doc, subscriptions);
 
@@ -101,7 +105,15 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
                     this.sendChildren(webviewPanel.webview, document, msg.nodeId);
                     break;
                 case "edit":
-                    void this.handleEdit(webviewPanel.webview, document, msg.fieldId, msg.fieldPath, msg.value, refreshGate, localEditTracker);
+                    void this.handleEdit(
+                        webviewPanel.webview,
+                        document,
+                        msg.fieldId,
+                        msg.fieldPath,
+                        msg.value,
+                        refreshGate,
+                        localEditTracker,
+                    );
                     break;
                 case "dumpJson":
                     void this.handleDumpJson(document);
@@ -110,8 +122,13 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
                     void this.handleLoadJson(document);
                     break;
                 case "runtimeError":
-                    console.error(`Binary editor runtime error for ${document.uri.fsPath}: ${msg.message}`, msg.stack ?? "");
-                    void vscode.window.showErrorMessage(`Binary editor failed for ${path.basename(document.uri.fsPath)}: ${msg.message}`);
+                    console.error(
+                        `Binary editor runtime error for ${document.uri.fsPath}: ${msg.message}`,
+                        msg.stack ?? "",
+                    );
+                    void vscode.window.showErrorMessage(
+                        `Binary editor failed for ${path.basename(document.uri.fsPath)}: ${msg.message}`,
+                    );
                     break;
             }
         });
@@ -131,7 +148,11 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
         await saveBinaryDocumentArtifacts(document.uri, document.uri, bytes, document.parseResult);
     }
 
-    async saveCustomDocumentAs(document: BinaryDocument, destination: vscode.Uri, _cancellation: vscode.CancellationToken): Promise<void> {
+    async saveCustomDocumentAs(
+        document: BinaryDocument,
+        destination: vscode.Uri,
+        _cancellation: vscode.CancellationToken,
+    ): Promise<void> {
         const bytes = document.getContent();
         await saveBinaryDocumentArtifacts(document.uri, destination, bytes, document.parseResult);
     }
@@ -167,15 +188,16 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
             const parseOptions = this.getParseOptions(extension);
             const loaded = loadBinaryJsonSnapshot(jsonText, {
                 proParseOptions: parseOptions,
-                mapParseOptions: extension === ".map"
-                    ? { ...parseOptions, gracefulMapBoundaries: false }
-                    : parseOptions,
+                mapParseOptions:
+                    extension === ".map" ? { ...parseOptions, gracefulMapBoundaries: false } : parseOptions,
             });
             const snapshot = loaded.parseResult;
             const parser = this.getEditableParser(extension);
 
             if (!parser) {
-                void vscode.window.showErrorMessage(`No editable parser registered for ${path.basename(document.uri.fsPath)}`);
+                void vscode.window.showErrorMessage(
+                    `No editable parser registered for ${path.basename(document.uri.fsPath)}`,
+                );
                 return;
             }
 
@@ -234,7 +256,12 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
         const field = document.getFieldById(fieldId);
 
         if (!field) {
-            const msg: ExtensionToWebview = { type: "validationError", fieldId, fieldPath, message: `Field not found: ${fieldPath}` };
+            const msg: ExtensionToWebview = {
+                type: "validationError",
+                fieldId,
+                fieldPath,
+                message: `Field not found: ${fieldPath}`,
+            };
             webview.postMessage(msg);
             return;
         }
@@ -353,7 +380,11 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
     // -- HTML rendering (shell only, data sent via postMessage) --------------
 
     private getHtmlTemplate(): string {
-        return getCachedHtmlAsset("binary-editor", this.extensionUri.fsPath, path.join("client", "src", "editors", "binaryEditor.html"));
+        return getCachedHtmlAsset(
+            "binary-editor",
+            this.extensionUri.fsPath,
+            path.join("client", "src", "editors", "binaryEditor.html"),
+        );
     }
 
     private getCss(): string {
@@ -364,7 +395,11 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
     }
 
     private getJs(): string {
-        return getCachedJsAsset("binary-editor", this.extensionUri.fsPath, path.join("client", "out", "editors", "binaryEditor-webview.js"));
+        return getCachedJsAsset(
+            "binary-editor",
+            this.extensionUri.fsPath,
+            path.join("client", "out", "editors", "binaryEditor-webview.js"),
+        );
     }
 
     /**

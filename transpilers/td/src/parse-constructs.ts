@@ -6,13 +6,7 @@
  * invoked by transformTopLevelCall() in parse.ts.
  */
 
-import {
-    ArrayLiteralExpression,
-    Block,
-    CallExpression,
-    Expression,
-    Node,
-} from "ts-morph";
+import { ArrayLiteralExpression, Block, CallExpression, Expression, Node } from "ts-morph";
 import {
     TDConstructType,
     TDPatchOp,
@@ -31,7 +25,12 @@ import {
 import type { VarsContext } from "../../common/transpiler-utils";
 import { resolveStringExpr, parseBooleanOption, parseRequiredNumber } from "./parse-helpers";
 import { TranspileError } from "../../common/transpile-error";
-import { type FuncsContext, processExtendStatements, processStateStatement, transformFunctionToState } from "./state-transitions";
+import {
+    type FuncsContext,
+    processExtendStatements,
+    processStateStatement,
+    transformFunctionToState,
+} from "./state-transitions";
 import { processChainStatements } from "./chain-processing";
 
 /**
@@ -40,7 +39,7 @@ import { processChainStatements } from "./chain-processing";
  */
 export function transformBegin(
     ctx: { vars: VarsContext; funcs: FuncsContext },
-    call: CallExpression
+    call: CallExpression,
 ): TDConstruct[] | null {
     const args = call.getArguments();
     if (args.length < 2) {
@@ -57,8 +56,7 @@ export function transformBegin(
 
     // Check for options as last argument (distinguished from object-form states)
     const lastArg = args[args.length - 1];
-    const hasOptionsArg = lastArg && Node.isObjectLiteralExpression(lastArg) &&
-        !isObjectWithMethods(lastArg);
+    const hasOptionsArg = lastArg && Node.isObjectLiteralExpression(lastArg) && !isObjectWithMethods(lastArg);
     const nonPausing = hasOptionsArg ? parseBooleanOption(lastArg, "nonPausing") || undefined : undefined;
     const stateArgs = hasOptionsArg ? args.slice(1, -1) : args.slice(1);
 
@@ -86,7 +84,7 @@ export function transformBegin(
 export function transformAppend(
     ctx: { vars: VarsContext; funcs: FuncsContext },
     call: CallExpression,
-    isEarly: boolean
+    isEarly: boolean,
 ): TDConstruct[] | null {
     const funcName = isEarly ? "appendEarly" : "append";
     const args = call.getArguments();
@@ -104,8 +102,7 @@ export function transformAppend(
 
     // Check for options as last argument (distinguished from object-form states)
     const lastArg = args[args.length - 1];
-    const hasOptionsArg = lastArg && Node.isObjectLiteralExpression(lastArg) &&
-        !isObjectWithMethods(lastArg);
+    const hasOptionsArg = lastArg && Node.isObjectLiteralExpression(lastArg) && !isObjectWithMethods(lastArg);
     const ifFileExists = hasOptionsArg ? parseBooleanOption(lastArg, "ifFileExists") || undefined : undefined;
     const stateArgs = hasOptionsArg ? args.slice(1, -1) : args.slice(1);
 
@@ -128,7 +125,7 @@ export function transformAppend(
  */
 export function transformReplaceState(
     ctx: { vars: VarsContext; funcs: FuncsContext },
-    call: CallExpression
+    call: CallExpression,
 ): TDConstruct[] | null {
     const args = call.getArguments();
     if (args.length < 3) {
@@ -179,7 +176,7 @@ export function transformReplaceState(
 export function transformExtend(
     ctx: { vars: VarsContext; funcs: FuncsContext },
     call: CallExpression,
-    isTop: boolean
+    isTop: boolean,
 ): TDConstruct[] | null {
     const funcName = isTop ? "extendTop" : "extendBottom";
     const args = call.getArguments();
@@ -257,10 +254,15 @@ export function transformExtend(
 export function transformInterject(
     ctx: { vars: VarsContext; funcs: FuncsContext },
     call: CallExpression,
-    type: TDConstructType.Interject | TDConstructType.InterjectCopyTrans | TDConstructType.InterjectCopyTrans2
+    type: TDConstructType.Interject | TDConstructType.InterjectCopyTrans | TDConstructType.InterjectCopyTrans2,
 ): TDConstruct[] | null {
     const args = call.getArguments();
-    const funcName = type === TDConstructType.Interject ? "interject" : type === TDConstructType.InterjectCopyTrans ? "interjectCopyTrans" : "interjectCopyTrans2";
+    const funcName =
+        type === TDConstructType.Interject
+            ? "interject"
+            : type === TDConstructType.InterjectCopyTrans
+              ? "interjectCopyTrans"
+              : "interjectCopyTrans2";
     const minArgs = type === TDConstructType.Interject ? 6 : 4;
 
     if (args.length < minArgs) {
@@ -332,9 +334,7 @@ export function transformInterject(
  */
 function isObjectWithMethods(node: Node): boolean {
     if (!Node.isObjectLiteralExpression(node)) return false;
-    return node.getProperties().some(p =>
-        Node.isMethodDeclaration(p) || Node.isFunctionExpression(p)
-    );
+    return node.getProperties().some((p) => Node.isMethodDeclaration(p) || Node.isFunctionExpression(p));
 }
 
 /**
@@ -346,7 +346,7 @@ function collectStatesFromArgs(
     ctx: { vars: VarsContext; funcs: FuncsContext },
     stateArgs: Node[],
     states: TDState[],
-    funcName: string
+    funcName: string,
 ): void {
     for (const arg of stateArgs) {
         if (Node.isArrayLiteralExpression(arg)) {
@@ -395,7 +395,7 @@ function collectStatesFromArgs(
 function collectInlineState(
     ctx: { vars: VarsContext; funcs: FuncsContext },
     call: CallExpression,
-    states: TDState[]
+    states: TDState[],
 ): void {
     const args = call.getArguments();
     if (args.length < 2) {
@@ -434,7 +434,7 @@ function collectSingleStateRef(
     ctx: { vars: VarsContext; funcs: FuncsContext },
     element: Node,
     states: TDState[],
-    funcName: string
+    funcName: string,
 ): void {
     if (Node.isIdentifier(element)) {
         const refName = element.getText();

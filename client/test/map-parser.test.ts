@@ -24,18 +24,9 @@ const LOCAL_FIXTURE_MAPS = new Set([
     "sfsheng.map",
 ]);
 
-const LOCAL_STRICT_FIXTURE_MAPS = [
-    "artemple.map",
-    "arcaves.map",
-    "bhrnddst.map",
-    "denbus1.map",
-    "newr2.map",
-] as const;
+const LOCAL_STRICT_FIXTURE_MAPS = ["artemple.map", "arcaves.map", "bhrnddst.map", "denbus1.map", "newr2.map"] as const;
 
-const LOCAL_GRACEFUL_FIXTURE_MAPS = [
-    ...LOCAL_STRICT_FIXTURE_MAPS,
-    "sfsheng.map",
-] as const;
+const LOCAL_GRACEFUL_FIXTURE_MAPS = [...LOCAL_STRICT_FIXTURE_MAPS, "sfsheng.map"] as const;
 
 function resolveMapPath(fileName: string): string {
     if (LOCAL_FIXTURE_MAPS.has(fileName)) {
@@ -93,18 +84,14 @@ describe("MAP parser - interface", () => {
 });
 
 describe("MAP parser - real maps", () => {
-    it.each([
-        REAL_MAPS[0],
-        REAL_MAPS[1],
-        REAL_MAPS[2],
-        REAL_MAPS[3],
-        REAL_MAPS[4],
-        REAL_MAPS[5],
-    ])("strictly parses %s without errors", (mapPath) => {
-        const result = mapParser.parse(loadMap(mapPath));
-        expect(result.errors).toBeUndefined();
-        expect(result.root.fields.length).toBeGreaterThan(1);
-    });
+    it.each([REAL_MAPS[0], REAL_MAPS[1], REAL_MAPS[2], REAL_MAPS[3], REAL_MAPS[4], REAL_MAPS[5]])(
+        "strictly parses %s without errors",
+        (mapPath) => {
+            const result = mapParser.parse(loadMap(mapPath));
+            expect(result.errors).toBeUndefined();
+            expect(result.root.fields.length).toBeGreaterThan(1);
+        },
+    );
 
     it.each(REAL_MAPS)("round-trips %s byte-for-byte", (mapPath) => {
         const mapData = loadMap(mapPath);
@@ -116,7 +103,9 @@ describe("MAP parser - real maps", () => {
     });
 
     it("attaches a semantic canonical MAP document alongside the editor tree", () => {
-        const result = mapParser.parse(loadMap(resolveMapPath("artemple.map")), { gracefulMapBoundaries: true }) as ParseResult & {
+        const result = mapParser.parse(loadMap(resolveMapPath("artemple.map")), {
+            gracefulMapBoundaries: true,
+        }) as ParseResult & {
             document?: {
                 header?: {
                     version: number;
@@ -142,53 +131,47 @@ describe("MAP parser - real maps", () => {
         expect(Array.isArray(result.document?.scripts)).toBe(true);
         expect(typeof result.document?.objects?.totalObjects).toBe("number");
         expect(result.sourceData).toBeInstanceOf(Uint8Array);
-        expect(result.sourceData && Buffer.from(result.sourceData).equals(Buffer.from(loadMap(resolveMapPath("artemple.map"))))).toBe(true);
+        expect(
+            result.sourceData &&
+                Buffer.from(result.sourceData).equals(Buffer.from(loadMap(resolveMapPath("artemple.map")))),
+        ).toBe(true);
     });
 
-    it.each(LOCAL_STRICT_FIXTURE_MAPS)(
-        "strict JSON snapshots round-trip %s byte-for-byte",
-        (fileName) => {
-            const mapData = loadMap(resolveMapPath(fileName));
-            const result = mapParser.parse(mapData);
+    it.each(LOCAL_STRICT_FIXTURE_MAPS)("strict JSON snapshots round-trip %s byte-for-byte", (fileName) => {
+        const mapData = loadMap(resolveMapPath(fileName));
+        const result = mapParser.parse(mapData);
 
-            expect(result.errors).toBeUndefined();
+        expect(result.errors).toBeUndefined();
 
-            const snapshot = parseBinaryJsonSnapshot(createBinaryJsonSnapshot(result));
-            const serialized = mapParser.serialize!(snapshot);
+        const snapshot = parseBinaryJsonSnapshot(createBinaryJsonSnapshot(result));
+        const serialized = mapParser.serialize!(snapshot);
 
-            expect(Buffer.from(serialized).equals(Buffer.from(mapData))).toBe(true);
-        }
-    );
+        expect(Buffer.from(serialized).equals(Buffer.from(mapData))).toBe(true);
+    });
 
-    it.each(LOCAL_STRICT_FIXTURE_MAPS)(
-        "strict editor-mode JSON snapshots round-trip %s byte-for-byte",
-        (fileName) => {
-            const mapData = loadMap(resolveMapPath(fileName));
-            const result = mapParser.parse(mapData, { skipMapTiles: true });
+    it.each(LOCAL_STRICT_FIXTURE_MAPS)("strict editor-mode JSON snapshots round-trip %s byte-for-byte", (fileName) => {
+        const mapData = loadMap(resolveMapPath(fileName));
+        const result = mapParser.parse(mapData, { skipMapTiles: true });
 
-            expect(result.errors).toBeUndefined();
+        expect(result.errors).toBeUndefined();
 
-            const snapshot = parseBinaryJsonSnapshot(createBinaryJsonSnapshot(result));
-            const serialized = mapParser.serialize!(snapshot);
+        const snapshot = parseBinaryJsonSnapshot(createBinaryJsonSnapshot(result));
+        const serialized = mapParser.serialize!(snapshot);
 
-            expect(Buffer.from(serialized).equals(Buffer.from(mapData))).toBe(true);
-        }
-    );
+        expect(Buffer.from(serialized).equals(Buffer.from(mapData))).toBe(true);
+    });
 
-    it.each(LOCAL_GRACEFUL_FIXTURE_MAPS)(
-        "graceful JSON snapshots round-trip %s byte-for-byte",
-        (fileName) => {
-            const mapData = loadMap(resolveMapPath(fileName));
-            const result = mapParser.parse(mapData, { gracefulMapBoundaries: true });
+    it.each(LOCAL_GRACEFUL_FIXTURE_MAPS)("graceful JSON snapshots round-trip %s byte-for-byte", (fileName) => {
+        const mapData = loadMap(resolveMapPath(fileName));
+        const result = mapParser.parse(mapData, { gracefulMapBoundaries: true });
 
-            expect(result.errors).toBeUndefined();
+        expect(result.errors).toBeUndefined();
 
-            const snapshot = parseBinaryJsonSnapshot(createBinaryJsonSnapshot(result));
-            const serialized = mapParser.serialize!(snapshot);
+        const snapshot = parseBinaryJsonSnapshot(createBinaryJsonSnapshot(result));
+        const serialized = mapParser.serialize!(snapshot);
 
-            expect(Buffer.from(serialized).equals(Buffer.from(mapData))).toBe(true);
-        }
-    );
+        expect(Buffer.from(serialized).equals(Buffer.from(mapData))).toBe(true);
+    });
 
     it.each(LOCAL_GRACEFUL_FIXTURE_MAPS)(
         "graceful editor-mode JSON snapshots round-trip %s byte-for-byte",
@@ -202,7 +185,7 @@ describe("MAP parser - real maps", () => {
             const serialized = mapParser.serialize!(snapshot);
 
             expect(Buffer.from(serialized).equals(Buffer.from(mapData))).toBe(true);
-        }
+        },
     );
 
     it("strict mode preserves PRO-dependent object tails as opaque ranges without parse errors", () => {
@@ -221,9 +204,15 @@ describe("MAP parser - real maps", () => {
         const result = mapParser.parse(mapData, { skipMapTiles: true, gracefulMapBoundaries: true });
 
         expect(result.errors).toBeUndefined();
-        expect(result.root.fields.some((field) =>
-            field && typeof field === "object" && "name" in field && /^Elevation \d+ Tiles$/.test(String(field.name))
-        )).toBe(false);
+        expect(
+            result.root.fields.some(
+                (field) =>
+                    field &&
+                    typeof field === "object" &&
+                    "name" in field &&
+                    /^Elevation \d+ Tiles$/.test(String(field.name)),
+            ),
+        ).toBe(false);
 
         const serialized = mapParser.serialize!(result);
         expect(Buffer.from(serialized).equals(Buffer.from(mapData))).toBe(true);
@@ -247,7 +236,7 @@ describe("MAP parser - real maps", () => {
         const tileGroup = result.root.fields.find((field) => "name" in field && field.name === "Elevation 0 Tiles");
 
         expect(tileGroup).toBeDefined();
-        expect("fields" in (tileGroup!)).toBe(true);
+        expect("fields" in tileGroup!).toBe(true);
 
         const tileFields = (tileGroup as { fields: unknown[] }).fields;
         const floorField = findFieldByName(tileFields, "Tile 0 Floor");
@@ -297,7 +286,7 @@ describe("MAP parser - real maps", () => {
 
         const serialized = mapParser.serialize!(result);
         const view = new DataView(serialized.buffer, serialized.byteOffset, serialized.byteLength);
-        expect(view.getInt32(0x1C, false)).toBe(5);
+        expect(view.getInt32(0x1c, false)).toBe(5);
     });
 
     it("parses object section counts and leaves a TODO when subtype resolution is missing", () => {
@@ -306,20 +295,20 @@ describe("MAP parser - real maps", () => {
         const objectsSection = result.root.fields.find((field) => "name" in field && field.name === "Objects Section");
 
         expect(objectsSection).toBeDefined();
-        expect("fields" in (objectsSection!)).toBe(true);
+        expect("fields" in objectsSection!).toBe(true);
 
         const objectFields = (objectsSection as { fields: unknown[] }).fields;
         const totalObjects = findFieldByName(objectFields, "Total Objects");
         expect(totalObjects.value).toBe(4886);
 
-        const elevation0 = objectFields.find((field) =>
-            field && typeof field === "object" && "name" in field && field.name === "Elevation 0 Objects"
+        const elevation0 = objectFields.find(
+            (field) => field && typeof field === "object" && "name" in field && field.name === "Elevation 0 Objects",
         ) as { fields: unknown[] } | undefined;
         expect(elevation0).toBeDefined();
         expect(findFieldByName(elevation0!.fields, "Object Count").value).toBe(4294);
 
-        const todoNote = objectFields.find((field) =>
-            field && typeof field === "object" && "name" in field && field.name === "TODO"
+        const todoNote = objectFields.find(
+            (field) => field && typeof field === "object" && "name" in field && field.name === "TODO",
         ) as { value: unknown } | undefined;
         expect(todoNote?.value).toContain("PRO");
     });
@@ -332,8 +321,8 @@ describe("MAP parser - real maps", () => {
 
         const objectsSection = findGroupByName(result.root.fields, "Objects Section");
         const elevation0 = findGroupByName(objectsSection.fields, "Elevation 0 Objects");
-        const firstObject = elevation0.fields.find((field) =>
-            field && typeof field === "object" && "name" in field && field.name === "Object 0.0 (Misc)"
+        const firstObject = elevation0.fields.find(
+            (field) => field && typeof field === "object" && "name" in field && field.name === "Object 0.0 (Misc)",
         ) as { fields: unknown[] } | undefined;
 
         expect(firstObject).toBeDefined();
@@ -365,8 +354,14 @@ describe("MAP parser - real maps", () => {
         expect(findFieldByName(header.fields, "Default Elevation").type).toBe("enum");
         expect(findFieldByName(header.fields, "Default Orientation").type).toBe("enum");
 
-        const firstScriptGroup = result.root.fields.find((field) =>
-            field && typeof field === "object" && "name" in field && typeof field.name === "string" && field.name.endsWith("Scripts") && "fields" in field
+        const firstScriptGroup = result.root.fields.find(
+            (field) =>
+                field &&
+                typeof field === "object" &&
+                "name" in field &&
+                typeof field.name === "string" &&
+                field.name.endsWith("Scripts") &&
+                "fields" in field,
         ) as { fields: unknown[] } | undefined;
         expect(firstScriptGroup).toBeDefined();
 
@@ -378,8 +373,8 @@ describe("MAP parser - real maps", () => {
 
         const objectsSection = findGroupByName(result.root.fields, "Objects Section");
         const elevation0 = findGroupByName(objectsSection.fields, "Elevation 0 Objects");
-        const firstObject = elevation0.fields.find((field) =>
-            field && typeof field === "object" && "name" in field && field.name === "Object 0.0 (Misc)"
+        const firstObject = elevation0.fields.find(
+            (field) => field && typeof field === "object" && "name" in field && field.name === "Object 0.0 (Misc)",
         ) as { fields: unknown[] } | undefined;
 
         expect(firstObject).toBeDefined();
@@ -387,18 +382,19 @@ describe("MAP parser - real maps", () => {
         expect(findFieldByName(firstObject!.fields, "Rotation").type).toBe("enum");
         expect(findFieldByName(firstObject!.fields, "Elevation").type).toBe("enum");
 
-        const exitGridResult = mapParser.parse(
-            loadMap(resolveMapPath("bhrnddst.map"))
-        );
+        const exitGridResult = mapParser.parse(loadMap(resolveMapPath("bhrnddst.map")));
         expect(exitGridResult.errors).toBeUndefined();
 
         const exitObjectsSection = findGroupByName(exitGridResult.root.fields, "Objects Section");
         const exitElevation0 = findGroupByName(exitObjectsSection.fields, "Elevation 0 Objects");
-        const exitObject = exitElevation0.fields.find((field) =>
-            field && typeof field === "object" && "fields" in field &&
-            (field as { fields: unknown[] }).fields.some((child) =>
-                child && typeof child === "object" && "name" in child && child.name === "Exit Grid"
-            )
+        const exitObject = exitElevation0.fields.find(
+            (field) =>
+                field &&
+                typeof field === "object" &&
+                "fields" in field &&
+                (field as { fields: unknown[] }).fields.some(
+                    (child) => child && typeof child === "object" && "name" in child && child.name === "Exit Grid",
+                ),
         ) as { fields: unknown[] } | undefined;
 
         expect(exitObject).toBeDefined();
@@ -412,14 +408,14 @@ describe("MAP parser - real maps", () => {
         const result = mapParser.parse(mapData, { gracefulMapBoundaries: true });
 
         expect(result.errors).toBeUndefined();
-        expect(result.root.fields.some((field) =>
-            field && typeof field === "object" && "name" in field && field.name === "Objects Section"
-        )).toBe(true);
+        expect(
+            result.root.fields.some(
+                (field) => field && typeof field === "object" && "name" in field && field.name === "Objects Section",
+            ),
+        ).toBe(true);
     });
 
-    it.each([
-        "sfsheng.map",
-    ])("falls back to an opaque object section for ambiguous %s boundaries", (fileName) => {
+    it.each(["sfsheng.map"])("falls back to an opaque object section for ambiguous %s boundaries", (fileName) => {
         const mapData = loadMap(resolveMapPath(fileName));
         const result = mapParser.parse(mapData, { gracefulMapBoundaries: true });
 
@@ -431,13 +427,14 @@ describe("MAP parser - real maps", () => {
         const elevation0 = findGroupByName(objectsSection.fields, "Elevation 0 Objects");
         expect(findFieldByName(elevation0.fields, "Object Count").value).toBe(0);
 
-        const todoNote = objectsSection.fields.find((field) =>
-            field && typeof field === "object" && "name" in field && field.name === "TODO"
+        const todoNote = objectsSection.fields.find(
+            (field) => field && typeof field === "object" && "name" in field && field.name === "TODO",
         ) as { value: unknown } | undefined;
         expect(todoNote?.value).toContain("boundary");
 
-        const firstObject = elevation0.fields.find((field) =>
-            field && typeof field === "object" && "name" in field && /^Object \d+\.\d+ /.test(String(field.name))
+        const firstObject = elevation0.fields.find(
+            (field) =>
+                field && typeof field === "object" && "name" in field && /^Object \d+\.\d+ /.test(String(field.name)),
         );
         expect(firstObject).toBeUndefined();
     });
@@ -472,14 +469,14 @@ describe("MAP parser - real maps", () => {
         expect(typeof opaqueRange?.size).toBe("number");
         expect(Array.isArray(opaqueRange?.hexChunks)).toBe(true);
         expect((opaqueRange!.hexChunks as unknown[]).length).toBeGreaterThan(0);
-        expect((opaqueRange!.hexChunks as unknown[]).every((chunk) =>
-            typeof chunk === "string" && /^[0-9a-f]+$/.test(chunk) && chunk.length <= 64
-        )).toBe(true);
+        expect(
+            (opaqueRange!.hexChunks as unknown[]).every(
+                (chunk) => typeof chunk === "string" && /^[0-9a-f]+$/.test(chunk) && chunk.length <= 64,
+            ),
+        ).toBe(true);
     });
 
-    it.each([
-        "sfsheng.map",
-    ])("fails strict parsing for deterministic %s script parse errors", (fileName) => {
+    it.each(["sfsheng.map"])("fails strict parsing for deterministic %s script parse errors", (fileName) => {
         const mapData = loadMap(resolveMapPath(fileName));
         const result = mapParser.parse(mapData);
 

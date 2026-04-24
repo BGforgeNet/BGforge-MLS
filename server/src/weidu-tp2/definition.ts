@@ -20,9 +20,7 @@ import { findNodeAtPosition, findAncestorOfType, stripStringDelimiters } from ".
 import type { Symbols } from "../core/symbol-index";
 
 /** Node types for INCLUDE directives. */
-const INCLUDE_TYPES = new Set([
-    SyntaxType.ActionInclude,
-]);
+const INCLUDE_TYPES = new Set([SyntaxType.ActionInclude]);
 
 // ============================================
 // Main entry point
@@ -104,10 +102,12 @@ export function isOnFunctionCallParamName(root: SyntaxNode, position: Position):
     let isParamItem = false;
 
     while (current && current !== callNode) {
-        if (current.type === SyntaxType.IntVarCallItem ||
+        if (
+            current.type === SyntaxType.IntVarCallItem ||
             current.type === SyntaxType.StrVarCallItem ||
             current.type === SyntaxType.RetCallItem ||
-            current.type === SyntaxType.RetArrayCallItem) {
+            current.type === SyntaxType.RetArrayCallItem
+        ) {
             isParamItem = true;
             break;
         }
@@ -132,7 +132,12 @@ export function isOnFunctionCallParamName(root: SyntaxNode, position: Position):
  * When cursor is on a parameter name in a function call (e.g., `LAF my_func INT_VAR foo = 1 END`),
  * navigate to the function definition instead of treating it as a variable.
  */
-function tryFunctionCallParamDefinition(node: SyntaxNode, text: string, uri: string, symbols?: Symbols): Location | null {
+function tryFunctionCallParamDefinition(
+    node: SyntaxNode,
+    text: string,
+    uri: string,
+    symbols?: Symbols,
+): Location | null {
     // Reuse the guard to check if we're on a parameter name
     // Note: node.tree exists but isn't in the type definitions, so we walk up to root
     let root = node;

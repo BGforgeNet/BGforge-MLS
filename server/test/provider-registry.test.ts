@@ -51,7 +51,7 @@ function createRegistry() {
     vi.resetModules();
     // Note: We're testing the class behavior, not the singleton instance
     // For isolation, we'll create mock providers and test routing
-    return import("../src/provider-registry").then(m => m.registry);
+    return import("../src/provider-registry").then((m) => m.registry);
 }
 
 describe("ProviderRegistry", () => {
@@ -283,7 +283,9 @@ describe("ProviderRegistry", () => {
         it("should delegate to provider's format", async () => {
             const registry = await createRegistry();
             const formatResult: FormatResult = {
-                edits: [{ range: { start: { line: 0, character: 0 }, end: { line: 0, character: 5 } }, newText: "hello" }],
+                edits: [
+                    { range: { start: { line: 0, character: 0 }, end: { line: 0, character: 5 } }, newText: "hello" },
+                ],
             };
             const mockFormat = vi.fn().mockReturnValue(formatResult);
             registry.register(createMockProvider("test", { format: mockFormat }));
@@ -304,17 +306,19 @@ describe("ProviderRegistry", () => {
 
         it("routes semantic token spans through the shared encoder", async () => {
             const registry = await createRegistry();
-            registry.register(createMockProvider("test", {
-                semanticTokens: vi.fn().mockReturnValue([
-                    {
-                        line: 1,
-                        startChar: 4,
-                        length: 5,
-                        tokenType: SemanticTokenTypes.parameter,
-                        tokenModifiers: 0,
-                    },
-                ]),
-            }));
+            registry.register(
+                createMockProvider("test", {
+                    semanticTokens: vi.fn().mockReturnValue([
+                        {
+                            line: 1,
+                            startChar: 4,
+                            length: 5,
+                            tokenType: SemanticTokenTypes.parameter,
+                            tokenModifiers: 0,
+                        },
+                    ]),
+                }),
+            );
 
             const result = registry.semanticTokens("test", "text", "file:///test.txt");
 
@@ -360,7 +364,9 @@ describe("ProviderRegistry", () => {
         it("should return null if no provider found", async () => {
             const registry = await createRegistry();
 
-            expect(registry.definition("nonexistent", "text", { line: 0, character: 0 }, "file:///test.txt")).toBeNull();
+            expect(
+                registry.definition("nonexistent", "text", { line: 0, character: 0 }, "file:///test.txt"),
+            ).toBeNull();
         });
 
         it("should delegate to provider's definition", async () => {
@@ -424,7 +430,9 @@ describe("ProviderRegistry", () => {
         it("should return null if no provider found", async () => {
             const registry = await createRegistry();
 
-            expect(registry.rename("nonexistent", "text", { line: 0, character: 0 }, "newName", "file:///test.txt")).toBeNull();
+            expect(
+                registry.rename("nonexistent", "text", { line: 0, character: 0 }, "newName", "file:///test.txt"),
+            ).toBeNull();
         });
 
         it("should delegate to provider's rename", async () => {
@@ -432,13 +440,22 @@ describe("ProviderRegistry", () => {
             const mockEdit: WorkspaceEdit = {
                 changes: {
                     "file:///test.txt": [
-                        { range: { start: { line: 0, character: 6 }, end: { line: 0, character: 11 } }, newText: "newVar" },
+                        {
+                            range: { start: { line: 0, character: 6 }, end: { line: 0, character: 11 } },
+                            newText: "newVar",
+                        },
                     ],
                 },
             };
             registry.register(createMockProvider("test", { rename: vi.fn().mockReturnValue(mockEdit) }));
 
-            const result = registry.rename("test", "const myVar = 1;", { line: 0, character: 7 }, "newVar", "file:///test.txt");
+            const result = registry.rename(
+                "test",
+                "const myVar = 1;",
+                { line: 0, character: 7 },
+                "newVar",
+                "file:///test.txt",
+            );
 
             expect(result).toBe(mockEdit);
         });
@@ -453,12 +470,12 @@ describe("ProviderRegistry", () => {
 
         it("should return header completions from getCompletions", async () => {
             const registry = await createRegistry();
-            const headerItems: CompletionItem[] = [
-                { label: "headerFunc", kind: CompletionItemKind.Function },
-            ];
-            registry.register(createMockProvider("test", {
-                getCompletions: vi.fn().mockReturnValue(headerItems),
-            }));
+            const headerItems: CompletionItem[] = [{ label: "headerFunc", kind: CompletionItemKind.Function }];
+            registry.register(
+                createMockProvider("test", {
+                    getCompletions: vi.fn().mockReturnValue(headerItems),
+                }),
+            );
 
             const result = registry.completion("test", "text", "file:///test.txt");
 
@@ -474,10 +491,12 @@ describe("ProviderRegistry", () => {
             ];
             const filteredItems: CompletionItem[] = [items[0]];
             const mockFilter = vi.fn().mockReturnValue(filteredItems);
-            registry.register(createMockProvider("test", {
-                getCompletions: vi.fn().mockReturnValue(items),
-                filterCompletions: mockFilter,
-            }));
+            registry.register(
+                createMockProvider("test", {
+                    getCompletions: vi.fn().mockReturnValue(items),
+                    filterCompletions: mockFilter,
+                }),
+            );
 
             const position: Position = { line: 0, character: 5 };
             const result = registry.completion("test", "text", "file:///test.txt", position);
@@ -491,14 +510,19 @@ describe("ProviderRegistry", () => {
         it("should return not-handled if no provider found", async () => {
             const registry = await createRegistry();
 
-            const result = registry.localHover("nonexistent", "text", "sym", "file:///test.txt", { line: 0, character: 0 });
+            const result = registry.localHover("nonexistent", "text", "sym", "file:///test.txt", {
+                line: 0,
+                character: 0,
+            });
             expect(result).toEqual({ handled: false });
         });
 
         it("should delegate to provider's hover", async () => {
             const registry = await createRegistry();
             const mockHover: Hover = { contents: { kind: "markdown", value: "**myFunc**" } };
-            registry.register(createMockProvider("test", { hover: vi.fn().mockReturnValue({ handled: true, hover: mockHover }) }));
+            registry.register(
+                createMockProvider("test", { hover: vi.fn().mockReturnValue({ handled: true, hover: mockHover }) }),
+            );
 
             const result = registry.localHover("test", "text", "myFunc", "file:///test.txt", { line: 0, character: 5 });
 
@@ -517,9 +541,11 @@ describe("ProviderRegistry", () => {
             const registry = await createRegistry();
             const mockHover: Hover = { contents: "hover content" };
             const mockSymbol = { hover: mockHover };
-            registry.register(createMockProvider("test", {
-                resolveSymbol: vi.fn().mockReturnValue(mockSymbol),
-            }));
+            registry.register(
+                createMockProvider("test", {
+                    resolveSymbol: vi.fn().mockReturnValue(mockSymbol),
+                }),
+            );
 
             const result = registry.hover("test", "file:///test.txt", "symbol", "text");
 
@@ -546,10 +572,12 @@ describe("ProviderRegistry", () => {
                 activeSignature: 0,
                 activeParameter: 0,
             };
-            registry.register(createMockProvider("test", {
-                localSignature: vi.fn().mockReturnValue(localSig),
-                getSignature: vi.fn().mockReturnValue(headerSig),
-            }));
+            registry.register(
+                createMockProvider("test", {
+                    localSignature: vi.fn().mockReturnValue(localSig),
+                    getSignature: vi.fn().mockReturnValue(headerSig),
+                }),
+            );
 
             const result = registry.signature("test", "text", "file:///test.txt", "func", 0);
 
@@ -563,10 +591,12 @@ describe("ProviderRegistry", () => {
                 activeSignature: 0,
                 activeParameter: 0,
             };
-            registry.register(createMockProvider("test", {
-                localSignature: vi.fn().mockReturnValue(null),
-                getSignature: vi.fn().mockReturnValue(headerSig),
-            }));
+            registry.register(
+                createMockProvider("test", {
+                    localSignature: vi.fn().mockReturnValue(null),
+                    getSignature: vi.fn().mockReturnValue(headerSig),
+                }),
+            );
 
             const result = registry.signature("test", "text", "file:///test.txt", "func", 0);
 
@@ -587,9 +617,11 @@ describe("ProviderRegistry", () => {
                 uri: "file:///header.h",
                 range: { start: { line: 5, character: 0 }, end: { line: 5, character: 10 } },
             };
-            registry.register(createMockProvider("test", {
-                getSymbolDefinition: vi.fn().mockReturnValue(mockLocation),
-            }));
+            registry.register(
+                createMockProvider("test", {
+                    getSymbolDefinition: vi.fn().mockReturnValue(mockLocation),
+                }),
+            );
 
             const result = registry.symbolDefinition("test", "symbol");
 
@@ -600,23 +632,27 @@ describe("ProviderRegistry", () => {
             // This prevents VSCode from trying to open workspace root as a directory
             const registry = await createRegistry();
             const invalidLocation: Location = {
-                uri: "",  // Empty URI - invalid for navigation
+                uri: "", // Empty URI - invalid for navigation
                 range: { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } },
             };
-            registry.register(createMockProvider("test", {
-                getSymbolDefinition: vi.fn().mockReturnValue(invalidLocation),
-            }));
+            registry.register(
+                createMockProvider("test", {
+                    getSymbolDefinition: vi.fn().mockReturnValue(invalidLocation),
+                }),
+            );
 
             const result = registry.symbolDefinition("test", "symbol");
 
-            expect(result).toBeNull();  // Should filter out invalid location
+            expect(result).toBeNull(); // Should filter out invalid location
         });
 
         it("should return null when provider returns null", async () => {
             const registry = await createRegistry();
-            registry.register(createMockProvider("test", {
-                getSymbolDefinition: vi.fn().mockReturnValue(null),
-            }));
+            registry.register(
+                createMockProvider("test", {
+                    getSymbolDefinition: vi.fn().mockReturnValue(null),
+                }),
+            );
 
             const result = registry.symbolDefinition("test", "symbol");
 
@@ -688,9 +724,9 @@ describe("ProviderRegistry", () => {
             const patterns = registry.getWatchPatterns();
 
             expect(patterns).toHaveLength(3);
-            expect(patterns.map(p => p.globPattern)).toContain("**/*.h");
-            expect(patterns.map(p => p.globPattern)).toContain("**/*.inc");
-            expect(patterns.map(p => p.globPattern)).toContain("**/*.tph");
+            expect(patterns.map((p) => p.globPattern)).toContain("**/*.h");
+            expect(patterns.map((p) => p.globPattern)).toContain("**/*.inc");
+            expect(patterns.map((p) => p.globPattern)).toContain("**/*.tph");
         });
     });
 
@@ -716,10 +752,12 @@ describe("ProviderRegistry", () => {
         it("should call reloadFileData for each matching file in workspace", async () => {
             const registry = await createRegistry();
             const mockReload = vi.fn();
-            registry.register(createMockProvider("test", {
-                indexExtensions: [".tph"],
-                reloadFileData: mockReload,
-            }));
+            registry.register(
+                createMockProvider("test", {
+                    indexExtensions: [".tph"],
+                    reloadFileData: mockReload,
+                }),
+            );
 
             // Mock findFiles to return test files
             const { findFiles } = await import("../src/common");
@@ -734,10 +772,12 @@ describe("ProviderRegistry", () => {
         it("should do nothing if no workspace root provided", async () => {
             const registry = await createRegistry();
             const mockReload = vi.fn();
-            registry.register(createMockProvider("test", {
-                indexExtensions: [".tph"],
-                reloadFileData: mockReload,
-            }));
+            registry.register(
+                createMockProvider("test", {
+                    indexExtensions: [".tph"],
+                    reloadFileData: mockReload,
+                }),
+            );
 
             await registry.scanWorkspaceFiles(undefined);
 
@@ -747,13 +787,15 @@ describe("ProviderRegistry", () => {
         it("should skip providers without indexExtensions", async () => {
             const registry = await createRegistry();
             const mockReload = vi.fn();
-            registry.register(createMockProvider("test", {
-                reloadFileData: mockReload,
-                // No indexExtensions
-            }));
+            registry.register(
+                createMockProvider("test", {
+                    reloadFileData: mockReload,
+                    // No indexExtensions
+                }),
+            );
 
             const { findFiles } = await import("../src/common");
-            vi.mocked(findFiles).mockClear();  // Clear any previous calls
+            vi.mocked(findFiles).mockClear(); // Clear any previous calls
             vi.mocked(findFiles).mockReturnValue([]);
 
             await registry.scanWorkspaceFiles("/test/workspace");
@@ -764,10 +806,12 @@ describe("ProviderRegistry", () => {
 
         it("should skip providers without reloadFileData", async () => {
             const registry = await createRegistry();
-            registry.register(createMockProvider("test", {
-                indexExtensions: [".tph"],
-                // No reloadFileData
-            }));
+            registry.register(
+                createMockProvider("test", {
+                    indexExtensions: [".tph"],
+                    // No reloadFileData
+                }),
+            );
 
             const { findFiles } = await import("../src/common");
             vi.mocked(findFiles).mockReturnValue(["file.tph"]);
@@ -780,19 +824,23 @@ describe("ProviderRegistry", () => {
             const registry = await createRegistry();
             const mockReload1 = vi.fn();
             const mockReload2 = vi.fn();
-            registry.register(createMockProvider("weidu-tp2", {
-                indexExtensions: [".tph"],
-                reloadFileData: mockReload1,
-            }));
-            registry.register(createMockProvider("fallout-ssl", {
-                indexExtensions: [".h"],
-                reloadFileData: mockReload2,
-            }));
+            registry.register(
+                createMockProvider("weidu-tp2", {
+                    indexExtensions: [".tph"],
+                    reloadFileData: mockReload1,
+                }),
+            );
+            registry.register(
+                createMockProvider("fallout-ssl", {
+                    indexExtensions: [".h"],
+                    reloadFileData: mockReload2,
+                }),
+            );
 
             const { findFiles } = await import("../src/common");
             vi.mocked(findFiles)
-                .mockReturnValueOnce(["lib/a.tph"])  // First call for .tph
-                .mockReturnValueOnce(["lib/b.h"]);   // Second call for .h
+                .mockReturnValueOnce(["lib/a.tph"]) // First call for .tph
+                .mockReturnValueOnce(["lib/b.h"]); // Second call for .h
 
             await registry.scanWorkspaceFiles("/test/workspace");
 
@@ -805,10 +853,12 @@ describe("ProviderRegistry", () => {
         it("should route created files using indexExtensions", async () => {
             const registry = await createRegistry();
             const mockReload = vi.fn();
-            registry.register(createMockProvider("weidu-d", {
-                indexExtensions: [".d"],
-                reloadFileData: mockReload,
-            }));
+            registry.register(
+                createMockProvider("weidu-d", {
+                    indexExtensions: [".d"],
+                    reloadFileData: mockReload,
+                }),
+            );
             await registry.init(mockContext);
 
             registry.handleWatchedFileChange("file:///test/workspace/dialogs/a.d", 1);
@@ -819,10 +869,12 @@ describe("ProviderRegistry", () => {
         it("should route deleted files using indexExtensions", async () => {
             const registry = await createRegistry();
             const mockDeleted = vi.fn();
-            registry.register(createMockProvider("weidu-d", {
-                indexExtensions: [".d"],
-                onWatchedFileDeleted: mockDeleted,
-            }));
+            registry.register(
+                createMockProvider("weidu-d", {
+                    indexExtensions: [".d"],
+                    onWatchedFileDeleted: mockDeleted,
+                }),
+            );
             await registry.init(mockContext);
 
             registry.handleWatchedFileChange("file:///test/workspace/dialogs/a.d", 3);
@@ -844,19 +896,29 @@ describe("ProviderRegistry", () => {
             const symbolA: SymbolInformation = {
                 name: "proc_a",
                 kind: SymbolKind.Function,
-                location: { uri: "file:///a.ssl", range: { start: { line: 0, character: 0 }, end: { line: 0, character: 6 } } },
+                location: {
+                    uri: "file:///a.ssl",
+                    range: { start: { line: 0, character: 0 }, end: { line: 0, character: 6 } },
+                },
             };
             const symbolB: SymbolInformation = {
                 name: "func_b",
                 kind: SymbolKind.Function,
-                location: { uri: "file:///b.tph", range: { start: { line: 0, character: 0 }, end: { line: 0, character: 6 } } },
+                location: {
+                    uri: "file:///b.tph",
+                    range: { start: { line: 0, character: 0 }, end: { line: 0, character: 6 } },
+                },
             };
-            registry.register(createMockProvider("lang-a", {
-                workspaceSymbols: vi.fn().mockReturnValue([symbolA]),
-            }));
-            registry.register(createMockProvider("lang-b", {
-                workspaceSymbols: vi.fn().mockReturnValue([symbolB]),
-            }));
+            registry.register(
+                createMockProvider("lang-a", {
+                    workspaceSymbols: vi.fn().mockReturnValue([symbolA]),
+                }),
+            );
+            registry.register(
+                createMockProvider("lang-b", {
+                    workspaceSymbols: vi.fn().mockReturnValue([symbolB]),
+                }),
+            );
 
             const results = registry.workspaceSymbols("func", CancellationToken.None);
             expect(results).toHaveLength(2);
@@ -879,12 +941,17 @@ describe("ProviderRegistry", () => {
             const symbol: SymbolInformation = {
                 name: "proc",
                 kind: SymbolKind.Function,
-                location: { uri: "file:///a.ssl", range: { start: { line: 0, character: 0 }, end: { line: 0, character: 4 } } },
+                location: {
+                    uri: "file:///a.ssl",
+                    range: { start: { line: 0, character: 0 }, end: { line: 0, character: 4 } },
+                },
             };
             registry.register(createMockProvider("no-ws-symbols"));
-            registry.register(createMockProvider("has-ws-symbols", {
-                workspaceSymbols: vi.fn().mockReturnValue([symbol]),
-            }));
+            registry.register(
+                createMockProvider("has-ws-symbols", {
+                    workspaceSymbols: vi.fn().mockReturnValue([symbol]),
+                }),
+            );
 
             const results = registry.workspaceSymbols("", CancellationToken.None);
             expect(results).toHaveLength(1);

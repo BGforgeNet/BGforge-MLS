@@ -1,7 +1,7 @@
 /**
  * Core formatting logic for WeiDU TP2 files.
  * Main entry point and dispatcher for formatting operations.
- * 
+ *
  * For formatter behavior and examples, see:
  * {@link https://github.com/bgforge/vscode-mls/tree/master/grammars/weidu-tp2/formatter.md}
  */
@@ -107,9 +107,7 @@ function formatComponent(node: SyntaxNode, ctx: FormatContext): string {
             child.type === SyntaxType.VariableRef ||
             child.type === SyntaxType.TraRef
         ) {
-            beginLine = beginLine
-                ? beginLine + " " + normalizeWhitespace(child.text)
-                : normalizeWhitespace(child.text);
+            beginLine = beginLine ? beginLine + " " + normalizeWhitespace(child.text) : normalizeWhitespace(child.text);
             lastHeaderRow = child.endPosition.row;
             continue;
         }
@@ -134,13 +132,7 @@ function formatComponent(node: SyntaxNode, ctx: FormatContext): string {
                 const predicate = child.childForFieldName("predicate");
                 const message = child.childForFieldName("message");
                 const contIndent = ctx.indent;
-                const condLines = formatCondition(
-                    predicate,
-                    "REQUIRE_PREDICATE",
-                    "",
-                    contIndent,
-                    ctx.lineLimit,
-                );
+                const condLines = formatCondition(predicate, "REQUIRE_PREDICATE", "", contIndent, ctx.lineLimit);
                 if (message) {
                     condLines[condLines.length - 1] += " " + normalizeWhitespace(message.text);
                 }
@@ -196,11 +188,7 @@ function formatAlwaysBlock(node: SyntaxNode, ctx: FormatContext): string {
         } else if (child.type === SyntaxType.InlinedFile) {
             lines.push(formatInlinedFile(child, ctx, 1));
             lastEndRow = child.endPosition.row;
-        } else if (
-            isAction(child.type) ||
-            isControlFlow(child.type) ||
-            isFunctionCall(child.type)
-        ) {
+        } else if (isAction(child.type) || isControlFlow(child.type) || isFunctionCall(child.type)) {
             lines.push(formatNode(child, ctx, 1));
             lastEndRow = child.endPosition.row;
         }
@@ -382,11 +370,7 @@ function formatNode(node: SyntaxNode, ctx: FormatContext, depth: number): string
     }
 
     // INNER_PATCH / INNER_PATCH_SAVE / INNER_PATCH_FILE
-    if (
-        type === NODE_INNER_PATCH ||
-        type === NODE_INNER_PATCH_SAVE ||
-        type === NODE_INNER_PATCH_FILE
-    ) {
+    if (type === NODE_INNER_PATCH || type === NODE_INNER_PATCH_SAVE || type === NODE_INNER_PATCH_FILE) {
         return formatInnerPatch(node, ctx, depth, formatNode);
     }
 
@@ -404,11 +388,7 @@ function formatNode(node: SyntaxNode, ctx: FormatContext, depth: number): string
 // ============================================
 
 /** Try to append an inline comment to the last result entry. */
-function tryAppendTopLevelInlineComment(
-    result: string[],
-    child: SyntaxNode,
-    lastEndRow: number,
-): boolean {
+function tryAppendTopLevelInlineComment(result: string[], child: SyntaxNode, lastEndRow: number): boolean {
     if (!isComment(child) || lastEndRow < 0 || child.startPosition.row !== lastEndRow) {
         return false;
     }
@@ -427,18 +407,13 @@ function tryAppendTopLevelInlineComment(
         return false;
     }
 
-    lastResultLines[lastResultLines.length - 1] =
-        lastLine + INLINE_COMMENT_SPACING + normalizeComment(child.text);
+    lastResultLines[lastResultLines.length - 1] = lastLine + INLINE_COMMENT_SPACING + normalizeComment(child.text);
     result[result.length - 1] = lastResultLines.join("\n");
     return true;
 }
 
 /** Check if a comment chain is attached to a following component. */
-function isCommentAttachedToComponent(
-    children: SyntaxNode[],
-    idx: number,
-    lastEndRow: number,
-): boolean {
+function isCommentAttachedToComponent(children: SyntaxNode[], idx: number, lastEndRow: number): boolean {
     const child = children[idx];
     if (!child || !isComment(child)) {
         return false;
@@ -502,8 +477,7 @@ export function formatDocument(root: SyntaxNode, options?: Partial<FormatOptions
         }
 
         const needsBlankBefore =
-            attachedToComponent ||
-            (child.type === SyntaxType.Component && !skipBlankBeforeComponent);
+            attachedToComponent || (child.type === SyntaxType.Component && !skipBlankBeforeComponent);
         if (needsBlankBefore && result.length > 0 && result[result.length - 1] !== "") {
             result.push("");
         }

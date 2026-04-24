@@ -240,10 +240,7 @@ mls:
             const { project } = await import("../src/settings");
             project("/test/workspace");
 
-            expect(mockReadFileSync).toHaveBeenCalledWith(
-                path.join("/test/workspace", ".bgforge.yml"),
-                "utf8"
-            );
+            expect(mockReadFileSync).toHaveBeenCalledWith(path.join("/test/workspace", ".bgforge.yml"), "utf8");
         });
 
         it("should not contaminate defaults between calls", async () => {

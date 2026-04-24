@@ -4,7 +4,8 @@
  */
 
 /** LAF/LPF/LAM/LPM keywords that indicate function/macro name position. */
-export const FUNC_CALL_KEYWORDS = /^\s*(LAF|LPF|LAM|LPM|LAUNCH_ACTION_FUNCTION|LAUNCH_PATCH_FUNCTION|LAUNCH_ACTION_MACRO|LAUNCH_PATCH_MACRO)\s+\S*$/i;
+export const FUNC_CALL_KEYWORDS =
+    /^\s*(LAF|LPF|LAM|LPM|LAUNCH_ACTION_FUNCTION|LAUNCH_PATCH_FUNCTION|LAUNCH_ACTION_MACRO|LAUNCH_PATCH_MACRO)\s+\S*$/i;
 
 /**
  * LAF/LPF keywords followed by a function name and whitespace — cursor is past the name,
@@ -37,18 +38,18 @@ export const FUNC_PARAM_KEYWORDS = /^\s*(?:LAF|LPF|LAUNCH_ACTION_FUNCTION|LAUNCH
 /** Variable assignment keywords (SET/SPRINT) with optional EVAL/EVALUATE_BUFFER/GLOBAL modifier. */
 export const ASSIGNMENT_SITE_PATTERN = new RegExp(
     "^\\s*(?:OUTER_)?(?:SET|SPRINT|TEXT_SPRINT)\\s+(?:(?:EVAL(?:UATE_BUFFER)?|GLOBAL)\\s+)?\\S*$",
-    "i"
+    "i",
 );
 
 /** Definition keywords (function/macro/array/loop) where a new unique name is being declared. */
 export const DEFINITION_SITE_PATTERN = new RegExp(
     "^\\s*(" +
-    // Function/macro definitions
-    "DEFINE_(?:ACTION|PATCH)_(?:FUNCTION|MACRO)\\s+|" +
-    // Array definitions
-    "(?:ACTION_)?DEFINE_(?:ASSOCIATIVE_)?ARRAY\\s+|" +
-    // Loop variable bindings
-    "(?:PATCH_|ACTION_)?(?:FOR_EACH|PHP_EACH)\\s+" +
-    ")\\S*$",
-    "i"
+        // Function/macro definitions
+        "DEFINE_(?:ACTION|PATCH)_(?:FUNCTION|MACRO)\\s+|" +
+        // Array definitions
+        "(?:ACTION_)?DEFINE_(?:ASSOCIATIVE_)?ARRAY\\s+|" +
+        // Loop variable bindings
+        "(?:PATCH_|ACTION_)?(?:FOR_EACH|PHP_EACH)\\s+" +
+        ")\\S*$",
+    "i",
 );

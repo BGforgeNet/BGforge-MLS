@@ -15,7 +15,7 @@ suite("Should get hover", () => {
             "```fallout-ssl-tooltip\n" +
                 "int get_proto_data(int pid, int offset)\n```\n" +
                 "Used to read the in-memory copies of the .pro files Fallout makes when they are loaded. " +
-                "The offset refers to the offset in memory from the start of the proto to the element you are reading."
+                "The offset refers to the offset in memory from the start of the proto to the element you are reading.",
         );
         const eh = { contents: [mds] };
         const pos = new vscode.Position(0, 15);
@@ -23,17 +23,13 @@ suite("Should get hover", () => {
     });
 });
 
-async function testHover(
-    docUri: vscode.Uri,
-    position: vscode.Position,
-    expectedHover: vscode.Hover
-) {
+async function testHover(docUri: vscode.Uri, position: vscode.Position, expectedHover: vscode.Hover) {
     await activate(docUri);
 
     const actualHover = (await vscode.commands.executeCommand(
         "vscode.executeHoverProvider",
         docUri,
-        position
+        position,
     )) as vscode.Hover[];
     const hover = actualHover[0];
     assert.ok(hover, "Expected hover result");
@@ -46,6 +42,6 @@ async function testHover(
     assert.ok(expectedContent !== undefined, "Expected expectedHover to have content");
     assert.equal(
         typeof actualContent === "string" ? actualContent : actualContent.value,
-        typeof expectedContent === "string" ? expectedContent : expectedContent.value
+        typeof expectedContent === "string" ? expectedContent : expectedContent.value,
     );
 }

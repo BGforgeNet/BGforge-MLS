@@ -615,16 +615,18 @@ describe("TP2 definition: static symbols", () => {
         // Static symbols (built-in functions like ALTER_EFFECT) have no source file.
         // Their location is null, so definition should return null.
         const mockSymbols = new Symbols();
-        mockSymbols.loadStatic([{
-            name: "ALTER_EFFECT",
-            kind: SymbolKind.Action,
-            location: null,  // Static symbols have no source file
-            scope: { level: ScopeLevel.Global },
-            source: { type: SourceType.Static, uri: null },
-            completion: { label: "ALTER_EFFECT", kind: CompletionItemKind.Function },
-            hover: { contents: { kind: "markdown", value: "Alters an effect" } },
-            callable: {},
-        }]);
+        mockSymbols.loadStatic([
+            {
+                name: "ALTER_EFFECT",
+                kind: SymbolKind.Action,
+                location: null, // Static symbols have no source file
+                scope: { level: ScopeLevel.Global },
+                source: { type: SourceType.Static, uri: null },
+                completion: { label: "ALTER_EFFECT", kind: CompletionItemKind.Function },
+                hover: { contents: { kind: "markdown", value: "Alters an effect" } },
+                callable: {},
+            },
+        ]);
 
         const text = `COPY_EXISTING ~spell.spl~ ~override~
     LPF ALTER_EFFECT END

@@ -336,8 +336,6 @@ describe("validateFuncData", () => {
     });
 
     it("throws when int_params is not an array", () => {
-        expect(() =>
-            validateFuncData({ name: "f", type: "int", desc: "x", int_params: "bad" }, "ctx")
-        ).toThrow();
+        expect(() => validateFuncData({ name: "f", type: "int", desc: "x", int_params: "bad" }, "ctx")).toThrow();
     });
 });

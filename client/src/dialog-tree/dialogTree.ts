@@ -64,7 +64,11 @@ interface OptionMeta {
 
 export function getOptionMeta(o: DialogOption): OptionMeta {
     const isMessage = o.type.endsWith("Message");
-    const colorClass = o.type.startsWith("G") ? "option-good" : o.type.startsWith("B") ? "option-bad" : "option-neutral";
+    const colorClass = o.type.startsWith("G")
+        ? "option-good"
+        : o.type.startsWith("B")
+          ? "option-bad"
+          : "option-neutral";
     const tooltip = escapeHtml(`${o.type}(${o.msgId})`);
     const isLow = o.type.includes("Low");
     const lowEmoji = isLow ? `<span title="${tooltip}">🤪</span>` : "";
@@ -82,9 +86,7 @@ export function buildTreeHtml(data: DialogData): string {
 
     // Entry points called from talk_p_proc
     const entryPointNames = data.entryPoints.filter((name) => name.startsWith("Node"));
-    const entries = entryPointNames
-        .map((name) => nodeMap.get(name))
-        .filter((n): n is DialogNode => n !== undefined);
+    const entries = entryPointNames.map((name) => nodeMap.get(name)).filter((n): n is DialogNode => n !== undefined);
 
     // First pass: compute minimum depth for each node (closest to root wins)
     const minDepth = new Map<string, number>();
@@ -136,13 +138,15 @@ export function buildTreeHtml(data: DialogData): string {
 
         // If node only has call targets (no replies/options), show inline
         if (node.replies.length === 0 && node.options.length === 0 && node.callTargets.length > 0) {
-            const targets = node.callTargets.map((t) => {
-                const escaped = escapeHtml(t);
-                const targetNode = nodeMap.get(t);
-                return targetNode
-                    ? `<a href="#" class="node-link" data-target="${escaped}">${escaped}</a>`
-                    : `<span class="target">${escaped}</span>`;
-            }).join(", ");
+            const targets = node.callTargets
+                .map((t) => {
+                    const escaped = escapeHtml(t);
+                    const targetNode = nodeMap.get(t);
+                    return targetNode
+                        ? `<a href="#" class="node-link" data-target="${escaped}">${escaped}</a>`
+                        : `<span class="target">${escaped}</span>`;
+                })
+                .join(", ");
             return `<div class="item node-transition" id="node-${escapeHtml(node.name)}"><span class="codicon codicon-symbol-function"></span> <span class="node-name">${escapeHtml(node.name)}</span><span class="target-link"><span class="codicon codicon-arrow-right target-arrow"></span> ${targets}</span></div>`;
         }
 
@@ -210,10 +214,14 @@ export function buildTreeHtml(data: DialogData): string {
                     </details>`);
                 } else {
                     // Just a link, no nested content
-                    optionParts.push(`<div class="item option ${colorClass}"><span class="codicon codicon-${icon}" title="${tooltip}"></span>${lowEmoji} <span class="msg-text" data-fulltext="${attr}">${text}</span><span class="target-link"><span class="codicon codicon-arrow-right target-arrow"></span> ${targetHtml}</span></div>`);
+                    optionParts.push(
+                        `<div class="item option ${colorClass}"><span class="codicon codicon-${icon}" title="${tooltip}"></span>${lowEmoji} <span class="msg-text" data-fulltext="${attr}">${text}</span><span class="target-link"><span class="codicon codicon-arrow-right target-arrow"></span> ${targetHtml}</span></div>`,
+                    );
                 }
             } else {
-                optionParts.push(`<div class="item option ${colorClass}"><span class="codicon codicon-${icon}" title="${tooltip}"></span>${lowEmoji} <span class="msg-text" data-fulltext="${attr}">${text}</span></div>`);
+                optionParts.push(
+                    `<div class="item option ${colorClass}"><span class="codicon codicon-${icon}" title="${tooltip}"></span>${lowEmoji} <span class="msg-text" data-fulltext="${attr}">${text}</span></div>`,
+                );
             }
         });
         const options = optionParts.join("");
@@ -247,9 +255,7 @@ export function buildTreeHtml(data: DialogData): string {
 
 export function registerDialogTree(context: vscode.ExtensionContext, client: LanguageClient): DialogPreviewController {
     return registerDialogPanel(context, client, {
-        matchDocument: (doc) =>
-            doc.languageId === "fallout-ssl" ||
-            doc.fileName.toLowerCase().endsWith(".tssl"),
+        matchDocument: (doc) => doc.languageId === "fallout-ssl" || doc.fileName.toLowerCase().endsWith(".tssl"),
         warningMessage: "Open a Fallout SSL or TSSL file to preview dialog",
         translationLangId: "fallout-msg",
         buildTreeHtml: (data) => buildTreeHtml(data as DialogData),

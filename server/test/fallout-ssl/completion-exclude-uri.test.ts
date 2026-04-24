@@ -51,7 +51,7 @@ describe("SSL getCompletions excludeUri", () => {
         (provider as any).fileIndex = fileIndex;
 
         const completions = provider.getCompletions(headerA);
-        const labels = completions.map(c => c.label);
+        const labels = completions.map((c) => c.label);
 
         expect(labels).toContain("func_b");
         expect(labels).not.toContain("func_a");
@@ -68,7 +68,7 @@ describe("SSL getCompletions excludeUri", () => {
         (provider as any).fileIndex = fileIndex;
 
         const completions = provider.getCompletions(headerA);
-        const labels = completions.map(c => c.label);
+        const labels = completions.map((c) => c.label);
 
         expect(labels).toContain("builtin_func");
         expect(labels).not.toContain("func_a");

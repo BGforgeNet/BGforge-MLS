@@ -10,7 +10,12 @@ import type { ParsedField, ParsedGroup, ParseOptions, ParseResult } from "./type
 
 export type ProjectedEntry =
     | { readonly kind: "field"; readonly entry: ParsedField; readonly sourceSegments: readonly string[] }
-    | { readonly kind: "group"; readonly entry: ParsedGroup; readonly sourceSegments: readonly string[]; readonly children: readonly ProjectedEntry[] };
+    | {
+          readonly kind: "group";
+          readonly entry: ParsedGroup;
+          readonly sourceSegments: readonly string[];
+          readonly children: readonly ProjectedEntry[];
+      };
 
 export interface BinaryFormatAdapter {
     readonly formatId: string;
@@ -30,12 +35,20 @@ export interface BinaryFormatAdapter {
     shouldHideGroup?(entry: ParsedGroup): boolean;
     projectDisplayRoot?(
         parseResult: ParseResult,
-        projectEntry: (parseResult: ParseResult, entry: ParsedField | ParsedGroup, sourceSegments: readonly string[]) => ProjectedEntry | undefined,
+        projectEntry: (
+            parseResult: ParseResult,
+            entry: ParsedField | ParsedGroup,
+            sourceSegments: readonly string[],
+        ) => ProjectedEntry | undefined,
     ): ProjectedEntry[];
 
     // -- Structural edits (optional) -------------------------------------------
     isStructuralFieldId?(fieldId: string): boolean;
-    buildStructuralTransitionBytes?(parseResult: ParseResult, fieldId: string, rawValue: number): Uint8Array | undefined;
+    buildStructuralTransitionBytes?(
+        parseResult: ParseResult,
+        fieldId: string,
+        rawValue: number,
+    ): Uint8Array | undefined;
 }
 
 class FormatAdapterRegistry {

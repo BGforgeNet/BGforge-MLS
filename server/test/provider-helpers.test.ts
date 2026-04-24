@@ -26,13 +26,13 @@ function mockSymbol(name: string, uri: string | null = null): IndexedSymbol {
 }
 
 function mockSymbols(entries: Array<{ name: string; uri: string | null }>): Symbols {
-    const symbolMap = new Map(entries.map(e => [e.name, mockSymbol(e.name, e.uri)]));
+    const symbolMap = new Map(entries.map((e) => [e.name, mockSymbol(e.name, e.uri)]));
     return {
         lookup: (name: string) => symbolMap.get(name),
         query: (opts: { excludeUri?: string }) => {
             const all = [...symbolMap.values()];
             if (opts.excludeUri) {
-                return all.filter(s => s.source.uri !== opts.excludeUri);
+                return all.filter((s) => s.source.uri !== opts.excludeUri);
             }
             return all;
         },
@@ -190,7 +190,9 @@ describe("formatWithValidation", () => {
             languageName: "TEST",
             isInitialized: () => true,
             parse: () => ({ rootNode: {} }),
-            formatAst: () => { throw new Error("parse fail"); },
+            formatAst: () => {
+                throw new Error("parse fail");
+            },
             getFormatOptions: () => ({}),
             stripComments: (t: string) => t,
         });

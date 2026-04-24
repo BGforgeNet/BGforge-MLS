@@ -217,12 +217,7 @@ export class Translation {
      * @param includeDeclaration - Whether to include the definition itself
      * @returns Locations of all references, or empty array if not on a valid entry
      */
-    getReferences(
-        uri: string,
-        langId: string,
-        position: Position,
-        includeDeclaration: boolean
-    ): Location[] {
+    getReferences(uri: string, langId: string, position: Position, includeDeclaration: boolean): Location[] {
         if (!this.initialized) return [];
         if (!languages.includes(langId)) return [];
 
@@ -643,7 +638,7 @@ export class Translation {
         traExt: TraExt,
         text: string,
         range: Range,
-        filePath: string
+        filePath: string,
     ): InlayHint[] {
         const hints: InlayHint[] = [];
 
@@ -731,7 +726,7 @@ export class Translation {
     private getHintValue(
         traEntries: TraEntries,
         traFileKey: string,
-        lineKey: string
+        lineKey: string,
     ): { label: string; tooltip?: string | MarkupContent } {
         const traEntry = traEntries.get(lineKey);
         if (traEntry === undefined) {
@@ -913,7 +908,7 @@ export class Translation {
         entryNum: string,
         traExt: TraExt,
         traAbsPath: string,
-        includeDeclaration: boolean
+        includeDeclaration: boolean,
     ): Location[] {
         const locations: Location[] = [];
 
@@ -964,7 +959,7 @@ export class Translation {
     private scanFileForReferences(
         text: string,
         entryNum: string,
-        traExt: TraExt
+        traExt: TraExt,
     ): Array<{ line: number; character: number; endCharacter: number }> {
         const results: Array<{ line: number; character: number; endCharacter: number }> = [];
         const lines = text.split("\n");

@@ -20,11 +20,7 @@ const ITEM_TYPE_PREFIX = "ITEM_TYPE_";
 export function getItemTypes(iesdpFileFormatsDir: string): readonly ItemType[] {
     const sourceFile = path.join(iesdpFileFormatsDir, "item_types.yml");
     const content = fs.readFileSync(sourceFile, "utf8");
-    const items: readonly ItemTypeRaw[] = validateArray(
-        YAML.parse(content),
-        validateItemTypeRaw,
-        sourceFile,
-    );
+    const items: readonly ItemTypeRaw[] = validateArray(YAML.parse(content), validateItemTypeRaw, sourceFile);
 
     return items.reduce<readonly ItemType[]>((acc, item) => {
         const iid = getItemTypeId(item);

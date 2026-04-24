@@ -466,9 +466,7 @@ procedure foo begin end
             expect(proc).not.toBeNull();
 
             const params = extractParams(proc!);
-            expect(params).toEqual([
-                { name: "x", defaultValue: "42" },
-            ]);
+            expect(params).toEqual([{ name: "x", defaultValue: "42" }]);
         });
 
         it("does not extract invalid expression defaults from procedure params", () => {
@@ -480,9 +478,7 @@ procedure foo begin end
             expect(proc).not.toBeNull();
 
             const params = extractParams(proc!);
-            expect(params).toEqual([
-                { name: "x", defaultValue: undefined },
-            ]);
+            expect(params).toEqual([{ name: "x", defaultValue: undefined }]);
         });
     });
 });

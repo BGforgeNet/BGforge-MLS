@@ -162,15 +162,15 @@ describe("fallout-ssl JSDoc completion", () => {
 
         it("returns only tags, not types", () => {
             const items = getJsdocCompletions(FALLOUT_JSDOC_TYPES, tagPrefix);
-            const tags = items.filter(i => i.kind === CompletionItemKind.Keyword);
-            const types = items.filter(i => i.kind === CompletionItemKind.TypeParameter);
+            const tags = items.filter((i) => i.kind === CompletionItemKind.Keyword);
+            const types = items.filter((i) => i.kind === CompletionItemKind.TypeParameter);
             expect(tags.length).toBeGreaterThan(0);
             expect(types.length).toBe(0);
         });
 
         it("returns all tag aliases", () => {
             const items = getJsdocCompletions(FALLOUT_JSDOC_TYPES, tagPrefix);
-            const labels = items.map(i => i.label);
+            const labels = items.map((i) => i.label);
             expect(labels).toContain("@param");
             expect(labels).toContain("@arg");
             expect(labels).toContain("@ret");
@@ -182,16 +182,16 @@ describe("fallout-ssl JSDoc completion", () => {
 
         it("strips @ from insertText and filterText", () => {
             const items = getJsdocCompletions(FALLOUT_JSDOC_TYPES, tagPrefix);
-            const paramItem = items.find(i => i.label === "@param");
+            const paramItem = items.find((i) => i.label === "@param");
             expect(paramItem?.insertText).toBe("param ");
             expect(paramItem?.filterText).toBe("param");
         });
 
         it("tags expecting type have re-trigger command and trailing space", () => {
             const items = getJsdocCompletions(FALLOUT_JSDOC_TYPES, tagPrefix);
-            const paramItem = items.find(i => i.label === "@param");
-            const retItem = items.find(i => i.label === "@ret");
-            const typeItem = items.find(i => i.label === "@type");
+            const paramItem = items.find((i) => i.label === "@param");
+            const retItem = items.find((i) => i.label === "@ret");
+            const typeItem = items.find((i) => i.label === "@type");
             expect(paramItem?.command?.command).toBe("editor.action.triggerSuggest");
             expect(retItem?.command?.command).toBe("editor.action.triggerSuggest");
             expect(typeItem?.command?.command).toBe("editor.action.triggerSuggest");
@@ -199,7 +199,7 @@ describe("fallout-ssl JSDoc completion", () => {
 
         it("@deprecated has no re-trigger command and no trailing space", () => {
             const items = getJsdocCompletions(FALLOUT_JSDOC_TYPES, tagPrefix);
-            const depItem = items.find(i => i.label === "@deprecated");
+            const depItem = items.find((i) => i.label === "@deprecated");
             expect(depItem?.command).toBeUndefined();
             expect(depItem?.insertText).toBe("deprecated");
         });
@@ -210,15 +210,15 @@ describe("fallout-ssl JSDoc completion", () => {
 
         it("returns only types, not tags", () => {
             const items = getJsdocCompletions(FALLOUT_JSDOC_TYPES, typePrefix);
-            const tags = items.filter(i => i.kind === CompletionItemKind.Keyword);
-            const types = items.filter(i => i.kind === CompletionItemKind.TypeParameter);
+            const tags = items.filter((i) => i.kind === CompletionItemKind.Keyword);
+            const types = items.filter((i) => i.kind === CompletionItemKind.TypeParameter);
             expect(tags.length).toBe(0);
             expect(types.length).toBeGreaterThan(0);
         });
 
         it("returns all Fallout type names", () => {
             const items = getJsdocCompletions(FALLOUT_JSDOC_TYPES, typePrefix);
-            const typeLabels = items.map(i => i.label);
+            const typeLabels = items.map((i) => i.label);
             for (const typeName of FALLOUT_JSDOC_TYPE_NAMES) {
                 expect(typeLabels).toContain(typeName);
             }
@@ -226,13 +226,13 @@ describe("fallout-ssl JSDoc completion", () => {
 
         it("includes bit in Fallout type completions", () => {
             const items = getJsdocCompletions(FALLOUT_JSDOC_TYPES, typePrefix);
-            const bitItem = items.find(i => i.label === "bit");
+            const bitItem = items.find((i) => i.label === "bit");
             expect(bitItem?.kind).toBe(CompletionItemKind.TypeParameter);
         });
 
         it("does not return WeiDU-only types", () => {
             const items = getJsdocCompletions(FALLOUT_JSDOC_TYPES, typePrefix);
-            const typeLabels = items.map(i => i.label);
+            const typeLabels = items.map((i) => i.label);
             expect(typeLabels).not.toContain("resref");
             expect(typeLabels).not.toContain("ids");
             expect(typeLabels).not.toContain("filename");
@@ -248,13 +248,13 @@ describe("fallout-ssl JSDoc completion", () => {
         it("works after @type tag", () => {
             const items = getJsdocCompletions(FALLOUT_JSDOC_TYPES, " * @type ");
             expect(items.length).toBeGreaterThan(0);
-            expect(items.every(i => i.kind === CompletionItemKind.TypeParameter)).toBe(true);
+            expect(items.every((i) => i.kind === CompletionItemKind.TypeParameter)).toBe(true);
         });
 
         it("works with opening brace", () => {
             const items = getJsdocCompletions(FALLOUT_JSDOC_TYPES, " * @param {");
             expect(items.length).toBeGreaterThan(0);
-            expect(items.every(i => i.kind === CompletionItemKind.TypeParameter)).toBe(true);
+            expect(items.every((i) => i.kind === CompletionItemKind.TypeParameter)).toBe(true);
         });
     });
 

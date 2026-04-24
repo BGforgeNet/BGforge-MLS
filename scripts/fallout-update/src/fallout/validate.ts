@@ -23,7 +23,9 @@ export { assertArray, assertObject, optionalBoolean, optionalString, requireStri
  * Returns a field as string or number if present, undefined otherwise. Throws if present but wrong type.
  */
 function optionalStringOrNumber(
-    record: Record<string, unknown>, field: string, context: string,
+    record: Record<string, unknown>,
+    field: string,
+    context: string,
 ): string | number | undefined {
     const value = record[field];
     if (value === undefined) {

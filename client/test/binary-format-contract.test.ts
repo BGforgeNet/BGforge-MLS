@@ -22,16 +22,12 @@ describe("binary-format-contract", () => {
 
     it("validates primitive and domain constraints in one place", () => {
         expect(validateNumericValue(256, "uint8")).toContain("out of range");
-        expect(validateNumericValue(
-            6,
-            "int32",
-            { format: "map", fieldKey: "map.header.defaultOrientation" },
-        )).toContain("allowed range");
-        expect(validateNumericValue(
-            64,
-            "uint32",
-            { format: "pro", fieldKey: "pro.stairsProperties.destElevation" },
-        )).toContain("allowed range");
+        expect(
+            validateNumericValue(6, "int32", { format: "map", fieldKey: "map.header.defaultOrientation" }),
+        ).toContain("allowed range");
+        expect(
+            validateNumericValue(64, "uint32", { format: "pro", fieldKey: "pro.stairsProperties.destElevation" }),
+        ).toContain("allowed range");
     });
 
     it("builds zod numeric schemas with domain limits", () => {
@@ -40,7 +36,7 @@ describe("binary-format-contract", () => {
         expect(orientationSchema.safeParse(6).success).toBe(false);
 
         const destTileSchema = zodFieldNumber("pro", "pro.stairsProperties.destTile", "uint32");
-        expect(destTileSchema.safeParse(0x03_FF_FF_FF).success).toBe(true);
+        expect(destTileSchema.safeParse(0x03_ff_ff_ff).success).toBe(true);
         expect(destTileSchema.safeParse(0x04_00_00_00).success).toBe(false);
     });
 });

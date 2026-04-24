@@ -11,12 +11,7 @@
 import { describe, expect, it } from "vitest";
 import { CompletionItemKind } from "vscode-languageserver/node";
 import { Symbols } from "../../src/core/symbol-index";
-import {
-    type Symbol,
-    SymbolKind,
-    ScopeLevel,
-    SourceType,
-} from "../../src/core/symbol";
+import { type Symbol, SymbolKind, ScopeLevel, SourceType } from "../../src/core/symbol";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -74,7 +69,7 @@ describe("Symbols LRU cap", () => {
         }
 
         const results = index.searchWorkspaceSymbols("");
-        const names = results.map(r => r.name);
+        const names = results.map((r) => r.name);
 
         // Evicted symbols must not appear
         expect(names).not.toContain("sym1");

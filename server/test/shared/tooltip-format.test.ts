@@ -9,22 +9,13 @@ import { buildSignatureBlock, formatDeprecation } from "../../../shared/tooltip-
 describe("buildSignatureBlock", () => {
     it("renders signature in code fence", () => {
         const result = buildSignatureBlock("int foo(int x)", "test-lang");
-        expect(result).toBe(
-            "```test-lang\n" +
-            "int foo(int x)\n" +
-            "```"
-        );
+        expect(result).toBe("```test-lang\nint foo(int x)\n```");
     });
 
     it("renders signature with file path", () => {
         const result = buildSignatureBlock("void bar()", "my-lang", "lib/utils.h");
         expect(result).toBe(
-            "```my-lang\n" +
-            "void bar()\n" +
-            "```\n" +
-            "```bgforge-mls-comment\n" +
-            "lib/utils.h\n" +
-            "```"
+            "```my-lang\nvoid bar()\n```\n```bgforge-mls-comment\nlib/utils.h\n```",
         );
     });
 
@@ -49,8 +40,6 @@ describe("formatDeprecation", () => {
     });
 
     it("returns notice with message for string", () => {
-        expect(formatDeprecation("Use bar() instead")).toBe(
-            "\n\n**Deprecated:** Use bar() instead"
-        );
+        expect(formatDeprecation("Use bar() instead")).toBe("\n\n**Deprecated:** Use bar() instead");
     });
 });

@@ -61,7 +61,13 @@ export interface RuntimeErrorMessage {
     readonly stack?: string;
 }
 
-export type WebviewToExtension = EditMessage | ReadyMessage | GetChildrenMessage | DumpJsonMessage | LoadJsonMessage | RuntimeErrorMessage;
+export type WebviewToExtension =
+    | EditMessage
+    | ReadyMessage
+    | GetChildrenMessage
+    | DumpJsonMessage
+    | LoadJsonMessage
+    | RuntimeErrorMessage;
 
 // -- Extension -> Webview ---------------------------------------------------
 

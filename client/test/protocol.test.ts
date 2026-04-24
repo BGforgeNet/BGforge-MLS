@@ -4,10 +4,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import {
-    encodeWorkspaceSymbolQuery,
-    decodeWorkspaceSymbolQuery,
-} from "../../shared/protocol";
+import { encodeWorkspaceSymbolQuery, decodeWorkspaceSymbolQuery } from "../../shared/protocol";
 
 describe("encodeWorkspaceSymbolQuery", () => {
     it("returns the query unchanged when no languageId is provided", () => {

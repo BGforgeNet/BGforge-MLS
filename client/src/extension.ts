@@ -37,7 +37,11 @@ function getWorkspaceSymbolScopeLanguageId(): string | undefined {
         return undefined;
     }
 
-    if (document.languageId === "fallout-ssl" || document.languageId === "weidu-d" || document.languageId === "weidu-tp2") {
+    if (
+        document.languageId === "fallout-ssl" ||
+        document.languageId === "weidu-d" ||
+        document.languageId === "weidu-tp2"
+    ) {
         return document.languageId;
     }
 
@@ -117,28 +121,31 @@ export async function activate(context: ExtensionContext) {
 
     const sslDialogPreview = registerDialogTree(context, client);
     const dDialogPreview = registerDDialogTree(context, client);
-    context.subscriptions.push(vscode.commands.registerCommand(cmd_dialogPreview, async () => {
-        const document = vscode.window.activeTextEditor?.document;
-        if (!document) {
-            return;
-        }
-        if (sslDialogPreview.matchesDocument(document)) {
-            await sslDialogPreview.openPreview();
-            return;
-        }
-        if (dDialogPreview.matchesDocument(document)) {
-            await dDialogPreview.openPreview();
-            return;
-        }
-        vscode.window.showWarningMessage("Open a Fallout SSL, TSSL, D, or TD file to preview dialog");
-    }));
+    context.subscriptions.push(
+        vscode.commands.registerCommand(cmd_dialogPreview, async () => {
+            const document = vscode.window.activeTextEditor?.document;
+            if (!document) {
+                return;
+            }
+            if (sslDialogPreview.matchesDocument(document)) {
+                await sslDialogPreview.openPreview();
+                return;
+            }
+            if (dDialogPreview.matchesDocument(document)) {
+                await dDialogPreview.openPreview();
+                return;
+            }
+            vscode.window.showWarningMessage("Open a Fallout SSL, TSSL, D, or TD file to preview dialog");
+        }),
+    );
 
     client.onRequest(REQUEST_SET_BUILT_IN_COMPILER, async (params: { uri?: string }) => {
         const resource = params.uri ? vscode.Uri.parse(params.uri) : undefined;
         const configuration = workspace.getConfiguration("bgforge", resource);
-        const target = resource && workspace.getWorkspaceFolder(resource)
-            ? ConfigurationTarget.WorkspaceFolder
-            : ConfigurationTarget.Global;
+        const target =
+            resource && workspace.getWorkspaceFolder(resource)
+                ? ConfigurationTarget.WorkspaceFolder
+                : ConfigurationTarget.Global;
         await configuration.update("falloutSSL.compilePath", "", target);
         return true;
     });

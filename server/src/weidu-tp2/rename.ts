@@ -31,7 +31,7 @@ import { findAllReferences } from "./reference-finder";
  */
 export function prepareRenameSymbol(
     text: string,
-    position: Position
+    position: Position,
 ): { range: { start: Position; end: Position }; placeholder: string } | null {
     if (!isInitialized()) {
         return null;
@@ -56,7 +56,7 @@ export function prepareRenameSymbol(
     // Check if the symbol has a definition in the current file
     // Allow rename from any position (definition or reference), but reject if symbol is external
     const occurrences = findAllReferences(tree.rootNode, symbolInfo);
-    const hasLocalDefinition = occurrences.some(occ => occ.isDefinition);
+    const hasLocalDefinition = occurrences.some((occ) => occ.isDefinition);
     if (!hasLocalDefinition) {
         return null; // Symbol is not defined in this file
     }
@@ -75,12 +75,7 @@ export function prepareRenameSymbol(
  * Rename a symbol at the given position.
  * Returns null if the symbol cannot be renamed.
  */
-export function renameSymbol(
-    text: string,
-    position: Position,
-    newName: string,
-    uri: string
-): WorkspaceEdit | null {
+export function renameSymbol(text: string, position: Position, newName: string, uri: string): WorkspaceEdit | null {
     if (!isInitialized()) {
         return null;
     }
@@ -109,7 +104,7 @@ export function renameSymbol(
 
     // Check if the symbol has a definition in the current file
     // Allow rename from any position (definition or reference), but reject if symbol is external
-    const hasLocalDefinition = occurrences.some(occ => occ.isDefinition);
+    const hasLocalDefinition = occurrences.some((occ) => occ.isDefinition);
     if (!hasLocalDefinition) {
         return null; // Symbol is not defined in this file
     }
@@ -126,12 +121,12 @@ export function renameSymbol(
         const needsPercentWrapper = isSyntheticPercentVar || isPercentString;
 
         // For macro/function names that are strings, preserve the delimiters
-        const isStringName = (
-            node.type === SyntaxType.String ||
-            node.type === SyntaxType.TildeString ||
-            node.type === SyntaxType.DoubleString ||
-            node.type === SyntaxType.FiveTildeString
-        ) && symbolInfo.kind === "function";
+        const isStringName =
+            (node.type === SyntaxType.String ||
+                node.type === SyntaxType.TildeString ||
+                node.type === SyntaxType.DoubleString ||
+                node.type === SyntaxType.FiveTildeString) &&
+            symbolInfo.kind === "function";
 
         let editText: string;
         if (needsPercentWrapper) {

@@ -12,10 +12,7 @@ describe("expandRepository", () => {
             repository: {
                 keywords: {
                     name: "keyword.control.lang",
-                    patterns: [
-                        { match: "\\b(begin)\\b" },
-                        { match: "\\b(end)\\b" },
-                    ],
+                    patterns: [{ match: "\\b(begin)\\b" }, { match: "\\b(end)\\b" }],
                 },
             },
         };
@@ -30,10 +27,7 @@ describe("expandRepository", () => {
             repository: {
                 keywords: {
                     name: "keyword.control.lang",
-                    patterns: [
-                        { match: "\\b(begin)\\b", name: "keyword.special.lang" },
-                        { match: "\\b(end)\\b" },
-                    ],
+                    patterns: [{ match: "\\b(begin)\\b", name: "keyword.special.lang" }, { match: "\\b(end)\\b" }],
                 },
             },
         };

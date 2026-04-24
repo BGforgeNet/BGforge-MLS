@@ -20,7 +20,7 @@ suite("Should do completion", () => {
 async function testCompletion(
     docUri: vscode.Uri,
     position: vscode.Position,
-    expectedCompletionList: vscode.CompletionList
+    expectedCompletionList: vscode.CompletionList,
 ) {
     await activate(docUri);
 
@@ -28,7 +28,7 @@ async function testCompletion(
     const actualCompletionList = (await vscode.commands.executeCommand(
         "vscode.executeCompletionItemProvider",
         docUri,
-        position
+        position,
     )) as vscode.CompletionList;
 
     assert.ok(actualCompletionList.items.length >= 1);

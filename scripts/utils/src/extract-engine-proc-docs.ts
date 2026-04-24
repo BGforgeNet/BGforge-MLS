@@ -62,7 +62,7 @@ function main(): void {
     const docs: Readonly<Record<string, string>> = Object.fromEntries(
         engineStanza.items
             .filter((item) => item.doc !== undefined && item.doc !== "")
-            .map((item) => [item.name, item.doc as string] as const)
+            .map((item) => [item.name, item.doc as string] as const),
     );
 
     fs.writeFileSync(values.out, JSON.stringify(docs, null, 4), "utf8");

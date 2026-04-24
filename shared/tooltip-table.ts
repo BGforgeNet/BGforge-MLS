@@ -26,10 +26,7 @@ export function buildWeiduTable(sections: readonly VarSection[]): string {
         return "";
     }
 
-    const rows: string[] = [
-        "| | | | |",
-        "|-:|:-|:-|:-|",
-    ];
+    const rows: string[] = ["| | | | |", "|-:|:-|:-|:-|"];
 
     for (const section of nonEmpty) {
         const [word1, word2] = section.label.split(" ");
@@ -57,16 +54,15 @@ function formatDefault(row: VarRow): string {
 }
 
 /** Build the Fallout-style two-column args table. */
-export function buildFalloutArgsTable(args: readonly { readonly name: string; readonly description?: string }[]): string {
+export function buildFalloutArgsTable(
+    args: readonly { readonly name: string; readonly description?: string }[],
+): string {
     const described = args.filter((arg) => arg.description);
     if (described.length === 0) {
         return "";
     }
 
-    const rows: string[] = [
-        "|||",
-        "|:-|:-|",
-    ];
+    const rows: string[] = ["|||", "|:-|:-|"];
 
     for (const arg of described) {
         rows.push(`|\`${arg.name}\`|&nbsp;&nbsp;${arg.description}|`);

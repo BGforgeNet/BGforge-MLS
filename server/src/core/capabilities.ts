@@ -40,9 +40,7 @@ import type { MLSsettings } from "../settings";
  * - handled=true, hover=null: provider handled it but nothing to show (block fallthrough)
  * - handled=false: provider didn't handle it, fall through to data-driven hover
  */
-export type HoverResult =
-    | { readonly handled: true; readonly hover: Hover | null }
-    | { readonly handled: false };
+export type HoverResult = { readonly handled: true; readonly hover: Hover | null } | { readonly handled: false };
 
 /** Factory helpers for creating HoverResult values. */
 export const HoverResult = {
@@ -105,7 +103,13 @@ export interface FoldingCapability {
 
 export interface NavigationCapability {
     definition?(text: string, position: Position, uri: string): Location | null;
-    references?(text: string, position: Position, uri: string, includeDeclaration: boolean, token: CancellationToken): Location[];
+    references?(
+        text: string,
+        position: Position,
+        uri: string,
+        includeDeclaration: boolean,
+        token: CancellationToken,
+    ): Location[];
 }
 
 export interface RenameCapability {
@@ -119,7 +123,13 @@ export interface HoverCapability {
 
 export interface CompletionCapability {
     getCompletions(uri: string): CompletionItem[];
-    filterCompletions?(items: CompletionItem[], text: string, position: Position, uri: string, triggerCharacter?: string): CompletionItem[];
+    filterCompletions?(
+        items: CompletionItem[],
+        text: string,
+        position: Position,
+        uri: string,
+        triggerCharacter?: string,
+    ): CompletionItem[];
 }
 
 export interface DataCapability {

@@ -130,9 +130,7 @@ export function getOffsetSize(item: OffsetItem): number {
  */
 export function validateOffset(currentOffset: number, item: OffsetItem): void {
     if (item.offset !== undefined && item.offset !== currentOffset) {
-        throw new Error(
-            `Offset mismatch. Expected ${currentOffset}, got ${item.offset} for ${JSON.stringify(item)}`
-        );
+        throw new Error(`Offset mismatch. Expected ${currentOffset}, got ${item.offset} for ${JSON.stringify(item)}`);
     }
 }
 
@@ -153,10 +151,7 @@ export function offsetIsUnused(offset: OffsetItem): boolean {
  * Converts an array of offset items to a definition map of id -> hex value.
  * Skips unused/unknown items. Validates offsets along the way.
  */
-export function offsetsToDefinition(
-    data: readonly OffsetItem[],
-    prefix: string
-): Map<string, string> {
+export function offsetsToDefinition(data: readonly OffsetItem[], prefix: string): Map<string, string> {
     const firstItem = data[0];
     if (firstItem === undefined) {
         return new Map();

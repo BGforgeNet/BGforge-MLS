@@ -20,12 +20,7 @@ import { formatDocument } from "../../src/weidu-tp2/format/core";
 import { createFoldingRangesProvider } from "../../src/shared/folding-ranges";
 import { SyntaxType } from "../../src/weidu-tp2/tree-sitter.d";
 import { FileIndex } from "../../src/core/file-index";
-import {
-    loadFixture,
-    loadFixtures,
-    findIdentifierPosition,
-    IE_FIXTURES,
-} from "./test-helpers";
+import { loadFixture, loadFixtures, findIdentifierPosition, IE_FIXTURES } from "./test-helpers";
 
 const TNT_BASE = join(IE_FIXTURES, "bg2-tweaks-and-tricks");
 const RR_BASE = join(IE_FIXTURES, "rr");
@@ -35,7 +30,6 @@ beforeAll(async () => {
 });
 
 describe("weidu-tp2 integration", () => {
-
     // =========================================================================
     // Document Symbols
     // =========================================================================
@@ -46,9 +40,12 @@ describe("weidu-tp2 integration", () => {
             const symbols = getDocumentSymbols(f.text);
 
             expect(symbols).toHaveLength(5);
-            expect(symbols.map(s => s.name)).toEqual([
-                "LIST_WEB_SPELLS", "unstack_armor_bonus",
-                "CREATE_SHELL_SPELL", "CREATE_SHELL_BLINDNESS", "CREATE_SHELL_CONFUSION",
+            expect(symbols.map((s) => s.name)).toEqual([
+                "LIST_WEB_SPELLS",
+                "unstack_armor_bonus",
+                "CREATE_SHELL_SPELL",
+                "CREATE_SHELL_BLINDNESS",
+                "CREATE_SHELL_CONFUSION",
             ]);
         });
 
@@ -56,9 +53,9 @@ describe("weidu-tp2 integration", () => {
             const f = loadFixture(TNT_BASE, "tnt/lib/functions.tph");
             const symbols = getDocumentSymbols(f.text);
 
-            const listWebSpells = symbols.find(s => s.name === "LIST_WEB_SPELLS");
+            const listWebSpells = symbols.find((s) => s.name === "LIST_WEB_SPELLS");
             expect(listWebSpells).toBeDefined();
-            expect(listWebSpells!.children?.map(c => c.name)).toEqual(["spells"]);
+            expect(listWebSpells!.children?.map((c) => c.name)).toEqual(["spells"]);
         });
 
         it("extracts components from a tp2 file", () => {
@@ -72,11 +69,19 @@ describe("weidu-tp2 integration", () => {
             const f = loadFixture(TNT_BASE, "tnt/lib/functions.tph");
             const symbols = getDocumentSymbols(f.text);
 
-            const unstack = symbols.find(s => s.name === "unstack_armor_bonus");
+            const unstack = symbols.find((s) => s.name === "unstack_armor_bonus");
             expect(unstack).toBeDefined();
-            expect(unstack!.children?.map(c => c.name)).toEqual(
-                ["bonus", "stacking_id_base", "found", "int", "fx_off", "opcode", "type", "ac_mod", "i"]
-            );
+            expect(unstack!.children?.map((c) => c.name)).toEqual([
+                "bonus",
+                "stacking_id_base",
+                "found",
+                "int",
+                "fx_off",
+                "opcode",
+                "type",
+                "ac_mod",
+                "i",
+            ]);
         });
     });
 
@@ -286,7 +291,7 @@ describe("weidu-tp2 integration", () => {
             const f = loadFixture(TNT_BASE, "tnt/lib/functions.tph");
 
             const ranges = getFoldingRanges(f.text);
-            const commentRanges = ranges.filter(r => r.kind === FoldingRangeKind.Comment);
+            const commentRanges = ranges.filter((r) => r.kind === FoldingRangeKind.Comment);
             expect(commentRanges).toHaveLength(2);
         });
     });
@@ -371,9 +376,12 @@ describe("weidu-tp2 integration", () => {
 
             const symbols = getLocalSymbols(f.text, f.uri);
             expect(symbols).toHaveLength(5);
-            expect(symbols.map(s => s.name)).toEqual([
-                "LIST_WEB_SPELLS", "unstack_armor_bonus",
-                "CREATE_SHELL_SPELL", "CREATE_SHELL_BLINDNESS", "CREATE_SHELL_CONFUSION",
+            expect(symbols.map((s) => s.name)).toEqual([
+                "LIST_WEB_SPELLS",
+                "unstack_armor_bonus",
+                "CREATE_SHELL_SPELL",
+                "CREATE_SHELL_BLINDNESS",
+                "CREATE_SHELL_CONFUSION",
             ]);
         });
 
@@ -381,7 +389,7 @@ describe("weidu-tp2 integration", () => {
             const f = loadFixture(TNT_BASE, "tnt/lib/functions.tph");
 
             const symbols = getLocalSymbols(f.text, f.uri);
-            const unstack = symbols.find(s => s.name === "unstack_armor_bonus");
+            const unstack = symbols.find((s) => s.name === "unstack_armor_bonus");
             expect(unstack).toBeDefined();
 
             // Local symbols should have pre-computed hover
@@ -393,7 +401,7 @@ describe("weidu-tp2 integration", () => {
             const f = loadFixture(TNT_BASE, "tnt/lib/functions.tph");
 
             const symbols = getLocalSymbols(f.text, f.uri);
-            const listWeb = symbols.find(s => s.name === "LIST_WEB_SPELLS");
+            const listWeb = symbols.find((s) => s.name === "LIST_WEB_SPELLS");
             expect(listWeb).toBeDefined();
 
             // Local symbols should have pre-computed completion

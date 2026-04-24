@@ -41,7 +41,7 @@ const dFragments: fc.Arbitrary<string> = fc.oneof(
     fc.constant("BEGIN ~DIALOG2~\nIF ~~ THEN BEGIN state1\n    SAY ~Hi~\nEND"),
     fc.constant("APPEND ~DIALOG~\nIF ~~ THEN BEGIN appended_state\n    SAY ~Appended~\nEND\nEND"),
     fc.constant("BEGIN ~EMPTY~"),
-    fc.constant("")
+    fc.constant(""),
 );
 
 /** Concatenates 1–4 fragments with newlines. */
@@ -60,7 +60,7 @@ describe("weidu-d symbol extractor properties", () => {
                 const result = getDocumentSymbols(text);
                 expect(Array.isArray(result)).toBe(true);
             }),
-            { numRuns: 50 }
+            { numRuns: 50 },
         );
     });
 
@@ -78,15 +78,14 @@ describe("weidu-d symbol extractor properties", () => {
                     expect(end.character).toBeGreaterThanOrEqual(0);
                     // start must not be after end
                     const startBefore =
-                        start.line < end.line ||
-                        (start.line === end.line && start.character <= end.character);
+                        start.line < end.line || (start.line === end.line && start.character <= end.character);
                     expect(startBefore).toBe(true);
                     // end line must be within the document
                     // (allow end.line === lineCount for EOF-terminated ranges)
                     expect(end.line).toBeLessThanOrEqual(lineCount);
                 }
             }),
-            { numRuns: 50 }
+            { numRuns: 50 },
         );
     });
 
@@ -97,7 +96,7 @@ describe("weidu-d symbol extractor properties", () => {
                 const second = getDocumentSymbols(text);
                 expect(second).toEqual(first);
             }),
-            { numRuns: 50 }
+            { numRuns: 50 },
         );
     });
 });

@@ -32,8 +32,18 @@ vi.mock("../src/user-messages", () => ({
 import { ssl_compile } from "../src/sslc/ssl_compiler";
 
 /** Build a fake child-process emitter that never emits "close" on its own. */
-function makeSuspendedChild(): EventEmitter & { stdout: EventEmitter; stderr: EventEmitter; kill: ReturnType<typeof vi.fn>; killed: boolean } {
-    const child = new EventEmitter() as EventEmitter & { stdout: EventEmitter; stderr: EventEmitter; kill: ReturnType<typeof vi.fn>; killed: boolean };
+function makeSuspendedChild(): EventEmitter & {
+    stdout: EventEmitter;
+    stderr: EventEmitter;
+    kill: ReturnType<typeof vi.fn>;
+    killed: boolean;
+} {
+    const child = new EventEmitter() as EventEmitter & {
+        stdout: EventEmitter;
+        stderr: EventEmitter;
+        kill: ReturnType<typeof vi.fn>;
+        killed: boolean;
+    };
     child.stdout = new EventEmitter();
     child.stderr = new EventEmitter();
     child.killed = false;

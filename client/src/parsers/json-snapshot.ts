@@ -48,17 +48,19 @@ interface BinaryJsonGroup {
     readonly children: BinaryJsonNode[];
 }
 
-const binaryJsonNodeSchema: z.ZodType<BinaryJsonNode> = z.lazy(() => z.union([
-    binaryJsonFieldSchema,
-    z.strictObject({
-        nodeType: z.literal("group"),
-        key: z.string().min(1),
-        label: z.string().min(1),
-        description: z.string().optional(),
-        expanded: z.boolean().optional(),
-        children: z.array(binaryJsonNodeSchema),
-    }),
-]));
+const binaryJsonNodeSchema: z.ZodType<BinaryJsonNode> = z.lazy(() =>
+    z.union([
+        binaryJsonFieldSchema,
+        z.strictObject({
+            nodeType: z.literal("group"),
+            key: z.string().min(1),
+            label: z.string().min(1),
+            description: z.string().optional(),
+            expanded: z.boolean().optional(),
+            children: z.array(binaryJsonNodeSchema),
+        }),
+    ]),
+);
 
 const binaryJsonDocumentV1Schema = z.strictObject({
     schemaVersion: z.literal(1),
@@ -118,7 +120,9 @@ function createBinaryJsonDocument(parseResult: ParseResult): BinaryJsonDocumentV
             key: slugify(parseResult.root.name),
             label: parseResult.root.name,
             description: parseResult.root.description,
-            children: parseResult.root.fields.map((entry) => toBinaryJsonNode(parseResult.format, entry, [], childKeys)),
+            children: parseResult.root.fields.map((entry) =>
+                toBinaryJsonNode(parseResult.format, entry, [], childKeys),
+            ),
         },
         opaqueRanges: parseResult.opaqueRanges,
         warnings: parseResult.warnings,
@@ -179,7 +183,11 @@ function toParseResultNode(
         return group;
     }
 
-    const parsedValue = parseFieldValue(format, toSemanticFieldKey(format, fieldSegments) ?? createFieldKey(fieldSegments), entry);
+    const parsedValue = parseFieldValue(
+        format,
+        toSemanticFieldKey(format, fieldSegments) ?? createFieldKey(fieldSegments),
+        entry,
+    );
     const field: ParsedField = {
         name: entry.label,
         offset: entry.offset,
@@ -247,9 +255,12 @@ export function loadBinaryJsonSnapshot(
             if (typeof format === "string") {
                 const adapter = formatAdapterRegistry.get(format);
                 if (adapter) {
-                    const parseOptions = format === "pro" ? options?.proParseOptions
-                        : format === "map" ? options?.mapParseOptions
-                            : undefined;
+                    const parseOptions =
+                        format === "pro"
+                            ? options?.proParseOptions
+                            : format === "map"
+                              ? options?.mapParseOptions
+                              : undefined;
                     return adapter.loadJsonSnapshot(jsonText, parseOptions);
                 }
             }

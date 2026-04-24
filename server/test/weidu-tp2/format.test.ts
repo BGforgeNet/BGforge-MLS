@@ -192,7 +192,7 @@ describe("formatDocument integration", () => {
     });
 
     it("formats simple component", () => {
-        const input = 'BEGIN @1';
+        const input = "BEGIN @1";
         const output = format(input);
         expect(output).toBe("BEGIN @1\n");
     });
@@ -641,7 +641,7 @@ DEFINE_ACTION_MACRO macro1 BEGIN END
 `;
         const functions = parseHeader(code, "file:///test.tph");
         expect(functions).toHaveLength(3);
-        expect(functions.map(f => f.name)).toEqual(["func1", "func2", "macro1"]);
+        expect(functions.map((f) => f.name)).toEqual(["func1", "func2", "macro1"]);
     });
 });
 
@@ -711,7 +711,7 @@ describe("hover formatting: parseHeaderToSymbols", () => {
 
     /** Look up a symbol by name from parseHeaderToSymbols output. */
     function findSymbol(symbols: IndexedSymbol[], name: string) {
-        return symbols.find(s => s.name === name);
+        return symbols.find((s) => s.name === name);
     }
 
     // Use "/" as workspace root so that URI "file:///lib/test.tph" resolves to display path "lib/test.tph"
@@ -909,11 +909,11 @@ REQUIRE_PREDICATE ( MOD_IS_INSTALLED ~tnt.tp2~ (ID_OF_LABEL ~tnt.tp2~ ~g_tnt_tra
         const output = format(input);
         const lines = output.split("\n");
         // Should split across lines
-        const predLine = lines.find(l => l.includes("REQUIRE_PREDICATE"));
+        const predLine = lines.find((l) => l.includes("REQUIRE_PREDICATE"));
         expect(predLine).toBeDefined();
         expect(predLine!.length).toBeLessThanOrEqual(120);
         // OR should be on continuation line
-        const orLine = lines.find(l => l.trimStart().startsWith("OR "));
+        const orLine = lines.find((l) => l.trimStart().startsWith("OR "));
         expect(orLine).toBeDefined();
     });
 
@@ -925,7 +925,7 @@ REQUIRE_PREDICATE NOT ( MOD_IS_INSTALLED ~ua.tp2~ (ID_OF_LABEL ~ua.tp2~ ~g_ua_co
         expect(output).toContain("REQUIRE_PREDICATE NOT (");
         // Should split at OR
         const lines = output.split("\n");
-        const orLine = lines.find(l => l.trimStart().startsWith("OR "));
+        const orLine = lines.find((l) => l.trimStart().startsWith("OR "));
         expect(orLine).toBeDefined();
     });
 
@@ -1003,11 +1003,11 @@ END`;
 
         // Each OR should be on separate lines when line exceeds limit (120 chars)
         const lines = output.split("\n");
-        const allLinesFit = lines.every(line => line.length <= 120);
+        const allLinesFit = lines.every((line) => line.length <= 120);
         expect(allLinesFit).toBe(true);
 
         // Should have multiple OR lines
-        const orLines = lines.filter(l => l.includes(" OR "));
+        const orLines = lines.filter((l) => l.includes(" OR "));
         expect(orLines.length).toBeGreaterThan(1);
     });
 });

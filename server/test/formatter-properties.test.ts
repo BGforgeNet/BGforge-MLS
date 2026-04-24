@@ -42,23 +42,16 @@ const token2da = fc.stringMatching(/^\S+$/).filter((s) => s.length > 0 && s.leng
  * Structure: signature line, default-value line, column-names row, data rows.
  */
 const arb2da: fc.Arbitrary<string> = fc
-    .array(
-        fc.array(token2da, { minLength: 2, maxLength: 5 }),
-        { minLength: 1, maxLength: 8 }
-    )
+    .array(fc.array(token2da, { minLength: 2, maxLength: 5 }), { minLength: 1, maxLength: 8 })
     .chain((rows) => {
         // Derive column count from the first row (label + values, so values = row[0].length - 1)
         const colCount = (rows[0]?.length ?? 2) - 1;
-        return fc
-            .array(token2da, { minLength: colCount, maxLength: colCount })
-            .map((colNames) => {
-                const header = "2DA V1.0\n****\n";
-                const colRow = "    " + colNames.join("  ") + "\n";
-                const dataRows = rows
-                    .map((cells) => cells.join("  "))
-                    .join("\n");
-                return header + colRow + dataRows + "\n";
-            });
+        return fc.array(token2da, { minLength: colCount, maxLength: colCount }).map((colNames) => {
+            const header = "2DA V1.0\n****\n";
+            const colRow = "    " + colNames.join("  ") + "\n";
+            const dataRows = rows.map((cells) => cells.join("  ")).join("\n");
+            return header + colRow + dataRows + "\n";
+        });
     });
 
 /** Content safe inside a tilde-delimited TRA string (no tildes). */
@@ -69,9 +62,7 @@ const traStringContent = fc
 /** Generates one `@N = ~text~` entry line. */
 const traEntry: fc.Arbitrary<string> = fc
     .integer({ min: 0, max: 9999 })
-    .chain((n) =>
-        traStringContent.map((content) => `@${n} = ~${content}~`)
-    );
+    .chain((n) => traStringContent.map((content) => `@${n} = ~${content}~`));
 
 /**
  * Generates a plausible TRA document: one or more entries separated by
@@ -82,14 +73,12 @@ const arbTra: fc.Arbitrary<string> = fc
     .map((entries) => entries.join("\n") + "\n");
 
 /** Content safe inside a MSG brace group — no braces. */
-const msgContent = fc
-    .string({ maxLength: 8 })
-    .filter((s) => !/[{}]/.test(s));
+const msgContent = fc.string({ maxLength: 8 }).filter((s) => !/[{}]/.test(s));
 
 /** Generates one `{number}{audio}{text}` MSG entry line. */
-const msgEntry: fc.Arbitrary<string> = fc.integer({ min: 0, max: 9999 }).chain((n) =>
-    fc.tuple(msgContent, msgContent).map(([audio, text]) => `{${n}}{${audio}}{${text}}`)
-);
+const msgEntry: fc.Arbitrary<string> = fc
+    .integer({ min: 0, max: 9999 })
+    .chain((n) => fc.tuple(msgContent, msgContent).map(([audio, text]) => `{${n}}{${audio}}{${text}}`));
 
 /**
  * Generates a plausible MSG document: one or more entries joined by newlines.
@@ -110,7 +99,7 @@ describe("formatter properties — format2da", () => {
                 const twice = applyFormat(format2da, once);
                 expect(twice).toBe(once);
             }),
-            { numRuns: 50 }
+            { numRuns: 50 },
         );
     });
 
@@ -120,7 +109,7 @@ describe("formatter properties — format2da", () => {
                 const result = applyFormat(format2da, input);
                 expect(typeof result).toBe("string");
             }),
-            { numRuns: 50 }
+            { numRuns: 50 },
         );
     });
 });
@@ -133,7 +122,7 @@ describe("formatter properties — formatTra", () => {
                 const twice = applyFormat(formatTra, once);
                 expect(twice).toBe(once);
             }),
-            { numRuns: 50 }
+            { numRuns: 50 },
         );
     });
 
@@ -143,7 +132,7 @@ describe("formatter properties — formatTra", () => {
                 const result = applyFormat(formatTra, input);
                 expect(typeof result).toBe("string");
             }),
-            { numRuns: 50 }
+            { numRuns: 50 },
         );
     });
 });
@@ -156,7 +145,7 @@ describe("formatter properties — formatMsg", () => {
                 const twice = applyFormat(formatMsg, once);
                 expect(twice).toBe(once);
             }),
-            { numRuns: 50 }
+            { numRuns: 50 },
         );
     });
 
@@ -166,7 +155,7 @@ describe("formatter properties — formatMsg", () => {
                 const result = applyFormat(formatMsg, input);
                 expect(typeof result).toBe("string");
             }),
-            { numRuns: 50 }
+            { numRuns: 50 },
         );
     });
 });

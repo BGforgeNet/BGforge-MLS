@@ -82,9 +82,7 @@ function emitAppend(append: TDAppend): string {
     const keyword = append.early ? "APPEND_EARLY" : "APPEND";
     const ifExists = append.ifFileExists ? "IF_FILE_EXISTS " : "";
     const header = `${keyword} ${ifExists}${append.filename}\n`;
-    const states = append.states
-        .map(s => indentBlock(emitState(s)))
-        .join("\n\n");
+    const states = append.states.map((s) => indentBlock(emitState(s))).join("\n\n");
     return header + states + "\nEND";
 }
 
@@ -92,7 +90,10 @@ function emitAppend(append: TDAppend): string {
  * Indent every line of a block by one level.
  */
 function indentBlock(block: string): string {
-    return block.split("\n").map(line => INDENT + line).join("\n");
+    return block
+        .split("\n")
+        .map((line) => INDENT + line)
+        .join("\n");
 }
 
 // =============================================================================
@@ -379,9 +380,7 @@ function emitChainEpilogue(epilogue: TDChainEpilogue): string {
             return `${keyword} ${safe}${epilogue.filename} ${epilogue.target}`;
         }
         case TDEpilogueType.Transitions:
-            return (
-                "END\n" + epilogue.transitions.map(emitTransition).join("\n")
-            );
+            return "END\n" + epilogue.transitions.map(emitTransition).join("\n");
     }
 }
 
@@ -525,7 +524,7 @@ function emitReplaceStates(op: import("./types").TDReplaceStates): string {
         .sort(([a], [b]) => a - b)
         .map(([_, state]) => indentBlock(emitState(state)));
 
-    lines.push(...states.flatMap(s => s.split("\n")));
+    lines.push(...states.flatMap((s) => s.split("\n")));
     lines.push("END");
 
     return lines.join("\n");

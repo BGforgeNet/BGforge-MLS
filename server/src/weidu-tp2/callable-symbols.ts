@@ -97,14 +97,18 @@ function getCallableNameFromContainer(node: SyntaxNode, containerTypes: Readonly
 }
 
 function isStringContentNode(node: SyntaxNode): boolean {
-    return node.type === SyntaxType.TildeContent ||
+    return (
+        node.type === SyntaxType.TildeContent ||
         node.type === SyntaxType.DoubleContent ||
-        node.type === SyntaxType.FiveTildeContent;
+        node.type === SyntaxType.FiveTildeContent
+    );
 }
 
 function isStringNode(node: SyntaxNode): boolean {
-    return node.type === SyntaxType.String ||
+    return (
+        node.type === SyntaxType.String ||
         node.type === SyntaxType.TildeString ||
         node.type === SyntaxType.DoubleString ||
-        node.type === SyntaxType.FiveTildeString;
+        node.type === SyntaxType.FiveTildeString
+    );
 }

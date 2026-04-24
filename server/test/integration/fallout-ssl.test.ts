@@ -32,7 +32,6 @@ beforeAll(async () => {
 });
 
 describe("fallout-ssl integration", () => {
-
     // =========================================================================
     // Document Symbols
     // =========================================================================
@@ -42,7 +41,7 @@ describe("fallout-ssl integration", () => {
             const f = loadFixture(TWEAKS_BASE, "source_test/gl_g_scenepid.ssl");
             const symbols = getDocumentSymbols(f.text);
 
-            const names = symbols.map(s => s.name);
+            const names = symbols.map((s) => s.name);
             expect(names).toContain("print_scenery");
             expect(names).toContain("start");
             expect(names).toContain("map_enter_p_proc");
@@ -55,7 +54,7 @@ describe("fallout-ssl integration", () => {
             const symbols = getDocumentSymbols(f.text);
 
             // dclara.ssl has 113 symbols: procedures + forward declarations + macros
-            const names = symbols.map(s => s.name);
+            const names = symbols.map((s) => s.name);
             expect(names).toContain("start");
             expect(names).toContain("talk_p_proc");
             expect(names).toContain("Node001");
@@ -66,7 +65,7 @@ describe("fallout-ssl integration", () => {
             const f = loadFixture(RP_BASE, "headers/define.h");
             const symbols = getDocumentSymbols(f.text);
 
-            const names = symbols.map(s => s.name);
+            const names = symbols.map((s) => s.name);
             expect(names).toContain("ndebug");
             expect(names).toContain("DEFINE_H");
             expect(symbols).toHaveLength(618);
@@ -76,11 +75,11 @@ describe("fallout-ssl integration", () => {
             const f = loadFixture(TWEAKS_BASE, "source_test/gl_g_scenepid.ssl");
             const symbols = getDocumentSymbols(f.text);
 
-            const printScenery = symbols.find(s => s.name === "print_scenery");
+            const printScenery = symbols.find((s) => s.name === "print_scenery");
             expect(printScenery).toBeDefined();
             // print_scenery has "variable s, scenery = ..." — 2 children
             expect(printScenery!.children).toBeDefined();
-            expect(printScenery!.children!.map(c => c.name)).toEqual(["s", "scenery"]);
+            expect(printScenery!.children!.map((c) => c.name)).toEqual(["s", "scenery"]);
         });
     });
 
@@ -181,7 +180,7 @@ describe("fallout-ssl integration", () => {
 
             const refs = findReferences(f.text, pos!, f.uri, true);
             expect(refs).toHaveLength(2);
-            expect(refs.map(r => r.range.start.line)).toEqual([5, 7]);
+            expect(refs.map((r) => r.range.start.line)).toEqual([5, 7]);
         });
 
         it("finds macro references across the file", () => {
@@ -310,9 +309,12 @@ describe("fallout-ssl integration", () => {
 
             const symbols = getLocalSymbols(f.text, f.uri);
             expect(symbols).toHaveLength(4);
-            expect(symbols.map(s => s.name)).toEqual(
-                ["print_scenery", "start", "map_enter_p_proc", "SCRIPT_REALNAME"]
-            );
+            expect(symbols.map((s) => s.name)).toEqual([
+                "print_scenery",
+                "start",
+                "map_enter_p_proc",
+                "SCRIPT_REALNAME",
+            ]);
         });
 
         it("extracts macros from header files", () => {
@@ -320,7 +322,7 @@ describe("fallout-ssl integration", () => {
 
             const symbols = getLocalSymbols(f.text, f.uri);
             expect(symbols).toHaveLength(618);
-            const names = symbols.map(s => s.name);
+            const names = symbols.map((s) => s.name);
             expect(names).toContain("ndebug");
             expect(names).toContain("METARULE_TEST_FIRSTRUN");
         });
@@ -330,7 +332,7 @@ describe("fallout-ssl integration", () => {
 
             const symbols = getLocalSymbols(f.text, f.uri);
             expect(symbols).toHaveLength(361);
-            const names = symbols.map(s => s.name);
+            const names = symbols.map((s) => s.name);
             expect(names).toContain("WORLDMAP");
             expect(names).toContain("COMBAT");
             expect(names).toContain("HOOK_TOHIT");
@@ -371,7 +373,7 @@ describe("fallout-ssl integration", () => {
             const f = loadFixture(RP_BASE, "den/dclara.ssl");
 
             const ranges = getFoldingRanges(f.text);
-            const commentRanges = ranges.filter(r => r.kind === FoldingRangeKind.Comment);
+            const commentRanges = ranges.filter((r) => r.kind === FoldingRangeKind.Comment);
             expect(commentRanges).toHaveLength(4);
         });
     });
@@ -421,9 +423,7 @@ describe("fallout-ssl integration", () => {
 
     describe("workspace symbols", () => {
         it("indexes header symbols for workspace search", () => {
-            const files = loadFixtures(FALLOUT_FIXTURES, [
-                "sfall/artifacts/scripting/headers/sfall.h",
-            ]);
+            const files = loadFixtures(FALLOUT_FIXTURES, ["sfall/artifacts/scripting/headers/sfall.h"]);
 
             const fileIndex = new FileIndex();
             for (const { uri, text } of files.values()) {

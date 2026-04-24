@@ -10,12 +10,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { CancellationTokenSource, CompletionItemKind } from "vscode-languageserver/node";
 import { Symbols } from "../../src/core/symbol-index";
-import {
-    type IndexedSymbol,
-    SymbolKind,
-    ScopeLevel,
-    SourceType,
-} from "../../src/core/symbol";
+import { type IndexedSymbol, SymbolKind, ScopeLevel, SourceType } from "../../src/core/symbol";
 import { normalizeUri } from "../../src/core/normalized-uri";
 import type { LanguageProvider } from "../../src/language-provider";
 
@@ -146,7 +141,11 @@ describe("ProviderRegistry.references — cancellation", () => {
 
     it("returns empty without calling provider.references when token is pre-cancelled", async () => {
         const registry = await createRegistry();
-        const referencesFn = vi.fn().mockReturnValue([{ uri: "file:///a.ssl", range: { start: { line: 0, character: 0 }, end: { line: 0, character: 5 } } }]);
+        const referencesFn = vi
+            .fn()
+            .mockReturnValue([
+                { uri: "file:///a.ssl", range: { start: { line: 0, character: 0 }, end: { line: 0, character: 5 } } },
+            ]);
         const provider = createMockProvider("test-lang", {
             references: referencesFn,
         });

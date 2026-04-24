@@ -109,11 +109,7 @@ function detectFuncParamFromLineText(text: string, line: number, character: numb
  * @param character 0-based character offset
  * @returns Array of detected contexts, or empty array if no filtering needed
  */
-export function getContextAtPosition(
-    text: string,
-    line: number,
-    character: number,
-): CompletionContext[] {
+export function getContextAtPosition(text: string, line: number, character: number): CompletionContext[] {
     if (!isInitialized()) {
         return [];
     }

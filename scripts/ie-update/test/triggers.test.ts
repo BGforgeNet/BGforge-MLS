@@ -55,7 +55,9 @@ was within shouting range
         expect(result!.name).toBe("Heard");
         expect(result!.detail).toBe("Heard(O:Object*,I:ID*SHOUTIDS)");
         expect(result!.doc).toContain("[CRE](https://gibberlings3.github.io/iesdp/file_formats/ie_formats/cre_v1.htm)");
-        expect(result!.doc).toContain("[Shout](https://gibberlings3.github.io/iesdp/scripting/actions/bgeeactions.htm#106)");
+        expect(result!.doc).toContain(
+            "[Shout](https://gibberlings3.github.io/iesdp/scripting/actions/bgeeactions.htm#106)",
+        );
     });
 
     it("does not wrap markdown links in backticks when source uses code around anchors", () => {
@@ -70,7 +72,9 @@ Scripting uses the same random value to seed all <code><a href="#0x4047">RandomN
         const [result] = extractTriggersFromHtml(html, BASE_URL);
 
         expect(result).toBeDefined();
-        expect(result!.doc).toContain("[RandomNum()](https://gibberlings3.github.io/iesdp/scripting/triggers/bgeetriggers.htm#0x4047)");
+        expect(result!.doc).toContain(
+            "[RandomNum()](https://gibberlings3.github.io/iesdp/scripting/triggers/bgeetriggers.htm#0x4047)",
+        );
         expect(result!.doc).not.toContain("`[RandomNum()]");
     });
 
@@ -88,7 +92,9 @@ See <a href="{{ '/file_formats/ie_formats/cre_v1.htm' | prepend: relurl }}"><cod
 
         expect(result).toBeDefined();
         expect(result!.doc).toContain("[CRE](https://gibberlings3.github.io/iesdp/file_formats/ie_formats/cre_v1.htm)");
-        expect(result!.doc).toContain("[Shout](https://gibberlings3.github.io/iesdp/scripting/actions/bgeeactions.htm#106)");
+        expect(result!.doc).toContain(
+            "[Shout](https://gibberlings3.github.io/iesdp/scripting/actions/bgeeactions.htm#106)",
+        );
         expect(result!.doc).not.toContain("%7B%7B");
     });
 
@@ -147,12 +153,7 @@ Returns true only if the specified object cast the specified spell.
 
         const result = extractTriggersFromHtml(html, BASE_URL);
 
-        expect(result.map((item) => item.name)).toEqual([
-            "HaveSpell",
-            "HaveSpellRES",
-            "SpellCast",
-            "SpellCastRES",
-        ]);
+        expect(result.map((item) => item.name)).toEqual(["HaveSpell", "HaveSpellRES", "SpellCast", "SpellCastRES"]);
         expect(result[0]!.doc).toBe("Returns true only if the active CRE has the specified spell memorised.");
         expect(result[1]!.doc).toBe("Returns true only if the active CRE has the specified spell memorised.");
         expect(result[2]!.doc).toBe("Returns true only if the specified object cast the specified spell.");

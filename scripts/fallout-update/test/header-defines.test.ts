@@ -157,11 +157,7 @@ describe("collectDefines", () => {
     });
 
     it("returns entries sorted alphabetically", () => {
-        fs.writeFileSync(
-            path.join(tmpDir, "test.h"),
-            "#define zebra_const (1)\n#define alpha_const (2)\n",
-            "utf8",
-        );
+        fs.writeFileSync(path.join(tmpDir, "test.h"), "#define zebra_const (1)\n#define alpha_const (2)\n", "utf8");
         const defines = collectDefines(tmpDir);
         const keys = [...defines.keys()];
         expect(keys).toEqual(["alpha_const", "zebra_const"]);

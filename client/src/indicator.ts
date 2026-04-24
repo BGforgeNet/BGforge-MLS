@@ -27,7 +27,7 @@ export class ServerInitializingIndicator extends Disposable {
             () =>
                 new Promise<void>((resolve) => {
                     this._task = { project: projectName, resolve };
-                })
+                }),
         );
     }
 

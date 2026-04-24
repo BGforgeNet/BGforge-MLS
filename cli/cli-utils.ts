@@ -26,7 +26,7 @@ export function parseCliArgs(helpText: string): CliArgs | null {
         process.exit(0);
     }
 
-    const target = args.find(a => !a.startsWith("-"));
+    const target = args.find((a) => !a.startsWith("-"));
     const save = args.includes("--save");
     const check = args.includes("--check");
     const saveAndCheck = args.includes("--save-and-check");
@@ -57,7 +57,7 @@ export function findFiles(dir: string, extensions: readonly string[]): string[] 
                 continue;
             }
             files.push(...findFiles(fullPath, extensions));
-        } else if (extensions.some(ext => entry.name.toLowerCase().endsWith(ext))) {
+        } else if (extensions.some((ext) => entry.name.toLowerCase().endsWith(ext))) {
             files.push(fullPath);
         }
     }
@@ -80,10 +80,7 @@ export function reportDiff(label: string, expected: string, actual: string): voi
 }
 
 /** Wraps a processFile function in try/catch for consistent error handling. */
-export async function safeProcess(
-    filePath: string,
-    fn: () => FileResult | Promise<FileResult>,
-): Promise<FileResult> {
+export async function safeProcess(filePath: string, fn: () => FileResult | Promise<FileResult>): Promise<FileResult> {
     try {
         return await fn();
     } catch (err) {
@@ -130,7 +127,8 @@ export async function runCli(options: RunOptions): Promise<void> {
         }
 
         if (!args.quiet) console.log(`Found ${files.length} ${description} files`);
-        let changed = 0, unchanged = 0;
+        let changed = 0,
+            unchanged = 0;
 
         for (const file of files) {
             // Sequential processing — CLI mode needs deterministic output and

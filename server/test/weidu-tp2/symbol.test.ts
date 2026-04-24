@@ -52,7 +52,7 @@ describe("weidu-tp2: getDocumentSymbols", () => {
     it("returns file-level variables from OUTER_SET", () => {
         const text = `OUTER_SET my_var = 42`;
         const symbols = getDocumentSymbols(text);
-        const varSym = symbols.find(s => s.name === "my_var");
+        const varSym = symbols.find((s) => s.name === "my_var");
         expect(varSym).toBeDefined();
         expect(varSym!.kind).toBe(SymbolKind.Variable);
     });
@@ -60,13 +60,13 @@ describe("weidu-tp2: getDocumentSymbols", () => {
     it("returns file-level variables from OUTER_SPRINT", () => {
         const text = `OUTER_SPRINT my_str ~hello~`;
         const symbols = getDocumentSymbols(text);
-        expect(symbols.find(s => s.name === "my_str")).toBeDefined();
+        expect(symbols.find((s) => s.name === "my_str")).toBeDefined();
     });
 
     it("returns file-level array definitions with Array kind", () => {
         const text = `ACTION_DEFINE_ARRAY my_arr BEGIN ~a~ ~b~ END`;
         const symbols = getDocumentSymbols(text);
-        const sym = symbols.find(s => s.name === "my_arr");
+        const sym = symbols.find((s) => s.name === "my_arr");
         expect(sym).toBeDefined();
         expect(sym!.kind).toBe(SymbolKind.Array);
     });
@@ -74,19 +74,19 @@ describe("weidu-tp2: getDocumentSymbols", () => {
     it("returns file-level variables from OUTER_SPRINTF", () => {
         const text = `OUTER_SPRINTF my_str ~%d~ 42`;
         const symbols = getDocumentSymbols(text);
-        expect(symbols.find(s => s.name === "my_str")).toBeDefined();
+        expect(symbols.find((s) => s.name === "my_str")).toBeDefined();
     });
 
     it("returns file-level variables from OUTER_TEXT_SPRINT", () => {
         const text = `OUTER_TEXT_SPRINT my_str ~hello~`;
         const symbols = getDocumentSymbols(text);
-        expect(symbols.find(s => s.name === "my_str")).toBeDefined();
+        expect(symbols.find((s) => s.name === "my_str")).toBeDefined();
     });
 
     it("returns file-level associative array definitions with Array kind", () => {
         const text = `ACTION_DEFINE_ASSOCIATIVE_ARRAY my_map BEGIN ~k~ => ~v~ END`;
         const symbols = getDocumentSymbols(text);
-        const sym = symbols.find(s => s.name === "my_map");
+        const sym = symbols.find((s) => s.name === "my_map");
         expect(sym).toBeDefined();
         expect(sym!.kind).toBe(SymbolKind.Array);
     });
@@ -94,7 +94,7 @@ describe("weidu-tp2: getDocumentSymbols", () => {
     it("returns Constant kind for UPPER_first_word variables", () => {
         const text = `OUTER_SET MOD_version = 1`;
         const symbols = getDocumentSymbols(text);
-        const sym = symbols.find(s => s.name === "MOD_version");
+        const sym = symbols.find((s) => s.name === "MOD_version");
         expect(sym).toBeDefined();
         expect(sym!.kind).toBe(SymbolKind.Constant);
     });
@@ -102,7 +102,7 @@ describe("weidu-tp2: getDocumentSymbols", () => {
     it("returns Constant kind for all-uppercase variables", () => {
         const text = `OUTER_SET DEBUG = 1`;
         const symbols = getDocumentSymbols(text);
-        const sym = symbols.find(s => s.name === "DEBUG");
+        const sym = symbols.find((s) => s.name === "DEBUG");
         expect(sym).toBeDefined();
         expect(sym!.kind).toBe(SymbolKind.Constant);
     });
@@ -110,7 +110,7 @@ describe("weidu-tp2: getDocumentSymbols", () => {
     it("returns Variable kind for lowercase-first variables", () => {
         const text = `OUTER_SET my_var = 1`;
         const symbols = getDocumentSymbols(text);
-        const sym = symbols.find(s => s.name === "my_var");
+        const sym = symbols.find((s) => s.name === "my_var");
         expect(sym).toBeDefined();
         expect(sym!.kind).toBe(SymbolKind.Variable);
     });
@@ -118,23 +118,23 @@ describe("weidu-tp2: getDocumentSymbols", () => {
     it("returns file-level loop vars from ACTION_PHP_EACH", () => {
         const text = `ACTION_PHP_EACH my_arr AS k => v BEGIN END`;
         const symbols = getDocumentSymbols(text);
-        expect(symbols.find(s => s.name === "k")).toBeDefined();
-        expect(symbols.find(s => s.name === "v")).toBeDefined();
+        expect(symbols.find((s) => s.name === "k")).toBeDefined();
+        expect(symbols.find((s) => s.name === "v")).toBeDefined();
     });
 
     it("returns file-level loop var from ACTION_FOR_EACH", () => {
         const text = `ACTION_FOR_EACH item IN ~a~ ~b~ ~c~ BEGIN END`;
         const symbols = getDocumentSymbols(text);
-        expect(symbols.find(s => s.name === "item")).toBeDefined();
+        expect(symbols.find((s) => s.name === "item")).toBeDefined();
     });
 
     it("returns INT_VAR params as function children", () => {
         const text = `DEFINE_ACTION_FUNCTION my_func INT_VAR x = 0 y = 1 BEGIN END`;
         const symbols = getDocumentSymbols(text);
-        const func = symbols.find(s => s.name === "my_func");
+        const func = symbols.find((s) => s.name === "my_func");
         expect(func).toBeDefined();
         expect(func!.children).toBeDefined();
-        const names = func!.children!.map(c => c.name);
+        const names = func!.children!.map((c) => c.name);
         expect(names).toContain("x");
         expect(names).toContain("y");
         for (const child of func!.children!) {
@@ -146,10 +146,10 @@ describe("weidu-tp2: getDocumentSymbols", () => {
     it("returns STR_VAR params as function children", () => {
         const text = `DEFINE_PATCH_FUNCTION my_func STR_VAR name = ~~ BEGIN END`;
         const symbols = getDocumentSymbols(text);
-        const func = symbols.find(s => s.name === "my_func");
+        const func = symbols.find((s) => s.name === "my_func");
         expect(func).toBeDefined();
         expect(func!.children).toBeDefined();
-        const names = func!.children!.map(c => c.name);
+        const names = func!.children!.map((c) => c.name);
         expect(names).toContain("name");
     });
 
@@ -158,9 +158,9 @@ describe("weidu-tp2: getDocumentSymbols", () => {
             SET y = 1
         END`;
         const symbols = getDocumentSymbols(text);
-        const func = symbols.find(s => s.name === "my_func");
+        const func = symbols.find((s) => s.name === "my_func");
         expect(func).toBeDefined();
-        const names = func!.children!.map(c => c.name);
+        const names = func!.children!.map((c) => c.name);
         expect(names).toEqual(["x", "y"]);
     });
 
@@ -171,9 +171,9 @@ describe("weidu-tp2: getDocumentSymbols", () => {
     creature = ~~
   BEGIN END`;
         const symbols = getDocumentSymbols(text);
-        const func = symbols.find(s => s.name === "my_func");
+        const func = symbols.find((s) => s.name === "my_func");
         expect(func).toBeDefined();
-        const names = func!.children!.map(c => c.name);
+        const names = func!.children!.map((c) => c.name);
         expect(names).toEqual(["item", "creature"]);
     });
 
@@ -182,9 +182,9 @@ describe("weidu-tp2: getDocumentSymbols", () => {
             SET x = 5
         END`;
         const symbols = getDocumentSymbols(text);
-        const func = symbols.find(s => s.name === "my_func");
+        const func = symbols.find((s) => s.name === "my_func");
         expect(func).toBeDefined();
-        const xChildren = func!.children!.filter(c => c.name === "x");
+        const xChildren = func!.children!.filter((c) => c.name === "x");
         expect(xChildren).toHaveLength(1);
     });
 
@@ -194,10 +194,10 @@ describe("weidu-tp2: getDocumentSymbols", () => {
             SPRINT my_str ~hello~
         END`;
         const symbols = getDocumentSymbols(text);
-        const func = symbols.find(s => s.name === "my_func");
+        const func = symbols.find((s) => s.name === "my_func");
         expect(func).toBeDefined();
         expect(func!.children).toBeDefined();
-        const names = func!.children!.map(c => c.name);
+        const names = func!.children!.map((c) => c.name);
         expect(names).toContain("my_var");
         expect(names).toContain("my_str");
         for (const child of func!.children!) {
@@ -211,9 +211,9 @@ describe("weidu-tp2: getDocumentSymbols", () => {
             READ_BYTE 0x00 my_byte
         END`;
         const symbols = getDocumentSymbols(text);
-        const func = symbols.find(s => s.name === "my_func");
+        const func = symbols.find((s) => s.name === "my_func");
         expect(func).toBeDefined();
-        const names = func!.children!.map(c => c.name);
+        const names = func!.children!.map((c) => c.name);
         expect(names).toContain("my_byte");
     });
 
@@ -223,9 +223,9 @@ describe("weidu-tp2: getDocumentSymbols", () => {
             TEXT_SPRINT my_txt ~hello~
         END`;
         const symbols = getDocumentSymbols(text);
-        const func = symbols.find(s => s.name === "my_func");
+        const func = symbols.find((s) => s.name === "my_func");
         expect(func).toBeDefined();
-        const names = func!.children!.map(c => c.name);
+        const names = func!.children!.map((c) => c.name);
         expect(names).toContain("my_fmt");
         expect(names).toContain("my_txt");
     });
@@ -235,9 +235,9 @@ describe("weidu-tp2: getDocumentSymbols", () => {
             LOCAL_SET my_local = 1
         END`;
         const symbols = getDocumentSymbols(text);
-        const macro = symbols.find(s => s.name === "my_macro");
+        const macro = symbols.find((s) => s.name === "my_macro");
         expect(macro).toBeDefined();
-        expect(macro!.children!.map(c => c.name)).toContain("my_local");
+        expect(macro!.children!.map((c) => c.name)).toContain("my_local");
     });
 
     it("returns READ_LONG and READ_SHORT vars as function children", () => {
@@ -246,9 +246,9 @@ describe("weidu-tp2: getDocumentSymbols", () => {
             READ_SHORT 0x04 my_short
         END`;
         const symbols = getDocumentSymbols(text);
-        const func = symbols.find(s => s.name === "my_func");
+        const func = symbols.find((s) => s.name === "my_func");
         expect(func).toBeDefined();
-        const names = func!.children!.map(c => c.name);
+        const names = func!.children!.map((c) => c.name);
         expect(names).toContain("my_long");
         expect(names).toContain("my_short");
     });
@@ -258,9 +258,9 @@ describe("weidu-tp2: getDocumentSymbols", () => {
             PHP_EACH my_arr AS k => v BEGIN END
         END`;
         const symbols = getDocumentSymbols(text);
-        const func = symbols.find(s => s.name === "my_func");
+        const func = symbols.find((s) => s.name === "my_func");
         expect(func).toBeDefined();
-        const names = func!.children!.map(c => c.name);
+        const names = func!.children!.map((c) => c.name);
         expect(names).toContain("k");
         expect(names).toContain("v");
     });
@@ -270,10 +270,10 @@ describe("weidu-tp2: getDocumentSymbols", () => {
             OUTER_SET my_var = 1
         END`;
         const symbols = getDocumentSymbols(text);
-        const macro = symbols.find(s => s.name === "my_macro");
+        const macro = symbols.find((s) => s.name === "my_macro");
         expect(macro).toBeDefined();
         expect(macro!.children).toBeDefined();
-        expect(macro!.children!.map(c => c.name)).toContain("my_var");
+        expect(macro!.children!.map((c) => c.name)).toContain("my_var");
         expect(macro!.children![0].detail).toBe("my_macro");
     });
 
@@ -284,9 +284,9 @@ describe("weidu-tp2: getDocumentSymbols", () => {
             END
         END`;
         const symbols = getDocumentSymbols(text);
-        const func = symbols.find(s => s.name === "my_func");
+        const func = symbols.find((s) => s.name === "my_func");
         expect(func).toBeDefined();
-        const names = func!.children!.map(c => c.name);
+        const names = func!.children!.map((c) => c.name);
         expect(names).toContain("nested_var");
     });
 
@@ -295,7 +295,7 @@ describe("weidu-tp2: getDocumentSymbols", () => {
             OUTER_SPRINT lang_dir ~foo~
         END`;
         const symbols = getDocumentSymbols(text);
-        expect(symbols.find(s => s.name === "lang_dir")).toBeDefined();
+        expect(symbols.find((s) => s.name === "lang_dir")).toBeDefined();
     });
 
     it("returns vars from nested conditionals as file-level symbols", () => {
@@ -305,7 +305,7 @@ describe("weidu-tp2: getDocumentSymbols", () => {
             END
         END`;
         const symbols = getDocumentSymbols(text);
-        expect(symbols.find(s => s.name === "deep_var")).toBeDefined();
+        expect(symbols.find((s) => s.name === "deep_var")).toBeDefined();
     });
 
     it("does not collect function body vars as file-level symbols", () => {
@@ -313,7 +313,7 @@ describe("weidu-tp2: getDocumentSymbols", () => {
             OUTER_SET inner_var = 1
         END`;
         const symbols = getDocumentSymbols(text);
-        const fileLevelNames = symbols.filter(s => s.kind !== SymbolKind.Function).map(s => s.name);
+        const fileLevelNames = symbols.filter((s) => s.kind !== SymbolKind.Function).map((s) => s.name);
         expect(fileLevelNames).not.toContain("inner_var");
     });
 
@@ -323,7 +323,7 @@ ACTION_IF 1 BEGIN
     OUTER_SET x = 2
 END`;
         const symbols = getDocumentSymbols(text);
-        const xSymbols = symbols.filter(s => s.name === "x");
+        const xSymbols = symbols.filter((s) => s.name === "x");
         expect(xSymbols).toHaveLength(1);
     });
 
@@ -332,7 +332,7 @@ END`;
 OUTER_SET x = 2
 OUTER_SET x = 3`;
         const symbols = getDocumentSymbols(text);
-        const xSymbols = symbols.filter(s => s.name === "x");
+        const xSymbols = symbols.filter((s) => s.name === "x");
         expect(xSymbols).toHaveLength(1);
     });
 
@@ -344,10 +344,10 @@ OUTER_SET x = 3`;
             SPRINT y ~world~
         END`;
         const symbols = getDocumentSymbols(text);
-        const func = symbols.find(s => s.name === "my_func");
+        const func = symbols.find((s) => s.name === "my_func");
         expect(func).toBeDefined();
-        const xChildren = func!.children!.filter(c => c.name === "x");
-        const yChildren = func!.children!.filter(c => c.name === "y");
+        const xChildren = func!.children!.filter((c) => c.name === "x");
+        const yChildren = func!.children!.filter((c) => c.name === "y");
         expect(xChildren).toHaveLength(1);
         expect(yChildren).toHaveLength(1);
     });
@@ -369,7 +369,7 @@ aaaaaaa zzzzzz
 
 ddddddd`;
         const symbols = getDocumentSymbols(text);
-        const names = symbols.map(s => s.name);
+        const names = symbols.map((s) => s.name);
         expect(names).toEqual(["TOBEX_MOD_DIRECTORY"]);
     });
 

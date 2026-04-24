@@ -13,7 +13,12 @@ interface TreeNodeRecord {
     readonly children: readonly string[];
 }
 
-function group(name: string, fields: (ParsedField | ParsedGroup)[], expanded = true, description?: string): ParsedGroup {
+function group(
+    name: string,
+    fields: (ParsedField | ParsedGroup)[],
+    expanded = true,
+    description?: string,
+): ParsedGroup {
     return { name, fields, expanded, description };
 }
 
@@ -30,7 +35,13 @@ function makeFieldId(sourceSegments: readonly string[]): string {
 }
 
 export interface BinaryEditorTreeState {
-    getInitMessagePayload(): { format: string; formatName: string; errors?: string[]; warnings?: string[]; rootChildren: BinaryEditorNode[] };
+    getInitMessagePayload(): {
+        format: string;
+        formatName: string;
+        errors?: string[];
+        warnings?: string[];
+        rootChildren: BinaryEditorNode[];
+    };
     getChildren(nodeId: string): BinaryEditorNode[];
 }
 
@@ -43,11 +54,13 @@ function shouldHideFieldFromEditor(parseResult: ParseResult, entry: ParsedField)
     return adapter?.shouldHideField?.(entry) ?? false;
 }
 
-function projectDisplayEntry(parseResult: ParseResult, entry: ParsedField | ParsedGroup, sourceSegments: readonly string[]): ProjectedEntry | undefined {
+function projectDisplayEntry(
+    parseResult: ParseResult,
+    entry: ParsedField | ParsedGroup,
+    sourceSegments: readonly string[],
+): ProjectedEntry | undefined {
     if (!isGroup(entry)) {
-        return shouldHideFieldFromEditor(parseResult, entry)
-            ? undefined
-            : { kind: "field", entry, sourceSegments };
+        return shouldHideFieldFromEditor(parseResult, entry) ? undefined : { kind: "field", entry, sourceSegments };
     }
 
     const projectedChildren = entry.fields
@@ -59,12 +72,16 @@ function projectDisplayEntry(parseResult: ParseResult, entry: ParsedField | Pars
     }
 
     const adapter = formatAdapterRegistry.get(parseResult.format);
-    if (adapter?.shouldHideGroup?.(group(
-        entry.name,
-        projectedChildren.map((child) => child.entry),
-        entry.expanded !== false,
-        entry.description,
-    ))) {
+    if (
+        adapter?.shouldHideGroup?.(
+            group(
+                entry.name,
+                projectedChildren.map((child) => child.entry),
+                entry.expanded !== false,
+                entry.description,
+            ),
+        )
+    ) {
         return undefined;
     }
 
@@ -118,22 +135,25 @@ export function buildBinaryEditorTreeState(parseResult: ParseResult): BinaryEdit
         const entry = projected.entry;
         const fieldPath = makeFieldPath(parentPath, entry.name);
         const fieldId = makeFieldId(projected.sourceSegments);
-        const fieldKey = toSemanticFieldKey(parseResult.format, projected.sourceSegments)
-            ?? createFieldKey(projected.sourceSegments);
+        const fieldKey =
+            toSemanticFieldKey(parseResult.format, projected.sourceSegments) ??
+            createFieldKey(projected.sourceSegments);
         const presentation = resolveFieldPresentation(parseResult.format, fieldKey, entry.name);
         const numericFormat = resolveNumericFormat(parseResult.format, fieldKey, entry.name);
         const enumOptions = resolveEnumLookup(parseResult.format, fieldKey, entry.name);
         const flagOptions = resolveFlagLookup(parseResult.format, fieldKey, entry.name);
-        const numericValue = typeof entry.rawValue === "number"
-            ? entry.rawValue
-            : typeof entry.value === "number"
-                ? entry.value
-                : undefined;
-        const displayValue = typeof numericValue === "number"
-            ? enumOptions || flagOptions
-                ? resolveDisplayValue(parseResult.format, fieldKey, entry.name, numericValue)
-                : formatNumericValue(numericValue, numericFormat)
-            : String(entry.value);
+        const numericValue =
+            typeof entry.rawValue === "number"
+                ? entry.rawValue
+                : typeof entry.value === "number"
+                  ? entry.value
+                  : undefined;
+        const displayValue =
+            typeof numericValue === "number"
+                ? enumOptions || flagOptions
+                    ? resolveDisplayValue(parseResult.format, fieldKey, entry.name, numericValue)
+                    : formatNumericValue(numericValue, numericFormat)
+                : String(entry.value);
         nodes.set(id, {
             id,
             children: [],

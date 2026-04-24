@@ -16,10 +16,7 @@ import type { LanguageProvider } from "../language-provider";
  * @param id - The language ID string (must match package.json contributes.languages).
  * @param formatFn - Pure function that transforms document text into TextEdits.
  */
-export function createFormatOnlyProvider(
-    id: string,
-    formatFn: (text: string) => FormatResult,
-): LanguageProvider {
+export function createFormatOnlyProvider(id: string, formatFn: (text: string) => FormatResult): LanguageProvider {
     return {
         id,
         async init(_context: ProviderContext): Promise<void> {

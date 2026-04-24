@@ -83,7 +83,7 @@ export function REGEX_TRA_REF(entryNum: string): RegExp {
 export function REGEX_MSG_REF(entryNum: string): RegExp {
     return new RegExp(
         `(?:${msgFunctionsPattern})\\(${entryNum}(?!\\d)|floater_rand\\(\\d+\\s*,\\s*${entryNum}(?!\\d)`,
-        "g"
+        "g",
     );
 }
 

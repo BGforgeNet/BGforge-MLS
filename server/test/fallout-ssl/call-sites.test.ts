@@ -86,7 +86,10 @@ end
     });
 
     it("collects GVAR identifiers from real dclara.ssl fixture", () => {
-        const sslPath = resolve(__dirname, "../../../external/fallout/Fallout2_Restoration_Project/scripts_src/den/dclara.ssl");
+        const sslPath = resolve(
+            __dirname,
+            "../../../external/fallout/Fallout2_Restoration_Project/scripts_src/den/dclara.ssl",
+        );
         const text = readFileSync(sslPath, "utf-8");
         const { refs } = parseFile(TEST_URI, text);
 
@@ -106,7 +109,7 @@ end
         const result = parseFile(TEST_URI, text);
         // Symbols: should contain my_proc
         expect(result.symbols.length).toBeGreaterThanOrEqual(1);
-        expect(result.symbols.some(s => s.name === "my_proc")).toBe(true);
+        expect(result.symbols.some((s) => s.name === "my_proc")).toBe(true);
         // Refs: should contain my_proc identifiers
         const procRefs = result.refs.get("my_proc");
         expect(procRefs).toBeDefined();

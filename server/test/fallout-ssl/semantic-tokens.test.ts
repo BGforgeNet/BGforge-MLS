@@ -27,7 +27,7 @@ function getLine(text: string, line: number): string {
 
 function tokenTexts(text: string): string[] {
     return getSemanticTokenSpans(text).map((span) =>
-        getLine(text, span.line).slice(span.startChar, span.startChar + span.length)
+        getLine(text, span.line).slice(span.startChar, span.startChar + span.length),
     );
 }
 
@@ -43,7 +43,7 @@ end
         const spans = getSemanticTokenSpans(text);
 
         expect(spans).toHaveLength(4);
-        expect(spans.every(span => span.tokenType === SemanticTokenTypes.parameter)).toBe(true);
+        expect(spans.every((span) => span.tokenType === SemanticTokenTypes.parameter)).toBe(true);
         expect(tokenTexts(text)).toEqual(["who", "who", "amount", "who"]);
     });
 
@@ -70,7 +70,7 @@ end
         const spans = getSemanticTokenSpans(text);
 
         expect(spans).toHaveLength(2);
-        expect(spans.map(span => span.line)).toEqual([2, 5]);
+        expect(spans.map((span) => span.line)).toEqual([2, 5]);
     });
 
     it("does not emit non-parameter locals or globals", () => {
@@ -95,7 +95,7 @@ end
         const spans = getSemanticTokenSpans(text);
 
         expect(spans).toHaveLength(2);
-        expect(spans.every(span => span.tokenType === SemanticTokenTypes.parameter)).toBe(true);
+        expect(spans.every((span) => span.tokenType === SemanticTokenTypes.parameter)).toBe(true);
         expect(tokenTexts(text)).toEqual(["a", "b"]);
     });
 

@@ -41,9 +41,14 @@ const TAGS_WITH_TYPE: ReadonlySet<string> = new Set([
 /** Detail strings for each tag group. First entry is the primary description, rest are aliases. */
 const TAG_DETAILS: ReadonlyMap<string, string> = new Map([
     // Param tags
-    ...JSDOC_PARAM_TAGS.map((t, i) => [t, i === 0 ? "Function parameter" : `Function parameter (alias for @${JSDOC_PARAM_TAGS[0]})`] as const),
+    ...JSDOC_PARAM_TAGS.map(
+        (t, i) =>
+            [t, i === 0 ? "Function parameter" : `Function parameter (alias for @${JSDOC_PARAM_TAGS[0]})`] as const,
+    ),
     // Return tags
-    ...JSDOC_RETURN_TAGS.map((t, i) => [t, i === 0 ? "Return type" : `Return type (alias for @${JSDOC_RETURN_TAGS[0]})`] as const),
+    ...JSDOC_RETURN_TAGS.map(
+        (t, i) => [t, i === 0 ? "Return type" : `Return type (alias for @${JSDOC_RETURN_TAGS[0]})`] as const,
+    ),
     // Standalone tags
     [JSDOC_STANDALONE_TAGS[0], "Variable type"],
     [JSDOC_STANDALONE_TAGS[1], "Mark as deprecated"],
@@ -55,9 +60,7 @@ const TAG_DETAILS: ReadonlyMap<string, string> = new Map([
  * Does NOT match: `@param {int} ` (closing brace), `@param int ` (word + space), `@deprecated `.
  * Built dynamically from TAGS_WITH_TYPE to stay in sync with canonical lists.
  */
-const TYPE_POSITION_RE = new RegExp(
-    `@(?:${[...TAGS_WITH_TYPE].join("|")})\\s+\\{?\\w*$`
-);
+const TYPE_POSITION_RE = new RegExp(`@(?:${[...TAGS_WITH_TYPE].join("|")})\\s+\\{?\\w*$`);
 
 /** Regex for tag position: cursor is at `@` or `@partial_name`. */
 const TAG_POSITION_RE = /@\w*$/;
@@ -91,10 +94,7 @@ export function getJsdocPositionKind(linePrefix: string): JsdocPositionKind {
  * @param linePrefix Line text from column 0 up to the cursor position
  * @returns Array of completion items based on position
  */
-export function getJsdocCompletions(
-    types: ReadonlyMap<string, TypeMeta>,
-    linePrefix: string,
-): CompletionItem[] {
+export function getJsdocCompletions(types: ReadonlyMap<string, TypeMeta>, linePrefix: string): CompletionItem[] {
     const kind = getJsdocPositionKind(linePrefix);
     if (kind === JsdocPositionKind.Tag) {
         return getJsdocTagCompletions();
@@ -114,17 +114,22 @@ function getJsdocTagCompletions(): CompletionItem[] {
     return [...ALL_JSDOC_TAG_NAMES].map((name) => {
         const expectsType = TAGS_WITH_TYPE.has(name);
         const suffix = expectsType ? " " : "";
-        return {label:`@${name}`,insertText:`${name}${suffix}`,filterText:name,kind:CompletionItemKind.Keyword,detail:TAG_DETAILS.get(name)??name, ...(expectsType?{command:RETRIGGER_CMD}:{})};
+        return {
+            label: `@${name}`,
+            insertText: `${name}${suffix}`,
+            filterText: name,
+            kind: CompletionItemKind.Keyword,
+            detail: TAG_DETAILS.get(name) ?? name,
+            ...(expectsType ? { command: RETRIGGER_CMD } : {}),
+        };
     });
 }
 
 /** Build type completion items from language-specific metadata. */
 function getJsdocTypeCompletions(types: ReadonlyMap<string, TypeMeta>): CompletionItem[] {
-    return [...types].map(
-        ([label, { detail }]) => ({
-            label,
-            detail,
-            kind: CompletionItemKind.TypeParameter,
-        }),
-    );
+    return [...types].map(([label, { detail }]) => ({
+        label,
+        detail,
+        kind: CompletionItemKind.TypeParameter,
+    }));
 }

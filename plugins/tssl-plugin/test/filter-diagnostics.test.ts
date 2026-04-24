@@ -42,15 +42,13 @@ describe("engineProcedureNames", () => {
 
 describe("extractIdentifierFromTS6133", () => {
     it("extracts identifier from string message", () => {
-        expect(
-            extractIdentifierFromTS6133("'start' is declared but its value is never read.")
-        ).toBe("start");
+        expect(extractIdentifierFromTS6133("'start' is declared but its value is never read.")).toBe("start");
     });
 
     it("extracts identifier from double-quoted message", () => {
-        expect(
-            extractIdentifierFromTS6133('"talk_p_proc" is declared but its value is never read.')
-        ).toBe("talk_p_proc");
+        expect(extractIdentifierFromTS6133('"talk_p_proc" is declared but its value is never read.')).toBe(
+            "talk_p_proc",
+        );
     });
 
     it("extracts identifier from DiagnosticMessageChain", () => {
@@ -91,18 +89,13 @@ describe("filterEngineProcedureDiagnostics", () => {
     });
 
     it("keeps TS6133 for non-engine identifiers", () => {
-        const diagnostics = [
-            makeDiagnostic(6133, "'myVar' is declared but its value is never read."),
-        ];
+        const diagnostics = [makeDiagnostic(6133, "'myVar' is declared but its value is never read.")];
         const result = filterEngineProcedureDiagnostics(diagnostics);
         expect(result).toHaveLength(1);
     });
 
     it("keeps non-6133 diagnostics unchanged", () => {
-        const diagnostics = [
-            makeDiagnostic(2304, "Cannot find name 'foo'."),
-            makeDiagnostic(1005, "';' expected."),
-        ];
+        const diagnostics = [makeDiagnostic(2304, "Cannot find name 'foo'."), makeDiagnostic(1005, "';' expected.")];
         const result = filterEngineProcedureDiagnostics(diagnostics);
         expect(result).toHaveLength(2);
     });
@@ -127,9 +120,7 @@ describe("filterEngineProcedureDiagnostics", () => {
     });
 
     it("returns new array (immutable)", () => {
-        const diagnostics = [
-            makeDiagnostic(2304, "Cannot find name 'foo'."),
-        ];
+        const diagnostics = [makeDiagnostic(2304, "Cannot find name 'foo'.")];
         const result = filterEngineProcedureDiagnostics(diagnostics);
         expect(result).not.toBe(diagnostics);
     });

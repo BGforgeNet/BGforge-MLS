@@ -17,10 +17,7 @@ import { SyntaxType } from "./tree-sitter.d";
  * Tied to SyntaxType rather than plain strings so adding/removing a keyword
  * requires updating the grammar first — the compiler catches stale entries.
  */
-const SET_SYNTAX_TYPES: ReadonlySet<SyntaxType> = new Set([
-    SyntaxType.PatchSet,
-    SyntaxType.ActionOuterSet,
-]);
+const SET_SYNTAX_TYPES: ReadonlySet<SyntaxType> = new Set([SyntaxType.PatchSet, SyntaxType.ActionOuterSet]);
 
 const SPRINT_SYNTAX_TYPES: ReadonlySet<SyntaxType> = new Set([
     SyntaxType.PatchSprint,
@@ -75,9 +72,9 @@ export function buildFunctionCallSnippet(callable: CallableInfo, name: string, p
     // When params info is available, check if any params exist.
     // When params is undefined (static symbols from YAML), assume params may exist.
     const params = callable.params;
-    const hasParams = params !== undefined
-        && (params.intVar.length > 0 || params.strVar.length > 0
-            || params.ret.length > 0 || params.retArray.length > 0);
+    const hasParams =
+        params !== undefined &&
+        (params.intVar.length > 0 || params.strVar.length > 0 || params.ret.length > 0 || params.retArray.length > 0);
     const mayHaveParams = params === undefined || hasParams;
 
     // Without prefix (lafName/lpfName context), only generate snippet if may have params
@@ -98,13 +95,12 @@ export function buildFunctionCallSnippet(callable: CallableInfo, name: string, p
     }
 
     // If any required input params or any RET params exist, build explicit param blocks
-    const requiredInt = params?.intVar.filter(p => p.required) ?? [];
-    const requiredStr = params?.strVar.filter(p => p.required) ?? [];
+    const requiredInt = params?.intVar.filter((p) => p.required) ?? [];
+    const requiredStr = params?.strVar.filter((p) => p.required) ?? [];
     const retParams = params?.ret ?? [];
     const retArrayParams = params?.retArray ?? [];
 
-    if (requiredInt.length > 0 || requiredStr.length > 0
-        || retParams.length > 0 || retArrayParams.length > 0) {
+    if (requiredInt.length > 0 || requiredStr.length > 0 || retParams.length > 0 || retArrayParams.length > 0) {
         const lines = [firstLine];
         let tabStop = 1;
         tabStop = appendParamBlock(lines, "INT_VAR", requiredInt, tabStop);
@@ -127,16 +123,11 @@ export function buildFunctionCallSnippet(callable: CallableInfo, name: string, p
  * NOTE: This mirrors the alignment logic in outputAlignedAssignments() in format/utils.ts.
  * If formatting rules change (indentation, alignment, separator), update both places.
  */
-function appendParamBlock(
-    lines: string[],
-    keyword: string,
-    params: readonly CallableParam[],
-    tabStop: number,
-): number {
+function appendParamBlock(lines: string[], keyword: string, params: readonly CallableParam[], tabStop: number): number {
     if (params.length === 0) {
         return tabStop;
     }
-    const maxNameLen = Math.max(...params.map(p => p.name.length));
+    const maxNameLen = Math.max(...params.map((p) => p.name.length));
     lines.push(`${KEYWORD_INDENT}${keyword}`);
     for (const p of params) {
         const padding = " ".repeat(maxNameLen - p.name.length);
@@ -150,11 +141,7 @@ function appendParamBlock(
  * RET supports both `RET var = expr` and the short form `RET var`.
  * We insert the short form since it covers the common case.
  */
-function appendRetBlock(
-    lines: string[],
-    keyword: "RET" | "RET_ARRAY",
-    params: readonly string[],
-): void {
+function appendRetBlock(lines: string[], keyword: "RET" | "RET_ARRAY", params: readonly string[]): void {
     if (params.length === 0) {
         return;
     }

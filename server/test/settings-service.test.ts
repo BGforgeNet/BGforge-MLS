@@ -13,9 +13,7 @@ describe("settings-service", () => {
     });
 
     it("throws if getDocumentSettings called before init", () => {
-        expect(() => getDocumentSettings("file:///test.ts")).toThrow(
-            "Settings service not initialized"
-        );
+        expect(() => getDocumentSettings("file:///test.ts")).toThrow("Settings service not initialized");
     });
 
     it("delegates to the registered getter after init", async () => {

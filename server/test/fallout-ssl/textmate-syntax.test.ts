@@ -31,7 +31,9 @@ function getTokenScopes(grammarToUse: IGrammar, text: string, lineNumber: number
         const startIndex = line.indexOf(target);
         expect(startIndex).toBeGreaterThanOrEqual(0);
         const endIndex = startIndex + target.length;
-        const token = tokenized.tokens.find(({ startIndex: tokenStart, endIndex: tokenEnd }) => tokenStart <= startIndex && tokenEnd >= endIndex);
+        const token = tokenized.tokens.find(
+            ({ startIndex: tokenStart, endIndex: tokenEnd }) => tokenStart <= startIndex && tokenEnd >= endIndex,
+        );
         expect(token).toBeDefined();
         return token!.scopes;
     }
@@ -57,7 +59,10 @@ beforeAll(async () => {
                 return rawGrammar;
             }
             if (scopeName === "source.fallout-ssl-tooltip") {
-                const rawGrammar = parseRawGrammar(readFileSync(TOOLTIP_SYNTAX_PATH, "utf-8"), TOOLTIP_SYNTAX_PATH) as IRawGrammar;
+                const rawGrammar = parseRawGrammar(
+                    readFileSync(TOOLTIP_SYNTAX_PATH, "utf-8"),
+                    TOOLTIP_SYNTAX_PATH,
+                ) as IRawGrammar;
                 return rawGrammar;
             }
             return null;

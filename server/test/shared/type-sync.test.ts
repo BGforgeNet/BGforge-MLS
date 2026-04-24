@@ -90,7 +90,7 @@ describe("JSDoc type sync", () => {
             // @type annotations but not in braceless @param/@ret patterns, so they appear
             // in the completion map but not in the single-word type name list.
             const nameSet = new Set(WEIDU_JSDOC_TYPE_NAMES);
-            const extraKeys = [...WEIDU_JSDOC_TYPES.keys()].filter(k => !nameSet.has(k));
+            const extraKeys = [...WEIDU_JSDOC_TYPES.keys()].filter((k) => !nameSet.has(k));
             for (const key of extraKeys) {
                 expect(key).toContain(" ");
             }

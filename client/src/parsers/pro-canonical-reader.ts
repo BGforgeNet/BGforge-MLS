@@ -7,11 +7,7 @@ import { clampNumericValue } from "./binary-format-contract";
 import { resolveRawValueFromDisplay } from "./display-lookups";
 import { createFieldKey, toSemanticFieldKey } from "./presentation-schema";
 import { parseWithSchemaValidation } from "./schema-validation";
-import {
-    CRITTER_BASE_PRIMARY,
-    CRITTER_BASE_SECONDARY,
-    CRITTER_SKILLS,
-} from "./pro-types";
+import { CRITTER_BASE_PRIMARY, CRITTER_BASE_SECONDARY, CRITTER_SKILLS } from "./pro-types";
 import type { ParsedField, ParsedGroup, ParseResult } from "./types";
 import {
     proCanonicalSnapshotSchema,
@@ -66,11 +62,22 @@ function readFieldNumber(group: ParsedGroup, fieldName: string, fieldPath: strin
     throw new Error(`Field is not numeric: ${fullFieldPath}`);
 }
 
-function mapGroupFields(group: ParsedGroup, mapping: ReadonlyArray<readonly [fieldName: string, key: string]>): Record<string, number> {
-    return Object.fromEntries(mapping.map(([fieldName, key]) => [key, readFieldNumber(group, fieldName, `${group.name}`)]));
+function mapGroupFields(
+    group: ParsedGroup,
+    mapping: ReadonlyArray<readonly [fieldName: string, key: string]>,
+): Record<string, number> {
+    return Object.fromEntries(
+        mapping.map(([fieldName, key]) => [key, readFieldNumber(group, fieldName, `${group.name}`)]),
+    );
 }
 
-function readClampedFieldNumber(group: ParsedGroup, fieldName: string, sectionName: string, fieldKey: string, type: string): number {
+function readClampedFieldNumber(
+    group: ParsedGroup,
+    fieldName: string,
+    sectionName: string,
+    fieldKey: string,
+    type: string,
+): number {
     return clampNumericValue(readFieldNumber(group, fieldName, sectionName), type, { format: "pro", fieldKey });
 }
 
@@ -85,7 +92,13 @@ function rebuildProCanonicalSnapshot(parseResult: ParseResult): ProCanonicalSnap
         frmType: readFieldNumber(header, "FRM Type", "Header"),
         frmId: readFieldNumber(header, "FRM ID", "Header"),
         lightRadius: readClampedFieldNumber(header, "Light Radius", "Header", "pro.header.lightRadius", "uint32"),
-        lightIntensity: readClampedFieldNumber(header, "Light Intensity", "Header", "pro.header.lightIntensity", "uint32"),
+        lightIntensity: readClampedFieldNumber(
+            header,
+            "Light Intensity",
+            "Header",
+            "pro.header.lightIntensity",
+            "uint32",
+        ),
         flags: readFieldNumber(header, "Flags", "Header"),
     };
 
@@ -113,10 +126,22 @@ function rebuildProCanonicalSnapshot(parseResult: ParseResult): ProCanonicalSnap
         sections.armorStats = {
             ac: readFieldNumber(armorStats, "AC", "Armor Stats"),
             damageResistance: mapGroupFields(getGroup(armorStats, "Damage Resistance"), [
-                ["Normal", "normal"], ["Laser", "laser"], ["Fire", "fire"], ["Plasma", "plasma"], ["Electrical", "electrical"], ["EMP", "emp"], ["Explosion", "explosion"],
+                ["Normal", "normal"],
+                ["Laser", "laser"],
+                ["Fire", "fire"],
+                ["Plasma", "plasma"],
+                ["Electrical", "electrical"],
+                ["EMP", "emp"],
+                ["Explosion", "explosion"],
             ]),
             damageThreshold: mapGroupFields(getGroup(armorStats, "Damage Threshold"), [
-                ["Normal", "normal"], ["Laser", "laser"], ["Fire", "fire"], ["Plasma", "plasma"], ["Electrical", "electrical"], ["EMP", "emp"], ["Explosion", "explosion"],
+                ["Normal", "normal"],
+                ["Laser", "laser"],
+                ["Fire", "fire"],
+                ["Plasma", "plasma"],
+                ["Electrical", "electrical"],
+                ["EMP", "emp"],
+                ["Explosion", "explosion"],
             ]),
             perk: readFieldNumber(armorStats, "Perk", "Armor Stats"),
             maleFrmId: readFieldNumber(armorStats, "Male FRM ID", "Armor Stats"),
@@ -170,11 +195,33 @@ function rebuildProCanonicalSnapshot(parseResult: ParseResult): ProCanonicalSnap
     const drugStats = getOptionalGroup(parseResult.root, "Drug Stats");
     if (drugStats) {
         sections.drugStats = {
-            affectedStats: mapGroupFields(getGroup(drugStats, "Affected Stats"), [["Stat 0", "stat0"], ["Stat 1", "stat1"], ["Stat 2", "stat2"]]),
-            instantEffect: mapGroupFields(getGroup(drugStats, "Instant Effect"), [["Amount 0", "amount0"], ["Amount 1", "amount1"], ["Amount 2", "amount2"]]),
-            delayedEffect1: mapGroupFields(getGroup(drugStats, "Delayed Effect 1"), [["Duration", "duration"], ["Amount 0", "amount0"], ["Amount 1", "amount1"], ["Amount 2", "amount2"]]),
-            delayedEffect2: mapGroupFields(getGroup(drugStats, "Delayed Effect 2"), [["Duration", "duration"], ["Amount 0", "amount0"], ["Amount 1", "amount1"], ["Amount 2", "amount2"]]),
-            addiction: mapGroupFields(getGroup(drugStats, "Addiction"), [["Rate", "rate"], ["Effect", "effect"], ["Onset", "onset"]]),
+            affectedStats: mapGroupFields(getGroup(drugStats, "Affected Stats"), [
+                ["Stat 0", "stat0"],
+                ["Stat 1", "stat1"],
+                ["Stat 2", "stat2"],
+            ]),
+            instantEffect: mapGroupFields(getGroup(drugStats, "Instant Effect"), [
+                ["Amount 0", "amount0"],
+                ["Amount 1", "amount1"],
+                ["Amount 2", "amount2"],
+            ]),
+            delayedEffect1: mapGroupFields(getGroup(drugStats, "Delayed Effect 1"), [
+                ["Duration", "duration"],
+                ["Amount 0", "amount0"],
+                ["Amount 1", "amount1"],
+                ["Amount 2", "amount2"],
+            ]),
+            delayedEffect2: mapGroupFields(getGroup(drugStats, "Delayed Effect 2"), [
+                ["Duration", "duration"],
+                ["Amount 0", "amount0"],
+                ["Amount 1", "amount1"],
+                ["Amount 2", "amount2"],
+            ]),
+            addiction: mapGroupFields(getGroup(drugStats, "Addiction"), [
+                ["Rate", "rate"],
+                ["Effect", "effect"],
+                ["Onset", "onset"],
+            ]),
         };
     }
 
@@ -211,59 +258,114 @@ function rebuildProCanonicalSnapshot(parseResult: ParseResult): ProCanonicalSnap
 
     const basePrimaryStats = getOptionalGroup(parseResult.root, "Base Primary Stats");
     if (basePrimaryStats) {
-        sections.basePrimaryStats = Object.fromEntries(CRITTER_BASE_PRIMARY.map(([displayName, dataKey]) => [dataKey, readFieldNumber(basePrimaryStats, displayName, "Base Primary Stats")]));
+        sections.basePrimaryStats = Object.fromEntries(
+            CRITTER_BASE_PRIMARY.map(([displayName, dataKey]) => [
+                dataKey,
+                readFieldNumber(basePrimaryStats, displayName, "Base Primary Stats"),
+            ]),
+        );
     }
 
     const baseSecondaryStats = getOptionalGroup(parseResult.root, "Base Secondary Stats");
     if (baseSecondaryStats) {
-        sections.baseSecondaryStats = Object.fromEntries(CRITTER_BASE_SECONDARY.map(([displayName, dataKey]) => [dataKey, readFieldNumber(baseSecondaryStats, displayName, "Base Secondary Stats")]));
+        sections.baseSecondaryStats = Object.fromEntries(
+            CRITTER_BASE_SECONDARY.map(([displayName, dataKey]) => [
+                dataKey,
+                readFieldNumber(baseSecondaryStats, displayName, "Base Secondary Stats"),
+            ]),
+        );
     }
 
     const baseDamageThreshold = getOptionalGroup(parseResult.root, "Base Damage Threshold");
     if (baseDamageThreshold) {
         sections.baseDamageThreshold = mapGroupFields(baseDamageThreshold, [
-            ["Normal", "normal"], ["Laser", "laser"], ["Fire", "fire"], ["Plasma", "plasma"], ["Electrical", "electrical"], ["EMP", "emp"], ["Explosive", "explosive"],
+            ["Normal", "normal"],
+            ["Laser", "laser"],
+            ["Fire", "fire"],
+            ["Plasma", "plasma"],
+            ["Electrical", "electrical"],
+            ["EMP", "emp"],
+            ["Explosive", "explosive"],
         ]);
     }
 
     const baseDamageResistance = getOptionalGroup(parseResult.root, "Base Damage Resistance");
     if (baseDamageResistance) {
         sections.baseDamageResistance = mapGroupFields(baseDamageResistance, [
-            ["Normal", "normal"], ["Laser", "laser"], ["Fire", "fire"], ["Plasma", "plasma"], ["Electrical", "electrical"], ["EMP", "emp"], ["Explosive", "explosive"], ["Radiation", "radiation"], ["Poison", "poison"],
+            ["Normal", "normal"],
+            ["Laser", "laser"],
+            ["Fire", "fire"],
+            ["Plasma", "plasma"],
+            ["Electrical", "electrical"],
+            ["EMP", "emp"],
+            ["Explosive", "explosive"],
+            ["Radiation", "radiation"],
+            ["Poison", "poison"],
         ]);
     }
 
     const bonusPrimaryStats = getOptionalGroup(parseResult.root, "Bonus Primary Stats");
     if (bonusPrimaryStats) {
         sections.bonusPrimaryStats = mapGroupFields(bonusPrimaryStats, [
-            ["Strength", "strength"], ["Perception", "perception"], ["Endurance", "endurance"], ["Charisma", "charisma"], ["Intelligence", "intelligence"], ["Agility", "agility"], ["Luck", "luck"],
+            ["Strength", "strength"],
+            ["Perception", "perception"],
+            ["Endurance", "endurance"],
+            ["Charisma", "charisma"],
+            ["Intelligence", "intelligence"],
+            ["Agility", "agility"],
+            ["Luck", "luck"],
         ]);
     }
 
     const bonusSecondaryStats = getOptionalGroup(parseResult.root, "Bonus Secondary Stats");
     if (bonusSecondaryStats) {
         sections.bonusSecondaryStats = mapGroupFields(bonusSecondaryStats, [
-            ["Hit Points", "hitPoints"], ["Action Points", "actionPoints"], ["Armor Class", "armorClass"], ["Unarmed Damage", "unarmedDamage"], ["Melee Damage", "meleeDamage"], ["Carry Weight", "carryWeight"], ["Sequence", "sequence"], ["Healing Rate", "healingRate"], ["Critical Chance", "criticalChance"], ["Better Criticals", "betterCriticals"],
+            ["Hit Points", "hitPoints"],
+            ["Action Points", "actionPoints"],
+            ["Armor Class", "armorClass"],
+            ["Unarmed Damage", "unarmedDamage"],
+            ["Melee Damage", "meleeDamage"],
+            ["Carry Weight", "carryWeight"],
+            ["Sequence", "sequence"],
+            ["Healing Rate", "healingRate"],
+            ["Critical Chance", "criticalChance"],
+            ["Better Criticals", "betterCriticals"],
         ]);
     }
 
     const bonusDamageThreshold = getOptionalGroup(parseResult.root, "Bonus Damage Threshold");
     if (bonusDamageThreshold) {
         sections.bonusDamageThreshold = mapGroupFields(bonusDamageThreshold, [
-            ["Normal", "normal"], ["Laser", "laser"], ["Fire", "fire"], ["Plasma", "plasma"], ["Electrical", "electrical"], ["EMP", "emp"], ["Explosive", "explosive"],
+            ["Normal", "normal"],
+            ["Laser", "laser"],
+            ["Fire", "fire"],
+            ["Plasma", "plasma"],
+            ["Electrical", "electrical"],
+            ["EMP", "emp"],
+            ["Explosive", "explosive"],
         ]);
     }
 
     const bonusDamageResistance = getOptionalGroup(parseResult.root, "Bonus Damage Resistance");
     if (bonusDamageResistance) {
         sections.bonusDamageResistance = mapGroupFields(bonusDamageResistance, [
-            ["Normal", "normal"], ["Laser", "laser"], ["Fire", "fire"], ["Plasma", "plasma"], ["Electrical", "electrical"], ["EMP", "emp"], ["Explosive", "explosive"], ["Radiation", "radiation"], ["Poison", "poison"],
+            ["Normal", "normal"],
+            ["Laser", "laser"],
+            ["Fire", "fire"],
+            ["Plasma", "plasma"],
+            ["Electrical", "electrical"],
+            ["EMP", "emp"],
+            ["Explosive", "explosive"],
+            ["Radiation", "radiation"],
+            ["Poison", "poison"],
         ]);
     }
 
     const skills = getOptionalGroup(parseResult.root, "Skills");
     if (skills) {
-        sections.skills = Object.fromEntries(CRITTER_SKILLS.map(([displayName, dataKey]) => [dataKey, readFieldNumber(skills, displayName, "Skills")]));
+        sections.skills = Object.fromEntries(
+            CRITTER_SKILLS.map(([displayName, dataKey]) => [dataKey, readFieldNumber(skills, displayName, "Skills")]),
+        );
     }
 
     const demographics = getOptionalGroup(parseResult.root, "Demographics");
@@ -307,7 +409,7 @@ function rebuildProCanonicalSnapshot(parseResult: ParseResult): ProCanonicalSnap
                 "Walk Through",
                 "Door Properties",
                 "pro.doorProperties.walkThrough",
-                "uint32"
+                "uint32",
             ),
             unknown: readFieldNumber(doorProperties, "Unknown", "Door Properties"),
         };
@@ -321,14 +423,14 @@ function rebuildProCanonicalSnapshot(parseResult: ParseResult): ProCanonicalSnap
                 "Dest Tile",
                 "Stairs Properties",
                 "pro.stairsProperties.destTile",
-                "uint32"
+                "uint32",
             ),
             destElevation: readClampedFieldNumber(
                 stairsProperties,
                 "Dest Elevation",
                 "Stairs Properties",
                 "pro.stairsProperties.destElevation",
-                "uint32"
+                "uint32",
             ),
             destMap: readFieldNumber(stairsProperties, "Dest Map", "Stairs Properties"),
         };
@@ -350,14 +452,14 @@ function rebuildProCanonicalSnapshot(parseResult: ParseResult): ProCanonicalSnap
                 "Dest Tile",
                 "Ladder Properties",
                 "pro.ladderProperties.destTile",
-                "uint32"
+                "uint32",
             ),
             destElevation: readClampedFieldNumber(
                 ladderProperties,
                 "Dest Elevation",
                 "Ladder Properties",
                 "pro.ladderProperties.destElevation",
-                "uint32"
+                "uint32",
             ),
         };
     }
@@ -396,26 +498,34 @@ function rebuildProCanonicalSnapshot(parseResult: ParseResult): ProCanonicalSnap
         };
     }
 
-    return parseWithSchemaValidation(proCanonicalSnapshotSchema, {
-        schemaVersion: 1,
-        format: "pro",
-        formatName: parseResult.formatName,
-        document: {
-            header: headerData,
-            sections,
+    return parseWithSchemaValidation(
+        proCanonicalSnapshotSchema,
+        {
+            schemaVersion: 1,
+            format: "pro",
+            formatName: parseResult.formatName,
+            document: {
+                header: headerData,
+                sections,
+            },
         },
-    }, "Invalid PRO canonical snapshot");
+        "Invalid PRO canonical snapshot",
+    );
 }
 
 export function createProCanonicalSnapshot(parseResult: ParseResult): ProCanonicalSnapshot {
     const embeddedDocument = getProCanonicalDocument(parseResult);
     if (embeddedDocument) {
-        return parseWithSchemaValidation(proCanonicalSnapshotSchema, {
-            schemaVersion: 1,
-            format: "pro",
-            formatName: parseResult.formatName,
-            document: embeddedDocument,
-        }, "Invalid PRO canonical document");
+        return parseWithSchemaValidation(
+            proCanonicalSnapshotSchema,
+            {
+                schemaVersion: 1,
+                format: "pro",
+                formatName: parseResult.formatName,
+                document: embeddedDocument,
+            },
+            "Invalid PRO canonical document",
+        );
     }
 
     return rebuildProCanonicalSnapshot(parseResult);

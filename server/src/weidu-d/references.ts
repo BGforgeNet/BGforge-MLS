@@ -39,11 +39,11 @@ export function findReferences(
 
     const labelName = labelInfo.labelNode.text;
     const refs = findAllDialogLabelRefs(tree.rootNode, labelInfo.dialogFile, labelName);
-    const hasLocalDefinition = refs.some(r => r.isDefinition);
+    const hasLocalDefinition = refs.some((r) => r.isDefinition);
 
     const localLocations = refs
-        .filter(ref => includeDeclaration || !ref.isDefinition)
-        .map(ref => ({
+        .filter((ref) => includeDeclaration || !ref.isDefinition)
+        .map((ref) => ({
             uri,
             range: makeRange(ref.node),
         }));
@@ -51,8 +51,7 @@ export function findReferences(
     // Add cross-file references from the index
     if (refsIndex) {
         const compositeKey = `${labelInfo.dialogFile}:${labelName}`;
-        const crossFileRefs = refsIndex.lookup(compositeKey)
-            .filter(loc => loc.uri !== uri);
+        const crossFileRefs = refsIndex.lookup(compositeKey).filter((loc) => loc.uri !== uri);
 
         // If no local definition, return only cross-file results (e.g., EXTEND_TOP
         // referencing a label defined in another file).

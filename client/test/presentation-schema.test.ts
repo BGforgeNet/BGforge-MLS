@@ -30,19 +30,11 @@ describe("presentation-schema", () => {
     });
 
     it("merges pattern metadata for dynamic MAP fields", () => {
-        expect(resolveFieldPresentation(
-            "map",
-            "map.objects.elevations[].objects[].base.pid",
-            "PID",
-        )).toEqual({
+        expect(resolveFieldPresentation("map", "map.objects.elevations[].objects[].base.pid", "PID")).toEqual({
             numericFormat: "hex32",
         });
 
-        expect(resolveFieldPresentation(
-            "map",
-            "map.scripts[].extents[].slots[].flags",
-            "Entry 0 Flags",
-        )).toEqual({
+        expect(resolveFieldPresentation("map", "map.scripts[].extents[].slots[].flags", "Entry 0 Flags")).toEqual({
             presentationType: "flags",
             flagOptions: expect.objectContaining({
                 "1": "Loaded",

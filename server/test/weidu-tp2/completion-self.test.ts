@@ -58,7 +58,7 @@ describe("weidu-tp2: phantom assignment rejection", () => {
     REPLACE_TEXTUALLY ~foo~ ~bar~
   END`;
         const completions = localCompletion(text);
-        const fake = completions.find(c => c.label === "COPY_EXISTN");
+        const fake = completions.find((c) => c.label === "COPY_EXISTN");
         expect(fake).toBeUndefined();
     });
 
@@ -68,41 +68,41 @@ describe("weidu-tp2: phantom assignment rejection", () => {
     REPLACE_TEXTUALLY ~foo~ ~bar~
   END`;
         const vars = parseHeaderVariables(text, "file:///test.tp2");
-        const fake = vars.find(v => v.name === "COPY_EXISTN");
+        const fake = vars.find((v) => v.name === "COPY_EXISTN");
         expect(fake).toBeUndefined();
     });
 
     it("should still extract real variables from OUTER_SET", () => {
         const text = `OUTER_SET my_var = 42`;
         const completions = localCompletion(text);
-        expect(completions.find(c => c.label === "my_var")).toBeDefined();
+        expect(completions.find((c) => c.label === "my_var")).toBeDefined();
     });
 
     it("should still extract real variables from OUTER_SPRINT", () => {
         const text = `OUTER_SPRINT my_str ~hello~`;
         const vars = parseHeaderVariables(text, "file:///test.tp2");
-        expect(vars.find(v => v.name === "my_str")).toBeDefined();
+        expect(vars.find((v) => v.name === "my_str")).toBeDefined();
     });
 
     it("should still extract real patch_assignment variables (bare SET)", () => {
         // In .tpp context, bare assignments like "foo = 5" are valid
         const text = `foo = 5`;
         const completions = localCompletion(text);
-        expect(completions.find(c => c.label === "foo")).toBeDefined();
+        expect(completions.find((c) => c.label === "foo")).toBeDefined();
     });
 
     it("should NOT extract variables from other broken keywords", () => {
         // Test with various partial/misspelled keywords
         const text = `COPY_EXISTIN ~file.bcs~ ~override~`;
         const completions = localCompletion(text);
-        const fake = completions.find(c => c.label === "COPY_EXISTIN");
+        const fake = completions.find((c) => c.label === "COPY_EXISTIN");
         expect(fake).toBeUndefined();
     });
 
     it("should NOT extract variables from broken APPEND keyword", () => {
         const text = `APPEN ~file.2da~ ~row data~`;
         const completions = localCompletion(text);
-        const fake = completions.find(c => c.label === "APPEN");
+        const fake = completions.find((c) => c.label === "APPEN");
         expect(fake).toBeUndefined();
     });
 
@@ -133,9 +133,7 @@ my_var`;
         const base = weiduTp2Provider.getCompletions!(uri);
         const filtered = weiduTp2Provider.filterCompletions!(base, text, position, uri);
 
-        const selfItem = filtered.find(
-            c => c.label === "my_var" && c.kind === CompletionItemKind.Variable
-        );
+        const selfItem = filtered.find((c) => c.label === "my_var" && c.kind === CompletionItemKind.Variable);
         expect(selfItem).toBeUndefined();
     });
 
@@ -151,12 +149,8 @@ alpha`;
         const filtered = weiduTp2Provider.filterCompletions!(base, text, position, uri);
 
         // "alpha" should be excluded (current word), "beta" should remain
-        const alpha = filtered.find(
-            c => c.label === "alpha" && c.kind === CompletionItemKind.Variable
-        );
-        const beta = filtered.find(
-            c => c.label === "beta" && c.kind === CompletionItemKind.Variable
-        );
+        const alpha = filtered.find((c) => c.label === "alpha" && c.kind === CompletionItemKind.Variable);
+        const beta = filtered.find((c) => c.label === "beta" && c.kind === CompletionItemKind.Variable);
         expect(alpha).toBeUndefined();
         expect(beta).toBeDefined();
     });

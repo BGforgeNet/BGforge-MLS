@@ -6,7 +6,7 @@
 // --- IElib sync surface start ---
 // These types must be structurally compatible with BGforge IElib.
 // Both projects define them independently; keep shapes and brand strings identical.
-type StrRef = number & { __brand: "StrRef" }
+type StrRef = number & { __brand: "StrRef" };
 type Point = [number, number];
 // --- IElib sync surface end ---
 

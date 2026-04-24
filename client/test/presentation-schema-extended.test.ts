@@ -92,11 +92,7 @@ describe("resolveFieldPresentation", () => {
 
     it("merges pattern presentation into base when pattern matches", () => {
         // MAP pattern field: hex32 numericFormat
-        const result = resolveFieldPresentation(
-            "map",
-            "map.objects.elevations[].objects[].base.pid",
-            "PID",
-        );
+        const result = resolveFieldPresentation("map", "map.objects.elevations[].objects[].base.pid", "PID");
         expect(result).toMatchObject({ numericFormat: "hex32" });
     });
 

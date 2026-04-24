@@ -43,7 +43,7 @@ describe("weidu-tp2 format string literal preservation", () => {
         // Note: OUTER_SET might use a different formatter, let's see.
         expect(result.text).toBe(input);
     });
-    
+
     it("should preserve space between two strings", () => {
         const input = "COPY ~src~ ~dst~\n";
         const root = getParser().parse(input).rootNode;

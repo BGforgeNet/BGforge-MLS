@@ -8,10 +8,18 @@
  */
 
 import {
-    object, u8, u16, u32, i32,
+    object,
+    u8,
+    u16,
+    u32,
+    i32,
     type Parsed,
-    Schema, Measurer,
-    type ISerialInput, type ISerialOutput, type IMeasurer, MaxValue,
+    Schema,
+    Measurer,
+    type ISerialInput,
+    type ISerialOutput,
+    type IMeasurer,
+    MaxValue,
 } from "typed-binary";
 
 // -- Custom 24-bit unsigned integer schema ----------------------------------
@@ -30,9 +38,9 @@ class Uint24Schema extends Schema<number> {
     }
 
     write(output: ISerialOutput, value: number): void {
-        output.writeUint8((value >> 16) & 0xFF);
-        output.writeUint8((value >> 8) & 0xFF);
-        output.writeUint8(value & 0xFF);
+        output.writeUint8((value >> 16) & 0xff);
+        output.writeUint8((value >> 8) & 0xff);
+        output.writeUint8(value & 0xff);
     }
 
     measure(_: number | typeof MaxValue, measurer?: IMeasurer): IMeasurer {

@@ -14,7 +14,11 @@ import { getCachedCssAsset, getCachedHtmlAsset, getCachedJsAsset } from "../webv
 import { LSP_COMMAND_PARSE_DIALOG } from "../../../shared/protocol";
 
 function getHtmlTemplate(extensionPath: string): string {
-    return getCachedHtmlAsset("dialog-tree", extensionPath, path.join("client", "src", "dialog-tree", "dialogTree.html"));
+    return getCachedHtmlAsset(
+        "dialog-tree",
+        extensionPath,
+        path.join("client", "src", "dialog-tree", "dialogTree.html"),
+    );
 }
 
 function getCss(extensionPath: string): string {
@@ -25,7 +29,11 @@ function getCss(extensionPath: string): string {
 }
 
 function getJs(extensionPath: string): string {
-    return getCachedJsAsset("dialog-tree", extensionPath, path.join("client", "out", "dialog-tree", "dialogTree-webview.js"));
+    return getCachedJsAsset(
+        "dialog-tree",
+        extensionPath,
+        path.join("client", "out", "dialog-tree", "dialogTree-webview.js"),
+    );
 }
 
 // Re-export so dialog tree builders (dialogTree.ts, dialogTree-d.ts) can import from "./shared"
@@ -40,15 +48,23 @@ function buildBreadcrumbHtml(filePath: string, iconUri: string): string {
     const segments = filePath.split(/[/\\]/).filter(Boolean);
     if (segments.length === 0) return "";
     const separator = ' <span class="breadcrumb-sep codicon codicon-chevron-right"></span> ';
-    return segments.map((s, i) => {
-        const icon = i === segments.length - 1
-            ? `<img class="breadcrumb-icon" src="${escapeHtml(iconUri)}" alt="" /> `
-            : "";
-        return `<span class="breadcrumb-segment">${icon}${escapeHtml(s)}</span>`;
-    }).join(separator);
+    return segments
+        .map((s, i) => {
+            const icon =
+                i === segments.length - 1 ? `<img class="breadcrumb-icon" src="${escapeHtml(iconUri)}" alt="" /> ` : "";
+            return `<span class="breadcrumb-segment">${icon}${escapeHtml(s)}</span>`;
+        })
+        .join(separator);
 }
 
-function getDialogPreviewHtml(treeContent: string, codiconsUri: string, extensionPath: string, fileName: string, filePath: string, iconUri: string): string {
+function getDialogPreviewHtml(
+    treeContent: string,
+    codiconsUri: string,
+    extensionPath: string,
+    fileName: string,
+    filePath: string,
+    iconUri: string,
+): string {
     // Function replacers prevent $-pattern interpretation in replacement strings
     // ($&, $', $` are special even with string search patterns).
     return getHtmlTemplate(extensionPath)
@@ -117,17 +133,24 @@ export function registerDialogPanel(
         };
 
         try {
-            const data = await client.sendRequest(ExecuteCommandRequest.type, params) as unknown;
+            const data = (await client.sendRequest(ExecuteCommandRequest.type, params)) as unknown;
             if (data == null || !config.hasData(data)) return;
 
             const treeContent = config.buildTreeHtml(data);
             const codiconsUri = dialogPanel.webview.asWebviewUri(
-                vscode.Uri.joinPath(context.extensionUri, "client", "out", "codicons", "codicon.css")
+                vscode.Uri.joinPath(context.extensionUri, "client", "out", "codicons", "codicon.css"),
             );
             const iconUri = dialogPanel.webview.asWebviewUri(
-                vscode.Uri.joinPath(context.extensionUri, config.tabIconPath)
+                vscode.Uri.joinPath(context.extensionUri, config.tabIconPath),
             );
-            dialogPanel.webview.html = getDialogPreviewHtml(treeContent, codiconsUri.toString(), context.extensionUri.fsPath, currentFileName || "dialog", currentFilePath || "", iconUri.toString());
+            dialogPanel.webview.html = getDialogPreviewHtml(
+                treeContent,
+                codiconsUri.toString(),
+                context.extensionUri.fsPath,
+                currentFileName || "dialog",
+                currentFilePath || "",
+                iconUri.toString(),
+            );
         } catch {
             // Ignore errors during refresh
         }
@@ -146,7 +169,7 @@ export function registerDialogPanel(
             if (dialogPanel && e.document.uri.toString() === currentDocumentUri) {
                 scheduleRefresh();
             }
-        })
+        }),
     );
 
     // Refresh on save (source file or translation file)
@@ -156,7 +179,7 @@ export function registerDialogPanel(
             if (doc.uri.toString() === currentDocumentUri || doc.languageId === config.translationLangId) {
                 void refreshPreview();
             }
-        })
+        }),
     );
 
     async function openPreview() {
@@ -174,7 +197,7 @@ export function registerDialogPanel(
         };
 
         try {
-            const data = await client.sendRequest(ExecuteCommandRequest.type, params) as unknown;
+            const data = (await client.sendRequest(ExecuteCommandRequest.type, params)) as unknown;
 
             if (data == null || !config.hasData(data)) {
                 vscode.window.showWarningMessage("No dialog data found");
@@ -196,14 +219,17 @@ export function registerDialogPanel(
                     "bgforgeDialogPreview",
                     `Dialog: ${fileName}`,
                     vscode.ViewColumn.Active,
-                    { enableScripts: true, localResourceRoots: [context.extensionUri] }
+                    { enableScripts: true, localResourceRoots: [context.extensionUri] },
                 );
                 dialogPanel.iconPath = vscode.Uri.joinPath(context.extensionUri, config.tabIconPath);
                 dialogPanel.webview.onDidReceiveMessage((message: DialogTreeRuntimeErrorMessage) => {
                     if (message.type !== "runtimeError") {
                         return;
                     }
-                    console.error(`Dialog preview runtime error for ${currentFilePath ?? fileName}: ${message.message}`, message.stack ?? "");
+                    console.error(
+                        `Dialog preview runtime error for ${currentFilePath ?? fileName}: ${message.message}`,
+                        message.stack ?? "",
+                    );
                     void vscode.window.showErrorMessage(`Dialog preview failed for ${fileName}: ${message.message}`);
                 });
                 dialogPanel.onDidDispose(() => {
@@ -219,14 +245,21 @@ export function registerDialogPanel(
 
             const treeContent = config.buildTreeHtml(data);
             const codiconsUri = dialogPanel.webview.asWebviewUri(
-                vscode.Uri.joinPath(context.extensionUri, "client", "out", "codicons", "codicon.css")
+                vscode.Uri.joinPath(context.extensionUri, "client", "out", "codicons", "codicon.css"),
             );
             const iconUri = dialogPanel.webview.asWebviewUri(
-                vscode.Uri.joinPath(context.extensionUri, config.tabIconPath)
+                vscode.Uri.joinPath(context.extensionUri, config.tabIconPath),
             );
 
             dialogPanel.title = `Dialog: ${fileName}`;
-            dialogPanel.webview.html = getDialogPreviewHtml(treeContent, codiconsUri.toString(), context.extensionUri.fsPath, fileName, filePath, iconUri.toString());
+            dialogPanel.webview.html = getDialogPreviewHtml(
+                treeContent,
+                codiconsUri.toString(),
+                context.extensionUri.fsPath,
+                fileName,
+                filePath,
+                iconUri.toString(),
+            );
         } catch (error) {
             const msg = error instanceof Error ? error.message : String(error);
             // Log full stack trace to Developer Tools for debugging (showErrorMessage only gets the message)

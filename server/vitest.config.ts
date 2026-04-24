@@ -22,11 +22,7 @@ export default defineConfig({
         coverage: {
             provider: "v8",
             reporter: ["text", "html", "lcov"],
-            exclude: [
-                "src/**/format/**/*.ts",
-                "src/fallout-ssl/provider.ts",
-                "src/weidu-tp2/provider.ts",
-            ],
+            exclude: ["src/**/format/**/*.ts", "src/fallout-ssl/provider.ts", "src/weidu-tp2/provider.ts"],
             thresholds: {
                 lines: 90,
                 functions: 90,

@@ -19,15 +19,7 @@ import {
     ActionFlags,
     WeaponAnimCode,
 } from "./pro-types";
-import {
-    MapElevation,
-    MapFlags,
-    ObjectFlags,
-    Rotation,
-    ScriptProc,
-    ScriptFlags,
-    Skill,
-} from "./map-types";
+import { MapElevation, MapFlags, ObjectFlags, Rotation, ScriptProc, ScriptFlags, Skill } from "./map-types";
 import { formatAdapterRegistry } from "./format-adapter";
 
 const numericFormatSchema = z.enum(["decimal", "hex32"]);
@@ -90,44 +82,162 @@ function stringifyKeys(table: Record<number, string>): Record<string, string> {
 }
 
 const scriptProcDropdown = Object.fromEntries(
-    Object.entries(ScriptProc).filter(([, value]) => value !== "none_x_bad").map(([key, value]) => [String(key), value]),
+    Object.entries(ScriptProc)
+        .filter(([, value]) => value !== "none_x_bad")
+        .map(([key, value]) => [String(key), value]),
 ) as Record<string, string>;
 
 const proPresentationSchema = formatPresentationSchema.parse({
     schemaVersion: 1,
     format: "pro",
     exactFields: {
-        "pro.header.objectType": { label: "Object Type", presentationType: "enum", enumOptions: stringifyKeys(ObjectType) },
+        "pro.header.objectType": {
+            label: "Object Type",
+            presentationType: "enum",
+            enumOptions: stringifyKeys(ObjectType),
+        },
         "pro.header.frmType": { label: "FRM Type", presentationType: "enum", enumOptions: stringifyKeys(FRMType) },
         "pro.header.flags": { label: "Flags", presentationType: "flags", flagOptions: stringifyKeys(HeaderFlags) },
-        "pro.itemProperties.subType": { label: "Sub Type", presentationType: "enum", enumOptions: stringifyKeys(ItemSubType) },
-        "pro.sceneryProperties.subType": { label: "Sub Type", presentationType: "enum", enumOptions: stringifyKeys(ScenerySubType) },
-        "pro.itemProperties.material": { label: "Material", presentationType: "enum", enumOptions: stringifyKeys(MaterialType) },
-        "pro.sceneryProperties.material": { label: "Material", presentationType: "enum", enumOptions: stringifyKeys(MaterialType) },
-        "pro.wallProperties.material": { label: "Material", presentationType: "enum", enumOptions: stringifyKeys(MaterialType) },
-        "pro.tileProperties.material": { label: "Material", presentationType: "enum", enumOptions: stringifyKeys(MaterialType) },
-        "pro.weaponStats.damageType": { label: "Damage Type", presentationType: "enum", enumOptions: stringifyKeys(DamageType) },
-        "pro.finalProperties.bodyType": { label: "Body Type", presentationType: "enum", enumOptions: stringifyKeys(BodyType) },
-        "pro.finalProperties.killType": { label: "Kill Type", presentationType: "enum", enumOptions: stringifyKeys(KillType) },
-        "pro.finalProperties.damageType": { label: "Damage Type", presentationType: "enum", enumOptions: stringifyKeys(DamageType) },
-        "pro.elevatorProperties.elevatorType": { label: "Elevator Type", presentationType: "enum", enumOptions: stringifyKeys(ElevatorType) },
-        "pro.weaponStats.animationCode": { label: "Animation Code", presentationType: "enum", enumOptions: stringifyKeys(WeaponAnimCode) },
-        "pro.drugStats.affectedStats.stat0": { label: "Stat 0", presentationType: "enum", enumOptions: stringifyKeys(StatType) },
-        "pro.drugStats.affectedStats.stat1": { label: "Stat 1", presentationType: "enum", enumOptions: stringifyKeys(StatType) },
-        "pro.drugStats.affectedStats.stat2": { label: "Stat 2", presentationType: "enum", enumOptions: stringifyKeys(StatType) },
-        "pro.critterProperties.scriptType": { label: "Script Type", presentationType: "enum", enumOptions: stringifyKeys(ProScriptType) },
-        "pro.itemProperties.scriptType": { label: "Script Type", presentationType: "enum", enumOptions: stringifyKeys(ProScriptType) },
-        "pro.sceneryProperties.scriptType": { label: "Script Type", presentationType: "enum", enumOptions: stringifyKeys(ProScriptType) },
-        "pro.wallProperties.scriptType": { label: "Script Type", presentationType: "enum", enumOptions: stringifyKeys(ProScriptType) },
-        "pro.demographics.gender": { label: "Gender", presentationType: "enum", enumOptions: { "0": "Male", "1": "Female" } },
-        "pro.doorProperties.walkThrough": { label: "Walk Through", presentationType: "enum", enumOptions: { "0": "No", "1": "Yes" } },
-        "pro.itemProperties.flagsExt": { label: "Flags Ext", presentationType: "flags", flagOptions: stringifyKeys(ItemFlagsExt) },
-        "pro.sceneryProperties.wallLightFlags": { label: "Wall Light Flags", presentationType: "flags", flagOptions: stringifyKeys(WallLightFlags) },
-        "pro.sceneryProperties.actionFlags": { label: "Action Flags", presentationType: "flags", flagOptions: stringifyKeys(ActionFlags) },
-        "pro.wallProperties.wallLightFlags": { label: "Wall Light Flags", presentationType: "flags", flagOptions: stringifyKeys(WallLightFlags) },
-        "pro.wallProperties.actionFlags": { label: "Action Flags", presentationType: "flags", flagOptions: stringifyKeys(ActionFlags) },
-        "pro.containerStats.openFlags": { label: "Open Flags", presentationType: "flags", flagOptions: stringifyKeys(ContainerFlags) },
-        "pro.critterProperties.critterFlags": { label: "Critter Flags", presentationType: "flags", flagOptions: stringifyKeys(CritterFlags) },
+        "pro.itemProperties.subType": {
+            label: "Sub Type",
+            presentationType: "enum",
+            enumOptions: stringifyKeys(ItemSubType),
+        },
+        "pro.sceneryProperties.subType": {
+            label: "Sub Type",
+            presentationType: "enum",
+            enumOptions: stringifyKeys(ScenerySubType),
+        },
+        "pro.itemProperties.material": {
+            label: "Material",
+            presentationType: "enum",
+            enumOptions: stringifyKeys(MaterialType),
+        },
+        "pro.sceneryProperties.material": {
+            label: "Material",
+            presentationType: "enum",
+            enumOptions: stringifyKeys(MaterialType),
+        },
+        "pro.wallProperties.material": {
+            label: "Material",
+            presentationType: "enum",
+            enumOptions: stringifyKeys(MaterialType),
+        },
+        "pro.tileProperties.material": {
+            label: "Material",
+            presentationType: "enum",
+            enumOptions: stringifyKeys(MaterialType),
+        },
+        "pro.weaponStats.damageType": {
+            label: "Damage Type",
+            presentationType: "enum",
+            enumOptions: stringifyKeys(DamageType),
+        },
+        "pro.finalProperties.bodyType": {
+            label: "Body Type",
+            presentationType: "enum",
+            enumOptions: stringifyKeys(BodyType),
+        },
+        "pro.finalProperties.killType": {
+            label: "Kill Type",
+            presentationType: "enum",
+            enumOptions: stringifyKeys(KillType),
+        },
+        "pro.finalProperties.damageType": {
+            label: "Damage Type",
+            presentationType: "enum",
+            enumOptions: stringifyKeys(DamageType),
+        },
+        "pro.elevatorProperties.elevatorType": {
+            label: "Elevator Type",
+            presentationType: "enum",
+            enumOptions: stringifyKeys(ElevatorType),
+        },
+        "pro.weaponStats.animationCode": {
+            label: "Animation Code",
+            presentationType: "enum",
+            enumOptions: stringifyKeys(WeaponAnimCode),
+        },
+        "pro.drugStats.affectedStats.stat0": {
+            label: "Stat 0",
+            presentationType: "enum",
+            enumOptions: stringifyKeys(StatType),
+        },
+        "pro.drugStats.affectedStats.stat1": {
+            label: "Stat 1",
+            presentationType: "enum",
+            enumOptions: stringifyKeys(StatType),
+        },
+        "pro.drugStats.affectedStats.stat2": {
+            label: "Stat 2",
+            presentationType: "enum",
+            enumOptions: stringifyKeys(StatType),
+        },
+        "pro.critterProperties.scriptType": {
+            label: "Script Type",
+            presentationType: "enum",
+            enumOptions: stringifyKeys(ProScriptType),
+        },
+        "pro.itemProperties.scriptType": {
+            label: "Script Type",
+            presentationType: "enum",
+            enumOptions: stringifyKeys(ProScriptType),
+        },
+        "pro.sceneryProperties.scriptType": {
+            label: "Script Type",
+            presentationType: "enum",
+            enumOptions: stringifyKeys(ProScriptType),
+        },
+        "pro.wallProperties.scriptType": {
+            label: "Script Type",
+            presentationType: "enum",
+            enumOptions: stringifyKeys(ProScriptType),
+        },
+        "pro.demographics.gender": {
+            label: "Gender",
+            presentationType: "enum",
+            enumOptions: { "0": "Male", "1": "Female" },
+        },
+        "pro.doorProperties.walkThrough": {
+            label: "Walk Through",
+            presentationType: "enum",
+            enumOptions: { "0": "No", "1": "Yes" },
+        },
+        "pro.itemProperties.flagsExt": {
+            label: "Flags Ext",
+            presentationType: "flags",
+            flagOptions: stringifyKeys(ItemFlagsExt),
+        },
+        "pro.sceneryProperties.wallLightFlags": {
+            label: "Wall Light Flags",
+            presentationType: "flags",
+            flagOptions: stringifyKeys(WallLightFlags),
+        },
+        "pro.sceneryProperties.actionFlags": {
+            label: "Action Flags",
+            presentationType: "flags",
+            flagOptions: stringifyKeys(ActionFlags),
+        },
+        "pro.wallProperties.wallLightFlags": {
+            label: "Wall Light Flags",
+            presentationType: "flags",
+            flagOptions: stringifyKeys(WallLightFlags),
+        },
+        "pro.wallProperties.actionFlags": {
+            label: "Action Flags",
+            presentationType: "flags",
+            flagOptions: stringifyKeys(ActionFlags),
+        },
+        "pro.containerStats.openFlags": {
+            label: "Open Flags",
+            presentationType: "flags",
+            flagOptions: stringifyKeys(ContainerFlags),
+        },
+        "pro.critterProperties.critterFlags": {
+            label: "Critter Flags",
+            presentationType: "flags",
+            flagOptions: stringifyKeys(CritterFlags),
+        },
     },
     patternFields: [],
 });
@@ -137,36 +247,92 @@ const mapPresentationSchema = formatPresentationSchema.parse({
     format: "map",
     exactFields: {
         "map.header.version": { label: "Version", editable: false },
-        "map.header.defaultElevation": { label: "Default Elevation", presentationType: "enum", enumOptions: stringifyKeys(MapElevation) },
-        "map.header.defaultOrientation": { label: "Default Orientation", presentationType: "enum", enumOptions: stringifyKeys(Rotation) },
+        "map.header.defaultElevation": {
+            label: "Default Elevation",
+            presentationType: "enum",
+            enumOptions: stringifyKeys(MapElevation),
+        },
+        "map.header.defaultOrientation": {
+            label: "Default Orientation",
+            presentationType: "enum",
+            enumOptions: stringifyKeys(Rotation),
+        },
         "map.header.numLocalVars": { label: "Num Local Vars", editable: false },
         "map.header.numGlobalVars": { label: "Num Global Vars", editable: false },
         "map.objects.totalObjects": { label: "Total Objects", editable: false },
         "map.header.mapFlags": {
             label: "Map Flags",
             presentationType: "flags",
-            flagOptions: { "1": MapFlags[0x1]!, "2": "Has Elevation 0", "4": "Has Elevation 1", "8": "Has Elevation 2" },
+            flagOptions: {
+                "1": MapFlags[0x1]!,
+                "2": "Has Elevation 0",
+                "4": "Has Elevation 1",
+                "8": "Has Elevation 2",
+            },
             flagActivation: { "1": "set", "2": "clear", "4": "clear", "8": "clear" },
             editable: false,
         },
         "map.header.filename": { label: "Filename" },
     },
     patternFields: [
-        { pathPattern: "^map\\.objects\\.elevations\\[\\]\\.objects\\[\\]\\.base\\.(pid|fid|cid|sid)$", numericFormat: "hex32" },
+        {
+            pathPattern: "^map\\.objects\\.elevations\\[\\]\\.objects\\[\\]\\.base\\.(pid|fid|cid|sid)$",
+            numericFormat: "hex32",
+        },
         { pathPattern: "^map\\.scripts\\[\\]\\.extents\\[\\]\\.slots\\[\\]\\.sid$", numericFormat: "hex32" },
-        { pathPattern: "^map\\.objects\\.elevations\\[\\]\\.objects\\[\\]\\.base\\.rotation$", presentationType: "enum", enumOptions: stringifyKeys(Rotation) },
-        { pathPattern: "^map\\.objects\\.elevations\\[\\]\\.objects\\[\\]\\.base\\.elevation$", presentationType: "enum", enumOptions: stringifyKeys(MapElevation) },
-        { pathPattern: "^map\\.objects\\.elevations\\[\\]\\.objects\\[\\]\\.exitGrid\\.destinationElevation$", presentationType: "enum", enumOptions: stringifyKeys(MapElevation) },
-        { pathPattern: "^map\\.objects\\.elevations\\[\\]\\.objects\\[\\]\\.exitGrid\\.destinationRotation$", presentationType: "enum", enumOptions: stringifyKeys(Rotation) },
-        { pathPattern: "^map\\.scripts\\[\\]\\.extents\\[\\]\\.slots\\[\\]\\.action$", presentationType: "enum", enumOptions: scriptProcDropdown },
-        { pathPattern: "^map\\.scripts\\[\\]\\.extents\\[\\]\\.slots\\[\\]\\.actionBeingUsed$", presentationType: "enum", enumOptions: stringifyKeys(Skill) },
-        { pathPattern: "^map\\.scripts\\[\\]\\.extents\\[\\]\\.slots\\[\\]\\.flags$", presentationType: "flags", flagOptions: stringifyKeys(ScriptFlags) },
-        { pathPattern: "^map\\.objects\\.elevations\\[\\]\\.objects\\[\\]\\.base\\.flags$", presentationType: "flags", flagOptions: stringifyKeys(ObjectFlags) },
+        {
+            pathPattern: "^map\\.objects\\.elevations\\[\\]\\.objects\\[\\]\\.base\\.rotation$",
+            presentationType: "enum",
+            enumOptions: stringifyKeys(Rotation),
+        },
+        {
+            pathPattern: "^map\\.objects\\.elevations\\[\\]\\.objects\\[\\]\\.base\\.elevation$",
+            presentationType: "enum",
+            enumOptions: stringifyKeys(MapElevation),
+        },
+        {
+            pathPattern: "^map\\.objects\\.elevations\\[\\]\\.objects\\[\\]\\.exitGrid\\.destinationElevation$",
+            presentationType: "enum",
+            enumOptions: stringifyKeys(MapElevation),
+        },
+        {
+            pathPattern: "^map\\.objects\\.elevations\\[\\]\\.objects\\[\\]\\.exitGrid\\.destinationRotation$",
+            presentationType: "enum",
+            enumOptions: stringifyKeys(Rotation),
+        },
+        {
+            pathPattern: "^map\\.scripts\\[\\]\\.extents\\[\\]\\.slots\\[\\]\\.action$",
+            presentationType: "enum",
+            enumOptions: scriptProcDropdown,
+        },
+        {
+            pathPattern: "^map\\.scripts\\[\\]\\.extents\\[\\]\\.slots\\[\\]\\.actionBeingUsed$",
+            presentationType: "enum",
+            enumOptions: stringifyKeys(Skill),
+        },
+        {
+            pathPattern: "^map\\.scripts\\[\\]\\.extents\\[\\]\\.slots\\[\\]\\.flags$",
+            presentationType: "flags",
+            flagOptions: stringifyKeys(ScriptFlags),
+        },
+        {
+            pathPattern: "^map\\.objects\\.elevations\\[\\]\\.objects\\[\\]\\.base\\.flags$",
+            presentationType: "flags",
+            flagOptions: stringifyKeys(ObjectFlags),
+        },
         { pathPattern: "^map\\.header\\.(version|numLocalVars|numGlobalVars|mapFlags)$", editable: false },
         { pathPattern: "^map\\.scripts\\[\\]\\.extents\\[\\]\\.(extentLength|extentNext)$", editable: false },
-        { pathPattern: "^map\\.scripts\\[\\]\\.extents\\[\\]\\.slots\\[\\]\\.(localVarsOffset|numLocalVars|programPointerSlot|unknownField0x48|legacyField0x50)$", editable: false },
+        {
+            pathPattern:
+                "^map\\.scripts\\[\\]\\.extents\\[\\]\\.slots\\[\\]\\.(localVarsOffset|numLocalVars|programPointerSlot|unknownField0x48|legacyField0x50)$",
+            editable: false,
+        },
         { pathPattern: "^map\\.objects\\.(totalObjects|elevations\\[\\]\\.objectCount)$", editable: false },
-        { pathPattern: "^map\\.objects\\.elevations\\[\\]\\.objects\\[\\]\\.(base\\.field74|inventoryHeader\\.(inventoryLength|inventoryCapacity|inventoryPointer))$", editable: false },
+        {
+            pathPattern:
+                "^map\\.objects\\.elevations\\[\\]\\.objects\\[\\]\\.(base\\.field74|inventoryHeader\\.(inventoryLength|inventoryCapacity|inventoryPointer))$",
+            editable: false,
+        },
     ],
 });
 
@@ -221,7 +387,11 @@ export function getFormatPresentationSchema(format: string): FormatPresentationS
     return binaryPresentationSchemas[format as SupportedPresentationFormat];
 }
 
-export function resolveFieldPresentation(format: string, fieldKey: string, fieldName: string): FieldPresentation | undefined {
+export function resolveFieldPresentation(
+    format: string,
+    fieldKey: string,
+    fieldName: string,
+): FieldPresentation | undefined {
     const schema = getFormatPresentationSchema(format);
     if (!schema) {
         return undefined;

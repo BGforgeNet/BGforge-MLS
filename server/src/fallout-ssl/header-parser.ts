@@ -16,7 +16,16 @@ import { type ParseResult, EMPTY_PARSE_RESULT } from "../core/parse-result";
 import { makeRange as makeRangeFromNode } from "../core/position-utils";
 import { type IndexedSymbol, SourceType } from "../core/symbol";
 import * as jsdoc from "../shared/jsdoc";
-import { buildProcedureSymbol, buildMacroSymbol, buildVariableSymbol, extractMacros, extractParams, extractProcedures, findPrecedingDocComment, makeRange } from "./utils";
+import {
+    buildProcedureSymbol,
+    buildMacroSymbol,
+    buildVariableSymbol,
+    extractMacros,
+    extractParams,
+    extractProcedures,
+    findPrecedingDocComment,
+    makeRange,
+} from "./utils";
 import { isInitialized, parseWithCache } from "./parser";
 import { SyntaxType } from "./tree-sitter.d";
 
@@ -35,12 +44,7 @@ import { SyntaxType } from "./tree-sitter.d";
  * @param workspaceRoot Workspace root for computing relative displayPath
  * @param sourceType Override source type (default: Workspace). Use Navigation for non-header files.
  */
-export function parseFile(
-    uri: string,
-    text: string,
-    workspaceRoot?: string,
-    sourceType?: SourceType,
-): ParseResult {
+export function parseFile(uri: string, text: string, workspaceRoot?: string, sourceType?: SourceType): ParseResult {
     if (!isInitialized()) {
         return EMPTY_PARSE_RESULT;
     }
@@ -95,7 +99,9 @@ function extractSymbols(
                 if (child.type === SyntaxType.VarInit) {
                     const nameNode = child.childForFieldName("name");
                     if (nameNode) {
-                        result.push(buildVariableSymbol(nameNode.text, uri, makeRange(child), undefined, parsed, displayPath));
+                        result.push(
+                            buildVariableSymbol(nameNode.text, uri, makeRange(child), undefined, parsed, displayPath),
+                        );
                     }
                 }
             }
@@ -104,14 +110,16 @@ function extractSymbols(
             const parsed = docComment ? jsdoc.parse(docComment) : null;
             const nameNode = node.childForFieldName("name");
             if (nameNode) {
-                result.push(buildVariableSymbol(nameNode.text, uri, makeRange(node), "export variable", parsed, displayPath));
+                result.push(
+                    buildVariableSymbol(nameNode.text, uri, makeRange(node), "export variable", parsed, displayPath),
+                );
             }
         }
     }
 
     // Remap source type when called for non-header files (e.g., Navigation for Ctrl+T)
     if (sourceType !== undefined && sourceType !== SourceType.Workspace) {
-        return result.map(s => ({
+        return result.map((s) => ({
             ...s,
             source: { ...s.source, type: sourceType },
         }));

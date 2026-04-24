@@ -21,12 +21,7 @@ import { buildSignatureBlock } from "../../../shared/tooltip-format";
  * Returns HoverResult.found() with JSDoc content, or HoverResult.notHandled()
  * to fall through to static data hover.
  */
-export function getStateLabelHover(
-    text: string,
-    _symbol: string,
-    _uri: string,
-    position: Position
-): HoverResult {
+export function getStateLabelHover(text: string, _symbol: string, _uri: string, position: Position): HoverResult {
     if (!isInitialized()) {
         return HR.notHandled();
     }
@@ -71,4 +66,3 @@ export function getStateLabelHover(
         },
     });
 }
-

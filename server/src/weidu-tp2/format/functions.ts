@@ -104,13 +104,27 @@ function formatParamDecl(node: SyntaxNode, indent: string, ctx: FormatContext): 
         if (!child) continue;
 
         if (isComment(child)) {
-            items.push({ type: CollectedItemType.Comment, text: normalizeComment(child.text), startRow: child.startPosition.row, endRow: child.endPosition.row });
+            items.push({
+                type: CollectedItemType.Comment,
+                text: normalizeComment(child.text),
+                startRow: child.startPosition.row,
+                endRow: child.endPosition.row,
+            });
         } else if (child.type === SyntaxType.PatchAssignment) {
             const parsed = parseAssignment(child);
             if (parsed) {
-                items.push({ type: CollectedItemType.Assignment, name: parsed.name, value: parsed.value, endRow: child.endPosition.row });
+                items.push({
+                    type: CollectedItemType.Assignment,
+                    name: parsed.name,
+                    value: parsed.value,
+                    endRow: child.endPosition.row,
+                });
             }
-        } else if (child.type === SyntaxType.VariableRef || child.type === SyntaxType.Identifier || child.type === SyntaxType.String) {
+        } else if (
+            child.type === SyntaxType.VariableRef ||
+            child.type === SyntaxType.Identifier ||
+            child.type === SyntaxType.String
+        ) {
             // Check if next child is "=" token indicating an assignment
             const nextChild = children[i + 1];
             if (nextChild && nextChild.text === "=") {
@@ -126,12 +140,22 @@ function formatParamDecl(node: SyntaxNode, indent: string, ctx: FormatContext): 
                     i += 2; // Skip "=" and value
                 } else {
                     // "=" without value - handle gracefully
-                    items.push({ type: CollectedItemType.Assignment, name: child.text, value: "", endRow: child.endPosition.row });
+                    items.push({
+                        type: CollectedItemType.Assignment,
+                        name: child.text,
+                        value: "",
+                        endRow: child.endPosition.row,
+                    });
                     i++; // Skip "="
                 }
             } else {
                 // No "=" - name without value
-                items.push({ type: CollectedItemType.Assignment, name: child.text, value: "", endRow: child.endPosition.row });
+                items.push({
+                    type: CollectedItemType.Assignment,
+                    name: child.text,
+                    value: "",
+                    endRow: child.endPosition.row,
+                });
             }
         }
     }
@@ -153,7 +177,12 @@ function formatParamCall(node: SyntaxNode, indent: string, ctx: FormatContext): 
         if (isParamKeyword(child.text)) {
             keyword = child.text;
         } else if (isComment(child)) {
-            items.push({ type: CollectedItemType.Comment, text: normalizeComment(child.text), startRow: child.startPosition.row, endRow: child.endPosition.row });
+            items.push({
+                type: CollectedItemType.Comment,
+                text: normalizeComment(child.text),
+                startRow: child.startPosition.row,
+                endRow: child.endPosition.row,
+            });
         } else if (
             child.type === SyntaxType.IntVarCallItem ||
             child.type === SyntaxType.StrVarCallItem ||
@@ -164,10 +193,20 @@ function formatParamCall(node: SyntaxNode, indent: string, ctx: FormatContext): 
         ) {
             const parsed = parseAssignment(child);
             if (parsed) {
-                items.push({ type: CollectedItemType.Assignment, name: parsed.name, value: parsed.value, endRow: child.endPosition.row });
+                items.push({
+                    type: CollectedItemType.Assignment,
+                    name: parsed.name,
+                    value: parsed.value,
+                    endRow: child.endPosition.row,
+                });
             }
         } else if (child.type === SyntaxType.VariableRef || child.type === SyntaxType.Identifier) {
-            items.push({ type: CollectedItemType.Assignment, name: child.text, value: "", endRow: child.endPosition.row });
+            items.push({
+                type: CollectedItemType.Assignment,
+                name: child.text,
+                value: "",
+                endRow: child.endPosition.row,
+            });
         }
     }
 
@@ -187,7 +226,7 @@ export function formatFunctionDef(
     node: SyntaxNode,
     ctx: FormatContext,
     depth: number,
-    formatNode: (node: SyntaxNode, ctx: FormatContext, depth: number) => string
+    formatNode: (node: SyntaxNode, ctx: FormatContext, depth: number) => string,
 ): string {
     const indent = ctx.indent.repeat(depth);
     const bodyIndent = ctx.indent.repeat(depth + 1);
@@ -238,12 +277,20 @@ export function formatFunctionDef(
 
         if (inBody) {
             // Handle standard body content and macro-specific LOCAL_SET/LOCAL_SPRINT
-            if (isBodyContent(child.type) || child.type === SyntaxType.LocalSet || child.type === SyntaxType.LocalSprint) {
+            if (
+                isBodyContent(child.type) ||
+                child.type === SyntaxType.LocalSet ||
+                child.type === SyntaxType.LocalSprint
+            ) {
                 lines.push(formatNode(child, ctx, depth + 1));
                 lastEndRow = child.endPosition.row;
             }
         } else {
-            if (child.type.endsWith("_var_decl") || child.type === SyntaxType.RetDecl || child.type === SyntaxType.RetArrayDecl) {
+            if (
+                child.type.endsWith("_var_decl") ||
+                child.type === SyntaxType.RetDecl ||
+                child.type === SyntaxType.RetArrayDecl
+            ) {
                 if (defLine) {
                     lines.push(indent + defLine);
                     defLine = "";
@@ -266,7 +313,11 @@ export function formatFunctionDef(
 
     // Report structural issues
     if (!hasBegin) {
-        throwFormatError(`Function definition missing BEGIN`, node.startPosition.row + 1, node.startPosition.column + 1);
+        throwFormatError(
+            `Function definition missing BEGIN`,
+            node.startPosition.row + 1,
+            node.startPosition.column + 1,
+        );
     }
     if (!hasEnd) {
         throwFormatError(`Function definition missing END`, node.startPosition.row + 1, node.startPosition.column + 1);
@@ -359,7 +410,11 @@ export function formatFunctionCall(node: SyntaxNode, ctx: FormatContext, depth: 
     // Report structural issues (launch macros don't have END, only launch functions do)
     const isMacro = node.type === "action_launch_macro" || node.type === "patch_launch_macro";
     if (!hasEnd && !isMacro) {
-        throwFormatError(`Function call '${callKeyword}' missing END`, node.startPosition.row + 1, node.startPosition.column + 1);
+        throwFormatError(
+            `Function call '${callKeyword}' missing END`,
+            node.startPosition.row + 1,
+            node.startPosition.column + 1,
+        );
     }
 
     return lines.join("\n");

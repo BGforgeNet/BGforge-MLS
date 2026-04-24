@@ -10,12 +10,7 @@
 import { type CancellationToken, CompletionItemKind } from "vscode-languageserver/node";
 import { describe, expect, it } from "vitest";
 import { Symbols } from "../../src/core/symbol-index";
-import {
-    type Symbol,
-    ScopeLevel,
-    SourceType,
-    SymbolKind,
-} from "../../src/core/symbol";
+import { type Symbol, ScopeLevel, SourceType, SymbolKind } from "../../src/core/symbol";
 
 function makeUri(n: number): string {
     return `file:///cancel-test-${n}.ssl`;

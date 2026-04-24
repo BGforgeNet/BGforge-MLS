@@ -19,7 +19,6 @@ export function resolveFlagLookup(
     return presentation?.presentationType === "flags" ? toNumericOptionMap(presentation.flagOptions) : undefined;
 }
 
-
 function getActiveFlagLabels(
     format: string,
     fieldKey: string,
@@ -40,12 +39,7 @@ function getActiveFlagLabels(
         .map(([, label]) => label);
 }
 
-export function resolveDisplayValue(
-    format: string,
-    fieldKey: string,
-    fieldName: string,
-    rawValue: number,
-): string {
+export function resolveDisplayValue(format: string, fieldKey: string, fieldName: string, rawValue: number): string {
     const enumTable = resolveEnumLookup(format, fieldKey, fieldName);
     if (enumTable) {
         const label = enumTable[rawValue];
@@ -65,12 +59,7 @@ export function formatEnumDisplayValue(label: string, rawValue: number): string 
     return label === String(rawValue) ? label : `${label} (${rawValue})`;
 }
 
-export function resolveStoredFieldValue(
-    format: string,
-    fieldKey: string,
-    fieldName: string,
-    rawValue: number,
-): string {
+export function resolveStoredFieldValue(format: string, fieldKey: string, fieldName: string, rawValue: number): string {
     const enumTable = resolveEnumLookup(format, fieldKey, fieldName);
     if (enumTable) {
         return enumTable[rawValue] ?? `Unknown (${rawValue})`;
@@ -106,7 +95,10 @@ export function resolveRawValueFromDisplay(
     if (flagTable) {
         const presentation = resolveFieldPresentation(format, fieldKey, fieldName);
         let rawValue = 0;
-        const parts = normalized.split(",").map((part) => part.trim()).filter(Boolean);
+        const parts = normalized
+            .split(",")
+            .map((part) => part.trim())
+            .filter(Boolean);
         if (parts.length === 1 && (parts[0] === "(none)" || parts[0] === "None")) {
             return 0;
         }

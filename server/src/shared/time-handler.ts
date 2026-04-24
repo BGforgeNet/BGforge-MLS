@@ -81,9 +81,6 @@ export function timeHandler<TArgs extends unknown[], TReturn>(
  * Build a timeHandler options object from an LSP connection console.
  * Convenience helper used in server.ts.
  */
-export function makeTimingOptions(
-    console: WarnLogger,
-    thresholdMs: number = DEFAULT_THRESHOLD_MS,
-): TimeHandlerOptions {
+export function makeTimingOptions(console: WarnLogger, thresholdMs: number = DEFAULT_THRESHOLD_MS): TimeHandlerOptions {
     return { warn: (msg) => console.warn(msg), thresholdMs };
 }

@@ -15,16 +15,8 @@ import type { BinaryParser, ParseOpaqueRange, ParseOptions, ParseResult } from "
 import { rebuildMapCanonicalDocument } from "./map-canonical";
 import { serializeMap } from "./map-serializer";
 import { encodeOpaqueRange } from "./opaque-range";
-import {
-    HEADER_SIZE,
-    parseHeader,
-} from "./map-schemas";
-import {
-    makeGroup,
-    HEADER_PADDING_OFFSET,
-    HEADER_OPAQUE_END,
-    STRICT_MAP_SCRIPT_TYPE_COUNT,
-} from "./map-parse-helpers";
+import { HEADER_SIZE, parseHeader } from "./map-schemas";
+import { makeGroup, HEADER_PADDING_OFFSET, HEADER_OPAQUE_END, STRICT_MAP_SCRIPT_TYPE_COUNT } from "./map-parse-helpers";
 import { parseHeaderSection, parseVariablesSection, parseTiles, parseScripts } from "./map-parse-sections";
 import { parseObjects } from "./map-parse-objects";
 import { scoreParsedTail, isConfidentObjectsGroup, buildOpaqueObjectsGroup } from "./map-parse-scoring";
@@ -85,23 +77,13 @@ class MapParser implements BinaryParser {
             const trailingStart = 0x04 + filenameTerminator + 1;
             const trailingBytes = data.subarray(trailingStart, 0x14);
             if (trailingBytes.some((byte) => byte !== 0)) {
-                const filenameTailRange = encodeOpaqueRange(
-                    "header-filename-tail",
-                    data,
-                    trailingStart,
-                    0x14,
-                );
+                const filenameTailRange = encodeOpaqueRange("header-filename-tail", data, trailingStart, 0x14);
                 if (filenameTailRange) {
                     opaqueRanges.push(filenameTailRange);
                 }
             }
         }
-        const headerPaddingRange = encodeOpaqueRange(
-            "header-padding",
-            data,
-            HEADER_PADDING_OFFSET,
-            HEADER_OPAQUE_END,
-        );
+        const headerPaddingRange = encodeOpaqueRange("header-padding", data, HEADER_PADDING_OFFSET, HEADER_OPAQUE_END);
         if (headerPaddingRange) {
             opaqueRanges.push(headerPaddingRange);
         }
@@ -110,7 +92,11 @@ class MapParser implements BinaryParser {
         rootFields.push(...parseVariablesSection(data, header));
 
         let currentOffset = varOffset + header.numGlobalVars * 4 + header.numLocalVars * 4;
-        const { tiles, offset: tileEndOffset, skippedRange } = parseTiles(data, header, currentOffset, options?.skipMapTiles);
+        const {
+            tiles,
+            offset: tileEndOffset,
+            skippedRange,
+        } = parseTiles(data, header, currentOffset, options?.skipMapTiles);
         tiles.forEach((elevTiles) => rootFields.push(...elevTiles));
         currentOffset = tileEndOffset;
         if (skippedRange) {
@@ -127,8 +113,18 @@ class MapParser implements BinaryParser {
         if (options?.gracefulMapBoundaries) {
             const scriptTailCandidates = [0, 1, 2, 3, 4, 5].map((scriptTypeCount) => {
                 const candidateErrors: string[] = [];
-                const { scripts, offset: scriptOffset } = parseScripts(data, currentOffset, candidateErrors, scriptTypeCount);
-                const { group: objectsGroup, opaqueTailOffset } = parseObjects(data, header, scriptOffset, candidateErrors);
+                const { scripts, offset: scriptOffset } = parseScripts(
+                    data,
+                    currentOffset,
+                    candidateErrors,
+                    scriptTypeCount,
+                );
+                const { group: objectsGroup, opaqueTailOffset } = parseObjects(
+                    data,
+                    header,
+                    scriptOffset,
+                    candidateErrors,
+                );
 
                 return {
                     scripts,
@@ -141,8 +137,9 @@ class MapParser implements BinaryParser {
             });
 
             scriptTailCandidates.sort((a, b) => b.score - a.score);
-            const chosenTail = scriptTailCandidates.find((candidate) => isConfidentObjectsGroup(candidate.objectsGroup))
-                ?? scriptTailCandidates[0]!;
+            const chosenTail =
+                scriptTailCandidates.find((candidate) => isConfidentObjectsGroup(candidate.objectsGroup)) ??
+                scriptTailCandidates[0]!;
 
             rootFields.push(...chosenTail.scripts);
             currentOffset = chosenTail.scriptOffset;
@@ -157,13 +154,18 @@ class MapParser implements BinaryParser {
             const opaqueRange = encodeOpaqueRange(
                 "objects-tail",
                 data,
-                chosenTailIsConfident ? (chosenTail.opaqueTailOffset ?? data.length) : chosenTail.scriptOffset
+                chosenTailIsConfident ? (chosenTail.opaqueTailOffset ?? data.length) : chosenTail.scriptOffset,
             );
             if (opaqueRange) {
                 opaqueRanges.push(opaqueRange);
             }
         } else {
-            const { scripts, offset: scriptOffset } = parseScripts(data, currentOffset, errors, STRICT_MAP_SCRIPT_TYPE_COUNT);
+            const { scripts, offset: scriptOffset } = parseScripts(
+                data,
+                currentOffset,
+                errors,
+                STRICT_MAP_SCRIPT_TYPE_COUNT,
+            );
             const { group: objectsGroup, opaqueTailOffset } = parseObjects(data, header, scriptOffset, errors);
 
             rootFields.push(...scripts);
@@ -209,7 +211,10 @@ class MapParser implements BinaryParser {
                         cachedDocument = rebuildMapCanonicalDocument(result);
                     } catch (error) {
                         const message = error instanceof Error ? error.message : String(error);
-                        result.warnings = [...(result.warnings ?? []), `Canonical MAP document unavailable: ${message}`];
+                        result.warnings = [
+                            ...(result.warnings ?? []),
+                            `Canonical MAP document unavailable: ${message}`,
+                        ];
                     }
                 }
                 return cachedDocument;

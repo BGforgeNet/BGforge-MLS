@@ -10,11 +10,12 @@ export function getLoadableGroupIds(
     loadingChildren: ReadonlySet<string>,
 ): string[] {
     return nodes
-        .filter((node) =>
-            node.kind === "group"
-            && node.expandable
-            && !childrenLoaded.has(node.id)
-            && !loadingChildren.has(node.id))
+        .filter(
+            (node) =>
+                node.kind === "group" &&
+                node.expandable &&
+                !childrenLoaded.has(node.id) &&
+                !loadingChildren.has(node.id),
+        )
         .map((node) => node.id);
 }
-

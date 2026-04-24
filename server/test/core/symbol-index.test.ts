@@ -5,12 +5,7 @@
 import { describe, expect, it, beforeEach } from "vitest";
 import { CompletionItemKind } from "vscode-languageserver/node";
 import { Symbols } from "../../src/core/symbol-index";
-import {
-    type Symbol,
-    SymbolKind,
-    ScopeLevel,
-    SourceType,
-} from "../../src/core/symbol";
+import { type Symbol, SymbolKind, ScopeLevel, SourceType } from "../../src/core/symbol";
 
 // =============================================================================
 // Test fixtures
@@ -20,10 +15,13 @@ function createSymbol(overrides: Partial<Symbol> & { name: string }): Symbol {
     return {
         name: overrides.name,
         kind: overrides.kind ?? SymbolKind.Variable,
-        location: "location" in overrides ? overrides.location : {
-            uri: "file:///test.txt",
-            range: { start: { line: 0, character: 0 }, end: { line: 0, character: 10 } },
-        },
+        location:
+            "location" in overrides
+                ? overrides.location
+                : {
+                      uri: "file:///test.txt",
+                      range: { start: { line: 0, character: 0 }, end: { line: 0, character: 10 } },
+                  },
         scope: overrides.scope ?? { level: ScopeLevel.File },
         source: overrides.source ?? { type: SourceType.Document, uri: "file:///test.txt" },
         completion: overrides.completion ?? {
@@ -49,17 +47,14 @@ describe("Symbols", () => {
     // =========================================================================
     describe("updateFile()", () => {
         it("should store symbols for a file", () => {
-            const symbols = [
-                createSymbol({ name: "x" }),
-                createSymbol({ name: "y" }),
-            ];
+            const symbols = [createSymbol({ name: "x" }), createSymbol({ name: "y" })];
 
             index.updateFile("file:///test.txt", symbols);
 
             const result = index.getFileSymbols("file:///test.txt");
             expect(result).toHaveLength(2);
-            expect(result.map(s => s.name)).toContain("x");
-            expect(result.map(s => s.name)).toContain("y");
+            expect(result.map((s) => s.name)).toContain("x");
+            expect(result.map((s) => s.name)).toContain("y");
         });
 
         it("should replace symbols when updating same file", () => {
@@ -98,10 +93,7 @@ describe("Symbols", () => {
 
     describe("clearFile()", () => {
         it("should remove all symbols from a file", () => {
-            index.updateFile("file:///test.txt", [
-                createSymbol({ name: "x" }),
-                createSymbol({ name: "y" }),
-            ]);
+            index.updateFile("file:///test.txt", [createSymbol({ name: "x" }), createSymbol({ name: "y" })]);
 
             index.clearFile("file:///test.txt");
 
@@ -142,7 +134,7 @@ describe("Symbols", () => {
             index.updateFile("file:///test.txt", symbols);
 
             const result = index.getFileSymbols("file:///test.txt");
-            expect(result.map(s => s.name)).toEqual(["first", "second", "third"]);
+            expect(result.map((s) => s.name)).toEqual(["first", "second", "third"]);
         });
 
         it("should return the same array reference (no defensive copy)", () => {
@@ -174,14 +166,18 @@ describe("Symbols", () => {
         });
 
         it("should replace existing static symbols on reload", () => {
-            index.loadStatic([createSymbol({
-                name: "func",
-                source: { type: SourceType.Static, uri: null },
-            })]);
-            index.loadStatic([createSymbol({
-                name: "other_func",
-                source: { type: SourceType.Static, uri: null },
-            })]);
+            index.loadStatic([
+                createSymbol({
+                    name: "func",
+                    source: { type: SourceType.Static, uri: null },
+                }),
+            ]);
+            index.loadStatic([
+                createSymbol({
+                    name: "other_func",
+                    source: { type: SourceType.Static, uri: null },
+                }),
+            ]);
 
             expect(index.lookup("func")).toBeUndefined();
             expect(index.lookup("other_func")).toBeDefined();
@@ -193,10 +189,7 @@ describe("Symbols", () => {
     // =========================================================================
     describe("lookup()", () => {
         it("should find symbol by exact name", () => {
-            index.updateFile("file:///test.txt", [
-                createSymbol({ name: "target" }),
-                createSymbol({ name: "other" }),
-            ]);
+            index.updateFile("file:///test.txt", [createSymbol({ name: "target" }), createSymbol({ name: "other" })]);
 
             const result = index.lookup("target");
 
@@ -221,26 +214,32 @@ describe("Symbols", () => {
         });
 
         it("should find static symbols", () => {
-            index.loadStatic([createSymbol({
-                name: "static_func",
-                source: { type: SourceType.Static, uri: null },
-            })]);
+            index.loadStatic([
+                createSymbol({
+                    name: "static_func",
+                    source: { type: SourceType.Static, uri: null },
+                }),
+            ]);
 
             const result = index.lookup("static_func");
             expect(result).toBeDefined();
         });
 
         it("should prioritize document symbols over static", () => {
-            index.loadStatic([createSymbol({
-                name: "shared",
-                source: { type: SourceType.Static, uri: null },
-                scope: { level: ScopeLevel.Global },
-            })]);
-            index.updateFile("file:///test.txt", [createSymbol({
-                name: "shared",
-                source: { type: SourceType.Document, uri: "file:///test.txt" },
-                scope: { level: ScopeLevel.File },
-            })]);
+            index.loadStatic([
+                createSymbol({
+                    name: "shared",
+                    source: { type: SourceType.Static, uri: null },
+                    scope: { level: ScopeLevel.Global },
+                }),
+            ]);
+            index.updateFile("file:///test.txt", [
+                createSymbol({
+                    name: "shared",
+                    source: { type: SourceType.Document, uri: "file:///test.txt" },
+                    scope: { level: ScopeLevel.File },
+                }),
+            ]);
 
             const result = index.lookup("shared", { uri: "file:///test.txt" });
 
@@ -269,11 +268,13 @@ describe("Symbols", () => {
         });
 
         it("should return null for static symbols with null location", () => {
-            index.loadStatic([createSymbol({
-                name: "builtin_func",
-                source: { type: SourceType.Static, uri: null },
-                location: null,  // Static symbols have no source file
-            })]);
+            index.loadStatic([
+                createSymbol({
+                    name: "builtin_func",
+                    source: { type: SourceType.Static, uri: null },
+                    location: null, // Static symbols have no source file
+                }),
+            ]);
 
             const result = index.lookupDefinition("builtin_func");
 
@@ -319,7 +320,7 @@ describe("Symbols", () => {
             const result = index.query({ kinds: [SymbolKind.Variable] });
 
             expect(result).toHaveLength(2);
-            expect(result.every(s => s.kind === SymbolKind.Variable)).toBe(true);
+            expect(result.every((s) => s.kind === SymbolKind.Variable)).toBe(true);
         });
 
         it("should filter by multiple kinds", () => {
@@ -341,64 +342,72 @@ describe("Symbols", () => {
         });
 
         it("should filter by uri", () => {
-            index.updateFile("file:///other.txt", [createSymbol({
-                name: "other_sym",
-                source: { type: SourceType.Document, uri: "file:///other.txt" },
-            })]);
+            index.updateFile("file:///other.txt", [
+                createSymbol({
+                    name: "other_sym",
+                    source: { type: SourceType.Document, uri: "file:///other.txt" },
+                }),
+            ]);
 
             const result = index.query({ uri: "file:///test.txt" });
 
             expect(result).toHaveLength(4);
-            expect(result.find(s => s.name === "other_sym")).toBeUndefined();
+            expect(result.find((s) => s.name === "other_sym")).toBeUndefined();
         });
 
         it("should include static symbols unless uri filter excludes them", () => {
-            index.loadStatic([createSymbol({
-                name: "static_sym",
-                source: { type: SourceType.Static, uri: null },
-            })]);
+            index.loadStatic([
+                createSymbol({
+                    name: "static_sym",
+                    source: { type: SourceType.Static, uri: null },
+                }),
+            ]);
 
             const allResult = index.query({});
-            expect(allResult.find(s => s.name === "static_sym")).toBeDefined();
+            expect(allResult.find((s) => s.name === "static_sym")).toBeDefined();
 
             const filteredResult = index.query({ uri: "file:///test.txt" });
             // Static symbols should still be included when filtering by uri
             // because they're visible everywhere
-            expect(filteredResult.find(s => s.name === "static_sym")).toBeDefined();
+            expect(filteredResult.find((s) => s.name === "static_sym")).toBeDefined();
         });
 
         it("should exclude symbols from excludeUri", () => {
             // Add symbols to a second file
-            index.updateFile("file:///header.tph", [createSymbol({
-                name: "header_func",
-                kind: SymbolKind.Function,
-                source: { type: SourceType.Workspace, uri: "file:///header.tph" },
-            })]);
+            index.updateFile("file:///header.tph", [
+                createSymbol({
+                    name: "header_func",
+                    kind: SymbolKind.Function,
+                    source: { type: SourceType.Workspace, uri: "file:///header.tph" },
+                }),
+            ]);
 
             // Query without exclusion - should include both files
             const allResult = index.query({});
-            expect(allResult.find(s => s.name === "foo_var")).toBeDefined();
-            expect(allResult.find(s => s.name === "header_func")).toBeDefined();
+            expect(allResult.find((s) => s.name === "foo_var")).toBeDefined();
+            expect(allResult.find((s) => s.name === "header_func")).toBeDefined();
 
             // Query with excludeUri - should exclude that file's symbols
             const excludedResult = index.query({ excludeUri: "file:///test.txt" });
-            expect(excludedResult.find(s => s.name === "foo_var")).toBeUndefined();
-            expect(excludedResult.find(s => s.name === "header_func")).toBeDefined();
+            expect(excludedResult.find((s) => s.name === "foo_var")).toBeUndefined();
+            expect(excludedResult.find((s) => s.name === "header_func")).toBeDefined();
         });
 
         it("should still include static symbols when using excludeUri", () => {
-            index.loadStatic([createSymbol({
-                name: "builtin_func",
-                source: { type: SourceType.Static, uri: null },
-            })]);
+            index.loadStatic([
+                createSymbol({
+                    name: "builtin_func",
+                    source: { type: SourceType.Static, uri: null },
+                }),
+            ]);
 
             const result = index.query({ excludeUri: "file:///test.txt" });
 
             // Static symbols are stored separately (not in files map), so excludeUri doesn't apply.
             // Context-based filtering (action/patch) is a separate layer in the provider.
-            expect(result.find(s => s.name === "builtin_func")).toBeDefined();
+            expect(result.find((s) => s.name === "builtin_func")).toBeDefined();
             // File symbols with matching URI are excluded
-            expect(result.find(s => s.name === "foo_var")).toBeUndefined();
+            expect(result.find((s) => s.name === "foo_var")).toBeUndefined();
         });
     });
 
@@ -467,7 +476,7 @@ describe("Symbols", () => {
             index.updateFile("file:///a.h", [symA]);
             index.updateFile("file:///b.h", [symB]);
 
-            const before = index.lookupAll("SHARED").map(s => s.source.uri);
+            const before = index.lookupAll("SHARED").map((s) => s.source.uri);
 
             // Simulate file reload (re-updating a.h)
             const symAReloaded = createSymbol({
@@ -478,7 +487,7 @@ describe("Symbols", () => {
             });
             index.updateFile("file:///a.h", [symAReloaded]);
 
-            const after = index.lookupAll("SHARED").map(s => s.source.uri);
+            const after = index.lookupAll("SHARED").map((s) => s.source.uri);
 
             // Order should be the same after reload
             expect(after).toEqual(before);
@@ -486,25 +495,31 @@ describe("Symbols", () => {
 
         it("scope precedence: Document > Static > Workspace", () => {
             // Static symbol
-            index.loadStatic([createSymbol({
-                name: "SHARED",
-                source: { type: SourceType.Static, uri: null },
-                scope: { level: ScopeLevel.Global },
-            })]);
+            index.loadStatic([
+                createSymbol({
+                    name: "SHARED",
+                    source: { type: SourceType.Static, uri: null },
+                    scope: { level: ScopeLevel.Global },
+                }),
+            ]);
 
             // Workspace symbol from header
-            index.updateFile("file:///header.h", [createSymbol({
-                name: "SHARED",
-                source: { type: SourceType.Workspace, uri: "file:///header.h" },
-                scope: { level: ScopeLevel.Workspace },
-            })]);
+            index.updateFile("file:///header.h", [
+                createSymbol({
+                    name: "SHARED",
+                    source: { type: SourceType.Workspace, uri: "file:///header.h" },
+                    scope: { level: ScopeLevel.Workspace },
+                }),
+            ]);
 
             // Document symbol from current file
-            index.updateFile("file:///current.txt", [createSymbol({
-                name: "SHARED",
-                source: { type: SourceType.Document, uri: "file:///current.txt" },
-                scope: { level: ScopeLevel.File },
-            })]);
+            index.updateFile("file:///current.txt", [
+                createSymbol({
+                    name: "SHARED",
+                    source: { type: SourceType.Document, uri: "file:///current.txt" },
+                    scope: { level: ScopeLevel.File },
+                }),
+            ]);
 
             // With context pointing to current file, document symbol should win
             const result = index.lookup("SHARED", { uri: "file:///current.txt" });
@@ -530,16 +545,18 @@ describe("Symbols", () => {
                     scope: { level: ScopeLevel.File },
                 }),
             ]);
-            index.loadStatic([createSymbol({
-                name: "static_func",
-                scope: { level: ScopeLevel.Global },
-                source: { type: SourceType.Static, uri: null },
-            })]);
+            index.loadStatic([
+                createSymbol({
+                    name: "static_func",
+                    scope: { level: ScopeLevel.Global },
+                    source: { type: SourceType.Static, uri: null },
+                }),
+            ]);
 
             const result = index.getVisibleSymbols("file:///test.txt");
 
-            expect(result.map(s => s.name)).toContain("file_var");
-            expect(result.map(s => s.name)).toContain("static_func");
+            expect(result.map((s) => s.name)).toContain("file_var");
+            expect(result.map((s) => s.name)).toContain("static_func");
         });
 
         it("should not include symbols from other files at file scope", () => {
@@ -560,8 +577,8 @@ describe("Symbols", () => {
 
             const result = index.getVisibleSymbols("file:///a.txt");
 
-            expect(result.map(s => s.name)).toContain("a_var");
-            expect(result.map(s => s.name)).not.toContain("b_var");
+            expect(result.map((s) => s.name)).toContain("a_var");
+            expect(result.map((s) => s.name)).not.toContain("b_var");
         });
 
         it("should include workspace-scoped symbols from headers", () => {
@@ -575,7 +592,7 @@ describe("Symbols", () => {
 
             const result = index.getVisibleSymbols("file:///test.txt");
 
-            expect(result.map(s => s.name)).toContain("header_func");
+            expect(result.map((s) => s.name)).toContain("header_func");
         });
     });
 });

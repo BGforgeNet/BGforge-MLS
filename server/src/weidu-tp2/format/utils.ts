@@ -215,20 +215,12 @@ export function isTopLevelDirective(type: string): boolean {
 
 /** Check if node type is an action. */
 export function isAction(type: string): boolean {
-    return (
-        type.startsWith("action_") ||
-        type.startsWith("outer_") ||
-        SPECIAL_ACTION_TYPES.has(type)
-    );
+    return type.startsWith("action_") || type.startsWith("outer_") || SPECIAL_ACTION_TYPES.has(type);
 }
 
 /** Check if node type is a patch. */
 export function isPatch(type: string): boolean {
-    return (
-        type.startsWith("patch_") ||
-        type.startsWith("inner_") ||
-        SPECIAL_PATCH_TYPES.has(type)
-    );
+    return type.startsWith("patch_") || type.startsWith("inner_") || SPECIAL_PATCH_TYPES.has(type);
 }
 
 /** Check if text is a parameter keyword. */
@@ -324,7 +316,7 @@ export function outputAlignedAssignments(
     keyword: string,
     keywordIndent: string,
     assignIndent: string,
-    separator: string = " = "
+    separator: string = " = ",
 ): string[] {
     const lines: string[] = [];
 

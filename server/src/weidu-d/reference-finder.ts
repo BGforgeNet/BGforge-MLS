@@ -102,7 +102,12 @@ function collectRefsInScope(scopeNode: SyntaxNode, scopeDialog: string, labelNam
         if (node.type === SyntaxType.CopyTrans) {
             const fileNode = node.childForFieldName("file");
             const stateNode = node.childForFieldName("state");
-            if (fileNode && stateNode && normalizeDialogFile(fileNode.text) === scopeDialog && stateNode.text === labelName) {
+            if (
+                fileNode &&
+                stateNode &&
+                normalizeDialogFile(fileNode.text) === scopeDialog &&
+                stateNode.text === labelName
+            ) {
                 refs.push({ node: stateNode, isDefinition: false });
             }
         }
@@ -198,7 +203,7 @@ function matchFileLabel(
     labelField: string,
     dialogFile: string,
     labelName: string,
-    refs: LabelRef[]
+    refs: LabelRef[],
 ): void {
     const fileNode = node.childForFieldName(fileField);
     const labelNode = node.childForFieldName(labelField);

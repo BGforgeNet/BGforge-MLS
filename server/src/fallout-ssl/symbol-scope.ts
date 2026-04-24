@@ -13,7 +13,14 @@ import type { Node } from "web-tree-sitter";
 import { Position } from "vscode-languageserver/node";
 import { findIdentifierNodeAtPosition } from "./utils";
 import { ScopeKind, type ScopeKind as ScopeKindValue } from "./scope-kinds";
-import { findContainingDefine, findContainingProcedure, findFileScopeDefinitionNode, findMacroParamDefinitionNode, isLocalToProc, resolveIdentifierDefinitionNode } from "./symbol-definitions";
+import {
+    findContainingDefine,
+    findContainingProcedure,
+    findFileScopeDefinitionNode,
+    findMacroParamDefinitionNode,
+    isLocalToProc,
+    resolveIdentifierDefinitionNode,
+} from "./symbol-definitions";
 
 /**
  * Scope information for a symbol at a given cursor position.
@@ -67,9 +74,10 @@ export function getSymbolScope(rootNode: Node, position: Position): SslSymbolSco
     }
 
     const containingProc = findContainingProcedure(symbolNode);
-    const localDefinitionNode = containingProc && isLocalToProc(containingProc, symbolName)
-        ? resolveIdentifierDefinitionNode(rootNode, symbolNode)
-        : null;
+    const localDefinitionNode =
+        containingProc && isLocalToProc(containingProc, symbolName)
+            ? resolveIdentifierDefinitionNode(rootNode, symbolNode)
+            : null;
 
     if (containingProc && localDefinitionNode) {
         return {

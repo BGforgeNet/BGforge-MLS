@@ -60,10 +60,7 @@ export async function bundle(filePath: string, sourceText: string): Promise<stri
         target: "esnext",
         sharedEnumNames,
         sharedExternalEnumNames,
-        extraPlugins: [
-            tbafResolverPlugin(sharedEnumNames),
-            tsExtensionResolverPlugin(sharedExternalEnumNames),
-        ],
+        extraPlugins: [tbafResolverPlugin(sharedEnumNames), tsExtensionResolverPlugin(sharedExternalEnumNames)],
     });
 
     return result.code;

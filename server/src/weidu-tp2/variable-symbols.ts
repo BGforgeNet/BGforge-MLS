@@ -9,7 +9,14 @@ import { makeRange } from "../core/position-utils";
 import { parseWithCache, isInitialized } from "./parser";
 import { ScopeKind, type ScopeKind as ScopeKindValue } from "./scope-kinds";
 import { SyntaxType } from "./tree-sitter.d";
-import { findIdentifier, findNodeAtPosition, findAncestorOfType, isSameNode, stripStringDelimiters, unwrapVariableRef } from "./tree-utils";
+import {
+    findIdentifier,
+    findNodeAtPosition,
+    findAncestorOfType,
+    isSameNode,
+    stripStringDelimiters,
+    unwrapVariableRef,
+} from "./tree-utils";
 import type { Symbols } from "../core/symbol-index";
 
 // ============================================
@@ -116,10 +123,7 @@ export function findContainingLoop(node: SyntaxNode): SyntaxNode | null {
  * Determine the scope for a variable reference.
  * Checks if the variable is a loop variable, function-local variable, or file-scoped variable.
  */
-function determineVariableScope(
-    varName: string,
-    node: SyntaxNode
-): VariableScopeInfo {
+function determineVariableScope(varName: string, node: SyntaxNode): VariableScopeInfo {
     // Check if we're inside a loop and the variable is a loop variable
     const loopNode = findContainingLoop(node);
     if (loopNode) {
@@ -236,7 +240,7 @@ function positionToByteOffset(text: string, position: Position, basePosition: { 
         }
 
         // Advance to next character
-        if (text[i] === '\n') {
+        if (text[i] === "\n") {
             currentLine++;
             currentCol = 0;
         } else {
@@ -275,7 +279,12 @@ export function matchesSymbol(name1: string, name2: string): boolean {
  *
  * Loop/function-scoped variables always use local definitions only.
  */
-export function findVariableDefinition(text: string, uri: string, position: Position, symbols?: Symbols): Location | null {
+export function findVariableDefinition(
+    text: string,
+    uri: string,
+    position: Position,
+    symbols?: Symbols,
+): Location | null {
     if (!isInitialized()) {
         return null;
     }
@@ -312,10 +321,7 @@ export function findVariableDefinition(text: string, uri: string, position: Posi
 /**
  * Get variable symbol info at the given position.
  */
-export function getVariableSymbolAtPosition(
-    root: SyntaxNode,
-    position: Position
-): VariableSymbolInfo | null {
+export function getVariableSymbolAtPosition(root: SyntaxNode, position: Position): VariableSymbolInfo | null {
     let node = findNodeAtPosition(root, position);
     if (!node) {
         return null;
@@ -412,10 +418,7 @@ export function getVariableSymbolAtPosition(
 /**
  * Find the first declaration of a variable in the given scope.
  */
-export function findVariableDefinitionNode(
-    root: SyntaxNode,
-    symbolInfo: VariableSymbolInfo
-): SyntaxNode | null {
+export function findVariableDefinitionNode(root: SyntaxNode, symbolInfo: VariableSymbolInfo): SyntaxNode | null {
     let searchScope: SyntaxNode = root;
     if (symbolInfo.scope === ScopeKind.Loop && symbolInfo.loopNode) {
         searchScope = symbolInfo.loopNode;
@@ -426,11 +429,7 @@ export function findVariableDefinitionNode(
     return findFirstDeclaration(searchScope, symbolInfo.name, symbolInfo);
 }
 
-function findFirstDeclaration(
-    scopeNode: SyntaxNode,
-    varName: string,
-    scopeInfo: VariableScopeInfo
-): SyntaxNode | null {
+function findFirstDeclaration(scopeNode: SyntaxNode, varName: string, scopeInfo: VariableScopeInfo): SyntaxNode | null {
     let firstDecl: SyntaxNode | null = null;
 
     function visit(node: SyntaxNode): void {
@@ -496,10 +495,12 @@ function findFirstDeclaration(
             }
 
             // For parameter declarations (INT_VAR, STR_VAR, RET, RET_ARRAY)
-            if (node.type === SyntaxType.IntVarDecl ||
+            if (
+                node.type === SyntaxType.IntVarDecl ||
                 node.type === SyntaxType.StrVarDecl ||
                 node.type === SyntaxType.RetDecl ||
-                node.type === SyntaxType.RetArrayDecl) {
+                node.type === SyntaxType.RetArrayDecl
+            ) {
                 for (const child of node.children) {
                     if (child.type === SyntaxType.Identifier && matchesSymbol(child.text, varName)) {
                         firstDecl = child;

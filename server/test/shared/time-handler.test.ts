@@ -27,7 +27,10 @@ describe("shared/time-handler", () => {
         });
 
         it("async handler completing well under threshold does not call warn", async () => {
-            const handler = timeHandler("testFastAsync", () => Promise.resolve("ok"), { warn: warnSpy, thresholdMs: 50 });
+            const handler = timeHandler("testFastAsync", () => Promise.resolve("ok"), {
+                warn: warnSpy,
+                thresholdMs: 50,
+            });
             const result = await handler();
             expect(result).toBe("ok");
             expect(warnSpy).not.toHaveBeenCalled();
@@ -38,7 +41,9 @@ describe("shared/time-handler", () => {
         it("async handler exceeding threshold logs the correct message", async () => {
             vi.useFakeTimers();
             const slowFn = (): Promise<string> =>
-                new Promise((resolve) => { setTimeout(() => resolve("done"), 60); });
+                new Promise((resolve) => {
+                    setTimeout(() => resolve("done"), 60);
+                });
             const handler = timeHandler("slowOp", slowFn, { warn: warnSpy, thresholdMs: 50 });
             const promise = handler();
             await vi.runAllTimersAsync();
@@ -53,7 +58,13 @@ describe("shared/time-handler", () => {
     describe("throw: handler that throws logs elapsed time and rethrows", () => {
         it("sync handler that throws logs and rethrows the error", () => {
             const err = new Error("boom");
-            const handler = timeHandler("throwingOp", () => { throw err; }, { warn: warnSpy, thresholdMs: 0 });
+            const handler = timeHandler(
+                "throwingOp",
+                () => {
+                    throw err;
+                },
+                { warn: warnSpy, thresholdMs: 0 },
+            );
             expect(() => handler()).toThrow(err);
             expect(warnSpy).toHaveBeenCalledOnce();
             const msg: string = warnSpy.mock.calls[0][0] as string;
@@ -62,7 +73,13 @@ describe("shared/time-handler", () => {
 
         it("async handler that rejects logs and rethrows the error", async () => {
             const err = new Error("async boom");
-            const handler = timeHandler("asyncThrow", async () => { throw err; }, { warn: warnSpy, thresholdMs: 0 });
+            const handler = timeHandler(
+                "asyncThrow",
+                async () => {
+                    throw err;
+                },
+                { warn: warnSpy, thresholdMs: 0 },
+            );
             await expect(handler()).rejects.toThrow(err);
             expect(warnSpy).toHaveBeenCalledOnce();
             const msg: string = warnSpy.mock.calls[0][0] as string;

@@ -35,7 +35,11 @@ end
     });
 });
 
-function findIdentifierNodeByText(node: import("web-tree-sitter").Node, text: string, occurrenceIndex: number): import("web-tree-sitter").Node | null {
+function findIdentifierNodeByText(
+    node: import("web-tree-sitter").Node,
+    text: string,
+    occurrenceIndex: number,
+): import("web-tree-sitter").Node | null {
     let seen = -1;
 
     function visit(current: import("web-tree-sitter").Node): import("web-tree-sitter").Node | null {

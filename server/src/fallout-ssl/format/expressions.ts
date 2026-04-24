@@ -8,9 +8,12 @@ import type { Node as SyntaxNode } from "web-tree-sitter";
 import { getCtx, isComment, throwFormatError } from "./core";
 import { SyntaxType } from "../tree-sitter.d";
 
-
 /** Format an expression node to a string, with optional column tracking for line-breaking. */
-export function formatExpression(node: SyntaxNode | null | undefined, column: number = 0, extraLength: number = 0): string {
+export function formatExpression(
+    node: SyntaxNode | null | undefined,
+    column: number = 0,
+    extraLength: number = 0,
+): string {
     if (!node) return "";
 
     // Handle ERROR nodes: preserve original text
@@ -89,7 +92,7 @@ export function formatExpression(node: SyntaxNode | null | undefined, column: nu
                 );
             }
             // Preserve := vs = from original
-            const op = node.children.find(c => c.text === ":=" || c.text === "=")?.text || "=";
+            const op = node.children.find((c) => c.text === ":=" || c.text === "=")?.text || "=";
             return `${name.text} ${op} ${formatExpression(value)}`;
         }
         default:
@@ -136,7 +139,7 @@ function formatBinaryExpr(node: SyntaxNode, column: number = 0, extraLength: num
     if (breakableOps.includes(op)) {
         const operands = flattenBinaryChain(node, op);
         // Try compact first - format without column info for length check
-        const compactOperands = operands.map(o => formatExpression(o));
+        const compactOperands = operands.map((o) => formatExpression(o));
         const compact = compactOperands.join(` ${op} `);
 
         // Check if compact version fits (including any suffix like " then begin")
@@ -191,8 +194,8 @@ function formatCallExpr(node: SyntaxNode, column: number = 0, extraLength: numbe
     const func = node.childForFieldName("func");
     const funcName = func?.text || "";
     // namedChildren[0] is the func, rest are args; skip inline block comments
-    const argNodes = node.namedChildren.slice(1).filter(c => c.type !== SyntaxType.Comment);
-    const args = argNodes.map(a => formatExpression(a));
+    const argNodes = node.namedChildren.slice(1).filter((c) => c.type !== SyntaxType.Comment);
+    const args = argNodes.map((a) => formatExpression(a));
 
     const compact = `${funcName}(${args.join(", ")})`;
 
@@ -300,10 +303,10 @@ export function formatAssignment(node: SyntaxNode): string {
 
 export function formatExpressionStmt(node: SyntaxNode, depth: number): string {
     const ctx = getCtx();
-    const expr = node.children.find(c => c.type !== ";");
+    const expr = node.children.find((c) => c.type !== ";");
     if (!expr) return "";
 
-    const hasSemicolon = node.children.some(c => c.text === ";");
+    const hasSemicolon = node.children.some((c) => c.text === ";");
     const column = depth * ctx.indent.length;
     return formatExpression(expr, column) + (hasSemicolon ? ";" : "");
 }

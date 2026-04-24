@@ -1,11 +1,6 @@
-import {
-    type ServerCapabilities,
-    TextDocumentSyncKind,
-} from "vscode-languageserver/node";
+import { type ServerCapabilities, TextDocumentSyncKind } from "vscode-languageserver/node";
 import { semanticTokensLegend } from "./shared/semantic-tokens";
-import {
-    LSP_COMMAND_PARSE_DIALOG,
-} from "../../shared/protocol";
+import { LSP_COMMAND_PARSE_DIALOG } from "../../shared/protocol";
 import { COMMAND_compile } from "./compile";
 
 export function getServerCapabilities(): ServerCapabilities {

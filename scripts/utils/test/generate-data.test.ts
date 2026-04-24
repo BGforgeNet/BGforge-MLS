@@ -7,13 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { WEIDU_TP2_STANZAS } from "../../../shared/stanza-names.ts";
-import {
-    generateCompletion,
-    generateHover,
-    generateSignatures,
-    getDetail,
-    loadData,
-} from "../src/generate-data.ts";
+import { generateCompletion, generateHover, generateSignatures, getDetail, loadData } from "../src/generate-data.ts";
 
 const TMP_BASE = "tmp";
 beforeAll(() => fs.mkdirSync(TMP_BASE, { recursive: true }));
@@ -152,11 +146,13 @@ describe("generateCompletion", () => {
         const data = {
             funcs: {
                 type: 3,
-                items: [{
-                    name: "f",
-                    type: "int",
-                    args: [{ name: "a", type: "int", doc: "val" }],
-                }],
+                items: [
+                    {
+                        name: "f",
+                        type: "int",
+                        args: [{ name: "a", type: "int", doc: "val" }],
+                    },
+                ],
             },
         };
         const result = generateCompletion(data, "lang");
@@ -217,12 +213,14 @@ describe("generateHover", () => {
         const data = {
             funcs: {
                 type: 3,
-                items: [{
-                    name: "f",
-                    type: "int",
-                    args: [{ name: "x", type: "int", doc: "val" }],
-                    doc: "A function.",
-                }],
+                items: [
+                    {
+                        name: "f",
+                        type: "int",
+                        args: [{ name: "x", type: "int", doc: "val" }],
+                        doc: "A function.",
+                    },
+                ],
             },
         };
         const result = generateHover(data, "lang");
@@ -246,8 +244,20 @@ describe("generateHover", () => {
 
     it("emits hover object keys in sorted order", () => {
         const data = {
-            zeta: { type: 3, items: [{ name: "zed", detail: "zed()" }, { name: "alpha", detail: "alpha()" }] },
-            alpha: { type: 3, items: [{ name: "zulu", detail: "zulu()" }, { name: "beta", detail: "beta()" }] },
+            zeta: {
+                type: 3,
+                items: [
+                    { name: "zed", detail: "zed()" },
+                    { name: "alpha", detail: "alpha()" },
+                ],
+            },
+            alpha: {
+                type: 3,
+                items: [
+                    { name: "zulu", detail: "zulu()" },
+                    { name: "beta", detail: "beta()" },
+                ],
+            },
         };
         const result = generateHover(data, "lang");
         expect(Object.keys(result)).toEqual(["beta", "zulu", "alpha", "zed"]);
@@ -374,7 +384,10 @@ describe("deprecation in hover output", () => {
 
     it("appends string deprecation notice to hover", () => {
         const data = {
-            funcs: { type: 3, items: [{ name: "old_func", detail: "void old_func()", deprecated: "Use new_func instead" }] },
+            funcs: {
+                type: 3,
+                items: [{ name: "old_func", detail: "void old_func()", deprecated: "Use new_func instead" }],
+            },
         };
         const result = generateHover(data, "lang");
         expect(result["old_func"]!.contents.value).toContain("**Deprecated:** Use new_func instead");
@@ -402,15 +415,17 @@ describe("generateCompletion (WeiDU)", () => {
         const data = {
             dimorphic_functions: {
                 type: 3,
-                items: [{
-                    name: "SUBSTRING",
-                    type: "dimorphic",
-                    doc: "Returns a substring.",
-                    args: [
-                        { name: "start", type: "int", doc: "offset" },
-                        { name: "text", type: "string", doc: "source" },
-                    ],
-                }],
+                items: [
+                    {
+                        name: "SUBSTRING",
+                        type: "dimorphic",
+                        doc: "Returns a substring.",
+                        args: [
+                            { name: "start", type: "int", doc: "offset" },
+                            { name: "text", type: "string", doc: "source" },
+                        ],
+                    },
+                ],
             },
         };
         const result = generateCompletion(data, "weidu-tp2-tooltip");
@@ -425,17 +440,15 @@ describe("generateHover (WeiDU)", () => {
         const data = {
             dimorphic_functions: {
                 type: 3,
-                items: [{
-                    name: "SUBSTRING",
-                    type: "dimorphic",
-                    doc: "Returns a substring.",
-                    args: [
-                        { name: "start", type: "int", doc: "offset" },
-                    ],
-                    rets: [
-                        { name: "result", type: "string", doc: "the substring" },
-                    ],
-                }],
+                items: [
+                    {
+                        name: "SUBSTRING",
+                        type: "dimorphic",
+                        doc: "Returns a substring.",
+                        args: [{ name: "start", type: "int", doc: "offset" }],
+                        rets: [{ name: "result", type: "string", doc: "the substring" }],
+                    },
+                ],
             },
         };
         const result = generateHover(data, "weidu-tp2-tooltip");
@@ -450,10 +463,12 @@ describe("generateHover (WeiDU)", () => {
         const data = {
             patch_functions: {
                 type: 3,
-                items: [{
-                    name: "GET_AC",
-                    rets: [{ name: "base_ac", type: "int", doc: "base AC" }],
-                }],
+                items: [
+                    {
+                        name: "GET_AC",
+                        rets: [{ name: "base_ac", type: "int", doc: "base AC" }],
+                    },
+                ],
             },
         };
         const result = generateHover(data, "weidu-tp2-tooltip");
@@ -467,15 +482,17 @@ describe("generateSignatures (WeiDU)", () => {
         const data = {
             dimorphic_functions: {
                 type: 3,
-                items: [{
-                    name: "SUBSTRING",
-                    type: "dimorphic",
-                    doc: "Returns a substring.",
-                    args: [
-                        { name: "start", type: "int", doc: "offset" },
-                        { name: "text", type: "string", doc: "source" },
-                    ],
-                }],
+                items: [
+                    {
+                        name: "SUBSTRING",
+                        type: "dimorphic",
+                        doc: "Returns a substring.",
+                        args: [
+                            { name: "start", type: "int", doc: "offset" },
+                            { name: "text", type: "string", doc: "source" },
+                        ],
+                    },
+                ],
             },
         };
         const result = generateSignatures(data, "weidu-tp2-tooltip");
@@ -493,12 +510,14 @@ describe("generateSignatures", () => {
         const data = {
             funcs: {
                 type: 3,
-                items: [{
-                    name: "f",
-                    type: "int",
-                    doc: "A function.",
-                    args: [{ name: "x", type: "int", doc: "the value" }],
-                }],
+                items: [
+                    {
+                        name: "f",
+                        type: "int",
+                        doc: "A function.",
+                        args: [{ name: "x", type: "int", doc: "the value" }],
+                    },
+                ],
             },
         };
         const result = generateSignatures(data, "lang");
@@ -545,34 +564,47 @@ describe("generateCompletion params field (WeiDU)", () => {
         const data = {
             patch_functions: {
                 type: 3,
-                items: [{
-                    name: "CLONE_EFFECT",
-                    type: "patch",
-                    args: [
-                        { name: "opcode", type: "int", doc: "Effect opcode", default: "-1" },
-                        { name: "match_resource", type: "string", doc: "Resource" },
-                    ],
-                }],
+                items: [
+                    {
+                        name: "CLONE_EFFECT",
+                        type: "patch",
+                        args: [
+                            { name: "opcode", type: "int", doc: "Effect opcode", default: "-1" },
+                            { name: "match_resource", type: "string", doc: "Resource" },
+                        ],
+                    },
+                ],
             },
         };
         const result = generateCompletion(data, "weidu-tp2-tooltip");
         const item = result[0]!;
         expect(item.params).toBeDefined();
         expect(item.params!.intVar).toHaveLength(1);
-        expect(item.params!.intVar[0]).toMatchObject({ name: "opcode", type: "int", defaultValue: "-1", description: "Effect opcode" });
+        expect(item.params!.intVar[0]).toMatchObject({
+            name: "opcode",
+            type: "int",
+            defaultValue: "-1",
+            description: "Effect opcode",
+        });
         expect(item.params!.strVar).toHaveLength(1);
-        expect(item.params!.strVar[0]).toMatchObject({ name: "match_resource", type: "string", description: "Resource" });
+        expect(item.params!.strVar[0]).toMatchObject({
+            name: "match_resource",
+            type: "string",
+            description: "Resource",
+        });
     });
 
     it("includes params.ret for WeiDU items with rets", () => {
         const data = {
             patch_functions: {
                 type: 3,
-                items: [{
-                    name: "GET_ITEM_AC",
-                    type: "patch",
-                    rets: [{ name: "base_ac", type: "int", doc: "base AC" }],
-                }],
+                items: [
+                    {
+                        name: "GET_ITEM_AC",
+                        type: "patch",
+                        rets: [{ name: "base_ac", type: "int", doc: "base AC" }],
+                    },
+                ],
             },
         };
         const result = generateCompletion(data, "weidu-tp2-tooltip");
@@ -586,11 +618,13 @@ describe("generateCompletion params field (WeiDU)", () => {
         const data = {
             funcs: {
                 type: 3,
-                items: [{
-                    name: "my_func",
-                    type: "int",
-                    args: [{ name: "x", type: "int", doc: "val" }],
-                }],
+                items: [
+                    {
+                        name: "my_func",
+                        type: "int",
+                        args: [{ name: "x", type: "int", doc: "val" }],
+                    },
+                ],
             },
         };
         const result = generateCompletion(data, "fallout-ssl-tooltip");
@@ -612,14 +646,16 @@ describe("generateCompletion params field (WeiDU)", () => {
         const data = {
             patch_functions: {
                 type: 3,
-                items: [{
-                    name: "MY_FUNC",
-                    type: "patch",
-                    args: [
-                        { name: "mandatory", type: "int", required: true },
-                        { name: "optional", type: "int", default: "0" },
-                    ],
-                }],
+                items: [
+                    {
+                        name: "MY_FUNC",
+                        type: "patch",
+                        args: [
+                            { name: "mandatory", type: "int", required: true },
+                            { name: "optional", type: "int", default: "0" },
+                        ],
+                    },
+                ],
             },
         };
         const result = generateCompletion(data, "weidu-tp2-tooltip");
@@ -682,12 +718,14 @@ describe("generateSignatures getCategoryPrefix", () => {
         const data = {
             dimorphic_functions: {
                 type: 3,
-                items: [{
-                    name: "MY_FUNC",
-                    type: "dimorphic",
-                    doc: "does things",
-                    args: [{ name: "x", type: "unknowntype", doc: "x val" }],
-                }],
+                items: [
+                    {
+                        name: "MY_FUNC",
+                        type: "dimorphic",
+                        doc: "does things",
+                        args: [{ name: "x", type: "unknowntype", doc: "x val" }],
+                    },
+                ],
             },
         };
         const result = generateSignatures(data, "weidu-tp2-tooltip");

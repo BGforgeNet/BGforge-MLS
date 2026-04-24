@@ -31,7 +31,7 @@ export function formatInnerAction(
     node: SyntaxNode,
     ctx: FormatContext,
     depth: number,
-    formatNode: (node: SyntaxNode, ctx: FormatContext, depth: number) => string
+    formatNode: (node: SyntaxNode, ctx: FormatContext, depth: number) => string,
 ): string {
     const indent = ctx.indent.repeat(depth);
     const bodyIndent = ctx.indent.repeat(depth + 1);
@@ -88,7 +88,7 @@ export function formatInnerPatch(
     node: SyntaxNode,
     ctx: FormatContext,
     depth: number,
-    formatNode: (node: SyntaxNode, ctx: FormatContext, depth: number) => string
+    formatNode: (node: SyntaxNode, ctx: FormatContext, depth: number) => string,
 ): string {
     const indent = ctx.indent.repeat(depth);
     const bodyIndent = ctx.indent.repeat(depth + 1);
@@ -172,7 +172,7 @@ export function formatReplaceBcsBlock(
     node: SyntaxNode,
     ctx: FormatContext,
     depth: number,
-    formatNode: (node: SyntaxNode, ctx: FormatContext, depth: number) => string
+    formatNode: (node: SyntaxNode, ctx: FormatContext, depth: number) => string,
 ): string {
     const indent = ctx.indent.repeat(depth);
     const bodyIndent = ctx.indent.repeat(depth + 1);

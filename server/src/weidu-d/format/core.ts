@@ -1,7 +1,7 @@
 /**
  * Core formatting logic for WeiDU D files.
  * Simple approach: preserve source structure, normalize indent, break long lines.
- * 
+ *
  * For formatter behavior and examples, see:
  * {@link https://github.com/bgforge/vscode-mls/tree/master/grammars/weidu-d/formatter.md}
  */
@@ -240,7 +240,11 @@ function formatTransitionNode(node: SyntaxNode, indent: string, innerIndent: str
         for (let i = 0; i < lines.length; i++) {
             const linePart = lines[i];
             if (linePart !== undefined) {
-                const processed = isCode ? linePart.trim().replace(/\s+/g, " ") : (i === 0 ? linePart : linePart.trimStart());
+                const processed = isCode
+                    ? linePart.trim().replace(/\s+/g, " ")
+                    : i === 0
+                      ? linePart
+                      : linePart.trimStart();
                 if (processed || (isCode && i < lines.length - 1)) {
                     if (i === 0) {
                         if (currentLine && !currentLine.endsWith(" ")) {
@@ -291,7 +295,6 @@ function formatTransitionNode(node: SyntaxNode, indent: string, innerIndent: str
 
     return result.join("\n");
 }
-
 
 // Reindent a multi-line state preserving source structure
 function reindentState(node: SyntaxNode, ctx: FormatContext): string {

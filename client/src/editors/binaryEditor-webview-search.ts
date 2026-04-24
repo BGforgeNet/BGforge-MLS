@@ -65,10 +65,7 @@ export function filterTree(query: string, ctx: SearchContext): void {
     });
 }
 
-export function setupSearchInput(
-    searchInput: HTMLInputElement,
-    ctx: SearchContext,
-): void {
+export function setupSearchInput(searchInput: HTMLInputElement, ctx: SearchContext): void {
     const isMac = /Macintosh|Mac OS X/.test(navigator.userAgent);
     searchInput.placeholder = isMac ? "Cmd+F or / to search" : "Ctrl+F or / to search";
 
@@ -87,10 +84,12 @@ export function setupGlobalKeyboardShortcuts(searchInput: HTMLInputElement | nul
             searchInput?.select();
         }
         if (
-            event.key === "/"
-            && !(document.activeElement instanceof HTMLInputElement
-                || document.activeElement instanceof HTMLTextAreaElement
-                || document.activeElement instanceof HTMLSelectElement)
+            event.key === "/" &&
+            !(
+                document.activeElement instanceof HTMLInputElement ||
+                document.activeElement instanceof HTMLTextAreaElement ||
+                document.activeElement instanceof HTMLSelectElement
+            )
         ) {
             event.preventDefault();
             searchInput?.focus();

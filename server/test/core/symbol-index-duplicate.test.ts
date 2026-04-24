@@ -93,7 +93,7 @@ describe("symbol-index duplicate handling", () => {
         const all = symbols.lookupAll("CONST");
         expect(all).toHaveLength(2);
         // Both URIs should be present
-        const uris = all.map(s => s.source.uri);
+        const uris = all.map((s) => s.source.uri);
         expect(uris).toContain(uriA);
         expect(uris).toContain(uriB);
     });
@@ -123,11 +123,11 @@ describe("symbol-index duplicate handling", () => {
 
         // query() should return ALL symbols including duplicates
         const allSymbols = symbols.query({});
-        const pipboySymbols = allSymbols.filter(s => s.name === "PIPBOY");
+        const pipboySymbols = allSymbols.filter((s) => s.name === "PIPBOY");
 
         expect(pipboySymbols).toHaveLength(2);
         // Each should have different displayPath for distinguishing in completion
-        const paths = pipboySymbols.map(s => s.source.displayPath);
+        const paths = pipboySymbols.map((s) => s.source.displayPath);
         expect(paths).toContain("a.h");
         expect(paths).toContain("b.h");
     });

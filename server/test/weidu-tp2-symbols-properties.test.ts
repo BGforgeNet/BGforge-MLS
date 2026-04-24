@@ -41,10 +41,8 @@ const tp2Fragments: fc.Arbitrary<string> = fc.oneof(
     fc.constant("DEFINE_ACTION_MACRO my_macro BEGIN END"),
     fc.constant("OUTER_SET MY_VAR = 42"),
     fc.constant("OUTER_SPRINT MY_STRING ~hello~"),
-    fc.constant(
-        "DEFINE_ACTION_FUNCTION complex_fn\n    INT_VAR param1 = 0\nBEGIN\n    OUTER_SET local_var = 1\nEND"
-    ),
-    fc.constant("")
+    fc.constant("DEFINE_ACTION_FUNCTION complex_fn\n    INT_VAR param1 = 0\nBEGIN\n    OUTER_SET local_var = 1\nEND"),
+    fc.constant(""),
 );
 
 /** Concatenates 1–4 fragments with newlines. */
@@ -63,7 +61,7 @@ describe("weidu-tp2 symbol extractor properties", () => {
                 const result = getDocumentSymbols(text);
                 expect(Array.isArray(result)).toBe(true);
             }),
-            { numRuns: 50 }
+            { numRuns: 50 },
         );
     });
 
@@ -81,15 +79,14 @@ describe("weidu-tp2 symbol extractor properties", () => {
                     expect(end.character).toBeGreaterThanOrEqual(0);
                     // start must not be after end
                     const startBefore =
-                        start.line < end.line ||
-                        (start.line === end.line && start.character <= end.character);
+                        start.line < end.line || (start.line === end.line && start.character <= end.character);
                     expect(startBefore).toBe(true);
                     // end line must be within the document
                     // (allow end.line === lineCount for EOF-terminated ranges)
                     expect(end.line).toBeLessThanOrEqual(lineCount);
                 }
             }),
-            { numRuns: 50 }
+            { numRuns: 50 },
         );
     });
 
@@ -100,7 +97,7 @@ describe("weidu-tp2 symbol extractor properties", () => {
                 const second = getDocumentSymbols(text);
                 expect(second).toEqual(first);
             }),
-            { numRuns: 50 }
+            { numRuns: 50 },
         );
     });
 });

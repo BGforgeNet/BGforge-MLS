@@ -4,4 +4,4 @@ export const ScopeKind = {
     Loop: "loop",
 } as const;
 
-export type ScopeKind = typeof ScopeKind[keyof typeof ScopeKind];
+export type ScopeKind = (typeof ScopeKind)[keyof typeof ScopeKind];

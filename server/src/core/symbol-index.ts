@@ -12,11 +12,7 @@
  * - Type-safe lookups: Typed methods return narrowed symbol types
  */
 
-import {
-    type CancellationToken,
-    type Location,
-    type SymbolInformation,
-} from "vscode-languageserver/node";
+import { type CancellationToken, type Location, type SymbolInformation } from "vscode-languageserver/node";
 import type { NormalizedUri } from "./normalized-uri";
 import {
     type IndexedSymbol,
@@ -236,9 +232,7 @@ export class Symbols {
         // Always sort for deterministic ordering:
         // - With context: sort by scope precedence, then URI as tiebreaker
         // - Without context: sort by URI only (alphabetical)
-        return [...candidates].sort((a, b) =>
-            this.compareScopePrecedence(a, b, context?.uri)
-        );
+        return [...candidates].sort((a, b) => this.compareScopePrecedence(a, b, context?.uri));
     }
 
     /**
@@ -269,20 +263,17 @@ export class Symbols {
         // Apply filters
         if (options.prefix) {
             const prefix = options.prefix.toLowerCase();
-            results = results.filter(s => s.name.toLowerCase().startsWith(prefix));
+            results = results.filter((s) => s.name.toLowerCase().startsWith(prefix));
         }
 
         if (options.kinds && options.kinds.length > 0) {
             const kinds = new Set(options.kinds);
-            results = results.filter(s => kinds.has(s.kind));
+            results = results.filter((s) => kinds.has(s.kind));
         }
 
         if (options.uri) {
             // Filter to file symbols + static (static is visible everywhere)
-            results = results.filter(s =>
-                s.source.uri === options.uri ||
-                s.source.type === SourceType.Static
-            );
+            results = results.filter((s) => s.source.uri === options.uri || s.source.type === SourceType.Static);
         }
 
         // Apply limit
@@ -533,14 +524,9 @@ export class Symbols {
     /**
      * Check if a symbol is visible in the given context.
      */
-    private isVisibleInContext(
-        symbol: IndexedSymbol,
-        uri: string,
-        context?: QueryContext
-    ): boolean {
+    private isVisibleInContext(symbol: IndexedSymbol, uri: string, context?: QueryContext): boolean {
         // Global and workspace symbols are always visible
-        if (symbol.scope.level === ScopeLevel.Global ||
-            symbol.scope.level === ScopeLevel.Workspace) {
+        if (symbol.scope.level === ScopeLevel.Global || symbol.scope.level === ScopeLevel.Workspace) {
             return true;
         }
 

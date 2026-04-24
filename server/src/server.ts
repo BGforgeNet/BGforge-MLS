@@ -58,7 +58,13 @@ import { falloutWorldmapProvider } from "./fallout-worldmap/provider";
 import { parserManager } from "./core/parser-manager";
 import { registry } from "./provider-registry";
 import * as settings from "./settings";
-import { type MLSsettings, defaultSettings, normalizeSettings, shouldValidateOnChange, shouldValidateOnSave } from "./settings";
+import {
+    type MLSsettings,
+    defaultSettings,
+    normalizeSettings,
+    shouldValidateOnChange,
+    shouldValidateOnSave,
+} from "./settings";
 import { weiduBafProvider } from "./weidu-baf/provider";
 import { weiduDProvider } from "./weidu-d/provider";
 import { weiduTp2Provider } from "./weidu-tp2/provider";
@@ -67,11 +73,7 @@ import { initServerContext, getServerContext, tryGetServerContext, updateServerS
 import { initSettingsService } from "./settings-service";
 import { getServerCapabilities } from "./server-capabilities";
 import { UriDebouncer } from "./core/uri-debouncer";
-import {
-    LSP_COMMAND_PARSE_DIALOG,
-    NOTIFICATION_LOAD_FINISHED,
-    VSCODE_COMMAND_COMPILE,
-} from "../../shared/protocol";
+import { LSP_COMMAND_PARSE_DIALOG, NOTIFICATION_LOAD_FINISHED, VSCODE_COMMAND_COMPILE } from "../../shared/protocol";
 
 // Create a connection for the server.
 // createConnection() auto-detects transport from process.argv:
@@ -287,10 +289,12 @@ export function getDocumentSettings(resource: string): Thenable<MLSsettings> {
     }
     let result = documentSettings.get(resource);
     if (!result) {
-        result = connection.workspace.getConfiguration({
-            scopeUri: resource,
-            section: "bgforge",
-        }).then(normalizeSettings);
+        result = connection.workspace
+            .getConfiguration({
+                scopeUri: resource,
+                section: "bgforge",
+            })
+            .then(normalizeSettings);
         documentSettings.set(resource, result);
     }
     return result;
@@ -319,16 +323,22 @@ documents.onDidOpen(async (event) => {
 });
 
 // This handler provides the initial list of the completion items.
-connection.onCompletion(timeHandler("onCompletion", (params: CompletionParams) => {
-    const uri = params.textDocument.uri;
-    const textDoc = documents.get(uri);
-    if (!textDoc) {
-        return [];
-    }
-    const langId = textDoc.languageId;
-    const text = textDoc.getText();
-    return registry.completion(langId, text, uri, params.position, params.context?.triggerCharacter);
-}, timingOpts));
+connection.onCompletion(
+    timeHandler(
+        "onCompletion",
+        (params: CompletionParams) => {
+            const uri = params.textDocument.uri;
+            const textDoc = documents.get(uri);
+            if (!textDoc) {
+                return [];
+            }
+            const langId = textDoc.languageId;
+            const text = textDoc.getText();
+            return registry.completion(langId, text, uri, params.position, params.context?.triggerCharacter);
+        },
+        timingOpts,
+    ),
+);
 
 // This handler resolve additional information for the item selected in
 // the completion list.
@@ -343,51 +353,57 @@ documents.listen(connection);
 // Listen on the connection
 connection.listen();
 
-connection.onHover(timeHandler("onHover", async (textDocumentPosition: TextDocumentPositionParams) => {
-    const uri = textDocumentPosition.textDocument.uri;
-    const textDoc = documents.get(uri);
-    if (!textDoc) {
-        return;
-    }
-    const langId = textDoc.languageId;
-    const text = textDoc.getText();
-    const symbol = symbolAtPosition(text, textDocumentPosition.position);
-    const ctx = await getServerContext();
-    const { debug } = ctx.settings;
+connection.onHover(
+    timeHandler(
+        "onHover",
+        async (textDocumentPosition: TextDocumentPositionParams) => {
+            const uri = textDocumentPosition.textDocument.uri;
+            const textDoc = documents.get(uri);
+            if (!textDoc) {
+                return;
+            }
+            const langId = textDoc.languageId;
+            const text = textDoc.getText();
+            const symbol = symbolAtPosition(text, textDocumentPosition.position);
+            const ctx = await getServerContext();
+            const { debug } = ctx.settings;
 
-    if (!symbol) {
-        if (debug) conlog(`[hover] no symbol at position in ${uri}`);
-        return;
-    }
+            if (!symbol) {
+                if (debug) conlog(`[hover] no symbol at position in ${uri}`);
+                return;
+            }
 
-    if (debug) conlog(`[hover] symbol="${symbol}" langId="${langId}" uri="${uri}"`);
+            if (debug) conlog(`[hover] symbol="${symbol}" langId="${langId}" uri="${uri}"`);
 
-    // Suppress all features in comment zones
-    if (!registry.shouldProvideFeatures(langId, text, textDocumentPosition.position)) {
-        if (debug) conlog(`[hover] suppressed (shouldProvideFeatures=false)`);
-        return;
-    }
+            // Suppress all features in comment zones
+            if (!registry.shouldProvideFeatures(langId, text, textDocumentPosition.position)) {
+                if (debug) conlog(`[hover] suppressed (shouldProvideFeatures=false)`);
+                return;
+            }
 
-    // Check translation hover first (for @123 or NOption(123) references)
-    const translationHover = ctx.translation.getHover(uri, langId, symbol, text);
-    if (translationHover) {
-        if (debug) conlog(`[hover] translation hover returned`);
-        return translationHover;
-    }
+            // Check translation hover first (for @123 or NOption(123) references)
+            const translationHover = ctx.translation.getHover(uri, langId, symbol, text);
+            if (translationHover) {
+                if (debug) conlog(`[hover] translation hover returned`);
+                return translationHover;
+            }
 
-    // Try local hover (AST-based, for symbols defined in current file)
-    const localHover = registry.localHover(langId, text, symbol, uri, textDocumentPosition.position);
-    if (localHover.handled) {
-        if (debug) conlog(`[hover] localHover handled, result=${localHover.hover ? "found" : "null"}`);
-        return localHover.hover;
-    }
+            // Try local hover (AST-based, for symbols defined in current file)
+            const localHover = registry.localHover(langId, text, symbol, uri, textDocumentPosition.position);
+            if (localHover.handled) {
+                if (debug) conlog(`[hover] localHover handled, result=${localHover.hover ? "found" : "null"}`);
+                return localHover.hover;
+            }
 
-    // Fall back to data-driven hover (from headers/static data)
-    // Pass text to enable unified symbol resolution (Approach C)
-    const dataHover = registry.hover(langId, uri, symbol, text);
-    if (debug) conlog(`[hover] dataHover result=${dataHover ? "found" : "null"}`);
-    return dataHover;
-}, timingOpts));
+            // Fall back to data-driven hover (from headers/static data)
+            // Pass text to enable unified symbol resolution (Approach C)
+            const dataHover = registry.hover(langId, uri, symbol, text);
+            if (debug) conlog(`[hover] dataHover result=${dataHover ? "found" : "null"}`);
+            return dataHover;
+        },
+        timingOpts,
+    ),
+);
 
 /** Dialog preview handler registry. Maps language/extension to parser + translation language. */
 const dialogHandlers = [
@@ -584,75 +600,99 @@ connection.languages.inlayHint.on(async (params) => {
     return ctx.translation.getInlayHints(uri, langId, text, params.range);
 });
 
-connection.onDefinition(timeHandler("onDefinition", async (params) => {
-    const textDoc = documents.get(params.textDocument.uri);
-    if (!textDoc) {
-        return;
-    }
-    const uri = params.textDocument.uri;
-    const langId = textDoc.languageId;
-    const text = textDoc.getText();
+connection.onDefinition(
+    timeHandler(
+        "onDefinition",
+        async (params) => {
+            const textDoc = documents.get(params.textDocument.uri);
+            if (!textDoc) {
+                return;
+            }
+            const uri = params.textDocument.uri;
+            const langId = textDoc.languageId;
+            const text = textDoc.getText();
 
-    // Suppress features in comment/param-name zones
-    if (!registry.shouldProvideFeatures(langId, text, params.position)) {
-        return;
-    }
+            // Suppress features in comment/param-name zones
+            if (!registry.shouldProvideFeatures(langId, text, params.position)) {
+                return;
+            }
 
-    // Try provider first (AST-based definition, e.g. state labels in D files)
-    const providerResult = registry.definition(langId, text, params.position, uri);
-    if (providerResult) {
-        return providerResult;
-    }
+            // Try provider first (AST-based definition, e.g. state labels in D files)
+            const providerResult = registry.definition(langId, text, params.position, uri);
+            if (providerResult) {
+                return providerResult;
+            }
 
-    const symbol = symbolAtPosition(text, params.position);
-    const ctx = await getServerContext();
+            const symbol = symbolAtPosition(text, params.position);
+            const ctx = await getServerContext();
 
-    // Try translation definition (mstr/tra/@123 references -> .msg/.tra files)
-    if (symbol) {
-        const traResult = ctx.translation.getDefinition(uri, langId, symbol, text);
-        if (traResult) {
-            return traResult;
-        }
-    }
+            // Try translation definition (mstr/tra/@123 references -> .msg/.tra files)
+            if (symbol) {
+                const traResult = ctx.translation.getDefinition(uri, langId, symbol, text);
+                if (traResult) {
+                    return traResult;
+                }
+            }
 
-    // Try provider symbol definition (data-driven, from headers)
-    if (symbol) {
-        return registry.symbolDefinition(langId, symbol);
-    }
+            // Try provider symbol definition (data-driven, from headers)
+            if (symbol) {
+                return registry.symbolDefinition(langId, symbol);
+            }
 
-    return null;
-}, timingOpts));
+            return null;
+        },
+        timingOpts,
+    ),
+);
 
-connection.onReferences(timeHandler("onReferences", async (params, token) => {
-    const textDoc = documents.get(params.textDocument.uri);
-    if (!textDoc) {
-        return [];
-    }
-    const uri = params.textDocument.uri;
-    const langId = textDoc.languageId;
-    const text = textDoc.getText();
+connection.onReferences(
+    timeHandler(
+        "onReferences",
+        async (params, token) => {
+            const textDoc = documents.get(params.textDocument.uri);
+            if (!textDoc) {
+                return [];
+            }
+            const uri = params.textDocument.uri;
+            const langId = textDoc.languageId;
+            const text = textDoc.getText();
 
-    // Suppress features in comment/param-name zones
-    if (!registry.shouldProvideFeatures(langId, text, params.position)) {
-        return [];
-    }
+            // Suppress features in comment/param-name zones
+            if (!registry.shouldProvideFeatures(langId, text, params.position)) {
+                return [];
+            }
 
-    // Try provider references first (AST-based, e.g. variable/function references)
-    const providerResult = registry.references(langId, text, params.position, uri, params.context.includeDeclaration, token);
-    if (providerResult.length > 0) {
-        return providerResult;
-    }
+            // Try provider references first (AST-based, e.g. variable/function references)
+            const providerResult = registry.references(
+                langId,
+                text,
+                params.position,
+                uri,
+                params.context.includeDeclaration,
+                token,
+            );
+            if (providerResult.length > 0) {
+                return providerResult;
+            }
 
-    // Try translation references (for tra/msg files — find usages across consumer files)
-    // Translation lookup is a single-file index lookup — bounded work, no token check needed.
-    const ctx = await getServerContext();
-    const traResult = ctx.translation.getReferences(uri, langId, params.position, params.context.includeDeclaration);
-    if (traResult && traResult.length > 0) {
-        return traResult;
-    }
+            // Try translation references (for tra/msg files — find usages across consumer files)
+            // Translation lookup is a single-file index lookup — bounded work, no token check needed.
+            const ctx = await getServerContext();
+            const traResult = ctx.translation.getReferences(
+                uri,
+                langId,
+                params.position,
+                params.context.includeDeclaration,
+            );
+            if (traResult && traResult.length > 0) {
+                return traResult;
+            }
 
-    return [];
-}, timingOpts));
+            return [];
+        },
+        timingOpts,
+    ),
+);
 
 connection.onPrepareRename((params) => {
     const textDoc = documents.get(params.textDocument.uri);
@@ -695,7 +735,9 @@ connection.onRenameRequest((params) => {
         }
         // Safety cleanup in case some URIs never trigger change/save
         if (renameSuppressTimer) clearTimeout(renameSuppressTimer);
-        renameSuppressTimer = setTimeout(() => { renameAffectedUris.clear(); }, RENAME_SUPPRESS_MS);
+        renameSuppressTimer = setTimeout(() => {
+            renameAffectedUris.clear();
+        }, RENAME_SUPPRESS_MS);
     }
 
     return result;
@@ -731,26 +773,44 @@ connection.onDocumentFormatting((params) => {
     return result.edits;
 });
 
-connection.onDocumentSymbol(timeHandler("onDocumentSymbol", (params) => {
-    const textDoc = documents.get(params.textDocument.uri);
-    if (!textDoc) {
-        return [];
-    }
-    return registry.symbols(textDoc.languageId, textDoc.getText());
-}, timingOpts));
+connection.onDocumentSymbol(
+    timeHandler(
+        "onDocumentSymbol",
+        (params) => {
+            const textDoc = documents.get(params.textDocument.uri);
+            if (!textDoc) {
+                return [];
+            }
+            return registry.symbols(textDoc.languageId, textDoc.getText());
+        },
+        timingOpts,
+    ),
+);
 
-connection.languages.semanticTokens.on(timeHandler("semanticTokens", (params) => {
-    const textDoc = documents.get(params.textDocument.uri);
-    if (!textDoc) {
-        return { data: [] };
-    }
+connection.languages.semanticTokens.on(
+    timeHandler(
+        "semanticTokens",
+        (params) => {
+            const textDoc = documents.get(params.textDocument.uri);
+            if (!textDoc) {
+                return { data: [] };
+            }
 
-    return registry.semanticTokens(textDoc.languageId, textDoc.getText(), params.textDocument.uri);
-}, timingOpts));
+            return registry.semanticTokens(textDoc.languageId, textDoc.getText(), params.textDocument.uri);
+        },
+        timingOpts,
+    ),
+);
 
-connection.onWorkspaceSymbol(timeHandler("onWorkspaceSymbol", (params, token) => {
-    return registry.workspaceSymbols(params.query, token);
-}, timingOpts));
+connection.onWorkspaceSymbol(
+    timeHandler(
+        "onWorkspaceSymbol",
+        (params, token) => {
+            return registry.workspaceSymbols(params.query, token);
+        },
+        timingOpts,
+    ),
+);
 
 connection.onFoldingRanges((params) => {
     const textDoc = documents.get(params.textDocument.uri);

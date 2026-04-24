@@ -41,13 +41,9 @@ function parseLine(line: string): ParsedLine | null {
     const rawMetadata = match[3]?.trim() ?? "";
 
     // Normalize internal whitespace: "; text" should have a single space after ;
-    const comment = rawComment.length > 0
-        ? "; " + rawComment.slice(1).trimStart()
-        : "";
+    const comment = rawComment.length > 0 ? "; " + rawComment.slice(1).trimStart() : "";
 
-    const metadata = rawMetadata.length > 0
-        ? "# " + rawMetadata.slice(1).trimStart()
-        : "";
+    const metadata = rawMetadata.length > 0 ? "# " + rawMetadata.slice(1).trimStart() : "";
 
     return { filename, comment, metadata };
 }
@@ -67,12 +63,10 @@ export function formatScriptsLst(rawText: string): FormatResult {
     const rawLines = text.split("\n");
 
     // Remove a trailing empty string caused by a final newline
-    const lines = rawLines[rawLines.length - 1] === ""
-        ? rawLines.slice(0, -1)
-        : rawLines;
+    const lines = rawLines[rawLines.length - 1] === "" ? rawLines.slice(0, -1) : rawLines;
 
     // Parse lines; track which can be formatted and collect column widths
-    const parsed: Array<ParsedLine | null> = lines.map(line => parseLine(line));
+    const parsed: Array<ParsedLine | null> = lines.map((line) => parseLine(line));
 
     let maxFilenameWidth = 0;
     let maxCommentWidth = 0;

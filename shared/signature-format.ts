@@ -31,7 +31,7 @@ export function formatSignature(sig: SignatureData): string {
     if (sig.params.length === 0) {
         return `${sig.prefix}${sig.name}`;
     }
-    const paramStrs = sig.params.map(p => {
+    const paramStrs = sig.params.map((p) => {
         let s = p.type ? `${p.type} ${p.name}` : p.name;
         if (p.defaultValue) s += ` = ${p.defaultValue}`;
         return s;

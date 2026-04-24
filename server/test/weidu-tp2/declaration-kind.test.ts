@@ -30,7 +30,7 @@ beforeAll(async () => {
 
 function getVarDeclarationKind(code: string, varName: string): DeclarationKind | undefined {
     const symbols = parseHeaderToSymbols("file:///test.tph", code);
-    const sym = symbols.find(s => s.name === varName);
+    const sym = symbols.find((s) => s.name === varName);
     if (sym && isVariableSymbol(sym)) {
         return sym.variable.declarationKind;
     }

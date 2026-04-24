@@ -36,7 +36,11 @@ function createItem(label: string, category: CompletionCategory): Tp2CompletionI
 }
 
 /** Helper to check if items are filtered correctly. */
-function expectFiltering(context: CompletionContext | CompletionContext[], category: CompletionCategory, shouldBeIncluded: boolean) {
+function expectFiltering(
+    context: CompletionContext | CompletionContext[],
+    category: CompletionCategory,
+    shouldBeIncluded: boolean,
+) {
     const items = [createItem("TEST_ITEM", category)];
     const contexts = Array.isArray(context) ? context : [context];
     const filtered = filterItemsByContext(items, contexts);
@@ -255,14 +259,20 @@ describe("name context filtering", () => {
 
     describe("all name contexts exclude non-callable categories", () => {
         const nameContexts = [
-            CompletionContext.LafName, CompletionContext.LpfName,
-            CompletionContext.LamName, CompletionContext.LpmName,
+            CompletionContext.LafName,
+            CompletionContext.LpfName,
+            CompletionContext.LamName,
+            CompletionContext.LpmName,
         ];
         const nonCallableCategories = [
-            CompletionCategory.Prologue, CompletionCategory.Flag,
-            CompletionCategory.ComponentFlag, CompletionCategory.Language,
-            CompletionCategory.Action, CompletionCategory.Patch,
-            CompletionCategory.Constants, CompletionCategory.Vars,
+            CompletionCategory.Prologue,
+            CompletionCategory.Flag,
+            CompletionCategory.ComponentFlag,
+            CompletionCategory.Language,
+            CompletionCategory.Action,
+            CompletionCategory.Patch,
+            CompletionCategory.Constants,
+            CompletionCategory.Vars,
         ];
 
         for (const ctx of nameContexts) {

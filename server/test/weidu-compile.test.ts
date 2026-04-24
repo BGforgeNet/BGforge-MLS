@@ -80,9 +80,7 @@ describe("weidu-compile", () => {
             await compile("file:///test.txt", baseSettings, true, "content");
 
             expect(mockExecFile).not.toHaveBeenCalled();
-            expect(mockShowInfo).toHaveBeenCalledWith(
-                expect.stringContaining("Focus a WeiDU file to parse!")
-            );
+            expect(mockShowInfo).toHaveBeenCalledWith(expect.stringContaining("Focus a WeiDU file to parse!"));
         });
 
         it("rejects .d without game path", async () => {
@@ -90,9 +88,7 @@ describe("weidu-compile", () => {
             await compile("file:///test.d", noGameSettings, true, "content");
 
             expect(mockExecFile).not.toHaveBeenCalled();
-            expect(mockShowWarning).toHaveBeenCalledWith(
-                expect.stringContaining("can't parse D or BAF")
-            );
+            expect(mockShowWarning).toHaveBeenCalledWith(expect.stringContaining("can't parse D or BAF"));
         });
 
         it("rejects .baf without game path", async () => {
@@ -194,10 +190,7 @@ describe("weidu-compile", () => {
         it("writes text to temp file before executing", async () => {
             await compile("file:///test.tp2", baseSettings, false, "my content");
 
-            expect(mockWriteFile).toHaveBeenCalledWith(
-                expect.stringMatching(/\.tp2$/),
-                "my content"
-            );
+            expect(mockWriteFile).toHaveBeenCalledWith(expect.stringMatching(/\.tp2$/), "my content");
         });
     });
 
@@ -244,11 +237,14 @@ describe("weidu-compile", () => {
             });
 
             let resolved = false;
-            const promise = compile("file:///test.tp2", baseSettings, false, "content")
-                .then(() => { resolved = true; });
+            const promise = compile("file:///test.tp2", baseSettings, false, "content").then(() => {
+                resolved = true;
+            });
 
             // Let microtasks run
-            await new Promise((r) => { setTimeout(r, 0); });
+            await new Promise((r) => {
+                setTimeout(r, 0);
+            });
             expect(resolved).toBe(false);
             expect(capturedCallback).toBeDefined();
 
@@ -265,9 +261,7 @@ describe("weidu-compile", () => {
 
             await compile("file:///test.tp2", baseSettings, false, "content");
 
-            expect(mockUnlink).toHaveBeenCalledWith(
-                expect.stringMatching(/\.tp2$/)
-            );
+            expect(mockUnlink).toHaveBeenCalledWith(expect.stringMatching(/\.tp2$/));
         });
 
         it("cleans up tmp file even when compilation fails", async () => {
@@ -275,9 +269,7 @@ describe("weidu-compile", () => {
 
             await compile("file:///test.tp2", baseSettings, false, "content");
 
-            expect(mockUnlink).toHaveBeenCalledWith(
-                expect.stringMatching(/\.tp2$/)
-            );
+            expect(mockUnlink).toHaveBeenCalledWith(expect.stringMatching(/\.tp2$/));
         });
 
         it("ignores ENOENT when cleaning up (already deleted)", async () => {
@@ -292,14 +284,10 @@ describe("weidu-compile", () => {
         it("cleans up tmp file when writeFile fails (partial write)", async () => {
             mockWriteFile.mockRejectedValue(new Error("ENOSPC"));
 
-            await expect(
-                compile("file:///test.tp2", baseSettings, false, "content")
-            ).rejects.toThrow("ENOSPC");
+            await expect(compile("file:///test.tp2", baseSettings, false, "content")).rejects.toThrow("ENOSPC");
 
             expect(mockExecFile).not.toHaveBeenCalled();
-            expect(mockUnlink).toHaveBeenCalledWith(
-                expect.stringMatching(/\.tp2$/)
-            );
+            expect(mockUnlink).toHaveBeenCalledWith(expect.stringMatching(/\.tp2$/));
         });
 
         it("logs and swallows non-ENOENT cleanup errors", async () => {
@@ -325,10 +313,7 @@ describe("weidu-compile", () => {
         });
 
         it("sends diagnostics on error", async () => {
-            setupExecFile(
-                { code: 1 },
-                "[ua.tp2]  ERROR at line 30 column 1-63"
-            );
+            setupExecFile({ code: 1 }, "[ua.tp2]  ERROR at line 30 column 1-63");
 
             await compile("file:///test.tp2", baseSettings, true, "content");
 
@@ -336,10 +321,7 @@ describe("weidu-compile", () => {
         });
 
         it("parses standard error format from stdout", async () => {
-            setupExecFile(
-                { code: 1 },
-                "[ua.tp2]  ERROR at line 30 column 1-63"
-            );
+            setupExecFile({ code: 1 }, "[ua.tp2]  ERROR at line 30 column 1-63");
 
             await compile("file:///test.tp2", baseSettings, true, "content");
 
@@ -350,10 +332,7 @@ describe("weidu-compile", () => {
         });
 
         it("parses PARSE ERROR variant from stdout", async () => {
-            setupExecFile(
-                { code: 1 },
-                "[ua.tp2]  PARSE ERROR at line 15 column 5-20"
-            );
+            setupExecFile({ code: 1 }, "[ua.tp2]  PARSE ERROR at line 15 column 5-20");
 
             await compile("file:///test.tp2", baseSettings, true, "content");
 
@@ -364,9 +343,7 @@ describe("weidu-compile", () => {
         });
 
         it("handles multiple errors at different lines", async () => {
-            const multiError =
-                "[ua.tp2]  ERROR at line 30 column 1-63\n" +
-                "[ua.tp2]  ERROR at line 45 column 10-25\n";
+            const multiError = "[ua.tp2]  ERROR at line 30 column 1-63\n[ua.tp2]  ERROR at line 45 column 10-25\n";
 
             setupExecFile({ code: 1 }, multiError);
 
@@ -512,12 +489,8 @@ describe("weidu-compile", () => {
 
             await compile("file:///test.tp2", baseSettings, true, "content");
 
-            expect(mockShowError).toHaveBeenCalledWith(
-                expect.stringContaining("WeiDU not found")
-            );
-            expect(mockShowError).toHaveBeenCalledWith(
-                expect.stringContaining("bgforge.mls.weidu.path")
-            );
+            expect(mockShowError).toHaveBeenCalledWith(expect.stringContaining("WeiDU not found"));
+            expect(mockShowError).toHaveBeenCalledWith(expect.stringContaining("bgforge.mls.weidu.path"));
             // Only the specific ENOENT message, not the generic "Failed to parse" on top
             expect(mockShowError).toHaveBeenCalledTimes(1);
         });
@@ -540,22 +513,15 @@ describe("weidu-compile", () => {
 
             await compile("file:///test.tp2", baseSettings, true, "content");
 
-            expect(mockShowInfo).toHaveBeenCalledWith(
-                expect.stringContaining("Successfully parsed")
-            );
+            expect(mockShowInfo).toHaveBeenCalledWith(expect.stringContaining("Successfully parsed"));
         });
 
         it("shows error message on failure in interactive mode", async () => {
-            setupExecFile(
-                { code: 1 },
-                "[ua.tp2]  ERROR at line 30 column 1-63"
-            );
+            setupExecFile({ code: 1 }, "[ua.tp2]  ERROR at line 30 column 1-63");
 
             await compile("file:///test.tp2", baseSettings, true, "content");
 
-            expect(mockShowError).toHaveBeenCalledWith(
-                expect.stringContaining("Failed to parse")
-            );
+            expect(mockShowError).toHaveBeenCalledWith(expect.stringContaining("Failed to parse"));
         });
 
         it("does not show messages when not interactive", async () => {

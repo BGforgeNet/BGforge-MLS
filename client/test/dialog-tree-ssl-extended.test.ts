@@ -28,14 +28,16 @@ describe("buildTreeHtml - remaining reply rendering", () => {
     it("renders multiple replies where first is inline and rest are listed", () => {
         // Lines 177-184: replies.slice(skipFirstReply ? 1 : 0)
         const data: DialogData = {
-            nodes: [node({
-                name: "Node001",
-                replies: [
-                    { msgId: 100, line: 2 },
-                    { msgId: 200, line: 3 }, // second reply should appear in the list
-                ],
-                options: [],
-            })],
+            nodes: [
+                node({
+                    name: "Node001",
+                    replies: [
+                        { msgId: 100, line: 2 },
+                        { msgId: 200, line: 3 }, // second reply should appear in the list
+                    ],
+                    options: [],
+                }),
+            ],
             entryPoints: ["Node001"],
             messages: { "100": "First reply", "200": "Second reply" },
         };
@@ -77,11 +79,13 @@ describe("buildTreeHtml - terminal option inline rendering", () => {
     it("renders option without target as terminal message inline in node header", () => {
         // Lines 163-173: terminalIdx !== -1 branch
         const data: DialogData = {
-            nodes: [node({
-                name: "Node001",
-                replies: [],
-                options: [{ msgId: 100, target: "", type: "NMessage", line: 2 }],
-            })],
+            nodes: [
+                node({
+                    name: "Node001",
+                    replies: [],
+                    options: [{ msgId: 100, target: "", type: "NMessage", line: 2 }],
+                }),
+            ],
             entryPoints: ["Node001"],
             messages: { "100": "Terminal message" },
         };
@@ -94,11 +98,13 @@ describe("buildTreeHtml - option target rendering variants", () => {
     it("renders option pointing to unknown (non-existent) target as span, not link", () => {
         // Lines 200-202: targetNode undefined, renders as span
         const data: DialogData = {
-            nodes: [node({
-                name: "Node001",
-                replies: [],
-                options: [{ msgId: 100, target: "GhostNode", type: "NOption", line: 2 }],
-            })],
+            nodes: [
+                node({
+                    name: "Node001",
+                    replies: [],
+                    options: [{ msgId: 100, target: "GhostNode", type: "NOption", line: 2 }],
+                }),
+            ],
             entryPoints: ["Node001"],
             messages: { "100": "Go to ghost" },
         };
@@ -111,11 +117,13 @@ describe("buildTreeHtml - option target rendering variants", () => {
     it("renders node with no children (no replies, no options) as single inline line", () => {
         // Line 224-226: !children branch — node-inline div
         const data: DialogData = {
-            nodes: [node({
-                name: "Node001",
-                replies: [],
-                options: [],
-            })],
+            nodes: [
+                node({
+                    name: "Node001",
+                    replies: [],
+                    options: [],
+                }),
+            ],
             entryPoints: ["Node001"],
             messages: {},
         };

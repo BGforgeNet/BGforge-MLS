@@ -27,12 +27,7 @@ import {
     SymbolInformation,
     WorkspaceEdit,
 } from "vscode-languageserver/node";
-import {
-    type FormatResult,
-    type LanguageProvider,
-    type ProviderContext,
-    HoverResult,
-} from "./language-provider";
+import { type FormatResult, type LanguageProvider, type ProviderContext, HoverResult } from "./language-provider";
 import { conlog } from "./common";
 import { validLocationOrNull } from "./core/location-utils";
 import { normalizeUri } from "./core/normalized-uri";
@@ -181,7 +176,14 @@ class ProviderRegistry {
         return null;
     }
 
-    references(langId: string, text: string, position: Position, uri: string, includeDeclaration: boolean, token: CancellationToken): Location[] {
+    references(
+        langId: string,
+        text: string,
+        position: Position,
+        uri: string,
+        includeDeclaration: boolean,
+        token: CancellationToken,
+    ): Location[] {
         if (token.isCancellationRequested) {
             return [];
         }
@@ -209,7 +211,11 @@ class ProviderRegistry {
         return encodeSemanticTokens(provider?.semanticTokens?.(text, normUri) ?? []);
     }
 
-    prepareRename(langId: string, text: string, position: Position): { range: { start: Position; end: Position }; placeholder: string } | null {
+    prepareRename(
+        langId: string,
+        text: string,
+        position: Position,
+    ): { range: { start: Position; end: Position }; placeholder: string } | null {
         const provider = this.get(langId);
         if (provider?.prepareRename) {
             return provider.prepareRename(text, position);
@@ -234,7 +240,13 @@ class ProviderRegistry {
      * Get completions from headers/static data, then apply context-based filtering.
      * Local symbol merging happens inside each provider's filterCompletions().
      */
-    completion(langId: string, text: string, uri: string, position?: Position, triggerCharacter?: string): CompletionItem[] {
+    completion(
+        langId: string,
+        text: string,
+        uri: string,
+        position?: Position,
+        triggerCharacter?: string,
+    ): CompletionItem[] {
         const normUri = normalizeUri(uri);
         const provider = this.get(langId);
         if (!provider) {

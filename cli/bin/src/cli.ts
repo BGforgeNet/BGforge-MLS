@@ -8,14 +8,15 @@
 import * as fs from "fs";
 import * as path from "path";
 import { parserRegistry, type ParseOptions, type ParseResult } from "../../../client/src/parsers";
+import { getOutputPathForJsonSnapshot, getSnapshotPath } from "../../../client/src/parsers/json-snapshot-path";
 import {
-    getOutputPathForJsonSnapshot,
-    getSnapshotPath,
-} from "../../../client/src/parsers/json-snapshot-path";
-import { createBinaryJsonSnapshot, loadBinaryJsonSnapshot, parseBinaryJsonSnapshot } from "../../../client/src/parsers/json-snapshot";
+    createBinaryJsonSnapshot,
+    loadBinaryJsonSnapshot,
+    parseBinaryJsonSnapshot,
+} from "../../../client/src/parsers/json-snapshot";
 import { type FileResult, type OutputMode, parseCliArgs, runCli, safeProcess, reportDiff } from "../../cli-utils";
 
-const EXTENSIONS = parserRegistry.getExtensions().map(ext => `.${ext}`);
+const EXTENSIONS = parserRegistry.getExtensions().map((ext) => `.${ext}`);
 const CLI_PARSE_OPTIONS: ParseOptions = {
     gracefulMapBoundaries: process.argv.includes("--graceful-map"),
 };
@@ -139,7 +140,7 @@ async function main() {
 
     // Handle --load separately: it takes .json input, not .pro
     if (argv.includes("--load")) {
-        const jsonPath = argv.find(a => !a.startsWith("-"));
+        const jsonPath = argv.find((a) => !a.startsWith("-"));
         if (!jsonPath) {
             console.error("Error: No file specified");
             process.exit(1);
@@ -159,7 +160,7 @@ async function main() {
     });
 }
 
-main().catch(err => {
+main().catch((err) => {
     console.error("Error:", err.message);
     process.exit(1);
 });

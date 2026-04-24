@@ -40,7 +40,7 @@ export interface Arg {
 
 /** Parsed return type info. */
 export interface Ret {
-    name?: string;        // For named returns (@return {type} name, named mode only)
+    name?: string; // For named returns (@return {type} name, named mode only)
     type: string;
     description?: string;
 }
@@ -49,8 +49,8 @@ export interface Ret {
 export interface JSdoc {
     desc?: string;
     args: Arg[];
-    ret?: Ret;      // Unnamed @return {type} (SSL, unnamed mode)
-    rets?: Ret[];   // Named returns: @return {type} name desc (TP2, named mode)
+    ret?: Ret; // Unnamed @return {type} (SSL, unnamed mode)
+    rets?: Ret[]; // Named returns: @return {type} name desc (TP2, named mode)
     deprecated?: string | true;
     type?: string; // For @type tag (used for variables)
 }
@@ -91,7 +91,7 @@ const PARAM_PATTERN = /@(?:arg|param)\s+\{(\w+)\}\s+(?:(\w+)(!)?|\[(\w+)=([^\]]+
  * Groups: 1=type, 2=name, 3=requiredMarker(!), 4=description
  */
 const PARAM_BRACELESS_PATTERN = new RegExp(
-    `@(?:arg|param)\\s+(${JSDOC_TYPE_PATTERN})\\s+(\\w+)(!)?(?:\\s+-\\s+|\\s+)?(.+)?`
+    `@(?:arg|param)\\s+(${JSDOC_TYPE_PATTERN})\\s+(\\w+)(!)?(?:\\s+-\\s+|\\s+)?(.+)?`,
 );
 
 /** Pattern for unnamed @return/@returns/@ret tags with braces. Groups: 1=type, 2=description (optional) */
@@ -102,7 +102,7 @@ const RETURN_PATTERN = /@(?:ret|return|returns)\s+\{(\w+)\}(?:\s+-\s+|\s+)?(.+)?
  * Groups: 1=type, 2=description (optional)
  */
 const RETURN_BRACELESS_PATTERN = new RegExp(
-    `@(?:ret|return|returns)\\s+(${JSDOC_TYPE_PATTERN})\\b(?:\\s+-\\s+|\\s+)?(.+)?`
+    `@(?:ret|return|returns)\\s+(${JSDOC_TYPE_PATTERN})\\b(?:\\s+-\\s+|\\s+)?(.+)?`,
 );
 
 /**
@@ -121,7 +121,7 @@ const NAMED_RETURN_TYPE_FIRST_PATTERN = /@(?:ret|return|returns)\s+\{(\w+)\}\s+(
  * Groups: 1=type, 2=name, 3=description (optional)
  */
 const NAMED_RETURN_TYPE_FIRST_BRACELESS_PATTERN = new RegExp(
-    `@(?:ret|return|returns)\\s+(${JSDOC_TYPE_PATTERN})\\s+(\\w+)(?:\\s+-\\s+|\\s+)?(.+)?`
+    `@(?:ret|return|returns)\\s+(${JSDOC_TYPE_PATTERN})\\s+(\\w+)(?:\\s+-\\s+|\\s+)?(.+)?`,
 );
 
 /** Pattern for @deprecated tag. Groups: 1=message (optional) */
@@ -150,7 +150,10 @@ export function parse(text: string, options?: ParseOptions): JSdoc {
 
     if (lines.length === 1) {
         // Single-line JSDoc: /** content */
-        const content = text.replace(/^\/\*\*\s*/, "").replace(/\s*\*\/$/, "").trim();
+        const content = text
+            .replace(/^\/\*\*\s*/, "")
+            .replace(/\s*\*\/$/, "")
+            .trim();
         lines.length = 0;
         if (content) {
             lines.push(content);
@@ -384,7 +387,6 @@ interface ParamDisplayInfo {
     description?: string;
     required?: boolean;
 }
-
 
 /**
  * Build a map of parameter names to their display info (description, required) from JSDoc.

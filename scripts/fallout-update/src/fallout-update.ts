@@ -8,11 +8,7 @@
  */
 
 import { parseArgs } from "node:util";
-import {
-    dumpFalloutCompletion,
-    loadSfallFunctions,
-    loadSfallHooks,
-} from "./fallout/index.ts";
+import { dumpFalloutCompletion, loadSfallFunctions, loadSfallHooks } from "./fallout/index.ts";
 
 const { values } = parseArgs({
     options: {

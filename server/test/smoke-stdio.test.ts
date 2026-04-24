@@ -44,10 +44,7 @@ function request(
 ): Promise<Record<string, unknown>> {
     return new Promise((resolve, reject) => {
         let buf = "";
-        const timer = setTimeout(
-            () => reject(new Error(`Timeout waiting for response to ${msg.method}`)),
-            timeoutMs,
-        );
+        const timer = setTimeout(() => reject(new Error(`Timeout waiting for response to ${msg.method}`)), timeoutMs);
 
         const onData = (chunk: Buffer) => {
             buf += chunk.toString();
@@ -71,10 +68,7 @@ function request(
 }
 
 /** Send a notification (no response expected). */
-function notify(
-    proc: ChildProcess,
-    msg: { jsonrpc: string; method: string; params?: unknown },
-): void {
+function notify(proc: ChildProcess, msg: { jsonrpc: string; method: string; params?: unknown }): void {
     proc.stdin!.write(encode(msg));
 }
 
@@ -88,7 +82,9 @@ async function waitForFile(filePath: string, timeoutMs = 10_000): Promise<void> 
             return;
         } catch {
             // eslint-disable-next-line no-await-in-loop
-            await new Promise(resolve => { setTimeout(resolve, 50); });
+            await new Promise((resolve) => {
+                setTimeout(resolve, 50);
+            });
         }
     }
     throw new Error(`Timed out waiting for file ${filePath}`);
@@ -172,12 +168,15 @@ describe("LSP stdio smoke test", () => {
         expect(exitCode, `Server exited uncleanly. stderr:\n${stderr}`).toBe(0);
     });
 
-    it("does not write raw compile logs to stdout during stdio save-triggered TD compile", { timeout: 30_000 }, async () => {
-        tempDir = await mkdtemp(join(tmpdir(), "bgforge-mls-stdio-"));
-        const sourcePath = join(tempDir, "dialog.td");
-        const outputPath = join(tempDir, "dialog.d");
-        const sourceUri = `file://${sourcePath}`;
-        const sourceText = `
+    it(
+        "does not write raw compile logs to stdout during stdio save-triggered TD compile",
+        { timeout: 30_000 },
+        async () => {
+            tempDir = await mkdtemp(join(tmpdir(), "bgforge-mls-stdio-"));
+            const sourcePath = join(tempDir, "dialog.td");
+            const outputPath = join(tempDir, "dialog.d");
+            const sourceUri = `file://${sourcePath}`;
+            const sourceText = `
 function start() {
     say(tra(100));
     exit();
@@ -185,62 +184,65 @@ function start() {
 begin("DIALOG", [start]);
 `.trimStart();
 
-        await mkdir(tempDir, { recursive: true });
-        await writeFile(sourcePath, sourceText, "utf8");
+            await mkdir(tempDir, { recursive: true });
+            await writeFile(sourcePath, sourceText, "utf8");
 
-        proc = spawn("node", [SERVER_PATH, "--stdio"], {
-            stdio: ["pipe", "pipe", "pipe"],
-        });
+            proc = spawn("node", [SERVER_PATH, "--stdio"], {
+                stdio: ["pipe", "pipe", "pipe"],
+            });
 
-        let stderr = "";
-        let stdout = "";
-        proc.stderr!.on("data", (chunk: Buffer) => {
-            stderr += chunk.toString();
-        });
-        proc.stdout!.on("data", (chunk: Buffer) => {
-            stdout += chunk.toString();
-        });
+            let stderr = "";
+            let stdout = "";
+            proc.stderr!.on("data", (chunk: Buffer) => {
+                stderr += chunk.toString();
+            });
+            proc.stdout!.on("data", (chunk: Buffer) => {
+                stdout += chunk.toString();
+            });
 
-        const initResponse = await request(proc, {
-            jsonrpc: "2.0",
-            id: 1,
-            method: "initialize",
-            params: {
-                processId: process.pid,
-                capabilities: {},
-                rootUri: null,
-                workspaceFolders: null,
-            },
-        });
-        expect(initResponse.result).toBeDefined();
+            const initResponse = await request(proc, {
+                jsonrpc: "2.0",
+                id: 1,
+                method: "initialize",
+                params: {
+                    processId: process.pid,
+                    capabilities: {},
+                    rootUri: null,
+                    workspaceFolders: null,
+                },
+            });
+            expect(initResponse.result).toBeDefined();
 
-        notify(proc, { jsonrpc: "2.0", method: "initialized", params: {} });
-        notify(proc, {
-            jsonrpc: "2.0",
-            method: "textDocument/didOpen",
-            params: {
-                textDocument: {
-                    uri: sourceUri,
-                    languageId: "typescript",
-                    version: 1,
+            notify(proc, { jsonrpc: "2.0", method: "initialized", params: {} });
+            notify(proc, {
+                jsonrpc: "2.0",
+                method: "textDocument/didOpen",
+                params: {
+                    textDocument: {
+                        uri: sourceUri,
+                        languageId: "typescript",
+                        version: 1,
+                        text: sourceText,
+                    },
+                },
+            });
+            notify(proc, {
+                jsonrpc: "2.0",
+                method: "textDocument/didSave",
+                params: {
+                    textDocument: { uri: sourceUri },
                     text: sourceText,
                 },
-            },
-        });
-        notify(proc, {
-            jsonrpc: "2.0",
-            method: "textDocument/didSave",
-            params: {
-                textDocument: { uri: sourceUri },
-                text: sourceText,
-            },
-        });
+            });
 
-        await waitForFile(outputPath);
-        await new Promise(resolve => { setTimeout(resolve, 200); });
+            await waitForFile(outputPath);
+            await new Promise((resolve) => {
+                setTimeout(resolve, 200);
+            });
 
-        expect(stdout, `Unexpected raw stdout during stdio compile. stderr:\n${stderr}`).not.toContain(
-            `Transpiled to ${outputPath}`,
-        );
-    });
+            expect(stdout, `Unexpected raw stdout during stdio compile. stderr:\n${stderr}`).not.toContain(
+                `Transpiled to ${outputPath}`,
+            );
+        },
+    );
 });

@@ -66,9 +66,7 @@ describe("saveItemTypesIelib", () => {
 
 describe("getItemTypesIsense", () => {
     it("formats item types for completion", () => {
-        const itypes: ItemType[] = [
-            { id: "ITEM_TYPE_sword", desc: "Sword", value: "0x01" },
-        ];
+        const itypes: ItemType[] = [{ id: "ITEM_TYPE_sword", desc: "Sword", value: "0x01" }];
         const result = getItemTypesIsense(itypes);
         expect(result).toHaveLength(1);
         expect(result[0]).toEqual({

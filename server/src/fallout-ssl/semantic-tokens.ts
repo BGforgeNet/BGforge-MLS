@@ -54,7 +54,12 @@ function collectProcedureParameterReferences(rootNode: Node, procedureNode: Node
         if (child.type === SyntaxType.ParamList) {
             continue;
         }
-        if (nameNode && child.type === SyntaxType.Identifier && child.startIndex === nameNode.startIndex && child.endIndex === nameNode.endIndex) {
+        if (
+            nameNode &&
+            child.type === SyntaxType.Identifier &&
+            child.startIndex === nameNode.startIndex &&
+            child.endIndex === nameNode.endIndex
+        ) {
             continue;
         }
         visitBodyForParamRefs(rootNode, child, out);

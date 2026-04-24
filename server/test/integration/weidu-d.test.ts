@@ -27,7 +27,6 @@ beforeAll(async () => {
 });
 
 describe("weidu-d integration", () => {
-
     // =========================================================================
     // Document Symbols
     // =========================================================================
@@ -40,7 +39,7 @@ describe("weidu-d integration", () => {
             expect(symbols).toHaveLength(66);
 
             // State labels are numeric in this file (0..65)
-            const names = symbols.map(s => s.name);
+            const names = symbols.map((s) => s.name);
             expect(names).toContain("0");
             expect(names).toContain("1");
             expect(names).toContain("65");
@@ -52,7 +51,7 @@ describe("weidu-d integration", () => {
 
             // balth.d has named states: 24, a31..a100
             expect(symbols).toHaveLength(66);
-            const names = symbols.map(s => s.name);
+            const names = symbols.map((s) => s.name);
             expect(names).toContain("a31");
             expect(names).toContain("a32");
         });
@@ -181,7 +180,7 @@ describe("weidu-d integration", () => {
 
             const results = fileIndex.symbols.searchWorkspaceSymbols("a39");
             expect(results.length).toBeGreaterThan(0);
-            expect(results.some(result => result.name === "balth:a39")).toBe(true);
+            expect(results.some((result) => result.name === "balth:a39")).toBe(true);
         });
 
         it("includes D symbols from multiple files", () => {
@@ -215,7 +214,7 @@ END
 
             const results = fileIndex.symbols.searchWorkspaceSymbols("0");
             expect(results).toHaveLength(2);
-            expect(results.map(result => result.name)).toEqual(["a:0", "b:0"]);
+            expect(results.map((result) => result.name)).toEqual(["a:0", "b:0"]);
         });
     });
 

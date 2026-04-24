@@ -42,8 +42,8 @@ export function validLocationOrNull(location: Location | null | undefined): Loca
 
 /** Header file extensions by language. */
 const HEADER_EXTENSIONS: ReadonlySet<string> = new Set([
-    ".h",    // Fallout SSL headers
-    ".tph",  // WeiDU TP2 headers
+    ".h", // Fallout SSL headers
+    ".tph", // WeiDU TP2 headers
 ]);
 
 /**

@@ -23,32 +23,13 @@ import {
     Statement,
     SyntaxKind,
 } from "ts-morph";
-import {
-    TDTransitionType,
-    type TDState,
-    type TDTransition,
-} from "./types";
+import { TDTransitionType, type TDState, type TDTransition } from "./types";
 import * as utils from "../../common/transpiler-utils";
 import type { VarsContext } from "../../common/transpiler-utils";
-import {
-    resolveStringExpr,
-    validateArgs,
-    parseBooleanOption,
-    parseRequiredNumber,
-} from "./parse-helpers";
-import {
-    expressionToTrigger,
-    expressionToText,
-} from "./expression-eval";
-import {
-    isChainExpression,
-    parseTransitionChain,
-} from "./chain-parsing";
-import {
-    processTransitionCall,
-    processTransitionStatement,
-    processExtendStatements,
-} from "./transition-calls";
+import { resolveStringExpr, validateArgs, parseBooleanOption, parseRequiredNumber } from "./parse-helpers";
+import { expressionToTrigger, expressionToText } from "./expression-eval";
+import { isChainExpression, parseTransitionChain } from "./chain-parsing";
+import { processTransitionCall, processTransitionStatement, processExtendStatements } from "./transition-calls";
 import { unrollForOf, unrollFor } from "./inline-and-unroll";
 
 /** Function info including optional entry trigger from if-wrapping */
@@ -87,7 +68,7 @@ function transformFunctionToState(
     func: FunctionDeclaration,
     vars: VarsContext,
     funcs: FuncsContext,
-    entryTrigger?: string
+    entryTrigger?: string,
 ): TDState | null {
     const name = func.getName();
     if (!name) return null;
@@ -237,12 +218,7 @@ function buildInlineCallback(
  * Also detects state-level wrapping if (where the if wraps the entire body
  * including say()), in which case it becomes a state trigger.
  */
-function processIfTransition(
-    ifStmt: IfStatement,
-    state: TDState,
-    vars: VarsContext,
-    funcs: FuncsContext
-) {
+function processIfTransition(ifStmt: IfStatement, state: TDState, vars: VarsContext, funcs: FuncsContext) {
     const trigger = expressionToTrigger(ifStmt.getExpression(), vars);
     const thenStmts = utils.getBlockStatements(ifStmt.getThenStatement());
 
@@ -250,7 +226,7 @@ function processIfTransition(
     // This becomes a state entry trigger, not a transition condition.
     // Pattern: if (cond) { say(...); transitions } with no prior say/transitions
     if (state.say.length === 0 && state.transitions.length === 0 && !ifStmt.getElseStatement()) {
-        const hasSay = thenStmts.some(s => {
+        const hasSay = thenStmts.some((s) => {
             if (!s.isKind(SyntaxKind.ExpressionStatement)) return false;
             const e = s.getExpression();
             if (!Node.isCallExpression(e)) return false;
@@ -319,12 +295,7 @@ function processIfTransition(
 /**
  * Process else/else-if branches of an if statement.
  */
-function processIfElseBranch(
-    ifStmt: IfStatement,
-    state: TDState,
-    vars: VarsContext,
-    funcs: FuncsContext
-) {
+function processIfElseBranch(ifStmt: IfStatement, state: TDState, vars: VarsContext, funcs: FuncsContext) {
     const elseStmt = ifStmt.getElseStatement();
     if (!elseStmt) return;
 
@@ -357,7 +328,7 @@ function inlineUserFunction(
     func: FunctionDeclaration,
     state: TDState,
     vars: VarsContext,
-    funcs: FuncsContext
+    funcs: FuncsContext,
 ) {
     const body = func.getBody()?.asKind(SyntaxKind.Block);
     if (!body) return;
@@ -386,9 +357,4 @@ function inlineUserFunction(
     }
 }
 
-export {
-    transformFunctionToState,
-    processExtendStatements,
-    processStateStatement,
-    type FuncsContext,
-};
+export { transformFunctionToState, processExtendStatements, processStateStatement, type FuncsContext };

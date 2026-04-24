@@ -4,18 +4,9 @@
  */
 
 import * as fs from "fs";
-import {
-    Project,
-    SourceFile,
-    Node
-} from 'ts-morph';
-import {
-    SyntaxKind,
-    type InlineFunc,
-    type InlineArg,
-    type TsslContext,
-} from './types';
-import { convertOperatorsAST } from './convert-operators';
+import { Project, SourceFile, Node } from "ts-morph";
+import { SyntaxKind, type InlineFunc, type InlineArg, type TsslContext } from "./types";
+import { convertOperatorsAST } from "./convert-operators";
 
 /** Cache for inline functions extracted from imported files, keyed by absolute path. */
 export type InlineFunctionCache = Map<string, Map<string, InlineFunc>>;
@@ -63,7 +54,7 @@ function extractInlineFunctionsFromSource(source: SourceFile, result: Map<string
 
         // Check for @inline JSDoc tag
         const jsDocs = func.getJsDocs();
-        const hasInlineTag = jsDocs.some(doc => doc.getText().includes('@inline'));
+        const hasInlineTag = jsDocs.some((doc) => doc.getText().includes("@inline"));
         if (!hasInlineTag) continue;
 
         const funcName = func.getName();
@@ -74,8 +65,8 @@ function extractInlineFunctionsFromSource(source: SourceFile, result: Map<string
         if (!body) continue;
 
         // Get parameter names to identify which args are params vs constants
-        const paramNames = new Set(func.getParameters().map(p => p.getName()));
-        const params = func.getParameters().map(p => p.getName());
+        const paramNames = new Set(func.getParameters().map((p) => p.getName()));
+        const params = func.getParameters().map((p) => p.getName());
 
         let targetFunc: string | undefined;
         const inlineArgs: InlineArg[] = [];
@@ -89,10 +80,10 @@ function extractInlineFunctionsFromSource(source: SourceFile, result: Map<string
             for (const arg of args) {
                 const argText = arg.getText();
                 if (paramNames.has(argText)) {
-                    inlineArgs.push({ type: 'param', value: argText });
+                    inlineArgs.push({ type: "param", value: argText });
                 } else {
                     // Convert operators to SSL syntax (| -> bwor, etc.)
-                    inlineArgs.push({ type: 'constant', value: convertOperatorsAST(arg) });
+                    inlineArgs.push({ type: "constant", value: convertOperatorsAST(arg) });
                 }
             }
         };
@@ -142,10 +133,10 @@ export function generateInlineMacros(
     const macros: string[] = [];
     for (const [funcName, inline] of inlineFuncs) {
         if (!usedFuncs.has(funcName)) continue;
-        const paramList = inline.params.length > 0 ? `(${inline.params.join(', ')})` : '';
+        const paramList = inline.params.length > 0 ? `(${inline.params.join(", ")})` : "";
         const argList = inline.args
-            .map(a => a.type === 'constant' ? expandEnumAccess(a.value, enumNames) : a.value)
-            .join(', ');
+            .map((a) => (a.type === "constant" ? expandEnumAccess(a.value, enumNames) : a.value))
+            .join(", ");
         macros.push(`#define ${funcName}${paramList} ${inline.targetFunc}(${argList})`);
     }
     return macros;
@@ -161,7 +152,7 @@ function expandEnumAccess(value: string, enumNames: ReadonlySet<string>): string
     }
     // Match word.word patterns where the first word is a known enum name
     return value.replace(/\b(\w+)\.(\w+)\b/g, (match, obj: string, prop: string) =>
-        enumNames.has(obj) ? `${obj}_${prop}` : match
+        enumNames.has(obj) ? `${obj}_${prop}` : match,
     );
 }
 
@@ -191,14 +182,14 @@ export function findUsedInlineFunctions(source: SourceFile, inlineFuncs: Map<str
  * This must be done before bundling since esbuild strips JSDoc.
  */
 export function extractJsDocs(sourceFile: SourceFile, ctx: TsslContext): void {
-    sourceFile.getFunctions().forEach(func => {
+    sourceFile.getFunctions().forEach((func) => {
         const name = func.getName();
         if (!name) return;
 
         const jsDocs = func.getJsDocs();
         if (jsDocs.length > 0) {
             // Keep the original JSDoc format - SSL supports it
-            const jsDocText = jsDocs.map(doc => doc.getText()).join('\n');
+            const jsDocText = jsDocs.map((doc) => doc.getText()).join("\n");
             if (jsDocText) {
                 ctx.functionJsDocs.set(name, jsDocText);
             }

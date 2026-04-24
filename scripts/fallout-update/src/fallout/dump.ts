@@ -21,10 +21,7 @@ import {
  * Creates a YAML sequence of completion items for the sfall_functions stanza.
  * Doc fields use block scalar style (|-) for multiline content.
  */
-function createCompletionSeq(
-    doc: Document,
-    items: readonly FalloutCompletionItem[],
-): YAMLSeq {
+function createCompletionSeq(doc: Document, items: readonly FalloutCompletionItem[]): YAMLSeq {
     const seq = new YAMLSeq();
     for (const item of items) {
         const map = new YAMLMap();
@@ -83,4 +80,3 @@ export function dumpFalloutCompletion(
     const output = doc.toString(YAML_DUMP_OPTIONS);
     fs.writeFileSync(fpath, output, "utf8");
 }
-

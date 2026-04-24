@@ -65,11 +65,7 @@ export function findAllReferences(root: SyntaxNode, symbolInfo: SymbolInfo): Sym
 /**
  * Find all references to a variable.
  */
-function findVariableReferences(
-    root: SyntaxNode,
-    symbolInfo: SymbolInfo,
-    occurrences: SymbolOccurrence[]
-): void {
+function findVariableReferences(root: SyntaxNode, symbolInfo: SymbolInfo, occurrences: SymbolOccurrence[]): void {
     // Determine search scope: loop > function > file
     let searchScope: SyntaxNode = root;
     if (symbolInfo.scope === ScopeKind.Loop && symbolInfo.loopNode) {
@@ -79,7 +75,6 @@ function findVariableReferences(
     }
 
     function visit(node: SyntaxNode): void {
-
         // Check percent_content nodes inside %var% syntax
         if (node.type === SyntaxType.PercentContent) {
             const name = node.text; // Already without the % delimiters
@@ -102,9 +97,9 @@ function findVariableReferences(
             // These are always references, not definitions
             // For loop-scoped variables, filter out shadowed references
             const filteredRefs = symbolInfo.loopNode
-                ? varRefs.filter(n => !isShadowedByInnerLoop(n, symbolInfo.name, symbolInfo.loopNode!))
+                ? varRefs.filter((n) => !isShadowedByInnerLoop(n, symbolInfo.name, symbolInfo.loopNode!))
                 : varRefs;
-            occurrences.push(...filteredRefs.map(n => ({ node: n, isDefinition: false })));
+            occurrences.push(...filteredRefs.map((n) => ({ node: n, isDefinition: false })));
         }
 
         // Check variable_ref nodes (bare identifiers in expressions)
@@ -148,7 +143,11 @@ function findVariableReferences(
                         if (varNode && varNode.type === SyntaxType.VariableRef) {
                             varNode = varNode.child(0);
                         }
-                        if (varNode && varNode.type === SyntaxType.Identifier && matchesSymbol(varNode.text, symbolInfo.name)) {
+                        if (
+                            varNode &&
+                            varNode.type === SyntaxType.Identifier &&
+                            matchesSymbol(varNode.text, symbolInfo.name)
+                        ) {
                             // This is a definition
                             occurrences.push({ node: varNode, isDefinition: true });
                         }
@@ -194,7 +193,11 @@ function findVariableReferences(
                     exprNode = exprNode.child(0);
                 }
 
-                if (exprNode && exprNode.type === SyntaxType.Identifier && matchesSymbol(exprNode.text, symbolInfo.name)) {
+                if (
+                    exprNode &&
+                    exprNode.type === SyntaxType.Identifier &&
+                    matchesSymbol(exprNode.text, symbolInfo.name)
+                ) {
                     // This is a definition - push the identifier node
                     occurrences.push({ node: exprNode, isDefinition: true });
                 }
@@ -211,7 +214,11 @@ function findVariableReferences(
                     if (keyVarNode.type === SyntaxType.VariableRef) {
                         identNode = keyVarNode.child(0);
                     }
-                    if (identNode && identNode.type === SyntaxType.Identifier && matchesSymbol(identNode.text, symbolInfo.name)) {
+                    if (
+                        identNode &&
+                        identNode.type === SyntaxType.Identifier &&
+                        matchesSymbol(identNode.text, symbolInfo.name)
+                    ) {
                         // This is a definition only if it's from the target loop
                         if (isTargetLoop) {
                             occurrences.push({ node: identNode, isDefinition: true });
@@ -225,7 +232,11 @@ function findVariableReferences(
                     if (valueVarNode.type === SyntaxType.VariableRef) {
                         identNode = valueVarNode.child(0);
                     }
-                    if (identNode && identNode.type === SyntaxType.Identifier && matchesSymbol(identNode.text, symbolInfo.name)) {
+                    if (
+                        identNode &&
+                        identNode.type === SyntaxType.Identifier &&
+                        matchesSymbol(identNode.text, symbolInfo.name)
+                    ) {
                         // This is a definition only if it's from the target loop
                         if (isTargetLoop) {
                             occurrences.push({ node: identNode, isDefinition: true });
@@ -239,7 +250,11 @@ function findVariableReferences(
                     if (arrayNode.type === SyntaxType.VariableRef) {
                         identNode = arrayNode.child(0);
                     }
-                    if (identNode && identNode.type === SyntaxType.Identifier && matchesSymbol(identNode.text, symbolInfo.name)) {
+                    if (
+                        identNode &&
+                        identNode.type === SyntaxType.Identifier &&
+                        matchesSymbol(identNode.text, symbolInfo.name)
+                    ) {
                         // Array reference in PHP_EACH is a usage, not a definition
                         occurrences.push({ node: identNode, isDefinition: false });
                     }
@@ -258,7 +273,11 @@ function findVariableReferences(
                     if (identNode && identNode.type === SyntaxType.VariableRef) {
                         identNode = identNode.child(0);
                     }
-                    if (identNode && identNode.type === SyntaxType.Identifier && matchesSymbol(identNode.text, symbolInfo.name)) {
+                    if (
+                        identNode &&
+                        identNode.type === SyntaxType.Identifier &&
+                        matchesSymbol(identNode.text, symbolInfo.name)
+                    ) {
                         // This is a definition only if it's from the target loop
                         if (isTargetLoop) {
                             occurrences.push({ node: identNode, isDefinition: true });
@@ -268,10 +287,12 @@ function findVariableReferences(
             }
 
             // For parameter declarations, identifiers are direct children
-            if (node.type === SyntaxType.IntVarDecl ||
+            if (
+                node.type === SyntaxType.IntVarDecl ||
                 node.type === SyntaxType.StrVarDecl ||
                 node.type === SyntaxType.RetDecl ||
-                node.type === SyntaxType.RetArrayDecl) {
+                node.type === SyntaxType.RetArrayDecl
+            ) {
                 for (const child of node.children) {
                     if (child.type === SyntaxType.Identifier && matchesSymbol(child.text, symbolInfo.name)) {
                         // This is a definition
@@ -302,11 +323,7 @@ function findVariableReferences(
 /**
  * Find all references to a function/macro.
  */
-function findFunctionReferences(
-    root: SyntaxNode,
-    symbolInfo: SymbolInfo,
-    occurrences: SymbolOccurrence[]
-): void {
+function findFunctionReferences(root: SyntaxNode, symbolInfo: SymbolInfo, occurrences: SymbolOccurrence[]): void {
     function visit(node: SyntaxNode): void {
         // Check function definitions
         // Cast to SyntaxType because tree-sitter node.type is string
@@ -356,7 +373,7 @@ function byteOffsetToPosition(text: string, offset: number, basePosition: { row:
     let currentCol = basePosition.column;
 
     for (let i = 0; i < offset; i++) {
-        if (text[i] === '\n') {
+        if (text[i] === "\n") {
             currentLine++;
             currentCol = 0;
         } else {
@@ -371,10 +388,7 @@ function byteOffsetToPosition(text: string, offset: number, basePosition: { row:
  * Find all references to a specific variable within string content.
  * Returns synthetic nodes representing each %var% occurrence.
  */
-function findAllVariableReferencesInStringContent(
-    node: SyntaxNode,
-    varName: string
-): SyntaxNode[] {
+function findAllVariableReferencesInStringContent(node: SyntaxNode, varName: string): SyntaxNode[] {
     const text = node.text;
     const references: SyntaxNode[] = [];
 

@@ -1213,7 +1213,7 @@ function potions() {
 begin("DLG", [potions]);
 `;
             const result = transpileWithEnums(code);
-            expect(result).toContain("CreateCreature(\"spy\",\"[-1.-1]\",4)");
+            expect(result).toContain('CreateCreature("spy","[-1.-1]",4)');
         });
 
         it("substitutes enum values in trigger conditions", () => {
@@ -1310,13 +1310,16 @@ begin("DLG", [start]);
             expect(() => parse(badSource)).toThrow();
 
             // Second call: valid source — must succeed without contamination
-            const goodSource = project.createSourceFile("good.td", `
+            const goodSource = project.createSourceFile(
+                "good.td",
+                `
 function start() {
     say(tra(100));
     exit();
 }
 begin("MYDLG", [start]);
-`);
+`,
+            );
             const ir = parse(goodSource);
             expect(ir.constructs).toHaveLength(1);
             // Non-null safe: guarded by toHaveLength(1) assertion above

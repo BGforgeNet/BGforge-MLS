@@ -20,10 +20,7 @@ import { createFullDocumentEdit, validateFormatting, type CommentStripper } from
  * Resolve a symbol from static/indexed storage only.
  * Used by providers without local symbols (BAF, D, Worldmap).
  */
-export function resolveSymbolStatic(
-    name: string,
-    symbols: Symbols | undefined
-): IndexedSymbol | undefined {
+export function resolveSymbolStatic(name: string, symbols: Symbols | undefined): IndexedSymbol | undefined {
     return symbols?.lookup(name);
 }
 
@@ -40,7 +37,7 @@ export function resolveSymbolWithLocal(
     text: string,
     uri: string,
     symbols: Symbols | undefined,
-    lookupLocal: (name: string, text: string, uri: string) => IndexedSymbol | undefined
+    lookupLocal: (name: string, text: string, uri: string) => IndexedSymbol | undefined,
 ): IndexedSymbol | undefined {
     // Local symbols take priority (fresh buffer)
     const local = lookupLocal(name, text, uri);

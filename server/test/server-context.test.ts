@@ -87,9 +87,7 @@ describe("server-context", () => {
 
     describe("updateServerSettings", () => {
         it("throws if called before initServerContext", () => {
-            expect(() => updateServerSettings({} as MLSsettings)).toThrow(
-                "ServerContext not initialized",
-            );
+            expect(() => updateServerSettings({} as MLSsettings)).toThrow("ServerContext not initialized");
         });
 
         it("mutates settings on the live context after init", () => {

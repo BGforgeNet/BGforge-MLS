@@ -81,14 +81,14 @@ describe("dumpCompletion", () => {
 describe("checkCompletion", () => {
     it("throws on duplicate names across stanzas", () => {
         const doc = YAML.parseDocument(
-            "stanza1:\n  type: 21\n  items:\n    - name: DUPE\n      detail: d\n      doc: d\nstanza2:\n  type: 21\n  items:\n    - name: DUPE\n      detail: d\n      doc: d"
+            "stanza1:\n  type: 21\n  items:\n    - name: DUPE\n      detail: d\n      doc: d\nstanza2:\n  type: 21\n  items:\n    - name: DUPE\n      detail: d\n      doc: d",
         );
         expect(() => checkCompletion(doc)).toThrow("Duplicated completion items");
     });
 
     it("allows EVALUATE_BUFFER duplicates", () => {
         const doc = YAML.parseDocument(
-            "stanza1:\n  type: 21\n  items:\n    - name: EVALUATE_BUFFER\n      detail: d\n      doc: d\nstanza2:\n  type: 21\n  items:\n    - name: EVALUATE_BUFFER\n      detail: d\n      doc: d"
+            "stanza1:\n  type: 21\n  items:\n    - name: EVALUATE_BUFFER\n      detail: d\n      doc: d\nstanza2:\n  type: 21\n  items:\n    - name: EVALUATE_BUFFER\n      detail: d\n      doc: d",
         );
         expect(() => checkCompletion(doc)).not.toThrow();
     });

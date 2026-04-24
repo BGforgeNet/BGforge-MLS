@@ -4,11 +4,7 @@
 
 import { z } from "zod";
 import { decodeOpaqueRange } from "./opaque-range";
-import {
-    HEADER_SIZE,
-    TILE_DATA_SIZE_PER_ELEVATION,
-    getScriptType,
-} from "./map-schemas";
+import { HEADER_SIZE, TILE_DATA_SIZE_PER_ELEVATION, getScriptType } from "./map-schemas";
 import { hasElevation } from "./map-types";
 import type { ParseOpaqueRange } from "./types";
 import {
@@ -43,11 +39,11 @@ function serializeHeader(bytes: Uint8Array, header: z.infer<typeof mapHeaderSche
     }
     writeInt32(view, 0x14, header.defaultPosition);
     writeInt32(view, 0x18, header.defaultElevation);
-    writeInt32(view, 0x1C, header.defaultOrientation);
+    writeInt32(view, 0x1c, header.defaultOrientation);
     writeInt32(view, 0x20, header.numLocalVars);
     writeInt32(view, 0x24, header.scriptId);
     writeUint32(view, 0x28, header.flags);
-    writeInt32(view, 0x2C, header.darkness);
+    writeInt32(view, 0x2c, header.darkness);
     writeInt32(view, 0x30, header.numGlobalVars);
     writeInt32(view, 0x34, header.mapId);
     writeUint32(view, 0x38, header.timestamp);
@@ -66,7 +62,12 @@ function serializeVariables(view: DataView, globalVariables: number[], localVari
     return offset;
 }
 
-function serializeTiles(view: DataView, header: z.infer<typeof mapHeaderSchema>, tiles: z.infer<typeof mapTileElevationSchema>[], offset: number): number {
+function serializeTiles(
+    view: DataView,
+    header: z.infer<typeof mapHeaderSchema>,
+    tiles: z.infer<typeof mapTileElevationSchema>[],
+    offset: number,
+): number {
     const tilesByElevation = new Map(tiles.map((entry) => [entry.elevation, entry]));
     for (let elevation = 0; elevation < 3; elevation++) {
         if (!hasElevation(header.flags, elevation)) {
@@ -75,10 +76,11 @@ function serializeTiles(view: DataView, header: z.infer<typeof mapHeaderSchema>,
 
         const tileElevation = tilesByElevation.get(elevation);
         for (const tile of tileElevation?.tiles ?? []) {
-            const word = ((tile.roofFlags & 0x0F) << 28)
-                | ((tile.roofTileId & 0x0F_FF) << 16)
-                | ((tile.floorFlags & 0x0F) << 12)
-                | (tile.floorTileId & 0x0F_FF);
+            const word =
+                ((tile.roofFlags & 0x0f) << 28) |
+                ((tile.roofTileId & 0x0f_ff) << 16) |
+                ((tile.floorFlags & 0x0f) << 12) |
+                (tile.floorTileId & 0x0f_ff);
             writeUint32(view, offset + tile.index * 4, word);
         }
         offset += TILE_DATA_SIZE_PER_ELEVATION;
@@ -150,7 +152,7 @@ function serializeScripts(view: DataView, scripts: z.infer<typeof mapScriptSecti
 
 function objectSerializedLength(object: z.infer<typeof mapObjectSchema>): number {
     let length = MAP_OBJECT_BASE_SIZE + MAP_OBJECT_DATA_HEADER_SIZE;
-    const pidType = (object.base.pid >>> 24) & 0xFF;
+    const pidType = (object.base.pid >>> 24) & 0xff;
     if (pidType === PID_TYPE_CRITTER) {
         length += 44;
     } else {
@@ -194,7 +196,7 @@ function serializeMapObject(view: DataView, object: z.infer<typeof mapObjectSche
     writeInt32(view, currentOffset + 8, object.inventoryHeader.inventoryPointer);
     currentOffset += MAP_OBJECT_DATA_HEADER_SIZE;
 
-    const pidType = (object.base.pid >>> 24) & 0xFF;
+    const pidType = (object.base.pid >>> 24) & 0xff;
     if (pidType === PID_TYPE_CRITTER) {
         const critterData = object.critterData;
         if (!critterData) {
@@ -304,12 +306,16 @@ function scriptSectionLength(scripts: z.infer<typeof mapScriptSectionSchema>[]):
     return length;
 }
 
-export function serializeMapCanonicalDocument(document: MapCanonicalDocument, opaqueRanges?: ParseOpaqueRange[]): Uint8Array {
-    const computedLength = HEADER_SIZE
-        + (document.globalVariables.length + document.localVariables.length) * 4
-        + tileSectionLength(document.header)
-        + scriptSectionLength(document.scripts)
-        + objectsSerializedLength(document.objects);
+export function serializeMapCanonicalDocument(
+    document: MapCanonicalDocument,
+    opaqueRanges?: ParseOpaqueRange[],
+): Uint8Array {
+    const computedLength =
+        HEADER_SIZE +
+        (document.globalVariables.length + document.localVariables.length) * 4 +
+        tileSectionLength(document.header) +
+        scriptSectionLength(document.scripts) +
+        objectsSerializedLength(document.objects);
     const opaqueEnd = Math.max(0, ...(opaqueRanges ?? []).map((range) => range.offset + range.size));
     const bytes = new Uint8Array(Math.max(computedLength, opaqueEnd));
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);

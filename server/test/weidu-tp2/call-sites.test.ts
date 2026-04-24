@@ -106,7 +106,7 @@ LAF my_func END
         const result = parseFile(TEST_URI, text);
         // Symbols: should contain my_func
         expect(result.symbols.length).toBeGreaterThanOrEqual(1);
-        expect(result.symbols.some(s => s.name === "my_func")).toBe(true);
+        expect(result.symbols.some((s) => s.name === "my_func")).toBe(true);
         // Refs: should contain my_func
         const funcRefs = result.refs.get("my_func");
         expect(funcRefs).toBeDefined();

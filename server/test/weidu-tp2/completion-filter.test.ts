@@ -19,7 +19,7 @@ describe("completion-filter", () => {
                 for (const ctx of exclusions!) {
                     expect(
                         VALID_CONTEXTS.has(ctx),
-                        `Invalid context "${ctx}" in exclusion for category "${category}"`
+                        `Invalid context "${ctx}" in exclusion for category "${category}"`,
                     ).toBe(true);
                 }
             }
@@ -30,7 +30,7 @@ describe("completion-filter", () => {
             for (const key of Object.keys(CATEGORY_EXCLUSIONS)) {
                 expect(
                     validCategories.has(key as CompletionCategory),
-                    `Invalid category key "${key}" in CATEGORY_EXCLUSIONS`
+                    `Invalid category key "${key}" in CATEGORY_EXCLUSIONS`,
                 ).toBe(true);
             }
         });
@@ -177,18 +177,20 @@ describe("completion-filter", () => {
         it("should pass through filter in any context", () => {
             const items: Tp2CompletionItem[] = [
                 { label: "no_category_var", kind: CompletionItemKind.Variable },
-                { label: "with_category", kind: CompletionItemKind.Function, category: CompletionCategory.ActionFunctions },
+                {
+                    label: "with_category",
+                    kind: CompletionItemKind.Function,
+                    category: CompletionCategory.ActionFunctions,
+                },
             ];
             const result = filterItemsByContext(items, [CompletionContext.LafName]);
-            const labels = result.map(i => i.label);
+            const labels = result.map((i) => i.label);
             expect(labels).toContain("no_category_var");
             expect(labels).toContain("with_category");
         });
 
         it("should pass through filter with empty contexts", () => {
-            const items: Tp2CompletionItem[] = [
-                { label: "local_var", kind: CompletionItemKind.Variable },
-            ];
+            const items: Tp2CompletionItem[] = [{ label: "local_var", kind: CompletionItemKind.Variable }];
             const result = filterItemsByContext(items, []);
             expect(result).toHaveLength(1);
             expect(result[0].label).toBe("local_var");
@@ -216,7 +218,7 @@ describe("completion-filter", () => {
                 createItem("INT_VAR", CompletionCategory.FuncVarKeyword),
             ];
             const result = filterItemsByContext(items, []);
-            const labels = result.map(i => i.label);
+            const labels = result.map((i) => i.label);
             expect(labels).toContain("ACTION_IF");
             expect(labels).not.toContain("INT_VAR");
         });
@@ -228,18 +230,14 @@ describe("completion-filter", () => {
     describe("permissive filtering", () => {
         it("item excluded by one context but allowed by another is shown", () => {
             // ActionFunctions excluded from LpfName, but allowed in LafName
-            const items: Tp2CompletionItem[] = [
-                createItem("my_func", CompletionCategory.ActionFunctions),
-            ];
+            const items: Tp2CompletionItem[] = [createItem("my_func", CompletionCategory.ActionFunctions)];
             const result = filterItemsByContext(items, [CompletionContext.LafName, CompletionContext.LpfName]);
             expect(result).toHaveLength(1);
         });
 
         it("item excluded by all active contexts is hidden", () => {
             // ActionMacros excluded from both LafName and LpfName
-            const items: Tp2CompletionItem[] = [
-                createItem("my_macro", CompletionCategory.ActionMacros),
-            ];
+            const items: Tp2CompletionItem[] = [createItem("my_macro", CompletionCategory.ActionMacros)];
             const result = filterItemsByContext(items, [CompletionContext.LafName, CompletionContext.LpfName]);
             expect(result).toHaveLength(0);
         });

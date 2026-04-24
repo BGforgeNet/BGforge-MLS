@@ -6,13 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { Document, isScalar, Scalar } from "yaml";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import {
-    cmpStr,
-    findFiles,
-    litscal,
-    makeBlockScalar,
-    YAML_DUMP_OPTIONS,
-} from "../src/yaml-helpers.ts";
+import { cmpStr, findFiles, litscal, makeBlockScalar, YAML_DUMP_OPTIONS } from "../src/yaml-helpers.ts";
 
 const TMP_BASE = "tmp";
 beforeAll(() => fs.mkdirSync(TMP_BASE, { recursive: true }));

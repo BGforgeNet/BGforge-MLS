@@ -50,7 +50,7 @@ const sslFragments: fc.Arbitrary<string> = fc.oneof(
     fc.constant("variable global_var;"),
     fc.constant("procedure test_proc(p1, p2)\nbegin\nvariable local_var;\nend"),
     fc.constant("export variable exported_var;"),
-    fc.constant("")
+    fc.constant(""),
 );
 
 /** Concatenates 1–5 fragments with newlines. */
@@ -69,7 +69,7 @@ describe("fallout-ssl symbol extractor properties", () => {
                 const result = getDocumentSymbols(text);
                 expect(Array.isArray(result)).toBe(true);
             }),
-            { numRuns: 50 }
+            { numRuns: 50 },
         );
     });
 
@@ -87,15 +87,14 @@ describe("fallout-ssl symbol extractor properties", () => {
                     expect(end.character).toBeGreaterThanOrEqual(0);
                     // start must not be after end
                     const startBefore =
-                        start.line < end.line ||
-                        (start.line === end.line && start.character <= end.character);
+                        start.line < end.line || (start.line === end.line && start.character <= end.character);
                     expect(startBefore).toBe(true);
                     // end line must be within the document
                     // (allow end.line === lineCount for EOF-terminated ranges)
                     expect(end.line).toBeLessThanOrEqual(lineCount);
                 }
             }),
-            { numRuns: 50 }
+            { numRuns: 50 },
         );
     });
 
@@ -106,7 +105,7 @@ describe("fallout-ssl symbol extractor properties", () => {
                 const second = getDocumentSymbols(text);
                 expect(second).toEqual(first);
             }),
-            { numRuns: 50 }
+            { numRuns: 50 },
         );
     });
 });

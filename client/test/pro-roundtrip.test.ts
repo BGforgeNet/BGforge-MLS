@@ -12,14 +12,27 @@ import { BufferReader, BufferWriter } from "typed-binary";
 import { createBinaryJsonSnapshot } from "../src/parsers/json-snapshot";
 import { proParser } from "../src/parsers/pro";
 import {
-    headerSchema, itemCommonSchema, armorSchema, containerSchema, drugSchema,
-    weaponSchema, ammoSchema, miscItemSchema, keySchema, critterSchema,
-    sceneryCommonSchema, doorSchema, stairsSchema, elevatorSchema, ladderSchema,
-    genericScenerySchema, wallSchema, tileSchema, miscSchema,
+    headerSchema,
+    itemCommonSchema,
+    armorSchema,
+    containerSchema,
+    drugSchema,
+    weaponSchema,
+    ammoSchema,
+    miscItemSchema,
+    keySchema,
+    critterSchema,
+    sceneryCommonSchema,
+    doorSchema,
+    stairsSchema,
+    elevatorSchema,
+    ladderSchema,
+    genericScenerySchema,
+    wallSchema,
+    tileSchema,
+    miscSchema,
 } from "../src/parsers/pro-schemas";
-import {
-    HEADER_SIZE, ITEM_SUBTYPE_OFFSET, SCENERY_SUBTYPE_OFFSET,
-} from "../src/parsers/pro-types";
+import { HEADER_SIZE, ITEM_SUBTYPE_OFFSET, SCENERY_SUBTYPE_OFFSET } from "../src/parsers/pro-types";
 
 const FIXTURES = path.resolve("client/testFixture/proto");
 
@@ -39,14 +52,23 @@ function roundTrip(input: Uint8Array): Uint8Array {
     const header = headerSchema.read(reader(input));
     headerSchema.write(writer(output), header);
 
-    const objectType = (header.objectTypeAndId >> 24) & 0xFF;
+    const objectType = (header.objectTypeAndId >> 24) & 0xff;
 
     switch (objectType) {
-        case 0: { // Item
+        case 0: {
+            // Item
             const itemCommon = itemCommonSchema.read(reader(input, HEADER_SIZE));
             itemCommonSchema.write(writer(output, HEADER_SIZE), itemCommon);
 
-            const subSchema = [armorSchema, containerSchema, drugSchema, weaponSchema, ammoSchema, miscItemSchema, keySchema][itemCommon.subType];
+            const subSchema = [
+                armorSchema,
+                containerSchema,
+                drugSchema,
+                weaponSchema,
+                ammoSchema,
+                miscItemSchema,
+                keySchema,
+            ][itemCommon.subType];
             if (subSchema) {
                 const subData = subSchema.read(reader(input, ITEM_SUBTYPE_OFFSET));
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- generic dispatch across heterogeneous schemas
@@ -54,16 +76,25 @@ function roundTrip(input: Uint8Array): Uint8Array {
             }
             break;
         }
-        case 1: { // Critter
+        case 1: {
+            // Critter
             const critter = critterSchema.read(reader(input, HEADER_SIZE));
             critterSchema.write(writer(output, HEADER_SIZE), critter);
             break;
         }
-        case 2: { // Scenery
+        case 2: {
+            // Scenery
             const scenery = sceneryCommonSchema.read(reader(input, HEADER_SIZE));
             sceneryCommonSchema.write(writer(output, HEADER_SIZE), scenery);
 
-            const subSchema = [doorSchema, stairsSchema, elevatorSchema, ladderSchema, ladderSchema, genericScenerySchema][scenery.subType];
+            const subSchema = [
+                doorSchema,
+                stairsSchema,
+                elevatorSchema,
+                ladderSchema,
+                ladderSchema,
+                genericScenerySchema,
+            ][scenery.subType];
             if (subSchema) {
                 const subData = subSchema.read(reader(input, SCENERY_SUBTYPE_OFFSET));
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- generic dispatch across heterogeneous schemas
@@ -71,17 +102,20 @@ function roundTrip(input: Uint8Array): Uint8Array {
             }
             break;
         }
-        case 3: { // Wall
+        case 3: {
+            // Wall
             const wall = wallSchema.read(reader(input, HEADER_SIZE));
             wallSchema.write(writer(output, HEADER_SIZE), wall);
             break;
         }
-        case 4: { // Tile
+        case 4: {
+            // Tile
             const tile = tileSchema.read(reader(input, HEADER_SIZE));
             tileSchema.write(writer(output, HEADER_SIZE), tile);
             break;
         }
-        case 5: { // Misc
+        case 5: {
+            // Misc
             const misc = miscSchema.read(reader(input, HEADER_SIZE));
             miscSchema.write(writer(output, HEADER_SIZE), misc);
             break;
@@ -102,7 +136,7 @@ function loadProFiles(subDir: string): Array<{ name: string; path: string }> {
 }
 
 const GOOD_DIRS = ["misc", "walls", "tiles", "critters", "scenery", "items"];
-const fixtures = GOOD_DIRS.flatMap(dir => loadProFiles(dir));
+const fixtures = GOOD_DIRS.flatMap((dir) => loadProFiles(dir));
 
 describe("PRO round-trip via schemas (read -> write -> byte-identical)", () => {
     it.each(fixtures)("$name round-trips to identical bytes", ({ path: proPath }) => {
@@ -201,6 +235,6 @@ describe("PRO round-trip via serializer (parse -> serialize -> byte-identical)",
 
         const output = proParser.serialize!(parsed);
         const view = new DataView(output.buffer, output.byteOffset, output.byteLength);
-        expect(view.getUint32(0x0C, false)).toBe(8);
+        expect(view.getUint32(0x0c, false)).toBe(8);
     });
 });

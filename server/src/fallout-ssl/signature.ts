@@ -40,12 +40,12 @@ export function getLocalSignature(text: string, symbol: string, paramIndex: numb
 
     // Try macros
     const macros = extractMacros(tree.rootNode);
-    const macro = macros.find(m => m.name === symbol && m.hasParams);
+    const macro = macros.find((m) => m.name === symbol && m.hasParams);
 
     if (macro && macro.params) {
         const sig = buildSignatureHelp(
             macro.name,
-            macro.params.map(name => ({ name })),
+            macro.params.map((name) => ({ name })),
             macro.jsdoc ?? null,
             "",
         );

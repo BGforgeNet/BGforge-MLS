@@ -10,7 +10,11 @@ import * as path from "path";
 import { EXT_TD, EXT_TBAF, EXT_TSSL } from "../../../transpilers/common/extensions";
 import { transpile as transpileTBAF } from "../../../transpilers/tbaf/src/index";
 import { transpile as transpileTD } from "../../../transpilers/td/src/index";
-import { transpile as transpileTSSL, createBatchState, type TranspileBatchState } from "../../../transpilers/tssl/src/index";
+import {
+    transpile as transpileTSSL,
+    createBatchState,
+    type TranspileBatchState,
+} from "../../../transpilers/tssl/src/index";
 import { type FileResult, type OutputMode, parseCliArgs, runCli, safeProcess, reportDiff } from "../../cli-utils";
 
 type TranspileType = "td" | "tbaf" | "tssl";
@@ -115,7 +119,7 @@ async function main() {
     });
 }
 
-main().catch(err => {
+main().catch((err) => {
     console.error("Error:", err.message);
     process.exit(1);
 });

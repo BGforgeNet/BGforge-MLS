@@ -20,7 +20,13 @@ import * as jsdoc from "../shared/jsdoc";
 import type { SigInfoEx } from "../shared/signature";
 import { buildSignatureBlock } from "../../../shared/tooltip-format";
 import { jsdocToMarkdown } from "./jsdoc-format";
-import { type MacroData, parseMacroParams, buildMacroTooltip, buildMacroCompletion, buildSignatureHelp } from "./macro-utils";
+import {
+    type MacroData,
+    parseMacroParams,
+    buildMacroTooltip,
+    buildMacroCompletion,
+    buildSignatureHelp,
+} from "./macro-utils";
 import { SyntaxType } from "./tree-sitter.d";
 
 // Re-export for existing consumers
@@ -103,11 +109,7 @@ import { type SignatureParam, formatSignature } from "../../../shared/signature-
  * Build procedure signature string from AST params, enriched with optional JSDoc.
  * AST params are the source of truth; JSDoc only adds types and return info.
  */
-function buildProcedureSignature(
-    name: string,
-    params: ParamInfo[],
-    parsed: jsdoc.JSdoc | null
-): string {
+function buildProcedureSignature(name: string, params: ParamInfo[], parsed: jsdoc.JSdoc | null): string {
     // Always build from AST params, enrich with JSDoc types; use "var" for untyped params
     const sigParams: SignatureParam[] = params.map((p, idx) => ({
         name: p.name,
@@ -558,9 +560,8 @@ export function buildProcedureSymbol(
         value: hoverValue,
     };
 
-    const sigHelp: SigInfoEx | undefined = astParams.length > 0
-        ? buildSignatureHelp(name, astParams, parsed, uri)
-        : undefined;
+    const sigHelp: SigInfoEx | undefined =
+        astParams.length > 0 ? buildSignatureHelp(name, astParams, parsed, uri) : undefined;
 
     const isWorkspace = displayPath !== undefined;
 
@@ -569,9 +570,7 @@ export function buildProcedureSymbol(
         kind: SymbolKind.Procedure,
         location: { uri, range },
         scope: { level: isWorkspace ? ScopeLevel.Workspace : ScopeLevel.File },
-        source: isWorkspace
-            ? { type: SourceType.Workspace, uri, displayPath }
-            : { type: SourceType.Document, uri },
+        source: isWorkspace ? { type: SourceType.Workspace, uri, displayPath } : { type: SourceType.Document, uri },
         completion: {
             label: name,
             kind: CompletionItemKind.Function,
@@ -581,8 +580,8 @@ export function buildProcedureSymbol(
         hover: { contents: hoverContents },
         signature: sigHelp,
         callable: {
-            parameters: astParams.map(p => {
-                const jsdocArg = parsed?.args.find(a => a.name === p.name);
+            parameters: astParams.map((p) => {
+                const jsdocArg = parsed?.args.find((a) => a.name === p.name);
                 return {
                     name: p.name,
                     type: jsdocArg?.type,
@@ -601,11 +600,7 @@ export function buildProcedureSymbol(
  * When `displayPath` is provided, builds a workspace-scoped symbol (header-parser.ts).
  * When omitted, builds a file-scoped symbol (local-symbols.ts).
  */
-export function buildMacroSymbol(
-    macro: MacroData,
-    uri: string,
-    displayPath?: string,
-): IndexedSymbol {
+export function buildMacroSymbol(macro: MacroData, uri: string, displayPath?: string): IndexedSymbol {
     const location = macro.node ? { uri, range: makeRange(macro.node) } : null;
 
     const hoverContents = {
@@ -615,9 +610,15 @@ export function buildMacroSymbol(
     const completionItem = buildMacroCompletion(macro, uri, displayPath ?? "");
 
     // Variadic macros always get signature help, enriched with JSDoc if available
-    const sig = macro.hasParams && macro.params
-        ? buildSignatureHelp(macro.name, macro.params.map(name => ({ name })), macro.jsdoc ?? null, uri)
-        : undefined;
+    const sig =
+        macro.hasParams && macro.params
+            ? buildSignatureHelp(
+                  macro.name,
+                  macro.params.map((name) => ({ name })),
+                  macro.jsdoc ?? null,
+                  uri,
+              )
+            : undefined;
 
     const isWorkspace = displayPath !== undefined;
 
@@ -625,9 +626,7 @@ export function buildMacroSymbol(
         name: macro.name,
         location,
         scope: { level: isWorkspace ? ScopeLevel.Workspace : ScopeLevel.File },
-        source: isWorkspace
-            ? { type: SourceType.Workspace, uri, displayPath }
-            : { type: SourceType.Document, uri },
+        source: isWorkspace ? { type: SourceType.Workspace, uri, displayPath } : { type: SourceType.Document, uri },
         completion: completionItem,
         hover: { contents: hoverContents },
         signature: sig,
@@ -637,7 +636,7 @@ export function buildMacroSymbol(
         return {
             ...base,
             kind: SymbolKind.Macro,
-            callable: { parameters: macro.params?.map(p => ({ name: p })) },
+            callable: { parameters: macro.params?.map((p) => ({ name: p })) },
         } as CallableSymbol;
     }
 
@@ -666,8 +665,8 @@ export function buildVariableSymbol(
     const sigText = parsed?.type
         ? `${parsed.type} ${name}`
         : description
-            ? `${description} ${name}`
-            : `variable ${name}`;
+          ? `${description} ${name}`
+          : `variable ${name}`;
     let hoverValue = buildSignatureBlock(sigText, LANG_FALLOUT_SSL_TOOLTIP, displayPath);
 
     if (description) {
@@ -689,9 +688,7 @@ export function buildVariableSymbol(
         kind: SymbolKind.Variable,
         location: { uri, range },
         scope: { level: isWorkspace ? ScopeLevel.Workspace : ScopeLevel.File },
-        source: isWorkspace
-            ? { type: SourceType.Workspace, uri, displayPath }
-            : { type: SourceType.Document, uri },
+        source: isWorkspace ? { type: SourceType.Workspace, uri, displayPath } : { type: SourceType.Document, uri },
         completion: {
             label: name,
             kind: CompletionItemKind.Variable,

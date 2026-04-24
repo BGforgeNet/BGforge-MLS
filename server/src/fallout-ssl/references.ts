@@ -25,10 +25,11 @@ function excludeDeclaration(locations: Location[], text: string, uri: string, po
         return locations;
     }
     // Guard on URI: cross-file refs at the same line/column must not be excluded
-    return locations.filter(loc =>
-        loc.uri !== uri ||
-        loc.range.start.line !== defLocation.range.start.line ||
-        loc.range.start.character !== defLocation.range.start.character
+    return locations.filter(
+        (loc) =>
+            loc.uri !== uri ||
+            loc.range.start.line !== defLocation.range.start.line ||
+            loc.range.start.character !== defLocation.range.start.character,
     );
 }
 
@@ -71,9 +72,9 @@ export function findReferences(
         // Also search the current file for matching identifiers using file-scope traversal
         const fileScopeInfo = { name: scopeInfo.name, scope: ScopeKind.File };
         const localNodes = findScopedReferences(tree.rootNode, fileScopeInfo);
-        const localLocations = localNodes.map(node => ({ uri, range: makeRange(node) }));
+        const localLocations = localNodes.map((node) => ({ uri, range: makeRange(node) }));
         // Merge: local refs + cross-file refs (excluding current file to avoid duplicates)
-        const externalRefs = crossFileRefs.filter(loc => loc.uri !== uri);
+        const externalRefs = crossFileRefs.filter((loc) => loc.uri !== uri);
         const allLocations = [...localLocations, ...externalRefs];
         return includeDeclaration ? allLocations : excludeDeclaration(allLocations, text, uri, position);
     }
@@ -83,7 +84,7 @@ export function findReferences(
         return [];
     }
 
-    const localLocations = refNodes.map(node => ({
+    const localLocations = refNodes.map((node) => ({
         uri,
         range: makeRange(node),
     }));
@@ -91,8 +92,7 @@ export function findReferences(
     // For file-scoped symbols, add cross-file references from the index
     let allLocations = localLocations;
     if (scopeInfo.scope === ScopeKind.File && refsIndex) {
-        const crossFileRefs = refsIndex.lookup(scopeInfo.name)
-            .filter(loc => loc.uri !== uri);
+        const crossFileRefs = refsIndex.lookup(scopeInfo.name).filter((loc) => loc.uri !== uri);
         allLocations = [...localLocations, ...crossFileRefs];
     }
 

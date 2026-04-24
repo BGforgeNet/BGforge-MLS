@@ -63,7 +63,7 @@ export async function compile(uri: string, langId: string, interactive = false, 
                 const outputEvent = findOutputWrittenEvent(events);
                 if (interactive) {
                     if (warnings.length > 0) {
-                        const orphanNames = warnings.map(w => w.message.match(/^Function "(.+)" /)?.[1] ?? "?");
+                        const orphanNames = warnings.map((w) => w.message.match(/^Function "(.+)" /)?.[1] ?? "?");
                         const baseMessage = outputEvent?.message ?? `Transpiled to ${dName}`;
                         const msg = `${baseMessage}. Orphan states: ${orphanNames.join(", ")}`;
                         showWarning(msg);
@@ -74,7 +74,7 @@ export async function compile(uri: string, langId: string, interactive = false, 
                 // Chain D compilation if weidu and game path are configured
                 if (settings.weidu.path && settings.weidu.gamePath) {
                     const dUri = pathToUri(dPath);
-                    const dText = await fs.promises.readFile(dPath, 'utf-8');
+                    const dText = await fs.promises.readFile(dPath, "utf-8");
                     await weidu.compile(dUri, settings.weidu, interactive, dText);
                 }
             } catch (error) {
@@ -97,7 +97,7 @@ export async function compile(uri: string, langId: string, interactive = false, 
                 // Chain BAF compilation if weidu and game path are configured
                 if (settings.weidu.path && settings.weidu.gamePath) {
                     const bafUri = pathToUri(bafPath);
-                    const bafText = await fs.promises.readFile(bafPath, 'utf-8');
+                    const bafText = await fs.promises.readFile(bafPath, "utf-8");
                     await weidu.compile(bafUri, settings.weidu, interactive, bafText);
                 }
             } catch (error) {
@@ -117,7 +117,7 @@ export async function compile(uri: string, langId: string, interactive = false, 
                 }
                 // Chain SSL compilation via registry
                 const sslUri = pathToUri(sslPath);
-                const sslText = await fs.promises.readFile(sslPath, 'utf-8');
+                const sslText = await fs.promises.readFile(sslPath, "utf-8");
                 clearDiagnostics(sslUri);
                 await registry.compile(LANG_FALLOUT_SSL, sslUri, sslText, interactive);
             } catch (error) {

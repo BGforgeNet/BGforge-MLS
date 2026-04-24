@@ -23,16 +23,12 @@ beforeAll(async () => {
 });
 
 describe("weidu-baf integration", () => {
-
     // =========================================================================
     // Folding Ranges
     // =========================================================================
 
     describe("folding ranges", () => {
-        const BAF_FOLDABLE_TYPES = new Set([
-            SyntaxType.Block,
-            SyntaxType.Response,
-        ]);
+        const BAF_FOLDABLE_TYPES = new Set([SyntaxType.Block, SyntaxType.Response]);
         const getFoldingRanges = createFoldingRangesProvider(isInitialized, parseWithCache, BAF_FOLDABLE_TYPES);
 
         it("produces folding ranges for IF/THEN blocks", () => {

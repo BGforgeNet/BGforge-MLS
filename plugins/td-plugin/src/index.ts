@@ -42,8 +42,11 @@ function init(modules: { typescript: typeof ts }): ts.server.PluginModule {
             get(target, prop, receiver) {
                 if (prop === "getCompletionsAtPosition") {
                     return (fileName: string, position: number, options: ts.GetCompletionsAtPositionOptions) => {
-                        const result: ts.WithMetadata<ts.CompletionInfo> | undefined =
-                            target.getCompletionsAtPosition(fileName, position, options);
+                        const result: ts.WithMetadata<ts.CompletionInfo> | undefined = target.getCompletionsAtPosition(
+                            fileName,
+                            position,
+                            options,
+                        );
                         if (result === undefined) return result;
 
                         if (isTdFile(fileName)) {

@@ -216,13 +216,15 @@ describe("buildDTreeHtml", () => {
     it("renders a simple begin block with one state", () => {
         const data: DDialogData = {
             blocks: [{ kind: "begin", file: "GAELAN", line: 1 }],
-            states: [{
-                label: "state_0",
-                line: 1,
-                sayText: "Hello adventurer",
-                speaker: "GAELAN",
-                transitions: [{ line: 2, replyText: "Hi there", target: { kind: "exit" } }],
-            }],
+            states: [
+                {
+                    label: "state_0",
+                    line: 1,
+                    sayText: "Hello adventurer",
+                    speaker: "GAELAN",
+                    transitions: [{ line: 2, replyText: "Hi there", target: { kind: "exit" } }],
+                },
+            ],
             messages: {},
         };
         const html = buildDTreeHtml(data);
@@ -235,13 +237,15 @@ describe("buildDTreeHtml", () => {
     it("escapes HTML in state text", () => {
         const data: DDialogData = {
             blocks: [{ kind: "begin", file: "NPC", line: 1 }],
-            states: [{
-                label: "xss_state",
-                line: 1,
-                sayText: '<img src=x onerror="alert(1)">',
-                speaker: "NPC",
-                transitions: [],
-            }],
+            states: [
+                {
+                    label: "xss_state",
+                    line: 1,
+                    sayText: '<img src=x onerror="alert(1)">',
+                    speaker: "NPC",
+                    transitions: [],
+                },
+            ],
             messages: {},
         };
         const html = buildDTreeHtml(data);
@@ -252,17 +256,21 @@ describe("buildDTreeHtml", () => {
     it("escapes HTML in reply text attributes", () => {
         const data: DDialogData = {
             blocks: [{ kind: "begin", file: "NPC", line: 1 }],
-            states: [{
-                label: "s1",
-                line: 1,
-                sayText: "Hi",
-                speaker: "NPC",
-                transitions: [{
-                    line: 2,
-                    replyText: 'He said "hello" & waved',
-                    target: { kind: "exit" },
-                }],
-            }],
+            states: [
+                {
+                    label: "s1",
+                    line: 1,
+                    sayText: "Hi",
+                    speaker: "NPC",
+                    transitions: [
+                        {
+                            line: 2,
+                            replyText: 'He said "hello" & waved',
+                            target: { kind: "exit" },
+                        },
+                    ],
+                },
+            ],
             messages: {},
         };
         const html = buildDTreeHtml(data);
@@ -274,13 +282,15 @@ describe("buildDTreeHtml", () => {
     it("resolves tra refs via messages", () => {
         const data: DDialogData = {
             blocks: [{ kind: "begin", file: "NPC", line: 1 }],
-            states: [{
-                label: "s1",
-                line: 1,
-                sayText: "@100",
-                speaker: "NPC",
-                transitions: [],
-            }],
+            states: [
+                {
+                    label: "s1",
+                    line: 1,
+                    sayText: "@100",
+                    speaker: "NPC",
+                    transitions: [],
+                },
+            ],
             messages: { "100": "Translated text here" },
         };
         const html = buildDTreeHtml(data);
@@ -317,13 +327,15 @@ describe("buildDTreeHtml", () => {
     it("skips file-level grouping for single target file", () => {
         const data: DDialogData = {
             blocks: [{ kind: "begin", file: "NPC", line: 1 }],
-            states: [{
-                label: "s1",
-                line: 1,
-                sayText: "Hi",
-                speaker: "NPC",
-                transitions: [],
-            }],
+            states: [
+                {
+                    label: "s1",
+                    line: 1,
+                    sayText: "Hi",
+                    speaker: "NPC",
+                    transitions: [],
+                },
+            ],
             messages: {},
         };
         const html = buildDTreeHtml(data);
@@ -353,7 +365,16 @@ describe("buildDTreeHtml", () => {
 
     it("renders modify blocks as compact entries", () => {
         const data: DDialogData = {
-            blocks: [{ kind: "modify", file: "NPC", line: 1, actionName: "SET_WEIGHT", stateRefs: ["s1"], description: "weight 5" }],
+            blocks: [
+                {
+                    kind: "modify",
+                    file: "NPC",
+                    line: 1,
+                    actionName: "SET_WEIGHT",
+                    stateRefs: ["s1"],
+                    description: "weight 5",
+                },
+            ],
             states: [],
             messages: {},
         };

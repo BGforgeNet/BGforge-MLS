@@ -36,9 +36,7 @@ export function buildFalloutBaseFunctionPatterns(yamlPath: string): readonly Hig
         }
     }
 
-    return [...patternsByName.entries()]
-        .sort(([a], [b]) => cmpStr(a, b))
-        .map(([, pattern]) => pattern);
+    return [...patternsByName.entries()].sort(([a], [b]) => cmpStr(a, b)).map(([, pattern]) => pattern);
 }
 
 function main(): void {

@@ -42,7 +42,10 @@ describe("evaluateCondition", () => {
         });
 
         it("handles boolean operators", () => {
-            const vars: VarsContext = new Map([["min", "0"], ["max", "10"]]);
+            const vars: VarsContext = new Map([
+                ["min", "0"],
+                ["max", "10"],
+            ]);
             expect(evaluateCondition("i >= min && i < max", "i", 5, vars)).toBe(true);
             expect(evaluateCondition("i >= min && i < max", "i", 15, vars)).toBe(false);
         });
@@ -72,9 +75,7 @@ describe("evaluateCondition", () => {
         });
 
         it("rejects constructor access", () => {
-            expect(() =>
-                evaluateCondition("constructor.constructor('return this')()", "i", 0, emptyVars)
-            ).toThrow();
+            expect(() => evaluateCondition("constructor.constructor('return this')()", "i", 0, emptyVars)).toThrow();
         });
 
         it("rejects string literals", () => {
@@ -86,9 +87,7 @@ describe("evaluateCondition", () => {
         });
 
         it("rejects statement injection via semicolons", () => {
-            expect(() =>
-                evaluateCondition("i < 10; process.exit(0)", "i", 0, emptyVars)
-            ).toThrow();
+            expect(() => evaluateCondition("i < 10; process.exit(0)", "i", 0, emptyVars)).toThrow();
         });
     });
 
@@ -277,15 +276,13 @@ describe("applyHelperFixups", () => {
         });
 
         it("converts point inside nested function call", () => {
-            expect(applyHelperFixups("JumpToPoint([825, 370])")).toBe(
-                "JumpToPoint([825.370])",
-            );
+            expect(applyHelperFixups("JumpToPoint([825, 370])")).toBe("JumpToPoint([825.370])");
         });
 
         it("converts point inside ActionOverride", () => {
-            expect(
-                applyHelperFixups("ActionOverride(Player2,JumpToPoint([825, 370]))"),
-            ).toBe("ActionOverride(Player2,JumpToPoint([825.370]))");
+            expect(applyHelperFixups("ActionOverride(Player2,JumpToPoint([825, 370]))")).toBe(
+                "ActionOverride(Player2,JumpToPoint([825.370]))",
+            );
         });
 
         it("converts negative coordinates", () => {

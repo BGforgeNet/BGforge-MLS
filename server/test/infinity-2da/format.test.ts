@@ -20,13 +20,7 @@ function lines(...ls: string[]): string {
 
 describe("infinity-2da/format", () => {
     it("aligns column names and data under the same column positions", () => {
-        const input = lines(
-            "2DA V1.0",
-            "****",
-            "   ResRef  Type",
-            "Charm_Person SPWI104 3",
-            "Friends SPWI107 3",
-        );
+        const input = lines("2DA V1.0", "****", "   ResRef  Type", "Charm_Person SPWI104 3", "Friends SPWI107 3");
         const out = fmt(input);
         const outLines = out.split("\n");
         // Column names line must start with whitespace equal to label-col width + 2
@@ -38,15 +32,13 @@ describe("infinity-2da/format", () => {
     });
 
     it("separates columns by at least 4 spaces", () => {
-        const input = lines(
-            "2DA V1.0",
-            "****",
-            "   A B",
-            "r1 x y",
-        );
+        const input = lines("2DA V1.0", "****", "   A B", "r1 x y");
         const out = fmt(input);
         // Only data and column-name lines get column formatting; skip signature/default lines.
-        const dataLines = out.split("\n").slice(2).filter((l) => l.length > 0);
+        const dataLines = out
+            .split("\n")
+            .slice(2)
+            .filter((l) => l.length > 0);
         for (const line of dataLines) {
             // No fewer than 4 spaces between adjacent columns
             expect(line).not.toMatch(/\S {1,3}\S/);
@@ -58,7 +50,7 @@ describe("infinity-2da/format", () => {
             "2DA V1.0",
             "****",
             "   Col1",
-            "  bad_row val1",   // accidental leading whitespace
+            "  bad_row val1", // accidental leading whitespace
         );
         const out = fmt(input);
         const dataLine = out.split("\n")[3] ?? "";
@@ -66,12 +58,7 @@ describe("infinity-2da/format", () => {
     });
 
     it("trims trailing whitespace from every line", () => {
-        const input = lines(
-            "2DA V1.0   ",
-            "****   ",
-            "   Col1   Col2   ",
-            "row1   val1   val2   ",
-        );
+        const input = lines("2DA V1.0   ", "****   ", "   Col1   Col2   ", "row1   val1   val2   ");
         const out = fmt(input);
         for (const line of out.split("\n")) {
             expect(line).toBe(line.trimEnd());
@@ -97,11 +84,7 @@ describe("infinity-2da/format", () => {
     });
 
     it("works without a signature (header-absent files)", () => {
-        const input = lines(
-            "   Col1  Col2",
-            "r1 a b",
-            "r2 cc d",
-        );
+        const input = lines("   Col1  Col2", "r1 a b", "r2 cc d");
         const out = fmt(input);
         const outLines = out.split("\n");
         // First line is column names (starts with whitespace)
@@ -113,12 +96,7 @@ describe("infinity-2da/format", () => {
     });
 
     it("handles rows with more values than column names", () => {
-        const input = lines(
-            "2DA V1.0",
-            "0",
-            "   A",
-            "r1 v1 extra",
-        );
+        const input = lines("2DA V1.0", "0", "   A", "r1 v1 extra");
         // Should not throw; extra value is kept
         const out = fmt(input);
         expect(out).toContain("extra");

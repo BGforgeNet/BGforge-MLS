@@ -75,7 +75,7 @@ vi.mock("fs", () => ({
 
 vi.mock("../src/common", () => ({
     conlog: vi.fn(),
-    errorMessage: (error: unknown) => error instanceof Error ? error.message : String(error),
+    errorMessage: (error: unknown) => (error instanceof Error ? error.message : String(error)),
     isDirectory: vi.fn().mockReturnValue(true),
     pathToUri: vi.fn((p: string) => `file://${p}`),
     tmpDir: "/tmp/bgforge-mls",
@@ -109,12 +109,7 @@ describe("compile dispatcher", () => {
 
             await compile("file:///test.tp2", "weidu-tp2", false, "content");
 
-            expect(mockRegistryCompile).toHaveBeenCalledWith(
-                "weidu-tp2",
-                "file:///test.tp2",
-                "content",
-                false
-            );
+            expect(mockRegistryCompile).toHaveBeenCalledWith("weidu-tp2", "file:///test.tp2", "content", false);
         });
 
         it("clears diagnostics before provider compile", async () => {
@@ -135,22 +130,33 @@ describe("compile dispatcher", () => {
             mockTdCompile.mockResolvedValue({
                 dPath: "/output/test.d",
                 warnings: [],
-                events: [{ level: "info", code: "output_written", message: "Transpiled to test.d", outPath: "/output/test.d" }],
+                events: [
+                    {
+                        level: "info",
+                        code: "output_written",
+                        message: "Transpiled to test.d",
+                        outPath: "/output/test.d",
+                    },
+                ],
             });
 
             await compile("file:///test.td", "typescript", false, "td content");
 
-            expect(mockTdCompile).toHaveBeenCalledWith(
-                "file:///test.td",
-                "td content"
-            );
+            expect(mockTdCompile).toHaveBeenCalledWith("file:///test.td", "td content");
         });
 
         it("shows success message after TD transpile", async () => {
             mockTdCompile.mockResolvedValue({
                 dPath: "/output/test.d",
                 warnings: [],
-                events: [{ level: "info", code: "output_written", message: "Transpiled to test.d", outPath: "/output/test.d" }],
+                events: [
+                    {
+                        level: "info",
+                        code: "output_written",
+                        message: "Transpiled to test.d",
+                        outPath: "/output/test.d",
+                    },
+                ],
             });
 
             await compile("file:///test.td", "typescript", true, "td content");
@@ -162,16 +168,33 @@ describe("compile dispatcher", () => {
             mockTdCompile.mockResolvedValue({
                 dPath: "/output/test.d",
                 warnings: [
-                    { message: 'Function "orphan1" looks like an orphan state', line: 5, columnStart: 9, columnEnd: 16 },
-                    { message: 'Function "orphan2" looks like an orphan state', line: 8, columnStart: 9, columnEnd: 16 },
+                    {
+                        message: 'Function "orphan1" looks like an orphan state',
+                        line: 5,
+                        columnStart: 9,
+                        columnEnd: 16,
+                    },
+                    {
+                        message: 'Function "orphan2" looks like an orphan state',
+                        line: 8,
+                        columnStart: 9,
+                        columnEnd: 16,
+                    },
                 ],
-                events: [{ level: "info", code: "output_written", message: "Transpiled to test.d", outPath: "/output/test.d" }],
+                events: [
+                    {
+                        level: "info",
+                        code: "output_written",
+                        message: "Transpiled to test.d",
+                        outPath: "/output/test.d",
+                    },
+                ],
             });
 
             await compile("file:///test.td", "typescript", true, "td content");
 
             expect(mockShowWarning).toHaveBeenCalledWith(
-                expect.stringContaining("Transpiled to test.d. Orphan states: orphan1, orphan2")
+                expect.stringContaining("Transpiled to test.d. Orphan states: orphan1, orphan2"),
             );
             // Should NOT show a separate info message
             expect(mockShowInfo).not.toHaveBeenCalled();
@@ -182,29 +205,38 @@ describe("compile dispatcher", () => {
 
             await compile("file:///test.td", "typescript", true, "bad td");
 
-            expect(mockShowError).toHaveBeenCalledWith(
-                expect.stringContaining("TD: Parse error in TD")
-            );
+            expect(mockShowError).toHaveBeenCalledWith(expect.stringContaining("TD: Parse error in TD"));
         });
 
         it("routes .tbaf files to TBAF transpiler", async () => {
             mockTbafCompile.mockResolvedValue({
                 bafPath: "/output/test.baf",
-                events: [{ level: "info", code: "output_written", message: "Transpiled to test.baf", outPath: "/output/test.baf" }],
+                events: [
+                    {
+                        level: "info",
+                        code: "output_written",
+                        message: "Transpiled to test.baf",
+                        outPath: "/output/test.baf",
+                    },
+                ],
             });
 
             await compile("file:///test.tbaf", "typescript", false, "tbaf content");
 
-            expect(mockTbafCompile).toHaveBeenCalledWith(
-                "file:///test.tbaf",
-                "tbaf content"
-            );
+            expect(mockTbafCompile).toHaveBeenCalledWith("file:///test.tbaf", "tbaf content");
         });
 
         it("clears diagnostics before TBAF transpile", async () => {
             mockTbafCompile.mockResolvedValue({
                 bafPath: "/output/test.baf",
-                events: [{ level: "info", code: "output_written", message: "Transpiled to test.baf", outPath: "/output/test.baf" }],
+                events: [
+                    {
+                        level: "info",
+                        code: "output_written",
+                        message: "Transpiled to test.baf",
+                        outPath: "/output/test.baf",
+                    },
+                ],
             });
 
             await compile("file:///test.tbaf", "typescript", false, "tbaf content");
@@ -223,14 +255,19 @@ describe("compile dispatcher", () => {
         it("does not fall through to unknown-language after successful TBAF transpile", async () => {
             mockTbafCompile.mockResolvedValue({
                 bafPath: "/output/test.baf",
-                events: [{ level: "info", code: "output_written", message: "Transpiled to test.baf", outPath: "/output/test.baf" }],
+                events: [
+                    {
+                        level: "info",
+                        code: "output_written",
+                        message: "Transpiled to test.baf",
+                        outPath: "/output/test.baf",
+                    },
+                ],
             });
 
             await compile("file:///test.tbaf", "typescript", true, "tbaf content");
 
-            expect(conlog).not.toHaveBeenCalledWith(
-                expect.stringContaining("Don't know how to compile")
-            );
+            expect(conlog).not.toHaveBeenCalledWith(expect.stringContaining("Don't know how to compile"));
             expect(mockShowInfo).toHaveBeenCalledWith("Transpiled to test.baf");
         });
 
@@ -239,9 +276,7 @@ describe("compile dispatcher", () => {
 
             await compile("file:///test.tbaf", "typescript", true, "bad tbaf");
 
-            expect(mockShowError).toHaveBeenCalledWith(
-                expect.stringContaining("TBAF: TBAF syntax error")
-            );
+            expect(mockShowError).toHaveBeenCalledWith(expect.stringContaining("TBAF: TBAF syntax error"));
         });
 
         it("routes .tssl files to TSSL transpiler", async () => {
@@ -252,10 +287,7 @@ describe("compile dispatcher", () => {
 
             await compile("file:///test.tssl", "typescript", false, "tssl content");
 
-            expect(mockTsslCompile).toHaveBeenCalledWith(
-                "file:///test.tssl",
-                "tssl content"
-            );
+            expect(mockTsslCompile).toHaveBeenCalledWith("file:///test.tssl", "tssl content");
         });
 
         it("shows error message on TSSL transpile failure", async () => {
@@ -263,9 +295,7 @@ describe("compile dispatcher", () => {
 
             await compile("file:///test.tssl", "typescript", true, "bad tssl");
 
-            expect(mockShowError).toHaveBeenCalledWith(
-                expect.stringContaining("TSSL: TSSL error")
-            );
+            expect(mockShowError).toHaveBeenCalledWith(expect.stringContaining("TSSL: TSSL error"));
         });
     });
 
@@ -273,9 +303,7 @@ describe("compile dispatcher", () => {
         it("logs message for unknown language", async () => {
             await compile("file:///test.xyz", "unknown-lang", true, "content");
 
-            expect(mockShowInfo).toHaveBeenCalledWith(
-                expect.stringContaining("Don't know how to compile")
-            );
+            expect(mockShowInfo).toHaveBeenCalledWith(expect.stringContaining("Don't know how to compile"));
         });
 
         it("does not show message when not interactive", async () => {

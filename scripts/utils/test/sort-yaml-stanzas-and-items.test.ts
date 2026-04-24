@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { sortSequenceInAllMapEntries, sortYamlSequenceByPath, sortYamlStanzasAndItems } from "../src/sort-yaml-stanzas-and-items.ts";
+import {
+    sortSequenceInAllMapEntries,
+    sortYamlSequenceByPath,
+    sortYamlStanzasAndItems,
+} from "../src/sort-yaml-stanzas-and-items.ts";
 
 describe("sortYamlStanzasAndItems", () => {
     it("sorts top-level stanzas alphabetically while preserving stanza formatting", () => {
@@ -121,11 +125,7 @@ other:
       - match: a
 `;
 
-        const result = sortYamlSequenceByPath(
-            input,
-            ["repository", "fallout-base-functions", "patterns"],
-            "match",
-        );
+        const result = sortYamlSequenceByPath(input, ["repository", "fallout-base-functions", "patterns"], "match");
 
         expect(result).toBe(`repository:
   fallout-base-functions:
@@ -155,7 +155,9 @@ describe("sortYamlStanzasAndItems error branches", () => {
     });
 
     it("throws when top-level is not a mapping", () => {
-        expect(() => sortYamlStanzasAndItems("- item1\n- item2\n")).toThrow("Expected top-level YAML document to be a mapping");
+        expect(() => sortYamlStanzasAndItems("- item1\n- item2\n")).toThrow(
+            "Expected top-level YAML document to be a mapping",
+        );
     });
 });
 
@@ -165,7 +167,9 @@ describe("sortYamlSequenceByPath error branches", () => {
     });
 
     it("throws when top-level is not a mapping", () => {
-        expect(() => sortYamlSequenceByPath("- item\n", ["key"], "name")).toThrow("Expected top-level YAML document to be a mapping");
+        expect(() => sortYamlSequenceByPath("- item\n", ["key"], "name")).toThrow(
+            "Expected top-level YAML document to be a mapping",
+        );
     });
 
     it("returns source unchanged when path length is zero", () => {
@@ -199,7 +203,9 @@ describe("sortSequenceInAllMapEntries error branches", () => {
     });
 
     it("throws when top-level is not a mapping", () => {
-        expect(() => sortSequenceInAllMapEntries("- item\n", [], "patterns", "match")).toThrow("Expected top-level YAML document to be a mapping");
+        expect(() => sortSequenceInAllMapEntries("- item\n", [], "patterns", "match")).toThrow(
+            "Expected top-level YAML document to be a mapping",
+        );
     });
 
     it("handles empty mapPath (operates on top-level map)", () => {

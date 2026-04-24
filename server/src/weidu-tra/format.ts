@@ -115,10 +115,7 @@ function processLine(text: string, pos: number): ProcessedLine {
     }
 
     // Comment line (// or /*) — trim trailing whitespace only
-    if (
-        (text[pos] === "/" && text[pos + 1] === "/") ||
-        (text[pos] === "/" && text[pos + 1] === "*")
-    ) {
+    if ((text[pos] === "/" && text[pos + 1] === "/") || (text[pos] === "/" && text[pos + 1] === "*")) {
         const nlPos = text.indexOf("\n", pos);
         const end = nlPos === -1 ? text.length : nlPos;
         const line = text.slice(pos, end).trimEnd();

@@ -90,8 +90,4 @@ export const CONSUMER_EXTENSIONS_TRA = [
  * Single source of truth for the extension-to-traExt mapping for MSG consumers.
  * Used by the reverse index to discover which files may contain mstr(123) etc. references.
  */
-export const CONSUMER_EXTENSIONS_MSG = [
-    EXT_FALLOUT_SSL.slice(1),
-    "h",
-    EXT_TSSL.slice(1),
-] as const;
+export const CONSUMER_EXTENSIONS_MSG = [EXT_FALLOUT_SSL.slice(1), "h", EXT_TSSL.slice(1)] as const;

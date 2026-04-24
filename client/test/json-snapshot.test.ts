@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { ParseResult } from "../src/parsers/types";
-import { createBinaryJsonSnapshot, loadBinaryJsonSnapshot, parseBinaryJsonSnapshot } from "../src/parsers/json-snapshot";
+import {
+    createBinaryJsonSnapshot,
+    loadBinaryJsonSnapshot,
+    parseBinaryJsonSnapshot,
+} from "../src/parsers/json-snapshot";
 
 function makeSnapshotResult(): ParseResult {
     return {
@@ -12,9 +16,7 @@ function makeSnapshotResult(): ParseResult {
                 {
                     name: "Header",
                     expanded: true,
-                    fields: [
-                        { name: "Version", value: 20, offset: 0, size: 4, type: "uint32" },
-                    ],
+                    fields: [{ name: "Version", value: 20, offset: 0, size: 4, type: "uint32" }],
                 },
             ],
         },
@@ -33,10 +35,13 @@ describe("json-snapshot", () => {
     it("serializes generic parse results as schema version 1 with a trailing newline", () => {
         const json = createBinaryJsonSnapshot(makeSnapshotResult());
         expect(json.endsWith("\n")).toBe(true);
-        expect(json).toContain("\"opaqueRanges\"");
+        expect(json).toContain('"opaqueRanges"');
         const parsed = JSON.parse(json) as {
             schemaVersion: number;
-            root: { nodeType: string; children: Array<{ nodeType: string; key: string; children?: Array<{ key: string; value: unknown }> }> };
+            root: {
+                nodeType: string;
+                children: Array<{ nodeType: string; key: string; children?: Array<{ key: string; value: unknown }> }>;
+            };
         };
         expect(parsed.schemaVersion).toBe(1);
         expect(parsed.root.nodeType).toBe("group");
@@ -175,10 +180,24 @@ describe("json-snapshot", () => {
                             { name: "Filename", value: "artemple", offset: 4, size: 16, type: "string" },
                             { name: "Default Position", value: 20_100, offset: 20, size: 4, type: "int32" },
                             { name: "Default Elevation", value: "0", rawValue: 0, offset: 24, size: 4, type: "enum" },
-                            { name: "Default Orientation", value: "NE", rawValue: 0, offset: 28, size: 4, type: "enum" },
+                            {
+                                name: "Default Orientation",
+                                value: "NE",
+                                rawValue: 0,
+                                offset: 28,
+                                size: 4,
+                                type: "enum",
+                            },
                             { name: "Num Local Vars", value: 1, offset: 32, size: 4, type: "int32" },
                             { name: "Script ID", value: -1, offset: 36, size: 4, type: "int32" },
-                            { name: "Map Flags", value: "Has Elevation 0", rawValue: 0, offset: 40, size: 4, type: "flags" },
+                            {
+                                name: "Map Flags",
+                                value: "Has Elevation 0",
+                                rawValue: 0,
+                                offset: 40,
+                                size: 4,
+                                type: "flags",
+                            },
                             { name: "Darkness", value: 0, offset: 44, size: 4, type: "int32" },
                             { name: "Num Global Vars", value: 1, offset: 48, size: 4, type: "int32" },
                             { name: "Map ID", value: 42, offset: 52, size: 4, type: "int32" },
@@ -187,15 +206,11 @@ describe("json-snapshot", () => {
                     },
                     {
                         name: "Global Variables",
-                        fields: [
-                            { name: "Global Var 0", value: 11, offset: 240, size: 4, type: "int32" },
-                        ],
+                        fields: [{ name: "Global Var 0", value: 11, offset: 240, size: 4, type: "int32" }],
                     },
                     {
                         name: "Local Variables",
-                        fields: [
-                            { name: "Local Var 0", value: 22, offset: 244, size: 4, type: "int32" },
-                        ],
+                        fields: [{ name: "Local Var 0", value: 22, offset: 244, size: 4, type: "int32" }],
                     },
                     {
                         name: "Objects Section",
@@ -253,10 +268,10 @@ describe("json-snapshot", () => {
         expect(snapshot.document.localVariables).toEqual([22]);
         expect(snapshot.opaqueRanges?.some((range) => range.label === "tiles")).toBe(true);
         const documentJson = JSON.stringify(snapshot.document);
-        expect(documentJson).not.toContain("\"offset\"");
-        expect(documentJson).not.toContain("\"size\"");
-        expect(documentJson).not.toContain("\"valueType\"");
-        expect(documentJson).not.toContain("\"nodeType\"");
+        expect(documentJson).not.toContain('"offset"');
+        expect(documentJson).not.toContain('"size"');
+        expect(documentJson).not.toContain('"valueType"');
+        expect(documentJson).not.toContain('"nodeType"');
     });
 
     it("rejects MAP snapshots that use decoded tiles instead of opaque tile ranges", () => {
@@ -273,10 +288,24 @@ describe("json-snapshot", () => {
                             { name: "Filename", value: "artemple", offset: 4, size: 16, type: "string" },
                             { name: "Default Position", value: 20_100, offset: 20, size: 4, type: "int32" },
                             { name: "Default Elevation", value: "0", rawValue: 0, offset: 24, size: 4, type: "enum" },
-                            { name: "Default Orientation", value: "NE", rawValue: 0, offset: 28, size: 4, type: "enum" },
+                            {
+                                name: "Default Orientation",
+                                value: "NE",
+                                rawValue: 0,
+                                offset: 28,
+                                size: 4,
+                                type: "enum",
+                            },
                             { name: "Num Local Vars", value: 0, offset: 32, size: 4, type: "int32" },
                             { name: "Script ID", value: -1, offset: 36, size: 4, type: "int32" },
-                            { name: "Map Flags", value: "Has Elevation 0", rawValue: 0, offset: 40, size: 4, type: "flags" },
+                            {
+                                name: "Map Flags",
+                                value: "Has Elevation 0",
+                                rawValue: 0,
+                                offset: 40,
+                                size: 4,
+                                type: "flags",
+                            },
                             { name: "Darkness", value: 0, offset: 44, size: 4, type: "int32" },
                             { name: "Num Global Vars", value: 0, offset: 48, size: 4, type: "int32" },
                             { name: "Map ID", value: 42, offset: 52, size: 4, type: "int32" },
@@ -287,9 +316,18 @@ describe("json-snapshot", () => {
                         name: "Objects Section",
                         fields: [
                             { name: "Total Objects", value: 0, offset: 248, size: 4, type: "int32" },
-                            { name: "Elevation 0 Objects", fields: [{ name: "Object Count", value: 0, offset: 252, size: 4, type: "int32" }] },
-                            { name: "Elevation 1 Objects", fields: [{ name: "Object Count", value: 0, offset: 256, size: 4, type: "int32" }] },
-                            { name: "Elevation 2 Objects", fields: [{ name: "Object Count", value: 0, offset: 260, size: 4, type: "int32" }] },
+                            {
+                                name: "Elevation 0 Objects",
+                                fields: [{ name: "Object Count", value: 0, offset: 252, size: 4, type: "int32" }],
+                            },
+                            {
+                                name: "Elevation 1 Objects",
+                                fields: [{ name: "Object Count", value: 0, offset: 256, size: 4, type: "int32" }],
+                            },
+                            {
+                                name: "Elevation 2 Objects",
+                                fields: [{ name: "Object Count", value: 0, offset: 260, size: 4, type: "int32" }],
+                            },
                         ],
                     },
                 ],
@@ -302,7 +340,9 @@ describe("json-snapshot", () => {
         };
         dumped.opaqueRanges = (dumped.opaqueRanges ?? []).filter((range) => range.label !== "tiles");
 
-        expect(() => parseBinaryJsonSnapshot(`${JSON.stringify(dumped)}\n`)).toThrow(/decoded tiles are not supported/i);
+        expect(() => parseBinaryJsonSnapshot(`${JSON.stringify(dumped)}\n`)).toThrow(
+            /decoded tiles are not supported/i,
+        );
     });
 
     it("rejects invalid version 1 snapshots with unknown keys", () => {

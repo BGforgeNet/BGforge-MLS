@@ -154,7 +154,6 @@ describe("bin CLI integration", () => {
             expect(code).toBe(0);
             expect(stdout).not.toContain("Saved:");
         });
-
     });
 
     describe("error handling", () => {
@@ -259,7 +258,7 @@ describe("bin CLI integration", () => {
             for (const dir of dirs) {
                 const dirPath = path.join(FIXTURES, dir);
                 if (!fs.existsSync(dirPath)) continue;
-                const files = fs.readdirSync(dirPath).filter(f => f.endsWith(".pro.json"));
+                const files = fs.readdirSync(dirPath).filter((f) => f.endsWith(".pro.json"));
                 for (const jsonFile of files) {
                     const srcJson = path.join(dirPath, jsonFile);
                     const srcPro = path.join(dirPath, jsonFile.replace(/\.pro\.json$/, ".pro"));
@@ -375,9 +374,7 @@ describe("bin CLI integration", () => {
             expect(objectsTailRange).toBeDefined();
             expect(objectsTailRange?.hexChunks.length).toBeGreaterThan(0);
 
-            const chunkLines = jsonText
-                .split("\n")
-                .filter((line) => /^\s+"[0-9a-f]+",?$/.test(line));
+            const chunkLines = jsonText.split("\n").filter((line) => /^\s+"[0-9a-f]+",?$/.test(line));
             expect(chunkLines.length).toBeGreaterThan(0);
             expect(chunkLines.every((line) => line.length <= 80)).toBe(true);
         });

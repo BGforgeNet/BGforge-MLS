@@ -19,7 +19,18 @@ vi.mock("../src/lsp-connection", () => ({
     }),
 }));
 
-import { symbolAtPosition, sendParseResult, isSubpath, expandHome, parseCommandPath, needsShell, errorMessage, addFallbackDiagnostic, runProcess, type ParseResult } from "../src/common";
+import {
+    symbolAtPosition,
+    sendParseResult,
+    isSubpath,
+    expandHome,
+    parseCommandPath,
+    needsShell,
+    errorMessage,
+    addFallbackDiagnostic,
+    runProcess,
+    type ParseResult,
+} from "../src/common";
 
 describe("symbolAtPosition", () => {
     it("returns word under cursor", () => {
@@ -168,9 +179,7 @@ describe("sendParseResult", () => {
 
     it("replaces tmpUri with mainUri for errors", () => {
         const parseResult: ParseResult = {
-            errors: [
-                { uri: "file:///tmp.tp2", line: 3, columnStart: 0, columnEnd: 5, message: "err" },
-            ],
+            errors: [{ uri: "file:///tmp.tp2", line: 3, columnStart: 0, columnEnd: 5, message: "err" }],
             warnings: [],
         };
         sendParseResult(parseResult, "file:///main.tp2", "file:///tmp.tp2");
@@ -182,9 +191,7 @@ describe("sendParseResult", () => {
     it("replaces tmpUri with mainUri for warnings", () => {
         const parseResult: ParseResult = {
             errors: [],
-            warnings: [
-                { uri: "file:///tmp.tp2", line: 3, columnStart: 0, columnEnd: 5, message: "warn" },
-            ],
+            warnings: [{ uri: "file:///tmp.tp2", line: 3, columnStart: 0, columnEnd: 5, message: "warn" }],
         };
         sendParseResult(parseResult, "file:///main.tp2", "file:///tmp.tp2");
 
@@ -194,12 +201,8 @@ describe("sendParseResult", () => {
 
     it("accumulates errors and warnings for the same URI", () => {
         const parseResult: ParseResult = {
-            errors: [
-                { uri: "file:///a.tp2", line: 1, columnStart: 0, columnEnd: 10, message: "error" },
-            ],
-            warnings: [
-                { uri: "file:///a.tp2", line: 2, columnStart: 0, columnEnd: 10, message: "warning" },
-            ],
+            errors: [{ uri: "file:///a.tp2", line: 1, columnStart: 0, columnEnd: 10, message: "error" }],
+            warnings: [{ uri: "file:///a.tp2", line: 2, columnStart: 0, columnEnd: 10, message: "warning" }],
         };
         sendParseResult(parseResult, "file:///a.tp2", "file:///tmp.tp2");
 
@@ -397,7 +400,10 @@ describe("addFallbackDiagnostic", () => {
         const err = { message: "exit code 1" } as import("child_process").ExecFileException;
 
         const result = addFallbackDiagnostic(
-            { errors: [], warnings: [] }, err, "file:///test.tp2", "Some unexpected output"
+            { errors: [], warnings: [] },
+            err,
+            "file:///test.tp2",
+            "Some unexpected output",
         );
 
         expect(result.errors[0].message).toBe("Some unexpected output");
@@ -406,9 +412,7 @@ describe("addFallbackDiagnostic", () => {
     it("uses err.message as message when stdout is empty", () => {
         const err = { message: "Command failed" } as import("child_process").ExecFileException;
 
-        const result = addFallbackDiagnostic(
-            { errors: [], warnings: [] }, err, "file:///test.tp2", ""
-        );
+        const result = addFallbackDiagnostic({ errors: [], warnings: [] }, err, "file:///test.tp2", "");
 
         expect(result.errors[0].message).toBe("Command failed");
     });

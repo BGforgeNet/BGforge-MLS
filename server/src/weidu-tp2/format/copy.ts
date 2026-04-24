@@ -49,10 +49,7 @@ interface CopyActionParts {
 /** Check if a node is a file pair type. */
 function isFilePairType(type: string): boolean {
     return (
-        type === "file_pair" ||
-        type === "copy_random_item" ||
-        type === "copy_large_item" ||
-        type === "copy_2da_item"
+        type === "file_pair" || type === "copy_random_item" || type === "copy_large_item" || type === "copy_2da_item"
     );
 }
 
@@ -72,9 +69,7 @@ function isPatchContent(type: string): boolean {
 /** Check if a node is a suffix keyword. */
 function isSuffixKeyword(child: SyntaxNode): boolean {
     return (
-        isKeyword(child, KW_BUT_ONLY) ||
-        isKeyword(child, KW_BUT_ONLY_IF_IT_CHANGES) ||
-        isKeyword(child, KW_IF_EXISTS)
+        isKeyword(child, KW_BUT_ONLY) || isKeyword(child, KW_BUT_ONLY_IF_IT_CHANGES) || isKeyword(child, KW_IF_EXISTS)
     );
 }
 
@@ -132,7 +127,9 @@ function parseWhenNode(node: SyntaxNode): string[] {
 
 /** Check if a node is a value type (for UNLESS/IF values). */
 function isValueType(type: string): boolean {
-    return type === "value" || type === "string" || type === "variable_ref" || type === "identifier" || type === "number";
+    return (
+        type === "value" || type === "string" || type === "variable_ref" || type === "identifier" || type === "number"
+    );
 }
 
 /** Check if child is a COPY flag (GLOB, NOGLOB, +, -). */
@@ -231,13 +228,23 @@ function parseCopyAction(node: SyntaxNode): CopyActionParts {
         }
 
         // Value following UNLESS
-        if (inPatchArea && parts.suffix.length > 0 && parts.suffix[parts.suffix.length - 1] === KW_UNLESS && isValueType(child.type)) {
+        if (
+            inPatchArea &&
+            parts.suffix.length > 0 &&
+            parts.suffix[parts.suffix.length - 1] === KW_UNLESS &&
+            isValueType(child.type)
+        ) {
             parts.suffix[parts.suffix.length - 1] = KW_UNLESS + " " + child.text;
             continue;
         }
 
         // Value following IF (in BUT_ONLY IF context)
-        if (inPatchArea && parts.suffix.length > 0 && parts.suffix[parts.suffix.length - 1] === KW_IF && isValueType(child.type)) {
+        if (
+            inPatchArea &&
+            parts.suffix.length > 0 &&
+            parts.suffix[parts.suffix.length - 1] === KW_IF &&
+            isValueType(child.type)
+        ) {
             parts.suffix[parts.suffix.length - 1] = KW_IF + " " + child.text;
             continue;
         }
@@ -284,7 +291,7 @@ function formatCopyPatches(
     patches: SyntaxNode[],
     ctx: FormatContext,
     depth: number,
-    formatNode: (node: SyntaxNode, ctx: FormatContext, depth: number) => string
+    formatNode: (node: SyntaxNode, ctx: FormatContext, depth: number) => string,
 ): string[] {
     const patchIndent = ctx.indent.repeat(depth + 1);
     const nestedIndent = ctx.indent.repeat(depth + 2);
@@ -369,7 +376,7 @@ export function formatCopyAction(
     node: SyntaxNode,
     ctx: FormatContext,
     depth: number,
-    formatNode: (node: SyntaxNode, ctx: FormatContext, depth: number) => string
+    formatNode: (node: SyntaxNode, ctx: FormatContext, depth: number) => string,
 ): string {
     const indent = ctx.indent.repeat(depth);
     const patchIndent = ctx.indent.repeat(depth + 1);
@@ -383,7 +390,11 @@ export function formatCopyAction(
 
     // Report if COPY action has no file pairs (likely malformed)
     if (parts.filePairs.length === 0 && parts.patches.length === 0) {
-        throwFormatError(`COPY action '${parts.keyword}' has no file pairs`, node.startPosition.row + 1, node.startPosition.column + 1);
+        throwFormatError(
+            `COPY action '${parts.keyword}' has no file pairs`,
+            node.startPosition.row + 1,
+            node.startPosition.column + 1,
+        );
     }
 
     const headerLines = formatCopyHeader(parts, indent, patchIndent, ctx.lineLimit);

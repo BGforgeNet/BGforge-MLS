@@ -125,8 +125,9 @@ describe("core/parser-manager", () => {
 
     describe("parseWithCache()", () => {
         it("throws when the language is not registered", () => {
-            expect(() => parserManager.parseWithCache("unregistered-parse-lang", "text"))
-                .toThrow("No parser registered for language: unregistered-parse-lang");
+            expect(() => parserManager.parseWithCache("unregistered-parse-lang", "text")).toThrow(
+                "No parser registered for language: unregistered-parse-lang",
+            );
         });
 
         it("delegates to the module's parseWithCache for a registered language", () => {
@@ -143,8 +144,9 @@ describe("core/parser-manager", () => {
 
     describe("getParser()", () => {
         it("throws when the language is not registered", () => {
-            expect(() => parserManager.getParser("unregistered-getparser-lang"))
-                .toThrow("No parser registered for language: unregistered-getparser-lang");
+            expect(() => parserManager.getParser("unregistered-getparser-lang")).toThrow(
+                "No parser registered for language: unregistered-getparser-lang",
+            );
         });
 
         it("delegates to the module's getParser for a registered language", () => {

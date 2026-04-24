@@ -140,7 +140,7 @@ procedure my_proc begin end
         clearAllLocalSymbolsCache();
 
         const symbols = getLocalSymbols(text, uri);
-        const names = symbols.map(s => s.name);
+        const names = symbols.map((s) => s.name);
 
         expect(names).toContain("my_var");
         expect(names).toContain("my_proc");

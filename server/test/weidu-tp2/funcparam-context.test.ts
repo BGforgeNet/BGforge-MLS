@@ -273,6 +273,5 @@ END`;
             const contexts = getContextAtPosition(text, 0, pos);
             expect(contexts).toContain(CompletionContext.FuncParamValue);
         });
-
     });
 });

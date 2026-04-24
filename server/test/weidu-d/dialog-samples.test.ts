@@ -23,7 +23,8 @@ const SAMPLES_DIR = path.resolve(__dirname, "../../../grammars/weidu-d/test/samp
 
 /** Collect all .d files from the samples directory. */
 function getSampleFiles(): string[] {
-    return fs.readdirSync(SAMPLES_DIR)
+    return fs
+        .readdirSync(SAMPLES_DIR)
         .filter((f) => f.endsWith(".d"))
         .sort();
 }
@@ -107,9 +108,7 @@ describe("weidu-d/dialog - sample files", () => {
             // The file has many IF/THEN BEGIN states inside APPEND
             expect(result.states.length).toBeGreaterThanOrEqual(10);
 
-            const statesWithTransitions = result.states.filter(
-                (s) => s.transitions.length > 0,
-            );
+            const statesWithTransitions = result.states.filter((s) => s.transitions.length > 0);
             expect(statesWithTransitions.length).toBeGreaterThanOrEqual(5);
         });
 
@@ -123,23 +122,17 @@ describe("weidu-d/dialog - sample files", () => {
         });
 
         it("has states referencing GAELAN dialog file", () => {
-            const gaelanStates = result.states.filter(
-                (s) => s.speaker === "GAELAN",
-            );
+            const gaelanStates = result.states.filter((s) => s.speaker === "GAELAN");
             expect(gaelanStates.length).toBeGreaterThanOrEqual(5);
         });
 
         it("has GOTO transitions between states", () => {
-            const gotoTransitions = result.states.flatMap((s) =>
-                s.transitions.filter((t) => t.target.kind === "goto"),
-            );
+            const gotoTransitions = result.states.flatMap((s) => s.transitions.filter((t) => t.target.kind === "goto"));
             expect(gotoTransitions.length).toBeGreaterThanOrEqual(10);
         });
 
         it("has EXIT transitions", () => {
-            const exitTransitions = result.states.flatMap((s) =>
-                s.transitions.filter((t) => t.target.kind === "exit"),
-            );
+            const exitTransitions = result.states.flatMap((s) => s.transitions.filter((t) => t.target.kind === "exit"));
             expect(exitTransitions.length).toBeGreaterThanOrEqual(5);
         });
     });
@@ -180,8 +173,9 @@ describe("weidu-d/dialog - sample files", () => {
             // or be connected to the next state via auto-generated GOTO.
             for (const state of result.states) {
                 // The last state might have an EXIT; intermediate states have GOTOs
-                expect(state.transitions.length + (state === result.states[result.states.length - 1] ? 0 : 1))
-                    .toBeGreaterThanOrEqual(0);
+                expect(
+                    state.transitions.length + (state === result.states[result.states.length - 1] ? 0 : 1),
+                ).toBeGreaterThanOrEqual(0);
             }
         });
     });
@@ -208,16 +202,12 @@ describe("weidu-d/dialog - sample files", () => {
 
         it("has states with short (++) transitions", () => {
             // States like g_item_type, g_weapon, g_armor, g_trinket use ++ syntax
-            const statesWithShortTransitions = result.states.filter(
-                (s) => s.transitions.length >= 2,
-            );
+            const statesWithShortTransitions = result.states.filter((s) => s.transitions.length >= 2);
             expect(statesWithShortTransitions.length).toBeGreaterThanOrEqual(1);
         });
 
         it("has GOTO transitions from short syntax", () => {
-            const gotoTransitions = result.states.flatMap((s) =>
-                s.transitions.filter((t) => t.target.kind === "goto"),
-            );
+            const gotoTransitions = result.states.flatMap((s) => s.transitions.filter((t) => t.target.kind === "goto"));
             expect(gotoTransitions.length).toBeGreaterThanOrEqual(4);
         });
     });
@@ -226,10 +216,7 @@ describe("weidu-d/dialog - sample files", () => {
         let result: DDialogData;
 
         beforeAll(() => {
-            const text = fs.readFileSync(
-                path.join(SAMPLES_DIR, "ascension_bodhi_solar.d"),
-                "utf-8",
-            );
+            const text = fs.readFileSync(path.join(SAMPLES_DIR, "ascension_bodhi_solar.d"), "utf-8");
             result = parseDDialog(text);
         });
 
@@ -253,37 +240,27 @@ describe("weidu-d/dialog - sample files", () => {
             expect(externTransitions.length).toBeGreaterThanOrEqual(1);
 
             // At least one EXTERN points to finsol01
-            const toSolar = externTransitions.filter(
-                (t) => t.target.kind === "extern" && t.target.file === "finsol01",
-            );
+            const toSolar = externTransitions.filter((t) => t.target.kind === "extern" && t.target.file === "finsol01");
             expect(toSolar.length).toBeGreaterThanOrEqual(1);
         });
 
         it("has states with GOTO transitions", () => {
-            const gotoTransitions = result.states.flatMap((s) =>
-                s.transitions.filter((t) => t.target.kind === "goto"),
-            );
+            const gotoTransitions = result.states.flatMap((s) => s.transitions.filter((t) => t.target.kind === "goto"));
             expect(gotoTransitions.length).toBeGreaterThanOrEqual(2);
         });
 
         it("has states with EXIT transitions", () => {
-            const exitTransitions = result.states.flatMap((s) =>
-                s.transitions.filter((t) => t.target.kind === "exit"),
-            );
+            const exitTransitions = result.states.flatMap((s) => s.transitions.filter((t) => t.target.kind === "exit"));
             expect(exitTransitions.length).toBeGreaterThanOrEqual(5);
         });
 
         it("has states with reply text", () => {
-            const statesWithReplies = result.states.filter((s) =>
-                s.transitions.some((t) => t.replyText !== undefined),
-            );
+            const statesWithReplies = result.states.filter((s) => s.transitions.some((t) => t.replyText !== undefined));
             expect(statesWithReplies.length).toBeGreaterThanOrEqual(2);
         });
 
         it("has bodhi_interjection state with multiple replies", () => {
-            const bodhiState = result.states.find(
-                (s) => s.label === "bodhi_interjection",
-            );
+            const bodhiState = result.states.find((s) => s.label === "bodhi_interjection");
             expect(bodhiState).toBeDefined();
             expect(bodhiState!.transitions.length).toBeGreaterThanOrEqual(3);
         });
@@ -308,10 +285,7 @@ describe("weidu-d/dialog - sample files", () => {
                     const result = parseDDialog(text);
                     totalBlocks += result.blocks.length;
                     totalStates += result.states.length;
-                    totalTransitions += result.states.reduce(
-                        (sum, s) => sum + s.transitions.length,
-                        0,
-                    );
+                    totalTransitions += result.states.reduce((sum, s) => sum + s.transitions.length, 0);
                 } catch {
                     filesWithErrors++;
                 }

@@ -3,10 +3,7 @@
  * Converts TypeScript AST to Fallout SSL output, handling all statement types.
  */
 
-import {
-    SourceFile,
-    Node
-} from 'ts-morph';
+import { SourceFile, Node } from "ts-morph";
 import {
     SyntaxKind,
     conlog,
@@ -14,9 +11,9 @@ import {
     type TsslContext,
     type MainFileData,
     type SourceSection,
-} from './types';
-import { convertOperatorsAST, convertVarOrConstToVariable } from './convert-operators';
-import { findUsedInlineFunctions, generateInlineMacros } from './inline-functions';
+} from "./types";
+import { convertOperatorsAST, convertVarOrConstToVariable } from "./convert-operators";
+import { findUsedInlineFunctions, generateInlineMacros } from "./inline-functions";
 
 /**
  * Export typescript code as SSL string.
@@ -27,7 +24,13 @@ import { findUsedInlineFunctions, generateInlineMacros } from './inline-function
  * @param traTag Optional @tra filename to preserve in output header
  * @returns Generated SSL output string
  */
-export function exportSSL(sourceFile: SourceFile, sourceName: string, mainFileData: MainFileData, ctx: TsslContext, traTag?: string): string {
+export function exportSSL(
+    sourceFile: SourceFile,
+    sourceName: string,
+    mainFileData: MainFileData,
+    ctx: TsslContext,
+    traTag?: string,
+): string {
     conlog(`Starting conversion of: ${sourceName}`);
 
     const traLine = traTag ? `/** @tra ${traTag} */\n` : "";
@@ -40,14 +43,14 @@ export function exportSSL(sourceFile: SourceFile, sourceName: string, mainFileDa
         for (const inc of mainFileData.includes) {
             output += `#include "${inc}"\n`;
         }
-        output += '\n';
+        output += "\n";
     }
 
     // Separate bundled vs main sections
     // Main file has sourceName (e.g., "foo.tssl" -> "foo.ts" in esbuild source comments)
-    const mainFileMarker = sourceName.replace('.tssl', '.ts');
-    const mainSections = sections.filter(s => s.source.includes(mainFileMarker));
-    const bundledSections = sections.filter(s => !s.source.includes(mainFileMarker));
+    const mainFileMarker = sourceName.replace(".tssl", ".ts");
+    const mainSections = sections.filter((s) => s.source.includes(mainFileMarker));
+    const bundledSections = sections.filter((s) => !s.source.includes(mainFileMarker));
 
     // Collect all defines, declarations, variables, procedures
     const allDefines: string[] = [];
@@ -86,27 +89,27 @@ export function exportSSL(sourceFile: SourceFile, sourceName: string, mainFileDa
             }
             output += `#define ${name} ${value}\n`;
         }
-        output += '\n';
+        output += "\n";
     }
 
     // Output in order: defines, declarations, bundled code, main code
-    if (allDefines.length > 0) output += allDefines.join('\n') + '\n\n';
-    if (allDeclarations.length > 0) output += allDeclarations.join('\n') + '\n';
+    if (allDefines.length > 0) output += allDefines.join("\n") + "\n\n";
+    if (allDeclarations.length > 0) output += allDeclarations.join("\n") + "\n";
     if (bundledVariables.length > 0 || bundledProcedures.length > 0) {
-        output += '\n/* ===== bundled ===== */\n';
-        if (bundledVariables.length > 0) output += bundledVariables.join('\n') + '\n';
-        if (bundledProcedures.length > 0) output += bundledProcedures.join('\n') + '\n';
-        output += '/* ===== end bundled ===== */\n';
+        output += "\n/* ===== bundled ===== */\n";
+        if (bundledVariables.length > 0) output += bundledVariables.join("\n") + "\n";
+        if (bundledProcedures.length > 0) output += bundledProcedures.join("\n") + "\n";
+        output += "/* ===== end bundled ===== */\n";
     }
     if (mainVariables.length > 0 || mainProcedures.length > 0) {
-        output += '\n/* ===== main body ===== */\n';
-        if (mainVariables.length > 0) output += mainVariables.join('\n') + '\n';
-        if (mainProcedures.length > 0) output += mainProcedures.join('\n') + '\n';
-        output += '/* ===== end main body ===== */\n';
+        output += "\n/* ===== main body ===== */\n";
+        if (mainVariables.length > 0) output += mainVariables.join("\n") + "\n";
+        if (mainProcedures.length > 0) output += mainProcedures.join("\n") + "\n";
+        output += "/* ===== end main body ===== */\n";
     }
 
     // Replace sfall_typeof with typeof (TS keyword conflict workaround)
-    output = output.replace(/\bsfall_typeof\b/g, 'typeof');
+    output = output.replace(/\bsfall_typeof\b/g, "typeof");
 
     return output;
 }
@@ -145,7 +148,7 @@ function processInput(source: SourceFile, mainFileData: MainFileData, ctx: TsslC
     // Track current source from esbuild comments
     let currentSource = "unknown";
     const sourceText = source.getFullText();
-    const lines = sourceText.split('\n');
+    const lines = sourceText.split("\n");
 
     function updateSourceFromLine(stmtStart: number): void {
         const stmtLine = source.getLineAndColumnAtPos(stmtStart).line;
@@ -153,7 +156,7 @@ function processInput(source: SourceFile, mainFileData: MainFileData, ctx: TsslC
         // lines[stmtLine - 2] is the line immediately before the statement
         for (let i = stmtLine - 2; i >= 0 && i >= stmtLine - SOURCE_COMMENT_LOOKBACK; i--) {
             const line = lines[i]?.trim();
-            if (line?.startsWith('// ') && (line.includes('/') || line.includes('.ts'))) {
+            if (line?.startsWith("// ") && (line.includes("/") || line.includes(".ts"))) {
                 currentSource = line.substring(3);
                 break;
             }
@@ -173,7 +176,7 @@ function processInput(source: SourceFile, mainFileData: MainFileData, ctx: TsslC
             for (const decl of declList.getDeclarations()) {
                 const name = decl.getName();
                 const init = decl.getInitializer();
-                const initText = init ? convertOperatorsAST(init, ctx) : '';
+                const initText = init ? convertOperatorsAST(init, ctx) : "";
 
                 // const -> #define
                 // var (was const after esbuild) -> #define, unless it's a main file let
@@ -183,11 +186,13 @@ function processInput(source: SourceFile, mainFileData: MainFileData, ctx: TsslC
                 const isMainFileConst = mainFileData.constants.has(name);
                 if (isMainFileConst) {
                     // Skip - already output as #define from mainFileConstants
-                } else if (keywordKind === SyntaxKind.ConstKeyword ||
-                    (keywordKind === SyntaxKind.VarKeyword && !isMainFileLetVar)) {
+                } else if (
+                    keywordKind === SyntaxKind.ConstKeyword ||
+                    (keywordKind === SyntaxKind.VarKeyword && !isMainFileLetVar)
+                ) {
                     section.defines.push(`#define ${name} ${initText}`);
                 } else if (keywordKind === SyntaxKind.LetKeyword || keywordKind === SyntaxKind.VarKeyword) {
-                    section.variables.push(`variable ${name}${initText ? ` = ${initText}` : ''};`);
+                    section.variables.push(`variable ${name}${initText ? ` = ${initText}` : ""};`);
                 }
             }
         } else if (stmt.getKind() === SyntaxKind.FunctionDeclaration) {
@@ -199,24 +204,30 @@ function processInput(source: SourceFile, mainFileData: MainFileData, ctx: TsslC
             if (name && ctx.inlineFunctions.has(name)) continue;
 
             // Skip list() and map() - they are converted to array/map literal by the transpiler
-            if (name === 'list' || name === 'map') continue;
+            if (name === "list" || name === "map") continue;
 
-            const paramsWithDefaults = func.getParameters().map(p => {
-                const paramName = p.getName();
-                const init = p.getInitializer();
-                if (init) {
-                    return `variable ${paramName} = ${convertOperatorsAST(init, ctx)}`;
-                }
-                return `variable ${paramName}`;
-            }).join(", ");
-            const params = func.getParameters().map(p => `variable ${p.getName()}`).join(", ");
+            const paramsWithDefaults = func
+                .getParameters()
+                .map((p) => {
+                    const paramName = p.getName();
+                    const init = p.getInitializer();
+                    if (init) {
+                        return `variable ${paramName} = ${convertOperatorsAST(init, ctx)}`;
+                    }
+                    return `variable ${paramName}`;
+                })
+                .join(", ");
+            const params = func
+                .getParameters()
+                .map((p) => `variable ${p.getName()}`)
+                .join(", ");
             const body = func.getBody() ? processFunctionBody(func.getBody()!, "    ", ctx) : "";
 
             section.declarations.push(`procedure ${name}(${paramsWithDefaults});`);
 
             // Include JSDoc as SSL comment if available
             const jsDoc = name ? ctx.functionJsDocs.get(name) : undefined;
-            const procCode = `procedure ${name}(${params}) begin\n${body ? body + '\n' : ''}end`;
+            const procCode = `procedure ${name}(${params}) begin\n${body ? body + "\n" : ""}end`;
             section.procedures.push(jsDoc ? `${jsDoc}\n${procCode}` : procCode);
         }
     }
@@ -270,7 +281,7 @@ function handleExpressionStatement(stmt: Node, indent: string, ctx: TsslContext)
 function handleReturnStatement(stmt: Node, indent: string, ctx: TsslContext): string {
     const ret = stmt.asKindOrThrow(SyntaxKind.ReturnStatement);
     const expr = ret.getExpression();
-    return `${indent}return${expr ? ' ' + convertOperatorsAST(expr, ctx) : ''};\n`;
+    return `${indent}return${expr ? " " + convertOperatorsAST(expr, ctx) : ""};\n`;
 }
 
 function handleForStatement(stmt: Node, indent: string, ctx: TsslContext): string {
@@ -288,7 +299,7 @@ function handleForStatement(stmt: Node, indent: string, ctx: TsslContext): strin
             if (decl) {
                 const name = decl.getName();
                 const initializer = decl.getInitializer();
-                initStr = `variable ${name} = ${initializer ? convertOperatorsAST(initializer, ctx) : '0'}`;
+                initStr = `variable ${name} = ${initializer ? convertOperatorsAST(initializer, ctx) : "0"}`;
             }
         } else {
             initStr = convertOperatorsAST(init, ctx);
@@ -314,9 +325,10 @@ function handleWhileStatement(stmt: Node, indent: string, ctx: TsslContext): str
 }
 
 function handleForEachStatement(stmt: Node, indent: string, ctx: TsslContext): string {
-    const forStmt = stmt.getKind() === SyntaxKind.ForInStatement
-        ? stmt.asKindOrThrow(SyntaxKind.ForInStatement)
-        : stmt.asKindOrThrow(SyntaxKind.ForOfStatement);
+    const forStmt =
+        stmt.getKind() === SyntaxKind.ForInStatement
+            ? stmt.asKindOrThrow(SyntaxKind.ForInStatement)
+            : stmt.asKindOrThrow(SyntaxKind.ForOfStatement);
     const init = forStmt.getInitializer();
     const expr = forStmt.getExpression();
     const body = forStmt.getStatement();
@@ -366,7 +378,7 @@ function handleSwitchStatement(stmt: Node, indent: string, ctx: TsslContext): st
             const caseClause = clause.asKindOrThrow(SyntaxKind.CaseClause);
             const caseExpr = caseClause.getExpression();
             const statements = caseClause.getStatements();
-            const filteredStmts = statements.filter(s => s.getKind() !== SyntaxKind.BreakStatement);
+            const filteredStmts = statements.filter((s) => s.getKind() !== SyntaxKind.BreakStatement);
             result += `${caseIndent}case ${convertOperatorsAST(caseExpr, ctx)}:\n`;
             for (const s of filteredStmts) {
                 result += processFunctionBody(s, bodyIndent, ctx) + "\n";
@@ -374,7 +386,7 @@ function handleSwitchStatement(stmt: Node, indent: string, ctx: TsslContext): st
         } else if (clause.getKind() === SyntaxKind.DefaultClause) {
             const defaultClause = clause.asKindOrThrow(SyntaxKind.DefaultClause);
             const statements = defaultClause.getStatements();
-            const filteredStmts = statements.filter(s => s.getKind() !== SyntaxKind.BreakStatement);
+            const filteredStmts = statements.filter((s) => s.getKind() !== SyntaxKind.BreakStatement);
             result += `${caseIndent}default:\n`;
             for (const s of filteredStmts) {
                 result += processFunctionBody(s, bodyIndent, ctx) + "\n";
@@ -396,7 +408,6 @@ function handleDoStatement(stmt: Node, indent: string, ctx: TsslContext): string
     result += processFunctionBody(body, indent + "    ", ctx);
     return result + `\n${indent}end\n`;
 }
-
 
 // ============================================================================
 // Main function body processor
@@ -426,7 +437,7 @@ function processFunctionBody(bodyNode: Node, indent: string = "", ctx: TsslConte
             const prevLine = prevStmt.getEndLineNumber();
             const currLine = stmt.getStartLineNumber();
             if (currLine - prevLine > 1) {
-                result += '\n';
+                result += "\n";
             }
         }
 
@@ -471,7 +482,9 @@ function processFunctionBody(bodyNode: Node, indent: string = "", ctx: TsslConte
                 // bare `;` — no output needed
                 break;
             default:
-                throw new Error(`Unhandled statement type: ${stmt.getKindName()}. Code: ${stmt.getText().substring(0, 100)}`);
+                throw new Error(
+                    `Unhandled statement type: ${stmt.getKindName()}. Code: ${stmt.getText().substring(0, 100)}`,
+                );
         }
     });
     return result.trimEnd();
@@ -497,13 +510,13 @@ function processCallExpression(callExpr: Node, ctx: TsslContext): string {
     const fnName = expression.getText();
 
     // Special handling for list() and map() - convert to SSL array/map literals
-    if (fnName === 'list') {
+    if (fnName === "list") {
         const processedArgs = args.map((arg: Node) => convertOperatorsAST(arg, ctx));
-        return `[${processedArgs.join(', ')}]`;
+        return `[${processedArgs.join(", ")}]`;
     }
-    if (fnName === 'map') {
+    if (fnName === "map") {
         if (args.length === 0) {
-            return '{}';
+            return "{}";
         }
         // map() takes a single object argument, just output it directly
         const arg0 = args[0];
@@ -521,7 +534,7 @@ function processCallExpression(callExpr: Node, ctx: TsslContext): string {
 
     // Only add 'call' keyword if it's a standalone call AND the function is defined in our file (not inline)
     if (isStandaloneCall && ctx.definedFunctions.has(fnName) && !ctx.inlineFunctions.has(fnName)) {
-        return `call ${fnName}(${processedArgs.join(', ')})`;
+        return `call ${fnName}(${processedArgs.join(", ")})`;
     }
 
     // For zero-arg inline macros, don't include parentheses
@@ -537,7 +550,7 @@ function processCallExpression(callExpr: Node, ctx: TsslContext): string {
     }
 
     // Otherwise keep as is (either it's an external function or part of an assignment)
-    return `${fnName}(${processedArgs.join(', ')})`;
+    return `${fnName}(${processedArgs.join(", ")})`;
 }
 
 /**
@@ -570,7 +583,7 @@ export function isEnumConstant(name: string, enumNames: ReadonlySet<string>): bo
     // Check all underscore positions to handle enum names with underscores
     // (e.g. DAMAGE_TYPE_Fire should match enum name DAMAGE_TYPE)
     let idx = 0;
-    while ((idx = name.indexOf('_', idx)) !== -1) {
+    while ((idx = name.indexOf("_", idx)) !== -1) {
         if (enumNames.has(name.substring(0, idx))) {
             return true;
         }

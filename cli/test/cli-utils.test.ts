@@ -34,7 +34,7 @@ describe("reportDiff", () => {
     it("handles added lines (actual longer than expected)", () => {
         reportDiff("f.txt", "a", "a\nb");
         expect(stderrSpy).toHaveBeenCalledWith("  Line 2:");
-        expect(stderrSpy).toHaveBeenCalledWith('    - (missing)');
+        expect(stderrSpy).toHaveBeenCalledWith("    - (missing)");
         expect(stderrSpy).toHaveBeenCalledWith("    + b");
     });
 
@@ -42,7 +42,7 @@ describe("reportDiff", () => {
         reportDiff("f.txt", "a\nb", "a");
         expect(stderrSpy).toHaveBeenCalledWith("  Line 2:");
         expect(stderrSpy).toHaveBeenCalledWith("    - b");
-        expect(stderrSpy).toHaveBeenCalledWith('    + (missing)');
+        expect(stderrSpy).toHaveBeenCalledWith("    + (missing)");
     });
 
     it("only reports differing lines", () => {
@@ -121,7 +121,7 @@ describe("findFiles", () => {
 
     it("finds files matching extensions recursively", () => {
         const files = findFiles(tmpDir, [".ssl"]);
-        const basenames = files.map(f => path.basename(f)).sort();
+        const basenames = files.map((f) => path.basename(f)).sort();
         expect(basenames).toEqual(["a.ssl", "d.ssl"]);
     });
 
@@ -138,13 +138,13 @@ describe("findFiles", () => {
     it("is case-insensitive for extensions", () => {
         fs.writeFileSync(path.join(tmpDir, "upper.SSL"), "");
         const files = findFiles(tmpDir, [".ssl"]);
-        const basenames = files.map(f => path.basename(f));
+        const basenames = files.map((f) => path.basename(f));
         expect(basenames).toContain("upper.SSL");
     });
 
     it("skips dependency directories like node_modules", () => {
         const files = findFiles(tmpDir, [".ssl", ".map"]);
-        const basenames = files.map(f => path.basename(f)).sort();
+        const basenames = files.map((f) => path.basename(f)).sort();
         expect(basenames).not.toContain("ignored.map");
         expect(basenames).not.toContain("ignored.ssl");
     });
@@ -157,7 +157,9 @@ describe("parseCliArgs", () => {
     let errorSpy: ReturnType<typeof vi.spyOn>;
 
     beforeEach(() => {
-        exitSpy = vi.spyOn(process, "exit").mockImplementation(() => { throw new Error("exit"); });
+        exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
+            throw new Error("exit");
+        });
         logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
         errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     });
@@ -231,7 +233,9 @@ describe("runCli", () => {
     const tmpDir = path.resolve("tmp/cli-test-runcli");
 
     beforeEach(() => {
-        exitSpy = vi.spyOn(process, "exit").mockImplementation(() => { throw new Error("exit"); });
+        exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
+            throw new Error("exit");
+        });
         logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
         errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
         fs.mkdirSync(tmpDir, { recursive: true });
@@ -248,23 +252,27 @@ describe("runCli", () => {
 
     it("single file check mode: exits 1 on 'changed'", async () => {
         const processFile = vi.fn<(f: string, m: OutputMode) => FileResult>().mockReturnValue("changed");
-        await expect(runCli({
-            args: { target: path.join(tmpDir, "a.txt"), mode: "check", recursive: false, quiet: false },
-            extensions: [".txt"],
-            description: "test",
-            processFile,
-        })).rejects.toThrow("exit");
+        await expect(
+            runCli({
+                args: { target: path.join(tmpDir, "a.txt"), mode: "check", recursive: false, quiet: false },
+                extensions: [".txt"],
+                description: "test",
+                processFile,
+            }),
+        ).rejects.toThrow("exit");
         expect(exitSpy).toHaveBeenCalledWith(1);
     });
 
     it("single file check mode: exits 1 on 'error'", async () => {
         const processFile = vi.fn<(f: string, m: OutputMode) => FileResult>().mockReturnValue("error");
-        await expect(runCli({
-            args: { target: path.join(tmpDir, "a.txt"), mode: "check", recursive: false, quiet: false },
-            extensions: [".txt"],
-            description: "test",
-            processFile,
-        })).rejects.toThrow("exit");
+        await expect(
+            runCli({
+                args: { target: path.join(tmpDir, "a.txt"), mode: "check", recursive: false, quiet: false },
+                extensions: [".txt"],
+                description: "test",
+                processFile,
+            }),
+        ).rejects.toThrow("exit");
         expect(exitSpy).toHaveBeenCalledWith(1);
     });
 
@@ -291,28 +299,34 @@ describe("runCli", () => {
     });
 
     it("directory check mode: exits 1 when any file returns 'changed'", async () => {
-        const processFile = vi.fn<(f: string, m: OutputMode) => FileResult>()
+        const processFile = vi
+            .fn<(f: string, m: OutputMode) => FileResult>()
             .mockReturnValueOnce("unchanged")
             .mockReturnValueOnce("changed");
-        await expect(runCli({
-            args: { target: tmpDir, mode: "check", recursive: true, quiet: true },
-            extensions: [".txt"],
-            description: "test",
-            processFile,
-        })).rejects.toThrow("exit");
+        await expect(
+            runCli({
+                args: { target: tmpDir, mode: "check", recursive: true, quiet: true },
+                extensions: [".txt"],
+                description: "test",
+                processFile,
+            }),
+        ).rejects.toThrow("exit");
         expect(exitSpy).toHaveBeenCalledWith(1);
     });
 
     it("directory check mode: exits 1 on errors", async () => {
-        const processFile = vi.fn<(f: string, m: OutputMode) => FileResult>()
+        const processFile = vi
+            .fn<(f: string, m: OutputMode) => FileResult>()
             .mockReturnValueOnce("unchanged")
             .mockReturnValueOnce("error");
-        await expect(runCli({
-            args: { target: tmpDir, mode: "check", recursive: true, quiet: true },
-            extensions: [".txt"],
-            description: "test",
-            processFile,
-        })).rejects.toThrow("exit");
+        await expect(
+            runCli({
+                args: { target: tmpDir, mode: "check", recursive: true, quiet: true },
+                extensions: [".txt"],
+                description: "test",
+                processFile,
+            }),
+        ).rejects.toThrow("exit");
         expect(exitSpy).toHaveBeenCalledWith(1);
     });
 
@@ -340,12 +354,14 @@ describe("runCli", () => {
 
     it("directory mode: requires -r flag", async () => {
         const processFile = vi.fn<(f: string, m: OutputMode) => FileResult>();
-        await expect(runCli({
-            args: { target: tmpDir, mode: "save", recursive: false, quiet: false },
-            extensions: [".txt"],
-            description: "test",
-            processFile,
-        })).rejects.toThrow("exit");
+        await expect(
+            runCli({
+                args: { target: tmpDir, mode: "save", recursive: false, quiet: false },
+                extensions: [".txt"],
+                description: "test",
+                processFile,
+            }),
+        ).rejects.toThrow("exit");
         expect(errorSpy).toHaveBeenCalledWith("Error: Target is a directory. Use -r for recursive.");
     });
 

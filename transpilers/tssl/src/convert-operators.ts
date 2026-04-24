@@ -3,14 +3,9 @@
  * Converts TypeScript operators and expressions to SSL syntax using the AST.
  */
 
-import { Node } from 'ts-morph';
-import {
-    SyntaxKind,
-    FORBIDDEN_GLOBALS,
-    RESERVED_VAR_NAMES,
-    type TsslContext,
-} from './types';
-import { TranspileError } from '../../common/transpile-error';
+import { Node } from "ts-morph";
+import { SyntaxKind, FORBIDDEN_GLOBALS, RESERVED_VAR_NAMES, type TsslContext } from "./types";
+import { TranspileError } from "../../common/transpile-error";
 
 /**
  * Converts operators from TypeScript to SSL syntax using the AST
@@ -26,7 +21,7 @@ export function convertOperatorsAST(node: Node, ctx?: TsslContext): string {
             const operator = binary.getOperatorToken().getText();
 
             // Handle comma expression (0, expr) - just return the right side
-            if (operator === ',') {
+            if (operator === ",") {
                 return convertOperatorsAST(binary.getRight(), ctx);
             }
 
@@ -36,11 +31,21 @@ export function convertOperatorsAST(node: Node, ctx?: TsslContext): string {
             // Convert operator
             let sslOperator = operator;
             switch (operator) {
-                case '&&': sslOperator = 'and'; break;
-                case '||': sslOperator = 'or'; break;
-                case '&': sslOperator = 'bwand'; break;
-                case '|': sslOperator = 'bwor'; break;
-                case '^': sslOperator = 'bxor'; break;
+                case "&&":
+                    sslOperator = "and";
+                    break;
+                case "||":
+                    sslOperator = "or";
+                    break;
+                case "&":
+                    sslOperator = "bwand";
+                    break;
+                case "|":
+                    sslOperator = "bwor";
+                    break;
+                case "^":
+                    sslOperator = "bxor";
+                    break;
             }
 
             return `${left} ${sslOperator} ${right}`;
@@ -84,38 +89,44 @@ export function convertOperatorsAST(node: Node, ctx?: TsslContext): string {
         // Handle array literals
         case SyntaxKind.ArrayLiteralExpression: {
             const array = node.asKindOrThrow(SyntaxKind.ArrayLiteralExpression);
-            const elements = array.getElements().map(element => convertOperatorsAST(element, ctx)).join(', ');
+            const elements = array
+                .getElements()
+                .map((element) => convertOperatorsAST(element, ctx))
+                .join(", ");
             return `[${elements}]`;
         }
 
         // Handle object literals
         case SyntaxKind.ObjectLiteralExpression: {
             const obj = node.asKindOrThrow(SyntaxKind.ObjectLiteralExpression);
-            const properties = obj.getProperties().map(prop => {
-                if (prop.getKind() === SyntaxKind.PropertyAssignment) {
-                    const propAssignment = prop.asKindOrThrow(SyntaxKind.PropertyAssignment);
-                    const nameNode = propAssignment.getNameNode();
-                    const initNode = propAssignment.getInitializer();
-                    const initializer = initNode ? convertOperatorsAST(initNode, ctx) : '';
-                    // Handle computed property names: [PID_MINIGUN] -> PID_MINIGUN
-                    if (nameNode.getKind() === SyntaxKind.ComputedPropertyName) {
-                        const computed = nameNode.asKindOrThrow(SyntaxKind.ComputedPropertyName);
-                        const expr = computed.getExpression();
-                        return `${expr.getText()}: ${initializer}`;
+            const properties = obj
+                .getProperties()
+                .map((prop) => {
+                    if (prop.getKind() === SyntaxKind.PropertyAssignment) {
+                        const propAssignment = prop.asKindOrThrow(SyntaxKind.PropertyAssignment);
+                        const nameNode = propAssignment.getNameNode();
+                        const initNode = propAssignment.getInitializer();
+                        const initializer = initNode ? convertOperatorsAST(initNode, ctx) : "";
+                        // Handle computed property names: [PID_MINIGUN] -> PID_MINIGUN
+                        if (nameNode.getKind() === SyntaxKind.ComputedPropertyName) {
+                            const computed = nameNode.asKindOrThrow(SyntaxKind.ComputedPropertyName);
+                            const expr = computed.getExpression();
+                            return `${expr.getText()}: ${initializer}`;
+                        }
+                        // String literal key - already quoted, use as-is
+                        if (nameNode.getKind() === SyntaxKind.StringLiteral) {
+                            return `${nameNode.getText()}: ${initializer}`;
+                        }
+                        // Numeric literal key - no quotes needed
+                        if (nameNode.getKind() === SyntaxKind.NumericLiteral) {
+                            return `${nameNode.getText()}: ${initializer}`;
+                        }
+                        // Identifier key - add quotes
+                        return `"${propAssignment.getName()}": ${initializer}`;
                     }
-                    // String literal key - already quoted, use as-is
-                    if (nameNode.getKind() === SyntaxKind.StringLiteral) {
-                        return `${nameNode.getText()}: ${initializer}`;
-                    }
-                    // Numeric literal key - no quotes needed
-                    if (nameNode.getKind() === SyntaxKind.NumericLiteral) {
-                        return `${nameNode.getText()}: ${initializer}`;
-                    }
-                    // Identifier key - add quotes
-                    return `"${propAssignment.getName()}": ${initializer}`;
-                }
-                return prop.getText();
-            }).join(', ');
+                    return prop.getText();
+                })
+                .join(", ");
             return `{${properties}}`;
         }
 
@@ -140,7 +151,7 @@ export function convertOperatorsAST(node: Node, ctx?: TsslContext): string {
             }
 
             // Strip folib_exports. or similar _exports. prefixes
-            if (obj.endsWith('_exports')) {
+            if (obj.endsWith("_exports")) {
                 return prop;
             }
             return `${convertOperatorsAST(propAccess.getExpression(), ctx)}.${prop}`;
@@ -151,7 +162,7 @@ export function convertOperatorsAST(node: Node, ctx?: TsslContext): string {
             const elemAccess = node.asKindOrThrow(SyntaxKind.ElementAccessExpression);
             const obj = convertOperatorsAST(elemAccess.getExpression(), ctx);
             const arg = elemAccess.getArgumentExpression();
-            const index = arg ? convertOperatorsAST(arg, ctx) : '';
+            const index = arg ? convertOperatorsAST(arg, ctx) : "";
             return `${obj}[${index}]`;
         }
 
@@ -162,14 +173,14 @@ export function convertOperatorsAST(node: Node, ctx?: TsslContext): string {
             const fnName = convertOperatorsAST(callExpr, ctx);
 
             // Special handling for list() and map() - convert to SSL array/map literals
-            if (fnName === 'list') {
-                const args = call.getArguments().map(arg => convertOperatorsAST(arg, ctx));
-                return `[${args.join(', ')}]`;
+            if (fnName === "list") {
+                const args = call.getArguments().map((arg) => convertOperatorsAST(arg, ctx));
+                return `[${args.join(", ")}]`;
             }
-            if (fnName === 'map') {
+            if (fnName === "map") {
                 const mapArgs = call.getArguments();
                 if (mapArgs.length === 0) {
-                    return '{}';
+                    return "{}";
                 }
                 // map() takes a single object argument, just output it directly
                 const mapArg0 = mapArgs[0];
@@ -178,7 +189,7 @@ export function convertOperatorsAST(node: Node, ctx?: TsslContext): string {
                 }
             }
 
-            const args = call.getArguments().map(arg => convertOperatorsAST(arg, ctx));
+            const args = call.getArguments().map((arg) => convertOperatorsAST(arg, ctx));
 
             // For zero-arg inline macros, don't use parentheses (only if ctx available)
             if (ctx) {
@@ -193,7 +204,7 @@ export function convertOperatorsAST(node: Node, ctx?: TsslContext): string {
                 }
             }
 
-            return `${fnName}(${args.join(', ')})`;
+            return `${fnName}(${args.join(", ")})`;
         }
 
         case SyntaxKind.NumericLiteral: {
@@ -201,7 +212,7 @@ export function convertOperatorsAST(node: Node, ctx?: TsslContext): string {
             // Preserve float literals - if it has a decimal point, keep it
             // If it's an integer but was originally written as X.0, esbuild strips the .0
             // We can't recover that, but we can ensure numbers with decimals stay as floats
-            if (text.includes('.')) {
+            if (text.includes(".")) {
                 return text;
             }
             // For integers, just return as-is
@@ -213,7 +224,7 @@ export function convertOperatorsAST(node: Node, ctx?: TsslContext): string {
             // FLOAT1 is a special constant that forces float division
             // esbuild strips .0 from float literals, so we use FLOAT1 * a / b
             // to ensure float division in SSL output
-            if (text === 'FLOAT1') return '1.0';
+            if (text === "FLOAT1") return "1.0";
             return text;
         }
 
@@ -254,7 +265,10 @@ export function convertVarOrConstToVariable(stmt: Node, ctx: TsslContext): strin
     for (const decl of declList.getDeclarations()) {
         const varName = decl.getName();
         if (RESERVED_VAR_NAMES.has(varName)) {
-            throw TranspileError.fromNode(decl, `Variable name '${varName}' conflicts with folib export. Use a different name.`);
+            throw TranspileError.fromNode(
+                decl,
+                `Variable name '${varName}' conflicts with folib export. Use a different name.`,
+            );
         }
         const initializer = decl.getInitializer();
         if (initializer) {
@@ -263,7 +277,7 @@ export function convertVarOrConstToVariable(stmt: Node, ctx: TsslContext): strin
                 replacements.push({
                     start: initializer.getStart() - stmtStart,
                     end: initializer.getEnd() - stmtStart,
-                    text: converted
+                    text: converted,
                 });
             }
         }
@@ -287,7 +301,7 @@ export function convertVarOrConstToVariable(stmt: Node, ctx: TsslContext): strin
     let result = beforeKeyword + "variable" + afterKeyword;
 
     // Add semicolon at the end if needed (only if it doesn't already end with one)
-    if (!result.trim().endsWith(';')) {
+    if (!result.trim().endsWith(";")) {
         const lastNonWhitespacePos = result.trimEnd().length;
         result = result.substring(0, lastNonWhitespacePos) + ";" + result.substring(lastNonWhitespacePos);
     }

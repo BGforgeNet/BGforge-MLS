@@ -59,7 +59,7 @@ end`;
 
             // Should parse the first line as a macro
             expect(symbols.length).toBeGreaterThanOrEqual(1);
-            const macroSymbol = symbols.find(s => s.name === "MY_MACRO");
+            const macroSymbol = symbols.find((s) => s.name === "MY_MACRO");
             expect(macroSymbol).toBeDefined();
         });
 
@@ -70,7 +70,7 @@ end`;
 end`;
             const symbols = parseHeaderToSymbols(testUri, input, workspaceRoot);
 
-            const symbol = symbols.find(s => s.name === "SETUP_STUFF");
+            const symbol = symbols.find((s) => s.name === "SETUP_STUFF");
             expect(symbol).toBeDefined();
             // Without params in the define signature, it's a ConstantSymbol
             expect(symbol!.kind).toBe(SymbolKind.Constant);
@@ -83,7 +83,7 @@ end`;
 end`;
             const symbols = parseHeaderToSymbols(testUri, input, workspaceRoot);
 
-            const symbol = symbols.find(s => s.name === "setup_stuff");
+            const symbol = symbols.find((s) => s.name === "setup_stuff");
             expect(symbol).toBeDefined();
             expect(isCallableSymbol(symbol!)).toBe(true);
             expect(symbol!.kind).toBe(SymbolKind.Macro);
@@ -97,7 +97,7 @@ end`;
             const symbols = parseHeaderToSymbols(testUri, input, workspaceRoot);
 
             expect(symbols.length).toBeGreaterThanOrEqual(1);
-            const something = symbols.find(s => s.name === "SOMETHING");
+            const something = symbols.find((s) => s.name === "SOMETHING");
             expect(something).toBeDefined();
         });
     });
@@ -188,9 +188,9 @@ procedure init_items begin end
             const symbols = parseHeaderToSymbols(testUri, input, workspaceRoot);
 
             expect(symbols).toHaveLength(3);
-            expect(symbols.some(s => s.name === "MAX_ITEMS")).toBe(true);
-            expect(symbols.some(s => s.name === "get_item")).toBe(true);
-            expect(symbols.some(s => s.name === "init_items")).toBe(true);
+            expect(symbols.some((s) => s.name === "MAX_ITEMS")).toBe(true);
+            expect(symbols.some((s) => s.name === "get_item")).toBe(true);
+            expect(symbols.some((s) => s.name === "init_items")).toBe(true);
         });
     });
 
@@ -253,7 +253,7 @@ variable health;`;
             const symbols = parseHeaderToSymbols(testUri, input, workspaceRoot);
 
             expect(symbols).toHaveLength(3);
-            expect(symbols.map(s => s.name).sort()).toEqual(["x", "y", "z"]);
+            expect(symbols.map((s) => s.name).sort()).toEqual(["x", "y", "z"]);
             for (const sym of symbols) {
                 expect(sym.kind).toBe(SymbolKind.Variable);
             }
@@ -301,10 +301,10 @@ procedure init_items begin end
             const symbols = parseHeaderToSymbols(testUri, input, workspaceRoot);
 
             expect(symbols).toHaveLength(4);
-            expect(symbols.find(s => s.name === "MAX_ITEMS")?.kind).toBe(SymbolKind.Constant);
-            expect(symbols.find(s => s.name === "item_count")?.kind).toBe(SymbolKind.Variable);
-            expect(symbols.find(s => s.name === "shared_flag")?.kind).toBe(SymbolKind.Variable);
-            expect(symbols.find(s => s.name === "init_items")?.kind).toBe(SymbolKind.Procedure);
+            expect(symbols.find((s) => s.name === "MAX_ITEMS")?.kind).toBe(SymbolKind.Constant);
+            expect(symbols.find((s) => s.name === "item_count")?.kind).toBe(SymbolKind.Variable);
+            expect(symbols.find((s) => s.name === "shared_flag")?.kind).toBe(SymbolKind.Variable);
+            expect(symbols.find((s) => s.name === "init_items")?.kind).toBe(SymbolKind.Procedure);
         });
     });
 });

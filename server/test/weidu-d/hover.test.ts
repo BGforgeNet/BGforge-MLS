@@ -162,14 +162,9 @@ describe("weidu-d/hover", () => {
 
     it("returns notHandled when JSDoc comment has no description body", () => {
         // A JSDoc with only the delimiters and no text — jsdoc.desc is falsy → line 60
-        const text = [
-            "BEGIN ~DIALOG~",
-            "",
-            "/***/",
-            "IF ~~ THEN BEGIN empty_jsdoc",
-            "    SAY ~Hello~",
-            "END",
-        ].join("\n");
+        const text = ["BEGIN ~DIALOG~", "", "/***/", "IF ~~ THEN BEGIN empty_jsdoc", "    SAY ~Hello~", "END"].join(
+            "\n",
+        );
 
         const result = getStateLabelHover(text, "empty_jsdoc", URI, { line: 3, character: 22 });
         expect(result.handled).toBe(false);

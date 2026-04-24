@@ -164,7 +164,7 @@ export class TBAFTransformer implements TransformerContext {
      * Process a block of statements - either recurse for nested ifs or emit actions.
      */
     private processBlock(statements: Statement[], conditions: BAFTopCondition[]) {
-        const hasNestedIf = statements.some(s => s.isKind(SyntaxKind.IfStatement));
+        const hasNestedIf = statements.some((s) => s.isKind(SyntaxKind.IfStatement));
 
         if (hasNestedIf) {
             for (const s of statements) {
@@ -212,8 +212,8 @@ export class TBAFTransformer implements TransformerContext {
                 // BAF doesn't have a way to express "none of the above" conditions cleanly
                 throw new TranspileError(
                     `Default case in switch statement is not supported. ` +
-                    `BAF cannot represent "none of the above" logic. ` +
-                    `Remove the default case or refactor to explicit case values.`
+                        `BAF cannot represent "none of the above" logic. ` +
+                        `Remove the default case or refactor to explicit case values.`,
                 );
             }
 
@@ -258,7 +258,7 @@ export class TBAFTransformer implements TransformerContext {
      */
     transformCallToCondition(call: CallExpression): BAFCondition {
         const funcName = call.getExpression().getText();
-        const args = call.getArguments().map(a => utils.substituteVars(a.getText(), this.vars));
+        const args = call.getArguments().map((a) => utils.substituteVars(a.getText(), this.vars));
         return { negated: false, name: funcName, args };
     }
 
@@ -267,7 +267,7 @@ export class TBAFTransformer implements TransformerContext {
      */
     private transformCallToAction(call: CallExpression): BAFAction {
         const funcName = call.getExpression().getText();
-        const args = call.getArguments().map(a => utils.substituteVars(a.getText(), this.vars));
+        const args = call.getArguments().map((a) => utils.substituteVars(a.getText(), this.vars));
         return { name: funcName, args };
     }
 
@@ -310,7 +310,11 @@ export class TBAFTransformer implements TransformerContext {
      * Inline a void function call at top level, transforming its body statements.
      * This handles functions containing if statements, loops, etc.
      */
-    private inlineVoidFunctionCall(call: CallExpression, funcDecl: FunctionDeclaration, parentConditions: BAFTopCondition[]) {
+    private inlineVoidFunctionCall(
+        call: CallExpression,
+        funcDecl: FunctionDeclaration,
+        parentConditions: BAFTopCondition[],
+    ) {
         const body = funcDecl.getBody()?.asKindOrThrow(SyntaxKind.Block);
         if (!body) return;
 
@@ -440,7 +444,7 @@ export class TBAFTransformer implements TransformerContext {
             return {
                 negated,
                 name: match[1],
-                args: match[2] ? match[2].split(",").map(s => s.trim()) : [],
+                args: match[2] ? match[2].split(",").map((s) => s.trim()) : [],
             };
         }
 

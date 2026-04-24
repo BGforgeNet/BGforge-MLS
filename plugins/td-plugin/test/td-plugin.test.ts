@@ -214,7 +214,7 @@ describe("TD plugin", () => {
 
         it("keeps member/local/parameter kinds regardless of name", () => {
             const memberKinds = ["property", "method", "local var", "local function", "parameter"];
-            const entries = memberKinds.map(kind => ({ name: "Array", kind }));
+            const entries = memberKinds.map((kind) => ({ name: "Array", kind }));
             const info = createMockInfo(["/project/dialog.td"], {}, makeCompletionResult(entries));
             const service = plugin.create(info);
 

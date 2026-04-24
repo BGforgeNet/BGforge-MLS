@@ -110,9 +110,7 @@ export function findIdentifier(node: SyntaxNode): SyntaxNode | null {
 // ============================================
 
 /** Node types for assignment nodes that can be phantom (tree-sitter error recovery). */
-const ASSIGNMENT_NODE_TYPES: ReadonlySet<string> = new Set([
-    SyntaxType.PatchAssignment,
-]);
+const ASSIGNMENT_NODE_TYPES: ReadonlySet<string> = new Set([SyntaxType.PatchAssignment]);
 
 /**
  * Assignment operators from the grammar's `_assign_op` rule.
@@ -124,9 +122,7 @@ const ASSIGNMENT_NODE_TYPES: ReadonlySet<string> = new Set([
  * to "no operator found" and returns true (phantom) — this is the safe direction
  * (rejects a real assignment rather than accepting a phantom one).
  */
-const ASSIGN_OPS: ReadonlySet<string> = new Set([
-    "=", "+=", "-=", "*=", "/=", "|=", "&=", "||=", "&&=",
-]);
+const ASSIGN_OPS: ReadonlySet<string> = new Set(["=", "+=", "-=", "*=", "/=", "|=", "&=", "||=", "&&="]);
 
 /**
  * Check if an assignment node is a phantom created by tree-sitter error recovery.
@@ -189,7 +185,12 @@ export function isPhantomAssignment(node: SyntaxNode): boolean {
  */
 export function looksLikeConstant(name: string): boolean {
     const firstWord = name.split("_", 1)[0];
-    return firstWord !== undefined && firstWord.length > 0 && firstWord === firstWord.toUpperCase() && /[A-Z]/.test(firstWord);
+    return (
+        firstWord !== undefined &&
+        firstWord.length > 0 &&
+        firstWord === firstWord.toUpperCase() &&
+        /[A-Z]/.test(firstWord)
+    );
 }
 
 // ============================================
@@ -207,11 +208,7 @@ export function stripStringDelimiters(text: string): string {
     }
     const first = text[0];
     const last = text[text.length - 1];
-    if (
-        (first === "~" && last === "~") ||
-        (first === '"' && last === '"') ||
-        (first === "%" && last === "%")
-    ) {
+    if ((first === "~" && last === "~") || (first === '"' && last === '"') || (first === "%" && last === "%")) {
         return text.slice(1, -1);
     }
     return text;

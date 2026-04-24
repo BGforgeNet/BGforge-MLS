@@ -1,4 +1,9 @@
-import { createProCanonicalSnapshot, proCanonicalSnapshotSchema, serializeProCanonicalSnapshot, type ProCanonicalSnapshot } from "./pro-canonical";
+import {
+    createProCanonicalSnapshot,
+    proCanonicalSnapshotSchema,
+    serializeProCanonicalSnapshot,
+    type ProCanonicalSnapshot,
+} from "./pro-canonical";
 import { proParser } from "./pro";
 import { parseWithSchemaValidation } from "./schema-validation";
 import type { ParseOptions, ParseResult } from "./types";
@@ -13,7 +18,10 @@ export function createCanonicalProJsonSnapshot(parseResult: ParseResult): string
     return `${JSON.stringify(createProCanonicalSnapshot(parseResult), null, 2)}\n`;
 }
 
-export function loadCanonicalProJsonSnapshot(jsonText: string, parseOptions?: ParseOptions): LoadedCanonicalProSnapshot {
+export function loadCanonicalProJsonSnapshot(
+    jsonText: string,
+    parseOptions?: ParseOptions,
+): LoadedCanonicalProSnapshot {
     const snapshot = parseWithSchemaValidation(
         proCanonicalSnapshotSchema,
         JSON.parse(jsonText),

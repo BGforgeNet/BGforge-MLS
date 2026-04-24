@@ -102,13 +102,7 @@ export interface TDScript {
 }
 
 /** Top-level D construct */
-export type TDConstruct =
-    | TDBegin
-    | TDAppend
-    | TDExtend
-    | TDChain
-    | TDInterject
-    | TDPatch;
+export type TDConstruct = TDBegin | TDAppend | TDExtend | TDChain | TDInterject | TDPatch;
 
 /** BEGIN - new dialog file */
 export interface TDBegin {

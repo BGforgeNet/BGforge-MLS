@@ -23,7 +23,12 @@ const DESC_MAX_LENGTH = 80;
  * Get hover info for a function parameter in a function call.
  * Parses text to find function calls and checks if symbol is a parameter name.
  */
-export function getFunctionParamHover(text: string, symbol: string, position: Position, symbols?: Symbols): Hover | null {
+export function getFunctionParamHover(
+    text: string,
+    symbol: string,
+    position: Position,
+    symbols?: Symbols,
+): Hover | null {
     if (!isInitialized()) {
         return null;
     }
@@ -72,7 +77,7 @@ function findParamInFunctionCalls(
     symbol: string,
     position: Position,
     localFunctions: FunctionInfo[],
-    symbols?: Symbols
+    symbols?: Symbols,
 ): { paramType: string; defaultValue?: string; description?: string; required?: boolean } | null {
     const type = node.type;
 
@@ -103,7 +108,7 @@ function findParamInFunctionCalls(
                 }
 
                 // Fall back to local definitions (same file)
-                const localFunc = localFunctions.find(f => f.name === funcName);
+                const localFunc = localFunctions.find((f) => f.name === funcName);
                 if (localFunc?.params) {
                     const result = findParamInFuncInfo(localFunc, symbol);
                     if (result) {
@@ -147,7 +152,7 @@ function buildRetsMap(rets?: Ret[]): Map<string, Ret> {
  */
 function findParamInFuncInfo(
     funcInfo: FunctionInfo,
-    symbol: string
+    symbol: string,
 ): { paramType: string; defaultValue?: string; description?: string; required?: boolean } | null {
     if (!funcInfo.params) {
         return null;
@@ -160,14 +165,24 @@ function findParamInFuncInfo(
     // Check INT_VAR
     for (const param of funcInfo.params.intVar) {
         if (param.name === symbol) {
-            return { paramType: "int", defaultValue: param.defaultValue, description: info?.description, required: info?.required };
+            return {
+                paramType: "int",
+                defaultValue: param.defaultValue,
+                description: info?.description,
+                required: info?.required,
+            };
         }
     }
 
     // Check STR_VAR
     for (const param of funcInfo.params.strVar) {
         if (param.name === symbol) {
-            return { paramType: "string", defaultValue: param.defaultValue, description: info?.description, required: info?.required };
+            return {
+                paramType: "string",
+                defaultValue: param.defaultValue,
+                description: info?.description,
+                required: info?.required,
+            };
         }
     }
 
@@ -202,7 +217,7 @@ function findParamInFuncInfo(
  */
 function findParamInCallableInfo(
     callable: CallableInfo,
-    symbol: string
+    symbol: string,
 ): { paramType: string; defaultValue?: string; description?: string; required?: boolean } | null {
     if (!callable.params) {
         return null;
@@ -303,17 +318,14 @@ export function buildFunctionHover(funcInfo: FunctionInfo, displayPath?: string 
  */
 function buildParamTable(
     funcInfo: FunctionInfo,
-    jsdocArgs: Map<string, { type: string; description?: string; required?: boolean }>
+    jsdocArgs: Map<string, { type: string; description?: string; required?: boolean }>,
 ): string {
     if (!funcInfo.params) {
         return "";
     }
 
     /** Map INT_VAR/STR_VAR params to VarRow[], merging JSDoc metadata. */
-    const mapVarRows = (
-        params: { name: string; defaultValue?: string }[],
-        defaultType: string
-    ): readonly VarRow[] =>
+    const mapVarRows = (params: { name: string; defaultValue?: string }[], defaultType: string): readonly VarRow[] =>
         params.map((p) => {
             const jsdoc = jsdocArgs.get(p.name);
             // Hide default value for required params (don't show _required_ — user code
@@ -434,4 +446,3 @@ export function buildVariableHover(varInfo: VariableInfo, displayPath?: string |
 
     return { contents: { kind: MarkupKind.Markdown, value } };
 }
-

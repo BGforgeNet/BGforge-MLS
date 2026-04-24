@@ -57,7 +57,6 @@ interface SequenceSrcToken {
     readonly items?: readonly SequenceItemToken[];
 }
 
-
 function isTokenWithSource(value: unknown): value is TokenWithSource {
     if (typeof value !== "object" || value === null) {
         return false;
@@ -113,7 +112,12 @@ function getTopLevelName(item: unknown): string | undefined {
         return undefined;
     }
     for (const pair of item.items) {
-        if (isScalar(pair.key) && pair.key.value === "name" && isScalar(pair.value) && typeof pair.value.value === "string") {
+        if (
+            isScalar(pair.key) &&
+            pair.key.value === "name" &&
+            isScalar(pair.value) &&
+            typeof pair.value.value === "string"
+        ) {
             return pair.value.value;
         }
     }
@@ -153,7 +157,12 @@ function getScalarField(item: unknown, fieldName: string): string | undefined {
         return undefined;
     }
     for (const pair of item.items) {
-        if (isScalar(pair.key) && pair.key.value === fieldName && isScalar(pair.value) && typeof pair.value.value === "string") {
+        if (
+            isScalar(pair.key) &&
+            pair.key.value === fieldName &&
+            isScalar(pair.value) &&
+            typeof pair.value.value === "string"
+        ) {
             return pair.value.value;
         }
     }
@@ -202,9 +211,12 @@ function sortItemsInStanzaBody(body: string): string {
         const sortedItems = [...slices]
             .sort((a, b) => cmpStr(a.name, b.name))
             .reduce((text, item, index) => {
-                const itemText = index === 0
-                    ? item.text.replace(/^\n+/, "")
-                    : (item.text.startsWith("\n") ? item.text : `\n${item.text}`);
+                const itemText =
+                    index === 0
+                        ? item.text.replace(/^\n+/, "")
+                        : item.text.startsWith("\n")
+                          ? item.text
+                          : `\n${item.text}`;
                 return `${text}${itemText}`;
             }, "");
         const head = result.slice(pairStart, headEnd);
@@ -248,11 +260,7 @@ function sortSequenceItemsInSource(
     }, "");
 }
 
-export function sortYamlSequenceByPath(
-    source: string,
-    path: readonly string[],
-    sortKey: string,
-): string {
+export function sortYamlSequenceByPath(source: string, path: readonly string[], sortKey: string): string {
     const doc = YAML.parseDocument(source, { keepSourceTokens: true });
     if (doc.errors.length > 0) {
         throw new Error(doc.errors[0]!.message);
@@ -368,11 +376,8 @@ export function sortYamlStanzasAndItems(source: string): string {
     const sorted = [...stanzas].sort((a, b) => cmpStr(a.key, b.key));
 
     return sorted.reduce((result, stanza, index) => {
-        const leading = index === 0
-            ? stanza.leading.replace(/^\n+/, "")
-            : stanza.leading.length > 0
-                ? stanza.leading
-                : "\n";
+        const leading =
+            index === 0 ? stanza.leading.replace(/^\n+/, "") : stanza.leading.length > 0 ? stanza.leading : "\n";
         return `${result}${leading}${stanza.body}`;
     }, prefix);
 }
@@ -395,8 +400,8 @@ function main(): void {
     if (inputFile === undefined) {
         console.error(
             "Usage: sort-yaml-stanzas-and-items <input.yml>\n" +
-            "       sort-yaml-stanzas-and-items <input.yml> --sequence-path a.b.c --sort-key key\n" +
-            "       sort-yaml-stanzas-and-items <input.yml> --map-path a.b --sequence-key patterns --sort-key match",
+                "       sort-yaml-stanzas-and-items <input.yml> --sequence-path a.b.c --sort-key key\n" +
+                "       sort-yaml-stanzas-and-items <input.yml> --map-path a.b --sequence-key patterns --sort-key match",
         );
         process.exit(1);
     }

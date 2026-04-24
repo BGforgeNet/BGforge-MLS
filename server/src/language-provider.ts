@@ -60,18 +60,18 @@ import type {
  * their language supports. The ProviderRegistry routes requests by checking
  * for the presence of each capability's methods.
  */
-export type LanguageProvider = ProviderBase
-    & Partial<FormattingCapability>
-    & Partial<SymbolCapability>
-    & Partial<FoldingCapability>
-    & Partial<NavigationCapability>
-    & Partial<RenameCapability>
-    & Partial<HoverCapability>
-    & Partial<CompletionCapability>
-    & Partial<DataCapability>
-    & Partial<CompilationCapability>
-    & Partial<IndexingCapability>
-    & Partial<FeatureGateCapability>
-    & Partial<SemanticTokenCapability>
-    & Partial<InlayHintCapability>
-    & Partial<WorkspaceSymbolCapability>;
+export type LanguageProvider = ProviderBase &
+    Partial<FormattingCapability> &
+    Partial<SymbolCapability> &
+    Partial<FoldingCapability> &
+    Partial<NavigationCapability> &
+    Partial<RenameCapability> &
+    Partial<HoverCapability> &
+    Partial<CompletionCapability> &
+    Partial<DataCapability> &
+    Partial<CompilationCapability> &
+    Partial<IndexingCapability> &
+    Partial<FeatureGateCapability> &
+    Partial<SemanticTokenCapability> &
+    Partial<InlayHintCapability> &
+    Partial<WorkspaceSymbolCapability>;

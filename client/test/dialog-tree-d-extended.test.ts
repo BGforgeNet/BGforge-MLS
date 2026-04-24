@@ -25,10 +25,7 @@ describe("buildDTreeHtml - multiple blocks for same file (line 235 branch)", () 
     it("groups multiple begin blocks under the same file", () => {
         // Line 235: existing.push(block) — second block pushed to same file entry
         const data: DDialogData = {
-            blocks: [
-                makeBlock("begin", "NPC"),
-                makeBlock("modify", "NPC", { actionName: "DO_THING", stateRefs: [] }),
-            ],
+            blocks: [makeBlock("begin", "NPC"), makeBlock("modify", "NPC", { actionName: "DO_THING", stateRefs: [] })],
             states: [makeState("s1", "NPC")],
             messages: {},
         };
@@ -73,18 +70,22 @@ describe("buildDTreeHtml - transition with trigger and replyText", () => {
         // Line 150-152: triggerHtml rendered when t.trigger && t.replyText
         const data: DDialogData = {
             blocks: [makeBlock("begin", "NPC")],
-            states: [{
-                label: "s1",
-                line: 1,
-                sayText: "Hello",
-                speaker: "NPC",
-                transitions: [{
-                    line: 2,
-                    replyText: "I agree",
-                    trigger: 'Global("x","LOCALS",1)',
-                    target: { kind: "exit" },
-                }],
-            }],
+            states: [
+                {
+                    label: "s1",
+                    line: 1,
+                    sayText: "Hello",
+                    speaker: "NPC",
+                    transitions: [
+                        {
+                            line: 2,
+                            replyText: "I agree",
+                            trigger: 'Global("x","LOCALS",1)',
+                            target: { kind: "exit" },
+                        },
+                    ],
+                },
+            ],
             messages: {},
         };
         const html = buildDTreeHtml(data);
@@ -96,18 +97,22 @@ describe("buildDTreeHtml - transition with trigger and replyText", () => {
         // Line 153-155: actionHtml rendered when t.action is set
         const data: DDialogData = {
             blocks: [makeBlock("begin", "NPC")],
-            states: [{
-                label: "s1",
-                line: 1,
-                sayText: "Hello",
-                speaker: "NPC",
-                transitions: [{
-                    line: 2,
-                    replyText: "Do it",
-                    action: 'SetGlobal("done","GLOBAL",1)',
-                    target: { kind: "exit" },
-                }],
-            }],
+            states: [
+                {
+                    label: "s1",
+                    line: 1,
+                    sayText: "Hello",
+                    speaker: "NPC",
+                    transitions: [
+                        {
+                            line: 2,
+                            replyText: "Do it",
+                            action: 'SetGlobal("done","GLOBAL",1)',
+                            target: { kind: "exit" },
+                        },
+                    ],
+                },
+            ],
             messages: {},
         };
         const html = buildDTreeHtml(data);
@@ -122,14 +127,16 @@ describe("buildDTreeHtml - speaker label display", () => {
         // a different speaker from the block's file, triggering the speaker label.
         const data: DDialogData = {
             blocks: [makeBlock("chain", "GAELAN", { label: "mychain" })],
-            states: [{
-                label: "s1",
-                line: 1,
-                sayText: "Hear me",
-                speaker: "MINSC", // different from block file
-                blockLabel: "mychain",
-                transitions: [],
-            }],
+            states: [
+                {
+                    label: "s1",
+                    line: 1,
+                    sayText: "Hear me",
+                    speaker: "MINSC", // different from block file
+                    blockLabel: "mychain",
+                    transitions: [],
+                },
+            ],
             messages: {},
         };
         const html = buildDTreeHtml(data);
@@ -155,13 +162,15 @@ describe("buildDTreeHtml - state with no sayText", () => {
         // Transition text also uses msg-text, so check for "reply msg-text" specifically.
         const data: DDialogData = {
             blocks: [makeBlock("begin", "NPC")],
-            states: [{
-                label: "s1",
-                line: 1,
-                sayText: "",
-                speaker: "NPC",
-                transitions: [{ line: 2, target: { kind: "exit" } }],
-            }],
+            states: [
+                {
+                    label: "s1",
+                    line: 1,
+                    sayText: "",
+                    speaker: "NPC",
+                    transitions: [{ line: 2, target: { kind: "exit" } }],
+                },
+            ],
             messages: {},
         };
         const html = buildDTreeHtml(data);
@@ -237,13 +246,21 @@ describe("buildDTreeHtml - extern/copy_trans transitions inside state", () => {
         // Line 172: icon = "arrow-right" for non-exit, non-goto targets
         const data: DDialogData = {
             blocks: [makeBlock("begin", "NPC")],
-            states: [{
-                label: "s1",
-                line: 1,
-                sayText: "See",
-                speaker: "NPC",
-                transitions: [{ line: 2, replyText: "Extern link", target: { kind: "extern", file: "OTHER", label: "other_s" } }],
-            }],
+            states: [
+                {
+                    label: "s1",
+                    line: 1,
+                    sayText: "See",
+                    speaker: "NPC",
+                    transitions: [
+                        {
+                            line: 2,
+                            replyText: "Extern link",
+                            target: { kind: "extern", file: "OTHER", label: "other_s" },
+                        },
+                    ],
+                },
+            ],
             messages: {},
         };
         const html = buildDTreeHtml(data);

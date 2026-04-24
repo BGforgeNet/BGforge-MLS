@@ -18,24 +18,21 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import {
-    Project,
-    SyntaxKind
-} from 'ts-morph';
+import { Project, SyntaxKind } from "ts-morph";
 import { fileURLToPath } from "url";
 import { EXT_TSSL } from "../../common/extensions";
 import { bundleWithEsbuild } from "../../common/esbuild-utils";
-import { conlog, type TsslContext, type MainFileData } from './types';
-import { convertOperatorsAST } from './convert-operators';
-import { extractInlineFunctionsFromFiles, extractJsDocs, type InlineFunctionCache } from './inline-functions';
-import { exportSSL } from './emit';
+import { conlog, type TsslContext, type MainFileData } from "./types";
+import { convertOperatorsAST } from "./convert-operators";
+import { extractInlineFunctionsFromFiles, extractJsDocs, type InlineFunctionCache } from "./inline-functions";
+import { exportSSL } from "./emit";
 // Generated from server/data/fallout-ssl-base.yml by generate-data.sh.
 // Inlined by esbuild at bundle time.
-import engineProcedureNames from '../../../server/out/fallout-ssl-engine-procedures.json';
+import engineProcedureNames from "../../../server/out/fallout-ssl-engine-procedures.json";
 import { transformEnums } from "../../common/enum-transform";
 import { extractTraTag } from "../../common/transpiler-utils";
 
-const uriToPath = (uri: string) => uri.startsWith('file://') ? fileURLToPath(uri) : uri;
+const uriToPath = (uri: string) => (uri.startsWith("file://") ? fileURLToPath(uri) : uri);
 
 /** Marker to identify start of user code in esbuild output */
 const TSSL_CODE_MARKER = "/* __TSSL_CODE_START__ */";
@@ -107,7 +104,7 @@ async function transpileCore(filePath: string, text: string, batch?: TranspileBa
     conlog(`Extracted JSDoc for ${ctx.functionJsDocs.size} functions from main file`);
 
     const preserveFunctions = extractPreserveFunctions(text);
-    const preserveCode = `\n// Preserve functions\nif ((globalThis as any).__preserve__) { console.log(${preserveFunctions.join(', ')}); }`;
+    const preserveCode = `\n// Preserve functions\nif ((globalThis as any).__preserve__) { console.log(${preserveFunctions.join(", ")}); }`;
 
     const bundleResult = await bundleWithEsbuild({
         filePath,
@@ -115,7 +112,7 @@ async function transpileCore(filePath: string, text: string, batch?: TranspileBa
         preTransformed: { enumNames },
         marker: TSSL_CODE_MARKER,
         target: "es2022",
-        sourcefile: path.basename(filePath).replace('.tssl', '.ts'),
+        sourcefile: path.basename(filePath).replace(".tssl", ".ts"),
         metafile: true,
         appendCode: preserveCode,
         originalConstants: mainFileData.constants,
@@ -148,7 +145,7 @@ export async function compile(uri: string, text: string): Promise<string> {
 
     const parsed = path.parse(filePath);
     const sslPath = path.join(parsed.dir, `${parsed.name}.ssl`);
-    fs.writeFileSync(sslPath, output, 'utf-8');
+    fs.writeFileSync(sslPath, output, "utf-8");
     conlog(`Content saved to ${sslPath}`);
 
     return sslPath;
@@ -190,7 +187,10 @@ function extractIncludes(sourceText: string): string[] {
  * @param sourceText The original TypeScript source text
  * @returns Object with constants map and letVars set
  */
-function extractTopLevelVars(project: Project, sourceText: string): { constants: Map<string, string>; letVars: Set<string> } {
+function extractTopLevelVars(
+    project: Project,
+    sourceText: string,
+): { constants: Map<string, string>; letVars: Set<string> } {
     const constants = new Map<string, string>();
     const letVars = new Set<string>();
     const tempSourceFile = project.createSourceFile("temp-vars.ts", sourceText, { overwrite: true });
@@ -211,7 +211,10 @@ function extractTopLevelVars(project: Project, sourceText: string): { constants:
                     if (initializer) {
                         // Skip compat objects (enum-generated `as const` objects)
                         // These have object literal initializers and shouldn't become #define
-                        if (initializer.isKind(SyntaxKind.AsExpression) || initializer.isKind(SyntaxKind.ObjectLiteralExpression)) {
+                        if (
+                            initializer.isKind(SyntaxKind.AsExpression) ||
+                            initializer.isKind(SyntaxKind.ObjectLiteralExpression)
+                        ) {
                             continue;
                         }
                         // Convert operators to SSL syntax (| -> bwor, etc.)

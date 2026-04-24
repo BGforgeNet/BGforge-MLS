@@ -235,7 +235,7 @@ SET ex
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
         const filtered = weiduTp2Provider.filterCompletions?.(allItems, text, position, uri) ?? [];
 
-        const localVar = filtered.find(i => i.label === "existing_var");
+        const localVar = filtered.find((i) => i.label === "existing_var");
         expect(localVar).toBeDefined();
         expect(localVar?.kind).toBe(CompletionItemKind.Variable);
     });
@@ -252,8 +252,8 @@ SET ex
         const filtered = weiduTp2Provider.filterCompletions?.(allItems, text, position, uri) ?? [];
 
         // Static items (from YAML data) should NOT appear
-        const hasStaticAction = filtered.some(i => i.label === "COPY");
-        const hasStaticPatch = filtered.some(i => i.label === "WRITE_BYTE");
+        const hasStaticAction = filtered.some((i) => i.label === "COPY");
+        const hasStaticPatch = filtered.some((i) => i.label === "WRITE_BYTE");
         expect(hasStaticAction).toBe(false);
         expect(hasStaticPatch).toBe(false);
     });
@@ -269,7 +269,7 @@ OUTER_SPRINT ba
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
         const filtered = weiduTp2Provider.filterCompletions?.(allItems, text, position, uri) ?? [];
 
-        const localVar = filtered.find(i => i.label === "base_path");
+        const localVar = filtered.find((i) => i.label === "base_path");
         expect(localVar).toBeDefined();
     });
 
@@ -300,11 +300,11 @@ SET m
         const filtered = weiduTp2Provider.filterCompletions?.(allItems, text, position, uri) ?? [];
 
         // Local variables should be present
-        const varItem = filtered.find(i => i.label === "my_var");
+        const varItem = filtered.find((i) => i.label === "my_var");
         expect(varItem).toBeDefined();
 
         // Local functions should NOT be present (you don't assign a function name)
-        const funcItem = filtered.find(i => i.label === "my_func");
+        const funcItem = filtered.find((i) => i.label === "my_func");
         expect(funcItem).toBeUndefined();
     });
 
@@ -320,11 +320,11 @@ OUTER_SET existing_v
         const filtered = weiduTp2Provider.filterCompletions?.(allItems, text, position, uri) ?? [];
 
         // The word being typed ("existing_v") should NOT appear in completions
-        const selfRef = filtered.find(i => i.label === "existing_v");
+        const selfRef = filtered.find((i) => i.label === "existing_v");
         expect(selfRef).toBeUndefined();
 
         // But previously declared variables should still appear
-        const existing = filtered.find(i => i.label === "existing_var");
+        const existing = filtered.find((i) => i.label === "existing_var");
         expect(existing).toBeDefined();
     });
 });

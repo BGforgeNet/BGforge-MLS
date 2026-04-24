@@ -36,12 +36,16 @@ b:
 
     it("sorts a specific YAML sequence path in place", () => {
         const inputFile = path.join(tmpDir, "input.yml");
-        fs.writeFileSync(inputFile, `repository:
+        fs.writeFileSync(
+            inputFile,
+            `repository:
   fallout-base-functions:
     patterns:
       - match: z
       - match: a
-`, "utf8");
+`,
+            "utf8",
+        );
 
         execSync(
             `pnpm exec tsx scripts/utils/src/sort-yaml-stanzas-and-items.ts "${inputFile}" --sequence-path repository.fallout-base-functions.patterns --sort-key match`,
@@ -58,7 +62,9 @@ b:
 
     it("sorts patterns in all map entries via --map-path and --sequence-key", () => {
         const inputFile = path.join(tmpDir, "input.yml");
-        fs.writeFileSync(inputFile, `repository:
+        fs.writeFileSync(
+            inputFile,
+            `repository:
   beta:
     patterns:
       - match: z
@@ -67,7 +73,9 @@ b:
     patterns:
       - match: y
       - match: b
-`, "utf8");
+`,
+            "utf8",
+        );
 
         execSync(
             `pnpm exec tsx scripts/utils/src/sort-yaml-stanzas-and-items.ts "${inputFile}" --map-path repository --sequence-key patterns --sort-key match`,
@@ -88,13 +96,17 @@ b:
 
     it("sorts a specific YAML sequence path with blank lines removed", () => {
         const inputFile = path.join(tmpDir, "input.yml");
-        fs.writeFileSync(inputFile, `repository:
+        fs.writeFileSync(
+            inputFile,
+            `repository:
   fallout-base-functions:
     patterns:
       - match: z
 
       - match: a
-`, "utf8");
+`,
+            "utf8",
+        );
 
         execSync(
             `pnpm exec tsx scripts/utils/src/sort-yaml-stanzas-and-items.ts "${inputFile}" --sequence-path repository.fallout-base-functions.patterns --sort-key match`,

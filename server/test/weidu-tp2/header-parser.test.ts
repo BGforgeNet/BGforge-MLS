@@ -232,12 +232,12 @@ describe("parseHeaderToSymbols", () => {
             expect(sym.source.displayPath).toBe(displayPath);
             const hoverContent = sym.hover.contents as MarkupContent;
             expect(hoverContent.value).toBe(
-`\`\`\`weidu-tp2-tooltip
+                `\`\`\`weidu-tp2-tooltip
 action function my_func
 \`\`\`
 \`\`\`bgforge-mls-comment
 lib/functions.tph
-\`\`\``
+\`\`\``,
             );
         });
 
@@ -251,7 +251,7 @@ DEFINE_PATCH_FUNCTION apply_armor_bonus BEGIN END`;
             const hoverContent = symbols[0].hover.contents as MarkupContent;
 
             expect(hoverContent.value).toBe(
-`\`\`\`weidu-tp2-tooltip
+                `\`\`\`weidu-tp2-tooltip
 patch function apply_armor_bonus
 \`\`\`
 \`\`\`bgforge-mls-comment
@@ -260,7 +260,7 @@ lib/functions.tph
 
 ---
 
-Applies bonus to armor.`
+Applies bonus to armor.`,
             );
         });
 
@@ -280,7 +280,7 @@ END`;
             const hoverContent = symbols[0].hover.contents as MarkupContent;
 
             expect(hoverContent.value).toBe(
-`\`\`\`weidu-tp2-tooltip
+                `\`\`\`weidu-tp2-tooltip
 action function test_func
 \`\`\`
 \`\`\`bgforge-mls-comment
@@ -296,7 +296,7 @@ Test function.
 |**INT**|**vars**|||
 |[int](https://ielib.bgforge.net/types#int)|bonus||&nbsp;&nbsp;the bonus amount|
 |**STR**|**vars**|||
-|[string](https://ielib.bgforge.net/types#string)|name|=&nbsp;""|&nbsp;&nbsp;item name to use|`
+|[string](https://ielib.bgforge.net/types#string)|name|=&nbsp;""|&nbsp;&nbsp;item name to use|`,
             );
         });
 
@@ -311,7 +311,7 @@ DEFINE_ACTION_FUNCTION get_value BEGIN END`;
             const hoverContent = symbols[0].hover.contents as MarkupContent;
 
             expect(hoverContent.value).toBe(
-`\`\`\`weidu-tp2-tooltip
+                `\`\`\`weidu-tp2-tooltip
 action function get_value
 \`\`\`
 \`\`\`bgforge-mls-comment
@@ -320,7 +320,7 @@ lib/functions.tph
 
 ---
 
-Returns a value.`
+Returns a value.`,
             );
         });
 
@@ -335,7 +335,7 @@ DEFINE_ACTION_FUNCTION old_func BEGIN END`;
             const hoverContent = symbols[0].hover.contents as MarkupContent;
 
             expect(hoverContent.value).toBe(
-`\`\`\`weidu-tp2-tooltip
+                `\`\`\`weidu-tp2-tooltip
 action function old_func
 \`\`\`
 \`\`\`bgforge-mls-comment
@@ -346,7 +346,7 @@ lib/functions.tph
 
 Old function.
 
-**Deprecated:** Use new_func instead`
+**Deprecated:** Use new_func instead`,
             );
         });
 
@@ -364,7 +364,7 @@ END`;
             const hoverContent = symbols[0].hover.contents as MarkupContent;
 
             expect(hoverContent.value).toBe(
-`\`\`\`weidu-tp2-tooltip
+                `\`\`\`weidu-tp2-tooltip
 action function use_item
 \`\`\`
 \`\`\`bgforge-mls-comment
@@ -378,7 +378,7 @@ Uses an item.
 | | | | |
 |-:|:-|:-|:-|
 |**STR**|**vars**|||
-|[resref](https://ielib.bgforge.net/types#resref)|item|=&nbsp;""|&nbsp;&nbsp;the item resref|`
+|[resref](https://ielib.bgforge.net/types#resref)|item|=&nbsp;""|&nbsp;&nbsp;the item resref|`,
             );
         });
     });
@@ -402,12 +402,12 @@ Uses an item.
 
             expect(sym.source.displayPath).toBe("functions.tph");
             expect(hoverContent.value).toBe(
-`\`\`\`weidu-tp2-tooltip
+                `\`\`\`weidu-tp2-tooltip
 action function my_func
 \`\`\`
 \`\`\`bgforge-mls-comment
 functions.tph
-\`\`\``
+\`\`\``,
             );
         });
 
@@ -420,12 +420,12 @@ functions.tph
 
             expect(sym.source.displayPath).toBe("utils.tph");
             expect(hoverContent.value).toBe(
-`\`\`\`weidu-tp2-tooltip
+                `\`\`\`weidu-tp2-tooltip
 action function my_func
 \`\`\`
 \`\`\`bgforge-mls-comment
 utils.tph
-\`\`\``
+\`\`\``,
             );
         });
     });
@@ -441,12 +441,12 @@ utils.tph
             const hoverContent = sym.hover.contents as MarkupContent;
             // Lowercase variable: type + name only, no value
             expect(hoverContent.value).toBe(
-`\`\`\`weidu-tp2-tooltip
+                `\`\`\`weidu-tp2-tooltip
 int my_var
 \`\`\`
 \`\`\`bgforge-mls-comment
 lib/functions.tph
-\`\`\``
+\`\`\``,
             );
         });
 
@@ -462,7 +462,7 @@ OUTER_SET max_items = 100`;
 
             // Lowercase variable: type + name only, no value
             expect(hoverContent.value).toBe(
-`\`\`\`weidu-tp2-tooltip
+                `\`\`\`weidu-tp2-tooltip
 int max_items
 \`\`\`
 \`\`\`bgforge-mls-comment
@@ -471,7 +471,7 @@ lib/functions.tph
 
 ---
 
-Maximum item count.`
+Maximum item count.`,
             );
         });
 
@@ -486,7 +486,7 @@ OUTER_SET OLD_VALUE = 5`;
             const hoverContent = symbols[0].hover.contents as MarkupContent;
 
             expect(hoverContent.value).toBe(
-`\`\`\`weidu-tp2-tooltip
+                `\`\`\`weidu-tp2-tooltip
 int OLD_VALUE = 5
 \`\`\`
 \`\`\`bgforge-mls-comment
@@ -497,7 +497,7 @@ lib/functions.tph
 
 Old constant.
 
-**Deprecated:** Use NEW_VALUE instead`
+**Deprecated:** Use NEW_VALUE instead`,
             );
         });
 
@@ -508,12 +508,12 @@ Old constant.
 
             // Lowercase variable: type + name only, no value
             expect(hoverContent.value).toBe(
-`\`\`\`weidu-tp2-tooltip
+                `\`\`\`weidu-tp2-tooltip
 string my_str
 \`\`\`
 \`\`\`bgforge-mls-comment
 lib/functions.tph
-\`\`\``
+\`\`\``,
             );
         });
     });
@@ -528,8 +528,8 @@ END`;
             const symbols = parseHeaderToSymbols(uri, input, workspaceRoot);
 
             expect(symbols).toHaveLength(2);
-            expect(symbols.some(s => s.name === "global_count")).toBe(true);
-            expect(symbols.some(s => s.name === "increment_count")).toBe(true);
+            expect(symbols.some((s) => s.name === "global_count")).toBe(true);
+            expect(symbols.some((s) => s.name === "increment_count")).toBe(true);
         });
     });
 
@@ -630,6 +630,5 @@ END`;
             // Type from @arg should override default "string"
             expect(sym.callable.params?.strVar[0].type).toBe("resref");
         });
-
     });
 });

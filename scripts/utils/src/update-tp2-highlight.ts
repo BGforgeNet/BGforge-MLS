@@ -69,7 +69,12 @@ export function buildHighlightPatterns(
     return stanza.items
         .filter((item) => /^\w/.test(item.name))
         .filter((item) => !skipCatchall || !UPPER_CASE_CATCHALL.test(item.name))
-        .map((item): HighlightPattern => (({match:`\\b(${item.name})\\b`, ...(item.deprecated!==undefined?{name:`invalid.deprecated.bgforge`}:{})})))
+        .map(
+            (item): HighlightPattern => ({
+                match: `\\b(${item.name})\\b`,
+                ...(item.deprecated !== undefined ? { name: `invalid.deprecated.bgforge` } : {}),
+            }),
+        )
         .sort((a, b) => cmpStr(a.match, b.match));
 }
 
@@ -88,9 +93,7 @@ export function updateHighlightStanza(
     if (!isMap(repo)) {
         throw new Error("Expected 'repository' map");
     }
-    const stanzaPair = repo.items.find(
-        (pair) => isScalar(pair.key) && pair.key.value === repositoryKey,
-    );
+    const stanzaPair = repo.items.find((pair) => isScalar(pair.key) && pair.key.value === repositoryKey);
     if (stanzaPair === undefined || !isMap(stanzaPair.value)) {
         throw new Error(`Expected 'repository.${repositoryKey}' map`);
     }
@@ -108,9 +111,7 @@ export function updateHighlightStanza(
     const preserved: unknown[] = [];
     for (const item of patternsNode.items) {
         if (!isMap(item)) continue;
-        const hasMatch = item.items.some(
-            (pair) => isScalar(pair.key) && pair.key.value === "match",
-        );
+        const hasMatch = item.items.some((pair) => isScalar(pair.key) && pair.key.value === "match");
         if (!hasMatch) {
             preserved.push(item.toJSON());
         }

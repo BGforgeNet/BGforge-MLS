@@ -95,9 +95,7 @@ function extractEntryPoints(proc: SyntaxNode, entryPoints: string[]): void {
         if (node.type === "call_stmt") {
             const target = node.childForFieldName("target");
             if (target) {
-                const name = target.type === "call_expr"
-                    ? target.childForFieldName("func")?.text
-                    : target.text;
+                const name = target.type === "call_expr" ? target.childForFieldName("func")?.text : target.text;
                 if (name && !entryPoints.includes(name)) {
                     entryPoints.push(name);
                 }
@@ -138,7 +136,14 @@ function parseProcedure(proc: SyntaxNode, name: string): DialogNode {
             }
 
             // NOption, GOption, BOption, etc.
-            const optionTypes = [DialogOptionType.NOption, DialogOptionType.NLowOption, DialogOptionType.GOption, DialogOptionType.GLowOption, DialogOptionType.BOption, DialogOptionType.BLowOption];
+            const optionTypes = [
+                DialogOptionType.NOption,
+                DialogOptionType.NLowOption,
+                DialogOptionType.GOption,
+                DialogOptionType.GLowOption,
+                DialogOptionType.BOption,
+                DialogOptionType.BLowOption,
+            ];
             if (optionTypes.includes(funcName as DialogOptionType) && arg0 && arg1) {
                 const target = arg1.text;
                 options.push({
@@ -166,9 +171,7 @@ function parseProcedure(proc: SyntaxNode, name: string): DialogNode {
         if (node.type === "call_stmt") {
             const target = node.childForFieldName("target");
             if (target) {
-                const targetName = target.type === "call_expr"
-                    ? target.childForFieldName("func")?.text
-                    : target.text;
+                const targetName = target.type === "call_expr" ? target.childForFieldName("func")?.text : target.text;
                 if (targetName?.startsWith("Node") && !callTargets.includes(targetName)) {
                     callTargets.push(targetName);
                 }

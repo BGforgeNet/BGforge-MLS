@@ -6,7 +6,7 @@ import type { ParsedField, ParsedFieldType, ParsedGroup } from "./types";
 import { HEADER_SIZE } from "./map-schemas";
 
 export const MAP_OBJECT_BASE_SIZE = 0x48;
-export const MAP_OBJECT_DATA_HEADER_SIZE = 0x0C;
+export const MAP_OBJECT_DATA_HEADER_SIZE = 0x0c;
 export const STRICT_MAP_SCRIPT_TYPE_COUNT = 4;
 export const PID_TYPE_ITEM = 0;
 export const PID_TYPE_CRITTER = 1;
@@ -14,7 +14,7 @@ export const PID_TYPE_SCENERY = 2;
 export const PID_TYPE_MISC = 5;
 const FIRST_EXIT_GRID_PID = 0x5_00_00_10;
 const LAST_EXIT_GRID_PID = 0x5_00_00_17;
-export const HEADER_PADDING_OFFSET = 0x3C;
+export const HEADER_PADDING_OFFSET = 0x3c;
 export const HEADER_PADDING_SIZE = 176;
 export const HEADER_OPAQUE_END = HEADER_SIZE;
 
@@ -25,7 +25,7 @@ export function field(
     size: number,
     type: ParsedFieldType,
     description?: string,
-    rawValue?: number
+    rawValue?: number,
 ): ParsedField {
     return { name, value, offset, size, type, description, rawValue };
 }
@@ -34,7 +34,7 @@ export function makeGroup(
     name: string,
     fields: (ParsedField | ParsedGroup)[],
     expanded = true,
-    description?: string
+    description?: string,
 ): ParsedGroup {
     return { name, fields, expanded, description };
 }
@@ -44,7 +44,7 @@ export function flagsField(
     value: number,
     flagDefs: Record<number, string>,
     offset: number,
-    size: number
+    size: number,
 ): ParsedField {
     const flags: string[] = [];
     for (const [bit, flagName] of Object.entries(flagDefs)) {
@@ -65,7 +65,7 @@ export function enumField(
     lookup: Record<number, string>,
     offset: number,
     size: number,
-    errors?: string[]
+    errors?: string[],
 ): ParsedField {
     const resolved = lookup[value];
     if (resolved === undefined && errors) {
@@ -93,14 +93,21 @@ export function isExitGridPid(pid: number): boolean {
 }
 
 export function objectTypeName(pid: number): string {
-    switch ((pid >>> 24) & 0xFF) {
-        case PID_TYPE_ITEM: return "Item";
-        case PID_TYPE_CRITTER: return "Critter";
-        case PID_TYPE_SCENERY: return "Scenery";
-        case 3: return "Wall";
-        case 4: return "Tile";
-        case PID_TYPE_MISC: return "Misc";
-        default: return `Type${(pid >>> 24) & 0xFF}`;
+    switch ((pid >>> 24) & 0xff) {
+        case PID_TYPE_ITEM:
+            return "Item";
+        case PID_TYPE_CRITTER:
+            return "Critter";
+        case PID_TYPE_SCENERY:
+            return "Scenery";
+        case 3:
+            return "Wall";
+        case 4:
+            return "Tile";
+        case PID_TYPE_MISC:
+            return "Misc";
+        default:
+            return `Type${(pid >>> 24) & 0xff}`;
     }
 }
 

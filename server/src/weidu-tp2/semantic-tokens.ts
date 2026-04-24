@@ -20,7 +20,13 @@ import { SemanticTokenTypes } from "vscode-languageserver/node";
 import type { Node } from "web-tree-sitter";
 import { isInitialized, parseWithCache } from "./parser";
 import { SyntaxType } from "./tree-sitter.d";
-import { collectLoopVarNames, FUNCTION_DEF_TYPES, LOOP_TYPES, PARAM_DECL_TYPES, STRING_CONTENT_TYPES } from "./variable-symbols";
+import {
+    collectLoopVarNames,
+    FUNCTION_DEF_TYPES,
+    LOOP_TYPES,
+    PARAM_DECL_TYPES,
+    STRING_CONTENT_TYPES,
+} from "./variable-symbols";
 import { type SemanticTokenSpan } from "../shared/semantic-tokens";
 
 /**
@@ -149,7 +155,7 @@ function visitBodyForNames(
 
     // String content nodes contain raw text with %var% references that the grammar doesn't parse
     if (STRING_CONTENT_TYPES.has(node.type as SyntaxType)) {
-        scanStringContentForMatches(node, (name) => names.has(name) ? tokenType : undefined, out);
+        scanStringContentForMatches(node, (name) => (names.has(name) ? tokenType : undefined), out);
         return;
     }
 

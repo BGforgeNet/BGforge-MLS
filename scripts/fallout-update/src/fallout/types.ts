@@ -64,4 +64,3 @@ export const HIGHLIGHT_STANZAS = {
     sfallFunctions: "sfall-functions",
     hooks: FALLOUT_SSL_STANZAS.hooks,
 } as const;
-

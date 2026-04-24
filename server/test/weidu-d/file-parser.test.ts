@@ -62,9 +62,9 @@ END
         const result = parseFile(TEST_URI, text);
 
         expect(result.symbols).toHaveLength(2);
-        const names = result.symbols.map(s => s.name);
-        expect(names.some(n => n.includes("first"))).toBe(true);
-        expect(names.some(n => n.includes("second"))).toBe(true);
+        const names = result.symbols.map((s) => s.name);
+        expect(names.some((n) => n.includes("first"))).toBe(true);
+        expect(names.some((n) => n.includes("second"))).toBe(true);
     });
 
     it("records GOTO references in the refs map", () => {

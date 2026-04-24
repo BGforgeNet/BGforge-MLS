@@ -30,11 +30,12 @@ function mapSemanticFieldKey(segments: readonly string[]): string | undefined {
             return undefined;
         }
 
-        const tileField = tileMatch[1] === "Floor"
-            ? "floorTileId"
-            : tileMatch[1] === "Floor Flags"
-                ? "floorFlags"
-                : tileMatch[1] === "Roof"
+        const tileField =
+            tileMatch[1] === "Floor"
+                ? "floorTileId"
+                : tileMatch[1] === "Floor Flags"
+                  ? "floorFlags"
+                  : tileMatch[1] === "Roof"
                     ? "roofTileId"
                     : "roofFlags";
         return `map.tiles[].${tileField}`;
@@ -102,9 +103,11 @@ function isGroup(entry: ParsedField | ParsedGroup): entry is ParsedGroup {
 }
 
 function shouldHideMapField(entry: ParsedField): boolean {
-    return entry.name === "Padding (field_3C)"
-        || entry.name === "Field 74"
-        || /^Entry \d+ (Next Script Link \(legacy\)|Unknown Field 0x48|Legacy Field 0x50)$/.test(entry.name);
+    return (
+        entry.name === "Padding (field_3C)" ||
+        entry.name === "Field 74" ||
+        /^Entry \d+ (Next Script Link \(legacy\)|Unknown Field 0x48|Legacy Field 0x50)$/.test(entry.name)
+    );
 }
 
 /** Receives projected children (after field hiding), not the raw parser group. */
@@ -116,10 +119,9 @@ function shouldHideMapGroup(entry: ParsedGroup): boolean {
         return false;
     }
     const [firstField] = entry.fields;
-    return firstField !== undefined
-        && !isGroup(firstField)
-        && firstField.name === "Script Count"
-        && firstField.value === 0;
+    return (
+        firstField !== undefined && !isGroup(firstField) && firstField.name === "Script Count" && firstField.value === 0
+    );
 }
 
 export const mapFormatAdapter: BinaryFormatAdapter = {
@@ -152,7 +154,11 @@ export const mapFormatAdapter: BinaryFormatAdapter = {
 
     projectDisplayRoot(
         parseResult: ParseResult,
-        projectEntry: (parseResult: ParseResult, entry: ParsedField | ParsedGroup, sourceSegments: readonly string[]) => ProjectedEntry | undefined,
+        projectEntry: (
+            parseResult: ParseResult,
+            entry: ParsedField | ParsedGroup,
+            sourceSegments: readonly string[],
+        ) => ProjectedEntry | undefined,
     ): ProjectedEntry[] {
         const projectedFields: ProjectedEntry[] = [];
         let insertedTilesGroup = false;

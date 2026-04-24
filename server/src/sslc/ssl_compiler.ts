@@ -28,7 +28,8 @@ export async function ssl_compile(opts: {
     timeoutMs?: number;
 }) {
     if (!isSslcAvailable()) {
-        const msg = "Built-in SSL compiler not available. Install the sslc-emscripten-noderawfs package or configure an external compiler path in settings.";
+        const msg =
+            "Built-in SSL compiler not available. Install the sslc-emscripten-noderawfs package or configure an external compiler path in settings.";
         conlog(msg);
         return {
             returnCode: 1,
@@ -45,9 +46,7 @@ export async function ssl_compile(opts: {
     if (opts.headersDir) {
         if (cmdArgs.some((s) => s.startsWith("-I"))) {
             if (opts.interactive) {
-                showWarning(
-                    "Warning: -I switch is used but it will be ignored",
-                );
+                showWarning("Warning: -I switch is used but it will be ignored");
             }
             cmdArgs = cmdArgs.filter((s) => !s.startsWith("-I"));
         }
@@ -61,15 +60,11 @@ export async function ssl_compile(opts: {
 
     let p;
     try {
-        p = fork(
-            COMPILER_MODULE,
-            cmdArgs,
-            {
-                execArgv: [], // Disable Node.js flags like --inspect
-                cwd: opts.cwd,
-                silent: true,
-            },
-        );
+        p = fork(COMPILER_MODULE, cmdArgs, {
+            execArgv: [], // Disable Node.js flags like --inspect
+            cwd: opts.cwd,
+            silent: true,
+        });
     } catch (err) {
         // fork() can throw synchronously (e.g. EINVAL on Windows with bad env).
         // Return an error result instead of crashing the server.
@@ -152,7 +147,13 @@ export async function ssl_compile(opts: {
             if (opts.signal.aborted) {
                 p.kill();
             } else {
-                opts.signal.addEventListener("abort", () => { if (!p.killed) p.kill(); }, { once: true });
+                opts.signal.addEventListener(
+                    "abort",
+                    () => {
+                        if (!p.killed) p.kill();
+                    },
+                    { once: true },
+                );
             }
         }
     });

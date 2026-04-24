@@ -13,10 +13,18 @@ vi.mock("vscode", () => {
         private listeners: Array<(e: T) => void> = [];
         event = (listener: (e: T) => void) => {
             this.listeners.push(listener);
-            return { dispose: () => { this.listeners = this.listeners.filter(l => l !== listener); } };
+            return {
+                dispose: () => {
+                    this.listeners = this.listeners.filter((l) => l !== listener);
+                },
+            };
         };
-        fire(data: T) { for (const l of this.listeners) l(data); }
-        dispose() { this.listeners = []; }
+        fire(data: T) {
+            for (const l of this.listeners) l(data);
+        }
+        dispose() {
+            this.listeners = [];
+        }
     }
     return { EventEmitter, Uri: { file: (p: string) => ({ fsPath: p, scheme: "file", toString: () => p }) } };
 });
@@ -62,15 +70,20 @@ function makeTestResult(): ParseResult {
                         { name: "FRM ID", value: 9, offset: 9, size: 3, type: "uint24" },
                         { name: "Light Radius", value: 8, offset: 12, size: 4, type: "uint32" },
                         { name: "Light Intensity", value: 65_536, offset: 16, size: 4, type: "uint32" },
-                        { name: "Flags", value: "LightThru", offset: 20, size: 4, type: "flags", rawValue: 536_870_912 },
+                        {
+                            name: "Flags",
+                            value: "LightThru",
+                            offset: 20,
+                            size: 4,
+                            type: "flags",
+                            rawValue: 536_870_912,
+                        },
                     ],
                 },
                 {
                     name: "Misc Properties",
                     expanded: true,
-                    fields: [
-                        { name: "Unknown", value: 0, offset: 24, size: 4, type: "uint32" },
-                    ],
+                    fields: [{ name: "Unknown", value: 0, offset: 24, size: 4, type: "uint32" }],
                 },
             ],
         },
@@ -84,20 +97,18 @@ const fieldId = (...parts: string[]) => JSON.stringify(parts);
 function loadMapDocument(mapName: string): BinaryDocument {
     const mapPath = path.resolve("client/testFixture/maps", mapName);
     const parseResult = mapParser.parse(new Uint8Array(fs.readFileSync(mapPath)));
-    return new BinaryDocument(
-        { fsPath: mapPath, scheme: "file", toString: () => mapPath } as any,
-        parseResult,
-        { parse: mapParser.parse.bind(mapParser), serialize: mapParser.serialize!.bind(mapParser) },
-    );
+    return new BinaryDocument({ fsPath: mapPath, scheme: "file", toString: () => mapPath } as any, parseResult, {
+        parse: mapParser.parse.bind(mapParser),
+        serialize: mapParser.serialize!.bind(mapParser),
+    });
 }
 
 function loadProDocument(proPath: string): BinaryDocument {
     const parseResult = proParser.parse(new Uint8Array(fs.readFileSync(proPath)));
-    return new BinaryDocument(
-        { fsPath: proPath, scheme: "file", toString: () => proPath } as any,
-        parseResult,
-        { parse: proParser.parse.bind(proParser), serialize: proParser.serialize!.bind(proParser) },
-    );
+    return new BinaryDocument({ fsPath: proPath, scheme: "file", toString: () => proPath } as any, parseResult, {
+        parse: proParser.parse.bind(proParser),
+        serialize: proParser.serialize!.bind(proParser),
+    });
 }
 
 describe("BinaryDocument", () => {
@@ -142,11 +153,16 @@ describe("BinaryDocument", () => {
         it("keeps editing responsive when the tree becomes temporarily invalid for canonical sync", () => {
             const proDoc = loadProDocument(path.resolve("client/testFixture/proto/misc/00000001.pro"));
 
-            expect(() => proDoc.applyEdit(fieldId("Header", "Object Type"), "Header.Object Type", 1, "Critter")).not.toThrow();
+            expect(() =>
+                proDoc.applyEdit(fieldId("Header", "Object Type"), "Header.Object Type", 1, "Critter"),
+            ).not.toThrow();
             expect(proDoc.parseResult.document).toBeDefined();
 
             const groupNames = proDoc.parseResult.root.fields
-                .filter((entry): entry is { name: string; fields: unknown[] } => typeof entry === "object" && entry !== null && "fields" in entry)
+                .filter(
+                    (entry): entry is { name: string; fields: unknown[] } =>
+                        typeof entry === "object" && entry !== null && "fields" in entry,
+                )
                 .map((entry) => entry.name);
             expect(groupNames).toContain("Critter Properties");
             expect(groupNames).not.toContain("Misc Properties");
@@ -171,7 +187,9 @@ describe("BinaryDocument", () => {
 
         it("fires onDidChangeContent event", () => {
             let fired = false;
-            doc.onDidChangeContent(() => { fired = true; });
+            doc.onDidChangeContent(() => {
+                fired = true;
+            });
 
             doc.applyEdit(fieldId("Header", "Text ID"), "Header.Text ID", 200, "200");
             expect(fired).toBe(true);
@@ -209,7 +227,9 @@ describe("BinaryDocument", () => {
     describe("reset", () => {
         it("replaces the parse result and fires content change", () => {
             let fired = false;
-            doc.onDidChangeContent(() => { fired = true; });
+            doc.onDidChangeContent(() => {
+                fired = true;
+            });
 
             const newResult = makeTestResult();
             (newResult.root.fields[0] as any).fields[2].value = 999;
@@ -237,7 +257,7 @@ describe("BinaryDocument", () => {
 
             events[0].undo();
             expect(doc.parseResult.root.fields[0]).not.toBe(replacement.root.fields[0]);
-            expect(((doc.parseResult.root.fields[0] as any).fields[2]).value).toBe(100);
+            expect((doc.parseResult.root.fields[0] as any).fields[2].value).toBe(100);
 
             events[0].redo();
             expect(doc.parseResult).toStrictEqual(replacement);

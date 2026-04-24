@@ -14,19 +14,21 @@ import { type Symbol, SymbolKind, ScopeLevel, SourceType } from "../../src/core/
 
 // Mock fs and common to avoid file system and LSP dependencies
 vi.mock("fs", () => ({
-    readFileSync: vi.fn().mockReturnValue(JSON.stringify([
-        {
-            label: "DELETE_EFFECT",
-            kind: 3, // CompletionItemKind.Function
-            category: "functions",
-            documentation: { kind: "markdown", value: "Deletes an effect" },
-        },
-        {
-            label: "COPY_EXISTING",
-            kind: 14, // CompletionItemKind.Keyword
-            category: "keywords",
-        },
-    ])),
+    readFileSync: vi.fn().mockReturnValue(
+        JSON.stringify([
+            {
+                label: "DELETE_EFFECT",
+                kind: 3, // CompletionItemKind.Function
+                category: "functions",
+                documentation: { kind: "markdown", value: "Deletes an effect" },
+            },
+            {
+                label: "COPY_EXISTING",
+                kind: 14, // CompletionItemKind.Keyword
+                category: "keywords",
+            },
+        ]),
+    ),
 }));
 
 vi.mock("../../src/common", () => ({

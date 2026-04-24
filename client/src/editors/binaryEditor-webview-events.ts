@@ -21,7 +21,9 @@ function handleStepButton(stepButton: HTMLButtonElement, ctx: EventContext): voi
     if (!fieldId || !fieldPath || Number.isNaN(delta)) {
         return;
     }
-    const input = ctx.treeEl.querySelector<HTMLInputElement>(`.field[data-path="${CSS.escape(fieldPath)}"] input.field-input`);
+    const input = ctx.treeEl.querySelector<HTMLInputElement>(
+        `.field[data-path="${CSS.escape(fieldPath)}"] input.field-input`,
+    );
     if (!input) {
         return;
     }
@@ -36,10 +38,7 @@ function handleStepButton(stepButton: HTMLButtonElement, ctx: EventContext): voi
     ctx.vscode.postMessage({ type: "edit", fieldId, fieldPath, value: nextValue });
 }
 
-function handleGroupHeaderClick(
-    groupHeader: HTMLElement,
-    ensureChildrenLoaded: (nodeId: string) => void,
-): void {
+function handleGroupHeaderClick(groupHeader: HTMLElement, ensureChildrenLoaded: (nodeId: string) => void): void {
     const nodeId = groupHeader.dataset.nodeId;
     if (!nodeId) {
         return;
@@ -94,10 +93,7 @@ function handleFlagClick(target: HTMLElement, ctx: EventContext): void {
     }
 }
 
-export function setupTreeEventListeners(
-    ctx: EventContext,
-    ensureChildrenLoaded: (nodeId: string) => void,
-): void {
+export function setupTreeEventListeners(ctx: EventContext, ensureChildrenLoaded: (nodeId: string) => void): void {
     const { treeEl } = ctx;
 
     treeEl.addEventListener("click", (event) => {
@@ -169,7 +165,10 @@ export function setupTreeEventListeners(
     treeEl.addEventListener("keydown", (event) => {
         const keyboardEvent = event as KeyboardEvent;
         const target = keyboardEvent.target as HTMLElement;
-        if (target.classList.contains("flag-checkbox") && (keyboardEvent.key === " " || keyboardEvent.key === "Enter")) {
+        if (
+            target.classList.contains("flag-checkbox") &&
+            (keyboardEvent.key === " " || keyboardEvent.key === "Enter")
+        ) {
             keyboardEvent.preventDefault();
             toggleFlagCheckbox(target, ctx);
             return;

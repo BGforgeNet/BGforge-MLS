@@ -12,7 +12,18 @@ import { LANG_WEIDU_BAF } from "../core/languages";
 import type { IndexedSymbol } from "../core/symbol";
 import { Symbols } from "../core/symbol-index";
 import { loadStaticSymbols } from "../core/static-loader";
-import { type FormatResult, type LanguageProvider, type ProviderContext, type ProviderBase, type FormattingCapability, type CompletionCapability, type DataCapability, type FoldingCapability, type FeatureGateCapability, type CompilationCapability } from "../language-provider";
+import {
+    type FormatResult,
+    type LanguageProvider,
+    type ProviderContext,
+    type ProviderBase,
+    type FormattingCapability,
+    type CompletionCapability,
+    type DataCapability,
+    type FoldingCapability,
+    type FeatureGateCapability,
+    type CompilationCapability,
+} from "../language-provider";
 import { createIsInsideComment } from "../shared/comment-check";
 import { stripCommentsWeidu } from "../shared/format-utils";
 import { getFormatOptions } from "../shared/format-options";
@@ -29,14 +40,20 @@ const BAF_COMMENT_TYPES: ReadonlySet<string> = new Set([SyntaxType.Comment, Synt
 const isInsideComment = createIsInsideComment(isInitialized, parseWithCache, BAF_COMMENT_TYPES);
 
 /** BAF block-level node types for code folding. */
-const BAF_FOLDABLE_TYPES = new Set([
-    SyntaxType.Block,
-    SyntaxType.Response,
-]);
+const BAF_FOLDABLE_TYPES = new Set([SyntaxType.Block, SyntaxType.Response]);
 
 const bafFoldingRanges = createFoldingRangesProvider(isInitialized, parseWithCache, BAF_FOLDABLE_TYPES);
 
-class WeiduBafProvider implements ProviderBase, FormattingCapability, CompletionCapability, DataCapability, FoldingCapability, FeatureGateCapability, CompilationCapability {
+class WeiduBafProvider
+    implements
+        ProviderBase,
+        FormattingCapability,
+        CompletionCapability,
+        DataCapability,
+        FoldingCapability,
+        FeatureGateCapability,
+        CompilationCapability
+{
     readonly id = LANG_WEIDU_BAF;
     private symbolStore: Symbols | undefined;
     private storedContext: ProviderContext | undefined;

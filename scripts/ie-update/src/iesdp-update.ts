@@ -46,10 +46,7 @@ function loadActions(iesdpDir: string): readonly ActionItem[] {
     const actions: ActionItem[] = [];
     for (const f of actionFiles) {
         const action: ActionItem = validateActionItem(YAML.parse(fs.readFileSync(f, "utf8")), f);
-        if (
-            (action.bg2 !== undefined && action.bg2 === 1) ||
-            (action.bgee !== undefined && action.bgee === 1)
-        ) {
+        if ((action.bg2 !== undefined && action.bg2 === 1) || (action.bgee !== undefined && action.bgee === 1)) {
             actions.push(action);
         }
     }
@@ -70,12 +67,8 @@ function buildActionsCompletion(
 ): readonly CompletionItem[] {
     const parentsBg2 = actions.filter((x) => x.bg2 !== undefined && x.alias === undefined);
     const aliasesBg2 = actions.filter((x) => x.bg2 !== undefined && x.alias !== undefined);
-    const parentsBgee = actions.filter(
-        (x) => x.bgee !== undefined && x.bg2 === undefined && x.alias === undefined
-    );
-    const aliasesBgee = actions.filter(
-        (x) => x.bgee !== undefined && x.bg2 === undefined && x.alias !== undefined
-    );
+    const parentsBgee = actions.filter((x) => x.bgee !== undefined && x.bg2 === undefined && x.alias === undefined);
+    const aliasesBgee = actions.filter((x) => x.bgee !== undefined && x.bg2 === undefined && x.alias !== undefined);
 
     // Priority: classic actions > classic aliases > EE in the same order
     let actionsUnique = appendUnique([], parentsBg2);
@@ -107,10 +100,7 @@ function buildActionsCompletion(
 /**
  * Writes BAF completion data to YAML file.
  */
-function writeActionsCompletion(
-    dataBaf: string,
-    items: readonly CompletionItem[],
-): void {
+function writeActionsCompletion(dataBaf: string, items: readonly CompletionItem[]): void {
     const bafDataDoc = YAML.parseDocument(fs.readFileSync(dataBaf, "utf8"));
     const actionsNode = bafDataDoc.get(ACTIONS_STANZA, true);
     if (!isMap(actionsNode)) {
@@ -118,20 +108,13 @@ function writeActionsCompletion(
     }
     const itemsSeq = createItemsSeq(bafDataDoc, items, true);
     actionsNode.set("items", itemsSeq);
-    fs.writeFileSync(
-        dataBaf,
-        bafDataDoc.toString({ lineWidth: 4096, indent: 2, indentSeq: true }),
-        "utf8"
-    );
+    fs.writeFileSync(dataBaf, bafDataDoc.toString({ lineWidth: 4096, indent: 2, indentSeq: true }), "utf8");
 }
 
 /**
  * Writes BAF trigger completion data to YAML file.
  */
-function writeTriggersCompletion(
-    dataBaf: string,
-    items: readonly CompletionItem[],
-): void {
+function writeTriggersCompletion(dataBaf: string, items: readonly CompletionItem[]): void {
     const bafDataDoc = YAML.parseDocument(fs.readFileSync(dataBaf, "utf8"));
     let triggersNode = bafDataDoc.get(TRIGGERS_STANZA, true);
     if (!isMap(triggersNode)) {
@@ -144,20 +127,13 @@ function writeTriggersCompletion(
     triggersNode.set("type", 3);
     const itemsSeq = createItemsSeq(bafDataDoc, items, true);
     triggersNode.set("items", itemsSeq);
-    fs.writeFileSync(
-        dataBaf,
-        bafDataDoc.toString({ lineWidth: 4096, indent: 2, indentSeq: true }),
-        "utf8"
-    );
+    fs.writeFileSync(dataBaf, bafDataDoc.toString({ lineWidth: 4096, indent: 2, indentSeq: true }), "utf8");
 }
 
 /**
  * Loads action YAML files, deduplicates, and writes BAF completion data.
  */
-function processActions(
-    iesdpDir: string,
-    dataBaf: string,
-): void {
+function processActions(iesdpDir: string, dataBaf: string): void {
     const actions = loadActions(iesdpDir);
 
     const iesdpGamesFile = path.join(iesdpDir, "_data", "games.yml");
@@ -174,10 +150,7 @@ function processActions(
 /**
  * Loads trigger HTML, extracts completion items, and writes BAF completion data.
  */
-function processTriggers(
-    iesdpDir: string,
-    dataBaf: string,
-): void {
+function processTriggers(iesdpDir: string, dataBaf: string): void {
     const triggersFile = path.join(iesdpDir, BGEE_TRIGGERS_PATH);
     const html = fs.readFileSync(triggersFile, "utf8");
     const pageUrl = new URL(BGEE_TRIGGERS_PATH, IESDP_BASE_URL).toString();
@@ -198,9 +171,7 @@ function main(): void {
     const dataBaf = values["data-baf"];
 
     if (!iesdpDir || !dataBaf) {
-        console.error(
-            "Usage: iesdp-update -s <iesdp_dir> --data-baf <path>"
-        );
+        console.error("Usage: iesdp-update -s <iesdp_dir> --data-baf <path>");
         process.exit(1);
     }
 

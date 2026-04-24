@@ -144,7 +144,7 @@ end
 
             // Should find at least: usage in den.h + usage in global.h
             expect(refs.length).toBeGreaterThanOrEqual(2);
-            const uris = new Set(refs.map(r => r.uri));
+            const uris = new Set(refs.map((r) => r.uri));
             expect(uris).toContain(denHUri);
             expect(uris).toContain(globalHUri);
         });
@@ -197,7 +197,7 @@ end
             // Find references from den.h (where symbol is "external")
             const refs = findReferences(denHText, { line: 1, character: 31 }, denHUri, true, refsIndex);
 
-            const uris = new Set(refs.map(r => r.uri));
+            const uris = new Set(refs.map((r) => r.uri));
             // Should include: den.h (local usage) + global.h (definition) + .ssl file (direct usage)
             expect(uris).toContain(denHUri);
             expect(uris).toContain(globalHUri);
@@ -225,14 +225,17 @@ procedure main begin
 end
 `;
             const otherUri = "file:///other.ssl" as const;
-            const crossLoc = { uri: otherUri, range: { start: { line: 5, character: 4 }, end: { line: 5, character: 10 } } };
+            const crossLoc = {
+                uri: otherUri,
+                range: { start: { line: 5, character: 4 }, end: { line: 5, character: 10 } },
+            };
             const index = new ReferencesIndex();
             index.updateFile(otherUri, new Map([["helper", [crossLoc]]]));
 
             // cursor on "helper" definition
             const refs = findReferences(text, { line: 1, character: 10 }, TEST_URI, true, index);
             // local (def + call) + cross-file ref
-            const crossRefs = refs.filter(r => r.uri === otherUri);
+            const crossRefs = refs.filter((r) => r.uri === otherUri);
             expect(crossRefs).toHaveLength(1);
             expect(crossRefs[0]).toEqual(crossLoc);
         });
@@ -244,7 +247,10 @@ procedure main begin
     call helper;
 end
 `;
-            const selfLoc = { uri: TEST_URI, range: { start: { line: 3, character: 4 }, end: { line: 3, character: 10 } } };
+            const selfLoc = {
+                uri: TEST_URI,
+                range: { start: { line: 3, character: 4 }, end: { line: 3, character: 10 } },
+            };
             const index = new ReferencesIndex();
             // Add index entry for same URI — should be filtered
             index.updateFile(TEST_URI, new Map([["helper", [selfLoc]]]));

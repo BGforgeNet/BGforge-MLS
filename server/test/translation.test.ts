@@ -251,7 +251,6 @@ describe("Translation", () => {
             // Should be null because td uses tra() format, not msg format
             expect(hover).toBeNull();
         });
-
     });
 
     describe("regular typescript files (.ts)", () => {
@@ -354,12 +353,7 @@ describe("Translation", () => {
 
             // With @tra comment, should resolve
             const textWithComment = `/** @tra test.msg */\nconst x = mstr(100);`;
-            const hoverWithComment = strictTranslation.getHover(
-                uri,
-                "typescript",
-                "mstr(100",
-                textWithComment
-            );
+            const hoverWithComment = strictTranslation.getHover(uri, "typescript", "mstr(100", textWithComment);
 
             expect(hoverWithComment).not.toBeNull();
         });
@@ -837,9 +831,7 @@ translation~`;
             const newText = `@100 = ~Updated text~\n@200 = ~New entry~`;
 
             // Should not throw -- verifies the reload path works
-            expect(() =>
-                translation.reloadFile(traUri, "weidu-tra", newText)
-            ).not.toThrow();
+            expect(() => translation.reloadFile(traUri, "weidu-tra", newText)).not.toThrow();
         });
 
         it("ignores files with unknown language ID", async () => {
@@ -849,9 +841,7 @@ translation~`;
             const newText = `@100 = ~Updated text~`;
 
             // Non-translation langId should be silently ignored
-            expect(() =>
-                translation.reloadFile(traUri, "typescript", newText)
-            ).not.toThrow();
+            expect(() => translation.reloadFile(traUri, "typescript", newText)).not.toThrow();
         });
     });
 });

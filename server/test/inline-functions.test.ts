@@ -14,50 +14,55 @@ import type { InlineFunc } from "../../transpilers/tssl/src/types";
 describe("generateInlineMacros", () => {
     it("generates basic inline macro without params", () => {
         const inlineFuncs = new Map<string, InlineFunc>([
-            ["dude_charisma", {
-                targetFunc: "get_critter_stat",
-                args: [
-                    { type: "constant", value: "dude_obj" },
-                    { type: "constant", value: "STAT_ch" },
-                ],
-                params: [],
-            }],
+            [
+                "dude_charisma",
+                {
+                    targetFunc: "get_critter_stat",
+                    args: [
+                        { type: "constant", value: "dude_obj" },
+                        { type: "constant", value: "STAT_ch" },
+                    ],
+                    params: [],
+                },
+            ],
         ]);
         const used = new Set(["dude_charisma"]);
 
         const macros = generateInlineMacros(inlineFuncs, used, new Set());
-        expect(macros).toEqual([
-            "#define dude_charisma get_critter_stat(dude_obj, STAT_ch)",
-        ]);
+        expect(macros).toEqual(["#define dude_charisma get_critter_stat(dude_obj, STAT_ch)"]);
     });
 
     it("generates inline macro with params", () => {
         const inlineFuncs = new Map<string, InlineFunc>([
-            ["set_stat", {
-                targetFunc: "set_critter_stat",
-                args: [
-                    { type: "constant", value: "dude_obj" },
-                    { type: "param", value: "stat" },
-                    { type: "param", value: "val" },
-                ],
-                params: ["stat", "val"],
-            }],
+            [
+                "set_stat",
+                {
+                    targetFunc: "set_critter_stat",
+                    args: [
+                        { type: "constant", value: "dude_obj" },
+                        { type: "param", value: "stat" },
+                        { type: "param", value: "val" },
+                    ],
+                    params: ["stat", "val"],
+                },
+            ],
         ]);
         const used = new Set(["set_stat"]);
 
         const macros = generateInlineMacros(inlineFuncs, used, new Set());
-        expect(macros).toEqual([
-            "#define set_stat(stat, val) set_critter_stat(dude_obj, stat, val)",
-        ]);
+        expect(macros).toEqual(["#define set_stat(stat, val) set_critter_stat(dude_obj, stat, val)"]);
     });
 
     it("skips unused inline functions", () => {
         const inlineFuncs = new Map<string, InlineFunc>([
-            ["unused_fn", {
-                targetFunc: "some_func",
-                args: [{ type: "constant", value: "1" }],
-                params: [],
-            }],
+            [
+                "unused_fn",
+                {
+                    targetFunc: "some_func",
+                    args: [{ type: "constant", value: "1" }],
+                    params: [],
+                },
+            ],
         ]);
         const used = new Set<string>();
 
@@ -67,102 +72,101 @@ describe("generateInlineMacros", () => {
 
     it("expands enum property access in constant args", () => {
         const inlineFuncs = new Map<string, InlineFunc>([
-            ["dude_charisma", {
-                targetFunc: "get_critter_stat",
-                args: [
-                    { type: "constant", value: "dude_obj" },
-                    { type: "constant", value: "STAT.ch" },
-                ],
-                params: [],
-            }],
+            [
+                "dude_charisma",
+                {
+                    targetFunc: "get_critter_stat",
+                    args: [
+                        { type: "constant", value: "dude_obj" },
+                        { type: "constant", value: "STAT.ch" },
+                    ],
+                    params: [],
+                },
+            ],
         ]);
         const used = new Set(["dude_charisma"]);
         const enumNames = new Set(["STAT"]);
 
         const macros = generateInlineMacros(inlineFuncs, used, enumNames);
-        expect(macros).toEqual([
-            "#define dude_charisma get_critter_stat(dude_obj, STAT_ch)",
-        ]);
+        expect(macros).toEqual(["#define dude_charisma get_critter_stat(dude_obj, STAT_ch)"]);
     });
 
     it("expands multiple enum accesses in same arg list", () => {
         const inlineFuncs = new Map<string, InlineFunc>([
-            ["multi_enum", {
-                targetFunc: "some_func",
-                args: [
-                    { type: "constant", value: "STAT.ch" },
-                    { type: "constant", value: "SKILL.lockpick" },
-                    { type: "param", value: "x" },
-                ],
-                params: ["x"],
-            }],
+            [
+                "multi_enum",
+                {
+                    targetFunc: "some_func",
+                    args: [
+                        { type: "constant", value: "STAT.ch" },
+                        { type: "constant", value: "SKILL.lockpick" },
+                        { type: "param", value: "x" },
+                    ],
+                    params: ["x"],
+                },
+            ],
         ]);
         const used = new Set(["multi_enum"]);
         const enumNames = new Set(["STAT", "SKILL"]);
 
         const macros = generateInlineMacros(inlineFuncs, used, enumNames);
-        expect(macros).toEqual([
-            "#define multi_enum(x) some_func(STAT_ch, SKILL_lockpick, x)",
-        ]);
+        expect(macros).toEqual(["#define multi_enum(x) some_func(STAT_ch, SKILL_lockpick, x)"]);
     });
 
     it("does not modify param args even if they look like enums", () => {
         const inlineFuncs = new Map<string, InlineFunc>([
-            ["fn", {
-                targetFunc: "target",
-                args: [
-                    { type: "param", value: "STAT.ch" },
-                ],
-                params: ["STAT.ch"],
-            }],
+            [
+                "fn",
+                {
+                    targetFunc: "target",
+                    args: [{ type: "param", value: "STAT.ch" }],
+                    params: ["STAT.ch"],
+                },
+            ],
         ]);
         const used = new Set(["fn"]);
         const enumNames = new Set(["STAT"]);
 
         const macros = generateInlineMacros(inlineFuncs, used, enumNames);
         // Param args should not be transformed
-        expect(macros).toEqual([
-            "#define fn(STAT.ch) target(STAT.ch)",
-        ]);
+        expect(macros).toEqual(["#define fn(STAT.ch) target(STAT.ch)"]);
     });
 
     it("does not expand property access for non-enum names", () => {
         const inlineFuncs = new Map<string, InlineFunc>([
-            ["fn", {
-                targetFunc: "target",
-                args: [
-                    { type: "constant", value: "obj.prop" },
-                ],
-                params: [],
-            }],
+            [
+                "fn",
+                {
+                    targetFunc: "target",
+                    args: [{ type: "constant", value: "obj.prop" }],
+                    params: [],
+                },
+            ],
         ]);
         const used = new Set(["fn"]);
         const enumNames = new Set(["STAT"]);
 
         const macros = generateInlineMacros(inlineFuncs, used, enumNames);
         // obj is not an enum name, so it should remain as-is
-        expect(macros).toEqual([
-            "#define fn target(obj.prop)",
-        ]);
+        expect(macros).toEqual(["#define fn target(obj.prop)"]);
     });
 
     it("handles empty enum names set", () => {
         const inlineFuncs = new Map<string, InlineFunc>([
-            ["fn", {
-                targetFunc: "target",
-                args: [
-                    { type: "constant", value: "STAT.ch" },
-                ],
-                params: [],
-            }],
+            [
+                "fn",
+                {
+                    targetFunc: "target",
+                    args: [{ type: "constant", value: "STAT.ch" }],
+                    params: [],
+                },
+            ],
         ]);
         const used = new Set(["fn"]);
 
         const macros = generateInlineMacros(inlineFuncs, used, new Set());
         // No enum names, so no expansion
-        expect(macros).toEqual([
-            "#define fn target(STAT.ch)",
-        ]);
+        expect(macros).toEqual(["#define fn target(STAT.ch)"]);
     });
 });
 
@@ -257,7 +261,9 @@ describe("extractInlineFunctionsFromFiles", () => {
 
     it("extracts @inline function from file given absolute path", () => {
         try {
-            const filePath = writeTmpFile("utils.ts", `
+            const filePath = writeTmpFile(
+                "utils.ts",
+                `
 /**
  * Logs a message to debug.log.
  * @param msg log message
@@ -266,7 +272,8 @@ describe("extractInlineFunctionsFromFiles", () => {
 export function ndebug(msg: string): void {
     debug_msg(SCRIPT_REALNAME + ": " + msg);
 }
-`);
+`,
+            );
             const project = new Project();
             const result = extractInlineFunctionsFromFiles(project, [filePath]);
             expect(result.has("ndebug")).toBe(true);
@@ -288,10 +295,13 @@ export function ndebug(msg: string): void {
         try {
             // Simulate the bug: esbuild metafile returns paths relative to absWorkingDir,
             // which differs from process.cwd(). The relative path won't resolve.
-            const filePath = writeTmpFile("lib.ts", `
+            const filePath = writeTmpFile(
+                "lib.ts",
+                `
 /** @inline */
 export function foo(): void { bar(); }
-`);
+`,
+            );
             const project = new Project();
             // Use a path relative to tmpDir, not cwd — this simulates the absWorkingDir mismatch
             const relativePath = path.relative(tmpDir, filePath);

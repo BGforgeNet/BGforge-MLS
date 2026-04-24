@@ -41,9 +41,7 @@ describe("CLI smoke tests — entry-point presence and startup", () => {
             .filter(([, p]) => !fs.existsSync(p))
             .map(([name]) => name);
         if (missing.length > 0) {
-            throw new Error(
-                `CLI bundle(s) not built: ${missing.join(", ")}. Run: pnpm build`,
-            );
+            throw new Error(`CLI bundle(s) not built: ${missing.join(", ")}. Run: pnpm build`);
         }
     });
 

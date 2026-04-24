@@ -14,7 +14,7 @@ export function slugify(label: string): string {
     }
 
     const parts = normalized.split(/\s+/);
-    return parts.map((part, index) => index === 0 ? part : `${part[0]!.toUpperCase()}${part.slice(1)}`).join("");
+    return parts.map((part, index) => (index === 0 ? part : `${part[0]!.toUpperCase()}${part.slice(1)}`)).join("");
 }
 
 export function makeUniqueKey(baseKey: string, usedKeys: Map<string, number>): string {
@@ -23,12 +23,21 @@ export function makeUniqueKey(baseKey: string, usedKeys: Map<string, number>): s
     return count === 0 ? baseKey : `${baseKey}${count + 1}`;
 }
 
-export function parseScalarFieldValue(format: string, fieldKey: string, field: ParsedField): string | number | boolean | null {
+export function parseScalarFieldValue(
+    format: string,
+    fieldKey: string,
+    field: ParsedField,
+): string | number | boolean | null {
     if (typeof field.rawValue === "number" || typeof field.rawValue === "string") {
         return field.rawValue;
     }
 
-    if (typeof field.value === "number" || typeof field.value === "string" || typeof field.value === "boolean" || field.value === null) {
+    if (
+        typeof field.value === "number" ||
+        typeof field.value === "string" ||
+        typeof field.value === "boolean" ||
+        field.value === null
+    ) {
         if (typeof field.value === "string") {
             const lookedUp = resolveRawValueFromDisplay(format, fieldKey, field.name, field.value);
             if (lookedUp !== undefined) {

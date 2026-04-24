@@ -20,10 +20,7 @@ const DISPLAY_TYPE_NAMES: Readonly<Record<string, string>> = {
  * Resolves the description for an aliased action by looking up the parent action.
  * Returns false if the parent action is unknown.
  */
-export function actionAliasDesc(
-    actions: readonly ActionItem[],
-    action: ActionItem
-): string | false {
+export function actionAliasDesc(actions: readonly ActionItem[], action: ActionItem): string | false {
     const num = action.alias === true ? action.n : action.alias;
     const parent = actions.find((x) => x.n === num && x.alias === undefined);
 
@@ -45,7 +42,7 @@ export function actionDesc(
     actions: readonly ActionItem[],
     action: ActionItem,
     iesdpGames: readonly IESDPGame[],
-    iesdpBaseUrl: string
+    iesdpBaseUrl: string,
 ): string | false {
     let desc: string | false;
 
@@ -82,7 +79,7 @@ export function actionDescAbsoluteUrls(
     desc: string,
     games: readonly IESDPGame[],
     gameName: string,
-    iesdpBaseUrl: string
+    iesdpBaseUrl: string,
 ): string {
     const game = games.find((x) => x.name === gameName);
     if (game === undefined) {
@@ -167,17 +164,14 @@ function replaceTriggerLinkIncludes(desc: string, currentUrl: string): string {
 
     return desc.replace(
         /\{%-?\s*assign\s+text\s*=\s*"([\s\S]*?)"\s*-?%\}\s*\{%-?\s*assign\s+anchor\s*=\s*"([^"]+)"\s*-?%\}\s*\{%-?\s*include\s+trigger_link\.html\s*-?%\}/g,
-        (_m, text: string, anchor: string) => `[${htmlInlineToText(text)}](${triggerUrl}#${anchor})`
+        (_m, text: string, anchor: string) => `[${htmlInlineToText(text)}](${triggerUrl}#${anchor})`,
     );
 }
 /**
  * Appends actions to the list, skipping those whose name already exists.
  * Returns a new array (does not mutate the input).
  */
-export function appendUnique(
-    actions: readonly ActionItem[],
-    newActions: readonly ActionItem[]
-): readonly ActionItem[] {
+export function appendUnique(actions: readonly ActionItem[], newActions: readonly ActionItem[]): readonly ActionItem[] {
     const result = [...actions];
     for (const newAction of newActions) {
         if (/^reserved\d*$/i.test(newAction.name)) {

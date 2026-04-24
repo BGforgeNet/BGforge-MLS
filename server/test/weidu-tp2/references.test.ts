@@ -151,7 +151,10 @@ DEFINE_ACTION_FUNCTION my_func BEGIN END
 LAF my_func END
 `;
             const otherUri = "file:///other.tp2" as const;
-            const crossLoc = { uri: otherUri, range: { start: { line: 0, character: 4 }, end: { line: 0, character: 11 } } };
+            const crossLoc = {
+                uri: otherUri,
+                range: { start: { line: 0, character: 4 }, end: { line: 0, character: 11 } },
+            };
 
             const index = new ReferencesIndex();
             index.updateFile(otherUri, new Map([["my_func", [crossLoc]]]));
@@ -159,7 +162,7 @@ LAF my_func END
             // cursor on definition
             const refs = findReferences(text, { line: 1, character: 23 }, TEST_URI, true, index);
             // local (definition + call) + cross-file ref from other.tp2
-            const crossRefs = refs.filter(r => r.uri === otherUri);
+            const crossRefs = refs.filter((r) => r.uri === otherUri);
             expect(crossRefs).toHaveLength(1);
             expect(crossRefs[0]).toEqual(crossLoc);
         });
@@ -169,7 +172,10 @@ LAF my_func END
 DEFINE_ACTION_FUNCTION my_func BEGIN END
 LAF my_func END
 `;
-            const selfLoc = { uri: TEST_URI, range: { start: { line: 2, character: 4 }, end: { line: 2, character: 11 } } };
+            const selfLoc = {
+                uri: TEST_URI,
+                range: { start: { line: 2, character: 4 }, end: { line: 2, character: 11 } },
+            };
 
             const index = new ReferencesIndex();
             // Same URI as TEST_URI — should be filtered out (loc.uri !== uri check)
@@ -188,12 +194,25 @@ OUTER_SET result = %my_var% + 1
 `;
             const otherUri = "file:///other.tp2" as const;
             const index = new ReferencesIndex();
-            index.updateFile(otherUri, new Map([["my_var", [{ uri: otherUri, range: { start: { line: 0, character: 0 }, end: { line: 0, character: 6 } } }]]]));
+            index.updateFile(
+                otherUri,
+                new Map([
+                    [
+                        "my_var",
+                        [
+                            {
+                                uri: otherUri,
+                                range: { start: { line: 0, character: 0 }, end: { line: 0, character: 6 } },
+                            },
+                        ],
+                    ],
+                ]),
+            );
 
             // cursor on variable declaration — kind is "variable", not "function"
             const refs = findReferences(text, { line: 1, character: 10 }, TEST_URI, true, index);
             // No cross-file refs for variable symbols
-            const crossRefs = refs.filter(r => r.uri === otherUri);
+            const crossRefs = refs.filter((r) => r.uri === otherUri);
             expect(crossRefs).toHaveLength(0);
         });
     });

@@ -33,9 +33,7 @@ describe("getOffsetPrefix", () => {
     });
 
     it("generates prefix for custom data file names", () => {
-        expect(getOffsetPrefix("spl_v1", "casting_feature_block.yml")).toBe(
-            "SPL_CASTING_FEATURE_BLOCK_"
-        );
+        expect(getOffsetPrefix("spl_v1", "casting_feature_block.yml")).toBe("SPL_CASTING_FEATURE_BLOCK_");
     });
 
     it("handles versions with dots", () => {
@@ -114,9 +112,7 @@ describe("getOffsetSize", () => {
     });
 
     it("throws on unknown type", () => {
-        expect(() => getOffsetSize({ type: "unknown_type", desc: "x" })).toThrow(
-            "Unknown offset type"
-        );
+        expect(() => getOffsetSize({ type: "unknown_type", desc: "x" })).toThrow("Unknown offset type");
     });
 });
 
@@ -126,15 +122,11 @@ describe("validateOffset", () => {
     });
 
     it("does not throw when offset matches", () => {
-        expect(() =>
-            validateOffset(4, { type: "dword", desc: "x", offset: 4 })
-        ).not.toThrow();
+        expect(() => validateOffset(4, { type: "dword", desc: "x", offset: 4 })).not.toThrow();
     });
 
     it("throws on offset mismatch", () => {
-        expect(() =>
-            validateOffset(4, { type: "dword", desc: "x", offset: 8 })
-        ).toThrow("Offset mismatch");
+        expect(() => validateOffset(4, { type: "dword", desc: "x", offset: 8 })).toThrow("Offset mismatch");
     });
 });
 
@@ -167,7 +159,7 @@ describe("offsetsToDefinition", () => {
             new Map([
                 ["ITM_flags", "0x0"],
                 ["ITM_type", "0x4"],
-            ])
+            ]),
         );
     });
 
@@ -182,7 +174,7 @@ describe("offsetsToDefinition", () => {
             new Map([
                 ["P_flags", "0x0"],
                 ["P_type", "0x8"],
-            ])
+            ]),
         );
     });
 

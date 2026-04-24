@@ -74,7 +74,7 @@ describe("weidu-d/format/core", () => {
             // Newline inside string is preserved (string split across lines)
             expect(output).toContain('~Global("x",');
             expect(output).toContain('"y")~');
-            expect(output).toContain('\n');
+            expect(output).toContain("\n");
         });
 
         it("preserves multiple spaces in strings", () => {
@@ -119,7 +119,9 @@ describe("weidu-d/format/core", () => {
                 const input = `///////////////////////////////////////////////////////////////////////\n// comment\n///////////////////////////////////////////////////////////////////////\n`;
                 const output = format(input);
                 expect(output).toContain("///////////////////////////////////////////////////////////////////////");
-                expect(output).not.toContain("// /////////////////////////////////////////////////////////////////////");
+                expect(output).not.toContain(
+                    "// /////////////////////////////////////////////////////////////////////",
+                );
             });
 
             it("preserves shorter decorative separators", () => {

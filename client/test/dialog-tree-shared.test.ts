@@ -33,7 +33,7 @@ describe("escapeHtml", () => {
 
     it("escapes all five characters in one string", () => {
         expect(escapeHtml(`<div class="x" data-name='a&b'>`)).toBe(
-            "&lt;div class=&quot;x&quot; data-name=&#39;a&amp;b&#39;&gt;"
+            "&lt;div class=&quot;x&quot; data-name=&#39;a&amp;b&#39;&gt;",
         );
     });
 

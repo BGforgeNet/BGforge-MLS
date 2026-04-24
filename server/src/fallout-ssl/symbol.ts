@@ -13,7 +13,13 @@ import { parseWithCache, isInitialized } from "./parser";
 import { extractProcedures, makeRange, extractMacros } from "./utils";
 import { SyntaxType } from "./tree-sitter.d";
 
-function makeSymbol(node: Node, nameNode: Node, kind: SymbolKind, detail?: string, children?: DocumentSymbol[]): DocumentSymbol | null {
+function makeSymbol(
+    node: Node,
+    nameNode: Node,
+    kind: SymbolKind,
+    detail?: string,
+    children?: DocumentSymbol[],
+): DocumentSymbol | null {
     const name = nameNode.text;
     if (!name) {
         return null;
@@ -91,12 +97,15 @@ function extractSymbols(root: Node): DocumentSymbol[] {
         const nameNode = node.childForFieldName("name");
         if (!nameNode) continue;
 
-        const children = [
-            ...collectProcParams(node, name),
-            ...collectProcBodyVars(node, name),
-        ];
+        const children = [...collectProcParams(node, name), ...collectProcBodyVars(node, name)];
 
-        const sym = makeSymbol(node, nameNode, SymbolKind.Function, undefined, children.length > 0 ? children : undefined);
+        const sym = makeSymbol(
+            node,
+            nameNode,
+            SymbolKind.Function,
+            undefined,
+            children.length > 0 ? children : undefined,
+        );
         if (sym) procSymbols.push(sym);
     }
 
@@ -113,14 +122,12 @@ function extractSymbols(root: Node): DocumentSymbol[] {
                     if (!nameNode) continue;
 
                     const name = nameNode.text;
-                    const macro = macros.find(m => m.name === name);
+                    const macro = macros.find((m) => m.name === name);
                     if (!macro) continue;
 
                     // Determine symbol kind: parameterized macros → Method,
                     // constant-like macros → Constant
-                    const kind = macro.hasParams
-                        ? SymbolKind.Method
-                        : SymbolKind.Constant;
+                    const kind = macro.hasParams ? SymbolKind.Method : SymbolKind.Constant;
 
                     const sym = makeSymbol(child, nameNode, kind);
                     if (sym) macroSymbols.push(sym);

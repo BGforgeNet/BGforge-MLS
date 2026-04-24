@@ -76,9 +76,12 @@ function tryIncludeDefinition(root: Node, position: Position, uri: string): Loca
     // Only trigger when cursor is on the path string, not the #include keyword
     const ps = pathNode.startPosition;
     const pe = pathNode.endPosition;
-    if (position.line < ps.row || position.line > pe.row
-        || (position.line === ps.row && position.character < ps.column)
-        || (position.line === pe.row && position.character >= pe.column)) {
+    if (
+        position.line < ps.row ||
+        position.line > pe.row ||
+        (position.line === ps.row && position.character < ps.column) ||
+        (position.line === pe.row && position.character >= pe.column)
+    ) {
         return null;
     }
 

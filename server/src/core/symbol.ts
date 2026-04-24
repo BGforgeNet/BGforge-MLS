@@ -36,21 +36,21 @@ import {
  */
 export const enum SymbolKind {
     // Callables
-    Function = "function",       // TP2 DEFINE_*_FUNCTION
-    Procedure = "procedure",     // SSL procedure
-    Macro = "macro",             // SSL #define or TP2 DEFINE_*_MACRO
-    Action = "action",           // WeiDU action (BAF/D/TP2)
-    Trigger = "trigger",         // WeiDU trigger (BAF/D)
+    Function = "function", // TP2 DEFINE_*_FUNCTION
+    Procedure = "procedure", // SSL procedure
+    Macro = "macro", // SSL #define or TP2 DEFINE_*_MACRO
+    Action = "action", // WeiDU action (BAF/D/TP2)
+    Trigger = "trigger", // WeiDU trigger (BAF/D)
 
     // Data
-    Variable = "variable",       // General variable
-    Constant = "constant",       // Constant value
-    Parameter = "parameter",     // Function/procedure parameter
+    Variable = "variable", // General variable
+    Constant = "constant", // Constant value
+    Parameter = "parameter", // Function/procedure parameter
     LoopVariable = "loop_variable", // Loop iteration variable
 
     // Structures
-    State = "state",             // Dialog state (D files)
-    Component = "component",     // TP2 component
+    State = "state", // Dialog state (D files)
+    Component = "component", // TP2 component
 }
 
 // =============================================================================
@@ -62,11 +62,11 @@ export const enum SymbolKind {
  * Listed from broadest to narrowest scope.
  */
 export const enum ScopeLevel {
-    Global = "global",           // Built-in/static symbols
-    Workspace = "workspace",     // From workspace headers (.h, .tph)
-    File = "file",               // Script-scope (SSL) or file-scope (TP2)
-    Function = "function",       // Inside procedure (SSL) or function (TP2)
-    Loop = "loop",               // Loop variables (TP2 PHP_EACH, FOR_EACH)
+    Global = "global", // Built-in/static symbols
+    Workspace = "workspace", // From workspace headers (.h, .tph)
+    File = "file", // Script-scope (SSL) or file-scope (TP2)
+    Function = "function", // Inside procedure (SSL) or function (TP2)
+    Loop = "loop", // Loop variables (TP2 PHP_EACH, FOR_EACH)
 }
 
 /**
@@ -92,13 +92,12 @@ export interface SymbolScope {
  * Where the symbol data originated from.
  */
 export const enum SourceType {
-    Static = "static",           // Built-in from YAML/JSON data files
-    Workspace = "workspace",     // Parsed from workspace headers
-    External = "external",       // From external headers directory
-    Document = "document",       // From current open document
-    Navigation = "navigation",   // Non-header workspace files (for Ctrl+T search only, excluded from completion)
+    Static = "static", // Built-in from YAML/JSON data files
+    Workspace = "workspace", // Parsed from workspace headers
+    External = "external", // From external headers directory
+    Document = "document", // From current open document
+    Navigation = "navigation", // Non-header workspace files (for Ctrl+T search only, excluded from completion)
 }
-
 
 // =============================================================================
 // Callable Context and Definition Type
@@ -176,7 +175,7 @@ export interface SymbolLocation {
  */
 export interface CallableParam {
     readonly name: string;
-    readonly type?: string;           // "int", "string", "array", etc.
+    readonly type?: string; // "int", "string", "array", etc.
     readonly defaultValue?: string;
     readonly description?: string;
     readonly required?: boolean;
@@ -267,7 +266,12 @@ interface BaseSymbol {
  * Contains CallableInfo with parameter details.
  */
 export interface CallableSymbol extends BaseSymbol {
-    readonly kind: SymbolKind.Function | SymbolKind.Procedure | SymbolKind.Macro | SymbolKind.Action | SymbolKind.Trigger;
+    readonly kind:
+        | SymbolKind.Function
+        | SymbolKind.Procedure
+        | SymbolKind.Macro
+        | SymbolKind.Action
+        | SymbolKind.Trigger;
     readonly callable: CallableInfo;
 }
 

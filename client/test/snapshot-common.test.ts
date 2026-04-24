@@ -12,10 +12,6 @@ describe("snapshot-common", () => {
             type: "enum",
         };
 
-        expect(parseScalarFieldValue(
-            "map",
-            "map.objects.elevations[].objects[].base.rotation",
-            field,
-        )).toBe(0);
+        expect(parseScalarFieldValue("map", "map.objects.elevations[].objects[].base.rotation", field)).toBe(0);
     });
 });

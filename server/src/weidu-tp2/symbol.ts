@@ -14,10 +14,7 @@ import { looksLikeConstant } from "./tree-utils";
 import { SyntaxType } from "./tree-sitter.d";
 
 /** Macro definition types (subset of function defs). */
-const MACRO_DEF_TYPES: ReadonlySet<string> = new Set([
-    SyntaxType.ActionDefineMacro,
-    SyntaxType.ActionDefinePatchMacro,
-]);
+const MACRO_DEF_TYPES: ReadonlySet<string> = new Set([SyntaxType.ActionDefineMacro, SyntaxType.ActionDefinePatchMacro]);
 
 /** Array definition types — shown with Array icon in outline. */
 const ARRAY_DEF_TYPES: ReadonlySet<string> = new Set([
@@ -39,9 +36,7 @@ const FILE_LEVEL_VAR_TYPES: ReadonlySet<string> = new Set([
 ]);
 
 /** File-level loop types that introduce two variables (key + value). */
-const FILE_LEVEL_LOOP_TYPES: ReadonlySet<string> = new Set([
-    SyntaxType.ActionPhpEach,
-]);
+const FILE_LEVEL_LOOP_TYPES: ReadonlySet<string> = new Set([SyntaxType.ActionPhpEach]);
 
 /** Types using varNodes (array) to hold the variable name. */
 const VAR_NODES_TYPES: ReadonlySet<string> = new Set([
@@ -99,10 +94,7 @@ const BODY_VAR_TYPES: ReadonlySet<string> = new Set([
 ]);
 
 /** Loop types that introduce two variables (key + value) in function/macro bodies. */
-const BODY_LOOP_TYPES: ReadonlySet<string> = new Set([
-    SyntaxType.PatchPhpEach,
-    SyntaxType.ActionPhpEach,
-]);
+const BODY_LOOP_TYPES: ReadonlySet<string> = new Set([SyntaxType.PatchPhpEach, SyntaxType.ActionPhpEach]);
 
 /**
  * Extract the first Identifier node from a varNodes array field.
@@ -200,10 +192,7 @@ function extractFileLevelVars(node: Node, seen: Set<string>): DocumentSymbol[] {
 }
 
 /** Parameter declaration types to collect as function children. */
-const PARAM_DECL_TYPES: ReadonlySet<string> = new Set([
-    SyntaxType.IntVarDecl,
-    SyntaxType.StrVarDecl,
-]);
+const PARAM_DECL_TYPES: ReadonlySet<string> = new Set([SyntaxType.IntVarDecl, SyntaxType.StrVarDecl]);
 
 /**
  * Collect INT_VAR and STR_VAR parameter names from a function definition node.

@@ -4,25 +4,85 @@ import { createProCanonicalSnapshot } from "./pro-canonical";
 import { serializePro } from "./pro-serializer";
 import {
     type CritterFieldDef,
-    ObjectType, ItemSubType, ScenerySubType, DamageType, MaterialType,
-    FRMType, BodyType, KillType, ElevatorType, WeaponAnimCode, StatType, ScriptType,
-    HeaderFlags, ItemFlagsExt, WallLightFlags, ActionFlags, ContainerFlags, CritterFlags,
-    HEADER_SIZE, ITEM_COMMON_SIZE, ITEM_SUBTYPE_OFFSET, ITEM_SUBTYPE_SIZES,
-    CRITTER_SIZE, SCENERY_COMMON_SIZE, SCENERY_SUBTYPE_OFFSET, SCENERY_SUBTYPE_SIZES,
-    WALL_SIZE, TILE_SIZE, MISC_SIZE,
-    CRITTER_PROPERTIES, CRITTER_BASE_PRIMARY, CRITTER_BASE_SECONDARY,
-    CRITTER_BASE_DT, CRITTER_BASE_DR, CRITTER_BONUS_PRIMARY, CRITTER_BONUS_SECONDARY,
-    CRITTER_BONUS_DT, CRITTER_BONUS_DR, CRITTER_SKILLS,
+    ObjectType,
+    ItemSubType,
+    ScenerySubType,
+    DamageType,
+    MaterialType,
+    FRMType,
+    BodyType,
+    KillType,
+    ElevatorType,
+    WeaponAnimCode,
+    StatType,
+    ScriptType,
+    HeaderFlags,
+    ItemFlagsExt,
+    WallLightFlags,
+    ActionFlags,
+    ContainerFlags,
+    CritterFlags,
+    HEADER_SIZE,
+    ITEM_COMMON_SIZE,
+    ITEM_SUBTYPE_OFFSET,
+    ITEM_SUBTYPE_SIZES,
+    CRITTER_SIZE,
+    SCENERY_COMMON_SIZE,
+    SCENERY_SUBTYPE_OFFSET,
+    SCENERY_SUBTYPE_SIZES,
+    WALL_SIZE,
+    TILE_SIZE,
+    MISC_SIZE,
+    CRITTER_PROPERTIES,
+    CRITTER_BASE_PRIMARY,
+    CRITTER_BASE_SECONDARY,
+    CRITTER_BASE_DT,
+    CRITTER_BASE_DR,
+    CRITTER_BONUS_PRIMARY,
+    CRITTER_BONUS_SECONDARY,
+    CRITTER_BONUS_DT,
+    CRITTER_BONUS_DR,
+    CRITTER_SKILLS,
 } from "./pro-types";
 import {
-    headerSchema, itemCommonSchema, armorSchema, containerSchema, drugSchema,
-    weaponSchema, ammoSchema, miscItemSchema, keySchema, critterSchema,
-    sceneryCommonSchema, doorSchema, stairsSchema, elevatorSchema, ladderSchema,
-    genericScenerySchema, wallSchema, tileSchema, miscSchema,
-    type HeaderData, type ItemCommonData, type ArmorData, type ContainerData, type DrugData,
-    type WeaponData, type AmmoData, type MiscItemData, type KeyData, type CritterData,
-    type SceneryCommonData, type DoorData, type StairsData, type ElevatorData,
-    type LadderData, type GenericSceneryData, type WallData, type TileData, type MiscData,
+    headerSchema,
+    itemCommonSchema,
+    armorSchema,
+    containerSchema,
+    drugSchema,
+    weaponSchema,
+    ammoSchema,
+    miscItemSchema,
+    keySchema,
+    critterSchema,
+    sceneryCommonSchema,
+    doorSchema,
+    stairsSchema,
+    elevatorSchema,
+    ladderSchema,
+    genericScenerySchema,
+    wallSchema,
+    tileSchema,
+    miscSchema,
+    type HeaderData,
+    type ItemCommonData,
+    type ArmorData,
+    type ContainerData,
+    type DrugData,
+    type WeaponData,
+    type AmmoData,
+    type MiscItemData,
+    type KeyData,
+    type CritterData,
+    type SceneryCommonData,
+    type DoorData,
+    type StairsData,
+    type ElevatorData,
+    type LadderData,
+    type GenericSceneryData,
+    type WallData,
+    type TileData,
+    type MiscData,
 } from "./pro-schemas";
 
 /**
@@ -66,7 +126,7 @@ function field(
     size: number,
     type: ParsedFieldType,
     description?: string,
-    rawValue?: number
+    rawValue?: number,
 ): ParsedField {
     return { name, value, offset, size, type, description, rawValue };
 }
@@ -80,7 +140,7 @@ function enumField(
     lookup: Record<number, string>,
     offset: number,
     size: number,
-    errors: string[]
+    errors: string[],
 ): ParsedField {
     const resolved = lookup[value];
     if (resolved === undefined) {
@@ -97,7 +157,7 @@ function flagsField(
     value: number,
     flagDefs: Record<number, string>,
     offset: number,
-    size: number
+    size: number,
 ): ParsedField {
     const flags = parseFlags(value, flagDefs);
     const display = flags.length > 0 ? flags.join(", ") : "(none)";
@@ -109,21 +169,14 @@ function flagsField(
  * Format: 0xAABBCCCC where AA=ScriptType, BBCCCC=ScriptID
  * Returns [-1, -1] for 0xFFFFFFFF (no script)
  */
-function scriptFields(
-    value: number,
-    offset: number,
-    errors: string[]
-): [ParsedField, ParsedField] {
+function scriptFields(value: number, offset: number, errors: string[]): [ParsedField, ParsedField] {
     // -1 (0xFFFFFFFF) means no script
-    if (value === 0xFF_FF_FF_FF) {
-        return [
-            field("Script Type", -1, offset, 1, "int8"),
-            field("Script ID", -1, offset + 1, 3, "int24"),
-        ];
+    if (value === 0xff_ff_ff_ff) {
+        return [field("Script Type", -1, offset, 1, "int8"), field("Script ID", -1, offset + 1, 3, "int24")];
     }
 
-    const scriptType = (value >> 24) & 0xFF;
-    const scriptId = value & 0x00_FF_FF_FF;
+    const scriptType = (value >> 24) & 0xff;
+    const scriptId = value & 0x00_ff_ff_ff;
     const typeName = ScriptType[scriptType];
 
     if (typeName === undefined) {
@@ -143,7 +196,7 @@ function group(
     name: string,
     fields: (ParsedField | ParsedGroup)[],
     expanded = true,
-    description?: string
+    description?: string,
 ): ParsedGroup {
     return { name, fields, expanded, description };
 }
@@ -151,11 +204,7 @@ function group(
 /**
  * Generate fields from data-driven definitions
  */
-function fieldsFromDefs(
-    defs: CritterFieldDef[],
-    data: Record<string, number>,
-    errors: string[]
-): ParsedField[] {
+function fieldsFromDefs(defs: CritterFieldDef[], data: Record<string, number>, errors: string[]): ParsedField[] {
     return defs.flatMap(([displayName, dataKey, offset, type]) => {
         const value = data[dataKey] ?? 0;
         if (type === "percent") {
@@ -172,10 +221,10 @@ function fieldsFromDefs(
  * Parse header into structured format
  */
 function parseHeader(data: HeaderData, errors: string[]): ParsedGroup {
-    const objectType = (data.objectTypeAndId >> 24) & 0xFF;
-    const objectId = data.objectTypeAndId & 0x00_FF_FF_FF;
-    const frmType = (data.frmTypeAndId >> 24) & 0xFF;
-    const frmId = data.frmTypeAndId & 0x00_FF_FF_FF;
+    const objectType = (data.objectTypeAndId >> 24) & 0xff;
+    const objectId = data.objectTypeAndId & 0x00_ff_ff_ff;
+    const frmType = (data.frmTypeAndId >> 24) & 0xff;
+    const frmId = data.frmTypeAndId & 0x00_ff_ff_ff;
 
     return group("Header", [
         enumField("Object Type", objectType, ObjectType, 0x00, 1, errors),
@@ -183,7 +232,7 @@ function parseHeader(data: HeaderData, errors: string[]): ParsedGroup {
         field("Text ID", data.textId, 0x04, 4, "uint32"),
         enumField("FRM Type", frmType, FRMType, 0x08, 1, errors),
         field("FRM ID", frmId, 0x09, 3, "uint24"),
-        field("Light Radius", data.lightRadius, 0x0C, 4, "uint32", "0-8 hexes"),
+        field("Light Radius", data.lightRadius, 0x0c, 4, "uint32", "0-8 hexes"),
         field("Light Intensity", data.lightIntensity, 0x10, 4, "uint32", "0-65536"),
         flagsField("Flags", data.flags, HeaderFlags, 0x14, 4),
     ]);
@@ -213,24 +262,32 @@ function parseItemCommon(data: ItemCommonData, baseOffset: number, errors: strin
 function parseArmor(data: ArmorData, baseOffset: number): ParsedGroup {
     return group("Armor Stats", [
         field("AC", data.ac, baseOffset, 4, "int32"),
-        group("Damage Resistance", [
-            field("Normal", percent(data.drNormal), baseOffset + 4, 4, "int32"),
-            field("Laser", percent(data.drLaser), baseOffset + 8, 4, "int32"),
-            field("Fire", percent(data.drFire), baseOffset + 12, 4, "int32"),
-            field("Plasma", percent(data.drPlasma), baseOffset + 16, 4, "int32"),
-            field("Electrical", percent(data.drElectrical), baseOffset + 20, 4, "int32"),
-            field("EMP", percent(data.drEmp), baseOffset + 24, 4, "int32"),
-            field("Explosion", percent(data.drExplosion), baseOffset + 28, 4, "int32"),
-        ], false),
-        group("Damage Threshold", [
-            field("Normal", data.dtNormal, baseOffset + 32, 4, "int32"),
-            field("Laser", data.dtLaser, baseOffset + 36, 4, "int32"),
-            field("Fire", data.dtFire, baseOffset + 40, 4, "int32"),
-            field("Plasma", data.dtPlasma, baseOffset + 44, 4, "int32"),
-            field("Electrical", data.dtElectrical, baseOffset + 48, 4, "int32"),
-            field("EMP", data.dtEmp, baseOffset + 52, 4, "int32"),
-            field("Explosion", data.dtExplosion, baseOffset + 56, 4, "int32"),
-        ], false),
+        group(
+            "Damage Resistance",
+            [
+                field("Normal", percent(data.drNormal), baseOffset + 4, 4, "int32"),
+                field("Laser", percent(data.drLaser), baseOffset + 8, 4, "int32"),
+                field("Fire", percent(data.drFire), baseOffset + 12, 4, "int32"),
+                field("Plasma", percent(data.drPlasma), baseOffset + 16, 4, "int32"),
+                field("Electrical", percent(data.drElectrical), baseOffset + 20, 4, "int32"),
+                field("EMP", percent(data.drEmp), baseOffset + 24, 4, "int32"),
+                field("Explosion", percent(data.drExplosion), baseOffset + 28, 4, "int32"),
+            ],
+            false,
+        ),
+        group(
+            "Damage Threshold",
+            [
+                field("Normal", data.dtNormal, baseOffset + 32, 4, "int32"),
+                field("Laser", data.dtLaser, baseOffset + 36, 4, "int32"),
+                field("Fire", data.dtFire, baseOffset + 40, 4, "int32"),
+                field("Plasma", data.dtPlasma, baseOffset + 44, 4, "int32"),
+                field("Electrical", data.dtElectrical, baseOffset + 48, 4, "int32"),
+                field("EMP", data.dtEmp, baseOffset + 52, 4, "int32"),
+                field("Explosion", data.dtExplosion, baseOffset + 56, 4, "int32"),
+            ],
+            false,
+        ),
         field("Perk", data.perk, baseOffset + 60, 4, "int32"),
         field("Male FRM ID", data.maleFrmId, baseOffset + 64, 4, "int32"),
         field("Female FRM ID", data.femaleFrmId, baseOffset + 68, 4, "int32"),
@@ -301,18 +358,26 @@ function parseDrug(data: DrugData, baseOffset: number, errors: string[]): Parsed
             field("Amount 1", data.amount1Instant, baseOffset + 16, 4, "int32"),
             field("Amount 2", data.amount2Instant, baseOffset + 20, 4, "int32"),
         ]),
-        group("Delayed Effect 1", [
-            field("Duration", data.duration1, baseOffset + 24, 4, "int32"),
-            field("Amount 0", data.amount0Delayed1, baseOffset + 28, 4, "int32"),
-            field("Amount 1", data.amount1Delayed1, baseOffset + 32, 4, "int32"),
-            field("Amount 2", data.amount2Delayed1, baseOffset + 36, 4, "int32"),
-        ], false),
-        group("Delayed Effect 2", [
-            field("Duration", data.duration2, baseOffset + 40, 4, "int32"),
-            field("Amount 0", data.amount0Delayed2, baseOffset + 44, 4, "int32"),
-            field("Amount 1", data.amount1Delayed2, baseOffset + 48, 4, "int32"),
-            field("Amount 2", data.amount2Delayed2, baseOffset + 52, 4, "int32"),
-        ], false),
+        group(
+            "Delayed Effect 1",
+            [
+                field("Duration", data.duration1, baseOffset + 24, 4, "int32"),
+                field("Amount 0", data.amount0Delayed1, baseOffset + 28, 4, "int32"),
+                field("Amount 1", data.amount1Delayed1, baseOffset + 32, 4, "int32"),
+                field("Amount 2", data.amount2Delayed1, baseOffset + 36, 4, "int32"),
+            ],
+            false,
+        ),
+        group(
+            "Delayed Effect 2",
+            [
+                field("Duration", data.duration2, baseOffset + 40, 4, "int32"),
+                field("Amount 0", data.amount0Delayed2, baseOffset + 44, 4, "int32"),
+                field("Amount 1", data.amount1Delayed2, baseOffset + 48, 4, "int32"),
+                field("Amount 2", data.amount2Delayed2, baseOffset + 52, 4, "int32"),
+            ],
+            false,
+        ),
         group("Addiction", [
             field("Rate", percent(data.addictionRate), baseOffset + 56, 4, "int32"),
             field("Effect", data.addictionEffect, baseOffset + 60, 4, "int32"),
@@ -350,17 +415,25 @@ function parseCritter(data: CritterData, errors: string[]): ParsedGroup[] {
 
     return [
         group("Critter Properties", [
-            field("Flags Ext", `0x${data.flagsExt.toString(16).padStart(8, "0")}`, 0x18, 4, "flags", undefined, data.flagsExt),
+            field(
+                "Flags Ext",
+                `0x${data.flagsExt.toString(16).padStart(8, "0")}`,
+                0x18,
+                4,
+                "flags",
+                undefined,
+                data.flagsExt,
+            ),
             ...fieldsFromDefs(CRITTER_PROPERTIES, critterData, errors),
-            flagsField("Critter Flags", data.critterFlags, CritterFlags, 0x2C, 4),
+            flagsField("Critter Flags", data.critterFlags, CritterFlags, 0x2c, 4),
         ]),
         group("Base Primary Stats", fieldsFromDefs(CRITTER_BASE_PRIMARY, critterData, errors)),
         group("Base Secondary Stats", fieldsFromDefs(CRITTER_BASE_SECONDARY, critterData, errors)),
         group("Base Damage Threshold", fieldsFromDefs(CRITTER_BASE_DT, critterData, errors), false),
         group("Base Damage Resistance", fieldsFromDefs(CRITTER_BASE_DR, critterData, errors), false),
         group("Demographics", [
-            field("Age", data.age, 0xB4, 4, "int32"),
-            field("Gender", data.gender === 0 ? "Male" : "Female", 0xB8, 4, "enum", undefined, data.gender),
+            field("Age", data.age, 0xb4, 4, "int32"),
+            field("Gender", data.gender === 0 ? "Male" : "Female", 0xb8, 4, "enum", undefined, data.gender),
         ]),
         group("Bonus Primary Stats", fieldsFromDefs(CRITTER_BONUS_PRIMARY, critterData, errors), false),
         group("Bonus Secondary Stats", fieldsFromDefs(CRITTER_BONUS_SECONDARY, critterData, errors), false),
@@ -371,7 +444,7 @@ function parseCritter(data: CritterData, errors: string[]): ParsedGroup[] {
             enumField("Body Type", data.bodyType, BodyType, 0x1_90, 4, errors),
             field("Experience Value", data.expValue, 0x1_94, 4, "uint32"),
             enumField("Kill Type", data.killType, KillType, 0x1_98, 4, errors),
-            enumField("Damage Type", data.damageType, DamageType, 0x1_9C, 4, errors),
+            enumField("Damage Type", data.damageType, DamageType, 0x1_9c, 4, errors),
         ]),
     ];
 }
@@ -379,66 +452,75 @@ function parseCritter(data: CritterData, errors: string[]): ParsedGroup[] {
 /**
  * Parse scenery common and subtypes
  */
-function parseScenery(
-    data: Uint8Array,
-    scenery: SceneryCommonData,
-    errors: string[]
-): ParsedGroup[] {
+function parseScenery(data: Uint8Array, scenery: SceneryCommonData, errors: string[]): ParsedGroup[] {
     const groups: ParsedGroup[] = [];
 
-    groups.push(group("Scenery Properties", [
-        flagsField("Wall Light Flags", scenery.wallLightFlags, WallLightFlags, 0x18, 2),
-        flagsField("Action Flags", scenery.actionFlags, ActionFlags, 0x1A, 2),
-        ...scriptFields(scenery.scriptId, 0x1C, errors),
-        enumField("Sub Type", scenery.subType, ScenerySubType, 0x20, 4, errors),
-        enumField("Material", scenery.materialId, MaterialType, 0x24, 4, errors),
-        field("Sound ID", scenery.soundId, 0x28, 1, "uint8"),
-    ]));
+    groups.push(
+        group("Scenery Properties", [
+            flagsField("Wall Light Flags", scenery.wallLightFlags, WallLightFlags, 0x18, 2),
+            flagsField("Action Flags", scenery.actionFlags, ActionFlags, 0x1a, 2),
+            ...scriptFields(scenery.scriptId, 0x1c, errors),
+            enumField("Sub Type", scenery.subType, ScenerySubType, 0x20, 4, errors),
+            enumField("Material", scenery.materialId, MaterialType, 0x24, 4, errors),
+            field("Sound ID", scenery.soundId, 0x28, 1, "uint8"),
+        ]),
+    );
 
     switch (scenery.subType) {
-        case 0: { // Door
+        case 0: {
+            // Door
             const door: DoorData = doorSchema.read(reader(data, SCENERY_SUBTYPE_OFFSET));
-            groups.push(group("Door Properties", [
-                field("Walk Through", door.walkThruFlag === 0 ? "No" : "Yes", 0x29, 4, "enum"),
-                field("Unknown", door.unknown, 0x2D, 4, "uint32"),
-            ]));
+            groups.push(
+                group("Door Properties", [
+                    field("Walk Through", door.walkThruFlag === 0 ? "No" : "Yes", 0x29, 4, "enum"),
+                    field("Unknown", door.unknown, 0x2d, 4, "uint32"),
+                ]),
+            );
             break;
         }
-        case 1: { // Stairs
+        case 1: {
+            // Stairs
             const stairs: StairsData = stairsSchema.read(reader(data, SCENERY_SUBTYPE_OFFSET));
-            const destTile = stairs.destTileAndElevation & 0x3_FF_FF_FF;
-            const destElev = (stairs.destTileAndElevation >> 26) & 0x3F;
-            groups.push(group("Stairs Properties", [
-                field("Dest Tile", destTile, 0x29, 4, "uint32"),
-                field("Dest Elevation", destElev, 0x29, 4, "uint32"),
-                field("Dest Map", stairs.destMap, 0x2D, 4, "uint32"),
-            ]));
+            const destTile = stairs.destTileAndElevation & 0x3_ff_ff_ff;
+            const destElev = (stairs.destTileAndElevation >> 26) & 0x3f;
+            groups.push(
+                group("Stairs Properties", [
+                    field("Dest Tile", destTile, 0x29, 4, "uint32"),
+                    field("Dest Elevation", destElev, 0x29, 4, "uint32"),
+                    field("Dest Map", stairs.destMap, 0x2d, 4, "uint32"),
+                ]),
+            );
             break;
         }
-        case 2: { // Elevator
+        case 2: {
+            // Elevator
             const elevator: ElevatorData = elevatorSchema.read(reader(data, SCENERY_SUBTYPE_OFFSET));
-            groups.push(group("Elevator Properties", [
-                enumField("Elevator Type", elevator.elevatorType, ElevatorType, 0x29, 4, errors),
-                field("Elevator Level", elevator.elevatorLevel, 0x2D, 4, "uint32"),
-            ]));
+            groups.push(
+                group("Elevator Properties", [
+                    enumField("Elevator Type", elevator.elevatorType, ElevatorType, 0x29, 4, errors),
+                    field("Elevator Level", elevator.elevatorLevel, 0x2d, 4, "uint32"),
+                ]),
+            );
             break;
         }
         case 3: // Ladder Bottom
-        case 4: { // Ladder Top
+        case 4: {
+            // Ladder Top
             const ladder: LadderData = ladderSchema.read(reader(data, SCENERY_SUBTYPE_OFFSET));
-            const destTile = ladder.destTileAndElevation & 0x3_FF_FF_FF;
-            const destElev = (ladder.destTileAndElevation >> 26) & 0x3F;
-            groups.push(group("Ladder Properties", [
-                field("Dest Tile", destTile, 0x29, 4, "uint32"),
-                field("Dest Elevation", destElev, 0x29, 4, "uint32"),
-            ]));
+            const destTile = ladder.destTileAndElevation & 0x3_ff_ff_ff;
+            const destElev = (ladder.destTileAndElevation >> 26) & 0x3f;
+            groups.push(
+                group("Ladder Properties", [
+                    field("Dest Tile", destTile, 0x29, 4, "uint32"),
+                    field("Dest Elevation", destElev, 0x29, 4, "uint32"),
+                ]),
+            );
             break;
         }
-        case 5: { // Generic
+        case 5: {
+            // Generic
             const genScenery: GenericSceneryData = genericScenerySchema.read(reader(data, SCENERY_SUBTYPE_OFFSET));
-            groups.push(group("Generic Properties", [
-                field("Unknown", genScenery.unknown, 0x29, 4, "uint32"),
-            ]));
+            groups.push(group("Generic Properties", [field("Unknown", genScenery.unknown, 0x29, 4, "uint32")]));
             break;
         }
     }
@@ -452,8 +534,8 @@ function parseScenery(
 function parseWall(data: WallData, errors: string[]): ParsedGroup {
     return group("Wall Properties", [
         flagsField("Wall Light Flags", data.wallLightFlags, WallLightFlags, 0x18, 2),
-        flagsField("Action Flags", data.actionFlags, ActionFlags, 0x1A, 2),
-        ...scriptFields(data.scriptId, 0x1C, errors),
+        flagsField("Action Flags", data.actionFlags, ActionFlags, 0x1a, 2),
+        ...scriptFields(data.scriptId, 0x1c, errors),
         enumField("Material", data.materialId, MaterialType, 0x20, 4, errors),
     ]);
 }
@@ -462,18 +544,14 @@ function parseWall(data: WallData, errors: string[]): ParsedGroup {
  * Parse tile data
  */
 function parseTile(data: TileData, errors: string[]): ParsedGroup {
-    return group("Tile Properties", [
-        enumField("Material", data.materialId, MaterialType, 0x18, 4, errors),
-    ]);
+    return group("Tile Properties", [enumField("Material", data.materialId, MaterialType, 0x18, 4, errors)]);
 }
 
 /**
  * Parse misc data
  */
 function parseMisc(data: MiscData): ParsedGroup {
-    return group("Misc Properties", [
-        field("Unknown", data.unknown, 0x18, 4, "uint32"),
-    ]);
+    return group("Misc Properties", [field("Unknown", data.unknown, 0x18, 4, "uint32")]);
 }
 
 // Maximum file size for PRO files (largest is critter at 416 bytes, add margin)
@@ -521,16 +599,19 @@ class ProParser implements BinaryParser {
 
         // Parse header to determine type
         const header: HeaderData = headerSchema.read(reader(data));
-        const objectType = (header.objectTypeAndId >> 24) & 0xFF;
+        const objectType = (header.objectTypeAndId >> 24) & 0xff;
 
         // Validate file size based on object type
         let expectedSize: number;
         let subType: number | undefined;
 
         switch (objectType) {
-            case 0: { // Item
+            case 0: {
+                // Item
                 if (fileSize < HEADER_SIZE + ITEM_COMMON_SIZE) {
-                    return this.fail(`Item file too small: ${fileSize} bytes, need at least ${HEADER_SIZE + ITEM_COMMON_SIZE}`);
+                    return this.fail(
+                        `Item file too small: ${fileSize} bytes, need at least ${HEADER_SIZE + ITEM_COMMON_SIZE}`,
+                    );
                 }
                 const itemCommon: ItemCommonData = itemCommonSchema.read(reader(data, HEADER_SIZE));
                 subType = itemCommon.subType;
@@ -544,9 +625,12 @@ class ProParser implements BinaryParser {
             case 1: // Critter
                 expectedSize = CRITTER_SIZE;
                 break;
-            case 2: { // Scenery
+            case 2: {
+                // Scenery
                 if (fileSize < HEADER_SIZE + SCENERY_COMMON_SIZE) {
-                    return this.fail(`Scenery file too small: ${fileSize} bytes, need at least ${HEADER_SIZE + SCENERY_COMMON_SIZE}`);
+                    return this.fail(
+                        `Scenery file too small: ${fileSize} bytes, need at least ${HEADER_SIZE + SCENERY_COMMON_SIZE}`,
+                    );
                 }
                 const sceneryCommon: SceneryCommonData = sceneryCommonSchema.read(reader(data, HEADER_SIZE));
                 subType = sceneryCommon.subType;
@@ -581,28 +665,46 @@ class ProParser implements BinaryParser {
         const groups: (ParsedField | ParsedGroup)[] = [headerGroup];
 
         switch (objectType) {
-            case 0: { // Item
+            case 0: {
+                // Item
                 const itemCommon: ItemCommonData = itemCommonSchema.read(reader(data, HEADER_SIZE));
                 groups.push(parseItemCommon(itemCommon, HEADER_SIZE, errors));
 
                 switch (itemCommon.subType) {
                     case 0: // Armor
-                        groups.push(parseArmor(armorSchema.read(reader(data, ITEM_SUBTYPE_OFFSET)), ITEM_SUBTYPE_OFFSET));
+                        groups.push(
+                            parseArmor(armorSchema.read(reader(data, ITEM_SUBTYPE_OFFSET)), ITEM_SUBTYPE_OFFSET),
+                        );
                         break;
                     case 1: // Container
-                        groups.push(parseContainer(containerSchema.read(reader(data, ITEM_SUBTYPE_OFFSET)), ITEM_SUBTYPE_OFFSET));
+                        groups.push(
+                            parseContainer(
+                                containerSchema.read(reader(data, ITEM_SUBTYPE_OFFSET)),
+                                ITEM_SUBTYPE_OFFSET,
+                            ),
+                        );
                         break;
                     case 2: // Drug
-                        groups.push(parseDrug(drugSchema.read(reader(data, ITEM_SUBTYPE_OFFSET)), ITEM_SUBTYPE_OFFSET, errors));
+                        groups.push(
+                            parseDrug(drugSchema.read(reader(data, ITEM_SUBTYPE_OFFSET)), ITEM_SUBTYPE_OFFSET, errors),
+                        );
                         break;
                     case 3: // Weapon
-                        groups.push(parseWeapon(weaponSchema.read(reader(data, ITEM_SUBTYPE_OFFSET)), ITEM_SUBTYPE_OFFSET, errors));
+                        groups.push(
+                            parseWeapon(
+                                weaponSchema.read(reader(data, ITEM_SUBTYPE_OFFSET)),
+                                ITEM_SUBTYPE_OFFSET,
+                                errors,
+                            ),
+                        );
                         break;
                     case 4: // Ammo
                         groups.push(parseAmmo(ammoSchema.read(reader(data, ITEM_SUBTYPE_OFFSET)), ITEM_SUBTYPE_OFFSET));
                         break;
                     case 5: // Misc
-                        groups.push(parseMiscItem(miscItemSchema.read(reader(data, ITEM_SUBTYPE_OFFSET)), ITEM_SUBTYPE_OFFSET));
+                        groups.push(
+                            parseMiscItem(miscItemSchema.read(reader(data, ITEM_SUBTYPE_OFFSET)), ITEM_SUBTYPE_OFFSET),
+                        );
                         break;
                     case 6: // Key
                         groups.push(parseKey(keySchema.read(reader(data, ITEM_SUBTYPE_OFFSET)), ITEM_SUBTYPE_OFFSET));
@@ -612,27 +714,32 @@ class ProParser implements BinaryParser {
                 }
                 break;
             }
-            case 1: { // Critter
+            case 1: {
+                // Critter
                 const critter: CritterData = critterSchema.read(reader(data, HEADER_SIZE));
                 groups.push(...parseCritter(critter, errors));
                 break;
             }
-            case 2: { // Scenery
+            case 2: {
+                // Scenery
                 const scenery: SceneryCommonData = sceneryCommonSchema.read(reader(data, HEADER_SIZE));
                 groups.push(...parseScenery(data, scenery, errors));
                 break;
             }
-            case 3: { // Wall
+            case 3: {
+                // Wall
                 const wall: WallData = wallSchema.read(reader(data, HEADER_SIZE));
                 groups.push(parseWall(wall, errors));
                 break;
             }
-            case 4: { // Tile
+            case 4: {
+                // Tile
                 const tile: TileData = tileSchema.read(reader(data, HEADER_SIZE));
                 groups.push(parseTile(tile, errors));
                 break;
             }
-            case 5: { // Misc
+            case 5: {
+                // Misc
                 const misc: MiscData = miscSchema.read(reader(data, HEADER_SIZE));
                 groups.push(parseMisc(misc));
                 break;

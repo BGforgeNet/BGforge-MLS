@@ -16,7 +16,7 @@ describe("encodeOpaqueRange", () => {
     });
 
     it("encodes a small range into a single chunk", () => {
-        const data = new Uint8Array([0xDE, 0xAD, 0xBE, 0xEF]);
+        const data = new Uint8Array([0xde, 0xad, 0xbe, 0xef]);
         const result = encodeOpaqueRange("test", data, 0, 4);
         expect(result).toBeDefined();
         expect(result!.label).toBe("test");
@@ -28,7 +28,7 @@ describe("encodeOpaqueRange", () => {
 
     it("splits large ranges into multiple chunks", () => {
         // 32 bytes per chunk; 65 bytes should produce 3 chunks
-        const data = new Uint8Array(65).fill(0xAB);
+        const data = new Uint8Array(65).fill(0xab);
         const result = encodeOpaqueRange("big", data, 0);
         expect(result).toBeDefined();
         expect(result!.hexChunks).toHaveLength(3);

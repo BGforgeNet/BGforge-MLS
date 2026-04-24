@@ -28,7 +28,5 @@ export async function writeBinaryJsonSnapshot(uri: vscode.Uri, parseResult: Pars
 }
 
 function shouldAutoDumpJsonOnSave(resource: vscode.Uri): boolean {
-    return vscode.workspace
-        .getConfiguration("bgforge", resource)
-        .get<boolean>(AUTO_DUMP_JSON_SETTING, false);
+    return vscode.workspace.getConfiguration("bgforge", resource).get<boolean>(AUTO_DUMP_JSON_SETTING, false);
 }

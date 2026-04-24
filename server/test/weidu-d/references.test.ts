@@ -116,7 +116,7 @@ REPLACE_STATE_TRIGGER ~MYMOD~ target ~NewTrigger()~
             const refs = findReferences(text, { line: 2, character: 28 }, TEST_URI, true);
             // definition + REPLACE_STATE_TRIGGER = 2
             expect(refs.length).toBeGreaterThanOrEqual(2);
-            const hasReplaceRef = refs.some(r => r.range.start.line === 6);
+            const hasReplaceRef = refs.some((r) => r.range.start.line === 6);
             expect(hasReplaceRef).toBe(true);
         });
 
@@ -133,7 +133,7 @@ SET_WEIGHT ~MYMOD~ my_state #50
             const refs = findReferences(text, { line: 2, character: 28 }, TEST_URI, true);
             // definition + SET_WEIGHT = 2
             expect(refs.length).toBeGreaterThanOrEqual(2);
-            const hasSetWeightRef = refs.some(r => r.range.start.line === 6);
+            const hasSetWeightRef = refs.some((r) => r.range.start.line === 6);
             expect(hasSetWeightRef).toBe(true);
         });
     });
@@ -175,9 +175,20 @@ BEGIN ~MYMOD~
 `;
             const OTHER_URI = "file:///other.d";
             const index = new ReferencesIndex();
-            index.updateFile(OTHER_URI, new Map([
-                ["other:missing_state", [{ uri: OTHER_URI, range: { start: { line: 1, character: 0 }, end: { line: 1, character: 13 } } }]],
-            ]));
+            index.updateFile(
+                OTHER_URI,
+                new Map([
+                    [
+                        "other:missing_state",
+                        [
+                            {
+                                uri: OTHER_URI,
+                                range: { start: { line: 1, character: 0 }, end: { line: 1, character: 13 } },
+                            },
+                        ],
+                    ],
+                ]),
+            );
 
             // cursor on "missing_state" — EXTERN to OTHER dialog (starts at col 30)
             const refs = findReferences(text, { line: 4, character: 30 }, TEST_URI, true, index);
@@ -195,7 +206,10 @@ BEGIN ~MYMOD~
   END
 `;
             const OTHER_URI = "file:///other.d";
-            const crossLoc = { uri: OTHER_URI, range: { start: { line: 0, character: 0 }, end: { line: 0, character: 6 } } };
+            const crossLoc = {
+                uri: OTHER_URI,
+                range: { start: { line: 0, character: 0 }, end: { line: 0, character: 6 } },
+            };
             const index = new ReferencesIndex();
             // "mymod:state1" key (normalizeDialogFile lowercases)
             index.updateFile(OTHER_URI, new Map([["mymod:state1", [crossLoc]]]));
@@ -203,7 +217,7 @@ BEGIN ~MYMOD~
             // cursor on "state1" definition — local definition exists
             const refs = findReferences(text, { line: 2, character: 28 }, TEST_URI, true, index);
             // local (def + GOTO) + cross-file = 3
-            const crossRefs = refs.filter(r => r.uri === OTHER_URI);
+            const crossRefs = refs.filter((r) => r.uri === OTHER_URI);
             expect(crossRefs).toHaveLength(1);
             expect(crossRefs[0]).toEqual(crossLoc);
         });

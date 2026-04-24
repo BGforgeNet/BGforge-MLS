@@ -7,11 +7,7 @@ import path from "node:path";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import YAML from "yaml";
 import { dumpFalloutCompletion } from "../src/fallout/dump.ts";
-import {
-    SFALL_FUNCTIONS_STANZA,
-    SFALL_HOOKS_STANZA,
-    type FalloutCompletionItem,
-} from "../src/fallout/types.ts";
+import { SFALL_FUNCTIONS_STANZA, SFALL_HOOKS_STANZA, type FalloutCompletionItem } from "../src/fallout/types.ts";
 
 const TMP_BASE = "tmp";
 beforeAll(() => fs.mkdirSync(TMP_BASE, { recursive: true }));
@@ -41,9 +37,7 @@ other-stanza:
     });
 
     it("writes function completion items", () => {
-        const functions: FalloutCompletionItem[] = [
-            { name: "my_func", detail: "void my_func()", doc: "A function." },
-        ];
+        const functions: FalloutCompletionItem[] = [{ name: "my_func", detail: "void my_func()", doc: "A function." }];
         const hooks: FalloutCompletionItem[] = [];
 
         dumpFalloutCompletion(filePath, functions, hooks);
@@ -57,9 +51,7 @@ other-stanza:
 
     it("writes hook completion items", () => {
         const functions: FalloutCompletionItem[] = [];
-        const hooks: FalloutCompletionItem[] = [
-            { name: "HOOK_TEST", doc: "A test hook." },
-        ];
+        const hooks: FalloutCompletionItem[] = [{ name: "HOOK_TEST", doc: "A test hook." }];
 
         dumpFalloutCompletion(filePath, functions, hooks);
 
@@ -79,9 +71,7 @@ other-stanza:
     });
 
     it("uses block scalar for multiline doc", () => {
-        const functions: FalloutCompletionItem[] = [
-            { name: "func", detail: "void func()", doc: "Line 1\nLine 2" },
-        ];
+        const functions: FalloutCompletionItem[] = [{ name: "func", detail: "void func()", doc: "Line 1\nLine 2" }];
         dumpFalloutCompletion(filePath, functions, []);
 
         const content = fs.readFileSync(filePath, "utf8");

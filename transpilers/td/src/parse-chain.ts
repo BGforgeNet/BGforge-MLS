@@ -5,20 +5,8 @@
  * Extracted from parse.ts. Called by transformTopLevelCall() in parse.ts.
  */
 
-import {
-    Block,
-    CallExpression,
-    Expression,
-    FunctionExpression,
-    Node,
-} from "ts-morph";
-import {
-    TDConstructType,
-    TDEpilogueType,
-    type TDConstruct,
-    type TDChainEntry,
-    type TDChainEpilogue,
-} from "./types";
+import { Block, CallExpression, Expression, FunctionExpression, Node } from "ts-morph";
+import { TDConstructType, TDEpilogueType, type TDConstruct, type TDChainEntry, type TDChainEpilogue } from "./types";
 import type { VarsContext } from "../../common/transpiler-utils";
 import { resolveStringExpr } from "./parse-helpers";
 import { TranspileError } from "../../common/transpile-error";
@@ -36,7 +24,7 @@ import type { FuncsContext } from "./state-transitions";
  */
 export function transformChainCall(
     ctx: { vars: VarsContext; funcs: FuncsContext },
-    call: CallExpression
+    call: CallExpression,
 ): TDConstruct[] | null {
     const args = call.getArguments();
     if (args.length < 1) {
@@ -46,8 +34,8 @@ export function transformChainCall(
     // Detect new form: chain(dialog, label, body) or chain(trigger, dialog, label, body)
     // New form has an arrow function as the body argument (3rd or 4th).
     // Old form has a function expression or identifier as 1st or 2nd argument.
-    const isNewForm = (args.length >= 3 && Node.isArrowFunction(args[2])) ||
-                      (args.length >= 4 && Node.isArrowFunction(args[3]));
+    const isNewForm =
+        (args.length >= 3 && Node.isArrowFunction(args[2])) || (args.length >= 4 && Node.isArrowFunction(args[3]));
 
     if (isNewForm) {
         return transformChainNewForm(ctx, call);
@@ -86,7 +74,7 @@ export function transformChainCall(
  */
 function transformChainNewForm(
     ctx: { vars: VarsContext; funcs: FuncsContext },
-    call: CallExpression
+    call: CallExpression,
 ): TDConstruct[] | null {
     const args = call.getArguments();
     let trigger: string | undefined;
@@ -116,20 +104,20 @@ function transformChainNewForm(
     if (Node.isArrowFunction(bodyArg)) {
         const body = bodyArg.getBody();
         if (Node.isBlock(body)) {
-            const result = processChainBody(
-                (body as Block).getStatements(), dialog, ctx.vars
-            );
+            const result = processChainBody((body as Block).getStatements(), dialog, ctx.vars);
             entries.push(...result.entries);
             epilogue = result.epilogue;
         }
     }
 
-    return [{
-        type: TDConstructType.Chain,
-        filename: dialog,
-        label,
-        trigger,
-        entries,
-        epilogue,
-    }];
+    return [
+        {
+            type: TDConstructType.Chain,
+            filename: dialog,
+            label,
+            trigger,
+            entries,
+            epilogue,
+        },
+    ];
 }

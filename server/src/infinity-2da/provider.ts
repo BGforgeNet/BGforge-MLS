@@ -7,7 +7,13 @@
 import { conlog } from "../common";
 import { LANG_INFINITY_2DA } from "../core/languages";
 import type { FormatResult } from "../core/capabilities";
-import type { LanguageProvider, ProviderBase, ProviderContext, SemanticTokenCapability, FormattingCapability } from "../language-provider";
+import type {
+    LanguageProvider,
+    ProviderBase,
+    ProviderContext,
+    SemanticTokenCapability,
+    FormattingCapability,
+} from "../language-provider";
 import type { SemanticTokenSpan } from "../shared/semantic-tokens";
 import { getSemanticTokenSpans } from "./semantic-tokens";
 import { format2da } from "./format";

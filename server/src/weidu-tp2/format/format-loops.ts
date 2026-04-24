@@ -82,7 +82,7 @@ export function formatForLoop(
     ctx: FormatContext,
     depth: number,
     header: string,
-    formatNode: (node: SyntaxNode, ctx: FormatContext, depth: number) => string
+    formatNode: (node: SyntaxNode, ctx: FormatContext, depth: number) => string,
 ): string {
     const indent = ctx.indent.repeat(depth);
     const bodyIndent = ctx.indent.repeat(depth + 1);
@@ -122,7 +122,7 @@ export function formatForEach(
     node: SyntaxNode,
     ctx: FormatContext,
     depth: number,
-    formatNode: (node: SyntaxNode, ctx: FormatContext, depth: number) => string
+    formatNode: (node: SyntaxNode, ctx: FormatContext, depth: number) => string,
 ): string {
     const indent = ctx.indent.repeat(depth);
     const bodyIndent = ctx.indent.repeat(depth + 1);
@@ -190,7 +190,8 @@ export function formatForEach(
             if (beginRow >= 0 && child.startPosition.row === beginRow) {
                 const lastLine = headerLines[headerLines.length - 1];
                 if (lastLine && !lastLine.includes("//")) {
-                    headerLines[headerLines.length - 1] = lastLine + INLINE_COMMENT_SPACING + normalizeComment(child.text);
+                    headerLines[headerLines.length - 1] =
+                        lastLine + INLINE_COMMENT_SPACING + normalizeComment(child.text);
                     beginRow = -1;
                     continue;
                 }
@@ -283,7 +284,12 @@ export function formatAssociativeArray(node: SyntaxNode, ctx: FormatContext, dep
                 continue;
             }
             beginRow = -1;
-            items.push({ type: CollectedItemType.Comment, text: normalizeComment(child.text), startRow: child.startPosition.row, endRow: child.endPosition.row });
+            items.push({
+                type: CollectedItemType.Comment,
+                text: normalizeComment(child.text),
+                startRow: child.startPosition.row,
+                endRow: child.endPosition.row,
+            });
             continue;
         }
         beginRow = -1;
@@ -291,7 +297,12 @@ export function formatAssociativeArray(node: SyntaxNode, ctx: FormatContext, dep
         if (child.type === SyntaxType.AssocEntry) {
             const parsed = parseAssocEntry(child);
             if (parsed) {
-                items.push({ type: CollectedItemType.Assignment, name: parsed.name, value: parsed.value, endRow: child.endPosition.row });
+                items.push({
+                    type: CollectedItemType.Assignment,
+                    name: parsed.name,
+                    value: parsed.value,
+                    endRow: child.endPosition.row,
+                });
             }
         }
     }

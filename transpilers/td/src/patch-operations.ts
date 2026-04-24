@@ -6,12 +6,7 @@
  * parser context (vars) as a parameter.
  */
 
-import {
-    CallExpression,
-    FunctionDeclaration,
-    Node,
-    SyntaxKind,
-} from "ts-morph";
+import { CallExpression, FunctionDeclaration, Node, SyntaxKind } from "ts-morph";
 import {
     TDConstructType,
     TDPatchOp,
@@ -30,19 +25,9 @@ import {
 } from "./types";
 import * as utils from "../../common/transpiler-utils";
 import type { VarsContext } from "../../common/transpiler-utils";
-import {
-    resolveStringExpr,
-    parseStateList,
-    parseNumberArray,
-    parseUnless,
-    getCallArg,
-} from "./parse-helpers";
+import { resolveStringExpr, parseStateList, parseNumberArray, parseUnless, getCallArg } from "./parse-helpers";
 import { TranspileError } from "../../common/transpile-error";
-import {
-    expressionToTrigger,
-    expressionToAction,
-    expressionToText,
-} from "./expression-eval";
+import { expressionToTrigger, expressionToAction, expressionToText } from "./expression-eval";
 import { type FuncsContext, transformFunctionToState } from "./state-transitions";
 
 /**
@@ -203,7 +188,7 @@ function transformAddTransAction(call: CallExpression, vars: VarsContext): TDCon
 function transformReplaceTrans(
     call: CallExpression,
     op: TDPatchOp.ReplaceTransTrigger | TDPatchOp.ReplaceTransAction,
-    vars: VarsContext
+    vars: VarsContext,
 ): TDConstruct[] | null {
     const args = call.getArguments();
     const funcName = op === TDPatchOp.ReplaceTransTrigger ? "replaceTransTrigger" : "replaceTransAction";
@@ -238,7 +223,7 @@ function transformReplaceTrans(
 function transformReplaceText(
     call: CallExpression,
     op: TDPatchOp.ReplaceTriggerText | TDPatchOp.ReplaceActionText,
-    vars: VarsContext
+    vars: VarsContext,
 ): TDConstruct[] | null {
     const args = call.getArguments();
     const funcName = op === TDPatchOp.ReplaceTriggerText ? "replaceTriggerText" : "replaceActionText";
@@ -349,11 +334,7 @@ function transformReplaceStateTrigger(call: CallExpression, vars: VarsContext): 
  * Transform replace(filename, { stateNum: function, ... }).
  * Replaces entire states by their numeric index.
  */
-function transformReplace(
-    call: CallExpression,
-    vars: VarsContext,
-    funcs: FuncsContext
-): TDConstruct[] | null {
+function transformReplace(call: CallExpression, vars: VarsContext, funcs: FuncsContext): TDConstruct[] | null {
     const args = call.getArguments();
     if (args.length < 2) {
         throw TranspileError.fromNode(call, `replace() requires 2 arguments`);

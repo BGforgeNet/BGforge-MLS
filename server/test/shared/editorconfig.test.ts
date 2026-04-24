@@ -203,12 +203,10 @@ max_line_length = invalid
         it("walks up to parent directory when settings not fully found", () => {
             // First directory has only indent_size, second has max_line_length
             mockExistsSync.mockReturnValue(true);
-            mockReadFileSync
-                .mockReturnValueOnce(`
+            mockReadFileSync.mockReturnValueOnce(`
 [*]
 indent_size = 2
-`)
-                .mockReturnValueOnce(`
+`).mockReturnValueOnce(`
 [*]
 max_line_length = 100
 `);

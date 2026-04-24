@@ -15,11 +15,7 @@
 
 import { readFileSync } from "fs";
 import * as path from "path";
-import {
-    type CompletionItem,
-    CompletionItemKind,
-    type MarkupContent,
-} from "vscode-languageserver/node";
+import { type CompletionItem, CompletionItemKind, type MarkupContent } from "vscode-languageserver/node";
 import type { CompletionItemWithCategory, CompletionCategory } from "../shared/completion-context";
 import { WEIDU_TP2_STANZAS } from "../../../shared/stanza-names";
 import { conlog } from "../common";
@@ -144,7 +140,7 @@ export function loadStaticSymbols(langId: string): IndexedSymbol[] {
         return [];
     }
 
-    return items.map(item => convertToSymbol(item));
+    return items.map((item) => convertToSymbol(item));
 }
 
 /**
@@ -160,7 +156,6 @@ function loadCompletionJson(langId: string): StaticCompletionItem[] | undefined 
         return undefined;
     }
 }
-
 
 /**
  * Convert a static completion item to an IndexedSymbol.
@@ -214,16 +209,18 @@ function convertToSymbol(item: StaticCompletionItem): IndexedSymbol {
         // to avoid false positives on worldmap or other non-TP2 stanzas that reuse
         // category names like "action" with different CompletionItemKind values.
         const meta = item.category ? CALLABLE_CATEGORY_META[item.category] : undefined;
-        const metaFields = (meta && item.kind === CompletionItemKind.Function)
-            ? { context: meta.context, dtype: meta.dtype }
-            : {};
-        const callable: CallableSymbol["callable"] = item.params
-            ? { ...metaFields, params: item.params }
-            : metaFields;
+        const metaFields =
+            meta && item.kind === CompletionItemKind.Function ? { context: meta.context, dtype: meta.dtype } : {};
+        const callable: CallableSymbol["callable"] = item.params ? { ...metaFields, params: item.params } : metaFields;
 
         return {
             ...base,
-            kind: kind as SymbolKind.Function | SymbolKind.Procedure | SymbolKind.Macro | SymbolKind.Action | SymbolKind.Trigger,
+            kind: kind as
+                | SymbolKind.Function
+                | SymbolKind.Procedure
+                | SymbolKind.Macro
+                | SymbolKind.Action
+                | SymbolKind.Trigger,
             callable,
         } as CallableSymbol;
     }

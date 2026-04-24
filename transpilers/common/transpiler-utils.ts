@@ -64,11 +64,7 @@ export function parseIncrement(text: string): number {
  * @param vars Variable context for substituting argument expressions
  * @returns Map from parameter name to substituted argument value
  */
-export function buildParamMap(
-    call: CallExpression,
-    func: FunctionDeclaration,
-    vars: VarsContext
-): Map<string, string> {
+export function buildParamMap(call: CallExpression, func: FunctionDeclaration, vars: VarsContext): Map<string, string> {
     const params = func.getParameters();
     const args = call.getArguments();
     const map = new Map<string, string>();
@@ -97,12 +93,7 @@ export function buildParamMap(
  * @example
  * evaluateCondition("i < count", "i", 5, new Map([["count", "10"]])) // => true
  */
-export function evaluateCondition(
-    condition: string,
-    loopVar: string,
-    value: number,
-    vars: VarsContext
-): boolean {
+export function evaluateCondition(condition: string, loopVar: string, value: number, vars: VarsContext): boolean {
     // Substitute loop variable
     let substituted = condition.replace(new RegExp(`\\b${loopVar}\\b`, "g"), value.toString());
     // Substitute other compile-time variables
@@ -114,7 +105,7 @@ export function evaluateCondition(
     } catch (e) {
         throw new Error(
             `Cannot evaluate loop condition "${condition}" with ${loopVar}=${value}. ` +
-            `Substituted: "${substituted}". Error: ${e instanceof Error ? e.message : e}`,
+                `Substituted: "${substituted}". Error: ${e instanceof Error ? e.message : e}`,
             { cause: e },
         );
     }

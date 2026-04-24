@@ -76,11 +76,7 @@ export function isTdFile(fileName: string): boolean {
  * Override the language service host to inject td-runtime.d.ts and
  * exclude DOM lib for projects containing .td files.
  */
-export function overrideHost(
-    host: ts.LanguageServiceHost,
-    resolvedPath: string,
-    tsModule: typeof ts,
-): void {
+export function overrideHost(host: ts.LanguageServiceHost, resolvedPath: string, tsModule: typeof ts): void {
     // Inject td-runtime.d.ts into the project's file list.
     // getExternalFiles does not reliably add files to inferred projects.
     const originalGetScriptFileNames = host.getScriptFileNames.bind(host);

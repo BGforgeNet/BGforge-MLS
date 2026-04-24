@@ -25,9 +25,9 @@ describe("buildWeiduTable", () => {
         const result = buildWeiduTable(sections);
         expect(result).toBe(
             "| | | | |\n" +
-            "|-:|:-|:-|:-|\n" +
-            "|**INT**|**vars**|||\n" +
-            "|[int](https://ielib.bgforge.net/types#int)|count||&nbsp;&nbsp;how many|"
+                "|-:|:-|:-|:-|\n" +
+                "|**INT**|**vars**|||\n" +
+                "|[int](https://ielib.bgforge.net/types#int)|count||&nbsp;&nbsp;how many|",
         );
     });
 
@@ -50,7 +50,9 @@ describe("buildWeiduTable", () => {
             },
         ];
         const result = buildWeiduTable(sections);
-        expect(result).toContain("|[int](https://ielib.bgforge.net/types#int)|index|_required_|&nbsp;&nbsp;structure index|");
+        expect(result).toContain(
+            "|[int](https://ielib.bgforge.net/types#int)|index|_required_|&nbsp;&nbsp;structure index|",
+        );
     });
 
     it("renders row without description", () => {
@@ -123,10 +125,7 @@ describe("buildWeiduTable", () => {
 
 describe("buildFalloutArgsTable", () => {
     it("returns empty string when no args have descriptions", () => {
-        const args = [
-            { name: "a" },
-            { name: "b" },
-        ];
+        const args = [{ name: "a" }, { name: "b" }];
         expect(buildFalloutArgsTable(args)).toBe("");
     });
 
@@ -137,19 +136,11 @@ describe("buildFalloutArgsTable", () => {
     it("renders single arg with description", () => {
         const args = [{ name: "who", description: "test123" }];
         const result = buildFalloutArgsTable(args);
-        expect(result).toBe(
-            "|||\n" +
-            "|:-|:-|\n" +
-            "|`who`|&nbsp;&nbsp;test123|"
-        );
+        expect(result).toBe("|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;test123|");
     });
 
     it("renders multiple args, skipping those without descriptions", () => {
-        const args = [
-            { name: "a", description: "first" },
-            { name: "b" },
-            { name: "c", description: "third" },
-        ];
+        const args = [{ name: "a", description: "first" }, { name: "b" }, { name: "c", description: "third" }];
         const result = buildFalloutArgsTable(args);
         expect(result).toContain("|`a`|&nbsp;&nbsp;first|");
         expect(result).not.toContain("|`b`|");

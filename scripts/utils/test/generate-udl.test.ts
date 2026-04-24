@@ -15,7 +15,7 @@ const SSL_LANG = {
     ext: "ssl h",
     yamlFiles: ["server/data/fallout-ssl-base.yml"],
     caseIgnored: false,
-    stringDelimiters: [["\"", "\""]] as const,
+    stringDelimiters: [['"', '"']] as const,
     foldingPairs: [["begin", "end"]] as const,
 };
 
@@ -25,11 +25,15 @@ const BAF_LANG = {
     ext: "baf",
     yamlFiles: ["server/data/weidu-baf-base.yml"],
     caseIgnored: true,
-    stringDelimiters: [["~", "~"], ["\"", "\""]] as const,
+    stringDelimiters: [
+        ["~", "~"],
+        ['"', '"'],
+    ] as const,
     foldingPairs: [["IF", "END"]] as const,
 };
 
-const XSD_URL = "https://raw.githubusercontent.com/notepad-plus-plus/userDefinedLanguages/master/.validators/userDefineLangs.xsd";
+const XSD_URL =
+    "https://raw.githubusercontent.com/notepad-plus-plus/userDefinedLanguages/master/.validators/userDefineLangs.xsd";
 
 function hasXmllint(): boolean {
     try {
@@ -82,7 +86,7 @@ describe("generateUdlXml", () => {
     it("encodes string delimiters", () => {
         const sslXml = generateUdlXml(SSL_LANG);
         // Single delimiter: " in slots 00-02
-        expect(sslXml).toContain('00&quot; 01 02&quot;');
+        expect(sslXml).toContain("00&quot; 01 02&quot;");
 
         const bafXml = generateUdlXml(BAF_LANG);
         // Two delimiters: ~ in 00-02, " in 03-05

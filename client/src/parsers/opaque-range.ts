@@ -6,7 +6,7 @@ export function encodeOpaqueRange(
     label: string,
     data: Uint8Array,
     offset: number,
-    end = data.length
+    end = data.length,
 ): ParseOpaqueRange | undefined {
     if (offset >= end) {
         return undefined;

@@ -109,12 +109,7 @@ describe("infinity-2da/semantic-tokens", () => {
     });
 
     it("cycles back to C0 after C5 for wide tables", () => {
-        const wide = [
-            "2DA V1.0",
-            "****",
-            "    A  B  C  D  E  F  G",
-            "r1  1  2  3  4  5  6  7",
-        ].join("\n");
+        const wide = ["2DA V1.0", "****", "    A  B  C  D  E  F  G", "r1  1  2  3  4  5  6  7"].join("\n");
         const spans = getSemanticTokenSpans(wide);
         const types = spans.map((s) => s.tokenType);
         expect(types).toEqual([...CELL_2DA_COL_TYPES, CELL_2DA_C0]);

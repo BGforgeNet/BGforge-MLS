@@ -91,7 +91,9 @@ export class FileWatcherManager {
                 const text = readFileSync(filePath, "utf-8");
                 if (provider.reloadFileData) {
                     provider.reloadFileData(normUri, text);
-                    conlog(`File ${changeType === FileChangeType.Created ? "created" : "changed"}, reloaded: ${filePath}`);
+                    conlog(
+                        `File ${changeType === FileChangeType.Created ? "created" : "changed"}, reloaded: ${filePath}`,
+                    );
                 }
             } catch (error) {
                 conlog(`Failed to read file ${filePath}: ${error}`);

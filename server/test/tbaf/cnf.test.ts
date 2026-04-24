@@ -78,7 +78,7 @@ describe("dnfToCnf", () => {
                 if (isOrGroup(clause)) {
                     expect(clause.conditions).toHaveLength(2);
                     // Each clause should contain C
-                    expect(clause.conditions.some(c => c.name === "C")).toBe(true);
+                    expect(clause.conditions.some((c) => c.name === "C")).toBe(true);
                 }
             }
         });
@@ -107,10 +107,7 @@ describe("dnfToCnf", () => {
         it("preserves negation on individual conditions", () => {
             // DNF: (!A) || (!B)
             // CNF: (!A || !B)
-            const result = dnfToCnf([
-                [cond("A", true)],
-                [cond("B", true)],
-            ]);
+            const result = dnfToCnf([[cond("A", true)], [cond("B", true)]]);
 
             expect(result).toHaveLength(1);
             const first = result[0]!;
@@ -122,10 +119,7 @@ describe("dnfToCnf", () => {
         });
 
         it("converts (!A && !B) || (!C) to (!A || !C) && (!B || !C)", () => {
-            const result = dnfToCnf([
-                [cond("A", true), cond("B", true)],
-                [cond("C", true)],
-            ]);
+            const result = dnfToCnf([[cond("A", true), cond("B", true)], [cond("C", true)]]);
 
             expect(result).toHaveLength(2);
             for (const clause of result) {
@@ -206,11 +200,7 @@ describe("dnfToCnf", () => {
     describe("deeply nested conditions", () => {
         it("handles three-way OR correctly", () => {
             // (A) || (B) || (C) => (A || B || C)
-            const result = dnfToCnf([
-                [cond("A")],
-                [cond("B")],
-                [cond("C")],
-            ]);
+            const result = dnfToCnf([[cond("A")], [cond("B")], [cond("C")]]);
 
             expect(result).toHaveLength(1);
             const first = result[0]!;
@@ -223,11 +213,7 @@ describe("dnfToCnf", () => {
         it("handles mixed single and multi-element terms", () => {
             // (A && B) || (C) || (D && E)
             // = (A||C||D) && (A||C||E) && (B||C||D) && (B||C||E)
-            const result = dnfToCnf([
-                [cond("A"), cond("B")],
-                [cond("C")],
-                [cond("D"), cond("E")],
-            ]);
+            const result = dnfToCnf([[cond("A"), cond("B")], [cond("C")], [cond("D"), cond("E")]]);
 
             // 2 * 1 * 2 = 4 clauses
             expect(result).toHaveLength(4);

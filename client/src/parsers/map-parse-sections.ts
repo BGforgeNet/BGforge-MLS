@@ -5,13 +5,22 @@
 import type { ParseOpaqueRange, ParsedField, ParsedGroup } from "./types";
 import { encodeOpaqueRange } from "./opaque-range";
 import {
-    MapVersion, MapFlags, MapElevation, Rotation, ScriptFlags, ScriptProc, ScriptType, Skill,
+    MapVersion,
+    MapFlags,
+    MapElevation,
+    Rotation,
+    ScriptFlags,
+    ScriptProc,
+    ScriptType,
+    Skill,
     hasElevation,
 } from "./map-types";
 import {
     HEADER_SIZE,
-    TILE_DATA_SIZE_PER_ELEVATION, TILES_PER_ELEVATION,
-    parseHeader, parseTilePair,
+    TILE_DATA_SIZE_PER_ELEVATION,
+    TILES_PER_ELEVATION,
+    parseHeader,
+    parseTilePair,
     getScriptType,
     type MapHeader,
 } from "./map-schemas";
@@ -33,19 +42,28 @@ export function parseHeaderSection(data: Uint8Array, errors: string[]): ParsedGr
         field("Filename", header.filename, 0x04, 16, "string"),
         field("Default Position", header.defaultPosition, 0x14, 4, "int32"),
         enumField("Default Elevation", header.defaultElevation, MapElevation, 0x18, 4, errors),
-        enumField("Default Orientation", header.defaultOrientation, Rotation, 0x1C, 4, errors),
+        enumField("Default Orientation", header.defaultOrientation, Rotation, 0x1c, 4, errors),
         field("Num Local Vars", header.numLocalVars, 0x20, 4, "int32"),
         field("Script ID", header.scriptId, 0x24, 4, "int32"),
         flagsField("Map Flags", header.flags, MapFlags, 0x28, 4),
-        field("Darkness", header.darkness, 0x2C, 4, "int32"),
+        field("Darkness", header.darkness, 0x2c, 4, "int32"),
         field("Num Global Vars", header.numGlobalVars, 0x30, 4, "int32"),
         field("Map ID", header.mapId, 0x34, 4, "int32"),
         field("Timestamp", header.timestamp, 0x38, 4, "uint32"),
-        field("Padding (field_3C)", `(${header.field_3C.length} values)`, HEADER_PADDING_OFFSET, HEADER_PADDING_SIZE, "padding"),
+        field(
+            "Padding (field_3C)",
+            `(${header.field_3C.length} values)`,
+            HEADER_PADDING_OFFSET,
+            HEADER_PADDING_SIZE,
+            "padding",
+        ),
     ]);
 }
 
-function parseVariables(data: Uint8Array, header: MapHeader): { globalVars: number[]; localVars: number[]; offset: number } {
+function parseVariables(
+    data: Uint8Array,
+    header: MapHeader,
+): { globalVars: number[]; localVars: number[]; offset: number } {
     let offset = HEADER_SIZE;
 
     const globalVars: number[] = [];
@@ -71,7 +89,7 @@ export function parseVariablesSection(data: Uint8Array, header: MapHeader): Pars
 
     if (globalVars.length > 0) {
         const globalVarFields: ParsedField[] = globalVars.map((val, i) =>
-            field(`Global Var ${i}`, val, HEADER_SIZE + i * 4, 4, "int32")
+            field(`Global Var ${i}`, val, HEADER_SIZE + i * 4, 4, "int32"),
         );
         groups.push(makeGroup("Global Variables", globalVarFields));
     }
@@ -79,7 +97,7 @@ export function parseVariablesSection(data: Uint8Array, header: MapHeader): Pars
     if (localVars.length > 0) {
         const localOffset = HEADER_SIZE + globalVars.length * 4;
         const localVarFields: ParsedField[] = localVars.map((val, i) =>
-            field(`Local Var ${i}`, val, localOffset + i * 4, 4, "int32")
+            field(`Local Var ${i}`, val, localOffset + i * 4, 4, "int32"),
         );
         groups.push(makeGroup("Local Variables", localVarFields));
     }
@@ -120,7 +138,7 @@ export function parseTiles(
                     field(`Tile ${i} Floor`, tilePair.floorTileId, currentOffset + i * 4, 2, "uint16"),
                     field(`Tile ${i} Floor Flags`, tilePair.floorFlags, currentOffset + i * 4, 1, "uint8"),
                     field(`Tile ${i} Roof`, tilePair.roofTileId, currentOffset + i * 4 + 2, 2, "uint16"),
-                    field(`Tile ${i} Roof Flags`, tilePair.roofFlags, currentOffset + i * 4 + 2, 1, "uint8")
+                    field(`Tile ${i} Roof Flags`, tilePair.roofFlags, currentOffset + i * 4 + 2, 1, "uint8"),
                 );
             }
         }
@@ -132,9 +150,7 @@ export function parseTiles(
         currentOffset += TILE_DATA_SIZE_PER_ELEVATION;
     }
 
-    const skippedRange = skipMapTiles
-        ? encodeOpaqueRange("tiles", data, tileSectionStart, currentOffset)
-        : undefined;
+    const skippedRange = skipMapTiles ? encodeOpaqueRange("tiles", data, tileSectionStart, currentOffset) : undefined;
 
     return { tiles, offset: currentOffset, skippedRange };
 }
@@ -143,7 +159,7 @@ function parseScriptEntryFields(
     data: Uint8Array,
     currentOffset: number,
     label: string,
-    errors: string[]
+    errors: string[],
 ): { fields: ParsedField[]; offset: number } {
     if (currentOffset + 8 > data.length) {
         errors.push(`Script entry ${label} truncated at offset 0x${currentOffset.toString(16)}`);
@@ -159,7 +175,9 @@ function parseScriptEntryFields(
     fields.push(field(`${label} SID`, sid, currentOffset, 4, "uint32"));
 
     const field4View = new DataView(data.buffer, data.byteOffset + currentOffset + 4, 4);
-    fields.push(field(`${label} Next Script Link (legacy)`, field4View.getInt32(0, false), currentOffset + 4, 4, "int32"));
+    fields.push(
+        field(`${label} Next Script Link (legacy)`, field4View.getInt32(0, false), currentOffset + 4, 4, "int32"),
+    );
 
     let pos = 8;
     if (actualScriptType === 1) {
@@ -175,9 +193,22 @@ function parseScriptEntryFields(
         pos += 4;
     }
 
-    const commonNames = ["Flags", "Index", "Program Pointer Slot", "Owner ID", "Local Vars Offset",
-        "Num Local Vars", "Return Value", "Action", "Fixed Param", "Action Being Used",
-        "Script Overrides", "Unknown Field 0x48", "Check Margin (how_much)", "Legacy Field 0x50"];
+    const commonNames = [
+        "Flags",
+        "Index",
+        "Program Pointer Slot",
+        "Owner ID",
+        "Local Vars Offset",
+        "Num Local Vars",
+        "Return Value",
+        "Action",
+        "Fixed Param",
+        "Action Being Used",
+        "Script Overrides",
+        "Unknown Field 0x48",
+        "Check Margin (how_much)",
+        "Legacy Field 0x50",
+    ];
     for (const [index, name] of commonNames.entries()) {
         if (currentOffset + pos + 4 > data.length) {
             errors.push(`Script entry ${label} overflow at offset 0x${(currentOffset + pos).toString(16)}`);
@@ -205,7 +236,7 @@ export function parseScripts(
     data: Uint8Array,
     currentOffset: number,
     errors: string[],
-    scriptTypeCount: number
+    scriptTypeCount: number,
 ): { scripts: ParsedGroup[]; offset: number } {
     const scripts: ParsedGroup[] = [];
 
@@ -221,9 +252,7 @@ export function parseScripts(
             break;
         }
 
-        const scriptEntries: (ParsedField | ParsedGroup)[] = [
-            field("Script Count", count, countOffset, 4, "int32"),
-        ];
+        const scriptEntries: (ParsedField | ParsedGroup)[] = [field("Script Count", count, countOffset, 4, "int32")];
 
         if (count === 0) {
             scripts.push(makeGroup(`${ScriptType[scriptType] ?? `Type${scriptType}`} Scripts`, scriptEntries));
@@ -239,7 +268,12 @@ export function parseScripts(
             const extentFields: (ParsedField | ParsedGroup)[] = [];
 
             for (let slotIndex = 0; slotIndex < 16; slotIndex++) {
-                const entry = parseScriptEntryFields(data, currentOffset, `Entry ${extentIndex * 16 + slotIndex}`, errors);
+                const entry = parseScriptEntryFields(
+                    data,
+                    currentOffset,
+                    `Entry ${extentIndex * 16 + slotIndex}`,
+                    errors,
+                );
                 if (entry.fields.length === 0) {
                     currentOffset = entry.offset;
                     break;

@@ -9,7 +9,13 @@
 import { isAbsolute, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Node } from "web-tree-sitter";
-import { OptionalVersionedTextDocumentIdentifier, Position, TextDocumentEdit, TextEdit, WorkspaceEdit } from "vscode-languageserver/node";
+import {
+    OptionalVersionedTextDocumentIdentifier,
+    Position,
+    TextDocumentEdit,
+    TextEdit,
+    WorkspaceEdit,
+} from "vscode-languageserver/node";
 import { normalizeUri } from "../core/normalized-uri";
 import type { ReferencesIndex } from "../shared/references-index";
 import { SourceType } from "../core/symbol";
@@ -39,7 +45,7 @@ function isWithinBase(resolvedPath: string, base: string): boolean {
  */
 export function prepareRenameSymbol(
     text: string,
-    position: Position
+    position: Position,
 ): { range: { start: Position; end: Position }; placeholder: string } | null {
     if (!isInitialized()) {
         return null;
@@ -317,9 +323,7 @@ export function renameSymbolWorkspace(
     const fileScopeInfo: SslSymbolScope = { name: symbolName, scope: ScopeKind.File };
 
     for (const candidateUri of candidateUris) {
-        const candidateText = candidateUri === normUri
-            ? text
-            : getFileText(candidateUri);
+        const candidateText = candidateUri === normUri ? text : getFileText(candidateUri);
 
         if (!candidateText) {
             debugLog?.(`rename: skipping ${candidateUri} (could not read file text)`);
@@ -355,11 +359,13 @@ export function renameSymbolWorkspace(
             newText: newName,
         }));
 
-        documentChanges.push(TextDocumentEdit.create(
-            // version: null means "apply regardless of current version"
-            OptionalVersionedTextDocumentIdentifier.create(candidateUri, null),
-            edits,
-        ));
+        documentChanges.push(
+            TextDocumentEdit.create(
+                // version: null means "apply regardless of current version"
+                OptionalVersionedTextDocumentIdentifier.create(candidateUri, null),
+                edits,
+            ),
+        );
     }
 
     if (documentChanges.length === 0) {

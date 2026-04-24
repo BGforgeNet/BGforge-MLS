@@ -6,7 +6,18 @@
  * User-defined functions and variables from .tph headers are handled by header-parser.
  */
 
-import { type CancellationToken, type CompletionItem, CompletionItemKind, type DocumentSymbol, type FoldingRange, type Location, type Position, type SymbolInformation, type WorkspaceEdit, InsertTextFormat } from "vscode-languageserver/node";
+import {
+    type CancellationToken,
+    type CompletionItem,
+    CompletionItemKind,
+    type DocumentSymbol,
+    type FoldingRange,
+    type Location,
+    type Position,
+    type SymbolInformation,
+    type WorkspaceEdit,
+    InsertTextFormat,
+} from "vscode-languageserver/node";
 import { extname } from "path";
 import { fileURLToPath } from "url";
 import { conlog, getLinePrefix } from "../common";
@@ -16,7 +27,26 @@ import { isHeaderFile } from "../core/location-utils";
 import { FileIndex } from "../core/file-index";
 import { Symbols } from "../core/symbol-index";
 import { loadStaticSymbols } from "../core/static-loader";
-import { type FormatResult, HoverResult, type LanguageProvider, type ProviderContext, type ProviderBase, type FormattingCapability, type SymbolCapability, type FoldingCapability, type NavigationCapability, type RenameCapability, type HoverCapability, type CompletionCapability, type DataCapability, type CompilationCapability, type IndexingCapability, type FeatureGateCapability, type SemanticTokenCapability, type WorkspaceSymbolCapability } from "../language-provider";
+import {
+    type FormatResult,
+    HoverResult,
+    type LanguageProvider,
+    type ProviderContext,
+    type ProviderBase,
+    type FormattingCapability,
+    type SymbolCapability,
+    type FoldingCapability,
+    type NavigationCapability,
+    type RenameCapability,
+    type HoverCapability,
+    type CompletionCapability,
+    type DataCapability,
+    type CompilationCapability,
+    type IndexingCapability,
+    type FeatureGateCapability,
+    type SemanticTokenCapability,
+    type WorkspaceSymbolCapability,
+} from "../language-provider";
 import { getFormatOptions } from "../shared/format-options";
 import { stripCommentsWeidu } from "../shared/format-utils";
 import { resolveSymbolWithLocal, formatWithValidation } from "../shared/provider-helpers";
@@ -91,7 +121,11 @@ const tp2FoldingRanges = createFoldingRangesProvider(isInitialized, parseWithCac
  * Add parameter completions (INT_VAR, STR_VAR names) when in funcParamName context.
  * Returns the original items if not in funcParamName context or no params available.
  */
-function addParamCompletions(items: Tp2CompletionItem[], contexts: CompletionContext[], symbolStore?: Symbols): Tp2CompletionItem[] {
+function addParamCompletions(
+    items: Tp2CompletionItem[],
+    contexts: CompletionContext[],
+    symbolStore?: Symbols,
+): Tp2CompletionItem[] {
     if (!contexts.includes(CompletionContext.FuncParamName)) {
         return items;
     }
@@ -121,14 +155,15 @@ function applySnippets(
     contexts: CompletionContext[],
     text: string,
     uri: string,
-    symbolStore: Symbols | undefined
+    symbolStore: Symbols | undefined,
 ): Tp2CompletionItem[] {
-    const inNameContext = contexts.includes(CompletionContext.LafName)
-        || contexts.includes(CompletionContext.LpfName)
-        || contexts.includes(CompletionContext.LamName)
-        || contexts.includes(CompletionContext.LpmName);
-    const inParamContext = contexts.includes(CompletionContext.FuncParamName)
-        || contexts.includes(CompletionContext.FuncParamValue);
+    const inNameContext =
+        contexts.includes(CompletionContext.LafName) ||
+        contexts.includes(CompletionContext.LpfName) ||
+        contexts.includes(CompletionContext.LamName) ||
+        contexts.includes(CompletionContext.LpmName);
+    const inParamContext =
+        contexts.includes(CompletionContext.FuncParamName) || contexts.includes(CompletionContext.FuncParamValue);
 
     // No snippets in param contexts
     if (inParamContext) {
@@ -179,7 +214,7 @@ function applySnippets(
 function getSnippetPrefixFromSymbol(
     dtype: string | undefined,
     callableContext: CallableContext | undefined,
-    ext: string
+    ext: string,
 ): string | undefined {
     const isMacro = dtype === "macro";
     if (callableContext === CallableContext.Patch) {
@@ -207,7 +242,7 @@ function getSnippetPrefixFromSymbol(
 function collectLocalCompletions(
     text: string,
     uri: string,
-    options?: { variablesOnly?: boolean; excludeWord?: string }
+    options?: { variablesOnly?: boolean; excludeWord?: string },
 ): Tp2CompletionItem[] {
     const { variablesOnly = false, excludeWord } = options ?? {};
     const seen = new Set<string>();
@@ -235,11 +270,29 @@ function collectLocalCompletions(
 
 /** JSDoc completion items with TP2 category metadata. */
 function getJsdocCompletions(linePrefix: string): Tp2CompletionItem[] {
-    return getSharedJsdocCompletions(WEIDU_JSDOC_TYPES, linePrefix)
-        .map((item) => ({ ...item, category: CompletionCategory.Jsdoc }));
+    return getSharedJsdocCompletions(WEIDU_JSDOC_TYPES, linePrefix).map((item) => ({
+        ...item,
+        category: CompletionCategory.Jsdoc,
+    }));
 }
 
-class WeiduTp2Provider implements ProviderBase, FormattingCapability, SymbolCapability, FoldingCapability, NavigationCapability, RenameCapability, HoverCapability, CompletionCapability, DataCapability, CompilationCapability, IndexingCapability, FeatureGateCapability, SemanticTokenCapability, WorkspaceSymbolCapability {
+class WeiduTp2Provider
+    implements
+        ProviderBase,
+        FormattingCapability,
+        SymbolCapability,
+        FoldingCapability,
+        NavigationCapability,
+        RenameCapability,
+        HoverCapability,
+        CompletionCapability,
+        DataCapability,
+        CompilationCapability,
+        IndexingCapability,
+        FeatureGateCapability,
+        SemanticTokenCapability,
+        WorkspaceSymbolCapability
+{
     readonly id = LANG_WEIDU_TP2;
     readonly indexExtensions = [...EXT_WEIDU_TP2];
 
@@ -270,12 +323,20 @@ class WeiduTp2Provider implements ProviderBase, FormattingCapability, SymbolCapa
         return allSymbols.map((s: IndexedSymbol) => s.completion);
     }
 
-    filterCompletions(items: CompletionItem[], text: string, position: Position, uri: string, triggerCharacter?: string): CompletionItem[] {
+    filterCompletions(
+        items: CompletionItem[],
+        text: string,
+        position: Position,
+        uri: string,
+        triggerCharacter?: string,
+    ): CompletionItem[] {
         const filePath = fileURLToPath(uri);
         const ext = extname(filePath).toLowerCase();
         const contexts = getContextAtPosition(text, position.line, position.character);
 
-        conlog(`[tp2] Completion contexts: [${contexts.join(", ")}] at ${position.line}:${position.character} in ${ext}`);
+        conlog(
+            `[tp2] Completion contexts: [${contexts.join(", ")}] at ${position.line}:${position.character} in ${ext}`,
+        );
 
         if (contexts.includes(CompletionContext.Comment)) {
             return [];
@@ -409,7 +470,13 @@ class WeiduTp2Provider implements ProviderBase, FormattingCapability, SymbolCapa
         return tp2FoldingRanges(text);
     }
 
-    references(text: string, position: Position, uri: string, includeDeclaration: boolean, _token: CancellationToken): Location[] {
+    references(
+        text: string,
+        position: Position,
+        uri: string,
+        includeDeclaration: boolean,
+        _token: CancellationToken,
+    ): Location[] {
         if (!isInitialized()) {
             return [];
         }
@@ -421,7 +488,10 @@ class WeiduTp2Provider implements ProviderBase, FormattingCapability, SymbolCapa
         return renameSymbol(text, position, newName, uri);
     }
 
-    prepareRename(text: string, position: Position): { range: { start: Position; end: Position }; placeholder: string } | null {
+    prepareRename(
+        text: string,
+        position: Position,
+    ): { range: { start: Position; end: Position }; placeholder: string } | null {
         return prepareRenameSymbol(text, position);
     }
 

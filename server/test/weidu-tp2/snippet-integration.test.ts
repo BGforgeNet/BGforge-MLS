@@ -59,10 +59,8 @@ function createKeywordSymbol(name: string, category: CompletionCategory): Consta
 /** Filter completions for the given text/position and find an item by label. */
 function findCompletion(text: string, line: number, character: number, label: string): CompletionItem | undefined {
     const completions = weiduTp2Provider.getCompletions!(CURRENT_URI);
-    const filtered = weiduTp2Provider.filterCompletions!(
-        completions, text, { line, character }, CURRENT_URI
-    );
-    return filtered.find(c => c.label === label);
+    const filtered = weiduTp2Provider.filterCompletions!(completions, text, { line, character }, CURRENT_URI);
+    return filtered.find((c) => c.label === label);
 }
 
 beforeAll(async () => {
@@ -143,14 +141,14 @@ describe("weidu-tp2: keyword snippet integration in patch context", () => {
         const item = findCompletion(PATCH_TEXT, PATCH_LINE, PATCH_COL, "SPRINT");
         expect(item).toBeDefined();
         expect(item!.insertTextFormat).toBe(InsertTextFormat.Snippet);
-        expect(item!.insertText).toBe("SPRINT ${1} \"${2}\"$0");
+        expect(item!.insertText).toBe('SPRINT ${1} "${2}"$0');
     });
 
     it("inserts TEXT_SPRINT snippet with tab stops and quotes", () => {
         const item = findCompletion(PATCH_TEXT, PATCH_LINE, PATCH_COL, "TEXT_SPRINT");
         expect(item).toBeDefined();
         expect(item!.insertTextFormat).toBe(InsertTextFormat.Snippet);
-        expect(item!.insertText).toBe("TEXT_SPRINT ${1} \"${2}\"$0");
+        expect(item!.insertText).toBe('TEXT_SPRINT ${1} "${2}"$0');
     });
 
     it("does not add snippet for non-SET/SPRINT keywords like WRITE_BYTE", () => {
@@ -176,14 +174,14 @@ describe("weidu-tp2: keyword snippet integration in action context", () => {
         const item = findCompletion(ACTION_TEXT, ACTION_LINE, ACTION_COL, "OUTER_SPRINT");
         expect(item).toBeDefined();
         expect(item!.insertTextFormat).toBe(InsertTextFormat.Snippet);
-        expect(item!.insertText).toBe("OUTER_SPRINT ${1} \"${2}\"$0");
+        expect(item!.insertText).toBe('OUTER_SPRINT ${1} "${2}"$0');
     });
 
     it("inserts OUTER_TEXT_SPRINT snippet with quotes", () => {
         const item = findCompletion(ACTION_TEXT, ACTION_LINE, ACTION_COL, "OUTER_TEXT_SPRINT");
         expect(item).toBeDefined();
         expect(item!.insertTextFormat).toBe(InsertTextFormat.Snippet);
-        expect(item!.insertText).toBe("OUTER_TEXT_SPRINT ${1} \"${2}\"$0");
+        expect(item!.insertText).toBe('OUTER_TEXT_SPRINT ${1} "${2}"$0');
     });
 });
 
@@ -212,12 +210,12 @@ describe("weidu-tp2: snippet integration in lpfName context", () => {
         expect(item).toBeDefined();
         expect(item!.insertTextFormat).toBe(InsertTextFormat.Snippet);
         expect(item!.insertText).toBe(
-            "func_required_params\n"
-            + "    INT_VAR\n"
-            + "        count = ${1}\n"
-            + "    STR_VAR\n"
-            + "        name = ${2}\n"
-            + "END$0"
+            "func_required_params\n" +
+                "    INT_VAR\n" +
+                "        count = ${1}\n" +
+                "    STR_VAR\n" +
+                "        name = ${2}\n" +
+                "END$0",
         );
     });
 
@@ -231,12 +229,7 @@ describe("weidu-tp2: snippet integration in lpfName context", () => {
         expect(item).toBeDefined();
         expect(item!.insertTextFormat).toBe(InsertTextFormat.Snippet);
         expect(item!.insertText).toBe(
-            "func_with_ret\n"
-            + "    RET\n"
-            + "        success\n"
-            + "    RET_ARRAY\n"
-            + "        items\n"
-            + "END$0"
+            "func_with_ret\n    RET\n        success\n    RET_ARRAY\n        items\nEND$0",
         );
     });
 });

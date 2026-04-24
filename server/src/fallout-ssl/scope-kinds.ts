@@ -5,7 +5,7 @@ export const ScopeKind = {
     External: "external",
 } as const;
 
-export type ScopeKind = typeof ScopeKind[keyof typeof ScopeKind];
+export type ScopeKind = (typeof ScopeKind)[keyof typeof ScopeKind];
 
 /**
  * Exhaustive-check helper for ScopeKind switches.

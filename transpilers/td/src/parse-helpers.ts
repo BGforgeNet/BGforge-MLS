@@ -6,12 +6,7 @@
  * receive parser context (vars map) as a parameter.
  */
 
-import {
-    ArrayLiteralExpression,
-    Expression,
-    Node,
-    SyntaxKind,
-} from "ts-morph";
+import { ArrayLiteralExpression, Expression, Node, SyntaxKind } from "ts-morph";
 import * as utils from "../../common/transpiler-utils";
 import type { VarsContext } from "../../common/transpiler-utils";
 import { TranspileError } from "../../common/transpile-error";
@@ -31,9 +26,7 @@ function evaluateExpression(expr: Expression, vars: VarsContext): string | undef
     }
 
     if (expr.isKind(SyntaxKind.ArrayLiteralExpression)) {
-        const elements = (expr as ArrayLiteralExpression)
-            .getElements()
-            .map(e => e.getText());
+        const elements = (expr as ArrayLiteralExpression).getElements().map((e) => e.getText());
         return `[${elements.join(", ")}]`;
     }
 
@@ -130,7 +123,7 @@ function expressionToActionString(expr: Expression, vars: VarsContext): string {
             return `"${raw}"`;
         }
 
-        const argStrings = args.map(a => expressionToActionString(a as Expression, vars));
+        const argStrings = args.map((a) => expressionToActionString(a as Expression, vars));
         return `${funcName}(${argStrings.join(",")})`;
     }
 
@@ -164,10 +157,7 @@ function expressionToActionString(expr: Expression, vars: VarsContext): string {
 function validateArgs(funcName: string, args: Node[], minArgs: number, lineNumber: number) {
     if (args.length < minArgs) {
         const argWord = minArgs === 1 ? "argument" : "arguments";
-        throw new TranspileError(
-            `${funcName}() requires at least ${minArgs} ${argWord}`,
-            { line: lineNumber }
-        );
+        throw new TranspileError(`${funcName}() requires at least ${minArgs} ${argWord}`, { line: lineNumber });
     }
 }
 
@@ -224,7 +214,6 @@ function parseUnless(expr: Expression): string | undefined {
     return utils.stripQuotes(expr.getText());
 }
 
-
 /**
  * Extract a boolean option from an optional ObjectLiteralExpression argument.
  * Returns true if the property exists and its initializer text is "true".
@@ -261,10 +250,7 @@ function parseStringOption(arg: Node | undefined, propertyName: string): string 
 function parseRequiredNumber(arg: Node, context: string, lineNumber: number): number {
     const value = Number(arg.getText());
     if (Number.isNaN(value)) {
-        throw new TranspileError(
-            `Expected numeric value for ${context}, got "${arg.getText()}"`,
-            { line: lineNumber }
-        );
+        throw new TranspileError(`Expected numeric value for ${context}, got "${arg.getText()}"`, { line: lineNumber });
     }
     return value;
 }

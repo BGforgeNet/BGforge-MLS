@@ -36,13 +36,7 @@ const config: KnipConfig = {
                 // .ts symlinks created by typecheck-samples.sh, may exist during parallel runs
                 "test/td/*.ts",
                 "test/tbaf/*.ts",
-                ...(isProductionKnip
-                    ? [
-                        "src/**",
-                        "vitest.integration.config.ts",
-                        "test/integration/**",
-                    ]
-                    : []),
+                ...(isProductionKnip ? ["src/**", "vitest.integration.config.ts", "test/integration/**"] : []),
             ],
         },
         "plugins/tssl-plugin": {

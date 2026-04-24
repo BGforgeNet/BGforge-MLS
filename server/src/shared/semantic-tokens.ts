@@ -88,7 +88,7 @@ export const semanticTokensLegend: SemanticTokensLegend = {
 };
 
 const tokenTypeToIndex = new Map(
-    semanticTokensLegend.tokenTypes.map((tokenType, index) => [tokenType, index] as const)
+    semanticTokensLegend.tokenTypes.map((tokenType, index) => [tokenType, index] as const),
 );
 
 function compareSpans(left: SemanticTokenSpan, right: SemanticTokenSpan): number {

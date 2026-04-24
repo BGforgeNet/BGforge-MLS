@@ -20,7 +20,9 @@ class ParserRegistry {
             const extLower = ext.toLowerCase();
             if (this.extensionMap.has(extLower)) {
                 const existingId = this.extensionMap.get(extLower);
-                console.warn(`Extension ".${ext}" already registered by "${existingId}", overwriting with "${parser.id}"`);
+                console.warn(
+                    `Extension ".${ext}" already registered by "${existingId}", overwriting with "${parser.id}"`,
+                );
             }
             this.extensionMap.set(extLower, parser.id);
         }

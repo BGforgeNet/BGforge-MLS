@@ -16,26 +16,12 @@
  * - patch-operations.ts: patch operation transforms (ALTER_TRANS, etc.)
  */
 
-import {
-    CallExpression,
-    FunctionDeclaration,
-    Node,
-    SourceFile,
-    Statement,
-    SyntaxKind,
-} from "ts-morph";
-import {
-    TDConstructType,
-    TDPatchOp,
-    type TDScript,
-    type TDConstruct,
-} from "./types";
+import { CallExpression, FunctionDeclaration, Node, SourceFile, Statement, SyntaxKind } from "ts-morph";
+import { TDConstructType, TDPatchOp, type TDScript, type TDConstruct } from "./types";
 import type { VarsContext } from "../../common/transpiler-utils";
 import { evaluateExpression } from "./parse-helpers";
 import { expressionToTrigger } from "./expression-eval";
-import {
-    type FuncsContext,
-} from "./state-transitions";
+import { type FuncsContext } from "./state-transitions";
 import { resolveTransitiveStates, collectOrphanWarnings } from "./state-resolution";
 import {
     transformAlterTrans,
@@ -95,7 +81,7 @@ const TD_KEYWORDS = {
  */
 interface ParseContext {
     readonly sourceFile: SourceFile;
-    readonly vars: VarsContext;       // mutable by design — inlineUserFunction mutates it
+    readonly vars: VarsContext; // mutable by design — inlineUserFunction mutates it
     readonly funcs: FuncsContext;
     readonly calledAsFunction: Set<string>;
 }

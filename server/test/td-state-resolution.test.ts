@@ -86,10 +86,10 @@ append("DLG2", [shared, x]);
 `;
             const ir = parseIR(code);
             // DLG1 should NOT contain shared (it's explicit in DLG2's append)
-            const beginConstruct = ir.constructs.find(c => c.type === "begin");
+            const beginConstruct = ir.constructs.find((c) => c.type === "begin");
             expect(beginConstruct).toBeDefined();
             if (beginConstruct?.type === "begin") {
-                const labels = beginConstruct.states.map(s => s.label);
+                const labels = beginConstruct.states.map((s) => s.label);
                 expect(labels).not.toContain("shared");
             }
         });
@@ -140,7 +140,7 @@ begin("DLG", [start]);
             const ir = parseIR(code);
             // helper is called as a function, should not be collected as state
             if (ir.constructs[0]?.type === "begin") {
-                const labels = ir.constructs[0].states.map(s => s.label);
+                const labels = ir.constructs[0].states.map((s) => s.label);
                 expect(labels).not.toContain("helper");
                 expect(labels).toContain("start");
             }
@@ -163,7 +163,7 @@ begin("DLG", [start]);
             const ir = parseIR(code);
             // helper has parameters, should not be transitively collected
             if (ir.constructs[0]?.type === "begin") {
-                const labels = ir.constructs[0].states.map(s => s.label);
+                const labels = ir.constructs[0].states.map((s) => s.label);
                 expect(labels).not.toContain("helper");
             }
         });
@@ -217,9 +217,9 @@ begin("DLG", [start, target]);
 `;
             const ir = parseIR(code);
             if (ir.constructs[0]?.type === "begin") {
-                const labels = ir.constructs[0].states.map(s => s.label);
+                const labels = ir.constructs[0].states.map((s) => s.label);
                 // target should appear exactly once
-                expect(labels.filter(l => l === "target")).toHaveLength(1);
+                expect(labels.filter((l) => l === "target")).toHaveLength(1);
             }
         });
 
@@ -337,10 +337,10 @@ begin("DLG", [start]);
 `;
             const ir = parseIR(code);
             const warnings = ir.warnings ?? [];
-            const orphanNames = warnings.map(w => w.message);
-            expect(orphanNames.some(m => m.includes("state27"))).toBe(true);
-            expect(orphanNames.some(m => m.includes("state28"))).toBe(true);
-            expect(orphanNames.some(m => m.includes("state29"))).toBe(true);
+            const orphanNames = warnings.map((w) => w.message);
+            expect(orphanNames.some((m) => m.includes("state27"))).toBe(true);
+            expect(orphanNames.some((m) => m.includes("state28"))).toBe(true);
+            expect(orphanNames.some((m) => m.includes("state29"))).toBe(true);
         });
 
         it("warns on unused function even when similar functions are used in for-of", () => {
@@ -360,7 +360,7 @@ begin("DLG", [start]);
 `;
             const ir = parseIR(code);
             const warnings = ir.warnings ?? [];
-            expect(warnings.some(w => w.message.includes("state29"))).toBe(true);
+            expect(warnings.some((w) => w.message.includes("state29"))).toBe(true);
         });
 
         it("does not warn for transitively collected states", () => {
@@ -407,9 +407,9 @@ begin("DLG", [start, state28]);
 `;
             const ir = parseIR(irCode);
             const warnings = detectOrphansFromOriginal(originalCode, ir);
-            expect(warnings.some(w => w.message.includes("state29"))).toBe(true);
+            expect(warnings.some((w) => w.message.includes("state29"))).toBe(true);
             // state28 is in IR, should not be warned
-            expect(warnings.some(w => w.message.includes("state28"))).toBe(false);
+            expect(warnings.some((w) => w.message.includes("state28"))).toBe(false);
         });
 
         it("excludes helper functions called as callees", () => {
@@ -425,9 +425,9 @@ begin("DLG", [start]);
 `);
             const warnings = detectOrphansFromOriginal(originalCode, ir);
             // learnSpell has params -> not warned
-            expect(warnings.some(w => w.message.includes("learnSpell"))).toBe(false);
+            expect(warnings.some((w) => w.message.includes("learnSpell"))).toBe(false);
             // state29 has no params, not collected -> warned
-            expect(warnings.some(w => w.message.includes("state29"))).toBe(true);
+            expect(warnings.some((w) => w.message.includes("state29"))).toBe(true);
         });
 
         it("excludes functions with parameters", () => {
@@ -446,10 +446,22 @@ begin("DLG", [start]);
 
         it("mergeWarnings deduplicates by message", () => {
             const parserWarnings = [
-                { message: 'Function "orphan" looks like an orphan state (not collected by any begin/append and not called as a helper)', line: 5, columnStart: 9, columnEnd: 15 },
+                {
+                    message:
+                        'Function "orphan" looks like an orphan state (not collected by any begin/append and not called as a helper)',
+                    line: 5,
+                    columnStart: 9,
+                    columnEnd: 15,
+                },
             ];
             const orphanWarnings = [
-                { message: 'Function "orphan" looks like an orphan state (not collected by any begin/append and not called as a helper)', line: 3, columnStart: 9, columnEnd: 15 },
+                {
+                    message:
+                        'Function "orphan" looks like an orphan state (not collected by any begin/append and not called as a helper)',
+                    line: 3,
+                    columnStart: 9,
+                    columnEnd: 15,
+                },
             ];
             const merged = mergeWarnings(parserWarnings, orphanWarnings);
             // Only one warning, from orphanWarnings (original source, preferred)

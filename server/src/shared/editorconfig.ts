@@ -18,7 +18,7 @@ function matchesGlob(fileName: string, pattern: string): boolean {
         const braceMatch = extPattern.match(/^\{(.+)\}$/);
         if (braceMatch && braceMatch[1]) {
             const extensions = braceMatch[1].split(",");
-            return extensions.some(ext => fileName.endsWith("." + ext.trim()));
+            return extensions.some((ext) => fileName.endsWith("." + ext.trim()));
         }
         return fileName.endsWith("." + extPattern);
     }

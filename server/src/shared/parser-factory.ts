@@ -77,7 +77,7 @@ const DEFAULT_MAX_CACHE_SIZE = 10;
 export function createCachedParserModule(
     wasmFileName: string,
     name: string,
-    maxCacheSize: number = DEFAULT_MAX_CACHE_SIZE
+    maxCacheSize: number = DEFAULT_MAX_CACHE_SIZE,
 ): CachedParserModule {
     const base = createParserModule(wasmFileName, name);
 

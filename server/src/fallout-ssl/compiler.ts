@@ -207,12 +207,7 @@ function getValidationOutputPath(uri: string, base: string) {
     return path.join(tmpDir, `tmp-${uriHash}-${base}.int`);
 }
 
-export async function compile(
-    uri: NormalizedUri,
-    sslSettings: SSLsettings,
-    interactive = false,
-    text: string,
-) {
+export async function compile(uri: NormalizedUri, sslSettings: SSLsettings, interactive = false, text: string) {
     const filepath = uriToPath(uri);
     const cwdTo = path.dirname(filepath);
     const tmpPath = path.join(cwdTo, TMP_SSL_NAME);

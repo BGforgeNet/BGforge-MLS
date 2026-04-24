@@ -18,13 +18,7 @@ export {
 
 export { getItemTypes, saveItemTypesIelib, getItemTypesIsense } from "./item-types.ts";
 
-export {
-    actionAliasDesc,
-    actionDesc,
-    actionDescAbsoluteUrls,
-    appendUnique,
-    actionDetail,
-} from "./actions.ts";
+export { actionAliasDesc, actionDesc, actionDescAbsoluteUrls, appendUnique, actionDetail } from "./actions.ts";
 
 export { extractTriggersFromHtml } from "./triggers.ts";
 

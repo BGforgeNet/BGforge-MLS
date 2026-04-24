@@ -224,7 +224,7 @@ function parseScriptSection(group: ParsedGroup): z.infer<typeof mapScriptSection
 }
 
 function objectKindFromPid(pid: number): z.infer<typeof mapObjectSchema>["kind"] {
-    switch ((pid >>> 24) & 0xFF) {
+    switch ((pid >>> 24) & 0xff) {
         case 0:
             return "item";
         case 1:
@@ -279,7 +279,11 @@ function parseMapObject(group: ParsedGroup): z.infer<typeof mapObjectSchema> {
             .filter((entry): entry is ParsedGroup => isGroup(entry) && /^Inventory Entry \d+$/.test(entry.name))
             .map((entry) => ({
                 quantity: readNumber(entry, "Quantity"),
-                object: parseMapObject(entry.fields.find((field): field is ParsedGroup => isGroup(field) && /^Object \d+\.\d+ /.test(field.name))!),
+                object: parseMapObject(
+                    entry.fields.find(
+                        (field): field is ParsedGroup => isGroup(field) && /^Object \d+\.\d+ /.test(field.name),
+                    )!,
+                ),
             })),
     };
 
@@ -313,13 +317,13 @@ function parseMapObject(group: ParsedGroup): z.infer<typeof mapObjectSchema> {
                 exitGrid,
                 "Destination Elevation",
                 "map.objects.elevations[].objects[].exitGrid.destinationElevation",
-                "int32"
+                "int32",
             ),
             destinationRotation: readClampedNumber(
                 exitGrid,
                 "Destination Rotation",
                 "map.objects.elevations[].objects[].exitGrid.destinationRotation",
-                "int32"
+                "int32",
             ),
         };
     }
@@ -361,7 +365,12 @@ export function rebuildMapCanonicalDocument(parseResult: ParseResult): MapCanoni
         filename: readString(headerGroup, "Filename"),
         defaultPosition: readNumber(headerGroup, "Default Position"),
         defaultElevation: readClampedNumber(headerGroup, "Default Elevation", "map.header.defaultElevation", "int32"),
-        defaultOrientation: readClampedNumber(headerGroup, "Default Orientation", "map.header.defaultOrientation", "int32"),
+        defaultOrientation: readClampedNumber(
+            headerGroup,
+            "Default Orientation",
+            "map.header.defaultOrientation",
+            "int32",
+        ),
         numLocalVars: readNumber(headerGroup, "Num Local Vars"),
         scriptId: readNumber(headerGroup, "Script ID"),
         flags: readNumber(headerGroup, "Map Flags") >>> 0,
@@ -371,31 +380,37 @@ export function rebuildMapCanonicalDocument(parseResult: ParseResult): MapCanoni
         timestamp: readNumber(headerGroup, "Timestamp") >>> 0,
     };
 
-    const globalVariables = getOptionalGroup(parseResult.root, "Global Variables")?.fields
-        .filter((entry): entry is ParsedField => !isGroup(entry))
-        .map((entry) => typeof entry.value === "number" ? entry.value : Number(entry.value)) ?? [];
-    const localVariables = getOptionalGroup(parseResult.root, "Local Variables")?.fields
-        .filter((entry): entry is ParsedField => !isGroup(entry))
-        .map((entry) => typeof entry.value === "number" ? entry.value : Number(entry.value)) ?? [];
+    const globalVariables =
+        getOptionalGroup(parseResult.root, "Global Variables")
+            ?.fields.filter((entry): entry is ParsedField => !isGroup(entry))
+            .map((entry) => (typeof entry.value === "number" ? entry.value : Number(entry.value))) ?? [];
+    const localVariables =
+        getOptionalGroup(parseResult.root, "Local Variables")
+            ?.fields.filter((entry): entry is ParsedField => !isGroup(entry))
+            .map((entry) => (typeof entry.value === "number" ? entry.value : Number(entry.value))) ?? [];
 
     const tiles = parseResult.root.fields
         .filter((entry): entry is ParsedGroup => isGroup(entry) && /^Elevation \d+ Tiles$/.test(entry.name))
         .map((entry) => parseTileElevation(entry));
 
     const scripts = parseResult.root.fields
-        .filter((entry): entry is ParsedGroup => isGroup(entry) && entry.name.endsWith(' Scripts'))
+        .filter((entry): entry is ParsedGroup => isGroup(entry) && entry.name.endsWith(" Scripts"))
         .map((entry) => parseScriptSection(entry));
 
     const objects = parseObjects(getGroup(parseResult.root, "Objects Section"));
 
-    return parseWithSchemaValidation(mapCanonicalDocumentSchema, {
-        header,
-        globalVariables,
-        localVariables,
-        tiles,
-        scripts,
-        objects,
-    }, "Invalid MAP canonical document");
+    return parseWithSchemaValidation(
+        mapCanonicalDocumentSchema,
+        {
+            header,
+            globalVariables,
+            localVariables,
+            tiles,
+            scripts,
+            objects,
+        },
+        "Invalid MAP canonical document",
+    );
 }
 
 export function getMapCanonicalDocument(parseResult: ParseResult): MapCanonicalDocument | undefined {
@@ -405,14 +420,17 @@ export function getMapCanonicalDocument(parseResult: ParseResult): MapCanonicalD
 
 export function createMapCanonicalSnapshot(parseResult: ParseResult): MapCanonicalSnapshot {
     const document = getMapCanonicalDocument(parseResult) ?? rebuildMapCanonicalDocument(parseResult);
-    return parseWithSchemaValidation(mapCanonicalSnapshotSchema, {
-        schemaVersion: 1,
-        format: "map",
-        formatName: parseResult.formatName,
-        document,
-        opaqueRanges: parseResult.opaqueRanges,
-        warnings: parseResult.warnings,
-        errors: parseResult.errors,
-    }, "Invalid MAP canonical snapshot");
+    return parseWithSchemaValidation(
+        mapCanonicalSnapshotSchema,
+        {
+            schemaVersion: 1,
+            format: "map",
+            formatName: parseResult.formatName,
+            document,
+            opaqueRanges: parseResult.opaqueRanges,
+            warnings: parseResult.warnings,
+            errors: parseResult.errors,
+        },
+        "Invalid MAP canonical snapshot",
+    );
 }
-

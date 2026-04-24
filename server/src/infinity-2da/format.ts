@@ -64,7 +64,10 @@ function parse(text: string): Parsed {
     let columnNames: readonly string[] = [];
     while (cursor < lines.length) {
         const line = lines[cursor] ?? "";
-        if (line.length === 0) { cursor++; continue; }
+        if (line.length === 0) {
+            cursor++;
+            continue;
+        }
         if (line[0] === " " || line[0] === "\t") {
             columnNames = tokenize(line);
             cursor++;
@@ -107,19 +110,13 @@ export function format2da(rawText: string): FormatResult {
     const maxLabelWidth = dataRows.reduce((max, row) => Math.max(max, row.label.length), 0);
 
     // Number of data columns (max across column-names row and all data rows)
-    const numCols = Math.max(
-        columnNames.length,
-        ...dataRows.map((row) => row.values.length)
-    );
+    const numCols = Math.max(columnNames.length, ...dataRows.map((row) => row.values.length));
 
     // Width of each data column = max of its header name and all its cell values
     const colWidths: number[] = [];
     for (let c = 0; c < numCols; c++) {
         const nameWidth = (columnNames[c] ?? "").length;
-        const dataWidth = dataRows.reduce(
-            (max, row) => Math.max(max, (row.values[c] ?? "").length),
-            0
-        );
+        const dataWidth = dataRows.reduce((max, row) => Math.max(max, (row.values[c] ?? "").length), 0);
         colWidths.push(Math.max(nameWidth, dataWidth));
     }
 
@@ -135,17 +132,13 @@ export function format2da(rawText: string): FormatResult {
     // Column-names row: indent by (maxLabelWidth + MIN_GAP) to align with data columns
     if (columnNames.length > 0) {
         const indent = " ".repeat(maxLabelWidth + MIN_GAP);
-        const parts = columnNames.map((name, i) =>
-            name.padEnd((colWidths[i] ?? name.length) + MIN_GAP)
-        );
+        const parts = columnNames.map((name, i) => name.padEnd((colWidths[i] ?? name.length) + MIN_GAP));
         outputLines.push((indent + parts.join("")).trimEnd());
     }
 
     // Data rows
     for (const { label, values } of dataRows) {
-        const parts = values.map((val, i) =>
-            val.padEnd((colWidths[i] ?? val.length) + MIN_GAP)
-        );
+        const parts = values.map((val, i) => val.padEnd((colWidths[i] ?? val.length) + MIN_GAP));
         outputLines.push((label.padEnd(maxLabelWidth + MIN_GAP) + parts.join("")).trimEnd());
     }
 

@@ -124,13 +124,15 @@ describe("buildTreeHtml", () => {
 
     it("renders a simple dialog node", () => {
         const data: DialogData = {
-            nodes: [{
-                name: "Node001",
-                line: 1,
-                replies: [{ msgId: 100, line: 2 }],
-                options: [{ msgId: 200, target: "", type: "NMessage", line: 3 }],
-                callTargets: [],
-            }],
+            nodes: [
+                {
+                    name: "Node001",
+                    line: 1,
+                    replies: [{ msgId: 100, line: 2 }],
+                    options: [{ msgId: 200, target: "", type: "NMessage", line: 3 }],
+                    callTargets: [],
+                },
+            ],
             entryPoints: ["Node001"],
             messages: { "100": "Hello there", "200": "Goodbye" },
         };
@@ -143,13 +145,15 @@ describe("buildTreeHtml", () => {
 
     it("escapes HTML in message text", () => {
         const data: DialogData = {
-            nodes: [{
-                name: "Node001",
-                line: 1,
-                replies: [{ msgId: "inline <script>alert(1)</script>", line: 2 }],
-                options: [],
-                callTargets: [],
-            }],
+            nodes: [
+                {
+                    name: "Node001",
+                    line: 1,
+                    replies: [{ msgId: "inline <script>alert(1)</script>", line: 2 }],
+                    options: [],
+                    callTargets: [],
+                },
+            ],
             entryPoints: ["Node001"],
             messages: {},
         };
@@ -160,13 +164,15 @@ describe("buildTreeHtml", () => {
 
     it("escapes data-fulltext attributes", () => {
         const data: DialogData = {
-            nodes: [{
-                name: "Node001",
-                line: 1,
-                replies: [{ msgId: 100, line: 2 }],
-                options: [],
-                callTargets: [],
-            }],
+            nodes: [
+                {
+                    name: "Node001",
+                    line: 1,
+                    replies: [{ msgId: 100, line: 2 }],
+                    options: [],
+                    callTargets: [],
+                },
+            ],
             entryPoints: ["Node001"],
             messages: { "100": 'She said "hello" & waved' },
         };
@@ -210,18 +216,14 @@ describe("buildTreeHtml", () => {
                     name: "Node001",
                     line: 1,
                     replies: [],
-                    options: [
-                        { msgId: 100, target: "Node002", type: "NOption", line: 2 },
-                    ],
+                    options: [{ msgId: 100, target: "Node002", type: "NOption", line: 2 }],
                     callTargets: [],
                 },
                 {
                     name: "Node002",
                     line: 5,
                     replies: [],
-                    options: [
-                        { msgId: 200, target: "Node001", type: "NOption", line: 6 },
-                    ],
+                    options: [{ msgId: 200, target: "Node001", type: "NOption", line: 6 }],
                     callTargets: [],
                 },
             ],

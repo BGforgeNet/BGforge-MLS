@@ -65,14 +65,14 @@ function buildObjectTypeTransitionBytes(currentBytes: Uint8Array, objectType: nu
     const header = headerSchema.read(reader(currentBytes));
     headerSchema.write(writer(nextBytes), {
         ...header,
-        objectTypeAndId: ((objectType & 0xFF) << 24) | (header.objectTypeAndId & 0x00_FF_FF_FF),
+        objectTypeAndId: ((objectType & 0xff) << 24) | (header.objectTypeAndId & 0x00_ff_ff_ff),
     });
 
     if (objectType === 0) {
         itemCommonSchema.write(writer(nextBytes, HEADER_SIZE), {
             flagsExt: 0,
             attackModes: 0,
-            scriptId: 0xFF_FF_FF_FF,
+            scriptId: 0xff_ff_ff_ff,
             subType: 0,
             materialId: 0,
             size: 0,
@@ -85,7 +85,7 @@ function buildObjectTypeTransitionBytes(currentBytes: Uint8Array, objectType: nu
         sceneryCommonSchema.write(writer(nextBytes, HEADER_SIZE), {
             wallLightFlags: 0,
             actionFlags: 0,
-            scriptId: 0xFF_FF_FF_FF,
+            scriptId: 0xff_ff_ff_ff,
             subType: 0,
             materialId: 0,
             soundId: 0,
@@ -136,13 +136,17 @@ export function isProStructuralFieldId(fieldId: string): boolean {
     }
 
     return (
-        (segments.length === 2 && segments[0] === "Header" && segments[1] === "Object Type")
-        || (segments.length === 2 && segments[0] === "Item Properties" && segments[1] === "Sub Type")
-        || (segments.length === 2 && segments[0] === "Scenery Properties" && segments[1] === "Sub Type")
+        (segments.length === 2 && segments[0] === "Header" && segments[1] === "Object Type") ||
+        (segments.length === 2 && segments[0] === "Item Properties" && segments[1] === "Sub Type") ||
+        (segments.length === 2 && segments[0] === "Scenery Properties" && segments[1] === "Sub Type")
     );
 }
 
-export function buildProStructuralTransitionBytes(parseResult: ParseResult, fieldId: string, rawValue: number): Uint8Array | undefined {
+export function buildProStructuralTransitionBytes(
+    parseResult: ParseResult,
+    fieldId: string,
+    rawValue: number,
+): Uint8Array | undefined {
     const segments = parseFieldId(fieldId);
     if (!segments) {
         return undefined;

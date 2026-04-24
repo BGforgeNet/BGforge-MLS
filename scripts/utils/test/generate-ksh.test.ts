@@ -15,7 +15,7 @@ const SSL_LANG = {
     ext: "ssl h",
     yamlFiles: ["server/data/fallout-ssl-base.yml"],
     caseIgnored: false,
-    stringDelimiters: [["\"", "\""]] as const,
+    stringDelimiters: [['"', '"']] as const,
     foldingPairs: [["begin", "end"]] as const,
 };
 
@@ -25,7 +25,10 @@ const BAF_LANG = {
     ext: "baf",
     yamlFiles: ["server/data/weidu-baf-base.yml"],
     caseIgnored: true,
-    stringDelimiters: [["~", "~"], ["\"", "\""]] as const,
+    stringDelimiters: [
+        ["~", "~"],
+        ['"', '"'],
+    ] as const,
     foldingPairs: [["IF", "END"]] as const,
 };
 

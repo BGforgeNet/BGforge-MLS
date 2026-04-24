@@ -229,7 +229,7 @@ IF ~~ THEN GOTO a21
             const result = parseDDialog(text);
 
             // Should have the BEGIN state plus CHAIN states
-            const chainStates = result.states.filter(s => s.blockLabel === "chainlabel");
+            const chainStates = result.states.filter((s) => s.blockLabel === "chainlabel");
             expect(chainStates.length).toBeGreaterThanOrEqual(1);
 
             // Last chain state should have a GOTO transition to a21
@@ -325,7 +325,7 @@ INTERJECT_COPY_TRANS DIALOG s1 myInterject
 `;
             const result = parseDDialog(text);
 
-            const interjectBlocks = result.blocks.filter(b => b.kind === "interject");
+            const interjectBlocks = result.blocks.filter((b) => b.kind === "interject");
             expect(interjectBlocks.length).toBeGreaterThanOrEqual(1);
         });
 
@@ -462,8 +462,8 @@ END
             // Should have 4 blocks: alter_trans, append, replace_trans_trigger, extend
             expect(result.blocks).toHaveLength(4);
 
-            const structural = result.blocks.filter(b => b.kind !== "modify");
-            const modify = result.blocks.filter(b => b.kind === "modify");
+            const structural = result.blocks.filter((b) => b.kind !== "modify");
+            const modify = result.blocks.filter((b) => b.kind === "modify");
 
             expect(structural).toHaveLength(2); // append + extend
             expect(modify).toHaveLength(2); // alter_trans + replace_trans_trigger
@@ -578,7 +578,7 @@ EXIT
             const result = parseDDialog(text);
 
             // Both chain text segments should become states
-            const chainStates = result.states.filter(s => s.blockLabel === "chainlabel");
+            const chainStates = result.states.filter((s) => s.blockLabel === "chainlabel");
             expect(chainStates.length).toBeGreaterThanOrEqual(2);
 
             // The first state must have an auto-added GOTO transition to the second

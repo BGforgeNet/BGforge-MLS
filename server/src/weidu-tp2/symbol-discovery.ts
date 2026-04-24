@@ -103,9 +103,11 @@ export function getSymbolAtPosition(root: SyntaxNode, position: Position): Symbo
         // No %var% found at cursor - fall through to check for function/macro names below
     }
 
-    if (node.type === SyntaxType.PercentString ||
+    if (
+        node.type === SyntaxType.PercentString ||
         node.type === SyntaxType.PercentContent ||
-        node.type === SyntaxType.VariableRef) {
+        node.type === SyntaxType.VariableRef
+    ) {
         return getVariableSymbolAtPosition(root, position);
     }
 
@@ -146,9 +148,10 @@ export function getSymbolAtPosition(root: SyntaxNode, position: Position): Symbo
                 const valueVarNode = varDecl.childForFieldName("value_var");
                 const forEachVarNode = varDecl.childForFieldName("var");
 
-                const isLoopVar = (keyVarNode && isSameNode(keyVarNode, node)) ||
-                                  (valueVarNode && isSameNode(valueVarNode, node)) ||
-                                  (forEachVarNode && isSameNode(forEachVarNode, node));
+                const isLoopVar =
+                    (keyVarNode && isSameNode(keyVarNode, node)) ||
+                    (valueVarNode && isSameNode(valueVarNode, node)) ||
+                    (forEachVarNode && isSameNode(forEachVarNode, node));
 
                 if (isLoopVar) {
                     return {
@@ -197,14 +200,20 @@ export function getSymbolAtPosition(root: SyntaxNode, position: Position): Symbo
                 while (current && !isSameNode(current, callAncestor)) {
                     // int_var_call_item, str_var_call_item, ret_call_item, ret_array_call_item
                     // contain the parameter names in function calls
-                    if (current.type === SyntaxType.IntVarCallItem ||
+                    if (
+                        current.type === SyntaxType.IntVarCallItem ||
                         current.type === SyntaxType.StrVarCallItem ||
                         current.type === SyntaxType.RetCallItem ||
-                        current.type === SyntaxType.RetArrayCallItem) {
+                        current.type === SyntaxType.RetArrayCallItem
+                    ) {
                         // Only reject if cursor is on the param name (first child),
                         // not on the value part. Grammar: call_item = name [= value]
                         const paramNameNode = current.children[0];
-                        if (paramNameNode && node.startIndex >= paramNameNode.startIndex && node.endIndex <= paramNameNode.endIndex) {
+                        if (
+                            paramNameNode &&
+                            node.startIndex >= paramNameNode.startIndex &&
+                            node.endIndex <= paramNameNode.endIndex
+                        ) {
                             return null; // Function call parameter names cannot be renamed
                         }
                         break;
@@ -224,11 +233,7 @@ export function getSymbolAtPosition(root: SyntaxNode, position: Position): Symbo
  * Check if a node's variable reference is shadowed by an inner loop within the target loop scope.
  * This is used to exclude references that are shadowed by nested loops from rename operations.
  */
-export function isShadowedByInnerLoop(
-    node: SyntaxNode,
-    varName: string,
-    targetLoopNode: SyntaxNode
-): boolean {
+export function isShadowedByInnerLoop(node: SyntaxNode, varName: string, targetLoopNode: SyntaxNode): boolean {
     // Find the containing loop for this reference
     const containingLoop = findContainingLoop(node);
     if (!containingLoop) {
@@ -272,7 +277,10 @@ export function isVariableRefInDeclarationContext(varRefNode: SyntaxNode): boole
     // For FOR_EACH, the var field is a value node that contains the variable_ref
     // So we need to check the grandparent
     const grandparent = parent.parent;
-    if (grandparent && (grandparent.type === SyntaxType.ActionForEach || grandparent.type === SyntaxType.PatchForEach)) {
+    if (
+        grandparent &&
+        (grandparent.type === SyntaxType.ActionForEach || grandparent.type === SyntaxType.PatchForEach)
+    ) {
         const varField = grandparent.childForFieldName("var");
         // Check if the var field (value node) contains this variable_ref
         if (varField && varField === parent) {
@@ -283,8 +291,10 @@ export function isVariableRefInDeclarationContext(varRefNode: SyntaxNode): boole
     if (parent.type === SyntaxType.ActionPhpEach || parent.type === SyntaxType.PatchPhpEach) {
         const keyVarField = parent.childForFieldName("key_var");
         const valueVarField = parent.childForFieldName("value_var");
-        if ((keyVarField && isSameNode(keyVarField, varRefNode)) ||
-            (valueVarField && isSameNode(valueVarField, varRefNode))) {
+        if (
+            (keyVarField && isSameNode(keyVarField, varRefNode)) ||
+            (valueVarField && isSameNode(valueVarField, varRefNode))
+        ) {
             return true;
         }
     }

@@ -197,10 +197,7 @@ describe("core/symbol", () => {
                 hover: { contents: { kind: "markdown", value: "function my_func()" } },
                 signature: {
                     label: "my_func(INT_VAR x, STR_VAR s)",
-                    parameters: [
-                        { label: "x" },
-                        { label: "s" },
-                    ],
+                    parameters: [{ label: "x" }, { label: "s" }],
                 },
             };
 

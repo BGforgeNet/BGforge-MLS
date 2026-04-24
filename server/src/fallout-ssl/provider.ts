@@ -10,7 +10,17 @@
 
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { type CancellationToken, type CompletionItem, type DocumentSymbol, type FoldingRange, type Location, type Position, type SignatureHelp, type SymbolInformation, type WorkspaceEdit } from "vscode-languageserver/node";
+import {
+    type CancellationToken,
+    type CompletionItem,
+    type DocumentSymbol,
+    type FoldingRange,
+    type Location,
+    type Position,
+    type SignatureHelp,
+    type SymbolInformation,
+    type WorkspaceEdit,
+} from "vscode-languageserver/node";
 import type { NormalizedUri } from "../core/normalized-uri";
 import { type IndexedSymbol, SourceType } from "../core/symbol";
 import { conlog, getLinePrefix } from "../common";
@@ -19,7 +29,24 @@ import { isHeaderFile } from "../core/location-utils";
 import { FileIndex } from "../core/file-index";
 import { loadStaticSymbols } from "../core/static-loader";
 import { compile as falloutCompile } from "./compiler";
-import { type FormatResult, type LanguageProvider, type ProviderContext, type ProviderBase, type FormattingCapability, type SymbolCapability, type FoldingCapability, type NavigationCapability, type RenameCapability, type CompletionCapability, type DataCapability, type CompilationCapability, type IndexingCapability, type FeatureGateCapability, type SemanticTokenCapability, type WorkspaceSymbolCapability } from "../language-provider";
+import {
+    type FormatResult,
+    type LanguageProvider,
+    type ProviderContext,
+    type ProviderBase,
+    type FormattingCapability,
+    type SymbolCapability,
+    type FoldingCapability,
+    type NavigationCapability,
+    type RenameCapability,
+    type CompletionCapability,
+    type DataCapability,
+    type CompilationCapability,
+    type IndexingCapability,
+    type FeatureGateCapability,
+    type SemanticTokenCapability,
+    type WorkspaceSymbolCapability,
+} from "../language-provider";
 import { formatWithValidation } from "../shared/provider-helpers";
 import { getJsdocCompletions } from "../shared/jsdoc-completions";
 import { FALLOUT_JSDOC_TYPES } from "../shared/fallout-types";
@@ -54,7 +81,22 @@ const SSL_FOLDABLE_TYPES = new Set([
 
 const sslFoldingRanges = createFoldingRangesProvider(isInitialized, parseWithCache, SSL_FOLDABLE_TYPES);
 
-class FalloutSslProvider implements ProviderBase, FormattingCapability, SymbolCapability, FoldingCapability, NavigationCapability, RenameCapability, CompletionCapability, DataCapability, CompilationCapability, IndexingCapability, FeatureGateCapability, SemanticTokenCapability, WorkspaceSymbolCapability {
+class FalloutSslProvider
+    implements
+        ProviderBase,
+        FormattingCapability,
+        SymbolCapability,
+        FoldingCapability,
+        NavigationCapability,
+        RenameCapability,
+        CompletionCapability,
+        DataCapability,
+        CompilationCapability,
+        IndexingCapability,
+        FeatureGateCapability,
+        SemanticTokenCapability,
+        WorkspaceSymbolCapability
+{
     readonly id = LANG_FALLOUT_SSL;
     readonly indexExtensions = [...EXT_FALLOUT_SSL_ALL];
 
@@ -65,10 +107,7 @@ class FalloutSslProvider implements ProviderBase, FormattingCapability, SymbolCa
     private lookupFallbackSymbol(name: string, currentUri?: string): IndexedSymbol | undefined {
         return this.fileIndex?.symbols
             .lookupAll(name)
-            .find((symbol) =>
-                symbol.source.type !== SourceType.Navigation &&
-                symbol.source.uri !== currentUri
-            );
+            .find((symbol) => symbol.source.type !== SourceType.Navigation && symbol.source.uri !== currentUri);
     }
 
     async init(context: ProviderContext): Promise<void> {
@@ -113,7 +152,9 @@ class FalloutSslProvider implements ProviderBase, FormattingCapability, SymbolCa
         if (this.storedContext?.settings.debug) {
             if (!local) {
                 const allLocal = getLocalSymbols(text, uri);
-                conlog(`[resolveSymbol] name="${name}" uri="${uri}" local=not found; local symbols: [${allLocal.map(s => s.name).join(", ")}]`);
+                conlog(
+                    `[resolveSymbol] name="${name}" uri="${uri}" local=not found; local symbols: [${allLocal.map((s) => s.name).join(", ")}]`,
+                );
             } else {
                 conlog(`[resolveSymbol] name="${name}" uri="${uri}" local=found`);
             }
@@ -159,7 +200,13 @@ class FalloutSslProvider implements ProviderBase, FormattingCapability, SymbolCa
         return getLocalDefinition(text, uri, position);
     }
 
-    references(text: string, position: Position, uri: string, includeDeclaration: boolean, _token: CancellationToken): Location[] {
+    references(
+        text: string,
+        position: Position,
+        uri: string,
+        includeDeclaration: boolean,
+        _token: CancellationToken,
+    ): Location[] {
         if (!isInitialized()) {
             return [];
         }
@@ -167,7 +214,13 @@ class FalloutSslProvider implements ProviderBase, FormattingCapability, SymbolCa
         return findReferences(text, position, uri, includeDeclaration, this.fileIndex?.refs);
     }
 
-    filterCompletions(items: CompletionItem[], text: string, position: Position, uri: string, triggerCharacter?: string): CompletionItem[] {
+    filterCompletions(
+        items: CompletionItem[],
+        text: string,
+        position: Position,
+        uri: string,
+        triggerCharacter?: string,
+    ): CompletionItem[] {
         const context = getSslCompletionContext(text, position);
 
         if (context === SslCompletionContext.Comment) {
@@ -189,9 +242,9 @@ class FalloutSslProvider implements ProviderBase, FormattingCapability, SymbolCa
 
         // Merge local symbols into completions (local takes precedence)
         const localSymbols = getLocalSymbols(text, uri);
-        const localLabels = new Set(localSymbols.map(s => s.name));
-        const filtered = items.filter(item => !localLabels.has(item.label as string));
-        return [...localSymbols.map(s => s.completion), ...filtered];
+        const localLabels = new Set(localSymbols.map((s) => s.name));
+        const filtered = items.filter((item) => !localLabels.has(item.label as string));
+        return [...localSymbols.map((s) => s.completion), ...filtered];
     }
 
     shouldProvideFeatures(text: string, position: Position): boolean {
@@ -210,14 +263,22 @@ class FalloutSslProvider implements ProviderBase, FormattingCapability, SymbolCa
         return getSemanticTokenSpans(text);
     }
 
-    prepareRename(text: string, position: Position): { range: { start: Position; end: Position }; placeholder: string } | null {
+    prepareRename(
+        text: string,
+        position: Position,
+    ): { range: { start: Position; end: Position }; placeholder: string } | null {
         if (!isInitialized()) {
             return null;
         }
 
         // Try workspace-aware prepare first (allows renaming header-defined symbols)
         if (this.fileIndex) {
-            const wsResult = prepareRenameSymbolWorkspace(text, position, this.fileIndex.symbols, this.storedContext?.workspaceRoot);
+            const wsResult = prepareRenameSymbolWorkspace(
+                text,
+                position,
+                this.fileIndex.symbols,
+                this.storedContext?.workspaceRoot,
+            );
             if (wsResult) {
                 return wsResult;
             }
@@ -232,16 +293,18 @@ class FalloutSslProvider implements ProviderBase, FormattingCapability, SymbolCa
             return null;
         }
 
-        const debugLog = this.storedContext?.settings.debug
-            ? (msg: string) => conlog(`[debug] ${msg}`)
-            : undefined;
+        const debugLog = this.storedContext?.settings.debug ? (msg: string) => conlog(`[debug] ${msg}`) : undefined;
 
         // Try workspace-wide rename first (for symbols defined in headers)
         if (this.fileIndex) {
             debugLog?.(`rename: trying workspace rename for "${newName}" at ${uri}`);
             const wsResult = renameSymbolWorkspace(
-                text, position, newName, uri,
-                this.fileIndex.refs, this.fileIndex.symbols,
+                text,
+                position,
+                newName,
+                uri,
+                this.fileIndex.refs,
+                this.fileIndex.symbols,
                 (fileUri) => this.readFileText(fileUri),
                 this.storedContext?.workspaceRoot,
                 debugLog,
@@ -262,7 +325,9 @@ class FalloutSslProvider implements ProviderBase, FormattingCapability, SymbolCa
     }
 
     getCompletions(uri: string): CompletionItem[] {
-        return this.fileIndex ? this.fileIndex.symbols.query({ excludeUri: uri }).map((s: IndexedSymbol) => s.completion) : [];
+        return this.fileIndex
+            ? this.fileIndex.symbols.query({ excludeUri: uri }).map((s: IndexedSymbol) => s.completion)
+            : [];
     }
 
     getSignature(_uri: string, symbolName: string, paramIndex: number): SignatureHelp | null {

@@ -41,10 +41,7 @@ export const WEIDU_JSDOC_TYPE_NAMES: readonly string[] = [
 ] as const;
 
 /** Custom type names shared across languages (not engine-specific). Subset of the above. */
-export const CUSTOM_JSDOC_TYPE_NAMES: readonly string[] = [
-    "list",
-    "map",
-] as const;
+export const CUSTOM_JSDOC_TYPE_NAMES: readonly string[] = ["list", "map"] as const;
 
 /** All JSDoc type names across all languages, deduplicated and sorted. Used for brace-less type disambiguation. */
 export const ALL_JSDOC_TYPE_NAMES: readonly string[] = [

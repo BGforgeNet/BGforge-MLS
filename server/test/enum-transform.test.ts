@@ -6,7 +6,11 @@
 import { describe, expect, it } from "vitest";
 import * as fs from "fs";
 import * as path from "path";
-import { transformEnums, expandEnumPropertyAccess, extractDeclareEnumNames } from "../../transpilers/common/enum-transform";
+import {
+    transformEnums,
+    expandEnumPropertyAccess,
+    extractDeclareEnumNames,
+} from "../../transpilers/common/enum-transform";
 import { bundle } from "../../transpilers/common/bundle";
 
 describe("transformEnums", () => {
@@ -222,9 +226,7 @@ describe("expandEnumPropertyAccess — externalized enums", () => {
 
     it("strips prefix for multiple externalized enums", () => {
         const input = `var x = ClassID.ANKHEG;\nvar y = AnimateID.BASILISK;`;
-        const result = expandEnumPropertyAccess(
-            input, new Set(), new Set(["ClassID", "AnimateID"]),
-        );
+        const result = expandEnumPropertyAccess(input, new Set(), new Set(["ClassID", "AnimateID"]));
 
         expect(result).toContain("var x = ANKHEG;");
         expect(result).toContain("var y = BASILISK;");
@@ -233,9 +235,7 @@ describe("expandEnumPropertyAccess — externalized enums", () => {
     it("handles mixed bundled and externalized enums", () => {
         // Direction is a bundled enum (has compat object), ClassID is externalized
         const input = `var Direction = { S: 0, N: 8 };\nvar x = Direction.S;\nvar y = ClassID.ANKHEG;`;
-        const result = expandEnumPropertyAccess(
-            input, new Set(["Direction"]), new Set(["ClassID"]),
-        );
+        const result = expandEnumPropertyAccess(input, new Set(["Direction"]), new Set(["ClassID"]));
 
         // Bundled enum: expanded with underscore prefix and value
         expect(result).toContain("Direction_S");
@@ -289,26 +289,38 @@ describe("bundle (esbuild integration)", () => {
         // and ./dir.ids (→ dir.ids.ts with enum), using extensionless imports.
         try {
             // Enum file — should be bundled so values are resolved
-            writeTmpFile("pkg/dir.ids.ts", `
+            writeTmpFile(
+                "pkg/dir.ids.ts",
+                `
 export enum Direction {
   S = 0, SSW = 1, SW = 2, W = 4, N = 8, E = 12,
 }
-`);
+`,
+            );
             // Declaration file — should be externalized (type-only)
-            writeTmpFile("pkg/actions.d.ts", `
+            writeTmpFile(
+                "pkg/actions.d.ts",
+                `
 export declare function Attack(target: string): void;
-`);
+`,
+            );
             // Package index with extensionless re-exports (the pattern that caused resolution failures)
-            writeTmpFile("pkg/index.ts", `
+            writeTmpFile(
+                "pkg/index.ts",
+                `
 export * from './actions';
 export * from './dir.ids';
-`);
+`,
+            );
             // TBAF file that imports and uses enum value
-            const tbafPath = writeTmpFile("test.tbaf", `
+            const tbafPath = writeTmpFile(
+                "test.tbaf",
+                `
 import { Direction, Attack } from "./pkg";
 const dir = Direction.S;
 const facing = Direction.N;
-`);
+`,
+            );
             const source = fs.readFileSync(tbafPath, "utf-8");
             const output = await bundle(tbafPath, source);
 
@@ -326,16 +338,25 @@ const facing = Direction.N;
     it("externalizes .d.ts imports without breaking the build", async () => {
         // Ensures that declaration-only imports don't cause build failures
         try {
-            writeTmpFile("lib/actions.d.ts", `
+            writeTmpFile(
+                "lib/actions.d.ts",
+                `
 export declare function Foo(): void;
-`);
-            writeTmpFile("lib/index.ts", `
+`,
+            );
+            writeTmpFile(
+                "lib/index.ts",
+                `
 export * from './actions';
-`);
-            const tbafPath = writeTmpFile("test.tbaf", `
+`,
+            );
+            const tbafPath = writeTmpFile(
+                "test.tbaf",
+                `
 import { Foo } from "./lib";
 Foo();
-`);
+`,
+            );
             const source = fs.readFileSync(tbafPath, "utf-8");
             // Should not throw — .d.ts externalization + extensionless resolution should handle this
             const output = await bundle(tbafPath, source);
@@ -349,19 +370,31 @@ Foo();
         // Tests the pattern where root index re-exports from a subdirectory
         // that itself re-exports enum files
         try {
-            writeTmpFile("root/sub/color.ids.ts", `
+            writeTmpFile(
+                "root/sub/color.ids.ts",
+                `
 export enum Color { Red = 0, Green = 1, Blue = 2 }
-`);
-            writeTmpFile("root/sub/index.ts", `
+`,
+            );
+            writeTmpFile(
+                "root/sub/index.ts",
+                `
 export * from './color.ids';
-`);
-            writeTmpFile("root/index.ts", `
+`,
+            );
+            writeTmpFile(
+                "root/index.ts",
+                `
 export * from './sub';
-`);
-            const tbafPath = writeTmpFile("test.tbaf", `
+`,
+            );
+            const tbafPath = writeTmpFile(
+                "test.tbaf",
+                `
 import { Color } from "./root";
 const c = Color.Red;
-`);
+`,
+            );
             const source = fs.readFileSync(tbafPath, "utf-8");
             const output = await bundle(tbafPath, source);
 
@@ -379,21 +412,30 @@ const c = Color.Red;
         // externalizes it. Post-processing should strip prefix:
         // ClassID.ANKHEG → ANKHEG.
         try {
-            writeTmpFile("lib/classes.d.ts", `
+            writeTmpFile(
+                "lib/classes.d.ts",
+                `
 export declare enum ClassID {
     ANKHEG = 101,
     BASILISK = 102,
     BEAR = 103,
 }
-`);
-            writeTmpFile("lib/index.ts", `
+`,
+            );
+            writeTmpFile(
+                "lib/index.ts",
+                `
 export { ClassID } from './classes';
-`);
-            const tbafPath = writeTmpFile("test.tbaf", `
+`,
+            );
+            const tbafPath = writeTmpFile(
+                "test.tbaf",
+                `
 import { ClassID } from "./lib";
 const x = ClassID.ANKHEG;
 const y = ClassID.BASILISK;
-`);
+`,
+            );
             const source = fs.readFileSync(tbafPath, "utf-8");
             const output = await bundle(tbafPath, source);
 
@@ -411,22 +453,31 @@ const y = ClassID.BASILISK;
         // (TypeScript allows omitting .ts). The external-declarations plugin matches
         // the .d suffix, but the resolved path needs .ts appended to read the file.
         try {
-            writeTmpFile("lib/class.ids.d.ts", `
+            writeTmpFile(
+                "lib/class.ids.d.ts",
+                `
 export declare enum CLASS {
     MAGE = 1,
     FIGHTER = 2,
     THIEF = 4,
     THIEF_ALL = 202,
 }
-`);
-            writeTmpFile("lib/index.ts", `
+`,
+            );
+            writeTmpFile(
+                "lib/index.ts",
+                `
 export { CLASS } from './class.ids.d';
-`);
-            const tbafPath = writeTmpFile("test.tbaf", `
+`,
+            );
+            const tbafPath = writeTmpFile(
+                "test.tbaf",
+                `
 import { CLASS } from "./lib";
 const x = CLASS.THIEF_ALL;
 const y = CLASS.MAGE;
-`);
+`,
+            );
             const source = fs.readFileSync(tbafPath, "utf-8");
             const output = await bundle(tbafPath, source);
 
@@ -443,21 +494,33 @@ const y = CLASS.MAGE;
         // Direction is a regular enum (.ts file, bundled → resolved to values).
         // ClassID is a declare enum (.d.ts file, externalized → prefix stripped).
         try {
-            writeTmpFile("lib/dir.ids.ts", `
+            writeTmpFile(
+                "lib/dir.ids.ts",
+                `
 export enum Direction { S = 0, N = 8 }
-`);
-            writeTmpFile("lib/classes.d.ts", `
+`,
+            );
+            writeTmpFile(
+                "lib/classes.d.ts",
+                `
 export declare enum ClassID { ANKHEG = 101 }
-`);
-            writeTmpFile("lib/index.ts", `
+`,
+            );
+            writeTmpFile(
+                "lib/index.ts",
+                `
 export { Direction } from './dir.ids';
 export { ClassID } from './classes';
-`);
-            const tbafPath = writeTmpFile("test.tbaf", `
+`,
+            );
+            const tbafPath = writeTmpFile(
+                "test.tbaf",
+                `
 import { Direction, ClassID } from "./lib";
 const dir = Direction.S;
 const cls = ClassID.ANKHEG;
-`);
+`,
+            );
             const source = fs.readFileSync(tbafPath, "utf-8");
             const output = await bundle(tbafPath, source);
 

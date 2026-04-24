@@ -18,7 +18,12 @@ vi.mock("../../src/lsp-connection", () => ({
     initLspConnection: vi.fn(),
 }));
 
-import { renameSymbol, prepareRenameSymbol, renameSymbolWorkspace, prepareRenameSymbolWorkspace } from "../../src/fallout-ssl/rename";
+import {
+    renameSymbol,
+    prepareRenameSymbol,
+    renameSymbolWorkspace,
+    prepareRenameSymbolWorkspace,
+} from "../../src/fallout-ssl/rename";
 import { initParser } from "../../src/fallout-ssl/parser";
 import { ReferencesIndex } from "../../src/shared/references-index";
 import { parseFile } from "../../src/fallout-ssl/header-parser";
@@ -201,8 +206,8 @@ end
 
             // Check that foobar is not renamed
             const edits = result?.changes?.[uri] ?? [];
-            const hasEditOnFoobar = edits.some(edit =>
-                edit.range.start.line === 2 && edit.range.start.character === 10
+            const hasEditOnFoobar = edits.some(
+                (edit) => edit.range.start.line === 2 && edit.range.start.character === 10,
             );
             expect(hasEditOnFoobar).toBe(false);
         });
@@ -398,16 +403,21 @@ procedure main begin
 end
 `;
             const symbolStore = new Symbols();
-            symbolStore.updateFile(headerUri, [{
-                name: "helper",
-                kind: SymbolKind.Procedure,
-                callable: {},
-                location: { uri: headerUri, range: { start: { line: 0, character: 10 }, end: { line: 0, character: 16 } } },
-                scope: { level: ScopeLevel.Workspace },
-                source: { type: SourceType.Workspace, uri: headerUri, displayPath: "headers/utils.h" },
-                completion: { label: "helper" },
-                hover: { contents: { kind: MarkupKind.Markdown, value: "" } },
-            }]);
+            symbolStore.updateFile(headerUri, [
+                {
+                    name: "helper",
+                    kind: SymbolKind.Procedure,
+                    callable: {},
+                    location: {
+                        uri: headerUri,
+                        range: { start: { line: 0, character: 10 }, end: { line: 0, character: 16 } },
+                    },
+                    scope: { level: ScopeLevel.Workspace },
+                    source: { type: SourceType.Workspace, uri: headerUri, displayPath: "headers/utils.h" },
+                    completion: { label: "helper" },
+                    hover: { contents: { kind: MarkupKind.Markdown, value: "" } },
+                },
+            ]);
 
             // Cursor on "helper" reference (not locally defined)
             const position: Position = { line: 2, character: 10 };
@@ -440,16 +450,18 @@ procedure main begin
 end
 `;
             const symbolStore = new Symbols();
-            symbolStore.loadStatic([{
-                name: "display_msg",
-                kind: SymbolKind.Procedure,
-                callable: {},
-                location: null,
-                scope: { level: ScopeLevel.Global },
-                source: { type: SourceType.Static, uri: null },
-                completion: { label: "display_msg" },
-                hover: { contents: { kind: MarkupKind.Markdown, value: "" } },
-            }]);
+            symbolStore.loadStatic([
+                {
+                    name: "display_msg",
+                    kind: SymbolKind.Procedure,
+                    callable: {},
+                    location: null,
+                    scope: { level: ScopeLevel.Global },
+                    source: { type: SourceType.Static, uri: null },
+                    completion: { label: "display_msg" },
+                    hover: { contents: { kind: MarkupKind.Markdown, value: "" } },
+                },
+            ]);
 
             // Cursor on "display_msg" (static symbol)
             const position: Position = { line: 2, character: 8 };
@@ -466,16 +478,21 @@ procedure main begin
 end
 `;
             const symbolStore = new Symbols();
-            symbolStore.updateFile(externalUri, [{
-                name: "sfall_func",
-                kind: SymbolKind.Procedure,
-                callable: {},
-                location: { uri: externalUri, range: { start: { line: 0, character: 10 }, end: { line: 0, character: 20 } } },
-                scope: { level: ScopeLevel.Workspace },
-                source: { type: SourceType.Workspace, uri: externalUri, displayPath: "sfall.h" },
-                completion: { label: "sfall_func" },
-                hover: { contents: { kind: MarkupKind.Markdown, value: "" } },
-            }]);
+            symbolStore.updateFile(externalUri, [
+                {
+                    name: "sfall_func",
+                    kind: SymbolKind.Procedure,
+                    callable: {},
+                    location: {
+                        uri: externalUri,
+                        range: { start: { line: 0, character: 10 }, end: { line: 0, character: 20 } },
+                    },
+                    scope: { level: ScopeLevel.Workspace },
+                    source: { type: SourceType.Workspace, uri: externalUri, displayPath: "sfall.h" },
+                    completion: { label: "sfall_func" },
+                    hover: { contents: { kind: MarkupKind.Markdown, value: "" } },
+                },
+            ]);
 
             // Cursor on "sfall_func" (defined outside workspace root)
             const position: Position = { line: 2, character: 10 };
@@ -737,8 +754,12 @@ end
 
             const position: Position = { line: 0, character: 12 };
             const result = renameSymbolWorkspace(
-                headerText, position, "invalid name!", headerUri,
-                refsIndex, symbolStore,
+                headerText,
+                position,
+                "invalid name!",
+                headerUri,
+                refsIndex,
+                symbolStore,
                 () => null,
                 "/project",
             );
@@ -763,8 +784,12 @@ end
             workspaceRoot: string | undefined,
         ): WorkspaceEdit | null {
             const wsResult = renameSymbolWorkspace(
-                text, position, newName, uri,
-                refsIndex, symbolStore,
+                text,
+                position,
+                newName,
+                uri,
+                refsIndex,
+                symbolStore,
                 getFileText,
                 workspaceRoot,
             );
@@ -782,7 +807,7 @@ end
             // Check documentChanges format (workspace rename)
             if (result?.documentChanges) {
                 const docEdit = result.documentChanges.find(
-                    (dc): dc is TextDocumentEdit => TextDocumentEdit.is(dc) && dc.textDocument.uri === uri
+                    (dc): dc is TextDocumentEdit => TextDocumentEdit.is(dc) && dc.textDocument.uri === uri,
                 );
                 return docEdit?.edits as TextEdit[] | undefined;
             }
@@ -816,8 +841,12 @@ end`;
             // Rename from definition site in header file
             const position: Position = { line: 0, character: 12 };
             const result = providerRename(
-                headerText, position, "rename_test123", headerUri,
-                refsIndex, symbolStore,
+                headerText,
+                position,
+                "rename_test123",
+                headerUri,
+                refsIndex,
+                symbolStore,
                 makeGetFileText({ [headerUri]: headerText, [sslUri]: sslText }),
                 "/project",
             );
@@ -847,7 +876,7 @@ end`;
         function getEditsForUri(result: WorkspaceEdit | null, uri: string): TextEdit[] | undefined {
             if (!result?.documentChanges) return undefined;
             const docEdit = result.documentChanges.find(
-                (dc): dc is TextDocumentEdit => TextDocumentEdit.is(dc) && dc.textDocument.uri === uri
+                (dc): dc is TextDocumentEdit => TextDocumentEdit.is(dc) && dc.textDocument.uri === uri,
             );
             return docEdit?.edits as TextEdit[] | undefined;
         }
@@ -875,8 +904,12 @@ end
             // Rename "helper" from the header file at the definition site
             const position: Position = { line: 0, character: 12 };
             const result = renameSymbolWorkspace(
-                headerText, position, "new_helper", headerUri,
-                refsIndex, symbolStore,
+                headerText,
+                position,
+                "new_helper",
+                headerUri,
+                refsIndex,
+                symbolStore,
                 makeGetFileText({ [headerUri]: headerText, [sslUri]: sslText }),
                 "/project",
             );
@@ -932,8 +965,12 @@ end
             // Rename from header definition
             const position: Position = { line: 0, character: 10 };
             const result = renameSymbolWorkspace(
-                headerText, position, "ITEM_LIMIT", headerUri,
-                refsIndex, symbolStore,
+                headerText,
+                position,
+                "ITEM_LIMIT",
+                headerUri,
+                refsIndex,
+                symbolStore,
                 makeGetFileText({ [headerUri]: headerText, [ssl1Uri]: ssl1Text, [ssl2Uri]: ssl2Text }),
                 "/project",
             );
@@ -960,22 +997,31 @@ end
             refsIndex.updateFile(sslUri, extractCallSites(sslText, sslUri));
 
             const symbolStore = new Symbols();
-            symbolStore.updateFile(externalUri, [{
-                name: "sfall_func",
-                kind: SymbolKind.Procedure,
-                callable: {},
-                location: { uri: externalUri, range: { start: { line: 0, character: 10 }, end: { line: 0, character: 20 } } },
-                scope: { level: ScopeLevel.Workspace },
-                source: { type: SourceType.Workspace, uri: externalUri, displayPath: "sfall.h" },
-                completion: { label: "sfall_func" },
-                hover: { contents: { kind: MarkupKind.Markdown, value: "" } },
-            }]);
+            symbolStore.updateFile(externalUri, [
+                {
+                    name: "sfall_func",
+                    kind: SymbolKind.Procedure,
+                    callable: {},
+                    location: {
+                        uri: externalUri,
+                        range: { start: { line: 0, character: 10 }, end: { line: 0, character: 20 } },
+                    },
+                    scope: { level: ScopeLevel.Workspace },
+                    source: { type: SourceType.Workspace, uri: externalUri, displayPath: "sfall.h" },
+                    completion: { label: "sfall_func" },
+                    hover: { contents: { kind: MarkupKind.Markdown, value: "" } },
+                },
+            ]);
 
             // Cursor on "sfall_func" (defined outside workspace root /project)
             const position: Position = { line: 2, character: 10 };
             const result = renameSymbolWorkspace(
-                sslText, position, "new_sfall_func", sslUri,
-                refsIndex, symbolStore,
+                sslText,
+                position,
+                "new_sfall_func",
+                sslUri,
+                refsIndex,
+                symbolStore,
                 () => null,
                 "/project",
             );
@@ -999,8 +1045,12 @@ end
             // Cursor on "counter" (function-scoped variable)
             const position: Position = { line: 2, character: 14 };
             const result = renameSymbolWorkspace(
-                sslText, position, "new_counter", sslUri,
-                refsIndex, symbolStore,
+                sslText,
+                position,
+                "new_counter",
+                sslUri,
+                refsIndex,
+                symbolStore,
                 () => null,
                 "/project",
             );
@@ -1046,8 +1096,12 @@ end
             // Rename "helper" from header
             const position: Position = { line: 0, character: 12 };
             const result = renameSymbolWorkspace(
-                headerText, position, "new_helper", headerUri,
-                refsIndex, symbolStore,
+                headerText,
+                position,
+                "new_helper",
+                headerUri,
+                refsIndex,
+                symbolStore,
                 makeGetFileText({ [headerUri]: headerText, [ssl1Uri]: ssl1Text, [ssl2Uri]: ssl2Text }),
                 "/project",
             );
@@ -1087,8 +1141,12 @@ end
             // Rename FOO from header
             const position: Position = { line: 0, character: 8 };
             const result = renameSymbolWorkspace(
-                headerText, position, "BAR", headerUri,
-                refsIndex, symbolStore,
+                headerText,
+                position,
+                "BAR",
+                headerUri,
+                refsIndex,
+                symbolStore,
                 makeGetFileText({ [headerUri]: headerText, [sslUri]: sslText }),
                 "/project",
             );
@@ -1127,22 +1185,31 @@ end
 
             // Create symbol store with the header symbol so lookup works from reference site
             const symbolStore = new Symbols();
-            symbolStore.updateFile(headerUri, [{
-                name: "helper",
-                kind: SymbolKind.Procedure,
-                callable: {},
-                location: { uri: headerUri, range: { start: { line: 0, character: 10 }, end: { line: 0, character: 16 } } },
-                scope: { level: ScopeLevel.Workspace },
-                source: { type: SourceType.Workspace, uri: headerUri, displayPath: "headers/utils.h" },
-                completion: { label: "helper" },
-                hover: { contents: { kind: MarkupKind.Markdown, value: "" } },
-            }]);
+            symbolStore.updateFile(headerUri, [
+                {
+                    name: "helper",
+                    kind: SymbolKind.Procedure,
+                    callable: {},
+                    location: {
+                        uri: headerUri,
+                        range: { start: { line: 0, character: 10 }, end: { line: 0, character: 16 } },
+                    },
+                    scope: { level: ScopeLevel.Workspace },
+                    source: { type: SourceType.Workspace, uri: headerUri, displayPath: "headers/utils.h" },
+                    completion: { label: "helper" },
+                    hover: { contents: { kind: MarkupKind.Markdown, value: "" } },
+                },
+            ]);
 
             // Rename from reference site in .ssl file (cursor on "helper" in call)
             const position: Position = { line: 4, character: 10 };
             const result = renameSymbolWorkspace(
-                sslText, position, "new_helper", sslUri,
-                refsIndex, symbolStore,
+                sslText,
+                position,
+                "new_helper",
+                sslUri,
+                refsIndex,
+                symbolStore,
                 makeGetFileText({ [headerUri]: headerText, [sslUri]: sslText }),
                 "/project",
             );
@@ -1184,8 +1251,12 @@ end
             // Rename deep_func from its definition in c.h
             const position: Position = { line: 0, character: 15 };
             const result = renameSymbolWorkspace(
-                headerCText, position, "renamed_func", headerCUri,
-                refsIndex, symbolStore,
+                headerCText,
+                position,
+                "renamed_func",
+                headerCUri,
+                refsIndex,
+                symbolStore,
                 makeGetFileText({ [headerCUri]: headerCText, [headerBUri]: headerBText, [sslAUri]: sslAText }),
                 "/project",
             );
@@ -1229,8 +1300,12 @@ end
             // Rename GVAR_DEN_GANGWAR from its definition in global.h
             const position: Position = { line: 0, character: 8 };
             const result = renameSymbolWorkspace(
-                globalHText, position, "GVAR_DEN_GANGWAR_NEW", globalHUri,
-                refsIndex, symbolStore,
+                globalHText,
+                position,
+                "GVAR_DEN_GANGWAR_NEW",
+                globalHUri,
+                refsIndex,
+                symbolStore,
                 makeGetFileText({ [globalHUri]: globalHText, [denHUri]: denHText, [sslUri]: sslText }),
                 "/project",
             );
@@ -1244,7 +1319,10 @@ end
 
         it("renames symbol defined in .h across .ssl files that directly use it (real fixtures)", () => {
             // Uses real RP fixture files to test the exact GVAR_DEN_GANGWAR scenario
-            const fixtureBase = resolve(__dirname, "../../../external/fallout/Fallout2_Restoration_Project/scripts_src");
+            const fixtureBase = resolve(
+                __dirname,
+                "../../../external/fallout/Fallout2_Restoration_Project/scripts_src",
+            );
 
             const globalHUri = "file:///project/headers/global.h";
             const denHUri = "file:///project/headers/den.h";
@@ -1266,13 +1344,17 @@ end
 
             // Rename from definition in global.h (line 126 = 0-indexed line for #define GVAR_DEN_GANGWAR)
             const globalHLines = globalHText.split("\n");
-            const defLine = globalHLines.findIndex(l => l.includes("#define GVAR_DEN_GANGWAR "));
+            const defLine = globalHLines.findIndex((l) => l.includes("#define GVAR_DEN_GANGWAR "));
             expect(defLine, "GVAR_DEN_GANGWAR definition should exist in global.h").toBeGreaterThan(-1);
             const defCol = globalHLines[defLine].indexOf("GVAR_DEN_GANGWAR");
             const position: Position = { line: defLine, character: defCol };
             const result = renameSymbolWorkspace(
-                globalHText, position, "GVAR_DEN_GANGWAR_NEW", globalHUri,
-                refsIndex, symbolStore,
+                globalHText,
+                position,
+                "GVAR_DEN_GANGWAR_NEW",
+                globalHUri,
+                refsIndex,
+                symbolStore,
                 makeGetFileText({
                     [globalHUri]: globalHText,
                     [denHUri]: denHText,
@@ -1302,7 +1384,10 @@ end
         it("integration: FileIndex-based rename across real .h and .ssl fixtures", () => {
             // Simulates the exact provider scanWorkspaceFiles flow:
             // read real files, parseFile with SourceType, populate FileIndex, then rename.
-            const fixtureBase = resolve(__dirname, "../../../external/fallout/Fallout2_Restoration_Project/scripts_src");
+            const fixtureBase = resolve(
+                __dirname,
+                "../../../external/fallout/Fallout2_Restoration_Project/scripts_src",
+            );
             const files: Record<string, { uri: string; text: string }> = {};
 
             // Simulate scanWorkspaceFiles: index global.h, den.h, and .ssl files
@@ -1332,13 +1417,13 @@ end
 
             // Verify: GVAR_DEN_GANGWAR is in the refs index across all expected file types
             const allUris = fileIndex.refs.lookupUris("GVAR_DEN_GANGWAR");
-            const sslUris = [...allUris].filter(u => u.endsWith(".ssl"));
-            const hUris = [...allUris].filter(u => u.endsWith(".h"));
+            const sslUris = [...allUris].filter((u) => u.endsWith(".ssl"));
+            const hUris = [...allUris].filter((u) => u.endsWith(".h"));
             expect(hUris.length, "GVAR_DEN_GANGWAR should be indexed in .h files").toBeGreaterThanOrEqual(2);
             expect(sslUris.length, "GVAR_DEN_GANGWAR should be indexed in .ssl files").toBeGreaterThanOrEqual(2);
 
             // Find the definition line in global.h
-            const globalHUri = Object.keys(files).find(u => u.endsWith("global.h"))!;
+            const globalHUri = Object.keys(files).find((u) => u.endsWith("global.h"))!;
             const globalHText = files[globalHUri].text;
             const globalHLines = globalHText.split("\n");
             const defLine = globalHLines.findIndex((l: string) => l.includes("#define GVAR_DEN_GANGWAR "));
@@ -1358,20 +1443,26 @@ end
             );
 
             expect(result).not.toBeNull();
-            const editUris = result!.documentChanges!
-                .filter((dc: unknown): dc is TextDocumentEdit => TextDocumentEdit.is(dc))
+            const editUris = result!
+                .documentChanges!.filter((dc: unknown): dc is TextDocumentEdit => TextDocumentEdit.is(dc))
                 .map((dc: TextDocumentEdit) => dc.textDocument.uri);
 
             // Should have edits in global.h + den.h + .ssl files
-            expect(editUris.filter(u => u.endsWith(".h")).length).toBeGreaterThanOrEqual(2);
-            expect(editUris.filter(u => u.endsWith(".ssl")).length, "rename should include .ssl files").toBeGreaterThanOrEqual(2);
+            expect(editUris.filter((u) => u.endsWith(".h")).length).toBeGreaterThanOrEqual(2);
+            expect(
+                editUris.filter((u) => u.endsWith(".ssl")).length,
+                "rename should include .ssl files",
+            ).toBeGreaterThanOrEqual(2);
         });
 
         it("integration: rename FROM an .ssl file (external symbol) across real fixtures", () => {
             // The user triggers rename on GVAR_DEN_GANGWAR from dclara.ssl,
             // where it is NOT locally defined (scope = "external").
             // This tests the workspace rename path from a reference site.
-            const fixtureBase = resolve(__dirname, "../../../external/fallout/Fallout2_Restoration_Project/scripts_src");
+            const fixtureBase = resolve(
+                __dirname,
+                "../../../external/fallout/Fallout2_Restoration_Project/scripts_src",
+            );
             const files: Record<string, { uri: string; text: string }> = {};
 
             for (const relPath of [
@@ -1395,7 +1486,7 @@ end
             }
 
             // Find GVAR_DEN_GANGWAR as an actual identifier (not inside a string literal)
-            const sslUri = Object.keys(files).find(u => u.endsWith("dclara.ssl"))!;
+            const sslUri = Object.keys(files).find((u) => u.endsWith("dclara.ssl"))!;
             const sslText = files[sslUri].text;
             const sslLines = sslText.split("\n");
             // Find the line with global_var(GVAR_DEN_GANGWAR) — the identifier usage
@@ -1423,13 +1514,16 @@ end
             );
 
             expect(result, "workspace rename from .ssl reference site should succeed").not.toBeNull();
-            const editUris = result!.documentChanges!
-                .filter((dc: unknown): dc is TextDocumentEdit => TextDocumentEdit.is(dc))
+            const editUris = result!
+                .documentChanges!.filter((dc: unknown): dc is TextDocumentEdit => TextDocumentEdit.is(dc))
                 .map((dc: TextDocumentEdit) => dc.textDocument.uri);
 
             // Should include the definition file (global.h), den.h, and .ssl files
-            expect(editUris.filter(u => u.endsWith(".h")).length).toBeGreaterThanOrEqual(2);
-            expect(editUris.filter(u => u.endsWith(".ssl")).length, "rename from .ssl should include other .ssl files").toBeGreaterThanOrEqual(2);
+            expect(editUris.filter((u) => u.endsWith(".h")).length).toBeGreaterThanOrEqual(2);
+            expect(
+                editUris.filter((u) => u.endsWith(".ssl")).length,
+                "rename from .ssl should include other .ssl files",
+            ).toBeGreaterThanOrEqual(2);
         });
     });
 });

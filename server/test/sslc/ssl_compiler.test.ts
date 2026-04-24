@@ -158,7 +158,7 @@ describe("ssl_compile", () => {
             await promise;
 
             expect(mockShowWarning).toHaveBeenCalledWith(
-                expect.stringContaining("-I switch is used but it will be ignored")
+                expect.stringContaining("-I switch is used but it will be ignored"),
             );
 
             // Verify -I was stripped from args and replaced with headersDir

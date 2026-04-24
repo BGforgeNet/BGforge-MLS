@@ -54,11 +54,7 @@ export function collectExplicitLabels(constructs: readonly TDConstruct[]): Set<s
  * functions that aren't already explicitly passed to any construct.
  * Prevents having to manually list every reachable state.
  */
-export function resolveTransitiveStates(
-    constructs: TDConstruct[],
-    funcs: FuncsContext,
-    vars: VarsContext,
-) {
+export function resolveTransitiveStates(constructs: TDConstruct[], funcs: FuncsContext, vars: VarsContext) {
     const explicitLabels = collectExplicitLabels(constructs);
 
     for (const construct of constructs) {
@@ -139,12 +135,8 @@ export function collectOrphanWarnings(
         // Underline the function name identifier
         const nameNode = funcInfo.func.getNameNode();
         const sf = funcInfo.func.getSourceFile();
-        const startCol = nameNode
-            ? sf.getLineAndColumnAtPos(nameNode.getStart()).column - 1
-            : 0;
-        const endCol = nameNode
-            ? sf.getLineAndColumnAtPos(nameNode.getEnd()).column - 1
-            : 0;
+        const startCol = nameNode ? sf.getLineAndColumnAtPos(nameNode.getStart()).column - 1 : 0;
+        const endCol = nameNode ? sf.getLineAndColumnAtPos(nameNode.getEnd()).column - 1 : 0;
 
         warnings.push({
             message: ORPHAN_WARNING_TEMPLATE(name),

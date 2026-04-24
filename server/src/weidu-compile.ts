@@ -70,11 +70,15 @@ function parseWeiduOutput(text: string) {
                 // WeiDU always stops at the first error, so there's no risk of bleeding
                 // into a second error block — but we still limit to 4 lines for readability.
                 const afterMatch = text.slice(match.index + match[0].length);
-                const detailLines = afterMatch.split(/\r?\n/).slice(1).filter((l) => l.length > 0);
+                const detailLines = afterMatch
+                    .split(/\r?\n/)
+                    .slice(1)
+                    .filter((l) => l.length > 0);
                 const maxDetailLines = 4;
-                const truncatedDetails = detailLines.length > maxDetailLines
-                    ? [...detailLines.slice(0, maxDetailLines), "..."]
-                    : detailLines;
+                const truncatedDetails =
+                    detailLines.length > maxDetailLines
+                        ? [...detailLines.slice(0, maxDetailLines), "..."]
+                        : detailLines;
                 const message = truncatedDetails.join("\n");
 
                 errors.push({
@@ -139,9 +143,7 @@ export async function compile(uri: NormalizedUri, settings: WeiDUsettings, inter
     if ((weiduType === "d" || weiduType === "baf") && gamePath === "") {
         conlog("Path to IE game is not specified in settings, can't parse D or BAF!");
         if (interactive) {
-            showWarning(
-                "Path to IE game is not specified in settings, can't parse D or BAF!"
-            );
+            showWarning("Path to IE game is not specified in settings, can't parse D or BAF!");
         }
         return;
     }
@@ -179,12 +181,22 @@ export async function compile(uri: NormalizedUri, settings: WeiDUsettings, inter
                 showError(`WeiDU not found at '${weiduPath}'. Check bgforge.mls.weidu.path setting.`);
                 showedSpecificError = true;
             }
-            parseResult = addFallbackDiagnostic(parseResult, err, pathToUri(filePath), stdout.replaceAll(tmpFile, baseName));
+            parseResult = addFallbackDiagnostic(
+                parseResult,
+                err,
+                pathToUri(filePath),
+                stdout.replaceAll(tmpFile, baseName),
+            );
         }
 
         // Skip generic message when we already showed a specific one (e.g. ENOENT)
         if (!showedSpecificError) {
-            reportCompileResult(parseResult, interactive, `Successfully parsed ${baseName}.`, `Failed to parse ${baseName}!`);
+            reportCompileResult(
+                parseResult,
+                interactive,
+                `Successfully parsed ${baseName}.`,
+                `Failed to parse ${baseName}!`,
+            );
         }
 
         // Always send diagnostics: clears stale errors on success, reports new ones on failure

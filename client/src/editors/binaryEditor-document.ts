@@ -47,7 +47,11 @@ export class BinaryDocument implements vscode.CustomDocument {
     /** Internal event: content changed, webview should refresh */
     readonly onDidChangeContent = this._onDidChangeContent.event;
 
-    constructor(uri: vscode.Uri, parseResult: ParseResult, codec: BinaryDocumentCodec | NonNullable<BinaryParser["serialize"]>) {
+    constructor(
+        uri: vscode.Uri,
+        parseResult: ParseResult,
+        codec: BinaryDocumentCodec | NonNullable<BinaryParser["serialize"]>,
+    ) {
         this.uri = uri;
         this._parseResult = parseResult;
         this.codec = typeof codec === "function" ? { serialize: codec } : codec;
@@ -110,7 +114,8 @@ export class BinaryDocument implements vscode.CustomDocument {
         const field = this.findFieldById(fieldId);
         if (!field) return undefined;
 
-        const oldRawValue = typeof field.rawValue === "number" ? field.rawValue : (typeof field.value === "number" ? field.value : 0);
+        const oldRawValue =
+            typeof field.rawValue === "number" ? field.rawValue : typeof field.value === "number" ? field.value : 0;
         const oldDisplayValue = String(field.value);
 
         const edit: FieldEdit = {
@@ -157,13 +162,20 @@ export class BinaryDocument implements vscode.CustomDocument {
         }
     }
 
-    private applyStructuralEdit(adapter: BinaryFormatAdapter, fieldId: string, fieldPath: string, newRawValue: number, newDisplayValue: string): FieldEdit | undefined {
+    private applyStructuralEdit(
+        adapter: BinaryFormatAdapter,
+        fieldId: string,
+        fieldPath: string,
+        newRawValue: number,
+        newDisplayValue: string,
+    ): FieldEdit | undefined {
         const field = this.findFieldById(fieldId);
         if (!field || !this.codec.parse) {
             return undefined;
         }
 
-        const oldRawValue = typeof field.rawValue === "number" ? field.rawValue : (typeof field.value === "number" ? field.value : 0);
+        const oldRawValue =
+            typeof field.rawValue === "number" ? field.rawValue : typeof field.value === "number" ? field.value : 0;
         const oldDisplayValue = String(field.value);
         const nextBytes = adapter.buildStructuralTransitionBytes?.(this._parseResult, fieldId, newRawValue);
         if (!nextBytes) {
@@ -231,7 +243,9 @@ export class BinaryDocument implements vscode.CustomDocument {
         try {
             const adapter = formatAdapterRegistry.get(this._parseResult.format);
             if (adapter) {
-                this._parseResult.document = adapter.rebuildCanonicalDocument(this._parseResult) as ParseResult["document"];
+                this._parseResult.document = adapter.rebuildCanonicalDocument(
+                    this._parseResult,
+                ) as ParseResult["document"];
             }
         } catch {
             this._parseResult.document = undefined;
@@ -254,11 +268,7 @@ function cloneParseResult(parseResult: ParseResult): ParseResult {
     return cloned;
 }
 
-function findFieldBySegments(
-    group: ParsedGroup,
-    pathParts: readonly string[],
-    depth: number,
-): ParsedField | undefined {
+function findFieldBySegments(group: ParsedGroup, pathParts: readonly string[], depth: number): ParsedField | undefined {
     if (depth >= pathParts.length) {
         return undefined;
     }

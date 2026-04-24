@@ -9,25 +9,13 @@
 import * as fs from "fs";
 import * as path from "path";
 import { formatDocument as formatSslDocument } from "../../../server/src/fallout-ssl/format/core";
-import {
-    initParser as initSslParser,
-    getParser as getSslParser,
-} from "../../../server/src/fallout-ssl/parser";
+import { initParser as initSslParser, getParser as getSslParser } from "../../../server/src/fallout-ssl/parser";
 import { formatDocument as formatBafDocument } from "../../../server/src/weidu-baf/format/core";
-import {
-    initParser as initBafParser,
-    getParser as getBafParser,
-} from "../../../server/src/weidu-baf/parser";
+import { initParser as initBafParser, getParser as getBafParser } from "../../../server/src/weidu-baf/parser";
 import { formatDocument as formatDDocument } from "../../../server/src/weidu-d/format/core";
-import {
-    initParser as initDParser,
-    getParser as getDParser,
-} from "../../../server/src/weidu-d/parser";
+import { initParser as initDParser, getParser as getDParser } from "../../../server/src/weidu-d/parser";
 import { formatDocument as formatTp2Document } from "../../../server/src/weidu-tp2/format/core";
-import {
-    initParser as initTp2Parser,
-    getParser as getTp2Parser,
-} from "../../../server/src/weidu-tp2/parser";
+import { initParser as initTp2Parser, getParser as getTp2Parser } from "../../../server/src/weidu-tp2/parser";
 import { formatTra } from "../../../server/src/weidu-tra/format";
 import { formatMsg } from "../../../server/src/fallout-msg/format";
 import { format2da } from "../../../server/src/infinity-2da/format";
@@ -52,14 +40,7 @@ import {
     EXT_INFINITY_2DA,
     FILENAME_FALLOUT_SCRIPTS_LST,
 } from "../../../server/src/core/languages";
-import {
-    type FileResult,
-    type OutputMode,
-    parseCliArgs,
-    runCli,
-    safeProcess,
-    reportDiff,
-} from "../../cli-utils";
+import { type FileResult, type OutputMode, parseCliArgs, runCli, safeProcess, reportDiff } from "../../cli-utils";
 
 const DEFAULT_INDENT = 4;
 const EXTENSIONS = [
@@ -105,10 +86,7 @@ type FormatResult = { text: string };
  * These formatters return `{ edits: TextEdit[]; warning?: string }` rather than `{ text }`.
  * A warning means the formatter detected a safety-check failure and declined to format.
  */
-function extractFormatResultText(
-    original: string,
-    result: { edits: { newText: string }[]; warning?: string },
-): string {
+function extractFormatResultText(original: string, result: { edits: { newText: string }[]; warning?: string }): string {
     if (result.warning) {
         throw new Error(result.warning);
     }
@@ -188,12 +166,24 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
 
         let stripComments;
         switch (fileType) {
-            case "ssl":         stripComments = stripCommentsFalloutSsl; break;
-            case "tra":         stripComments = stripCommentsTra; break;
-            case "msg":         stripComments = stripCommentsFalloutMsg; break;
-            case "2da":         stripComments = stripComments2da; break;
-            case "scripts-lst": stripComments = stripCommentsFalloutScriptsLst; break;
-            default:            stripComments = stripCommentsWeidu; break;
+            case "ssl":
+                stripComments = stripCommentsFalloutSsl;
+                break;
+            case "tra":
+                stripComments = stripCommentsTra;
+                break;
+            case "msg":
+                stripComments = stripCommentsFalloutMsg;
+                break;
+            case "2da":
+                stripComments = stripComments2da;
+                break;
+            case "scripts-lst":
+                stripComments = stripCommentsFalloutScriptsLst;
+                break;
+            default:
+                stripComments = stripCommentsWeidu;
+                break;
         }
         const validationError = validateFormatting(text, result.text, stripComments);
         if (validationError) {

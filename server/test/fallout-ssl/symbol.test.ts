@@ -56,7 +56,7 @@ procedure foo begin end
 procedure bar begin end
 `;
         const symbols = getDocumentSymbols(text);
-        const names = symbols.map(s => s.name);
+        const names = symbols.map((s) => s.name);
         expect(names).toContain("x");
         expect(names).toContain("y");
         expect(names).toContain("foo");
@@ -85,7 +85,7 @@ procedure bar begin end
     it("returns procedure symbols without detail", () => {
         const text = `procedure my_proc(variable x, variable y) begin end`;
         const symbols = getDocumentSymbols(text);
-        const proc = symbols.find(s => s.name === "my_proc");
+        const proc = symbols.find((s) => s.name === "my_proc");
         expect(proc).toBeDefined();
         expect(proc!.detail).toBeUndefined();
     });
@@ -93,11 +93,11 @@ procedure bar begin end
     it("returns procedure params as children with parent detail", () => {
         const text = `procedure my_proc(variable x, variable y) begin end`;
         const symbols = getDocumentSymbols(text);
-        const proc = symbols.find(s => s.name === "my_proc");
+        const proc = symbols.find((s) => s.name === "my_proc");
         expect(proc).toBeDefined();
         expect(proc!.children).toBeDefined();
         const children = proc!.children!;
-        const names = children.map(c => c.name);
+        const names = children.map((c) => c.name);
         expect(names).toContain("x");
         expect(names).toContain("y");
         for (const child of children) {
@@ -111,11 +111,11 @@ procedure bar begin end
             variable local_var := 0;
         end`;
         const symbols = getDocumentSymbols(text);
-        const proc = symbols.find(s => s.name === "my_proc");
+        const proc = symbols.find((s) => s.name === "my_proc");
         expect(proc).toBeDefined();
         const children = proc!.children!;
-        expect(children.map(c => c.name)).toContain("local_var");
-        expect(children.find(c => c.name === "local_var")!.detail).toBe("my_proc");
+        expect(children.map((c) => c.name)).toContain("local_var");
+        expect(children.find((c) => c.name === "local_var")!.detail).toBe("my_proc");
     });
 
     it("returns for loop declaration vars as procedure children", () => {
@@ -124,9 +124,9 @@ procedure bar begin end
             end
         end`;
         const symbols = getDocumentSymbols(text);
-        const proc = symbols.find(s => s.name === "my_proc");
+        const proc = symbols.find((s) => s.name === "my_proc");
         expect(proc).toBeDefined();
-        const names = proc!.children!.map(c => c.name);
+        const names = proc!.children!.map((c) => c.name);
         expect(names).toContain("i");
     });
 
@@ -136,7 +136,7 @@ procedure bar begin end
             end
         end`;
         const symbols = getDocumentSymbols(text);
-        const proc = symbols.find(s => s.name === "my_proc");
+        const proc = symbols.find((s) => s.name === "my_proc");
         expect(proc).toBeDefined();
         expect(proc!.children).toBeUndefined();
     });
@@ -147,7 +147,7 @@ procedure bar begin end
             end
         end`;
         const symbols = getDocumentSymbols(text);
-        const proc = symbols.find(s => s.name === "my_proc");
+        const proc = symbols.find((s) => s.name === "my_proc");
         expect(proc).toBeDefined();
         expect(proc!.children).toBeUndefined();
     });
@@ -159,9 +159,9 @@ procedure bar begin end
             end
         end`;
         const symbols = getDocumentSymbols(text);
-        const proc = symbols.find(s => s.name === "my_proc");
+        const proc = symbols.find((s) => s.name === "my_proc");
         expect(proc).toBeDefined();
-        const names = proc!.children!.map(c => c.name);
+        const names = proc!.children!.map((c) => c.name);
         expect(names).toContain("nested_var");
     });
 
@@ -173,7 +173,7 @@ procedure bar begin end
         const text = `#define MAX_ITEMS 100`;
         const symbols = getDocumentSymbols(text);
         // Macros are returned as Constant symbols
-        const macro = symbols.find(s => s.name === "MAX_ITEMS");
+        const macro = symbols.find((s) => s.name === "MAX_ITEMS");
         expect(macro).toBeDefined();
         expect(macro!.kind).toBe(SymbolKind.Constant);
     });
@@ -181,7 +181,7 @@ procedure bar begin end
     it("returns macro symbols for parameterized #define (Method kind)", () => {
         const text = `#define CLAMP(x, min, max) (x < min ? min : (x > max ? max : x))`;
         const symbols = getDocumentSymbols(text);
-        const macro = symbols.find(s => s.name === "CLAMP");
+        const macro = symbols.find((s) => s.name === "CLAMP");
         expect(macro).toBeDefined();
         expect(macro!.kind).toBe(SymbolKind.Method);
     });
@@ -192,7 +192,7 @@ procedure bar begin end
 procedure run begin end
 `;
         const symbols = getDocumentSymbols(text);
-        const names = symbols.map(s => s.name);
+        const names = symbols.map((s) => s.name);
         expect(names).toContain("SPEED");
         expect(names).toContain("run");
     });

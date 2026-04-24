@@ -52,7 +52,9 @@ describe("requireString", () => {
     });
 
     it("throws on non-string field", () => {
-        expect(() => requireString({ name: 42 }, "name", "test")).toThrow("Missing or invalid 'name' (expected string) in test");
+        expect(() => requireString({ name: 42 }, "name", "test")).toThrow(
+            "Missing or invalid 'name' (expected string) in test",
+        );
     });
 });
 
@@ -80,7 +82,9 @@ describe("optionalBoolean", () => {
     });
 
     it("throws on non-boolean field", () => {
-        expect(() => optionalBoolean({ flag: "yes" }, "flag", "test")).toThrow("Invalid 'flag' (expected boolean) in test");
+        expect(() => optionalBoolean({ flag: "yes" }, "flag", "test")).toThrow(
+            "Invalid 'flag' (expected boolean) in test",
+        );
     });
 });
 

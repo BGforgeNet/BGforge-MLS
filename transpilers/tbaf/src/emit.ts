@@ -5,7 +5,14 @@
  */
 
 import * as path from "path";
-import { type BAFAction, type BAFBlock, type BAFCondition, type BAFScript, type BAFTopCondition, isOrGroup } from "./ir";
+import {
+    type BAFAction,
+    type BAFBlock,
+    type BAFCondition,
+    type BAFScript,
+    type BAFTopCondition,
+    isOrGroup,
+} from "./ir";
 
 /** Emit a complete BAF script */
 export function emitBAF(script: BAFScript): string {

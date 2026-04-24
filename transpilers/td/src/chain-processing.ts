@@ -17,25 +17,12 @@ import {
     Statement,
     SyntaxKind,
 } from "ts-morph";
-import {
-    TDEpilogueType,
-    TDConstructType,
-    type TDChain,
-    type TDChainEntry,
-    type TDChainEpilogue,
-} from "./types";
+import { TDEpilogueType, TDConstructType, type TDChain, type TDChainEntry, type TDChainEpilogue } from "./types";
 import * as utils from "../../common/transpiler-utils";
 import type { VarsContext } from "../../common/transpiler-utils";
-import {
-    resolveStringExpr,
-    expressionToActionString,
-    validateArgs,
-} from "./parse-helpers";
+import { resolveStringExpr, expressionToActionString, validateArgs } from "./parse-helpers";
 import { TranspileError } from "../../common/transpile-error";
-import {
-    expressionToTrigger,
-    expressionToText,
-} from "./expression-eval";
+import { expressionToTrigger, expressionToText } from "./expression-eval";
 
 /** TD say keyword constant */
 const SAY_KEYWORD = "say";
@@ -46,7 +33,7 @@ const SAY_KEYWORD = "say";
 function transformFunctionToChain(
     func: FunctionDeclaration | FunctionExpression,
     vars: VarsContext,
-    entryTrigger?: string
+    entryTrigger?: string,
 ): TDChain | null {
     const name = func.getName();
     if (!name) return null;
@@ -81,7 +68,7 @@ function transformFunctionToChain(
                     if (!currentEntry) {
                         throw TranspileError.fromNode(expr, `action() must come after a say() statement`);
                     }
-                    currentEntry.action = args.map(a => a.getText()).join(" ");
+                    currentEntry.action = args.map((a) => a.getText()).join(" ");
                 } else if (funcName === "exit") {
                     epilogue = { type: TDEpilogueType.Exit };
                 } else if (funcName === "goTo") {
@@ -130,7 +117,7 @@ function processSayInChain(
     currentEntry: TDChainEntry | null,
     entries: TDChainEntry[],
     vars: VarsContext,
-    options?: { trigger?: string }
+    options?: { trigger?: string },
 ): TDChainEntry | null {
     if (args.length >= 2 && args[0] && args[1]) {
         // say(speaker, text) - new entry with speaker
@@ -148,10 +135,7 @@ function processSayInChain(
     } else if (args.length >= 1 && args[0]) {
         // say(text) - multisay continuation
         if (!currentEntry) {
-            throw TranspileError.fromNode(
-                expr,
-                `say(text) without speaker - must use say(speaker, text) first`
-            );
+            throw TranspileError.fromNode(expr, `say(text) without speaker - must use say(speaker, text) first`);
         }
         currentEntry.texts.push(expressionToText(args[0] as Expression, vars));
         return currentEntry;
@@ -169,7 +153,7 @@ function processChainStatements(
     entries: TDChainEntry[],
     currentEntry: TDChainEntry | null,
     vars: VarsContext,
-    options?: { trigger?: string }
+    options?: { trigger?: string },
 ): TDChainEntry | null {
     for (const stmt of statements) {
         if (stmt.isKind(SyntaxKind.ExpressionStatement)) {
@@ -179,14 +163,7 @@ function processChainStatements(
                 const args = expr.getArguments();
 
                 if (funcName === SAY_KEYWORD) {
-                    currentEntry = processSayInChain(
-                        args,
-                        expr,
-                        currentEntry,
-                        entries,
-                        vars,
-                        options
-                    );
+                    currentEntry = processSayInChain(args, expr, currentEntry, entries, vars, options);
                 }
             }
         } else if (stmt.isKind(SyntaxKind.IfStatement)) {
@@ -205,21 +182,11 @@ function processChainStatements(
 /**
  * Process an if statement inside a chain (conditional text).
  */
-function processChainIf(
-    ifStmt: IfStatement,
-    entries: TDChainEntry[],
-    vars: VarsContext
-) {
+function processChainIf(ifStmt: IfStatement, entries: TDChainEntry[], vars: VarsContext) {
     const trigger = expressionToTrigger(ifStmt.getExpression(), vars);
     const thenStmts = utils.getBlockStatements(ifStmt.getThenStatement());
 
-    const conditionalEntry = processChainStatements(
-        thenStmts,
-        entries,
-        null,
-        vars,
-        { trigger }
-    );
+    const conditionalEntry = processChainStatements(thenStmts, entries, null, vars, { trigger });
 
     // Push final conditional entry
     if (conditionalEntry) {
@@ -249,11 +216,7 @@ interface ChainBodyResult {
  *   exit()                     - set epilogue to EXIT
  *   goTo(target)               - set epilogue to END
  */
-function processChainBody(
-    statements: Statement[],
-    defaultFilename: string,
-    vars: VarsContext
-): ChainBodyResult {
+function processChainBody(statements: Statement[], defaultFilename: string, vars: VarsContext): ChainBodyResult {
     const entries: TDChainEntry[] = [];
     let currentEntry: TDChainEntry | null = null;
     let currentSpeaker: string = defaultFilename;
@@ -327,7 +290,7 @@ function processChainBody(
                 if (!currentEntry) {
                     throw TranspileError.fromNode(expr, `action() must come after say()`);
                 }
-                currentEntry.action = args.map(a => expressionToActionString(a as Expression, vars)).join(" ");
+                currentEntry.action = args.map((a) => expressionToActionString(a as Expression, vars)).join(" ");
                 break;
             }
 
@@ -357,8 +320,4 @@ function processChainBody(
     return { entries, epilogue };
 }
 
-export {
-    transformFunctionToChain,
-    processChainStatements,
-    processChainBody,
-};
+export { transformFunctionToChain, processChainStatements, processChainBody };

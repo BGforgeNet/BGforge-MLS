@@ -4,12 +4,7 @@
  */
 
 import type { ParsedGroup } from "./types";
-import {
-    makeGroup,
-    noteField,
-    fieldNumber,
-    PID_TYPE_MISC,
-} from "./map-parse-helpers";
+import { makeGroup, noteField, fieldNumber, PID_TYPE_MISC } from "./map-parse-helpers";
 
 function findFirstObjectGroup(group: ParsedGroup): ParsedGroup | undefined {
     for (const entry of group.fields) {
@@ -33,13 +28,19 @@ function findFirstObjectGroup(group: ParsedGroup): ParsedGroup | undefined {
 export function buildOpaqueObjectsGroup(offset: number): ParsedGroup {
     return makeGroup("Objects Section", [
         { name: "Total Objects", value: 0, offset, size: 0, type: "int32" as const },
-        makeGroup("Elevation 0 Objects", [{ name: "Object Count", value: 0, offset: offset + 4, size: 0, type: "int32" as const }]),
-        makeGroup("Elevation 1 Objects", [{ name: "Object Count", value: 0, offset: offset + 8, size: 0, type: "int32" as const }]),
-        makeGroup("Elevation 2 Objects", [{ name: "Object Count", value: 0, offset: offset + 12, size: 0, type: "int32" as const }]),
+        makeGroup("Elevation 0 Objects", [
+            { name: "Object Count", value: 0, offset: offset + 4, size: 0, type: "int32" as const },
+        ]),
+        makeGroup("Elevation 1 Objects", [
+            { name: "Object Count", value: 0, offset: offset + 8, size: 0, type: "int32" as const },
+        ]),
+        makeGroup("Elevation 2 Objects", [
+            { name: "Object Count", value: 0, offset: offset + 12, size: 0, type: "int32" as const },
+        ]),
         noteField(
             "TODO",
             `Unable to confidently decode object section: script/object boundary is ambiguous near offset 0x${offset.toString(16)}; preserving remaining bytes opaquely`,
-            offset
+            offset,
         ),
     ]);
 }
@@ -56,10 +57,13 @@ function hasTodoNote(group: ParsedGroup): boolean {
 }
 
 export function isConfidentObjectsGroup(objectsGroup: ParsedGroup): boolean {
-    const totalObjectsEntry = objectsGroup.fields.find((entry) => !("fields" in entry) && entry.name === "Total Objects");
-    const totalObjects = totalObjectsEntry && !("fields" in totalObjectsEntry) && typeof totalObjectsEntry.value === "number"
-        ? totalObjectsEntry.value
-        : undefined;
+    const totalObjectsEntry = objectsGroup.fields.find(
+        (entry) => !("fields" in entry) && entry.name === "Total Objects",
+    );
+    const totalObjects =
+        totalObjectsEntry && !("fields" in totalObjectsEntry) && typeof totalObjectsEntry.value === "number"
+            ? totalObjectsEntry.value
+            : undefined;
 
     if (totalObjects === undefined || totalObjects < 0) {
         return false;
@@ -96,22 +100,21 @@ export function isConfidentObjectsGroup(objectsGroup: ParsedGroup): boolean {
         return false;
     }
 
-    const pidType = (pid >>> 24) & 0xFF;
+    const pidType = (pid >>> 24) & 0xff;
     return pid === -1 || pidType <= PID_TYPE_MISC;
 }
 
-export function scoreParsedTail(
-    scriptTypeCount: number,
-    scriptErrors: string[],
-    objectsGroup: ParsedGroup
-): number {
+export function scoreParsedTail(scriptTypeCount: number, scriptErrors: string[], objectsGroup: ParsedGroup): number {
     let score = -scriptErrors.length * 100_000;
     score += (6 - scriptTypeCount) * 5;
 
-    const totalObjectsEntry = objectsGroup.fields.find((entry) => !("fields" in entry) && entry.name === "Total Objects");
-    const totalObjects = totalObjectsEntry && !("fields" in totalObjectsEntry) && typeof totalObjectsEntry.value === "number"
-        ? totalObjectsEntry.value
-        : undefined;
+    const totalObjectsEntry = objectsGroup.fields.find(
+        (entry) => !("fields" in entry) && entry.name === "Total Objects",
+    );
+    const totalObjects =
+        totalObjectsEntry && !("fields" in totalObjectsEntry) && typeof totalObjectsEntry.value === "number"
+            ? totalObjectsEntry.value
+            : undefined;
 
     if (totalObjects !== undefined && totalObjects >= 0) {
         score += 50;
@@ -168,7 +171,7 @@ export function scoreParsedTail(
 
     const pid = fieldNumber(firstObject, "PID");
     if (pid !== undefined) {
-        const pidType = (pid >>> 24) & 0xFF;
+        const pidType = (pid >>> 24) & 0xff;
         score += pid === -1 || pidType <= PID_TYPE_MISC ? 40 : -175;
     }
 
@@ -179,4 +182,3 @@ export function scoreParsedTail(
 
     return score;
 }
-

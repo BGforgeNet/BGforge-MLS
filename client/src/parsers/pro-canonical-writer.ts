@@ -49,13 +49,13 @@ function writer(data: Uint8Array, offset = 0): BufferWriter {
 
 function packScriptId(script: { type: number; id: number }): number {
     if (script.type === -1 && script.id === -1) {
-        return 0xFF_FF_FF_FF;
+        return 0xff_ff_ff_ff;
     }
-    return ((script.type & 0xFF) << 24) | (script.id & 0x00_FF_FF_FF);
+    return ((script.type & 0xff) << 24) | (script.id & 0x00_ff_ff_ff);
 }
 
 function packDestTileAndElevation(destTile: number, destElevation: number): number {
-    return ((destElevation & 0x3F) << 26) | (destTile & 0x03_FF_FF_FF);
+    return ((destElevation & 0x3f) << 26) | (destTile & 0x03_ff_ff_ff);
 }
 
 export function serializeProCanonicalSnapshot(snapshot: ProCanonicalSnapshot): Uint8Array {
@@ -87,9 +87,9 @@ export function serializeProCanonicalSnapshot(snapshot: ProCanonicalSnapshot): U
 
     const data = new Uint8Array(size);
     headerSchema.write(writer(data), {
-        objectTypeAndId: ((header.objectType & 0xFF) << 24) | (header.objectId & 0x00_FF_FF_FF),
+        objectTypeAndId: ((header.objectType & 0xff) << 24) | (header.objectId & 0x00_ff_ff_ff),
         textId: header.textId,
-        frmTypeAndId: ((header.frmType & 0xFF) << 24) | (header.frmId & 0x00_FF_FF_FF),
+        frmTypeAndId: ((header.frmType & 0xff) << 24) | (header.frmId & 0x00_ff_ff_ff),
         lightRadius: header.lightRadius,
         lightIntensity: header.lightIntensity,
         flags: header.flags,
@@ -269,7 +269,10 @@ export function serializeProCanonicalSnapshot(snapshot: ProCanonicalSnapshot): U
                     break;
                 case 1:
                     stairsSchema.write(writer(data, SCENERY_SUBTYPE_OFFSET), {
-                        destTileAndElevation: packDestTileAndElevation(sections.stairsProperties!.destTile, sections.stairsProperties!.destElevation),
+                        destTileAndElevation: packDestTileAndElevation(
+                            sections.stairsProperties!.destTile,
+                            sections.stairsProperties!.destElevation,
+                        ),
                         destMap: sections.stairsProperties!.destMap,
                     });
                     break;
@@ -279,7 +282,10 @@ export function serializeProCanonicalSnapshot(snapshot: ProCanonicalSnapshot): U
                 case 3:
                 case 4:
                     ladderSchema.write(writer(data, SCENERY_SUBTYPE_OFFSET), {
-                        destTileAndElevation: packDestTileAndElevation(sections.ladderProperties!.destTile, sections.ladderProperties!.destElevation),
+                        destTileAndElevation: packDestTileAndElevation(
+                            sections.ladderProperties!.destTile,
+                            sections.ladderProperties!.destElevation,
+                        ),
                     });
                     break;
                 case 5:
@@ -309,11 +315,20 @@ export function serializeProCanonicalSnapshot(snapshot: ProCanonicalSnapshot): U
     return data;
 }
 
-export function serializeProCanonicalDocument(document: ProCanonicalDocument, formatName = "Fallout PRO (Prototype)"): Uint8Array {
-    return serializeProCanonicalSnapshot(parseWithSchemaValidation(proCanonicalSnapshotSchema, {
-        schemaVersion: 1,
-        format: "pro",
-        formatName,
-        document,
-    }, "Invalid PRO canonical document"));
+export function serializeProCanonicalDocument(
+    document: ProCanonicalDocument,
+    formatName = "Fallout PRO (Prototype)",
+): Uint8Array {
+    return serializeProCanonicalSnapshot(
+        parseWithSchemaValidation(
+            proCanonicalSnapshotSchema,
+            {
+                schemaVersion: 1,
+                format: "pro",
+                formatName,
+                document,
+            },
+            "Invalid PRO canonical document",
+        ),
+    );
 }

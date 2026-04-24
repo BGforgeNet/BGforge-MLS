@@ -129,7 +129,9 @@ export function parseDDialog(text: string): DDialogData {
 
 /** Shared parser for BEGIN, APPEND, and REPLACE actions (identical structure: block + child states). */
 function parseStateContainer(
-    node: SyntaxNode, blocks: DDialogBlock[], states: DDialogState[],
+    node: SyntaxNode,
+    blocks: DDialogBlock[],
+    states: DDialogState[],
     kind: "begin" | "append" | "replace",
 ): void {
     const file = getNodeFieldText(node, "file");
@@ -221,7 +223,6 @@ function parseInterjectAction(node: SyntaxNode, blocks: DDialogBlock[], states: 
     // Interjects may contain chain-like text sequences
     flattenChain(node, file, label, states);
 }
-
 
 // ---------------------------------------------------------------------------
 // State parser
@@ -354,9 +355,7 @@ function flattenChain(
         if (child.type === SyntaxType.ChainText) {
             const sayText = extractChainText(child);
             const trigger = extractChainTextTrigger(child);
-            const label = stateIndex === 0 && chainLabel
-                ? chainLabel
-                : `${chainLabel ?? "chain"}_${stateIndex}`;
+            const label = stateIndex === 0 && chainLabel ? chainLabel : `${chainLabel ?? "chain"}_${stateIndex}`;
 
             syntheticStates.push({
                 label,

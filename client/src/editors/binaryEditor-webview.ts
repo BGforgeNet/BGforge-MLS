@@ -3,7 +3,12 @@ import { getLoadableGroupIds, shouldRecursivelyLoadTree } from "./binaryEditor-l
 import type { BinaryEditorNode } from "./binaryEditor-messages";
 import { setupTreeEventListeners, setupSidebarButtons } from "./binaryEditor-webview-events";
 import { createNodeElement, renderMessages } from "./binaryEditor-webview-rendering";
-import { filterTree, setupSearchInput, setupGlobalKeyboardShortcuts, type SearchContext } from "./binaryEditor-webview-search";
+import {
+    filterTree,
+    setupSearchInput,
+    setupGlobalKeyboardShortcuts,
+    type SearchContext,
+} from "./binaryEditor-webview-search";
 import { createWebviewState, registerNode, resetState } from "./binaryEditor-webview-state";
 
 /**
@@ -68,9 +73,7 @@ import { createWebviewState, registerNode, resetState } from "./binaryEditor-web
         }
         fatalErrorShown = true;
 
-        const detail = error instanceof Error
-            ? `${message}\n${error.stack ?? error.message}`
-            : message;
+        const detail = error instanceof Error ? `${message}\n${error.stack ?? error.message}` : message;
         console.error("Binary editor runtime error:", error ?? message);
         vscode.postMessage({
             type: "runtimeError",
@@ -104,8 +107,9 @@ import { createWebviewState, registerNode, resetState } from "./binaryEditor-web
     }
 
     function expandLoadedGroupsAndQueueChildren(nodes?: readonly BinaryEditorNode[]): void {
-        const groups = (nodes ?? Array.from(state.nodeById.values()))
-            .filter((node) => node.kind === "group" && node.expandable);
+        const groups = (nodes ?? Array.from(state.nodeById.values())).filter(
+            (node) => node.kind === "group" && node.expandable,
+        );
 
         for (const group of groups) {
             const groupEl = treeEl.querySelector<HTMLElement>(`.group[data-node-id="${CSS.escape(group.id)}"]`);
@@ -130,9 +134,12 @@ import { createWebviewState, registerNode, resetState } from "./binaryEditor-web
     }
 
     function applyFieldValue(fieldEl: HTMLElement, rawValue: number | string, displayValue: string): void {
-        const input = fieldEl.querySelector<HTMLInputElement>('input.field-input');
+        const input = fieldEl.querySelector<HTMLInputElement>("input.field-input");
         if (input) {
-            input.value = formatEditableNumberValue(Number(rawValue), input.dataset.numericFormat === "hex32" ? "hex32" : "decimal");
+            input.value = formatEditableNumberValue(
+                Number(rawValue),
+                input.dataset.numericFormat === "hex32" ? "hex32" : "decimal",
+            );
             return;
         }
 
@@ -163,7 +170,9 @@ import { createWebviewState, registerNode, resetState } from "./binaryEditor-web
     }
 
     function showFieldError(fieldRef: string, message: string): void {
-        const fieldEl = treeEl.querySelector<HTMLElement>(`.field[data-field-id="${CSS.escape(fieldRef)}"], .field[data-path="${CSS.escape(fieldRef)}"]`);
+        const fieldEl = treeEl.querySelector<HTMLElement>(
+            `.field[data-field-id="${CSS.escape(fieldRef)}"], .field[data-path="${CSS.escape(fieldRef)}"]`,
+        );
         const fieldId = fieldEl?.dataset.fieldId;
         const errorSelector = fieldId
             ? `.field-error[data-error-for="${CSS.escape(fieldId)}"]`
@@ -181,7 +190,9 @@ import { createWebviewState, registerNode, resetState } from "./binaryEditor-web
     }
 
     function clearFieldError(fieldRef: string): void {
-        const fieldEl = treeEl.querySelector<HTMLElement>(`.field[data-field-id="${CSS.escape(fieldRef)}"], .field[data-path="${CSS.escape(fieldRef)}"]`);
+        const fieldEl = treeEl.querySelector<HTMLElement>(
+            `.field[data-field-id="${CSS.escape(fieldRef)}"], .field[data-path="${CSS.escape(fieldRef)}"]`,
+        );
         const fieldId = fieldEl?.dataset.fieldId;
         const errorSelector = fieldId
             ? `.field-error[data-error-for="${CSS.escape(fieldId)}"]`
@@ -222,7 +233,9 @@ import { createWebviewState, registerNode, resetState } from "./binaryEditor-web
     }
 
     function renderChildren(nodeId: string, children: ChildrenMessage["children"]): void {
-        const contentEl = treeEl.querySelector<HTMLElement>(`.group-content[data-parent-node-id="${CSS.escape(nodeId)}"]`);
+        const contentEl = treeEl.querySelector<HTMLElement>(
+            `.group-content[data-parent-node-id="${CSS.escape(nodeId)}"]`,
+        );
         if (!contentEl) {
             state.loadingChildren.delete(nodeId);
             return;
@@ -265,7 +278,9 @@ import { createWebviewState, registerNode, resetState } from "./binaryEditor-web
     const eventCtx = { treeEl, vscode, clearFieldError };
 
     setupTreeEventListeners(eventCtx, ensureChildrenLoaded);
-    setupSidebarButtons(vscode, expandAllBtn, collapseAllBtn, dumpJsonBtn, loadJsonBtn, treeEl, state, () => expandLoadedGroupsAndQueueChildren());
+    setupSidebarButtons(vscode, expandAllBtn, collapseAllBtn, dumpJsonBtn, loadJsonBtn, treeEl, state, () =>
+        expandLoadedGroupsAndQueueChildren(),
+    );
 
     if (searchInput) {
         setupSearchInput(searchInput, searchCtx);

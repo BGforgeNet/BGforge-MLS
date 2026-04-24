@@ -299,14 +299,22 @@ OUTER_TEXT_SPRINT mod_folder ~mymod~`;
         // Non-UPPERCASE: should show type and name only
         const intSymbol = weiduTp2Provider.resolveSymbol!("test123", "", "");
         expect(intSymbol?.hover).toBeDefined();
-        if (intSymbol?.hover.contents && typeof intSymbol.hover.contents === "object" && "value" in intSymbol.hover.contents) {
+        if (
+            intSymbol?.hover.contents &&
+            typeof intSymbol.hover.contents === "object" &&
+            "value" in intSymbol.hover.contents
+        ) {
             expect(intSymbol.hover.contents.value).toContain("int test123");
             expect(intSymbol.hover.contents.value).not.toContain("= 120");
         }
 
         const strSymbol = weiduTp2Provider.resolveSymbol!("mod_folder", "", "");
         expect(strSymbol?.hover).toBeDefined();
-        if (strSymbol?.hover.contents && typeof strSymbol.hover.contents === "object" && "value" in strSymbol.hover.contents) {
+        if (
+            strSymbol?.hover.contents &&
+            typeof strSymbol.hover.contents === "object" &&
+            "value" in strSymbol.hover.contents
+        ) {
             expect(strSymbol.hover.contents.value).toContain("string mod_folder");
             expect(strSymbol.hover.contents.value).not.toContain("= ~mymod~");
         }
@@ -324,13 +332,21 @@ OUTER_TEXT_SPRINT MOD_FOLDER ~mymod~`;
         // UPPERCASE: should show type, name, AND value
         const intSymbol = weiduTp2Provider.resolveSymbol!("MAX_LEVEL", "", "");
         expect(intSymbol?.hover).toBeDefined();
-        if (intSymbol?.hover.contents && typeof intSymbol.hover.contents === "object" && "value" in intSymbol.hover.contents) {
+        if (
+            intSymbol?.hover.contents &&
+            typeof intSymbol.hover.contents === "object" &&
+            "value" in intSymbol.hover.contents
+        ) {
             expect(intSymbol.hover.contents.value).toContain("int MAX_LEVEL = 40");
         }
 
         const strSymbol = weiduTp2Provider.resolveSymbol!("MOD_FOLDER", "", "");
         expect(strSymbol?.hover).toBeDefined();
-        if (strSymbol?.hover.contents && typeof strSymbol.hover.contents === "object" && "value" in strSymbol.hover.contents) {
+        if (
+            strSymbol?.hover.contents &&
+            typeof strSymbol.hover.contents === "object" &&
+            "value" in strSymbol.hover.contents
+        ) {
             expect(strSymbol.hover.contents.value).toContain("string MOD_FOLDER = ~mymod~");
         }
 
@@ -370,7 +386,7 @@ describe("weidu-tp2: JSDoc comment completions", () => {
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
         const filteredItems = weiduTp2Provider.filterCompletions?.(allItems, text, position, uri) ?? [];
 
-        const labels = filteredItems.map(item => item.label);
+        const labels = filteredItems.map((item) => item.label);
         expect(labels).toContain("@type");
         expect(labels).toContain("@param");
         // Tags only — types not shown at @ position
@@ -388,7 +404,7 @@ describe("weidu-tp2: JSDoc comment completions", () => {
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
         const filteredItems = weiduTp2Provider.filterCompletions?.(allItems, text, position, uri) ?? [];
 
-        const labels = filteredItems.map(item => item.label);
+        const labels = filteredItems.map((item) => item.label);
         expect(labels).toContain("int");
         expect(labels).toContain("string");
         // Types only — tags not shown at type position
@@ -406,7 +422,7 @@ describe("weidu-tp2: JSDoc comment completions", () => {
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
         const filteredItems = weiduTp2Provider.filterCompletions?.(allItems, text, position, uri) ?? [];
 
-        const labels = filteredItems.map(item => item.label);
+        const labels = filteredItems.map((item) => item.label);
         expect(labels).toContain("@type");
         expect(labels).toContain("@param");
     });

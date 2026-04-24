@@ -4,26 +4,15 @@
  *
  * Control flow formatters are in control-flow.ts.
  * Expression formatters are in expressions.ts.
- * 
+ *
  * For formatter behavior and examples, see:
  * {@link https://github.com/bgforge/vscode-mls/tree/master/grammars/fallout-ssl/formatter.md}
  */
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
 
-import {
-    formatIfStmt,
-    formatWhileStmt,
-    formatForStmt,
-    formatForeachStmt,
-    formatSwitchStmt,
-} from "./control-flow";
-import {
-    formatExpression,
-    formatCallStmt,
-    formatAssignment,
-    formatExpressionStmt,
-} from "./expressions";
+import { formatIfStmt, formatWhileStmt, formatForStmt, formatForeachStmt, formatSwitchStmt } from "./control-flow";
+import { formatExpression, formatCallStmt, formatAssignment, formatExpressionStmt } from "./expressions";
 import { SyntaxType } from "../tree-sitter.d";
 import type { FormatOptions } from "../../shared/format-options";
 import { throwOnParseError } from "../../shared/format-utils";
@@ -65,11 +54,7 @@ export function isComment(node: SyntaxNode): boolean {
 
 // Helper: check if next sibling is a trailing comment on same line
 function hasTrailingComment(child: SyntaxNode, nextChild: SyntaxNode | undefined): boolean {
-    return (
-        nextChild !== undefined &&
-        isComment(nextChild) &&
-        nextChild.startPosition.row === contentEndRow(child)
-    );
+    return nextChild !== undefined && isComment(nextChild) && nextChild.startPosition.row === contentEndRow(child);
 }
 
 // Get the row where a node's actual content ends.
@@ -152,10 +137,7 @@ interface FormatResult {
     text: string;
 }
 
-export function formatDocument(
-    node: SyntaxNode,
-    options: FormatOptions = DEFAULT_OPTIONS,
-): FormatResult {
+export function formatDocument(node: SyntaxNode, options: FormatOptions = DEFAULT_OPTIONS): FormatResult {
     throwOnParseError(node);
 
     ctx = {
@@ -178,9 +160,7 @@ export function formatNode(node: SyntaxNode, depth: number): string {
         case SyntaxType.SourceFile: {
             const content = formatChildren(node, depth);
             // Replace tabs, remove leading blank lines, ensure exactly one trailing newline
-            return (
-                content.replace(/\t/g, ctx.indent).replace(/^\n+/, "").replace(/\n+$/, "") + "\n"
-            );
+            return content.replace(/\t/g, ctx.indent).replace(/^\n+/, "").replace(/\n+$/, "") + "\n";
         }
         case SyntaxType.Preprocessor:
             // Trailing comment handling is done by callers (formatProcedure, formatChildren)
@@ -236,8 +216,7 @@ function formatChildren(node: SyntaxNode, depth: number): string {
         const prevChild = children[i - 1]; // undefined at start
         const nextChild = children[i + 1]; // undefined at end
 
-        const hadBlankLineBefore =
-            prevChild !== undefined && child.startPosition.row - contentEndRow(prevChild) > 1;
+        const hadBlankLineBefore = prevChild !== undefined && child.startPosition.row - contentEndRow(prevChild) > 1;
         const trailingComment = hasTrailingComment(child, nextChild);
 
         if (isComment(child)) {
@@ -246,8 +225,7 @@ function formatChildren(node: SyntaxNode, depth: number): string {
                 return;
             }
 
-            const immediatelyAfterProcedure =
-                prevChild?.type === SyntaxType.Procedure && !hadBlankLineBefore;
+            const immediatelyAfterProcedure = prevChild?.type === SyntaxType.Procedure && !hadBlankLineBefore;
 
             if (parts.length > 0 && !immediatelyAfterProcedure) {
                 if (needsBlankLine || hadBlankLineBefore) {
@@ -275,8 +253,7 @@ function formatChildren(node: SyntaxNode, depth: number): string {
                 nextChild.startPosition.row === contentEndRow(child)
             ) {
                 // Add the comment on the same line
-                preprocessorText =
-                    preprocessorText.trimEnd() + "    " + normalizeComment(nextChild.text);
+                preprocessorText = preprocessorText.trimEnd() + "    " + normalizeComment(nextChild.text);
             }
             parts.push(preprocessorText);
         } else if (child.type === SyntaxType.Procedure) {
@@ -328,9 +305,7 @@ function formatProcedure(node: SyntaxNode, depth: number): string {
     const name = node.childForFieldName("name")?.text || "";
     const params = node.childForFieldName("params");
 
-    const header = params
-        ? `procedure ${name}${formatParamList(params)} begin`
-        : `procedure ${name} begin`;
+    const header = params ? `procedure ${name}${formatParamList(params)} begin` : `procedure ${name} begin`;
 
     const bodyParts: string[] = [];
     const skipTypes: Set<string> = new Set([SyntaxType.Identifier, SyntaxType.ParamList]);
@@ -349,8 +324,7 @@ function formatProcedure(node: SyntaxNode, depth: number): string {
         }
         if (child.type.includes("procedure")) return;
 
-        const hadBlankLineBefore =
-            prevChild !== undefined && child.startPosition.row - contentEndRow(prevChild) > 1;
+        const hadBlankLineBefore = prevChild !== undefined && child.startPosition.row - contentEndRow(prevChild) > 1;
         const trailingComment = hasTrailingComment(child, nextChild);
 
         if (isComment(child)) {

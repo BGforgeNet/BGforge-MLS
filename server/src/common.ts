@@ -17,7 +17,6 @@ import { REGEX_MSG_INLAY, REGEX_MSG_INLAY_FLOATER_RAND } from "./core/patterns";
 import { getConnection } from "./lsp-connection";
 import { showError, showInfo } from "./user-messages";
 
-
 export const tmpDir = path.join(os.tmpdir(), "bgforge-mls");
 
 /** Expand leading ~ to the user's home directory. execFile doesn't use a shell, so ~ is not expanded. */
@@ -61,7 +60,7 @@ interface ParseItem {
     columnEnd: number;
     message: string;
 }
-export interface ParseItemList extends Array<ParseItem> { }
+export interface ParseItemList extends Array<ParseItem> {}
 
 export interface ParseResult {
     errors: ParseItemList;
@@ -128,7 +127,6 @@ export function isDirectory(fsPath: string): boolean {
     return false;
 }
 
-
 /** find files in directory by extension */
 export function findFiles(dirName: string, extension: string) {
     const entries = fg.sync(`**/*.${extension}`, { cwd: dirName, caseSensitiveMatch: false });
@@ -179,7 +177,6 @@ export function parseCommandPath(commandPath: string): { executable: string; pre
 export function getRelPath(root: string, other_dir: string) {
     return path.relative(root, other_dir);
 }
-
 
 export function uriToPath(uri_string: string) {
     return fileURLToPath(uri_string);
@@ -353,16 +350,21 @@ export function runProcess(
     conlog(`${executable} ${args.join(" ")}`);
 
     return new Promise((resolve) => {
-        cp.execFile(executable, [...args], { cwd, shell, signal, timeout: timeoutMs }, (err, stdout: string, stderr: string) => {
-            conlog("stdout: " + stdout);
-            if (stderr) {
-                conlog("stderr: " + stderr);
-            }
-            if (err) {
-                conlog("error: " + err.message);
-            }
-            resolve({ err, stdout });
-        });
+        cp.execFile(
+            executable,
+            [...args],
+            { cwd, shell, signal, timeout: timeoutMs },
+            (err, stdout: string, stderr: string) => {
+                conlog("stdout: " + stdout);
+                if (stderr) {
+                    conlog("stderr: " + stderr);
+                }
+                if (err) {
+                    conlog("error: " + err.message);
+                }
+                resolve({ err, stdout });
+            },
+        );
     });
 }
 
@@ -374,13 +376,16 @@ export function addFallbackDiagnostic(
     stdout: string,
 ): ParseResult {
     return {
-        errors: [...parseResult.errors, {
-            uri,
-            line: 1,
-            columnStart: 0,
-            columnEnd: 0,
-            message: stdout || err.message,
-        }],
+        errors: [
+            ...parseResult.errors,
+            {
+                uri,
+                line: 1,
+                columnStart: 0,
+                columnEnd: 0,
+                message: stdout || err.message,
+            },
+        ],
         warnings: parseResult.warnings,
     };
 }

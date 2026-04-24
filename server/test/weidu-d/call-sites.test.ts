@@ -127,9 +127,6 @@ END
         const { symbols } = parseFile(TEST_URI, text);
 
         expect(symbols).toHaveLength(2);
-        expect(symbols.map(symbol => symbol.name)).toEqual([
-            "dialog_a:0",
-            "dialog_b:0",
-        ]);
+        expect(symbols.map((symbol) => symbol.name)).toEqual(["dialog_a:0", "dialog_b:0"]);
     });
 });

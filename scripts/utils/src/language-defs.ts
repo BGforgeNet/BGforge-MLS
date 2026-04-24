@@ -39,7 +39,11 @@ export const LANGUAGES: readonly LanguageDef[] = [
         ext: "tra",
         yamlFiles: [],
         caseIgnored: false,
-        stringDelimiters: [["~", "~"], ["\"", "\""], ["~~~~~", "~~~~~"]],
+        stringDelimiters: [
+            ["~", "~"],
+            ['"', '"'],
+            ["~~~~~", "~~~~~"],
+        ],
         foldingPairs: [],
     },
     {
@@ -48,16 +52,26 @@ export const LANGUAGES: readonly LanguageDef[] = [
         ext: "ssl h",
         yamlFiles: [`${DATA_DIR}/fallout-ssl-base.yml`, `${DATA_DIR}/fallout-ssl-sfall.yml`],
         caseIgnored: false,
-        stringDelimiters: [["\"", "\""]],
-        foldingPairs: [["begin", "end"], ["{", "}"]],
+        stringDelimiters: [['"', '"']],
+        foldingPairs: [
+            ["begin", "end"],
+            ["{", "}"],
+        ],
     },
     {
         name: "weidu-baf",
         displayName: "WeiDU BAF",
         ext: "baf",
-        yamlFiles: [`${DATA_DIR}/weidu-baf-base.yml`, `${DATA_DIR}/weidu-baf-iesdp.yml`, `${DATA_DIR}/weidu-baf-ids.yml`],
+        yamlFiles: [
+            `${DATA_DIR}/weidu-baf-base.yml`,
+            `${DATA_DIR}/weidu-baf-iesdp.yml`,
+            `${DATA_DIR}/weidu-baf-ids.yml`,
+        ],
         caseIgnored: true,
-        stringDelimiters: [["~", "~"], ["\"", "\""]],
+        stringDelimiters: [
+            ["~", "~"],
+            ['"', '"'],
+        ],
         foldingPairs: [["IF", "END"]],
     },
     {
@@ -66,7 +80,10 @@ export const LANGUAGES: readonly LanguageDef[] = [
         ext: "d",
         yamlFiles: [`${DATA_DIR}/weidu-d-base.yml`],
         caseIgnored: true,
-        stringDelimiters: [["~", "~"], ["\"", "\""]],
+        stringDelimiters: [
+            ["~", "~"],
+            ['"', '"'],
+        ],
         foldingPairs: [["BEGIN", "END"]],
     },
     {
@@ -75,7 +92,11 @@ export const LANGUAGES: readonly LanguageDef[] = [
         ext: "tp2 tpa tph tpp",
         yamlFiles: [`${DATA_DIR}/weidu-tp2-base.yml`],
         caseIgnored: true,
-        stringDelimiters: [["~", "~"], ["\"", "\""], ["%", "%"]],
+        stringDelimiters: [
+            ["~", "~"],
+            ['"', '"'],
+            ["%", "%"],
+        ],
         foldingPairs: [["BEGIN", "END"]],
     },
 ];
@@ -88,11 +109,7 @@ export const LANGUAGES: readonly LanguageDef[] = [
  * Output validity is verified by XSD validation in tests.
  */
 export function escapeXml(s: string): string {
-    return s
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;");
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 // -- Keyword collection --
@@ -116,10 +133,13 @@ export function collectKeywords(yamlFiles: readonly string[]): KeywordGroups {
 
     for (const stanza of Object.values(data)) {
         const target =
-            stanza.type === TYPE_KEYWORD ? kw :
-            stanza.type === TYPE_FUNCTION ? fn :
-            stanza.type === TYPE_CONSTANT ? cn :
-            null;
+            stanza.type === TYPE_KEYWORD
+                ? kw
+                : stanza.type === TYPE_FUNCTION
+                  ? fn
+                  : stanza.type === TYPE_CONSTANT
+                    ? cn
+                    : null;
         if (target === null) continue;
 
         for (const item of stanza.items) {

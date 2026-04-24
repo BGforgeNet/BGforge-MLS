@@ -59,7 +59,9 @@ function optionalNumber(record: Record<string, unknown>, field: string, context:
  * Throws if present but wrong type. Used for truthy markers (e.g. unused: 1).
  */
 function optionalNumberOrBoolean(
-    record: Record<string, unknown>, field: string, context: string,
+    record: Record<string, unknown>,
+    field: string,
+    context: string,
 ): number | boolean | undefined {
     const value = record[field];
     if (value === undefined) {

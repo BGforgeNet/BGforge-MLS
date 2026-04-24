@@ -6,15 +6,8 @@
  * the vars context as a parameter.
  */
 
-import {
-    Expression,
-    Node,
-    SyntaxKind,
-} from "ts-morph";
-import {
-    TDTextType,
-    type TDText,
-} from "./types";
+import { Expression, Node, SyntaxKind } from "ts-morph";
+import { TDTextType, type TDText } from "./types";
 import * as utils from "../../common/transpiler-utils";
 import type { VarsContext } from "../../common/transpiler-utils";
 import { expressionToActionString, parseStringOption } from "./parse-helpers";
@@ -60,7 +53,7 @@ function expressionToTrigger(expr: Expression, vars: VarsContext): string {
         if (funcName === "OR" && expr.getArguments().length >= 2) {
             const args = expr.getArguments();
             const count = args[0]?.getText() ?? "2";
-            const conditions = args.slice(1).map(a => expressionToTrigger(a as Expression, vars));
+            const conditions = args.slice(1).map((a) => expressionToTrigger(a as Expression, vars));
             return `OR(${count}) ${conditions.join(" ")}`;
         }
         // Regular function call - serialize as trigger
@@ -196,8 +189,4 @@ function expressionToText(expr: Expression, vars: VarsContext): TDText {
     };
 }
 
-export {
-    expressionToTrigger,
-    expressionToAction,
-    expressionToText,
-};
+export { expressionToTrigger, expressionToAction, expressionToText };

@@ -30,12 +30,7 @@ function labelKey(dialogFile: string, labelName: string): string {
     return `${dialogFile}:${labelName}`;
 }
 
-function createStateSymbol(
-    uri: string,
-    dialogFile: string,
-    labelNode: SyntaxNode,
-    displayPath: string,
-): StateSymbol {
+function createStateSymbol(uri: string, dialogFile: string, labelNode: SyntaxNode, displayPath: string): StateSymbol {
     const label = labelNode.text;
     const scopedName = labelKey(dialogFile, label);
     return {
@@ -228,9 +223,13 @@ function collectTopLevelRefs(
     }
 
     // ADD_STATE_TRIGGER, ADD_TRANS_TRIGGER, REPLACE_SAY, REPLACE_STATE_TRIGGER, SET_WEIGHT
-    if (type === SyntaxType.AddStateTrigger || type === SyntaxType.AddTransTrigger ||
-        type === SyntaxType.ReplaceSay || type === SyntaxType.ReplaceStateTrigger ||
-        type === SyntaxType.SetWeight) {
+    if (
+        type === SyntaxType.AddStateTrigger ||
+        type === SyntaxType.AddTransTrigger ||
+        type === SyntaxType.ReplaceSay ||
+        type === SyntaxType.ReplaceStateTrigger ||
+        type === SyntaxType.SetWeight
+    ) {
         collectFileLabel(node, "file", "state", uri, addRef);
         return true;
     }

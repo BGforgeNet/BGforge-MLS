@@ -5,7 +5,7 @@
  * variable-length sections (header vars, tiles, scripts, objects) separately.
  */
 
-export const HEADER_SIZE = 0xF0;
+export const HEADER_SIZE = 0xf0;
 
 export interface MapHeader {
     version: number;
@@ -28,7 +28,9 @@ export function parseHeader(data: Uint8Array): MapHeader {
 
     const filenameBytes = new Uint8Array(data.buffer, data.byteOffset + 4, 16);
     const filenameEnd = filenameBytes.indexOf(0);
-    const filename = String.fromCharCode(...filenameBytes.subarray(0, filenameEnd === -1 ? filenameBytes.length : filenameEnd));
+    const filename = String.fromCharCode(
+        ...filenameBytes.subarray(0, filenameEnd === -1 ? filenameBytes.length : filenameEnd),
+    );
 
     const field_3C: number[] = [];
     for (let i = 0; i < 44; i++) {
@@ -53,7 +55,7 @@ export function parseHeader(data: Uint8Array): MapHeader {
 }
 
 export function getScriptType(sid: number): number {
-    return (sid >>> 24) & 0xF;
+    return (sid >>> 24) & 0xf;
 }
 
 export const TILES_PER_ELEVATION = 10_000;
@@ -70,9 +72,9 @@ export function parseTilePair(data: Uint8Array, offset: number): TilePair {
     const view = new DataView(data.buffer, data.byteOffset + offset, 4);
     const word = view.getUint32(0, false);
     return {
-        floorTileId: word & 0xF_FF,
-        floorFlags: (word >> 12) & 0xF,
-        roofTileId: (word >> 16) & 0xF_FF,
-        roofFlags: (word >> 28) & 0xF,
+        floorTileId: word & 0xf_ff,
+        floorFlags: (word >> 12) & 0xf,
+        roofTileId: (word >> 16) & 0xf_ff,
+        roofFlags: (word >> 28) & 0xf,
     };
 }

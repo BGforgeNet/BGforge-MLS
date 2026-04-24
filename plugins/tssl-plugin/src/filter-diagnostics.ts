@@ -42,9 +42,7 @@ export function extractIdentifierFromTS6133(
  * Filter out TS6133 diagnostics for Fallout engine procedure names.
  * Returns a new array (immutable -- does not modify the input).
  */
-export function filterEngineProcedureDiagnostics<T extends DiagnosticLike>(
-    diagnostics: readonly T[],
-): T[] {
+export function filterEngineProcedureDiagnostics<T extends DiagnosticLike>(diagnostics: readonly T[]): T[] {
     return diagnostics.filter((d) => {
         if (d.code !== TS6133_CODE) {
             return true;

@@ -5,13 +5,7 @@
  * Handles &&, ||, !, De Morgan's law, function inlining, and OR groups.
  */
 
-import {
-    CallExpression,
-    Expression,
-    FunctionDeclaration,
-    Node,
-    SyntaxKind,
-} from "ts-morph";
+import { CallExpression, Expression, FunctionDeclaration, Node, SyntaxKind } from "ts-morph";
 import type { BAFCondition, BAFOrGroup, BAFTopCondition } from "./ir";
 import { dnfToCnf } from "./cnf";
 import * as utils from "../../common/transpiler-utils";
@@ -29,7 +23,7 @@ function buildSwitchCondition(ctx: TransformerContext, switchExpr: Expression, c
     if (Node.isCallExpression(actualExpr)) {
         const funcName = actualExpr.getExpression().getText();
         // Get arguments from resolved expression (already contains literal values, not variable names)
-        const args = actualExpr.getArguments().map(a => a.getText());
+        const args = actualExpr.getArguments().map((a) => a.getText());
 
         // For Global and similar functions, append the case value as the last argument
         return {
@@ -42,7 +36,7 @@ function buildSwitchCondition(ctx: TransformerContext, switchExpr: Expression, c
     throw TranspileError.fromNode(
         switchExpr,
         `Switch expression "${switchExpr.getText()}" is not supported. ` +
-        `Only function call expressions (like Global()) are supported in switch statements.`
+            `Only function call expressions (like Global()) are supported in switch statements.`,
     );
 }
 
@@ -57,10 +51,7 @@ function transformConditionExpr(ctx: TransformerContext, expr: Expression): BAFT
 
         if (opKind === SyntaxKind.AmpersandAmpersandToken) {
             // AND: combine conditions
-            return [
-                ...transformConditionExpr(ctx, expr.getLeft()),
-                ...transformConditionExpr(ctx, expr.getRight()),
-            ];
+            return [...transformConditionExpr(ctx, expr.getLeft()), ...transformConditionExpr(ctx, expr.getRight())];
         }
 
         if (opKind === SyntaxKind.BarBarToken) {
@@ -101,7 +92,7 @@ function transformConditionExpr(ctx: TransformerContext, expr: Expression): BAFT
                     throw TranspileError.fromNode(
                         inner,
                         `Cannot represent "!(${inner.getText()})" in BAF.\n` +
-                        `Negation of OR groups is not supported. Refactor to avoid this pattern.`
+                            `Negation of OR groups is not supported. Refactor to avoid this pattern.`,
                     );
                 }
             }
@@ -189,12 +180,17 @@ function exprToCondition(ctx: TransformerContext, expr: Expression): BAFConditio
  * Inline a user function call, returning its conditions.
  * Handles complex return expressions like "A() && B() && C()".
  */
-function inlineFunctionConditions(ctx: TransformerContext, call: CallExpression, funcDecl: FunctionDeclaration): BAFTopCondition[] {
+function inlineFunctionConditions(
+    ctx: TransformerContext,
+    call: CallExpression,
+    funcDecl: FunctionDeclaration,
+): BAFTopCondition[] {
     const body = funcDecl.getBody()?.asKindOrThrow(SyntaxKind.Block);
     if (!body) return [ctx.trueCondition()];
 
-    const returnStmt = body.getStatements()
-        .find(s => s.isKind(SyntaxKind.ReturnStatement))
+    const returnStmt = body
+        .getStatements()
+        .find((s) => s.isKind(SyntaxKind.ReturnStatement))
         ?.asKind(SyntaxKind.ReturnStatement);
     if (!returnStmt) return [ctx.trueCondition()];
 
@@ -222,13 +218,17 @@ function inlineFunctionConditions(ctx: TransformerContext, call: CallExpression,
  * Inline a user function call as a single condition (for OR groups).
  * Throws if the function returns multiple conditions.
  */
-function inlineFunctionAsSingleCondition(ctx: TransformerContext, call: CallExpression, funcDecl: FunctionDeclaration): BAFCondition {
+function inlineFunctionAsSingleCondition(
+    ctx: TransformerContext,
+    call: CallExpression,
+    funcDecl: FunctionDeclaration,
+): BAFCondition {
     const conditions = inlineFunctionConditions(ctx, call, funcDecl);
 
     if (conditions.length !== 1) {
         throw new TranspileError(
             `Cannot use function "${funcDecl.getName()}" inside OR group: ` +
-            `it returns ${conditions.length} conditions, but OR elements must be single conditions.`
+                `it returns ${conditions.length} conditions, but OR elements must be single conditions.`,
         );
     }
 
@@ -239,7 +239,7 @@ function inlineFunctionAsSingleCondition(ctx: TransformerContext, call: CallExpr
     if ("conditions" in cond) {
         throw new TranspileError(
             `Cannot use function "${funcDecl.getName()}" inside OR group: ` +
-            `it returns an OR group, which cannot be nested inside another OR.`
+                `it returns an OR group, which cannot be nested inside another OR.`,
         );
     }
 
@@ -249,7 +249,11 @@ function inlineFunctionAsSingleCondition(ctx: TransformerContext, call: CallExpr
 /**
  * Invert conditions for else block.
  */
-function invertConditions(ctx: TransformerContext, parentConditions: BAFTopCondition[], condExpr: Expression): BAFTopCondition[] {
+function invertConditions(
+    ctx: TransformerContext,
+    parentConditions: BAFTopCondition[],
+    condExpr: Expression,
+): BAFTopCondition[] {
     // For else, we need: parentConditions AND NOT(condExpr)
     const inverted = invertExpression(ctx, condExpr);
     return [...parentConditions, ...inverted];
@@ -274,9 +278,14 @@ function invertExpression(ctx: TransformerContext, expr: Expression): BAFTopCond
             // If both results are single atoms, we can directly create an OR group
             const leftFirst = leftConds[0];
             const rightFirst = rightConds[0];
-            if (leftConds.length === 1 && rightConds.length === 1 &&
-                leftFirst && rightFirst &&
-                !("conditions" in leftFirst) && !("conditions" in rightFirst)) {
+            if (
+                leftConds.length === 1 &&
+                rightConds.length === 1 &&
+                leftFirst &&
+                rightFirst &&
+                !("conditions" in leftFirst) &&
+                !("conditions" in rightFirst)
+            ) {
                 return [{ conditions: [leftFirst, rightFirst] }];
             }
 
@@ -352,9 +361,7 @@ function negateConditions(conditions: BAFTopCondition[]): BAFTopCondition[] {
     for (const c of conditions) {
         if ("conditions" in c) {
             // OR group: !(A || B || ...) = !A && !B && ... (De Morgan)
-            const negatedAtoms: BAFCondition[] = c.conditions.map(
-                inner => ({ ...inner, negated: !inner.negated })
-            );
+            const negatedAtoms: BAFCondition[] = c.conditions.map((inner) => ({ ...inner, negated: !inner.negated }));
             terms.push(negatedAtoms);
         } else {
             // Atom: just negate it
@@ -366,8 +373,4 @@ function negateConditions(conditions: BAFTopCondition[]): BAFTopCondition[] {
     return dnfToCnf(terms);
 }
 
-export {
-    buildSwitchCondition,
-    transformConditionExpr,
-    invertConditions,
-};
+export { buildSwitchCondition, transformConditionExpr, invertConditions };

@@ -191,7 +191,7 @@ if (True()) {
 }
 `;
             const result = transpile(code);
-            expect(result).toContain("CreateCreature(\"ccguard2\", [2791.831], 6)");
+            expect(result).toContain('CreateCreature("ccguard2", [2791.831], 6)');
         });
 
         it("converts point tuple through variable substitution", () => {
@@ -203,7 +203,7 @@ if (True()) {
 }
 `;
             const result = transpile(code);
-            expect(result).toContain("CreateCreature(\"ccguard2\", [100.200], 6)");
+            expect(result).toContain('CreateCreature("ccguard2", [100.200], 6)');
         });
 
         it("converts point tuple through function inlining", () => {
@@ -217,7 +217,7 @@ function spawn(resref: string, pos: [number, number]) {
 spawn("ccguard2", [2791, 831]);
 `;
             const result = transpile(code);
-            expect(result).toContain("CreateCreature(\"ccguard2\", [2791.831], 0)");
+            expect(result).toContain('CreateCreature("ccguard2", [2791.831], 0)');
         });
 
         it("converts point tuples through for-of loop unrolling", () => {
@@ -234,8 +234,8 @@ for (const [resref, pos] of positions) {
 }
 `;
             const result = transpile(code);
-            expect(result).toContain("CreateCreature(\"ccguard1\", [100.200], 0)");
-            expect(result).toContain("CreateCreature(\"ccguard2\", [300.400], 0)");
+            expect(result).toContain('CreateCreature("ccguard1", [100.200], 0)');
+            expect(result).toContain('CreateCreature("ccguard2", [300.400], 0)');
         });
     });
 

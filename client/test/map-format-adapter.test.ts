@@ -44,14 +44,22 @@ describe("map adapter toSemanticFieldKey", () => {
     });
 
     it("maps script extent fields", () => {
-        expect(adapter.toSemanticFieldKey(["Spatial Scripts", "Extent 0", "Extent Length"])).toBe("map.scripts[].extents[].extentLength");
-        expect(adapter.toSemanticFieldKey(["Spatial Scripts", "Extent 0", "Extent Next"])).toBe("map.scripts[].extents[].extentNext");
+        expect(adapter.toSemanticFieldKey(["Spatial Scripts", "Extent 0", "Extent Length"])).toBe(
+            "map.scripts[].extents[].extentLength",
+        );
+        expect(adapter.toSemanticFieldKey(["Spatial Scripts", "Extent 0", "Extent Next"])).toBe(
+            "map.scripts[].extents[].extentNext",
+        );
     });
 
     it("maps script slot fields via Entry N prefix stripping", () => {
         // Line 55-56: /^Slot \d+$/ + Entry N prefix stripping
-        expect(adapter.toSemanticFieldKey(["Spatial Scripts", "Extent 0", "Slot 0", "Entry 0 Sid"])).toBe("map.scripts[].extents[].slots[].sid");
-        expect(adapter.toSemanticFieldKey(["Spatial Scripts", "Extent 0", "Slot 0", "Entry 0 Action"])).toBe("map.scripts[].extents[].slots[].action");
+        expect(adapter.toSemanticFieldKey(["Spatial Scripts", "Extent 0", "Slot 0", "Entry 0 Sid"])).toBe(
+            "map.scripts[].extents[].slots[].sid",
+        );
+        expect(adapter.toSemanticFieldKey(["Spatial Scripts", "Extent 0", "Slot 0", "Entry 0 Action"])).toBe(
+            "map.scripts[].extents[].slots[].action",
+        );
     });
 
     it("returns undefined for Scripts segment that doesn't match known sub-paths", () => {
@@ -64,47 +72,101 @@ describe("map adapter toSemanticFieldKey", () => {
     });
 
     it("maps Objects Section - elevation object count", () => {
-        expect(adapter.toSemanticFieldKey(["Objects Section", "Elevation 0 Objects", "Object Count"])).toBe("map.objects.elevations[].objectCount");
+        expect(adapter.toSemanticFieldKey(["Objects Section", "Elevation 0 Objects", "Object Count"])).toBe(
+            "map.objects.elevations[].objectCount",
+        );
     });
 
     it("maps Objects Section - object reference without fourth segment", () => {
         // Line 71-72: !fourth branch
-        expect(adapter.toSemanticFieldKey(["Objects Section", "Elevation 0 Objects", "Object 0.0 (Item)"])).toBe("map.objects.elevations[].objects[]");
+        expect(adapter.toSemanticFieldKey(["Objects Section", "Elevation 0 Objects", "Object 0.0 (Item)"])).toBe(
+            "map.objects.elevations[].objects[]",
+        );
     });
 
     it("maps Objects Section - object base field (fourth segment is plain field name)", () => {
         // Line 92: base field fallback
-        expect(adapter.toSemanticFieldKey(["Objects Section", "Elevation 0 Objects", "Object 0.0 (Item)", "PID"])).toBe("map.objects.elevations[].objects[].base.pid");
+        expect(adapter.toSemanticFieldKey(["Objects Section", "Elevation 0 Objects", "Object 0.0 (Item)", "PID"])).toBe(
+            "map.objects.elevations[].objects[].base.pid",
+        );
     });
 
     it("maps Objects Section - Inventory Header", () => {
         // Line 74-76
-        expect(adapter.toSemanticFieldKey(["Objects Section", "Elevation 0 Objects", "Object 0.0 (Item)", "Inventory Header", "Quantity"])).toBe("map.objects.elevations[].objects[].inventoryHeader.quantity");
+        expect(
+            adapter.toSemanticFieldKey([
+                "Objects Section",
+                "Elevation 0 Objects",
+                "Object 0.0 (Item)",
+                "Inventory Header",
+                "Quantity",
+            ]),
+        ).toBe("map.objects.elevations[].objects[].inventoryHeader.quantity");
     });
 
     it("maps Objects Section - Object Data", () => {
         // Line 77-79
-        expect(adapter.toSemanticFieldKey(["Objects Section", "Elevation 0 Objects", "Object 0.0 (Item)", "Object Data", "Sub PID"])).toBe("map.objects.elevations[].objects[].objectData.subPid");
+        expect(
+            adapter.toSemanticFieldKey([
+                "Objects Section",
+                "Elevation 0 Objects",
+                "Object 0.0 (Item)",
+                "Object Data",
+                "Sub PID",
+            ]),
+        ).toBe("map.objects.elevations[].objects[].objectData.subPid");
     });
 
     it("maps Objects Section - Exit Grid", () => {
         // Line 80-82
-        expect(adapter.toSemanticFieldKey(["Objects Section", "Elevation 0 Objects", "Object 0.0 (Item)", "Exit Grid", "Dest Tile"])).toBe("map.objects.elevations[].objects[].exitGrid.destTile");
+        expect(
+            adapter.toSemanticFieldKey([
+                "Objects Section",
+                "Elevation 0 Objects",
+                "Object 0.0 (Item)",
+                "Exit Grid",
+                "Dest Tile",
+            ]),
+        ).toBe("map.objects.elevations[].objects[].exitGrid.destTile");
     });
 
     it("maps Objects Section - Critter Data", () => {
         // Line 83-85
-        expect(adapter.toSemanticFieldKey(["Objects Section", "Elevation 0 Objects", "Object 0.0 (Critter)", "Critter Data", "Team Number"])).toBe("map.objects.elevations[].objects[].critterData.teamNumber");
+        expect(
+            adapter.toSemanticFieldKey([
+                "Objects Section",
+                "Elevation 0 Objects",
+                "Object 0.0 (Critter)",
+                "Critter Data",
+                "Team Number",
+            ]),
+        ).toBe("map.objects.elevations[].objects[].critterData.teamNumber");
     });
 
     it("maps Objects Section - Inventory Entry Quantity", () => {
         // Line 87-89
-        expect(adapter.toSemanticFieldKey(["Objects Section", "Elevation 0 Objects", "Object 0.0 (Item)", "Inventory Entry 0", "Quantity"])).toBe("map.objects.elevations[].objects[].inventory[].quantity");
+        expect(
+            adapter.toSemanticFieldKey([
+                "Objects Section",
+                "Elevation 0 Objects",
+                "Object 0.0 (Item)",
+                "Inventory Entry 0",
+                "Quantity",
+            ]),
+        ).toBe("map.objects.elevations[].objects[].inventory[].quantity");
     });
 
     it("maps Objects Section - Inventory Entry other field", () => {
         // Line 90-91
-        expect(adapter.toSemanticFieldKey(["Objects Section", "Elevation 0 Objects", "Object 0.0 (Item)", "Inventory Entry 0", "PID"])).toBe("map.objects.elevations[].objects[].inventory[].pid");
+        expect(
+            adapter.toSemanticFieldKey([
+                "Objects Section",
+                "Elevation 0 Objects",
+                "Object 0.0 (Item)",
+                "Inventory Entry 0",
+                "PID",
+            ]),
+        ).toBe("map.objects.elevations[].objects[].inventory[].pid");
     });
 
     it("falls back to generic dotted path for unrecognized top-level segment", () => {
@@ -127,7 +189,13 @@ describe("map adapter shouldHideField", () => {
     });
 
     it("hides Entry N Next Script Link (legacy)", () => {
-        const field = { name: "Entry 0 Next Script Link (legacy)", value: 0, offset: 0, size: 4, type: "int32" as const };
+        const field = {
+            name: "Entry 0 Next Script Link (legacy)",
+            value: 0,
+            offset: 0,
+            size: 4,
+            type: "int32" as const,
+        };
         expect(adapter.shouldHideField?.(field)).toBe(true);
     });
 

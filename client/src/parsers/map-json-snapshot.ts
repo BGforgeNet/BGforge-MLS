@@ -50,7 +50,10 @@ export function createCanonicalMapJsonSnapshot(parseResult: ParseResult): string
     return `${JSON.stringify(snapshot, null, 2)}\n`;
 }
 
-export function loadCanonicalMapJsonSnapshot(jsonText: string, _parseOptions?: ParseOptions): LoadedCanonicalMapSnapshot {
+export function loadCanonicalMapJsonSnapshot(
+    jsonText: string,
+    _parseOptions?: ParseOptions,
+): LoadedCanonicalMapSnapshot {
     const snapshot = parseWithSchemaValidation(
         mapCanonicalSnapshotSchema,
         JSON.parse(jsonText),

@@ -6,12 +6,7 @@
  * for statement processing so they remain decoupled from state-transitions.ts.
  */
 
-import {
-    ForOfStatement,
-    ForStatement,
-    Statement,
-    SyntaxKind,
-} from "ts-morph";
+import { ForOfStatement, ForStatement, Statement, SyntaxKind } from "ts-morph";
 import type { VarsContext } from "../../common/transpiler-utils";
 import * as utils from "../../common/transpiler-utils";
 import { resolveArrayElements } from "./parse-helpers";
@@ -21,11 +16,7 @@ import { TranspileError } from "../../common/transpile-error";
  * Unroll a for-of loop.
  * Supports both simple variables and array destructuring patterns.
  */
-export function unrollForOf(
-    forOf: ForOfStatement,
-    vars: VarsContext,
-    onStatement: (s: Statement) => void
-): void {
+export function unrollForOf(forOf: ForOfStatement, vars: VarsContext, onStatement: (s: Statement) => void): void {
     const arrayExpr = forOf.getExpression();
     const elements = resolveArrayElements(arrayExpr, vars);
 
@@ -70,7 +61,10 @@ export function unrollForOf(
         }
     } else {
         // Simple variable: const item of array
-        const loopVar = initializer.getText().replace(/^const\s+/, "").replace(/^let\s+/, "");
+        const loopVar = initializer
+            .getText()
+            .replace(/^const\s+/, "")
+            .replace(/^let\s+/, "");
 
         for (const element of elements) {
             vars.set(loopVar, element);
@@ -86,11 +80,7 @@ export function unrollForOf(
 /**
  * Unroll a for loop.
  */
-export function unrollFor(
-    forStmt: ForStatement,
-    vars: VarsContext,
-    onStatement: (s: Statement) => void
-): void {
+export function unrollFor(forStmt: ForStatement, vars: VarsContext, onStatement: (s: Statement) => void): void {
     const initializer = forStmt.getInitializer();
     if (!initializer || !initializer.isKind(SyntaxKind.VariableDeclarationList)) {
         throw new TranspileError("Cannot unroll for loop: complex initializer");

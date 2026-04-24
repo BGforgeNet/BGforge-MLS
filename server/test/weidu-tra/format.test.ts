@@ -44,11 +44,11 @@ describe("weidu-tra/format", () => {
     });
 
     it("preserves double-quoted strings when already formatted", () => {
-        noop("@1 = \"Hello world\"\n");
+        noop('@1 = "Hello world"\n');
     });
 
     it("normalizes prefix with double-quoted string", () => {
-        expect(fmt("@ 1 = \"Hello world\"\n")).toBe("@1 = \"Hello world\"\n");
+        expect(fmt('@ 1 = "Hello world"\n')).toBe('@1 = "Hello world"\n');
     });
 
     it("preserves sound refs", () => {

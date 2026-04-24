@@ -78,7 +78,9 @@ END
         expect(maxItem?.insertText).toBe("max = ");
         // Documentation contains signature like "int max = 100"
         const maxDoc = maxItem?.documentation;
-        expect(maxDoc && typeof maxDoc === "object" && "value" in maxDoc ? maxDoc.value : "").toContain("int max = 100");
+        expect(maxDoc && typeof maxDoc === "object" && "value" in maxDoc ? maxDoc.value : "").toContain(
+            "int max = 100",
+        );
     });
 
     it("provides STR_VAR parameter completions for LPF", () => {
@@ -196,8 +198,8 @@ LAF unknown_function INT_VAR  END
 
         // Should not have any function-specific param completions
         // (but may have general completions from static data)
-        const hasParamCompletions = filteredItems.some(item =>
-            item.insertText?.endsWith(" = ") && item.kind === 5 // CompletionItemKind.Field
+        const hasParamCompletions = filteredItems.some(
+            (item) => item.insertText?.endsWith(" = ") && item.kind === 5, // CompletionItemKind.Field
         );
 
         expect(hasParamCompletions).toBe(false);
@@ -235,7 +237,9 @@ END
         expect(xxxsItem?.insertText).toBe("xxxs = ");
         // Documentation contains signature like 'string xxxs = "bzzzz"'
         const xxxsDoc = xxxsItem?.documentation;
-        expect(xxxsDoc && typeof xxxsDoc === "object" && "value" in xxxsDoc ? xxxsDoc.value : "").toContain("string xxxs");
+        expect(xxxsDoc && typeof xxxsDoc === "object" && "value" in xxxsDoc ? xxxsDoc.value : "").toContain(
+            "string xxxs",
+        );
     });
 
     it("provides STR_VAR completions when typing partial param name in incomplete STR_VAR section", () => {
@@ -303,9 +307,7 @@ LAM my_macro
         const filteredItems = weiduTp2Provider.filterCompletions?.(allItems, text, position, uri) ?? [];
 
         // Macros don't have parameters, so no param completions
-        const hasParamCompletions = filteredItems.some(item =>
-            item.insertText?.endsWith(" = ") && item.kind === 5
-        );
+        const hasParamCompletions = filteredItems.some((item) => item.insertText?.endsWith(" = ") && item.kind === 5);
 
         expect(hasParamCompletions).toBe(false);
     });

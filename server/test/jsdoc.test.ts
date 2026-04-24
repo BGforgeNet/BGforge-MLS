@@ -245,7 +245,6 @@ describe("jsdoc.parse", () => {
             const result = jsdoc.parse(input);
             expect(result.ret).toBeUndefined();
         });
-
     });
 
     describe("@deprecated parsing", () => {

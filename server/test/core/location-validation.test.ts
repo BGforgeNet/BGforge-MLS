@@ -58,7 +58,7 @@ describe("Location validation", () => {
             const staticSymbol: Symbol = {
                 name: "DELETE_EFFECT",
                 kind: SymbolKind.Function,
-                location: null,  // Static symbols have no source file
+                location: null, // Static symbols have no source file
                 scope: { level: ScopeLevel.Global },
                 source: { type: SourceType.Static, uri: null },
                 completion: { label: "DELETE_EFFECT" },
@@ -102,7 +102,7 @@ describe("Location validation", () => {
             const staticSymbol: Symbol = {
                 name: "COPY_EXISTING",
                 kind: SymbolKind.Function,
-                location: null,  // Static symbols have no source file
+                location: null, // Static symbols have no source file
                 scope: { level: ScopeLevel.Global },
                 source: { type: SourceType.Static, uri: null },
                 completion: { label: "COPY_EXISTING" },

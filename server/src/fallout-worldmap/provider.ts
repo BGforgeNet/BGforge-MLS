@@ -11,7 +11,13 @@ import { LANG_FALLOUT_WORLDMAP_TXT } from "../core/languages";
 import type { IndexedSymbol } from "../core/symbol";
 import { Symbols } from "../core/symbol-index";
 import { loadStaticSymbols } from "../core/static-loader";
-import type { LanguageProvider, ProviderContext, ProviderBase, CompletionCapability, DataCapability } from "../language-provider";
+import type {
+    LanguageProvider,
+    ProviderContext,
+    ProviderBase,
+    CompletionCapability,
+    DataCapability,
+} from "../language-provider";
 import { resolveSymbolStatic, getStaticCompletions } from "../shared/provider-helpers";
 
 class FalloutWorldmapProvider implements ProviderBase, CompletionCapability, DataCapability {
@@ -35,7 +41,6 @@ class FalloutWorldmapProvider implements ProviderBase, CompletionCapability, Dat
     getCompletions(_uri: string): CompletionItem[] {
         return getStaticCompletions(this.symbolStore);
     }
-
 }
 
 export const falloutWorldmapProvider: LanguageProvider = new FalloutWorldmapProvider();

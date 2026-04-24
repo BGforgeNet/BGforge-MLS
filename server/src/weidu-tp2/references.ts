@@ -43,16 +43,15 @@ export function findReferences(
     }
 
     const localLocations = occurrences
-        .filter(occ => includeDeclaration || !occ.isDefinition)
-        .map(occ => ({
+        .filter((occ) => includeDeclaration || !occ.isDefinition)
+        .map((occ) => ({
             uri,
             range: makeRange(occ.node),
         }));
 
     // For function/macro symbols, add cross-file references from the index.
     if (symbolInfo.kind === "function" && refsIndex) {
-        const crossFileRefs = refsIndex.lookup(symbolInfo.name)
-            .filter(loc => loc.uri !== uri);
+        const crossFileRefs = refsIndex.lookup(symbolInfo.name).filter((loc) => loc.uri !== uri);
         return [...localLocations, ...crossFileRefs];
     }
 

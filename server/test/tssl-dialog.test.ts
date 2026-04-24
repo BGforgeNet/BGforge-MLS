@@ -66,14 +66,14 @@ end
             expect(result.entryPoints).toContain("Node001");
             expect(result.nodes).toHaveLength(2);
 
-            const node1 = result.nodes.find(n => n.name === "Node001");
+            const node1 = result.nodes.find((n) => n.name === "Node001");
             expect(node1).toBeDefined();
             expect(node1!.replies).toHaveLength(1);
             expect(node1!.replies[0]!.msgId).toBe(100);
             expect(node1!.options).toHaveLength(1);
             expect(node1!.options[0]!.target).toBe("Node002");
 
-            const node2 = result.nodes.find(n => n.name === "Node002");
+            const node2 = result.nodes.find((n) => n.name === "Node002");
             expect(node2).toBeDefined();
             expect(node2!.replies).toHaveLength(1);
             expect(node2!.options).toHaveLength(1);
@@ -115,10 +115,7 @@ end
 
             await parseTSSLDialog("file:///path/to/script.tssl", "const x = 1;");
 
-            expect(mockedTranspile).toHaveBeenCalledWith(
-                "/path/to/script.tssl",
-                "const x = 1;",
-            );
+            expect(mockedTranspile).toHaveBeenCalledWith("/path/to/script.tssl", "const x = 1;");
         });
 
         it("collects call_stmt (call_expr target) entries from parseProcedure body", async () => {
@@ -143,7 +140,7 @@ end
             const result = await parseTSSLDialog("file:///test.tssl", "// tssl");
 
             expect(result.entryPoints).toContain("Node001");
-            const node1 = result.nodes.find(n => n.name === "Node001");
+            const node1 = result.nodes.find((n) => n.name === "Node001");
             expect(node1).toBeDefined();
             // callTargets should include Node002 (collected via call_stmt in parseProcedure)
             expect(node1!.callTargets).toContain("Node002");
@@ -190,7 +187,7 @@ end
 
             const result = await parseTSSLDialog("file:///test.tssl", "// tssl");
 
-            const node1 = result.nodes.find(n => n.name === "Node001");
+            const node1 = result.nodes.find((n) => n.name === "Node001");
             expect(node1).toBeDefined();
             // msgId should be the text of the identifier (string branch of parseArgValue)
             expect(node1!.replies[0]!.msgId).toBe("MSG_ID_CONST");

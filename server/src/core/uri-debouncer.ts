@@ -18,10 +18,13 @@ export class UriDebouncer<K extends string = string> {
         if (existing !== undefined) {
             clearTimeout(existing);
         }
-        this.timers.set(key, setTimeout(() => {
-            this.timers.delete(key);
-            fn();
-        }, this.delayMs));
+        this.timers.set(
+            key,
+            setTimeout(() => {
+                this.timers.delete(key);
+                fn();
+            }, this.delayMs),
+        );
     }
 
     /** Cancel a pending call. Returns true if one was cancelled. */

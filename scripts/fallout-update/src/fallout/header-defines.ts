@@ -13,7 +13,6 @@ import { cmpStr, findFiles } from "../../../utils/src/yaml-helpers.ts";
 /** Classification of a #define extracted from header files */
 export type DefineKind = "constant" | "variable" | "procedure" | "define_with_vars" | "alias";
 
-
 /** Matches: #define NAME (value) or #define NAME value — numeric constants */
 const REGEX_CONSTANT = /^#define\s+(\w+)\s+\(?([0-9]+)\)?/;
 
@@ -126,8 +125,6 @@ export function collectDefines(srcDir: string): ReadonlyMap<string, DefineKind> 
     }
 
     // Sort alphabetically for deterministic output
-    const sorted = new Map(
-        [...merged.entries()].sort(([a], [b]) => cmpStr(a, b))
-    );
+    const sorted = new Map([...merged.entries()].sort(([a], [b]) => cmpStr(a, b)));
     return sorted;
 }

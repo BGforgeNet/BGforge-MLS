@@ -10,12 +10,7 @@
 import { describe, expect, it, beforeEach } from "vitest";
 import { CompletionItemKind, SymbolKind as VscodeSymbolKind } from "vscode-languageserver/node";
 import { Symbols } from "../../src/core/symbol-index";
-import {
-    type IndexedSymbol,
-    SymbolKind,
-    ScopeLevel,
-    SourceType,
-} from "../../src/core/symbol";
+import { type IndexedSymbol, SymbolKind, ScopeLevel, SourceType } from "../../src/core/symbol";
 
 // =============================================================================
 // Test fixtures
@@ -68,29 +63,25 @@ describe("Symbols — workspace symbol search", () => {
 
     describe("query() excludes Navigation symbols", () => {
         it("should not return Navigation symbols in query results", () => {
-            index.updateFile(URI_A, [
-                createSymbol("nav_proc", { sourceType: SourceType.Navigation }),
-            ]);
+            index.updateFile(URI_A, [createSymbol("nav_proc", { sourceType: SourceType.Navigation })]);
 
             const results = index.query({});
-            expect(results.find(s => s.name === "nav_proc")).toBeUndefined();
+            expect(results.find((s) => s.name === "nav_proc")).toBeUndefined();
         });
 
         it("should still return Workspace, Static, and Document symbols", () => {
             index.updateFile(URI_HEADER, [
                 createSymbol("header_proc", { sourceType: SourceType.Workspace, uri: URI_HEADER }),
             ]);
-            index.updateFile(URI_A, [
-                createSymbol("doc_proc", { sourceType: SourceType.Document }),
-            ]);
+            index.updateFile(URI_A, [createSymbol("doc_proc", { sourceType: SourceType.Document })]);
             index.loadStatic([
                 createSymbol("builtin_func", { sourceType: SourceType.Static, uri: null as unknown as string }),
             ]);
 
             const results = index.query({});
-            expect(results.find(s => s.name === "header_proc")).toBeDefined();
-            expect(results.find(s => s.name === "doc_proc")).toBeDefined();
-            expect(results.find(s => s.name === "builtin_func")).toBeDefined();
+            expect(results.find((s) => s.name === "header_proc")).toBeDefined();
+            expect(results.find((s) => s.name === "doc_proc")).toBeDefined();
+            expect(results.find((s) => s.name === "builtin_func")).toBeDefined();
         });
 
         it("should exclude Navigation even with prefix filter", () => {
@@ -130,8 +121,8 @@ describe("Symbols — workspace symbol search", () => {
         it("should filter by case-insensitive substring", () => {
             const results = index.searchWorkspaceSymbols("calc");
             expect(results).toHaveLength(2);
-            expect(results.map(s => s.name)).toContain("calculate_damage");
-            expect(results.map(s => s.name)).toContain("calculate_hit_chance");
+            expect(results.map((s) => s.name)).toContain("calculate_damage");
+            expect(results.map((s) => s.name)).toContain("calculate_hit_chance");
         });
 
         it("should be case-insensitive", () => {
@@ -143,8 +134,8 @@ describe("Symbols — workspace symbol search", () => {
         it("should match anywhere in the name", () => {
             const results = index.searchWorkspaceSymbols("armor");
             expect(results).toHaveLength(2);
-            expect(results.map(s => s.name)).toContain("apply_armor");
-            expect(results.map(s => s.name)).toContain("get_armor_class");
+            expect(results.map((s) => s.name)).toContain("apply_armor");
+            expect(results.map((s) => s.name)).toContain("get_armor_class");
         });
 
         it("should return empty array when nothing matches", () => {
@@ -159,7 +150,7 @@ describe("Symbols — workspace symbol search", () => {
 
         it("should return results from multiple files", () => {
             const results = index.searchWorkspaceSymbols("calculate");
-            const uris = results.map(s => s.location.uri);
+            const uris = results.map((s) => s.location.uri);
             expect(uris).toContain(URI_A);
             expect(uris).toContain(URI_B);
         });
@@ -172,7 +163,7 @@ describe("Symbols — workspace symbol search", () => {
             const results = index.searchWorkspaceSymbols("");
             // 5 navigation + 1 workspace
             expect(results).toHaveLength(6);
-            expect(results.find(s => s.name === "header_func")).toBeDefined();
+            expect(results.find((s) => s.name === "header_func")).toBeDefined();
         });
 
         it("should exclude static symbols", () => {
@@ -197,9 +188,7 @@ describe("Symbols — workspace symbol search", () => {
 
         it("should include displayPath as containerName", () => {
             const customIndex = new Symbols();
-            customIndex.updateFile(URI_A, [
-                createSymbol("my_func", { displayPath: "scripts/a.ssl" }),
-            ]);
+            customIndex.updateFile(URI_A, [createSymbol("my_func", { displayPath: "scripts/a.ssl" })]);
 
             const results = customIndex.searchWorkspaceSymbols("my_func");
             expect(results).toHaveLength(1);
@@ -208,9 +197,7 @@ describe("Symbols — workspace symbol search", () => {
 
         it("should omit containerName when displayPath is undefined", () => {
             const customIndex = new Symbols();
-            customIndex.updateFile(URI_A, [
-                createSymbol("bare_func"),
-            ]);
+            customIndex.updateFile(URI_A, [createSymbol("bare_func")]);
 
             const results = customIndex.searchWorkspaceSymbols("bare_func");
             expect(results).toHaveLength(1);
@@ -224,9 +211,7 @@ describe("Symbols — workspace symbol search", () => {
 
     describe("lookup() includes Navigation symbols", () => {
         it("should find Navigation symbols by name", () => {
-            index.updateFile(URI_A, [
-                createSymbol("nav_proc", { sourceType: SourceType.Navigation }),
-            ]);
+            index.updateFile(URI_A, [createSymbol("nav_proc", { sourceType: SourceType.Navigation })]);
 
             const result = index.lookup("nav_proc");
             expect(result).toBeDefined();
@@ -259,12 +244,8 @@ describe("Symbols — workspace symbol search", () => {
 
     describe("clearFile() removes Navigation symbols", () => {
         it("should remove Navigation symbols from search", () => {
-            index.updateFile(URI_A, [
-                createSymbol("proc_a"),
-            ]);
-            index.updateFile(URI_B, [
-                createSymbol("proc_b", { uri: URI_B }),
-            ]);
+            index.updateFile(URI_A, [createSymbol("proc_a")]);
+            index.updateFile(URI_B, [createSymbol("proc_b", { uri: URI_B })]);
 
             index.clearFile(URI_A);
 

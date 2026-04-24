@@ -55,7 +55,7 @@ COPY ~a~ ~b~
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
         const filteredItems = weiduTp2Provider.filterCompletions?.(allItems, text, position, uri) ?? [];
 
-        const item = filteredItems.find(i => i.label === "my_documented_var");
+        const item = filteredItems.find((i) => i.label === "my_documented_var");
         expect(item).toBeDefined();
         expect(item?.kind).toBe(CompletionItemKind.Variable);
 
@@ -82,7 +82,7 @@ END
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
         const filteredItems = weiduTp2Provider.filterCompletions?.(allItems, text, position, uri) ?? [];
 
-        const item = filteredItems.find(i => i.label === "helpful_func");
+        const item = filteredItems.find((i) => i.label === "helpful_func");
         expect(item).toBeDefined();
         expect(item?.kind).toBe(CompletionItemKind.Function);
 
@@ -107,7 +107,7 @@ END
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
         const filteredItems = weiduTp2Provider.filterCompletions?.(allItems, text, position, uri) ?? [];
 
-        const item = filteredItems.find(i => i.label === "inner_only_var");
+        const item = filteredItems.find((i) => i.label === "inner_only_var");
         expect(item).toBeDefined();
         expect(item?.kind).toBe(CompletionItemKind.Variable);
     });
@@ -127,7 +127,7 @@ COPY ~a~ ~b~
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
         const filteredItems = weiduTp2Provider.filterCompletions?.(allItems, text, position, uri) ?? [];
 
-        const matches = filteredItems.filter(i => i.label === "dedup_test_var");
+        const matches = filteredItems.filter((i) => i.label === "dedup_test_var");
         expect(matches).toHaveLength(1);
     });
 });

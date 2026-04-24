@@ -26,7 +26,10 @@ function isConstantMacro(name: string): boolean {
  */
 function isNumericValue(value: string): boolean {
     // Strip inline comment (// or /* */)
-    const stripped = value.replace(/\/\/.*$/, "").replace(/\/\*.*\*\//, "").trim();
+    const stripped = value
+        .replace(/\/\/.*$/, "")
+        .replace(/\/\*.*\*\//, "")
+        .trim();
     return /^\(?-?(?:0x[0-9a-fA-F]+|\d+)\)?$/.test(stripped);
 }
 
@@ -40,7 +43,10 @@ export function parseMacroParams(params: string): string[] {
     const cleaned = params.replace(/^\(|\)$/g, "").trim();
     if (!cleaned) return [];
 
-    return cleaned.split(",").map(p => p.trim()).filter(p => p.length > 0);
+    return cleaned
+        .split(",")
+        .map((p) => p.trim())
+        .filter((p) => p.length > 0);
 }
 
 /**
@@ -48,11 +54,11 @@ export function parseMacroParams(params: string): string[] {
  */
 export interface MacroData {
     name: string;
-    params?: string[];       // ["msg"] or ["critter", "slot"] or undefined
+    params?: string[]; // ["msg"] or ["critter", "slot"] or undefined
     hasParams: boolean;
-    body?: string;           // Macro body text (if available)
-    firstline?: string;      // First line of body (for display)
-    multiline?: boolean;     // Has line continuations
+    body?: string; // Macro body text (if available)
+    firstline?: string; // First line of body (for display)
+    multiline?: boolean; // Has line continuations
     jsdoc?: jsdoc.JSdoc;
     /** AST node for the define directive (for location extraction). Only present when extracted from tree-sitter. */
     node?: import("web-tree-sitter").Node;
@@ -72,12 +78,13 @@ function buildMacroSignature(macro: MacroData): string {
     }
 
     // Build from definition params, enrich with JSDoc types
-    const params = macro.hasParams && macro.params
-        ? macro.params.map((name, idx) => ({
-            name,
-            type: macro.jsdoc?.args[idx]?.type ?? "var",
-        }))
-        : [];
+    const params =
+        macro.hasParams && macro.params
+            ? macro.params.map((name, idx) => ({
+                  name,
+                  type: macro.jsdoc?.args[idx]?.type ?? "var",
+              }))
+            : [];
 
     let prefix = "macro ";
     if (macro.jsdoc?.ret) {
@@ -147,7 +154,7 @@ export function buildSignatureHelp(
         return info;
     });
 
-    let sigLabel = name + "(" + parameters.map(p => p.label).join(", ") + ")";
+    let sigLabel = name + "(" + parameters.map((p) => p.label).join(", ") + ")";
     if (jsd?.ret) {
         sigLabel = `${jsd.ret.type} ${sigLabel}`;
     }
@@ -168,19 +175,15 @@ export function buildSignatureHelp(
  * Build completion item for a macro.
  * Used by header-parser.ts and local-symbols.ts.
  */
-export function buildMacroCompletion(
-    macro: MacroData,
-    _uri: string,
-    filePath: string
-): CompletionItem {
+export function buildMacroCompletion(macro: MacroData, _uri: string, filePath: string): CompletionItem {
     const isConstant = !macro.hasParams && isConstantMacro(macro.name);
     const markdownValue = buildMacroTooltip(macro, filePath);
 
     const kind = isConstant
         ? CompletionItemKind.Constant
         : macro.hasParams
-            ? CompletionItemKind.Function
-            : CompletionItemKind.Snippet;
+          ? CompletionItemKind.Function
+          : CompletionItemKind.Snippet;
 
     const item: CompletionItem = {
         label: macro.name,

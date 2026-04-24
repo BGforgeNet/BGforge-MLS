@@ -45,10 +45,15 @@ export function createFullDocumentEdit(originalText: string, newText: string): T
     const lines = originalText.split("\n");
     const lastLine = lines[lines.length - 1] ?? "";
 
-    return [TextEdit.replace({
-        start: { line: 0, character: 0 },
-        end: { line: lines.length - 1, character: lastLine.length },
-    }, newText)];
+    return [
+        TextEdit.replace(
+            {
+                start: { line: 0, character: 0 },
+                end: { line: lines.length - 1, character: lastLine.length },
+            },
+            newText,
+        ),
+    ];
 }
 
 /** WeiDU multi-tilde delimiter count (~~~~~...~~~~~). */
@@ -172,83 +177,83 @@ export function tokenizeWeidu(text: string): WeiduToken[] {
     while (i < text.length) {
         // Tilde strings: WeiDU uses 1 tilde or 5 tildes as delimiters
         if (text[i] === "~") {
-                const start = i;
-                let tildeCount = 0;
-                while (i < text.length && text[i] === "~") {
-                    tildeCount++;
-                    i++;
-                }
-                const delimiterCount = tildeCount >= WEIDU_MULTI_TILDE_COUNT ? WEIDU_MULTI_TILDE_COUNT : 1;
-                i = start + delimiterCount;
-                const closer = "~".repeat(delimiterCount);
-                const end = text.indexOf(closer, i);
-                if (end !== -1) {
-                    flushCode(start);
-                    tokens.push({
-                        type: WeiduTokenType.String,
-                        text: text.slice(start, end + delimiterCount),
-                    });
-                    i = end + delimiterCount;
-                    lastCodeStart = i;
-                }
-                continue;
+            const start = i;
+            let tildeCount = 0;
+            while (i < text.length && text[i] === "~") {
+                tildeCount++;
+                i++;
             }
-            // Double-quoted strings
-            if (text[i] === '"') {
-                const start = i++;
-                while (i < text.length && text[i] !== '"') {
-                    if (text[i] === "\\") i++;
-                    i++;
-                }
-                if (i < text.length) i++;
+            const delimiterCount = tildeCount >= WEIDU_MULTI_TILDE_COUNT ? WEIDU_MULTI_TILDE_COUNT : 1;
+            i = start + delimiterCount;
+            const closer = "~".repeat(delimiterCount);
+            const end = text.indexOf(closer, i);
+            if (end !== -1) {
                 flushCode(start);
                 tokens.push({
                     type: WeiduTokenType.String,
-                    text: text.slice(start, i),
+                    text: text.slice(start, end + delimiterCount),
                 });
+                i = end + delimiterCount;
                 lastCodeStart = i;
-                continue;
             }
-            // Percent strings/variables
-            if (text[i] === "%") {
-                const start = i++;
-                const end = text.indexOf("%", i);
-                if (end !== -1) {
-                    flushCode(start);
-                    tokens.push({
-                        type: WeiduTokenType.String,
-                        text: text.slice(start, end + 1),
-                    });
-                    i = end + 1;
-                    lastCodeStart = i;
-                }
-                continue;
+            continue;
+        }
+        // Double-quoted strings
+        if (text[i] === '"') {
+            const start = i++;
+            while (i < text.length && text[i] !== '"') {
+                if (text[i] === "\\") i++;
+                i++;
             }
-            // Block comments - check before line comments
-            if (text[i] === "/" && text[i + 1] === "*") {
-                const start = i;
-                const end = text.indexOf("*/", i + 2);
-                i = end !== -1 ? end + 2 : text.length;
+            if (i < text.length) i++;
+            flushCode(start);
+            tokens.push({
+                type: WeiduTokenType.String,
+                text: text.slice(start, i),
+            });
+            lastCodeStart = i;
+            continue;
+        }
+        // Percent strings/variables
+        if (text[i] === "%") {
+            const start = i++;
+            const end = text.indexOf("%", i);
+            if (end !== -1) {
                 flushCode(start);
                 tokens.push({
-                    type: WeiduTokenType.Comment,
-                    text: text.slice(start, i),
+                    type: WeiduTokenType.String,
+                    text: text.slice(start, end + 1),
                 });
+                i = end + 1;
                 lastCodeStart = i;
-                continue;
             }
-            // Line comments - only if not in a string
-            if (text[i] === "/" && text[i + 1] === "/") {
-                const start = i;
-                while (i < text.length && text[i] !== "\n") i++;
-                flushCode(start);
-                tokens.push({
-                    type: WeiduTokenType.Comment,
-                    text: text.slice(start, i),
-                });
-                lastCodeStart = i;
-                continue;
-            }
+            continue;
+        }
+        // Block comments - check before line comments
+        if (text[i] === "/" && text[i + 1] === "*") {
+            const start = i;
+            const end = text.indexOf("*/", i + 2);
+            i = end !== -1 ? end + 2 : text.length;
+            flushCode(start);
+            tokens.push({
+                type: WeiduTokenType.Comment,
+                text: text.slice(start, i),
+            });
+            lastCodeStart = i;
+            continue;
+        }
+        // Line comments - only if not in a string
+        if (text[i] === "/" && text[i + 1] === "/") {
+            const start = i;
+            while (i < text.length && text[i] !== "\n") i++;
+            flushCode(start);
+            tokens.push({
+                type: WeiduTokenType.Comment,
+                text: text.slice(start, i),
+            });
+            lastCodeStart = i;
+            continue;
+        }
         i++;
     }
     flushCode(text.length);
@@ -448,11 +453,7 @@ export function stripCommentsFalloutScriptsLst(text: string): string {
  * Returns error message if content changed, null if OK.
  * @param stripComments Language-specific function to strip comments while respecting strings
  */
-export function validateFormatting(
-    original: string,
-    formatted: string,
-    stripComments: CommentStripper
-): string | null {
+export function validateFormatting(original: string, formatted: string, stripComments: CommentStripper): string | null {
     const normalize = (text: string) => stripComments(text).replace(/\s+/g, "");
     const normalizedOriginal = normalize(original);
     const normalizedFormatted = normalize(formatted);

@@ -6,7 +6,11 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { loadBinaryJsonSnapshot, createBinaryJsonSnapshot, parseBinaryJsonSnapshot } from "../src/parsers/json-snapshot";
+import {
+    loadBinaryJsonSnapshot,
+    createBinaryJsonSnapshot,
+    parseBinaryJsonSnapshot,
+} from "../src/parsers/json-snapshot";
 import type { ParseResult } from "../src/parsers/types";
 
 function makeSimpleResult(overrides: Partial<ParseResult> = {}): ParseResult {
@@ -15,9 +19,7 @@ function makeSimpleResult(overrides: Partial<ParseResult> = {}): ParseResult {
         formatName: "Test Binary",
         root: {
             name: "Root",
-            fields: [
-                { name: "Value", value: 42, offset: 0, size: 4, type: "uint32" },
-            ],
+            fields: [{ name: "Value", value: 42, offset: 0, size: 4, type: "uint32" }],
         },
         ...overrides,
     };
@@ -100,9 +102,7 @@ describe("loadBinaryJsonSnapshot — field types in generic schema", () => {
                         name: "Group",
                         description: "group desc",
                         expanded: false,
-                        fields: [
-                            { name: "Field", value: 1, offset: 0, size: 1, type: "uint8" },
-                        ],
+                        fields: [{ name: "Field", value: 1, offset: 0, size: 1, type: "uint8" }],
                     },
                 ],
             },
@@ -122,9 +122,7 @@ describe("loadBinaryJsonSnapshot — field types in generic schema", () => {
             formatName: "Test",
             root: {
                 name: "Root",
-                fields: [
-                    { name: "F", value: 10, offset: 0, size: 4, type: "uint32", description: "some desc" },
-                ],
+                fields: [{ name: "F", value: 10, offset: 0, size: 4, type: "uint32", description: "some desc" }],
             },
         };
         const json = createBinaryJsonSnapshot(result);
@@ -158,9 +156,7 @@ describe("parseFieldValue — enum/flags with string input", () => {
                     },
                     {
                         name: "Misc Properties",
-                        fields: [
-                            { name: "Unknown", value: 0, offset: 24, size: 4, type: "uint32" },
-                        ],
+                        fields: [{ name: "Unknown", value: 0, offset: 24, size: 4, type: "uint32" }],
                     },
                 ],
             },

@@ -3,9 +3,7 @@
  */
 
 import type { ParsedField, ParsedGroup } from "./types";
-import {
-    MapElevation, Rotation, ObjectFlags,
-} from "./map-types";
+import { MapElevation, Rotation, ObjectFlags } from "./map-types";
 import type { MapHeader } from "./map-schemas";
 import {
     makeGroup,
@@ -44,10 +42,28 @@ function parseObjectBaseFields(data: Uint8Array, offset: number): { fields: Pars
         int32Field("Screen X", data, offset + 16),
         int32Field("Screen Y", data, offset + 20),
         int32Field("Frame", data, offset + 24),
-        enumField("Rotation", new DataView(data.buffer, data.byteOffset + offset + 28, 4).getInt32(0, false), Rotation, offset + 28, 4),
+        enumField(
+            "Rotation",
+            new DataView(data.buffer, data.byteOffset + offset + 28, 4).getInt32(0, false),
+            Rotation,
+            offset + 28,
+            4,
+        ),
         uint32Field("FID", data, offset + 32),
-        flagsField("Flags", new DataView(data.buffer, data.byteOffset + offset + 36, 4).getInt32(0, false), ObjectFlags, offset + 36, 4),
-        enumField("Elevation", new DataView(data.buffer, data.byteOffset + offset + 40, 4).getInt32(0, false), MapElevation, offset + 40, 4),
+        flagsField(
+            "Flags",
+            new DataView(data.buffer, data.byteOffset + offset + 36, 4).getInt32(0, false),
+            ObjectFlags,
+            offset + 36,
+            4,
+        ),
+        enumField(
+            "Elevation",
+            new DataView(data.buffer, data.byteOffset + offset + 40, 4).getInt32(0, false),
+            MapElevation,
+            offset + 40,
+            4,
+        ),
         { name: "PID", value: pid, offset: pidFieldOffset, size: 4, type: "int32" as const },
         int32Field("CID", data, offset + 48),
         int32Field("Light Distance", data, offset + 52),
@@ -83,12 +99,30 @@ function parseExitGridFields(data: Uint8Array, offset: number): ParsedField[] {
     return [
         int32Field("Destination Map", data, offset + 0),
         int32Field("Destination Tile", data, offset + 4),
-        enumField("Destination Elevation", new DataView(data.buffer, data.byteOffset + offset + 8, 4).getInt32(0, false), MapElevation, offset + 8, 4),
-        enumField("Destination Rotation", new DataView(data.buffer, data.byteOffset + offset + 12, 4).getInt32(0, false), Rotation, offset + 12, 4),
+        enumField(
+            "Destination Elevation",
+            new DataView(data.buffer, data.byteOffset + offset + 8, 4).getInt32(0, false),
+            MapElevation,
+            offset + 8,
+            4,
+        ),
+        enumField(
+            "Destination Rotation",
+            new DataView(data.buffer, data.byteOffset + offset + 12, 4).getInt32(0, false),
+            Rotation,
+            offset + 12,
+            4,
+        ),
     ];
 }
 
-function parseObjectAt(data: Uint8Array, offset: number, index: string, header: MapHeader, errors: string[]): ParsedObjectResult {
+function parseObjectAt(
+    data: Uint8Array,
+    offset: number,
+    index: string,
+    header: MapHeader,
+    errors: string[],
+): ParsedObjectResult {
     void header;
 
     if (offset + MAP_OBJECT_BASE_SIZE + MAP_OBJECT_DATA_HEADER_SIZE > data.length) {
@@ -101,7 +135,7 @@ function parseObjectAt(data: Uint8Array, offset: number, index: string, header: 
     }
 
     const { fields: baseFields, pid } = parseObjectBaseFields(data, offset);
-    const pidType = (pid >>> 24) & 0xFF;
+    const pidType = (pid >>> 24) & 0xff;
     let currentOffset = offset + MAP_OBJECT_BASE_SIZE;
 
     const inventoryLength = int32Field("Inventory Length", data, currentOffset);
@@ -155,11 +189,13 @@ function parseObjectAt(data: Uint8Array, offset: number, index: string, header: 
             objectFields.push(makeGroup("Exit Grid", parseExitGridFields(data, currentOffset)));
             currentOffset += 16;
         } else if (pidType === PID_TYPE_ITEM || pidType === PID_TYPE_SCENERY) {
-            objectFields.push(noteField(
-                "TODO",
-                "Payload decoding for item/scenery objects requires external PRO metadata to resolve subtype-specific layout",
-                currentOffset
-            ));
+            objectFields.push(
+                noteField(
+                    "TODO",
+                    "Payload decoding for item/scenery objects requires external PRO metadata to resolve subtype-specific layout",
+                    currentOffset,
+                ),
+            );
             return {
                 complete: false,
                 group: makeGroup(`Object ${index} (${objectTypeName(pid)})`, objectFields),
@@ -171,7 +207,9 @@ function parseObjectAt(data: Uint8Array, offset: number, index: string, header: 
     const inventoryGroups: ParsedGroup[] = [];
     for (let inventoryIndex = 0; inventoryIndex < Number(inventoryLength.value); inventoryIndex++) {
         if (currentOffset + 4 > data.length) {
-            errors.push(`Inventory entry ${index}.${inventoryIndex} quantity truncated at offset 0x${currentOffset.toString(16)}`);
+            errors.push(
+                `Inventory entry ${index}.${inventoryIndex} quantity truncated at offset 0x${currentOffset.toString(16)}`,
+            );
             objectFields.push(noteField("TODO", "Truncated inventory entry", currentOffset));
             return {
                 complete: false,
@@ -207,7 +245,7 @@ export function parseObjects(
     data: Uint8Array,
     header: MapHeader,
     currentOffset: number,
-    errors: string[]
+    errors: string[],
 ): { offset: number; group: ParsedGroup; opaqueTailOffset?: number } {
     if (currentOffset >= data.length) {
         return {
@@ -235,7 +273,11 @@ export function parseObjects(
     for (let elev = 0; elev < 3; elev++) {
         if (currentOffset + 4 > data.length) {
             errors.push(`Elevation ${elev} object count truncated at offset 0x${currentOffset.toString(16)}`);
-            sectionFields.push(makeGroup(`Elevation ${elev} Objects`, [noteField("TODO", "Truncated elevation object count", currentOffset)]));
+            sectionFields.push(
+                makeGroup(`Elevation ${elev} Objects`, [
+                    noteField("TODO", "Truncated elevation object count", currentOffset),
+                ]),
+            );
             return { offset: data.length, group: makeGroup("Objects Section", sectionFields) };
         }
 
@@ -251,11 +293,13 @@ export function parseObjects(
             if (!parsedObject.complete) {
                 const remainingObjects = Number(countField.value) - objectIndex - 1;
                 if (remainingObjects > 0) {
-                    elevationFields.push(noteField(
-                        "TODO",
-                        `${remainingObjects} more top-level object(s) on elevation ${elev} require a PRO resolver or a fuller object model to decode safely`,
-                        currentOffset
-                    ));
+                    elevationFields.push(
+                        noteField(
+                            "TODO",
+                            `${remainingObjects} more top-level object(s) on elevation ${elev} require a PRO resolver or a fuller object model to decode safely`,
+                            currentOffset,
+                        ),
+                    );
                 }
 
                 stoppedEarly = true;
@@ -270,18 +314,23 @@ export function parseObjects(
     }
 
     if (currentOffset < data.length) {
-        const hasOnlyZeroCounts = totalObjects.value === 0
-            && sectionFields
-                .filter((entry): entry is ParsedGroup => "fields" in entry && /^Elevation \d+ Objects$/.test(entry.name))
+        const hasOnlyZeroCounts =
+            totalObjects.value === 0 &&
+            sectionFields
+                .filter(
+                    (entry): entry is ParsedGroup => "fields" in entry && /^Elevation \d+ Objects$/.test(entry.name),
+                )
                 .every((entry) => fieldNumber(entry, "Object Count") === 0);
 
-        sectionFields.push(noteField(
-            "TODO",
-            hasOnlyZeroCounts
-                ? `Unable to confidently decode object section: script/object boundary is ambiguous near offset 0x${currentOffset.toString(16)}; preserving remaining bytes opaquely`
-                : `Opaque trailing object bytes remain from offset 0x${currentOffset.toString(16)}; full decoding requires PRO-backed subtype resolution`,
-            currentOffset
-        ));
+        sectionFields.push(
+            noteField(
+                "TODO",
+                hasOnlyZeroCounts
+                    ? `Unable to confidently decode object section: script/object boundary is ambiguous near offset 0x${currentOffset.toString(16)}; preserving remaining bytes opaquely`
+                    : `Opaque trailing object bytes remain from offset 0x${currentOffset.toString(16)}; full decoding requires PRO-backed subtype resolution`,
+                currentOffset,
+            ),
+        );
 
         return {
             offset: data.length,

@@ -6,10 +6,7 @@
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import { CompletionContext } from "../types";
-import {
-    detectFunctionCallContext,
-    detectFunctionDefContext,
-} from "./function-call";
+import { detectFunctionCallContext, detectFunctionDefContext } from "./function-call";
 
 /**
  * Detect context by walking up from cursor node.
@@ -21,8 +18,7 @@ export function detectContextFromNode(node: SyntaxNode, cursorOffset: number): C
 
     while (current) {
         const context =
-            detectFunctionCallContext(current, cursorOffset) ??
-            detectFunctionDefContext(current, cursorOffset);
+            detectFunctionCallContext(current, cursorOffset) ?? detectFunctionDefContext(current, cursorOffset);
 
         if (context) {
             return context;

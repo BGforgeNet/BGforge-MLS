@@ -25,7 +25,25 @@ describe("buildHighlightPatterns", () => {
     });
 
     it("generates patterns for all mapped stanzas", () => {
-        for (const stanza of ["action", "array_sort_type", "caching", "component_flag", "flag", "language", "opt_case", "opt_exact", "opt_glob", "patch", "patch_byte", "patch_long", "patch_string", "prologue", "value_constant", "value_function", "when"]) {
+        for (const stanza of [
+            "action",
+            "array_sort_type",
+            "caching",
+            "component_flag",
+            "flag",
+            "language",
+            "opt_case",
+            "opt_exact",
+            "opt_glob",
+            "patch",
+            "patch_byte",
+            "patch_long",
+            "patch_string",
+            "prologue",
+            "value_constant",
+            "value_function",
+            "when",
+        ]) {
             const patterns = buildHighlightPatterns(DATA, stanza);
             expect(patterns.length).toBeGreaterThan(0);
         }

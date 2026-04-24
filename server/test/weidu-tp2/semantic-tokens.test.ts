@@ -16,7 +16,13 @@ vi.mock("../../src/lsp-connection", () => ({
 
 import { initParser } from "../../src/weidu-tp2/parser";
 import { getSemanticTokenSpans } from "../../src/weidu-tp2/semantic-tokens";
-import { RESREF_TOKEN_TYPE, BYTE_TOKEN_TYPE, CHAR_TOKEN_TYPE, DWORD_TOKEN_TYPE, INT_TOKEN_TYPE } from "../../src/shared/semantic-tokens";
+import {
+    RESREF_TOKEN_TYPE,
+    BYTE_TOKEN_TYPE,
+    CHAR_TOKEN_TYPE,
+    DWORD_TOKEN_TYPE,
+    INT_TOKEN_TYPE,
+} from "../../src/shared/semantic-tokens";
 
 beforeAll(async () => {
     await initParser();
@@ -28,7 +34,7 @@ function getLine(text: string, line: number): string {
 
 function tokenTexts(text: string): string[] {
     return getSemanticTokenSpans(text).map((span) =>
-        getLine(text, span.line).slice(span.startChar, span.startChar + span.length)
+        getLine(text, span.line).slice(span.startChar, span.startChar + span.length),
     );
 }
 
@@ -254,8 +260,12 @@ END
         const loopSpans = spans.filter((s) => s.tokenType === SemanticTokenTypes.variable);
 
         expect(loopSpans).toHaveLength(4);
-        expect(loopSpans.map((s) => getLine(text, s.line).slice(s.startChar, s.startChar + s.length)))
-            .toEqual(["key", "value", "key", "value"]);
+        expect(loopSpans.map((s) => getLine(text, s.line).slice(s.startChar, s.startChar + s.length))).toEqual([
+            "key",
+            "value",
+            "key",
+            "value",
+        ]);
     });
 
     it("highlights ACTION_PHP_EACH loop variables", () => {
@@ -269,8 +279,12 @@ END
         const loopSpans = spans.filter((s) => s.tokenType === SemanticTokenTypes.variable);
 
         expect(loopSpans).toHaveLength(4);
-        expect(loopSpans.map((s) => getLine(text, s.line).slice(s.startChar, s.startChar + s.length)))
-            .toEqual(["k", "v", "k", "v"]);
+        expect(loopSpans.map((s) => getLine(text, s.line).slice(s.startChar, s.startChar + s.length))).toEqual([
+            "k",
+            "v",
+            "k",
+            "v",
+        ]);
     });
 
     it("highlights PATCH_FOR_EACH loop variable", () => {
@@ -287,8 +301,10 @@ END
         const loopSpans = spans.filter((s) => s.tokenType === SemanticTokenTypes.variable);
 
         expect(loopSpans).toHaveLength(2);
-        expect(loopSpans.map((s) => getLine(text, s.line).slice(s.startChar, s.startChar + s.length)))
-            .toEqual(["item", "item"]);
+        expect(loopSpans.map((s) => getLine(text, s.line).slice(s.startChar, s.startChar + s.length))).toEqual([
+            "item",
+            "item",
+        ]);
     });
 
     it("highlights ACTION_FOR_EACH loop variable", () => {
@@ -302,8 +318,10 @@ END
         const loopSpans = spans.filter((s) => s.tokenType === SemanticTokenTypes.variable);
 
         expect(loopSpans).toHaveLength(2);
-        expect(loopSpans.map((s) => getLine(text, s.line).slice(s.startChar, s.startChar + s.length)))
-            .toEqual(["item", "item"]);
+        expect(loopSpans.map((s) => getLine(text, s.line).slice(s.startChar, s.startChar + s.length))).toEqual([
+            "item",
+            "item",
+        ]);
     });
 
     it("uses different token types for function params and loop vars", () => {
@@ -321,10 +339,15 @@ END
         const paramSpans = spans.filter((s) => s.tokenType === SemanticTokenTypes.parameter);
         const loopSpans = spans.filter((s) => s.tokenType === SemanticTokenTypes.variable);
 
-        expect(paramSpans.map((s) => getLine(text, s.line).slice(s.startChar, s.startChar + s.length)))
-            .toEqual(["count"]);
-        expect(loopSpans.map((s) => getLine(text, s.line).slice(s.startChar, s.startChar + s.length)))
-            .toEqual(["key", "val", "key", "val"]);
+        expect(paramSpans.map((s) => getLine(text, s.line).slice(s.startChar, s.startChar + s.length))).toEqual([
+            "count",
+        ]);
+        expect(loopSpans.map((s) => getLine(text, s.line).slice(s.startChar, s.startChar + s.length))).toEqual([
+            "key",
+            "val",
+            "key",
+            "val",
+        ]);
     });
 
     it("highlights loop variable names in the declaration itself", () => {
@@ -369,8 +392,9 @@ OUTER_SPRINT var CLERIC_BLESS
             const resrefSpans = spans.filter((s) => s.tokenType === RESREF_TOKEN_TYPE);
 
             expect(resrefSpans).toHaveLength(1);
-            expect(resrefSpans.map((s) => getLine(text, s.line).slice(s.startChar, s.startChar + s.length)))
-                .toEqual(["CLERIC_BLESS"]);
+            expect(resrefSpans.map((s) => getLine(text, s.line).slice(s.startChar, s.startChar + s.length))).toEqual([
+                "CLERIC_BLESS",
+            ]);
         });
 
         it("highlights %resref% in string content", () => {
@@ -383,8 +407,9 @@ COPY_EXISTING ~%CLERIC_BLESS%.spl~ override
             const resrefSpans = spans.filter((s) => s.tokenType === RESREF_TOKEN_TYPE);
 
             expect(resrefSpans).toHaveLength(1);
-            expect(resrefSpans.map((s) => getLine(text, s.line).slice(s.startChar, s.startChar + s.length)))
-                .toEqual(["CLERIC_BLESS"]);
+            expect(resrefSpans.map((s) => getLine(text, s.line).slice(s.startChar, s.startChar + s.length))).toEqual([
+                "CLERIC_BLESS",
+            ]);
         });
 
         it("highlights percent_string resref reference", () => {
@@ -397,8 +422,9 @@ COPY_EXISTING %CLERIC_BLESS% override
             const resrefSpans = spans.filter((s) => s.tokenType === RESREF_TOKEN_TYPE);
 
             expect(resrefSpans).toHaveLength(1);
-            expect(resrefSpans.map((s) => getLine(text, s.line).slice(s.startChar, s.startChar + s.length)))
-                .toEqual(["CLERIC_BLESS"]);
+            expect(resrefSpans.map((s) => getLine(text, s.line).slice(s.startChar, s.startChar + s.length))).toEqual([
+                "CLERIC_BLESS",
+            ]);
         });
 
         it("does not highlight identifiers not in the typed names map", () => {
@@ -427,10 +453,12 @@ END
             const paramSpans = spans.filter((s) => s.tokenType === SemanticTokenTypes.parameter);
             const resrefSpans = spans.filter((s) => s.tokenType === RESREF_TOKEN_TYPE);
 
-            expect(paramSpans.map((s) => getLine(text, s.line).slice(s.startChar, s.startChar + s.length)))
-                .toEqual(["spell"]);
-            expect(resrefSpans.map((s) => getLine(text, s.line).slice(s.startChar, s.startChar + s.length)))
-                .toEqual(["CLERIC_BLESS"]);
+            expect(paramSpans.map((s) => getLine(text, s.line).slice(s.startChar, s.startChar + s.length))).toEqual([
+                "spell",
+            ]);
+            expect(resrefSpans.map((s) => getLine(text, s.line).slice(s.startChar, s.startChar + s.length))).toEqual([
+                "CLERIC_BLESS",
+            ]);
         });
 
         it("returns no typed tokens when typedNames is not provided", () => {
@@ -454,8 +482,9 @@ WRITE_BYTE ITEM_FLAGS 0
             const byteSpans = spans.filter((s) => s.tokenType === BYTE_TOKEN_TYPE);
 
             expect(byteSpans).toHaveLength(1);
-            expect(byteSpans.map((s) => getLine(text, s.line).slice(s.startChar, s.startChar + s.length)))
-                .toEqual(["ITEM_FLAGS"]);
+            expect(byteSpans.map((s) => getLine(text, s.line).slice(s.startChar, s.startChar + s.length))).toEqual([
+                "ITEM_FLAGS",
+            ]);
         });
 
         it("highlights dword-typed constant with dword token type", () => {
@@ -468,8 +497,9 @@ WRITE_LONG SPL_FLAGS 0
             const dwordSpans = spans.filter((s) => s.tokenType === DWORD_TOKEN_TYPE);
 
             expect(dwordSpans).toHaveLength(1);
-            expect(dwordSpans.map((s) => getLine(text, s.line).slice(s.startChar, s.startChar + s.length)))
-                .toEqual(["SPL_FLAGS"]);
+            expect(dwordSpans.map((s) => getLine(text, s.line).slice(s.startChar, s.startChar + s.length))).toEqual([
+                "SPL_FLAGS",
+            ]);
         });
 
         it("highlights int-typed constant with int token type", () => {
@@ -482,8 +512,9 @@ SET x = MYCONST
             const intSpans = spans.filter((s) => s.tokenType === INT_TOKEN_TYPE);
 
             expect(intSpans).toHaveLength(1);
-            expect(intSpans.map((s) => getLine(text, s.line).slice(s.startChar, s.startChar + s.length)))
-                .toEqual(["MYCONST"]);
+            expect(intSpans.map((s) => getLine(text, s.line).slice(s.startChar, s.startChar + s.length))).toEqual([
+                "MYCONST",
+            ]);
         });
 
         it("assigns different token types to different typed constants", () => {
@@ -507,6 +538,5 @@ WRITE_ASCII CHAR_NAME ~test~
             expect(spans.filter((s) => s.tokenType === DWORD_TOKEN_TYPE)).toHaveLength(1);
             expect(spans.filter((s) => s.tokenType === CHAR_TOKEN_TYPE)).toHaveLength(1);
         });
-
     });
 });

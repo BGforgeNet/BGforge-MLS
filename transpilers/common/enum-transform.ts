@@ -70,7 +70,7 @@ export function transformEnums(sourceText: string): EnumTransformResult {
     // sourceFile itself remains valid. getDescendantsOfKind re-walks the current tree.
     replaceEnumPropertyAccesses(sourceFile, enumInfos);
 
-    const enumNames = new Set(enumInfos.map(e => e.name));
+    const enumNames = new Set(enumInfos.map((e) => e.name));
     return { code: sourceFile.getFullText(), enumNames };
 }
 
@@ -122,12 +122,9 @@ function collectEnumInfo(enumDecls: readonly EnumDeclaration[]): readonly EnumIn
  * Replace each enum declaration with flat const declarations and a compat object.
  * Processes in reverse order to preserve source positions.
  */
-function replaceEnumDeclarations(
-    enumDecls: readonly EnumDeclaration[],
-    enumInfos: readonly EnumInfo[],
-): void {
+function replaceEnumDeclarations(enumDecls: readonly EnumDeclaration[], enumInfos: readonly EnumInfo[]): void {
     // Build a map from enum name to info for lookup
-    const infoByName = new Map(enumInfos.map(e => [e.name, e]));
+    const infoByName = new Map(enumInfos.map((e) => [e.name, e]));
 
     // Process in reverse to preserve positions
     for (let i = enumDecls.length - 1; i >= 0; i--) {
@@ -149,7 +146,7 @@ function replaceEnumDeclarations(
 
         // Compat object for cross-file imports
         if (info.members.length > 0) {
-            const entries = info.members.map(m => `${m.name}: ${m.value}`).join(", ");
+            const entries = info.members.map((m) => `${m.name}: ${m.value}`).join(", ");
             lines.push(`${exportPrefix}const ${info.name} = { ${entries} } as const;`);
         } else {
             lines.push(`${exportPrefix}const ${info.name} = {} as const;`);
@@ -163,14 +160,11 @@ function replaceEnumDeclarations(
  * Replace all `EnumName.Member` property accesses with `EnumName_Member`.
  * Only matches direct Identifier.property patterns (not nested like Obj.Enum.Member).
  */
-function replaceEnumPropertyAccesses(
-    sourceFile: SourceFile,
-    enumInfos: readonly EnumInfo[],
-): void {
+function replaceEnumPropertyAccesses(sourceFile: SourceFile, enumInfos: readonly EnumInfo[]): void {
     // Build lookup: enum name -> set of member names
     const memberLookup = new Map<string, Set<string>>();
     for (const info of enumInfos) {
-        memberLookup.set(info.name, new Set(info.members.map(m => m.name)));
+        memberLookup.set(info.name, new Set(info.members.map((m) => m.name)));
     }
 
     // Find and replace property accesses
@@ -302,7 +296,7 @@ export function expandEnumPropertyAccess(
         expandedInfos.push({ name, isExported: false, members });
 
         // Replace var statement with individual declarations for referenced members only
-        const lines = members.map(m => `var ${name}_${m.name} = ${m.value};`);
+        const lines = members.map((m) => `var ${name}_${m.name} = ${m.value};`);
         varStmt.replaceWithText(lines.join("\n"));
     }
 
@@ -330,10 +324,7 @@ export function expandEnumPropertyAccess(
  * bundled enums (which get `Enum_Member = value` flat vars), externalized enums
  * need to keep the symbolic name — the game engine resolves them at runtime.
  */
-function stripExternalEnumPrefixes(
-    sourceFile: SourceFile,
-    externalEnumNames: ReadonlySet<string>,
-): void {
+function stripExternalEnumPrefixes(sourceFile: SourceFile, externalEnumNames: ReadonlySet<string>): void {
     const accesses = sourceFile.getDescendantsOfKind(SyntaxKind.PropertyAccessExpression);
     for (let i = accesses.length - 1; i >= 0; i--) {
         const access = accesses[i]!;

@@ -6,15 +6,8 @@
  * by walking the chain inside-out and collecting each method call.
  */
 
-import {
-    CallExpression,
-    Expression,
-    Node,
-} from "ts-morph";
-import {
-    TDTransitionType,
-    type TDTransition,
-} from "./types";
+import { CallExpression, Expression, Node } from "ts-morph";
+import { TDTransitionType, type TDTransition } from "./types";
 import * as utils from "../../common/transpiler-utils";
 import type { VarsContext } from "../../common/transpiler-utils";
 import {
@@ -24,9 +17,7 @@ import {
     parseBooleanOption,
     parseRequiredNumber,
 } from "./parse-helpers";
-import {
-    expressionToText,
-} from "./expression-eval";
+import { expressionToText } from "./expression-eval";
 
 /** Names that start a method chain: reply(...).xxx() or action(...).xxx(). */
 const CHAIN_STARTERS = new Set(["reply", "action"]);
@@ -119,9 +110,7 @@ function parseTransitionChain(expr: CallExpression, vars: VarsContext): TDTransi
 
             case "action": {
                 validateArgs("action", step.args, 1, lineNumber);
-                const actionStr = step.args
-                    .map(a => expressionToActionString(a as Expression, vars))
-                    .join(" ");
+                const actionStr = step.args.map((a) => expressionToActionString(a as Expression, vars)).join(" ");
                 trans.action = actionStr;
                 break;
             }
@@ -188,7 +177,4 @@ function parseTransitionChain(expr: CallExpression, vars: VarsContext): TDTransi
     return trans;
 }
 
-export {
-    isChainExpression,
-    parseTransitionChain,
-};
+export { isChainExpression, parseTransitionChain };

@@ -17,18 +17,10 @@ import {
     Statement,
     SyntaxKind,
 } from "ts-morph";
-import {
-    TDTransitionType,
-    type TDTransition,
-} from "./types";
+import { TDTransitionType, type TDTransition } from "./types";
 import * as utils from "../../common/transpiler-utils";
 import type { VarsContext } from "../../common/transpiler-utils";
-import {
-    resolveStringExpr,
-    expressionToActionString,
-    validateArgs,
-    parseRequiredNumber,
-} from "./parse-helpers";
+import { resolveStringExpr, expressionToActionString, validateArgs, parseRequiredNumber } from "./parse-helpers";
 import { TranspileError } from "../../common/transpile-error";
 import { expressionToTrigger, expressionToText } from "./expression-eval";
 import { isChainExpression, parseTransitionChain } from "./chain-parsing";
@@ -52,7 +44,7 @@ export function processTransitionCall(
         getLastTransition(): TDTransition | undefined;
         addTransition(trans: TDTransition): void;
     },
-    vars: VarsContext
+    vars: VarsContext,
 ): boolean {
     const lineNumber = expr.getStartLineNumber();
 
@@ -89,7 +81,7 @@ export function processTransitionCall(
 
         case "action": {
             validateArgs("action", args, 1, lineNumber);
-            const actionStr = args.map(a => expressionToActionString(a as Expression, vars)).join(" ");
+            const actionStr = args.map((a) => expressionToActionString(a as Expression, vars)).join(" ");
             const lastTrans = context.getLastTransition();
             if (lastTrans) {
                 lastTrans.action = actionStr;
@@ -153,7 +145,7 @@ function setTransitionTextField(
     args: Node[],
     lineNumber: number,
     funcName: string,
-    vars: VarsContext
+    vars: VarsContext,
 ): void {
     validateArgs(funcName, args, 1, lineNumber);
     const lastTrans = context.getLastTransition();
@@ -226,10 +218,7 @@ export function processTransitionStatement(
             const context = {
                 getLastTransition: () => trans,
                 addTransition: () => {
-                    throw TranspileError.fromNode(
-                        expr,
-                        `Unexpected addTransition() in single-transition context`
-                    );
+                    throw TranspileError.fromNode(expr, `Unexpected addTransition() in single-transition context`);
                 },
             };
 
@@ -253,11 +242,7 @@ export function processTransitionStatement(
  * Process statements in extend block to build transitions.
  * Similar to processStateStatement but builds transitions directly.
  */
-export function processExtendStatements(
-    statements: Statement[],
-    transitions: TDTransition[],
-    vars: VarsContext
-): void {
+export function processExtendStatements(statements: Statement[], transitions: TDTransition[], vars: VarsContext): void {
     for (const stmt of statements) {
         if (stmt.isKind(SyntaxKind.IfStatement)) {
             // if (trigger) { ... } - transition with trigger

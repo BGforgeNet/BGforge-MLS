@@ -35,7 +35,7 @@ describe("validateNumericRange", () => {
 
     it("accepts valid uint24 values", () => {
         expect(validateNumericRange(0, "uint24")).toBeUndefined();
-        expect(validateNumericRange(0xFF_FF_FF, "uint24")).toBeUndefined();
+        expect(validateNumericRange(0xff_ff_ff, "uint24")).toBeUndefined();
     });
 
     it("rejects out-of-range uint24 values", () => {
@@ -45,7 +45,7 @@ describe("validateNumericRange", () => {
 
     it("accepts valid uint32 values", () => {
         expect(validateNumericRange(0, "uint32")).toBeUndefined();
-        expect(validateNumericRange(0xFF_FF_FF_FF, "uint32")).toBeUndefined();
+        expect(validateNumericRange(0xff_ff_ff_ff, "uint32")).toBeUndefined();
     });
 
     it("rejects out-of-range uint32 values", () => {
@@ -74,10 +74,18 @@ describe("validateNumericRange", () => {
     });
 
     it("applies domain-specific ranges when field context is provided", () => {
-        expect(validateNumericRange(8, "uint32", { format: "pro", fieldKey: "pro.header.lightRadius" })).toBeUndefined();
-        expect(validateNumericRange(9, "uint32", { format: "pro", fieldKey: "pro.header.lightRadius" })).toContain("allowed range");
-        expect(validateNumericRange(2, "int32", { format: "map", fieldKey: "map.header.defaultElevation" })).toBeUndefined();
-        expect(validateNumericRange(3, "int32", { format: "map", fieldKey: "map.header.defaultElevation" })).toContain("allowed range");
+        expect(
+            validateNumericRange(8, "uint32", { format: "pro", fieldKey: "pro.header.lightRadius" }),
+        ).toBeUndefined();
+        expect(validateNumericRange(9, "uint32", { format: "pro", fieldKey: "pro.header.lightRadius" })).toContain(
+            "allowed range",
+        );
+        expect(
+            validateNumericRange(2, "int32", { format: "map", fieldKey: "map.header.defaultElevation" }),
+        ).toBeUndefined();
+        expect(validateNumericRange(3, "int32", { format: "map", fieldKey: "map.header.defaultElevation" })).toContain(
+            "allowed range",
+        );
     });
 });
 
@@ -109,7 +117,7 @@ describe("validateFlags", () => {
 
     it("rejects flags with invalid bits set", () => {
         expect(validateFlags(0x08, flagDefs)).toBeDefined();
-        expect(validateFlags(0xFF, flagDefs)).toBeDefined();
+        expect(validateFlags(0xff, flagDefs)).toBeDefined();
     });
 
     it("accepts zero flags even with no zero key", () => {
@@ -134,12 +142,8 @@ describe("validateFieldEdit", () => {
     });
 
     it("enforces domain-specific constraints for numeric field edits", () => {
-        expect(validateFieldEdit(
-            9,
-            "uint32",
-            undefined,
-            undefined,
-            { format: "pro", fieldKey: "pro.header.lightRadius" },
-        )).toContain("allowed range");
+        expect(
+            validateFieldEdit(9, "uint32", undefined, undefined, { format: "pro", fieldKey: "pro.header.lightRadius" }),
+        ).toContain("allowed range");
     });
 });

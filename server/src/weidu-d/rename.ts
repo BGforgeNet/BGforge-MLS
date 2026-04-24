@@ -23,7 +23,7 @@ const VALID_STATE_LABEL = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
  */
 export function prepareRenameSymbol(
     text: string,
-    position: Position
+    position: Position,
 ): { range: { start: Position; end: Position }; placeholder: string } | null {
     if (!isInitialized()) {
         return null;
@@ -41,7 +41,7 @@ export function prepareRenameSymbol(
 
     // Ensure there's a definition for this label in the file
     const refs = findAllDialogLabelRefs(tree.rootNode, labelInfo.dialogFile, labelInfo.labelNode.text);
-    const hasDefinition = refs.some(r => r.isDefinition);
+    const hasDefinition = refs.some((r) => r.isDefinition);
     if (!hasDefinition) {
         lastPrepareResult = null;
         return null;
@@ -65,12 +65,7 @@ export function prepareRenameSymbol(
  * Rename a symbol at the given position.
  * Returns null if the symbol cannot be renamed.
  */
-export function renameSymbol(
-    text: string,
-    position: Position,
-    newName: string,
-    uri: string
-): WorkspaceEdit | null {
+export function renameSymbol(text: string, position: Position, newName: string, uri: string): WorkspaceEdit | null {
     if (!isInitialized() || !VALID_STATE_LABEL.test(newName)) {
         return null;
     }
@@ -87,21 +82,25 @@ export function renameSymbol(
 
     // Reuse cached refs from prepareRename if the text and label match
     const cached = lastPrepareResult;
-    const refs = (cached && cached.text === text && cached.dialogFile === labelInfo.dialogFile && cached.labelName === labelInfo.labelNode.text)
-        ? cached.refs
-        : findAllDialogLabelRefs(tree.rootNode, labelInfo.dialogFile, labelInfo.labelNode.text);
+    const refs =
+        cached &&
+        cached.text === text &&
+        cached.dialogFile === labelInfo.dialogFile &&
+        cached.labelName === labelInfo.labelNode.text
+            ? cached.refs
+            : findAllDialogLabelRefs(tree.rootNode, labelInfo.dialogFile, labelInfo.labelNode.text);
     lastPrepareResult = null;
 
     if (refs.length === 0) {
         return null;
     }
 
-    const hasDefinition = refs.some(r => r.isDefinition);
+    const hasDefinition = refs.some((r) => r.isDefinition);
     if (!hasDefinition) {
         return null;
     }
 
-    const edits: TextEdit[] = refs.map(ref => ({
+    const edits: TextEdit[] = refs.map((ref) => ({
         range: makeRange(ref.node),
         newText: newName,
     }));

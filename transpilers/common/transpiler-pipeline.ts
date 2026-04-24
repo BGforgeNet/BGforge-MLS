@@ -98,12 +98,14 @@ export function createTranspiler<TResult>(config: TranspilerConfig<TResult>) {
             return {
                 outPath,
                 result,
-                events: [{
-                    level: "info",
-                    code: "output_written",
-                    message: `Transpiled to ${outPath}`,
-                    outPath,
-                }],
+                events: [
+                    {
+                        level: "info",
+                        code: "output_written",
+                        message: `Transpiled to ${outPath}`,
+                        outPath,
+                    },
+                ],
             };
         },
 

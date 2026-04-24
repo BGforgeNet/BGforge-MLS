@@ -7,7 +7,14 @@
 import * as vscode from "vscode";
 import { LanguageClient } from "vscode-languageclient/node";
 import { escapeHtml, registerDialogPanel, type DialogPreviewController } from "./shared";
-import type { DDialogData, DDialogBlock, DDialogBlockKind, DDialogState, DDialogTransition, DDialogTarget } from "../../../shared/dialog-types";
+import type {
+    DDialogData,
+    DDialogBlock,
+    DDialogBlockKind,
+    DDialogState,
+    DDialogTransition,
+    DDialogTarget,
+} from "../../../shared/dialog-types";
 
 // ---------------------------------------------------------------------------
 // D-specific helpers
@@ -26,14 +33,20 @@ export function getResolvedText(text: string, messages: Record<string, string>):
 }
 
 /** Returns { plain, html } -- plain is raw (must be escaped before insertion into attributes), html is pre-escaped for display. */
-export function getTransitionText(t: DDialogTransition, messages: Record<string, string>): { plain: string; html: string } {
+export function getTransitionText(
+    t: DDialogTransition,
+    messages: Record<string, string>,
+): { plain: string; html: string } {
     if (t.replyText) {
         const raw = getResolvedText(t.replyText, messages);
         return { plain: raw, html: escapeHtml(raw) };
     }
     // Silent transitions: show filter icon with trigger as tooltip instead of inline text
     if (t.trigger) {
-        return { plain: `[${t.trigger}]`, html: `<span class="trigger-detail"><span class="codicon codicon-filter" title="${escapeHtml(t.trigger)}"></span></span>` };
+        return {
+            plain: `[${t.trigger}]`,
+            html: `<span class="trigger-detail"><span class="codicon codicon-filter" title="${escapeHtml(t.trigger)}"></span></span>`,
+        };
     }
     return { plain: "(auto)", html: `<span class="silent-transition">(auto)</span>` };
 }
@@ -93,18 +106,22 @@ export function buildDTreeHtml(data: DDialogData): string {
         const sayHtml = state.sayText ? escapeHtml(sayRaw) : "";
         // Only show speaker when it differs from the block's file (useful in CHAINs with alternating speakers)
         const speaker = state.speaker;
-        const speakerHtml = speaker !== undefined && speaker !== defaultSpeaker
-            ? ` <span class="speaker-label">[${escapeHtml(speaker)}]</span>`
+        const speakerHtml =
+            speaker !== undefined && speaker !== defaultSpeaker
+                ? ` <span class="speaker-label">[${escapeHtml(speaker)}]</span>`
+                : "";
+        const sayDisplay = sayHtml
+            ? ` <span class="reply msg-text" data-fulltext="${escapeHtml(sayRaw)}">${sayHtml}</span>`
             : "";
-        const sayDisplay = sayHtml ? ` <span class="reply msg-text" data-fulltext="${escapeHtml(sayRaw)}">${sayHtml}</span>` : "";
 
         const transitionParts: string[] = [];
         for (const t of state.transitions) {
             const { plain: textPlain, html: textHtml } = getTransitionText(t, messages);
             const targetHtml = renderTargetHtml(t.target);
-            const triggerHtml = t.trigger && t.replyText
-                ? `<span class="trigger-detail"><span class="codicon codicon-filter" title="${escapeHtml(t.trigger)}"></span></span> `
-                : "";
+            const triggerHtml =
+                t.trigger && t.replyText
+                    ? `<span class="trigger-detail"><span class="codicon codicon-filter" title="${escapeHtml(t.trigger)}"></span></span> `
+                    : "";
             const actionHtml = t.action
                 ? ` <span class="action-detail"><span class="codicon codicon-play" title="${escapeHtml(t.action)}"></span></span>`
                 : "";
@@ -112,7 +129,8 @@ export function buildDTreeHtml(data: DDialogData): string {
             if (t.target.kind === "goto") {
                 const targetState = stateMap.get(t.target.label);
                 const targetMinDepth = minDepth.get(t.target.label);
-                const shouldExpand = targetState && !rendered.has(t.target.label) && targetMinDepth === currentDepth + 1;
+                const shouldExpand =
+                    targetState && !rendered.has(t.target.label) && targetMinDepth === currentDepth + 1;
 
                 if (shouldExpand) {
                     const childHtml = renderState(targetState, currentDepth + 1, defaultSpeaker);
@@ -121,11 +139,15 @@ export function buildDTreeHtml(data: DDialogData): string {
                         <div class="children">${childHtml}</div>
                     </details>`);
                 } else {
-                    transitionParts.push(`<div class="item option option-neutral">${triggerHtml}<span class="codicon codicon-arrow-right"></span> <span class="msg-text" data-fulltext="${escapeHtml(textPlain)}">${textHtml}</span>${actionHtml}${targetHtml}</div>`);
+                    transitionParts.push(
+                        `<div class="item option option-neutral">${triggerHtml}<span class="codicon codicon-arrow-right"></span> <span class="msg-text" data-fulltext="${escapeHtml(textPlain)}">${textHtml}</span>${actionHtml}${targetHtml}</div>`,
+                    );
                 }
             } else {
                 const icon = t.target.kind === "exit" ? "stop-circle" : "arrow-right";
-                transitionParts.push(`<div class="item option option-neutral">${triggerHtml}<span class="codicon codicon-${icon}"></span> <span class="msg-text" data-fulltext="${escapeHtml(textPlain)}">${textHtml}</span>${actionHtml}${targetHtml}</div>`);
+                transitionParts.push(
+                    `<div class="item option option-neutral">${triggerHtml}<span class="codicon codicon-${icon}"></span> <span class="msg-text" data-fulltext="${escapeHtml(textPlain)}">${textHtml}</span>${actionHtml}${targetHtml}</div>`,
+                );
             }
         }
 
@@ -143,9 +165,7 @@ export function buildDTreeHtml(data: DDialogData): string {
 
     function renderStructuralBlock(block: DDialogBlock, blockStates: DDialogState[]): string {
         const blockKind = block.kind.toUpperCase();
-        const blockTitle = block.label
-            ? `${blockKind} ${escapeHtml(block.label)}`
-            : blockKind;
+        const blockTitle = block.label ? `${blockKind} ${escapeHtml(block.label)}` : blockKind;
 
         for (const state of blockStates) {
             computeDepths(state.label, 1, new Set());
@@ -170,9 +190,10 @@ export function buildDTreeHtml(data: DDialogData): string {
 
     function renderModifyBlock(block: DDialogBlock): string {
         const actionName = block.actionName ?? "MODIFY";
-        const refsHtml = block.stateRefs && block.stateRefs.length > 0
-            ? ` ${block.stateRefs.map((ref) => `<a href="#" class="node-link" data-target="${escapeHtml(ref)}">${escapeHtml(ref)}</a>`).join(", ")}`
-            : "";
+        const refsHtml =
+            block.stateRefs && block.stateRefs.length > 0
+                ? ` ${block.stateRefs.map((ref) => `<a href="#" class="node-link" data-target="${escapeHtml(ref)}">${escapeHtml(ref)}</a>`).join(", ")}`
+                : "";
         const desc = block.description ? ` <span class="desc">${escapeHtml(block.description)}</span>` : "";
         return `<div class="item modify-entry"><span class="codicon codicon-edit"></span> <span class="modify-action">${escapeHtml(actionName)}</span>${refsHtml}${desc}</div>`;
     }
@@ -216,7 +237,7 @@ export function buildDTreeHtml(data: DDialogData): string {
 
         // Render modify blocks as compact entries
         if (modifyBlocks.length > 0) {
-            const modifyHtml = modifyBlocks.map(block => renderModifyBlock(block)).join("");
+            const modifyHtml = modifyBlocks.map((block) => renderModifyBlock(block)).join("");
             innerParts.push(`<details class="node">
                 <summary><span class="codicon codicon-tools"></span> <span class="block-header">Modifications</span> <span class="speaker-label">(${modifyBlocks.length})</span></summary>
                 <div class="children">${modifyHtml}</div>
@@ -268,9 +289,7 @@ export function getBlockStates(block: DDialogBlock, states: DDialogState[]): DDi
 
 export function registerDDialogTree(context: vscode.ExtensionContext, client: LanguageClient): DialogPreviewController {
     return registerDialogPanel(context, client, {
-        matchDocument: (doc) =>
-            doc.languageId === "weidu-d" ||
-            doc.fileName.toLowerCase().endsWith(".td"),
+        matchDocument: (doc) => doc.languageId === "weidu-d" || doc.fileName.toLowerCase().endsWith(".td"),
         warningMessage: "Open a D or TD file to preview dialog",
         translationLangId: "weidu-tra",
         buildTreeHtml: (data) => buildDTreeHtml(data as DDialogData),

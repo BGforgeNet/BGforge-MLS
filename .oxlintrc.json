@@ -80,6 +80,11 @@
         // DOM. Not worth the churn.
         "unicorn/text-encoding-identifier-case": "off",
 
+        // oxfmt normalizes hex literals to lowercase (`0xFF` → `0xff`) and
+        // has no option to configure case. The rule would fight the formatter
+        // on every run.
+        "unicorn/number-literal-case": "off",
+
         // Rule pushes `.toSorted()` (ES2023) in places where the project's
         // TS lib target predates it. Re-enable when lib is bumped.
         "unicorn/no-array-sort": "off",
