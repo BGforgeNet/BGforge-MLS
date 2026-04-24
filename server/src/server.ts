@@ -75,7 +75,6 @@ import * as signatureHandler from "./handlers/signature";
 import * as symbolsHandler from "./handlers/symbols";
 import * as renameHandler from "./handlers/rename";
 import * as documentLifecycleHandler from "./handlers/document-lifecycle";
-import { makeGetDocumentSettings, clearDocumentSettings } from "./handlers/document-lifecycle";
 
 // Create a connection for the server.
 // createConnection() auto-detects transport from process.argv:
@@ -240,7 +239,7 @@ connection.onInitialized(async () => {
     conlog("onInitialized completed");
 });
 
-const getDocumentSettings = makeGetDocumentSettings(connection);
+const getDocumentSettings = documentLifecycleHandler.makeGetDocumentSettings(connection);
 
 connection.onDidChangeConfiguration(async (change) => {
     conlog("did change configuration");
@@ -251,7 +250,7 @@ connection.onDidChangeConfiguration(async (change) => {
     }
     if (serverCtx.capabilities.configuration) {
         // Reset all cached document settings
-        clearDocumentSettings();
+        documentLifecycleHandler.clearDocumentSettings();
         // Fetch fresh global settings and push to providers (e.g., debug flag)
         const freshSettings = normalizeSettings(await connection.workspace.getConfiguration({ section: "bgforge" }));
         updateServerSettings(freshSettings);
