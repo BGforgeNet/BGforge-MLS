@@ -11,7 +11,7 @@ Setup guide for using BGforge MLS with Sublime Text.
 ## Prerequisites
 
 ```bash
-npm install -g @bgforge/mls-server
+pnpm install -g @bgforge/mls-server
 ```
 
 Install the [LSP](https://packagecontrol.io/packages/LSP) package via Package Control.

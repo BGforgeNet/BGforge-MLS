@@ -11,7 +11,7 @@ Setup guide for using BGforge MLS with Helix.
 ## Prerequisites
 
 ```bash
-npm install -g @bgforge/mls-server
+pnpm install -g @bgforge/mls-server
 ```
 
 ## Language server and file types

@@ -15,7 +15,6 @@
 # Dev files
 CLAUDE.md
 CONTRIBUTING.md
-eslint.config.mjs
 knip.ts
 tsconfig.json
 pnpm-lock.yaml

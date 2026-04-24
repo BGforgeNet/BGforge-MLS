@@ -11,7 +11,7 @@ Setup guide for using BGforge MLS with JetBrains IDEs (IntelliJ IDEA, WebStorm, 
 ## Prerequisites
 
 ```bash
-npm install -g @bgforge/mls-server
+pnpm install -g @bgforge/mls-server
 ```
 
 Install [LSP4IJ](https://plugins.jetbrains.com/plugin/23257-lsp4ij) from the JetBrains Marketplace.

@@ -11,9 +11,9 @@ The server package includes TypeScript Language Service Plugins for `.tssl` and 
 The plugins are bundled inside the server package at `out/tssl-plugin.js` and `out/td-plugin.js`. Find the install location:
 
 ```bash
-MLS_DIR="$(npm root -g)/@bgforge/mls-server"
+MLS_DIR="$(pnpm root -g)/@bgforge/mls-server"
 # or if installed locally:
-MLS_DIR="$(npm root)/@bgforge/mls-server"
+MLS_DIR="$(pnpm root)/@bgforge/mls-server"
 ```
 
 Add to your project's `tsconfig.json`:

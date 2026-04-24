@@ -11,7 +11,7 @@ Setup guide for using BGforge MLS with Kate (KDE text editor).
 ## Prerequisites
 
 ```bash
-npm install -g @bgforge/mls-server
+pnpm install -g @bgforge/mls-server
 ```
 
 Requires Kate 25.08+ for settings support. Older versions (21.12+) provide basic LSP features but cannot pass settings to the server.

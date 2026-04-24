@@ -19,7 +19,7 @@ Transpiler support (TypeScript to target language): TSSL, TBAF, TD.
 ## Installation
 
 ```bash
-npm install -g @bgforge/mls-server
+pnpm install -g @bgforge/mls-server
 ```
 
 ## Usage

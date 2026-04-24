@@ -18,7 +18,7 @@ Setup guide for using BGforge MLS with Emacs 29+.
 ## Prerequisites
 
 ```bash
-npm install -g @bgforge/mls-server
+pnpm install -g @bgforge/mls-server
 ```
 
 ## File type detection

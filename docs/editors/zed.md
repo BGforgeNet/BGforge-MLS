@@ -17,7 +17,7 @@ Setup guide for using BGforge MLS with Zed.
 ## Prerequisites
 
 ```bash
-npm install -g @bgforge/mls-server
+pnpm install -g @bgforge/mls-server
 ```
 
 ## Extension

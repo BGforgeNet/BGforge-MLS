@@ -11,7 +11,7 @@ Setup guide for using BGforge MLS with Notepad++.
 ## Prerequisites
 
 ```bash
-npm install -g @bgforge/mls-server
+pnpm install -g @bgforge/mls-server
 ```
 
 Install the [NppLspClient](https://github.com/Ekopalypse/NppLspClient) plugin:

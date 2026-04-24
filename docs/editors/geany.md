@@ -11,7 +11,7 @@ Setup guide for using BGforge MLS with Geany (2.1+).
 ## Prerequisites
 
 ```bash
-npm install -g @bgforge/mls-server
+pnpm install -g @bgforge/mls-server
 ```
 
 Requires Geany 2.1+ with the [LSP Client plugin](https://plugins.geany.org/lsp.html) enabled.

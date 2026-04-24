@@ -14,7 +14,7 @@ Setup guide for using BGforge MLS with Neovim 0.11+.
 ## Prerequisites
 
 ```bash
-npm install -g @bgforge/mls-server
+pnpm install -g @bgforge/mls-server
 ```
 
 ## File type detection
