@@ -92,5 +92,20 @@ describe("shared/parser-factory", () => {
             expect(() => module.invalidateCache()).not.toThrow();
             expect(() => module.invalidateCache("some text")).not.toThrow();
         });
+
+        it("should have a default cache size suitable for editor workloads", () => {
+            // Guard against silent regression to the old size-10 default.
+            // Loading the module source keeps the constant internal (not exported).
+            const fs = require("fs");
+            const path = require("path");
+            const source = fs.readFileSync(
+                path.join(__dirname, "../../src/shared/parser-factory.ts"),
+                "utf-8",
+            );
+            const match = source.match(/DEFAULT_MAX_CACHE_SIZE\s*=\s*(\d+)/);
+            expect(match).not.toBeNull();
+            const defaultSize = Number(match![1]);
+            expect(defaultSize).toBeGreaterThanOrEqual(32);
+        });
     });
 });

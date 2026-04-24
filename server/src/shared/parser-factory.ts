@@ -63,8 +63,15 @@ export function createParserModule(wasmFileName: string, name: string): ParserMo
     };
 }
 
-/** Default maximum cache entries */
-const DEFAULT_MAX_CACHE_SIZE = 10;
+/** Default maximum cache entries.
+ *
+ * Sized for realistic editor workloads: comfortably above a typical set of
+ * open tabs plus the header files referenced from each tab. 10 thrashed on
+ * any session touching more distinct texts than that; 64 is comfortably
+ * above the observed working set without meaningful memory growth
+ * (tree-sitter trees hold a reference to their source text, so memory
+ * scales with cache size × avg file size). */
+const DEFAULT_MAX_CACHE_SIZE = 64;
 
 /**
  * Creates a cached parser module that wraps a regular parser module.
@@ -72,7 +79,7 @@ const DEFAULT_MAX_CACHE_SIZE = 10;
  *
  * @param wasmFileName - Name of the grammar WASM file (e.g., "tree-sitter-baf.wasm")
  * @param name - Human-readable name for error messages
- * @param maxCacheSize - Maximum number of cached trees (default: 10)
+ * @param maxCacheSize - Maximum number of cached trees (default: 64)
  */
 export function createCachedParserModule(
     wasmFileName: string,
