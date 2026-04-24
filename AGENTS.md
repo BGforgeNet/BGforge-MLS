@@ -161,18 +161,23 @@ See `server/INTERNALS.md` for the full feature matrix and cross-language feature
 
 ## Documentation Index
 
-| Area               | Key Files                                                                                                             |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------- |
-| Architecture       | `docs/architecture.md`, `server/INTERNALS.md`                                                                         |
-| Contributing       | `CONTRIBUTING.md`                                                                                                     |
-| Settings           | `docs/settings.md`                                                                                                    |
-| Changelog          | `docs/changelog.md`                                                                                                   |
-| Editor setup       | `docs/editors/` (neovim, emacs, helix, zed, kate, sublime, jetbrains, geany, notepadpp)                               |
-| TS plugins         | `docs/editors/typescript-plugins.md`                                                                                  |
-| Transpiler guides  | `transpilers/tssl/docs/`, `transpilers/tbaf/docs/`, `transpilers/td/docs/` (each has README, writing guide, llms.txt) |
-| Server npm package | `server/README.md`                                                                                                    |
-| Data files         | `server/data/README.md`                                                                                               |
-| Data pipeline      | `docs/data-pipeline.md`                                                                                               |
-| Grammars           | `grammars/README.md` + per-grammar READMEs                                                                            |
-| Build scripts      | `scripts/README.md`                                                                                                   |
-| Packaging          | `docs/ignore-files.md`                                                                                                |
+| Area                    | Key Files                                                                                                                            |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Architecture            | `docs/architecture.md`, `server/INTERNALS.md`, `client/src/parsers/README.md`                                                        |
+| Contributing            | `CONTRIBUTING.md`                                                                                                                    |
+| Settings                | `docs/settings.md`                                                                                                                   |
+| Changelog               | `docs/changelog.md`                                                                                                                  |
+| User docs (misc)        | `docs/README.md`, `docs/file_associations.md`, `docs/theme.md`, `docs/icon-theme.md`, `docs/lsp-api.md`                              |
+| Editor setup            | `docs/editors/` (`README.md` + 9 editor guides: neovim, emacs, helix, zed, kate, sublime, jetbrains, geany, notepadpp)               |
+| TS plugins              | `docs/editors/typescript-plugins.md` (user setup), `plugins/td-plugin/README.md`, `plugins/tssl-plugin/README.md` (source)           |
+| Transpiler guides       | `transpilers/README.md`, `transpilers/{tssl,tbaf,td}/docs/` (each has README + writing guide; tssl also `converting-ssl-to-tssl.md`) |
+| CLI packages            | `cli/transpile/README.md`                                                                                                            |
+| Server npm package      | `server/README.md`                                                                                                                   |
+| Data files              | `server/data/README.md`                                                                                                              |
+| Data pipeline           | `docs/data-pipeline.md`                                                                                                              |
+| Grammars                | `grammars/README.md` + per-grammar `README.md` and `formatter.md`                                                                    |
+| Syntaxes                | `syntaxes/README.md`                                                                                                                 |
+| Themes (source)         | `themes/README.md`                                                                                                                   |
+| Language configurations | `language-configurations/README.md`                                                                                                  |
+| Build scripts           | `scripts/README.md`                                                                                                                  |
+| Packaging               | `docs/ignore-files.md`                                                                                                               |

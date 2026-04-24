@@ -704,8 +704,8 @@ Debug logs intentionally keep raw URIs to preserve diagnostic ability.
 
 ## Deliberate Non-Consolidations
 
-Previous simplification reviews flagged two targets for collapsing; both were considered
-and rejected. Recorded here so future passes don't re-raise them.
+Cases where apparent duplication is intentional. Each subsection explains why the
+components stay separate.
 
 ### Three Separate CLIs (format, transpile, bin)
 
