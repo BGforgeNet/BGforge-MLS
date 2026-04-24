@@ -231,8 +231,6 @@ export async function compile(uri: NormalizedUri, sslSettings: SSLsettings, inte
     }
     conlog(`compiling ${baseName}...`);
 
-    const extraCleanupPaths = shouldWriteOutput ? [] : [dstPath];
-
     // Errors from the compiler (e.g. WASM crash) propagate to callers.
     // Fire-and-forget call sites (server.ts onDidSave/onDidChangeContent) use
     // `void compile(...).catch(...)` to log and swallow rejections. Awaited
@@ -243,7 +241,8 @@ export async function compile(uri: NormalizedUri, sslSettings: SSLsettings, inte
         tmpPath,
         text,
         activeCompiles,
-        extraCleanupPaths,
+        // Throwaway validation output only exists when we didn't write to the real output dir.
+        extraCleanupPaths: shouldWriteOutput ? undefined : [dstPath],
         run: async (signal) => {
             let useBuiltInCompiler = !sslSettings.compilePath;
 
