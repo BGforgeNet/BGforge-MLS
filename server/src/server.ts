@@ -75,6 +75,7 @@ import * as completionHandler from "./handlers/completion";
 import * as definitionHandler from "./handlers/definition";
 import * as formattingHandler from "./handlers/formatting";
 import * as hoverHandler from "./handlers/hover";
+import * as inlayHintsHandler from "./handlers/inlay-hints";
 import * as referencesHandler from "./handlers/references";
 import * as semanticTokensHandler from "./handlers/semantic-tokens";
 import * as signatureHandler from "./handlers/signature";
@@ -508,25 +509,7 @@ documents.onDidChangeContent(async (event) => {
     }
 });
 
-connection.languages.inlayHint.on(async (params) => {
-    const uri = params.textDocument.uri;
-    const document = documents.get(uri);
-    if (!document) {
-        return;
-    }
-    const text = document.getText();
-    const langId = document.languageId;
-
-    // Try provider first (for AST-based inlay hints)
-    const providerResult = registry.inlayHints(langId, text, uri, params.range);
-    if (providerResult.length > 0) {
-        return providerResult;
-    }
-
-    // Fall back to translation-based inlay hints
-    const ctx = await getServerContext();
-    return ctx.translation.getInlayHints(uri, langId, text, params.range);
-});
+inlayHintsHandler.register(handlerCtx);
 
 definitionHandler.register(handlerCtx);
 
