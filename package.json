@@ -104,7 +104,7 @@
         "oxlint": "~1.61.0",
         "remark-cli": "^12.0.1",
         "remark-validate-links": "^13.1.0",
-        "tree-sitter-cli": "0.26.3",
+        "tree-sitter-cli": "0.26.8",
         "tsx": "^4.21.0",
         "typescript": "^5.9.3",
         "vite": "^8.0.9",
@@ -612,6 +612,7 @@
             "esbuild",
             "tree-sitter-cli"
         ],
+        "//": "Transitive pins addressing security advisories in mocha's bundled dependencies.",
         "overrides": {
             "mocha>diff": ">=8.0.3",
             "mocha>serialize-javascript": ">=7.0.5"
