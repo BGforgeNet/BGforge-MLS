@@ -23,7 +23,15 @@ const tbaf = createTranspiler<string>({
         // 1. Bundle imports (skips bundling internally for files without imports)
         const bundled = await bundle(filePath, text);
 
-        // 2. Parse bundled code
+        // 2. Parse bundled code.
+        // Uses a per-compile Project rather than the module-scoped shared one
+        // in transpilers/common/shared-project.ts. The shared pattern fits
+        // short-lived source files whose AST is consumed synchronously within
+        // a single call (as in parseExpressionFromText). Here the bundled
+        // source flows through the full transform → emit pipeline, and a
+        // concurrent transpile would overwrite the virtual file mid-walk.
+        // Fresh-Project construction at this granularity (one per compile) is
+        // a small fraction of total compile time.
         const project = new Project({ useInMemoryFileSystem: true });
         const sourceFile = project.createSourceFile("bundled.ts", bundled);
 

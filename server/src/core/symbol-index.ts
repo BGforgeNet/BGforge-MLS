@@ -119,9 +119,11 @@ export class Symbols {
      * which is workspace-search-only). Rebuilt lazily on first read after any
      * mutation that could affect its contents.
      *
-     * Two hot callers hit this: query({}) from completion handlers (per keystroke)
-     * and searchWorkspaceSymbols (per Ctrl+T keystroke). Before this cache, both
-     * rebuilt the list on every call by iterating the files Map.
+     * Two hot callers read this: query({}) from completion handlers (per keystroke)
+     * and searchWorkspaceSymbols (per Ctrl+T keystroke). A materialised flat array
+     * amortises the O(files) Map iteration across every call between mutations;
+     * the alternative of rebuilding per call is what this cache replaces, and is
+     * still taken on the excludeUri path in query() (see there).
      */
     private allSymbolsCache: IndexedSymbol[] | null = null;
 

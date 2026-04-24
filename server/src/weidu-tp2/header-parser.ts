@@ -137,9 +137,10 @@ interface ExtractAllResult {
 
 /**
  * Single-walk extraction of function defs, variables, and function/call refs.
- * Replaces three separate tree walks for hot-path performance.
+ * The three extraction concerns share a single recursive pass for hot-path
+ * performance (parseFile is called per keystroke on open TP2 files).
  *
- * Rules preserved from the original three passes:
+ * Extraction rules:
  * - Functions: top-level (direct root children) matching FUNCTION_DEF_TYPES only.
  * - Variables: any depth, but not inside function/macro bodies (separate WeiDU scope).
  * - Refs: any depth including inside function/macro bodies; covers both def and call nodes.

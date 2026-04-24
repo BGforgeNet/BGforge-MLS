@@ -1,6 +1,7 @@
 /**
- * Measures parseFile end-to-end on a realistic TP2 source. Task 2 replaces
- * three AST walks with one; this file's numbers are compared before/after.
+ * Measures parseFile end-to-end on a realistic TP2 source. parseFile is called
+ * per keystroke on open TP2 files, so the single-walk extraction hot path
+ * (extractAll in header-parser.ts) is load-bearing.
  *
  * Picks the largest real TP2 file available from external/ if present,
  * otherwise falls back to the committed grammar sample `tnt.tp2`.
