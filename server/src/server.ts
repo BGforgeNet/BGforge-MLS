@@ -16,10 +16,9 @@ import {
     TextDocuments,
 } from "vscode-languageserver/node";
 import { conlog } from "./common";
-import { isHeaderFile } from "./core/location-utils";
-import { type NormalizedUri, normalizeUri } from "./core/normalized-uri";
+import { type NormalizedUri } from "./core/normalized-uri";
 import { showInfo } from "./user-messages";
-import { clearDiagnostics, COMMAND_compile, compile } from "./compile";
+import { COMMAND_compile, compile } from "./compile";
 import { makeTimingOptions } from "./shared/time-handler";
 import { parseDialog } from "./dialog";
 import { parseTDDialog } from "./td/dialog";
@@ -52,13 +51,7 @@ import { falloutWorldmapProvider } from "./fallout-worldmap/provider";
 import { parserManager } from "./core/parser-manager";
 import { registry } from "./provider-registry";
 import * as settings from "./settings";
-import {
-    type MLSsettings,
-    defaultSettings,
-    normalizeSettings,
-    shouldValidateOnChange,
-    shouldValidateOnSave,
-} from "./settings";
+import { defaultSettings, normalizeSettings } from "./settings";
 import { weiduBafProvider } from "./weidu-baf/provider";
 import { weiduDProvider } from "./weidu-d/provider";
 import { weiduTp2Provider } from "./weidu-tp2/provider";
@@ -81,6 +74,8 @@ import * as semanticTokensHandler from "./handlers/semantic-tokens";
 import * as signatureHandler from "./handlers/signature";
 import * as symbolsHandler from "./handlers/symbols";
 import * as renameHandler from "./handlers/rename";
+import * as documentLifecycleHandler from "./handlers/document-lifecycle";
+import { makeGetDocumentSettings, clearDocumentSettings } from "./handlers/document-lifecycle";
 
 // Create a connection for the server.
 // createConnection() auto-detects transport from process.argv:
@@ -110,11 +105,6 @@ const fileReloadDebouncer = new UriDebouncer<NormalizedUri>(RELOAD_DEBOUNCE_MS);
 // writes a shared .tmp.ssl file — concurrent compilations corrupt each other.
 const COMPILE_DEBOUNCE_MS = 300;
 const compileDebouncer = new UriDebouncer<NormalizedUri>(COMPILE_DEBOUNCE_MS);
-
-/** Log and swallow compile errors for fire-and-forget call sites. */
-function logCompileError(err: unknown) {
-    conlog(`Compilation error: ${err}`);
-}
 
 // Capability flags captured in onInitialize, consumed in onInitialized.
 // Plain object so both handlers share a reference without module-level lets.
@@ -250,8 +240,7 @@ connection.onInitialized(async () => {
     conlog("onInitialized completed");
 });
 
-// Cache the settings of all open documents
-const documentSettings: Map<string, Thenable<MLSsettings>> = new Map();
+const getDocumentSettings = makeGetDocumentSettings(connection);
 
 connection.onDidChangeConfiguration(async (change) => {
     conlog("did change configuration");
@@ -262,7 +251,7 @@ connection.onDidChangeConfiguration(async (change) => {
     }
     if (serverCtx.capabilities.configuration) {
         // Reset all cached document settings
-        documentSettings.clear();
+        clearDocumentSettings();
         // Fetch fresh global settings and push to providers (e.g., debug flag)
         const freshSettings = normalizeSettings(await connection.workspace.getConfiguration({ section: "bgforge" }));
         updateServerSettings(freshSettings);
@@ -283,30 +272,6 @@ connection.onDidChangeWatchedFiles((params) => {
     }
 });
 
-// Clean up on document close
-documents.onDidClose((e) => {
-    documentSettings.delete(e.document.uri);
-    registry.handleDocumentClosed(e.document.languageId, e.document.uri);
-});
-
-export function getDocumentSettings(resource: string): Thenable<MLSsettings> {
-    const serverCtx = tryGetServerContext();
-    if (!serverCtx?.capabilities.configuration) {
-        return Promise.resolve(serverCtx?.settings ?? defaultSettings);
-    }
-    let result = documentSettings.get(resource);
-    if (!result) {
-        result = connection.workspace
-            .getConfiguration({
-                scopeUri: resource,
-                section: "bgforge",
-            })
-            .then(normalizeSettings);
-        documentSettings.set(resource, result);
-    }
-    return result;
-}
-
 // Initialize the settings service holder so compile.ts can access settings without importing server.ts
 initSettingsService(getDocumentSettings);
 
@@ -322,25 +287,6 @@ const handlerCtx: HandlerContext = {
     getDocumentSettings,
 };
 
-documents.onDidOpen(async (event) => {
-    // Await the context barrier — covers the (now-very-small) window where
-    // onInitialize's async work has not finished yet.
-    const ctx = await getServerContext();
-
-    const uri = event.document.uri;
-    const langId = event.document.languageId;
-    const text = event.document.getText();
-
-    // Reload provider data
-    registry.reloadFileData(langId, uri, text);
-
-    // Reload translation data if it's a translation file
-    ctx.translation.reloadFile(uri, langId, text);
-
-    // Update consumer reverse index for consumer files
-    ctx.translation.reloadConsumer(uri, text, langId);
-});
-
 // Make the text document manager listen on the connection
 // for open, change and close text document events
 documents.listen(connection);
@@ -350,6 +296,11 @@ connection.listen();
 
 completionHandler.register(handlerCtx);
 hoverHandler.register(handlerCtx);
+
+/** Log and swallow compile errors for fire-and-forget call sites. */
+function logCompileError(err: unknown) {
+    conlog(`Compilation error: ${err}`);
+}
 
 /** Dialog preview handler registry. Maps language/extension to parser + translation language. */
 const dialogHandlers = [
@@ -436,79 +387,7 @@ connection.onExecuteCommand(async (params) => {
 
 signatureHandler.register(handlerCtx);
 
-documents.onDidSave(async (change) => {
-    const uri = change.document.uri;
-    const langId = change.document.languageId;
-    const text = change.document.getText();
-
-    // Reload provider data
-    registry.reloadFileData(langId, uri, text);
-
-    // Header changes can affect semantic tokens in other files
-    // (e.g., @type {resref} annotations define resref highlighting).
-    if (isHeaderFile(uri)) {
-        connection.languages.semanticTokens.refresh();
-    }
-
-    // Reload translation data if it's a translation file
-    tryGetServerContext()?.translation.reloadFile(uri, langId, text);
-
-    // Update consumer reverse index for consumer files
-    tryGetServerContext()?.translation.reloadConsumer(uri, text, langId);
-
-    const normUri = normalizeUri(uri);
-
-    // Skip compile for files touched by a recent multi-file rename.
-    // Remove the URI so subsequent saves compile normally.
-    if (handlerCtx.renameSuppression.consumeAffected(normUri)) {
-        return;
-    }
-
-    const docSettings = await getDocumentSettings(uri);
-    const validate = docSettings.validate;
-    if (shouldValidateOnSave(validate)) {
-        // Cancel any pending debounced compile for this URI — save takes priority
-        // and must not race with a stale onDidChangeContent compilation.
-        compileDebouncer.cancel(normUri);
-        void compile(uri, langId, false, text).catch(logCompileError);
-    }
-});
-
-documents.onDidChangeContent(async (event) => {
-    const uri = event.document.uri;
-    const langId = event.document.languageId;
-    const text = event.document.getText();
-
-    const normUri = normalizeUri(uri);
-
-    // Keep provider data (function index, etc.) and translation data up to date as content changes.
-    // This ensures hover/definition work immediately after edits like rename.
-    // Debounced to avoid excessive reloads during rapid typing.
-    fileReloadDebouncer.schedule(normUri, () => {
-        registry.reloadFileData(langId, uri, text);
-        tryGetServerContext()?.translation.reloadFile(uri, langId, text);
-        tryGetServerContext()?.translation.reloadConsumer(uri, text, langId);
-        if (isHeaderFile(uri)) {
-            connection.languages.semanticTokens.refresh();
-        }
-    });
-
-    // Skip compile for files touched by a recent multi-file rename.
-    // Keep the URI in the set — onDidSave will remove it after the final skip.
-    if (handlerCtx.renameSuppression.isAffected(normUri)) {
-        return;
-    }
-
-    clearDiagnostics(uri);
-
-    const docSettings = await getDocumentSettings(uri);
-    const validate = docSettings.validate;
-    if (shouldValidateOnChange(validate)) {
-        compileDebouncer.schedule(normUri, () => {
-            void compile(uri, langId, false, text).catch(logCompileError);
-        });
-    }
-});
+documentLifecycleHandler.register(handlerCtx);
 
 inlayHintsHandler.register(handlerCtx);
 
