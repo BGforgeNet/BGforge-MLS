@@ -228,8 +228,6 @@ describe("weidu-tp2: snippet integration in lpfName context", () => {
         const item = findCompletion(LPF_TEXT, LPF_LINE, LPF_COL, "func_with_ret");
         expect(item).toBeDefined();
         expect(item!.insertTextFormat).toBe(InsertTextFormat.Snippet);
-        expect(item!.insertText).toBe(
-            "func_with_ret\n    RET\n        success\n    RET_ARRAY\n        items\nEND$0",
-        );
+        expect(item!.insertText).toBe("func_with_ret\n    RET\n        success\n    RET_ARRAY\n        items\nEND$0");
     });
 });

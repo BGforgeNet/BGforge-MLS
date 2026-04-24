@@ -14,9 +14,7 @@ describe("buildSignatureBlock", () => {
 
     it("renders signature with file path", () => {
         const result = buildSignatureBlock("void bar()", "my-lang", "lib/utils.h");
-        expect(result).toBe(
-            "```my-lang\nvoid bar()\n```\n```bgforge-mls-comment\nlib/utils.h\n```",
-        );
+        expect(result).toBe("```my-lang\nvoid bar()\n```\n```bgforge-mls-comment\nlib/utils.h\n```");
     });
 
     it("omits file path block when filePath is undefined", () => {

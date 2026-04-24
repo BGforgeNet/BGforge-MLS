@@ -11,6 +11,12 @@ pre-commit:
             run: pnpm knip:prod
         oxlint:
             run: pnpm exec oxlint
+        oxfmt-check:
+            run: pnpm exec oxfmt --check
+        lint-shell:
+            run: pnpm lint:shell
+        lint-scripts:
+            run: pnpm lint:scripts
         typecheck-server:
             run: pnpm exec tsc --noEmit --project server/tsconfig.json
         typecheck-client:
