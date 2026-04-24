@@ -10,7 +10,6 @@ import {
     type CompletionParams,
     type InitializeParams,
     type InitializeResult,
-    type TextDocumentPositionParams,
     CompletionItem,
     createConnection,
     DidChangeConfigurationNotification,
@@ -74,6 +73,9 @@ import { initSettingsService } from "./settings-service";
 import { getServerCapabilities } from "./server-capabilities";
 import { UriDebouncer } from "./core/uri-debouncer";
 import { LSP_COMMAND_PARSE_DIALOG, NOTIFICATION_LOAD_FINISHED, VSCODE_COMMAND_COMPILE } from "../../shared/protocol";
+import type { HandlerContext } from "./handlers/context";
+import { createRenameSuppression } from "./handlers/rename-suppression";
+import * as hoverHandler from "./handlers/hover";
 
 // Create a connection for the server.
 // createConnection() auto-detects transport from process.argv:
@@ -303,6 +305,18 @@ export function getDocumentSettings(resource: string): Thenable<MLSsettings> {
 // Initialize the settings service holder so compile.ts can access settings without importing server.ts
 initSettingsService(getDocumentSettings);
 
+const renameSuppression = createRenameSuppression();
+
+const handlerCtx: HandlerContext = {
+    connection,
+    documents,
+    timingOpts,
+    fileReloadDebouncer,
+    compileDebouncer,
+    renameSuppression,
+    getDocumentSettings,
+};
+
 documents.onDidOpen(async (event) => {
     // Await the context barrier — covers the (now-very-small) window where
     // onInitialize's async work has not finished yet.
@@ -353,57 +367,7 @@ documents.listen(connection);
 // Listen on the connection
 connection.listen();
 
-connection.onHover(
-    timeHandler(
-        "onHover",
-        async (textDocumentPosition: TextDocumentPositionParams) => {
-            const uri = textDocumentPosition.textDocument.uri;
-            const textDoc = documents.get(uri);
-            if (!textDoc) {
-                return;
-            }
-            const langId = textDoc.languageId;
-            const text = textDoc.getText();
-            const symbol = symbolAtPosition(text, textDocumentPosition.position);
-            const ctx = await getServerContext();
-            const { debug } = ctx.settings;
-
-            if (!symbol) {
-                if (debug) conlog(`[hover] no symbol at position in ${uri}`);
-                return;
-            }
-
-            if (debug) conlog(`[hover] symbol="${symbol}" langId="${langId}" uri="${uri}"`);
-
-            // Suppress all features in comment zones
-            if (!registry.shouldProvideFeatures(langId, text, textDocumentPosition.position)) {
-                if (debug) conlog(`[hover] suppressed (shouldProvideFeatures=false)`);
-                return;
-            }
-
-            // Check translation hover first (for @123 or NOption(123) references)
-            const translationHover = ctx.translation.getHover(uri, langId, symbol, text);
-            if (translationHover) {
-                if (debug) conlog(`[hover] translation hover returned`);
-                return translationHover;
-            }
-
-            // Try local hover (AST-based, for symbols defined in current file)
-            const localHover = registry.localHover(langId, text, symbol, uri, textDocumentPosition.position);
-            if (localHover.handled) {
-                if (debug) conlog(`[hover] localHover handled, result=${localHover.hover ? "found" : "null"}`);
-                return localHover.hover;
-            }
-
-            // Fall back to data-driven hover (from headers/static data)
-            // Pass text to enable unified symbol resolution (Approach C)
-            const dataHover = registry.hover(langId, uri, symbol, text);
-            if (debug) conlog(`[hover] dataHover result=${dataHover ? "found" : "null"}`);
-            return dataHover;
-        },
-        timingOpts,
-    ),
-);
+hoverHandler.register(handlerCtx);
 
 /** Dialog preview handler registry. Maps language/extension to parser + translation language. */
 const dialogHandlers = [
