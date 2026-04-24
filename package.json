@@ -58,6 +58,7 @@
         "test:grammar": "./scripts/test-grammar.sh",
         "regenerate-expected": "./scripts/regenerate-expected.sh",
         "test:cli": "vitest run --config cli/vitest.config.ts",
+        "test:cli:external": "RUN_EXTERNAL_CLI_TESTS=1 vitest run --config cli/vitest.config.ts",
         "test:server:smoke": "cd server && pnpm exec vitest run test/smoke-stdio.test.ts",
         "test:e2e": "./scripts/test-e2e.sh",
         "test:coverage": "cd server && vitest run --coverage",

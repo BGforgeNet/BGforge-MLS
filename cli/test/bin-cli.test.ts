@@ -2,6 +2,20 @@
  * Integration tests for the bin CLI.
  * Runs the built bin-cli.js bundle as a child process to verify
  * exit codes, stdout output, and stderr diff reporting.
+ *
+ * Fixture sources:
+ * - FIXTURES (`client/testFixture/proto/`) — tracked in git, always present.
+ *   Tests that read only from FIXTURES are safe to run in parallel with any
+ *   other phase.
+ * - RP_MAPS (`external/fallout/Fallout2_Restoration_Project/data/maps/`) —
+ *   populated by `scripts/test-external.sh`, which also resets the external
+ *   repos on exit via a trap. Tests that read from RP_MAPS must run in the
+ *   same serialized chain as test-external.sh; otherwise the reset trap can
+ *   fire mid-test and delete fixtures out from under copyFileSync. They are
+ *   gated behind the `RUN_EXTERNAL_CLI_TESTS` env var, which `test-all.sh`
+ *   sets only in the External+Integration+Transpile chain. `pnpm test:cli`
+ *   (parallel phase) runs without the var, so the RP_MAPS tests are skipped
+ *   visibly. `pnpm test:cli:external` runs them.
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
@@ -13,6 +27,10 @@ const CLI = path.resolve("cli/bin/out/bin-cli.js");
 const NODE = process.execPath;
 const FIXTURES = path.resolve("client/testFixture/proto");
 const RP_MAPS = path.resolve("external/fallout/Fallout2_Restoration_Project/data/maps");
+
+const RUN_EXTERNAL = process.env.RUN_EXTERNAL_CLI_TESTS === "1";
+/** Use for tests that read from RP_MAPS. Skipped visibly when RUN_EXTERNAL_CLI_TESTS is unset. */
+const itExternal = it.skipIf(!RUN_EXTERNAL);
 
 /** Run the bin CLI, returning exit code, stdout, stderr. */
 function run(...args: string[]): { code: number; stdout: string; stderr: string } {
@@ -45,7 +63,6 @@ describe("bin CLI integration", () => {
     describe("stdout mode", () => {
         it("outputs parsed JSON to stdout", () => {
             const proFile = path.join(FIXTURES, "misc", "00000001.pro");
-            if (!fs.existsSync(proFile)) return;
             const { code, stdout } = run(proFile);
             expect(code).toBe(0);
             // Output should be valid JSON
@@ -55,7 +72,6 @@ describe("bin CLI integration", () => {
 
         it("outputs JSON with trailing newline", () => {
             const proFile = path.join(FIXTURES, "misc", "00000001.pro");
-            if (!fs.existsSync(proFile)) return;
             const { stdout } = run(proFile);
             expect(stdout.endsWith("\n")).toBe(true);
         });
@@ -65,7 +81,6 @@ describe("bin CLI integration", () => {
         it("exits 0 when JSON snapshot matches", () => {
             const proFile = path.join(FIXTURES, "misc", "00000001.pro");
             const jsonFile = path.join(FIXTURES, "misc", "00000001.pro.json");
-            if (!fs.existsSync(proFile) || !fs.existsSync(jsonFile)) return;
 
             const tmpPro = path.join(tmpDir, "match.pro");
             const tmpJson = path.join(tmpDir, "match.pro.json");
@@ -78,7 +93,6 @@ describe("bin CLI integration", () => {
 
         it("exits 1 when JSON snapshot is stale (returns 'changed')", () => {
             const proFile = path.join(FIXTURES, "misc", "00000001.pro");
-            if (!fs.existsSync(proFile)) return;
 
             // Copy .pro to temp, create stale .json
             const tmpPro = path.join(tmpDir, "test.pro");
@@ -93,7 +107,6 @@ describe("bin CLI integration", () => {
 
         it("shows line-by-line diff on stderr for stale snapshot", () => {
             const proFile = path.join(FIXTURES, "misc", "00000001.pro");
-            if (!fs.existsSync(proFile)) return;
 
             const tmpPro = path.join(tmpDir, "diff.pro");
             const tmpJson = path.join(tmpDir, "diff.pro.json");
@@ -108,7 +121,6 @@ describe("bin CLI integration", () => {
 
         it("exits 1 when JSON snapshot is missing", () => {
             const proFile = path.join(FIXTURES, "misc", "00000001.pro");
-            if (!fs.existsSync(proFile)) return;
 
             // Copy .pro to temp without .json
             const tmpPro = path.join(tmpDir, "nojson.pro");
@@ -123,7 +135,6 @@ describe("bin CLI integration", () => {
     describe("save mode", () => {
         it("writes JSON snapshot file", () => {
             const proFile = path.join(FIXTURES, "misc", "00000001.pro");
-            if (!fs.existsSync(proFile)) return;
 
             const tmpPro = path.join(tmpDir, "save.pro");
             fs.copyFileSync(proFile, tmpPro);
@@ -142,7 +153,6 @@ describe("bin CLI integration", () => {
 
         it("does not rewrite up-to-date snapshot", () => {
             const proFile = path.join(FIXTURES, "misc", "00000001.pro");
-            if (!fs.existsSync(proFile)) return;
 
             const tmpPro = path.join(tmpDir, "noop.pro");
             fs.copyFileSync(proFile, tmpPro);
@@ -157,9 +167,8 @@ describe("bin CLI integration", () => {
     });
 
     describe("error handling", () => {
-        it("fails ambiguous MAP parsing by default", () => {
+        itExternal("fails ambiguous MAP parsing by default", () => {
             const mapFile = path.join(RP_MAPS, "sfsheng.map");
-            if (!fs.existsSync(mapFile)) return;
 
             const tmpMap = path.join(tmpDir, "sfsheng-strict.map");
             fs.copyFileSync(mapFile, tmpMap);
@@ -169,9 +178,8 @@ describe("bin CLI integration", () => {
             expect(stderr).toContain("overflow");
         });
 
-        it("allows ambiguous MAP parsing with --graceful-map", () => {
+        itExternal("allows ambiguous MAP parsing with --graceful-map", () => {
             const mapFile = path.join(RP_MAPS, "sfsheng.map");
-            if (!fs.existsSync(mapFile)) return;
 
             const tmpMap = path.join(tmpDir, "sfsheng-graceful.map");
             fs.copyFileSync(mapFile, tmpMap);
@@ -183,9 +191,8 @@ describe("bin CLI integration", () => {
             expect(fs.existsSync(path.join(tmpDir, "sfsheng-graceful.map.json"))).toBe(true);
         });
 
-        it("saves strict MAP JSON for PRO-dependent object tails without --graceful-map", () => {
+        itExternal("saves strict MAP JSON for PRO-dependent object tails without --graceful-map", () => {
             const mapFile = path.join(RP_MAPS, "denbus1.map");
-            if (!fs.existsSync(mapFile)) return;
 
             const tmpMap = path.join(tmpDir, "denbus1.map");
             fs.copyFileSync(mapFile, tmpMap);
@@ -204,7 +211,6 @@ describe("bin CLI integration", () => {
 
         it("exits 1 for parse errors in binary", () => {
             const badFile = path.join(FIXTURES, "bad", "too-small.pro");
-            if (!fs.existsSync(badFile)) return;
             const { code, stderr } = run(badFile);
             expect(code).toBe(1);
             expect(stderr).toContain("Error parsing");
@@ -236,7 +242,6 @@ describe("bin CLI integration", () => {
         it("converts JSON back to identical binary", () => {
             const proFile = path.join(FIXTURES, "misc", "00000001.pro");
             const jsonFile = path.join(FIXTURES, "misc", "00000001.pro.json");
-            if (!fs.existsSync(proFile) || !fs.existsSync(jsonFile)) return;
 
             const tmpJson = path.join(tmpDir, "load.json");
             fs.copyFileSync(jsonFile, tmpJson);
@@ -277,9 +282,8 @@ describe("bin CLI integration", () => {
             }
         });
 
-        it("preserves .map extension when loading MAP JSON back to binary", () => {
+        itExternal("preserves .map extension when loading MAP JSON back to binary", () => {
             const mapFile = path.join(RP_MAPS, "artemple.map");
-            if (!fs.existsSync(mapFile)) return;
 
             const tmpMap = path.join(tmpDir, "artemple.map");
             fs.copyFileSync(mapFile, tmpMap);
@@ -297,9 +301,8 @@ describe("bin CLI integration", () => {
             expect(fs.existsSync(path.join(tmpDir, "artemple.pro"))).toBe(false);
         });
 
-        it("loads strict MAP JSON with PRO-dependent opaque ranges back to identical bytes", () => {
+        itExternal("loads strict MAP JSON with PRO-dependent opaque ranges back to identical bytes", () => {
             const mapFile = path.join(RP_MAPS, "denbus1.map");
-            if (!fs.existsSync(mapFile)) return;
 
             const tmpMap = path.join(tmpDir, "denbus1.map");
             fs.copyFileSync(mapFile, tmpMap);
@@ -316,9 +319,8 @@ describe("bin CLI integration", () => {
             expect(original.equals(recreated)).toBe(true);
         });
 
-        it("round-trips ambiguous MAP JSON back to identical bytes with opaque ranges", () => {
+        itExternal("round-trips ambiguous MAP JSON back to identical bytes with opaque ranges", () => {
             const mapFile = path.join(RP_MAPS, "sfsheng.map");
-            if (!fs.existsSync(mapFile)) return;
 
             const tmpMap = path.join(tmpDir, "sfsheng.map");
             fs.copyFileSync(mapFile, tmpMap);
@@ -335,9 +337,8 @@ describe("bin CLI integration", () => {
             expect(original.equals(recreated)).toBe(true);
         });
 
-        it("loads ambiguous MAP JSON without --graceful-map (loader infers from opaque ranges)", () => {
+        itExternal("loads ambiguous MAP JSON without --graceful-map (loader infers from opaque ranges)", () => {
             const mapFile = path.join(RP_MAPS, "sfsheng.map");
-            if (!fs.existsSync(mapFile)) return;
 
             const tmpMap = path.join(tmpDir, "sfsheng.map");
             fs.copyFileSync(mapFile, tmpMap);
@@ -354,9 +355,8 @@ describe("bin CLI integration", () => {
             expect(original.equals(recreated)).toBe(true);
         });
 
-        it("writes opaque MAP ranges as short hex chunks for readable diffs", () => {
+        itExternal("writes opaque MAP ranges as short hex chunks for readable diffs", () => {
             const mapFile = path.join(RP_MAPS, "sfsheng.map");
-            if (!fs.existsSync(mapFile)) return;
 
             const tmpMap = path.join(tmpDir, "sfsheng.map");
             fs.copyFileSync(mapFile, tmpMap);
@@ -395,7 +395,6 @@ describe("bin CLI integration", () => {
 
         it("check mode exits 1 when any snapshot is stale", () => {
             const proFile = path.join(FIXTURES, "misc", "00000001.pro");
-            if (!fs.existsSync(proFile)) return;
 
             const tmpPro = path.join(tmpDir, "a.pro");
             const tmpJson = path.join(tmpDir, "a.pro.json");
@@ -408,7 +407,6 @@ describe("bin CLI integration", () => {
 
         it("check mode exits 0 when all snapshots match", () => {
             const proFile = path.join(FIXTURES, "misc", "00000001.pro");
-            if (!fs.existsSync(proFile)) return;
 
             const tmpPro = path.join(tmpDir, "ok.pro");
             fs.copyFileSync(proFile, tmpPro);
