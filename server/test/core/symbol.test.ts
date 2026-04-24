@@ -1,14 +1,14 @@
 /**
- * Tests for core/symbol.ts - Symbol type definitions and utilities.
+ * Tests for core/symbol.ts - IndexedSymbol type definitions and utilities.
  *
- * These tests validate the Symbol interface structure and any helper functions
+ * These tests validate the IndexedSymbol interface structure and any helper functions
  * for working with symbols.
  */
 
 import { describe, expect, it } from "vitest";
 import { CompletionItemKind } from "vscode-languageserver/node";
 import {
-    type Symbol,
+    type IndexedSymbol,
     type SymbolLocation,
     type SymbolScope,
     type SymbolSource,
@@ -135,9 +135,9 @@ describe("core/symbol", () => {
     });
 
     // =========================================================================
-    // Symbol interface structure (compile-time checks, runtime validation)
+    // IndexedSymbol interface structure (compile-time checks, runtime validation)
     // =========================================================================
-    describe("Symbol interface", () => {
+    describe("IndexedSymbol interface", () => {
         it("should accept a valid symbol with all required fields", () => {
             const location: SymbolLocation = {
                 uri: "file:///test.ssl",
@@ -156,9 +156,10 @@ describe("core/symbol", () => {
                 uri: "file:///test.ssl",
             };
 
-            const symbol: Symbol = {
+            const symbol: IndexedSymbol = {
                 name: "test_proc",
                 kind: SymbolKind.Procedure,
+                callable: {},
                 location,
                 scope,
                 source,
@@ -184,9 +185,10 @@ describe("core/symbol", () => {
         });
 
         it("should accept a symbol with optional signature for callables", () => {
-            const symbol: Symbol = {
+            const symbol: IndexedSymbol = {
                 name: "my_func",
                 kind: SymbolKind.Function,
+                callable: {},
                 location: {
                     uri: "file:///test.tp2",
                     range: { start: { line: 5, character: 0 }, end: { line: 5, character: 20 } },
@@ -207,9 +209,10 @@ describe("core/symbol", () => {
         });
 
         it("should accept a symbol with scope container for function-local symbols", () => {
-            const symbol: Symbol = {
+            const symbol: IndexedSymbol = {
                 name: "i",
                 kind: SymbolKind.LoopVariable,
+                variable: {},
                 location: {
                     uri: "file:///test.ssl",
                     range: { start: { line: 10, character: 4 }, end: { line: 10, character: 5 } },
@@ -227,9 +230,10 @@ describe("core/symbol", () => {
         });
 
         it("should accept a symbol with displayPath in source", () => {
-            const symbol: Symbol = {
+            const symbol: IndexedSymbol = {
                 name: "header_func",
                 kind: SymbolKind.Function,
+                callable: {},
                 location: {
                     uri: "file:///project/lib/utils.tph",
                     range: { start: { line: 0, character: 0 }, end: { line: 0, character: 15 } },

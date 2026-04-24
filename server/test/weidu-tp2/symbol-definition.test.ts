@@ -10,7 +10,7 @@ import { type Location } from "vscode-languageserver/node";
 import { Symbols } from "../../src/core/symbol-index";
 import { loadStaticSymbols } from "../../src/core/static-loader";
 import { validLocationOrNull } from "../../src/core/location-utils";
-import { type Symbol, SymbolKind, ScopeLevel, SourceType } from "../../src/core/symbol";
+import { type IndexedSymbol, SymbolKind, ScopeLevel, SourceType } from "../../src/core/symbol";
 
 // Mock fs and common to avoid file system and LSP dependencies
 vi.mock("fs", () => ({
@@ -69,9 +69,10 @@ describe("weidu-tp2 getSymbolDefinition", () => {
 
     it("returns valid location for document symbols", () => {
         // Add a document symbol with a real location
-        const documentSymbol: Symbol = {
+        const documentSymbol: IndexedSymbol = {
             name: "my_custom_function",
             kind: SymbolKind.Function,
+            callable: {},
             location: {
                 uri: "file:///workspace/lib/utils.tph",
                 range: { start: { line: 5, character: 0 }, end: { line: 5, character: 18 } },

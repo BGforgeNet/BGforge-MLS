@@ -10,16 +10,17 @@
 import { type CancellationToken, CompletionItemKind } from "vscode-languageserver/node";
 import { describe, expect, it } from "vitest";
 import { Symbols } from "../../src/core/symbol-index";
-import { type Symbol, ScopeLevel, SourceType, SymbolKind } from "../../src/core/symbol";
+import { type IndexedSymbol, ScopeLevel, SourceType, SymbolKind } from "../../src/core/symbol";
 
 function makeUri(n: number): string {
     return `file:///cancel-test-${n}.ssl`;
 }
 
-function makeSymbol(name: string, uri: string): Symbol {
+function makeSymbol(name: string, uri: string): IndexedSymbol {
     return {
         name,
         kind: SymbolKind.Variable,
+        variable: {},
         location: {
             uri,
             range: { start: { line: 0, character: 0 }, end: { line: 0, character: name.length } },

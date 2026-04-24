@@ -5,13 +5,13 @@
 import { describe, expect, it, beforeEach } from "vitest";
 import { CompletionItemKind } from "vscode-languageserver/node";
 import { Symbols } from "../../src/core/symbol-index";
-import { type Symbol, SymbolKind, ScopeLevel, SourceType } from "../../src/core/symbol";
+import { type IndexedSymbol, SymbolKind, ScopeLevel, SourceType } from "../../src/core/symbol";
 
 // =============================================================================
 // Test fixtures
 // =============================================================================
 
-function createSymbol(overrides: Partial<Symbol> & { name: string }): Symbol {
+function createSymbol(overrides: Partial<IndexedSymbol> & { name: string }): IndexedSymbol {
     return {
         name: overrides.name,
         kind: overrides.kind ?? SymbolKind.Variable,

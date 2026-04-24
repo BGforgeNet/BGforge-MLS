@@ -8,7 +8,7 @@
 import { describe, expect, it, beforeEach } from "vitest";
 import { type Location } from "vscode-languageserver/node";
 import { Symbols } from "../../src/core/symbol-index";
-import { type Symbol, SymbolKind, ScopeLevel, SourceType } from "../../src/core/symbol";
+import { type IndexedSymbol, SymbolKind, ScopeLevel, SourceType } from "../../src/core/symbol";
 
 /**
  * Validates that a Location is suitable for VSCode navigation.
@@ -55,9 +55,10 @@ describe("Location validation", () => {
         });
 
         it("static symbols have null location (no source file)", () => {
-            const staticSymbol: Symbol = {
+            const staticSymbol: IndexedSymbol = {
                 name: "DELETE_EFFECT",
                 kind: SymbolKind.Function,
+                callable: {},
                 location: null, // Static symbols have no source file
                 scope: { level: ScopeLevel.Global },
                 source: { type: SourceType.Static, uri: null },
@@ -74,9 +75,10 @@ describe("Location validation", () => {
         });
 
         it("document symbols have valid URIs", () => {
-            const documentSymbol: Symbol = {
+            const documentSymbol: IndexedSymbol = {
                 name: "my_function",
                 kind: SymbolKind.Function,
+                callable: {},
                 location: {
                     uri: "file:///path/to/file.tph",
                     range: { start: { line: 10, character: 0 }, end: { line: 10, character: 11 } },
@@ -99,9 +101,10 @@ describe("Location validation", () => {
     describe("lookupDefinition returns null for static symbols", () => {
         it("returns null for static symbols (prevents VSCode directory open)", () => {
             const index = new Symbols();
-            const staticSymbol: Symbol = {
+            const staticSymbol: IndexedSymbol = {
                 name: "COPY_EXISTING",
                 kind: SymbolKind.Function,
+                callable: {},
                 location: null, // Static symbols have no source file
                 scope: { level: ScopeLevel.Global },
                 source: { type: SourceType.Static, uri: null },
@@ -122,9 +125,10 @@ describe("Location validation", () => {
 
         it("returns valid location for document symbols", () => {
             const index = new Symbols();
-            const documentSymbol: Symbol = {
+            const documentSymbol: IndexedSymbol = {
                 name: "my_function",
                 kind: SymbolKind.Function,
+                callable: {},
                 location: {
                     uri: "file:///path/to/file.tph",
                     range: { start: { line: 10, character: 0 }, end: { line: 10, character: 11 } },

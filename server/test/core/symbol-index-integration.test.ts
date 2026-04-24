@@ -3,7 +3,7 @@
  *
  * These tests load actual static data and compare outputs between:
  * - Old approach: Language class with separate completion/hover data
- * - New approach: Symbols with unified Symbol storage
+ * - New approach: Symbols with unified IndexedSymbol storage
  */
 
 import { describe, expect, it, beforeAll } from "vitest";
@@ -11,7 +11,7 @@ import * as path from "path";
 import * as fs from "fs";
 import { type CompletionItem, CompletionItemKind, type Hover, type MarkupContent } from "vscode-languageserver/node";
 import { Symbols } from "../../src/core/symbol-index";
-import { type Symbol, SymbolKind, ScopeLevel, SourceType } from "../../src/core/symbol";
+import { type IndexedSymbol, SymbolKind, ScopeLevel, SourceType } from "../../src/core/symbol";
 
 // Path to generated JSON files (server/out/)
 const OUT_DIR = path.join(__dirname, "../../out");
@@ -31,9 +31,9 @@ const CATEGORY_TO_KIND: Record<string, SymbolKind> = {
 };
 
 /**
- * Convert completion item to Symbol (for testing)
+ * Convert completion item to IndexedSymbol (for testing)
  */
-function completionToSymbol(item: CompletionItem & { category?: string }): Symbol {
+function completionToSymbol(item: CompletionItem & { category?: string }): IndexedSymbol {
     const name = item.label;
 
     // Determine SymbolKind from category
@@ -58,6 +58,9 @@ function completionToSymbol(item: CompletionItem & { category?: string }): Symbo
         hoverContents = { kind: "markdown", value: name };
     }
 
+    // Dynamic `kind` means no single literal can satisfy the IndexedSymbol
+    // discriminated union, so cast. `Symbols` does not inspect the variant
+    // field at runtime, and this helper is test-only scaffolding.
     return {
         name,
         kind,
@@ -73,7 +76,7 @@ function completionToSymbol(item: CompletionItem & { category?: string }): Symbo
             tags: item.tags,
         },
         hover: { contents: hoverContents },
-    };
+    } as IndexedSymbol;
 }
 
 describe("Symbols integration", () => {

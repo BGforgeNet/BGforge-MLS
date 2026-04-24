@@ -11,7 +11,7 @@
 import { describe, expect, it } from "vitest";
 import { CompletionItemKind } from "vscode-languageserver/node";
 import { Symbols } from "../../src/core/symbol-index";
-import { type Symbol, SymbolKind, ScopeLevel, SourceType } from "../../src/core/symbol";
+import { type IndexedSymbol, SymbolKind, ScopeLevel, SourceType } from "../../src/core/symbol";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -21,10 +21,11 @@ function makeUri(n: number): string {
     return `file:///file${n}.ssl`;
 }
 
-function makeSymbol(name: string, uri: string): Symbol {
+function makeSymbol(name: string, uri: string): IndexedSymbol {
     return {
         name,
         kind: SymbolKind.Variable,
+        variable: {},
         location: {
             uri,
             range: { start: { line: 0, character: 0 }, end: { line: 0, character: name.length } },
