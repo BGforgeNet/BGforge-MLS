@@ -17,22 +17,13 @@ import {
 } from "vscode-languageserver/node";
 import { conlog } from "./common";
 import { type NormalizedUri } from "./core/normalized-uri";
-import { showInfo } from "./user-messages";
-import { COMMAND_compile, compile } from "./compile";
 import { makeTimingOptions } from "./shared/time-handler";
-import { parseDialog } from "./dialog";
-import { parseTDDialog } from "./td/dialog";
-import { parseTSSLDialog } from "./tssl/dialog";
-import { parseDDialog } from "./weidu-d/dialog";
 import { falloutSslProvider } from "./fallout-ssl/provider";
 import { Translation } from "./translation";
 import {
-    EXT_TD,
-    EXT_TSSL,
     LANG_FALLOUT_MSG,
     LANG_FALLOUT_SCRIPTS_LST,
     LANG_FALLOUT_SSL,
-    LANG_TYPESCRIPT,
     LANG_WEIDU_BAF,
     LANG_WEIDU_D,
     LANG_WEIDU_LOG,
@@ -56,11 +47,11 @@ import { weiduBafProvider } from "./weidu-baf/provider";
 import { weiduDProvider } from "./weidu-d/provider";
 import { weiduTp2Provider } from "./weidu-tp2/provider";
 import { initLspConnection } from "./lsp-connection";
-import { initServerContext, getServerContext, updateServerSettings } from "./server-context";
+import { initServerContext, updateServerSettings } from "./server-context";
 import { initSettingsService } from "./settings-service";
 import { getServerCapabilities } from "./server-capabilities";
 import { UriDebouncer } from "./core/uri-debouncer";
-import { LSP_COMMAND_PARSE_DIALOG, NOTIFICATION_LOAD_FINISHED, VSCODE_COMMAND_COMPILE } from "../../shared/protocol";
+import { NOTIFICATION_LOAD_FINISHED } from "../../shared/protocol";
 import type { HandlerContext } from "./handlers/context";
 import { createRenameSuppression } from "./handlers/rename-suppression";
 import * as completionHandler from "./handlers/completion";
@@ -76,6 +67,7 @@ import * as signatureHandler from "./handlers/signature";
 import * as symbolsHandler from "./handlers/symbols";
 import * as renameHandler from "./handlers/rename";
 import * as documentLifecycleHandler from "./handlers/document-lifecycle";
+import * as executeCommandHandler from "./handlers/execute-command";
 
 // Create a connection for the server.
 // createConnection() auto-detects transport from process.argv:
@@ -268,93 +260,7 @@ completionHandler.register(handlerCtx);
 configHandler.register(handlerCtx);
 hoverHandler.register(handlerCtx);
 
-/** Log and swallow compile errors for fire-and-forget call sites. */
-function logCompileError(err: unknown) {
-    conlog(`Compilation error: ${err}`);
-}
-
-/** Dialog preview handler registry. Maps language/extension to parser + translation language. */
-const dialogHandlers = [
-    {
-        match: (langId: string, _uri: string) => langId === LANG_FALLOUT_SSL,
-        parse: (_uri: string, text: string) => parseDialog(text),
-        translationLangId: LANG_FALLOUT_SSL,
-    },
-    {
-        match: (langId: string, _uri: string) => langId === LANG_WEIDU_D,
-        parse: (_uri: string, text: string) => Promise.resolve(parseDDialog(text)),
-        translationLangId: LANG_WEIDU_D,
-    },
-    {
-        match: (langId: string, uri: string) => langId === LANG_TYPESCRIPT && uri.endsWith(EXT_TD),
-        parse: (uri: string, text: string) => parseTDDialog(uri, text),
-        translationLangId: LANG_WEIDU_D,
-    },
-    {
-        match: (langId: string, uri: string) => langId === LANG_TYPESCRIPT && uri.endsWith(EXT_TSSL),
-        parse: (uri: string, text: string) => parseTSSLDialog(uri, text),
-        translationLangId: LANG_FALLOUT_SSL,
-    },
-];
-
-connection.onExecuteCommand(async (params) => {
-    const command = params.command;
-    if (!params.arguments) {
-        return;
-    }
-    const args = params.arguments[0];
-
-    // Handle parseDialog command
-    if (command === LSP_COMMAND_PARSE_DIALOG) {
-        const uri: string = args.uri;
-        const textDoc = documents.get(uri);
-        if (!textDoc) {
-            return null;
-        }
-        try {
-            const langId = textDoc.languageId;
-            const text = textDoc.getText();
-            const lowerUri = uri.toLowerCase();
-
-            // Each entry: match condition, parse function, translation language
-            const handler = dialogHandlers.find((h) => h.match(langId, lowerUri));
-            if (!handler) {
-                return null;
-            }
-            const dialogData = await handler.parse(uri, text);
-            const ctx = await getServerContext();
-            const messages = ctx.translation.getMessages(uri, text, handler.translationLangId);
-            return { ...dialogData, messages };
-        } catch (e) {
-            conlog(`parseDialog error: ${e instanceof Error ? e.message : String(e)}`, "error");
-            if (e instanceof Error && e.stack) {
-                conlog(e.stack, "debug");
-            }
-            return null;
-        }
-    }
-
-    if (command !== COMMAND_compile && command !== VSCODE_COMMAND_COMPILE) {
-        return;
-    }
-
-    const uri = typeof args.uri === "string" ? args.uri : undefined;
-    if (!uri || !uri.startsWith("file://")) {
-        conlog(`Compile: invalid non-file uri '${String(uri)}'`);
-        showInfo("Focus a valid file to run commands!");
-        return;
-    }
-
-    const textDoc = documents.get(uri);
-    if (!textDoc) {
-        return;
-    }
-    const langId = textDoc.languageId;
-    const text = textDoc.getText();
-
-    void compile(uri, langId, true, text).catch(logCompileError);
-    return undefined;
-});
+executeCommandHandler.register(handlerCtx);
 
 signatureHandler.register(handlerCtx);
 
