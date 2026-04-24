@@ -17,7 +17,7 @@ import {
     TextDocuments,
     TextDocumentEdit,
 } from "vscode-languageserver/node";
-import { conlog, symbolAtPosition } from "./common";
+import { conlog } from "./common";
 import { isHeaderFile } from "./core/location-utils";
 import { type NormalizedUri, normalizeUri } from "./core/normalized-uri";
 import { decodeFileUris, showInfo } from "./user-messages";
@@ -74,6 +74,7 @@ import { LSP_COMMAND_PARSE_DIALOG, NOTIFICATION_LOAD_FINISHED, VSCODE_COMMAND_CO
 import type { HandlerContext } from "./handlers/context";
 import { createRenameSuppression } from "./handlers/rename-suppression";
 import * as completionHandler from "./handlers/completion";
+import * as definitionHandler from "./handlers/definition";
 import * as hoverHandler from "./handlers/hover";
 
 // Create a connection for the server.
@@ -540,50 +541,7 @@ connection.languages.inlayHint.on(async (params) => {
     return ctx.translation.getInlayHints(uri, langId, text, params.range);
 });
 
-connection.onDefinition(
-    timeHandler(
-        "onDefinition",
-        async (params) => {
-            const textDoc = documents.get(params.textDocument.uri);
-            if (!textDoc) {
-                return;
-            }
-            const uri = params.textDocument.uri;
-            const langId = textDoc.languageId;
-            const text = textDoc.getText();
-
-            // Suppress features in comment/param-name zones
-            if (!registry.shouldProvideFeatures(langId, text, params.position)) {
-                return;
-            }
-
-            // Try provider first (AST-based definition, e.g. state labels in D files)
-            const providerResult = registry.definition(langId, text, params.position, uri);
-            if (providerResult) {
-                return providerResult;
-            }
-
-            const symbol = symbolAtPosition(text, params.position);
-            const ctx = await getServerContext();
-
-            // Try translation definition (mstr/tra/@123 references -> .msg/.tra files)
-            if (symbol) {
-                const traResult = ctx.translation.getDefinition(uri, langId, symbol, text);
-                if (traResult) {
-                    return traResult;
-                }
-            }
-
-            // Try provider symbol definition (data-driven, from headers)
-            if (symbol) {
-                return registry.symbolDefinition(langId, symbol);
-            }
-
-            return null;
-        },
-        timingOpts,
-    ),
-);
+definitionHandler.register(handlerCtx);
 
 connection.onReferences(
     timeHandler(
