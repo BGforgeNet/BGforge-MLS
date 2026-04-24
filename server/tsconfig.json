@@ -8,6 +8,6 @@
         "outDir": "out",
         "tsBuildInfoFile": "../tmp/server.tsbuildinfo"
     },
-    "include": ["src", "../shared", "../transpilers"],
-    "exclude": ["node_modules", ".vscode-test", "test"]
+    "include": ["src", "test", "../shared", "../transpilers"],
+    "exclude": ["node_modules", ".vscode-test"]
 }
