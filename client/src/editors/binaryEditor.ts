@@ -5,6 +5,7 @@
 
 import * as vscode from "vscode";
 import * as path from "path";
+import { randomBytes } from "crypto";
 import { type BinaryParser, type ParseResult, parserRegistry } from "../parsers";
 import { formatAdapterRegistry } from "../parsers/format-adapter";
 import { createSemanticFieldKeyFromId } from "../parsers/presentation-schema";
@@ -408,6 +409,7 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
      */
     private getHtmlShell(document: BinaryDocument): string {
         const fileName = path.basename(document.uri.fsPath);
+        const nonce = randomBytes(16).toString("base64");
         return this.getHtmlTemplate()
             .replace(/\{\{fileName\}\}/g, escapeHtml(fileName))
             .replace("{{formatName}}", escapeHtml(document.parseResult.formatName))
@@ -415,7 +417,8 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
             .replace("{{errors}}", "")
             .replace("{{warnings}}", "")
             .replace("{{tree}}", '<div class="loading">Loading...</div>')
-            .replace("/* __SCRIPT__ */", this.getJs());
+            .replace("/* __SCRIPT__ */", this.getJs())
+            .replace(/\{\{nonce\}\}/g, nonce);
     }
 }
 

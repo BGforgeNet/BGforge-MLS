@@ -8,6 +8,7 @@
 
 import * as vscode from "vscode";
 import * as path from "path";
+import { randomBytes } from "crypto";
 import { type ExecuteCommandParams, LanguageClient, ExecuteCommandRequest } from "vscode-languageclient/node";
 import { escapeHtml } from "../utils";
 import { getCachedCssAsset, getCachedHtmlAsset, getCachedJsAsset } from "../webview-assets";
@@ -60,22 +61,26 @@ function buildBreadcrumbHtml(filePath: string, iconUri: string): string {
 function getDialogPreviewHtml(
     treeContent: string,
     codiconsUri: string,
+    cspSource: string,
     extensionPath: string,
     fileName: string,
     filePath: string,
     iconUri: string,
 ): string {
+    const nonce = randomBytes(16).toString("base64");
     // Function replacers prevent $-pattern interpretation in replacement strings
     // ($&, $', $` are special even with string search patterns).
     return getHtmlTemplate(extensionPath)
         .replace("{{codiconsUri}}", () => codiconsUri)
         .replace("{{cssUri}}", () => "")
         .replace("{{scriptUri}}", () => "")
-        .replace('<link href="" rel="stylesheet" />', () => `<style>${getCss(extensionPath)}</style>`)
-        .replace('<script src=""></script>', () => `<script>${getJs(extensionPath)}</script>`)
+        .replace('<link href="" rel="stylesheet" />', () => `<style nonce="${nonce}">${getCss(extensionPath)}</style>`)
+        .replace('<script src=""></script>', () => `<script nonce="${nonce}">${getJs(extensionPath)}</script>`)
         .replace("{{filePath}}", () => buildBreadcrumbHtml(filePath, iconUri))
         .replace("{{fileName}}", () => escapeHtml(fileName))
-        .replace("{{treeContent}}", () => treeContent);
+        .replace("{{treeContent}}", () => treeContent)
+        .replaceAll("{{cspSource}}", cspSource)
+        .replaceAll("{{nonce}}", nonce);
 }
 
 // ---------------------------------------------------------------------------
@@ -146,6 +151,7 @@ export function registerDialogPanel(
             dialogPanel.webview.html = getDialogPreviewHtml(
                 treeContent,
                 codiconsUri.toString(),
+                dialogPanel.webview.cspSource,
                 context.extensionUri.fsPath,
                 currentFileName || "dialog",
                 currentFilePath || "",
@@ -219,7 +225,13 @@ export function registerDialogPanel(
                     "bgforgeDialogPreview",
                     `Dialog: ${fileName}`,
                     vscode.ViewColumn.Active,
-                    { enableScripts: true, localResourceRoots: [context.extensionUri] },
+                    {
+                        enableScripts: true,
+                        localResourceRoots: [
+                            vscode.Uri.joinPath(context.extensionUri, "client", "out", "codicons"),
+                            vscode.Uri.joinPath(context.extensionUri, path.dirname(config.tabIconPath)),
+                        ],
+                    },
                 );
                 dialogPanel.iconPath = vscode.Uri.joinPath(context.extensionUri, config.tabIconPath);
                 dialogPanel.webview.onDidReceiveMessage((message: DialogTreeRuntimeErrorMessage) => {
@@ -255,6 +267,7 @@ export function registerDialogPanel(
             dialogPanel.webview.html = getDialogPreviewHtml(
                 treeContent,
                 codiconsUri.toString(),
+                dialogPanel.webview.cspSource,
                 context.extensionUri.fsPath,
                 fileName,
                 filePath,

@@ -4,22 +4,11 @@
 //   - Platform-aware search placeholder (isMac detection)
 //   - Keyboard shortcuts (Ctrl+F / Escape)
 //   - Expand/collapse all button handlers
-// Each has its own escapeHtml copy (separate esbuild bundle, can't share imports).
+import { escapeHtml } from "../utils";
+
 (function () {
     // @ts-expect-error -- acquireVsCodeApi is injected by VSCode webview runtime
     const vscode = acquireVsCodeApi();
-
-    // Escape HTML for safe interpolation into innerHTML.
-    // Values read from DOM properties (.id, .textContent) are browser-decoded,
-    // so they must be re-escaped before insertion into innerHTML strings.
-    function escapeHtml(text: string): string {
-        return text
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#39;");
-    }
 
     // Simple debounce helper
     function debounce<T extends (..._args: unknown[]) => void>(fn: T, ms: number): T {
