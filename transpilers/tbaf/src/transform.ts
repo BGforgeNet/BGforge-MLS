@@ -16,7 +16,6 @@ import {
     FunctionDeclaration,
     IfStatement,
     Node,
-    Project,
     SourceFile,
     Statement,
     SwitchStatement,
@@ -29,6 +28,7 @@ import type { FuncsContext, TransformerContext } from "./transformer-context";
 import { buildSwitchCondition, invertConditions, transformConditionExpr } from "./condition-algebra";
 import { unrollFor, unrollForOf, unrollForAsActions, unrollForOfAsActions } from "./loop-unroll";
 import { TranspileError } from "../../common/transpile-error";
+import { getSharedProject } from "../../common/shared-project";
 
 export class TBAFTransformer implements TransformerContext {
     vars: VarsContext = new Map();
@@ -363,8 +363,10 @@ export class TBAFTransformer implements TransformerContext {
      * @returns The parsed Expression node, or undefined if parsing fails
      */
     parseExpressionFromText(text: string): Expression | undefined {
-        const project = new Project({ useInMemoryFileSystem: true });
-        const tempFile = project.createSourceFile("temp.ts", `const _x_ = ${text};`);
+        const project = getSharedProject();
+        const tempFile = project.createSourceFile("tbaf-expr.ts", `const _x_ = ${text};`, {
+            overwrite: true,
+        });
         const varDecl = tempFile.getVariableDeclarations()[0];
         return varDecl?.getInitializer();
     }

@@ -343,6 +343,20 @@ switch (Global("state", "LOCALS")) {
         });
     });
 
+    describe("parseExpressionFromText (shared project)", () => {
+        it("parses expressions correctly across multiple sequential calls", () => {
+            const t = new TBAFTransformer();
+            // Each expression is consumed before the next call (mirrors production usage).
+            // The shared Project overwrites the same virtual file on each call.
+            const aText = t.parseExpressionFromText("Global('foo', 'LOCALS', 1)")?.getText();
+            const bText = t.parseExpressionFromText("Global('bar', 'LOCALS', 2)")?.getText();
+            expect(aText).toBeDefined();
+            expect(bText).toBeDefined();
+            expect(aText).toContain("foo");
+            expect(bText).toContain("bar");
+        });
+    });
+
     describe("Enum support", () => {
         it("substitutes numeric enum values in conditions and actions", () => {
             const code = `
