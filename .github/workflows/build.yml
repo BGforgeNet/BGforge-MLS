@@ -20,6 +20,9 @@ jobs:
             - name: Checkout
               uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
+            - name: Verify supply-chain invariants
+              run: ./scripts/verify-supply-chain.sh
+
             - name: Install xvfb (release only)
               if: startsWith(github.ref, 'refs/tags/')
               run: sudo apt-get install -y xvfb
