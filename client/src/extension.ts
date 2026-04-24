@@ -24,8 +24,6 @@ import { registerDDialogTree } from "./dialog-tree/dialogTree-d";
 import { ServerInitializingIndicator } from "./indicator";
 import { conlog, initOutputChannel } from "./logging";
 
-export { conlog };
-
 // Initialized in activate(), undefined until then
 let client: LanguageClient | undefined;
 const loadingIndicator = new ServerInitializingIndicator(() => {
@@ -103,10 +101,6 @@ export async function activate(context: ExtensionContext) {
             { scheme: "file", pattern: "**/*.td" },
             { scheme: "file", language: "typescript" },
         ],
-        synchronize: {
-            // Notify the server about file changes to '.clientrc files contained in the workspace
-            fileEvents: workspace.createFileSystemWatcher("**/.clientrc"),
-        },
         middleware: {
             provideWorkspaceSymbols: (query, token, next) => {
                 return next(encodeWorkspaceSymbolQuery(query, getWorkspaceSymbolScopeLanguageId()), token);
