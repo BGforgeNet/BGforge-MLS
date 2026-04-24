@@ -12,8 +12,8 @@ import {
     parseIncrement,
     stripQuotes,
     substituteVars,
+    type VarsContext,
 } from "../../transpilers/common/transpiler-utils";
-import type { VarsContext } from "../../transpilers/common/transpiler-utils";
 
 describe("evaluateCondition", () => {
     const emptyVars: VarsContext = new Map();
