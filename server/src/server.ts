@@ -79,43 +79,29 @@ const handlerCtx: HandlerContext = {
     getDocumentSettings,
 };
 
-// Make the text document manager listen on the connection
-// for open, change and close text document events
-documents.listen(connection);
-
-// Listen on the connection
-connection.listen();
-
+// Register every LSP handler before we start listening.
 initializeHandler.register(handlerCtx);
-completionHandler.register(handlerCtx);
 configHandler.register(handlerCtx);
-hoverHandler.register(handlerCtx);
-
-executeCommandHandler.register(handlerCtx);
-
-signatureHandler.register(handlerCtx);
-
 documentLifecycleHandler.register(handlerCtx);
-
-inlayHintsHandler.register(handlerCtx);
-
+executeCommandHandler.register(handlerCtx);
+completionHandler.register(handlerCtx);
 definitionHandler.register(handlerCtx);
-
+foldingHandler.register(handlerCtx);
+formattingHandler.register(handlerCtx);
+hoverHandler.register(handlerCtx);
+inlayHintsHandler.register(handlerCtx);
 referencesHandler.register(handlerCtx);
-
 renameHandler.register(handlerCtx);
+semanticTokensHandler.register(handlerCtx);
+signatureHandler.register(handlerCtx);
+symbolsHandler.register(handlerCtx);
 
-// Clean up timers on shutdown
 connection.onShutdown(() => {
     handlerCtx.renameSuppression.dispose();
     fileReloadDebouncer.dispose();
     compileDebouncer.dispose();
 });
 
-formattingHandler.register(handlerCtx);
-
-symbolsHandler.register(handlerCtx);
-
-semanticTokensHandler.register(handlerCtx);
-
-foldingHandler.register(handlerCtx);
+// Attach the document manager and start the LSP transport.
+documents.listen(connection);
+connection.listen();
