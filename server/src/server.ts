@@ -73,6 +73,7 @@ import type { HandlerContext } from "./handlers/context";
 import { createRenameSuppression } from "./handlers/rename-suppression";
 import * as completionHandler from "./handlers/completion";
 import * as definitionHandler from "./handlers/definition";
+import * as foldingHandler from "./handlers/folding";
 import * as formattingHandler from "./handlers/formatting";
 import * as hoverHandler from "./handlers/hover";
 import * as inlayHintsHandler from "./handlers/inlay-hints";
@@ -577,10 +578,4 @@ symbolsHandler.register(handlerCtx);
 
 semanticTokensHandler.register(handlerCtx);
 
-connection.onFoldingRanges((params) => {
-    const textDoc = documents.get(params.textDocument.uri);
-    if (!textDoc) {
-        return [];
-    }
-    return registry.foldingRanges(textDoc.languageId, textDoc.getText());
-});
+foldingHandler.register(handlerCtx);
