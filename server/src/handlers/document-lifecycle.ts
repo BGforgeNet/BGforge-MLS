@@ -16,6 +16,7 @@ import type { HandlerContext } from "./context";
 
 const documentSettings: Map<string, Thenable<MLSsettings>> = new Map();
 
+/** Log and swallow compile errors for fire-and-forget call sites. */
 function logCompileError(err: unknown) {
     conlog(`Compilation error: ${err}`);
 }
