@@ -26,6 +26,8 @@ export function register(ctx: HandlerContext): void {
         const result = await registry.rename(langId, text, params.position, params.newName, uri);
 
         if (result?.documentChanges && result.documentChanges.length > 0) {
+            // Collect into an array, not a lazy iterator: markAffected clears the
+            // tracked set before iterating, so iteration must happen over a snapshot.
             const uris: NormalizedUri[] = [];
             for (const dc of result.documentChanges) {
                 if (TextDocumentEdit.is(dc)) {
