@@ -14,7 +14,6 @@ import {
     DidChangeWatchedFilesNotification,
     ProposedFeatures,
     TextDocuments,
-    TextDocumentEdit,
 } from "vscode-languageserver/node";
 import { conlog } from "./common";
 import { isHeaderFile } from "./core/location-utils";
@@ -81,6 +80,7 @@ import * as referencesHandler from "./handlers/references";
 import * as semanticTokensHandler from "./handlers/semantic-tokens";
 import * as signatureHandler from "./handlers/signature";
 import * as symbolsHandler from "./handlers/symbols";
+import * as renameHandler from "./handlers/rename";
 
 // Create a connection for the server.
 // createConnection() auto-detects transport from process.argv:
@@ -460,7 +460,7 @@ documents.onDidSave(async (change) => {
 
     // Skip compile for files touched by a recent multi-file rename.
     // Remove the URI so subsequent saves compile normally.
-    if (renameAffectedUris.delete(normUri)) {
+    if (handlerCtx.renameSuppression.consumeAffected(normUri)) {
         return;
     }
 
@@ -495,7 +495,7 @@ documents.onDidChangeContent(async (event) => {
 
     // Skip compile for files touched by a recent multi-file rename.
     // Keep the URI in the set — onDidSave will remove it after the final skip.
-    if (renameAffectedUris.has(normUri)) {
+    if (handlerCtx.renameSuppression.isAffected(normUri)) {
         return;
     }
 
@@ -516,58 +516,11 @@ definitionHandler.register(handlerCtx);
 
 referencesHandler.register(handlerCtx);
 
-connection.onPrepareRename((params) => {
-    const textDoc = documents.get(params.textDocument.uri);
-    if (!textDoc) {
-        return null;
-    }
-    const langId = textDoc.languageId;
-    const text = textDoc.getText();
-
-    return registry.prepareRename(langId, text, params.position);
-});
-
-// URIs touched by the most recent multi-file rename. Compile is suppressed for
-// these files in both onDidChangeContent and onDidSave to avoid breaking VS Code's
-// cross-file undo group (compile writes .tmp.ssl which triggers file watchers that
-// invalidate the undo group). A safety timeout clears the set in case some files
-// never trigger change/save events (e.g. user undoes before save).
-const RENAME_SUPPRESS_MS = 3000;
-const renameAffectedUris = new Set<NormalizedUri>();
-let renameSuppressTimer: NodeJS.Timeout | undefined;
-
-connection.onRenameRequest(async (params) => {
-    const textDoc = documents.get(params.textDocument.uri);
-    if (!textDoc) {
-        return null;
-    }
-    const uri = params.textDocument.uri;
-    const langId = textDoc.languageId;
-    const text = textDoc.getText();
-
-    const result = await registry.rename(langId, text, params.position, params.newName, uri);
-
-    // Track affected URIs so onDidChangeContent/onDidSave skip compile for them
-    if (result?.documentChanges && result.documentChanges.length > 0) {
-        renameAffectedUris.clear();
-        for (const dc of result.documentChanges) {
-            if (TextDocumentEdit.is(dc)) {
-                renameAffectedUris.add(normalizeUri(dc.textDocument.uri));
-            }
-        }
-        // Safety cleanup in case some URIs never trigger change/save
-        if (renameSuppressTimer) clearTimeout(renameSuppressTimer);
-        renameSuppressTimer = setTimeout(() => {
-            renameAffectedUris.clear();
-        }, RENAME_SUPPRESS_MS);
-    }
-
-    return result;
-});
+renameHandler.register(handlerCtx);
 
 // Clean up timers on shutdown
 connection.onShutdown(() => {
-    if (renameSuppressTimer) clearTimeout(renameSuppressTimer);
+    handlerCtx.renameSuppression.dispose();
     fileReloadDebouncer.dispose();
     compileDebouncer.dispose();
 });
