@@ -14,7 +14,13 @@ import type { NormalizedUri } from "../core/normalized-uri";
 const RENAME_SUPPRESS_MS = 3000;
 
 export interface RenameSuppression {
-    /** Replace the tracked set with the URIs touched by this rename. Resets the safety timer. */
+    /**
+     * Replace the tracked set with the URIs touched by this rename. Resets the safety timer.
+     *
+     * Intentional replacement (not union): VS Code sends renames sequentially, so concurrent
+     * renames are not a supported flow. The prior batch would have been consumed by the
+     * follow-up change/save events before the next rename fires.
+     */
     markAffected(uris: Iterable<NormalizedUri>): void;
     /**
      * Returns true if the URI is tracked and removes it from the set.
@@ -23,7 +29,7 @@ export interface RenameSuppression {
     consumeAffected(uri: NormalizedUri): boolean;
     /** Non-consuming check used by onDidChangeContent — keep the URI tracked for the later save. */
     isAffected(uri: NormalizedUri): boolean;
-    /** Clear timer on shutdown. */
+    /** Clear timer. Called once at shutdown; the instance is unusable after dispose. */
     dispose(): void;
 }
 
