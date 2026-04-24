@@ -40,6 +40,7 @@ import { parseFile } from "../../src/weidu-tp2/header-parser";
 /** Extract symbols only (convenience wrapper). */
 const parseHeaderToSymbols = (...args: Parameters<typeof parseFile>) => [...parseFile(...args).symbols];
 import type { IndexedSymbol } from "../../src/core/symbol";
+import { normalizeUri } from "../../src/core/normalized-uri";
 
 describe("format-utils: normalizeLineComment", () => {
     it("adds space after // if missing", () => {
@@ -681,7 +682,7 @@ BEGIN @1
         const mockStore = new SymbolsClass();
         const headerCode = `DEFINE_ACTION_FUNCTION header_func BEGIN END`;
         const parsedSymbols = lazyParseHeaderToSymbols("file:///header.tph", headerCode);
-        mockStore.updateFile("file:///header.tph", parsedSymbols);
+        mockStore.updateFile(normalizeUri("file:///header.tph"), parsedSymbols);
 
         // Main file calls the function
         const mainCode = `

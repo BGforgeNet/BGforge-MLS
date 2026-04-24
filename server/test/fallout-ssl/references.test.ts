@@ -19,6 +19,7 @@ import { initParser } from "../../src/fallout-ssl/parser";
 import { findReferences } from "../../src/fallout-ssl/references";
 import { ReferencesIndex } from "../../src/shared/references-index";
 import { parseFile } from "../../src/fallout-ssl/header-parser";
+import { normalizeUri } from "../../src/core/normalized-uri";
 
 /** Extract refs only (convenience wrapper for tests migrated from call-sites). */
 const extractCallSites = (text: string, uri: string) => parseFile(uri, text).refs;
@@ -136,8 +137,8 @@ end
             const globalHText = `#define GVAR_DEN_GANGWAR (454)`;
 
             const refsIndex = new ReferencesIndex();
-            refsIndex.updateFile(denHUri, extractCallSites(denHText, denHUri));
-            refsIndex.updateFile(globalHUri, extractCallSites(globalHText, globalHUri));
+            refsIndex.updateFile(normalizeUri(denHUri), extractCallSites(denHText, denHUri));
+            refsIndex.updateFile(normalizeUri(globalHUri), extractCallSites(globalHText, globalHUri));
 
             // Cursor on GVAR_DEN_GANGWAR in den.h (line 1, character 31)
             const refs = findReferences(denHText, { line: 1, character: 31 }, denHUri, true, refsIndex);
@@ -159,7 +160,7 @@ procedure main begin
 end
 `;
             const refsIndex = new ReferencesIndex();
-            refsIndex.updateFile(uri, extractCallSites(text, uri));
+            refsIndex.updateFile(normalizeUri(uri), extractCallSites(text, uri));
 
             // Cursor on first GVAR_DEN_GANGWAR (line 2)
             const refs = findReferences(text, { line: 2, character: 8 }, uri, true, refsIndex);
@@ -190,9 +191,9 @@ end
 `;
 
             const refsIndex = new ReferencesIndex();
-            refsIndex.updateFile(globalHUri, extractCallSites(globalHText, globalHUri));
-            refsIndex.updateFile(denHUri, extractCallSites(denHText, denHUri));
-            refsIndex.updateFile(sslUri, extractCallSites(sslText, sslUri));
+            refsIndex.updateFile(normalizeUri(globalHUri), extractCallSites(globalHText, globalHUri));
+            refsIndex.updateFile(normalizeUri(denHUri), extractCallSites(denHText, denHUri));
+            refsIndex.updateFile(normalizeUri(sslUri), extractCallSites(sslText, sslUri));
 
             // Find references from den.h (where symbol is "external")
             const refs = findReferences(denHText, { line: 1, character: 31 }, denHUri, true, refsIndex);
@@ -230,7 +231,7 @@ end
                 range: { start: { line: 5, character: 4 }, end: { line: 5, character: 10 } },
             };
             const index = new ReferencesIndex();
-            index.updateFile(otherUri, new Map([["helper", [crossLoc]]]));
+            index.updateFile(normalizeUri(otherUri), new Map([["helper", [crossLoc]]]));
 
             // cursor on "helper" definition
             const refs = findReferences(text, { line: 1, character: 10 }, TEST_URI, true, index);
@@ -253,7 +254,7 @@ end
             };
             const index = new ReferencesIndex();
             // Add index entry for same URI — should be filtered
-            index.updateFile(TEST_URI, new Map([["helper", [selfLoc]]]));
+            index.updateFile(normalizeUri(TEST_URI), new Map([["helper", [selfLoc]]]));
 
             const refs = findReferences(text, { line: 1, character: 10 }, TEST_URI, true, index);
             // Local refs only; same-URI cross-file entry excluded

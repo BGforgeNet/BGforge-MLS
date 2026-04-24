@@ -11,6 +11,7 @@ import { Symbols } from "../../src/core/symbol-index";
 import { loadStaticSymbols } from "../../src/core/static-loader";
 import { validLocationOrNull } from "../../src/core/location-utils";
 import { type IndexedSymbol, SymbolKind, ScopeLevel, SourceType } from "../../src/core/symbol";
+import { normalizeUri } from "../../src/core/normalized-uri";
 
 // Mock fs and common to avoid file system and LSP dependencies
 vi.mock("fs", () => ({
@@ -83,7 +84,7 @@ describe("weidu-tp2 getSymbolDefinition", () => {
             hover: { contents: { kind: "markdown", value: "Custom function" } },
         };
 
-        symbols.updateFile("file:///workspace/lib/utils.tph", [documentSymbol]);
+        symbols.updateFile(normalizeUri("file:///workspace/lib/utils.tph"), [documentSymbol]);
 
         const symbol = symbols.lookup("my_custom_function");
         expect(symbol).toBeDefined();

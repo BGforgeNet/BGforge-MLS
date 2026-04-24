@@ -11,6 +11,7 @@ import { describe, expect, it, beforeEach } from "vitest";
 import { CompletionItemKind, SymbolKind as VscodeSymbolKind } from "vscode-languageserver/node";
 import { Symbols } from "../../src/core/symbol-index";
 import { type IndexedSymbol, SymbolKind, ScopeLevel, SourceType } from "../../src/core/symbol";
+import { normalizeUri } from "../../src/core/normalized-uri";
 
 // =============================================================================
 // Test fixtures
@@ -63,17 +64,17 @@ describe("Symbols — workspace symbol search", () => {
 
     describe("query() excludes Navigation symbols", () => {
         it("should not return Navigation symbols in query results", () => {
-            index.updateFile(URI_A, [createSymbol("nav_proc", { sourceType: SourceType.Navigation })]);
+            index.updateFile(normalizeUri(URI_A), [createSymbol("nav_proc", { sourceType: SourceType.Navigation })]);
 
             const results = index.query({});
             expect(results.find((s) => s.name === "nav_proc")).toBeUndefined();
         });
 
         it("should still return Workspace, Static, and Document symbols", () => {
-            index.updateFile(URI_HEADER, [
+            index.updateFile(normalizeUri(URI_HEADER), [
                 createSymbol("header_proc", { sourceType: SourceType.Workspace, uri: URI_HEADER }),
             ]);
-            index.updateFile(URI_A, [createSymbol("doc_proc", { sourceType: SourceType.Document })]);
+            index.updateFile(normalizeUri(URI_A), [createSymbol("doc_proc", { sourceType: SourceType.Document })]);
             index.loadStatic([
                 createSymbol("builtin_func", { sourceType: SourceType.Static, uri: null as unknown as string }),
             ]);
@@ -85,7 +86,7 @@ describe("Symbols — workspace symbol search", () => {
         });
 
         it("should exclude Navigation even with prefix filter", () => {
-            index.updateFile(URI_A, [
+            index.updateFile(normalizeUri(URI_A), [
                 createSymbol("my_nav_proc", { sourceType: SourceType.Navigation }),
                 createSymbol("my_header_proc", { sourceType: SourceType.Workspace }),
             ]);
@@ -102,12 +103,12 @@ describe("Symbols — workspace symbol search", () => {
 
     describe("searchWorkspaceSymbols()", () => {
         beforeEach(() => {
-            index.updateFile(URI_A, [
+            index.updateFile(normalizeUri(URI_A), [
                 createSymbol("calculate_damage"),
                 createSymbol("apply_armor"),
                 createSymbol("MY_MACRO", { kind: SymbolKind.Macro }),
             ]);
-            index.updateFile(URI_B, [
+            index.updateFile(normalizeUri(URI_B), [
                 createSymbol("calculate_hit_chance", { uri: URI_B }),
                 createSymbol("get_armor_class", { uri: URI_B }),
             ]);
@@ -156,7 +157,7 @@ describe("Symbols — workspace symbol search", () => {
         });
 
         it("should include Navigation, Workspace, and Document symbols", () => {
-            index.updateFile(URI_HEADER, [
+            index.updateFile(normalizeUri(URI_HEADER), [
                 createSymbol("header_func", { sourceType: SourceType.Workspace, uri: URI_HEADER }),
             ]);
 
@@ -188,7 +189,7 @@ describe("Symbols — workspace symbol search", () => {
 
         it("should include displayPath as containerName", () => {
             const customIndex = new Symbols();
-            customIndex.updateFile(URI_A, [createSymbol("my_func", { displayPath: "scripts/a.ssl" })]);
+            customIndex.updateFile(normalizeUri(URI_A), [createSymbol("my_func", { displayPath: "scripts/a.ssl" })]);
 
             const results = customIndex.searchWorkspaceSymbols("my_func");
             expect(results).toHaveLength(1);
@@ -197,7 +198,7 @@ describe("Symbols — workspace symbol search", () => {
 
         it("should omit containerName when displayPath is undefined", () => {
             const customIndex = new Symbols();
-            customIndex.updateFile(URI_A, [createSymbol("bare_func")]);
+            customIndex.updateFile(normalizeUri(URI_A), [createSymbol("bare_func")]);
 
             const results = customIndex.searchWorkspaceSymbols("bare_func");
             expect(results).toHaveLength(1);
@@ -211,7 +212,7 @@ describe("Symbols — workspace symbol search", () => {
 
     describe("lookup() includes Navigation symbols", () => {
         it("should find Navigation symbols by name", () => {
-            index.updateFile(URI_A, [createSymbol("nav_proc", { sourceType: SourceType.Navigation })]);
+            index.updateFile(normalizeUri(URI_A), [createSymbol("nav_proc", { sourceType: SourceType.Navigation })]);
 
             const result = index.lookup("nav_proc");
             expect(result).toBeDefined();
@@ -225,15 +226,15 @@ describe("Symbols — workspace symbol search", () => {
 
     describe("getFileSymbols()", () => {
         it("should return the same array reference for the same file", () => {
-            index.updateFile(URI_A, [createSymbol("proc_a")]);
+            index.updateFile(normalizeUri(URI_A), [createSymbol("proc_a")]);
 
-            const first = index.getFileSymbols(URI_A);
-            const second = index.getFileSymbols(URI_A);
+            const first = index.getFileSymbols(normalizeUri(URI_A));
+            const second = index.getFileSymbols(normalizeUri(URI_A));
             expect(first).toBe(second);
         });
 
         it("should return empty array for unknown file", () => {
-            const result = index.getFileSymbols("file:///unknown");
+            const result = index.getFileSymbols(normalizeUri("file:///unknown"));
             expect(result).toEqual([]);
         });
     });
@@ -244,10 +245,10 @@ describe("Symbols — workspace symbol search", () => {
 
     describe("clearFile() removes Navigation symbols", () => {
         it("should remove Navigation symbols from search", () => {
-            index.updateFile(URI_A, [createSymbol("proc_a")]);
-            index.updateFile(URI_B, [createSymbol("proc_b", { uri: URI_B })]);
+            index.updateFile(normalizeUri(URI_A), [createSymbol("proc_a")]);
+            index.updateFile(normalizeUri(URI_B), [createSymbol("proc_b", { uri: URI_B })]);
 
-            index.clearFile(URI_A);
+            index.clearFile(normalizeUri(URI_A));
 
             const results = index.searchWorkspaceSymbols("");
             expect(results).toHaveLength(1);

@@ -22,6 +22,7 @@ import { parseFile } from "../../src/fallout-ssl/header-parser";
 import { FileIndex } from "../../src/core/file-index";
 import { SyntaxType } from "../../src/fallout-ssl/tree-sitter.d";
 import { loadFixture, loadFixtures, findIdentifierPosition, FALLOUT_FIXTURES } from "./test-helpers";
+import { normalizeUri } from "../../src/core/normalized-uri";
 
 const RP_BASE = join(FALLOUT_FIXTURES, "Fallout2_Restoration_Project/scripts_src");
 const TWEAKS_BASE = join(FALLOUT_FIXTURES, "FO2tweaks");
@@ -428,7 +429,7 @@ describe("fallout-ssl integration", () => {
             const fileIndex = new FileIndex();
             for (const { uri, text } of files.values()) {
                 const result = parseFile(uri, text);
-                fileIndex.updateFile(uri, result);
+                fileIndex.updateFile(normalizeUri(uri), result);
             }
 
             const results = fileIndex.symbols.searchWorkspaceSymbols("WORLDMAP");
@@ -445,7 +446,7 @@ describe("fallout-ssl integration", () => {
             const fileIndex = new FileIndex();
             for (const { uri, text } of files.values()) {
                 const result = parseFile(uri, text);
-                fileIndex.updateFile(uri, result);
+                fileIndex.updateFile(normalizeUri(uri), result);
             }
 
             const results = fileIndex.symbols.searchWorkspaceSymbols("");

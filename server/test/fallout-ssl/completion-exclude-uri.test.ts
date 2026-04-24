@@ -7,6 +7,7 @@ import { describe, expect, it, beforeAll, vi } from "vitest";
 import type { CompletionItem } from "vscode-languageserver/node";
 import { type IndexedSymbol, SourceType } from "../../src/core/symbol";
 import { FileIndex } from "../../src/core/file-index";
+import { normalizeUri } from "../../src/core/normalized-uri";
 
 vi.mock("../../src/lsp-connection", () => ({
     getConnection: () => ({
@@ -45,8 +46,8 @@ describe("SSL getCompletions excludeUri", () => {
         const headerA = "file:///headers/a.h";
         const headerB = "file:///headers/b.h";
 
-        fileIndex.symbols.updateFile(headerA, [createSymbol("func_a", headerA)]);
-        fileIndex.symbols.updateFile(headerB, [createSymbol("func_b", headerB)]);
+        fileIndex.symbols.updateFile(normalizeUri(headerA), [createSymbol("func_a", headerA)]);
+        fileIndex.symbols.updateFile(normalizeUri(headerB), [createSymbol("func_b", headerB)]);
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test-only: inject mock fileIndex
         (provider as any).fileIndex = fileIndex;
@@ -63,7 +64,7 @@ describe("SSL getCompletions excludeUri", () => {
         const headerA = "file:///headers/a.h";
 
         fileIndex.loadStatic([createSymbol("builtin_func", null)]);
-        fileIndex.symbols.updateFile(headerA, [createSymbol("func_a", headerA)]);
+        fileIndex.symbols.updateFile(normalizeUri(headerA), [createSymbol("func_a", headerA)]);
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test-only: inject mock fileIndex
         (provider as any).fileIndex = fileIndex;

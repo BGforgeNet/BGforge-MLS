@@ -21,6 +21,7 @@ import { createFoldingRangesProvider } from "../../src/shared/folding-ranges";
 import { SyntaxType } from "../../src/weidu-tp2/tree-sitter.d";
 import { FileIndex } from "../../src/core/file-index";
 import { loadFixture, loadFixtures, findIdentifierPosition, IE_FIXTURES } from "./test-helpers";
+import { normalizeUri } from "../../src/core/normalized-uri";
 
 const TNT_BASE = join(IE_FIXTURES, "bg2-tweaks-and-tricks");
 const RR_BASE = join(IE_FIXTURES, "rr");
@@ -222,7 +223,7 @@ describe("weidu-tp2 integration", () => {
             const fileIndex = new FileIndex();
             for (const { uri, text } of files.values()) {
                 const result = parseFile(uri, text);
-                fileIndex.updateFile(uri, result);
+                fileIndex.updateFile(normalizeUri(uri), result);
             }
 
             const results = fileIndex.symbols.searchWorkspaceSymbols("unstack");
@@ -238,7 +239,7 @@ describe("weidu-tp2 integration", () => {
             const fileIndex = new FileIndex();
             for (const { uri, text } of allFiles.values()) {
                 const result = parseFile(uri, text);
-                fileIndex.updateFile(uri, result);
+                fileIndex.updateFile(normalizeUri(uri), result);
             }
 
             const results = fileIndex.symbols.searchWorkspaceSymbols("");

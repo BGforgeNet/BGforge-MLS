@@ -19,6 +19,7 @@ import { SyntaxType } from "../../src/weidu-d/tree-sitter.d";
 import { FileIndex } from "../../src/core/file-index";
 import { parseFile } from "../../src/weidu-d/file-parser";
 import { loadFixture, findIdentifierPosition, IE_FIXTURES } from "./test-helpers";
+import { normalizeUri } from "../../src/core/normalized-uri";
 
 const BGT_BASE = join(IE_FIXTURES, "BGT-WeiDU");
 
@@ -176,7 +177,7 @@ describe("weidu-d integration", () => {
             const f = loadFixture(IE_FIXTURES, "Ascension/ascension/balthazar/d/balth.d");
 
             const fileIndex = new FileIndex();
-            fileIndex.updateFile(f.uri, parseFile(f.uri, f.text, IE_FIXTURES));
+            fileIndex.updateFile(normalizeUri(f.uri), parseFile(f.uri, f.text, IE_FIXTURES));
 
             const results = fileIndex.symbols.searchWorkspaceSymbols("a39");
             expect(results.length).toBeGreaterThan(0);
@@ -188,8 +189,8 @@ describe("weidu-d integration", () => {
             const second = loadFixture(IE_FIXTURES, "Ascension/ascension/balthazar/d/balth.d");
 
             const fileIndex = new FileIndex();
-            fileIndex.updateFile(first.uri, parseFile(first.uri, first.text, IE_FIXTURES));
-            fileIndex.updateFile(second.uri, parseFile(second.uri, second.text, IE_FIXTURES));
+            fileIndex.updateFile(normalizeUri(first.uri), parseFile(first.uri, first.text, IE_FIXTURES));
+            fileIndex.updateFile(normalizeUri(second.uri), parseFile(second.uri, second.text, IE_FIXTURES));
 
             const results = fileIndex.symbols.searchWorkspaceSymbols("");
             expect(results.length).toBeGreaterThan(100);
@@ -210,7 +211,7 @@ END
             const uri = "file:///test/multi-dialog.d";
 
             const fileIndex = new FileIndex();
-            fileIndex.updateFile(uri, parseFile(uri, text, "/test"));
+            fileIndex.updateFile(normalizeUri(uri), parseFile(uri, text, "/test"));
 
             const results = fileIndex.symbols.searchWorkspaceSymbols("0");
             expect(results).toHaveLength(2);

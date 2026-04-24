@@ -34,6 +34,7 @@ import { Symbols } from "../../src/core/symbol-index";
 import { FileIndex } from "../../src/core/file-index";
 import { pathToUri } from "../../src/common";
 import { isHeaderFile } from "../../src/core/location-utils";
+import { normalizeUri } from "../../src/core/normalized-uri";
 
 beforeAll(async () => {
     await initParser();
@@ -403,7 +404,7 @@ procedure main begin
 end
 `;
             const symbolStore = new Symbols();
-            symbolStore.updateFile(headerUri, [
+            symbolStore.updateFile(normalizeUri(headerUri), [
                 {
                     name: "helper",
                     kind: SymbolKind.Procedure,
@@ -478,7 +479,7 @@ procedure main begin
 end
 `;
             const symbolStore = new Symbols();
-            symbolStore.updateFile(externalUri, [
+            symbolStore.updateFile(normalizeUri(externalUri), [
                 {
                     name: "sfall_func",
                     kind: SymbolKind.Procedure,
@@ -833,8 +834,8 @@ procedure start begin
 end`;
 
             const refsIndex = new ReferencesIndex();
-            refsIndex.updateFile(headerUri, extractCallSites(headerText, headerUri));
-            refsIndex.updateFile(sslUri, extractCallSites(sslText, sslUri));
+            refsIndex.updateFile(normalizeUri(headerUri), extractCallSites(headerText, headerUri));
+            refsIndex.updateFile(normalizeUri(sslUri), extractCallSites(sslText, sslUri));
 
             const symbolStore = new Symbols();
 
@@ -895,8 +896,8 @@ end
 `;
 
             const refsIndex = new ReferencesIndex();
-            refsIndex.updateFile(headerUri, extractCallSites(headerText, headerUri));
-            refsIndex.updateFile(sslUri, extractCallSites(sslText, sslUri));
+            refsIndex.updateFile(normalizeUri(headerUri), extractCallSites(headerText, headerUri));
+            refsIndex.updateFile(normalizeUri(sslUri), extractCallSites(sslText, sslUri));
 
             // Empty symbol store (symbol is locally defined in header file)
             const symbolStore = new Symbols();
@@ -956,9 +957,9 @@ end
 `;
 
             const refsIndex = new ReferencesIndex();
-            refsIndex.updateFile(headerUri, extractCallSites(headerText, headerUri));
-            refsIndex.updateFile(ssl1Uri, extractCallSites(ssl1Text, ssl1Uri));
-            refsIndex.updateFile(ssl2Uri, extractCallSites(ssl2Text, ssl2Uri));
+            refsIndex.updateFile(normalizeUri(headerUri), extractCallSites(headerText, headerUri));
+            refsIndex.updateFile(normalizeUri(ssl1Uri), extractCallSites(ssl1Text, ssl1Uri));
+            refsIndex.updateFile(normalizeUri(ssl2Uri), extractCallSites(ssl2Text, ssl2Uri));
 
             const symbolStore = new Symbols();
 
@@ -994,10 +995,10 @@ end
 `;
 
             const refsIndex = new ReferencesIndex();
-            refsIndex.updateFile(sslUri, extractCallSites(sslText, sslUri));
+            refsIndex.updateFile(normalizeUri(sslUri), extractCallSites(sslText, sslUri));
 
             const symbolStore = new Symbols();
-            symbolStore.updateFile(externalUri, [
+            symbolStore.updateFile(normalizeUri(externalUri), [
                 {
                     name: "sfall_func",
                     kind: SymbolKind.Procedure,
@@ -1087,9 +1088,9 @@ end
 `;
 
             const refsIndex = new ReferencesIndex();
-            refsIndex.updateFile(headerUri, extractCallSites(headerText, headerUri));
-            refsIndex.updateFile(ssl1Uri, extractCallSites(ssl1Text, ssl1Uri));
-            refsIndex.updateFile(ssl2Uri, extractCallSites(ssl2Text, ssl2Uri));
+            refsIndex.updateFile(normalizeUri(headerUri), extractCallSites(headerText, headerUri));
+            refsIndex.updateFile(normalizeUri(ssl1Uri), extractCallSites(ssl1Text, ssl1Uri));
+            refsIndex.updateFile(normalizeUri(ssl2Uri), extractCallSites(ssl2Text, ssl2Uri));
 
             const symbolStore = new Symbols();
 
@@ -1133,8 +1134,8 @@ end
 `;
 
             const refsIndex = new ReferencesIndex();
-            refsIndex.updateFile(headerUri, extractCallSites(headerText, headerUri));
-            refsIndex.updateFile(sslUri, extractCallSites(sslText, sslUri));
+            refsIndex.updateFile(normalizeUri(headerUri), extractCallSites(headerText, headerUri));
+            refsIndex.updateFile(normalizeUri(sslUri), extractCallSites(sslText, sslUri));
 
             const symbolStore = new Symbols();
 
@@ -1180,12 +1181,12 @@ end
 `;
 
             const refsIndex = new ReferencesIndex();
-            refsIndex.updateFile(headerUri, extractCallSites(headerText, headerUri));
-            refsIndex.updateFile(sslUri, extractCallSites(sslText, sslUri));
+            refsIndex.updateFile(normalizeUri(headerUri), extractCallSites(headerText, headerUri));
+            refsIndex.updateFile(normalizeUri(sslUri), extractCallSites(sslText, sslUri));
 
             // Create symbol store with the header symbol so lookup works from reference site
             const symbolStore = new Symbols();
-            symbolStore.updateFile(headerUri, [
+            symbolStore.updateFile(normalizeUri(headerUri), [
                 {
                     name: "helper",
                     kind: SymbolKind.Procedure,
@@ -1242,9 +1243,9 @@ end
 `;
 
             const refsIndex = new ReferencesIndex();
-            refsIndex.updateFile(headerCUri, extractCallSites(headerCText, headerCUri));
-            refsIndex.updateFile(headerBUri, extractCallSites(headerBText, headerBUri));
-            refsIndex.updateFile(sslAUri, extractCallSites(sslAText, sslAUri));
+            refsIndex.updateFile(normalizeUri(headerCUri), extractCallSites(headerCText, headerCUri));
+            refsIndex.updateFile(normalizeUri(headerBUri), extractCallSites(headerBText, headerBUri));
+            refsIndex.updateFile(normalizeUri(sslAUri), extractCallSites(sslAText, sslAUri));
 
             const symbolStore = new Symbols();
 
@@ -1291,9 +1292,9 @@ end
 `;
 
             const refsIndex = new ReferencesIndex();
-            refsIndex.updateFile(globalHUri, extractCallSites(globalHText, globalHUri));
-            refsIndex.updateFile(denHUri, extractCallSites(denHText, denHUri));
-            refsIndex.updateFile(sslUri, extractCallSites(sslText, sslUri));
+            refsIndex.updateFile(normalizeUri(globalHUri), extractCallSites(globalHText, globalHUri));
+            refsIndex.updateFile(normalizeUri(denHUri), extractCallSites(denHText, denHUri));
+            refsIndex.updateFile(normalizeUri(sslUri), extractCallSites(sslText, sslUri));
 
             const symbolStore = new Symbols();
 
@@ -1335,10 +1336,10 @@ end
             const ssl2Text: string = readFileSync(join(fixtureBase, "den/dctyler.ssl"), "utf-8");
 
             const refsIndex = new ReferencesIndex();
-            refsIndex.updateFile(globalHUri, extractCallSites(globalHText, globalHUri));
-            refsIndex.updateFile(denHUri, extractCallSites(denHText, denHUri));
-            refsIndex.updateFile(ssl1Uri, extractCallSites(ssl1Text, ssl1Uri));
-            refsIndex.updateFile(ssl2Uri, extractCallSites(ssl2Text, ssl2Uri));
+            refsIndex.updateFile(normalizeUri(globalHUri), extractCallSites(globalHText, globalHUri));
+            refsIndex.updateFile(normalizeUri(denHUri), extractCallSites(denHText, denHUri));
+            refsIndex.updateFile(normalizeUri(ssl1Uri), extractCallSites(ssl1Text, ssl1Uri));
+            refsIndex.updateFile(normalizeUri(ssl2Uri), extractCallSites(ssl2Text, ssl2Uri));
 
             const symbolStore = new Symbols();
 
@@ -1412,7 +1413,7 @@ end
             for (const { uri, text } of Object.values(files)) {
                 const st = isHeaderFile(uri) ? SourceType.Workspace : SourceType.Navigation;
                 const result = parseFile(uri, text, fixtureBase, st);
-                fileIndex.updateFile(uri, result);
+                fileIndex.updateFile(normalizeUri(uri), result);
             }
 
             // Verify: GVAR_DEN_GANGWAR is in the refs index across all expected file types
@@ -1482,7 +1483,7 @@ end
             for (const { uri, text } of Object.values(files)) {
                 const st = isHeaderFile(uri) ? SourceType.Workspace : SourceType.Navigation;
                 const result = parseFile(uri, text, fixtureBase, st);
-                fileIndex.updateFile(uri, result);
+                fileIndex.updateFile(normalizeUri(uri), result);
             }
 
             // Find GVAR_DEN_GANGWAR as an actual identifier (not inside a string literal)

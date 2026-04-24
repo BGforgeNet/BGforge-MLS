@@ -28,6 +28,7 @@ import { parseFile } from "../../src/weidu-tp2/header-parser";
 const parseHeaderToSymbols = (...args: Parameters<typeof parseFile>) => [...parseFile(...args).symbols];
 import { initParser } from "../../src/weidu-tp2/parser";
 import { Symbols } from "../../src/core/symbol-index";
+import { normalizeUri } from "../../src/core/normalized-uri";
 import { isCallableSymbol } from "../../src/core/symbol";
 
 // Initialize tree-sitter parser before tests (required for header parsing)
@@ -62,7 +63,7 @@ END
         it("parses function parameters", () => {
             const uri = "file:///test.tph";
             const parsedSymbols = parseHeaderToSymbols(uri, testHeaderContent);
-            store.updateFile(uri, parsedSymbols);
+            store.updateFile(normalizeUri(uri), parsedSymbols);
 
             const func = store.lookup("unstack_armor_bonus");
             expect(func).toBeDefined();
@@ -78,7 +79,7 @@ END
         it("indexes multiple functions from same file", () => {
             const uri = "file:///test.tph";
             const parsedSymbols = parseHeaderToSymbols(uri, testHeaderContent);
-            store.updateFile(uri, parsedSymbols);
+            store.updateFile(normalizeUri(uri), parsedSymbols);
 
             expect(store.lookup("unstack_armor_bonus")).toBeDefined();
             expect(store.lookup("apply_bonus")).toBeDefined();
@@ -87,7 +88,7 @@ END
         it("preserves function location information", () => {
             const uri = "file:///test.tph";
             const parsedSymbols = parseHeaderToSymbols(uri, testHeaderContent);
-            store.updateFile(uri, parsedSymbols);
+            store.updateFile(normalizeUri(uri), parsedSymbols);
 
             const func = store.lookup("unstack_armor_bonus");
             expect(func?.location.uri).toBe(uri);
@@ -99,13 +100,13 @@ END
 
             // Index original content
             const parsedSymbols1 = parseHeaderToSymbols(uri, testHeaderContent);
-            store.updateFile(uri, parsedSymbols1);
+            store.updateFile(normalizeUri(uri), parsedSymbols1);
             expect(store.lookup("unstack_armor_bonus")).toBeDefined();
 
             // Update with new content
             const newContent = `DEFINE_ACTION_FUNCTION new_function BEGIN END`;
             const parsedSymbols2 = parseHeaderToSymbols(uri, newContent);
-            store.updateFile(uri, parsedSymbols2);
+            store.updateFile(normalizeUri(uri), parsedSymbols2);
 
             expect(store.lookup("unstack_armor_bonus")).toBeUndefined();
             expect(store.lookup("new_function")).toBeDefined();
@@ -116,11 +117,11 @@ END
 
             // Index file
             const parsedSymbols = parseHeaderToSymbols(uri, testHeaderContent);
-            store.updateFile(uri, parsedSymbols);
+            store.updateFile(normalizeUri(uri), parsedSymbols);
             expect(store.lookup("unstack_armor_bonus")).toBeDefined();
 
             // Clear file
-            store.clearFile(uri);
+            store.clearFile(normalizeUri(uri));
             expect(store.lookup("unstack_armor_bonus")).toBeUndefined();
         });
 
@@ -131,13 +132,13 @@ END
             const content2 = `DEFINE_ACTION_FUNCTION other_func BEGIN END`;
 
             const parsedSymbols1 = parseHeaderToSymbols(uri1, testHeaderContent);
-            store.updateFile(uri1, parsedSymbols1);
+            store.updateFile(normalizeUri(uri1), parsedSymbols1);
 
             const parsedSymbols2 = parseHeaderToSymbols(uri2, content2);
-            store.updateFile(uri2, parsedSymbols2);
+            store.updateFile(normalizeUri(uri2), parsedSymbols2);
 
             // Clear only first file
-            store.clearFile(uri1);
+            store.clearFile(normalizeUri(uri1));
 
             expect(store.lookup("unstack_armor_bonus")).toBeUndefined();
             expect(store.lookup("other_func")).toBeDefined();
@@ -162,7 +163,7 @@ END
             const uri = pathToFileURL(filePath).href;
             const text = fs.readFileSync(filePath, "utf8");
             const parsedSymbols = parseHeaderToSymbols(uri, text);
-            store.updateFile(uri, parsedSymbols);
+            store.updateFile(normalizeUri(uri), parsedSymbols);
 
             const func = store.lookup("unstack_armor_bonus");
             expect(func).toBeDefined();

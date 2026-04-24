@@ -16,6 +16,7 @@ vi.mock("../../src/server", () => ({
 
 import { initParser } from "../../src/weidu-tp2/parser";
 import { findReferences } from "../../src/weidu-tp2/references";
+import { normalizeUri } from "../../src/core/normalized-uri";
 
 const TEST_URI = "file:///test.tp2";
 
@@ -157,7 +158,7 @@ LAF my_func END
             };
 
             const index = new ReferencesIndex();
-            index.updateFile(otherUri, new Map([["my_func", [crossLoc]]]));
+            index.updateFile(normalizeUri(otherUri), new Map([["my_func", [crossLoc]]]));
 
             // cursor on definition
             const refs = findReferences(text, { line: 1, character: 23 }, TEST_URI, true, index);
@@ -179,7 +180,7 @@ LAF my_func END
 
             const index = new ReferencesIndex();
             // Same URI as TEST_URI — should be filtered out (loc.uri !== uri check)
-            index.updateFile(TEST_URI, new Map([["my_func", [selfLoc]]]));
+            index.updateFile(normalizeUri(TEST_URI), new Map([["my_func", [selfLoc]]]));
 
             const refs = findReferences(text, { line: 1, character: 23 }, TEST_URI, true, index);
             // Local refs only; cross-file entry with same URI excluded
@@ -195,7 +196,7 @@ OUTER_SET result = %my_var% + 1
             const otherUri = "file:///other.tp2" as const;
             const index = new ReferencesIndex();
             index.updateFile(
-                otherUri,
+                normalizeUri(otherUri),
                 new Map([
                     [
                         "my_var",

@@ -16,6 +16,7 @@ vi.mock("../../src/server", () => ({
 import { initParser } from "../../src/weidu-d/parser";
 import { findReferences } from "../../src/weidu-d/references";
 import { ReferencesIndex } from "../../src/shared/references-index";
+import { normalizeUri } from "../../src/core/normalized-uri";
 
 const TEST_URI = "file:///test.d";
 
@@ -176,7 +177,7 @@ BEGIN ~MYMOD~
             const OTHER_URI = "file:///other.d";
             const index = new ReferencesIndex();
             index.updateFile(
-                OTHER_URI,
+                normalizeUri(OTHER_URI),
                 new Map([
                     [
                         "other:missing_state",
@@ -212,7 +213,7 @@ BEGIN ~MYMOD~
             };
             const index = new ReferencesIndex();
             // "mymod:state1" key (normalizeDialogFile lowercases)
-            index.updateFile(OTHER_URI, new Map([["mymod:state1", [crossLoc]]]));
+            index.updateFile(normalizeUri(OTHER_URI), new Map([["mymod:state1", [crossLoc]]]));
 
             // cursor on "state1" definition — local definition exists
             const refs = findReferences(text, { line: 2, character: 28 }, TEST_URI, true, index);

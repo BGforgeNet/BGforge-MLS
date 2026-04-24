@@ -9,6 +9,7 @@ import { describe, expect, it, beforeEach } from "vitest";
 import { type Location } from "vscode-languageserver/node";
 import { Symbols } from "../../src/core/symbol-index";
 import { type IndexedSymbol, SymbolKind, ScopeLevel, SourceType } from "../../src/core/symbol";
+import { normalizeUri } from "../../src/core/normalized-uri";
 
 /**
  * Validates that a Location is suitable for VSCode navigation.
@@ -89,7 +90,7 @@ describe("Location validation", () => {
                 hover: { contents: { kind: "markdown", value: "User function" } },
             };
 
-            index.updateFile("file:///path/to/file.tph", [documentSymbol]);
+            index.updateFile(normalizeUri("file:///path/to/file.tph"), [documentSymbol]);
 
             const found = index.lookup("my_function");
             expect(found).toBeDefined();
@@ -139,7 +140,7 @@ describe("Location validation", () => {
                 hover: { contents: { kind: "markdown", value: "User function" } },
             };
 
-            index.updateFile("file:///path/to/file.tph", [documentSymbol]);
+            index.updateFile(normalizeUri("file:///path/to/file.tph"), [documentSymbol]);
 
             const definition = index.lookupDefinition("my_function");
             expect(definition).not.toBeNull();

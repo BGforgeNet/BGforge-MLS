@@ -29,6 +29,7 @@ import { defaultSettings } from "../../src/settings";
 import { CompletionCategory, type CompletionItemWithCategory } from "../../src/shared/completion-context";
 import { ScopeLevel, SourceType, SymbolKind, type ConstantSymbol } from "../../src/core/symbol";
 import * as path from "path";
+import { normalizeUri } from "../../src/core/normalized-uri";
 
 const HEADER_URI = "file:///test-snippet.tph";
 const STATIC_URI = "file:///test-static-keywords.tph";
@@ -113,7 +114,7 @@ END
     // Static JSON lives in server/out/ which isn't on the source path during tests,
     // so we access the private fileIndex.symbols directly to inject test-only keyword data.
     const store = (weiduTp2Provider as unknown as { fileIndex: { symbols: Symbols } }).fileIndex.symbols;
-    store.updateFile(STATIC_URI, [
+    store.updateFile(normalizeUri(STATIC_URI), [
         createKeywordSymbol("SET", CompletionCategory.Patch),
         createKeywordSymbol("SPRINT", CompletionCategory.Patch),
         createKeywordSymbol("TEXT_SPRINT", CompletionCategory.Patch),

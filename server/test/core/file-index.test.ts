@@ -8,6 +8,7 @@ import { Location, Range, Position } from "vscode-languageserver/node";
 import { FileIndex } from "../../src/core/file-index";
 import { type IndexedSymbol, SymbolKind, ScopeLevel, SourceType } from "../../src/core/symbol";
 import type { ParseResult } from "../../src/core/parse-result";
+import { normalizeUri } from "../../src/core/normalized-uri";
 
 function makeLoc(uri: string, line: number, char: number): Location {
     return Location.create(uri, Range.create(Position.create(line, char), Position.create(line, char + 5)));
@@ -34,10 +35,10 @@ describe("FileIndex", () => {
             refs: new Map([["my_proc", [makeLoc(uri, 1, 0), makeLoc(uri, 5, 0)]]]),
         };
 
-        index.updateFile(uri, result);
+        index.updateFile(normalizeUri(uri), result);
 
         // Symbols store was updated
-        expect(index.symbols.getFileSymbols(uri)).toHaveLength(1);
+        expect(index.symbols.getFileSymbols(normalizeUri(uri))).toHaveLength(1);
         expect(index.symbols.lookup("my_proc")).toBeDefined();
 
         // References store was updated
@@ -52,10 +53,10 @@ describe("FileIndex", () => {
             refs: new Map([["my_proc", [makeLoc(uri, 1, 0)]]]),
         };
 
-        index.updateFile(uri, result);
-        index.removeFile(uri);
+        index.updateFile(normalizeUri(uri), result);
+        index.removeFile(normalizeUri(uri));
 
-        expect(index.symbols.getFileSymbols(uri)).toHaveLength(0);
+        expect(index.symbols.getFileSymbols(normalizeUri(uri))).toHaveLength(0);
         expect(index.refs.lookup("my_proc")).toHaveLength(0);
     });
 
@@ -72,12 +73,12 @@ describe("FileIndex", () => {
         const index = new FileIndex();
         const uri = "file:///a.ssl";
 
-        index.updateFile(uri, {
+        index.updateFile(normalizeUri(uri), {
             symbols: [makeSymbol("old_func", uri)],
             refs: new Map([["old_func", [makeLoc(uri, 1, 0)]]]),
         });
 
-        index.updateFile(uri, {
+        index.updateFile(normalizeUri(uri), {
             symbols: [makeSymbol("new_func", uri)],
             refs: new Map([["new_func", [makeLoc(uri, 2, 0)]]]),
         });

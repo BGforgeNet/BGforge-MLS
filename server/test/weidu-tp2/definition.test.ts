@@ -25,6 +25,7 @@ import { parseFile } from "../../src/weidu-tp2/header-parser";
 /** Extract symbols only (convenience wrapper). */
 const parseHeaderToSymbols = (...args: Parameters<typeof parseFile>) => [...parseFile(...args).symbols];
 import { Symbols } from "../../src/core/symbol-index";
+import { normalizeUri } from "../../src/core/normalized-uri";
 
 beforeAll(async () => {
     await initParser();
@@ -455,7 +456,7 @@ LAF my_func INT_VAR bonus = test2 END
 OUTER_SET parameter2 = 999
 `;
         const symbols = parseHeaderToSymbols(headerUri, headerText);
-        mockSymbols.updateFile(headerUri, symbols);
+        mockSymbols.updateFile(normalizeUri(headerUri), symbols);
 
         // Call an unknown function with a parameter that matches the indexed variable
         const text = `LPF unknown_func
@@ -549,7 +550,7 @@ OUTER_SET test_var = 100
         // Populate the Symbols as if header file was indexed
         const mockSymbols = new Symbols();
         const symbols = parseHeaderToSymbols(headerUri, headerText);
-        mockSymbols.updateFile(headerUri, symbols);
+        mockSymbols.updateFile(normalizeUri(headerUri), symbols);
 
         // Cursor on "test_var" in %test_var%
         const position: Position = { line: 2, character: 21 };
@@ -576,7 +577,7 @@ OUTER_SET result = %my_var% + 1
 OUTER_SET my_var = 1
 `;
         const symbols = parseHeaderToSymbols(headerUri, headerText);
-        mockSymbols.updateFile(headerUri, symbols);
+        mockSymbols.updateFile(normalizeUri(headerUri), symbols);
 
         // Cursor on "my_var" in %my_var%
         const position: Position = { line: 3, character: 21 };
@@ -650,7 +651,7 @@ BEGIN
 END
 `;
         const symbols = parseHeaderToSymbols(headerUri, headerText);
-        mockSymbols.updateFile(headerUri, symbols);
+        mockSymbols.updateFile(normalizeUri(headerUri), symbols);
 
         const text = `COPY_EXISTING ~item.itm~ ~override~
     LPF my_patch_func END

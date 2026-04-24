@@ -64,6 +64,7 @@ vi.mock("../../src/sslc/ssl_compiler", () => ({
 
 import { compile, TMP_SSL_NAME, _resetCompilerCache } from "../../src/fallout-ssl/compiler";
 import type { SSLsettings } from "../../src/settings";
+import { normalizeUri } from "../../src/core/normalized-uri";
 
 describe("fallout-ssl compiler", () => {
     beforeEach(() => {
@@ -91,14 +92,14 @@ describe("fallout-ssl compiler", () => {
 
     describe("extension validation", () => {
         it("rejects non-.ssl files silently in non-interactive mode", async () => {
-            await compile("file:///test.txt", baseSettings, false, "content");
+            await compile(normalizeUri("file:///test.txt"), baseSettings, false, "content");
 
             expect(mockWriteFile).not.toHaveBeenCalled();
             expect(mockShowInfo).not.toHaveBeenCalled();
         });
 
         it("shows message for non-.ssl files in interactive mode", async () => {
-            await compile("file:///test.txt", baseSettings, true, "content");
+            await compile(normalizeUri("file:///test.txt"), baseSettings, true, "content");
 
             expect(mockWriteFile).not.toHaveBeenCalled();
             expect(mockShowInfo).toHaveBeenCalledWith(expect.stringContaining("Fallout SSL file"));
@@ -107,13 +108,13 @@ describe("fallout-ssl compiler", () => {
 
     describe("tmp file lifecycle", () => {
         it("writes text to .tmp.ssl using async fs.promises.writeFile", async () => {
-            await compile("file:///project/test.ssl", baseSettings, false, "script code");
+            await compile(normalizeUri("file:///project/test.ssl"), baseSettings, false, "script code");
 
             expect(mockWriteFile).toHaveBeenCalledWith(expect.stringContaining(TMP_SSL_NAME), "script code");
         });
 
         it("writes tmp file in the same directory as source (for include resolution)", async () => {
-            await compile("file:///project/scripts/test.ssl", baseSettings, false, "code");
+            await compile(normalizeUri("file:///project/scripts/test.ssl"), baseSettings, false, "code");
 
             const writtenPath = mockWriteFile.mock.calls[0][0] as string;
             expect(writtenPath).toMatch(/\/project\/scripts\/\.tmp\.ssl$/);
@@ -122,7 +123,7 @@ describe("fallout-ssl compiler", () => {
         it("cleans up tmp file after successful built-in compilation", async () => {
             mockBuiltinCompiler.mockResolvedValue({ stdout: "", returnCode: 0 });
 
-            await compile("file:///project/test.ssl", baseSettings, false, "code");
+            await compile(normalizeUri("file:///project/test.ssl"), baseSettings, false, "code");
 
             expect(mockUnlink).toHaveBeenCalledWith(expect.stringContaining(TMP_SSL_NAME));
         });
@@ -130,7 +131,7 @@ describe("fallout-ssl compiler", () => {
         it("cleans up validation-only .int files from temp dir", async () => {
             const settings = { ...baseSettings, compileOnValidate: false };
 
-            await compile("file:///project/test.ssl", settings, false, "code");
+            await compile(normalizeUri("file:///project/test.ssl"), settings, false, "code");
 
             expect(mockUnlink).toHaveBeenCalledWith(expect.stringMatching(/bgforge-mls\/tmp-[0-9a-f]{8}-test\.int$/));
         });
@@ -138,7 +139,7 @@ describe("fallout-ssl compiler", () => {
         it("cleans up tmp file even when built-in compiler throws", async () => {
             mockBuiltinCompiler.mockRejectedValue(new Error("WASM crash"));
 
-            await expect(compile("file:///project/test.ssl", baseSettings, false, "code")).rejects.toThrow(
+            await expect(compile(normalizeUri("file:///project/test.ssl"), baseSettings, false, "code")).rejects.toThrow(
                 "WASM crash",
             );
 
@@ -163,7 +164,7 @@ describe("fallout-ssl compiler", () => {
                 }
             });
 
-            await compile("file:///project/test.ssl", externalSettings, false, "code");
+            await compile(normalizeUri("file:///project/test.ssl"), externalSettings, false, "code");
 
             expect(mockUnlink).toHaveBeenCalledWith(expect.stringContaining(TMP_SSL_NAME));
         });
@@ -186,7 +187,7 @@ describe("fallout-ssl compiler", () => {
                 }
             });
 
-            await compile("file:///project/test.ssl", externalSettings, false, "code");
+            await compile(normalizeUri("file:///project/test.ssl"), externalSettings, false, "code");
 
             expect(mockUnlink).toHaveBeenCalledWith(expect.stringContaining(TMP_SSL_NAME));
         });
@@ -196,13 +197,13 @@ describe("fallout-ssl compiler", () => {
             mockUnlink.mockRejectedValue(enoent);
 
             // Should not throw
-            await compile("file:///project/test.ssl", baseSettings, false, "code");
+            await compile(normalizeUri("file:///project/test.ssl"), baseSettings, false, "code");
         });
 
         it("cleans up tmp file when writeFile throws", async () => {
             mockWriteFile.mockRejectedValue(new Error("ENOSPC"));
 
-            await expect(compile("file:///project/test.ssl", baseSettings, false, "code")).rejects.toThrow("ENOSPC");
+            await expect(compile(normalizeUri("file:///project/test.ssl"), baseSettings, false, "code")).rejects.toThrow("ENOSPC");
 
             expect(mockBuiltinCompiler).not.toHaveBeenCalled();
             expect(mockUnlink).toHaveBeenCalledWith(expect.stringContaining(TMP_SSL_NAME));
@@ -213,7 +214,7 @@ describe("fallout-ssl compiler", () => {
             mockUnlink.mockRejectedValue(eperm);
 
             // Should not throw — cleanup errors must not mask compiler results
-            await compile("file:///project/test.ssl", baseSettings, false, "code");
+            await compile(normalizeUri("file:///project/test.ssl"), baseSettings, false, "code");
 
             // Diagnostics should still have been sent despite cleanup failure
             expect(mockSendParseResult).toHaveBeenCalled();
@@ -224,7 +225,7 @@ describe("fallout-ssl compiler", () => {
         it("passes correct options to built-in compiler", async () => {
             const settings = { ...baseSettings, compileOptions: "-O2 -p" };
 
-            await compile("file:///project/test.ssl", settings, true, "code");
+            await compile(normalizeUri("file:///project/test.ssl"), settings, true, "code");
 
             expect(mockBuiltinCompiler).toHaveBeenCalledWith(
                 expect.objectContaining({
@@ -240,7 +241,7 @@ describe("fallout-ssl compiler", () => {
         it("writes validation output to temp dir when compileOnValidate is disabled", async () => {
             const settings = { ...baseSettings, compileOnValidate: false };
 
-            await compile("file:///project/test.ssl", settings, false, "code");
+            await compile(normalizeUri("file:///project/test.ssl"), settings, false, "code");
 
             expect(mockBuiltinCompiler).toHaveBeenCalledWith(
                 expect.objectContaining({
@@ -252,7 +253,7 @@ describe("fallout-ssl compiler", () => {
         it("keeps explicit compile writing to outputDirectory when compileOnValidate is disabled", async () => {
             const settings = { ...baseSettings, compileOnValidate: false };
 
-            await compile("file:///project/test.ssl", settings, true, "code");
+            await compile(normalizeUri("file:///project/test.ssl"), settings, true, "code");
 
             expect(mockBuiltinCompiler).toHaveBeenCalledWith(
                 expect.objectContaining({
@@ -264,7 +265,7 @@ describe("fallout-ssl compiler", () => {
         it("shows success message on returnCode 0 in interactive mode", async () => {
             mockBuiltinCompiler.mockResolvedValue({ stdout: "", returnCode: 0 });
 
-            await compile("file:///project/test.ssl", baseSettings, true, "code");
+            await compile(normalizeUri("file:///project/test.ssl"), baseSettings, true, "code");
 
             expect(mockShowInfo).toHaveBeenCalledWith(expect.stringContaining("Compiled test.ssl"));
         });
@@ -272,7 +273,7 @@ describe("fallout-ssl compiler", () => {
         it("shows error message on non-zero returnCode in interactive mode", async () => {
             mockBuiltinCompiler.mockResolvedValue({ stdout: "error output", returnCode: 1 });
 
-            await compile("file:///project/test.ssl", baseSettings, true, "code");
+            await compile(normalizeUri("file:///project/test.ssl"), baseSettings, true, "code");
 
             expect(mockShowError).toHaveBeenCalledWith(expect.stringContaining("Failed to compile test.ssl"));
         });
@@ -280,7 +281,7 @@ describe("fallout-ssl compiler", () => {
         it("sends diagnostics after compilation", async () => {
             mockBuiltinCompiler.mockResolvedValue({ stdout: "compiler output", returnCode: 0 });
 
-            await compile("file:///project/test.ssl", baseSettings, false, "code");
+            await compile(normalizeUri("file:///project/test.ssl"), baseSettings, false, "code");
 
             expect(mockSendParseResult).toHaveBeenCalledWith(
                 expect.objectContaining({ errors: expect.any(Array), warnings: expect.any(Array) }),
@@ -294,7 +295,7 @@ describe("fallout-ssl compiler", () => {
             const warningOutput = "[Warning] <test.ssl>:5:10: Unused variable x";
             mockBuiltinCompiler.mockResolvedValue({ stdout: warningOutput, returnCode: 0 });
 
-            await compile("file:///project/test.ssl", baseSettings, false, "code");
+            await compile(normalizeUri("file:///project/test.ssl"), baseSettings, false, "code");
 
             expect(mockSendParseResult).toHaveBeenCalledWith(
                 expect.objectContaining({
@@ -310,7 +311,7 @@ describe("fallout-ssl compiler", () => {
             const errorOutput = "[Error] <test.ssl>:3:8: Expecting top-level statement";
             mockBuiltinCompiler.mockResolvedValue({ stdout: errorOutput, returnCode: 1 });
 
-            await compile("file:///project/test.ssl", baseSettings, false, "code");
+            await compile(normalizeUri("file:///project/test.ssl"), baseSettings, false, "code");
 
             expect(mockSendParseResult).toHaveBeenCalledWith(
                 expect.objectContaining({
@@ -363,7 +364,7 @@ describe("fallout-ssl compiler", () => {
             });
 
             let resolved = false;
-            const promise = compile("file:///project/test.ssl", externalSettings, false, "code").then(() => {
+            const promise = compile(normalizeUri("file:///project/test.ssl"), externalSettings, false, "code").then(() => {
                 resolved = true;
             });
 
@@ -383,7 +384,7 @@ describe("fallout-ssl compiler", () => {
         it("passes compile options as separate args", async () => {
             const settings = { ...externalSettings, compileOptions: "-O2 -p" };
 
-            await compile("file:///project/test.ssl", settings, false, "code");
+            await compile(normalizeUri("file:///project/test.ssl"), settings, false, "code");
 
             // Find the actual compile call (not the --version check)
             const compileCalls = mockExecFile.mock.calls.filter(
@@ -398,7 +399,7 @@ describe("fallout-ssl compiler", () => {
         it("writes validation output to temp dir when compileOnValidate is disabled", async () => {
             const settings = { ...externalSettings, compileOnValidate: false };
 
-            await compile("file:///project/test.ssl", settings, false, "code");
+            await compile(normalizeUri("file:///project/test.ssl"), settings, false, "code");
 
             const compileCall = mockExecFile.mock.calls.find(
                 (call: unknown[]) => !(call[1] as string[]).some((a: string) => a === "--version"),
@@ -410,7 +411,7 @@ describe("fallout-ssl compiler", () => {
         });
 
         it("shows success message in interactive mode", async () => {
-            await compile("file:///project/test.ssl", externalSettings, true, "code");
+            await compile(normalizeUri("file:///project/test.ssl"), externalSettings, true, "code");
 
             expect(mockShowInfo).toHaveBeenCalledWith(expect.stringContaining("Compiled test.ssl"));
         });
@@ -432,7 +433,7 @@ describe("fallout-ssl compiler", () => {
                 }
             });
 
-            await compile("file:///project/test.ssl", externalSettings, true, "code");
+            await compile(normalizeUri("file:///project/test.ssl"), externalSettings, true, "code");
 
             expect(mockShowError).toHaveBeenCalledWith(expect.stringContaining("Failed to compile test.ssl"));
         });
@@ -454,7 +455,7 @@ describe("fallout-ssl compiler", () => {
             });
             mockShowErrorWithActions.mockResolvedValue({ id: "switch" });
 
-            await compile("file:///project/test.ssl", externalSettings, true, "code");
+            await compile(normalizeUri("file:///project/test.ssl"), externalSettings, true, "code");
 
             expect(mockShowErrorWithActions).toHaveBeenCalledWith(
                 "Failed to run 'compile'! Switch to built-in compiler?",
@@ -475,7 +476,7 @@ describe("fallout-ssl compiler", () => {
                 }
             });
 
-            await compile("file:///project/test.ssl", externalSettings, false, "code");
+            await compile(normalizeUri("file:///project/test.ssl"), externalSettings, false, "code");
 
             expect(mockShowErrorWithActions).not.toHaveBeenCalled();
             expect(mockBuiltinCompiler).toHaveBeenCalled();
@@ -490,7 +491,7 @@ describe("fallout-ssl compiler", () => {
             });
             mockShowErrorWithActions.mockResolvedValue({ id: "cancel" });
 
-            await compile("file:///project/test.ssl", externalSettings, true, "code");
+            await compile(normalizeUri("file:///project/test.ssl"), externalSettings, true, "code");
 
             expect(mockBuiltinCompiler).not.toHaveBeenCalled();
             // Should not attempt external compile either (only the --version check)
@@ -508,7 +509,7 @@ describe("fallout-ssl compiler", () => {
             });
             mockShowErrorWithActions.mockResolvedValue(undefined);
 
-            await compile("file:///project/test.ssl", externalSettings, true, "code");
+            await compile(normalizeUri("file:///project/test.ssl"), externalSettings, true, "code");
 
             expect(mockBuiltinCompiler).not.toHaveBeenCalled();
             expect(mockExecFile).toHaveBeenCalledTimes(1);
@@ -529,11 +530,11 @@ describe("fallout-ssl compiler", () => {
                 }
             });
 
-            await compile("file:///project/test.ssl", externalSettings, false, "code");
+            await compile(normalizeUri("file:///project/test.ssl"), externalSettings, false, "code");
             const firstCallCount = mockExecFile.mock.calls.length;
 
             // Second call should skip the --version check (cached path)
-            await compile("file:///project/test.ssl", externalSettings, false, "code");
+            await compile(normalizeUri("file:///project/test.ssl"), externalSettings, false, "code");
             const secondCallCount = mockExecFile.mock.calls.length - firstCallCount;
 
             // Only one call in the second compile: the actual compile, no --version
@@ -553,7 +554,7 @@ describe("fallout-ssl compiler", () => {
             mockBuiltinCompiler.mockResolvedValue({ stdout: "", returnCode: 0 });
 
             // Should not throw — sendRequest failure is logged and swallowed
-            await compile("file:///project/test.ssl", externalSettings, true, "code");
+            await compile(normalizeUri("file:///project/test.ssl"), externalSettings, true, "code");
 
             expect(mockBuiltinCompiler).toHaveBeenCalled();
         });
@@ -574,8 +575,8 @@ describe("fallout-ssl compiler", () => {
                 return { stdout: "", returnCode: 0 };
             });
 
-            const first = compile("file:///project/test.ssl", baseSettings, false, "code");
-            const second = compile("file:///project/test.ssl", baseSettings, false, "code");
+            const first = compile(normalizeUri("file:///project/test.ssl"), baseSettings, false, "code");
+            const second = compile(normalizeUri("file:///project/test.ssl"), baseSettings, false, "code");
             await Promise.all([first, second]);
 
             // Second compile always sends diagnostics; total calls >= 1

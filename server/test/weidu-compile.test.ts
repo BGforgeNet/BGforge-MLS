@@ -52,6 +52,7 @@ vi.mock("../src/user-messages", () => ({
 
 import { compile } from "../src/weidu-compile";
 import type { WeiDUsettings } from "../src/settings";
+import { normalizeUri } from "../src/core/normalized-uri";
 
 describe("weidu-compile", () => {
     beforeEach(() => {
@@ -77,7 +78,7 @@ describe("weidu-compile", () => {
 
     describe("compile() - extension validation", () => {
         it("rejects unsupported file extensions", async () => {
-            await compile("file:///test.txt", baseSettings, true, "content");
+            await compile(normalizeUri("file:///test.txt"), baseSettings, true, "content");
 
             expect(mockExecFile).not.toHaveBeenCalled();
             expect(mockShowInfo).toHaveBeenCalledWith(expect.stringContaining("Focus a WeiDU file to parse!"));
@@ -85,7 +86,7 @@ describe("weidu-compile", () => {
 
         it("rejects .d without game path", async () => {
             const noGameSettings: WeiDUsettings = { path: "/usr/bin/weidu", gamePath: "" };
-            await compile("file:///test.d", noGameSettings, true, "content");
+            await compile(normalizeUri("file:///test.d"), noGameSettings, true, "content");
 
             expect(mockExecFile).not.toHaveBeenCalled();
             expect(mockShowWarning).toHaveBeenCalledWith(expect.stringContaining("can't parse D or BAF"));
@@ -93,7 +94,7 @@ describe("weidu-compile", () => {
 
         it("rejects .baf without game path", async () => {
             const noGameSettings: WeiDUsettings = { path: "/usr/bin/weidu", gamePath: "" };
-            await compile("file:///test.baf", noGameSettings, true, "content");
+            await compile(normalizeUri("file:///test.baf"), noGameSettings, true, "content");
 
             expect(mockExecFile).not.toHaveBeenCalled();
             expect(mockShowWarning).toHaveBeenCalled();
@@ -102,7 +103,7 @@ describe("weidu-compile", () => {
         it("allows .tp2 without game path (uses --nogame)", async () => {
             const noGameSettings: WeiDUsettings = { path: "/usr/bin/weidu", gamePath: "" };
             setupExecFile(null, "OK");
-            await compile("file:///test.tp2", noGameSettings, false, "content");
+            await compile(normalizeUri("file:///test.tp2"), noGameSettings, false, "content");
 
             expect(mockExecFile).toHaveBeenCalled();
             const args = mockExecFile.mock.calls[0][1] as string[];
@@ -111,7 +112,7 @@ describe("weidu-compile", () => {
 
         it("dispatches valid .tp2 extension", async () => {
             setupExecFile(null, "OK");
-            await compile("file:///test.tp2", baseSettings, false, "content");
+            await compile(normalizeUri("file:///test.tp2"), baseSettings, false, "content");
 
             expect(mockExecFile).toHaveBeenCalled();
             const args = mockExecFile.mock.calls[0][1] as string[];
@@ -120,7 +121,7 @@ describe("weidu-compile", () => {
 
         it("dispatches valid .d extension with game path", async () => {
             setupExecFile(null, "OK");
-            await compile("file:///test.d", baseSettings, false, "content");
+            await compile(normalizeUri("file:///test.d"), baseSettings, false, "content");
 
             expect(mockExecFile).toHaveBeenCalled();
             const args = mockExecFile.mock.calls[0][1] as string[];
@@ -129,7 +130,7 @@ describe("weidu-compile", () => {
 
         it("dispatches valid .baf extension with game path", async () => {
             setupExecFile(null, "OK");
-            await compile("file:///test.baf", baseSettings, false, "content");
+            await compile(normalizeUri("file:///test.baf"), baseSettings, false, "content");
 
             expect(mockExecFile).toHaveBeenCalled();
             const args = mockExecFile.mock.calls[0][1] as string[];
@@ -138,7 +139,7 @@ describe("weidu-compile", () => {
 
         it("dispatches .tpa as tpa type", async () => {
             setupExecFile(null, "OK");
-            await compile("file:///test.tpa", baseSettings, false, "content");
+            await compile(normalizeUri("file:///test.tpa"), baseSettings, false, "content");
 
             expect(mockExecFile).toHaveBeenCalled();
             const args = mockExecFile.mock.calls[0][1] as string[];
@@ -147,7 +148,7 @@ describe("weidu-compile", () => {
 
         it("dispatches .tph as tpa type", async () => {
             setupExecFile(null, "OK");
-            await compile("file:///test.tph", baseSettings, false, "content");
+            await compile(normalizeUri("file:///test.tph"), baseSettings, false, "content");
 
             expect(mockExecFile).toHaveBeenCalled();
             const args = mockExecFile.mock.calls[0][1] as string[];
@@ -156,7 +157,7 @@ describe("weidu-compile", () => {
 
         it("dispatches .tpp as tpp type", async () => {
             setupExecFile(null, "OK");
-            await compile("file:///test.tpp", baseSettings, false, "content");
+            await compile(normalizeUri("file:///test.tpp"), baseSettings, false, "content");
 
             expect(mockExecFile).toHaveBeenCalled();
             const args = mockExecFile.mock.calls[0][1] as string[];
@@ -170,7 +171,7 @@ describe("weidu-compile", () => {
         });
 
         it("includes --game flag when gamePath is set", async () => {
-            await compile("file:///test.tp2", baseSettings, false, "content");
+            await compile(normalizeUri("file:///test.tp2"), baseSettings, false, "content");
 
             const args = mockExecFile.mock.calls[0][1] as string[];
             expect(args).toContain("--game");
@@ -178,7 +179,7 @@ describe("weidu-compile", () => {
         });
 
         it("includes standard weidu flags", async () => {
-            await compile("file:///test.tp2", baseSettings, false, "content");
+            await compile(normalizeUri("file:///test.tp2"), baseSettings, false, "content");
 
             const args = mockExecFile.mock.calls[0][1] as string[];
             expect(args).toContain("--no-exit-pause");
@@ -188,7 +189,7 @@ describe("weidu-compile", () => {
         });
 
         it("writes text to temp file before executing", async () => {
-            await compile("file:///test.tp2", baseSettings, false, "my content");
+            await compile(normalizeUri("file:///test.tp2"), baseSettings, false, "my content");
 
             expect(mockWriteFile).toHaveBeenCalledWith(expect.stringMatching(/\.tp2$/), "my content");
         });
@@ -200,8 +201,8 @@ describe("weidu-compile", () => {
         });
 
         it("uses different tmp filenames for different URIs", async () => {
-            await compile("file:///project/a.tp2", baseSettings, false, "content a");
-            await compile("file:///project/b.tp2", baseSettings, false, "content b");
+            await compile(normalizeUri("file:///project/a.tp2"), baseSettings, false, "content a");
+            await compile(normalizeUri("file:///project/b.tp2"), baseSettings, false, "content b");
 
             const pathA = mockWriteFile.mock.calls[0][0] as string;
             const pathB = mockWriteFile.mock.calls[1][0] as string;
@@ -209,15 +210,15 @@ describe("weidu-compile", () => {
         });
 
         it("preserves the original file extension in tmp filename", async () => {
-            await compile("file:///test.tp2", baseSettings, false, "content");
+            await compile(normalizeUri("file:///test.tp2"), baseSettings, false, "content");
 
             const tmpPath = mockWriteFile.mock.calls[0][0] as string;
             expect(tmpPath).toMatch(/\.tp2$/);
         });
 
         it("uses the same tmp filename for the same URI", async () => {
-            await compile("file:///test.tp2", baseSettings, false, "content 1");
-            await compile("file:///test.tp2", baseSettings, false, "content 2");
+            await compile(normalizeUri("file:///test.tp2"), baseSettings, false, "content 1");
+            await compile(normalizeUri("file:///test.tp2"), baseSettings, false, "content 2");
 
             const path1 = mockWriteFile.mock.calls[0][0] as string;
             const path2 = mockWriteFile.mock.calls[1][0] as string;
@@ -237,7 +238,7 @@ describe("weidu-compile", () => {
             });
 
             let resolved = false;
-            const promise = compile("file:///test.tp2", baseSettings, false, "content").then(() => {
+            const promise = compile(normalizeUri("file:///test.tp2"), baseSettings, false, "content").then(() => {
                 resolved = true;
             });
 
@@ -259,7 +260,7 @@ describe("weidu-compile", () => {
         it("cleans up tmp file after successful compilation", async () => {
             setupExecFile(null, "Parsing complete");
 
-            await compile("file:///test.tp2", baseSettings, false, "content");
+            await compile(normalizeUri("file:///test.tp2"), baseSettings, false, "content");
 
             expect(mockUnlink).toHaveBeenCalledWith(expect.stringMatching(/\.tp2$/));
         });
@@ -267,7 +268,7 @@ describe("weidu-compile", () => {
         it("cleans up tmp file even when compilation fails", async () => {
             setupExecFile({ code: 1 }, "[test.tp2]  ERROR at line 1 column 1-10");
 
-            await compile("file:///test.tp2", baseSettings, false, "content");
+            await compile(normalizeUri("file:///test.tp2"), baseSettings, false, "content");
 
             expect(mockUnlink).toHaveBeenCalledWith(expect.stringMatching(/\.tp2$/));
         });
@@ -278,13 +279,13 @@ describe("weidu-compile", () => {
             mockUnlink.mockRejectedValue(enoent);
 
             // Should not throw
-            await compile("file:///test.tp2", baseSettings, false, "content");
+            await compile(normalizeUri("file:///test.tp2"), baseSettings, false, "content");
         });
 
         it("cleans up tmp file when writeFile fails (partial write)", async () => {
             mockWriteFile.mockRejectedValue(new Error("ENOSPC"));
 
-            await expect(compile("file:///test.tp2", baseSettings, false, "content")).rejects.toThrow("ENOSPC");
+            await expect(compile(normalizeUri("file:///test.tp2"), baseSettings, false, "content")).rejects.toThrow("ENOSPC");
 
             expect(mockExecFile).not.toHaveBeenCalled();
             expect(mockUnlink).toHaveBeenCalledWith(expect.stringMatching(/\.tp2$/));
@@ -296,7 +297,7 @@ describe("weidu-compile", () => {
             mockUnlink.mockRejectedValue(eperm);
 
             // Should not throw — cleanup errors must not mask compiler results
-            await compile("file:///test.tp2", baseSettings, false, "content");
+            await compile(normalizeUri("file:///test.tp2"), baseSettings, false, "content");
 
             // Diagnostics should still have been sent despite cleanup failure
             expect(mockSendParseResult).toHaveBeenCalled();
@@ -307,7 +308,7 @@ describe("weidu-compile", () => {
         it("sends diagnostics on success (to clear stale errors)", async () => {
             setupExecFile(null, "Parsing complete. No errors.");
 
-            await compile("file:///test.tp2", baseSettings, false, "content");
+            await compile(normalizeUri("file:///test.tp2"), baseSettings, false, "content");
 
             expect(mockSendParseResult).toHaveBeenCalled();
         });
@@ -315,7 +316,7 @@ describe("weidu-compile", () => {
         it("sends diagnostics on error", async () => {
             setupExecFile({ code: 1 }, "[ua.tp2]  ERROR at line 30 column 1-63");
 
-            await compile("file:///test.tp2", baseSettings, true, "content");
+            await compile(normalizeUri("file:///test.tp2"), baseSettings, true, "content");
 
             expect(mockSendParseResult).toHaveBeenCalled();
         });
@@ -323,7 +324,7 @@ describe("weidu-compile", () => {
         it("parses standard error format from stdout", async () => {
             setupExecFile({ code: 1 }, "[ua.tp2]  ERROR at line 30 column 1-63");
 
-            await compile("file:///test.tp2", baseSettings, true, "content");
+            await compile(normalizeUri("file:///test.tp2"), baseSettings, true, "content");
 
             expect(mockSendParseResult).toHaveBeenCalled();
             const parseResult = mockSendParseResult.mock.calls[0][0];
@@ -334,7 +335,7 @@ describe("weidu-compile", () => {
         it("parses PARSE ERROR variant from stdout", async () => {
             setupExecFile({ code: 1 }, "[ua.tp2]  PARSE ERROR at line 15 column 5-20");
 
-            await compile("file:///test.tp2", baseSettings, true, "content");
+            await compile(normalizeUri("file:///test.tp2"), baseSettings, true, "content");
 
             expect(mockSendParseResult).toHaveBeenCalled();
             const parseResult = mockSendParseResult.mock.calls[0][0];
@@ -347,7 +348,7 @@ describe("weidu-compile", () => {
 
             setupExecFile({ code: 1 }, multiError);
 
-            await compile("file:///test.tp2", baseSettings, true, "content");
+            await compile(normalizeUri("file:///test.tp2"), baseSettings, true, "content");
 
             expect(mockSendParseResult).toHaveBeenCalled();
             const parseResult = mockSendParseResult.mock.calls[0][0];
@@ -365,7 +366,7 @@ describe("weidu-compile", () => {
 
             setupExecFile({ code: 1 }, dupeOutput);
 
-            await compile("file:///test.tpa", baseSettings, true, "content");
+            await compile(normalizeUri("file:///test.tpa"), baseSettings, true, "content");
 
             const parseResult = mockSendParseResult.mock.calls[0][0];
             expect(parseResult.errors).toHaveLength(1);
@@ -381,7 +382,7 @@ describe("weidu-compile", () => {
 
             setupExecFile({ code: 1 }, output);
 
-            await compile("file:///test.tp2", baseSettings, true, "content");
+            await compile(normalizeUri("file:///test.tp2"), baseSettings, true, "content");
 
             const msg = mockSendParseResult.mock.calls[0][0].errors[0].message;
             // WeiDU output preserved verbatim
@@ -401,7 +402,7 @@ describe("weidu-compile", () => {
 
             setupExecFile({ code: 1 }, output);
 
-            await compile("file:///test.tpa", baseSettings, true, "content");
+            await compile(normalizeUri("file:///test.tpa"), baseSettings, true, "content");
 
             const msg = mockSendParseResult.mock.calls[0][0].errors[0].message;
             expect(msg).toContain("Near Text: INCLUDE");
@@ -421,7 +422,7 @@ describe("weidu-compile", () => {
 
             setupExecFile({ code: 1 }, output);
 
-            await compile("file:///test.tp2", baseSettings, true, "content");
+            await compile(normalizeUri("file:///test.tp2"), baseSettings, true, "content");
 
             const parseResult = mockSendParseResult.mock.calls[0][0];
             expect(parseResult.errors).toHaveLength(1);
@@ -443,7 +444,7 @@ describe("weidu-compile", () => {
 
             setupExecFile({ code: 1 }, output);
 
-            await compile("file:///test.tpa", baseSettings, true, "content");
+            await compile(normalizeUri("file:///test.tpa"), baseSettings, true, "content");
 
             const parseResult = mockSendParseResult.mock.calls[0][0];
             expect(parseResult.errors).toHaveLength(1);
@@ -454,7 +455,7 @@ describe("weidu-compile", () => {
         it("detects errors with zero exit code when parse errors exist in stdout", async () => {
             setupExecFile(null, "[test.tp2]  ERROR at line 5 column 1-10");
 
-            await compile("file:///test.tp2", baseSettings, true, "content");
+            await compile(normalizeUri("file:///test.tp2"), baseSettings, true, "content");
 
             expect(mockSendParseResult).toHaveBeenCalled();
             expect(mockShowError).toHaveBeenCalled();
@@ -465,7 +466,7 @@ describe("weidu-compile", () => {
         it("creates fallback diagnostic with stdout when WeiDU fails but output has no error pattern", async () => {
             setupExecFile({ code: 1 }, "Some unexpected WeiDU output");
 
-            await compile("file:///test.tp2", baseSettings, false, "content");
+            await compile(normalizeUri("file:///test.tp2"), baseSettings, false, "content");
 
             expect(mockSendParseResult).toHaveBeenCalled();
             const parseResult = mockSendParseResult.mock.calls[0][0];
@@ -476,7 +477,7 @@ describe("weidu-compile", () => {
         it("creates fallback diagnostic with err.message when stdout is empty", async () => {
             setupExecFile({ code: 1, message: "Command failed" }, "");
 
-            await compile("file:///test.tp2", baseSettings, false, "content");
+            await compile(normalizeUri("file:///test.tp2"), baseSettings, false, "content");
 
             const parseResult = mockSendParseResult.mock.calls[0][0];
             expect(parseResult.errors).toHaveLength(1);
@@ -487,7 +488,7 @@ describe("weidu-compile", () => {
             // Node sets .code on ErrnoException (string) separately from ExecFileException .code (number)
             setupExecFile(Object.assign(new Error("spawn ENOENT"), { code: "ENOENT" }), "");
 
-            await compile("file:///test.tp2", baseSettings, true, "content");
+            await compile(normalizeUri("file:///test.tp2"), baseSettings, true, "content");
 
             expect(mockShowError).toHaveBeenCalledWith(expect.stringContaining("WeiDU not found"));
             expect(mockShowError).toHaveBeenCalledWith(expect.stringContaining("bgforge.mls.weidu.path"));
@@ -498,7 +499,7 @@ describe("weidu-compile", () => {
         it("does not create fallback when errors were successfully parsed", async () => {
             setupExecFile({ code: 1 }, "[test.tp2]  ERROR at line 5 column 1-10");
 
-            await compile("file:///test.tp2", baseSettings, false, "content");
+            await compile(normalizeUri("file:///test.tp2"), baseSettings, false, "content");
 
             const parseResult = mockSendParseResult.mock.calls[0][0];
             // Only the parsed error, no fallback
@@ -511,7 +512,7 @@ describe("weidu-compile", () => {
         it("shows success message in interactive mode", async () => {
             setupExecFile(null, "Parsing complete");
 
-            await compile("file:///test.tp2", baseSettings, true, "content");
+            await compile(normalizeUri("file:///test.tp2"), baseSettings, true, "content");
 
             expect(mockShowInfo).toHaveBeenCalledWith(expect.stringContaining("Successfully parsed"));
         });
@@ -519,7 +520,7 @@ describe("weidu-compile", () => {
         it("shows error message on failure in interactive mode", async () => {
             setupExecFile({ code: 1 }, "[ua.tp2]  ERROR at line 30 column 1-63");
 
-            await compile("file:///test.tp2", baseSettings, true, "content");
+            await compile(normalizeUri("file:///test.tp2"), baseSettings, true, "content");
 
             expect(mockShowError).toHaveBeenCalledWith(expect.stringContaining("Failed to parse"));
         });
@@ -527,7 +528,7 @@ describe("weidu-compile", () => {
         it("does not show messages when not interactive", async () => {
             setupExecFile(null, "Parsing complete");
 
-            await compile("file:///test.tp2", baseSettings, false, "content");
+            await compile(normalizeUri("file:///test.tp2"), baseSettings, false, "content");
 
             expect(mockShowInfo).not.toHaveBeenCalled();
             expect(mockShowError).not.toHaveBeenCalled();
