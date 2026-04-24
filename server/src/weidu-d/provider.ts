@@ -157,7 +157,7 @@ class WeiduDProvider
         return prepareRenameSymbol(text, position);
     }
 
-    rename(text: string, position: Position, newName: string, uri: string) {
+    async rename(text: string, position: Position, newName: string, uri: string) {
         return renameSymbol(text, position, newName, uri);
     }
 

@@ -16,6 +16,7 @@ import {
     TextEdit,
     WorkspaceEdit,
 } from "vscode-languageserver/node";
+import { conlog } from "../common";
 import { normalizeUri } from "../core/normalized-uri";
 import type { ReferencesIndex } from "../shared/references-index";
 import { SourceType } from "../core/symbol";
@@ -256,17 +257,16 @@ export function prepareRenameSymbolWorkspace(
  *
  * Returns null if the symbol is not workspace-renameable (caller falls back to single-file).
  */
-export function renameSymbolWorkspace(
+export async function renameSymbolWorkspace(
     text: string,
     position: Position,
     newName: string,
     uri: string,
     refsIndex: ReferencesIndex,
     symbolStore: Symbols,
-    getFileText: (uri: string) => string | null,
+    getFileText: (uri: string) => Promise<string | null> | string | null,
     workspaceRoot: string | undefined,
-    debugLog?: (msg: string) => void,
-): WorkspaceEdit | null {
+): Promise<WorkspaceEdit | null> {
     if (!isInitialized() || !VALID_IDENTIFIER.test(newName)) {
         return null;
     }
@@ -278,23 +278,23 @@ export function renameSymbolWorkspace(
 
     const symbolName = findIdentifierAtPosition(tree.rootNode, position);
     if (!symbolName) {
-        debugLog?.(`rename: no identifier at position ${position.line}:${position.character}`);
+        conlog(`rename: no identifier at position ${position.line}:${position.character}`, "debug");
         return null;
     }
 
-    debugLog?.(`rename: symbol="${symbolName}" uri=${uri}`);
+    conlog(`rename: symbol="${symbolName}" uri=${uri}`, "debug");
 
     // Determine where the symbol is defined
     const defInfo = findDefinitionUri(symbolName, uri, tree.rootNode, symbolStore, workspaceRoot);
     if (!defInfo) {
         // Not a workspace-scope symbol (e.g., function-scoped variable)
-        debugLog?.(`rename: findDefinitionUri returned null (not a workspace-scope symbol)`);
+        conlog(`rename: findDefinitionUri returned null (not a workspace-scope symbol)`, "debug");
         return null;
     }
 
     if (defInfo.isExternal) {
         // Symbol defined in external headers (read-only): not renameable
-        debugLog?.(`rename: symbol defined in external headers (read-only), uri=${defInfo.uri}`);
+        conlog(`rename: symbol defined in external headers (read-only), uri=${defInfo.uri}`, "debug");
         return null;
     }
 
@@ -303,18 +303,18 @@ export function renameSymbolWorkspace(
     // defInfo.uri comes from the symbol store and genuinely needs normalization.
     const normUri = normalizeUri(uri);
     const definitionUri = normalizeUri(defInfo.uri);
-    debugLog?.(`rename: definitionUri=${definitionUri}`);
+    conlog(`rename: definitionUri=${definitionUri}`, "debug");
 
     // Collect candidate files from the ReferencesIndex (all files that reference this name)
     const indexedUris = refsIndex.lookupUris(symbolName);
-    debugLog?.(`rename: ReferencesIndex returned ${indexedUris.size} file(s) for "${symbolName}"`);
+    conlog(`rename: ReferencesIndex returned ${indexedUris.size} file(s) for "${symbolName}"`, "debug");
 
     // Always include the definition file and current file as safety nets
     const candidateUris = new Set(indexedUris);
     candidateUris.add(definitionUri);
     candidateUris.add(normUri);
 
-    debugLog?.(`rename: ${candidateUris.size} candidate files to scan`);
+    conlog(`rename: ${candidateUris.size} candidate files to scan`, "debug");
 
     // Build edits for each candidate file.
     // Uses documentChanges format (TextDocumentEdit[]) so VS Code treats the
@@ -323,16 +323,17 @@ export function renameSymbolWorkspace(
     const fileScopeInfo: SslSymbolScope = { name: symbolName, scope: ScopeKind.File };
 
     for (const candidateUri of candidateUris) {
-        const candidateText = candidateUri === normUri ? text : getFileText(candidateUri);
+        // eslint-disable-next-line no-await-in-loop -- sequential reads keep log ordering deterministic; rename is user-initiated and bounded
+        const candidateText = candidateUri === normUri ? text : await getFileText(candidateUri);
 
         if (!candidateText) {
-            debugLog?.(`rename: skipping ${candidateUri} (could not read file text)`);
+            conlog(`rename: skipping ${candidateUri} (could not read file text)`, "debug");
             continue;
         }
 
         const candidateTree = parseWithCache(candidateText);
         if (!candidateTree) {
-            debugLog?.(`rename: skipping ${candidateUri} (parse failed)`);
+            conlog(`rename: skipping ${candidateUri} (parse failed)`, "debug");
             continue;
         }
 
@@ -340,7 +341,7 @@ export function renameSymbolWorkspace(
         // (a different procedure/macro/export with the same name). Procedure-local
         // shadows are handled by findScopedReferences (it skips those subtrees).
         if (candidateUri !== definitionUri && isFileScopeDef(candidateTree.rootNode, symbolName)) {
-            debugLog?.(`rename: skipping ${candidateUri} (symbol redefined at file scope)`);
+            conlog(`rename: skipping ${candidateUri} (symbol redefined at file scope)`, "debug");
             continue;
         }
 
@@ -348,11 +349,11 @@ export function renameSymbolWorkspace(
         // skips procedures that have a local definition of the same name
         const refs = findScopedReferences(candidateTree.rootNode, fileScopeInfo);
         if (refs.length === 0) {
-            debugLog?.(`rename: skipping ${candidateUri} (no references found)`);
+            conlog(`rename: skipping ${candidateUri} (no references found)`, "debug");
             continue;
         }
 
-        debugLog?.(`rename: ${candidateUri} -> ${refs.length} reference(s)`);
+        conlog(`rename: ${candidateUri} -> ${refs.length} reference(s)`, "debug");
 
         const edits: TextEdit[] = refs.map((node) => ({
             range: makeRange(node),
@@ -369,10 +370,10 @@ export function renameSymbolWorkspace(
     }
 
     if (documentChanges.length === 0) {
-        debugLog?.(`rename: no edits produced across all candidates`);
+        conlog(`rename: no edits produced across all candidates`, "debug");
         return null;
     }
 
-    debugLog?.(`rename: workspace edit covers ${documentChanges.length} file(s)`);
+    conlog(`rename: workspace edit covers ${documentChanges.length} file(s)`, "debug");
     return { documentChanges };
 }

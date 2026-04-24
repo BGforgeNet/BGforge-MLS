@@ -11,7 +11,7 @@ import { SymbolKind, ScopeLevel, SourceType } from "../../src/core/symbol";
 // Mock the LSP connection to avoid initialization issues in tests
 vi.mock("../../src/lsp-connection", () => ({
     getConnection: () => ({
-        console: { log: vi.fn() },
+        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
         sendDiagnostics: vi.fn(),
     }),
     getDocuments: () => ({ get: vi.fn() }),
@@ -746,14 +746,14 @@ end
             expect(result).not.toBeNull();
         });
 
-        it("rejects invalid newName in workspace rename", () => {
+        it("rejects invalid newName in workspace rename", async () => {
             const headerUri = "file:///project/headers/utils.h";
             const headerText = `procedure helper begin end`;
             const refsIndex = new ReferencesIndex();
             const symbolStore = new Symbols();
 
             const position: Position = { line: 0, character: 12 };
-            const result = renameSymbolWorkspace(
+            const result = await renameSymbolWorkspace(
                 headerText,
                 position,
                 "invalid name!",
@@ -773,7 +773,7 @@ end
          * Simulates the provider's rename() method: try workspace rename first,
          * fall back to single-file rename.
          */
-        function providerRename(
+        async function providerRename(
             text: string,
             position: Position,
             newName: string,
@@ -782,8 +782,8 @@ end
             symbolStore: Symbols,
             getFileText: (uri: string) => string | null,
             workspaceRoot: string | undefined,
-        ): WorkspaceEdit | null {
-            const wsResult = renameSymbolWorkspace(
+        ): Promise<WorkspaceEdit | null> {
+            const wsResult = await renameSymbolWorkspace(
                 text,
                 position,
                 newName,
@@ -818,7 +818,7 @@ end
             return undefined;
         }
 
-        it("renames procedure from definition in header file across all consuming files", () => {
+        it("renames procedure from definition in header file across all consuming files", async () => {
             const headerUri = "file:///project/bug.h";
             const sslUri = "file:///project/bug.ssl";
 
@@ -840,7 +840,7 @@ end`;
 
             // Rename from definition site in header file
             const position: Position = { line: 0, character: 12 };
-            const result = providerRename(
+            const result = await providerRename(
                 headerText,
                 position,
                 "rename_test123",
@@ -881,7 +881,7 @@ end`;
             return docEdit?.edits as TextEdit[] | undefined;
         }
 
-        it("renames procedure defined in header across consuming .ssl files", () => {
+        it("renames procedure defined in header across consuming .ssl files", async () => {
             const headerUri = "file:///project/headers/utils.h";
             const sslUri = "file:///project/scripts/main.ssl";
 
@@ -903,7 +903,7 @@ end
 
             // Rename "helper" from the header file at the definition site
             const position: Position = { line: 0, character: 12 };
-            const result = renameSymbolWorkspace(
+            const result = await renameSymbolWorkspace(
                 headerText,
                 position,
                 "new_helper",
@@ -933,7 +933,7 @@ end
             expect(sslEdits![0].newText).toBe("new_helper");
         });
 
-        it("renames macro defined in header across multiple .ssl files", () => {
+        it("renames macro defined in header across multiple .ssl files", async () => {
             const headerUri = "file:///project/headers/defs.h";
             const ssl1Uri = "file:///project/scripts/a.ssl";
             const ssl2Uri = "file:///project/scripts/b.ssl";
@@ -964,7 +964,7 @@ end
 
             // Rename from header definition
             const position: Position = { line: 0, character: 10 };
-            const result = renameSymbolWorkspace(
+            const result = await renameSymbolWorkspace(
                 headerText,
                 position,
                 "ITEM_LIMIT",
@@ -983,7 +983,7 @@ end
             expect(getEditsForUri(result, ssl2Uri)).toBeDefined();
         });
 
-        it("returns null for symbol defined in external headers (path traversal guard)", () => {
+        it("returns null for symbol defined in external headers (path traversal guard)", async () => {
             const externalUri = "file:///external/headers/sfall.h";
             const sslUri = "file:///project/scripts/main.ssl";
 
@@ -1015,7 +1015,7 @@ end
 
             // Cursor on "sfall_func" (defined outside workspace root /project)
             const position: Position = { line: 2, character: 10 };
-            const result = renameSymbolWorkspace(
+            const result = await renameSymbolWorkspace(
                 sslText,
                 position,
                 "new_sfall_func",
@@ -1030,7 +1030,7 @@ end
             expect(result).toBeNull();
         });
 
-        it("returns null for function-scoped variable (not workspace-renameable)", () => {
+        it("returns null for function-scoped variable (not workspace-renameable)", async () => {
             const sslUri = "file:///project/scripts/main.ssl";
             const sslText = `
 procedure foo begin
@@ -1044,7 +1044,7 @@ end
 
             // Cursor on "counter" (function-scoped variable)
             const position: Position = { line: 2, character: 14 };
-            const result = renameSymbolWorkspace(
+            const result = await renameSymbolWorkspace(
                 sslText,
                 position,
                 "new_counter",
@@ -1059,7 +1059,7 @@ end
             expect(result).toBeNull();
         });
 
-        it("skips files where the symbol is locally redefined (shadowing)", () => {
+        it("skips files where the symbol is locally redefined (shadowing)", async () => {
             const headerUri = "file:///project/headers/utils.h";
             const ssl1Uri = "file:///project/scripts/a.ssl";
             const ssl2Uri = "file:///project/scripts/b.ssl";
@@ -1095,7 +1095,7 @@ end
 
             // Rename "helper" from header
             const position: Position = { line: 0, character: 12 };
-            const result = renameSymbolWorkspace(
+            const result = await renameSymbolWorkspace(
                 headerText,
                 position,
                 "new_helper",
@@ -1114,7 +1114,7 @@ end
             expect(getEditsForUri(result, ssl2Uri)).toBeUndefined();
         });
 
-        it("workspace rename skips procedure-local shadows but renames other refs in same file", () => {
+        it("workspace rename skips procedure-local shadows but renames other refs in same file", async () => {
             const headerUri = "file:///project/headers/defs.h";
             const sslUri = "file:///project/scripts/main.ssl";
 
@@ -1140,7 +1140,7 @@ end
 
             // Rename FOO from header
             const position: Position = { line: 0, character: 8 };
-            const result = renameSymbolWorkspace(
+            const result = await renameSymbolWorkspace(
                 headerText,
                 position,
                 "BAR",
@@ -1166,7 +1166,7 @@ end
             expect(sslEdits![0].range.start.line).toBe(8); // line with display_msg(FOO)
         });
 
-        it("renames from reference site (not just definition)", () => {
+        it("renames from reference site (not just definition)", async () => {
             const headerUri = "file:///project/headers/utils.h";
             const sslUri = "file:///project/scripts/main.ssl";
 
@@ -1203,7 +1203,7 @@ end
 
             // Rename from reference site in .ssl file (cursor on "helper" in call)
             const position: Position = { line: 4, character: 10 };
-            const result = renameSymbolWorkspace(
+            const result = await renameSymbolWorkspace(
                 sslText,
                 position,
                 "new_helper",
@@ -1220,7 +1220,7 @@ end
             expect(getEditsForUri(result, sslUri)).toBeDefined();
         });
 
-        it("renames across files that reference the symbol (regardless of include structure)", () => {
+        it("renames across files that reference the symbol (regardless of include structure)", async () => {
             const headerCUri = "file:///project/headers/c.h";
             const headerBUri = "file:///project/headers/b.h";
             const sslAUri = "file:///project/scripts/a.ssl";
@@ -1250,7 +1250,7 @@ end
 
             // Rename deep_func from its definition in c.h
             const position: Position = { line: 0, character: 15 };
-            const result = renameSymbolWorkspace(
+            const result = await renameSymbolWorkspace(
                 headerCText,
                 position,
                 "renamed_func",
@@ -1268,7 +1268,7 @@ end
             expect(getEditsForUri(result, sslAUri)).toBeDefined();
         });
 
-        it("renames symbol in header that uses it without directly including the definition", () => {
+        it("renames symbol in header that uses it without directly including the definition", async () => {
             // Real-world case: den.h uses GVAR_DEN_GANGWAR defined in global.h,
             // but den.h does not #include global.h -- it relies on .ssl files
             // including both headers. The flat ReferencesIndex catches this because
@@ -1299,7 +1299,7 @@ end
 
             // Rename GVAR_DEN_GANGWAR from its definition in global.h
             const position: Position = { line: 0, character: 8 };
-            const result = renameSymbolWorkspace(
+            const result = await renameSymbolWorkspace(
                 globalHText,
                 position,
                 "GVAR_DEN_GANGWAR_NEW",
@@ -1317,7 +1317,7 @@ end
             expect(getEditsForUri(result, denHUri)).toBeDefined();
         });
 
-        it("renames symbol defined in .h across .ssl files that directly use it (real fixtures)", () => {
+        it("renames symbol defined in .h across .ssl files that directly use it (real fixtures)", async () => {
             // Uses real RP fixture files to test the exact GVAR_DEN_GANGWAR scenario
             const fixtureBase = resolve(
                 __dirname,
@@ -1348,7 +1348,7 @@ end
             expect(defLine, "GVAR_DEN_GANGWAR definition should exist in global.h").toBeGreaterThan(-1);
             const defCol = globalHLines[defLine].indexOf("GVAR_DEN_GANGWAR");
             const position: Position = { line: defLine, character: defCol };
-            const result = renameSymbolWorkspace(
+            const result = await renameSymbolWorkspace(
                 globalHText,
                 position,
                 "GVAR_DEN_GANGWAR_NEW",
@@ -1381,7 +1381,7 @@ end
             }
         });
 
-        it("integration: FileIndex-based rename across real .h and .ssl fixtures", () => {
+        it("integration: FileIndex-based rename across real .h and .ssl fixtures", async () => {
             // Simulates the exact provider scanWorkspaceFiles flow:
             // read real files, parseFile with SourceType, populate FileIndex, then rename.
             const fixtureBase = resolve(
@@ -1431,7 +1431,7 @@ end
             const defCol = globalHLines[defLine].indexOf("GVAR_DEN_GANGWAR");
 
             // Perform workspace rename
-            const result = renameSymbolWorkspace(
+            const result = await renameSymbolWorkspace(
                 globalHText,
                 { line: defLine, character: defCol },
                 "GVAR_DEN_GANGWAR_RENAMED",
@@ -1455,7 +1455,7 @@ end
             ).toBeGreaterThanOrEqual(2);
         });
 
-        it("integration: rename FROM an .ssl file (external symbol) across real fixtures", () => {
+        it("integration: rename FROM an .ssl file (external symbol) across real fixtures", async () => {
             // The user triggers rename on GVAR_DEN_GANGWAR from dclara.ssl,
             // where it is NOT locally defined (scope = "external").
             // This tests the workspace rename path from a reference site.
@@ -1502,7 +1502,7 @@ end
             const usageCol = callIdx + "global_var(".length;
 
             // Rename from the .ssl file (external symbol — not locally defined)
-            const result = renameSymbolWorkspace(
+            const result = await renameSymbolWorkspace(
                 sslText,
                 { line: usageLine, character: usageCol },
                 "GVAR_DEN_GANGWAR_RENAMED",

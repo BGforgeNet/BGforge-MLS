@@ -8,7 +8,7 @@
  * in local-symbols.ts, following the same pattern as TP2.
  */
 
-import { readFileSync } from "node:fs";
+import { promises as fsPromises } from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
     type CancellationToken,
@@ -23,7 +23,7 @@ import {
 } from "vscode-languageserver/node";
 import type { NormalizedUri } from "../core/normalized-uri";
 import { type IndexedSymbol, SourceType } from "../core/symbol";
-import { conlog, getLinePrefix } from "../common";
+import { conlog, errorMessage, getLinePrefix } from "../common";
 import { EXT_FALLOUT_SSL_ALL, LANG_FALLOUT_SSL } from "../core/languages";
 import { isHeaderFile } from "../core/location-utils";
 import { FileIndex } from "../core/file-index";
@@ -128,44 +128,37 @@ class FalloutSslProvider
      * Read file text, preferring open document buffers over disk.
      * Returns null if the file cannot be read.
      */
-    private readFileText(uri: string): string | null {
+    private async readFileText(uri: string): Promise<string | null> {
         // Try open document buffer first
         const bufferText = this.storedContext?.getDocumentText?.(uri);
         if (bufferText !== undefined) {
             return bufferText;
         }
 
-        // Fall back to disk.
-        // NOTE: readFileSync is used because the LSP rename handler is synchronous.
-        // For large workspaces with many transitive dependants this could block the
-        // event loop. Acceptable for now since renames are infrequent and user-initiated.
         try {
-            return readFileSync(fileURLToPath(uri), "utf-8");
+            return await fsPromises.readFile(fileURLToPath(uri), "utf-8");
         } catch (err) {
-            conlog(`readFileText: failed to read ${uri}: ${err}`);
+            conlog(`readFileText: failed to read ${uri}: ${errorMessage(err)}`, "warn");
             return null;
         }
     }
 
     resolveSymbol(name: string, text: string, uri: string): IndexedSymbol | undefined {
         const local = lookupLocalSymbol(name, text, uri);
-        if (this.storedContext?.settings.debug) {
-            if (!local) {
-                const allLocal = getLocalSymbols(text, uri);
-                conlog(
-                    `[resolveSymbol] name="${name}" uri="${uri}" local=not found; local symbols: [${allLocal.map((s) => s.name).join(", ")}]`,
-                );
-            } else {
-                conlog(`[resolveSymbol] name="${name}" uri="${uri}" local=found`);
-            }
-        }
         if (local) {
+            conlog(`resolveSymbol: name="${name}" uri="${uri}" local=found`, "debug");
             return local;
         }
-        const fallback = this.lookupFallbackSymbol(name, uri);
+        // Guard the expensive getLocalSymbols call behind the debug flag directly.
         if (this.storedContext?.settings.debug) {
-            conlog(`[resolveSymbol] fallback=${fallback ? "found" : "not found"}`);
+            const allLocal = getLocalSymbols(text, uri);
+            conlog(
+                `resolveSymbol: name="${name}" uri="${uri}" local=not found; local symbols: [${allLocal.map((s) => s.name).join(", ")}]`,
+                "debug",
+            );
         }
+        const fallback = this.lookupFallbackSymbol(name, uri);
+        conlog(`resolveSymbol: fallback=${fallback ? "found" : "not found"}`, "debug");
         return fallback;
     }
 
@@ -288,17 +281,20 @@ class FalloutSslProvider
         return prepareRenameSymbol(text, position);
     }
 
-    rename(text: string, position: Position, newName: string, uri: string): WorkspaceEdit | null {
+    async rename(
+        text: string,
+        position: Position,
+        newName: string,
+        uri: string,
+    ): Promise<WorkspaceEdit | null> {
         if (!isInitialized()) {
             return null;
         }
 
-        const debugLog = this.storedContext?.settings.debug ? (msg: string) => conlog(`[debug] ${msg}`) : undefined;
-
         // Try workspace-wide rename first (for symbols defined in headers)
         if (this.fileIndex) {
-            debugLog?.(`rename: trying workspace rename for "${newName}" at ${uri}`);
-            const wsResult = renameSymbolWorkspace(
+            conlog(`rename: trying workspace rename for "${newName}" at ${uri}`, "debug");
+            const wsResult = await renameSymbolWorkspace(
                 text,
                 position,
                 newName,
@@ -307,20 +303,19 @@ class FalloutSslProvider
                 this.fileIndex.symbols,
                 (fileUri) => this.readFileText(fileUri),
                 this.storedContext?.workspaceRoot,
-                debugLog,
             );
             if (wsResult) {
-                debugLog?.(`rename: workspace rename succeeded`);
+                conlog(`rename: workspace rename succeeded`, "debug");
                 return wsResult;
             }
-            debugLog?.(`rename: workspace rename returned null, falling back to single-file`);
+            conlog(`rename: workspace rename returned null, falling back to single-file`, "debug");
         } else {
-            debugLog?.(`rename: no fileIndex, using single-file rename`);
+            conlog(`rename: no fileIndex, using single-file rename`, "debug");
         }
 
         // Fall back to single-file rename (local variables, params)
         const result = renameSymbol(text, position, newName, uri);
-        debugLog?.(`rename: single-file rename ${result ? "succeeded" : "returned null"}`);
+        conlog(`rename: single-file rename ${result ? "succeeded" : "returned null"}`, "debug");
         return result;
     }
 

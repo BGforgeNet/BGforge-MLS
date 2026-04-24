@@ -260,7 +260,7 @@ export async function compile(uri: NormalizedUri, sslSettings: SSLsettings, inte
                     try {
                         await getConnection().sendRequest(REQUEST_SET_BUILT_IN_COMPILER, { uri });
                     } catch (err) {
-                        conlog(`Failed to persist built-in compiler switch: ${err}`);
+                        conlog(`Failed to persist built-in compiler switch: ${errorMessage(err)}`, "warn");
                     }
                 } else {
                     return;

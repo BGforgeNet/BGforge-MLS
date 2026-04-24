@@ -5,6 +5,7 @@
  */
 
 import * as vscode from "vscode";
+import { conlog } from "../logging";
 import type { BinaryParser, ParseOptions, ParseResult, ParsedField, ParsedGroup } from "../parsers";
 import { formatAdapterRegistry, type BinaryFormatAdapter } from "../parsers/format-adapter";
 
@@ -247,7 +248,11 @@ export class BinaryDocument implements vscode.CustomDocument {
                     this._parseResult,
                 ) as ParseResult["document"];
             }
-        } catch {
+        } catch (err) {
+            conlog(
+                `Binary editor: failed to rebuild canonical document for ${this._parseResult.format}: ${err instanceof Error ? err.message : String(err)}`,
+                "warn",
+            );
             this._parseResult.document = undefined;
         }
     }

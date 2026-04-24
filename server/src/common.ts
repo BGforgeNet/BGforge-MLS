@@ -336,7 +336,7 @@ export async function removeTmpFile(tmpPath: string) {
         await fs.promises.unlink(tmpPath);
     } catch (err) {
         if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
-            conlog(`Failed to clean up ${tmpPath}: ${err}`);
+            conlog(`Failed to clean up ${tmpPath}: ${errorMessage(err)}`, "warn");
         }
     }
 }

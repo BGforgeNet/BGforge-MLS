@@ -11,7 +11,7 @@ const mockShowWarning = vi.fn();
 
 vi.mock("../../src/lsp-connection", () => ({
     getConnection: () => ({
-        console: { log: vi.fn() },
+        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
         window: {
             showWarningMessage: (...args: unknown[]) => mockShowWarning(...args),
         },

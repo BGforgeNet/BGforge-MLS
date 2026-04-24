@@ -16,14 +16,14 @@ import { describe, it, expect, beforeAll, vi } from "vitest";
 // Mock lsp-connection to suppress console output during tests.
 vi.mock("../src/lsp-connection", () => ({
     getConnection: () => ({
-        console: { log: vi.fn() },
+        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
     }),
 }));
 
 // Also mock server module accessed by some transitive imports.
 vi.mock("../src/server", () => ({
     connection: {
-        console: { log: vi.fn() },
+        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
         sendDiagnostics: vi.fn(),
     },
 }));

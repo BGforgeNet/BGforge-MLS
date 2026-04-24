@@ -12,7 +12,7 @@ const mockSendDiagnostics = vi.fn();
 
 vi.mock("../src/lsp-connection", () => ({
     getConnection: () => ({
-        console: { log: vi.fn() },
+        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
         sendDiagnostics: mockSendDiagnostics,
         window: {
             showInformationMessage: mockShowInfo,

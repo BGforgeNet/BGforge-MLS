@@ -10,12 +10,13 @@ import { FileIndex } from "../../src/core/file-index";
 
 vi.mock("../../src/lsp-connection", () => ({
     getConnection: () => ({
-        console: { log: vi.fn() },
+        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
     }),
 }));
 
 vi.mock("../../src/common", () => ({
     conlog: vi.fn(),
+    errorMessage: (err) => (err instanceof Error ? err.message : String(err)),
     findFiles: vi.fn().mockReturnValue([]),
     getLinePrefix: vi.fn(),
     pathToUri: vi.fn(),

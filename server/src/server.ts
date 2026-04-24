@@ -458,9 +458,9 @@ connection.onExecuteCommand(async (params) => {
             const messages = ctx.translation.getMessages(uri, text, handler.translationLangId);
             return { ...dialogData, messages };
         } catch (e) {
-            conlog("parseDialog error: " + e);
-            if (e instanceof Error) {
-                conlog("stack: " + e.stack);
+            conlog(`parseDialog error: ${e instanceof Error ? e.message : String(e)}`, "error");
+            if (e instanceof Error && e.stack) {
+                conlog(e.stack, "debug");
             }
             return null;
         }
@@ -714,7 +714,7 @@ const RENAME_SUPPRESS_MS = 3000;
 const renameAffectedUris = new Set<NormalizedUri>();
 let renameSuppressTimer: NodeJS.Timeout | undefined;
 
-connection.onRenameRequest((params) => {
+connection.onRenameRequest(async (params) => {
     const textDoc = documents.get(params.textDocument.uri);
     if (!textDoc) {
         return null;
@@ -723,7 +723,7 @@ connection.onRenameRequest((params) => {
     const langId = textDoc.languageId;
     const text = textDoc.getText();
 
-    const result = registry.rename(langId, text, params.position, params.newName, uri);
+    const result = await registry.rename(langId, text, params.position, params.newName, uri);
 
     // Track affected URIs so onDidChangeContent/onDidSave skip compile for them
     if (result?.documentChanges && result.documentChanges.length > 0) {

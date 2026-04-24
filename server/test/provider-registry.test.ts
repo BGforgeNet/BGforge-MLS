@@ -30,6 +30,7 @@ import { encodeWorkspaceSymbolQuery } from "../../shared/protocol";
 // Mock the common module to suppress logs and control file finding during tests
 vi.mock("../src/common", () => ({
     conlog: vi.fn(),
+    errorMessage: (err) => (err instanceof Error ? err.message : String(err)),
     findFiles: vi.fn().mockReturnValue([]),
     pathToUri: vi.fn((p: string) => `file://${p}`),
 }));
@@ -430,9 +431,9 @@ describe("ProviderRegistry", () => {
         it("should return null if no provider found", async () => {
             const registry = await createRegistry();
 
-            expect(
+            await expect(
                 registry.rename("nonexistent", "text", { line: 0, character: 0 }, "newName", "file:///test.txt"),
-            ).toBeNull();
+            ).resolves.toBeNull();
         });
 
         it("should delegate to provider's rename", async () => {
@@ -449,7 +450,7 @@ describe("ProviderRegistry", () => {
             };
             registry.register(createMockProvider("test", { rename: vi.fn().mockReturnValue(mockEdit) }));
 
-            const result = registry.rename(
+            const result = await registry.rename(
                 "test",
                 "const myVar = 1;",
                 { line: 0, character: 7 },

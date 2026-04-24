@@ -7,7 +7,7 @@ import { SemanticTokenTypes } from "vscode-languageserver/node";
 
 vi.mock("../../src/lsp-connection", () => ({
     getConnection: () => ({
-        console: { log: vi.fn() },
+        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
         sendDiagnostics: vi.fn(),
     }),
     getDocuments: () => ({ get: vi.fn() }),

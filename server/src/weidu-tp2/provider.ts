@@ -484,7 +484,12 @@ class WeiduTp2Provider
         return findReferences(text, position, uri, includeDeclaration, this.fileIndex?.refs);
     }
 
-    rename(text: string, position: Position, newName: string, uri: string): WorkspaceEdit | null {
+    async rename(
+        text: string,
+        position: Position,
+        newName: string,
+        uri: string,
+    ): Promise<WorkspaceEdit | null> {
         return renameSymbol(text, position, newName, uri);
     }
 

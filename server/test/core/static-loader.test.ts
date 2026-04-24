@@ -16,6 +16,7 @@ vi.mock("fs", () => ({
 // Mock conlog to avoid LSP connection requirement
 vi.mock("../../src/common", () => ({
     conlog: vi.fn(),
+    errorMessage: (err) => (err instanceof Error ? err.message : String(err)),
 }));
 
 import { loadStaticSymbols } from "../../src/core/static-loader";

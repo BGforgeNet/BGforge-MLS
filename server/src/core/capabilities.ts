@@ -113,7 +113,12 @@ export interface NavigationCapability {
 }
 
 export interface RenameCapability {
-    rename(text: string, position: Position, newName: string, uri: string): WorkspaceEdit | null;
+    rename(
+        text: string,
+        position: Position,
+        newName: string,
+        uri: string,
+    ): Promise<WorkspaceEdit | null> | WorkspaceEdit | null;
     prepareRename(text: string, position: Position): { range: Range; placeholder: string } | null;
 }
 

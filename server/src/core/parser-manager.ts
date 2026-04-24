@@ -9,7 +9,7 @@
 
 import type { Parser, Tree } from "web-tree-sitter";
 import { createCachedParserModule } from "../shared/parser-factory";
-import { conlog } from "../common";
+import { conlog, errorMessage } from "../common";
 
 /** Per-language cached parser module, stored internally by the manager. */
 interface ManagedParser {
@@ -74,7 +74,7 @@ class ParserManager {
                 // eslint-disable-next-line no-await-in-loop
                 await parser.module.init();
             } catch (error) {
-                conlog(`Failed to initialize ${parser.name} parser: ${error}`);
+                conlog(`Failed to initialize ${parser.name} parser: ${errorMessage(error)}`, "error");
             }
         }
         conlog(`ParserManager: initialized ${this.parsers.size} parsers`);

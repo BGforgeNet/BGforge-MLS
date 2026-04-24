@@ -33,7 +33,7 @@ describe("lsp-connection", () => {
     });
 
     it("initLspConnection stores the connection and getConnection returns it", () => {
-        const mockConn = { console: { log: vi.fn() } } as unknown as Connection;
+        const mockConn = { console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() } } as unknown as Connection;
         const mockDocs = {} as unknown as TextDocuments<TextDocument>;
 
         initLspConnection(mockConn, mockDocs);
@@ -42,7 +42,7 @@ describe("lsp-connection", () => {
     });
 
     it("initLspConnection stores the documents manager and getDocuments returns it", () => {
-        const mockConn = { console: { log: vi.fn() } } as unknown as Connection;
+        const mockConn = { console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() } } as unknown as Connection;
         const mockDocs = { get: vi.fn() } as unknown as TextDocuments<TextDocument>;
 
         initLspConnection(mockConn, mockDocs);

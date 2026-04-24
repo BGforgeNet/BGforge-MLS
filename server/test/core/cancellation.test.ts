@@ -20,6 +20,7 @@ import type { LanguageProvider } from "../../src/language-provider";
 
 vi.mock("../../src/common", () => ({
     conlog: vi.fn(),
+    errorMessage: (err) => (err instanceof Error ? err.message : String(err)),
     findFiles: vi.fn().mockReturnValue([]),
     pathToUri: vi.fn((p: string) => `file://${p}`),
 }));

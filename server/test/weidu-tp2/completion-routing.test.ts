@@ -9,7 +9,7 @@ import { describe, expect, it, beforeAll, vi } from "vitest";
 // Mock the server module to avoid LSP connection issues
 vi.mock("../../src/server", () => ({
     connection: {
-        console: { log: vi.fn() },
+        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
         sendDiagnostics: vi.fn(),
     },
 }));
@@ -17,7 +17,7 @@ vi.mock("../../src/server", () => ({
 // Mock LSP connection for static loader
 vi.mock("../../src/lsp-connection", () => ({
     getConnection: vi.fn(() => ({
-        console: { log: vi.fn() },
+        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
         sendDiagnostics: vi.fn(),
     })),
     initLspConnection: vi.fn(),

@@ -28,7 +28,7 @@ import {
     WorkspaceEdit,
 } from "vscode-languageserver/node";
 import { type FormatResult, type LanguageProvider, type ProviderContext, HoverResult } from "./language-provider";
-import { conlog } from "./common";
+import { conlog, errorMessage } from "./common";
 import { validLocationOrNull } from "./core/location-utils";
 import { normalizeUri } from "./core/normalized-uri";
 import { decodeWorkspaceSymbolQuery } from "../../shared/protocol";
@@ -68,7 +68,7 @@ class ProviderRegistry {
                 // eslint-disable-next-line no-await-in-loop
                 await provider.init(context);
             } catch (error) {
-                conlog(`Failed to initialize provider ${provider.id}: ${error}`);
+                conlog(`Failed to initialize provider ${provider.id}: ${errorMessage(error)}`, "error");
             }
         }
         conlog(`Initialized ${this.providers.size} providers`);
@@ -223,11 +223,17 @@ class ProviderRegistry {
         return null;
     }
 
-    rename(langId: string, text: string, position: Position, newName: string, uri: string): WorkspaceEdit | null {
+    async rename(
+        langId: string,
+        text: string,
+        position: Position,
+        newName: string,
+        uri: string,
+    ): Promise<WorkspaceEdit | null> {
         const normUri = normalizeUri(uri);
         const provider = this.get(langId);
         if (provider?.rename) {
-            return provider.rename(text, position, newName, normUri);
+            return await provider.rename(text, position, newName, normUri);
         }
         return null;
     }

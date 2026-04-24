@@ -9,14 +9,14 @@ import { CompletionItemKind, InsertTextFormat, MarkupKind, type CompletionItem }
 
 vi.mock("../../src/server", () => ({
     connection: {
-        console: { log: vi.fn() },
+        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
         sendDiagnostics: vi.fn(),
     },
 }));
 
 vi.mock("../../src/lsp-connection", () => ({
     getConnection: vi.fn(() => ({
-        console: { log: vi.fn() },
+        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
         sendDiagnostics: vi.fn(),
     })),
     initLspConnection: vi.fn(),

@@ -9,7 +9,7 @@ import { ReferencesIndex } from "../../src/shared/references-index";
 
 vi.mock("../../src/server", () => ({
     connection: {
-        console: { log: vi.fn() },
+        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
         sendDiagnostics: vi.fn(),
     },
 }));

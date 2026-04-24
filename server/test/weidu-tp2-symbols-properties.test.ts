@@ -16,7 +16,7 @@ import { describe, it, expect, beforeAll, vi } from "vitest";
 // Mock lsp-connection to suppress LSP connection side-effects during tests.
 vi.mock("../src/lsp-connection", () => ({
     getConnection: () => ({
-        console: { log: vi.fn() },
+        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
     }),
 }));
 

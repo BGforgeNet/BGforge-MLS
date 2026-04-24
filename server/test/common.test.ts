@@ -14,7 +14,7 @@ vi.mock("child_process", () => ({
 // Mock lsp-connection to provide a controllable connection
 vi.mock("../src/lsp-connection", () => ({
     getConnection: () => ({
-        console: { log: vi.fn() },
+        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
         sendDiagnostics: mockSendDiagnostics,
     }),
 }));

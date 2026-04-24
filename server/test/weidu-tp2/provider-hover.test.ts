@@ -10,6 +10,7 @@ import { defaultSettings } from "../../src/settings";
 // Mock LSP connection before importing provider
 vi.mock("../../src/common", () => ({
     conlog: vi.fn(),
+    errorMessage: (err) => (err instanceof Error ? err.message : String(err)),
 }));
 
 // Mock static loader to provide test symbols

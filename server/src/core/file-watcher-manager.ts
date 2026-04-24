@@ -16,7 +16,7 @@ import { extname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { FileChangeType, WatchKind } from "vscode-languageserver/node";
 import type { LanguageProvider } from "../language-provider";
-import { conlog } from "../common";
+import { conlog, errorMessage } from "../common";
 import { normalizeUri } from "./normalized-uri";
 
 /**
@@ -96,7 +96,7 @@ export class FileWatcherManager {
                     );
                 }
             } catch (error) {
-                conlog(`Failed to read file ${filePath}: ${error}`);
+                conlog(`Failed to read file ${filePath}: ${errorMessage(error)}`, "warn");
             }
         }
     }
