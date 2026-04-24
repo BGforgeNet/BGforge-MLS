@@ -740,3 +740,18 @@ worthwhile.
   `contributes.typescriptServerPlugins` -- having them separate costs one extra plugin
   registration entry, nothing else at runtime. The build pipeline already calls the
   same `scripts/build-ts-plugin.sh` for both with different args.
+
+### Two Feature Matrices (README + `server/INTERNALS.md`)
+
+The feature matrix appears in two forms serving different audiences; both are maintained.
+
+- **README** — user-facing languages ("Fallout SSL", "WeiDU TP2"), ✓ marks, includes a
+  "Dialog preview" row. Optimized for someone deciding whether the extension supports
+  their workflow.
+- **`server/INTERNALS.md#feature-matrix`** — provider names (`fallout-ssl`, `weidu-tp2`),
+  `Y`/`n/a`/blank distinction, covers extra providers (`weidu-log`, `worldmap`, `weidu-tra`,
+  `fallout-msg`, `infinity-2da`, `scripts-lst`) that are internals relevant only to
+  implementers.
+
+Collapsing to either form would hide information the other audience needs. Both must be
+updated when a user-visible feature ships.

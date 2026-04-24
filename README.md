@@ -19,7 +19,24 @@ Originally a VS Code extension, it now also works with various other editors. Se
 
 ## Languages
 
-Supported languages: Fallout SSL (`.ssl`, `.h`), WeiDU BAF/SSL (`.baf`, `.ssl`, `.slb`), WeiDU D (`.d`), WeiDU TP2 (`.tp2`, `.tpa`, `.tph`, `.tpp`). Features include completion, hover, go-to-definition, find references, formatting, symbols, rename, inlay hints, diagnostics, folding, and dialog preview. For the full per-language feature matrix, see [`server/INTERNALS.md`](server/INTERNALS.md#feature-matrix).
+| Feature           | Fallout SSL  |     WeiDU BAF/SSL      | WeiDU D |           WeiDU TP2            |
+| ----------------- | :----------: | :--------------------: | :-----: | :----------------------------: |
+| Extensions        | `.ssl`, `.h` | `.baf`, `.ssl`, `.slb` |  `.d`   | `.tp2`, `.tpa`, `.tph`, `.tpp` |
+| Completion        |      ✓       |           ✓            |    ✓    |               ✓                |
+| Hover             |      ✓       |           ✓            |    ✓    |               ✓                |
+| Signature help    |      ✓       |                        |         |                                |
+| Go to definition  |      ✓       |                        |    ✓    |               ✓                |
+| Find references   |      ✓       |                        |    ✓    |               ✓                |
+| Formatting        |      ✓       |           ✓            |    ✓    |               ✓                |
+| Document symbols  |      ✓       |                        |    ✓    |               ✓                |
+| Workspace symbols |      ✓       |                        |         |               ✓                |
+| Semantic tokens   |      ✓       |                        |         |               ✓                |
+| Rename            |      ✓       |                        |    ✓    |           Same file            |
+| Inlay hints       |    `.msg`    |         `.tra`         | `.tra`  |             `.tra`             |
+| Diagnostics       |      ✓       |           ✓            |    ✓    |               ✓                |
+| JSDoc             |      ✓       |                        |    ✓    |               ✓                |
+| Folding           |      ✓       |           ✓            |    ✓    |               ✓                |
+| Dialog preview    |      ✓       |                        |    ✓    |                                |
 
 ## Transpilers
 
