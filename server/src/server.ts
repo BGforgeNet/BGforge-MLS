@@ -56,7 +56,7 @@ import { weiduBafProvider } from "./weidu-baf/provider";
 import { weiduDProvider } from "./weidu-d/provider";
 import { weiduTp2Provider } from "./weidu-tp2/provider";
 import { initLspConnection } from "./lsp-connection";
-import { initServerContext, getServerContext, tryGetServerContext, updateServerSettings } from "./server-context";
+import { initServerContext, getServerContext, updateServerSettings } from "./server-context";
 import { initSettingsService } from "./settings-service";
 import { getServerCapabilities } from "./server-capabilities";
 import { UriDebouncer } from "./core/uri-debouncer";
@@ -64,6 +64,7 @@ import { LSP_COMMAND_PARSE_DIALOG, NOTIFICATION_LOAD_FINISHED, VSCODE_COMMAND_CO
 import type { HandlerContext } from "./handlers/context";
 import { createRenameSuppression } from "./handlers/rename-suppression";
 import * as completionHandler from "./handlers/completion";
+import * as configHandler from "./handlers/config";
 import * as definitionHandler from "./handlers/definition";
 import * as foldingHandler from "./handlers/folding";
 import * as formattingHandler from "./handlers/formatting";
@@ -241,36 +242,6 @@ connection.onInitialized(async () => {
 
 const getDocumentSettings = documentLifecycleHandler.makeGetDocumentSettings(connection);
 
-connection.onDidChangeConfiguration(async (change) => {
-    conlog("did change configuration");
-    // LSP event ordering is uncertain — this may fire before onInitialized completes.
-    const serverCtx = tryGetServerContext();
-    if (!serverCtx) {
-        return;
-    }
-    if (serverCtx.capabilities.configuration) {
-        // Reset all cached document settings
-        documentLifecycleHandler.clearDocumentSettings();
-        // Fetch fresh global settings and push to providers (e.g., debug flag)
-        const freshSettings = normalizeSettings(await connection.workspace.getConfiguration({ section: "bgforge" }));
-        updateServerSettings(freshSettings);
-        registry.updateSettings(freshSettings);
-    } else {
-        // change.settings is typed as any by vscode-languageserver
-        const bgforge = change.settings?.bgforge as unknown;
-        const freshSettings = normalizeSettings(bgforge ?? defaultSettings);
-        updateServerSettings(freshSettings);
-        registry.updateSettings(freshSettings);
-    }
-});
-
-// Handle file system changes for watched files (headers)
-connection.onDidChangeWatchedFiles((params) => {
-    for (const event of params.changes) {
-        registry.handleWatchedFileChange(event.uri, event.type);
-    }
-});
-
 // Initialize the settings service holder so compile.ts can access settings without importing server.ts
 initSettingsService(getDocumentSettings);
 
@@ -294,6 +265,7 @@ documents.listen(connection);
 connection.listen();
 
 completionHandler.register(handlerCtx);
+configHandler.register(handlerCtx);
 hoverHandler.register(handlerCtx);
 
 /** Log and swallow compile errors for fire-and-forget call sites. */
