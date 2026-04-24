@@ -4,7 +4,6 @@ import { registry } from "../provider-registry";
 import type { HandlerContext } from "./context";
 
 export function register(ctx: HandlerContext): void {
-    // This handler provides the initial list of the completion items.
     ctx.connection.onCompletion(
         timeHandler(
             "onCompletion",
@@ -22,8 +21,6 @@ export function register(ctx: HandlerContext): void {
         ),
     );
 
-    // This handler resolves additional information for the item selected in
-    // the completion list.
     ctx.connection.onCompletionResolve((item: CompletionItem): CompletionItem => {
         return item;
     });
