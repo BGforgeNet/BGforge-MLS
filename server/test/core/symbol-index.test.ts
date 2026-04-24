@@ -67,7 +67,7 @@ describe("Symbols", () => {
 
             const result = index.getFileSymbols(normalizeUri("file:///test.txt"));
             expect(result).toHaveLength(1);
-            expect(result[0].name).toBe("new");
+            expect(result[0]!.name).toBe("new");
         });
 
         it("should keep symbols from other files when updating", () => {
@@ -78,9 +78,9 @@ describe("Symbols", () => {
             const resultB = index.getFileSymbols(normalizeUri("file:///b.txt"));
 
             expect(resultA).toHaveLength(1);
-            expect(resultA[0].name).toBe("a");
+            expect(resultA[0]!.name).toBe("a");
             expect(resultB).toHaveLength(1);
-            expect(resultB[0].name).toBe("b");
+            expect(resultB[0]!.name).toBe("b");
         });
 
         it("should handle empty symbol array", () => {
@@ -308,7 +308,7 @@ describe("Symbols", () => {
             const result = index.query({ prefix: "bar" });
 
             expect(result).toHaveLength(1);
-            expect(result[0].name).toBe("bar_var");
+            expect(result[0]!.name).toBe("bar_var");
         });
 
         it("should filter by prefix case-insensitively", () => {
@@ -339,7 +339,7 @@ describe("Symbols", () => {
             const result = index.query({ prefix: "foo", kinds: [SymbolKind.Function] });
 
             expect(result).toHaveLength(1);
-            expect(result[0].name).toBe("foo_func");
+            expect(result[0]!.name).toBe("foo_func");
         });
 
         it("should filter by uri", () => {

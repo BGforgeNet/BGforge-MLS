@@ -27,7 +27,7 @@ describe("ReferencesIndex", () => {
 
         const result = index.lookup("my_func");
         expect(result).toHaveLength(2);
-        expect(result[0].uri).toBe("file:///a.ssl");
+        expect(result[0]!.uri).toBe("file:///a.ssl");
     });
 
     it("aggregates references across multiple files", () => {

@@ -121,7 +121,7 @@ begin("DLG", [a]);
             // Should only have one state
             const ir = parseIR(code);
             if (ir.constructs[0]?.type === "begin") {
-                expect(ir.constructs[0].states).toHaveLength(1);
+                expect(ir.constructs[0]!.states).toHaveLength(1);
             }
         });
 
@@ -140,7 +140,7 @@ begin("DLG", [start]);
             const ir = parseIR(code);
             // helper is called as a function, should not be collected as state
             if (ir.constructs[0]?.type === "begin") {
-                const labels = ir.constructs[0].states.map((s) => s.label);
+                const labels = ir.constructs[0]!.states.map((s) => s.label);
                 expect(labels).not.toContain("helper");
                 expect(labels).toContain("start");
             }
@@ -163,7 +163,7 @@ begin("DLG", [start]);
             const ir = parseIR(code);
             // helper has parameters, should not be transitively collected
             if (ir.constructs[0]?.type === "begin") {
-                const labels = ir.constructs[0].states.map((s) => s.label);
+                const labels = ir.constructs[0]!.states.map((s) => s.label);
                 expect(labels).not.toContain("helper");
             }
         });
@@ -217,7 +217,7 @@ begin("DLG", [start, target]);
 `;
             const ir = parseIR(code);
             if (ir.constructs[0]?.type === "begin") {
-                const labels = ir.constructs[0].states.map((s) => s.label);
+                const labels = ir.constructs[0]!.states.map((s) => s.label);
                 // target should appear exactly once
                 expect(labels.filter((l) => l === "target")).toHaveLength(1);
             }

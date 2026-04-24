@@ -34,7 +34,7 @@ COPY_EXISTING ~foo.itm~ ~override~
     it("getSymbolAtPosition should return null for DECOMPILE_AND_PATCH keyword", () => {
         const tree = parseWithCache(text)!;
         // cursor on DECOMPILE_AND_PATCH, line 2
-        const symbolInfo = getSymbolAtPosition(tree.rootNode, { line: 2, character: 5 });
+        const symbolInfo = getSymbolAtPosition(tree!.rootNode, { line: 2, character: 5 });
         expect(symbolInfo).toBeNull();
     });
 
@@ -45,7 +45,7 @@ COPY_EXISTING ~foo.itm~ ~override~
 
     it("getSymbolAtPosition should return null for COPY_EXISTING keyword", () => {
         const tree = parseWithCache(text)!;
-        const symbolInfo = getSymbolAtPosition(tree.rootNode, { line: 1, character: 5 });
+        const symbolInfo = getSymbolAtPosition(tree!.rootNode, { line: 1, character: 5 });
         expect(symbolInfo).toBeNull();
     });
 

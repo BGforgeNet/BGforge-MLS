@@ -28,24 +28,24 @@ describe("fallout-ssl: getDocumentSymbols", () => {
         const text = `procedure my_proc begin end`;
         const symbols = getDocumentSymbols(text);
         expect(symbols).toHaveLength(1);
-        expect(symbols[0].name).toBe("my_proc");
-        expect(symbols[0].kind).toBe(SymbolKind.Function);
+        expect(symbols[0]!.name).toBe("my_proc");
+        expect(symbols[0]!.kind).toBe(SymbolKind.Function);
     });
 
     it("returns variable symbols", () => {
         const text = `variable my_var := 0;`;
         const symbols = getDocumentSymbols(text);
         expect(symbols).toHaveLength(1);
-        expect(symbols[0].name).toBe("my_var");
-        expect(symbols[0].kind).toBe(SymbolKind.Variable);
+        expect(symbols[0]!.name).toBe("my_var");
+        expect(symbols[0]!.kind).toBe(SymbolKind.Variable);
     });
 
     it("returns export variable symbols", () => {
         const text = `export variable exported_var;`;
         const symbols = getDocumentSymbols(text);
         expect(symbols).toHaveLength(1);
-        expect(symbols[0].name).toBe("exported_var");
-        expect(symbols[0].kind).toBe(SymbolKind.Variable);
+        expect(symbols[0]!.name).toBe("exported_var");
+        expect(symbols[0]!.kind).toBe(SymbolKind.Variable);
     });
 
     it("returns multiple symbols", () => {

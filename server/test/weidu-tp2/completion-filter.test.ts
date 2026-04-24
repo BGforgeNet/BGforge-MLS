@@ -193,7 +193,7 @@ describe("completion-filter", () => {
             const items: Tp2CompletionItem[] = [{ label: "local_var", kind: CompletionItemKind.Variable }];
             const result = filterItemsByContext(items, []);
             expect(result).toHaveLength(1);
-            expect(result[0].label).toBe("local_var");
+            expect(result[0]!.label).toBe("local_var");
         });
     });
 

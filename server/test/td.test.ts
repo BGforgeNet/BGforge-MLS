@@ -1325,9 +1325,9 @@ begin("MYDLG", [start]);
             // Non-null safe: guarded by toHaveLength(1) assertion above
             expect(ir.constructs[0]!.type).toBe("begin");
             if (ir.constructs[0]?.type === "begin") {
-                expect(ir.constructs[0].states).toHaveLength(1);
+                expect(ir.constructs[0]!.states).toHaveLength(1);
                 // Non-null safe: guarded by toHaveLength(1) assertion above
-                expect(ir.constructs[0].states[0]!.label).toBe("start");
+                expect(ir.constructs[0]!.states[0]!.label).toBe("start");
             }
         });
     });

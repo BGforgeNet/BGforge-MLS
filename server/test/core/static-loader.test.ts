@@ -66,10 +66,10 @@ describe("static-loader", () => {
             const result = loadStaticSymbols("test-lang");
 
             expect(result).toHaveLength(1);
-            expect(result[0].name).toBe("IF");
-            expect(result[0].kind).toBe(SymbolKind.Constant);
-            expect(result[0].scope.level).toBe(ScopeLevel.Global);
-            expect(result[0].source.type).toBe(SourceType.Static);
+            expect(result[0]!.name).toBe("IF");
+            expect(result[0]!.kind).toBe(SymbolKind.Constant);
+            expect(result[0]!.scope.level).toBe(ScopeLevel.Global);
+            expect(result[0]!.source.type).toBe(SourceType.Static);
         });
 
         it("should convert action to Symbol with Action kind", () => {
@@ -90,8 +90,8 @@ describe("static-loader", () => {
             const result = loadStaticSymbols("test-lang");
 
             expect(result).toHaveLength(1);
-            expect(result[0].name).toBe("ActionOverride");
-            expect(result[0].kind).toBe(SymbolKind.Action);
+            expect(result[0]!.name).toBe("ActionOverride");
+            expect(result[0]!.kind).toBe(SymbolKind.Action);
         });
 
         it("should convert trigger to Symbol with Trigger kind", () => {
@@ -108,8 +108,8 @@ describe("static-loader", () => {
             const result = loadStaticSymbols("test-lang");
 
             expect(result).toHaveLength(1);
-            expect(result[0].name).toBe("TriggerOverride");
-            expect(result[0].kind).toBe(SymbolKind.Trigger);
+            expect(result[0]!.name).toBe("TriggerOverride");
+            expect(result[0]!.kind).toBe(SymbolKind.Trigger);
         });
 
         it("should preserve completion item structure", () => {
@@ -126,7 +126,7 @@ describe("static-loader", () => {
             );
 
             const result = loadStaticSymbols("test-lang");
-            const completion = result[0].completion;
+            const completion = result[0]!.completion;
 
             expect(completion.label).toBe("TestAction");
             expect(completion.kind).toBe(CompletionItemKind.Function);
@@ -151,7 +151,7 @@ describe("static-loader", () => {
             );
 
             const result = loadStaticSymbols("test-lang");
-            const hover = result[0].hover;
+            const hover = result[0]!.hover;
 
             expect(hover.contents).toEqual({
                 kind: MarkupKind.Markdown,
@@ -171,7 +171,7 @@ describe("static-loader", () => {
             );
 
             const result = loadStaticSymbols("test-lang");
-            const hover = result[0].hover;
+            const hover = result[0]!.hover;
 
             expect(hover.contents).toEqual({
                 kind: MarkupKind.Markdown,
@@ -191,7 +191,7 @@ describe("static-loader", () => {
             );
 
             const result = loadStaticSymbols("test-lang");
-            const hover = result[0].hover;
+            const hover = result[0]!.hover;
 
             expect(hover.contents).toEqual({
                 kind: MarkupKind.Markdown,
@@ -212,7 +212,7 @@ describe("static-loader", () => {
 
             const result = loadStaticSymbols("test-lang");
 
-            expect(result[0].kind).toBe(SymbolKind.Variable);
+            expect(result[0]!.kind).toBe(SymbolKind.Variable);
         });
 
         it("should convert multiple items", () => {
@@ -243,7 +243,7 @@ describe("static-loader", () => {
             const result = loadStaticSymbols("test-lang");
 
             // Static symbols have no source file, so location is null
-            expect(result[0].location).toBeNull();
+            expect(result[0]!.location).toBeNull();
         });
 
         it("should preserve category from JSON on completion item", () => {
@@ -258,7 +258,7 @@ describe("static-loader", () => {
             );
 
             const result = loadStaticSymbols("test-lang");
-            const completion = result[0].completion as CompletionItemWithCategory;
+            const completion = result[0]!.completion as CompletionItemWithCategory;
 
             expect(completion.category).toBe(CompletionCategory.Action);
         });
@@ -275,7 +275,7 @@ describe("static-loader", () => {
             );
 
             const result = loadStaticSymbols("test-lang");
-            const completion = result[0].completion as CompletionItemWithCategory;
+            const completion = result[0]!.completion as CompletionItemWithCategory;
 
             expect(completion.category).toBe(CompletionCategory.Patch);
         });
@@ -286,8 +286,8 @@ describe("static-loader", () => {
             const result = loadStaticSymbols("test-lang");
 
             // Static symbols have no source file
-            expect(result[0].source.type).toBe(SourceType.Static);
-            expect(result[0].source.uri).toBeNull();
+            expect(result[0]!.source.type).toBe(SourceType.Static);
+            expect(result[0]!.source.uri).toBeNull();
         });
 
         it("should map functions category to Function kind", () => {
@@ -297,7 +297,7 @@ describe("static-loader", () => {
 
             const result = loadStaticSymbols("test-lang");
 
-            expect(result[0].kind).toBe(SymbolKind.Function);
+            expect(result[0]!.kind).toBe(SymbolKind.Function);
         });
 
         it("should map procedures category to Procedure kind", () => {
@@ -307,7 +307,7 @@ describe("static-loader", () => {
 
             const result = loadStaticSymbols("test-lang");
 
-            expect(result[0].kind).toBe(SymbolKind.Procedure);
+            expect(result[0]!.kind).toBe(SymbolKind.Procedure);
         });
 
         it("should map macros category to Macro kind", () => {
@@ -317,7 +317,7 @@ describe("static-loader", () => {
 
             const result = loadStaticSymbols("test-lang");
 
-            expect(result[0].kind).toBe(SymbolKind.Macro);
+            expect(result[0]!.kind).toBe(SymbolKind.Macro);
         });
     });
 
@@ -384,7 +384,7 @@ describe("static-loader", () => {
             );
 
             const result = loadStaticSymbols("test-lang");
-            const value = (result[0].hover.contents as { kind: string; value: string }).value;
+            const value = (result[0]!.hover.contents as { kind: string; value: string }).value;
 
             // Commands should NOT have "action function" prefix (not in CALLABLE_CATEGORY_META)
             expect(value).toBe("```weidu-tp2-tooltip\nCOPY ~source~ ~dest~\n```\nCopies a file.");
@@ -406,7 +406,7 @@ describe("static-loader", () => {
             );
 
             const result = loadStaticSymbols("test-lang");
-            const value = (result[0].hover.contents as { kind: string; value: string }).value;
+            const value = (result[0]!.hover.contents as { kind: string; value: string }).value;
 
             expect(value).toBe("```weidu-tp2-tooltip\npatch function ADD_SPELL_EFFECT\n```\nAdds an effect.");
         });
@@ -427,7 +427,7 @@ describe("static-loader", () => {
             );
 
             const result = loadStaticSymbols("test-lang");
-            const value = (result[0].hover.contents as { kind: string; value: string }).value;
+            const value = (result[0]!.hover.contents as { kind: string; value: string }).value;
 
             expect(value).toBe("```weidu-tp2-tooltip\naction function ADD_WORLDMAP\n```\nAdds a worldmap.");
         });
@@ -448,8 +448,8 @@ describe("static-loader", () => {
             );
 
             const result = loadStaticSymbols("test-lang");
-            const hoverValue = (result[0].hover.contents as { kind: string; value: string }).value;
-            const completionDoc = result[0].completion.documentation as { kind: string; value: string };
+            const hoverValue = (result[0]!.hover.contents as { kind: string; value: string }).value;
+            const completionDoc = result[0]!.completion.documentation as { kind: string; value: string };
 
             // Both should contain the pre-baked "patch function" prefix
             expect(hoverValue).toContain("patch function ADD_AREA_ITEM");
@@ -497,7 +497,7 @@ describe("static-loader", () => {
             const result = loadStaticSymbols("test-lang");
 
             // Should be Constant (from Keyword fallback), not a callable with metadata
-            expect(result[0].kind).toBe(SymbolKind.Constant);
+            expect(result[0]!.kind).toBe(SymbolKind.Constant);
         });
 
         it("should pass through pre-baked dimorphic function prefix", () => {
@@ -516,7 +516,7 @@ describe("static-loader", () => {
             );
 
             const result = loadStaticSymbols("test-lang");
-            const value = (result[0].hover.contents as { kind: string; value: string }).value;
+            const value = (result[0]!.hover.contents as { kind: string; value: string }).value;
 
             expect(value).toBe(
                 "```weidu-tp2-tooltip\ndimorphic function RESOLVE_STR_REF\n```\nResolves a string reference.",
@@ -536,7 +536,7 @@ describe("static-loader", () => {
 
             const result = loadStaticSymbols("test-lang");
 
-            expect(result[0].hover.contents).toEqual({
+            expect(result[0]!.hover.contents).toEqual({
                 kind: "markdown",
                 value: "BARE_ACTION",
             });

@@ -454,7 +454,7 @@ BUT_ONLY
         const uri = "file:///test.tp2";
         // Position on 'opcode' after AS (not inside 'save_opcodes')
         const line1 = text.split("\n")[1];
-        const col = line1.indexOf("AS opcode") + 3; // skip "AS "
+        const col = line1!.indexOf("AS opcode") + 3; // skip "AS "
         const position: Position = { line: 1, character: col };
 
         const result = weiduTp2Provider.hover?.(text, "opcode", uri, position);
@@ -475,7 +475,7 @@ END
 `;
         const uri = "file:///test.tp2";
         const line0 = text.split("\n")[0];
-        const col = line0.indexOf("AS item") + 3; // skip "AS "
+        const col = line0!.indexOf("AS item") + 3; // skip "AS "
         const position: Position = { line: 0, character: col };
 
         const result = weiduTp2Provider.hover?.(text, "item", uri, position);
@@ -496,7 +496,7 @@ END
         const uri = "file:///test.tp2";
         // Position on 'power' after '=>'
         const line0 = text.split("\n")[0];
-        const col = line0.indexOf("=> power") + 3; // skip "=> "
+        const col = line0!.indexOf("=> power") + 3; // skip "=> "
         const position: Position = { line: 0, character: col };
 
         const result = weiduTp2Provider.hover?.(text, "power", uri, position);
@@ -519,7 +519,7 @@ BUT_ONLY
         const uri = "file:///test.tp2";
         // Position on 'opcode' in SET x = opcode (line 2)
         const line2 = text.split("\n")[2];
-        const col = line2.indexOf("opcode");
+        const col = line2!.indexOf("opcode");
         const position: Position = { line: 2, character: col };
 
         const result = weiduTp2Provider.hover?.(text, "opcode", uri, position);

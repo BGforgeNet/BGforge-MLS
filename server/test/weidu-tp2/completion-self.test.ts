@@ -175,7 +175,7 @@ describe("weidu-tp2: isPhantomAssignment direct unit tests", () => {
     it("should detect phantom patch_assignment from broken keyword", () => {
         // "COPY_EXISTN ~delon.bcs~" -> patch_assignment with zero-width "="
         const tree = parseWithCache("COPY_EXISTN ~delon.bcs~ ~override~");
-        expect(tree).not.toBeNull();
+        expect(tree!).not.toBeNull();
         const node = findNodeByType(tree!.rootNode, "patch_assignment");
         expect(node).not.toBeNull();
         expect(isPhantomAssignment(node!)).toBe(true);
@@ -183,7 +183,7 @@ describe("weidu-tp2: isPhantomAssignment direct unit tests", () => {
 
     it("should accept real patch_assignment with actual = operator", () => {
         const tree = parseWithCache("foo = 5");
-        expect(tree).not.toBeNull();
+        expect(tree!).not.toBeNull();
         const node = findNodeByType(tree!.rootNode, "patch_assignment");
         expect(node).not.toBeNull();
         expect(isPhantomAssignment(node!)).toBe(false);
@@ -191,7 +191,7 @@ describe("weidu-tp2: isPhantomAssignment direct unit tests", () => {
 
     it("should accept real patch_assignment with compound operator", () => {
         const tree = parseWithCache("foo += 3");
-        expect(tree).not.toBeNull();
+        expect(tree!).not.toBeNull();
         const node = findNodeByType(tree!.rootNode, "patch_assignment");
         expect(node).not.toBeNull();
         expect(isPhantomAssignment(node!)).toBe(false);
@@ -201,7 +201,7 @@ describe("weidu-tp2: isPhantomAssignment direct unit tests", () => {
         // OUTER_SET produces action_outer_set, not patch_assignment.
         // isPhantomAssignment should return false (not applicable).
         const tree = parseWithCache("OUTER_SET x = 1");
-        expect(tree).not.toBeNull();
+        expect(tree!).not.toBeNull();
         const node = findNodeByType(tree!.rootNode, "action_outer_set");
         expect(node).not.toBeNull();
         expect(isPhantomAssignment(node!)).toBe(false);
@@ -210,7 +210,7 @@ describe("weidu-tp2: isPhantomAssignment direct unit tests", () => {
     it("should detect phantom from single-char broken identifier", () => {
         // Even a single-character identifier can produce a phantom assignment
         const tree = parseWithCache("C ~file~");
-        expect(tree).not.toBeNull();
+        expect(tree!).not.toBeNull();
         const node = findNodeByType(tree!.rootNode, "patch_assignment");
         expect(node).not.toBeNull();
         expect(isPhantomAssignment(node!)).toBe(true);
@@ -219,7 +219,7 @@ describe("weidu-tp2: isPhantomAssignment direct unit tests", () => {
     it("should detect phantom when value is a number", () => {
         // "FOO 42" — broken keyword with numeric value
         const tree = parseWithCache("FOO 42");
-        expect(tree).not.toBeNull();
+        expect(tree!).not.toBeNull();
         const node = findNodeByType(tree!.rootNode, "patch_assignment");
         expect(node).not.toBeNull();
         expect(isPhantomAssignment(node!)).toBe(true);

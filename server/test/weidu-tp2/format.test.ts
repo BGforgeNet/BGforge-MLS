@@ -182,7 +182,7 @@ describe("formatDocument integration", () => {
     function format(code: string): string {
         const parser = getParser();
         const tree = parser.parse(code);
-        const result = formatDocument(tree.rootNode);
+        const result = formatDocument(tree!.rootNode);
         return result.text;
     }
 
@@ -363,7 +363,7 @@ describe("formatDocument TRY blocks", () => {
     function format(code: string): string {
         const parser = getParser();
         const tree = parser.parse(code);
-        const result = formatDocument(tree.rootNode);
+        const result = formatDocument(tree!.rootNode);
         return result.text;
     }
 
@@ -492,7 +492,7 @@ describe("formatDocument MATCH statements", () => {
     function format(code: string): string {
         const parser = getParser();
         const tree = parser.parse(code);
-        const result = formatDocument(tree.rootNode);
+        const result = formatDocument(tree!.rootNode);
         return result.text;
     }
 
@@ -558,7 +558,7 @@ describe("formatDocument throws on structural errors", () => {
     function format(code: string): string {
         const parser = getParser();
         const tree = parser.parse(code);
-        return formatDocument(tree.rootNode).text;
+        return formatDocument(tree!.rootNode).text;
     }
 
     it("succeeds for valid code", () => {
@@ -588,18 +588,18 @@ describe("header-parser: parseHeader", () => {
         const code = `DEFINE_ACTION_FUNCTION my_function BEGIN END`;
         const functions = parseHeader(code, "file:///test.tph");
         expect(functions).toHaveLength(1);
-        expect(functions[0].name).toBe("my_function");
-        expect(functions[0].context).toBe("action");
-        expect(functions[0].dtype).toBe("function");
+        expect(functions[0]!.name).toBe("my_function");
+        expect(functions[0]!.context).toBe("action");
+        expect(functions[0]!.dtype).toBe("function");
     });
 
     it("extracts macro definitions", () => {
         const code = `DEFINE_PATCH_MACRO my_macro BEGIN END`;
         const functions = parseHeader(code, "file:///test.tph");
         expect(functions).toHaveLength(1);
-        expect(functions[0].name).toBe("my_macro");
-        expect(functions[0].context).toBe("patch");
-        expect(functions[0].dtype).toBe("macro");
+        expect(functions[0]!.name).toBe("my_macro");
+        expect(functions[0]!.context).toBe("patch");
+        expect(functions[0]!.dtype).toBe("macro");
     });
 
     it("extracts function parameters", () => {
@@ -615,7 +615,7 @@ BEGIN
 END`;
         const functions = parseHeader(code, "file:///test.tph");
         expect(functions).toHaveLength(1);
-        const params = functions[0].params;
+        const params = functions[0]!.params;
         expect(params).toBeDefined();
         expect(params?.intVar).toHaveLength(2);
         expect(params?.strVar).toHaveLength(1);
@@ -630,8 +630,8 @@ END`;
 DEFINE_ACTION_FUNCTION documented_func BEGIN END`;
         const functions = parseHeader(code, "file:///test.tph");
         expect(functions).toHaveLength(1);
-        expect(functions[0].jsdoc).toBeDefined();
-        expect(functions[0].jsdoc?.desc).toContain("test function");
+        expect(functions[0]!.jsdoc).toBeDefined();
+        expect(functions[0]!.jsdoc?.desc).toContain("test function");
     });
 
     it("handles multiple functions", () => {
@@ -873,7 +873,7 @@ describe("formatDocument component flags", () => {
     function format(code: string): string {
         const parser = getParser();
         const tree = parser.parse(code);
-        const result = formatDocument(tree.rootNode);
+        const result = formatDocument(tree!.rootNode);
         return result.text;
     }
 
@@ -946,7 +946,7 @@ describe("formatDocument COPY inline comments", () => {
     function format(code: string): string {
         const parser = getParser();
         const tree = parser.parse(code);
-        const result = formatDocument(tree.rootNode);
+        const result = formatDocument(tree!.rootNode);
         return result.text;
     }
 
@@ -981,7 +981,7 @@ describe("formatDocument multi-line OR conditions", () => {
     function format(code: string): string {
         const parser = getParser();
         const tree = parser.parse(code);
-        const result = formatDocument(tree.rootNode);
+        const result = formatDocument(tree!.rootNode);
         return result.text;
     }
 

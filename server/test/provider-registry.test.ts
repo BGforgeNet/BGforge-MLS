@@ -481,7 +481,7 @@ describe("ProviderRegistry", () => {
             const result = registry.completion("test", "text", "file:///test.txt");
 
             expect(result).toHaveLength(1);
-            expect(result[0].label).toBe("headerFunc");
+            expect(result[0]!.label).toBe("headerFunc");
         });
 
         it("should apply filterCompletions if provider implements it", async () => {

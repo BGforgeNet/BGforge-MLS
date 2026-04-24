@@ -261,7 +261,7 @@ END
             const f = loadFixture(BGT_BASE, "bgt/base/d_bg1/durlyle1.d");
 
             const tree = parseWithCache(f.text);
-            expect(tree).not.toBeNull();
+            expect(tree!).not.toBeNull();
 
             const result = formatDocument(tree!.rootNode);
             expect(result.text).toBeTruthy();
@@ -284,7 +284,7 @@ END
             const f = loadFixture(IE_FIXTURES, "Ascension/ascension/balthazar/d/balth.d");
 
             const tree = parseWithCache(f.text);
-            expect(tree).not.toBeNull();
+            expect(tree!).not.toBeNull();
 
             const result = formatDocument(tree!.rootNode);
             expect(result.text).toBeTruthy();

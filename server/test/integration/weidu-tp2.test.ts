@@ -228,7 +228,7 @@ describe("weidu-tp2 integration", () => {
 
             const results = fileIndex.symbols.searchWorkspaceSymbols("unstack");
             expect(results).toHaveLength(1);
-            expect(results[0].name).toBe("unstack_armor_bonus");
+            expect(results[0]!.name).toBe("unstack_armor_bonus");
         });
 
         it("searches across multiple files", () => {
@@ -306,7 +306,7 @@ describe("weidu-tp2 integration", () => {
             const f = loadFixture(TNT_BASE, "tnt/lib/functions.tph");
 
             const tree = parseWithCache(f.text);
-            expect(tree).not.toBeNull();
+            expect(tree!).not.toBeNull();
 
             const result = formatDocument(tree!.rootNode);
             expect(result.text).toBeTruthy();
@@ -329,7 +329,7 @@ describe("weidu-tp2 integration", () => {
             const f = loadFixture(RR_BASE, "rr/setup-rr.tp2");
 
             const tree = parseWithCache(f.text);
-            expect(tree).not.toBeNull();
+            expect(tree!).not.toBeNull();
 
             const result = formatDocument(tree!.rootNode);
             expect(result.text).toBeTruthy();

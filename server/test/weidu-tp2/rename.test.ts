@@ -1034,11 +1034,11 @@ function applyEdits(text: string, edits: TextEdit[]): string {
 
         if (startLine === endLine) {
             const line = lines[startLine];
-            lines[startLine] = line.slice(0, startChar) + edit.newText + line.slice(endChar);
+            lines[startLine] = line!.slice(0, startChar) + edit.newText + line!.slice(endChar);
         } else {
             // Multi-line edit (not common in rename, but handle it anyway)
-            const firstLine = lines[startLine].slice(0, startChar);
-            const lastLine = lines[endLine].slice(endChar);
+            const firstLine = lines[startLine]!.slice(0, startChar);
+            const lastLine = lines[endLine]!.slice(endChar);
             lines.splice(startLine, endLine - startLine + 1, firstLine + edit.newText + lastLine);
         }
     }

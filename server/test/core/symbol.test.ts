@@ -177,7 +177,7 @@ describe("core/symbol", () => {
 
             expect(symbol.name).toBe("test_proc");
             expect(symbol.kind).toBe(SymbolKind.Procedure);
-            expect(symbol.location.uri).toBe("file:///test.ssl");
+            expect(symbol.location!.uri).toBe("file:///test.ssl");
             expect(symbol.scope.level).toBe(ScopeLevel.File);
             expect(symbol.source.type).toBe(SourceType.Document);
             expect(symbol.completion.label).toBe("test_proc");

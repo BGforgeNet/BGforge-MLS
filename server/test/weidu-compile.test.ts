@@ -106,7 +106,7 @@ describe("weidu-compile", () => {
             await compile(normalizeUri("file:///test.tp2"), noGameSettings, false, "content");
 
             expect(mockExecFile).toHaveBeenCalled();
-            const args = mockExecFile.mock.calls[0][1] as string[];
+            const args = mockExecFile.mock.calls[0]![1] as string[];
             expect(args).toContain("--nogame");
         });
 
@@ -115,7 +115,7 @@ describe("weidu-compile", () => {
             await compile(normalizeUri("file:///test.tp2"), baseSettings, false, "content");
 
             expect(mockExecFile).toHaveBeenCalled();
-            const args = mockExecFile.mock.calls[0][1] as string[];
+            const args = mockExecFile.mock.calls[0]![1] as string[];
             expect(args).toContain("tp2");
         });
 
@@ -124,7 +124,7 @@ describe("weidu-compile", () => {
             await compile(normalizeUri("file:///test.d"), baseSettings, false, "content");
 
             expect(mockExecFile).toHaveBeenCalled();
-            const args = mockExecFile.mock.calls[0][1] as string[];
+            const args = mockExecFile.mock.calls[0]![1] as string[];
             expect(args).toContain("d");
         });
 
@@ -133,7 +133,7 @@ describe("weidu-compile", () => {
             await compile(normalizeUri("file:///test.baf"), baseSettings, false, "content");
 
             expect(mockExecFile).toHaveBeenCalled();
-            const args = mockExecFile.mock.calls[0][1] as string[];
+            const args = mockExecFile.mock.calls[0]![1] as string[];
             expect(args).toContain("baf");
         });
 
@@ -142,7 +142,7 @@ describe("weidu-compile", () => {
             await compile(normalizeUri("file:///test.tpa"), baseSettings, false, "content");
 
             expect(mockExecFile).toHaveBeenCalled();
-            const args = mockExecFile.mock.calls[0][1] as string[];
+            const args = mockExecFile.mock.calls[0]![1] as string[];
             expect(args).toContain("tpa");
         });
 
@@ -151,7 +151,7 @@ describe("weidu-compile", () => {
             await compile(normalizeUri("file:///test.tph"), baseSettings, false, "content");
 
             expect(mockExecFile).toHaveBeenCalled();
-            const args = mockExecFile.mock.calls[0][1] as string[];
+            const args = mockExecFile.mock.calls[0]![1] as string[];
             expect(args).toContain("tpa");
         });
 
@@ -160,7 +160,7 @@ describe("weidu-compile", () => {
             await compile(normalizeUri("file:///test.tpp"), baseSettings, false, "content");
 
             expect(mockExecFile).toHaveBeenCalled();
-            const args = mockExecFile.mock.calls[0][1] as string[];
+            const args = mockExecFile.mock.calls[0]![1] as string[];
             expect(args).toContain("tpp");
         });
     });
@@ -173,7 +173,7 @@ describe("weidu-compile", () => {
         it("includes --game flag when gamePath is set", async () => {
             await compile(normalizeUri("file:///test.tp2"), baseSettings, false, "content");
 
-            const args = mockExecFile.mock.calls[0][1] as string[];
+            const args = mockExecFile.mock.calls[0]![1] as string[];
             expect(args).toContain("--game");
             expect(args).toContain("/games/bg2");
         });
@@ -181,7 +181,7 @@ describe("weidu-compile", () => {
         it("includes standard weidu flags", async () => {
             await compile(normalizeUri("file:///test.tp2"), baseSettings, false, "content");
 
-            const args = mockExecFile.mock.calls[0][1] as string[];
+            const args = mockExecFile.mock.calls[0]![1] as string[];
             expect(args).toContain("--no-exit-pause");
             expect(args).toContain("--noautoupdate");
             expect(args).toContain("--debug-assign");
@@ -204,15 +204,15 @@ describe("weidu-compile", () => {
             await compile(normalizeUri("file:///project/a.tp2"), baseSettings, false, "content a");
             await compile(normalizeUri("file:///project/b.tp2"), baseSettings, false, "content b");
 
-            const pathA = mockWriteFile.mock.calls[0][0] as string;
-            const pathB = mockWriteFile.mock.calls[1][0] as string;
+            const pathA = mockWriteFile.mock.calls[0]![0] as string;
+            const pathB = mockWriteFile.mock.calls[1]![0] as string;
             expect(pathA).not.toBe(pathB);
         });
 
         it("preserves the original file extension in tmp filename", async () => {
             await compile(normalizeUri("file:///test.tp2"), baseSettings, false, "content");
 
-            const tmpPath = mockWriteFile.mock.calls[0][0] as string;
+            const tmpPath = mockWriteFile.mock.calls[0]![0] as string;
             expect(tmpPath).toMatch(/\.tp2$/);
         });
 
@@ -220,8 +220,8 @@ describe("weidu-compile", () => {
             await compile(normalizeUri("file:///test.tp2"), baseSettings, false, "content 1");
             await compile(normalizeUri("file:///test.tp2"), baseSettings, false, "content 2");
 
-            const path1 = mockWriteFile.mock.calls[0][0] as string;
-            const path2 = mockWriteFile.mock.calls[1][0] as string;
+            const path1 = mockWriteFile.mock.calls[0]![0] as string;
+            const path2 = mockWriteFile.mock.calls[1]![0] as string;
             expect(path1).toBe(path2);
         });
     });
@@ -327,9 +327,9 @@ describe("weidu-compile", () => {
             await compile(normalizeUri("file:///test.tp2"), baseSettings, true, "content");
 
             expect(mockSendParseResult).toHaveBeenCalled();
-            const parseResult = mockSendParseResult.mock.calls[0][0];
+            const parseResult = mockSendParseResult.mock.calls[0]![0];
             expect(parseResult.errors).toHaveLength(1);
-            expect(parseResult.errors[0].line).toBe(30);
+            expect(parseResult.errors[0]!.line).toBe(30);
         });
 
         it("parses PARSE ERROR variant from stdout", async () => {
@@ -338,9 +338,9 @@ describe("weidu-compile", () => {
             await compile(normalizeUri("file:///test.tp2"), baseSettings, true, "content");
 
             expect(mockSendParseResult).toHaveBeenCalled();
-            const parseResult = mockSendParseResult.mock.calls[0][0];
+            const parseResult = mockSendParseResult.mock.calls[0]![0];
             expect(parseResult.errors).toHaveLength(1);
-            expect(parseResult.errors[0].line).toBe(15);
+            expect(parseResult.errors[0]!.line).toBe(15);
         });
 
         it("handles multiple errors at different lines", async () => {
@@ -351,7 +351,7 @@ describe("weidu-compile", () => {
             await compile(normalizeUri("file:///test.tp2"), baseSettings, true, "content");
 
             expect(mockSendParseResult).toHaveBeenCalled();
-            const parseResult = mockSendParseResult.mock.calls[0][0];
+            const parseResult = mockSendParseResult.mock.calls[0]![0];
             expect(parseResult.errors).toHaveLength(2);
         });
 
@@ -368,9 +368,9 @@ describe("weidu-compile", () => {
 
             await compile(normalizeUri("file:///test.tpa"), baseSettings, true, "content");
 
-            const parseResult = mockSendParseResult.mock.calls[0][0];
+            const parseResult = mockSendParseResult.mock.calls[0]![0];
             expect(parseResult.errors).toHaveLength(1);
-            expect(parseResult.errors[0].line).toBe(87);
+            expect(parseResult.errors[0]!.line).toBe(87);
         });
 
         it("includes detail lines from WeiDU output verbatim", async () => {
@@ -384,7 +384,7 @@ describe("weidu-compile", () => {
 
             await compile(normalizeUri("file:///test.tp2"), baseSettings, true, "content");
 
-            const msg = mockSendParseResult.mock.calls[0][0].errors[0].message;
+            const msg = mockSendParseResult.mock.calls[0]![0].errors[0]!.message;
             // WeiDU output preserved verbatim
             expect(msg).toContain("Near Text: something");
             expect(msg).toContain("HINT: Don't use MS Word.");
@@ -404,7 +404,7 @@ describe("weidu-compile", () => {
 
             await compile(normalizeUri("file:///test.tpa"), baseSettings, true, "content");
 
-            const msg = mockSendParseResult.mock.calls[0][0].errors[0].message;
+            const msg = mockSendParseResult.mock.calls[0]![0].errors[0]!.message;
             expect(msg).toContain("Near Text: INCLUDE");
             expect(msg).toContain("GLR parse error");
             expect(msg).toContain("detail line 4");
@@ -424,11 +424,11 @@ describe("weidu-compile", () => {
 
             await compile(normalizeUri("file:///test.tp2"), baseSettings, true, "content");
 
-            const parseResult = mockSendParseResult.mock.calls[0][0];
+            const parseResult = mockSendParseResult.mock.calls[0]![0];
             expect(parseResult.errors).toHaveLength(1);
-            expect(parseResult.errors[0].line).toBe(66);
+            expect(parseResult.errors[0]!.line).toBe(66);
             // WeiDU's verbatim output preserved, including replacement characters
-            expect(parseResult.errors[0].message).toContain("Near Text: \uFFFD");
+            expect(parseResult.errors[0]!.message).toContain("Near Text: \uFFFD");
         });
 
         it("clamps column 0 to avoid negative LSP character offset", async () => {
@@ -446,10 +446,10 @@ describe("weidu-compile", () => {
 
             await compile(normalizeUri("file:///test.tpa"), baseSettings, true, "content");
 
-            const parseResult = mockSendParseResult.mock.calls[0][0];
+            const parseResult = mockSendParseResult.mock.calls[0]![0];
             expect(parseResult.errors).toHaveLength(1);
-            expect(parseResult.errors[0].columnStart).toBe(0);
-            expect(parseResult.errors[0].columnEnd).toBe(5);
+            expect(parseResult.errors[0]!.columnStart).toBe(0);
+            expect(parseResult.errors[0]!.columnEnd).toBe(5);
         });
 
         it("detects errors with zero exit code when parse errors exist in stdout", async () => {
@@ -469,9 +469,9 @@ describe("weidu-compile", () => {
             await compile(normalizeUri("file:///test.tp2"), baseSettings, false, "content");
 
             expect(mockSendParseResult).toHaveBeenCalled();
-            const parseResult = mockSendParseResult.mock.calls[0][0];
+            const parseResult = mockSendParseResult.mock.calls[0]![0];
             expect(parseResult.errors).toHaveLength(1);
-            expect(parseResult.errors[0].message).toContain("Some unexpected WeiDU output");
+            expect(parseResult.errors[0]!.message).toContain("Some unexpected WeiDU output");
         });
 
         it("creates fallback diagnostic with err.message when stdout is empty", async () => {
@@ -479,9 +479,9 @@ describe("weidu-compile", () => {
 
             await compile(normalizeUri("file:///test.tp2"), baseSettings, false, "content");
 
-            const parseResult = mockSendParseResult.mock.calls[0][0];
+            const parseResult = mockSendParseResult.mock.calls[0]![0];
             expect(parseResult.errors).toHaveLength(1);
-            expect(parseResult.errors[0].message).toContain("Command failed");
+            expect(parseResult.errors[0]!.message).toContain("Command failed");
         });
 
         it("shows actionable message when WeiDU binary not found", async () => {
@@ -501,10 +501,10 @@ describe("weidu-compile", () => {
 
             await compile(normalizeUri("file:///test.tp2"), baseSettings, false, "content");
 
-            const parseResult = mockSendParseResult.mock.calls[0][0];
+            const parseResult = mockSendParseResult.mock.calls[0]![0];
             // Only the parsed error, no fallback
             expect(parseResult.errors).toHaveLength(1);
-            expect(parseResult.errors[0].line).toBe(5);
+            expect(parseResult.errors[0]!.line).toBe(5);
         });
     });
 

@@ -55,7 +55,7 @@ describe("weidu-baf integration", () => {
             const f = loadFixture(RR_BASE, "rr/rr_core/compile/rr#stl01.baf");
 
             const tree = parseWithCache(f.text);
-            expect(tree).not.toBeNull();
+            expect(tree!).not.toBeNull();
 
             const result = formatDocument(tree!.rootNode);
             expect(result.text).toBeTruthy();
@@ -80,7 +80,7 @@ describe("weidu-baf integration", () => {
             const f = loadFixture(RR_BASE, "rr/rr_upgr/compile/botsmith.baf");
 
             const tree = parseWithCache(f.text);
-            expect(tree).not.toBeNull();
+            expect(tree!).not.toBeNull();
 
             const result = formatDocument(tree!.rootNode);
             expect(result.text).toBeTruthy();

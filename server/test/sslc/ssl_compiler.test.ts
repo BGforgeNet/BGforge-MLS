@@ -162,7 +162,7 @@ describe("ssl_compile", () => {
             );
 
             // Verify -I was stripped from args and replaced with headersDir
-            const forkArgs = mockFork.mock.calls[0][1] as string[];
+            const forkArgs = mockFork.mock.calls[0]![1] as string[];
             const userIFlags = forkArgs.filter((s: string) => s === "-I/custom/path");
             expect(userIFlags).toHaveLength(0);
 
@@ -199,7 +199,7 @@ describe("ssl_compile", () => {
             proc.emit("close", 0);
             await promise;
 
-            const forkArgs = mockFork.mock.calls[0][1] as string[];
+            const forkArgs = mockFork.mock.calls[0]![1] as string[];
             expect(forkArgs).toContain("script.ssl");
             expect(forkArgs).toContain("-o");
             expect(forkArgs).toContain("script.int");
@@ -218,7 +218,7 @@ describe("ssl_compile", () => {
             proc.emit("close", 0);
             await promise;
 
-            const forkArgs = mockFork.mock.calls[0][1] as string[];
+            const forkArgs = mockFork.mock.calls[0]![1] as string[];
             const iFlag = forkArgs.find((s: string) => s.startsWith("-I"));
             expect(iFlag).toBeDefined();
             expect(iFlag).toContain("headers");
@@ -237,7 +237,7 @@ describe("ssl_compile", () => {
             proc.emit("close", 0);
             await promise;
 
-            const forkArgs = mockFork.mock.calls[0][1] as string[];
+            const forkArgs = mockFork.mock.calls[0]![1] as string[];
             expect(forkArgs).toContain("-O2");
             expect(forkArgs).toContain("-q");
             expect(forkArgs).toContain("-p");
@@ -251,7 +251,7 @@ describe("ssl_compile", () => {
             proc.emit("close", 0);
             await promise;
 
-            const forkArgs = mockFork.mock.calls[0][1] as string[];
+            const forkArgs = mockFork.mock.calls[0]![1] as string[];
             // Should only have input, -o, output (no empty strings from split)
             expect(forkArgs).toContain("script.ssl");
             expect(forkArgs).not.toContain("");
@@ -265,7 +265,7 @@ describe("ssl_compile", () => {
             proc.emit("close", 0);
             await promise;
 
-            const forkOpts = mockFork.mock.calls[0][2] as Record<string, unknown>;
+            const forkOpts = mockFork.mock.calls[0]![2] as Record<string, unknown>;
             expect(forkOpts.silent).toBe(true);
             expect(forkOpts.execArgv).toEqual([]);
             expect(forkOpts.env).toBeUndefined();

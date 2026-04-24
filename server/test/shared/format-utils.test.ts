@@ -23,7 +23,7 @@ describe("shared/format-utils", () => {
             const edits = createFullDocumentEdit(original, newText);
 
             expect(edits).toHaveLength(1);
-            expect(edits[0].newText).toBe(newText);
+            expect(edits[0]!.newText).toBe(newText);
         });
 
         it("should set correct range for single line", () => {
@@ -32,8 +32,8 @@ describe("shared/format-utils", () => {
 
             const edits = createFullDocumentEdit(original, newText);
 
-            expect(edits[0].range.start).toEqual({ line: 0, character: 0 });
-            expect(edits[0].range.end).toEqual({ line: 0, character: 11 });
+            expect(edits[0]!.range.start).toEqual({ line: 0, character: 0 });
+            expect(edits[0]!.range.end).toEqual({ line: 0, character: 11 });
         });
 
         it("should set correct range for multiple lines", () => {
@@ -42,8 +42,8 @@ describe("shared/format-utils", () => {
 
             const edits = createFullDocumentEdit(original, newText);
 
-            expect(edits[0].range.start).toEqual({ line: 0, character: 0 });
-            expect(edits[0].range.end).toEqual({ line: 2, character: 5 });
+            expect(edits[0]!.range.start).toEqual({ line: 0, character: 0 });
+            expect(edits[0]!.range.end).toEqual({ line: 2, character: 5 });
         });
 
         it("should handle empty last line", () => {
@@ -52,7 +52,7 @@ describe("shared/format-utils", () => {
 
             const edits = createFullDocumentEdit(original, newText);
 
-            expect(edits[0].range.end).toEqual({ line: 2, character: 0 });
+            expect(edits[0]!.range.end).toEqual({ line: 2, character: 0 });
         });
 
         it("should handle empty document", () => {
@@ -61,8 +61,8 @@ describe("shared/format-utils", () => {
 
             const edits = createFullDocumentEdit(original, newText);
 
-            expect(edits[0].range.start).toEqual({ line: 0, character: 0 });
-            expect(edits[0].range.end).toEqual({ line: 0, character: 0 });
+            expect(edits[0]!.range.start).toEqual({ line: 0, character: 0 });
+            expect(edits[0]!.range.end).toEqual({ line: 0, character: 0 });
         });
     });
 

@@ -38,7 +38,7 @@ procedure bar begin
 end
 `;
             const tree = parseWithCache(text)!;
-            const fooProcNode = tree.rootNode.children.find((c) => c.type === "procedure")!;
+            const fooProcNode = tree!.rootNode.children.find((c) => c.type === "procedure")!;
 
             const symbolInfo: SslSymbolScope = {
                 name: "i",
@@ -46,7 +46,7 @@ end
                 procedureNode: fooProcNode,
             };
 
-            const refs = findScopedReferences(tree.rootNode, symbolInfo);
+            const refs = findScopedReferences(tree!.rootNode, symbolInfo);
             // Should find refs only in foo: declaration + 3 usages = 4
             // Should NOT include the 2 refs from bar
             expect(refs.length).toBe(4);
@@ -71,7 +71,7 @@ procedure other(variable value) begin
 end
 `;
             const tree = parseWithCache(text)!;
-            const processProcNode = tree.rootNode.children.find((c) => c.type === "procedure")!;
+            const processProcNode = tree!.rootNode.children.find((c) => c.type === "procedure")!;
 
             const symbolInfo: SslSymbolScope = {
                 name: "value",
@@ -79,7 +79,7 @@ end
                 procedureNode: processProcNode,
             };
 
-            const refs = findScopedReferences(tree.rootNode, symbolInfo);
+            const refs = findScopedReferences(tree!.rootNode, symbolInfo);
             // param definition + 3 usages in process = 4
             // Should NOT include refs from other
             expect(refs.length).toBe(4);
@@ -98,7 +98,7 @@ procedure bar begin
 end
 `;
             const tree = parseWithCache(text)!;
-            const fooProcNode = tree.rootNode.children.find((c) => c.type === "procedure")!;
+            const fooProcNode = tree!.rootNode.children.find((c) => c.type === "procedure")!;
 
             const symbolInfo: SslSymbolScope = {
                 name: "i",
@@ -106,7 +106,7 @@ end
                 procedureNode: fooProcNode,
             };
 
-            const refs = findScopedReferences(tree.rootNode, symbolInfo);
+            const refs = findScopedReferences(tree!.rootNode, symbolInfo);
             // Must find at least the references in foo, and none from bar
             expect(refs.length).toBeGreaterThan(0);
             for (const ref of refs) {
@@ -130,7 +130,7 @@ end
                 scope: "external",
             };
 
-            const refs = findScopedReferences(tree.rootNode, symbolInfo);
+            const refs = findScopedReferences(tree!.rootNode, symbolInfo);
             expect(refs.length).toBe(0);
         });
     });
@@ -151,7 +151,7 @@ end
                 scope: "file",
             };
 
-            const refs = findScopedReferences(tree.rootNode, symbolInfo);
+            const refs = findScopedReferences(tree!.rootNode, symbolInfo);
             // definition + 2 call sites = 3
             expect(refs.length).toBe(3);
         });
@@ -175,7 +175,7 @@ end
                 scope: "file",
             };
 
-            const refs = findScopedReferences(tree.rootNode, symbolInfo);
+            const refs = findScopedReferences(tree!.rootNode, symbolInfo);
             // definition + usage in foo + usage in bar = 3
             expect(refs.length).toBe(3);
         });
@@ -200,7 +200,7 @@ end
                 scope: "file",
             };
 
-            const refs = findScopedReferences(tree.rootNode, symbolInfo);
+            const refs = findScopedReferences(tree!.rootNode, symbolInfo);
             // definition in #define + usage in bar = 2
             // foo has local "x" so all refs in foo should be SKIPPED
             expect(refs.length).toBe(2);
@@ -231,7 +231,7 @@ end
                 scope: "file",
             };
 
-            const refs = findScopedReferences(tree.rootNode, symbolInfo);
+            const refs = findScopedReferences(tree!.rootNode, symbolInfo);
             // definition + foo usage + bar usage = 3
             expect(refs.length).toBe(3);
         });
@@ -259,7 +259,7 @@ end
                 scope: "file",
             };
 
-            const refs = findScopedReferences(tree.rootNode, symbolInfo);
+            const refs = findScopedReferences(tree!.rootNode, symbolInfo);
             // definition + usage in "user" = 2
             // shadower and another_shadower both shadow, so their refs are excluded
             expect(refs.length).toBe(2);

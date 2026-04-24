@@ -116,7 +116,7 @@ describe("fallout-ssl compiler", () => {
         it("writes tmp file in the same directory as source (for include resolution)", async () => {
             await compile(normalizeUri("file:///project/scripts/test.ssl"), baseSettings, false, "code");
 
-            const writtenPath = mockWriteFile.mock.calls[0][0] as string;
+            const writtenPath = mockWriteFile.mock.calls[0]![0] as string;
             expect(writtenPath).toMatch(/\/project\/scripts\/\.tmp\.ssl$/);
         });
 
@@ -391,7 +391,7 @@ describe("fallout-ssl compiler", () => {
                 (call: unknown[]) => !(call[1] as string[]).some((a: string) => a === "--version"),
             );
             expect(compileCalls).toHaveLength(1);
-            const args = compileCalls[0][1] as string[];
+            const args = compileCalls[0]![1] as string[];
             expect(args).toContain("-O2");
             expect(args).toContain("-p");
         });

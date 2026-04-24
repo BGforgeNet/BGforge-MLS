@@ -93,7 +93,7 @@ describe("Symbols — workspace symbol search", () => {
 
             const results = index.query({ prefix: "my_" });
             expect(results).toHaveLength(1);
-            expect(results[0].name).toBe("my_header_proc");
+            expect(results[0]!.name).toBe("my_header_proc");
         });
     });
 
@@ -129,7 +129,7 @@ describe("Symbols — workspace symbol search", () => {
         it("should be case-insensitive", () => {
             const results = index.searchWorkspaceSymbols("my_macro");
             expect(results).toHaveLength(1);
-            expect(results[0].name).toBe("MY_MACRO");
+            expect(results[0]!.name).toBe("MY_MACRO");
         });
 
         it("should match anywhere in the name", () => {
@@ -181,10 +181,10 @@ describe("Symbols — workspace symbol search", () => {
             expect(results).toHaveLength(1);
 
             const sym = results[0];
-            expect(sym.name).toBe("MY_MACRO");
+            expect(sym!.name).toBe("MY_MACRO");
             // Macro maps to Function in VSCode SymbolKind
-            expect(sym.kind).toBe(VscodeSymbolKind.Function);
-            expect(sym.location.uri).toBe(URI_A);
+            expect(sym!.kind).toBe(VscodeSymbolKind.Function);
+            expect(sym!.location.uri).toBe(URI_A);
         });
 
         it("should include displayPath as containerName", () => {
@@ -193,7 +193,7 @@ describe("Symbols — workspace symbol search", () => {
 
             const results = customIndex.searchWorkspaceSymbols("my_func");
             expect(results).toHaveLength(1);
-            expect(results[0].containerName).toBe("scripts/a.ssl");
+            expect(results[0]!.containerName).toBe("scripts/a.ssl");
         });
 
         it("should omit containerName when displayPath is undefined", () => {
@@ -202,7 +202,7 @@ describe("Symbols — workspace symbol search", () => {
 
             const results = customIndex.searchWorkspaceSymbols("bare_func");
             expect(results).toHaveLength(1);
-            expect(results[0].containerName).toBeUndefined();
+            expect(results[0]!.containerName).toBeUndefined();
         });
     });
 
@@ -252,7 +252,7 @@ describe("Symbols — workspace symbol search", () => {
 
             const results = index.searchWorkspaceSymbols("");
             expect(results).toHaveLength(1);
-            expect(results[0].name).toBe("proc_b");
+            expect(results[0]!.name).toBe("proc_b");
         });
     });
 });

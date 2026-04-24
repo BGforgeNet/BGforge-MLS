@@ -70,9 +70,9 @@ END
             expect(isCallableSymbol(func!)).toBe(true);
             if (isCallableSymbol(func!)) {
                 expect(func.callable.params?.intVar).toHaveLength(1);
-                expect(func.callable.params?.intVar[0].name).toBe("bonus");
+                expect(func.callable.params?.intVar[0]!.name).toBe("bonus");
                 expect(func.callable.params?.strVar).toHaveLength(1);
-                expect(func.callable.params?.strVar[0].name).toBe("item");
+                expect(func.callable.params?.strVar[0]!.name).toBe("item");
             }
         });
 
@@ -91,8 +91,8 @@ END
             store.updateFile(normalizeUri(uri), parsedSymbols);
 
             const func = store.lookup("unstack_armor_bonus");
-            expect(func?.location.uri).toBe(uri);
-            expect(func?.location.range.start.line).toBe(1);
+            expect(func?.location!.uri).toBe(uri);
+            expect(func?.location!.range.start.line).toBe(1);
         });
 
         it("updates existing function when file is reindexed", () => {
@@ -167,7 +167,7 @@ END
 
             const func = store.lookup("unstack_armor_bonus");
             expect(func).toBeDefined();
-            expect(func?.location.uri).toBe(uri);
+            expect(func?.location!.uri).toBe(uri);
         });
     });
 });

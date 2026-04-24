@@ -31,7 +31,7 @@ end
 
             expect(result).not.toBeNull();
             expect(result?.signatures.length).toBe(1);
-            expect(result?.signatures[0].label).toContain("add");
+            expect(result?.signatures[0]!.label).toContain("add");
         });
 
         it("returns null for undefined symbol", () => {
@@ -50,7 +50,7 @@ end
             const result = getLocalSignature(text, "process", 0);
 
             expect(result).not.toBeNull();
-            expect(result?.signatures[0].parameters?.length).toBe(3);
+            expect(result?.signatures[0]!.parameters?.length).toBe(3);
         });
 
         it("sets correct active parameter index", () => {
@@ -81,9 +81,9 @@ end
             const result = getLocalSignature(text, "calc", 0);
 
             expect(result).not.toBeNull();
-            expect(result?.signatures[0].label).toContain("calc");
+            expect(result?.signatures[0]!.label).toContain("calc");
             // Parameters should be present
-            expect(result?.signatures[0].parameters?.length).toBe(2);
+            expect(result?.signatures[0]!.parameters?.length).toBe(2);
         });
 
         it("handles procedures with JSDoc return type", () => {
@@ -100,7 +100,7 @@ end
 
             expect(result).not.toBeNull();
             // Just verify the signature exists
-            expect(result?.signatures[0].label).toContain("get_value");
+            expect(result?.signatures[0]!.label).toContain("get_value");
         });
 
         it("handles procedure with no parameters", () => {
@@ -112,7 +112,7 @@ end
             const result = getLocalSignature(text, "no_params", 0);
 
             expect(result).not.toBeNull();
-            expect(result?.signatures[0].parameters?.length ?? 0).toBe(0);
+            expect(result?.signatures[0]!.parameters?.length ?? 0).toBe(0);
         });
 
         it("handles function-like macro signature", () => {
@@ -150,7 +150,7 @@ procedure important begin end
             const result = getLocalSignature(text, "important", 0);
 
             expect(result).not.toBeNull();
-            const doc = result?.signatures[0].documentation;
+            const doc = result?.signatures[0]!.documentation;
             expect(doc).toBeDefined();
             const docText = typeof doc === "string" ? doc : (doc as { value: string }).value;
             expect(docText).toContain("important");

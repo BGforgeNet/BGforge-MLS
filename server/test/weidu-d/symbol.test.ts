@@ -43,8 +43,8 @@ END
             const symbols = getDocumentSymbols(text);
 
             expect(symbols.length).toBe(2);
-            expect(symbols[0].name).toBe("start_state");
-            expect(symbols[1].name).toBe("end_state");
+            expect(symbols[0]!.name).toBe("start_state");
+            expect(symbols[1]!.name).toBe("end_state");
         });
 
         it("returns symbols with correct kind", () => {
@@ -58,7 +58,7 @@ END
             const symbols = getDocumentSymbols(text);
 
             expect(symbols.length).toBe(1);
-            expect(symbols[0].kind).toBe(SymbolKind.Function);
+            expect(symbols[0]!.kind).toBe(SymbolKind.Function);
         });
 
         it("includes correct range for symbols", () => {
@@ -73,9 +73,9 @@ END
 
             expect(symbols.length).toBe(1);
             // Range should cover the entire state block
-            expect(symbols[0].range.start.line).toBe(3);
+            expect(symbols[0]!.range.start.line).toBe(3);
             // Selection range should be just the label
-            expect(symbols[0].selectionRange.start.line).toBe(3);
+            expect(symbols[0]!.selectionRange.start.line).toBe(3);
         });
 
         it("handles numeric state labels", () => {
@@ -93,8 +93,8 @@ END
             const symbols = getDocumentSymbols(text);
 
             expect(symbols.length).toBe(2);
-            expect(symbols[0].name).toBe("0");
-            expect(symbols[1].name).toBe("1");
+            expect(symbols[0]!.name).toBe("0");
+            expect(symbols[1]!.name).toBe("1");
         });
 
         it("handles multiple dialogs", () => {
@@ -114,8 +114,8 @@ END
             const symbols = getDocumentSymbols(text);
 
             expect(symbols.length).toBe(2);
-            expect(symbols[0].name).toBe("state1");
-            expect(symbols[1].name).toBe("state2");
+            expect(symbols[0]!.name).toBe("state1");
+            expect(symbols[1]!.name).toBe("state2");
         });
 
         it("handles APPEND blocks", () => {
@@ -131,7 +131,7 @@ END
             const symbols = getDocumentSymbols(text);
 
             expect(symbols.length).toBe(1);
-            expect(symbols[0].name).toBe("appended_state");
+            expect(symbols[0]!.name).toBe("appended_state");
         });
 
         it("handles INTERJECT_COPY_TRANS", () => {

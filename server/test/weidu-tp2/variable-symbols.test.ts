@@ -25,7 +25,7 @@ BEGIN
 END
 `;
         const tree = parseWithCache(text);
-        expect(tree).not.toBeNull();
+        expect(tree!).not.toBeNull();
 
         const symbolInfo = getVariableSymbolAtPosition(tree!.rootNode, { line: 4, character: 16 });
         expect(symbolInfo).not.toBeNull();
@@ -48,7 +48,7 @@ OUTER_SET my_var = 5
 OUTER_SET result = %my_var% + 1
 `;
         const tree = parseWithCache(text);
-        expect(tree).not.toBeNull();
+        expect(tree!).not.toBeNull();
 
         const symbolInfo = getVariableSymbolAtPosition(tree!.rootNode, { line: 2, character: 20 });
         expect(symbolInfo).not.toBeNull();

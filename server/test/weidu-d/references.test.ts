@@ -195,7 +195,7 @@ BEGIN ~MYMOD~
             const refs = findReferences(text, { line: 4, character: 30 }, TEST_URI, true, index);
             // No local definition, but cross-file index has the definition in other.d
             expect(refs).toHaveLength(1);
-            expect(refs[0].uri).toBe(OTHER_URI);
+            expect(refs[0]!.uri).toBe(OTHER_URI);
         });
 
         it("merges local refs with cross-file refs when local definition exists and refsIndex provided (line 62)", () => {

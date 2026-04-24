@@ -42,7 +42,7 @@ END
         expect(result.symbols).toHaveLength(1);
         // Name is dialog-scoped: "GAELAN:greet_state"
         expect(result.symbols[0]!.name).toContain("greet_state");
-        expect(result.symbols[0]!.location.uri).toBe(TEST_URI);
+        expect(result.symbols[0]!.location!.uri).toBe(TEST_URI);
     });
 
     it("extracts multiple state labels from BEGIN block", () => {
@@ -162,7 +162,7 @@ END
 
         expect(result.symbols).toHaveLength(1);
         // symbol.source.displayPath should be workspace-relative
-        expect(result.symbols[0]!.location.uri).toBe("file:///workspace/npcs/npc.d");
+        expect(result.symbols[0]!.location!.uri).toBe("file:///workspace/npcs/npc.d");
     });
 
     it("records CopyTrans references", () => {

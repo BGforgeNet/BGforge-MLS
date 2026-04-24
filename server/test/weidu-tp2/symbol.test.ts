@@ -25,28 +25,28 @@ describe("weidu-tp2: getDocumentSymbols", () => {
         const text = `DEFINE_ACTION_FUNCTION my_func BEGIN END`;
         const symbols = getDocumentSymbols(text);
         expect(symbols).toHaveLength(1);
-        expect(symbols[0].name).toBe("my_func");
-        expect(symbols[0].kind).toBe(SymbolKind.Function);
+        expect(symbols[0]!.name).toBe("my_func");
+        expect(symbols[0]!.kind).toBe(SymbolKind.Function);
     });
 
     it("returns macro symbols with Method kind", () => {
         const text = `DEFINE_ACTION_MACRO my_macro BEGIN END`;
         const symbols = getDocumentSymbols(text);
         expect(symbols).toHaveLength(1);
-        expect(symbols[0].name).toBe("my_macro");
-        expect(symbols[0].kind).toBe(SymbolKind.Method);
+        expect(symbols[0]!.name).toBe("my_macro");
+        expect(symbols[0]!.kind).toBe(SymbolKind.Method);
     });
 
     it("returns patch macro symbols with Method kind", () => {
         const text = `DEFINE_PATCH_MACRO my_macro BEGIN END`;
         const symbols = getDocumentSymbols(text);
-        expect(symbols[0].kind).toBe(SymbolKind.Method);
+        expect(symbols[0]!.kind).toBe(SymbolKind.Method);
     });
 
     it("returns no detail for top-level symbols", () => {
         const text = `DEFINE_ACTION_FUNCTION my_func INT_VAR x = 0 BEGIN END`;
         const symbols = getDocumentSymbols(text);
-        expect(symbols[0].detail).toBeUndefined();
+        expect(symbols[0]!.detail).toBeUndefined();
     });
 
     it("returns file-level variables from OUTER_SET", () => {
@@ -274,7 +274,7 @@ describe("weidu-tp2: getDocumentSymbols", () => {
         expect(macro).toBeDefined();
         expect(macro!.children).toBeDefined();
         expect(macro!.children!.map((c) => c.name)).toContain("my_var");
-        expect(macro!.children![0].detail).toBe("my_macro");
+        expect(macro!.children![0]!.detail).toBe("my_macro");
     });
 
     it("collects nested vars from inside conditionals as flat children", () => {

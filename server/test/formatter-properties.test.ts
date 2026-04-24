@@ -44,7 +44,7 @@ const token2da = fc.stringMatching(/^\S+$/).filter((s) => s.length > 0 && s.leng
 const arb2da: fc.Arbitrary<string> = fc
     .array(fc.array(token2da, { minLength: 2, maxLength: 5 }), { minLength: 1, maxLength: 8 })
     .chain((rows) => {
-        // Derive column count from the first row (label + values, so values = row[0].length - 1)
+        // Derive column count from the first row (label + values, so values = row[0]!.length - 1)
         const colCount = (rows[0]?.length ?? 2) - 1;
         return fc.array(token2da, { minLength: colCount, maxLength: colCount }).map((colNames) => {
             const header = "2DA V1.0\n****\n";

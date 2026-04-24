@@ -34,7 +34,7 @@ end
 `;
             const tree = parseWithCache(text)!;
             // Find the "x" identifier node
-            const xNode = findNodeByText(tree.rootNode, "x");
+            const xNode = findNodeByText(tree!.rootNode, "x");
             expect(xNode).not.toBeNull();
             const proc = findContainingProcedure(xNode!);
             expect(proc).not.toBeNull();
@@ -46,7 +46,7 @@ end
 procedure foo begin end
 `;
             const tree = parseWithCache(text)!;
-            const procNode = tree.rootNode.children.find((c) => c.type === "procedure")!;
+            const procNode = tree!.rootNode.children.find((c) => c.type === "procedure")!;
             const nameNode = procNode.childForFieldName("name")!;
             // nameNode's parent IS the procedure node, so findContainingProcedure returns it.
             // The rename logic uses isLocalToProc separately to determine that "foo" is
@@ -63,7 +63,7 @@ procedure foo begin end
 procedure foo begin end
 `;
             const tree = parseWithCache(text)!;
-            const maxNode = findNodeByText(tree.rootNode, "MAX");
+            const maxNode = findNodeByText(tree!.rootNode, "MAX");
             expect(maxNode).not.toBeNull();
             const proc = findContainingProcedure(maxNode!);
             expect(proc).toBeNull();
@@ -78,7 +78,7 @@ procedure foo(variable value) begin
 end
 `;
             const tree = parseWithCache(text)!;
-            const procNode = tree.rootNode.children.find((c) => c.type === "procedure")!;
+            const procNode = tree!.rootNode.children.find((c) => c.type === "procedure")!;
             expect(isLocalToProc(procNode, "value")).toBe(true);
         });
 
@@ -90,7 +90,7 @@ procedure foo begin
 end
 `;
             const tree = parseWithCache(text)!;
-            const procNode = tree.rootNode.children.find((c) => c.type === "procedure")!;
+            const procNode = tree!.rootNode.children.find((c) => c.type === "procedure")!;
             expect(isLocalToProc(procNode, "counter")).toBe(true);
         });
 
@@ -102,7 +102,7 @@ procedure foo begin
 end
 `;
             const tree = parseWithCache(text)!;
-            const procNode = tree.rootNode.children.find((c) => c.type === "procedure")!;
+            const procNode = tree!.rootNode.children.find((c) => c.type === "procedure")!;
             expect(isLocalToProc(procNode, "i")).toBe(true);
         });
 
@@ -114,7 +114,7 @@ procedure foo begin
 end
 `;
             const tree = parseWithCache(text)!;
-            const procNode = tree.rootNode.children.find((c) => c.type === "procedure")!;
+            const procNode = tree!.rootNode.children.find((c) => c.type === "procedure")!;
             expect(isLocalToProc(procNode, "item")).toBe(true);
         });
 
@@ -125,7 +125,7 @@ procedure foo begin
 end
 `;
             const tree = parseWithCache(text)!;
-            const procNode = tree.rootNode.children.find((c) => c.type === "procedure")!;
+            const procNode = tree!.rootNode.children.find((c) => c.type === "procedure")!;
             expect(isLocalToProc(procNode, "foo")).toBe(false);
         });
 
@@ -139,7 +139,7 @@ procedure bar begin
 end
 `;
             const tree = parseWithCache(text)!;
-            const barNode = tree.rootNode.children.filter((c) => c.type === "procedure")[1]!;
+            const barNode = tree!.rootNode.children.filter((c) => c.type === "procedure")[1]!;
             expect(isLocalToProc(barNode, "x")).toBe(false);
         });
     });
@@ -155,7 +155,7 @@ end
             const tree = parseWithCache(text)!;
             // Cursor on "counter" at usage
             const position: Position = { line: 3, character: 4 };
-            const result = getSymbolScope(tree.rootNode, position);
+            const result = getSymbolScope(tree!.rootNode, position);
 
             expect(result).not.toBeNull();
             expect(result!.scope).toBe(ScopeKind.Procedure);
@@ -172,7 +172,7 @@ end
             const tree = parseWithCache(text)!;
             // Cursor on "value" usage
             const position: Position = { line: 2, character: 16 };
-            const result = getSymbolScope(tree.rootNode, position);
+            const result = getSymbolScope(tree!.rootNode, position);
 
             expect(result).not.toBeNull();
             expect(result!.scope).toBe(ScopeKind.Procedure);
@@ -189,7 +189,7 @@ end
             const tree = parseWithCache(text)!;
             // Cursor on "helper" at definition
             const position: Position = { line: 1, character: 12 };
-            const result = getSymbolScope(tree.rootNode, position);
+            const result = getSymbolScope(tree!.rootNode, position);
 
             expect(result).not.toBeNull();
             expect(result!.scope).toBe(ScopeKind.File);
@@ -206,7 +206,7 @@ end
             const tree = parseWithCache(text)!;
             // Cursor on "helper" at call site inside main
             const position: Position = { line: 3, character: 10 };
-            const result = getSymbolScope(tree.rootNode, position);
+            const result = getSymbolScope(tree!.rootNode, position);
 
             expect(result).not.toBeNull();
             expect(result!.scope).toBe(ScopeKind.File);
@@ -225,7 +225,7 @@ end
             const tree = parseWithCache(text)!;
             // Cursor on "MAX_ITEMS" at definition
             const position: Position = { line: 1, character: 10 };
-            const result = getSymbolScope(tree.rootNode, position);
+            const result = getSymbolScope(tree!.rootNode, position);
 
             expect(result).not.toBeNull();
             expect(result!.scope).toBe("file");
@@ -244,7 +244,7 @@ end
             const tree = parseWithCache(text)!;
             // Cursor on "MAX_ITEMS" inside procedure
             const position: Position = { line: 4, character: 20 };
-            const result = getSymbolScope(tree.rootNode, position);
+            const result = getSymbolScope(tree!.rootNode, position);
 
             expect(result).not.toBeNull();
             expect(result!.scope).toBe("file");
@@ -258,7 +258,7 @@ procedure foo begin end
             const tree = parseWithCache(text)!;
             // Cursor on whitespace
             const position: Position = { line: 0, character: 0 };
-            const result = getSymbolScope(tree.rootNode, position);
+            const result = getSymbolScope(tree!.rootNode, position);
 
             expect(result).toBeNull();
         });
@@ -277,7 +277,7 @@ end
             // Cursor on "x" in bar, but "x" is only a local in foo, not bar
             // Since there's no file-scope "x" either, this is an external reference
             const position: Position = { line: 6, character: 4 };
-            const result = getSymbolScope(tree.rootNode, position);
+            const result = getSymbolScope(tree!.rootNode, position);
 
             expect(result).not.toBeNull();
             expect(result!.scope).toBe("external");
@@ -295,7 +295,7 @@ end
             const tree = parseWithCache(text)!;
             // Cursor on "dogmeatPtr" at declaration
             const position: Position = { line: 1, character: 12 };
-            const result = getSymbolScope(tree.rootNode, position);
+            const result = getSymbolScope(tree!.rootNode, position);
 
             expect(result).not.toBeNull();
             expect(result!.scope).toBe("file");
@@ -316,7 +316,7 @@ end
             const tree = parseWithCache(text)!;
             // Cursor on "dogmeatCheck" at declaration
             const position: Position = { line: 3, character: 6 };
-            const result = getSymbolScope(tree.rootNode, position);
+            const result = getSymbolScope(tree!.rootNode, position);
 
             expect(result).not.toBeNull();
             expect(result!.scope).toBe("file");
@@ -334,7 +334,7 @@ end
             const tree = parseWithCache(text)!;
             // Cursor on "dogmeatPtr" usage inside procedure
             const position: Position = { line: 4, character: 8 };
-            const result = getSymbolScope(tree.rootNode, position);
+            const result = getSymbolScope(tree!.rootNode, position);
 
             expect(result).not.toBeNull();
             expect(result!.scope).toBe("file");
@@ -352,7 +352,7 @@ end
             const tree = parseWithCache(text)!;
             // Cursor on "global_val" at export definition
             const position: Position = { line: 1, character: 18 };
-            const result = getSymbolScope(tree.rootNode, position);
+            const result = getSymbolScope(tree!.rootNode, position);
 
             expect(result).not.toBeNull();
             expect(result!.scope).toBe("file");

@@ -50,7 +50,7 @@ describe("shared/time-handler", () => {
             const result = await promise;
             expect(result).toBe("done");
             expect(warnSpy).toHaveBeenCalledOnce();
-            const msg: string = warnSpy.mock.calls[0][0] as string;
+            const msg: string = warnSpy.mock.calls[0]![0] as string;
             expect(msg).toMatch(/^\[lsp-timing\] slowOp took \d+ms$/);
         });
     });
@@ -67,7 +67,7 @@ describe("shared/time-handler", () => {
             );
             expect(() => handler()).toThrow(err);
             expect(warnSpy).toHaveBeenCalledOnce();
-            const msg: string = warnSpy.mock.calls[0][0] as string;
+            const msg: string = warnSpy.mock.calls[0]![0] as string;
             expect(msg).toMatch(/^\[lsp-timing\] throwingOp threw after \d+ms$/);
         });
 
@@ -82,7 +82,7 @@ describe("shared/time-handler", () => {
             );
             await expect(handler()).rejects.toThrow(err);
             expect(warnSpy).toHaveBeenCalledOnce();
-            const msg: string = warnSpy.mock.calls[0][0] as string;
+            const msg: string = warnSpy.mock.calls[0]![0] as string;
             expect(msg).toMatch(/^\[lsp-timing\] asyncThrow threw after \d+ms$/);
         });
     });
@@ -102,7 +102,7 @@ describe("shared/time-handler", () => {
             const result = handler();
             expect(result).toBe("value");
             expect(warnSpy).toHaveBeenCalledOnce();
-            const msg: string = warnSpy.mock.calls[0][0] as string;
+            const msg: string = warnSpy.mock.calls[0]![0] as string;
             expect(msg).toMatch(/^\[lsp-timing\] syncSlow took \d+ms$/);
         });
     });

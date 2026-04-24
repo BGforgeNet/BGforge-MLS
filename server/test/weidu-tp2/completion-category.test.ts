@@ -75,7 +75,7 @@ describe("Completion Category Safeguards", () => {
             const result = filterItemsByContext([tagItem], []);
 
             expect(result).toHaveLength(1);
-            expect(result[0].label).toBe("@type");
+            expect(result[0]!.label).toBe("@type");
         });
 
         it("JSDoc type completions have category jsdoc", () => {
@@ -88,7 +88,7 @@ describe("Completion Category Safeguards", () => {
             const result = filterItemsByContext([typeItem], []);
 
             expect(result).toHaveLength(1);
-            expect(result[0].label).toBe("int");
+            expect(result[0]!.label).toBe("int");
         });
     });
 

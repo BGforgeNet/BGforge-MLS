@@ -113,9 +113,9 @@ describe("shared/folding-ranges", () => {
         ]);
         const result = getFoldingRanges(root as never, blockTypes);
         expect(result).toHaveLength(3);
-        expect(result[0].kind).toBe(FoldingRangeKind.Comment);
-        expect(result[1].kind).toBeUndefined();
-        expect(result[2].kind).toBe(FoldingRangeKind.Comment);
+        expect(result[0]!.kind).toBe(FoldingRangeKind.Comment);
+        expect(result[1]!.kind).toBeUndefined();
+        expect(result[2]!.kind).toBe(FoldingRangeKind.Comment);
     });
 
     it("finds foldable nodes nested inside non-foldable parents", () => {
@@ -136,7 +136,7 @@ describe("shared/folding-ranges", () => {
         const result = getFoldingRanges(root as never, new Set());
         // Only comment should fold
         expect(result).toHaveLength(1);
-        expect(result[0].kind).toBe(FoldingRangeKind.Comment);
+        expect(result[0]!.kind).toBe(FoldingRangeKind.Comment);
     });
 });
 

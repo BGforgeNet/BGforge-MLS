@@ -257,8 +257,8 @@ describe("fallout-ssl integration", () => {
             const sig = getLocalSignature(f.text, "ndebug", 0);
             expect(sig).not.toBeNull();
             expect(sig!.signatures).toHaveLength(1);
-            expect(sig!.signatures[0].parameters).toBeDefined();
-            expect(sig!.signatures[0].parameters!.length).toBe(1);
+            expect(sig!.signatures[0]!.parameters).toBeDefined();
+            expect(sig!.signatures[0]!.parameters!.length).toBe(1);
         });
 
         it("returns signature for a multi-parameter macro", () => {
@@ -267,7 +267,7 @@ describe("fallout-ssl integration", () => {
             // create_object(X,Y,Z) macro
             const sig = getLocalSignature(f.text, "create_object", 0);
             expect(sig).not.toBeNull();
-            expect(sig!.signatures[0].parameters!.length).toBe(3);
+            expect(sig!.signatures[0]!.parameters!.length).toBe(3);
         });
 
         it("returns null for a non-existent symbol", () => {
@@ -388,7 +388,7 @@ describe("fallout-ssl integration", () => {
             const f = loadFixture(TWEAKS_BASE, "source_test/gl_g_scenepid.ssl");
 
             const tree = parseWithCache(f.text);
-            expect(tree).not.toBeNull();
+            expect(tree!).not.toBeNull();
 
             const result = formatDocument(tree!.rootNode);
             expect(result.text).toBeTruthy();
@@ -411,7 +411,7 @@ describe("fallout-ssl integration", () => {
             const f = loadFixture(RP_BASE, "headers/define.h");
 
             const tree = parseWithCache(f.text);
-            expect(tree).not.toBeNull();
+            expect(tree!).not.toBeNull();
 
             const result = formatDocument(tree!.rootNode);
             expect(result.text).toBeTruthy();
@@ -434,7 +434,7 @@ describe("fallout-ssl integration", () => {
 
             const results = fileIndex.symbols.searchWorkspaceSymbols("WORLDMAP");
             expect(results).toHaveLength(5);
-            expect(results[0].name).toBe("WORLDMAP");
+            expect(results[0]!.name).toBe("WORLDMAP");
         });
 
         it("indexes symbols across multiple header files", () => {

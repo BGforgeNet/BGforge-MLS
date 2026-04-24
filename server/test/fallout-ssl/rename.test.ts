@@ -59,7 +59,7 @@ end
             expect(result?.changes).toBeDefined();
             expect(result?.changes?.[uri]).toBeDefined();
             // Should have edits for: definition + 2 call sites = 3
-            expect(result?.changes?.[uri].length).toBe(3);
+            expect(result?.changes?.[uri]!.length).toBe(3);
 
             // All edits should replace with the new name
             for (const edit of result?.changes?.[uri] ?? []) {
@@ -84,7 +84,7 @@ end
             expect(result).not.toBeNull();
             expect(result?.changes?.[uri]).toBeDefined();
             // declaration + 4 usages = 5
-            expect(result?.changes?.[uri].length).toBe(5);
+            expect(result?.changes?.[uri]!.length).toBe(5);
 
             for (const edit of result?.changes?.[uri] ?? []) {
                 expect(edit.newText).toBe("count");
@@ -132,7 +132,7 @@ end
             expect(result).not.toBeNull();
             expect(result?.changes?.[uri]).toBeDefined();
             // param definition + 3 usages = 4
-            expect(result?.changes?.[uri].length).toBe(4);
+            expect(result?.changes?.[uri]!.length).toBe(4);
 
             for (const edit of result?.changes?.[uri] ?? []) {
                 expect(edit.newText).toBe("amount");
@@ -162,7 +162,7 @@ end
             expect(result).not.toBeNull();
             expect(result?.changes?.[uri]).toBeDefined();
             // declaration + 3 usages (foo: 2, bar: 1) = 4
-            expect(result?.changes?.[uri].length).toBe(4);
+            expect(result?.changes?.[uri]!.length).toBe(4);
 
             for (const edit of result?.changes?.[uri] ?? []) {
                 expect(edit.newText).toBe("dmPtr");
@@ -203,11 +203,11 @@ end
             expect(result).not.toBeNull();
             expect(result?.changes?.[uri]).toBeDefined();
             // Should only rename "foo" not "foobar"
-            expect(result?.changes?.[uri].length).toBe(2); // definition + 1 call
+            expect(result?.changes?.[uri]!.length).toBe(2); // definition + 1 call
 
             // Check that foobar is not renamed
             const edits = result?.changes?.[uri] ?? [];
-            const hasEditOnFoobar = edits.some(
+            const hasEditOnFoobar = edits!.some(
                 (edit) => edit.range.start.line === 2 && edit.range.start.character === 10,
             );
             expect(hasEditOnFoobar).toBe(false);
@@ -237,10 +237,10 @@ end
             expect(result?.changes?.[uri]).toBeDefined();
             // Should rename only in foo: declaration + 3 usages = 4
             const edits = result!.changes![uri];
-            expect(edits.length).toBe(4);
+            expect(edits!.length).toBe(4);
 
             // All edits should be within foo (lines 1-5)
-            for (const edit of edits) {
+            for (const edit of edits!) {
                 expect(edit.range.start.line).toBeGreaterThanOrEqual(1);
                 expect(edit.range.start.line).toBeLessThanOrEqual(5);
                 expect(edit.newText).toBe("idx");
@@ -264,10 +264,10 @@ end
             expect(result).not.toBeNull();
             const edits = result!.changes![uri];
             // foo: param def + 1 usage = 2
-            expect(edits.length).toBe(2);
+            expect(edits!.length).toBe(2);
 
             // All edits in foo (lines 1-3)
-            for (const edit of edits) {
+            for (const edit of edits!) {
                 expect(edit.range.start.line).toBeGreaterThanOrEqual(1);
                 expect(edit.range.start.line).toBeLessThanOrEqual(3);
             }
@@ -294,10 +294,10 @@ end
             const edits = result!.changes![uri];
             // definition in #define + usage in bar = 2
             // foo has local x, should NOT be renamed
-            expect(edits.length).toBe(2);
+            expect(edits!.length).toBe(2);
 
             // No edits should be inside foo (lines 3-6)
-            for (const edit of edits) {
+            for (const edit of edits!) {
                 const inFoo = edit.range.start.line >= 3 && edit.range.start.line <= 6;
                 expect(inFoo).toBe(false);
             }
@@ -521,9 +521,9 @@ end
             expect(result).not.toBeNull();
             const edits = result!.changes![uri];
             // definition + macro body reference + call site = 3
-            expect(edits.length).toBe(3);
+            expect(edits!.length).toBe(3);
 
-            for (const edit of edits) {
+            for (const edit of edits!) {
                 expect(edit.newText).toBe("new_helper");
             }
         });
@@ -547,10 +547,10 @@ end
             const edits = result!.changes![uri];
             // variable declaration + usage in foo = 2
             // macro body's "a" should NOT be renamed (it shadows the file-scope variable)
-            expect(edits.length).toBe(2);
+            expect(edits!.length).toBe(2);
 
             // No edits should be inside the macro body (line 3)
-            for (const edit of edits) {
+            for (const edit of edits!) {
                 expect(edit.range.start.line).not.toBe(3);
             }
         });
@@ -572,7 +572,7 @@ end
             expect(result).not.toBeNull();
             const edits = result!.changes![uri];
             // definition + reference in CHECK_ITEMS body + reference in foo = 3
-            expect(edits.length).toBe(3);
+            expect(edits!.length).toBe(3);
         });
 
         it("renames symbol inside multiline macro body", () => {
@@ -595,7 +595,7 @@ end
             expect(result).not.toBeNull();
             const edits = result!.changes![uri];
             // definition + macro body reference + call in main = 3
-            expect(edits.length).toBe(3);
+            expect(edits!.length).toBe(3);
         });
 
         it("allows rename from cursor inside macro body", () => {
@@ -611,7 +611,7 @@ procedure helper begin end
             expect(result).not.toBeNull();
             const edits = result!.changes![uri];
             // definition + macro body reference = 2
-            expect(edits.length).toBe(2);
+            expect(edits!.length).toBe(2);
         });
 
         it("renames macro parameter from its definition site (in params)", () => {
@@ -626,8 +626,8 @@ procedure helper begin end
             expect(result).not.toBeNull();
             const edits = result!.changes![uri];
             // param definition + 1 usage in body = 2
-            expect(edits.length).toBe(2);
-            for (const edit of edits) {
+            expect(edits!.length).toBe(2);
+            for (const edit of edits!) {
                 expect(edit.newText).toBe("target_obj");
             }
         });
@@ -644,8 +644,8 @@ procedure helper begin end
             expect(result).not.toBeNull();
             const edits = result!.changes![uri];
             // param definition + 1 usage in body = 2
-            expect(edits.length).toBe(2);
-            for (const edit of edits) {
+            expect(edits!.length).toBe(2);
+            for (const edit of edits!) {
                 expect(edit.newText).toBe("target_obj");
             }
         });
@@ -663,9 +663,9 @@ procedure helper begin end
             expect(result).not.toBeNull();
             const edits = result!.changes![uri];
             // ADD param "a" def + 1 usage in ADD body = 2 (MUL's "a" untouched)
-            expect(edits.length).toBe(2);
+            expect(edits!.length).toBe(2);
             // All edits on line 1 (ADD), none on line 2 (MUL)
-            for (const edit of edits) {
+            for (const edit of edits!) {
                 expect(edit.range.start.line).toBe(1);
             }
         });
@@ -686,8 +686,8 @@ end
             expect(result).not.toBeNull();
             const edits = result!.changes![uri];
             // Only ADD's param def + 1 usage in body = 2; variable "a" and foo's usage untouched
-            expect(edits.length).toBe(2);
-            for (const edit of edits) {
+            expect(edits!.length).toBe(2);
+            for (const edit of edits!) {
                 expect(edit.range.start.line).toBe(2);
             }
         });
@@ -861,7 +861,7 @@ end`;
             expect(headerEdits).toBeDefined();
             expect(sslEdits).toBeDefined();
             expect(sslEdits!.length).toBe(1);
-            expect(sslEdits![0].newText).toBe("rename_test123");
+            expect(sslEdits![0]!.newText).toBe("rename_test123");
         });
     });
 
@@ -927,11 +927,11 @@ end
 
             // Header: 1 edit (definition)
             expect(headerEdits!.length).toBe(1);
-            expect(headerEdits![0].newText).toBe("new_helper");
+            expect(headerEdits![0]!.newText).toBe("new_helper");
 
             // SSL file: 1 edit (call site)
             expect(sslEdits!.length).toBe(1);
-            expect(sslEdits![0].newText).toBe("new_helper");
+            expect(sslEdits![0]!.newText).toBe("new_helper");
         });
 
         it("renames macro defined in header across multiple .ssl files", async () => {
@@ -1164,7 +1164,7 @@ end
             expect(sslEdits).toBeDefined();
             expect(sslEdits!.length).toBe(1);
             // The edit should be on the display_msg(FOO) line in "user"
-            expect(sslEdits![0].range.start.line).toBe(8); // line with display_msg(FOO)
+            expect(sslEdits![0]!.range.start.line).toBe(8); // line with display_msg(FOO)
         });
 
         it("renames from reference site (not just definition)", async () => {
@@ -1347,7 +1347,7 @@ end
             const globalHLines = globalHText.split("\n");
             const defLine = globalHLines.findIndex((l) => l.includes("#define GVAR_DEN_GANGWAR "));
             expect(defLine, "GVAR_DEN_GANGWAR definition should exist in global.h").toBeGreaterThan(-1);
-            const defCol = globalHLines[defLine].indexOf("GVAR_DEN_GANGWAR");
+            const defCol = globalHLines[defLine]!.indexOf("GVAR_DEN_GANGWAR");
             const position: Position = { line: defLine, character: defCol };
             const result = await renameSymbolWorkspace(
                 globalHText,
@@ -1425,11 +1425,11 @@ end
 
             // Find the definition line in global.h
             const globalHUri = Object.keys(files).find((u) => u.endsWith("global.h"))!;
-            const globalHText = files[globalHUri].text;
+            const globalHText = files[globalHUri]!.text;
             const globalHLines = globalHText.split("\n");
             const defLine = globalHLines.findIndex((l: string) => l.includes("#define GVAR_DEN_GANGWAR "));
             expect(defLine, "GVAR_DEN_GANGWAR definition should exist in global.h").toBeGreaterThan(-1);
-            const defCol = globalHLines[defLine].indexOf("GVAR_DEN_GANGWAR");
+            const defCol = globalHLines[defLine]!.indexOf("GVAR_DEN_GANGWAR");
 
             // Perform workspace rename
             const result = await renameSymbolWorkspace(
@@ -1488,7 +1488,7 @@ end
 
             // Find GVAR_DEN_GANGWAR as an actual identifier (not inside a string literal)
             const sslUri = Object.keys(files).find((u) => u.endsWith("dclara.ssl"))!;
-            const sslText = files[sslUri].text;
+            const sslText = files[sslUri]!.text;
             const sslLines = sslText.split("\n");
             // Find the line with global_var(GVAR_DEN_GANGWAR) — the identifier usage
             const usageLine = sslLines.findIndex((l: string) => {
@@ -1498,7 +1498,7 @@ end
             });
             expect(usageLine, "GVAR_DEN_GANGWAR usage should exist in dclara.ssl").toBeGreaterThan(-1);
             // Position cursor on the LAST occurrence (the real identifier, not the one in the string)
-            const callIdx = sslLines[usageLine].lastIndexOf("global_var(GVAR_DEN_GANGWAR)");
+            const callIdx = sslLines[usageLine]!.lastIndexOf("global_var(GVAR_DEN_GANGWAR)");
             // Skip past "global_var(" to land on the identifier
             const usageCol = callIdx + "global_var(".length;
 

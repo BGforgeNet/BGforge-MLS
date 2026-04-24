@@ -28,7 +28,7 @@ function extractTypesFromRegex(content: string, pattern: RegExp): string[] {
     const globalPattern = new RegExp(pattern.source, "g");
     while ((match = globalPattern.exec(content)) !== null) {
         const alternation = match[1];
-        for (const type of alternation.split("|")) {
+        for (const type of alternation!.split("|")) {
             types.add(type.trim());
         }
     }
@@ -51,7 +51,7 @@ describe("JSDoc type sync", () => {
             expect(paramLine).toBeDefined();
             const match = paramLine!.match(/\(([^)]+)\)\\s\+\(\\w\+\)/);
             expect(match).toBeTruthy();
-            const types = match![1].split("|").sort();
+            const types = match![1]!.split("|").sort();
             expect(types).toEqual([...ALL_JSDOC_TYPE_NAMES].sort());
         });
 
@@ -65,7 +65,7 @@ describe("JSDoc type sync", () => {
             for (const retLine of retLines) {
                 const match = retLine.match(/\(@ret\|@return\|@returns\)\\s\+\(([^)]+)\)/);
                 expect(match).toBeTruthy();
-                const types = match![1].split("|").sort();
+                const types = match![1]!.split("|").sort();
                 expect(types).toEqual([...ALL_JSDOC_TYPE_NAMES].sort());
             }
         });
@@ -141,15 +141,15 @@ describe("JSDoc type sync", () => {
             // Parser uses @(?:arg|param) in regex patterns
             const matches = [...parserContent.matchAll(/@\(\?:(arg\|param|param\|arg)\)/g)];
             expect(matches.length).toBeGreaterThan(0);
-            const parserTags = matches[0][1].split("|").sort();
+            const parserTags = matches[0]![1]!.split("|").sort();
             expect(parserTags).toEqual([...JSDOC_PARAM_TAGS].sort());
         });
 
         it("parser return patterns use exactly JSDOC_RETURN_TAGS", () => {
             // Parser uses @(?:ret|return|returns) in regex patterns
-            const matches = [...parserContent.matchAll(/@\(\?:([\w|]+)\)\\s/g)].filter((m) => m[1].includes("ret"));
+            const matches = [...parserContent.matchAll(/@\(\?:([\w|]+)\)\\s/g)].filter((m) => m[1]!.includes("ret"));
             expect(matches.length).toBeGreaterThan(0);
-            const parserTags = matches[0][1].split("|").sort();
+            const parserTags = matches[0]![1]!.split("|").sort();
             expect(parserTags).toEqual([...JSDOC_RETURN_TAGS].sort());
         });
 

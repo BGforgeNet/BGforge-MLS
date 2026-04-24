@@ -46,7 +46,7 @@ function expectFiltering(
     const filtered = filterItemsByContext(items, contexts);
     if (shouldBeIncluded) {
         expect(filtered).toHaveLength(1);
-        expect(filtered[0].label).toBe("TEST_ITEM");
+        expect(filtered[0]!.label).toBe("TEST_ITEM");
     } else {
         expect(filtered).toHaveLength(0);
     }
@@ -58,7 +58,7 @@ function getCursorPosition(textWithCursor: string): { text: string; line: number
     if (cursorIndex === -1) throw new Error("No cursor marker | found");
     const text = textWithCursor.slice(0, cursorIndex) + textWithCursor.slice(cursorIndex + 1);
     const lines = textWithCursor.slice(0, cursorIndex).split("\n");
-    return { text, line: lines.length - 1, character: lines[lines.length - 1].length };
+    return { text, line: lines.length - 1, character: lines[lines.length - 1]!.length };
 }
 
 /** Helper to get contexts at cursor position. */

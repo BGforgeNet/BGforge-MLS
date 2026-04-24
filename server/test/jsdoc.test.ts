@@ -74,9 +74,9 @@ describe("jsdoc.parse", () => {
  */`;
             const result = jsdoc.parse(input);
             expect(result.args).toHaveLength(3);
-            expect(result.args[0].name).toBe("count");
-            expect(result.args[1].name).toBe("name");
-            expect(result.args[2].name).toBe("enabled");
+            expect(result.args[0]!.name).toBe("count");
+            expect(result.args[1]!.name).toBe("name");
+            expect(result.args[2]!.name).toBe("enabled");
         });
 
         it("parses @param with ! suffix as required", () => {
@@ -527,7 +527,7 @@ describe("jsdoc.parse", () => {
             const result = jsdoc.parse(input, { returnMode: "named" });
             expect(result.ret).toBeUndefined();
             expect(result.rets).toHaveLength(1);
-            expect(result.rets![0].name).toBe("count");
+            expect(result.rets![0]!.name).toBe("count");
         });
 
         it("parses multiple named returns in named mode", () => {

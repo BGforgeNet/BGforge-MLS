@@ -377,9 +377,9 @@ describe("addFallbackDiagnostic", () => {
         const result = addFallbackDiagnostic(original, err, "file:///test.tp2", "");
 
         expect(result.errors).toHaveLength(1);
-        expect(result.errors[0].message).toBe("Command failed");
-        expect(result.errors[0].uri).toBe("file:///test.tp2");
-        expect(result.errors[0].line).toBe(1);
+        expect(result.errors[0]!.message).toBe("Command failed");
+        expect(result.errors[0]!.uri).toBe("file:///test.tp2");
+        expect(result.errors[0]!.line).toBe(1);
     });
 
     it("does not mutate the original ParseResult", () => {
@@ -406,7 +406,7 @@ describe("addFallbackDiagnostic", () => {
             "Some unexpected output",
         );
 
-        expect(result.errors[0].message).toBe("Some unexpected output");
+        expect(result.errors[0]!.message).toBe("Some unexpected output");
     });
 
     it("uses err.message as message when stdout is empty", () => {
@@ -414,7 +414,7 @@ describe("addFallbackDiagnostic", () => {
 
         const result = addFallbackDiagnostic({ errors: [], warnings: [] }, err, "file:///test.tp2", "");
 
-        expect(result.errors[0].message).toBe("Command failed");
+        expect(result.errors[0]!.message).toBe("Command failed");
     });
 
     it("preserves existing errors and warnings from input", () => {
@@ -427,10 +427,10 @@ describe("addFallbackDiagnostic", () => {
         const result = addFallbackDiagnostic(original, err, "file:///b.tp2", "");
 
         expect(result.errors).toHaveLength(2);
-        expect(result.errors[0].message).toBe("err1");
-        expect(result.errors[1].message).toBe("fallback");
+        expect(result.errors[0]!.message).toBe("err1");
+        expect(result.errors[1]!.message).toBe("fallback");
         expect(result.warnings).toHaveLength(1);
-        expect(result.warnings[0].message).toBe("warn1");
+        expect(result.warnings[0]!.message).toBe("warn1");
     });
 });
 
@@ -450,7 +450,7 @@ describe("runProcess", () => {
 
         await runProcess("echo", ["hello"], ".", controller.signal);
 
-        const options = mockExecFile.mock.calls[0][2] as { signal?: AbortSignal };
+        const options = mockExecFile.mock.calls[0]![2] as { signal?: AbortSignal };
         expect(options.signal).toBe(controller.signal);
     });
 
@@ -464,7 +464,7 @@ describe("runProcess", () => {
 
         await runProcess("echo", ["hello"], ".");
 
-        const options = mockExecFile.mock.calls[0][2] as { signal?: AbortSignal };
+        const options = mockExecFile.mock.calls[0]![2] as { signal?: AbortSignal };
         expect(options.signal).toBeUndefined();
     });
 
@@ -495,7 +495,7 @@ describe("runProcess", () => {
 
         await runProcess("echo", ["hello"], ".", undefined, 5000);
 
-        const options = mockExecFile.mock.calls[0][2] as { timeout?: number };
+        const options = mockExecFile.mock.calls[0]![2] as { timeout?: number };
         expect(options.timeout).toBe(5000);
     });
 
@@ -509,7 +509,7 @@ describe("runProcess", () => {
 
         await runProcess("echo", ["hello"], ".");
 
-        const options = mockExecFile.mock.calls[0][2] as { timeout?: number };
+        const options = mockExecFile.mock.calls[0]![2] as { timeout?: number };
         expect(options.timeout).toBe(60_000);
     });
 });

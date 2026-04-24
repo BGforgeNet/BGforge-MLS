@@ -35,7 +35,7 @@ describe("fallout-ssl/utils", () => {
         it("creates a range from tree-sitter node positions", () => {
             const text = "procedure foo begin end";
             const tree = parseWithCache(text);
-            expect(tree).not.toBeNull();
+            expect(tree!).not.toBeNull();
 
             const nameNode = tree!.rootNode.childForFieldName("name");
             if (nameNode) {
@@ -52,7 +52,7 @@ describe("fallout-ssl/utils", () => {
         it("extracts a single procedure", () => {
             const text = "procedure foo begin end";
             const tree = parseWithCache(text);
-            expect(tree).not.toBeNull();
+            expect(tree!).not.toBeNull();
 
             const procedures = extractProcedures(tree!.rootNode);
             expect(procedures.size).toBe(1);
@@ -67,7 +67,7 @@ procedure bar begin end
 procedure baz begin end
 `;
             const tree = parseWithCache(text);
-            expect(tree).not.toBeNull();
+            expect(tree!).not.toBeNull();
 
             const procedures = extractProcedures(tree!.rootNode);
             expect(procedures.size).toBe(3);
@@ -79,7 +79,7 @@ procedure baz begin end
         it("extracts forward declarations", () => {
             const text = "procedure foo;";
             const tree = parseWithCache(text);
-            expect(tree).not.toBeNull();
+            expect(tree!).not.toBeNull();
 
             const procedures = extractProcedures(tree!.rootNode);
             expect(procedures.size).toBe(1);
@@ -93,7 +93,7 @@ procedure foo;
 procedure foo begin end
 `;
             const tree = parseWithCache(text);
-            expect(tree).not.toBeNull();
+            expect(tree!).not.toBeNull();
 
             const procedures = extractProcedures(tree!.rootNode);
             expect(procedures.size).toBe(1);
@@ -104,7 +104,7 @@ procedure foo begin end
         it("returns empty map for empty file", () => {
             const text = "";
             const tree = parseWithCache(text);
-            expect(tree).not.toBeNull();
+            expect(tree!).not.toBeNull();
 
             const procedures = extractProcedures(tree!.rootNode);
             expect(procedures.size).toBe(0);
@@ -118,7 +118,7 @@ procedure foo begin end
 procedure bar begin end
 `;
             const tree = parseWithCache(text);
-            expect(tree).not.toBeNull();
+            expect(tree!).not.toBeNull();
 
             const proc = findProcedure(tree!.rootNode, "bar");
             expect(proc).not.toBeNull();
@@ -128,7 +128,7 @@ procedure bar begin end
         it("returns null for non-existent procedure", () => {
             const text = "procedure foo begin end";
             const tree = parseWithCache(text);
-            expect(tree).not.toBeNull();
+            expect(tree!).not.toBeNull();
 
             const proc = findProcedure(tree!.rootNode, "nonexistent");
             expect(proc).toBeNull();
@@ -137,7 +137,7 @@ procedure bar begin end
         it("finds forward declaration when no definition exists", () => {
             const text = "procedure foo;";
             const tree = parseWithCache(text);
-            expect(tree).not.toBeNull();
+            expect(tree!).not.toBeNull();
 
             const proc = findProcedure(tree!.rootNode, "foo");
             expect(proc).not.toBeNull();
@@ -149,7 +149,7 @@ procedure bar begin end
         it("finds identifier at cursor position", () => {
             const text = "procedure foo begin end";
             const tree = parseWithCache(text);
-            expect(tree).not.toBeNull();
+            expect(tree!).not.toBeNull();
 
             // Position on "foo"
             const position: Position = { line: 0, character: 10 };
@@ -160,7 +160,7 @@ procedure bar begin end
         it("returns null for position outside identifiers", () => {
             const text = "procedure foo begin end";
             const tree = parseWithCache(text);
-            expect(tree).not.toBeNull();
+            expect(tree!).not.toBeNull();
 
             // Position on whitespace
             const position: Position = { line: 0, character: 9 };
@@ -171,7 +171,7 @@ procedure bar begin end
         it("returns null for position beyond text", () => {
             const text = "procedure foo begin end";
             const tree = parseWithCache(text);
-            expect(tree).not.toBeNull();
+            expect(tree!).not.toBeNull();
 
             const position: Position = { line: 10, character: 0 };
             const symbol = findIdentifierAtPosition(tree!.rootNode, position);
@@ -183,7 +183,7 @@ procedure bar begin end
         it("finds procedure definition", () => {
             const text = "procedure foo begin end";
             const tree = parseWithCache(text);
-            expect(tree).not.toBeNull();
+            expect(tree!).not.toBeNull();
 
             const def = findDefinitionNode(tree!.rootNode, "foo");
             expect(def).not.toBeNull();
@@ -197,7 +197,7 @@ procedure foo begin
 end
 `;
             const tree = parseWithCache(text);
-            expect(tree).not.toBeNull();
+            expect(tree!).not.toBeNull();
 
             const def = findDefinitionNode(tree!.rootNode, "x");
             expect(def).not.toBeNull();
@@ -206,7 +206,7 @@ end
         it("returns null for undefined symbol", () => {
             const text = "procedure foo begin end";
             const tree = parseWithCache(text);
-            expect(tree).not.toBeNull();
+            expect(tree!).not.toBeNull();
 
             const def = findDefinitionNode(tree!.rootNode, "nonexistent");
             expect(def).toBeNull();
@@ -219,7 +219,7 @@ procedure foo begin
 end
 `;
             const tree = parseWithCache(text);
-            expect(tree).not.toBeNull();
+            expect(tree!).not.toBeNull();
 
             const def = findDefinitionNode(tree!.rootNode, "item");
             expect(def).not.toBeNull();
@@ -228,7 +228,7 @@ end
         it("finds export variable declaration", () => {
             const text = `export variable my_export := 0;`;
             const tree = parseWithCache(text);
-            expect(tree).not.toBeNull();
+            expect(tree!).not.toBeNull();
 
             const def = findDefinitionNode(tree!.rootNode, "my_export");
             expect(def).not.toBeNull();
@@ -239,7 +239,7 @@ end
         it("returns true for locally defined procedure", () => {
             const text = "procedure foo begin end";
             const tree = parseWithCache(text);
-            expect(tree).not.toBeNull();
+            expect(tree!).not.toBeNull();
 
             const isLocal = isLocalDefinition(tree!.rootNode, "foo");
             expect(isLocal).toBe(true);
@@ -248,7 +248,7 @@ end
         it("returns false for undefined symbol", () => {
             const text = "procedure foo begin end";
             const tree = parseWithCache(text);
-            expect(tree).not.toBeNull();
+            expect(tree!).not.toBeNull();
 
             const isLocal = isLocalDefinition(tree!.rootNode, "bar");
             expect(isLocal).toBe(false);
@@ -360,7 +360,7 @@ end
 procedure foo begin end
 `;
             const tree = parseWithCache(text);
-            expect(tree).not.toBeNull();
+            expect(tree!).not.toBeNull();
 
             // Find the procedure node
             const proc = findProcedure(tree!.rootNode, "foo");
@@ -373,7 +373,7 @@ procedure foo begin end
         it("returns null when no doc comment", () => {
             const text = "procedure foo begin end";
             const tree = parseWithCache(text);
-            expect(tree).not.toBeNull();
+            expect(tree!).not.toBeNull();
 
             const proc = findProcedure(tree!.rootNode, "foo");
             expect(proc).not.toBeNull();
@@ -388,7 +388,7 @@ procedure foo begin end
 procedure foo begin end
 `;
             const tree = parseWithCache(text);
-            expect(tree).not.toBeNull();
+            expect(tree!).not.toBeNull();
 
             const proc = findProcedure(tree!.rootNode, "foo");
             expect(proc).not.toBeNull();
@@ -402,7 +402,7 @@ procedure foo begin end
         it("extracts parameters without defaults", () => {
             const text = "procedure foo(variable x, variable y) begin end";
             const tree = parseWithCache(text);
-            expect(tree).not.toBeNull();
+            expect(tree!).not.toBeNull();
 
             const proc = findProcedure(tree!.rootNode, "foo");
             expect(proc).not.toBeNull();
@@ -417,7 +417,7 @@ procedure foo begin end
         it("extracts parameters with default values", () => {
             const text = "procedure foo(variable x := 0, variable y = 1) begin end";
             const tree = parseWithCache(text);
-            expect(tree).not.toBeNull();
+            expect(tree!).not.toBeNull();
 
             const proc = findProcedure(tree!.rootNode, "foo");
             expect(proc).not.toBeNull();
@@ -432,7 +432,7 @@ procedure foo begin end
         it("extracts mixed parameters (some with defaults, some without)", () => {
             const text = "procedure foo(variable x, variable y = 5, variable z) begin end";
             const tree = parseWithCache(text);
-            expect(tree).not.toBeNull();
+            expect(tree!).not.toBeNull();
 
             const proc = findProcedure(tree!.rootNode, "foo");
             expect(proc).not.toBeNull();
@@ -448,7 +448,7 @@ procedure foo begin end
         it("returns empty array for procedure without parameters", () => {
             const text = "procedure foo begin end";
             const tree = parseWithCache(text);
-            expect(tree).not.toBeNull();
+            expect(tree!).not.toBeNull();
 
             const proc = findProcedure(tree!.rootNode, "foo");
             expect(proc).not.toBeNull();
@@ -460,7 +460,7 @@ procedure foo begin end
         it("extracts parameters from forward declaration", () => {
             const text = "procedure foo(variable x = 42);";
             const tree = parseWithCache(text);
-            expect(tree).not.toBeNull();
+            expect(tree!).not.toBeNull();
 
             const proc = findProcedure(tree!.rootNode, "foo");
             expect(proc).not.toBeNull();
@@ -472,7 +472,7 @@ procedure foo begin end
         it("does not extract invalid expression defaults from procedure params", () => {
             const text = "procedure foo(variable x = (1 + 2)) begin end";
             const tree = parseWithCache(text);
-            expect(tree).not.toBeNull();
+            expect(tree!).not.toBeNull();
 
             const proc = findProcedure(tree!.rootNode, "foo");
             expect(proc).not.toBeNull();

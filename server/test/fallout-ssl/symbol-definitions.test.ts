@@ -24,10 +24,10 @@ procedure foo(variable amount) begin
 end
 `;
         const tree = parseWithCache(text)!;
-        const amountRef = findIdentifierNodeByText(tree.rootNode, "amount", 1);
+        const amountRef = findIdentifierNodeByText(tree!.rootNode, "amount", 1);
         expect(amountRef).not.toBeNull();
 
-        const definitionNode = resolveIdentifierDefinitionNode(tree.rootNode, amountRef!);
+        const definitionNode = resolveIdentifierDefinitionNode(tree!.rootNode, amountRef!);
         expect(definitionNode).not.toBeNull();
         expect(definitionNode?.text).toBe("amount");
         expect(isParameterDefinitionNode(definitionNode!)).toBe(true);

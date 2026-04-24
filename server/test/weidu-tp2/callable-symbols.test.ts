@@ -28,7 +28,7 @@ COPY_EXISTING ~file.itm~ ~override~
 `;
 
         const tree = parseWithCache(text);
-        expect(tree).not.toBeNull();
+        expect(tree!).not.toBeNull();
 
         const symbolInfo = getCallableSymbolAtPosition(tree!.rootNode, { line: 6, character: 8 });
         expect(symbolInfo).not.toBeNull();
@@ -55,7 +55,7 @@ COPY_EXISTING ~file.itm~ ~override~
 `;
 
         const tree = parseWithCache(text);
-        expect(tree).not.toBeNull();
+        expect(tree!).not.toBeNull();
 
         const symbolInfo = getCallableSymbolAtPosition(tree!.rootNode, { line: 5, character: 10 });
         expect(symbolInfo).not.toBeNull();

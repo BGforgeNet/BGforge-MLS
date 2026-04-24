@@ -13,7 +13,7 @@ beforeAll(async () => {
 function format(input: string): string {
     const parser = getParser();
     const tree = parser.parse(input);
-    return formatDocument(tree.rootNode).text;
+    return formatDocument(tree!.rootNode).text;
 }
 
 describe("weidu-d/format/core", () => {
