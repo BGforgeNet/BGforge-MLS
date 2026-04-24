@@ -39,7 +39,7 @@ function completionToSymbol(item: CompletionItem & { category?: string }): Index
     // Determine SymbolKind from category
     let kind = SymbolKind.Variable;
     if (item.category && CATEGORY_TO_KIND[item.category]) {
-        kind = CATEGORY_TO_KIND[item.category];
+        kind = CATEGORY_TO_KIND[item.category]!;
     } else if (item.kind === CompletionItemKind.Function) {
         kind = SymbolKind.Function;
     } else if (item.kind === CompletionItemKind.Keyword) {

@@ -17,8 +17,8 @@ describe("settings-service", () => {
     });
 
     it("delegates to the registered getter after init", async () => {
-        const mockSettings = { ...defaultSettings, validate: "saveAndType" };
-        const getter = () => Promise.resolve(mockSettings);
+        const mockSettings = { ...defaultSettings, validate: "saveAndType" as const };
+        const getter = (_resource: string) => Promise.resolve(mockSettings);
         initSettingsService(getter);
 
         const result = await getDocumentSettings("file:///test.ts");

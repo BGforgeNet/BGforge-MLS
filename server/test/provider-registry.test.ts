@@ -490,7 +490,7 @@ describe("ProviderRegistry", () => {
                 { label: "func1", kind: CompletionItemKind.Function },
                 { label: "func2", kind: CompletionItemKind.Function },
             ];
-            const filteredItems: CompletionItem[] = [items[0]];
+            const filteredItems: CompletionItem[] = [items[0]!];
             const mockFilter = vi.fn().mockReturnValue(filteredItems);
             registry.register(
                 createMockProvider("test", {

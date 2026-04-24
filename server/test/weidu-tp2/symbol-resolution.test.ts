@@ -7,6 +7,7 @@
  */
 
 import { describe, expect, it, beforeAll, vi } from "vitest";
+import { defaultSettings } from "../../src/settings";
 
 // Mock LSP connection before importing provider
 vi.mock("../../src/common", () => ({
@@ -47,6 +48,7 @@ describe("weidu-tp2 symbol resolution", () => {
         await weiduTp2Provider.init({
             workspaceRoot: undefined,
             settings: {
+                ...defaultSettings,
                 weidu: { path: "", gamePath: "" },
             },
         });

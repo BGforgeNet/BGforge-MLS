@@ -69,8 +69,8 @@ beforeAll(async () => {
         },
     });
 
-    grammar = await registry.loadGrammar("source.fallout-ssl");
-    tooltipGrammar = await registry.loadGrammar("source.fallout-ssl-tooltip");
+    grammar = (await registry.loadGrammar("source.fallout-ssl"))!;
+    tooltipGrammar = (await registry.loadGrammar("source.fallout-ssl-tooltip"))!;
 });
 
 describe("fallout-ssl TextMate syntax", () => {

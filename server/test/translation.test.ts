@@ -25,7 +25,7 @@ vi.mock("../src/server", () => ({
 }));
 
 import { Translation } from "../src/translation";
-import { ProjectTraSettings } from "../src/settings";
+import type { ProjectTraSettings } from "../src/settings";
 
 describe("Translation", () => {
     let tempDir: string;

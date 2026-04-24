@@ -558,7 +558,10 @@ describe("jsdoc.parse", () => {
         });
 
         it("returns empty map when jsdoc has no args", () => {
-            const map = jsdoc.buildParamInfoMap({ desc: "no args" });
+            // Intentionally omits `args` to exercise the runtime branch where
+            // the JSDoc was parsed with no @arg/@param tags; the type requires
+            // `args` but the function tolerates missing input.
+            const map = jsdoc.buildParamInfoMap({ desc: "no args" } as jsdoc.JSdoc);
             expect(map.size).toBe(0);
         });
 
