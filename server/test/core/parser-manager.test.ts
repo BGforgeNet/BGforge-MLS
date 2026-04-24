@@ -27,7 +27,7 @@ vi.mock("../../src/shared/parser-factory", () => ({
 // Suppress conlog output in tests
 vi.mock("../../src/common", () => ({
     conlog: vi.fn(),
-    errorMessage: (err) => (err instanceof Error ? err.message : String(err)),
+    errorMessage: (err: unknown) => (err instanceof Error ? err.message : String(err)),
 }));
 
 // Import after mocks are set up.  Use a fresh ParserManager instance for each

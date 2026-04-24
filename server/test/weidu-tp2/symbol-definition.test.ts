@@ -33,7 +33,7 @@ vi.mock("fs", () => ({
 
 vi.mock("../../src/common", () => ({
     conlog: vi.fn(),
-    errorMessage: (err) => (err instanceof Error ? err.message : String(err)),
+    errorMessage: (err: unknown) => (err instanceof Error ? err.message : String(err)),
 }));
 
 describe("weidu-tp2 getSymbolDefinition", () => {

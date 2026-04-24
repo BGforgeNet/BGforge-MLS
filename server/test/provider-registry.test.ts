@@ -30,7 +30,7 @@ import { encodeWorkspaceSymbolQuery } from "../../shared/protocol";
 // Mock the common module to suppress logs and control file finding during tests
 vi.mock("../src/common", () => ({
     conlog: vi.fn(),
-    errorMessage: (err) => (err instanceof Error ? err.message : String(err)),
+    errorMessage: (err: unknown) => (err instanceof Error ? err.message : String(err)),
     findFiles: vi.fn().mockReturnValue([]),
     pathToUri: vi.fn((p: string) => `file://${p}`),
 }));

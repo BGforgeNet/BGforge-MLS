@@ -15,7 +15,7 @@ import { DeclarationKind, CallableContext, CallableDefType } from "../../src/cor
 
 vi.mock("../../src/common", () => ({
     conlog: vi.fn(),
-    errorMessage: (err) => (err instanceof Error ? err.message : String(err)),
+    errorMessage: (err: unknown) => (err instanceof Error ? err.message : String(err)),
 }));
 
 import { buildVariableHover, buildFunctionHover } from "../../src/weidu-tp2/hover";

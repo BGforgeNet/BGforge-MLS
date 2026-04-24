@@ -10,7 +10,7 @@ import { CompletionItemKind, MarkupKind } from "vscode-languageserver/node";
 // Mock LSP connection before importing modules that use it
 vi.mock("../../src/common", () => ({
     conlog: vi.fn(),
-    errorMessage: (err) => (err instanceof Error ? err.message : String(err)),
+    errorMessage: (err: unknown) => (err instanceof Error ? err.message : String(err)),
 }));
 
 import { lookupLocalSymbol, getLocalSymbols, clearAllLocalSymbolsCache } from "../../src/fallout-ssl/local-symbols";

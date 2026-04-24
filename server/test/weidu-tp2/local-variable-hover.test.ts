@@ -12,7 +12,7 @@ import { MarkupKind } from "vscode-languageserver/node";
 // Mock LSP connection before importing modules that use it
 vi.mock("../../src/common", () => ({
     conlog: vi.fn(),
-    errorMessage: (err) => (err instanceof Error ? err.message : String(err)),
+    errorMessage: (err: unknown) => (err instanceof Error ? err.message : String(err)),
 }));
 
 import { lookupLocalSymbol, clearAllLocalSymbolsCache } from "../../src/weidu-tp2/local-symbols";

@@ -24,7 +24,7 @@ vi.mock("node:fs", () => ({
 // Mock common.ts logging (conlog) and user-messages to avoid LSP connection setup.
 vi.mock("../src/common", () => ({
     conlog: vi.fn(),
-    errorMessage: (err) => (err instanceof Error ? err.message : String(err)),
+    errorMessage: (err: unknown) => (err instanceof Error ? err.message : String(err)),
 }));
 vi.mock("../src/user-messages", () => ({
     showWarning: vi.fn(),
