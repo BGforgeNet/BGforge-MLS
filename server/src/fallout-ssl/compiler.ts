@@ -18,6 +18,7 @@ import {
     type ParseItemList,
     addFallbackDiagnostic,
     conlog,
+    errorMessage,
     needsShell,
     parseCommandPath,
     pathToUri,
@@ -143,7 +144,7 @@ function parseCompileOutput(text: string, uri: string) {
             });
         }
     } catch (err) {
-        conlog(err);
+        conlog(`fallout-ssl parse output failed: ${errorMessage(err)}`, "error");
     }
     return { errors, warnings };
 }

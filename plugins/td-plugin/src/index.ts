@@ -30,6 +30,9 @@ function init(modules: { typescript: typeof ts }): ts.server.PluginModule {
 
     function create(info: ts.server.PluginCreateInfo): ts.LanguageService {
         if (!runtime.exists) {
+            info.project?.projectService?.logger?.info(
+                `[td-plugin] TD runtime not found at ${runtime.path}; .td completions will not include the TD API.`,
+            );
             return info.languageService;
         }
 

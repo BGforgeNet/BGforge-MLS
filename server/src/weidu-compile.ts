@@ -11,6 +11,7 @@ import {
     type ParseResult,
     addFallbackDiagnostic,
     conlog,
+    errorMessage,
     parseCommandPath,
     pathToUri,
     removeTmpFile,
@@ -98,7 +99,7 @@ function parseWeiduOutput(text: string) {
             match = errorsRegex.exec(text);
         }
     } catch (err) {
-        conlog(err);
+        conlog(`weidu parse output failed: ${errorMessage(err)}`, "error");
     }
     const result: ParseResult = { errors: errors, warnings: warnings };
     return result;

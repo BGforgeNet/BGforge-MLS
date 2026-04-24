@@ -9,6 +9,7 @@
  * context is available and then return real results.
  */
 
+import { setDebugLogging } from "./common";
 import type { MLSsettings, ProjectSettings } from "./settings";
 import type { Translation } from "./translation";
 
@@ -40,6 +41,7 @@ const contextReady = new Promise<ServerContext>((resolve) => {
 /** Populate the context holder. Called once from onInitialize in server.ts. */
 export function initServerContext(value: ServerContext): void {
     ctx = value;
+    setDebugLogging(value.settings.debug);
     resolveContextReady(value);
 }
 
@@ -67,4 +69,5 @@ export function updateServerSettings(s: MLSsettings): void {
         throw new Error("ServerContext not initialized. Call initServerContext first.");
     }
     ctx.settings = s;
+    setDebugLogging(s.debug);
 }

@@ -6,7 +6,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as yaml from "yaml";
-import { conlog } from "./common";
+import { conlog, errorMessage } from "./common";
 
 export interface SSLsettings {
     compilePath: string;
@@ -112,7 +112,7 @@ export function project(dir: string | undefined) {
             }
         }
     } catch (e) {
-        conlog(e);
+        conlog(`Failed to load .bgforge.yml from ${dir}: ${errorMessage(e)}`, "warn");
     }
     return settings;
 }

@@ -10,7 +10,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
 import { Hover, InlayHint, Location, MarkupContent, MarkupKind, Position, Range } from "vscode-languageserver/node";
-import { conlog, findFiles, getRelPath, isDirectory, isSubpath, pathToUri } from "./common";
+import { conlog, errorMessage, findFiles, getRelPath, isDirectory, isSubpath, pathToUri } from "./common";
 import {
     CONSUMER_EXTENSIONS_MSG,
     CONSUMER_EXTENSIONS_TRA,
@@ -217,7 +217,12 @@ export class Translation {
      * @param includeDeclaration - Whether to include the definition itself
      * @returns Locations of all references, or empty array if not on a valid entry
      */
-    getReferences(uri: string, langId: string, position: Position, includeDeclaration: boolean): Location[] {
+    async getReferences(
+        uri: string,
+        langId: string,
+        position: Position,
+        includeDeclaration: boolean,
+    ): Promise<Location[]> {
         if (!this.initialized) return [];
         if (!languages.includes(langId)) return [];
 
@@ -389,7 +394,10 @@ export class Translation {
             // eslint-disable-next-line no-await-in-loop
             const { results, errors } = await this.loadFiles(traDir, traFiles, ext);
             if (errors.length > 0) {
-                conlog(errors);
+                conlog(
+                    `Translation: ${errors.length} error(s) loading *.${ext} from ${traDir}: ${errors.map((e) => errorMessage(e)).join("; ")}`,
+                    "warn",
+                );
             }
             for (const x of results) {
                 for (const [key, value] of x) {
@@ -900,16 +908,16 @@ export class Translation {
 
     /**
      * Find all references to a specific entry number across consumer files.
-     * Uses synchronous file reads: LSP references requests are synchronous by protocol,
-     * and typical mod projects have a small number of consumer files per tra/msg entry.
+     * Consumer files are read concurrently via fs.promises.readFile to avoid
+     * blocking the event loop on large mod projects.
      */
-    private findReferencesInConsumers(
+    private async findReferencesInConsumers(
         traFileKey: string,
         entryNum: string,
         traExt: TraExt,
         traAbsPath: string,
         includeDeclaration: boolean,
-    ): Location[] {
+    ): Promise<Location[]> {
         const locations: Location[] = [];
 
         // Optionally include the declaration itself
@@ -929,13 +937,20 @@ export class Translation {
         const consumerFiles = this.consumers.get(traFileKey);
         if (!consumerFiles) return locations;
 
-        for (const absPath of consumerFiles) {
-            let text: string;
-            try {
-                text = fs.readFileSync(absPath, "utf8");
-            } catch {
-                continue;
-            }
+        const reads = await Promise.all(
+            [...consumerFiles].map(async (absPath) => {
+                try {
+                    const text = await fs.promises.readFile(absPath, "utf8");
+                    return { absPath, text };
+                } catch {
+                    return undefined;
+                }
+            }),
+        );
+
+        for (const read of reads) {
+            if (!read) continue;
+            const { absPath, text } = read;
             const refs = this.scanFileForReferences(text, entryNum, traExt);
             const fileUri = pathToUri(absPath);
             for (const ref of refs) {

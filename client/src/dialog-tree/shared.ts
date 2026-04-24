@@ -10,6 +10,7 @@ import * as vscode from "vscode";
 import * as path from "path";
 import { randomBytes } from "crypto";
 import { type ExecuteCommandParams, LanguageClient, ExecuteCommandRequest } from "vscode-languageclient/node";
+import { conlog } from "../logging";
 import { escapeHtml } from "../utils";
 import { getCachedCssAsset, getCachedHtmlAsset, getCachedJsAsset } from "../webview-assets";
 import { LSP_COMMAND_PARSE_DIALOG } from "../../../shared/protocol";
@@ -157,8 +158,11 @@ export function registerDialogPanel(
                 currentFilePath || "",
                 iconUri.toString(),
             );
-        } catch {
-            // Ignore errors during refresh
+        } catch (err) {
+            conlog(
+                `Dialog preview refresh failed for ${currentFileName ?? "<unknown>"}: ${err instanceof Error ? err.message : String(err)}`,
+                "warn",
+            );
         }
     }
 

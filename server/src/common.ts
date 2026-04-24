@@ -27,29 +27,35 @@ export function expandHome(filePath: string): string {
     return filePath;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- logging accepts any value
-export function conlog(item: any): void {
-    const log = getConnection().console.log.bind(getConnection().console);
-    if (item === undefined) {
-        log("undefined");
-        return;
-    }
-    if (typeof item === "string") {
-        log(item);
-        return;
-    }
-    if (typeof item === "number" || typeof item === "boolean") {
-        log(item.toString());
-        return;
-    }
-    if (item instanceof Map) {
-        log(JSON.stringify([...item]));
-        return;
-    }
-    try {
-        log(JSON.stringify(item));
-    } catch {
-        log(String(item));
+type LogLevel = "debug" | "info" | "warn" | "error";
+
+let debugEnabled = false;
+
+/** Toggle debug-level logging. Called from server-context when settings.debug changes. */
+export function setDebugLogging(enabled: boolean): void {
+    debugEnabled = enabled;
+}
+
+/**
+ * Log a message through the LSP connection's console at the given level.
+ * Debug-level messages are dropped unless {@link setDebugLogging} was called with true.
+ */
+export function conlog(message: string, level: LogLevel = "info"): void {
+    if (level === "debug" && !debugEnabled) return;
+    const console = getConnection().console;
+    switch (level) {
+        case "debug":
+            console.log(`[debug] ${message}`);
+            break;
+        case "info":
+            console.log(message);
+            break;
+        case "warn":
+            console.warn(message);
+            break;
+        case "error":
+            console.error(message);
+            break;
     }
 }
 

@@ -637,7 +637,7 @@ translation~`;
 
             const traUri = `file://${tempDir}/test.tra`;
             // Cursor on @100 in the tra file (line 0, character 0)
-            const refs = translation.getReferences(traUri, "weidu-tra", { line: 0, character: 0 }, false);
+            const refs = await translation.getReferences(traUri, "weidu-tra", { line: 0, character: 0 }, false);
 
             expect(refs.length).toBe(1);
             expect(refs[0]!.uri).toContain("test.baf");
@@ -652,7 +652,7 @@ translation~`;
 
             const msgUri = `file://${tempDir}/test.msg`;
             // Cursor on {100} in the msg file (line 0, character 0)
-            const refs = translation.getReferences(msgUri, "fallout-msg", { line: 0, character: 0 }, false);
+            const refs = await translation.getReferences(msgUri, "fallout-msg", { line: 0, character: 0 }, false);
 
             expect(refs.length).toBe(1);
             expect(refs[0]!.uri).toContain("test.ssl");
@@ -665,7 +665,7 @@ translation~`;
             await translation.init();
 
             const traUri = `file://${tempDir}/test.tra`;
-            const refs = translation.getReferences(traUri, "weidu-tra", { line: 0, character: 0 }, true);
+            const refs = await translation.getReferences(traUri, "weidu-tra", { line: 0, character: 0 }, true);
 
             // Should include both the declaration in test.tra and the reference in test.baf
             expect(refs.length).toBe(2);
@@ -681,7 +681,7 @@ translation~`;
 
             const traUri = `file://${tempDir}/test.tra`;
             // Cursor on "Hello" in "@100 = ~Hello from tra~" (line 0, character 10)
-            const refs = translation.getReferences(traUri, "weidu-tra", { line: 0, character: 10 }, false);
+            const refs = await translation.getReferences(traUri, "weidu-tra", { line: 0, character: 10 }, false);
 
             expect(refs.length).toBe(1);
             expect(refs[0]!.uri).toContain("test.baf");
@@ -702,7 +702,7 @@ translation~`;
 
             const traUri = `file://${tempDir}/multi.tra`;
             // Cursor on "multi-line" (line 1)
-            const refs = t.getReferences(traUri, "weidu-tra", { line: 1, character: 3 }, false);
+            const refs = await t.getReferences(traUri, "weidu-tra", { line: 1, character: 3 }, false);
 
             expect(refs.length).toBe(1);
             expect(refs[0]!.uri).toContain("multi.baf");
@@ -715,7 +715,7 @@ translation~`;
             await translation.init();
 
             const msgUri = `file://${tempDir}/test.msg`;
-            const refs = translation.getReferences(msgUri, "fallout-msg", { line: 0, character: 0 }, false);
+            const refs = await translation.getReferences(msgUri, "fallout-msg", { line: 0, character: 0 }, false);
 
             expect(refs.length).toBe(2);
         });
@@ -727,7 +727,7 @@ translation~`;
             await translation.init();
 
             const traUri = `file://${tempDir}/test.tra`;
-            const refs = translation.getReferences(traUri, "weidu-tra", { line: 0, character: 0 }, false);
+            const refs = await translation.getReferences(traUri, "weidu-tra", { line: 0, character: 0 }, false);
 
             expect(refs.length).toBe(1);
             expect(refs[0]!.uri).toContain("test.tbaf");
@@ -738,14 +738,14 @@ translation~`;
 
             const traUri = `file://${tempDir}/test.tra`;
             // Cursor on a blank line (beyond the entries)
-            const refs = translation.getReferences(traUri, "weidu-tra", { line: 10, character: 0 }, false);
+            const refs = await translation.getReferences(traUri, "weidu-tra", { line: 10, character: 0 }, false);
 
             expect(refs).toEqual([]);
         });
 
-        it("returns empty array when not initialized", () => {
+        it("returns empty array when not initialized", async () => {
             const traUri = `file://${tempDir}/test.tra`;
-            const refs = translation.getReferences(traUri, "weidu-tra", { line: 0, character: 0 }, false);
+            const refs = await translation.getReferences(traUri, "weidu-tra", { line: 0, character: 0 }, false);
 
             expect(refs).toEqual([]);
         });
@@ -765,7 +765,7 @@ translation~`;
 
             const traUri = `file://${tempDir}/partial.tra`;
             // Cursor on @10 (line 0) — should NOT find @100 references
-            const refs = t.getReferences(traUri, "weidu-tra", { line: 0, character: 0 }, false);
+            const refs = await t.getReferences(traUri, "weidu-tra", { line: 0, character: 0 }, false);
 
             expect(refs).toEqual([]);
         });
@@ -780,14 +780,14 @@ translation~`;
 
             // Initially no consumers for test.tra (new.baf wasn't present at init)
             const traUri = `file://${tempDir}/test.tra`;
-            const refsBefore = translation.getReferences(traUri, "weidu-tra", { line: 0, character: 0 }, false);
+            const refsBefore = await translation.getReferences(traUri, "weidu-tra", { line: 0, character: 0 }, false);
 
             // After reloadConsumer, the file should be indexed
             const bafUri = `file://${tempDir}/new.baf`;
             const bafText = `/** @tra test.tra */\n${bafContent}`;
             translation.reloadConsumer(bafUri, bafText, "weidu-baf");
 
-            const refsAfter = translation.getReferences(traUri, "weidu-tra", { line: 0, character: 0 }, false);
+            const refsAfter = await translation.getReferences(traUri, "weidu-tra", { line: 0, character: 0 }, false);
 
             expect(refsAfter.length).toBeGreaterThan(refsBefore.length);
         });
@@ -814,8 +814,8 @@ translation~`;
             const traUri = `file://${tempDir}/test.tra`;
             const otherUri = `file://${tempDir}/other.tra`;
 
-            const testRefs = translation.getReferences(traUri, "weidu-tra", { line: 0, character: 0 }, false);
-            const otherRefs = translation.getReferences(otherUri, "weidu-tra", { line: 0, character: 0 }, false);
+            const testRefs = await translation.getReferences(traUri, "weidu-tra", { line: 0, character: 0 }, false);
+            const otherRefs = await translation.getReferences(otherUri, "weidu-tra", { line: 0, character: 0 }, false);
 
             // Should no longer reference test.tra, should reference other.tra
             expect(testRefs.length).toBe(0);

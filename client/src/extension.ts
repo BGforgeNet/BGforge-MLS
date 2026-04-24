@@ -22,6 +22,9 @@ import { registerBinaryEditor } from "./editors/binaryEditor";
 import { registerDialogTree } from "./dialog-tree/dialogTree";
 import { registerDDialogTree } from "./dialog-tree/dialogTree-d";
 import { ServerInitializingIndicator } from "./indicator";
+import { conlog, initOutputChannel } from "./logging";
+
+export { conlog };
 
 // Initialized in activate(), undefined until then
 let client: LanguageClient | undefined;
@@ -49,6 +52,7 @@ function getWorkspaceSymbolScopeLanguageId(): string | undefined {
 }
 
 export async function activate(context: ExtensionContext) {
+    initOutputChannel(context);
     // The server is implemented in node
     const serverModule = context.asAbsolutePath(path.join("server", "out", "server.js"));
     // The debug options for the server
@@ -176,29 +180,4 @@ async function compile(document = vscode.window.activeTextEditor?.document) {
         ],
     };
     await client.sendRequest(ExecuteCommandRequest.type, params);
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function conlog(item: any): void {
-    switch (typeof item) {
-        case "number":
-            console.log(item.toString());
-            break;
-        case "boolean":
-            console.log(item.toString());
-            break;
-        case "undefined":
-            console.log(item);
-            break;
-        case "string":
-            console.log(item);
-            break;
-        default:
-            if (item instanceof Map) {
-                console.log(JSON.stringify([...item]));
-            } else {
-                console.log(JSON.stringify(item));
-            }
-            break;
-    }
 }

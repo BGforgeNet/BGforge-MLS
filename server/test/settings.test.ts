@@ -11,6 +11,7 @@ import * as path from "path";
 // Mock the common module to suppress logs during tests
 vi.mock("../src/common", () => ({
     conlog: vi.fn(),
+    errorMessage: (err: unknown) => (err instanceof Error ? err.message : String(err)),
 }));
 
 // Mock fs module with hoisted mock

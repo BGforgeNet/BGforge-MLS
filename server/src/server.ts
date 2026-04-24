@@ -678,7 +678,7 @@ connection.onReferences(
             // Try translation references (for tra/msg files — find usages across consumer files)
             // Translation lookup is a single-file index lookup — bounded work, no token check needed.
             const ctx = await getServerContext();
-            const traResult = ctx.translation.getReferences(
+            const traResult = await ctx.translation.getReferences(
                 uri,
                 langId,
                 params.position,
