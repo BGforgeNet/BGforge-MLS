@@ -36,6 +36,8 @@ const config: KnipConfig = {
                 // .ts symlinks created by typecheck-samples.sh, may exist during parallel runs
                 "test/td/*.ts",
                 "test/tbaf/*.ts",
+                // Bench files invoked explicitly; not reachable from server.ts entry
+                "test/perf/**",
                 ...(isProductionKnip ? ["src/**", "vitest.integration.config.ts", "test/integration/**"] : []),
             ],
         },
