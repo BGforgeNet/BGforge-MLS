@@ -22,7 +22,6 @@ import { isHeaderFile } from "./core/location-utils";
 import { type NormalizedUri, normalizeUri } from "./core/normalized-uri";
 import { decodeFileUris, showInfo } from "./user-messages";
 import { clearDiagnostics, COMMAND_compile, compile } from "./compile";
-import { getRequest as getSignatureRequest } from "./shared/signature";
 import { makeTimingOptions, timeHandler } from "./shared/time-handler";
 import { parseDialog } from "./dialog";
 import { parseTDDialog } from "./td/dialog";
@@ -77,6 +76,7 @@ import * as completionHandler from "./handlers/completion";
 import * as definitionHandler from "./handlers/definition";
 import * as hoverHandler from "./handlers/hover";
 import * as referencesHandler from "./handlers/references";
+import * as signatureHandler from "./handlers/signature";
 
 // Create a connection for the server.
 // createConnection() auto-detects transport from process.argv:
@@ -430,23 +430,7 @@ connection.onExecuteCommand(async (params) => {
     return undefined;
 });
 
-connection.onSignatureHelp((params) => {
-    const uri = params.textDocument.uri;
-    const document = documents.get(uri);
-    if (!document) {
-        return null;
-    }
-    const text = document.getText();
-    const langId = document.languageId;
-
-    // Parse signature request from text/position
-    const request = getSignatureRequest(text, params.position);
-    if (!request) {
-        return null;
-    }
-
-    return registry.signature(langId, text, uri, request.symbol, request.parameter);
-});
+signatureHandler.register(handlerCtx);
 
 documents.onDidSave(async (change) => {
     const uri = change.document.uri;
