@@ -12,7 +12,6 @@ import {
     createConnection,
     DidChangeConfigurationNotification,
     DidChangeWatchedFilesNotification,
-    MessageType,
     ProposedFeatures,
     TextDocuments,
     TextDocumentEdit,
@@ -20,7 +19,7 @@ import {
 import { conlog } from "./common";
 import { isHeaderFile } from "./core/location-utils";
 import { type NormalizedUri, normalizeUri } from "./core/normalized-uri";
-import { decodeFileUris, showInfo } from "./user-messages";
+import { showInfo } from "./user-messages";
 import { clearDiagnostics, COMMAND_compile, compile } from "./compile";
 import { makeTimingOptions, timeHandler } from "./shared/time-handler";
 import { parseDialog } from "./dialog";
@@ -74,6 +73,7 @@ import type { HandlerContext } from "./handlers/context";
 import { createRenameSuppression } from "./handlers/rename-suppression";
 import * as completionHandler from "./handlers/completion";
 import * as definitionHandler from "./handlers/definition";
+import * as formattingHandler from "./handlers/formatting";
 import * as hoverHandler from "./handlers/hover";
 import * as referencesHandler from "./handlers/references";
 import * as signatureHandler from "./handlers/signature";
@@ -586,28 +586,7 @@ connection.onShutdown(() => {
     compileDebouncer.dispose();
 });
 
-connection.onDocumentFormatting((params) => {
-    const textDoc = documents.get(params.textDocument.uri);
-    if (!textDoc) {
-        return [];
-    }
-    const uri = params.textDocument.uri;
-    const langId = textDoc.languageId;
-    const text = textDoc.getText();
-
-    const result = registry.format(langId, text, uri);
-    if (result.warning) {
-        // Use sendNotification (fire-and-forget) instead of showWarningMessage
-        // (request/response) to avoid blocking the formatting response.
-        // Cannot use showWarning() wrapper here for the same reason (it's request/response).
-        // The ESLint no-restricted-syntax rule only targets .show*Message() member access.
-        void connection.sendNotification("window/showMessage", {
-            type: MessageType.Warning,
-            message: decodeFileUris(result.warning),
-        });
-    }
-    return result.edits;
-});
+formattingHandler.register(handlerCtx);
 
 connection.onDocumentSymbol(
     timeHandler(
