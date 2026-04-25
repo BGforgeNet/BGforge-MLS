@@ -27,10 +27,17 @@ const config: KnipConfig = {
             // Point knip at the TypeScript source entry directly.
             // The package.json "main" field targets the built JS output.
             entry: ["src/server.ts"],
+            // esbuild-wasm is marked --external in scripts/build-base-server.sh and loaded
+            // at runtime from server/node_modules by transpilers/common/{esbuild-utils,
+            // enum-transform}.ts (which knip can't trace because transpilers/common has no
+            // entry). package.sh also copies server/node_modules/esbuild-wasm into the VSIX.
+            ignoreDependencies: ["esbuild-wasm"],
             // Created at runtime by enum-transform.test.ts, may exist during parallel Knip runs
             ignore: [
                 "**/*.d.ts",
-                // Built JS bundles (knip 6.6+ reports these as unused files otherwise)
+                // Built JS bundles (knip 6.6+ reports these as unused files otherwise).
+                // Pattern is only present when build has run; knip hints "Remove from ignore"
+                // before build, but the ignore is still required after build.
                 "out/**",
                 // .ts symlinks created by typecheck-samples.sh, may exist during parallel runs
                 "test/td/*.ts",
