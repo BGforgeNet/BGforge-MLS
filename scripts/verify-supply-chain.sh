@@ -6,6 +6,7 @@ set -euo pipefail
 #   (a) OpenSSF Scorecard workflow exists.
 #   (b) CycloneDX SBOM generation step is present in build.yml.
 #   (c) SLSA provenance generator is referenced in the release pipeline.
+#   (d) CodeQL workflow exists (closes the Scorecard SAST check).
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -51,6 +52,13 @@ if [[ "$slsa_found" -eq 1 ]]; then
     check "SLSA provenance generator referenced" "ok"
 else
     check "SLSA provenance generator referenced" "missing"
+fi
+
+# (d) CodeQL workflow exists
+if [[ -f "$ROOT_DIR/.github/workflows/codeql.yml" ]]; then
+    check "codeql.yml exists" "ok"
+else
+    check "codeql.yml exists" "missing"
 fi
 
 if [[ "$fail" -ne 0 ]]; then

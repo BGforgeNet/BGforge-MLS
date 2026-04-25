@@ -1,0 +1,51 @@
+name: "CodeQL"
+
+# CodeQL static analysis for JavaScript/TypeScript. Catches classes that
+# the linter does not (prototype pollution, code injection, ReDOS,
+# path-traversal sinks). Findings publish to GitHub code scanning, where
+# the Scorecard SAST check expects to see a SAST workflow present.
+
+on:
+    push:
+        branches:
+            - master
+    pull_request:
+        branches:
+            - master
+    schedule:
+        # Weekly on Monday at 06:30 UTC. Offset by 30 minutes from the
+        # Scorecard run so the two security workflows do not contend for
+        # the same runner concurrency window.
+        - cron: "30 6 * * 1"
+
+permissions:
+    contents: read
+
+jobs:
+    analyze:
+        name: Analyze JavaScript/TypeScript
+        runs-on: ubuntu-latest
+        permissions:
+            security-events: write
+            actions: read
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+              with:
+                  persist-credentials: false
+
+            - name: Initialize CodeQL
+              uses: github/codeql-action/init@ce64ddcb0d8d890d2df4a9d1c04ff297367dea2a # v3.35.2
+              with:
+                  languages: javascript-typescript
+                  # `security-extended` adds the second tier of queries beyond the
+                  # default-on set; `security-and-quality` is broader still and
+                  # tends to surface stylistic noise. Extended is the usual
+                  # production-codebase pick.
+                  queries: security-extended
+
+            - name: Perform CodeQL analysis
+              uses: github/codeql-action/analyze@ce64ddcb0d8d890d2df4a9d1c04ff297367dea2a # v3.35.2
+              with:
+                  category: "/language:javascript-typescript"
