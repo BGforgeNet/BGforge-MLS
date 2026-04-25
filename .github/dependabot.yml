@@ -10,8 +10,10 @@ updates:
                   - "minor"
                   - "patch"
       ignore:
-          # Track Node.js LTS only; bump manually when moving to the next LTS major.
-          - dependency-name: "@types/node"
+          # Major upgrades are reviewed and bumped manually. Security updates
+          # are unaffected — they ship via a separate dependabot channel that
+          # bypasses ignore rules.
+          - dependency-name: "*"
             update-types: ["version-update:semver-major"]
 
     - package-ecosystem: "github-actions"
@@ -23,3 +25,6 @@ updates:
               update-types:
                   - "minor"
                   - "patch"
+      ignore:
+          - dependency-name: "*"
+            update-types: ["version-update:semver-major"]
