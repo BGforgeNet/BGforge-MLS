@@ -32,6 +32,8 @@ export type VarsContext = Map<string, string>;
 export function substituteVars(text: string, vars: VarsContext): string {
     let result = text;
     vars.forEach((value, key) => {
+        // key is a TypeScript identifier (source of VarsContext keys is ts-morph AST names),
+        // which cannot contain regex metacharacters — safe to interpolate without escaping.
         result = result.replace(new RegExp(`\\b${key}\\b`, "g"), value);
     });
     return result;

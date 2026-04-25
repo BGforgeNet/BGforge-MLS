@@ -65,12 +65,23 @@ export const REGEX_TRANSPILER_TRA_INLAY = /\btra\((\d+)\)/g;
 // These produce a match per entry number, used to locate all usages in consumer files.
 // =============================================================================
 
+/** Validates that an entryNum is a bare digit string before regex interpolation. */
+const DIGIT_ENTRY_RE = /^\d+$/;
+function assertDigitEntry(entryNum: string): void {
+    if (!DIGIT_ENTRY_RE.test(entryNum)) {
+        throw new Error(`entryNum must be digits only, got: ${JSON.stringify(entryNum)}`);
+    }
+}
+
 /**
  * Builds a regex to find references to a specific TRA entry number.
  * Matches both @{num} (native WeiDU) and tra({num}) (transpiler) patterns.
  * The number must be followed by a non-digit to avoid partial matches (e.g., @12 in @123).
  */
 export function REGEX_TRA_REF(entryNum: string): RegExp {
+    // entryNum is interpolated into the source string; enforce the digit-only invariant
+    // explicitly so a callsite change can't turn this into a regex-injection surface.
+    assertDigitEntry(entryNum);
     return new RegExp(`(?:@${entryNum}(?!\\d)|\\btra\\(${entryNum}\\))`, "g");
 }
 
@@ -81,6 +92,7 @@ export function REGEX_TRA_REF(entryNum: string): RegExp {
  * Combined into a single alternation for a single-pass scan.
  */
 export function REGEX_MSG_REF(entryNum: string): RegExp {
+    assertDigitEntry(entryNum);
     return new RegExp(
         `(?:${msgFunctionsPattern})\\(${entryNum}(?!\\d)|floater_rand\\(\\d+\\s*,\\s*${entryNum}(?!\\d)`,
         "g",
