@@ -80,7 +80,8 @@
         "knip:prod": "knip --production --workspace server --include files",
         "publish:server": "./scripts/publish-server.sh",
         "supply-chain:verify": "./scripts/verify-supply-chain.sh",
-        "test:mutation": "stryker run"
+        "test:mutation": "stryker run",
+        "bench": "cd server && pnpm bench"
     },
     "dependencies": {
         "zod": "^4.3.6"

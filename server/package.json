@@ -33,7 +33,8 @@
     "scripts": {
         "test": "./scripts/test.sh",
         "test:unit": "vitest run",
-        "test:integration": "vitest run --config vitest.integration.config.ts"
+        "test:integration": "vitest run --config vitest.integration.config.ts",
+        "bench": "vitest bench --run test/perf"
     },
     "dependencies": {
         "esbuild-wasm": "^0.28.0",
