@@ -95,8 +95,15 @@ export function sendParseResult(parseResult: ParseResult, mainUri: string, tmpUr
             source: diagSource,
         };
         const uri = item.uri === tmpUri ? mainUri : item.uri;
-        const existing = diagnostics.get(uri) ?? [];
-        diagnostics.set(uri, [...existing, diagnostic]);
+        // Mutating push avoids O(n²) re-allocation when a single file produces
+        // many diagnostics. The map's array values are owned by this function;
+        // they are only read by the sendDiagnostics loop below.
+        let bucket = diagnostics.get(uri);
+        if (!bucket) {
+            bucket = [];
+            diagnostics.set(uri, bucket);
+        }
+        bucket.push(diagnostic);
     }
 
     for (const e of parseResult.errors) {

@@ -223,6 +223,21 @@ describe("sendParseResult", () => {
 
         expect(mockSendDiagnostics).toHaveBeenCalledTimes(2);
     });
+
+    it("accumulates many diagnostics for one URI in a single call", () => {
+        const errors = Array.from({ length: 200 }, (_, i) => ({
+            uri: "file:///big.tp2",
+            line: i + 1,
+            columnStart: 0,
+            columnEnd: 5,
+            message: `err ${i}`,
+        }));
+        sendParseResult({ errors, warnings: [] }, "file:///big.tp2", "file:///tmp.tp2");
+
+        expect(mockSendDiagnostics).toHaveBeenCalledTimes(1);
+        const call = mockSendDiagnostics.mock.calls[0]![0];
+        expect(call.diagnostics).toHaveLength(200);
+    });
 });
 
 describe("isSubpath", () => {
