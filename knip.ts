@@ -88,8 +88,6 @@ const config: KnipConfig = {
     ignore: [
         // tree-sitter grammars, not TypeScript
         "grammars/**",
-        // CLI packages bundled by esbuild, import across workspace boundaries
-        "cli/**",
         // external repositories cloned for testing
         "external/**",
         // standalone update scripts run via pnpm exec tsx, not imported by main code

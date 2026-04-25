@@ -12,6 +12,7 @@
 - `@bgforge/mls-server`: `quick-lru` is now correctly declared as a runtime dependency (previously misclassified as devDependency, which would cause module-not-found errors for downstream npm consumers).
 - New library `@bgforge/transpile` published on npm. It exposes the TSSL/TBAF/TD transpilers (`tssl`, `tbaf`, `td` named exports plus an extension-dispatching `transpile()` helper) for use as a library in custom build pipelines, and ships the `fgtp` CLI as a `bin` entry. Replaces the previous standalone `@bgforge/fgtp` package.
 - New library `@bgforge/format` published on npm. It exposes formatters for all supported file types (Fallout SSL, WeiDU BAF/D/TP2/TRA, Fallout MSG, Infinity Engine 2DA, and scripts.lst) for use as a library in custom build pipelines, and ships the `fgfmt` CLI as a `bin` entry.
+- New library `@bgforge/binary` published on npm. It exposes parsers for Fallout `.pro` and `.map` binary files with round-trip JSON snapshot helpers for use as a library in custom build pipelines, and ships the `fgbin` CLI as a `bin` entry.
 - TSSL/TBAF/TD transpile success notifications now show just the output filename (e.g. `Transpiled to foo.d`), matching the format of compile notifications instead of including the full absolute path.
 
 ## 3.7.0 (2026-04-12)

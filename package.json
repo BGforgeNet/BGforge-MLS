@@ -78,6 +78,7 @@
         "lint:shell": "./scripts/lint-shell.sh",
         "knip": "knip",
         "knip:prod": "knip --production --workspace server --include files",
+        "publish:binary": "./scripts/publish-binary.sh",
         "publish:format": "./scripts/publish-format.sh",
         "publish:server": "./scripts/publish-server.sh",
         "supply-chain:verify": "./scripts/verify-supply-chain.sh",
