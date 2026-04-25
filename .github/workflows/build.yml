@@ -57,6 +57,14 @@ jobs:
             - name: Build tree-sitter grammar
               run: pnpm build:grammar
 
+            # Set the VSIX artifact version before Test so test:all's Phase 4
+            # (pnpm package, see scripts/test-all.sh) names the produced .vsix
+            # with the short SHA on non-tag pushes. On tag pushes the version
+            # comes from package.json (package.sh fallback).
+            - name: Set artifact version
+              if: "!startsWith(github.ref, 'refs/tags/')"
+              run: echo "ARTIFACT_VERSION=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+
             - name: Test
               run: pnpm test:all
 
@@ -71,13 +79,10 @@ jobs:
               if: startsWith(github.ref, 'refs/tags/')
               run: pnpm test:e2e
 
-            - name: Package
-              run: |
-                  if [[ "$GITHUB_REF" != refs/tags/* ]]; then
-                    export ARTIFACT_VERSION="${GITHUB_SHA::7}"
-                  fi
-                  pnpm package
-                  echo "VSIX_PATH=$(ls dist/*.vsix)" >> "$GITHUB_ENV"
+            # test:all already produced the VSIX in dist/ (Phase 4); record its
+            # path for later steps to consume.
+            - name: Record VSIX path
+              run: echo "VSIX_PATH=$(ls dist/*.vsix)" >> "$GITHUB_ENV"
 
             - name: Generate CycloneDX SBOM (release only)
               if: startsWith(github.ref, 'refs/tags/')
