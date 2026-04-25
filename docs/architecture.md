@@ -60,7 +60,7 @@ High-level architecture of the BGforge MLS extension. For server-specific detail
 |   CLI Tools       |   Standalone, reuse server modules
 |    fgfmt (cli.js) |   No VSCode dependency
 |   transpile.js    |
-|  bin-cli.js       |
+|    fgbin (cli.js) |
 +-------------------+
 ```
 
@@ -172,7 +172,7 @@ All bundles use **esbuild** (not tsc). The monorepo uses **pnpm workspaces**.
 | Webviews      | `client/src/{dialog,binary}-webview.ts` | `client/out/*.js`                           | Browser context                            |
 | Format lib    | `format/src/{index,cli}.ts`             | `format/out/{index,cli}.js`                 | ESM, tsup-bundled; cli.js is the fgfmt bin |
 | Transpile lib | `transpilers/src/{index,cli}.ts`        | `transpilers/out/{index,cli}.js`            | ESM, tsup-bundled; cli.js is the fgtp bin  |
-| Binary CLI    | `cli/bin/src/cli.ts`                    | `cli/bin/out/bin-cli.js`                    | CJS                                        |
+| Binary lib    | `binary/src/{index,cli}.ts`             | `binary/out/{index,cli}.js`                 | ESM, tsup-bundled; cli.js is the fgbin bin |
 | Grammars      | `grammars/*/grammar.js`                 | `grammars/*/*.wasm` -> `server/out/`        | tree-sitter build --wasm                   |
 | TextMate      | `syntaxes/*.tmLanguage.yml`             | `syntaxes/*.tmLanguage.json`                | YAML -> JSON conversion                    |
 
@@ -181,7 +181,8 @@ All bundles use **esbuild** (not tsc). The monorepo uses **pnpm workspaces**.
 ```
 pnpm build
   |
-  +-> build:client        esbuild client + TS plugins + bin CLI
+  +-> build:client        esbuild client + TS plugins
+  +-> build:binary        @bgforge/binary library + fgbin CLI
   +-> build:server        esbuild server + copy WASM to server/out/
   +-> build:test          esbuild E2E test bundles
   +-> build:webviews      esbuild webview bundles
@@ -414,8 +415,10 @@ Reports orphan warnings for TD files.
 ### Binary CLI
 
 ```
-node bin-cli.js <file.pro|file.map|dir> [--save] [--check] [--load] [--graceful-map] [-r] [-q]
+fgbin <file.pro|file.map|dir> [--save] [--check] [--load] [--graceful-map] [-r] [-q]
 ```
+
+Ships as the `fgbin` bin entry of `@bgforge/binary` (built via tsup to `binary/out/cli.js`).
 
 Parses Fallout `.pro` and `.map` binary files and outputs structured JSON. `--load` writes JSON back using the parser's native extension, and `--graceful-map` allows ambiguous MAP object boundaries to fall back to opaque bytes for corpus and round-trip workflows.
 Snapshots are saved as extension-preserving sidecars such as `file.pro.json` and `file.map.json`.
@@ -718,22 +721,23 @@ Debug logs intentionally keep raw URIs to preserve diagnostic ability.
 Cases where apparent duplication is intentional. Each subsection explains why the
 components stay separate.
 
-### Three Separate CLIs (format, transpile, bin)
+### Three Separate CLIs (format, transpile, binary)
 
-`format/` (fgfmt bin), `transpilers/` (fgtp bin), and `cli/bin` stay as separate bundles.
+`format/` (fgfmt bin), `transpilers/` (fgtp bin), and `binary/` (fgbin bin) stay as separate bundles.
 Shared scaffolding (argument parsing, file discovery, output modes) is already extracted to
 `shared/cli/cli-utils.ts`; further consolidation was evaluated and costs more than it saves.
 
 - The transpile bundle is ~12 MB (owns `esbuild` + `ts-morph` + transform passes). Format
-  and bin bundles are small. A unified binary would load the transpile toolchain on every
-  `format` or `bin` invocation -- cold-start and install-size regression for the two use
+  and binary bundles are small. A unified binary would load the transpile toolchain on every
+  `format` or `binary` invocation -- cold-start and install-size regression for the two use
   cases that don't need it.
 - The three tools do semantically different jobs: text round-trip, source-to-source
   compilation, binary parsing. The shared surface is already shared at the right layer
   (`shared/cli/cli-utils.ts`); the per-tool bodies are not duplicated.
-- The format CLI ships as the `fgfmt` bin entry within `@bgforge/format`, and the transpile
-  CLI ships as the `fgtp` bin entry within `@bgforge/transpile`, so each library and its CLI
-  share one package, one version, and one tarball without coupling to the other tools.
+- The format CLI ships as the `fgfmt` bin entry within `@bgforge/format`, the transpile
+  CLI ships as the `fgtp` bin entry within `@bgforge/transpile`, and the binary CLI ships
+  as the `fgbin` bin entry within `@bgforge/binary` -- each library and its CLI share one
+  package, one version, and one tarball without coupling to the other tools.
 
 ### Two Separate TypeScript Plugins (tssl-plugin, td-plugin)
 

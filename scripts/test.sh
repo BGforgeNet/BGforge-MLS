@@ -56,7 +56,7 @@ step "Phase 2: Building Server + CLIs"
 parallel \
     "Server bundle" "$SCRIPT_DIR/build-base-server.sh" \
     "Format CLI" "pnpm --filter @bgforge/format build" \
-    "Bin CLI" "$SCRIPT_DIR/build-bin-cli.sh"
+    "Binary CLI" "pnpm --filter @bgforge/binary build"
 
 # Support early exit for test-all.sh (runs its own Phase 3 with extended tests interleaved)
 if [[ "${TEST_STOP_AFTER_BUILD:-}" == "1" ]]; then

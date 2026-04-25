@@ -21,6 +21,9 @@
         "url": "https://github.com/BGforgeNet/BGforge-MLS",
         "directory": "binary"
     },
+    "bin": {
+        "fgbin": "out/cli.js"
+    },
     "files": [
         "out/",
         "!out/*.map",
@@ -40,10 +43,12 @@
         "access": "public"
     },
     "scripts": {
-        "build": "tsup",
+        "build": "tsup && chmod +x out/cli.js",
         "test": "vitest run --config vitest.config.ts"
     },
     "dependencies": {
+        "cac": "^7.0.0",
+        "diff": "^9.0.0",
         "typed-binary": "^4.3.3",
         "zod": "^4.3.6"
     },

@@ -124,7 +124,7 @@ cd grammars/weidu-tp2 && pnpm test   # or any grammars/*/
 
 Three artifact streams, all triggered by `git tag vX.Y.Z` -> GitHub Actions. See `docs/architecture.md` for packaging details.
 
-**Version management:** Root `package.json`, `server/package.json`, `transpilers/package.json` (the published `@bgforge/transpile` library), and `format/package.json` (the published `@bgforge/format` library) must carry identical versions; check the current value with `node -p "require('./package.json').version"`. Other packages have independent versions. Bump all four together, commit as "Update changelog, bump version: X.Y.Z", then tag.
+**Version management:** Root `package.json`, `server/package.json`, `transpilers/package.json` (the published `@bgforge/transpile` library), `format/package.json` (the published `@bgforge/format` library), and `binary/package.json` (the published `@bgforge/binary` library) must carry identical versions; check the current value with `node -p "require('./package.json').version"`. Other packages have independent versions. Bump all five together, commit as "Update changelog, bump version: X.Y.Z", then tag.
 
 **Changelog entries:** Document only user-facing changes (new features, bug fixes, behavior changes). Do not include implementation details (refactoring, test additions, code quality improvements, internal constants). Users care about what changed, not how it was implemented.
 

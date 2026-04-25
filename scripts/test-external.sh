@@ -83,15 +83,15 @@ test_bin() {
 
     step "Testing Fallout binary assets"
     # Stdout mode outputs JSON - discard it, we only care about exit code (parse success)
-    node "$ROOT_DIR/cli/bin/out/bin-cli.js" "$target_dir" -r -q > /dev/null
+    node "$ROOT_DIR/binary/out/cli.js" "$target_dir" -r -q > /dev/null
 }
 
 step "Building CLIs"
 if [[ ! -f "$ROOT_DIR/format/out/cli.js" ]]; then
     (cd "$ROOT_DIR" && pnpm build:format)
 fi
-if [[ ! -f "$ROOT_DIR/cli/bin/out/bin-cli.js" ]]; then
-    "$ROOT_DIR/scripts/build-bin-cli.sh"
+if [[ ! -f "$ROOT_DIR/binary/out/cli.js" ]]; then
+    (cd "$ROOT_DIR" && pnpm build:binary)
 fi
 
 step "Setting up Fallout repos"

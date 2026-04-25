@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * CLI tool to parse binary files (Fallout PRO) and output structured JSON.
+ * CLI tool to parse Fallout PRO and MAP binary files and output structured JSON.
  * Also supports loading JSON back to binary via --load.
- * Usage: node bin-cli.js <file.pro|file.map|dir> [--save] [--check] [--load] [-r] [-q]
+ * Usage: fgbin <file.pro|file.map|dir> [--save] [--check] [--load] [-r] [-q]
  */
 
 import * as fs from "fs";
@@ -16,7 +16,7 @@ import {
     createBinaryJsonSnapshot,
     loadBinaryJsonSnapshot,
     parseBinaryJsonSnapshot,
-} from "../../../binary/src";
+} from "./index";
 import {
     type FileResult,
     type OutputMode,
@@ -24,7 +24,7 @@ import {
     runCli,
     safeProcess,
     reportDiff,
-} from "../../../shared/cli/cli-utils";
+} from "../../shared/cli/cli-utils";
 
 const EXTENSIONS = parserRegistry.getExtensions().map((ext) => `.${ext}`);
 const CLI_PARSE_OPTIONS: ParseOptions = {
@@ -99,7 +99,7 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
     });
 }
 
-const HELP = `Usage: bin-cli <file.pro|file.map|dir> [--save] [--check] [--load] [-r] [-q]
+const HELP = `Usage: fgbin <file.pro|file.map|dir> [--save] [--check] [--load] [-r] [-q]
   --save    Save parsed JSON alongside the binary file (.pro.json/.map.json)
   --check   Compare parsed output against existing JSON snapshot (exit 1 if diff)
   --load    Load JSON and write binary using the parser's native extension
@@ -109,11 +109,11 @@ const HELP = `Usage: bin-cli <file.pro|file.map|dir> [--save] [--check] [--load]
   -q        Quiet mode: suppress summary, only print errors
 
 Examples:
-  bin-cli file.pro                  # Parse single file, print JSON to stdout
-  bin-cli proto/ -r --save          # Save JSON snapshots for all files
-  bin-cli proto/ -r -q --check      # Verify files match snapshots (CI)
-  bin-cli file.pro.json --load      # Convert JSON back to binary (.pro/.map/etc.)
-  bin-cli sfsheng.map.json --load --graceful-map
+  fgbin file.pro                  # Parse single file, print JSON to stdout
+  fgbin proto/ -r --save          # Save JSON snapshots for all files
+  fgbin proto/ -r -q --check      # Verify files match snapshots (CI)
+  fgbin file.pro.json --load      # Convert JSON back to binary (.pro/.map/etc.)
+  fgbin sfsheng.map.json --load --graceful-map
                                    # Reload an ambiguous MAP snapshot saved with --graceful-map`;
 
 /**

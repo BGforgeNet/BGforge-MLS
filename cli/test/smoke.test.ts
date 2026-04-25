@@ -19,7 +19,7 @@ const NODE = process.execPath;
 const CLIS = {
     format: path.resolve("format/out/cli.js"),
     transpile: path.resolve("transpilers/out/cli.js"),
-    bin: path.resolve("cli/bin/out/bin-cli.js"),
+    bin: path.resolve("binary/out/cli.js"),
 } as const;
 
 /** Run a CLI with the given arguments and return exit code + stdout. */
@@ -69,7 +69,7 @@ describe("CLI smoke tests — entry-point presence and startup", () => {
         });
     });
 
-    describe("bin CLI (bin-cli.js)", () => {
+    describe("binary CLI (cli.js / fgbin)", () => {
         it("exits 0 when --help is passed", () => {
             const { code } = runHelp(CLIS.bin);
             expect(code).toBe(0);
@@ -77,7 +77,7 @@ describe("CLI smoke tests — entry-point presence and startup", () => {
 
         it("prints a usage banner to stdout", () => {
             const { stdout } = runHelp(CLIS.bin);
-            expect(stdout).toContain("Usage: bin-cli");
+            expect(stdout).toContain("Usage: fgbin");
         });
     });
 });

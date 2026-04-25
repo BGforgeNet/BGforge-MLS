@@ -23,7 +23,7 @@ import { execFileSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 
-const CLI = path.resolve("cli/bin/out/bin-cli.js");
+const CLI = path.resolve("binary/out/cli.js");
 const NODE = process.execPath;
 const FIXTURES = path.resolve("client/testFixture/proto");
 const RP_MAPS = path.resolve("external/fallout/Fallout2_Restoration_Project/data/maps");
@@ -51,7 +51,7 @@ describe("bin CLI integration", () => {
 
     beforeEach(() => {
         if (!fs.existsSync(CLI)) {
-            throw new Error("bin-cli.js not built. Run: pnpm build:bin-cli");
+            throw new Error("binary/out/cli.js not built. Run: pnpm --filter @bgforge/binary build");
         }
         fs.mkdirSync(tmpDir, { recursive: true });
     });

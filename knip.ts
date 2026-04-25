@@ -80,6 +80,9 @@ const config: KnipConfig = {
         },
         binary: {
             entry: ["test/**/*.test.ts"],
+            // cac and diff are imported via shared/cli/cli-utils.ts, which lives outside any
+            // workspace; knip's per-workspace dep tracing doesn't reach across that boundary.
+            ignoreDependencies: ["cac", "diff"],
         },
     },
     ignore: [

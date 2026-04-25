@@ -94,10 +94,10 @@ Use this end-to-end checklist when adding a new binary format to avoid missing o
 ## CLI
 
 ```bash
-node cli/bin/out/bin-cli.js <file>           # dump to stdout (requires pnpm build first)
-node cli/bin/out/bin-cli.js <file> --save    # save to <file>.<ext>.json
-node cli/bin/out/bin-cli.js <file> --check   # verify against saved canonical json
-node cli/bin/out/bin-cli.js <file>.json --load
+node binary/out/cli.js <file>           # dump to stdout (requires pnpm build:binary first)
+node binary/out/cli.js <file> --save    # save to <file>.<ext>.json
+node binary/out/cli.js <file> --check   # verify against saved canonical json
+node binary/out/cli.js <file>.json --load
 ```
 
 Notes:
