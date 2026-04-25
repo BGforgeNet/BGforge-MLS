@@ -7,6 +7,16 @@
  * The internal barrier promise (`contextReady`) ensures that handlers racing
  * the initialization window never see an error — they simply await until the
  * context is available and then return real results.
+ *
+ * The barrier deliberately has no rejection path. Catastrophic init failure
+ * (anything thrown from `onInitialize` before `initServerContext` is called)
+ * surfaces via the LSP wire: the connection returns an error response to the
+ * `initialize` request, and a conformant client stops dispatching subsequent
+ * requests. Handlers therefore cannot legitimately observe a "never-resolved"
+ * barrier in the field — only a server-side programming bug (an early return
+ * between `registry.init()` and `initServerContext()` in handlers/initialize.ts)
+ * could create that state, and any such bug would be caught by integration
+ * tests on the first request the client sends.
  */
 
 import { setDebugLogging } from "./common";
