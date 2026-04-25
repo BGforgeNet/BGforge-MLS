@@ -1,7 +1,0 @@
-{
-    "name": "bgforge-format-cli",
-    "version": "1.0.0",
-    "private": true,
-    "description": "CLI formatter for Fallout SSL, WeiDU BAF, D, and TP2 files",
-    "license": "SEE LICENSE IN ../../LICENSE.txt"
-}

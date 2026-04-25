@@ -76,7 +76,7 @@ grammar_build_format() {
         return
     fi
     step "$GRAMMAR_NAME: Building format CLI"
-    (cd "$ROOT_DIR" && pnpm build:format-cli)
+    (cd "$ROOT_DIR" && pnpm build:format)
 }
 
 grammar_format() {

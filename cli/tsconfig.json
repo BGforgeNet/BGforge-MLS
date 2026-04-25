@@ -5,6 +5,6 @@
         "allowImportingTsExtensions": true,
         "tsBuildInfoFile": "../tmp/cli.tsbuildinfo"
     },
-    "include": [".", "../server/src", "../client/src/parsers", "../transpilers", "../shared", "../format/src"],
+    "include": [".", "../server/src", "../client/src/parsers", "../transpilers", "../shared"],
     "exclude": ["node_modules", "**/out", "test", "vitest.config.ts"]
 }

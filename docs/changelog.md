@@ -11,6 +11,7 @@
 - Webview panels (binary editor, dialog tree preview) now enforce a strict per-render Content-Security-Policy with nonced styles and scripts; the dialog-tree panel's allowed resource roots are narrowed to the directories it actually loads from.
 - `@bgforge/mls-server`: `quick-lru` is now correctly declared as a runtime dependency (previously misclassified as devDependency, which would cause module-not-found errors for downstream npm consumers).
 - New library `@bgforge/transpile` published on npm. It exposes the TSSL/TBAF/TD transpilers (`tssl`, `tbaf`, `td` named exports plus an extension-dispatching `transpile()` helper) for use as a library in custom build pipelines, and ships the `fgtp` CLI as a `bin` entry. Replaces the previous standalone `@bgforge/fgtp` package.
+- New library `@bgforge/format` published on npm. It exposes formatters for all supported file types (Fallout SSL, WeiDU BAF/D/TP2/TRA, Fallout MSG, Infinity Engine 2DA, and scripts.lst) for use as a library in custom build pipelines, and ships the `fgfmt` CLI as a `bin` entry.
 - TSSL/TBAF/TD transpile success notifications now show just the output filename (e.g. `Transpiled to foo.d`), matching the format of compile notifications instead of including the full absolute path.
 
 ## 3.7.0 (2026-04-12)

@@ -87,6 +87,7 @@ pnpm build:all         # Full build: build + grammars + editor bundles
 pnpm build:dev         # Minimal build for F5 development (skips CLIs, linting, tests)
 pnpm build:grammar     # Build tree-sitter grammars to WASM
 pnpm build:transpile   # Build transpile library + CLI (tsup, produces out/index.js + out/cli.js)
+pnpm build:format      # Build format library + CLI (tsup, produces out/index.js + out/cli.js)
 pnpm test              # Partial test suite (server only): typecheck, lint, unit + coverage, transpiler samples, CLI, integration, knip
 pnpm test:all          # Full test suite: test + grammars + transpile-external. ALWAYS use this for verification.
 pnpm test:grammars     # Grammar tests (generate, lint, corpus, highlight, parse, format)
@@ -123,7 +124,7 @@ cd grammars/weidu-tp2 && pnpm test   # or any grammars/*/
 
 Three artifact streams, all triggered by `git tag vX.Y.Z` -> GitHub Actions. See `docs/architecture.md` for packaging details.
 
-**Version management:** Root `package.json`, `server/package.json`, and `transpilers/package.json` (the published `@bgforge/transpile` library) must carry identical versions; check the current value with `node -p "require('./package.json').version"`. Other packages have independent versions. Bump all three together, commit as "Update changelog, bump version: X.Y.Z", then tag.
+**Version management:** Root `package.json`, `server/package.json`, `transpilers/package.json` (the published `@bgforge/transpile` library), and `format/package.json` (the published `@bgforge/format` library) must carry identical versions; check the current value with `node -p "require('./package.json').version"`. Other packages have independent versions. Bump all four together, commit as "Update changelog, bump version: X.Y.Z", then tag.
 
 **Changelog entries:** Document only user-facing changes (new features, bug fixes, behavior changes). Do not include implementation details (refactoring, test additions, code quality improvements, internal constants). Users care about what changed, not how it was implemented.
 

@@ -4,6 +4,7 @@
         "syntaxes/*.tmLanguage.json",
         "syntaxes/*.tmLanguage.yml",
         "server/out/*.json",
+        "format/out/**",
         "server/src/*/tree-sitter.d.ts",
         "grammars/*/src/tree-sitter.d.ts",
         "themes/vscode-monokai.json",

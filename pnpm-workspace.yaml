@@ -3,7 +3,6 @@ packages:
     - format
     - server
     - grammars/*
-    - cli/format
     - plugins/*
     - transpilers
     - transpilers/common

@@ -3,8 +3,8 @@
 # Build tree-sitter grammars to WASM and set up files for both production and testing.
 # WASM builds run sequentially because tree-sitter shares a global wasi-sdk cache and
 # concurrent downloads/extracts can corrupt the archive on a cold cache. After building,
-# copy WASM files to server/out/ and cli/format/out/, then create symlinks in
-# server/src/shared/ so vitest can find them via __dirname resolution.
+# copy WASM files to server/out/ and format/out/ (the format package's CLI bundle), then
+# create symlinks in server/src/shared/ so vitest can find them via __dirname resolution.
 
 set -eu -o pipefail
 
@@ -23,7 +23,7 @@ mkdir -p "$LOG_DIR"
 # shellcheck source=scripts/parallel-lib.sh
 source "$SCRIPT_DIR/parallel-lib.sh"
 
-mkdir -p server/out cli/format/out
+mkdir -p server/out format/out
 
 TREE_SITTER="$ROOT_DIR/node_modules/.bin/tree-sitter"
 
@@ -40,10 +40,10 @@ for dir in fallout-ssl weidu-baf weidu-d weidu-tp2; do
     )
 done
 
-# Copy WASM files to server and CLI output directories (sequential — depends on all builds)
+# Copy WASM files to server and format CLI output directories (sequential — depends on all builds)
 for dir in fallout-ssl weidu-baf weidu-d weidu-tp2; do
     cp "grammars/$dir"/*.wasm server/out/
-    cp "grammars/$dir"/*.wasm cli/format/out/
+    cp "grammars/$dir"/*.wasm format/out/
 done
 
 # Copy web-tree-sitter runtime WASM (needed by parser-factory.ts)

@@ -14,6 +14,13 @@ export default defineConfig({
     // cli.js via a shared chunk, avoiding duplication in the tarball.
     splitting: true,
     minify: false,
+    // Copy the 5 tree-sitter WASM files next to out/cli.js so the CLI can load
+    // them via __dirname at runtime. Runs from the repo root (format/ is a
+    // direct child, so ../scripts/ reaches the scripts directory).
+    // The script sources esbuild-lib.sh's copy_wasm_to helper so the WASM list
+    // is maintained in one place. tsup runs onSuccess from the package directory
+    // (format/), so we navigate up to the repo root before invoking the script.
+    onSuccess: "bash ../scripts/build-format-postbuild.sh",
     // No external entries: unlike transpilers (which externalises esbuild-wasm),
     // the format package's WASM files are loaded via __dirname at runtime inside
     // parser-factory.ts (Phase 5). The banner below re-creates the CJS globals

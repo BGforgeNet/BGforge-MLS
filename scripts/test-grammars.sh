@@ -19,7 +19,7 @@ mkdir -p "$LOG_DIR"
 source "$SCRIPT_DIR/parallel-lib.sh"
 
 step "Building format CLI"
-pnpm build:format-cli
+pnpm build:format
 
 export SKIP_FORMAT_BUILD=1
 

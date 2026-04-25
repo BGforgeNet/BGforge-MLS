@@ -9,7 +9,7 @@ import { execFileSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 
-const CLI = path.resolve("cli/format/out/format-cli.js");
+const CLI = path.resolve("format/out/cli.js");
 const NODE = process.execPath;
 
 /** Run the format CLI, returning exit code, stdout, stderr. */
@@ -31,7 +31,7 @@ describe("format CLI integration", () => {
 
     beforeEach(() => {
         if (!fs.existsSync(CLI)) {
-            throw new Error("format-cli.js not built. Run: pnpm build:format-cli");
+            throw new Error("format/out/cli.js not built. Run: pnpm build:format");
         }
         fs.mkdirSync(tmpDir, { recursive: true });
     });

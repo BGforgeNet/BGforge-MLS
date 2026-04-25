@@ -70,7 +70,7 @@ test_format() {
     fi
 
     step "Formatting $name files (with idempotency check)"
-    node "$ROOT_DIR/cli/format/out/format-cli.js" "$target_dir" -r --save-and-check -q
+    node "$ROOT_DIR/format/out/cli.js" "$target_dir" -r --save-and-check -q
 }
 
 # Test bin CLI on Fallout PRO files (parse only, no snapshot comparison)
@@ -87,8 +87,8 @@ test_bin() {
 }
 
 step "Building CLIs"
-if [[ ! -f "$ROOT_DIR/cli/format/out/format-cli.js" ]]; then
-    "$ROOT_DIR/scripts/build-format-cli.sh"
+if [[ ! -f "$ROOT_DIR/format/out/cli.js" ]]; then
+    (cd "$ROOT_DIR" && pnpm build:format)
 fi
 if [[ ! -f "$ROOT_DIR/cli/bin/out/bin-cli.js" ]]; then
     "$ROOT_DIR/scripts/build-bin-cli.sh"

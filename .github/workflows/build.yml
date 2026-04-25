@@ -20,7 +20,7 @@ jobs:
         runs-on: ubuntu-latest
         # contents: write is needed for the GitHub Release step on tag pushes.
         # id-token: write is needed for pnpm publish --provenance (npm OIDC attestation)
-        # in the server and transpile publish steps on release tags.
+        # in the server, transpile, and format publish steps on release tags.
         permissions:
             contents: write
             id-token: write
@@ -126,6 +126,12 @@ jobs:
             - name: Publish transpile library to npm
               if: startsWith(github.ref, 'refs/tags/')
               run: SKIP_BUILD=1 ./scripts/publish-transpile.sh
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+            - name: Publish format library to npm
+              if: startsWith(github.ref, 'refs/tags/')
+              run: SKIP_BUILD=1 ./scripts/publish-format.sh
               env:
                   NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 

@@ -17,7 +17,7 @@ import * as path from "path";
 const NODE = process.execPath;
 
 const CLIS = {
-    format: path.resolve("cli/format/out/format-cli.js"),
+    format: path.resolve("format/out/cli.js"),
     transpile: path.resolve("transpilers/out/cli.js"),
     bin: path.resolve("cli/bin/out/bin-cli.js"),
 } as const;
