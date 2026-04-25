@@ -4,13 +4,13 @@
 
 - Minimum supported Node.js version raised from 18 to 20. Node 18 reached end-of-life in April 2025; Node 20 is the current LTS minimum. Affects users installing `@bgforge/mls-server` or `@bgforge/fgtp` standalone via npm.
 
-## 3.7.0
+## 3.7.0 (2026-04-12)
 
 - Document formatting is now available for `.tra`, `.msg`, `.2da`, and `scripts.lst` files.
 - 2DA tables have improved highlighting.
 - Built-in WeiDU functions have their parameters data structured, enabling better intellisense.
 
-## 3.6.0
+## 3.6.0 (2026-04-09)
 
 - Find references from `.tra` and `.msg` files: cursor on any entry finds all usages across consumer files (`.ssl`, `.baf`, `.d`, `.tp2`, `.tssl`, `.tbaf`, `.td`).
 - Fallout SSL: go to definition on `#include` path navigates to the included file.
@@ -19,13 +19,13 @@
 - Binary editor save and JSON export now clamp out-of-range PRO and MAP values to the nearest supported in-format value instead of writing invalid data.
 - Binary editor JSON dump now produces strict canonical JSON.
 
-## 3.5.0
+## 3.5.0 (2026-04-04)
 
 - Binary viewer is now an editor, supporting **Dump to JSON** and **Load from JSON** actions, and `autoDumpJson` setting.
 - Added best-effort support for Fallout 2 MAP files in the editor and bin cli.
 - Added `bit` type support to JSdoc.
 
-## 3.4.0
+## 3.4.0 (2026-03-26)
 
 ### Fallout SSL
 
@@ -60,7 +60,7 @@
 - `map()` with no arguments now transpiles to `{}` (empty map literal).
 - Fixed a crash when the source contains empty statements (bare semicolons).
 
-## 3.3.1
+## 3.3.1 (2026-03-22)
 
 Fix standalone LSP package publish after repository rename.
 
@@ -74,7 +74,7 @@ Fix standalone LSP package publish after repository rename.
 - Fallout SSL: header macros definitions are no longer shipped with LSP.
 - WeiDU TP2: ielib symbols data is no longer shipped with LSP.
 
-## 3.2.1
+## 3.2.1 (2026-03-19)
 
 ### Formatter Improvements
 
@@ -107,7 +107,7 @@ Fix standalone LSP package publish after repository rename.
 - Fixed completion detail and hover for overloaded symbol names.
 - Unified provider indexing and scoped workspace symbols by language.
 
-## 3.2.0
+## 3.2.0 (2026-03-16)
 
 Compile/validate:
 
@@ -142,19 +142,19 @@ WeiDU
 - Outline icons: macros use Method icon, arrays use Array icon, UPPER_first_word variables use Constant icon.
 - Variables now appear as top-level symbols.
 
-## 3.1.3
+## 3.1.3 (2026-03-08)
 
 - Really really fixed npm publish failing in CI.
 
-## 3.1.2
+## 3.1.2 (2026-03-08)
 
 - Really fixed npm publish failing in CI.
 
-## 3.1.1
+## 3.1.1 (2026-03-08)
 
 - Fixed npm publish failing in CI.
 
-## 3.1.0
+## 3.1.0 (2026-03-08)
 
 Fallout SSL
 
@@ -194,7 +194,7 @@ General
 - Fixed crash when compiling with external sslc on Windows.
 - Updated editor setup documentation.
 
-## 3.0.1
+## 3.0.1 (2026-03-06)
 
 - Bumped sslc to 2026-02-07 release.
 - Added tree-sitter highlights.scm for Neovim and other editors.
@@ -203,7 +203,7 @@ General
 - Removed single quote from TP2 autoclosing pairs.
 - Prepared standalone LSP server for npm publishing.
 
-## 3.0.0
+## 3.0.0 (2026-03-05)
 
 Fallout SSL
 

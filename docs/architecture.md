@@ -484,7 +484,7 @@ Four test layers:
 
 ### Server Unit Tests
 
-- **Server unit tests** (`server/test/`, vitest) -- ~1900 tests covering providers, transpilers, core symbol system, shared utilities
+- **Server unit tests** (`server/test/`, vitest) -- a couple thousand tests covering providers, transpilers, core symbol system, shared utilities. Run `pnpm exec vitest --run --reporter=verbose 2>/dev/null | tail` for the current count.
 
 ### Integration Tests
 
