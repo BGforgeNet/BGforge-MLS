@@ -13,7 +13,7 @@ import type {
     SSLDialogReply,
 } from "../../shared/dialog-types";
 
-export type { SSLDialogData as DialogData, SSLDialogNode as DialogNode };
+export type { SSLDialogData as DialogData };
 
 // Membership sets for SSL option/message types. Using ReadonlySet<string>
 // (rather than Set<SSLDialogOptionType>) lets the .has() check act as a

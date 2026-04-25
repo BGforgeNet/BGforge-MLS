@@ -7,7 +7,7 @@ import { Disposable } from "vscode";
  * against the spinner persisting indefinitely if the server crashes
  * before sending its LOAD_FINISHED notification.
  */
-export const DEFAULT_INDICATOR_TIMEOUT_MS = 60_000;
+const DEFAULT_INDICATOR_TIMEOUT_MS = 60_000;
 
 export class ServerInitializingIndicator extends Disposable {
     private _task?: { project: string | undefined; resolve: () => void; timer: ReturnType<typeof setTimeout> };
