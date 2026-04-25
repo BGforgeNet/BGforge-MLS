@@ -32,7 +32,6 @@ bgforge-mls-notepadpp-udl*/
 bgforge-mls-kate-ksh*/
 
 # Dev-only directories
-cli/
 coverage/
 docs/
 external/
@@ -42,6 +41,14 @@ scripts/
 test/
 tmp/
 transpilers/
+
+# Per-workspace node_modules. Their published bundles in out/ are self-contained
+# (esbuild inlines all deps), so the workspace's pnpm symlinks are dev-only and
+# cannot be safely zipped (some are directory symlinks that yazl rejects with
+# "not a file"). server/node_modules is the exception — package.sh derefs the
+# externalised esbuild-wasm and strips all other symlinks before vsce runs.
+binary/node_modules/
+format/node_modules/
 
 # Source YAML for TextMate grammars (only .json ships)
 syntaxes/*.yml
