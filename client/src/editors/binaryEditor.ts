@@ -96,7 +96,15 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
         // Set the initial HTML shell
         webviewPanel.webview.html = this.getHtmlShell(document);
 
-        // Handle messages from webview
+        // Handle messages from webview.
+        //
+        // The `msg` is type-asserted, not runtime-discriminated. VSCode's
+        // webview postMessage channel is same-origin: the only producer is the
+        // extension's own webview JS (loaded under the nonce-gated CSP set in
+        // binaryEditor.html), so external injection is not possible. A runtime
+        // discriminated-union guard would only catch bugs in our own webview
+        // code — not a trust-boundary concern — and is intentionally omitted to
+        // keep the dispatcher legible.
         webviewPanel.webview.onDidReceiveMessage((msg: WebviewToExtension) => {
             switch (msg.type) {
                 case "ready":

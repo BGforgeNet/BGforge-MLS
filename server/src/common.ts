@@ -39,6 +39,13 @@ export function setDebugLogging(enabled: boolean): void {
 /**
  * Log a message through the LSP connection's console at the given level.
  * Debug-level messages are dropped unless {@link setDebugLogging} was called with true.
+ *
+ * Logs target the VSCode "BGforge MLS" output channel, read by humans. They are
+ * not consumed programmatically (no metrics sink, no log-shipping integration),
+ * so structured-field / JSON / per-request correlation-ID emission is not
+ * pursued — it would add ceremony without a downstream consumer to benefit. The
+ * slow-request wrapper in shared/time-handler.ts already encodes the latency
+ * timing that an operator would care about, in a human-readable line.
  */
 export function conlog(message: string, level: LogLevel = "info"): void {
     if (level === "debug" && !debugEnabled) return;
@@ -388,7 +395,13 @@ export async function removeTmpFile(tmpPath: string) {
 /** Run an external process and return a promise that resolves when it finishes.
  *  timeoutMs defaults to 60 000 ms — long enough for real sslc/weidu compiles on
  *  slow machines, short enough to surface hangs. Node kills the child on timeout
- *  and calls back with err.killed === true + err.signal === "SIGTERM". */
+ *  and calls back with err.killed === true + err.signal === "SIGTERM".
+ *
+ *  Kept as a hand-rolled wrapper rather than depending on `execa`/`tinyexec`:
+ *  the surface here (timeout + AbortSignal + Windows .cmd/.bat shell flag) is
+ *  small enough that a runtime dep on top of `cp.execFile` would add supply-chain
+ *  weight without a correctness or capability benefit, and `@bgforge/mls-server`
+ *  publishes a deliberately lean runtime footprint. */
 export function runProcess(
     executable: string,
     args: readonly string[],
