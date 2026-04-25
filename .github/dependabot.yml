@@ -11,10 +11,18 @@ updates:
                   - "patch"
       ignore:
           # Major upgrades are reviewed and bumped manually. Security updates
-          # are unaffected — they ship via a separate dependabot channel that
-          # bypasses ignore rules.
+          # are unaffected by update-types filters — they ship via a separate
+          # channel that respects only by-name ignores below.
           - dependency-name: "*"
             update-types: ["version-update:semver-major"]
+          # uuid: transitive devDep via @vscode/vsce > @azure/identity >
+          # @azure/msal-node (packaging-only, never executed at runtime).
+          # GHSA-w5hq-g745-h8pq is patched in uuid@14, but msal-node@5.x pins
+          # uuid@^8 and was written against the pre-v9 default-export API; an
+          # override to v14 would break it. The vulnerable code path is in
+          # v3/v5/v6 with an explicit buf argument; msal-node uses v4. Revisit
+          # when msal-node bumps its uuid pin upstream.
+          - dependency-name: "uuid"
 
     - package-ecosystem: "github-actions"
       directory: "/"
