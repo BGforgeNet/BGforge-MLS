@@ -36,10 +36,11 @@ vi.mock("../src/common", () => ({
 }));
 
 // Mock user-messages so init failures don't try to call into an uninitialised LSP connection.
+const { mockShowError } = vi.hoisted(() => ({ mockShowError: vi.fn() }));
 vi.mock("../src/user-messages", () => ({
     showInfo: vi.fn(),
     showWarning: vi.fn(),
-    showError: vi.fn(),
+    showError: mockShowError,
     showErrorWithActions: vi.fn(),
     decodeFileUris: (s: string) => s,
 }));
@@ -228,6 +229,22 @@ describe("ProviderRegistry", () => {
 
             const result = await registry.compile("failing", "file:///test.txt", "content", false);
             expect(result).toBe(false);
+        });
+
+        it("surfaces init failure to the user via showError", async () => {
+            mockShowError.mockClear();
+            const registry = await createRegistry();
+            const failingProvider = createMockProvider("weidu-tp2", {
+                init: vi.fn().mockRejectedValue(new Error("WASM load failed")),
+            });
+
+            registry.register(failingProvider);
+            await registry.init(mockContext);
+
+            expect(mockShowError).toHaveBeenCalledTimes(1);
+            const message = mockShowError.mock.calls[0]![0] as string;
+            expect(message).toContain("weidu-tp2");
+            expect(message).toContain("WASM load failed");
         });
     });
 
