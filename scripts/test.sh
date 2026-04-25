@@ -37,6 +37,9 @@ parallel \
     "Typecheck client" "(cd client && pnpm exec tsc --noEmit)" \
     "Typecheck plugins" "(cd plugins/tssl-plugin && pnpm exec tsc --noEmit) && (cd plugins/td-plugin && pnpm exec tsc --noEmit)" \
     "Typecheck server" "(cd server && pnpm exec tsc --noEmit)" \
+    "Typecheck binary" "(cd binary && pnpm exec tsc --noEmit)" \
+    "Typecheck format" "(cd format && pnpm exec tsc --noEmit)" \
+    "Typecheck transpilers" "(cd transpilers && pnpm exec tsc --noEmit)" \
     "Oxlint" "pnpm exec oxlint" \
     "Lint scripts" "pnpm lint:scripts" \
     "Format check" "pnpm exec oxfmt --check" \

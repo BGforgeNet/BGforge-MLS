@@ -10,6 +10,7 @@ import * as path from "path";
 
 import { parseBinaryJsonSnapshot } from "../src/json-snapshot";
 import { proParser } from "../src/pro";
+import type { ParseResult } from "../src/types";
 
 const FIXTURES = path.resolve("client/testFixture/proto");
 
