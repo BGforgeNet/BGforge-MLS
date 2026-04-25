@@ -13,7 +13,17 @@ const { withProgressMock } = vi.hoisted(() => ({
 }));
 
 vi.mock("vscode", () => {
-    class FakeDisposable {}
+    // Mirrors the shape of vscode.Disposable: constructor takes the dispose
+    // callback and stores it for tests that need to assert disposal behaviour.
+    class FakeDisposable {
+        public callOnDispose: () => void;
+        public constructor(callOnDispose: () => void) {
+            this.callOnDispose = callOnDispose;
+        }
+        public dispose(): void {
+            this.callOnDispose();
+        }
+    }
     return {
         window: {
             get withProgress() {
