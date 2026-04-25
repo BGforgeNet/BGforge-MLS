@@ -12,8 +12,7 @@
  * Multiline text fields (closing `}` on a later line) are supported.
  */
 
-import type { FormatResult } from "../core/capabilities";
-import { createFullDocumentEdit, stripBom } from "../shared/format-utils";
+import { stripBom, type FormatOutput } from "../shared/format-utils";
 
 interface ParsedEntry {
     /** Trimmed number string (e.g. "100"). */
@@ -102,13 +101,13 @@ function processItem(text: string, pos: number): ProcessedLine {
 
 /**
  * Formats a Fallout .msg message file.
- * Returns an empty edits array if the file is empty or already formatted.
+ * Returns the original text unchanged if the file is empty or already formatted.
  */
-export function formatMsg(rawText: string): FormatResult {
+export function formatMsg(rawText: string): FormatOutput {
     const text = stripBom(rawText);
 
     if (text.length === 0) {
-        return { edits: [] };
+        return { text: rawText };
     }
 
     const outputLines: string[] = [];
@@ -127,7 +126,7 @@ export function formatMsg(rawText: string): FormatResult {
 
     // Identity check
     if (formatted === rawText) {
-        return { edits: [] };
+        return { text: rawText };
     }
 
     // Safety check: entry numbers must be identical and in the same order.
@@ -144,8 +143,8 @@ export function formatMsg(rawText: string): FormatResult {
     const origNums = extractNumbers(text);
     const fmtNums = extractNumbers(formatted);
     if (origNums.join("\0") !== fmtNums.join("\0")) {
-        return { edits: [], warning: "MSG formatter: entry number mismatch after formatting, skipping" };
+        return { text: rawText, warning: "MSG formatter: entry number mismatch after formatting, skipping" };
     }
 
-    return { edits: createFullDocumentEdit(rawText, formatted) };
+    return { text: formatted };
 }

@@ -12,8 +12,7 @@
  * trimming trailing whitespace.
  */
 
-import type { FormatResult } from "../core/capabilities";
-import { createFullDocumentEdit, stripBom } from "../shared/format-utils";
+import { stripBom, type FormatOutput } from "../shared/format-utils";
 
 const MIN_GAP = 4;
 const TOKEN_RE = /\S+/g;
@@ -91,10 +90,10 @@ function parse(text: string): Parsed {
 
 /**
  * Formats a 2DA document.
- * Returns an empty edits array (no-op) if the file has no column or data content,
+ * Returns the original text unchanged if the file has no column or data content,
  * or if a content-safety validation fails after formatting.
  */
-export function format2da(rawText: string): FormatResult {
+export function format2da(rawText: string): FormatOutput {
     // Strip BOM before any processing; the original is kept only for the document-edit range.
     const text = stripBom(rawText);
     const { signature, defaultValue, columnNames, dataRows } = parse(text);
@@ -103,7 +102,7 @@ export function format2da(rawText: string): FormatResult {
     // Header-only files (signature + default value, no data) still go through formatting so
     // that the signature line is normalized (e.g. tabs/multiple spaces collapsed to one space).
     if (signature === null && columnNames.length === 0 && dataRows.length === 0) {
-        return { edits: [] };
+        return { text: rawText };
     }
 
     // Max width of the row-label column (the implicit first column in data rows)
@@ -144,9 +143,9 @@ export function format2da(rawText: string): FormatResult {
 
     const formatted = outputLines.join("\n") + "\n";
 
-    // Identity check against rawText so BOM-only differences still produce an edit.
+    // Identity check against rawText so BOM-only differences still produce a change.
     if (formatted === rawText) {
-        return { edits: [] };
+        return { text: rawText };
     }
 
     // Safety check: non-whitespace tokens must be identical and in the same order.
@@ -154,8 +153,8 @@ export function format2da(rawText: string): FormatResult {
     const originalTokens = text.split(/\s+/).filter((t) => t.length > 0);
     const formattedTokens = formatted.split(/\s+/).filter((t) => t.length > 0);
     if (originalTokens.join("\0") !== formattedTokens.join("\0")) {
-        return { edits: [], warning: "2DA formatter: token mismatch after formatting, skipping" };
+        return { text: rawText, warning: "2DA formatter: token mismatch after formatting, skipping" };
     }
 
-    return { edits: createFullDocumentEdit(rawText, formatted) };
+    return { text: formatted };
 }

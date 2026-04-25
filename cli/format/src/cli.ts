@@ -89,21 +89,14 @@ function getFormatOptions(filePath: string): { indentSize: number; lineLimit: nu
 type FormatResult = { text: string };
 
 /**
- * Extract the formatted text from a FormatResult returned by tra/msg/2da formatters.
- * These formatters return `{ edits: TextEdit[]; warning?: string }` rather than `{ text }`.
+ * Extract the formatted text from a FormatOutput returned by the pure-string formatters.
  * A warning means the formatter detected a safety-check failure and declined to format.
  */
-function extractFormatResultText(original: string, result: { edits: { newText: string }[]; warning?: string }): string {
+function extractFormatResultText(_original: string, result: { text: string; warning?: string }): string {
     if (result.warning) {
         throw new Error(result.warning);
     }
-    if (result.edits.length === 0) {
-        return original;
-    }
-    if (result.edits.length === 1 && result.edits[0] !== undefined) {
-        return result.edits[0].newText;
-    }
-    throw new Error("Unexpected edit count from formatter");
+    return result.text;
 }
 
 function parseAndFormat(

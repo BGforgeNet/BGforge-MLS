@@ -9,15 +9,15 @@ import { formatMsg } from "../../src/fallout-msg/format";
 function fmt(text: string): string {
     const result = formatMsg(text);
     expect(result.warning).toBeUndefined();
-    expect(result.edits.length).toBeGreaterThan(0);
-    return result.edits[0]?.newText ?? text;
+    expect(result.text).not.toBe(text);
+    return result.text;
 }
 
 /** Assert the formatter is a no-op on already-formatted text. */
 function noop(text: string): void {
     const result = formatMsg(text);
     expect(result.warning).toBeUndefined();
-    expect(result.edits).toEqual([]);
+    expect(result.text).toBe(text);
 }
 
 describe("fallout-msg/format", () => {
@@ -85,13 +85,13 @@ describe("fallout-msg/format", () => {
 
     it("adds trailing newline when original lacks one", () => {
         const result = formatMsg("{ 100 }{}{text}");
-        expect(result.edits[0]?.newText).toMatch(/\n$/);
+        expect(result.text).toMatch(/\n$/);
     });
 
     it("strips BOM from output", () => {
         const result = formatMsg("\uFEFF{100}{}{text}\n");
-        expect(result.edits[0]?.newText.startsWith("\uFEFF")).toBe(false);
-        expect(result.edits[0]?.newText).toBe("{100}{}{text}\n");
+        expect(result.text.startsWith("\uFEFF")).toBe(false);
+        expect(result.text).toBe("{100}{}{text}\n");
     });
 
     it("is a no-op for already-formatted file", () => {
@@ -103,8 +103,8 @@ describe("fallout-msg/format", () => {
         expect(fmt(input)).toBe("{100}{}{text}\n{200}{snd}{other}\n");
     });
 
-    it("returns empty edits for empty input", () => {
-        expect(formatMsg("").edits).toEqual([]);
+    it("is a no-op for empty input", () => {
+        expect(formatMsg("").text).toBe("");
     });
 
     // The safety check (entry-number mismatch → warning) is a defensive invariant:

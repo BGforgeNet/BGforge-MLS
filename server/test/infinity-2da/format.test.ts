@@ -8,9 +8,8 @@ import { format2da } from "../../src/infinity-2da/format";
 function fmt(text: string): string {
     const result = format2da(text);
     expect(result.warning).toBeUndefined();
-    expect(result.edits.length).toBeGreaterThan(0);
-    // edits[0] is always a full-document replacement
-    return result.edits[0]?.newText ?? text;
+    expect(result.text).not.toBe(text);
+    return result.text;
 }
 
 /** Shorthand: join lines with newline and add trailing newline. */
@@ -102,23 +101,23 @@ describe("infinity-2da/format", () => {
         expect(out).toContain("extra");
     });
 
-    it("returns no-op for empty/minimal files", () => {
-        expect(format2da("").edits).toEqual([]);
-        expect(format2da("2DA V1.0\n****\n").edits).toEqual([]);
+    it("is a no-op for empty/minimal files", () => {
+        expect(format2da("").text).toBe("");
+        expect(format2da("2DA V1.0\n****\n").text).toBe("2DA V1.0\n****\n");
     });
 
     it("normalizes signature in header-only files (tab or extra spaces, no data rows)", () => {
         const result = format2da("2DA\tV1.0\n0\n");
         expect(result.warning).toBeUndefined();
-        expect(result.edits.length).toBeGreaterThan(0);
-        expect(result.edits[0]?.newText).toBe("2DA V1.0\n0\n");
+        expect(result.text).not.toBe("2DA\tV1.0\n0\n");
+        expect(result.text).toBe("2DA V1.0\n0\n");
     });
 
     it("strips leading BOM from the output", () => {
         const input = "\uFEFF2DA V1.0\n****\n   Col1\nrow1 val1\n";
         const result = format2da(input);
         expect(result.warning).toBeUndefined();
-        expect(result.edits.length).toBeGreaterThan(0);
-        expect(result.edits[0]?.newText.startsWith("\uFEFF")).toBe(false);
+        expect(result.text).not.toBe(input);
+        expect(result.text.startsWith("\uFEFF")).toBe(false);
     });
 });

@@ -14,8 +14,7 @@
  * whitespace trimmed only.
  */
 
-import type { FormatResult } from "../core/capabilities";
-import { createFullDocumentEdit, stripBom } from "../shared/format-utils";
+import { stripBom, type FormatOutput } from "../shared/format-utils";
 
 /** Matches the entry prefix: @<optional_whitespace><number><optional_whitespace>=<optional_whitespace> */
 const ENTRY_PREFIX_RE = /^(@)\s*(-?\d+)\s*=\s*/;
@@ -147,13 +146,13 @@ function processLine(text: string, pos: number): ProcessedLine {
 
 /**
  * Formats a WeiDU .tra translation file.
- * Returns an empty edits array if the file is empty or already formatted.
+ * Returns the original text unchanged if the file is empty or already formatted.
  */
-export function formatTra(rawText: string): FormatResult {
+export function formatTra(rawText: string): FormatOutput {
     const text = stripBom(rawText);
 
     if (text.length === 0) {
-        return { edits: [] };
+        return { text: rawText };
     }
 
     const outputLines: string[] = [];
@@ -172,7 +171,7 @@ export function formatTra(rawText: string): FormatResult {
 
     // Identity check: if nothing changed, return no-op.
     if (formatted === rawText) {
-        return { edits: [] };
+        return { text: rawText };
     }
 
     // Safety check: entry numbers must be identical and in the same order.
@@ -188,8 +187,8 @@ export function formatTra(rawText: string): FormatResult {
     const origNums = extractNumbers(text);
     const fmtNums = extractNumbers(formatted);
     if (origNums.join("\0") !== fmtNums.join("\0")) {
-        return { edits: [], warning: "TRA formatter: entry number mismatch after formatting, skipping" };
+        return { text: rawText, warning: "TRA formatter: entry number mismatch after formatting, skipping" };
     }
 
-    return { edits: createFullDocumentEdit(rawText, formatted) };
+    return { text: formatted };
 }

@@ -16,18 +16,17 @@ import { describe, expect, it } from "vitest";
 import { format2da } from "../src/infinity-2da/format";
 import { formatMsg } from "../src/fallout-msg/format";
 import { formatTra } from "../src/weidu-tra/format";
-import type { FormatResult } from "../src/core/capabilities";
+import type { FormatOutput } from "../src/shared/format-utils";
 
 // ---------------------------------------------------------------------------
 // Helper
 // ---------------------------------------------------------------------------
 
-type Formatter = (raw: string) => FormatResult;
+type Formatter = (raw: string) => FormatOutput;
 
-/** Apply a formatter once. Returns the formatted text, or the input if the formatter is a no-op. */
+/** Apply a formatter once. Returns the formatted text (no-op returns the input unchanged). */
 function applyFormat(fn: Formatter, input: string): string {
-    const result = fn(input);
-    return result.edits[0]?.newText ?? input;
+    return fn(input).text;
 }
 
 // ---------------------------------------------------------------------------

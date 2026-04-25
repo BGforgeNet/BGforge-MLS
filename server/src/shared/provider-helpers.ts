@@ -10,7 +10,7 @@ import type { IndexedSymbol } from "../core/symbol";
 import type { Symbols } from "../core/symbol-index";
 import type { FormatResult } from "../language-provider";
 import { conlog } from "../common";
-import { createFullDocumentEdit, validateFormatting, type CommentStripper } from "./format-utils";
+import { createFullDocumentEdit, validateFormatting, type CommentStripper, type FormatOutput } from "./format-utils";
 
 // ============================================
 // Symbol resolution
@@ -93,7 +93,7 @@ interface FormatWithValidationOptions<TRoot = unknown, TOpts = unknown> {
     /** Parse text into a tree (returns null on failure) */
     parse: (text: string) => { rootNode: TRoot } | null;
     /** Format the AST root node with options */
-    formatAst: (rootNode: TRoot, options: TOpts) => { text: string };
+    formatAst: (rootNode: TRoot, options: TOpts) => FormatOutput;
     /** Get format options for a URI */
     getFormatOptions: (uri: string) => TOpts;
     /** Strip comments for validation (language-specific) */
@@ -125,6 +125,11 @@ export function formatWithValidation<TRoot, TOpts>(opts: FormatWithValidationOpt
         return { edits: [], warning: `${opts.languageName} formatter error: ${msg}` };
     }
 
+    if (result.warning) {
+        conlog(`${opts.languageName} formatter error: ${result.warning}`);
+        return { edits: [], warning: result.warning };
+    }
+
     const validationError = validateFormatting(opts.text, result.text, opts.stripComments);
     if (validationError) {
         conlog(`${opts.languageName} formatter validation failed: ${validationError}`);
@@ -134,5 +139,6 @@ export function formatWithValidation<TRoot, TOpts>(opts: FormatWithValidationOpt
         };
     }
 
+    if (result.text === opts.text) return { edits: [] };
     return { edits: createFullDocumentEdit(opts.text, result.text) };
 }

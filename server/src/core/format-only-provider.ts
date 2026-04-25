@@ -9,21 +9,25 @@
 import { conlog } from "../common";
 import type { FormatResult, ProviderContext } from "./capabilities";
 import type { LanguageProvider } from "../language-provider";
+import { createFullDocumentEdit, type FormatOutput } from "../shared/format-utils";
 
 /**
  * Creates a minimal LanguageProvider that exposes only document formatting.
  *
  * @param id - The language ID string (must match package.json contributes.languages).
- * @param formatFn - Pure function that transforms document text into TextEdits.
+ * @param formatFn - Pure function that transforms document text into a FormatOutput.
  */
-export function createFormatOnlyProvider(id: string, formatFn: (text: string) => FormatResult): LanguageProvider {
+export function createFormatOnlyProvider(id: string, formatFn: (text: string) => FormatOutput): LanguageProvider {
     return {
         id,
         async init(_context: ProviderContext): Promise<void> {
             conlog(`${id} provider initialized`);
         },
         format(text: string, _uri: string): FormatResult {
-            return formatFn(text);
+            const out = formatFn(text);
+            if (out.warning) return { edits: [], warning: out.warning };
+            if (out.text === text) return { edits: [] };
+            return { edits: createFullDocumentEdit(text, out.text) };
         },
     };
 }

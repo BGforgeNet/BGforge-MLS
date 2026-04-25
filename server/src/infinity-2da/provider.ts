@@ -15,6 +15,7 @@ import type {
     FormattingCapability,
 } from "../language-provider";
 import type { SemanticTokenSpan } from "../shared/semantic-tokens";
+import { createFullDocumentEdit } from "../shared/format-utils";
 import { getSemanticTokenSpans } from "./semantic-tokens";
 import { format2da } from "./format";
 
@@ -30,7 +31,10 @@ class Infinity2daProvider implements ProviderBase, SemanticTokenCapability, Form
     }
 
     format(text: string, _uri: string): FormatResult {
-        return format2da(text);
+        const out = format2da(text);
+        if (out.warning) return { edits: [], warning: out.warning };
+        if (out.text === text) return { edits: [] };
+        return { edits: createFullDocumentEdit(text, out.text) };
     }
 }
 

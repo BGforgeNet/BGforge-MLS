@@ -10,15 +10,15 @@ import { formatScriptsLst } from "../../src/fallout-scripts-lst/format";
 function fmt(text: string): string {
     const result = formatScriptsLst(text);
     expect(result.warning).toBeUndefined();
-    expect(result.edits.length).toBeGreaterThan(0);
-    return result.edits[0]?.newText ?? text;
+    expect(result.text).not.toBe(text);
+    return result.text;
 }
 
 /** Assert the formatter is a no-op on already-formatted text. */
 function noop(text: string): void {
     const result = formatScriptsLst(text);
     expect(result.warning).toBeUndefined();
-    expect(result.edits).toEqual([]);
+    expect(result.text).toBe(text);
 }
 
 /** Shorthand: convert LF string to CRLF for use in expected values. */
@@ -27,8 +27,8 @@ function crlf(text: string): string {
 }
 
 describe("fallout-scripts-lst/format", () => {
-    it("returns empty edits for empty input", () => {
-        expect(formatScriptsLst("").edits).toEqual([]);
+    it("is a no-op for empty input", () => {
+        expect(formatScriptsLst("").text).toBe("");
     });
 
     it("is a no-op for a single filename-only line (CRLF)", () => {
@@ -45,12 +45,12 @@ describe("fallout-scripts-lst/format", () => {
 
     it("normalizes LF input to CRLF output", () => {
         const result = formatScriptsLst("AR0100.int\n");
-        expect(result.edits[0]?.newText).toBe("AR0100.int\r\n");
+        expect(result.text).toBe("AR0100.int\r\n");
     });
 
     it("adds trailing CRLF when original lacks a newline", () => {
         const result = formatScriptsLst("AR0100.int");
-        expect(result.edits[0]?.newText).toMatch(/\r\n$/);
+        expect(result.text).toMatch(/\r\n$/);
     });
 
     it("trims trailing whitespace from filename-only line", () => {
@@ -102,8 +102,8 @@ describe("fallout-scripts-lst/format", () => {
 
     it("strips BOM from output", () => {
         const result = formatScriptsLst("\uFEFFAR0100.int\r\n");
-        expect(result.edits[0]?.newText.startsWith("\uFEFF")).toBe(false);
-        expect(result.edits[0]?.newText).toBe("AR0100.int\r\n");
+        expect(result.text.startsWith("\uFEFF")).toBe(false);
+        expect(result.text).toBe("AR0100.int\r\n");
     });
 
     it("is idempotent: formatting an already-formatted CRLF file is a no-op", () => {

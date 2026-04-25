@@ -9,15 +9,15 @@ import { formatTra } from "../../src/weidu-tra/format";
 function fmt(text: string): string {
     const result = formatTra(text);
     expect(result.warning).toBeUndefined();
-    expect(result.edits.length).toBeGreaterThan(0);
-    return result.edits[0]?.newText ?? text;
+    expect(result.text).not.toBe(text);
+    return result.text;
 }
 
 /** Assert the formatter is a no-op on already-formatted text. */
 function noop(text: string): void {
     const result = formatTra(text);
     expect(result.warning).toBeUndefined();
-    expect(result.edits).toEqual([]);
+    expect(result.text).toBe(text);
 }
 
 describe("weidu-tra/format", () => {
@@ -107,13 +107,13 @@ describe("weidu-tra/format", () => {
 
     it("adds trailing newline when original lacks one", () => {
         const result = formatTra("@ 1 = ~text~");
-        expect(result.edits[0]?.newText).toMatch(/\n$/);
+        expect(result.text).toMatch(/\n$/);
     });
 
     it("strips BOM from output", () => {
         const result = formatTra("\uFEFF@1 = ~text~\n");
-        expect(result.edits[0]?.newText.startsWith("\uFEFF")).toBe(false);
-        expect(result.edits[0]?.newText).toBe("@1 = ~text~\n");
+        expect(result.text.startsWith("\uFEFF")).toBe(false);
+        expect(result.text).toBe("@1 = ~text~\n");
     });
 
     it("is a no-op for already-formatted file", () => {
@@ -149,7 +149,7 @@ describe("weidu-tra/format", () => {
         expect(formatTra("@1 = ~line one\n@2 = fake entry inside string~\n@3 = ~real~\n").warning).toBeUndefined();
     });
 
-    it("returns empty edits for empty input", () => {
-        expect(formatTra("").edits).toEqual([]);
+    it("is a no-op for empty input", () => {
+        expect(formatTra("").text).toBe("");
     });
 });

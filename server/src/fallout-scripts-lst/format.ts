@@ -10,8 +10,7 @@
  * Output always uses CRLF line endings, matching the Fallout engine's convention.
  */
 
-import type { FormatResult } from "../core/capabilities";
-import { createFullDocumentEdit, stripBom } from "../shared/format-utils";
+import { stripBom, type FormatOutput } from "../shared/format-utils";
 
 const MIN_GAP = 4;
 
@@ -50,14 +49,14 @@ function parseLine(line: string): ParsedLine | null {
 
 /**
  * Formats a Fallout scripts.lst file.
- * Returns an empty edits array if the file is already formatted.
+ * Returns the original text unchanged if the file is already formatted.
  */
-export function formatScriptsLst(rawText: string): FormatResult {
+export function formatScriptsLst(rawText: string): FormatOutput {
     // Normalize CRLF to LF before processing; $ in the LINE_RE does not match before \r.
     const text = stripBom(rawText).replace(/\r\n/g, "\n").replace(/\r/g, "\n");
 
     if (text.length === 0) {
-        return { edits: [] };
+        return { text: rawText };
     }
 
     const rawLines = text.split("\n");
@@ -113,7 +112,7 @@ export function formatScriptsLst(rawText: string): FormatResult {
     const formatted = outputLines.join("\r\n") + "\r\n";
 
     if (formatted === rawText) {
-        return { edits: [] };
+        return { text: rawText };
     }
 
     // Safety check: all non-whitespace tokens must be identical and in the same order.
@@ -121,8 +120,8 @@ export function formatScriptsLst(rawText: string): FormatResult {
     const origTokens = tokenize(text);
     const fmtTokens = tokenize(formatted);
     if (origTokens.join("\0") !== fmtTokens.join("\0")) {
-        return { edits: [], warning: "scripts.lst formatter: token mismatch after formatting, skipping" };
+        return { text: rawText, warning: "scripts.lst formatter: token mismatch after formatting, skipping" };
     }
 
-    return { edits: createFullDocumentEdit(rawText, formatted) };
+    return { text: formatted };
 }

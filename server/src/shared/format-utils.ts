@@ -5,6 +5,12 @@
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import { TextEdit } from "vscode-languageserver/node";
 
+/** Library-shape formatter output. Wrappers convert to LSP TextEdit[] at the LSP boundary. */
+export interface FormatOutput {
+    text: string;
+    warning?: string;
+}
+
 /** Strips a leading UTF-8 BOM (\uFEFF) from text if present. */
 export function stripBom(text: string): string {
     return text.startsWith("\uFEFF") ? text.slice(1) : text;
