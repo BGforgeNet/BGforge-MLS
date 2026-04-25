@@ -98,10 +98,7 @@ describe("shared/parser-factory", () => {
             // Loading the module source keeps the constant internal (not exported).
             const fs = require("fs");
             const path = require("path");
-            const source = fs.readFileSync(
-                path.join(__dirname, "../../src/shared/parser-factory.ts"),
-                "utf-8",
-            );
+            const source = fs.readFileSync(path.join(__dirname, "../../src/shared/parser-factory.ts"), "utf-8");
             const match = source.match(/DEFAULT_MAX_CACHE_SIZE\s*=\s*(\d+)/);
             expect(match).not.toBeNull();
             const defaultSize = Number(match![1]);

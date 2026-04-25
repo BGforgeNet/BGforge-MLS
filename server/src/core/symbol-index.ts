@@ -330,9 +330,7 @@ export class Symbols {
         }
 
         if (options.uri) {
-            results = results.filter(
-                (s) => s.source.uri === options.uri || s.source.type === SourceType.Static,
-            );
+            results = results.filter((s) => s.source.uri === options.uri || s.source.type === SourceType.Static);
         }
 
         if (options.limit && results.length > options.limit) {

@@ -97,7 +97,10 @@ describe("Symbols", () => {
 
     describe("clearFile()", () => {
         it("should remove all symbols from a file", () => {
-            index.updateFile(normalizeUri("file:///test.txt"), [createSymbol({ name: "x" }), createSymbol({ name: "y" })]);
+            index.updateFile(normalizeUri("file:///test.txt"), [
+                createSymbol({ name: "x" }),
+                createSymbol({ name: "y" }),
+            ]);
 
             index.clearFile(normalizeUri("file:///test.txt"));
 
@@ -193,7 +196,10 @@ describe("Symbols", () => {
     // =========================================================================
     describe("lookup()", () => {
         it("should find symbol by exact name", () => {
-            index.updateFile(normalizeUri("file:///test.txt"), [createSymbol({ name: "target" }), createSymbol({ name: "other" })]);
+            index.updateFile(normalizeUri("file:///test.txt"), [
+                createSymbol({ name: "target" }),
+                createSymbol({ name: "other" }),
+            ]);
 
             const result = index.lookup("target");
 
@@ -434,7 +440,9 @@ describe("Symbols", () => {
 
             // Invalidate by update: results change accordingly.
             const uri0 = "file:///mod/f0.tp2";
-            symbols.updateFile(normalizeUri(uri0), [createSymbol({ name: "new_only", source: { type: SourceType.Workspace, uri: uri0 } })]);
+            symbols.updateFile(normalizeUri(uri0), [
+                createSymbol({ name: "new_only", source: { type: SourceType.Workspace, uri: uri0 } }),
+            ]);
             const third = [...symbols.query({})].map((s) => s.name);
             expect(third).not.toContain("a0");
             expect(third).toContain("new_only");
@@ -444,10 +452,18 @@ describe("Symbols", () => {
             const symbols = new Symbols();
             for (let f = 0; f < 3; f++) {
                 const uri = `file:///mod/f${f}.tp2`;
-                symbols.updateFile(normalizeUri(uri), [createSymbol({ name: `fn_${f}`, source: { type: SourceType.Workspace, uri } })]);
+                symbols.updateFile(normalizeUri(uri), [
+                    createSymbol({ name: `fn_${f}`, source: { type: SourceType.Workspace, uri } }),
+                ]);
             }
-            const first = symbols.searchWorkspaceSymbols("fn").map((s) => s.name).sort();
-            const second = symbols.searchWorkspaceSymbols("fn").map((s) => s.name).sort();
+            const first = symbols
+                .searchWorkspaceSymbols("fn")
+                .map((s) => s.name)
+                .sort();
+            const second = symbols
+                .searchWorkspaceSymbols("fn")
+                .map((s) => s.name)
+                .sort();
             expect(second).toEqual(first);
         });
     });

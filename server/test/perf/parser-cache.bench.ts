@@ -62,7 +62,6 @@ if (texts.length >= 11) {
 }
 
 describe.skipIf(texts.length < 11)("parser cache throughput (real TP2 fixtures)", () => {
-
     bench(`size=10, ${texts.length} texts x 1 cycle`, () => {
         for (const t of texts) sink += mod10.parseWithCache(t)?.rootNode.childCount ?? 0;
     });

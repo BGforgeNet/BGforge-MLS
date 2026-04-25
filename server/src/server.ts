@@ -5,11 +5,7 @@
  */
 
 import { TextDocument } from "vscode-languageserver-textdocument";
-import {
-    createConnection,
-    ProposedFeatures,
-    TextDocuments,
-} from "vscode-languageserver/node";
+import { createConnection, ProposedFeatures, TextDocuments } from "vscode-languageserver/node";
 import { type NormalizedUri } from "./core/normalized-uri";
 import { makeTimingOptions } from "./shared/time-handler";
 import { initLspConnection } from "./lsp-connection";

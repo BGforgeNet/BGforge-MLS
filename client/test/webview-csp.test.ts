@@ -16,7 +16,7 @@ describe("webview CSP", () => {
     it("dialog tree template declares a nonce-based CSP", () => {
         const html = fs.readFileSync(path.resolve("client/src/dialog-tree/dialogTree.html"), "utf8");
         expect(html).not.toContain("'unsafe-inline'");
-        expect(html).toContain("http-equiv=\"Content-Security-Policy\"");
+        expect(html).toContain('http-equiv="Content-Security-Policy"');
         expect(html).toContain("default-src 'none'");
         expect(html).toContain("'nonce-{{nonce}}'");
         expect(html).toContain("{{cspSource}}");

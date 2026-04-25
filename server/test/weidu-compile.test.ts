@@ -285,7 +285,9 @@ describe("weidu-compile", () => {
         it("cleans up tmp file when writeFile fails (partial write)", async () => {
             mockWriteFile.mockRejectedValue(new Error("ENOSPC"));
 
-            await expect(compile(normalizeUri("file:///test.tp2"), baseSettings, false, "content")).rejects.toThrow("ENOSPC");
+            await expect(compile(normalizeUri("file:///test.tp2"), baseSettings, false, "content")).rejects.toThrow(
+                "ENOSPC",
+            );
 
             expect(mockExecFile).not.toHaveBeenCalled();
             expect(mockUnlink).toHaveBeenCalledWith(expect.stringMatching(/\.tp2$/));

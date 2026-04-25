@@ -38,7 +38,7 @@ const config: KnipConfig = {
                 "test/tbaf/*.ts",
                 // Bench files invoked explicitly; not reachable from server.ts entry
                 "test/perf/**",
-...(isProductionKnip ? ["src/**", "vitest.integration.config.ts", "test/integration/**"] : []),
+                ...(isProductionKnip ? ["src/**", "vitest.integration.config.ts", "test/integration/**"] : []),
             ],
         },
         "plugins/tssl-plugin": {

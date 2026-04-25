@@ -139,9 +139,9 @@ describe("fallout-ssl compiler", () => {
         it("cleans up tmp file even when built-in compiler throws", async () => {
             mockBuiltinCompiler.mockRejectedValue(new Error("WASM crash"));
 
-            await expect(compile(normalizeUri("file:///project/test.ssl"), baseSettings, false, "code")).rejects.toThrow(
-                "WASM crash",
-            );
+            await expect(
+                compile(normalizeUri("file:///project/test.ssl"), baseSettings, false, "code"),
+            ).rejects.toThrow("WASM crash");
 
             expect(mockUnlink).toHaveBeenCalledWith(expect.stringContaining(TMP_SSL_NAME));
         });
@@ -203,7 +203,9 @@ describe("fallout-ssl compiler", () => {
         it("cleans up tmp file when writeFile throws", async () => {
             mockWriteFile.mockRejectedValue(new Error("ENOSPC"));
 
-            await expect(compile(normalizeUri("file:///project/test.ssl"), baseSettings, false, "code")).rejects.toThrow("ENOSPC");
+            await expect(
+                compile(normalizeUri("file:///project/test.ssl"), baseSettings, false, "code"),
+            ).rejects.toThrow("ENOSPC");
 
             expect(mockBuiltinCompiler).not.toHaveBeenCalled();
             expect(mockUnlink).toHaveBeenCalledWith(expect.stringContaining(TMP_SSL_NAME));
@@ -364,9 +366,11 @@ describe("fallout-ssl compiler", () => {
             });
 
             let resolved = false;
-            const promise = compile(normalizeUri("file:///project/test.ssl"), externalSettings, false, "code").then(() => {
-                resolved = true;
-            });
+            const promise = compile(normalizeUri("file:///project/test.ssl"), externalSettings, false, "code").then(
+                () => {
+                    resolved = true;
+                },
+            );
 
             // Let microtasks run
             await new Promise((r) => {

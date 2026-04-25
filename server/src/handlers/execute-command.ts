@@ -6,13 +6,7 @@ import { parseTDDialog } from "../td/dialog";
 import { parseTSSLDialog } from "../tssl/dialog";
 import { parseDDialog } from "../weidu-d/dialog";
 import { getServerContext } from "../server-context";
-import {
-    EXT_TD,
-    EXT_TSSL,
-    LANG_FALLOUT_SSL,
-    LANG_TYPESCRIPT,
-    LANG_WEIDU_D,
-} from "../core/languages";
+import { EXT_TD, EXT_TSSL, LANG_FALLOUT_SSL, LANG_TYPESCRIPT, LANG_WEIDU_D } from "../core/languages";
 import { LSP_COMMAND_PARSE_DIALOG, VSCODE_COMMAND_COMPILE } from "../../../shared/protocol";
 import type { HandlerContext } from "./context";
 

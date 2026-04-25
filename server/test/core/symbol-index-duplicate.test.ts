@@ -137,7 +137,9 @@ describe("symbol-index duplicate handling", () => {
         const headerUri = "file:///headers/lib.h";
 
         // Add header symbol (Workspace)
-        symbols.updateFile(normalizeUri(headerUri), [makeConstantSymbol("get_proto_data", headerUri, "header_version")]);
+        symbols.updateFile(normalizeUri(headerUri), [
+            makeConstantSymbol("get_proto_data", headerUri, "header_version"),
+        ]);
 
         // Add static symbol (built-in)
         const staticSymbol: ConstantSymbol = {
