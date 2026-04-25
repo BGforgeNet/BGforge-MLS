@@ -48,14 +48,13 @@ import {
     type WorkspaceSymbolCapability,
 } from "../language-provider";
 import { getFormatOptions } from "../shared/format-options";
-import { stripCommentsWeidu } from "@bgforge/format";
+import { stripCommentsWeidu, formatWeiduTp2 as formatAst } from "@bgforge/format";
 import { resolveSymbolWithLocal, formatWithValidation } from "../shared/provider-helpers";
 import { compile as weiduCompile } from "../weidu-compile";
 import { getContextAtPosition, getFuncParamsContext, isAtDeclarationSite } from "./completion/context";
 import { filterItemsByContext } from "./completion/filter";
 import { getParamCompletions } from "./completion/parameter";
 import { CompletionCategory, CompletionContext, type Tp2CompletionItem } from "./completion/types";
-import { formatDocument as formatAst } from "./format/core";
 import { initParser, parseWithCache, isInitialized } from "./parser";
 import { getDocumentSymbols } from "./symbol";
 import { getDefinition, isOnFunctionCallParamName } from "./definition";

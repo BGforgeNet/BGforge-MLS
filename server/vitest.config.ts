@@ -2,8 +2,6 @@
  * Vitest configuration for server unit tests with coverage reporting.
  *
  * Coverage measures every source file the unit tests import. Exclusions:
- *   - `src/**\/format/**` — tree-sitter format sub-modules operate on parsed
- *     AST nodes and are covered by grammar-corpus tests, not unit tests.
  *   - `src/fallout-ssl/provider.ts`, `src/weidu-tp2/provider.ts` — LSP
  *     dispatcher glue that delegates to unit-tested sub-modules; end-to-end
  *     behaviour is verified by integration tests under `test/integration/`.
@@ -35,7 +33,7 @@ export default defineConfig({
             // server+client coverage runs in scripts/test.sh don't race on
             // coverage/.tmp shard files.
             reportsDirectory: "coverage/server",
-            exclude: ["src/**/format/**/*.ts", "src/fallout-ssl/provider.ts", "src/weidu-tp2/provider.ts"],
+            exclude: ["src/fallout-ssl/provider.ts", "src/weidu-tp2/provider.ts"],
             thresholds: {
                 lines: 90,
                 functions: 90,

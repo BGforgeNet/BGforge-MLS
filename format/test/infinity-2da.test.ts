@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { format2da } from "../../src/infinity-2da/format";
+import { format2da } from "@bgforge/format";
 
 function fmt(text: string): string {
     const result = format2da(text);

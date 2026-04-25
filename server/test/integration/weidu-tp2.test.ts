@@ -16,7 +16,7 @@ import { renameSymbol, prepareRenameSymbol } from "../../src/weidu-tp2/rename";
 import { parseFile } from "../../src/weidu-tp2/header-parser";
 import { getFunctionParamHover } from "../../src/weidu-tp2/hover";
 import { getLocalSymbols } from "../../src/weidu-tp2/local-symbols";
-import { formatDocument } from "../../src/weidu-tp2/format/core";
+import { formatWeiduTp2 as formatDocument } from "@bgforge/format";
 import { createFoldingRangesProvider } from "../../src/shared/folding-ranges";
 import { SyntaxType } from "../../src/weidu-tp2/tree-sitter.d";
 import { FileIndex } from "../../src/core/file-index";

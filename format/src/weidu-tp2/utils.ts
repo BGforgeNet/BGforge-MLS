@@ -15,7 +15,7 @@ import {
     type CollectedItem,
     CollectedItemType,
 } from "./types";
-import { SyntaxType } from "../tree-sitter.d";
+import { SyntaxType } from "../../../server/src/weidu-tp2/tree-sitter.d";
 import { type WeiduToken, tokenizeWeidu, WeiduTokenType, normalizeWhitespaceWeidu } from "@bgforge/format";
 
 // ============================================

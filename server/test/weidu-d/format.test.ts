@@ -4,7 +4,7 @@
 
 import { describe, expect, it, beforeAll } from "vitest";
 import { initParser, getParser } from "../../src/weidu-d/parser";
-import { formatDocument } from "../../src/weidu-d/format/core";
+import { formatWeiduD as formatDocument } from "@bgforge/format";
 
 beforeAll(async () => {
     await initParser();

@@ -5,7 +5,7 @@
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import { SyntaxType } from "../../tree-sitter.d";
-import { KW_BEGIN, KW_END } from "../../format/types";
+import { KW_BEGIN, KW_END } from "@bgforge/format";
 
 /**
  * BEGIN/END block boundary positions.

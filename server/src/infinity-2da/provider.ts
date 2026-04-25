@@ -17,7 +17,7 @@ import type {
 import type { SemanticTokenSpan } from "../shared/semantic-tokens";
 import { createFullDocumentEdit } from "../shared/format-edits";
 import { getSemanticTokenSpans } from "./semantic-tokens";
-import { format2da } from "./format";
+import { format2da } from "@bgforge/format";
 
 class Infinity2daProvider implements ProviderBase, SemanticTokenCapability, FormattingCapability {
     readonly id = LANG_INFINITY_2DA;

@@ -38,7 +38,7 @@ import {
     type FeatureGateCapability,
     type WorkspaceSymbolCapability,
 } from "../language-provider";
-import { stripCommentsWeidu } from "@bgforge/format";
+import { stripCommentsWeidu, formatWeiduD as formatAst } from "@bgforge/format";
 import { getFormatOptions } from "../shared/format-options";
 import { resolveSymbolStatic, getStaticCompletions, formatWithValidation } from "../shared/provider-helpers";
 import { isInsideComment } from "./ast-utils";
@@ -47,7 +47,6 @@ import { getDefinition } from "./definition";
 import { getStateLabelHover } from "./hover";
 import { findReferences } from "./references";
 import { prepareRenameSymbol, renameSymbol } from "./rename";
-import { formatDocument as formatAst } from "./format/core";
 import { initParser, parseWithCache, isInitialized } from "./parser";
 import { getDocumentSymbols } from "./symbol";
 import { compile as weiduCompile } from "../weidu-compile";

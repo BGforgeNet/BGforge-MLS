@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { formatMsg } from "../../src/fallout-msg/format";
+import { formatMsg } from "@bgforge/format";
 
 /** Apply the formatter and assert it produced a change. */
 function fmt(text: string): string {

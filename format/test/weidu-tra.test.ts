@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { formatTra } from "../../src/weidu-tra/format";
+import { formatTra } from "@bgforge/format";
 
 /** Apply the formatter and assert it produced a change. */
 function fmt(text: string): string {

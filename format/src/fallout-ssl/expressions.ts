@@ -6,7 +6,7 @@
 import type { Node as SyntaxNode } from "web-tree-sitter";
 
 import { getCtx, isComment, throwFormatError } from "./core";
-import { SyntaxType } from "../tree-sitter.d";
+import { SyntaxType } from "../../../server/src/fallout-ssl/tree-sitter.d";
 
 /** Format an expression node to a string, with optional column tracking for line-breaking. */
 export function formatExpression(

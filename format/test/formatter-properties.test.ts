@@ -13,10 +13,7 @@
 
 import * as fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { format2da } from "../src/infinity-2da/format";
-import { formatMsg } from "../src/fallout-msg/format";
-import { formatTra } from "../src/weidu-tra/format";
-import type { FormatOutput } from "@bgforge/format";
+import { format2da, formatMsg, formatTra, type FormatOutput } from "@bgforge/format";
 
 // ---------------------------------------------------------------------------
 // Helper

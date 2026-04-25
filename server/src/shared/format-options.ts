@@ -9,7 +9,7 @@ import { getEditorconfigSettings } from "@bgforge/format";
 const DEFAULT_INDENT = 4;
 const DEFAULT_LINE_LIMIT = 120;
 
-export interface FormatOptions {
+interface FormatOptions {
     indentSize: number;
     lineLimit: number;
 }

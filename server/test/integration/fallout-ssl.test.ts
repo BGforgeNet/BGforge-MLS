@@ -17,7 +17,7 @@ import { getLocalSignature } from "../../src/fallout-ssl/signature";
 import { getSslCompletionContext, SslCompletionContext } from "../../src/fallout-ssl/completion-context";
 import { getLocalSymbols } from "../../src/fallout-ssl/local-symbols";
 import { createFoldingRangesProvider } from "../../src/shared/folding-ranges";
-import { formatDocument } from "../../src/fallout-ssl/format/core";
+import { formatFalloutSsl as formatDocument } from "@bgforge/format";
 import { parseFile } from "../../src/fallout-ssl/header-parser";
 import { FileIndex } from "../../src/core/file-index";
 import { SyntaxType } from "../../src/fallout-ssl/tree-sitter.d";

@@ -13,7 +13,7 @@ import { getDefinition } from "../../src/weidu-d/definition";
 import { findReferences } from "../../src/weidu-d/references";
 import { renameSymbol, prepareRenameSymbol } from "../../src/weidu-d/rename";
 import { getStateLabelHover } from "../../src/weidu-d/hover";
-import { formatDocument } from "../../src/weidu-d/format/core";
+import { formatWeiduD as formatDocument } from "@bgforge/format";
 import { createFoldingRangesProvider } from "../../src/shared/folding-ranges";
 import { SyntaxType } from "../../src/weidu-d/tree-sitter.d";
 import { FileIndex } from "../../src/core/file-index";

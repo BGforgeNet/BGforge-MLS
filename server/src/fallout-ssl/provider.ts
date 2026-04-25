@@ -50,10 +50,9 @@ import {
 import { formatWithValidation } from "../shared/provider-helpers";
 import { getJsdocCompletions } from "../shared/jsdoc-completions";
 import { FALLOUT_JSDOC_TYPES } from "../shared/fallout-types";
-import { stripCommentsFalloutSsl } from "@bgforge/format";
+import { stripCommentsFalloutSsl, formatFalloutSsl as formatAst } from "@bgforge/format";
 import { getFormatOptions } from "../shared/format-options";
 import * as signature from "../shared/signature";
-import { formatDocument as formatAst } from "./format/core";
 import { initParser, isInitialized, parseWithCache } from "./parser";
 import { createFoldingRangesProvider } from "../shared/folding-ranges";
 import { getDocumentSymbols } from "./symbol";

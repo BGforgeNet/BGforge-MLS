@@ -32,8 +32,8 @@ import {
     isFunctionDef,
     isFunctionCall,
     isBodyContent,
-} from "../../src/weidu-tp2/format/utils";
-import { formatDocument } from "../../src/weidu-tp2/format/core";
+    formatWeiduTp2 as formatDocument,
+} from "@bgforge/format";
 import { initParser, getParser } from "../../src/weidu-tp2/parser";
 import { parseFile } from "../../src/weidu-tp2/header-parser";
 

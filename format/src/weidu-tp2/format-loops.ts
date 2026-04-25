@@ -25,7 +25,7 @@ import {
     tryAppendInlineComment,
     outputAlignedAssignments,
 } from "./utils";
-import { SyntaxType } from "../tree-sitter.d";
+import { SyntaxType } from "../../../server/src/weidu-tp2/tree-sitter.d";
 
 // ============================================
 // FOR loop formatting

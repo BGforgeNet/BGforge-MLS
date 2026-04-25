@@ -27,7 +27,7 @@ import {
     handleComment,
     outputAlignedAssignments,
 } from "./utils";
-import { SyntaxType } from "../tree-sitter.d";
+import { SyntaxType } from "../../../server/src/weidu-tp2/tree-sitter.d";
 
 // ============================================
 // Assignment parsing

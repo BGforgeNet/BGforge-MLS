@@ -72,12 +72,11 @@ const config: KnipConfig = {
             ignoreDependencies: ["esbuild-wasm", "cac", "diff"],
         },
         format: {
-            // quick-lru is needed once Phase 5 moves the parser-factory into this package.
-            // Declared now so the lockfile and package.json are stable; unused until then.
+            entry: ["test/**/*.test.ts"],
+            // quick-lru is needed once Phase 7 moves the parser-factory into this package.
             // cac and diff are imported via shared/cli/cli-utils.ts, which is outside any
             // workspace; knip's per-workspace dep tracing doesn't reach across that boundary.
-            // vitest is declared for future tests; no test files exist yet.
-            ignoreDependencies: ["quick-lru", "cac", "diff", "vitest"],
+            ignoreDependencies: ["quick-lru", "cac", "diff"],
         },
     },
     ignore: [

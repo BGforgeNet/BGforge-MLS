@@ -7,7 +7,7 @@
  */
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
-import { SyntaxType } from "../tree-sitter.d";
+import { SyntaxType } from "../../../server/src/weidu-baf/tree-sitter.d";
 import { throwOnParseError } from "@bgforge/format";
 
 // Formatting options.

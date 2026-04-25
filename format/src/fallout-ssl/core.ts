@@ -13,9 +13,14 @@ import type { Node as SyntaxNode } from "web-tree-sitter";
 
 import { formatIfStmt, formatWhileStmt, formatForStmt, formatForeachStmt, formatSwitchStmt } from "./control-flow";
 import { formatExpression, formatCallStmt, formatAssignment, formatExpressionStmt } from "./expressions";
-import { SyntaxType } from "../tree-sitter.d";
-import type { FormatOptions } from "../../shared/format-options";
+import { SyntaxType } from "../../../server/src/fallout-ssl/tree-sitter.d";
+
 import { throwOnParseError } from "@bgforge/format";
+
+interface FormatOptions {
+    indentSize: number;
+    lineLimit: number;
+}
 
 const DEFAULT_OPTIONS: FormatOptions = {
     indentSize: 4,

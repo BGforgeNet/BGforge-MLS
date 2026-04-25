@@ -11,7 +11,7 @@
 import { join } from "node:path";
 import { describe, expect, it, beforeAll } from "vitest";
 import { initParser, isInitialized, parseWithCache } from "../../src/weidu-baf/parser";
-import { formatDocument } from "../../src/weidu-baf/format/core";
+import { formatWeiduBaf as formatDocument } from "@bgforge/format";
 import { createFoldingRangesProvider } from "../../src/shared/folding-ranges";
 import { SyntaxType } from "../../src/weidu-baf/tree-sitter.d";
 import { loadFixture, IE_FIXTURES } from "./test-helpers";
