@@ -167,6 +167,7 @@ All bundles use **esbuild** (not tsc). The monorepo uses **pnpm workspaces**.
 | Webviews      | `client/src/{dialog,binary}-webview.ts` | `client/out/*.js`                           | Browser context                     |
 | Format CLI    | `cli/format/src/cli.ts`                 | `cli/format/out/format-cli.js`              | CJS + WASM files                    |
 | Transpile CLI | `transpilers/cli/src/cli.ts`            | `transpilers/cli/out/transpile.js`          | CJS                                 |
+| Transpile lib | `transpilers/src/index.ts`              | `transpilers/out/index.js`                  | ESM, tsup-bundled                   |
 | Binary CLI    | `cli/bin/src/cli.ts`                    | `cli/bin/out/bin-cli.js`                    | CJS                                 |
 | Grammars      | `grammars/*/grammar.js`                 | `grammars/*/*.wasm` -> `server/out/`        | tree-sitter build --wasm            |
 | TextMate      | `syntaxes/*.tmLanguage.yml`             | `syntaxes/*.tmLanguage.json`                | YAML -> JSON conversion             |
@@ -324,6 +325,13 @@ Source (.tssl/.tbaf/.td)
   +-> Write output file
   +-> Optional: chain native compilation
 ```
+
+The four internal packages (`common`, `tssl`, `tbaf`, `td`) stay private. The
+publishable library lives at the `transpilers/` root as `@bgforge/transpile`
+and bundles all four into a single ESM artifact via `tsup`. Internal consumers
+(LSP server, TS plugins) keep importing the per-language packages directly;
+external consumers use the bundled library. `esbuild-wasm` is the only runtime
+dependency — it cannot be inlined because it detects bundling at load time.
 
 **Shared pipeline** (`transpilers/common/transpiler-pipeline.ts`): `createTranspiler()` factory
 handles the common orchestration — extension validation, @tra tag extraction, file I/O,

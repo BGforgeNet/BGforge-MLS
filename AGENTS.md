@@ -124,7 +124,7 @@ cd grammars/weidu-tp2 && pnpm test   # or any grammars/*/
 
 Three artifact streams, all triggered by `git tag vX.Y.Z` -> GitHub Actions. See `docs/architecture.md` for packaging details.
 
-**Version management:** Root `package.json` and `server/package.json` must have identical versions; check the current value with `node -p "require('./package.json').version"`. Other packages have independent versions. Bump manually, commit as "Update changelog, bump version: X.Y.Z", then tag.
+**Version management:** Root `package.json`, `server/package.json`, and `transpilers/package.json` (the published `@bgforge/transpile` library) must carry identical versions; check the current value with `node -p "require('./package.json').version"`. Other packages have independent versions. Bump all three together, commit as "Update changelog, bump version: X.Y.Z", then tag.
 
 **Changelog entries:** Document only user-facing changes (new features, bug fixes, behavior changes). Do not include implementation details (refactoring, test additions, code quality improvements, internal constants). Users care about what changed, not how it was implemented.
 
@@ -173,23 +173,24 @@ See `server/INTERNALS.md` for the full feature matrix and cross-language feature
 
 ## Documentation Index
 
-| Area                    | Key Files                                                                                                                            |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| Architecture            | `docs/architecture.md`, `server/INTERNALS.md`, `client/src/parsers/README.md`                                                        |
-| Contributing            | `CONTRIBUTING.md`                                                                                                                    |
-| Settings                | `docs/settings.md`                                                                                                                   |
-| Changelog               | `docs/changelog.md`                                                                                                                  |
-| User docs (misc)        | `docs/README.md`, `docs/file_associations.md`, `docs/theme.md`, `docs/icon-theme.md`, `docs/lsp-api.md`                              |
-| Editor setup            | `docs/editors/` (`README.md` + 9 editor guides: neovim, emacs, helix, zed, kate, sublime, jetbrains, geany, notepadpp)               |
-| TS plugins              | `docs/editors/typescript-plugins.md` (user setup), `plugins/td-plugin/README.md`, `plugins/tssl-plugin/README.md` (source)           |
-| Transpiler guides       | `transpilers/README.md`, `transpilers/{tssl,tbaf,td}/docs/` (each has README + writing guide; tssl also `converting-ssl-to-tssl.md`) |
-| CLI packages            | `transpilers/cli/README.md`                                                                                                          |
-| Server npm package      | `server/README.md`                                                                                                                   |
-| Data files              | `server/data/README.md`                                                                                                              |
-| Data pipeline           | `docs/data-pipeline.md`                                                                                                              |
-| Grammars                | `grammars/README.md` + per-grammar `README.md` and `formatter.md`                                                                    |
-| Syntaxes                | `syntaxes/README.md`                                                                                                                 |
-| Themes (source)         | `themes/README.md`                                                                                                                   |
-| Language configurations | `language-configurations/README.md`                                                                                                  |
-| Build scripts           | `scripts/README.md`                                                                                                                  |
-| Packaging               | `docs/ignore-files.md`                                                                                                               |
+| Area                    | Key Files                                                                                                                  |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Architecture            | `docs/architecture.md`, `server/INTERNALS.md`, `client/src/parsers/README.md`                                              |
+| Contributing            | `CONTRIBUTING.md`                                                                                                          |
+| Settings                | `docs/settings.md`                                                                                                         |
+| Changelog               | `docs/changelog.md`                                                                                                        |
+| User docs (misc)        | `docs/README.md`, `docs/file_associations.md`, `docs/theme.md`, `docs/icon-theme.md`, `docs/lsp-api.md`                    |
+| Editor setup            | `docs/editors/` (`README.md` + 9 editor guides: neovim, emacs, helix, zed, kate, sublime, jetbrains, geany, notepadpp)     |
+| TS plugins              | `docs/editors/typescript-plugins.md` (user setup), `plugins/td-plugin/README.md`, `plugins/tssl-plugin/README.md` (source) |
+| Transpile library       | `transpilers/README.md`                                                                                                    |
+| Transpiler guides       | `transpilers/{tssl,tbaf,td}/docs/` (each has README + writing guide; tssl also `converting-ssl-to-tssl.md`)                |
+| CLI packages            | `transpilers/cli/README.md`                                                                                                |
+| Server npm package      | `server/README.md`                                                                                                         |
+| Data files              | `server/data/README.md`                                                                                                    |
+| Data pipeline           | `docs/data-pipeline.md`                                                                                                    |
+| Grammars                | `grammars/README.md` + per-grammar `README.md` and `formatter.md`                                                          |
+| Syntaxes                | `syntaxes/README.md`                                                                                                       |
+| Themes (source)         | `themes/README.md`                                                                                                         |
+| Language configurations | `language-configurations/README.md`                                                                                        |
+| Build scripts           | `scripts/README.md`                                                                                                        |
+| Packaging               | `docs/ignore-files.md`                                                                                                     |
