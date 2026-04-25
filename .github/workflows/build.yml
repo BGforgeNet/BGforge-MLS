@@ -19,9 +19,11 @@ jobs:
         name: build
         runs-on: ubuntu-latest
         # contents: write is needed for the GitHub Release step on tag pushes.
-        # id-token is not used here; the provenance job declares its own.
+        # id-token: write is needed for pnpm publish --provenance (npm OIDC attestation)
+        # in the server and transpile publish steps on release tags.
         permissions:
             contents: write
+            id-token: write
         outputs:
             # base64-encoded sha256 digests of release artifacts, consumed by the
             # SLSA provenance job.  Empty on non-release runs.
@@ -118,6 +120,12 @@ jobs:
             - name: Publish server to npm
               if: startsWith(github.ref, 'refs/tags/')
               run: SKIP_BUILD=1 ./scripts/publish-server.sh
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+            - name: Publish transpile library to npm
+              if: startsWith(github.ref, 'refs/tags/')
+              run: SKIP_BUILD=1 ./scripts/publish-transpile.sh
               env:
                   NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
