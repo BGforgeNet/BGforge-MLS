@@ -8,6 +8,8 @@ Release builds produce a CycloneDX SBOM (`dist/sbom.cdx.json`) attached to the G
 
 Static analysis runs alongside: OpenSSF Scorecard (`.github/workflows/scorecard.yml`) for project-process hygiene, and CodeQL (`.github/workflows/codeql.yml`) for JavaScript/TypeScript SAST queries. Findings publish to the repository's GitHub code-scanning surface. The `pnpm supply-chain:verify` script (run as the first CI step) confirms all four workflow artifacts are present before install.
 
+Dependabot version-update PRs are intentionally disabled — there is no `.github/dependabot.yml`, and one should not be added back. Dependency bumps are performed manually as coordinated changes so the LSP `vscode-languageclient` / `vscode-languageserver` / `vscode-languageserver-protocol` triplet (see _Pinned dependency constraints_), major-version updates, and any required `pnpm.overrides` adjustments stay grouped with their rationale rather than landing as separate noisy PRs. Dependabot _security_ updates are a separate channel toggled in repo Settings → Code security and remain enabled; the absence of `dependabot.yml` does not affect them. If a security advisory needs by-name suppression (e.g., the prior `uuid` case where the vulnerable code path was unreachable), close the PR with a rationale rather than re-introducing `dependabot.yml` solely to host an `ignore:` entry.
+
 ## Important Rules
 
 - **Never delete a file without reading it first.** Always check contents and ask for confirmation.
