@@ -47,13 +47,4 @@ parallel \
     "External + Integration + Transpile" "$SCRIPT_DIR/test-external.sh && (cd server && pnpm exec vitest run --config vitest.integration.config.ts) && pnpm test:transpile-external && pnpm test:cli:external" \
     "Grammar tests" "pnpm test:grammars"
 
-# Phase 4: VSIX packaging. Runs sequentially because package.sh strips and
-# restores server/node_modules via an EXIT trap; running it in parallel with
-# anything else risks racing on that node_modules state. Catches packaging
-# regressions (e.g. .vscodeignore missing a directory whose pnpm symlinks
-# crash vsce's zip writer) that the upstream CI also runs on every push but
-# the in-process unit/integration suites don't see.
-step "Phase 4: VSIX package"
-pnpm package
-
 timing_summary "All tests passed (full suite)"
