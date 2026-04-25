@@ -350,12 +350,25 @@ export function errorMessage(error: unknown): string {
     return error instanceof Error ? error.message : String(error);
 }
 
+/**
+ * Read Node's `errno` code (e.g. `"ENOENT"`, `"EACCES"`) from an unknown caught
+ * value. Returns `undefined` for non-error values or errors lacking a code.
+ * Centralised here so callers do not need their own `as NodeJS.ErrnoException`
+ * cast every time they want to branch on a filesystem-errno.
+ */
+export function getErrnoCode(error: unknown): string | undefined {
+    if (error && typeof error === "object" && "code" in error && typeof (error as { code: unknown }).code === "string") {
+        return (error as { code: string }).code;
+    }
+    return undefined;
+}
+
 /** Remove a tmp file, logging errors instead of throwing (cleanup must not mask compiler results). */
 export async function removeTmpFile(tmpPath: string) {
     try {
         await fs.promises.unlink(tmpPath);
     } catch (err) {
-        if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+        if (getErrnoCode(err) !== "ENOENT") {
             conlog(`Failed to clean up ${tmpPath}: ${errorMessage(err)}`, "warn");
         }
     }

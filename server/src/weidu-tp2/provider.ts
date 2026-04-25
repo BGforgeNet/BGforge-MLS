@@ -177,14 +177,14 @@ function applySnippets(
         // Apply keyword snippets for action/patch command keywords
         const cat = item.category;
         if (cat === CompletionCategory.Action || cat === CompletionCategory.Patch) {
-            const kwSnippet = getKeywordSnippet(item.label as string);
+            const kwSnippet = getKeywordSnippet(item.label);
             if (kwSnippet) {
                 return { ...item, insertText: kwSnippet, insertTextFormat: InsertTextFormat.Snippet };
             }
             return item;
         }
 
-        const funcName = item.label as string;
+        const funcName = item.label;
         const symbol = symbolStore?.lookup(funcName) ?? lookupLocalSymbol(funcName, text, version, uri);
         if (!symbol || !isCallableSymbol(symbol)) {
             return item;
@@ -260,7 +260,7 @@ function collectLocalCompletions(
 
     // Deep-scoped variables (inside function bodies, loops) not covered by file-scope
     for (const v of localCompletion(text)) {
-        const label = v.label as string;
+        const label = v.label;
         if (seen.has(label)) continue;
         if (excludeWord && label === excludeWord) continue;
         seen.add(label);

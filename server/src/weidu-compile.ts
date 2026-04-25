@@ -11,6 +11,7 @@ import {
     addFallbackDiagnostic,
     conlog,
     errorMessage,
+    getErrnoCode,
     parseCommandPath,
     pathToUri,
     reportCompileResult,
@@ -179,7 +180,7 @@ export async function compile(uri: NormalizedUri, settings: WeiDUsettings, inter
 
             let showedSpecificError = false;
             if (err && parseResult.errors.length === 0) {
-                if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+                if (getErrnoCode(err) === "ENOENT") {
                     showError(`WeiDU not found at '${weiduPath}'. Check bgforge.mls.weidu.path setting.`);
                     showedSpecificError = true;
                 }

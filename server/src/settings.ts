@@ -48,6 +48,11 @@ export const defaultSettings: MLSsettings = {
 };
 
 export function normalizeSettings(value: unknown): MLSsettings {
+    // The `value` arrives from LSP `workspace/configuration` responses, which
+    // VSCode types as `unknown`. We treat the runtime payload as a partial
+    // settings object and rely on the spreads with `defaultSettings` below to
+    // fill in any missing fields, so a malformed or partial response degrades
+    // to defaults rather than throwing.
     const raw = (value ?? {}) as Partial<MLSsettings> & {
         falloutSSL?: Partial<SSLsettings>;
         weidu?: Partial<WeiDUsettings>;
@@ -99,7 +104,12 @@ export function project(dir: string | undefined) {
     }
     try {
         const file = fs.readFileSync(path.join(dir, ".bgforge.yml"), "utf8");
-        // yaml.parse returns any, so we need explicit type checks
+        // yaml.parse() returns `any`. We narrow the structural shape with three
+        // shallow `Record<string, unknown>` casts as we descend mls.translation,
+        // then `typeof` guards on each leaf field before assignment. The casts
+        // are scoped: `yaml` is an external API whose runtime shape isn't
+        // recoverable through pure narrowing, so the recognised idiom is
+        // structural cast at the boundary, value-checks at the use site.
         const yml = yaml.parse(file) as Record<string, unknown> | null;
         const yml_settings = yml?.mls as Record<string, unknown> | undefined;
         const translation = yml_settings?.translation as Record<string, unknown> | undefined;
