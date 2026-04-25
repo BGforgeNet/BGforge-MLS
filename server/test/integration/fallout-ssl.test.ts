@@ -8,7 +8,7 @@
 import { join } from "node:path";
 import { describe, expect, it, beforeAll } from "vitest";
 import { FoldingRangeKind, type Position } from "vscode-languageserver/node";
-import { initParser, isInitialized, parseWithCache } from "../../src/fallout-ssl/parser";
+import { initParser, isInitialized, parseWithCache } from "../../../shared/parsers/fallout-ssl";
 import { getDocumentSymbols } from "../../src/fallout-ssl/symbol";
 import { getLocalDefinition } from "../../src/fallout-ssl/definition";
 import { findReferences } from "../../src/fallout-ssl/references";

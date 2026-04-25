@@ -9,7 +9,7 @@
 
 import { DocumentSymbol, SymbolKind } from "vscode-languageserver/node";
 import type { Node } from "web-tree-sitter";
-import { parseWithCache, isInitialized } from "./parser";
+import { parseWithCache, isInitialized } from "../../../shared/parsers/fallout-ssl";
 import { extractProcedures, makeRange, extractMacros } from "./utils";
 import { SyntaxType } from "./tree-sitter.d";
 

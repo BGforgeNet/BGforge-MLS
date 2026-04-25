@@ -7,7 +7,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { bench, describe } from "vitest";
-import { createCachedParserModule } from "../../src/shared/parser-factory";
+import { createCachedParserModule } from "../../../shared/parsers/parser-factory";
 
 const ROOT_DIR = resolve(__dirname, "../../..");
 const IE_FIXTURES = join(ROOT_DIR, "external/infinity-engine");

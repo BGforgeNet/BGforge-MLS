@@ -6,7 +6,7 @@
 
 import { uriToPath } from "../common";
 import { parseDialog, type DialogData } from "../dialog";
-import { isInitialized } from "../fallout-ssl/parser";
+import { isInitialized } from "../../../shared/parsers/fallout-ssl";
 import { transpile } from "../../../transpilers/tssl/src/index";
 
 /**

@@ -10,7 +10,7 @@ import * as path from "path";
 import type { Node } from "web-tree-sitter";
 import { Location, Position } from "vscode-languageserver/node";
 import { uriToPath, pathToUri } from "../common";
-import { parseWithCache, isInitialized } from "./parser";
+import { parseWithCache, isInitialized } from "../../../shared/parsers/fallout-ssl";
 import { SyntaxType } from "./tree-sitter.d";
 import { makeRange, findIdentifierNodeAtPosition } from "./utils";
 import { resolveIdentifierDefinitionNode } from "./symbol-definitions";

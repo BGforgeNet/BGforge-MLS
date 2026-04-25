@@ -14,7 +14,7 @@ vi.mock("../../src/lsp-connection", () => ({
 }));
 
 import { getDocumentSymbols } from "../../src/weidu-tp2/symbol";
-import { initParser } from "../../src/weidu-tp2/parser";
+import { initParser } from "../../../shared/parsers/weidu-tp2";
 
 beforeAll(async () => {
     await initParser();

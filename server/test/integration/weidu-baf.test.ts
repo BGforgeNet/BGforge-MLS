@@ -10,7 +10,7 @@
 
 import { join } from "node:path";
 import { describe, expect, it, beforeAll } from "vitest";
-import { initParser, isInitialized, parseWithCache } from "../../src/weidu-baf/parser";
+import { initParser, isInitialized, parseWithCache } from "../../../shared/parsers/weidu-baf";
 import { formatWeiduBaf as formatDocument } from "@bgforge/format";
 import { createFoldingRangesProvider } from "../../src/shared/folding-ranges";
 import { SyntaxType } from "../../src/weidu-baf/tree-sitter.d";

@@ -6,7 +6,7 @@
 import { CompletionItemKind, Position } from "vscode-languageserver/node";
 import { createIsInsideComment } from "../shared/comment-check";
 import { CompletionCategory, type Tp2CompletionItem } from "./completion/types";
-import { parseWithCache, isInitialized } from "./parser";
+import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-tp2";
 import { SyntaxType } from "./tree-sitter.d";
 import {
     findNodeAtPosition,

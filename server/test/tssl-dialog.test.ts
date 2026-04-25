@@ -21,7 +21,7 @@ vi.mock("../../transpilers/tssl/src/index", () => ({
 }));
 
 import { parseTSSLDialog } from "../src/tssl/dialog";
-import { initParser } from "../src/fallout-ssl/parser";
+import { initParser } from "../../shared/parsers/fallout-ssl";
 import { transpile } from "../../transpilers/tssl/src/index";
 
 const mockedTranspile = vi.mocked(transpile);
@@ -33,7 +33,7 @@ beforeAll(async () => {
 describe("tssl/dialog", () => {
     describe("parseTSSLDialog()", () => {
         it("returns empty data when parser not initialized", async () => {
-            const mod = await import("../src/fallout-ssl/parser");
+            const mod = await import("../../shared/parsers/fallout-ssl");
             const spy = vi.spyOn(mod, "isInitialized").mockReturnValueOnce(false);
 
             const result = await parseTSSLDialog("file:///test.tssl", "// anything");

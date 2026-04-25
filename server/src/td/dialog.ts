@@ -12,7 +12,7 @@ import { emitD } from "../../../transpilers/td/src/emit";
 import { parse } from "../../../transpilers/td/src/parse";
 import type { DDialogData } from "../../../shared/dialog-types";
 import { parseDDialog } from "../weidu-d/dialog";
-import { isInitialized } from "../weidu-d/parser";
+import { isInitialized } from "../../../shared/parsers/weidu-d";
 
 // Reused across calls to avoid re-initializing the TypeScript compiler.
 // The previous source file is removed before creating a new one.

@@ -2,8 +2,8 @@
  * Tree-sitter parser for WeiDU BAF — thin re-export from ParserManager.
  */
 
-import { parserManager } from "../core/parser-manager";
-import { LANG_WEIDU_BAF } from "../core/languages";
+import { parserManager } from "./parser-manager";
+import { LANG_WEIDU_BAF } from "../languages";
 
 export const initParser = () => parserManager.initOne(LANG_WEIDU_BAF, "tree-sitter-baf.wasm", "BAF");
 export const getParser = () => parserManager.getParser(LANG_WEIDU_BAF);

@@ -19,7 +19,7 @@ vi.mock("../../src/common", () => ({
 }));
 
 import { buildVariableHover, buildFunctionHover } from "../../src/weidu-tp2/hover";
-import { initParser } from "../../src/weidu-tp2/parser";
+import { initParser } from "../../../shared/parsers/weidu-tp2";
 import type { VariableInfo, FunctionInfo } from "../../src/weidu-tp2/header-parser";
 
 function makeVarInfo(overrides: Partial<VariableInfo> = {}): VariableInfo {

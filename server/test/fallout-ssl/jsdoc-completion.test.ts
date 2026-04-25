@@ -15,7 +15,7 @@ vi.mock("../../src/server", () => ({
     },
 }));
 
-import { initParser } from "../../src/fallout-ssl/parser";
+import { initParser } from "../../../shared/parsers/fallout-ssl";
 import { getSslCompletionContext, SslCompletionContext } from "../../src/fallout-ssl/completion-context";
 import { getJsdocCompletions, getJsdocPositionKind, JsdocPositionKind } from "../../src/shared/jsdoc-completions";
 import { FALLOUT_JSDOC_TYPE_NAMES } from "../../src/shared/jsdoc-types";

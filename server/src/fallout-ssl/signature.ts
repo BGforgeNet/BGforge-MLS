@@ -4,7 +4,7 @@
  */
 
 import type { SignatureHelp } from "vscode-languageserver/node";
-import { parseWithCache, isInitialized } from "./parser";
+import { parseWithCache, isInitialized } from "../../../shared/parsers/fallout-ssl";
 import * as jsdoc from "../shared/jsdoc";
 import { findProcedure, findPrecedingDocComment, extractMacros, extractParams } from "./utils";
 import { buildSignatureHelp } from "./macro-utils";

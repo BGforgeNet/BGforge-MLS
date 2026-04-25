@@ -13,7 +13,7 @@ vi.mock("../../src/server", () => ({
 }));
 
 import { getLocalSignature } from "../../src/fallout-ssl/signature";
-import { initParser } from "../../src/fallout-ssl/parser";
+import { initParser } from "../../../shared/parsers/fallout-ssl";
 
 beforeAll(async () => {
     await initParser();

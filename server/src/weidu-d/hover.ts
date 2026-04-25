@@ -10,7 +10,7 @@
 import { MarkupKind, Position } from "vscode-languageserver/node";
 import { type HoverResult, HoverResult as HR } from "../language-provider";
 import { LANG_WEIDU_D_TOOLTIP } from "../core/languages";
-import { parseWithCache, isInitialized } from "./parser";
+import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-d";
 import { SyntaxType } from "./tree-sitter.d";
 import { findLabelNodeAtPosition, findStateInDialog } from "./state-utils";
 import { parse as parseJSDoc } from "../shared/jsdoc";

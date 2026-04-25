@@ -34,7 +34,7 @@ import {
     isBodyContent,
     formatWeiduTp2 as formatDocument,
 } from "@bgforge/format";
-import { initParser, getParser } from "../../src/weidu-tp2/parser";
+import { initParser, getParser } from "../../../shared/parsers/weidu-tp2";
 import { parseFile } from "../../src/weidu-tp2/header-parser";
 
 /** Extract symbols only (convenience wrapper). */

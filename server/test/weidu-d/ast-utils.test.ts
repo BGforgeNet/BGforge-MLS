@@ -14,7 +14,7 @@ vi.mock("../../src/server", () => ({
 }));
 
 import { isInsideComment } from "../../src/weidu-d/ast-utils";
-import { initParser } from "../../src/weidu-d/parser";
+import { initParser } from "../../../shared/parsers/weidu-d";
 
 beforeAll(async () => {
     await initParser();

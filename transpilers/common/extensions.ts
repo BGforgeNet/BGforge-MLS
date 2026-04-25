@@ -1,11 +1,9 @@
 /**
  * Transpiler file extension constants.
  *
- * Duplicated from server/src/core/languages.ts to avoid a dependency on the
- * server package. The authoritative definitions live in languages.ts; these
- * must be kept in sync manually.
+ * Re-exported from shared/file-extensions.ts (the authoritative cross-package
+ * registry) so the transpiler workspace doesn't reach into a sibling package's
+ * source.
  */
 
-export const EXT_TSSL = ".tssl" as const;
-export const EXT_TBAF = ".tbaf" as const;
-export const EXT_TD = ".td" as const;
+export { EXT_TSSL, EXT_TBAF, EXT_TD } from "../../shared/languages";

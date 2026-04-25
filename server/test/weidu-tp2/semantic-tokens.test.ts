@@ -14,7 +14,7 @@ vi.mock("../../src/lsp-connection", () => ({
     initLspConnection: vi.fn(),
 }));
 
-import { initParser } from "../../src/weidu-tp2/parser";
+import { initParser } from "../../../shared/parsers/weidu-tp2";
 import { getSemanticTokenSpans } from "../../src/weidu-tp2/semantic-tokens";
 import {
     RESREF_TOKEN_TYPE,

@@ -11,7 +11,7 @@ import type { Position } from "vscode-languageserver/node";
 import { SyntaxType } from "../../tree-sitter.d";
 import { getUtf8ByteOffset } from "../../../shared/completion-context";
 import { getLinePrefix } from "../../../common";
-import { getParser, isInitialized } from "../../parser";
+import { getParser, isInitialized } from "../../../../../shared/parsers/weidu-tp2";
 import { CompletionContext } from "../types";
 import { ASSIGNMENT_SITE_PATTERN, DEFINITION_SITE_PATTERN, FUNC_CALL_KEYWORDS, FUNC_PARAM_KEYWORDS } from "./constants";
 import { detectContextFromNode } from "./detectors";

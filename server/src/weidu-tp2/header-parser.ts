@@ -18,7 +18,7 @@ import { computeDisplayPath, extractFilename } from "../core/location-utils";
 import { type ParseResult, EMPTY_PARSE_RESULT } from "../core/parse-result";
 import { makeRange } from "../core/position-utils";
 import * as jsdoc from "../shared/jsdoc";
-import { parseWithCache, isInitialized } from "./parser";
+import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-tp2";
 import { SyntaxType } from "./tree-sitter.d";
 import { isPhantomAssignment, looksLikeConstant, stripStringDelimiters } from "./tree-utils";
 import { FUNCTION_CALL_TYPES } from "./callable-symbols";

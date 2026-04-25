@@ -2,8 +2,8 @@
  * Tree-sitter parser for WeiDU D — thin re-export from ParserManager.
  */
 
-import { parserManager } from "../core/parser-manager";
-import { LANG_WEIDU_D } from "../core/languages";
+import { parserManager } from "./parser-manager";
+import { LANG_WEIDU_D } from "../languages";
 
 export const initParser = () => parserManager.initOne(LANG_WEIDU_D, "tree-sitter-weidu_d.wasm", "WeiDU D");
 export const getParser = () => parserManager.getParser(LANG_WEIDU_D);

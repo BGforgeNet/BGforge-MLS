@@ -53,7 +53,7 @@ import { FALLOUT_JSDOC_TYPES } from "../shared/fallout-types";
 import { stripCommentsFalloutSsl, formatFalloutSsl as formatAst } from "@bgforge/format";
 import { getFormatOptions } from "../shared/format-options";
 import * as signature from "../shared/signature";
-import { initParser, isInitialized, parseWithCache } from "./parser";
+import { initParser, isInitialized, parseWithCache } from "../../../shared/parsers/fallout-ssl";
 import { createFoldingRangesProvider } from "../shared/folding-ranges";
 import { getDocumentSymbols } from "./symbol";
 import { getLocalDefinition } from "./definition";

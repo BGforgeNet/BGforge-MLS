@@ -18,7 +18,7 @@ vi.mock("../../src/server", () => ({
 import { getContextAtPosition } from "../../src/weidu-tp2/completion/context";
 import { filterItemsByContext } from "../../src/weidu-tp2/completion/filter";
 import { CompletionContext, type Tp2CompletionItem } from "../../src/weidu-tp2/completion/types";
-import { initParser } from "../../src/weidu-tp2/parser";
+import { initParser } from "../../../shared/parsers/weidu-tp2";
 import { CompletionItemKind } from "vscode-languageserver/node";
 import { CompletionCategory } from "../../src/shared/completion-context";
 

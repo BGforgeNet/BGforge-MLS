@@ -5,7 +5,7 @@
 
 import type { Position } from "vscode-languageserver/node";
 import { getLinePrefix } from "../common";
-import { isInitialized, parseWithCache } from "./parser";
+import { isInitialized, parseWithCache } from "../../../shared/parsers/fallout-ssl";
 import { SyntaxType } from "./tree-sitter.d";
 
 /** SSL completion context for filterCompletions. */

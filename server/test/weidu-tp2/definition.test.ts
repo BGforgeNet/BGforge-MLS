@@ -19,7 +19,7 @@ vi.mock("../../src/server", () => ({
 }));
 
 import { getDefinition } from "../../src/weidu-tp2/definition";
-import { initParser } from "../../src/weidu-tp2/parser";
+import { initParser } from "../../../shared/parsers/weidu-tp2";
 import { parseFile } from "../../src/weidu-tp2/header-parser";
 
 /** Extract symbols only (convenience wrapper). */

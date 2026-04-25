@@ -26,7 +26,7 @@ import {
     findPrecedingDocComment,
     makeRange,
 } from "./utils";
-import { isInitialized, parseWithCache } from "./parser";
+import { isInitialized, parseWithCache } from "../../../shared/parsers/fallout-ssl";
 import { SyntaxType } from "./tree-sitter.d";
 
 // =============================================================================

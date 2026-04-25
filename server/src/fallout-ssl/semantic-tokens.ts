@@ -15,7 +15,7 @@
 
 import { SemanticTokenTypes } from "vscode-languageserver/node";
 import type { Node } from "web-tree-sitter";
-import { isInitialized, parseWithCache } from "./parser";
+import { isInitialized, parseWithCache } from "../../../shared/parsers/fallout-ssl";
 import { SyntaxType } from "./tree-sitter.d";
 import { isParameterDefinitionNode, resolveIdentifierDefinitionNode } from "./symbol-definitions";
 import type { SemanticTokenSpan } from "../shared/semantic-tokens";

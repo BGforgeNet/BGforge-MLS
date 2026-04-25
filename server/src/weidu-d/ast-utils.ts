@@ -4,7 +4,7 @@
  */
 
 import { createIsInsideComment } from "../shared/comment-check";
-import { isInitialized, parseWithCache } from "./parser";
+import { isInitialized, parseWithCache } from "../../../shared/parsers/weidu-d";
 import { SyntaxType } from "./tree-sitter.d";
 
 /** Comment node types in the D grammar. */

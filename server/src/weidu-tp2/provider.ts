@@ -55,7 +55,7 @@ import { getContextAtPosition, getFuncParamsContext, isAtDeclarationSite } from 
 import { filterItemsByContext } from "./completion/filter";
 import { getParamCompletions } from "./completion/parameter";
 import { CompletionCategory, CompletionContext, type Tp2CompletionItem } from "./completion/types";
-import { initParser, parseWithCache, isInitialized } from "./parser";
+import { initParser, parseWithCache, isInitialized } from "../../../shared/parsers/weidu-tp2";
 import { getDocumentSymbols } from "./symbol";
 import { getDefinition, isOnFunctionCallParamName } from "./definition";
 import { parseFile } from "./header-parser";

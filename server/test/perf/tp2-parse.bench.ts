@@ -11,7 +11,7 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { bench, describe } from "vitest";
 import { parseFile } from "../../src/weidu-tp2/header-parser";
-import { initParser } from "../../src/weidu-tp2/parser";
+import { initParser } from "../../../shared/parsers/weidu-tp2";
 
 // Top-level await: vitest bench runs bench() bodies in a context where
 // beforeAll() state does not reliably carry over. Initialize at module load

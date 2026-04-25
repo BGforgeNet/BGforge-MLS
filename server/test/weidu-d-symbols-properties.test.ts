@@ -22,7 +22,7 @@ vi.mock("../src/server", () => ({
 }));
 
 import { getDocumentSymbols } from "../src/weidu-d/symbol";
-import { initParser } from "../src/weidu-d/parser";
+import { initParser } from "../../shared/parsers/weidu-d";
 
 beforeAll(async () => {
     await initParser();

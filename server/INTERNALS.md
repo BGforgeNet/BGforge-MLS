@@ -424,11 +424,13 @@ Factory helpers: `HoverResult.found(hover)`, `HoverResult.empty()`, `HoverResult
                          +------------------+
 ```
 
-**ParserManager** (`core/parser-manager.ts`) centralizes parser lifecycle. Parsers are
-registered and initialized sequentially (WASM `TRANSFER_BUFFER` constraint) before
-providers start. Each language's `parser.ts` is a thin re-export that delegates to the
-manager. Tests can use `initOne()` to initialize a single parser without the full server
-startup.
+**ParserManager** (`shared/parsers/parser-manager.ts`) centralizes parser lifecycle.
+Parsers are registered and initialized sequentially (WASM `TRANSFER_BUFFER` constraint)
+before providers start. Each language's wrapper module (`shared/parsers/<lang>.ts`) is a
+thin re-export that delegates to the manager. Tests can use `initOne()` to initialize a
+single parser without the full server startup. The manager and per-language wrappers
+live in `shared/parsers/` so the @bgforge/format CLI can consume them through the same
+import surface; server installs an LSP-routed logger via `setParserLogger()` at startup.
 
 ### SyntaxType Enum
 
@@ -692,7 +694,7 @@ Thresholds: 90% lines, 80% branches, 90% functions, 90% statements — enforced 
 
 ## Adding a New Provider
 
-1. Add language ID to `core/languages.ts`
+1. Add language ID to `shared/languages.ts` (and re-export from `server/src/core/languages.ts` if server-internal code needs it)
 2. Create tree-sitter grammar in `grammars/{lang}/`
 3. Add `@asgerf/dts-tree-sitter` devDependency and `generate:types` script to grammar's `package.json`
 4. Run `pnpm generate:types` to create `tree-sitter.d.ts` with `SyntaxType` enum

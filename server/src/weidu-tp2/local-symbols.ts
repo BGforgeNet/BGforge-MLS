@@ -18,7 +18,7 @@
 import type { IndexedSymbol } from "../core/symbol";
 import { TextCache } from "../shared/text-cache";
 import { parseFile } from "./header-parser";
-import { isInitialized } from "./parser";
+import { isInitialized } from "../../../shared/parsers/weidu-tp2";
 
 /** Cached local symbols data: symbols array + name lookup map */
 interface LocalSymbolsData {

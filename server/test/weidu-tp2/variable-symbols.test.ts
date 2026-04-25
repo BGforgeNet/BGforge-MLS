@@ -7,7 +7,7 @@ vi.mock("../../src/server", () => ({
     },
 }));
 
-import { initParser, parseWithCache } from "../../src/weidu-tp2/parser";
+import { initParser, parseWithCache } from "../../../shared/parsers/weidu-tp2";
 import { ScopeKind } from "../../src/weidu-tp2/scope-kinds";
 import { findVariableDefinitionNode, getVariableSymbolAtPosition } from "../../src/weidu-tp2/variable-symbols";
 

@@ -8,8 +8,32 @@
  */
 
 import type { Parser, Tree } from "web-tree-sitter";
-import { createCachedParserModule } from "../shared/parser-factory";
-import { conlog, errorMessage } from "../common";
+import { createCachedParserModule } from "./parser-factory";
+
+/**
+ * Logger surface the manager uses to report per-parser init failures and
+ * a final init summary. Defaults to console.error / console.log so the
+ * @bgforge/format CLI works without configuration; the LSP server installs
+ * a connection-routed logger via setParserLogger() at startup so messages
+ * surface in the client's Output panel instead of stderr.
+ */
+interface ParserLogger {
+    info(message: string): void;
+    error(message: string): void;
+}
+
+let logger: ParserLogger = {
+    info: (message) => console.log(message),
+    error: (message) => console.error(message),
+};
+
+export function setParserLogger(next: ParserLogger): void {
+    logger = next;
+}
+
+function errorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
+}
 
 /** Per-language cached parser module, stored internally by the manager. */
 interface ManagedParser {
@@ -74,10 +98,10 @@ class ParserManager {
                 // eslint-disable-next-line no-await-in-loop
                 await parser.module.init();
             } catch (error) {
-                conlog(`Failed to initialize ${parser.name} parser: ${errorMessage(error)}`, "error");
+                logger.error(`Failed to initialize ${parser.name} parser: ${errorMessage(error)}`);
             }
         }
-        conlog(`ParserManager: initialized ${this.parsers.size} parsers`);
+        logger.info(`ParserManager: initialized ${this.parsers.size} parsers`);
     }
 
     /** Check if a specific language parser is initialized. */

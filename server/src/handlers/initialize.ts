@@ -18,7 +18,7 @@ import {
     LANG_WEIDU_TRA,
     LANG_WEIDU_TP2,
 } from "../core/languages";
-import { parserManager } from "../core/parser-manager";
+import { parserManager, setParserLogger } from "../../../shared/parsers/parser-manager";
 import { registry } from "../provider-registry";
 import * as settings from "../settings";
 import { defaultSettings, normalizeSettings } from "../settings";
@@ -72,6 +72,14 @@ export function register(ctx: HandlerContext): void {
         // Initialize translation service
         const translation = new Translation(projectSettings.translation, workspaceRoot);
         await translation.init();
+
+        // Route parser-init log lines through the LSP connection so they surface
+        // in the client's Output panel (the default console.error sink would lose
+        // them inside the language-server stdio stream).
+        setParserLogger({
+            info: (message) => conlog(message),
+            error: (message) => conlog(message, "error"),
+        });
 
         // Register tree-sitter parsers and initialize them sequentially
         // (web-tree-sitter's shared TRANSFER_BUFFER requires sequential Language.load())

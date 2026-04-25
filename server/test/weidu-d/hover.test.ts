@@ -11,7 +11,7 @@ vi.mock("../../src/server", () => ({
 }));
 
 import { getStateLabelHover } from "../../src/weidu-d/hover";
-import { initParser } from "../../src/weidu-d/parser";
+import { initParser } from "../../../shared/parsers/weidu-d";
 
 beforeAll(async () => {
     await initParser();

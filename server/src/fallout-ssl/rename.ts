@@ -21,7 +21,7 @@ import { normalizeUri } from "../core/normalized-uri";
 import type { ReferencesIndex } from "../shared/references-index";
 import { SourceType } from "../core/symbol";
 import type { Symbols } from "../core/symbol-index";
-import { parseWithCache, isInitialized } from "./parser";
+import { parseWithCache, isInitialized } from "../../../shared/parsers/fallout-ssl";
 import { findIdentifierAtPosition, findIdentifierNodeAtPosition, isLocalDefinition, makeRange } from "./utils";
 import { ScopeKind } from "./scope-kinds";
 import { type SslSymbolScope, getSymbolScope } from "./symbol-scope";

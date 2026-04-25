@@ -4,7 +4,7 @@
 
 import { describe, expect, it, beforeAll } from "vitest";
 import { parseHeaderVariables, parseFile } from "../../src/weidu-tp2/header-parser";
-import { initParser } from "../../src/weidu-tp2/parser";
+import { initParser } from "../../../shared/parsers/weidu-tp2";
 
 beforeAll(async () => {
     await initParser();

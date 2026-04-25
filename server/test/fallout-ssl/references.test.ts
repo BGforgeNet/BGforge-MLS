@@ -15,7 +15,7 @@ vi.mock("../../src/lsp-connection", () => ({
     initLspConnection: vi.fn(),
 }));
 
-import { initParser } from "../../src/fallout-ssl/parser";
+import { initParser } from "../../../shared/parsers/fallout-ssl";
 import { findReferences } from "../../src/fallout-ssl/references";
 import { ReferencesIndex } from "../../src/shared/references-index";
 import { parseFile } from "../../src/fallout-ssl/header-parser";

@@ -26,7 +26,7 @@ vi.mock("../../src/common", async (importOriginal) => {
 });
 
 import { weiduTp2Provider } from "../../src/weidu-tp2/provider";
-import { initParser } from "../../src/weidu-tp2/parser";
+import { initParser } from "../../../shared/parsers/weidu-tp2";
 import { defaultSettings } from "../../src/settings";
 import * as path from "path";
 

@@ -28,7 +28,7 @@ import { createIsInsideComment } from "../shared/comment-check";
 import { stripCommentsWeidu, formatWeiduBaf as formatAst } from "@bgforge/format";
 import { getFormatOptions } from "../shared/format-options";
 import { resolveSymbolStatic, getStaticCompletions, formatWithValidation } from "../shared/provider-helpers";
-import { initParser, parseWithCache, isInitialized } from "./parser";
+import { initParser, parseWithCache, isInitialized } from "../../../shared/parsers/weidu-baf";
 import { compile as weiduCompile } from "../weidu-compile";
 import { createFoldingRangesProvider } from "../shared/folding-ranges";
 import { SyntaxType } from "./tree-sitter.d";

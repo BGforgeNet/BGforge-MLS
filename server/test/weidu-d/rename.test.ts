@@ -13,7 +13,7 @@ vi.mock("../../src/server", () => ({
 }));
 
 import { prepareRenameSymbol, renameSymbol } from "../../src/weidu-d/rename";
-import { initParser } from "../../src/weidu-d/parser";
+import { initParser } from "../../../shared/parsers/weidu-d";
 
 beforeAll(async () => {
     await initParser();

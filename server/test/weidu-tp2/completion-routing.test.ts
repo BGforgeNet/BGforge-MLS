@@ -23,7 +23,7 @@ vi.mock("../../src/lsp-connection", () => ({
     initLspConnection: vi.fn(),
 }));
 
-import { initParser } from "../../src/weidu-tp2/parser";
+import { initParser } from "../../../shared/parsers/weidu-tp2";
 import { weiduTp2Provider } from "../../src/weidu-tp2/provider";
 import { localCompletion } from "../../src/weidu-tp2/ast-utils";
 import { defaultSettings } from "../../src/settings";

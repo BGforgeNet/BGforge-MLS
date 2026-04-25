@@ -7,7 +7,7 @@
 import { Hover, MarkupKind, Position } from "vscode-languageserver/node";
 import { isCallableSymbol, type CallableInfo } from "../core/symbol";
 import { buildParamInfoMap, type Ret } from "../shared/jsdoc";
-import { parseWithCache, isInitialized } from "./parser";
+import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-tp2";
 import { type FunctionInfo, type VariableInfo, parseHeader } from "./header-parser";
 import type { Symbols } from "../core/symbol-index";
 import { SyntaxType } from "./tree-sitter.d";

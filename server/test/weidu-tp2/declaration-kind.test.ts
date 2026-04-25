@@ -21,7 +21,7 @@ import { parseFile } from "../../src/weidu-tp2/header-parser";
 
 /** Extract symbols only (convenience wrapper). */
 const parseHeaderToSymbols = (...args: Parameters<typeof parseFile>) => [...parseFile(...args).symbols];
-import { initParser } from "../../src/weidu-tp2/parser";
+import { initParser } from "../../../shared/parsers/weidu-tp2";
 import { isVariableSymbol, DeclarationKind } from "../../src/core/symbol";
 
 beforeAll(async () => {

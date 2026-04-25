@@ -14,7 +14,7 @@ vi.mock("../../src/server", () => ({
 }));
 
 import { renameSymbol, prepareRenameSymbol } from "../../src/weidu-tp2/rename";
-import { initParser } from "../../src/weidu-tp2/parser";
+import { initParser } from "../../../shared/parsers/weidu-tp2";
 
 beforeAll(async () => {
     await initParser();

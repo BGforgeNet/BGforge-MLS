@@ -24,7 +24,7 @@ import {
     renameSymbolWorkspace,
     prepareRenameSymbolWorkspace,
 } from "../../src/fallout-ssl/rename";
-import { initParser } from "../../src/fallout-ssl/parser";
+import { initParser } from "../../../shared/parsers/fallout-ssl";
 import { ReferencesIndex } from "../../src/shared/references-index";
 import { parseFile } from "../../src/fallout-ssl/header-parser";
 

@@ -8,7 +8,7 @@
 import { join } from "node:path";
 import { FoldingRangeKind } from "vscode-languageserver/node";
 import { describe, expect, it, beforeAll } from "vitest";
-import { initParser, isInitialized, parseWithCache } from "../../src/weidu-tp2/parser";
+import { initParser, isInitialized, parseWithCache } from "../../../shared/parsers/weidu-tp2";
 import { getDocumentSymbols } from "../../src/weidu-tp2/symbol";
 import { getDefinition } from "../../src/weidu-tp2/definition";
 import { findReferences } from "../../src/weidu-tp2/references";

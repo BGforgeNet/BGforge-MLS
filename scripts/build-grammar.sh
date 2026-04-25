@@ -4,7 +4,8 @@
 # WASM builds run sequentially because tree-sitter shares a global wasi-sdk cache and
 # concurrent downloads/extracts can corrupt the archive on a cold cache. After building,
 # copy WASM files to server/out/ and format/out/ (the format package's CLI bundle), then
-# create symlinks in server/src/shared/ so vitest can find them via __dirname resolution.
+# create symlinks in shared/parsers/ so vitest can find them via __dirname resolution
+# (shared/parsers/parser-factory.ts is the cross-package home for parser infrastructure).
 
 set -eu -o pipefail
 
@@ -49,13 +50,15 @@ done
 # Copy web-tree-sitter runtime WASM (needed by parser-factory.ts)
 cp server/node_modules/web-tree-sitter/web-tree-sitter.wasm server/out/
 
-# Create symlinks in server/src/shared/ for vitest.
-# vitest resolves __dirname to the source directory (server/src/shared/), not the
+# Create symlinks in shared/parsers/ for vitest.
+# vitest resolves __dirname to the source directory (shared/parsers/), not the
 # build output (server/out/). These symlinks let parser-factory.ts find WASM files
-# during testing without a full build.
+# during testing without a full build. Pointing into server/out/ couples the symlink
+# target but not the source — shared/parsers/ stays free of server-specific imports.
+mkdir -p shared/parsers
 for wasm in server/out/*.wasm; do
-    target="server/src/shared/$(basename "$wasm")"
-    ln -sf "../../out/$(basename "$wasm")" "$target"
+    target="shared/parsers/$(basename "$wasm")"
+    ln -sf "../../server/out/$(basename "$wasm")" "$target"
 done
 
 # Generate SyntaxType enums for all LSP grammars in parallel.

@@ -10,7 +10,7 @@
  */
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
-import { parseWithCache, isInitialized } from "./parser";
+import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-d";
 import { SyntaxType } from "./tree-sitter.d";
 import type { DDialogBlock, DDialogData, DDialogState, DDialogTransition } from "../../../shared/dialog-types";
 import {

@@ -13,7 +13,7 @@ vi.mock("../../src/server", () => ({
     },
 }));
 
-import { initParser } from "../../src/weidu-d/parser";
+import { initParser } from "../../../shared/parsers/weidu-d";
 import { findReferences } from "../../src/weidu-d/references";
 import { ReferencesIndex } from "../../src/shared/references-index";
 import { normalizeUri } from "../../src/core/normalized-uri";

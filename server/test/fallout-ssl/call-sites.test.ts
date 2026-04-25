@@ -16,7 +16,7 @@ vi.mock("../../src/lsp-connection", () => ({
     initLspConnection: vi.fn(),
 }));
 
-import { initParser } from "../../src/fallout-ssl/parser";
+import { initParser } from "../../../shared/parsers/fallout-ssl";
 import { parseFile } from "../../src/fallout-ssl/header-parser";
 
 const TEST_URI = "file:///test.ssl";

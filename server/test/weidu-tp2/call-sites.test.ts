@@ -12,7 +12,7 @@ vi.mock("../../src/server", () => ({
     },
 }));
 
-import { initParser } from "../../src/weidu-tp2/parser";
+import { initParser } from "../../../shared/parsers/weidu-tp2";
 import { parseFile } from "../../src/weidu-tp2/header-parser";
 
 const TEST_URI = "file:///test.tp2";

@@ -7,7 +7,7 @@
 
 import { join } from "node:path";
 import { describe, expect, it, beforeAll } from "vitest";
-import { initParser, isInitialized, parseWithCache } from "../../src/weidu-d/parser";
+import { initParser, isInitialized, parseWithCache } from "../../../shared/parsers/weidu-d";
 import { getDocumentSymbols } from "../../src/weidu-d/symbol";
 import { getDefinition } from "../../src/weidu-d/definition";
 import { findReferences } from "../../src/weidu-d/references";

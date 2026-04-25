@@ -14,7 +14,7 @@ vi.mock("../../src/server", () => ({
 }));
 
 import { getDefinition } from "../../src/weidu-d/definition";
-import { initParser } from "../../src/weidu-d/parser";
+import { initParser } from "../../../shared/parsers/weidu-d";
 
 beforeAll(async () => {
     await initParser();

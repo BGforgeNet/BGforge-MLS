@@ -3,7 +3,7 @@
  */
 
 import { DocumentSymbol, SymbolKind } from "vscode-languageserver/node";
-import { parseWithCache, isInitialized } from "./parser";
+import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-d";
 
 export function getDocumentSymbols(text: string): DocumentSymbol[] {
     if (!isInitialized()) {

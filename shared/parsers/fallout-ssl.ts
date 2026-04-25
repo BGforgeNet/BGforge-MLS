@@ -2,8 +2,8 @@
  * Tree-sitter parser for Fallout SSL — thin re-export from ParserManager.
  */
 
-import { parserManager } from "../core/parser-manager";
-import { LANG_FALLOUT_SSL } from "../core/languages";
+import { parserManager } from "./parser-manager";
+import { LANG_FALLOUT_SSL } from "../languages";
 
 export const initParser = () => parserManager.initOne(LANG_FALLOUT_SSL, "tree-sitter-ssl.wasm", "SSL");
 export const getParser = () => parserManager.getParser(LANG_FALLOUT_SSL);

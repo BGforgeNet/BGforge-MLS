@@ -23,7 +23,7 @@ import { buildSignatureBlock } from "../../../shared/tooltip-format";
 import { LANG_WEIDU_D_TOOLTIP } from "../core/languages";
 import { SyntaxType } from "./tree-sitter.d";
 import { normalizeDialogFile } from "./state-utils";
-import { parseWithCache, isInitialized } from "./parser";
+import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-d";
 
 /** Build the composite key for dialog-scoped labels. */
 function labelKey(dialogFile: string, labelName: string): string {

@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { getContextAtPosition } from "../../src/weidu-tp2/completion/context";
 import { CompletionContext } from "../../src/weidu-tp2/completion/types";
-import { initParser } from "../../src/weidu-tp2/parser";
+import { initParser } from "../../../shared/parsers/weidu-tp2";
 
 beforeAll(async () => {
     await initParser();

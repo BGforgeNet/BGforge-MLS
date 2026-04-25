@@ -17,7 +17,7 @@ vi.mock("../../src/server", () => ({
 }));
 
 import { getDocumentSymbols } from "../../src/fallout-ssl/symbol";
-import { initParser } from "../../src/fallout-ssl/parser";
+import { initParser } from "../../../shared/parsers/fallout-ssl";
 
 beforeAll(async () => {
     await initParser();

@@ -13,7 +13,7 @@ vi.mock("../../src/server", () => ({
 }));
 
 import { parseDDialog } from "../../src/weidu-d/dialog";
-import { initParser } from "../../src/weidu-d/parser";
+import { initParser } from "../../../shared/parsers/weidu-d";
 
 beforeAll(async () => {
     await initParser();

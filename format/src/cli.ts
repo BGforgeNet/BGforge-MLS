@@ -26,10 +26,10 @@ import {
     stripComments2da,
     stripCommentsFalloutScriptsLst,
 } from "./index";
-import { initParser as initSslParser, getParser as getSslParser } from "../../server/src/fallout-ssl/parser";
-import { initParser as initBafParser, getParser as getBafParser } from "../../server/src/weidu-baf/parser";
-import { initParser as initDParser, getParser as getDParser } from "../../server/src/weidu-d/parser";
-import { initParser as initTp2Parser, getParser as getTp2Parser } from "../../server/src/weidu-tp2/parser";
+import { initParser as initSslParser, getParser as getSslParser } from "../../shared/parsers/fallout-ssl";
+import { initParser as initBafParser, getParser as getBafParser } from "../../shared/parsers/weidu-baf";
+import { initParser as initDParser, getParser as getDParser } from "../../shared/parsers/weidu-d";
+import { initParser as initTp2Parser, getParser as getTp2Parser } from "../../shared/parsers/weidu-tp2";
 import {
     EXT_FALLOUT_SSL,
     EXT_WEIDU_BAF,
@@ -39,7 +39,7 @@ import {
     EXT_FALLOUT_MSG,
     EXT_INFINITY_2DA,
     FILENAME_FALLOUT_SCRIPTS_LST,
-} from "../../server/src/core/languages";
+} from "../../shared/languages";
 import {
     type FileResult,
     type OutputMode,
