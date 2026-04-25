@@ -37,7 +37,7 @@ parallel \
     "Lint scripts" "pnpm lint:scripts" \
     "Format check" "pnpm exec oxfmt --check" \
     "Server unit tests + coverage" "(cd server && pnpm exec vitest run --coverage)" \
-    "Client unit tests" "vitest run --config client/vitest.config.ts" \
+    "Client unit tests + coverage" "vitest run --config client/vitest.config.ts --coverage" \
     "Plugin unit tests" "vitest run --config plugins/tssl-plugin/vitest.config.ts && vitest run --config plugins/td-plugin/vitest.config.ts" \
     "Script tests" "pnpm test:scripts" \
     "Knip" "pnpm knip" \

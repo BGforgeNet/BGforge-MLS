@@ -88,12 +88,19 @@ describe("buildBinaryEditorTreeState", () => {
         ]);
     });
 
-    it("keeps MAP init payload tiny for large real maps", () => {
-        const tree = buildBinaryEditorTreeState(loadMapResult("navarro.map", true));
-        const initBytes = Buffer.byteLength(JSON.stringify(tree.getInitMessagePayload()));
+    it(
+        "keeps MAP init payload tiny for large real maps",
+        // Parses navarro.map end-to-end — v8 coverage instrumentation pushes
+        // this past the 5s default; raise the ceiling so the size assertion
+        // still runs under --coverage.
+        { timeout: 15_000 },
+        () => {
+            const tree = buildBinaryEditorTreeState(loadMapResult("navarro.map", true));
+            const initBytes = Buffer.byteLength(JSON.stringify(tree.getInitMessagePayload()));
 
-        expect(initBytes).toBeLessThan(10_000);
-    });
+            expect(initBytes).toBeLessThan(10_000);
+        },
+    );
 
     it("omits the synthetic Tiles root when the editor parse skips MAP tiles entirely", () => {
         const tree = buildBinaryEditorTreeState(loadMapResult("artemple.map", true, true));
