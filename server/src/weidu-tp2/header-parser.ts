@@ -28,7 +28,7 @@ import { FUNCTION_CALL_TYPES } from "./callable-symbols";
 // ============================================
 
 /** Parameter info extracted from function definitions. */
-export interface FunctionParams {
+interface FunctionParams {
     intVar: ParamInfo[];
     strVar: ParamInfo[];
     ret: string[];

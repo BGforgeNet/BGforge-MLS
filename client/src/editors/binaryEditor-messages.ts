@@ -27,8 +27,12 @@ export interface BinaryEditorNode {
 }
 
 // -- Webview -> Extension ---------------------------------------------------
+//
+// The arms below are only referenced via the WebviewToExtension union; consumers
+// pattern-match on `msg.type` and TypeScript narrows structurally. Keep them
+// unexported so knip doesn't flag them as unused public symbols.
 
-export interface EditMessage {
+interface EditMessage {
     readonly type: "edit";
     /** Opaque source-tree identifier for the field */
     readonly fieldId: string;
@@ -38,24 +42,24 @@ export interface EditMessage {
     readonly value: number;
 }
 
-export interface ReadyMessage {
+interface ReadyMessage {
     readonly type: "ready";
 }
 
-export interface GetChildrenMessage {
+interface GetChildrenMessage {
     readonly type: "getChildren";
     readonly nodeId: string;
 }
 
-export interface DumpJsonMessage {
+interface DumpJsonMessage {
     readonly type: "dumpJson";
 }
 
-export interface LoadJsonMessage {
+interface LoadJsonMessage {
     readonly type: "loadJson";
 }
 
-export interface RuntimeErrorMessage {
+interface RuntimeErrorMessage {
     readonly type: "runtimeError";
     readonly message: string;
     readonly stack?: string;
@@ -80,13 +84,13 @@ export interface InitMessage {
     readonly errors?: string[];
 }
 
-export interface ChildrenMessage {
+interface ChildrenMessage {
     readonly type: "children";
     readonly nodeId: string;
     readonly children: BinaryEditorNode[];
 }
 
-export interface UpdateFieldMessage {
+interface UpdateFieldMessage {
     readonly type: "updateField";
     readonly fieldId: string;
     /** Dot-separated path to the changed field */
@@ -97,7 +101,7 @@ export interface UpdateFieldMessage {
     readonly rawValue: number;
 }
 
-export interface ValidationErrorMessage {
+interface ValidationErrorMessage {
     readonly type: "validationError";
     readonly fieldId?: string;
     readonly fieldPath: string;

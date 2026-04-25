@@ -187,7 +187,7 @@ export enum CollectedItemType {
 }
 
 /** Collected assignment for aligned output. */
-export interface AssignmentItem {
+interface AssignmentItem {
     type: CollectedItemType.Assignment;
     name: string;
     value: string;
@@ -195,7 +195,7 @@ export interface AssignmentItem {
 }
 
 /** Collected comment for aligned output. */
-export interface CommentItem {
+interface CommentItem {
     type: CollectedItemType.Comment;
     text: string;
     startRow: number;

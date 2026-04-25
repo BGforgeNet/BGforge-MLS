@@ -31,7 +31,7 @@
 // ============================================
 
 /** Parsed parameter info. */
-export interface Arg {
+interface Arg {
     name: string;
     type: string;
     description?: string;

@@ -27,7 +27,6 @@ const config: KnipConfig = {
             // Point knip at the TypeScript source entry directly.
             // The package.json "main" field targets the built JS output.
             entry: ["src/server.ts"],
-            ignoreDependencies: ["esbuild-wasm"],
             // Created at runtime by enum-transform.test.ts, may exist during parallel Knip runs
             ignore: [
                 "**/*.d.ts",
@@ -35,7 +34,6 @@ const config: KnipConfig = {
                 "out/**",
                 // .ts symlinks created by typecheck-samples.sh, may exist during parallel runs
                 "test/td/*.ts",
-                "test/tbaf/*.ts",
                 // Bench files invoked explicitly; not reachable from server.ts entry
                 "test/perf/**",
                 ...(isProductionKnip ? ["src/**", "vitest.integration.config.ts", "test/integration/**"] : []),
@@ -69,20 +67,12 @@ const config: KnipConfig = {
         "external/**",
         // standalone update scripts run via pnpm exec tsx, not imported by main code
         "scripts/**",
-        // custom oxlint plugin (referenced in .oxlintrc.json, not imported by code)
-        ".oxlint/**",
-        // git worktrees created by AI agents for isolated task execution
-        ".claude/**",
     ],
     ignoreDependencies: [
         // icon font used via CSS classes in dialogTree.ts (e.g. "codicon codicon-references")
         "@vscode/codicons",
         // invoked via pnpm exec in scripts
         "oxfmt",
-        // used by custom oxlint plugin
-        "@oxlint/plugins",
-        // used by scripts/ (pnpm exec tsx scripts/...)
-        "tsx",
         // invoked via pnpm vsce in scripts/package.sh
         "@vscode/vsce",
         // loaded by remark CLI via --use in package.json scripts, not statically imported

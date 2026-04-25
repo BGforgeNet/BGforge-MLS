@@ -156,7 +156,7 @@ export interface TDInterject {
 }
 
 /** Patching operations */
-export interface TDPatch {
+interface TDPatch {
     type: TDConstructType.Patch;
     operation: TDPatchOperation;
 }
@@ -175,7 +175,7 @@ export interface TDState {
 }
 
 /** SAY statement, can have multiple texts (multisay) */
-export interface TDSay {
+interface TDSay {
     text: TDText;
 }
 

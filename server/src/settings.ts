@@ -21,7 +21,7 @@ export interface WeiDUsettings {
     gamePath: string;
 }
 
-export type ValidationMode = "manual" | "save" | "type" | "saveAndType";
+type ValidationMode = "manual" | "save" | "type" | "saveAndType";
 
 export interface MLSsettings {
     falloutSSL: SSLsettings;

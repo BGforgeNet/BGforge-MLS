@@ -31,7 +31,6 @@ export {
     type IndexingCapability,
     type FeatureGateCapability,
     type SemanticTokenCapability,
-    type InlayHintCapability,
     type WorkspaceSymbolCapability,
 } from "./core/capabilities";
 

@@ -1,7 +1,9 @@
 import type { MapCanonicalDocument } from "./map-canonical";
 import type { ProCanonicalDocument } from "./pro-canonical";
 
-export type BinaryCanonicalDocument = ProCanonicalDocument | MapCanonicalDocument;
+// Used only via ParseResult.document below; consumers see it through ParseResult,
+// no downstream importer references the alias by name.
+type BinaryCanonicalDocument = ProCanonicalDocument | MapCanonicalDocument;
 
 export type ParsedFieldType =
     | "enum"
@@ -48,7 +50,9 @@ export interface ParsedGroup {
     expanded?: boolean;
 }
 
-export interface ParseDisplayModel {
+// ParseDisplayModel + ParseSerializationContext exist only as composition pieces of
+// ParseResult below; no downstream importer references either by name.
+interface ParseDisplayModel {
     /** Parsed structure as groups and fields */
     root: ParsedGroup;
     /** Any warnings during parsing */
@@ -57,7 +61,7 @@ export interface ParseDisplayModel {
     errors?: string[];
 }
 
-export interface ParseSerializationContext {
+interface ParseSerializationContext {
     /** Original source bytes when they are needed to preserve undecoded or skipped regions */
     sourceData?: Uint8Array;
     /** Raw byte ranges preserved when parts of the format cannot be decoded structurally */
