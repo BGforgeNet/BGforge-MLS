@@ -253,7 +253,11 @@ export function normalizeHtmlFragment(html: string, options: NormalizeHtmlFragme
     result = result.replace(/<br\s*\/?>/gi, "\n");
     result = result.replace(/<\/?(?:div|p|span|strong|em)>/gi, "");
     result = result.replace(/<sup>([\s\S]*?)<\/sup>/gi, (_m, inner: string) => decodeHtmlEntities(inner));
-    result = result.replace(/<[^>]+>/g, "");
+    // Strip well-formed tags first, then any residual `<`/`>` left by nested
+    // or malformed input — single greedy passes leave residue otherwise
+    // (CodeQL js/incomplete-multi-character-sanitization).
+    result = result.replace(/<[^>]*>/g, "");
+    result = result.replace(/[<>]/g, "");
     result = decodeHtmlEntities(result);
     result = result.replace(/[ \t]+\n/g, "\n");
 
@@ -294,7 +298,10 @@ function normalizeCodeFence(text: string): string {
 }
 
 export function htmlInlineToText(html: string): string {
-    return decodeHtmlEntities(html.replace(/<[^>]+>/g, "").trim());
+    // Two-step strip: well-formed tags then any residual `<`/`>` from nested
+    // or malformed input (CodeQL js/incomplete-multi-character-sanitization).
+    const stripped = html.replace(/<[^>]*>/g, "").replace(/[<>]/g, "");
+    return decodeHtmlEntities(stripped.trim());
 }
 
 export function decodeHtmlEntities(text: string): string {

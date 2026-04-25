@@ -91,6 +91,14 @@ describe("stringToId", () => {
     it("throws on invalid characters", () => {
         expect(() => stringToId("invalid@char", "P_")).toThrow("Bad id");
     });
+
+    it("strips nested HTML tags without leaving residual brackets", () => {
+        // CodeQL js/incomplete-multi-character-sanitization: a single greedy
+        // /<[^>]+>/g pass over `<bar<baz>>` matches `<bar<baz>` and leaves a
+        // stray `>` behind, which then fails the alphanumeric validator.
+        // The sanitization must remove all `<` and `>` characters.
+        expect(stringToId("foo<bar<baz>>quux", "P_")).toBe("P_fooquux");
+    });
 });
 
 describe("getOffsetSize", () => {

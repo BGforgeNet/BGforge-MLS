@@ -152,6 +152,12 @@ describe("htmlInlineToText", () => {
     it("strips tags and decodes entities", () => {
         expect(htmlInlineToText("<code>&#x41;</code>")).toBe("A");
     });
+
+    it("strips nested tags without leaving residual brackets", () => {
+        // CodeQL js/incomplete-multi-character-sanitization: greedy /<[^>]+>/g
+        // matches `<bar<baz>` in `<bar<baz>>` and leaves a stray `>` behind.
+        expect(htmlInlineToText("foo<bar<baz>>quux")).toBe("fooquux");
+    });
 });
 
 describe("normalizeHtmlFragment compactBlankLines: false", () => {
@@ -173,6 +179,16 @@ describe("normalizeHtmlFragment compactBlankLines: false", () => {
         });
         // Three <br> = three newlines — not collapsed
         expect(result).toContain("\n\n\n");
+    });
+
+    it("strips nested tags without leaving residual brackets", () => {
+        // CodeQL js/incomplete-multi-character-sanitization: same shape as
+        // htmlInlineToText — greedy single-pass strip leaves stray brackets.
+        const result = normalizeHtmlFragment("foo<bar<baz>>quux", {
+            resolveHref: (h: string) => h,
+            compactBlankLines: false,
+        });
+        expect(result).toBe("fooquux");
     });
 });
 
