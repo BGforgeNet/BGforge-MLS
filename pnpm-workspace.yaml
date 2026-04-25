@@ -5,7 +5,6 @@ packages:
     - cli/format
     - plugins/*
     - transpilers
-    - transpilers/cli
     - transpilers/common
     - transpilers/tssl
     - transpilers/tbaf

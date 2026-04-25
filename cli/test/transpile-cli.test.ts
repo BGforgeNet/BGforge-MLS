@@ -8,9 +8,9 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { execFileSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
-import transpileCliPackage from "../../transpilers/cli/package.json";
+import transpileLibPackage from "../../transpilers/package.json";
 
-const CLI = path.resolve("transpilers/cli", transpileCliPackage.bin.fgtp);
+const CLI = path.resolve("transpilers", transpileLibPackage.bin.fgtp);
 const NODE = process.execPath;
 const SAMPLES_DIR = path.resolve("server/test/td/samples");
 const SAMPLES_EXPECTED = path.resolve("server/test/td/samples-expected");
@@ -34,7 +34,7 @@ describe("transpile CLI integration", () => {
 
     beforeEach(() => {
         if (!fs.existsSync(CLI)) {
-            throw new Error("transpile.js not built. Run: pnpm build:transpile-cli");
+            throw new Error("cli.js not built. Run: pnpm build:transpile");
         }
         fs.mkdirSync(tmpDir, { recursive: true });
     });

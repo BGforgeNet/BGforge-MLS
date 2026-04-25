@@ -1,14 +1,18 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-    entry: ["src/index.ts"],
+    entry: ["src/index.ts", "src/cli.ts"],
     format: ["esm"],
-    dts: true,
+    // Only the library entry gets DTS. The CLI is a bin script, not a module
+    // consumers import — emitting .d.ts for it would be misleading.
+    dts: { entry: "src/index.ts" },
     clean: true,
     sourcemap: false,
     target: "node20",
     outDir: "out",
-    splitting: false,
+    // splitting: true shares the heavy ts-morph + transpiler code between index.js
+    // and cli.js via a shared chunk, avoiding a ~12 MB duplication in the tarball.
+    splitting: true,
     minify: false,
     // esbuild-wasm detects at runtime whether it has been bundled by checking that
     // __filename/path.basename(__dirname) equal "main.js"/"lib" respectively.

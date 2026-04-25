@@ -11,6 +11,8 @@ import { transpile as tsslImpl } from "../tssl/src/index";
 import { transpile as tbafImpl } from "../tbaf/src/index";
 import { transpile as tdImpl, type TDWarning } from "../td/src/index";
 
+export { createBatchState, type TranspileBatchState } from "../tssl/src/index";
+
 export const tssl = tsslImpl;
 export const tbaf = tbafImpl;
 export const td = tdImpl;

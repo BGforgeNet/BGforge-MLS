@@ -59,10 +59,10 @@ try {
 
 ## CLI
 
-The standalone CLI is published as a separate package: [`@bgforge/fgtp`](cli/README.md).
+Installing globally also exposes the `fgtp` CLI:
 
 ```bash
-pnpm add -g @bgforge/fgtp
+pnpm add -g @bgforge/transpile
 fgtp script.tssl --save
 ```
 

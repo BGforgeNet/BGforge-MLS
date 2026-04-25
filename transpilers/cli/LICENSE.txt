@@ -1,6 +1,0 @@
-License notice for `@bgforge/fgtp`
-
-The full project license text is not bundled into this package yet.
-
-Refer to:
-https://github.com/BGforgeNet/BGforge-MLS/blob/main/LICENSE.txt

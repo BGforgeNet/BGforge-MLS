@@ -146,7 +146,7 @@ vscode-mls/
 |   +-- tssl/                   @bgforge/tssl: TypeScript to Fallout SSL
 |   +-- tbaf/                   @bgforge/tbaf: TypeScript to WeiDU BAF
 |   +-- td/                     @bgforge/td: TypeScript to WeiDU D
-|   +-- cli/                    @bgforge/fgtp: standalone fgtp CLI for TSSL/TBAF/TD
+|   +-- src/                    @bgforge/transpile: library entry (index.ts) + fgtp bin (cli.ts)
 +-- external/               Game data (Fallout, Infinity Engine)
 +-- resources/              Extension icon
 +-- docs/                   Documentation
@@ -158,19 +158,18 @@ All bundles use **esbuild** (not tsc). The monorepo uses **pnpm workspaces**.
 
 ### Build Targets
 
-| Target        | Input                                   | Output                                      | Notes                               |
-| ------------- | --------------------------------------- | ------------------------------------------- | ----------------------------------- |
-| Client        | `client/src/extension.ts`               | `client/out/extension.js`                   | CJS, `vscode` external              |
-| Server        | `server/src/server.ts`                  | `server/out/server.js`                      | CJS, patches `import_meta` for WASM |
-| TSSL Plugin   | `plugins/tssl-plugin/src/index.ts`      | `node_modules/bgforge-tssl-plugin/index.js` | CJS, standalone                     |
-| TD Plugin     | `plugins/td-plugin/src/index.ts`        | `node_modules/bgforge-td-plugin/index.js`   | CJS, standalone                     |
-| Webviews      | `client/src/{dialog,binary}-webview.ts` | `client/out/*.js`                           | Browser context                     |
-| Format CLI    | `cli/format/src/cli.ts`                 | `cli/format/out/format-cli.js`              | CJS + WASM files                    |
-| Transpile CLI | `transpilers/cli/src/cli.ts`            | `transpilers/cli/out/transpile.js`          | CJS                                 |
-| Transpile lib | `transpilers/src/index.ts`              | `transpilers/out/index.js`                  | ESM, tsup-bundled                   |
-| Binary CLI    | `cli/bin/src/cli.ts`                    | `cli/bin/out/bin-cli.js`                    | CJS                                 |
-| Grammars      | `grammars/*/grammar.js`                 | `grammars/*/*.wasm` -> `server/out/`        | tree-sitter build --wasm            |
-| TextMate      | `syntaxes/*.tmLanguage.yml`             | `syntaxes/*.tmLanguage.json`                | YAML -> JSON conversion             |
+| Target        | Input                                   | Output                                      | Notes                                     |
+| ------------- | --------------------------------------- | ------------------------------------------- | ----------------------------------------- |
+| Client        | `client/src/extension.ts`               | `client/out/extension.js`                   | CJS, `vscode` external                    |
+| Server        | `server/src/server.ts`                  | `server/out/server.js`                      | CJS, patches `import_meta` for WASM       |
+| TSSL Plugin   | `plugins/tssl-plugin/src/index.ts`      | `node_modules/bgforge-tssl-plugin/index.js` | CJS, standalone                           |
+| TD Plugin     | `plugins/td-plugin/src/index.ts`        | `node_modules/bgforge-td-plugin/index.js`   | CJS, standalone                           |
+| Webviews      | `client/src/{dialog,binary}-webview.ts` | `client/out/*.js`                           | Browser context                           |
+| Format CLI    | `cli/format/src/cli.ts`                 | `cli/format/out/format-cli.js`              | CJS + WASM files                          |
+| Transpile lib | `transpilers/src/{index,cli}.ts`        | `transpilers/out/{index,cli}.js`            | ESM, tsup-bundled; cli.js is the fgtp bin |
+| Binary CLI    | `cli/bin/src/cli.ts`                    | `cli/bin/out/bin-cli.js`                    | CJS                                       |
+| Grammars      | `grammars/*/grammar.js`                 | `grammars/*/*.wasm` -> `server/out/`        | tree-sitter build --wasm                  |
+| TextMate      | `syntaxes/*.tmLanguage.yml`             | `syntaxes/*.tmLanguage.json`                | YAML -> JSON conversion                   |
 
 ### Build Pipeline
 
@@ -715,9 +714,9 @@ components stay separate.
 
 ### Three Separate CLIs (format, transpile, bin)
 
-`cli/format`, `transpilers/cli`, and `cli/bin` stay as separate bundles. Shared scaffolding
-(argument parsing, file discovery, output modes) is already extracted to `cli/cli-utils.ts`;
-further consolidation was evaluated and costs more than it saves.
+`cli/format`, `transpilers/` (fgtp bin), and `cli/bin` stay as separate bundles. Shared
+scaffolding (argument parsing, file discovery, output modes) is already extracted to
+`cli/cli-utils.ts`; further consolidation was evaluated and costs more than it saves.
 
 - The transpile bundle is ~12 MB (owns `esbuild` + `ts-morph` + transform passes). Format
   and bin bundles are small. A unified binary would load the transpile toolchain on every
@@ -726,9 +725,8 @@ further consolidation was evaluated and costs more than it saves.
 - The three tools do semantically different jobs: text round-trip, source-to-source
   compilation, binary parsing. The shared surface is already shared at the right layer
   (`cli-utils.ts`); the per-tool bodies are not duplicated.
-- The transpile CLI is published as `@bgforge/fgtp` with a deliberate name. Folding it
-  into a `bgforge-cli transpile` subcommand would lose that and couple release cadence
-  across tools with different audiences.
+- The transpile CLI ships as the `fgtp` bin entry within `@bgforge/transpile`, so the library
+  and CLI share one package, one version, and one tarball without coupling format/bin.
 
 ### Two Separate TypeScript Plugins (tssl-plugin, td-plugin)
 

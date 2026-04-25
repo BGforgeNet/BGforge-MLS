@@ -7,18 +7,15 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { EXT_TD, EXT_TBAF, EXT_TSSL } from "../../common/extensions";
-import { transpile as transpileTBAF } from "../../tbaf/src/index";
-import { transpile as transpileTD } from "../../td/src/index";
-import { transpile as transpileTSSL, createBatchState, type TranspileBatchState } from "../../tssl/src/index";
+import { EXT_TD, EXT_TBAF, EXT_TSSL } from "../common/extensions";
 import {
-    type FileResult,
-    type OutputMode,
-    parseCliArgs,
-    runCli,
-    safeProcess,
-    reportDiff,
-} from "../../../cli/cli-utils";
+    tssl as transpileTSSL,
+    tbaf as transpileTBAF,
+    td as transpileTD,
+    createBatchState,
+    type TranspileBatchState,
+} from "./index";
+import { type FileResult, type OutputMode, parseCliArgs, runCli, safeProcess, reportDiff } from "../../cli/cli-utils";
 
 type TranspileType = "td" | "tbaf" | "tssl";
 

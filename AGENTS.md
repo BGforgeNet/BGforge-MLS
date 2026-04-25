@@ -73,7 +73,6 @@ transpilers/             # Transpiler implementations + user documentation
   tssl/                  # @bgforge/tssl package: TypeScript to Fallout SSL
   tbaf/                  # @bgforge/tbaf package: TypeScript to WeiDU BAF
   td/                    # @bgforge/td package: TypeScript to WeiDU D
-  cli/                   # @bgforge/fgtp: standalone fgtp CLI for TSSL/TBAF/TD
 docs/                    # User docs, editor setup guides, architecture, changelog
 external/                # Third-party mod sources (test fixtures, not project code)
 ```
@@ -87,7 +86,7 @@ pnpm build             # Default repo-wide build: client + server + test bundles
 pnpm build:all         # Full build: build + grammars + editor bundles
 pnpm build:dev         # Minimal build for F5 development (skips CLIs, linting, tests)
 pnpm build:grammar     # Build tree-sitter grammars to WASM
-pnpm build:transpile-cli # Build transpile CLI (esbuild bundle, NOT included in tsc)
+pnpm build:transpile   # Build transpile library + CLI (tsup, produces out/index.js + out/cli.js)
 pnpm test              # Partial test suite (server only): typecheck, lint, unit + coverage, transpiler samples, CLI, integration, knip
 pnpm test:all          # Full test suite: test + grammars + transpile-external. ALWAYS use this for verification.
 pnpm test:grammars     # Grammar tests (generate, lint, corpus, highlight, parse, format)
@@ -184,7 +183,7 @@ See `server/INTERNALS.md` for the full feature matrix and cross-language feature
 | TS plugins              | `docs/editors/typescript-plugins.md` (user setup), `plugins/td-plugin/README.md`, `plugins/tssl-plugin/README.md` (source) |
 | Transpile library       | `transpilers/README.md`                                                                                                    |
 | Transpiler guides       | `transpilers/{tssl,tbaf,td}/docs/` (each has README + writing guide; tssl also `converting-ssl-to-tssl.md`)                |
-| CLI packages            | `transpilers/cli/README.md`                                                                                                |
+| Transpile CLI           | see `transpilers/README.md` (CLI ships as `fgtp` bin in `@bgforge/transpile`)                                              |
 | Server npm package      | `server/README.md`                                                                                                         |
 | Data files              | `server/data/README.md`                                                                                                    |
 | Data pipeline           | `docs/data-pipeline.md`                                                                                                    |

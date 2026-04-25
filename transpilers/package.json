@@ -20,6 +20,9 @@
         "url": "https://github.com/BGforgeNet/BGforge-MLS",
         "directory": "transpilers"
     },
+    "bin": {
+        "fgtp": "out/cli.js"
+    },
     "files": [
         "out/",
         "!out/*.map",
@@ -38,7 +41,12 @@
     "publishConfig": {
         "access": "public"
     },
+    "scripts": {
+        "build": "tsup && chmod +x out/cli.js"
+    },
     "dependencies": {
+        "cac": "^7.0.0",
+        "diff": "^9.0.0",
         "esbuild-wasm": "^0.28.0"
     },
     "devDependencies": {

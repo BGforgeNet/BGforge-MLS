@@ -53,7 +53,6 @@ parallel \
 step "Phase 2: Building Server + CLIs"
 parallel \
     "Server bundle" "$SCRIPT_DIR/build-base-server.sh" \
-    "Transpile CLI" "$SCRIPT_DIR/build-transpile-cli.sh" \
     "Format CLI" "$SCRIPT_DIR/build-format-cli.sh" \
     "Bin CLI" "$SCRIPT_DIR/build-bin-cli.sh"
 

@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Build and publish the standalone transpile CLI package to npm.
-# Usage: ./scripts/publish-fgtp.sh [--dry-run]
-# Set SKIP_BUILD=1 to skip the CLI build (CI uses this).
+# Build and publish the @bgforge/transpile package (library + fgtp bin) to npm.
+# Usage: ./scripts/publish-transpile.sh [--dry-run]
+# Set SKIP_BUILD=1 to skip the build step (CI uses this).
 #
 # Prerequisites:
 #   - pnpm install
@@ -17,13 +17,13 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$ROOT_DIR"
 
 if [ "${SKIP_BUILD:-}" != "1" ]; then
-    echo "=== Building transpile CLI ==="
-    pnpm build:transpile-cli
+    echo "=== Building @bgforge/transpile ==="
+    pnpm build:transpile
 fi
 
 echo ""
-echo "=== Publishing @bgforge/fgtp ==="
-cd transpilers/cli
+echo "=== Publishing @bgforge/transpile ==="
+cd transpilers
 
 provenance=""
 if [ -n "${GITHUB_ACTIONS:-}" ]; then
