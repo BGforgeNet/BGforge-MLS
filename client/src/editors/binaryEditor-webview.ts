@@ -290,6 +290,11 @@ import { createWebviewState, registerNode, resetState } from "./binaryEditor-web
     // -- Message handler ------------------------------------------------------
 
     window.addEventListener("message", (event) => {
+        // VSCode host-to-webview messages share the webview's own origin;
+        // reject anything else (CodeQL js/missing-origin-check).
+        if (event.origin !== globalThis.origin) {
+            return;
+        }
         const msg = event.data as ExtensionToWebview;
         switch (msg.type) {
             case "init":
