@@ -5,6 +5,8 @@
         "syntaxes/*.tmLanguage.yml",
         "server/out/*.json",
         "server/src/*/tree-sitter.d.ts",
-        "grammars/*/src/tree-sitter.d.ts"
+        "grammars/*/src/tree-sitter.d.ts",
+        "themes/vscode-monokai.json",
+        "themes/vs-seti-icon-theme.json"
     ]
 }
