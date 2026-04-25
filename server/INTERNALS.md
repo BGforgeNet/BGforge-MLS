@@ -64,9 +64,28 @@ Header File Change
 ```
 server/src/
 |
-+-- server.ts                 # LSP entry point
++-- server.ts                 # LSP entry point: connection setup, debouncer wiring, handler registration
 +-- provider-registry.ts      # Routes requests to providers
 +-- language-provider.ts      # Provider interface
+|
++-- handlers/                 # Per-feature LSP request handlers (extracted from server.ts)
+|   +-- context.ts            # HandlerContext: shared dependencies passed to each handler
+|   +-- initialize.ts         # onInitialize / onInitialized
+|   +-- config.ts             # Configuration change handlers
+|   +-- document-lifecycle.ts # onDidOpen / onDidChange / onDidSave / onDidClose
+|   +-- completion.ts         # onCompletion + onCompletionResolve
+|   +-- hover.ts              # onHover
+|   +-- definition.ts         # onDefinition
+|   +-- references.ts         # onReferences
+|   +-- rename.ts             # onPrepareRename + onRenameRequest
+|   +-- rename-suppression.ts # Suppresses rename feedback during in-flight workspace edits
+|   +-- symbols.ts            # onDocumentSymbol + onWorkspaceSymbol
+|   +-- formatting.ts         # onDocumentFormatting
+|   +-- signature.ts          # onSignatureHelp
+|   +-- folding.ts            # onFoldingRanges
+|   +-- inlay-hints.ts        # inlayHint.on
+|   +-- semantic-tokens.ts    # semanticTokens.on
+|   +-- execute-command.ts    # onExecuteCommand + dialog-tree commands
 |
 +-- core/
 |   +-- symbol.ts             # IndexedSymbol type definitions
@@ -74,10 +93,18 @@ server/src/
 |   +-- static-loader.ts      # Loads built-in symbols from JSON
 |   +-- normalized-uri.ts     # Branded NormalizedUri type, URI encoding canonicalization
 |   +-- parser-manager.ts     # Centralized tree-sitter parser lifecycle (registration, sequential init, caching)
+|   +-- parse-result.ts       # ParseResult type used by compilation diagnostics
 |   +-- capabilities.ts       # Provider capability interfaces (FormattingCapability, SymbolCapability, etc.)
 |   +-- languages.ts          # Language IDs & file extensions
 |   +-- patterns.ts           # Regex patterns
 |   +-- location-utils.ts     # Position/range helpers
+|   +-- position-utils.ts     # Document position helpers
+|   +-- file-index.ts         # Per-extension URI index used by providers
+|   +-- file-watcher-manager.ts # File watcher subscriptions for indexed extensions
+|   +-- workspace-scanner.ts  # Initial workspace scan dispatcher
+|   +-- format-only-provider.ts # Lightweight provider base for format-only languages
+|   +-- compile-with-tmp-file.ts # Tmp-file lifecycle helper used by SSL/WeiDU compilers (with abort signal)
+|   +-- uri-debouncer.ts      # UriDebouncer<K>: per-URI scheduled callback with cancel/dispose
 |
 +-- fallout-ssl/              # Fallout 1/2 scripting
 |   +-- tree-sitter.d.ts      # Generated SyntaxType enum
@@ -508,7 +535,7 @@ onDidSave / onDidChangeContent / manual command
 
 **Temporary files**: External compilers need files on disk. SSL writes `.tmp.ssl` (exported as `TMP_SSL_NAME` in `fallout-ssl/compiler.ts`) in the same directory as the source file so that relative `#include` paths resolve correctly. WeiDU writes to a system temp directory (`os.tmpdir()/bgforge-mls`) with unique filenames per URI (MD5 hash prefix) to prevent concurrent compilations of same-extension files from overwriting each other. The `.tmp.ssl` name is excluded from VS Code file watchers via `configurationDefaults` in `package.json` — these two locations must be kept in sync. Both SSL and WeiDU write tmp files inside `try/finally` so that cleanup runs even if `writeFile` fails (e.g., `ENOSPC`).
 
-**Compile debouncing**: `onDidChangeContent` debounces compilation via `pendingCompiles` (300ms) to prevent rapid-fire compiler spawning when `validateOnChange` is enabled. `onDidSave` and manual compile are not debounced. Both `pendingCompiles` and `pendingReloads` timers are cleared in `onShutdown`. Both SSL and WeiDU compilation are async (return `Promise<void>`), which is essential for debouncing to work — if `compile()` returned synchronously, the debounce timer couldn't prevent overlapping processes.
+**Compile debouncing**: `onDidChangeContent` debounces compilation via the `compileDebouncer` (`UriDebouncer` instance, 300ms) to prevent rapid-fire compiler spawning when `validateOnChange` is enabled. `onDidSave` and manual compile are not debounced. Both `compileDebouncer` and `fileReloadDebouncer` are disposed in `onShutdown`. Both SSL and WeiDU compilation are async (return `Promise<void>`), which is essential for debouncing to work — if `compile()` returned synchronously, the debounce timer couldn't prevent overlapping processes.
 
 **Process cancellation**: Both SSL and WeiDU compilers track in-flight compilations per URI via `AbortController`. When a new compilation starts for the same URI, the previous one is aborted — `runProcess()` passes the abort signal to `cp.execFile`, and results from aborted compiles are silently discarded. The built-in WASM compiler (`ssl_compile`) also supports cancellation by killing the forked child process when the signal fires.
 

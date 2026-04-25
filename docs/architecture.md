@@ -90,7 +90,7 @@ vscode-mls/
 |
 +-- server/                 LSP server (see server/INTERNALS.md for details)
 |   +-- src/
-|   |   +-- server.ts               LSP entry point, request handlers
+|   |   +-- server.ts               LSP entry point: connection setup, debouncer wiring, handler registration
 |   |   +-- provider-registry.ts    Routes requests to language providers
 |   |   +-- language-provider.ts    Provider interface
 |   |   +-- compile.ts              Compilation dispatch
@@ -99,7 +99,8 @@ vscode-mls/
 |   |   +-- safe-eval.ts            Safe expression evaluator (no eval())
 |   |   +-- common.ts               Logging, file utilities
 |   |   +-- settings.ts             User settings
-|   |   +-- core/                   Symbol system, language IDs, URI normalization, patterns
+|   |   +-- handlers/               Per-feature LSP request handlers (HandlerContext shared)
+|   |   +-- core/                   Symbol system, URI normalization, patterns, debouncer, file index, compile-tmp helper
 |   |   +-- shared/                 Cross-provider utilities
 |   |   +-- fallout-ssl/            Fallout SSL provider (full IDE support)
 |   |   +-- fallout-worldmap/       Worldmap provider (completion + hover)
@@ -683,8 +684,9 @@ via a `fileURLToPath` -> `pathToFileURL` round-trip. `ProviderRegistry` normaliz
 URIs at the gateway before passing to providers.
 
 The branded type is enforced at storage boundaries: `Symbols.files`,
-`ReferencesIndex.files`, `FileIndex` methods, debounce maps in `server.ts`, and
-`activeCompiles` maps in compilers all use `Map<NormalizedUri, ...>`. `pathToUri()`
+`ReferencesIndex.files`, `FileIndex` methods, the `UriDebouncer` instances
+in `core/uri-debouncer.ts`, and `activeCompiles` maps in compilers all use
+`Map<NormalizedUri, ...>`. `pathToUri()`
 returns `NormalizedUri` since it produces canonical encoding. Providers cast at the
 boundary where they pass URIs to storage (`uri as NormalizedUri`), documented with a
 comment explaining the gateway guarantee.

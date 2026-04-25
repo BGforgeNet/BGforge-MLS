@@ -4,6 +4,12 @@
 
 - Minimum supported Node.js version raised from 18 to 20. Node 18 reached end-of-life in April 2025; Node 20 is the current LTS minimum. Affects users installing `@bgforge/mls-server` or `@bgforge/fgtp` standalone via npm.
 - `.bgforge.yml` `directory` values that resolve outside the workspace root (via an absolute path elsewhere on disk, or via `..` segments) are now ignored with a warning logged to the BGforge MLS output channel. Translation lookup still works for workspace-internal `directory` values.
+- Project-loading progress spinner now self-resolves after 60 seconds instead of hanging indefinitely if the server never reports project load completion.
+- Long-running Fallout SSL and WeiDU compilations are now aborted on extension shutdown, rather than holding tmp-file locks until their own timeout.
+- Provider initialization failures now surface a user-visible error naming the affected language, instead of silently producing an empty language.
+- TSSL CLI diagnostics are now written to stderr (matching TBAF and TD), so piping `fgtp file.tssl` no longer contaminates stdout with progress messages.
+- Webview panels (binary editor, dialog tree preview) now enforce a strict per-render Content-Security-Policy with nonced styles and scripts; the dialog-tree panel's allowed resource roots are narrowed to the directories it actually loads from.
+- `@bgforge/mls-server`: `quick-lru` is now correctly declared as a runtime dependency (previously misclassified as devDependency, which would cause module-not-found errors for downstream npm consumers).
 
 ## 3.7.0 (2026-04-12)
 
