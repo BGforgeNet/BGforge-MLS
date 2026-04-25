@@ -9,6 +9,10 @@ updates:
               update-types:
                   - "minor"
                   - "patch"
+      ignore:
+          # Track Node.js LTS only; bump manually when moving to the next LTS major.
+          - dependency-name: "@types/node"
+            update-types: ["version-update:semver-major"]
 
     - package-ecosystem: "github-actions"
       directory: "/"
