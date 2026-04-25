@@ -20,6 +20,7 @@ import { emitD } from "./emit";
 import { parse } from "./parse";
 import { collectExplicitLabels } from "./state-resolution";
 import { ORPHAN_WARNING_TEMPLATE, type TDScript, type TDWarning } from "./types";
+export type { TDWarning } from "./types";
 
 interface TDTranspileResult {
     output: string;

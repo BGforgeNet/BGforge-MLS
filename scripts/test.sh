@@ -39,6 +39,7 @@ parallel \
     "Server unit tests + coverage" "(cd server && pnpm exec vitest run --coverage)" \
     "Client unit tests + coverage" "vitest run --config client/vitest.config.ts --coverage" \
     "Plugin unit tests" "vitest run --config plugins/tssl-plugin/vitest.config.ts && vitest run --config plugins/td-plugin/vitest.config.ts" \
+    "Transpile lib unit tests" "vitest run --config transpilers/vitest.config.ts" \
     "Script tests" "pnpm test:scripts" \
     "Knip" "pnpm knip" \
     "Knip prod" "pnpm knip:prod"

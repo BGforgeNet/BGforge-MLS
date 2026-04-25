@@ -70,7 +70,7 @@ const config: KnipConfig = {
             ignoreDependencies: ["esbuild"],
         },
         transpilers: {
-            entry: ["test/**/*.test.ts"],
+            entry: ["src/index.ts", "test/**/*.test.ts"],
             // tsup is invoked via scripts at publish time (Phase 6 build step), not imported in source
             ignoreDependencies: ["tsup"],
         },

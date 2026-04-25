@@ -9,16 +9,20 @@
 import { EXT_TSSL, EXT_TBAF, EXT_TD } from "../common/extensions";
 import { transpile as tsslImpl } from "../tssl/src/index";
 import { transpile as tbafImpl } from "../tbaf/src/index";
-import { transpile as tdImpl } from "../td/src/index";
+import { transpile as tdImpl, type TDWarning } from "../td/src/index";
 
 export const tssl = tsslImpl;
 export const tbaf = tbafImpl;
 export const td = tdImpl;
 
+// The warnings array is narrowed to Pick<TDWarning, "line" | "message"> rather than
+// exposing TDWarning directly. This keeps the public API surface minimal while
+// remaining structurally tied to TDWarning: a rename of the line/message fields
+// upstream will produce a compile error here rather than a silent runtime mismatch.
 export type TranspileResult =
     | { kind: "tssl"; output: string }
     | { kind: "tbaf"; output: string }
-    | { kind: "td"; output: string; warnings: ReadonlyArray<{ line: number; message: string }> };
+    | { kind: "td"; output: string; warnings: ReadonlyArray<Pick<TDWarning, "line" | "message">> };
 
 export class UnknownTranspileExtensionError extends Error {
     constructor(filePath: string) {

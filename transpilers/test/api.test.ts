@@ -62,21 +62,23 @@ describe("@bgforge/transpile public API", () => {
         it("dispatches .tssl to the TSSL transpiler", async () => {
             const r = await transpile(tsslPath, TSSL_SRC);
             expect(r.kind).toBe("tssl");
-            expect(typeof r.output).toBe("string");
+            const direct = await tsslDirect(tsslPath, TSSL_SRC, undefined);
+            expect(r.output).toBe(direct);
         });
 
         it("dispatches .tbaf to the TBAF transpiler", async () => {
             const r = await transpile(tbafPath, TBAF_SRC);
             expect(r.kind).toBe("tbaf");
-            expect(typeof r.output).toBe("string");
+            const direct = await tbafDirect(tbafPath, TBAF_SRC);
+            expect(r.output).toBe(direct);
         });
 
         it("dispatches .td to the TD transpiler and surfaces warnings", async () => {
             const r = await transpile(tdPath, TD_SRC);
             if (r.kind !== "td") throw new Error(`Expected kind "td", got "${r.kind}"`);
-            expect(r.kind).toBe("td");
-            expect(typeof r.output).toBe("string");
-            expect(Array.isArray(r.warnings)).toBe(true);
+            const direct = await tdDirect(tdPath, TD_SRC);
+            expect(r.output).toBe(direct.output);
+            expect(r.warnings).toStrictEqual(direct.warnings);
         });
 
         it("throws UnknownTranspileExtensionError for unknown extension", async () => {
