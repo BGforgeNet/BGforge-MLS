@@ -4,6 +4,13 @@ on:
     pull_request:
     push:
 
+# Cancel superseded runs on the same ref. Release-tag runs use distinct refs
+# (refs/tags/vX.Y.Z) and are not affected; PR pushes and branch pushes get the
+# stale run cancelled when a newer push arrives.
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
 permissions:
     contents: write
     id-token: write
