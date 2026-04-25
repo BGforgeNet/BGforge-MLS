@@ -4,7 +4,6 @@ packages:
     - grammars/*
     - cli/format
     - plugins/*
-    - transpilers
     - transpilers/cli
     - transpilers/common
     - transpilers/tssl

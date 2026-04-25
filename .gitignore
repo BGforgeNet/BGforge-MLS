@@ -24,7 +24,6 @@ server/out/*
 
 cli/*/out
 transpilers/cli/out
-transpilers/out
 
 plugins/*/out
 
