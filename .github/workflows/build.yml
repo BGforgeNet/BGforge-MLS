@@ -12,13 +12,16 @@ concurrency:
     cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 permissions:
-    contents: write
-    id-token: write
+    contents: read
 
 jobs:
     build:
         name: build
         runs-on: ubuntu-latest
+        # contents: write is needed for the GitHub Release step on tag pushes.
+        # id-token is not used here; the provenance job declares its own.
+        permissions:
+            contents: write
         outputs:
             # base64-encoded sha256 digests of release artifacts, consumed by the
             # SLSA provenance job.  Empty on non-release runs.
