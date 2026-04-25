@@ -117,9 +117,22 @@ export function isSubpath(outerPath: string | undefined, innerPath: string): boo
         return false;
     }
     try {
-        const innerReal = fs.realpathSync(innerPath);
         const outerReal = fs.realpathSync(outerPath);
-        const rel = path.relative(outerReal, innerReal);
+        return isSubpathResolved(outerReal, innerPath);
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Like `isSubpath`, but accepts a pre-resolved outer path (already passed through
+ * `fs.realpathSync`). Lets callers on hot paths resolve the outer once and avoid
+ * the syscall on every check.
+ */
+export function isSubpathResolved(resolvedOuter: string, innerPath: string): boolean {
+    try {
+        const innerReal = fs.realpathSync(innerPath);
+        const rel = path.relative(resolvedOuter, innerReal);
         return !rel.startsWith("..") && !path.isAbsolute(rel);
     } catch {
         return false;

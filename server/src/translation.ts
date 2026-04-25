@@ -10,7 +10,16 @@ import pLimit from "p-limit";
 import * as path from "path";
 import { fileURLToPath } from "url";
 import { Hover, InlayHint, Location, MarkupContent, MarkupKind, Position, Range } from "vscode-languageserver/node";
-import { conlog, errorMessage, findFiles, getRelPath, isDirectory, isSubpath, pathToUri } from "./common";
+import {
+    conlog,
+    errorMessage,
+    findFiles,
+    getRelPath,
+    isDirectory,
+    isSubpath,
+    isSubpathResolved,
+    pathToUri,
+} from "./common";
 import {
     CONSUMER_EXTENSIONS_MSG,
     CONSUMER_EXTENSIONS_TRA,
@@ -71,6 +80,16 @@ const extensions: Array<TraExt> = ["msg", "tra"];
 /** Max concurrent file reads when loading translation files. */
 const SCAN_CONCURRENCY = 4;
 
+/** Resolve a path's realpath, returning undefined on failure or missing input. */
+function resolveRealpath(p: string | undefined): string | undefined {
+    if (!p) return undefined;
+    try {
+        return fs.realpathSync(p);
+    } catch {
+        return undefined;
+    }
+}
+
 /**
  * Check if a symbol is a translation reference for the given language.
  * For typescript files, also checks file extension to determine format.
@@ -113,6 +132,14 @@ export class Translation {
     private consumers: Map<string, Set<string>>;
     private settings: ProjectTraSettings;
     private workspaceRoot: string | undefined;
+    /**
+     * `fs.realpathSync(workspaceRoot)` memoised at construction. isSubpath is called
+     * on every debounced document change; resolving the workspace root once avoids a
+     * syscall per call. `undefined` if no workspace root or realpath failed.
+     */
+    private resolvedWsRoot: string | undefined;
+    /** Lazily memoised realpath of the tra directory (see resolvedTraDir getter). */
+    private resolvedTraDirCache: string | null | undefined = null;
     initialized: boolean;
 
     constructor(settings: ProjectTraSettings, workspaceRoot: string | undefined) {
@@ -120,9 +147,22 @@ export class Translation {
         this.settings = settings;
         this.directory = settings.directory;
         this.workspaceRoot = workspaceRoot;
+        this.resolvedWsRoot = resolveRealpath(workspaceRoot);
         this.initialized = false;
         this.data = new Map();
         this.consumers = new Map();
+    }
+
+    /**
+     * Memoised realpath of the resolved tra directory. Returns `undefined` if the
+     * directory can't be resolved (missing workspace root, realpath failure).
+     */
+    private get resolvedTraDir(): string | undefined {
+        if (this.resolvedTraDirCache === null) {
+            const traDir = this.resolveTraDir();
+            this.resolvedTraDirCache = resolveRealpath(traDir);
+        }
+        return this.resolvedTraDirCache;
     }
 
     async init(): Promise<void> {
@@ -201,8 +241,8 @@ export class Translation {
         if (!languages.includes(langId)) return;
 
         const filePath = this.uriToPath(uri);
-        const wsRoot = this.workspaceRoot;
-        if (wsRoot === undefined || !isSubpath(wsRoot, filePath)) return;
+        const wsRoot = this.resolvedWsRoot;
+        if (wsRoot === undefined || !isSubpathResolved(wsRoot, filePath)) return;
 
         const wsPath = getRelPath(wsRoot, filePath);
         this.reloadFileLines(wsPath, text);
@@ -256,8 +296,8 @@ export class Translation {
         if (!translatableLanguages.includes(langId)) return;
 
         const filePath = this.uriToPath(uri);
-        const wsRoot = this.workspaceRoot;
-        if (wsRoot === undefined || !isSubpath(wsRoot, filePath)) return;
+        const wsRoot = this.resolvedWsRoot;
+        if (wsRoot === undefined || !isSubpathResolved(wsRoot, filePath)) return;
 
         const wsRelPath = getRelPath(wsRoot, filePath);
 
@@ -316,8 +356,8 @@ export class Translation {
         if (!translatableLanguages.includes(langId)) return null;
 
         const filePath = this.uriToPath(uri);
-        const wsRoot = this.workspaceRoot;
-        if (wsRoot === undefined || !isSubpath(wsRoot, filePath)) return null;
+        const wsRoot = this.resolvedWsRoot;
+        if (wsRoot === undefined || !isSubpathResolved(wsRoot, filePath)) return null;
         if (!isTraRef(symbol, langId, filePath)) return null;
 
         return getRelPath(wsRoot, filePath);
@@ -875,9 +915,9 @@ export class Translation {
      * Handles both absolute and relative tra directory settings.
      */
     private filePathToTraKey(filePath: string): string | undefined {
-        const traDir = this.resolveTraDir();
+        const traDir = this.resolvedTraDir;
         if (!traDir) return undefined;
-        if (!isSubpath(traDir, filePath)) return undefined;
+        if (!isSubpathResolved(traDir, filePath)) return undefined;
         return getRelPath(traDir, filePath);
     }
 
