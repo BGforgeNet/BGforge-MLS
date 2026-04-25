@@ -19,13 +19,18 @@ import {
     tmpDir,
     uriToPath,
 } from "./common";
-import { compileWithTmpFile } from "./core/compile-with-tmp-file";
+import { abortAllCompiles, compileWithTmpFile } from "./core/compile-with-tmp-file";
 import { showError, showInfo, showWarning } from "./user-messages";
 import type { WeiDUsettings } from "./settings";
 import type { NormalizedUri } from "./core/normalized-uri";
 
 /** Track in-flight compilations per URI so we can cancel stale ones. */
 const activeCompiles = new Map<NormalizedUri, AbortController>();
+
+/** Abort every in-flight WeiDU compilation. Called from server shutdown. */
+export function abortInFlightWeiduCompiles(): void {
+    abortAllCompiles(activeCompiles);
+}
 
 const valid_extensions = new Map([
     [".tp2", "tp2"],

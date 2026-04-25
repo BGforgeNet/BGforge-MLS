@@ -33,6 +33,22 @@ interface CompileWithTmpFileParams {
     run: (signal: AbortSignal) => Promise<void>;
 }
 
+/**
+ * Abort every in-flight compilation tracked in `activeCompiles` and clear the map.
+ *
+ * Called from `connection.onShutdown`: the compiler subprocess is detached from
+ * the LSP transport once shutdown begins, so a long-running compile would
+ * continue until its own timeout instead of releasing tmp-file locks promptly.
+ * Aborting via the shared `AbortController` lets each compiler's `runProcess`
+ * tear the child process down on the same signal it already honours mid-edit.
+ */
+export function abortAllCompiles(activeCompiles: Map<NormalizedUri, AbortController>): void {
+    for (const controller of activeCompiles.values()) {
+        controller.abort();
+    }
+    activeCompiles.clear();
+}
+
 export async function compileWithTmpFile(params: CompileWithTmpFileParams): Promise<void> {
     const { uri, tmpPath, text, activeCompiles, extraCleanupPaths, run } = params;
 

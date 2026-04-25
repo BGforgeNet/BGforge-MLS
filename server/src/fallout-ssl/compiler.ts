@@ -27,7 +27,7 @@ import {
     tmpDir,
     uriToPath,
 } from "../common";
-import { compileWithTmpFile } from "../core/compile-with-tmp-file";
+import { abortAllCompiles, compileWithTmpFile } from "../core/compile-with-tmp-file";
 import type { NormalizedUri } from "../core/normalized-uri";
 import { getConnection, getDocuments } from "../lsp-connection";
 import { showError, showErrorWithActions, showInfo } from "../user-messages";
@@ -159,6 +159,11 @@ const compilerPathCache: { path: string | null } = { path: null };
 
 /** Track in-flight compilations per URI so we can cancel stale ones. */
 const activeCompiles = new Map<NormalizedUri, AbortController>();
+
+/** Abort every in-flight Fallout SSL compilation. Called from server shutdown. */
+export function abortInFlightSSLCompiles(): void {
+    abortAllCompiles(activeCompiles);
+}
 
 /**
  * Reset cached compiler path. Exported for testing only — module-level

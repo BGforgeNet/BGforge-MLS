@@ -28,6 +28,8 @@ import * as symbolsHandler from "./handlers/symbols";
 import * as renameHandler from "./handlers/rename";
 import * as documentLifecycleHandler from "./handlers/document-lifecycle";
 import * as executeCommandHandler from "./handlers/execute-command";
+import { abortInFlightSSLCompiles } from "./fallout-ssl/compiler";
+import { abortInFlightWeiduCompiles } from "./weidu-compile";
 
 // Create a connection for the server.
 // createConnection() auto-detects transport from process.argv:
@@ -96,6 +98,11 @@ connection.onShutdown(() => {
     handlerCtx.renameSuppression.dispose();
     fileReloadDebouncer.dispose();
     compileDebouncer.dispose();
+    // Detach in-flight compilers so they don't continue running after the
+    // LSP transport closes. Each compiler honours the AbortSignal it was
+    // started with via runProcess; aborting clears the per-URI tracking maps.
+    abortInFlightSSLCompiles();
+    abortInFlightWeiduCompiles();
 });
 
 // Attach the document manager and start the LSP transport.
