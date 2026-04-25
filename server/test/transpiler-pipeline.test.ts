@@ -40,7 +40,7 @@ describe("createTranspiler", () => {
             {
                 level: "info",
                 code: "output_written",
-                message: `Transpiled to ${join(tempDir, "sample.d")}`,
+                message: `Transpiled to sample.d`,
                 outPath: join(tempDir, "sample.d"),
             },
         ]);

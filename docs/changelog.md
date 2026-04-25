@@ -10,6 +10,7 @@
 - TSSL CLI diagnostics are now written to stderr (matching TBAF and TD), so piping `fgtp file.tssl` no longer contaminates stdout with progress messages.
 - Webview panels (binary editor, dialog tree preview) now enforce a strict per-render Content-Security-Policy with nonced styles and scripts; the dialog-tree panel's allowed resource roots are narrowed to the directories it actually loads from.
 - `@bgforge/mls-server`: `quick-lru` is now correctly declared as a runtime dependency (previously misclassified as devDependency, which would cause module-not-found errors for downstream npm consumers).
+- TSSL/TBAF/TD transpile success notifications now show just the output filename (e.g. `Transpiled to foo.d`), matching the format of compile notifications instead of including the full absolute path.
 
 ## 3.7.0 (2026-04-12)
 

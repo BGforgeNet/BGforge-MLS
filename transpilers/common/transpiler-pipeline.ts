@@ -115,7 +115,7 @@ export function createTranspiler<TResult, TExtra = void>(config: TranspilerConfi
                     {
                         level: "info",
                         code: "output_written",
-                        message: `Transpiled to ${outPath}`,
+                        message: `Transpiled to ${path.basename(outPath)}`,
                         outPath,
                     },
                 ],
