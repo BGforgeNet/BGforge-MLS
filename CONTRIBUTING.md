@@ -54,7 +54,7 @@ TS plugin logs: set `"typescript.tsserver.log": "verbose"` in settings, check Ou
 
 Keep transient test/build artifacts under the repo-level `tmp/` directory unless a tool specifically requires system temp storage.
 
-Do not create temporary directories inside source or fixture trees such as `server/test/`, `cli/test/`, or `scripts/**`.
+Do not create temporary directories inside source or fixture trees such as `server/test/`, `binary/test/`, or `scripts/**`.
 
 ## Submitting Changes
 

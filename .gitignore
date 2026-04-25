@@ -22,7 +22,6 @@ server/out/*
 !server/out/fallout-ssl-engine-proc-docs.json
 !server/out/fallout-ssl-engine-procedures.json
 
-cli/*/out
 transpilers/out
 format/out
 binary/out
@@ -37,8 +36,6 @@ external/*
 node_modules
 .npmrc
 tmp
-
-/test
 
 *.wasm
 

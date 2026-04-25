@@ -12,9 +12,9 @@ import {
     findFiles,
     parseCliArgs,
     runCli,
-    FileResult,
-    OutputMode,
-} from "../../shared/cli/cli-utils";
+    type FileResult,
+    type OutputMode,
+} from "../cli-utils";
 
 describe("reportDiff", () => {
     let stderrSpy: ReturnType<typeof vi.spyOn>;
@@ -180,37 +180,37 @@ describe("parseCliArgs", () => {
     });
 
     it("parses save mode", () => {
-        process.argv = ["node", "cli.js", "cli/test/cli-utils.test.ts", "--save"];
+        process.argv = ["node", "cli.js", "shared/cli/test/cli-utils.test.ts", "--save"];
         const args = parseCliArgs("help");
         expect(args?.mode).toBe("save");
     });
 
     it("parses check mode", () => {
-        process.argv = ["node", "cli.js", "cli/test/cli-utils.test.ts", "--check"];
+        process.argv = ["node", "cli.js", "shared/cli/test/cli-utils.test.ts", "--check"];
         const args = parseCliArgs("help");
         expect(args?.mode).toBe("check");
     });
 
     it("defaults to stdout mode", () => {
-        process.argv = ["node", "cli.js", "cli/test/cli-utils.test.ts"];
+        process.argv = ["node", "cli.js", "shared/cli/test/cli-utils.test.ts"];
         const args = parseCliArgs("help");
         expect(args?.mode).toBe("stdout");
     });
 
     it("parses recursive flag -r", () => {
-        process.argv = ["node", "cli.js", "cli/test", "-r"];
+        process.argv = ["node", "cli.js", "shared/cli/test", "-r"];
         const args = parseCliArgs("help");
         expect(args?.recursive).toBe(true);
     });
 
     it("parses recursive flag --recursive", () => {
-        process.argv = ["node", "cli.js", "cli/test", "--recursive"];
+        process.argv = ["node", "cli.js", "shared/cli/test", "--recursive"];
         const args = parseCliArgs("help");
         expect(args?.recursive).toBe(true);
     });
 
     it("parses quiet flag", () => {
-        process.argv = ["node", "cli.js", "cli/test/cli-utils.test.ts", "-q"];
+        process.argv = ["node", "cli.js", "shared/cli/test/cli-utils.test.ts", "-q"];
         const args = parseCliArgs("help");
         expect(args?.quiet).toBe(true);
     });

@@ -37,7 +37,6 @@ parallel \
     "Typecheck client" "(cd client && pnpm exec tsc --noEmit)" \
     "Typecheck plugins" "(cd plugins/tssl-plugin && pnpm exec tsc --noEmit) && (cd plugins/td-plugin && pnpm exec tsc --noEmit)" \
     "Typecheck server" "(cd server && pnpm exec tsc --noEmit)" \
-    "Typecheck CLI" "pnpm exec tsc --project cli/tsconfig.json" \
     "Oxlint" "pnpm exec oxlint" \
     "Lint scripts" "pnpm lint:scripts" \
     "Format check" "pnpm exec oxfmt --check" \
@@ -47,6 +46,7 @@ parallel \
     "Transpile lib unit tests" "vitest run --config transpilers/vitest.config.ts" \
     "Format lib unit tests" "vitest run --config format/vitest.config.ts" \
     "Binary lib unit tests" "vitest run --config binary/vitest.config.ts" \
+    "Shared unit tests" "vitest run --config shared/vitest.config.ts" \
     "Script tests" "pnpm test:scripts" \
     "Knip" "pnpm knip" \
     "Knip prod" "pnpm knip:prod"

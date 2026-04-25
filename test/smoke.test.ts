@@ -1,12 +1,12 @@
 /**
  * Smoke tests for CLI entry points.
  *
- * The CLI package ships as a release artefact but cannot carry a numeric v8
- * coverage gate — subprocess instrumentation via child_process does not
- * capture coverage (see cli/vitest.config.ts). These tests substitute for a
- * coverage threshold by asserting that each entry point starts, parses flags,
- * and exits cleanly. A broken shebang, missing bundle, or startup crash will
- * fail here before it reaches users.
+ * Each release CLI ships as its own published artefact but cannot carry a
+ * numeric v8 coverage gate — subprocess instrumentation via child_process
+ * does not capture in-process coverage. These tests substitute for a
+ * coverage threshold by asserting that each entry point starts, parses
+ * flags, and exits cleanly. A broken shebang, missing bundle, or startup
+ * crash will fail here before it reaches users.
  */
 
 import { describe, it, expect, beforeAll } from "vitest";

@@ -8,7 +8,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { execFileSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
-import transpileLibPackage from "../../transpilers/package.json";
+import transpileLibPackage from "../package.json";
 
 const CLI = path.resolve("transpilers", transpileLibPackage.bin.fgtp);
 const NODE = process.execPath;

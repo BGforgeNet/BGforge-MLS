@@ -11,6 +11,6 @@
             "@bgforge/format": ["../format/src/index.ts"]
         }
     },
-    "include": ["src", "test", "../shared", "../transpilers", "../format/src"],
+    "include": ["src", "test", "../shared", "../transpilers", "../format/src", "../test"],
     "exclude": ["node_modules", ".vscode-test"]
 }
