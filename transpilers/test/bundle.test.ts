@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect, beforeAll } from "vitest";
-import { execFileSync } from "child_process";
+import { execFileSync, spawnSync } from "child_process";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
@@ -103,10 +103,59 @@ describe("@bgforge/transpile bundle smoke", () => {
         expect(stdout.trim()).toBe("OK");
     });
 
-    it("DTS file has expected exports", () => {
-        const dts = fs.readFileSync(DTS, "utf-8");
-        for (const sym of ["tssl", "tbaf", "td", "transpile", "TranspileResult", "UnknownTranspileExtensionError"]) {
-            expect(dts).toContain(sym);
+    it("DTS supports type-only consumption from a tsc consumer fixture", () => {
+        // Build a tiny consumer that imports every public symbol AS A TYPE.
+        // tsc --noEmit on this fixture proves the .d.ts is well-formed and
+        // exports all symbols at the type level. A DTS that only mentions
+        // names in comments would fail compilation here.
+        const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "bundle-dts-"));
+        try {
+            const fixture = path.join(tmp, "consumer.ts");
+            fs.writeFileSync(
+                fixture,
+                [
+                    `import { tssl, tbaf, td, transpile, createBatchState, UnknownTranspileExtensionError } from ${JSON.stringify(BUNDLE)};`,
+                    `import type { TranspileResult, TranspileBatchState } from ${JSON.stringify(BUNDLE)};`,
+                    `// Reference each value to keep tsc honest about presence.`,
+                    `void tssl; void tbaf; void td; void transpile; void createBatchState; void UnknownTranspileExtensionError;`,
+                    `// Reference each type via a no-op signature.`,
+                    `type _R = TranspileResult; type _B = TranspileBatchState;`,
+                    `const _r: _R | undefined = undefined; const _b: _B | undefined = undefined; void _r; void _b;`,
+                ].join("\n"),
+                "utf-8",
+            );
+            const tsconfig = path.join(tmp, "tsconfig.json");
+            fs.writeFileSync(
+                tsconfig,
+                JSON.stringify(
+                    {
+                        compilerOptions: {
+                            module: "esnext",
+                            moduleResolution: "bundler",
+                            target: "es2022",
+                            strict: true,
+                            skipLibCheck: true,
+                            noEmit: true,
+                            types: [],
+                        },
+                        files: ["consumer.ts"],
+                    },
+                    null,
+                    2,
+                ),
+                "utf-8",
+            );
+
+            // Use the repo's tsc JS entry directly (not the shell wrapper in .bin/).
+            // node_modules/.bin/tsc is a POSIX shell script and cannot be passed to
+            // process.execPath (node) — use the actual JS entrypoint instead.
+            const tsc = path.resolve("node_modules/typescript/bin/tsc");
+            const result = spawnSync(process.execPath, [tsc, "-p", tsconfig], { encoding: "utf-8" });
+            if (result.status !== 0) {
+                throw new Error(`tsc failed:\nstdout: ${result.stdout}\nstderr: ${result.stderr}`);
+            }
+        } finally {
+            fs.rmSync(tmp, { recursive: true, force: true });
         }
     });
 });
