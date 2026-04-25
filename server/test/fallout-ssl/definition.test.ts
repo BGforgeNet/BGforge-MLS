@@ -158,13 +158,21 @@ end
         });
 
         describe("#include directive", () => {
-            const tmpDir = path.join(os.tmpdir(), "bgforge-mls-test-definition");
-            const headersDir = path.join(tmpDir, "headers");
-            const headerFile = path.join(headersDir, "sfall.h");
-            const rootHeaderFile = path.join(tmpDir, "sfall.h");
-            const sslUri = pathToUri(path.join(tmpDir, "test.ssl"));
+            // Use mkdtempSync for an unpredictable per-run directory rather
+            // than a fixed predictable path under os.tmpdir() (CodeQL
+            // js/insecure-temporary-file).
+            let tmpDir: string;
+            let headersDir: string;
+            let headerFile: string;
+            let rootHeaderFile: string;
+            let sslUri: string;
 
             beforeAll(() => {
+                tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "bgforge-mls-test-definition-"));
+                headersDir = path.join(tmpDir, "headers");
+                headerFile = path.join(headersDir, "sfall.h");
+                rootHeaderFile = path.join(tmpDir, "sfall.h");
+                sslUri = pathToUri(path.join(tmpDir, "test.ssl"));
                 fs.mkdirSync(headersDir, { recursive: true });
                 fs.writeFileSync(headerFile, "// sfall header\n");
                 fs.writeFileSync(rootHeaderFile, "// root header\n");

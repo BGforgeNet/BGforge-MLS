@@ -191,7 +191,10 @@ describe("weidu-compile", () => {
         it("writes text to temp file before executing", async () => {
             await compile(normalizeUri("file:///test.tp2"), baseSettings, false, "my content");
 
-            expect(mockWriteFile).toHaveBeenCalledWith(expect.stringMatching(/\.tp2$/), "my content");
+            expect(mockWriteFile).toHaveBeenCalledWith(expect.stringMatching(/\.tp2$/), "my content", {
+                flag: "wx",
+                mode: 0o600,
+            });
         });
     });
 

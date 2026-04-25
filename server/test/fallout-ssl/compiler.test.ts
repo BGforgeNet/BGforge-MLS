@@ -110,7 +110,10 @@ describe("fallout-ssl compiler", () => {
         it("writes text to .tmp.ssl using async fs.promises.writeFile", async () => {
             await compile(normalizeUri("file:///project/test.ssl"), baseSettings, false, "script code");
 
-            expect(mockWriteFile).toHaveBeenCalledWith(expect.stringContaining(TMP_SSL_NAME), "script code");
+            expect(mockWriteFile).toHaveBeenCalledWith(expect.stringContaining(TMP_SSL_NAME), "script code", {
+                flag: "wx",
+                mode: 0o600,
+            });
         });
 
         it("writes tmp file in the same directory as source (for include resolution)", async () => {
