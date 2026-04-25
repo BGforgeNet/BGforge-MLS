@@ -8,8 +8,8 @@ import { describe, expect, it } from "vitest";
 import * as fs from "fs";
 import * as path from "path";
 
-import { parseBinaryJsonSnapshot } from "../src/parsers/json-snapshot";
-import { proParser } from "../src/parsers/pro";
+import { parseBinaryJsonSnapshot } from "../src/json-snapshot";
+import { proParser } from "../src/pro";
 
 const FIXTURES = path.resolve("client/testFixture/proto");
 

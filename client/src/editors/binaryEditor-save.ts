@@ -1,7 +1,5 @@
 import * as vscode from "vscode";
-import type { ParseResult } from "../parsers";
-import { createBinaryJsonSnapshot } from "../parsers/json-snapshot";
-import { getSnapshotPath } from "../parsers/json-snapshot-path";
+import { type ParseResult, createBinaryJsonSnapshot, getSnapshotPath } from "@bgforge/binary";
 
 const AUTO_DUMP_JSON_SETTING = "binaryEditor.autoDumpJson";
 

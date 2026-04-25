@@ -30,9 +30,7 @@ vi.mock("vscode", () => {
 });
 
 import { BinaryDocument } from "../src/editors/binaryEditor-document";
-import type { ParseResult } from "../src/parsers/types";
-import { mapParser } from "../src/parsers/map";
-import { proParser } from "../src/parsers/pro";
+import { type ParseResult, mapParser, proParser } from "@bgforge/binary";
 import { buildBinaryEditorTreeState } from "../src/editors/binaryEditor-tree";
 
 function makeTestResult(): ParseResult {

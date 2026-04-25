@@ -1,6 +1,9 @@
 import type { BinaryEditorNode } from "./binaryEditor-messages";
 import { formatEditableNumberValue } from "./binaryEditor-formatting";
-import { isFlagActive } from "../parsers/flags";
+// Webview bundle is browser-targeted; importing from the @bgforge/binary
+// barrel pulls in zod and the full parser graph. Deep-imports the leaf
+// helper instead so esbuild can tree-shake to a tiny bundle.
+import { isFlagActive } from "../../../binary/src/flags";
 
 export function createNodeElement(node: BinaryEditorNode): HTMLElement {
     return node.kind === "group" ? createGroupElement(node) : createFieldElement(node);

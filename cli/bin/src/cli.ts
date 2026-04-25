@@ -7,13 +7,16 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { parserRegistry, type ParseOptions, type ParseResult } from "../../../client/src/parsers";
-import { getOutputPathForJsonSnapshot, getSnapshotPath } from "../../../client/src/parsers/json-snapshot-path";
 import {
+    parserRegistry,
+    type ParseOptions,
+    type ParseResult,
+    getOutputPathForJsonSnapshot,
+    getSnapshotPath,
     createBinaryJsonSnapshot,
     loadBinaryJsonSnapshot,
     parseBinaryJsonSnapshot,
-} from "../../../client/src/parsers/json-snapshot";
+} from "../../../binary/src";
 import {
     type FileResult,
     type OutputMode,

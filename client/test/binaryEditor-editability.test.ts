@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ParsedField } from "../src/parsers";
+import type { ParsedField } from "@bgforge/binary";
 import { isEditableFieldForFormat } from "../src/editors/binaryEditor-editability";
 
 function makeField(name: string, type: ParsedField["type"]): ParsedField {

@@ -6,11 +6,15 @@
 import * as vscode from "vscode";
 import * as path from "path";
 import { randomBytes } from "crypto";
-import { type BinaryParser, type ParseResult, parserRegistry } from "../parsers";
-import { formatAdapterRegistry } from "../parsers/format-adapter";
-import { createSemanticFieldKeyFromId } from "../parsers/presentation-schema";
-import { getSnapshotPath } from "../parsers/json-snapshot-path";
-import { loadBinaryJsonSnapshot } from "../parsers/json-snapshot";
+import {
+    type BinaryParser,
+    type ParseResult,
+    parserRegistry,
+    formatAdapterRegistry,
+    createSemanticFieldKeyFromId,
+    getSnapshotPath,
+    loadBinaryJsonSnapshot,
+} from "@bgforge/binary";
 import { escapeHtml } from "../utils";
 import { getCachedCssAsset, getCachedHtmlAsset, getCachedJsAsset } from "../webview-assets";
 import { BinaryDocument } from "./binaryEditor-document";

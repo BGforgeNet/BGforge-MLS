@@ -8,9 +8,9 @@
 import { describe, expect, it } from "vitest";
 import * as fs from "fs";
 import * as path from "path";
-import { isProStructuralFieldId, buildProStructuralTransitionBytes } from "../src/parsers/pro-transition";
-import { proParser } from "../src/parsers/pro";
-import type { ParseResult } from "../src/parsers/types";
+import { isProStructuralFieldId, buildProStructuralTransitionBytes } from "../src/pro-transition";
+import { proParser } from "../src/pro";
+import type { ParseResult } from "../src/types";
 
 const FIXTURES = path.resolve("client/testFixture/proto");
 

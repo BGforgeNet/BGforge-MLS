@@ -46,6 +46,7 @@ parallel \
     "Plugin unit tests" "vitest run --config plugins/tssl-plugin/vitest.config.ts && vitest run --config plugins/td-plugin/vitest.config.ts" \
     "Transpile lib unit tests" "vitest run --config transpilers/vitest.config.ts" \
     "Format lib unit tests" "vitest run --config format/vitest.config.ts" \
+    "Binary lib unit tests" "vitest run --config binary/vitest.config.ts" \
     "Script tests" "pnpm test:scripts" \
     "Knip" "pnpm knip" \
     "Knip prod" "pnpm knip:prod"

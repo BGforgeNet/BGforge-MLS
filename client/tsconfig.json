@@ -6,8 +6,11 @@
         "rootDir": "..",
         "sourceMap": true,
         "allowImportingTsExtensions": true,
-        "tsBuildInfoFile": "../tmp/client.tsbuildinfo"
+        "tsBuildInfoFile": "../tmp/client.tsbuildinfo",
+        "paths": {
+            "@bgforge/binary": ["../binary/src/index.ts"]
+        }
     },
-    "include": ["src", "../shared"],
+    "include": ["src", "../shared", "../binary/src"],
     "exclude": ["node_modules", ".vscode-test"]
 }

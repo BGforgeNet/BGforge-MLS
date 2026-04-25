@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { parseScalarFieldValue } from "../src/parsers/snapshot-common";
-import type { ParsedField } from "../src/parsers/types";
+import { parseScalarFieldValue } from "../src/snapshot-common";
+import type { ParsedField } from "../src/types";
 
 describe("snapshot-common", () => {
     it("parses MAP presentation values through stable field keys instead of display paths", () => {

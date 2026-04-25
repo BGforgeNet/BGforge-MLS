@@ -27,19 +27,19 @@ Use this end-to-end checklist when adding a new binary format to avoid missing o
 
 1. Parser and registry
 
-- Add `client/src/parsers/<format>.ts` implementing `BinaryParser` (`id`, `name`, `extensions`, `parse`, optional `serialize`).
-- Register the parser in `client/src/parsers/index.ts`.
+- Add `binary/src/<format>.ts` implementing `BinaryParser` (`id`, `name`, `extensions`, `parse`, optional `serialize`).
+- Register the parser in `binary/src/index.ts` (the side-effect block at the bottom of the public-API barrel).
 - Ensure extension mapping is reachable from the binary editor (`parserRegistry.getByExtension(...)`).
 
 2. Canonical model and serializer
 
-- Add `client/src/parsers/<format>-canonical-schemas.ts` (zod schema + types), `<format>-canonical-reader.ts` (rebuild helpers), and `<format>-canonical-writer.ts` (serializer); expose via a `<format>-canonical.ts` barrel.
+- Add `binary/src/<format>-canonical-schemas.ts` (zod schema + types), `<format>-canonical-reader.ts` (rebuild helpers), and `<format>-canonical-writer.ts` (serializer); expose via a `<format>-canonical.ts` barrel.
 - Ensure parser output populates `ParseResult.document` with the canonical document.
 - Ensure serializer prefers canonical document data over display tree data.
 
 3. Snapshot adapter
 
-- Add `client/src/parsers/<format>-json-snapshot.ts` with:
+- Add `binary/src/<format>-json-snapshot.ts` with:
     - `createCanonical<Format>JsonSnapshot(parseResult)`
     - `loadCanonical<Format>JsonSnapshot(jsonText, parseOptions?)`
 - Enforce round-trip checks: `snapshot -> bytes -> parse -> snapshot` semantic equality.

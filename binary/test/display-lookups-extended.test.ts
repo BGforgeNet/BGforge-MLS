@@ -13,7 +13,7 @@ import {
     resolveRawValueFromDisplay,
     formatEnumDisplayValue,
     resolveStoredFieldValue,
-} from "../src/parsers/display-lookups";
+} from "../src/display-lookups";
 
 // ---------------------------------------------------------------------------
 // resolveEnumLookup

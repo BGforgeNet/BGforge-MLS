@@ -5,7 +5,7 @@ import {
     resolveEnumLookup,
     resolveFlagLookup,
 } from "../src/editors/binaryEditor-lookups";
-import { resolveRawValueFromDisplay, resolveStoredFieldValue } from "../src/parsers/display-lookups";
+import { resolveRawValueFromDisplay, resolveStoredFieldValue } from "@bgforge/binary";
 
 describe("binaryEditor-lookups", () => {
     it("resolves MAP enum lookups by exact field name", () => {

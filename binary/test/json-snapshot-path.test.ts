@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getOutputPathForJsonSnapshot, getSnapshotPath } from "../src/parsers/json-snapshot-path";
+import { getOutputPathForJsonSnapshot, getSnapshotPath } from "../src/json-snapshot-path";
 
 describe("json-snapshot-path", () => {
     it("appends .json to the source filename", () => {

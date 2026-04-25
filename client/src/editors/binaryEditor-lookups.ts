@@ -1,6 +1,1 @@
-export {
-    resolveDisplayValue,
-    resolveEnumLookup,
-    resolveFlagLookup,
-    formatEnumDisplayValue,
-} from "../parsers/display-lookups";
+export { resolveDisplayValue, resolveEnumLookup, resolveFlagLookup, formatEnumDisplayValue } from "@bgforge/binary";

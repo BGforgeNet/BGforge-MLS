@@ -4,8 +4,8 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { encodeOpaqueRange, decodeOpaqueRange } from "../src/parsers/opaque-range";
-import type { ParseOpaqueRange } from "../src/parsers/types";
+import { encodeOpaqueRange, decodeOpaqueRange } from "../src/opaque-range";
+import type { ParseOpaqueRange } from "../src/types";
 
 describe("encodeOpaqueRange", () => {
     it("returns undefined when offset >= end", () => {

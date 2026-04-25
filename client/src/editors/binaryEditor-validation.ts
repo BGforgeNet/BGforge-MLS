@@ -3,7 +3,7 @@
  * Returns an error message string if invalid, undefined if valid.
  */
 
-import { validateNumericValue } from "../parsers/binary-format-contract";
+import { validateNumericValue } from "@bgforge/binary";
 
 /**
  * Validate that a numeric value is within the range for its type.

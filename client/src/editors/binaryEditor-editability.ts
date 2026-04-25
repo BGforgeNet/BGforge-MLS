@@ -1,5 +1,4 @@
-import type { ParsedField } from "../parsers";
-import { resolveFieldPresentation } from "../parsers/presentation-schema";
+import { type ParsedField, resolveFieldPresentation } from "@bgforge/binary";
 
 function isPotentiallyEditableValue(field: ParsedField): boolean {
     return field.type === "enum" || field.type === "flags" || field.type.includes("int") || field.type.includes("uint");

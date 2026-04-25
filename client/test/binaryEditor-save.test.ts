@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ParseResult } from "../src/parsers/types";
-import { createBinaryJsonSnapshot } from "../src/parsers/json-snapshot";
+import { type ParseResult, createBinaryJsonSnapshot } from "@bgforge/binary";
 
 const { writeFile, getConfiguration } = vi.hoisted(() => ({
     writeFile: vi.fn(),

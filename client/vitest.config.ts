@@ -4,8 +4,17 @@
  */
 
 import { defineConfig } from "vitest/config";
+import path from "path";
 
 export default defineConfig({
+    resolve: {
+        // Map the workspace package to its source so vitest can import it
+        // without requiring a build step. The built out/ does not exist until
+        // pnpm --filter @bgforge/binary build runs, but tests run from source.
+        alias: {
+            "@bgforge/binary": path.resolve(__dirname, "../binary/src/index.ts"),
+        },
+    },
     test: {
         name: "client",
         include: ["client/test/**/*.test.ts"],
@@ -20,7 +29,14 @@ export default defineConfig({
             // server+client coverage runs in scripts/test.sh don't race on
             // coverage/.tmp shard files.
             reportsDirectory: "coverage/client",
+            // Constrain measurement to client sources. Without this, v8 also
+            // counts files loaded transitively through workspace deps
+            // (@bgforge/binary), which sinks the ratio because the binary
+            // package has its own test suite under binary/test/.
+            include: ["client/src/**/*.ts"],
             exclude: [
+                // VS Code E2E harness (electron-driven), not unit-testable.
+                "client/src/test/**",
                 // VSCode extension entry point: activate/deactivate require the live vscode
                 // runtime; there is no meaningful unit surface to test here.
                 "client/src/extension.ts",

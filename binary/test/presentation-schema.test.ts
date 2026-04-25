@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-    getFormatPresentationSchema,
-    resolveFieldPresentation,
-    toNumericOptionMap,
-} from "../src/parsers/presentation-schema";
+import { getFormatPresentationSchema, resolveFieldPresentation, toNumericOptionMap } from "../src/presentation-schema";
 
 describe("presentation-schema", () => {
     it("exposes per-format presentation metadata for external consumers", () => {

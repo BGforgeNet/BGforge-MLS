@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 import * as fs from "fs";
 import * as path from "path";
-import type { ParseResult } from "../src/parsers/types";
-import { mapParser } from "../src/parsers/map";
-import { proParser } from "../src/parsers/pro";
+import { type ParseResult, mapParser, proParser } from "@bgforge/binary";
 import { buildBinaryEditorTreeState } from "../src/editors/binaryEditor-tree";
 
 function makeProResult(): ParseResult {

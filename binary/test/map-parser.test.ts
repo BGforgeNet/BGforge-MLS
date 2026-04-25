@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import * as fs from "fs";
 import * as path from "path";
-import { mapParser } from "../src/parsers/map";
-import { createBinaryJsonSnapshot, parseBinaryJsonSnapshot } from "../src/parsers/json-snapshot";
-import type { ParseResult } from "../src/parsers/types";
+import { mapParser } from "../src/map";
+import { createBinaryJsonSnapshot, parseBinaryJsonSnapshot } from "../src/json-snapshot";
+import type { ParseResult } from "../src/types";
 
 const REAL_MAPS = [
     path.resolve("external/fallout/Fallout2_Restoration_Project/data/maps/artemple.map"),

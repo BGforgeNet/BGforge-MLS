@@ -6,12 +6,8 @@
  */
 
 import { describe, expect, it } from "vitest";
-import {
-    loadBinaryJsonSnapshot,
-    createBinaryJsonSnapshot,
-    parseBinaryJsonSnapshot,
-} from "../src/parsers/json-snapshot";
-import type { ParseResult } from "../src/parsers/types";
+import { loadBinaryJsonSnapshot, createBinaryJsonSnapshot, parseBinaryJsonSnapshot } from "../src/json-snapshot";
+import type { ParseResult } from "../src/types";
 
 function makeSimpleResult(overrides: Partial<ParseResult> = {}): ParseResult {
     return {

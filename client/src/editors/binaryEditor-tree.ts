@@ -1,6 +1,13 @@
-import type { ParseResult, ParsedField, ParsedGroup } from "../parsers";
-import { formatAdapterRegistry, type ProjectedEntry } from "../parsers/format-adapter";
-import { createFieldKey, resolveFieldPresentation, toSemanticFieldKey } from "../parsers/presentation-schema";
+import {
+    type ParseResult,
+    type ParsedField,
+    type ParsedGroup,
+    type ProjectedEntry,
+    formatAdapterRegistry,
+    createFieldKey,
+    resolveFieldPresentation,
+    toSemanticFieldKey,
+} from "@bgforge/binary";
 import type { BinaryEditorNode } from "./binaryEditor-messages";
 import { isEditableFieldForFormat } from "./binaryEditor-editability";
 import { formatNumericValue } from "./binaryEditor-formatting";

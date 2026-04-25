@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { ParseResult } from "../src/parsers/types";
-import {
-    createBinaryJsonSnapshot,
-    loadBinaryJsonSnapshot,
-    parseBinaryJsonSnapshot,
-} from "../src/parsers/json-snapshot";
+import type { ParseResult } from "../src/types";
+import { createBinaryJsonSnapshot, loadBinaryJsonSnapshot, parseBinaryJsonSnapshot } from "../src/json-snapshot";
 
 function makeSnapshotResult(): ParseResult {
     return {

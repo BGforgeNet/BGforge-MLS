@@ -9,8 +9,8 @@ import { describe, expect, it } from "vitest";
 import * as fs from "fs";
 import * as path from "path";
 import { BufferReader, BufferWriter } from "typed-binary";
-import { createBinaryJsonSnapshot } from "../src/parsers/json-snapshot";
-import { proParser } from "../src/parsers/pro";
+import { createBinaryJsonSnapshot } from "../src/json-snapshot";
+import { proParser } from "../src/pro";
 import {
     headerSchema,
     itemCommonSchema,
@@ -31,8 +31,8 @@ import {
     wallSchema,
     tileSchema,
     miscSchema,
-} from "../src/parsers/pro-schemas";
-import { HEADER_SIZE, ITEM_SUBTYPE_OFFSET, SCENERY_SUBTYPE_OFFSET } from "../src/parsers/pro-types";
+} from "../src/pro-schemas";
+import { HEADER_SIZE, ITEM_SUBTYPE_OFFSET, SCENERY_SUBTYPE_OFFSET } from "../src/pro-types";
 
 const FIXTURES = path.resolve("client/testFixture/proto");
 

@@ -6,8 +6,15 @@
 
 import * as vscode from "vscode";
 import { conlog } from "../logging";
-import type { BinaryParser, ParseOptions, ParseResult, ParsedField, ParsedGroup } from "../parsers";
-import { formatAdapterRegistry, type BinaryFormatAdapter } from "../parsers/format-adapter";
+import {
+    type BinaryParser,
+    type ParseOptions,
+    type ParseResult,
+    type ParsedField,
+    type ParsedGroup,
+    type BinaryFormatAdapter,
+    formatAdapterRegistry,
+} from "@bgforge/binary";
 
 /**
  * Represents a single field edit for undo/redo.

@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { formatAdapterRegistry } from "../src/parsers/format-adapter";
+import { formatAdapterRegistry } from "../src/format-adapter";
 
 const adapter = formatAdapterRegistry.get("map")!;
 

@@ -4,7 +4,7 @@ import {
     getNumericTypeRange,
     validateNumericValue,
     zodFieldNumber,
-} from "../src/parsers/binary-format-contract";
+} from "../src/binary-format-contract";
 
 describe("binary-format-contract", () => {
     it("exposes shared primitive numeric ranges", () => {

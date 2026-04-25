@@ -13,10 +13,9 @@
         "test": "./scripts/test.sh"
     },
     "dependencies": {
-        "typed-binary": "^4.3.3",
+        "@bgforge/binary": "workspace:*",
         "vscode-languageclient": "8.1.0",
-        "vscode-languageserver-protocol": "3.17.3",
-        "zod": "^4.3.6"
+        "vscode-languageserver-protocol": "3.17.3"
     },
     "devDependencies": {
         "@types/node": "^22.19.17",

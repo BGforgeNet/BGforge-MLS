@@ -1,0 +1,13 @@
+{
+    "extends": "../tsconfig.base.json",
+    "compilerOptions": {
+        "lib": ["es2022"],
+        "allowImportingTsExtensions": true,
+        "noEmit": true,
+        "tsBuildInfoFile": "../tmp/binary-lib.tsbuildinfo",
+        "paths": {
+            "@bgforge/binary": ["./src/index.ts"]
+        }
+    },
+    "include": ["src", "test"]
+}

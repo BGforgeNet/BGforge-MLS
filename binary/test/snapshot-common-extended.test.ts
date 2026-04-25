@@ -6,8 +6,8 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { slugify, makeUniqueKey, parseScalarFieldValue, getScalarFieldLookupKey } from "../src/parsers/snapshot-common";
-import type { ParsedField } from "../src/parsers/types";
+import { slugify, makeUniqueKey, parseScalarFieldValue, getScalarFieldLookupKey } from "../src/snapshot-common";
+import type { ParsedField } from "../src/types";
 
 // ---------------------------------------------------------------------------
 // slugify

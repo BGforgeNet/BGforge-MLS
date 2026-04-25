@@ -12,7 +12,7 @@ import {
     createSemanticFieldKeyFromId,
     resolveFieldPresentation,
     toNumericOptionMap,
-} from "../src/parsers/presentation-schema";
+} from "../src/presentation-schema";
 
 // ---------------------------------------------------------------------------
 // createFieldKey
