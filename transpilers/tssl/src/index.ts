@@ -16,10 +16,8 @@
  *    bundled files (main + imports) via bundleResult.allEnumNames.
  */
 
-import * as fs from "fs";
 import * as path from "path";
 import { Project, SyntaxKind } from "ts-morph";
-import { fileURLToPath } from "url";
 import { EXT_TSSL } from "../../common/extensions";
 import { bundleWithEsbuild } from "../../common/esbuild-utils";
 import { conlog, type TsslContext, type MainFileData } from "./types";
@@ -30,9 +28,7 @@ import { exportSSL } from "./emit";
 // Inlined by esbuild at bundle time.
 import engineProcedureNames from "../../../server/out/fallout-ssl-engine-procedures.json";
 import { transformEnums } from "../../common/enum-transform";
-import { extractTraTag } from "../../common/transpiler-utils";
-
-const uriToPath = (uri: string) => (uri.startsWith("file://") ? fileURLToPath(uri) : uri);
+import { createTranspiler, type TranspilerEvent } from "../../common/transpiler-pipeline";
 
 /** Marker to identify start of user code in esbuild output */
 const TSSL_CODE_MARKER = "/* __TSSL_CODE_START__ */";
@@ -55,112 +51,101 @@ export function createBatchState(): TranspileBatchState {
     };
 }
 
-/**
- * Core transpilation pipeline: TSSL source text to SSL output string.
- * Shared by compile() (LSP, writes to disk) and transpile() (CLI, returns string).
- * @param filePath Absolute file path to the .tssl file
- * @param text Source text content
- * @param batch Optional shared state for batch processing (reuses Project + caches)
- * @returns Generated SSL output string
- */
-async function transpileCore(filePath: string, text: string, batch?: TranspileBatchState): Promise<string> {
-    const parsed = path.parse(filePath);
-    if (parsed.ext.toLowerCase() !== EXT_TSSL) {
-        throw new Error(`${filePath} is not a .tssl file`);
-    }
+const tssl = createTranspiler<string, TranspileBatchState | undefined>({
+    sourceExtension: EXT_TSSL,
+    targetExtension: ".ssl",
+    name: "TSSL",
 
-    // Extract @tra tag before bundling (esbuild strips comments)
-    const traTag = extractTraTag(text);
+    async transpileCore(filePath, text, traTag, batch) {
+        // Pre-transform enums for extracting constants/let vars.
+        // Pass enumNames to the shared bundler to skip redundant re-transformation.
+        const { code: enumTransformedText, enumNames } = transformEnums(text);
 
-    // Pre-transform enums for extracting constants/let vars.
-    // Pass enumNames to the shared bundler to skip redundant re-transformation.
-    const { code: enumTransformedText, enumNames } = transformEnums(text);
+        // Reuse project from batch state, or create a fresh one (LSP / single-file mode)
+        const project = batch?.project ?? new Project();
 
-    // Reuse project from batch state, or create a fresh one (LSP / single-file mode)
-    const project = batch?.project ?? new Project();
+        // Extract includes, constants, and let vars from the enum-transformed source
+        const { constants, letVars } = extractTopLevelVars(project, enumTransformedText);
+        const mainFileData: MainFileData = {
+            constants,
+            letVars,
+            // Extract includes from original text (enums don't affect includes)
+            includes: extractIncludes(text),
+        };
 
-    // Extract includes, constants, and let vars from the enum-transformed source
-    const { constants, letVars } = extractTopLevelVars(project, enumTransformedText);
-    const mainFileData: MainFileData = {
-        constants,
-        letVars,
-        // Extract includes from original text (enums don't affect includes)
-        includes: extractIncludes(text),
-    };
+        // Create context for this compilation (enumNames populated after bundling)
+        const ctx: TsslContext = {
+            inlineFunctions: new Map(),
+            definedFunctions: new Set(),
+            functionJsDocs: new Map(),
+            doStatementCounter: 0,
+            enumNames: new Set(),
+        };
 
-    // Create context for this compilation (enumNames populated after bundling)
-    const ctx: TsslContext = {
-        inlineFunctions: new Map(),
-        definedFunctions: new Set(),
-        functionJsDocs: new Map(),
-        doStatementCounter: 0,
-        enumNames: new Set(),
-    };
+        // Extract JSDoc from main source file before bundling (esbuild strips them).
+        // In batch mode, the file may already be in the project from a previous run.
+        const mainSource = project.getSourceFile(filePath) ?? project.addSourceFileAtPath(filePath);
+        extractJsDocs(mainSource, ctx);
+        conlog(`Extracted JSDoc for ${ctx.functionJsDocs.size} functions from main file`);
 
-    // Extract JSDoc from main source file before bundling (esbuild strips them).
-    // In batch mode, the file may already be in the project from a previous run.
-    const mainSource = project.getSourceFile(filePath) ?? project.addSourceFileAtPath(filePath);
-    extractJsDocs(mainSource, ctx);
-    conlog(`Extracted JSDoc for ${ctx.functionJsDocs.size} functions from main file`);
+        const preserveFunctions = extractPreserveFunctions(text);
+        const preserveCode = `\n// Preserve functions\nif ((globalThis as any).__preserve__) { console.log(${preserveFunctions.join(", ")}); }`;
 
-    const preserveFunctions = extractPreserveFunctions(text);
-    const preserveCode = `\n// Preserve functions\nif ((globalThis as any).__preserve__) { console.log(${preserveFunctions.join(", ")}); }`;
+        const bundleResult = await bundleWithEsbuild({
+            filePath,
+            sourceText: enumTransformedText,
+            preTransformed: { enumNames },
+            marker: TSSL_CODE_MARKER,
+            target: "es2022",
+            sourcefile: path.basename(filePath).replace(".tssl", ".ts"),
+            metafile: true,
+            appendCode: preserveCode,
+            originalConstants: mainFileData.constants,
+        });
 
-    const bundleResult = await bundleWithEsbuild({
-        filePath,
-        sourceText: enumTransformedText,
-        preTransformed: { enumNames },
-        marker: TSSL_CODE_MARKER,
-        target: "es2022",
-        sourcefile: path.basename(filePath).replace(".tssl", ".ts"),
-        metafile: true,
-        appendCode: preserveCode,
-        originalConstants: mainFileData.constants,
-    });
+        // All enum names (main file + imported files) for inline function expansion
+        ctx.enumNames = bundleResult.allEnumNames;
 
-    // All enum names (main file + imported files) for inline function expansion
-    ctx.enumNames = bundleResult.allEnumNames;
+        // Create source file in memory from cleaned bundled code
+        const sourceFile = project.createSourceFile("bundled.ts", bundleResult.code, { overwrite: true });
 
-    // Create source file in memory from cleaned bundled code
-    const sourceFile = project.createSourceFile("bundled.ts", bundleResult.code, { overwrite: true });
+        // Extract inline functions from files that were actually bundled.
+        // In batch mode, the cache avoids re-parsing shared imports (e.g., folib).
+        ctx.inlineFunctions = extractInlineFunctionsFromFiles(
+            project,
+            bundleResult.inputFiles,
+            batch?.inlineFunctionCache,
+        );
+        conlog(`Found ${ctx.inlineFunctions.size} inline functions`);
 
-    // Extract inline functions from files that were actually bundled.
-    // In batch mode, the cache avoids re-parsing shared imports (e.g., folib).
-    ctx.inlineFunctions = extractInlineFunctionsFromFiles(project, bundleResult.inputFiles, batch?.inlineFunctionCache);
-    conlog(`Found ${ctx.inlineFunctions.size} inline functions`);
+        return exportSSL(sourceFile, path.parse(filePath).base, mainFileData, ctx, traTag);
+    },
 
-    return exportSSL(sourceFile, parsed.base, mainFileData, ctx, traTag);
+    getOutput: (result) => result,
+});
+
+export interface TSSLCompileResult {
+    sslPath: string;
+    events: readonly TranspilerEvent[];
 }
 
 /**
  * Convert TSSL to SSL, writing the output to disk.
  * Used by the LSP compile handler.
- * @param uri VSCode document URI or file path
- * @param text Source text content
- * @returns Path to generated SSL file
  */
-export async function compile(uri: string, text: string): Promise<string> {
-    const filePath = uriToPath(uri);
-    const output = await transpileCore(filePath, text);
-
-    const parsed = path.parse(filePath);
-    const sslPath = path.join(parsed.dir, `${parsed.name}.ssl`);
-    fs.writeFileSync(sslPath, output, "utf-8");
-    conlog(`Content saved to ${sslPath}`);
-
-    return sslPath;
+export async function compile(uri: string, text: string): Promise<TSSLCompileResult> {
+    // No batch state on the LSP compile path — TSSL CLI directory mode is the only batch consumer.
+    const { outPath, events } = await tssl.compile(uri, text, undefined);
+    return { sslPath: outPath, events };
 }
 
 /**
  * Transpile TSSL to SSL, returning the output string without writing to disk.
  * Used by the CLI where the caller controls file I/O.
- * @param filePath Absolute file path to the .tssl file
- * @param text Source text content
  * @param batch Optional shared state for batch processing (pass createBatchState() result)
- * @returns Generated SSL output string
  */
 export async function transpile(filePath: string, text: string, batch?: TranspileBatchState): Promise<string> {
-    return transpileCore(filePath, text, batch);
+    return tssl.transpile(filePath, text, batch);
 }
 
 /**

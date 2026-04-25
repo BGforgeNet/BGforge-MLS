@@ -110,7 +110,7 @@ export async function compile(uri: string, langId: string, interactive = false, 
         }
         if (uri.toLowerCase().endsWith(EXT_TSSL)) {
             try {
-                const sslPath = await tssl.compile(uri, text);
+                const { sslPath } = await tssl.compile(uri, text);
                 const sslName = path.basename(sslPath);
                 if (interactive) {
                     showInfo(`Transpiled to ${sslName}`);
