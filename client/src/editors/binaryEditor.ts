@@ -410,15 +410,21 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
     private getHtmlShell(document: BinaryDocument): string {
         const fileName = path.basename(document.uri.fsPath);
         const nonce = randomBytes(16).toString("base64");
-        return this.getHtmlTemplate()
-            .replace(/\{\{fileName\}\}/g, escapeHtml(fileName))
-            .replace("{{formatName}}", escapeHtml(document.parseResult.formatName))
-            .replace("{{styles}}", this.getCss())
-            .replace("{{errors}}", "")
-            .replace("{{warnings}}", "")
-            .replace("{{tree}}", '<div class="loading">Loading...</div>')
-            .replace("/* __SCRIPT__ */", this.getJs())
-            .replace(/\{\{nonce\}\}/g, nonce);
+        return (
+            this.getHtmlTemplate()
+                .replace(/\{\{fileName\}\}/g, escapeHtml(fileName))
+                .replace("{{formatName}}", escapeHtml(document.parseResult.formatName))
+                .replace("{{styles}}", this.getCss())
+                // The {{errors}}/{{warnings}} placeholders sit in the static HTML
+                // before the webview script runs; substituting them with empty
+                // strings here prevents a brief flash of literal '{{errors}}' text
+                // until the init message arrives and renderMessages() takes over.
+                .replace("{{errors}}", "")
+                .replace("{{warnings}}", "")
+                .replace("{{tree}}", '<div class="loading">Loading...</div>')
+                .replace("/* __SCRIPT__ */", this.getJs())
+                .replace(/\{\{nonce\}\}/g, nonce)
+        );
     }
 }
 

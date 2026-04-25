@@ -125,6 +125,12 @@ Three artifact streams, all triggered by `git tag vX.Y.Z` -> GitHub Actions. See
 
 **Changelog entries:** Document only user-facing changes (new features, bug fixes, behavior changes). Do not include implementation details (refactoring, test additions, code quality improvements, internal constants). Users care about what changed, not how it was implemented.
 
+**Pinned dependency constraints:**
+
+- `client/package.json:vscode-languageserver-protocol` is pinned to the same patch level as the `vscode-languageclient` and `vscode-languageserver` majors (currently `8.1.0` / protocol `3.17.3`). Bumping the protocol patch independently breaks `client.sendRequest(ExecuteCommandRequest.type, ...)` overloads — the LSP client/server/protocol triplet must move together when the LSP majors are upgraded.
+- `vscode-languageclient` / `vscode-languageserver` themselves remain on `8.1.0` while the `9.x` line is `9.0.x` only; the cross-major bump waits for a `9.1` release that proves the major has matured.
+- `pnpm.overrides` for `mocha>diff` and `mocha>serialize-javascript` exist for security-advisory reasons; revisit only when the underlying advisories are closed.
+
 ## Architecture
 
 LSP-based extension with provider-registry pattern. Monorepo with separate `client/` and `server/` packages. Build uses esbuild (not tsc) for all bundles.

@@ -118,7 +118,13 @@ export function sendParseResult(parseResult: ParseResult, mainUri: string, tmpUr
     }
 }
 
-/** Check if 1st dir contains the 2nd */
+/**
+ * Check if 1st dir contains the 2nd. Resolves `outerPath` via realpathSync on
+ * every call. Use this only when the outer is short-lived or rarely the same
+ * twice — for hot paths where the outer is stable (workspace root, translation
+ * directory), use `isSubpathResolved` with a cached resolved value instead.
+ * Current callers all run on debounced reload paths, not LSP-request hot paths.
+ */
 export function isSubpath(outerPath: string | undefined, innerPath: string): boolean {
     if (outerPath === undefined) {
         return false;
