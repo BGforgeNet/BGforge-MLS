@@ -81,8 +81,6 @@ vscode-mls/
 |   +-- src/
 |   |   +-- extension.ts        Entry point (activate/deactivate, LSP client)
 |   |   +-- (TS plugins moved to plugins/ directory)
-|   |   +-- filter-diagnostics.ts   Diagnostic filtering for TSSL plugin
-|   |   +-- engine-proc-hover.ts    Engine procedure hover docs injection
 |   |   +-- indicator.ts            Server initialization progress indicator
 |   |   +-- dialog-tree/            Dialog tree preview (webview panels)
 |   |   +-- editors/                Binary .pro/.map editor (custom editor)
@@ -519,9 +517,7 @@ and rationale.
 | bgforge-tssl-plugin       | `node_modules/`        | Loaded by tsserver by package name    |
 | bgforge-td-plugin         | `node_modules/`        | Loaded by tsserver by package name    |
 
-**Validation**: `scripts/test-package-deps.ts` runs in CI and catches missing
-`.vscodeignore` entries by scanning build scripts, source code, and `package.json`
-contributes. See [docs/ignore-files.md](ignore-files.md#packaging-notes) for details.
+See [docs/ignore-files.md](ignore-files.md#packaging-notes) for `.vscodeignore` details.
 
 ## Latency Budgets
 
