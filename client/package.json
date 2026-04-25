@@ -14,7 +14,7 @@
     },
     "dependencies": {
         "typed-binary": "^4.3.3",
-        "vscode-languageclient": "8.1.0",
+        "vscode-languageclient": "9.0.1",
         "vscode-languageserver-protocol": "3.17.3",
         "zod": "^4.3.6"
     },
