@@ -29,6 +29,7 @@ import {
 } from "vscode-languageserver/node";
 import { type FormatResult, type LanguageProvider, type ProviderContext, HoverResult } from "./language-provider";
 import { conlog, errorMessage } from "./common";
+import { showError } from "./user-messages";
 import { validLocationOrNull } from "./core/location-utils";
 import { normalizeUri } from "./core/normalized-uri";
 import { decodeWorkspaceSymbolQuery } from "../../shared/protocol";
@@ -68,7 +69,10 @@ class ProviderRegistry {
                 // eslint-disable-next-line no-await-in-loop
                 await provider.init(context);
             } catch (error) {
-                conlog(`Failed to initialize provider ${provider.id}: ${errorMessage(error)}`, "error");
+                const message = errorMessage(error);
+                conlog(`Failed to initialize provider ${provider.id}: ${message}`, "error");
+                // Surface to the user so the affected language doesn't silently have empty results.
+                showError(`BGforge MLS: ${provider.id} failed to initialize: ${message}`);
             }
         }
         conlog(`Initialized ${this.providers.size} providers`);

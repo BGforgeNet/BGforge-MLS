@@ -35,6 +35,15 @@ vi.mock("../src/common", () => ({
     pathToUri: vi.fn((p: string) => `file://${p}`),
 }));
 
+// Mock user-messages so init failures don't try to call into an uninitialised LSP connection.
+vi.mock("../src/user-messages", () => ({
+    showInfo: vi.fn(),
+    showWarning: vi.fn(),
+    showError: vi.fn(),
+    showErrorWithActions: vi.fn(),
+    decodeFileUris: (s: string) => s,
+}));
+
 // Mock fs.readFileSync for file watching tests
 vi.mock("node:fs", () => ({
     readFileSync: vi.fn(() => "mock file content"),
