@@ -98,7 +98,7 @@ jobs:
             # dereferences pnpm symlinks that vsce can't follow.
             - name: Publish to Open VSX Registry
               if: "startsWith(github.ref, 'refs/tags/')"
-              uses: HaaLeo/publish-vscode-extension@4004fc217b5ac892b15a1c3cbe6458de97242dde # v2
+              uses: HaaLeo/publish-vscode-extension@ca5561daa085dee804bf9f37fe0165785a9b14db # v2
               id: publishToOpenVSX
               with:
                   pat: ${{ secrets.OPEN_VSX_TOKEN }}
@@ -106,7 +106,7 @@ jobs:
 
             - name: Publish to Visual Studio Marketplace
               if: "startsWith(github.ref, 'refs/tags/')"
-              uses: HaaLeo/publish-vscode-extension@4004fc217b5ac892b15a1c3cbe6458de97242dde # v2
+              uses: HaaLeo/publish-vscode-extension@ca5561daa085dee804bf9f37fe0165785a9b14db # v2
               with:
                   pat: ${{ secrets.VS_MARKETPLACE_TOKEN }}
                   registryUrl: https://marketplace.visualstudio.com
