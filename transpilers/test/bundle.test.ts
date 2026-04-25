@@ -18,6 +18,12 @@ import * as path from "path";
 const BUNDLE = path.resolve("transpilers/out/index.js");
 const DTS = path.resolve("transpilers/out/index.d.ts");
 
+function isExecError(
+    err: unknown,
+): err is { status?: number | null; stdout?: string | Buffer; stderr?: string | Buffer } {
+    return typeof err === "object" && err !== null && ("status" in err || "stdout" in err || "stderr" in err);
+}
+
 function runNode(script: string): { code: number; stdout: string; stderr: string } {
     try {
         const stdout = execFileSync(process.execPath, ["--no-warnings", "--input-type=module", "-e", script], {
@@ -26,8 +32,12 @@ function runNode(script: string): { code: number; stdout: string; stderr: string
         });
         return { code: 0, stdout, stderr: "" };
     } catch (err: unknown) {
-        const e = err as { status: number; stdout: string; stderr: string };
-        return { code: e.status ?? 1, stdout: e.stdout ?? "", stderr: e.stderr ?? "" };
+        if (!isExecError(err)) throw err;
+        return {
+            code: err.status ?? 1,
+            stdout: typeof err.stdout === "string" ? err.stdout : (err.stdout?.toString("utf-8") ?? ""),
+            stderr: typeof err.stderr === "string" ? err.stderr : (err.stderr?.toString("utf-8") ?? ""),
+        };
     }
 }
 
