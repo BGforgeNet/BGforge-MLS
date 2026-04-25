@@ -245,13 +245,21 @@ export const SCOPE_CONSTANTS: ReadonlySet<string> = new Set([
  *   - tlk(N)     / $tlk(N)     -> N (bare number; # prefix is D text-only)
  *   - Bare SCOPE_CONSTANTS     -> "CONSTANT"
  *
- * Both TBAF and TD transpilers need this same resolution logic.
- * TBAF uses it as the primary resolution (post-processing on flat string IR).
- * TD uses it as a safety net in the emitter (primary resolution is AST-level
- * in expressionToActionString/evaluateExpression, which produces a typed IR).
+ * Both TBAF and TD transpilers call this; the layering is intentional and
+ * not redundant:
+ *   - AST-level resolution (TD's expressionToActionString in parse-helpers.ts,
+ *     TBAF's evaluateExpression in transform.ts) is where vars-context
+ *     substitution happens — e.g. `obj(npc)` where `const npc = "[ANYONE]"`
+ *     resolves through the variable binding. The regex pass below cannot
+ *     reach that information; it sees only the rendered string.
+ *   - applyHelperFixups is the unified last-mile pass over rendered IR
+ *     fields. Some IR carries raw expression text from sites that bypass
+ *     AST-level resolution (TD patch ops, chain triggers, TBAF action args
+ *     that flow through fixupArgs). Running the regex over every emitted
+ *     trigger/action lets those sites share one resolver instead of each
+ *     re-implementing tra/tlk/obj handling.
  *
- * TODO: consider unifying the handling so both transpilers use the same
- * resolution strategy instead of TD doing AST-level + regex safety net.
+ * Idempotency below means both layers can run without double-substitution.
  *
  * Safe to call multiple times (idempotent on already-resolved values).
  *
