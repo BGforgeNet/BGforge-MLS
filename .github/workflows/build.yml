@@ -154,6 +154,12 @@ jobs:
             id-token: write
             contents: write
             actions: read
-        uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0 # tag
+        # MUST be pinned to a full @vX.Y.Z tag, NOT a commit SHA, despite the
+        # rest of this workflow's third-party-action SHA-pinning convention.
+        # slsa-verifier validates the workflow_ref recorded in the provenance
+        # attestation against the trusted builder's published tag — pinning by
+        # SHA would make the resulting attestation unverifiable. See
+        # https://github.com/slsa-framework/slsa-github-generator README.
+        uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0
         with:
             base64-subjects: ${{ needs.build.outputs.artifact-subjects }}
