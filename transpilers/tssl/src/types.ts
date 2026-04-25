@@ -74,8 +74,9 @@ export interface SourceSection {
     procedures: string[];
 }
 
-// Use console.log directly for CLI compatibility (conlog depends on LSP connection)
-export const conlog = console.log;
+// Route diagnostics to stderr so CLI stdout mode (`fgtp file.tssl`) stays a clean
+// pipe. conlog depends on the LSP connection and isn't usable from the CLI.
+export const conlog = console.error;
 
 /**
  * How many lines to look backwards when searching for esbuild source comments.
