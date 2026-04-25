@@ -46,7 +46,14 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
         const jsonPath = getSnapshotPath(filePath);
 
         if (mode === "save") {
-            const existing = fs.existsSync(jsonPath) ? fs.readFileSync(jsonPath, "utf-8").trim() : null;
+            // Read with try/catch instead of existsSync→readFileSync to avoid
+            // the TOCTOU window CodeQL js/file-system-race flags.
+            let existing: string | null = null;
+            try {
+                existing = fs.readFileSync(jsonPath, "utf-8").trim();
+            } catch (err) {
+                if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+            }
             if (existing !== json) {
                 fs.writeFileSync(jsonPath, json + "\n");
                 console.log(`Saved: ${jsonPath}`);
@@ -54,11 +61,16 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
             }
             return "unchanged";
         } else if (mode === "check") {
-            if (!fs.existsSync(jsonPath)) {
-                console.error(`Missing: ${jsonPath}`);
-                return "error";
+            let expectedText: string;
+            try {
+                expectedText = fs.readFileSync(jsonPath, "utf-8");
+            } catch (err) {
+                if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+                    console.error(`Missing: ${jsonPath}`);
+                    return "error";
+                }
+                throw err;
             }
-            const expectedText = fs.readFileSync(jsonPath, "utf-8");
             let expected = expectedText.trim();
             try {
                 expected = createBinaryJsonSnapshot(parseBinaryJsonSnapshot(expectedText)).trimEnd();

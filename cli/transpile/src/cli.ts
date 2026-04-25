@@ -71,8 +71,18 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
 
         const outPath = getOutputPath(filePath, type);
 
+        // Read with try/catch instead of existsSync→readFileSync to avoid the
+        // TOCTOU window CodeQL js/file-system-race flags.
+        const readExisting = (): string | null => {
+            try {
+                return fs.readFileSync(outPath, "utf-8");
+            } catch (err) {
+                if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
+                throw err;
+            }
+        };
         if (mode === "save") {
-            const existing = fs.existsSync(outPath) ? fs.readFileSync(outPath, "utf-8") : null;
+            const existing = readExisting();
             if (existing !== output) {
                 fs.writeFileSync(outPath, output, "utf-8");
                 console.log(`Transpiled: ${filePath} -> ${path.basename(outPath)}`);
@@ -80,7 +90,7 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
             }
             return "unchanged";
         } else if (mode === "check") {
-            const existing = fs.existsSync(outPath) ? fs.readFileSync(outPath, "utf-8") : null;
+            const existing = readExisting();
             if (existing !== output) {
                 reportDiff(filePath, existing ?? "", output);
                 return "changed";
