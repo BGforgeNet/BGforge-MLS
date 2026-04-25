@@ -74,13 +74,30 @@ export function resolveStoredFieldValue(format: string, fieldKey: string, fieldN
     return String(rawValue);
 }
 
+// Strip a trailing " (123)" annotation produced by `formatEnumDisplayValue`.
+// Implemented as an indexed scan rather than the natural `/\s+\((-?\d+)\)$/`
+// because that pattern is polynomial: the `\s+...$` shape forces the engine
+// to retry every starting position when the trailing parenthesised number is
+// absent, giving O(n²) on inputs with long whitespace runs (CodeQL
+// js/polynomial-redos). The display lookups are reachable from library
+// callers via `@bgforge/binary`, so input is treated as untrusted.
+function stripTrailingNumberParen(value: string): string {
+    if (!value.endsWith(")")) return value;
+    const open = value.lastIndexOf("(");
+    if (open < 1) return value;
+    if (!/^-?\d+$/.test(value.slice(open + 1, -1))) return value;
+    const beforeOpen = value.slice(0, open);
+    const stripped = beforeOpen.trimEnd();
+    return stripped.length === beforeOpen.length ? value : stripped;
+}
+
 export function resolveRawValueFromDisplay(
     format: string,
     fieldKey: string,
     fieldName: string,
     value: string,
 ): number | undefined {
-    const normalized = value.replace(/\s+\((-?\d+)\)$/, "");
+    const normalized = stripTrailingNumberParen(value);
 
     const enumTable = resolveEnumLookup(format, fieldKey, fieldName);
     if (enumTable) {

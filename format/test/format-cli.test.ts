@@ -305,4 +305,26 @@ describe("format CLI integration", () => {
             expect(code).toBe(1);
         });
     });
+
+    describe("fallout-ssl preprocessor idempotence", () => {
+        // Regression: a multiline `#define` whose body ends with `\<newline>`
+        // followed by a blank continuation line carries that blank line as part
+        // of the directive's tree-sitter node text. The terminating newline
+        // makes the macro definition end *before* a following directive on the
+        // next reparse; if the formatter strips it, the parser merges the next
+        // `#define` into the macro body and the second formatting pass loses
+        // the blank line that originally separated them.
+        it("preserves blank-continuation termination of a multiline #define", () => {
+            // Three consecutive directives are needed because the merge induced
+            // by stripping the load-bearing newline only changes the layout
+            // *between* later directives — a 2-directive case collapses on the
+            // first pass and is then stably idempotent in its degraded form.
+            const input = "#define A  (foo)                  \\\n\n#define B  bar\n\n#define C  baz\n";
+            const file = path.join(tmpDir, "preproc.ssl");
+            fs.writeFileSync(file, input);
+            const { code, stderr } = run(file, "--save-and-check");
+            expect(stderr).not.toContain("Formatter not idempotent");
+            expect(code).toBe(0);
+        });
+    });
 });

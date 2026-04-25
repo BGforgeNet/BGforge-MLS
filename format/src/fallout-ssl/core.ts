@@ -69,31 +69,63 @@ function contentEndRow(node: SyntaxNode): number {
     return node.text.endsWith("\n") ? node.endPosition.row - 1 : node.endPosition.row;
 }
 
-// Normalize preprocessor directives with trailing comments
+// Normalize preprocessor directives with trailing comments.
+//
+// The natural form `text.match(/^(.+?)(\s*)(\/\/[^\r\n]*)[\r\n]*$/)` is
+// polynomial: lazy `(.+?)` and greedy `(\s*)` overlap (whitespace can belong
+// to either capture), so the engine retries every split point on input that
+// looks code-like but lacks the trailing comment. The block-comment variant
+// has the same shape. The formatter is library-exposed via `@bgforge/format`,
+// so input is treated as untrusted and we use indexed scans here (CodeQL
+// js/polynomial-redos).
 function normalizePreprocessor(text: string): string {
-    // Check for trailing line comment.
-    // Use [^\r\n]* instead of .* — tree-sitter node text includes trailing \r\n
-    // (CRLF files) or \n (LF files), and . matches \r, corrupting the comment.
-    const lineCommentMatch = text.match(/^(.+?)(\s*)(\/\/[^\r\n]*)[\r\n]*$/);
-    if (lineCommentMatch) {
-        const code = lineCommentMatch[1];
-        const comment = lineCommentMatch[3];
-        if (code && comment) {
-            return code.trimEnd() + ctx.indent + normalizeComment(comment);
+    // Identify the trailing `[\r\n]*` tail, then search the body for a comment.
+    // The comment branches return `code + indent + comment`, with no tail —
+    // matching the original regexes' `[\r\n]*$` consumption.
+    let tailStart = text.length;
+    while (tailStart > 0) {
+        const c = text.charCodeAt(tailStart - 1);
+        if (c !== 10 && c !== 13) break;
+        tailStart--;
+    }
+    const body = text.slice(0, tailStart);
+
+    // Trailing line comment: split at the first "//" with non-empty code
+    // before. Preprocessor lines have no string literals, so a literal
+    // `indexOf` is safe.
+    const slashIdx = body.indexOf("//");
+    if (slashIdx > 0) {
+        const code = body.slice(0, slashIdx).trimEnd();
+        const comment = body.slice(slashIdx);
+        if (code && !comment.includes("\n")) {
+            return code + ctx.indent + normalizeComment(comment);
         }
     }
-    // Check for trailing block comment (single line only)
-    const blockCommentMatch = text.match(/^(.+?)(\s*)(\/\*[^]*?\*\/)[\r\n]*$/);
-    if (blockCommentMatch) {
-        const code = blockCommentMatch[1];
-        const comment = blockCommentMatch[3];
-        if (code && comment && !comment.includes("\n")) {
-            return code.trimEnd() + ctx.indent + normalizeComment(comment);
+
+    // Trailing block comment, single line only and ending the directive.
+    if (body.endsWith("*/")) {
+        const openIdx = body.lastIndexOf("/*");
+        if (openIdx > 0) {
+            const comment = body.slice(openIdx);
+            if (!comment.includes("\n")) {
+                const code = body.slice(0, openIdx).trimEnd();
+                if (code) {
+                    return code + ctx.indent + normalizeComment(comment);
+                }
+            }
         }
     }
-    // Strip trailing line ending — #define nodes include it in their text,
-    // but parts are joined with \n so the caller provides newlines.
-    return text.replace(/\r?\n$/, "");
+
+    // No comment branch: strip exactly one `\r?\n` at the end, matching the
+    // original `text.replace(/\r?\n$/, "")`. Trailing newlines beyond the
+    // first are load-bearing — a multiline `#define` whose body ends with
+    // `\<newline><blank-line-newline>` relies on that blank-continuation
+    // newline to terminate the macro on the next reparse. Eating it would
+    // make the parser merge the following directive into this one and break
+    // formatter idempotence on real-world `.ssl` sources.
+    if (text.endsWith("\r\n")) return text.slice(0, -2);
+    if (text.endsWith("\n")) return text.slice(0, -1);
+    return text;
 }
 
 // Normalize comment spacing:
@@ -164,8 +196,16 @@ export function formatNode(node: SyntaxNode, depth: number): string {
     switch (node.type) {
         case SyntaxType.SourceFile: {
             const content = formatChildren(node, depth);
-            // Replace tabs, remove leading blank lines, ensure exactly one trailing newline
-            return content.replace(/\t/g, ctx.indent).replace(/^\n+/, "").replace(/\n+$/, "") + "\n";
+            // Replace tabs and ensure exactly one leading/trailing newline.
+            // The trailing strip is a manual scan rather than `/\n+$/` because
+            // `\n+` followed by `$` is polynomial: the engine retries every
+            // starting position on input with internal `\n` runs, giving O(n²)
+            // (CodeQL js/polynomial-redos). The leading-`/^\n+/` is anchored
+            // and therefore linear.
+            const expanded = content.replace(/\t/g, ctx.indent).replace(/^\n+/, "");
+            let endIdx = expanded.length;
+            while (endIdx > 0 && expanded.charCodeAt(endIdx - 1) === 10) endIdx--;
+            return expanded.slice(0, endIdx) + "\n";
         }
         case SyntaxType.Preprocessor:
             // Trailing comment handling is done by callers (formatProcedure, formatChildren)

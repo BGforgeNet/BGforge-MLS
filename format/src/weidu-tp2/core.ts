@@ -222,6 +222,32 @@ function formatInlinedFile(node: SyntaxNode, ctx: FormatContext, depth: number):
     return indent + node.text.trim();
 }
 
+/**
+ * Split a string before each `SAY` keyword that is preceded by whitespace.
+ * Equivalent to `text.split(/\s+(?=SAY\b)/i)` for the inputs this formatter
+ * sees, but linear-time. See call site for rationale.
+ */
+function splitBeforeSayKeyword(text: string): string[] {
+    const parts: string[] = [];
+    const sayPattern = /SAY\b/gi;
+    let lastIdx = 0;
+    let match: RegExpExecArray | null;
+    while ((match = sayPattern.exec(text)) !== null) {
+        let splitAt = match.index;
+        let whitespaceLen = 0;
+        while (splitAt > lastIdx && /\s/.test(text[splitAt - 1] ?? "")) {
+            splitAt--;
+            whitespaceLen++;
+        }
+        // Match `\s+` semantics: require at least one whitespace char before SAY.
+        if (whitespaceLen === 0) continue;
+        parts.push(text.slice(lastIdx, splitAt));
+        lastIdx = match.index;
+    }
+    if (lastIdx < text.length) parts.push(text.slice(lastIdx));
+    return parts;
+}
+
 /** Format a simple node, splitting long lines with multiple string arguments. */
 function formatSimpleNode(node: SyntaxNode, ctx: FormatContext, depth: number): string {
     const indent = ctx.indent.repeat(depth);
@@ -289,8 +315,16 @@ function formatSimpleNode(node: SyntaxNode, ctx: FormatContext, depth: number): 
         const remainingStart = lastString.endIndex - node.startIndex;
         const remaining = normalizeWhitespace(node.text.slice(remainingStart));
         if (remaining) {
-            // Split remaining content by lines and indent each
-            for (const part of remaining.split(/\s+(?=SAY\b)/i)) {
+            // Split remaining content by lines and indent each.
+            // The natural form `remaining.split(/\s+(?=SAY\b)/i)` is polynomial:
+            // `\s+` followed by a lookahead that may fail forces the engine to
+            // retry shorter `\s+` matches at every starting position, giving
+            // O(n²) on whitespace-heavy adversarial input (CodeQL
+            // js/polynomial-redos). The formatter is library-exposed via
+            // `@bgforge/format`, so the scanner here is hand-rolled to keep
+            // worst-case linear: anchored `/SAY\b/gi` is unambiguous, and the
+            // per-character whitespace walk-back is bounded by the run length.
+            for (const part of splitBeforeSayKeyword(remaining)) {
                 if (part.trim()) {
                     lines.push(argIndent + part.trim());
                 }
