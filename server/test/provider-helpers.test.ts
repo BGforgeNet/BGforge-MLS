@@ -74,16 +74,16 @@ describe("resolveSymbolWithLocal", () => {
         const lookupLocal = vi.fn().mockReturnValue(localSymbol);
         const symbols = mockSymbols([{ name: "foo", uri: null }]);
 
-        const result = resolveSymbolWithLocal("foo", "text", "file:///a.ts", symbols, lookupLocal);
+        const result = resolveSymbolWithLocal("foo", "text", 1, "file:///a.ts", symbols, lookupLocal);
         expect(result).toBe(localSymbol);
-        expect(lookupLocal).toHaveBeenCalledWith("foo", "text", "file:///a.ts");
+        expect(lookupLocal).toHaveBeenCalledWith("foo", "text", 1, "file:///a.ts");
     });
 
     it("falls back to indexed symbol from different file", () => {
         const lookupLocal = vi.fn().mockReturnValue(undefined);
         const symbols = mockSymbols([{ name: "foo", uri: "file:///other.ts" }]);
 
-        const result = resolveSymbolWithLocal("foo", "text", "file:///a.ts", symbols, lookupLocal);
+        const result = resolveSymbolWithLocal("foo", "text", 1, "file:///a.ts", symbols, lookupLocal);
         expect(result?.name).toBe("foo");
     });
 
@@ -91,7 +91,7 @@ describe("resolveSymbolWithLocal", () => {
         const lookupLocal = vi.fn().mockReturnValue(undefined);
         const symbols = mockSymbols([{ name: "foo", uri: null }]);
 
-        const result = resolveSymbolWithLocal("foo", "text", "file:///a.ts", symbols, lookupLocal);
+        const result = resolveSymbolWithLocal("foo", "text", 1, "file:///a.ts", symbols, lookupLocal);
         expect(result?.name).toBe("foo");
     });
 
@@ -99,7 +99,7 @@ describe("resolveSymbolWithLocal", () => {
         const lookupLocal = vi.fn().mockReturnValue(undefined);
         const symbols = mockSymbols([{ name: "foo", uri: "file:///a.ts" }]);
 
-        const result = resolveSymbolWithLocal("foo", "text", "file:///a.ts", symbols, lookupLocal);
+        const result = resolveSymbolWithLocal("foo", "text", 1, "file:///a.ts", symbols, lookupLocal);
         expect(result).toBeUndefined();
     });
 
@@ -107,7 +107,7 @@ describe("resolveSymbolWithLocal", () => {
         const lookupLocal = vi.fn().mockReturnValue(undefined);
         const symbols = mockSymbols([]);
 
-        const result = resolveSymbolWithLocal("foo", "text", "file:///a.ts", symbols, lookupLocal);
+        const result = resolveSymbolWithLocal("foo", "text", 1, "file:///a.ts", symbols, lookupLocal);
         expect(result).toBeUndefined();
     });
 });

@@ -144,14 +144,15 @@ class FalloutSslProvider
     }
 
     resolveSymbol(name: string, text: string, uri: string): IndexedSymbol | undefined {
-        const local = lookupLocalSymbol(name, text, uri);
+        const version = this.storedContext?.getDocumentVersion?.(uri);
+        const local = lookupLocalSymbol(name, text, version, uri);
         if (local) {
             conlog(`resolveSymbol: name="${name}" uri="${uri}" local=found`, "debug");
             return local;
         }
         // Guard the expensive getLocalSymbols call behind the debug flag directly.
         if (this.storedContext?.settings.debug) {
-            const allLocal = getLocalSymbols(text, uri);
+            const allLocal = getLocalSymbols(text, version, uri);
             conlog(
                 `resolveSymbol: name="${name}" uri="${uri}" local=not found; local symbols: [${allLocal.map((s) => s.name).join(", ")}]`,
                 "debug",
@@ -234,7 +235,8 @@ class FalloutSslProvider
         }
 
         // Merge local symbols into completions (local takes precedence)
-        const localSymbols = getLocalSymbols(text, uri);
+        const version = this.storedContext?.getDocumentVersion?.(uri);
+        const localSymbols = getLocalSymbols(text, version, uri);
         const localLabels = new Set(localSymbols.map((s) => s.name));
         const filtered = items.filter((item) => !localLabels.has(item.label as string));
         return [...localSymbols.map((s) => s.completion), ...filtered];
@@ -281,12 +283,7 @@ class FalloutSslProvider
         return prepareRenameSymbol(text, position);
     }
 
-    async rename(
-        text: string,
-        position: Position,
-        newName: string,
-        uri: string,
-    ): Promise<WorkspaceEdit | null> {
+    async rename(text: string, position: Position, newName: string, uri: string): Promise<WorkspaceEdit | null> {
         if (!isInitialized()) {
             return null;
         }

@@ -29,7 +29,7 @@ end
 `;
         const uri = "file:///mymod/scripts/test.ssl";
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("my_proc", text, uri);
+        const symbol = lookupLocalSymbol("my_proc", text, 1, uri);
 
         expect(symbol).toBeDefined();
         expect(symbol?.hover).toBeDefined();
@@ -51,7 +51,7 @@ end
 `;
         const uri = "file:///mymod/scripts/test.ssl";
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("MY_MACRO", text, uri);
+        const symbol = lookupLocalSymbol("MY_MACRO", text, 1, uri);
 
         expect(symbol).toBeDefined();
         expect(symbol?.hover).toBeDefined();
@@ -75,7 +75,7 @@ end
 `;
         const uri = "file:///mymod/scripts/test.ssl";
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("MAX_VALUE", text, uri);
+        const symbol = lookupLocalSymbol("MAX_VALUE", text, 1, uri);
 
         expect(symbol).toBeDefined();
         expect(symbol?.hover).toBeDefined();
@@ -97,7 +97,7 @@ variable my_var := 42;
 `;
         const uri = "file:///mymod/scripts/test.ssl";
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("my_var", text, uri);
+        const symbol = lookupLocalSymbol("my_var", text, 1, uri);
 
         expect(symbol).toBeDefined();
         expect(symbol?.hover).toBeDefined();
@@ -118,7 +118,7 @@ variable my_var := 42;
 `;
         const uri = "file:///test.ssl";
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("my_var", text, uri);
+        const symbol = lookupLocalSymbol("my_var", text, 1, uri);
 
         expect(symbol).toBeDefined();
         const contents = symbol?.hover?.contents;
@@ -136,7 +136,7 @@ end
 `;
         const uri = "file:///test.ssl";
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("my_proc", text, uri);
+        const symbol = lookupLocalSymbol("my_proc", text, 1, uri);
 
         expect(symbol).toBeDefined();
         const contents = symbol?.hover?.contents;
@@ -161,7 +161,7 @@ end
 `;
         const uri = "file:///test.ssl";
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("add", text, uri);
+        const symbol = lookupLocalSymbol("add", text, 1, uri);
 
         expect(symbol).toBeDefined();
         const contents = symbol?.hover?.contents;
@@ -178,7 +178,7 @@ end
 `;
         const uri = "file:///test.ssl";
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("test_defaults", text, uri);
+        const symbol = lookupLocalSymbol("test_defaults", text, 1, uri);
 
         expect(symbol).toBeDefined();
         const contents = symbol?.hover?.contents;
@@ -194,7 +194,7 @@ export variable my_export := 0;
 `;
         const uri = "file:///test.ssl";
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("my_export", text, uri);
+        const symbol = lookupLocalSymbol("my_export", text, 1, uri);
 
         expect(symbol).toBeDefined();
         const contents = symbol?.hover?.contents;
@@ -210,7 +210,7 @@ export variable my_export := 0;
 `;
         const uri = "file:///test.ssl";
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("my_export", text, uri);
+        const symbol = lookupLocalSymbol("my_export", text, 1, uri);
 
         expect(symbol).toBeDefined();
         const contents = symbol?.hover?.contents;
@@ -227,7 +227,7 @@ variable my_count := 0;
 `;
         const uri = "file:///test.ssl";
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("my_count", text, uri);
+        const symbol = lookupLocalSymbol("my_count", text, 1, uri);
 
         expect(symbol).toBeDefined();
         const contents = symbol?.hover?.contents;
@@ -243,7 +243,7 @@ export variable my_export := 0;
 `;
         const uri = "file:///test.ssl";
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("my_export", text, uri);
+        const symbol = lookupLocalSymbol("my_export", text, 1, uri);
 
         expect(symbol).toBeDefined();
         const contents = symbol?.hover?.contents;
@@ -260,7 +260,7 @@ variable my_count := 0;
 `;
         const uri = "file:///test.ssl";
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("my_count", text, uri);
+        const symbol = lookupLocalSymbol("my_count", text, 1, uri);
 
         expect(symbol).toBeDefined();
         const contents = symbol?.hover?.contents;
@@ -280,7 +280,7 @@ variable kill_count := 0;
 `;
         const uri = "file:///test.ssl";
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("kill_count", text, uri);
+        const symbol = lookupLocalSymbol("kill_count", text, 1, uri);
 
         expect(symbol).toBeDefined();
         const contents = symbol?.hover?.contents;
@@ -298,7 +298,7 @@ variable score := 0;
 `;
         const uri = "file:///test.ssl";
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("score", text, uri);
+        const symbol = lookupLocalSymbol("score", text, 1, uri);
 
         expect(symbol).toBeDefined();
         const contents = symbol?.hover?.contents;
@@ -316,7 +316,7 @@ export variable my_export := 0;
 `;
         const uri = "file:///test.ssl";
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("my_export", text, uri);
+        const symbol = lookupLocalSymbol("my_export", text, 1, uri);
 
         expect(symbol).toBeDefined();
         const contents = symbol?.hover?.contents;

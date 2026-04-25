@@ -29,7 +29,7 @@ end
 `;
         const uri = "file:///test.ssl";
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("my_proc", text, uri);
+        const symbol = lookupLocalSymbol("my_proc", text, 1, uri);
 
         expect(symbol).toBeDefined();
         expect(symbol?.completion.label).toBe("my_proc");
@@ -47,7 +47,7 @@ end
 `;
         const uri = "file:///test.ssl";
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("my_proc", text, uri);
+        const symbol = lookupLocalSymbol("my_proc", text, 1, uri);
 
         expect(symbol).toBeDefined();
         const docs = symbol?.completion.documentation;
@@ -65,7 +65,7 @@ variable my_var := 42;
 `;
         const uri = "file:///test.ssl";
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("my_var", text, uri);
+        const symbol = lookupLocalSymbol("my_var", text, 1, uri);
 
         expect(symbol).toBeDefined();
         expect(symbol?.completion.label).toBe("my_var");
@@ -78,7 +78,7 @@ export variable my_export := 0;
 `;
         const uri = "file:///test.ssl";
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("my_export", text, uri);
+        const symbol = lookupLocalSymbol("my_export", text, 1, uri);
 
         expect(symbol).toBeDefined();
         expect(symbol?.completion.label).toBe("my_export");
@@ -93,11 +93,11 @@ export variable my_export := 0;
         const uri = "file:///test.ssl";
         clearAllLocalSymbolsCache();
 
-        const constSymbol = lookupLocalSymbol("MY_CONST", text, uri);
+        const constSymbol = lookupLocalSymbol("MY_CONST", text, 1, uri);
         expect(constSymbol).toBeDefined();
         expect(constSymbol?.completion.label).toBe("MY_CONST");
 
-        const funcSymbol = lookupLocalSymbol("MY_FUNC", text, uri);
+        const funcSymbol = lookupLocalSymbol("MY_FUNC", text, 1, uri);
         expect(funcSymbol).toBeDefined();
         expect(funcSymbol?.completion.label).toBe("MY_FUNC");
     });
@@ -108,7 +108,7 @@ variable my_var := 42;
 `;
         const uri = "file:///test.ssl";
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("my_var", text, uri);
+        const symbol = lookupLocalSymbol("my_var", text, 1, uri);
 
         expect(symbol).toBeDefined();
         expect(isVariableSymbol(symbol!)).toBe(true);
@@ -124,7 +124,7 @@ variable my_var := 42;
 `;
         const uri = "file:///test.ssl";
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("my_var", text, uri);
+        const symbol = lookupLocalSymbol("my_var", text, 1, uri);
 
         expect(symbol).toBeDefined();
         // signature should not be present (not even as undefined key)
@@ -140,7 +140,7 @@ procedure my_proc begin end
         const uri = "file:///test.ssl";
         clearAllLocalSymbolsCache();
 
-        const symbols = getLocalSymbols(text, uri);
+        const symbols = getLocalSymbols(text, 1, uri);
         const names = symbols.map((s) => s.name);
 
         expect(names).toContain("my_var");

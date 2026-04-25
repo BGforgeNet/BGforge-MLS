@@ -308,7 +308,7 @@ describe("fallout-ssl integration", () => {
         it("extracts all local symbols from a file for completion", () => {
             const f = loadFixture(TWEAKS_BASE, "source_test/gl_g_scenepid.ssl");
 
-            const symbols = getLocalSymbols(f.text, f.uri);
+            const symbols = getLocalSymbols(f.text, 1, f.uri);
             expect(symbols).toHaveLength(4);
             expect(symbols.map((s) => s.name)).toEqual([
                 "print_scenery",
@@ -321,7 +321,7 @@ describe("fallout-ssl integration", () => {
         it("extracts macros from header files", () => {
             const f = loadFixture(RP_BASE, "headers/define.h");
 
-            const symbols = getLocalSymbols(f.text, f.uri);
+            const symbols = getLocalSymbols(f.text, 1, f.uri);
             expect(symbols).toHaveLength(618);
             const names = symbols.map((s) => s.name);
             expect(names).toContain("ndebug");
@@ -331,7 +331,7 @@ describe("fallout-ssl integration", () => {
         it("extracts symbols from sfall header", () => {
             const f = loadFixture(SFALL_BASE, "headers/sfall.h");
 
-            const symbols = getLocalSymbols(f.text, f.uri);
+            const symbols = getLocalSymbols(f.text, 1, f.uri);
             expect(symbols).toHaveLength(361);
             const names = symbols.map((s) => s.name);
             expect(names).toContain("WORLDMAP");

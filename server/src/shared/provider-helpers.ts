@@ -35,12 +35,13 @@ export function resolveSymbolStatic(name: string, symbols: Symbols | undefined):
 export function resolveSymbolWithLocal(
     name: string,
     text: string,
+    version: number | undefined,
     uri: string,
     symbols: Symbols | undefined,
-    lookupLocal: (name: string, text: string, uri: string) => IndexedSymbol | undefined,
+    lookupLocal: (name: string, text: string, version: number | undefined, uri: string) => IndexedSymbol | undefined,
 ): IndexedSymbol | undefined {
     // Local symbols take priority (fresh buffer)
-    const local = lookupLocal(name, text, uri);
+    const local = lookupLocal(name, text, version, uri);
     if (local) {
         return local;
     }

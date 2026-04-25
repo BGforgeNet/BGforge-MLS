@@ -154,6 +154,7 @@ function applySnippets(
     items: Tp2CompletionItem[],
     contexts: CompletionContext[],
     text: string,
+    version: number | undefined,
     uri: string,
     symbolStore: Symbols | undefined,
 ): Tp2CompletionItem[] {
@@ -184,7 +185,7 @@ function applySnippets(
         }
 
         const funcName = item.label as string;
-        const symbol = symbolStore?.lookup(funcName) ?? lookupLocalSymbol(funcName, text, uri);
+        const symbol = symbolStore?.lookup(funcName) ?? lookupLocalSymbol(funcName, text, version, uri);
         if (!symbol || !isCallableSymbol(symbol)) {
             return item;
         }
@@ -241,6 +242,7 @@ function getSnippetPrefixFromSymbol(
  */
 function collectLocalCompletions(
     text: string,
+    version: number | undefined,
     uri: string,
     options?: { variablesOnly?: boolean; excludeWord?: string },
 ): Tp2CompletionItem[] {
@@ -248,7 +250,7 @@ function collectLocalCompletions(
     const seen = new Set<string>();
     const result: Tp2CompletionItem[] = [];
 
-    for (const s of extractLocalSymbols(text, uri)) {
+    for (const s of extractLocalSymbols(text, version, uri)) {
         if (seen.has(s.name)) continue;
         if (excludeWord && s.name === excludeWord) continue;
         if (variablesOnly && s.completion.kind !== CompletionItemKind.Variable) continue;
@@ -312,7 +314,8 @@ class WeiduTp2Provider
     }
 
     resolveSymbol(name: string, text: string, uri: string): IndexedSymbol | undefined {
-        return resolveSymbolWithLocal(name, text, uri, this.fileIndex?.symbols, lookupLocalSymbol);
+        const version = this.storedContext?.getDocumentVersion?.(uri);
+        return resolveSymbolWithLocal(name, text, version, uri, this.fileIndex?.symbols, lookupLocalSymbol);
     }
 
     getCompletions(uri: string): CompletionItem[] {
@@ -371,15 +374,17 @@ class WeiduTp2Provider
         // under-matching (empty string) disables exclusion, which is also safe.
         const currentWord = getLinePrefix(text, position).match(/(\S+)$/)?.[1] ?? "";
 
+        const version = this.storedContext?.getDocumentVersion?.(uri);
+
         if (declSite === "assignment") {
-            return collectLocalCompletions(text, uri, { variablesOnly: true, excludeWord: currentWord });
+            return collectLocalCompletions(text, version, uri, { variablesOnly: true, excludeWord: currentWord });
         }
 
-        const localCompletions = collectLocalCompletions(text, uri, { excludeWord: currentWord });
+        const localCompletions = collectLocalCompletions(text, version, uri, { excludeWord: currentWord });
 
         const baseItems: Tp2CompletionItem[] = [...items, ...localCompletions];
         const withParams = addParamCompletions(baseItems, contexts, this.fileIndex?.symbols);
-        const withSnippets = applySnippets(withParams, contexts, text, uri, this.fileIndex?.symbols);
+        const withSnippets = applySnippets(withParams, contexts, text, version, uri, this.fileIndex?.symbols);
 
         return filterItemsByContext(withSnippets, contexts);
     }
@@ -484,12 +489,7 @@ class WeiduTp2Provider
         return findReferences(text, position, uri, includeDeclaration, this.fileIndex?.refs);
     }
 
-    async rename(
-        text: string,
-        position: Position,
-        newName: string,
-        uri: string,
-    ): Promise<WorkspaceEdit | null> {
+    async rename(text: string, position: Position, newName: string, uri: string): Promise<WorkspaceEdit | null> {
         return renameSymbol(text, position, newName, uri);
     }
 
@@ -524,7 +524,8 @@ class WeiduTp2Provider
         }
 
         // From current document (reflects unsaved edits immediately)
-        for (const symbol of extractLocalSymbols(text, uri)) {
+        const version = this.storedContext?.getDocumentVersion?.(uri);
+        for (const symbol of extractLocalSymbols(text, version, uri)) {
             const tokenType = getStyledTokenType(symbol);
             if (tokenType) {
                 names.set(symbol.name, tokenType);

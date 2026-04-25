@@ -111,6 +111,7 @@ export function register(ctx: HandlerContext): void {
             workspaceRoot,
             settings: defaultSettings,
             getDocumentText: (uri) => ctx.documents.get(uri)?.getText(),
+            getDocumentVersion: (uri) => ctx.documents.get(uri)?.version,
         });
 
         initServerContext({

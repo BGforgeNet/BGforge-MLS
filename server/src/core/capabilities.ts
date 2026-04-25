@@ -74,6 +74,12 @@ export interface ProviderContext {
      * VSCode TextDocuments API which uses raw URI strings from the LSP protocol.
      */
     getDocumentText?: (uri: string) => string | undefined;
+    /**
+     * Returns the LSP `TextDocument.version` counter for an open document.
+     * Used as a cache key by per-document parse caches; unchanged version means
+     * unchanged content so the cache can short-circuit without scanning text.
+     */
+    getDocumentVersion?: (uri: string) => number | undefined;
 }
 
 // =============================================================================

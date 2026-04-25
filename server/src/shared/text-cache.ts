@@ -1,15 +1,15 @@
 /**
  * Generic LRU text cache for parsed document data.
  *
- * Caches parsed results by URI with text hash validation.
- * Used by local-symbols modules to avoid re-parsing unchanged documents.
+ * Caches parsed results by URI with version-based invalidation. Callers pass the
+ * LSP `TextDocument.version` (a monotonic per-document counter); a stable version
+ * means the document hasn't changed, so the cache hit short-circuits the parse
+ * without scanning the text.
  */
 
-import { djb2Hash } from "./hash";
-
-/** Cache entry with hash and parsed data */
+/** Cache entry with version and parsed data */
 interface CacheEntry<T> {
-    hash: number;
+    version: number;
     data: T;
 }
 
@@ -33,16 +33,28 @@ export class TextCache<T> {
      * Get cached data or parse and cache new data.
      *
      * @param uri Document URI (cache key)
-     * @param text Document text (used for hash validation)
+     * @param version Document version counter (cache validation key — usually
+     *   `TextDocument.version`). When `undefined` the cache is bypassed: parse
+     *   runs on every call and nothing is stored. Lets callers without access
+     *   to a real document version (tests, ad-hoc parses) avoid stale-cache hits
+     *   without changing the signature for real callers.
+     * @param text Document text (passed to `parse` on a cache miss)
      * @param parse Function to parse text into data (called on cache miss)
      * @returns Parsed data, or null if parse returns null
      */
-    getOrParse(uri: string, text: string, parse: (text: string, uri: string) => T | null): T | null {
-        const hash = djb2Hash(text);
+    getOrParse(
+        uri: string,
+        version: number | undefined,
+        text: string,
+        parse: (text: string, uri: string) => T | null,
+    ): T | null {
+        if (version === undefined) {
+            return parse(text, uri);
+        }
 
         // Check cache
         const cached = this.cache.get(uri);
-        if (cached && cached.hash === hash) {
+        if (cached && cached.version === version) {
             return cached.data;
         }
 
@@ -60,7 +72,7 @@ export class TextCache<T> {
             }
         }
 
-        this.cache.set(uri, { hash, data });
+        this.cache.set(uri, { version, data });
         return data;
     }
 

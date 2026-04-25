@@ -107,16 +107,27 @@ function parseLocalSymbols(text: string, uri: string): LocalSymbolsData | null {
 
 /**
  * Get all local symbols from the current document.
+ *
+ * @param version Document version counter (LSP `TextDocument.version`) used as
+ *   cache key; pass `undefined` to bypass the cache.
  */
-export function getLocalSymbols(text: string, uri: string): IndexedSymbol[] {
-    return cache.getOrParse(uri, text, parseLocalSymbols)?.symbols ?? [];
+export function getLocalSymbols(text: string, version: number | undefined, uri: string): IndexedSymbol[] {
+    return cache.getOrParse(uri, version, text, parseLocalSymbols)?.symbols ?? [];
 }
 
 /**
  * Look up a local symbol by name. O(1) via cached map.
+ *
+ * @param version Document version counter (LSP `TextDocument.version`) used as
+ *   cache key; pass `undefined` to bypass the cache.
  */
-export function lookupLocalSymbol(name: string, text: string, uri: string): IndexedSymbol | undefined {
-    return cache.getOrParse(uri, text, parseLocalSymbols)?.byName.get(name);
+export function lookupLocalSymbol(
+    name: string,
+    text: string,
+    version: number | undefined,
+    uri: string,
+): IndexedSymbol | undefined {
+    return cache.getOrParse(uri, version, text, parseLocalSymbols)?.byName.get(name);
 }
 
 /**

@@ -375,7 +375,7 @@ describe("weidu-tp2 integration", () => {
         it("extracts function definitions as local symbols", () => {
             const f = loadFixture(TNT_BASE, "tnt/lib/functions.tph");
 
-            const symbols = getLocalSymbols(f.text, f.uri);
+            const symbols = getLocalSymbols(f.text, 1, f.uri);
             expect(symbols).toHaveLength(5);
             expect(symbols.map((s) => s.name)).toEqual([
                 "LIST_WEB_SPELLS",
@@ -389,7 +389,7 @@ describe("weidu-tp2 integration", () => {
         it("includes hover content in local symbols", () => {
             const f = loadFixture(TNT_BASE, "tnt/lib/functions.tph");
 
-            const symbols = getLocalSymbols(f.text, f.uri);
+            const symbols = getLocalSymbols(f.text, 1, f.uri);
             const unstack = symbols.find((s) => s.name === "unstack_armor_bonus");
             expect(unstack).toBeDefined();
 
@@ -401,7 +401,7 @@ describe("weidu-tp2 integration", () => {
         it("includes completion items in local symbols", () => {
             const f = loadFixture(TNT_BASE, "tnt/lib/functions.tph");
 
-            const symbols = getLocalSymbols(f.text, f.uri);
+            const symbols = getLocalSymbols(f.text, 1, f.uri);
             const listWeb = symbols.find((s) => s.name === "LIST_WEB_SPELLS");
             expect(listWeb).toBeDefined();
 

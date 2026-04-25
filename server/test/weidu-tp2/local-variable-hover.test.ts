@@ -32,7 +32,7 @@ LAF my_function END
 `;
         const uri = "file:///test.tp2";
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("pip_limit", text, uri);
+        const symbol = lookupLocalSymbol("pip_limit", text, 1, uri);
 
         expect(symbol).toBeDefined();
         expect(symbol?.hover).toBeDefined();
@@ -53,7 +53,7 @@ OUTER_SET my_var = 42
 `;
         const uri = "file:///test.tp2";
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("my_var", text, uri);
+        const symbol = lookupLocalSymbol("my_var", text, 1, uri);
 
         expect(symbol).toBeDefined();
         expect(symbol?.hover).toBeDefined();
@@ -74,7 +74,7 @@ OUTER_SPRINT my_string ~hello world~
 `;
         const uri = "file:///test.tp2";
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("my_string", text, uri);
+        const symbol = lookupLocalSymbol("my_string", text, 1, uri);
 
         expect(symbol).toBeDefined();
         expect(symbol?.hover).toBeDefined();
@@ -92,7 +92,7 @@ OUTER_SET foo = 1
 `;
         const uri = "file:///test.tp2";
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("bar", text, uri);
+        const symbol = lookupLocalSymbol("bar", text, 1, uri);
 
         expect(symbol).toBeUndefined();
     });
@@ -107,7 +107,7 @@ OUTER_SET documented_var = 100
 `;
         const uri = "file:///test.tp2";
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("documented_var", text, uri);
+        const symbol = lookupLocalSymbol("documented_var", text, 1, uri);
 
         expect(symbol).toBeDefined();
         expect(symbol?.hover).toBeDefined();
@@ -124,7 +124,7 @@ OUTER_TEXT_SPRINT text_var ~some text~
 `;
         const uri = "file:///test.tp2";
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("text_var", text, uri);
+        const symbol = lookupLocalSymbol("text_var", text, 1, uri);
 
         expect(symbol).toBeDefined();
         expect(symbol?.hover).toBeDefined();
@@ -144,7 +144,7 @@ OUTER_SET count = 2
 `;
         const uri = "file:///test.tp2";
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("count", text, uri);
+        const symbol = lookupLocalSymbol("count", text, 1, uri);
 
         expect(symbol).toBeDefined();
         expect(symbol?.hover).toBeDefined();
@@ -162,7 +162,7 @@ OUTER_SET MAX_LEVEL = 40
 `;
         const uri = "file:///test.tp2";
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("MAX_LEVEL", text, uri);
+        const symbol = lookupLocalSymbol("MAX_LEVEL", text, 1, uri);
 
         expect(symbol).toBeDefined();
         expect(symbol?.hover).toBeDefined();
@@ -179,7 +179,7 @@ OUTER_TEXT_SPRINT MOD_FOLDER ~mymod~
 `;
         const uri = "file:///test.tp2";
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("MOD_FOLDER", text, uri);
+        const symbol = lookupLocalSymbol("MOD_FOLDER", text, 1, uri);
 
         expect(symbol).toBeDefined();
         expect(symbol?.hover).toBeDefined();
@@ -196,7 +196,7 @@ OUTER_TEXT_SPRINT MOD_folder ~mymod~
 `;
         const uri = "file:///test.tp2";
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("MOD_folder", text, uri);
+        const symbol = lookupLocalSymbol("MOD_folder", text, 1, uri);
 
         expect(symbol).toBeDefined();
         expect(symbol?.hover).toBeDefined();
@@ -213,7 +213,7 @@ OUTER_SET Max_Level = 40
 `;
         const uri = "file:///test.tp2";
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("Max_Level", text, uri);
+        const symbol = lookupLocalSymbol("Max_Level", text, 1, uri);
 
         expect(symbol).toBeDefined();
         expect(symbol?.hover).toBeDefined();
@@ -231,7 +231,7 @@ OUTER_SET local_var = 123
 `;
         const uri = "file:///mymod/setup.tp2";
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("local_var", text, uri);
+        const symbol = lookupLocalSymbol("local_var", text, 1, uri);
 
         expect(symbol).toBeDefined();
         expect(symbol?.hover).toBeDefined();

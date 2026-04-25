@@ -27,7 +27,7 @@ procedure map_enter_p_proc begin
 end
 `;
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("map_enter_p_proc", text, TEST_URI);
+        const symbol = lookupLocalSymbol("map_enter_p_proc", text, 1, TEST_URI);
 
         expect(symbol).toBeDefined();
         const contents = symbol?.hover?.contents;
@@ -49,7 +49,7 @@ procedure map_enter_p_proc begin
 end
 `;
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("map_enter_p_proc", text, TEST_URI);
+        const symbol = lookupLocalSymbol("map_enter_p_proc", text, 1, TEST_URI);
 
         expect(symbol).toBeDefined();
         const contents = symbol?.hover?.contents;
@@ -75,7 +75,7 @@ procedure my_custom_proc begin
 end
 `;
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("my_custom_proc", text, TEST_URI);
+        const symbol = lookupLocalSymbol("my_custom_proc", text, 1, TEST_URI);
 
         expect(symbol).toBeDefined();
         const contents = symbol?.hover?.contents;
@@ -93,7 +93,7 @@ procedure map_exit_p_proc begin
 end
 `;
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("map_exit_p_proc", text, TEST_URI);
+        const symbol = lookupLocalSymbol("map_exit_p_proc", text, 1, TEST_URI);
 
         expect(symbol).toBeDefined();
         const contents = symbol?.hover?.contents;
@@ -109,7 +109,7 @@ procedure start begin
 end
 `;
         clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("start", text, TEST_URI);
+        const symbol = lookupLocalSymbol("start", text, 1, TEST_URI);
 
         expect(symbol).toBeDefined();
         const contents = symbol?.hover?.contents;
