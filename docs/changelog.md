@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Minimum supported Node.js version raised from 18 to 20. Node 18 reached end-of-life in April 2025; Node 20 is the current LTS minimum. Affects users installing `@bgforge/mls-server` or `@bgforge/fgtp` standalone via npm.
+
 ## 3.7.0
 
 - Document formatting is now available for `.tra`, `.msg`, `.2da`, and `scripts.lst` files.
