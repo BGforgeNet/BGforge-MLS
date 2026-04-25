@@ -40,6 +40,7 @@
         "fast-glob": "^3.3.3",
         "ini": "^6.0.0",
         "p-limit": "^7.3.0",
+        "quick-lru": "^7.3.0",
         "ts-morph": "^24.0.0",
         "typescript": "^5.9.3",
         "vscode-languageserver": "8.1.0",
@@ -51,7 +52,6 @@
         "@types/ini": "^4.1.1",
         "@types/node": "^22.19.17",
         "fast-check": "^4.7.0",
-        "quick-lru": "^7.3.0",
         "vitest": "^4.1.5"
     },
     "optionalDependencies": {
