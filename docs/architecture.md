@@ -116,7 +116,6 @@ vscode-mls/
 |
 +-- cli/                    Standalone CLI tools
 |   +-- format/                 Format CLI (all languages)
-|   +-- transpile/              Transpile CLI (TSSL, TBAF, TD)
 |   +-- bin/                    Binary parser CLI (.pro/.map -> JSON)
 |   +-- cli-utils.ts            Shared CLI utilities
 |   +-- test/                   CLI tests
@@ -147,6 +146,7 @@ vscode-mls/
 |   +-- tssl/                   @bgforge/tssl: TypeScript to Fallout SSL
 |   +-- tbaf/                   @bgforge/tbaf: TypeScript to WeiDU BAF
 |   +-- td/                     @bgforge/td: TypeScript to WeiDU D
+|   +-- cli/                    @bgforge/fgtp: standalone fgtp CLI for TSSL/TBAF/TD
 +-- external/               Game data (Fallout, Infinity Engine)
 +-- resources/              Extension icon
 +-- docs/                   Documentation
