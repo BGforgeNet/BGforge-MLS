@@ -40,6 +40,14 @@ const config: KnipConfig = {
                 "test/perf/**",
                 ...(isProductionKnip ? ["src/**", "vitest.integration.config.ts", "test/integration/**"] : []),
             ],
+            // esbuild-wasm is required at runtime: the server bundle imports
+            // transpilers/common/bundle.ts via filesystem path and externalises
+            // esbuild-wasm in scripts/build-base-server.sh, so the dep must be
+            // declared directly in server's package.json for strict-pnpm consumers
+            // to resolve `require("esbuild-wasm")` from server's node_modules at
+            // runtime. Knip's per-workspace static analysis can't see the import
+            // chain through the bundled-in non-workspace source.
+            ignoreDependencies: ["esbuild-wasm"],
         },
         "plugins/tssl-plugin": {
             entry: ["src/index.ts", "test/*.test.ts"],
