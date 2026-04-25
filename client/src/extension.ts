@@ -26,9 +26,7 @@ import { conlog, initOutputChannel } from "./logging";
 
 // Initialized in activate(), undefined until then
 let client: LanguageClient | undefined;
-const loadingIndicator = new ServerInitializingIndicator(() => {
-    conlog("loading start");
-});
+const loadingIndicator = new ServerInitializingIndicator();
 const cmd_compile = VSCODE_COMMAND_COMPILE;
 const cmd_dialogPreview = VSCODE_COMMAND_DIALOG_PREVIEW;
 
