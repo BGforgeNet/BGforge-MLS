@@ -218,6 +218,14 @@ export function extractTraTag(text: string): string | undefined {
 export const MAX_LOOP_ITERATIONS = 1000;
 
 /**
+ * Upper bound on input length to applyHelperFixups. The obj("[...]") rewrite
+ * has worst-case O(n²) regex cost on adversarial input (CodeQL js/polynomial-redos);
+ * real WeiDU args are short identifiers or numbers, so any input beyond a few
+ * thousand characters is malformed and is rejected before reaching the regex.
+ */
+const MAX_HELPER_FIXUP_INPUT_LENGTH = 4096;
+
+/**
  * WeiDU scope constants that must be quoted in output.
  *
  * These are imported from ielib (e.g., `import { GLOBAL } from "ielib"`), where they
@@ -269,6 +277,12 @@ export const SCOPE_CONSTANTS: ReadonlySet<string> = new Set([
  * false matches.
  */
 export function applyHelperFixups(text: string): string {
+    if (text.length > MAX_HELPER_FIXUP_INPUT_LENGTH) {
+        throw new Error(
+            `applyHelperFixups input length ${text.length} exceeds ${MAX_HELPER_FIXUP_INPUT_LENGTH}; ` +
+                "WeiDU args are short identifiers or numbers, refusing to process likely-malformed input.",
+        );
+    }
     if (SCOPE_CONSTANTS.has(text)) {
         return `"${text}"`;
     }

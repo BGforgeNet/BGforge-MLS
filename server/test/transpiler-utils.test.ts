@@ -313,4 +313,16 @@ describe("applyHelperFixups", () => {
             expect(applyHelperFixups("[PC]")).toBe("[PC]");
         });
     });
+
+    describe("input length limit", () => {
+        it("rejects pathologically long input to prevent quadratic regex backtracking", () => {
+            // The obj("[...]") rewrite uses /\$?obj\("\[(.*?)\]"\)/g, which has
+            // worst-case O(n²) cost on inputs like `obj("[a` repeated without a
+            // closing `]")`. Real WeiDU args extracted from the AST are short
+            // identifiers/numbers; reject anything orders of magnitude beyond
+            // that to bound the regex cost.
+            const adversarial = 'obj("[a'.repeat(10_000); // 70k chars
+            expect(() => applyHelperFixups(adversarial)).toThrow();
+        });
+    });
 });
