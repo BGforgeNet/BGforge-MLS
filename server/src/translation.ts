@@ -166,7 +166,10 @@ export class Translation {
     }
 
     async init(): Promise<void> {
-        this.data = await this.loadDir(this.settings.directory);
+        // Route loading through resolveTraDir so the workspace-subpath check
+        // gates the load path the same way it gates the lookup path.
+        const traDir = this.resolveTraDir();
+        this.data = traDir ? await this.loadDir(traDir) : new Map();
         this.buildConsumerIndex();
         this.initialized = true;
         conlog("Translation: initialized");
@@ -921,13 +924,39 @@ export class Translation {
         return getRelPath(traDir, filePath);
     }
 
-    /** Resolve the tra directory to an absolute path. */
+    /** Resolve the tra directory to an absolute path, refusing values that
+     *  resolve outside the workspace root.
+     *
+     *  Defense in depth: VSCode Workspace Trust is the primary gate against an
+     *  untrusted `.bgforge.yml`, but trust can be bypassed (or absent in
+     *  non-VSCode LSP clients), so the LSP layer also checks. A `directory`
+     *  that escapes via `..` or names an absolute path elsewhere on disk is
+     *  ignored — `loadDir` is never called against it, so unrelated `.tra`/
+     *  `.msg` files outside the workspace never reach hover/inlay output.
+     *
+     *  The check is path-math only (no realpath): a tra directory that does
+     *  not yet exist on disk but resolves inside the workspace is still
+     *  accepted, matching `loadDir`'s tolerance for missing directories. */
     private resolveTraDir(): string | undefined {
+        let resolved: string;
         if (path.isAbsolute(this.directory)) {
-            return this.directory;
+            resolved = this.directory;
+        } else if (this.workspaceRoot) {
+            resolved = path.join(this.workspaceRoot, this.directory);
+        } else {
+            return undefined;
         }
-        if (!this.workspaceRoot) return undefined;
-        return path.join(this.workspaceRoot, this.directory);
+        if (this.workspaceRoot) {
+            const rel = path.relative(this.workspaceRoot, resolved);
+            if (rel === ".." || rel.startsWith(".." + path.sep) || path.isAbsolute(rel)) {
+                conlog(
+                    `Translation: ignoring tra directory '${this.directory}' — resolves outside workspace root`,
+                    "warn",
+                );
+                return undefined;
+            }
+        }
+        return resolved;
     }
 
     /**

@@ -823,6 +823,50 @@ translation~`;
         });
     });
 
+    describe("workspace boundary", () => {
+        it("does not load translations when an absolute directory escapes the workspace root", async () => {
+            // Place a translation file outside the workspace; configure Translation
+            // with directory pointing there. The defense-in-depth check should
+            // refuse to load entries from outside the workspace, so getHover finds
+            // nothing even though the .tra file does exist on disk.
+            const outsideDir = fs.mkdtempSync(path.join(os.tmpdir(), "mls-test-outside-"));
+            try {
+                fs.writeFileSync(path.join(outsideDir, "outside.tra"), "@500 = ~Should not be visible~");
+
+                const escaping = new Translation({ directory: outsideDir, auto_tra: true }, tempDir);
+                await escaping.init();
+
+                const consumerUri = `file://${tempDir}/test.tbaf`;
+                const text = `/** @tra outside.tra */\nconst x = tra(500);`;
+                const hover = escaping.getHover(consumerUri, "typescript", "tra(500)", text);
+
+                expect(hover).toBeNull();
+            } finally {
+                fs.rmSync(outsideDir, { recursive: true, force: true });
+            }
+        });
+
+        it("does not load translations when a relative directory escapes via '..'", async () => {
+            const outsideDir = fs.mkdtempSync(path.join(os.tmpdir(), "mls-test-outside-"));
+            try {
+                fs.writeFileSync(path.join(outsideDir, "outside.tra"), "@600 = ~Should not be visible~");
+
+                // Relative path from tempDir to outsideDir traverses '..'.
+                const relativeEscape = path.relative(tempDir, outsideDir);
+                const escaping = new Translation({ directory: relativeEscape, auto_tra: true }, tempDir);
+                await escaping.init();
+
+                const consumerUri = `file://${tempDir}/test.tbaf`;
+                const text = `/** @tra outside.tra */\nconst x = tra(600);`;
+                const hover = escaping.getHover(consumerUri, "typescript", "tra(600)", text);
+
+                expect(hover).toBeNull();
+            } finally {
+                fs.rmSync(outsideDir, { recursive: true, force: true });
+            }
+        });
+    });
+
     describe("reloadFile", () => {
         it("does not throw when reloading a .tra file within workspace", async () => {
             await translation.init();
