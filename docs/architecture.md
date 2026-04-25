@@ -117,8 +117,10 @@ vscode-mls/
 +-- cli/                    Standalone CLI tools
 |   +-- format/                 Format CLI (all languages)
 |   +-- bin/                    Binary parser CLI (.pro/.map -> JSON)
-|   +-- cli-utils.ts            Shared CLI utilities
 |   +-- test/                   CLI tests
+|
++-- shared/                 Pure TypeScript helpers shared across workspaces
+|   +-- cli/                    Shared CLI utilities (used by format, transpile, bin)
 |
 +-- plugins/               TypeScript Language Service Plugins
 |   +-- tssl-plugin/           TSSL plugin (TS6133 suppression, engine proc hover)
@@ -424,7 +426,7 @@ Snapshot contract:
 
 ### Shared CLI Infrastructure
 
-`cli/cli-utils.ts` provides:
+`shared/cli/cli-utils.ts` provides:
 
 - Argument parsing (`--save`, `--check`, `-r`, `-q`)
 - File discovery (single file or recursive directory scan)
@@ -716,7 +718,7 @@ components stay separate.
 
 `cli/format`, `transpilers/` (fgtp bin), and `cli/bin` stay as separate bundles. Shared
 scaffolding (argument parsing, file discovery, output modes) is already extracted to
-`cli/cli-utils.ts`; further consolidation was evaluated and costs more than it saves.
+`shared/cli/cli-utils.ts`; further consolidation was evaluated and costs more than it saves.
 
 - The transpile bundle is ~12 MB (owns `esbuild` + `ts-morph` + transform passes). Format
   and bin bundles are small. A unified binary would load the transpile toolchain on every
@@ -724,7 +726,7 @@ scaffolding (argument parsing, file discovery, output modes) is already extracte
   cases that don't need it.
 - The three tools do semantically different jobs: text round-trip, source-to-source
   compilation, binary parsing. The shared surface is already shared at the right layer
-  (`cli-utils.ts`); the per-tool bodies are not duplicated.
+  (`shared/cli/cli-utils.ts`); the per-tool bodies are not duplicated.
 - The transpile CLI ships as the `fgtp` bin entry within `@bgforge/transpile`, so the library
   and CLI share one package, one version, and one tarball without coupling format/bin.
 

@@ -14,7 +14,14 @@ import {
     loadBinaryJsonSnapshot,
     parseBinaryJsonSnapshot,
 } from "../../../client/src/parsers/json-snapshot";
-import { type FileResult, type OutputMode, parseCliArgs, runCli, safeProcess, reportDiff } from "../../cli-utils";
+import {
+    type FileResult,
+    type OutputMode,
+    parseCliArgs,
+    runCli,
+    safeProcess,
+    reportDiff,
+} from "../../../shared/cli/cli-utils";
 
 const EXTENSIONS = parserRegistry.getExtensions().map((ext) => `.${ext}`);
 const CLI_PARSE_OPTIONS: ParseOptions = {

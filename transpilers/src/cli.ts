@@ -15,7 +15,14 @@ import {
     createBatchState,
     type TranspileBatchState,
 } from "./index";
-import { type FileResult, type OutputMode, parseCliArgs, runCli, safeProcess, reportDiff } from "../../cli/cli-utils";
+import {
+    type FileResult,
+    type OutputMode,
+    parseCliArgs,
+    runCli,
+    safeProcess,
+    reportDiff,
+} from "../../shared/cli/cli-utils";
 
 type TranspileType = "td" | "tbaf" | "tssl";
 

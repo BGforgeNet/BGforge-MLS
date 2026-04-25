@@ -66,9 +66,9 @@ const config: KnipConfig = {
             // Knip sees no TS import within this workspace because the import lives in
             // transpilers/common (a separate workspace); ignoreDependencies suppresses the
             // false-positive "unused dependency" report.
-            // cac and diff are imported by cli/cli-utils.ts, which lives in the cli/
-            // workspace (globally ignored). Knip can't trace the import chain through the
-            // ignore boundary, so suppress the false-positive here.
+            // cac and diff are imported via shared/cli/cli-utils.ts, which is not part of
+            // any workspace; knip's per-workspace dep tracing doesn't reach across that
+            // non-workspace boundary, so suppress the false positive.
             ignoreDependencies: ["esbuild-wasm", "cac", "diff"],
         },
     },

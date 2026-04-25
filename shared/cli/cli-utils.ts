@@ -8,12 +8,12 @@ import * as fs from "fs";
 import * as path from "path";
 import cac from "cac";
 import { diffLines } from "diff";
-import { TranspileError } from "../transpilers/common/transpile-error";
+import { TranspileError } from "../../transpilers/common/transpile-error";
 
 export type FileResult = "changed" | "unchanged" | "error";
 export type OutputMode = "save" | "stdout" | "check" | "save-and-check";
 
-export interface CliArgs {
+interface CliArgs {
     target: string;
     mode: OutputMode;
     recursive: boolean;
@@ -109,7 +109,7 @@ export async function safeProcess(filePath: string, fn: () => FileResult | Promi
     }
 }
 
-export interface RunOptions {
+interface RunOptions {
     args: CliArgs;
     extensions: readonly string[];
     description: string;

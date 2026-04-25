@@ -6,7 +6,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as fs from "fs";
 import * as path from "path";
-import { reportDiff, safeProcess, findFiles, parseCliArgs, runCli, FileResult, OutputMode } from "../cli-utils";
+import {
+    reportDiff,
+    safeProcess,
+    findFiles,
+    parseCliArgs,
+    runCli,
+    FileResult,
+    OutputMode,
+} from "../../shared/cli/cli-utils";
 
 describe("reportDiff", () => {
     let stderrSpy: ReturnType<typeof vi.spyOn>;
