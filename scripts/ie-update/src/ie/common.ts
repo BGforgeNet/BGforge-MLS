@@ -253,11 +253,14 @@ export function normalizeHtmlFragment(html: string, options: NormalizeHtmlFragme
     result = result.replace(/<br\s*\/?>/gi, "\n");
     result = result.replace(/<\/?(?:div|p|span|strong|em)>/gi, "");
     result = result.replace(/<sup>([\s\S]*?)<\/sup>/gi, (_m, inner: string) => decodeHtmlEntities(inner));
-    // Strip well-formed tags first, then any residual `<`/`>` left by nested
-    // or malformed input — single greedy passes leave residue otherwise
-    // (CodeQL js/incomplete-multi-character-sanitization).
-    result = result.replace(/<[^>]*>/g, "");
-    result = result.replace(/[<>]/g, "");
+    // Strip remaining HTML tags. Repeat-until-stable with `[^<>]*` (forbidding
+    // both brackets) handles nested tags that a single greedy pass would leave
+    // residue from (CodeQL js/incomplete-multi-character-sanitization).
+    let prev: string;
+    do {
+        prev = result;
+        result = result.replace(/<[^<>]*>/g, "");
+    } while (result !== prev);
     result = decodeHtmlEntities(result);
     result = result.replace(/[ \t]+\n/g, "\n");
 
@@ -298,9 +301,15 @@ function normalizeCodeFence(text: string): string {
 }
 
 export function htmlInlineToText(html: string): string {
-    // Two-step strip: well-formed tags then any residual `<`/`>` from nested
-    // or malformed input (CodeQL js/incomplete-multi-character-sanitization).
-    const stripped = html.replace(/<[^>]*>/g, "").replace(/[<>]/g, "");
+    // Repeat-until-stable with `[^<>]*` (forbidding both brackets) handles
+    // nested tags that a single greedy pass leaves residue from (CodeQL
+    // js/incomplete-multi-character-sanitization).
+    let stripped = html;
+    let prev: string;
+    do {
+        prev = stripped;
+        stripped = stripped.replace(/<[^<>]*>/g, "");
+    } while (stripped !== prev);
     return decodeHtmlEntities(stripped.trim());
 }
 

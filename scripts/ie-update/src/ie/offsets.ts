@@ -89,11 +89,14 @@ export function stringToId(line: string, prefix: string): string {
 
     // Strip markdown links: [text](url) -> text
     iid = iid.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
-    // Strip well-formed HTML tags first, then any residual `<`/`>` left by
-    // nested or malformed input — single greedy passes leave residue otherwise
-    // (CodeQL js/incomplete-multi-character-sanitization).
-    iid = iid.replace(/<[^>]*>/g, "");
-    iid = iid.replace(/[<>]/g, "");
+    // Strip HTML tags. Repeat-until-stable with `[^<>]*` (forbidding both
+    // brackets) handles nested tags like `<a<b>>` that a single greedy pass
+    // would leave residue from (CodeQL js/incomplete-multi-character-sanitization).
+    let prev: string;
+    do {
+        prev = iid;
+        iid = iid.replace(/<[^<>]*>/g, "");
+    } while (iid !== prev);
 
     for (const [orig, repl] of ID_REPLACEMENTS) {
         iid = iid.replaceAll(orig, repl);
