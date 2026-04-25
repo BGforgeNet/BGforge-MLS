@@ -69,6 +69,11 @@ const config: KnipConfig = {
             // esbuild is invoked via scripts/build-transpile-cli.sh, not imported in source
             ignoreDependencies: ["esbuild"],
         },
+        transpilers: {
+            entry: ["test/**/*.test.ts"],
+            // tsup is invoked via scripts at publish time (Phase 6 build step), not imported in source
+            ignoreDependencies: ["tsup"],
+        },
     },
     ignore: [
         // tree-sitter grammars, not TypeScript

@@ -19,6 +19,7 @@ export default defineConfig({
             "plugins/tssl-plugin/vitest.config.ts",
             "plugins/td-plugin/vitest.config.ts",
             "scripts/vitest.config.ts",
+            "transpilers/vitest.config.ts",
         ],
     },
 });

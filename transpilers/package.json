@@ -1,0 +1,47 @@
+{
+    "name": "@bgforge/transpile",
+    "version": "3.7.0",
+    "description": "Library for transpiling TSSL, TBAF, and TD source files to Fallout SSL, WeiDU BAF, and WeiDU D",
+    "keywords": [
+        "fallout",
+        "infinity-engine",
+        "modding",
+        "transpiler",
+        "weidu"
+    ],
+    "homepage": "https://github.com/BGforgeNet/BGforge-MLS",
+    "bugs": {
+        "url": "https://github.com/BGforgeNet/BGforge-MLS/issues"
+    },
+    "license": "SEE LICENSE IN LICENSE.txt",
+    "author": "BGforge",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/BGforgeNet/BGforge-MLS",
+        "directory": "transpilers"
+    },
+    "files": [
+        "out/",
+        "!out/*.map",
+        "README.md",
+        "LICENSE.txt"
+    ],
+    "type": "module",
+    "main": "out/index.js",
+    "types": "out/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./out/index.d.ts",
+            "import": "./out/index.js"
+        }
+    },
+    "publishConfig": {
+        "access": "public"
+    },
+    "devDependencies": {
+        "tsup": "^8.3.0"
+    },
+    "engines": {
+        "node": ">=20"
+    }
+}

@@ -1,0 +1,10 @@
+{
+    "extends": "../server/tsconfig.json",
+    "compilerOptions": {
+        "rootDir": "src",
+        "outDir": "out",
+        "noEmit": true,
+        "tsBuildInfoFile": "../tmp/transpilers-lib.tsbuildinfo"
+    },
+    "include": ["src", "test", "common", "tssl", "tbaf", "td"]
+}
