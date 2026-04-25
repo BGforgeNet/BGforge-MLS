@@ -83,9 +83,6 @@
         "test:mutation": "stryker run",
         "bench": "cd server && pnpm bench"
     },
-    "dependencies": {
-        "zod": "^4.3.6"
-    },
     "devDependencies": {
         "@oxlint/plugins": "~1.61.0",
         "@stryker-mutator/core": "^9.6.1",
