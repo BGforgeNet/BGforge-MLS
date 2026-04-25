@@ -89,6 +89,10 @@ jobs:
               with:
                   name: bgforge-mls
                   path: dist/
+                  # Default 90-day retention is excessive for branch builds;
+                  # 14 days is enough for a developer to inspect a CI artifact
+                  # produced from a recent push or PR.
+                  retention-days: 14
 
             # Use pre-built VSIX for publishing: pnpm package (scripts/package.sh)
             # dereferences pnpm symlinks that vsce can't follow.

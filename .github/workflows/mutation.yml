@@ -42,3 +42,6 @@ jobs:
                   name: mutation-report
                   path: tmp/mutation/
                   if-no-files-found: warn
+                  # Weekly run; one quarter is enough history for trend
+                  # comparison. Drop the 90-day default.
+                  retention-days: 90

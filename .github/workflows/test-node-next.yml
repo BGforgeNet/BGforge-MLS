@@ -1,0 +1,53 @@
+name: "Test on Node next-LTS"
+
+# Runs the canonical pnpm test:all suite on the active LTS Node line so
+# regressions there surface before the maintenance-LTS pin in build.yml.
+# Not on every push: build.yml already exercises the supported runtime
+# (Node 22) per push and PR; this is an early-warning signal, not a gate.
+
+on:
+    schedule:
+        # Weekly on Tuesday at 06:00 UTC, offset from scorecard.yml (Mon 06:00)
+        # and codeql.yml (Mon 06:30) so the three secondary workflows do not
+        # contend for runner concurrency.
+        - cron: "0 6 * * 2"
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    test:
+        name: test (Node ${{ matrix.node-version }})
+        runs-on: ubuntu-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                node-version: ["24"]
+        steps:
+            - name: Checkout
+              uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+            - name: Install pnpm
+              uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3
+              with:
+                  run_install: false
+
+            - name: Install Node.js
+              uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+              with:
+                  node-version: ${{ matrix.node-version }}
+                  cache: pnpm
+
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Build tree-sitter grammar
+              run: pnpm build:grammar
+
+            - name: Test
+              run: pnpm test:all
