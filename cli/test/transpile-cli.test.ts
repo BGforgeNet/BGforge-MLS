@@ -8,9 +8,9 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { execFileSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
-import transpileCliPackage from "../transpile/package.json";
+import transpileCliPackage from "../../transpilers/cli/package.json";
 
-const CLI = path.resolve("cli/transpile", transpileCliPackage.bin.fgtp);
+const CLI = path.resolve("transpilers/cli", transpileCliPackage.bin.fgtp);
 const NODE = process.execPath;
 const SAMPLES_DIR = path.resolve("server/test/td/samples");
 const SAMPLES_EXPECTED = path.resolve("server/test/td/samples-expected");

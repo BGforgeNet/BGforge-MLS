@@ -166,7 +166,7 @@ All bundles use **esbuild** (not tsc). The monorepo uses **pnpm workspaces**.
 | TD Plugin     | `plugins/td-plugin/src/index.ts`        | `node_modules/bgforge-td-plugin/index.js`   | CJS, standalone                     |
 | Webviews      | `client/src/{dialog,binary}-webview.ts` | `client/out/*.js`                           | Browser context                     |
 | Format CLI    | `cli/format/src/cli.ts`                 | `cli/format/out/format-cli.js`              | CJS + WASM files                    |
-| Transpile CLI | `cli/transpile/src/cli.ts`              | `cli/transpile/out/transpile.js`            | CJS                                 |
+| Transpile CLI | `transpilers/cli/src/cli.ts`            | `transpilers/cli/out/transpile.js`          | CJS                                 |
 | Binary CLI    | `cli/bin/src/cli.ts`                    | `cli/bin/out/bin-cli.js`                    | CJS                                 |
 | Grammars      | `grammars/*/grammar.js`                 | `grammars/*/*.wasm` -> `server/out/`        | tree-sitter build --wasm            |
 | TextMate      | `syntaxes/*.tmLanguage.yml`             | `syntaxes/*.tmLanguage.json`                | YAML -> JSON conversion             |
@@ -707,7 +707,7 @@ components stay separate.
 
 ### Three Separate CLIs (format, transpile, bin)
 
-`cli/format`, `cli/transpile`, and `cli/bin` stay as separate bundles. Shared scaffolding
+`cli/format`, `transpilers/cli`, and `cli/bin` stay as separate bundles. Shared scaffolding
 (argument parsing, file discovery, output modes) is already extracted to `cli/cli-utils.ts`;
 further consolidation was evaluated and costs more than it saves.
 

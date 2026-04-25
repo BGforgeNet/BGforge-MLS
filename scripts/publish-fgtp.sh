@@ -23,7 +23,7 @@ fi
 
 echo ""
 echo "=== Publishing @bgforge/fgtp ==="
-cd cli/transpile
+cd transpilers/cli
 
 provenance=""
 if [ -n "${GITHUB_ACTIONS:-}" ]; then

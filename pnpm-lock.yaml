@@ -94,12 +94,6 @@ importers:
 
   cli/format: {}
 
-  cli/transpile:
-    dependencies:
-      esbuild:
-        specifier: ^0.28.0
-        version: 0.28.0
-
   client:
     dependencies:
       typed-binary:
@@ -232,6 +226,12 @@ importers:
       sslc-emscripten-noderawfs:
         specifier: https://github.com/sfall-team/sslc/releases/download/2026-02-07-11-20-26/wasm-emscripten-node-noderawfs.tar.gz
         version: https://github.com/sfall-team/sslc/releases/download/2026-02-07-11-20-26/wasm-emscripten-node-noderawfs.tar.gz
+
+  transpilers/cli:
+    dependencies:
+      esbuild:
+        specifier: ^0.28.0
+        version: 0.28.0
 
   transpilers/common:
     devDependencies:

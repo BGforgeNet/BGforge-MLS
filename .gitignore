@@ -23,6 +23,8 @@ server/out/*
 !server/out/fallout-ssl-engine-procedures.json
 
 cli/*/out
+transpilers/cli/out
+transpilers/out
 
 plugins/*/out
 

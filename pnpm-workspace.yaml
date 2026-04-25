@@ -2,8 +2,10 @@ packages:
     - client
     - server
     - grammars/*
-    - cli/*
+    - cli/format
     - plugins/*
+    - transpilers
+    - transpilers/cli
     - transpilers/common
     - transpilers/tssl
     - transpilers/tbaf
