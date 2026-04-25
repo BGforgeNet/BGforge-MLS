@@ -1,7 +1,6 @@
 {
     "extends": "../server/tsconfig.json",
     "compilerOptions": {
-        "rootDir": ".",
         "outDir": "out",
         "noEmit": true,
         "tsBuildInfoFile": "../tmp/transpilers-lib.tsbuildinfo"
