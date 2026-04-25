@@ -104,7 +104,12 @@ function parseWhenNode(node: SyntaxNode): string[] {
         if (text === "IF" || text === "UNLESS" || text === "IF_SIZE_IS") {
             let valueIdx = i + 1;
             const commentsBetween: string[] = [];
-            // Collect comments between keyword and value
+            // Collect comments between keyword and value.
+            // The `children[valueIdx] &&` truthy check inside the condition narrows
+            // the value in-place under noUncheckedIndexedAccess, but the narrowing
+            // does not propagate to the sibling `isComment(children[valueIdx]!)`
+            // call or to the body's `children[valueIdx]!.text` read — both index
+            // again into the same array and re-yield T | undefined.
             while (valueIdx < children.length && children[valueIdx] && isComment(children[valueIdx]!)) {
                 commentsBetween.push(normalizeComment(children[valueIdx]!.text));
                 valueIdx++;

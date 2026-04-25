@@ -81,6 +81,10 @@ export function findScopedReferences(rootNode: Node, symbolInfo: SslSymbolScope)
     const searchRoot = resolveSearchRoot(symbolInfo, rootNode);
 
     if (symbolInfo.definitionNode) {
+        // visitResolved is only entered inside the symbolInfo.definitionNode
+        // truthy guard above; TypeScript does not preserve property-narrowing
+        // through nested function expressions when the property is accessed
+        // via `symbolInfo`, hence the non-null assertion at each read site.
         const visitResolved = (node: Node): void => {
             if (node.type === SyntaxType.Identifier) {
                 if (node.id === symbolInfo.definitionNode!.id) {
