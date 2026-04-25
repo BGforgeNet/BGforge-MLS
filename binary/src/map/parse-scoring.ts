@@ -3,8 +3,8 @@
  * script/object boundary candidate when gracefulMapBoundaries is enabled.
  */
 
-import type { ParsedGroup } from "./types";
-import { makeGroup, noteField, fieldNumber, PID_TYPE_MISC } from "./map-parse-helpers";
+import type { ParsedGroup } from "../types";
+import { makeGroup, noteField, fieldNumber, PID_TYPE_MISC } from "./parse-helpers";
 
 function findFirstObjectGroup(group: ParsedGroup): ParsedGroup | undefined {
     for (const entry of group.fields) {

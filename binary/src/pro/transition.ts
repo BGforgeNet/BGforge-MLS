@@ -1,6 +1,6 @@
 import { BufferReader, BufferWriter } from "typed-binary";
-import { getProCanonicalDocument, rebuildProCanonicalDocument, serializeProCanonicalDocument } from "./pro-canonical";
-import { headerSchema, itemCommonSchema, sceneryCommonSchema } from "./pro-schemas";
+import { getProCanonicalDocument, rebuildProCanonicalDocument, serializeProCanonicalDocument } from "./canonical";
+import { headerSchema, itemCommonSchema, sceneryCommonSchema } from "./schemas";
 import {
     CRITTER_SIZE,
     HEADER_SIZE,
@@ -11,8 +11,8 @@ import {
     SCENERY_SUBTYPE_SIZES,
     TILE_SIZE,
     WALL_SIZE,
-} from "./pro-types";
-import type { ParseResult } from "./types";
+} from "./types";
+import type { ParseResult } from "../types";
 
 function reader(data: Uint8Array, offset = 0): BufferReader {
     return new BufferReader(data.buffer, { endianness: "big", byteOffset: data.byteOffset + offset });

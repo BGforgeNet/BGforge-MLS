@@ -3,10 +3,10 @@ import {
     proCanonicalSnapshotSchema,
     serializeProCanonicalSnapshot,
     type ProCanonicalSnapshot,
-} from "./pro-canonical";
-import { proParser } from "./pro";
-import { parseWithSchemaValidation } from "./schema-validation";
-import type { ParseOptions, ParseResult } from "./types";
+} from "./canonical";
+import { proParser } from "./index";
+import { parseWithSchemaValidation } from "../schema-validation";
+import type { ParseOptions, ParseResult } from "../types";
 
 interface LoadedCanonicalProSnapshot {
     readonly snapshot: ProCanonicalSnapshot;

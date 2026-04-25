@@ -2,8 +2,8 @@
  * Constants and low-level field helpers shared by map parsing phases.
  */
 
-import type { ParsedField, ParsedFieldType, ParsedGroup } from "./types";
-import { HEADER_SIZE } from "./map-schemas";
+import type { ParsedField, ParsedFieldType, ParsedGroup } from "../types";
+import { HEADER_SIZE } from "./schemas";
 
 export const MAP_OBJECT_BASE_SIZE = 0x48;
 export const MAP_OBJECT_DATA_HEADER_SIZE = 0x0c;

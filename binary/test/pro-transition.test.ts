@@ -8,7 +8,7 @@
 import { describe, expect, it } from "vitest";
 import * as fs from "fs";
 import * as path from "path";
-import { isProStructuralFieldId, buildProStructuralTransitionBytes } from "../src/pro-transition";
+import { isProStructuralFieldId, buildProStructuralTransitionBytes } from "../src/pro/transition";
 import { proParser } from "../src/pro";
 import type { ParseResult } from "../src/types";
 

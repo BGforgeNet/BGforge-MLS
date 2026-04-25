@@ -4,7 +4,7 @@
  */
 
 import { BufferWriter } from "typed-binary";
-import { parseWithSchemaValidation } from "./schema-validation";
+import { parseWithSchemaValidation } from "../schema-validation";
 import {
     ammoSchema,
     armorSchema,
@@ -25,7 +25,7 @@ import {
     tileSchema,
     wallSchema,
     weaponSchema,
-} from "./pro-schemas";
+} from "./schemas";
 import {
     CRITTER_SIZE,
     HEADER_SIZE,
@@ -36,12 +36,8 @@ import {
     SCENERY_SUBTYPE_SIZES,
     TILE_SIZE,
     WALL_SIZE,
-} from "./pro-types";
-import {
-    proCanonicalSnapshotSchema,
-    type ProCanonicalSnapshot,
-    type ProCanonicalDocument,
-} from "./pro-canonical-schemas";
+} from "./types";
+import { proCanonicalSnapshotSchema, type ProCanonicalSnapshot, type ProCanonicalDocument } from "./canonical-schemas";
 
 function writer(data: Uint8Array, offset = 0): BufferWriter {
     return new BufferWriter(data.buffer, { endianness: "big", byteOffset: data.byteOffset + offset });

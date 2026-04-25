@@ -4,11 +4,11 @@
  */
 
 import { z } from "zod";
-import { clampNumericValue } from "./binary-format-contract";
-import { parseWithSchemaValidation } from "./schema-validation";
+import { clampNumericValue } from "../binary-format-contract";
+import { parseWithSchemaValidation } from "../schema-validation";
 
-import { ScriptType } from "./map-types";
-import type { ParsedField, ParsedGroup, ParseResult } from "./types";
+import { ScriptType } from "./types";
+import type { ParsedField, ParsedGroup, ParseResult } from "../types";
 import {
     mapCanonicalDocumentSchema,
     mapCanonicalSnapshotSchema,
@@ -19,7 +19,7 @@ import {
     mapObjectsSchema,
     type MapCanonicalDocument,
     type MapCanonicalSnapshot,
-} from "./map-canonical-schemas";
+} from "./canonical-schemas";
 
 function isGroup(entry: ParsedField | ParsedGroup): entry is ParsedGroup {
     return "fields" in entry;

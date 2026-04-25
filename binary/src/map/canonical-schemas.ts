@@ -4,9 +4,9 @@
  */
 
 import { z } from "zod";
-import { zodFieldNumber, zodNumericType } from "./binary-format-contract";
-import { opaqueRangeSchema } from "./shared-schemas";
-import { TILES_PER_ELEVATION } from "./map-schemas";
+import { zodFieldNumber, zodNumericType } from "../binary-format-contract";
+import { opaqueRangeSchema } from "../shared-schemas";
+import { TILES_PER_ELEVATION } from "./schemas";
 
 export const MAP_OBJECT_BASE_SIZE = 0x48;
 export const MAP_OBJECT_DATA_HEADER_SIZE = 0x0c;

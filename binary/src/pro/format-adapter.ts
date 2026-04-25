@@ -1,9 +1,9 @@
-import type { BinaryFormatAdapter } from "./format-adapter";
-import { createCanonicalProJsonSnapshot, loadCanonicalProJsonSnapshot } from "./pro-json-snapshot";
-import { rebuildProCanonicalDocument } from "./pro-canonical";
-import { isProStructuralFieldId, buildProStructuralTransitionBytes } from "./pro-transition";
-import { slugify } from "./snapshot-common";
-import type { ParseOptions, ParseResult } from "./types";
+import type { BinaryFormatAdapter } from "../format-adapter";
+import { createCanonicalProJsonSnapshot, loadCanonicalProJsonSnapshot } from "./json-snapshot";
+import { rebuildProCanonicalDocument } from "./canonical";
+import { isProStructuralFieldId, buildProStructuralTransitionBytes } from "./transition";
+import { slugify } from "../snapshot-common";
+import type { ParseOptions, ParseResult } from "../types";
 
 export const proFormatAdapter: BinaryFormatAdapter = {
     formatId: "pro",

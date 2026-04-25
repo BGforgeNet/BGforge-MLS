@@ -1,7 +1,7 @@
 import { BufferReader } from "typed-binary";
-import type { BinaryParser, ParseOptions, ParseResult, ParsedGroup, ParsedField, ParsedFieldType } from "./types";
-import { createProCanonicalSnapshot } from "./pro-canonical";
-import { serializePro } from "./pro-serializer";
+import type { BinaryParser, ParseOptions, ParseResult, ParsedGroup, ParsedField, ParsedFieldType } from "../types";
+import { createProCanonicalSnapshot } from "./canonical";
+import { serializePro } from "./serializer";
 import {
     type CritterFieldDef,
     ObjectType,
@@ -43,7 +43,7 @@ import {
     CRITTER_BONUS_DT,
     CRITTER_BONUS_DR,
     CRITTER_SKILLS,
-} from "./pro-types";
+} from "./types";
 import {
     headerSchema,
     itemCommonSchema,
@@ -83,7 +83,7 @@ import {
     type WallData,
     type TileData,
     type MiscData,
-} from "./pro-schemas";
+} from "./schemas";
 
 /**
  * Create a big-endian BufferReader from a Uint8Array, optionally starting at byteOffset

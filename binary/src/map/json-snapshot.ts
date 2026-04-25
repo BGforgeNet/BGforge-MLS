@@ -1,12 +1,12 @@
-import { mapParser } from "./map";
+import { mapParser } from "./index";
 import {
     createMapCanonicalSnapshot,
     mapCanonicalSnapshotSchema,
     serializeMapCanonicalDocument,
     type MapCanonicalSnapshot,
-} from "./map-canonical";
-import { parseWithSchemaValidation } from "./schema-validation";
-import type { ParseOptions, ParseResult } from "./types";
+} from "./canonical";
+import { parseWithSchemaValidation } from "../schema-validation";
+import type { ParseOptions, ParseResult } from "../types";
 
 interface LoadedCanonicalMapSnapshot {
     readonly snapshot: MapCanonicalSnapshot;

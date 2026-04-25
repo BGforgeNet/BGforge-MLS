@@ -4,7 +4,7 @@
  */
 
 import { z } from "zod";
-import { zodFieldNumber, zodNumericType } from "./binary-format-contract";
+import { zodFieldNumber, zodNumericType } from "../binary-format-contract";
 
 const int32Schema = zodNumericType("int32");
 const uint8Schema = zodNumericType("uint8");

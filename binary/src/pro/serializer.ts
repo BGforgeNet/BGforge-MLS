@@ -1,5 +1,5 @@
-import { createProCanonicalSnapshot, serializeProCanonicalDocument } from "./pro-canonical";
-import type { ParseResult } from "./types";
+import { createProCanonicalSnapshot, serializeProCanonicalDocument } from "./canonical";
+import type { ParseResult } from "../types";
 
 /**
  * Serialize a PRO ParseResult back to binary bytes from the canonical document only.

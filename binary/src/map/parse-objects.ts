@@ -2,9 +2,9 @@
  * Parse functions for MAP object data (base fields, critter data, exit grids, inventory).
  */
 
-import type { ParsedField, ParsedGroup } from "./types";
-import { MapElevation, Rotation, ObjectFlags } from "./map-types";
-import type { MapHeader } from "./map-schemas";
+import type { ParsedField, ParsedGroup } from "../types";
+import { MapElevation, Rotation, ObjectFlags } from "./types";
+import type { MapHeader } from "./schemas";
 import {
     makeGroup,
     flagsField,
@@ -21,7 +21,7 @@ import {
     PID_TYPE_MISC,
     PID_TYPE_ITEM,
     PID_TYPE_SCENERY,
-} from "./map-parse-helpers";
+} from "./parse-helpers";
 
 type ParsedObjectResult = {
     complete: boolean;

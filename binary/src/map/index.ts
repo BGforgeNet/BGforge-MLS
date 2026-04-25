@@ -11,15 +11,15 @@
  * 6. Objects per elevation (variable count)
  */
 
-import type { BinaryParser, ParseOpaqueRange, ParseOptions, ParseResult } from "./types";
-import { rebuildMapCanonicalDocument } from "./map-canonical";
-import { serializeMap } from "./map-serializer";
-import { encodeOpaqueRange } from "./opaque-range";
-import { HEADER_SIZE, parseHeader } from "./map-schemas";
-import { makeGroup, HEADER_PADDING_OFFSET, HEADER_OPAQUE_END, STRICT_MAP_SCRIPT_TYPE_COUNT } from "./map-parse-helpers";
-import { parseHeaderSection, parseVariablesSection, parseTiles, parseScripts } from "./map-parse-sections";
-import { parseObjects } from "./map-parse-objects";
-import { scoreParsedTail, isConfidentObjectsGroup, buildOpaqueObjectsGroup } from "./map-parse-scoring";
+import type { BinaryParser, ParseOpaqueRange, ParseOptions, ParseResult } from "../types";
+import { rebuildMapCanonicalDocument } from "./canonical";
+import { serializeMap } from "./serializer";
+import { encodeOpaqueRange } from "../opaque-range";
+import { HEADER_SIZE, parseHeader } from "./schemas";
+import { makeGroup, HEADER_PADDING_OFFSET, HEADER_OPAQUE_END, STRICT_MAP_SCRIPT_TYPE_COUNT } from "./parse-helpers";
+import { parseHeaderSection, parseVariablesSection, parseTiles, parseScripts } from "./parse-sections";
+import { parseObjects } from "./parse-objects";
+import { scoreParsedTail, isConfidentObjectsGroup, buildOpaqueObjectsGroup } from "./parse-scoring";
 
 class MapParser implements BinaryParser {
     readonly id = "map";
@@ -68,7 +68,7 @@ class MapParser implements BinaryParser {
             errors.push(`Unknown MAP version: ${header.version} (expected 19 or 20)`);
         }
 
-        const rootFields: (import("./types").ParsedField | import("./types").ParsedGroup)[] = [];
+        const rootFields: (import("../types").ParsedField | import("../types").ParsedGroup)[] = [];
 
         rootFields.push(parseHeaderSection(data, errors));
         const filenameBytes = data.subarray(0x04, 0x14);

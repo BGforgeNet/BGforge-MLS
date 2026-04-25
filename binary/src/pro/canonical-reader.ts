@@ -3,18 +3,18 @@
  * from a parsed display tree (ParseResult).
  */
 
-import { clampNumericValue } from "./binary-format-contract";
-import { resolveRawValueFromDisplay } from "./display-lookups";
-import { createFieldKey, toSemanticFieldKey } from "./presentation-schema";
-import { parseWithSchemaValidation } from "./schema-validation";
-import { CRITTER_BASE_PRIMARY, CRITTER_BASE_SECONDARY, CRITTER_SKILLS } from "./pro-types";
-import type { ParsedField, ParsedGroup, ParseResult } from "./types";
+import { clampNumericValue } from "../binary-format-contract";
+import { resolveRawValueFromDisplay } from "../display-lookups";
+import { createFieldKey, toSemanticFieldKey } from "../presentation-schema";
+import { parseWithSchemaValidation } from "../schema-validation";
+import { CRITTER_BASE_PRIMARY, CRITTER_BASE_SECONDARY, CRITTER_SKILLS } from "./types";
+import type { ParsedField, ParsedGroup, ParseResult } from "../types";
 import {
     proCanonicalSnapshotSchema,
     proCanonicalDocumentSchema,
     type ProCanonicalSnapshot,
     type ProCanonicalDocument,
-} from "./pro-canonical-schemas";
+} from "./canonical-schemas";
 
 function getGroup(root: ParsedGroup, groupName: string): ParsedGroup {
     const group = root.fields.find((entry): entry is ParsedGroup => "fields" in entry && entry.name === groupName);

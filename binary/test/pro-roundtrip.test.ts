@@ -31,8 +31,8 @@ import {
     wallSchema,
     tileSchema,
     miscSchema,
-} from "../src/pro-schemas";
-import { HEADER_SIZE, ITEM_SUBTYPE_OFFSET, SCENERY_SUBTYPE_OFFSET } from "../src/pro-types";
+} from "../src/pro/schemas";
+import { HEADER_SIZE, ITEM_SUBTYPE_OFFSET, SCENERY_SUBTYPE_OFFSET } from "../src/pro/types";
 
 const FIXTURES = path.resolve("client/testFixture/proto");
 

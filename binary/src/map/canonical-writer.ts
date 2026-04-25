@@ -3,10 +3,10 @@
  */
 
 import { z } from "zod";
-import { decodeOpaqueRange } from "./opaque-range";
-import { HEADER_SIZE, TILE_DATA_SIZE_PER_ELEVATION, getScriptType } from "./map-schemas";
-import { hasElevation } from "./map-types";
-import type { ParseOpaqueRange } from "./types";
+import { decodeOpaqueRange } from "../opaque-range";
+import { HEADER_SIZE, TILE_DATA_SIZE_PER_ELEVATION, getScriptType } from "./schemas";
+import { hasElevation } from "./types";
+import type { ParseOpaqueRange } from "../types";
 import {
     mapHeaderSchema,
     mapTileElevationSchema,
@@ -20,7 +20,7 @@ import {
     PID_TYPE_CRITTER,
     PID_TYPE_MISC,
     type MapCanonicalDocument,
-} from "./map-canonical-schemas";
+} from "./canonical-schemas";
 
 function writeInt32(view: DataView, offset: number, value: number): void {
     view.setInt32(offset, value, false);

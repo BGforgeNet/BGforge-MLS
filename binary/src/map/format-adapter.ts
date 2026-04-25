@@ -1,8 +1,8 @@
-import type { BinaryFormatAdapter, ProjectedEntry } from "./format-adapter";
-import type { ParsedField, ParsedGroup, ParseOptions, ParseResult } from "./types";
-import { createCanonicalMapJsonSnapshot, loadCanonicalMapJsonSnapshot } from "./map-json-snapshot";
-import { rebuildMapCanonicalDocument } from "./map-canonical";
-import { slugify } from "./snapshot-common";
+import type { BinaryFormatAdapter, ProjectedEntry } from "../format-adapter";
+import type { ParsedField, ParsedGroup, ParseOptions, ParseResult } from "../types";
+import { createCanonicalMapJsonSnapshot, loadCanonicalMapJsonSnapshot } from "./json-snapshot";
+import { rebuildMapCanonicalDocument } from "./canonical";
+import { slugify } from "../snapshot-common";
 
 function mapSemanticFieldKey(segments: readonly string[]): string | undefined {
     if (segments.length === 0) {

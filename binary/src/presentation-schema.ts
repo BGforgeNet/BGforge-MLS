@@ -18,8 +18,8 @@ import {
     WallLightFlags,
     ActionFlags,
     WeaponAnimCode,
-} from "./pro-types";
-import { MapElevation, MapFlags, ObjectFlags, Rotation, ScriptProc, ScriptFlags, Skill } from "./map-types";
+} from "./pro/types";
+import { MapElevation, MapFlags, ObjectFlags, Rotation, ScriptProc, ScriptFlags, Skill } from "./map/types";
 import { formatAdapterRegistry } from "./format-adapter";
 
 const numericFormatSchema = z.enum(["decimal", "hex32"]);

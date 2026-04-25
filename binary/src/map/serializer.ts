@@ -4,8 +4,8 @@
  * rebuilt into canonical form only as a fallback for synthetic test inputs.
  */
 
-import { getMapCanonicalDocument, rebuildMapCanonicalDocument, serializeMapCanonicalDocument } from "./map-canonical";
-import type { ParseResult } from "./types";
+import { getMapCanonicalDocument, rebuildMapCanonicalDocument, serializeMapCanonicalDocument } from "./canonical";
+import type { ParseResult } from "../types";
 
 export function serializeMap(result: ParseResult): Uint8Array {
     const document = getMapCanonicalDocument(result) ?? rebuildMapCanonicalDocument(result);

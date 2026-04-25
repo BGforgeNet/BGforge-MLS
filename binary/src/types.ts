@@ -1,5 +1,5 @@
-import type { MapCanonicalDocument } from "./map-canonical";
-import type { ProCanonicalDocument } from "./pro-canonical";
+import type { MapCanonicalDocument } from "./map/canonical";
+import type { ProCanonicalDocument } from "./pro/canonical";
 
 // Used only via ParseResult.document below; consumers see it through ParseResult,
 // no downstream importer references the alias by name.

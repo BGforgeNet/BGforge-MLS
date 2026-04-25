@@ -2,8 +2,8 @@
  * Parse functions for the header, variables, tiles, and scripts sections of a MAP file.
  */
 
-import type { ParseOpaqueRange, ParsedField, ParsedGroup } from "./types";
-import { encodeOpaqueRange } from "./opaque-range";
+import type { ParseOpaqueRange, ParsedField, ParsedGroup } from "../types";
+import { encodeOpaqueRange } from "../opaque-range";
 import {
     MapVersion,
     MapFlags,
@@ -14,7 +14,7 @@ import {
     ScriptType,
     Skill,
     hasElevation,
-} from "./map-types";
+} from "./types";
 import {
     HEADER_SIZE,
     TILE_DATA_SIZE_PER_ELEVATION,
@@ -23,7 +23,7 @@ import {
     parseTilePair,
     getScriptType,
     type MapHeader,
-} from "./map-schemas";
+} from "./schemas";
 import {
     field,
     makeGroup,
@@ -32,7 +32,7 @@ import {
     int32Field,
     HEADER_PADDING_OFFSET,
     HEADER_PADDING_SIZE,
-} from "./map-parse-helpers";
+} from "./parse-helpers";
 
 export function parseHeaderSection(data: Uint8Array, errors: string[]): ParsedGroup {
     const header = parseHeader(data);
