@@ -58,7 +58,7 @@ import {
     formatReplaceBcsBlock,
 } from "./blocks";
 import { SyntaxType } from "../tree-sitter.d";
-import { throwOnParseError } from "../../shared/format-utils";
+import { throwOnParseError } from "@bgforge/format";
 
 // ============================================
 // Simple node formatters

@@ -7,7 +7,7 @@
  */
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
-import { normalizeWhitespaceWeidu, throwOnParseError, tokenizeWeidu, WeiduTokenType } from "../../shared/format-utils";
+import { normalizeWhitespaceWeidu, throwOnParseError, tokenizeWeidu, WeiduTokenType } from "@bgforge/format";
 
 interface FormatOptions {
     indentSize: number;

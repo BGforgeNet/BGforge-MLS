@@ -16,7 +16,7 @@ import { describe, expect, it } from "vitest";
 import { format2da } from "../src/infinity-2da/format";
 import { formatMsg } from "../src/fallout-msg/format";
 import { formatTra } from "../src/weidu-tra/format";
-import type { FormatOutput } from "../src/shared/format-utils";
+import type { FormatOutput } from "@bgforge/format";
 
 // ---------------------------------------------------------------------------
 // Helper

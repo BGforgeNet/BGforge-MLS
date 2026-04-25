@@ -48,7 +48,7 @@ import {
     type WorkspaceSymbolCapability,
 } from "../language-provider";
 import { getFormatOptions } from "../shared/format-options";
-import { stripCommentsWeidu } from "../shared/format-utils";
+import { stripCommentsWeidu } from "@bgforge/format";
 import { resolveSymbolWithLocal, formatWithValidation } from "../shared/provider-helpers";
 import { compile as weiduCompile } from "../weidu-compile";
 import { getContextAtPosition, getFuncParamsContext, isAtDeclarationSite } from "./completion/context";

@@ -9,7 +9,8 @@
 import { conlog } from "../common";
 import type { FormatResult, ProviderContext } from "./capabilities";
 import type { LanguageProvider } from "../language-provider";
-import { createFullDocumentEdit, type FormatOutput } from "../shared/format-utils";
+import { createFullDocumentEdit } from "../shared/format-edits";
+import type { FormatOutput } from "@bgforge/format";
 
 /**
  * Creates a minimal LanguageProvider that exposes only document formatting.

@@ -3,7 +3,6 @@
  */
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
-import { TextEdit } from "vscode-languageserver/node";
 
 /** Library-shape formatter output. Wrappers convert to LSP TextEdit[] at the LSP boundary. */
 export interface FormatOutput {
@@ -42,24 +41,6 @@ export function throwOnParseError(root: SyntaxNode): void {
         const kind = node.isMissing ? "MISSING" : "ERROR";
         throw new Error(`${row + 1}:${column + 1}: Parse ${kind}`);
     }
-}
-
-/**
- * Creates a TextEdit that replaces the entire document.
- */
-export function createFullDocumentEdit(originalText: string, newText: string): TextEdit[] {
-    const lines = originalText.split("\n");
-    const lastLine = lines[lines.length - 1] ?? "";
-
-    return [
-        TextEdit.replace(
-            {
-                start: { line: 0, character: 0 },
-                end: { line: lines.length - 1, character: lastLine.length },
-            },
-            newText,
-        ),
-    ];
 }
 
 /** WeiDU multi-tilde delimiter count (~~~~~...~~~~~). */

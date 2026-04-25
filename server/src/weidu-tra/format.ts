@@ -14,7 +14,7 @@
  * whitespace trimmed only.
  */
 
-import { stripBom, type FormatOutput } from "../shared/format-utils";
+import { stripBom, type FormatOutput } from "@bgforge/format";
 
 /** Matches the entry prefix: @<optional_whitespace><number><optional_whitespace>=<optional_whitespace> */
 const ENTRY_PREFIX_RE = /^(@)\s*(-?\d+)\s*=\s*/;

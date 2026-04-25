@@ -10,7 +10,8 @@ import type { IndexedSymbol } from "../core/symbol";
 import type { Symbols } from "../core/symbol-index";
 import type { FormatResult } from "../language-provider";
 import { conlog } from "../common";
-import { createFullDocumentEdit, validateFormatting, type CommentStripper, type FormatOutput } from "./format-utils";
+import { createFullDocumentEdit } from "./format-edits";
+import { validateFormatting, type CommentStripper, type FormatOutput } from "@bgforge/format";
 
 // ============================================
 // Symbol resolution

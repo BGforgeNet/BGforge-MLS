@@ -12,7 +12,7 @@
  * Multiline text fields (closing `}` on a later line) are supported.
  */
 
-import { stripBom, type FormatOutput } from "../shared/format-utils";
+import { stripBom, type FormatOutput } from "@bgforge/format";
 
 interface ParsedEntry {
     /** Trimmed number string (e.g. "100"). */

@@ -12,8 +12,17 @@
  */
 
 import { defineConfig } from "vitest/config";
+import path from "path";
 
 export default defineConfig({
+    resolve: {
+        // Map the workspace package to its source so vitest can import it
+        // without requiring a build step. The built out/ does not exist until
+        // pnpm --filter @bgforge/format build runs, but tests run from source.
+        alias: {
+            "@bgforge/format": path.resolve(__dirname, "../format/src/index.ts"),
+        },
+    },
     test: {
         name: "server",
         include: ["test/**/*.test.ts"],

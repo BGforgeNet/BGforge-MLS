@@ -8,7 +8,7 @@
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import { SyntaxType } from "../tree-sitter.d";
-import { throwOnParseError } from "../../shared/format-utils";
+import { throwOnParseError } from "@bgforge/format";
 
 // Formatting options.
 // Note: BAF doesn't need lineLimit - its format is inherently line-based

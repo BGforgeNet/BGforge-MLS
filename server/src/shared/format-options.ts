@@ -4,7 +4,7 @@
  */
 
 import { fileURLToPath } from "url";
-import { getEditorconfigSettings } from "./editorconfig";
+import { getEditorconfigSettings } from "@bgforge/format";
 
 const DEFAULT_INDENT = 4;
 const DEFAULT_LINE_LIMIT = 120;

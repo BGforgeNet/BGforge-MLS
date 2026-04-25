@@ -10,7 +10,7 @@
  * Output always uses CRLF line endings, matching the Fallout engine's convention.
  */
 
-import { stripBom, type FormatOutput } from "../shared/format-utils";
+import { stripBom, type FormatOutput } from "@bgforge/format";
 
 const MIN_GAP = 4;
 

@@ -15,7 +15,7 @@
  */
 
 import { type SemanticTokenSpan, CELL_2DA_COL_TYPES } from "../shared/semantic-tokens";
-import { stripBom } from "../shared/format-utils";
+import { stripBom } from "@bgforge/format";
 
 /** Regex for matching non-whitespace runs; must be reset before each use. */
 const TOKEN_RE = /\S+/g;

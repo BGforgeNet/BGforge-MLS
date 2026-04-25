@@ -15,7 +15,7 @@ import type {
     FormattingCapability,
 } from "../language-provider";
 import type { SemanticTokenSpan } from "../shared/semantic-tokens";
-import { createFullDocumentEdit } from "../shared/format-utils";
+import { createFullDocumentEdit } from "../shared/format-edits";
 import { getSemanticTokenSpans } from "./semantic-tokens";
 import { format2da } from "./format";
 

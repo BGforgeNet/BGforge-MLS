@@ -7,7 +7,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 
 const mockGetEditorconfigSettings = vi.fn();
 
-vi.mock("../../src/shared/editorconfig", () => ({
+vi.mock("@bgforge/format", () => ({
     getEditorconfigSettings: (...args: unknown[]) => mockGetEditorconfigSettings(...args),
 }));
 

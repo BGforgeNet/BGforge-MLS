@@ -20,7 +20,7 @@ vi.mock("fs", () => ({
     readFileSync: (...args: unknown[]) => mockReadFileSync(...args),
 }));
 
-import { getEditorconfigSettings } from "../../src/shared/editorconfig";
+import { getEditorconfigSettings } from "@bgforge/format";
 
 describe("shared/editorconfig", () => {
     beforeEach(() => {

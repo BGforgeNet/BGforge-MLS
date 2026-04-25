@@ -1,5 +1,6 @@
 packages:
     - client
+    - format
     - server
     - grammars/*
     - cli/format

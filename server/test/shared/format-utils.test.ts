@@ -3,8 +3,8 @@
  */
 
 import { describe, expect, it } from "vitest";
+import { createFullDocumentEdit } from "../../src/shared/format-edits";
 import {
-    createFullDocumentEdit,
     stripCommentsWeidu,
     stripCommentsFalloutSsl,
     stripCommentsTra,
@@ -12,7 +12,7 @@ import {
     stripComments2da,
     stripCommentsFalloutScriptsLst,
     validateFormatting,
-} from "../../src/shared/format-utils";
+} from "@bgforge/format";
 
 describe("shared/format-utils", () => {
     describe("createFullDocumentEdit()", () => {

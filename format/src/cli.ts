@@ -8,20 +8,20 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { formatDocument as formatSslDocument } from "../../../server/src/fallout-ssl/format/core";
-import { initParser as initSslParser, getParser as getSslParser } from "../../../server/src/fallout-ssl/parser";
-import { formatDocument as formatBafDocument } from "../../../server/src/weidu-baf/format/core";
-import { initParser as initBafParser, getParser as getBafParser } from "../../../server/src/weidu-baf/parser";
-import { formatDocument as formatDDocument } from "../../../server/src/weidu-d/format/core";
-import { initParser as initDParser, getParser as getDParser } from "../../../server/src/weidu-d/parser";
-import { formatDocument as formatTp2Document } from "../../../server/src/weidu-tp2/format/core";
-import { initParser as initTp2Parser, getParser as getTp2Parser } from "../../../server/src/weidu-tp2/parser";
-import { formatTra } from "../../../server/src/weidu-tra/format";
-import { formatMsg } from "../../../server/src/fallout-msg/format";
-import { format2da } from "../../../server/src/infinity-2da/format";
-import { formatScriptsLst } from "../../../server/src/fallout-scripts-lst/format";
+import { formatDocument as formatSslDocument } from "../../server/src/fallout-ssl/format/core";
+import { initParser as initSslParser, getParser as getSslParser } from "../../server/src/fallout-ssl/parser";
+import { formatDocument as formatBafDocument } from "../../server/src/weidu-baf/format/core";
+import { initParser as initBafParser, getParser as getBafParser } from "../../server/src/weidu-baf/parser";
+import { formatDocument as formatDDocument } from "../../server/src/weidu-d/format/core";
+import { initParser as initDParser, getParser as getDParser } from "../../server/src/weidu-d/parser";
+import { formatDocument as formatTp2Document } from "../../server/src/weidu-tp2/format/core";
+import { initParser as initTp2Parser, getParser as getTp2Parser } from "../../server/src/weidu-tp2/parser";
+import { formatTra } from "../../server/src/weidu-tra/format";
+import { formatMsg } from "../../server/src/fallout-msg/format";
+import { format2da } from "../../server/src/infinity-2da/format";
+import { formatScriptsLst } from "../../server/src/fallout-scripts-lst/format";
+import { getEditorconfigSettings } from "./editorconfig";
 import {
-    getEditorconfigSettings,
     validateFormatting,
     stripCommentsWeidu,
     stripCommentsFalloutSsl,
@@ -29,7 +29,7 @@ import {
     stripCommentsFalloutMsg,
     stripComments2da,
     stripCommentsFalloutScriptsLst,
-} from "@bgforge/format";
+} from "./format-utils";
 import {
     EXT_FALLOUT_SSL,
     EXT_WEIDU_BAF,
@@ -39,7 +39,7 @@ import {
     EXT_FALLOUT_MSG,
     EXT_INFINITY_2DA,
     FILENAME_FALLOUT_SCRIPTS_LST,
-} from "../../../server/src/core/languages";
+} from "../../server/src/core/languages";
 import {
     type FileResult,
     type OutputMode,
@@ -47,7 +47,7 @@ import {
     runCli,
     safeProcess,
     reportDiff,
-} from "../../../shared/cli/cli-utils";
+} from "../../shared/cli/cli-utils";
 
 const DEFAULT_INDENT = 4;
 const EXTENSIONS = [

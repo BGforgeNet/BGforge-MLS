@@ -15,7 +15,7 @@ import { formatIfStmt, formatWhileStmt, formatForStmt, formatForeachStmt, format
 import { formatExpression, formatCallStmt, formatAssignment, formatExpressionStmt } from "./expressions";
 import { SyntaxType } from "../tree-sitter.d";
 import type { FormatOptions } from "../../shared/format-options";
-import { throwOnParseError } from "../../shared/format-utils";
+import { throwOnParseError } from "@bgforge/format";
 
 const DEFAULT_OPTIONS: FormatOptions = {
     indentSize: 4,

@@ -6,8 +6,11 @@
         "allowImportingTsExtensions": true,
         "rootDir": "..",
         "outDir": "out",
-        "tsBuildInfoFile": "../tmp/server.tsbuildinfo"
+        "tsBuildInfoFile": "../tmp/server.tsbuildinfo",
+        "paths": {
+            "@bgforge/format": ["../format/src/index.ts"]
+        }
     },
-    "include": ["src", "test", "../shared", "../transpilers"],
+    "include": ["src", "test", "../shared", "../transpilers", "../format/src"],
     "exclude": ["node_modules", ".vscode-test"]
 }

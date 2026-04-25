@@ -38,7 +38,7 @@ import {
     type FeatureGateCapability,
     type WorkspaceSymbolCapability,
 } from "../language-provider";
-import { stripCommentsWeidu } from "../shared/format-utils";
+import { stripCommentsWeidu } from "@bgforge/format";
 import { getFormatOptions } from "../shared/format-options";
 import { resolveSymbolStatic, getStaticCompletions, formatWithValidation } from "../shared/provider-helpers";
 import { isInsideComment } from "./ast-utils";

@@ -25,7 +25,7 @@ import {
     type CompilationCapability,
 } from "../language-provider";
 import { createIsInsideComment } from "../shared/comment-check";
-import { stripCommentsWeidu } from "../shared/format-utils";
+import { stripCommentsWeidu } from "@bgforge/format";
 import { getFormatOptions } from "../shared/format-options";
 import { resolveSymbolStatic, getStaticCompletions, formatWithValidation } from "../shared/provider-helpers";
 import { formatDocument as formatAst } from "./format/core";

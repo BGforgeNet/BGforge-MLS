@@ -16,7 +16,7 @@ import {
     CollectedItemType,
 } from "./types";
 import { SyntaxType } from "../tree-sitter.d";
-import { type WeiduToken, tokenizeWeidu, WeiduTokenType, normalizeWhitespaceWeidu } from "../../shared/format-utils";
+import { type WeiduToken, tokenizeWeidu, WeiduTokenType, normalizeWhitespaceWeidu } from "@bgforge/format";
 
 // ============================================
 // Type lookup sets (O(1) instead of O(n) array includes)

@@ -50,7 +50,7 @@ import {
 import { formatWithValidation } from "../shared/provider-helpers";
 import { getJsdocCompletions } from "../shared/jsdoc-completions";
 import { FALLOUT_JSDOC_TYPES } from "../shared/fallout-types";
-import { stripCommentsFalloutSsl } from "../shared/format-utils";
+import { stripCommentsFalloutSsl } from "@bgforge/format";
 import { getFormatOptions } from "../shared/format-options";
 import * as signature from "../shared/signature";
 import { formatDocument as formatAst } from "./format/core";
