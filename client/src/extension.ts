@@ -2,7 +2,7 @@
 
 import * as path from "path";
 import * as vscode from "vscode";
-import { type ExtensionContext, ConfigurationTarget, workspace } from "vscode";
+import { type ExtensionContext } from "vscode";
 import {
     type LanguageClientOptions,
     type ServerOptions,
@@ -12,39 +12,31 @@ import {
 import { type ExecuteCommandParams, ExecuteCommandRequest } from "vscode-languageserver-protocol";
 import {
     LSP_COMMAND_COMPILE,
-    NOTIFICATION_LOAD_FINISHED,
-    REQUEST_SET_BUILT_IN_COMPILER,
     VSCODE_COMMAND_COMPILE,
     VSCODE_COMMAND_DIALOG_PREVIEW,
-    encodeWorkspaceSymbolQuery,
+    WORKSPACE_SYMBOL_SCOPED_LANGUAGES,
+    type WorkspaceSymbolScopedLanguage,
+    lspWorkspaceSymbolsCommand,
 } from "../../shared/protocol";
 import { registerBinaryEditor } from "./editors/binaryEditor";
 import { registerDialogTree } from "./dialog-tree/dialogTree";
 import { registerDDialogTree } from "./dialog-tree/dialogTree-d";
-import { ServerInitializingIndicator } from "./indicator";
 import { conlog, initOutputChannel } from "./logging";
 
 // Initialized in activate(), undefined until then
 let client: LanguageClient | undefined;
-const loadingIndicator = new ServerInitializingIndicator();
 const cmd_compile = VSCODE_COMMAND_COMPILE;
 const cmd_dialogPreview = VSCODE_COMMAND_DIALOG_PREVIEW;
 
-function getWorkspaceSymbolScopeLanguageId(): string | undefined {
+function getWorkspaceSymbolScopeLanguageId(): WorkspaceSymbolScopedLanguage | undefined {
     const document = vscode.window.activeTextEditor?.document;
     if (!document) {
         return undefined;
     }
-
-    if (
-        document.languageId === "fallout-ssl" ||
-        document.languageId === "weidu-d" ||
-        document.languageId === "weidu-tp2"
-    ) {
-        return document.languageId;
-    }
-
-    return undefined;
+    const langId = document.languageId;
+    return (WORKSPACE_SYMBOL_SCOPED_LANGUAGES as readonly string[]).includes(langId)
+        ? (langId as WorkspaceSymbolScopedLanguage)
+        : undefined;
 }
 
 export async function activate(context: ExtensionContext) {
@@ -99,16 +91,22 @@ export async function activate(context: ExtensionContext) {
             { scheme: "file", pattern: "**/*.td" },
         ],
         middleware: {
-            provideWorkspaceSymbols: (query, token, next) => {
-                return next(encodeWorkspaceSymbolQuery(query, getWorkspaceSymbolScopeLanguageId()), token);
+            provideWorkspaceSymbols: async (query, token, next) => {
+                const languageId = getWorkspaceSymbolScopeLanguageId();
+                if (!languageId || !client) {
+                    return next(query, token);
+                }
+                const params: ExecuteCommandParams = {
+                    command: lspWorkspaceSymbolsCommand(languageId),
+                    arguments: [{ query }],
+                };
+                return await client.sendRequest(ExecuteCommandRequest.type, params, token);
             },
         },
     };
 
     // Create the language client and start the client.
     client = new LanguageClient("bgforge-mls", "BGforge MLS", serverOptions, clientOptions);
-
-    loadingIndicator.startedLoadingProject("");
 
     // Start the client. This will also launch the server
     await client.start();
@@ -133,21 +131,6 @@ export async function activate(context: ExtensionContext) {
             vscode.window.showWarningMessage("Open a Fallout SSL, TSSL, D, or TD file to preview dialog");
         }),
     );
-
-    client.onRequest(REQUEST_SET_BUILT_IN_COMPILER, async (params: { uri?: string }) => {
-        const resource = params.uri ? vscode.Uri.parse(params.uri) : undefined;
-        const configuration = workspace.getConfiguration("bgforge", resource);
-        const target =
-            resource && workspace.getWorkspaceFolder(resource)
-                ? ConfigurationTarget.WorkspaceFolder
-                : ConfigurationTarget.Global;
-        await configuration.update("falloutSSL.compilePath", "", target);
-        return true;
-    });
-
-    client.onNotification(NOTIFICATION_LOAD_FINISHED, () => {
-        loadingIndicator.finishedLoadingProject("");
-    });
 }
 
 export async function deactivate(): Promise<void> {

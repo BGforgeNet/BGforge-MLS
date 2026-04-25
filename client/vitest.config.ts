@@ -40,11 +40,6 @@ export default defineConfig({
                 // VSCode extension entry point: activate/deactivate require the live vscode
                 // runtime; there is no meaningful unit surface to test here.
                 "client/src/extension.ts",
-                // The withProgress-driven progress UI requires a live vscode runtime;
-                // unit tests in client/test/indicator.test.ts cover the timeout/reset
-                // logic with a mocked vscode but cannot reach the runtime branches
-                // needed to lift this file above the 90% coverage threshold.
-                "client/src/indicator.ts",
                 // Panel lifecycle management is built entirely around vscode.WebviewPanel,
                 // vscode.workspace, and vscode.window APIs; mocking them would recreate the
                 // framework rather than test behaviour.

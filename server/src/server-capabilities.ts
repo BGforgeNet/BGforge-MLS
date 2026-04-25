@@ -1,6 +1,10 @@
 import { type ServerCapabilities, TextDocumentSyncKind } from "vscode-languageserver/node";
 import { semanticTokensLegend } from "./shared/semantic-tokens";
-import { LSP_COMMAND_PARSE_DIALOG } from "../../shared/protocol";
+import {
+    LSP_COMMAND_PARSE_DIALOG,
+    WORKSPACE_SYMBOL_SCOPED_LANGUAGES,
+    lspWorkspaceSymbolsCommand,
+} from "../../shared/protocol";
 import { COMMAND_compile } from "./compile";
 
 export function getServerCapabilities(): ServerCapabilities {
@@ -28,7 +32,11 @@ export function getServerCapabilities(): ServerCapabilities {
         workspaceSymbolProvider: true,
         foldingRangeProvider: true,
         executeCommandProvider: {
-            commands: [COMMAND_compile, LSP_COMMAND_PARSE_DIALOG],
+            commands: [
+                COMMAND_compile,
+                LSP_COMMAND_PARSE_DIALOG,
+                ...WORKSPACE_SYMBOL_SCOPED_LANGUAGES.map((lang) => lspWorkspaceSymbolsCommand(lang)),
+            ],
         },
     };
 }

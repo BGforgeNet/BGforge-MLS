@@ -29,11 +29,10 @@ import {
 } from "../common";
 import { abortAllCompiles, compileWithTmpFile } from "../core/compile-with-tmp-file";
 import type { NormalizedUri } from "../core/normalized-uri";
-import { getConnection, getDocuments } from "../lsp-connection";
+import { getDocuments } from "../lsp-connection";
 import { showError, showErrorWithActions, showInfo } from "../user-messages";
 import type { SSLsettings } from "../settings";
 import { ssl_compile as ssl_builtin_compiler } from "../sslc/ssl_compiler";
-import { REQUEST_SET_BUILT_IN_COMPILER } from "../../../shared/protocol";
 
 const sslExt = ".ssl";
 
@@ -157,6 +156,15 @@ function sendDiagnostics(uri: string, outputText: string, tmpUri: string) {
 // the cached value to be updated and reset (for tests via _resetCompilerCache).
 const compilerPathCache: { path: string | null } = { path: null };
 
+/**
+ * External compiler paths the user has opted out of for the lifetime of the
+ * server. Once the user picks "Switch" on the version-check error dialog, we
+ * stop re-prompting for that path on subsequent compiles and use the built-in
+ * compiler directly. The user makes the decision permanent by clearing
+ * `bgforge.falloutSSL.compilePath` in their settings.
+ */
+const disabledExternalPaths = new Set<string>();
+
 /** Track in-flight compilations per URI so we can cancel stale ones. */
 const activeCompiles = new Map<NormalizedUri, AbortController>();
 
@@ -166,12 +174,13 @@ export function abortInFlightSSLCompiles(): void {
 }
 
 /**
- * Reset cached compiler path. Exported for testing only — module-level
- * state (successfulCompilerPath) persists across test cases, so each test
- * must call this in beforeEach to avoid cross-test contamination.
+ * Reset cached compiler state. Exported for testing only — module-level
+ * state persists across test cases, so each test must call this in beforeEach
+ * to avoid cross-test contamination.
  */
 export function _resetCompilerCache() {
     compilerPathCache.path = null;
+    disabledExternalPaths.clear();
 }
 
 async function checkExternalCompiler(compilePath: string) {
@@ -249,7 +258,7 @@ export async function compile(uri: NormalizedUri, sslSettings: SSLsettings, inte
         // Throwaway validation output only exists when we didn't write to the real output dir.
         extraCleanupPaths: shouldWriteOutput ? undefined : [dstPath],
         run: async (signal) => {
-            let useBuiltInCompiler = !sslSettings.compilePath;
+            let useBuiltInCompiler = !sslSettings.compilePath || disabledExternalPaths.has(sslSettings.compilePath);
 
             if (!useBuiltInCompiler && !(await checkExternalCompiler(sslSettings.compilePath))) {
                 if (!interactive) {
@@ -262,11 +271,10 @@ export async function compile(uri: NormalizedUri, sslSettings: SSLsettings, inte
                     );
                     if (response?.id === "switch") {
                         useBuiltInCompiler = true;
-                        try {
-                            await getConnection().sendRequest(REQUEST_SET_BUILT_IN_COMPILER, { uri });
-                        } catch (err) {
-                            conlog(`Failed to persist built-in compiler switch: ${errorMessage(err)}`, "warn");
-                        }
+                        disabledExternalPaths.add(sslSettings.compilePath);
+                        showInfo(
+                            "Using built-in compiler. To make this permanent, clear the bgforge.falloutSSL.compilePath setting.",
+                        );
                     } else {
                         return;
                     }

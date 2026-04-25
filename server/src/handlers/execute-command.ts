@@ -7,7 +7,12 @@ import { parseTSSLDialog } from "../tssl/dialog";
 import { parseDDialog } from "../weidu-d/dialog";
 import { getServerContext } from "../server-context";
 import { EXT_TD, EXT_TSSL, LANG_FALLOUT_SSL, LANG_TYPESCRIPT, LANG_WEIDU_D } from "../core/languages";
-import { LSP_COMMAND_PARSE_DIALOG, VSCODE_COMMAND_COMPILE } from "../../../shared/protocol";
+import {
+    LSP_COMMAND_PARSE_DIALOG,
+    LSP_COMMAND_WORKSPACE_SYMBOLS_PREFIX,
+    VSCODE_COMMAND_COMPILE,
+} from "../../../shared/protocol";
+import { registry } from "../provider-registry";
 import type { HandlerContext } from "./context";
 
 /** Dialog preview handler registry. Maps language/extension to parser + translation language. */
@@ -40,8 +45,20 @@ function logCompileError(err: unknown) {
 }
 
 export function register(ctx: HandlerContext): void {
-    ctx.connection.onExecuteCommand(async (params) => {
+    ctx.connection.onExecuteCommand(async (params, token) => {
         const command = params.command;
+
+        // Per-language scoped workspace-symbol search.
+        // Standard `workspace/symbol` returns aggregated results from every provider;
+        // this command lets clients restrict results to one language for polyglot
+        // workspaces. Argument shape: `{ query: string }`.
+        if (command.startsWith(LSP_COMMAND_WORKSPACE_SYMBOLS_PREFIX)) {
+            const languageId = command.slice(LSP_COMMAND_WORKSPACE_SYMBOLS_PREFIX.length);
+            const arg = params.arguments?.[0];
+            const query = typeof arg?.query === "string" ? arg.query : "";
+            return registry.workspaceSymbols(query, token, languageId);
+        }
+
         if (!params.arguments) {
             return;
         }

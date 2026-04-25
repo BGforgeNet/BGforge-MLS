@@ -1,51 +1,27 @@
 /**
  * Unit tests for shared/protocol.ts.
- * Tests workspace symbol query encode/decode round-trip and edge cases.
+ * Verifies the per-language workspace-symbols executeCommand identifiers.
  */
 
 import { describe, expect, it } from "vitest";
-import { encodeWorkspaceSymbolQuery, decodeWorkspaceSymbolQuery } from "../../shared/protocol";
+import {
+    LSP_COMMAND_WORKSPACE_SYMBOLS_PREFIX,
+    WORKSPACE_SYMBOL_SCOPED_LANGUAGES,
+    lspWorkspaceSymbolsCommand,
+} from "../../shared/protocol";
 
-describe("encodeWorkspaceSymbolQuery", () => {
-    it("returns the query unchanged when no languageId is provided", () => {
-        expect(encodeWorkspaceSymbolQuery("myFunc")).toBe("myFunc");
-        expect(encodeWorkspaceSymbolQuery("myFunc", undefined)).toBe("myFunc");
+describe("lspWorkspaceSymbolsCommand", () => {
+    it("composes a command ID from the prefix and language ID", () => {
+        expect(lspWorkspaceSymbolsCommand("fallout-ssl")).toBe(`${LSP_COMMAND_WORKSPACE_SYMBOLS_PREFIX}fallout-ssl`);
     });
 
-    it("prefixes with scope when languageId is provided", () => {
-        const encoded = encodeWorkspaceSymbolQuery("myFunc", "fallout-ssl");
-        expect(encoded).toContain("fallout-ssl");
-        expect(encoded).toContain("myFunc");
-    });
-});
-
-describe("decodeWorkspaceSymbolQuery", () => {
-    it("returns raw query unchanged when it has no scope prefix", () => {
-        const result = decodeWorkspaceSymbolQuery("plainQuery");
-        expect(result).toEqual({ query: "plainQuery" });
+    it("produces a unique ID for every supported language", () => {
+        const ids = WORKSPACE_SYMBOL_SCOPED_LANGUAGES.map((lang) => lspWorkspaceSymbolsCommand(lang));
+        expect(new Set(ids).size).toBe(ids.length);
     });
 
-    it("round-trips an encoded query back to its parts", () => {
-        const encoded = encodeWorkspaceSymbolQuery("myFunc", "fallout-ssl");
-        const decoded = decodeWorkspaceSymbolQuery(encoded);
-        expect(decoded.languageId).toBe("fallout-ssl");
-        expect(decoded.query).toBe("myFunc");
-    });
-
-    it("returns raw query when prefix is present but no colon follows", () => {
-        // separator < 0 branch — no colon after the scope prefix
-        // Manually craft a string that starts with the prefix but has no ":" after it
-        const prefix = "bgforge-ws:";
-        const malformed = `${prefix}nocolon`;
-        const result = decodeWorkspaceSymbolQuery(malformed);
-        expect(result).toEqual({ query: malformed });
-    });
-
-    it("returns raw query when languageId segment is empty", () => {
-        // languageId empty after the prefix
-        const prefix = "bgforge-ws:";
-        const malformed = `${prefix}:query`;
-        const result = decodeWorkspaceSymbolQuery(malformed);
-        expect(result).toEqual({ query: malformed });
+    it("uses a prefix that other LSP commands do not collide with", () => {
+        // Sanity check: the prefix is namespaced under bgforge.workspaceSymbols.
+        expect(LSP_COMMAND_WORKSPACE_SYMBOLS_PREFIX).toMatch(/^bgforge\./);
     });
 });

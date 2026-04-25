@@ -32,7 +32,6 @@ import { conlog, errorMessage } from "./common";
 import { showError } from "./user-messages";
 import { validLocationOrNull } from "./core/location-utils";
 import { normalizeUri } from "./core/normalized-uri";
-import { decodeWorkspaceSymbolQuery } from "../../shared/protocol";
 import { encodeSemanticTokens } from "./shared/semantic-tokens";
 import { FileWatcherManager } from "./core/file-watcher-manager";
 import { scanWorkspaceFiles } from "./core/workspace-scanner";
@@ -139,25 +138,25 @@ class ProviderRegistry {
     }
 
     /**
-     * Search workspace symbols across all providers.
-     * Aggregates results from every provider that implements workspaceSymbols.
+     * Search workspace symbols.
+     * When `languageId` is provided, returns symbols only from that language's provider;
+     * otherwise aggregates results from every provider that implements workspaceSymbols.
      * Returns empty immediately when the token is already cancelled.
      */
-    workspaceSymbols(query: string, token: CancellationToken): SymbolInformation[] {
+    workspaceSymbols(query: string, token: CancellationToken, languageId?: string): SymbolInformation[] {
         if (token.isCancellationRequested) {
             return [];
         }
 
-        const decoded = decodeWorkspaceSymbolQuery(query);
-        if (decoded.languageId) {
-            const provider = this.get(decoded.languageId);
-            return provider?.workspaceSymbols?.(decoded.query, token) ?? [];
+        if (languageId) {
+            const provider = this.get(languageId);
+            return provider?.workspaceSymbols?.(query, token) ?? [];
         }
 
         const results: SymbolInformation[] = [];
         for (const provider of this.providers.values()) {
             if (provider.workspaceSymbols) {
-                results.push(...provider.workspaceSymbols(decoded.query, token));
+                results.push(...provider.workspaceSymbols(query, token));
             }
         }
         return results;

@@ -470,9 +470,24 @@ describe("fallout-ssl compiler", () => {
                 { title: "Cancel", id: "cancel" },
             );
             expect(mockBuiltinCompiler).toHaveBeenCalled();
-            expect(mockSendRequest).toHaveBeenCalledWith("bgforge-mls/setBuiltInCompiler", {
-                uri: "file:///project/test.ssl",
+            expect(mockShowInfo).toHaveBeenCalledWith(expect.stringContaining("bgforge.falloutSSL.compilePath"));
+            expect(mockSendRequest).not.toHaveBeenCalled();
+        });
+
+        it("remembers the user's switch decision and skips re-prompting on subsequent compiles", async () => {
+            mockExecFile.mockImplementation((...args: unknown[]) => {
+                const lastArg = args[args.length - 1];
+                if (typeof lastArg === "function") {
+                    (lastArg as (err: Error) => void)(new Error("not found"));
+                }
             });
+            mockShowErrorWithActions.mockResolvedValue({ id: "switch" });
+
+            await compile(normalizeUri("file:///project/a.ssl"), externalSettings, true, "code");
+            await compile(normalizeUri("file:///project/b.ssl"), externalSettings, true, "code");
+
+            expect(mockShowErrorWithActions).toHaveBeenCalledTimes(1);
+            expect(mockBuiltinCompiler).toHaveBeenCalledTimes(2);
         });
 
         it("falls back to built-in without prompting during non-interactive validation", async () => {
@@ -546,24 +561,6 @@ describe("fallout-ssl compiler", () => {
 
             // Only one call in the second compile: the actual compile, no --version
             expect(secondCallCount).toBe(1);
-        });
-
-        it("logs but does not rethrow when sendRequest fails after user switches to built-in", async () => {
-            // Version check fails → user accepts switch
-            mockExecFile.mockImplementation((...args: unknown[]) => {
-                const lastArg = args[args.length - 1];
-                if (typeof lastArg === "function") {
-                    (lastArg as (err: Error) => void)(new Error("not found"));
-                }
-            });
-            mockShowErrorWithActions.mockResolvedValue({ id: "switch" });
-            mockSendRequest.mockRejectedValue(new Error("connection lost"));
-            mockBuiltinCompiler.mockResolvedValue({ stdout: "", returnCode: 0 });
-
-            // Should not throw — sendRequest failure is logged and swallowed
-            await compile(normalizeUri("file:///project/test.ssl"), externalSettings, true, "code");
-
-            expect(mockBuiltinCompiler).toHaveBeenCalled();
         });
     });
 

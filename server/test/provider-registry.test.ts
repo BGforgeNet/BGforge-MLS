@@ -25,7 +25,6 @@ import {
     WorkspaceEdit,
 } from "vscode-languageserver/node";
 import type { LanguageProvider, ProviderContext, FormatResult } from "../src/language-provider";
-import { encodeWorkspaceSymbolQuery } from "../../shared/protocol";
 
 // Mock the common module to suppress logs and control file finding during tests
 vi.mock("../src/common", () => ({
@@ -985,7 +984,7 @@ describe("ProviderRegistry", () => {
             expect(results[0]).toBe(symbol);
         });
 
-        it("should filter workspace symbols to the scoped language when query is encoded", async () => {
+        it("should filter workspace symbols to the requested language when languageId is provided", async () => {
             const registry = await createRegistry();
             const scoped = vi.fn().mockReturnValue([]);
             const other = vi.fn().mockReturnValue([]);
@@ -993,9 +992,20 @@ describe("ProviderRegistry", () => {
             registry.register(createMockProvider("weidu-d", { workspaceSymbols: scoped }));
             registry.register(createMockProvider("weidu-tp2", { workspaceSymbols: other }));
 
-            registry.workspaceSymbols(encodeWorkspaceSymbolQuery("label", "weidu-d"), CancellationToken.None);
+            registry.workspaceSymbols("label", CancellationToken.None, "weidu-d");
 
             expect(scoped).toHaveBeenCalledWith("label", CancellationToken.None);
+            expect(other).not.toHaveBeenCalled();
+        });
+
+        it("should return empty when languageId has no matching provider", async () => {
+            const registry = await createRegistry();
+            const other = vi.fn().mockReturnValue([{} as SymbolInformation]);
+            registry.register(createMockProvider("weidu-tp2", { workspaceSymbols: other }));
+
+            const results = registry.workspaceSymbols("label", CancellationToken.None, "weidu-d");
+
+            expect(results).toEqual([]);
             expect(other).not.toHaveBeenCalled();
         });
 

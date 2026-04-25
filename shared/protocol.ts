@@ -7,35 +7,29 @@
 export const LSP_COMMAND_COMPILE = "bgforge.compile";
 export const LSP_COMMAND_PARSE_DIALOG = "bgforge.parseDialog";
 
+/**
+ * Prefix for per-language workspace-symbol executeCommand IDs.
+ * Full ID is `{prefix}{languageId}` — see {@link lspWorkspaceSymbolsCommand}.
+ *
+ * Standard LSP `workspace/symbol` returns aggregated symbols across all
+ * providers; clients that want results scoped to the active document's
+ * language send `workspace/executeCommand` with this command and a
+ * `{ query }` argument, receiving the filtered `SymbolInformation[]` back.
+ * The set of supported languages is enumerated in
+ * {@link WORKSPACE_SYMBOL_SCOPED_LANGUAGES}.
+ */
+export const LSP_COMMAND_WORKSPACE_SYMBOLS_PREFIX = "bgforge.workspaceSymbols.";
+
+/** Languages whose providers implement workspace-symbol search. */
+export const WORKSPACE_SYMBOL_SCOPED_LANGUAGES = ["fallout-ssl", "weidu-d", "weidu-tp2"] as const;
+
+export type WorkspaceSymbolScopedLanguage = (typeof WORKSPACE_SYMBOL_SCOPED_LANGUAGES)[number];
+
+/** Full executeCommand ID for scoped workspace-symbol search in `languageId`. */
+export function lspWorkspaceSymbolsCommand(languageId: WorkspaceSymbolScopedLanguage): string {
+    return `${LSP_COMMAND_WORKSPACE_SYMBOLS_PREFIX}${languageId}`;
+}
+
 /** VS Code extension command identifiers. These are client-side wrappers, not LSP commands. */
 export const VSCODE_COMMAND_COMPILE = "extension.bgforge.compile";
 export const VSCODE_COMMAND_DIALOG_PREVIEW = "extension.bgforge.dialogPreview";
-
-/** Custom client/server protocol methods used in addition to standard LSP. */
-export const REQUEST_SET_BUILT_IN_COMPILER = "bgforge-mls/setBuiltInCompiler";
-export const NOTIFICATION_LOAD_FINISHED = "bgforge-mls/load-finished";
-
-const WORKSPACE_SYMBOL_SCOPE_PREFIX = "bgforge-ws:";
-
-export function encodeWorkspaceSymbolQuery(query: string, languageId?: string): string {
-    if (!languageId) {
-        return query;
-    }
-    return `${WORKSPACE_SYMBOL_SCOPE_PREFIX}${languageId}:${query}`;
-}
-
-export function decodeWorkspaceSymbolQuery(query: string): { languageId?: string; query: string } {
-    if (!query.startsWith(WORKSPACE_SYMBOL_SCOPE_PREFIX)) {
-        return { query };
-    }
-
-    const rest = query.slice(WORKSPACE_SYMBOL_SCOPE_PREFIX.length);
-    const separator = rest.indexOf(":");
-    if (separator === -1) {
-        return { query };
-    }
-
-    const languageId = rest.slice(0, separator);
-    const decodedQuery = rest.slice(separator + 1);
-    return languageId ? { languageId, query: decodedQuery } : { query };
-}

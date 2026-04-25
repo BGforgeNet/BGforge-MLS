@@ -34,7 +34,6 @@ import { getDefinition as getWeiduLogDefinition } from "../weidu-log/definition"
 import { Translation } from "../translation";
 import { initServerContext, updateServerSettings } from "../server-context";
 import { getServerCapabilities } from "../server-capabilities";
-import { NOTIFICATION_LOAD_FINISHED } from "../../../shared/protocol";
 import type { HandlerContext } from "./context";
 
 // Capability flags captured in onInitialize, consumed in onInitialized.
@@ -179,7 +178,6 @@ export function register(ctx: HandlerContext): void {
             }
         }
 
-        void ctx.connection.sendNotification(NOTIFICATION_LOAD_FINISHED);
         conlog("onInitialized completed");
     });
 }
