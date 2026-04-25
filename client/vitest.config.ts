@@ -9,9 +9,17 @@ export default defineConfig({
     test: {
         name: "client",
         include: ["client/test/**/*.test.ts"],
+        // v8 coverage instrumentation roughly 3-4x slows the binary-format parser
+        // tests in this suite; the 5s vitest default is too tight for them under
+        // --coverage and was producing intermittent failures.
+        testTimeout: 15_000,
         coverage: {
             provider: "v8",
             reporter: ["text", "html", "lcov"],
+            // Separate from the server's coverage output so the parallel
+            // server+client coverage runs in scripts/test.sh don't race on
+            // coverage/.tmp shard files.
+            reportsDirectory: "coverage/client",
             exclude: [
                 // VSCode extension entry point: activate/deactivate require the live vscode
                 // runtime; there is no meaningful unit surface to test here.
@@ -39,10 +47,10 @@ export default defineConfig({
             // lowered; raising them when a test bump pulls the actual numbers
             // up turns the gate into a ratchet against future regressions.
             thresholds: {
-                lines: 89,
+                lines: 90,
                 functions: 90,
                 branches: 80,
-                statements: 89,
+                statements: 90,
             },
         },
     },

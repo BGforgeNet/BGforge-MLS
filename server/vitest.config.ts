@@ -22,6 +22,10 @@ export default defineConfig({
         coverage: {
             provider: "v8",
             reporter: ["text", "html", "lcov"],
+            // Separate from the client's coverage output so the parallel
+            // server+client coverage runs in scripts/test.sh don't race on
+            // coverage/.tmp shard files.
+            reportsDirectory: "coverage/server",
             exclude: ["src/**/format/**/*.ts", "src/fallout-ssl/provider.ts", "src/weidu-tp2/provider.ts"],
             thresholds: {
                 lines: 90,
