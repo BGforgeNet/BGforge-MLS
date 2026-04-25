@@ -15,6 +15,13 @@ updates:
           # channel that respects only by-name ignores below.
           - dependency-name: "*"
             update-types: ["version-update:semver-major"]
+          # LSP client/server/protocol must move together — bumping any one
+          # of these independently breaks ExecuteCommandRequest overloads and
+          # other API surface (see AGENTS.md "Pinned dependency constraints").
+          # Bumped manually as a triplet.
+          - dependency-name: "vscode-languageclient"
+          - dependency-name: "vscode-languageserver"
+          - dependency-name: "vscode-languageserver-protocol"
           # uuid: transitive devDep via @vscode/vsce > @azure/identity >
           # @azure/msal-node (packaging-only, never executed at runtime).
           # GHSA-w5hq-g745-h8pq is patched in uuid@14, but msal-node@5.x pins
