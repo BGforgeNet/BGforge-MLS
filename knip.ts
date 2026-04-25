@@ -71,8 +71,12 @@ const config: KnipConfig = {
         },
         transpilers: {
             entry: ["src/index.ts", "test/**/*.test.ts"],
-            // tsup is invoked via scripts at publish time (Phase 6 build step), not imported in source
-            ignoreDependencies: ["tsup"],
+            // esbuild-wasm is listed as a runtime dependency so the published bundle can
+            // resolve it from node_modules (it refuses to be inlined — see tsup.config.ts).
+            // Knip sees no TS import within this workspace because the import lives in
+            // transpilers/common (a separate workspace); ignoreDependencies suppresses the
+            // false-positive "unused dependency" report.
+            ignoreDependencies: ["esbuild-wasm"],
         },
     },
     ignore: [
@@ -94,6 +98,12 @@ const config: KnipConfig = {
         "@vscode/vsce",
         // loaded by remark CLI via --use in package.json scripts, not statically imported
         "remark-validate-links",
+    ],
+    ignoreBinaries: [
+        // invoked via `cd transpilers && pnpm exec tsup` in root package.json build:transpile;
+        // tsup lives in transpilers/package.json devDependencies — knip flags it as an unlisted
+        // binary at root scope because it can't trace cross-workspace exec paths.
+        "tsup",
     ],
 };
 

@@ -228,6 +228,10 @@ importers:
         version: https://github.com/sfall-team/sslc/releases/download/2026-02-07-11-20-26/wasm-emscripten-node-noderawfs.tar.gz
 
   transpilers:
+    dependencies:
+      esbuild-wasm:
+        specifier: ^0.28.0
+        version: 0.28.0
     devDependencies:
       tsup:
         specifier: ^8.3.0

@@ -25,6 +25,11 @@ step "Resetting External Repos"
 # Consumed by test-external.sh to skip its own redundant reset when called from this script.
 export EXTERNAL_REPOS_CLEAN=1
 
+# Build the transpile library bundle before Phase 1 so bundle.test.ts can load
+# transpilers/out/index.js. The build is fast (~5s) and must precede the parallel block.
+step "Building transpile library bundle"
+pnpm build:transpile
+
 # --- Phase 1: Static analysis + unit tests + dead code (all independent, run in parallel) ---
 step "Phase 1: Static Analysis + Unit Tests + Dead Code"
 parallel \
