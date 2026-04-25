@@ -60,7 +60,7 @@ Do not create temporary directories inside source or fixture trees such as `serv
 
 1. Fork the repository on GitHub and clone your fork.
 2. Create a topic branch off `master` (`git checkout -b fix/short-description`). Avoid committing directly to `master` on your fork.
-3. Make your changes on the topic branch. Match the commit-message style visible in `git log` — one short imperative subject (no period), an optional body explaining the *why*. Don't reference the PR number, the development workflow, or AI tooling.
+3. Make your changes on the topic branch. Match the commit-message style visible in `git log` — one short imperative subject (no period), an optional body explaining the _why_. Don't reference the PR number, the development workflow, or AI tooling.
 4. Run `pnpm test:all` before pushing; that runs the canonical full-verification target (build, typecheck, lint, unit/integration/grammar/external suites). PR review starts from a green run.
 5. Push your branch to your fork and open a pull request against `BGforgeNet/BGforge-MLS:master`. Describe what changed and why; link any issues the PR closes.
 6. Update `docs/changelog.md` for any user-facing change (new feature, bug fix, behavior change). Internal refactors and test additions do not earn changelog entries.
