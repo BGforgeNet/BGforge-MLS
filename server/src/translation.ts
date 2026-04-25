@@ -5,8 +5,8 @@
  * Can be used by any consumer (providers, TSSL/TBAF handlers, etc.)
  */
 
-import PromisePool from "@supercharge/promise-pool";
 import * as fs from "fs";
+import pLimit from "p-limit";
 import * as path from "path";
 import { fileURLToPath } from "url";
 import { Hover, InlayHint, Location, MarkupContent, MarkupKind, Position, Range } from "vscode-languageserver/node";
@@ -408,16 +408,31 @@ export class Translation {
         return traData;
     }
 
-    private async loadFiles(traDir: string, files: string[], ext: TraExt) {
-        const { results, errors } = await PromisePool.withConcurrency(SCAN_CONCURRENCY)
-            .for(files)
-            .process(async (relPath) => {
-                const result: TraData = new Map();
-                const text = await fs.promises.readFile(path.join(traDir, relPath), "utf8");
-                const lines = this.parseEntries(text, ext);
-                result.set(relPath, lines);
-                return result;
-            });
+    private async loadFiles(
+        traDir: string,
+        files: string[],
+        ext: TraExt,
+    ): Promise<{ results: TraData[]; errors: unknown[] }> {
+        const limit = pLimit(SCAN_CONCURRENCY);
+        const results: TraData[] = [];
+        const errors: unknown[] = [];
+        await Promise.all(
+            files.map((relPath) =>
+                limit(async () => {
+                    try {
+                        const text = await fs.promises.readFile(path.join(traDir, relPath), "utf8");
+                        const lines = this.parseEntries(text, ext);
+                        const result: TraData = new Map();
+                        result.set(relPath, lines);
+                        results.push(result);
+                    } catch (e) {
+                        // Collect per-file failures instead of failing fast — a single unreadable
+                        // file shouldn't abort the whole load pass.
+                        errors.push(e);
+                    }
+                }),
+            ),
+        );
         return { results, errors };
     }
 
