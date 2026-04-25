@@ -5,37 +5,18 @@
 
 import * as vscode from "vscode";
 import { LanguageClient } from "vscode-languageclient/node";
+import type { SSLDialogData, SSLDialogNode, SSLDialogOption } from "../../../shared/dialog-types";
 import { escapeHtml, registerDialogPanel, type DialogPreviewController } from "./shared";
 
 // ---------------------------------------------------------------------------
-// Data model (duplicated from server/src/dialog.ts -- can't cross-import)
+// Data model — shared with server/src/dialog.ts via shared/dialog-types.ts.
+// Re-export under shorter local names so the rest of this module reads naturally.
 // ---------------------------------------------------------------------------
 
-interface DialogReply {
-    msgId: number | string;
-    line: number;
-}
-
-export interface DialogOption {
-    msgId: number | string;
-    target: string;
-    type: string;
-    line: number;
-}
-
-export interface DialogNode {
-    name: string;
-    line: number;
-    replies: DialogReply[];
-    options: DialogOption[];
-    callTargets: string[];
-}
-
-export interface DialogData {
-    nodes: DialogNode[];
-    entryPoints: string[];
-    messages: Record<string, string>;
-}
+export type DialogOption = SSLDialogOption;
+export type DialogNode = SSLDialogNode;
+/** Webview-side narrowing: `messages` is required after the client has resolved translations. */
+export type DialogData = SSLDialogData & { messages: Record<string, string> };
 
 // ---------------------------------------------------------------------------
 // SSL-specific helpers

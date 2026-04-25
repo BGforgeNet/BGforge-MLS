@@ -5,53 +5,42 @@
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import { initParser, parseWithCache, isInitialized } from "./fallout-ssl/parser";
+import type {
+    SSLDialogData,
+    SSLDialogNode,
+    SSLDialogOption,
+    SSLDialogOptionType,
+    SSLDialogReply,
+} from "../../shared/dialog-types";
 
-interface DialogReply {
-    msgId: number | string;
-    line: number;
-    conditional?: string;
+export type { SSLDialogData as DialogData, SSLDialogNode as DialogNode };
+
+// Membership sets for SSL option/message types. Using ReadonlySet<string>
+// (rather than Set<SSLDialogOptionType>) lets the .has() check act as a
+// type guard via `isOptionFn`/`isMessageFn` below — no `as` cast needed.
+const OPTION_FN_NAMES: ReadonlySet<string> = new Set<SSLDialogOptionType>([
+    "NOption",
+    "NLowOption",
+    "GOption",
+    "GLowOption",
+    "BOption",
+    "BLowOption",
+]);
+
+const MESSAGE_FN_NAMES: ReadonlySet<string> = new Set<SSLDialogOptionType>(["NMessage", "GMessage", "BMessage"]);
+
+function isOptionFn(name: string): name is SSLDialogOptionType {
+    return OPTION_FN_NAMES.has(name);
 }
 
-/**
- * Types of dialog options and messages.
- */
-enum DialogOptionType {
-    NOption = "NOption",
-    NLowOption = "NLowOption",
-    GOption = "GOption",
-    GLowOption = "GLowOption",
-    BOption = "BOption",
-    BLowOption = "BLowOption",
-    NMessage = "NMessage",
-    GMessage = "GMessage",
-    BMessage = "BMessage",
-}
-
-interface DialogOption {
-    msgId: number | string;
-    target: string;
-    skill?: number;
-    type: DialogOptionType;
-    line: number;
-}
-
-export interface DialogNode {
-    name: string;
-    line: number;
-    replies: DialogReply[];
-    options: DialogOption[];
-    callTargets: string[]; // Direct "call Node*" transitions
-}
-
-export interface DialogData {
-    nodes: DialogNode[];
-    entryPoints: string[];
+function isMessageFn(name: string): name is SSLDialogOptionType {
+    return MESSAGE_FN_NAMES.has(name);
 }
 
 /**
  * Parse dialog structure from SSL script text using tree-sitter
  */
-export async function parseDialog(text: string): Promise<DialogData> {
+export async function parseDialog(text: string): Promise<SSLDialogData> {
     if (!isInitialized()) {
         await initParser();
     }
@@ -61,7 +50,7 @@ export async function parseDialog(text: string): Promise<DialogData> {
     }
     const root = tree.rootNode;
 
-    const nodes: DialogNode[] = [];
+    const nodes: SSLDialogNode[] = [];
     const entryPoints: string[] = [];
 
     // Find all procedures
@@ -109,9 +98,9 @@ function extractEntryPoints(proc: SyntaxNode, entryPoints: string[]): void {
     });
 }
 
-function parseProcedure(proc: SyntaxNode, name: string): DialogNode {
-    const replies: DialogReply[] = [];
-    const options: DialogOption[] = [];
+function parseProcedure(proc: SyntaxNode, name: string): SSLDialogNode {
+    const replies: SSLDialogReply[] = [];
+    const options: SSLDialogOption[] = [];
     const callTargets: string[] = [];
 
     walkTree(proc, (node) => {
@@ -135,19 +124,11 @@ function parseProcedure(proc: SyntaxNode, name: string): DialogNode {
                 });
             }
 
-            // NOption, GOption, BOption, etc.
-            const optionTypes = [
-                DialogOptionType.NOption,
-                DialogOptionType.NLowOption,
-                DialogOptionType.GOption,
-                DialogOptionType.GLowOption,
-                DialogOptionType.BOption,
-                DialogOptionType.BLowOption,
-            ];
-            if (optionTypes.includes(funcName as DialogOptionType) && arg0 && arg1) {
+            // NOption, GOption, BOption, and Low variants — narrows funcName.
+            if (isOptionFn(funcName) && arg0 && arg1) {
                 const target = arg1.text;
                 options.push({
-                    type: funcName as DialogOptionType,
+                    type: funcName,
                     msgId: parseArgValue(arg0),
                     target,
                     skill: arg2 ? parseInt(arg2.text, 10) : undefined,
@@ -155,11 +136,10 @@ function parseProcedure(proc: SyntaxNode, name: string): DialogNode {
                 });
             }
 
-            // NMessage, GMessage, BMessage (terminal)
-            const msgTypes = [DialogOptionType.NMessage, DialogOptionType.GMessage, DialogOptionType.BMessage];
-            if (msgTypes.includes(funcName as DialogOptionType) && arg0) {
+            // NMessage, GMessage, BMessage (terminal) — narrows funcName.
+            if (isMessageFn(funcName) && arg0) {
                 options.push({
-                    type: funcName as DialogOptionType,
+                    type: funcName,
                     msgId: parseArgValue(arg0),
                     target: "",
                     line,

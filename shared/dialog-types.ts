@@ -1,8 +1,61 @@
 /**
- * Shared data model types for WeiDU D dialog tree parsing.
- * Used by the server dialog parser and the client dialog tree webview preview.
- * Single source of truth — both sides import from here.
+ * Shared data model types for dialog tree parsing.
+ * Two dialects: Fallout SSL (SSLDialog*) and WeiDU D (DDialog*).
+ * Server-side parsers populate these and the client webview previews consume them.
+ * Single source of truth for both sides — eliminates client/server type drift.
  */
+
+// ---------------------------------------------------------------------------
+// Fallout SSL dialog types
+// ---------------------------------------------------------------------------
+
+/** SSL dialog option/message type names emitted by Fallout's dialog API. */
+export type SSLDialogOptionType =
+    | "NOption"
+    | "NLowOption"
+    | "GOption"
+    | "GLowOption"
+    | "BOption"
+    | "BLowOption"
+    | "NMessage"
+    | "GMessage"
+    | "BMessage";
+
+export interface SSLDialogReply {
+    msgId: number | string;
+    line: number;
+    /** Raw conditional expression text, when the reply is wrapped in `if (...)`. */
+    conditional?: string;
+}
+
+export interface SSLDialogOption {
+    msgId: number | string;
+    target: string;
+    /** Skill check level, when the option is a skilled (G/B) variant. */
+    skill?: number;
+    type: SSLDialogOptionType;
+    line: number;
+}
+
+export interface SSLDialogNode {
+    name: string;
+    line: number;
+    replies: SSLDialogReply[];
+    options: SSLDialogOption[];
+    /** Direct `call Node*` transitions. */
+    callTargets: string[];
+}
+
+export interface SSLDialogData {
+    nodes: SSLDialogNode[];
+    entryPoints: string[];
+    /** Translation messages keyed by index. Populated by the client before rendering; not set by the server. */
+    messages?: Record<string, string>;
+}
+
+// ---------------------------------------------------------------------------
+// WeiDU D dialog types
+// ---------------------------------------------------------------------------
 
 export type DDialogTarget =
     | { kind: "goto"; label: string }
