@@ -18,6 +18,7 @@ import {
     ForOfStatement,
     ForStatement,
     FunctionDeclaration,
+    FunctionExpression,
     IfStatement,
     Node,
     Statement,
@@ -63,9 +64,15 @@ function makePendingTransition(): PendingTransition {
 
 /**
  * Transform a function to a STATE.
+ *
+ * Accepts both `FunctionDeclaration` (named, top-level — the common path from
+ * parse-constructs / state-resolution) and `FunctionExpression` (anonymous,
+ * value-position — used by `replace()` patch state-object literals). Both
+ * shapes implement `getName()` and `getBody()` via the `NameableNode` /
+ * `BodiedNode` ts-morph mixins.
  */
 function transformFunctionToState(
-    func: FunctionDeclaration,
+    func: FunctionDeclaration | FunctionExpression,
     vars: VarsContext,
     funcs: FuncsContext,
     entryTrigger?: string,

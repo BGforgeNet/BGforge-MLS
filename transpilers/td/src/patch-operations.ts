@@ -6,7 +6,7 @@
  * parser context (vars) as a parameter.
  */
 
-import { CallExpression, FunctionDeclaration, Node, SyntaxKind } from "ts-morph";
+import { CallExpression, Node, SyntaxKind } from "ts-morph";
 import {
     TDConstructType,
     TDPatchOp,
@@ -358,12 +358,7 @@ function transformReplace(call: CallExpression, vars: VarsContext, funcs: FuncsC
                 throw TranspileError.fromNode(call, `replace() state ${stateNum} must be a function`);
             }
 
-            // FunctionExpression and FunctionDeclaration are distinct class hierarchies in ts-morph
-            // despite sharing getName()/getBody() via NameableNode/BodiedNode mixins.
-            // transformFunctionToState() takes FunctionDeclaration and cannot be widened without
-            // changing its public signature; the cast is safe because only getName()/getBody() are used.
-            const funcDecl = funcExpr as unknown as FunctionDeclaration;
-            const state = transformFunctionToState(funcDecl, vars, funcs);
+            const state = transformFunctionToState(funcExpr, vars, funcs);
 
             if (!state) {
                 throw TranspileError.fromNode(call, `replace() failed to parse state ${stateNum}`);
