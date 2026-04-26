@@ -21,6 +21,30 @@ import { safeEvaluate } from "./safe-eval";
 /** Variable substitution context - maps variable names to their compile-time values */
 export type VarsContext = Map<string, string>;
 
+// Cache of word-boundary regexes keyed by identifier name. Variable names are
+// TypeScript identifiers (sourced from ts-morph AST node names), which cannot
+// contain regex metacharacters, so direct interpolation is safe and the cache
+// key is the identifier text itself. The cache is global across calls because
+// the regex source depends only on the name; reusing the compiled instance
+// avoids recompiling per call (substituteVars is hot in loop-unroll paths).
+//
+// String.prototype.replace with a /g regex does not consult lastIndex, so
+// caching a stateful global regex is safe for the .replace() use site below.
+const wordBoundaryRegexCache = new Map<string, RegExp>();
+
+/**
+ * Return a cached word-boundary regex matching the given identifier globally.
+ * Same name → same RegExp instance.
+ */
+export function getWordBoundaryRegex(name: string): RegExp {
+    let cached = wordBoundaryRegexCache.get(name);
+    if (!cached) {
+        cached = new RegExp(`\\b${name}\\b`, "g");
+        wordBoundaryRegexCache.set(name, cached);
+    }
+    return cached;
+}
+
 /**
  * Substitute all occurrences of variables in text with their compile-time values.
  * Uses word boundary regex to avoid partial matches.
@@ -32,9 +56,7 @@ export type VarsContext = Map<string, string>;
 export function substituteVars(text: string, vars: VarsContext): string {
     let result = text;
     vars.forEach((value, key) => {
-        // key is a TypeScript identifier (source of VarsContext keys is ts-morph AST names),
-        // which cannot contain regex metacharacters — safe to interpolate without escaping.
-        result = result.replace(new RegExp(`\\b${key}\\b`, "g"), value);
+        result = result.replace(getWordBoundaryRegex(key), value);
     });
     return result;
 }
@@ -97,7 +119,7 @@ export function buildParamMap(call: CallExpression, func: FunctionDeclaration, v
  */
 export function evaluateCondition(condition: string, loopVar: string, value: number, vars: VarsContext): boolean {
     // Substitute loop variable
-    let substituted = condition.replace(new RegExp(`\\b${loopVar}\\b`, "g"), value.toString());
+    let substituted = condition.replace(getWordBoundaryRegex(loopVar), value.toString());
     // Substitute other compile-time variables
     substituted = substituteVars(substituted, vars);
 
