@@ -393,7 +393,7 @@ Standalone command-line tools that reuse server modules without VSCode dependenc
 ### Format CLI
 
 ```
-fgfmt <file|dir> [--save] [--check] [-r] [-q]
+fgfmt <file|dir> [--save] [--check] [--save-and-check] [-r] [-q]
 ```
 
 Formats Fallout SSL, WeiDU BAF/D/TP2, WeiDU TRA, Fallout MSG, Infinity Engine 2DA, and
