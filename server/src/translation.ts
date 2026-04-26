@@ -17,8 +17,10 @@ import {
     getRelPath,
     isDirectory,
     isSubpath,
+    isSubpathFullyResolved,
     isSubpathResolved,
     pathToUri,
+    tryRealpathSync,
 } from "./common";
 import {
     CONSUMER_EXTENSIONS_MSG,
@@ -243,9 +245,12 @@ export class Translation {
         if (!this.initialized) return;
         if (!languages.includes(langId)) return;
 
-        const filePath = this.uriToPath(uri);
         const wsRoot = this.resolvedWsRoot;
-        if (wsRoot === undefined || !isSubpathResolved(wsRoot, filePath)) return;
+        if (wsRoot === undefined) return;
+        const filePath = this.uriToPath(uri);
+        const resolvedFilePath = tryRealpathSync(filePath);
+        if (resolvedFilePath === undefined) return;
+        if (!isSubpathFullyResolved(wsRoot, resolvedFilePath)) return;
 
         const wsPath = getRelPath(wsRoot, filePath);
         this.reloadFileLines(wsPath, text);
@@ -298,9 +303,12 @@ export class Translation {
         if (!this.initialized) return;
         if (!translatableLanguages.includes(langId)) return;
 
-        const filePath = this.uriToPath(uri);
         const wsRoot = this.resolvedWsRoot;
-        if (wsRoot === undefined || !isSubpathResolved(wsRoot, filePath)) return;
+        if (wsRoot === undefined) return;
+        const filePath = this.uriToPath(uri);
+        const resolvedFilePath = tryRealpathSync(filePath);
+        if (resolvedFilePath === undefined) return;
+        if (!isSubpathFullyResolved(wsRoot, resolvedFilePath)) return;
 
         const wsRelPath = getRelPath(wsRoot, filePath);
 
@@ -358,10 +366,13 @@ export class Translation {
         if (this.data.size === 0) return null;
         if (!translatableLanguages.includes(langId)) return null;
 
-        const filePath = this.uriToPath(uri);
         const wsRoot = this.resolvedWsRoot;
-        if (wsRoot === undefined || !isSubpathResolved(wsRoot, filePath)) return null;
+        if (wsRoot === undefined) return null;
+        const filePath = this.uriToPath(uri);
         if (!isTraRef(symbol, langId, filePath)) return null;
+        const resolvedFilePath = tryRealpathSync(filePath);
+        if (resolvedFilePath === undefined) return null;
+        if (!isSubpathFullyResolved(wsRoot, resolvedFilePath)) return null;
 
         return getRelPath(wsRoot, filePath);
     }

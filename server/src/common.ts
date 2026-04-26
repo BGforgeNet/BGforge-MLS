@@ -159,6 +159,31 @@ export function isSubpathResolved(resolvedOuter: string, innerPath: string): boo
     }
 }
 
+/**
+ * Like `isSubpathResolved`, but assumes BOTH paths have already been resolved
+ * via `fs.realpathSync` (or are otherwise canonical). Pure string check — no
+ * syscall — suitable for the LSP-request hot path. Callers must resolve the
+ * inner once at request entry (via `tryRealpathSync`) before calling.
+ */
+export function isSubpathFullyResolved(resolvedOuter: string, resolvedInner: string): boolean {
+    const rel = path.relative(resolvedOuter, resolvedInner);
+    return !rel.startsWith("..") && !path.isAbsolute(rel);
+}
+
+/**
+ * Resolve a path via `fs.realpathSync` once, returning `undefined` if the
+ * path does not exist or is otherwise unreadable. Centralises per-request
+ * inner-path resolution so callers can do it at handler entry and pass the
+ * resolved value through to sibling helpers.
+ */
+export function tryRealpathSync(p: string): string | undefined {
+    try {
+        return fs.realpathSync(p);
+    } catch {
+        return undefined;
+    }
+}
+
 export function isDirectory(fsPath: string): boolean {
     if (fs.existsSync(fsPath)) {
         return fs.lstatSync(fsPath).isDirectory();

@@ -23,6 +23,8 @@ import {
     symbolAtPosition,
     sendParseResult,
     isSubpath,
+    isSubpathFullyResolved,
+    tryRealpathSync,
     expandHome,
     parseCommandPath,
     needsShell,
@@ -247,6 +249,39 @@ describe("isSubpath", () => {
 
     it("returns false for non-existent paths", () => {
         expect(isSubpath("/nonexistent/path", "/also/nonexistent")).toBe(false);
+    });
+});
+
+describe("isSubpathFullyResolved", () => {
+    it("returns true when inner is under outer (both absolute, both already resolved)", () => {
+        expect(isSubpathFullyResolved("/a/b", "/a/b/c.txt")).toBe(true);
+    });
+
+    it("returns false when inner is outside outer", () => {
+        expect(isSubpathFullyResolved("/a/b", "/a/c/d.txt")).toBe(false);
+    });
+
+    it("returns true regardless of whether the inner exists on disk", () => {
+        // The whole point of this helper: pure string check, no syscall.
+        // A non-existent path that is lexically inside the outer must answer
+        // true so the LSP hot path does not have to realpathSync per request.
+        expect(isSubpathFullyResolved("/a/b", "/a/b/no-such-file-on-disk.tra")).toBe(true);
+    });
+
+    it("returns false for the outer being a string-prefix but not a directory parent", () => {
+        // /a/bcd is not under /a/b — naive string-prefix would say yes
+        expect(isSubpathFullyResolved("/a/b", "/a/bcd/x.txt")).toBe(false);
+    });
+});
+
+describe("tryRealpathSync", () => {
+    it("returns the resolved path for an existing path", () => {
+        const result = tryRealpathSync(__dirname);
+        expect(result).toBe(__dirname);
+    });
+
+    it("returns undefined for a non-existent path", () => {
+        expect(tryRealpathSync("/nonexistent/path/here")).toBeUndefined();
     });
 });
 
