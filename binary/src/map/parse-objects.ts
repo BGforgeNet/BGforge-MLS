@@ -53,6 +53,37 @@ type ParsedObjectResult = {
     offset: number;
 };
 
+// Minimum bytes a single inventory entry consumes on the wire: a 4-byte
+// quantity prefix plus the nested object's base record + data header.
+const MIN_INVENTORY_ENTRY_BYTES = 4 + MAP_OBJECT_BASE_SIZE + MAP_OBJECT_DATA_HEADER_SIZE;
+
+// Minimum bytes a single top-level elevation object consumes on the wire.
+const MIN_OBJECT_BYTES = MAP_OBJECT_BASE_SIZE + MAP_OBJECT_DATA_HEADER_SIZE;
+
+/**
+ * Clamp a count read from the wire against what the remaining buffer could
+ * physically hold (one item of `minItemBytes` per slot). Mirrors
+ * `clampVarCount` in parse-sections.ts: a malformed file with a 2^30+ count
+ * would otherwise iterate billions of times before the per-iteration buffer
+ * check terminated the loop. Returns 0 and records an error on out-of-range.
+ */
+function clampObjectCount(
+    rawCount: number,
+    label: string,
+    remainingBytes: number,
+    minItemBytes: number,
+    errors: string[],
+): number {
+    const maxCount = Math.max(0, Math.floor(remainingBytes / minItemBytes));
+    if (rawCount < 0 || rawCount > maxCount) {
+        errors.push(
+            `Map reports ${rawCount} ${label} but only ${maxCount} fit in the remaining buffer; treating as malformed`,
+        );
+        return 0;
+    }
+    return rawCount;
+}
+
 function parseObjectBaseFields(
     data: Uint8Array,
     offset: number,
@@ -164,7 +195,14 @@ function parseObjectAt(
     }
 
     const inventoryGroups: ParsedGroup[] = [];
-    for (let inventoryIndex = 0; inventoryIndex < inventoryLength; inventoryIndex++) {
+    const safeInventoryLength = clampObjectCount(
+        inventoryLength,
+        `inventory entries for object ${index}`,
+        data.length - currentOffset,
+        MIN_INVENTORY_ENTRY_BYTES,
+        errors,
+    );
+    for (let inventoryIndex = 0; inventoryIndex < safeInventoryLength; inventoryIndex++) {
         if (currentOffset + 4 > data.length) {
             errors.push(
                 `Inventory entry ${index}.${inventoryIndex} quantity truncated at offset 0x${currentOffset.toString(16)}`,
@@ -244,13 +282,20 @@ export function parseObjects(
         currentOffset += 4;
 
         const elevationFields: (ParsedField | ParsedGroup)[] = [countField];
-        for (let objectIndex = 0; objectIndex < Number(countField.value); objectIndex++) {
+        const safeObjectCount = clampObjectCount(
+            Number(countField.value),
+            `top-level objects on elevation ${elev}`,
+            data.length - currentOffset,
+            MIN_OBJECT_BYTES,
+            errors,
+        );
+        for (let objectIndex = 0; objectIndex < safeObjectCount; objectIndex++) {
             const parsedObject = parseObjectAt(data, currentOffset, `${elev}.${objectIndex}`, header, errors);
             elevationFields.push(parsedObject.group);
             currentOffset = parsedObject.offset;
 
             if (!parsedObject.complete) {
-                const remainingObjects = Number(countField.value) - objectIndex - 1;
+                const remainingObjects = safeObjectCount - objectIndex - 1;
                 if (remainingObjects > 0) {
                     elevationFields.push(
                         noteField(
