@@ -749,7 +749,7 @@ export class Translation {
                         continue;
                     }
                     lineHints.push({
-                        character: match.index! + match[0].length,
+                        character: match.index + match[0].length,
                         lineKey,
                     });
                 }
@@ -761,7 +761,7 @@ export class Translation {
                     }
                     const secondStart = match[0].lastIndexOf(secondKey);
                     lineHints.push({
-                        character: match.index! + secondStart + secondKey.length,
+                        character: match.index + secondStart + secondKey.length,
                         lineKey: secondKey,
                     });
                 }
@@ -790,8 +790,7 @@ export class Translation {
         lines.forEach((l, i) => {
             const matches = l.matchAll(regex);
             for (const m of matches) {
-                // matchAll always provides index for each match
-                const char_end = m.index! + m[0].length;
+                const char_end = m.index + m[0].length;
                 const lineKey = m[keyIndex];
                 if (!lineKey) continue;
                 pushHint(range.start.line + i, char_end, lineKey);
@@ -1081,8 +1080,8 @@ export class Translation {
                 for (const match of lineText.matchAll(regex)) {
                     results.push({
                         line: i,
-                        character: match.index!,
-                        endCharacter: match.index! + match[0].length,
+                        character: match.index,
+                        endCharacter: match.index + match[0].length,
                     });
                 }
             }
@@ -1095,8 +1094,8 @@ export class Translation {
                 for (const match of lineText.matchAll(regex)) {
                     results.push({
                         line: i,
-                        character: match.index!,
-                        endCharacter: match.index! + match[0].length,
+                        character: match.index,
+                        endCharacter: match.index + match[0].length,
                     });
                 }
             }
