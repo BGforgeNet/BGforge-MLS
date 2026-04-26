@@ -21,3 +21,13 @@ pre-commit:
             run: pnpm exec tsc --noEmit --project server/tsconfig.json
         typecheck-client:
             run: pnpm exec tsc --noEmit --project client/tsconfig.json
+        typecheck-binary:
+            run: pnpm exec tsc --noEmit --project binary/tsconfig.json
+        typecheck-format:
+            run: pnpm exec tsc --noEmit --project format/tsconfig.json
+        typecheck-transpilers:
+            run: pnpm exec tsc --noEmit --project transpilers/tsconfig.json
+        typecheck-plugins-tssl:
+            run: pnpm exec tsc --noEmit --project plugins/tssl-plugin/tsconfig.json
+        typecheck-plugins-td:
+            run: pnpm exec tsc --noEmit --project plugins/td-plugin/tsconfig.json
