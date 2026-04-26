@@ -41,7 +41,19 @@ function fieldSpecToZod(fs: FieldSpec): z.ZodType<unknown> {
                 message: `expected one of ${[...allowed].join(", ")}`,
             });
     }
-    let schema = zodNumericType(codecNumericTypeName(fs.codec));
+    // Packed-field parts: bounds come from bitRange (unsigned bit field),
+    // not from the wire codec's full numeric range. The wire codec on a
+    // packed part is the SLOT codec (e.g., u32 for a 26-bit subfield) —
+    // applying its range would let `destTile = 0x0400_0000` pass even though
+    // it overflows the 26-bit slot.
+    let schema: z.ZodNumber;
+    if (fs.packedAs !== undefined && fs.bitRange) {
+        const [, width] = fs.bitRange;
+        const max = width >= 32 ? 0xffff_ffff : (1 << width) - 1;
+        schema = z.number().int().min(0).max(max);
+    } else {
+        schema = zodNumericType(codecNumericTypeName(fs.codec));
+    }
     if (fs.domain) {
         schema = schema.min(fs.domain.min).max(fs.domain.max);
     }
