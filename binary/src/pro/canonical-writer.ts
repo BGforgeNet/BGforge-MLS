@@ -113,29 +113,9 @@ export function serializeProCanonicalSnapshot(snapshot: ProCanonicalSnapshot): U
                 case 1:
                     containerSchema.write(writer(data, ITEM_SUBTYPE_OFFSET), sections.containerStats!);
                     break;
-                case 2: {
-                    const drug = sections.drugStats!;
-                    drugSchema.write(writer(data, ITEM_SUBTYPE_OFFSET), {
-                        stat0: drug.affectedStats.stat0,
-                        stat1: drug.affectedStats.stat1,
-                        stat2: drug.affectedStats.stat2,
-                        amount0Instant: drug.instantEffect.amount0,
-                        amount1Instant: drug.instantEffect.amount1,
-                        amount2Instant: drug.instantEffect.amount2,
-                        duration1: drug.delayedEffect1.duration,
-                        amount0Delayed1: drug.delayedEffect1.amount0,
-                        amount1Delayed1: drug.delayedEffect1.amount1,
-                        amount2Delayed1: drug.delayedEffect1.amount2,
-                        duration2: drug.delayedEffect2.duration,
-                        amount0Delayed2: drug.delayedEffect2.amount0,
-                        amount1Delayed2: drug.delayedEffect2.amount1,
-                        amount2Delayed2: drug.delayedEffect2.amount2,
-                        addictionRate: drug.addiction.rate,
-                        addictionEffect: drug.addiction.effect,
-                        addictionOnset: drug.addiction.onset,
-                    });
+                case 2:
+                    drugSchema.write(writer(data, ITEM_SUBTYPE_OFFSET), sections.drugStats!);
                     break;
-                }
                 case 3:
                     weaponSchema.write(writer(data, ITEM_SUBTYPE_OFFSET), sections.weaponStats!);
                     break;

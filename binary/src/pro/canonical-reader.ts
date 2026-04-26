@@ -192,34 +192,29 @@ function rebuildProCanonicalSnapshot(parseResult: ParseResult): ProCanonicalSnap
 
     const drugStats = getOptionalGroup(parseResult.root, "Drug Stats");
     if (drugStats) {
+        const affected = getGroup(drugStats, "Affected Stats");
+        const instant = getGroup(drugStats, "Instant Effect");
+        const delayed1 = getGroup(drugStats, "Delayed Effect 1");
+        const delayed2 = getGroup(drugStats, "Delayed Effect 2");
+        const addiction = getGroup(drugStats, "Addiction");
         sections.drugStats = {
-            affectedStats: mapGroupFields(getGroup(drugStats, "Affected Stats"), [
-                ["Stat 0", "stat0"],
-                ["Stat 1", "stat1"],
-                ["Stat 2", "stat2"],
-            ]),
-            instantEffect: mapGroupFields(getGroup(drugStats, "Instant Effect"), [
-                ["Amount 0", "amount0"],
-                ["Amount 1", "amount1"],
-                ["Amount 2", "amount2"],
-            ]),
-            delayedEffect1: mapGroupFields(getGroup(drugStats, "Delayed Effect 1"), [
-                ["Duration", "duration"],
-                ["Amount 0", "amount0"],
-                ["Amount 1", "amount1"],
-                ["Amount 2", "amount2"],
-            ]),
-            delayedEffect2: mapGroupFields(getGroup(drugStats, "Delayed Effect 2"), [
-                ["Duration", "duration"],
-                ["Amount 0", "amount0"],
-                ["Amount 1", "amount1"],
-                ["Amount 2", "amount2"],
-            ]),
-            addiction: mapGroupFields(getGroup(drugStats, "Addiction"), [
-                ["Rate", "rate"],
-                ["Effect", "effect"],
-                ["Onset", "onset"],
-            ]),
+            stat0: readFieldNumber(affected, "Stat 0", "Drug Stats.Affected Stats"),
+            stat1: readFieldNumber(affected, "Stat 1", "Drug Stats.Affected Stats"),
+            stat2: readFieldNumber(affected, "Stat 2", "Drug Stats.Affected Stats"),
+            amount0Instant: readFieldNumber(instant, "Amount 0", "Drug Stats.Instant Effect"),
+            amount1Instant: readFieldNumber(instant, "Amount 1", "Drug Stats.Instant Effect"),
+            amount2Instant: readFieldNumber(instant, "Amount 2", "Drug Stats.Instant Effect"),
+            duration1: readFieldNumber(delayed1, "Duration", "Drug Stats.Delayed Effect 1"),
+            amount0Delayed1: readFieldNumber(delayed1, "Amount 0", "Drug Stats.Delayed Effect 1"),
+            amount1Delayed1: readFieldNumber(delayed1, "Amount 1", "Drug Stats.Delayed Effect 1"),
+            amount2Delayed1: readFieldNumber(delayed1, "Amount 2", "Drug Stats.Delayed Effect 1"),
+            duration2: readFieldNumber(delayed2, "Duration", "Drug Stats.Delayed Effect 2"),
+            amount0Delayed2: readFieldNumber(delayed2, "Amount 0", "Drug Stats.Delayed Effect 2"),
+            amount1Delayed2: readFieldNumber(delayed2, "Amount 1", "Drug Stats.Delayed Effect 2"),
+            amount2Delayed2: readFieldNumber(delayed2, "Amount 2", "Drug Stats.Delayed Effect 2"),
+            addictionRate: readFieldNumber(addiction, "Rate", "Drug Stats.Addiction"),
+            addictionEffect: readFieldNumber(addiction, "Effect", "Drug Stats.Addiction"),
+            addictionOnset: readFieldNumber(addiction, "Onset", "Drug Stats.Addiction"),
         };
     }
 

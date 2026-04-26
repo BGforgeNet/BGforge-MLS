@@ -12,6 +12,7 @@ import { toTypedBinarySchema } from "../spec/derive-typed-binary";
 import { ammoSpec } from "./specs/ammo";
 import { armorSpec } from "./specs/armor";
 import { containerSpec } from "./specs/container";
+import { drugSpec } from "./specs/drug";
 import { headerSpec } from "./specs/header";
 import { itemCommonSpec } from "./specs/item-common";
 import { keySpec } from "./specs/key";
@@ -32,28 +33,7 @@ export const armorSchema = toTypedBinarySchema(armorSpec);
 
 export const containerSchema = toTypedBinarySchema(containerSpec);
 
-// Drug stays as object() for now; canonical zod has nested groups
-// (affectedStats / instantEffect / delayedEffect1+2 / addiction) that need
-// flattening before deriving the typed-binary schema becomes useful here.
-export const drugSchema = object({
-    stat0: i32,
-    stat1: i32,
-    stat2: i32,
-    amount0Instant: u32,
-    amount1Instant: u32,
-    amount2Instant: u32,
-    duration1: u32,
-    amount0Delayed1: u32,
-    amount1Delayed1: u32,
-    amount2Delayed1: u32,
-    duration2: u32,
-    amount0Delayed2: u32,
-    amount1Delayed2: u32,
-    amount2Delayed2: u32,
-    addictionRate: u32,
-    addictionEffect: u32,
-    addictionOnset: u32,
-});
+export const drugSchema = toTypedBinarySchema(drugSpec);
 
 export const weaponSchema = toTypedBinarySchema(weaponSpec);
 
@@ -241,7 +221,7 @@ export type { HeaderData } from "./specs/header";
 export type { ItemCommonData } from "./specs/item-common";
 export type { ArmorData } from "./specs/armor";
 export type { ContainerData } from "./specs/container";
-export type DrugData = Parsed<typeof drugSchema>;
+export type { DrugData } from "./specs/drug";
 export type { WeaponData } from "./specs/weapon";
 export type { AmmoData } from "./specs/ammo";
 export type { MiscItemData } from "./specs/misc-item";

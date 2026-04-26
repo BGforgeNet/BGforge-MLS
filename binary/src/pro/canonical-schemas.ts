@@ -7,6 +7,7 @@ import { z } from "zod";
 import { zodFieldNumber, zodNumericType } from "../binary-format-contract";
 import { toZodSchema } from "../spec/derive-zod";
 import { armorSpec } from "./specs/armor";
+import { drugSpec } from "./specs/drug";
 
 const int32Schema = zodNumericType("int32");
 const uint8Schema = zodNumericType("uint8");
@@ -182,37 +183,7 @@ const proCanonicalSectionsSchema = z.strictObject({
             openFlags: uint32Schema,
         })
         .optional(),
-    drugStats: z
-        .strictObject({
-            affectedStats: z.strictObject({
-                stat0: int32Schema,
-                stat1: int32Schema,
-                stat2: int32Schema,
-            }),
-            instantEffect: z.strictObject({
-                amount0: uint32Schema,
-                amount1: uint32Schema,
-                amount2: uint32Schema,
-            }),
-            delayedEffect1: z.strictObject({
-                duration: uint32Schema,
-                amount0: uint32Schema,
-                amount1: uint32Schema,
-                amount2: uint32Schema,
-            }),
-            delayedEffect2: z.strictObject({
-                duration: uint32Schema,
-                amount0: uint32Schema,
-                amount1: uint32Schema,
-                amount2: uint32Schema,
-            }),
-            addiction: z.strictObject({
-                rate: uint32Schema,
-                effect: uint32Schema,
-                onset: uint32Schema,
-            }),
-        })
-        .optional(),
+    drugStats: toZodSchema(drugSpec).optional(),
     miscItemStats: z
         .strictObject({
             powerPid: int32Schema,

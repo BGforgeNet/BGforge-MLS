@@ -3,7 +3,10 @@
 ## Unreleased
 
 - Binary editor: fixed armor stat fields (AC, damage resistance, damage threshold, perk) being annotated as signed `int32` in the field-detail view; they are unsigned in the file format and now display as `uint32`.
-- **BREAKING (`@bgforge/binary` library, `.pro.json` snapshots):** the canonical document shape for armor PROs has been flattened. Previously: `armorStats: { ac, damageResistance: { normal, laser, ... }, damageThreshold: { normal, ... }, perk, maleFrmId, femaleFrmId }`. Now: `armorStats: { ac, drNormal, drLaser, ..., dtNormal, ..., perk, maleFrmId, femaleFrmId }`. The new shape matches the wire format directly. Anyone with saved `.pro.json` snapshots for armor PROs needs to regenerate them (re-save in the binary editor, or pipe the file through `fgbin` again).
+- **BREAKING (`@bgforge/binary` library, `.pro.json` snapshots):** the canonical document shapes for armor and drug PROs have been flattened to match the wire format.
+    - `armorStats`: replaced `damageResistance: { normal, laser, ... }` and `damageThreshold: { normal, ... }` nested groups with flat `drNormal`..`drExplosion` and `dtNormal`..`dtExplosion` fields.
+    - `drugStats`: replaced `affectedStats: { stat0..stat2 }`, `instantEffect: { amount0..amount2 }`, `delayedEffect1: { duration, amount0..amount2 }`, `delayedEffect2: { ... }`, `addiction: { rate, effect, onset }` nested groups with flat `stat0..stat2`, `amount{0,1,2}Instant`, `duration1`, `amount{0,1,2}Delayed1`, `duration2`, `amount{0,1,2}Delayed2`, `addictionRate`, `addictionEffect`, `addictionOnset` fields.
+    - Anyone with saved `.pro.json` snapshots for armor or drug PROs needs to regenerate them (re-save in the binary editor, or pipe the file through `fgbin` again).
 - `fgbin` and the binary editor now reject Fallout `.map` files whose header reports more global or local variables than fit in the remaining file, instead of attempting a multi-billion-iteration read.
 - `fgtp --help` now lists the `--save-and-check` flag (write the transpiled output and re-verify it on a second pass), bringing the help text in line with the actual CLI surface.
 - Minimum supported Node.js version raised from 18 to 20. Node 18 reached end-of-life in April 2025; Node 20 is the current LTS minimum. Affects users installing `@bgforge/mls-server` or `@bgforge/transpile` standalone via npm.
