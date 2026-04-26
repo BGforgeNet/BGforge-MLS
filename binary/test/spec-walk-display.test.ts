@@ -147,6 +147,25 @@ describe("walkStruct", () => {
         expect(result.fields[1]).toMatchObject({ name: "Trailer", offset: 12, size: 4 });
     });
 
+    it("labelPrefix prepends to every emitted label", () => {
+        type Data = { a: number; b: number };
+        const spec: StructSpec<Data> = { a: { codec: u32 }, b: { codec: u32 } };
+        const presentation: StructPresentation<Data> = { a: { label: "Alpha" } };
+        const result = walkStruct(spec, presentation, 0, { a: 1, b: 2 }, "G", { labelPrefix: "Entry 7" });
+        expect((result.fields[0] as { name: string }).name).toBe("Entry 7 Alpha");
+        expect((result.fields[1] as { name: string }).name).toBe("Entry 7 B");
+    });
+
+    it("array fields render as '(N values)' summary instead of unrolling the elements", () => {
+        type Data = { count: number; values: number[] };
+        const spec: StructSpec<Data> = {
+            count: { codec: u32 },
+            values: { kind: "array", element: { codec: u32 }, count: 3 },
+        };
+        const result = walkStruct(spec, {}, 0, { count: 3, values: [10, 20, 30] }, "G");
+        expect(result.fields[1]).toMatchObject({ name: "Values", value: "(3 values)", type: "padding" });
+    });
+
     it("walkGroup is the inverse of walkStruct on scalars", () => {
         type Data = { a: number; b: number; c: number };
         const spec: StructSpec<Data> = {

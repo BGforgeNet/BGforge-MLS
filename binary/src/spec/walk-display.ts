@@ -70,6 +70,14 @@ interface SubGroupSpec {
 interface WalkOptions {
     readonly subGroups?: readonly SubGroupSpec[];
     readonly expanded?: boolean;
+    /**
+     * Prepended (with a separating space) to every emitted field's display
+     * label. Use for per-iteration prefixes that the surrounding wrapper
+     * group cannot supply — e.g. `"Entry 5"` for a script slot whose
+     * sibling slots share the same field labels and need disambiguation
+     * inside the wrapper group.
+     */
+    readonly labelPrefix?: string;
 }
 
 /**
@@ -123,7 +131,7 @@ export function walkStruct<T extends Record<string, unknown>>(
                 const k = keys[j]!;
                 const f = spec[k];
                 if (isArraySpec(f) || f.packedAs !== slot) break;
-                builtFields.set(k, fieldFor(k, f, presentation[k], slotOffset, slotSize, data[k]));
+                builtFields.set(k, fieldFor(k, f, presentation[k], slotOffset, slotSize, data[k], options.labelPrefix));
                 j++;
             }
             cursor += slotSize;
@@ -132,7 +140,7 @@ export function walkStruct<T extends Record<string, unknown>>(
         }
 
         const size = fieldSize(fs, data, key);
-        builtFields.set(key, fieldFor(key, fs, presentation[key], cursor, size, data[key]));
+        builtFields.set(key, fieldFor(key, fs, presentation[key], cursor, size, data[key], options.labelPrefix));
         cursor += size;
         i++;
     }
@@ -198,11 +206,18 @@ function fieldFor(
     offset: number,
     size: number,
     value: unknown,
+    labelPrefix?: string,
 ): ParsedField {
-    const label = pres?.label ?? humanize(name);
+    const baseLabel = pres?.label ?? humanize(name);
+    const label = labelPrefix ? `${labelPrefix} ${baseLabel}` : baseLabel;
 
     if (isArraySpec(fs)) {
-        return { name: label, value, offset, size, type: "padding" };
+        // Trailing reserves and other byte-array fields are presented as a
+        // single "(N values)" summary row rather than N unrolled scalars;
+        // the canonical doc carries the full array if a downstream tool
+        // needs it.
+        const summary = Array.isArray(value) ? `(${value.length} values)` : value;
+        return { name: label, value: summary, offset, size, type: "padding" };
     }
 
     if (fs.enum) {

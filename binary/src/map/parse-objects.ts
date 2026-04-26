@@ -4,14 +4,11 @@
 
 import { BufferReader } from "typed-binary";
 import type { ParsedField, ParsedGroup } from "../types";
-import { MapElevation, Rotation, ObjectFlags } from "./types";
 import type { MapHeader } from "./schemas";
 import { toTypedBinarySchema } from "../spec/derive-typed-binary";
+import { walkStruct } from "../spec/walk-display";
 import {
-    field,
     makeGroup,
-    flagsField,
-    enumField,
     int32Field,
     uint32Field,
     noteField,
@@ -25,7 +22,16 @@ import {
     PID_TYPE_ITEM,
     PID_TYPE_SCENERY,
 } from "./parse-helpers";
-import { objectBaseSpec, inventoryHeaderSpec, critterDataSpec, exitGridSpec } from "./specs/object";
+import {
+    objectBaseSpec,
+    objectBasePresentation,
+    inventoryHeaderSpec,
+    inventoryHeaderPresentation,
+    critterDataSpec,
+    critterPresentation,
+    exitGridSpec,
+    exitGridPresentation,
+} from "./specs/object";
 
 const objectBaseCodec = toTypedBinarySchema(objectBaseSpec);
 const inventoryHeaderCodec = toTypedBinarySchema(inventoryHeaderSpec);
@@ -47,56 +53,31 @@ type ParsedObjectResult = {
     offset: number;
 };
 
-function parseObjectBaseFields(data: Uint8Array, offset: number): { fields: ParsedField[]; pid: number } {
+function parseObjectBaseFields(
+    data: Uint8Array,
+    offset: number,
+): { fields: (ParsedField | ParsedGroup)[]; pid: number } {
     const obj = readSpec(objectBaseCodec, data, offset);
-    const fields: ParsedField[] = [
-        field("ID", obj.id, offset + 0, 4, "int32"),
-        field("Tile", obj.tile, offset + 4, 4, "int32"),
-        field("X", obj.x, offset + 8, 4, "int32"),
-        field("Y", obj.y, offset + 12, 4, "int32"),
-        field("Screen X", obj.screenX, offset + 16, 4, "int32"),
-        field("Screen Y", obj.screenY, offset + 20, 4, "int32"),
-        field("Frame", obj.frame, offset + 24, 4, "int32"),
-        enumField("Rotation", obj.rotation, Rotation, offset + 28, 4),
-        field("FID", obj.fid, offset + 32, 4, "uint32"),
-        flagsField("Flags", obj.flags, ObjectFlags, offset + 36, 4),
-        enumField("Elevation", obj.elevation, MapElevation, offset + 40, 4),
-        field("PID", obj.pid, offset + 44, 4, "int32"),
-        field("CID", obj.cid, offset + 48, 4, "int32"),
-        field("Light Distance", obj.lightDistance, offset + 52, 4, "int32"),
-        field("Light Intensity", obj.lightIntensity, offset + 56, 4, "int32"),
-        field("Field 74", obj.field74, offset + 60, 4, "int32"),
-        field("SID", obj.sid, offset + 64, 4, "int32"),
-        field("Script Index", obj.scriptIndex, offset + 68, 4, "int32"),
-    ];
-    return { fields, pid: obj.pid };
+    const group = walkStruct(objectBaseSpec, objectBasePresentation, offset, obj, "Object Base");
+    return { fields: group.fields, pid: obj.pid };
 }
 
-function parseCritterDataFields(data: Uint8Array, offset: number): ParsedField[] {
+function parseCritterDataGroup(data: Uint8Array, offset: number): ParsedGroup {
     const c = readSpec(critterDataCodec, data, offset);
-    return [
-        field("Reaction", c.reaction, offset + 0, 4, "int32"),
-        field("Damage Last Turn", c.damageLastTurn, offset + 4, 4, "int32"),
-        field("Combat Maneuver", c.combatManeuver, offset + 8, 4, "int32"),
-        field("Current AP", c.currentAp, offset + 12, 4, "int32"),
-        field("Combat Results", c.combatResults, offset + 16, 4, "int32"),
-        field("AI Packet", c.aiPacket, offset + 20, 4, "int32"),
-        field("Team", c.team, offset + 24, 4, "int32"),
-        field("Who Hit Me CID", c.whoHitMeCid, offset + 28, 4, "int32"),
-        field("Current HP", c.currentHp, offset + 32, 4, "int32"),
-        field("Radiation", c.radiation, offset + 36, 4, "int32"),
-        field("Poison", c.poison, offset + 40, 4, "int32"),
-    ];
+    return walkStruct(critterDataSpec, critterPresentation, offset, c, "Critter Data");
 }
 
-function parseExitGridFields(data: Uint8Array, offset: number): ParsedField[] {
+function parseExitGridGroup(data: Uint8Array, offset: number): ParsedGroup {
     const e = readSpec(exitGridCodec, data, offset);
-    return [
-        field("Destination Map", e.destinationMap, offset + 0, 4, "int32"),
-        field("Destination Tile", e.destinationTile, offset + 4, 4, "int32"),
-        enumField("Destination Elevation", e.destinationElevation, MapElevation, offset + 8, 4),
-        enumField("Destination Rotation", e.destinationRotation, Rotation, offset + 12, 4),
-    ];
+    return walkStruct(exitGridSpec, exitGridPresentation, offset, e, "Exit Grid");
+}
+
+function parseInventoryHeaderGroup(data: Uint8Array, offset: number): { group: ParsedGroup; inventoryLength: number } {
+    const inv = readSpec(inventoryHeaderCodec, data, offset);
+    return {
+        group: walkStruct(inventoryHeaderSpec, inventoryHeaderPresentation, offset, inv, "Inventory Header"),
+        inventoryLength: inv.inventoryLength,
+    };
 }
 
 function parseObjectAt(
@@ -121,16 +102,10 @@ function parseObjectAt(
     const pidType = (pid >>> 24) & 0xff;
     let currentOffset = offset + MAP_OBJECT_BASE_SIZE;
 
-    const inv = readSpec(inventoryHeaderCodec, data, currentOffset);
-    const inventoryLengthField = field("Inventory Length", inv.inventoryLength, currentOffset, 4, "int32");
-    const inventoryCapacityField = field("Inventory Capacity", inv.inventoryCapacity, currentOffset + 4, 4, "int32");
-    const inventoryPointerField = field("Inventory Pointer", inv.inventoryPointer, currentOffset + 8, 4, "int32");
+    const { group: inventoryHeaderGroup, inventoryLength } = parseInventoryHeaderGroup(data, currentOffset);
     currentOffset += MAP_OBJECT_DATA_HEADER_SIZE;
 
-    const objectFields: (ParsedField | ParsedGroup)[] = [
-        ...baseFields,
-        makeGroup("Inventory Header", [inventoryLengthField, inventoryCapacityField, inventoryPointerField]),
-    ];
+    const objectFields: (ParsedField | ParsedGroup)[] = [...baseFields, inventoryHeaderGroup];
 
     if (pidType === PID_TYPE_CRITTER) {
         if (currentOffset + 44 > data.length) {
@@ -143,7 +118,7 @@ function parseObjectAt(
             };
         }
 
-        objectFields.push(makeGroup("Critter Data", parseCritterDataFields(data, currentOffset)));
+        objectFields.push(parseCritterDataGroup(data, currentOffset));
         currentOffset += 44;
     } else {
         if (currentOffset + 4 > data.length) {
@@ -170,7 +145,7 @@ function parseObjectAt(
                 };
             }
 
-            objectFields.push(makeGroup("Exit Grid", parseExitGridFields(data, currentOffset)));
+            objectFields.push(parseExitGridGroup(data, currentOffset));
             currentOffset += 16;
         } else if (pidType === PID_TYPE_ITEM || pidType === PID_TYPE_SCENERY) {
             objectFields.push(
@@ -189,7 +164,7 @@ function parseObjectAt(
     }
 
     const inventoryGroups: ParsedGroup[] = [];
-    for (let inventoryIndex = 0; inventoryIndex < inv.inventoryLength; inventoryIndex++) {
+    for (let inventoryIndex = 0; inventoryIndex < inventoryLength; inventoryIndex++) {
         if (currentOffset + 4 > data.length) {
             errors.push(
                 `Inventory entry ${index}.${inventoryIndex} quantity truncated at offset 0x${currentOffset.toString(16)}`,

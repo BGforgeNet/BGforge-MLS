@@ -6,17 +6,7 @@ import { BufferReader } from "typed-binary";
 import type { ParseOpaqueRange, ParsedField, ParsedGroup } from "../types";
 import { encodeOpaqueRange } from "../opaque-range";
 import { toTypedBinarySchema } from "../spec/derive-typed-binary";
-import {
-    MapVersion,
-    MapFlags,
-    MapElevation,
-    Rotation,
-    ScriptFlags,
-    ScriptProc,
-    ScriptType,
-    Skill,
-    hasElevation,
-} from "./types";
+import { ScriptType, hasElevation } from "./types";
 import {
     HEADER_SIZE,
     TILE_DATA_SIZE_PER_ELEVATION,
@@ -26,44 +16,54 @@ import {
     getScriptType,
     type MapHeader,
 } from "./schemas";
+import { mapHeaderCanonicalSpec, mapHeaderPresentation } from "./specs/header";
 import { varSectionSpec, type VarSectionCtx } from "./specs/variables";
 import {
     OTHER_SLOT_BYTES,
     SPATIAL_SLOT_BYTES,
     TIMER_SLOT_BYTES,
     otherSlotSpec,
+    otherSlotPresentation,
     spatialSlotSpec,
+    spatialSlotPresentation,
     timerSlotSpec,
-    type OtherSlotData,
-    type SpatialSlotData,
-    type TimerSlotData,
+    timerSlotPresentation,
 } from "./specs/script-slot";
-import {
-    field,
-    makeGroup,
-    flagsField,
-    enumField,
-    int32Field,
-    HEADER_PADDING_OFFSET,
-    HEADER_PADDING_SIZE,
-} from "./parse-helpers";
+import { walkStruct } from "../spec/walk-display";
+import { field, makeGroup, int32Field, HEADER_PADDING_OFFSET, HEADER_PADDING_SIZE } from "./parse-helpers";
 
 export function parseHeaderSection(data: Uint8Array, errors: string[]): ParsedGroup {
     const header = parseHeader(data);
 
-    return makeGroup("Header", [
-        enumField("Version", header.version, MapVersion, 0x00, 4, errors),
-        field("Filename", header.filename, 0x04, 16, "string"),
-        field("Default Position", header.defaultPosition, 0x14, 4, "int32"),
-        enumField("Default Elevation", header.defaultElevation, MapElevation, 0x18, 4, errors),
-        enumField("Default Orientation", header.defaultOrientation, Rotation, 0x1c, 4, errors),
-        field("Num Local Vars", header.numLocalVars, 0x20, 4, "int32"),
-        field("Script ID", header.scriptId, 0x24, 4, "int32"),
-        flagsField("Map Flags", header.flags, MapFlags, 0x28, 4),
-        field("Darkness", header.darkness, 0x2c, 4, "int32"),
-        field("Num Global Vars", header.numGlobalVars, 0x30, 4, "int32"),
-        field("Map ID", header.mapId, 0x34, 4, "int32"),
-        field("Timestamp", header.timestamp, 0x38, 4, "uint32"),
+    // walkStruct produces the 11 numeric/enum/flags rows from the spec +
+    // presentation. Filename (string) and Padding (field_3C summary) sit
+    // outside that scalar set and are spliced in at their wire positions.
+    // The cast widens MapHeader (specific shape) to walkStruct's generic
+    // record constraint; the spec keys are a subset of MapHeader's so the
+    // runtime access is sound.
+    const numericGroup = walkStruct(
+        mapHeaderCanonicalSpec,
+        mapHeaderPresentation,
+        0,
+        header as unknown as Record<string, number>,
+        "Header",
+    );
+    for (const fieldEntry of numericGroup.fields) {
+        if ("fields" in fieldEntry) continue;
+        if (
+            fieldEntry.type === "enum" &&
+            typeof fieldEntry.value === "string" &&
+            fieldEntry.value.startsWith("Unknown (")
+        ) {
+            errors.push(
+                `Invalid ${fieldEntry.name} at offset 0x${fieldEntry.offset.toString(16)}: ${fieldEntry.rawValue}`,
+            );
+        }
+    }
+
+    const fields = [...numericGroup.fields];
+    fields.splice(1, 0, field("Filename", header.filename, 0x04, 16, "string"));
+    fields.push(
         field(
             "Padding (field_3C)",
             `(${header.field_3C.length} values)`,
@@ -71,7 +71,8 @@ export function parseHeaderSection(data: Uint8Array, errors: string[]): ParsedGr
             HEADER_PADDING_SIZE,
             "padding",
         ),
-    ]);
+    );
+    return makeGroup("Header", fields);
 }
 
 function clampVarCount(rawCount: number, label: "global" | "local", remainingBytes: number, errors: string[]): number {
@@ -195,25 +196,6 @@ const otherSlotCodec = toTypedBinarySchema(otherSlotSpec);
 const spatialSlotCodec = toTypedBinarySchema(spatialSlotSpec);
 const timerSlotCodec = toTypedBinarySchema(timerSlotSpec);
 
-type AnySlotData = OtherSlotData | SpatialSlotData | TimerSlotData;
-
-function appendSlotCommonFields(fields: ParsedField[], slot: AnySlotData, label: string, commonOffset: number): void {
-    fields.push(flagsField(`${label} Flags`, slot.flags, ScriptFlags, commonOffset, 4));
-    fields.push(field(`${label} Index`, slot.index, commonOffset + 4, 4, "int32"));
-    fields.push(field(`${label} Program Pointer Slot`, slot.programPointerSlot, commonOffset + 8, 4, "int32"));
-    fields.push(field(`${label} Owner ID`, slot.ownerId, commonOffset + 12, 4, "int32"));
-    fields.push(field(`${label} Local Vars Offset`, slot.localVarsOffset, commonOffset + 16, 4, "int32"));
-    fields.push(field(`${label} Num Local Vars`, slot.numLocalVars, commonOffset + 20, 4, "int32"));
-    fields.push(field(`${label} Return Value`, slot.returnValue, commonOffset + 24, 4, "int32"));
-    fields.push(enumField(`${label} Action`, slot.action, ScriptProc, commonOffset + 28, 4));
-    fields.push(field(`${label} Fixed Param`, slot.fixedParam, commonOffset + 32, 4, "int32"));
-    fields.push(enumField(`${label} Action Being Used`, slot.actionBeingUsed, Skill, commonOffset + 36, 4));
-    fields.push(field(`${label} Script Overrides`, slot.scriptOverrides, commonOffset + 40, 4, "int32"));
-    fields.push(field(`${label} Unknown Field 0x48`, slot.unknownField0x48, commonOffset + 44, 4, "int32"));
-    fields.push(field(`${label} Check Margin (how_much)`, slot.checkMarginHowMuch, commonOffset + 48, 4, "int32"));
-    fields.push(field(`${label} Legacy Field 0x50`, slot.legacyField0x50, commonOffset + 52, 4, "int32"));
-}
-
 function parseScriptEntryFields(
     data: Uint8Array,
     currentOffset: number,
@@ -243,35 +225,21 @@ function parseScriptEntryFields(
         byteOffset: data.byteOffset + currentOffset,
     });
 
-    const fields: ParsedField[] = [];
-
+    let group: ParsedGroup;
     if (scriptType === 1) {
         const slot = spatialSlotCodec.read(reader);
-        fields.push(field(`${label} SID`, slot.sid, currentOffset, 4, "uint32"));
-        fields.push(
-            field(`${label} Next Script Link (legacy)`, slot.nextScriptLinkLegacy, currentOffset + 4, 4, "int32"),
-        );
-        fields.push(field(`${label} Built Tile`, slot.builtTile, currentOffset + 8, 4, "int32"));
-        fields.push(field(`${label} Spatial Radius`, slot.spatialRadius, currentOffset + 12, 4, "int32"));
-        appendSlotCommonFields(fields, slot, label, currentOffset + 16);
+        group = walkStruct(spatialSlotSpec, spatialSlotPresentation, currentOffset, slot, label, {
+            labelPrefix: label,
+        });
     } else if (scriptType === 2) {
         const slot = timerSlotCodec.read(reader);
-        fields.push(field(`${label} SID`, slot.sid, currentOffset, 4, "uint32"));
-        fields.push(
-            field(`${label} Next Script Link (legacy)`, slot.nextScriptLinkLegacy, currentOffset + 4, 4, "int32"),
-        );
-        fields.push(field(`${label} Timer Time`, slot.timerTime, currentOffset + 8, 4, "int32"));
-        appendSlotCommonFields(fields, slot, label, currentOffset + 12);
+        group = walkStruct(timerSlotSpec, timerSlotPresentation, currentOffset, slot, label, { labelPrefix: label });
     } else {
         const slot = otherSlotCodec.read(reader);
-        fields.push(field(`${label} SID`, slot.sid, currentOffset, 4, "uint32"));
-        fields.push(
-            field(`${label} Next Script Link (legacy)`, slot.nextScriptLinkLegacy, currentOffset + 4, 4, "int32"),
-        );
-        appendSlotCommonFields(fields, slot, label, currentOffset + 8);
+        group = walkStruct(otherSlotSpec, otherSlotPresentation, currentOffset, slot, label, { labelPrefix: label });
     }
 
-    return { fields, offset: currentOffset + slotBytes };
+    return { fields: group.fields as ParsedField[], offset: currentOffset + slotBytes };
 }
 
 export function parseScripts(
