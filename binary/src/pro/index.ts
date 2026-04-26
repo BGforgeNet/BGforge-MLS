@@ -15,6 +15,8 @@ import { keySpec, keyPresentation } from "./specs/key";
 import { doorSpec, doorPresentation } from "./specs/door";
 import { elevatorSpec, elevatorPresentation } from "./specs/elevator";
 import { genericScenerySpec, genericSceneryPresentation } from "./specs/generic-scenery";
+import { stairsSpec, stairsPresentation } from "./specs/stairs";
+import { ladderSpec, ladderPresentation } from "./specs/ladder";
 import { tileSpec, tilePresentation } from "./specs/tile";
 import { miscSpec, miscPresentation } from "./specs/misc";
 import { createProCanonicalSnapshot } from "./canonical";
@@ -357,14 +359,8 @@ function parseScenery(data: Uint8Array, scenery: SceneryCommonData, _errors: str
         case 1: {
             // Stairs
             const stairs: StairsData = stairsSchema.read(reader(data, SCENERY_SUBTYPE_OFFSET));
-            const destTile = stairs.destTileAndElevation & 0x3_ff_ff_ff;
-            const destElev = (stairs.destTileAndElevation >> 26) & 0x3f;
             groups.push(
-                group("Stairs Properties", [
-                    field("Dest Tile", destTile, 0x29, 4, "uint32"),
-                    field("Dest Elevation", destElev, 0x29, 4, "uint32"),
-                    field("Dest Map", stairs.destMap, 0x2d, 4, "uint32"),
-                ]),
+                walkStruct(stairsSpec, stairsPresentation, SCENERY_SUBTYPE_OFFSET, stairs, "Stairs Properties"),
             );
             break;
         }
@@ -378,13 +374,8 @@ function parseScenery(data: Uint8Array, scenery: SceneryCommonData, _errors: str
         case 4: {
             // Ladder Top
             const ladder: LadderData = ladderSchema.read(reader(data, SCENERY_SUBTYPE_OFFSET));
-            const destTile = ladder.destTileAndElevation & 0x3_ff_ff_ff;
-            const destElev = (ladder.destTileAndElevation >> 26) & 0x3f;
             groups.push(
-                group("Ladder Properties", [
-                    field("Dest Tile", destTile, 0x29, 4, "uint32"),
-                    field("Dest Elevation", destElev, 0x29, 4, "uint32"),
-                ]),
+                walkStruct(ladderSpec, ladderPresentation, SCENERY_SUBTYPE_OFFSET, ladder, "Ladder Properties"),
             );
             break;
         }

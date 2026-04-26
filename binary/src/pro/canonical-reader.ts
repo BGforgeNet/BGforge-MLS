@@ -321,15 +321,9 @@ function rebuildProCanonicalSnapshot(parseResult: ParseResult): ProCanonicalSnap
 
     const stairsProperties = getOptionalGroup(parseResult.root, "Stairs Properties");
     if (stairsProperties) {
-        // The display tree splits the wire's packed u32 into "Dest Tile"
-        // (low 26 bits) and "Dest Elevation" (high 6 bits) for editor UX.
-        // Recombine into the wire-shape destTileAndElevation field. The
-        // unsigned-shift `>>> 0` coerces the JS bitwise `|` result back into
-        // u32 range (otherwise high-bit-set values come out negative).
-        const destTile = readFieldNumber(stairsProperties, "Dest Tile", "Stairs Properties") & 0x03_ff_ff_ff;
-        const destElevation = readFieldNumber(stairsProperties, "Dest Elevation", "Stairs Properties") & 0x3f;
         sections.stairsProperties = {
-            destTileAndElevation: ((destElevation << 26) | destTile) >>> 0,
+            destTile: readFieldNumber(stairsProperties, "Dest Tile", "Stairs Properties"),
+            destElevation: readFieldNumber(stairsProperties, "Dest Elevation", "Stairs Properties"),
             destMap: readFieldNumber(stairsProperties, "Dest Map", "Stairs Properties"),
         };
     }
@@ -344,11 +338,9 @@ function rebuildProCanonicalSnapshot(parseResult: ParseResult): ProCanonicalSnap
 
     const ladderProperties = getOptionalGroup(parseResult.root, "Ladder Properties");
     if (ladderProperties) {
-        // Same 26+6 bit packing as stairs; see destTileAndElevation comment above.
-        const destTile = readFieldNumber(ladderProperties, "Dest Tile", "Ladder Properties") & 0x03_ff_ff_ff;
-        const destElevation = readFieldNumber(ladderProperties, "Dest Elevation", "Ladder Properties") & 0x3f;
         sections.ladderProperties = {
-            destTileAndElevation: ((destElevation << 26) | destTile) >>> 0,
+            destTile: readFieldNumber(ladderProperties, "Dest Tile", "Ladder Properties"),
+            destElevation: readFieldNumber(ladderProperties, "Dest Elevation", "Ladder Properties"),
         };
     }
 
