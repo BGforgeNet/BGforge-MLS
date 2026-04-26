@@ -308,11 +308,11 @@ function rebuildProCanonicalSnapshot(parseResult: ParseResult): ProCanonicalSnap
     const doorProperties = getOptionalGroup(parseResult.root, "Door Properties");
     if (doorProperties) {
         sections.doorProperties = {
-            walkThrough: readClampedFieldNumber(
+            walkThruFlag: readClampedFieldNumber(
                 doorProperties,
                 "Walk Through",
                 "Door Properties",
-                "pro.doorProperties.walkThrough",
+                "pro.doorProperties.walkThruFlag",
                 "uint32",
             ),
             unknown: readFieldNumber(doorProperties, "Unknown", "Door Properties"),

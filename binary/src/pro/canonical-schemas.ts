@@ -17,6 +17,7 @@ import { itemCommonSpec } from "./specs/item-common";
 import { keySpec } from "./specs/key";
 import { miscItemSpec } from "./specs/misc-item";
 import { miscSpec } from "./specs/misc";
+import { doorSpec } from "./specs/door";
 import { sceneryCommonSpec } from "./specs/scenery-common";
 import { tileSpec } from "./specs/tile";
 import { wallSpec } from "./specs/wall";
@@ -37,12 +38,7 @@ const proCanonicalSectionsSchema = z.strictObject({
     keyStats: toZodSchema(keySpec).optional(),
     critterStats: toZodSchema(critterSpec).optional(),
     sceneryProperties: toZodSchema(sceneryCommonSpec).optional(),
-    doorProperties: z
-        .strictObject({
-            walkThrough: zodFieldNumber("pro", "pro.doorProperties.walkThrough", "uint32"),
-            unknown: uint32Schema,
-        })
-        .optional(),
+    doorProperties: toZodSchema(doorSpec).optional(),
     stairsProperties: z
         .strictObject({
             destTile: zodFieldNumber("pro", "pro.stairsProperties.destTile", "uint32"),

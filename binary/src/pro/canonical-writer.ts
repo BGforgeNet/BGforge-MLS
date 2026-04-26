@@ -115,10 +115,7 @@ export function serializeProCanonicalSnapshot(snapshot: ProCanonicalSnapshot): U
             sceneryCommonSchema.write(writer(data, HEADER_SIZE), scenery);
             switch (scenery.subType) {
                 case 0:
-                    doorSchema.write(writer(data, SCENERY_SUBTYPE_OFFSET), {
-                        walkThruFlag: sections.doorProperties!.walkThrough,
-                        unknown: sections.doorProperties!.unknown,
-                    });
+                    doorSchema.write(writer(data, SCENERY_SUBTYPE_OFFSET), sections.doorProperties!);
                     break;
                 case 1:
                     stairsSchema.write(writer(data, SCENERY_SUBTYPE_OFFSET), {

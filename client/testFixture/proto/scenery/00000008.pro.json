@@ -24,7 +24,7 @@
                 "soundId": 66
             },
             "doorProperties": {
-                "walkThrough": 0,
+                "walkThruFlag": 0,
                 "unknown": 3435973836
             }
         }

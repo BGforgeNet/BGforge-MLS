@@ -24,7 +24,7 @@ const DOMAIN_RANGES: Record<BinaryFormat, Readonly<Record<string, NumericRange>>
     pro: {
         "pro.header.lightRadius": { min: 0, max: 8 },
         "pro.header.lightIntensity": { min: 0, max: 65_536 },
-        "pro.doorProperties.walkThrough": { min: 0, max: 1 },
+        "pro.doorProperties.walkThruFlag": { min: 0, max: 1 },
         "pro.stairsProperties.destTile": { min: 0, max: 0x03_ff_ff_ff },
         "pro.stairsProperties.destElevation": { min: 0, max: 0x3f },
         "pro.ladderProperties.destTile": { min: 0, max: 0x03_ff_ff_ff },
