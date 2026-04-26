@@ -25,14 +25,11 @@ import {
     isSubpath,
     isSubpathFullyResolved,
     tryRealpathSync,
-    expandHome,
-    parseCommandPath,
-    needsShell,
     errorMessage,
     addFallbackDiagnostic,
-    runProcess,
     type ParseResult,
 } from "../src/common";
+import { expandHome, needsShell, parseCommandPath, runProcess } from "../src/process-runner";
 
 describe("symbolAtPosition", () => {
     it("returns word under cursor", () => {

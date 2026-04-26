@@ -15,7 +15,7 @@
  */
 
 import * as fs from "fs";
-import { removeTmpFile } from "../common";
+import { removeTmpFile } from "../process-runner";
 import type { NormalizedUri } from "./normalized-uri";
 
 interface CompileWithTmpFileParams {

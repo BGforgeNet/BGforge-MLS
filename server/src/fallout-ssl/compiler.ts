@@ -18,15 +18,13 @@ import {
     addFallbackDiagnostic,
     conlog,
     errorMessage,
-    needsShell,
-    parseCommandPath,
     pathToUri,
     reportCompileResult,
-    runProcess,
     sendParseResult,
     tmpDir,
     uriToPath,
 } from "../common";
+import { needsShell, parseCommandPath, runProcess } from "../process-runner";
 import { abortAllCompiles, compileWithTmpFile } from "../core/compile-with-tmp-file";
 import type { NormalizedUri } from "../core/normalized-uri";
 import { getDocuments } from "../lsp-connection";

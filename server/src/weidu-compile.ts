@@ -12,14 +12,13 @@ import {
     conlog,
     errorMessage,
     getErrnoCode,
-    parseCommandPath,
     pathToUri,
     reportCompileResult,
-    runProcess,
     sendParseResult,
     tmpDir,
     uriToPath,
 } from "./common";
+import { parseCommandPath, runProcess } from "./process-runner";
 import { abortAllCompiles, compileWithTmpFile } from "./core/compile-with-tmp-file";
 import { showError, showInfo, showWarning } from "./user-messages";
 import type { WeiDUsettings } from "./settings";
