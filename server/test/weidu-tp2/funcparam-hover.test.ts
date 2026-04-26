@@ -28,6 +28,7 @@ import { weiduTp2Provider } from "../../src/weidu-tp2/provider";
 import { initParser } from "../../../shared/parsers/weidu-tp2";
 import { defaultSettings } from "../../src/settings";
 import type { HoverResult } from "../../src/language-provider";
+import { normalizeUri } from "../../src/core/normalized-uri";
 import * as path from "path";
 
 beforeAll(async () => {
@@ -59,7 +60,7 @@ BEGIN
     PRINT ~test~
 END
 `;
-        const headerUri = "file:///lib.tph";
+        const headerUri = normalizeUri("file:///lib.tph");
         weiduTp2Provider.reloadFileData?.(headerUri, headerText);
 
         // Test hover inside function call - cursor on parameter name
@@ -69,7 +70,7 @@ LAF unstack_armor_bonus
         stacking_id_base = 100
 END
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         // Position on "stacking_id_base" at line 3 (inside the function call)
         const position: Position = { line: 3, character: 10 };
 
@@ -90,7 +91,7 @@ BEGIN
     PRINT ~test~
 END
 `;
-        const headerUri = "file:///lib.tph";
+        const headerUri = normalizeUri("file:///lib.tph");
         weiduTp2Provider.reloadFileData?.(headerUri, headerText);
 
         // Test hover outside function call - cursor on variable declaration
@@ -100,7 +101,7 @@ LAF unstack_armor_bonus
         stacking_id_base = 100
 END
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         // Position on "stacking_id_base" at line 0 (outside the function call)
         const position: Position = { line: 0, character: 15 };
 
@@ -126,8 +127,8 @@ DEFINE_PATCH_FUNCTION inner_func
 BEGIN
 END
 `;
-        const headerUri1 = "file:///lib1.tph";
-        const headerUri2 = "file:///lib2.tph";
+        const headerUri1 = normalizeUri("file:///lib1.tph");
+        const headerUri2 = normalizeUri("file:///lib2.tph");
         weiduTp2Provider.reloadFileData?.(headerUri1, headerText1);
         weiduTp2Provider.reloadFileData?.(headerUri2, headerText2);
 
@@ -142,7 +143,7 @@ COPY ~file.bcs~ ~override~
             inner_param = 20
     END
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
 
         // Position inside outer_func call
         const positionOuter: Position = { line: 2, character: 10 };
@@ -171,7 +172,7 @@ DEFINE_ACTION_FUNCTION test_func
 BEGIN
 END
 `;
-        const headerUri = "file:///lib.tph";
+        const headerUri = normalizeUri("file:///lib.tph");
         weiduTp2Provider.reloadFileData?.(headerUri, headerText);
 
         const text = `OUTER_TEXT_SPRINT message ~global~
@@ -181,7 +182,7 @@ LAF test_func
         message = ~local~
 END
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
 
         // Inside function call
         const positionInside: Position = { line: 4, character: 10 };
@@ -208,7 +209,7 @@ DEFINE_PATCH_FUNCTION unstack_armor_bonus
 BEGIN
 END
 `;
-        const headerUri = "file:///lib.tph";
+        const headerUri = normalizeUri("file:///lib.tph");
         weiduTp2Provider.reloadFileData?.(headerUri, headerText);
 
         const text = `LPF unstack_armor_bonus
@@ -216,7 +217,7 @@ END
         stacking_id_base = 100
 END
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 2, character: 10 };
 
         const result = weiduTp2Provider.hover?.(text, "stacking_id_base", uri, position);
@@ -239,7 +240,7 @@ DEFINE_ACTION_FUNCTION test_func
 BEGIN
 END
 `;
-        const headerUri = "file:///lib.tph";
+        const headerUri = normalizeUri("file:///lib.tph");
         weiduTp2Provider.reloadFileData?.(headerUri, headerText);
 
         const text = `LAF test_func
@@ -247,7 +248,7 @@ END
         required_param = 42
 END
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 2, character: 10 };
 
         const result = weiduTp2Provider.hover?.(text, "required_param", uri, position);
@@ -266,7 +267,7 @@ END
         parameter2 = 1
 END
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 2, character: 10 };
 
         // hover() should return handled+null (block fallthrough) not not-handled (fall through)
@@ -347,7 +348,7 @@ BEGIN
     PRINT ~test~
 END
 `;
-        const headerUri = "file:///lib.tph";
+        const headerUri = normalizeUri("file:///lib.tph");
         weiduTp2Provider.reloadFileData?.(headerUri, headerText);
 
         const text = `LAF test_func
@@ -355,7 +356,7 @@ END
         func_param = 1
 END
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const symbol = "func_param";
         const position: Position = { line: 2, character: 10 };
 
@@ -376,7 +377,7 @@ END
         const varFileText = `
 OUTER_SET my_var = 123
 `;
-        const varUri = "file:///vars.tp2";
+        const varUri = normalizeUri("file:///vars.tp2");
         weiduTp2Provider.reloadFileData?.(varUri, varFileText);
 
         const text = `LAF unknown_func
@@ -384,7 +385,7 @@ OUTER_SET my_var = 123
         my_var = 1
 END
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const symbol = "my_var";
         const position: Position = { line: 2, character: 10 };
 
@@ -407,7 +408,7 @@ END
         const varFileText = `
 OUTER_SET my_var = 456
 `;
-        const varUri = "file:///vars.tph";
+        const varUri = normalizeUri("file:///vars.tph");
         weiduTp2Provider.reloadFileData?.(varUri, varFileText);
 
         try {
@@ -418,7 +419,7 @@ LAF some_func
         param = 1
 END
 `;
-            const uri = "file:///test.tp2";
+            const uri = normalizeUri("file:///test.tp2");
             const symbol = "my_var";
             const position: Position = { line: 0, character: 25 };
 
@@ -443,7 +444,7 @@ describe("weidu-tp2: loop variable binding hover suppression", () => {
     it("returns empty for variable in PHP_EACH AS binding", () => {
         // Index a variable named 'opcode' from a header
         const headerText = `OUTER_SET opcode = 999\n`;
-        weiduTp2Provider.reloadFileData?.("file:///lib.tph", headerText);
+        weiduTp2Provider.reloadFileData?.(normalizeUri("file:///lib.tph"), headerText);
 
         const text = `COPY_EXISTING ~sw1h54.itm~ ~override~
   PHP_EACH save_opcodes AS opcode => int BEGIN
@@ -451,7 +452,7 @@ describe("weidu-tp2: loop variable binding hover suppression", () => {
   END
 BUT_ONLY
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         // Position on 'opcode' after AS (not inside 'save_opcodes')
         const line1 = text.split("\n")[1];
         const col = line1!.indexOf("AS opcode") + 3; // skip "AS "
@@ -467,13 +468,13 @@ BUT_ONLY
 
     it("returns empty for variable in ACTION_PHP_EACH AS binding", () => {
         const headerText = `OUTER_SET item = 0\n`;
-        weiduTp2Provider.reloadFileData?.("file:///lib.tph", headerText);
+        weiduTp2Provider.reloadFileData?.(normalizeUri("file:///lib.tph"), headerText);
 
         const text = `ACTION_PHP_EACH my_array AS item => power BEGIN
   PRINT ~%item%~
 END
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const line0 = text.split("\n")[0];
         const col = line0!.indexOf("AS item") + 3; // skip "AS "
         const position: Position = { line: 0, character: col };
@@ -487,13 +488,13 @@ END
 
     it("returns empty for value variable in PHP_EACH => binding", () => {
         const headerText = `OUTER_SET power = 0\n`;
-        weiduTp2Provider.reloadFileData?.("file:///lib.tph", headerText);
+        weiduTp2Provider.reloadFileData?.(normalizeUri("file:///lib.tph"), headerText);
 
         const text = `ACTION_PHP_EACH my_array AS item => power BEGIN
   PRINT ~%power%~
 END
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         // Position on 'power' after '=>'
         const line0 = text.split("\n")[0];
         const col = line0!.indexOf("=> power") + 3; // skip "=> "
@@ -508,7 +509,7 @@ END
 
     it("allows hover for variable reference inside loop body", () => {
         const headerText = `OUTER_SET opcode = 999\n`;
-        weiduTp2Provider.reloadFileData?.("file:///lib.tph", headerText);
+        weiduTp2Provider.reloadFileData?.(normalizeUri("file:///lib.tph"), headerText);
 
         const text = `COPY_EXISTING ~sw1h54.itm~ ~override~
   PHP_EACH save_opcodes AS item => int BEGIN
@@ -516,7 +517,7 @@ END
   END
 BUT_ONLY
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         // Position on 'opcode' in SET x = opcode (line 2)
         const line2 = text.split("\n")[2];
         const col = line2!.indexOf("opcode");

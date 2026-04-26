@@ -27,6 +27,7 @@ vi.mock("../../src/common", async (importOriginal) => {
 import { weiduTp2Provider } from "../../src/weidu-tp2/provider";
 import { initParser } from "../../../shared/parsers/weidu-tp2";
 import { defaultSettings } from "../../src/settings";
+import { normalizeUri } from "../../src/core/normalized-uri";
 import * as path from "path";
 
 beforeAll(async () => {
@@ -51,7 +52,7 @@ BEGIN
     PRINT ~Function called~
 END
 `;
-        const headerUri = "file:///lib.tph";
+        const headerUri = normalizeUri("file:///lib.tph");
 
         // Index the header file
         weiduTp2Provider.reloadFileData?.(headerUri, headerText);
@@ -63,7 +64,7 @@ INT_VAR count = 5
 
 END
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 3, character: 0 }; // On blank line inside INT_VAR section
 
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
@@ -93,14 +94,14 @@ BEGIN
     PATCH_PRINT ~Patching~
 END
 `;
-        const headerUri = "file:///lib.tph";
+        const headerUri = normalizeUri("file:///lib.tph");
         weiduTp2Provider.reloadFileData?.(headerUri, headerText);
 
         const text = `
 COPY ~file.bcs~ ~override~
     LPF my_patch_func STR_VAR  END
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 2, character: 29 }; // After "STR_VAR "
 
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
@@ -126,7 +127,7 @@ DEFINE_ACTION_FUNCTION test_func
 BEGIN
 END
 `;
-        const headerUri = "file:///lib.tph";
+        const headerUri = normalizeUri("file:///lib.tph");
         weiduTp2Provider.reloadFileData?.(headerUri, headerText);
 
         const text = `
@@ -136,7 +137,7 @@ INT_VAR
 
 END
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 4, character: 0 }; // On blank line inside INT_VAR section (funcParamName context)
 
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
@@ -163,14 +164,14 @@ DEFINE_PATCH_FUNCTION get_value
 BEGIN
 END
 `;
-        const headerUri = "file:///lib.tph";
+        const headerUri = normalizeUri("file:///lib.tph");
         weiduTp2Provider.reloadFileData?.(headerUri, headerText);
 
         const text = `
 COPY ~file.bcs~ ~override~
     LPF get_value RET  END
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 2, character: 23 }; // After "RET "
 
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
@@ -190,7 +191,7 @@ COPY ~file.bcs~ ~override~
         const text = `
 LAF unknown_function INT_VAR  END
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 1, character: 30 }; // After "INT_VAR "
 
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
@@ -217,7 +218,7 @@ BEGIN
     PRINT ~test~
 END
 `;
-        const headerUri = "file:///lib.tph";
+        const headerUri = normalizeUri("file:///lib.tph");
         weiduTp2Provider.reloadFileData?.(headerUri, headerText);
 
         const text = `
@@ -226,7 +227,7 @@ INT_VAR count = 5
 STR_VAR
 END
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 3, character: 7 }; // In STR_VAR section
 
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
@@ -257,7 +258,7 @@ BEGIN
     PATCH_PRINT ~test~
 END
 `;
-        const headerUri = "file:///lib.tph";
+        const headerUri = normalizeUri("file:///lib.tph");
         weiduTp2Provider.reloadFileData?.(headerUri, headerText);
 
         // Simulates user typing "xxx" in STR_VAR section with incomplete INT_VAR assignments
@@ -271,7 +272,7 @@ COPY ~file.2da~ ~override~
         xxx
     END
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 6, character: 11 }; // After "xxx" in STR_VAR section
 
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
@@ -294,13 +295,13 @@ BEGIN
     PRINT ~Macro called~
 END
 `;
-        const headerUri = "file:///lib.tph";
+        const headerUri = normalizeUri("file:///lib.tph");
         weiduTp2Provider.reloadFileData?.(headerUri, headerText);
 
         const text = `
 LAM my_macro
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 1, character: 12 }; // After "my_macro"
 
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
@@ -321,14 +322,14 @@ DEFINE_PATCH_FUNCTION get_arrays
 BEGIN
 END
 `;
-        const headerUri = "file:///lib.tph";
+        const headerUri = normalizeUri("file:///lib.tph");
         weiduTp2Provider.reloadFileData?.(headerUri, headerText);
 
         const text = `
 COPY ~file.bcs~ ~override~
     LPF get_arrays RET_ARRAY  END
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 2, character: 30 }; // After "RET_ARRAY "
 
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
@@ -356,7 +357,7 @@ DEFINE_ACTION_FUNCTION documented_func
 BEGIN
 END
 `;
-        const headerUri = "file:///lib.tph";
+        const headerUri = normalizeUri("file:///lib.tph");
         weiduTp2Provider.reloadFileData?.(headerUri, headerText);
 
         const text = `
@@ -365,7 +366,7 @@ INT_VAR
 
 END
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 3, character: 0 }; // Inside INT_VAR section
 
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];

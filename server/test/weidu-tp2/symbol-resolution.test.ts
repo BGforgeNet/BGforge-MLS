@@ -41,6 +41,7 @@ vi.mock("../../src/core/static-loader", () => ({
 }));
 
 import { weiduTp2Provider } from "../../src/weidu-tp2/provider";
+import { normalizeUri } from "../../src/core/normalized-uri";
 
 describe("weidu-tp2 symbol resolution", () => {
     beforeAll(async () => {
@@ -60,7 +61,7 @@ describe("weidu-tp2 symbol resolution", () => {
 /** @type {int} Maximum pip count */
 OUTER_SET pip_limit = 10
 `;
-            const uri = "file:///test.tp2";
+            const uri = normalizeUri("file:///test.tp2");
             const result = weiduTp2Provider.resolveSymbol?.("pip_limit", text, uri);
 
             expect(result).toBeDefined();
@@ -82,7 +83,7 @@ DEFINE_ACTION_FUNCTION my_local_func BEGIN
     PRINT ~hello~
 END
 `;
-            const uri = "file:///test.tp2";
+            const uri = normalizeUri("file:///test.tp2");
             const result = weiduTp2Provider.resolveSymbol?.("my_local_func", text, uri);
 
             expect(result).toBeDefined();
@@ -92,7 +93,7 @@ END
 
         it("should find static symbol (e.g., COPY_EXISTING)", () => {
             const text = `COPY_EXISTING ~test.itm~ ~override~`;
-            const uri = "file:///test.tp2";
+            const uri = normalizeUri("file:///test.tp2");
             const result = weiduTp2Provider.resolveSymbol?.("COPY_EXISTING", text, uri);
 
             expect(result).toBeDefined();
@@ -106,7 +107,7 @@ END
 /** Local version of the function */
 DEFINE_ACTION_FUNCTION my_func BEGIN END
 `;
-            const uri = "file:///test.tp2";
+            const uri = normalizeUri("file:///test.tp2");
             const result = weiduTp2Provider.resolveSymbol?.("my_func", text, uri);
 
             expect(result).toBeDefined();
@@ -121,7 +122,7 @@ DEFINE_ACTION_FUNCTION my_func BEGIN END
             // Simulate: file was indexed with old_var, but buffer now has new_var
             // Hovering on old_var should NOT find the stale indexed version
             const text = `OUTER_SET new_var = 1`; // old_var is gone from buffer
-            const uri = "file:///test.tp2";
+            const uri = normalizeUri("file:///test.tp2");
 
             // old_var doesn't exist in current buffer
             const result = weiduTp2Provider.resolveSymbol?.("old_var", text, uri);
@@ -132,7 +133,7 @@ DEFINE_ACTION_FUNCTION my_func BEGIN END
 
         it("should return undefined for non-existent symbol", () => {
             const text = `OUTER_SET foo = 1`;
-            const uri = "file:///test.tp2";
+            const uri = normalizeUri("file:///test.tp2");
             const result = weiduTp2Provider.resolveSymbol?.("nonexistent_symbol", text, uri);
 
             expect(result).toBeUndefined();
@@ -148,7 +149,7 @@ DEFINE_ACTION_FUNCTION my_func BEGIN END
  */
 OUTER_SET documented_var = 100
 `;
-            const uri = "file:///test.tp2";
+            const uri = normalizeUri("file:///test.tp2");
             const result = weiduTp2Provider.resolveSymbol?.("documented_var", text, uri);
 
             expect(result?.hover).toBeDefined();
@@ -160,7 +161,7 @@ OUTER_SET documented_var = 100
 
         it("should return hover for string variable (OUTER_SPRINT)", () => {
             const text = `OUTER_SPRINT my_string ~hello world~`;
-            const uri = "file:///test.tp2";
+            const uri = normalizeUri("file:///test.tp2");
             const result = weiduTp2Provider.resolveSymbol?.("my_string", text, uri);
 
             expect(result?.hover).toBeDefined();

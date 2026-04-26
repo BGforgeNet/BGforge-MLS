@@ -108,12 +108,12 @@ class WeiduDProvider
 
     // D files have state labels for navigation, but data-driven hover/completion
     // should remain static-only (YAML data: actions + triggers).
-    resolveSymbol(name: string, _text: string, _uri: string): IndexedSymbol | undefined {
+    resolveSymbol(name: string, _text: string, _uri: NormalizedUri): IndexedSymbol | undefined {
         const symbol = resolveSymbolStatic(name, this.fileIndex?.symbols);
         return symbol?.source.type === SourceType.Static ? symbol : undefined;
     }
 
-    format(text: string, uri: string): FormatResult {
+    format(text: string, uri: NormalizedUri): FormatResult {
         return formatWithValidation({
             text,
             uri,
@@ -134,14 +134,14 @@ class WeiduDProvider
         return dFoldingRanges(text);
     }
 
-    definition(text: string, position: Position, uri: string): Location | null {
+    definition(text: string, position: Position, uri: NormalizedUri): Location | null {
         return getDefinition(text, uri, position);
     }
 
     references(
         text: string,
         position: Position,
-        uri: string,
+        uri: NormalizedUri,
         includeDeclaration: boolean,
         _token: CancellationToken,
     ): Location[] {
@@ -156,15 +156,15 @@ class WeiduDProvider
         return prepareRenameSymbol(text, position);
     }
 
-    async rename(text: string, position: Position, newName: string, uri: string) {
+    async rename(text: string, position: Position, newName: string, uri: NormalizedUri) {
         return renameSymbol(text, position, newName, uri);
     }
 
-    hover(text: string, symbol: string, uri: string, position: Position) {
+    hover(text: string, symbol: string, uri: NormalizedUri, position: Position) {
         return getStateLabelHover(text, symbol, uri, position);
     }
 
-    getCompletions(_uri: string): CompletionItem[] {
+    getCompletions(_uri: NormalizedUri): CompletionItem[] {
         return getStaticCompletions(this.fileIndex?.symbols);
     }
 
@@ -172,26 +172,23 @@ class WeiduDProvider
         return this.fileIndex?.symbols.searchWorkspaceSymbols(query, 500, token) ?? [];
     }
 
-    reloadFileData(uri: string, text: string): void {
+    reloadFileData(uri: NormalizedUri, text: string): void {
         if (isInitialized() && this.fileIndex) {
             const result = parseFile(uri, text, this.storedContext?.workspaceRoot);
-            // uri is guaranteed normalized by the ProviderRegistry gateway
-            this.fileIndex.updateFile(uri as NormalizedUri, result);
+            this.fileIndex.updateFile(uri, result);
         }
     }
 
-    onWatchedFileDeleted(uri: string): void {
-        // uri is guaranteed normalized by the ProviderRegistry gateway
-        this.fileIndex?.removeFile(uri as NormalizedUri);
+    onWatchedFileDeleted(uri: NormalizedUri): void {
+        this.fileIndex?.removeFile(uri);
     }
 
-    async compile(uri: string, text: string, interactive: boolean): Promise<void> {
+    async compile(uri: NormalizedUri, text: string, interactive: boolean): Promise<void> {
         if (!this.storedContext) {
             conlog("WeiDU D provider not initialized, cannot compile");
             return;
         }
-        // uri is guaranteed normalized by the ProviderRegistry gateway
-        await weiduCompile(uri as NormalizedUri, this.storedContext.settings.weidu, interactive, text);
+        await weiduCompile(uri, this.storedContext.settings.weidu, interactive, text);
     }
 }
 

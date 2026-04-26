@@ -26,6 +26,7 @@ import type {
     WorkspaceEdit,
 } from "vscode-languageserver/node";
 import type { IndexedSymbol } from "./symbol";
+import type { NormalizedUri } from "./normalized-uri";
 import type { SemanticTokenSpan } from "../shared/semantic-tokens";
 import type { MLSsettings } from "../settings";
 
@@ -96,7 +97,7 @@ export interface ProviderBase {
 // =============================================================================
 
 export interface FormattingCapability {
-    format(text: string, uri: string): FormatResult;
+    format(text: string, uri: NormalizedUri): FormatResult;
 }
 
 export interface SymbolCapability {
@@ -108,11 +109,11 @@ export interface FoldingCapability {
 }
 
 export interface NavigationCapability {
-    definition?(text: string, position: Position, uri: string): Location | null;
+    definition?(text: string, position: Position, uri: NormalizedUri): Location | null;
     references?(
         text: string,
         position: Position,
-        uri: string,
+        uri: NormalizedUri,
         includeDeclaration: boolean,
         token: CancellationToken,
     ): Location[];
@@ -123,42 +124,42 @@ export interface RenameCapability {
         text: string,
         position: Position,
         newName: string,
-        uri: string,
+        uri: NormalizedUri,
     ): Promise<WorkspaceEdit | null> | WorkspaceEdit | null;
     prepareRename(text: string, position: Position): { range: Range; placeholder: string } | null;
 }
 
 export interface HoverCapability {
-    hover(text: string, symbol: string, uri: string, position: Position): HoverResult;
+    hover(text: string, symbol: string, uri: NormalizedUri, position: Position): HoverResult;
 }
 
 export interface CompletionCapability {
-    getCompletions(uri: string): CompletionItem[];
+    getCompletions(uri: NormalizedUri): CompletionItem[];
     filterCompletions?(
         items: CompletionItem[],
         text: string,
         position: Position,
-        uri: string,
+        uri: NormalizedUri,
         triggerCharacter?: string,
     ): CompletionItem[];
 }
 
 export interface DataCapability {
-    resolveSymbol?(name: string, text: string, uri: string): IndexedSymbol | undefined;
-    getSignature?(uri: string, symbol: string, paramIndex: number): SignatureHelp | null;
+    resolveSymbol?(name: string, text: string, uri: NormalizedUri): IndexedSymbol | undefined;
+    getSignature?(uri: NormalizedUri, symbol: string, paramIndex: number): SignatureHelp | null;
     getSymbolDefinition?(symbol: string): Location | null;
     localSignature?(text: string, symbol: string, paramIndex: number): SignatureHelp | null;
 }
 
 export interface CompilationCapability {
-    compile(uri: string, text: string, interactive: boolean): Promise<void>;
+    compile(uri: NormalizedUri, text: string, interactive: boolean): Promise<void>;
 }
 
 export interface IndexingCapability {
     indexExtensions: string[];
-    reloadFileData(uri: string, text: string): void;
-    onWatchedFileDeleted?(uri: string): void;
-    onDocumentClosed?(uri: string): void;
+    reloadFileData(uri: NormalizedUri, text: string): void;
+    onWatchedFileDeleted?(uri: NormalizedUri): void;
+    onDocumentClosed?(uri: NormalizedUri): void;
 }
 
 export interface FeatureGateCapability {
@@ -166,11 +167,11 @@ export interface FeatureGateCapability {
 }
 
 export interface SemanticTokenCapability {
-    semanticTokens(text: string, uri: string): SemanticTokenSpan[];
+    semanticTokens(text: string, uri: NormalizedUri): SemanticTokenSpan[];
 }
 
 export interface InlayHintCapability {
-    inlayHints(text: string, uri: string, range: Range): InlayHint[];
+    inlayHints(text: string, uri: NormalizedUri, range: Range): InlayHint[];
 }
 
 export interface WorkspaceSymbolCapability {

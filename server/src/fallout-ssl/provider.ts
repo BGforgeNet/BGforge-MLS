@@ -103,7 +103,7 @@ class FalloutSslProvider
     private staticSignatures: signature.SigMap | undefined;
     private storedContext: ProviderContext | undefined;
 
-    private lookupFallbackSymbol(name: string, currentUri?: string): IndexedSymbol | undefined {
+    private lookupFallbackSymbol(name: string, currentUri?: NormalizedUri): IndexedSymbol | undefined {
         return this.fileIndex?.symbols
             .lookupAll(name)
             .find((symbol) => symbol.source.type !== SourceType.Navigation && symbol.source.uri !== currentUri);
@@ -142,7 +142,7 @@ class FalloutSslProvider
         }
     }
 
-    resolveSymbol(name: string, text: string, uri: string): IndexedSymbol | undefined {
+    resolveSymbol(name: string, text: string, uri: NormalizedUri): IndexedSymbol | undefined {
         const version = this.storedContext?.getDocumentVersion?.(uri);
         const local = lookupLocalSymbol(name, text, version, uri);
         if (local) {
@@ -162,7 +162,7 @@ class FalloutSslProvider
         return fallback;
     }
 
-    format(text: string, uri: string): FormatResult {
+    format(text: string, uri: NormalizedUri): FormatResult {
         return formatWithValidation({
             text,
             uri,
@@ -186,7 +186,7 @@ class FalloutSslProvider
         return sslFoldingRanges(text);
     }
 
-    definition(text: string, position: Position, uri: string): Location | null {
+    definition(text: string, position: Position, uri: NormalizedUri): Location | null {
         if (!isInitialized()) {
             return null;
         }
@@ -196,7 +196,7 @@ class FalloutSslProvider
     references(
         text: string,
         position: Position,
-        uri: string,
+        uri: NormalizedUri,
         includeDeclaration: boolean,
         _token: CancellationToken,
     ): Location[] {
@@ -211,7 +211,7 @@ class FalloutSslProvider
         items: CompletionItem[],
         text: string,
         position: Position,
-        uri: string,
+        uri: NormalizedUri,
         triggerCharacter?: string,
     ): CompletionItem[] {
         const context = getSslCompletionContext(text, position);
@@ -253,7 +253,7 @@ class FalloutSslProvider
         return getLocalSignature(text, symbol, paramIndex);
     }
 
-    semanticTokens(text: string, _uri: string): SemanticTokenSpan[] {
+    semanticTokens(text: string, _uri: NormalizedUri): SemanticTokenSpan[] {
         return getSemanticTokenSpans(text);
     }
 
@@ -282,7 +282,7 @@ class FalloutSslProvider
         return prepareRenameSymbol(text, position);
     }
 
-    async rename(text: string, position: Position, newName: string, uri: string): Promise<WorkspaceEdit | null> {
+    async rename(text: string, position: Position, newName: string, uri: NormalizedUri): Promise<WorkspaceEdit | null> {
         if (!isInitialized()) {
             return null;
         }
@@ -315,13 +315,13 @@ class FalloutSslProvider
         return result;
     }
 
-    getCompletions(uri: string): CompletionItem[] {
+    getCompletions(uri: NormalizedUri): CompletionItem[] {
         return this.fileIndex
             ? this.fileIndex.symbols.query({ excludeUri: uri }).map((s: IndexedSymbol) => s.completion)
             : [];
     }
 
-    getSignature(_uri: string, symbolName: string, paramIndex: number): SignatureHelp | null {
+    getSignature(_uri: NormalizedUri, symbolName: string, paramIndex: number): SignatureHelp | null {
         if (this.staticSignatures) {
             const sig = this.staticSignatures.get(symbolName);
             if (sig) {
@@ -340,35 +340,32 @@ class FalloutSslProvider
         return symbol?.location ?? null;
     }
 
-    reloadFileData(uri: string, text: string): void {
+    reloadFileData(uri: NormalizedUri, text: string): void {
         if (isInitialized() && this.fileIndex) {
             const st = isHeaderFile(uri) ? SourceType.Workspace : SourceType.Navigation;
             const result = parseFile(uri, text, this.storedContext?.workspaceRoot, st);
-            // uri is guaranteed normalized by the ProviderRegistry gateway
-            this.fileIndex.updateFile(uri as NormalizedUri, result);
+            this.fileIndex.updateFile(uri, result);
         }
     }
 
-    onWatchedFileDeleted(uri: string): void {
-        // uri is guaranteed normalized by the ProviderRegistry gateway
-        this.fileIndex?.removeFile(uri as NormalizedUri);
+    onWatchedFileDeleted(uri: NormalizedUri): void {
+        this.fileIndex?.removeFile(uri);
     }
 
     workspaceSymbols(query: string, token: CancellationToken): SymbolInformation[] {
         return this.fileIndex?.symbols.searchWorkspaceSymbols(query, 500, token) ?? [];
     }
 
-    onDocumentClosed(uri: string): void {
+    onDocumentClosed(uri: NormalizedUri): void {
         clearLocalSymbolsCache(uri);
     }
 
-    async compile(uri: string, text: string, interactive: boolean): Promise<void> {
+    async compile(uri: NormalizedUri, text: string, interactive: boolean): Promise<void> {
         if (!this.storedContext) {
             conlog("Fallout SSL provider not initialized, cannot compile");
             return;
         }
-        // uri is guaranteed normalized by the ProviderRegistry gateway
-        await falloutCompile(uri as NormalizedUri, this.storedContext.settings.falloutSSL, interactive, text);
+        await falloutCompile(uri, this.storedContext.settings.falloutSSL, interactive, text);
     }
 }
 

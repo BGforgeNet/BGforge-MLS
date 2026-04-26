@@ -28,6 +28,7 @@ vi.mock("../../src/common", async (importOriginal) => {
 import { weiduTp2Provider } from "../../src/weidu-tp2/provider";
 import { initParser } from "../../../shared/parsers/weidu-tp2";
 import { defaultSettings } from "../../src/settings";
+import { normalizeUri } from "../../src/core/normalized-uri";
 import * as path from "path";
 
 beforeAll(async () => {
@@ -48,7 +49,7 @@ describe("weidu-tp2: local completion merge", () => {
 OUTER_SET my_documented_var = 42
 COPY ~a~ ~b~
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         // Position on a non-declaration line where completions should fire
         const position: Position = { line: 7, character: 5 };
 
@@ -76,7 +77,7 @@ DEFINE_ACTION_FUNCTION helpful_func
 BEGIN
 END
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 8, character: 0 };
 
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
@@ -101,7 +102,7 @@ DEFINE_PATCH_FUNCTION inner_func BEGIN
     PATCH_PRINT ~%inner_only_var%~
 END
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 3, character: 20 };
 
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
@@ -120,7 +121,7 @@ OUTER_SET dedup_test_var = 1
 OUTER_SET another_var = 2
 COPY ~a~ ~b~
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         // Position on a non-declaration line where completions should fire
         const position: Position = { line: 3, character: 5 };
 

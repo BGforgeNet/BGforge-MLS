@@ -21,9 +21,10 @@ import { initParser } from "../../../shared/parsers/fallout-ssl";
 import { falloutSslProvider } from "../../src/fallout-ssl/provider";
 import type { ProviderContext } from "../../src/language-provider";
 import type { MLSsettings } from "../../src/settings";
+import { normalizeUri } from "../../src/core/normalized-uri";
 
 describe("fallout-ssl header symbol hover", () => {
-    const testUri = "file:///mymod/headers/define.h";
+    const testUri = normalizeUri("file:///mymod/headers/define.h");
     const workspaceRoot = "/mymod";
 
     beforeAll(async () => {
@@ -87,7 +88,7 @@ procedure test begin
     set_cursor_mode(CURSOR_TARGETING);
 end
 `;
-        const sslUri = "file:///mymod/scripts/test.ssl";
+        const sslUri = normalizeUri("file:///mymod/scripts/test.ssl");
 
         const resolved = falloutSslProvider.resolveSymbol!("CURSOR_TARGETING", sslText, sslUri);
 
@@ -103,7 +104,7 @@ end
         falloutSslProvider.reloadFileData!(testUri, headerText);
 
         const sslText = `variable x := MY_CONSTANT;`;
-        const sslUri = "file:///mymod/scripts/test.ssl";
+        const sslUri = normalizeUri("file:///mymod/scripts/test.ssl");
 
         const resolved = falloutSslProvider.resolveSymbol!("MY_CONSTANT", sslText, sslUri);
 
@@ -114,7 +115,7 @@ end
     });
 
     it("resolveSymbol should not fall back to unrelated source-file symbols", () => {
-        const sourceUri = "file:///mymod/scripts/other.ssl";
+        const sourceUri = normalizeUri("file:///mymod/scripts/other.ssl");
         const sourceText = `
 procedure shared_name begin
 end
@@ -126,7 +127,7 @@ procedure test begin
     shared_name();
 end
 `;
-        const currentUri = "file:///mymod/scripts/test.ssl";
+        const currentUri = normalizeUri("file:///mymod/scripts/test.ssl");
 
         const resolved = falloutSslProvider.resolveSymbol!("shared_name", currentText, currentUri);
 
@@ -134,7 +135,7 @@ end
     });
 
     it("resolveSymbol should show relative path, not absolute realpath", async () => {
-        const headerUri = "file:///home/user/mymod/headers/define.h";
+        const headerUri = normalizeUri("file:///home/user/mymod/headers/define.h");
         const headerText = `
 #define TEST_CONST    123
 `;
@@ -148,7 +149,7 @@ end
         falloutSslProvider.reloadFileData!(headerUri, headerText);
 
         const sslText = `variable x := TEST_CONST;`;
-        const sslUri = "file:///home/user/mymod/scripts/test.ssl";
+        const sslUri = normalizeUri("file:///home/user/mymod/scripts/test.ssl");
 
         const resolved = falloutSslProvider.resolveSymbol!("TEST_CONST", sslText, sslUri);
 
@@ -172,7 +173,7 @@ end
         await falloutSslProvider.init(mockContext);
 
         // Simulate reloadFileData being called with absolute URI
-        const headerUri = "file:///home/user/mymod/headers/test.h";
+        const headerUri = normalizeUri("file:///home/user/mymod/headers/test.h");
         const headerText = `
 #define RELOAD_TEST    999
 `;
@@ -180,7 +181,7 @@ end
 
         // Now check the symbol
         const sslText = `variable x := RELOAD_TEST;`;
-        const sslUri = "file:///home/user/mymod/scripts/test.ssl";
+        const sslUri = normalizeUri("file:///home/user/mymod/scripts/test.ssl");
 
         const resolved = falloutSslProvider.resolveSymbol!("RELOAD_TEST", sslText, sslUri);
 
@@ -261,7 +262,7 @@ end
         });
 
         it("does not return location for procedure from unrelated source file", () => {
-            const sourceUri = "file:///mymod/scripts/other.ssl";
+            const sourceUri = normalizeUri("file:///mymod/scripts/other.ssl");
             const sourceText = `procedure shared_name begin end`;
             falloutSslProvider.reloadFileData!(sourceUri, sourceText);
 
@@ -421,14 +422,14 @@ end`;
         await falloutSslProvider.init(mockContext);
 
         // Two headers define the same constant
-        const headerA = "file:///mymod/headers/a.h";
-        const headerB = "file:///mymod/headers/b.h";
+        const headerA = normalizeUri("file:///mymod/headers/a.h");
+        const headerB = normalizeUri("file:///mymod/headers/b.h");
 
         falloutSslProvider.reloadFileData!(headerA, "#define PIPBOY (0x400)");
         falloutSslProvider.reloadFileData!(headerB, "#define PIPBOY (0x400)");
 
         // getCompletions should return BOTH symbols
-        const completions = falloutSslProvider.getCompletions!("file:///mymod/scripts/test.ssl");
+        const completions = falloutSslProvider.getCompletions!(normalizeUri("file:///mymod/scripts/test.ssl"));
         const pipboyCompletions = completions.filter((c) => c.label === "PIPBOY");
 
         // Both duplicates should be present

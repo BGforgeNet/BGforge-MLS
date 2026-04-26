@@ -34,6 +34,7 @@ vi.mock("../../src/common", async (importOriginal) => {
 import { weiduTp2Provider } from "../../src/weidu-tp2/provider";
 import { initParser } from "../../../shared/parsers/weidu-tp2";
 import { defaultSettings } from "../../src/settings";
+import { normalizeUri } from "../../src/core/normalized-uri";
 
 beforeAll(async () => {
     await initParser();
@@ -229,7 +230,7 @@ describe("TP2 filterCompletions at assignment sites", () => {
 OUTER_SET existing_var = 42
 SET ex
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 2, character: 6 };
 
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
@@ -245,7 +246,7 @@ SET ex
 OUTER_SET existing_var = 42
 SET ex
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 2, character: 6 };
 
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
@@ -263,7 +264,7 @@ SET ex
 OUTER_TEXT_SPRINT base_path ~mymod~
 OUTER_SPRINT ba
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 2, character: 15 };
 
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
@@ -278,7 +279,7 @@ OUTER_SPRINT ba
 OUTER_SET existing_var = 42
 DEFINE_ACTION_FUNCTION my
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 2, character: 25 };
 
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
@@ -293,7 +294,7 @@ DEFINE_ACTION_FUNCTION my_func BEGIN END
 OUTER_SET my_var = 1
 SET m
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 3, character: 5 };
 
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
@@ -313,7 +314,7 @@ SET m
 OUTER_SET existing_var = 42
 OUTER_SET existing_v
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 2, character: 20 };
 
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];

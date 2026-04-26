@@ -27,6 +27,7 @@ vi.mock("../../src/common", async (importOriginal) => {
 import { weiduTp2Provider } from "../../src/weidu-tp2/provider";
 import { initParser } from "../../../shared/parsers/weidu-tp2";
 import { defaultSettings } from "../../src/settings";
+import { normalizeUri } from "../../src/core/normalized-uri";
 import * as path from "path";
 
 beforeAll(async () => {
@@ -43,7 +44,7 @@ describe("weidu-tp2: local variable completion", () => {
 OUTER_SET my_var = 5
 OUTER_SET result = %my_var% + 1
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 2, character: 20 };
 
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
@@ -59,7 +60,7 @@ OUTER_SET result = %my_var% + 1
 OUTER_TEXT_SPRINT mod_folder ~mymod~
 COPY ~%mod_folder%/file.txt~ ~override~
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 2, character: 9 };
 
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
@@ -79,7 +80,7 @@ BEGIN
     PATCH_PRINT ~local_var = %local_var%~
 END
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 5, character: 31 };
 
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
@@ -98,7 +99,7 @@ BEGIN
     SET total = count * 2
 END
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 4, character: 16 };
 
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
@@ -117,7 +118,7 @@ BEGIN
     ACTION_PRINT ~%message%~
 END
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 4, character: 20 };
 
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
@@ -135,7 +136,7 @@ ACTION_FOR_EACH color IN colors BEGIN
     OUTER_SPRINT msg ~Color: %color%~
 END
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 3, character: 31 };
 
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
@@ -155,7 +156,7 @@ ACTION_PHP_EACH potion_string AS potion => string BEGIN
     OUTER_SPRINT msg ~%potion%~
 END
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 5, character: 24 };
 
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
@@ -176,7 +177,7 @@ ACTION_FOR_EACH item IN my_array BEGIN
     PRINT ~%item%~
 END
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 2, character: 30 };
 
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
@@ -194,7 +195,7 @@ OUTER_SET x = 2
 OUTER_SET x = 3
 COPY ~a~ ~b~
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         // Position on a non-declaration line where completions should fire
         const position: Position = { line: 4, character: 5 };
 
@@ -213,7 +214,7 @@ describe("weidu-tp2: header variable completion via Symbols", () => {
 
     it("includes header variables with JSDoc in completions", () => {
         // Parse header content to symbols
-        const tphUri = "file:///test-header.tph";
+        const tphUri = normalizeUri("file:///test-header.tph");
         const tphContent = `
 /**
  * Module folder path.
@@ -224,7 +225,7 @@ OUTER_TEXT_SPRINT mod_folder ~mymod~
         weiduTp2Provider.reloadFileData!(tphUri, tphContent);
 
         // The variable should be in the index
-        const modFolderSymbol = weiduTp2Provider.resolveSymbol!("mod_folder", "", "");
+        const modFolderSymbol = weiduTp2Provider.resolveSymbol!("mod_folder", "", normalizeUri(""));
         expect(modFolderSymbol).toBeDefined();
         expect(modFolderSymbol?.completion.kind).toBe(6); // CompletionItemKind.Variable
 
@@ -234,12 +235,12 @@ OUTER_TEXT_SPRINT mod_folder ~mymod~
 
     it("includes header variables without JSDoc in completions", () => {
         // Load a header with a variable that has NO JSDoc
-        const tphUri = "file:///test-no-jsdoc.tph";
+        const tphUri = normalizeUri("file:///test-no-jsdoc.tph");
         const tphContent = `OUTER_TEXT_SPRINT no_jsdoc ~value~`;
         weiduTp2Provider.reloadFileData!(tphUri, tphContent);
 
         // All top-level variables from .tph should appear
-        const noJsdocSymbol = weiduTp2Provider.resolveSymbol!("no_jsdoc", "", "");
+        const noJsdocSymbol = weiduTp2Provider.resolveSymbol!("no_jsdoc", "", normalizeUri(""));
         expect(noJsdocSymbol).toBeDefined();
         expect(noJsdocSymbol?.completion.kind).toBe(6); // CompletionItemKind.Variable
 
@@ -249,7 +250,7 @@ OUTER_TEXT_SPRINT mod_folder ~mymod~
 
     it("provides hover info for header variables with JSDoc", () => {
         // Load a header with a variable that has JSDoc
-        const tphUri = "file:///test-hover.tph";
+        const tphUri = normalizeUri("file:///test-hover.tph");
         const tphContent = `
 /**
  * Configuration flag for debug mode.
@@ -260,7 +261,7 @@ OUTER_SET debug_mode = 0
         weiduTp2Provider.reloadFileData!(tphUri, tphContent);
 
         // Get hover from symbol
-        const symbol = weiduTp2Provider.resolveSymbol!("debug_mode", "", "");
+        const symbol = weiduTp2Provider.resolveSymbol!("debug_mode", "", normalizeUri(""));
         expect(symbol?.hover).toBeDefined();
         const contents = symbol?.hover.contents;
         if (contents && typeof contents === "object" && "value" in contents) {
@@ -276,28 +277,28 @@ OUTER_SET debug_mode = 0
 
     it("clears header variables when file is removed from index", () => {
         // Load a header
-        const tphUri = "file:///test-clear.tph";
+        const tphUri = normalizeUri("file:///test-clear.tph");
         const tphContent = `OUTER_TEXT_SPRINT temp_var ~value~`;
         weiduTp2Provider.reloadFileData!(tphUri, tphContent);
 
         // Verify it's in the index
-        expect(weiduTp2Provider.resolveSymbol!("temp_var", "", "")).toBeDefined();
+        expect(weiduTp2Provider.resolveSymbol!("temp_var", "", normalizeUri(""))).toBeDefined();
 
         // Clear the file
         weiduTp2Provider.onWatchedFileDeleted!(tphUri);
 
         // Verify it's removed
-        expect(weiduTp2Provider.resolveSymbol!("temp_var", "", "")).toBeUndefined();
+        expect(weiduTp2Provider.resolveSymbol!("temp_var", "", normalizeUri(""))).toBeUndefined();
     });
 
     it("does not show value for non-UPPERCASE variables", () => {
-        const tphUri = "file:///test-type-value.tph";
+        const tphUri = normalizeUri("file:///test-type-value.tph");
         const tphContent = `OUTER_SET test123 = 120
 OUTER_TEXT_SPRINT mod_folder ~mymod~`;
         weiduTp2Provider.reloadFileData!(tphUri, tphContent);
 
         // Non-UPPERCASE: should show type and name only
-        const intSymbol = weiduTp2Provider.resolveSymbol!("test123", "", "");
+        const intSymbol = weiduTp2Provider.resolveSymbol!("test123", "", normalizeUri(""));
         expect(intSymbol?.hover).toBeDefined();
         if (
             intSymbol?.hover.contents &&
@@ -308,7 +309,7 @@ OUTER_TEXT_SPRINT mod_folder ~mymod~`;
             expect(intSymbol.hover.contents.value).not.toContain("= 120");
         }
 
-        const strSymbol = weiduTp2Provider.resolveSymbol!("mod_folder", "", "");
+        const strSymbol = weiduTp2Provider.resolveSymbol!("mod_folder", "", normalizeUri(""));
         expect(strSymbol?.hover).toBeDefined();
         if (
             strSymbol?.hover.contents &&
@@ -324,13 +325,13 @@ OUTER_TEXT_SPRINT mod_folder ~mymod~`;
     });
 
     it("shows value for UPPERCASE constant variables", () => {
-        const tphUri = "file:///test-const-value.tph";
+        const tphUri = normalizeUri("file:///test-const-value.tph");
         const tphContent = `OUTER_SET MAX_LEVEL = 40
 OUTER_TEXT_SPRINT MOD_FOLDER ~mymod~`;
         weiduTp2Provider.reloadFileData!(tphUri, tphContent);
 
         // UPPERCASE: should show type, name, AND value
-        const intSymbol = weiduTp2Provider.resolveSymbol!("MAX_LEVEL", "", "");
+        const intSymbol = weiduTp2Provider.resolveSymbol!("MAX_LEVEL", "", normalizeUri(""));
         expect(intSymbol?.hover).toBeDefined();
         if (
             intSymbol?.hover.contents &&
@@ -340,7 +341,7 @@ OUTER_TEXT_SPRINT MOD_FOLDER ~mymod~`;
             expect(intSymbol.hover.contents.value).toContain("int MAX_LEVEL = 40");
         }
 
-        const strSymbol = weiduTp2Provider.resolveSymbol!("MOD_FOLDER", "", "");
+        const strSymbol = weiduTp2Provider.resolveSymbol!("MOD_FOLDER", "", normalizeUri(""));
         expect(strSymbol?.hover).toBeDefined();
         if (
             strSymbol?.hover.contents &&
@@ -355,7 +356,7 @@ OUTER_TEXT_SPRINT MOD_FOLDER ~mymod~`;
     });
 
     it("respects JSDoc @type override for variables", () => {
-        const tphUri = "file:///test-type-override.tph";
+        const tphUri = normalizeUri("file:///test-type-override.tph");
         const tphContent = `/**
  * @type {resref}
  */
@@ -363,7 +364,7 @@ OUTER_TEXT_SPRINT spell ~SPWI101~`;
         weiduTp2Provider.reloadFileData!(tphUri, tphContent);
 
         // Test JSDoc @type overrides inferred type
-        const symbol = weiduTp2Provider.resolveSymbol!("spell", "", "");
+        const symbol = weiduTp2Provider.resolveSymbol!("spell", "", normalizeUri(""));
         expect(symbol?.hover).toBeDefined();
         if (symbol?.hover.contents && typeof symbol.hover.contents === "object" && "value" in symbol.hover.contents) {
             expect(symbol.hover.contents.value).toContain("resref spell");
@@ -380,7 +381,7 @@ describe("weidu-tp2: JSDoc comment completions", () => {
     it("returns JSDoc tags at @ position inside single-line JSDoc comment", () => {
         // "/** @ */" — cursor at col 5, right after @
         const text = `/** @ */\nOUTER_SET x = 1\n`;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 0, character: 5 };
 
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
@@ -398,7 +399,7 @@ describe("weidu-tp2: JSDoc comment completions", () => {
     it("returns JSDoc types at type position inside single-line JSDoc comment", () => {
         // "/** @type  */" — cursor at col 10, after "@type "
         const text = `/** @type  */\nOUTER_SET x = 1\n`;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 0, character: 10 };
 
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
@@ -416,7 +417,7 @@ describe("weidu-tp2: JSDoc comment completions", () => {
     it("returns JSDoc tags at @ position inside multi-line JSDoc comment", () => {
         // Line 1 is " * @" — cursor at col 4, right after @
         const text = `/**\n * @\n */\nOUTER_SET x = 1\n`;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 1, character: 4 };
 
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
@@ -430,7 +431,7 @@ describe("weidu-tp2: JSDoc comment completions", () => {
     it("returns no JSDoc completions on empty JSDoc line", () => {
         // Line 1 is " * " — cursor at col 3, no @ typed yet
         const text = `/**\n * \n */\nOUTER_SET x = 1\n`;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 1, character: 3 };
 
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
@@ -441,7 +442,7 @@ describe("weidu-tp2: JSDoc comment completions", () => {
 
     it("returns empty completions inside regular block comment", () => {
         const text = `/* regular comment */\nOUTER_SET x = 1\n`;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 0, character: 10 };
 
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];
@@ -452,7 +453,7 @@ describe("weidu-tp2: JSDoc comment completions", () => {
 
     it("returns empty completions inside line comment", () => {
         const text = `// line comment\nOUTER_SET x = 1\n`;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 0, character: 5 };
 
         const allItems = weiduTp2Provider.getCompletions?.(uri) ?? [];

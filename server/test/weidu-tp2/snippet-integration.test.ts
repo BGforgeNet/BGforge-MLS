@@ -31,9 +31,9 @@ import { ScopeLevel, SourceType, SymbolKind, type ConstantSymbol } from "../../s
 import * as path from "path";
 import { normalizeUri } from "../../src/core/normalized-uri";
 
-const HEADER_URI = "file:///test-snippet.tph";
-const STATIC_URI = "file:///test-static-keywords.tph";
-const CURRENT_URI = "file:///test-mod.tp2";
+const HEADER_URI = normalizeUri("file:///test-snippet.tph");
+const STATIC_URI = normalizeUri("file:///test-static-keywords.tph");
+const CURRENT_URI = normalizeUri("file:///test-mod.tp2");
 
 /**
  * Create a minimal keyword symbol to simulate static data.

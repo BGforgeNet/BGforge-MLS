@@ -75,7 +75,7 @@ class WeiduBafProvider
 
     // BAF has no user-defined constructs (no functions/macros/variables),
     // so symbol lookup is static-only (YAML data: actions + triggers).
-    resolveSymbol(name: string, _text: string, _uri: string): IndexedSymbol | undefined {
+    resolveSymbol(name: string, _text: string, _uri: NormalizedUri): IndexedSymbol | undefined {
         return resolveSymbolStatic(name, this.symbolStore);
     }
 
@@ -83,7 +83,7 @@ class WeiduBafProvider
         return bafFoldingRanges(text);
     }
 
-    format(text: string, uri: string): FormatResult {
+    format(text: string, uri: NormalizedUri): FormatResult {
         return formatWithValidation({
             text,
             uri,
@@ -96,17 +96,16 @@ class WeiduBafProvider
         });
     }
 
-    getCompletions(_uri: string): CompletionItem[] {
+    getCompletions(_uri: NormalizedUri): CompletionItem[] {
         return getStaticCompletions(this.symbolStore);
     }
 
-    async compile(uri: string, text: string, interactive: boolean): Promise<void> {
+    async compile(uri: NormalizedUri, text: string, interactive: boolean): Promise<void> {
         if (!this.storedContext) {
             conlog("WeiDU BAF provider not initialized, cannot compile");
             return;
         }
-        // uri is guaranteed normalized by the ProviderRegistry gateway
-        await weiduCompile(uri as NormalizedUri, this.storedContext.settings.weidu, interactive, text);
+        await weiduCompile(uri, this.storedContext.settings.weidu, interactive, text);
     }
 }
 

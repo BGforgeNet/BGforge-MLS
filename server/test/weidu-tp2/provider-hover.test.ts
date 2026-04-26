@@ -30,6 +30,7 @@ vi.mock("../../src/core/static-loader", () => ({
 }));
 
 import { weiduTp2Provider } from "../../src/weidu-tp2/provider";
+import { normalizeUri } from "../../src/core/normalized-uri";
 
 describe("weidu-tp2 provider hover()", () => {
     beforeAll(async () => {
@@ -43,7 +44,7 @@ describe("weidu-tp2 provider hover()", () => {
         // hover() should NOT look up regular symbols itself.
         // The registry will use resolveSymbol() as fallback after hover() returns notHandled.
         const text = `OUTER_SET my_var = 42`;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const position = { line: 0, character: 12 };
 
         const result = weiduTp2Provider.hover!(text, "my_var", uri, position);
@@ -55,7 +56,7 @@ describe("weidu-tp2 provider hover()", () => {
     it("should return notHandled for static symbols (delegates to resolveSymbol)", () => {
         // Even static symbols like COPY_EXISTING should not be handled by hover()
         const text = `COPY_EXISTING ~test.itm~ ~override~`;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         const position = { line: 0, character: 5 };
 
         const result = weiduTp2Provider.hover!(text, "COPY_EXISTING", uri, position);
@@ -69,7 +70,7 @@ describe("weidu-tp2 provider hover()", () => {
 ACTION_PHP_EACH my_array AS key => value BEGIN
 END
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         // Position on "key" in the loop binding
         const position = { line: 1, character: 37 };
 
@@ -92,7 +93,7 @@ END
 
 LAF my_func INT_VAR count = 5 END
 `;
-        const uri = "file:///test.tp2";
+        const uri = normalizeUri("file:///test.tp2");
         // Position on "count" in the LAF call (line 6, "count" starts at col 20)
         const position = { line: 6, character: 22 };
 

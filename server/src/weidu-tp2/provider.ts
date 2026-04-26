@@ -154,7 +154,7 @@ function applySnippets(
     contexts: CompletionContext[],
     text: string,
     version: number | undefined,
-    uri: string,
+    uri: NormalizedUri,
     symbolStore: Symbols | undefined,
 ): Tp2CompletionItem[] {
     const inNameContext =
@@ -242,7 +242,7 @@ function getSnippetPrefixFromSymbol(
 function collectLocalCompletions(
     text: string,
     version: number | undefined,
-    uri: string,
+    uri: NormalizedUri,
     options?: { variablesOnly?: boolean; excludeWord?: string },
 ): Tp2CompletionItem[] {
     const { variablesOnly = false, excludeWord } = options ?? {};
@@ -312,12 +312,12 @@ class WeiduTp2Provider
         conlog(`WeiDU TP2 provider initialized with ${staticSymbols.length} static symbols`);
     }
 
-    resolveSymbol(name: string, text: string, uri: string): IndexedSymbol | undefined {
+    resolveSymbol(name: string, text: string, uri: NormalizedUri): IndexedSymbol | undefined {
         const version = this.storedContext?.getDocumentVersion?.(uri);
         return resolveSymbolWithLocal(name, text, version, uri, this.fileIndex?.symbols, lookupLocalSymbol);
     }
 
-    getCompletions(uri: string): CompletionItem[] {
+    getCompletions(uri: NormalizedUri): CompletionItem[] {
         if (!this.fileIndex) {
             return [];
         }
@@ -329,7 +329,7 @@ class WeiduTp2Provider
         items: CompletionItem[],
         text: string,
         position: Position,
-        uri: string,
+        uri: NormalizedUri,
         triggerCharacter?: string,
     ): CompletionItem[] {
         const filePath = fileURLToPath(uri);
@@ -392,7 +392,7 @@ class WeiduTp2Provider
         return !isInsideComment(text, position);
     }
 
-    hover(text: string, symbol: string, _uri: string, position: Position): HoverResult {
+    hover(text: string, symbol: string, _uri: NormalizedUri, position: Position): HoverResult {
         const paramHover = getFunctionParamHover(text, symbol, position, this.fileIndex?.symbols);
         if (paramHover) {
             return HoverResult.found(paramHover);
@@ -418,42 +418,39 @@ class WeiduTp2Provider
         return this.fileIndex?.symbols.lookupDefinition(symbolName) ?? null;
     }
 
-    definition(text: string, position: Position, uri: string): Location | null {
+    definition(text: string, position: Position, uri: NormalizedUri): Location | null {
         return getDefinition(text, uri, position, this.fileIndex?.symbols);
     }
 
-    reloadFileData(uri: string, text: string): void {
+    reloadFileData(uri: NormalizedUri, text: string): void {
         if (isInitialized() && this.fileIndex) {
             const st = isHeaderFile(uri) ? SourceType.Workspace : SourceType.Navigation;
             const result = parseFile(uri, text, { workspaceRoot: this.storedContext?.workspaceRoot, sourceType: st });
-            // uri is guaranteed normalized by the ProviderRegistry gateway
-            this.fileIndex.updateFile(uri as NormalizedUri, result);
+            this.fileIndex.updateFile(uri, result);
         }
     }
 
-    onWatchedFileDeleted(uri: string): void {
-        // uri is guaranteed normalized by the ProviderRegistry gateway
-        this.fileIndex?.removeFile(uri as NormalizedUri);
+    onWatchedFileDeleted(uri: NormalizedUri): void {
+        this.fileIndex?.removeFile(uri);
     }
 
     workspaceSymbols(query: string, token: CancellationToken): SymbolInformation[] {
         return this.fileIndex?.symbols.searchWorkspaceSymbols(query, 500, token) ?? [];
     }
 
-    onDocumentClosed(uri: string): void {
+    onDocumentClosed(uri: NormalizedUri): void {
         clearLocalSymbolsCache(uri);
     }
 
-    async compile(uri: string, text: string, interactive: boolean): Promise<void> {
+    async compile(uri: NormalizedUri, text: string, interactive: boolean): Promise<void> {
         if (!this.storedContext) {
             conlog("WeiDU TP2 provider not initialized, cannot compile");
             return;
         }
-        // uri is guaranteed normalized by the ProviderRegistry gateway
-        await weiduCompile(uri as NormalizedUri, this.storedContext.settings.weidu, interactive, text);
+        await weiduCompile(uri, this.storedContext.settings.weidu, interactive, text);
     }
 
-    format(text: string, uri: string): FormatResult {
+    format(text: string, uri: NormalizedUri): FormatResult {
         return formatWithValidation({
             text,
             uri,
@@ -477,7 +474,7 @@ class WeiduTp2Provider
     references(
         text: string,
         position: Position,
-        uri: string,
+        uri: NormalizedUri,
         includeDeclaration: boolean,
         _token: CancellationToken,
     ): Location[] {
@@ -488,7 +485,7 @@ class WeiduTp2Provider
         return findReferences(text, position, uri, includeDeclaration, this.fileIndex?.refs);
     }
 
-    async rename(text: string, position: Position, newName: string, uri: string): Promise<WorkspaceEdit | null> {
+    async rename(text: string, position: Position, newName: string, uri: NormalizedUri): Promise<WorkspaceEdit | null> {
         return renameSymbol(text, position, newName, uri);
     }
 
@@ -499,7 +496,7 @@ class WeiduTp2Provider
         return prepareRenameSymbol(text, position);
     }
 
-    semanticTokens(text: string, uri: string): SemanticTokenSpan[] {
+    semanticTokens(text: string, uri: NormalizedUri): SemanticTokenSpan[] {
         return getSemanticTokenSpans(text, this.getTypedNames(text, uri));
     }
 
@@ -509,7 +506,7 @@ class WeiduTp2Provider
      * Merges indexed symbols (other files) with local symbols (current document)
      * so that changes in the current file are reflected immediately.
      */
-    private getTypedNames(text: string, uri: string): ReadonlyMap<string, string> {
+    private getTypedNames(text: string, uri: NormalizedUri): ReadonlyMap<string, string> {
         const names = new Map<string, string>();
 
         // From symbol index (headers and other workspace files)

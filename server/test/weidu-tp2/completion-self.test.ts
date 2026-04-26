@@ -38,6 +38,7 @@ import { isPhantomAssignment } from "../../src/weidu-tp2/tree-utils";
 import { weiduTp2Provider } from "../../src/weidu-tp2/provider";
 import { defaultSettings } from "../../src/settings";
 import { CompletionItemKind } from "vscode-languageserver/node";
+import { normalizeUri } from "../../src/core/normalized-uri";
 import * as path from "path";
 
 beforeAll(async () => {
@@ -126,7 +127,7 @@ describe("weidu-tp2: self-completion exclusion in general path", () => {
         // in a non-declaration context. The word should not self-complete.
         const text = `OUTER_SET my_var = 5
 my_var`;
-        const uri = "file:///test-self.tp2";
+        const uri = normalizeUri("file:///test-self.tp2");
         // Cursor at end of line 1 (0-indexed), on "my_var"
         const position = { line: 1, character: 6 };
 
@@ -141,7 +142,7 @@ my_var`;
         const text = `OUTER_SET alpha = 1
 OUTER_SET beta = 2
 alpha`;
-        const uri = "file:///test-self2.tp2";
+        const uri = normalizeUri("file:///test-self2.tp2");
         // Cursor on "alpha" at line 2
         const position = { line: 2, character: 5 };
 

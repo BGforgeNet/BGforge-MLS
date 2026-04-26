@@ -27,6 +27,7 @@ import { initParser } from "../../../shared/parsers/weidu-tp2";
 import { weiduTp2Provider } from "../../src/weidu-tp2/provider";
 import { localCompletion } from "../../src/weidu-tp2/ast-utils";
 import { defaultSettings } from "../../src/settings";
+import { normalizeUri } from "../../src/core/normalized-uri";
 import * as path from "path";
 
 beforeAll(async () => {
@@ -43,14 +44,14 @@ describe("weidu-tp2: completion routing by file extension", () => {
 
     it("routes .tph functions to Symbols (shared across workspace)", () => {
         // Load a .tph file with a function definition
-        const tphUri = "file:///test-routing.tph";
+        const tphUri = normalizeUri("file:///test-routing.tph");
         const tphContent = `DEFINE_ACTION_FUNCTION shared_func BEGIN
     PRINT ~shared~
 END`;
         weiduTp2Provider.reloadFileData!(tphUri, tphContent);
 
         // The function should be in the global Symbols
-        const sharedFunc = weiduTp2Provider.resolveSymbol!("shared_func", "", "");
+        const sharedFunc = weiduTp2Provider.resolveSymbol!("shared_func", "", normalizeUri(""));
         expect(sharedFunc).toBeDefined();
         expect(sharedFunc?.completion.label).toBe("shared_func");
 
@@ -79,23 +80,23 @@ END`;
     it("non-.tph files don't have their functions in Symbols", () => {
         // A .tpa file's functions should NOT be in Symbols
         // (Symbols is only populated for .tph files via provider.reloadFileData)
-        const localFunc = weiduTp2Provider.resolveSymbol!("local_func_that_doesnt_exist", "", "");
+        const localFunc = weiduTp2Provider.resolveSymbol!("local_func_that_doesnt_exist", "", normalizeUri(""));
         expect(localFunc).toBeUndefined();
     });
 
     it("combines .tph functions from multiple header files in Symbols", () => {
         // Load multiple .tph files
-        const tph1Uri = "file:///header1.tph";
+        const tph1Uri = normalizeUri("file:///header1.tph");
         const tph1Content = `DEFINE_ACTION_FUNCTION func1 BEGIN END`;
         weiduTp2Provider.reloadFileData!(tph1Uri, tph1Content);
 
-        const tph2Uri = "file:///header2.tph";
+        const tph2Uri = normalizeUri("file:///header2.tph");
         const tph2Content = `DEFINE_ACTION_FUNCTION func2 BEGIN END`;
         weiduTp2Provider.reloadFileData!(tph2Uri, tph2Content);
 
         // Both functions should be in Symbols
-        expect(weiduTp2Provider.resolveSymbol!("func1", "", "")).toBeDefined();
-        expect(weiduTp2Provider.resolveSymbol!("func2", "", "")).toBeDefined();
+        expect(weiduTp2Provider.resolveSymbol!("func1", "", normalizeUri(""))).toBeDefined();
+        expect(weiduTp2Provider.resolveSymbol!("func2", "", normalizeUri(""))).toBeDefined();
 
         // Cleanup
         weiduTp2Provider.onWatchedFileDeleted!(tph1Uri);
@@ -104,7 +105,7 @@ END`;
 
     it("keeps .tph (Symbols) and local (localCompletion) separate", () => {
         // Load a .tph file (shared via Symbols)
-        const tphUri = "file:///shared-sep.tph";
+        const tphUri = normalizeUri("file:///shared-sep.tph");
         const tphContent = `DEFINE_ACTION_FUNCTION shared_func_sep BEGIN END`;
         weiduTp2Provider.reloadFileData!(tphUri, tphContent);
 
@@ -113,13 +114,13 @@ END`;
         const localCompletions = localCompletion(localContent);
 
         // shared_func_sep is in Symbols
-        expect(weiduTp2Provider.resolveSymbol!("shared_func_sep", "", "")).toBeDefined();
+        expect(weiduTp2Provider.resolveSymbol!("shared_func_sep", "", normalizeUri(""))).toBeDefined();
 
         // local_var is in localCompletion result
         expect(localCompletions.find((item) => item.label === "local_var")).toBeDefined();
 
         // local_var is NOT in Symbols (not from .tph)
-        expect(weiduTp2Provider.resolveSymbol!("local_var", "", "")).toBeUndefined();
+        expect(weiduTp2Provider.resolveSymbol!("local_var", "", normalizeUri(""))).toBeUndefined();
 
         // Cleanup
         weiduTp2Provider.onWatchedFileDeleted!(tphUri);
@@ -127,17 +128,17 @@ END`;
 
     it("clears .tph functions from Symbols when file is removed", () => {
         // Load a .tph file with a unique function name
-        const tphUri = "file:///to-delete.tph";
+        const tphUri = normalizeUri("file:///to-delete.tph");
         const tphContent = `DEFINE_ACTION_FUNCTION func_to_delete BEGIN END`;
         weiduTp2Provider.reloadFileData!(tphUri, tphContent);
 
         // Verify it's in the index
-        expect(weiduTp2Provider.resolveSymbol!("func_to_delete", "", "")).toBeDefined();
+        expect(weiduTp2Provider.resolveSymbol!("func_to_delete", "", normalizeUri(""))).toBeDefined();
 
         // Clear the file
         weiduTp2Provider.onWatchedFileDeleted!(tphUri);
 
         // Verify it's removed
-        expect(weiduTp2Provider.resolveSymbol!("func_to_delete", "", "")).toBeUndefined();
+        expect(weiduTp2Provider.resolveSymbol!("func_to_delete", "", normalizeUri(""))).toBeUndefined();
     });
 });
