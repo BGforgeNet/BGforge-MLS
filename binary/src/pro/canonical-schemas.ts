@@ -18,7 +18,9 @@ import { keySpec } from "./specs/key";
 import { miscItemSpec } from "./specs/misc-item";
 import { miscSpec } from "./specs/misc";
 import { doorSpec } from "./specs/door";
+import { ladderSpec } from "./specs/ladder";
 import { sceneryCommonSpec } from "./specs/scenery-common";
+import { stairsSpec } from "./specs/stairs";
 import { tileSpec } from "./specs/tile";
 import { wallSpec } from "./specs/wall";
 import { weaponSpec } from "./specs/weapon";
@@ -39,20 +41,9 @@ const proCanonicalSectionsSchema = z.strictObject({
     critterStats: toZodSchema(critterSpec).optional(),
     sceneryProperties: toZodSchema(sceneryCommonSpec).optional(),
     doorProperties: toZodSchema(doorSpec).optional(),
-    stairsProperties: z
-        .strictObject({
-            destTile: zodFieldNumber("pro", "pro.stairsProperties.destTile", "uint32"),
-            destElevation: zodFieldNumber("pro", "pro.stairsProperties.destElevation", "uint32"),
-            destMap: uint32Schema,
-        })
-        .optional(),
+    stairsProperties: toZodSchema(stairsSpec).optional(),
     elevatorProperties: toZodSchema(elevatorSpec).optional(),
-    ladderProperties: z
-        .strictObject({
-            destTile: zodFieldNumber("pro", "pro.ladderProperties.destTile", "uint32"),
-            destElevation: zodFieldNumber("pro", "pro.ladderProperties.destElevation", "uint32"),
-        })
-        .optional(),
+    ladderProperties: toZodSchema(ladderSpec).optional(),
     genericProperties: toZodSchema(genericScenerySpec).optional(),
     wallProperties: toZodSchema(wallSpec).optional(),
     tileProperties: toZodSchema(tileSpec).optional(),

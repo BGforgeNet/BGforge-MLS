@@ -43,10 +43,6 @@ function writer(data: Uint8Array, offset = 0): BufferWriter {
     return new BufferWriter(data.buffer, { endianness: "big", byteOffset: data.byteOffset + offset });
 }
 
-function packDestTileAndElevation(destTile: number, destElevation: number): number {
-    return ((destElevation & 0x3f) << 26) | (destTile & 0x03_ff_ff_ff);
-}
-
 export function serializeProCanonicalSnapshot(snapshot: ProCanonicalSnapshot): Uint8Array {
     const { header, sections } = snapshot.document;
     let size = HEADER_SIZE;
@@ -118,25 +114,14 @@ export function serializeProCanonicalSnapshot(snapshot: ProCanonicalSnapshot): U
                     doorSchema.write(writer(data, SCENERY_SUBTYPE_OFFSET), sections.doorProperties!);
                     break;
                 case 1:
-                    stairsSchema.write(writer(data, SCENERY_SUBTYPE_OFFSET), {
-                        destTileAndElevation: packDestTileAndElevation(
-                            sections.stairsProperties!.destTile,
-                            sections.stairsProperties!.destElevation,
-                        ),
-                        destMap: sections.stairsProperties!.destMap,
-                    });
+                    stairsSchema.write(writer(data, SCENERY_SUBTYPE_OFFSET), sections.stairsProperties!);
                     break;
                 case 2:
                     elevatorSchema.write(writer(data, SCENERY_SUBTYPE_OFFSET), sections.elevatorProperties!);
                     break;
                 case 3:
                 case 4:
-                    ladderSchema.write(writer(data, SCENERY_SUBTYPE_OFFSET), {
-                        destTileAndElevation: packDestTileAndElevation(
-                            sections.ladderProperties!.destTile,
-                            sections.ladderProperties!.destElevation,
-                        ),
-                    });
+                    ladderSchema.write(writer(data, SCENERY_SUBTYPE_OFFSET), sections.ladderProperties!);
                     break;
                 case 5:
                     genericScenerySchema.write(writer(data, SCENERY_SUBTYPE_OFFSET), sections.genericProperties!);
