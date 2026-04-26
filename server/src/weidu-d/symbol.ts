@@ -4,6 +4,7 @@
 
 import { DocumentSymbol, SymbolKind } from "vscode-languageserver/node";
 import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-d";
+import { SyntaxType } from "./tree-sitter.d";
 
 export function getDocumentSymbols(text: string): DocumentSymbol[] {
     if (!isInitialized()) {
@@ -19,7 +20,7 @@ export function getDocumentSymbols(text: string): DocumentSymbol[] {
 
     // Walk the tree to find state nodes and extract their labels
     function visit(node: import("web-tree-sitter").Node) {
-        if (node.type === "state") {
+        if (node.type === SyntaxType.State) {
             const label = node.childForFieldName("label");
             if (label && label.text) {
                 const startPos = label.startPosition;

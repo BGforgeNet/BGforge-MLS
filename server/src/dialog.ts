@@ -5,6 +5,7 @@
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import { initParser, parseWithCache, isInitialized } from "../../shared/parsers/fallout-ssl";
+import { SyntaxType } from "./fallout-ssl/tree-sitter.d";
 import type {
     SSLDialogData,
     SSLDialogNode,
@@ -55,7 +56,7 @@ export async function parseDialog(text: string): Promise<SSLDialogData> {
 
     // Find all procedures
     for (const child of root.children) {
-        if (child.type === "procedure") {
+        if (child.type === SyntaxType.Procedure) {
             const nameNode = child.childForFieldName("name");
             if (!nameNode) continue;
 
@@ -81,15 +82,15 @@ export async function parseDialog(text: string): Promise<SSLDialogData> {
 function extractEntryPoints(proc: SyntaxNode, entryPoints: string[]): void {
     // Find call statements and call expressions
     walkTree(proc, (node) => {
-        if (node.type === "call_stmt") {
+        if (node.type === SyntaxType.CallStmt) {
             const target = node.childForFieldName("target");
             if (target) {
-                const name = target.type === "call_expr" ? target.childForFieldName("func")?.text : target.text;
+                const name = target.type === SyntaxType.CallExpr ? target.childForFieldName("func")?.text : target.text;
                 if (name && !entryPoints.includes(name)) {
                     entryPoints.push(name);
                 }
             }
-        } else if (node.type === "call_expr") {
+        } else if (node.type === SyntaxType.CallExpr) {
             const func = node.childForFieldName("func");
             if (func?.text.startsWith("Node") && !entryPoints.includes(func.text)) {
                 entryPoints.push(func.text);
@@ -104,7 +105,7 @@ function parseProcedure(proc: SyntaxNode, name: string): SSLDialogNode {
     const callTargets: string[] = [];
 
     walkTree(proc, (node) => {
-        if (node.type === "call_expr") {
+        if (node.type === SyntaxType.CallExpr) {
             const funcNode = node.childForFieldName("func");
             if (!funcNode) return;
 
@@ -148,10 +149,11 @@ function parseProcedure(proc: SyntaxNode, name: string): SSLDialogNode {
         }
 
         // Collect "call Node*" statements as direct transitions
-        if (node.type === "call_stmt") {
+        if (node.type === SyntaxType.CallStmt) {
             const target = node.childForFieldName("target");
             if (target) {
-                const targetName = target.type === "call_expr" ? target.childForFieldName("func")?.text : target.text;
+                const targetName =
+                    target.type === SyntaxType.CallExpr ? target.childForFieldName("func")?.text : target.text;
                 if (targetName?.startsWith("Node") && !callTargets.includes(targetName)) {
                     callTargets.push(targetName);
                 }
@@ -174,7 +176,7 @@ function getCallArgs(callExpr: SyntaxNode): SyntaxNode[] {
 }
 
 function parseArgValue(node: SyntaxNode): number | string {
-    if (node.type === "number") {
+    if (node.type === SyntaxType.Number) {
         return parseInt(node.text, 10);
     }
     return node.text;
