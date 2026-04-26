@@ -148,6 +148,7 @@ For detailed architecture, see:
 
 - `docs/architecture.md` — system overview, build pipeline, client, CLIs, grammars, packaging
 - `server/INTERNALS.md` — server internals: provider registry, symbol system, data flow, tree-sitter, feature implementations, design decisions
+- `binary/INTERNALS.md` — binary library internals: spec system, primitives, derivation, orchestrator/spec boundary, format adapters, adding a new format
 
 ### Tree-Sitter Type Generation
 
@@ -177,7 +178,7 @@ See `server/INTERNALS.md` for the full feature matrix and cross-language feature
 
 | Area                    | Key Files                                                                                                                  |
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Architecture            | `docs/architecture.md`, `server/INTERNALS.md`                                                                              |
+| Architecture            | `docs/architecture.md`, `server/INTERNALS.md`, `binary/INTERNALS.md`                                                       |
 | Contributing            | `CONTRIBUTING.md`                                                                                                          |
 | Settings                | `docs/settings.md`                                                                                                         |
 | Changelog               | `docs/changelog.md`                                                                                                        |
