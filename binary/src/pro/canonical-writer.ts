@@ -25,6 +25,7 @@ import {
     tileSchema,
     wallSchema,
     weaponSchema,
+    type HeaderData,
 } from "./schemas";
 import {
     CRITTER_SIZE,
@@ -71,7 +72,11 @@ export function serializeProCanonicalSnapshot(snapshot: ProCanonicalSnapshot): U
     }
 
     const data = new Uint8Array(size);
-    headerSchema.write(writer(data), header);
+    // Cast: toZodSchema's parametric `z.ZodType<SpecData<S>>` return doesn't
+    // propagate the structural shape through z.strictObject inference for
+    // non-optional fields, so the destructured `header` lands as a generic
+    // index signature. The runtime shape matches HeaderData; assert it.
+    headerSchema.write(writer(data), header as HeaderData);
 
     switch (header.objectType) {
         case 0: {

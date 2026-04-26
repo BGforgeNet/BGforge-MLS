@@ -4,7 +4,6 @@
  */
 
 import { z } from "zod";
-import { zodFieldNumber, zodNumericType } from "../binary-format-contract";
 import { toZodSchema } from "../spec/derive-zod";
 import { ammoSpec } from "./specs/ammo";
 import { armorSpec } from "./specs/armor";
@@ -13,6 +12,7 @@ import { critterSpec } from "./specs/critter";
 import { drugSpec } from "./specs/drug";
 import { elevatorSpec } from "./specs/elevator";
 import { genericScenerySpec } from "./specs/generic-scenery";
+import { headerSpec } from "./specs/header";
 import { itemCommonSpec } from "./specs/item-common";
 import { keySpec } from "./specs/key";
 import { miscItemSpec } from "./specs/misc-item";
@@ -24,10 +24,6 @@ import { stairsSpec } from "./specs/stairs";
 import { tileSpec } from "./specs/tile";
 import { wallSpec } from "./specs/wall";
 import { weaponSpec } from "./specs/weapon";
-
-const uint8Schema = zodNumericType("uint8");
-const uint24Schema = zodNumericType("uint24");
-const uint32Schema = zodNumericType("uint32");
 
 const proCanonicalSectionsSchema = z.strictObject({
     itemProperties: toZodSchema(itemCommonSpec).optional(),
@@ -52,16 +48,7 @@ const proCanonicalSectionsSchema = z.strictObject({
 
 export const proCanonicalDocumentSchema = z
     .strictObject({
-        header: z.strictObject({
-            objectType: uint8Schema,
-            objectId: uint24Schema,
-            textId: uint32Schema,
-            frmType: uint8Schema,
-            frmId: uint24Schema,
-            lightRadius: zodFieldNumber("pro", "pro.header.lightRadius", "uint32"),
-            lightIntensity: zodFieldNumber("pro", "pro.header.lightIntensity", "uint32"),
-            flags: uint32Schema,
-        }),
+        header: toZodSchema(headerSpec),
         sections: proCanonicalSectionsSchema,
     })
     .superRefine((document, ctx) => {
