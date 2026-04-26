@@ -587,6 +587,7 @@
         ]
     },
     "activationEvents": [
+        "onCustomEditor:bgforge.binaryEditor",
         "onLanguage:fallout-msg",
         "onLanguage:fallout-scripts-lst",
         "onLanguage:fallout-ssl",

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Binary editor: now activates correctly when opening a `.pro` or `.map` file in a workspace that contains no other recognised file types; previously the editor fell back to a plain text view in that case.
 - Binary editor: opening the same `.pro` or `.map` file in two side-by-side panels now keeps each panel's tree expand/collapse state independent; previously the second panel overwrote the first.
 - Binary editor: fixed armor stat fields (AC, damage resistance, damage threshold, perk) being annotated as signed `int32` in the field-detail view; they are unsigned in the file format and now display as `uint32`.
 - **BREAKING (`@bgforge/binary` library, `.pro.json` snapshots):** the canonical document shapes for armor, drug, critter, stairs, and ladder PROs have been flattened to match the wire format.
