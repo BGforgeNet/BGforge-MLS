@@ -19,9 +19,20 @@
  * tests on the first request the client sends.
  */
 
-import { setDebugLogging } from "./common";
+import { conlog, setDebugLogging } from "./common";
 import type { MLSsettings, ProjectSettings } from "./settings";
 import type { Translation } from "./translation";
+
+/**
+ * Threshold after which the init watchdog reports "ServerContext never
+ * initialized". `onInitialize` calls `initServerContext` synchronously after
+ * provider setup; in normal operation this is well under a second. 30 seconds
+ * accommodates slow grammar/parser bring-up while still catching the silent-
+ * hang failure mode (an early return between `registry.init()` and
+ * `initServerContext()` in handlers/initialize.ts) before a user files a
+ * "server unresponsive" report.
+ */
+const INIT_WATCHDOG_MS = 30_000;
 
 /** Client capability flags negotiated during LSP initialization. */
 interface ClientCapabilityFlags {
@@ -48,8 +59,27 @@ const contextReady = new Promise<ServerContext>((resolve) => {
     resolveContextReady = resolve;
 });
 
+// Watchdog: emits a single warn-level log if initServerContext does not arrive
+// within INIT_WATCHDOG_MS. Does NOT reject the barrier — the no-rejection
+// invariant on contextReady is preserved (handlers can still resolve later if
+// init eventually fires). This exists to surface the silent-hang failure mode
+// in the operator-visible output channel rather than waiting for the user to
+// notice unresponsive completions. .unref() lets the process exit cleanly if
+// nothing else is keeping it alive (the LSP loop is the lifeline; the
+// watchdog is observability only).
+const initWatchdog = setTimeout(() => {
+    conlog(
+        `ServerContext was not initialized within ${INIT_WATCHDOG_MS} ms; ` +
+            "request handlers awaiting the init barrier will hang. This indicates " +
+            "an early return between provider init and initServerContext() in onInitialize.",
+        "warn",
+    );
+}, INIT_WATCHDOG_MS);
+initWatchdog.unref();
+
 /** Populate the context holder. Called once from onInitialize in server.ts. */
 export function initServerContext(value: ServerContext): void {
+    clearTimeout(initWatchdog);
     ctx = value;
     setDebugLogging(value.settings.debug);
     resolveContextReady(value);

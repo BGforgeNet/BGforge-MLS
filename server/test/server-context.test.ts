@@ -5,9 +5,15 @@
  * re-import before each test so the barrier promise is fresh per test.
  */
 
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { afterEach, describe, expect, it, vi, beforeEach } from "vitest";
 import type { MLSsettings, ProjectSettings } from "../src/settings";
 import type { Translation } from "../src/translation";
+
+const { mockConlog } = vi.hoisted(() => ({ mockConlog: vi.fn() }));
+vi.mock("../src/common", () => ({
+    conlog: mockConlog,
+    setDebugLogging: vi.fn(),
+}));
 
 /** Minimal stub satisfying the ServerContext shape. */
 function makeStubContext() {
@@ -28,11 +34,16 @@ describe("server-context", () => {
 
     beforeEach(async () => {
         vi.resetModules();
+        mockConlog.mockReset();
         const mod = await import("../src/server-context");
         initServerContext = mod.initServerContext as typeof initServerContext;
         getServerContext = mod.getServerContext as typeof getServerContext;
         tryGetServerContext = mod.tryGetServerContext as typeof tryGetServerContext;
         updateServerSettings = mod.updateServerSettings;
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
     });
 
     describe("tryGetServerContext", () => {
@@ -82,6 +93,34 @@ describe("server-context", () => {
             expect(r1).toBe(ctx);
             expect(r2).toBe(ctx);
             expect(r3).toBe(ctx);
+        });
+    });
+
+    describe("init watchdog", () => {
+        it("logs a structured warning if initServerContext is not called within the threshold", async () => {
+            vi.useFakeTimers();
+            vi.resetModules();
+            mockConlog.mockReset();
+            await import("../src/server-context");
+
+            await vi.advanceTimersByTimeAsync(30_000);
+
+            const warns = mockConlog.mock.calls.filter((c) => c[1] === "warn");
+            expect(warns.length).toBeGreaterThanOrEqual(1);
+            expect(warns[0]?.[0]).toMatch(/ServerContext/i);
+        });
+
+        it("does not log a warning when initServerContext is called before the threshold", async () => {
+            vi.useFakeTimers();
+            vi.resetModules();
+            mockConlog.mockReset();
+            const mod = await import("../src/server-context");
+
+            mod.initServerContext(makeStubContext());
+            await vi.advanceTimersByTimeAsync(60_000);
+
+            const warns = mockConlog.mock.calls.filter((c) => c[1] === "warn");
+            expect(warns).toEqual([]);
         });
     });
 
