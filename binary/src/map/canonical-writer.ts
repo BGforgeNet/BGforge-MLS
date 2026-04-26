@@ -9,6 +9,15 @@ import { toTypedBinarySchema } from "../spec/derive-typed-binary";
 import { HEADER_SIZE, TILE_DATA_SIZE_PER_ELEVATION, getScriptType, tilePairCodec } from "./schemas";
 import { mapHeaderSpec } from "./specs/header";
 import { varSectionSpec, type VarSectionCtx } from "./specs/variables";
+import {
+    OTHER_SLOT_BYTES,
+    SPATIAL_SLOT_BYTES,
+    TIMER_SLOT_BYTES,
+    otherSlotSpec,
+    spatialSlotSpec,
+    timerSlotSpec,
+} from "./specs/script-slot";
+import { objectBaseSpec, inventoryHeaderSpec, critterDataSpec, exitGridSpec } from "./specs/object";
 import { hasElevation } from "./types";
 import type { ParseOpaqueRange } from "../types";
 import {
@@ -16,7 +25,6 @@ import {
     mapTileElevationSchema,
     mapScriptSectionSchema,
     mapScriptSlotSchema,
-    mapObjectBaseSchema,
     mapObjectSchema,
     mapObjectsSchema,
     MAP_OBJECT_BASE_SIZE,
@@ -28,9 +36,28 @@ import {
 
 const headerCodec = toTypedBinarySchema(mapHeaderSpec);
 const varSectionCodec = toTypedBinarySchema<typeof varSectionSpec, VarSectionCtx>(varSectionSpec);
+const otherSlotCodec = toTypedBinarySchema(otherSlotSpec);
+const spatialSlotCodec = toTypedBinarySchema(spatialSlotSpec);
+const timerSlotCodec = toTypedBinarySchema(timerSlotSpec);
+const objectBaseCodec = toTypedBinarySchema(objectBaseSpec);
+const inventoryHeaderCodec = toTypedBinarySchema(inventoryHeaderSpec);
+const critterDataCodec = toTypedBinarySchema(critterDataSpec);
+const exitGridCodec = toTypedBinarySchema(exitGridSpec);
 
 function bufferWriterAt(bytes: Uint8Array, offset: number): BufferWriter {
     return new BufferWriter(bytes.buffer, { endianness: "big", byteOffset: bytes.byteOffset + offset });
+}
+
+// Single-field big-endian helpers used for the few wire fields that
+// don't fit into a struct spec (extent metadata, per-elevation object
+// counts, inventory quantities, dataFlags). One-field-spec modules
+// would be more code than the inline DataView write.
+function writeInt32(bytes: Uint8Array, offset: number, value: number): void {
+    new DataView(bytes.buffer, bytes.byteOffset + offset, 4).setInt32(0, value, false);
+}
+
+function writeUint32(bytes: Uint8Array, offset: number, value: number): void {
+    new DataView(bytes.buffer, bytes.byteOffset + offset, 4).setUint32(0, value >>> 0, false);
 }
 
 function encodeFilename(filename: string): number[] {
@@ -40,14 +67,6 @@ function encodeFilename(filename: string): number[] {
     const out = Array.from<number>({ length: 16 }).fill(0);
     for (let i = 0; i < 16 && i < encoded.length; i++) out[i] = encoded[i]!;
     return out;
-}
-
-function writeInt32(view: DataView, offset: number, value: number): void {
-    view.setInt32(offset, value, false);
-}
-
-function writeUint32(view: DataView, offset: number, value: number): void {
-    view.setUint32(offset, value >>> 0, false);
 }
 
 function serializeHeader(bytes: Uint8Array, header: z.infer<typeof mapHeaderSchema>): void {
@@ -106,51 +125,59 @@ function serializeTiles(
     return offset;
 }
 
-function serializeScriptSlot(view: DataView, slot: z.infer<typeof mapScriptSlotSchema>, offset: number): number {
-    writeUint32(view, offset, slot.sid);
-    writeInt32(view, offset + 4, slot.nextScriptLinkLegacy);
-    let currentOffset = offset + 8;
-
+function serializeScriptSlot(bytes: Uint8Array, slot: z.infer<typeof mapScriptSlotSchema>, offset: number): number {
+    const writer = bufferWriterAt(bytes, offset);
+    const commons = {
+        flags: slot.flags,
+        index: slot.index,
+        programPointerSlot: slot.programPointerSlot,
+        ownerId: slot.ownerId,
+        localVarsOffset: slot.localVarsOffset,
+        numLocalVars: slot.numLocalVars,
+        returnValue: slot.returnValue,
+        action: slot.action,
+        fixedParam: slot.fixedParam,
+        actionBeingUsed: slot.actionBeingUsed,
+        scriptOverrides: slot.scriptOverrides,
+        unknownField0x48: slot.unknownField0x48,
+        checkMarginHowMuch: slot.checkMarginHowMuch,
+        legacyField0x50: slot.legacyField0x50,
+    };
     switch (getScriptType(slot.sid)) {
         case 1:
-            writeInt32(view, currentOffset, slot.builtTile ?? 0);
-            writeInt32(view, currentOffset + 4, slot.spatialRadius ?? 0);
-            currentOffset += 8;
-            break;
+            spatialSlotCodec.write(writer, {
+                sid: slot.sid,
+                nextScriptLinkLegacy: slot.nextScriptLinkLegacy,
+                builtTile: slot.builtTile ?? 0,
+                spatialRadius: slot.spatialRadius ?? 0,
+                ...commons,
+            });
+            return offset + SPATIAL_SLOT_BYTES;
         case 2:
-            writeInt32(view, currentOffset, slot.timerTime ?? 0);
-            currentOffset += 4;
-            break;
+            timerSlotCodec.write(writer, {
+                sid: slot.sid,
+                nextScriptLinkLegacy: slot.nextScriptLinkLegacy,
+                timerTime: slot.timerTime ?? 0,
+                ...commons,
+            });
+            return offset + TIMER_SLOT_BYTES;
+        default:
+            otherSlotCodec.write(writer, {
+                sid: slot.sid,
+                nextScriptLinkLegacy: slot.nextScriptLinkLegacy,
+                ...commons,
+            });
+            return offset + OTHER_SLOT_BYTES;
     }
-
-    const commonValues = [
-        slot.flags,
-        slot.index,
-        slot.programPointerSlot,
-        slot.ownerId,
-        slot.localVarsOffset,
-        slot.numLocalVars,
-        slot.returnValue,
-        slot.action,
-        slot.fixedParam,
-        slot.actionBeingUsed,
-        slot.scriptOverrides,
-        slot.unknownField0x48,
-        slot.checkMarginHowMuch,
-        slot.legacyField0x50,
-    ];
-
-    for (const value of commonValues) {
-        writeInt32(view, currentOffset, value);
-        currentOffset += 4;
-    }
-
-    return currentOffset;
 }
 
-function serializeScripts(view: DataView, scripts: z.infer<typeof mapScriptSectionSchema>[], offset: number): number {
+function serializeScripts(
+    bytes: Uint8Array,
+    scripts: z.infer<typeof mapScriptSectionSchema>[],
+    offset: number,
+): number {
     for (const scriptSection of scripts) {
-        writeInt32(view, offset, scriptSection.count);
+        writeInt32(bytes, offset, scriptSection.count);
         offset += 4;
         if (scriptSection.count === 0) {
             continue;
@@ -158,10 +185,10 @@ function serializeScripts(view: DataView, scripts: z.infer<typeof mapScriptSecti
 
         for (const extent of scriptSection.extents) {
             for (const slot of extent.slots) {
-                offset = serializeScriptSlot(view, slot, offset);
+                offset = serializeScriptSlot(bytes, slot, offset);
             }
-            writeInt32(view, offset, extent.extentLength);
-            writeInt32(view, offset + 4, extent.extentNext);
+            writeInt32(bytes, offset, extent.extentLength);
+            writeInt32(bytes, offset + 4, extent.extentNext);
             offset += 8;
         }
     }
@@ -185,88 +212,46 @@ function objectSerializedLength(object: z.infer<typeof mapObjectSchema>): number
     return length;
 }
 
-function writeObjectBase(view: DataView, base: z.infer<typeof mapObjectBaseSchema>, offset: number): void {
-    writeInt32(view, offset + 0, base.id);
-    writeInt32(view, offset + 4, base.tile);
-    writeInt32(view, offset + 8, base.x);
-    writeInt32(view, offset + 12, base.y);
-    writeInt32(view, offset + 16, base.screenX);
-    writeInt32(view, offset + 20, base.screenY);
-    writeInt32(view, offset + 24, base.frame);
-    writeInt32(view, offset + 28, base.rotation);
-    writeUint32(view, offset + 32, base.fid);
-    writeInt32(view, offset + 36, base.flags);
-    writeInt32(view, offset + 40, base.elevation);
-    writeInt32(view, offset + 44, base.pid);
-    writeInt32(view, offset + 48, base.cid);
-    writeInt32(view, offset + 52, base.lightDistance);
-    writeInt32(view, offset + 56, base.lightIntensity);
-    writeInt32(view, offset + 60, base.field74);
-    writeInt32(view, offset + 64, base.sid);
-    writeInt32(view, offset + 68, base.scriptIndex);
-}
-
-function serializeMapObject(view: DataView, object: z.infer<typeof mapObjectSchema>, offset: number): number {
-    writeObjectBase(view, object.base, offset);
+function serializeMapObject(bytes: Uint8Array, object: z.infer<typeof mapObjectSchema>, offset: number): number {
+    objectBaseCodec.write(bufferWriterAt(bytes, offset), object.base);
     let currentOffset = offset + MAP_OBJECT_BASE_SIZE;
-    writeInt32(view, currentOffset, object.inventoryHeader.inventoryLength);
-    writeInt32(view, currentOffset + 4, object.inventoryHeader.inventoryCapacity);
-    writeInt32(view, currentOffset + 8, object.inventoryHeader.inventoryPointer);
+    inventoryHeaderCodec.write(bufferWriterAt(bytes, currentOffset), object.inventoryHeader);
     currentOffset += MAP_OBJECT_DATA_HEADER_SIZE;
 
     const pidType = (object.base.pid >>> 24) & 0xff;
     if (pidType === PID_TYPE_CRITTER) {
-        const critterData = object.critterData;
-        if (!critterData) {
+        if (!object.critterData) {
             throw new Error("critterData is required for critter MAP objects");
         }
-        const values = [
-            critterData.reaction,
-            critterData.damageLastTurn,
-            critterData.combatManeuver,
-            critterData.currentAp,
-            critterData.combatResults,
-            critterData.aiPacket,
-            critterData.team,
-            critterData.whoHitMeCid,
-            critterData.currentHp,
-            critterData.radiation,
-            critterData.poison,
-        ];
-        for (const value of values) {
-            writeInt32(view, currentOffset, value);
-            currentOffset += 4;
-        }
+        critterDataCodec.write(bufferWriterAt(bytes, currentOffset), object.critterData);
+        currentOffset += 44;
     } else {
-        writeUint32(view, currentOffset, object.objectData?.dataFlags ?? 0);
+        writeUint32(bytes, currentOffset, object.objectData?.dataFlags ?? 0);
         currentOffset += 4;
 
         if (pidType === PID_TYPE_MISC && object.exitGrid) {
-            writeInt32(view, currentOffset, object.exitGrid.destinationMap);
-            writeInt32(view, currentOffset + 4, object.exitGrid.destinationTile);
-            writeInt32(view, currentOffset + 8, object.exitGrid.destinationElevation);
-            writeInt32(view, currentOffset + 12, object.exitGrid.destinationRotation);
+            exitGridCodec.write(bufferWriterAt(bytes, currentOffset), object.exitGrid);
             currentOffset += 16;
         }
     }
 
     for (const entry of object.inventory) {
-        writeInt32(view, currentOffset, entry.quantity);
+        writeInt32(bytes, currentOffset, entry.quantity);
         currentOffset += 4;
-        currentOffset = serializeMapObject(view, entry.object, currentOffset);
+        currentOffset = serializeMapObject(bytes, entry.object, currentOffset);
     }
 
     return currentOffset;
 }
 
-function serializeObjects(view: DataView, objects: z.infer<typeof mapObjectsSchema>, offset: number): number {
-    writeInt32(view, offset, objects.totalObjects);
+function serializeObjects(bytes: Uint8Array, objects: z.infer<typeof mapObjectsSchema>, offset: number): number {
+    writeInt32(bytes, offset, objects.totalObjects);
     offset += 4;
     for (const elevation of objects.elevations) {
-        writeInt32(view, offset, elevation.objectCount);
+        writeInt32(bytes, offset, elevation.objectCount);
         offset += 4;
         for (const object of elevation.objects) {
-            offset = serializeMapObject(view, object, offset);
+            offset = serializeMapObject(bytes, object, offset);
         }
     }
     return offset;
@@ -336,13 +321,12 @@ export function serializeMapCanonicalDocument(
         objectsSerializedLength(document.objects);
     const opaqueEnd = Math.max(0, ...(opaqueRanges ?? []).map((range) => range.offset + range.size));
     const bytes = new Uint8Array(Math.max(computedLength, opaqueEnd));
-    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 
     serializeHeader(bytes, document.header);
     let offset = serializeVariables(bytes, document.globalVariables, document.localVariables);
     offset = serializeTiles(bytes, document.header, document.tiles, offset);
-    offset = serializeScripts(view, document.scripts, offset);
-    offset = serializeObjects(view, document.objects, offset);
+    offset = serializeScripts(bytes, document.scripts, offset);
+    offset = serializeObjects(bytes, document.objects, offset);
     void offset;
 
     applyOpaqueRanges(bytes, opaqueRanges);

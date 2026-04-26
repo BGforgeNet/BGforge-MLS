@@ -32,19 +32,19 @@ const COMMON_FIELDS = {
     actionBeingUsed: { codec: i32, enum: Skill },
     scriptOverrides: { codec: i32 },
     unknownField0x48: { codec: i32 },
-    checkMargin: { codec: i32 },
+    checkMarginHowMuch: { codec: i32 },
     legacyField0x50: { codec: i32 },
 } as const satisfies Record<string, FieldSpec>;
 
 export const otherSlotSpec = {
     sid: { codec: u32 },
-    nextScriptLink: { codec: i32 },
+    nextScriptLinkLegacy: { codec: i32 },
     ...COMMON_FIELDS,
 } as const satisfies Record<string, FieldSpec>;
 
 export const spatialSlotSpec = {
     sid: { codec: u32 },
-    nextScriptLink: { codec: i32 },
+    nextScriptLinkLegacy: { codec: i32 },
     builtTile: { codec: i32 },
     spatialRadius: { codec: i32 },
     ...COMMON_FIELDS,
@@ -52,7 +52,7 @@ export const spatialSlotSpec = {
 
 export const timerSlotSpec = {
     sid: { codec: u32 },
-    nextScriptLink: { codec: i32 },
+    nextScriptLinkLegacy: { codec: i32 },
     timerTime: { codec: i32 },
     ...COMMON_FIELDS,
 } as const satisfies Record<string, FieldSpec>;

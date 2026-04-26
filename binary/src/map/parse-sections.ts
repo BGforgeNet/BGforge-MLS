@@ -210,7 +210,7 @@ function appendSlotCommonFields(fields: ParsedField[], slot: AnySlotData, label:
     fields.push(enumField(`${label} Action Being Used`, slot.actionBeingUsed, Skill, commonOffset + 36, 4));
     fields.push(field(`${label} Script Overrides`, slot.scriptOverrides, commonOffset + 40, 4, "int32"));
     fields.push(field(`${label} Unknown Field 0x48`, slot.unknownField0x48, commonOffset + 44, 4, "int32"));
-    fields.push(field(`${label} Check Margin (how_much)`, slot.checkMargin, commonOffset + 48, 4, "int32"));
+    fields.push(field(`${label} Check Margin (how_much)`, slot.checkMarginHowMuch, commonOffset + 48, 4, "int32"));
     fields.push(field(`${label} Legacy Field 0x50`, slot.legacyField0x50, commonOffset + 52, 4, "int32"));
 }
 
@@ -248,20 +248,26 @@ function parseScriptEntryFields(
     if (scriptType === 1) {
         const slot = spatialSlotCodec.read(reader);
         fields.push(field(`${label} SID`, slot.sid, currentOffset, 4, "uint32"));
-        fields.push(field(`${label} Next Script Link (legacy)`, slot.nextScriptLink, currentOffset + 4, 4, "int32"));
+        fields.push(
+            field(`${label} Next Script Link (legacy)`, slot.nextScriptLinkLegacy, currentOffset + 4, 4, "int32"),
+        );
         fields.push(field(`${label} Built Tile`, slot.builtTile, currentOffset + 8, 4, "int32"));
         fields.push(field(`${label} Spatial Radius`, slot.spatialRadius, currentOffset + 12, 4, "int32"));
         appendSlotCommonFields(fields, slot, label, currentOffset + 16);
     } else if (scriptType === 2) {
         const slot = timerSlotCodec.read(reader);
         fields.push(field(`${label} SID`, slot.sid, currentOffset, 4, "uint32"));
-        fields.push(field(`${label} Next Script Link (legacy)`, slot.nextScriptLink, currentOffset + 4, 4, "int32"));
+        fields.push(
+            field(`${label} Next Script Link (legacy)`, slot.nextScriptLinkLegacy, currentOffset + 4, 4, "int32"),
+        );
         fields.push(field(`${label} Timer Time`, slot.timerTime, currentOffset + 8, 4, "int32"));
         appendSlotCommonFields(fields, slot, label, currentOffset + 12);
     } else {
         const slot = otherSlotCodec.read(reader);
         fields.push(field(`${label} SID`, slot.sid, currentOffset, 4, "uint32"));
-        fields.push(field(`${label} Next Script Link (legacy)`, slot.nextScriptLink, currentOffset + 4, 4, "int32"));
+        fields.push(
+            field(`${label} Next Script Link (legacy)`, slot.nextScriptLinkLegacy, currentOffset + 4, 4, "int32"),
+        );
         appendSlotCommonFields(fields, slot, label, currentOffset + 8);
     }
 

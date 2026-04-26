@@ -19,7 +19,7 @@ function buildOtherBytes(): { bytes: ArrayBuffer; expected: Record<string, numbe
     const w = new BufferWriter(bytes, { endianness: "big" });
     const expected: Record<string, number> = {
         sid: 0x0300_0001, // type 3, id 1
-        nextScriptLink: -1,
+        nextScriptLinkLegacy: -1,
         flags: 0,
         index: 1,
         programPointerSlot: 2,
@@ -32,11 +32,11 @@ function buildOtherBytes(): { bytes: ArrayBuffer; expected: Record<string, numbe
         actionBeingUsed: 9,
         scriptOverrides: 10,
         unknownField0x48: 11,
-        checkMargin: 12,
+        checkMarginHowMuch: 12,
         legacyField0x50: 13,
     };
     w.writeUint32(expected.sid!);
-    w.writeInt32(expected.nextScriptLink!);
+    w.writeInt32(expected.nextScriptLinkLegacy!);
     for (const k of [
         "flags",
         "index",
@@ -50,7 +50,7 @@ function buildOtherBytes(): { bytes: ArrayBuffer; expected: Record<string, numbe
         "actionBeingUsed",
         "scriptOverrides",
         "unknownField0x48",
-        "checkMargin",
+        "checkMarginHowMuch",
         "legacyField0x50",
     ]) {
         w.writeInt32(expected[k]!);
@@ -70,7 +70,7 @@ describe("script slot specs", () => {
         const w = new BufferWriter(buf, { endianness: "big" });
         spatialCodec.write(w, {
             sid: 0x0100_0007,
-            nextScriptLink: -1,
+            nextScriptLinkLegacy: -1,
             builtTile: 100,
             spatialRadius: 5,
             flags: 0,
@@ -85,7 +85,7 @@ describe("script slot specs", () => {
             actionBeingUsed: 0,
             scriptOverrides: 0,
             unknownField0x48: 0,
-            checkMargin: 0,
+            checkMarginHowMuch: 0,
             legacyField0x50: 0,
         });
 
@@ -102,7 +102,7 @@ describe("script slot specs", () => {
         const w = new BufferWriter(buf, { endianness: "big" });
         timerCodec.write(w, {
             sid: 0x0200_000a,
-            nextScriptLink: -1,
+            nextScriptLinkLegacy: -1,
             timerTime: 12345,
             flags: 0,
             index: 0,
@@ -116,7 +116,7 @@ describe("script slot specs", () => {
             actionBeingUsed: 0,
             scriptOverrides: 0,
             unknownField0x48: 0,
-            checkMargin: 0,
+            checkMarginHowMuch: 0,
             legacyField0x50: 0,
         });
 
