@@ -123,10 +123,8 @@ function rebuildProCanonicalSnapshot(parseResult: ParseResult): ProCanonicalSnap
         sections.itemProperties = {
             flagsExt: readFieldNumber(itemProperties, "Flags Ext", "Item Properties"),
             attackModes: readFieldNumber(itemProperties, "Attack Modes", "Item Properties"),
-            script: {
-                type: readFieldNumber(itemProperties, "Script Type", "Item Properties"),
-                id: readFieldNumber(itemProperties, "Script ID", "Item Properties"),
-            },
+            scriptType: readFieldNumber(itemProperties, "Script Type", "Item Properties"),
+            scriptId: readFieldNumber(itemProperties, "Script ID", "Item Properties"),
             subType: readFieldNumber(itemProperties, "Sub Type", "Item Properties"),
             materialId: readFieldNumber(itemProperties, "Material", "Item Properties"),
             size: readFieldNumber(itemProperties, "Size", "Item Properties"),

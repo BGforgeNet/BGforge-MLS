@@ -3,6 +3,7 @@ import type { BinaryParser, ParseOptions, ParseResult, ParsedGroup, ParsedField,
 import { walkStruct } from "../spec/walk-display";
 import { armorSpec, armorPresentation } from "./specs/armor";
 import { headerSpec, headerPresentation } from "./specs/header";
+import { itemCommonSpec, itemCommonPresentation } from "./specs/item-common";
 import { weaponSpec, weaponPresentation } from "./specs/weapon";
 import { ammoSpec, ammoPresentation } from "./specs/ammo";
 import { containerSpec, containerPresentation } from "./specs/container";
@@ -19,14 +20,12 @@ import { serializePro } from "./serializer";
 import {
     type CritterFieldDef,
     ObjectType,
-    ItemSubType,
     ScenerySubType,
     DamageType,
     MaterialType,
     BodyType,
     KillType,
     ScriptType,
-    ItemFlagsExt,
     WallLightFlags,
     ActionFlags,
     CritterFlags,
@@ -235,19 +234,8 @@ function parseHeader(data: HeaderData): ParsedGroup {
 /**
  * Parse item common fields
  */
-function parseItemCommon(data: ItemCommonData, baseOffset: number, errors: string[]): ParsedGroup {
-    return group("Item Properties", [
-        flagsField("Flags Ext", data.flagsExt, ItemFlagsExt, baseOffset, 3),
-        field("Attack Modes", data.attackModes, baseOffset + 3, 1, "uint8"),
-        ...scriptFields(data.scriptId, baseOffset + 4, errors),
-        enumField("Sub Type", data.subType, ItemSubType, baseOffset + 8, 4, errors),
-        enumField("Material", data.materialId, MaterialType, baseOffset + 12, 4, errors),
-        field("Size", data.size, baseOffset + 16, 4, "uint32"),
-        field("Weight", data.weight, baseOffset + 20, 4, "uint32", "pounds"),
-        field("Cost", data.cost, baseOffset + 24, 4, "uint32", "caps"),
-        field("Inventory FRM ID", data.inventoryFrmId, baseOffset + 28, 4, "int32"),
-        field("Sound ID", data.soundId, baseOffset + 32, 1, "uint8"),
-    ]);
+function parseItemCommon(data: ItemCommonData, baseOffset: number): ParsedGroup {
+    return walkStruct(itemCommonSpec, itemCommonPresentation, baseOffset, data, "Item Properties");
 }
 
 /**
@@ -605,7 +593,7 @@ class ProParser implements BinaryParser {
             case 0: {
                 // Item
                 const itemCommon: ItemCommonData = itemCommonSchema.read(reader(data, HEADER_SIZE));
-                groups.push(parseItemCommon(itemCommon, HEADER_SIZE, errors));
+                groups.push(parseItemCommon(itemCommon, HEADER_SIZE));
 
                 switch (itemCommon.subType) {
                     case 0: // Armor

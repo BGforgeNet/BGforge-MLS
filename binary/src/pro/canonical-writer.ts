@@ -87,18 +87,7 @@ export function serializeProCanonicalSnapshot(snapshot: ProCanonicalSnapshot): U
     switch (header.objectType) {
         case 0: {
             const item = sections.itemProperties!;
-            itemCommonSchema.write(writer(data, HEADER_SIZE), {
-                flagsExt: item.flagsExt,
-                attackModes: item.attackModes,
-                scriptId: packScriptId(item.script),
-                subType: item.subType,
-                materialId: item.materialId,
-                size: item.size,
-                weight: item.weight,
-                cost: item.cost,
-                inventoryFrmId: item.inventoryFrmId,
-                soundId: item.soundId,
-            });
+            itemCommonSchema.write(writer(data, HEADER_SIZE), item);
             switch (item.subType) {
                 case 0:
                     armorSchema.write(writer(data, ITEM_SUBTYPE_OFFSET), sections.armorStats!);

@@ -72,7 +72,8 @@ function buildObjectTypeTransitionBytes(currentBytes: Uint8Array, objectType: nu
         itemCommonSchema.write(writer(nextBytes, HEADER_SIZE), {
             flagsExt: 0,
             attackModes: 0,
-            scriptId: 0xff_ff_ff_ff,
+            scriptType: -1,
+            scriptId: -1,
             subType: 0,
             materialId: 0,
             size: 0,

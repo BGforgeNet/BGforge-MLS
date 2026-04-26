@@ -17,10 +17,8 @@
             "itemProperties": {
                 "flagsExt": 168,
                 "attackModes": 5,
-                "script": {
-                    "type": -1,
-                    "id": -1
-                },
+                "scriptType": -1,
+                "scriptId": -1,
                 "subType": 3,
                 "materialId": 1,
                 "size": 1,

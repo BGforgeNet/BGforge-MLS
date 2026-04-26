@@ -13,13 +13,13 @@ import { critterSpec } from "./specs/critter";
 import { drugSpec } from "./specs/drug";
 import { elevatorSpec } from "./specs/elevator";
 import { genericScenerySpec } from "./specs/generic-scenery";
+import { itemCommonSpec } from "./specs/item-common";
 import { keySpec } from "./specs/key";
 import { miscItemSpec } from "./specs/misc-item";
 import { miscSpec } from "./specs/misc";
 import { tileSpec } from "./specs/tile";
 import { weaponSpec } from "./specs/weapon";
 
-const int32Schema = zodNumericType("int32");
 const uint8Schema = zodNumericType("uint8");
 const uint16Schema = zodNumericType("uint16");
 const uint24Schema = zodNumericType("uint24");
@@ -31,20 +31,7 @@ const scriptRefSchema = z.strictObject({
 });
 
 const proCanonicalSectionsSchema = z.strictObject({
-    itemProperties: z
-        .strictObject({
-            flagsExt: uint24Schema,
-            attackModes: uint8Schema,
-            script: scriptRefSchema,
-            subType: uint32Schema,
-            materialId: uint32Schema,
-            size: uint32Schema,
-            weight: uint32Schema,
-            cost: uint32Schema,
-            inventoryFrmId: int32Schema,
-            soundId: uint8Schema,
-        })
-        .optional(),
+    itemProperties: toZodSchema(itemCommonSpec).optional(),
     armorStats: toZodSchema(armorSpec).optional(),
     weaponStats: toZodSchema(weaponSpec).optional(),
     ammoStats: toZodSchema(ammoSpec).optional(),
