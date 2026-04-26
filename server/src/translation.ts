@@ -130,8 +130,18 @@ type ResolveResult =
 export class Translation {
     private directory: string;
     private data: TraData;
-    /** Reverse index: traFileKey → set of absolute consumer file paths */
+    /** Forward index: traFileKey → set of absolute consumer file paths */
     private consumers: Map<string, Set<string>>;
+    /**
+     * Inverse of `consumers`: absolute consumer file path → its current traFileKey.
+     *
+     * A consumer file references exactly one tra/msg file at a time (resolved by
+     * `resolveTraFileKey`), so this is a 1:1 lookup, not 1:many. Maintained in
+     * lockstep with `consumers` so `reloadConsumer` can remove the previous
+     * mapping for a file in O(1) instead of scanning every traFileKey's consumer
+     * set on each debounced document change.
+     */
+    private consumerToTraKey: Map<string, string>;
     private settings: ProjectTraSettings;
     private workspaceRoot: string | undefined;
     /**
@@ -153,6 +163,7 @@ export class Translation {
         this.initialized = false;
         this.data = new Map();
         this.consumers = new Map();
+        this.consumerToTraKey = new Map();
     }
 
     /**
@@ -312,10 +323,8 @@ export class Translation {
 
         const wsRelPath = getRelPath(wsRoot, filePath);
 
-        // Remove this file from any existing consumer sets
-        for (const consumerSet of this.consumers.values()) {
-            consumerSet.delete(filePath);
-        }
+        // Remove this file from its previous consumer set in O(1) via the reverse index.
+        this.removeConsumer(filePath);
 
         // Resolve which tra/msg file this consumer maps to
         const traFileKey = this.resolveTraFileKey(wsRelPath, text, langId);
@@ -843,6 +852,7 @@ export class Translation {
         if (!wsRoot) return;
 
         this.consumers = new Map();
+        this.consumerToTraKey = new Map();
 
         // Determine which extensions to scan based on loaded tra data
         const hasMsg = [...this.data.keys()].some((k) => k.endsWith(".msg"));
@@ -922,6 +932,20 @@ export class Translation {
             this.consumers.set(traFileKey, consumerSet);
         }
         consumerSet.add(absPath);
+        this.consumerToTraKey.set(absPath, traFileKey);
+    }
+
+    /** Remove a file from its current consumer set in O(1) via the reverse index. */
+    private removeConsumer(absPath: string): void {
+        const previousKey = this.consumerToTraKey.get(absPath);
+        if (previousKey === undefined) return;
+        this.consumerToTraKey.delete(absPath);
+        const consumerSet = this.consumers.get(previousKey);
+        if (!consumerSet) return;
+        consumerSet.delete(absPath);
+        if (consumerSet.size === 0) {
+            this.consumers.delete(previousKey);
+        }
     }
 
     /**
