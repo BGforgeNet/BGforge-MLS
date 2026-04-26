@@ -16,6 +16,7 @@ import {
     Statement,
     SyntaxKind,
 } from "ts-morph";
+import QuickLRU from "quick-lru";
 import { safeEvaluate } from "./safe-eval";
 
 /** Variable substitution context - maps variable names to their compile-time values */
@@ -28,9 +29,14 @@ export type VarsContext = Map<string, string>;
 // the regex source depends only on the name; reusing the compiled instance
 // avoids recompiling per call (substituteVars is hot in loop-unroll paths).
 //
+// Bounded by QuickLRU so a long-running LSP session that processes many distinct
+// identifier names does not retain a regex for every name ever seen. The 256
+// entry cap covers the working set of a typical TSSL/TBAF/TD compile (variables
+// + macro params + foreach iterators) with headroom for batch directory runs.
+//
 // String.prototype.replace with a /g regex does not consult lastIndex, so
 // caching a stateful global regex is safe for the .replace() use site below.
-const wordBoundaryRegexCache = new Map<string, RegExp>();
+const wordBoundaryRegexCache = new QuickLRU<string, RegExp>({ maxSize: 256 });
 
 /**
  * Return a cached word-boundary regex matching the given identifier globally.
