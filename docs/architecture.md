@@ -512,6 +512,26 @@ Four test layers:
 - **E2E tests** (`client/src/test/`, mocha + vscode) -- completion, hover in a real VSCode instance
 - **Grammar tests** (`grammars/*/test/corpus/`) -- tree-sitter corpus tests per grammar
 
+### Coverage thresholds
+
+Per-package vitest coverage thresholds reflect the slice of behaviour each package's
+unit tests are responsible for, not the package's full execution surface. Two
+packages run intentionally low floors because their broader behaviour is verified
+by other layers:
+
+- **`@bgforge/format`** (`format/vitest.config.ts`): 27/17/12/27 (lines/functions/branches/statements). The formatter surface is exercised end-to-end by grammar-corpus fixtures under `grammars/*/test/corpus/` and by the directory-mode `--save-and-check` invocation in `scripts/test.sh`. The vitest project here covers only the standalone unit slice (utilities, helpers, dispatch); the broader surface is covered but in a different layer.
+- **`@bgforge/transpile`** (`transpilers/vitest.config.ts`): 15/25/8/15. The bulk of transpiler correctness is enforced by Stryker mutation testing (`stryker.conf.json`, breaks at 60% mutation score) plus the TD/TBAF fixture-driven integration suites in `scripts/test.sh`. The vitest project here covers the public API and shared helpers; the per-language transformer surface is covered through mutation and integration.
+
+The other workspaces — `server`, `client`, `binary`, `shared`, `scripts`, and the
+two TypeScript plugins — run at 90/80/90/90 (or higher for the plugins) because
+their unit suites are responsible for the bulk of their own behaviour. `server`
+additionally excludes `src/fallout-ssl/provider.ts` and `src/weidu-tp2/provider.ts`
+(LSP dispatcher glue verified by the integration tests under `server/test/integration/`)
+and `src/**/format/**/*.ts` (per-language tree-sitter formatters covered by
+grammar-corpus tests).
+
+Ratchet upward when the unit slice in any package widens.
+
 ## Extension Packaging
 
 `.vscodeignore` uses a **blocklist** strategy (exclude dev files, keep runtime files by default). See [docs/ignore-files.md](ignore-files.md) for the full list

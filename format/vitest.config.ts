@@ -24,7 +24,8 @@ export default defineConfig({
             // Floor reflects the unit-test slice only. Most of the formatter
             // surface is exercised by grammar-driven format-check fixtures
             // run from scripts/test.sh, which are out of scope here. Ratchet
-            // upward as standalone unit tests are added.
+            // upward as standalone unit tests are added. See
+            // docs/architecture.md "Coverage thresholds" for the full layering.
             thresholds: {
                 lines: 27,
                 functions: 17,
