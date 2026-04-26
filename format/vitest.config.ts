@@ -16,5 +16,21 @@ export default defineConfig({
         // CLI bundle to exist; they run from test/vitest.cli.config.ts in a later phase.
         exclude: [path.resolve(__dirname, "test/**/*-cli.test.ts")],
         testTimeout: 30_000,
+        coverage: {
+            provider: "v8",
+            reporter: ["text", "html", "lcov"],
+            reportsDirectory: "coverage/format",
+            include: ["src/**/*.ts"],
+            // Floor reflects the unit-test slice only. Most of the formatter
+            // surface is exercised by grammar-driven format-check fixtures
+            // run from scripts/test.sh, which are out of scope here. Ratchet
+            // upward as standalone unit tests are added.
+            thresholds: {
+                lines: 27,
+                functions: 17,
+                branches: 12,
+                statements: 27,
+            },
+        },
     },
 });

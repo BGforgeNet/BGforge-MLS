@@ -46,10 +46,10 @@ parallel \
     "Server unit tests + coverage" "(cd server && pnpm exec vitest run --coverage)" \
     "Client unit tests + coverage" "vitest run --config client/vitest.config.ts --coverage" \
     "Plugin unit tests" "vitest run --config plugins/tssl-plugin/vitest.config.ts && vitest run --config plugins/td-plugin/vitest.config.ts" \
-    "Transpile lib unit tests" "vitest run --config transpilers/vitest.config.ts" \
-    "Format lib unit tests" "vitest run --config format/vitest.config.ts" \
-    "Binary lib unit tests" "vitest run --config binary/vitest.config.ts" \
-    "Shared unit tests" "vitest run --config shared/vitest.config.ts" \
+    "Transpile lib unit tests" "vitest run --config transpilers/vitest.config.ts --coverage" \
+    "Format lib unit tests" "vitest run --config format/vitest.config.ts --coverage" \
+    "Binary lib unit tests" "vitest run --config binary/vitest.config.ts --coverage" \
+    "Shared unit tests" "vitest run --config shared/vitest.config.ts --coverage" \
     "Script tests" "pnpm test:scripts" \
     "Knip" "pnpm knip" \
     "Knip prod" "pnpm knip:prod"

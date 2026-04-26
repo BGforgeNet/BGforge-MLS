@@ -18,5 +18,23 @@ export default defineConfig({
         // v8 coverage instrumentation slows the binary parser tests; the 5s
         // vitest default is too tight for them.
         testTimeout: 15_000,
+        coverage: {
+            provider: "v8",
+            reporter: ["text", "html", "lcov"],
+            reportsDirectory: "coverage/binary",
+            // Pin the denominator to this package's source so transitive
+            // workspace deps (e.g. @bgforge/format aliased above its tests)
+            // cannot dilute the ratio.
+            include: ["src/**/*.ts"],
+            // Thresholds set at the floor measured by this unit-test slice.
+            // CLI integration tests live in a separate vitest project and are
+            // not counted here. Ratchet upward as coverage grows.
+            thresholds: {
+                lines: 86,
+                functions: 89,
+                branches: 74,
+                statements: 86,
+            },
+        },
     },
 });
