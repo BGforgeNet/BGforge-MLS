@@ -33,6 +33,14 @@ export default defineConfig({
             // server+client coverage runs in scripts/test.sh don't race on
             // coverage/.tmp shard files.
             reportsDirectory: "coverage/server",
+            // Coverage is intentionally scoped to "files actually loaded by tests"
+            // (the v8 default — no `include`). Adding `include: ["src/**/*.ts"]`
+            // would also count integration-only modules and the tree-sitter
+            // generated types in the denominator, which the unit slice cannot
+            // realistically cover. The `@bgforge/format` alias above resolves
+            // to format/src/ but tests load only a thin slice of it; add an
+            // explicit `include` here only after auditing exactly which files
+            // the unit suite touches.
             exclude: ["src/fallout-ssl/provider.ts", "src/weidu-tp2/provider.ts"],
             thresholds: {
                 lines: 90,
