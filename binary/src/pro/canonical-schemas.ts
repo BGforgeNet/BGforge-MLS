@@ -6,9 +6,18 @@
 import { z } from "zod";
 import { zodFieldNumber, zodNumericType } from "../binary-format-contract";
 import { toZodSchema } from "../spec/derive-zod";
+import { ammoSpec } from "./specs/ammo";
 import { armorSpec } from "./specs/armor";
+import { containerSpec } from "./specs/container";
 import { critterSpec } from "./specs/critter";
 import { drugSpec } from "./specs/drug";
+import { elevatorSpec } from "./specs/elevator";
+import { genericScenerySpec } from "./specs/generic-scenery";
+import { keySpec } from "./specs/key";
+import { miscItemSpec } from "./specs/misc-item";
+import { miscSpec } from "./specs/misc";
+import { tileSpec } from "./specs/tile";
+import { weaponSpec } from "./specs/weapon";
 
 const int32Schema = zodNumericType("int32");
 const uint8Schema = zodNumericType("uint8");
@@ -37,56 +46,12 @@ const proCanonicalSectionsSchema = z.strictObject({
         })
         .optional(),
     armorStats: toZodSchema(armorSpec).optional(),
-    weaponStats: z
-        .strictObject({
-            animCode: uint32Schema,
-            minDamage: uint32Schema,
-            maxDamage: uint32Schema,
-            damageType: uint32Schema,
-            maxRange1: uint32Schema,
-            maxRange2: uint32Schema,
-            projectilePid: int32Schema,
-            minStrength: uint32Schema,
-            apCost1: uint32Schema,
-            apCost2: uint32Schema,
-            criticalFail: uint32Schema,
-            perk: uint32Schema,
-            rounds: uint32Schema,
-            caliber: uint32Schema,
-            ammoPid: int32Schema,
-            maxAmmo: uint32Schema,
-            soundId: uint8Schema,
-        })
-        .optional(),
-    ammoStats: z
-        .strictObject({
-            caliber: uint32Schema,
-            quantity: uint32Schema,
-            acModifier: uint32Schema,
-            drModifier: uint32Schema,
-            damageMultiplier: uint32Schema,
-            damageDivisor: uint32Schema,
-        })
-        .optional(),
-    containerStats: z
-        .strictObject({
-            maxSize: uint32Schema,
-            openFlags: uint32Schema,
-        })
-        .optional(),
+    weaponStats: toZodSchema(weaponSpec).optional(),
+    ammoStats: toZodSchema(ammoSpec).optional(),
+    containerStats: toZodSchema(containerSpec).optional(),
     drugStats: toZodSchema(drugSpec).optional(),
-    miscItemStats: z
-        .strictObject({
-            powerPid: int32Schema,
-            powerType: uint32Schema,
-            charges: uint32Schema,
-        })
-        .optional(),
-    keyStats: z
-        .strictObject({
-            keyCode: uint32Schema,
-        })
-        .optional(),
+    miscItemStats: toZodSchema(miscItemSpec).optional(),
+    keyStats: toZodSchema(keySpec).optional(),
     critterStats: toZodSchema(critterSpec).optional(),
     sceneryProperties: z
         .strictObject({
@@ -111,23 +76,14 @@ const proCanonicalSectionsSchema = z.strictObject({
             destMap: uint32Schema,
         })
         .optional(),
-    elevatorProperties: z
-        .strictObject({
-            elevatorType: uint32Schema,
-            elevatorLevel: uint32Schema,
-        })
-        .optional(),
+    elevatorProperties: toZodSchema(elevatorSpec).optional(),
     ladderProperties: z
         .strictObject({
             destTile: zodFieldNumber("pro", "pro.ladderProperties.destTile", "uint32"),
             destElevation: zodFieldNumber("pro", "pro.ladderProperties.destElevation", "uint32"),
         })
         .optional(),
-    genericProperties: z
-        .strictObject({
-            unknown: uint32Schema,
-        })
-        .optional(),
+    genericProperties: toZodSchema(genericScenerySpec).optional(),
     wallProperties: z
         .strictObject({
             wallLightFlags: uint16Schema,
@@ -136,16 +92,8 @@ const proCanonicalSectionsSchema = z.strictObject({
             materialId: uint32Schema,
         })
         .optional(),
-    tileProperties: z
-        .strictObject({
-            materialId: uint32Schema,
-        })
-        .optional(),
-    miscProperties: z
-        .strictObject({
-            unknown: uint32Schema,
-        })
-        .optional(),
+    tileProperties: toZodSchema(tileSpec).optional(),
+    miscProperties: toZodSchema(miscSpec).optional(),
 });
 
 export const proCanonicalDocumentSchema = z
