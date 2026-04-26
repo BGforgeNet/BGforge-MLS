@@ -22,7 +22,7 @@ import {
     TILE_DATA_SIZE_PER_ELEVATION,
     TILES_PER_ELEVATION,
     parseHeader,
-    parseTilePair,
+    tilePairCodec,
     getScriptType,
     type MapHeader,
 } from "./schemas";
@@ -148,10 +148,16 @@ export function parseTiles(
         }
 
         const tileFields: ParsedField[] = [];
+        // Decode the elevation as one contiguous run: a single BufferReader
+        // amortises setup across all 10 000 pairs.
+        const tileReader = new BufferReader(data.buffer, {
+            endianness: "big",
+            byteOffset: data.byteOffset + currentOffset,
+        });
 
         for (let i = 0; i < TILES_PER_ELEVATION; i++) {
             if (currentOffset + i * 4 + 4 > data.length) break;
-            const tilePair = parseTilePair(data, currentOffset + i * 4);
+            const tilePair = tilePairCodec.read(tileReader);
             if (tilePair.floorTileId !== 0 || tilePair.roofTileId !== 0) {
                 tileFields.push(
                     field(`Tile ${i} Floor`, tilePair.floorTileId, currentOffset + i * 4, 2, "uint16"),

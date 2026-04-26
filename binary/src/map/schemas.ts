@@ -62,7 +62,12 @@ export function getScriptType(sid: number): number {
 export const TILES_PER_ELEVATION = 10_000;
 export const TILE_DATA_SIZE_PER_ELEVATION = TILES_PER_ELEVATION * 4;
 
-const tilePairCodec = toTypedBinarySchema(tilePairSpec);
+/**
+ * Wire codec for one tile pair. Exposed so callers reading a contiguous run
+ * of pairs (e.g. one elevation = 10 000 pairs) can amortise BufferReader
+ * setup across the whole run instead of constructing one per pair.
+ */
+export const tilePairCodec = toTypedBinarySchema(tilePairSpec);
 
 export function parseTilePair(data: Uint8Array, offset: number): TilePairData {
     const reader = new BufferReader(data.buffer, { endianness: "big", byteOffset: data.byteOffset + offset });
