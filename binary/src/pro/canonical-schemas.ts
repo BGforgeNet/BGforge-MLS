@@ -7,6 +7,7 @@ import { z } from "zod";
 import { zodFieldNumber, zodNumericType } from "../binary-format-contract";
 import { toZodSchema } from "../spec/derive-zod";
 import { armorSpec } from "./specs/armor";
+import { critterSpec } from "./specs/critter";
 import { drugSpec } from "./specs/drug";
 
 const int32Schema = zodNumericType("int32");
@@ -18,116 +19,6 @@ const uint32Schema = zodNumericType("uint32");
 const scriptRefSchema = z.strictObject({
     type: z.number().int().min(-1).max(0xff),
     id: z.number().int().min(-1).max(0x00_ff_ff_ff),
-});
-
-const unsignedCritterDamageResistanceSchema = z.strictObject({
-    normal: uint32Schema,
-    laser: uint32Schema,
-    fire: uint32Schema,
-    plasma: uint32Schema,
-    electrical: uint32Schema,
-    emp: uint32Schema,
-    explosive: uint32Schema,
-    radiation: uint32Schema,
-    poison: uint32Schema,
-});
-
-const unsignedPrimaryStatsSchema = z.strictObject({
-    strength: uint32Schema,
-    perception: uint32Schema,
-    endurance: uint32Schema,
-    charisma: uint32Schema,
-    intelligence: uint32Schema,
-    agility: uint32Schema,
-    luck: uint32Schema,
-});
-
-const signedPrimaryStatsSchema = z.strictObject({
-    strength: int32Schema,
-    perception: int32Schema,
-    endurance: int32Schema,
-    charisma: int32Schema,
-    intelligence: int32Schema,
-    agility: int32Schema,
-    luck: int32Schema,
-});
-
-const unsignedSecondaryStatsSchema = z.strictObject({
-    hitPoints: uint32Schema,
-    actionPoints: uint32Schema,
-    armorClass: uint32Schema,
-    unarmedDamage: uint32Schema,
-    meleeDamage: uint32Schema,
-    carryWeight: uint32Schema,
-    sequence: uint32Schema,
-    healingRate: uint32Schema,
-    criticalChance: uint32Schema,
-    betterCriticals: uint32Schema,
-});
-
-const signedSecondaryStatsSchema = z.strictObject({
-    hitPoints: int32Schema,
-    actionPoints: int32Schema,
-    armorClass: int32Schema,
-    unarmedDamage: int32Schema,
-    meleeDamage: int32Schema,
-    carryWeight: int32Schema,
-    sequence: int32Schema,
-    healingRate: int32Schema,
-    criticalChance: int32Schema,
-    betterCriticals: int32Schema,
-});
-
-const signedCritterDamageThresholdSchema = z.strictObject({
-    normal: int32Schema,
-    laser: int32Schema,
-    fire: int32Schema,
-    plasma: int32Schema,
-    electrical: int32Schema,
-    emp: int32Schema,
-    explosive: int32Schema,
-});
-
-const signedCritterDamageResistanceSchema = z.strictObject({
-    normal: int32Schema,
-    laser: int32Schema,
-    fire: int32Schema,
-    plasma: int32Schema,
-    electrical: int32Schema,
-    emp: int32Schema,
-    explosive: int32Schema,
-    radiation: int32Schema,
-    poison: int32Schema,
-});
-
-const critterPropertiesSchema = z.strictObject({
-    flagsExt: uint32Schema,
-    script: scriptRefSchema,
-    headFrmId: int32Schema,
-    aiPacket: uint32Schema,
-    teamNumber: uint32Schema,
-    critterFlags: uint32Schema,
-});
-
-const critterSkillsSchema = z.strictObject({
-    skillSmallGuns: int32Schema,
-    skillBigGuns: int32Schema,
-    skillEnergyWeapons: int32Schema,
-    skillUnarmed: int32Schema,
-    skillMelee: int32Schema,
-    skillThrowing: int32Schema,
-    skillFirstAid: int32Schema,
-    skillDoctor: int32Schema,
-    skillSneak: int32Schema,
-    skillLockpick: int32Schema,
-    skillSteal: int32Schema,
-    skillTraps: int32Schema,
-    skillScience: int32Schema,
-    skillRepair: int32Schema,
-    skillSpeech: int32Schema,
-    skillBarter: int32Schema,
-    skillGambling: int32Schema,
-    skillOutdoorsman: int32Schema,
 });
 
 const proCanonicalSectionsSchema = z.strictObject({
@@ -196,40 +87,7 @@ const proCanonicalSectionsSchema = z.strictObject({
             keyCode: uint32Schema,
         })
         .optional(),
-    critterProperties: critterPropertiesSchema.optional(),
-    basePrimaryStats: unsignedPrimaryStatsSchema.optional(),
-    baseSecondaryStats: unsignedSecondaryStatsSchema.optional(),
-    baseDamageThreshold: z
-        .strictObject({
-            normal: uint32Schema,
-            laser: uint32Schema,
-            fire: uint32Schema,
-            plasma: uint32Schema,
-            electrical: uint32Schema,
-            emp: uint32Schema,
-            explosive: uint32Schema,
-        })
-        .optional(),
-    baseDamageResistance: unsignedCritterDamageResistanceSchema.optional(),
-    demographics: z
-        .strictObject({
-            age: uint32Schema,
-            gender: uint32Schema,
-        })
-        .optional(),
-    bonusPrimaryStats: signedPrimaryStatsSchema.optional(),
-    bonusSecondaryStats: signedSecondaryStatsSchema.optional(),
-    bonusDamageThreshold: signedCritterDamageThresholdSchema.optional(),
-    bonusDamageResistance: signedCritterDamageResistanceSchema.optional(),
-    skills: critterSkillsSchema.optional(),
-    finalProperties: z
-        .strictObject({
-            bodyType: uint32Schema,
-            expValue: uint32Schema,
-            killType: uint32Schema,
-            damageType: uint32Schema,
-        })
-        .optional(),
+    critterStats: toZodSchema(critterSpec).optional(),
     sceneryProperties: z
         .strictObject({
             wallLightFlags: uint16Schema,
@@ -378,27 +236,12 @@ export const proCanonicalDocumentSchema = z
                 }
                 break;
             case 1:
-                for (const requiredSection of [
-                    "critterProperties",
-                    "basePrimaryStats",
-                    "baseSecondaryStats",
-                    "baseDamageThreshold",
-                    "baseDamageResistance",
-                    "demographics",
-                    "bonusPrimaryStats",
-                    "bonusSecondaryStats",
-                    "bonusDamageThreshold",
-                    "bonusDamageResistance",
-                    "skills",
-                    "finalProperties",
-                ] as const) {
-                    if (!sections[requiredSection]) {
-                        ctx.addIssue({
-                            code: "custom",
-                            path: ["sections", requiredSection],
-                            message: `${requiredSection} is required for critter PRO snapshots`,
-                        });
-                    }
+                if (!sections.critterStats) {
+                    ctx.addIssue({
+                        code: "custom",
+                        path: ["sections", "critterStats"],
+                        message: "critterStats is required for critter PRO snapshots",
+                    });
                 }
                 break;
             case 2:

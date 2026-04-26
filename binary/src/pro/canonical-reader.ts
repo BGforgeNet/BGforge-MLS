@@ -7,7 +7,17 @@ import { clampNumericValue } from "../binary-format-contract";
 import { resolveRawValueFromDisplay } from "../display-lookups";
 import { createFieldKey, toSemanticFieldKey } from "../presentation-schema";
 import { parseWithSchemaValidation } from "../schema-validation";
-import { CRITTER_BASE_PRIMARY, CRITTER_BASE_SECONDARY, CRITTER_SKILLS } from "./types";
+import {
+    CRITTER_BASE_DR,
+    CRITTER_BASE_DT,
+    CRITTER_BASE_PRIMARY,
+    CRITTER_BASE_SECONDARY,
+    CRITTER_BONUS_DR,
+    CRITTER_BONUS_DT,
+    CRITTER_BONUS_PRIMARY,
+    CRITTER_BONUS_SECONDARY,
+    CRITTER_SKILLS,
+} from "./types";
 import type { ParsedField, ParsedGroup, ParseResult } from "../types";
 import {
     proCanonicalSnapshotSchema,
@@ -62,12 +72,18 @@ function readFieldNumber(group: ParsedGroup, fieldName: string, fieldPath: strin
     throw new Error(`Field is not numeric: ${fullFieldPath}`);
 }
 
-function mapGroupFields(
+/**
+ * Read every field declared in a CritterFieldDef-style table out of `group`,
+ * producing a flat `dataKey -> number` map. Trailing tuple entries (offset,
+ * type) are unused here — we only need the displayName/dataKey pair to drive
+ * the lookup against the parsed display tree.
+ */
+function mapGroupFromDefs(
     group: ParsedGroup,
-    mapping: ReadonlyArray<readonly [fieldName: string, key: string]>,
+    defs: ReadonlyArray<readonly [displayName: string, dataKey: string, ...rest: unknown[]]>,
 ): Record<string, number> {
     return Object.fromEntries(
-        mapping.map(([fieldName, key]) => [key, readFieldNumber(group, fieldName, `${group.name}`)]),
+        defs.map(([displayName, dataKey]) => [dataKey, readFieldNumber(group, displayName, `${group.name}`)]),
     );
 }
 
@@ -236,142 +252,49 @@ function rebuildProCanonicalSnapshot(parseResult: ParseResult): ProCanonicalSnap
 
     const critterProperties = getOptionalGroup(parseResult.root, "Critter Properties");
     if (critterProperties) {
-        sections.critterProperties = {
+        const basePrimary = getGroup(parseResult.root, "Base Primary Stats");
+        const baseSecondary = getGroup(parseResult.root, "Base Secondary Stats");
+        const baseDt = getGroup(parseResult.root, "Base Damage Threshold");
+        const baseDr = getGroup(parseResult.root, "Base Damage Resistance");
+        const demographics = getGroup(parseResult.root, "Demographics");
+        const bonusPrimary = getGroup(parseResult.root, "Bonus Primary Stats");
+        const bonusSecondary = getGroup(parseResult.root, "Bonus Secondary Stats");
+        const bonusDt = getGroup(parseResult.root, "Bonus Damage Threshold");
+        const bonusDr = getGroup(parseResult.root, "Bonus Damage Resistance");
+        const skills = getGroup(parseResult.root, "Skills");
+        const finalProperties = getGroup(parseResult.root, "Final Properties");
+
+        const scriptType = readFieldNumber(critterProperties, "Script Type", "Critter Properties");
+        const scriptId = readFieldNumber(critterProperties, "Script ID", "Critter Properties");
+        // Re-pack the displayed Script Type (i8) + Script ID (u24) back into the
+        // wire's u32 scriptId. (-1, -1) is the canonical "no script" sentinel.
+        const packedScriptId =
+            scriptType === -1 && scriptId === -1
+                ? 0xff_ff_ff_ff
+                : ((scriptType & 0xff) << 24) | (scriptId & 0x00_ff_ff_ff);
+
+        sections.critterStats = {
             flagsExt: readFieldNumber(critterProperties, "Flags Ext", "Critter Properties"),
-            script: {
-                type: readFieldNumber(critterProperties, "Script Type", "Critter Properties"),
-                id: readFieldNumber(critterProperties, "Script ID", "Critter Properties"),
-            },
+            scriptId: packedScriptId,
             headFrmId: readFieldNumber(critterProperties, "Head FRM ID", "Critter Properties"),
             aiPacket: readFieldNumber(critterProperties, "AI Packet", "Critter Properties"),
             teamNumber: readFieldNumber(critterProperties, "Team Number", "Critter Properties"),
             critterFlags: readFieldNumber(critterProperties, "Critter Flags", "Critter Properties"),
-        };
-    }
-
-    const basePrimaryStats = getOptionalGroup(parseResult.root, "Base Primary Stats");
-    if (basePrimaryStats) {
-        sections.basePrimaryStats = Object.fromEntries(
-            CRITTER_BASE_PRIMARY.map(([displayName, dataKey]) => [
-                dataKey,
-                readFieldNumber(basePrimaryStats, displayName, "Base Primary Stats"),
-            ]),
-        );
-    }
-
-    const baseSecondaryStats = getOptionalGroup(parseResult.root, "Base Secondary Stats");
-    if (baseSecondaryStats) {
-        sections.baseSecondaryStats = Object.fromEntries(
-            CRITTER_BASE_SECONDARY.map(([displayName, dataKey]) => [
-                dataKey,
-                readFieldNumber(baseSecondaryStats, displayName, "Base Secondary Stats"),
-            ]),
-        );
-    }
-
-    const baseDamageThreshold = getOptionalGroup(parseResult.root, "Base Damage Threshold");
-    if (baseDamageThreshold) {
-        sections.baseDamageThreshold = mapGroupFields(baseDamageThreshold, [
-            ["Normal", "normal"],
-            ["Laser", "laser"],
-            ["Fire", "fire"],
-            ["Plasma", "plasma"],
-            ["Electrical", "electrical"],
-            ["EMP", "emp"],
-            ["Explosive", "explosive"],
-        ]);
-    }
-
-    const baseDamageResistance = getOptionalGroup(parseResult.root, "Base Damage Resistance");
-    if (baseDamageResistance) {
-        sections.baseDamageResistance = mapGroupFields(baseDamageResistance, [
-            ["Normal", "normal"],
-            ["Laser", "laser"],
-            ["Fire", "fire"],
-            ["Plasma", "plasma"],
-            ["Electrical", "electrical"],
-            ["EMP", "emp"],
-            ["Explosive", "explosive"],
-            ["Radiation", "radiation"],
-            ["Poison", "poison"],
-        ]);
-    }
-
-    const bonusPrimaryStats = getOptionalGroup(parseResult.root, "Bonus Primary Stats");
-    if (bonusPrimaryStats) {
-        sections.bonusPrimaryStats = mapGroupFields(bonusPrimaryStats, [
-            ["Strength", "strength"],
-            ["Perception", "perception"],
-            ["Endurance", "endurance"],
-            ["Charisma", "charisma"],
-            ["Intelligence", "intelligence"],
-            ["Agility", "agility"],
-            ["Luck", "luck"],
-        ]);
-    }
-
-    const bonusSecondaryStats = getOptionalGroup(parseResult.root, "Bonus Secondary Stats");
-    if (bonusSecondaryStats) {
-        sections.bonusSecondaryStats = mapGroupFields(bonusSecondaryStats, [
-            ["Hit Points", "hitPoints"],
-            ["Action Points", "actionPoints"],
-            ["Armor Class", "armorClass"],
-            ["Unarmed Damage", "unarmedDamage"],
-            ["Melee Damage", "meleeDamage"],
-            ["Carry Weight", "carryWeight"],
-            ["Sequence", "sequence"],
-            ["Healing Rate", "healingRate"],
-            ["Critical Chance", "criticalChance"],
-            ["Better Criticals", "betterCriticals"],
-        ]);
-    }
-
-    const bonusDamageThreshold = getOptionalGroup(parseResult.root, "Bonus Damage Threshold");
-    if (bonusDamageThreshold) {
-        sections.bonusDamageThreshold = mapGroupFields(bonusDamageThreshold, [
-            ["Normal", "normal"],
-            ["Laser", "laser"],
-            ["Fire", "fire"],
-            ["Plasma", "plasma"],
-            ["Electrical", "electrical"],
-            ["EMP", "emp"],
-            ["Explosive", "explosive"],
-        ]);
-    }
-
-    const bonusDamageResistance = getOptionalGroup(parseResult.root, "Bonus Damage Resistance");
-    if (bonusDamageResistance) {
-        sections.bonusDamageResistance = mapGroupFields(bonusDamageResistance, [
-            ["Normal", "normal"],
-            ["Laser", "laser"],
-            ["Fire", "fire"],
-            ["Plasma", "plasma"],
-            ["Electrical", "electrical"],
-            ["EMP", "emp"],
-            ["Explosive", "explosive"],
-            ["Radiation", "radiation"],
-            ["Poison", "poison"],
-        ]);
-    }
-
-    const skills = getOptionalGroup(parseResult.root, "Skills");
-    if (skills) {
-        sections.skills = Object.fromEntries(
-            CRITTER_SKILLS.map(([displayName, dataKey]) => [dataKey, readFieldNumber(skills, displayName, "Skills")]),
-        );
-    }
-
-    const demographics = getOptionalGroup(parseResult.root, "Demographics");
-    if (demographics) {
-        sections.demographics = {
+            ...mapGroupFromDefs(basePrimary, CRITTER_BASE_PRIMARY),
+            ...mapGroupFromDefs(baseSecondary, CRITTER_BASE_SECONDARY),
+            ...mapGroupFromDefs(baseDt, CRITTER_BASE_DT),
+            ...mapGroupFromDefs(baseDr, CRITTER_BASE_DR),
             age: readFieldNumber(demographics, "Age", "Demographics"),
             gender: readFieldNumber(demographics, "Gender", "Demographics"),
-        };
-    }
-
-    const finalProperties = getOptionalGroup(parseResult.root, "Final Properties");
-    if (finalProperties) {
-        sections.finalProperties = {
+            ...mapGroupFromDefs(bonusPrimary, CRITTER_BONUS_PRIMARY),
+            ...mapGroupFromDefs(bonusSecondary, CRITTER_BONUS_SECONDARY),
+            ...mapGroupFromDefs(bonusDt, CRITTER_BONUS_DT),
+            ...mapGroupFromDefs(bonusDr, CRITTER_BONUS_DR),
+            // No "Bonus Demographics" group exists in the display tree; the wire
+            // bytes for ageBonus/genderBonus are always written as 0 by the engine.
+            ageBonus: 0,
+            genderBonus: 0,
+            ...mapGroupFromDefs(skills, CRITTER_SKILLS),
             bodyType: readFieldNumber(finalProperties, "Body Type", "Final Properties"),
             expValue: readFieldNumber(finalProperties, "Experience Value", "Final Properties"),
             killType: readFieldNumber(finalProperties, "Kill Type", "Final Properties"),
