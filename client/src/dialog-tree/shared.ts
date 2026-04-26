@@ -42,6 +42,47 @@ function getJs(extensionPath: string): string {
 export { escapeHtml };
 
 // ---------------------------------------------------------------------------
+// Refresh-failure tracking
+// ---------------------------------------------------------------------------
+
+/**
+ * Tracks consecutive refresh failures and surfaces a user-visible error after a
+ * threshold is reached. Transient failures during typing are common (the LSP
+ * parser may be mid-update); a low-threshold escalation would spam the user
+ * while a never-surfacing one would let real breakage hide as a frozen preview.
+ *
+ * Surfaces exactly once per failure streak: after the Nth consecutive failure
+ * fires `onSurface`, further failures stay silent until a `recordSuccess`
+ * re-arms the tracker.
+ */
+interface RefreshFailureTracker {
+    recordFailure(err: unknown): void;
+    recordSuccess(): void;
+}
+
+export function createRefreshFailureTracker(options: {
+    threshold: number;
+    onSurface: (message: string) => void;
+}): RefreshFailureTracker {
+    let consecutive = 0;
+    let surfaced = false;
+    return {
+        recordFailure(err: unknown): void {
+            consecutive++;
+            if (!surfaced && consecutive >= options.threshold) {
+                surfaced = true;
+                const message = err instanceof Error ? err.message : String(err);
+                options.onSurface(message);
+            }
+        },
+        recordSuccess(): void {
+            consecutive = 0;
+            surfaced = false;
+        },
+    };
+}
+
+// ---------------------------------------------------------------------------
 // HTML assembly
 // ---------------------------------------------------------------------------
 
@@ -130,6 +171,19 @@ export function registerDialogPanel(
     let currentFilePath: string | undefined;
     let refreshTimeout: NodeJS.Timeout | undefined;
 
+    // Surface a user-visible error after several consecutive refresh failures.
+    // A single failure during typing is normal (the parser may be mid-update);
+    // sustained failures mean the preview is frozen at the last good state and
+    // the user has no other signal that something is wrong.
+    const failureTracker = createRefreshFailureTracker({
+        threshold: 3,
+        onSurface: (message) => {
+            void vscode.window.showErrorMessage(
+                `Dialog preview refresh failing for ${currentFileName ?? "dialog"}: ${message}`,
+            );
+        },
+    });
+
     async function refreshPreview() {
         if (!dialogPanel || !currentDocumentUri) return;
 
@@ -158,11 +212,13 @@ export function registerDialogPanel(
                 currentFilePath || "",
                 iconUri.toString(),
             );
+            failureTracker.recordSuccess();
         } catch (err) {
             conlog(
                 `Dialog preview refresh failed for ${currentFileName ?? "<unknown>"}: ${err instanceof Error ? err.message : String(err)}`,
                 "warn",
             );
+            failureTracker.recordFailure(err);
         }
     }
 
