@@ -16,7 +16,8 @@
         "sections": {
             "critterStats": {
                 "flagsExt": 24576,
-                "scriptId": 4294967295,
+                "scriptType": -1,
+                "scriptId": -1,
                 "headFrmId": -1,
                 "aiPacket": 14,
                 "teamNumber": 1,

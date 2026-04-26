@@ -262,18 +262,10 @@ function rebuildProCanonicalSnapshot(parseResult: ParseResult): ProCanonicalSnap
         const skills = getGroup(parseResult.root, "Skills");
         const finalProperties = getGroup(parseResult.root, "Final Properties");
 
-        const scriptType = readFieldNumber(critterProperties, "Script Type", "Critter Properties");
-        const scriptId = readFieldNumber(critterProperties, "Script ID", "Critter Properties");
-        // Re-pack the displayed Script Type (i8) + Script ID (u24) back into the
-        // wire's u32 scriptId. (-1, -1) is the canonical "no script" sentinel.
-        const packedScriptId =
-            scriptType === -1 && scriptId === -1
-                ? 0xff_ff_ff_ff
-                : ((scriptType & 0xff) << 24) | (scriptId & 0x00_ff_ff_ff);
-
         sections.critterStats = {
             flagsExt: readFieldNumber(critterProperties, "Flags Ext", "Critter Properties"),
-            scriptId: packedScriptId,
+            scriptType: readFieldNumber(critterProperties, "Script Type", "Critter Properties"),
+            scriptId: readFieldNumber(critterProperties, "Script ID", "Critter Properties"),
             headFrmId: readFieldNumber(critterProperties, "Head FRM ID", "Critter Properties"),
             aiPacket: readFieldNumber(critterProperties, "AI Packet", "Critter Properties"),
             teamNumber: readFieldNumber(critterProperties, "Team Number", "Critter Properties"),
@@ -305,10 +297,8 @@ function rebuildProCanonicalSnapshot(parseResult: ParseResult): ProCanonicalSnap
         sections.sceneryProperties = {
             wallLightFlags: readFieldNumber(sceneryProperties, "Wall Light Flags", "Scenery Properties"),
             actionFlags: readFieldNumber(sceneryProperties, "Action Flags", "Scenery Properties"),
-            script: {
-                type: readFieldNumber(sceneryProperties, "Script Type", "Scenery Properties"),
-                id: readFieldNumber(sceneryProperties, "Script ID", "Scenery Properties"),
-            },
+            scriptType: readFieldNumber(sceneryProperties, "Script Type", "Scenery Properties"),
+            scriptId: readFieldNumber(sceneryProperties, "Script ID", "Scenery Properties"),
             subType: readFieldNumber(sceneryProperties, "Sub Type", "Scenery Properties"),
             materialId: readFieldNumber(sceneryProperties, "Material", "Scenery Properties"),
             soundId: readFieldNumber(sceneryProperties, "Sound ID", "Scenery Properties"),
@@ -390,10 +380,8 @@ function rebuildProCanonicalSnapshot(parseResult: ParseResult): ProCanonicalSnap
         sections.wallProperties = {
             wallLightFlags: readFieldNumber(wallProperties, "Wall Light Flags", "Wall Properties"),
             actionFlags: readFieldNumber(wallProperties, "Action Flags", "Wall Properties"),
-            script: {
-                type: readFieldNumber(wallProperties, "Script Type", "Wall Properties"),
-                id: readFieldNumber(wallProperties, "Script ID", "Wall Properties"),
-            },
+            scriptType: readFieldNumber(wallProperties, "Script Type", "Wall Properties"),
+            scriptId: readFieldNumber(wallProperties, "Script ID", "Wall Properties"),
             materialId: readFieldNumber(wallProperties, "Material", "Wall Properties"),
         };
     }

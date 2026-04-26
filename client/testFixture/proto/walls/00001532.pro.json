@@ -17,10 +17,8 @@
             "wallProperties": {
                 "wallLightFlags": 0,
                 "actionFlags": 8192,
-                "script": {
-                    "type": -1,
-                    "id": -1
-                },
+                "scriptType": -1,
+                "scriptId": -1,
                 "materialId": 1
             }
         }

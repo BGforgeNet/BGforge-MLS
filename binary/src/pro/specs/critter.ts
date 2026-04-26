@@ -1,5 +1,6 @@
-import { u32, i32 } from "typed-binary";
-import { CritterFlags, BodyType, KillType, DamageType } from "../types";
+import { u32, i8, i32 } from "typed-binary";
+import { i24 } from "../../spec/codec-meta";
+import { CritterFlags, BodyType, KillType, DamageType, ScriptType } from "../types";
 import type { FieldSpec, SpecData } from "../../spec/types";
 
 /**
@@ -13,7 +14,8 @@ import type { FieldSpec, SpecData } from "../../spec/types";
  */
 export const critterSpec = {
     flagsExt: { codec: u32 },
-    scriptId: { codec: u32 },
+    scriptType: { codec: i8, enum: ScriptType },
+    scriptId: { codec: i24 },
     headFrmId: { codec: i32 },
     aiPacket: { codec: u32 },
     teamNumber: { codec: u32 },

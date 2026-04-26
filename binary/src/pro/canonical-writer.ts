@@ -43,13 +43,6 @@ function writer(data: Uint8Array, offset = 0): BufferWriter {
     return new BufferWriter(data.buffer, { endianness: "big", byteOffset: data.byteOffset + offset });
 }
 
-function packScriptId(script: { type: number; id: number }): number {
-    if (script.type === -1 && script.id === -1) {
-        return 0xff_ff_ff_ff;
-    }
-    return ((script.type & 0xff) << 24) | (script.id & 0x00_ff_ff_ff);
-}
-
 function packDestTileAndElevation(destTile: number, destElevation: number): number {
     return ((destElevation & 0x3f) << 26) | (destTile & 0x03_ff_ff_ff);
 }
@@ -119,14 +112,7 @@ export function serializeProCanonicalSnapshot(snapshot: ProCanonicalSnapshot): U
         }
         case 2: {
             const scenery = sections.sceneryProperties!;
-            sceneryCommonSchema.write(writer(data, HEADER_SIZE), {
-                wallLightFlags: scenery.wallLightFlags,
-                actionFlags: scenery.actionFlags,
-                scriptId: packScriptId(scenery.script),
-                subType: scenery.subType,
-                materialId: scenery.materialId,
-                soundId: scenery.soundId,
-            });
+            sceneryCommonSchema.write(writer(data, HEADER_SIZE), scenery);
             switch (scenery.subType) {
                 case 0:
                     doorSchema.write(writer(data, SCENERY_SUBTYPE_OFFSET), {
@@ -161,16 +147,9 @@ export function serializeProCanonicalSnapshot(snapshot: ProCanonicalSnapshot): U
             }
             break;
         }
-        case 3: {
-            const wall = sections.wallProperties!;
-            wallSchema.write(writer(data, HEADER_SIZE), {
-                wallLightFlags: wall.wallLightFlags,
-                actionFlags: wall.actionFlags,
-                scriptId: packScriptId(wall.script),
-                materialId: wall.materialId,
-            });
+        case 3:
+            wallSchema.write(writer(data, HEADER_SIZE), sections.wallProperties!);
             break;
-        }
         case 4:
             tileSchema.write(writer(data, HEADER_SIZE), sections.tileProperties!);
             break;

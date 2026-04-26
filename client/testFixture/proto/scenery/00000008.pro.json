@@ -17,10 +17,8 @@
             "sceneryProperties": {
                 "wallLightFlags": 32768,
                 "actionFlags": 10240,
-                "script": {
-                    "type": -1,
-                    "id": -1
-                },
+                "scriptType": -1,
+                "scriptId": -1,
                 "subType": 0,
                 "materialId": 1,
                 "soundId": 66

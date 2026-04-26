@@ -256,6 +256,7 @@ export const CritterFlags: Record<number, string> = {
 
 // Script types (upper byte of Script ID field)
 export const ScriptType: Record<number, string> = {
+    [-1]: "(none)",
     0: "System",
     1: "Spatial",
     2: "Timer",
@@ -293,10 +294,11 @@ export const MISC_SIZE = 0x1c; // 28 bytes
 
 // Critter field definitions for data-driven parsing
 // [displayName, dataKey, offset, type, group?]
-export type CritterFieldDef = [string, string, number, "int32" | "uint32" | "percent" | "script"];
+export type CritterFieldDef = [string, string, number, "int32" | "uint32" | "percent" | "scriptType" | "scriptId"];
 
 export const CRITTER_PROPERTIES: CritterFieldDef[] = [
-    ["Script ID", "scriptId", 0x1c, "script"],
+    ["Script Type", "scriptType", 0x1c, "scriptType"],
+    ["Script ID", "scriptId", 0x1d, "scriptId"],
     ["Head FRM ID", "headFrmId", 0x20, "int32"],
     ["AI Packet", "aiPacket", 0x24, "uint32"],
     ["Team Number", "teamNumber", 0x28, "uint32"],

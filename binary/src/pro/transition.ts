@@ -86,7 +86,8 @@ function buildObjectTypeTransitionBytes(currentBytes: Uint8Array, objectType: nu
         sceneryCommonSchema.write(writer(nextBytes, HEADER_SIZE), {
             wallLightFlags: 0,
             actionFlags: 0,
-            scriptId: 0xff_ff_ff_ff,
+            scriptType: -1,
+            scriptId: -1,
             subType: 0,
             materialId: 0,
             soundId: 0,

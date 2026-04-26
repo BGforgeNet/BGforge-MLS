@@ -107,13 +107,18 @@ describe("PRO parser - error cases", () => {
         expect(result.errors![0]).toContain("size");
     });
 
-    it("reports invalid enum values as errors", () => {
+    it("displays out-of-range enum values as 'Unknown (N)' without erroring", () => {
+        // Reading a structurally-sound file always surfaces a display tree;
+        // values outside an enum table render as `Unknown (N)` rather than
+        // failing parse. Schema-level rejection happens on save (see
+        // canonical-writer / zod refinement).
         const proPath = path.join(FIXTURES, "bad", "bad-material.pro");
         if (!fs.existsSync(proPath)) return;
         const data = new Uint8Array(fs.readFileSync(proPath));
         const result = proParser.parse(data);
-        expect(result.errors).toBeDefined();
-        expect(result.errors!.some((e) => e.includes("Invalid"))).toBe(true);
+        expect(result.errors).toBeUndefined();
+        const flat = JSON.stringify(result.root);
+        expect(flat).toContain("Unknown (99)");
     });
 
     it("rejects empty files", () => {

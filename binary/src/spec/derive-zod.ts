@@ -28,6 +28,19 @@ function fieldSpecToZod(fs: FieldSpec): z.ZodType<unknown> {
         }
         return z.array(inner);
     }
+    if (fs.enum) {
+        // Saved values must be a key in the enum table; permissive parsing
+        // still surfaces "Unknown (N)" in the display tree, but committing a
+        // value back to bytes is rejected here so .pro.json snapshots stay
+        // round-trippable.
+        const allowed = new Set(Object.keys(fs.enum).map(Number));
+        return z
+            .number()
+            .int()
+            .refine((v) => allowed.has(v), {
+                message: `expected one of ${[...allowed].join(", ")}`,
+            });
+    }
     let schema = zodNumericType(codecNumericTypeName(fs.codec));
     if (fs.domain) {
         schema = schema.min(fs.domain.min).max(fs.domain.max);

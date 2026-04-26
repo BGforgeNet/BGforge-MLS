@@ -4,6 +4,8 @@ import { walkStruct } from "../spec/walk-display";
 import { armorSpec, armorPresentation } from "./specs/armor";
 import { headerSpec, headerPresentation } from "./specs/header";
 import { itemCommonSpec, itemCommonPresentation } from "./specs/item-common";
+import { sceneryCommonSpec, sceneryCommonPresentation } from "./specs/scenery-common";
+import { wallSpec, wallPresentation } from "./specs/wall";
 import { weaponSpec, weaponPresentation } from "./specs/weapon";
 import { ammoSpec, ammoPresentation } from "./specs/ammo";
 import { containerSpec, containerPresentation } from "./specs/container";
@@ -20,14 +22,10 @@ import { serializePro } from "./serializer";
 import {
     type CritterFieldDef,
     ObjectType,
-    ScenerySubType,
     DamageType,
-    MaterialType,
     BodyType,
     KillType,
     ScriptType,
-    WallLightFlags,
-    ActionFlags,
     CritterFlags,
     HEADER_SIZE,
     ITEM_COMMON_SIZE,
@@ -172,31 +170,6 @@ function flagsField(
 }
 
 /**
- * Helper to parse Script field into two fields: Script Type and Script ID
- * Format: 0xAABBCCCC where AA=ScriptType, BBCCCC=ScriptID
- * Returns [-1, -1] for 0xFFFFFFFF (no script)
- */
-function scriptFields(value: number, offset: number, errors: string[]): [ParsedField, ParsedField] {
-    // -1 (0xFFFFFFFF) means no script
-    if (value === 0xff_ff_ff_ff) {
-        return [field("Script Type", -1, offset, 1, "int8"), field("Script ID", -1, offset + 1, 3, "int24")];
-    }
-
-    const scriptType = (value >> 24) & 0xff;
-    const scriptId = value & 0x00_ff_ff_ff;
-    const typeName = ScriptType[scriptType];
-
-    if (typeName === undefined) {
-        errors.push(`Invalid Script Type at offset 0x${offset.toString(16)}: ${scriptType}`);
-    }
-
-    return [
-        enumField("Script Type", scriptType, ScriptType, offset, 1, errors),
-        field("Script ID", scriptId, offset + 1, 3, "uint24"),
-    ];
-}
-
-/**
  * Helper to create a ParsedGroup
  */
 function group(
@@ -212,13 +185,16 @@ function group(
  * Generate fields from data-driven definitions
  */
 function fieldsFromDefs(defs: CritterFieldDef[], data: Record<string, number>, errors: string[]): ParsedField[] {
-    return defs.flatMap(([displayName, dataKey, offset, type]) => {
+    return defs.map(([displayName, dataKey, offset, type]) => {
         const value = data[dataKey] ?? 0;
         if (type === "percent") {
             return field(displayName, percent(value), offset, 4, "int32");
         }
-        if (type === "script") {
-            return scriptFields(value, offset, errors);
+        if (type === "scriptType") {
+            return enumField(displayName, value, ScriptType, offset, 1, errors);
+        }
+        if (type === "scriptId") {
+            return field(displayName, value, offset, 3, "int24");
         }
         return field(displayName, value, offset, 4, type);
     });
@@ -366,19 +342,10 @@ function parseCritter(data: CritterData, errors: string[]): ParsedGroup[] {
 /**
  * Parse scenery common and subtypes
  */
-function parseScenery(data: Uint8Array, scenery: SceneryCommonData, errors: string[]): ParsedGroup[] {
+function parseScenery(data: Uint8Array, scenery: SceneryCommonData, _errors: string[]): ParsedGroup[] {
     const groups: ParsedGroup[] = [];
 
-    groups.push(
-        group("Scenery Properties", [
-            flagsField("Wall Light Flags", scenery.wallLightFlags, WallLightFlags, 0x18, 2),
-            flagsField("Action Flags", scenery.actionFlags, ActionFlags, 0x1a, 2),
-            ...scriptFields(scenery.scriptId, 0x1c, errors),
-            enumField("Sub Type", scenery.subType, ScenerySubType, 0x20, 4, errors),
-            enumField("Material", scenery.materialId, MaterialType, 0x24, 4, errors),
-            field("Sound ID", scenery.soundId, 0x28, 1, "uint8"),
-        ]),
-    );
+    groups.push(walkStruct(sceneryCommonSpec, sceneryCommonPresentation, 0x18, scenery, "Scenery Properties"));
 
     switch (scenery.subType) {
         case 0: {
@@ -456,13 +423,8 @@ function parseGenericScenery(data: GenericSceneryData): ParsedGroup {
 /**
  * Parse wall data
  */
-function parseWall(data: WallData, errors: string[]): ParsedGroup {
-    return group("Wall Properties", [
-        flagsField("Wall Light Flags", data.wallLightFlags, WallLightFlags, 0x18, 2),
-        flagsField("Action Flags", data.actionFlags, ActionFlags, 0x1a, 2),
-        ...scriptFields(data.scriptId, 0x1c, errors),
-        enumField("Material", data.materialId, MaterialType, 0x20, 4, errors),
-    ]);
+function parseWall(data: WallData): ParsedGroup {
+    return walkStruct(wallSpec, wallPresentation, 0x18, data, "Wall Properties");
 }
 
 /**
@@ -648,7 +610,7 @@ class ProParser implements BinaryParser {
             case 3: {
                 // Wall
                 const wall: WallData = wallSchema.read(reader(data, HEADER_SIZE));
-                groups.push(parseWall(wall, errors));
+                groups.push(parseWall(wall));
                 break;
             }
             case 4: {

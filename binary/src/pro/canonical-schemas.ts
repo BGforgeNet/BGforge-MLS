@@ -17,18 +17,14 @@ import { itemCommonSpec } from "./specs/item-common";
 import { keySpec } from "./specs/key";
 import { miscItemSpec } from "./specs/misc-item";
 import { miscSpec } from "./specs/misc";
+import { sceneryCommonSpec } from "./specs/scenery-common";
 import { tileSpec } from "./specs/tile";
+import { wallSpec } from "./specs/wall";
 import { weaponSpec } from "./specs/weapon";
 
 const uint8Schema = zodNumericType("uint8");
-const uint16Schema = zodNumericType("uint16");
 const uint24Schema = zodNumericType("uint24");
 const uint32Schema = zodNumericType("uint32");
-
-const scriptRefSchema = z.strictObject({
-    type: z.number().int().min(-1).max(0xff),
-    id: z.number().int().min(-1).max(0x00_ff_ff_ff),
-});
 
 const proCanonicalSectionsSchema = z.strictObject({
     itemProperties: toZodSchema(itemCommonSpec).optional(),
@@ -40,16 +36,7 @@ const proCanonicalSectionsSchema = z.strictObject({
     miscItemStats: toZodSchema(miscItemSpec).optional(),
     keyStats: toZodSchema(keySpec).optional(),
     critterStats: toZodSchema(critterSpec).optional(),
-    sceneryProperties: z
-        .strictObject({
-            wallLightFlags: uint16Schema,
-            actionFlags: uint16Schema,
-            script: scriptRefSchema,
-            subType: uint32Schema,
-            materialId: uint32Schema,
-            soundId: uint8Schema,
-        })
-        .optional(),
+    sceneryProperties: toZodSchema(sceneryCommonSpec).optional(),
     doorProperties: z
         .strictObject({
             walkThrough: zodFieldNumber("pro", "pro.doorProperties.walkThrough", "uint32"),
@@ -71,14 +58,7 @@ const proCanonicalSectionsSchema = z.strictObject({
         })
         .optional(),
     genericProperties: toZodSchema(genericScenerySpec).optional(),
-    wallProperties: z
-        .strictObject({
-            wallLightFlags: uint16Schema,
-            actionFlags: uint16Schema,
-            script: scriptRefSchema,
-            materialId: uint32Schema,
-        })
-        .optional(),
+    wallProperties: toZodSchema(wallSpec).optional(),
     tileProperties: toZodSchema(tileSpec).optional(),
     miscProperties: toZodSchema(miscSpec).optional(),
 });
