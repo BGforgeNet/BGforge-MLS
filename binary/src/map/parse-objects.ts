@@ -2,10 +2,13 @@
  * Parse functions for MAP object data (base fields, critter data, exit grids, inventory).
  */
 
+import { BufferReader } from "typed-binary";
 import type { ParsedField, ParsedGroup } from "../types";
 import { MapElevation, Rotation, ObjectFlags } from "./types";
 import type { MapHeader } from "./schemas";
+import { toTypedBinarySchema } from "../spec/derive-typed-binary";
 import {
+    field,
     makeGroup,
     flagsField,
     enumField,
@@ -22,6 +25,21 @@ import {
     PID_TYPE_ITEM,
     PID_TYPE_SCENERY,
 } from "./parse-helpers";
+import { objectBaseSpec, inventoryHeaderSpec, critterDataSpec, exitGridSpec } from "./specs/object";
+
+const objectBaseCodec = toTypedBinarySchema(objectBaseSpec);
+const inventoryHeaderCodec = toTypedBinarySchema(inventoryHeaderSpec);
+const critterDataCodec = toTypedBinarySchema(critterDataSpec);
+const exitGridCodec = toTypedBinarySchema(exitGridSpec);
+
+function readSpec<T>(
+    codec: { read(input: import("typed-binary").ISerialInput): T },
+    data: Uint8Array,
+    offset: number,
+): T {
+    const reader = new BufferReader(data.buffer, { endianness: "big", byteOffset: data.byteOffset + offset });
+    return codec.read(reader);
+}
 
 type ParsedObjectResult = {
     complete: boolean;
@@ -30,89 +48,54 @@ type ParsedObjectResult = {
 };
 
 function parseObjectBaseFields(data: Uint8Array, offset: number): { fields: ParsedField[]; pid: number } {
-    const pidFieldOffset = offset + 44;
-    const pidView = new DataView(data.buffer, data.byteOffset + pidFieldOffset, 4);
-    const pid = pidView.getInt32(0, false);
-
-    const fields = [
-        int32Field("ID", data, offset + 0),
-        int32Field("Tile", data, offset + 4),
-        int32Field("X", data, offset + 8),
-        int32Field("Y", data, offset + 12),
-        int32Field("Screen X", data, offset + 16),
-        int32Field("Screen Y", data, offset + 20),
-        int32Field("Frame", data, offset + 24),
-        enumField(
-            "Rotation",
-            new DataView(data.buffer, data.byteOffset + offset + 28, 4).getInt32(0, false),
-            Rotation,
-            offset + 28,
-            4,
-        ),
-        uint32Field("FID", data, offset + 32),
-        flagsField(
-            "Flags",
-            new DataView(data.buffer, data.byteOffset + offset + 36, 4).getInt32(0, false),
-            ObjectFlags,
-            offset + 36,
-            4,
-        ),
-        enumField(
-            "Elevation",
-            new DataView(data.buffer, data.byteOffset + offset + 40, 4).getInt32(0, false),
-            MapElevation,
-            offset + 40,
-            4,
-        ),
-        { name: "PID", value: pid, offset: pidFieldOffset, size: 4, type: "int32" as const },
-        int32Field("CID", data, offset + 48),
-        int32Field("Light Distance", data, offset + 52),
-        int32Field("Light Intensity", data, offset + 56),
-        int32Field("Field 74", data, offset + 60),
-        int32Field("SID", data, offset + 64),
-        int32Field("Script Index", data, offset + 68),
+    const obj = readSpec(objectBaseCodec, data, offset);
+    const fields: ParsedField[] = [
+        field("ID", obj.id, offset + 0, 4, "int32"),
+        field("Tile", obj.tile, offset + 4, 4, "int32"),
+        field("X", obj.x, offset + 8, 4, "int32"),
+        field("Y", obj.y, offset + 12, 4, "int32"),
+        field("Screen X", obj.screenX, offset + 16, 4, "int32"),
+        field("Screen Y", obj.screenY, offset + 20, 4, "int32"),
+        field("Frame", obj.frame, offset + 24, 4, "int32"),
+        enumField("Rotation", obj.rotation, Rotation, offset + 28, 4),
+        field("FID", obj.fid, offset + 32, 4, "uint32"),
+        flagsField("Flags", obj.flags, ObjectFlags, offset + 36, 4),
+        enumField("Elevation", obj.elevation, MapElevation, offset + 40, 4),
+        field("PID", obj.pid, offset + 44, 4, "int32"),
+        field("CID", obj.cid, offset + 48, 4, "int32"),
+        field("Light Distance", obj.lightDistance, offset + 52, 4, "int32"),
+        field("Light Intensity", obj.lightIntensity, offset + 56, 4, "int32"),
+        field("Field 74", obj.field74, offset + 60, 4, "int32"),
+        field("SID", obj.sid, offset + 64, 4, "int32"),
+        field("Script Index", obj.scriptIndex, offset + 68, 4, "int32"),
     ];
-
-    return {
-        fields,
-        pid,
-    };
+    return { fields, pid: obj.pid };
 }
 
 function parseCritterDataFields(data: Uint8Array, offset: number): ParsedField[] {
+    const c = readSpec(critterDataCodec, data, offset);
     return [
-        int32Field("Reaction", data, offset + 0),
-        int32Field("Damage Last Turn", data, offset + 4),
-        int32Field("Combat Maneuver", data, offset + 8),
-        int32Field("Current AP", data, offset + 12),
-        int32Field("Combat Results", data, offset + 16),
-        int32Field("AI Packet", data, offset + 20),
-        int32Field("Team", data, offset + 24),
-        int32Field("Who Hit Me CID", data, offset + 28),
-        int32Field("Current HP", data, offset + 32),
-        int32Field("Radiation", data, offset + 36),
-        int32Field("Poison", data, offset + 40),
+        field("Reaction", c.reaction, offset + 0, 4, "int32"),
+        field("Damage Last Turn", c.damageLastTurn, offset + 4, 4, "int32"),
+        field("Combat Maneuver", c.combatManeuver, offset + 8, 4, "int32"),
+        field("Current AP", c.currentAp, offset + 12, 4, "int32"),
+        field("Combat Results", c.combatResults, offset + 16, 4, "int32"),
+        field("AI Packet", c.aiPacket, offset + 20, 4, "int32"),
+        field("Team", c.team, offset + 24, 4, "int32"),
+        field("Who Hit Me CID", c.whoHitMeCid, offset + 28, 4, "int32"),
+        field("Current HP", c.currentHp, offset + 32, 4, "int32"),
+        field("Radiation", c.radiation, offset + 36, 4, "int32"),
+        field("Poison", c.poison, offset + 40, 4, "int32"),
     ];
 }
 
 function parseExitGridFields(data: Uint8Array, offset: number): ParsedField[] {
+    const e = readSpec(exitGridCodec, data, offset);
     return [
-        int32Field("Destination Map", data, offset + 0),
-        int32Field("Destination Tile", data, offset + 4),
-        enumField(
-            "Destination Elevation",
-            new DataView(data.buffer, data.byteOffset + offset + 8, 4).getInt32(0, false),
-            MapElevation,
-            offset + 8,
-            4,
-        ),
-        enumField(
-            "Destination Rotation",
-            new DataView(data.buffer, data.byteOffset + offset + 12, 4).getInt32(0, false),
-            Rotation,
-            offset + 12,
-            4,
-        ),
+        field("Destination Map", e.destinationMap, offset + 0, 4, "int32"),
+        field("Destination Tile", e.destinationTile, offset + 4, 4, "int32"),
+        enumField("Destination Elevation", e.destinationElevation, MapElevation, offset + 8, 4),
+        enumField("Destination Rotation", e.destinationRotation, Rotation, offset + 12, 4),
     ];
 }
 
@@ -138,14 +121,15 @@ function parseObjectAt(
     const pidType = (pid >>> 24) & 0xff;
     let currentOffset = offset + MAP_OBJECT_BASE_SIZE;
 
-    const inventoryLength = int32Field("Inventory Length", data, currentOffset);
-    const inventoryCapacity = int32Field("Inventory Capacity", data, currentOffset + 4);
-    const inventoryPointer = int32Field("Inventory Pointer", data, currentOffset + 8);
+    const inv = readSpec(inventoryHeaderCodec, data, currentOffset);
+    const inventoryLengthField = field("Inventory Length", inv.inventoryLength, currentOffset, 4, "int32");
+    const inventoryCapacityField = field("Inventory Capacity", inv.inventoryCapacity, currentOffset + 4, 4, "int32");
+    const inventoryPointerField = field("Inventory Pointer", inv.inventoryPointer, currentOffset + 8, 4, "int32");
     currentOffset += MAP_OBJECT_DATA_HEADER_SIZE;
 
     const objectFields: (ParsedField | ParsedGroup)[] = [
         ...baseFields,
-        makeGroup("Inventory Header", [inventoryLength, inventoryCapacity, inventoryPointer]),
+        makeGroup("Inventory Header", [inventoryLengthField, inventoryCapacityField, inventoryPointerField]),
     ];
 
     if (pidType === PID_TYPE_CRITTER) {
@@ -205,7 +189,7 @@ function parseObjectAt(
     }
 
     const inventoryGroups: ParsedGroup[] = [];
-    for (let inventoryIndex = 0; inventoryIndex < Number(inventoryLength.value); inventoryIndex++) {
+    for (let inventoryIndex = 0; inventoryIndex < inv.inventoryLength; inventoryIndex++) {
         if (currentOffset + 4 > data.length) {
             errors.push(
                 `Inventory entry ${index}.${inventoryIndex} quantity truncated at offset 0x${currentOffset.toString(16)}`,
