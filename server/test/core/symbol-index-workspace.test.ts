@@ -26,7 +26,7 @@ function createSymbol(
     overrides?: Partial<{
         kind: SymbolKind;
         sourceType: SourceType;
-        uri: string;
+        uri: string | null;
         scopeLevel: ScopeLevel;
         displayPath: string;
     }>,
@@ -75,9 +75,7 @@ describe("Symbols — workspace symbol search", () => {
                 createSymbol("header_proc", { sourceType: SourceType.Workspace, uri: URI_HEADER }),
             ]);
             index.updateFile(normalizeUri(URI_A), [createSymbol("doc_proc", { sourceType: SourceType.Document })]);
-            index.loadStatic([
-                createSymbol("builtin_func", { sourceType: SourceType.Static, uri: null as unknown as string }),
-            ]);
+            index.loadStatic([createSymbol("builtin_func", { sourceType: SourceType.Static, uri: null })]);
 
             const results = index.query({});
             expect(results.find((s) => s.name === "header_proc")).toBeDefined();
@@ -168,9 +166,7 @@ describe("Symbols — workspace symbol search", () => {
         });
 
         it("should exclude static symbols", () => {
-            index.loadStatic([
-                createSymbol("builtin", { sourceType: SourceType.Static, uri: null as unknown as string }),
-            ]);
+            index.loadStatic([createSymbol("builtin", { sourceType: SourceType.Static, uri: null })]);
 
             const results = index.searchWorkspaceSymbols("builtin");
             expect(results).toHaveLength(0);

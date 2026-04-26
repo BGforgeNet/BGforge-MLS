@@ -89,6 +89,10 @@ const tssl = createTranspiler<string, TranspileBatchState | undefined>({
         conlog(`Extracted JSDoc for ${ctx.functionJsDocs.size} functions from main file`);
 
         const preserveFunctions = extractPreserveFunctions(text);
+        // Dead-code-prevention shim appended to the bundle so esbuild keeps the named
+        // functions reachable. The body never runs (`globalThis.__preserve__` is never
+        // set); the `as any` keeps the snippet valid as TS so esbuild parses it without
+        // requiring an ambient declaration for the synthetic global.
         const preserveCode = `\n// Preserve functions\nif ((globalThis as any).__preserve__) { console.log(${preserveFunctions.join(", ")}); }`;
 
         const bundleResult = await bundleWithEsbuild({

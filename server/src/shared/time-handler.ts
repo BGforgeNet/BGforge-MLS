@@ -52,6 +52,10 @@ export function timeHandler<TArgs extends unknown[], TReturn>(
 
         // If the result is a Promise, attach timing to its settlement.
         if (result instanceof Promise) {
+            // `result instanceof Promise` only narrows to Promise<unknown>; the
+            // attached `.then(...)` chain is typed Promise<unknown>. We are in the
+            // branch where TReturn itself is a Promise, so re-asserting back to
+            // TReturn restores the caller-visible signature.
             return result.then(
                 (value) => {
                     const elapsed = Math.round(performance.now() - start);
