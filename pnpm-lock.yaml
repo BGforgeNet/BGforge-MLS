@@ -50,8 +50,8 @@ importers:
         specifier: ^0.28.0
         version: 0.28.0
       knip:
-        specifier: ^6.6.3
-        version: 6.6.3(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
+        specifier: ^6.7.0
+        version: 6.7.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
       mocha:
         specifier: ^11.7.5
         version: 11.7.5
@@ -2939,8 +2939,8 @@ packages:
   keytar@7.9.0:
     resolution: {integrity: sha512-VPD8mtVtm5JNtA2AErl6Chp06JBfy7diFQ7TQQhdpWOl6MrCRB+eRbvAZUsbGQS9kiMq0coJsy0W0vHpDCkWsQ==}
 
-  knip@6.6.3:
-    resolution: {integrity: sha512-7HSf5bLx6r66+sjXwSvSiDEE9RjRzHuAkrEFLE6XXHqaPDY97tdzNvyRVF9DeusbiV72kStAFiNnhj72rxJNGQ==}
+  knip@6.7.0:
+    resolution: {integrity: sha512-ckL51NDH1YJxnv1kNB0iUdDngB4f/e9Igz8uIqYfmNDoyOFmmk1V0WFv3LQ7/hzC63b2Z9X41gGUE9eOWrZpaA==}
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
 
@@ -6760,7 +6760,7 @@ snapshots:
       prebuild-install: 7.1.3
     optional: true
 
-  knip@6.6.3(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0):
+  knip@6.7.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0):
     dependencies:
       fdir: 6.5.0(picomatch@4.0.4)
       formatly: 0.3.0
