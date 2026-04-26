@@ -33,6 +33,11 @@ interface FormatContext {
     lineLimit: number;
 }
 
+// Module-level mutable state. The SSL formatter is split across three files
+// (core.ts, control-flow.ts, expressions.ts); shared access via `getCtx()` avoids
+// threading a `FormatContext` argument through every formatter signature in the
+// split. Safe because Node is single-threaded and each `formatDocument()` call
+// resets this synchronously before any formatter reads it.
 let ctx: FormatContext = {
     indent: "    ",
     lineLimit: 120,

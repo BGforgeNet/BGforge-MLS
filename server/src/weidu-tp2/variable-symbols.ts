@@ -23,7 +23,13 @@ import type { Symbols } from "../core/symbol-index";
 // Constants
 // ============================================
 
-/** Node types for variable assignments. */
+/**
+ * Node types for variable assignments at any scope.
+ *
+ * Broader than `VARIABLE_TYPES` in `weidu-tp2/header-parser.ts`: this set covers
+ * every write site (parameter decls, loop variables, array definitions,
+ * `READ_2DA_*` reads), where header-parser only tracks file-scope decls.
+ */
 export const VARIABLE_DECL_TYPES: ReadonlySet<SyntaxType> = new Set([
     SyntaxType.ActionOuterSet,
     SyntaxType.ActionOuterTextSprint,

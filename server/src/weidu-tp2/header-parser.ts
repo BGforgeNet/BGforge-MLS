@@ -69,7 +69,14 @@ const FUNCTION_DEF_TYPES = new Set([
     SyntaxType.ActionDefinePatchMacro,
 ]);
 
-/** Node types for variable declarations (file-scope, outside function/macro bodies). */
+/**
+ * Node types for variable declarations (file-scope, outside function/macro bodies).
+ *
+ * Narrower than `VARIABLE_DECL_TYPES` in `weidu-tp2/variable-symbols.ts`: this set
+ * tracks file-scope decls only and intentionally omits loop variables, parameter
+ * declarations, array definitions, and `READ_2DA_*` reads — those are valid only
+ * inside function/macro bodies.
+ */
 const VARIABLE_TYPES = new Set([
     SyntaxType.ActionOuterSet,
     SyntaxType.ActionOuterSprint,
