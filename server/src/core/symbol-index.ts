@@ -295,10 +295,14 @@ export class Symbols {
     /**
      * Query symbols with optional filters.
      *
-     * TODO: Results are returned in Map insertion order, which can change when files
-     * are reloaded. This affects completion list ordering but is low-impact since IDEs
-     * sort/filter results anyway. Adding deterministic sorting would hurt performance.
-     * See compareScopePrecedence() for how lookup() handles this via URI tiebreaker.
+     * Result ordering reflects the underlying `Map` insertion order (file load
+     * order). This is intentionally not stabilised here: the LSP client already
+     * sorts and filters completion results before display, so the ordering this
+     * method returns is observable only to internal callers that aggregate then
+     * re-sort, and a per-call `sort()` over the hot completion path would cost
+     * more than it would surface. `lookup()` (which IS user-visible per match)
+     * applies a deterministic scope-precedence + URI tiebreaker via
+     * {@link compareScopePrecedence} for that reason.
      */
     query(options: QueryOptions): readonly IndexedSymbol[] {
         let results: IndexedSymbol[];
@@ -352,9 +356,12 @@ export class Symbols {
      *
      * For function/loop scope, caller must provide containerName in context.
      *
-     * TODO: When multiple headers define the same symbol, which one is returned
-     * depends on Map iteration order (file load order). See query() TODO for details.
-     * Currently not called by any provider - they use query() + local merge instead.
+     * Reserved API: no production caller uses this path today (providers call
+     * {@link query} and merge locally instead). When the first redefinition-
+     * sensitive caller lands, that caller must apply its own deterministic
+     * tiebreaker — `getVisibleSymbols` follows {@link query}'s file-load-order
+     * convention rather than imposing one here, since the right tiebreaker
+     * depends on the caller's policy (header-precedence, last-loaded-wins, etc.).
      */
     getVisibleSymbols(uri: NormalizedUri, context?: QueryContext): readonly IndexedSymbol[] {
         const results: IndexedSymbol[] = [];
