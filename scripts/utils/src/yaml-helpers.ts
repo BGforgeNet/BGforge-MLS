@@ -5,7 +5,15 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { type Document, type Scalar, isScalar, Scalar as ScalarClass } from "yaml";
+import YAML, {
+    type Document,
+    type DocumentOptions,
+    type ParseOptions,
+    type Scalar,
+    type SchemaOptions,
+    isScalar,
+    Scalar as ScalarClass,
+} from "yaml";
 
 /** A highlight pattern entry for tmLanguage YAML. */
 export interface HighlightPattern {
@@ -91,6 +99,26 @@ export function findFiles(
 
     walk(dirPath);
     return results;
+}
+
+/**
+ * Parses a YAML document and rejects duplicate map keys (and any other
+ * structural error) by throwing. The default `parseDocument` records errors
+ * on `doc.errors` but still yields a deduplicated document, so editing
+ * pipelines that read → mutate → serialise would silently drop one of the
+ * duplicate entries on the next write. Use this whenever the parsed YAML
+ * is going to be edited and re-emitted, or whenever a duplicate key would
+ * indicate a data-source mistake (typo, copy-paste).
+ */
+export function parseYamlDocStrict(
+    source: string,
+    options?: ParseOptions & DocumentOptions & SchemaOptions,
+): Document.Parsed {
+    const doc = YAML.parseDocument(source, options);
+    if (doc.errors.length > 0) {
+        throw new Error(doc.errors[0]!.message);
+    }
+    return doc;
 }
 
 /**

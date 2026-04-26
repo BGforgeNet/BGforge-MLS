@@ -14,7 +14,7 @@ import { parseArgs } from "node:util";
 import YAML, { type Document } from "yaml";
 import { HIGHLIGHT_STANZAS } from "../../fallout-update/src/fallout/types.ts";
 import { updateHighlightStanza } from "./update-tp2-highlight.ts";
-import { type HighlightPattern, YAML_DUMP_OPTIONS, cmpStr } from "./yaml-helpers.ts";
+import { type HighlightPattern, YAML_DUMP_OPTIONS, cmpStr, parseYamlDocStrict } from "./yaml-helpers.ts";
 
 interface SfallYaml {
     sfall_functions?: { items?: Array<{ name: string }> };
@@ -60,7 +60,7 @@ function main(): void {
     const sourceFile = path.basename(yamlPath);
 
     const content = fs.readFileSync(highlightPath, "utf8");
-    const doc = YAML.parseDocument(content) as Document;
+    const doc = parseYamlDocStrict(content) as Document;
     updateHighlightStanza(doc, HIGHLIGHT_STANZAS.sfallFunctions, sfallPatterns, sourceFile);
     updateHighlightStanza(doc, HIGHLIGHT_STANZAS.hooks, hookPatterns, sourceFile);
     fs.writeFileSync(highlightPath, doc.toString(YAML_DUMP_OPTIONS), "utf8");

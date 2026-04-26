@@ -11,10 +11,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
-import YAML, { type Document } from "yaml";
+import { type Document } from "yaml";
 import { loadData } from "./generate-data.ts";
 import { buildHighlightPatterns, updateHighlightStanza } from "./update-tp2-highlight.ts";
-import { YAML_DUMP_OPTIONS } from "./yaml-helpers.ts";
+import { YAML_DUMP_OPTIONS, parseYamlDocStrict } from "./yaml-helpers.ts";
 
 /** Stanzas whose name in the data YAML matches the tmLanguage repository key. */
 const STANZAS: readonly string[] = ["actions", "triggers"];
@@ -22,7 +22,7 @@ const STANZAS: readonly string[] = ["actions", "triggers"];
 export function updateBafHighlight(yamlPath: string, highlightPath: string): void {
     const data = loadData([yamlPath]);
     const content = fs.readFileSync(highlightPath, "utf8");
-    const doc = YAML.parseDocument(content) as Document;
+    const doc = parseYamlDocStrict(content) as Document;
 
     const sourceFile = path.basename(yamlPath);
     for (const stanza of STANZAS) {

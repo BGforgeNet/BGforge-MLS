@@ -9,8 +9,15 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import YAML, { Document, YAMLMap, YAMLSeq, isMap, isScalar } from "yaml";
-import { cmpStr, findFiles, litscal, makeBlockScalar, YAML_DUMP_OPTIONS } from "../../../utils/src/yaml-helpers.ts";
+import { Document, YAMLMap, YAMLSeq, isMap, isScalar } from "yaml";
+import {
+    cmpStr,
+    findFiles,
+    litscal,
+    makeBlockScalar,
+    parseYamlDocStrict,
+    YAML_DUMP_OPTIONS,
+} from "../../../utils/src/yaml-helpers.ts";
 import { type CompletionItem, type IEData, COMPLETION_TYPE_CONSTANT } from "./types.ts";
 
 export { cmpStr, findFiles, litscal };
@@ -164,7 +171,7 @@ export function checkCompletion(doc: Document): void {
  */
 export function dumpHighlight(fpath: string, iedata: IEData): void {
     const content = fs.readFileSync(fpath, "utf8");
-    const doc = YAML.parseDocument(content);
+    const doc = parseYamlDocStrict(content);
 
     const repository = doc.getIn(["repository"], true);
     if (!isMap(repository)) {

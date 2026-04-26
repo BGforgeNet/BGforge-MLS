@@ -6,7 +6,14 @@ import fs from "node:fs";
 import path from "node:path";
 import { Document, isScalar, Scalar } from "yaml";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { cmpStr, findFiles, litscal, makeBlockScalar, YAML_DUMP_OPTIONS } from "../src/yaml-helpers.ts";
+import {
+    cmpStr,
+    findFiles,
+    litscal,
+    makeBlockScalar,
+    parseYamlDocStrict,
+    YAML_DUMP_OPTIONS,
+} from "../src/yaml-helpers.ts";
 
 const TMP_BASE = "tmp";
 beforeAll(() => fs.mkdirSync(TMP_BASE, { recursive: true }));
@@ -106,5 +113,25 @@ describe("YAML_DUMP_OPTIONS", () => {
         expect(YAML_DUMP_OPTIONS.lineWidth).toBe(4096);
         expect(YAML_DUMP_OPTIONS.indent).toBe(2);
         expect(YAML_DUMP_OPTIONS.indentSeq).toBe(true);
+    });
+});
+
+describe("parseYamlDocStrict", () => {
+    it("throws on duplicate map keys", () => {
+        expect(() => parseYamlDocStrict("a: 1\na: 2\n")).toThrow(/unique/i);
+    });
+
+    it("returns a Document on valid input", () => {
+        const doc = parseYamlDocStrict("a: 1\nb: 2\n");
+        expect(doc.toJS()).toEqual({ a: 1, b: 2 });
+    });
+
+    it("forwards parse options", () => {
+        const doc = parseYamlDocStrict("a: 1\n", { keepSourceTokens: true });
+        expect(doc.toJS()).toEqual({ a: 1 });
+    });
+
+    it("throws on other parse errors", () => {
+        expect(() => parseYamlDocStrict("a: [unclosed\n")).toThrow();
     });
 });

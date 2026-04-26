@@ -8,6 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import YAML, { isMap } from "yaml";
+import { parseYamlDocStrict } from "../../utils/src/yaml-helpers.ts";
 import {
     type ActionItem,
     type CompletionItem,
@@ -101,7 +102,7 @@ function buildActionsCompletion(
  * Writes BAF completion data to YAML file.
  */
 function writeActionsCompletion(dataBaf: string, items: readonly CompletionItem[]): void {
-    const bafDataDoc = YAML.parseDocument(fs.readFileSync(dataBaf, "utf8"));
+    const bafDataDoc = parseYamlDocStrict(fs.readFileSync(dataBaf, "utf8"));
     const actionsNode = bafDataDoc.get(ACTIONS_STANZA, true);
     if (!isMap(actionsNode)) {
         throw new Error(`Expected '${ACTIONS_STANZA}' map in ${dataBaf}`);
@@ -115,7 +116,7 @@ function writeActionsCompletion(dataBaf: string, items: readonly CompletionItem[
  * Writes BAF trigger completion data to YAML file.
  */
 function writeTriggersCompletion(dataBaf: string, items: readonly CompletionItem[]): void {
-    const bafDataDoc = YAML.parseDocument(fs.readFileSync(dataBaf, "utf8"));
+    const bafDataDoc = parseYamlDocStrict(fs.readFileSync(dataBaf, "utf8"));
     let triggersNode = bafDataDoc.get(TRIGGERS_STANZA, true);
     if (!isMap(triggersNode)) {
         triggersNode = bafDataDoc.createNode({ type: 3, items: [] });

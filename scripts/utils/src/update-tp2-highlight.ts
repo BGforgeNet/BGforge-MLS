@@ -15,9 +15,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
-import YAML, { type Document, isMap, isScalar, isSeq } from "yaml";
+import { type Document, isMap, isScalar, isSeq } from "yaml";
 import { type DataFile, loadData } from "./generate-data.ts";
-import { type HighlightPattern, cmpStr, YAML_DUMP_OPTIONS } from "./yaml-helpers.ts";
+import { type HighlightPattern, cmpStr, YAML_DUMP_OPTIONS, parseYamlDocStrict } from "./yaml-helpers.ts";
 
 export type { HighlightPattern };
 
@@ -195,8 +195,7 @@ export function buildVarsPatterns(data: DataFile): readonly HighlightPattern[] {
 export function updateTp2Highlight(yamlPath: string, highlightPath: string): void {
     const data = loadData([yamlPath]);
     const content = fs.readFileSync(highlightPath, "utf8");
-    // Cast to Document to avoid ParsedNode generic constraints on set()
-    const doc = YAML.parseDocument(content) as Document;
+    const doc = parseYamlDocStrict(content) as Document;
 
     const sourceFile = path.basename(yamlPath);
     for (const [stanzaName, config] of STANZA_MAP) {

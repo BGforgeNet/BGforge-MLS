@@ -7,8 +7,8 @@
  */
 
 import fs from "node:fs";
-import YAML, { Document, YAMLMap, YAMLSeq, isMap } from "yaml";
-import { makeBlockScalar, YAML_DUMP_OPTIONS } from "../../../utils/src/yaml-helpers.ts";
+import { Document, YAMLMap, YAMLSeq, isMap } from "yaml";
+import { makeBlockScalar, parseYamlDocStrict, YAML_DUMP_OPTIONS } from "../../../utils/src/yaml-helpers.ts";
 import {
     type FalloutCompletionItem,
     COMPLETION_TYPE_CONSTANT,
@@ -57,8 +57,7 @@ export function dumpFalloutCompletion(
     sfallHooks: readonly FalloutCompletionItem[],
 ): void {
     const content = fs.readFileSync(fpath, "utf8");
-    // Cast to Document to avoid ParsedNode generic constraints on set()
-    const doc = YAML.parseDocument(content) as Document;
+    const doc = parseYamlDocStrict(content) as Document;
 
     const contents = doc.contents;
     if (!isMap(contents)) {

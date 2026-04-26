@@ -11,12 +11,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
-import YAML, { type Document } from "yaml";
+import { type Document } from "yaml";
 import { HIGHLIGHT_STANZAS } from "../../fallout-update/src/fallout/types.ts";
 import { FALLOUT_SSL_BUILTIN_FUNCTION_STANZAS } from "../../../shared/stanza-names.ts";
 import { loadData } from "./generate-data.ts";
 import { updateHighlightStanza } from "./update-tp2-highlight.ts";
-import { type HighlightPattern, YAML_DUMP_OPTIONS, cmpStr } from "./yaml-helpers.ts";
+import { type HighlightPattern, YAML_DUMP_OPTIONS, cmpStr, parseYamlDocStrict } from "./yaml-helpers.ts";
 
 export function buildFalloutBaseFunctionPatterns(yamlPath: string): readonly HighlightPattern[] {
     const data = loadData([yamlPath]);
@@ -57,7 +57,7 @@ function main(): void {
 
     const basePatterns = buildFalloutBaseFunctionPatterns(yamlPath);
     const content = fs.readFileSync(highlightPath, "utf8");
-    const doc = YAML.parseDocument(content) as Document;
+    const doc = parseYamlDocStrict(content) as Document;
     const sourceFile = path.basename(yamlPath);
     updateHighlightStanza(doc, HIGHLIGHT_STANZAS.falloutBaseFunctions, basePatterns, sourceFile);
     fs.writeFileSync(highlightPath, doc.toString(YAML_DUMP_OPTIONS), "utf8");

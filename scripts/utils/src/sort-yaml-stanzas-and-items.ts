@@ -10,7 +10,7 @@
 import fs from "node:fs";
 import { parseArgs } from "node:util";
 import YAML, { isMap, isScalar, isSeq } from "yaml";
-import { cmpStr } from "./yaml-helpers.ts";
+import { cmpStr, parseYamlDocStrict } from "./yaml-helpers.ts";
 
 interface SourceTokenLike {
     readonly offset: number;
@@ -261,10 +261,7 @@ function sortSequenceItemsInSource(
 }
 
 export function sortYamlSequenceByPath(source: string, path: readonly string[], sortKey: string): string {
-    const doc = YAML.parseDocument(source, { keepSourceTokens: true });
-    if (doc.errors.length > 0) {
-        throw new Error(doc.errors[0]!.message);
-    }
+    const doc = parseYamlDocStrict(source, { keepSourceTokens: true });
     if (!isMap(doc.contents)) {
         throw new Error("Expected top-level YAML document to be a mapping");
     }
@@ -312,10 +309,7 @@ export function sortSequenceInAllMapEntries(
     sequenceKey: string,
     sortKey: string,
 ): string {
-    const doc = YAML.parseDocument(source, { keepSourceTokens: true });
-    if (doc.errors.length > 0) {
-        throw new Error(doc.errors[0]!.message);
-    }
+    const doc = parseYamlDocStrict(source, { keepSourceTokens: true });
     if (!isMap(doc.contents)) {
         throw new Error("Expected top-level YAML document to be a mapping");
     }
@@ -341,10 +335,7 @@ export function sortSequenceInAllMapEntries(
 }
 
 export function sortYamlStanzasAndItems(source: string): string {
-    const doc = YAML.parseDocument(source, { keepSourceTokens: true });
-    if (doc.errors.length > 0) {
-        throw new Error(doc.errors[0]!.message);
-    }
+    const doc = parseYamlDocStrict(source, { keepSourceTokens: true });
     if (!isMap(doc.contents)) {
         throw new Error("Expected top-level YAML document to be a mapping");
     }
