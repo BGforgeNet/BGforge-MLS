@@ -690,7 +690,7 @@ Unit coverage measures every source file the tests actually import, with two exc
 - `src/**/format/**/*.ts` — tree-sitter format sub-modules that operate on parsed AST nodes. Exercised by grammar-corpus tests (`grammars/*/test/corpus`), not unit tests. Top-level format orchestrators (`infinity-2da/format.ts`, `weidu-tra/format.ts`, `fallout-msg/format.ts`) remain unit-tested and measured.
 - `src/fallout-ssl/provider.ts`, `src/weidu-tp2/provider.ts` — LSP dispatcher glue whose methods delegate to unit-tested sub-modules. End-to-end behaviour is verified by `test/integration/` against real mod files.
 
-Thresholds: 90% lines, 80% branches, 90% functions, 90% statements — enforced by `pnpm exec vitest run --coverage`.
+Thresholds: 90% lines, 80% branches, 90% functions, 90% statements — enforced by `pnpm exec vitest run --coverage`. Branches are held to 80% (vs 90% on the other metrics) because tree-sitter happy-path traversals dominate over error-recovery branches in the surface area; demanding 90% branch coverage would force tests for parser failure modes that are already exercised end-to-end by the integration suite.
 
 ## Adding a New Provider
 
