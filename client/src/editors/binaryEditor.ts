@@ -38,7 +38,13 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
 
     /** Per-document disposables, cleaned up when document is disposed */
     private readonly documentSubscriptions = new Map<BinaryDocument, vscode.Disposable[]>();
-    private readonly treeStates = new Map<BinaryDocument, BinaryEditorTreeState>();
+    /**
+     * Per-panel tree state. Keyed by `WebviewPanel` rather than by `BinaryDocument`
+     * because `supportsMultipleEditorsPerDocument: true` permits two panels to view
+     * the same document — keying by document would cause the second panel's
+     * lazy-expand state to overwrite the first's.
+     */
+    private readonly treeStates = new Map<vscode.WebviewPanel, BinaryEditorTreeState>();
 
     private readonly _onDidChangeCustomDocument = new vscode.EventEmitter<
         vscode.CustomDocumentEditEvent<BinaryDocument>
@@ -68,7 +74,9 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
         // Forward document edit events to VSCode for dirty tracking and undo/redo
         subscriptions.push(doc.onDidChange((e) => this._onDidChangeCustomDocument.fire(e)));
 
-        // Clean up subscriptions when document is disposed
+        // Clean up subscriptions when document is disposed.
+        // Per-panel treeStates entries are removed by each panel's onDidDispose;
+        // by the time the document disposes, all its panels are already gone.
         subscriptions.push(
             doc.onDidDispose(() => {
                 const subs = this.documentSubscriptions.get(doc);
@@ -76,7 +84,6 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
                     for (const sub of subs) sub.dispose();
                     this.documentSubscriptions.delete(doc);
                 }
-                this.treeStates.delete(doc);
             }),
         );
 
@@ -101,6 +108,11 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
         // Set the initial HTML shell
         webviewPanel.webview.html = this.getHtmlShell(document);
 
+        // Per-panel disposables. Pushed onto onDidDispose so that closing one
+        // panel for a document does not leak the document.onDidChangeContent
+        // listener that the closed panel registered.
+        const panelSubscriptions: vscode.Disposable[] = [];
+
         // Handle messages from webview.
         //
         // The `msg` is type-asserted, not runtime-discriminated. VSCode's
@@ -110,49 +122,58 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
         // discriminated-union guard would only catch bugs in our own webview
         // code — not a trust-boundary concern — and is intentionally omitted to
         // keep the dispatcher legible.
-        webviewPanel.webview.onDidReceiveMessage((msg: WebviewToExtension) => {
-            switch (msg.type) {
-                case "ready":
-                    this.sendInit(webviewPanel.webview, document);
-                    break;
-                case "getChildren":
-                    this.sendChildren(webviewPanel.webview, document, msg.nodeId);
-                    break;
-                case "edit":
-                    void this.handleEdit(
-                        webviewPanel.webview,
-                        document,
-                        msg.fieldId,
-                        msg.fieldPath,
-                        msg.value,
-                        refreshGate,
-                        localEditTracker,
-                    );
-                    break;
-                case "dumpJson":
-                    void this.handleDumpJson(document);
-                    break;
-                case "loadJson":
-                    void this.handleLoadJson(document);
-                    break;
-                case "runtimeError":
-                    surfaceWebviewRuntimeError({
-                        label: "Binary editor",
-                        userFacingFile: path.basename(document.uri.fsPath),
-                        message: msg.message,
-                        stack: msg.stack,
-                    });
-                    break;
-            }
-        });
+        panelSubscriptions.push(
+            webviewPanel.webview.onDidReceiveMessage((msg: WebviewToExtension) => {
+                switch (msg.type) {
+                    case "ready":
+                        this.sendInit(webviewPanel, document);
+                        break;
+                    case "getChildren":
+                        this.sendChildren(webviewPanel, document, msg.nodeId);
+                        break;
+                    case "edit":
+                        void this.handleEdit(
+                            webviewPanel.webview,
+                            document,
+                            msg.fieldId,
+                            msg.fieldPath,
+                            msg.value,
+                            refreshGate,
+                            localEditTracker,
+                        );
+                        break;
+                    case "dumpJson":
+                        void this.handleDumpJson(document);
+                        break;
+                    case "loadJson":
+                        void this.handleLoadJson(document);
+                        break;
+                    case "runtimeError":
+                        surfaceWebviewRuntimeError({
+                            label: "Binary editor",
+                            userFacingFile: path.basename(document.uri.fsPath),
+                            message: msg.message,
+                            stack: msg.stack,
+                        });
+                        break;
+                }
+            }),
+        );
 
         // Re-send data when content changes (undo/redo)
-        document.onDidChangeContent(() => {
-            if (refreshGate.consumeShouldSkipFullRefresh()) {
-                return;
-            }
-            localEditTracker.clear();
-            this.sendInit(webviewPanel.webview, document);
+        panelSubscriptions.push(
+            document.onDidChangeContent(() => {
+                if (refreshGate.consumeShouldSkipFullRefresh()) {
+                    return;
+                }
+                localEditTracker.clear();
+                this.sendInit(webviewPanel, document);
+            }),
+        );
+
+        webviewPanel.onDidDispose(() => {
+            for (const sub of panelSubscriptions) sub.dispose();
+            this.treeStates.delete(webviewPanel);
         });
     }
 
@@ -230,9 +251,9 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
         }
     }
 
-    private sendInit(webview: vscode.Webview, document: BinaryDocument): void {
+    private sendInit(panel: vscode.WebviewPanel, document: BinaryDocument): void {
         const treeState = buildBinaryEditorTreeState(document.parseResult);
-        this.treeStates.set(document, treeState);
+        this.treeStates.set(panel, treeState);
         const payload = treeState.getInitMessagePayload();
         const msg: InitMessage = {
             type: "init",
@@ -242,18 +263,18 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
             warnings: payload.warnings,
             errors: payload.errors,
         };
-        webview.postMessage(msg);
+        panel.webview.postMessage(msg);
     }
 
-    private sendChildren(webview: vscode.Webview, document: BinaryDocument, nodeId: string): void {
-        const treeState = this.treeStates.get(document) ?? buildBinaryEditorTreeState(document.parseResult);
-        this.treeStates.set(document, treeState);
+    private sendChildren(panel: vscode.WebviewPanel, document: BinaryDocument, nodeId: string): void {
+        const treeState = this.treeStates.get(panel) ?? buildBinaryEditorTreeState(document.parseResult);
+        this.treeStates.set(panel, treeState);
         const msg: ExtensionToWebview = {
             type: "children",
             nodeId,
             children: treeState.getChildren(nodeId),
         };
-        webview.postMessage(msg);
+        panel.webview.postMessage(msg);
     }
 
     private async handleEdit(
