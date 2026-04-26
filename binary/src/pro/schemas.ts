@@ -23,6 +23,7 @@ import {
 } from "typed-binary";
 import { toTypedBinarySchema } from "../spec/derive-typed-binary";
 import { armorSpec } from "./specs/armor";
+import { headerSpec } from "./specs/header";
 
 // -- Custom 24-bit unsigned integer schema ----------------------------------
 // PRO item common section packs flagsExt (3 bytes) + attackModes (1 byte).
@@ -54,14 +55,7 @@ const u24 = new Uint24Schema();
 
 // -- Header (24 bytes, 0x00-0x17) -------------------------------------------
 
-export const headerSchema = object({
-    objectTypeAndId: u32,
-    textId: u32,
-    frmTypeAndId: u32,
-    lightRadius: u32,
-    lightIntensity: u32,
-    flags: u32,
-});
+export const headerSchema = toTypedBinarySchema(headerSpec);
 
 // -- Item common (33 bytes, 0x18-0x38) --------------------------------------
 
@@ -320,7 +314,7 @@ export const miscSchema = object({
 
 // -- Exported data types (inferred from schemas) ----------------------------
 
-export type HeaderData = Parsed<typeof headerSchema>;
+export type { HeaderData } from "./specs/header";
 export type ItemCommonData = Parsed<typeof itemCommonSchema>;
 export type { ArmorData } from "./specs/armor";
 export type ContainerData = Parsed<typeof containerSchema>;
