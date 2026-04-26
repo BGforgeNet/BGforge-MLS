@@ -3,6 +3,7 @@
 ## Unreleased
 
 - `fgbin` and the binary editor now reject Fallout `.map` files whose header reports more global or local variables than fit in the remaining file, instead of attempting a multi-billion-iteration read.
+- `fgtp --help` now lists the `--save-and-check` flag (write the transpiled output and re-verify it on a second pass), bringing the help text in line with the actual CLI surface.
 - Minimum supported Node.js version raised from 18 to 20. Node 18 reached end-of-life in April 2025; Node 20 is the current LTS minimum. Affects users installing `@bgforge/mls-server` or `@bgforge/transpile` standalone via npm.
 - `.bgforge.yml` `directory` values that resolve outside the workspace root (via an absolute path elsewhere on disk, or via `..` segments) are now ignored with a warning logged to the BGforge MLS output channel. Translation lookup still works for workspace-internal `directory` values.
 - Project-loading progress spinner now self-resolves after 60 seconds instead of hanging indefinitely if the server never reports project load completion.

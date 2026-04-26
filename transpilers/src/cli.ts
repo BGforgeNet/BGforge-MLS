@@ -110,11 +110,12 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
     });
 }
 
-const HELP = `Usage: fgtp <file.td|file.tbaf|file.tssl|dir> [--save] [--check] [-r] [-q]
-  --save    Write output to file (default: stdout)
-  --check   Check if output files are up to date (exit 1 if not)
-  -r        Recursively transpile all .td, .tbaf, and .tssl files in directory
-  -q        Quiet mode: suppress summary, only print changed files
+const HELP = `Usage: fgtp <file.td|file.tbaf|file.tssl|dir> [--save] [--check] [--save-and-check] [-r] [-q]
+  --save            Write output to file (default: stdout)
+  --check           Check if output files are up to date (exit 1 if not)
+  --save-and-check  Write output and verify the result is unchanged on a re-run
+  -r                Recursively transpile all .td, .tbaf, and .tssl files in directory
+  -q                Quiet mode: suppress summary, only print changed files
 
 Examples:
   fgtp mydialog.td              # Print D output to stdout
