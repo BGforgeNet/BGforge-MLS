@@ -7,51 +7,11 @@
  * PRO files are big-endian: use { endianness: 'big' }.
  */
 
-import {
-    object,
-    u8,
-    u16,
-    u32,
-    i32,
-    type Parsed,
-    Schema,
-    Measurer,
-    type ISerialInput,
-    type ISerialOutput,
-    type IMeasurer,
-    MaxValue,
-} from "typed-binary";
+import { object, u8, u16, u32, i32, type Parsed } from "typed-binary";
 import { toTypedBinarySchema } from "../spec/derive-typed-binary";
 import { armorSpec } from "./specs/armor";
 import { headerSpec } from "./specs/header";
-
-// -- Custom 24-bit unsigned integer schema ----------------------------------
-// PRO item common section packs flagsExt (3 bytes) + attackModes (1 byte).
-// typed-binary has no native u24, so we define a custom one.
-// Reads/writes 3 bytes in big-endian order (byte-level, endian-agnostic).
-
-class Uint24Schema extends Schema<number> {
-    readonly maxSize = 3;
-
-    read(input: ISerialInput): number {
-        const hi = input.readUint8();
-        const mid = input.readUint8();
-        const lo = input.readUint8();
-        return (hi << 16) | (mid << 8) | lo;
-    }
-
-    write(output: ISerialOutput, value: number): void {
-        output.writeUint8((value >> 16) & 0xff);
-        output.writeUint8((value >> 8) & 0xff);
-        output.writeUint8(value & 0xff);
-    }
-
-    measure(_: number | typeof MaxValue, measurer?: IMeasurer): IMeasurer {
-        return (measurer ?? new Measurer()).add(3);
-    }
-}
-
-const u24 = new Uint24Schema();
+import { itemCommonSpec } from "./specs/item-common";
 
 // -- Header (24 bytes, 0x00-0x17) -------------------------------------------
 
@@ -59,18 +19,7 @@ export const headerSchema = toTypedBinarySchema(headerSpec);
 
 // -- Item common (33 bytes, 0x18-0x38) --------------------------------------
 
-export const itemCommonSchema = object({
-    flagsExt: u24,
-    attackModes: u8,
-    scriptId: u32,
-    subType: u32,
-    materialId: u32,
-    size: u32,
-    weight: u32,
-    cost: u32,
-    inventoryFrmId: i32,
-    soundId: u8,
-});
+export const itemCommonSchema = toTypedBinarySchema(itemCommonSpec);
 
 // -- Item subtypes ----------------------------------------------------------
 
@@ -315,7 +264,7 @@ export const miscSchema = object({
 // -- Exported data types (inferred from schemas) ----------------------------
 
 export type { HeaderData } from "./specs/header";
-export type ItemCommonData = Parsed<typeof itemCommonSchema>;
+export type { ItemCommonData } from "./specs/item-common";
 export type { ArmorData } from "./specs/armor";
 export type ContainerData = Parsed<typeof containerSchema>;
 export type DrugData = Parsed<typeof drugSchema>;
