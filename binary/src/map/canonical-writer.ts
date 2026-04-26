@@ -3,8 +3,12 @@
  */
 
 import { z } from "zod";
+import { BufferWriter } from "typed-binary";
 import { decodeOpaqueRange } from "../opaque-range";
-import { HEADER_SIZE, TILE_DATA_SIZE_PER_ELEVATION, getScriptType } from "./schemas";
+import { toTypedBinarySchema } from "../spec/derive-typed-binary";
+import { HEADER_SIZE, TILE_DATA_SIZE_PER_ELEVATION, getScriptType, tilePairCodec } from "./schemas";
+import { mapHeaderSpec } from "./specs/header";
+import { varSectionSpec, type VarSectionCtx } from "./specs/variables";
 import { hasElevation } from "./types";
 import type { ParseOpaqueRange } from "../types";
 import {
@@ -22,6 +26,22 @@ import {
     type MapCanonicalDocument,
 } from "./canonical-schemas";
 
+const headerCodec = toTypedBinarySchema(mapHeaderSpec);
+const varSectionCodec = toTypedBinarySchema<typeof varSectionSpec, VarSectionCtx>(varSectionSpec);
+
+function bufferWriterAt(bytes: Uint8Array, offset: number): BufferWriter {
+    return new BufferWriter(bytes.buffer, { endianness: "big", byteOffset: bytes.byteOffset + offset });
+}
+
+function encodeFilename(filename: string): number[] {
+    // Canonical filename is a string; the wire layout is 16 raw u8 bytes
+    // padded with NULs. Truncate or zero-fill to match.
+    const encoded = new TextEncoder().encode(filename);
+    const out = Array.from<number>({ length: 16 }).fill(0);
+    for (let i = 0; i < 16 && i < encoded.length; i++) out[i] = encoded[i]!;
+    return out;
+}
+
 function writeInt32(view: DataView, offset: number, value: number): void {
     view.setInt32(offset, value, false);
 }
@@ -31,39 +51,37 @@ function writeUint32(view: DataView, offset: number, value: number): void {
 }
 
 function serializeHeader(bytes: Uint8Array, header: z.infer<typeof mapHeaderSchema>): void {
-    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-    writeUint32(view, 0x00, header.version);
-    const filenameBytes = new TextEncoder().encode(header.filename);
-    for (let index = 0; index < 16; index++) {
-        view.setUint8(0x04 + index, filenameBytes[index] ?? 0);
-    }
-    writeInt32(view, 0x14, header.defaultPosition);
-    writeInt32(view, 0x18, header.defaultElevation);
-    writeInt32(view, 0x1c, header.defaultOrientation);
-    writeInt32(view, 0x20, header.numLocalVars);
-    writeInt32(view, 0x24, header.scriptId);
-    writeUint32(view, 0x28, header.flags);
-    writeInt32(view, 0x2c, header.darkness);
-    writeInt32(view, 0x30, header.numGlobalVars);
-    writeInt32(view, 0x34, header.mapId);
-    writeUint32(view, 0x38, header.timestamp);
+    headerCodec.write(bufferWriterAt(bytes, 0), {
+        version: header.version,
+        filename: encodeFilename(header.filename),
+        defaultPosition: header.defaultPosition,
+        defaultElevation: header.defaultElevation,
+        defaultOrientation: header.defaultOrientation,
+        numLocalVars: header.numLocalVars,
+        scriptId: header.scriptId,
+        flags: header.flags,
+        darkness: header.darkness,
+        numGlobalVars: header.numGlobalVars,
+        mapId: header.mapId,
+        timestamp: header.timestamp,
+        // The wire reserves 44×i32 of trailing space (`field_3C`) that the
+        // canonical doc does not surface. Write zeros, matching what the
+        // prior hand-rolled writer left in place from the buffer init.
+        field_3C: Array.from<number>({ length: 44 }).fill(0),
+    });
 }
 
-function serializeVariables(view: DataView, globalVariables: number[], localVariables: number[]): number {
+function serializeVariables(bytes: Uint8Array, globalVariables: number[], localVariables: number[]): number {
     let offset = HEADER_SIZE;
-    for (const value of globalVariables) {
-        writeInt32(view, offset, value);
-        offset += 4;
-    }
-    for (const value of localVariables) {
-        writeInt32(view, offset, value);
-        offset += 4;
-    }
+    varSectionCodec.write(bufferWriterAt(bytes, offset), { values: globalVariables });
+    offset += globalVariables.length * 4;
+    varSectionCodec.write(bufferWriterAt(bytes, offset), { values: localVariables });
+    offset += localVariables.length * 4;
     return offset;
 }
 
 function serializeTiles(
-    view: DataView,
+    bytes: Uint8Array,
     header: z.infer<typeof mapHeaderSchema>,
     tiles: z.infer<typeof mapTileElevationSchema>[],
     offset: number,
@@ -76,12 +94,12 @@ function serializeTiles(
 
         const tileElevation = tilesByElevation.get(elevation);
         for (const tile of tileElevation?.tiles ?? []) {
-            const word =
-                ((tile.roofFlags & 0x0f) << 28) |
-                ((tile.roofTileId & 0x0f_ff) << 16) |
-                ((tile.floorFlags & 0x0f) << 12) |
-                (tile.floorTileId & 0x0f_ff);
-            writeUint32(view, offset + tile.index * 4, word);
+            tilePairCodec.write(bufferWriterAt(bytes, offset + tile.index * 4), {
+                floorTileId: tile.floorTileId,
+                floorFlags: tile.floorFlags,
+                roofTileId: tile.roofTileId,
+                roofFlags: tile.roofFlags,
+            });
         }
         offset += TILE_DATA_SIZE_PER_ELEVATION;
     }
@@ -321,8 +339,8 @@ export function serializeMapCanonicalDocument(
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 
     serializeHeader(bytes, document.header);
-    let offset = serializeVariables(view, document.globalVariables, document.localVariables);
-    offset = serializeTiles(view, document.header, document.tiles, offset);
+    let offset = serializeVariables(bytes, document.globalVariables, document.localVariables);
+    offset = serializeTiles(bytes, document.header, document.tiles, offset);
     offset = serializeScripts(view, document.scripts, offset);
     offset = serializeObjects(view, document.objects, offset);
     void offset;
