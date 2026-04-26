@@ -1,5 +1,6 @@
 import { i32, u32 } from "typed-binary";
 import type { FieldSpec, SpecData } from "../../spec/types";
+import type { StructPresentation } from "../../spec/presentation";
 import { MapElevation, ObjectFlags, Rotation } from "../types";
 
 /**
@@ -75,3 +76,28 @@ export type ObjectBaseData = SpecData<typeof objectBaseSpec>;
 export type InventoryHeaderData = SpecData<typeof inventoryHeaderSpec>;
 export type CritterData = SpecData<typeof critterDataSpec>;
 export type ExitGridData = SpecData<typeof exitGridSpec>;
+
+// Acronym fields (id, fid, pid, cid, sid) and the numeric-suffix `field74`
+// don't round-trip through `humanize` correctly; override them. Other fields
+// derive from `humanize(fieldName)` and don't need an entry.
+export const objectBasePresentation: StructPresentation<ObjectBaseData> = {
+    id: { label: "ID" },
+    fid: { label: "FID" },
+    pid: { label: "PID" },
+    cid: { label: "CID" },
+    sid: { label: "SID" },
+    field74: { label: "Field 74" },
+};
+
+// Inventory header keys all humanize cleanly — empty presentation table.
+export const inventoryHeaderPresentation: StructPresentation<InventoryHeaderData> = {};
+
+export const critterPresentation: StructPresentation<CritterData> = {
+    aiPacket: { label: "AI Packet" },
+    currentAp: { label: "Current AP" },
+    whoHitMeCid: { label: "Who Hit Me CID" },
+    currentHp: { label: "Current HP" },
+};
+
+// Exit grid keys all humanize cleanly — empty presentation table.
+export const exitGridPresentation: StructPresentation<ExitGridData> = {};

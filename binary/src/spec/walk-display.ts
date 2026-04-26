@@ -1,7 +1,65 @@
 import { codecByteLength, codecNumericTypeName } from "./codec-meta";
 import { humanize, type FieldPresentation, type StructPresentation } from "./presentation";
-import { isArraySpec, type FieldSpec, type StructSpec } from "./types";
+import { isArraySpec, type FieldSpec, type SpecData, type StructSpec } from "./types";
 import type { ParsedField, ParsedGroup, ParsedFieldType } from "../types";
+
+/**
+ * Inverse of `walkStruct`: walk a `ParsedGroup` produced by the display
+ * layer and rebuild the typed data object from it. Used by canonical
+ * readers that previously routed each field through a hand-coded
+ * `readFieldNumber(group, "Display Label")` lookup — instead the spec +
+ * presentation declares the label/key mapping once, and this helper
+ * uses it to extract the data.
+ *
+ * For scalar fields, prefers `rawValue` when present (enum/flags display
+ * the resolved name in `value`; the number is in `rawValue`). For
+ * pure-numeric fields, `value` holds the number directly. Array fields
+ * are not handled here — callers walk the surrounding group structure
+ * for those cases.
+ *
+ * Throws if a spec field's display label is missing from the group.
+ */
+export function walkGroup<S extends Record<string, FieldSpec>>(
+    group: ParsedGroup,
+    spec: S,
+    presentation: StructPresentation<SpecData<S>>,
+): { -readonly [K in keyof S]: number } {
+    const byName = new Map<string, ParsedField>();
+    for (const entry of group.fields) {
+        if ("fields" in entry) continue; // sub-groups skipped; scalars only
+        byName.set(entry.name, entry);
+    }
+    const out: Record<string, unknown> = {};
+    for (const key of Object.keys(spec)) {
+        const fs = spec[key]!;
+        if (isArraySpec(fs)) {
+            throw new Error(
+                `walkGroup: array field "${key}" is not supported; iterate the array group at the call site.`,
+            );
+        }
+        const presKey = key as keyof SpecData<S>;
+        const label = presentation[presKey]?.label ?? humanize(key);
+        const found = byName.get(label);
+        if (!found) {
+            throw new Error(
+                `walkGroup: field "${key}" expected display label "${label}" but no such field in "${group.name}".`,
+            );
+        }
+        const numeric =
+            typeof found.rawValue === "number"
+                ? found.rawValue
+                : typeof found.value === "number"
+                  ? found.value
+                  : undefined;
+        if (typeof numeric !== "number") {
+            throw new TypeError(
+                `walkGroup: field "${key}" (label "${label}") in "${group.name}" had no numeric rawValue/value.`,
+            );
+        }
+        out[key] = numeric;
+    }
+    return out as { -readonly [K in keyof S]: number };
+}
 
 interface SubGroupSpec {
     readonly name: string;

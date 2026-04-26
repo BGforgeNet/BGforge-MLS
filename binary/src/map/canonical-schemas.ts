@@ -7,6 +7,8 @@ import { z } from "zod";
 import { zodFieldNumber, zodNumericType } from "../binary-format-contract";
 import { opaqueRangeSchema } from "../shared-schemas";
 import { TILES_PER_ELEVATION } from "./schemas";
+import { toZodSchema } from "../spec/derive-zod";
+import { critterDataSpec, inventoryHeaderSpec } from "./specs/object";
 
 export const MAP_OBJECT_BASE_SIZE = 0x48;
 export const MAP_OBJECT_DATA_HEADER_SIZE = 0x0c;
@@ -84,6 +86,12 @@ export const mapScriptSectionSchema = z.strictObject({
     extents: z.array(mapScriptExtentSchema),
 });
 
+// Hand-written rather than derived from objectBaseSpec because real-world
+// MAP files carry non-enum values in `rotation` and `elevation` for object
+// records (packed PID-like values around 0x02000020 leak into these slots
+// in widely-used mods). The spec's enum tables describe the documented
+// format; the canonical zod stays permissive at int32 to accept what
+// actually ships.
 export const mapObjectBaseSchema = z.strictObject({
     id: int32Schema,
     tile: int32Schema,
@@ -105,30 +113,22 @@ export const mapObjectBaseSchema = z.strictObject({
     scriptIndex: int32Schema,
 });
 
-const mapInventoryHeaderSchema = z.strictObject({
-    inventoryLength: int32Schema,
-    inventoryCapacity: int32Schema,
-    inventoryPointer: int32Schema,
-});
-
-const mapCritterDataSchema = z.strictObject({
-    reaction: int32Schema,
-    damageLastTurn: int32Schema,
-    combatManeuver: int32Schema,
-    currentAp: int32Schema,
-    combatResults: int32Schema,
-    aiPacket: int32Schema,
-    team: int32Schema,
-    whoHitMeCid: int32Schema,
-    currentHp: int32Schema,
-    radiation: int32Schema,
-    poison: int32Schema,
-});
+// Derived from inventoryHeaderSpec / critterDataSpec — both are plain
+// int32 fields with no enum or flags refinement, so the spec system's
+// derived zod produces an identical strictObject without duplicating
+// the field list.
+const mapInventoryHeaderSchema = toZodSchema(inventoryHeaderSpec);
+const mapCritterDataSchema = toZodSchema(critterDataSpec);
 
 const mapObjectDataSchema = z.strictObject({
     dataFlags: uint32Schema,
 });
 
+// Hand-written rather than derived from exitGridSpec for the same reason
+// as mapObjectBaseSchema above: shipped MAP files put non-enum values in
+// these slots and the canonical doc stays permissive at int32. The
+// canonical reader applies clampNumericValue to keep values inside int32
+// range when surfacing them to the canonical doc.
 const mapExitGridSchema = z.strictObject({
     destinationMap: int32Schema,
     destinationTile: int32Schema,

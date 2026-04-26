@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { u32, i32 } from "typed-binary";
-import { walkStruct } from "../src/spec/walk-display";
+import { walkStruct, walkGroup } from "../src/spec/walk-display";
 import { type StructSpec } from "../src/spec/types";
 import { type StructPresentation } from "../src/spec/presentation";
 import type { ParsedGroup } from "../src/types";
@@ -145,6 +145,30 @@ describe("walkStruct", () => {
         expect(result.fields).toHaveLength(2);
         expect(result.fields[0]).toMatchObject({ name: "Values", offset: 0, size: 12 });
         expect(result.fields[1]).toMatchObject({ name: "Trailer", offset: 12, size: 4 });
+    });
+
+    it("walkGroup is the inverse of walkStruct on scalars", () => {
+        type Data = { a: number; b: number; c: number };
+        const spec: StructSpec<Data> = {
+            a: { codec: u32 },
+            b: { codec: u32, enum: { 0: "Zero", 1: "One" } },
+            c: { codec: u32, flags: { 1: "FlagA", 2: "FlagB" } },
+        };
+        const presentation = { a: { label: "Alpha" } };
+        const data: Data = { a: 42, b: 1, c: 3 };
+        const group = walkStruct(spec, presentation, 0, data, "Test");
+        expect(walkGroup(group, spec, presentation)).toEqual(data);
+    });
+
+    it("walkGroup throws when a field's display label is missing from the group", () => {
+        type Data = { a: number; b: number };
+        const spec: StructSpec<Data> = { a: { codec: u32 }, b: { codec: u32 } };
+        const partial: ParsedGroup = {
+            name: "Partial",
+            fields: [{ name: "A", value: 1, offset: 0, size: 4, type: "uint32" }],
+            expanded: true,
+        };
+        expect(() => walkGroup(partial, spec, {})).toThrow(/B/);
     });
 
     it("packed-field parts share the slot's offset and size; cursor advances once per group", () => {

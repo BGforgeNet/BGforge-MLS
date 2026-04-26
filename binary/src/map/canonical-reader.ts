@@ -6,9 +6,30 @@
 import { z } from "zod";
 import { clampNumericValue } from "../binary-format-contract";
 import { parseWithSchemaValidation } from "../schema-validation";
+import { walkGroup } from "../spec/walk-display";
 
 import { ScriptType } from "./types";
+import { getScriptType } from "./schemas";
 import type { ParsedField, ParsedGroup, ParseResult } from "../types";
+import { mapHeaderCanonicalSpec, mapHeaderPresentation } from "./specs/header";
+import {
+    objectBaseSpec,
+    objectBasePresentation,
+    inventoryHeaderSpec,
+    inventoryHeaderPresentation,
+    critterDataSpec,
+    critterPresentation,
+    exitGridSpec,
+    exitGridPresentation,
+} from "./specs/object";
+import {
+    otherSlotSpec,
+    otherSlotPresentation,
+    spatialSlotSpec,
+    spatialSlotPresentation,
+    timerSlotSpec,
+    timerSlotPresentation,
+} from "./specs/script-slot";
 import {
     mapCanonicalDocumentSchema,
     mapCanonicalSnapshotSchema,
@@ -54,10 +75,6 @@ function readNumber(group: ParsedGroup, name: string): number {
         return field.value;
     }
     throw new Error(`Field is not numeric: ${group.name}.${name}`);
-}
-
-function readClampedNumber(group: ParsedGroup, name: string, fieldKey: string, type: string): number {
-    return clampNumericValue(readNumber(group, name), type, { format: "map", fieldKey });
 }
 
 function readString(group: ParsedGroup, name: string): string {
@@ -112,94 +129,37 @@ function parseTileElevation(group: ParsedGroup): z.infer<typeof mapTileElevation
     };
 }
 
-function parseScriptSlot(group: ParsedGroup): z.infer<typeof mapScriptSlotSchema> {
-    const result: z.infer<typeof mapScriptSlotSchema> = {
-        sid: 0,
-        nextScriptLinkLegacy: 0,
-        flags: 0,
-        index: 0,
-        programPointerSlot: 0,
-        ownerId: 0,
-        localVarsOffset: 0,
-        numLocalVars: 0,
-        returnValue: 0,
-        action: 0,
-        fixedParam: 0,
-        actionBeingUsed: 0,
-        scriptOverrides: 0,
-        unknownField0x48: 0,
-        checkMarginHowMuch: 0,
-        legacyField0x50: 0,
+// Slot fields are wrapped in `${label} ${fieldName}` by the display tree
+// so the surrounding "Slot N" group can host an outer label. walkGroup
+// looks up by exact name, so strip the prefix before walking.
+function stripFieldPrefix(group: ParsedGroup, prefixPattern: RegExp): ParsedGroup {
+    return {
+        ...group,
+        fields: group.fields.map((entry) =>
+            isGroup(entry) ? entry : { ...entry, name: entry.name.replace(prefixPattern, "") },
+        ),
     };
+}
 
-    for (const entry of group.fields) {
-        if (isGroup(entry)) {
-            continue;
-        }
-        const name = entry.name.replace(/^Entry \d+ /, "");
-        const value = typeof entry.rawValue === "number" ? entry.rawValue : Number(entry.value);
-        switch (name) {
-            case "SID":
-                result.sid = value >>> 0;
-                break;
-            case "Next Script Link (legacy)":
-                result.nextScriptLinkLegacy = value;
-                break;
-            case "Built Tile":
-                result.builtTile = value;
-                break;
-            case "Spatial Radius":
-                result.spatialRadius = value;
-                break;
-            case "Timer Time":
-                result.timerTime = value;
-                break;
-            case "Flags":
-                result.flags = value;
-                break;
-            case "Index":
-                result.index = value;
-                break;
-            case "Program Pointer Slot":
-                result.programPointerSlot = value;
-                break;
-            case "Owner ID":
-                result.ownerId = value;
-                break;
-            case "Local Vars Offset":
-                result.localVarsOffset = value;
-                break;
-            case "Num Local Vars":
-                result.numLocalVars = value;
-                break;
-            case "Return Value":
-                result.returnValue = value;
-                break;
-            case "Action":
-                result.action = value;
-                break;
-            case "Fixed Param":
-                result.fixedParam = value;
-                break;
-            case "Action Being Used":
-                result.actionBeingUsed = value;
-                break;
-            case "Script Overrides":
-                result.scriptOverrides = value;
-                break;
-            case "Unknown Field 0x48":
-                result.unknownField0x48 = value;
-                break;
-            case "Check Margin (how_much)":
-                result.checkMarginHowMuch = value;
-                break;
-            case "Legacy Field 0x50":
-                result.legacyField0x50 = value;
-                break;
-        }
+function parseScriptSlot(group: ParsedGroup): z.infer<typeof mapScriptSlotSchema> {
+    const cleaned = stripFieldPrefix(group, /^Entry \d+ /);
+    const sidField = cleaned.fields.find((entry): entry is ParsedField => !isGroup(entry) && entry.name === "SID");
+    if (!sidField) {
+        throw new Error(`Missing MAP field: ${group.name}.SID`);
     }
+    const sidRaw = typeof sidField.rawValue === "number" ? sidField.rawValue : Number(sidField.value);
+    const scriptType = getScriptType(sidRaw >>> 0);
 
-    return result;
+    if (scriptType === 1) {
+        const slot = walkGroup(cleaned, spatialSlotSpec, spatialSlotPresentation);
+        return { ...slot, sid: slot.sid >>> 0 };
+    }
+    if (scriptType === 2) {
+        const slot = walkGroup(cleaned, timerSlotSpec, timerSlotPresentation);
+        return { ...slot, sid: slot.sid >>> 0 };
+    }
+    const slot = walkGroup(cleaned, otherSlotSpec, otherSlotPresentation);
+    return { ...slot, sid: slot.sid >>> 0 };
 }
 
 function parseScriptSection(group: ParsedGroup): z.infer<typeof mapScriptSectionSchema> {
@@ -248,33 +208,13 @@ function parseMapObject(group: ParsedGroup): z.infer<typeof mapObjectSchema> {
     const critterData = getOptionalGroup(group, "Critter Data");
     const exitGrid = getOptionalGroup(group, "Exit Grid");
 
+    const base = walkGroup(group, objectBaseSpec, objectBasePresentation);
     const object: z.infer<typeof mapObjectSchema> = {
-        kind: objectKindFromPid(readNumber(group, "PID")),
-        base: {
-            id: readNumber(group, "ID"),
-            tile: readNumber(group, "Tile"),
-            x: readNumber(group, "X"),
-            y: readNumber(group, "Y"),
-            screenX: readNumber(group, "Screen X"),
-            screenY: readNumber(group, "Screen Y"),
-            frame: readNumber(group, "Frame"),
-            rotation: readNumber(group, "Rotation"),
-            fid: readNumber(group, "FID"),
-            flags: readNumber(group, "Flags"),
-            elevation: readNumber(group, "Elevation"),
-            pid: readNumber(group, "PID"),
-            cid: readNumber(group, "CID"),
-            lightDistance: readNumber(group, "Light Distance"),
-            lightIntensity: readNumber(group, "Light Intensity"),
-            field74: readNumber(group, "Field 74"),
-            sid: readNumber(group, "SID"),
-            scriptIndex: readNumber(group, "Script Index"),
-        },
-        inventoryHeader: {
-            inventoryLength: inventoryHeader ? readNumber(inventoryHeader, "Inventory Length") : 0,
-            inventoryCapacity: inventoryHeader ? readNumber(inventoryHeader, "Inventory Capacity") : 0,
-            inventoryPointer: inventoryHeader ? readNumber(inventoryHeader, "Inventory Pointer") : 0,
-        },
+        kind: objectKindFromPid(base.pid),
+        base: { ...base, fid: base.fid >>> 0 },
+        inventoryHeader: inventoryHeader
+            ? walkGroup(inventoryHeader, inventoryHeaderSpec, inventoryHeaderPresentation)
+            : { inventoryLength: 0, inventoryCapacity: 0, inventoryPointer: 0 },
         inventory: group.fields
             .filter((entry): entry is ParsedGroup => isGroup(entry) && /^Inventory Entry \d+$/.test(entry.name))
             .map((entry) => ({
@@ -294,37 +234,22 @@ function parseMapObject(group: ParsedGroup): z.infer<typeof mapObjectSchema> {
     }
 
     if (critterData) {
-        object.critterData = {
-            reaction: readNumber(critterData, "Reaction"),
-            damageLastTurn: readNumber(critterData, "Damage Last Turn"),
-            combatManeuver: readNumber(critterData, "Combat Maneuver"),
-            currentAp: readNumber(critterData, "Current AP"),
-            combatResults: readNumber(critterData, "Combat Results"),
-            aiPacket: readNumber(critterData, "AI Packet"),
-            team: readNumber(critterData, "Team"),
-            whoHitMeCid: readNumber(critterData, "Who Hit Me CID"),
-            currentHp: readNumber(critterData, "Current HP"),
-            radiation: readNumber(critterData, "Radiation"),
-            poison: readNumber(critterData, "Poison"),
-        };
+        object.critterData = walkGroup(critterData, critterDataSpec, critterPresentation);
     }
 
     if (exitGrid) {
+        const grid = walkGroup(exitGrid, exitGridSpec, exitGridPresentation);
         object.exitGrid = {
-            destinationMap: readNumber(exitGrid, "Destination Map"),
-            destinationTile: readNumber(exitGrid, "Destination Tile"),
-            destinationElevation: readClampedNumber(
-                exitGrid,
-                "Destination Elevation",
-                "map.objects.elevations[].objects[].exitGrid.destinationElevation",
-                "int32",
-            ),
-            destinationRotation: readClampedNumber(
-                exitGrid,
-                "Destination Rotation",
-                "map.objects.elevations[].objects[].exitGrid.destinationRotation",
-                "int32",
-            ),
+            destinationMap: grid.destinationMap,
+            destinationTile: grid.destinationTile,
+            destinationElevation: clampNumericValue(grid.destinationElevation, "int32", {
+                format: "map",
+                fieldKey: "map.objects.elevations[].objects[].exitGrid.destinationElevation",
+            }),
+            destinationRotation: clampNumericValue(grid.destinationRotation, "int32", {
+                format: "map",
+                fieldKey: "map.objects.elevations[].objects[].exitGrid.destinationRotation",
+            }),
         };
     }
 
@@ -360,24 +285,21 @@ function parseObjects(group: ParsedGroup): z.infer<typeof mapObjectsSchema> {
 
 export function rebuildMapCanonicalDocument(parseResult: ParseResult): MapCanonicalDocument {
     const headerGroup = getGroup(parseResult.root, "Header");
+    const headerScalars = walkGroup(headerGroup, mapHeaderCanonicalSpec, mapHeaderPresentation);
     const header = {
-        version: readNumber(headerGroup, "Version") >>> 0,
+        ...headerScalars,
+        version: headerScalars.version >>> 0,
         filename: readString(headerGroup, "Filename"),
-        defaultPosition: readNumber(headerGroup, "Default Position"),
-        defaultElevation: readClampedNumber(headerGroup, "Default Elevation", "map.header.defaultElevation", "int32"),
-        defaultOrientation: readClampedNumber(
-            headerGroup,
-            "Default Orientation",
-            "map.header.defaultOrientation",
-            "int32",
-        ),
-        numLocalVars: readNumber(headerGroup, "Num Local Vars"),
-        scriptId: readNumber(headerGroup, "Script ID"),
-        flags: readNumber(headerGroup, "Map Flags") >>> 0,
-        darkness: readNumber(headerGroup, "Darkness"),
-        numGlobalVars: readNumber(headerGroup, "Num Global Vars"),
-        mapId: readNumber(headerGroup, "Map ID"),
-        timestamp: readNumber(headerGroup, "Timestamp") >>> 0,
+        flags: headerScalars.flags >>> 0,
+        timestamp: headerScalars.timestamp >>> 0,
+        defaultElevation: clampNumericValue(headerScalars.defaultElevation, "int32", {
+            format: "map",
+            fieldKey: "map.header.defaultElevation",
+        }),
+        defaultOrientation: clampNumericValue(headerScalars.defaultOrientation, "int32", {
+            format: "map",
+            fieldKey: "map.header.defaultOrientation",
+        }),
     };
 
     const globalVariables =

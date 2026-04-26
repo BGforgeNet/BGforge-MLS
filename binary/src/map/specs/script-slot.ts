@@ -1,5 +1,6 @@
 import { i32, u32 } from "typed-binary";
 import type { FieldSpec, SpecData } from "../../spec/types";
+import type { StructPresentation } from "../../spec/presentation";
 import { ScriptFlags, ScriptProc, Skill } from "../types";
 
 /**
@@ -64,3 +65,24 @@ export type TimerSlotData = SpecData<typeof timerSlotSpec>;
 export const OTHER_SLOT_BYTES = 4 + 4 + 14 * 4;
 export const SPATIAL_SLOT_BYTES = 4 + 4 + 4 + 4 + 14 * 4;
 export const TIMER_SLOT_BYTES = 4 + 4 + 4 + 14 * 4;
+
+/**
+ * Display labels for slot fields. Acronym keys (`sid`) and labels with
+ * legacy parenthetical hints (`Next Script Link (legacy)`,
+ * `Check Margin (how_much)`) don't round-trip through humanize; override
+ * them. The hex-suffix fields (`unknownField0x48`, `legacyField0x50`)
+ * also need explicit labels because humanize doesn't insert spaces
+ * before digits.
+ */
+const COMMON_PRESENTATION = {
+    sid: { label: "SID" },
+    nextScriptLinkLegacy: { label: "Next Script Link (legacy)" },
+    ownerId: { label: "Owner ID" },
+    unknownField0x48: { label: "Unknown Field 0x48" },
+    checkMarginHowMuch: { label: "Check Margin (how_much)" },
+    legacyField0x50: { label: "Legacy Field 0x50" },
+} as const;
+
+export const otherSlotPresentation: StructPresentation<OtherSlotData> = COMMON_PRESENTATION;
+export const spatialSlotPresentation: StructPresentation<SpatialSlotData> = COMMON_PRESENTATION;
+export const timerSlotPresentation: StructPresentation<TimerSlotData> = COMMON_PRESENTATION;
