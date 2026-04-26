@@ -42,6 +42,13 @@
         "init-declarations": "off",
         "unicorn/switch-case-braces": "off",
 
+        // Forcing fixed-length digit groups on hex literals harms readability
+        // for values that read naturally as words (`0xdeadbeef`) or as a
+        // single 32-bit constant. Authors can still apply the project's
+        // 2-digit byte grouping where it helps; mandating it everywhere is
+        // noise.
+        "unicorn/numeric-separators-style": "off",
+
         // `filename-case` would force a repo-wide rename without an
         // established convention — out of scope for a lint upgrade.
         "unicorn/filename-case": "off",
