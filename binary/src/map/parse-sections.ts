@@ -2,8 +2,10 @@
  * Parse functions for the header, variables, tiles, and scripts sections of a MAP file.
  */
 
+import { BufferReader } from "typed-binary";
 import type { ParseOpaqueRange, ParsedField, ParsedGroup } from "../types";
 import { encodeOpaqueRange } from "../opaque-range";
+import { toTypedBinarySchema } from "../spec/derive-typed-binary";
 import {
     MapVersion,
     MapFlags,
@@ -24,6 +26,7 @@ import {
     getScriptType,
     type MapHeader,
 } from "./schemas";
+import { varSectionSpec, type VarSectionCtx } from "./specs/variables";
 import {
     field,
     makeGroup,
@@ -77,6 +80,8 @@ function clampVarCount(rawCount: number, label: "global" | "local", remainingByt
     return rawCount;
 }
 
+const varSectionCodec = toTypedBinarySchema<typeof varSectionSpec, VarSectionCtx>(varSectionSpec);
+
 function parseVariables(
     data: Uint8Array,
     header: MapHeader,
@@ -85,20 +90,14 @@ function parseVariables(
     let offset = HEADER_SIZE;
 
     const globalCount = clampVarCount(header.numGlobalVars, "global", data.byteLength - offset, errors);
-    const globalVars: number[] = [];
-    for (let i = 0; i < globalCount; i++) {
-        const view = new DataView(data.buffer, data.byteOffset + offset, 4);
-        globalVars.push(view.getInt32(0, false));
-        offset += 4;
-    }
+    const globalReader = new BufferReader(data.buffer, { endianness: "big", byteOffset: data.byteOffset + offset });
+    const globalVars = varSectionCodec.read(globalReader, { count: globalCount }).values;
+    offset += globalCount * 4;
 
     const localCount = clampVarCount(header.numLocalVars, "local", data.byteLength - offset, errors);
-    const localVars: number[] = [];
-    for (let i = 0; i < localCount; i++) {
-        const view = new DataView(data.buffer, data.byteOffset + offset, 4);
-        localVars.push(view.getInt32(0, false));
-        offset += 4;
-    }
+    const localReader = new BufferReader(data.buffer, { endianness: "big", byteOffset: data.byteOffset + offset });
+    const localVars = varSectionCodec.read(localReader, { count: localCount }).values;
+    offset += localCount * 4;
 
     return { globalVars, localVars, offset };
 }
