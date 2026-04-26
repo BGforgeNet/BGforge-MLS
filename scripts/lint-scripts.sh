@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -eu -o pipefail
 
 # Typecheck and lint scripts/ utility code.
 pnpm exec tsc --project scripts/tsconfig.json

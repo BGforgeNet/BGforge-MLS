@@ -5,7 +5,7 @@
 # When SKIP_PREPUBLISH=1, exits early (used by package.sh which builds
 # first, then strips pnpm artifacts before packaging).
 
-set -e
+set -eu -o pipefail
 
 if [ "${SKIP_PREPUBLISH:-}" = "1" ]; then
     echo "Skipping prepublish (already built by package.sh)"

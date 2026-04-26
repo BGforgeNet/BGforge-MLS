@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -eu -o pipefail
 
 # Build client extension bundle. Forwards args (--sourcemap, --minify, --watch) to esbuild.
 esbuild ./client/src/extension.ts \

@@ -55,7 +55,7 @@ grammar_highlight() {
         step "$GRAMMAR_NAME: Skipping highlight validation (no queries/highlights.scm)"
         return
     fi
-    step "$GRAMMAR_NAME: Validating highlight captures"
+    step "$GRAMMAR_NAME: Confirming queries/highlights.scm is present (capture-name validation skipped — see comment above)"
 }
 
 grammar_parse() {

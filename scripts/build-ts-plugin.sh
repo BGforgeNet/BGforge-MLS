@@ -10,6 +10,8 @@ set -e
 # For npm: bundled into @bgforge/mls-server by publish-server.sh.
 # Source lives in plugins/<plugin-name>/src/.
 
+set -eu -o pipefail
+
 plugin="${1:?Usage: build-ts-plugin.sh <plugin-name>}"
 
 mkdir -p "node_modules/bgforge-${plugin}"

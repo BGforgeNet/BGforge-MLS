@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -eu -o pipefail
 
 # Minimal build for F5 development: client + ts-plugin + server + webviews.
 # Skips CLIs (format, transpile, bin), linting, and test bundles.

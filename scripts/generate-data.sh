@@ -3,7 +3,7 @@
 # Regenerate hover and completion JSONs from server/data YAMLs.
 # Must run before build:ts-plugin (which bundles fallout-ssl-engine-proc-docs.json via esbuild).
 
-set -xeu -o pipefail
+set -eu -o pipefail
 
 data_dir="server/data"
 dest_dir="server/out"

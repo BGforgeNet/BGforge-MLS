@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -eu -o pipefail
 
 # Build E2E test bundles for the VS Code extension host.
 esbuild ./client/src/test/*.ts \

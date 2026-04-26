@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -eu -o pipefail
 
 # Build server bundle
 # --define replaces import.meta.url references with __imu (defined in --banner).

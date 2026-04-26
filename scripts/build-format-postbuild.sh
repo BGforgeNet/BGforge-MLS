@@ -5,7 +5,7 @@
 # Invoked by tsup's onSuccess hook in format/tsup.config.ts.
 # Must run from the repo root so grammars/ and server/node_modules/ are reachable.
 
-set -e
+set -eu -o pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
