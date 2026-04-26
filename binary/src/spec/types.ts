@@ -57,19 +57,49 @@ export interface ScalarFieldSpec {
 export interface ArrayFieldSpec {
     readonly kind: "array";
     readonly element: ScalarFieldSpec;
-    readonly count: number | { readonly fromField: string };
+    readonly count: number | { readonly fromField: string } | { readonly fromCtx: (ctx: never) => number };
 }
 
 export type FieldSpec = ScalarFieldSpec | ArrayFieldSpec;
 
 export type StructSpec<T> = { readonly [K in keyof T]: FieldSpec };
 
-export function arraySpec(args: { element: ScalarFieldSpec; count: number | { fromField: string } }): ArrayFieldSpec {
-    return { kind: "array", element: args.element, count: args.count };
+/**
+ * Construct an array field spec.
+ *
+ * Length sources, in order of locality:
+ *   - `count: N` — fixed wire length.
+ *   - `count: { fromField: "X" }` — same-struct sibling: count and array
+ *     decoded together; zod refinement keeps the two in sync at save time.
+ *   - `count: { fromCtx: (ctx) => N }` — cross-struct: count decoded earlier
+ *     in the file (e.g., a header field) and supplied as `ctx` at the
+ *     spec's `read()` call. The orchestrator owns the binding; zod cannot
+ *     refine across structs, so out-of-band count drift is the
+ *     orchestrator's concern.
+ */
+export function arraySpec<Ctx = never>(args: {
+    element: ScalarFieldSpec;
+    count: number | { fromField: string } | { fromCtx: (ctx: Ctx) => number };
+}): ArrayFieldSpec {
+    return {
+        kind: "array",
+        element: args.element,
+        // Re-narrow the public never-seed parameter for storage; the variance
+        // would otherwise reject ctx being typed wider than `never` here.
+        count: args.count as ArrayFieldSpec["count"],
+    };
 }
 
 export function isArraySpec(spec: FieldSpec): spec is ArrayFieldSpec {
     return spec.kind === "array";
+}
+
+export function isFromFieldCount(count: ArrayFieldSpec["count"]): count is { readonly fromField: string } {
+    return typeof count === "object" && "fromField" in count;
+}
+
+export function isFromCtxCount(count: ArrayFieldSpec["count"]): count is { readonly fromCtx: (ctx: never) => number } {
+    return typeof count === "object" && "fromCtx" in count;
 }
 
 /**
@@ -110,7 +140,7 @@ export function enforceLinkedCounts<S extends Record<string, FieldSpec>, D exten
     for (const key of Object.keys(spec) as (keyof S & string)[]) {
         const fs = spec[key];
         if (!fs || !isArraySpec(fs)) continue;
-        if (typeof fs.count === "number") continue;
+        if (!isFromFieldCount(fs.count)) continue;
         const countField = fs.count.fromField;
         const arr = doc[key];
         if (!Array.isArray(arr)) continue;

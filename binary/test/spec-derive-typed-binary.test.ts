@@ -191,4 +191,67 @@ describe("toTypedBinarySchema", () => {
         } satisfies Record<string, FieldSpec>;
         expect(() => toTypedBinarySchema(spec)).toThrow(/at least two/);
     });
+
+    it("supports fromCtx arrays: ctx callback drives length on read", () => {
+        const spec = {
+            values: arraySpec({
+                element: { codec: u32 },
+                count: { fromCtx: (ctx: { n: number }) => ctx.n },
+            }),
+        } satisfies Record<string, FieldSpec>;
+        const derived = toTypedBinarySchema<typeof spec, { n: number }>(spec);
+
+        const buf = new ArrayBuffer(12);
+        const w = new BufferWriter(buf, { endianness: "big" });
+        w.writeUint32(10);
+        w.writeUint32(20);
+        w.writeUint32(30);
+
+        const r = new BufferReader(buf, { endianness: "big" });
+        expect(derived.read(r, { n: 3 })).toEqual({ values: [10, 20, 30] });
+    });
+
+    it("fromCtx arrays write all elements regardless of ctx", () => {
+        const spec = {
+            values: arraySpec({
+                element: { codec: u32 },
+                count: { fromCtx: (ctx: { n: number }) => ctx.n },
+            }),
+        } satisfies Record<string, FieldSpec>;
+        const derived = toTypedBinarySchema<typeof spec, { n: number }>(spec);
+
+        const buf = new ArrayBuffer(8);
+        const w = new BufferWriter(buf, { endianness: "big" });
+        derived.write(w, { values: [10, 20] });
+
+        const r = new BufferReader(buf, { endianness: "big" });
+        expect(r.readUint32()).toBe(10);
+        expect(r.readUint32()).toBe(20);
+    });
+
+    it("fromCtx read without ctx throws a clear error", () => {
+        const spec = {
+            values: arraySpec({
+                element: { codec: u32 },
+                count: { fromCtx: (ctx: { n: number }) => ctx.n },
+            }),
+        } satisfies Record<string, FieldSpec>;
+        const derived = toTypedBinarySchema<typeof spec, { n: number }>(spec);
+        const buf = new ArrayBuffer(0);
+        const r = new BufferReader(buf, { endianness: "big" });
+        expect(() => derived.read(r)).toThrow(/ctx/i);
+    });
+
+    it("fromCtx with zero count reads as empty", () => {
+        const spec = {
+            values: arraySpec({
+                element: { codec: u32 },
+                count: { fromCtx: (ctx: { n: number }) => ctx.n },
+            }),
+        } satisfies Record<string, FieldSpec>;
+        const derived = toTypedBinarySchema<typeof spec, { n: number }>(spec);
+        const buf = new ArrayBuffer(0);
+        const r = new BufferReader(buf, { endianness: "big" });
+        expect(derived.read(r, { n: 0 })).toEqual({ values: [] });
+    });
 });

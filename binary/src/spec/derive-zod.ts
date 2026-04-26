@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { zodNumericType } from "../binary-format-contract";
 import { codecNumericTypeName } from "./codec-meta";
-import { isArraySpec, type FieldSpec, type SpecData } from "./types";
+import { isArraySpec, isFromFieldCount, type FieldSpec, type SpecData } from "./types";
 
 /**
  * Derive a zod canonical-document schema from a `StructSpec`.
@@ -18,7 +18,10 @@ export function toZodSchema<S extends Record<string, FieldSpec>>(spec: S): z.Zod
     for (const key of Object.keys(spec)) {
         const fs = spec[key]!;
         shape[key] = fieldSpecToZod(fs);
-        if (isArraySpec(fs) && typeof fs.count !== "number") {
+        // fromCtx arrays get their count from a value decoded outside this
+        // struct; zod cannot validate that cross-struct relation, so the
+        // refinement is scoped to same-struct fromField pairs only.
+        if (isArraySpec(fs) && isFromFieldCount(fs.count)) {
             linkedCounts.push({ arrayKey: key, countField: fs.count.fromField });
         }
     }

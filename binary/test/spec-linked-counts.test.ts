@@ -33,4 +33,12 @@ describe("enforceLinkedCounts", () => {
         const doc = { sentinel: 0, tail: [1, 2, 3] };
         expect(enforceLinkedCounts(fixedSpec, doc)).toBe(doc);
     });
+
+    it("ignores fromCtx arrays — their count lives outside the doc", () => {
+        const ctxSpec = {
+            xs: arraySpec({ element: { codec: u32 }, count: { fromCtx: (ctx: { n: number }) => ctx.n } }),
+        } satisfies Record<string, FieldSpec>;
+        const doc = { xs: [10, 20] };
+        expect(enforceLinkedCounts(ctxSpec, doc)).toBe(doc);
+    });
 });

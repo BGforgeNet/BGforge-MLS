@@ -132,6 +132,21 @@ describe("walkStruct", () => {
         expect(result.fields[2]).toMatchObject({ name: "Trailer", offset: 16, size: 4 });
     });
 
+    it("fromCtx array sizes itself from data[arrayKey].length × elementBytes", () => {
+        type Data = { values: number[]; trailer: number };
+        const spec: StructSpec<Data> = {
+            values: { kind: "array", element: { codec: u32 }, count: { fromCtx: (ctx: { n: number }) => ctx.n } },
+            trailer: { codec: u32 },
+        };
+        const data: Data = { values: [10, 20, 30], trailer: 0xff };
+        const result = walkStruct(spec, {}, 0, data, "Variable");
+
+        // values @ 0..12 (3*4 bytes), trailer @ 12..16.
+        expect(result.fields).toHaveLength(2);
+        expect(result.fields[0]).toMatchObject({ name: "Values", offset: 0, size: 12 });
+        expect(result.fields[1]).toMatchObject({ name: "Trailer", offset: 12, size: 4 });
+    });
+
     it("packed-field parts share the slot's offset and size; cursor advances once per group", () => {
         type Data = { destTile: number; destElevation: number; destMap: number };
         const spec: StructSpec<Data> = {

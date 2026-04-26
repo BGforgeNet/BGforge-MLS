@@ -87,6 +87,21 @@ describe("toZodSchema", () => {
         expect(() => z.parse({ n: 0, xs: [1] })).toThrow();
     });
 
+    it("fromCtx array does not get a same-struct linked-count refinement", () => {
+        // The count for a fromCtx array lives in another struct (e.g. a header
+        // decoded earlier), so there is no in-doc field to refine against.
+        // The schema should accept any matching-element-type array; cross-struct
+        // consistency is the orchestrator's responsibility.
+        const spec = {
+            xs: arraySpec({ element: { codec: u8 }, count: { fromCtx: (ctx: { n: number }) => ctx.n } }),
+        } satisfies Record<string, FieldSpec>;
+        const z = toZodSchema(spec);
+
+        expect(z.parse({ xs: [1, 2, 3] })).toEqual({ xs: [1, 2, 3] });
+        expect(z.parse({ xs: [] })).toEqual({ xs: [] });
+        expect(() => z.parse({ xs: [256] })).toThrow(); // element OOR still enforced
+    });
+
     it("packed-field part with domain narrows below the bit-width max", () => {
         const spec = {
             elevation: { codec: u32, packedAs: "w", bitRange: [0, 6], domain: { min: 0, max: 3 } },
