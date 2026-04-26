@@ -1,8 +1,7 @@
 import { u32, i32 } from "typed-binary";
-import type { StructSpec } from "../../spec/types";
-import type { ArmorData } from "../schemas";
+import type { FieldSpec, SpecData } from "../../spec/types";
 
-export const armorSpec: StructSpec<ArmorData> = {
+export const armorSpec = {
     ac: { codec: u32 },
     drNormal: { codec: u32 },
     drLaser: { codec: u32 },
@@ -21,4 +20,6 @@ export const armorSpec: StructSpec<ArmorData> = {
     perk: { codec: u32 },
     maleFrmId: { codec: i32 },
     femaleFrmId: { codec: i32 },
-};
+} satisfies Record<string, FieldSpec>;
+
+export type ArmorData = SpecData<typeof armorSpec>;

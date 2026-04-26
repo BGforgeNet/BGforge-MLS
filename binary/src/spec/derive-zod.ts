@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { zodNumericType } from "../binary-format-contract";
 import { codecNumericTypeName } from "./codec-meta";
-import { isArraySpec, type FieldSpec, type StructSpec } from "./types";
+import { isArraySpec, type FieldSpec, type SpecData } from "./types";
 
 /**
  * Derive a zod canonical-document schema from a `StructSpec`.
@@ -12,12 +12,12 @@ import { isArraySpec, type FieldSpec, type StructSpec } from "./types";
  * are validated structurally by the reader, not by zod, so they map to a
  * plain `z.array(...)`.
  */
-export function toZodSchema<T>(spec: StructSpec<T>): z.ZodType<T> {
+export function toZodSchema<S extends Record<string, FieldSpec>>(spec: S): z.ZodType<SpecData<S>> {
     const shape: Record<string, z.ZodType<unknown>> = {};
-    for (const key of Object.keys(spec) as (keyof T & string)[]) {
-        shape[key] = fieldSpecToZod(spec[key]);
+    for (const key of Object.keys(spec)) {
+        shape[key] = fieldSpecToZod(spec[key]!);
     }
-    return z.strictObject(shape) as unknown as z.ZodType<T>;
+    return z.strictObject(shape) as unknown as z.ZodType<SpecData<S>>;
 }
 
 function fieldSpecToZod(fs: FieldSpec): z.ZodType<unknown> {

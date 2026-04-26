@@ -1,18 +1,17 @@
 import { describe, it, expect } from "vitest";
-import { BufferReader, BufferWriter, object, u8, u16, u32, i32, type Parsed } from "typed-binary";
+import { BufferReader, BufferWriter, object, u8, u16, u32, i32 } from "typed-binary";
 import { toTypedBinarySchema } from "../src/spec/derive-typed-binary";
-import { arraySpec, type StructSpec } from "../src/spec/types";
+import { arraySpec, type FieldSpec } from "../src/spec/types";
 
 describe("toTypedBinarySchema", () => {
     it("derived scalar struct reads identically to a handwritten one", () => {
         const handwritten = object({ a: u32, b: i32, c: u16, d: u8 });
-        type T = Parsed<typeof handwritten>;
-        const spec: StructSpec<T> = {
+        const spec = {
             a: { codec: u32 },
             b: { codec: i32 },
             c: { codec: u16 },
             d: { codec: u8 },
-        };
+        } satisfies Record<string, FieldSpec>;
         const derived = toTypedBinarySchema(spec);
 
         const buf = new ArrayBuffer(11);
@@ -26,8 +25,7 @@ describe("toTypedBinarySchema", () => {
 
     it("derived struct writes identically to a handwritten one", () => {
         const handwritten = object({ a: u32, b: i32 });
-        type T = Parsed<typeof handwritten>;
-        const spec: StructSpec<T> = { a: { codec: u32 }, b: { codec: i32 } };
+        const spec = { a: { codec: u32 }, b: { codec: i32 } } satisfies Record<string, FieldSpec>;
         const derived = toTypedBinarySchema(spec);
 
         const sample = { a: 100, b: -200 };
@@ -40,11 +38,10 @@ describe("toTypedBinarySchema", () => {
     });
 
     it("derived schema with fixed-count array reads correctly", () => {
-        type T = { count: number; values: number[] };
-        const spec: StructSpec<T> = {
+        const spec = {
             count: { codec: u32 },
             values: arraySpec({ element: { codec: u32 }, count: 3 }),
-        };
+        } satisfies Record<string, FieldSpec>;
         const derived = toTypedBinarySchema(spec);
 
         const buf = new ArrayBuffer(16);
@@ -56,16 +53,15 @@ describe("toTypedBinarySchema", () => {
     });
 
     it("rejects length-from-field arrays at raw schema level", () => {
-        type T = { count: number; values: number[] };
-        const spec: StructSpec<T> = {
+        const spec = {
             count: { codec: u32 },
             values: arraySpec({ element: { codec: u32 }, count: { fromField: "count" } }),
-        };
+        } satisfies Record<string, FieldSpec>;
         expect(() => toTypedBinarySchema(spec)).toThrow(/lengthFrom/);
     });
 
     it("caches derived schema by spec reference", () => {
-        const spec: StructSpec<{ a: number }> = { a: { codec: u32 } };
+        const spec = { a: { codec: u32 } } satisfies Record<string, FieldSpec>;
         expect(toTypedBinarySchema(spec)).toBe(toTypedBinarySchema(spec));
     });
 });

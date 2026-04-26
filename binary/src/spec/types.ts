@@ -37,3 +37,15 @@ export function arraySpec(args: { element: ScalarFieldSpec; count: number | { fr
 export function isArraySpec(spec: FieldSpec): spec is ArrayFieldSpec {
     return spec.kind === "array";
 }
+
+/**
+ * Type-level projection from a spec object to the data shape it describes.
+ *
+ * Use as `type FooData = SpecData<typeof fooSpec>;` to keep the data shape and
+ * the spec declarations in sync — adding a field to the spec automatically
+ * adds it to the data type, removing the prior duplication between
+ * `interface FooData` and the spec field list.
+ */
+export type SpecData<S extends Record<string, FieldSpec>> = {
+    -readonly [K in keyof S]: S[K] extends ArrayFieldSpec ? number[] : number;
+};

@@ -21,6 +21,8 @@ import {
     type IMeasurer,
     MaxValue,
 } from "typed-binary";
+import { toTypedBinarySchema } from "../spec/derive-typed-binary";
+import { armorSpec } from "./specs/armor";
 
 // -- Custom 24-bit unsigned integer schema ----------------------------------
 // PRO item common section packs flagsExt (3 bytes) + attackModes (1 byte).
@@ -78,26 +80,7 @@ export const itemCommonSchema = object({
 
 // -- Item subtypes ----------------------------------------------------------
 
-export const armorSchema = object({
-    ac: u32,
-    drNormal: u32,
-    drLaser: u32,
-    drFire: u32,
-    drPlasma: u32,
-    drElectrical: u32,
-    drEmp: u32,
-    drExplosion: u32,
-    dtNormal: u32,
-    dtLaser: u32,
-    dtFire: u32,
-    dtPlasma: u32,
-    dtElectrical: u32,
-    dtEmp: u32,
-    dtExplosion: u32,
-    perk: u32,
-    maleFrmId: i32,
-    femaleFrmId: i32,
-});
+export const armorSchema = toTypedBinarySchema(armorSpec);
 
 export const containerSchema = object({
     maxSize: u32,
@@ -339,7 +322,7 @@ export const miscSchema = object({
 
 export type HeaderData = Parsed<typeof headerSchema>;
 export type ItemCommonData = Parsed<typeof itemCommonSchema>;
-export type ArmorData = Parsed<typeof armorSchema>;
+export type { ArmorData } from "./specs/armor";
 export type ContainerData = Parsed<typeof containerSchema>;
 export type DrugData = Parsed<typeof drugSchema>;
 export type WeaponData = Parsed<typeof weaponSchema>;

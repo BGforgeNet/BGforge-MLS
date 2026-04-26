@@ -1,5 +1,5 @@
 import { object, arrayOf, type ISchema, type AnySchema } from "typed-binary";
-import { isArraySpec, type FieldSpec, type StructSpec } from "./types";
+import { isArraySpec, type FieldSpec, type SpecData } from "./types";
 
 /**
  * Derive a typed-binary `object({...})` schema from a `StructSpec`.
@@ -14,16 +14,16 @@ import { isArraySpec, type FieldSpec, type StructSpec } from "./types";
  */
 const cache = new WeakMap<object, ISchema<unknown>>();
 
-export function toTypedBinarySchema<T>(spec: StructSpec<T>): ISchema<T> {
-    const cached = cache.get(spec as unknown as object);
-    if (cached) return cached as ISchema<T>;
+export function toTypedBinarySchema<S extends Record<string, FieldSpec>>(spec: S): ISchema<SpecData<S>> {
+    const cached = cache.get(spec);
+    if (cached) return cached as ISchema<SpecData<S>>;
 
     const props: Record<string, AnySchema> = {};
-    for (const key of Object.keys(spec) as (keyof T & string)[]) {
-        props[key] = fieldSpecToCodec(spec[key]);
+    for (const key of Object.keys(spec)) {
+        props[key] = fieldSpecToCodec(spec[key]!);
     }
-    const schema = object(props) as unknown as ISchema<T>;
-    cache.set(spec as unknown as object, schema as ISchema<unknown>);
+    const schema = object(props) as unknown as ISchema<SpecData<S>>;
+    cache.set(spec, schema as ISchema<unknown>);
     return schema;
 }
 
