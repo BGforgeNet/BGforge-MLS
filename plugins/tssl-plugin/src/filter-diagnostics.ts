@@ -13,7 +13,14 @@ const ENGINE_PROCEDURES: ReadonlySet<string> = new Set(engineProcedureNames);
 /** TS6133: '{0}' is declared but its value is never read. */
 const TS6133_CODE = 6133;
 
-/** Matches the quoted identifier in a TS6133 message: 'name' or "name" */
+/**
+ * Matches the quoted identifier in a TS6133 message: 'name' or "name".
+ * The pattern depends on TypeScript's diagnostic message wording, which is
+ * stable across the 5.x line but unversioned in the public API. If a future
+ * TypeScript major rephrases TS6133, the procedure-name suppression below
+ * will silently stop working — guard with a snapshot test on a fixed TS
+ * version before bumping the `typescript` dep range.
+ */
 const TS6133_IDENTIFIER_RE = /^['"](\w+)['"]\s+is declared but/;
 
 /**
