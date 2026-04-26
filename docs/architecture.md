@@ -259,6 +259,8 @@ Two webview-based features, each with a host-side and browser-side module:
 | Dialog Tree (TSSL) | `dialog-tree/dialogTree.ts`   | `dialogTree-webview.ts`   | Ctrl+Shift+V in TSSL   |
 | Binary Editor      | `editors/binaryEditor.ts`     | `binaryEditor-webview.ts` | Open .pro or .map file |
 
+For the binary library internals — spec system, primitives, derivation, format-adapter pattern, adding a new format — see [binary/INTERNALS.md](../binary/INTERNALS.md).
+
 Binary editor design choice:
 
 - `.map` files are parsed strictly in the custom editor. If strict parsing fails, the editor shows the parse errors instead of silently falling back to heuristic recovery.

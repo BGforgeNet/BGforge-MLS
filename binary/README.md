@@ -5,6 +5,9 @@ Library and CLI for parsing and serialising Fallout `.pro` (prototype) and
 canonical JSON snapshots, suitable for diff-friendly version control of
 binary fixtures and for the BGforge MLS binary editor.
 
+For internals (spec system, primitives, derivation, format-adapter pattern,
+adding a new format), see [INTERNALS.md](INTERNALS.md).
+
 ## Library API
 
 ```ts
