@@ -1,5 +1,7 @@
 import { BufferReader } from "typed-binary";
 import type { BinaryParser, ParseOptions, ParseResult, ParsedGroup, ParsedField, ParsedFieldType } from "../types";
+import { walkStruct } from "../spec/walk-display";
+import { armorSpec, armorPresentation } from "./specs/armor";
 import { createProCanonicalSnapshot } from "./canonical";
 import { serializePro } from "./serializer";
 import {
@@ -260,38 +262,18 @@ function parseItemCommon(data: ItemCommonData, baseOffset: number, errors: strin
  * Parse armor subtype
  */
 function parseArmor(data: ArmorData, baseOffset: number): ParsedGroup {
-    return group("Armor Stats", [
-        field("AC", data.ac, baseOffset, 4, "int32"),
-        group(
-            "Damage Resistance",
-            [
-                field("Normal", percent(data.drNormal), baseOffset + 4, 4, "int32"),
-                field("Laser", percent(data.drLaser), baseOffset + 8, 4, "int32"),
-                field("Fire", percent(data.drFire), baseOffset + 12, 4, "int32"),
-                field("Plasma", percent(data.drPlasma), baseOffset + 16, 4, "int32"),
-                field("Electrical", percent(data.drElectrical), baseOffset + 20, 4, "int32"),
-                field("EMP", percent(data.drEmp), baseOffset + 24, 4, "int32"),
-                field("Explosion", percent(data.drExplosion), baseOffset + 28, 4, "int32"),
-            ],
-            false,
-        ),
-        group(
-            "Damage Threshold",
-            [
-                field("Normal", data.dtNormal, baseOffset + 32, 4, "int32"),
-                field("Laser", data.dtLaser, baseOffset + 36, 4, "int32"),
-                field("Fire", data.dtFire, baseOffset + 40, 4, "int32"),
-                field("Plasma", data.dtPlasma, baseOffset + 44, 4, "int32"),
-                field("Electrical", data.dtElectrical, baseOffset + 48, 4, "int32"),
-                field("EMP", data.dtEmp, baseOffset + 52, 4, "int32"),
-                field("Explosion", data.dtExplosion, baseOffset + 56, 4, "int32"),
-            ],
-            false,
-        ),
-        field("Perk", data.perk, baseOffset + 60, 4, "int32"),
-        field("Male FRM ID", data.maleFrmId, baseOffset + 64, 4, "int32"),
-        field("Female FRM ID", data.femaleFrmId, baseOffset + 68, 4, "int32"),
-    ]);
+    return walkStruct(armorSpec, armorPresentation, baseOffset, data, "Armor Stats", {
+        subGroups: [
+            {
+                name: "Damage Resistance",
+                fields: ["drNormal", "drLaser", "drFire", "drPlasma", "drElectrical", "drEmp", "drExplosion"],
+            },
+            {
+                name: "Damage Threshold",
+                fields: ["dtNormal", "dtLaser", "dtFire", "dtPlasma", "dtElectrical", "dtEmp", "dtExplosion"],
+            },
+        ],
+    });
 }
 
 /**

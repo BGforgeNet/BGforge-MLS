@@ -107,30 +107,9 @@ export function serializeProCanonicalSnapshot(snapshot: ProCanonicalSnapshot): U
                 soundId: item.soundId,
             });
             switch (item.subType) {
-                case 0: {
-                    const armor = sections.armorStats!;
-                    armorSchema.write(writer(data, ITEM_SUBTYPE_OFFSET), {
-                        ac: armor.ac,
-                        drNormal: armor.damageResistance.normal,
-                        drLaser: armor.damageResistance.laser,
-                        drFire: armor.damageResistance.fire,
-                        drPlasma: armor.damageResistance.plasma,
-                        drElectrical: armor.damageResistance.electrical,
-                        drEmp: armor.damageResistance.emp,
-                        drExplosion: armor.damageResistance.explosion,
-                        dtNormal: armor.damageThreshold.normal,
-                        dtLaser: armor.damageThreshold.laser,
-                        dtFire: armor.damageThreshold.fire,
-                        dtPlasma: armor.damageThreshold.plasma,
-                        dtElectrical: armor.damageThreshold.electrical,
-                        dtEmp: armor.damageThreshold.emp,
-                        dtExplosion: armor.damageThreshold.explosion,
-                        perk: armor.perk,
-                        maleFrmId: armor.maleFrmId,
-                        femaleFrmId: armor.femaleFrmId,
-                    });
+                case 0:
+                    armorSchema.write(writer(data, ITEM_SUBTYPE_OFFSET), sections.armorStats!);
                     break;
-                }
                 case 1:
                     containerSchema.write(writer(data, ITEM_SUBTYPE_OFFSET), sections.containerStats!);
                     break;

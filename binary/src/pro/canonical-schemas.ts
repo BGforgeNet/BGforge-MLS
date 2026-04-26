@@ -5,6 +5,8 @@
 
 import { z } from "zod";
 import { zodFieldNumber, zodNumericType } from "../binary-format-contract";
+import { toZodSchema } from "../spec/derive-zod";
+import { armorSpec } from "./specs/armor";
 
 const int32Schema = zodNumericType("int32");
 const uint8Schema = zodNumericType("uint8");
@@ -15,26 +17,6 @@ const uint32Schema = zodNumericType("uint32");
 const scriptRefSchema = z.strictObject({
     type: z.number().int().min(-1).max(0xff),
     id: z.number().int().min(-1).max(0x00_ff_ff_ff),
-});
-
-const unsignedDamageThresholdSchema = z.strictObject({
-    normal: uint32Schema,
-    laser: uint32Schema,
-    fire: uint32Schema,
-    plasma: uint32Schema,
-    electrical: uint32Schema,
-    emp: uint32Schema,
-    explosion: uint32Schema,
-});
-
-const unsignedDamageResistanceSchema = z.strictObject({
-    normal: uint32Schema,
-    laser: uint32Schema,
-    fire: uint32Schema,
-    plasma: uint32Schema,
-    electrical: uint32Schema,
-    emp: uint32Schema,
-    explosion: uint32Schema,
 });
 
 const unsignedCritterDamageResistanceSchema = z.strictObject({
@@ -162,16 +144,7 @@ const proCanonicalSectionsSchema = z.strictObject({
             soundId: uint8Schema,
         })
         .optional(),
-    armorStats: z
-        .strictObject({
-            ac: uint32Schema,
-            damageResistance: unsignedDamageResistanceSchema,
-            damageThreshold: unsignedDamageThresholdSchema,
-            perk: uint32Schema,
-            maleFrmId: int32Schema,
-            femaleFrmId: int32Schema,
-        })
-        .optional(),
+    armorStats: toZodSchema(armorSpec).optional(),
     weaponStats: z
         .strictObject({
             animCode: uint32Schema,

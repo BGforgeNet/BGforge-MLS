@@ -123,26 +123,24 @@ function rebuildProCanonicalSnapshot(parseResult: ParseResult): ProCanonicalSnap
 
     const armorStats = getOptionalGroup(parseResult.root, "Armor Stats");
     if (armorStats) {
+        const dr = getGroup(armorStats, "Damage Resistance");
+        const dt = getGroup(armorStats, "Damage Threshold");
         sections.armorStats = {
             ac: readFieldNumber(armorStats, "AC", "Armor Stats"),
-            damageResistance: mapGroupFields(getGroup(armorStats, "Damage Resistance"), [
-                ["Normal", "normal"],
-                ["Laser", "laser"],
-                ["Fire", "fire"],
-                ["Plasma", "plasma"],
-                ["Electrical", "electrical"],
-                ["EMP", "emp"],
-                ["Explosion", "explosion"],
-            ]),
-            damageThreshold: mapGroupFields(getGroup(armorStats, "Damage Threshold"), [
-                ["Normal", "normal"],
-                ["Laser", "laser"],
-                ["Fire", "fire"],
-                ["Plasma", "plasma"],
-                ["Electrical", "electrical"],
-                ["EMP", "emp"],
-                ["Explosion", "explosion"],
-            ]),
+            drNormal: readFieldNumber(dr, "Normal", "Armor Stats.Damage Resistance"),
+            drLaser: readFieldNumber(dr, "Laser", "Armor Stats.Damage Resistance"),
+            drFire: readFieldNumber(dr, "Fire", "Armor Stats.Damage Resistance"),
+            drPlasma: readFieldNumber(dr, "Plasma", "Armor Stats.Damage Resistance"),
+            drElectrical: readFieldNumber(dr, "Electrical", "Armor Stats.Damage Resistance"),
+            drEmp: readFieldNumber(dr, "EMP", "Armor Stats.Damage Resistance"),
+            drExplosion: readFieldNumber(dr, "Explosion", "Armor Stats.Damage Resistance"),
+            dtNormal: readFieldNumber(dt, "Normal", "Armor Stats.Damage Threshold"),
+            dtLaser: readFieldNumber(dt, "Laser", "Armor Stats.Damage Threshold"),
+            dtFire: readFieldNumber(dt, "Fire", "Armor Stats.Damage Threshold"),
+            dtPlasma: readFieldNumber(dt, "Plasma", "Armor Stats.Damage Threshold"),
+            dtElectrical: readFieldNumber(dt, "Electrical", "Armor Stats.Damage Threshold"),
+            dtEmp: readFieldNumber(dt, "EMP", "Armor Stats.Damage Threshold"),
+            dtExplosion: readFieldNumber(dt, "Explosion", "Armor Stats.Damage Threshold"),
             perk: readFieldNumber(armorStats, "Perk", "Armor Stats"),
             maleFrmId: readFieldNumber(armorStats, "Male FRM ID", "Armor Stats"),
             femaleFrmId: readFieldNumber(armorStats, "Female FRM ID", "Armor Stats"),
