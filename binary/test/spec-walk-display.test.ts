@@ -114,4 +114,22 @@ describe("walkStruct", () => {
         const result = walkStruct(spec, {}, 0, { f: 0 }, "G");
         expect((result.fields[0] as { value: unknown }).value).toBe("(none)");
     });
+
+    it("packed-field parts share the slot's offset and size; cursor advances once per group", () => {
+        type Data = { destTile: number; destElevation: number; destMap: number };
+        const spec: StructSpec<Data> = {
+            destTile: { codec: u32, packedAs: "destTileAndElevation", bitRange: [0, 26] },
+            destElevation: { codec: u32, packedAs: "destTileAndElevation", bitRange: [26, 6] },
+            destMap: { codec: u32 },
+        };
+        const data: Data = { destTile: 5, destElevation: 2, destMap: 0x1234 };
+        const result = walkStruct(spec, {}, 0x29, data, "Stairs");
+
+        // Both parts highlight the same wire slot bytes [0x29..0x2D); destMap follows at 0x2D.
+        expect(result.fields).toEqual([
+            { name: "Dest Tile", value: 5, offset: 0x29, size: 4, type: "uint32", rawValue: 5 },
+            { name: "Dest Elevation", value: 2, offset: 0x29, size: 4, type: "uint32", rawValue: 2 },
+            { name: "Dest Map", value: 0x1234, offset: 0x2d, size: 4, type: "uint32", rawValue: 0x1234 },
+        ]);
+    });
 });

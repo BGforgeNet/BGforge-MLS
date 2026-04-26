@@ -46,11 +46,37 @@ export function walkStruct<T extends Record<string, unknown>>(
 
     let cursor = baseOffset;
     const builtFields = new Map<keyof T & string, ParsedField>();
-    for (const key of keys) {
+    let i = 0;
+    while (i < keys.length) {
+        const key = keys[i]!;
         const fs = spec[key];
+
+        // Packed-field parts share one wire slot: all consecutive parts with
+        // the same `packedAs` value report the slot's offset+size and the
+        // cursor advances by the slot size once for the whole group. Spec
+        // authors are responsible for grouping packed parts contiguously
+        // (the typed-binary derivation enforces this at module load).
+        if (!isArraySpec(fs) && fs.packedAs !== undefined) {
+            const slot = fs.packedAs;
+            const slotOffset = cursor;
+            const slotSize = codecByteLength(fs.codec);
+            let j = i;
+            while (j < keys.length) {
+                const k = keys[j]!;
+                const f = spec[k];
+                if (isArraySpec(f) || f.packedAs !== slot) break;
+                builtFields.set(k, fieldFor(k, f, presentation[k], slotOffset, slotSize, data[k]));
+                j++;
+            }
+            cursor += slotSize;
+            i = j;
+            continue;
+        }
+
         const size = fieldSize(fs);
         builtFields.set(key, fieldFor(key, fs, presentation[key], cursor, size, data[key]));
         cursor += size;
+        i++;
     }
 
     const grouped = new Set<string>();
