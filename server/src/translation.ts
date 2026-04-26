@@ -427,8 +427,9 @@ export class Translation {
         if (!firstLine) return undefined;
 
         const match = REGEX_TRA_COMMENT_EXT.exec(firstLine);
-        if (match && match[1]) {
-            return match[1] as TraExt;
+        const captured = match?.[1];
+        if (captured === "tra" || captured === "msg") {
+            return captured;
         }
         return undefined;
     }
