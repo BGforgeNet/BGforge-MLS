@@ -10,6 +10,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+WORKFLOWS_DIR="${WORKFLOWS_DIR:-$ROOT_DIR/.github/workflows}"
 
 fail=0
 
@@ -27,23 +28,28 @@ check() {
 echo "Supply-chain invariant checks:"
 
 # (a) Scorecard workflow exists
-if [[ -f "$ROOT_DIR/.github/workflows/scorecard.yml" ]]; then
+if [[ -f "$WORKFLOWS_DIR/scorecard.yml" ]]; then
     check "scorecard.yml exists" "ok"
 else
     check "scorecard.yml exists" "missing"
 fi
 
-# (b) CycloneDX SBOM step present in build.yml
-if grep -q "cyclonedx" "$ROOT_DIR/.github/workflows/build.yml"; then
+# (b) CycloneDX SBOM step present in build.yml.
+# Match the npm package specifier `@cyclonedx/cyclonedx-npm` directly so a stray
+# comment mentioning the keyword cannot satisfy the gate; only an actual run
+# step that invokes the generator counts.
+if [[ -f "$WORKFLOWS_DIR/build.yml" ]] && grep -q "@cyclonedx/cyclonedx-npm" "$WORKFLOWS_DIR/build.yml"; then
     check "build.yml contains CycloneDX SBOM step" "ok"
 else
     check "build.yml contains CycloneDX SBOM step" "missing"
 fi
 
-# (c) SLSA provenance generator referenced (either in build.yml or release-provenance.yml)
+# (c) SLSA provenance generator referenced (either in build.yml or release-provenance.yml).
+# Require the `uses:` directive shape so a comment referencing the upstream
+# project cannot satisfy the gate; only a real workflow reference counts.
 slsa_found=0
-for f in "$ROOT_DIR/.github/workflows/build.yml" "$ROOT_DIR/.github/workflows/release-provenance.yml"; do
-    if [[ -f "$f" ]] && grep -q "slsa-github-generator" "$f"; then
+for f in "$WORKFLOWS_DIR/build.yml" "$WORKFLOWS_DIR/release-provenance.yml"; do
+    if [[ -f "$f" ]] && grep -Eq "uses:[[:space:]]+slsa-framework/slsa-github-generator/" "$f"; then
         slsa_found=1
         break
     fi
@@ -55,7 +61,7 @@ else
 fi
 
 # (d) CodeQL workflow exists
-if [[ -f "$ROOT_DIR/.github/workflows/codeql.yml" ]]; then
+if [[ -f "$WORKFLOWS_DIR/codeql.yml" ]]; then
     check "codeql.yml exists" "ok"
 else
     check "codeql.yml exists" "missing"
