@@ -82,14 +82,7 @@ export function serializeProCanonicalSnapshot(snapshot: ProCanonicalSnapshot): U
     }
 
     const data = new Uint8Array(size);
-    headerSchema.write(writer(data), {
-        objectTypeAndId: ((header.objectType & 0xff) << 24) | (header.objectId & 0x00_ff_ff_ff),
-        textId: header.textId,
-        frmTypeAndId: ((header.frmType & 0xff) << 24) | (header.frmId & 0x00_ff_ff_ff),
-        lightRadius: header.lightRadius,
-        lightIntensity: header.lightIntensity,
-        flags: header.flags,
-    });
+    headerSchema.write(writer(data), header);
 
     switch (header.objectType) {
         case 0: {

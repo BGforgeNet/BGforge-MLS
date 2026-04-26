@@ -2,6 +2,7 @@ import { BufferReader } from "typed-binary";
 import type { BinaryParser, ParseOptions, ParseResult, ParsedGroup, ParsedField, ParsedFieldType } from "../types";
 import { walkStruct } from "../spec/walk-display";
 import { armorSpec, armorPresentation } from "./specs/armor";
+import { headerSpec, headerPresentation } from "./specs/header";
 import { weaponSpec, weaponPresentation } from "./specs/weapon";
 import { ammoSpec, ammoPresentation } from "./specs/ammo";
 import { containerSpec, containerPresentation } from "./specs/container";
@@ -22,11 +23,9 @@ import {
     ScenerySubType,
     DamageType,
     MaterialType,
-    FRMType,
     BodyType,
     KillType,
     ScriptType,
-    HeaderFlags,
     ItemFlagsExt,
     WallLightFlags,
     ActionFlags,
@@ -229,22 +228,8 @@ function fieldsFromDefs(defs: CritterFieldDef[], data: Record<string, number>, e
 /**
  * Parse header into structured format
  */
-function parseHeader(data: HeaderData, errors: string[]): ParsedGroup {
-    const objectType = (data.objectTypeAndId >> 24) & 0xff;
-    const objectId = data.objectTypeAndId & 0x00_ff_ff_ff;
-    const frmType = (data.frmTypeAndId >> 24) & 0xff;
-    const frmId = data.frmTypeAndId & 0x00_ff_ff_ff;
-
-    return group("Header", [
-        enumField("Object Type", objectType, ObjectType, 0x00, 1, errors),
-        field("Object ID", objectId, 0x01, 3, "uint24"),
-        field("Text ID", data.textId, 0x04, 4, "uint32"),
-        enumField("FRM Type", frmType, FRMType, 0x08, 1, errors),
-        field("FRM ID", frmId, 0x09, 3, "uint24"),
-        field("Light Radius", data.lightRadius, 0x0c, 4, "uint32", "0-8 hexes"),
-        field("Light Intensity", data.lightIntensity, 0x10, 4, "uint32", "0-65536"),
-        flagsField("Flags", data.flags, HeaderFlags, 0x14, 4),
-    ]);
+function parseHeader(data: HeaderData): ParsedGroup {
+    return walkStruct(headerSpec, headerPresentation, 0, data, "Header");
 }
 
 /**
@@ -551,7 +536,7 @@ class ProParser implements BinaryParser {
 
         // Parse header to determine type
         const header: HeaderData = headerSchema.read(reader(data));
-        const objectType = (header.objectTypeAndId >> 24) & 0xff;
+        const objectType = header.objectType;
 
         // Validate file size based on object type
         let expectedSize: number;
@@ -613,7 +598,7 @@ class ProParser implements BinaryParser {
 
         // Now parse the validated file
         const errors: string[] = [];
-        const headerGroup = parseHeader(header, errors);
+        const headerGroup = parseHeader(header);
         const groups: (ParsedField | ParsedGroup)[] = [headerGroup];
 
         switch (objectType) {

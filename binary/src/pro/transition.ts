@@ -65,7 +65,7 @@ function buildObjectTypeTransitionBytes(currentBytes: Uint8Array, objectType: nu
     const header = headerSchema.read(reader(currentBytes));
     headerSchema.write(writer(nextBytes), {
         ...header,
-        objectTypeAndId: ((objectType & 0xff) << 24) | (header.objectTypeAndId & 0x00_ff_ff_ff),
+        objectType,
     });
 
     if (objectType === 0) {

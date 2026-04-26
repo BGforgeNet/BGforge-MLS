@@ -52,7 +52,7 @@ function roundTrip(input: Uint8Array): Uint8Array {
     const header = headerSchema.read(reader(input));
     headerSchema.write(writer(output), header);
 
-    const objectType = (header.objectTypeAndId >> 24) & 0xff;
+    const objectType = header.objectType;
 
     switch (objectType) {
         case 0: {

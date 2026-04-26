@@ -49,6 +49,12 @@
         // noise.
         "unicorn/numeric-separators-style": "off",
 
+        // The codec-meta module bundles tightly-coupled typed-binary Schema
+        // subclasses (u24, i24, future bit-packed codecs) for a single
+        // registration table. Splitting each into its own file would scatter
+        // the registration across N files for no readability gain.
+        "max-classes-per-file": "off",
+
         // `filename-case` would force a repo-wide rename without an
         // established convention — out of scope for a lint upgrade.
         "unicorn/filename-case": "off",
