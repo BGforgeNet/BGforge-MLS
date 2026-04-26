@@ -68,6 +68,6 @@ fgtp script.tssl --save
 
 ## Per-language transpiler guides
 
-- [TSSL](https://github.com/BGforgeNet/BGforge-MLS/tree/master/transpilers/tssl/docs) — TypeScript to Fallout SSL
-- [TBAF](https://github.com/BGforgeNet/BGforge-MLS/tree/master/transpilers/tbaf/docs) — TypeScript to Infinity Engine BAF
-- [TD](https://github.com/BGforgeNet/BGforge-MLS/tree/master/transpilers/td/docs) — TypeScript to Infinity Engine D
+- [TSSL](./tssl/docs/) — TypeScript to Fallout SSL
+- [TBAF](./tbaf/docs/) — TypeScript to Infinity Engine BAF
+- [TD](./td/docs/) — TypeScript to Infinity Engine D
