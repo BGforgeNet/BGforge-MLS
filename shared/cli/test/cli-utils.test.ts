@@ -106,6 +106,32 @@ describe("safeProcess", () => {
         expect(result).toBe("error");
         expect(stderrSpy).toHaveBeenCalledWith("bad.txt: string error");
     });
+
+    it("formats errors with full location as file:line:col prefix", async () => {
+        const result = await safeProcess("fallback.txt", () => {
+            throw Object.assign(new Error("syntax error"), {
+                location: { file: "/path/to/src.txt", line: 42, column: 7 },
+            });
+        });
+        expect(result).toBe("error");
+        expect(stderrSpy).toHaveBeenCalledWith("/path/to/src.txt:42:7: syntax error");
+    });
+
+    it("uses fallback file path when location.file is missing", async () => {
+        const result = await safeProcess("fallback.txt", () => {
+            throw Object.assign(new Error("issue here"), { location: { line: 10 } });
+        });
+        expect(result).toBe("error");
+        expect(stderrSpy).toHaveBeenCalledWith("fallback.txt:10: issue here");
+    });
+
+    it("treats errors without location as plain", async () => {
+        const result = await safeProcess("plain.txt", () => {
+            throw new Error("nothing structured");
+        });
+        expect(result).toBe("error");
+        expect(stderrSpy).toHaveBeenCalledWith("plain.txt: nothing structured");
+    });
 });
 
 describe("findFiles", () => {

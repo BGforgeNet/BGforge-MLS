@@ -8,10 +8,38 @@ import * as fs from "fs";
 import * as path from "path";
 import cac from "cac";
 import { diffLines } from "diff";
-import { TranspileError } from "../../transpilers/common/transpile-error";
 
 export type FileResult = "changed" | "unchanged" | "error";
 export type OutputMode = "save" | "stdout" | "check" | "save-and-check";
+
+/**
+ * Optional source-location metadata that error throwers can attach for
+ * file:line:column formatting in CLI output. Duck-typed so this module does
+ * not need to depend on any specific error class — the transpilers' own
+ * TranspileError satisfies the shape, and other domains can attach the same
+ * fields without sharing a class hierarchy.
+ */
+interface LocatedErrorShape {
+    readonly file?: string;
+    readonly line?: number;
+    readonly column?: number;
+}
+
+function readLocation(err: Error): LocatedErrorShape | undefined {
+    // Error doesn't declare a `location` property; the cast acknowledges this
+    // is a duck-typed read of an optional unknown field, which we then validate
+    // structurally below before trusting it.
+    const raw = (err as Error & { location?: unknown }).location;
+    if (typeof raw !== "object" || raw === null) return undefined;
+    // After the typeof guard above, raw is a non-null object; the Record cast
+    // is the only way to index unknown keys on the `object` type.
+    const obj = raw as Record<string, unknown>;
+    const file = typeof obj.file === "string" ? obj.file : undefined;
+    const line = typeof obj.line === "number" ? obj.line : undefined;
+    const column = typeof obj.column === "number" ? obj.column : undefined;
+    if (file === undefined && line === undefined && column === undefined) return undefined;
+    return { file, line, column };
+}
 
 interface CliArgs {
     target: string;
@@ -95,15 +123,18 @@ export async function safeProcess(filePath: string, fn: () => FileResult | Promi
     try {
         return await fn();
     } catch (err) {
-        if (err instanceof TranspileError) {
-            const loc = err.location;
-            const file = loc.file ?? filePath;
-            const linePart = loc.line !== undefined ? `:${loc.line}` : "";
-            const colPart = loc.column !== undefined ? `:${loc.column}` : "";
-            console.error(`${file}${linePart}${colPart}: ${err.message}`);
+        if (err instanceof Error) {
+            const loc = readLocation(err);
+            if (loc !== undefined) {
+                const file = loc.file ?? filePath;
+                const linePart = loc.line !== undefined ? `:${loc.line}` : "";
+                const colPart = loc.column !== undefined ? `:${loc.column}` : "";
+                console.error(`${file}${linePart}${colPart}: ${err.message}`);
+            } else {
+                console.error(`${filePath}: ${err.message}`);
+            }
         } else {
-            const msg = err instanceof Error ? err.message : String(err);
-            console.error(`${filePath}: ${msg}`);
+            console.error(`${filePath}: ${String(err)}`);
         }
         return "error";
     }
