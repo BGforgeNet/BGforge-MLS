@@ -121,12 +121,19 @@ Examples:
  * Validation and semantic round-trip checks happen inside the shared snapshot loader.
  */
 function loadJsonToBinary(jsonPath: string): void {
-    if (!fs.existsSync(jsonPath)) {
-        console.error(`Not found: ${jsonPath}`);
-        process.exit(1);
+    let jsonText: string;
+    try {
+        // Read with try/catch instead of existsSync→readFileSync to avoid
+        // the TOCTOU window CodeQL js/file-system-race flags.
+        jsonText = fs.readFileSync(jsonPath, "utf-8");
+    } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+            console.error(`Not found: ${jsonPath}`);
+            process.exit(1);
+        }
+        throw err;
     }
 
-    const jsonText = fs.readFileSync(jsonPath, "utf-8");
     const loaded = loadBinaryJsonSnapshot(jsonText, {
         proParseOptions: CLI_PARSE_OPTIONS,
         mapParseOptions: CLI_PARSE_OPTIONS,
