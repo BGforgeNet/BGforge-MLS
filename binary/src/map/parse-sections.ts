@@ -28,6 +28,17 @@ import {
 } from "./schemas";
 import { varSectionSpec, type VarSectionCtx } from "./specs/variables";
 import {
+    OTHER_SLOT_BYTES,
+    SPATIAL_SLOT_BYTES,
+    TIMER_SLOT_BYTES,
+    otherSlotSpec,
+    spatialSlotSpec,
+    timerSlotSpec,
+    type OtherSlotData,
+    type SpatialSlotData,
+    type TimerSlotData,
+} from "./specs/script-slot";
+import {
     field,
     makeGroup,
     flagsField,
@@ -180,81 +191,81 @@ export function parseTiles(
     return { tiles, offset: currentOffset, skippedRange };
 }
 
+const otherSlotCodec = toTypedBinarySchema(otherSlotSpec);
+const spatialSlotCodec = toTypedBinarySchema(spatialSlotSpec);
+const timerSlotCodec = toTypedBinarySchema(timerSlotSpec);
+
+type AnySlotData = OtherSlotData | SpatialSlotData | TimerSlotData;
+
+function appendSlotCommonFields(fields: ParsedField[], slot: AnySlotData, label: string, commonOffset: number): void {
+    fields.push(flagsField(`${label} Flags`, slot.flags, ScriptFlags, commonOffset, 4));
+    fields.push(field(`${label} Index`, slot.index, commonOffset + 4, 4, "int32"));
+    fields.push(field(`${label} Program Pointer Slot`, slot.programPointerSlot, commonOffset + 8, 4, "int32"));
+    fields.push(field(`${label} Owner ID`, slot.ownerId, commonOffset + 12, 4, "int32"));
+    fields.push(field(`${label} Local Vars Offset`, slot.localVarsOffset, commonOffset + 16, 4, "int32"));
+    fields.push(field(`${label} Num Local Vars`, slot.numLocalVars, commonOffset + 20, 4, "int32"));
+    fields.push(field(`${label} Return Value`, slot.returnValue, commonOffset + 24, 4, "int32"));
+    fields.push(enumField(`${label} Action`, slot.action, ScriptProc, commonOffset + 28, 4));
+    fields.push(field(`${label} Fixed Param`, slot.fixedParam, commonOffset + 32, 4, "int32"));
+    fields.push(enumField(`${label} Action Being Used`, slot.actionBeingUsed, Skill, commonOffset + 36, 4));
+    fields.push(field(`${label} Script Overrides`, slot.scriptOverrides, commonOffset + 40, 4, "int32"));
+    fields.push(field(`${label} Unknown Field 0x48`, slot.unknownField0x48, commonOffset + 44, 4, "int32"));
+    fields.push(field(`${label} Check Margin (how_much)`, slot.checkMargin, commonOffset + 48, 4, "int32"));
+    fields.push(field(`${label} Legacy Field 0x50`, slot.legacyField0x50, commonOffset + 52, 4, "int32"));
+}
+
 function parseScriptEntryFields(
     data: Uint8Array,
     currentOffset: number,
     label: string,
     errors: string[],
 ): { fields: ParsedField[]; offset: number } {
+    // Need at least sid+nextLink to even peek the discriminator.
     if (currentOffset + 8 > data.length) {
         errors.push(`Script entry ${label} truncated at offset 0x${currentOffset.toString(16)}`);
         return { fields: [], offset: data.length };
     }
 
-    const fields: ParsedField[] = [];
-
+    // Peek sid (without consuming through the spec codec) so we can pick
+    // the variant whose layout matches the wire bytes.
     const sidView = new DataView(data.buffer, data.byteOffset + currentOffset, 4);
     const sid = sidView.getUint32(0, false);
-    const actualScriptType = getScriptType(sid);
+    const scriptType = getScriptType(sid);
 
-    fields.push(field(`${label} SID`, sid, currentOffset, 4, "uint32"));
-
-    const field4View = new DataView(data.buffer, data.byteOffset + currentOffset + 4, 4);
-    fields.push(
-        field(`${label} Next Script Link (legacy)`, field4View.getInt32(0, false), currentOffset + 4, 4, "int32"),
-    );
-
-    let pos = 8;
-    if (actualScriptType === 1) {
-        const builtTileView = new DataView(data.buffer, data.byteOffset + currentOffset + pos, 4);
-        fields.push(field(`${label} Built Tile`, builtTileView.getInt32(0, false), currentOffset + pos, 4, "int32"));
-        pos += 4;
-        const radiusView = new DataView(data.buffer, data.byteOffset + currentOffset + pos, 4);
-        fields.push(field(`${label} Spatial Radius`, radiusView.getInt32(0, false), currentOffset + pos, 4, "int32"));
-        pos += 4;
-    } else if (actualScriptType === 2) {
-        const timeView = new DataView(data.buffer, data.byteOffset + currentOffset + pos, 4);
-        fields.push(field(`${label} Timer Time`, timeView.getInt32(0, false), currentOffset + pos, 4, "int32"));
-        pos += 4;
+    const slotBytes = scriptType === 1 ? SPATIAL_SLOT_BYTES : scriptType === 2 ? TIMER_SLOT_BYTES : OTHER_SLOT_BYTES;
+    if (currentOffset + slotBytes > data.length) {
+        errors.push(`Script entry ${label} overflow at offset 0x${currentOffset.toString(16)}`);
+        return { fields: [], offset: data.length };
     }
 
-    const commonNames = [
-        "Flags",
-        "Index",
-        "Program Pointer Slot",
-        "Owner ID",
-        "Local Vars Offset",
-        "Num Local Vars",
-        "Return Value",
-        "Action",
-        "Fixed Param",
-        "Action Being Used",
-        "Script Overrides",
-        "Unknown Field 0x48",
-        "Check Margin (how_much)",
-        "Legacy Field 0x50",
-    ];
-    for (const [index, name] of commonNames.entries()) {
-        if (currentOffset + pos + 4 > data.length) {
-            errors.push(`Script entry ${label} overflow at offset 0x${(currentOffset + pos).toString(16)}`);
-            return { fields, offset: data.length };
-        }
+    const reader = new BufferReader(data.buffer, {
+        endianness: "big",
+        byteOffset: data.byteOffset + currentOffset,
+    });
 
-        const fview = new DataView(data.buffer, data.byteOffset + currentOffset + pos, 4);
-        const value = fview.getInt32(0, false);
-        if (index === 0) {
-            fields.push(flagsField(`${label} ${name}`, value, ScriptFlags, currentOffset + pos, 4));
-        } else if (name === "Action") {
-            fields.push(enumField(`${label} ${name}`, value, ScriptProc, currentOffset + pos, 4));
-        } else if (name === "Action Being Used") {
-            fields.push(enumField(`${label} ${name}`, value, Skill, currentOffset + pos, 4));
-        } else {
-            fields.push(field(`${label} ${name}`, value, currentOffset + pos, 4, "int32"));
-        }
-        pos += 4;
+    const fields: ParsedField[] = [];
+
+    if (scriptType === 1) {
+        const slot = spatialSlotCodec.read(reader);
+        fields.push(field(`${label} SID`, slot.sid, currentOffset, 4, "uint32"));
+        fields.push(field(`${label} Next Script Link (legacy)`, slot.nextScriptLink, currentOffset + 4, 4, "int32"));
+        fields.push(field(`${label} Built Tile`, slot.builtTile, currentOffset + 8, 4, "int32"));
+        fields.push(field(`${label} Spatial Radius`, slot.spatialRadius, currentOffset + 12, 4, "int32"));
+        appendSlotCommonFields(fields, slot, label, currentOffset + 16);
+    } else if (scriptType === 2) {
+        const slot = timerSlotCodec.read(reader);
+        fields.push(field(`${label} SID`, slot.sid, currentOffset, 4, "uint32"));
+        fields.push(field(`${label} Next Script Link (legacy)`, slot.nextScriptLink, currentOffset + 4, 4, "int32"));
+        fields.push(field(`${label} Timer Time`, slot.timerTime, currentOffset + 8, 4, "int32"));
+        appendSlotCommonFields(fields, slot, label, currentOffset + 12);
+    } else {
+        const slot = otherSlotCodec.read(reader);
+        fields.push(field(`${label} SID`, slot.sid, currentOffset, 4, "uint32"));
+        fields.push(field(`${label} Next Script Link (legacy)`, slot.nextScriptLink, currentOffset + 4, 4, "int32"));
+        appendSlotCommonFields(fields, slot, label, currentOffset + 8);
     }
 
-    return { fields, offset: currentOffset + pos };
+    return { fields, offset: currentOffset + slotBytes };
 }
 
 export function parseScripts(
