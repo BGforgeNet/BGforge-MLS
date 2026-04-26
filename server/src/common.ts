@@ -296,7 +296,7 @@ function findTraArgumentAtPosition(line: string, pos: number): string | null {
  * Returns the normalized hover token form, e.g. "mstr(100" or "floater_rand(307".
  */
 function findMsgArgumentAtPosition(line: string, pos: number): string | null {
-    for (const match of line.matchAll(new RegExp(REGEX_MSG_INLAY.source, "g"))) {
+    for (const match of line.matchAll(REGEX_MSG_INLAY)) {
         const functionName = match[1];
         const lineKey = match[2];
         if (!functionName || !lineKey) {
@@ -309,7 +309,7 @@ function findMsgArgumentAtPosition(line: string, pos: number): string | null {
         }
     }
 
-    for (const match of line.matchAll(new RegExp(REGEX_MSG_INLAY_FLOATER_RAND.source, "g"))) {
+    for (const match of line.matchAll(REGEX_MSG_INLAY_FLOATER_RAND)) {
         const firstKey = match[1];
         const secondKey = match[2];
         if (!firstKey || !secondKey) {
