@@ -75,6 +75,18 @@ describe("toZodSchema", () => {
         expect(() => z.parse({ destTile: -1, destElevation: 0, destMap: 0 })).toThrow();
     });
 
+    it("lengthFrom array rejects when count field disagrees with array length", () => {
+        const spec = {
+            n: { codec: u32 },
+            xs: arraySpec({ element: { codec: u8 }, count: { fromField: "n" } }),
+        } satisfies Record<string, FieldSpec>;
+        const z = toZodSchema(spec);
+
+        expect(z.parse({ n: 3, xs: [1, 2, 3] })).toEqual({ n: 3, xs: [1, 2, 3] });
+        expect(() => z.parse({ n: 3, xs: [1, 2] })).toThrow();
+        expect(() => z.parse({ n: 0, xs: [1] })).toThrow();
+    });
+
     it("packed-field part with domain narrows below the bit-width max", () => {
         const spec = {
             elevation: { codec: u32, packedAs: "w", bitRange: [0, 6], domain: { min: 0, max: 3 } },

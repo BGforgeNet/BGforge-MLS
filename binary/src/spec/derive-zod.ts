@@ -14,10 +14,37 @@ import { isArraySpec, type FieldSpec, type SpecData } from "./types";
  */
 export function toZodSchema<S extends Record<string, FieldSpec>>(spec: S): z.ZodType<SpecData<S>> {
     const shape: Record<string, z.ZodType<unknown>> = {};
+    const linkedCounts: { arrayKey: string; countField: string }[] = [];
     for (const key of Object.keys(spec)) {
-        shape[key] = fieldSpecToZod(spec[key]!);
+        const fs = spec[key]!;
+        shape[key] = fieldSpecToZod(fs);
+        if (isArraySpec(fs) && typeof fs.count !== "number") {
+            linkedCounts.push({ arrayKey: key, countField: fs.count.fromField });
+        }
     }
-    return z.strictObject(shape) as unknown as z.ZodType<SpecData<S>>;
+    let schema: z.ZodType<unknown> = z.strictObject(shape);
+    if (linkedCounts.length > 0) {
+        // Save-time guard: each lengthFrom array's length must equal its
+        // declared count field. enforceLinkedCounts (in spec/types.ts) is the
+        // pre-serialization sync helper; this refinement is the safety net
+        // that catches docs assembled without that helper.
+        schema = schema.superRefine((doc, ctx) => {
+            const d = doc as Record<string, unknown>;
+            for (const { arrayKey, countField } of linkedCounts) {
+                const arr = d[arrayKey];
+                const count = d[countField];
+                if (!Array.isArray(arr) || typeof count !== "number") continue;
+                if (arr.length !== count) {
+                    ctx.addIssue({
+                        code: "custom",
+                        path: [arrayKey],
+                        message: `lengthFrom array "${arrayKey}" has length ${arr.length} but count field "${countField}" is ${count}.`,
+                    });
+                }
+            }
+        });
+    }
+    return schema as unknown as z.ZodType<SpecData<S>>;
 }
 
 function fieldSpecToZod(fs: FieldSpec): z.ZodType<unknown> {

@@ -52,12 +52,46 @@ describe("toTypedBinarySchema", () => {
         expect(derived.read(r)).toEqual({ count: 3, values: [10, 20, 30] });
     });
 
-    it("rejects length-from-field arrays at raw schema level", () => {
+    it("supports length-from-field arrays: count field drives array length on read and write", () => {
         const spec = {
             count: { codec: u32 },
             values: arraySpec({ element: { codec: u32 }, count: { fromField: "count" } }),
         } satisfies Record<string, FieldSpec>;
-        expect(() => toTypedBinarySchema(spec)).toThrow(/lengthFrom/);
+        const derived = toTypedBinarySchema(spec);
+
+        const buf = new ArrayBuffer(16); // 4 (count) + 3*4 (values).
+        const w = new BufferWriter(buf, { endianness: "big" });
+        derived.write(w, { count: 3, values: [10, 20, 30] });
+
+        const r = new BufferReader(buf, { endianness: "big" });
+        expect(derived.read(r)).toEqual({ count: 3, values: [10, 20, 30] });
+    });
+
+    it("length-from-field array with zero count reads as empty", () => {
+        const spec = {
+            n: { codec: u32 },
+            xs: arraySpec({ element: { codec: u8 }, count: { fromField: "n" } }),
+        } satisfies Record<string, FieldSpec>;
+        const derived = toTypedBinarySchema(spec);
+
+        const buf = new ArrayBuffer(4);
+        const w = new BufferWriter(buf, { endianness: "big" });
+        derived.write(w, { n: 0, xs: [] });
+
+        const r = new BufferReader(buf, { endianness: "big" });
+        expect(derived.read(r)).toEqual({ n: 0, xs: [] });
+    });
+
+    it("length-from-field array referencing an unknown sibling field throws on read", () => {
+        const spec = {
+            count: { codec: u32 },
+            values: arraySpec({ element: { codec: u8 }, count: { fromField: "missing" } }),
+        } satisfies Record<string, FieldSpec>;
+        const derived = toTypedBinarySchema(spec);
+
+        const buf = new ArrayBuffer(4);
+        new BufferWriter(buf, { endianness: "big" }).writeUint32(3);
+        expect(() => derived.read(new BufferReader(buf, { endianness: "big" }))).toThrow(/missing/);
     });
 
     it("caches derived schema by spec reference", () => {

@@ -73,7 +73,7 @@ export function walkStruct<T extends Record<string, unknown>>(
             continue;
         }
 
-        const size = fieldSize(fs);
+        const size = fieldSize(fs, data, key);
         builtFields.set(key, fieldFor(key, fs, presentation[key], cursor, size, data[key]));
         cursor += size;
         i++;
@@ -116,12 +116,19 @@ export function walkStruct<T extends Record<string, unknown>>(
     return { name: groupName, fields: out, expanded: options.expanded ?? true };
 }
 
-function fieldSize(fs: FieldSpec): number {
+function fieldSize<T extends Record<string, unknown>>(fs: FieldSpec, data: T, key: string): number {
     if (isArraySpec(fs)) {
         if (typeof fs.count === "number") {
             return fs.count * codecByteLength(fs.element.codec);
         }
-        throw new Error("lengthFrom arrays must be sized by the caller; not yet supported in walker.");
+        // lengthFrom: size from data[arrayKey].length × element bytes. The
+        // count field's value is redundant here — array.length is the source
+        // of truth (enforceLinkedCounts keeps the count field in sync).
+        const arr = data[key];
+        if (!Array.isArray(arr)) {
+            throw new TypeError(`lengthFrom array "${key}" expected an array in data, got ${typeof arr}.`);
+        }
+        return arr.length * codecByteLength(fs.element.codec);
     }
     return codecByteLength(fs.codec);
 }

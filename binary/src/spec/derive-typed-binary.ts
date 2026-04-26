@@ -14,18 +14,14 @@ import { codecByteLength } from "./codec-meta";
 import { isArraySpec, type FieldSpec, type SpecData } from "./types";
 
 /**
- * Derive a typed-binary `object({...})` schema from a `StructSpec`.
+ * Derive a typed-binary schema from a `StructSpec`.
  *
- * For scalar fields, each entry maps to its declared codec. For fixed-count
- * arrays, emits `arrayOf(element, count)`. Length-from-field arrays cannot be
- * expressed in raw typed-binary (which has no cross-field dependency); those
- * are handled by the higher-level walker. See `tmp/binary-spec-plan.md`.
- *
- * When any field declares `packedAs`, falls through to `PackedStructSchema`
- * instead of `object({...})`: typed-binary's object reads each property
- * independently, but a bit-packed group needs one wire read distributed
- * across multiple flat data properties. The dispatch keeps the pure-scalar
- * case on the well-trodden `object({...})` path so packing is opt-in.
+ * For pure-scalar specs with fixed-count arrays only, returns a typed-binary
+ * `object({...})` schema (one prop per spec key). When the spec needs
+ * cross-field coordination — bit-packed slots (`packedAs`) or length-from-field
+ * arrays (`count: { fromField }`) — falls through to a custom `SpecStructSchema`
+ * that walks the spec in declaration order and handles those interactions
+ * directly.
  *
  * Results are cached by spec reference so repeated derivations on the same
  * spec object return the same schema instance.
@@ -36,11 +32,14 @@ export function toTypedBinarySchema<S extends Record<string, FieldSpec>>(spec: S
     const cached = cache.get(spec);
     if (cached) return cached as ISchema<SpecData<S>>;
 
-    const hasPacked = Object.values(spec).some((f) => !isArraySpec(f) && f.packedAs !== undefined);
+    const needsCustom = Object.values(spec).some((f) => {
+        if (isArraySpec(f)) return typeof f.count !== "number";
+        return f.packedAs !== undefined;
+    });
 
     let schema: ISchema<unknown>;
-    if (hasPacked) {
-        schema = new PackedStructSchema(spec);
+    if (needsCustom) {
+        schema = new SpecStructSchema(spec);
     } else {
         const props: Record<string, AnySchema> = {};
         for (const key of Object.keys(spec)) {
@@ -54,10 +53,13 @@ export function toTypedBinarySchema<S extends Record<string, FieldSpec>>(spec: S
 
 function fieldSpecToCodec(fs: FieldSpec): AnySchema {
     if (isArraySpec(fs)) {
-        if (typeof fs.count === "number") {
-            return arrayOf(fs.element.codec, fs.count) as unknown as AnySchema;
+        // Reachable only on the pure-scalar dispatch branch where lengthFrom
+        // arrays have already been ruled out; throwing here is a guard against
+        // future refactors that bypass the dispatch.
+        if (typeof fs.count !== "number") {
+            throw new TypeError("lengthFrom arrays must be derived via SpecStructSchema, not the object({...}) path.");
         }
-        throw new Error("lengthFrom arrays are not supported in raw schema derivation; use the walker.");
+        return arrayOf(fs.element.codec, fs.count) as unknown as AnySchema;
     }
     return fs.codec as unknown as AnySchema;
 }
@@ -76,19 +78,30 @@ type WireEntry =
           readonly codec: ISchema<number>;
           readonly bytes: number;
           readonly parts: readonly PackedPart[];
+      }
+    | {
+          readonly kind: "lengthFromArray";
+          readonly key: string;
+          readonly elementCodec: ISchema<number>;
+          readonly elementBytes: number;
+          readonly fromField: string;
       };
 
 // Extends `Schema<unknown>` rather than `Schema<SpecData<S>>` to dodge the
 // generic-`Parsed<T, Ctx>` simplification mismatch; the call site in
 // `toTypedBinarySchema` casts back to `ISchema<SpecData<S>>` at the boundary.
-class PackedStructSchema extends Schema<unknown> {
+class SpecStructSchema extends Schema<unknown> {
     readonly maxSize: number;
     private readonly entries: readonly WireEntry[];
 
     constructor(spec: Record<string, FieldSpec>) {
         super();
         this.entries = buildWireLayout(spec);
-        this.maxSize = this.entries.reduce((sum, e) => sum + e.bytes, 0);
+        // For variable-length structs (lengthFrom arrays), maxSize covers
+        // only the fixed contributions; the actual size depends on per-doc
+        // array lengths and is computed in `measure(value, ...)`. Callers who
+        // need an exact size for buffer allocation should use measure.
+        this.maxSize = this.entries.reduce((sum, e) => sum + (e.kind === "lengthFromArray" ? 0 : e.bytes), 0);
     }
 
     read(input: ISerialInput): unknown {
@@ -96,12 +109,21 @@ class PackedStructSchema extends Schema<unknown> {
         for (const entry of this.entries) {
             if (entry.kind === "plain") {
                 out[entry.key] = (entry.codec as ISchema<unknown>).read(input);
-            } else {
+            } else if (entry.kind === "packed") {
                 const word = entry.codec.read(input);
                 for (const p of entry.parts) {
                     const mask = bitMask(p.bitWidth);
                     out[p.key] = (word >>> p.bitOffset) & mask;
                 }
+            } else {
+                const count = out[entry.fromField];
+                if (typeof count !== "number") {
+                    throw new TypeError(
+                        `lengthFrom array "${entry.key}" references field "${entry.fromField}" which has not been read as a number.`,
+                    );
+                }
+                const arr: number[] = Array.from({ length: count }, () => entry.elementCodec.read(input));
+                out[entry.key] = arr;
             }
         }
         return out;
@@ -112,7 +134,7 @@ class PackedStructSchema extends Schema<unknown> {
         for (const entry of this.entries) {
             if (entry.kind === "plain") {
                 (entry.codec as ISchema<unknown>).write(output, v[entry.key]);
-            } else {
+            } else if (entry.kind === "packed") {
                 let word = 0;
                 for (const p of entry.parts) {
                     const mask = bitMask(p.bitWidth);
@@ -122,12 +144,32 @@ class PackedStructSchema extends Schema<unknown> {
                 // JS bit-OR/shift returns int32; without `>>> 0`, a part landing
                 // on bit 31 produces a negative value the u32 codec rejects.
                 entry.codec.write(output, word >>> 0);
+            } else {
+                const arr = v[entry.key];
+                if (!Array.isArray(arr)) {
+                    throw new TypeError(`lengthFrom array "${entry.key}" expected an array, got ${typeof arr}.`);
+                }
+                for (const elem of arr) {
+                    entry.elementCodec.write(output, elem as number);
+                }
             }
         }
     }
 
-    measure(_: unknown | MaxValue, measurer?: IMeasurer): IMeasurer {
-        return (measurer ?? new Measurer()).add(this.maxSize);
+    measure(value: unknown | MaxValue, measurer?: IMeasurer): IMeasurer {
+        const m = measurer ?? new Measurer();
+        let dynamic = 0;
+        for (const entry of this.entries) {
+            if (entry.kind !== "lengthFromArray") continue;
+            // For MaxValue probes (e.g. typed-binary measuring an unbounded
+            // schema), report only the fixed parts; consumers needing an
+            // exact size for variable structs must pass an actual value.
+            if (typeof value === "object" && value !== null) {
+                const arr = (value as Record<string, unknown>)[entry.key];
+                if (Array.isArray(arr)) dynamic += arr.length * entry.elementBytes;
+            }
+        }
+        return m.add(this.maxSize + dynamic);
     }
 }
 
@@ -145,15 +187,22 @@ function buildWireLayout<S extends Record<string, FieldSpec>>(spec: S): WireEntr
         const fs = spec[key]!;
 
         if (isArraySpec(fs)) {
-            if (typeof fs.count !== "number") {
-                throw new TypeError("lengthFrom arrays are not supported in raw schema derivation; use the walker.");
+            if (typeof fs.count === "number") {
+                entries.push({
+                    kind: "plain",
+                    key,
+                    codec: arrayOf(fs.element.codec, fs.count) as unknown as AnySchema,
+                    bytes: fs.count * codecByteLength(fs.element.codec),
+                });
+            } else {
+                entries.push({
+                    kind: "lengthFromArray",
+                    key,
+                    elementCodec: fs.element.codec,
+                    elementBytes: codecByteLength(fs.element.codec),
+                    fromField: fs.count.fromField,
+                });
             }
-            entries.push({
-                kind: "plain",
-                key,
-                codec: arrayOf(fs.element.codec, fs.count) as unknown as AnySchema,
-                bytes: fs.count * codecByteLength(fs.element.codec),
-            });
             i++;
             continue;
         }
