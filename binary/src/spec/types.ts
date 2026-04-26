@@ -49,3 +49,41 @@ export function isArraySpec(spec: FieldSpec): spec is ArrayFieldSpec {
 export type SpecData<S extends Record<string, FieldSpec>> = {
     -readonly [K in keyof S]: S[K] extends ArrayFieldSpec ? number[] : number;
 };
+
+/**
+ * Linked structures: when an array field declares
+ * `count: { fromField: "X" }`, the scalar field `X` is the on-wire count
+ * paired with that array. The canonical-write path treats `X` as derived
+ * from the array's length: callers (or `enforceLinkedCounts` below) must
+ * recompute `X` from `doc.array.length` before serializing, and the zod
+ * schema rejects documents where the two diverge. This keeps "add an item
+ * to a map" a single semantic edit on the array — the count field tracks
+ * automatically — while still surfacing the count in the canonical document
+ * for visibility and round-trip JSON edits.
+ *
+ * Currently no spec uses lengthFrom arrays at runtime; the MAP migration
+ * (variable-length tile/script/object sections) is the first consumer.
+ *
+ * Walks the spec and copies `doc[arrayName].length` into the linked count
+ * field. Returns a new object; does not mutate `doc`. Use this as the
+ * pre-serialization step in canonical-writer flows that have linked counts.
+ */
+export function enforceLinkedCounts<S extends Record<string, FieldSpec>, D extends Record<string, unknown>>(
+    spec: S,
+    doc: D,
+): D {
+    let out: D | undefined;
+    for (const key of Object.keys(spec) as (keyof S & string)[]) {
+        const fs = spec[key];
+        if (!fs || !isArraySpec(fs)) continue;
+        if (typeof fs.count === "number") continue;
+        const countField = fs.count.fromField;
+        const arr = doc[key];
+        if (!Array.isArray(arr)) continue;
+        const desired = arr.length;
+        if (doc[countField] === desired) continue;
+        if (!out) out = { ...doc };
+        (out as Record<string, unknown>)[countField] = desired;
+    }
+    return out ?? doc;
+}
