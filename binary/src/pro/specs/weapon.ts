@@ -1,6 +1,7 @@
 import { u8, u32, i32 } from "typed-binary";
 import { DamageType, WeaponAnimCode } from "../types";
 import type { FieldSpec, SpecData } from "../../spec/types";
+import type { StructPresentation } from "../../spec/presentation";
 
 export const weaponSpec = {
     animCode: { codec: u32, enum: WeaponAnimCode },
@@ -23,3 +24,23 @@ export const weaponSpec = {
 } satisfies Record<string, FieldSpec>;
 
 export type WeaponData = SpecData<typeof weaponSpec>;
+
+export const weaponPresentation: StructPresentation<WeaponData> = {
+    animCode: { label: "Animation Code" },
+    minDamage: { label: "Min Damage" },
+    maxDamage: { label: "Max Damage" },
+    damageType: { label: "Damage Type" },
+    maxRange1: { label: "Max Range 1" },
+    maxRange2: { label: "Max Range 2" },
+    projectilePid: { label: "Projectile PID" },
+    minStrength: { label: "Min Strength" },
+    apCost1: { label: "AP Cost 1" },
+    apCost2: { label: "AP Cost 2" },
+    criticalFail: { label: "Critical Fail" },
+    perk: { label: "Perk" },
+    rounds: { label: "Rounds" },
+    caliber: { label: "Caliber" },
+    ammoPid: { label: "Ammo PID" },
+    maxAmmo: { label: "Max Ammo" },
+    soundId: { label: "Sound ID" },
+};
