@@ -940,12 +940,11 @@ export class Translation {
         const previousKey = this.consumerToTraKey.get(absPath);
         if (previousKey === undefined) return;
         this.consumerToTraKey.delete(absPath);
-        const consumerSet = this.consumers.get(previousKey);
-        if (!consumerSet) return;
-        consumerSet.delete(absPath);
-        if (consumerSet.size === 0) {
-            this.consumers.delete(previousKey);
-        }
+        // Leave empty traFileKey entries in `this.consumers` behind to match the
+        // pre-reverse-index semantics (the old loop deleted from every set
+        // unconditionally without removing keys); downstream reads handle absent
+        // and empty Sets identically.
+        this.consumers.get(previousKey)?.delete(absPath);
     }
 
     /**
