@@ -14,6 +14,26 @@ interface ScalarFieldSpec {
     readonly domain?: { readonly min: number; readonly max: number };
     readonly enum?: Readonly<Record<number, string>>;
     readonly flags?: Readonly<Record<number, string>>;
+    /**
+     * Bit-packed wire layout: this field is one part of a multi-field packed
+     * slot named `packedAs`. All ScalarFieldSpec entries sharing one
+     * `packedAs` value share one wire codec read; the canonical-doc shape
+     * stays flat — each part is a peer scalar entry, same as a byte-aligned
+     * split (e.g. `objectType`+`objectId`). The wire codec is the codec
+     * declared on every part (they must match); each part must declare a
+     * `bitRange`. Parts of one group must appear consecutively in spec
+     * declaration order, must share the same `codec`, and their bit ranges
+     * must not overlap. Gaps are permitted (read as 0, written as 0).
+     */
+    readonly packedAs?: string;
+    /**
+     * `[bitOffset, bitWidth]`, LSB=0 numbering. `bitOffset + bitWidth` must
+     * fit within the wire codec's width in bits. On write, each part is
+     * masked to its width before being shifted into the wire word — the
+     * caller (zod refinement, walker validation) is responsible for the
+     * value-range check; this layer only enforces the bit-width invariant.
+     */
+    readonly bitRange?: readonly [bitOffset: number, bitWidth: number];
 }
 
 /**

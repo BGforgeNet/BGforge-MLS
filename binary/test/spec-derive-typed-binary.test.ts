@@ -64,4 +64,97 @@ describe("toTypedBinarySchema", () => {
         const spec = { a: { codec: u32 } } satisfies Record<string, FieldSpec>;
         expect(toTypedBinarySchema(spec)).toBe(toTypedBinarySchema(spec));
     });
+
+    it("packed-field parts read as flat properties from the shared wire slot", () => {
+        const spec = {
+            destTile: { codec: u32, packedAs: "destTileAndElevation", bitRange: [0, 26] },
+            destElevation: { codec: u32, packedAs: "destTileAndElevation", bitRange: [26, 6] },
+            destMap: { codec: u32 },
+        } satisfies Record<string, FieldSpec>;
+        const derived = toTypedBinarySchema(spec);
+
+        // tile=5 in low 26 bits, elevation=2 in high 6 bits → packed = 0x0800_0005.
+        const buf = new ArrayBuffer(8);
+        const w = new BufferWriter(buf, { endianness: "big" });
+        object({ packed: u32, destMap: u32 }).write(w, { packed: 0x0800_0005, destMap: 0x1234_5678 });
+
+        const r = new BufferReader(buf, { endianness: "big" });
+        expect(derived.read(r)).toEqual({ destTile: 5, destElevation: 2, destMap: 0x1234_5678 });
+    });
+
+    it("packed-field parts write back into the shared wire slot", () => {
+        const spec = {
+            destTile: { codec: u32, packedAs: "destTileAndElevation", bitRange: [0, 26] },
+            destElevation: { codec: u32, packedAs: "destTileAndElevation", bitRange: [26, 6] },
+            destMap: { codec: u32 },
+        } satisfies Record<string, FieldSpec>;
+        const derived = toTypedBinarySchema(spec);
+
+        const buf = new ArrayBuffer(8);
+        const w = new BufferWriter(buf, { endianness: "big" });
+        derived.write(w, { destTile: 5, destElevation: 2, destMap: 0x1234_5678 });
+
+        const expected = new ArrayBuffer(8);
+        object({ packed: u32, destMap: u32 }).write(new BufferWriter(expected, { endianness: "big" }), {
+            packed: 0x0800_0005,
+            destMap: 0x1234_5678,
+        });
+        expect(new Uint8Array(buf)).toEqual(new Uint8Array(expected));
+    });
+
+    it("packed-field group with gaps reads zero for the gap bits", () => {
+        // 16-bit gap: low 8 bits = lo, top 8 bits = hi, middle 16 bits ignored.
+        const spec = {
+            lo: { codec: u32, packedAs: "word", bitRange: [0, 8] },
+            hi: { codec: u32, packedAs: "word", bitRange: [24, 8] },
+        } satisfies Record<string, FieldSpec>;
+        const derived = toTypedBinarySchema(spec);
+
+        const buf = new ArrayBuffer(4);
+        // Wire word: hi=0xAB at bit 24, lo=0xCD at bit 0, middle = 0xFFFF.
+        new BufferWriter(buf, { endianness: "big" }).writeUint32((0xab << 24) | (0xffff << 8) | 0xcd);
+
+        const r = new BufferReader(buf, { endianness: "big" });
+        expect(derived.read(r)).toEqual({ lo: 0xcd, hi: 0xab });
+    });
+
+    it("rejects a packed-field part missing bitRange", () => {
+        const spec = {
+            a: { codec: u32, packedAs: "w", bitRange: [0, 16] },
+            b: { codec: u32, packedAs: "w" },
+        } satisfies Record<string, FieldSpec>;
+        expect(() => toTypedBinarySchema(spec)).toThrow(/missing bitRange/);
+    });
+
+    it("rejects a packed-field group with mismatched codecs across parts", () => {
+        const spec = {
+            a: { codec: u32, packedAs: "w", bitRange: [0, 16] },
+            b: { codec: u16, packedAs: "w", bitRange: [16, 16] },
+        } satisfies Record<string, FieldSpec>;
+        expect(() => toTypedBinarySchema(spec)).toThrow(/wire codec/);
+    });
+
+    it("rejects a packed-field bitRange that exceeds the wire codec width", () => {
+        const spec = {
+            a: { codec: u32, packedAs: "w", bitRange: [0, 24] },
+            b: { codec: u32, packedAs: "w", bitRange: [16, 24] },
+        } satisfies Record<string, FieldSpec>;
+        expect(() => toTypedBinarySchema(spec)).toThrow(/exceeds 32-bit wire codec/);
+    });
+
+    it("rejects a packed-field group whose parts overlap", () => {
+        const spec = {
+            a: { codec: u32, packedAs: "w", bitRange: [0, 20] },
+            b: { codec: u32, packedAs: "w", bitRange: [16, 16] },
+        } satisfies Record<string, FieldSpec>;
+        expect(() => toTypedBinarySchema(spec)).toThrow(/overlap/);
+    });
+
+    it("rejects a packed-field group with only one part", () => {
+        const spec = {
+            a: { codec: u32, packedAs: "w", bitRange: [0, 32] },
+            b: { codec: u32 },
+        } satisfies Record<string, FieldSpec>;
+        expect(() => toTypedBinarySchema(spec)).toThrow(/at least two/);
+    });
 });
