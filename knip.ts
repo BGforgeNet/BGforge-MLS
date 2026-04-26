@@ -8,6 +8,12 @@ const config: KnipConfig = {
         // Knip can't trace enum member access (e.g. DeclarationKind.Set) as usage
         enumMembers: "off",
     },
+    // Types reachable only through tsup-emitted .d.ts surfaces (inferred return
+    // types of `arraySpec(...)` in spec modules) must be exported for the
+    // published `@bgforge/binary` typings to compile, but knip's per-workspace
+    // static analysis can't see them used in source. Mark such exports with a
+    // `@public` JSDoc tag and knip treats them as used.
+    tags: ["+public"],
     workspaces: {
         client: {
             entry: [

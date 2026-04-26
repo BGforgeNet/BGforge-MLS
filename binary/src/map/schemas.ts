@@ -1,9 +1,15 @@
 /**
- * typed-binary schema definitions for MAP file format.
- * MAP files are big-endian and have several variable-length sections.
- * We use typed-binary for fixed-size sub-structures but handle the
- * variable-length sections (header vars, tiles, scripts, objects) separately.
+ * MAP file format helpers.
+ *
+ * MAP files are big-endian and have several variable-length sections. The
+ * fixed-size header is now spec-driven (`specs/header.ts` → typed-binary
+ * codec); the variable-length sections (header vars, tiles, scripts, objects)
+ * are still hand-parsed in `parse-sections.ts` / `parse-objects.ts`.
  */
+
+import { BufferReader } from "typed-binary";
+import { toTypedBinarySchema } from "../spec/derive-typed-binary";
+import { mapHeaderSpec } from "./specs/header";
 
 export const HEADER_SIZE = 0xf0;
 
@@ -23,34 +29,28 @@ export interface MapHeader {
     field_3C: number[];
 }
 
+const headerCodec = toTypedBinarySchema(mapHeaderSpec);
+
 export function parseHeader(data: Uint8Array): MapHeader {
-    const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
-
-    const filenameBytes = new Uint8Array(data.buffer, data.byteOffset + 4, 16);
-    const filenameEnd = filenameBytes.indexOf(0);
-    const filename = String.fromCharCode(
-        ...filenameBytes.subarray(0, filenameEnd === -1 ? filenameBytes.length : filenameEnd),
-    );
-
-    const field_3C: number[] = [];
-    for (let i = 0; i < 44; i++) {
-        field_3C.push(view.getInt32(60 + i * 4, false));
-    }
-
+    const reader = new BufferReader(data.buffer, { endianness: "big", byteOffset: data.byteOffset });
+    const wire = headerCodec.read(reader);
+    const nullIdx = wire.filename.indexOf(0);
+    const filenameLen = nullIdx === -1 ? wire.filename.length : nullIdx;
+    const filename = String.fromCharCode(...wire.filename.slice(0, filenameLen));
     return {
-        version: view.getUint32(0, false),
+        version: wire.version,
         filename,
-        defaultPosition: view.getInt32(20, false),
-        defaultElevation: view.getInt32(24, false),
-        defaultOrientation: view.getInt32(28, false),
-        numLocalVars: view.getInt32(32, false),
-        scriptId: view.getInt32(36, false),
-        flags: view.getUint32(40, false),
-        darkness: view.getInt32(44, false),
-        numGlobalVars: view.getInt32(48, false),
-        mapId: view.getInt32(52, false),
-        timestamp: view.getUint32(56, false),
-        field_3C,
+        defaultPosition: wire.defaultPosition,
+        defaultElevation: wire.defaultElevation,
+        defaultOrientation: wire.defaultOrientation,
+        numLocalVars: wire.numLocalVars,
+        scriptId: wire.scriptId,
+        flags: wire.flags,
+        darkness: wire.darkness,
+        numGlobalVars: wire.numGlobalVars,
+        mapId: wire.mapId,
+        timestamp: wire.timestamp,
+        field_3C: wire.field_3C,
     };
 }
 

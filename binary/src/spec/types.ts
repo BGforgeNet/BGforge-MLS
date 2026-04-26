@@ -8,7 +8,14 @@ import type { ISchema } from "typed-binary";
  * binary-editor display annotation, and the `DOMAIN_RANGES` clamp/validate
  * table. See `tmp/binary-spec-plan.md` for the architecture.
  */
-interface ScalarFieldSpec {
+/**
+ * Exported so the published `@bgforge/binary` `.d.ts` can name types that
+ * inferred from `arraySpec(...)` calls in spec modules; not imported from
+ * source.
+ *
+ * @public
+ */
+export interface ScalarFieldSpec {
     readonly kind?: "scalar";
     readonly codec: ISchema<number>;
     readonly domain?: { readonly min: number; readonly max: number };
@@ -40,7 +47,14 @@ interface ScalarFieldSpec {
  * Fixed-count or length-from-field array of scalar entries. Covers
  * `field_3C: u32 × 44` (count) and MAP variable-length sections (lengthFrom).
  */
-interface ArrayFieldSpec {
+/**
+ * Exported so the published `@bgforge/binary` `.d.ts` can name types
+ * inferred from `arraySpec(...)` calls in spec modules; not imported from
+ * source.
+ *
+ * @public
+ */
+export interface ArrayFieldSpec {
     readonly kind: "array";
     readonly element: ScalarFieldSpec;
     readonly count: number | { readonly fromField: string };
