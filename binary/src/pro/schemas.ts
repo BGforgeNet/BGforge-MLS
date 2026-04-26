@@ -7,16 +7,25 @@
  * PRO files are big-endian: use { endianness: 'big' }.
  */
 
-import { object, u8, u16, u32, i32, type Parsed } from "typed-binary";
+import { object, u32, i32, type Parsed } from "typed-binary";
 import { toTypedBinarySchema } from "../spec/derive-typed-binary";
 import { ammoSpec } from "./specs/ammo";
 import { armorSpec } from "./specs/armor";
 import { containerSpec } from "./specs/container";
+import { doorSpec } from "./specs/door";
 import { drugSpec } from "./specs/drug";
+import { elevatorSpec } from "./specs/elevator";
+import { genericScenerySpec } from "./specs/generic-scenery";
 import { headerSpec } from "./specs/header";
 import { itemCommonSpec } from "./specs/item-common";
 import { keySpec } from "./specs/key";
+import { ladderSpec } from "./specs/ladder";
 import { miscItemSpec } from "./specs/misc-item";
+import { miscSpec } from "./specs/misc";
+import { sceneryCommonSpec } from "./specs/scenery-common";
+import { stairsSpec } from "./specs/stairs";
+import { tileSpec } from "./specs/tile";
+import { wallSpec } from "./specs/wall";
 import { weaponSpec } from "./specs/weapon";
 
 // -- Header (24 bytes, 0x00-0x17) -------------------------------------------
@@ -160,60 +169,27 @@ export const critterSchema = object({
 
 // -- Scenery common (17 bytes, 0x18-0x28) -----------------------------------
 
-export const sceneryCommonSchema = object({
-    wallLightFlags: u16,
-    actionFlags: u16,
-    scriptId: u32,
-    subType: u32,
-    materialId: u32,
-    soundId: u8,
-});
+export const sceneryCommonSchema = toTypedBinarySchema(sceneryCommonSpec);
 
 // -- Scenery subtypes -------------------------------------------------------
 
-export const doorSchema = object({
-    walkThruFlag: u32,
-    unknown: u32,
-});
-
-export const stairsSchema = object({
-    destTileAndElevation: u32,
-    destMap: u32,
-});
-
-export const elevatorSchema = object({
-    elevatorType: u32,
-    elevatorLevel: u32,
-});
-
-export const ladderSchema = object({
-    destTileAndElevation: u32,
-});
-
-export const genericScenerySchema = object({
-    unknown: u32,
-});
+export const doorSchema = toTypedBinarySchema(doorSpec);
+export const stairsSchema = toTypedBinarySchema(stairsSpec);
+export const elevatorSchema = toTypedBinarySchema(elevatorSpec);
+export const ladderSchema = toTypedBinarySchema(ladderSpec);
+export const genericScenerySchema = toTypedBinarySchema(genericScenerySpec);
 
 // -- Wall (12 bytes, 0x18-0x23) ---------------------------------------------
 
-export const wallSchema = object({
-    wallLightFlags: u16,
-    actionFlags: u16,
-    scriptId: u32,
-    materialId: u32,
-});
+export const wallSchema = toTypedBinarySchema(wallSpec);
 
 // -- Tile (4 bytes, 0x18-0x1B) ----------------------------------------------
 
-export const tileSchema = object({
-    materialId: u32,
-});
+export const tileSchema = toTypedBinarySchema(tileSpec);
 
 // -- Misc (4 bytes, 0x18-0x1B) ----------------------------------------------
 
-export const miscSchema = object({
-    unknown: u32,
-});
+export const miscSchema = toTypedBinarySchema(miscSpec);
 
 // -- Exported data types (inferred from schemas) ----------------------------
 
@@ -227,12 +203,12 @@ export type { AmmoData } from "./specs/ammo";
 export type { MiscItemData } from "./specs/misc-item";
 export type { KeyData } from "./specs/key";
 export type CritterData = Parsed<typeof critterSchema>;
-export type SceneryCommonData = Parsed<typeof sceneryCommonSchema>;
-export type DoorData = Parsed<typeof doorSchema>;
-export type StairsData = Parsed<typeof stairsSchema>;
-export type ElevatorData = Parsed<typeof elevatorSchema>;
-export type LadderData = Parsed<typeof ladderSchema>;
-export type GenericSceneryData = Parsed<typeof genericScenerySchema>;
-export type WallData = Parsed<typeof wallSchema>;
-export type TileData = Parsed<typeof tileSchema>;
-export type MiscData = Parsed<typeof miscSchema>;
+export type { SceneryCommonData } from "./specs/scenery-common";
+export type { DoorData } from "./specs/door";
+export type { StairsData } from "./specs/stairs";
+export type { ElevatorData } from "./specs/elevator";
+export type { LadderData } from "./specs/ladder";
+export type { GenericSceneryData } from "./specs/generic-scenery";
+export type { WallData } from "./specs/wall";
+export type { TileData } from "./specs/tile";
+export type { MiscData } from "./specs/misc";
