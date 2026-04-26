@@ -8,6 +8,13 @@ import { validateNumericValue } from "@bgforge/binary";
 /**
  * Validate that a numeric value is within the range for its type.
  * Returns an error message if invalid, undefined if valid.
+ *
+ * Thin wrapper over `validateNumericValue` from `@bgforge/binary`. Kept as the
+ * editor-side entry point so that all four validators in this file (numeric,
+ * enum, flags, dispatch) sit behind one import surface for the webview bundle,
+ * and a future range-narrowing override (e.g., "this field caps at engine
+ * limit X regardless of the underlying int type") has a place to land without
+ * touching every call site.
  */
 export function validateNumericRange(
     value: number,
