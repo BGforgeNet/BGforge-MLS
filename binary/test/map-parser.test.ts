@@ -498,4 +498,20 @@ describe("MAP parser - error cases", () => {
         expect(result.errors).toBeDefined();
         expect(result.errors![0]).toContain("too small");
     });
+
+    it("rejects malformed var counts without iterating into oversized loops", () => {
+        // Build a buffer with a valid version field but a numGlobalVars value that
+        // would otherwise drive a billion-iteration loop in parseVariables.
+        const HEADER_SIZE = 0xf0;
+        const buffer = new Uint8Array(HEADER_SIZE + 32);
+        const view = new DataView(buffer.buffer);
+        view.setInt32(0, 20, false); // valid version
+        view.setInt32(48, 2_147_483_647, false); // numGlobalVars: int32 max
+        const start = Date.now();
+        const result = mapParser.parse(buffer);
+        const elapsed = Date.now() - start;
+        expect(elapsed).toBeLessThan(1000);
+        expect(result.errors).toBeDefined();
+        expect(result.errors!.some((e) => e.includes("global vars"))).toBe(true);
+    });
 });

@@ -89,9 +89,17 @@ class MapParser implements BinaryParser {
         }
 
         const varOffset = HEADER_SIZE;
-        rootFields.push(...parseVariablesSection(data, header));
+        rootFields.push(...parseVariablesSection(data, header, errors));
 
-        let currentOffset = varOffset + header.numGlobalVars * 4 + header.numLocalVars * 4;
+        const safeGlobalVars = Math.max(
+            0,
+            Math.min(header.numGlobalVars, Math.floor((data.byteLength - varOffset) / 4)),
+        );
+        const safeLocalVars = Math.max(
+            0,
+            Math.min(header.numLocalVars, Math.floor((data.byteLength - varOffset - safeGlobalVars * 4) / 4)),
+        );
+        let currentOffset = varOffset + safeGlobalVars * 4 + safeLocalVars * 4;
         const {
             tiles,
             offset: tileEndOffset,

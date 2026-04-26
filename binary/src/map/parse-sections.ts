@@ -60,21 +60,41 @@ export function parseHeaderSection(data: Uint8Array, errors: string[]): ParsedGr
     ]);
 }
 
+function clampVarCount(rawCount: number, label: "global" | "local", remainingBytes: number, errors: string[]): number {
+    // numGlobalVars / numLocalVars are signed int32 values read straight out of the
+    // file header. A crafted MAP can put any value there, including a large positive
+    // count that would otherwise iterate billions of times before the per-iteration
+    // DataView bounds check fires. Clamp to what the remaining buffer can possibly
+    // hold (one int32 per slot) and surface an error so the caller knows the file
+    // was rejected as malformed rather than silently truncated.
+    const maxCount = Math.max(0, Math.floor(remainingBytes / 4));
+    if (rawCount < 0 || rawCount > maxCount) {
+        errors.push(
+            `Map header reports ${rawCount} ${label} vars but only ${maxCount} fit in the remaining buffer; treating as malformed`,
+        );
+        return 0;
+    }
+    return rawCount;
+}
+
 function parseVariables(
     data: Uint8Array,
     header: MapHeader,
+    errors: string[],
 ): { globalVars: number[]; localVars: number[]; offset: number } {
     let offset = HEADER_SIZE;
 
+    const globalCount = clampVarCount(header.numGlobalVars, "global", data.byteLength - offset, errors);
     const globalVars: number[] = [];
-    for (let i = 0; i < header.numGlobalVars; i++) {
+    for (let i = 0; i < globalCount; i++) {
         const view = new DataView(data.buffer, data.byteOffset + offset, 4);
         globalVars.push(view.getInt32(0, false));
         offset += 4;
     }
 
+    const localCount = clampVarCount(header.numLocalVars, "local", data.byteLength - offset, errors);
     const localVars: number[] = [];
-    for (let i = 0; i < header.numLocalVars; i++) {
+    for (let i = 0; i < localCount; i++) {
         const view = new DataView(data.buffer, data.byteOffset + offset, 4);
         localVars.push(view.getInt32(0, false));
         offset += 4;
@@ -83,8 +103,8 @@ function parseVariables(
     return { globalVars, localVars, offset };
 }
 
-export function parseVariablesSection(data: Uint8Array, header: MapHeader): ParsedGroup[] {
-    const { globalVars, localVars } = parseVariables(data, header);
+export function parseVariablesSection(data: Uint8Array, header: MapHeader, errors: string[]): ParsedGroup[] {
+    const { globalVars, localVars } = parseVariables(data, header, errors);
     const groups: ParsedGroup[] = [];
 
     if (globalVars.length > 0) {
