@@ -9,9 +9,14 @@
 
 import { object, u8, u16, u32, i32, type Parsed } from "typed-binary";
 import { toTypedBinarySchema } from "../spec/derive-typed-binary";
+import { ammoSpec } from "./specs/ammo";
 import { armorSpec } from "./specs/armor";
+import { containerSpec } from "./specs/container";
 import { headerSpec } from "./specs/header";
 import { itemCommonSpec } from "./specs/item-common";
+import { keySpec } from "./specs/key";
+import { miscItemSpec } from "./specs/misc-item";
+import { weaponSpec } from "./specs/weapon";
 
 // -- Header (24 bytes, 0x00-0x17) -------------------------------------------
 
@@ -25,11 +30,11 @@ export const itemCommonSchema = toTypedBinarySchema(itemCommonSpec);
 
 export const armorSchema = toTypedBinarySchema(armorSpec);
 
-export const containerSchema = object({
-    maxSize: u32,
-    openFlags: u32,
-});
+export const containerSchema = toTypedBinarySchema(containerSpec);
 
+// Drug stays as object() for now; canonical zod has nested groups
+// (affectedStats / instantEffect / delayedEffect1+2 / addiction) that need
+// flattening before deriving the typed-binary schema becomes useful here.
 export const drugSchema = object({
     stat0: i32,
     stat1: i32,
@@ -50,44 +55,13 @@ export const drugSchema = object({
     addictionOnset: u32,
 });
 
-export const weaponSchema = object({
-    animCode: u32,
-    minDamage: u32,
-    maxDamage: u32,
-    damageType: u32,
-    maxRange1: u32,
-    maxRange2: u32,
-    projectilePid: i32,
-    minStrength: u32,
-    apCost1: u32,
-    apCost2: u32,
-    criticalFail: u32,
-    perk: u32,
-    rounds: u32,
-    caliber: u32,
-    ammoPid: i32,
-    maxAmmo: u32,
-    soundId: u8,
-});
+export const weaponSchema = toTypedBinarySchema(weaponSpec);
 
-export const ammoSchema = object({
-    caliber: u32,
-    quantity: u32,
-    acModifier: u32,
-    drModifier: u32,
-    damageMultiplier: u32,
-    damageDivisor: u32,
-});
+export const ammoSchema = toTypedBinarySchema(ammoSpec);
 
-export const miscItemSchema = object({
-    powerPid: i32,
-    powerType: u32,
-    charges: u32,
-});
+export const miscItemSchema = toTypedBinarySchema(miscItemSpec);
 
-export const keySchema = object({
-    keyCode: u32,
-});
+export const keySchema = toTypedBinarySchema(keySpec);
 
 // -- Critter (392 bytes at 0x18-0x19F, total file 416) ----------------------
 
@@ -266,12 +240,12 @@ export const miscSchema = object({
 export type { HeaderData } from "./specs/header";
 export type { ItemCommonData } from "./specs/item-common";
 export type { ArmorData } from "./specs/armor";
-export type ContainerData = Parsed<typeof containerSchema>;
+export type { ContainerData } from "./specs/container";
 export type DrugData = Parsed<typeof drugSchema>;
-export type WeaponData = Parsed<typeof weaponSchema>;
-export type AmmoData = Parsed<typeof ammoSchema>;
-export type MiscItemData = Parsed<typeof miscItemSchema>;
-export type KeyData = Parsed<typeof keySchema>;
+export type { WeaponData } from "./specs/weapon";
+export type { AmmoData } from "./specs/ammo";
+export type { MiscItemData } from "./specs/misc-item";
+export type { KeyData } from "./specs/key";
 export type CritterData = Parsed<typeof critterSchema>;
 export type SceneryCommonData = Parsed<typeof sceneryCommonSchema>;
 export type DoorData = Parsed<typeof doorSchema>;
