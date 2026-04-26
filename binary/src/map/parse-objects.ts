@@ -62,10 +62,15 @@ const MIN_OBJECT_BYTES = MAP_OBJECT_BASE_SIZE + MAP_OBJECT_DATA_HEADER_SIZE;
 
 /**
  * Clamp a count read from the wire against what the remaining buffer could
- * physically hold (one item of `minItemBytes` per slot). Mirrors
- * `clampVarCount` in parse-sections.ts: a malformed file with a 2^30+ count
- * would otherwise iterate billions of times before the per-iteration buffer
- * check terminated the loop. Returns 0 and records an error on out-of-range.
+ * physically hold (one item of `minItemBytes` per slot). A malformed file
+ * with a 2^30+ count would otherwise iterate billions of times before the
+ * per-iteration buffer check terminated the loop. Negative counts are a
+ * benign legacy sentinel for "empty elevation" / "no inventory" in
+ * real-world MAP files (e.g., Fallout 2 RP's `sfchina2.map` carries
+ * `objectCount = -1` for unused elevations) — quietly treat as 0; the old
+ * `for (i = 0; i < count; i++)` loop did the same. Surface an error only
+ * for the positive-overflow case where a count exceeds what the remaining
+ * buffer can hold.
  */
 function clampObjectCount(
     rawCount: number,
@@ -74,8 +79,9 @@ function clampObjectCount(
     minItemBytes: number,
     errors: string[],
 ): number {
+    if (rawCount <= 0) return 0;
     const maxCount = Math.max(0, Math.floor(remainingBytes / minItemBytes));
-    if (rawCount < 0 || rawCount > maxCount) {
+    if (rawCount > maxCount) {
         errors.push(
             `Map reports ${rawCount} ${label} but only ${maxCount} fit in the remaining buffer; treating as malformed`,
         );
