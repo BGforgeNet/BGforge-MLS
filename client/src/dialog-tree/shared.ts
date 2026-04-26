@@ -14,6 +14,7 @@ import { conlog } from "../logging";
 import { escapeHtml } from "../utils";
 import { getCachedCssAsset, getCachedHtmlAsset, getCachedJsAsset } from "../webview-assets";
 import { LSP_COMMAND_PARSE_DIALOG } from "../../../shared/protocol";
+import { surfaceWebviewRuntimeError } from "../webview-error";
 
 function getHtmlTemplate(extensionPath: string): string {
     return getCachedHtmlAsset(
@@ -298,11 +299,12 @@ export function registerDialogPanel(
                     if (message.type !== "runtimeError") {
                         return;
                     }
-                    console.error(
-                        `Dialog preview runtime error for ${currentFilePath ?? fileName}: ${message.message}`,
-                        message.stack ?? "",
-                    );
-                    void vscode.window.showErrorMessage(`Dialog preview failed for ${fileName}: ${message.message}`);
+                    surfaceWebviewRuntimeError({
+                        label: `Dialog preview for ${currentFilePath ?? fileName}`,
+                        userFacingFile: fileName,
+                        message: message.message,
+                        stack: message.stack,
+                    });
                 });
                 dialogPanel.onDidDispose(() => {
                     dialogPanel = undefined;

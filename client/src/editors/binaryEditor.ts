@@ -25,6 +25,7 @@ import { resolveDisplayValue, resolveEnumLookup, resolveFlagLookup } from "./bin
 import { saveBinaryDocumentArtifacts, writeBinaryJsonSnapshot } from "./binaryEditor-save";
 import { BinaryEditorRefreshGate } from "./binaryEditor-refreshGate";
 import { BinaryEditorLocalEditTracker } from "./binaryEditor-localEditTracker";
+import { surfaceWebviewRuntimeError } from "../webview-error";
 
 type EditableBinaryParser = BinaryParser & {
     serialize: NonNullable<BinaryParser["serialize"]>;
@@ -135,13 +136,12 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
                     void this.handleLoadJson(document);
                     break;
                 case "runtimeError":
-                    console.error(
-                        `Binary editor runtime error for ${document.uri.fsPath}: ${msg.message}`,
-                        msg.stack ?? "",
-                    );
-                    void vscode.window.showErrorMessage(
-                        `Binary editor failed for ${path.basename(document.uri.fsPath)}: ${msg.message}`,
-                    );
+                    surfaceWebviewRuntimeError({
+                        label: "Binary editor",
+                        userFacingFile: path.basename(document.uri.fsPath),
+                        message: msg.message,
+                        stack: msg.stack,
+                    });
                     break;
             }
         });

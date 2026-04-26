@@ -176,6 +176,12 @@ export function register(ctx: HandlerContext): void {
                 });
                 conlog(`Registered file watchers for ${watchPatterns.length} patterns`);
             }
+        } else if (registry.getWatchPatterns().length > 0) {
+            conlog(
+                "Client did not advertise didChangeWatchedFiles dynamicRegistration; " +
+                    "header reload on out-of-band edit is disabled.",
+                "warn",
+            );
         }
 
         conlog("onInitialized completed");
