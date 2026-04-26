@@ -887,7 +887,7 @@ describe("ProviderRegistry", () => {
             );
             await registry.init(mockContext);
 
-            registry.handleWatchedFileChange("file:///test/workspace/dialogs/a.d", 1);
+            await registry.handleWatchedFileChange("file:///test/workspace/dialogs/a.d", 1);
 
             expect(mockReload).toHaveBeenCalledWith("file:///test/workspace/dialogs/a.d", "mock file content");
         });
@@ -903,9 +903,32 @@ describe("ProviderRegistry", () => {
             );
             await registry.init(mockContext);
 
-            registry.handleWatchedFileChange("file:///test/workspace/dialogs/a.d", 3);
+            await registry.handleWatchedFileChange("file:///test/workspace/dialogs/a.d", 3);
 
             expect(mockDeleted).toHaveBeenCalledWith("file:///test/workspace/dialogs/a.d");
+        });
+
+        it("reads the changed file via fs/promises (does not block the event loop)", async () => {
+            const fs = await import("node:fs");
+            const fsPromises = await import("node:fs/promises");
+            const syncMock = vi.mocked(fs.readFileSync);
+            const asyncMock = vi.mocked(fsPromises.readFile);
+            syncMock.mockClear();
+            asyncMock.mockClear();
+
+            const registry = await createRegistry();
+            registry.register(
+                createMockProvider("weidu-d", {
+                    indexExtensions: [".d"],
+                    reloadFileData: vi.fn(),
+                }),
+            );
+            await registry.init(mockContext);
+
+            await registry.handleWatchedFileChange("file:///test/workspace/dialogs/a.d", 1);
+
+            expect(asyncMock).toHaveBeenCalled();
+            expect(syncMock).not.toHaveBeenCalled();
         });
     });
 

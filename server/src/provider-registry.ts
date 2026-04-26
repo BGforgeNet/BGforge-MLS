@@ -365,8 +365,8 @@ class ProviderRegistry {
     }
 
     /** Handle a file change event from the workspace. */
-    handleWatchedFileChange(uri: string, changeType: FileChangeType): void {
-        this.fileWatcher.handleWatchedFileChange(uri, changeType);
+    handleWatchedFileChange(uri: string, changeType: FileChangeType): Promise<void> {
+        return this.fileWatcher.handleWatchedFileChange(uri, changeType);
     }
 
     /** Clear per-document cached data on document close. */

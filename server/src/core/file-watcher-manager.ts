@@ -11,7 +11,7 @@
  * rather than stored, to avoid circular ownership.
  */
 
-import { readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { extname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { FileChangeType, WatchKind } from "vscode-languageserver/node";
@@ -69,8 +69,12 @@ export class FileWatcherManager {
     /**
      * Handle a file change event from the workspace.
      * Routes to the appropriate provider based on file extension.
+     *
+     * Reads the changed file asynchronously so the LSP event loop is not blocked
+     * while disk I/O completes. Callers may fire-and-forget the returned promise;
+     * errors are logged via conlog rather than rethrown.
      */
-    handleWatchedFileChange(uri: string, changeType: FileChangeType): void {
+    async handleWatchedFileChange(uri: string, changeType: FileChangeType): Promise<void> {
         const normUri = normalizeUri(uri);
         const filePath = fileURLToPath(normUri);
         const ext = extname(filePath).toLowerCase();
@@ -88,7 +92,7 @@ export class FileWatcherManager {
         } else {
             // Created or Changed - reload the file data
             try {
-                const text = readFileSync(filePath, "utf-8");
+                const text = await readFile(filePath, "utf-8");
                 if (provider.reloadFileData) {
                     provider.reloadFileData(normUri, text);
                     conlog(

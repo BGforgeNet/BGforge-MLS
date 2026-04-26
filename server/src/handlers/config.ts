@@ -30,8 +30,16 @@ export function register(ctx: HandlerContext): void {
     });
 
     ctx.connection.onDidChangeWatchedFiles((params) => {
+        // Each handleWatchedFileChange call is async — fan out in parallel and
+        // let the LSP event loop continue immediately. Errors are logged inside
+        // the handler; we surface unexpected promise rejections via conlog.
         for (const event of params.changes) {
-            registry.handleWatchedFileChange(event.uri, event.type);
+            registry.handleWatchedFileChange(event.uri, event.type).catch((error: unknown) => {
+                conlog(
+                    `handleWatchedFileChange rejected: ${error instanceof Error ? error.message : String(error)}`,
+                    "warn",
+                );
+            });
         }
     });
 }
