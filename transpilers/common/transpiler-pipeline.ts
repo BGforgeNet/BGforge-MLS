@@ -91,8 +91,7 @@ export function createTranspiler<TResult, TExtra = void>(config: TranspilerConfi
             const filePath = fileURLToPath(uri);
             validateExtension(filePath);
 
-            // For TExtra=void, no arg is passed; coerce to undefined for the core call.
-            const extra = extraArgs[0] as TExtra | undefined as TExtra;
+            const extra = extraArgs[0] as TExtra;
             const traTag = extractTraTag(text);
             let result: TResult;
             try {
@@ -128,7 +127,7 @@ export function createTranspiler<TResult, TExtra = void>(config: TranspilerConfi
          */
         async transpile(filePath: string, text: string, ...extraArgs: ExtraArgs<TExtra>): Promise<TResult> {
             validateExtension(filePath);
-            const extra = extraArgs[0] as TExtra | undefined as TExtra;
+            const extra = extraArgs[0] as TExtra;
             const traTag = extractTraTag(text);
             try {
                 return await config.transpileCore(filePath, text, traTag, extra);
