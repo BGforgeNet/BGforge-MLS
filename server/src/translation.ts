@@ -732,7 +732,7 @@ export class Translation {
                 const lineNumber = range.start.line + i;
                 const lineHints: Array<{ character: number; lineKey: string }> = [];
 
-                for (const match of lineText.matchAll(new RegExp(REGEX_MSG_INLAY.source, "g"))) {
+                for (const match of lineText.matchAll(REGEX_MSG_INLAY)) {
                     const lineKey = match[2];
                     if (!lineKey) {
                         continue;
@@ -743,7 +743,7 @@ export class Translation {
                     });
                 }
 
-                for (const match of lineText.matchAll(new RegExp(REGEX_MSG_INLAY_FLOATER_RAND.source, "g"))) {
+                for (const match of lineText.matchAll(REGEX_MSG_INLAY_FLOATER_RAND)) {
                     const secondKey = match[2];
                     if (!secondKey) {
                         continue;
@@ -766,9 +766,9 @@ export class Translation {
             // Native WeiDU files (baf, d, tp2) use @123 syntax.
             const ext = path.extname(filePath).toLowerCase();
             if (ext === EXT_TBAF || ext === EXT_TD || ext === ".ts") {
-                regex = new RegExp(REGEX_TRANSPILER_TRA_INLAY.source, "g");
+                regex = REGEX_TRANSPILER_TRA_INLAY;
             } else {
-                regex = new RegExp(REGEX_TRA_INLAY.source, "g");
+                regex = REGEX_TRA_INLAY;
             }
             keyIndex = 1;
         }
