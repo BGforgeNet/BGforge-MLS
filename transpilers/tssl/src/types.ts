@@ -75,8 +75,21 @@ export interface SourceSection {
 }
 
 // Route diagnostics to stderr so CLI stdout mode (`fgtp file.tssl`) stays a clean
-// pipe. conlog depends on the LSP connection and isn't usable from the CLI.
-export const conlog = console.error;
+// pipe. The LSP server installs a connection-routed logger via setConlog() at
+// startup so messages surface in the client's Output panel instead of stderr;
+// the CLI keeps the default and inherits the stderr separation from stdout.
+type Conlog = (message: string) => void;
+
+let conlogSink: Conlog = console.error;
+
+/** Redirect tssl diagnostic output. Pair with `setConlog(console.error)` to reset. */
+export function setConlog(next: Conlog): void {
+    conlogSink = next;
+}
+
+export const conlog: Conlog = (message) => {
+    conlogSink(message);
+};
 
 /**
  * How many lines to look backwards when searching for esbuild source comments.
