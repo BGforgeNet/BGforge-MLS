@@ -177,7 +177,7 @@ See `server/INTERNALS.md` for the full feature matrix and cross-language feature
 
 | Area                    | Key Files                                                                                                                  |
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Architecture            | `docs/architecture.md`, `server/INTERNALS.md`, `client/src/parsers/README.md`                                              |
+| Architecture            | `docs/architecture.md`, `server/INTERNALS.md`                                                                              |
 | Contributing            | `CONTRIBUTING.md`                                                                                                          |
 | Settings                | `docs/settings.md`                                                                                                         |
 | Changelog               | `docs/changelog.md`                                                                                                        |

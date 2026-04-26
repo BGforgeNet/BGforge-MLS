@@ -261,15 +261,13 @@ Two webview-based features, each with a host-side and browser-side module:
 
 Binary editor design choice:
 
-Implementation checklist and extension plan for new binary formats live in [`client/src/parsers/README.md`](../client/src/parsers/README.md).
-
 - `.map` files are parsed strictly in the custom editor. If strict parsing fails, the editor shows the parse errors instead of silently falling back to heuristic recovery.
 - Graceful MAP fallback remains available in non-editor workflows such as the binary CLI via `--graceful-map`, where corpus parsing and opaque-byte round-tripping are more useful than an editable strict tree.
 - The editor includes `Dump to JSON` and `Load from JSON` sidebar actions. Snapshots use extension-preserving sidecars such as `file.pro.json` and `file.map.json`.
 - Binary JSON snapshots are canonical `schemaVersion: 1` documents for both `pro` and `map`. They are validated on dump and load. Legacy editor-tree snapshots are no longer supported.
 - Both binary parsers now separate canonical data from presentation. Parser results still include a tree for the editor, but `ParseResult.document` is the canonical machine model and is the source of truth for JSON dump/load and binary serialization.
 - Canonical rebuild during save and JSON export is strict about output validity. If a parsed PRO or MAP field is outside a supported domain range, the serializer clamps it to the nearest valid value before writing bytes or snapshots.
-- Presentation metadata such as labels, enum/flag option tables, numeric formatting, and editability is defined separately in `client/src/parsers/presentation-schema.ts`, so external tools can consume the canonical data contract without inheriting the editor tree.
+- Presentation metadata such as labels, enum/flag option tables, numeric formatting, and editability is defined separately in `binary/src/presentation-schema.ts`, so external tools can consume the canonical data contract without inheriting the editor tree.
 - Presentation lookups are keyed by stable semantic IDs such as `pro.header.objectType` and `map.scripts[].extents[].slots[].flags`. The old escaped tree-path lookup form is no longer part of the contract.
 - MAP JSON snapshots remain fidelity snapshots. Any MAP region the editor intentionally omits from the visible tree, such as tiles or opaque tails, is still carried in the canonical snapshot so JSON round-trips remain byte-preserving.
 - That byte preservation applies to omitted MAP regions and preserved fixed-width source bytes such as filename slots. Once a field is modeled and changed through the canonical document, JSON load/save treats the parsed value as authoritative and rewrites that field in canonical form.
@@ -279,7 +277,7 @@ Implementation checklist and extension plan for new binary formats live in [`cli
 - The custom editor intentionally omits MAP tile data. Tiles are large, mostly low-signal bulk data for editor workflows, so the editor skips materializing them entirely and preserves their bytes only for round-trip save/revert.
 - The MAP editor hides a few script-entry struct slots that Fallout 2 CE still leaves as legacy or unknown internals. It keeps meaningful fields visible, renames them to match CE semantics where possible, and leaves the persisted program pointer slot read-only because the engine treats the saved pointer value as non-semantic.
 - The editor sends a lazy tree model to the webview rather than one large pre-expanded JSON payload. Enum/flag choices are attached per field node, and MAP projection now lives in the tree builder instead of a separate compacted parse-result layer.
-- Format-specific behaviour (snapshots, canonical rebuild, semantic key mapping, editor projection, structural edits) is encapsulated in `BinaryFormatAdapter` implementations registered in `client/src/parsers/format-adapter.ts`. Adding a new binary format requires implementing this interface alongside the parser. See `client/src/parsers/README.md` for the full checklist.
+- Format-specific behaviour (snapshots, canonical rebuild, semantic key mapping, editor projection, structural edits) is encapsulated in `BinaryFormatAdapter` implementations registered in `binary/src/format-adapter.ts`. Adding a new binary format requires implementing this interface alongside the parser.
 - Dialog tree preview and binary editor now share the same inline webview asset-cache helper (`client/src/webview-assets.ts`) for HTML/CSS/JS shell loading.
 
 ## Server Architecture

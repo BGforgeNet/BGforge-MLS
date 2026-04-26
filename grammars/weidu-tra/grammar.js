@@ -18,8 +18,6 @@ export default grammar({
 
     externals: ($) => [$.tilde_string],
 
-    conflicts: ($) => [],
-
     rules: {
         source_file: ($) => repeat($.entry),
 
