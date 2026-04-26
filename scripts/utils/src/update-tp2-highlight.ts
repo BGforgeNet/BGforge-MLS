@@ -195,7 +195,7 @@ export function buildVarsPatterns(data: DataFile): readonly HighlightPattern[] {
 export function updateTp2Highlight(yamlPath: string, highlightPath: string): void {
     const data = loadData([yamlPath]);
     const content = fs.readFileSync(highlightPath, "utf8");
-    const doc = parseYamlDocStrict(content) as Document;
+    const doc: Document = parseYamlDocStrict(content);
 
     const sourceFile = path.basename(yamlPath);
     for (const [stanzaName, config] of STANZA_MAP) {

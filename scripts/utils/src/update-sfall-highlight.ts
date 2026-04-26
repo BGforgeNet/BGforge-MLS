@@ -60,7 +60,7 @@ function main(): void {
     const sourceFile = path.basename(yamlPath);
 
     const content = fs.readFileSync(highlightPath, "utf8");
-    const doc = parseYamlDocStrict(content) as Document;
+    const doc: Document = parseYamlDocStrict(content);
     updateHighlightStanza(doc, HIGHLIGHT_STANZAS.sfallFunctions, sfallPatterns, sourceFile);
     updateHighlightStanza(doc, HIGHLIGHT_STANZAS.hooks, hookPatterns, sourceFile);
     fs.writeFileSync(highlightPath, doc.toString(YAML_DUMP_OPTIONS), "utf8");

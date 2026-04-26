@@ -57,7 +57,7 @@ function main(): void {
 
     const basePatterns = buildFalloutBaseFunctionPatterns(yamlPath);
     const content = fs.readFileSync(highlightPath, "utf8");
-    const doc = parseYamlDocStrict(content) as Document;
+    const doc: Document = parseYamlDocStrict(content);
     const sourceFile = path.basename(yamlPath);
     updateHighlightStanza(doc, HIGHLIGHT_STANZAS.falloutBaseFunctions, basePatterns, sourceFile);
     fs.writeFileSync(highlightPath, doc.toString(YAML_DUMP_OPTIONS), "utf8");

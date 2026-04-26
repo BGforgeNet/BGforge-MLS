@@ -22,7 +22,7 @@ const STANZAS: readonly string[] = ["actions", "triggers"];
 export function updateBafHighlight(yamlPath: string, highlightPath: string): void {
     const data = loadData([yamlPath]);
     const content = fs.readFileSync(highlightPath, "utf8");
-    const doc = parseYamlDocStrict(content) as Document;
+    const doc: Document = parseYamlDocStrict(content);
 
     const sourceFile = path.basename(yamlPath);
     for (const stanza of STANZAS) {

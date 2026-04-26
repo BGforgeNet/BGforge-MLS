@@ -57,7 +57,7 @@ export function dumpFalloutCompletion(
     sfallHooks: readonly FalloutCompletionItem[],
 ): void {
     const content = fs.readFileSync(fpath, "utf8");
-    const doc = parseYamlDocStrict(content) as Document;
+    const doc: Document = parseYamlDocStrict(content);
 
     const contents = doc.contents;
     if (!isMap(contents)) {
