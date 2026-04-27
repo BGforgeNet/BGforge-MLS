@@ -206,6 +206,23 @@ when you need grammars and editor bundles too.
 3. **Externalized .d.ts imports**: Transpiler libraries (ielib, folib) use `.d.ts` for
    engine declarations. esbuild externalizes these; they pass through as bare identifiers.
    Libraries must use named re-exports, not `export *`.
+4. **Library bundlers (tsup)**: `@bgforge/binary`, `@bgforge/format`, and `@bgforge/transpile`
+   bundle via tsup. tsdown — the named successor to tsup, Rolldown-based — was evaluated
+   and rejected for now: the format package imports the runtime `SyntaxType` enum from
+   auto-generated `tree-sitter.d.ts` declaration files (`from "../../../server/src/<lang>/tree-sitter.d"`).
+   esbuild (under tsup) inlines those enum members as the literal string at each use site
+   (`child.type === "value" /* Value */`); Rolldown (under tsdown) follows tsc's strict
+   "`.d.ts` is types-only" rule, so the imported references resolve to placeholder objects
+   at runtime and every `child.type === SyntaxType.X` comparison silently returns false —
+   dropping content during formatting. (Reproducer: Ascension.tp2's
+   `BEGIN @104001 DESIGNATED 0 ... INCLUDE` block collapses to `BEGIN INCLUDE` when the
+   format CLI is built with tsdown.) Switching off tsup requires either making the
+   generated tree-sitter types a runtime `.ts` file (project-wide rename across ~50 import
+   sites plus the `dts-tree-sitter` generation pipeline and gitignore patterns) or
+   hand-maintaining a runtime SyntaxType shim per grammar; neither is justified by tsup's
+   current state alone. Revisit when tsdown matures (an esbuild-style enum-inlining option
+   would unblock the swap), when tsup actually breaks, or when one of those refactors
+   lands for an unrelated reason.
 
 ### TypeScript configuration
 
