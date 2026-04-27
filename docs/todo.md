@@ -55,18 +55,50 @@ Out of scope for v1: variant arrays, insert-at-index, multi-select, context menu
 
 To ship together with v2.5 since MAP objects are the natural consumer for variants and the only place an immediate min/max bound applies (per-elevation max, total-objects bound).
 
-- Variant-picker component invoked when an array's spec declares `variants`. Surfaced via `vscode.window.showQuickPick`. Used identically by inline `+`, context menu, and command.
+- Variant-picker UI: `vscode.window.showQuickPick` listing variants from the format's variants registry. Used identically by inline `+`, context menu, and command.
 - `minSize` / `maxSize` enforcement from the array spec: refuse remove at minimum, refuse add at maximum, surface via the field-error channel.
 
 #### v2.5 — MAP objects coverage
 
-- Per-elevation, variant-shaped records (Misc, Critter, Item, Scenery, Wall, Tile, Exit Grid). Each variant has its own default skeleton (PID, fid, optional sub-records like `critterData` for critters, `exitGrid` for exits).
-- Recursive inventory entries: objects can carry inventories of `{quantity, object}` pairs; "+ Add inventory item" reuses the same variant-picker pathway.
-- Drives the v2.3 variant-picker abstraction against a real format with multiple shapes.
+- Per-elevation, variant-shaped records (Misc, Critter, Item, Scenery, Wall, Tile, Exit Grid). Each variant has its own default skeleton: PID upper bits encoding the type tag, sensible default `fid` / `flags` / coordinates, presence of optional sub-records (`critterData` for critters, `exitGrid` for exit-grid misc objects, `objectData` where applicable), empty inventory.
+- Recursive inventory entries: objects carry inventories of `{quantity, object}` pairs. "+ Add inventory item" reuses the same variant-picker pathway against the inventory's nested object.
+
+##### Where variants live (Option B for v2.5)
+
+The current `arraySpec` primitive describes a uniform array of one scalar element type — globals/locals/tile fields use it directly. MAP objects don't fit that shape: object records are variable-size and self-recursive, and the per-elevation objects array isn't an `arraySpec` today. The spec migration history moved fixed object _chunks_ (`objectBaseSpec`, `inventoryHeaderSpec`, `critterDataSpec`, `exitGridSpec`) into spec form; the array layer stayed in the orchestrator (`parse-objects.ts`).
+
+For v2.5, variants live in a sibling **variants registry** module under `specs/` rather than inside `arraySpec`:
+
+```text
+binary/src/map/specs/object-variants.ts
+  export const objectVariants = [
+    { id, label, pidTypeBits, defaultElement: () => MapCanonicalObject },
+    ...
+  ] as const;
+```
+
+Format adapter + entity-ops import the registry the same way they import `varSectionSpec` today. The format still owns its truth — the registry lives in `specs/`, alongside the wire-chunk specs — it's just not threaded through the existing `arraySpec` primitive.
+
+Carrying the wider design rule forward: for any addable array, the format's `specs/` directory is the single source of truth. Two encodings are permitted: (a) capability metadata on `arraySpec` for uniform arrays (already shipped), (b) a sibling registry module for variant or otherwise non-uniform arrays (introduced in v2.5).
 
 #### v2.6 — script slots coverage
 
 - Capacity-batched script extents. Shares the variant + ordering machinery; the byte-builder owns extent-capacity growth and `extentNext` linkage when a batch fills.
+
+##### Spec-system promotion (Option A) — follow-up after v2.6
+
+Once v2.5 (MAP objects) and v2.6 (script slots) both ship with sibling variant registries, the spec system gets a second concrete consumer that constrains the design. Promote the registry idiom into a first-class `variantArraySpec` primitive:
+
+```text
+variantArraySpec({
+  discriminator,           // field that selects the variant on read
+  variants: [{ id, label, struct, defaultElement }, ...],
+})
+```
+
+This drives typed-binary read/write through the discriminator, derived zod with discriminated unions, derived presentation, and derived domain ranges — all variant-aware. Migration is mechanical: each `*-variants.ts` registry moves into the matching `arraySpec(...)` call and consumers shift one import.
+
+Don't do this before v2.6 lands: with only one consumer (objects), the primitive risks being shaped for that one case and bent on the second. Two consumers in hand is the right time.
 
 ### v3 — bulk ops, multi-select, scripting
 
