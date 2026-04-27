@@ -56,8 +56,22 @@ export interface BinaryFormatAdapter {
      * to the array at `arrayPath` (tree-segment names, e.g. `["Global Variables"]`).
      * Returns `undefined` if the path is not a known addable array for this
      * format.
+     *
+     * For variant-shaped arrays (declared via `getArrayVariants`), the caller
+     * passes `options.variantId` to pick the variant skeleton; calling without
+     * `variantId` against a variant array returns `undefined`.
      */
-    buildAddEntryBytes?(parseResult: ParseResult, arrayPath: readonly string[]): Uint8Array | undefined;
+    buildAddEntryBytes?(
+        parseResult: ParseResult,
+        arrayPath: readonly string[],
+        options?: { readonly variantId?: string },
+    ): Uint8Array | undefined;
+    /**
+     * Returns the list of insertable variants for `arrayPath`, or `undefined`
+     * if the array is uniform (use the default skeleton on the spec). The
+     * editor's `+` flow shows a quick-pick when this is non-empty.
+     */
+    getArrayVariants?(arrayPath: readonly string[]): readonly { id: string; label: string }[] | undefined;
     /**
      * Produce the bytes for `parseResult` with the entry at `entryPath` removed
      * from its array (tree-segment names, e.g. `["Global Variables", "Global Var 3"]`).

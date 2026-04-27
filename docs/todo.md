@@ -60,6 +60,22 @@ To ship together with v2.5 since MAP objects are the natural consumer for varian
 
 #### v2.5 — MAP objects coverage
 
+##### Blocker: canonical-writer / parser round-trip on the objects section
+
+The MAP canonical writer's script-section length and the parser's actual consumed bytes diverge on every real fixture inspected (`arcaves`, `denbus1`, `newr2`, `sfsheng`, `bhrnddst`, `artemple`). The script section parser tolerates malformed entries (e.g., overflow at `Entry 6881` in `sfsheng`) but the canonical reader produces a reduced canonical doc that the writer reserialises to fewer bytes than the parser consumed. Result: the objects section in the rewritten file lands at a different offset from what the parser expects on reparse, so any object inserted via add/remove disappears (parser reads zero objects from the wrong byte range).
+
+This is independent of v2.5's add/remove logic — a no-op round-trip (parse → canonical → serialize → reparse) of any of the listed fixtures exhibits the same corruption. Fixing it is a prerequisite to landing v2.5 in the editor.
+
+Likely fix sites:
+
+1. `binary/src/map/canonical-reader.ts` — when a script section can't decode an entry, surface enough information for the writer to reproduce the original byte run (either preserve the unread tail as a per-section opaque blob, or reject the file as unwritable).
+2. `binary/src/map/canonical-writer.ts` — match the parser's byte count exactly, including any trailing padding or undecoded extents.
+3. Or both — converge on a representation where `bytes → parse → canonical → serialize → bytes` is a fixed point on every fixture.
+
+Until then, the v2.5 byte-builders (`buildAddObjectAtElevation`, `buildRemoveObjectAtElevation`) and the variants registry (`object-variants.ts`) are staged in source but gated off by `ENABLE_PER_ELEVATION_OBJECT_ENTITY_OPS = false` in `entity-ops.ts`. Flip the flag once the round-trip is fixed.
+
+##### Scope when unblocked
+
 - Per-elevation, variant-shaped records (Misc, Critter, Item, Scenery, Wall, Tile, Exit Grid). Each variant has its own default skeleton.
 
 ##### Skeleton-construction rule
