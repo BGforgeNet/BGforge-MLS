@@ -314,4 +314,59 @@ describe("TD plugin", () => {
             expect(result!.entries).toHaveLength(2);
         });
     });
+
+    describe("getCompletionsAtPosition undefined passthrough", () => {
+        it("returns undefined unchanged when the underlying service returns undefined", () => {
+            const info = createMockInfo(["/project/dialog.td"], {}, undefined);
+            const service = plugin.create(info);
+
+            const result = service.getCompletionsAtPosition("/project/dialog.td", 0, undefined!);
+            expect(result).toBeUndefined();
+        });
+    });
+
+    describe("TD names memoization", () => {
+        it("loads the runtime file only once across multiple completion calls", async () => {
+            const { readFileSync } = await import("fs");
+            vi.mocked(readFileSync).mockClear();
+
+            const freshPlugin = init(MOCK_TS_MODULES);
+            const entries: MockCompletionEntry[] = [{ name: "myFunction", kind: "function" }];
+            const info = createMockInfo(["/project/script.tssl"], {}, makeCompletionResult(entries));
+            const service = freshPlugin.create(info);
+
+            service.getCompletionsAtPosition("/project/script.tssl", 0, undefined!);
+            service.getCompletionsAtPosition("/project/script.tssl", 0, undefined!);
+
+            // First call reads the file; second call hits the memoized set without re-reading.
+            expect(vi.mocked(readFileSync)).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    describe("runtime declaration shapes", () => {
+        it("extracts names from `declare var` statements (variable declarations)", async () => {
+            const { readFileSync } = await import("fs");
+            // Runtime content using `declare var` — exercises the VariableStatement branch
+            // in extractDeclaredNames. Multiple declarators in one statement are also covered.
+            vi.mocked(readFileSync).mockImplementationOnce(
+                () => "declare var declaredVarOne: number, declaredVarTwo: string",
+            );
+
+            const freshPlugin = init(MOCK_TS_MODULES);
+            const entries: MockCompletionEntry[] = [
+                { name: "myFunction", kind: "function" },
+                { name: "declaredVarOne", kind: "var" },
+                { name: "declaredVarTwo", kind: "var" },
+            ];
+            const info = createMockInfo(["/project/script.tssl"], {}, makeCompletionResult(entries));
+            const service = freshPlugin.create(info);
+
+            const result = service.getCompletionsAtPosition("/project/script.tssl", 0, undefined!);
+            const names = result!.entries.map((e: { name: string }) => e.name);
+            // declared var names must be filtered out of non-.td completions
+            expect(names).toContain("myFunction");
+            expect(names).not.toContain("declaredVarOne");
+            expect(names).not.toContain("declaredVarTwo");
+        });
+    });
 });
