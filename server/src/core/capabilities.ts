@@ -109,7 +109,7 @@ export interface FoldingCapability {
 }
 
 export interface NavigationCapability {
-    definition?(text: string, position: Position, uri: NormalizedUri): Location | null;
+    definition?(text: string, position: Position, uri: NormalizedUri): Location | null | Promise<Location | null>;
     references?(
         text: string,
         position: Position,

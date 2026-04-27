@@ -23,7 +23,7 @@ export function register(ctx: HandlerContext): void {
                 }
 
                 // Try provider first (AST-based definition, e.g. state labels in D files)
-                const providerResult = registry.definition(langId, text, params.position, uri);
+                const providerResult = await registry.definition(langId, text, params.position, uri);
                 if (providerResult) {
                     return providerResult;
                 }

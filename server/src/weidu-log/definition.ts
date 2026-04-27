@@ -4,7 +4,7 @@
  * using case-insensitive path resolution (WeiDU paths are case-insensitive).
  */
 
-import * as fs from "fs";
+import * as fs from "fs/promises";
 import * as path from "path";
 import { Location, Position } from "vscode-languageserver/node";
 import { uriToPath, pathToUri } from "../common";
@@ -13,14 +13,25 @@ import { uriToPath, pathToUri } from "../common";
  * Get definition for the mod path under the cursor in a weidu.log file.
  * Parses ~path~ entries and resolves them case-insensitively relative to the log file.
  */
-export function getDefinition(text: string, uri: string, position: Position): Location | null {
+export async function getDefinition(text: string, uri: string, position: Position): Promise<Location | null> {
     const lines = text.split("\n");
     const line = lines[position.line];
     if (!line) {
         return null;
     }
 
-    // Find ~path~ span that contains the cursor
+    const modPath = findModPathAtCursor(line, position.character);
+    if (!modPath) {
+        return null;
+    }
+    return resolveModPath(modPath, uri);
+}
+
+/**
+ * Find the ~path~ span that contains the cursor and return the inner path,
+ * or null if the cursor is outside any such span.
+ */
+function findModPathAtCursor(line: string, character: number): string | null {
     const modPathRegex = /~([^~]+)~/g;
     let match: RegExpExecArray | null;
     while ((match = modPathRegex.exec(line)) !== null) {
@@ -30,11 +41,10 @@ export function getDefinition(text: string, uri: string, position: Position): Lo
         }
         const matchStart = match.index + 1; // after opening ~
         const matchEnd = matchStart + innerMatch.length; // before closing ~
-        if (position.character >= matchStart && position.character < matchEnd) {
-            return resolveModPath(innerMatch, uri);
+        if (character >= matchStart && character < matchEnd) {
+            return innerMatch;
         }
     }
-
     return null;
 }
 
@@ -42,10 +52,10 @@ export function getDefinition(text: string, uri: string, position: Position): Lo
  * Resolve a mod path (e.g. "ALTERNATIVES/SETUP-ALTERNATIVES.TP2") to a file Location.
  * The path is resolved case-insensitively relative to the weidu.log file's directory.
  */
-function resolveModPath(modPath: string, uri: string): Location | null {
+async function resolveModPath(modPath: string, uri: string): Promise<Location | null> {
     const logFilePath = uriToPath(uri);
     const logDir = path.dirname(logFilePath);
-    const resolved = resolveCaseInsensitive(logDir, modPath);
+    const resolved = await resolveCaseInsensitive(logDir, modPath);
     if (!resolved) {
         return null;
     }
@@ -64,14 +74,17 @@ function resolveModPath(modPath: string, uri: string): Location | null {
  * and matching against actual directory entries.
  * Returns the resolved absolute path, or null if not found.
  */
-function resolveCaseInsensitive(baseDir: string, relativePath: string): string | null {
+async function resolveCaseInsensitive(baseDir: string, relativePath: string): Promise<string | null> {
     const segments = relativePath.split(/[/\\]/);
     let current = baseDir;
 
+    // Each segment's directory is determined by resolving the previous one,
+    // so the readdir calls are inherently sequential and cannot be parallelised.
     for (const segment of segments) {
         let entries: string[];
         try {
-            entries = fs.readdirSync(current);
+            // eslint-disable-next-line no-await-in-loop -- each iteration depends on the previous segment's resolved path
+            entries = await fs.readdir(current);
         } catch {
             return null;
         }
@@ -86,7 +99,8 @@ function resolveCaseInsensitive(baseDir: string, relativePath: string): string |
 
     // Verify the final path is a file
     try {
-        if (!fs.statSync(current).isFile()) {
+        const stats = await fs.stat(current);
+        if (!stats.isFile()) {
             return null;
         }
     } catch {

@@ -170,11 +170,11 @@ class ProviderRegistry {
         return [];
     }
 
-    definition(langId: string, text: string, position: Position, uri: string): Location | null {
+    async definition(langId: string, text: string, position: Position, uri: string): Promise<Location | null> {
         const normUri = normalizeUri(uri);
         const provider = this.get(langId);
         if (provider?.definition) {
-            return provider.definition(text, position, normUri);
+            return await provider.definition(text, position, normUri);
         }
         return null;
     }

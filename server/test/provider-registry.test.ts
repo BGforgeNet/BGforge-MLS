@@ -390,9 +390,9 @@ describe("ProviderRegistry", () => {
         it("should return null if no provider found", async () => {
             const registry = await createRegistry();
 
-            expect(
+            await expect(
                 registry.definition("nonexistent", "text", { line: 0, character: 0 }, "file:///test.txt"),
-            ).toBeNull();
+            ).resolves.toBeNull();
         });
 
         it("should delegate to provider's definition", async () => {
@@ -403,7 +403,7 @@ describe("ProviderRegistry", () => {
             };
             registry.register(createMockProvider("test", { definition: vi.fn().mockReturnValue(mockLocation) }));
 
-            const result = registry.definition("test", "text", { line: 0, character: 5 }, "file:///test.txt");
+            const result = await registry.definition("test", "text", { line: 0, character: 5 }, "file:///test.txt");
 
             expect(result).toBe(mockLocation);
         });
