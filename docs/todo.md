@@ -36,14 +36,34 @@ Out of scope for v1: variant arrays, insert-at-index, multi-select, context menu
 
 ### v2 — selection, commands, variant arrays, ordering, context menu
 
-- Tree-state selection model in the webview (single-select, keyboard navigable). Host-side mirror keyed by webview panel; `selectionChanged` message keeps the two in sync. Prerequisite for everything else in this phase.
-- VSCode commands: `bgforge.binaryEditor.addEntry`, `bgforge.binaryEditor.removeEntry`, scoped to the active binary editor and acting on the selected node. Surfaced in the Command Palette and keybindable.
-- Context menu (right-click) on tree nodes mirroring inline actions plus duplicate / move up / move down / paste.
-- Variant-picker component invoked when an array's spec declares `variants` (e.g., MAP object types: critter, exit-grid, generic). Used identically by inline `+`, context menu, and command. Surfaced via a quick-pick.
+#### v2.1 — selection model + commands (shipped)
+
+- Webview tracks a single-selected node and applies an always-visible `.selected` highlight to the focused row (both group headers and field rows). Selection survives re-render after add/remove/undo/redo.
+- Host-side `BinaryEditorSelectionTracker` mirrors per-panel selection plus active-panel state, fed by webview `selectionChanged` messages and `onDidChangeViewState`.
+- VSCode commands `bgforge.binaryEditor.addEntry` and `bgforge.binaryEditor.removeEntry` resolve the active context from the tracker and dispatch to `BinaryDocument.addEntity` / `removeEntity`. Both appear in the Command Palette under "Binary Editor", gated by a when-clause that scopes them to the binary editor view.
+
+#### v2.2 — context menu
+
+- Right-click context menu on tree nodes mirroring inline `+ Add entry` / `✕ Remove`, plus the v2.4 ordering actions once they land. Reuses the selection model.
+- Keyboard equivalent (Shift+F10 / context-menu key) opens the same menu on the focused row.
+
+#### v2.3 — variant picker + min/max validation
+
+- Variant-picker component invoked when an array's spec declares `variants` (e.g., MAP object types: critter, exit-grid, generic). Used identically by inline `+`, context menu, and command. Surfaced via `vscode.window.showQuickPick`.
+- `minSize` / `maxSize` enforcement from the array spec: refuse remove at minimum, refuse add at maximum, surface via the field-error channel.
+
+#### v2.4 — ordering
+
 - Insert-at-index: `Add before` / `Add after` on entry rows. Required for collections where slot index is identity (global var index referenced from scripts).
 - Move up / move down on entry rows; structural pathway covers any cross-record offset adjustments.
-- `minSize` / `maxSize` enforcement from the array spec: refuse remove at minimum, refuse add at maximum, surface via the field-error channel.
-- Format coverage: MAP objects (per-elevation, variant-shaped records including critter/exit-grid/inventory). Script slots within capacity-batched extents come with this phase since they share the variant + ordering machinery (and need extent-capacity growth handled by the byte-builder).
+
+#### v2.5 — MAP objects coverage
+
+- Per-elevation, variant-shaped records including critter / exit-grid / inventory. Drives the variant-picker abstraction from v2.3 against a real format with multiple shapes.
+
+#### v2.6 — script slots coverage
+
+- Capacity-batched script extents. Shares the variant + ordering machinery; the byte-builder owns extent-capacity growth and `extentNext` linkage when a batch fills.
 
 ### v3 — bulk ops, multi-select, scripting
 
