@@ -65,6 +65,18 @@ export function buildMapAddEntryBytes(parseResult: ParseResult, arrayPath: reado
     return serializeMapCanonicalDocument(applyVarSectionUpdate(doc, section, nextValues), parseResult.opaqueRanges);
 }
 
+export function isMapAddableArray(arrayPath: readonly string[]): boolean {
+    return arrayPath.length === 1 && VAR_SECTIONS.some((entry) => entry.arrayName === arrayPath[0]);
+}
+
+export function isMapRemovableEntry(entryPath: readonly string[]): boolean {
+    if (entryPath.length !== 2) return false;
+    const [arrayName, entryName] = entryPath;
+    const section = VAR_SECTIONS.find((entry) => entry.arrayName === arrayName);
+    if (!section || entryName === undefined) return false;
+    return parseEntryIndex(entryName, section.entryPrefix) !== undefined;
+}
+
 function parseEntryIndex(label: string, prefix: string): number | undefined {
     if (!label.startsWith(prefix)) return undefined;
     const index = Number.parseInt(label.slice(prefix.length), 10);

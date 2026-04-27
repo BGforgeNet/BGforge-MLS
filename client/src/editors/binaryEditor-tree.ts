@@ -122,12 +122,14 @@ export function buildBinaryEditorTreeState(parseResult: ParseResult): BinaryEdit
     const rootChildren: string[] = [];
     let nextId = 0;
 
+    const adapter = formatAdapterRegistry.get(parseResult.format);
     const visitEntry = (projected: ProjectedEntry, parentId: string, parentPath: string): string => {
         const id = `node-${nextId++}`;
         if (projected.kind === "group") {
             const entry = projected.entry;
             const groupPath = makeFieldPath(parentPath, entry.name);
             const childIds = projected.children.map((child) => visitEntry(child, id, groupPath));
+            const addable = adapter?.isAddableArray?.(projected.sourceSegments) === true;
             nodes.set(id, {
                 id,
                 children: childIds,
@@ -139,6 +141,7 @@ export function buildBinaryEditorTreeState(parseResult: ParseResult): BinaryEdit
                     description: entry.description,
                     expandable: childIds.length > 0,
                     expanded: entry.expanded !== false,
+                    ...(addable ? { addable: true } : {}),
                 },
             });
             return id;
@@ -193,6 +196,7 @@ export function buildBinaryEditorTreeState(parseResult: ParseResult): BinaryEdit
                     entry.type === "string"
                         ? resolveStringCharset(parseResult.format, fieldKey, entry.name)
                         : undefined,
+                ...(adapter?.isRemovableEntry?.(projected.sourceSegments) === true ? { removable: true } : {}),
             },
         });
         return id;

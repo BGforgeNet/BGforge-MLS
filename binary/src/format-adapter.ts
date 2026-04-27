@@ -65,6 +65,13 @@ export interface BinaryFormatAdapter {
      * format.
      */
     buildRemoveEntryBytes?(parseResult: ParseResult, entryPath: readonly string[]): Uint8Array | undefined;
+    /**
+     * Lightweight predicate the tree builder can call per group/entry. Decoupled
+     * from the byte-builders above so `buildBinaryEditorTreeState` can decide
+     * UI affordances without doing a full canonical-doc rebuild + serialize.
+     */
+    isAddableArray?(arrayPath: readonly string[]): boolean;
+    isRemovableEntry?(entryPath: readonly string[]): boolean;
 }
 
 class FormatAdapterRegistry {

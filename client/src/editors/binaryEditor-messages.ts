@@ -30,6 +30,10 @@ export interface BinaryEditorNode {
      * so live keystroke sanitization mirrors the host-side validator.
      */
     readonly stringCharset?: "ascii-printable" | "utf8";
+    /** Group nodes whose array accepts new entries (e.g. MAP "Global Variables"). */
+    readonly addable?: boolean;
+    /** Field/entry nodes that can be removed from their parent array. */
+    readonly removable?: boolean;
 }
 
 // -- Webview -> Extension ---------------------------------------------------

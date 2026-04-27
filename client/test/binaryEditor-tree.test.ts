@@ -59,6 +59,35 @@ describe("buildBinaryEditorTreeState", () => {
         });
     });
 
+    it("marks Global Variables as addable and its entries as removable", () => {
+        const tree = buildBinaryEditorTreeState(loadMapResult("arcaves.map"));
+        const init = tree.getInitMessagePayload();
+
+        const globalsNode = init.rootChildren.find((node) => node.name === "Global Variables");
+        expect(globalsNode).toBeDefined();
+        expect(globalsNode!.addable).toBe(true);
+
+        const entries = tree.getChildren(globalsNode!.id);
+        expect(entries.length).toBeGreaterThan(0);
+        for (const entry of entries) {
+            expect(entry.removable).toBe(true);
+        }
+    });
+
+    it("does not mark non-addable groups as addable", () => {
+        const tree = buildBinaryEditorTreeState(loadMapResult("arcaves.map"));
+        const init = tree.getInitMessagePayload();
+
+        const headerNode = init.rootChildren.find((node) => node.name === "Header");
+        expect(headerNode).toBeDefined();
+        expect(headerNode!.addable).toBeFalsy();
+
+        const headerChildren = tree.getChildren(headerNode!.id);
+        for (const child of headerChildren) {
+            expect(child.removable).toBeFalsy();
+        }
+    });
+
     it("uses compact MAP summaries as lazy root nodes", () => {
         const fullResult = loadMapResult("artemple.map", true);
         const tree = buildBinaryEditorTreeState(fullResult);

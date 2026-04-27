@@ -2,7 +2,7 @@ import type { BinaryFormatAdapter, ProjectedEntry } from "../format-adapter";
 import type { ParsedField, ParsedGroup, ParseOptions, ParseResult } from "../types";
 import { createCanonicalMapJsonSnapshot, loadCanonicalMapJsonSnapshot } from "./json-snapshot";
 import { rebuildMapCanonicalDocument } from "./canonical";
-import { buildMapAddEntryBytes, buildMapRemoveEntryBytes } from "./entity-ops";
+import { buildMapAddEntryBytes, buildMapRemoveEntryBytes, isMapAddableArray, isMapRemovableEntry } from "./entity-ops";
 import { slugify } from "../snapshot-common";
 
 function mapSemanticFieldKey(segments: readonly string[]): string | undefined {
@@ -193,5 +193,13 @@ export const mapFormatAdapter: BinaryFormatAdapter = {
 
     buildRemoveEntryBytes(parseResult: ParseResult, entryPath: readonly string[]) {
         return buildMapRemoveEntryBytes(parseResult, entryPath);
+    },
+
+    isAddableArray(arrayPath: readonly string[]): boolean {
+        return isMapAddableArray(arrayPath);
+    },
+
+    isRemovableEntry(entryPath: readonly string[]): boolean {
+        return isMapRemovableEntry(entryPath);
     },
 };
