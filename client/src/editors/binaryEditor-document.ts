@@ -289,6 +289,45 @@ export class BinaryDocument implements vscode.CustomDocument {
         return this.applyByteRebuild(nextBytes, label) ? { label } : undefined;
     }
 
+    /** Insert a new default entry directly before `entryPath`. */
+    insertEntityBefore(entryPath: readonly string[]): EntityOperationResult | undefined {
+        return this.insertEntity(entryPath, "before");
+    }
+
+    /** Insert a new default entry directly after `entryPath`. */
+    insertEntityAfter(entryPath: readonly string[]): EntityOperationResult | undefined {
+        return this.insertEntity(entryPath, "after");
+    }
+
+    private insertEntity(
+        entryPath: readonly string[],
+        position: "before" | "after",
+    ): EntityOperationResult | undefined {
+        const adapter = formatAdapterRegistry.get(this._parseResult.format);
+        const nextBytes = adapter?.buildInsertEntryBytes?.(this._parseResult, entryPath, position);
+        if (!nextBytes) return undefined;
+        const label = `Insert ${position} ${entryPath.join(" / ")}`;
+        return this.applyByteRebuild(nextBytes, label) ? { label } : undefined;
+    }
+
+    /** Swap the entry at `entryPath` with its predecessor. */
+    moveEntityUp(entryPath: readonly string[]): EntityOperationResult | undefined {
+        return this.moveEntity(entryPath, "up");
+    }
+
+    /** Swap the entry at `entryPath` with its successor. */
+    moveEntityDown(entryPath: readonly string[]): EntityOperationResult | undefined {
+        return this.moveEntity(entryPath, "down");
+    }
+
+    private moveEntity(entryPath: readonly string[], direction: "up" | "down"): EntityOperationResult | undefined {
+        const adapter = formatAdapterRegistry.get(this._parseResult.format);
+        const nextBytes = adapter?.buildMoveEntryBytes?.(this._parseResult, entryPath, direction);
+        if (!nextBytes) return undefined;
+        const label = `Move ${entryPath.join(" / ")} ${direction}`;
+        return this.applyByteRebuild(nextBytes, label) ? { label } : undefined;
+    }
+
     /**
      * Set a field's raw and display values.
      */

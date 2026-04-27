@@ -578,5 +578,37 @@ export function registerBinaryEditor(context: vscode.ExtensionContext): vscode.D
         ctx.document.removeEntity(ctx.selection.entryPath);
     });
 
-    return vscode.Disposable.from(editorRegistration, addCommand, removeCommand);
+    const insertBeforeCommand = vscode.commands.registerCommand("bgforge.binaryEditor.insertEntryBefore", () => {
+        const ctx = provider.getActiveContext();
+        if (!ctx?.selection.removable || !ctx.selection.entryPath) return;
+        ctx.document.insertEntityBefore(ctx.selection.entryPath);
+    });
+
+    const insertAfterCommand = vscode.commands.registerCommand("bgforge.binaryEditor.insertEntryAfter", () => {
+        const ctx = provider.getActiveContext();
+        if (!ctx?.selection.removable || !ctx.selection.entryPath) return;
+        ctx.document.insertEntityAfter(ctx.selection.entryPath);
+    });
+
+    const moveUpCommand = vscode.commands.registerCommand("bgforge.binaryEditor.moveEntryUp", () => {
+        const ctx = provider.getActiveContext();
+        if (!ctx?.selection.removable || !ctx.selection.entryPath) return;
+        ctx.document.moveEntityUp(ctx.selection.entryPath);
+    });
+
+    const moveDownCommand = vscode.commands.registerCommand("bgforge.binaryEditor.moveEntryDown", () => {
+        const ctx = provider.getActiveContext();
+        if (!ctx?.selection.removable || !ctx.selection.entryPath) return;
+        ctx.document.moveEntityDown(ctx.selection.entryPath);
+    });
+
+    return vscode.Disposable.from(
+        editorRegistration,
+        addCommand,
+        removeCommand,
+        insertBeforeCommand,
+        insertAfterCommand,
+        moveUpCommand,
+        moveDownCommand,
+    );
 }

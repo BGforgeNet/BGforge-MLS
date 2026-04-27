@@ -2,7 +2,14 @@ import type { BinaryFormatAdapter, ProjectedEntry } from "../format-adapter";
 import type { ParsedField, ParsedGroup, ParseOptions, ParseResult } from "../types";
 import { createCanonicalMapJsonSnapshot, loadCanonicalMapJsonSnapshot } from "./json-snapshot";
 import { rebuildMapCanonicalDocument } from "./canonical";
-import { buildMapAddEntryBytes, buildMapRemoveEntryBytes, isMapAddableArray, isMapRemovableEntry } from "./entity-ops";
+import {
+    buildMapAddEntryBytes,
+    buildMapInsertEntryBytes,
+    buildMapMoveEntryBytes,
+    buildMapRemoveEntryBytes,
+    isMapAddableArray,
+    isMapRemovableEntry,
+} from "./entity-ops";
 import { slugify } from "../snapshot-common";
 
 function mapSemanticFieldKey(segments: readonly string[]): string | undefined {
@@ -193,6 +200,14 @@ export const mapFormatAdapter: BinaryFormatAdapter = {
 
     buildRemoveEntryBytes(parseResult: ParseResult, entryPath: readonly string[]) {
         return buildMapRemoveEntryBytes(parseResult, entryPath);
+    },
+
+    buildInsertEntryBytes(parseResult: ParseResult, entryPath: readonly string[], position: "before" | "after") {
+        return buildMapInsertEntryBytes(parseResult, entryPath, position);
+    },
+
+    buildMoveEntryBytes(parseResult: ParseResult, entryPath: readonly string[], direction: "up" | "down") {
+        return buildMapMoveEntryBytes(parseResult, entryPath, direction);
     },
 
     isAddableArray(arrayPath: readonly string[]): boolean {

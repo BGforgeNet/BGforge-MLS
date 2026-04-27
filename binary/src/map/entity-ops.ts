@@ -110,14 +110,63 @@ export function buildMapRemoveEntryBytes(
     entryPath: readonly string[],
 ): Uint8Array | undefined {
     if (!isMapRemovableEntry(entryPath)) return undefined;
+    return mutateVarSectionEntry(parseResult, entryPath, (values, index) => [
+        ...values.slice(0, index),
+        ...values.slice(index + 1),
+    ]);
+}
+
+export function buildMapInsertEntryBytes(
+    parseResult: ParseResult,
+    entryPath: readonly string[],
+    position: "before" | "after",
+): Uint8Array | undefined {
+    // An entry can be inserted next to any entry that itself is recognised as
+    // a removable target — the addressing rules are the same.
+    if (!isMapRemovableEntry(entryPath)) return undefined;
+    return mutateVarSectionEntry(parseResult, entryPath, (values, index) => {
+        const insertAt = position === "before" ? index : index + 1;
+        return [...values.slice(0, insertAt), defaultVarValue(), ...values.slice(insertAt)];
+    });
+}
+
+export function buildMapMoveEntryBytes(
+    parseResult: ParseResult,
+    entryPath: readonly string[],
+    direction: "up" | "down",
+): Uint8Array | undefined {
+    if (!isMapRemovableEntry(entryPath)) return undefined;
+    return mutateVarSectionEntry(parseResult, entryPath, (values, index) => {
+        const targetIndex = direction === "up" ? index - 1 : index + 1;
+        if (targetIndex < 0 || targetIndex >= values.length) return undefined;
+        const next = [...values];
+        [next[index], next[targetIndex]] = [next[targetIndex]!, next[index]!];
+        return next;
+    });
+}
+
+/**
+ * Shared boilerplate for entry-targeted var-section mutations: resolves the
+ * binding row, runs the mutator on the current values, and re-serialises.
+ * The mutator may return `undefined` to abort (e.g., move at the boundary).
+ */
+function mutateVarSectionEntry(
+    parseResult: ParseResult,
+    entryPath: readonly string[],
+    mutate: (values: readonly number[], index: number) => readonly number[] | undefined,
+): Uint8Array | undefined {
     const doc = readDocument(parseResult);
     if (!doc) return undefined;
-
     const section = findVarSectionByArrayName(entryPath[0])!;
     const index = parseEntryIndex(entryPath[1]!, section.entryPrefix)!;
     const current = doc[section.arrayKey];
     if (index >= current.length) return undefined;
 
-    const nextValues = [...current.slice(0, index), ...current.slice(index + 1)];
-    return serializeMapCanonicalDocument(applyVarSectionUpdate(doc, section, nextValues), parseResult.opaqueRanges);
+    const nextValues = mutate(current, index);
+    if (!nextValues) return undefined;
+
+    return serializeMapCanonicalDocument(
+        applyVarSectionUpdate(doc, section, [...nextValues]),
+        parseResult.opaqueRanges,
+    );
 }

@@ -434,5 +434,83 @@ describe("BinaryDocument", () => {
             const result = mapDoc.addEntity(["No Such Array"]);
             expect(result).toBeUndefined();
         });
+
+        it("insertEntityBefore inserts a 0 ahead of the targeted entry", () => {
+            const mapDoc = loadMapDocument("arcaves.map");
+            const before = mapDoc.parseResult.document as GlobalsDoc;
+            const originalAt2 = before.globalVariables[2];
+
+            const result = mapDoc.insertEntityBefore(["Global Variables", "Global Var 2"]);
+            expect(result).toBeDefined();
+
+            const after = mapDoc.parseResult.document as GlobalsDoc;
+            expect(after.globalVariables[2]).toBe(0);
+            expect(after.globalVariables[3]).toBe(originalAt2);
+        });
+
+        it("insertEntityAfter inserts a 0 immediately after the targeted entry", () => {
+            const mapDoc = loadMapDocument("arcaves.map");
+            const before = mapDoc.parseResult.document as GlobalsDoc;
+            const originalAt2 = before.globalVariables[2];
+            const originalAt3 = before.globalVariables[3];
+
+            const result = mapDoc.insertEntityAfter(["Global Variables", "Global Var 2"]);
+            expect(result).toBeDefined();
+
+            const after = mapDoc.parseResult.document as GlobalsDoc;
+            expect(after.globalVariables[2]).toBe(originalAt2);
+            expect(after.globalVariables[3]).toBe(0);
+            expect(after.globalVariables[4]).toBe(originalAt3);
+        });
+
+        it("moveEntityUp swaps the targeted entry with its predecessor", () => {
+            const mapDoc = loadMapDocument("arcaves.map");
+            const before = mapDoc.parseResult.document as GlobalsDoc;
+            const originalAt2 = before.globalVariables[2];
+            const originalAt3 = before.globalVariables[3];
+
+            const result = mapDoc.moveEntityUp(["Global Variables", "Global Var 3"]);
+            expect(result).toBeDefined();
+
+            const after = mapDoc.parseResult.document as GlobalsDoc;
+            expect(after.globalVariables[2]).toBe(originalAt3);
+            expect(after.globalVariables[3]).toBe(originalAt2);
+        });
+
+        it("moveEntityDown swaps the targeted entry with its successor", () => {
+            const mapDoc = loadMapDocument("arcaves.map");
+            const before = mapDoc.parseResult.document as GlobalsDoc;
+            const originalAt2 = before.globalVariables[2];
+            const originalAt3 = before.globalVariables[3];
+
+            const result = mapDoc.moveEntityDown(["Global Variables", "Global Var 2"]);
+            expect(result).toBeDefined();
+
+            const after = mapDoc.parseResult.document as GlobalsDoc;
+            expect(after.globalVariables[2]).toBe(originalAt3);
+            expect(after.globalVariables[3]).toBe(originalAt2);
+        });
+
+        it("moveEntityUp at the boundary returns undefined", () => {
+            const mapDoc = loadMapDocument("arcaves.map");
+            const result = mapDoc.moveEntityUp(["Global Variables", "Global Var 0"]);
+            expect(result).toBeUndefined();
+        });
+
+        it("undoing a move swaps the values back", () => {
+            const mapDoc = loadMapDocument("arcaves.map");
+            const events: any[] = [];
+            mapDoc.onDidChange((e) => events.push(e));
+            const before = mapDoc.parseResult.document as GlobalsDoc;
+            const originalAt2 = before.globalVariables[2];
+            const originalAt3 = before.globalVariables[3];
+
+            mapDoc.moveEntityUp(["Global Variables", "Global Var 3"]);
+            events[0].undo();
+
+            const after = mapDoc.parseResult.document as GlobalsDoc;
+            expect(after.globalVariables[2]).toBe(originalAt2);
+            expect(after.globalVariables[3]).toBe(originalAt3);
+        });
     });
 });

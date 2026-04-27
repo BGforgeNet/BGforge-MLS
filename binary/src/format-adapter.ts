@@ -66,6 +66,26 @@ export interface BinaryFormatAdapter {
      */
     buildRemoveEntryBytes?(parseResult: ParseResult, entryPath: readonly string[]): Uint8Array | undefined;
     /**
+     * Insert a new default entry adjacent to the targeted entry. Used by the
+     * Insert before / Insert after editor actions for arrays where slot index
+     * carries identity (e.g. MAP global vars referenced by index from scripts).
+     */
+    buildInsertEntryBytes?(
+        parseResult: ParseResult,
+        entryPath: readonly string[],
+        position: "before" | "after",
+    ): Uint8Array | undefined;
+    /**
+     * Swap the targeted entry with its neighbour in the given direction.
+     * Returns undefined when the move is at the array boundary (no-op) or the
+     * path is not a known movable entry.
+     */
+    buildMoveEntryBytes?(
+        parseResult: ParseResult,
+        entryPath: readonly string[],
+        direction: "up" | "down",
+    ): Uint8Array | undefined;
+    /**
      * Lightweight predicate the tree builder can call per group/entry. Decoupled
      * from the byte-builders above so `buildBinaryEditorTreeState` can decide
      * UI affordances without doing a full canonical-doc rebuild + serialize.
