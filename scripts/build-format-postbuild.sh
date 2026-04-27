@@ -2,7 +2,7 @@
 
 # Post-build hook for @bgforge/format: copies tree-sitter WASM files next to
 # format/out/cli.js so the CLI can load them via __dirname at runtime.
-# Invoked by tsup's onSuccess hook in format/tsup.config.ts.
+# Invoked from format/package.json's build script after tsdown finishes.
 # Must run from the repo root so grammars/ and server/node_modules/ are reachable.
 
 set -eu -o pipefail
