@@ -42,24 +42,27 @@ Out of scope for v1: variant arrays, insert-at-index, multi-select, context menu
 - Host-side `BinaryEditorSelectionTracker` mirrors per-panel selection plus active-panel state, fed by webview `selectionChanged` messages and `onDidChangeViewState`.
 - VSCode commands `bgforge.binaryEditor.addEntry` and `bgforge.binaryEditor.removeEntry` resolve the active context from the tracker and dispatch to `BinaryDocument.addEntity` / `removeEntity`. Both appear in the Command Palette under "Binary Editor", gated by a when-clause that scopes them to the binary editor view.
 
-#### v2.2 — context menu
+#### v2.2 — context menu (shipped)
 
-- Right-click context menu on tree nodes mirroring inline `+ Add entry` / `✕ Remove`, plus the v2.4 ordering actions once they land. Reuses the selection model.
-- Keyboard equivalent (Shift+F10 / context-menu key) opens the same menu on the focused row.
+- Right-click on an addable group header or a removable entry opens the VSCode-native webview context menu via `data-vscode-context` + `contributes.menus.webview/context`. Items dispatch to the v2.1 commands; `Shift+F10` and the keyboard menu key open the same menu.
 
-#### v2.3 — variant picker + min/max validation
+#### v2.4 — ordering (shipped)
 
-- Variant-picker component invoked when an array's spec declares `variants` (e.g., MAP object types: critter, exit-grid, generic). Used identically by inline `+`, context menu, and command. Surfaced via `vscode.window.showQuickPick`.
+- `buildInsertEntryBytes(parseResult, entryPath, position)` and `buildMoveEntryBytes(parseResult, entryPath, direction)` on the adapter. `BinaryDocument` exposes `insertEntityBefore` / `insertEntityAfter` / `moveEntityUp` / `moveEntityDown` (each one undo-able through the existing pipeline).
+- VSCode commands `bgforge.binaryEditor.insertEntryBefore` / `insertEntryAfter` / `moveEntryUp` / `moveEntryDown`, all surfaced in the Command Palette and webview context menu (grouped separately from add/remove for readability).
+
+#### v2.3 — variant picker + min/max validation (deferred)
+
+To ship together with v2.5 since MAP objects are the natural consumer for variants and the only place an immediate min/max bound applies (per-elevation max, total-objects bound).
+
+- Variant-picker component invoked when an array's spec declares `variants`. Surfaced via `vscode.window.showQuickPick`. Used identically by inline `+`, context menu, and command.
 - `minSize` / `maxSize` enforcement from the array spec: refuse remove at minimum, refuse add at maximum, surface via the field-error channel.
-
-#### v2.4 — ordering
-
-- Insert-at-index: `Add before` / `Add after` on entry rows. Required for collections where slot index is identity (global var index referenced from scripts).
-- Move up / move down on entry rows; structural pathway covers any cross-record offset adjustments.
 
 #### v2.5 — MAP objects coverage
 
-- Per-elevation, variant-shaped records including critter / exit-grid / inventory. Drives the variant-picker abstraction from v2.3 against a real format with multiple shapes.
+- Per-elevation, variant-shaped records (Misc, Critter, Item, Scenery, Wall, Tile, Exit Grid). Each variant has its own default skeleton (PID, fid, optional sub-records like `critterData` for critters, `exitGrid` for exits).
+- Recursive inventory entries: objects can carry inventories of `{quantity, object}` pairs; "+ Add inventory item" reuses the same variant-picker pathway.
+- Drives the v2.3 variant-picker abstraction against a real format with multiple shapes.
 
 #### v2.6 — script slots coverage
 
