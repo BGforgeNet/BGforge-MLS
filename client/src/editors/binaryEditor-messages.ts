@@ -91,6 +91,18 @@ interface RemoveEntryMessage {
     readonly entryPath: readonly string[];
 }
 
+interface SelectionChangedMessage {
+    readonly type: "selectionChanged";
+    /** `undefined` clears the selection (e.g., user clicked outside the tree). */
+    readonly selection?: {
+        readonly nodeId: string;
+        readonly addable?: boolean;
+        readonly removable?: boolean;
+        readonly arrayPath?: readonly string[];
+        readonly entryPath?: readonly string[];
+    };
+}
+
 export type WebviewToExtension =
     | EditMessage
     | ReadyMessage
@@ -99,7 +111,8 @@ export type WebviewToExtension =
     | LoadJsonMessage
     | RuntimeErrorMessage
     | AddEntryMessage
-    | RemoveEntryMessage;
+    | RemoveEntryMessage
+    | SelectionChangedMessage;
 
 // -- Extension -> Webview ---------------------------------------------------
 

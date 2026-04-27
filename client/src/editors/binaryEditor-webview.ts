@@ -3,6 +3,7 @@ import { getLoadableGroupIds, shouldRecursivelyLoadTree } from "./binaryEditor-l
 import type { BinaryEditorNode } from "./binaryEditor-messages";
 import { setupTreeEventListeners, setupSidebarButtons } from "./binaryEditor-webview-events";
 import { createNodeElement, renderMessages } from "./binaryEditor-webview-rendering";
+import { setupSelection, reapplyVisualSelection } from "./binaryEditor-webview-selection";
 import {
     filterTree,
     setupSearchInput,
@@ -212,7 +213,13 @@ import { createWebviewState, registerNode, resetState } from "./binaryEditor-web
     // -- Tree rendering -------------------------------------------------------
 
     function renderRoot(message: InitMessage): void {
+        // Preserve any active selection across re-renders (undo/redo flips
+        // here too). The node id is stable across reparses for nodes that
+        // weren't touched; if the prior selection's row was removed, the
+        // re-apply call below silently no-ops.
+        const previouslySelected = state.selectedNodeId;
         resetState(state);
+        state.selectedNodeId = previouslySelected;
         renderMessages(errorsEl, "errors", message.errors);
         renderMessages(warningsEl, "warnings", message.warnings);
         treeEl.replaceChildren();
@@ -234,6 +241,8 @@ import { createWebviewState, registerNode, resetState } from "./binaryEditor-web
         if (searchInput?.value) {
             filterTree(searchInput.value, searchCtx);
         }
+
+        reapplyVisualSelection(treeEl, state.selectedNodeId);
     }
 
     function renderChildren(nodeId: string, children: ChildrenMessage["children"]): void {
@@ -254,6 +263,7 @@ import { createWebviewState, registerNode, resetState } from "./binaryEditor-web
         contentEl.append(fragment);
         state.childrenLoaded.add(nodeId);
         state.loadingChildren.delete(nodeId);
+        reapplyVisualSelection(treeEl, state.selectedNodeId);
 
         if (searchInput?.value) {
             filterTree(searchInput.value, searchCtx);
@@ -282,6 +292,15 @@ import { createWebviewState, registerNode, resetState } from "./binaryEditor-web
     const eventCtx = { treeEl, vscode, clearFieldError };
 
     setupTreeEventListeners(eventCtx, ensureChildrenLoaded);
+    setupSelection({
+        treeEl,
+        vscode,
+        getNode: (id) => state.nodeById.get(id),
+        getSelectedId: () => state.selectedNodeId,
+        setSelectedId: (id) => {
+            state.selectedNodeId = id;
+        },
+    });
     setupSidebarButtons(vscode, expandAllBtn, collapseAllBtn, dumpJsonBtn, loadJsonBtn, treeEl, state, () =>
         expandLoadedGroupsAndQueueChildren(),
     );

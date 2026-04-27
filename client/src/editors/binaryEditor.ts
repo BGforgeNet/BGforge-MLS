@@ -18,6 +18,7 @@ import {
 import { escapeHtml } from "../utils";
 import { getCachedCssAsset, getCachedHtmlAsset, getCachedJsAsset } from "../webview-assets";
 import { BinaryDocument } from "./binaryEditor-document";
+import { BinaryEditorSelectionTracker, type BinaryEditorSelection } from "./binaryEditor-selectionTracker";
 import { type BinaryEditorTreeState, buildBinaryEditorTreeState } from "./binaryEditor-tree";
 import { validateFieldEdit } from "./binaryEditor-validation";
 import type { WebviewToExtension, ExtensionToWebview, InitMessage } from "./binaryEditor-messages";
@@ -51,6 +52,9 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
      */
     private readonly treeStates = new Map<vscode.WebviewPanel, BinaryEditorTreeState>();
 
+    private readonly panelDocuments = new Map<vscode.WebviewPanel, BinaryDocument>();
+    private readonly selectionTracker = new BinaryEditorSelectionTracker();
+
     private readonly _onDidChangeCustomDocument = new vscode.EventEmitter<
         vscode.CustomDocumentEditEvent<BinaryDocument>
     >();
@@ -59,6 +63,34 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
     constructor(context: vscode.ExtensionContext) {
         this.extensionUri = context.extensionUri;
     }
+
+    /**
+     * Currently selected node + its source document, or undefined if no
+     * binary editor is the focused view. Commands consult this to know
+     * what to operate on.
+     */
+    getActiveContext(): { document: BinaryDocument; selection: BinaryEditorSelection } | undefined {
+        const selection = this.selectionTracker.getActiveSelection();
+        if (!selection) return undefined;
+        for (const [panel, doc] of this.panelDocuments) {
+            if (panel.active) return { document: doc, selection };
+        }
+        return undefined;
+    }
+
+    private panelKey(panel: vscode.WebviewPanel): string {
+        // Stable per-panel key. Panels are reference-typed and we only need
+        // identity equality, so a Map<panel, key> would be redundant — we
+        // synthesize a key from a WeakMap-backed counter.
+        let key = this.panelKeys.get(panel);
+        if (key === undefined) {
+            key = `panel-${this.nextPanelKey++}`;
+            this.panelKeys.set(panel, key);
+        }
+        return key;
+    }
+    private readonly panelKeys = new WeakMap<vscode.WebviewPanel, string>();
+    private nextPanelKey = 0;
 
     // -- CustomEditorProvider lifecycle -------------------------------------
 
@@ -121,6 +153,17 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
         // listener that the closed panel registered.
         const panelSubscriptions: vscode.Disposable[] = [];
 
+        // Register panel↔document binding + view-state tracking for the
+        // selection model. Commands consult `getActiveContext` to learn which
+        // document the focused webview belongs to.
+        this.panelDocuments.set(webviewPanel, document);
+        this.selectionTracker.recordActive(this.panelKey(webviewPanel), webviewPanel.active);
+        panelSubscriptions.push(
+            webviewPanel.onDidChangeViewState((event) => {
+                this.selectionTracker.recordActive(this.panelKey(event.webviewPanel), event.webviewPanel.active);
+            }),
+        );
+
         // Handle messages from webview.
         //
         // The `msg` is type-asserted, not runtime-discriminated. VSCode's
@@ -170,6 +213,9 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
                     case "removeEntry":
                         document.removeEntity(msg.entryPath);
                         break;
+                    case "selectionChanged":
+                        this.selectionTracker.recordSelection(this.panelKey(webviewPanel), msg.selection);
+                        break;
                 }
             }),
         );
@@ -188,6 +234,8 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
         webviewPanel.onDidDispose(() => {
             for (const sub of panelSubscriptions) sub.dispose();
             this.treeStates.delete(webviewPanel);
+            this.selectionTracker.forgetPanel(this.panelKey(webviewPanel));
+            this.panelDocuments.delete(webviewPanel);
         });
     }
 
@@ -504,14 +552,31 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
 }
 
 /**
- * Register the binary editor provider
+ * Register the binary editor provider plus its add-entry / remove-entry
+ * commands. The returned disposable composes the editor provider and the
+ * two command registrations so the extension teardown cleans everything
+ * in one push to `context.subscriptions`.
  */
 export function registerBinaryEditor(context: vscode.ExtensionContext): vscode.Disposable {
     const provider = new BinaryEditorProvider(context);
-    return vscode.window.registerCustomEditorProvider(BinaryEditorProvider.viewType, provider, {
+    const editorRegistration = vscode.window.registerCustomEditorProvider(BinaryEditorProvider.viewType, provider, {
         supportsMultipleEditorsPerDocument: true,
         webviewOptions: {
             retainContextWhenHidden: true,
         },
     });
+
+    const addCommand = vscode.commands.registerCommand("bgforge.binaryEditor.addEntry", () => {
+        const ctx = provider.getActiveContext();
+        if (!ctx?.selection.addable || !ctx.selection.arrayPath) return;
+        ctx.document.addEntity(ctx.selection.arrayPath);
+    });
+
+    const removeCommand = vscode.commands.registerCommand("bgforge.binaryEditor.removeEntry", () => {
+        const ctx = provider.getActiveContext();
+        if (!ctx?.selection.removable || !ctx.selection.entryPath) return;
+        ctx.document.removeEntity(ctx.selection.entryPath);
+    });
+
+    return vscode.Disposable.from(editorRegistration, addCommand, removeCommand);
 }

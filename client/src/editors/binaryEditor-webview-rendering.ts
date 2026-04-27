@@ -66,6 +66,7 @@ function createRemoveEntryButton(entryPath: readonly string[]): HTMLElement {
 function createFieldElement(node: BinaryEditorNode): HTMLElement {
     const fieldEl = document.createElement("div");
     fieldEl.className = "field";
+    fieldEl.dataset.nodeId = node.id;
     if (node.fieldId) {
         fieldEl.dataset.fieldId = node.fieldId;
     }

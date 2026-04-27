@@ -362,8 +362,30 @@
                 "command": "extension.bgforge.dialogPreview",
                 "title": "BGforge MLS: Dialog Preview",
                 "icon": "$(open-preview)"
+            },
+            {
+                "command": "bgforge.binaryEditor.addEntry",
+                "title": "BGforge: Add entry to selected array",
+                "category": "Binary Editor"
+            },
+            {
+                "command": "bgforge.binaryEditor.removeEntry",
+                "title": "BGforge: Remove selected entry",
+                "category": "Binary Editor"
             }
         ],
+        "menus": {
+            "commandPalette": [
+                {
+                    "command": "bgforge.binaryEditor.addEntry",
+                    "when": "activeCustomEditorId == 'bgforge.binaryEditor'"
+                },
+                {
+                    "command": "bgforge.binaryEditor.removeEntry",
+                    "when": "activeCustomEditorId == 'bgforge.binaryEditor'"
+                }
+            ]
+        },
         "customEditors": [
             {
                 "viewType": "bgforge.binaryEditor",

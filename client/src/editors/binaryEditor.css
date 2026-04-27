@@ -445,6 +445,23 @@ input[type="number"]:hover::-webkit-outer-spin-button {
     border-radius: 2px;
 }
 
+/* -- Tree selection -------------------------------------------------------- */
+
+.field.selected,
+.group-header.selected {
+    background-color: var(--vscode-list-inactiveSelectionBackground, rgba(255, 255, 255, 0.04));
+    color: var(--vscode-list-inactiveSelectionForeground, inherit);
+}
+
+/* When the webview itself is focused, switch to the active-selection palette
+   so the highlight isn't ambiguous against unfocused list items elsewhere in
+   the editor. focus-within on the tree root is the cheapest signal we have. */
+.tree:focus-within .field.selected,
+.tree:focus-within .group-header.selected {
+    background-color: var(--vscode-list-activeSelectionBackground, rgba(255, 255, 255, 0.08));
+    color: var(--vscode-list-activeSelectionForeground, inherit);
+}
+
 /* -- Add/remove entity affordances ----------------------------------------- */
 
 .entity-add-row {

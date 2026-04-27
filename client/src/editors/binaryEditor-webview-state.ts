@@ -6,6 +6,7 @@ interface WebviewState {
     readonly childrenLoaded: Set<string>;
     readonly loadingChildren: Set<string>;
     expandAllActive: boolean;
+    selectedNodeId?: string;
 }
 
 export function createWebviewState(): WebviewState {
@@ -24,6 +25,7 @@ export function resetState(state: WebviewState): void {
     state.childrenLoaded.clear();
     state.loadingChildren.clear();
     state.expandAllActive = false;
+    state.selectedNodeId = undefined;
 }
 
 export function registerNode(state: WebviewState, node: BinaryEditorNode): void {
