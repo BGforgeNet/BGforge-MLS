@@ -8,13 +8,14 @@ Controls what git tracks. Most build output is ignored; checked-in data JSONs ar
 
 ### Build output
 
-| Pattern        | What it ignores                                                  |
-| -------------- | ---------------------------------------------------------------- |
-| `client/out`   | Client esbuild bundles (extension.js, webviews, etc.)            |
-| `server/out/*` | Server esbuild bundle, WASM files, generated runtime files       |
-| `cli/*/out`    | CLI bundles (format-cli.js, transpile.js, bin-cli.js)            |
-| `*.wasm`       | Tree-sitter WASM files (built from C sources by `build:grammar`) |
-| `coverage/`    | Vitest coverage reports                                          |
+| Pattern                                       | What it ignores                                                  |
+| --------------------------------------------- | ---------------------------------------------------------------- |
+| `client/out`                                  | Client esbuild bundles (extension.js, webviews, etc.)            |
+| `server/out/*`                                | Server esbuild bundle, WASM files, generated runtime files       |
+| `transpilers/out`, `format/out`, `binary/out` | Library + CLI bundles for the published `@bgforge/*` packages    |
+| `plugins/*/out`                               | TypeScript Language Service plugin bundles                       |
+| `*.wasm`                                      | Tree-sitter WASM files (built from C sources by `build:grammar`) |
+| `coverage/`                                   | Vitest coverage reports                                          |
 
 ### Checked-in data (exceptions to `server/out/*`)
 
@@ -36,17 +37,17 @@ These JSON files are generated from `server/data/*.yml` by `generate-data.sh` bu
 
 ### Third-party and temporary
 
-| Pattern                                      | What it ignores                                          |
-| -------------------------------------------- | -------------------------------------------------------- |
-| `node_modules`                               | pnpm dependencies (root, client, server, cli workspaces) |
-| `client/node_modules`, `server/node_modules` | Workspace-specific node_modules                          |
-| `external/*`                                 | Cloned third-party mod repos used as test fixtures       |
-| `.vscode-test/`                              | Downloaded VSCode binaries for E2E tests                 |
-| `tmp`                                        | Scratch directory                                        |
-| `/test`                                      | Root-level test directory                                |
-| `.reports/`                                  | Analysis reports                                         |
-| `dist/`                                      | Build artifact directory (VSIX, editor bundles)          |
-| `*.log`, `*.vsix`                            | Log files and built extension packages                   |
+| Pattern                                      | What it ignores                                    |
+| -------------------------------------------- | -------------------------------------------------- |
+| `node_modules`                               | pnpm dependencies (root and all workspaces)        |
+| `client/node_modules`, `server/node_modules` | Workspace-specific node_modules                    |
+| `external/*`                                 | Cloned third-party mod repos used as test fixtures |
+| `.vscode-test/`                              | Downloaded VSCode binaries for E2E tests           |
+| `tmp`                                        | Scratch directory                                  |
+| `/test`                                      | Root-level test directory                          |
+| `.reports/`                                  | Analysis reports                                   |
+| `dist/`                                      | Build artifact directory (VSIX, editor bundles)    |
+| `*.log`, `*.vsix`                            | Log files and built extension packages             |
 
 The `external/` directory has four allowlisted text files (`!external/fallout.txt`, etc.) that list which repos to clone and what to exclude.
 
@@ -73,13 +74,13 @@ Controls what ships in the VSIX extension package. Uses a **blocklist** strategy
 
 ### Excluded: dev-only directories
 
-| Pattern                      | What it excludes                                    |
-| ---------------------------- | --------------------------------------------------- |
-| `cli/`, `coverage/`, `docs/` | CLI packages, coverage reports, documentation       |
-| `external/`, `grammars/`     | Test fixtures (~70 MB), tree-sitter grammar sources |
-| `plugins/`                   | TypeScript plugin sources (built to node_modules/)  |
-| `scripts/`, `test/`, `tmp/`  | Build scripts, tests, scratch                       |
-| `transpilers/`               | Transpiler documentation                            |
+| Pattern                     | What it excludes                                                    |
+| --------------------------- | ------------------------------------------------------------------- |
+| `coverage/`, `docs/`        | Coverage reports, documentation                                     |
+| `external/`, `grammars/`    | Test fixtures (~70 MB), tree-sitter grammar sources                 |
+| `plugins/`                  | TypeScript plugin sources (injected by `package.sh` post-packaging) |
+| `scripts/`, `test/`, `tmp/` | Build scripts, tests, scratch                                       |
+| `transpilers/`              | Transpiler sources and per-package docs                             |
 
 ### Excluded: source code and dev files
 
