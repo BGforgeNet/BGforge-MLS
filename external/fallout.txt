@@ -1,5 +1,10 @@
-# External Fallout repos for testing - one URL per line
-https://github.com/BGforgeNet/FO2tweaks
-https://github.com/BGforgeNet/Fallout2_Restoration_Project
-https://github.com/BGforgeNet/Fallout2_Party_Orders
-https://github.com/sfall-team/sfall
+# External Fallout repos for testing.
+# Format: <url> [<commit_sha>]
+#   - URL alone:           cloned shallow at upstream HEAD (follows upstream)
+#   - URL + commit SHA:    fetched shallow at the pinned commit (reproducible)
+# Pinning makes the integration tests reproducible across upstream pushes;
+# bump the SHA when intentionally tracking newer upstream content.
+https://github.com/BGforgeNet/FO2tweaks acf81c2b923c55e6b0a0eb9d267dcf6627e03410
+https://github.com/BGforgeNet/Fallout2_Restoration_Project 4f4c7a0cb323c2a3b709c29dc77ec3d4ce60f040
+https://github.com/BGforgeNet/Fallout2_Party_Orders 14c4d134d772b1a97f1389fdc5967a3bfb6e38eb
+https://github.com/sfall-team/sfall fb47779d4cf8f1af4693ba9461037452c3bd1320

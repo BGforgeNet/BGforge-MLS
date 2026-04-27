@@ -20,23 +20,8 @@ mkdir -p "$LOG_DIR"
 # shellcheck source=scripts/parallel-lib.sh
 source "$SCRIPT_DIR/parallel-lib.sh"
 
-# Clone repos from a txt file into a directory
-clone_repos() {
-    local txt_file="$1"
-    local target_dir="$2"
-
-    mkdir -p "$target_dir"
-    while IFS= read -r url || [[ -n "$url" ]]; do
-        [[ -z "$url" || "$url" == \#* ]] && continue
-        name=$(basename "$url" .git)
-        if [[ -d "$target_dir/$name" ]]; then
-            echo "  Already cloned: $name"
-        else
-            echo "  Cloning: $name"
-            git clone --depth 1 "$url" "$target_dir/$name"
-        fi
-    done < "$txt_file"
-}
+# shellcheck source=scripts/external-repos-lib.sh
+source "$SCRIPT_DIR/external-repos-lib.sh"
 
 # Remove excluded files from a directory
 remove_excluded() {

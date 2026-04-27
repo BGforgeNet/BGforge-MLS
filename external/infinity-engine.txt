@@ -1,7 +1,12 @@
-# External Infinity Engine repos for testing - one URL per line
-https://github.com/BGforgeNet/bg2-tweaks-and-tricks
-https://github.com/BGforgeNet/bg2-wildmage
-https://github.com/BGforgeNet/bg2-uniqueartifacts
-https://github.com/InfinityMods/Ascension
-https://github.com/Spellhold-Studios/BGT-WeiDU
-https://github.com/FredrikLindgren/rr
+# External Infinity Engine repos for testing.
+# Format: <url> [<commit_sha>]
+#   - URL alone:           cloned shallow at upstream HEAD (follows upstream)
+#   - URL + commit SHA:    fetched shallow at the pinned commit (reproducible)
+# Pinning makes the integration tests reproducible across upstream pushes;
+# bump the SHA when intentionally tracking newer upstream content.
+https://github.com/BGforgeNet/bg2-tweaks-and-tricks ca82cc1c177aa7972ae340636a12342fed672d37
+https://github.com/BGforgeNet/bg2-wildmage 87a8484d6fc7d010708ce0f2565b8d611c787287
+https://github.com/BGforgeNet/bg2-uniqueartifacts 1159183325b82b69b02472f46cedaa5b880ff2cb
+https://github.com/InfinityMods/Ascension 870ac8ac94c4ee2638ddf32fd1b243df05b80b5b
+https://github.com/Spellhold-Studios/BGT-WeiDU 2432cac96b692f85ea1c84aeb8d3c3398b53b1ff
+https://github.com/FredrikLindgren/rr 18680008d468ec5014b4377beabb706376ad0fe0
