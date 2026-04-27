@@ -94,10 +94,34 @@ function createFieldValueElement(node: BinaryEditorNode): HTMLElement {
         return createNumberInput(fieldId, fieldPath, node);
     }
 
+    if (node.editable && node.valueType === "string") {
+        return createStringInput(fieldId, fieldPath, node);
+    }
+
     const valueEl = document.createElement("span");
     valueEl.className = `field-value ${getValueClass(node.valueType ?? "")}`.trim();
     valueEl.textContent = node.value ?? "";
     return valueEl;
+}
+
+function createStringInput(fieldId: string, fieldPath: string, node: BinaryEditorNode): HTMLElement {
+    const initial = typeof node.rawValue === "string" ? node.rawValue : (node.value ?? "");
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "field-input string";
+    input.dataset.field = fieldId;
+    input.dataset.fieldPath = fieldPath;
+    input.dataset.valueType = "string";
+    // Both attributes are sourced from the host (presentation schema +
+    // parsed-field size), not invented by the webview — see binaryEditor-tree.
+    if (typeof node.size === "number") {
+        input.dataset.maxBytes = String(node.size);
+    }
+    if (node.stringCharset) {
+        input.dataset.stringCharset = node.stringCharset;
+    }
+    input.value = initial;
+    return input;
 }
 
 function createNumberInput(fieldId: string, fieldPath: string, node: BinaryEditorNode): HTMLElement {

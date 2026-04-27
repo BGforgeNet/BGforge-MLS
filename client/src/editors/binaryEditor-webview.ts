@@ -40,7 +40,7 @@ import { createWebviewState, registerNode, resetState } from "./binaryEditor-web
         fieldId: string;
         fieldPath: string;
         displayValue: string;
-        rawValue: number;
+        rawValue: number | string;
     }
 
     interface ValidationErrorMessage {
@@ -123,7 +123,7 @@ import { createWebviewState, registerNode, resetState } from "./binaryEditor-web
 
     // -- Field updates --------------------------------------------------------
 
-    function updateField(fieldId: string, displayValue: string, rawValue: number): void {
+    function updateField(fieldId: string, displayValue: string, rawValue: number | string): void {
         const fieldEl = treeEl.querySelector<HTMLElement>(`.field[data-field-id="${CSS.escape(fieldId)}"]`);
         if (!fieldEl) {
             return;
@@ -136,6 +136,10 @@ import { createWebviewState, registerNode, resetState } from "./binaryEditor-web
     function applyFieldValue(fieldEl: HTMLElement, rawValue: number | string, displayValue: string): void {
         const input = fieldEl.querySelector<HTMLInputElement>("input.field-input");
         if (input) {
+            if (input.dataset.valueType === "string") {
+                input.value = typeof rawValue === "string" ? rawValue : displayValue;
+                return;
+            }
             input.value = formatEditableNumberValue(
                 Number(rawValue),
                 input.dataset.numericFormat === "hex32" ? "hex32" : "decimal",

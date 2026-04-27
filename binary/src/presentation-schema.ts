@@ -27,6 +27,8 @@ const flagActivationSchema = z.enum(["set", "clear", "equal"]);
 
 const presentationOptionsSchema = z.record(z.string(), z.string());
 
+const stringCharsetSchema = z.enum(["ascii-printable", "utf8"]);
+
 const fieldPresentationSchema = z.strictObject({
     label: z.string().min(1).optional(),
     presentationType: z.enum(["scalar", "enum", "flags"]).optional(),
@@ -35,6 +37,11 @@ const fieldPresentationSchema = z.strictObject({
     flagActivation: z.record(z.string(), flagActivationSchema).optional(),
     numericFormat: numericFormatSchema.optional(),
     editable: z.boolean().optional(),
+    // Charset restriction for `string` field types. Defaults to "utf8" (any
+    // value within the byte budget). Set to "ascii-printable" for fields
+    // consumed by 1990s-era game engines that don't honour multi-byte
+    // encodings — accepted bytes stay within the engine's documented input.
+    stringCharset: stringCharsetSchema.optional(),
 });
 
 const patternFieldPresentationSchema = fieldPresentationSchema.extend({
@@ -272,7 +279,7 @@ const mapPresentationSchema = formatPresentationSchema.parse({
             flagActivation: { "1": "set", "2": "clear", "4": "clear", "8": "clear" },
             editable: false,
         },
-        "map.header.filename": { label: "Filename" },
+        "map.header.filename": { label: "Filename", stringCharset: "ascii-printable" },
     },
     patternFields: [
         {
@@ -380,6 +387,7 @@ function toFieldPresentation(entry: PatternFieldPresentation | CompiledPatternFi
         flagActivation: entry.flagActivation,
         numericFormat: entry.numericFormat,
         editable: entry.editable,
+        stringCharset: entry.stringCharset,
     };
 }
 

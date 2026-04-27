@@ -339,4 +339,24 @@ describe("BinaryDocument", () => {
             });
         });
     });
+
+    describe("string field edits", () => {
+        it("applies a new filename and round-trips through the canonical document", () => {
+            const mapDoc = loadMapDocument("arcaves.map");
+            const filenameId = fieldId("Header", "Filename");
+
+            const edit = mapDoc.applyEdit(filenameId, "Header.Filename", "NEWNAME.SAV", "NEWNAME.SAV");
+            expect(edit).toBeDefined();
+            expect(edit!.newRawValue).toBe("NEWNAME.SAV");
+
+            // The parsed-tree field reflects the new value...
+            const filenameField = mapDoc.getFieldById(filenameId);
+            expect(filenameField?.value).toBe("NEWNAME.SAV");
+
+            // ...and the canonical document picks it up via rebuildCanonicalDocument.
+            expect((mapDoc.parseResult.document as { header: { filename: string } }).header.filename).toBe(
+                "NEWNAME.SAV",
+            );
+        });
+    });
 });

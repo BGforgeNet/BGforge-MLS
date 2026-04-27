@@ -19,6 +19,15 @@ export function resolveFlagLookup(
     return presentation?.presentationType === "flags" ? toNumericOptionMap(presentation.flagOptions) : undefined;
 }
 
+/**
+ * Returns the charset restriction for a `string` field, defaulting to "utf8".
+ * Editor-side validation uses this to gate input on engines that don't honour
+ * multi-byte encodings (set per-field in the presentation schema).
+ */
+export function resolveStringCharset(format: string, fieldKey: string, fieldName: string): "ascii-printable" | "utf8" {
+    return resolveFieldPresentation(format, fieldKey, fieldName)?.stringCharset ?? "utf8";
+}
+
 function getActiveFlagLabels(
     format: string,
     fieldKey: string,

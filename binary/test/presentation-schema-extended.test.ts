@@ -102,6 +102,11 @@ describe("resolveFieldPresentation", () => {
         expect(result).toMatchObject({ label: "Filename" });
     });
 
+    it("declares ascii-printable charset for the MAP filename", () => {
+        const result = resolveFieldPresentation("map", "map.header.filename", "Filename");
+        expect(result).toMatchObject({ stringCharset: "ascii-printable" });
+    });
+
     it("resolves PRO exact field with flagActivation (map flags)", () => {
         const result = resolveFieldPresentation("map", "map.header.mapFlags", "Map Flags");
         expect(result).toMatchObject({ presentationType: "flags" });

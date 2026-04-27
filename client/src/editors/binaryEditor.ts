@@ -21,7 +21,12 @@ import { BinaryDocument } from "./binaryEditor-document";
 import { type BinaryEditorTreeState, buildBinaryEditorTreeState } from "./binaryEditor-tree";
 import { validateFieldEdit } from "./binaryEditor-validation";
 import type { WebviewToExtension, ExtensionToWebview, InitMessage } from "./binaryEditor-messages";
-import { resolveDisplayValue, resolveEnumLookup, resolveFlagLookup } from "./binaryEditor-lookups";
+import {
+    resolveDisplayValue,
+    resolveEnumLookup,
+    resolveFlagLookup,
+    resolveStringCharset,
+} from "./binaryEditor-lookups";
 import { saveBinaryDocumentArtifacts, writeBinaryJsonSnapshot } from "./binaryEditor-save";
 import { BinaryEditorRefreshGate } from "./binaryEditor-refreshGate";
 import { BinaryEditorLocalEditTracker } from "./binaryEditor-localEditTracker";
@@ -285,7 +290,7 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
         document: BinaryDocument,
         fieldId: string,
         fieldPath: string,
-        rawValue: number,
+        rawValue: number | string,
         refreshGate: BinaryEditorRefreshGate,
         localEditTracker: BinaryEditorLocalEditTracker,
     ): Promise<void> {
@@ -303,6 +308,28 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
             return;
         }
 
+        // Reject value/type mismatches at the dispatcher boundary so downstream
+        // code can rely on the invariant that string fields receive string values.
+        const isStringField = field.type === "string";
+        if (isStringField && typeof rawValue !== "string") {
+            webview.postMessage({
+                type: "validationError",
+                fieldId,
+                fieldPath,
+                message: `Field ${fieldPath} expects a string value`,
+            } satisfies ExtensionToWebview);
+            return;
+        }
+        if (!isStringField && typeof rawValue !== "number") {
+            webview.postMessage({
+                type: "validationError",
+                fieldId,
+                fieldPath,
+                message: `Field ${fieldPath} expects a numeric value`,
+            } satisfies ExtensionToWebview);
+            return;
+        }
+
         const fieldName = field.name;
         const fieldKey = createSemanticFieldKeyFromId(format, fieldId) ?? fieldPath;
 
@@ -310,7 +337,9 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
             localEditTracker.clear();
             refreshGate.beginIncrementalEdit();
             await vscode.commands.executeCommand("undo");
-            const displayValue = resolveDisplayValue(format, fieldKey, fieldName, rawValue);
+            const displayValue = isStringField
+                ? (rawValue as string)
+                : resolveDisplayValue(format, fieldKey, fieldName, rawValue as number);
             const msg: ExtensionToWebview = {
                 type: "updateField",
                 fieldId,
@@ -327,6 +356,8 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
         const validationError = validateFieldEdit(rawValue, field.type, enumTable, flagTable, {
             format,
             fieldKey,
+            maxBytes: isStringField ? field.size : undefined,
+            stringCharset: isStringField ? resolveStringCharset(format, fieldKey, fieldName) : undefined,
         });
         if (validationError) {
             const msg: ExtensionToWebview = { type: "validationError", fieldId, fieldPath, message: validationError };
@@ -335,7 +366,9 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
         }
 
         // Compute display value
-        const displayValue = resolveDisplayValue(format, fieldKey, fieldName, rawValue);
+        const displayValue = isStringField
+            ? (rawValue as string)
+            : resolveDisplayValue(format, fieldKey, fieldName, rawValue as number);
 
         const adapter = formatAdapterRegistry.get(format);
         const structuralEdit = adapter?.isStructuralFieldId?.(fieldId) ?? false;

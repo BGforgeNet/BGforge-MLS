@@ -11,6 +11,7 @@ import {
     resolveEnumLookup,
     resolveFlagLookup,
     resolveRawValueFromDisplay,
+    resolveStringCharset,
     formatEnumDisplayValue,
     resolveStoredFieldValue,
 } from "../src/display-lookups";
@@ -18,6 +19,20 @@ import {
 // ---------------------------------------------------------------------------
 // resolveEnumLookup
 // ---------------------------------------------------------------------------
+
+describe("resolveStringCharset", () => {
+    it("returns the configured charset for a presentation entry that sets one", () => {
+        expect(resolveStringCharset("map", "map.header.filename", "Filename")).toBe("ascii-printable");
+    });
+
+    it("defaults to utf8 for fields without a presentation entry", () => {
+        expect(resolveStringCharset("map", "map.no.such.field", "Whatever")).toBe("utf8");
+    });
+
+    it("defaults to utf8 for an unknown format", () => {
+        expect(resolveStringCharset("unknown", "any.key", "Field")).toBe("utf8");
+    });
+});
 
 describe("resolveEnumLookup", () => {
     it("returns lookup table for a known enum field", () => {

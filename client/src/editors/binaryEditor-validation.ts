@@ -3,7 +3,9 @@
  * Returns an error message string if invalid, undefined if valid.
  */
 
-import { validateNumericValue } from "@bgforge/binary";
+import { type StringCharset, isStringAllowedInCharset, validateNumericValue } from "@bgforge/binary";
+
+export type { StringCharset };
 
 /**
  * Validate that a numeric value is within the range for its type.
@@ -37,6 +39,29 @@ export function validateEnum(value: number, lookup: Record<number, string>): str
 }
 
 /**
+ * Validate that a string fits the field's byte budget under UTF-8 encoding,
+ * and (optionally) honours a charset restriction.
+ *
+ * Byte length mirrors the writer's encoding (`new TextEncoder().encode`) so
+ * the editor and the on-disk truncation point agree on length: anything the
+ * editor accepts round-trips without silent truncation.
+ *
+ * Charset semantics live in `@bgforge/binary/string-charset` — the same module
+ * the webview's live sanitizer imports, so host validation and keystroke
+ * filtering cannot drift apart.
+ */
+export function validateString(value: string, maxBytes: number, charset: StringCharset = "utf8"): string | undefined {
+    const byteLength = new TextEncoder().encode(value).length;
+    if (byteLength > maxBytes) {
+        return `Value exceeds ${maxBytes} bytes (got ${byteLength})`;
+    }
+    if (!isStringAllowedInCharset(value, charset)) {
+        return `Value contains non-printable-ASCII characters (only 0x20..0x7E allowed)`;
+    }
+    return undefined;
+}
+
+/**
  * Validate that only known flag bits are set.
  * Returns an error message if invalid bits are set, undefined if valid.
  */
@@ -56,12 +81,28 @@ export function validateFlags(value: number, flagDefs: Record<number, string>): 
 }
 
 export function validateFieldEdit(
-    value: number,
+    value: number | string,
     type: string,
     enumLookup?: Record<number, string>,
     flagDefs?: Record<number, string>,
-    context?: { readonly format?: string; readonly fieldKey?: string },
+    context?: {
+        readonly format?: string;
+        readonly fieldKey?: string;
+        readonly maxBytes?: number;
+        readonly stringCharset?: StringCharset;
+    },
 ): string | undefined {
+    if (type === "string") {
+        if (typeof value !== "string" || context?.maxBytes === undefined) {
+            return undefined;
+        }
+        return validateString(value, context.maxBytes, context.stringCharset);
+    }
+
+    if (typeof value !== "number") {
+        return undefined;
+    }
+
     if (type === "enum") {
         return enumLookup ? validateEnum(value, enumLookup) : undefined;
     }

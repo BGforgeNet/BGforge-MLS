@@ -22,9 +22,10 @@ import {
 export interface FieldEdit {
     readonly fieldId: string;
     readonly fieldPath: string;
-    readonly oldRawValue: number;
+    /** Numeric for int/uint/enum/flags fields; string for fixed-width string fields. */
+    readonly oldRawValue: number | string;
     readonly oldDisplayValue: string;
-    readonly newRawValue: number;
+    readonly newRawValue: number | string;
     readonly newDisplayValue: string;
     readonly incrementalSafe: boolean;
 }
@@ -113,17 +114,33 @@ export class BinaryDocument implements vscode.CustomDocument {
      * Apply an edit to a field. Fires onDidChange for VSCode undo integration.
      * Returns the edit if successful, undefined if field not found.
      */
-    applyEdit(fieldId: string, fieldPath: string, newRawValue: number, newDisplayValue: string): FieldEdit | undefined {
+    applyEdit(
+        fieldId: string,
+        fieldPath: string,
+        newRawValue: number | string,
+        newDisplayValue: string,
+    ): FieldEdit | undefined {
         const adapter = formatAdapterRegistry.get(this._parseResult.format);
         if (adapter?.isStructuralFieldId?.(fieldId) && this.codec.parse) {
+            // Structural edits only fire for numeric fields whose change rebuilds parts of the
+            // tree (e.g., enum-driven section reshapes). Strings never sit on that pathway.
+            if (typeof newRawValue !== "number") return undefined;
             return this.applyStructuralEdit(adapter, fieldId, fieldPath, newRawValue, newDisplayValue);
         }
 
         const field = this.findFieldById(fieldId);
         if (!field) return undefined;
 
-        const oldRawValue =
-            typeof field.rawValue === "number" ? field.rawValue : typeof field.value === "number" ? field.value : 0;
+        const oldRawValue: number | string =
+            field.type === "string"
+                ? typeof field.value === "string"
+                    ? field.value
+                    : ""
+                : typeof field.rawValue === "number"
+                  ? field.rawValue
+                  : typeof field.value === "number"
+                    ? field.value
+                    : 0;
         const oldDisplayValue = String(field.value);
 
         const edit: FieldEdit = {
@@ -229,17 +246,20 @@ export class BinaryDocument implements vscode.CustomDocument {
     /**
      * Set a field's raw and display values.
      */
-    private setFieldValue(field: ParsedField, rawValue: number, displayValue: string): void {
+    private setFieldValue(field: ParsedField, rawValue: number | string, displayValue: string): void {
         // Mutating in-place is intentional here: the ParseResult tree is owned
         // by this document, and immutable copies would require rebuilding the
         // entire tree for every edit. Since PRO files are small and the tree
         // is never shared, in-place updates are safe and much simpler.
-        (field as { value: unknown }).value = displayValue;
+        // For string-typed fields, the canonical reader sources the value from
+        // `field.value`, so writing the string there keeps the canonical doc
+        // refresh consistent with the parsed tree.
+        (field as { value: unknown }).value = field.type === "string" ? rawValue : displayValue;
         (field as { rawValue?: number | string }).rawValue = rawValue;
         this.refreshCanonicalDocument();
     }
 
-    private setFieldValueById(fieldId: string, rawValue: number, displayValue: string): void {
+    private setFieldValueById(fieldId: string, rawValue: number | string, displayValue: string): void {
         const field = this.findFieldById(fieldId);
         if (!field) {
             return;

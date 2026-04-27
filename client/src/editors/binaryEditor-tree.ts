@@ -11,7 +11,12 @@ import {
 import type { BinaryEditorNode } from "./binaryEditor-messages";
 import { isEditableFieldForFormat } from "./binaryEditor-editability";
 import { formatNumericValue } from "./binaryEditor-formatting";
-import { resolveDisplayValue, resolveEnumLookup, resolveFlagLookup } from "./binaryEditor-lookups";
+import {
+    resolveDisplayValue,
+    resolveEnumLookup,
+    resolveFlagLookup,
+    resolveStringCharset,
+} from "./binaryEditor-lookups";
 import { resolveNumericFormat } from "./binaryEditor-numericFormat";
 
 interface TreeNodeRecord {
@@ -184,6 +189,10 @@ export function buildBinaryEditorTreeState(parseResult: ParseResult): BinaryEdit
                 enumOptions,
                 flagOptions,
                 flagActivation: presentation?.flagActivation,
+                stringCharset:
+                    entry.type === "string"
+                        ? resolveStringCharset(parseResult.format, fieldKey, entry.name)
+                        : undefined,
             },
         });
         return id;

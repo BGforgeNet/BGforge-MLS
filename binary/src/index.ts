@@ -34,6 +34,7 @@ export {
     resolveDisplayValue,
     resolveEnumLookup,
     resolveFlagLookup,
+    resolveStringCharset,
     formatEnumDisplayValue,
     resolveRawValueFromDisplay,
     resolveStoredFieldValue,
@@ -44,6 +45,10 @@ export { validateNumericValue } from "./binary-format-contract";
 
 // Flags
 export { isFlagActive } from "./flags";
+
+// String field charsets — single source of truth for "what does ascii-printable mean".
+export type { StringCharset } from "./string-charset";
+export { isCharAllowedInCharset, isStringAllowedInCharset } from "./string-charset";
 
 // Concrete parser implementations
 export { proParser } from "./pro";

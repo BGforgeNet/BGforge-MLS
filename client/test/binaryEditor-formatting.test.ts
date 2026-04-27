@@ -4,6 +4,7 @@ import {
     formatNumericValue,
     parseEditableNumberValue,
     sanitizeEditableNumberValue,
+    sanitizeEditableStringValue,
 } from "../src/editors/binaryEditor-formatting";
 import { resolveNumericFormat } from "../src/editors/binaryEditor-numericFormat";
 
@@ -45,5 +46,29 @@ describe("binaryEditor-formatting", () => {
         expect(parseEditableNumberValue("FFFFFFFF", "hex32", "int32")).toBe(-1);
         expect(parseEditableNumberValue("80000000", "hex32", "uint32")).toBe(0x80_00_00_00);
         expect(parseEditableNumberValue("80000000", "hex32", "int32")).toBe(-2_147_483_648);
+    });
+
+    describe("sanitizeEditableStringValue", () => {
+        it("passes through valid printable ASCII unchanged", () => {
+            expect(sanitizeEditableStringValue("HELLO.SAV", 16, "ascii-printable")).toBe("HELLO.SAV");
+            expect(sanitizeEditableStringValue("a b ~", 16, "ascii-printable")).toBe("a b ~");
+        });
+
+        it("strips non-printable-ASCII when charset is ascii-printable", () => {
+            expect(sanitizeEditableStringValue("café", 16, "ascii-printable")).toBe("caf");
+            expect(sanitizeEditableStringValue("a\tb\nc", 16, "ascii-printable")).toBe("abc");
+            expect(sanitizeEditableStringValue("hi\u0000there", 16, "ascii-printable")).toBe("hithere");
+        });
+
+        it("clamps to the byte budget under ascii-printable (1 byte per char)", () => {
+            expect(sanitizeEditableStringValue("0123456789abcdefg", 16, "ascii-printable")).toBe("0123456789abcdef");
+        });
+
+        it("preserves UTF-8 input but clamps the byte budget when charset is utf8", () => {
+            // "é" is 2 bytes; eight é's = 16 bytes (just fits).
+            expect(sanitizeEditableStringValue("éééééééé", 16, "utf8")).toBe("éééééééé");
+            // Adding one more must drop the trailing codepoint, not split it.
+            expect(sanitizeEditableStringValue("ééééééééé", 16, "utf8")).toBe("éééééééé");
+        });
     });
 });

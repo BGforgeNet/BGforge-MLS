@@ -24,6 +24,12 @@ export interface BinaryEditorNode {
     readonly numericFormat?: "decimal" | "hex32";
     readonly enumOptions?: Record<number, string>;
     readonly flagOptions?: Record<number, string>;
+    /**
+     * Charset restriction for string-typed fields. Sourced from the
+     * presentation schema by the extension host and passed down to the webview
+     * so live keystroke sanitization mirrors the host-side validator.
+     */
+    readonly stringCharset?: "ascii-printable" | "utf8";
 }
 
 // -- Webview -> Extension ---------------------------------------------------
@@ -38,8 +44,8 @@ interface EditMessage {
     readonly fieldId: string;
     /** Dot-separated path from root to the field, e.g. "Header.Object Type" */
     readonly fieldPath: string;
-    /** New raw numeric value */
-    readonly value: number;
+    /** New raw value — numeric for int/uint/enum/flags fields, string for fixed-width string fields. */
+    readonly value: number | string;
 }
 
 interface ReadyMessage {
@@ -97,8 +103,8 @@ interface UpdateFieldMessage {
     readonly fieldPath: string;
     /** New display value */
     readonly displayValue: string;
-    /** New raw value */
-    readonly rawValue: number;
+    /** New raw value — numeric for int/uint/enum/flags, string for fixed-width string fields. */
+    readonly rawValue: number | string;
 }
 
 interface ValidationErrorMessage {

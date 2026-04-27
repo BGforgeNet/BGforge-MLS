@@ -11,7 +11,7 @@ export class BinaryEditorLocalEditTracker {
         this.lastEdit = undefined;
     }
 
-    shouldUndo(fieldId: string, newRawValue: number): boolean {
+    shouldUndo(fieldId: string, newRawValue: number | string): boolean {
         return (
             this.lastEdit?.incrementalSafe === true &&
             this.lastEdit.fieldId === fieldId &&
