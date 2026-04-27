@@ -29,6 +29,10 @@ export default defineConfig({
             // server+client coverage runs in scripts/test.sh don't race on
             // coverage/.tmp shard files.
             reportsDirectory: "coverage/client",
+            // Maintainer-recommended workaround for the .tmp/coverage-N.json
+            // ENOENT race under parallel coverage runs (vitest-dev/vitest
+            // #4943, #5903). scripts/test.sh also serialises coverage jobs.
+            clean: false,
             // Constrain measurement to client sources. Without this, v8 also
             // counts files loaded transitively through workspace deps
             // (@bgforge/binary), which sinks the ratio because the binary

@@ -33,6 +33,10 @@ export default defineConfig({
             // server+client coverage runs in scripts/test.sh don't race on
             // coverage/.tmp shard files.
             reportsDirectory: "coverage/server",
+            // Maintainer-recommended workaround for the .tmp/coverage-N.json
+            // ENOENT race under parallel coverage runs (vitest-dev/vitest
+            // #4943, #5903). scripts/test.sh also serialises coverage jobs.
+            clean: false,
             // Coverage is intentionally scoped to "files actually loaded by tests"
             // (the v8 default — no `include`). Adding `include: ["src/**/*.ts"]`
             // would also count integration-only modules and the tree-sitter

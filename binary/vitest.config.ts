@@ -22,6 +22,12 @@ export default defineConfig({
             provider: "v8",
             reporter: ["text", "html", "lcov"],
             reportsDirectory: "coverage/binary",
+            // Skip the outer reportsDirectory wipe at run start. Maintainer-recommended
+            // workaround for the .tmp/coverage-N.json ENOENT race that fires under CPU
+            // contention when many vitest --coverage processes run in parallel
+            // (vitest-dev/vitest #4943, #5903). Combined with the serialised coverage
+            // block in scripts/test.sh.
+            clean: false,
             // Pin the denominator to this package's source so transitive
             // workspace deps (e.g. @bgforge/format aliased above its tests)
             // cannot dilute the ratio.

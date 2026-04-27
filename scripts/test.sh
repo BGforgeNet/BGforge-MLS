@@ -30,8 +30,9 @@ export EXTERNAL_REPOS_CLEAN=1
 step "Building transpile library bundle"
 pnpm build:transpile
 
-# --- Phase 1: Static analysis + unit tests + dead code (all independent, run in parallel) ---
-step "Phase 1: Static Analysis + Unit Tests + Dead Code"
+# --- Phase 1: Static analysis + dead code (all independent, run in parallel) ---
+# Coverage runs are deliberately NOT in this block — see Phase 1.5 for why.
+step "Phase 1: Static Analysis + Dead Code"
 parallel \
     "Shell lint" "pnpm lint:shell" \
     "Typecheck client" "(cd client && pnpm exec tsc --noEmit)" \
@@ -43,16 +44,30 @@ parallel \
     "Oxlint" "pnpm exec oxlint" \
     "Lint scripts" "pnpm lint:scripts" \
     "Format check" "pnpm exec oxfmt --check" \
-    "Server unit tests + coverage" "(cd server && pnpm exec vitest run --coverage)" \
-    "Client unit tests + coverage" "vitest run --config client/vitest.config.ts --coverage" \
-    "Plugin unit tests" "vitest run --config plugins/tssl-plugin/vitest.config.ts --coverage && vitest run --config plugins/td-plugin/vitest.config.ts --coverage" \
-    "Transpile lib unit tests" "vitest run --config transpilers/vitest.config.ts --coverage" \
-    "Format lib unit tests" "vitest run --config format/vitest.config.ts --coverage" \
-    "Binary lib unit tests" "vitest run --config binary/vitest.config.ts --coverage" \
-    "Shared unit tests" "vitest run --config shared/vitest.config.ts --coverage" \
     "Script tests" "pnpm test:scripts" \
     "Knip" "pnpm knip" \
     "Knip prod" "pnpm knip:prod"
+
+# --- Phase 1.5: Coverage runs (sequential) ---
+# Vitest's V8 coverage provider has a known race writing shard files to
+# `<reportsDirectory>/.tmp/coverage-N.json` when many `vitest --coverage`
+# processes run simultaneously: a slow worker can land its writeFile after
+# the main process has already cleaned `.tmp/`, surfacing as ENOENT
+# (vitest-dev/vitest #4943, #5903; not fixed as of vitest 4.1.5). Each
+# config also sets `coverage.clean: false` to skip the outer reportsDirectory
+# wipe. The combination is the maintainer-recommended workaround.
+# Wall-time cost: each coverage run was previously sharing CPU with ~12
+# other parallel jobs; running them sequentially on an idle CPU finishes
+# each one faster, so the net penalty is smaller than the sum.
+step "Phase 1.5: Unit tests + coverage (sequential)"
+(cd server && pnpm exec vitest run --coverage)
+vitest run --config client/vitest.config.ts --coverage
+vitest run --config plugins/tssl-plugin/vitest.config.ts --coverage
+vitest run --config plugins/td-plugin/vitest.config.ts --coverage
+vitest run --config transpilers/vitest.config.ts --coverage
+vitest run --config format/vitest.config.ts --coverage
+vitest run --config binary/vitest.config.ts --coverage
+vitest run --config shared/vitest.config.ts --coverage
 
 # --- Phase 2: Builds (server and CLIs in parallel, independent of each other) ---
 step "Phase 2: Building Server + CLIs"

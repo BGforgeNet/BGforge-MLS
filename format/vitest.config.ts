@@ -20,6 +20,10 @@ export default defineConfig({
             provider: "v8",
             reporter: ["text", "html", "lcov"],
             reportsDirectory: "coverage/format",
+            // Maintainer-recommended workaround for the .tmp/coverage-N.json
+            // ENOENT race under parallel coverage runs (vitest-dev/vitest
+            // #4943, #5903). scripts/test.sh also serialises coverage jobs.
+            clean: false,
             include: ["src/**/*.ts"],
             // Floor reflects the unit-test slice only. Most of the formatter
             // surface is exercised by grammar-driven format-check fixtures

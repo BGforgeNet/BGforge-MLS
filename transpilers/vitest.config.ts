@@ -11,6 +11,10 @@ export default defineConfig({
             provider: "v8",
             reporter: ["text", "html", "lcov"],
             reportsDirectory: "coverage/transpile",
+            // Maintainer-recommended workaround for the .tmp/coverage-N.json
+            // ENOENT race under parallel coverage runs (vitest-dev/vitest
+            // #4943, #5903). scripts/test.sh also serialises coverage jobs.
+            clean: false,
             // Floor reflects the unit-test slice only. The transpilers' larger
             // execution surface is exercised by api.test.ts, transpile-cli.test.ts,
             // and the test/td + test/tbaf fixture-driven integration suites in
