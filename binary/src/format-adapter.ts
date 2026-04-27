@@ -58,6 +58,13 @@ export interface BinaryFormatAdapter {
      * format.
      */
     buildAddEntryBytes?(parseResult: ParseResult, arrayPath: readonly string[]): Uint8Array | undefined;
+    /**
+     * Produce the bytes for `parseResult` with the entry at `entryPath` removed
+     * from its array (tree-segment names, e.g. `["Global Variables", "Global Var 3"]`).
+     * Returns `undefined` if the path is not a known removable entry for this
+     * format.
+     */
+    buildRemoveEntryBytes?(parseResult: ParseResult, entryPath: readonly string[]): Uint8Array | undefined;
 }
 
 class FormatAdapterRegistry {

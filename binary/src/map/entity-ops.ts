@@ -16,18 +16,77 @@ function readDocument(parseResult: ParseResult): MapCanonicalDocument | undefine
     return getMapCanonicalDocument(parseResult) ?? rebuildMapCanonicalDocument(parseResult);
 }
 
+/**
+ * Variable-length array sections backed by an int32 slot count, with the
+ * count mirrored in the header. Adding a format = appending a row here.
+ */
+interface VarSection {
+    readonly arrayName: string;
+    readonly entryPrefix: string;
+    readonly arrayKey: "globalVariables" | "localVariables";
+    readonly headerCountKey: "numGlobalVars" | "numLocalVars";
+}
+
+const VAR_SECTIONS: readonly VarSection[] = [
+    {
+        arrayName: "Global Variables",
+        entryPrefix: "Global Var ",
+        arrayKey: "globalVariables",
+        headerCountKey: "numGlobalVars",
+    },
+    {
+        arrayName: "Local Variables",
+        entryPrefix: "Local Var ",
+        arrayKey: "localVariables",
+        headerCountKey: "numLocalVars",
+    },
+];
+
+function applyVarSectionUpdate(
+    doc: MapCanonicalDocument,
+    section: VarSection,
+    nextValues: number[],
+): MapCanonicalDocument {
+    return {
+        ...doc,
+        [section.arrayKey]: nextValues,
+        header: { ...doc.header, [section.headerCountKey]: nextValues.length },
+    };
+}
+
 export function buildMapAddEntryBytes(parseResult: ParseResult, arrayPath: readonly string[]): Uint8Array | undefined {
     const doc = readDocument(parseResult);
-    if (!doc) return undefined;
+    if (!doc || arrayPath.length !== 1) return undefined;
 
-    if (arrayPath.length === 1 && arrayPath[0] === "Global Variables") {
-        const next: MapCanonicalDocument = {
-            ...doc,
-            globalVariables: [...doc.globalVariables, 0],
-            header: { ...doc.header, numGlobalVars: doc.header.numGlobalVars + 1 },
-        };
-        return serializeMapCanonicalDocument(next, parseResult.opaqueRanges);
-    }
+    const section = VAR_SECTIONS.find((entry) => entry.arrayName === arrayPath[0]);
+    if (!section) return undefined;
 
-    return undefined;
+    const nextValues = [...doc[section.arrayKey], 0];
+    return serializeMapCanonicalDocument(applyVarSectionUpdate(doc, section, nextValues), parseResult.opaqueRanges);
+}
+
+function parseEntryIndex(label: string, prefix: string): number | undefined {
+    if (!label.startsWith(prefix)) return undefined;
+    const index = Number.parseInt(label.slice(prefix.length), 10);
+    return Number.isInteger(index) && index >= 0 ? index : undefined;
+}
+
+export function buildMapRemoveEntryBytes(
+    parseResult: ParseResult,
+    entryPath: readonly string[],
+): Uint8Array | undefined {
+    const doc = readDocument(parseResult);
+    if (!doc || entryPath.length !== 2) return undefined;
+
+    const [arrayName, entryName] = entryPath;
+    const section = VAR_SECTIONS.find((entry) => entry.arrayName === arrayName);
+    if (!section || entryName === undefined) return undefined;
+
+    const index = parseEntryIndex(entryName, section.entryPrefix);
+    if (index === undefined) return undefined;
+    const current = doc[section.arrayKey];
+    if (index >= current.length) return undefined;
+
+    const nextValues = [...current.slice(0, index), ...current.slice(index + 1)];
+    return serializeMapCanonicalDocument(applyVarSectionUpdate(doc, section, nextValues), parseResult.opaqueRanges);
 }
