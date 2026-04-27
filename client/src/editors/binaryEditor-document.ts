@@ -17,6 +17,15 @@ import {
 } from "@bgforge/binary";
 
 /**
+ * Outcome of an add/remove operation on a variable-length array.
+ * Carries the user-visible label so commands can echo it; absence (`undefined`)
+ * means the operation didn't apply (unknown path, parse rejected, etc.).
+ */
+export interface EntityOperationResult {
+    readonly label: string;
+}
+
+/**
  * Represents a single field edit for undo/redo.
  */
 export interface FieldEdit {
@@ -207,16 +216,11 @@ export class BinaryDocument implements vscode.CustomDocument {
             return undefined;
         }
 
-        const reparsed = this.codec.parse(nextBytes, this.codec.parseOptions);
-        if (reparsed.errors && reparsed.errors.length > 0) {
+        if (!this.applyByteRebuild(nextBytes, `Edit ${fieldPath}`)) {
             return undefined;
         }
 
-        const previousParseResult = cloneParseResult(this._parseResult);
-        const nextParseResult = cloneParseResult(reparsed);
-        this._parseResult = cloneParseResult(nextParseResult);
-
-        const edit: FieldEdit = {
+        return {
             fieldId,
             fieldPath,
             oldRawValue,
@@ -225,10 +229,30 @@ export class BinaryDocument implements vscode.CustomDocument {
             newDisplayValue,
             incrementalSafe: false,
         };
+    }
+
+    /**
+     * Reparse `nextBytes`, swap it in as the current parse result, and fire the
+     * VSCode edit event with undo/redo callbacks. Shared by every byte-rebuild
+     * path (structural field edits, add/remove entry). Returns false if the
+     * reparse fails so the caller can short-circuit.
+     */
+    private applyByteRebuild(nextBytes: Uint8Array, label: string): boolean {
+        if (!this.codec.parse) {
+            return false;
+        }
+        const reparsed = this.codec.parse(nextBytes, this.codec.parseOptions);
+        if (reparsed.errors && reparsed.errors.length > 0) {
+            return false;
+        }
+
+        const previousParseResult = cloneParseResult(this._parseResult);
+        const nextParseResult = cloneParseResult(reparsed);
+        this._parseResult = cloneParseResult(nextParseResult);
 
         this._onDidChange.fire({
             document: this,
-            label: `Edit ${fieldPath}`,
+            label,
             undo: () => {
                 this._parseResult = cloneParseResult(previousParseResult);
                 this._onDidChangeContent.fire();
@@ -240,7 +264,29 @@ export class BinaryDocument implements vscode.CustomDocument {
         });
 
         this._onDidChangeContent.fire();
-        return edit;
+        return true;
+    }
+
+    /**
+     * Append a default entry to the variable-length array at `arrayPath`
+     * (tree-segment names). Returns the operation result on success; undefined
+     * when the format/path doesn't support the operation or the rebuild fails.
+     */
+    addEntity(arrayPath: readonly string[]): EntityOperationResult | undefined {
+        const adapter = formatAdapterRegistry.get(this._parseResult.format);
+        const nextBytes = adapter?.buildAddEntryBytes?.(this._parseResult, arrayPath);
+        if (!nextBytes) return undefined;
+        const label = `Add entry to ${arrayPath.join(" / ")}`;
+        return this.applyByteRebuild(nextBytes, label) ? { label } : undefined;
+    }
+
+    /** Remove the entry at `entryPath` (full tree-segment path including the entry name). */
+    removeEntity(entryPath: readonly string[]): EntityOperationResult | undefined {
+        const adapter = formatAdapterRegistry.get(this._parseResult.format);
+        const nextBytes = adapter?.buildRemoveEntryBytes?.(this._parseResult, entryPath);
+        if (!nextBytes) return undefined;
+        const label = `Remove ${entryPath.join(" / ")}`;
+        return this.applyByteRebuild(nextBytes, label) ? { label } : undefined;
     }
 
     /**

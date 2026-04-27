@@ -359,4 +359,80 @@ describe("BinaryDocument", () => {
             );
         });
     });
+
+    describe("entity operations", () => {
+        type GlobalsDoc = { header: { numGlobalVars: number }; globalVariables: number[] };
+
+        it("addEntity appends a Global Variables entry and increments numGlobalVars", () => {
+            const mapDoc = loadMapDocument("arcaves.map");
+            const before = mapDoc.parseResult.document as GlobalsDoc;
+            const originalCount = before.globalVariables.length;
+
+            const result = mapDoc.addEntity(["Global Variables"]);
+            expect(result).toBeDefined();
+
+            const after = mapDoc.parseResult.document as GlobalsDoc;
+            expect(after.globalVariables.length).toBe(originalCount + 1);
+            expect(after.header.numGlobalVars).toBe(originalCount + 1);
+        });
+
+        it("addEntity fires onDidChange with an undo-able label", () => {
+            const mapDoc = loadMapDocument("arcaves.map");
+            const events: any[] = [];
+            mapDoc.onDidChange((e) => events.push(e));
+
+            mapDoc.addEntity(["Global Variables"]);
+            expect(events).toHaveLength(1);
+            expect(events[0].label).toMatch(/Global Variables/);
+            expect(typeof events[0].undo).toBe("function");
+            expect(typeof events[0].redo).toBe("function");
+        });
+
+        it("undo restores the array and the linked count", () => {
+            const mapDoc = loadMapDocument("arcaves.map");
+            const events: any[] = [];
+            mapDoc.onDidChange((e) => events.push(e));
+            const originalCount = (mapDoc.parseResult.document as GlobalsDoc).globalVariables.length;
+
+            mapDoc.addEntity(["Global Variables"]);
+            events[0].undo();
+
+            const after = mapDoc.parseResult.document as GlobalsDoc;
+            expect(after.globalVariables.length).toBe(originalCount);
+            expect(after.header.numGlobalVars).toBe(originalCount);
+        });
+
+        it("redo reapplies the addEntity", () => {
+            const mapDoc = loadMapDocument("arcaves.map");
+            const events: any[] = [];
+            mapDoc.onDidChange((e) => events.push(e));
+            const originalCount = (mapDoc.parseResult.document as GlobalsDoc).globalVariables.length;
+
+            mapDoc.addEntity(["Global Variables"]);
+            events[0].undo();
+            events[0].redo();
+
+            expect((mapDoc.parseResult.document as GlobalsDoc).globalVariables.length).toBe(originalCount + 1);
+        });
+
+        it("removeEntity drops the targeted entry and decrements the count", () => {
+            const mapDoc = loadMapDocument("arcaves.map");
+            const before = mapDoc.parseResult.document as GlobalsDoc;
+            const originalCount = before.globalVariables.length;
+            expect(originalCount).toBeGreaterThanOrEqual(2);
+
+            const result = mapDoc.removeEntity(["Global Variables", "Global Var 0"]);
+            expect(result).toBeDefined();
+
+            const after = mapDoc.parseResult.document as GlobalsDoc;
+            expect(after.globalVariables.length).toBe(originalCount - 1);
+            expect(after.header.numGlobalVars).toBe(originalCount - 1);
+        });
+
+        it("addEntity returns undefined for an unknown array path", () => {
+            const mapDoc = loadMapDocument("arcaves.map");
+            const result = mapDoc.addEntity(["No Such Array"]);
+            expect(result).toBeUndefined();
+        });
+    });
 });
