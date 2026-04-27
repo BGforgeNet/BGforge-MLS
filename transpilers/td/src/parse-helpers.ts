@@ -276,6 +276,23 @@ function getCallArg(args: readonly Node[], index: number, callExpr: Node): Expre
     return arg;
 }
 
+/**
+ * Narrow every entry in a call's argument list to Expression at once.
+ *
+ * Sibling helper to getCallArg, used at sites that iterate over `args` and would
+ * otherwise sprinkle `arg as Expression` inside the loop body (e.g. variadic
+ * `say(...)` and `action(...)` collectors). The runtime check is identical;
+ * narrowing the whole array here keeps the per-iteration body free of casts.
+ */
+function getCallArgs(args: readonly Node[], callExpr: Node): Expression[] {
+    return args.map((arg, index) => {
+        if (!Node.isExpression(arg)) {
+            throw TranspileError.fromNode(callExpr, `Argument at index ${index} is not an expression`);
+        }
+        return arg;
+    });
+}
+
 export {
     evaluateExpression,
     resolveArrayElements,
@@ -289,4 +306,5 @@ export {
     parseStringOption,
     parseRequiredNumber,
     getCallArg,
+    getCallArgs,
 };

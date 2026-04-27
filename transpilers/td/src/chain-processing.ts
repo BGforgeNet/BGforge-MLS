@@ -9,7 +9,6 @@
 
 import {
     CallExpression,
-    Expression,
     FunctionDeclaration,
     FunctionExpression,
     IfStatement,
@@ -20,7 +19,7 @@ import {
 import { TDEpilogueType, TDConstructType, type TDChain, type TDChainEntry, type TDChainEpilogue } from "./types";
 import * as utils from "../../common/transpiler-utils";
 import type { VarsContext } from "../../common/transpiler-utils";
-import { resolveStringExpr, expressionToActionString, validateArgs } from "./parse-helpers";
+import { getCallArg, getCallArgs, resolveStringExpr, expressionToActionString, validateArgs } from "./parse-helpers";
 import { TranspileError } from "../../common/transpile-error";
 import { expressionToTrigger, expressionToText } from "./expression-eval";
 
@@ -126,7 +125,7 @@ function processSayInChain(
         }
         const newEntry: TDChainEntry = {
             speaker: utils.stripQuotes(args[0].getText()),
-            texts: [expressionToText(args[1] as Expression, vars)],
+            texts: [expressionToText(getCallArg(args, 1, expr), vars)],
         };
         if (options?.trigger) {
             newEntry.trigger = options.trigger;
@@ -137,7 +136,7 @@ function processSayInChain(
         if (!currentEntry) {
             throw TranspileError.fromNode(expr, `say(text) without speaker - must use say(speaker, text) first`);
         }
-        currentEntry.texts.push(expressionToText(args[0] as Expression, vars));
+        currentEntry.texts.push(expressionToText(getCallArg(args, 0, expr), vars));
         return currentEntry;
     } else {
         throw TranspileError.fromNode(expr, `say() requires at least 1 argument`);
@@ -253,7 +252,7 @@ function processChainBody(statements: Statement[], defaultFilename: string, vars
                     entries.push(currentEntry);
                 }
                 currentSpeaker = utils.stripQuotes(args[0]!.getText());
-                const trigger = expressionToTrigger(args[1] as Expression, vars);
+                const trigger = expressionToTrigger(getCallArg(args, 1, expr), vars);
                 currentEntry = {
                     speaker: currentSpeaker,
                     texts: [],
@@ -278,7 +277,7 @@ function processChainBody(statements: Statement[], defaultFilename: string, vars
                             texts: [],
                         };
                     }
-                    currentEntry.texts.push(expressionToText(args[0] as Expression, vars));
+                    currentEntry.texts.push(expressionToText(getCallArg(args, 0, expr), vars));
                 }
                 break;
             }
@@ -290,7 +289,9 @@ function processChainBody(statements: Statement[], defaultFilename: string, vars
                 if (!currentEntry) {
                     throw TranspileError.fromNode(expr, `action() must come after say()`);
                 }
-                currentEntry.action = args.map((a) => expressionToActionString(a as Expression, vars)).join(" ");
+                currentEntry.action = getCallArgs(args, expr)
+                    .map((a) => expressionToActionString(a, vars))
+                    .join(" ");
                 break;
             }
 
@@ -305,7 +306,7 @@ function processChainBody(statements: Statement[], defaultFilename: string, vars
                 epilogue = {
                     type: TDEpilogueType.End,
                     filename: defaultFilename,
-                    target: resolveStringExpr(args[0] as Expression, vars),
+                    target: resolveStringExpr(getCallArg(args, 0, expr), vars),
                 };
                 break;
             }

@@ -23,7 +23,7 @@ import {
     type TDReplaceStates,
 } from "./types";
 import type { VarsContext } from "../../common/transpiler-utils";
-import { resolveStringExpr, parseBooleanOption, parseRequiredNumber } from "./parse-helpers";
+import { getCallArg, resolveStringExpr, parseBooleanOption, parseRequiredNumber } from "./parse-helpers";
 import { TranspileError } from "../../common/transpile-error";
 import {
     type FuncsContext,
@@ -46,12 +46,7 @@ export function transformBegin(
         throw TranspileError.fromNode(call, `begin() requires at least 2 arguments`);
     }
 
-    const filenameArg = args[0];
-    if (!filenameArg) {
-        throw TranspileError.fromNode(call, `begin() requires a filename`);
-    }
-
-    const filename = resolveStringExpr(filenameArg as Expression, ctx.vars);
+    const filename = resolveStringExpr(getCallArg(args, 0, call), ctx.vars);
     const states: TDState[] = [];
 
     // Check for options as last argument (distinguished from object-form states)
@@ -92,12 +87,7 @@ export function transformAppend(
         throw TranspileError.fromNode(call, `${funcName}() requires at least 2 arguments`);
     }
 
-    const filenameArg = args[0];
-    if (!filenameArg) {
-        throw TranspileError.fromNode(call, `${funcName}() requires a filename`);
-    }
-
-    const filename = resolveStringExpr(filenameArg as Expression, ctx.vars);
+    const filename = resolveStringExpr(getCallArg(args, 0, call), ctx.vars);
     const states: TDState[] = [];
 
     // Check for options as last argument (distinguished from object-form states)
@@ -132,7 +122,7 @@ export function transformReplaceState(
         throw TranspileError.fromNode(call, `replaceState() requires 3 arguments (dialog, stateNum, body)`);
     }
 
-    const filename = resolveStringExpr(args[0] as Expression, ctx.vars);
+    const filename = resolveStringExpr(getCallArg(args, 0, call), ctx.vars);
     const stateNum = parseRequiredNumber(args[1]!, "replaceState stateNum", call.getStartLineNumber());
     const bodyArg = args[2];
 
@@ -184,15 +174,8 @@ export function transformExtend(
         throw TranspileError.fromNode(call, `${funcName}() requires at least 3 arguments`);
     }
 
-    const filenameArg = args[0];
-    const stateLabelArg = args[1];
-
-    if (!filenameArg || !stateLabelArg) {
-        throw TranspileError.fromNode(call, `${funcName}() requires at least 3 arguments`);
-    }
-
-    const filename = resolveStringExpr(filenameArg as Expression, ctx.vars);
-    const stateLabel = resolveStringExpr(stateLabelArg as Expression, ctx.vars);
+    const filename = resolveStringExpr(getCallArg(args, 0, call), ctx.vars);
+    const stateLabel = resolveStringExpr(getCallArg(args, 1, call), ctx.vars);
 
     // Check if 3rd arg is options object or transitions function
     let position: number | undefined;
@@ -201,7 +184,7 @@ export function transformExtend(
     if (args.length === 4) {
         // 4 args: filename, state, options, transitions
         const optionsArg = args[2];
-        transitionsArg = args[3] as Expression;
+        transitionsArg = getCallArg(args, 3, call);
 
         // Parse options object { position: N }
         if (Node.isObjectLiteralExpression(optionsArg)) {
@@ -217,7 +200,7 @@ export function transformExtend(
         }
     } else if (args.length === 3) {
         // 3 args: filename, state, transitions
-        transitionsArg = args[2] as Expression;
+        transitionsArg = getCallArg(args, 2, call);
     } else {
         throw TranspileError.fromNode(call, `${funcName}() takes 3 or 4 arguments`);
     }
@@ -269,9 +252,9 @@ export function transformInterject(
         throw TranspileError.fromNode(call, `${funcName}() requires at least ${minArgs} arguments`);
     }
 
-    const entryFile = resolveStringExpr(args[0] as Expression, ctx.vars);
-    const entryLabel = resolveStringExpr(args[1] as Expression, ctx.vars);
-    const globalVar = resolveStringExpr(args[2] as Expression, ctx.vars);
+    const entryFile = resolveStringExpr(getCallArg(args, 0, call), ctx.vars);
+    const entryLabel = resolveStringExpr(getCallArg(args, 1, call), ctx.vars);
+    const globalVar = resolveStringExpr(getCallArg(args, 2, call), ctx.vars);
     const chainFunc = args[3];
 
     // Check for safe option (interjectCopyTrans only, arg 5)
@@ -300,8 +283,8 @@ export function transformInterject(
     // Determine epilogue
     let epilogue: TDChainEpilogue | undefined;
     if (type === TDConstructType.Interject) {
-        const exitFile = resolveStringExpr(args[4] as Expression, ctx.vars);
-        const exitLabel = resolveStringExpr(args[5] as Expression, ctx.vars);
+        const exitFile = resolveStringExpr(getCallArg(args, 4, call), ctx.vars);
+        const exitLabel = resolveStringExpr(getCallArg(args, 5, call), ctx.vars);
         epilogue = {
             type: TDEpilogueType.End,
             filename: exitFile,
@@ -402,7 +385,7 @@ function collectInlineState(
         throw TranspileError.fromNode(call, `state() requires 2 arguments (label, body)`);
     }
 
-    const label = resolveStringExpr(args[0] as Expression, ctx.vars);
+    const label = resolveStringExpr(getCallArg(args, 0, call), ctx.vars);
     const bodyArg = args[1];
 
     if (!Node.isArrowFunction(bodyArg) && !Node.isFunctionExpression(bodyArg)) {

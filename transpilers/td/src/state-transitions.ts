@@ -14,7 +14,6 @@
 
 import {
     CallExpression,
-    Expression,
     ForOfStatement,
     ForStatement,
     FunctionDeclaration,
@@ -27,7 +26,14 @@ import {
 import { TDTransitionType, type TDState, type TDTransition } from "./types";
 import * as utils from "../../common/transpiler-utils";
 import type { VarsContext } from "../../common/transpiler-utils";
-import { resolveStringExpr, validateArgs, parseBooleanOption, parseRequiredNumber } from "./parse-helpers";
+import {
+    getCallArg,
+    getCallArgs,
+    resolveStringExpr,
+    validateArgs,
+    parseBooleanOption,
+    parseRequiredNumber,
+} from "./parse-helpers";
 import { expressionToTrigger, expressionToText } from "./expression-eval";
 import { isChainExpression, parseTransitionChain } from "./chain-parsing";
 import { processTransitionCall, processTransitionStatement, processExtendStatements } from "./transition-calls";
@@ -136,8 +142,8 @@ function processStateStatement(
             // Handle say() - specific to states, supports variadic say(t1, t2, t3)
             if (funcName === SAY_KEYWORD) {
                 validateArgs(SAY_KEYWORD, args, 1, expr.getStartLineNumber());
-                for (const arg of args) {
-                    state.say.push({ text: expressionToText(arg as Expression, vars) });
+                for (const arg of getCallArgs(args, expr)) {
+                    state.say.push({ text: expressionToText(arg, vars) });
                 }
             }
             // Handle weight() - specific to states
@@ -148,8 +154,8 @@ function processStateStatement(
             // Handle copyTrans() at state level
             else if (funcName === "copyTrans") {
                 validateArgs("copyTrans", args, 2, expr.getStartLineNumber());
-                const filename = resolveStringExpr(args[0] as Expression, vars);
-                const target = resolveStringExpr(args[1] as Expression, vars);
+                const filename = resolveStringExpr(getCallArg(args, 0, expr), vars);
+                const target = resolveStringExpr(getCallArg(args, 1, expr), vars);
                 state.transitions.push({
                     next: {
                         type: TDTransitionType.CopyTrans,

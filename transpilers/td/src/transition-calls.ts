@@ -7,20 +7,18 @@
  * to avoid circular imports — callers provide any inlining behaviour via callback.
  */
 
-import {
-    CallExpression,
-    Expression,
-    ForOfStatement,
-    ForStatement,
-    IfStatement,
-    Node,
-    Statement,
-    SyntaxKind,
-} from "ts-morph";
+import { CallExpression, ForOfStatement, ForStatement, IfStatement, Node, Statement, SyntaxKind } from "ts-morph";
 import { TDTransitionType, type TDTransition } from "./types";
 import * as utils from "../../common/transpiler-utils";
 import type { VarsContext } from "../../common/transpiler-utils";
-import { resolveStringExpr, expressionToActionString, validateArgs, parseRequiredNumber } from "./parse-helpers";
+import {
+    getCallArg,
+    getCallArgs,
+    resolveStringExpr,
+    expressionToActionString,
+    validateArgs,
+    parseRequiredNumber,
+} from "./parse-helpers";
 import { TranspileError } from "../../common/transpile-error";
 import { expressionToTrigger, expressionToText } from "./expression-eval";
 import { isChainExpression, parseTransitionChain } from "./chain-parsing";
@@ -52,14 +50,14 @@ export function processTransitionCall(
         case "reply":
             validateArgs("reply", args, 1, lineNumber);
             context.addTransition({
-                reply: expressionToText(args[0] as Expression, vars),
+                reply: expressionToText(getCallArg(args, 0, expr), vars),
                 next: { type: TDTransitionType.Exit },
             });
             break;
 
         case "goTo": {
             validateArgs("goTo", args, 1, lineNumber);
-            const target = resolveStringExpr(args[0] as Expression, vars);
+            const target = resolveStringExpr(getCallArg(args, 0, expr), vars);
             const lastTrans = context.getLastTransition();
             if (lastTrans) {
                 lastTrans.next = { type: TDTransitionType.Goto, target };
@@ -81,7 +79,9 @@ export function processTransitionCall(
 
         case "action": {
             validateArgs("action", args, 1, lineNumber);
-            const actionStr = args.map((a) => expressionToActionString(a as Expression, vars)).join(" ");
+            const actionStr = getCallArgs(args, expr)
+                .map((a) => expressionToActionString(a, vars))
+                .join(" ");
             const lastTrans = context.getLastTransition();
             if (lastTrans) {
                 lastTrans.action = actionStr;
@@ -92,15 +92,15 @@ export function processTransitionCall(
         }
 
         case "journal":
-            setTransitionTextField(context, "journal", args, lineNumber, funcName, vars);
+            setTransitionTextField(context, "journal", args, expr, funcName, vars);
             break;
 
         case "solvedJournal":
-            setTransitionTextField(context, "solvedJournal", args, lineNumber, funcName, vars);
+            setTransitionTextField(context, "solvedJournal", args, expr, funcName, vars);
             break;
 
         case "unsolvedJournal":
-            setTransitionTextField(context, "unsolvedJournal", args, lineNumber, funcName, vars);
+            setTransitionTextField(context, "unsolvedJournal", args, expr, funcName, vars);
             break;
 
         case "flags": {
@@ -143,16 +143,17 @@ function setTransitionTextField(
     context: { getLastTransition(): TDTransition | undefined },
     field: "journal" | "solvedJournal" | "unsolvedJournal",
     args: Node[],
-    lineNumber: number,
+    callExpr: CallExpression,
     funcName: string,
     vars: VarsContext,
 ): void {
+    const lineNumber = callExpr.getStartLineNumber();
     validateArgs(funcName, args, 1, lineNumber);
     const lastTrans = context.getLastTransition();
     if (!lastTrans) {
         throw new TranspileError(`${funcName}() must come after a transition`, { line: lineNumber });
     }
-    lastTrans[field] = expressionToText(args[0] as Expression, vars);
+    lastTrans[field] = expressionToText(getCallArg(args, 0, callExpr), vars);
 }
 
 /**
@@ -208,7 +209,7 @@ export function processTransitionStatement(
             // Special handling for reply() in single transition context
             if (funcName === "reply") {
                 validateArgs("reply", args, 1, expr.getStartLineNumber());
-                trans.reply = expressionToText(args[0] as Expression, vars);
+                trans.reply = expressionToText(getCallArg(args, 0, expr), vars);
                 return;
             }
 
