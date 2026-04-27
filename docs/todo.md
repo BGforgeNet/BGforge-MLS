@@ -19,30 +19,31 @@ UI surfaces, with disjoint roles:
 
 Spec metadata extension: each `arraySpec` may declare `addable`, `removable`, `defaultElement`, `variants?`, `countSource`, `minSize?`, `maxSize?`. Adding a format = annotating its specs; no per-format UI work.
 
-### v1 — uniform arrays, append-only
+### v1 — uniform arrays, append-only (shipped)
 
-Scope:
+Landed:
 
-- `EntityOperation` abstraction in `binaryEditor-document.ts`, dispatching through `buildStructuralTransitionBytes` + reparse.
-- `arraySpec` metadata: `addable`, `removable`, `defaultElement`, `countSource` (path to the count field updated atomically with the section).
-- Tree-state selection model in the webview (single-select, keyboard navigable). Required by commands and by future multi-select.
-- Inline UI: `+ Add entry` row appended to an addable array group; persistent `✕` at the right edge of each removable row. Always visible, not hover-revealed.
-- VSCode commands: `bgforge.binaryEditor.addEntry`, `bgforge.binaryEditor.removeEntry`. Operate on the currently selected node.
-- MAP coverage: `Global Variables`, `Local Variables` (uniform `int32` arrays, count in header).
-- Append-only — `+` always tacks onto the end of the array; the new entry's value defaults from `defaultElement` (`0` for int globals/locals).
-- Validation: enforce `minSize`/`maxSize` from spec; refuse remove when at minimum, refuse add when at maximum, surface via existing field-error channel.
-- Undo/redo: reuse the structural-edit `replaceParseResult` pathway. No new undo machinery.
-- Tests: unit (operation correctness, count update, undo/redo round-trip), integration (round-trip a `.map`: add → save → reparse → remove → save → reparse), webview rendering (button presence on addable arrays, absence on non-addable).
+- `addEntity` / `removeEntity` on `BinaryDocument`, dispatching to format-adapter byte-builders (`buildAddEntryBytes` / `buildRemoveEntryBytes`) → reparse → `replaceParseResult`. Undo/redo, dirty tracking, and snapshot refresh all reuse the structural-edit pipeline.
+- `ArrayFieldSpec` carries `addable`, `removable`, `defaultElement`. The spec is the single source of truth — format adapters look up capability from the spec rather than maintaining a parallel table. The MAP `varSectionSpec` annotates `addable: true, removable: true, defaultElement: () => 0`; new addable formats opt in by annotating their own array specs.
+- Tree state marks groups `addable: true` (with `arrayPath`) and entries `removable: true` (with `entryPath`). Adapter predicates (`isAddableArray`, `isRemovableEntry`) drive the UI without per-format branching in the tree builder.
+- Inline UI in the webview: persistent `+ Add entry` row at the bottom of every addable group, `✕` at the right edge of every removable entry — always visible, not hover-revealed. Clicks post `addEntry` / `removeEntry` to the host.
+- MAP coverage: `Global Variables` and `Local Variables` (uniform `int32` arrays, count mirrored in header). Append-only.
+- Tests: unit coverage on the adapter byte-builders, the document API (including undo/redo round-trips), and the tree-state metadata. Full `pnpm test:all` is green.
 
-Out of scope for v1: variant arrays, insert-at-index, multi-select, context menu, bulk ops, copy/paste, move up/down.
+Deferred to v2 (see below): selection model and VSCode commands. Both naturally bundle with the context menu, which already needed selection — pulling them apart would force a selection model with no other v1 consumer.
 
-### v2 — variant arrays, ordering, context menu
+Out of scope for v1: variant arrays, insert-at-index, multi-select, context menu, bulk ops, copy/paste, move up/down, `minSize`/`maxSize` validation gating (spec carries `defaultElement` only so far).
 
+### v2 — selection, commands, variant arrays, ordering, context menu
+
+- Tree-state selection model in the webview (single-select, keyboard navigable). Host-side mirror keyed by webview panel; `selectionChanged` message keeps the two in sync. Prerequisite for everything else in this phase.
+- VSCode commands: `bgforge.binaryEditor.addEntry`, `bgforge.binaryEditor.removeEntry`, scoped to the active binary editor and acting on the selected node. Surfaced in the Command Palette and keybindable.
+- Context menu (right-click) on tree nodes mirroring inline actions plus duplicate / move up / move down / paste.
 - Variant-picker component invoked when an array's spec declares `variants` (e.g., MAP object types: critter, exit-grid, generic). Used identically by inline `+`, context menu, and command. Surfaced via a quick-pick.
 - Insert-at-index: `Add before` / `Add after` on entry rows. Required for collections where slot index is identity (global var index referenced from scripts).
-- Move up / move down on entry rows. Tracks `countSource` invariants and any cross-record offset adjustments via the structural pathway.
-- Context menu (right-click) mirroring inline actions plus the new ordering actions.
-- Format coverage: MAP objects (per-elevation, variant-shaped records including critter/exit-grid/inventory). Script slots within capacity-batched extents come with this phase since they share the variant + ordering machinery (and need extent-capacity growth handled in `countSource`).
+- Move up / move down on entry rows; structural pathway covers any cross-record offset adjustments.
+- `minSize` / `maxSize` enforcement from the array spec: refuse remove at minimum, refuse add at maximum, surface via the field-error channel.
+- Format coverage: MAP objects (per-elevation, variant-shaped records including critter/exit-grid/inventory). Script slots within capacity-batched extents come with this phase since they share the variant + ordering machinery (and need extent-capacity growth handled by the byte-builder).
 
 ### v3 — bulk ops, multi-select, scripting
 
