@@ -48,6 +48,18 @@ export interface ParsedGroup {
     fields: (ParsedField | ParsedGroup)[];
     /** Whether this group is expanded by default */
     expanded?: boolean;
+    /**
+     * Set when the parser couldn't fully decode this record's wire layout
+     * (e.g. a MAP object whose subtype payload is described by an unavailable
+     * `.pro` file). The group's already-decoded fields render for inspection,
+     * but editors must not expose field edits inside it: width-preserving
+     * field changes are not interpretation-preserving when the byte width
+     * of the rest of the record — and therefore where downstream sections
+     * actually start — depends on undecoded data. Propagates to descendants;
+     * the tree builder threads it down so individual fields show as
+     * non-editable.
+     */
+    editingLocked?: boolean;
 }
 
 // ParseDisplayModel + ParseSerializationContext exist only as composition pieces of

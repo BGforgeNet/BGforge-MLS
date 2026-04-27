@@ -5,6 +5,36 @@
  * count field that mirrors its length), serialize via the existing
  * canonical writer, and let the caller reparse. Keeps add/remove on the
  * same byte-rebuild pipeline as every other MAP write — no buffer splicing.
+ *
+ * Scope is intentionally limited to header-counted uniform-int32 arrays
+ * (Global/Local Variables). The objects section and the script section are
+ * deliberately excluded:
+ *
+ * - Object records embed PIDs whose subtype payload layouts (Item, Scenery,
+ *   Wall, Tile) are described in external `.pro` files that are not packaged
+ *   alongside `.map` files in user mod trees. Without that metadata, the
+ *   parser can't determine where each record ends, so the canonical doc can't
+ *   represent the section completely enough to encode it deterministically
+ *   after a structural mutation.
+ *
+ * - Script extents always carry 16 fixed slots regardless of `count`. Slots
+ *   round-trip byte-identically because the canonical doc keeps all 16 per
+ *   extent — but each slot's serialised width is selected by `getScriptType`
+ *   on its sid byte, and the padding slots (`count..15`) carry whatever sid
+ *   bits the engine had in scratch memory at the time of the original write.
+ *   Adding a real slot in place of a padding one only stays width-neutral
+ *   when the padding's accidental sid happens to match the script type the
+ *   caller wants to add; otherwise the extent grows or shrinks, shifting
+ *   downstream offsets. The writer's opaque-range mechanism replays trailers
+ *   (`objects-tail`, `script-section-tail`) at their original parse-time
+ *   offsets, so a downstream shift would clobber the trailer or leave a gap.
+ *   Supporting structural script mutations therefore requires both the
+ *   width-matching logic and a writer refactor that anchors trailing opaque
+ *   ranges at the structural end offset rather than the original one.
+ *
+ * Field-level edits on already-decoded objects/scripts are width-preserving
+ * and therefore safe; they go through the structural-edit pipeline directly,
+ * not this module.
  */
 
 import type { ParseResult } from "../types";
@@ -12,10 +42,7 @@ import { isArraySpec } from "../spec/types";
 import { getMapCanonicalDocument, rebuildMapCanonicalDocument } from "./canonical-reader";
 import { serializeMapCanonicalDocument } from "./canonical-writer";
 import type { MapCanonicalDocument } from "./canonical-schemas";
-import { findMapObjectVariant, MAP_OBJECT_VARIANTS } from "./specs/object-variants";
 import { varSectionSpec } from "./specs/variables";
-
-type MapObject = MapCanonicalDocument["objects"]["elevations"][number]["objects"][number];
 
 function readDocument(parseResult: ParseResult): MapCanonicalDocument | undefined {
     return getMapCanonicalDocument(parseResult) ?? rebuildMapCanonicalDocument(parseResult);
@@ -73,14 +100,7 @@ function applyVarSectionUpdate(
     };
 }
 
-export function buildMapAddEntryBytes(
-    parseResult: ParseResult,
-    arrayPath: readonly string[],
-    options?: { readonly variantId?: string },
-): Uint8Array | undefined {
-    if (ENABLE_PER_ELEVATION_OBJECT_ENTITY_OPS && isPerElevationObjectsPath(arrayPath)) {
-        return buildAddObjectAtElevation(parseResult, arrayPath, options);
-    }
+export function buildMapAddEntryBytes(parseResult: ParseResult, arrayPath: readonly string[]): Uint8Array | undefined {
     if (!isMapAddableArray(arrayPath)) return undefined;
     const doc = readDocument(parseResult);
     if (!doc) return undefined;
@@ -96,133 +116,17 @@ function findVarSectionByArrayName(name: string | undefined): VarSection | undef
     return VAR_SECTIONS.find((entry) => entry.arrayName === name);
 }
 
-/**
- * Per-elevation object add/remove is gated until the canonical-writer
- * round-trip stops losing the objects section on real fixtures (see
- * `docs/todo.md` v2.5). The byte-builders + variants registry are staged
- * here so the fix is a one-line flip; today they are unreachable from the
- * UI because the predicates below return false for object paths.
- */
-const ENABLE_PER_ELEVATION_OBJECT_ENTITY_OPS = false;
-
 export function isMapAddableArray(arrayPath: readonly string[]): boolean {
-    if (ENABLE_PER_ELEVATION_OBJECT_ENTITY_OPS && isPerElevationObjectsPath(arrayPath)) return true;
     if (!varSectionAddable || arrayPath.length !== 1) return false;
     return findVarSectionByArrayName(arrayPath[0]) !== undefined;
 }
 
 export function isMapRemovableEntry(entryPath: readonly string[]): boolean {
-    if (ENABLE_PER_ELEVATION_OBJECT_ENTITY_OPS && isPerElevationObjectEntryPath(entryPath)) return true;
     if (!varSectionRemovable || entryPath.length !== 2) return false;
     const [arrayName, entryName] = entryPath;
     const section = findVarSectionByArrayName(arrayName);
     if (!section || entryName === undefined) return false;
     return parseEntryIndex(entryName, section.entryPrefix) !== undefined;
-}
-
-export function getMapArrayVariants(
-    arrayPath: readonly string[],
-): readonly { id: string; label: string }[] | undefined {
-    if (!ENABLE_PER_ELEVATION_OBJECT_ENTITY_OPS || !isPerElevationObjectsPath(arrayPath)) return undefined;
-    return MAP_OBJECT_VARIANTS.map(({ id, label }) => ({ id, label }));
-}
-
-// -- Per-elevation object array helpers ------------------------------------
-
-const ELEVATION_OBJECTS_RE = /^Elevation (\d+) Objects$/;
-const OBJECT_ENTRY_RE = /^Object (\d+)\.(\d+) /;
-
-function isPerElevationObjectsPath(arrayPath: readonly string[]): boolean {
-    return (
-        arrayPath.length === 2 && arrayPath[0] === "Objects Section" && ELEVATION_OBJECTS_RE.test(arrayPath[1] ?? "")
-    );
-}
-
-function isPerElevationObjectEntryPath(entryPath: readonly string[]): boolean {
-    return (
-        entryPath.length === 3 &&
-        entryPath[0] === "Objects Section" &&
-        ELEVATION_OBJECTS_RE.test(entryPath[1] ?? "") &&
-        OBJECT_ENTRY_RE.test(entryPath[2] ?? "")
-    );
-}
-
-function elevationIndexFromArrayName(name: string): number | undefined {
-    const match = ELEVATION_OBJECTS_RE.exec(name);
-    if (!match || match[1] === undefined) return undefined;
-    const index = Number.parseInt(match[1], 10);
-    return Number.isInteger(index) && index >= 0 && index <= 2 ? index : undefined;
-}
-
-function objectIndexFromEntryName(name: string): number | undefined {
-    const match = OBJECT_ENTRY_RE.exec(name);
-    if (!match || match[2] === undefined) return undefined;
-    const index = Number.parseInt(match[2], 10);
-    return Number.isInteger(index) && index >= 0 ? index : undefined;
-}
-
-function applyObjectsUpdate(
-    doc: MapCanonicalDocument,
-    elevationIndex: number,
-    nextObjects: readonly MapObject[],
-): MapCanonicalDocument {
-    const elevations = doc.objects.elevations.map((entry, i) =>
-        i === elevationIndex ? { ...entry, objects: [...nextObjects], objectCount: nextObjects.length } : entry,
-    );
-    const totalObjects = elevations.reduce((sum, entry) => sum + entry.objects.length, 0);
-    return { ...doc, objects: { ...doc.objects, totalObjects, elevations } };
-}
-
-/**
- * Real-world maps carry an `objects-tail` opaque range covering the bytes
- * between the parser's last-decoded object and the end of file (junk the
- * parser couldn't safely decode without external PRO metadata, plus padding
- * fields the format reserves but ships zeroed). When the user mutates the
- * objects section, that opaque range becomes invalid — copying it back into
- * the output buffer at its original offset would overwrite the freshly-
- * inserted object's bytes. Drop it for object-section operations.
- */
-function opaqueRangesForObjectMutation(parseResult: ParseResult) {
-    return (parseResult.opaqueRanges ?? []).filter((range) => range.label !== "objects-tail");
-}
-
-function buildAddObjectAtElevation(
-    parseResult: ParseResult,
-    arrayPath: readonly string[],
-    options: { readonly variantId?: string } | undefined,
-): Uint8Array | undefined {
-    const variant = findMapObjectVariant(options?.variantId);
-    if (!variant) return undefined;
-    const elevationIndex = elevationIndexFromArrayName(arrayPath[1] ?? "");
-    if (elevationIndex === undefined) return undefined;
-
-    const doc = readDocument(parseResult);
-    if (!doc) return undefined;
-    const elevation = doc.objects.elevations[elevationIndex];
-    if (!elevation) return undefined;
-
-    const nextObjects = [...elevation.objects, variant.defaultElement()];
-    return serializeMapCanonicalDocument(
-        applyObjectsUpdate(doc, elevationIndex, nextObjects),
-        opaqueRangesForObjectMutation(parseResult),
-    );
-}
-
-function buildRemoveObjectAtElevation(parseResult: ParseResult, entryPath: readonly string[]): Uint8Array | undefined {
-    const elevationIndex = elevationIndexFromArrayName(entryPath[1] ?? "");
-    const objectIndex = objectIndexFromEntryName(entryPath[2] ?? "");
-    if (elevationIndex === undefined || objectIndex === undefined) return undefined;
-
-    const doc = readDocument(parseResult);
-    if (!doc) return undefined;
-    const elevation = doc.objects.elevations[elevationIndex];
-    if (!elevation || objectIndex >= elevation.objects.length) return undefined;
-
-    const nextObjects = [...elevation.objects.slice(0, objectIndex), ...elevation.objects.slice(objectIndex + 1)];
-    return serializeMapCanonicalDocument(
-        applyObjectsUpdate(doc, elevationIndex, nextObjects),
-        opaqueRangesForObjectMutation(parseResult),
-    );
 }
 
 function parseEntryIndex(label: string, prefix: string): number | undefined {
@@ -235,9 +139,6 @@ export function buildMapRemoveEntryBytes(
     parseResult: ParseResult,
     entryPath: readonly string[],
 ): Uint8Array | undefined {
-    if (ENABLE_PER_ELEVATION_OBJECT_ENTITY_OPS && isPerElevationObjectEntryPath(entryPath)) {
-        return buildRemoveObjectAtElevation(parseResult, entryPath);
-    }
     if (!isMapRemovableEntry(entryPath)) return undefined;
     return mutateVarSectionEntry(parseResult, entryPath, (values, index) => [
         ...values.slice(0, index),

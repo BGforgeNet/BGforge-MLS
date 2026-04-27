@@ -123,12 +123,19 @@ export function buildBinaryEditorTreeState(parseResult: ParseResult): BinaryEdit
     let nextId = 0;
 
     const adapter = formatAdapterRegistry.get(parseResult.format);
-    const visitEntry = (projected: ProjectedEntry, parentId: string, parentPath: string): string => {
+    // `locked` propagates from any ancestor `ParsedGroup.editingLocked` flag set
+    // by the parser (e.g. a MAP record whose subtype payload couldn't be decoded
+    // from external metadata). Field summaries inside a locked subtree report
+    // `editable: false` regardless of the schema's per-field rule, since field
+    // edits are only safe when the surrounding record's byte layout is fully
+    // determined.
+    const visitEntry = (projected: ProjectedEntry, parentId: string, parentPath: string, locked: boolean): string => {
         const id = `node-${nextId++}`;
         if (projected.kind === "group") {
             const entry = projected.entry;
             const groupPath = makeFieldPath(parentPath, entry.name);
-            const childIds = projected.children.map((child) => visitEntry(child, id, groupPath));
+            const childLocked = locked || entry.editingLocked === true;
+            const childIds = projected.children.map((child) => visitEntry(child, id, groupPath, childLocked));
             const addable = adapter?.isAddableArray?.(projected.sourceSegments) === true;
             nodes.set(id, {
                 id,
@@ -182,7 +189,7 @@ export function buildBinaryEditorTreeState(parseResult: ParseResult): BinaryEdit
                 fieldId,
                 fieldKey,
                 fieldPath,
-                editable: isEditableFieldForFormat(parseResult.format, fieldKey, entry),
+                editable: !locked && isEditableFieldForFormat(parseResult.format, fieldKey, entry),
                 value: displayValue,
                 rawValue: entry.rawValue,
                 offset: entry.offset,
@@ -205,7 +212,7 @@ export function buildBinaryEditorTreeState(parseResult: ParseResult): BinaryEdit
     };
 
     for (const entry of displayRoot) {
-        rootChildren.push(visitEntry(entry, "root", ""));
+        rootChildren.push(visitEntry(entry, "root", "", false));
     }
 
     return {

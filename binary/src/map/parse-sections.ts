@@ -247,18 +247,32 @@ export function parseScripts(
     currentOffset: number,
     errors: string[],
     scriptTypeCount: number,
-): { scripts: ParsedGroup[]; offset: number } {
+): { scripts: ParsedGroup[]; offset: number; overflowStart?: number } {
     const scripts: ParsedGroup[] = [];
 
+    // Earliest disk offset whose bytes were not captured into `scripts` (i.e.
+    // would be lost if the writer reconstructed only from the canonical doc).
+    // The caller surfaces this as a `script-section-tail` opaque range so the
+    // writer can replay the original bytes verbatim and preserve byte identity
+    // for files the parser couldn't fully decode (per-slot SID widths
+    // determined by accidental engine-scratch bytes, malformed counts, etc.).
+    let overflowStart: number | undefined;
+
     for (let scriptType = 0; scriptType < scriptTypeCount; scriptType++) {
-        if (currentOffset + 4 > data.length) break;
-        if (data.length - currentOffset < 4) break;
+        if (currentOffset + 4 > data.length) {
+            if (currentOffset < data.length && overflowStart === undefined) {
+                overflowStart = currentOffset;
+            }
+            break;
+        }
         const countOffset = currentOffset;
         const view = new DataView(data.buffer, data.byteOffset + currentOffset, 4);
         const count = view.getInt32(0, false);
         currentOffset += 4;
 
         if (count < 0) {
+            // Count consumed but not pushed: 4 bytes already read are lost.
+            overflowStart = countOffset;
             break;
         }
 
@@ -274,8 +288,11 @@ export function parseScripts(
         }
         const extentCount = Math.ceil(count / 16);
 
+        let scriptTypeAborted = false;
         for (let extentIndex = 0; extentIndex < extentCount; extentIndex++) {
+            const extentStart = currentOffset;
             const extentFields: (ParsedField | ParsedGroup)[] = [];
+            let extentAborted = false;
 
             for (let slotIndex = 0; slotIndex < 16; slotIndex++) {
                 const entry = parseScriptEntryFields(
@@ -286,6 +303,7 @@ export function parseScripts(
                 );
                 if (entry.fields.length === 0) {
                     currentOffset = entry.offset;
+                    extentAborted = true;
                     break;
                 }
 
@@ -293,8 +311,17 @@ export function parseScripts(
                 currentOffset = entry.offset;
             }
 
-            if (currentOffset + 8 > data.length) {
-                errors.push(`Script extent ${extentIndex} metadata truncated for script type ${scriptType}`);
+            if (extentAborted || currentOffset + 8 > data.length) {
+                if (!extentAborted) {
+                    errors.push(`Script extent ${extentIndex} metadata truncated for script type ${scriptType}`);
+                }
+                // The in-progress extent (and any successfully-read slots inside it)
+                // is dropped from the canonical doc — the writer would otherwise
+                // emit fewer bytes than the parser consumed for the same extent.
+                // Anchor the trailer at this extent's disk start; the writer will
+                // replay [extentStart..EOF] verbatim.
+                overflowStart = extentStart;
+                scriptTypeAborted = true;
                 break;
             }
 
@@ -308,7 +335,8 @@ export function parseScripts(
         }
 
         scripts.push(makeGroup(`${ScriptType[scriptType] ?? `Type${scriptType}`} Scripts`, scriptEntries));
+        if (scriptTypeAborted) break;
     }
 
-    return { scripts, offset: currentOffset };
+    return { scripts, offset: currentOffset, overflowStart };
 }

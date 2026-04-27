@@ -7,7 +7,6 @@ import {
     buildMapInsertEntryBytes,
     buildMapMoveEntryBytes,
     buildMapRemoveEntryBytes,
-    getMapArrayVariants,
     isMapAddableArray,
     isMapRemovableEntry,
 } from "./entity-ops";
@@ -195,16 +194,8 @@ export const mapFormatAdapter: BinaryFormatAdapter = {
         return projectedFields;
     },
 
-    buildAddEntryBytes(
-        parseResult: ParseResult,
-        arrayPath: readonly string[],
-        options?: { readonly variantId?: string },
-    ) {
-        return buildMapAddEntryBytes(parseResult, arrayPath, options);
-    },
-
-    getArrayVariants(arrayPath: readonly string[]) {
-        return getMapArrayVariants(arrayPath);
+    buildAddEntryBytes(parseResult: ParseResult, arrayPath: readonly string[]) {
+        return buildMapAddEntryBytes(parseResult, arrayPath);
     },
 
     buildRemoveEntryBytes(parseResult: ParseResult, entryPath: readonly string[]) {

@@ -117,6 +117,16 @@ function parseInventoryHeaderGroup(data: Uint8Array, offset: number): { group: P
     };
 }
 
+// Records the parser couldn't fully decode get `editingLocked: true` so the
+// editor's tree builder threads it down to descendant fields. Field edits
+// are width-preserving but not interpretation-preserving when the trailing
+// payload is unknown — changing `inventoryLength` or the upper byte of `pid`
+// (the type tag) would re-bind the opaque-trailer bytes to a different
+// structure on reparse, silently corrupting the file.
+function incompleteObjectResult(group: ParsedGroup, offset: number): ParsedObjectResult {
+    return { complete: false, group: { ...group, editingLocked: true }, offset };
+}
+
 function parseObjectAt(
     data: Uint8Array,
     offset: number,
@@ -128,11 +138,10 @@ function parseObjectAt(
 
     if (offset + MAP_OBJECT_BASE_SIZE + MAP_OBJECT_DATA_HEADER_SIZE > data.length) {
         errors.push(`Object ${index} truncated at offset 0x${offset.toString(16)}`);
-        return {
-            complete: false,
-            group: makeGroup(`Object ${index}`, [noteField("TODO", "Truncated object data", offset)], true),
-            offset: data.length,
-        };
+        return incompleteObjectResult(
+            makeGroup(`Object ${index}`, [noteField("TODO", "Truncated object data", offset)], true),
+            data.length,
+        );
     }
 
     const { fields: baseFields, pid } = parseObjectBaseFields(data, offset);
@@ -148,11 +157,10 @@ function parseObjectAt(
         if (currentOffset + 44 > data.length) {
             errors.push(`Critter object ${index} payload truncated at offset 0x${currentOffset.toString(16)}`);
             objectFields.push(noteField("TODO", "Truncated critter payload", currentOffset));
-            return {
-                complete: false,
-                group: makeGroup(`Object ${index} (${objectTypeName(pid)})`, objectFields),
-                offset: data.length,
-            };
+            return incompleteObjectResult(
+                makeGroup(`Object ${index} (${objectTypeName(pid)})`, objectFields),
+                data.length,
+            );
         }
 
         objectFields.push(parseCritterDataGroup(data, currentOffset));
@@ -161,11 +169,10 @@ function parseObjectAt(
         if (currentOffset + 4 > data.length) {
             errors.push(`Object ${index} flags truncated at offset 0x${currentOffset.toString(16)}`);
             objectFields.push(noteField("TODO", "Truncated object flags", currentOffset));
-            return {
-                complete: false,
-                group: makeGroup(`Object ${index} (${objectTypeName(pid)})`, objectFields),
-                offset: data.length,
-            };
+            return incompleteObjectResult(
+                makeGroup(`Object ${index} (${objectTypeName(pid)})`, objectFields),
+                data.length,
+            );
         }
 
         objectFields.push(makeGroup("Object Data", [uint32Field("Data Flags", data, currentOffset)]));
@@ -175,16 +182,25 @@ function parseObjectAt(
             if (currentOffset + 16 > data.length) {
                 errors.push(`Exit grid object ${index} payload truncated at offset 0x${currentOffset.toString(16)}`);
                 objectFields.push(noteField("TODO", "Truncated exit grid payload", currentOffset));
-                return {
-                    complete: false,
-                    group: makeGroup(`Object ${index} (${objectTypeName(pid)})`, objectFields),
-                    offset: data.length,
-                };
+                return incompleteObjectResult(
+                    makeGroup(`Object ${index} (${objectTypeName(pid)})`, objectFields),
+                    data.length,
+                );
             }
 
             objectFields.push(parseExitGridGroup(data, currentOffset));
             currentOffset += 16;
         } else if (pidType === PID_TYPE_ITEM || pidType === PID_TYPE_SCENERY) {
+            // Item / Scenery / Wall / Tile records carry a subtype-keyed payload after
+            // the data header whose layout is described by the corresponding `.pro`
+            // file. PROs are not packaged alongside `.map` files in user mod trees,
+            // so the parser cannot determine where this record ends. Stop here and
+            // let `parseObjects` capture everything from this offset to EOF as the
+            // `objects-tail` opaque blob; the writer replays that blob verbatim, which
+            // preserves byte identity but locks the object array against structural
+            // mutation (insert / remove / reorder would shift the trailer's bytes
+            // by an unknown number of bytes per affected record). See `entity-ops.ts`
+            // for the matching mutation gate.
             objectFields.push(
                 noteField(
                     "TODO",
@@ -192,11 +208,10 @@ function parseObjectAt(
                     currentOffset,
                 ),
             );
-            return {
-                complete: false,
-                group: makeGroup(`Object ${index} (${objectTypeName(pid)})`, objectFields),
-                offset: currentOffset,
-            };
+            return incompleteObjectResult(
+                makeGroup(`Object ${index} (${objectTypeName(pid)})`, objectFields),
+                currentOffset,
+            );
         }
     }
 
@@ -214,11 +229,10 @@ function parseObjectAt(
                 `Inventory entry ${index}.${inventoryIndex} quantity truncated at offset 0x${currentOffset.toString(16)}`,
             );
             objectFields.push(noteField("TODO", "Truncated inventory entry", currentOffset));
-            return {
-                complete: false,
-                group: makeGroup(`Object ${index} (${objectTypeName(pid)})`, [...objectFields, ...inventoryGroups]),
-                offset: data.length,
-            };
+            return incompleteObjectResult(
+                makeGroup(`Object ${index} (${objectTypeName(pid)})`, [...objectFields, ...inventoryGroups]),
+                data.length,
+            );
         }
 
         const quantityField = int32Field("Quantity", data, currentOffset);
@@ -229,11 +243,10 @@ function parseObjectAt(
         currentOffset = nestedObject.offset;
 
         if (!nestedObject.complete) {
-            return {
-                complete: false,
-                group: makeGroup(`Object ${index} (${objectTypeName(pid)})`, [...objectFields, ...inventoryGroups]),
-                offset: currentOffset,
-            };
+            return incompleteObjectResult(
+                makeGroup(`Object ${index} (${objectTypeName(pid)})`, [...objectFields, ...inventoryGroups]),
+                currentOffset,
+            );
         }
     }
 

@@ -11,9 +11,9 @@ import {
     type ParseOptions,
     type ParseResult,
     type ParsedField,
-    type ParsedGroup,
     type BinaryFormatAdapter,
     formatAdapterRegistry,
+    findEditableField,
 } from "@bgforge/binary";
 
 /**
@@ -184,16 +184,18 @@ export class BinaryDocument implements vscode.CustomDocument {
         return edit;
     }
 
+    /**
+     * Resolve a `fieldId` to its leaf `ParsedField` for mutation purposes.
+     *
+     * Delegates to the binary package's `findEditableField`, which returns
+     * `undefined` when any group on the path carries `editingLocked: true`.
+     * That flag is the parser's statement that the surrounding record's wire
+     * layout couldn't be fully decoded, so width-preserving field changes
+     * inside it are not safe — the helper is the canonical API gate every
+     * edit path runs through.
+     */
     private findFieldById(fieldId: string): ParsedField | undefined {
-        try {
-            const parts = JSON.parse(fieldId) as unknown;
-            if (!Array.isArray(parts) || !parts.every((part) => typeof part === "string")) {
-                return undefined;
-            }
-            return findFieldBySegments(this._parseResult.root, parts, 0);
-        } catch {
-            return undefined;
-        }
+        return findEditableField(this._parseResult.root, fieldId);
     }
 
     private applyStructuralEdit(
@@ -383,29 +385,4 @@ function cloneParseResult(parseResult: ParseResult): ParseResult {
         cloned.sourceData = new Uint8Array(parseResult.sourceData);
     }
     return cloned;
-}
-
-function findFieldBySegments(group: ParsedGroup, pathParts: readonly string[], depth: number): ParsedField | undefined {
-    if (depth >= pathParts.length) {
-        return undefined;
-    }
-
-    for (const entry of group.fields) {
-        if ("fields" in entry) {
-            if (entry.name !== pathParts[depth]) {
-                continue;
-            }
-            const result = findFieldBySegments(entry, pathParts, depth + 1);
-            if (result) {
-                return result;
-            }
-            continue;
-        }
-
-        if (depth === pathParts.length - 1 && entry.name === pathParts[depth]) {
-            return entry;
-        }
-    }
-
-    return undefined;
 }

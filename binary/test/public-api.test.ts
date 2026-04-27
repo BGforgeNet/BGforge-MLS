@@ -19,6 +19,8 @@ const REQUIRED_VALUE_EXPORTS = [
     "getOutputPathForJsonSnapshot",
     // Format adapters
     "formatAdapterRegistry",
+    // Edit policy
+    "findEditableField",
     // Presentation
     "createFieldKey",
     "toSemanticFieldKey",

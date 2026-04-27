@@ -121,12 +121,11 @@ class MapParser implements BinaryParser {
         if (options?.gracefulMapBoundaries) {
             const scriptTailCandidates = [0, 1, 2, 3, 4, 5].map((scriptTypeCount) => {
                 const candidateErrors: string[] = [];
-                const { scripts, offset: scriptOffset } = parseScripts(
-                    data,
-                    currentOffset,
-                    candidateErrors,
-                    scriptTypeCount,
-                );
+                const {
+                    scripts,
+                    offset: scriptOffset,
+                    overflowStart: scriptOverflowStart,
+                } = parseScripts(data, currentOffset, candidateErrors, scriptTypeCount);
                 const { group: objectsGroup, opaqueTailOffset } = parseObjects(
                     data,
                     header,
@@ -137,6 +136,7 @@ class MapParser implements BinaryParser {
                 return {
                     scripts,
                     scriptOffset,
+                    scriptOverflowStart,
                     objectsGroup,
                     opaqueTailOffset,
                     candidateErrors,
@@ -153,36 +153,50 @@ class MapParser implements BinaryParser {
             currentOffset = chosenTail.scriptOffset;
             errors.push(...chosenTail.candidateErrors);
 
+            if (chosenTail.scriptOverflowStart !== undefined) {
+                const scriptTail = encodeOpaqueRange("script-section-tail", data, chosenTail.scriptOverflowStart);
+                if (scriptTail) opaqueRanges.push(scriptTail);
+            }
+
             const chosenTailIsConfident = isConfidentObjectsGroup(chosenTail.objectsGroup);
             const objectsGroup = chosenTailIsConfident
                 ? chosenTail.objectsGroup
                 : buildOpaqueObjectsGroup(chosenTail.scriptOffset);
             rootFields.push(objectsGroup);
 
-            const opaqueRange = encodeOpaqueRange(
-                "objects-tail",
-                data,
-                chosenTailIsConfident ? (chosenTail.opaqueTailOffset ?? data.length) : chosenTail.scriptOffset,
-            );
-            if (opaqueRange) {
-                opaqueRanges.push(opaqueRange);
+            // Skip the objects-tail capture when scripts already trailed off into
+            // an opaque region: that trailer absorbs every byte to EOF, and a
+            // second range starting later would only duplicate or compete with it.
+            if (chosenTail.scriptOverflowStart === undefined) {
+                const opaqueRange = encodeOpaqueRange(
+                    "objects-tail",
+                    data,
+                    chosenTailIsConfident ? (chosenTail.opaqueTailOffset ?? data.length) : chosenTail.scriptOffset,
+                );
+                if (opaqueRange) {
+                    opaqueRanges.push(opaqueRange);
+                }
             }
         } else {
-            const { scripts, offset: scriptOffset } = parseScripts(
-                data,
-                currentOffset,
-                errors,
-                STRICT_MAP_SCRIPT_TYPE_COUNT,
-            );
+            const {
+                scripts,
+                offset: scriptOffset,
+                overflowStart: scriptOverflowStart,
+            } = parseScripts(data, currentOffset, errors, STRICT_MAP_SCRIPT_TYPE_COUNT);
             const { group: objectsGroup, opaqueTailOffset } = parseObjects(data, header, scriptOffset, errors);
 
             rootFields.push(...scripts);
             currentOffset = scriptOffset;
             rootFields.push(objectsGroup);
 
-            const opaqueRange = encodeOpaqueRange("objects-tail", data, opaqueTailOffset ?? data.length);
-            if (opaqueRange) {
-                opaqueRanges.push(opaqueRange);
+            if (scriptOverflowStart !== undefined) {
+                const scriptTail = encodeOpaqueRange("script-section-tail", data, scriptOverflowStart);
+                if (scriptTail) opaqueRanges.push(scriptTail);
+            } else {
+                const opaqueRange = encodeOpaqueRange("objects-tail", data, opaqueTailOffset ?? data.length);
+                if (opaqueRange) {
+                    opaqueRanges.push(opaqueRange);
+                }
             }
         }
 

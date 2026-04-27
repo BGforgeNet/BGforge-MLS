@@ -21,6 +21,9 @@ export { getSnapshotPath, getOutputPathForJsonSnapshot } from "./json-snapshot-p
 export { formatAdapterRegistry } from "./format-adapter";
 export type { BinaryFormatAdapter, ProjectedEntry } from "./format-adapter";
 
+// Edit policy
+export { findEditableField } from "./field-edit-policy";
+
 // Presentation schema
 export {
     createFieldKey,

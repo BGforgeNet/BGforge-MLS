@@ -51,81 +51,31 @@ Out of scope for v1: variant arrays, insert-at-index, multi-select, context menu
 - `buildInsertEntryBytes(parseResult, entryPath, position)` and `buildMoveEntryBytes(parseResult, entryPath, direction)` on the adapter. `BinaryDocument` exposes `insertEntityBefore` / `insertEntityAfter` / `moveEntityUp` / `moveEntityDown` (each one undo-able through the existing pipeline).
 - VSCode commands `bgforge.binaryEditor.insertEntryBefore` / `insertEntryAfter` / `moveEntryUp` / `moveEntryDown`, all surfaced in the Command Palette and webview context menu (grouped separately from add/remove for readability).
 
-#### v2.3 — variant picker + min/max validation (deferred)
+### Out of scope: object-array and script-slot mutations
 
-To ship together with v2.5 since MAP objects are the natural consumer for variants and the only place an immediate min/max bound applies (per-elevation max, total-objects bound).
+Add / remove / reorder is intentionally limited to **header-counted uniform-int32 arrays** (Global Variables, Local Variables). MAP object arrays and script-slot extents stay read-only at the structural level — fields inside individual already-decoded records remain editable through the field-edit pipeline; only the array length and ordering are locked.
 
-- Variant-picker UI: `vscode.window.showQuickPick` listing variants from the format's variants registry. Used identically by inline `+`, context menu, and command.
-- `minSize` / `maxSize` enforcement from the array spec: refuse remove at minimum, refuse add at maximum, surface via the field-error channel.
+The constraint is structural, not a missing feature. Two MAP regions cannot be deterministically encoded after a structural mutation:
 
-#### v2.5 — MAP objects coverage
+**Object records (per-elevation `objects[]`).** Each record's wire layout depends on its PID type tag. For the Item, Scenery, Wall, and Tile types the parser stops at the data-header boundary because the rest of the record's payload is described by the corresponding `.pro` file. PROs are not packaged alongside `.map` files in the user mod trees this editor targets, so the parser cannot determine where each affected record ends. Once the parser stops mid-elevation, every byte from that point to EOF — including elev 1 / elev 2 in their entirety — is captured as a single opaque trailer (`objects-tail`). A structural mutation in the elev 0 prefix shifts that trailer by an unknown number of bytes per inserted record, and on reparse the trailer's bytes get interpreted at the wrong offsets; subsequent objects (and elev 1 / elev 2) silently realign to garbage. Without per-record byte widths, there is no encoding the canonical doc can produce that round-trips through a re-parse.
 
-##### Blocker: canonical-writer / parser round-trip on the objects section
+**Script extents.** Each extent carries 16 fixed slot positions regardless of its `count` field. The canonical doc keeps all 16 per extent so files round-trip byte-identically with no edits, but each slot's serialised width is selected by `getScriptType` on its sid byte, and the padding slots (`count..15`) carry whatever sid bits the engine had in scratch memory at the time of the original write. Replacing a padding slot with a real one only stays width-neutral when the padding's accidental sid happens to match the script type the caller wants; otherwise the extent grows or shrinks. The writer's opaque-range mechanism replays trailing ranges (`objects-tail`, `script-section-tail`) at their original parse-time offsets, so a downstream shift would clobber or under-fill the trailer. Supporting structural script mutations therefore requires both the width-matching logic and a writer refactor that anchors trailing opaque ranges at the structural-end offset rather than the original offset — the same refactor that would unblock object-array mutations for Misc / Critter / Exit-Grid records.
 
-The MAP canonical writer's script-section length and the parser's actual consumed bytes diverge on every real fixture inspected (`arcaves`, `denbus1`, `newr2`, `sfsheng`, `bhrnddst`, `artemple`). The script section parser tolerates malformed entries (e.g., overflow at `Entry 6881` in `sfsheng`) but the canonical reader produces a reduced canonical doc that the writer reserialises to fewer bytes than the parser consumed. Result: the objects section in the rewritten file lands at a different offset from what the parser expects on reparse, so any object inserted via add/remove disappears (parser reads zero objects from the wrong byte range).
+Files where the script section overflows on parse (a `count` field driving the parser past EOF, or a malformed SID padding byte forcing a wider read than remains) are still parseable for display: the parser anchors a `script-section-tail` opaque range from the failing extent's start through EOF and the writer replays it verbatim. The byte-identity round-trip is preserved; the file just isn't structurally mutable downstream of the anchor.
 
-This is independent of v2.5's add/remove logic — a no-op round-trip (parse → canonical → serialize → reparse) of any of the listed fixtures exhibits the same corruption. Fixing it is a prerequisite to landing v2.5 in the editor.
+**What this rules out:**
 
-Likely fix sites:
+- Object add/remove/reorder on any elevation.
+- Variant picker + min/max validation (had only object arrays as a consumer).
+- Script slot add/remove/reorder; extent capacity growth.
+- A `variantArraySpec` primitive promotion (had only object arrays + script slots as candidate consumers; with both excluded, there are no consumers to constrain the design).
 
-1. `binary/src/map/canonical-reader.ts` — when a script section can't decode an entry, surface enough information for the writer to reproduce the original byte run (either preserve the unread tail as a per-section opaque blob, or reject the file as unwritable).
-2. `binary/src/map/canonical-writer.ts` — match the parser's byte count exactly, including any trailing padding or undecoded extents.
-3. Or both — converge on a representation where `bytes → parse → canonical → serialize → bytes` is a fixed point on every fixture.
+**What stays editable:**
 
-Until then, the v2.5 byte-builders (`buildAddObjectAtElevation`, `buildRemoveObjectAtElevation`) and the variants registry (`object-variants.ts`) are staged in source but gated off by `ENABLE_PER_ELEVATION_OBJECT_ENTITY_OPS = false` in `entity-ops.ts`. Flip the flag once the round-trip is fixed.
+- Field values on every decoded record — header fields, individual variable values, tile pair fields, fully-decoded object fields, fully-decoded script slot fields. Field edits are width-preserving and don't shift any opaque region.
+- Globals / Locals: full add / remove / insert-before / insert-after / move-up / move-down. These arrays sit upstream of any opaque region in the file layout, so mutations on them can never invalidate a downstream opaque trailer's offset.
 
-##### Scope when unblocked
-
-- Per-elevation, variant-shaped records (Misc, Critter, Item, Scenery, Wall, Tile, Exit Grid). Each variant has its own default skeleton.
-
-##### Skeleton-construction rule
-
-Default skeletons are **null-byte-padded across the board** — every numeric field starts at `0`. Override only where the format's structure forces a non-zero value, namely:
-
-- **Type-discriminator bits the parser uses to recognise the variant.** For MAP objects the PID's upper byte encodes the type tag (`pid >> 24`); each variant's skeleton must set those bits so the round-trip reparse keeps the variant identity. Other fields the parser doesn't read for type discrimination (frame, fid, coordinates, flags, light, sid, etc.) stay zero.
-- **Presence/absence of optional sub-records** controlled by the variant: `critterData` only for critters, `exitGrid` only for exit-grid misc objects, `objectData` where the type carries it. Where the sub-record is _present_, its fields default to zero.
-- **Linked counts and capacities the writer depends on** (e.g. an empty inventory needs `inventoryLength: 0` and `inventoryCapacity: 0`, not arbitrary numbers).
-
-Anything else — sensible defaults for in-game rendering, "interesting" starting values — is out of scope. The user is expected to fill in real values after insertion through the existing field editors. The guarantee is: the skeleton serialises, reparses cleanly, and identifies as the requested variant. Nothing more.
-
-- Recursive inventory entries: objects carry inventories of `{quantity, object}` pairs. "+ Add inventory item" reuses the same variant-picker pathway against the inventory's nested object.
-
-##### Where variants live (Option B for v2.5)
-
-The current `arraySpec` primitive describes a uniform array of one scalar element type — globals/locals/tile fields use it directly. MAP objects don't fit that shape: object records are variable-size and self-recursive, and the per-elevation objects array isn't an `arraySpec` today. The spec migration history moved fixed object _chunks_ (`objectBaseSpec`, `inventoryHeaderSpec`, `critterDataSpec`, `exitGridSpec`) into spec form; the array layer stayed in the orchestrator (`parse-objects.ts`).
-
-For v2.5, variants live in a sibling **variants registry** module under `specs/` rather than inside `arraySpec`:
-
-```text
-binary/src/map/specs/object-variants.ts
-  export const objectVariants = [
-    { id, label, pidTypeBits, defaultElement: () => MapCanonicalObject },
-    ...
-  ] as const;
-```
-
-Format adapter + entity-ops import the registry the same way they import `varSectionSpec` today. The format still owns its truth — the registry lives in `specs/`, alongside the wire-chunk specs — it's just not threaded through the existing `arraySpec` primitive.
-
-Carrying the wider design rule forward: for any addable array, the format's `specs/` directory is the single source of truth. Two encodings are permitted: (a) capability metadata on `arraySpec` for uniform arrays (already shipped), (b) a sibling registry module for variant or otherwise non-uniform arrays (introduced in v2.5).
-
-#### v2.6 — script slots coverage
-
-- Capacity-batched script extents. Shares the variant + ordering machinery; the byte-builder owns extent-capacity growth and `extentNext` linkage when a batch fills.
-
-##### Spec-system promotion (Option A) — follow-up after v2.6
-
-Once v2.5 (MAP objects) and v2.6 (script slots) both ship with sibling variant registries, the spec system gets a second concrete consumer that constrains the design. Promote the registry idiom into a first-class `variantArraySpec` primitive:
-
-```text
-variantArraySpec({
-  discriminator,           // field that selects the variant on read
-  variants: [{ id, label, struct, defaultElement }, ...],
-})
-```
-
-This drives typed-binary read/write through the discriminator, derived zod with discriminated unions, derived presentation, and derived domain ranges — all variant-aware. Migration is mechanical: each `*-variants.ts` registry moves into the matching `arraySpec(...)` call and consumers shift one import.
-
-Don't do this before v2.6 lands: with only one consumer (objects), the primitive risks being shaped for that one case and bent on the second. Two consumers in hand is the right time.
+**Verification gate.** A byte-identity round-trip test (`binary/test/canonical-roundtrip.test.ts`) exercises every fixture: `parser.serialize(parser.parse(bytes))` must equal the original bytes. Any future change that breaks identity for a previously-passing fixture fails CI.
 
 ### v3 — bulk ops, multi-select, scripting
 
