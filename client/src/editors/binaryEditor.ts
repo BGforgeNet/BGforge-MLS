@@ -102,7 +102,10 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
 
         webviewPanel.webview.options = {
             enableScripts: true,
-            localResourceRoots: [this.extensionUri],
+            // The HTML shell inlines its CSS (via <style>) and JS (via <script>) and
+            // never references local assets through asWebviewUri(); no roots need to
+            // be reachable. CSP locks the document to nonced inline content.
+            localResourceRoots: [],
         };
 
         // Set the initial HTML shell
