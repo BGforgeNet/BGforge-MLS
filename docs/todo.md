@@ -60,7 +60,18 @@ To ship together with v2.5 since MAP objects are the natural consumer for varian
 
 #### v2.5 — MAP objects coverage
 
-- Per-elevation, variant-shaped records (Misc, Critter, Item, Scenery, Wall, Tile, Exit Grid). Each variant has its own default skeleton: PID upper bits encoding the type tag, sensible default `fid` / `flags` / coordinates, presence of optional sub-records (`critterData` for critters, `exitGrid` for exit-grid misc objects, `objectData` where applicable), empty inventory.
+- Per-elevation, variant-shaped records (Misc, Critter, Item, Scenery, Wall, Tile, Exit Grid). Each variant has its own default skeleton.
+
+##### Skeleton-construction rule
+
+Default skeletons are **null-byte-padded across the board** — every numeric field starts at `0`. Override only where the format's structure forces a non-zero value, namely:
+
+- **Type-discriminator bits the parser uses to recognise the variant.** For MAP objects the PID's upper byte encodes the type tag (`pid >> 24`); each variant's skeleton must set those bits so the round-trip reparse keeps the variant identity. Other fields the parser doesn't read for type discrimination (frame, fid, coordinates, flags, light, sid, etc.) stay zero.
+- **Presence/absence of optional sub-records** controlled by the variant: `critterData` only for critters, `exitGrid` only for exit-grid misc objects, `objectData` where the type carries it. Where the sub-record is _present_, its fields default to zero.
+- **Linked counts and capacities the writer depends on** (e.g. an empty inventory needs `inventoryLength: 0` and `inventoryCapacity: 0`, not arbitrary numbers).
+
+Anything else — sensible defaults for in-game rendering, "interesting" starting values — is out of scope. The user is expected to fill in real values after insertion through the existing field editors. The guarantee is: the skeleton serialises, reparses cleanly, and identifies as the requested variant. Nothing more.
+
 - Recursive inventory entries: objects carry inventories of `{quantity, object}` pairs. "+ Add inventory item" reuses the same variant-picker pathway against the inventory's nested object.
 
 ##### Where variants live (Option B for v2.5)
