@@ -164,6 +164,12 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
                             stack: msg.stack,
                         });
                         break;
+                    case "addEntry":
+                        document.addEntity(msg.arrayPath);
+                        break;
+                    case "removeEntry":
+                        document.removeEntity(msg.entryPath);
+                        break;
                 }
             }),
         );

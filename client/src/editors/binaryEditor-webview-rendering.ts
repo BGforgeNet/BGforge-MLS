@@ -30,8 +30,37 @@ function createGroupElement(node: BinaryEditorNode): HTMLElement {
     contentEl.className = "group-content";
     contentEl.dataset.parentNodeId = node.id;
 
+    if (node.addable && node.arrayPath) {
+        contentEl.append(createAddEntryRow(node.arrayPath));
+    }
+
     groupEl.append(headerEl, contentEl);
     return groupEl;
+}
+
+function createAddEntryRow(arrayPath: readonly string[]): HTMLElement {
+    const rowEl = document.createElement("div");
+    rowEl.className = "entity-add-row";
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "entity-add-button";
+    button.dataset.arrayPath = JSON.stringify(arrayPath);
+    button.textContent = "+ Add entry";
+    rowEl.append(button);
+
+    return rowEl;
+}
+
+function createRemoveEntryButton(entryPath: readonly string[]): HTMLElement {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "entity-remove-button";
+    button.dataset.entryPath = JSON.stringify(entryPath);
+    button.title = "Remove entry";
+    button.setAttribute("aria-label", "Remove entry");
+    button.textContent = "✕";
+    return button;
 }
 
 function createFieldElement(node: BinaryEditorNode): HTMLElement {
@@ -72,6 +101,10 @@ function createFieldElement(node: BinaryEditorNode): HTMLElement {
         errorEl.dataset.errorFor = node.fieldId;
     }
     fieldEl.append(errorEl);
+
+    if (node.removable && node.entryPath) {
+        fieldEl.append(createRemoveEntryButton(node.entryPath));
+    }
 
     return fieldEl;
 }

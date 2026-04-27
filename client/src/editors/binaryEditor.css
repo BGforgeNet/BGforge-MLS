@@ -444,3 +444,43 @@ input[type="number"]:hover::-webkit-outer-spin-button {
     background-color: var(--vscode-editor-findMatchHighlightBackground, rgba(255, 255, 0, 0.3));
     border-radius: 2px;
 }
+
+/* -- Add/remove entity affordances ----------------------------------------- */
+
+.entity-add-row {
+    padding: 2px 0 2px 18px;
+}
+
+.entity-add-button {
+    background: transparent;
+    border: 1px dashed var(--vscode-input-border, var(--vscode-foreground));
+    border-radius: 3px;
+    color: var(--vscode-descriptionForeground, var(--vscode-foreground));
+    cursor: pointer;
+    font-family: inherit;
+    font-size: inherit;
+    padding: 2px 8px;
+}
+
+.entity-add-button:hover {
+    background-color: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground));
+    color: var(--vscode-foreground);
+}
+
+.entity-remove-button {
+    background: transparent;
+    border: none;
+    color: var(--vscode-descriptionForeground, var(--vscode-foreground));
+    cursor: pointer;
+    font-family: inherit;
+    font-size: inherit;
+    margin-left: 6px;
+    padding: 0 4px;
+    line-height: 1;
+}
+
+.entity-remove-button:hover {
+    color: var(--vscode-errorForeground, var(--vscode-foreground));
+    background-color: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground));
+    border-radius: 3px;
+}

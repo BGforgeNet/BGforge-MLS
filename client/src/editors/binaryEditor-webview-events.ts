@@ -95,11 +95,53 @@ function handleFlagClick(target: HTMLElement, ctx: EventContext): void {
     }
 }
 
+function handleEntityAddClick(button: HTMLButtonElement, vscode: VsCodeApi): void {
+    const raw = button.dataset.arrayPath;
+    if (!raw) return;
+    const arrayPath = parseSegmentArray(raw);
+    if (!arrayPath) return;
+    vscode.postMessage({ type: "addEntry", arrayPath });
+}
+
+function handleEntityRemoveClick(button: HTMLButtonElement, vscode: VsCodeApi): void {
+    const raw = button.dataset.entryPath;
+    if (!raw) return;
+    const entryPath = parseSegmentArray(raw);
+    if (!entryPath) return;
+    vscode.postMessage({ type: "removeEntry", entryPath });
+}
+
+function parseSegmentArray(raw: string): readonly string[] | undefined {
+    try {
+        const parsed = JSON.parse(raw) as unknown;
+        if (!Array.isArray(parsed)) return undefined;
+        return parsed.every((segment): segment is string => typeof segment === "string") ? parsed : undefined;
+    } catch {
+        return undefined;
+    }
+}
+
 export function setupTreeEventListeners(ctx: EventContext, ensureChildrenLoaded: (nodeId: string) => void): void {
     const { treeEl } = ctx;
 
     treeEl.addEventListener("click", (event) => {
         const target = event.target as HTMLElement;
+
+        const addButton = target.closest<HTMLButtonElement>(".entity-add-button");
+        if (addButton) {
+            event.preventDefault();
+            event.stopPropagation();
+            handleEntityAddClick(addButton, ctx.vscode);
+            return;
+        }
+
+        const removeButton = target.closest<HTMLButtonElement>(".entity-remove-button");
+        if (removeButton) {
+            event.preventDefault();
+            event.stopPropagation();
+            handleEntityRemoveClick(removeButton, ctx.vscode);
+            return;
+        }
 
         const stepButton = target.closest<HTMLButtonElement>(".field-step");
         if (stepButton) {

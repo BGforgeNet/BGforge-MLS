@@ -32,8 +32,12 @@ export interface BinaryEditorNode {
     readonly stringCharset?: "ascii-printable" | "utf8";
     /** Group nodes whose array accepts new entries (e.g. MAP "Global Variables"). */
     readonly addable?: boolean;
+    /** Source segments identifying the addable array (only set when `addable`). */
+    readonly arrayPath?: readonly string[];
     /** Field/entry nodes that can be removed from their parent array. */
     readonly removable?: boolean;
+    /** Source segments identifying the removable entry (only set when `removable`). */
+    readonly entryPath?: readonly string[];
 }
 
 // -- Webview -> Extension ---------------------------------------------------
@@ -75,13 +79,27 @@ interface RuntimeErrorMessage {
     readonly stack?: string;
 }
 
+interface AddEntryMessage {
+    readonly type: "addEntry";
+    /** Source-tree segments identifying the addable array. */
+    readonly arrayPath: readonly string[];
+}
+
+interface RemoveEntryMessage {
+    readonly type: "removeEntry";
+    /** Source-tree segments identifying the entry being removed. */
+    readonly entryPath: readonly string[];
+}
+
 export type WebviewToExtension =
     | EditMessage
     | ReadyMessage
     | GetChildrenMessage
     | DumpJsonMessage
     | LoadJsonMessage
-    | RuntimeErrorMessage;
+    | RuntimeErrorMessage
+    | AddEntryMessage
+    | RemoveEntryMessage;
 
 // -- Extension -> Webview ---------------------------------------------------
 

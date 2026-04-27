@@ -88,6 +88,19 @@ describe("buildBinaryEditorTreeState", () => {
         }
     });
 
+    it("carries arrayPath on addable groups and entryPath on removable entries", () => {
+        const tree = buildBinaryEditorTreeState(loadMapResult("arcaves.map"));
+        const init = tree.getInitMessagePayload();
+
+        const globalsNode = init.rootChildren.find((node) => node.name === "Global Variables")!;
+        expect(globalsNode.arrayPath).toEqual(["Global Variables"]);
+
+        const entries = tree.getChildren(globalsNode.id);
+        expect(entries.length).toBeGreaterThan(0);
+        expect(entries[0].entryPath).toEqual(["Global Variables", "Global Var 0"]);
+        expect(entries[1].entryPath).toEqual(["Global Variables", "Global Var 1"]);
+    });
+
     it("uses compact MAP summaries as lazy root nodes", () => {
         const fullResult = loadMapResult("artemple.map", true);
         const tree = buildBinaryEditorTreeState(fullResult);
