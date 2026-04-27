@@ -2,6 +2,7 @@ import type { BinaryFormatAdapter, ProjectedEntry } from "../format-adapter";
 import type { ParsedField, ParsedGroup, ParseOptions, ParseResult } from "../types";
 import { createCanonicalMapJsonSnapshot, loadCanonicalMapJsonSnapshot } from "./json-snapshot";
 import { rebuildMapCanonicalDocument } from "./canonical";
+import { buildMapAddEntryBytes } from "./entity-ops";
 import { slugify } from "../snapshot-common";
 
 function mapSemanticFieldKey(segments: readonly string[]): string | undefined {
@@ -184,5 +185,9 @@ export const mapFormatAdapter: BinaryFormatAdapter = {
         }
 
         return projectedFields;
+    },
+
+    buildAddEntryBytes(parseResult: ParseResult, arrayPath: readonly string[]) {
+        return buildMapAddEntryBytes(parseResult, arrayPath);
     },
 };

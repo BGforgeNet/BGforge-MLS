@@ -49,6 +49,15 @@ export interface BinaryFormatAdapter {
         fieldId: string,
         rawValue: number,
     ): Uint8Array | undefined;
+
+    // -- Add/remove entries in variable-length arrays (optional) ---------------
+    /**
+     * Produce the bytes for `parseResult` with one new default entry appended
+     * to the array at `arrayPath` (tree-segment names, e.g. `["Global Variables"]`).
+     * Returns `undefined` if the path is not a known addable array for this
+     * format.
+     */
+    buildAddEntryBytes?(parseResult: ParseResult, arrayPath: readonly string[]): Uint8Array | undefined;
 }
 
 class FormatAdapterRegistry {
