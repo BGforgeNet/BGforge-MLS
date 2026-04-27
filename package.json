@@ -384,6 +384,18 @@
                     "command": "bgforge.binaryEditor.removeEntry",
                     "when": "activeCustomEditorId == 'bgforge.binaryEditor'"
                 }
+            ],
+            "webview/context": [
+                {
+                    "command": "bgforge.binaryEditor.addEntry",
+                    "when": "webviewId == 'bgforge.binaryEditor' && webviewSection == 'binaryEditorAddableArray'",
+                    "group": "binaryEditor@1"
+                },
+                {
+                    "command": "bgforge.binaryEditor.removeEntry",
+                    "when": "webviewId == 'bgforge.binaryEditor' && webviewSection == 'binaryEditorRemovableEntry'",
+                    "group": "binaryEditor@1"
+                }
             ]
         },
         "customEditors": [

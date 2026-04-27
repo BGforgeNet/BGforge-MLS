@@ -20,6 +20,14 @@ function createGroupElement(node: BinaryEditorNode): HTMLElement {
     const headerEl = document.createElement("div");
     headerEl.className = "group-header";
     headerEl.dataset.nodeId = node.id;
+    if (node.addable) {
+        // VSCode reads data-vscode-context on the right-clicked element; the
+        // webviewSection value is matched against menus.webview/context
+        // when-clauses in package.json. Addable group headers expose the
+        // "binaryEditorAddableArray" section so the Add-entry menu item shows.
+        // (dataset.vscodeContext serialises to data-vscode-context.)
+        headerEl.dataset.vscodeContext = JSON.stringify({ webviewSection: "binaryEditorAddableArray" });
+    }
 
     const nameEl = document.createElement("span");
     nameEl.className = "group-name";
@@ -72,6 +80,12 @@ function createFieldElement(node: BinaryEditorNode): HTMLElement {
     }
     if (node.fieldPath) {
         fieldEl.dataset.path = node.fieldPath;
+    }
+    if (node.removable) {
+        // See createGroupElement: removable entries expose the
+        // "binaryEditorRemovableEntry" webviewSection so the Remove menu
+        // item shows up in the native VSCode webview context menu.
+        fieldEl.dataset.vscodeContext = JSON.stringify({ webviewSection: "binaryEditorRemovableEntry" });
     }
 
     const nameEl = document.createElement("span");

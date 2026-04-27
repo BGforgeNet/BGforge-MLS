@@ -60,19 +60,29 @@ function postSelection(ctx: SelectionContext, nodeId: string | undefined): void 
     });
 }
 
+function selectRow(ctx: SelectionContext, row: HTMLElement): void {
+    const nodeId = nodeIdOfRow(row);
+    if (!nodeId || nodeId === ctx.getSelectedId()) return;
+
+    clearVisualSelection(ctx.treeEl);
+    row.classList.add("selected");
+    ctx.setSelectedId(nodeId);
+    postSelection(ctx, nodeId);
+}
+
 export function setupSelection(ctx: SelectionContext): void {
     ctx.treeEl.addEventListener("click", (event) => {
-        const target = event.target as HTMLElement | null;
-        const row = findRowFromTarget(target);
-        if (!row) return;
+        const row = findRowFromTarget(event.target as HTMLElement | null);
+        if (row) selectRow(ctx, row);
+    });
 
-        const nodeId = nodeIdOfRow(row);
-        if (!nodeId || nodeId === ctx.getSelectedId()) return;
-
-        clearVisualSelection(ctx.treeEl);
-        row.classList.add("selected");
-        ctx.setSelectedId(nodeId);
-        postSelection(ctx, nodeId);
+    // Right-click selects too, so the host's selection tracker matches the
+    // row VSCode is about to open the native webview context menu over.
+    // We don't preventDefault — the menu still opens via `data-vscode-context`
+    // attributes the renderer puts on each row.
+    ctx.treeEl.addEventListener("contextmenu", (event) => {
+        const row = findRowFromTarget(event.target as HTMLElement | null);
+        if (row) selectRow(ctx, row);
     });
 }
 
