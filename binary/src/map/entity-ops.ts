@@ -8,17 +8,23 @@
  */
 
 import type { ParseResult } from "../types";
+import { isArraySpec } from "../spec/types";
 import { getMapCanonicalDocument, rebuildMapCanonicalDocument } from "./canonical-reader";
 import { serializeMapCanonicalDocument } from "./canonical-writer";
 import type { MapCanonicalDocument } from "./canonical-schemas";
+import { varSectionSpec } from "./specs/variables";
 
 function readDocument(parseResult: ParseResult): MapCanonicalDocument | undefined {
     return getMapCanonicalDocument(parseResult) ?? rebuildMapCanonicalDocument(parseResult);
 }
 
 /**
- * Variable-length array sections backed by an int32 slot count, with the
- * count mirrored in the header. Adding a format = appending a row here.
+ * Per-section binding from a parsed-tree group name (the label the parser
+ * emits) to the canonical-doc keys that mirror it. This is the only
+ * legitimately per-format work — the *capabilities* (addable/removable,
+ * default element) come from the array spec itself, queried below. Adding
+ * another header-counted variable section is one row in this table plus a
+ * spec entry that already declares its own addable/defaultElement.
  */
 interface VarSection {
     readonly arrayName: string;
@@ -42,6 +48,16 @@ const VAR_SECTIONS: readonly VarSection[] = [
     },
 ];
 
+const varSectionValuesSpec = varSectionSpec.values;
+const varSectionAddable = isArraySpec(varSectionValuesSpec) && varSectionValuesSpec.addable === true;
+const varSectionRemovable = isArraySpec(varSectionValuesSpec) && varSectionValuesSpec.removable === true;
+
+function defaultVarValue(): number {
+    if (!isArraySpec(varSectionValuesSpec)) return 0;
+    const value = varSectionValuesSpec.defaultElement?.();
+    return typeof value === "number" ? value : 0;
+}
+
 function applyVarSectionUpdate(
     doc: MapCanonicalDocument,
     section: VarSection,
@@ -55,24 +71,30 @@ function applyVarSectionUpdate(
 }
 
 export function buildMapAddEntryBytes(parseResult: ParseResult, arrayPath: readonly string[]): Uint8Array | undefined {
+    if (!isMapAddableArray(arrayPath)) return undefined;
     const doc = readDocument(parseResult);
-    if (!doc || arrayPath.length !== 1) return undefined;
+    if (!doc) return undefined;
 
-    const section = VAR_SECTIONS.find((entry) => entry.arrayName === arrayPath[0]);
+    const section = findVarSectionByArrayName(arrayPath[0]);
     if (!section) return undefined;
 
-    const nextValues = [...doc[section.arrayKey], 0];
+    const nextValues = [...doc[section.arrayKey], defaultVarValue()];
     return serializeMapCanonicalDocument(applyVarSectionUpdate(doc, section, nextValues), parseResult.opaqueRanges);
 }
 
+function findVarSectionByArrayName(name: string | undefined): VarSection | undefined {
+    return VAR_SECTIONS.find((entry) => entry.arrayName === name);
+}
+
 export function isMapAddableArray(arrayPath: readonly string[]): boolean {
-    return arrayPath.length === 1 && VAR_SECTIONS.some((entry) => entry.arrayName === arrayPath[0]);
+    if (!varSectionAddable || arrayPath.length !== 1) return false;
+    return findVarSectionByArrayName(arrayPath[0]) !== undefined;
 }
 
 export function isMapRemovableEntry(entryPath: readonly string[]): boolean {
-    if (entryPath.length !== 2) return false;
+    if (!varSectionRemovable || entryPath.length !== 2) return false;
     const [arrayName, entryName] = entryPath;
-    const section = VAR_SECTIONS.find((entry) => entry.arrayName === arrayName);
+    const section = findVarSectionByArrayName(arrayName);
     if (!section || entryName === undefined) return false;
     return parseEntryIndex(entryName, section.entryPrefix) !== undefined;
 }
@@ -87,15 +109,12 @@ export function buildMapRemoveEntryBytes(
     parseResult: ParseResult,
     entryPath: readonly string[],
 ): Uint8Array | undefined {
+    if (!isMapRemovableEntry(entryPath)) return undefined;
     const doc = readDocument(parseResult);
-    if (!doc || entryPath.length !== 2) return undefined;
+    if (!doc) return undefined;
 
-    const [arrayName, entryName] = entryPath;
-    const section = VAR_SECTIONS.find((entry) => entry.arrayName === arrayName);
-    if (!section || entryName === undefined) return undefined;
-
-    const index = parseEntryIndex(entryName, section.entryPrefix);
-    if (index === undefined) return undefined;
+    const section = findVarSectionByArrayName(entryPath[0])!;
+    const index = parseEntryIndex(entryPath[1]!, section.entryPrefix)!;
     const current = doc[section.arrayKey];
     if (index >= current.length) return undefined;
 

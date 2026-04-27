@@ -29,3 +29,27 @@ describe("FieldSpec", () => {
         expect(Object.keys(spec)).toEqual(["a", "b"]);
     });
 });
+
+describe("ArrayFieldSpec capabilities", () => {
+    it("arraySpec accepts and stores addable/removable/defaultElement metadata", async () => {
+        const { arraySpec } = await import("../src/spec/types");
+        const spec = arraySpec({
+            element: { codec: i32 },
+            count: { fromField: "n" },
+            addable: true,
+            removable: true,
+            defaultElement: () => 0,
+        });
+        expect(spec.addable).toBe(true);
+        expect(spec.removable).toBe(true);
+        expect(spec.defaultElement?.()).toBe(0);
+    });
+
+    it("defaults addable/removable to undefined when omitted", async () => {
+        const { arraySpec } = await import("../src/spec/types");
+        const spec = arraySpec({ element: { codec: u32 }, count: 8 });
+        expect(spec.addable).toBeUndefined();
+        expect(spec.removable).toBeUndefined();
+        expect(spec.defaultElement).toBeUndefined();
+    });
+});

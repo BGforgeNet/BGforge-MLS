@@ -58,6 +58,17 @@ export interface ArrayFieldSpec {
     readonly kind: "array";
     readonly element: ScalarFieldSpec;
     readonly count: number | { readonly fromField: string } | { readonly fromCtx: (ctx: never) => number };
+    /**
+     * Capability flags consumed by the binary editor's add/remove pathway.
+     * The spec is the source of truth for whether an array accepts user
+     * insertion/deletion; format adapters look this up rather than maintain
+     * a parallel capability table. `defaultElement` produces the value to
+     * insert (typed-binary primitive types are numeric; richer formats can
+     * supply structured defaults in the same slot).
+     */
+    readonly addable?: boolean;
+    readonly removable?: boolean;
+    readonly defaultElement?: () => unknown;
 }
 
 export type FieldSpec = ScalarFieldSpec | ArrayFieldSpec;
@@ -80,6 +91,9 @@ export type StructSpec<T> = { readonly [K in keyof T]: FieldSpec };
 export function arraySpec<Ctx = never>(args: {
     element: ScalarFieldSpec;
     count: number | { fromField: string } | { fromCtx: (ctx: Ctx) => number };
+    addable?: boolean;
+    removable?: boolean;
+    defaultElement?: () => unknown;
 }): ArrayFieldSpec {
     return {
         kind: "array",
@@ -87,6 +101,9 @@ export function arraySpec<Ctx = never>(args: {
         // Re-narrow the public never-seed parameter for storage; the variance
         // would otherwise reject ctx being typed wider than `never` here.
         count: args.count as ArrayFieldSpec["count"],
+        ...(args.addable !== undefined ? { addable: args.addable } : {}),
+        ...(args.removable !== undefined ? { removable: args.removable } : {}),
+        ...(args.defaultElement !== undefined ? { defaultElement: args.defaultElement } : {}),
     };
 }
 

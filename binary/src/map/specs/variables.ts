@@ -21,6 +21,9 @@ export const varSectionSpec = {
     values: arraySpec<VarSectionCtx>({
         element: { codec: i32 },
         count: { fromCtx: (ctx: VarSectionCtx) => ctx.count },
+        addable: true,
+        removable: true,
+        defaultElement: () => 0,
     }),
 } satisfies Record<string, FieldSpec>;
 
