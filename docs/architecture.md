@@ -333,7 +333,7 @@ Source (.tssl/.tbaf/.td)
 
 The four internal packages (`common`, `tssl`, `tbaf`, `td`) stay private. The
 publishable library lives at the `transpilers/` root as `@bgforge/transpile`
-and bundles all four into a single ESM artifact via `tsdown`. Internal consumers
+and bundles all four into a single ESM artifact via `tsup`. Internal consumers
 (LSP server, TS plugins) keep importing the per-language packages directly;
 external consumers use the bundled library. `esbuild-wasm` is the only runtime
 dependency — it cannot be inlined because it detects bundling at load time.

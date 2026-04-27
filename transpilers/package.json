@@ -42,7 +42,7 @@
         "access": "public"
     },
     "scripts": {
-        "build": "tsdown && chmod +x out/cli.js"
+        "build": "tsup && chmod +x out/cli.js"
     },
     "dependencies": {
         "cac": "^7.0.0",
@@ -50,7 +50,7 @@
         "esbuild-wasm": "^0.28.0"
     },
     "devDependencies": {
-        "tsdown": "^0.21.10"
+        "tsup": "^8.3.0"
     },
     "engines": {
         "node": ">=20"
