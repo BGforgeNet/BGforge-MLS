@@ -465,6 +465,7 @@ input[type="number"]:hover::-webkit-outer-spin-button {
 /* -- Add/remove entity affordances ----------------------------------------- */
 
 .entity-add-row {
+    grid-column: 1 / -1;
     padding: 2px 0 2px 18px;
 }
 

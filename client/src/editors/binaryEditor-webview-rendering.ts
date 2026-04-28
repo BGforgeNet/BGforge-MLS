@@ -38,15 +38,17 @@ function createGroupElement(node: BinaryEditorNode): HTMLElement {
     contentEl.className = "group-content";
     contentEl.dataset.parentNodeId = node.id;
 
-    if (node.addable && node.arrayPath) {
-        contentEl.append(createAddEntryRow(node.arrayPath));
-    }
+    // The add-entry row is owned by renderChildren — it has to re-append after
+    // every lazy-load round-trip (which calls replaceChildren() on contentEl)
+    // and the source-of-truth `addable` flag may change across re-renders
+    // (undo/redo). Adding the row here would only put it on screen for the
+    // microseconds before the first getChildren resolves.
 
     groupEl.append(headerEl, contentEl);
     return groupEl;
 }
 
-function createAddEntryRow(arrayPath: readonly string[]): HTMLElement {
+export function createAddEntryRow(arrayPath: readonly string[]): HTMLElement {
     const rowEl = document.createElement("div");
     rowEl.className = "entity-add-row";
 
@@ -108,6 +110,14 @@ function createFieldElement(node: BinaryEditorNode): HTMLElement {
     typeEl.textContent = node.valueType ?? "";
     metaEl.append(typeEl);
 
+    // Append the remove button into .field-meta (col 3, row 1) so it sits
+    // inline at the row's right edge. Appending it at the field level instead
+    // would leave it unplaced in the 3-column subgrid and auto-flow drops it
+    // to row 2 col 1 — visually below the row, not on it.
+    if (node.removable && node.entryPath) {
+        metaEl.append(createRemoveEntryButton(node.entryPath));
+    }
+
     fieldEl.append(metaEl);
 
     const errorEl = document.createElement("span");
@@ -116,10 +126,6 @@ function createFieldElement(node: BinaryEditorNode): HTMLElement {
         errorEl.dataset.errorFor = node.fieldId;
     }
     fieldEl.append(errorEl);
-
-    if (node.removable && node.entryPath) {
-        fieldEl.append(createRemoveEntryButton(node.entryPath));
-    }
 
     return fieldEl;
 }

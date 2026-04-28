@@ -2,7 +2,7 @@ import { formatEditableNumberValue } from "./binaryEditor-formatting";
 import { getLoadableGroupIds, shouldRecursivelyLoadTree } from "./binaryEditor-lazyActions";
 import type { BinaryEditorNode } from "./binaryEditor-messages";
 import { setupTreeEventListeners, setupSidebarButtons } from "./binaryEditor-webview-events";
-import { createNodeElement, renderMessages } from "./binaryEditor-webview-rendering";
+import { createAddEntryRow, createNodeElement, renderMessages } from "./binaryEditor-webview-rendering";
 import { setupSelection, reapplyVisualSelection } from "./binaryEditor-webview-selection";
 import {
     filterTree,
@@ -261,6 +261,15 @@ import { createWebviewState, registerNode, resetState } from "./binaryEditor-web
             fragment.append(createNodeElement(child));
         }
         contentEl.append(fragment);
+
+        // The add-entry row is re-appended on every children-load because
+        // replaceChildren above wipes it. Source of truth is the group's
+        // current `addable` flag, which can flip across re-renders (undo/redo).
+        const groupNode = state.nodeById.get(nodeId);
+        if (groupNode?.addable && groupNode.arrayPath) {
+            contentEl.append(createAddEntryRow(groupNode.arrayPath));
+        }
+
         state.childrenLoaded.add(nodeId);
         state.loadingChildren.delete(nodeId);
         reapplyVisualSelection(treeEl, state.selectedNodeId);
