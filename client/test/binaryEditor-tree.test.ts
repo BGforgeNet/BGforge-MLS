@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import * as fs from "fs";
 import * as path from "path";
-import { type ParseResult, mapParser, proParser } from "@bgforge/binary";
+import { type ParseResult, formatAdapterRegistry, mapParser, proParser } from "@bgforge/binary";
 import { buildBinaryEditorTreeState } from "../src/editors/binaryEditor-tree";
 
 function makeProResult(): ParseResult {
@@ -303,5 +303,37 @@ describe("buildBinaryEditorTreeState", () => {
         expect(objectData).toBeDefined();
         const objectDataFields = tree.getChildren(objectData!.id);
         expect(objectDataFields.find((node) => node.name === "Data Flags")?.editable).toBe(true);
+    });
+
+    it("preserves root-level node ids and removable child shape across a Global Variables remove", () => {
+        // Pins the invariants the host's entity-delta path relies on: building
+        // a fresh tree state from a post-remove reparse must produce the same
+        // root structure (by id) as the pre-remove tree, and the surviving
+        // entries must keep their `removable` flag and `entryPath`. If either
+        // fails, the editor's incremental-update path drops back to a full
+        // re-init and the inline buttons appear to "do nothing".
+        const oldResult = loadMapResult("arcaves.map");
+        const oldTree = buildBinaryEditorTreeState(oldResult);
+        const oldRoot = oldTree.getInitMessagePayload().rootChildren;
+        const oldGlobals = oldRoot.find((node) => node.name === "Global Variables")!;
+        const oldGlobalEntries = oldTree.getChildren(oldGlobals.id);
+
+        const adapter = formatAdapterRegistry.get(oldResult.format)!;
+        const nextBytes = adapter.buildRemoveEntryBytes!(oldResult, ["Global Variables", "Global Var 0"]);
+        expect(nextBytes).toBeDefined();
+        const newResult = mapParser.parse(nextBytes!);
+        const newTree = buildBinaryEditorTreeState(newResult);
+        const newRoot = newTree.getInitMessagePayload().rootChildren;
+        const newGlobals = newRoot.find((node) => node.name === "Global Variables")!;
+        const newGlobalEntries = newTree.getChildren(newGlobals.id);
+
+        expect(oldRoot.length).toBe(newRoot.length);
+        for (let i = 0; i < oldRoot.length; i++) {
+            expect(oldRoot[i]!.id).toBe(newRoot[i]!.id);
+        }
+
+        expect(oldGlobalEntries.length).toBe(newGlobalEntries.length + 1);
+        expect(newGlobalEntries[0]!.entryPath).toEqual(["Global Variables", "Global Var 0"]);
+        expect(newGlobalEntries[0]!.removable).toBe(true);
     });
 });

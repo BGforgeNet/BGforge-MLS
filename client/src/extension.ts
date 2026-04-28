@@ -21,7 +21,7 @@ import {
 import { registerBinaryEditor } from "./editors/binaryEditor";
 import { registerDialogTree } from "./dialog-tree/dialogTree";
 import { registerDDialogTree } from "./dialog-tree/dialogTree-d";
-import { conlog, initOutputChannel } from "./logging";
+import { conlog, initOutputChannel, setDebugLogging } from "./logging";
 
 // Initialized in activate(), undefined until then
 let client: LanguageClient | undefined;
@@ -41,6 +41,17 @@ function getWorkspaceSymbolScopeLanguageId(): WorkspaceSymbolScopedLanguage | un
 
 export async function activate(context: ExtensionContext) {
     const outputChannel = initOutputChannel(context);
+    // The server reads `bgforge.debug` via the LSP configuration push; the
+    // client tracks the same flag locally so client-side `conlog(..., "debug")`
+    // can stay quiet by default and light up on demand for diagnostics.
+    setDebugLogging(vscode.workspace.getConfiguration("bgforge").get<boolean>("debug", false));
+    context.subscriptions.push(
+        vscode.workspace.onDidChangeConfiguration((event) => {
+            if (event.affectsConfiguration("bgforge.debug")) {
+                setDebugLogging(vscode.workspace.getConfiguration("bgforge").get<boolean>("debug", false));
+            }
+        }),
+    );
     // The server is implemented in node
     const serverModule = context.asAbsolutePath(path.join("server", "out", "server.js"));
     // The debug options for the server

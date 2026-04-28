@@ -24,7 +24,7 @@ vi.mock("vscode", () => ({
 }));
 
 // Imported after the mock so the module sees the fake `vscode`.
-import { conlog, initOutputChannel } from "../src/logging";
+import { conlog, initOutputChannel, setDebugLogging } from "../src/logging";
 
 describe("logging", () => {
     beforeEach(() => {
@@ -92,6 +92,22 @@ describe("logging", () => {
         it("tags error messages with [client] [error]", () => {
             conlog("kaboom", "error");
             expect(appendLineMock).toHaveBeenCalledWith("[client] [error] kaboom");
+        });
+
+        it("drops debug messages when debug logging is off (default)", () => {
+            // Default state: setDebugLogging(true) hasn't been called.
+            conlog("noisy", "debug");
+            expect(appendLineMock).not.toHaveBeenCalled();
+        });
+
+        it("emits debug messages when debug logging is on", () => {
+            setDebugLogging(true);
+            try {
+                conlog("noisy", "debug");
+                expect(appendLineMock).toHaveBeenCalledWith("[client] [debug] noisy");
+            } finally {
+                setDebugLogging(false);
+            }
         });
     });
 });

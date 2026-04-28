@@ -32,6 +32,7 @@ import { saveBinaryDocumentArtifacts, writeBinaryJsonSnapshot } from "./binaryEd
 import { BinaryEditorRefreshGate } from "./binaryEditor-refreshGate";
 import { BinaryEditorLocalEditTracker } from "./binaryEditor-localEditTracker";
 import { surfaceWebviewRuntimeError } from "../webview-error";
+import { conlog } from "../logging";
 
 type EditableBinaryParser = BinaryParser & {
     serialize: NonNullable<BinaryParser["serialize"]>;
@@ -392,6 +393,7 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
         const oldTreeState = this.treeStates.get(panel);
         refreshGate.beginIncrementalEdit();
         const result = op();
+        conlog(`[entity] op result=${JSON.stringify(result)}, hadOldTreeState=${oldTreeState !== undefined}`, "debug");
         if (!result) {
             // Op didn't apply (unknown path or reparse failed). The
             // synchronous onDidChangeContent fire is the only thing that
@@ -402,10 +404,13 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
             return;
         }
         if (!oldTreeState) {
+            conlog(`[entity] no oldTreeState, falling back to sendInit`, "debug");
             this.sendInit(panel, document);
             return;
         }
-        if (!this.tryEmitEntityDelta(panel, document, oldTreeState)) {
+        const ok = this.tryEmitEntityDelta(panel, document, oldTreeState);
+        conlog(`[entity] tryEmitEntityDelta returned ${ok}`, "debug");
+        if (!ok) {
             this.sendInit(panel, document);
         }
     }
@@ -428,9 +433,15 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
         const oldRoot = oldTreeState.getInitMessagePayload().rootChildren;
         const newRoot = newTreeState.getInitMessagePayload().rootChildren;
 
-        if (oldRoot.length !== newRoot.length) return false;
+        if (oldRoot.length !== newRoot.length) {
+            conlog(`[entity] root length differs ${oldRoot.length}->${newRoot.length}`, "debug");
+            return false;
+        }
         for (let i = 0; i < oldRoot.length; i++) {
-            if (oldRoot[i]!.id !== newRoot[i]!.id) return false;
+            if (oldRoot[i]!.id !== newRoot[i]!.id) {
+                conlog(`[entity] root id differs at ${i}: ${oldRoot[i]!.id}!=${newRoot[i]!.id}`, "debug");
+                return false;
+            }
         }
 
         this.treeStates.set(panel, newTreeState);
@@ -444,6 +455,10 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
             const newChildren = newTreeState.getChildren(newNode.id);
 
             if (groupChildrenStructureChanged(oldChildren, newChildren)) {
+                conlog(
+                    `[entity] post children for ${newNode.name} (${newNode.id}): ${newChildren.length} entries`,
+                    "debug",
+                );
                 panel.webview.postMessage({
                     type: "children",
                     nodeId: newNode.id,
@@ -472,6 +487,10 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
                 if (oldChild.value === newChild.value && oldChild.rawValue === newChild.rawValue) {
                     continue;
                 }
+                conlog(
+                    `[entity] post updateField ${newChild.fieldId}: ${oldChild.value} -> ${newChild.value}`,
+                    "debug",
+                );
                 panel.webview.postMessage({
                     type: "updateField",
                     fieldId: newChild.fieldId,
