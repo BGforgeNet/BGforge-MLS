@@ -358,6 +358,7 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
             rootChildren: payload.rootChildren,
             warnings: payload.warnings,
             errors: payload.errors,
+            debug: vscode.workspace.getConfiguration("bgforge").get<boolean>("debug", false),
         };
         panel.webview.postMessage(msg);
     }

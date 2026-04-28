@@ -1,6 +1,11 @@
 /**
  * Typed message protocol for binary editor webview <-> extension host communication.
  * All messages are serialized via postMessage as JSON.
+ *
+ * The webview runs in a separate JS context with no direct access to
+ * `vscode.workspace`, so the extension host pushes the current
+ * `bgforge.debug` setting in every `init` message; the webview gates its
+ * own console diagnostics on that flag.
  */
 
 export interface BinaryEditorNode {
@@ -123,6 +128,12 @@ export interface InitMessage {
     readonly rootChildren: BinaryEditorNode[];
     readonly warnings?: string[];
     readonly errors?: string[];
+    /**
+     * Mirror of the extension's `bgforge.debug` setting. The webview gates
+     * its own console diagnostics on this — passed in `init` rather than
+     * read from the workspace because the webview has no `vscode` API.
+     */
+    readonly debug?: boolean;
 }
 
 interface ChildrenMessage {

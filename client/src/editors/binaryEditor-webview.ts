@@ -28,6 +28,15 @@ import { createWebviewState, registerNode, resetState } from "./binaryEditor-web
         rootChildren: BinaryEditorNode[];
         warnings?: string[];
         errors?: string[];
+        debug?: boolean;
+    }
+
+    // Mirrored from the extension's `bgforge.debug` setting via the init
+    // message — the webview has no `vscode.workspace` API of its own. Gate
+    // for `debugLog` so diagnostic console output stays quiet by default.
+    let debugEnabled = false;
+    function debugLog(message: string): void {
+        if (debugEnabled) console.log(message);
     }
 
     interface ChildrenMessage {
@@ -246,13 +255,16 @@ import { createWebviewState, registerNode, resetState } from "./binaryEditor-web
     }
 
     function renderChildren(nodeId: string, children: ChildrenMessage["children"]): void {
+        debugLog(`[webview] renderChildren nodeId=${nodeId}, children.length=${children.length}`);
         const contentEl = treeEl.querySelector<HTMLElement>(
             `.group-content[data-parent-node-id="${CSS.escape(nodeId)}"]`,
         );
         if (!contentEl) {
+            debugLog(`[webview] renderChildren: NO contentEl found for ${nodeId}`);
             state.loadingChildren.delete(nodeId);
             return;
         }
+        debugLog(`[webview] renderChildren: contentEl had ${contentEl.children.length} children before replace`);
 
         contentEl.replaceChildren();
         const fragment = document.createDocumentFragment();
@@ -288,6 +300,8 @@ import { createWebviewState, registerNode, resetState } from "./binaryEditor-web
                 ensureChildrenLoaded(child.id);
             }
         }
+
+        debugLog(`[webview] renderChildren done: contentEl now has ${contentEl.children.length} children`);
     }
 
     // -- Wiring ---------------------------------------------------------------
@@ -330,6 +344,7 @@ import { createWebviewState, registerNode, resetState } from "./binaryEditor-web
         const msg = event.data as ExtensionToWebview;
         switch (msg.type) {
             case "init":
+                debugEnabled = msg.debug === true;
                 renderRoot(msg);
                 break;
             case "children":
