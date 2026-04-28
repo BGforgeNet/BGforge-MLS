@@ -238,11 +238,13 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
                         });
                         break;
                     case "addEntry":
+                        conlog(`[entity] received addEntry arrayPath=${JSON.stringify(msg.arrayPath)}`, "debug");
                         this.applyEntityChange(webviewPanel, document, refreshGate, () =>
                             document.addEntity(msg.arrayPath),
                         );
                         break;
                     case "removeEntry":
+                        conlog(`[entity] received removeEntry entryPath=${JSON.stringify(msg.entryPath)}`, "debug");
                         this.applyEntityChange(webviewPanel, document, refreshGate, () =>
                             document.removeEntity(msg.entryPath),
                         );

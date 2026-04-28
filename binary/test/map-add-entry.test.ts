@@ -202,3 +202,31 @@ describe("mapFormatAdapter.buildMoveEntryBytes", () => {
         expect(result).toBeUndefined();
     });
 });
+
+describe("MAP entity ops with skipMapTiles", () => {
+    // The host opens .map files with skipMapTiles: true so the tile section
+    // becomes an opaque range. Var-section size changes shift every byte
+    // after the var section, so opaque ranges anchored after that section
+    // have to be re-anchored in the new layout. Without that adjustment the
+    // first remove silently misaligns the tile bytes by 4 (the parser's
+    // skip-tiles path doesn't notice), but the misalignment cascades into
+    // the script section on subsequent removes and applyByteRebuild's
+    // reparse finally errors.
+    it("survives repeated remove of Global Var 0 when tiles are opaque", () => {
+        const data = new Uint8Array(fs.readFileSync(MAP_FIXTURE));
+        let parseResult = mapParser.parse(data, { skipMapTiles: true });
+        const initialCount = (parseResult.document as GlobalsDoc).globalVariables.length;
+        expect(initialCount).toBeGreaterThanOrEqual(5);
+
+        for (let i = 0; i < 5; i++) {
+            const next = mapFormatAdapter.buildRemoveEntryBytes?.(parseResult, ["Global Variables", "Global Var 0"]);
+            expect(next, `iteration ${i} produced bytes`).toBeInstanceOf(Uint8Array);
+            const reparsed = mapParser.parse(next!, { skipMapTiles: true });
+            expect(reparsed.errors, `iteration ${i} reparse errors`).toBeUndefined();
+            const after = reparsed.document as GlobalsDoc;
+            expect(after.globalVariables.length).toBe(initialCount - i - 1);
+            expect(after.header.numGlobalVars).toBe(initialCount - i - 1);
+            parseResult = reparsed;
+        }
+    });
+});

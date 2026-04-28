@@ -37,11 +37,12 @@
  * not this module.
  */
 
-import type { ParseResult } from "../types";
+import type { ParseOpaqueRange, ParseResult } from "../types";
 import { isArraySpec } from "../spec/types";
 import { getMapCanonicalDocument, rebuildMapCanonicalDocument } from "./canonical-reader";
 import { serializeMapCanonicalDocument } from "./canonical-writer";
 import type { MapCanonicalDocument } from "./canonical-schemas";
+import { HEADER_SIZE } from "./schemas";
 import { varSectionSpec } from "./specs/variables";
 
 function readDocument(parseResult: ParseResult): MapCanonicalDocument | undefined {
@@ -109,7 +110,40 @@ export function buildMapAddEntryBytes(parseResult: ParseResult, arrayPath: reado
     if (!section) return undefined;
 
     const nextValues = [...doc[section.arrayKey], defaultVarValue()];
-    return serializeMapCanonicalDocument(applyVarSectionUpdate(doc, section, nextValues), parseResult.opaqueRanges);
+    return serializeMapCanonicalDocument(
+        applyVarSectionUpdate(doc, section, nextValues),
+        shiftOpaqueRangesAfterVarSection(parseResult.opaqueRanges, doc, section, +4),
+    );
+}
+
+/**
+ * The MAP writer applies opaque ranges at their stored offsets verbatim.
+ * Adding or removing a var entry shifts every byte after that var section,
+ * so any opaque range whose offset falls at-or-after the var-section
+ * boundary in the OLD layout has to be re-anchored in the new layout —
+ * otherwise the writer drops the opaque payload at the original (now-stale)
+ * offset and the resulting bytes are misaligned by `delta`. The misalignment
+ * is silent on the very first remove because skipMapTiles makes the corrupted
+ * bytes invisible to the parser, but it accumulates across operations until
+ * a downstream section (scripts/objects) trips a structural check and the
+ * reparse finally errors out.
+ *
+ * `delta` is the byte change in the var-section size:
+ *   add → +4, remove → -4, insert → +4, move → 0 (no shift needed; callers
+ *   that don't change length pass 0 or skip this helper entirely).
+ */
+function shiftOpaqueRangesAfterVarSection(
+    opaqueRanges: ParseOpaqueRange[] | undefined,
+    doc: MapCanonicalDocument,
+    section: VarSection,
+    delta: number,
+): ParseOpaqueRange[] | undefined {
+    if (!opaqueRanges || delta === 0) return opaqueRanges;
+    const cutoff =
+        section.arrayKey === "globalVariables"
+            ? HEADER_SIZE + doc.globalVariables.length * 4
+            : HEADER_SIZE + (doc.globalVariables.length + doc.localVariables.length) * 4;
+    return opaqueRanges.map((range) => (range.offset >= cutoff ? { ...range, offset: range.offset + delta } : range));
 }
 
 function findVarSectionByArrayName(name: string | undefined): VarSection | undefined {
@@ -195,8 +229,9 @@ function mutateVarSectionEntry(
     const nextValues = mutate(current, index);
     if (!nextValues) return undefined;
 
+    const delta = (nextValues.length - current.length) * 4;
     return serializeMapCanonicalDocument(
         applyVarSectionUpdate(doc, section, [...nextValues]),
-        parseResult.opaqueRanges,
+        shiftOpaqueRangesAfterVarSection(parseResult.opaqueRanges, doc, section, delta),
     );
 }
