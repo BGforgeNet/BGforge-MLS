@@ -21,7 +21,7 @@ import { BinaryDocument } from "./binaryEditor-document";
 import { BinaryEditorSelectionTracker, type BinaryEditorSelection } from "./binaryEditor-selectionTracker";
 import { type BinaryEditorTreeState, buildBinaryEditorTreeState } from "./binaryEditor-tree";
 import { validateFieldEdit } from "./binaryEditor-validation";
-import type { WebviewToExtension, ExtensionToWebview, InitMessage } from "./binaryEditor-messages";
+import type { BinaryEditorNode, WebviewToExtension, ExtensionToWebview, InitMessage } from "./binaryEditor-messages";
 import {
     resolveDisplayValue,
     resolveEnumLookup,
@@ -36,6 +36,35 @@ import { surfaceWebviewRuntimeError } from "../webview-error";
 type EditableBinaryParser = BinaryParser & {
     serialize: NonNullable<BinaryParser["serialize"]>;
 };
+
+/**
+ * Decide whether a group's children list needs to be replaced wholesale on
+ * the webview side. `updateField` only refreshes value/rawValue, so any
+ * change in display metadata (offset, size, type, name, kind) — e.g. local
+ * vars whose offsets shift after a global var is added — has to go through
+ * the children-replacement path.
+ */
+function groupChildrenStructureChanged(
+    oldChildren: readonly BinaryEditorNode[],
+    newChildren: readonly BinaryEditorNode[],
+): boolean {
+    if (oldChildren.length !== newChildren.length) return true;
+    for (let i = 0; i < oldChildren.length; i++) {
+        const o = oldChildren[i]!;
+        const n = newChildren[i]!;
+        if (
+            o.id !== n.id ||
+            o.kind !== n.kind ||
+            o.name !== n.name ||
+            o.offset !== n.offset ||
+            o.size !== n.size ||
+            o.valueType !== n.valueType
+        ) {
+            return true;
+        }
+    }
+    return false;
+}
 
 class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument> {
     public static readonly viewType = "bgforge.binaryEditor";
@@ -208,10 +237,14 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
                         });
                         break;
                     case "addEntry":
-                        document.addEntity(msg.arrayPath);
+                        this.applyEntityChange(webviewPanel, document, refreshGate, () =>
+                            document.addEntity(msg.arrayPath),
+                        );
                         break;
                     case "removeEntry":
-                        document.removeEntity(msg.entryPath);
+                        this.applyEntityChange(webviewPanel, document, refreshGate, () =>
+                            document.removeEntity(msg.entryPath),
+                        );
                         break;
                     case "selectionChanged":
                         this.selectionTracker.recordSelection(this.panelKey(webviewPanel), msg.selection);
@@ -337,6 +370,119 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
             children: treeState.getChildren(nodeId),
         };
         panel.webview.postMessage(msg);
+    }
+
+    /**
+     * Run an add/remove/insert/move operation and post a targeted delta to the
+     * webview instead of triggering a full re-init. The refresh gate is set
+     * before the document mutation so the synchronous `onDidChangeContent`
+     * fire from `applyByteRebuild` skips the wholesale rebuild — the delta
+     * messages here put the new state on screen without tearing down the DOM.
+     *
+     * Falls back to `sendInit` when the operation didn't apply, when there's
+     * no prior tree state to diff against, or when the top-level group set
+     * shifted (a var section appearing/disappearing as it crosses 0 entries).
+     */
+    private applyEntityChange(
+        panel: vscode.WebviewPanel,
+        document: BinaryDocument,
+        refreshGate: BinaryEditorRefreshGate,
+        op: () => unknown,
+    ): void {
+        const oldTreeState = this.treeStates.get(panel);
+        refreshGate.beginIncrementalEdit();
+        const result = op();
+        if (!result) {
+            // Op didn't apply (unknown path or reparse failed). The
+            // synchronous onDidChangeContent fire is the only thing that
+            // would have consumed the gate; if applyByteRebuild bailed out
+            // before firing, the gate stays armed and would suppress the next
+            // unrelated change. Clear it here.
+            refreshGate.cancelIncrementalEdit();
+            return;
+        }
+        if (!oldTreeState) {
+            this.sendInit(panel, document);
+            return;
+        }
+        if (!this.tryEmitEntityDelta(panel, document, oldTreeState)) {
+            this.sendInit(panel, document);
+        }
+    }
+
+    /**
+     * Compare the old and new tree state at root + one level deep and post
+     * `children` / `updateField` messages for what differs. One level is
+     * enough for the variable add/remove flow (Global/Local Variables groups
+     * are at the root; the only other affected node is the
+     * `Num Global Vars` / `Num Local Vars` field inside the Header group).
+     * Returns false when the top-level structure changed so the caller can
+     * fall back to a full re-init.
+     */
+    private tryEmitEntityDelta(
+        panel: vscode.WebviewPanel,
+        document: BinaryDocument,
+        oldTreeState: BinaryEditorTreeState,
+    ): boolean {
+        const newTreeState = buildBinaryEditorTreeState(document.parseResult);
+        const oldRoot = oldTreeState.getInitMessagePayload().rootChildren;
+        const newRoot = newTreeState.getInitMessagePayload().rootChildren;
+
+        if (oldRoot.length !== newRoot.length) return false;
+        for (let i = 0; i < oldRoot.length; i++) {
+            if (oldRoot[i]!.id !== newRoot[i]!.id) return false;
+        }
+
+        this.treeStates.set(panel, newTreeState);
+
+        for (let i = 0; i < newRoot.length; i++) {
+            const oldNode = oldRoot[i]!;
+            const newNode = newRoot[i]!;
+            if (oldNode.kind !== "group" || newNode.kind !== "group") continue;
+
+            const oldChildren = oldTreeState.getChildren(oldNode.id);
+            const newChildren = newTreeState.getChildren(newNode.id);
+
+            if (groupChildrenStructureChanged(oldChildren, newChildren)) {
+                panel.webview.postMessage({
+                    type: "children",
+                    nodeId: newNode.id,
+                    children: newChildren,
+                } satisfies ExtensionToWebview);
+                continue;
+            }
+
+            // Same structure and metadata at this group's children — only
+            // values may have changed. Post `updateField` for each leaf field
+            // whose value/rawValue differs. Nested groups (e.g. Header has no
+            // nested groups, but Tiles/Scripts/Objects do) are not recursed
+            // into — entity ops today only mutate variable arrays + their
+            // header-counter scalars, all reachable at this depth.
+            for (let j = 0; j < newChildren.length; j++) {
+                const oldChild = oldChildren[j]!;
+                const newChild = newChildren[j]!;
+                if (
+                    oldChild.kind !== "field" ||
+                    newChild.kind !== "field" ||
+                    !newChild.fieldId ||
+                    !newChild.fieldPath
+                ) {
+                    continue;
+                }
+                if (oldChild.value === newChild.value && oldChild.rawValue === newChild.rawValue) {
+                    continue;
+                }
+                panel.webview.postMessage({
+                    type: "updateField",
+                    fieldId: newChild.fieldId,
+                    fieldPath: newChild.fieldPath,
+                    displayValue: typeof newChild.value === "string" ? newChild.value : String(newChild.value ?? ""),
+                    rawValue: newChild.rawValue ?? 0,
+                } satisfies ExtensionToWebview);
+            }
+        }
+
+        return true;
     }
 
     private async handleEdit(

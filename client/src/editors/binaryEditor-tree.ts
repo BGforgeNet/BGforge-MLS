@@ -120,7 +120,6 @@ export function buildBinaryEditorTreeState(parseResult: ParseResult): BinaryEdit
     const displayRoot = buildDisplayRoot(parseResult);
     const nodes = new Map<string, TreeNodeRecord>();
     const rootChildren: string[] = [];
-    let nextId = 0;
 
     const adapter = formatAdapterRegistry.get(parseResult.format);
     // `locked` propagates from any ancestor `ParsedGroup.editingLocked` flag set
@@ -130,7 +129,14 @@ export function buildBinaryEditorTreeState(parseResult: ParseResult): BinaryEdit
     // edits are only safe when the surrounding record's byte layout is fully
     // determined.
     const visitEntry = (projected: ProjectedEntry, parentId: string, parentPath: string, locked: boolean): string => {
-        const id = `node-${nextId++}`;
+        // Node ids are derived from sourceSegments so they survive a reparse —
+        // a structural change (entity add/remove, undo/redo) produces a tree
+        // with the same id for any node whose path didn't change. The host
+        // can then post targeted `children` / `updateField` deltas keyed by
+        // these ids without needing the webview to rebuild the whole DOM.
+        // `g:` / `f:` prefixes prevent a theoretical collision between a group
+        // and a field at the same path.
+        const id = `${projected.kind === "group" ? "g" : "f"}:${JSON.stringify(projected.sourceSegments)}`;
         if (projected.kind === "group") {
             const entry = projected.entry;
             const groupPath = makeFieldPath(parentPath, entry.name);
