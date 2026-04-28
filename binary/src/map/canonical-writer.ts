@@ -309,6 +309,18 @@ function scriptSectionLength(scripts: z.infer<typeof mapScriptSectionSchema>[]):
     return length;
 }
 
+/**
+ * Caller contract: `opaqueRanges` offsets are written verbatim — the writer
+ * does not adjust them to match the new layout it computes from `document`.
+ * For round-trip and JSON-snapshot paths the document and opaqueRanges come
+ * from the same parse, so the offsets already match. For structural
+ * mutations that resize earlier sections (entity add/remove on the var
+ * arrays, hypothetical future object-record resizes), the caller MUST
+ * re-anchor any range whose offset falls in or after the resized region
+ * before calling, or the resulting bytes will be silently misaligned by
+ * the size delta. See `entity-ops.ts:shiftOpaqueRangesAfterVarSection`
+ * for the var-section-specific helper.
+ */
 export function serializeMapCanonicalDocument(
     document: MapCanonicalDocument,
     opaqueRanges?: ParseOpaqueRange[],

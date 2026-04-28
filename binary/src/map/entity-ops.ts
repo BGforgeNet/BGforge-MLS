@@ -35,6 +35,22 @@
  * Field-level edits on already-decoded objects/scripts are width-preserving
  * and therefore safe; they go through the structural-edit pipeline directly,
  * not this module.
+ *
+ * Future hazard for new structural mutations (object type-tag transitions,
+ * future buildStructuralTransitionBytes for MAP, anything else that changes
+ * mid-file byte layout): `serializeMapCanonicalDocument` writes the new
+ * sections at recomputed offsets but applies opaque ranges at their stored
+ * offsets verbatim. Any range whose offset lies in or after the resized
+ * region must be re-anchored in the new layout before serialization, or the
+ * resulting bytes will be silently misaligned. The local helper
+ * `shiftOpaqueRangesAfterVarSection` is specialised to the var-section
+ * boundary; it is not a general "shift past offset X" — a structural
+ * transition that resizes (e.g.) a single object record needs a new helper
+ * that shifts opaque ranges past the resize point, or a writer mode that
+ * re-anchors trailing ranges from semantic anchors instead of recorded
+ * offsets. The misalignment is silent on the first operation when the
+ * downstream section is opaque (skipMapTiles hides tile corruption), then
+ * cascades into the next decoded section.
  */
 
 import type { ParseOpaqueRange, ParseResult } from "../types";
