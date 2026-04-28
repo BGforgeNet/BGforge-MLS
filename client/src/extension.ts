@@ -40,7 +40,7 @@ function getWorkspaceSymbolScopeLanguageId(): WorkspaceSymbolScopedLanguage | un
 }
 
 export async function activate(context: ExtensionContext) {
-    initOutputChannel(context);
+    const outputChannel = initOutputChannel(context);
     // The server is implemented in node
     const serverModule = context.asAbsolutePath(path.join("server", "out", "server.js"));
     // The debug options for the server
@@ -63,8 +63,14 @@ export async function activate(context: ExtensionContext) {
         },
     };
 
-    // Options to control the language client
+    // Options to control the language client.
+    //
+    // `outputChannel` is set to the same channel `conlog` writes to. Without
+    // it, vscode-languageclient creates its own "BGforge MLS"-named channel
+    // for LSP traffic, which appears as a duplicate entry in the Output
+    // dropdown alongside the extension's manual channel.
     const clientOptions: LanguageClientOptions = {
+        outputChannel,
         documentSelector: [
             { scheme: "file", language: "infinity-2da" },
 

@@ -46,7 +46,7 @@ describe("logging", () => {
                 // Once initOutputChannel runs in a later test, this assertion
                 // would no longer be valid — that's why this test runs first.
                 if (createOutputChannelMock.mock.calls.length === 0) {
-                    expect(consoleSpy).toHaveBeenCalledWith("pre-init fallback");
+                    expect(consoleSpy).toHaveBeenCalledWith("[client] pre-init fallback");
                 }
             } finally {
                 consoleSpy.mockRestore();
@@ -74,24 +74,24 @@ describe("logging", () => {
             appendLineMock.mockReset();
         });
 
-        it("emits info messages to the channel without a level prefix", () => {
+        it("tags info messages with [client] only", () => {
             conlog("hello", "info");
-            expect(appendLineMock).toHaveBeenCalledWith("hello");
+            expect(appendLineMock).toHaveBeenCalledWith("[client] hello");
         });
 
         it("defaults the level to info", () => {
             conlog("default level");
-            expect(appendLineMock).toHaveBeenCalledWith("default level");
+            expect(appendLineMock).toHaveBeenCalledWith("[client] default level");
         });
 
-        it("prefixes warn messages with [warn]", () => {
+        it("tags warn messages with [client] [warn]", () => {
             conlog("careful", "warn");
-            expect(appendLineMock).toHaveBeenCalledWith("[warn] careful");
+            expect(appendLineMock).toHaveBeenCalledWith("[client] [warn] careful");
         });
 
-        it("prefixes error messages with [error]", () => {
+        it("tags error messages with [client] [error]", () => {
             conlog("kaboom", "error");
-            expect(appendLineMock).toHaveBeenCalledWith("[error] kaboom");
+            expect(appendLineMock).toHaveBeenCalledWith("[client] [error] kaboom");
         });
     });
 });

@@ -13,12 +13,23 @@ export function initOutputChannel(context: ExtensionContext): vscode.OutputChann
     return channel;
 }
 
-/** Log a message to the BGforge MLS output channel (falls back to console before activate). */
+/**
+ * Log a message to the BGforge MLS output channel (falls back to console
+ * before activate).
+ *
+ * The `[client]` tag distinguishes extension-host writes from LSP-surfaced
+ * server messages on the shared output channel. The vscode-languageclient
+ * formats server-originated lines as `[Info|Warn|Error - HH:MM:SS] body`,
+ * so any line starting with `[client]` is from the extension and any line
+ * starting with a level-and-timestamp prefix is from the server (or its
+ * client-side LSP wrapper).
+ */
 export function conlog(message: string, level: LogLevel = "info"): void {
-    const prefix = level === "info" ? "" : `[${level}] `;
+    const levelTag = level === "info" ? "" : ` [${level}]`;
+    const formatted = `[client]${levelTag} ${message}`;
     if (outputChannel) {
-        outputChannel.appendLine(`${prefix}${message}`);
+        outputChannel.appendLine(formatted);
         return;
     }
-    console.log(`${prefix}${message}`);
+    console.log(formatted);
 }
