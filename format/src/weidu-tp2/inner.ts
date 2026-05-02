@@ -15,6 +15,7 @@ import {
     isCopyAction,
     normalizeWhitespace,
     handleComment,
+    pushBlankIfGap,
 } from "./utils";
 import { SyntaxType } from "../../../server/src/weidu-tp2/tree-sitter.d";
 
@@ -53,7 +54,7 @@ export function formatInnerAction(
         }
 
         if (isComment(child)) {
-            handleComment(lines, child, bodyIndent, lastEndRow);
+            lastEndRow = handleComment(lines, child, bodyIndent, lastEndRow);
         } else if (
             isAction(child.type) ||
             isCopyAction(child.type) ||
@@ -61,6 +62,7 @@ export function formatInnerAction(
             isFunctionCall(child.type) ||
             child.type === SyntaxType.InlinedFile
         ) {
+            pushBlankIfGap(lines, child, lastEndRow);
             lines.push(formatNode(child, ctx, depth + 1));
             lastEndRow = child.endPosition.row;
         }
@@ -149,8 +151,9 @@ export function formatInnerPatch(
 
         // Body content (patches and comments)
         if (isComment(child)) {
-            handleComment(lines, child, bodyIndent, lastEndRow);
+            lastEndRow = handleComment(lines, child, bodyIndent, lastEndRow);
         } else if (isInnerPatchBodyContent(child.type)) {
+            pushBlankIfGap(lines, child, lastEndRow);
             lines.push(formatNode(child, ctx, depth + 1));
             lastEndRow = child.endPosition.row;
         }
@@ -218,8 +221,9 @@ export function formatReplaceBcsBlock(
         // Body content (after ON_MISMATCH)
         if (inOnMismatch) {
             if (isComment(child)) {
-                handleComment(lines, child, bodyIndent, lastEndRow);
+                lastEndRow = handleComment(lines, child, bodyIndent, lastEndRow);
             } else if (isPatch(child.type) || isControlFlow(child.type) || isFunctionCall(child.type)) {
+                pushBlankIfGap(lines, child, lastEndRow);
                 lines.push(formatNode(child, ctx, depth + 1));
                 lastEndRow = child.endPosition.row;
             }

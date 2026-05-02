@@ -126,6 +126,7 @@ BEGIN
         target = TARGET_FX_preset
         timing = TIMING_duration
         target2 = 123
+
         LPF ADD_SPELL_HEADER
             INT_VAR
                 target = target2
@@ -138,6 +139,7 @@ BEGIN
                 duration
                 savingthrow
         END
+
         LPF ADD_SPELL_EFFECT
             INT_VAR
                 opcode     = OPCODE_colour_glow_pulse
@@ -203,6 +205,7 @@ BEGIN
     COPY_EXISTING ~%spell%.spl~ ~override~
         target = TARGET_FX_preset
         timing = TIMING_duration
+
         LPF ADD_SPELL_HEADER
             INT_VAR
                 target = TARGET_HEAD_creature

@@ -24,6 +24,7 @@ import {
     handleComment,
     tryAppendInlineComment,
     outputAlignedAssignments,
+    pushBlankIfGap,
 } from "./utils";
 import { SyntaxType } from "../../../server/src/weidu-tp2/tree-sitter.d";
 
@@ -102,8 +103,9 @@ export function formatForLoop(
         if (!inBody) continue;
 
         if (isComment(child)) {
-            handleComment(lines, child, bodyIndent, lastEndRow);
+            lastEndRow = handleComment(lines, child, bodyIndent, lastEndRow);
         } else if (isBodyContent(child.type)) {
+            pushBlankIfGap(lines, child, lastEndRow);
             lines.push(formatNode(child, ctx, depth + 1));
             lastEndRow = child.endPosition.row;
         }
@@ -197,9 +199,10 @@ export function formatForEach(
                 }
             }
             beginRow = -1;
-            handleComment(bodyLines, child, bodyIndent, lastEndRow);
+            lastEndRow = handleComment(bodyLines, child, bodyIndent, lastEndRow);
         } else if (isBodyContent(child.type)) {
             beginRow = -1;
+            pushBlankIfGap(bodyLines, child, lastEndRow);
             bodyLines.push(formatNode(child, ctx, depth + 1));
             lastEndRow = child.endPosition.row;
         }

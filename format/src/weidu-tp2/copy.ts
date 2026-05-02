@@ -25,6 +25,7 @@ import {
     normalizeComment,
     normalizeWhitespace,
     handleComment,
+    pushBlankIfGap,
 } from "./utils";
 import { SyntaxType } from "../../../server/src/weidu-tp2/tree-sitter.d";
 
@@ -305,7 +306,7 @@ function formatCopyPatches(
 
     for (const patch of patches) {
         if (isComment(patch)) {
-            handleComment(lines, patch, patchIndent, lastPatchEndRow);
+            lastPatchEndRow = handleComment(lines, patch, patchIndent, lastPatchEndRow);
             continue;
         }
 
@@ -318,6 +319,7 @@ function formatCopyPatches(
         }
 
         if (patch.type === SyntaxType.PatchBlock) {
+            pushBlankIfGap(lines, patch, lastPatchEndRow);
             lines.push(patchIndent + KW_BEGIN);
             let lastBlockPatchEndRow = -1;
             for (const patchChild of patch.children) {
@@ -329,8 +331,9 @@ function formatCopyPatches(
                     continue;
                 }
                 if (isComment(patchChild)) {
-                    handleComment(lines, patchChild, nestedIndent, lastBlockPatchEndRow);
+                    lastBlockPatchEndRow = handleComment(lines, patchChild, nestedIndent, lastBlockPatchEndRow);
                 } else if (isPatchContent(patchChild.type)) {
+                    pushBlankIfGap(lines, patchChild, lastBlockPatchEndRow);
                     lines.push(formatNode(patchChild, ctx, depth + 2));
                     lastBlockPatchEndRow = patchChild.endPosition.row;
                 }
@@ -338,6 +341,7 @@ function formatCopyPatches(
             lines.push(patchIndent + KW_END);
             lastPatchEndRow = patch.endPosition.row;
         } else {
+            pushBlankIfGap(lines, patch, lastPatchEndRow);
             lines.push(formatNode(patch, ctx, depth + 1));
             lastPatchEndRow = patch.endPosition.row;
         }

@@ -58,6 +58,7 @@ DEFINE_PATCH_FUNCTION INFER_ARMOR_ENCHANTMENT
 BEGIN
     skip = 0
     enchantment = 0
+
     READ_SHORT ITM_type itype
     PATCH_IF itype != ITEM_TYPE_armor BEGIN
         PATCH_WARN ~INFER_ARMOR_ENCHANTMENT: %SOURCE_FILE% is not an armor, skipping!~
@@ -96,6 +97,7 @@ BEGIN
             RET
                 iac = base_ac
         END
+
         DEFINE_ASSOCIATIVE_ARRAY armor_types BEGIN
             leat01 => ~leather~
             leat04 => ~studded_leather~
@@ -104,6 +106,7 @@ BEGIN
             plat01 => ~plate~
             plat04 => ~full_plate~
         END
+
         SPRINT old_source ~%SOURCE_FILE%~
         PHP_EACH armor_types AS item => type  BEGIN
             INNER_PATCH_FILE ~%item%.itm~ BEGIN
@@ -115,11 +118,13 @@ BEGIN
                 SET $ac_desc(~%udesc%~) = bac
             END
         END
+
         READ_SHORT UNIDENTIFIED_DESC udesc
         PATCH_IF VARIABLE_IS_SET $ac_desc(~%udesc%~) BEGIN
             enchantment = $ac_desc(~%udesc%~) - iac
         END
     END
+
     PATCH_IF enchantment == "-1" BEGIN
         PATCH_WARN ~INFER_ARMOR_ENCHANTMENT: couldn't determine enchantment for %SOURCE_FILE%!~
     END

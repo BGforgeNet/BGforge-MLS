@@ -12,9 +12,11 @@ ALWAYS
         OUTER_SPRINT lang_dir ~%MOD_FOLDER%/tra/%LANGUAGE%~
     END
     LOAD_TRA ~%lang_dir%/text.tra~
+
     ACTION_IF GAME_IS ~bgee bg2ee eet iwdee pstee~ BEGIN
         LOAD_TRA ~%lang_dir%/text_ee.tra~
     END
+
     OUTER_SPRINT BGFORGE_LIB_DIR "%MOD_FOLDER%/lib/bgforge"
     INCLUDE ~%BGFORGE_LIB_DIR%/main.tpa~
 END

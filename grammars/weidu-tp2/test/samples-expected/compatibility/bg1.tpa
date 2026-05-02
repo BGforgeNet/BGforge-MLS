@@ -25,6 +25,7 @@ ACTION_IF GAME_INCLUDES ~bg1~ BEGIN
     BUT_ONLY
     OUTER_SET $item_source_compat(~misc8j~ ~nadari.cre~) = 1
     OUTER_SET $item_source_compat(~misc8j~ ~nadari.dlg~) = 1
+
     <<<<<<<< .../ua-inlined/nadari.d
 REPLACE_ACTION_TEXT ~nadari~
   ~GiveItem("boot02"~

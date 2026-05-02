@@ -5,15 +5,19 @@ OUTER_SPRINT comp_dir ~%MOD_FOLDER%/wild_spells~
 // Rhialto appearance
 ACTION_IF pansy = 0 BEGIN  // Ironman
     OUTER_SET rhia_xp = 19000  // Written later to wm_rhia1.cre
+
     EXTEND_TOP ~baldur.bcs~ ~%comp_dir%/baf/baldur.baf~  //  Have to use EXTEND_TOP because of PartyRested/SmallWait in baldur.bcs
     EXTEND_TOP ~baldur25.bcs~ ~%comp_dir%/baf/baldur.baf~
 END ELSE BEGIN  // Stationary Rhialto: create outside Candlekeep's wall and give scroll with a hint to Gorion's body
+
     OUTER_SET rhia_xp = 2000  // Written later to wm_rhia1.cre
+
     COPY ~%comp_dir%/itm/wm_scrl.itm~ ~override/wm_scrl.itm~
         SAY NAME1 @69998
         SAY NAME2 @69998
         SAY UNIDENTIFIED_DESC @69999
         SAY DESC @69999
+
     ACTION_IF GAME_IS ~bgee~ BEGIN
         OUTER_SPRINT gorion_cre ~gorion~
         OUTER_SPRINT out_candlekeep_area ~ar2626~
@@ -27,6 +31,7 @@ END ELSE BEGIN  // Stationary Rhialto: create outside Candlekeep's wall and give
         OUTER_SPRINT gorion_cre ~_gorion~
         OUTER_SPRINT out_candlekeep_area ~_ar2626~
     END
+
     EXTEND_BOTTOM ~%out_candlekeep_area%.bcs~ ~%comp_dir%/baf/candlekeep.baf~
     COPY_EXISTING ~%gorion_cre%.cre~ ~override~
         ADD_CRE_ITEM ~wm_scrl~ #0 #0 #0 ~IDENTIFIED~ ~INV16~
@@ -52,36 +57,45 @@ COPY ~%comp_dir%/cre/wm_rhia1.cre~ ~override/wm_rhia1.cre~  // Rhialto the Marve
     SAY NAME1 @50101
     SAY NAME2 @50102
     WRITE_LONG CRE_XP_value rhia_xp  // See pansy switch earlier
+
     ADD_MEMORIZED_SPELL ~spwi105~ #0 ~wizard~
     ADD_MEMORIZED_SPELL ~spwi112~ #0 ~wizard~
     ADD_MEMORIZED_SPELL ~spwi119~ #0 ~wizard~
+
     ADD_MEMORIZED_SPELL ~spwi211~ #1 ~wizard~
     ADD_MEMORIZED_SPELL ~spwi211~ #1 ~wizard~
     ADD_MEMORIZED_SPELL ~spwi219~ #1 ~wizard~
+
     ADD_MEMORIZED_SPELL ~spwi303~ #2 ~wizard~
     ADD_MEMORIZED_SPELL ~spwi304~ #2 ~wizard~
     ADD_MEMORIZED_SPELL ~spwi312~ #2 ~wizard~
     ADD_MEMORIZED_SPELL ~wm_word~ #2 ~wizard~
+
     ADD_MEMORIZED_SPELL ~spwi415~ #3 ~wizard~
     ADD_MEMORIZED_SPELL ~spwi418~ #3 ~wizard~
     ADD_MEMORIZED_SPELL ~spwi423~ #3 ~wizard~
     ADD_MEMORIZED_SPELL ~wm_glyph~ #3 ~wizard~
+
     ADD_MEMORIZED_SPELL ~spwi501~ #4 ~wizard~
     ADD_MEMORIZED_SPELL ~spwi505~ #4 ~wizard~
     ADD_MEMORIZED_SPELL ~spwi506~ #4 ~wizard~
     ADD_MEMORIZED_SPELL ~spwi523~ #4 ~wizard~
     ADD_MEMORIZED_SPELL ~wm_vortx~ #4 ~wizard~
+
     ADD_MEMORIZED_SPELL ~spwi604~ #5 ~wizard~
     ADD_MEMORIZED_SPELL ~spwi609~ #5 ~wizard~
     ADD_MEMORIZED_SPELL ~spwi616~ #5 ~wizard~
+
     ADD_MEMORIZED_SPELL ~spwi701~ #6 ~wizard~
     ADD_MEMORIZED_SPELL ~spwi713~ #6 ~wizard~
     ADD_MEMORIZED_SPELL ~spwi714~ #6 ~wizard~
+
     ADD_MEMORIZED_SPELL ~spwi812~ #7 ~wizard~
     ADD_MEMORIZED_SPELL ~spwi813~ #7 ~wizard~
     ADD_MEMORIZED_SPELL ~spwi897~ #7 ~wizard~
     ADD_MEMORIZED_SPELL ~spwi898~ #7 ~wizard~
     ADD_MEMORIZED_SPELL ~spwi899~ #7 ~wizard~
+
     ADD_MEMORIZED_SPELL ~spwi909~ #8 ~wizard~
     ADD_MEMORIZED_SPELL ~spwi913~ #8 ~wizard~
     ADD_MEMORIZED_SPELL ~wm_sphr~ #8 ~wizard~

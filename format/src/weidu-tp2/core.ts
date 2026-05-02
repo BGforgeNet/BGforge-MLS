@@ -44,6 +44,7 @@ import {
     normalizeWhitespace,
     withNormalizedComment,
     handleComment,
+    pushBlankIfGap,
 } from "./utils";
 import {
     formatControlFlow,
@@ -88,7 +89,7 @@ function formatComponent(node: SyntaxNode, ctx: FormatContext): string {
                     lines.push(beginLine);
                     beginLine = "";
                 }
-                handleComment(lines, child, "", lastEndRow);
+                lastEndRow = handleComment(lines, child, "", lastEndRow);
             }
             continue;
         }
@@ -157,6 +158,7 @@ function formatComponent(node: SyntaxNode, ctx: FormatContext): string {
                 lines.push(beginLine);
                 beginLine = "";
             }
+            pushBlankIfGap(lines, child, lastEndRow);
             lines.push(formatNode(child, ctx, 0));
             lastEndRow = child.endPosition.row;
         }
@@ -184,11 +186,13 @@ function formatAlwaysBlock(node: SyntaxNode, ctx: FormatContext): string {
             continue;
         }
         if (isComment(child)) {
-            handleComment(lines, child, ctx.indent, lastEndRow);
+            lastEndRow = handleComment(lines, child, ctx.indent, lastEndRow);
         } else if (child.type === SyntaxType.InlinedFile) {
+            pushBlankIfGap(lines, child, lastEndRow);
             lines.push(formatInlinedFile(child, ctx, 1));
             lastEndRow = child.endPosition.row;
         } else if (isAction(child.type) || isControlFlow(child.type) || isFunctionCall(child.type)) {
+            pushBlankIfGap(lines, child, lastEndRow);
             lines.push(formatNode(child, ctx, 1));
             lastEndRow = child.endPosition.row;
         }
@@ -205,8 +209,9 @@ function formatPatchFile(node: SyntaxNode, ctx: FormatContext): string {
 
     for (const child of node.children) {
         if (isComment(child)) {
-            handleComment(lines, child, "", lastEndRow);
+            lastEndRow = handleComment(lines, child, "", lastEndRow);
         } else if (isBodyContent(child.type)) {
+            pushBlankIfGap(lines, child, lastEndRow);
             lines.push(formatNode(child, ctx, 0));
             lastEndRow = child.endPosition.row;
         }

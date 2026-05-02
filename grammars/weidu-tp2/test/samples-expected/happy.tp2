@@ -21,6 +21,7 @@ BEGIN ~Happy modder pack~
 FORBID_COMPONENT "happy.tp2" "0" "Override only mode."
 // many tob-specific workarounds here. TODO: make applicable to all engines.
 REQUIRE_PREDICATE ENGINE_IS ~soa tob~ ~Only applicable to classic ToB or SoA currently~
+
 INCLUDE ~%MOD_FOLDER%/lib/bg2fixpack/modder.tpa~
 
 BEGIN ~Music: playlists~

@@ -26,6 +26,7 @@ import {
     normalizeWhitespace,
     handleComment,
     outputAlignedAssignments,
+    pushBlankIfGap,
 } from "./utils";
 import { SyntaxType } from "../../../server/src/weidu-tp2/tree-sitter.d";
 
@@ -273,7 +274,7 @@ export function formatFunctionDef(
 
         if (isComment(child)) {
             if (inBody) {
-                handleComment(lines, child, bodyIndent, lastEndRow);
+                lastEndRow = handleComment(lines, child, bodyIndent, lastEndRow);
             } else if (defLine && lastDefRow >= 0 && child.startPosition.row === lastDefRow) {
                 // Inline comment on same line as DEFINE_* header
                 defLine += INLINE_COMMENT_SPACING + normalizeComment(child.text);
@@ -296,6 +297,7 @@ export function formatFunctionDef(
                 child.type === SyntaxType.LocalSet ||
                 child.type === SyntaxType.LocalSprint
             ) {
+                pushBlankIfGap(lines, child, lastEndRow);
                 lines.push(formatNode(child, ctx, depth + 1));
                 lastEndRow = child.endPosition.row;
             }

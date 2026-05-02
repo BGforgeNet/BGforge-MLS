@@ -35,6 +35,7 @@ import {
     outputHeaderLines,
     lastElement,
     isControlFlowBodyContent,
+    pushBlankIfGap,
 } from "./utils";
 import { SyntaxType } from "../../../server/src/weidu-tp2/tree-sitter.d";
 import { formatForLoopHeader, formatForLoop, formatForEach, formatAssociativeArray } from "./format-loops";
@@ -308,6 +309,9 @@ function handleControlFlowComment(
             return;
         }
         state.lines.push(bodyIndent + normalizeComment(child.text));
+        // Track the comment row so a body item that follows on the next source row
+        // doesn't appear to have a gap (the comment occupies a row otherwise unseen).
+        state.lastContentRow = child.endPosition.row;
         state.beginRow = -1;
     } else if (state.afterElse) {
         state.lines.push(indent + normalizeComment(child.text));
@@ -349,6 +353,9 @@ function formatTryBlock(
         // WITH keyword - switch to default section
         if (isKeyword(child, KW_WITH)) {
             lines.push(indent + KW_WITH);
+            // Reset gap reference: a fresh body section shouldn't measure gap against
+            // the previous section's last content row.
+            lastEndRow = child.startPosition.row;
             continue;
         }
 
@@ -361,6 +368,7 @@ function formatTryBlock(
             } else {
                 lines.push(indent + KW_DEFAULT);
             }
+            lastEndRow = child.startPosition.row;
             continue;
         }
 
@@ -372,12 +380,13 @@ function formatTryBlock(
 
         // Comments
         if (isComment(child)) {
-            handleComment(lines, child, bodyIndent, lastEndRow);
+            lastEndRow = handleComment(lines, child, bodyIndent, lastEndRow);
             continue;
         }
 
         // Body content (both main body and default body)
         if (isBodyContent(child.type)) {
+            pushBlankIfGap(lines, child, lastEndRow);
             lines.push(formatNode(child, ctx, depth + 1));
             lastEndRow = child.endPosition.row;
         }
@@ -469,12 +478,14 @@ export function formatControlFlow(
             state.headerParts = [];
             state.lines.push(indent + KW_WITH);
             state.inBody = true;
+            state.beginRow = child.startPosition.row;
             continue;
         }
 
         // DEFAULT keyword
         if (isKeyword(child, KW_DEFAULT)) {
             state.lines.push(indent + KW_DEFAULT);
+            state.beginRow = child.startPosition.row;
             continue;
         }
 
@@ -502,6 +513,12 @@ export function formatControlFlow(
         // Body content
         if (state.inBody) {
             if (isControlFlowBodyContent(child.type)) {
+                // Reference row for gap detection: BEGIN row when available (first body
+                // item after BEGIN), else the previous body item's row. This matters for
+                // ELSE BEGIN — a fresh body shouldn't measure gap against the previous
+                // branch's last content.
+                const rowToCheck = state.beginRow >= 0 ? state.beginRow : state.lastContentRow;
+                pushBlankIfGap(state.lines, child, rowToCheck);
                 state.lines.push(formatNode(child, ctx, depth + 1));
                 state.lastContentRow = child.endPosition.row;
                 state.beginRow = -1;
@@ -570,7 +587,7 @@ export function formatMatchCase(
 
         if (isComment(child)) {
             if (inBody) {
-                handleComment(lines, child, bodyIndent, lastEndRow);
+                lastEndRow = handleComment(lines, child, bodyIndent, lastEndRow);
             } else {
                 headerParts.push(normalizeComment(child.text));
             }
@@ -579,6 +596,7 @@ export function formatMatchCase(
 
         if (inBody) {
             if (isBodyContent(child.type)) {
+                pushBlankIfGap(lines, child, lastEndRow);
                 lines.push(formatNode(child, ctx, depth + 1));
                 lastEndRow = child.endPosition.row;
             }

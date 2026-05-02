@@ -118,11 +118,28 @@ export function tryAppendInlineComment(lines: string[], child: SyntaxNode, lastE
 /**
  * Handle a comment node: try to append as inline comment, otherwise add on its own line.
  * This is the standard pattern for handling comments in body contexts.
+ *
+ * Returns the row that subsequent gap-detection should compare against — i.e. the
+ * comment's end row. Callers in body contexts must propagate this to their `lastEndRow`
+ * tracker, otherwise a body item following a standalone comment will see a false gap
+ * (the comment occupies a row that lastEndRow didn't advance past).
  */
-export function handleComment(lines: string[], child: SyntaxNode, indent: string, lastEndRow: number): void {
+export function handleComment(lines: string[], child: SyntaxNode, indent: string, lastEndRow: number): number {
     if (!tryAppendInlineComment(lines, child, lastEndRow)) {
         lines.push(indent + normalizeComment(child.text));
     }
+    return child.endPosition.row;
+}
+
+/**
+ * Preserve a single blank line between two body items when the source had a row gap between
+ * them. Multiple consecutive source blanks collapse to one. No-op when `lastEndRow < 0`
+ * (i.e. nothing emitted yet) or when the previous emitted line is already blank.
+ */
+export function pushBlankIfGap(lines: string[], child: SyntaxNode, lastEndRow: number): void {
+    if (lastEndRow < 0 || child.startPosition.row <= lastEndRow + 1) return;
+    if (lines.length === 0 || lines[lines.length - 1] === "") return;
+    lines.push("");
 }
 
 // ============================================

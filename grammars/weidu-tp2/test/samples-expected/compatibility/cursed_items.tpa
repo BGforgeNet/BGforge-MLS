@@ -16,6 +16,7 @@ ACTION_IF (FILE_EXISTS_IN_GAME ~#gglow.eff~) BEGIN
         OUTER_SET $item_source_compat(~ring23~ ~melica.dlg~) = 1
         OUTER_SET $item_source_compat(~ring23~ ~melica.cre~) = 1
     END
+
     ACTION_IF GAME_INCLUDES ~bg2~ BEGIN
         // should be bg1-only, but CI ALLOW_MISSINGs files instead of properly limiting
         OUTER_SET $item_source_compat(~ring04~ ~ar2210.are~) = 0  // Ring of Clumsiness
