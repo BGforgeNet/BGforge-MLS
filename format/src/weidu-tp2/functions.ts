@@ -238,16 +238,28 @@ export function formatFunctionDef(
     let lastDefRow = -1;
     let hasBegin = false;
     let hasEnd = false;
+    // Macros (DEFINE_*_MACRO) take no parameter declarations and their `BEGIN` belongs on
+    // the header line. Functions with INT_VAR/STR_VAR/RET blocks have already flushed the
+    // header before BEGIN, so `BEGIN` lands on its own line (the desired layout).
+    // An inline comment appended to the header forces BEGIN onto its own line because the
+    // comment terminates the source line.
+    let paramDeclsEmitted = false;
+    let defLineHasInlineComment = false;
 
     for (const child of node.children) {
         if (isKeyword(child, KW_BEGIN)) hasBegin = true;
         if (isKeyword(child, KW_END)) hasEnd = true;
         if (isKeyword(child, KW_BEGIN)) {
-            if (defLine) {
-                lines.push(indent + defLine);
+            if (defLine && !paramDeclsEmitted && !defLineHasInlineComment) {
+                lines.push(indent + defLine + " " + KW_BEGIN);
                 defLine = "";
+            } else {
+                if (defLine) {
+                    lines.push(indent + defLine);
+                    defLine = "";
+                }
+                lines.push(indent + KW_BEGIN);
             }
-            lines.push(indent + KW_BEGIN);
             inBody = true;
             lastEndRow = child.startPosition.row;
             continue;
@@ -265,10 +277,12 @@ export function formatFunctionDef(
             } else if (defLine && lastDefRow >= 0 && child.startPosition.row === lastDefRow) {
                 // Inline comment on same line as DEFINE_* header
                 defLine += INLINE_COMMENT_SPACING + normalizeComment(child.text);
+                defLineHasInlineComment = true;
             } else {
                 if (defLine) {
                     lines.push(indent + defLine);
                     defLine = "";
+                    defLineHasInlineComment = false;
                 }
                 lines.push(indent + normalizeComment(child.text));
             }
@@ -294,9 +308,11 @@ export function formatFunctionDef(
                 if (defLine) {
                     lines.push(indent + defLine);
                     defLine = "";
+                    defLineHasInlineComment = false;
                 }
                 // Parameter declarations are indented one level from the function definition
                 lines.push(...formatParamDecl(child, bodyIndent, ctx));
+                paramDeclsEmitted = true;
             } else if (child.text.startsWith("DEFINE_")) {
                 defLine = child.text;
                 lastDefRow = child.endPosition.row;
