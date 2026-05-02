@@ -1,0 +1,88 @@
+name: "Binary JSON snapshots"
+description: "Refresh .pro.json/.map.json snapshots via @bgforge/binary and commit them back to the branch."
+author: "BGforge"
+
+inputs:
+    paths:
+        description: "Path passed to the binary CLI (single path; recursive scan)."
+        required: false
+        default: "."
+    version:
+        description: "npm version specifier for @bgforge/binary."
+        required: false
+        default: "latest"
+    commit-message:
+        description: "Commit subject when snapshots change."
+        required: false
+        default: "chore: update binary JSON snapshots"
+    commit-author-name:
+        description: "git author name for the snapshot commit."
+        required: false
+        default: "github-actions[bot]"
+    commit-author-email:
+        description: "git author email for the snapshot commit."
+        required: false
+        default: "41898282+github-actions[bot]@users.noreply.github.com"
+    check:
+        description: 'If "true", verify snapshots match the binaries (exit 1 on diff or missing snapshot) and skip commit/push.'
+        required: false
+        default: "false"
+
+outputs:
+    changed:
+        description: "true if snapshot files changed and were committed."
+        value: ${{ steps.commit.outputs.changed }}
+    changed-files:
+        description: "Newline-separated list of committed snapshot files."
+        value: ${{ steps.commit.outputs.changed-files }}
+
+runs:
+    using: "composite"
+    steps:
+        - name: Guard against fork pull_request (read-only token cannot push)
+          shell: bash
+          env:
+              EVENT_NAME: ${{ github.event_name }}
+              IS_FORK: ${{ github.event.pull_request.head.repo.fork }}
+          run: ${{ github.action_path }}/scripts/guard-fork-pr.sh
+
+        - name: Set up Node.js
+          uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+          with:
+              node-version: 22
+
+        - name: Install @bgforge/binary
+          shell: bash
+          env:
+              BINARY_VERSION: ${{ inputs.version }}
+          run: npm install -g "@bgforge/binary@${BINARY_VERSION}"
+
+        - name: List changed binary files
+          id: list
+          shell: bash
+          env:
+              EVENT_NAME: ${{ github.event_name }}
+              SCAN_PATH: ${{ inputs.paths }}
+              BASE_SHA_PR: ${{ github.event.pull_request.base.sha }}
+              HEAD_SHA_PR: ${{ github.event.pull_request.head.sha }}
+              BASE_SHA_PUSH: ${{ github.event.before }}
+              HEAD_SHA_PUSH: ${{ github.sha }}
+          run: ${{ github.action_path }}/scripts/list-changed.sh
+
+        - name: Run binary CLI (--save by default, --check when check=true)
+          shell: bash
+          env:
+              CHECK_MODE: ${{ inputs.check }}
+              LIST: ${{ steps.list.outputs.list }}
+              COUNT: ${{ steps.list.outputs.count }}
+          run: ${{ github.action_path }}/scripts/run-cli.sh
+
+        - name: Commit and push if changed
+          id: commit
+          if: inputs.check != 'true'
+          shell: bash
+          env:
+              COMMIT_MESSAGE: ${{ inputs.commit-message }}
+              COMMIT_AUTHOR_NAME: ${{ inputs.commit-author-name }}
+              COMMIT_AUTHOR_EMAIL: ${{ inputs.commit-author-email }}
+          run: ${{ github.action_path }}/scripts/commit-and-push.sh
