@@ -5,9 +5,18 @@
 #   <proto-dir> must contain items/ and/or scenery/ subdirs of .pro files
 #   (matches the layout inside an extracted Fallout master.dat).
 #
-# Requires: pnpm + jq, and `pnpm build` to have been run so fgbin is on the path.
+# Requires: jq, and `pnpm build` to have been run so binary/out/cli.js exists.
 
 set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+FGBIN="$ROOT_DIR/binary/out/cli.js"
+
+if [[ ! -f $FGBIN ]]; then
+    echo "Error: $FGBIN not found. Run 'pnpm build' first." >&2
+    exit 1
+fi
 
 if [[ $# -ne 2 ]]; then
     echo "Usage: $0 <proto-dir> <output.json>" >&2
@@ -19,8 +28,8 @@ output=$2
 
 # Snapshot .pro files. fgbin --save is idempotent (writes only when changed),
 # so re-running the script is cheap.
-[[ -d $proto_dir/items   ]] && pnpm exec fgbin "$proto_dir/items"   -r --save -q
-[[ -d $proto_dir/scenery ]] && pnpm exec fgbin "$proto_dir/scenery" -r --save -q
+[[ -d $proto_dir/items   ]] && node "$FGBIN" "$proto_dir/items"   -r --save -q
+[[ -d $proto_dir/scenery ]] && node "$FGBIN" "$proto_dir/scenery" -r --save -q
 
 # Roll snapshots up into a pid -> subType map keyed by the full pid as a
 # decimal string. pid = (objectType << 24) | objectId; jq lacks bit-shifts,
