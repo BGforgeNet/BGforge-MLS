@@ -32,7 +32,7 @@ import {
 import { walkStruct } from "../spec/walk-display";
 import { field, makeGroup, int32Field, HEADER_PADDING_OFFSET, HEADER_PADDING_SIZE } from "./parse-helpers";
 
-export function parseHeaderSection(data: Uint8Array, errors: string[]): ParsedGroup {
+export function parseHeaderSection(data: Uint8Array, _errors: string[]): ParsedGroup {
     const header = parseHeader(data);
 
     // walkStruct produces the 11 numeric/enum/flags rows from the spec +
@@ -41,6 +41,11 @@ export function parseHeaderSection(data: Uint8Array, errors: string[]): ParsedGr
     // The cast widens MapHeader (specific shape) to walkStruct's generic
     // record constraint; the spec keys are a subset of MapHeader's so the
     // runtime access is sound.
+    //
+    // Out-of-enum values surface inline as `Unknown (N)`; they are not pushed
+    // to `errors` because the parser is read-permissive (mirroring PRO). The
+    // strict gate against committable garbage lives at the canonical-write
+    // path; here we just describe what the file actually says.
     const numericGroup = walkStruct(
         mapHeaderCanonicalSpec,
         mapHeaderPresentation,
@@ -48,18 +53,6 @@ export function parseHeaderSection(data: Uint8Array, errors: string[]): ParsedGr
         header as unknown as Record<string, number>,
         "Header",
     );
-    for (const fieldEntry of numericGroup.fields) {
-        if ("fields" in fieldEntry) continue;
-        if (
-            fieldEntry.type === "enum" &&
-            typeof fieldEntry.value === "string" &&
-            fieldEntry.value.startsWith("Unknown (")
-        ) {
-            errors.push(
-                `Invalid ${fieldEntry.name} at offset 0x${fieldEntry.offset.toString(16)}: ${fieldEntry.rawValue}`,
-            );
-        }
-    }
 
     const fields = [...numericGroup.fields];
     fields.splice(1, 0, field("Filename", header.filename, 0x04, 16, "string"));

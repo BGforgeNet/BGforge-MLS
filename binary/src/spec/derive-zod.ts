@@ -4,20 +4,41 @@ import { codecNumericTypeName } from "./codec-meta";
 import { isArraySpec, isFromFieldCount, type FieldSpec, type SpecData } from "./types";
 
 /**
+ * Validation strictness for `toZodSchema`.
+ *
+ * - **`"strict"`** (default) — full refinement: codec range, packed bit width,
+ *   array length, strictObject keys, plus value-level checks (enum membership,
+ *   domain bounds, linked-count consistency). Used by canonical-writers to
+ *   gate bytes that are about to be saved.
+ * - **`"permissive"`** — structural refinements only; value-level refinements
+ *   are dropped. Used by canonical-doc creation from parsed bytes and by
+ *   snapshot load, so a file with an out-of-enum or out-of-domain value still
+ *   produces a walkable canonical doc. The save path is the strict gate; the
+ *   read paths are tolerant.
+ */
+export interface ToZodSchemaOptions {
+    readonly mode?: "strict" | "permissive";
+}
+
+/**
  * Derive a zod canonical-document schema from a `StructSpec`.
  *
  * Each scalar field maps to `z.number().int().min(typeMin).max(typeMax)` based
- * on its codec's signedness, narrowed further by `spec.domain` if present.
- * Fixed-count arrays map to `z.array(...).length(N)`. Length-from-field arrays
- * are validated structurally by the reader, not by zod, so they map to a
- * plain `z.array(...)`.
+ * on its codec's signedness, narrowed further by `spec.domain` if present (in
+ * strict mode). Fixed-count arrays map to `z.array(...).length(N)`.
+ * Length-from-field arrays are validated structurally by the reader, not by
+ * zod, so they map to a plain `z.array(...)`.
  */
-export function toZodSchema<S extends Record<string, FieldSpec>>(spec: S): z.ZodType<SpecData<S>> {
+export function toZodSchema<S extends Record<string, FieldSpec>>(
+    spec: S,
+    options: ToZodSchemaOptions = {},
+): z.ZodType<SpecData<S>> {
+    const mode = options.mode ?? "strict";
     const shape: Record<string, z.ZodType<unknown>> = {};
     const linkedCounts: { arrayKey: string; countField: string }[] = [];
     for (const key of Object.keys(spec)) {
         const fs = spec[key]!;
-        shape[key] = fieldSpecToZod(fs);
+        shape[key] = fieldSpecToZod(fs, mode);
         // fromCtx arrays get their count from a value decoded outside this
         // struct; zod cannot validate that cross-struct relation, so the
         // refinement is scoped to same-struct fromField pairs only.
@@ -26,7 +47,7 @@ export function toZodSchema<S extends Record<string, FieldSpec>>(spec: S): z.Zod
         }
     }
     let schema: z.ZodType<unknown> = z.strictObject(shape);
-    if (linkedCounts.length > 0) {
+    if (mode === "strict" && linkedCounts.length > 0) {
         // Save-time guard: each lengthFrom array's length must equal its
         // declared count field. enforceLinkedCounts (in spec/types.ts) is the
         // pre-serialization sync helper; this refinement is the safety net
@@ -50,15 +71,15 @@ export function toZodSchema<S extends Record<string, FieldSpec>>(spec: S): z.Zod
     return schema as unknown as z.ZodType<SpecData<S>>;
 }
 
-function fieldSpecToZod(fs: FieldSpec): z.ZodType<unknown> {
+function fieldSpecToZod(fs: FieldSpec, mode: "strict" | "permissive"): z.ZodType<unknown> {
     if (isArraySpec(fs)) {
-        const inner = fieldSpecToZod(fs.element);
+        const inner = fieldSpecToZod(fs.element, mode);
         if (typeof fs.count === "number") {
             return z.array(inner).length(fs.count);
         }
         return z.array(inner);
     }
-    if (fs.enum) {
+    if (fs.enum && mode === "strict") {
         // Saved values must be a key in the enum table; permissive parsing
         // still surfaces "Unknown (N)" in the display tree, but committing a
         // value back to bytes is rejected here so .pro.json snapshots stay
@@ -75,7 +96,8 @@ function fieldSpecToZod(fs: FieldSpec): z.ZodType<unknown> {
     // not from the wire codec's full numeric range. The wire codec on a
     // packed part is the SLOT codec (e.g., u32 for a 26-bit subfield) —
     // applying its range would let `destTile = 0x0400_0000` pass even though
-    // it overflows the 26-bit slot.
+    // it overflows the 26-bit slot. The bit-width bound is structural (the
+    // value cannot fit in the wire slot) so it stays in permissive mode too.
     let schema: z.ZodNumber;
     if (fs.packedAs !== undefined && fs.bitRange) {
         const [, width] = fs.bitRange;
@@ -84,7 +106,7 @@ function fieldSpecToZod(fs: FieldSpec): z.ZodType<unknown> {
     } else {
         schema = zodNumericType(codecNumericTypeName(fs.codec));
     }
-    if (fs.domain) {
+    if (fs.domain && mode === "strict") {
         schema = schema.min(fs.domain.min).max(fs.domain.max);
     }
     return schema;

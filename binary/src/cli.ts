@@ -52,6 +52,18 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
             return "error";
         }
 
+        // Warnings are non-fatal: surface them to stderr but proceed with the
+        // snapshot output. `parse` reserves `errors` for structural failures
+        // that prevent display (size mismatch, truncation, unknown root type);
+        // value-level oddities arrive in `warnings` and the canonical doc is
+        // built permissively for them.
+        if (result.warnings && result.warnings.length > 0) {
+            console.error(`Warnings parsing ${filePath}:`);
+            for (const w of result.warnings) {
+                console.error(`  ${w}`);
+            }
+        }
+
         const json = createBinaryJsonSnapshot(result).trimEnd();
         const jsonPath = getSnapshotPath(filePath);
 

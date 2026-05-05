@@ -59,21 +59,6 @@ export function flagsField(
     return field(name, display, offset, size, "flags", undefined, value);
 }
 
-export function enumField(
-    name: string,
-    value: number,
-    lookup: Record<number, string>,
-    offset: number,
-    size: number,
-    errors?: string[],
-): ParsedField {
-    const resolved = lookup[value];
-    if (resolved === undefined && errors) {
-        errors.push(`Invalid ${name} at offset 0x${offset.toString(16)}: ${value}`);
-    }
-    return field(name, resolved ?? `Unknown (${value})`, offset, size, "enum", undefined, value);
-}
-
 export function int32Field(name: string, data: Uint8Array, offset: number): ParsedField {
     const view = new DataView(data.buffer, data.byteOffset + offset, 4);
     return field(name, view.getInt32(0, false), offset, 4, "int32");

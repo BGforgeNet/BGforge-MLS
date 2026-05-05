@@ -4,6 +4,13 @@
  * This file preserves the public surface for all existing importers.
  */
 
-export { proCanonicalSnapshotSchema, type ProCanonicalSnapshot, type ProCanonicalDocument } from "./canonical-schemas";
+export {
+    proCanonicalSnapshotSchema,
+    proCanonicalSnapshotSchemaPermissive,
+    proCanonicalDocumentSchema,
+    proCanonicalDocumentSchemaPermissive,
+    type ProCanonicalSnapshot,
+    type ProCanonicalDocument,
+} from "./canonical-schemas";
 export { createProCanonicalSnapshot, rebuildProCanonicalDocument, getProCanonicalDocument } from "./canonical-reader";
 export { serializeProCanonicalSnapshot, serializeProCanonicalDocument } from "./canonical-writer";

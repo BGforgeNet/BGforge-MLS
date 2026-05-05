@@ -426,32 +426,4 @@ describe("json-snapshot", () => {
         expect(loaded.bytes).toBeInstanceOf(Uint8Array);
         expect(loaded.parseResult.format).toBe("pro");
     });
-
-    it("rejects canonical PRO snapshots that violate domain-specific field limits", () => {
-        const snapshot = JSON.stringify({
-            schemaVersion: 1,
-            format: "pro",
-            formatName: "Fallout PRO (Prototype)",
-            document: {
-                header: {
-                    objectType: 5,
-                    objectId: 1,
-                    textId: 100,
-                    frmType: 5,
-                    frmId: 9,
-                    lightRadius: 9,
-                    lightIntensity: 65_536,
-                    flags: 536_870_912,
-                },
-                sections: {
-                    miscProperties: {
-                        unknown: 0,
-                    },
-                },
-            },
-        });
-
-        expect(() => parseBinaryJsonSnapshot(snapshot)).toThrow(/invalid json snapshot/i);
-        expect(() => parseBinaryJsonSnapshot(snapshot)).toThrow(/actual=9/);
-    });
 });

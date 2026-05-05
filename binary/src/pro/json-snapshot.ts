@@ -1,6 +1,6 @@
 import {
     createProCanonicalSnapshot,
-    proCanonicalSnapshotSchema,
+    proCanonicalSnapshotSchemaPermissive,
     serializeProCanonicalSnapshot,
     type ProCanonicalSnapshot,
 } from "./canonical";
@@ -22,8 +22,13 @@ export function loadCanonicalProJsonSnapshot(
     jsonText: string,
     parseOptions?: ParseOptions,
 ): LoadedCanonicalProSnapshot {
+    // Snapshot load is permissive: a snapshot dumped from a graceful-loaded
+    // file may carry out-of-enum / out-of-domain values, and we want it to
+    // round-trip back to the editor for display. The strict gate fires when
+    // the user explicitly serializes the canonical doc back to bytes for save
+    // (see canonical-writer's serializeProCanonicalDocument).
     const snapshot = parseWithSchemaValidation(
-        proCanonicalSnapshotSchema,
+        proCanonicalSnapshotSchemaPermissive,
         JSON.parse(jsonText),
         "Invalid canonical PRO snapshot",
     );

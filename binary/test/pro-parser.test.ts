@@ -174,4 +174,18 @@ describe("PRO parser - proto-default sentinels", () => {
         });
         expect(result.document?.sections.sceneryProperties?.materialId).toBe(-1);
     });
+
+    // Permissive canonical-doc creation: even when an out-of-enum value lands
+    // on disk (modder-set, prerelease tooling, hand-edited mod), the canonical
+    // doc must still build so the editor can render and snapshots can be
+    // dumped. Strict refinement only fires when serialising back to bytes.
+    it("builds canonical doc for elevator scenery with out-of-enum elevatorType", () => {
+        const data = buildElevatorScenery(99, 0, 1);
+        const result = proParser.parse(data) as ParseResult & {
+            document?: { sections: Record<string, Record<string, number>> };
+        };
+        expect(result.errors).toBeUndefined();
+        expect(result.document).toBeDefined();
+        expect(result.document?.sections.elevatorProperties?.elevatorType).toBe(99);
+    });
 });

@@ -139,21 +139,21 @@ function field(
 }
 
 /**
- * Helper to validate enum value and create a ParsedField
+ * Helper to render an enum-valued ParsedField. Out-of-range values display as
+ * `Unknown (N)` — the same fallback `walkStruct` produces for spec-driven
+ * fields. The strict gate against committable garbage lives at the canonical
+ * write path (zod refinement in `serializeProCanonicalDocument`); the parser
+ * is tolerant by design so the editor and snapshot dump never block on a
+ * value that's outside the documented range but otherwise readable.
  */
-function enumField(
+function enumFieldTolerant(
     name: string,
     value: number,
     lookup: Record<number, string>,
     offset: number,
     size: number,
-    errors: string[],
 ): ParsedField {
-    const resolved = lookup[value];
-    if (resolved === undefined) {
-        errors.push(`Invalid ${name} at offset 0x${offset.toString(16)}: ${value}`);
-    }
-    return field(name, resolved ?? `Unknown (${value})`, offset, size, "enum", undefined, value);
+    return field(name, lookup[value] ?? `Unknown (${value})`, offset, size, "enum", undefined, value);
 }
 
 /**
@@ -184,16 +184,16 @@ function group(
 }
 
 /**
- * Generate fields from data-driven definitions
+ * Generate fields from data-driven definitions.
  */
-function fieldsFromDefs(defs: CritterFieldDef[], data: Record<string, number>, errors: string[]): ParsedField[] {
+function fieldsFromDefs(defs: CritterFieldDef[], data: Record<string, number>): ParsedField[] {
     return defs.map(([displayName, dataKey, offset, type]) => {
         const value = data[dataKey] ?? 0;
         if (type === "percent") {
             return field(displayName, percent(value), offset, 4, "int32");
         }
         if (type === "scriptType") {
-            return enumField(displayName, value, ScriptType, offset, 1, errors);
+            return enumFieldTolerant(displayName, value, ScriptType, offset, 1);
         }
         if (type === "scriptId") {
             return field(displayName, value, offset, 3, "int24");
@@ -299,9 +299,14 @@ function parseKey(data: KeyData, baseOffset: number): ParsedGroup {
 }
 
 /**
- * Parse critter data using data-driven field definitions
+ * Build the critter display tree as 11 sibling groups under the PRO root.
+ *
+ * Reads via `enumFieldTolerant` for `scriptType`/`bodyType`/`killType`/
+ * `damageType`, so out-of-range values render as `Unknown (N)` and the parser
+ * stays graceful. The strict committed-bytes gate lives in the canonical-write
+ * path; here we just describe what the file actually says.
  */
-function parseCritter(data: CritterData, errors: string[]): ParsedGroup[] {
+function parseCritter(data: CritterData): ParsedGroup[] {
     // CritterData has known numeric fields - index signature for dynamic access
     const critterData: Record<string, number> = data;
 
@@ -316,27 +321,27 @@ function parseCritter(data: CritterData, errors: string[]): ParsedGroup[] {
                 undefined,
                 data.flagsExt,
             ),
-            ...fieldsFromDefs(CRITTER_PROPERTIES, critterData, errors),
+            ...fieldsFromDefs(CRITTER_PROPERTIES, critterData),
             flagsField("Critter Flags", data.critterFlags, CritterFlags, 0x2c, 4),
         ]),
-        group("Base Primary Stats", fieldsFromDefs(CRITTER_BASE_PRIMARY, critterData, errors)),
-        group("Base Secondary Stats", fieldsFromDefs(CRITTER_BASE_SECONDARY, critterData, errors)),
-        group("Base Damage Threshold", fieldsFromDefs(CRITTER_BASE_DT, critterData, errors), false),
-        group("Base Damage Resistance", fieldsFromDefs(CRITTER_BASE_DR, critterData, errors), false),
+        group("Base Primary Stats", fieldsFromDefs(CRITTER_BASE_PRIMARY, critterData)),
+        group("Base Secondary Stats", fieldsFromDefs(CRITTER_BASE_SECONDARY, critterData)),
+        group("Base Damage Threshold", fieldsFromDefs(CRITTER_BASE_DT, critterData), false),
+        group("Base Damage Resistance", fieldsFromDefs(CRITTER_BASE_DR, critterData), false),
         group("Demographics", [
             field("Age", data.age, 0xb4, 4, "int32"),
             field("Gender", data.gender === 0 ? "Male" : "Female", 0xb8, 4, "enum", undefined, data.gender),
         ]),
-        group("Bonus Primary Stats", fieldsFromDefs(CRITTER_BONUS_PRIMARY, critterData, errors), false),
-        group("Bonus Secondary Stats", fieldsFromDefs(CRITTER_BONUS_SECONDARY, critterData, errors), false),
-        group("Bonus Damage Threshold", fieldsFromDefs(CRITTER_BONUS_DT, critterData, errors), false),
-        group("Bonus Damage Resistance", fieldsFromDefs(CRITTER_BONUS_DR, critterData, errors), false),
-        group("Skills", fieldsFromDefs(CRITTER_SKILLS, critterData, errors)),
+        group("Bonus Primary Stats", fieldsFromDefs(CRITTER_BONUS_PRIMARY, critterData), false),
+        group("Bonus Secondary Stats", fieldsFromDefs(CRITTER_BONUS_SECONDARY, critterData), false),
+        group("Bonus Damage Threshold", fieldsFromDefs(CRITTER_BONUS_DT, critterData), false),
+        group("Bonus Damage Resistance", fieldsFromDefs(CRITTER_BONUS_DR, critterData), false),
+        group("Skills", fieldsFromDefs(CRITTER_SKILLS, critterData)),
         group("Final Properties", [
-            enumField("Body Type", data.bodyType, BodyType, 0x1_90, 4, errors),
+            enumFieldTolerant("Body Type", data.bodyType, BodyType, 0x1_90, 4),
             field("Experience Value", data.expValue, 0x1_94, 4, "uint32"),
-            enumField("Kill Type", data.killType, KillType, 0x1_98, 4, errors),
-            enumField("Damage Type", data.damageType, DamageType, 0x1_9c, 4, errors),
+            enumFieldTolerant("Kill Type", data.killType, KillType, 0x1_98, 4),
+            enumFieldTolerant("Damage Type", data.damageType, DamageType, 0x1_9c, 4),
         ]),
     ];
 }
@@ -589,7 +594,7 @@ class ProParser implements BinaryParser {
             case 1: {
                 // Critter
                 const critter: CritterData = critterSchema.read(reader(data, HEADER_SIZE));
-                groups.push(...parseCritter(critter, errors));
+                groups.push(...parseCritter(critter));
                 break;
             }
             case 2: {

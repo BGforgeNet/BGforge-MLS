@@ -20,8 +20,8 @@ import {
 } from "./types";
 import type { ParsedField, ParsedGroup, ParseResult } from "../types";
 import {
-    proCanonicalSnapshotSchema,
-    proCanonicalDocumentSchema,
+    proCanonicalSnapshotSchemaPermissive,
+    proCanonicalDocumentSchemaPermissive,
     type ProCanonicalSnapshot,
     type ProCanonicalDocument,
 } from "./canonical-schemas";
@@ -377,7 +377,7 @@ function rebuildProCanonicalSnapshot(parseResult: ParseResult): ProCanonicalSnap
     }
 
     return parseWithSchemaValidation(
-        proCanonicalSnapshotSchema,
+        proCanonicalSnapshotSchemaPermissive,
         {
             schemaVersion: 1,
             format: "pro",
@@ -395,7 +395,7 @@ export function createProCanonicalSnapshot(parseResult: ParseResult): ProCanonic
     const embeddedDocument = getProCanonicalDocument(parseResult);
     if (embeddedDocument) {
         return parseWithSchemaValidation(
-            proCanonicalSnapshotSchema,
+            proCanonicalSnapshotSchemaPermissive,
             {
                 schemaVersion: 1,
                 format: "pro",
@@ -414,6 +414,6 @@ export function rebuildProCanonicalDocument(parseResult: ParseResult): ProCanoni
 }
 
 export function getProCanonicalDocument(parseResult: ParseResult): ProCanonicalDocument | undefined {
-    const parsed = proCanonicalDocumentSchema.safeParse(parseResult.document);
+    const parsed = proCanonicalDocumentSchemaPermissive.safeParse(parseResult.document);
     return parsed.success ? parsed.data : undefined;
 }

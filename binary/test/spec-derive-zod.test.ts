@@ -114,3 +114,86 @@ describe("toZodSchema", () => {
         expect(() => z.parse({ elevation: 4, tile: 0 })).toThrow();
     });
 });
+
+// Permissive mode skips value-level refinements (enum membership, domain
+// bounds, linked-count consistency) so that canonical-doc creation and
+// snapshot load tolerate values the strict write-to-bytes path would reject.
+// Structural refinements (codec-range, bit-width, array length, strictObject
+// keys, integer/numeric typing) stay on — the doc shape must remain walkable
+// regardless of mode.
+describe("toZodSchema (permissive mode)", () => {
+    it("accepts out-of-enum values that strict mode rejects", () => {
+        const spec = {
+            kind: { codec: u32, enum: { 0: "A", 1: "B" } },
+        } satisfies Record<string, FieldSpec>;
+
+        const strict = toZodSchema(spec, { mode: "strict" });
+        const permissive = toZodSchema(spec, { mode: "permissive" });
+
+        expect(() => strict.parse({ kind: 99 })).toThrow();
+        expect(permissive.parse({ kind: 99 })).toEqual({ kind: 99 });
+    });
+
+    it("accepts out-of-domain values that strict mode rejects", () => {
+        const spec = {
+            x: { codec: u32, domain: { min: 0, max: 8 } },
+        } satisfies Record<string, FieldSpec>;
+
+        const strict = toZodSchema(spec, { mode: "strict" });
+        const permissive = toZodSchema(spec, { mode: "permissive" });
+
+        expect(() => strict.parse({ x: 99 })).toThrow();
+        expect(permissive.parse({ x: 99 })).toEqual({ x: 99 });
+    });
+
+    it("accepts linked-count mismatches that strict mode rejects", () => {
+        const spec = {
+            n: { codec: u32 },
+            xs: arraySpec({ element: { codec: u8 }, count: { fromField: "n" } }),
+        } satisfies Record<string, FieldSpec>;
+
+        const strict = toZodSchema(spec, { mode: "strict" });
+        const permissive = toZodSchema(spec, { mode: "permissive" });
+
+        expect(() => strict.parse({ n: 3, xs: [1, 2] })).toThrow();
+        expect(permissive.parse({ n: 3, xs: [1, 2] })).toEqual({ n: 3, xs: [1, 2] });
+    });
+
+    it("still rejects values outside the codec's numeric range", () => {
+        const spec = { a: { codec: u32 } } satisfies Record<string, FieldSpec>;
+        const permissive = toZodSchema(spec, { mode: "permissive" });
+        expect(() => permissive.parse({ a: -1 })).toThrow();
+        expect(() => permissive.parse({ a: 4_294_967_296 })).toThrow();
+    });
+
+    it("still rejects packed-field parts that overflow the bit width", () => {
+        const spec = {
+            destTile: { codec: u32, packedAs: "w", bitRange: [0, 26] },
+            destElevation: { codec: u32, packedAs: "w", bitRange: [26, 6] },
+        } satisfies Record<string, FieldSpec>;
+        const permissive = toZodSchema(spec, { mode: "permissive" });
+        expect(() => permissive.parse({ destTile: 0x0400_0000, destElevation: 0 })).toThrow();
+    });
+
+    it("still rejects unknown fields and non-integer values", () => {
+        const spec = { a: { codec: u8 } } satisfies Record<string, FieldSpec>;
+        const permissive = toZodSchema(spec, { mode: "permissive" });
+        expect(() => permissive.parse({ a: 1, extra: 2 })).toThrow();
+        expect(() => permissive.parse({ a: 1.5 })).toThrow();
+    });
+
+    it("still rejects fixed-count array length mismatches", () => {
+        const spec = {
+            xs: arraySpec({ element: { codec: u8 }, count: 3 }),
+        } satisfies Record<string, FieldSpec>;
+        const permissive = toZodSchema(spec, { mode: "permissive" });
+        expect(() => permissive.parse({ xs: [1, 2] })).toThrow();
+    });
+
+    it("default mode is strict (back-compat with existing callers)", () => {
+        const spec = {
+            kind: { codec: u32, enum: { 0: "A" } },
+        } satisfies Record<string, FieldSpec>;
+        expect(() => toZodSchema(spec).parse({ kind: 99 })).toThrow();
+    });
+});
