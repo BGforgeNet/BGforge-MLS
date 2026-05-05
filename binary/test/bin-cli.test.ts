@@ -19,7 +19,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { execFileSync } from "child_process";
+import { spawnSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -32,18 +32,19 @@ const RUN_EXTERNAL = process.env.RUN_EXTERNAL_CLI_TESTS === "1";
 /** Use for tests that read from RP_MAPS. Skipped visibly when RUN_EXTERNAL_CLI_TESTS is unset. */
 const itExternal = it.skipIf(!RUN_EXTERNAL);
 
-/** Run the bin CLI, returning exit code, stdout, stderr. */
+/** Run the bin CLI, returning exit code, stdout, stderr. Captures stderr on
+ *  success as well as failure (execFileSync only surfaces stderr on non-zero
+ *  exit, hiding informational lines printed during a successful run). */
 function run(...args: string[]): { code: number; stdout: string; stderr: string } {
-    try {
-        const stdout = execFileSync(NODE, [CLI, ...args], {
-            encoding: "utf-8",
-            stdio: ["pipe", "pipe", "pipe"],
-        });
-        return { code: 0, stdout, stderr: "" };
-    } catch (err: unknown) {
-        const e = err as { status: number; stdout: string; stderr: string };
-        return { code: e.status ?? 1, stdout: e.stdout ?? "", stderr: e.stderr ?? "" };
-    }
+    const result = spawnSync(NODE, [CLI, ...args], {
+        encoding: "utf-8",
+        stdio: ["pipe", "pipe", "pipe"],
+    });
+    return {
+        code: result.status ?? 1,
+        stdout: result.stdout ?? "",
+        stderr: result.stderr ?? "",
+    };
 }
 
 describe("bin CLI integration", () => {
@@ -162,6 +163,59 @@ describe("bin CLI integration", () => {
             const { code, stdout } = run(tmpPro, "--save");
             expect(code).toBe(0);
             expect(stdout).not.toContain("Saved:");
+        });
+    });
+
+    describe("MAP parsing auto-loads sibling proto/ overrides", () => {
+        it("emits a stats line on stderr when proto overrides are loaded", () => {
+            // Layout: tmpDir/data/{maps/artemple.map, proto/items/*.pro, proto/scenery/*.pro}.
+            // The CLI should walk `<map dir>/../proto/{items,scenery}` and report
+            // how many overrides it loaded.
+            const dataDir = path.join(tmpDir, "data");
+            const mapsDir = path.join(dataDir, "maps");
+            const protoItemsDir = path.join(dataDir, "proto", "items");
+            const protoSceneryDir = path.join(dataDir, "proto", "scenery");
+            fs.mkdirSync(mapsDir, { recursive: true });
+            fs.mkdirSync(protoItemsDir, { recursive: true });
+            fs.mkdirSync(protoSceneryDir, { recursive: true });
+
+            const mapFile = path.join(mapsDir, "artemple.map");
+            fs.copyFileSync(path.resolve("client/testFixture/maps/artemple.map"), mapFile);
+            fs.copyFileSync(path.join(FIXTURES, "items", "00000031.pro"), path.join(protoItemsDir, "00000031.pro"));
+            fs.copyFileSync(path.join(FIXTURES, "scenery", "00000008.pro"), path.join(protoSceneryDir, "00000008.pro"));
+
+            const { code, stderr } = run(mapFile, "--save");
+            expect(code).toBe(0);
+            expect(stderr).toMatch(/proto overrides/i);
+            expect(stderr).toMatch(/2/); // 2 overrides loaded
+        });
+
+        it("emits no stats line when no sibling proto/ dir exists", () => {
+            const mapFile = path.join(tmpDir, "artemple.map");
+            fs.copyFileSync(path.resolve("client/testFixture/maps/artemple.map"), mapFile);
+            const { code, stderr } = run(mapFile, "--save");
+            expect(code).toBe(0);
+            expect(stderr).not.toMatch(/proto overrides/i);
+        });
+
+        it("emits no stats line for PRO inputs (loader is MAP-only)", () => {
+            const proFile = path.join(FIXTURES, "misc", "00000001.pro");
+            const tmpPro = path.join(tmpDir, "test.pro");
+            fs.copyFileSync(proFile, tmpPro);
+            const { stderr } = run(tmpPro, "--save");
+            expect(stderr).not.toMatch(/proto overrides/i);
+        });
+
+        it("stays silent under -q (quiet mode suppresses the stats line)", () => {
+            const dataDir = path.join(tmpDir, "data");
+            const mapsDir = path.join(dataDir, "maps");
+            const protoItemsDir = path.join(dataDir, "proto", "items");
+            fs.mkdirSync(mapsDir, { recursive: true });
+            fs.mkdirSync(protoItemsDir, { recursive: true });
+            fs.copyFileSync(path.resolve("client/testFixture/maps/artemple.map"), path.join(mapsDir, "artemple.map"));
+            fs.copyFileSync(path.join(FIXTURES, "items", "00000031.pro"), path.join(protoItemsDir, "00000031.pro"));
+            const { stderr } = run(path.join(mapsDir, "artemple.map"), "--save", "-q");
+            expect(stderr).not.toMatch(/proto overrides/i);
         });
     });
 

@@ -144,13 +144,14 @@ const mapExitGridSchema = z.strictObject({
     ),
 });
 
-// Stores the trailing per-subtype payload of an item/scenery record as the
-// raw int32 values in wire order. Length is variable (0/1/2 ints depending
-// on subType + map version); the canonical doc does not need to carry the
-// subType itself because the values fully determine the bytes the writer
-// emits. See `parse-objects.ts:decodeItemSubtypeTrailer` /
-// `decodeScenerySubtypeTrailer` for the source of these values.
+// Stores the trailing per-subtype payload of an item/scenery record. `values`
+// holds the raw int32 fields in wire order (length 0/1/2 depending on subType
+// + map version); the writer emits exactly those bytes. `subType` is recorded
+// so a snapshot reparse can rebuild a pid → subType resolver from the
+// document itself, without consulting the original filesystem-backed
+// resolver — the canonical doc is otherwise self-describing for round-trip.
 const mapSubtypeDataSchema = z.strictObject({
+    subType: int32Schema,
     values: z.array(int32Schema),
 });
 

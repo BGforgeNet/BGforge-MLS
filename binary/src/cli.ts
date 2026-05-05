@@ -16,6 +16,9 @@ import {
     createBinaryJsonSnapshot,
     loadBinaryJsonSnapshot,
     parseBinaryJsonSnapshot,
+    resolvePidSubType,
+    loadProDirResolver,
+    composePidResolvers,
 } from "./index";
 import {
     type FileResult,
@@ -30,6 +33,39 @@ const EXTENSIONS = parserRegistry.getExtensions().map((ext) => `.${ext}`);
 const CLI_PARSE_OPTIONS: ParseOptions = {
     gracefulMapBoundaries: process.argv.includes("--graceful-map"),
 };
+const CLI_QUIET = process.argv.includes("-q") || process.argv.includes("--quiet");
+
+/**
+ * Builds per-file ParseOptions, layering a sibling proto/ override resolver
+ * on top of the bundled vanilla Fallout 2 table when the input is a MAP and
+ * a `<map dir>/../proto/` tree exists. Reports stats to stderr (unless -q).
+ */
+function buildParseOptionsForFile(filePath: string): ParseOptions {
+    if (path.extname(filePath).toLowerCase() !== ".map") {
+        return CLI_PARSE_OPTIONS;
+    }
+
+    const protoBaseDir = path.resolve(path.dirname(filePath), "..", "proto");
+    if (!fs.existsSync(protoBaseDir)) {
+        return CLI_PARSE_OPTIONS;
+    }
+
+    const { resolver, stats } = loadProDirResolver(protoBaseDir);
+    if (stats.filesScanned === 0) {
+        return CLI_PARSE_OPTIONS;
+    }
+
+    if (!CLI_QUIET) {
+        const errSuffix = stats.errors.length > 0 ? `, ${stats.errors.length} errors` : "";
+        console.error(
+            `Loaded ${stats.subtypesResolved} proto overrides from ${protoBaseDir} ` +
+                `in ${stats.durationMs.toFixed(0)}ms${errSuffix}`,
+        );
+        for (const err of stats.errors) console.error(`  ${err}`);
+    }
+
+    return { ...CLI_PARSE_OPTIONS, pidResolver: composePidResolvers(resolver, resolvePidSubType) };
+}
 
 async function processFile(filePath: string, mode: OutputMode): Promise<FileResult> {
     return safeProcess(filePath, () => {
@@ -42,7 +78,7 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
         }
 
         const data = fs.readFileSync(filePath);
-        const result = parser.parse(new Uint8Array(data), CLI_PARSE_OPTIONS);
+        const result = parser.parse(new Uint8Array(data), buildParseOptionsForFile(filePath));
 
         if (result.errors && result.errors.length > 0) {
             console.error(`Error parsing ${filePath}:`);

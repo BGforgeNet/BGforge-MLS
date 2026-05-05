@@ -313,9 +313,23 @@ function parseObjectAt(
                     data.length,
                 );
             }
-            if (decoded.fields.length > 0) {
-                objectFields.push(makeGroup("Subtype Data", decoded.fields));
-            }
+            // Always emit the Subtype Data group when the resolver succeeded —
+            // even for 0-byte-trailer subtypes (Armor/Container/Drug/Generic) —
+            // so the canonical doc can record the subType for reparse without
+            // re-running the original filesystem-backed resolver.
+            objectFields.push(
+                makeGroup("Subtype Data", [
+                    {
+                        name: "Sub Type",
+                        value: subType,
+                        offset: currentOffset,
+                        size: 0,
+                        type: "note",
+                        rawValue: subType,
+                    },
+                    ...decoded.fields,
+                ]),
+            );
             currentOffset = trailerEnd;
         }
     }

@@ -243,13 +243,16 @@ function parseMapObject(group: ParsedGroup): z.infer<typeof mapObjectSchema> {
 
     if (subtypeData) {
         // Field shapes are decoded by parse-objects.ts:decodeItemSubtypeTrailer /
-        // decodeScenerySubtypeTrailer in wire order; copy them through verbatim.
-        // The canonical doc stores raw int32 values so the writer can re-emit
-        // them without re-resolving the subType.
+        // decodeScenerySubtypeTrailer in wire order. The first child is a
+        // synthetic 0-byte "Sub Type" note carrying the resolved subType so
+        // the canonical doc can rebuild a resolver during snapshot reparse;
+        // the remaining children are the actual int32 trailer values.
+        const fields = subtypeData.fields.filter((entry): entry is import("../types").ParsedField => !isGroup(entry));
+        const subTypeField = fields.find((f) => f.name === "Sub Type");
+        const valueFields = fields.filter((f) => f.name !== "Sub Type");
         object.subtypeData = {
-            values: subtypeData.fields
-                .filter((entry): entry is import("../types").ParsedField => !isGroup(entry))
-                .map((entry) => (typeof entry.value === "number" ? entry.value : 0)),
+            subType: typeof subTypeField?.rawValue === "number" ? subTypeField.rawValue : -1,
+            values: valueFields.map((entry) => (typeof entry.value === "number" ? entry.value : 0)),
         };
     }
 

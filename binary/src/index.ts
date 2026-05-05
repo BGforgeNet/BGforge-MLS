@@ -57,6 +57,18 @@ export { isCharAllowedInCharset, isStringAllowedInCharset } from "./string-chars
 export { proParser } from "./pro";
 export { mapParser } from "./map";
 
+// Pid → subType resolution for MAP item / scenery decode. The default
+// resolver is backed by a bundled vanilla Fallout 2 lookup table; consumers
+// extend coverage by composing custom resolvers — typically a filesystem
+// loader pointed at a mod's own `proto/` tree — on top of the default.
+export { resolvePidSubType, type PidResolver } from "./pid-resolver";
+export {
+    loadProDirResolver,
+    composePidResolvers,
+    type ProResolverResult,
+    type ProResolverStats,
+} from "./pro-resolver-loader";
+
 // Side-effect: register the bundled parsers on the registry.
 import { proParser } from "./pro";
 import { mapParser } from "./map";
