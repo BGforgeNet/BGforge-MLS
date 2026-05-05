@@ -12,6 +12,8 @@ import { describe, it, expect } from "vitest";
 import * as fs from "fs";
 import * as path from "path";
 import { mapParser } from "../src/map";
+import { resolvePidSubType } from "../src/pid-resolver";
+import { composePidResolvers, loadProDirResolver } from "../src/pro-resolver-loader";
 import type { ParsedField, ParsedGroup } from "../src/types";
 
 function isGroup(x: unknown): x is ParsedGroup {
@@ -105,6 +107,30 @@ describe("vanilla MAP item/scenery decode via bundled pidtypes resolver", () => 
         // unknown pids do not crash the decode. bhrnddst pid 0x02000779 is
         // not present in the bundled Fallout 2 table.
         const parsed = loadFixture("bhrnddst");
+        const labels = (parsed.opaqueRanges ?? []).map((r) => r.label);
+        expect(labels).toContain("objects-tail");
+    });
+
+    it("newr2 keeps an objects-tail even with full proto coverage (engine-unloadable record)", () => {
+        // newr2.map contains an object-array record fallout2-ce itself can't
+        // load: a parent with pid=-1 (Type255) whose inventory references an
+        // item with pid=0, which `protoGetProto` would fail on. The parser
+        // bails at that record and captures the rest opaquely so the file
+        // still round-trips byte-identically. This test pins that contract:
+        // a future change that "fixes" the lock by silently advancing past
+        // such records (e.g. by guessing a 0-byte trailer) would lose the
+        // signal that the input is genuinely malformed and surface as a
+        // regression here. See binary/INTERNALS.md "Known feature gaps".
+        //
+        // The resolver below covers every legitimate pid (bundled defaults +
+        // sibling proto/ overrides — exactly what the CLI auto-applies) but
+        // still returns undefined for pid=0, so what's left is the corrupt-
+        // data path.
+        const { resolver: protoResolver } = loadProDirResolver(path.resolve("client/testFixture/proto"));
+        const data = new Uint8Array(fs.readFileSync(path.resolve("client/testFixture/maps/newr2.map")));
+        const parsed = mapParser.parse(data, {
+            pidResolver: composePidResolvers(protoResolver, resolvePidSubType),
+        });
         const labels = (parsed.opaqueRanges ?? []).map((r) => r.label);
         expect(labels).toContain("objects-tail");
     });
