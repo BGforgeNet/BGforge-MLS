@@ -77,7 +77,10 @@ function pathToFirstNumericFieldUnder(root: ParsedGroup, target: ParsedGroup): r
 
 function loadArcavesDocument(): BinaryDocument {
     const mapPath = path.resolve("client/testFixture/maps/arcaves.map");
-    const parseResult = mapParser.parse(new Uint8Array(fs.readFileSync(mapPath)));
+    // Force every item/scenery into the unresolved branch so the test sees a
+    // locked group regardless of which pids the bundled vanilla-FO2 table
+    // happens to cover. Mirrors the pre-resolver world for assertion purposes.
+    const parseResult = mapParser.parse(new Uint8Array(fs.readFileSync(mapPath)), { pidResolver: () => undefined });
     return new BinaryDocument({ fsPath: mapPath, scheme: "file", toString: () => mapPath } as never, parseResult, {
         parse: mapParser.parse.bind(mapParser),
         serialize: mapParser.serialize!.bind(mapParser),

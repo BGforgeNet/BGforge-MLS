@@ -207,6 +207,7 @@ function parseMapObject(group: ParsedGroup): z.infer<typeof mapObjectSchema> {
     const objectData = getOptionalGroup(group, "Object Data");
     const critterData = getOptionalGroup(group, "Critter Data");
     const exitGrid = getOptionalGroup(group, "Exit Grid");
+    const subtypeData = getOptionalGroup(group, "Subtype Data");
 
     const base = walkGroup(group, objectBaseSpec, objectBasePresentation);
     const object: z.infer<typeof mapObjectSchema> = {
@@ -220,8 +221,11 @@ function parseMapObject(group: ParsedGroup): z.infer<typeof mapObjectSchema> {
             .map((entry) => ({
                 quantity: readNumber(entry, "Quantity"),
                 object: parseMapObject(
+                    // Inventory recursion creates names like "Object 0.0.0 (Item)" /
+                    // "Object 0.0.0.0 (Item)" — match any dotted index path, not
+                    // just the two-level "elevation.index" form used at top level.
                     entry.fields.find(
-                        (field): field is ParsedGroup => isGroup(field) && /^Object \d+\.\d+ /.test(field.name),
+                        (field): field is ParsedGroup => isGroup(field) && /^Object [\d.]+ /.test(field.name),
                     )!,
                 ),
             })),
@@ -235,6 +239,18 @@ function parseMapObject(group: ParsedGroup): z.infer<typeof mapObjectSchema> {
 
     if (critterData) {
         object.critterData = walkGroup(critterData, critterDataSpec, critterPresentation);
+    }
+
+    if (subtypeData) {
+        // Field shapes are decoded by parse-objects.ts:decodeItemSubtypeTrailer /
+        // decodeScenerySubtypeTrailer in wire order; copy them through verbatim.
+        // The canonical doc stores raw int32 values so the writer can re-emit
+        // them without re-resolving the subType.
+        object.subtypeData = {
+            values: subtypeData.fields
+                .filter((entry): entry is import("../types").ParsedField => !isGroup(entry))
+                .map((entry) => (typeof entry.value === "number" ? entry.value : 0)),
+        };
     }
 
     if (exitGrid) {

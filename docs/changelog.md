@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Binary editor / `fgbin`: MAP files now decode the trailing per-subtype payload of item and scenery object records — weapon ammo quantity / type, ammo / misc / key counters, and scenery door / stairs / elevator / ladder fields all surface as named, editable fields. Records whose pid is covered by the bundled Fallout 2 lookup table no longer collapse into a single opaque trailer; pids outside the table fall back to the existing opaque-tail behavior so byte-identical round-trip is preserved either way.
+- `@bgforge/binary`: new `ParseOptions.pidResolver` hook lets callers supply a custom `pid → subType` mapping for MAP parsing, e.g. to extend coverage to modded item / scenery pids that aren't in the bundled vanilla Fallout 2 table.
 - Binary editor: the MAP header `Filename` field is now editable. Input is restricted to printable ASCII (the engine does not honour multi-byte encodings) and clamped to the field's 16-byte budget, with both rules applied live as you type.
 - Binary editor: now activates correctly when opening a `.pro` or `.map` file in a workspace that contains no other recognised file types; previously the editor fell back to a plain text view in that case.
 - Binary editor: opening the same `.pro` or `.map` file in two side-by-side panels now keeps each panel's tree expand/collapse state independent; previously the second panel overwrote the first.

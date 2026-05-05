@@ -7,6 +7,7 @@ import type { ParsedField, ParsedGroup } from "../types";
 import type { MapHeader } from "./schemas";
 import { toTypedBinarySchema } from "../spec/derive-typed-binary";
 import { walkStruct } from "../spec/walk-display";
+import { resolvePidSubType, type PidResolver } from "../pid-resolver";
 import {
     makeGroup,
     int32Field,
@@ -32,6 +33,10 @@ import {
     exitGridSpec,
     exitGridPresentation,
 } from "./specs/object";
+
+export interface ParseObjectsOptions {
+    pidResolver?: PidResolver;
+}
 
 const objectBaseCodec = toTypedBinarySchema(objectBaseSpec);
 const inventoryHeaderCodec = toTypedBinarySchema(inventoryHeaderSpec);
@@ -117,6 +122,86 @@ function parseInventoryHeaderGroup(data: Uint8Array, offset: number): { group: P
     };
 }
 
+/**
+ * Decode the per-subtype trailing payload that follows the 4-byte data flags
+ * for an Item record. Field shapes mirror fallout2-ce `proto.cc:objectDataRead`
+ * (lines 583–599): armor/container/drug carry no trailer; weapon, ammo, misc,
+ * and key each carry their type-specific int32 fields.
+ *
+ * Returns the new cursor offset and the field list to splice into the object
+ * group. Caller is responsible for resolving `subType` (typically via the
+ * pidtypes lookup) and for handling the unresolved case before reaching here.
+ */
+export function decodeItemSubtypeTrailer(
+    data: Uint8Array,
+    offset: number,
+    subType: number,
+): { fields: ParsedField[]; offset: number } {
+    switch (subType) {
+        case 3: // Weapon
+            return {
+                fields: [int32Field("Ammo Quantity", data, offset), int32Field("Ammo Type PID", data, offset + 4)],
+                offset: offset + 8,
+            };
+        case 4: // Ammo
+            return { fields: [int32Field("Quantity", data, offset)], offset: offset + 4 };
+        case 5: // Misc
+            return { fields: [int32Field("Charges", data, offset)], offset: offset + 4 };
+        case 6: // Key
+            return { fields: [int32Field("Key Code", data, offset)], offset: offset + 4 };
+        default: // 0 Armor / 1 Container / 2 Drug — no trailer
+            return { fields: [], offset };
+    }
+}
+
+/**
+ * Decode the per-subtype trailing payload for a Scenery record. Mirrors
+ * fallout2-ce `proto.cc:objectDataRead` (lines 605–633). Ladders read 8 bytes
+ * on v20 (Fallout 2) but only 4 bytes on v19 (Fallout 1, builtTile only).
+ */
+export function decodeScenerySubtypeTrailer(
+    data: Uint8Array,
+    offset: number,
+    subType: number,
+    mapVersion: number,
+): { fields: ParsedField[]; offset: number } {
+    switch (subType) {
+        case 0: // Door
+            return { fields: [int32Field("Open Flags", data, offset)], offset: offset + 4 };
+        case 1: // Stairs
+            return {
+                fields: [
+                    int32Field("Destination Built Tile", data, offset),
+                    int32Field("Destination Map", data, offset + 4),
+                ],
+                offset: offset + 8,
+            };
+        case 2: // Elevator
+            return {
+                fields: [int32Field("Elevator Type", data, offset), int32Field("Level", data, offset + 4)],
+                offset: offset + 8,
+            };
+        case 3: // Ladder Up
+        case 4: // Ladder Down
+            // v19 carries only destinationBuiltTile; v20 prepends destinationMap.
+            if (mapVersion === 19) {
+                return {
+                    fields: [int32Field("Destination Built Tile", data, offset)],
+                    offset: offset + 4,
+                };
+            }
+            return {
+                fields: [
+                    int32Field("Destination Map", data, offset),
+                    int32Field("Destination Built Tile", data, offset + 4),
+                ],
+                offset: offset + 8,
+            };
+        default: // 5 Generic — no trailer
+            return { fields: [], offset };
+    }
+}
+
 // Records the parser couldn't fully decode get `editingLocked: true` so the
 // editor's tree builder threads it down to descendant fields. Field edits
 // are width-preserving but not interpretation-preserving when the trailing
@@ -133,9 +218,8 @@ function parseObjectAt(
     index: string,
     header: MapHeader,
     errors: string[],
+    options: ParseObjectsOptions,
 ): ParsedObjectResult {
-    void header;
-
     if (offset + MAP_OBJECT_BASE_SIZE + MAP_OBJECT_DATA_HEADER_SIZE > data.length) {
         errors.push(`Object ${index} truncated at offset 0x${offset.toString(16)}`);
         return incompleteObjectResult(
@@ -191,27 +275,48 @@ function parseObjectAt(
             objectFields.push(parseExitGridGroup(data, currentOffset));
             currentOffset += 16;
         } else if (pidType === PID_TYPE_ITEM || pidType === PID_TYPE_SCENERY) {
-            // Item / Scenery / Wall / Tile records carry a subtype-keyed payload after
-            // the data header whose layout is described by the corresponding `.pro`
-            // file. PROs are not packaged alongside `.map` files in user mod trees,
-            // so the parser cannot determine where this record ends. Stop here and
-            // let `parseObjects` capture everything from this offset to EOF as the
-            // `objects-tail` opaque blob; the writer replays that blob verbatim, which
-            // preserves byte identity but locks the object array against structural
-            // mutation (insert / remove / reorder would shift the trailer's bytes
-            // by an unknown number of bytes per affected record). See `entity-ops.ts`
-            // for the matching mutation gate.
-            objectFields.push(
-                noteField(
-                    "TODO",
-                    "Payload decoding for item/scenery objects requires external PRO metadata to resolve subtype-specific layout",
+            // Item / Scenery records carry a subtype-keyed payload after the data
+            // header whose layout fallout2-ce determines via `proto->item.type` /
+            // `proto->scenery.type` (proto.cc:objectDataRead). PROs are not
+            // packaged alongside `.map` files in user mod trees, so we resolve
+            // the subtype through a precomputed pid lookup. Unresolved pids
+            // (modded territory not in the bundled table) keep the legacy
+            // opaque-tail bail so the file still round-trips byte-identically.
+            const resolver = options.pidResolver ?? resolvePidSubType;
+            const subType = resolver(pid);
+            if (subType === undefined) {
+                objectFields.push(
+                    noteField(
+                        "TODO",
+                        `Payload decoding for ${objectTypeName(pid)} pid 0x${(pid >>> 0)
+                            .toString(16)
+                            .padStart(8, "0")} needs a subtype mapping not in the default table`,
+                        currentOffset,
+                    ),
+                );
+                return incompleteObjectResult(
+                    makeGroup(`Object ${index} (${objectTypeName(pid)})`, objectFields),
                     currentOffset,
-                ),
-            );
-            return incompleteObjectResult(
-                makeGroup(`Object ${index} (${objectTypeName(pid)})`, objectFields),
-                currentOffset,
-            );
+                );
+            }
+
+            const decoded =
+                pidType === PID_TYPE_ITEM
+                    ? decodeItemSubtypeTrailer(data, currentOffset, subType)
+                    : decodeScenerySubtypeTrailer(data, currentOffset, subType, header.version);
+            const trailerEnd = decoded.offset;
+            if (trailerEnd > data.length) {
+                errors.push(`Object ${index} subtype trailer truncated at offset 0x${currentOffset.toString(16)}`);
+                objectFields.push(noteField("TODO", "Truncated subtype trailer", currentOffset));
+                return incompleteObjectResult(
+                    makeGroup(`Object ${index} (${objectTypeName(pid)})`, objectFields),
+                    data.length,
+                );
+            }
+            if (decoded.fields.length > 0) {
+                objectFields.push(makeGroup("Subtype Data", decoded.fields));
+            }
+            currentOffset = trailerEnd;
         }
     }
 
@@ -238,7 +343,7 @@ function parseObjectAt(
         const quantityField = int32Field("Quantity", data, currentOffset);
         currentOffset += 4;
 
-        const nestedObject = parseObjectAt(data, currentOffset, `${index}.${inventoryIndex}`, header, errors);
+        const nestedObject = parseObjectAt(data, currentOffset, `${index}.${inventoryIndex}`, header, errors, options);
         inventoryGroups.push(makeGroup(`Inventory Entry ${inventoryIndex}`, [quantityField, nestedObject.group]));
         currentOffset = nestedObject.offset;
 
@@ -262,6 +367,7 @@ export function parseObjects(
     header: MapHeader,
     currentOffset: number,
     errors: string[],
+    options: ParseObjectsOptions = {},
 ): { offset: number; group: ParsedGroup; opaqueTailOffset?: number } {
     if (currentOffset >= data.length) {
         return {
@@ -309,7 +415,7 @@ export function parseObjects(
             errors,
         );
         for (let objectIndex = 0; objectIndex < safeObjectCount; objectIndex++) {
-            const parsedObject = parseObjectAt(data, currentOffset, `${elev}.${objectIndex}`, header, errors);
+            const parsedObject = parseObjectAt(data, currentOffset, `${elev}.${objectIndex}`, header, errors, options);
             elevationFields.push(parsedObject.group);
             currentOffset = parsedObject.offset;
 

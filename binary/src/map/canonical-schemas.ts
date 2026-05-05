@@ -144,6 +144,16 @@ const mapExitGridSchema = z.strictObject({
     ),
 });
 
+// Stores the trailing per-subtype payload of an item/scenery record as the
+// raw int32 values in wire order. Length is variable (0/1/2 ints depending
+// on subType + map version); the canonical doc does not need to carry the
+// subType itself because the values fully determine the bytes the writer
+// emits. See `parse-objects.ts:decodeItemSubtypeTrailer` /
+// `decodeScenerySubtypeTrailer` for the source of these values.
+const mapSubtypeDataSchema = z.strictObject({
+    values: z.array(int32Schema),
+});
+
 interface MapCanonicalObject {
     kind: "item" | "critter" | "scenery" | "wall" | "tile" | "misc" | "unknown";
     base: z.infer<typeof mapObjectBaseSchema>;
@@ -151,6 +161,7 @@ interface MapCanonicalObject {
     objectData?: z.infer<typeof mapObjectDataSchema>;
     critterData?: z.infer<typeof mapCritterDataSchema>;
     exitGrid?: z.infer<typeof mapExitGridSchema>;
+    subtypeData?: z.infer<typeof mapSubtypeDataSchema>;
     inventory: Array<{ quantity: number; object: MapCanonicalObject }>;
 }
 
@@ -169,6 +180,7 @@ export const mapObjectSchema: z.ZodType<MapCanonicalObject> = z.lazy(() =>
         objectData: mapObjectDataSchema.optional(),
         critterData: mapCritterDataSchema.optional(),
         exitGrid: mapExitGridSchema.optional(),
+        subtypeData: mapSubtypeDataSchema.optional(),
         inventory: z.array(mapInventoryEntrySchema),
     }),
 );

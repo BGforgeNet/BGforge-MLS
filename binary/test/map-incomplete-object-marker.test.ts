@@ -1,15 +1,16 @@
 /**
  * Incomplete-object marker on the parsed display tree.
  *
- * Object records of types Item / Scenery / Wall / Tile carry a subtype payload
- * whose layout is described by the corresponding `.pro` file. When PROs aren't
- * available the parser stops at the data-header boundary; the partially-decoded
- * record still appears in the display tree (so the user can see what's there)
- * but its enclosing group is marked `editingLocked` so editors won't expose
- * field edits on it. Editing fields on such a record is unsafe — changing
- * `inventoryLength` or the upper byte of `pid` (the type tag) would change how
- * downstream opaque-trailer bytes get interpreted on reparse, silently
- * corrupting the file.
+ * Item and Scenery records carry a subtype-keyed trailer whose layout depends
+ * on the referenced `.pro`. The bundled `pid → subType` table resolves vanilla
+ * pids; for modded or unknown pids the resolver returns `undefined` and the
+ * parser falls back to its legacy bail. The bailed group's already-decoded
+ * fields still render so the user can inspect them, but the enclosing group
+ * is marked `editingLocked` — field edits are unsafe when the trailing-byte
+ * width is unknown (changing `inventoryLength` or the upper byte of `pid`
+ * would re-interpret the opaque trailer on reparse). Wall / Tile records
+ * have no subtype trailer (fallout2-ce's `objectDataRead` switch doesn't
+ * branch on them) and therefore parse cleanly.
  */
 
 import { describe, expect, it } from "vitest";
@@ -36,13 +37,28 @@ function findFirstGroupMatching(root: ParsedGroup, predicate: (g: ParsedGroup) =
 describe("incomplete-object groups carry editingLocked", () => {
     const arcavesPath = path.resolve("client/testFixture/maps/arcaves.map");
 
-    it("Object N.M (Scenery|Item|Wall|Tile) groups are flagged", () => {
+    it("Item / Scenery groups are flagged when the resolver returns undefined for their pid", () => {
+        // Force every item/scenery pid into the unresolved branch by supplying
+        // a resolver that always returns undefined. The first item/scenery the
+        // parser hits will then bail with editingLocked set, identical to the
+        // pre-resolver behavior.
+        const data = new Uint8Array(fs.readFileSync(arcavesPath));
+        const parsed = mapParser.parse(data, { pidResolver: () => undefined });
+
+        const scenery = findFirstGroupMatching(parsed.root, (g) => /^Object \d+\.\d+ \(Scenery\)$/.test(g.name));
+        expect(scenery, "expected at least one Scenery object in arcaves elev 0").toBeDefined();
+        expect(scenery?.editingLocked).toBe(true);
+    });
+
+    it("Item / Scenery groups stay unlocked when the resolver decodes their trailer", () => {
+        // The bundled fallout2-pidtypes.json resolves arcaves' first scenery
+        // (subType 5 / Generic, 0-byte trailer) so the parser advances cleanly.
         const data = new Uint8Array(fs.readFileSync(arcavesPath));
         const parsed = mapParser.parse(data);
 
         const scenery = findFirstGroupMatching(parsed.root, (g) => /^Object \d+\.\d+ \(Scenery\)$/.test(g.name));
         expect(scenery, "expected at least one Scenery object in arcaves elev 0").toBeDefined();
-        expect(scenery?.editingLocked).toBe(true);
+        expect(scenery?.editingLocked ?? false).toBe(false);
     });
 
     it("Object N.M (Misc|Critter) groups stay unlocked when the parser fully decoded them", () => {

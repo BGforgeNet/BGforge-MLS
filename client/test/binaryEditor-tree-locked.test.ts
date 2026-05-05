@@ -1,11 +1,14 @@
 /**
  * Tree-state propagation of `editingLocked` from incomplete records to their fields.
  *
- * When the parser couldn't fully decode a record (e.g. a MAP Item or Scenery
- * object whose subtype payload is described by an unavailable `.pro` file),
- * the enclosing group carries `editingLocked: true`. The tree builder must
- * thread that flag down so every field summary inside the locked record
- * renders as non-editable in the webview.
+ * Item / Scenery records whose pid the resolver can't map to a subtype keep
+ * the legacy bail: the enclosing group carries `editingLocked: true`, and the
+ * tree builder threads it down so every field summary inside the locked
+ * record renders as non-editable in the webview. With the bundled vanilla
+ * Fallout 2 resolver, most records on `arcaves.map` decode cleanly; only
+ * objects whose pids aren't in the table stay locked. To test the lock
+ * propagation reliably we drive the parse with a resolver that always
+ * returns `undefined`, mirroring the pre-resolver world for the assertion.
  */
 
 import { describe, expect, it } from "vitest";
@@ -14,14 +17,14 @@ import * as path from "path";
 import { mapParser } from "@bgforge/binary";
 import { buildBinaryEditorTreeState } from "../src/editors/binaryEditor-tree";
 
-function loadArcaves() {
+function loadArcaves(options?: Parameters<typeof mapParser.parse>[1]) {
     const data = new Uint8Array(fs.readFileSync(path.resolve("client/testFixture/maps/arcaves.map")));
-    return mapParser.parse(data);
+    return mapParser.parse(data, options);
 }
 
 describe("tree state propagates editingLocked from incomplete records", () => {
-    it("fields under an Object N.M (Scenery) group render as non-editable", () => {
-        const tree = buildBinaryEditorTreeState(loadArcaves());
+    it("fields under an Object N.M (Scenery) group render as non-editable when the pid is unresolved", () => {
+        const tree = buildBinaryEditorTreeState(loadArcaves({ pidResolver: () => undefined }));
 
         // Walk the tree to find a Scenery object's children.
         const visitedFieldNames: string[] = [];

@@ -131,6 +131,7 @@ class MapParser implements BinaryParser {
                     header,
                     scriptOffset,
                     candidateErrors,
+                    { pidResolver: options?.pidResolver },
                 );
 
                 return {
@@ -183,7 +184,9 @@ class MapParser implements BinaryParser {
                 offset: scriptOffset,
                 overflowStart: scriptOverflowStart,
             } = parseScripts(data, currentOffset, errors, STRICT_MAP_SCRIPT_TYPE_COUNT);
-            const { group: objectsGroup, opaqueTailOffset } = parseObjects(data, header, scriptOffset, errors);
+            const { group: objectsGroup, opaqueTailOffset } = parseObjects(data, header, scriptOffset, errors, {
+                pidResolver: options?.pidResolver,
+            });
 
             rootFields.push(...scripts);
             currentOffset = scriptOffset;

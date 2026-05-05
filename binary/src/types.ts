@@ -114,6 +114,15 @@ export interface ParseOptions {
      * bytes for round-trip serialization.
      */
     skipMapTiles?: boolean;
+    /**
+     * Override the default pid → subType resolver used when decoding the
+     * trailing per-subtype payload of MAP item / scenery records. Defaults to
+     * the bundled vanilla Fallout 2 table (`pid-resolver.ts`). Supplying a
+     * resolver lets callers extend coverage to modded pids that the bundled
+     * table doesn't include. Returning `undefined` for a pid keeps the legacy
+     * opaque-tail fallback for that record.
+     */
+    pidResolver?: (pid: number) => number | undefined;
 }
 
 /**

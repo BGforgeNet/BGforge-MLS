@@ -205,6 +205,9 @@ function objectSerializedLength(object: z.infer<typeof mapObjectSchema>): number
         if (pidType === PID_TYPE_MISC && object.exitGrid) {
             length += 16;
         }
+        if (object.subtypeData) {
+            length += object.subtypeData.values.length * 4;
+        }
     }
     for (const entry of object.inventory) {
         length += 4 + objectSerializedLength(entry.object);
@@ -232,6 +235,12 @@ function serializeMapObject(bytes: Uint8Array, object: z.infer<typeof mapObjectS
         if (pidType === PID_TYPE_MISC && object.exitGrid) {
             exitGridCodec.write(bufferWriterAt(bytes, currentOffset), object.exitGrid);
             currentOffset += 16;
+        }
+        if (object.subtypeData) {
+            for (const value of object.subtypeData.values) {
+                writeInt32(bytes, currentOffset, value);
+                currentOffset += 4;
+            }
         }
     }
 
