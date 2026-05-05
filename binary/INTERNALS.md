@@ -212,6 +212,9 @@ These are non-negotiable across PRO and MAP:
 2. **Presentation can nest** even when data is flat. The walker's `subGroups` option handles armor sub-categories, scenery layouts, etc., without warping the data shape.
 3. **Read permissive, write strict.** Out-of-range enum values display as `Unknown (N)` and parse succeeds; saving rejects via the zod refinement when `spec.enum` is set. Real-world exception: MAP object base `rotation`/`elevation` carry packed-PID-shaped values in shipped files — the canonical zod stays plain int32 for those even though the wire spec documents enum tables.
 4. **No special-case sentinels.** Wire `0xFFFFFFFF` for "no script" reads naturally as `{type: -1, id: -1}` via signed `i8`/`i24` codecs. Don't add `if (value === 0xFFFFFFFF)` branches.
+
+    The same pattern covers proto fields the engine seeds to `-1` in its `proto_*_init` / `proto_scenery_subdata_init` helpers (see fallout2-ce `proto.cc`). Vanilla protos that don't override the default save the seed verbatim, so the wire arrives with `0xFFFFFFFF` and the runtime per-object map record (or, rarely, a script-spawn caller) supplies the live value. Spec these fields with signed codecs (`i32`) and add `[-1]: "None"` (or a more specific sentinel label) to the enum table when one is attached. Known fields following this pattern: scenery `material` (`proto_scenery_init`), elevator `type` / `level`, stairs `destinationBuiltTile` / `destinationMap`, ladder `destinationMap` (`proto_scenery_subdata_init`); on the item side `armor.{perk,maleFid,femaleFid}`, `weapon.{projectilePid,perk,ammoTypePid}`, `misc.powerTypePid`, `key.keyCode` carry the same convention.
+
 5. **Linked structures.** Same-struct: array length drives count via `enforceLinkedCounts(spec, doc)` + zod refinement. Cross-struct (`fromCtx`): orchestrator owns the binding; the count flows in via the read-time ctx.
 6. **No work-time artifacts in the repo.** Exception: `tmp/` (in `.gitignore`).
 

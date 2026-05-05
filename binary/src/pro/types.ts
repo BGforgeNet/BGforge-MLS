@@ -45,7 +45,13 @@ export const DamageType: Record<number, string> = {
 };
 
 // Material types
+// Material 0..7 plus the -1 "no proto default" sentinel emitted by the
+// engine's proto_scenery_init (proto.cc:956). Item, wall, and tile protos
+// initialise material to 1 (Metal), so -1 is observed primarily on scenery in
+// vanilla; modded data may set it elsewhere, hence sentinel handling on every
+// material field that uses this lookup.
 export const MaterialType: Record<number, string> = {
+    [-1]: "None",
     0: "Glass",
     1: "Metal",
     2: "Plastic",
@@ -98,8 +104,13 @@ export const KillType: Record<number, string> = {
     18: "Big Bad Boss",
 };
 
-// Elevator types - 0x00-0x17
+// Elevator types - 0x00-0x17 plus the -1 "no proto default" sentinel
+// emitted by the engine's proto_scenery_subdata_init (proto.cc:976). The
+// per-object map record always supplies the live value at runtime; for
+// script-spawned elevators (rare) the proto value is the seed, and -1 there
+// signals "no default — caller must set it" (scripts.cc:1152 bails on -1).
 export const ElevatorType: Record<number, string> = {
+    [-1]: "None",
     0: "Elevator 0",
     1: "Elevator 1",
     2: "Elevator 2",

@@ -133,3 +133,45 @@ describe("PRO parser - error cases", () => {
         expect(result.errors![0]).toContain("too large");
     });
 });
+
+// Regression for the proto-default sentinel pattern: the engine's
+// proto_scenery_subdata_init seeds elevator type/level to -1 (proto.cc:976)
+// and proto_scenery_init seeds material to -1 (proto.cc:956). Vanilla protos
+// that never override those defaults reach disk with `0xff_ff_ff_ff` on the
+// wire; the parser must surface them as `-1` rather than rejecting the file.
+describe("PRO parser - proto-default sentinels", () => {
+    function buildElevatorScenery(elevatorType: number, elevatorLevel: number, materialId: number): Uint8Array {
+        // 24 (header) + 17 (scenery-common) + 8 (elevator subdata) = 49 bytes.
+        const b = new Uint8Array(49);
+        const view = new DataView(b.buffer);
+        view.setUint8(0, 2); // objectType = Scenery
+        view.setUint8(1, 0x00);
+        view.setUint8(2, 0x05);
+        view.setUint8(3, 0x0d); // objectId = 1293 (24-bit BE)
+        view.setUint32(4, 129300, false); // textId
+        view.setUint8(8, 2); // frmType = Scenery
+        view.setInt8(28, -1); // scriptType
+        view.setUint8(29, 0xff);
+        view.setUint8(30, 0xff);
+        view.setUint8(31, 0xff); // scriptId i24=-1
+        view.setUint32(32, 2, false); // sceneryProperties.subType = Elevator
+        view.setInt32(36, materialId, false);
+        view.setUint8(40, 48); // soundId
+        view.setInt32(41, elevatorType, false);
+        view.setInt32(45, elevatorLevel, false);
+        return b;
+    }
+
+    it("accepts elevator scenery with elevatorType/Level = -1 and material = -1", () => {
+        const data = buildElevatorScenery(-1, -1, -1);
+        const result = proParser.parse(data) as ParseResult & {
+            document?: { sections: Record<string, Record<string, number>> };
+        };
+        expect(result.errors).toBeUndefined();
+        expect(result.document?.sections.elevatorProperties).toEqual({
+            elevatorType: -1,
+            elevatorLevel: -1,
+        });
+        expect(result.document?.sections.sceneryProperties?.materialId).toBe(-1);
+    });
+});
