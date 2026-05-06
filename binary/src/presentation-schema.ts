@@ -20,6 +20,13 @@ import {
     WeaponAnimCode,
 } from "./pro/types";
 import { MapElevation, MapFlags, ObjectFlags, Rotation, ScriptProc, ScriptFlags, Skill } from "./map/types";
+import { effBodySpecAnnotated } from "./eff/specs/body.overrides";
+import { effectSpecAnnotated } from "./ie-common/specs/effect.overrides";
+import { itmAbilitySpecAnnotated } from "./itm/specs/ability.overrides";
+import { itmHeaderSpecAnnotated } from "./itm/specs/header.overrides";
+import { splAbilitySpecAnnotated } from "./spl/specs/ability.overrides";
+import { splHeaderSpecAnnotated } from "./spl/specs/header.overrides";
+import { toPresentationEntries } from "./spec/derive-presentation";
 import { formatAdapterRegistry } from "./format-adapter";
 
 const numericFormatSchema = z.enum(["decimal", "hex32"]);
@@ -343,9 +350,47 @@ const mapPresentationSchema = formatPresentationSchema.parse({
     ],
 });
 
+// IE format presentation schemas: derived from the augmented specs so the
+// editor's flag/enum dropdowns match what walkStruct resolves in the display
+// tree. Adding an enum/flag annotation in `<format>/specs/<file>.overrides.ts`
+// is enough — `toPresentationEntries` picks it up here.
+const itmPresentationSchema = formatPresentationSchema.parse({
+    schemaVersion: 1,
+    format: "itm",
+    exactFields: {
+        ...toPresentationEntries(itmHeaderSpecAnnotated, {}, "itm.header"),
+        ...toPresentationEntries(itmAbilitySpecAnnotated, {}, "itm.abilities[]"),
+        ...toPresentationEntries(effectSpecAnnotated, {}, "itm.effects[]"),
+    },
+    patternFields: [],
+});
+
+const splPresentationSchema = formatPresentationSchema.parse({
+    schemaVersion: 1,
+    format: "spl",
+    exactFields: {
+        ...toPresentationEntries(splHeaderSpecAnnotated, {}, "spl.header"),
+        ...toPresentationEntries(splAbilitySpecAnnotated, {}, "spl.abilities[]"),
+        ...toPresentationEntries(effectSpecAnnotated, {}, "spl.effects[]"),
+    },
+    patternFields: [],
+});
+
+const effPresentationSchema = formatPresentationSchema.parse({
+    schemaVersion: 1,
+    format: "eff",
+    exactFields: {
+        ...toPresentationEntries(effBodySpecAnnotated, {}, "eff.body"),
+    },
+    patternFields: [],
+});
+
 const binaryPresentationSchemas = {
     pro: proPresentationSchema,
     map: mapPresentationSchema,
+    itm: itmPresentationSchema,
+    spl: splPresentationSchema,
+    eff: effPresentationSchema,
 } as const satisfies Record<string, FormatPresentationSchema>;
 
 type SupportedPresentationFormat = keyof typeof binaryPresentationSchemas;
@@ -366,6 +411,9 @@ const compiledPatternSchemas: Record<SupportedPresentationFormat, readonly Compi
         pathRegex: new RegExp(entry.pathPattern),
         fieldNameRegex: entry.fieldNamePattern ? new RegExp(entry.fieldNamePattern) : undefined,
     })),
+    itm: [],
+    spl: [],
+    eff: [],
 };
 
 function mergePresentation(base: FieldPresentation, override: FieldPresentation): FieldPresentation {
