@@ -31,12 +31,20 @@ binary/src/
   index.ts                     # Public API surface; pinned by public-api.test.ts
   cli.ts                       # fgbin entry point
   registry.ts                  # parserRegistry (ext → BinaryParser)
-  format-adapter.ts            # BinaryFormatAdapter registry (editor metadata)
+  format-adapter.ts            # BinaryFormatAdapter interface + registry; eager bottom-imports
+                               #   register every per-format adapter and wire setDomainRangeLookup
   json-snapshot.ts             # Schema-versioned snapshot create/load/parse
   json-snapshot-path.ts        # Sidecar path resolution (.pro.json / .map.json)
-  presentation-schema.ts       # Format-specific labels/enum tables/editability
-  display-lookups.ts           # Resolve enum/flag display ↔ raw values
-  binary-format-contract.ts    # zodNumericType, clampNumericValue
+  presentation-schema.ts       # Lookup functions (resolveFieldPresentation, getFormatPresentationSchema)
+                               #   that route through formatAdapterRegistry; per-format schema CONTENT
+                               #   lives in <format>/presentation-schema.ts.
+  presentation-schema-types.ts # Type definitions + zod parsers + compilePatternFields helper.
+                               #   Type-only consumer for format-adapter.ts (cycle-free).
+  display-lookups.ts           # Resolve enum/flag display ↔ raw values via resolveFieldPresentation
+  binary-format-contract.ts    # Codec primitives (zodNumericType) + value helpers
+                               #   (validateNumericValue, clampNumericValue, zodFieldNumber,
+                               #   getDomainRange) with a setDomainRangeLookup setter installed
+                               #   by format-adapter.ts after registrations. Cycle-free.
   shared-schemas.ts            # opaqueRangeSchema
   schema-validation.ts         # parseWithSchemaValidation wrapper
   opaque-range.ts              # Hex-chunk encoding for undecoded byte spans
@@ -62,6 +70,7 @@ binary/src/
     canonical-writer.ts        # canonical doc → bytes
     canonical.ts               # Barrel re-exports
     format-adapter.ts          # BinaryFormatAdapter for PRO
+    presentation-schema.ts     # proPresentationSchema + proCompiledPatternFields + proDomainRanges
     json-snapshot.ts           # PRO-specific snapshot adapter
     serializer.ts              # Top-level serialise(parseResult)
     transition.ts              # Subtype-change structural edit handler
@@ -80,6 +89,7 @@ binary/src/
     canonical-reader.ts        # ParsedGroup → canonical doc (walkGroup-driven)
     canonical-writer.ts        # canonical doc → bytes (spec.write-driven)
     format-adapter.ts          # BinaryFormatAdapter for MAP
+    presentation-schema.ts     # mapPresentationSchema + mapCompiledPatternFields + mapDomainRanges
     json-snapshot.ts           # MAP-specific snapshot adapter
     serializer.ts              # Top-level serialise(parseResult)
     index.ts                   # mapParser
@@ -88,6 +98,8 @@ binary/src/
   itm/                         # Infinity Engine ITM v1 (items)
     specs/header.ts            # Generated from IESDP itm_v1/header.yml
     specs/ability.ts           # Generated from IESDP itm_v1/extended_header.yml
+    presentation-schema.ts     # itmPresentationSchema (derived via toPresentationEntries from
+                               #   *SpecAnnotated) + itmCompiledPatternFields + itmDomainRanges
     schemas.ts, canonical-{schemas,reader,writer}.ts, canonical.ts,
     format-adapter.ts, json-snapshot.ts, serializer.ts, index.ts, types.ts
 
@@ -95,12 +107,14 @@ binary/src/
     specs/header.ts            # Generated from IESDP spl_v1/header.yml
     specs/ability.ts           # Generated from IESDP spl_v1/extended_header.yml (40 bytes,
                                #   distinct shape from ITM ability)
+    presentation-schema.ts     # splPresentationSchema (derived) + compiled patterns + domainRanges
     schemas.ts, canonical-{schemas,reader,writer}.ts, canonical.ts,
     format-adapter.ts, json-snapshot.ts, serializer.ts, index.ts, types.ts
 
   eff/                         # Infinity Engine EFF v2 (sub-effects)
     specs/header.ts            # Generated from IESDP eff_v2/header.yml (8 bytes: sig + version)
     specs/body.ts              # Generated from IESDP eff_v2/body.yml (264 bytes)
+    presentation-schema.ts     # effPresentationSchema (derived) + compiled patterns + domainRanges
     schemas.ts, canonical-{schemas,reader,writer}.ts, canonical.ts,
     format-adapter.ts, json-snapshot.ts, serializer.ts, index.ts, types.ts
 
@@ -264,15 +278,31 @@ Sidecar paths preserve the original extension: `file.pro` → `file.pro.json`, `
 
 ## Format adapters
 
-`BinaryFormatAdapter` (in `format-adapter.ts`) encapsulates per-format editor concerns:
+`BinaryFormatAdapter` (in `format-adapter.ts`) is the single per-format extension point — every cross-cutting feature that needs format-specific data reads it from the adapter, so adding a new format means writing _one_ adapter rather than registering with N parallel module-level maps.
 
-- `createJsonSnapshot` / `loadJsonSnapshot` — canonical snapshot create/load
-- `rebuildCanonicalDocument` — reconstruct after tree edits
-- `toSemanticFieldKey` — display-path → semantic key for presentation lookup
-- `shouldHideField`, `shouldHideGroup`, `projectDisplayRoot` — editor projection (hide tile bulk, redundant slots, etc.)
-- `isStructuralFieldId`, `buildStructuralTransitionBytes` — structural edits that change layout (e.g. PRO subtype change)
+Adapter responsibilities:
 
-Adapters are registered in `format-adapter.ts` alongside parsers. The binary editor in the VSCode extension consumes the adapter registry; CLI/library users mostly interact with snapshot helpers and the parser registry directly.
+- **Snapshots**: `createJsonSnapshot` / `loadJsonSnapshot` — canonical snapshot create/load.
+- **Canonical**: `rebuildCanonicalDocument` — reconstruct after tree edits.
+- **Semantic keys**: `toSemanticFieldKey` — display-path → semantic key for presentation lookup.
+- **Editor presentation** (consolidated registries):
+    - `presentationSchema` — `FormatPresentationSchema` with `exactFields` + `patternFields` (labels, enum/flag dropdowns, numeric format, editability, charset). Built in each format's own `<format>/presentation-schema.ts`. Read by `getFormatPresentationSchema` and `resolveFieldPresentation` in the top-level `presentation-schema.ts`.
+    - `compiledPatternFields` — pre-compiled regex versions of `presentationSchema.patternFields`, computed once at module load via `compilePatternFields` (in `presentation-schema-types.ts`).
+    - `domainRanges` — per-field numeric domain narrowing keyed by semantic key. Read by `getDomainRange` in `binary-format-contract.ts`, consumed by `validateNumericValue` / `clampNumericValue` / `zodFieldNumber`.
+- **Editor projection** (optional): `shouldHideField`, `shouldHideGroup`, `projectDisplayRoot` — hide tile bulk, redundant slots, etc.
+- **Structural edits** (optional): `isStructuralFieldId`, `buildStructuralTransitionBytes` — layout-changing edits (PRO subtype change).
+- **Variable-length array editing** (optional): `buildAddEntryBytes` / `buildRemoveEntryBytes` / `buildInsertEntryBytes` / `buildMoveEntryBytes` / `isAddableArray` / `isRemovableEntry` — entity ops (MAP global vars, scripts).
+
+Adapters are registered eagerly at the bottom of `format-adapter.ts`. The binary editor consumes the adapter registry; CLI / library users mostly interact with snapshot helpers and the parser registry directly.
+
+**Cycle break for the registry-driven domain-range lookup.** `binary-format-contract.ts` exports `setDomainRangeLookup`, which `format-adapter.ts` calls once after registering every adapter. The setter pattern keeps `binary-format-contract.ts` cycle-free so `derive-zod` and per-format `canonical-schemas.ts` can import codec primitives (`zodNumericType`, `clampNumericValue`, `zodFieldNumber`) without dragging in the format-adapter graph. The split mirrors the type-only `presentation-schema-types.ts`, which exists for the same reason — `format-adapter.ts` types `presentationSchema?` and `compiledPatternFields?` against those types without circular-importing the runtime `presentation-schema.ts`.
+
+Type-only imports recap (load order, top to bottom):
+
+1. `binary-format-contract.ts` — codec primitives, no registry dependency.
+2. `presentation-schema-types.ts` — schema + compile helpers, type-only consumers.
+3. `format-adapter.ts` — interface + registry; eager bottom-imports register every per-format adapter and wire `setDomainRangeLookup`.
+4. `presentation-schema.ts` (runtime lookups) — queries the registry; safe because step 3 finishes before any test or CLI code touches it.
 
 ## Architectural rules
 
@@ -306,16 +336,27 @@ These are evaluated and intentionally kept in orchestrator code rather than lift
 
 ## Adding a new format
 
-1. **Wire spec(s).** Create `binary/src/<format>/specs/*.ts` with `StructSpec` declarations and `SpecData<typeof spec>` types.
-2. **Parser.** Implement `BinaryParser` in `binary/src/<format>/index.ts` (`id`, `name`, `extensions`, `parse`, optional `serialize`). Use `toTypedBinarySchema(spec)` for wire reads, `walkStruct(spec, presentation, ...)` for the display tree, and orchestrate any subtype dispatch / recursion in the parser itself.
-3. **Canonical model.** Add `canonical-schemas.ts` (zod), `canonical-reader.ts` (display tree → canonical via `walkGroup`), `canonical-writer.ts` (canonical → bytes via `spec.write` on a `BufferWriter`). Where the canonical shape matches the wire, derive zod via `toZodSchema(spec)`. Where it diverges (string fields, computed indices, discriminated unions), hand-write and document why.
-4. **Canonical barrel.** `canonical.ts` re-exports the canonical-document type and helpers.
-5. **Format adapter.** Implement `BinaryFormatAdapter` in `format-adapter.ts`; register alongside existing adapters.
-6. **JSON snapshot adapter.** Add `<format>/json-snapshot.ts` with `createCanonical<Format>JsonSnapshot` and `loadCanonical<Format>JsonSnapshot`. Wire into `binary/src/json-snapshot.ts`'s top-level routing.
-7. **Presentation schema.** Add semantic-key entries in `presentation-schema.ts` (enum/flags lookups, formatting, editability).
-8. **Register parser.** Add the side-effect `parserRegistry.register(myParser)` to `binary/src/index.ts`.
-9. **VSCode editor.** Add the extension pattern to `package.json`'s `customEditors` selector at the repo root.
-10. **Tests.** Round-trip parse/serialise, snapshot dump/load, CLI `--save`/`--check`/`--load`, presentation lookups, structural edits if any.
+The format-adapter consolidates per-format data (presentation schema, domain ranges, snapshot helpers, semantic keys) into one object — most of the wiring is local to the new format's directory. Touch-points outside `binary/src/<format>/` are listed below as **shared touch-points** so a format addition stays grep-able as a checklist.
+
+**In the new format's directory** (`binary/src/<format>/`):
+
+1. **Wire spec(s).** `specs/*.ts` with `StructSpec` declarations and `SpecData<typeof spec>` types. IESDP-driven formats: add the source YAML path to `scripts/ie-binary-update/src/main.ts`'s `TARGETS` and run `scripts/ie-binary-update.sh`.
+2. **Parser.** `index.ts` implements `BinaryParser` (`id`, `name`, `extensions`, `parse`, optional `serialize`). Use `toTypedBinarySchema(spec)` for wire reads, `walkStruct(spec, presentation, ...)` for the display tree, and orchestrate any subtype dispatch / recursion in the parser itself.
+3. **Canonical model.** `canonical-schemas.ts` (zod), `canonical-reader.ts`, `canonical-writer.ts`. Where the canonical shape matches the wire, derive zod via `toZodSchema(spec)`. Where it diverges (computed indices, discriminated unions), hand-write and document why. `canonical.ts` re-exports the document type and helpers.
+4. **JSON snapshot.** `json-snapshot.ts` exports `createCanonical<Format>JsonSnapshot` / `loadCanonical<Format>JsonSnapshot`.
+5. **Presentation schema.** `presentation-schema.ts` exports `<format>PresentationSchema`, `<format>CompiledPatternFields`, `<format>DomainRanges`. For most fields you can derive entries via `toPresentationEntries(spec, presentation, prefix)` over the augmented spec; hand-write `exactFields` / `patternFields` only where the spec annotation isn't expressive enough.
+6. **Format adapter.** `format-adapter.ts` builds a `BinaryFormatAdapter` and attaches `presentationSchema`, `compiledPatternFields`, `domainRanges` from step 5 plus the snapshot helpers from step 4. Editor projection / structural-edit / entity-op methods are optional; implement only what the format needs.
+
+**Shared touch-points** (each must be updated together — they are cross-linked here so a search for any one surfaces the rest):
+
+| Touch-point                                                                              | Why                                                                                                                                                                                                                                |
+| ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `binary/src/index.ts` parser export + `parserRegistry.register` block                    | Public API exposes the parser; the bottom-of-file side effects register it on the parser registry.                                                                                                                                 |
+| `binary/src/format-adapter.ts` bottom-of-file imports + `formatAdapterRegistry.register` | Eager-register the new adapter alongside the existing PRO/MAP/ITM/SPL/EFF entries. After all registrations this same block calls `setDomainRangeLookup`; no extra wiring needed for domain ranges, the adapter property is enough. |
+| `binary/src/types.ts` `BinaryCanonicalDocument` union                                    | TypeScript needs the literal union for narrowing on `ParseResult.document`. Add the new format's `<Format>CanonicalDocument` to the union.                                                                                         |
+| `package.json` `customEditors` selector                                                  | VSCode reads this manifest at install time; extension patterns can't be runtime-driven. Add the new file extension(s).                                                                                                             |
+
+**Tests.** Round-trip parse/serialise (real fixtures from `external/` if available), snapshot dump/load, CLI `--save` / `--check` / `--load`, presentation-tree assertions for headline enum/flag fields, and structural edits if the format has any. See `binary/test/{itm,spl,eff}-roundtrip.test.ts` and `binary/test/itm-spl-presentation.test.ts` for templates.
 
 ## CLI
 
