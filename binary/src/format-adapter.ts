@@ -124,8 +124,10 @@ import { proFormatAdapter } from "./pro/format-adapter";
 import { mapFormatAdapter } from "./map/format-adapter";
 import { itmFormatAdapter } from "./itm/format-adapter";
 import { splFormatAdapter } from "./spl/format-adapter";
+import { effFormatAdapter } from "./eff/format-adapter";
 
 formatAdapterRegistry.register(proFormatAdapter);
 formatAdapterRegistry.register(mapFormatAdapter);
 formatAdapterRegistry.register(itmFormatAdapter);
 formatAdapterRegistry.register(splFormatAdapter);
+formatAdapterRegistry.register(effFormatAdapter);

@@ -1,4 +1,4 @@
-import { isArraySpec, type StructSpec } from "./types";
+import { isArraySpec, isCharsSpec, type StructSpec } from "./types";
 import type { StructPresentation } from "./presentation";
 
 interface PresentationEntry {
@@ -30,7 +30,7 @@ export function toPresentationEntries<T>(
     const out: Record<string, PresentationEntry> = {};
     for (const key of Object.keys(spec) as (keyof T & string)[]) {
         const fs = spec[key];
-        if (isArraySpec(fs)) continue;
+        if (isArraySpec(fs) || isCharsSpec(fs)) continue;
         const pres = presentation[key];
         const fullKey = `${prefix}.${key}`;
 
@@ -55,7 +55,7 @@ export function toPresentationEntries<T>(
         }
 
         const overrides: { numericFormat?: "decimal" | "hex32"; editable?: boolean } = {};
-        if (pres?.format) overrides.numericFormat = pres.format;
+        if (pres?.format === "decimal" || pres?.format === "hex32") overrides.numericFormat = pres.format;
         if (pres?.editable !== undefined) overrides.editable = pres.editable;
         if (Object.keys(overrides).length > 0) {
             out[fullKey] = overrides;

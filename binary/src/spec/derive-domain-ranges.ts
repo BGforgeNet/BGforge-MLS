@@ -1,4 +1,4 @@
-import { isArraySpec, type StructSpec } from "./types";
+import { isArraySpec, isCharsSpec, type StructSpec } from "./types";
 
 interface NumericRange {
     readonly min: number;
@@ -15,7 +15,7 @@ export function toDomainRanges<T>(spec: StructSpec<T>, prefix: string): Record<s
     const out: Record<string, NumericRange> = {};
     for (const key of Object.keys(spec) as (keyof T & string)[]) {
         const fs = spec[key];
-        if (isArraySpec(fs)) continue;
+        if (isArraySpec(fs) || isCharsSpec(fs)) continue;
         if (fs.domain) {
             out[`${prefix}.${key}`] = fs.domain;
         }

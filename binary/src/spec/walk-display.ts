@@ -1,6 +1,6 @@
 import { codecByteLength, codecNumericTypeName } from "./codec-meta";
 import { humanize, type FieldPresentation, type StructPresentation } from "./presentation";
-import { isArraySpec, type FieldSpec, type SpecData, type StructSpec } from "./types";
+import { isArraySpec, isCharsSpec, type FieldSpec, type SpecData, type StructSpec } from "./types";
 import type { ParsedField, ParsedGroup, ParsedFieldType } from "../types";
 
 /**
@@ -36,6 +36,12 @@ export function walkGroup<S extends Record<string, FieldSpec>>(
             throw new Error(
                 `walkGroup: array field "${key}" is not supported; iterate the array group at the call site.`,
             );
+        }
+        if (isCharsSpec(fs)) {
+            // Chars project as `string` in SpecData; walkGroup's numeric-only
+            // contract doesn't cover them. Callers that need chars round-trip
+            // through a typed-binary read instead.
+            throw new Error(`walkGroup: chars field "${key}" is not supported; read the bytes through the codec.`);
         }
         const presKey = key as keyof SpecData<S>;
         const label = presentation[presKey]?.label ?? humanize(key);
@@ -122,7 +128,8 @@ export function walkStruct<T extends Record<string, unknown>>(
         // cursor advances by the slot size once for the whole group. Spec
         // authors are responsible for grouping packed parts contiguously
         // (the typed-binary derivation enforces this at module load).
-        if (!isArraySpec(fs) && fs.packedAs !== undefined) {
+        // Chars and array fields never participate in packing.
+        if (!isArraySpec(fs) && !isCharsSpec(fs) && fs.packedAs !== undefined) {
             const slot = fs.packedAs;
             const slotOffset = cursor;
             const slotSize = codecByteLength(fs.codec);
@@ -130,7 +137,7 @@ export function walkStruct<T extends Record<string, unknown>>(
             while (j < keys.length) {
                 const k = keys[j]!;
                 const f = spec[k];
-                if (isArraySpec(f) || f.packedAs !== slot) break;
+                if (isArraySpec(f) || isCharsSpec(f) || f.packedAs !== slot) break;
                 builtFields.set(k, fieldFor(k, f, presentation[k], slotOffset, slotSize, data[k], options.labelPrefix));
                 j++;
             }
@@ -196,6 +203,9 @@ function fieldSize<T extends Record<string, unknown>>(fs: FieldSpec, data: T, ke
         }
         return arr.length * codecByteLength(fs.element.codec);
     }
+    if (isCharsSpec(fs)) {
+        return fs.count;
+    }
     return codecByteLength(fs.codec);
 }
 
@@ -210,6 +220,17 @@ function fieldFor(
 ): ParsedField {
     const baseLabel = pres?.label ?? humanize(name);
     const label = labelPrefix ? `${labelPrefix} ${baseLabel}` : baseLabel;
+
+    if (isCharsSpec(fs)) {
+        // Chars fields preserve all wire bytes (including NULs) in the
+        // canonical string for round-trip safety. Display strips trailing
+        // NULs so a NUL-padded resref like `"EFF\0\0\0\0\0"` reads as
+        // `"EFF"`. Interior NULs (rare, in unused/garbage fields) stay
+        // verbatim so the display reflects the actual byte content.
+        const raw = typeof value === "string" ? value : String(value);
+        const trimmed = raw.replace(/ +$/, "");
+        return { name: label, value: trimmed, offset, size, type: "string" };
+    }
 
     if (isArraySpec(fs)) {
         // Trailing reserves and other byte-array fields are presented as a

@@ -1,7 +1,7 @@
 // Auto-generated from IESDP _data/file_formats/itm_v1/feature_block.yml. Do not hand-edit.
 
 import { u16, u32, u8 } from "typed-binary";
-import { arraySpec, type FieldSpec, type SpecData } from "../../spec/types";
+import { charsSpec, type FieldSpec, type SpecData } from "../../spec/types";
 
 export const effectSpec = {
     opcode: { codec: u16 },
@@ -14,7 +14,7 @@ export const effectSpec = {
     duration: { codec: u32 },
     probability1: { codec: u8 },
     probability2: { codec: u8 },
-    resource: arraySpec({ element: { codec: u8 }, count: 8 }),
+    resource: charsSpec(8),
     maxLevel: { codec: u32 },
     minLevel: { codec: u32 },
     saveType: { codec: u32 },

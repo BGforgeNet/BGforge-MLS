@@ -470,6 +470,9 @@
                     },
                     {
                         "filenamePattern": "*.spl"
+                    },
+                    {
+                        "filenamePattern": "*.eff"
                     }
                 ],
                 "priority": "default"

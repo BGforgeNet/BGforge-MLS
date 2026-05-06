@@ -71,7 +71,33 @@ export interface ArrayFieldSpec {
     readonly defaultElement?: () => unknown;
 }
 
-export type FieldSpec = ScalarFieldSpec | ArrayFieldSpec;
+/**
+ * Fixed-size ASCII string stored as N raw bytes on the wire. Covers IESDP
+ * `resref` (8 bytes) and `char array, length: N` (signature, version, names).
+ *
+ * The wire layout is N raw u8 bytes. The data layer surfaces a `string`:
+ * - `toTypedBinarySchema` reads N bytes and converts to a NUL-stripped string
+ *   on read; on write, encodes the string to ASCII, NUL-pads or truncates to N.
+ * - `toZodSchema` produces `z.string().max(N)`.
+ * - `walkStruct` renders the string directly in the display tree.
+ * - `SpecData<S>` projects the field as `string`.
+ *
+ * Lifting this to a primitive (rather than a presentation hint over u8[N]) is
+ * what makes JSON snapshot diffs single-line for resref / signature changes.
+ */
+/**
+ * Exported so the published `@bgforge/binary` `.d.ts` can name types
+ * inferred from `charsSpec(...)` calls in spec modules; not imported from
+ * source.
+ *
+ * @public
+ */
+export interface CharsFieldSpec {
+    readonly kind: "chars";
+    readonly count: number;
+}
+
+export type FieldSpec = ScalarFieldSpec | ArrayFieldSpec | CharsFieldSpec;
 
 export type StructSpec<T> = { readonly [K in keyof T]: FieldSpec };
 
@@ -111,6 +137,18 @@ export function isArraySpec(spec: FieldSpec): spec is ArrayFieldSpec {
     return spec.kind === "array";
 }
 
+export function isCharsSpec(spec: FieldSpec): spec is CharsFieldSpec {
+    return spec.kind === "chars";
+}
+
+/** Construct a fixed-size chars (ASCII string) field spec. */
+export function charsSpec(count: number): CharsFieldSpec {
+    if (!Number.isInteger(count) || count < 1) {
+        throw new Error(`charsSpec requires a positive integer count; got ${count}`);
+    }
+    return { kind: "chars", count };
+}
+
 export function isFromFieldCount(count: ArrayFieldSpec["count"]): count is { readonly fromField: string } {
     return typeof count === "object" && "fromField" in count;
 }
@@ -128,7 +166,7 @@ export function isFromCtxCount(count: ArrayFieldSpec["count"]): count is { reado
  * `interface FooData` and the spec field list.
  */
 export type SpecData<S extends Record<string, FieldSpec>> = {
-    -readonly [K in keyof S]: S[K] extends ArrayFieldSpec ? number[] : number;
+    -readonly [K in keyof S]: S[K] extends ArrayFieldSpec ? number[] : S[K] extends CharsFieldSpec ? string : number;
 };
 
 /**

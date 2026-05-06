@@ -8,7 +8,14 @@
 export interface FieldPresentation {
     readonly label?: string;
     readonly unit?: string;
-    readonly format?: "decimal" | "hex32";
+    /**
+     * Display format hint:
+     * - `decimal` (default) / `hex32`: scalar number rendering.
+     * - `ascii`: u8[N] array rendered as ASCII string (NUL bytes dropped, trailing
+     *   whitespace preserved). Used for fixed-byte name fields like resrefs and
+     *   format signatures (e.g. `"ITM "`, `"EFF_M01"`).
+     */
+    readonly format?: "decimal" | "hex32" | "ascii";
     readonly editable?: boolean;
 }
 

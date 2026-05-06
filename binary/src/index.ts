@@ -58,6 +58,7 @@ export { proParser } from "./pro";
 export { mapParser } from "./map";
 export { itmParser } from "./itm";
 export { splParser } from "./spl";
+export { effParser } from "./eff";
 
 // Pid → subType resolution for MAP item / scenery decode. The default
 // resolver is backed by a bundled vanilla Fallout 2 lookup table; consumers
@@ -81,8 +82,10 @@ import { proParser } from "./pro";
 import { mapParser } from "./map";
 import { itmParser } from "./itm";
 import { splParser } from "./spl";
+import { effParser } from "./eff";
 import { parserRegistry } from "./registry";
 parserRegistry.register(proParser);
 parserRegistry.register(mapParser);
 parserRegistry.register(itmParser);
 parserRegistry.register(splParser);
+parserRegistry.register(effParser);

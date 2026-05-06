@@ -11,7 +11,7 @@
 
 import { BufferReader } from "typed-binary";
 import { walkStruct } from "../spec/walk-display";
-import { effectSpec } from "../ie-common/specs";
+import { effectSpecAnnotated } from "../ie-common/specs/effect.overrides";
 import { EFFECT_SIZE, bytesEqual } from "../ie-common/types";
 import type { BinaryParser, ParseOptions, ParseResult, ParsedField, ParsedGroup } from "../types";
 import {
@@ -22,8 +22,8 @@ import {
     type ItmAbilityData,
     type ItmHeaderData,
 } from "./schemas";
-import { itmHeaderSpec } from "./specs/header";
-import { itmAbilitySpec } from "./specs/ability";
+import { itmHeaderSpecAnnotated } from "./specs/header.overrides";
+import { itmAbilitySpecAnnotated } from "./specs/ability.overrides";
 import { ITM_ABILITY_SIZE, ITM_HEADER_SIZE, ITM_SIGNATURE, ITM_VERSION_V1 } from "./types";
 import type { ItmCanonicalDocument } from "./canonical-schemas";
 import { serializeItm } from "./serializer";
@@ -49,7 +49,7 @@ function readerAt(data: Uint8Array, offset: number): BufferReader {
 }
 
 function parseHeader(data: ItmHeaderData): ParsedGroup {
-    return walkStruct(itmHeaderSpec, itmHeaderPresentation, 0, data, "ITM Header");
+    return walkStruct(itmHeaderSpecAnnotated, itmHeaderPresentation, 0, data, "ITM Header");
 }
 
 class ItmParser implements BinaryParser {
@@ -119,7 +119,7 @@ class ItmParser implements BinaryParser {
             "Abilities",
             abilities.map((ability, i) =>
                 walkStruct(
-                    itmAbilitySpec,
+                    itmAbilitySpecAnnotated,
                     abilityPresentation,
                     abilitiesOffset + i * ITM_ABILITY_SIZE,
                     ability,
@@ -130,7 +130,13 @@ class ItmParser implements BinaryParser {
         const effectsGroup = group(
             "Effects",
             effects.map((effect, i) =>
-                walkStruct(effectSpec, effectPresentation, effectsOffset + i * EFFECT_SIZE, effect, `Effect ${i + 1}`),
+                walkStruct(
+                    effectSpecAnnotated,
+                    effectPresentation,
+                    effectsOffset + i * EFFECT_SIZE,
+                    effect,
+                    `Effect ${i + 1}`,
+                ),
             ),
         );
 

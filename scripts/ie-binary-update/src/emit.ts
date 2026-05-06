@@ -3,7 +3,7 @@ import type { TranslatedStruct } from "./translate.ts";
 /** Identifiers imported from typed-binary directly. */
 const TYPED_BINARY_NAMES = new Set(["i8", "u8", "i16", "u16", "i32", "u32"]);
 /** Identifiers imported from binary/src/spec/types. */
-const SPEC_TYPES_NAMES = new Set(["arraySpec"]);
+const SPEC_TYPES_NAMES = new Set(["arraySpec", "charsSpec"]);
 
 export interface EmitInput {
     readonly struct: TranslatedStruct;

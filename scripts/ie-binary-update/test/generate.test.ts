@@ -33,12 +33,12 @@ describe("generate — IESDP itm_v1 header", () => {
         expect(generated).toContain("export type ItmHeaderData = SpecData<typeof itmHeaderSpec>;");
 
         // Spot-check a few fields that exercise distinct translation rules.
-        expect(generated).toContain("signature: arraySpec({ element: { codec: u8 }, count: 4 }),");
+        expect(generated).toContain("signature: charsSpec(4),"); // char array → chars primitive
         expect(generated).toContain("unidentifiedName: { codec: i32 },"); // strref → i32
-        expect(generated).toContain("replacement: arraySpec({ element: { codec: u8 }, count: 8 }),"); // resref
+        expect(generated).toContain("replacement: charsSpec(8),"); // resref → chars primitive
         expect(generated).toContain("flags: { codec: u32 },"); // markdown-stripped, derived name
         expect(generated).toContain("type: { codec: u16 },");
-        expect(generated).toContain("usabilityFlags: arraySpec({ element: { codec: u8 }, count: 4 }),"); // mult
+        expect(generated).toContain("usabilityFlags: arraySpec({ element: { codec: u8 }, count: 4 }),"); // byte+mult stays array
         expect(generated).toContain("kitUsability1: { codec: u8 },"); // markdown-stripped derived name
         expect(generated).toContain("featureBlocksCount: { codec: u16 },");
     });

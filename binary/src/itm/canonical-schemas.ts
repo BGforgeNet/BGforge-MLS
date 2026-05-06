@@ -12,16 +12,16 @@
 import { z } from "zod";
 import { toZodSchema } from "../spec/derive-zod";
 import { opaqueRangeSchema } from "../shared-schemas";
-import { effectSpec } from "../ie-common/specs";
-import { itmHeaderSpec } from "./specs/header";
-import { itmAbilitySpec } from "./specs/ability";
+import { effectSpecAnnotated } from "../ie-common/specs/effect.overrides";
+import { itmHeaderSpecAnnotated } from "./specs/header.overrides";
+import { itmAbilitySpecAnnotated } from "./specs/ability.overrides";
 
-const itmHeaderSchemaStrict = toZodSchema(itmHeaderSpec, { mode: "strict" });
-const itmHeaderSchemaPermissive = toZodSchema(itmHeaderSpec, { mode: "permissive" });
-const abilitySchemaStrict = toZodSchema(itmAbilitySpec, { mode: "strict" });
-const abilitySchemaPermissive = toZodSchema(itmAbilitySpec, { mode: "permissive" });
-const effectSchemaStrict = toZodSchema(effectSpec, { mode: "strict" });
-const effectSchemaPermissive = toZodSchema(effectSpec, { mode: "permissive" });
+const itmHeaderSchemaStrict = toZodSchema(itmHeaderSpecAnnotated, { mode: "strict" });
+const itmHeaderSchemaPermissive = toZodSchema(itmHeaderSpecAnnotated, { mode: "permissive" });
+const abilitySchemaStrict = toZodSchema(itmAbilitySpecAnnotated, { mode: "strict" });
+const abilitySchemaPermissive = toZodSchema(itmAbilitySpecAnnotated, { mode: "permissive" });
+const effectSchemaStrict = toZodSchema(effectSpecAnnotated, { mode: "strict" });
+const effectSchemaPermissive = toZodSchema(effectSpecAnnotated, { mode: "permissive" });
 
 export const itmCanonicalDocumentSchema = z.strictObject({
     header: itmHeaderSchemaStrict,

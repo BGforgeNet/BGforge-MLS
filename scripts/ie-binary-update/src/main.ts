@@ -7,8 +7,10 @@
  * sibling files and are merged at module load by the format's index.ts.
  */
 
+import fs from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
+import { extractOpcodes, emitOpcodesModule } from "./extract-opcodes.ts";
 import { type FormatTarget, generate } from "./generate.ts";
 
 /**
@@ -49,6 +51,18 @@ const TARGETS: readonly FormatTarget[] = [
         specConst: "splAbilitySpec",
         dataType: "SplAbilityData",
     },
+    {
+        iesdpRelPath: "_data/file_formats/eff_v2/header.yml",
+        outputRelPath: "binary/src/eff/specs/header.ts",
+        specConst: "effHeaderSpec",
+        dataType: "EffHeaderData",
+    },
+    {
+        iesdpRelPath: "_data/file_formats/eff_v2/body.yml",
+        outputRelPath: "binary/src/eff/specs/body.ts",
+        specConst: "effBodySpec",
+        dataType: "EffBodyData",
+    },
 ];
 
 function main(): void {
@@ -70,8 +84,25 @@ function main(): void {
     const outputDir = values["output-dir"] ?? process.cwd();
     const result = generate({ iesdpDir, outputDir, targets: TARGETS, checkOnly: values.check });
 
-    if (result.diffs.length > 0) {
-        for (const diff of result.diffs) {
+    // Opcode lookup: harvested from `_opcodes/opNNN.html` frontmatter rather
+    // than `_data/`, so it doesn't fit the per-format YAML pipeline. Generated
+    // alongside the format specs so a single regen refreshes everything.
+    const diffs = [...result.diffs];
+    const opcodesOutputRel = "binary/src/ie-common/opcodes.ts";
+    const opcodesExpected = emitOpcodesModule(extractOpcodes(path.join(iesdpDir, "_opcodes")), "_opcodes/opNNN.html");
+    const opcodesPath = path.join(outputDir, opcodesOutputRel);
+    if (values.check) {
+        const actual = fs.existsSync(opcodesPath) ? fs.readFileSync(opcodesPath, "utf8") : "";
+        if (actual !== opcodesExpected) {
+            diffs.push({ outputRelPath: opcodesOutputRel, expected: opcodesExpected, actual });
+        }
+    } else {
+        fs.mkdirSync(path.dirname(opcodesPath), { recursive: true });
+        fs.writeFileSync(opcodesPath, opcodesExpected, "utf8");
+    }
+
+    if (diffs.length > 0) {
+        for (const diff of diffs) {
             console.error(`Out of date: ${diff.outputRelPath}`);
         }
         console.error(

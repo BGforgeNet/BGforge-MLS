@@ -3,7 +3,7 @@
 Library and CLI for parsing and serialising:
 
 - Fallout `.pro` (prototype) and `.map` (savegame/map) files.
-- Infinity Engine `.itm` (item) and `.spl` (spell) v1 files.
+- Infinity Engine `.itm` (item) and `.spl` (spell) v1 files, and `.eff` (effect) v2 files.
 
 Round-trips bytes ↔ structured data ↔ canonical JSON snapshots, suitable for
 diff-friendly version control of binary fixtures and for the BGforge MLS
@@ -31,11 +31,11 @@ presentation-schema lookups.
 ## `fgbin` CLI
 
 ```
-fgbin <file.pro|file.map|file.itm|file.spl|dir> [--save] [--check] [--load] [-r] [-q]
+fgbin <file.pro|file.map|file.itm|file.spl|file.eff|dir> [--save] [--check] [--load] [-r] [-q]
 ```
 
 - `--save` — write parsed JSON snapshot alongside the binary file
-  (`.pro.json` / `.map.json` / `.itm.json` / `.spl.json`)
+  (`.pro.json` / `.map.json` / `.itm.json` / `.spl.json` / `.eff.json`)
 - `--check` — exit 1 if the binary does not match its existing JSON snapshot
 - `--load` — read a JSON snapshot and write the binary back out using the
   parser's native extension
@@ -50,6 +50,7 @@ fgbin <file.pro|file.map|file.itm|file.spl|dir> [--save] [--check] [--load] [-r]
 - `.map` — Fallout 1/2 savegame/map files.
 - `.itm` — Infinity Engine item files (v1: BG1, BG2, IWD).
 - `.spl` — Infinity Engine spell files (v1: BG1, BG2, IWD).
+- `.eff` — Infinity Engine sub-effect files (v2: BG2EE, IWDEE).
 
 Infinity Engine wire specs are generated from
 [IESDP](https://github.com/BGforgeNet/iesdp)'s `_data/file_formats/` YAML;

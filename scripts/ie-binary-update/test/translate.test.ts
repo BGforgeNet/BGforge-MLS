@@ -15,19 +15,23 @@ describe("translateField — scalar codecs", () => {
 });
 
 describe("translateField — fixed-count arrays", () => {
-    test("char array with length emits arraySpec over u8", () => {
-        const result = translateField({ desc: "Signature", type: "char array", length: 4, id: "signature" });
-        expect(result.fieldSource).toBe("arraySpec({ element: { codec: u8 }, count: 4 })");
-    });
-
     test("byte with mult emits arraySpec over u8", () => {
         const result = translateField({ desc: "Bitmask", type: "byte", mult: 4, id: "usability_flags" });
         expect(result.fieldSource).toBe("arraySpec({ element: { codec: u8 }, count: 4 })");
     });
+});
 
-    test("resref emits 8-byte u8 array (canonical converts to string later)", () => {
+describe("translateField — chars primitive", () => {
+    test("char array with length emits charsSpec(length)", () => {
+        const result = translateField({ desc: "Signature", type: "char array", length: 4, id: "signature" });
+        expect(result.fieldSource).toBe("charsSpec(4)");
+        expect(result.imports).toEqual(["charsSpec"]);
+    });
+
+    test("resref emits charsSpec(8)", () => {
         const result = translateField({ desc: "Replacement", type: "resref", id: "replacement" });
-        expect(result.fieldSource).toBe("arraySpec({ element: { codec: u8 }, count: 8 })");
+        expect(result.fieldSource).toBe("charsSpec(8)");
+        expect(result.imports).toEqual(["charsSpec"]);
     });
 });
 

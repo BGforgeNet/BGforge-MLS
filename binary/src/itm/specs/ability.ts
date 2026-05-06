@@ -1,14 +1,14 @@
 // Auto-generated from IESDP _data/file_formats/itm_v1/extended_header.yml. Do not hand-edit.
 
 import { u16, u32, u8 } from "typed-binary";
-import { arraySpec, type FieldSpec, type SpecData } from "../../spec/types";
+import { arraySpec, charsSpec, type FieldSpec, type SpecData } from "../../spec/types";
 
 export const itmAbilitySpec = {
     attackType: { codec: u8 },
     idRequired: { codec: u8 },
     location: { codec: u8 },
     alternativeDiceSides: { codec: u8 },
-    useIcon: arraySpec({ element: { codec: u8 }, count: 8 }),
+    useIcon: charsSpec(8),
     target: { codec: u8 },
     targetCount: { codec: u8 },
     range: { codec: u16 },

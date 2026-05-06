@@ -1,3 +1,4 @@
+import type { EffCanonicalDocument } from "./eff/canonical";
 import type { ItmCanonicalDocument } from "./itm/canonical";
 import type { MapCanonicalDocument } from "./map/canonical";
 import type { ProCanonicalDocument } from "./pro/canonical";
@@ -9,7 +10,8 @@ type BinaryCanonicalDocument =
     | ProCanonicalDocument
     | MapCanonicalDocument
     | ItmCanonicalDocument
-    | SplCanonicalDocument;
+    | SplCanonicalDocument
+    | EffCanonicalDocument;
 
 export type ParsedFieldType =
     | "enum"

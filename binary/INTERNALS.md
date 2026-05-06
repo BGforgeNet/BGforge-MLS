@@ -102,6 +102,28 @@ binary/src/
     schemas.ts, canonical-{schemas,reader,writer}.ts, canonical.ts,
     format-adapter.ts, json-snapshot.ts, serializer.ts, index.ts, types.ts
 
+  eff/                         # Infinity Engine EFF v2 (sub-effects)
+    specs/header.ts            # Generated from IESDP eff_v2/header.yml (8 bytes: sig + version)
+    specs/body.ts              # Generated from IESDP eff_v2/body.yml (264 bytes)
+    schemas.ts, canonical-{schemas,reader,writer}.ts, canonical.ts,
+    format-adapter.ts, json-snapshot.ts, serializer.ts, index.ts, types.ts
+
+  ie-common/                   # Shared IE bits (effect spec + opcodes + lookups)
+    types.ts                   # EFFECT_SIZE, bytesEqual, EffectTarget/Timing/Resistance/SaveType,
+                               #   AbilityTargetType, AbilityIdRequiredFlags
+    opcodes.ts                 # Generated from IESDP _opcodes/opNNN.html (250+ entries)
+    specs/effect.ts            # Generated from IESDP itm_v1/feature_block.yml (shared with SPL)
+    specs/effect.overrides.ts  # Hand-written: attaches Opcodes / EffectTarget / EffectTiming /
+                               #   EffectResistanceFlags / EffectSaveTypeFlags to effectSpec
+
+  <format>/specs/<file>.overrides.ts
+                               # Hand-written augmented spec per file. Imports the bare
+                               # generated spec + format-specific lookups (ItmFlags / ItmType
+                               # / SplFlags / etc.) and exports `<file>SpecAnnotated` with
+                               # `enum:` / `flags:` attached. Parser walkStruct + zod
+                               # canonical schemas import the annotated form; the bare
+                               # generated spec is only re-exported as a stable identifier.
+
 binary/test/                   # Vitest unit tests, repo-root cwd for fixture paths
 ```
 
@@ -110,7 +132,7 @@ binary/test/                   # Vitest unit tests, repo-root cwd for fixture pa
 ### `FieldSpec`
 
 ```ts
-type FieldSpec = ScalarFieldSpec | ArrayFieldSpec;
+type FieldSpec = ScalarFieldSpec | ArrayFieldSpec | CharsFieldSpec;
 
 interface ScalarFieldSpec {
     codec: ISchema<number>; // typed-binary codec (i8/u8/i16/...)
@@ -119,6 +141,11 @@ interface ScalarFieldSpec {
     flags?: Record<number, string>; // bit → display name
     packedAs?: string; // bit-packed slot name
     bitRange?: [bitOffset, bitWidth]; // required when packedAs is set
+}
+
+interface CharsFieldSpec {
+    kind: "chars";
+    count: number; // fixed N raw bytes, surfaced as `string`
 }
 
 interface ArrayFieldSpec {
@@ -143,6 +170,33 @@ arraySpec<H>({ element: { codec: i32 }, count: { fromCtx: (h: H) => h.numItems }
 - **fromField** — N decoded earlier in the same struct. zod refinement enforces `array.length === doc.n` at save; `enforceLinkedCounts(spec, doc)` is the pre-serialise sync helper that copies `doc.array.length` back into `doc.n`.
 - **fromCtx** — N lives in another struct decoded earlier in the file (e.g. a header field driving a variable section's length). The orchestrator owns the binding; zod cannot refine across structs. The clamp/safety check belongs in the orchestrator (e.g. `clampVarCount` in `parse-sections.ts` rejects malformed header counts before invoking the spec).
 
+### Chars fields
+
+Fixed-size ASCII string stored as N raw bytes on the wire. Covers IESDP `resref` (8 bytes) and `char array, length: N` (signature, version, name fields).
+
+```ts
+charsSpec(8); // 8-byte resref
+charsSpec(4); // 4-byte signature like 'ITM '
+```
+
+The spec primitive drives every artifact:
+
+- **typed-binary**: read converts N bytes → JS string verbatim (every byte = one Latin-1 char, including NULs); write encodes N bytes back, NUL-padding shorter values.
+- **zod**: `z.string().max(N)` in canonical schemas; canonical doc has `string` at this field.
+- **`SpecData<S>`**: chars fields project as `string`, not `number[]`.
+- **walkStruct display**: trims trailing NULs so `"EFF\0\0\0\0\0"` renders as `"EFF"`. Interior NULs (rare; in IESDP-marked unused/garbage slots) are preserved verbatim so the display reflects the actual byte content.
+
+Why all bytes (including NULs) round-trip through the canonical string: real-world IESDP-marked `unused` resref slots ship with non-zero filler bytes past the first NUL; a NUL-trim-on-read approach loses those bytes and breaks byte-exact round-trip. Preserve-all-on-the-wire is byte-perfect; cosmetic trimming happens only at display.
+
+JSON-snapshot diff payoff: a resref change shows as a single line.
+
+```diff
+-  "replacement": "EFF_M01",
++  "replacement": "EFF_M02",
+```
+
+vs the u8[8]-array shape it replaced, which scattered an 8-byte name change across 8 separate JSON lines.
+
 ### Bit-packed fields
 
 Multiple scalar entries share one wire codec read by tagging them with the same `packedAs` slot name and disjoint `bitRange` slices. The canonical-doc shape stays flat — packed parts are peer scalar entries — so a 4-bit floor-flags field reads as `floorFlags: number`, not as `tilePair.floor.flags`.
@@ -160,7 +214,7 @@ Construction-time guards: contiguous declaration order, matching codec across pa
 
 ### `SpecData<S>`
 
-Type-level projection. `SpecData<typeof spec>` is the data shape `{ [K]: number | number[] }`. Use `type FooData = SpecData<typeof fooSpec>` to keep the data shape and the spec declarations in sync — adding a field to the spec automatically adds it to the data type.
+Type-level projection. `SpecData<typeof spec>` projects per-field-kind: scalars as `number`, arrays as `number[]`, chars as `string`. Use `type FooData = SpecData<typeof fooSpec>` to keep the data shape and the spec declarations in sync — adding a field to the spec automatically adds it to the data type.
 
 ## Derivation
 
@@ -266,7 +320,7 @@ These are evaluated and intentionally kept in orchestrator code rather than lift
 ## CLI
 
 ```
-fgbin <file.pro|file.map|file.itm|file.spl|dir> [--save] [--check] [--load] [--graceful-map] [-r] [-q]
+fgbin <file.pro|file.map|file.itm|file.spl|file.eff|dir> [--save] [--check] [--load] [--graceful-map] [-r] [-q]
 ```
 
 | Flag             | Behaviour                                                                                                                    |

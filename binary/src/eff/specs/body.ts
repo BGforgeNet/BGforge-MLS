@@ -1,0 +1,52 @@
+// Auto-generated from IESDP _data/file_formats/eff_v2/body.yml. Do not hand-edit.
+
+import { u16, u32, u8 } from "typed-binary";
+import { arraySpec, charsSpec, type FieldSpec, type SpecData } from "../../spec/types";
+
+export const effBodySpec = {
+    signature2: charsSpec(4),
+    version2: charsSpec(4),
+    opcode: { codec: u32 },
+    target: { codec: u32 },
+    power: { codec: u32 },
+    parameter1: { codec: u32 },
+    parameter2: { codec: u32 },
+    timing: { codec: u16 },
+    unused1: { codec: u16 },
+    duration: { codec: u32 },
+    probability1: { codec: u16 },
+    probability2: { codec: u16 },
+    resource: charsSpec(8),
+    diceThrown: { codec: u32 },
+    diceSides: { codec: u32 },
+    saveType: { codec: u32 },
+    saveBonus: { codec: u32 },
+    stackingIdTobex: { codec: u32 },
+    school: { codec: u32 },
+    unused2: { codec: u32 },
+    unused3: { codec: u32 },
+    unused4: { codec: u32 },
+    resistance: { codec: u32 },
+    parameter3: { codec: u32 },
+    parameter4: { codec: u32 },
+    parameter5: { codec: u32 },
+    timeApplied: { codec: u32 },
+    resource2: charsSpec(8),
+    resource3: charsSpec(8),
+    casterXCoord: { codec: u32 },
+    casterYCoord: { codec: u32 },
+    targetXCoord: { codec: u32 },
+    targetYCoord: { codec: u32 },
+    parentResourceType: { codec: u32 },
+    parentResource: charsSpec(8),
+    parentResourceFlags: { codec: u32 },
+    projectile: { codec: u32 },
+    unused5: { codec: u32 },
+    variableName: arraySpec({ element: { codec: u8 }, count: 32 }),
+    casterLevel: { codec: u32 },
+    unused6: { codec: u32 },
+    sectype: { codec: u32 },
+    unused7: arraySpec({ element: { codec: u32 }, count: 15 }),
+} satisfies Record<string, FieldSpec>;
+
+export type EffBodyData = SpecData<typeof effBodySpec>;

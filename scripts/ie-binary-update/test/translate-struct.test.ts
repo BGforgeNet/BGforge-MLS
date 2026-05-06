@@ -21,8 +21,13 @@ describe("translateStruct — multiple fields", () => {
     });
 
     test("array fields collect arraySpec import", () => {
-        const result = translateStruct([{ type: "char array", length: 4, id: "signature", desc: "Sig" }]);
+        const result = translateStruct([{ type: "byte", mult: 4, id: "usability_flags", desc: "Usability" }]);
         expect([...result.imports].sort()).toEqual(["arraySpec", "u8"]);
+    });
+
+    test("chars fields collect only charsSpec import", () => {
+        const result = translateStruct([{ type: "char array", length: 4, id: "signature", desc: "Sig" }]);
+        expect([...result.imports].sort()).toEqual(["charsSpec"]);
     });
 });
 

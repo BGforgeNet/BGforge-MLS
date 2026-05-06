@@ -90,16 +90,18 @@ export function translateField(item: OffsetItem): TranslatedField {
     const isUnused = item.unused !== undefined || item.unknown !== undefined;
     const name = isUnused ? "" : item.id !== undefined ? snakeToCamel(item.id) : descToCamelCase(item.desc);
 
+    // resref / char array → first-class chars primitive. The wire footprint
+    // stays N raw bytes; the data layer surfaces a NUL-stripped string. Used
+    // by IESDP for fixed-size name / signature / version fields.
     if (item.type === "resref") {
-        return { name, fieldSource: arraySource("u8", RESREF_BYTES), imports: ["u8", "arraySpec"] };
+        return { name, fieldSource: `charsSpec(${RESREF_BYTES})`, imports: ["charsSpec"] };
     }
 
-    // "char array" + length: a fixed-byte buffer (e.g. 4-byte signature).
     if (item.type === "char array") {
         if (item.length === undefined) {
             throw new Error(`'char array' requires explicit length: ${JSON.stringify(item)}`);
         }
-        return { name, fieldSource: arraySource("u8", item.length), imports: ["u8", "arraySpec"] };
+        return { name, fieldSource: `charsSpec(${item.length})`, imports: ["charsSpec"] };
     }
 
     // `length` on non-char-array (rare): treat as raw byte buffer.

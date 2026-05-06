@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { zodNumericType } from "../binary-format-contract";
 import { codecNumericTypeName } from "./codec-meta";
-import { isArraySpec, isFromFieldCount, type FieldSpec, type SpecData } from "./types";
+import { isArraySpec, isCharsSpec, isFromFieldCount, type FieldSpec, type SpecData } from "./types";
 
 /**
  * Validation strictness for `toZodSchema`.
@@ -78,6 +78,11 @@ function fieldSpecToZod(fs: FieldSpec, mode: "strict" | "permissive"): z.ZodType
             return z.array(inner).length(fs.count);
         }
         return z.array(inner);
+    }
+    if (isCharsSpec(fs)) {
+        // Fixed-size ASCII string. Cap the JS-string length at the byte budget;
+        // shorter values are NUL-padded by the codec.
+        return z.string().max(fs.count);
     }
     if (fs.enum && mode === "strict") {
         // Saved values must be a key in the enum table; permissive parsing
