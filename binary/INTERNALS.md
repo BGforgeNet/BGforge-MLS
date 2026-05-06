@@ -2,9 +2,9 @@
 
 See also: [README.md](README.md) (npm-facing) | [docs/architecture.md](../docs/architecture.md) (system overview)
 
-`@bgforge/binary` parses and serialises Fallout `.pro` / `.map` and Infinity Engine `.itm` / `.spl` (v1) files. Round-trips bytes ↔ structured data ↔ canonical JSON snapshots. Bundled `fgbin` CLI uses the same code as the binary editor in the VSCode extension.
+`@bgforge/binary` parses and serialises Fallout `.pro` / `.map` and Infinity Engine `.itm` / `.spl` (v1) and `.eff` (v2) files. Round-trips bytes ↔ structured data ↔ canonical JSON snapshots. Bundled `fgbin` CLI uses the same code as the binary editor in the VSCode extension.
 
-The IE `.itm` and `.spl` wire specs are generated from [IESDP](https://github.com/BGforgeNet/iesdp)'s `_data/file_formats/` YAML by `scripts/ie-binary-update/`; checked-in `.ts` outputs carry an `Auto-generated from IESDP …` banner. Run `scripts/ie-binary-update.sh` to refresh.
+The IE `.itm` / `.spl` / `.eff` wire specs are generated from [IESDP](https://github.com/BGforgeNet/iesdp)'s `_data/file_formats/` YAML by `scripts/ie-binary-update/`; effect-opcode lookups are generated from `_opcodes/op<N>.html` frontmatter (250+ entries). Checked-in `.ts` outputs carry an `Auto-generated from IESDP …` banner. Run `scripts/ie-binary-update.sh` to refresh.
 
 ## Layered model
 
@@ -85,10 +85,6 @@ binary/src/
     index.ts                   # mapParser
     types.ts                   # MAP enums/flags
 
-  ie-common/                   # Shared Infinity Engine bits (ITM + SPL)
-    types.ts                   # EFFECT_SIZE, bytesEqual
-    specs/effect.ts            # Generated effect (feature_block) StructSpec, byte-shared
-
   itm/                         # Infinity Engine ITM v1 (items)
     specs/header.ts            # Generated from IESDP itm_v1/header.yml
     specs/ability.ts           # Generated from IESDP itm_v1/extended_header.yml
@@ -138,6 +134,7 @@ interface ScalarFieldSpec {
     codec: ISchema<number>; // typed-binary codec (i8/u8/i16/...)
     domain?: { min; max }; // tighter than codec range
     enum?: Record<number, string>; // value → display name
+    enumOpen?: boolean; // enum is advisory (display only); strict mode does not enforce membership
     flags?: Record<number, string>; // bit → display name
     packedAs?: string; // bit-packed slot name
     bitRange?: [bitOffset, bitWidth]; // required when packedAs is set
@@ -284,6 +281,9 @@ These are non-negotiable across PRO and MAP:
 1. **Schema = data.** Where the wire is flat, canonical zod is flat. Aesthetic nesting is rejected. Bit-packed fields are peer scalar entries via `packedAs`+`bitRange`.
 2. **Presentation can nest** even when data is flat. The walker's `subGroups` option handles armor sub-categories, scenery layouts, etc., without warping the data shape.
 3. **Read permissive, write strict.** Out-of-range enum values display as `Unknown (N)` and parse succeeds; saving rejects via the zod refinement when `spec.enum` is set. Real-world exception: MAP object base `rotation`/`elevation` carry packed-PID-shaped values in shipped files — the canonical zod stays plain int32 for those even though the wire spec documents enum tables.
+
+    **Closed vs open enums.** The strict gate fits enums whose value space is fixed by the engine (PRO `objectType`: Item/Critter/Scenery/Wall/Tile/Misc — adding a 7th would crash the engine). For fields whose value space is open by design — IE effect opcodes (mods can introduce new opcode numbers; the engine accepts any 16-bit value), ITM type (mod-extensible via `itemtype.2da`), ITM ability `damageType` / `projectileType` (engine treats out-of-table values as defaults), SPL `type` and `castingGraphics` — set `enumOpen: true` on the spec entry. The display lookup still resolves named values; the strict refinement does not enforce membership. Closed-default keeps PRO/MAP behaviour unchanged; opt-in keeps mod-friendly fields editable without producing false rejections at save time.
+
 4. **No special-case sentinels.** Wire `0xFFFFFFFF` for "no script" reads naturally as `{type: -1, id: -1}` via signed `i8`/`i24` codecs. Don't add `if (value === 0xFFFFFFFF)` branches.
 
     The same pattern covers proto fields the engine seeds to `-1` in its `proto_*_init` / `proto_scenery_subdata_init` helpers (see fallout2-ce `proto.cc`). Vanilla protos that don't override the default save the seed verbatim, so the wire arrives with `0xFFFFFFFF` and the runtime per-object map record (or, rarely, a script-spawn caller) supplies the live value. Spec these fields with signed codecs (`i32`) and add `[-1]: "None"` (or a more specific sentinel label) to the enum table when one is attached. Known fields following this pattern: scenery `material` (`proto_scenery_init`), elevator `type` / `level`, stairs `destinationBuiltTile` / `destinationMap`, ladder `destinationMap` (`proto_scenery_subdata_init`); on the item side `armor.{perk,maleFid,femaleFid}`, `weapon.{projectilePid,perk,ammoTypePid}`, `misc.powerTypePid`, `key.keyCode` carry the same convention.
