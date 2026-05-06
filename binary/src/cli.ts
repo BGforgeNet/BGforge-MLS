@@ -16,9 +16,7 @@ import {
     createBinaryJsonSnapshot,
     loadBinaryJsonSnapshot,
     parseBinaryJsonSnapshot,
-    resolvePidSubType,
-    loadProDirResolver,
-    composePidResolvers,
+    buildFileDerivedParseOptions,
 } from "./index";
 import {
     type FileResult,
@@ -36,35 +34,25 @@ const CLI_PARSE_OPTIONS: ParseOptions = {
 const CLI_QUIET = process.argv.includes("-q") || process.argv.includes("--quiet");
 
 /**
- * Builds per-file ParseOptions, layering a sibling proto/ override resolver
- * on top of the bundled vanilla Fallout 2 table when the input is a MAP and
- * a `<map dir>/../proto/` tree exists. Reports stats to stderr (unless -q).
+ * Builds per-file ParseOptions for the CLI: file-derived options come from
+ * the shared `@bgforge/binary` builder (today: sibling proto/ pidResolver),
+ * the CLI's own preference axes (--graceful-map) layer on top. Reports
+ * proto-load stats to stderr (unless -q).
  */
 function buildParseOptionsForFile(filePath: string): ParseOptions {
-    if (path.extname(filePath).toLowerCase() !== ".map") {
-        return CLI_PARSE_OPTIONS;
-    }
+    const fileDerived = buildFileDerivedParseOptions(filePath);
 
-    const protoBaseDir = path.resolve(path.dirname(filePath), "..", "proto");
-    if (!fs.existsSync(protoBaseDir)) {
-        return CLI_PARSE_OPTIONS;
-    }
-
-    const { resolver, stats } = loadProDirResolver(protoBaseDir);
-    if (stats.filesScanned === 0) {
-        return CLI_PARSE_OPTIONS;
-    }
-
-    if (!CLI_QUIET) {
+    if (!CLI_QUIET && fileDerived.diagnostics) {
+        const { protoDir, stats } = fileDerived.diagnostics;
         const errSuffix = stats.errors.length > 0 ? `, ${stats.errors.length} errors` : "";
         console.error(
-            `Loaded ${stats.subtypesResolved} proto overrides from ${protoBaseDir} ` +
+            `Loaded ${stats.subtypesResolved} proto overrides from ${protoDir} ` +
                 `in ${stats.durationMs.toFixed(0)}ms${errSuffix}`,
         );
         for (const err of stats.errors) console.error(`  ${err}`);
     }
 
-    return { ...CLI_PARSE_OPTIONS, pidResolver: composePidResolvers(resolver, resolvePidSubType) };
+    return { ...CLI_PARSE_OPTIONS, ...(fileDerived.pidResolver ? { pidResolver: fileDerived.pidResolver } : {}) };
 }
 
 async function processFile(filePath: string, mode: OutputMode): Promise<FileResult> {

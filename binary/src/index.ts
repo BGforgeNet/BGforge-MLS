@@ -68,6 +68,11 @@ export {
     type ProResolverResult,
     type ProResolverStats,
 } from "./pro-resolver-loader";
+export {
+    buildFileDerivedParseOptions,
+    type FileDerivedParseOptions,
+    type FileDerivedDiagnostics,
+} from "./parse-options";
 
 // Side-effect: register the bundled parsers on the registry.
 import { proParser } from "./pro";

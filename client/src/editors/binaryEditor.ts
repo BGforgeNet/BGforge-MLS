@@ -8,6 +8,7 @@ import * as path from "path";
 import { randomBytes } from "crypto";
 import {
     type BinaryParser,
+    type ParseOptions,
     type ParseResult,
     parserRegistry,
     formatAdapterRegistry,
@@ -29,6 +30,8 @@ import {
     resolveStringCharset,
 } from "./binaryEditor-lookups";
 import { saveBinaryDocumentArtifacts, writeBinaryJsonSnapshot } from "./binaryEditor-save";
+import { buildEditorParseOptions } from "./binaryEditor-parseOptions";
+import { parseForEditor } from "./binaryEditor-parse";
 import { BinaryEditorRefreshGate } from "./binaryEditor-refreshGate";
 import { BinaryEditorLocalEditTracker } from "./binaryEditor-localEditTracker";
 import { surfaceWebviewRuntimeError } from "../webview-error";
@@ -129,11 +132,11 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
         _openContext: vscode.CustomDocumentOpenContext,
         _token: vscode.CancellationToken,
     ): Promise<BinaryDocument> {
-        const { parseResult, parser } = await this.parseFile(uri);
+        const { parseResult, parser, parseOptions } = await this.parseFile(uri);
         const doc = new BinaryDocument(uri, parseResult, {
             parse: parser.parse.bind(parser),
             serialize: parser.serialize.bind(parser),
-            parseOptions: this.getParseOptions(path.extname(uri.fsPath)),
+            parseOptions,
         });
 
         const subscriptions: vscode.Disposable[] = [];
@@ -317,7 +320,7 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
         try {
             const jsonText = Buffer.from(await vscode.workspace.fs.readFile(jsonUri)).toString("utf8");
             const extension = path.extname(document.uri.fsPath);
-            const parseOptions = this.getParseOptions(extension);
+            const parseOptions = this.getParseOptions(document.uri.fsPath);
             const loaded = loadBinaryJsonSnapshot(jsonText, {
                 proParseOptions: parseOptions,
                 mapParseOptions:
@@ -635,11 +638,15 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
         return parser as EditableBinaryParser;
     }
 
-    private getParseOptions(extension: string): { skipMapTiles?: boolean } | undefined {
-        return extension === ".map" ? { skipMapTiles: true } : undefined;
+    private getParseOptions(filePath: string): ParseOptions | undefined {
+        return buildEditorParseOptions(filePath);
     }
 
-    private async parseFile(uri: vscode.Uri): Promise<{ parseResult: ParseResult; parser: EditableBinaryParser }> {
+    private async parseFile(uri: vscode.Uri): Promise<{
+        parseResult: ParseResult;
+        parser: EditableBinaryParser;
+        parseOptions: ParseOptions | undefined;
+    }> {
         const extension = path.extname(uri.fsPath);
         const parser = this.getEditableParser(extension);
 
@@ -659,14 +666,13 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
                     parse: () => parseResult,
                     serialize: () => new Uint8Array(),
                 },
+                parseOptions: undefined,
             };
         }
 
         const fileData = await vscode.workspace.fs.readFile(uri);
-        return {
-            parseResult: parser.parse(fileData, this.getParseOptions(extension)),
-            parser,
-        };
+        const outcome = parseForEditor(parser, fileData, uri.fsPath);
+        return { parseResult: outcome.parseResult, parser, parseOptions: outcome.parseOptions };
     }
 
     // -- HTML rendering (shell only, data sent via postMessage) --------------
