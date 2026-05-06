@@ -83,8 +83,8 @@ vscode-mls/
 |   |   +-- (TS plugins moved to plugins/ directory)
 |   |   +-- indicator.ts            Server initialization progress indicator
 |   |   +-- dialog-tree/            Dialog tree preview (webview panels)
-|   |   +-- editors/                Binary .pro/.map editor (custom editor)
-|   |   +-- parsers/                Binary file parsers (.pro/.map)
+|   |   +-- editors/                Binary .pro/.map/.itm/.spl editor (custom editor)
+|   |   +-- parsers/                Binary file parsers (.pro/.map/.itm/.spl)
 |   |   +-- test/                   E2E tests (mocha + vscode test runner)
 |   +-- out/                    esbuild output
 |
@@ -115,7 +115,7 @@ vscode-mls/
 |   +-- out/                    esbuild output + WASM files + JSON data
 |
 +-- cli/                    Standalone CLI tools
-|   +-- bin/                    Binary parser CLI (.pro/.map -> JSON)
+|   +-- bin/                    Binary parser CLI (.pro/.map/.itm/.spl -> JSON)
 |   +-- test/                   CLI tests
 |
 +-- format/                 @bgforge/format package: formatters library + fgfmt CLI bin
@@ -245,7 +245,7 @@ activate()
   |
   +-> Create LanguageClient (IPC transport to server)
   +-> Register commands (compile, dialog preview)
-  +-> Register binary editor provider (.pro/.map files)
+  +-> Register binary editor provider (.pro/.map/.itm/.spl files)
   +-> Register dialog tree webview panels
   +-> Start server (server/out/server.js)
 ```
@@ -269,12 +269,12 @@ process, not the extension host.
 
 Two webview-based features, each with a host-side and browser-side module:
 
-| Feature            | Host Module                   | Webview Module            | Trigger                |
-| ------------------ | ----------------------------- | ------------------------- | ---------------------- |
-| Dialog Tree (SSL)  | `dialog-tree/dialogTree.ts`   | `dialogTree-webview.ts`   | Ctrl+Shift+V in SSL    |
-| Dialog Tree (D/TD) | `dialog-tree/dialogTree-d.ts` | `dialogTree-webview.ts`   | Ctrl+Shift+V in D/TD   |
-| Dialog Tree (TSSL) | `dialog-tree/dialogTree.ts`   | `dialogTree-webview.ts`   | Ctrl+Shift+V in TSSL   |
-| Binary Editor      | `editors/binaryEditor.ts`     | `binaryEditor-webview.ts` | Open .pro or .map file |
+| Feature            | Host Module                   | Webview Module            | Trigger                  |
+| ------------------ | ----------------------------- | ------------------------- | ------------------------ |
+| Dialog Tree (SSL)  | `dialog-tree/dialogTree.ts`   | `dialogTree-webview.ts`   | Ctrl+Shift+V in SSL      |
+| Dialog Tree (D/TD) | `dialog-tree/dialogTree-d.ts` | `dialogTree-webview.ts`   | Ctrl+Shift+V in D/TD     |
+| Dialog Tree (TSSL) | `dialog-tree/dialogTree.ts`   | `dialogTree-webview.ts`   | Ctrl+Shift+V in TSSL     |
+| Binary Editor      | `editors/binaryEditor.ts`     | `binaryEditor-webview.ts` | Open .pro/.map/.itm/.spl |
 
 For the binary library internals — spec system, primitives, derivation, format-adapter pattern, adding a new format — see [binary/INTERNALS.md](../binary/INTERNALS.md).
 
@@ -432,13 +432,13 @@ Reports orphan warnings for TD files.
 ### Binary CLI
 
 ```
-fgbin <file.pro|file.map|dir> [--save] [--check] [--load] [--graceful-map] [-r] [-q]
+fgbin <file.pro|file.map|file.itm|file.spl|dir> [--save] [--check] [--load] [--graceful-map] [-r] [-q]
 ```
 
 Ships as the `fgbin` bin entry of `@bgforge/binary` (built via tsup to `binary/out/cli.js`).
 
-Parses Fallout `.pro` and `.map` binary files and outputs structured JSON. `--load` writes JSON back using the parser's native extension, and `--graceful-map` allows ambiguous MAP object boundaries to fall back to opaque bytes for corpus and round-trip workflows.
-Snapshots are saved as extension-preserving sidecars such as `file.pro.json` and `file.map.json`.
+Parses Fallout `.pro` / `.map` and Infinity Engine `.itm` / `.spl` (v1) binary files and outputs structured JSON. `--load` writes JSON back using the parser's native extension, and `--graceful-map` allows ambiguous MAP object boundaries to fall back to opaque bytes for corpus and round-trip workflows.
+Snapshots are saved as extension-preserving sidecars such as `file.pro.json`, `file.map.json`, `file.itm.json`, `file.spl.json`.
 
 Snapshot contract:
 

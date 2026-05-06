@@ -2,7 +2,9 @@
 
 See also: [README.md](README.md) (npm-facing) | [docs/architecture.md](../docs/architecture.md) (system overview)
 
-`@bgforge/binary` parses and serialises Fallout `.pro` and `.map` files. Round-trips bytes ↔ structured data ↔ canonical JSON snapshots. Bundled `fgbin` CLI uses the same code as the binary editor in the VSCode extension.
+`@bgforge/binary` parses and serialises Fallout `.pro` / `.map` and Infinity Engine `.itm` / `.spl` (v1) files. Round-trips bytes ↔ structured data ↔ canonical JSON snapshots. Bundled `fgbin` CLI uses the same code as the binary editor in the VSCode extension.
+
+The IE `.itm` and `.spl` wire specs are generated from [IESDP](https://github.com/BGforgeNet/iesdp)'s `_data/file_formats/` YAML by `scripts/ie-binary-update/`; checked-in `.ts` outputs carry an `Auto-generated from IESDP …` banner. Run `scripts/ie-binary-update.sh` to refresh.
 
 ## Layered model
 
@@ -82,6 +84,23 @@ binary/src/
     serializer.ts              # Top-level serialise(parseResult)
     index.ts                   # mapParser
     types.ts                   # MAP enums/flags
+
+  ie-common/                   # Shared Infinity Engine bits (ITM + SPL)
+    types.ts                   # EFFECT_SIZE, bytesEqual
+    specs/effect.ts            # Generated effect (feature_block) StructSpec, byte-shared
+
+  itm/                         # Infinity Engine ITM v1 (items)
+    specs/header.ts            # Generated from IESDP itm_v1/header.yml
+    specs/ability.ts           # Generated from IESDP itm_v1/extended_header.yml
+    schemas.ts, canonical-{schemas,reader,writer}.ts, canonical.ts,
+    format-adapter.ts, json-snapshot.ts, serializer.ts, index.ts, types.ts
+
+  spl/                         # Infinity Engine SPL v1 (spells)
+    specs/header.ts            # Generated from IESDP spl_v1/header.yml
+    specs/ability.ts           # Generated from IESDP spl_v1/extended_header.yml (40 bytes,
+                               #   distinct shape from ITM ability)
+    schemas.ts, canonical-{schemas,reader,writer}.ts, canonical.ts,
+    format-adapter.ts, json-snapshot.ts, serializer.ts, index.ts, types.ts
 
 binary/test/                   # Vitest unit tests, repo-root cwd for fixture paths
 ```
@@ -222,13 +241,14 @@ These are non-negotiable across PRO and MAP:
 
 These are evaluated and intentionally kept in orchestrator code rather than lifted to new spec primitives. Each has exactly one consumer in the current codebase, and lifting it would carry significant API surface for marginal payoff. Document the trade-off rather than re-evaluate every time.
 
-| Concern                                                                                         | Where it lives                             | Why not a primitive                                                                                                           |
-| ----------------------------------------------------------------------------------------------- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| Per-element subtype dispatch (script slot variants by `getScriptType(sid)`)                     | `parse-sections.ts`, `canonical-writer.ts` | One consumer; variants share most layout; discriminator is a single peeked field; the orchestrator-side dispatch is ~10 lines |
-| Recursive specs (object inventory: each entry is a full nested object record)                   | `parse-objects.ts`, `canonical-writer.ts`  | Self-referential `SpecData` projection is chicken-and-egg; orchestrator recursion is the cleanest expression                  |
-| Struct-element arrays (tile elevations as `arraySpec({ element: tilePairSpec, count: 10000 })`) | `parse-sections.ts` per-tile loop          | Sole consumer is tiles; scripts have variable-size elements, objects are recursive — neither would benefit                    |
-| Conditional per-elevation tile presence (`header.flags & SkipElevationN`)                       | `parse-sections.ts`                        | Avoids a `presentIf` primitive whose audience is also one consumer                                                            |
-| Environmental safety (count clamp against remaining buffer for malformed inputs)                | `clampVarCount` in `parse-sections.ts`     | Depends on remaining-bytes state the spec layer cannot see                                                                    |
+| Concern                                                                                         | Where it lives                             | Why not a primitive                                                                                                                                                                                                                                                 |
+| ----------------------------------------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Per-element subtype dispatch (script slot variants by `getScriptType(sid)`)                     | `parse-sections.ts`, `canonical-writer.ts` | One consumer; variants share most layout; discriminator is a single peeked field; the orchestrator-side dispatch is ~10 lines                                                                                                                                       |
+| Recursive specs (object inventory: each entry is a full nested object record)                   | `parse-objects.ts`, `canonical-writer.ts`  | Self-referential `SpecData` projection is chicken-and-egg; orchestrator recursion is the cleanest expression                                                                                                                                                        |
+| Struct-element arrays (tile elevations as `arraySpec({ element: tilePairSpec, count: 10000 })`) | `parse-sections.ts` per-tile loop          | Sole consumer is tiles; scripts have variable-size elements, objects are recursive — neither would benefit                                                                                                                                                          |
+| Conditional per-elevation tile presence (`header.flags & SkipElevationN`)                       | `parse-sections.ts`                        | Avoids a `presentIf` primitive whose audience is also one consumer                                                                                                                                                                                                  |
+| Environmental safety (count clamp against remaining buffer for malformed inputs)                | `clampVarCount` in `parse-sections.ts`     | Depends on remaining-bytes state the spec layer cannot see                                                                                                                                                                                                          |
+| Per-format scaffolding (canonical reader/writer/snapshot/format-adapter wrappers for ITM, SPL)  | duplicated across `itm/` and `spl/`        | Two consumers with near-identical shapes (~250 LOC duplication). A generic factory in `ie-common/` is plausible but premature with N=2 — re-evaluate when a third IE format (EFF/CRE/STO/ARE) arrives. Until then, copies stay self-contained and obviously correct |
 
 ## Adding a new format
 
@@ -246,7 +266,7 @@ These are evaluated and intentionally kept in orchestrator code rather than lift
 ## CLI
 
 ```
-fgbin <file.pro|file.map|dir> [--save] [--check] [--load] [--graceful-map] [-r] [-q]
+fgbin <file.pro|file.map|file.itm|file.spl|dir> [--save] [--check] [--load] [--graceful-map] [-r] [-q]
 ```
 
 | Flag             | Behaviour                                                                                                                    |

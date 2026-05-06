@@ -1,9 +1,15 @@
+import type { ItmCanonicalDocument } from "./itm/canonical";
 import type { MapCanonicalDocument } from "./map/canonical";
 import type { ProCanonicalDocument } from "./pro/canonical";
+import type { SplCanonicalDocument } from "./spl/canonical";
 
 // Used only via ParseResult.document below; consumers see it through ParseResult,
 // no downstream importer references the alias by name.
-type BinaryCanonicalDocument = ProCanonicalDocument | MapCanonicalDocument;
+type BinaryCanonicalDocument =
+    | ProCanonicalDocument
+    | MapCanonicalDocument
+    | ItmCanonicalDocument
+    | SplCanonicalDocument;
 
 export type ParsedFieldType =
     | "enum"

@@ -122,6 +122,10 @@ export const formatAdapterRegistry = new FormatAdapterRegistry();
 // Safe from circular dependencies: neither adapter file imports format-adapter.ts.
 import { proFormatAdapter } from "./pro/format-adapter";
 import { mapFormatAdapter } from "./map/format-adapter";
+import { itmFormatAdapter } from "./itm/format-adapter";
+import { splFormatAdapter } from "./spl/format-adapter";
 
 formatAdapterRegistry.register(proFormatAdapter);
 formatAdapterRegistry.register(mapFormatAdapter);
+formatAdapterRegistry.register(itmFormatAdapter);
+formatAdapterRegistry.register(splFormatAdapter);

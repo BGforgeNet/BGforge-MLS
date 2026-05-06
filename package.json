@@ -464,6 +464,12 @@
                     },
                     {
                         "filenamePattern": "*.map"
+                    },
+                    {
+                        "filenamePattern": "*.itm"
+                    },
+                    {
+                        "filenamePattern": "*.spl"
                     }
                 ],
                 "priority": "default"

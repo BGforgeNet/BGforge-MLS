@@ -18,6 +18,8 @@
     "include": [
         "ie-update/src",
         "ie-update/test",
+        "ie-binary-update/src",
+        "ie-binary-update/test",
         "fallout-update/src",
         "fallout-update/test",
         "utils/src",

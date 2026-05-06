@@ -56,6 +56,8 @@ export { isCharAllowedInCharset, isStringAllowedInCharset } from "./string-chars
 // Concrete parser implementations
 export { proParser } from "./pro";
 export { mapParser } from "./map";
+export { itmParser } from "./itm";
+export { splParser } from "./spl";
 
 // Pid → subType resolution for MAP item / scenery decode. The default
 // resolver is backed by a bundled vanilla Fallout 2 lookup table; consumers
@@ -77,6 +79,10 @@ export {
 // Side-effect: register the bundled parsers on the registry.
 import { proParser } from "./pro";
 import { mapParser } from "./map";
+import { itmParser } from "./itm";
+import { splParser } from "./spl";
 import { parserRegistry } from "./registry";
 parserRegistry.register(proParser);
 parserRegistry.register(mapParser);
+parserRegistry.register(itmParser);
+parserRegistry.register(splParser);

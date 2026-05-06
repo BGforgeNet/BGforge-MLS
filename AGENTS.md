@@ -41,7 +41,7 @@ VSCode extension providing IDE features for niche scripting languages used in cl
 - **SCS SSL/SLB** - Sword Coast Stratagems scripting (Infinity Engine AI mods)
 - **Transpilers** - TypeScript-like languages compiling to the above: TSSL->SSL, TBAF->BAF, TD->D
 
-**Features:** Completion, hover, go-to-definition, find references, rename, document symbols, formatting, inlay hints (translation string previews from .msg/.tra), diagnostics (via sslc/weidu), JSDoc, signature help, dialog tree preview (webview), binary .pro file viewer.
+**Features:** Completion, hover, go-to-definition, find references, rename, document symbols, formatting, inlay hints (translation string previews from .msg/.tra), diagnostics (via sslc/weidu), JSDoc, signature help, dialog tree preview (webview), binary file editor (Fallout `.pro` / `.map`, Infinity Engine `.itm` / `.spl`).
 
 **How it works:**
 
@@ -60,7 +60,7 @@ server/                  # LSP server (providers, symbol system, compilation, di
   data/                  # YAML engine definitions (functions, actions, triggers)
 shared/                  # Shared pure TypeScript helpers used by runtime and build-time code
 grammars/                # Tree-sitter grammars (6 dirs: 4 LSP + 2 highlight-only)
-binary/                  # @bgforge/binary package: library + fgbin CLI (Fallout PRO/MAP parser)
+binary/                  # @bgforge/binary package: library + fgbin CLI (Fallout PRO/MAP, Infinity Engine ITM/SPL parser)
 format/                  # @bgforge/format package: library + fgfmt CLI (Fallout/WeiDU formatters)
 plugins/                 # TypeScript Language Service Plugins: tssl-plugin/, td-plugin/
 test/                    # Cross-package tests: smoke + orchestration config for CLI integration tests
