@@ -70,6 +70,7 @@ themes/                  # Color themes (bgforge-monokai) + icon theme
 language-configurations/ # VSCode language config files (brackets, comments, indentation)
 snippets/                # Code snippets: fallout-ssl.json, weidu-baf.json, weidu-tp2.json
 scripts/                 # Build, test, data generation scripts
+actions/                 # Reusable composite GitHub Actions published from this repo (currently: binary/ — refresh/check .pro.json/.map.json snapshots)
 transpilers/             # Transpiler implementations + user documentation
   common/                # Shared transpiler utilities (not a package)
   tssl/                  # @bgforge/tssl package: TypeScript to Fallout SSL
@@ -196,4 +197,5 @@ See `server/INTERNALS.md` for the full feature matrix and cross-language feature
 | Themes (source)         | `themes/README.md`                                                                                                         |
 | Language configurations | `language-configurations/README.md`                                                                                        |
 | Build scripts           | `scripts/README.md`                                                                                                        |
+| Reusable GH Actions     | `actions/binary/README.md`                                                                                                 |
 | Packaging               | `docs/ignore-files.md`                                                                                                     |
