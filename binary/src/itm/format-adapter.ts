@@ -2,6 +2,7 @@ import type { BinaryFormatAdapter } from "../format-adapter";
 import type { ParseOptions, ParseResult } from "../types";
 import { rebuildItmCanonicalDocument } from "./canonical";
 import { createCanonicalItmJsonSnapshot, loadCanonicalItmJsonSnapshot } from "./json-snapshot";
+import { itmCompiledPatternFields, itmDomainRanges, itmPresentationSchema } from "./presentation-schema";
 import { slugify } from "../snapshot-common";
 
 function itmSemanticFieldKey(segments: readonly string[]): string | undefined {
@@ -29,6 +30,9 @@ function itmSemanticFieldKey(segments: readonly string[]): string | undefined {
 
 export const itmFormatAdapter: BinaryFormatAdapter = {
     formatId: "itm",
+    presentationSchema: itmPresentationSchema,
+    compiledPatternFields: itmCompiledPatternFields,
+    domainRanges: itmDomainRanges,
 
     createJsonSnapshot(parseResult: ParseResult): string {
         return createCanonicalItmJsonSnapshot(parseResult);

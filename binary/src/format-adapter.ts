@@ -6,6 +6,8 @@
  * branching in the snapshot, presentation, editor, and validation layers.
  */
 
+import { type NumericRange, setDomainRangeLookup } from "./binary-format-contract";
+import type { CompiledPatternFieldPresentation, FormatPresentationSchema } from "./presentation-schema-types";
 import type { ParsedField, ParsedGroup, ParseOptions, ParseResult } from "./types";
 
 export type ProjectedEntry =
@@ -19,6 +21,28 @@ export type ProjectedEntry =
 
 export interface BinaryFormatAdapter {
     readonly formatId: string;
+
+    // -- Per-format registries (consolidated to avoid parallel maps) ----------
+    /**
+     * Display labels, enum / flag dropdowns, and pattern overrides for the
+     * binary editor. Consumed by `getFormatPresentationSchema` and
+     * `resolveFieldPresentation`. Optional: a format with no presentation
+     * data still works (every field falls back to humanize-derived labels
+     * and walkStruct-resolved values).
+     */
+    readonly presentationSchema?: FormatPresentationSchema;
+    /**
+     * Pre-compiled regex versions of `presentationSchema.patternFields`.
+     * Compiled once per format module load; cheaper than recompiling on
+     * every `resolveFieldPresentation` call.
+     */
+    readonly compiledPatternFields?: readonly CompiledPatternFieldPresentation[];
+    /**
+     * Per-field domain ranges keyed by semantic field key. Tighter than the
+     * codec's numeric-type range; used by editor value validation and the
+     * canonical-write clamp path. Optional.
+     */
+    readonly domainRanges?: Readonly<Record<string, NumericRange>>;
 
     // -- Snapshots -------------------------------------------------------------
     createJsonSnapshot(parseResult: ParseResult): string;
@@ -118,8 +142,11 @@ class FormatAdapterRegistry {
 
 export const formatAdapterRegistry = new FormatAdapterRegistry();
 
-// Eagerly register all built-in format adapters.
-// Safe from circular dependencies: neither adapter file imports format-adapter.ts.
+// Eagerly register every built-in format adapter, then install the
+// registry-driven domain-range lookup into `binary-format-contract`. The
+// setter pattern keeps `binary-format-contract` cycle-free: derive-zod
+// and per-format canonical schemas import codec primitives from there
+// without dragging in the format-adapter graph.
 import { proFormatAdapter } from "./pro/format-adapter";
 import { mapFormatAdapter } from "./map/format-adapter";
 import { itmFormatAdapter } from "./itm/format-adapter";
@@ -131,3 +158,5 @@ formatAdapterRegistry.register(mapFormatAdapter);
 formatAdapterRegistry.register(itmFormatAdapter);
 formatAdapterRegistry.register(splFormatAdapter);
 formatAdapterRegistry.register(effFormatAdapter);
+
+setDomainRangeLookup((format, fieldKey) => formatAdapterRegistry.get(format)?.domainRanges?.[fieldKey]);

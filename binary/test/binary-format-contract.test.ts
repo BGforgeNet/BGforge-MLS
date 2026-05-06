@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import "../src"; // side-effect: registers format adapters + installs domain-range lookup
 import {
     getDomainRange,
     getNumericTypeRange,

@@ -10,6 +10,7 @@ import {
     isMapAddableArray,
     isMapRemovableEntry,
 } from "./entity-ops";
+import { mapCompiledPatternFields, mapDomainRanges, mapPresentationSchema } from "./presentation-schema";
 import { slugify } from "../snapshot-common";
 
 function mapSemanticFieldKey(segments: readonly string[]): string | undefined {
@@ -134,6 +135,9 @@ function shouldHideMapGroup(entry: ParsedGroup): boolean {
 
 export const mapFormatAdapter: BinaryFormatAdapter = {
     formatId: "map",
+    presentationSchema: mapPresentationSchema,
+    compiledPatternFields: mapCompiledPatternFields,
+    domainRanges: mapDomainRanges,
 
     createJsonSnapshot(parseResult: ParseResult): string {
         return createCanonicalMapJsonSnapshot(parseResult);

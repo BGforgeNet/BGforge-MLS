@@ -1,10 +1,18 @@
-import { z } from "zod";
+/**
+ * Codec-numeric primitives, plus the per-field domain-range and value
+ * validation helpers. Intentionally has no module-load dependency on the
+ * format-adapter registry — `format-adapter.ts` injects its registry-driven
+ * domain-range lookup via `setDomainRangeLookup` after registering each
+ * format's adapter. This lets `derive-zod` and per-format canonical schemas
+ * import primitives from this file freely without creating a load-time cycle
+ * back through the format adapters.
+ */
 
-type BinaryFormat = "pro" | "map" | "itm" | "spl" | "eff";
+import { z } from "zod";
 
 type NumericTypeName = "uint8" | "uint16" | "uint24" | "uint32" | "int8" | "int16" | "int24" | "int32";
 
-interface NumericRange {
+export interface NumericRange {
     readonly min: number;
     readonly max: number;
 }
@@ -20,37 +28,32 @@ const NUMERIC_TYPE_RANGES: Record<NumericTypeName, NumericRange> = {
     int32: { min: -2_147_483_648, max: 2_147_483_647 },
 };
 
-const DOMAIN_RANGES: Record<BinaryFormat, Readonly<Record<string, NumericRange>>> = {
-    pro: {
-        "pro.header.lightRadius": { min: 0, max: 8 },
-        "pro.header.lightIntensity": { min: 0, max: 65_536 },
-        "pro.doorProperties.walkThruFlag": { min: 0, max: 1 },
-        "pro.stairsProperties.destTile": { min: 0, max: 0x03_ff_ff_ff },
-        "pro.stairsProperties.destElevation": { min: 0, max: 0x3f },
-        "pro.ladderProperties.destTile": { min: 0, max: 0x03_ff_ff_ff },
-        "pro.ladderProperties.destElevation": { min: 0, max: 0x3f },
-    },
-    map: {
-        "map.header.defaultElevation": { min: 0, max: 2 },
-        "map.header.defaultOrientation": { min: 0, max: 5 },
-        "map.objects.elevations[].objects[].exitGrid.destinationElevation": { min: 0, max: 2 },
-        "map.objects.elevations[].objects[].exitGrid.destinationRotation": { min: 0, max: 5 },
-    },
-    // IE format domain ranges populate as specs add `domain:` clauses.
-    // Empty maps keep the editor's clamp/validate path lookup working
-    // (returns undefined for unmapped fields, which short-circuits cleanly).
-    itm: {},
-    spl: {},
-    eff: {},
-};
-
 export function getNumericTypeRange(type: string): NumericRange | undefined {
     return NUMERIC_TYPE_RANGES[type as NumericTypeName];
 }
 
+export function zodNumericType(type: NumericTypeName): z.ZodNumber {
+    const range = NUMERIC_TYPE_RANGES[type];
+    return z.number().int().min(range.min).max(range.max);
+}
+
+// -- Domain-range lookup hook ---------------------------------------------
+//
+// Setter installed by `format-adapter.ts` after the format adapters
+// register. Default no-op lookup keeps `validateNumericValue` /
+// `clampNumericValue` correct when called before adapters load (returns
+// undefined → no domain narrowing applies).
+
+type DomainRangeLookup = (format: string, fieldKey: string) => NumericRange | undefined;
+let domainRangeLookup: DomainRangeLookup = () => undefined;
+
+/** Installed by `format-adapter.ts` after format adapters register. */
+export function setDomainRangeLookup(lookup: DomainRangeLookup): void {
+    domainRangeLookup = lookup;
+}
+
 export function getDomainRange(format: string, fieldKey: string): NumericRange | undefined {
-    const table = (DOMAIN_RANGES as Record<string, Readonly<Record<string, NumericRange>> | undefined>)[format];
-    return table?.[fieldKey];
+    return domainRangeLookup(format, fieldKey);
 }
 
 export function validateNumericValue(
@@ -116,12 +119,7 @@ export function clampNumericValue(
     return Math.min(Math.max(value, min), max);
 }
 
-export function zodNumericType(type: NumericTypeName): z.ZodNumber {
-    const range = NUMERIC_TYPE_RANGES[type];
-    return z.number().int().min(range.min).max(range.max);
-}
-
-export function zodFieldNumber(format: BinaryFormat, fieldKey: string, type: NumericTypeName): z.ZodNumber {
+export function zodFieldNumber(format: string, fieldKey: string, type: NumericTypeName): z.ZodNumber {
     const schema = zodNumericType(type);
     const range = getDomainRange(format, fieldKey);
     return range ? schema.min(range.min).max(range.max) : schema;

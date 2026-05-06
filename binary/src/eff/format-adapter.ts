@@ -2,6 +2,7 @@ import type { BinaryFormatAdapter } from "../format-adapter";
 import type { ParseOptions, ParseResult } from "../types";
 import { rebuildEffCanonicalDocument } from "./canonical";
 import { createCanonicalEffJsonSnapshot, loadCanonicalEffJsonSnapshot } from "./json-snapshot";
+import { effCompiledPatternFields, effDomainRanges, effPresentationSchema } from "./presentation-schema";
 import { slugify } from "../snapshot-common";
 
 function effSemanticFieldKey(segments: readonly string[]): string | undefined {
@@ -19,6 +20,9 @@ function effSemanticFieldKey(segments: readonly string[]): string | undefined {
 
 export const effFormatAdapter: BinaryFormatAdapter = {
     formatId: "eff",
+    presentationSchema: effPresentationSchema,
+    compiledPatternFields: effCompiledPatternFields,
+    domainRanges: effDomainRanges,
 
     createJsonSnapshot(parseResult: ParseResult): string {
         return createCanonicalEffJsonSnapshot(parseResult);
