@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-type BinaryFormat = "pro" | "map";
+type BinaryFormat = "pro" | "map" | "itm" | "spl" | "eff";
 
 type NumericTypeName = "uint8" | "uint16" | "uint24" | "uint32" | "int8" | "int16" | "int24" | "int32";
 
@@ -36,6 +36,12 @@ const DOMAIN_RANGES: Record<BinaryFormat, Readonly<Record<string, NumericRange>>
         "map.objects.elevations[].objects[].exitGrid.destinationElevation": { min: 0, max: 2 },
         "map.objects.elevations[].objects[].exitGrid.destinationRotation": { min: 0, max: 5 },
     },
+    // IE format domain ranges populate as specs add `domain:` clauses.
+    // Empty maps keep the editor's clamp/validate path lookup working
+    // (returns undefined for unmapped fields, which short-circuits cleanly).
+    itm: {},
+    spl: {},
+    eff: {},
 };
 
 export function getNumericTypeRange(type: string): NumericRange | undefined {
@@ -43,10 +49,8 @@ export function getNumericTypeRange(type: string): NumericRange | undefined {
 }
 
 export function getDomainRange(format: string, fieldKey: string): NumericRange | undefined {
-    if (format !== "pro" && format !== "map") {
-        return undefined;
-    }
-    return DOMAIN_RANGES[format][fieldKey];
+    const table = (DOMAIN_RANGES as Record<string, Readonly<Record<string, NumericRange>> | undefined>)[format];
+    return table?.[fieldKey];
 }
 
 export function validateNumericValue(
