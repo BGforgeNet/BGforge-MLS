@@ -20,6 +20,17 @@ export interface ScalarFieldSpec {
     readonly codec: ISchema<number>;
     readonly domain?: { readonly min: number; readonly max: number };
     readonly enum?: Readonly<Record<number, string>>;
+    /**
+     * When `true`, treat `enum` as an advisory display lookup rather than a
+     * closed value set: walkStruct still resolves named values, but the
+     * `toZodSchema` strict-mode refinement does NOT enforce membership.
+     * Used for fields whose value space is open by design — e.g. effect
+     * opcodes (mods can define new ones; the engine accepts any 16-bit
+     * value) or item types backed by `itemtype.2da` (mod-extensible). The
+     * default (`undefined`) keeps the existing strict-enforce behaviour
+     * suitable for closed enums like PRO `objectType`.
+     */
+    readonly enumOpen?: boolean;
     readonly flags?: Readonly<Record<number, string>>;
     /**
      * Bit-packed wire layout: this field is one part of a multi-field packed

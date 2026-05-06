@@ -132,6 +132,31 @@ describe("SPL display tree presentation", () => {
     });
 });
 
+describe("Open enums — unknown values display + round-trip", () => {
+    test("unknown effect opcode displays as 'Unknown (N)' and survives canonical round-trip", async () => {
+        const { createCanonicalItmJsonSnapshot, loadCanonicalItmJsonSnapshot } =
+            await import("../src/itm/json-snapshot");
+        const itmFixture = new Uint8Array(fs.readFileSync(ITM_FIXTURE));
+        const result = itmParser.parse(itmFixture);
+        // Cast: the Document union loses ITM-specific shape on .document; the
+        // ITM parser populates effects[] for any non-trivial fixture.
+        const doc = result.document as { effects: { opcode: number }[] } | undefined;
+        if (!doc?.effects?.[0]) throw new Error("ITM fixture has no effects");
+        doc.effects[0].opcode = 9999;
+
+        const json = createCanonicalItmJsonSnapshot(result);
+        const loaded = loadCanonicalItmJsonSnapshot(json);
+        expect((loaded.snapshot.document as { effects: { opcode: number }[] }).effects[0]?.opcode).toBe(9999);
+
+        // Display tree shows "Unknown (9999)" for the unrecognised opcode.
+        const reparsed = itmParser.parse(loaded.bytes);
+        const effects = findGroup(reparsed.root, "Effects");
+        const effect1 = effects ? findGroup(effects, "Effect 1") : undefined;
+        const opcode = effect1 ? findField(effect1, "Opcode") : undefined;
+        expect(opcode?.value).toBe("Unknown (9999)");
+    });
+});
+
 describe("EFF display tree presentation", () => {
     const fixture = findFirstEff();
 

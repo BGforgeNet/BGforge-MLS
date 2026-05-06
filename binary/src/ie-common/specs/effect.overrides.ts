@@ -11,9 +11,14 @@ import { Opcodes } from "../opcodes";
 
 export const effectSpecAnnotated = {
     ...effectSpec,
-    opcode: { ...effectSpec.opcode, enum: Opcodes },
+    // Opcodes are open: IESDP catalogs ~370 known ones but mods can introduce
+    // new opcode numbers and the engine accepts any 16-bit value. The lookup
+    // is advisory (display only); strict canonical mode does not reject
+    // unrecognised opcodes.
+    opcode: { ...effectSpec.opcode, enum: Opcodes, enumOpen: true },
     target: { ...effectSpec.target, enum: EffectTarget },
-    timing: { ...effectSpec.timing, enum: EffectTiming },
+    // Timing has gaps (10 + 4096); mods occasionally use other values.
+    timing: { ...effectSpec.timing, enum: EffectTiming, enumOpen: true },
     resistance: { ...effectSpec.resistance, flags: EffectResistanceFlags },
     saveType: { ...effectSpec.saveType, flags: EffectSaveTypeFlags },
 } satisfies Record<string, FieldSpec>;

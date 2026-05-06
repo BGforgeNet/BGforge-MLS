@@ -9,7 +9,11 @@ import { splHeaderSpec } from "./header";
 export const splHeaderSpecAnnotated = {
     ...splHeaderSpec,
     flags: { ...splHeaderSpec.flags, flags: SplFlags },
-    type: { ...splHeaderSpec.type, enum: SplType },
+    // Per IESDP, type values 6–65535 behave as Psionic/Bard-song; the engine
+    // tolerates out-of-table values, so the lookup is advisory.
+    type: { ...splHeaderSpec.type, enum: SplType, enumOpen: true },
     exclusionFlags: { ...splHeaderSpec.exclusionFlags, flags: SplExclusionFlags },
-    castingGraphics: { ...splHeaderSpec.castingGraphics, enum: SplCastingGraphics },
+    // Casting graphics 0-15 are documented; mods/EE engines occasionally use
+    // additional values.
+    castingGraphics: { ...splHeaderSpec.castingGraphics, enum: SplCastingGraphics, enumOpen: true },
 } satisfies Record<string, FieldSpec>;

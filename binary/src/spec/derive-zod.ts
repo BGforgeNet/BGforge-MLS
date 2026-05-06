@@ -84,11 +84,14 @@ function fieldSpecToZod(fs: FieldSpec, mode: "strict" | "permissive"): z.ZodType
         // shorter values are NUL-padded by the codec.
         return z.string().max(fs.count);
     }
-    if (fs.enum && mode === "strict") {
-        // Saved values must be a key in the enum table; permissive parsing
+    if (fs.enum && mode === "strict" && !fs.enumOpen) {
+        // Closed enums (PRO `objectType`, ITM ability `attackType`, etc.):
+        // saved values must be a key in the enum table; permissive parsing
         // still surfaces "Unknown (N)" in the display tree, but committing a
         // value back to bytes is rejected here so .pro.json snapshots stay
-        // round-trippable.
+        // round-trippable. Open enums (`enumOpen: true`, e.g. effect opcodes,
+        // ITM type) skip this refinement — the table is advisory, not
+        // exhaustive.
         const allowed = new Set(Object.keys(fs.enum).map(Number));
         return z
             .number()

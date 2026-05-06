@@ -15,5 +15,8 @@ import { itmHeaderSpec } from "./header";
 export const itmHeaderSpecAnnotated = {
     ...itmHeaderSpec,
     flags: { ...itmHeaderSpec.flags, flags: ItmFlags },
-    type: { ...itmHeaderSpec.type, enum: ItmType },
+    // ItmType is backed by `itemtype.2da` which mods can extend with custom
+    // item categories; the engine accepts any 16-bit value. Display lookup
+    // only — strict canonical mode does not reject unrecognised types.
+    type: { ...itmHeaderSpec.type, enum: ItmType, enumOpen: true },
 } satisfies Record<string, FieldSpec>;
