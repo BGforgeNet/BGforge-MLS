@@ -22,6 +22,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { spawnSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
+import { parserRegistry } from "../src/index";
 
 const CLI = path.resolve("binary/out/cli.js");
 const NODE = process.execPath;
@@ -75,6 +76,19 @@ describe("bin CLI integration", () => {
             const proFile = path.join(FIXTURES, "misc", "00000001.pro");
             const { stdout } = run(proFile);
             expect(stdout.endsWith("\n")).toBe(true);
+        });
+    });
+
+    describe("--extensions flag", () => {
+        // The actions/binary/ shell scripts depend on this output shape:
+        // one extension per line, no dot, exit 0. Changes here must be
+        // matched in actions/binary/scripts/list-changed.sh.
+        it("prints the parserRegistry's extensions, one per line, sans dot", () => {
+            const { code, stdout, stderr } = run("--extensions");
+            expect(stderr).toBe("");
+            expect(code).toBe(0);
+            const lines = stdout.split("\n").filter((l) => l.length > 0);
+            expect(lines.sort()).toEqual([...parserRegistry.getExtensions()].sort());
         });
     });
 

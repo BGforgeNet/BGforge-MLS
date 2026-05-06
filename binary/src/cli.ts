@@ -139,6 +139,7 @@ const HELP = `Usage: fgbin <file.pro|file.map|dir> [--save] [--check] [--load] [
   --save    Save parsed JSON alongside the binary file (.pro.json/.map.json)
   --check   Compare parsed output against existing JSON snapshot (exit 1 if diff)
   --load    Load JSON and write binary using the parser's native extension
+  --extensions    Print supported file extensions (one per line) and exit
   --graceful-map  Opt into permissive MAP boundary guessing for ambiguous files (default is strict;
                   required again on --load for JSON snapshots created from ambiguous MAP bytes)
   -r        Recursively process all supported files in directory
@@ -202,6 +203,18 @@ function loadJsonToBinary(jsonPath: string): void {
 
 async function main() {
     const argv = process.argv.slice(2);
+
+    // --extensions: print the registry's extension list one per line and exit.
+    // Consumed by the actions/binary/ shell scripts to build their file
+    // filters from the same source the parsers register, so a new format
+    // landing in @bgforge/binary is picked up by the action without a
+    // matching action release.
+    if (argv.includes("--extensions")) {
+        for (const ext of parserRegistry.getExtensions()) {
+            process.stdout.write(`${ext}\n`);
+        }
+        return;
+    }
 
     // Handle --load separately: it takes .json input, not .pro
     if (argv.includes("--load")) {

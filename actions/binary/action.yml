@@ -1,5 +1,5 @@
 name: "Binary JSON snapshots"
-description: "Refresh .pro.json/.map.json snapshots via @bgforge/binary and commit them back to the branch."
+description: "Refresh JSON snapshots for binary files supported by @bgforge/binary (Fallout .pro/.map, Infinity Engine .itm/.spl/.eff) and commit them back to the branch."
 author: "BGforge"
 
 inputs:
@@ -85,4 +85,5 @@ runs:
               COMMIT_MESSAGE: ${{ inputs.commit-message }}
               COMMIT_AUTHOR_NAME: ${{ inputs.commit-author-name }}
               COMMIT_AUTHOR_EMAIL: ${{ inputs.commit-author-email }}
+              EXTENSIONS: ${{ steps.list.outputs.extensions }}
           run: ${{ github.action_path }}/scripts/commit-and-push.sh

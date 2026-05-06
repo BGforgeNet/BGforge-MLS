@@ -1,9 +1,12 @@
 # Binary JSON snapshots action
 
-Refreshes `.pro.json` / `.map.json` snapshot files using
-[`@bgforge/binary`](https://www.npmjs.com/package/@bgforge/binary) and commits them back to the branch that triggered
-the workflow. Use this so changes to `.pro` / `.map` binaries land in git history alongside their human-readable JSON
-form.
+Refreshes JSON snapshot files alongside binary game data using
+[`@bgforge/binary`](https://www.npmjs.com/package/@bgforge/binary), and commits them back to the branch that triggered
+the workflow. Use this so changes to binaries land in git history alongside their human-readable JSON form.
+
+The set of binary formats handled is discovered at runtime from the installed `@bgforge/binary` (`fgbin --extensions`),
+so any format newly registered there is picked up by the action without a matching action release. At the time of
+writing that is `.pro` / `.map` (Fallout) and `.itm` / `.spl` / `.eff` (Infinity Engine).
 
 ## Usage
 
@@ -14,9 +17,13 @@ name: Binary snapshots
 on:
     push:
         branches: [main]
+        # Trim this list to the formats your repo actually contains.
         paths:
             - "**/*.pro"
             - "**/*.map"
+            - "**/*.itm"
+            - "**/*.spl"
+            - "**/*.eff"
 
 permissions:
     contents: write
@@ -80,11 +87,12 @@ jobs:
   `ref: ${{ github.head_ref }}` so the snapshot commit lands on the PR head, not on a detached merge ref.
 - Concurrent pushes to the same branch may cause the rebase-and-push step to fail; wrap the consumer job in a
   `concurrency:` block if your workflow can fire on rapid successive pushes.
-- Only `.pro` / `.map` files added or modified in the current event's diff are processed. The action best-effort fetches
-  the base and head SHAs into the local clone, but on events where no usable base SHA is available (new-branch push,
-  manual `workflow_dispatch`, scheduled runs) it falls back to a full recursive scan of `paths`.
+- Only binary files (any extension `@bgforge/binary` recognizes) added or modified in the current event's diff are
+  processed. The action best-effort fetches the base and head SHAs into the local clone, but on events where no usable
+  base SHA is available (new-branch push, manual `workflow_dispatch`, scheduled runs) it falls back to a full recursive
+  scan of `paths`.
 
 ## Limitations
 
-- **Deleted binaries leave orphaned snapshots.** Removing a `.pro` / `.map` does not remove its corresponding
-  `.pro.json` / `.map.json`. Delete the snapshot manually in the same commit.
+- **Deleted binaries leave orphaned snapshots.** Removing a binary does not remove its corresponding `.json` snapshot.
+  Delete the snapshot manually in the same commit.
