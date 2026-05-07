@@ -30,6 +30,7 @@ export {
     toSemanticFieldKey,
     createSemanticFieldKeyFromId,
     resolveFieldPresentation,
+    toNumericOptionMap,
 } from "./presentation-schema";
 
 // Display lookups

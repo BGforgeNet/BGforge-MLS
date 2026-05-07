@@ -6,6 +6,7 @@ import {
     formatAdapterRegistry,
     createFieldKey,
     resolveFieldPresentation,
+    toNumericOptionMap,
     toSemanticFieldKey,
 } from "@bgforge/binary";
 import type { BinaryEditorNode } from "./binaryEditor-messages";
@@ -168,8 +169,17 @@ export function buildBinaryEditorTreeState(parseResult: ParseResult): BinaryEdit
             createFieldKey(projected.sourceSegments);
         const presentation = resolveFieldPresentation(parseResult.format, fieldKey, entry.name);
         const numericFormat = resolveNumericFormat(parseResult.format, fieldKey, entry.name);
-        const enumOptions = resolveEnumLookup(parseResult.format, fieldKey, entry.name);
-        const flagOptions = resolveFlagLookup(parseResult.format, fieldKey, entry.name);
+        // Adapter (path-keyed presentation schema) lookup is the override
+        // surface — explicit per-path tweaks like MAP's filtered ScriptProc
+        // dropdown live there. When the adapter has no entry (e.g. for slot
+        // children of a `view: "slots"` array, whose semantic-key collapses
+        // to the array's parent key), fall back to the walker-emitted spec
+        // table carried on the ParsedField. That fallback makes the spec the
+        // single source of truth for enum/flags display.
+        const adapterEnumOptions = resolveEnumLookup(parseResult.format, fieldKey, entry.name);
+        const adapterFlagOptions = resolveFlagLookup(parseResult.format, fieldKey, entry.name);
+        const enumOptions = adapterEnumOptions ?? toNumericOptionMap(entry.enumOptions);
+        const flagOptions = adapterFlagOptions ?? toNumericOptionMap(entry.flagOptions);
         const numericValue =
             typeof entry.rawValue === "number"
                 ? entry.rawValue
@@ -178,9 +188,15 @@ export function buildBinaryEditorTreeState(parseResult: ParseResult): BinaryEdit
                   : undefined;
         const displayValue =
             typeof numericValue === "number"
-                ? enumOptions || flagOptions
+                ? adapterEnumOptions || adapterFlagOptions
                     ? resolveDisplayValue(parseResult.format, fieldKey, entry.name, numericValue)
-                    : formatNumericValue(numericValue, numericFormat)
+                    : enumOptions || flagOptions
+                      ? // Walker pre-formatted the display string from the
+                        // spec's enum/flags table; reusing it avoids a
+                        // second resolve pass that would miss the same
+                        // path-keyed lookup the adapter just missed.
+                        String(entry.value)
+                      : formatNumericValue(numericValue, numericFormat)
                 : String(entry.value);
         nodes.set(id, {
             id,

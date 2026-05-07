@@ -157,6 +157,54 @@ describe("buildBinaryEditorTreeState", () => {
         expect(init.rootChildren).toEqual([]);
     });
 
+    it("falls back to walker-emitted flagOptions when the adapter's semantic-key lookup misses", () => {
+        // Slot children of a `view: "slots"` array all share the array's
+        // semantic key (the format-adapter's keying flattens at the array
+        // boundary), so the path-keyed presentation schema can't carry their
+        // per-slot flag tables. Walker emits the table on the ParsedField
+        // directly; the tree builder must surface it on the BinaryEditorNode.
+        const result: ParseResult = {
+            format: "itm",
+            formatName: "ITM",
+            root: {
+                name: "ITM File",
+                fields: [
+                    {
+                        name: "ITM Header",
+                        expanded: true,
+                        fields: [
+                            {
+                                name: "Usability Flags",
+                                expanded: true,
+                                fields: [
+                                    {
+                                        name: "Byte 1 (Class / Alignment)",
+                                        value: "(none)",
+                                        offset: 0x1e,
+                                        size: 1,
+                                        type: "flags",
+                                        rawValue: 0,
+                                        flagOptions: { "1": "Chaotic", "2": "Evil" },
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                ],
+            },
+        };
+        const tree = buildBinaryEditorTreeState(result);
+        const init = tree.getInitMessagePayload();
+        const header = init.rootChildren.find((node) => node.name === "ITM Header")!;
+        const usabilityFlags = tree.getChildren(header.id).find((node) => node.name === "Usability Flags")!;
+        const byte1 = tree.getChildren(usabilityFlags.id).find((node) => node.name === "Byte 1 (Class / Alignment)");
+        expect(byte1).toMatchObject({
+            valueType: "flags",
+            flagOptions: { 1: "Chaotic", 2: "Evil" },
+            value: "(none)",
+        });
+    });
+
     it("attaches MAP enum and flag options to lazy field nodes", () => {
         const tree = buildBinaryEditorTreeState(loadMapResult("arcaves.map"));
         const init = tree.getInitMessagePayload();
