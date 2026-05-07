@@ -23,18 +23,27 @@ import { ScriptFlags, ScriptProc, Skill } from "../types";
 const COMMON_FIELDS = {
     flags: { codec: i32, flags: ScriptFlags },
     index: { codec: i32 },
-    programPointerSlot: { codec: i32 },
+    // Engine-set internal pointer; not user data.
+    programPointerSlot: { codec: i32, role: "reserved" as const },
     ownerId: { codec: i32 },
-    localVarsOffset: { codec: i32 },
-    numLocalVars: { codec: i32 },
+    // Per-slot offset into the file's local-vars section. Round-trip
+    // preserves the wire value; the Fallout MAP format does not document a
+    // clean derivation formula the writer can recompute, so the role tag is
+    // editor-lock-only ("reserved" rather than "derivedOffset").
+    localVarsOffset: { codec: i32, role: "reserved" as const },
+    // Per-slot count of local vars. The flat doc-level localVariables array
+    // is the source of total length; per-slot subdivision is engine-managed
+    // metadata, not derivable from doc shape alone.
+    numLocalVars: { codec: i32, role: "reserved" as const },
     returnValue: { codec: i32 },
     action: { codec: i32, enum: ScriptProc },
     fixedParam: { codec: i32 },
     actionBeingUsed: { codec: i32, enum: Skill },
     scriptOverrides: { codec: i32 },
-    unknownField0x48: { codec: i32 },
+    // Reserved / unknown int32s preserved for round-trip; user shouldn't edit.
+    unknownField0x48: { codec: i32, role: "reserved" as const },
     checkMarginHowMuch: { codec: i32 },
-    legacyField0x50: { codec: i32 },
+    legacyField0x50: { codec: i32, role: "reserved" as const },
 } as const satisfies Record<string, FieldSpec>;
 
 export const otherSlotSpec = {

@@ -17,23 +17,26 @@ import type { ISchema } from "typed-binary";
  */
 /**
  * Semantic role of a scalar field. Defaults to `"data"` (user-editable game
- * value). Non-`"data"` roles mark fields whose value is derived from other
- * parts of the document and must not be hand-edited:
+ * value). Non-`"data"` roles mark fields the user must not hand-edit:
+ *
  * - `"derivedCount"` — the length of a sibling array.
  * - `"derivedOffset"` — the byte offset of a section within the file.
  * - `"derivedIndex"` — the index of a record into a sibling table.
+ * - `"reserved"` — engine-set value the user must not edit, but the writer
+ *   has no derivation formula for (unknown fields, runtime pointers,
+ *   tool-generated metadata). Editor lock applies; enforceDerivedFields and
+ *   validateDerivedFields are no-ops on these — the writer trusts whatever
+ *   value was on the wire and round-trips it byte-identically.
  *
  * The role flows into three downstream behaviours from one declaration:
  *   - presentation derivation emits `editable: false` (locks the editor input);
- *   - canonical-write recomputes the field from doc state (drops the input);
+ *   - canonical-write recomputes the field from doc state (derived roles);
  *   - canonical-read zod refinement asserts the on-disk value matches truth.
  *
- * `derivedFrom` names the source the canonical-write recompute reads. The
- * exact shape is consumed by `enforceDerivedFields` and is intentionally a
- * loose discriminated union here so format authors can describe the source
- * without coupling the spec layer to one specific recompute strategy.
+ * `derivedFrom` names the source the canonical-write recompute reads.
+ * Reserved fields omit it; the field's current value is the source of truth.
  */
-export type FieldRole = "data" | "derivedCount" | "derivedOffset" | "derivedIndex";
+export type FieldRole = "data" | "derivedCount" | "derivedOffset" | "derivedIndex" | "reserved";
 
 export type DerivedFrom = { readonly array: string } | { readonly section: string } | { readonly table: string };
 

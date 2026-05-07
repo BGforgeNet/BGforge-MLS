@@ -40,7 +40,7 @@ export const objectBaseSpec = {
     cid: { codec: i32 },
     lightDistance: { codec: i32 },
     lightIntensity: { codec: i32 },
-    field74: { codec: i32 },
+    field74: { codec: i32, role: "reserved" as const },
     sid: { codec: i32 },
     // Index into the global script table. Position-dependent on serialisation
     // order; not user data. Editor lock currently still flows through
@@ -59,8 +59,11 @@ export const inventoryHeaderSpec = {
         role: "derivedCount" as const,
         derivedFrom: { array: "inventory" } as const,
     },
-    inventoryCapacity: { codec: i32 },
-    inventoryPointer: { codec: i32 },
+    // Engine-set: max inventory size (capacity) and a runtime pointer the
+    // engine populates when loading. Round-trip preserves whatever was on
+    // disk; the editor must not let the user touch them.
+    inventoryCapacity: { codec: i32, role: "reserved" as const },
+    inventoryPointer: { codec: i32, role: "reserved" as const },
 } as const satisfies Record<string, FieldSpec>;
 
 export const critterDataSpec = {
