@@ -14,7 +14,8 @@
 - Opening the same `.pro` or `.map` file in two side-by-side panels now keeps each panel's tree expand/collapse state independent; previously the second panel overwrote the first.
 - Fixed armor stat fields (AC, damage resistance, damage threshold, perk) being annotated as signed `int32` in the field-detail view; they are unsigned in the file format and now display as `uint32`.
 - ITM and SPL header pointers (`Extended Headers Offset` / `Count`, `Feature Blocks Offset` / `Index` / `Count`, casting feature-block pair) and per-ability slice fields (`Feature Block Count` / `Index`) are now read-only in the binary editor. These fields are derived from the document layout; editing them by hand was a route to silently corrupting the file.
-- ITM `Usability Flags` now displays as four labelled flag rows (Class+Alignment, Class, Class+Race, Race) decoding their respective IESDP bits, instead of an opaque `(4 values) padding` summary.
+- ITM `Usability Flags` now displays as four labelled flag rows (Class+Alignment, Class, Class+Race, Race) decoding their respective IESDP bits, instead of an opaque `(4 values) padding` summary. Each row is editable as checkboxes per IESDP bit.
+- Nested groups inside the binary editor (e.g. `Usability Flags` inside the ITM header, `Melee Animation` inside an ability) no longer accumulate extra left indent on each nesting level; group children align with their grandparent's fields for a flat, scannable tree.
 - ITM ability `Melee Animation` now displays as three named slots (Overhand / Backhand / Thrust) instead of `(3 values) padding`.
 - EFF `Variable Name` and MAP `Filename` now display as strings directly (the editor already showed the filename via a workaround; EFF surfaces it for the first time).
 - MAP per-object `Script Index` is now read-only in the binary editor — it is an index into the global script table and editing it would have produced a corrupt save.

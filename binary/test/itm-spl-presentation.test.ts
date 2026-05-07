@@ -91,6 +91,23 @@ describe("ITM display tree presentation", () => {
         }
     });
 
+    test("usabilityFlags slot children carry per-byte flagOptions for the renderer", () => {
+        // The path-keyed presentation schema can't reach into slot children
+        // (they share the array's semantic key), so the walker must
+        // propagate each slot's flag table on the ParsedField directly.
+        // Without this, the renderer falls back to a read-only span.
+        const usability = findGroup(result.root, "Usability Flags");
+        const byte1 = usability!.fields[0] as ParsedField;
+        const byte2 = usability!.fields[1] as ParsedField;
+        expect(byte1.flagOptions).toBeDefined();
+        // Byte 1 carries class / alignment flags per IESDP — Bard should be
+        // one of the entries.
+        expect(Object.values(byte1.flagOptions!)).toContain("Bard");
+        expect(byte2.flagOptions).toBeDefined();
+        // Each byte gets its own table; the four are not the same set.
+        expect(byte1.flagOptions).not.toEqual(byte2.flagOptions);
+    });
+
     test("ability meleeAnimation displays as a 3-slot group (Overhand / Backhand / Thrust)", () => {
         const abilities = findGroup(result.root, "Abilities");
         expect(abilities).toBeDefined();
