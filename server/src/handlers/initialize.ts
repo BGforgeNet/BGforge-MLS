@@ -12,7 +12,6 @@ import {
     LANG_FALLOUT_SSL,
     LANG_WEIDU_BAF,
     LANG_WEIDU_D,
-    LANG_WEIDU_LOG,
     LANG_WEIDU_SLB,
     LANG_WEIDU_SSL,
     LANG_WEIDU_TRA,
@@ -30,7 +29,7 @@ import { weiduTp2Provider } from "../weidu-tp2/provider";
 import { infinity2daProvider } from "../infinity-2da/provider";
 import { createFormatOnlyProvider } from "../core/format-only-provider";
 import { formatTra, formatMsg, formatScriptsLst } from "@bgforge/format";
-import { getDefinition as getWeiduLogDefinition } from "../weidu-log/definition";
+import { weiduLogProvider } from "../weidu-log/provider";
 import { Translation } from "../translation";
 import { initServerContext, updateServerSettings } from "../server-context";
 import { getServerCapabilities } from "../server-capabilities";
@@ -94,15 +93,7 @@ export function register(ctx: HandlerContext): void {
         registry.register(weiduBafProvider);
         registry.register(weiduDProvider);
         registry.register(weiduTp2Provider);
-        registry.register({
-            id: LANG_WEIDU_LOG,
-            async init(): Promise<void> {
-                conlog(`${LANG_WEIDU_LOG} provider initialized`);
-            },
-            definition(text, position, uri) {
-                return getWeiduLogDefinition(text, uri, position);
-            },
-        });
+        registry.register(weiduLogProvider);
         registry.register(infinity2daProvider);
         registry.register(createFormatOnlyProvider(LANG_WEIDU_TRA, formatTra));
         registry.register(createFormatOnlyProvider(LANG_FALLOUT_MSG, formatMsg));
