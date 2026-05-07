@@ -10,3 +10,8 @@ https://github.com/BGforgeNet/bg2-uniqueartifacts 1159183325b82b69b02472f46cedaa
 https://github.com/InfinityMods/Ascension 870ac8ac94c4ee2638ddf32fd1b243df05b80b5b
 https://github.com/Spellhold-Studios/BGT-WeiDU 2432cac96b692f85ea1c84aeb8d3c3398b53b1ff
 https://github.com/FredrikLindgren/rr 18680008d468ec5014b4377beabb706376ad0fe0
+# IESDP YAML data source for the spec generator (scripts/ie-binary-update.sh).
+# The default branch is sync-upstream (mirrors Gibberlings3); the structured
+# _data/file_formats/ YAML lives on ielib. Pin to a SHA on ielib so clone_repos
+# (which fetches by SHA, not by branch name) lands on the right tree.
+https://github.com/BGforgeNet/iesdp.git 4e6206c88c973c3132bd49d1e3a5a49a47a51e9f

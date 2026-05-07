@@ -18,8 +18,11 @@ if [ ! -d "$iesdp_dir" ]; then
     git clone "$iesdp_repo" "$iesdp_dir"
 fi
 cd "$iesdp_dir"
-git checkout ielib
-git pull
+# Works whether the local repo came from `git clone` (full history, branches
+# tracked) or from clone_repos' `git init + git fetch <SHA>` (shallow, detached
+# HEAD, no local branches). Both cases land on the latest remote ielib.
+git fetch --depth 1 origin ielib
+git checkout -B ielib FETCH_HEAD
 popd
 
 pnpm exec tsx scripts/ie-update/src/iesdp-update.ts -s "$iesdp_dir" \
