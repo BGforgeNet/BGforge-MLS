@@ -213,6 +213,13 @@ function incompleteObjectResult(group: ParsedGroup, offset: number): ParsedObjec
     return { complete: false, group: { ...group, editingLocked: true }, offset };
 }
 
+// Game-format invariant: inventory items can themselves carry an inventory
+// (a critter's items) but no further. Cap recursion at 2 to bail out on
+// hostile inputs where a crafted MAP advertises non-zero `inventoryLength`
+// inside a nested inventory entry — without the cap, parseObjectAt would
+// recurse until the JS stack overflows. Real files never reach depth 2.
+const MAX_INVENTORY_RECURSION_DEPTH = 2;
+
 function parseObjectAt(
     data: Uint8Array,
     offset: number,
@@ -220,7 +227,27 @@ function parseObjectAt(
     header: MapHeader,
     errors: string[],
     options: ParseObjectsOptions,
+    depth = 0,
 ): ParsedObjectResult {
+    if (depth > MAX_INVENTORY_RECURSION_DEPTH) {
+        errors.push(
+            `Object ${index} inventory nesting exceeds depth ${MAX_INVENTORY_RECURSION_DEPTH}; treating as malformed`,
+        );
+        return incompleteObjectResult(
+            makeGroup(
+                `Object ${index}`,
+                [
+                    noteField(
+                        TRUNCATED_SENTINEL,
+                        `Inventory nesting exceeds depth ${MAX_INVENTORY_RECURSION_DEPTH}`,
+                        offset,
+                    ),
+                ],
+                true,
+            ),
+            offset,
+        );
+    }
     if (offset + MAP_OBJECT_BASE_SIZE + MAP_OBJECT_DATA_HEADER_SIZE > data.length) {
         errors.push(`Object ${index} truncated at offset 0x${offset.toString(16)}`);
         return incompleteObjectResult(
@@ -358,7 +385,15 @@ function parseObjectAt(
         const quantityField = int32Field("Quantity", data, currentOffset);
         currentOffset += 4;
 
-        const nestedObject = parseObjectAt(data, currentOffset, `${index}.${inventoryIndex}`, header, errors, options);
+        const nestedObject = parseObjectAt(
+            data,
+            currentOffset,
+            `${index}.${inventoryIndex}`,
+            header,
+            errors,
+            options,
+            depth + 1,
+        );
         inventoryGroups.push(makeGroup(`Inventory Entry ${inventoryIndex}`, [quantityField, nestedObject.group]));
         currentOffset = nestedObject.offset;
 

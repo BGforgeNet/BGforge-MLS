@@ -73,6 +73,11 @@ class SplParser implements BinaryParser {
 
         const header: SplHeaderData = splHeaderSchema.read(readerAt(data, 0));
 
+        // The product `abilityCount * SPL_ABILITY_SIZE` cannot overflow JS
+        // safe integers: codec types `abilityCount` as uint32 (≤ 4 294 967 295)
+        // and SPL_ABILITY_SIZE is a small fixed constant, so the maximum
+        // product is far inside double-precision exactness. The bounds check
+        // below stays meaningful even for adversarial inputs.
         const abilitiesOffset = header.extendedHeadersOffset;
         const abilityCount = header.extendedHeadersCount;
         const abilitiesEnd = abilitiesOffset + abilityCount * SPL_ABILITY_SIZE;

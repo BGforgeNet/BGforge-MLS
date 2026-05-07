@@ -17,6 +17,8 @@
 - New: `fgbin --extensions` prints the list of supported binary file extensions, one per line.
 - More robust parse and display.
 - MAP truncation / undecodable-region notes in JSON snapshots and the binary editor tree are now labelled `Truncated` instead of the previous `TODO` placeholder.
+- `fgbin` rejects oversized binary input files (e.g. a `.map` exceeding 16 MB) with a clear error before allocating a Buffer, so a malformed or accidentally-truncated download cannot trigger a multi-GB allocation.
+- The MAP parser caps inventory recursion depth at 2 (game format invariant: items can carry an inventory exactly one level deep). Crafted MAPs that advertise nested-inside-nested inventories now surface as a parse error instead of recursing until the JS stack overflows.
 
 ### GitHub Actions
 

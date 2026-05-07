@@ -85,6 +85,11 @@ class ItmParser implements BinaryParser {
         const header: ItmHeaderData = itmHeaderSchema.read(readerAt(data, 0));
 
         // Abilities live at header.extendedHeadersOffset, count given by header.
+        // The product `abilityCount * ITM_ABILITY_SIZE` cannot overflow JS safe
+        // integers: the codec types abilityCount as uint32 (≤ 4 294 967 295) and
+        // ITM_ABILITY_SIZE is a small fixed constant, so the maximum product is
+        // well below 2^48 — inside double-precision exactness — and the bounds
+        // check below stays meaningful even for adversarial inputs.
         const abilitiesOffset = header.extendedHeadersOffset;
         const abilityCount = header.extendedHeadersCount;
         const abilitiesEnd = abilitiesOffset + abilityCount * ITM_ABILITY_SIZE;

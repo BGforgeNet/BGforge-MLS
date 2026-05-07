@@ -33,6 +33,21 @@ const CLI_PARSE_OPTIONS: ParseOptions = {
 };
 const CLI_QUIET = process.argv.includes("-q") || process.argv.includes("--quiet");
 
+// Per-format maximum input file size, applied via stat() before allocating a
+// Buffer. Caps a malicious or accidentally-truncated file from triggering a
+// multi-GB allocation prior to header validation. Real-world files stay well
+// below these (largest published Fallout MAPs are ~250 KB; ITM/SPL/EFF are
+// in the low KB range; PRO has a 1 KB hard limit enforced inside its parser).
+// Override by editing this map, not by passing a flag — there is no
+// legitimate use case for parsing files at the cap.
+const MAX_FILE_SIZES: Record<string, number> = {
+    map: 16 * 1024 * 1024, // 16 MB
+    pro: 1024,
+    itm: 256 * 1024,
+    spl: 256 * 1024,
+    eff: 64 * 1024,
+};
+
 /**
  * Builds per-file ParseOptions for the CLI: file-derived options come from
  * the shared `@bgforge/binary` builder (today: sibling proto/ pidResolver),
@@ -63,6 +78,18 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
         if (!parser) {
             console.error(`No parser for extension: ${ext} (${filePath})`);
             return "error";
+        }
+
+        const extKey = ext.startsWith(".") ? ext.slice(1).toLowerCase() : ext.toLowerCase();
+        const maxSize = MAX_FILE_SIZES[extKey];
+        if (maxSize !== undefined) {
+            const stat = fs.statSync(filePath);
+            if (stat.size > maxSize) {
+                console.error(
+                    `File too large: ${stat.size} bytes (.${extKey} cap is ${maxSize}); refusing to read ${filePath}`,
+                );
+                return "error";
+            }
         }
 
         const data = fs.readFileSync(filePath);
