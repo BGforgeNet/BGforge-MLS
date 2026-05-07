@@ -292,6 +292,42 @@ export interface DerivedFieldsContext {
  * supplied in `ctx` is left as-is. The zod consistency refinement (when
  * present) is the place to assert truth at validation time.
  */
+/**
+ * Read-side counterpart to `enforceDerivedFields`: walk the same role-driven
+ * rules and return the list of fields whose doc value diverges from the
+ * recomputed truth. Empty list means the doc is internally consistent for
+ * the supplied ctx.
+ *
+ * Used by canonical-document zod refinements to reject hand-edited JSON
+ * snapshots that smuggle inconsistent structural metadata into the file.
+ * Permissive on missing ctx: a field whose derivedFrom source is not
+ * supplied is omitted from the report (no truth to compare against).
+ */
+export interface DerivedFieldMismatch {
+    readonly field: string;
+    readonly actual: unknown;
+    readonly expected: number;
+}
+
+export function validateDerivedFields<S extends Record<string, FieldSpec>, D extends Record<string, unknown>>(
+    spec: S,
+    doc: D,
+    ctx: DerivedFieldsContext = {},
+): DerivedFieldMismatch[] {
+    const recomputed = enforceDerivedFields(spec, doc, ctx);
+    if (recomputed === doc) return [];
+    const mismatches: DerivedFieldMismatch[] = [];
+    for (const key of Object.keys(spec) as (keyof S & string)[]) {
+        if (recomputed[key] === doc[key]) continue;
+        mismatches.push({
+            field: key,
+            actual: doc[key],
+            expected: recomputed[key] as number,
+        });
+    }
+    return mismatches;
+}
+
 export function enforceDerivedFields<S extends Record<string, FieldSpec>, D extends Record<string, unknown>>(
     spec: S,
     doc: D,

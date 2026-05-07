@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { u32 } from "typed-binary";
-import { arraySpec, enforceDerivedFields, type FieldSpec } from "../src/spec/types";
+import { arraySpec, enforceDerivedFields, validateDerivedFields, type FieldSpec } from "../src/spec/types";
 
 describe("enforceDerivedFields", () => {
     const spec = {
@@ -101,5 +101,50 @@ describe("enforceDerivedFields", () => {
             const header = { count: 99 };
             expect(enforceDerivedFields(headerSpec, header, { arrays: {} })).toBe(header);
         });
+    });
+});
+
+describe("validateDerivedFields", () => {
+    // The validation counterpart to enforceDerivedFields: returns the list of
+    // fields whose doc value diverges from the recomputed truth, with both
+    // values surfaced for issue reporting. Empty list = doc is consistent.
+    it("returns an empty list when every derived field matches", () => {
+        const spec = {
+            count: { codec: u32, role: "derivedCount" as const, derivedFrom: { array: "items" } as const },
+        } satisfies Record<string, FieldSpec>;
+        const doc = { count: 3 };
+        const ctx = { arrays: { items: [1, 2, 3] } };
+        expect(validateDerivedFields(spec, doc, ctx)).toEqual([]);
+    });
+
+    it("reports each mismatched field with actual + expected", () => {
+        const spec = {
+            count: { codec: u32, role: "derivedCount" as const, derivedFrom: { array: "items" } as const },
+            offset: { codec: u32, role: "derivedOffset" as const, derivedFrom: { section: "items" } as const },
+        } satisfies Record<string, FieldSpec>;
+        const doc = { count: 99, offset: 0 };
+        const ctx = { arrays: { items: [1, 2] }, sectionOffsets: { items: 0x14 } };
+        expect(validateDerivedFields(spec, doc, ctx)).toEqual([
+            { field: "count", actual: 99, expected: 2 },
+            { field: "offset", actual: 0, expected: 0x14 },
+        ]);
+    });
+
+    it("ignores role: data fields (user values that need not match anything)", () => {
+        const spec = {
+            x: { codec: u32 },
+            y: { codec: u32, role: "data" as const },
+        } satisfies Record<string, FieldSpec>;
+        expect(validateDerivedFields(spec, { x: 1, y: 2 }, {})).toEqual([]);
+    });
+
+    it("ignores derived fields whose source is not supplied in ctx", () => {
+        // Mirrors enforceDerivedFields' permissive-on-missing-context behaviour:
+        // the validator can only assert against truth it has access to. Fields
+        // without a derivable source pass through.
+        const spec = {
+            count: { codec: u32, role: "derivedCount" as const, derivedFrom: { array: "missing" } as const },
+        } satisfies Record<string, FieldSpec>;
+        expect(validateDerivedFields(spec, { count: 99 }, { arrays: {} })).toEqual([]);
     });
 });

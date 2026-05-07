@@ -15,6 +15,8 @@ import { opaqueRangeSchema } from "../shared-schemas";
 import { effectSpecAnnotated } from "../ie-common/specs/effect.overrides";
 import { itmHeaderSpecAnnotated } from "./specs/header.overrides";
 import { itmAbilitySpecAnnotated } from "./specs/ability.overrides";
+import { ITM_ABILITY_SIZE, ITM_HEADER_SIZE } from "./types";
+import { validateDerivedFields } from "../spec/types";
 
 const itmHeaderSchemaStrict = toZodSchema(itmHeaderSpecAnnotated, { mode: "strict" });
 const itmHeaderSchemaPermissive = toZodSchema(itmHeaderSpecAnnotated, { mode: "permissive" });
@@ -23,10 +25,35 @@ const abilitySchemaPermissive = toZodSchema(itmAbilitySpecAnnotated, { mode: "pe
 const effectSchemaStrict = toZodSchema(effectSpecAnnotated, { mode: "strict" });
 const effectSchemaPermissive = toZodSchema(effectSpecAnnotated, { mode: "permissive" });
 
-export const itmCanonicalDocumentSchema = z.strictObject({
+const itmCanonicalDocumentBaseSchema = z.strictObject({
     header: itmHeaderSchemaStrict,
     abilities: z.array(abilitySchemaStrict),
     effects: z.array(effectSchemaStrict),
+});
+
+/**
+ * Strict-mode canonical-doc schema for ITM. On top of the per-struct strict
+ * refinements, asserts that the header's role-tagged structural fields agree
+ * with what the canonical writer would recompute from the doc shape (abilities
+ * count, abilities/effects section offsets). Rejects hand-edited JSON
+ * snapshots that smuggle stale or wrong pointers; the writer would silently
+ * correct these on save, but a save-path validator should refuse rather
+ * than rewrite.
+ */
+export const itmCanonicalDocumentSchema = itmCanonicalDocumentBaseSchema.superRefine((doc, ctx) => {
+    const abilitiesOffset = ITM_HEADER_SIZE;
+    const effectsOffset = abilitiesOffset + doc.abilities.length * ITM_ABILITY_SIZE;
+    const mismatches = validateDerivedFields(itmHeaderSpecAnnotated, doc.header, {
+        arrays: { abilities: doc.abilities },
+        sectionOffsets: { abilities: abilitiesOffset, effects: effectsOffset },
+    });
+    for (const m of mismatches) {
+        ctx.addIssue({
+            code: "custom",
+            path: ["header", m.field],
+            message: `derived field "${m.field}" is ${m.actual} but the writer would compute ${m.expected}`,
+        });
+    }
 });
 
 export const itmCanonicalDocumentSchemaPermissive = z.strictObject({

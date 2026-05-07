@@ -9,6 +9,8 @@ import { opaqueRangeSchema } from "../shared-schemas";
 import { TILES_PER_ELEVATION } from "./schemas";
 import { toZodSchema } from "../spec/derive-zod";
 import { critterDataSpec, inventoryHeaderSpec } from "./specs/object";
+import { mapHeaderSpec } from "./specs/header";
+import { validateDerivedFields } from "../spec/types";
 
 export const MAP_OBJECT_BASE_SIZE = 0x48;
 export const MAP_OBJECT_DATA_HEADER_SIZE = 0x0c;
@@ -197,13 +199,32 @@ export const mapObjectsSchema = z.strictObject({
     elevations: z.array(mapObjectElevationSchema).min(3).max(3),
 });
 
-export const mapCanonicalDocumentSchema = z.strictObject({
+const mapCanonicalDocumentBaseSchema = z.strictObject({
     header: mapHeaderSchema,
     globalVariables: z.array(int32Schema),
     localVariables: z.array(int32Schema),
     tiles: z.array(mapTileElevationSchema),
     scripts: z.array(mapScriptSectionSchema),
     objects: mapObjectsSchema,
+});
+
+/**
+ * Strict-mode canonical-doc schema for MAP. Asserts the header's role-tagged
+ * count fields (numLocalVars / numGlobalVars) agree with the actual variable
+ * arrays. The writer recomputes these on save; this refinement is the
+ * load-side gate for hand-edited JSON snapshots.
+ */
+export const mapCanonicalDocumentSchema = mapCanonicalDocumentBaseSchema.superRefine((doc, ctx) => {
+    const mismatches = validateDerivedFields(mapHeaderSpec, doc.header, {
+        arrays: { globalVariables: doc.globalVariables, localVariables: doc.localVariables },
+    });
+    for (const m of mismatches) {
+        ctx.addIssue({
+            code: "custom",
+            path: ["header", m.field],
+            message: `derived field "${m.field}" is ${m.actual} but the writer would compute ${m.expected}`,
+        });
+    }
 });
 
 export type MapCanonicalDocument = z.infer<typeof mapCanonicalDocumentSchema>;
