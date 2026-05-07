@@ -15,11 +15,35 @@ import type { ISchema } from "typed-binary";
  *
  * @public
  */
+/**
+ * Semantic role of a scalar field. Defaults to `"data"` (user-editable game
+ * value). Non-`"data"` roles mark fields whose value is derived from other
+ * parts of the document and must not be hand-edited:
+ * - `"derivedCount"` — the length of a sibling array.
+ * - `"derivedOffset"` — the byte offset of a section within the file.
+ * - `"derivedIndex"` — the index of a record into a sibling table.
+ *
+ * The role flows into three downstream behaviours from one declaration:
+ *   - presentation derivation emits `editable: false` (locks the editor input);
+ *   - canonical-write recomputes the field from doc state (drops the input);
+ *   - canonical-read zod refinement asserts the on-disk value matches truth.
+ *
+ * `derivedFrom` names the source the canonical-write recompute reads. The
+ * exact shape is consumed by `enforceDerivedFields` and is intentionally a
+ * loose discriminated union here so format authors can describe the source
+ * without coupling the spec layer to one specific recompute strategy.
+ */
+export type FieldRole = "data" | "derivedCount" | "derivedOffset" | "derivedIndex";
+
+export type DerivedFrom = { readonly array: string } | { readonly section: string } | { readonly table: string };
+
 export interface ScalarFieldSpec {
     readonly kind?: "scalar";
     readonly codec: ISchema<number>;
     readonly domain?: { readonly min: number; readonly max: number };
     readonly enum?: Readonly<Record<number, string>>;
+    readonly role?: FieldRole;
+    readonly derivedFrom?: DerivedFrom;
     /**
      * When `true`, treat `enum` as an advisory display lookup rather than a
      * closed value set: walkStruct still resolves named values, but the

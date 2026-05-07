@@ -56,7 +56,12 @@ export function toPresentationEntries<T>(
 
         const overrides: { numericFormat?: "decimal" | "hex32"; editable?: boolean } = {};
         if (pres?.format === "decimal" || pres?.format === "hex32") overrides.numericFormat = pres.format;
+        // Spec-declared `role` is the authoritative source for "this field is
+        // derived, not user data". An explicit presentation `editable` override
+        // wins (escape hatch for cases the role taxonomy doesn't yet cover);
+        // otherwise a non-`"data"` role locks the field.
         if (pres?.editable !== undefined) overrides.editable = pres.editable;
+        else if (fs.role !== undefined && fs.role !== "data") overrides.editable = false;
         if (Object.keys(overrides).length > 0) {
             out[fullKey] = overrides;
         }

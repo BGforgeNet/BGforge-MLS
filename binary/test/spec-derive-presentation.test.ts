@@ -60,4 +60,25 @@ describe("toPresentationEntries", () => {
         const spec: StructSpec<T> = { x: { codec: u32 } };
         expect(toPresentationEntries(spec, {}, "pro.header")).toEqual({});
     });
+
+    it("emits editable: false for fields with a non-data role", () => {
+        // Structural fields (offsets, counts, indexes into sibling tables) are
+        // declared with a `role` on the spec. The role is the source of truth
+        // for "this is a derived field, not user-meaningful data" — the editor
+        // must lock such fields, and the canonical writer must recompute them.
+        // Presentation derivation translates the role into `editable: false`
+        // so the editor's existing presentation pipeline picks it up without
+        // needing a parallel role-aware path.
+        type T = { offset: number; count: number; idx: number };
+        const spec: StructSpec<T> = {
+            offset: { codec: u32, role: "derivedOffset", derivedFrom: { section: "abilities" } },
+            count: { codec: u32, role: "derivedCount", derivedFrom: { array: "abilities" } },
+            idx: { codec: u32, role: "derivedIndex", derivedFrom: { table: "effects" } },
+        };
+        expect(toPresentationEntries(spec, {}, "itm.header")).toEqual({
+            "itm.header.offset": { editable: false },
+            "itm.header.count": { editable: false },
+            "itm.header.idx": { editable: false },
+        });
+    });
 });

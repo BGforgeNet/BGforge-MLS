@@ -44,4 +44,51 @@ describe("binaryEditor-editability", () => {
             isEditableFieldForFormat("map", "map.objects.elevations[].objects[].base.pid", makeField("PID", "uint32")),
         ).toBe(true);
     });
+
+    it("locks ITM derived structural fields (offsets, counts, indexes)", () => {
+        // The lock derives from the spec's `role: "derived..."` annotation,
+        // which `derive-presentation` translates into `editable: false` on
+        // every field with a non-`"data"` role. The header pointers into the
+        // abilities + effects sections, and the per-ability slice into the
+        // global effect table, are all derived from doc shape — never user
+        // data — so the editor must not let them be typed in.
+        expect(
+            isEditableFieldForFormat(
+                "itm",
+                "itm.header.featureBlocksOffset",
+                makeField("Feature Blocks Offset", "uint32"),
+            ),
+        ).toBe(false);
+        expect(
+            isEditableFieldForFormat(
+                "itm",
+                "itm.header.extendedHeadersCount",
+                makeField("Extended Headers Count", "uint32"),
+            ),
+        ).toBe(false);
+        expect(
+            isEditableFieldForFormat(
+                "itm",
+                "itm.abilities[].featureBlockIndex",
+                makeField("Feature Block Index", "uint32"),
+            ),
+        ).toBe(false);
+    });
+
+    it("locks SPL derived structural fields", () => {
+        expect(
+            isEditableFieldForFormat(
+                "spl",
+                "spl.header.featureBlocksOffset",
+                makeField("Feature Blocks Offset", "uint32"),
+            ),
+        ).toBe(false);
+        expect(
+            isEditableFieldForFormat(
+                "spl",
+                "spl.abilities[].featureBlocksCount",
+                makeField("Feature Blocks Count", "uint32"),
+            ),
+        ).toBe(false);
+    });
 });

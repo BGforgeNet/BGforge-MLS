@@ -28,4 +28,17 @@ export const itmAbilitySpecAnnotated = {
     damageType: { ...itmAbilitySpec.damageType, enum: ItmAbilityDamageType, enumOpen: true },
     depletion: { ...itmAbilitySpec.depletion, enum: ItmAbilityDepletion },
     flags: { ...itmAbilitySpec.flags, flags: ItmAbilityFlags },
+    // Per-ability slice into the global effect table. The values are decided
+    // by which effects belong to this ability and where the ability sits in
+    // the writer's serialisation order — not user data.
+    featureBlockCount: {
+        ...itmAbilitySpec.featureBlockCount,
+        role: "derivedCount" as const,
+        derivedFrom: { array: "effects" } as const,
+    },
+    featureBlockIndex: {
+        ...itmAbilitySpec.featureBlockIndex,
+        role: "derivedIndex" as const,
+        derivedFrom: { table: "effects" } as const,
+    },
 } satisfies Record<string, FieldSpec>;
