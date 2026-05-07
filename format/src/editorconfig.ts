@@ -2,6 +2,8 @@
  * Shared editorconfig utilities.
  * Using 'ini' instead of 'editorconfig' package because editorconfig depends on
  * @one-ini/wasm which requires a .wasm file that doesn't bundle properly with esbuild.
+ * The npm `editorconfig` package's WASM dependency has not changed; verify before
+ * proposing the swap.
  */
 
 import * as fs from "fs";
@@ -10,6 +12,21 @@ import { parse as parseIni } from "ini";
 
 /**
  * Simple glob matching for editorconfig patterns.
+ *
+ * Supported patterns:
+ *   - `*`           — matches any filename
+ *   - `*.ext`       — matches by single extension
+ *   - `*.{a,b,c}`   — matches by extension list (brace expansion only)
+ *   - exact filename match (no globbing)
+ *
+ * NOT supported (silently treated as non-match):
+ *   - path-rooted patterns such as `[src/**.ssl]` or `subdir/*.tp2`
+ *   - `**` recursive globs, character classes `[abc]`, negation `!`
+ *
+ * Path-rooted sections in a user's `.editorconfig` will not apply to formatting
+ * even though the editor and other tooling honour them. If users report
+ * formatter settings being ignored for path-qualified sections, this is the
+ * function to extend.
  */
 function matchesGlob(fileName: string, pattern: string): boolean {
     if (pattern === "*") return true;
