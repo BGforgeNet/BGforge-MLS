@@ -62,7 +62,7 @@ body {
 
 /* -- Groups ---------------------------------------------------------------- */
 
-.group {
+.tree > .group {
     margin-left: var(--indent-size);
 }
 
