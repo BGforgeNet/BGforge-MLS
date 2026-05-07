@@ -13,6 +13,12 @@
 - The editor now activates correctly when opening a `.pro` or `.map` file in a workspace that contains no other recognised file types; previously it fell back to a plain text view in that case.
 - Opening the same `.pro` or `.map` file in two side-by-side panels now keeps each panel's tree expand/collapse state independent; previously the second panel overwrote the first.
 - Fixed armor stat fields (AC, damage resistance, damage threshold, perk) being annotated as signed `int32` in the field-detail view; they are unsigned in the file format and now display as `uint32`.
+- ITM and SPL header pointers (`Extended Headers Offset` / `Count`, `Feature Blocks Offset` / `Index` / `Count`, casting feature-block pair) and per-ability slice fields (`Feature Block Count` / `Index`) are now read-only in the binary editor. These fields are derived from the document layout; editing them by hand was a route to silently corrupting the file.
+- ITM `Usability Flags` now displays as four labelled flag rows (Class+Alignment, Class, Class+Race, Race) decoding their respective IESDP bits, instead of an opaque `(4 values) padding` summary.
+- ITM ability `Melee Animation` now displays as three named slots (Overhand / Backhand / Thrust) instead of `(3 values) padding`.
+- EFF `Variable Name` and MAP `Filename` now display as strings directly (the editor already showed the filename via a workaround; EFF surfaces it for the first time).
+- MAP per-object `Script Index` is now read-only in the binary editor — it is an index into the global script table and editing it would have produced a corrupt save.
+- Saving an ITM, SPL, or MAP file from a hand-edited JSON snapshot whose structural fields (header offsets/counts, per-object inventory length, MAP local/global variable counts) disagree with the actual document is now silently corrected on save instead of producing a corrupt file.
 
 ### Transpilers
 
