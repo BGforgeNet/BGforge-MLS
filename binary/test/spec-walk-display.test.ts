@@ -108,6 +108,26 @@ describe("walkStruct", () => {
         });
     });
 
+    it("flags field carries the spec's flag table on the emitted ParsedField", () => {
+        // The renderer needs the lookup table to draw a checkbox per bit; the
+        // walker has it in hand and must propagate it. Without this the only
+        // way to recover the table is the path-keyed presentation schema,
+        // which can't reach into nested array slots.
+        type Data = { f: number };
+        const flagTable = { 1: "A", 2: "B", 4: "C" };
+        const spec: StructSpec<Data> = { f: { codec: u32, flags: flagTable } };
+        const result = walkStruct(spec, {}, 0, { f: 0b101 }, "G");
+        expect(result.fields[0]).toMatchObject({ flagOptions: { "1": "A", "2": "B", "4": "C" } });
+    });
+
+    it("enum field carries the spec's enum table on the emitted ParsedField", () => {
+        type Data = { kind: number };
+        const enumTable = { 0: "Item", 1: "Critter" };
+        const spec: StructSpec<Data> = { kind: { codec: u32, enum: enumTable } };
+        const result = walkStruct(spec, {}, 0, { kind: 1 }, "G");
+        expect(result.fields[0]).toMatchObject({ enumOptions: { "0": "Item", "1": "Critter" } });
+    });
+
     it("emits '(none)' when no flags are active", () => {
         type Data = { f: number };
         const spec: StructSpec<Data> = { f: { codec: u32, flags: { 1: "A" } } };
@@ -217,8 +237,24 @@ describe("walkStruct", () => {
         const result = walkStruct(spec, {}, 0, data, "G");
         const group = result.fields[0] as ParsedGroup;
         expect(group.fields).toEqual([
-            { name: "Race", value: "Human", offset: 0, size: 2, type: "flags", rawValue: 0b01 },
-            { name: "Class", value: "Cleric", offset: 2, size: 2, type: "flags", rawValue: 0b10 },
+            {
+                name: "Race",
+                value: "Human",
+                offset: 0,
+                size: 2,
+                type: "flags",
+                rawValue: 0b01,
+                flagOptions: { "1": "Human", "2": "Elf" },
+            },
+            {
+                name: "Class",
+                value: "Cleric",
+                offset: 2,
+                size: 2,
+                type: "flags",
+                rawValue: 0b10,
+                flagOptions: { "1": "Mage", "2": "Cleric" },
+            },
         ]);
     });
 

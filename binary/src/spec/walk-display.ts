@@ -196,6 +196,10 @@ export function walkStruct<T extends Record<string, unknown>>(
     return { name: groupName, fields: out, expanded: options.expanded ?? true };
 }
 
+function stringifyKeys(table: Readonly<Record<number, string>>): Record<string, string> {
+    return Object.fromEntries(Object.entries(table).map(([k, v]) => [String(k), v]));
+}
+
 function fieldSize<T extends Record<string, unknown>>(fs: FieldSpec, data: T, key: string): number {
     if (isArraySpec(fs)) {
         if (typeof fs.count === "number") {
@@ -282,6 +286,7 @@ function scalarFieldFor(
             size,
             type: "enum",
             rawValue: value as number,
+            enumOptions: stringifyKeys(fs.enum),
         };
     }
 
@@ -297,6 +302,7 @@ function scalarFieldFor(
             size,
             type: "flags",
             rawValue: numeric,
+            flagOptions: stringifyKeys(fs.flags),
         };
     }
 

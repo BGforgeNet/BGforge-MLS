@@ -44,6 +44,18 @@ export interface ParsedField {
     type: ParsedFieldType;
     /** Optional description of the field */
     description?: string;
+    /**
+     * Spec-derived enum / flags lookup tables propagated alongside the field
+     * so the renderer doesn't have to round-trip through the path-keyed
+     * presentation schema. The path-keyed schema can't reach into
+     * `view: "slots"` array children (each child shares the array's
+     * semantic key); carrying the table on the field closes that gap and
+     * makes the spec the single source of truth for enum/flags display.
+     * Path-based overrides in the presentation schema still win when
+     * present — the tree builder consults them first.
+     */
+    enumOptions?: Readonly<Record<string, string>>;
+    flagOptions?: Readonly<Record<string, string>>;
 }
 
 /**
