@@ -73,6 +73,13 @@ export function noteField(name: string, value: string, offset: number): ParsedFi
     return field(name, value, offset, 0, "note");
 }
 
+/**
+ * Field-name marker for note records that flag a partial / truncated /
+ * undecodable region during MAP parsing. Used both as the visible label in
+ * JSON snapshots and as the predicate for `hasTruncatedNote()` scoring checks.
+ */
+export const TRUNCATED_SENTINEL = "Truncated";
+
 export function isExitGridPid(pid: number): boolean {
     return pid >= FIRST_EXIT_GRID_PID && pid <= LAST_EXIT_GRID_PID;
 }

@@ -4,7 +4,7 @@
  */
 
 import type { ParsedGroup } from "../types";
-import { makeGroup, noteField, fieldNumber, PID_TYPE_MISC } from "./parse-helpers";
+import { makeGroup, noteField, fieldNumber, PID_TYPE_MISC, TRUNCATED_SENTINEL } from "./parse-helpers";
 
 function findFirstObjectGroup(group: ParsedGroup): ParsedGroup | undefined {
     for (const entry of group.fields) {
@@ -38,7 +38,7 @@ export function buildOpaqueObjectsGroup(offset: number): ParsedGroup {
             { name: "Object Count", value: 0, offset: offset + 12, size: 0, type: "int32" as const },
         ]),
         noteField(
-            "TODO",
+            TRUNCATED_SENTINEL,
             `Unable to confidently decode object section: script/object boundary is ambiguous near offset 0x${offset.toString(16)}; preserving remaining bytes opaquely`,
             offset,
         ),
@@ -52,8 +52,8 @@ function objectCountNumbers(objectsGroup: ParsedGroup): number[] {
         .filter((value): value is number => value !== undefined);
 }
 
-function hasTodoNote(group: ParsedGroup): boolean {
-    return group.fields.some((entry) => !("fields" in entry) && entry.name === "TODO");
+function hasTruncatedNote(group: ParsedGroup): boolean {
+    return group.fields.some((entry) => !("fields" in entry) && entry.name === TRUNCATED_SENTINEL);
 }
 
 export function isConfidentObjectsGroup(objectsGroup: ParsedGroup): boolean {
@@ -81,7 +81,7 @@ export function isConfidentObjectsGroup(objectsGroup: ParsedGroup): boolean {
 
     const firstObject = findFirstObjectGroup(objectsGroup);
     if (!firstObject) {
-        return totalObjects === 0 && !hasTodoNote(objectsGroup);
+        return totalObjects === 0 && !hasTruncatedNote(objectsGroup);
     }
 
     const rotation = fieldNumber(firstObject, "Rotation");

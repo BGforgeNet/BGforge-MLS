@@ -365,7 +365,7 @@ describe("MAP parser - real maps", () => {
         expect(findFieldByName(elevation0!.fields, "Object Count").value).toBe(4294);
 
         const todoNote = objectFields.find(
-            (field) => field && typeof field === "object" && "name" in field && field.name === "TODO",
+            (field) => field && typeof field === "object" && "name" in field && field.name === "Truncated",
         ) as { value: unknown } | undefined;
         expect(todoNote?.value).toContain("PRO");
     });
@@ -485,7 +485,7 @@ describe("MAP parser - real maps", () => {
         expect(findFieldByName(elevation0.fields, "Object Count").value).toBe(0);
 
         const todoNote = objectsSection.fields.find(
-            (field) => field && typeof field === "object" && "name" in field && field.name === "TODO",
+            (field) => field && typeof field === "object" && "name" in field && field.name === "Truncated",
         ) as { value: unknown } | undefined;
         expect(todoNote?.value).toContain("boundary");
 

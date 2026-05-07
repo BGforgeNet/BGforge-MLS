@@ -22,6 +22,7 @@ import {
     PID_TYPE_MISC,
     PID_TYPE_ITEM,
     PID_TYPE_SCENERY,
+    TRUNCATED_SENTINEL,
 } from "./parse-helpers";
 import {
     objectBaseSpec,
@@ -223,7 +224,7 @@ function parseObjectAt(
     if (offset + MAP_OBJECT_BASE_SIZE + MAP_OBJECT_DATA_HEADER_SIZE > data.length) {
         errors.push(`Object ${index} truncated at offset 0x${offset.toString(16)}`);
         return incompleteObjectResult(
-            makeGroup(`Object ${index}`, [noteField("TODO", "Truncated object data", offset)], true),
+            makeGroup(`Object ${index}`, [noteField(TRUNCATED_SENTINEL, "Truncated object data", offset)], true),
             data.length,
         );
     }
@@ -240,7 +241,7 @@ function parseObjectAt(
     if (pidType === PID_TYPE_CRITTER) {
         if (currentOffset + 44 > data.length) {
             errors.push(`Critter object ${index} payload truncated at offset 0x${currentOffset.toString(16)}`);
-            objectFields.push(noteField("TODO", "Truncated critter payload", currentOffset));
+            objectFields.push(noteField(TRUNCATED_SENTINEL, "Truncated critter payload", currentOffset));
             return incompleteObjectResult(
                 makeGroup(`Object ${index} (${objectTypeName(pid)})`, objectFields),
                 data.length,
@@ -252,7 +253,7 @@ function parseObjectAt(
     } else {
         if (currentOffset + 4 > data.length) {
             errors.push(`Object ${index} flags truncated at offset 0x${currentOffset.toString(16)}`);
-            objectFields.push(noteField("TODO", "Truncated object flags", currentOffset));
+            objectFields.push(noteField(TRUNCATED_SENTINEL, "Truncated object flags", currentOffset));
             return incompleteObjectResult(
                 makeGroup(`Object ${index} (${objectTypeName(pid)})`, objectFields),
                 data.length,
@@ -265,7 +266,7 @@ function parseObjectAt(
         if (pidType === PID_TYPE_MISC && isExitGridPid(pid)) {
             if (currentOffset + 16 > data.length) {
                 errors.push(`Exit grid object ${index} payload truncated at offset 0x${currentOffset.toString(16)}`);
-                objectFields.push(noteField("TODO", "Truncated exit grid payload", currentOffset));
+                objectFields.push(noteField(TRUNCATED_SENTINEL, "Truncated exit grid payload", currentOffset));
                 return incompleteObjectResult(
                     makeGroup(`Object ${index} (${objectTypeName(pid)})`, objectFields),
                     data.length,
@@ -287,7 +288,7 @@ function parseObjectAt(
             if (subType === undefined) {
                 objectFields.push(
                     noteField(
-                        "TODO",
+                        TRUNCATED_SENTINEL,
                         `Payload decoding for ${objectTypeName(pid)} pid 0x${(pid >>> 0)
                             .toString(16)
                             .padStart(8, "0")} needs a subtype mapping not in the default table`,
@@ -307,7 +308,7 @@ function parseObjectAt(
             const trailerEnd = decoded.offset;
             if (trailerEnd > data.length) {
                 errors.push(`Object ${index} subtype trailer truncated at offset 0x${currentOffset.toString(16)}`);
-                objectFields.push(noteField("TODO", "Truncated subtype trailer", currentOffset));
+                objectFields.push(noteField(TRUNCATED_SENTINEL, "Truncated subtype trailer", currentOffset));
                 return incompleteObjectResult(
                     makeGroup(`Object ${index} (${objectTypeName(pid)})`, objectFields),
                     data.length,
@@ -347,7 +348,7 @@ function parseObjectAt(
             errors.push(
                 `Inventory entry ${index}.${inventoryIndex} quantity truncated at offset 0x${currentOffset.toString(16)}`,
             );
-            objectFields.push(noteField("TODO", "Truncated inventory entry", currentOffset));
+            objectFields.push(noteField(TRUNCATED_SENTINEL, "Truncated inventory entry", currentOffset));
             return incompleteObjectResult(
                 makeGroup(`Object ${index} (${objectTypeName(pid)})`, [...objectFields, ...inventoryGroups]),
                 data.length,
@@ -396,7 +397,9 @@ export function parseObjects(
         errors.push(`Object section truncated at offset 0x${currentOffset.toString(16)}`);
         return {
             offset: data.length,
-            group: makeGroup("Objects Section", [noteField("TODO", "Truncated object section header", currentOffset)]),
+            group: makeGroup("Objects Section", [
+                noteField(TRUNCATED_SENTINEL, "Truncated object section header", currentOffset),
+            ]),
         };
     }
 
@@ -411,7 +414,7 @@ export function parseObjects(
             errors.push(`Elevation ${elev} object count truncated at offset 0x${currentOffset.toString(16)}`);
             sectionFields.push(
                 makeGroup(`Elevation ${elev} Objects`, [
-                    noteField("TODO", "Truncated elevation object count", currentOffset),
+                    noteField(TRUNCATED_SENTINEL, "Truncated elevation object count", currentOffset),
                 ]),
             );
             return { offset: data.length, group: makeGroup("Objects Section", sectionFields) };
@@ -438,7 +441,7 @@ export function parseObjects(
                 if (remainingObjects > 0) {
                     elevationFields.push(
                         noteField(
-                            "TODO",
+                            TRUNCATED_SENTINEL,
                             `${remainingObjects} more top-level object(s) on elevation ${elev} require a PRO resolver or a fuller object model to decode safely`,
                             currentOffset,
                         ),
@@ -467,7 +470,7 @@ export function parseObjects(
 
         sectionFields.push(
             noteField(
-                "TODO",
+                TRUNCATED_SENTINEL,
                 hasOnlyZeroCounts
                     ? `Unable to confidently decode object section: script/object boundary is ambiguous near offset 0x${currentOffset.toString(16)}; preserving remaining bytes opaquely`
                     : `Opaque trailing object bytes remain from offset 0x${currentOffset.toString(16)}; full decoding requires PRO-backed subtype resolution`,

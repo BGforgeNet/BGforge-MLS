@@ -16,6 +16,7 @@
 - New: support for Infinity Engine `.itm` (item), `.spl` (spell), and `.eff` v2 (effect) files supported alongside Fallout `.pro` / `.map`.
 - New: `fgbin --extensions` prints the list of supported binary file extensions, one per line.
 - More robust parse and display.
+- MAP truncation / undecodable-region notes in JSON snapshots and the binary editor tree are now labelled `Truncated` instead of the previous `TODO` placeholder.
 
 ### GitHub Actions
 
