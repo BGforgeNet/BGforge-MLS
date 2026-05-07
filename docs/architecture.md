@@ -83,8 +83,7 @@ vscode-mls/
 |   |   +-- (TS plugins moved to plugins/ directory)
 |   |   +-- indicator.ts            Server initialization progress indicator
 |   |   +-- dialog-tree/            Dialog tree preview (webview panels)
-|   |   +-- editors/                Binary .pro/.map/.itm/.spl/.eff editor (custom editor)
-|   |   +-- parsers/                Binary file parsers (.pro/.map/.itm/.spl/.eff)
+|   |   +-- editors/                Binary .pro/.map/.itm/.spl/.eff editor (custom editor; uses @bgforge/binary)
 |   |   +-- test/                   E2E tests (mocha + vscode test runner)
 |   +-- out/                    esbuild output
 |
@@ -114,9 +113,10 @@ vscode-mls/
 |   +-- test/                   Unit tests (vitest)
 |   +-- out/                    esbuild output + WASM files + JSON data
 |
-+-- cli/                    Standalone CLI tools
-|   +-- bin/                    Binary parser CLI (.pro/.map/.itm/.spl/.eff -> JSON)
-|   +-- test/                   CLI tests
++-- binary/                 @bgforge/binary package: parsers library + fgbin CLI bin
+|   +-- src/                    index.ts (library) + cli.ts (fgbin bin) + format adapters
+|   +-- test/                   Library + CLI tests (vitest)
+|   +-- out/                    tsup output
 |
 +-- format/                 @bgforge/format package: formatters library + fgfmt CLI bin
 |   +-- src/                    index.ts (library) + cli.ts (fgfmt bin)
@@ -366,7 +366,7 @@ custom entry points due to its batch state and non-standard output path.
 (max 1000 iterations), array spread/destructuring, helper fixups (obj/tra/tlk),
 point tuple conversion (`[x, y]` -> `[x.y]`), @tra tag extraction.
 
-**Shared bundler** (`transpilers/tbaf/src/bundle.ts`): esbuild-wasm with externalized `.d.ts` imports,
+**Shared bundler** (`transpilers/common/bundle.ts`): esbuild-wasm with externalized `.d.ts` imports,
 enum transformation plugin, extensionless import resolution. Used by TBAF and TD
 directly; TSSL calls `bundleWithEsbuild()` directly with preserved-function tracking.
 TBAF/TD skip bundling for import-free files (`hasImports()` guard); TSSL always bundles

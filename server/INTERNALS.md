@@ -92,7 +92,6 @@ server/src/
 |   +-- symbol-index.ts       # Symbols class - unified storage & query
 |   +-- static-loader.ts      # Loads built-in symbols from JSON
 |   +-- normalized-uri.ts     # Branded NormalizedUri type, URI encoding canonicalization
-|   +-- parser-manager.ts     # Centralized tree-sitter parser lifecycle (registration, sequential init, caching)
 |   +-- parse-result.ts       # ParseResult type used by compilation diagnostics
 |   +-- capabilities.ts       # Provider capability interfaces (FormattingCapability, SymbolCapability, etc.)
 |   +-- languages.ts          # Language IDs & file extensions
