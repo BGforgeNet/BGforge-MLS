@@ -35,9 +35,11 @@ const headerCodec = toTypedBinarySchema(mapHeaderSpec);
 export function parseHeader(data: Uint8Array): MapHeader {
     const reader = new BufferReader(data.buffer, { endianness: "big", byteOffset: data.byteOffset });
     const wire = headerCodec.read(reader);
-    const nullIdx = wire.filename.indexOf(0);
-    const filenameLen = nullIdx === -1 ? wire.filename.length : nullIdx;
-    const filename = String.fromCharCode(...wire.filename.slice(0, filenameLen));
+    // Display the filename trimmed at the first NUL byte. The chars codec
+    // preserves the full 16-byte content for round-trip; the canonical doc
+    // / display tree show only the meaningful prefix.
+    const nullIdx = wire.filename.indexOf("\0");
+    const filename = nullIdx === -1 ? wire.filename : wire.filename.slice(0, nullIdx);
     return {
         version: wire.version,
         filename,

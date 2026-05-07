@@ -9,7 +9,9 @@ describe("mapHeaderSpec", () => {
     it("derives a typed-binary schema that round-trips a known header", () => {
         const schema = toTypedBinarySchema(mapHeaderSpec);
 
-        const filename = [0x6d, 0x61, 0x70, 0x2e, 0x6d, 0x61, 0x70, 0, 0, 0, 0, 0, 0, 0, 0, 0]; // "map.map\0..."
+        // 16-char chars field — explicit NUL-padding preserved verbatim by
+        // the codec for round-trip safety.
+        const filename = "map.map\0\0\0\0\0\0\0\0\0";
         const field_3C = Array.from({ length: 44 }, (_, i) => i + 1);
         const data: MapHeaderWireData = {
             version: 20,
@@ -36,7 +38,7 @@ describe("mapHeaderSpec", () => {
 
     it("encodes filename bytes at offset 4 in wire-readable form", () => {
         const schema = toTypedBinarySchema(mapHeaderSpec);
-        const filename = [0x66, 0x6f, 0x6f, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; // "foo\0"
+        const filename = "foo\0\0\0\0\0\0\0\0\0\0\0\0\0";
 
         const buf = new ArrayBuffer(HEADER_SIZE);
         schema.write(new BufferWriter(buf, { endianness: "big" }), {
@@ -56,6 +58,7 @@ describe("mapHeaderSpec", () => {
         });
 
         const view = new Uint8Array(buf);
-        expect(Array.from(view.slice(4, 4 + 16))).toEqual(filename);
+        const expected = [0x66, 0x6f, 0x6f, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; // "foo\0..."
+        expect(Array.from(view.slice(4, 4 + 16))).toEqual(expected);
     });
 });

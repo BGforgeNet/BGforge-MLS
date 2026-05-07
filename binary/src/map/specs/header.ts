@@ -1,15 +1,12 @@
-import { i32, u8, u32 } from "typed-binary";
-import { arraySpec, type FieldSpec, type SpecData } from "../../spec/types";
+import { i32, u32 } from "typed-binary";
+import { arraySpec, charsSpec, type FieldSpec, type SpecData } from "../../spec/types";
 import type { StructPresentation } from "../../spec/presentation";
 import { MapElevation, MapFlags, MapVersion, Rotation } from "../types";
 
 /**
  * Wire spec for the MAP header (240 bytes / 0xf0, big-endian).
  *
- * `filename` is 16 raw bytes; the canonical layer (and the public MapHeader
- * shape) converts to a NUL-terminated string. Keeping it as a u8 array in the
- * spec keeps the spec primitive scalar-only — extending the primitive to
- * support a `chars(N)` codec is a separate, larger change.
+ * `filename` is 16 raw bytes surfaced as a string via charsSpec.
  *
  * `field_3C` is 44 × i32 of trailing space the file writer reserves for
  * future use; round-trippers preserve the bytes verbatim.
@@ -19,7 +16,10 @@ import { MapElevation, MapFlags, MapVersion, Rotation } from "../types";
  */
 export const mapHeaderSpec = {
     version: { codec: u32, enum: MapVersion },
-    filename: arraySpec({ element: { codec: u8 }, count: 16 }),
+    // 16-byte NUL-terminated map filename. Wire layout is 16 raw bytes; the
+    // chars codec surfaces it as a string in the canonical doc and the
+    // editor display tree, with NUL padding preserved on round-trip.
+    filename: charsSpec(16),
     defaultPosition: { codec: i32 },
     defaultElevation: { codec: i32, enum: MapElevation },
     defaultOrientation: { codec: i32, enum: Rotation },
@@ -57,10 +57,10 @@ export const mapHeaderPresentation: StructPresentation<MapHeaderWireData> = {
 
 /**
  * Scalar-only view of the header for canonical-reader walking. The wire
- * spec includes `filename` (u8[16], surfaced as a string in the canonical
- * doc) and `field_3C` (44×i32 trailing reserve, not surfaced at all);
- * neither belongs in a `walkGroup` pass. This spec narrows to the 12
- * numeric fields the canonical document actually carries.
+ * spec includes `filename` (chars(16), surfaced as a string in the
+ * canonical doc) and `field_3C` (44×i32 trailing reserve, not surfaced at
+ * all); neither belongs in a `walkGroup` pass. This spec narrows to the
+ * 12 numeric fields the canonical document actually carries.
  */
 export const mapHeaderCanonicalSpec = {
     version: { codec: u32, enum: MapVersion },

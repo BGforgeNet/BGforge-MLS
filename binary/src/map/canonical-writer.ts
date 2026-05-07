@@ -61,15 +61,6 @@ function writeUint32(bytes: Uint8Array, offset: number, value: number): void {
     new DataView(bytes.buffer, bytes.byteOffset + offset, 4).setUint32(0, value >>> 0, false);
 }
 
-function encodeFilename(filename: string): number[] {
-    // Canonical filename is a string; the wire layout is 16 raw u8 bytes
-    // padded with NULs. Truncate or zero-fill to match.
-    const encoded = new TextEncoder().encode(filename);
-    const out = Array.from<number>({ length: 16 }).fill(0);
-    for (let i = 0; i < 16 && i < encoded.length; i++) out[i] = encoded[i]!;
-    return out;
-}
-
 function serializeHeader(
     bytes: Uint8Array,
     header: z.infer<typeof mapHeaderSchema>,
@@ -86,7 +77,7 @@ function serializeHeader(
     });
     headerCodec.write(bufferWriterAt(bytes, 0), {
         version: recomputed.version,
-        filename: encodeFilename(recomputed.filename),
+        filename: recomputed.filename,
         defaultPosition: recomputed.defaultPosition,
         defaultElevation: recomputed.defaultElevation,
         defaultOrientation: recomputed.defaultOrientation,
