@@ -4,6 +4,6 @@
     "private": true,
     "description": "TD transpiler (TypeScript to WeiDU D)",
     "devDependencies": {
-        "ts-morph": "^24.0.0"
+        "ts-morph": "^27.0.2"
     }
 }

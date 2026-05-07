@@ -50,7 +50,7 @@
         "cac": "^7.0.0",
         "diff": "^9.0.0",
         "typed-binary": "^4.3.3",
-        "zod": "^4.3.6"
+        "zod": "^4.4.3"
     },
     "devDependencies": {
         "tsup": "^8.3.0",
