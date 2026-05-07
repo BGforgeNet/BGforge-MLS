@@ -72,3 +72,72 @@ export function toPresentationEntries<T>(
 function stringifyKeys(table: Readonly<Record<number, string>>): Record<string, string> {
     return Object.fromEntries(Object.entries(table).map(([k, v]) => [String(k), v]));
 }
+
+interface PatternEntry extends PresentationEntry {
+    readonly pathPattern: string;
+}
+
+function regexEscape(literal: string): string {
+    return literal.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Path-aware counterpart to `toPresentationEntries`. Used by formats whose
+ * canonical paths nest through array indices (e.g., MAP's
+ * `map.scripts[].extents[].slots[].localVarsOffset`) which the flat-prefix
+ * `toPresentationEntries` shape cannot express.
+ *
+ * The `pathTemplate` carries the unescaped path including literal `[]`
+ * markers (`map.scripts[].extents[].slots[]`); the helper regex-escapes it
+ * and appends each emitted field name to produce a `^<path>\\.<field>$`
+ * pattern. Emit rules mirror `toPresentationEntries`:
+ *
+ *   - `spec.enum` → `presentationType: "enum"` + `enumOptions`.
+ *   - `spec.flags` → `presentationType: "flags"` + `flagOptions`.
+ *   - Otherwise: emit when the presentation overrides numericFormat / editable
+ *     OR the spec's `role` is non-`"data"` (locks the field).
+ *   - Array and chars fields are skipped.
+ */
+export function toPresentationPatterns<T>(
+    spec: StructSpec<T>,
+    presentation: StructPresentation<T>,
+    pathTemplate: string,
+): PatternEntry[] {
+    const escapedPath = regexEscape(pathTemplate);
+    const out: PatternEntry[] = [];
+    for (const key of Object.keys(spec) as (keyof T & string)[]) {
+        const fs = spec[key];
+        if (isArraySpec(fs) || isCharsSpec(fs)) continue;
+        const pres = presentation[key];
+        const pathPattern = `^${escapedPath}\\.${key}$`;
+
+        if (fs.enum) {
+            out.push({
+                pathPattern,
+                ...(pres?.label !== undefined && { label: pres.label }),
+                presentationType: "enum",
+                enumOptions: stringifyKeys(fs.enum),
+            });
+            continue;
+        }
+
+        if (fs.flags) {
+            out.push({
+                pathPattern,
+                ...(pres?.label !== undefined && { label: pres.label }),
+                presentationType: "flags",
+                flagOptions: stringifyKeys(fs.flags),
+            });
+            continue;
+        }
+
+        const overrides: { numericFormat?: "decimal" | "hex32"; editable?: boolean } = {};
+        if (pres?.format === "decimal" || pres?.format === "hex32") overrides.numericFormat = pres.format;
+        if (pres?.editable !== undefined) overrides.editable = pres.editable;
+        else if (fs.role !== undefined && fs.role !== "data") overrides.editable = false;
+        if (Object.keys(overrides).length > 0) {
+            out.push({ pathPattern, ...overrides });
+        }
+    }
+    return out;
+}
