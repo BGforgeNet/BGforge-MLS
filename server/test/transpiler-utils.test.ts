@@ -321,7 +321,7 @@ describe("applyHelperFixups", () => {
             // closing `]")`. Real WeiDU args extracted from the AST are short
             // identifiers/numbers; reject anything orders of magnitude beyond
             // that to bound the regex cost.
-            const adversarial = 'obj("[a'.repeat(10_000); // 70k chars
+            const adversarial = 'obj("[a'.repeat(10000); // 70k chars
             expect(() => applyHelperFixups(adversarial)).toThrow();
         });
     });

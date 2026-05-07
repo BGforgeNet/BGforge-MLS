@@ -10,7 +10,7 @@ import {
 describe("binary-format-contract", () => {
     it("exposes shared primitive numeric ranges", () => {
         expect(getNumericTypeRange("uint8")).toEqual({ min: 0, max: 255 });
-        expect(getNumericTypeRange("int32")).toEqual({ min: -2_147_483_648, max: 2_147_483_647 });
+        expect(getNumericTypeRange("int32")).toEqual({ min: -2147483648, max: 2147483647 });
         expect(getNumericTypeRange("unknown")).toBeUndefined();
     });
 
@@ -37,7 +37,7 @@ describe("binary-format-contract", () => {
         expect(orientationSchema.safeParse(6).success).toBe(false);
 
         const destTileSchema = zodFieldNumber("pro", "pro.stairsProperties.destTile", "uint32");
-        expect(destTileSchema.safeParse(0x03_ff_ff_ff).success).toBe(true);
-        expect(destTileSchema.safeParse(0x04_00_00_00).success).toBe(false);
+        expect(destTileSchema.safeParse(0x03ffffff).success).toBe(true);
+        expect(destTileSchema.safeParse(0x04000000).success).toBe(false);
     });
 });

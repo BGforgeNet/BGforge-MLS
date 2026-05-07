@@ -25,6 +25,6 @@ export default defineConfig({
             path.resolve(root, "transpilers/test/transpile-cli.test.ts"),
             path.resolve(root, "test/smoke.test.ts"),
         ],
-        testTimeout: 30_000,
+        testTimeout: 30000,
     },
 });

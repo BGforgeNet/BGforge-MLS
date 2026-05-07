@@ -557,6 +557,6 @@ describe("runProcess", () => {
         await runProcess("echo", ["hello"], ".");
 
         const options = mockExecFile.mock.calls[0]![2] as { timeout?: number };
-        expect(options.timeout).toBe(60_000);
+        expect(options.timeout).toBe(60000);
     });
 });

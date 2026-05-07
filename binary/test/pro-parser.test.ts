@@ -137,7 +137,7 @@ describe("PRO parser - error cases", () => {
 // Regression for the proto-default sentinel pattern: the engine's
 // proto_scenery_subdata_init seeds elevator type/level to -1 (proto.cc:976)
 // and proto_scenery_init seeds material to -1 (proto.cc:956). Vanilla protos
-// that never override those defaults reach disk with `0xff_ff_ff_ff` on the
+// that never override those defaults reach disk with `0xffffffff` on the
 // wire; the parser must surface them as `-1` rather than rejecting the file.
 describe("PRO parser - proto-default sentinels", () => {
     function buildElevatorScenery(elevatorType: number, elevatorLevel: number, materialId: number): Uint8Array {

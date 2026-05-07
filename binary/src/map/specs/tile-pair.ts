@@ -12,9 +12,9 @@ import type { FieldSpec, SpecData } from "../../spec/types";
  *   bits 28-31 — roof flags      (4 bits)
  */
 export const tilePairSpec = {
-    floorTileId: { codec: u32, packedAs: "tilePair", bitRange: [0, 12], domain: { min: 0, max: 0xf_ff } },
+    floorTileId: { codec: u32, packedAs: "tilePair", bitRange: [0, 12], domain: { min: 0, max: 0xfff } },
     floorFlags: { codec: u32, packedAs: "tilePair", bitRange: [12, 4], domain: { min: 0, max: 0xf } },
-    roofTileId: { codec: u32, packedAs: "tilePair", bitRange: [16, 12], domain: { min: 0, max: 0xf_ff } },
+    roofTileId: { codec: u32, packedAs: "tilePair", bitRange: [16, 12], domain: { min: 0, max: 0xfff } },
     roofFlags: { codec: u32, packedAs: "tilePair", bitRange: [28, 4], domain: { min: 0, max: 0xf } },
 } satisfies Record<string, FieldSpec>;
 

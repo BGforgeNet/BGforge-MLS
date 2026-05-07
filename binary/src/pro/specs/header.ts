@@ -19,7 +19,7 @@ export const headerSpec = {
     frmType: { codec: u8, enum: FRMType },
     frmId: { codec: u24 },
     lightRadius: { codec: u32, domain: { min: 0, max: 8 } },
-    lightIntensity: { codec: u32, domain: { min: 0, max: 65_536 } },
+    lightIntensity: { codec: u32, domain: { min: 0, max: 65536 } },
     flags: { codec: u32, flags: HeaderFlags },
 } satisfies Record<string, FieldSpec>;
 

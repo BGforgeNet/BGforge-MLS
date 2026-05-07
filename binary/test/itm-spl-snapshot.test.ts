@@ -176,11 +176,11 @@ describe("ITM corruption handling", () => {
     });
 
     test("rejects featureBlocksOffset past EOF", () => {
-        // featureBlocksOffset = 0xff_ff_ff_ff (huge) → effectsBytes goes negative.
+        // featureBlocksOffset = 0xffffffff (huge) → effectsBytes goes negative.
         const bytes = forgeItmHeader({
             extendedHeadersOffset: 0x72,
             extendedHeadersCount: 0,
-            featureBlocksOffset: 0xff_ff_ff_ff,
+            featureBlocksOffset: 0xffffffff,
         });
         const result = itmParser.parse(bytes);
         expect(result.errors).toBeDefined();

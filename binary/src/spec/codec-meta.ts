@@ -46,8 +46,8 @@ export const u24: ISchema<number> = new Uint24Schema();
 
 /**
  * 24-bit big-endian signed integer. Sign-extends the high bit so that bytes
- * `0xff_ff_ff` read as `-1`. Used together with `i8` to split a packed `u32`
- * (e.g. PRO scriptId, where the wire `0xff_ff_ff_ff` represents
+ * `0xffffff` read as `-1`. Used together with `i8` to split a packed `u32`
+ * (e.g. PRO scriptId, where the wire `0xffffffff` represents
  * `{type: -1, id: -1}` "no script") without a separate sentinel layer.
  */
 class Int24Schema extends Schema<number> {
@@ -58,7 +58,7 @@ class Int24Schema extends Schema<number> {
         const mid = input.readUint8();
         const lo = input.readUint8();
         const raw = (hi << 16) | (mid << 8) | lo;
-        return raw & 0x80_00_00 ? raw | ~0x00_ff_ff_ff : raw;
+        return raw & 0x800000 ? raw | ~0x00ffffff : raw;
     }
 
     write(output: ISerialOutput, value: number): void {

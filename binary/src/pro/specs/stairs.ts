@@ -13,7 +13,7 @@ export const stairsSpec = {
         codec: u32,
         packedAs: "destTileAndElevation",
         bitRange: [0, 26],
-        domain: { min: 0, max: 0x03_ff_ff_ff },
+        domain: { min: 0, max: 0x03ffffff },
     },
     destElevation: { codec: u32, packedAs: "destTileAndElevation", bitRange: [26, 6], domain: { min: 0, max: 0x3f } },
     destMap: { codec: u32 },

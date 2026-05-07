@@ -9,7 +9,7 @@ import { i24, u24 } from "../../spec/codec-meta";
  *
  * `scriptType` (1 byte) + `scriptId` (3 bytes) read consecutively from the
  * 4-byte packed wire field. Both use signed codecs so that the wire's
- * `0xff_ff_ff_ff` "no script" pattern reads naturally as `{type: -1, id: -1}`,
+ * `0xffffffff` "no script" pattern reads naturally as `{type: -1, id: -1}`,
  * with no separate sentinel layer.
  */
 export const itemCommonSpec = {

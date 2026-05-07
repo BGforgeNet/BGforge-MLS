@@ -18,16 +18,16 @@ describe("mapHeaderSpec", () => {
         const data: MapHeaderWireData = {
             version: 20,
             filename,
-            defaultPosition: 12_345,
+            defaultPosition: 12345,
             defaultElevation: 0,
             defaultOrientation: 1,
             numLocalVars: 7,
-            scriptId: 0x12_34_56_78,
+            scriptId: 0x12345678,
             flags: intToFlagDict(MapFlags, 0x0a, 32),
             darkness: 1,
             numGlobalVars: 3,
             mapId: 42,
-            timestamp: 0xdead_beef,
+            timestamp: 0xdeadbeef,
             field_3C,
         };
 

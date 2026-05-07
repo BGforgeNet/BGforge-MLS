@@ -85,7 +85,7 @@ export async function ssl_compile(opts: {
         stderr.push(text);
     });
 
-    const timeoutMs = opts.timeoutMs ?? 60_000;
+    const timeoutMs = opts.timeoutMs ?? 60000;
 
     return new Promise<{
         returnCode: number;

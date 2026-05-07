@@ -9,16 +9,16 @@ describe("toZodSchema", () => {
         const z = toZodSchema(spec);
 
         expect(z.parse({ a: 0, b: 0 })).toEqual({ a: 0, b: 0 });
-        expect(z.parse({ a: 4_294_967_295, b: -2_147_483_648 })).toEqual({
-            a: 4_294_967_295,
-            b: -2_147_483_648,
+        expect(z.parse({ a: 4294967295, b: -2147483648 })).toEqual({
+            a: 4294967295,
+            b: -2147483648,
         });
     });
 
     it("rejects out-of-range values per codec", () => {
         const spec = { a: { codec: u32 } } satisfies Record<string, FieldSpec>;
         expect(() => toZodSchema(spec).parse({ a: -1 })).toThrow();
-        expect(() => toZodSchema(spec).parse({ a: 4_294_967_296 })).toThrow();
+        expect(() => toZodSchema(spec).parse({ a: 4294967296 })).toThrow();
     });
 
     it("rejects non-integer values", () => {
@@ -59,14 +59,14 @@ describe("toZodSchema", () => {
         const z = toZodSchema(spec);
 
         // Within bit-width: passes.
-        expect(z.parse({ destTile: 0x03ff_ffff, destElevation: 0x3f, destMap: 0 })).toEqual({
-            destTile: 0x03ff_ffff,
+        expect(z.parse({ destTile: 0x03ffffff, destElevation: 0x3f, destMap: 0 })).toEqual({
+            destTile: 0x03ffffff,
             destElevation: 0x3f,
             destMap: 0,
         });
 
         // 26-bit max + 1 → reject.
-        expect(() => z.parse({ destTile: 0x0400_0000, destElevation: 0, destMap: 0 })).toThrow();
+        expect(() => z.parse({ destTile: 0x04000000, destElevation: 0, destMap: 0 })).toThrow();
 
         // 6-bit max + 1 → reject.
         expect(() => z.parse({ destTile: 0, destElevation: 0x40, destMap: 0 })).toThrow();
@@ -163,7 +163,7 @@ describe("toZodSchema (permissive mode)", () => {
         const spec = { a: { codec: u32 } } satisfies Record<string, FieldSpec>;
         const permissive = toZodSchema(spec, { mode: "permissive" });
         expect(() => permissive.parse({ a: -1 })).toThrow();
-        expect(() => permissive.parse({ a: 4_294_967_296 })).toThrow();
+        expect(() => permissive.parse({ a: 4294967296 })).toThrow();
     });
 
     it("still rejects packed-field parts that overflow the bit width", () => {
@@ -172,7 +172,7 @@ describe("toZodSchema (permissive mode)", () => {
             destElevation: { codec: u32, packedAs: "w", bitRange: [26, 6] },
         } satisfies Record<string, FieldSpec>;
         const permissive = toZodSchema(spec, { mode: "permissive" });
-        expect(() => permissive.parse({ destTile: 0x0400_0000, destElevation: 0 })).toThrow();
+        expect(() => permissive.parse({ destTile: 0x04000000, destElevation: 0 })).toThrow();
     });
 
     it("still rejects unknown fields and non-integer values", () => {

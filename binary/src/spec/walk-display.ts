@@ -71,6 +71,10 @@ export function walkGroup<S extends Record<string, FieldSpec>>(
                 `walkGroup: field "${key}" (label "${label}") in "${group.name}" had no numeric rawValue/value.`,
             );
         }
+        // Flag fields project to a named-bit dict; enum fields project to
+        // `string | number` (skipping when `enumOpaque` is set). Display
+        // tree carries the int via `rawValue`, so the round-trip is int →
+        // projected → int.
         // Flag fields project to a named-bit dict in canonical-doc shape; the
         // display tree carries the int via `rawValue` so the round-trip is
         // int → dict → int through `intToFlagDict` / `flagDictToInt`.

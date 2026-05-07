@@ -32,7 +32,7 @@ import type { Translation } from "./translation";
  * `initServerContext()` in handlers/initialize.ts) before a user files a
  * "server unresponsive" report.
  */
-const INIT_WATCHDOG_MS = 30_000;
+const INIT_WATCHDOG_MS = 30000;
 
 /** Client capability flags negotiated during LSP initialization. */
 interface ClientCapabilityFlags {

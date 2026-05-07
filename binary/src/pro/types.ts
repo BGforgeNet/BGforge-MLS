@@ -203,66 +203,66 @@ export const StatType: Record<number, string> = {
 
 // Flag definitions
 export const HeaderFlags: Record<number, string> = {
-    0x00_00_00_08: "Flat",
-    0x00_00_00_10: "NoBlock",
-    0x00_00_08_00: "MultiHex",
-    0x00_00_10_00: "NoHighlight",
-    0x00_00_40_00: "TransRed",
-    0x00_00_80_00: "TransNone",
-    0x00_01_00_00: "TransWall",
-    0x00_02_00_00: "TransGlass",
-    0x00_04_00_00: "TransSteam",
-    0x00_08_00_00: "TransEnergy",
-    0x10_00_00_00: "WallTransEnd",
-    0x20_00_00_00: "LightThru",
-    0x80_00_00_00: "ShootThru",
+    0x00000008: "Flat",
+    0x00000010: "NoBlock",
+    0x00000800: "MultiHex",
+    0x00001000: "NoHighlight",
+    0x00004000: "TransRed",
+    0x00008000: "TransNone",
+    0x00010000: "TransWall",
+    0x00020000: "TransGlass",
+    0x00040000: "TransSteam",
+    0x00080000: "TransEnergy",
+    0x10000000: "WallTransEnd",
+    0x20000000: "LightThru",
+    0x80000000: "ShootThru",
 };
 
 export const ItemFlagsExt: Record<number, string> = {
-    0x00_00_01: "BigGun",
-    0x00_00_02: "TwoHand",
-    0x00_00_08: "Use",
-    0x00_00_10: "UseOnSmth",
-    0x00_00_20: "Look",
-    0x00_00_80: "PickUp",
-    0x08_00_00: "Hidden",
+    0x000001: "BigGun",
+    0x000002: "TwoHand",
+    0x000008: "Use",
+    0x000010: "UseOnSmth",
+    0x000020: "Look",
+    0x000080: "PickUp",
+    0x080000: "Hidden",
 };
 
 export const WallLightFlags: Record<number, string> = {
-    0x00_00: "North/South",
-    0x08_00: "East/West",
-    0x10_00: "NorthCorner",
-    0x20_00: "SouthCorner",
-    0x40_00: "EastCorner",
-    0x80_00: "WestCorner",
+    0x0000: "North/South",
+    0x0800: "East/West",
+    0x1000: "NorthCorner",
+    0x2000: "SouthCorner",
+    0x4000: "EastCorner",
+    0x8000: "WestCorner",
 };
 
 export const ActionFlags: Record<number, string> = {
-    0x00_01: "Kneel",
-    0x00_08: "Use",
-    0x00_10: "UseOnSmth",
-    0x00_20: "Look",
-    0x00_40: "Talk",
-    0x00_80: "PickUp",
+    0x0001: "Kneel",
+    0x0008: "Use",
+    0x0010: "UseOnSmth",
+    0x0020: "Look",
+    0x0040: "Talk",
+    0x0080: "PickUp",
 };
 
 export const ContainerFlags: Record<number, string> = {
-    0x00_00_00_01: "CannotPickUp",
-    0x00_00_00_08: "MagicHandsGrnd",
+    0x00000001: "CannotPickUp",
+    0x00000008: "MagicHandsGrnd",
 };
 
 export const CritterFlags: Record<number, string> = {
-    0x00_00_00_02: "Barter",
-    0x00_00_00_20: "NoSteal",
-    0x00_00_00_40: "NoDrop",
-    0x00_00_00_80: "NoLimbs",
-    0x00_00_01_00: "NoAges",
-    0x00_00_02_00: "NoHeal",
-    0x00_00_04_00: "Invulnerable",
-    0x00_00_08_00: "NoFlatten",
-    0x00_00_10_00: "SpecialDeath",
-    0x00_00_20_00: "RangeMelee",
-    0x00_00_40_00: "NoKnock",
+    0x00000002: "Barter",
+    0x00000020: "NoSteal",
+    0x00000040: "NoDrop",
+    0x00000080: "NoLimbs",
+    0x00000100: "NoAges",
+    0x00000200: "NoHeal",
+    0x00000400: "Invulnerable",
+    0x00000800: "NoFlatten",
+    0x00001000: "SpecialDeath",
+    0x00002000: "RangeMelee",
+    0x00004000: "NoKnock",
 };
 
 // Script types (upper byte of Script ID field)
@@ -288,7 +288,7 @@ export const ITEM_SUBTYPE_SIZES: Record<number, number> = {
     5: 12, // Misc Item
     6: 4, // Key
 };
-export const CRITTER_SIZE = 0x1_a0; // 416 bytes
+export const CRITTER_SIZE = 0x1a0; // 416 bytes
 export const SCENERY_COMMON_SIZE = 0x11; // 17 bytes (0x18-0x28 inclusive)
 export const SCENERY_SUBTYPE_OFFSET = HEADER_SIZE + SCENERY_COMMON_SIZE; // 0x29
 export const SCENERY_SUBTYPE_SIZES: Record<number, number> = {
@@ -384,44 +384,44 @@ export const CRITTER_BONUS_SECONDARY: CritterFieldDef[] = [
 ];
 
 export const CRITTER_BONUS_DT: CritterFieldDef[] = [
-    ["Normal", "dtNormalBonus", 0x1_00, "int32"],
-    ["Laser", "dtLaserBonus", 0x1_04, "int32"],
-    ["Fire", "dtFireBonus", 0x1_08, "int32"],
-    ["Plasma", "dtPlasmaBonus", 0x1_0c, "int32"],
-    ["Electrical", "dtElectricalBonus", 0x1_10, "int32"],
-    ["EMP", "dtEmpBonus", 0x1_14, "int32"],
-    ["Explosive", "dtExplosiveBonus", 0x1_18, "int32"],
+    ["Normal", "dtNormalBonus", 0x100, "int32"],
+    ["Laser", "dtLaserBonus", 0x104, "int32"],
+    ["Fire", "dtFireBonus", 0x108, "int32"],
+    ["Plasma", "dtPlasmaBonus", 0x10c, "int32"],
+    ["Electrical", "dtElectricalBonus", 0x110, "int32"],
+    ["EMP", "dtEmpBonus", 0x114, "int32"],
+    ["Explosive", "dtExplosiveBonus", 0x118, "int32"],
 ];
 
 export const CRITTER_BONUS_DR: CritterFieldDef[] = [
-    ["Normal", "drNormalBonus", 0x1_1c, "int32"],
-    ["Laser", "drLaserBonus", 0x1_20, "int32"],
-    ["Fire", "drFireBonus", 0x1_24, "int32"],
-    ["Plasma", "drPlasmaBonus", 0x1_28, "int32"],
-    ["Electrical", "drElectricalBonus", 0x1_2c, "int32"],
-    ["EMP", "drEmpBonus", 0x1_30, "int32"],
-    ["Explosive", "drExplosiveBonus", 0x1_34, "int32"],
-    ["Radiation", "drRadiationBonus", 0x1_38, "int32"],
-    ["Poison", "drPoisonBonus", 0x1_3c, "int32"],
+    ["Normal", "drNormalBonus", 0x11c, "int32"],
+    ["Laser", "drLaserBonus", 0x120, "int32"],
+    ["Fire", "drFireBonus", 0x124, "int32"],
+    ["Plasma", "drPlasmaBonus", 0x128, "int32"],
+    ["Electrical", "drElectricalBonus", 0x12c, "int32"],
+    ["EMP", "drEmpBonus", 0x130, "int32"],
+    ["Explosive", "drExplosiveBonus", 0x134, "int32"],
+    ["Radiation", "drRadiationBonus", 0x138, "int32"],
+    ["Poison", "drPoisonBonus", 0x13c, "int32"],
 ];
 
 export const CRITTER_SKILLS: CritterFieldDef[] = [
-    ["Small Guns", "skillSmallGuns", 0x1_48, "int32"],
-    ["Big Guns", "skillBigGuns", 0x1_4c, "int32"],
-    ["Energy Weapons", "skillEnergyWeapons", 0x1_50, "int32"],
-    ["Unarmed", "skillUnarmed", 0x1_54, "int32"],
-    ["Melee", "skillMelee", 0x1_58, "int32"],
-    ["Throwing", "skillThrowing", 0x1_5c, "int32"],
-    ["First Aid", "skillFirstAid", 0x1_60, "int32"],
-    ["Doctor", "skillDoctor", 0x1_64, "int32"],
-    ["Sneak", "skillSneak", 0x1_68, "int32"],
-    ["Lockpick", "skillLockpick", 0x1_6c, "int32"],
-    ["Steal", "skillSteal", 0x1_70, "int32"],
-    ["Traps", "skillTraps", 0x1_74, "int32"],
-    ["Science", "skillScience", 0x1_78, "int32"],
-    ["Repair", "skillRepair", 0x1_7c, "int32"],
-    ["Speech", "skillSpeech", 0x1_80, "int32"],
-    ["Barter", "skillBarter", 0x1_84, "int32"],
-    ["Gambling", "skillGambling", 0x1_88, "int32"],
-    ["Outdoorsman", "skillOutdoorsman", 0x1_8c, "int32"],
+    ["Small Guns", "skillSmallGuns", 0x148, "int32"],
+    ["Big Guns", "skillBigGuns", 0x14c, "int32"],
+    ["Energy Weapons", "skillEnergyWeapons", 0x150, "int32"],
+    ["Unarmed", "skillUnarmed", 0x154, "int32"],
+    ["Melee", "skillMelee", 0x158, "int32"],
+    ["Throwing", "skillThrowing", 0x15c, "int32"],
+    ["First Aid", "skillFirstAid", 0x160, "int32"],
+    ["Doctor", "skillDoctor", 0x164, "int32"],
+    ["Sneak", "skillSneak", 0x168, "int32"],
+    ["Lockpick", "skillLockpick", 0x16c, "int32"],
+    ["Steal", "skillSteal", 0x170, "int32"],
+    ["Traps", "skillTraps", 0x174, "int32"],
+    ["Science", "skillScience", 0x178, "int32"],
+    ["Repair", "skillRepair", 0x17c, "int32"],
+    ["Speech", "skillSpeech", 0x180, "int32"],
+    ["Barter", "skillBarter", 0x184, "int32"],
+    ["Gambling", "skillGambling", 0x188, "int32"],
+    ["Outdoorsman", "skillOutdoorsman", 0x18c, "int32"],
 ];

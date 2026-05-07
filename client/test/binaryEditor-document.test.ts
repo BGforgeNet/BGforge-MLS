@@ -45,8 +45,24 @@ function makeTestResult(): ParseResult {
                 frmType: 5,
                 frmId: 9,
                 lightRadius: 8,
-                lightIntensity: 65_536,
-                flags: 536_870_912,
+                lightIntensity: 65536,
+                // HeaderFlags 0x20000000 → `lightThru` (the only named-projection
+                // change in canonical-doc; enums stay numeric).
+                flags: {
+                    flat: false,
+                    noBlock: false,
+                    multiHex: false,
+                    noHighlight: false,
+                    transRed: false,
+                    transNone: false,
+                    transWall: false,
+                    transGlass: false,
+                    transSteam: false,
+                    transEnergy: false,
+                    wallTransEnd: false,
+                    lightThru: true,
+                    shootThru: false,
+                },
             },
             sections: {
                 miscProperties: {
@@ -67,14 +83,14 @@ function makeTestResult(): ParseResult {
                         { name: "FRM Type", value: "Background", offset: 8, size: 1, type: "enum", rawValue: 5 },
                         { name: "FRM ID", value: 9, offset: 9, size: 3, type: "uint24" },
                         { name: "Light Radius", value: 8, offset: 12, size: 4, type: "uint32" },
-                        { name: "Light Intensity", value: 65_536, offset: 16, size: 4, type: "uint32" },
+                        { name: "Light Intensity", value: 65536, offset: 16, size: 4, type: "uint32" },
                         {
                             name: "Flags",
                             value: "LightThru",
                             offset: 20,
                             size: 4,
                             type: "flags",
-                            rawValue: 536_870_912,
+                            rawValue: 536870912,
                         },
                     ],
                 },

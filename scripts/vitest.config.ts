@@ -13,6 +13,6 @@ export default defineConfig({
     test: {
         name: "scripts",
         include: ["scripts/*/test/**/*.test.ts"],
-        testTimeout: 30_000,
+        testTimeout: 30000,
     },
 });

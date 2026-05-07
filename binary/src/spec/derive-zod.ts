@@ -103,12 +103,17 @@ function fieldSpecToZod(fs: FieldSpec, mode: "strict" | "permissive"): z.ZodType
         // ITM type) skip this refinement — the table is advisory, not
         // exhaustive.
         //
-        // Named-string projection for enums is described in `binary/INTERNALS.md`
-        // rule #7 but not yet wired through the wire codec / canonical schemas
-        // (the MAP "rotation/elevation deliberately numeric" carve-out makes
-        // it a multi-format refactor rather than a derivation tweak). Helpers
-        // `intToEnumValue` / `enumValueToInt` exist in `coded-projection.ts`
-        // for hand-written canonical schemas that opt in.
+        // Enums stay numeric in canonical-doc by design: half the enum fields
+        // drive dispatch (`objectType`, `subType`, `scriptType`, MAP `version`
+        // / `rotation` / `elevation`) and have to convert to int at every
+        // dispatch site if projected to strings. The diff-friendliness gain
+        // from named projection is also marginal compared to flags — toggling
+        // an enum changes one number to another (`5 → 0`) at the same line
+        // count as `"Items" → "Background"`. The display layer's `enum` table
+        // resolves names for dropdowns and hover; the snapshot stays close to
+        // the wire. Helpers `intToEnumValue` / `enumValueToInt` in
+        // `coded-projection.ts` are available as opt-in utilities for code
+        // that wants to convert.
         const allowed = new Set(Object.keys(fs.enum).map(Number));
         return z
             .number()
@@ -120,13 +125,13 @@ function fieldSpecToZod(fs: FieldSpec, mode: "strict" | "permissive"): z.ZodType
     // Packed-field parts: bounds come from bitRange (unsigned bit field),
     // not from the wire codec's full numeric range. The wire codec on a
     // packed part is the SLOT codec (e.g., u32 for a 26-bit subfield) —
-    // applying its range would let `destTile = 0x0400_0000` pass even though
+    // applying its range would let `destTile = 0x04000000` pass even though
     // it overflows the 26-bit slot. The bit-width bound is structural (the
     // value cannot fit in the wire slot) so it stays in permissive mode too.
     let schema: z.ZodNumber;
     if (fs.packedAs !== undefined && fs.bitRange) {
         const [, width] = fs.bitRange;
-        const max = width >= 32 ? 0xffff_ffff : (1 << width) - 1;
+        const max = width >= 32 ? 0xffffffff : (1 << width) - 1;
         schema = z.number().int().min(0).max(max);
     } else {
         schema = zodNumericType(codecNumericTypeName(fs.codec));

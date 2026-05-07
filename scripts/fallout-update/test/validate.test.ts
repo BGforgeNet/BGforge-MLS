@@ -24,7 +24,7 @@ describe("validateSfallFunction", () => {
                 name: "func",
                 detail: "void func()",
                 doc: "A function",
-                opcode: 0x81_56,
+                opcode: 0x8156,
                 unsafe: true,
                 macro: "MACRO_NAME",
                 type: "int",
@@ -32,7 +32,7 @@ describe("validateSfallFunction", () => {
             },
             "test",
         );
-        expect(result.opcode).toBe(0x81_56);
+        expect(result.opcode).toBe(0x8156);
         expect(result.unsafe).toBe(true);
         expect(result.macro).toBe("MACRO_NAME");
         expect(result.args).toHaveLength(1);

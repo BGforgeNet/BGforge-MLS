@@ -122,7 +122,7 @@ export function intToFlagDict(table: Readonly<Record<number, string>>, value: nu
     for (const entry of entries) {
         out[entry.key] = (value & entry.mask) !== 0;
     }
-    const codecMask = codecBitWidth >= 32 ? 0xffff_ffff : (1 << codecBitWidth) - 1;
+    const codecMask = codecBitWidth >= 32 ? 0xffffffff : (1 << codecBitWidth) - 1;
     const reservoir = (value & ~namedMask & codecMask) >>> 0;
     if (reservoir !== 0) {
         out._bits = `0x${reservoir.toString(16)}`;

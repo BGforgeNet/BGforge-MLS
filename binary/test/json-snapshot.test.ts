@@ -174,7 +174,7 @@ describe("json-snapshot", () => {
                         fields: [
                             { name: "Version", value: "Fallout 2", rawValue: 20, offset: 0, size: 4, type: "enum" },
                             { name: "Filename", value: "artemple", offset: 4, size: 16, type: "string" },
-                            { name: "Default Position", value: 20_100, offset: 20, size: 4, type: "int32" },
+                            { name: "Default Position", value: 20100, offset: 20, size: 4, type: "int32" },
                             { name: "Default Elevation", value: "0", rawValue: 0, offset: 24, size: 4, type: "enum" },
                             {
                                 name: "Default Orientation",
@@ -258,7 +258,7 @@ describe("json-snapshot", () => {
         expect(snapshot.document.header).toMatchObject({
             version: 20,
             filename: "artemple",
-            defaultPosition: 20_100,
+            defaultPosition: 20100,
         });
         expect(snapshot.document.globalVariables).toEqual([11]);
         expect(snapshot.document.localVariables).toEqual([22]);
@@ -282,7 +282,7 @@ describe("json-snapshot", () => {
                         fields: [
                             { name: "Version", value: "Fallout 2", rawValue: 20, offset: 0, size: 4, type: "enum" },
                             { name: "Filename", value: "artemple", offset: 4, size: 16, type: "string" },
-                            { name: "Default Position", value: 20_100, offset: 20, size: 4, type: "int32" },
+                            { name: "Default Position", value: 20100, offset: 20, size: 4, type: "int32" },
                             { name: "Default Elevation", value: "0", rawValue: 0, offset: 24, size: 4, type: "enum" },
                             {
                                 name: "Default Orientation",
@@ -377,7 +377,7 @@ describe("json-snapshot", () => {
                     frmType: 5,
                     frmId: 9,
                     lightRadius: 8,
-                    lightIntensity: 65_536,
+                    lightIntensity: 65536,
                     flags: {
                         flat: false,
                         noBlock: false,
@@ -425,7 +425,7 @@ describe("json-snapshot", () => {
                     frmType: 5,
                     frmId: 9,
                     lightRadius: 8,
-                    lightIntensity: 65_536,
+                    lightIntensity: 65536,
                     flags: {
                         flat: false,
                         noBlock: false,

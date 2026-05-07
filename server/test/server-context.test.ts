@@ -103,7 +103,7 @@ describe("server-context", () => {
             mockConlog.mockReset();
             await import("../src/server-context");
 
-            await vi.advanceTimersByTimeAsync(30_000);
+            await vi.advanceTimersByTimeAsync(30000);
 
             const warns = mockConlog.mock.calls.filter((c) => c[1] === "warn");
             expect(warns.length).toBeGreaterThanOrEqual(1);
@@ -117,7 +117,7 @@ describe("server-context", () => {
             const mod = await import("../src/server-context");
 
             mod.initServerContext(makeStubContext());
-            await vi.advanceTimersByTimeAsync(60_000);
+            await vi.advanceTimersByTimeAsync(60000);
 
             const warns = mockConlog.mock.calls.filter((c) => c[1] === "warn");
             expect(warns).toEqual([]);

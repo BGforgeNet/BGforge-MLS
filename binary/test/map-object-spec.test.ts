@@ -22,10 +22,10 @@ describe("object spec modules", () => {
             screenY: 40,
             frame: 0,
             rotation: 2,
-            fid: 0xab_cd_ef_01,
+            fid: 0xabcdef01,
             flags: intToFlagDict(ObjectFlags, 0, 32),
             elevation: 1,
-            pid: 0x0100_0042, // type 1, id 0x42
+            pid: 0x01000042, // type 1, id 0x42
             cid: -1,
             lightDistance: 0,
             lightIntensity: 0,

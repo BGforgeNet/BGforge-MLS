@@ -149,11 +149,17 @@ function field(
  */
 function enumFieldTolerant(
     name: string,
-    value: number,
+    value: number | string,
     lookup: Record<number, string>,
     offset: number,
     size: number,
 ): ParsedField {
+    // Canonical-doc surfaces enum values as `string | number` (named when in
+    // table, raw int otherwise). Pass strings through directly; resolve ints
+    // via the lookup table for display, falling through to `Unknown (N)`.
+    if (typeof value === "string") {
+        return field(name, value, offset, size, "enum", undefined, undefined);
+    }
     return field(name, lookup[value] ?? `Unknown (${value})`, offset, size, "enum", undefined, value);
 }
 
@@ -342,10 +348,10 @@ function parseCritter(data: CritterData): ParsedGroup[] {
         group("Bonus Damage Resistance", fieldsFromDefs(CRITTER_BONUS_DR, critterData), false),
         group("Skills", fieldsFromDefs(CRITTER_SKILLS, critterData)),
         group("Final Properties", [
-            enumFieldTolerant("Body Type", data.bodyType, BodyType, 0x1_90, 4),
-            field("Experience Value", data.expValue, 0x1_94, 4, "uint32"),
-            enumFieldTolerant("Kill Type", data.killType, KillType, 0x1_98, 4),
-            enumFieldTolerant("Damage Type", data.damageType, DamageType, 0x1_9c, 4),
+            enumFieldTolerant("Body Type", data.bodyType, BodyType, 0x190, 4),
+            field("Experience Value", data.expValue, 0x194, 4, "uint32"),
+            enumFieldTolerant("Kill Type", data.killType, KillType, 0x198, 4),
+            enumFieldTolerant("Damage Type", data.damageType, DamageType, 0x19c, 4),
         ]),
     ];
 }

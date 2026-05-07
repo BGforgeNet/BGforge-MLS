@@ -40,7 +40,7 @@ function tryParse(buf: string): [unknown | null, string] {
 function request(
     proc: ChildProcess,
     msg: { jsonrpc: string; id: number; method: string; params: unknown },
-    timeoutMs = 30_000,
+    timeoutMs = 30000,
 ): Promise<Record<string, unknown>> {
     return new Promise((resolve, reject) => {
         let buf = "";
@@ -72,7 +72,7 @@ function notify(proc: ChildProcess, msg: { jsonrpc: string; method: string; para
     proc.stdin!.write(encode(msg));
 }
 
-async function waitForFile(filePath: string, timeoutMs = 10_000): Promise<void> {
+async function waitForFile(filePath: string, timeoutMs = 10000): Promise<void> {
     const start = Date.now();
     while (Date.now() - start < timeoutMs) {
         try {
@@ -105,7 +105,7 @@ describe("LSP stdio smoke test", () => {
         tempDir = undefined;
     });
 
-    it("initializes, responds with capabilities, and shuts down", { timeout: 30_000 }, async () => {
+    it("initializes, responds with capabilities, and shuts down", { timeout: 30000 }, async () => {
         proc = spawn("node", [SERVER_PATH, "--stdio"], {
             stdio: ["pipe", "pipe", "pipe"],
         });
@@ -170,7 +170,7 @@ describe("LSP stdio smoke test", () => {
 
     it(
         "does not write raw compile logs to stdout during stdio save-triggered TD compile",
-        { timeout: 30_000 },
+        { timeout: 30000 },
         async () => {
             tempDir = await mkdtemp(join(tmpdir(), "bgforge-mls-stdio-"));
             const sourcePath = join(tempDir, "dialog.td");

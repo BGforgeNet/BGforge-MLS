@@ -68,7 +68,7 @@ export function getScriptType(sid: number): number {
     return (sid >>> 24) & 0xf;
 }
 
-export const TILES_PER_ELEVATION = 10_000;
+export const TILES_PER_ELEVATION = 10000;
 export const TILE_DATA_SIZE_PER_ELEVATION = TILES_PER_ELEVATION * 4;
 
 /**

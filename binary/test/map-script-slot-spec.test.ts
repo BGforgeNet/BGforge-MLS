@@ -23,7 +23,7 @@ function buildOtherBytes(): { bytes: ArrayBuffer; expected: Record<string, unkno
     // `expected` value compared after the read carries `flags` as the named
     // dict the wire codec produces.
     const wireInts: Record<string, number> = {
-        sid: 0x0300_0001, // type 3, id 1
+        sid: 0x03000001, // type 3, id 1
         nextScriptLinkLegacy: -1,
         flags: 0,
         index: 1,
@@ -78,7 +78,7 @@ describe("script slot specs", () => {
         const buf = new ArrayBuffer(SPATIAL_SLOT_BYTES);
         const w = new BufferWriter(buf, { endianness: "big" });
         spatialCodec.write(w, {
-            sid: 0x0100_0007,
+            sid: 0x01000007,
             nextScriptLinkLegacy: -1,
             builtTile: 100,
             spatialRadius: 5,
@@ -100,7 +100,7 @@ describe("script slot specs", () => {
 
         const r = new BufferReader(buf, { endianness: "big" });
         const slot = spatialCodec.read(r);
-        expect(slot.sid).toBe(0x0100_0007);
+        expect(slot.sid).toBe(0x01000007);
         expect(slot.builtTile).toBe(100);
         expect(slot.spatialRadius).toBe(5);
         expect(SPATIAL_SLOT_BYTES).toBe(72);
@@ -110,7 +110,7 @@ describe("script slot specs", () => {
         const buf = new ArrayBuffer(TIMER_SLOT_BYTES);
         const w = new BufferWriter(buf, { endianness: "big" });
         timerCodec.write(w, {
-            sid: 0x0200_000a,
+            sid: 0x0200000a,
             nextScriptLinkLegacy: -1,
             timerTime: 12345,
             flags: intToFlagDict(ScriptFlags, 0, 32),
@@ -131,7 +131,7 @@ describe("script slot specs", () => {
 
         const r = new BufferReader(buf, { endianness: "big" });
         const slot = timerCodec.read(r);
-        expect(slot.sid).toBe(0x0200_000a);
+        expect(slot.sid).toBe(0x0200000a);
         expect(slot.timerTime).toBe(12345);
         expect(TIMER_SLOT_BYTES).toBe(68);
     });

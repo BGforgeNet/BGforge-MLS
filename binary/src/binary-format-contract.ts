@@ -19,13 +19,13 @@ export interface NumericRange {
 
 const NUMERIC_TYPE_RANGES: Record<NumericTypeName, NumericRange> = {
     uint8: { min: 0, max: 0xff },
-    uint16: { min: 0, max: 0xff_ff },
-    uint24: { min: 0, max: 0xff_ff_ff },
-    uint32: { min: 0, max: 0xff_ff_ff_ff },
+    uint16: { min: 0, max: 0xffff },
+    uint24: { min: 0, max: 0xffffff },
+    uint32: { min: 0, max: 0xffffffff },
     int8: { min: -128, max: 127 },
-    int16: { min: -32_768, max: 32_767 },
-    int24: { min: -8_388_608, max: 8_388_607 },
-    int32: { min: -2_147_483_648, max: 2_147_483_647 },
+    int16: { min: -32768, max: 32767 },
+    int24: { min: -8388608, max: 8388607 },
+    int32: { min: -2147483648, max: 2147483647 },
 };
 
 export function getNumericTypeRange(type: string): NumericRange | undefined {

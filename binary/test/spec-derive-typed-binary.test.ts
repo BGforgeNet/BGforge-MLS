@@ -107,13 +107,13 @@ describe("toTypedBinarySchema", () => {
         } satisfies Record<string, FieldSpec>;
         const derived = toTypedBinarySchema(spec);
 
-        // tile=5 in low 26 bits, elevation=2 in high 6 bits → packed = 0x0800_0005.
+        // tile=5 in low 26 bits, elevation=2 in high 6 bits → packed = 0x08000005.
         const buf = new ArrayBuffer(8);
         const w = new BufferWriter(buf, { endianness: "big" });
-        object({ packed: u32, destMap: u32 }).write(w, { packed: 0x0800_0005, destMap: 0x1234_5678 });
+        object({ packed: u32, destMap: u32 }).write(w, { packed: 0x08000005, destMap: 0x12345678 });
 
         const r = new BufferReader(buf, { endianness: "big" });
-        expect(derived.read(r)).toEqual({ destTile: 5, destElevation: 2, destMap: 0x1234_5678 });
+        expect(derived.read(r)).toEqual({ destTile: 5, destElevation: 2, destMap: 0x12345678 });
     });
 
     it("packed-field parts write back into the shared wire slot", () => {
@@ -126,12 +126,12 @@ describe("toTypedBinarySchema", () => {
 
         const buf = new ArrayBuffer(8);
         const w = new BufferWriter(buf, { endianness: "big" });
-        derived.write(w, { destTile: 5, destElevation: 2, destMap: 0x1234_5678 });
+        derived.write(w, { destTile: 5, destElevation: 2, destMap: 0x12345678 });
 
         const expected = new ArrayBuffer(8);
         object({ packed: u32, destMap: u32 }).write(new BufferWriter(expected, { endianness: "big" }), {
-            packed: 0x0800_0005,
-            destMap: 0x1234_5678,
+            packed: 0x08000005,
+            destMap: 0x12345678,
         });
         expect(new Uint8Array(buf)).toEqual(new Uint8Array(expected));
     });

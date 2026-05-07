@@ -71,7 +71,7 @@ export function runProcess(
     args: readonly string[],
     cwd: string,
     signal?: AbortSignal,
-    timeoutMs = 60_000,
+    timeoutMs = 60000,
 ): Promise<{ err: cp.ExecFileException | null; stdout: string }> {
     const shell = needsShell(executable);
     conlog(`${executable} ${args.join(" ")}`);

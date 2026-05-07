@@ -105,7 +105,7 @@ export function isConfidentObjectsGroup(objectsGroup: ParsedGroup): boolean {
 }
 
 export function scoreParsedTail(scriptTypeCount: number, scriptErrors: string[], objectsGroup: ParsedGroup): number {
-    let score = -scriptErrors.length * 100_000;
+    let score = -scriptErrors.length * 100000;
     score += (6 - scriptTypeCount) * 5;
 
     const totalObjectsEntry = objectsGroup.fields.find(

@@ -21,7 +21,7 @@ export default defineConfig({
         // v8 coverage instrumentation roughly 3-4x slows the binary-format parser
         // tests in this suite; the 5s vitest default is too tight for them under
         // --coverage and was producing intermittent failures.
-        testTimeout: 15_000,
+        testTimeout: 15000,
         coverage: {
             provider: "v8",
             reporter: ["text", "html", "lcov"],

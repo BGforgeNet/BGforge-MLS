@@ -80,7 +80,7 @@ describe("intToFlagDict", () => {
 
     it("masks _bits to the codec bit width", () => {
         // u16 codec; bit 31 of input is outside the wire word, must not surface.
-        const dict = intToFlagDict({ 0x01: "Lo" }, 0x8000_0001 | 0, 16);
+        const dict = intToFlagDict({ 0x01: "Lo" }, 0x80000001 | 0, 16);
         expect(dict._bits).toBeUndefined();
         expect(dict.lo).toBe(true);
     });
@@ -114,13 +114,13 @@ describe("flagDictToInt", () => {
     });
 
     it("round-trips int → dict → int through arbitrary bits", () => {
-        const u32 = 0xdead_beef >>> 0;
+        const u32 = 0xdeadbeef >>> 0;
         const codecBits = 32;
         const tableLarge = {
-            0x0000_0001: "A",
-            0x0000_0010: "B",
-            0x0000_0100: "C",
-            0x0000_1000: "D",
+            0x00000001: "A",
+            0x00000010: "B",
+            0x00000100: "C",
+            0x00001000: "D",
         };
         const dict = intToFlagDict(tableLarge, u32, codecBits);
         const repacked = flagDictToInt(tableLarge, dict);

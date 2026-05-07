@@ -195,10 +195,10 @@ export const proCompiledPatternFields: readonly CompiledPatternFieldPresentation
 
 export const proDomainRanges: Readonly<Record<string, NumericRange>> = {
     "pro.header.lightRadius": { min: 0, max: 8 },
-    "pro.header.lightIntensity": { min: 0, max: 65_536 },
+    "pro.header.lightIntensity": { min: 0, max: 65536 },
     "pro.doorProperties.walkThruFlag": { min: 0, max: 1 },
-    "pro.stairsProperties.destTile": { min: 0, max: 0x03_ff_ff_ff },
+    "pro.stairsProperties.destTile": { min: 0, max: 0x03ffffff },
     "pro.stairsProperties.destElevation": { min: 0, max: 0x3f },
-    "pro.ladderProperties.destTile": { min: 0, max: 0x03_ff_ff_ff },
+    "pro.ladderProperties.destTile": { min: 0, max: 0x03ffffff },
     "pro.ladderProperties.destElevation": { min: 0, max: 0x3f },
 };

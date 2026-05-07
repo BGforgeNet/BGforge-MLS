@@ -133,12 +133,12 @@ describe("buildBinaryEditorTreeState", () => {
         // Parses navarro.map end-to-end — v8 coverage instrumentation pushes
         // this past the 5s default; raise the ceiling so the size assertion
         // still runs under --coverage.
-        { timeout: 15_000 },
+        { timeout: 15000 },
         () => {
             const tree = buildBinaryEditorTreeState(loadMapResult("navarro.map", true));
             const initBytes = Buffer.byteLength(JSON.stringify(tree.getInitMessagePayload()));
 
-            expect(initBytes).toBeLessThan(10_000);
+            expect(initBytes).toBeLessThan(10000);
         },
     );
 

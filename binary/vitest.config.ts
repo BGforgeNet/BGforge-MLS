@@ -17,7 +17,7 @@ export default defineConfig({
         exclude: [path.resolve(__dirname, "test/**/*-cli.test.ts")],
         // v8 coverage instrumentation slows the binary parser tests; the 5s
         // vitest default is too tight for them.
-        testTimeout: 15_000,
+        testTimeout: 15000,
         coverage: {
             provider: "v8",
             reporter: ["text", "html", "lcov"],

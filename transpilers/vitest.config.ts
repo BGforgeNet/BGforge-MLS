@@ -6,7 +6,7 @@ export default defineConfig({
         // CLI integration tests live alongside the unit tests but require the built
         // CLI bundle to exist; they run from test/vitest.cli.config.ts in a later phase.
         exclude: ["transpilers/test/**/*-cli.test.ts"],
-        testTimeout: 30_000,
+        testTimeout: 30000,
         coverage: {
             provider: "v8",
             reporter: ["text", "html", "lcov"],

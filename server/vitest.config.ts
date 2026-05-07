@@ -25,7 +25,7 @@ export default defineConfig({
         name: "server",
         include: ["test/**/*.test.ts"],
         exclude: ["test/smoke-stdio.test.ts", "test/integration/**"],
-        testTimeout: 30_000,
+        testTimeout: 30000,
         coverage: {
             provider: "v8",
             reporter: ["text", "html", "lcov"],
