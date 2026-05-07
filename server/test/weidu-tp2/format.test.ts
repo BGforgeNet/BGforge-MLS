@@ -37,8 +37,11 @@ import {
 import { initParser, getParser } from "../../../shared/parsers/weidu-tp2";
 import { parseFile } from "../../src/weidu-tp2/header-parser";
 
-/** Extract symbols only (convenience wrapper). */
-const parseHeaderToSymbols = (...args: Parameters<typeof parseFile>) => [...parseFile(...args).symbols];
+/** Extract symbols only (convenience wrapper). Accepts an optional workspaceRoot
+ *  string positionally to keep test sites concise. */
+const parseHeaderToSymbols = (uri: string, text: string, workspaceRoot?: string) => [
+    ...parseFile(uri, text, workspaceRoot === undefined ? undefined : { workspaceRoot }).symbols,
+];
 import type { IndexedSymbol } from "../../src/core/symbol";
 import { normalizeUri } from "../../src/core/normalized-uri";
 
@@ -649,7 +652,7 @@ DEFINE_ACTION_MACRO macro1 BEGIN END
 describe("definition: getDefinition", () => {
     // Lazy-load modules after parser initialization
     let getDefinition: typeof import("../../src/weidu-tp2/definition").getDefinition;
-    let lazyParseHeaderToSymbols: (...args: Parameters<typeof parseFile>) => IndexedSymbol[];
+    let lazyParseHeaderToSymbols: (uri: string, text: string, workspaceRoot?: string) => IndexedSymbol[];
     let SymbolsClass: typeof import("../../src/core/symbol-index").Symbols;
 
     beforeAll(async () => {
@@ -658,7 +661,9 @@ describe("definition: getDefinition", () => {
         const headerMod = await import("../../src/weidu-tp2/header-parser");
         const symbolMod = await import("../../src/core/symbol-index");
         getDefinition = defMod.getDefinition;
-        lazyParseHeaderToSymbols = (...args: Parameters<typeof parseFile>) => [...headerMod.parseFile(...args).symbols];
+        lazyParseHeaderToSymbols = (uri, text, workspaceRoot) => [
+            ...headerMod.parseFile(uri, text, workspaceRoot === undefined ? undefined : { workspaceRoot }).symbols,
+        ];
         SymbolsClass = symbolMod.Symbols;
     });
 

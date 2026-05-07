@@ -210,8 +210,11 @@ END`;
 // These tests ensure hover content includes all JSDoc features
 // =============================================================================
 
-/** Extract symbols only (convenience wrapper). */
-const parseHeaderToSymbols = (...args: Parameters<typeof parseFile>) => [...parseFile(...args).symbols];
+/** Extract symbols only (convenience wrapper). Accepts an optional workspaceRoot
+ *  string positionally to keep test sites concise. */
+const parseHeaderToSymbols = (uri: string, text: string, workspaceRoot?: string) => [
+    ...parseFile(uri, text, workspaceRoot === undefined ? undefined : { workspaceRoot }).symbols,
+];
 import { isCallableSymbol, isVariableSymbol } from "../../src/core/symbol";
 import { CompletionCategory, type CompletionItemWithCategory } from "../../src/shared/completion-context";
 import type { MarkupContent } from "vscode-languageserver/node";

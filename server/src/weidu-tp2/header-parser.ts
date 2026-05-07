@@ -644,9 +644,9 @@ interface ParseSymbolsOptions {
  *
  * @param uri File URI
  * @param text File content
- * @param options Options or workspaceRoot string (for backwards compatibility)
+ * @param options Parse options (workspace root, source type, path-skipping)
  */
-export function parseFile(uri: string, text: string, options?: string | ParseSymbolsOptions): ParseResult {
+export function parseFile(uri: string, text: string, options?: ParseSymbolsOptions): ParseResult {
     if (!isInitialized()) {
         return EMPTY_PARSE_RESULT;
     }
@@ -658,8 +658,7 @@ export function parseFile(uri: string, text: string, options?: string | ParseSym
 
     const { functions, variables, refs } = extractAll(tree.rootNode, uri);
 
-    // Handle backwards compatibility: options can be workspaceRoot string
-    const opts: ParseSymbolsOptions = typeof options === "string" ? { workspaceRoot: options } : (options ?? {});
+    const opts: ParseSymbolsOptions = options ?? {};
 
     const displayPath = opts.skipPath ? null : computeDisplayPath(uri, opts.workspaceRoot);
 
