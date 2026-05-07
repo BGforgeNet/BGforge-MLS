@@ -47,6 +47,33 @@ function makeFieldId(sourceSegments: readonly string[]): string {
     return JSON.stringify(sourceSegments);
 }
 
+interface DisplayValueArgs {
+    readonly format: string;
+    readonly fieldKey: string;
+    readonly fieldName: string;
+    readonly entryValue: unknown;
+    readonly numericValue: number | undefined;
+    readonly numericFormat: "decimal" | "hex32";
+    readonly hasAdapterLookup: boolean;
+    readonly hasSpecLookup: boolean;
+}
+
+function resolveFieldDisplayValue(args: DisplayValueArgs): string {
+    if (args.numericValue === undefined) {
+        return String(args.entryValue);
+    }
+    if (args.hasAdapterLookup) {
+        return resolveDisplayValue(args.format, args.fieldKey, args.fieldName, args.numericValue);
+    }
+    if (args.hasSpecLookup) {
+        // Walker pre-formatted the display string from the spec's enum/flags
+        // table; reusing it avoids a second resolve pass that would miss the
+        // same path-keyed lookup the adapter just missed.
+        return String(args.entryValue);
+    }
+    return formatNumericValue(args.numericValue, args.numericFormat);
+}
+
 export interface BinaryEditorTreeState {
     getInitMessagePayload(): {
         format: string;
@@ -186,18 +213,18 @@ export function buildBinaryEditorTreeState(parseResult: ParseResult): BinaryEdit
                 : typeof entry.value === "number"
                   ? entry.value
                   : undefined;
-        const displayValue =
-            typeof numericValue === "number"
-                ? adapterEnumOptions || adapterFlagOptions
-                    ? resolveDisplayValue(parseResult.format, fieldKey, entry.name, numericValue)
-                    : enumOptions || flagOptions
-                      ? // Walker pre-formatted the display string from the
-                        // spec's enum/flags table; reusing it avoids a
-                        // second resolve pass that would miss the same
-                        // path-keyed lookup the adapter just missed.
-                        String(entry.value)
-                      : formatNumericValue(numericValue, numericFormat)
-                : String(entry.value);
+        const hasAdapterLookup = adapterEnumOptions !== undefined || adapterFlagOptions !== undefined;
+        const hasSpecLookup = enumOptions !== undefined || flagOptions !== undefined;
+        const displayValue = resolveFieldDisplayValue({
+            format: parseResult.format,
+            fieldKey,
+            fieldName: entry.name,
+            entryValue: entry.value,
+            numericValue,
+            numericFormat,
+            hasAdapterLookup,
+            hasSpecLookup,
+        });
         nodes.set(id, {
             id,
             children: [],

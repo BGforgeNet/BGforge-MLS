@@ -38,21 +38,12 @@ export function parseHeaderSection(data: Uint8Array, _errors: string[]): ParsedG
     // walkStruct produces the 11 numeric/enum/flags rows from the spec +
     // presentation. Filename (string) and Padding (field_3C summary) sit
     // outside that scalar set and are spliced in at their wire positions.
-    // The cast widens MapHeader (specific shape) to walkStruct's generic
-    // record constraint; the spec keys are a subset of MapHeader's so the
-    // runtime access is sound.
     //
     // Out-of-enum values surface inline as `Unknown (N)`; they are not pushed
     // to `errors` because the parser is read-permissive (mirroring PRO). The
     // strict gate against committable garbage lives at the canonical-write
     // path; here we just describe what the file actually says.
-    const numericGroup = walkStruct(
-        mapHeaderCanonicalSpec,
-        mapHeaderPresentation,
-        0,
-        header as unknown as Record<string, number>,
-        "Header",
-    );
+    const numericGroup = walkStruct(mapHeaderCanonicalSpec, mapHeaderPresentation, 0, header, "Header");
 
     const fields = [...numericGroup.fields];
     fields.splice(1, 0, field("Filename", header.filename, 0x04, 16, "string"));

@@ -1,5 +1,6 @@
 import { codecByteLength, codecNumericTypeName } from "./codec-meta";
 import { humanize, type FieldPresentation, type StructPresentation } from "./presentation";
+import { stringifyKeys } from "../presentation-schema-types";
 import {
     isArraySpec,
     isCharsSpec,
@@ -113,18 +114,18 @@ interface WalkOptions {
  *   - `value`: raw number, with `unit: "%"` appended or `format: "hex32"`
  *     applied; enum/flags resolve through their lookup tables.
  */
-export function walkStruct<T extends Record<string, unknown>>(
-    spec: StructSpec<T>,
-    presentation: StructPresentation<T>,
+export function walkStruct<TSpec, TData extends TSpec>(
+    spec: StructSpec<TSpec>,
+    presentation: StructPresentation<TSpec>,
     baseOffset: number,
-    data: T,
+    data: TData,
     groupName: string,
     options: WalkOptions = {},
 ): ParsedGroup {
-    const keys = Object.keys(spec) as (keyof T & string)[];
+    const keys = Object.keys(spec) as (keyof TSpec & string)[];
 
     let cursor = baseOffset;
-    const builtFields = new Map<keyof T & string, ParsedField | ParsedGroup>();
+    const builtFields = new Map<keyof TSpec & string, ParsedField | ParsedGroup>();
     let i = 0;
     while (i < keys.length) {
         const key = keys[i]!;
@@ -167,7 +168,7 @@ export function walkStruct<T extends Record<string, unknown>>(
             throw new Error(`subGroup "${sg.name}" must list at least one field`);
         }
         const groupFields: (ParsedField | ParsedGroup)[] = sg.fields.map((f) => {
-            const pf = builtFields.get(f as keyof T & string);
+            const pf = builtFields.get(f as keyof TSpec & string);
             if (!pf) {
                 throw new Error(`subGroups references unknown field: ${f}`);
             }
@@ -196,11 +197,7 @@ export function walkStruct<T extends Record<string, unknown>>(
     return { name: groupName, fields: out, expanded: options.expanded ?? true };
 }
 
-function stringifyKeys(table: Readonly<Record<number, string>>): Record<string, string> {
-    return Object.fromEntries(Object.entries(table).map(([k, v]) => [String(k), v]));
-}
-
-function fieldSize<T extends Record<string, unknown>>(fs: FieldSpec, data: T, key: string): number {
+function fieldSize<T>(fs: FieldSpec, data: T, key: keyof T & string): number {
     if (isArraySpec(fs)) {
         if (typeof fs.count === "number") {
             return fs.count * codecByteLength(fs.element.codec);

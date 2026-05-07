@@ -5,6 +5,7 @@
 ### NPM packages
 
 3 new npm packages, each including an API and a corresponding cli tool:
+
 - `@bgforge/binary` - binary bindings for IE and Fallout 1/2 formats. CLI is `fgbin`.
 - `@bgforge/format` - formatting library for all supported text formats. CLI is `fgfmt`.
 - `@bgforge/transpile` - transpiling for TSSL, TBAF, TD. CLI is `fgtp`.

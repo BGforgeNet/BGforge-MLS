@@ -1,5 +1,6 @@
 import { isArraySpec, isCharsSpec, type StructSpec } from "./types";
 import type { StructPresentation } from "./presentation";
+import { stringifyKeys } from "../presentation-schema-types";
 
 interface PresentationEntry {
     readonly label?: string;
@@ -8,69 +9,6 @@ interface PresentationEntry {
     readonly flagOptions?: Readonly<Record<string, string>>;
     readonly numericFormat?: "decimal" | "hex32";
     readonly editable?: boolean;
-}
-
-/**
- * Derive `presentation-schema.ts` `exactFields` entries from a `StructSpec`
- * and `StructPresentation`. Output keyed by `${prefix}.${fieldName}`.
- *
- * - `spec.enum` → `presentationType: "enum"` with `enumOptions`.
- * - `spec.flags` → `presentationType: "flags"` with `flagOptions`.
- * - Otherwise: emit only when the presentation carries an override the walker
- *   cannot infer from the spec (`numericFormat`, `editable`, explicit `label`).
- *   `unit` is consumed by the walker and does not surface here.
- *
- * Array fields are not emitted.
- */
-export function toPresentationEntries<T>(
-    spec: StructSpec<T>,
-    presentation: StructPresentation<T>,
-    prefix: string,
-): Record<string, PresentationEntry> {
-    const out: Record<string, PresentationEntry> = {};
-    for (const key of Object.keys(spec) as (keyof T & string)[]) {
-        const fs = spec[key];
-        if (isArraySpec(fs) || isCharsSpec(fs)) continue;
-        const pres = presentation[key];
-        const fullKey = `${prefix}.${key}`;
-
-        if (fs.enum) {
-            const entry: PresentationEntry = {
-                ...(pres?.label !== undefined && { label: pres.label }),
-                presentationType: "enum",
-                enumOptions: stringifyKeys(fs.enum),
-            };
-            out[fullKey] = entry;
-            continue;
-        }
-
-        if (fs.flags) {
-            const entry: PresentationEntry = {
-                ...(pres?.label !== undefined && { label: pres.label }),
-                presentationType: "flags",
-                flagOptions: stringifyKeys(fs.flags),
-            };
-            out[fullKey] = entry;
-            continue;
-        }
-
-        const overrides: { numericFormat?: "decimal" | "hex32"; editable?: boolean } = {};
-        if (pres?.format === "decimal" || pres?.format === "hex32") overrides.numericFormat = pres.format;
-        // Spec-declared `role` is the authoritative source for "this field is
-        // derived, not user data". An explicit presentation `editable` override
-        // wins (escape hatch for cases the role taxonomy doesn't yet cover);
-        // otherwise a non-`"data"` role locks the field.
-        if (pres?.editable !== undefined) overrides.editable = pres.editable;
-        else if (fs.role !== undefined && fs.role !== "data") overrides.editable = false;
-        if (Object.keys(overrides).length > 0) {
-            out[fullKey] = overrides;
-        }
-    }
-    return out;
-}
-
-function stringifyKeys(table: Readonly<Record<number, string>>): Record<string, string> {
-    return Object.fromEntries(Object.entries(table).map(([k, v]) => [String(k), v]));
 }
 
 interface PatternEntry extends PresentationEntry {
@@ -82,38 +20,38 @@ function regexEscape(literal: string): string {
 }
 
 /**
- * Path-aware counterpart to `toPresentationEntries`. Used by formats whose
- * canonical paths nest through array indices (e.g., MAP's
- * `map.scripts[].extents[].slots[].localVarsOffset`) which the flat-prefix
- * `toPresentationEntries` shape cannot express.
+ * Walk the (spec, presentation) pair and emit one entry per scalar field
+ * whose presentation differs from the walker's defaults. The caller decides
+ * how the field's emit-key is built (flat `${prefix}.${field}` for
+ * exactFields, or a regex pattern for patternFields), and how each entry is
+ * collected.
  *
- * The `pathTemplate` carries the unescaped path including literal `[]`
- * markers (`map.scripts[].extents[].slots[]`); the helper regex-escapes it
- * and appends each emitted field name to produce a `^<path>\\.<field>$`
- * pattern. Emit rules mirror `toPresentationEntries`:
+ * Emit rules:
+ *  - `spec.enum` → `presentationType: "enum"` + `enumOptions`.
+ *  - `spec.flags` → `presentationType: "flags"` + `flagOptions`.
+ *  - Otherwise: emit only when the presentation carries an override the walker
+ *    cannot infer from the spec (`numericFormat`, `editable`, explicit `label`),
+ *    or when the spec's `role` is non-`"data"` (locks the field).
+ *    `unit` is consumed by the walker and does not surface here.
+ *  - Array and chars fields are skipped.
  *
- *   - `spec.enum` → `presentationType: "enum"` + `enumOptions`.
- *   - `spec.flags` → `presentationType: "flags"` + `flagOptions`.
- *   - Otherwise: emit when the presentation overrides numericFormat / editable
- *     OR the spec's `role` is non-`"data"` (locks the field).
- *   - Array and chars fields are skipped.
+ * Spec-declared `role` is the authoritative source for "this field is
+ * derived, not user data". An explicit presentation `editable` override
+ * wins (escape hatch for cases the role taxonomy doesn't yet cover);
+ * otherwise a non-`"data"` role locks the field.
  */
-export function toPresentationPatterns<T>(
+function emitPresentationEntries<T>(
     spec: StructSpec<T>,
     presentation: StructPresentation<T>,
-    pathTemplate: string,
-): PatternEntry[] {
-    const escapedPath = regexEscape(pathTemplate);
-    const out: PatternEntry[] = [];
+    emit: (key: keyof T & string, entry: PresentationEntry) => void,
+): void {
     for (const key of Object.keys(spec) as (keyof T & string)[]) {
         const fs = spec[key];
         if (isArraySpec(fs) || isCharsSpec(fs)) continue;
         const pres = presentation[key];
-        const pathPattern = `^${escapedPath}\\.${key}$`;
 
         if (fs.enum) {
-            out.push({
-                pathPattern,
+            emit(key, {
                 ...(pres?.label !== undefined && { label: pres.label }),
                 presentationType: "enum",
                 enumOptions: stringifyKeys(fs.enum),
@@ -122,8 +60,7 @@ export function toPresentationPatterns<T>(
         }
 
         if (fs.flags) {
-            out.push({
-                pathPattern,
+            emit(key, {
                 ...(pres?.label !== undefined && { label: pres.label }),
                 presentationType: "flags",
                 flagOptions: stringifyKeys(fs.flags),
@@ -136,8 +73,48 @@ export function toPresentationPatterns<T>(
         if (pres?.editable !== undefined) overrides.editable = pres.editable;
         else if (fs.role !== undefined && fs.role !== "data") overrides.editable = false;
         if (Object.keys(overrides).length > 0) {
-            out.push({ pathPattern, ...overrides });
+            emit(key, overrides);
         }
     }
+}
+
+/**
+ * Derive `presentation-schema.ts` `exactFields` entries from a `StructSpec`
+ * and `StructPresentation`. Output keyed by `${prefix}.${fieldName}`.
+ * See `emitPresentationEntries` for emit rules.
+ */
+export function toPresentationEntries<T>(
+    spec: StructSpec<T>,
+    presentation: StructPresentation<T>,
+    prefix: string,
+): Record<string, PresentationEntry> {
+    const out: Record<string, PresentationEntry> = {};
+    emitPresentationEntries(spec, presentation, (key, entry) => {
+        out[`${prefix}.${key}`] = entry;
+    });
+    return out;
+}
+
+/**
+ * Path-aware counterpart to `toPresentationEntries`. Used by formats whose
+ * canonical paths nest through array indices (e.g., MAP's
+ * `map.scripts[].extents[].slots[].localVarsOffset`) which the flat-prefix
+ * `toPresentationEntries` shape cannot express.
+ *
+ * The `pathTemplate` carries the unescaped path including literal `[]`
+ * markers (`map.scripts[].extents[].slots[]`); the helper regex-escapes it
+ * and appends each emitted field name to produce a `^<path>\\.<field>$`
+ * pattern. See `emitPresentationEntries` for emit rules.
+ */
+export function toPresentationPatterns<T>(
+    spec: StructSpec<T>,
+    presentation: StructPresentation<T>,
+    pathTemplate: string,
+): PatternEntry[] {
+    const escapedPath = regexEscape(pathTemplate);
+    const out: PatternEntry[] = [];
+    emitPresentationEntries(spec, presentation, (key, entry) => {
+        out.push({ pathPattern: `^${escapedPath}\\.${key}$`, ...entry });
+    });
     return out;
 }

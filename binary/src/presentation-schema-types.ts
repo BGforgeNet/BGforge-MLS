@@ -65,6 +65,6 @@ export function compilePatternFields(
 }
 
 /** Convert a numeric-keyed enum/flag table to a string-keyed shape suitable for the schema. */
-export function stringifyKeys(table: Record<number, string>): Record<string, string> {
+export function stringifyKeys(table: Readonly<Record<number, string>>): Record<string, string> {
     return Object.fromEntries(Object.entries(table).map(([key, value]) => [String(key), value]));
 }

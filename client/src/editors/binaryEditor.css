@@ -363,15 +363,6 @@ input[type="number"]:hover::-webkit-outer-spin-button {
 
 /* -- Flags (2-column grid) --------------------------------------------------- */
 
-.flag-label {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    cursor: pointer;
-    color: var(--vscode-debugTokenExpression-string, #ce9178);
-    font-size: 0.9em;
-}
-
 .flag-label:hover {
     color: var(--vscode-editor-foreground);
 }
