@@ -84,3 +84,93 @@ Files where the script section overflows on parse (a `count` field driving the p
 - Cross-file copy/paste of entries (clipboard carries spec-typed payload; paste validates against target array's spec).
 - Scripted-operation hook for extensions: a stable API to enumerate addable arrays and run `EntityOperation`s programmatically. Enables modder workflows like "apply patcher to every CRE in a directory."
 - Format coverage broadens to whatever IE/Fallout formats are wired up by then (`SAVE.DAT`, `GAM`, `CRE`, `ARE`, `TLK`, …). Each format opts in by annotating its `arraySpec`s — no UI changes required.
+
+## `@bgforge/binary`: enum and PID named projection
+
+Extension of the named-projection model (see `binary/INTERNALS.md` rules 7–9). Flag fields
+already project through `intToFlagDict` / `flagDictToInt` at the wire boundary; enums and PIDs
+are the remaining two coded-scalar shapes.
+
+### Enums — `string | number` union
+
+Closed enums (no `enumOpen`) project to a string-literal union; unknown values stay numeric in
+permissive load and are rejected by the strict save gate. Helpers `intToEnumValue` /
+`enumValueToInt` already exist in `binary/src/spec/coded-projection.ts`; the wire-codec
+boundary (`EnumValueSchema` analog of `FlagDictSchema`), zod schema (`enumValueZodSchema`
+analog of `flagDictZodSchema`), and `SpecData<S>` projection all need wiring.
+
+The MAP carve-out for `rotation` / `elevation` (`map/canonical-schemas.ts` keeps these as
+`int32Schema` despite the spec's enum tables, because shipped files carry packed-PID-shaped
+values) means MAP's hand-written canonical schema must accept `string | number` for affected
+fields, and any arithmetic in MAP's reader/writer/parse-objects must call `enumValueToInt`
+before bitwise ops. The change therefore lands per-format, not in a single derive-zod tweak.
+
+### PIDs — tagged composite
+
+Packed `objectType<<24 | objectId` ints become `{type: name, id}` when type is known,
+`{typeRaw: int, id}` otherwise. Spec annotation: a new `pid?: { typeTable: Record<number, string> }`
+attached to the parent slot; the wire codec packs/unpacks at the byte boundary; the canonical
+projection collapses the two parts into the tagged object. Existing `binary/src/pid-resolver.ts`
+provides the type-table contents.
+
+### Construction API: `@bgforge/binary` (file creation from scratch)
+
+Library-level support for building binary files from scratch in TypeScript, alongside the existing
+parse / mutate / serialize flow. Built on top of the named-projection canonical-doc shape (see
+`binary/INTERNALS.md` rules 7–9), which makes the canonical shape ergonomic enough to serve as
+both the on-disk JSON form and the construction-time API surface — no translation layer between
+them.
+
+### Goal
+
+```ts
+import { Item, makeAbility } from "@bgforge/binary";
+
+const item = new Item({ name: "Sulik's Chainsaw" });
+item.header.flags.unidentified = true;
+item.abilities.add(makeAbility({ type: "melee", damage: 5 }));
+item.abilities.add(makeAbility({ type: "ranged", damage: 8, range: 12 }));
+const bytes = item.toBytes();
+```
+
+The named-projection shape gives `flags.unidentified = true` for free. Sub-record factories
+(`makeAbility`, `makeEffect`, `makeHeader`, …) fill defaults from spec; constructors take a
+sparse `Partial<Document>` and merge over defaults.
+
+### Pieces
+
+- **Per-format wrapper classes**: `Item`, `Spell`, `Effect`, `Pro`, `Map`. Constructor takes
+  `Partial<Document>`; defaults filled from `spec/derive-default.ts`. Methods: `toBytes()`,
+  `toSnapshot()`, `validate()`. Static factories: `fromBytes(bytes)`, `fromSnapshot(json)`.
+- **Sub-record factory functions**: `makeAbility(opts?)`, `makeEffect(opts?)`, `makeHeader(opts?)`.
+  Plain typed objects with default-merging factories; class-wrapping every sub-record is heavier
+  than it earns.
+- **Collection helpers**: `item.abilities.add(opts?)`, `item.abilities.remove(idx)`,
+  `item.abilities.move(from, to)`, etc. Backed by the same `EntityOperation` pipeline the binary
+  editor uses.
+- **Validation timing**: construction is permissive (zero-default everything, allow free
+  mutation); strict gate runs at `toBytes()` / `toSnapshot()`. Aligns with the existing
+  read-permissive-write-strict architectural rule.
+- **No Constructs library.** The shallow ownership tree (Item → Ability → Effect; Map → Object
+  → Inventory) does not need scope traversal, aspects, or multi-stage synthesis. Plain
+  class-per-format with factory functions for sub-records is the right weight.
+
+### Test surface
+
+`binary/test/construction.test.ts` exercising:
+
+- Round-trip from scratch: `new Item({...}).toBytes()` produces parseable bytes that re-load to
+  an equivalent doc.
+- Permissive construction with derived-field mismatches getting caught at `toBytes()` time
+  (`validateDerivedFields` shape).
+- Defaults producing valid bytes for every format without user input beyond the format's
+  required-by-engine fields.
+
+### Prerequisites
+
+Named-projection redesign for PRO and the other four formats (rules 7–9 in
+`binary/INTERNALS.md`) lands first. The construction API is mechanical replication of the
+named-dict / typed-record shape across constructor classes; without that shape, the
+construction surface would either require translation (extra layer) or expose raw ints (poor
+ergonomics). Default-value derivation (`spec/derive-default.ts`) is introduced as part of the
+named-projection work so the construction API inherits a single source of truth.

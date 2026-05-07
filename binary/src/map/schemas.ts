@@ -22,7 +22,14 @@ export interface MapHeader {
     defaultOrientation: number;
     numLocalVars: number;
     scriptId: number;
-    flags: number;
+    /**
+     * `flags` is the named-bit dict produced by the wire codec
+     * (`FlagDictSchema`). Consumers that need a numeric mask use the
+     * `Record<string, boolean | string>` overload of `hasElevation` (see
+     * `./types.ts`); raw-int access goes through `flagDictToInt(MapFlags, …)`
+     * if needed.
+     */
+    flags: Record<string, boolean | string>;
     darkness: number;
     numGlobalVars: number;
     mapId: number;

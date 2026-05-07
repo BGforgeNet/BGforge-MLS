@@ -4,14 +4,18 @@
  */
 
 import { toTypedBinarySchema } from "../spec/derive-typed-binary";
-import { effectSpec } from "../ie-common/specs";
-import { splHeaderSpec } from "./specs/header";
-import { splAbilitySpec } from "./specs/ability";
+import { effectSpecAnnotated } from "../ie-common/specs/effect.overrides";
+import { splHeaderSpecAnnotated } from "./specs/header.overrides";
+import { splAbilitySpecAnnotated } from "./specs/ability.overrides";
+import type { SpecData } from "../spec/types";
 
-export const splHeaderSchema = toTypedBinarySchema(splHeaderSpec);
-export const splAbilitySchema = toTypedBinarySchema(splAbilitySpec);
-export const effectSchema = toTypedBinarySchema(effectSpec);
+// Wire codecs use the *annotated* specs so flag fields project through
+// `intToFlagDict` / `flagDictToInt` at the byte boundary — see itm/schemas.ts
+// for the same pattern.
+export const splHeaderSchema = toTypedBinarySchema(splHeaderSpecAnnotated);
+export const splAbilitySchema = toTypedBinarySchema(splAbilitySpecAnnotated);
+export const effectSchema = toTypedBinarySchema(effectSpecAnnotated);
 
-export type { SplHeaderData } from "./specs/header";
-export type { SplAbilityData } from "./specs/ability";
-export type { EffectData } from "../ie-common/specs";
+export type SplHeaderData = SpecData<typeof splHeaderSpecAnnotated>;
+export type SplAbilityData = SpecData<typeof splAbilitySpecAnnotated>;
+export type EffectData = SpecData<typeof effectSpecAnnotated>;

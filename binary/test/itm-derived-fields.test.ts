@@ -1,7 +1,8 @@
 import { describe, expect, test } from "vitest";
 import { itmPresentationSchema } from "../src/itm/presentation-schema";
 import { itmCanonicalDocumentSchema } from "../src/itm/canonical-schemas";
-import { ITM_HEADER_SIZE } from "../src/itm/types";
+import { ITM_HEADER_SIZE, ItmFlags } from "../src/itm/types";
+import { intToFlagDict } from "../src/spec/coded-projection";
 
 describe("ITM canonical-doc strict schema rejects mismatched derived fields", () => {
     function makeValidDoc() {
@@ -14,7 +15,7 @@ describe("ITM canonical-doc strict schema rejects mismatched derived fields", ()
                 unidentifiedName: 0,
                 identifiedName: 0,
                 replacement: "\0\0\0\0\0\0\0\0",
-                flags: 0,
+                flags: intToFlagDict(ItmFlags, 0, 32),
                 type: 0,
                 usabilityFlags: [0, 0, 0, 0],
                 animation: "  ",

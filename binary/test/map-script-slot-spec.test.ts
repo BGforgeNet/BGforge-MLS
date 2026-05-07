@@ -9,15 +9,20 @@ import {
     SPATIAL_SLOT_BYTES,
     TIMER_SLOT_BYTES,
 } from "../src/map/specs/script-slot";
+import { intToFlagDict } from "../src/spec/coded-projection";
+import { ScriptFlags } from "../src/map/types";
 
 const otherCodec = toTypedBinarySchema(otherSlotSpec);
 const spatialCodec = toTypedBinarySchema(spatialSlotSpec);
 const timerCodec = toTypedBinarySchema(timerSlotSpec);
 
-function buildOtherBytes(): { bytes: ArrayBuffer; expected: Record<string, number> } {
+function buildOtherBytes(): { bytes: ArrayBuffer; expected: Record<string, unknown> } {
     const bytes = new ArrayBuffer(OTHER_SLOT_BYTES);
     const w = new BufferWriter(bytes, { endianness: "big" });
-    const expected: Record<string, number> = {
+    // Wire shape (raw ints) used only to construct the byte buffer; the
+    // `expected` value compared after the read carries `flags` as the named
+    // dict the wire codec produces.
+    const wireInts: Record<string, number> = {
         sid: 0x0300_0001, // type 3, id 1
         nextScriptLinkLegacy: -1,
         flags: 0,
@@ -35,8 +40,8 @@ function buildOtherBytes(): { bytes: ArrayBuffer; expected: Record<string, numbe
         checkMarginHowMuch: 12,
         legacyField0x50: 13,
     };
-    w.writeUint32(expected.sid!);
-    w.writeInt32(expected.nextScriptLinkLegacy!);
+    w.writeUint32(wireInts.sid!);
+    w.writeInt32(wireInts.nextScriptLinkLegacy!);
     for (const k of [
         "flags",
         "index",
@@ -53,8 +58,12 @@ function buildOtherBytes(): { bytes: ArrayBuffer; expected: Record<string, numbe
         "checkMarginHowMuch",
         "legacyField0x50",
     ]) {
-        w.writeInt32(expected[k]!);
+        w.writeInt32(wireInts[k]!);
     }
+    const expected: Record<string, unknown> = {
+        ...wireInts,
+        flags: intToFlagDict(ScriptFlags, wireInts.flags!, 32),
+    };
     return { bytes, expected };
 }
 
@@ -73,7 +82,7 @@ describe("script slot specs", () => {
             nextScriptLinkLegacy: -1,
             builtTile: 100,
             spatialRadius: 5,
-            flags: 0,
+            flags: intToFlagDict(ScriptFlags, 0, 32),
             index: 0,
             programPointerSlot: 0,
             ownerId: 0,
@@ -104,7 +113,7 @@ describe("script slot specs", () => {
             sid: 0x0200_000a,
             nextScriptLinkLegacy: -1,
             timerTime: 12345,
-            flags: 0,
+            flags: intToFlagDict(ScriptFlags, 0, 32),
             index: 0,
             programPointerSlot: 0,
             ownerId: 0,

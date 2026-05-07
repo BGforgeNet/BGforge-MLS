@@ -11,11 +11,33 @@
             "frmId": 1,
             "lightRadius": 0,
             "lightIntensity": 0,
-            "flags": 2684354568
+            "flags": {
+                "flat": true,
+                "lightThru": true,
+                "multiHex": false,
+                "noBlock": false,
+                "noHighlight": false,
+                "shootThru": true,
+                "transEnergy": false,
+                "transGlass": false,
+                "transNone": false,
+                "transRed": false,
+                "transSteam": false,
+                "transWall": false,
+                "wallTransEnd": false
+            }
         },
         "sections": {
             "itemProperties": {
-                "flagsExt": 160,
+                "flagsExt": {
+                    "bigGun": false,
+                    "hidden": false,
+                    "look": true,
+                    "pickUp": true,
+                    "twoHand": false,
+                    "use": false,
+                    "useOnSmth": false
+                },
                 "attackModes": 0,
                 "scriptType": -1,
                 "scriptId": -1,

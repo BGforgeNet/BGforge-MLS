@@ -7,7 +7,11 @@ import { clampNumericValue } from "../binary-format-contract";
 import { resolveRawValueFromDisplay } from "../display-lookups";
 import { createFieldKey, toSemanticFieldKey } from "../presentation-schema";
 import { parseWithSchemaValidation } from "../schema-validation";
+import { intToFlagDict, type FlagDict } from "../spec/coded-projection";
 import {
+    ActionFlags,
+    ContainerFlags,
+    CritterFlags,
     CRITTER_BASE_DR,
     CRITTER_BASE_DT,
     CRITTER_BASE_PRIMARY,
@@ -17,6 +21,9 @@ import {
     CRITTER_BONUS_PRIMARY,
     CRITTER_BONUS_SECONDARY,
     CRITTER_SKILLS,
+    HeaderFlags,
+    ItemFlagsExt,
+    WallLightFlags,
 } from "./types";
 import type { ParsedField, ParsedGroup, ParseResult } from "../types";
 import {
@@ -97,6 +104,22 @@ function readClampedFieldNumber(
     return clampNumericValue(readFieldNumber(group, fieldName, sectionName), type, { format: "pro", fieldKey });
 }
 
+/**
+ * Read a flag-word field from the display tree and project it to the
+ * named-bit dict shape canonical-doc expects. Width is hard-coded per call
+ * site to match the underlying spec codec — every PRO flag word is u8 / u24
+ * / u32 in the spec, mapped to the matching `codecBitWidth` here.
+ */
+function readFlagDict(
+    group: ParsedGroup,
+    fieldName: string,
+    table: Readonly<Record<number, string>>,
+    codecBitWidth: number,
+): FlagDict {
+    const numeric = readFieldNumber(group, fieldName, group.name);
+    return intToFlagDict(table, numeric, codecBitWidth);
+}
+
 function rebuildProCanonicalSnapshot(parseResult: ParseResult): ProCanonicalSnapshot {
     const header = getGroup(parseResult.root, "Header");
     const sections: Record<string, unknown> = {};
@@ -115,13 +138,13 @@ function rebuildProCanonicalSnapshot(parseResult: ParseResult): ProCanonicalSnap
             "pro.header.lightIntensity",
             "uint32",
         ),
-        flags: readFieldNumber(header, "Flags", "Header"),
+        flags: readFlagDict(header, "Flags", HeaderFlags, 32),
     };
 
     const itemProperties = getOptionalGroup(parseResult.root, "Item Properties");
     if (itemProperties) {
         sections.itemProperties = {
-            flagsExt: readFieldNumber(itemProperties, "Flags Ext", "Item Properties"),
+            flagsExt: readFlagDict(itemProperties, "Flags Ext", ItemFlagsExt, 24),
             attackModes: readFieldNumber(itemProperties, "Attack Modes", "Item Properties"),
             scriptType: readFieldNumber(itemProperties, "Script Type", "Item Properties"),
             scriptId: readFieldNumber(itemProperties, "Script ID", "Item Properties"),
@@ -200,7 +223,7 @@ function rebuildProCanonicalSnapshot(parseResult: ParseResult): ProCanonicalSnap
     if (containerStats) {
         sections.containerStats = {
             maxSize: readFieldNumber(containerStats, "Max Size", "Container Stats"),
-            openFlags: readFieldNumber(containerStats, "Open Flags", "Container Stats"),
+            openFlags: readFlagDict(containerStats, "Open Flags", ContainerFlags, 32),
         };
     }
 
@@ -269,7 +292,7 @@ function rebuildProCanonicalSnapshot(parseResult: ParseResult): ProCanonicalSnap
             headFrmId: readFieldNumber(critterProperties, "Head FRM ID", "Critter Properties"),
             aiPacket: readFieldNumber(critterProperties, "AI Packet", "Critter Properties"),
             teamNumber: readFieldNumber(critterProperties, "Team Number", "Critter Properties"),
-            critterFlags: readFieldNumber(critterProperties, "Critter Flags", "Critter Properties"),
+            critterFlags: readFlagDict(critterProperties, "Critter Flags", CritterFlags, 32),
             ...mapGroupFromDefs(basePrimary, CRITTER_BASE_PRIMARY),
             ...mapGroupFromDefs(baseSecondary, CRITTER_BASE_SECONDARY),
             ...mapGroupFromDefs(baseDt, CRITTER_BASE_DT),
@@ -295,8 +318,8 @@ function rebuildProCanonicalSnapshot(parseResult: ParseResult): ProCanonicalSnap
     const sceneryProperties = getOptionalGroup(parseResult.root, "Scenery Properties");
     if (sceneryProperties) {
         sections.sceneryProperties = {
-            wallLightFlags: readFieldNumber(sceneryProperties, "Wall Light Flags", "Scenery Properties"),
-            actionFlags: readFieldNumber(sceneryProperties, "Action Flags", "Scenery Properties"),
+            wallLightFlags: readFlagDict(sceneryProperties, "Wall Light Flags", WallLightFlags, 16),
+            actionFlags: readFlagDict(sceneryProperties, "Action Flags", ActionFlags, 16),
             scriptType: readFieldNumber(sceneryProperties, "Script Type", "Scenery Properties"),
             scriptId: readFieldNumber(sceneryProperties, "Script ID", "Scenery Properties"),
             subType: readFieldNumber(sceneryProperties, "Sub Type", "Scenery Properties"),
@@ -354,8 +377,8 @@ function rebuildProCanonicalSnapshot(parseResult: ParseResult): ProCanonicalSnap
     const wallProperties = getOptionalGroup(parseResult.root, "Wall Properties");
     if (wallProperties) {
         sections.wallProperties = {
-            wallLightFlags: readFieldNumber(wallProperties, "Wall Light Flags", "Wall Properties"),
-            actionFlags: readFieldNumber(wallProperties, "Action Flags", "Wall Properties"),
+            wallLightFlags: readFlagDict(wallProperties, "Wall Light Flags", WallLightFlags, 16),
+            actionFlags: readFlagDict(wallProperties, "Action Flags", ActionFlags, 16),
             scriptType: readFieldNumber(wallProperties, "Script Type", "Wall Properties"),
             scriptId: readFieldNumber(wallProperties, "Script ID", "Wall Properties"),
             materialId: readFieldNumber(wallProperties, "Material", "Wall Properties"),

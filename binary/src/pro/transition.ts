@@ -2,16 +2,20 @@ import { BufferReader, BufferWriter } from "typed-binary";
 import { getProCanonicalDocument, rebuildProCanonicalDocument, serializeProCanonicalDocument } from "./canonical";
 import { headerSchema, itemCommonSchema, sceneryCommonSchema } from "./schemas";
 import {
+    ActionFlags,
     CRITTER_SIZE,
     HEADER_SIZE,
     ITEM_SUBTYPE_OFFSET,
     ITEM_SUBTYPE_SIZES,
+    ItemFlagsExt,
     MISC_SIZE,
     SCENERY_SUBTYPE_OFFSET,
     SCENERY_SUBTYPE_SIZES,
     TILE_SIZE,
     WALL_SIZE,
+    WallLightFlags,
 } from "./types";
+import { emptyFlagDict } from "../spec/coded-projection";
 import type { ParseResult } from "../types";
 
 function reader(data: Uint8Array, offset = 0): BufferReader {
@@ -70,7 +74,7 @@ function buildObjectTypeTransitionBytes(currentBytes: Uint8Array, objectType: nu
 
     if (objectType === 0) {
         itemCommonSchema.write(writer(nextBytes, HEADER_SIZE), {
-            flagsExt: 0,
+            flagsExt: emptyFlagDict(ItemFlagsExt),
             attackModes: 0,
             scriptType: -1,
             scriptId: -1,
@@ -84,8 +88,8 @@ function buildObjectTypeTransitionBytes(currentBytes: Uint8Array, objectType: nu
         });
     } else if (objectType === 2) {
         sceneryCommonSchema.write(writer(nextBytes, HEADER_SIZE), {
-            wallLightFlags: 0,
-            actionFlags: 0,
+            wallLightFlags: emptyFlagDict(WallLightFlags),
+            actionFlags: emptyFlagDict(ActionFlags),
             scriptType: -1,
             scriptId: -1,
             subType: 0,

@@ -220,7 +220,7 @@ export const HeaderFlags: Record<number, string> = {
 
 export const ItemFlagsExt: Record<number, string> = {
     0x00_00_01: "BigGun",
-    0x00_00_02: "2Hnd",
+    0x00_00_02: "TwoHand",
     0x00_00_08: "Use",
     0x00_00_10: "UseOnSmth",
     0x00_00_20: "Look",

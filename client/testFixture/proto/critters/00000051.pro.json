@@ -11,7 +11,21 @@
             "frmId": 120,
             "lightRadius": 0,
             "lightIntensity": 0,
-            "flags": 536870912
+            "flags": {
+                "flat": false,
+                "lightThru": true,
+                "multiHex": false,
+                "noBlock": false,
+                "noHighlight": false,
+                "shootThru": false,
+                "transEnergy": false,
+                "transGlass": false,
+                "transNone": false,
+                "transRed": false,
+                "transSteam": false,
+                "transWall": false,
+                "wallTransEnd": false
+            }
         },
         "sections": {
             "critterStats": {
@@ -21,7 +35,19 @@
                 "headFrmId": -1,
                 "aiPacket": 15,
                 "teamNumber": 1,
-                "critterFlags": 2,
+                "critterFlags": {
+                    "barter": true,
+                    "invulnerable": false,
+                    "noAges": false,
+                    "noDrop": false,
+                    "noFlatten": false,
+                    "noHeal": false,
+                    "noKnock": false,
+                    "noLimbs": false,
+                    "noSteal": false,
+                    "rangeMelee": false,
+                    "specialDeath": false
+                },
                 "strength": 4,
                 "perception": 8,
                 "endurance": 3,

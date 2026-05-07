@@ -123,6 +123,19 @@ export const ObjectFlags: Record<number, string> = {
     0x80_00_00_00: "ShootThru",
 };
 
-export function hasElevation(flags: number, elevation: number): boolean {
-    return (flags & (0x2 << elevation)) === 0;
+/**
+ * Predicate: whether tile bytes for `elevation` (0/1/2) are present in the
+ * file. Reads the `MapFlags.SkipElevation0Tiles` / `SkipElevation1Tiles` /
+ * `SkipElevation2Tiles` named bits — the named projection makes this a
+ * direct dict lookup; the legacy `(flags & (0x2 << elevation)) === 0`
+ * bitmask form is preserved as a fallback for callers that still hold a
+ * raw int (e.g., low-level parsers).
+ */
+export function hasElevation(flags: number | Record<string, boolean | string>, elevation: number): boolean {
+    if (typeof flags === "number") {
+        return (flags & (0x2 << elevation)) === 0;
+    }
+    const key =
+        elevation === 0 ? "skipElevation0Tiles" : elevation === 1 ? "skipElevation1Tiles" : "skipElevation2Tiles";
+    return flags[key] !== true;
 }

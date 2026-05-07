@@ -11,12 +11,41 @@
             "frmId": 1691,
             "lightRadius": 0,
             "lightIntensity": 0,
-            "flags": 0
+            "flags": {
+                "flat": false,
+                "lightThru": false,
+                "multiHex": false,
+                "noBlock": false,
+                "noHighlight": false,
+                "shootThru": false,
+                "transEnergy": false,
+                "transGlass": false,
+                "transNone": false,
+                "transRed": false,
+                "transSteam": false,
+                "transWall": false,
+                "wallTransEnd": false
+            }
         },
         "sections": {
             "wallProperties": {
-                "wallLightFlags": 8192,
-                "actionFlags": 8192,
+                "wallLightFlags": {
+                    "eastCorner": false,
+                    "eastWest": false,
+                    "northCorner": false,
+                    "northSouth": false,
+                    "southCorner": true,
+                    "westCorner": false
+                },
+                "actionFlags": {
+                    "kneel": false,
+                    "look": false,
+                    "pickUp": false,
+                    "talk": false,
+                    "use": false,
+                    "useOnSmth": false,
+                    "_bits": "0x2000"
+                },
                 "scriptType": -1,
                 "scriptId": -1,
                 "materialId": 5

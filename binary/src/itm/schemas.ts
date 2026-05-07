@@ -8,14 +8,25 @@
  */
 
 import { toTypedBinarySchema } from "../spec/derive-typed-binary";
-import { effectSpec } from "../ie-common/specs";
-import { itmHeaderSpec } from "./specs/header";
-import { itmAbilitySpec } from "./specs/ability";
+import { effectSpecAnnotated } from "../ie-common/specs/effect.overrides";
+import { itmHeaderSpecAnnotated } from "./specs/header.overrides";
+import { itmAbilitySpecAnnotated } from "./specs/ability.overrides";
 
-export const itmHeaderSchema = toTypedBinarySchema(itmHeaderSpec);
-export const itmAbilitySchema = toTypedBinarySchema(itmAbilitySpec);
-export const effectSchema = toTypedBinarySchema(effectSpec);
+// Wire codecs use the *annotated* specs so flag fields project through
+// `intToFlagDict` / `flagDictToInt` at the byte boundary — the canonical-doc
+// surface (which is built off the same annotated specs) sees flags as named
+// dicts, matching what the zod schema validates.
+export const itmHeaderSchema = toTypedBinarySchema(itmHeaderSpecAnnotated);
+export const itmAbilitySchema = toTypedBinarySchema(itmAbilitySpecAnnotated);
+export const effectSchema = toTypedBinarySchema(effectSpecAnnotated);
 
-export type { ItmHeaderData } from "./specs/header";
-export type { ItmAbilityData } from "./specs/ability";
-export type { EffectData } from "../ie-common/specs";
+// Re-export the data types projected from the *annotated* specs so flag
+// fields surface as `Record<string, boolean | string>` (the named-bit dict)
+// rather than `number`. The bare-spec types in `./specs/header` etc. remain
+// the underlying source for the spread, but consumers (parser, canonical
+// reader/writer) should consume the annotated projection.
+import type { SpecData } from "../spec/types";
+
+export type ItmHeaderData = SpecData<typeof itmHeaderSpecAnnotated>;
+export type ItmAbilityData = SpecData<typeof itmAbilitySpecAnnotated>;
+export type EffectData = SpecData<typeof effectSpecAnnotated>;

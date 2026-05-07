@@ -1,4 +1,5 @@
 import { codecByteLength, codecNumericTypeName } from "./codec-meta";
+import { flagDictToInt, intToFlagDict, type FlagDict } from "./coded-projection";
 import { humanize, type FieldPresentation, type StructPresentation } from "./presentation";
 import { stringifyKeys } from "../presentation-schema-types";
 import {
@@ -31,7 +32,7 @@ export function walkGroup<S extends Record<string, FieldSpec>>(
     group: ParsedGroup,
     spec: S,
     presentation: StructPresentation<SpecData<S>>,
-): { -readonly [K in keyof S]: number } {
+): SpecData<S> {
     const byName = new Map<string, ParsedField>();
     for (const entry of group.fields) {
         if ("fields" in entry) continue; // sub-groups skipped; scalars only
@@ -70,9 +71,12 @@ export function walkGroup<S extends Record<string, FieldSpec>>(
                 `walkGroup: field "${key}" (label "${label}") in "${group.name}" had no numeric rawValue/value.`,
             );
         }
-        out[key] = numeric;
+        // Flag fields project to a named-bit dict in canonical-doc shape; the
+        // display tree carries the int via `rawValue` so the round-trip is
+        // int → dict → int through `intToFlagDict` / `flagDictToInt`.
+        out[key] = fs.flags ? intToFlagDict(fs.flags, numeric, codecByteLength(fs.codec) * 8) : numeric;
     }
-    return out as { -readonly [K in keyof S]: number };
+    return out as SpecData<S>;
 }
 
 interface SubGroupSpec {
@@ -288,10 +292,16 @@ function scalarFieldFor(
     }
 
     if (fs.flags) {
-        const numeric = value as number;
+        // Flag fields surface in canonical-doc as a named-bit dict, but
+        // slot-element data still flows through here as raw `number` since the
+        // enclosing array's wire shape is `number[]` (the per-slot flag
+        // annotation is a presentation hint, not a structural change to the
+        // array element type). Accept both shapes: dict → repack via
+        // `flagDictToInt`, number → use directly.
+        const numeric = typeof value === "number" ? value : flagDictToInt(fs.flags, value as FlagDict);
         const active = Object.entries(fs.flags)
             .filter(([bit]) => (numeric & Number(bit)) !== 0)
-            .map(([, n]) => n);
+            .map(([, displayName]) => displayName);
         return {
             name: label,
             value: active.length > 0 ? active.join(", ") : "(none)",

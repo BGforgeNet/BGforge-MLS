@@ -11,7 +11,22 @@
             "frmId": 676,
             "lightRadius": 0,
             "lightIntensity": 0,
-            "flags": 4294967295
+            "flags": {
+                "flat": true,
+                "lightThru": true,
+                "multiHex": true,
+                "noBlock": true,
+                "noHighlight": true,
+                "shootThru": true,
+                "transEnergy": true,
+                "transGlass": true,
+                "transNone": true,
+                "transRed": true,
+                "transSteam": true,
+                "transWall": true,
+                "wallTransEnd": true,
+                "_bits": "0x4ff027e7"
+            }
         },
         "sections": {
             "tileProperties": {

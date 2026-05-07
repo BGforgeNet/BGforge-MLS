@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { zodNumericType } from "../binary-format-contract";
-import { codecNumericTypeName } from "./codec-meta";
+import { codecByteLength, codecNumericTypeName } from "./codec-meta";
+import { compileFlagTable } from "./coded-projection";
 import { isArraySpec, isCharsSpec, isFromFieldCount, type FieldSpec, type SpecData } from "./types";
 
 /**
@@ -84,6 +85,15 @@ function fieldSpecToZod(fs: FieldSpec, mode: "strict" | "permissive"): z.ZodType
         // shorter values are NUL-padded by the codec.
         return z.string().max(fs.count);
     }
+    if (fs.flags) {
+        // Flag word: project to a strict-object dict of named-bit booleans
+        // plus a `_bits` reservoir that carries unnamed bits as a hex string.
+        // The strict-disjoint invariant (named bits never appear in `_bits`)
+        // is enforced by `flagDictToInt` at the wire boundary; the schema
+        // shape itself just gates the surface — every named key is required,
+        // `_bits` is optional, no extra keys allowed.
+        return flagDictZodSchema(fs.flags, codecByteLength(fs.codec) * 8);
+    }
     if (fs.enum && mode === "strict" && !fs.enumOpen) {
         // Closed enums (PRO `objectType`, ITM ability `attackType`, etc.):
         // saved values must be a key in the enum table; permissive parsing
@@ -92,6 +102,13 @@ function fieldSpecToZod(fs: FieldSpec, mode: "strict" | "permissive"): z.ZodType
         // round-trippable. Open enums (`enumOpen: true`, e.g. effect opcodes,
         // ITM type) skip this refinement — the table is advisory, not
         // exhaustive.
+        //
+        // Named-string projection for enums is described in `binary/INTERNALS.md`
+        // rule #7 but not yet wired through the wire codec / canonical schemas
+        // (the MAP "rotation/elevation deliberately numeric" carve-out makes
+        // it a multi-format refactor rather than a derivation tweak). Helpers
+        // `intToEnumValue` / `enumValueToInt` exist in `coded-projection.ts`
+        // for hand-written canonical schemas that opt in.
         const allowed = new Set(Object.keys(fs.enum).map(Number));
         return z
             .number()
@@ -118,4 +135,72 @@ function fieldSpecToZod(fs: FieldSpec, mode: "strict" | "permissive"): z.ZodType
         schema = schema.min(fs.domain.min).max(fs.domain.max);
     }
     return schema;
+}
+
+/**
+ * Build the zod schema for an enum-value canonical-doc field.
+ *
+ * `closedStrict = true` produces a string-only union over the enum's named
+ * values (the strict-save gate for closed enums); otherwise the schema is
+ * `string | number` (permissive read for closed enums, and the steady-state
+ * shape for open enums where the table is advisory).
+ *
+ * Exported so hand-written canonical schemas (e.g. MAP) can declare enum
+ * fields without re-deriving the shape from a spec entry.
+ */
+export function enumValueZodSchema(
+    table: Readonly<Record<number, string>>,
+    closedStrict: boolean,
+): z.ZodType<string | number> {
+    const names = Object.values(table);
+    const literalSchemas = names.map((n) => z.literal(n));
+    if (literalSchemas.length === 0) {
+        // Defensive: an enum table with no entries doesn't constrain
+        // anything; fall through to z.number(). Should not occur in practice.
+        return z.number().int();
+    }
+    if (closedStrict) {
+        return literalSchemas.length === 1
+            ? (literalSchemas[0] as unknown as z.ZodType<string | number>)
+            : (z.union(literalSchemas as unknown as [z.ZodType<string>, z.ZodType<string>]) as unknown as z.ZodType<
+                  string | number
+              >);
+    }
+    const stringPart =
+        literalSchemas.length === 1
+            ? (literalSchemas[0] as unknown as z.ZodType<string>)
+            : z.union(literalSchemas as unknown as [z.ZodType<string>, z.ZodType<string>]);
+    return z.union([stringPart, z.number().int()]) as unknown as z.ZodType<string | number>;
+}
+
+/**
+ * Build the zod schema for a flag-dict canonical-doc field. Exported so
+ * hand-written canonical schemas (e.g. MAP) can declare flag fields without
+ * re-deriving the shape from a spec entry. `codecBitWidth` is 8 / 16 / 24 / 32
+ * — must match the wire codec's width so `_bits` cannot carry bits outside
+ * the wire word.
+ */
+export function flagDictZodSchema(
+    table: Readonly<Record<number, string>>,
+    codecBitWidth: number,
+): z.ZodType<Record<string, boolean | string>> {
+    const codecMaxHexDigits = Math.ceil(codecBitWidth / 4);
+    const { entries } = compileFlagTable(table);
+    const shape: Record<string, z.ZodType<unknown>> = {};
+    for (const entry of entries) {
+        shape[entry.key] = z.boolean();
+    }
+    // `_bits` is the reservoir for unnamed bits in the wire word. Width-bound
+    // to the codec so a hand-edit cannot smuggle bits beyond the wire shape.
+    // Disjointness with named bits is checked by `flagDictToInt` (the
+    // wire-boundary validator); enforcing it here too would require wiring
+    // the named mask through every refinement, doubled for permissive mode.
+    const reservoirSchema = z
+        .string()
+        .regex(new RegExp(`^0x[0-9a-fA-F]{1,${codecMaxHexDigits}}$`), {
+            message: `_bits must match /^0x[0-9a-fA-F]{1,${codecMaxHexDigits}}$/`,
+        })
+        .optional();
+    shape._bits = reservoirSchema;
+    return z.strictObject(shape) as unknown as z.ZodType<Record<string, boolean | string>>;
 }

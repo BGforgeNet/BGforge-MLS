@@ -7,10 +7,11 @@ import { z } from "zod";
 import { zodFieldNumber, zodNumericType } from "../binary-format-contract";
 import { opaqueRangeSchema } from "../shared-schemas";
 import { TILES_PER_ELEVATION } from "./schemas";
-import { toZodSchema } from "../spec/derive-zod";
+import { flagDictZodSchema, toZodSchema } from "../spec/derive-zod";
 import { critterDataSpec, inventoryHeaderSpec } from "./specs/object";
 import { mapHeaderSpec } from "./specs/header";
 import { validateDerivedFields } from "../spec/types";
+import { MapFlags, ObjectFlags, ScriptFlags } from "./types";
 
 export const MAP_OBJECT_BASE_SIZE = 0x48;
 export const MAP_OBJECT_DATA_HEADER_SIZE = 0x0c;
@@ -30,7 +31,7 @@ export const mapHeaderSchema = z.strictObject({
     defaultOrientation: zodFieldNumber("map", "map.header.defaultOrientation", "int32"),
     numLocalVars: int32Schema,
     scriptId: int32Schema,
-    flags: uint32Schema,
+    flags: flagDictZodSchema(MapFlags, 32),
     darkness: int32Schema,
     numGlobalVars: int32Schema,
     mapId: int32Schema,
@@ -60,7 +61,7 @@ export const mapScriptSlotSchema = z.strictObject({
     builtTile: int32Schema.optional(),
     spatialRadius: int32Schema.optional(),
     timerTime: int32Schema.optional(),
-    flags: int32Schema,
+    flags: flagDictZodSchema(ScriptFlags, 32),
     index: int32Schema,
     programPointerSlot: int32Schema,
     ownerId: int32Schema,
@@ -104,7 +105,7 @@ export const mapObjectBaseSchema = z.strictObject({
     frame: int32Schema,
     rotation: int32Schema,
     fid: uint32Schema,
-    flags: int32Schema,
+    flags: flagDictZodSchema(ObjectFlags, 32),
     elevation: int32Schema,
     pid: int32Schema,
     cid: int32Schema,

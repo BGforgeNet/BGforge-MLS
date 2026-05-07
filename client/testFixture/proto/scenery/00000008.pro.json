@@ -11,12 +11,41 @@
             "frmId": 283,
             "lightRadius": 0,
             "lightIntensity": 0,
-            "flags": 0
+            "flags": {
+                "flat": false,
+                "lightThru": false,
+                "multiHex": false,
+                "noBlock": false,
+                "noHighlight": false,
+                "shootThru": false,
+                "transEnergy": false,
+                "transGlass": false,
+                "transNone": false,
+                "transRed": false,
+                "transSteam": false,
+                "transWall": false,
+                "wallTransEnd": false
+            }
         },
         "sections": {
             "sceneryProperties": {
-                "wallLightFlags": 32768,
-                "actionFlags": 10240,
+                "wallLightFlags": {
+                    "eastCorner": false,
+                    "eastWest": false,
+                    "northCorner": false,
+                    "northSouth": false,
+                    "southCorner": false,
+                    "westCorner": true
+                },
+                "actionFlags": {
+                    "kneel": false,
+                    "look": false,
+                    "pickUp": false,
+                    "talk": false,
+                    "use": false,
+                    "useOnSmth": false,
+                    "_bits": "0x2800"
+                },
                 "scriptType": -1,
                 "scriptId": -1,
                 "subType": 0,

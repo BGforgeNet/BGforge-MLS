@@ -11,7 +11,21 @@
             "frmId": 9,
             "lightRadius": 8,
             "lightIntensity": 65536,
-            "flags": 536870912
+            "flags": {
+                "flat": false,
+                "lightThru": true,
+                "multiHex": false,
+                "noBlock": false,
+                "noHighlight": false,
+                "shootThru": false,
+                "transEnergy": false,
+                "transGlass": false,
+                "transNone": false,
+                "transRed": false,
+                "transSteam": false,
+                "transWall": false,
+                "wallTransEnd": false
+            }
         },
         "sections": {
             "miscProperties": {
