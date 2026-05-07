@@ -53,4 +53,31 @@ describe("itmParser — round-trip on real ITM v1 fixtures", () => {
             expect([...reserialized]).toEqual([...bytes]);
         });
     }
+
+    test("serializer recomputes derived structural fields, ignoring corrupted input", async () => {
+        // A canonical doc whose header pointers have been hand-edited to bogus
+        // values must still produce a valid file: enforceDerivedFields recomputes
+        // the fields the writer can definitively supply (header size for the
+        // abilities offset, abilities.length for the count, abilities-end for
+        // the effects offset). featureBlocksIndex/Count are equipping-subset
+        // metadata the helper has no truth source for and are preserved as-is.
+        const { serializeItmCanonicalDocument } = await import("../src/itm/canonical-writer");
+        const { getItmCanonicalDocument } = await import("../src/itm/canonical-reader");
+        const bytes = new Uint8Array(fs.readFileSync(FIRST_FIXTURE));
+        const result = itmParser.parse(bytes);
+        const doc = getItmCanonicalDocument(result);
+        if (!doc) throw new Error("no canonical doc");
+
+        const corrupted = {
+            ...doc,
+            header: {
+                ...doc.header,
+                extendedHeadersOffset: 99999,
+                extendedHeadersCount: 99,
+                featureBlocksOffset: 99999,
+            },
+        };
+        const reserialized = serializeItmCanonicalDocument(corrupted);
+        expect([...reserialized]).toEqual([...bytes]);
+    });
 });

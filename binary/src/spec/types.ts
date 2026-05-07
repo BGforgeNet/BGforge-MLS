@@ -205,39 +205,79 @@ export type SpecData<S extends Record<string, FieldSpec>> = {
 };
 
 /**
- * Linked structures: when an array field declares
- * `count: { fromField: "X" }`, the scalar field `X` is the on-wire count
- * paired with that array. The canonical-write path treats `X` as derived
- * from the array's length: callers (or `enforceLinkedCounts` below) must
- * recompute `X` from `doc.array.length` before serializing, and the zod
- * schema rejects documents where the two diverge. This keeps "add an item
- * to a map" a single semantic edit on the array — the count field tracks
- * automatically — while still surfacing the count in the canonical document
- * for visibility and round-trip JSON edits.
- *
- * Currently no spec uses lengthFrom arrays at runtime; the MAP migration
- * (variable-length tile/script/object sections) is the first consumer.
- *
- * Walks the spec and copies `doc[arrayName].length` into the linked count
- * field. Returns a new object; does not mutate `doc`. Use this as the
- * pre-serialization step in canonical-writer flows that have linked counts.
+ * Context for cross-struct recompute. The format-specific canonical writer
+ * assembles this from the surrounding doc shape (which arrays exist, what
+ * byte offsets the sections land at, where each record sits in a global
+ * table). The helper consults the context for any role-tagged scalar whose
+ * `derivedFrom` source is not a sibling field of the struct being walked.
  */
-export function enforceLinkedCounts<S extends Record<string, FieldSpec>, D extends Record<string, unknown>>(
+export interface DerivedFieldsContext {
+    readonly arrays?: Readonly<Record<string, readonly unknown[]>>;
+    readonly sectionOffsets?: Readonly<Record<string, number>>;
+    readonly tableIndexes?: Readonly<Record<string, number>>;
+}
+
+/**
+ * Recompute derived (structural) scalar fields from doc state.
+ *
+ * Two declaration shapes converge here:
+ *   - **Sibling array linkage** — `arraySpec({ count: { fromField: "X" } })`.
+ *     The scalar field `X` is the on-wire count paired with the same-struct
+ *     array. The helper sets `doc[X] = doc[arrayKey].length`. This is the
+ *     within-struct shape used by MAP variable-length sections.
+ *   - **Cross-struct role** — `{ codec, role: "derivedCount" | "derivedOffset"
+ *     | "derivedIndex", derivedFrom: { array | section | table } }`. The
+ *     source name resolves against the supplied `ctx` (`ctx.arrays[name]`
+ *     for counts, `ctx.sectionOffsets[name]` for offsets, etc.) rather
+ *     than a sibling field. Used by ITM/SPL where counts and offsets in
+ *     the header reference the doc-level abilities/effects arrays.
+ *
+ * Returns a new object when any field changed; otherwise returns `doc`
+ * unchanged (reference-equal). Does not mutate `doc`. Use this as the
+ * pre-serialization step in canonical-writer flows.
+ *
+ * Permissive on missing context: a role-tagged field whose source is not
+ * supplied in `ctx` is left as-is. The zod consistency refinement (when
+ * present) is the place to assert truth at validation time.
+ */
+export function enforceDerivedFields<S extends Record<string, FieldSpec>, D extends Record<string, unknown>>(
     spec: S,
     doc: D,
+    ctx: DerivedFieldsContext = {},
 ): D {
     let out: D | undefined;
+    const set = (field: string, value: number) => {
+        if (doc[field] === value) return;
+        if (!out) out = { ...doc };
+        (out as Record<string, unknown>)[field] = value;
+    };
+
     for (const key of Object.keys(spec) as (keyof S & string)[]) {
         const fs = spec[key];
-        if (!fs || !isArraySpec(fs)) continue;
-        if (!isFromFieldCount(fs.count)) continue;
-        const countField = fs.count.fromField;
-        const arr = doc[key];
-        if (!Array.isArray(arr)) continue;
-        const desired = arr.length;
-        if (doc[countField] === desired) continue;
-        if (!out) out = { ...doc };
-        (out as Record<string, unknown>)[countField] = desired;
+        if (!fs) continue;
+
+        // Within-struct linkage: array spec names its sibling count field.
+        if (isArraySpec(fs)) {
+            if (!isFromFieldCount(fs.count)) continue;
+            const arr = doc[key];
+            if (!Array.isArray(arr)) continue;
+            set(fs.count.fromField, arr.length);
+            continue;
+        }
+
+        // Cross-struct linkage: scalar role + ctx-supplied source.
+        if (isCharsSpec(fs) || !fs.role || fs.role === "data" || !fs.derivedFrom) continue;
+        const from = fs.derivedFrom;
+        if (fs.role === "derivedCount" && "array" in from) {
+            const arr = ctx.arrays?.[from.array];
+            if (Array.isArray(arr)) set(key, arr.length);
+        } else if (fs.role === "derivedOffset" && "section" in from) {
+            const offset = ctx.sectionOffsets?.[from.section];
+            if (typeof offset === "number") set(key, offset);
+        } else if (fs.role === "derivedIndex" && "table" in from) {
+            const index = ctx.tableIndexes?.[from.table];
+            if (typeof index === "number") set(key, index);
+        }
     }
     return out ?? doc;
 }

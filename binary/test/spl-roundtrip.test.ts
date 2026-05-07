@@ -43,5 +43,25 @@ describe("splParser — round-trip on real SPL v1 fixtures", () => {
             expect(result.opaqueRanges).toBeUndefined();
             expect(result.document).toBeDefined();
         });
+
+        test("serializer recomputes derived structural fields, ignoring corrupted input", async () => {
+            const { serializeSplCanonicalDocument } = await import("../src/spl/canonical-writer");
+            const { getSplCanonicalDocument } = await import("../src/spl/canonical-reader");
+            const bytes = new Uint8Array(fs.readFileSync(fixtures[0]!));
+            const result = splParser.parse(bytes);
+            const doc = getSplCanonicalDocument(result);
+            if (!doc) throw new Error("no canonical doc");
+            const corrupted = {
+                ...doc,
+                header: {
+                    ...doc.header,
+                    extendedHeadersOffset: 99999,
+                    extendedHeadersCount: 99,
+                    featureBlocksOffset: 99999,
+                },
+            };
+            const reserialized = serializeSplCanonicalDocument(corrupted);
+            expect([...reserialized]).toEqual([...bytes]);
+        });
     }
 });

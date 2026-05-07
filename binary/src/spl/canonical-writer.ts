@@ -1,7 +1,11 @@
 /**
  * Writer helpers for serialising SplCanonicalDocument back to SPL v1 bytes.
- * Honours canonical-declared offsets for round-trip safety with files that
- * have unusual layouts.
+ *
+ * Recomputes derived header fields (`extendedHeadersOffset/Count`,
+ * `featureBlocksOffset`) from the doc shape via `enforceDerivedFields`.
+ * Casting feature-block subset metadata is preserved as the user supplied
+ * it (no derivation source). See `itm/canonical-writer.ts` for the parallel
+ * shape and rationale.
  */
 
 import { BufferWriter } from "typed-binary";
@@ -9,15 +13,21 @@ import { EFFECT_SIZE } from "../ie-common/types";
 import { effectSchema, splAbilitySchema, splHeaderSchema } from "./schemas";
 import { SPL_ABILITY_SIZE, SPL_HEADER_SIZE } from "./types";
 import { type SplCanonicalDocument, type SplCanonicalSnapshot } from "./canonical-schemas";
+import { splHeaderSpecAnnotated } from "./specs/header.overrides";
+import { enforceDerivedFields } from "../spec/types";
 
 function writerAt(out: Uint8Array, offset: number): BufferWriter {
     return new BufferWriter(out.buffer, { byteOffset: out.byteOffset + offset });
 }
 
 export function serializeSplCanonicalDocument(document: SplCanonicalDocument): Uint8Array {
-    const { header, abilities, effects } = document;
-    const abilitiesOffset = header.extendedHeadersOffset;
-    const effectsOffset = header.featureBlocksOffset;
+    const { abilities, effects } = document;
+    const abilitiesOffset = SPL_HEADER_SIZE;
+    const effectsOffset = abilitiesOffset + abilities.length * SPL_ABILITY_SIZE;
+    const header = enforceDerivedFields(splHeaderSpecAnnotated, document.header, {
+        arrays: { abilities },
+        sectionOffsets: { abilities: abilitiesOffset, effects: effectsOffset },
+    });
 
     const totalSize = Math.max(
         SPL_HEADER_SIZE,
