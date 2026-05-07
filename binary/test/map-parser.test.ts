@@ -268,6 +268,27 @@ describe("MAP parser - real maps", () => {
         expect(Buffer.from(serialized).equals(Buffer.from(mapData))).toBe(true);
     });
 
+    it("serializer recomputes derived header counts (numLocalVars / numGlobalVars), ignoring corrupted input", async () => {
+        const { serializeMapCanonicalDocument } = await import("../src/map/canonical-writer");
+        const { getMapCanonicalDocument } = await import("../src/map/canonical-reader");
+        const mapData = loadMap(resolveMapPath("artemple.map"));
+        const result = mapParser.parse(mapData, { gracefulMapBoundaries: true });
+        const doc = getMapCanonicalDocument(result);
+        if (!doc) throw new Error("no canonical doc");
+        const corrupted = {
+            ...doc,
+            header: {
+                ...doc.header,
+                // Wrong on-wire counts; the writer must overwrite them with
+                // the actual array lengths so the file remains parseable.
+                numLocalVars: 99999,
+                numGlobalVars: 99999,
+            },
+        };
+        const serialized = serializeMapCanonicalDocument(corrupted, result.opaqueRanges ?? []);
+        expect(Buffer.from(serialized).equals(Buffer.from(mapData))).toBe(true);
+    });
+
     it("clamps invalid header values while rebuilding canonical data for save and JSON export", () => {
         const mapData = loadMap(resolveMapPath("artemple.map"));
         const result = mapParser.parse(mapData, { gracefulMapBoundaries: true });

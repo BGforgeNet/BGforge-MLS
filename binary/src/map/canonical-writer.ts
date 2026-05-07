@@ -9,6 +9,7 @@ import { toTypedBinarySchema } from "../spec/derive-typed-binary";
 import { HEADER_SIZE, TILE_DATA_SIZE_PER_ELEVATION, getScriptType, tilePairCodec } from "./schemas";
 import { mapHeaderSpec } from "./specs/header";
 import { varSectionSpec, type VarSectionCtx } from "./specs/variables";
+import { enforceDerivedFields } from "../spec/types";
 import {
     OTHER_SLOT_BYTES,
     SPATIAL_SLOT_BYTES,
@@ -69,20 +70,33 @@ function encodeFilename(filename: string): number[] {
     return out;
 }
 
-function serializeHeader(bytes: Uint8Array, header: z.infer<typeof mapHeaderSchema>): void {
+function serializeHeader(
+    bytes: Uint8Array,
+    header: z.infer<typeof mapHeaderSchema>,
+    globalVariables: number[],
+    localVariables: number[],
+): void {
+    // Recompute the derived count fields (numLocalVars / numGlobalVars) from
+    // the actual variable arrays before writing the header. Otherwise a
+    // hand-edited canonical doc with mismatched counts would yield a wire
+    // header whose section-length prefix is out of sync with the variables
+    // section that follows it — silent file corruption.
+    const recomputed = enforceDerivedFields(mapHeaderSpec, header, {
+        arrays: { globalVariables, localVariables },
+    });
     headerCodec.write(bufferWriterAt(bytes, 0), {
-        version: header.version,
-        filename: encodeFilename(header.filename),
-        defaultPosition: header.defaultPosition,
-        defaultElevation: header.defaultElevation,
-        defaultOrientation: header.defaultOrientation,
-        numLocalVars: header.numLocalVars,
-        scriptId: header.scriptId,
-        flags: header.flags,
-        darkness: header.darkness,
-        numGlobalVars: header.numGlobalVars,
-        mapId: header.mapId,
-        timestamp: header.timestamp,
+        version: recomputed.version,
+        filename: encodeFilename(recomputed.filename),
+        defaultPosition: recomputed.defaultPosition,
+        defaultElevation: recomputed.defaultElevation,
+        defaultOrientation: recomputed.defaultOrientation,
+        numLocalVars: recomputed.numLocalVars,
+        scriptId: recomputed.scriptId,
+        flags: recomputed.flags,
+        darkness: recomputed.darkness,
+        numGlobalVars: recomputed.numGlobalVars,
+        mapId: recomputed.mapId,
+        timestamp: recomputed.timestamp,
         // The wire reserves 44×i32 of trailing space (`field_3C`) that the
         // canonical doc does not surface. Write zeros, matching what the
         // prior hand-rolled writer left in place from the buffer init.
@@ -343,7 +357,7 @@ export function serializeMapCanonicalDocument(
     const opaqueEnd = Math.max(0, ...(opaqueRanges ?? []).map((range) => range.offset + range.size));
     const bytes = new Uint8Array(Math.max(computedLength, opaqueEnd));
 
-    serializeHeader(bytes, document.header);
+    serializeHeader(bytes, document.header, document.globalVariables, document.localVariables);
     let offset = serializeVariables(bytes, document.globalVariables, document.localVariables);
     offset = serializeTiles(bytes, document.header, document.tiles, offset);
     offset = serializeScripts(bytes, document.scripts, offset);
