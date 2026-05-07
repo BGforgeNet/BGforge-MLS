@@ -207,6 +207,12 @@ describe("EFF display tree presentation", () => {
         expect(typeof target?.value).toBe("string");
     });
 
+    test("body variableName surfaces as a string field, not '(N values) padding'", () => {
+        const variable = findField(result.root, "Variable Name");
+        expect(variable).toBeDefined();
+        expect(variable!.type).toBe("string");
+    });
+
     test("body resource fields surface as resref strings", () => {
         const r1 = findField(result.root, "Resource");
         const r2 = findField(result.root, "Resource2");

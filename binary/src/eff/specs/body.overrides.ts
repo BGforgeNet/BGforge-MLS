@@ -6,7 +6,7 @@
  * either wire type.
  */
 
-import type { FieldSpec } from "../../spec/types";
+import { charsSpec, type FieldSpec } from "../../spec/types";
 import { EffectResistanceFlags, EffectSaveTypeFlags, EffectTarget, EffectTiming } from "../../ie-common/types";
 import { Opcodes } from "../../ie-common/opcodes";
 import { effBodySpec } from "./body";
@@ -20,4 +20,10 @@ export const effBodySpecAnnotated = {
     timing: { ...effBodySpec.timing, enum: EffectTiming, enumOpen: true },
     resistance: { ...effBodySpec.resistance, flags: EffectResistanceFlags },
     saveType: { ...effBodySpec.saveType, flags: EffectSaveTypeFlags },
+    // IESDP types this as `bytes, length: 32` because it can hold non-ASCII
+    // garbage in unused effects, but it is semantically a NUL-terminated
+    // identifier string. Surface it as a string so the editor renders the
+    // name directly instead of "(32 values) padding"; the chars codec keeps
+    // wire round-trip byte-identical (NUL-pad on write, NUL-strip on display).
+    variableName: charsSpec(32),
 } satisfies Record<string, FieldSpec>;
