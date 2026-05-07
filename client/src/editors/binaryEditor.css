@@ -66,6 +66,14 @@ body {
     margin-left: var(--indent-size);
 }
 
+/* Children of a nested group sit one indent step right of the group header,
+ * so the disclosure triangle and the rows below it visibly enclose each
+ * other. Top-level groups skip this — they get their breathing room from
+ * the .tree margin above and shouldn't push their fields further still. */
+.group-content > .group > .group-content {
+    padding-left: var(--indent-size);
+}
+
 .group-header {
     cursor: pointer;
     user-select: none;
