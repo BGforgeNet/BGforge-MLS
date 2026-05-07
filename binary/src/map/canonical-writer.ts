@@ -223,7 +223,13 @@ function objectSerializedLength(object: z.infer<typeof mapObjectSchema>): number
 function serializeMapObject(bytes: Uint8Array, object: z.infer<typeof mapObjectSchema>, offset: number): number {
     objectBaseCodec.write(bufferWriterAt(bytes, offset), object.base);
     let currentOffset = offset + MAP_OBJECT_BASE_SIZE;
-    inventoryHeaderCodec.write(bufferWriterAt(bytes, currentOffset), object.inventoryHeader);
+    // Recompute inventoryLength from the actual inventory array — a stale
+    // count in a hand-edited canonical doc would otherwise yield a wire
+    // header out of sync with the inventory entries that follow.
+    const recomputedInventoryHeader = enforceDerivedFields(inventoryHeaderSpec, object.inventoryHeader, {
+        arrays: { inventory: object.inventory },
+    });
+    inventoryHeaderCodec.write(bufferWriterAt(bytes, currentOffset), recomputedInventoryHeader);
     currentOffset += MAP_OBJECT_DATA_HEADER_SIZE;
 
     const pidType = (object.base.pid >>> 24) & 0xff;

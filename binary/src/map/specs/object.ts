@@ -42,11 +42,23 @@ export const objectBaseSpec = {
     lightIntensity: { codec: i32 },
     field74: { codec: i32 },
     sid: { codec: i32 },
-    scriptIndex: { codec: i32 },
+    // Index into the global script table. Position-dependent on serialisation
+    // order; not user data. Editor lock currently still flows through
+    // mapPresentationSchema.patternFields.
+    scriptIndex: { codec: i32, role: "derivedIndex" as const, derivedFrom: { table: "scripts" } as const },
 } as const satisfies Record<string, FieldSpec>;
 
 export const inventoryHeaderSpec = {
-    inventoryLength: { codec: i32 },
+    // Length of the per-object inventory list. The canonical writer calls
+    // enforceDerivedFields with the inventory array as ctx, so a stale
+    // inventoryLength in a hand-edited JSON snapshot is silently corrected
+    // before serialisation — the writer-side invariant matches the spec
+    // role tag.
+    inventoryLength: {
+        codec: i32,
+        role: "derivedCount" as const,
+        derivedFrom: { array: "inventory" } as const,
+    },
     inventoryCapacity: { codec: i32 },
     inventoryPointer: { codec: i32 },
 } as const satisfies Record<string, FieldSpec>;

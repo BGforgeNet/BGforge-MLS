@@ -268,6 +268,42 @@ describe("MAP parser - real maps", () => {
         expect(Buffer.from(serialized).equals(Buffer.from(mapData))).toBe(true);
     });
 
+    it("serializer recomputes per-object inventoryLength, ignoring corrupted input", async () => {
+        const { serializeMapCanonicalDocument } = await import("../src/map/canonical-writer");
+        const { getMapCanonicalDocument } = await import("../src/map/canonical-reader");
+        // Pick a fixture with at least one object that has an inventory entry,
+        // so the recompute has a non-trivial array length to verify against.
+        const mapData = loadMap(resolveMapPath("denbus1.map"));
+        const result = mapParser.parse(mapData, { gracefulMapBoundaries: true });
+        const doc = getMapCanonicalDocument(result);
+        if (!doc) throw new Error("no canonical doc");
+        // Find an object with at least one inventory entry. Walk the
+        // elevations until one shows up.
+        let mutated = false;
+        const corrupted = {
+            ...doc,
+            objects: {
+                ...doc.objects,
+                elevations: doc.objects.elevations.map((elev) => ({
+                    ...elev,
+                    objects: elev.objects.map((obj) => {
+                        if (!mutated && obj.inventory.length > 0) {
+                            mutated = true;
+                            return {
+                                ...obj,
+                                inventoryHeader: { ...obj.inventoryHeader, inventoryLength: 99999 },
+                            };
+                        }
+                        return obj;
+                    }),
+                })),
+            },
+        };
+        if (!mutated) throw new Error("no inventory-bearing object in fixture");
+        const serialized = serializeMapCanonicalDocument(corrupted, result.opaqueRanges ?? []);
+        expect(Buffer.from(serialized).equals(Buffer.from(mapData))).toBe(true);
+    });
+
     it("serializer recomputes derived header counts (numLocalVars / numGlobalVars), ignoring corrupted input", async () => {
         const { serializeMapCanonicalDocument } = await import("../src/map/canonical-writer");
         const { getMapCanonicalDocument } = await import("../src/map/canonical-reader");

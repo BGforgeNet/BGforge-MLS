@@ -75,6 +75,16 @@ describe("binaryEditor-editability", () => {
         ).toBe(false);
     });
 
+    it("locks MAP per-object scriptIndex (index into the global script table)", () => {
+        expect(
+            isEditableFieldForFormat(
+                "map",
+                "map.objects.elevations[].objects[].base.scriptIndex",
+                makeField("Script Index", "int32"),
+            ),
+        ).toBe(false);
+    });
+
     it("locks SPL derived structural fields", () => {
         expect(
             isEditableFieldForFormat(

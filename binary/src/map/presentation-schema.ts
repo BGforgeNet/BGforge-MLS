@@ -111,7 +111,7 @@ export const mapPresentationSchema: FormatPresentationSchema = formatPresentatio
         { pathPattern: "^map\\.objects\\.(totalObjects|elevations\\[\\]\\.objectCount)$", editable: false },
         {
             pathPattern:
-                "^map\\.objects\\.elevations\\[\\]\\.objects\\[\\]\\.(base\\.field74|inventoryHeader\\.(inventoryLength|inventoryCapacity|inventoryPointer))$",
+                "^map\\.objects\\.elevations\\[\\]\\.objects\\[\\]\\.(base\\.(field74|scriptIndex)|inventoryHeader\\.(inventoryLength|inventoryCapacity|inventoryPointer))$",
             editable: false,
         },
     ],
