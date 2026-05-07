@@ -87,7 +87,10 @@ const config: KnipConfig = {
         },
         format: {
             entry: ["test/**/*.test.ts"],
-            // quick-lru is needed once Phase 7 moves the parser-factory into this package.
+            // quick-lru is reached transitively: format/src/cli.ts imports from
+            // ../../shared/parsers/*, and shared/parsers/parser-factory.ts imports
+            // quick-lru. Knip's per-workspace dep tracing can't follow imports
+            // across the non-workspace shared/ boundary.
             // cac and diff are imported via shared/cli/cli-utils.ts, which is outside any
             // workspace; knip's per-workspace dep tracing doesn't reach across that boundary.
             ignoreDependencies: ["quick-lru", "cac", "diff"],
