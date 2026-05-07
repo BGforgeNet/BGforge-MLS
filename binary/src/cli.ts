@@ -171,10 +171,7 @@ function loadJsonToBinary(jsonPath: string): void {
         throw err;
     }
 
-    const loaded = loadBinaryJsonSnapshot(jsonText, {
-        proParseOptions: CLI_PARSE_OPTIONS,
-        mapParseOptions: CLI_PARSE_OPTIONS,
-    });
+    const loaded = loadBinaryJsonSnapshot(jsonText, CLI_PARSE_OPTIONS);
     const result: ParseResult = loaded.parseResult;
 
     // Determine the parser from the format field

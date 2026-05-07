@@ -21,6 +21,30 @@ function makeSimpleResult(overrides: Partial<ParseResult> = {}): ParseResult {
     };
 }
 
+describe("loadBinaryJsonSnapshot — accepts a single ParseOptions bag", () => {
+    it("forwards a flat parseOptions bag to format-adapter snapshots without per-format keys", () => {
+        // The pre-change shape was `{ proParseOptions, mapParseOptions }`,
+        // requiring the call site to know each format's option bag. The
+        // current contract is a single `ParseOptions`; the dispatching
+        // adapter applies it. Test compiles only when the new signature
+        // holds. Body uses the generic-schema fall-through so adapter
+        // wiring isn't a precondition.
+        const synthetic = JSON.stringify({
+            schemaVersion: 1,
+            format: "testbin",
+            formatName: "Test Binary",
+            root: {
+                nodeType: "group",
+                key: "root",
+                label: "Root",
+                children: [],
+            },
+        });
+        const loaded = loadBinaryJsonSnapshot(synthetic, { gracefulMapBoundaries: true });
+        expect(loaded.parseResult.format).toBe("testbin");
+    });
+});
+
 describe("loadBinaryJsonSnapshot — error handling", () => {
     it("throws a wrapped error for completely invalid JSON", () => {
         // Line 266-268: catch branch

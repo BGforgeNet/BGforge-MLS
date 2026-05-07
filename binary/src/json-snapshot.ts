@@ -246,7 +246,7 @@ export function parseBinaryJsonSnapshot(jsonText: string): ParseResult {
 
 export function loadBinaryJsonSnapshot(
     jsonText: string,
-    options?: { proParseOptions?: ParseOptions; mapParseOptions?: ParseOptions },
+    parseOptions?: ParseOptions,
 ): { parseResult: ParseResult; bytes?: Uint8Array } {
     try {
         const parsed = JSON.parse(jsonText) as unknown;
@@ -255,12 +255,6 @@ export function loadBinaryJsonSnapshot(
             if (typeof format === "string") {
                 const adapter = formatAdapterRegistry.get(format);
                 if (adapter) {
-                    const parseOptions =
-                        format === "pro"
-                            ? options?.proParseOptions
-                            : format === "map"
-                              ? options?.mapParseOptions
-                              : undefined;
                     return adapter.loadJsonSnapshot(jsonText, parseOptions);
                 }
             }

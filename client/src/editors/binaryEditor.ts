@@ -321,11 +321,13 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
             const jsonText = Buffer.from(await vscode.workspace.fs.readFile(jsonUri)).toString("utf8");
             const extension = path.extname(document.uri.fsPath);
             const parseOptions = this.getParseOptions(document.uri.fsPath);
-            const loaded = loadBinaryJsonSnapshot(jsonText, {
-                proParseOptions: parseOptions,
-                mapParseOptions:
-                    extension === ".map" ? { ...parseOptions, gracefulMapBoundaries: false } : parseOptions,
-            });
+            // MAP load in the editor stays strict even when the snapshot was
+            // originally produced from a graceful parse: ambiguous MAP bytes
+            // should not spread through normal editor workflows. Users who
+            // explicitly want to reload those ambiguous snapshots use
+            // `fgbin --graceful-map`.
+            const loadOptions = extension === ".map" ? { ...parseOptions, gracefulMapBoundaries: false } : parseOptions;
+            const loaded = loadBinaryJsonSnapshot(jsonText, loadOptions);
             const snapshot = loaded.parseResult;
             const parser = this.getEditableParser(extension);
 
