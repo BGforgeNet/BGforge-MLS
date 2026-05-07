@@ -1,8 +1,10 @@
 /**
- * Vitest configuration for all data update script tests with coverage reporting.
+ * Vitest configuration for all data update script tests.
  *
- * Coverage measures every source file imported by tests, no allow/deny list.
- * Thresholds pinned to current actuals so regressions fail the gate.
+ * Coverage is not gated here: `pnpm test:scripts` runs without `--coverage`,
+ * and `scripts/test.sh` does not include scripts in its Phase-1.5 sequential
+ * coverage block. Add `--coverage` and a thresholds block here if scripts
+ * coverage ever needs to gate CI.
  */
 
 import { defineConfig } from "vitest/config";
@@ -12,15 +14,5 @@ export default defineConfig({
         name: "scripts",
         include: ["scripts/*/test/**/*.test.ts"],
         testTimeout: 30_000,
-        coverage: {
-            provider: "v8",
-            reporter: ["text", "html", "lcov"],
-            thresholds: {
-                lines: 90,
-                functions: 90,
-                branches: 80,
-                statements: 90,
-            },
-        },
     },
 });
