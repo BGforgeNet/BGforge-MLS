@@ -193,6 +193,35 @@ describe("walkStruct", () => {
         ]);
     });
 
+    it("slots view with slotElements renders each slot with its own enum/flags table", () => {
+        // Slots whose semantic differs per index need per-slot element specs.
+        // Use case: ITM usabilityFlags is a u8[4] where each byte carries a
+        // distinct flag table (race / class / kit / etc. per IESDP). The
+        // `slotElements` override lets the spec author supply one
+        // ScalarFieldSpec per slot; the walker honours it instead of the
+        // shared `element` spec when rendering that slot.
+        type Data = { kit: number[] };
+        const spec: StructSpec<Data> = {
+            kit: arraySpec({
+                element: { codec: u16 }, // shared default codec
+                count: 2,
+                view: "slots",
+                slotLabels: ["Race", "Class"],
+                slotElements: [
+                    { codec: u16, flags: { 1: "Human", 2: "Elf" } },
+                    { codec: u16, flags: { 1: "Mage", 2: "Cleric" } },
+                ],
+            }),
+        };
+        const data: Data = { kit: [0b01, 0b10] };
+        const result = walkStruct(spec, {}, 0, data, "G");
+        const group = result.fields[0] as ParsedGroup;
+        expect(group.fields).toEqual([
+            { name: "Race", value: "Human", offset: 0, size: 2, type: "flags", rawValue: 0b01 },
+            { name: "Class", value: "Cleric", offset: 2, size: 2, type: "flags", rawValue: 0b10 },
+        ]);
+    });
+
     it("slots view honours the presentation label override on the array itself", () => {
         type Data = { meleeAnimation: number[] };
         const spec: StructSpec<Data> = {

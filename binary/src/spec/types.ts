@@ -115,6 +115,16 @@ export interface ArrayFieldSpec {
     readonly view?: "bytes" | "slots";
     readonly slotLabels?: readonly string[];
     /**
+     * Optional per-slot element override. When supplied, the walker uses
+     * `slotElements[i]` for slot `i` instead of the shared `element` spec.
+     * Use when slots have semantically different content — e.g. an ITM
+     * `usabilityFlags: u8[4]` where each byte carries a distinct flag table
+     * (per IESDP class / race / kit breakdown). Wire codec must remain
+     * identical across slots; only the enum / flags / domain annotations
+     * may differ.
+     */
+    readonly slotElements?: readonly ScalarFieldSpec[];
+    /**
      * Capability flags consumed by the binary editor's add/remove pathway.
      * The spec is the source of truth for whether an array accepts user
      * insertion/deletion; format adapters look this up rather than maintain
@@ -175,6 +185,7 @@ export function arraySpec<Ctx = never>(args: {
     count: number | { fromField: string } | { fromCtx: (ctx: Ctx) => number };
     view?: "bytes" | "slots";
     slotLabels?: readonly string[];
+    slotElements?: readonly ScalarFieldSpec[];
     addable?: boolean;
     removable?: boolean;
     defaultElement?: () => unknown;
@@ -188,6 +199,11 @@ export function arraySpec<Ctx = never>(args: {
                 `arraySpec view='slots' slotLabels.length (${args.slotLabels.length}) must equal count (${args.count})`,
             );
         }
+        if (args.slotElements && args.slotElements.length !== args.slotLabels.length) {
+            throw new Error(
+                `arraySpec view='slots' slotElements.length (${args.slotElements.length}) must equal slotLabels.length (${args.slotLabels.length})`,
+            );
+        }
     }
     return {
         kind: "array",
@@ -197,6 +213,7 @@ export function arraySpec<Ctx = never>(args: {
         count: args.count as ArrayFieldSpec["count"],
         ...(args.view !== undefined ? { view: args.view } : {}),
         ...(args.slotLabels !== undefined ? { slotLabels: args.slotLabels } : {}),
+        ...(args.slotElements !== undefined ? { slotElements: args.slotElements } : {}),
         ...(args.addable !== undefined ? { addable: args.addable } : {}),
         ...(args.removable !== undefined ? { removable: args.removable } : {}),
         ...(args.defaultElement !== undefined ? { defaultElement: args.defaultElement } : {}),

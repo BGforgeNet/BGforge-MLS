@@ -246,9 +246,11 @@ function fieldFor(
             // (codec type, plus enum/flags from `fs.element` if declared).
             const elementSize = codecByteLength(fs.element.codec);
             const slotLabels = fs.slotLabels;
+            const slotElements = fs.slotElements;
             const children: ParsedField[] = value.map((elementValue, i) => {
                 const slotLabel = slotLabels[i] ?? `Slot ${i}`;
-                return scalarFieldFor(slotLabel, fs.element, offset + i * elementSize, elementSize, elementValue);
+                const elementSpec = slotElements?.[i] ?? fs.element;
+                return scalarFieldFor(slotLabel, elementSpec, offset + i * elementSize, elementSize, elementValue);
             });
             return { name: label, fields: children, expanded: false };
         }

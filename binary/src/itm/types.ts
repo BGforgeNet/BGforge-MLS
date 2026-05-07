@@ -114,6 +114,66 @@ export const ItmType: Readonly<Record<number, string>> = {
     75: "Gauntlet",
 };
 
+/**
+ * ITM header `usabilityFlags` is a 4-byte block (offset 0x1E) where each
+ * byte carries a *different* bitmap. Per IESDP `#Header_Usability`:
+ *
+ * - Byte 1: alignment matrix (bits 0–5 form chaotic/lawful/neutral × evil/
+ *   good/neutral combinations) plus class flags Bard, Cleric (bits 6–7).
+ * - Byte 2: class flags (Cleric/Mage, Cleric/Thief, Cleric/Ranger, Fighter,
+ *   Fighter/Druid, Fighter/Mage, Fighter/Cleric, Fighter/Mage/Cleric).
+ * - Byte 3: more class flags (multi-class permutations) plus race Elf.
+ * - Byte 4: race flags (Dwarf, Half-Elf, Halfling, Human, Gnome, Monk,
+ *   Druid/Shaman, Half-Orc).
+ *
+ * The four tables ship as separate Records so the per-byte editor row can
+ * decode each byte independently. Used as the `slotElements` for the
+ * `usabilityFlags` arraySpec in `header.overrides.ts`.
+ */
+export const ItmUsabilityByte1Flags: Readonly<Record<number, string>> = {
+    0x01: "Chaotic...",
+    0x02: "...Evil",
+    0x04: "...Good",
+    0x08: "...Neutral",
+    0x10: "Lawful...",
+    0x20: "Neutral...",
+    0x40: "Bard",
+    0x80: "Cleric",
+};
+
+export const ItmUsabilityByte2Flags: Readonly<Record<number, string>> = {
+    0x01: "Cleric/Mage",
+    0x02: "Cleric/Thief",
+    0x04: "Cleric/Ranger",
+    0x08: "Fighter",
+    0x10: "Fighter/Druid",
+    0x20: "Fighter/Mage",
+    0x40: "Fighter/Cleric",
+    0x80: "Fighter/Mage/Cleric",
+};
+
+export const ItmUsabilityByte3Flags: Readonly<Record<number, string>> = {
+    0x01: "Fighter/Mage/Thief",
+    0x02: "Fighter/Thief",
+    0x04: "Mage and Sorcerer",
+    0x08: "Mage/Thief",
+    0x10: "Paladin",
+    0x20: "Ranger",
+    0x40: "Thief",
+    0x80: "Elf",
+};
+
+export const ItmUsabilityByte4Flags: Readonly<Record<number, string>> = {
+    0x01: "Dwarf",
+    0x02: "Half-Elf",
+    0x04: "Halfling",
+    0x08: "Human",
+    0x10: "Gnome",
+    0x20: "Monk",
+    0x40: "Druid / Shaman (EE)",
+    0x80: "Half-Orc",
+};
+
 // -- Ability (extended_header) lookups --------------------------------------
 
 /** ITM ability `attackType` (char). */

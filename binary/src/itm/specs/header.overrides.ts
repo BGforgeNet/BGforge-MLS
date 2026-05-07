@@ -8,8 +8,16 @@
  * strings; no annotation needed for those.
  */
 
-import type { FieldSpec } from "../../spec/types";
-import { ItmFlags, ItmType } from "../types";
+import { arraySpec, type FieldSpec } from "../../spec/types";
+import { u8 } from "typed-binary";
+import {
+    ItmFlags,
+    ItmType,
+    ItmUsabilityByte1Flags,
+    ItmUsabilityByte2Flags,
+    ItmUsabilityByte3Flags,
+    ItmUsabilityByte4Flags,
+} from "../types";
 import { itmHeaderSpec } from "./header";
 
 export const itmHeaderSpecAnnotated = {
@@ -19,6 +27,22 @@ export const itmHeaderSpecAnnotated = {
     // item categories; the engine accepts any 16-bit value. Display lookup
     // only — strict canonical mode does not reject unrecognised types.
     type: { ...itmHeaderSpec.type, enum: ItmType, enumOpen: true },
+    // Usability flags is a 4-byte block where each byte carries a distinct
+    // flag table per IESDP. Slots view with per-slot element overrides
+    // surfaces 4 flag rows in the editor; canonical doc shape stays as
+    // number[] so JSON snapshots and round-trip are unaffected.
+    usabilityFlags: arraySpec({
+        element: { codec: u8 },
+        count: 4,
+        view: "slots",
+        slotLabels: ["Byte 1 (Class / Alignment)", "Byte 2 (Class)", "Byte 3 (Class / Race)", "Byte 4 (Race)"],
+        slotElements: [
+            { codec: u8, flags: ItmUsabilityByte1Flags },
+            { codec: u8, flags: ItmUsabilityByte2Flags },
+            { codec: u8, flags: ItmUsabilityByte3Flags },
+            { codec: u8, flags: ItmUsabilityByte4Flags },
+        ],
+    }),
     // Structural pointers into the abilities + effects sections that follow
     // the header. Editing these by hand silently corrupts the file, so the
     // editor renders them as read-only and (eventually) the canonical writer

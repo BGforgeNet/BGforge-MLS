@@ -80,6 +80,17 @@ describe("ITM display tree presentation", () => {
         expect(typeof flagsField?.value).toBe("string");
     });
 
+    test("header usabilityFlags displays as 4 flag rows with per-byte tables", () => {
+        const usability = findGroup(result.root, "Usability Flags");
+        expect(usability).toBeDefined();
+        // Four child rows, one per IESDP byte. Each byte carries its own
+        // flag table — bytes are not interchangeable.
+        expect(usability!.fields).toHaveLength(4);
+        for (const field of usability!.fields) {
+            expect("type" in field && field.type).toBe("flags");
+        }
+    });
+
     test("ability meleeAnimation displays as a 3-slot group (Overhand / Backhand / Thrust)", () => {
         const abilities = findGroup(result.root, "Abilities");
         expect(abilities).toBeDefined();
