@@ -94,6 +94,27 @@ export interface ArrayFieldSpec {
     readonly element: ScalarFieldSpec;
     readonly count: number | { readonly fromField: string } | { readonly fromCtx: (ctx: never) => number };
     /**
+     * How the display walker should render this array. Discriminates the
+     * single arraySpec catch-all into the cases that have meaningfully
+     * different display shapes:
+     *
+     * - `"bytes"` (default) — opaque byte run / trailing reserve. Walker
+     *   emits a single `(N values)` summary row of type `padding`. Used for
+     *   genuine reserves like `field_3C` (44×i32 trailing space) and
+     *   pre-`charsSpec`-era u8[] strings.
+     * - `"slots"` — N elements with stable per-index semantic labels (e.g.
+     *   melee animation's `Overhand` / `Backhand` / `Thrust`). Walker emits a
+     *   `ParsedGroup` named after the field, with one child per element
+     *   labelled from `slotLabels`. The element values stay individually
+     *   rendered (type comes from `element.codec`), so flag/enum tables on
+     *   the element apply per child.
+     *
+     * The single `arraySpec(...)` constructor accepts both shapes via the
+     * `view` discriminator; the data shape (number[]) is unchanged.
+     */
+    readonly view?: "bytes" | "slots";
+    readonly slotLabels?: readonly string[];
+    /**
      * Capability flags consumed by the binary editor's add/remove pathway.
      * The spec is the source of truth for whether an array accepts user
      * insertion/deletion; format adapters look this up rather than maintain
@@ -152,16 +173,30 @@ export type StructSpec<T> = { readonly [K in keyof T]: FieldSpec };
 export function arraySpec<Ctx = never>(args: {
     element: ScalarFieldSpec;
     count: number | { fromField: string } | { fromCtx: (ctx: Ctx) => number };
+    view?: "bytes" | "slots";
+    slotLabels?: readonly string[];
     addable?: boolean;
     removable?: boolean;
     defaultElement?: () => unknown;
 }): ArrayFieldSpec {
+    if (args.view === "slots") {
+        if (!args.slotLabels) {
+            throw new Error("arraySpec view='slots' requires slotLabels");
+        }
+        if (typeof args.count === "number" && args.slotLabels.length !== args.count) {
+            throw new Error(
+                `arraySpec view='slots' slotLabels.length (${args.slotLabels.length}) must equal count (${args.count})`,
+            );
+        }
+    }
     return {
         kind: "array",
         element: args.element,
         // Re-narrow the public never-seed parameter for storage; the variance
         // would otherwise reject ctx being typed wider than `never` here.
         count: args.count as ArrayFieldSpec["count"],
+        ...(args.view !== undefined ? { view: args.view } : {}),
+        ...(args.slotLabels !== undefined ? { slotLabels: args.slotLabels } : {}),
         ...(args.addable !== undefined ? { addable: args.addable } : {}),
         ...(args.removable !== undefined ? { removable: args.removable } : {}),
         ...(args.defaultElement !== undefined ? { defaultElement: args.defaultElement } : {}),

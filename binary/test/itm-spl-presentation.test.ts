@@ -80,6 +80,16 @@ describe("ITM display tree presentation", () => {
         expect(typeof flagsField?.value).toBe("string");
     });
 
+    test("ability meleeAnimation displays as a 3-slot group (Overhand / Backhand / Thrust)", () => {
+        const abilities = findGroup(result.root, "Abilities");
+        expect(abilities).toBeDefined();
+        const ability1 = findGroup(abilities!, "Ability 1");
+        expect(ability1).toBeDefined();
+        const meleeAnim = findGroup(ability1!, "Melee Animation");
+        expect(meleeAnim).toBeDefined();
+        expect(meleeAnim!.fields.map((f) => "name" in f && f.name)).toEqual(["Overhand", "Backhand", "Thrust"]);
+    });
+
     test("resref fields surface as strings (Inventory Icon, Description Icon, Ground Icon)", () => {
         const inv = findField(result.root, "Inventory Icon");
         expect(typeof inv?.value).toBe("string");

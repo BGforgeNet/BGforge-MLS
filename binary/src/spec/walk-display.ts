@@ -1,6 +1,13 @@
 import { codecByteLength, codecNumericTypeName } from "./codec-meta";
 import { humanize, type FieldPresentation, type StructPresentation } from "./presentation";
-import { isArraySpec, isCharsSpec, type FieldSpec, type SpecData, type StructSpec } from "./types";
+import {
+    isArraySpec,
+    isCharsSpec,
+    type FieldSpec,
+    type ScalarFieldSpec,
+    type SpecData,
+    type StructSpec,
+} from "./types";
 import type { ParsedField, ParsedGroup, ParsedFieldType } from "../types";
 
 /**
@@ -117,7 +124,7 @@ export function walkStruct<T extends Record<string, unknown>>(
     const keys = Object.keys(spec) as (keyof T & string)[];
 
     let cursor = baseOffset;
-    const builtFields = new Map<keyof T & string, ParsedField>();
+    const builtFields = new Map<keyof T & string, ParsedField | ParsedGroup>();
     let i = 0;
     while (i < keys.length) {
         const key = keys[i]!;
@@ -159,7 +166,7 @@ export function walkStruct<T extends Record<string, unknown>>(
         if (anchor === undefined) {
             throw new Error(`subGroup "${sg.name}" must list at least one field`);
         }
-        const groupFields: ParsedField[] = sg.fields.map((f) => {
+        const groupFields: (ParsedField | ParsedGroup)[] = sg.fields.map((f) => {
             const pf = builtFields.get(f as keyof T & string);
             if (!pf) {
                 throw new Error(`subGroups references unknown field: ${f}`);
@@ -217,7 +224,7 @@ function fieldFor(
     size: number,
     value: unknown,
     labelPrefix?: string,
-): ParsedField {
+): ParsedField | ParsedGroup {
     const baseLabel = pres?.label ?? humanize(name);
     const label = labelPrefix ? `${labelPrefix} ${baseLabel}` : baseLabel;
 
@@ -233,6 +240,18 @@ function fieldFor(
     }
 
     if (isArraySpec(fs)) {
+        if (fs.view === "slots" && fs.slotLabels && Array.isArray(value)) {
+            // Per-slot semantic labels: emit the array as a sub-group whose
+            // children carry the slot label and the element's full presentation
+            // (codec type, plus enum/flags from `fs.element` if declared).
+            const elementSize = codecByteLength(fs.element.codec);
+            const slotLabels = fs.slotLabels;
+            const children: ParsedField[] = value.map((elementValue, i) => {
+                const slotLabel = slotLabels[i] ?? `Slot ${i}`;
+                return scalarFieldFor(slotLabel, fs.element, offset + i * elementSize, elementSize, elementValue);
+            });
+            return { name: label, fields: children, expanded: false };
+        }
         // Trailing reserves and other byte-array fields are presented as a
         // single "(N values)" summary row rather than N unrolled scalars;
         // the canonical doc carries the full array if a downstream tool
@@ -241,6 +260,17 @@ function fieldFor(
         return { name: label, value: summary, offset, size, type: "padding" };
     }
 
+    return scalarFieldFor(label, fs, offset, size, value, pres);
+}
+
+function scalarFieldFor(
+    label: string,
+    fs: ScalarFieldSpec,
+    offset: number,
+    size: number,
+    value: unknown,
+    pres?: FieldPresentation,
+): ParsedField {
     if (fs.enum) {
         const resolved = fs.enum[value as number];
         return {

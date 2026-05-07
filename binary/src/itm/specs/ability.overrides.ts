@@ -21,6 +21,14 @@ export const itmAbilitySpecAnnotated = {
     idRequired: { ...itmAbilitySpec.idRequired, flags: AbilityIdRequiredFlags },
     location: { ...itmAbilitySpec.location, enum: ItmAbilityLocation },
     target: { ...itmAbilitySpec.target, enum: AbilityTargetType },
+    // Three named animation slots per IESDP — overhand / backhand / thrust.
+    // Walker emits them as a sub-group with stable per-index labels instead
+    // of the opaque "(3 values) padding" array fallback.
+    meleeAnimation: {
+        ...itmAbilitySpec.meleeAnimation,
+        view: "slots" as const,
+        slotLabels: ["Overhand", "Backhand", "Thrust"] as const,
+    },
     // Open: launcher / projectile values are mod-extensible via ITEMCAT.
     projectileType: { ...itmAbilitySpec.projectileType, enum: ItmAbilityProjectileType, enumOpen: true },
     // Open: per IESDP, damage type values 10+ behave as `None` rather than

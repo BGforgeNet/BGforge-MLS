@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { u32, i32 } from "typed-binary";
+import { u32, u16, i32 } from "typed-binary";
 import { walkStruct, walkGroup } from "../src/spec/walk-display";
-import { type StructSpec } from "../src/spec/types";
+import { arraySpec, type StructSpec } from "../src/spec/types";
 import { type StructPresentation } from "../src/spec/presentation";
 import type { ParsedGroup } from "../src/types";
 
@@ -164,6 +164,49 @@ describe("walkStruct", () => {
         };
         const result = walkStruct(spec, {}, 0, { count: 3, values: [10, 20, 30] }, "G");
         expect(result.fields[1]).toMatchObject({ name: "Values", value: "(3 values)", type: "padding" });
+    });
+
+    it("emits a per-slot named sub-group when array view is 'slots'", () => {
+        // A view: "slots" array carries indexed semantic slots — each element
+        // has a stable label that survives reorder/append. Walker emits a
+        // ParsedGroup with N child fields labelled from `slotLabels` rather
+        // than the "(N values) padding" fallback used for opaque byte runs.
+        type Data = { animation: number[] };
+        const spec: StructSpec<Data> = {
+            animation: arraySpec({
+                element: { codec: u16 },
+                count: 3,
+                view: "slots",
+                slotLabels: ["Overhand", "Backhand", "Thrust"],
+            }),
+        };
+        const data: Data = { animation: [34, 33, 33] };
+        const result = walkStruct(spec, {}, 0, data, "G");
+
+        expect(result.fields).toHaveLength(1);
+        const group = result.fields[0] as ParsedGroup;
+        expect(group.name).toBe("Animation");
+        expect(group.fields).toEqual([
+            { name: "Overhand", value: 34, offset: 0, size: 2, type: "uint16", rawValue: 34 },
+            { name: "Backhand", value: 33, offset: 2, size: 2, type: "uint16", rawValue: 33 },
+            { name: "Thrust", value: 33, offset: 4, size: 2, type: "uint16", rawValue: 33 },
+        ]);
+    });
+
+    it("slots view honours the presentation label override on the array itself", () => {
+        type Data = { meleeAnimation: number[] };
+        const spec: StructSpec<Data> = {
+            meleeAnimation: arraySpec({
+                element: { codec: u16 },
+                count: 3,
+                view: "slots",
+                slotLabels: ["A", "B", "C"],
+            }),
+        };
+        const presentation: StructPresentation<Data> = { meleeAnimation: { label: "Melee Animation" } };
+        const result = walkStruct(spec, presentation, 0, { meleeAnimation: [1, 2, 3] }, "G");
+        const group = result.fields[0] as ParsedGroup;
+        expect(group.name).toBe("Melee Animation");
     });
 
     it("walkGroup is the inverse of walkStruct on scalars", () => {
