@@ -12,6 +12,9 @@ import {
     stringifyKeys,
 } from "../presentation-schema-types";
 import type { NumericRange } from "../binary-format-contract";
+import { toPresentationPatterns } from "../spec/derive-presentation";
+import { otherSlotSpec } from "./specs/script-slot";
+import { inventoryHeaderSpec, objectBaseSpec } from "./specs/object";
 
 /**
  * Drop the legacy `none_x_bad` sentinel from the script-proc dropdown so the
@@ -101,19 +104,26 @@ export const mapPresentationSchema: FormatPresentationSchema = formatPresentatio
             presentationType: "flags",
             flagOptions: stringifyKeys(ObjectFlags),
         },
+        // Header / extent / objects-section locks. version + mapFlags are
+        // identity bits with no spec role tag; extentLength + extentNext are
+        // not in any spec (manual structure in the writer); totalObjects /
+        // objectCount are synthetic canonical-doc fields. Kept hand-written.
         { pathPattern: "^map\\.header\\.(version|numLocalVars|numGlobalVars|mapFlags)$", editable: false },
         { pathPattern: "^map\\.scripts\\[\\]\\.extents\\[\\]\\.(extentLength|extentNext)$", editable: false },
-        {
-            pathPattern:
-                "^map\\.scripts\\[\\]\\.extents\\[\\]\\.slots\\[\\]\\.(localVarsOffset|numLocalVars|programPointerSlot|unknownField0x48|legacyField0x50)$",
-            editable: false,
-        },
         { pathPattern: "^map\\.objects\\.(totalObjects|elevations\\[\\]\\.objectCount)$", editable: false },
-        {
-            pathPattern:
-                "^map\\.objects\\.elevations\\[\\]\\.objects\\[\\]\\.(base\\.(field74|scriptIndex)|inventoryHeader\\.(inventoryLength|inventoryCapacity|inventoryPointer))$",
-            editable: false,
-        },
+        // Per-spec structural / engine-set locks derived from the role
+        // annotation on each scalar field. Filter to editable: false so the
+        // enum / flags emissions (already covered by the hand-written
+        // patterns above) don't duplicate.
+        ...toPresentationPatterns(otherSlotSpec, {}, "map.scripts[].extents[].slots[]").filter(
+            (p) => p.editable === false,
+        ),
+        ...toPresentationPatterns(objectBaseSpec, {}, "map.objects.elevations[].objects[].base").filter(
+            (p) => p.editable === false,
+        ),
+        ...toPresentationPatterns(inventoryHeaderSpec, {}, "map.objects.elevations[].objects[].inventoryHeader").filter(
+            (p) => p.editable === false,
+        ),
     ],
 });
 
