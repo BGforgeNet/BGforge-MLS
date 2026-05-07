@@ -2,24 +2,23 @@
 
 ## Unreleased
 
+### NPM packages
+
+3 new npm packages, each including an API and a corresponding cli tool:
+- `@bgforge/binary` - binary bindings for IE and Fallout 1/2 formats. CLI is `fgbin`.
+- `@bgforge/format` - formatting library for all supported text formats. CLI is `fgfmt`.
+- `@bgforge/transpile` - transpiling for TSSL, TBAF, TD. CLI is `fgtp`.
+
 ### Binary editor / `fgbin`
 
-- New: Infinity Engine `.itm` (item), `.spl` (spell), and `.eff` v2 (effect) files supported alongside Fallout `.pro` / `.map`. Header, abilities, and effects decode into named, editable fields with byte-identical round-trip. Spell types, effect opcodes, and item flags display as readable names; resref and signature fields as ASCII strings. Unrecognised values in mod-extensible fields display as `Unknown (N)` rather than erroring, so files using custom values from mods round-trip cleanly.
-- New: adding, removing, and reordering entries in addable arrays (currently MAP global and local variables) — `+ Add entry` / `× Remove` buttons, insert before / after, move up / down, and a native VSCode context menu on tree rows.
-- New: editing fixed-width string fields (e.g. the MAP header `Filename`). Input is restricted to printable ASCII and clamped to the field's byte budget, applied live as you type.
-- New: MAP files decode the trailing per-subtype payload of item and scenery object records — weapon ammo quantity / type, ammo / misc / key counters, and scenery door / stairs / elevator / ladder fields all surface as named, editable fields. When parsing a MAP, `fgbin` and the binary editor automatically scan `<map dir>/../proto/{items,scenery}/` for `.pro` overrides, matching the standard Fallout 2 mod tree layout so a mod's own protos extend MAP decoding without any extra flags. Records whose pid is in no lookup retain the existing opaque-tail behaviour, so byte-identical round-trip is preserved either way.
+- New: support for full Fallout MAP decode with Fallout 2 default and proto-dir override.
+- New: support for Infinity Engine `.itm` (item), `.spl` (spell), and `.eff` v2 (effect) files supported alongside Fallout `.pro` / `.map`.
 - New: `fgbin --extensions` prints the list of supported binary file extensions, one per line.
-- `fgbin` and the binary editor now reject Fallout `.map` files whose header reports more global or local variables than fit in the remaining file, instead of attempting a multi-billion-iteration read.
-- The editor now activates correctly when opening a `.pro` or `.map` file in a workspace that contains no other recognised file types; previously it fell back to a plain text view in that case.
-- Opening the same `.pro` or `.map` file in two side-by-side panels now keeps each panel's tree expand/collapse state independent; previously the second panel overwrote the first.
-- Fixed armor stat fields (AC, damage resistance, damage threshold, perk) being annotated as signed `int32` in the field-detail view; they are unsigned in the file format and now display as `uint32`.
-- ITM and SPL header pointers (`Extended Headers Offset` / `Count`, `Feature Blocks Offset` / `Index` / `Count`, casting feature-block pair) and per-ability slice fields (`Feature Block Count` / `Index`) are now read-only in the binary editor. These fields are derived from the document layout; editing them by hand was a route to silently corrupting the file.
-- ITM `Usability Flags` now displays as four labelled flag rows (Class+Alignment, Class, Class+Race, Race) decoding their respective IESDP bits, instead of an opaque `(4 values) padding` summary. Each row is editable as checkboxes per IESDP bit.
-- Nested groups inside the binary editor (e.g. `Usability Flags` inside the ITM header, `Melee Animation` inside an ability) no longer accumulate extra left indent on each nesting level; group children align with their grandparent's fields for a flat, scannable tree.
-- ITM ability `Melee Animation` now displays as three named slots (Overhand / Backhand / Thrust) instead of `(3 values) padding`.
-- EFF `Variable Name` and MAP `Filename` now display as strings directly (the editor already showed the filename via a workaround; EFF surfaces it for the first time).
-- MAP per-object `Script Index` is now read-only in the binary editor — it is an index into the global script table and editing it would have produced a corrupt save.
-- Saving an ITM, SPL, or MAP file from a hand-edited JSON snapshot whose structural fields (header offsets/counts, per-object inventory length, MAP local/global variable counts) disagree with the actual document is now silently corrected on save instead of producing a corrupt file.
+- More robust parse and display.
+
+### GitHub Actions
+
+- New: `actions/binary` refreshes / checks JSON snapshots for every format `@bgforge/binary` recognises.
 
 ### Transpilers
 
@@ -29,39 +28,18 @@
 
 ### Formatter
 
-- New: WeiDU TP2 formatter preserves blank lines inside body blocks and keeps `BEGIN` on the header line for parameterless macros.
+- New: WeiDU TP2 formatter preserves blank lines inside body blocks and keeps `BEGIN` on the header line for macros.
 
 ### Extension / server
 
+- Minimum supported Node.js version raised to 20.
+- Fix: `quick-lru` is now correctly declared as a runtime dependency in `@bgforge/mls-server` (previously misclassified as devDependency, which would cause module-not-found errors for downstream npm consumers).
 - New setting `bgforge.debug` enables debug logging in the BGforge MLS output panel. Useful for troubleshooting rename, include resolution, and other issues.
-- Webview runtime errors (binary editor, dialog tree preview) are now surfaced in the BGforge MLS output channel instead of being silently swallowed.
-- Webview panels (binary editor, dialog tree preview) now enforce a strict per-render Content-Security-Policy with nonced styles and scripts; the dialog-tree panel's allowed resource roots are narrowed to the directories it actually loads from.
 - `.bgforge.yml` `directory` values that resolve outside the workspace root (via an absolute path elsewhere on disk, or via `..` segments) are now ignored with a warning logged to the BGforge MLS output channel. Translation lookup still works for workspace-internal `directory` values.
 - Project-loading progress spinner now self-resolves after 60 seconds instead of hanging indefinitely if the server never reports project load completion.
 - Long-running Fallout SSL and WeiDU compilations are now aborted on extension shutdown, rather than holding tmp-file locks until their own timeout.
 - Provider initialization failures now surface a user-visible error naming the affected language, instead of silently producing an empty language.
 - Dialog tree preview now surfaces persistent refresh failures to the user instead of silently failing.
-
-### npm packages
-
-- New library `@bgforge/binary` published on npm. Parsers for Fallout `.pro` / `.map` and Infinity Engine `.itm` / `.spl` / `.eff` with round-trip JSON snapshot helpers, and ships the `fgbin` CLI as a `bin` entry.
-- New library `@bgforge/format` published on npm. Formatters for Fallout SSL, WeiDU BAF / D / TP2 / TRA, Fallout MSG, Infinity Engine 2DA, and scripts.lst, and ships the `fgfmt` CLI as a `bin` entry.
-- New library `@bgforge/transpile` published on npm. TSSL / TBAF / TD transpilers (`tssl`, `tbaf`, `td` named exports plus an extension-dispatching `transpile()` helper), and ships the `fgtp` CLI as a `bin` entry. Replaces the previous standalone `@bgforge/fgtp` package.
-- Minimum supported Node.js version raised from 18 to 20. Node 18 reached end-of-life in April 2025; Node 20 is the current LTS minimum. Affects users installing `@bgforge/mls-server` or `@bgforge/transpile` standalone via npm.
-- `@bgforge/mls-server`: `quick-lru` is now correctly declared as a runtime dependency (previously misclassified as devDependency, which would cause module-not-found errors for downstream npm consumers).
-
-### GitHub Actions
-
-- New: `actions/binary` refreshes / checks JSON snapshots for every format `@bgforge/binary` recognises (was `.pro` / `.map` only), now including `.itm` / `.spl` / `.eff`. Future formats added to `@bgforge/binary` are picked up automatically.
-
-### Breaking
-
-- **`@bgforge/binary` library, `.pro.json` snapshots:** the canonical document shapes for armor, drug, critter, stairs, and ladder PROs have been flattened to match the wire format.
-    - `armorStats`: replaced `damageResistance: { normal, laser, ... }` and `damageThreshold: { normal, ... }` nested groups with flat `drNormal`..`drExplosion` and `dtNormal`..`dtExplosion` fields.
-    - `drugStats`: replaced `affectedStats: { stat0..stat2 }`, `instantEffect: { amount0..amount2 }`, `delayedEffect1: { duration, amount0..amount2 }`, `delayedEffect2: { ... }`, `addiction: { rate, effect, onset }` nested groups with flat `stat0..stat2`, `amount{0,1,2}Instant`, `duration1`, `amount{0,1,2}Delayed1`, `duration2`, `amount{0,1,2}Delayed2`, `addictionRate`, `addictionEffect`, `addictionOnset` fields.
-    - Critter PROs: replaced the twelve separate top-level sections (`critterProperties`, `basePrimaryStats`, `baseSecondaryStats`, `baseDamageThreshold`, `baseDamageResistance`, `demographics`, `bonusPrimaryStats`, `bonusSecondaryStats`, `bonusDamageThreshold`, `bonusDamageResistance`, `skills`, `finalProperties`) with a single flat `critterStats` section matching the wire layout. Field names are unchanged from the wire spec (e.g., `strengthBonus`, `skillSmallGuns`).
-    - `stairsProperties` and `ladderProperties`: replaced the bit-packed `destTileAndElevation` field with flat top-level `destTile` (low 26 bits) and `destElevation` (high 6 bits) entries, matching the editor display.
-    - Anyone with saved `.pro.json` snapshots for these PROs needs to regenerate them (re-save in the binary editor, or pipe the file through `fgbin` again).
 
 ## 3.7.0
 
