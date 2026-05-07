@@ -195,19 +195,23 @@ export function registerDialogPanel(
 
         try {
             const data = (await client.sendRequest(ExecuteCommandRequest.type, params)) as unknown;
+            // The panel can be disposed (synchronously nulling `dialogPanel` via
+            // onDidDispose at line 309) while sendRequest is in flight. Re-check
+            // before touching `.webview`; the pre-await guard above does not
+            // cover this window.
+            if (!dialogPanel) return;
             if (data == null || !config.hasData(data)) return;
 
+            const panel = dialogPanel;
             const treeContent = config.buildTreeHtml(data);
-            const codiconsUri = dialogPanel.webview.asWebviewUri(
+            const codiconsUri = panel.webview.asWebviewUri(
                 vscode.Uri.joinPath(context.extensionUri, "client", "out", "codicons", "codicon.css"),
             );
-            const iconUri = dialogPanel.webview.asWebviewUri(
-                vscode.Uri.joinPath(context.extensionUri, config.tabIconPath),
-            );
-            dialogPanel.webview.html = getDialogPreviewHtml(
+            const iconUri = panel.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, config.tabIconPath));
+            panel.webview.html = getDialogPreviewHtml(
                 treeContent,
                 codiconsUri.toString(),
-                dialogPanel.webview.cspSource,
+                panel.webview.cspSource,
                 context.extensionUri.fsPath,
                 currentFileName || "dialog",
                 currentFilePath || "",
