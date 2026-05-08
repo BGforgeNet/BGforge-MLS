@@ -308,7 +308,7 @@ export function rebuildMapCanonicalDocument(parseResult: ParseResult): MapCanoni
         ...headerScalars,
         version: headerScalars.version >>> 0,
         filename: readString(headerGroup, "Filename"),
-        // `flags` is a sorted-array projection (`{flags, flagsRaw?}`) produced
+        // `flags` is a flat sorted-array projection (`string[]`) produced
         // by `walkGroup`; no signedness coercion applies.
         timestamp: headerScalars.timestamp >>> 0,
         defaultElevation: clampNumericValue(headerScalars.defaultElevation, "int32", {

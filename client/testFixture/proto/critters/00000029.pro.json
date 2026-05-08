@@ -11,9 +11,7 @@
             "frmId": 33,
             "lightRadius": 0,
             "lightIntensity": 0,
-            "flags": {
-                "flags": ["lightThru", "transSteam"]
-            }
+            "flags": ["lightThru", "transSteam"]
         },
         "sections": {
             "critterStats": {
@@ -23,9 +21,7 @@
                 "headFrmId": -1,
                 "aiPacket": 14,
                 "teamNumber": 1,
-                "critterFlags": {
-                    "flags": ["invulnerable", "noSteal"]
-                },
+                "critterFlags": ["invulnerable", "noSteal"],
                 "strength": 5,
                 "perception": 5,
                 "endurance": 5,

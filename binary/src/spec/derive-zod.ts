@@ -86,13 +86,13 @@ function fieldSpecToZod(fs: FieldSpec, mode: "strict" | "permissive"): z.ZodType
         return z.string().max(fs.count);
     }
     if (fs.flags) {
-        // Flag word: project to a strict-object wrapper `{flags, flagsRaw?}`.
-        // `flags` is a sorted array of slugified-camelCase names (one per set
-        // bit); `flagsRaw` is an optional hex string carrying any wire bits
-        // the spec table doesn't name. The strict-disjoint invariant (named
-        // bits never appear in `flagsRaw`) is enforced by `flagArrayToInt`
-        // at the wire boundary; the schema gates shape only - uniqueness and
-        // codec-bound `flagsRaw` width.
+        // Flag word: project to a flat sorted array. Entries are either a
+        // canonical slug from the spec table (named set bit) or `bit<N>`
+        // (set bit with no name in the table). The strict-disjoint
+        // invariant (`bit<N>` never overlaps a named-bit mask) is enforced
+        // by `flagArrayToInt` at the wire boundary; the schema gates shape
+        // only - element membership, per-bit codec-width and disjoint
+        // refines, and array uniqueness.
         return flagArrayZodSchema(fs.flags, codecByteLength(fs.codec) * 8);
     }
     if (fs.enum && mode === "strict" && !fs.enumOpen) {
@@ -192,41 +192,37 @@ export function enumValueZodSchema(
  * Build the zod schema for a flag-array canonical-doc field. Exported so
  * hand-written canonical schemas (e.g. MAP) can declare flag fields without
  * re-deriving the shape from a spec entry. `codecBitWidth` is 8 / 16 / 24 / 32
- * - must match the wire codec's width so `flagsRaw` cannot carry bits outside
- * the wire word. Sort order is the writer's responsibility (`intToFlagArray`
- * emits alphabetically); the schema enforces uniqueness but accepts any order
- * so a hand-edit doesn't fail validation just for inserting a name in the
- * "wrong" slot.
+ * - bounds the `bit<N>` sentinel so a hand-edit cannot reference a position
+ * past the wire word. Sort order is the writer's responsibility
+ * (`intToFlagArray` emits canonical order: named slugs alphabetical, then
+ * `bit<N>` numeric); the schema enforces uniqueness and per-element
+ * validity but accepts any order so a hand-edit doesn't fail validation
+ * just for inserting an entry in the "wrong" slot.
  */
 export function flagArrayZodSchema(
     table: Readonly<Record<number, string>>,
     codecBitWidth: number,
-): z.ZodType<{ flags: string[]; flagsRaw?: string }> {
-    const codecMaxHexDigits = Math.ceil(codecBitWidth / 4);
-    const { entries } = compileFlagTable(table);
-    const names = entries.map((entry) => entry.key);
-    const flagsItem =
-        names.length === 0
-            ? z.never()
-            : names.length === 1
-              ? z.literal(names[0]!)
-              : z.enum(names as [string, ...string[]]);
-    const flagsArray = z
-        .array(flagsItem)
-        .refine((arr) => new Set(arr).size === arr.length, { message: "flags array must not contain duplicate names" });
-    const reservoirSchema = z
-        .string()
-        .regex(new RegExp(`^0x[0-9a-fA-F]{1,${codecMaxHexDigits}}$`), {
-            message: `flagsRaw must match /^0x[0-9a-fA-F]{1,${codecMaxHexDigits}}$/`,
-        })
-        .optional();
-    // strictObject inference produces a wrapper-typed schema whose `flags`
-    // element is `ZodEnum<...>` (or `ZodLiteral`/`ZodNever` in the edge
-    // cases above) - TS cannot widen those to `string[]` directly. The
-    // runtime shape is exactly `{flags: string[]; flagsRaw?: string}` per
-    // the field constructions above.
-    return z.strictObject({
-        flags: flagsArray,
-        flagsRaw: reservoirSchema,
-    }) as unknown as z.ZodType<{ flags: string[]; flagsRaw?: string }>;
+): z.ZodType<string[]> {
+    const { entries, namedMask } = compileFlagTable(table);
+    const namedSet = new Set(entries.map((entry) => entry.key));
+    const elementSchema = z.string().refine(
+        (value) => {
+            if (namedSet.has(value)) return true;
+            const match = /^bit(\d+)$/.exec(value);
+            if (!match) return false;
+            const position = Number(match[1]);
+            if (!Number.isInteger(position) || position < 0 || position >= codecBitWidth) return false;
+            // Strict-disjoint at the schema layer: `bit<N>` cannot occupy
+            // a position the spec already names (the canonical key must be
+            // used instead). flagArrayToInt re-checks at the wire boundary.
+            const bitMask = (1 << position) >>> 0;
+            return (bitMask & namedMask) === 0;
+        },
+        {
+            message: `expected a flag table key or "bit<N>" with N in [0, ${codecBitWidth}) and not overlapping a named bit`,
+        },
+    );
+    return z.array(elementSchema).refine((arr) => new Set(arr).size === arr.length, {
+        message: "flag array must not contain duplicate entries",
+    });
 }

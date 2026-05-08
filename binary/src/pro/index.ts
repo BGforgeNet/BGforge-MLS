@@ -319,7 +319,7 @@ function parseCritter(data: CritterData): ParsedGroup[] {
     // flagsField. The dynamic-access subset for fieldsFromDefs is the
     // numeric-only view.
     const critterData = data as unknown as Record<string, number>;
-    const critterFlagsInt = flagArrayToInt(CritterFlags, data.critterFlags);
+    const critterFlagsInt = flagArrayToInt(CritterFlags, data.critterFlags, 32);
 
     return [
         group("Critter Properties", [

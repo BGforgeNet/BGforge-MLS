@@ -378,7 +378,7 @@ describe("json-snapshot", () => {
                     frmId: 9,
                     lightRadius: 8,
                     lightIntensity: 65536,
-                    flags: { flags: ["lightThru"] },
+                    flags: ["lightThru"],
                 },
                 sections: {
                     miscProperties: {
@@ -412,7 +412,7 @@ describe("json-snapshot", () => {
                     frmId: 9,
                     lightRadius: 8,
                     lightIntensity: 65536,
-                    flags: { flags: ["lightThru"] },
+                    flags: ["lightThru"],
                 },
                 sections: {
                     miscProperties: {

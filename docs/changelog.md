@@ -15,6 +15,7 @@
 - New: support for full Fallout MAP decode with Fallout 2 default and proto-dir override.
 - New: support for Infinity Engine `.itm` (item), `.spl` (spell), and `.eff` v2 (effect) files supported alongside Fallout `.pro` / `.map`.
 - New: `fgbin --extensions` prints the list of supported binary file extensions, one per line.
+- Change: flag-word fields in JSON snapshots are now serialised as a flat sorted array of strings instead of a `{flags, flagsRaw}` wrapper object. Each entry is either a named slug (e.g. `"lightThru"`) or `bit<N>` for set bits the spec doesn't name (e.g. `"bit13"`). Snapshots produced by previous versions need to be re-saved through this version's CLI before consumers on the new shape can read them.
 - More robust parse and display.
 - MAP truncation / undecodable-region notes in JSON snapshots and the binary editor tree are now labelled `Truncated` instead of the previous `TODO` placeholder.
 - `fgbin` rejects oversized binary input files (e.g. a `.map` exceeding 16 MB) with a clear error before allocating a Buffer, so a malformed or accidentally-truncated download cannot trigger a multi-GB allocation.

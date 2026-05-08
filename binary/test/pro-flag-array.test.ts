@@ -1,10 +1,10 @@
 /**
- * Sorted-array projection for PRO flag fields.
+ * Flat-array projection for PRO flag fields.
  *
- * Exercises the canonical-doc shape (zod schema accepts {flags, flagsRaw?},
- * rejects raw int and dict), the strict-disjoint invariant (`flagsRaw`
- * overlapping a named bit fails to load), and the reservoir-adaptation
- * property (a snapshot with unnamed bits in `flagsRaw` round-trips
+ * Exercises the canonical-doc shape (zod schema accepts a sorted `string[]`,
+ * rejects raw int and wrapper-object), the strict-disjoint invariant
+ * (`bit<N>` overlapping a named bit fails to load), and the reservoir
+ * property (a snapshot with unnamed `bit<N>` entries round-trips
  * byte-identically through parse -> serialize).
  */
 
@@ -18,12 +18,7 @@ import { HeaderFlags } from "../src/pro/types";
 
 const FIXTURES = path.resolve("client/testFixture/proto");
 
-const validFlags = (overrides: Partial<{ flags: string[]; flagsRaw: string }> = {}) => ({
-    flags: [],
-    ...overrides,
-});
-
-const validBase = (flagOverrides: Partial<{ flags: string[]; flagsRaw: string }> = {}) => ({
+const validBase = (flags: string[] = []) => ({
     header: {
         objectType: 5,
         objectId: 0,
@@ -32,18 +27,18 @@ const validBase = (flagOverrides: Partial<{ flags: string[]; flagsRaw: string }>
         frmId: 0,
         lightRadius: 0,
         lightIntensity: 0,
-        flags: validFlags(flagOverrides),
+        flags,
     },
     sections: { miscProperties: { unknown: 0 } },
 });
 
-describe("PRO header.flags - sorted-array shape", () => {
-    it("accepts an empty flags array with no flagsRaw", () => {
+describe("PRO header.flags - flat-array shape", () => {
+    it("accepts an empty array", () => {
         expect(() => proCanonicalDocumentSchema.parse(validBase())).not.toThrow();
     });
 
-    it("accepts known names and no flagsRaw", () => {
-        expect(() => proCanonicalDocumentSchema.parse(validBase({ flags: ["lightThru"] }))).not.toThrow();
+    it("accepts known names", () => {
+        expect(() => proCanonicalDocumentSchema.parse(validBase(["lightThru"]))).not.toThrow();
     });
 
     it("rejects a raw integer for the flags field", () => {
@@ -52,35 +47,32 @@ describe("PRO header.flags - sorted-array shape", () => {
         expect(() => proCanonicalDocumentSchema.parse(doc)).toThrow();
     });
 
-    it("rejects a dict shape (legacy)", () => {
+    it("rejects a wrapper-object shape (legacy)", () => {
         const doc = validBase();
-        (doc.header as Record<string, unknown>).flags = { lightThru: true };
+        (doc.header as Record<string, unknown>).flags = { flags: ["lightThru"] };
         expect(() => proCanonicalDocumentSchema.parse(doc)).toThrow();
     });
 
     it("rejects an unknown flag name", () => {
-        expect(() => proCanonicalDocumentSchema.parse(validBase({ flags: ["unknownFlag"] }))).toThrow();
+        expect(() => proCanonicalDocumentSchema.parse(validBase(["unknownFlag"]))).toThrow();
     });
 
-    it("rejects duplicate names in the flags array", () => {
-        expect(() => proCanonicalDocumentSchema.parse(validBase({ flags: ["lightThru", "lightThru"] }))).toThrow();
+    it("rejects duplicate entries", () => {
+        expect(() => proCanonicalDocumentSchema.parse(validBase(["lightThru", "lightThru"]))).toThrow();
     });
 
-    it("rejects an extra unknown sibling key (z.strictObject)", () => {
-        const doc = validBase();
-        (doc.header.flags as Record<string, unknown>).bogus = true;
-        expect(() => proCanonicalDocumentSchema.parse(doc)).toThrow();
+    it("accepts bit<N> for unnamed positions within the codec width", () => {
+        // HeaderFlags is u32; bits not in the table are valid as `bit<N>`.
+        expect(() => proCanonicalDocumentSchema.parse(validBase(["bit0"]))).not.toThrow();
     });
 
-    it("accepts an optional flagsRaw hex string within the codec width", () => {
-        // u32 codec: any 1-8 digit hex value is shape-valid (disjointness check
-        // fires at the wire boundary, not in the schema).
-        expect(() => proCanonicalDocumentSchema.parse(validBase({ flagsRaw: "0x000000" }))).not.toThrow();
+    it("rejects bit<N> with N >= codec width", () => {
+        expect(() => proCanonicalDocumentSchema.parse(validBase(["bit32"]))).toThrow();
     });
 
-    it("rejects malformed flagsRaw strings", () => {
-        expect(() => proCanonicalDocumentSchema.parse(validBase({ flagsRaw: "deadbeef" }))).toThrow();
-        expect(() => proCanonicalDocumentSchema.parse(validBase({ flagsRaw: "0xZZZZ" }))).toThrow();
+    it("rejects bit<N> overlapping a named-bit position", () => {
+        // 0x20000000 == bit 29, named `lightThru`; the literal "bit29" must use the slug.
+        expect(() => proCanonicalDocumentSchema.parse(validBase(["bit29"]))).toThrow();
     });
 });
 
@@ -107,35 +99,35 @@ describe("PRO header.flags - round-trip via parser", () => {
 });
 
 describe("PRO header.flags - strict-disjoint invariant at the wire boundary", () => {
-    it("rejects writing a projection whose flagsRaw overlaps a named bit", () => {
-        // `lightThru` is bit 0x20000000 in HeaderFlags; the wire codec rejects
-        // a projection that sets `flagsRaw: "0x20000000"` because it duplicates
-        // the named bit at the wire level. Permissive zod accepts it
-        // (shape-only); the disjoint check fires when the doc is written to
-        // bytes.
-        const overlap = validBase({ flagsRaw: "0x20000000" });
-        const validated = proCanonicalDocumentSchemaPermissive.parse(overlap);
-        expect(() =>
-            flagArrayToInt(HeaderFlags, validated.header.flags as { flags: string[]; flagsRaw?: string }),
-        ).toThrow(/overlaps named-bit mask/);
+    it("rejects writing a projection that includes a bit<N> overlapping a named bit", () => {
+        // `lightThru` is bit 0x20000000 == position 29 in HeaderFlags. The
+        // permissive zod schema rejects "bit29" at the schema layer (overlap
+        // is shape-checked there too); flagArrayToInt re-checks at the wire
+        // boundary as a defence-in-depth gate.
+        expect(() => flagArrayToInt(HeaderFlags, ["bit29"], 32)).toThrow(/overlaps named-bit mask/);
+        // The schema layer rejects the same input via its element refine,
+        // so a permissive parse never produces a `["bit29"]` value here -
+        // assert the schema gate fires on the doc form too.
+        const overlapDoc = validBase(["bit29"]);
+        expect(() => proCanonicalDocumentSchemaPermissive.parse(overlapDoc)).toThrow();
     });
 
     it("packs the array back to the same int through intToFlagArray <-> flagArrayToInt", () => {
         // 0x20000000 lightThru + 0x00004000 transRed (per pro/types.ts).
         const original = 0x20004000;
         const projection = intToFlagArray(HeaderFlags, original, 32);
-        expect(projection.flags).toContain("lightThru");
-        expect(projection.flags).toContain("transRed");
-        expect(projection.flags).not.toContain("shootThru");
-        expect(flagArrayToInt(HeaderFlags, projection)).toBe(original);
+        expect(projection).toContain("lightThru");
+        expect(projection).toContain("transRed");
+        expect(projection).not.toContain("shootThru");
+        expect(flagArrayToInt(HeaderFlags, projection, 32)).toBe(original);
     });
 
-    it("preserves bits outside HeaderFlags via `flagsRaw` reservoir", () => {
-        // Bit 0x00000001 isn't named in HeaderFlags; the projection captures
-        // it in `flagsRaw` and the round-trip preserves it.
+    it("preserves bits outside HeaderFlags via bit<N> entries", () => {
+        // Bit 0 isn't named in HeaderFlags; the projection emits "bit0" and
+        // the round-trip preserves it.
         const original = 0x20000001 >>> 0;
         const projection = intToFlagArray(HeaderFlags, original, 32);
-        expect(projection.flagsRaw).toBe("0x1");
-        expect(flagArrayToInt(HeaderFlags, projection)).toBe(original);
+        expect(projection).toContain("bit0");
+        expect(flagArrayToInt(HeaderFlags, projection, 32)).toBe(original);
     });
 });

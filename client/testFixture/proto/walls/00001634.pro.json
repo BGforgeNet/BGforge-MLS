@@ -11,19 +11,12 @@
             "frmId": 1691,
             "lightRadius": 0,
             "lightIntensity": 0,
-            "flags": {
-                "flags": []
-            }
+            "flags": []
         },
         "sections": {
             "wallProperties": {
-                "wallLightFlags": {
-                    "flags": ["southCorner"]
-                },
-                "actionFlags": {
-                    "flags": [],
-                    "flagsRaw": "0x2000"
-                },
+                "wallLightFlags": ["southCorner"],
+                "actionFlags": ["bit13"],
                 "scriptType": -1,
                 "scriptId": -1,
                 "materialId": 5

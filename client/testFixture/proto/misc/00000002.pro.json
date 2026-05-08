@@ -11,9 +11,7 @@
             "frmId": 7,
             "lightRadius": 8,
             "lightIntensity": 65536,
-            "flags": {
-                "flags": []
-            }
+            "flags": []
         },
         "sections": {
             "miscProperties": {

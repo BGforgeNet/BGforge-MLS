@@ -23,12 +23,13 @@ export interface MapHeader {
     numLocalVars: number;
     scriptId: number;
     /**
-     * `flags` is the sorted-array projection produced by the wire codec
-     * (`FlagArraySchema`). Consumers that need a numeric mask use the
-     * `FlagArray` overload of `hasElevation` (see `./types.ts`); raw-int
-     * access goes through `flagArrayToInt(MapFlags, ...)` if needed.
+     * `flags` is the flat sorted-array projection produced by the wire
+     * codec (named slugs first, then `bit<N>` for unnamed set bits).
+     * Consumers that need a numeric mask use the `FlagArray` overload of
+     * `hasElevation` (see `./types.ts`); raw-int access goes through
+     * `flagArrayToInt(MapFlags, ..., 32)` if needed.
      */
-    flags: { flags: string[]; flagsRaw?: string };
+    flags: string[];
     darkness: number;
     numGlobalVars: number;
     mapId: number;

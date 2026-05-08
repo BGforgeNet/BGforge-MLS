@@ -11,15 +11,11 @@
             "frmId": 46,
             "lightRadius": 0,
             "lightIntensity": 0,
-            "flags": {
-                "flags": ["flat", "lightThru", "shootThru"]
-            }
+            "flags": ["flat", "lightThru", "shootThru"]
         },
         "sections": {
             "itemProperties": {
-                "flagsExt": {
-                    "flags": ["look", "pickUp", "use"]
-                },
+                "flagsExt": ["look", "pickUp", "use"],
                 "attackModes": 5,
                 "scriptType": -1,
                 "scriptId": -1,

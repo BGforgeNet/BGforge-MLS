@@ -32,8 +32,8 @@ function buildMiscDocument(overrides: Partial<{ lightRadius: number; frmType: nu
             lightRadius: overrides.lightRadius ?? 0,
             lightIntensity: 0,
             // PRO `HeaderFlags` value 0x20000000 -> "lightThru" entry after the
-            // named projection. Other named bits absent; `flagsRaw` empty.
-            flags: { flags: ["lightThru"] },
+            // named projection. Other named bits absent; no bit<N> entries.
+            flags: ["lightThru"],
         },
         sections: {
             miscProperties: { unknown: 0 },

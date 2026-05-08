@@ -105,11 +105,10 @@ function readClampedFieldNumber(
 }
 
 /**
- * Read a flag-word field from the display tree and project it to the
- * sorted-array `{flags, flagsRaw?}` shape canonical-doc expects. Width is
- * hard-coded per call site to match the underlying spec codec - every PRO
- * flag word is u8 / u24 / u32 in the spec, mapped to the matching
- * `codecBitWidth` here.
+ * Read a flag-word field from the display tree and project it to the flat
+ * sorted `string[]` shape canonical-doc expects. Width is hard-coded per
+ * call site to match the underlying spec codec - every PRO flag word is
+ * u8 / u24 / u32 in the spec, mapped to the matching `codecBitWidth` here.
  */
 function readFlagArray(
     group: ParsedGroup,

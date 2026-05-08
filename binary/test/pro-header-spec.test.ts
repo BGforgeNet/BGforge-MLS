@@ -4,7 +4,7 @@ import { proCanonicalDocumentSchema } from "../src/pro/canonical-schemas";
 describe("proCanonicalDocumentSchema header", () => {
     // All HeaderFlags bits cleared. Default valid base for the strict-shape
     // schema; tests that touch one bit override only that key.
-    const validFlags: { flags: string[]; flagsRaw?: string } = { flags: [] };
+    const validFlags: string[] = [];
     const validBase = {
         header: {
             objectType: 5, // Misc

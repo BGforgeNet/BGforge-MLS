@@ -131,11 +131,11 @@ export const ObjectFlags: Record<number, string> = {
  * bitmask form is preserved as a fallback for callers that still hold a
  * raw int (e.g., low-level parsers).
  */
-export function hasElevation(flags: number | { flags: string[]; flagsRaw?: string }, elevation: number): boolean {
+export function hasElevation(flags: number | string[], elevation: number): boolean {
     if (typeof flags === "number") {
         return (flags & (0x2 << elevation)) === 0;
     }
     const key =
         elevation === 0 ? "skipElevation0Tiles" : elevation === 1 ? "skipElevation1Tiles" : "skipElevation2Tiles";
-    return !flags.flags.includes(key);
+    return !flags.includes(key);
 }

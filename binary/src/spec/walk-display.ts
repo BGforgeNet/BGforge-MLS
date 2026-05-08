@@ -71,11 +71,11 @@ export function walkGroup<S extends Record<string, FieldSpec>>(
                 `walkGroup: field "${key}" (label "${label}") in "${group.name}" had no numeric rawValue/value.`,
             );
         }
-        // Flag fields project to a sorted-array `{flags, flagsRaw?}`; enum
-        // fields project to `string | number` (skipping when `enumOpaque` is
-        // set). Display tree carries the int via `rawValue`, so the
-        // round-trip is int -> projected -> int through `intToFlagArray` /
-        // `flagArrayToInt`.
+        // Flag fields project to a flat sorted `string[]` (named slugs +
+        // `bit<N>` sentinels); enum fields project to `string | number`
+        // (skipping when `enumOpaque` is set). Display tree carries the
+        // int via `rawValue`, so the round-trip is int -> projected -> int
+        // through `intToFlagArray` / `flagArrayToInt`.
         out[key] = fs.flags ? intToFlagArray(fs.flags, numeric, codecByteLength(fs.codec) * 8) : numeric;
     }
     return out as SpecData<S>;
@@ -294,14 +294,15 @@ function scalarFieldFor(
     }
 
     if (fs.flags) {
-        // Flag fields surface in canonical-doc as a sorted-array
-        // `{flags, flagsRaw?}` projection, but slot-element data still flows
-        // through here as raw `number` since the enclosing array's wire shape
-        // is `number[]` (the per-slot flag annotation is a presentation hint,
-        // not a structural change to the array element type). Accept both
-        // shapes: projection -> repack via `flagArrayToInt`, number -> use
-        // directly.
-        const numeric = typeof value === "number" ? value : flagArrayToInt(fs.flags, value as FlagArray);
+        // Flag fields surface in canonical-doc as a flat `string[]`
+        // projection, but slot-element data still flows through here as
+        // raw `number` since the enclosing array's wire shape is
+        // `number[]` (the per-slot flag annotation is a presentation
+        // hint, not a structural change to the array element type).
+        // Accept both shapes: projection -> repack via `flagArrayToInt`,
+        // number -> use directly.
+        const codecBitWidth = codecByteLength(fs.codec) * 8;
+        const numeric = typeof value === "number" ? value : flagArrayToInt(fs.flags, value as FlagArray, codecBitWidth);
         const active = Object.entries(fs.flags)
             .filter(([bit]) => (numeric & Number(bit)) !== 0)
             .map(([, displayName]) => displayName);

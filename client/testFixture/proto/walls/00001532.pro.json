@@ -11,19 +11,12 @@
             "frmId": 1589,
             "lightRadius": 0,
             "lightIntensity": 0,
-            "flags": {
-                "flags": []
-            }
+            "flags": []
         },
         "sections": {
             "wallProperties": {
-                "wallLightFlags": {
-                    "flags": []
-                },
-                "actionFlags": {
-                    "flags": [],
-                    "flagsRaw": "0x2000"
-                },
+                "wallLightFlags": [],
+                "actionFlags": ["bit13"],
                 "scriptType": -1,
                 "scriptId": -1,
                 "materialId": 1

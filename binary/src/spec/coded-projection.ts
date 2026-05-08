@@ -69,8 +69,20 @@ export function slugifyCodedName(displayName: string): string {
             `slugifyCodedName: name "${displayName}" produced "${camel}" which is not a valid JS identifier`,
         );
     }
+    if (RESERVED_BIT_PATTERN.test(camel)) {
+        // `bit<N>` is the reserved sentinel for unnamed set bits in
+        // FlagArray projections (see `intToFlagArray`). Spec authors must
+        // not pick a display name whose slug collides with that namespace,
+        // since the projection cannot distinguish a spec-named `bit13`
+        // from "bit at position 13" on encode.
+        throw new Error(
+            `slugifyCodedName: name "${displayName}" produced reserved sentinel "${camel}"; flag display names must not slugify to bit<N>`,
+        );
+    }
     return camel;
 }
+
+const RESERVED_BIT_PATTERN = /^bit\d+$/;
 
 export interface FlagBitEntry {
     readonly key: string;
@@ -82,9 +94,9 @@ export interface FlagBitEntry {
  * Compile a flag table (`{[mask]: displayName}`) into a sorted entry list with
  * canonical keys, plus the OR'd `namedMask` covering every named bit.
  *
- * Sorted alphabetically by canonical key so the projected `flags` array
- * serialises in stable order - toggling one bit adds or removes one entry
- * at its alphabetical position, regardless of bit position.
+ * Sorted alphabetically by canonical key so the projected array serialises
+ * in stable order - toggling a named bit adds or removes one entry at its
+ * alphabetical position, regardless of bit position.
  *
  * Returns frozen entries to discourage in-place mutation.
  */
@@ -108,34 +120,41 @@ export function compileFlagTable(table: Readonly<Record<number, string>>): {
 }
 
 /**
- * Build a default array projection - empty `flags`, no `flagsRaw`. Used by
+ * Sorted-array projection of a flag word. Each entry is one of:
+ *
+ * - A canonical (slugified-camelCase) key from the spec table, identifying
+ *   a named set bit (e.g. `lightThru`).
+ * - `bit<N>` where N is the zero-based bit position, identifying a set bit
+ *   the spec table doesn't name (e.g. `bit5`, `bit13`).
+ *
+ * Canonical sort order: named keys alphabetically first, then `bit<N>`
+ * entries in ascending bit-position order. Toggling one bit adds or removes
+ * exactly one entry at its sorted position - same shape for named and
+ * unnamed bits, so diffs read uniformly.
+ *
+ * Strict-disjoint invariant: a `bit<N>` entry is rejected at the wire
+ * boundary if `1 << N` falls inside the spec table's named-mask, since a
+ * hand-edit must use the canonical name for any spec-named bit. Encode
+ * also rejects N >= codecBitWidth (no synthetic bits past the wire word).
+ */
+export type FlagArray = string[];
+
+/**
+ * Build a default flag-array projection (empty array). Used by
  * structural-edit transitions and as a default in test fixtures or
  * construction APIs.
  */
 export function emptyFlagArray(_table: Readonly<Record<number, string>>): FlagArray {
-    return { flags: [] };
+    return [];
 }
 
 /**
- * Sorted-array projection of a flag word - `flags` lists every set bit by its
- * canonical (slugified-camelCase) name, `flagsRaw` carries any wire bits the
- * spec table doesn't name as a hex string. Both fields are wire-shape:
- * `flags` order is alphabetical for stable diffs, `flagsRaw` is omitted in
- * the common case where every set bit has a name.
- */
-export interface FlagArray {
-    flags: string[];
-    flagsRaw?: string;
-}
-
-/**
- * Project an integer flag word to a sorted array of slugified names. Each
- * named bit that's set contributes its canonical key; unnamed bits land in
- * `flagsRaw` as a lowercase hex string. `flagsRaw` is omitted when all set
- * bits are named.
+ * Project an integer flag word to a sorted FlagArray. Named set bits
+ * contribute their canonical key (alphabetical); unnamed set bits within
+ * the codec's bit width contribute `bit<N>` entries (numeric).
  *
- * `codecBitWidth` (8 / 16 / 24 / 32) masks `flagsRaw` to the wire width so
- * sign-extended bits a JS bit-OR might surface don't leak in.
+ * `codecBitWidth` (8 / 16 / 24 / 32) bounds the per-bit scan so sign-
+ * extended bits a JS bit-OR might surface don't leak in.
  */
 export function intToFlagArray(
     table: Readonly<Record<number, string>>,
@@ -143,55 +162,67 @@ export function intToFlagArray(
     codecBitWidth: number,
 ): FlagArray {
     const { entries, namedMask } = compileFlagTable(table);
-    const flags: string[] = [];
+    const named: string[] = [];
     for (const entry of entries) {
-        if ((value & entry.mask) !== 0) flags.push(entry.key);
+        if ((value & entry.mask) !== 0) named.push(entry.key);
     }
     const codecMask = codecBitWidth >= 32 ? 0xffffffff : (1 << codecBitWidth) - 1;
     const reservoir = (value & ~namedMask & codecMask) >>> 0;
-    if (reservoir !== 0) {
-        return { flags, flagsRaw: `0x${reservoir.toString(16)}` };
+    const bits: string[] = [];
+    for (let i = 0; i < codecBitWidth; i++) {
+        if ((reservoir & (1 << i)) !== 0) bits.push(`bit${i}`);
     }
-    return { flags };
+    return [...named, ...bits];
 }
 
 /**
- * Pack a flag array back to an integer. Every name in `flags` contributes its
- * mask; `flagsRaw` (hex) ORs in. Throws on unknown names, duplicate names,
- * malformed `flagsRaw`, or a `flagsRaw` value overlapping a named bit
- * (strict-disjoint invariant - the hand-edit surface should not let the same
- * bit be specified twice).
+ * Pack a FlagArray back to an integer. Each entry contributes its bit(s):
+ * named keys via the spec table, `bit<N>` via `1 << N`. Throws on:
+ *
+ * - unknown names that match neither the table nor `bit<N>`,
+ * - duplicate entries,
+ * - `bit<N>` whose position overlaps a named-bit mask (strict-disjoint
+ *   invariant - the hand-edit surface should not let the same bit be
+ *   specified twice),
+ * - `bit<N>` with N >= codecBitWidth (no synthetic bits past the wire
+ *   word).
  */
-export function flagArrayToInt(table: Readonly<Record<number, string>>, projection: FlagArray): number {
+export function flagArrayToInt(
+    table: Readonly<Record<number, string>>,
+    projection: FlagArray,
+    codecBitWidth: number,
+): number {
     const { entries, namedMask } = compileFlagTable(table);
     const byKey = new Map(entries.map((entry) => [entry.key, entry.mask]));
     const seen = new Set<string>();
     let value = 0;
-    for (const name of projection.flags) {
+    for (const name of projection) {
         if (seen.has(name)) {
             throw new Error(`flagArrayToInt: duplicate flag name "${name}"`);
         }
         seen.add(name);
         const mask = byKey.get(name);
-        if (mask === undefined) {
+        if (mask !== undefined) {
+            value = (value | mask) >>> 0;
+            continue;
+        }
+        const bitMatch = RESERVED_BIT_PATTERN.exec(name);
+        if (!bitMatch) {
             throw new Error(`flagArrayToInt: unknown flag "${name}" (known: ${entries.map((e) => e.key).join(", ")})`);
         }
-        value = (value | mask) >>> 0;
-    }
-    if (projection.flagsRaw !== undefined) {
-        if (typeof projection.flagsRaw !== "string" || !/^0x[0-9a-f]+$/i.test(projection.flagsRaw)) {
-            throw new TypeError(
-                `flagArrayToInt: flagsRaw must be a hex string ("0x..."); got ${String(projection.flagsRaw)}`,
-            );
-        }
-        const reservoir = Number.parseInt(projection.flagsRaw, 16);
-        if ((reservoir & namedMask) !== 0) {
-            const overlapHex = (reservoir & namedMask).toString(16);
+        const position = Number(bitMatch[0].slice(3));
+        if (position >= codecBitWidth) {
             throw new Error(
-                `flagArrayToInt: flagsRaw ${projection.flagsRaw} overlaps named-bit mask 0x${overlapHex}; named bits must be set via the flags array`,
+                `flagArrayToInt: bit position ${position} exceeds codec width ${codecBitWidth} for "${name}"`,
             );
         }
-        value = (value | reservoir) >>> 0;
+        const bitMask = (1 << position) >>> 0;
+        if ((bitMask & namedMask) !== 0) {
+            throw new Error(
+                `flagArrayToInt: bit position ${position} overlaps named-bit mask; named bits must be set by their canonical name, not "${name}"`,
+            );
+        }
+        value = (value | bitMask) >>> 0;
     }
     return value;
 }

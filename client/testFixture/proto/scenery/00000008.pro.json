@@ -11,19 +11,12 @@
             "frmId": 283,
             "lightRadius": 0,
             "lightIntensity": 0,
-            "flags": {
-                "flags": []
-            }
+            "flags": []
         },
         "sections": {
             "sceneryProperties": {
-                "wallLightFlags": {
-                    "flags": ["westCorner"]
-                },
-                "actionFlags": {
-                    "flags": [],
-                    "flagsRaw": "0x2800"
-                },
+                "wallLightFlags": ["westCorner"],
+                "actionFlags": ["bit11", "bit13"],
                 "scriptType": -1,
                 "scriptId": -1,
                 "subType": 0,

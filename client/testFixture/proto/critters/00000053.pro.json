@@ -11,9 +11,7 @@
             "frmId": 120,
             "lightRadius": 0,
             "lightIntensity": 0,
-            "flags": {
-                "flags": ["lightThru"]
-            }
+            "flags": ["lightThru"]
         },
         "sections": {
             "critterStats": {
@@ -23,9 +21,7 @@
                 "headFrmId": -1,
                 "aiPacket": 15,
                 "teamNumber": 1,
-                "critterFlags": {
-                    "flags": ["barter"]
-                },
+                "critterFlags": ["barter"],
                 "strength": 4,
                 "perception": 7,
                 "endurance": 3,
