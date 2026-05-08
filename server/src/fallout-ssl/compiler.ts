@@ -176,6 +176,7 @@ export function abortInFlightSSLCompiles(): void {
  * state persists across test cases, so each test must call this in beforeEach
  * to avoid cross-test contamination.
  */
+// eslint-disable-next-line no-underscore-dangle -- test-only escape hatch; the underscore signals "do not call from production code"
 export function _resetCompilerCache() {
     compilerPathCache.path = null;
     disabledExternalPaths.clear();

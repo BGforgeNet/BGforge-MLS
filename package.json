@@ -85,7 +85,7 @@
         "bench": "cd server && pnpm bench"
     },
     "devDependencies": {
-        "@oxlint/plugins": "1.61.0",
+        "@oxlint/plugins": "1.63.0",
         "@stryker-mutator/core": "^9.6.1",
         "@stryker-mutator/typescript-checker": "^9.6.1",
         "@stryker-mutator/vitest-runner": "^9.6.1",
@@ -100,7 +100,7 @@
         "knip": "^6.12.0",
         "mocha": "^11.7.5",
         "oxfmt": "^0.48.0",
-        "oxlint": "1.61.0",
+        "oxlint": "1.63.0",
         "quick-lru": "^7.3.0",
         "remark-cli": "^12.0.1",
         "remark-validate-links": "^13.1.0",

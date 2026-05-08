@@ -13,6 +13,7 @@
 
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+// eslint-disable-next-line no-underscore-dangle -- compile-time-only brand symbol; double underscore marks it as never read at runtime
 declare const __normalizedUri: unique symbol;
 
 /**

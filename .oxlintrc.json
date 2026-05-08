@@ -265,7 +265,22 @@
         // Closure-over-loop-var is safe here: the loop declares `const`
         // bindings inside the body, so the closed-over values don't leak
         // across iterations.
-        "no-loop-func": "off"
+        "no-loop-func": "off",
+
+        // Same readability rationale as `no-negated-condition` above; the
+        // `unicorn/` variant is a duplicate.
+        "unicorn/no-negated-condition": "off",
+
+        // Adding the `/u` flag changes regex semantics (Unicode mode is
+        // stricter on escape parsing and treats surrogate pairs as one
+        // code point). The codebase parses ASCII-only formats (Fallout SSL,
+        // WeiDU, binary headers) where the flag adds no correctness value
+        // and risks behavior changes on patterns with literal backslashes.
+        "require-unicode-regexp": "off",
+
+        // Pedantic refactor suggestion; the duplicated tail is often a
+        // deliberate parallel structure that documents both branches.
+        "oxc/branches-sharing-code": "off"
     },
     "overrides": [
         {
@@ -287,13 +302,26 @@
             "rules": {
                 "no-undef": "error",
                 "no-unused-vars": "off",
-                "no-useless-escape": "off"
+                "no-useless-escape": "off",
+                // Tree-sitter convention: hidden grammar rules are prefixed
+                // with `_` (e.g. `_statement`, `_expression`). The names are
+                // part of the grammar's public ABI.
+                "no-underscore-dangle": "off"
             }
         },
         {
             "files": ["server/src/**/*.ts"],
             "rules": {
                 "bgforge-mls/no-showmessage": "error"
+            }
+        },
+        {
+            // VS Code idiom: a private `_onDidX` EventEmitter exposes its
+            // public `.event` as `onDidX`. The pattern is used by `vscode.d.ts`
+            // itself; renaming would diverge from the host API style.
+            "files": ["client/src/editors/binaryEditor*.ts"],
+            "rules": {
+                "no-underscore-dangle": "off"
             }
         }
     ],
