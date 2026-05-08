@@ -45,9 +45,13 @@ test_repo() {
 
     # Install dependencies if node_modules is missing.
     # --ignore-workspace prevents pnpm from resolving to the parent monorepo workspace.
+    # --ignore-scripts skips lifecycle scripts: pnpm 11 errors on unapproved builds
+    # (ERR_PNPM_IGNORED_BUILDS), and the workspace's allowBuilds list is detached by
+    # --ignore-workspace. The transpile CLI only reads installed sources for type
+    # resolution (folib / iets .d.ts); no postinstall artefacts are needed.
     if [[ -f "$dir/package.json" && ! -d "$dir/node_modules" ]]; then
         echo "Installing dependencies for $repo..."
-        (cd "$dir" && pnpm install --ignore-workspace)
+        (cd "$dir" && pnpm install --ignore-workspace --ignore-scripts)
     fi
 
     # Transpile all files in one process using directory mode
