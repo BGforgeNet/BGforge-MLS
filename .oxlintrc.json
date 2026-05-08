@@ -177,7 +177,6 @@
         // Rule pushes `.toSorted()`/`.toReversed()` (ES2023), same lib
         // constraint as `unicorn/no-array-sort`.
         "unicorn/no-immediate-mutation": "off",
-        "unicorn/no-array-reverse": "off",
 
         // `.apply()` is sometimes clearer than spread, especially when
         // forwarding an existing array-like.

@@ -181,6 +181,7 @@ function sortItemsInStanzaBody(body: string): string {
     }
 
     let result = body;
+    // eslint-disable-next-line unicorn/no-array-reverse -- `Array#toReversed()` requires ES2023; the project's lib target is ES2022
     for (const pair of [...stanzaPair.value.items].reverse()) {
         if (!isScalar(pair.key) || pair.key.value !== "items" || !isSeq(pair.value) || pair.value.items.length <= 1) {
             continue;
@@ -329,6 +330,7 @@ export function sortSequenceInAllMapEntries(
     // Process in reverse order so changes to later stanzas don't shift offsets
     // of earlier ones on subsequent iterations.
     let result = source;
+    // eslint-disable-next-line unicorn/no-array-reverse -- `Array#toReversed()` requires ES2023; the project's lib target is ES2022
     for (const key of [...keys].reverse()) {
         result = sortYamlSequenceByPath(result, [...mapPath, key, sequenceKey], sortKey);
     }
