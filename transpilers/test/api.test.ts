@@ -92,8 +92,8 @@ describe("@bgforge/transpile public API", () => {
             try {
                 await transpile("/virtual/foo.xyz", "");
                 throw new Error("expected throw");
-            } catch (err) {
-                const m = (err as Error).message;
+            } catch (error) {
+                const m = (error as Error).message;
                 expect(m).toMatch(/\.tssl/);
                 expect(m).toMatch(/\.tbaf/);
                 expect(m).toMatch(/\.td/);

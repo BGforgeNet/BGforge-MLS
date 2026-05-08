@@ -25,13 +25,13 @@ async function main() {
 
         // Download VS Code, unzip it and run the integration test
         await runTests({ extensionDevelopmentPath, extensionTestsPath, launchArgs });
-    } catch (err) {
-        console.error(`Failed to run tests: ${err}`);
+    } catch (error) {
+        console.error(`Failed to run tests: ${error}`);
         process.exit(1);
     }
 }
 
-main().catch((err) => {
-    console.error("Unhandled error in main:", err);
+main().catch((error) => {
+    console.error("Unhandled error in main:", error);
     process.exit(1);
 });

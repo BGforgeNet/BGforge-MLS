@@ -102,8 +102,8 @@ function parseWeiduOutput(text: string) {
 
             match = errorsRegex.exec(text);
         }
-    } catch (err) {
-        conlog(`weidu parse output failed: ${errorMessage(err)}`, "error");
+    } catch (error) {
+        conlog(`weidu parse output failed: ${errorMessage(error)}`, "error");
     }
     const result: ParseResult = { errors: errors, warnings: warnings };
     return result;

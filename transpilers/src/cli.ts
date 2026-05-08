@@ -83,9 +83,9 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
         const readExisting = (): string | null => {
             try {
                 return fs.readFileSync(outPath, "utf-8");
-            } catch (err) {
-                if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
-                throw err;
+            } catch (error) {
+                if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+                throw error;
             }
         };
         if (mode === "save") {
@@ -137,7 +137,7 @@ async function main() {
     });
 }
 
-main().catch((err) => {
-    console.error("Error:", err.message);
+main().catch((error) => {
+    console.error("Error:", error.message);
     process.exit(1);
 });

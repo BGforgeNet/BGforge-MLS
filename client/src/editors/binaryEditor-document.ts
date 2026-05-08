@@ -362,9 +362,9 @@ export class BinaryDocument implements vscode.CustomDocument {
                     this._parseResult,
                 ) as ParseResult["document"];
             }
-        } catch (err) {
+        } catch (error) {
             conlog(
-                `Binary editor: failed to rebuild canonical document for ${this._parseResult.format}: ${err instanceof Error ? err.message : String(err)}`,
+                `Binary editor: failed to rebuild canonical document for ${this._parseResult.format}: ${error instanceof Error ? error.message : String(error)}`,
                 "warn",
             );
             this._parseResult.document = undefined;

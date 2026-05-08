@@ -136,8 +136,8 @@ class FalloutSslProvider
 
         try {
             return await fsPromises.readFile(fileURLToPath(uri), "utf-8");
-        } catch (err) {
-            conlog(`readFileText: failed to read ${uri}: ${errorMessage(err)}`, "warn");
+        } catch (error) {
+            conlog(`readFileText: failed to read ${uri}: ${errorMessage(error)}`, "warn");
             return null;
         }
     }

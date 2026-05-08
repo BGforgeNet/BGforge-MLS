@@ -218,12 +218,12 @@ export function registerDialogPanel(
                 iconUri.toString(),
             );
             failureTracker.recordSuccess();
-        } catch (err) {
+        } catch (error) {
             conlog(
-                `Dialog preview refresh failed for ${currentFileName ?? "<unknown>"}: ${err instanceof Error ? err.message : String(err)}`,
+                `Dialog preview refresh failed for ${currentFileName ?? "<unknown>"}: ${error instanceof Error ? error.message : String(error)}`,
                 "warn",
             );
-            failureTracker.recordFailure(err);
+            failureTracker.recordFailure(error);
         }
     }
 

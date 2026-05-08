@@ -65,10 +65,10 @@ export async function ssl_compile(opts: {
             cwd: opts.cwd,
             silent: true,
         });
-    } catch (err) {
+    } catch (error) {
         // fork() can throw synchronously (e.g. EINVAL on Windows with bad env).
         // Return an error result instead of crashing the server.
-        const msg = err instanceof Error ? err.message : String(err);
+        const msg = error instanceof Error ? error.message : String(error);
         conlog(`Built-in compiler fork failed: ${msg}`);
         return { returnCode: 1, stdout: "", stderr: msg };
     }

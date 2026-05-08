@@ -174,8 +174,8 @@ describe("evaluateCondition - edge cases", () => {
         try {
             evaluateCondition("i < bad", "i", 5, vars);
             expect.fail("should have thrown");
-        } catch (e) {
-            const msg = (e as Error).message;
+        } catch (error) {
+            const msg = (error as Error).message;
             expect(msg).toContain("Substituted:");
             expect(msg).toContain("5 < abc");
         }

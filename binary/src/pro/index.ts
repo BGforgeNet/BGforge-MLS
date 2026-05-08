@@ -471,8 +471,8 @@ class ProParser implements BinaryParser {
     parse(data: Uint8Array, _options?: ParseOptions): ParseResult {
         try {
             return this.parseInternal(data);
-        } catch (err) {
-            return this.fail(`Parse error: ${err instanceof Error ? err.message : String(err)}`);
+        } catch (error) {
+            return this.fail(`Parse error: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
 

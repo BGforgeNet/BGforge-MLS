@@ -121,8 +121,8 @@ export function project(dir: string | undefined) {
                 settings.translation.auto_tra = translation.auto_tra;
             }
         }
-    } catch (e) {
-        conlog(`Failed to load .bgforge.yml from ${dir}: ${errorMessage(e)}`, "warn");
+    } catch (error) {
+        conlog(`Failed to load .bgforge.yml from ${dir}: ${errorMessage(error)}`, "warn");
     }
     return settings;
 }

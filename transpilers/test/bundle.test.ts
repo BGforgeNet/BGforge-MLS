@@ -31,12 +31,12 @@ function runNode(script: string): { code: number; stdout: string; stderr: string
             stdio: ["pipe", "pipe", "pipe"],
         });
         return { code: 0, stdout, stderr: "" };
-    } catch (err: unknown) {
-        if (!isExecError(err)) throw err;
+    } catch (error: unknown) {
+        if (!isExecError(error)) throw error;
         return {
-            code: err.status ?? 1,
-            stdout: typeof err.stdout === "string" ? err.stdout : (err.stdout?.toString("utf-8") ?? ""),
-            stderr: typeof err.stderr === "string" ? err.stderr : (err.stderr?.toString("utf-8") ?? ""),
+            code: error.status ?? 1,
+            stdout: typeof error.stdout === "string" ? error.stdout : (error.stdout?.toString("utf-8") ?? ""),
+            stderr: typeof error.stderr === "string" ? error.stderr : (error.stderr?.toString("utf-8") ?? ""),
         };
     }
 }
@@ -92,8 +92,8 @@ describe("@bgforge/transpile bundle smoke", () => {
             try {
                 await transpile("/virtual/foo.xyz", "");
                 throw new Error("expected throw");
-            } catch (err) {
-                if (!(err instanceof UnknownTranspileExtensionError)) throw new Error("wrong error class: " + err.constructor.name);
+            } catch (error) {
+                if (!(error instanceof UnknownTranspileExtensionError)) throw new Error("wrong error class: " + error.constructor.name);
                 console.log("OK");
             }
         `;

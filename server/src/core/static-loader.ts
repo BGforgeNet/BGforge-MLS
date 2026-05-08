@@ -151,8 +151,8 @@ function loadCompletionJson(langId: string): StaticCompletionItem[] | undefined 
         // __dirname in bundled code points to server/out/
         const filePath = path.join(__dirname, `completion.${langId}.json`);
         return JSON.parse(readFileSync(filePath, "utf-8")) as StaticCompletionItem[];
-    } catch (e) {
-        conlog(`Failed to load static completion data for ${langId}: ${e}`);
+    } catch (error) {
+        conlog(`Failed to load static completion data for ${langId}: ${error}`);
         return undefined;
     }
 }

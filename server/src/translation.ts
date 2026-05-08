@@ -488,10 +488,10 @@ export class Translation {
                         const lines = this.parseEntries(text, ext);
                         const result: TraData = new Map([[relPath, lines]]);
                         results.push(result);
-                    } catch (e) {
+                    } catch (error) {
                         // Collect per-file failures instead of failing fast - a single unreadable
                         // file shouldn't abort the whole load pass.
-                        errors.push(e);
+                        errors.push(error);
                     }
                 }),
             ),

@@ -20,8 +20,8 @@ function loadStaticJson<T>(type: "completion" | "hover" | "signature", langId: s
         // __dirname in bundled code points to server/out/
         const filePath = path.join(__dirname, `${type}.${langId}.json`);
         return JSON.parse(readFileSync(filePath, "utf-8")) as T;
-    } catch (e) {
-        conlog(`Failed to load static ${type} data for ${langId}: ${e}`);
+    } catch (error) {
+        conlog(`Failed to load static ${type} data for ${langId}: ${error}`);
         return undefined;
     }
 }

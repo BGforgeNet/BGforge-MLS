@@ -31,9 +31,9 @@ export async function run(): Promise<void> {
                     resolve();
                 }
             });
-        } catch (err) {
-            console.error(err);
-            reject(err);
+        } catch (error) {
+            console.error(error);
+            reject(error);
         }
     });
 }

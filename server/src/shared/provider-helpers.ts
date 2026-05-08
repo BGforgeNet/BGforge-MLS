@@ -120,8 +120,8 @@ export function formatWithValidation<TRoot, TOpts>(opts: FormatWithValidationOpt
     let result;
     try {
         result = opts.formatAst(tree.rootNode, options);
-    } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
+    } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
         conlog(`${opts.languageName} formatter error: ${msg}`);
         return { edits: [], warning: `${opts.languageName} formatter error: ${msg}` };
     }

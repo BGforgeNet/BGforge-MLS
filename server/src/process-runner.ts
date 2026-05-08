@@ -99,9 +99,9 @@ export function runProcess(
 export async function removeTmpFile(tmpPath: string) {
     try {
         await fs.promises.unlink(tmpPath);
-    } catch (err) {
-        if (getErrnoCode(err) !== "ENOENT") {
-            conlog(`Failed to clean up ${tmpPath}: ${errorMessage(err)}`, "warn");
+    } catch (error) {
+        if (getErrnoCode(error) !== "ENOENT") {
+            conlog(`Failed to clean up ${tmpPath}: ${errorMessage(error)}`, "warn");
         }
     }
 }

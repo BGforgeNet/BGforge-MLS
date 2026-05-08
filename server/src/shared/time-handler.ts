@@ -44,10 +44,10 @@ export function timeHandler<TArgs extends unknown[], TReturn>(
         let result: TReturn;
         try {
             result = fn(...args);
-        } catch (err) {
+        } catch (error) {
             const elapsed = Math.round(performance.now() - start);
             warn(`[lsp-timing] ${name} threw after ${elapsed}ms`);
-            throw err;
+            throw error;
         }
 
         // If the result is a Promise, attach timing to its settlement.
@@ -64,10 +64,10 @@ export function timeHandler<TArgs extends unknown[], TReturn>(
                     }
                     return value;
                 },
-                (err: unknown) => {
+                (error: unknown) => {
                     const elapsed = Math.round(performance.now() - start);
                     warn(`[lsp-timing] ${name} threw after ${elapsed}ms`);
-                    throw err;
+                    throw error;
                 },
             ) as unknown as TReturn;
         }

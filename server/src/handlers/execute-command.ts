@@ -84,10 +84,10 @@ export function register(ctx: HandlerContext): void {
                 const serverCtx = await getServerContext();
                 const messages = serverCtx.translation.getMessages(uri, text, handler.translationLangId);
                 return { ...dialogData, messages };
-            } catch (e) {
-                conlog(`parseDialog error: ${e instanceof Error ? e.message : String(e)}`, "error");
-                if (e instanceof Error && e.stack) {
-                    conlog(e.stack, "debug");
+            } catch (error) {
+                conlog(`parseDialog error: ${error instanceof Error ? error.message : String(error)}`, "error");
+                if (error instanceof Error && error.stack) {
+                    conlog(error.stack, "debug");
                 }
                 return null;
             }

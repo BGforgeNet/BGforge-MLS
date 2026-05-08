@@ -122,19 +122,19 @@ export function reportDiff(label: string, expected: string, actual: string): voi
 export async function safeProcess(filePath: string, fn: () => FileResult | Promise<FileResult>): Promise<FileResult> {
     try {
         return await fn();
-    } catch (err) {
-        if (err instanceof Error) {
-            const loc = readLocation(err);
+    } catch (error) {
+        if (error instanceof Error) {
+            const loc = readLocation(error);
             if (loc !== undefined) {
                 const file = loc.file ?? filePath;
                 const linePart = loc.line !== undefined ? `:${loc.line}` : "";
                 const colPart = loc.column !== undefined ? `:${loc.column}` : "";
-                console.error(`${file}${linePart}${colPart}: ${err.message}`);
+                console.error(`${file}${linePart}${colPart}: ${error.message}`);
             } else {
-                console.error(`${filePath}: ${err.message}`);
+                console.error(`${filePath}: ${error.message}`);
             }
         } else {
-            console.error(`${filePath}: ${String(err)}`);
+            console.error(`${filePath}: ${String(error)}`);
         }
         return "error";
     }

@@ -139,8 +139,8 @@ function parseCompileOutput(text: string, uri: string) {
                 message: matchMsg,
             });
         }
-    } catch (err) {
-        conlog(`fallout-ssl parse output failed: ${errorMessage(err)}`, "error");
+    } catch (error) {
+        conlog(`fallout-ssl parse output failed: ${errorMessage(error)}`, "error");
     }
     return { errors, warnings };
 }

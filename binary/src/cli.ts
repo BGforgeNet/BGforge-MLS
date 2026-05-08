@@ -124,8 +124,8 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
             let existing: string | null = null;
             try {
                 existing = fs.readFileSync(jsonPath, "utf-8").trim();
-            } catch (err) {
-                if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+            } catch (error) {
+                if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
             }
             if (existing !== json) {
                 fs.writeFileSync(jsonPath, json + "\n");
@@ -136,12 +136,12 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
             let expectedText: string;
             try {
                 expectedText = fs.readFileSync(jsonPath, "utf-8");
-            } catch (err) {
-                if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+            } catch (error) {
+                if ((error as NodeJS.ErrnoException).code === "ENOENT") {
                     console.error(`Missing: ${jsonPath}`);
                     return "error";
                 }
-                throw err;
+                throw error;
             }
             let expected = expectedText.trim();
             try {
@@ -188,12 +188,12 @@ function loadJsonToBinary(jsonPath: string): void {
         // Read with try/catch instead of existsSync->readFileSync to avoid
         // the TOCTOU window CodeQL js/file-system-race flags.
         jsonText = fs.readFileSync(jsonPath, "utf-8");
-    } catch (err) {
-        if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+    } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT") {
             console.error(`Not found: ${jsonPath}`);
             process.exit(1);
         }
-        throw err;
+        throw error;
     }
 
     const loaded = loadBinaryJsonSnapshot(jsonText, CLI_PARSE_OPTIONS);
@@ -260,7 +260,7 @@ async function main() {
     });
 }
 
-main().catch((err) => {
-    console.error("Error:", err.message);
+main().catch((error) => {
+    console.error("Error:", error.message);
     process.exit(1);
 });

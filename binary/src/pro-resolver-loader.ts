@@ -65,10 +65,10 @@ export function loadProDirResolver(protoBaseDir: string): ProResolverResult {
         let entries: fs.Dirent[];
         try {
             entries = fs.readdirSync(dir, { withFileTypes: true });
-        } catch (err) {
+        } catch (error) {
             // Missing dir is the common case for partial mod trees - silently empty.
-            if ((err as NodeJS.ErrnoException).code === "ENOENT") continue;
-            errors.push(`Failed to list ${dir}: ${(err as Error).message}`);
+            if ((error as NodeJS.ErrnoException).code === "ENOENT") continue;
+            errors.push(`Failed to list ${dir}: ${(error as Error).message}`);
             continue;
         }
 
@@ -97,8 +97,8 @@ export function loadProDirResolver(protoBaseDir: string): ProResolverResult {
                 }
                 map.set(pid, subType);
                 subtypesResolved++;
-            } catch (err) {
-                errors.push(`Failed to parse ${filePath}: ${(err as Error).message}`);
+            } catch (error) {
+                errors.push(`Failed to parse ${filePath}: ${(error as Error).message}`);
             }
         }
     }

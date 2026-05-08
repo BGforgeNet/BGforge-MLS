@@ -135,9 +135,9 @@ describe("generateKshXml", () => {
                     execSync(`xmllint --schema "${xsdPath}" --noout "${xmlPath}"`, {
                         stdio: "pipe",
                     });
-                } catch (e) {
-                    const stderr = (e as { stderr?: Buffer }).stderr?.toString() ?? "";
-                    throw new Error(`XSD validation failed for ${lang.name}:\n${stderr}`, { cause: e });
+                } catch (error) {
+                    const stderr = (error as { stderr?: Buffer }).stderr?.toString() ?? "";
+                    throw new Error(`XSD validation failed for ${lang.name}:\n${stderr}`, { cause: error });
                 }
             }
         } finally {
@@ -163,9 +163,9 @@ describe("generateKshXml", () => {
                     execSync(`xmllint --schema "${xsdPath}" --noout "${xmlPath}"`, {
                         stdio: "pipe",
                     });
-                } catch (e) {
-                    const stderr = (e as { stderr?: Buffer }).stderr?.toString() ?? "";
-                    throw new Error(`XSD validation failed for static file ${file}:\n${stderr}`, { cause: e });
+                } catch (error) {
+                    const stderr = (error as { stderr?: Buffer }).stderr?.toString() ?? "";
+                    throw new Error(`XSD validation failed for static file ${file}:\n${stderr}`, { cause: error });
                 }
             }
         } finally {

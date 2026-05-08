@@ -96,8 +96,8 @@ export function createTranspiler<TResult, TExtra = void>(config: TranspilerConfi
             let result: TResult;
             try {
                 result = await config.transpileCore(filePath, text, traTag, extra);
-            } catch (e) {
-                throw TranspileError.wrap(e, { file: filePath });
+            } catch (error) {
+                throw TranspileError.wrap(error, { file: filePath });
             }
             const output = config.getOutput(result);
 
@@ -131,8 +131,8 @@ export function createTranspiler<TResult, TExtra = void>(config: TranspilerConfi
             const traTag = extractTraTag(text);
             try {
                 return await config.transpileCore(filePath, text, traTag, extra);
-            } catch (e) {
-                throw TranspileError.wrap(e, { file: filePath });
+            } catch (error) {
+                throw TranspileError.wrap(error, { file: filePath });
             }
         },
     };

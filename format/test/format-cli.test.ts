@@ -20,8 +20,8 @@ function run(...args: string[]): { code: number; stdout: string; stderr: string 
             stdio: ["pipe", "pipe", "pipe"],
         });
         return { code: 0, stdout, stderr: "" };
-    } catch (err: unknown) {
-        const e = err as { status: number; stdout: string; stderr: string };
+    } catch (error: unknown) {
+        const e = error as { status: number; stdout: string; stderr: string };
         return { code: e.status ?? 1, stdout: e.stdout ?? "", stderr: e.stderr ?? "" };
     }
 }

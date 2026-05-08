@@ -158,8 +158,8 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
         let result: FormatResult;
         try {
             result = parseAndFormat(text, fileType, opts);
-        } catch (err) {
-            const msg = err instanceof Error ? err.message : String(err);
+        } catch (error) {
+            const msg = error instanceof Error ? error.message : String(error);
             console.error(`Error: ${filePath}: ${msg}`);
             return "error";
         }
@@ -257,7 +257,7 @@ async function main() {
     });
 }
 
-main().catch((err) => {
-    console.error("Error:", err.message);
+main().catch((error) => {
+    console.error("Error:", error.message);
     process.exit(1);
 });

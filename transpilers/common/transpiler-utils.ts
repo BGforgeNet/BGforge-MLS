@@ -132,11 +132,11 @@ export function evaluateCondition(condition: string, loopVar: string, value: num
     try {
         const result = safeEvaluate(substituted);
         return Boolean(result);
-    } catch (e) {
+    } catch (error) {
         throw new Error(
             `Cannot evaluate loop condition "${condition}" with ${loopVar}=${value}. ` +
-                `Substituted: "${substituted}". Error: ${e instanceof Error ? e.message : e}`,
-            { cause: e },
+                `Substituted: "${substituted}". Error: ${error instanceof Error ? error.message : error}`,
+            { cause: error },
         );
     }
 }

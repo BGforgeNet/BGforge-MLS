@@ -45,8 +45,8 @@ class MapParser implements BinaryParser {
                 writable: false,
             });
             return result;
-        } catch (err) {
-            return this.fail(`Parse error: ${err instanceof Error ? err.message : String(err)}`);
+        } catch (error) {
+            return this.fail(`Parse error: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
 
