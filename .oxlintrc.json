@@ -188,10 +188,6 @@
         // Rule bans TODO/FIXME comments; these are useful tracking markers.
         "no-warning-comments": "off",
 
-        // False positives on project-specific constructors whose names
-        // don't match the plugin's heuristic (e.g. branded-type factories).
-        "new-cap": "off",
-
         // Parameter ordering is sometimes dictated by external APIs or
         // readability (required before optional).
         "default-param-last": "off",

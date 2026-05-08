@@ -38,14 +38,14 @@ import {
     REGEX_MSG_HOVER,
     REGEX_MSG_INLAY,
     REGEX_MSG_INLAY_FLOATER_RAND,
-    REGEX_MSG_REF,
+    regexMsgRef,
     REGEX_TRANSPILER_TRA_HOVER,
     REGEX_TRANSPILER_TRA_INLAY,
     REGEX_TRA_COMMENT,
     REGEX_TRA_COMMENT_EXT,
     REGEX_TRA_HOVER,
     REGEX_TRA_INLAY,
-    REGEX_TRA_REF,
+    regexTraRef,
 } from "./core/patterns";
 import type { ProjectTraSettings } from "./settings";
 
@@ -1099,7 +1099,7 @@ export class Translation {
         // MSG references (mstr(num), NOption(num), floater_rand(x, num)) use a
         // combined regex covering both first-arg and floater_rand second-arg
         // patterns; TRA references use a separate pattern.
-        const regex = traExt === "tra" ? REGEX_TRA_REF(entryNum) : REGEX_MSG_REF(entryNum);
+        const regex = traExt === "tra" ? regexTraRef(entryNum) : regexMsgRef(entryNum);
         for (let i = 0; i < lines.length; i++) {
             const lineText = lines[i]!;
             for (const match of lineText.matchAll(regex)) {

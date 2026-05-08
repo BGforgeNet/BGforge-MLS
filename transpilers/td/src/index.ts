@@ -19,7 +19,7 @@ import { bundle } from "../../common/bundle";
 import { emitD } from "./emit";
 import { parse } from "./parse";
 import { collectExplicitLabels } from "./state-resolution";
-import { ORPHAN_WARNING_TEMPLATE, type TDScript, type TDWarning } from "./types";
+import { orphanWarningTemplate, type TDScript, type TDWarning } from "./types";
 export type { TDWarning } from "./types";
 
 interface TDTranspileResult {
@@ -153,7 +153,7 @@ export function detectOrphansFromOriginal(originalText: string, ir: TDScript): T
         if (info.paramCount > 0) continue;
 
         warnings.push({
-            message: ORPHAN_WARNING_TEMPLATE(name),
+            message: orphanWarningTemplate(name),
             line: info.line,
             columnStart: info.columnStart,
             columnEnd: info.columnEnd,

@@ -2,7 +2,7 @@
  * Branch-coverage tests for core/patterns.ts.
  *
  * The pattern regexes are exercised indirectly by translation/inlay-hint
- * tests; the digit-entry guards on REGEX_TRA_REF / REGEX_MSG_REF are not.
+ * tests; the digit-entry guards on regexTraRef / regexMsgRef are not.
  * Without the throw branch covered, any future change that loosens the guard
  * (turning it into a regex-injection surface) goes unnoticed.
  */
@@ -12,73 +12,73 @@ import {
     REGEX_MSG_HOVER,
     REGEX_MSG_INLAY,
     REGEX_MSG_INLAY_FLOATER_RAND,
-    REGEX_MSG_REF,
+    regexMsgRef,
     REGEX_TRA_COMMENT,
     REGEX_TRA_COMMENT_EXT,
     REGEX_TRA_HOVER,
     REGEX_TRA_INLAY,
-    REGEX_TRA_REF,
+    regexTraRef,
     REGEX_TRANSPILER_TRA_HOVER,
     REGEX_TRANSPILER_TRA_INLAY,
 } from "../../src/core/patterns";
 
-describe("REGEX_TRA_REF / REGEX_MSG_REF: digit-entry guard", () => {
-    it("REGEX_TRA_REF accepts a digit string", () => {
-        expect(() => REGEX_TRA_REF("42")).not.toThrow();
+describe("regexTraRef / regexMsgRef: digit-entry guard", () => {
+    it("regexTraRef accepts a digit string", () => {
+        expect(() => regexTraRef("42")).not.toThrow();
     });
 
-    it("REGEX_TRA_REF rejects a non-digit entry (regex-injection guard)", () => {
-        expect(() => REGEX_TRA_REF("4)|.*")).toThrow(/digits only/);
-        expect(() => REGEX_TRA_REF("abc")).toThrow(/digits only/);
-        expect(() => REGEX_TRA_REF("")).toThrow(/digits only/);
-        expect(() => REGEX_TRA_REF("1 2")).toThrow(/digits only/);
+    it("regexTraRef rejects a non-digit entry (regex-injection guard)", () => {
+        expect(() => regexTraRef("4)|.*")).toThrow(/digits only/);
+        expect(() => regexTraRef("abc")).toThrow(/digits only/);
+        expect(() => regexTraRef("")).toThrow(/digits only/);
+        expect(() => regexTraRef("1 2")).toThrow(/digits only/);
     });
 
-    it("REGEX_MSG_REF accepts a digit string", () => {
-        expect(() => REGEX_MSG_REF("123")).not.toThrow();
+    it("regexMsgRef accepts a digit string", () => {
+        expect(() => regexMsgRef("123")).not.toThrow();
     });
 
-    it("REGEX_MSG_REF rejects non-digit entry", () => {
-        expect(() => REGEX_MSG_REF("abc")).toThrow(/digits only/);
-        expect(() => REGEX_MSG_REF("1)\\d+")).toThrow(/digits only/);
+    it("regexMsgRef rejects non-digit entry", () => {
+        expect(() => regexMsgRef("abc")).toThrow(/digits only/);
+        expect(() => regexMsgRef("1)\\d+")).toThrow(/digits only/);
     });
 });
 
-describe("REGEX_TRA_REF: regex behaviour", () => {
+describe("regexTraRef: regex behaviour", () => {
     it("matches @42 in source text", () => {
-        const re = REGEX_TRA_REF("42");
+        const re = regexTraRef("42");
         const matches = "use @42 here, also @421".match(re);
         // Only @42 should match - @421 fails the (?!\\d) lookahead.
         expect(matches).toEqual(["@42"]);
     });
 
     it("matches tra(42) syntax too", () => {
-        const re = REGEX_TRA_REF("42");
+        const re = regexTraRef("42");
         expect("call tra(42) please".match(re)).toEqual(["tra(42)"]);
     });
 
     it("does not match unrelated numbers", () => {
-        const re = REGEX_TRA_REF("42");
+        const re = regexTraRef("42");
         expect("number 99 elsewhere".match(re)).toBeNull();
     });
 });
 
-describe("REGEX_MSG_REF: regex behaviour", () => {
+describe("regexMsgRef: regex behaviour", () => {
     it("matches mstr(123) and Reply(123)", () => {
-        const re = REGEX_MSG_REF("123");
+        const re = regexMsgRef("123");
         const out = "mstr(123) and Reply(123) and NOption(99) ".match(re);
         expect(out).toContain("mstr(123");
         expect(out).toContain("Reply(123");
     });
 
     it("matches floater_rand second-arg form", () => {
-        const re = REGEX_MSG_REF("7");
+        const re = regexMsgRef("7");
         const out = "floater_rand(99, 7)".match(re);
         expect(out).not.toBeNull();
     });
 
     it("rejects partial-prefix matches via (?!\\d)", () => {
-        const re = REGEX_MSG_REF("12");
+        const re = regexMsgRef("12");
         // mstr(123) should NOT count as a match for entry 12 - the lookahead blocks it.
         expect("mstr(123)".match(re)).toBeNull();
     });

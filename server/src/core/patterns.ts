@@ -78,7 +78,7 @@ function assertDigitEntry(entryNum: string): void {
  * Matches both @{num} (native WeiDU) and tra({num}) (transpiler) patterns.
  * The number must be followed by a non-digit to avoid partial matches (e.g., @12 in @123).
  */
-export function REGEX_TRA_REF(entryNum: string): RegExp {
+export function regexTraRef(entryNum: string): RegExp {
     // entryNum is interpolated into the source string; enforce the digit-only invariant
     // explicitly so a callsite change can't turn this into a regex-injection surface.
     assertDigitEntry(entryNum);
@@ -91,7 +91,7 @@ export function REGEX_TRA_REF(entryNum: string): RegExp {
  * Also matches floater_rand where the entry appears as the second argument.
  * Combined into a single alternation for a single-pass scan.
  */
-export function REGEX_MSG_REF(entryNum: string): RegExp {
+export function regexMsgRef(entryNum: string): RegExp {
     assertDigitEntry(entryNum);
     return new RegExp(
         `(?:${msgFunctionsPattern})\\(${entryNum}(?!\\d)|floater_rand\\(\\d+\\s*,\\s*${entryNum}(?!\\d)`,

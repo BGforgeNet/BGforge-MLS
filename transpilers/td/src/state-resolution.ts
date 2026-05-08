@@ -9,7 +9,7 @@
 import {
     TDConstructType,
     TDTransitionType,
-    ORPHAN_WARNING_TEMPLATE,
+    orphanWarningTemplate,
     type TDConstruct,
     type TDState,
     type TDWarning,
@@ -139,7 +139,7 @@ export function collectOrphanWarnings(
         const endCol = nameNode ? sf.getLineAndColumnAtPos(nameNode.getEnd()).column - 1 : 0;
 
         warnings.push({
-            message: ORPHAN_WARNING_TEMPLATE(name),
+            message: orphanWarningTemplate(name),
             line: nameNode ? nameNode.getStartLineNumber() : funcInfo.func.getStartLineNumber(),
             columnStart: startCol,
             columnEnd: endCol,
