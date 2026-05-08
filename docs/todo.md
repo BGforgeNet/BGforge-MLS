@@ -148,3 +148,39 @@ directly (`item.header.frmType = 0`) or wrap a per-format helper that accepts th
 and resolves via `enumValueToInt` from `coded-projection.ts`. Default-value derivation
 (`spec/derive-default.ts`) is the missing piece — needs to be added so the construction API
 has a single source of truth for per-spec defaults.
+
+## `@bgforge/binary`: stable JSON snapshot format specification
+
+The on-disk shape of `*.pro.json`, `*.map.json`, `*.itm.json`, `*.spl.json`,
+and `*.eff.json` is its own consumer-facing contract, separate from the
+library API. Anyone committing snapshots to version control depends on it,
+and the [`actions/binary`](../actions/binary/README.md) GitHub Action checks
+parity against committed snapshots in CI. The schema is currently described
+informally in [`binary/INTERNALS.md`](../binary/INTERNALS.md) and pinned only
+by `createBinaryJsonSnapshot` / `parseBinaryJsonSnapshot` in the library
+public-API test, neither of which guarantees the _output JSON shape_ itself.
+
+The library API and the snapshot schema are independent contracts and should
+move on independent cadences — a library addition (new exported helper) does
+not break committed snapshots, but a snapshot-shape change (renamed field,
+restructured groups, switched flag projection) silently breaks every
+consumer with committed snapshots even if the library API is unchanged.
+
+### Pieces
+
+- A versioned schema document — `binary/SNAPSHOT-FORMAT.md` or similar — listing
+  per-format JSON shape: top-level keys, group structure, named-bit dict
+  layout for flag fields (rule #7), enum encoding (raw int per rule #9), header
+  fields, canonicalisation rules (key order, number formatting, whitespace).
+- A schema version embedded in the JSON itself (e.g. top-level `"$snapshot": 1`),
+  so consumers can detect a re-shaped snapshot before parsing succeeds with
+  silently-different data.
+- A migration policy: a snapshot-shape break is a major release of `@bgforge/binary`
+  with a documented migration path; ideally `parseBinaryJsonSnapshot` reads older
+  schema versions and upgrades on the fly.
+- Golden snapshot fixtures under `binary/test/snapshot-format/` that fail if
+  the JSON shape drifts unintentionally, complementing the existing parser
+  round-trip tests.
+
+Until this lands, any change to `createBinaryJsonSnapshot` output should be
+treated as a breaking change to all snapshot consumers.
