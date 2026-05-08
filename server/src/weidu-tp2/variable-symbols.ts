@@ -239,14 +239,14 @@ function positionToByteOffset(text: string, position: Position, basePosition: { 
     let currentCol = basePosition.column;
 
     // Traverse the text to find the offset
-    for (let i = 0; i < text.length; i++) {
+    for (const char of text) {
         // Check if we've reached the target position
         if (currentLine === position.line && currentCol === position.character) {
             return offset;
         }
 
         // Advance to next character
-        if (text[i] === "\n") {
+        if (char === "\n") {
             currentLine++;
             currentCol = 0;
         } else {

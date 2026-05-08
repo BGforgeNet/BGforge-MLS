@@ -253,11 +253,6 @@
         // object is the idiomatic copy-on-write pattern here.
         "oxc/no-map-spread": "off",
 
-        // Tree-sitter byte-offset traversal walks the string by index so it
-        // can count column/row advances; converting to `for-of` would hide
-        // the position tracking.
-        "typescript/prefer-for-of": "off",
-
         // Closure-over-loop-var is safe here: the loop declares `const`
         // bindings inside the body, so the closed-over values don't leak
         // across iterations.
