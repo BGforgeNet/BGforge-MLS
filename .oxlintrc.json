@@ -230,11 +230,7 @@
         // code point). The codebase parses ASCII-only formats (Fallout SSL,
         // WeiDU, binary headers) where the flag adds no correctness value
         // and risks behavior changes on patterns with literal backslashes.
-        "require-unicode-regexp": "off",
-
-        // Pedantic refactor suggestion; the duplicated tail is often a
-        // deliberate parallel structure that documents both branches.
-        "oxc/branches-sharing-code": "off"
+        "require-unicode-regexp": "off"
     },
     "overrides": [
         {

@@ -318,8 +318,8 @@ function formatCopyPatches(
             continue;
         }
 
+        pushBlankIfGap(lines, patch, lastPatchEndRow);
         if (patch.type === SyntaxType.PatchBlock) {
-            pushBlankIfGap(lines, patch, lastPatchEndRow);
             lines.push(patchIndent + KW_BEGIN);
             let lastBlockPatchEndRow = -1;
             for (const patchChild of patch.children) {
@@ -339,12 +339,10 @@ function formatCopyPatches(
                 }
             }
             lines.push(patchIndent + KW_END);
-            lastPatchEndRow = patch.endPosition.row;
         } else {
-            pushBlankIfGap(lines, patch, lastPatchEndRow);
             lines.push(formatNode(patch, ctx, depth + 1));
-            lastPatchEndRow = patch.endPosition.row;
         }
+        lastPatchEndRow = patch.endPosition.row;
     }
 
     return lines;

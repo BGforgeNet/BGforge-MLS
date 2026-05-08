@@ -351,35 +351,35 @@ export function replaceOutsideStrings(code: string, pattern: RegExp, replacer: (
     let i = 0;
     while (i < code.length) {
         const ch = code[i];
+
+        // Pass through string/template/comment spans verbatim; only code spans
+        // get the replacer applied.
+        let end: number;
+        let isCode = false;
         if (ch === '"' || ch === "'") {
-            const end = skipString(code, i);
-            result += code.substring(i, end);
-            i = end;
+            end = skipString(code, i);
         } else if (ch === "`") {
-            const end = skipTemplateLiteral(code, i);
-            result += code.substring(i, end);
-            i = end;
+            end = skipTemplateLiteral(code, i);
         } else if (ch === "/" && i + 1 < code.length && code[i + 1] === "/") {
-            let end = i;
+            end = i;
             while (end < code.length && code[end] !== "\n") end++;
-            result += code.substring(i, end);
-            i = end;
         } else if (ch === "/" && i + 1 < code.length && code[i + 1] === "*") {
-            const end = skipBlockComment(code, i);
-            result += code.substring(i, end);
-            i = end;
+            end = skipBlockComment(code, i);
         } else {
             // Accumulate code until next string/comment boundary
-            let end = i;
+            end = i;
             while (end < code.length) {
                 const c = code[end];
                 if (c === '"' || c === "'" || c === "`") break;
                 if (c === "/" && end + 1 < code.length && (code[end + 1] === "/" || code[end + 1] === "*")) break;
                 end++;
             }
-            result += code.substring(i, end).replace(pattern, replacer);
-            i = end;
+            isCode = true;
         }
+
+        const segment = code.substring(i, end);
+        result += isCode ? segment.replace(pattern, replacer) : segment;
+        i = end;
     }
     return result;
 }

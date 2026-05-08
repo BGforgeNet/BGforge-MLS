@@ -13,20 +13,17 @@ export function register(ctx: HandlerContext): void {
         if (!serverCtx) {
             return;
         }
+        let freshSettings;
         if (serverCtx.capabilities.configuration) {
             documentLifecycleHandler.clearDocumentSettings();
-            const freshSettings = normalizeSettings(
-                await ctx.connection.workspace.getConfiguration({ section: "bgforge" }),
-            );
-            updateServerSettings(freshSettings);
-            registry.updateSettings(freshSettings);
+            freshSettings = normalizeSettings(await ctx.connection.workspace.getConfiguration({ section: "bgforge" }));
         } else {
             // change.settings is typed as any by vscode-languageserver
             const bgforge = change.settings?.bgforge as unknown;
-            const freshSettings = normalizeSettings(bgforge ?? defaultSettings);
-            updateServerSettings(freshSettings);
-            registry.updateSettings(freshSettings);
+            freshSettings = normalizeSettings(bgforge ?? defaultSettings);
         }
+        updateServerSettings(freshSettings);
+        registry.updateSettings(freshSettings);
     });
 
     ctx.connection.onDidChangeWatchedFiles((params) => {

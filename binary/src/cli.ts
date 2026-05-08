@@ -132,7 +132,6 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
                 console.log(`Saved: ${jsonPath}`);
                 return "changed";
             }
-            return "unchanged";
         } else if (mode === "check") {
             let expectedText: string;
             try {
@@ -154,11 +153,10 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
                 reportDiff(filePath, expected, json);
                 return "changed";
             }
-            return "unchanged";
         } else {
             process.stdout.write(json + "\n");
-            return "unchanged";
         }
+        return "unchanged";
     });
 }
 

@@ -438,14 +438,15 @@ function extractVarParams(node: SyntaxNode, target: ParamInfo[]): void {
             target.push({ name: currentName, defaultValue: child.text });
             currentName = null;
             expectingDefault = false;
-        } else if (currentName !== null) {
-            // Previous param had no default, save it and start new one
-            target.push({ name: currentName });
-            currentName = child.text;
-        } else {
-            // This is a new parameter name
-            currentName = child.text;
+            continue;
         }
+
+        // Otherwise this is a new parameter name; flush any pending default-less
+        // name first.
+        if (currentName !== null) {
+            target.push({ name: currentName });
+        }
+        currentName = child.text;
     }
 
     // Don't forget the last parameter if no default value

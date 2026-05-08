@@ -1097,31 +1097,18 @@ export class Translation {
         const results: Array<{ line: number; character: number; endCharacter: number }> = [];
         const lines = text.split("\n");
 
-        if (traExt === "tra") {
-            const regex = REGEX_TRA_REF(entryNum);
-            for (let i = 0; i < lines.length; i++) {
-                const lineText = lines[i]!;
-                for (const match of lineText.matchAll(regex)) {
-                    results.push({
-                        line: i,
-                        character: match.index,
-                        endCharacter: match.index + match[0].length,
-                    });
-                }
-            }
-        } else {
-            // MSG references: mstr(num), NOption(num), floater_rand(x, num), etc.
-            // Single combined regex handles both first-arg and floater_rand second-arg patterns.
-            const regex = REGEX_MSG_REF(entryNum);
-            for (let i = 0; i < lines.length; i++) {
-                const lineText = lines[i]!;
-                for (const match of lineText.matchAll(regex)) {
-                    results.push({
-                        line: i,
-                        character: match.index,
-                        endCharacter: match.index + match[0].length,
-                    });
-                }
+        // MSG references (mstr(num), NOption(num), floater_rand(x, num)) use a
+        // combined regex covering both first-arg and floater_rand second-arg
+        // patterns; TRA references use a separate pattern.
+        const regex = traExt === "tra" ? REGEX_TRA_REF(entryNum) : REGEX_MSG_REF(entryNum);
+        for (let i = 0; i < lines.length; i++) {
+            const lineText = lines[i]!;
+            for (const match of lineText.matchAll(regex)) {
+                results.push({
+                    line: i,
+                    character: match.index,
+                    endCharacter: match.index + match[0].length,
+                });
             }
         }
 
