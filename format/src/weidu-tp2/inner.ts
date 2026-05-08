@@ -36,9 +36,7 @@ export function formatInnerAction(
 ): string {
     const indent = ctx.indent.repeat(depth);
     const bodyIndent = ctx.indent.repeat(depth + 1);
-    const lines: string[] = [];
-
-    lines.push(indent + "INNER_ACTION BEGIN");
+    const lines: string[] = [indent + "INNER_ACTION BEGIN"];
 
     let lastEndRow = -1;
     for (const child of node.children) {

@@ -486,8 +486,7 @@ export class Translation {
                     try {
                         const text = await fs.promises.readFile(path.join(traDir, relPath), "utf8");
                         const lines = this.parseEntries(text, ext);
-                        const result: TraData = new Map();
-                        result.set(relPath, lines);
+                        const result: TraData = new Map([[relPath, lines]]);
                         results.push(result);
                     } catch (e) {
                         // Collect per-file failures instead of failing fast - a single unreadable

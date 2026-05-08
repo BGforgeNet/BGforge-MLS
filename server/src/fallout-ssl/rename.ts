@@ -310,9 +310,7 @@ export async function renameSymbolWorkspace(
     conlog(`rename: ReferencesIndex returned ${indexedUris.size} file(s) for "${symbolName}"`, "debug");
 
     // Always include the definition file and current file as safety nets
-    const candidateUris = new Set(indexedUris);
-    candidateUris.add(definitionUri);
-    candidateUris.add(normUri);
+    const candidateUris = new Set([...indexedUris, definitionUri, normUri]);
 
     conlog(`rename: ${candidateUris.size} candidate files to scan`, "debug");
 

@@ -289,8 +289,7 @@ function emitExtend(extend: TDExtend): string {
     const keyword = extend.type === TDConstructType.ExtendTop ? "EXTEND_TOP" : "EXTEND_BOTTOM";
     const position = extend.position !== undefined ? ` #${extend.position}` : "";
 
-    const lines: string[] = [];
-    lines.push(`${keyword} ${extend.filename} ${extend.stateLabel}${position}`);
+    const lines: string[] = [`${keyword} ${extend.filename} ${extend.stateLabel}${position}`];
 
     for (const trans of extend.transitions) {
         lines.push(emitTransition(trans));
@@ -305,10 +304,8 @@ function emitExtend(extend: TDExtend): string {
 // =============================================================================
 
 function emitChain(chain: TDChain): string {
-    const lines: string[] = [];
-
     // CHAIN header
-    lines.push("CHAIN");
+    const lines: string[] = ["CHAIN"];
 
     // IF trigger THEN filename label
     if (chain.trigger) {
@@ -488,11 +485,12 @@ function emitPatch(patch: { type: "patch"; operation: import("./types").TDPatchO
 }
 
 function emitAlterTrans(op: import("./types").TDAlterTrans): string {
-    const lines: string[] = [];
-    lines.push(`ALTER_TRANS ${op.filename}`);
-    lines.push(`BEGIN ${formatStateList(op.states)} END`);
-    lines.push(`BEGIN ${op.transitions.join(" ")} END`);
-    lines.push("BEGIN");
+    const lines: string[] = [
+        `ALTER_TRANS ${op.filename}`,
+        `BEGIN ${formatStateList(op.states)} END`,
+        `BEGIN ${op.transitions.join(" ")} END`,
+        "BEGIN",
+    ];
 
     if (op.changes.trigger !== undefined) {
         const triggerValue = op.changes.trigger === false ? "" : applyHelperFixups(op.changes.trigger);
@@ -518,9 +516,10 @@ function formatUnless(unless?: string): string {
 }
 
 function emitReplaceStates(op: import("./types").TDReplaceStates): string {
-    const lines: string[] = [];
-    lines.push(`// REPLACE states in ${op.filename} - manually verify WeiDU syntax`);
-    lines.push(`APPEND ${op.filename}`);
+    const lines: string[] = [
+        `// REPLACE states in ${op.filename} - manually verify WeiDU syntax`,
+        `APPEND ${op.filename}`,
+    ];
 
     const states = Array.from(op.replacements.entries())
         .sort(([a], [b]) => a - b)

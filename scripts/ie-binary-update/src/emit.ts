@@ -33,10 +33,7 @@ function partitionImports(imports: ReadonlySet<string>): {
 
 export function emitSpecModule(input: EmitInput): string {
     const { typedBinary, specTypes } = partitionImports(input.struct.imports);
-    const lines: string[] = [];
-
-    lines.push(`// Auto-generated from IESDP ${input.sourcePath}. Do not hand-edit.`);
-    lines.push("");
+    const lines: string[] = [`// Auto-generated from IESDP ${input.sourcePath}. Do not hand-edit.`, ""];
 
     if (typedBinary.length > 0) {
         lines.push(`import { ${typedBinary.join(", ")} } from "typed-binary";`);

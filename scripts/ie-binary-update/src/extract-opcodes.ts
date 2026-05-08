@@ -62,14 +62,15 @@ export function extractOpcodes(opcodesDir: string): ReadonlyMap<number, string> 
 
 /** Emit the generated `opcodes.ts` source for the IE-common module. */
 export function emitOpcodesModule(opcodes: ReadonlyMap<number, string>, sourceRel: string): string {
-    const lines: string[] = [];
-    lines.push(`// Auto-generated from IESDP ${sourceRel}. Do not hand-edit.`);
-    lines.push("");
-    lines.push("/**");
-    lines.push(" * Effect / EFF body opcode -> display name. Sourced from IESDP `_opcodes/op<NNN>.html`");
-    lines.push(" * frontmatter `opname` fields (canonical files only, not engine-variant overrides).");
-    lines.push(" */");
-    lines.push("export const Opcodes: Readonly<Record<number, string>> = {");
+    const lines: string[] = [
+        `// Auto-generated from IESDP ${sourceRel}. Do not hand-edit.`,
+        "",
+        "/**",
+        " * Effect / EFF body opcode -> display name. Sourced from IESDP `_opcodes/op<NNN>.html`",
+        " * frontmatter `opname` fields (canonical files only, not engine-variant overrides).",
+        " */",
+        "export const Opcodes: Readonly<Record<number, string>> = {",
+    ];
     for (const [n, name] of opcodes) {
         // Escape the few characters that could break a JS string literal.
         const escaped = name.replaceAll("\\", "\\\\").replaceAll('"', '\\"');

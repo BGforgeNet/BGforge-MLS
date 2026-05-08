@@ -170,10 +170,6 @@
         // `if (arr.length)` is idiomatic and unambiguous in this codebase.
         "unicorn/explicit-length-check": "off",
 
-        // Rule pushes `.toSorted()`/`.toReversed()` (ES2023), same lib
-        // constraint as `unicorn/no-array-sort`.
-        "unicorn/no-immediate-mutation": "off",
-
         // `.apply()` is sometimes clearer than spread, especially when
         // forwarding an existing array-like.
         "unicorn/prefer-spread": "off",

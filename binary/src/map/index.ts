@@ -68,9 +68,9 @@ class MapParser implements BinaryParser {
             errors.push(`Unknown MAP version: ${header.version} (expected 19 or 20)`);
         }
 
-        const rootFields: (import("../types").ParsedField | import("../types").ParsedGroup)[] = [];
-
-        rootFields.push(parseHeaderSection(data, errors));
+        const rootFields: (import("../types").ParsedField | import("../types").ParsedGroup)[] = [
+            parseHeaderSection(data, errors),
+        ];
         const filenameBytes = data.subarray(0x04, 0x14);
         const filenameTerminator = filenameBytes.indexOf(0);
         if (filenameTerminator !== -1) {

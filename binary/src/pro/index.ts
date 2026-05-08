@@ -361,9 +361,9 @@ function parseCritter(data: CritterData): ParsedGroup[] {
  * Parse scenery common and subtypes
  */
 function parseScenery(data: Uint8Array, scenery: SceneryCommonData, _errors: string[]): ParsedGroup[] {
-    const groups: ParsedGroup[] = [];
-
-    groups.push(walkStruct(sceneryCommonSpec, sceneryCommonPresentation, 0x18, scenery, "Scenery Properties"));
+    const groups: ParsedGroup[] = [
+        walkStruct(sceneryCommonSpec, sceneryCommonPresentation, 0x18, scenery, "Scenery Properties"),
+    ];
 
     switch (scenery.subType) {
         case 0: {

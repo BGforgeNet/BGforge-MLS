@@ -139,15 +139,12 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
             parseOptions,
         });
 
-        const subscriptions: vscode.Disposable[] = [];
-
-        // Forward document edit events to VSCode for dirty tracking and undo/redo
-        subscriptions.push(doc.onDidChange((e) => this._onDidChangeCustomDocument.fire(e)));
-
-        // Clean up subscriptions when document is disposed.
-        // Per-panel treeStates entries are removed by each panel's onDidDispose;
-        // by the time the document disposes, all its panels are already gone.
-        subscriptions.push(
+        const subscriptions: vscode.Disposable[] = [
+            // Forward document edit events to VSCode for dirty tracking and undo/redo
+            doc.onDidChange((e) => this._onDidChangeCustomDocument.fire(e)),
+            // Clean up subscriptions when document is disposed.
+            // Per-panel treeStates entries are removed by each panel's onDidDispose;
+            // by the time the document disposes, all its panels are already gone.
             doc.onDidDispose(() => {
                 const subs = this.documentSubscriptions.get(doc);
                 if (subs) {
@@ -155,7 +152,7 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
                     this.documentSubscriptions.delete(doc);
                 }
             }),
-        );
+        ];
 
         this.documentSubscriptions.set(doc, subscriptions);
 
