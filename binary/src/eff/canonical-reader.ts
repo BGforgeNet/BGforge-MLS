@@ -1,55 +1,23 @@
 /**
- * Reader helpers for rebuilding EffCanonicalSnapshot/EffCanonicalDocument
- * from a parsed display tree (ParseResult). The parser stores the canonical
- * doc on `result.document` directly; the rebuild path mirrors the other IE
- * formats and is exercised by the JSON-snapshot reload flow.
+ * EFF canonical-reader: thin wrapper around the IE canonical-reader factory
+ * (`ie-common/canonical-reader.ts`).
  */
 
-import { parseWithSchemaValidation } from "../schema-validation";
+import { createIeCanonicalReader } from "../ie-common/canonical-reader";
 import {
     type EffCanonicalDocument,
     type EffCanonicalSnapshot,
     effCanonicalDocumentSchemaPermissive,
     effCanonicalSnapshotSchemaPermissive,
 } from "./canonical-schemas";
-import type { ParseResult } from "../types";
 
-export function getEffCanonicalDocument(result: ParseResult): EffCanonicalDocument | undefined {
-    if (!result.document) return undefined;
-    return parseWithSchemaValidation(
-        effCanonicalDocumentSchemaPermissive,
-        result.document,
-        "Invalid EFF canonical document",
-    );
-}
+const reader = createIeCanonicalReader<EffCanonicalDocument, EffCanonicalSnapshot>({
+    formatId: "eff",
+    formatLabel: "EFF",
+    documentSchemaPermissive: effCanonicalDocumentSchemaPermissive,
+    snapshotSchemaPermissive: effCanonicalSnapshotSchemaPermissive,
+});
 
-export function rebuildEffCanonicalDocument(result: ParseResult): EffCanonicalDocument {
-    const doc = getEffCanonicalDocument(result);
-    if (!doc) {
-        throw new Error(
-            "EFF canonical document missing from ParseResult; display-tree-only rebuild is not implemented",
-        );
-    }
-    return doc;
-}
-
-export function createEffCanonicalSnapshot(result: ParseResult): EffCanonicalSnapshot {
-    const document = rebuildEffCanonicalDocument(result);
-    const snapshot: EffCanonicalSnapshot = {
-        schemaVersion: 1,
-        format: "eff",
-        formatName: result.formatName,
-        document,
-    };
-    if (result.opaqueRanges && result.opaqueRanges.length > 0) {
-        return parseWithSchemaValidation(
-            effCanonicalSnapshotSchemaPermissive,
-            { ...snapshot, opaqueRanges: result.opaqueRanges },
-            "Invalid EFF canonical snapshot",
-        );
-    }
-    if (result.warnings) {
-        return { ...snapshot, warnings: result.warnings };
-    }
-    return snapshot;
-}
+export const getEffCanonicalDocument = reader.getDocument;
+export const rebuildEffCanonicalDocument = reader.rebuildDocument;
+export const createEffCanonicalSnapshot = reader.createSnapshot;

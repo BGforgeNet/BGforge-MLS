@@ -1,3 +1,8 @@
+/**
+ * EFF JSON-snapshot: thin wrapper around the IE json-snapshot factory
+ * (`ie-common/json-snapshot.ts`).
+ */
+
 import {
     createEffCanonicalSnapshot,
     effCanonicalSnapshotSchemaPermissive,
@@ -5,38 +10,15 @@ import {
     type EffCanonicalSnapshot,
 } from "./canonical";
 import { effParser } from "./index";
-import { parseWithSchemaValidation } from "../schema-validation";
-import type { ParseOptions, ParseResult } from "../types";
+import { createIeJsonSnapshot } from "../ie-common/json-snapshot";
 
-interface LoadedCanonicalEffSnapshot {
-    readonly snapshot: EffCanonicalSnapshot;
-    readonly bytes: Uint8Array;
-    readonly parseResult: ParseResult;
-}
+const layer = createIeJsonSnapshot<EffCanonicalSnapshot>({
+    formatLabel: "EFF",
+    snapshotSchemaPermissive: effCanonicalSnapshotSchemaPermissive,
+    createSnapshot: createEffCanonicalSnapshot,
+    serializeSnapshot: serializeEffCanonicalSnapshot,
+    getParser: () => effParser,
+});
 
-export function createCanonicalEffJsonSnapshot(parseResult: ParseResult): string {
-    return `${JSON.stringify(createEffCanonicalSnapshot(parseResult), null, 2)}\n`;
-}
-
-export function loadCanonicalEffJsonSnapshot(
-    jsonText: string,
-    parseOptions?: ParseOptions,
-): LoadedCanonicalEffSnapshot {
-    const snapshot = parseWithSchemaValidation(
-        effCanonicalSnapshotSchemaPermissive,
-        JSON.parse(jsonText),
-        "Invalid canonical EFF snapshot",
-    );
-    const bytes = serializeEffCanonicalSnapshot(snapshot);
-    const reparsed = effParser.parse(bytes, parseOptions);
-    if (reparsed.errors && reparsed.errors.length > 0) {
-        throw new Error(`Canonical EFF snapshot did not round-trip: ${reparsed.errors[0]}`);
-    }
-
-    const reparsedSnapshot = createEffCanonicalSnapshot(reparsed);
-    if (JSON.stringify(snapshot) !== JSON.stringify(reparsedSnapshot)) {
-        throw new Error("Canonical EFF snapshot did not round-trip semantically");
-    }
-
-    return { snapshot, bytes, parseResult: reparsed };
-}
+export const createCanonicalEffJsonSnapshot = layer.createJson;
+export const loadCanonicalEffJsonSnapshot = layer.loadJson;
