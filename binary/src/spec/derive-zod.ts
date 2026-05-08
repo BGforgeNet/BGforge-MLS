@@ -86,13 +86,14 @@ function fieldSpecToZod(fs: FieldSpec, mode: "strict" | "permissive"): z.ZodType
         return z.string().max(fs.count);
     }
     if (fs.flags) {
-        // Flag word: project to a strict-object dict of named-bit booleans
-        // plus a `_bits` reservoir that carries unnamed bits as a hex string.
-        // The strict-disjoint invariant (named bits never appear in `_bits`)
-        // is enforced by `flagDictToInt` at the wire boundary; the schema
-        // shape itself just gates the surface — every named key is required,
-        // `_bits` is optional, no extra keys allowed.
-        return flagDictZodSchema(fs.flags, codecByteLength(fs.codec) * 8);
+        // Flag word: project to a strict-object wrapper `{flags, flagsRaw?}`.
+        // `flags` is a sorted array of slugified-camelCase names (one per set
+        // bit); `flagsRaw` is an optional hex string carrying any wire bits
+        // the spec table doesn't name. The strict-disjoint invariant (named
+        // bits never appear in `flagsRaw`) is enforced by `flagArrayToInt`
+        // at the wire boundary; the schema gates shape only — uniqueness and
+        // codec-bound `flagsRaw` width.
+        return flagArrayZodSchema(fs.flags, codecByteLength(fs.codec) * 8);
     }
     if (fs.enum && mode === "strict" && !fs.enumOpen) {
         // Closed enums (PRO `objectType`, ITM ability `attackType`, etc.):
@@ -198,7 +199,7 @@ export function enumValueZodSchema(
 export function flagArrayZodSchema(
     table: Readonly<Record<number, string>>,
     codecBitWidth: number,
-): z.ZodType<{ flags: readonly string[]; flagsRaw?: string }> {
+): z.ZodType<{ flags: string[]; flagsRaw?: string }> {
     const codecMaxHexDigits = Math.ceil(codecBitWidth / 4);
     const { entries } = compileFlagTable(table);
     const names = entries.map((entry) => entry.key);
@@ -220,7 +221,7 @@ export function flagArrayZodSchema(
     return z.strictObject({
         flags: flagsArray,
         flagsRaw: reservoirSchema,
-    }) as unknown as z.ZodType<{ flags: readonly string[]; flagsRaw?: string }>;
+    }) as unknown as z.ZodType<{ flags: string[]; flagsRaw?: string }>;
 }
 
 export function flagDictZodSchema(

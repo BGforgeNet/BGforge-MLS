@@ -163,8 +163,8 @@ export function emptyFlagArray(_table: Readonly<Record<number, string>>): FlagAr
  * the common case where every set bit has a name.
  */
 export interface FlagArray {
-    readonly flags: readonly string[];
-    readonly flagsRaw?: string;
+    flags: string[];
+    flagsRaw?: string;
 }
 
 /**

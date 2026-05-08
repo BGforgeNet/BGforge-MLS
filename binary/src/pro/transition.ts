@@ -15,7 +15,7 @@ import {
     WALL_SIZE,
     WallLightFlags,
 } from "./types";
-import { emptyFlagDict } from "../spec/coded-projection";
+import { emptyFlagArray } from "../spec/coded-projection";
 import type { ParseResult } from "../types";
 
 function reader(data: Uint8Array, offset = 0): BufferReader {
@@ -74,7 +74,7 @@ function buildObjectTypeTransitionBytes(currentBytes: Uint8Array, objectType: nu
 
     if (objectType === 0) {
         itemCommonSchema.write(writer(nextBytes, HEADER_SIZE), {
-            flagsExt: emptyFlagDict(ItemFlagsExt),
+            flagsExt: emptyFlagArray(ItemFlagsExt),
             attackModes: 0,
             scriptType: -1,
             scriptId: -1,
@@ -88,8 +88,8 @@ function buildObjectTypeTransitionBytes(currentBytes: Uint8Array, objectType: nu
         });
     } else if (objectType === 2) {
         sceneryCommonSchema.write(writer(nextBytes, HEADER_SIZE), {
-            wallLightFlags: emptyFlagDict(WallLightFlags),
-            actionFlags: emptyFlagDict(ActionFlags),
+            wallLightFlags: emptyFlagArray(WallLightFlags),
+            actionFlags: emptyFlagArray(ActionFlags),
             scriptType: -1,
             scriptId: -1,
             subType: 0,

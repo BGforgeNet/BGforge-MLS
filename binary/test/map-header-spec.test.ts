@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { BufferReader, BufferWriter } from "typed-binary";
 import { toTypedBinarySchema } from "../src/spec/derive-typed-binary";
 import { mapHeaderSpec, type MapHeaderWireData } from "../src/map/specs/header";
-import { intToFlagDict } from "../src/spec/coded-projection";
+import { intToFlagArray } from "../src/spec/coded-projection";
 import { MapFlags } from "../src/map/types";
 
 const HEADER_SIZE = 0xf0;
@@ -23,7 +23,7 @@ describe("mapHeaderSpec", () => {
             defaultOrientation: 1,
             numLocalVars: 7,
             scriptId: 0x12345678,
-            flags: intToFlagDict(MapFlags, 0x0a, 32),
+            flags: intToFlagArray(MapFlags, 0x0a, 32),
             darkness: 1,
             numGlobalVars: 3,
             mapId: 42,
@@ -51,7 +51,7 @@ describe("mapHeaderSpec", () => {
             defaultOrientation: 0,
             numLocalVars: 0,
             scriptId: 0,
-            flags: intToFlagDict(MapFlags, 0, 32),
+            flags: intToFlagArray(MapFlags, 0, 32),
             darkness: 0,
             numGlobalVars: 0,
             mapId: 0,

@@ -12,20 +12,22 @@
             "lightRadius": 0,
             "lightIntensity": 0,
             "flags": {
-                "flat": true,
-                "lightThru": true,
-                "multiHex": true,
-                "noBlock": true,
-                "noHighlight": true,
-                "shootThru": true,
-                "transEnergy": true,
-                "transGlass": true,
-                "transNone": true,
-                "transRed": true,
-                "transSteam": true,
-                "transWall": true,
-                "wallTransEnd": true,
-                "_bits": "0x4ff027e7"
+                "flags": [
+                    "flat",
+                    "lightThru",
+                    "multiHex",
+                    "noBlock",
+                    "noHighlight",
+                    "shootThru",
+                    "transEnergy",
+                    "transGlass",
+                    "transNone",
+                    "transRed",
+                    "transSteam",
+                    "transWall",
+                    "wallTransEnd"
+                ],
+                "flagsRaw": "0x4ff027e7"
             }
         },
         "sections": {

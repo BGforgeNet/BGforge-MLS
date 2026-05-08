@@ -23,13 +23,12 @@ export interface MapHeader {
     numLocalVars: number;
     scriptId: number;
     /**
-     * `flags` is the named-bit dict produced by the wire codec
-     * (`FlagDictSchema`). Consumers that need a numeric mask use the
-     * `Record<string, boolean | string>` overload of `hasElevation` (see
-     * `./types.ts`); raw-int access goes through `flagDictToInt(MapFlags, …)`
-     * if needed.
+     * `flags` is the sorted-array projection produced by the wire codec
+     * (`FlagArraySchema`). Consumers that need a numeric mask use the
+     * `FlagArray` overload of `hasElevation` (see `./types.ts`); raw-int
+     * access goes through `flagArrayToInt(MapFlags, …)` if needed.
      */
-    flags: Record<string, boolean | string>;
+    flags: { flags: string[]; flagsRaw?: string };
     darkness: number;
     numGlobalVars: number;
     mapId: number;

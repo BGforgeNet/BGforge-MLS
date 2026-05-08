@@ -1,7 +1,7 @@
 import { BufferReader } from "typed-binary";
 import type { BinaryParser, ParseOptions, ParseResult, ParsedGroup, ParsedField, ParsedFieldType } from "../types";
 import { walkStruct } from "../spec/walk-display";
-import { flagDictToInt } from "../spec/coded-projection";
+import { flagArrayToInt } from "../spec/coded-projection";
 import { armorSpec, armorPresentation } from "./specs/armor";
 import { headerSpec, headerPresentation } from "./specs/header";
 import { itemCommonSpec, itemCommonPresentation } from "./specs/item-common";
@@ -314,11 +314,12 @@ function parseKey(data: KeyData, baseOffset: number): ParsedGroup {
  * path; here we just describe what the file actually says.
  */
 function parseCritter(data: CritterData): ParsedGroup[] {
-    // CritterData has mostly numeric fields; `critterFlags` is now a named-bit
-    // dict (see `FlagDictSchema`) and is rendered separately via flagsField.
-    // The dynamic-access subset for fieldsFromDefs is the numeric-only view.
+    // CritterData has mostly numeric fields; `critterFlags` is now a sorted
+    // array projection (see `FlagArraySchema`) and is rendered separately via
+    // flagsField. The dynamic-access subset for fieldsFromDefs is the
+    // numeric-only view.
     const critterData = data as unknown as Record<string, number>;
-    const critterFlagsInt = flagDictToInt(CritterFlags, data.critterFlags);
+    const critterFlagsInt = flagArrayToInt(CritterFlags, data.critterFlags);
 
     return [
         group("Critter Properties", [

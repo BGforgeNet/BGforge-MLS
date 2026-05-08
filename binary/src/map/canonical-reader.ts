@@ -309,8 +309,8 @@ export function rebuildMapCanonicalDocument(parseResult: ParseResult): MapCanoni
         ...headerScalars,
         version: headerScalars.version >>> 0,
         filename: readString(headerGroup, "Filename"),
-        // `flags` is a named-bit dict (`Record<string, boolean | string>`)
-        // produced by `walkGroup`; no signedness coercion applies.
+        // `flags` is a sorted-array projection (`{flags, flagsRaw?}`) produced
+        // by `walkGroup`; no signedness coercion applies.
         timestamp: headerScalars.timestamp >>> 0,
         defaultElevation: clampNumericValue(headerScalars.defaultElevation, "int32", {
             format: "map",

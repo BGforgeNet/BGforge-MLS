@@ -9,7 +9,7 @@ import {
     SPATIAL_SLOT_BYTES,
     TIMER_SLOT_BYTES,
 } from "../src/map/specs/script-slot";
-import { intToFlagDict } from "../src/spec/coded-projection";
+import { intToFlagArray } from "../src/spec/coded-projection";
 import { ScriptFlags } from "../src/map/types";
 
 const otherCodec = toTypedBinarySchema(otherSlotSpec);
@@ -62,7 +62,7 @@ function buildOtherBytes(): { bytes: ArrayBuffer; expected: Record<string, unkno
     }
     const expected: Record<string, unknown> = {
         ...wireInts,
-        flags: intToFlagDict(ScriptFlags, wireInts.flags!, 32),
+        flags: intToFlagArray(ScriptFlags, wireInts.flags!, 32),
     };
     return { bytes, expected };
 }
@@ -82,7 +82,7 @@ describe("script slot specs", () => {
             nextScriptLinkLegacy: -1,
             builtTile: 100,
             spatialRadius: 5,
-            flags: intToFlagDict(ScriptFlags, 0, 32),
+            flags: intToFlagArray(ScriptFlags, 0, 32),
             index: 0,
             programPointerSlot: 0,
             ownerId: 0,
@@ -113,7 +113,7 @@ describe("script slot specs", () => {
             sid: 0x0200000a,
             nextScriptLinkLegacy: -1,
             timerTime: 12345,
-            flags: intToFlagDict(ScriptFlags, 0, 32),
+            flags: intToFlagArray(ScriptFlags, 0, 32),
             index: 0,
             programPointerSlot: 0,
             ownerId: 0,

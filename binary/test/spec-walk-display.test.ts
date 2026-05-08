@@ -279,12 +279,12 @@ describe("walkStruct", () => {
             a: { codec: u32 },
             b: { codec: u32, enum: { 0: "Zero", 1: "One" } },
             c: { codec: u32, flags: { 1: "FlagA", 2: "FlagB" } },
-        } satisfies StructSpec<Record<string, number | Record<string, boolean | string>>>;
+        } satisfies StructSpec<Record<string, number | { flags: string[]; flagsRaw?: string }>>;
         const presentation = { a: { label: "Alpha" } };
-        // Canonical-doc shape: flag field surfaces as a named-bit dict (via
-        // FlagDictSchema); enum stays numeric. walkGroup repacks the dict
-        // identically through the round-trip.
-        const data = { a: 42, b: 1, c: { flagA: true, flagB: true } };
+        // Canonical-doc shape: flag field surfaces as a sorted-array
+        // projection (via FlagArraySchema); enum stays numeric. walkGroup
+        // repacks the projection identically through the round-trip.
+        const data = { a: 42, b: 1, c: { flags: ["flagA", "flagB"] } };
         const group = walkStruct(spec, presentation, 0, data, "Test");
         expect(walkGroup(group, spec, presentation)).toEqual(data);
     });

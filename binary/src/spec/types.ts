@@ -255,11 +255,11 @@ export function isFromCtxCount(count: ArrayFieldSpec["count"]): count is { reado
  * adds it to the data type, removing the prior duplication between
  * `interface FooData` and the spec field list.
  *
- * Scalars with a `flags` annotation project to `Record<string, boolean | string>`
- * — the named-bit dict the wire codec produces. The exact key set is loose at
- * the type level (the spec's flag table values are `Record<number, string>` and
- * cannot be lifted to literal types without `as const` migration); strict
- * structural validation lives in the zod schema.
+ * Scalars with a `flags` annotation project to `{flags: string[], flagsRaw?: string}`
+ * — the sorted-array projection the wire codec produces. The exact name set
+ * is loose at the type level (the spec's flag table values are
+ * `Record<number, string>` and cannot be lifted to literal types without
+ * `as const` migration); strict structural validation lives in the zod schema.
  */
 export type SpecData<S extends Record<string, FieldSpec>> = {
     -readonly [K in keyof S]: S[K] extends ArrayFieldSpec
@@ -268,7 +268,7 @@ export type SpecData<S extends Record<string, FieldSpec>> = {
           ? string
           : S[K] extends ScalarFieldSpec
             ? S[K] extends { readonly flags: Readonly<Record<number, string>> }
-                ? Record<string, boolean | string>
+                ? { flags: string[]; flagsRaw?: string }
                 : number
             : never;
 };

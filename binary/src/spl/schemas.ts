@@ -10,8 +10,8 @@ import { splAbilitySpecAnnotated } from "./specs/ability.overrides";
 import type { SpecData } from "../spec/types";
 
 // Wire codecs use the *annotated* specs so flag fields project through
-// `intToFlagDict` / `flagDictToInt` at the byte boundary — see itm/schemas.ts
-// for the same pattern.
+// `intToFlagArray` / `flagArrayToInt` at the byte boundary — see
+// itm/schemas.ts for the same pattern.
 export const splHeaderSchema = toTypedBinarySchema(splHeaderSpecAnnotated);
 export const splAbilitySchema = toTypedBinarySchema(splAbilitySpecAnnotated);
 export const effectSchema = toTypedBinarySchema(effectSpecAnnotated);

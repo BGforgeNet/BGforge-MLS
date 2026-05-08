@@ -12,19 +12,7 @@
             "lightRadius": 8,
             "lightIntensity": 65536,
             "flags": {
-                "flat": false,
-                "lightThru": false,
-                "multiHex": false,
-                "noBlock": false,
-                "noHighlight": false,
-                "shootThru": false,
-                "transEnergy": false,
-                "transGlass": false,
-                "transNone": false,
-                "transRed": false,
-                "transSteam": false,
-                "transWall": false,
-                "wallTransEnd": false
+                "flags": []
             }
         },
         "sections": {

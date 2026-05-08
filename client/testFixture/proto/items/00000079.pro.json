@@ -12,31 +12,13 @@
             "lightRadius": 0,
             "lightIntensity": 0,
             "flags": {
-                "flat": true,
-                "lightThru": true,
-                "multiHex": false,
-                "noBlock": false,
-                "noHighlight": false,
-                "shootThru": true,
-                "transEnergy": false,
-                "transGlass": false,
-                "transNone": false,
-                "transRed": false,
-                "transSteam": false,
-                "transWall": false,
-                "wallTransEnd": false
+                "flags": ["flat", "lightThru", "shootThru"]
             }
         },
         "sections": {
             "itemProperties": {
                 "flagsExt": {
-                    "bigGun": false,
-                    "hidden": false,
-                    "look": true,
-                    "pickUp": true,
-                    "twoHand": false,
-                    "use": true,
-                    "useOnSmth": false
+                    "flags": ["look", "pickUp", "use"]
                 },
                 "attackModes": 5,
                 "scriptType": -1,

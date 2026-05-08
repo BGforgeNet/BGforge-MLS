@@ -12,19 +12,7 @@
             "lightRadius": 0,
             "lightIntensity": 0,
             "flags": {
-                "flat": false,
-                "lightThru": true,
-                "multiHex": false,
-                "noBlock": false,
-                "noHighlight": false,
-                "shootThru": false,
-                "transEnergy": false,
-                "transGlass": false,
-                "transNone": false,
-                "transRed": false,
-                "transSteam": false,
-                "transWall": false,
-                "wallTransEnd": false
+                "flags": ["lightThru"]
             }
         },
         "sections": {
@@ -36,17 +24,7 @@
                 "aiPacket": 15,
                 "teamNumber": 1,
                 "critterFlags": {
-                    "barter": true,
-                    "invulnerable": false,
-                    "noAges": false,
-                    "noDrop": false,
-                    "noFlatten": false,
-                    "noHeal": false,
-                    "noKnock": false,
-                    "noLimbs": false,
-                    "noSteal": false,
-                    "rangeMelee": false,
-                    "specialDeath": false
+                    "flags": ["barter"]
                 },
                 "strength": 4,
                 "perception": 8,

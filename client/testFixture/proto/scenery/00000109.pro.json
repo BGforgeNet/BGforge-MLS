@@ -12,38 +12,16 @@
             "lightRadius": 0,
             "lightIntensity": 0,
             "flags": {
-                "flat": false,
-                "lightThru": true,
-                "multiHex": false,
-                "noBlock": true,
-                "noHighlight": false,
-                "shootThru": true,
-                "transEnergy": false,
-                "transGlass": false,
-                "transNone": true,
-                "transRed": false,
-                "transSteam": false,
-                "transWall": false,
-                "wallTransEnd": false
+                "flags": ["lightThru", "noBlock", "shootThru", "transNone"]
             }
         },
         "sections": {
             "sceneryProperties": {
                 "wallLightFlags": {
-                    "eastCorner": false,
-                    "eastWest": false,
-                    "northCorner": false,
-                    "northSouth": false,
-                    "southCorner": false,
-                    "westCorner": false
+                    "flags": []
                 },
                 "actionFlags": {
-                    "kneel": false,
-                    "look": false,
-                    "pickUp": false,
-                    "talk": false,
-                    "use": false,
-                    "useOnSmth": false
+                    "flags": []
                 },
                 "scriptType": -1,
                 "scriptId": -1,

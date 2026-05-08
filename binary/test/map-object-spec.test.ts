@@ -3,7 +3,7 @@ import { BufferReader, BufferWriter } from "typed-binary";
 import { toTypedBinarySchema } from "../src/spec/derive-typed-binary";
 import { objectBaseSpec, inventoryHeaderSpec, critterDataSpec, exitGridSpec } from "../src/map/specs/object";
 import { MAP_OBJECT_BASE_SIZE, MAP_OBJECT_DATA_HEADER_SIZE } from "../src/map/parse-helpers";
-import { intToFlagDict } from "../src/spec/coded-projection";
+import { intToFlagArray } from "../src/spec/coded-projection";
 import { ObjectFlags } from "../src/map/types";
 
 const objectBaseCodec = toTypedBinarySchema(objectBaseSpec);
@@ -23,7 +23,7 @@ describe("object spec modules", () => {
             frame: 0,
             rotation: 2,
             fid: 0xabcdef01,
-            flags: intToFlagDict(ObjectFlags, 0, 32),
+            flags: intToFlagArray(ObjectFlags, 0, 32),
             elevation: 1,
             pid: 0x01000042, // type 1, id 0x42
             cid: -1,

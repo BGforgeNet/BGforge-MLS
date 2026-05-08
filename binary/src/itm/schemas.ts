@@ -13,18 +13,19 @@ import { itmHeaderSpecAnnotated } from "./specs/header.overrides";
 import { itmAbilitySpecAnnotated } from "./specs/ability.overrides";
 
 // Wire codecs use the *annotated* specs so flag fields project through
-// `intToFlagDict` / `flagDictToInt` at the byte boundary — the canonical-doc
-// surface (which is built off the same annotated specs) sees flags as named
-// dicts, matching what the zod schema validates.
+// `intToFlagArray` / `flagArrayToInt` at the byte boundary — the
+// canonical-doc surface (which is built off the same annotated specs) sees
+// flags as sorted-array `{flags, flagsRaw?}` projections, matching what the
+// zod schema validates.
 export const itmHeaderSchema = toTypedBinarySchema(itmHeaderSpecAnnotated);
 export const itmAbilitySchema = toTypedBinarySchema(itmAbilitySpecAnnotated);
 export const effectSchema = toTypedBinarySchema(effectSpecAnnotated);
 
 // Re-export the data types projected from the *annotated* specs so flag
-// fields surface as `Record<string, boolean | string>` (the named-bit dict)
-// rather than `number`. The bare-spec types in `./specs/header` etc. remain
-// the underlying source for the spread, but consumers (parser, canonical
-// reader/writer) should consume the annotated projection.
+// fields surface as `{flags: string[], flagsRaw?: string}` (the sorted-array
+// projection) rather than `number`. The bare-spec types in `./specs/header`
+// etc. remain the underlying source for the spread, but consumers (parser,
+// canonical reader/writer) should consume the annotated projection.
 import type { SpecData } from "../spec/types";
 
 export type ItmHeaderData = SpecData<typeof itmHeaderSpecAnnotated>;
