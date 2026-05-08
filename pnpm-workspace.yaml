@@ -10,3 +10,20 @@ packages:
     - transpilers/tssl
     - transpilers/tbaf
     - transpilers/td
+# Grammars compile to WASM via tree-sitter-cli and load through web-tree-sitter at
+# runtime, so the native `tree-sitter` binding is denied. `keytar` is a transitive
+# `@vscode/vsce` dep no longer used since vsce 3. `@vscode/vsce-sign` only matters
+# when signing the VSIX, which is not done in this build.
+allowBuilds:
+    esbuild: true
+    tree-sitter-cli: true
+    "@vscode/vsce-sign": false
+    keytar: false
+    tree-sitter: false
+
+# Transitive pins addressing security advisories in mocha's bundled dependencies
+# and msal-node's uuid (GHSA-w5hq-g745-h8pq).
+overrides:
+    mocha>diff: ">=8.0.3"
+    mocha>serialize-javascript: ">=7.0.5"
+    uuid: ">=14"

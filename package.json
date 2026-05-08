@@ -707,17 +707,5 @@
     "engines": {
         "vscode": "^1.73.0"
     },
-    "packageManager": "pnpm@10.33.0",
-    "pnpm": {
-        "onlyBuiltDependencies": [
-            "esbuild",
-            "tree-sitter-cli"
-        ],
-        "//": "Transitive pins addressing security advisories in mocha's bundled dependencies and msal-node's uuid (GHSA-w5hq-g745-h8pq).",
-        "overrides": {
-            "mocha>diff": ">=8.0.3",
-            "mocha>serialize-javascript": ">=7.0.5",
-            "uuid": ">=14"
-        }
-    }
+    "packageManager": "pnpm@11.0.8"
 }

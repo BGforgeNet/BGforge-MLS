@@ -38,11 +38,13 @@ export type Edit = {
 
 export type Logger = (
   message: string,
-  params: Record<string, string>,
+  params: { [param: string]: string },
   type: "parse" | "lex"
 ) => void;
 
-export type Input = (index: number, position?: Point) => string | null;
+export interface Input {
+  (index: number, position?: Point): string | null;
+}
 
 interface SyntaxNodeBase {
   tree: Tree;
@@ -149,9 +151,9 @@ export interface QueryCapture {
   name: string;
   text?: string;
   node: SyntaxNode;
-  setProperties?: Record<string, string | null>;
-  assertedProperties?: Record<string, string | null>;
-  refutedProperties?: Record<string, string | null>;
+  setProperties?: { [prop: string]: string | null };
+  assertedProperties?: { [prop: string]: string | null };
+  refutedProperties?: { [prop: string]: string | null };
 }
 
 export interface QueryMatch {
@@ -174,7 +176,7 @@ export interface PredicateResult {
 }
 
 export class Query {
-  readonly predicates: Record<string, Function>[];
+  readonly predicates: { [name: string]: Function }[];
   readonly setProperties: any[];
   readonly assertedProperties: any[];
   readonly refutedProperties: any[];
