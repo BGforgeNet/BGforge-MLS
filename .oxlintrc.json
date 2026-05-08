@@ -237,12 +237,6 @@
         // and factories.
         "func-names": "off",
 
-        // False positive for VS Code extensions: `webview.postMessage()`
-        // (extension side) and `vscode.postMessage()` from
-        // `acquireVsCodeApi()` (webview side) are not the browser's
-        // `window.postMessage`; neither takes a `targetOrigin`.
-        "unicorn/require-post-message-target-origin": "off",
-
         // Rule pushes away from `.map(x => ({ ...x, extra }))` for perf, but
         // the alternatives either mutate the input (usually wrong) or have
         // equivalent perf (`Object.assign`). Spreading to produce a fresh
@@ -313,6 +307,15 @@
             "files": ["client/src/**/*-webview*.ts"],
             "rules": {
                 "unicorn/prefer-query-selector": "off"
+            }
+        },
+        {
+            // VS Code's `webview.postMessage()` (extension side) and
+            // `acquireVsCodeApi().postMessage()` (webview side) are not the
+            // browser's `window.postMessage`; neither takes a `targetOrigin`.
+            "files": ["client/src/editors/**", "client/src/dialog-tree/**"],
+            "rules": {
+                "unicorn/require-post-message-target-origin": "off"
             }
         }
     ],
