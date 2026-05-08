@@ -112,9 +112,7 @@ function fieldSpecToZod(fs: FieldSpec, mode: "strict" | "permissive"): z.ZodType
         // an enum changes one number to another (`5 → 0`) at the same line
         // count as `"Items" → "Background"`. The display layer's `enum` table
         // resolves names for dropdowns and hover; the snapshot stays close to
-        // the wire. Helpers `intToEnumValue` / `enumValueToInt` in
-        // `coded-projection.ts` are available as opt-in utilities for code
-        // that wants to convert.
+        // the wire.
         const allowed = new Set(Object.keys(fs.enum).map(Number));
         return z
             .number()

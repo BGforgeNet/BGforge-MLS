@@ -195,37 +195,3 @@ export function flagArrayToInt(table: Readonly<Record<number, string>>, projecti
     }
     return value;
 }
-
-export type EnumValue = string | number;
-
-/**
- * Project an integer enum value to its named-string form when the value is
- * in the table, otherwise pass through as a raw number. The canonical-doc
- * shape carries `EnumValue = string | number`: the named form is the
- * diff-friendly default, the int form is the reservoir for unknown values.
- *
- * For closed enums (`enumOpen` not set on the spec), the strict zod schema
- * rejects unknown ints — but the projection itself is permissive so a
- * malformed file still loads through `loadCanonicalProJsonSnapshotPermissive`
- * and surfaces in the editor.
- */
-export function intToEnumValue(table: Readonly<Record<number, string>>, value: number): EnumValue {
-    const name = table[value];
-    return name !== undefined ? name : value;
-}
-
-/**
- * Reverse of `intToEnumValue`. Looks up the int by display-name match against
- * the enum table; falls through to a numeric value as-is. Throws for a
- * string that doesn't match any table entry — that's a hand-edit error, not
- * a graceful fallback.
- */
-export function enumValueToInt(table: Readonly<Record<number, string>>, value: EnumValue): number {
-    if (typeof value === "number") return value;
-    for (const [intStr, name] of Object.entries(table)) {
-        if (name === value) return Number(intStr);
-    }
-    throw new Error(
-        `enumValueToInt: name "${value}" not found in enum table (known: ${Object.values(table).join(", ")})`,
-    );
-}
