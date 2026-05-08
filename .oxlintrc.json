@@ -170,10 +170,6 @@
         // `if (arr.length)` is idiomatic and unambiguous in this codebase.
         "unicorn/explicit-length-check": "off",
 
-        // `.apply()` is sometimes clearer than spread, especially when
-        // forwarding an existing array-like.
-        "unicorn/prefer-spread": "off",
-
         // Early-return vs. else-branch is a readability preference.
         "no-else-return": "off",
 

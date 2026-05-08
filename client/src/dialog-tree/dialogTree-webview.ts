@@ -28,7 +28,7 @@ import { escapeHtml } from "../utils";
         const groups: HTMLElement[][] = [];
         document.querySelectorAll(".children").forEach((container) => {
             const msgTexts: HTMLElement[] = [];
-            for (const child of Array.from(container.children)) {
+            for (const child of container.children) {
                 let msgText: HTMLElement | null = null;
                 if (child.classList.contains("item")) {
                     msgText = child.querySelector(".msg-text");
@@ -200,7 +200,7 @@ import { escapeHtml } from "../utils";
             // Element.textContent is always string at runtime (never null for elements)
             const textContent = itemEl.textContent!;
             // Also search in title attributes (contains type/msgId like "NLowOption(873)")
-            const titles = Array.from(itemEl.querySelectorAll("[title]"))
+            const titles = [...itemEl.querySelectorAll("[title]")]
                 .map((el) => el.getAttribute("title") || "")
                 .join(" ");
             const fullText = textContent + " " + titles;
@@ -315,7 +315,7 @@ import { escapeHtml } from "../utils";
             let elementToSelect: Element | null = null;
             if (itemText) {
                 // Search for the specific reply/option by message text content
-                const items = Array.from(targetEl.querySelectorAll(".item.reply, .item.option, summary.option"));
+                const items = [...targetEl.querySelectorAll(".item.reply, .item.option, summary.option")];
                 for (const item of items) {
                     const msgTextEl = item.querySelector(".msg-text");
                     const msgText = msgTextEl ? msgTextEl.textContent!.trim() : undefined;

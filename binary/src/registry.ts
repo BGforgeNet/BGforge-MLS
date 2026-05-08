@@ -51,14 +51,14 @@ class ParserRegistry {
      * Get all registered extensions
      */
     getExtensions(): string[] {
-        return Array.from(this.extensionMap.keys());
+        return [...this.extensionMap.keys()];
     }
 
     /**
      * Get all registered parsers
      */
     getAllParsers(): BinaryParser[] {
-        return Array.from(this.parsers.values());
+        return [...this.parsers.values()];
     }
 }
 

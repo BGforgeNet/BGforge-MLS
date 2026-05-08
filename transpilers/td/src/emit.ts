@@ -521,7 +521,7 @@ function emitReplaceStates(op: import("./types").TDReplaceStates): string {
         `APPEND ${op.filename}`,
     ];
 
-    const states = Array.from(op.replacements.entries())
+    const states = [...op.replacements.entries()]
         .sort(([a], [b]) => a - b)
         .map(([_, state]) => indentBlock(emitState(state)));
 

@@ -60,7 +60,7 @@ describe("mapHeaderSpec", () => {
         });
 
         const view = new Uint8Array(buf);
-        const expected = [0x66, 0x6f, 0x6f, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; // "foo\0..."
-        expect(Array.from(view.slice(4, 4 + 16))).toEqual(expected);
+        const expected = new Uint8Array([0x66, 0x6f, 0x6f, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]); // "foo\0..."
+        expect(view.slice(4, 4 + 16)).toEqual(expected);
     });
 });

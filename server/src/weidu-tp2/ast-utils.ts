@@ -96,7 +96,7 @@ export function localCompletion(text: string): Tp2CompletionItem[] {
     visit(tree.rootNode);
 
     // Convert to CompletionItem[] with "vars" category for filtering
-    return Array.from(variableNames).map(
+    return [...variableNames].map(
         (name): Tp2CompletionItem => ({
             label: name,
             kind: looksLikeConstant(name) ? CompletionItemKind.Constant : CompletionItemKind.Variable,

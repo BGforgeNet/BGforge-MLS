@@ -117,7 +117,7 @@ import { createWebviewState, registerNode, resetState } from "./binaryEditor-web
     }
 
     function expandLoadedGroupsAndQueueChildren(nodes?: readonly BinaryEditorNode[]): void {
-        const groups = (nodes ?? Array.from(state.nodeById.values())).filter(
+        const groups = (nodes ?? [...state.nodeById.values()]).filter(
             (node) => node.kind === "group" && node.expandable,
         );
 

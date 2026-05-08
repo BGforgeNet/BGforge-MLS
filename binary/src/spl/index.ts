@@ -60,11 +60,11 @@ class SplParser implements BinaryParser {
             return this.fail(`File too small: ${data.byteLength} bytes, need at least ${SPL_HEADER_SIZE} for header`);
         }
 
-        const signature = Array.from(data.subarray(0, 4));
+        const signature = [...data.subarray(0, 4)];
         if (!bytesEqual(signature, [...SPL_SIGNATURE])) {
             return this.fail(`Not an SPL file: signature ${JSON.stringify(String.fromCodePoint(...signature))}`);
         }
-        const version = Array.from(data.subarray(4, 8));
+        const version = [...data.subarray(4, 8)];
         if (!bytesEqual(version, [...SPL_VERSION_V1])) {
             return this.fail(
                 `Unsupported SPL version: ${JSON.stringify(String.fromCodePoint(...version))} (only V1 is supported)`,
