@@ -63,10 +63,6 @@
         // LSP protocol, some tree-sitter APIs). Blanket ban doesn't fit.
         "unicorn/no-null": "off",
 
-        // `document.getElementById` is clearer and faster than the
-        // `.querySelector('#id')` equivalent; the rule's premise doesn't hold.
-        "unicorn/prefer-query-selector": "off",
-
         // `x | 0` is a deliberate perf idiom in parser hot paths; `Math.trunc`
         // is not equivalent at the bytecode level.
         "unicorn/prefer-math-trunc": "off",
@@ -308,6 +304,15 @@
             "files": ["client/src/editors/binaryEditor*.ts"],
             "rules": {
                 "no-underscore-dangle": "off"
+            }
+        },
+        {
+            // `document.getElementById` is clearer and faster than
+            // `.querySelector('#id')`; the rule's premise doesn't hold.
+            // Webview scripts are the only DOM consumers in the codebase.
+            "files": ["client/src/**/*-webview*.ts"],
+            "rules": {
+                "unicorn/prefer-query-selector": "off"
             }
         }
     ],
