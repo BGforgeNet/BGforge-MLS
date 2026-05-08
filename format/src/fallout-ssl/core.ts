@@ -89,7 +89,7 @@ function normalizePreprocessor(text: string): string {
     // matching the original regexes' `[\r\n]*$` consumption.
     let tailStart = text.length;
     while (tailStart > 0) {
-        const c = text.charCodeAt(tailStart - 1);
+        const c = text.codePointAt(tailStart - 1)!;
         if (c !== 10 && c !== 13) break;
         tailStart--;
     }
@@ -209,7 +209,7 @@ export function formatNode(node: SyntaxNode, depth: number): string {
             // and therefore linear.
             const expanded = content.replace(/\t/g, ctx.indent).replace(/^\n+/, "");
             let endIdx = expanded.length;
-            while (endIdx > 0 && expanded.charCodeAt(endIdx - 1) === 10) endIdx--;
+            while (endIdx > 0 && expanded.codePointAt(endIdx - 1) === 10) endIdx--;
             return expanded.slice(0, endIdx) + "\n";
         }
         case SyntaxType.Preprocessor:

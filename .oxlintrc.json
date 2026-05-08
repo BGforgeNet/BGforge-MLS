@@ -120,10 +120,6 @@
         // impls are sync).
         "require-await": "off",
 
-        // Autofix is buggy in oxlint 1.61: rewrote `charCodeAt`->`codePointAt`
-        // (not equivalent - return types differ), leaving callers broken.
-        "unicorn/prefer-code-point": "off",
-
         // Autofix is buggy: renames `catch (e)` parameter but misses
         // references to `e` elsewhere in scope (e.g. `{ cause: e }`).
         "unicorn/catch-error-name": "off",

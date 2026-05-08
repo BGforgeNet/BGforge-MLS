@@ -52,12 +52,12 @@ class EffParser implements BinaryParser {
 
         const signature = Array.from(data.subarray(0, 4));
         if (!bytesEqual(signature, [...EFF_SIGNATURE])) {
-            return this.fail(`Not an EFF file: signature ${JSON.stringify(String.fromCharCode(...signature))}`);
+            return this.fail(`Not an EFF file: signature ${JSON.stringify(String.fromCodePoint(...signature))}`);
         }
         const version = Array.from(data.subarray(4, 8));
         if (!bytesEqual(version, [...EFF_VERSION_V2])) {
             return this.fail(
-                `Unsupported EFF version: ${JSON.stringify(String.fromCharCode(...version))} (only V2.0 is supported)`,
+                `Unsupported EFF version: ${JSON.stringify(String.fromCodePoint(...version))} (only V2.0 is supported)`,
             );
         }
 

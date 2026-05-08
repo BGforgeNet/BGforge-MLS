@@ -27,7 +27,7 @@ export function isStringAllowedInCharset(value: string, charset: StringCharset):
         return true;
     }
     for (let i = 0; i < value.length; i++) {
-        if (!isCharAllowedInCharset(value.charCodeAt(i), charset)) {
+        if (!isCharAllowedInCharset(value.codePointAt(i)!, charset)) {
             return false;
         }
     }

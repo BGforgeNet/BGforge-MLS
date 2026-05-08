@@ -73,12 +73,12 @@ class ItmParser implements BinaryParser {
 
         const signature = Array.from(data.subarray(0, 4));
         if (!bytesEqual(signature, [...ITM_SIGNATURE])) {
-            return this.fail(`Not an ITM file: signature ${JSON.stringify(String.fromCharCode(...signature))}`);
+            return this.fail(`Not an ITM file: signature ${JSON.stringify(String.fromCodePoint(...signature))}`);
         }
         const version = Array.from(data.subarray(4, 8));
         if (!bytesEqual(version, [...ITM_VERSION_V1])) {
             return this.fail(
-                `Unsupported ITM version: ${JSON.stringify(String.fromCharCode(...version))} (only V1 is supported)`,
+                `Unsupported ITM version: ${JSON.stringify(String.fromCodePoint(...version))} (only V1 is supported)`,
             );
         }
 

@@ -42,7 +42,7 @@ export function sanitizeEditableStringValue(text: string, maxBytes: number, char
     if (charset !== "utf8") {
         let filtered = "";
         for (let i = 0; i < candidate.length; i++) {
-            const code = candidate.charCodeAt(i);
+            const code = candidate.codePointAt(i)!;
             if (isCharAllowedInCharset(code, charset)) {
                 filtered += candidate[i];
             }
