@@ -63,10 +63,6 @@
         // LSP protocol, some tree-sitter APIs). Blanket ban doesn't fit.
         "unicorn/no-null": "off",
 
-        // `x | 0` is a deliberate perf idiom in parser hot paths; `Math.trunc`
-        // is not equivalent at the bytecode level.
-        "unicorn/prefer-math-trunc": "off",
-
         // Member-order churn with no autofix in oxlint. Imports are grouped
         // by origin (external -> internal -> types), not alphabetized within
         // braces.
@@ -325,6 +321,16 @@
             "files": ["**/src/cli.ts", "client/src/test/runTest.ts"],
             "rules": {
                 "unicorn/prefer-top-level-await": "off"
+            }
+        },
+        {
+            // `x | 0` is a deliberate 32-bit truncation idiom in binary
+            // parsing hot paths; `Math.trunc` is not equivalent at the
+            // bytecode level. Only applicable inside `binary/` and the
+            // editor's binary-formatting helper.
+            "files": ["binary/**", "client/src/editors/binaryEditor-formatting.ts"],
+            "rules": {
+                "unicorn/prefer-math-trunc": "off"
             }
         }
     ],
