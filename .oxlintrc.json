@@ -253,10 +253,6 @@
         // object is the idiomatic copy-on-write pattern here.
         "oxc/no-map-spread": "off",
 
-        // Same rationale as `oxc/no-map-spread`: the accumulator spread is
-        // an intentional copy-on-write in the data-loading scripts.
-        "oxc/no-accumulating-spread": "off",
-
         // Tree-sitter byte-offset traversal walks the string by index so it
         // can count column/row advances; converting to `for-of` would hide
         // the position tracking.

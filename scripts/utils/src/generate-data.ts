@@ -179,11 +179,11 @@ function sortDataFile(data: DataFile): DataFile {
  * Later files override earlier ones (last-writer-wins per stanza key).
  */
 export function loadData(yamlPaths: readonly string[]): DataFile {
-    let result: DataFile = {};
+    const result: DataFile = {};
     for (const ypath of yamlPaths) {
         const content = fs.readFileSync(ypath, "utf8");
         const ydata = validateDataFile(YAML.parse(content) as unknown, ypath);
-        result = { ...result, ...ydata };
+        Object.assign(result, ydata);
     }
     return sortDataFile(result);
 }

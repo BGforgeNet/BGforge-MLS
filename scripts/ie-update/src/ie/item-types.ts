@@ -22,16 +22,16 @@ export function getItemTypes(iesdpFileFormatsDir: string): readonly ItemType[] {
     const content = fs.readFileSync(sourceFile, "utf8");
     const items: readonly ItemTypeRaw[] = validateArray(YAML.parse(content), validateItemTypeRaw, sourceFile);
 
-    return items.reduce<readonly ItemType[]>((acc, item) => {
+    const result: ItemType[] = [];
+    for (const item of items) {
         const iid = getItemTypeId(item);
-        if (iid === "ITEM_TYPE_unknown") {
-            return acc;
-        }
+        if (iid === "ITEM_TYPE_unknown") continue;
         if (Number.isNaN(Number(item.code))) {
             throw new TypeError(`Invalid item type code '${item.code}' for '${item.type}' in ${sourceFile}`);
         }
-        return [...acc, { id: iid, desc: item.type, value: item.code }];
-    }, []);
+        result.push({ id: iid, desc: item.type, value: item.code });
+    }
+    return result;
 }
 
 /**
