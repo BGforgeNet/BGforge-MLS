@@ -185,6 +185,44 @@ export function enumValueZodSchema(
  * — must match the wire codec's width so `_bits` cannot carry bits outside
  * the wire word.
  */
+/**
+ * Build the zod schema for a flag-array canonical-doc field. Exported so
+ * hand-written canonical schemas (e.g. MAP) can declare flag fields without
+ * re-deriving the shape from a spec entry. `codecBitWidth` is 8 / 16 / 24 / 32
+ * — must match the wire codec's width so `flagsRaw` cannot carry bits outside
+ * the wire word. Sort order is the writer's responsibility (`intToFlagArray`
+ * emits alphabetically); the schema enforces uniqueness but accepts any order
+ * so a hand-edit doesn't fail validation just for inserting a name in the
+ * "wrong" slot.
+ */
+export function flagArrayZodSchema(
+    table: Readonly<Record<number, string>>,
+    codecBitWidth: number,
+): z.ZodType<{ flags: readonly string[]; flagsRaw?: string }> {
+    const codecMaxHexDigits = Math.ceil(codecBitWidth / 4);
+    const { entries } = compileFlagTable(table);
+    const names = entries.map((entry) => entry.key);
+    const flagsItem =
+        names.length === 0
+            ? z.never()
+            : names.length === 1
+              ? z.literal(names[0]!)
+              : z.enum(names as [string, ...string[]]);
+    const flagsArray = z
+        .array(flagsItem)
+        .refine((arr) => new Set(arr).size === arr.length, { message: "flags array must not contain duplicate names" });
+    const reservoirSchema = z
+        .string()
+        .regex(new RegExp(`^0x[0-9a-fA-F]{1,${codecMaxHexDigits}}$`), {
+            message: `flagsRaw must match /^0x[0-9a-fA-F]{1,${codecMaxHexDigits}}$/`,
+        })
+        .optional();
+    return z.strictObject({
+        flags: flagsArray,
+        flagsRaw: reservoirSchema,
+    }) as unknown as z.ZodType<{ flags: readonly string[]; flagsRaw?: string }>;
+}
+
 export function flagDictZodSchema(
     table: Readonly<Record<number, string>>,
     codecBitWidth: number,

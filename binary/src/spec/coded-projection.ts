@@ -27,6 +27,22 @@ const IDENTIFIER_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
  *   "MultiHex"      → "multiHex"
  *   "Magic Hands"   → "magicHands"
  *   "Trans-Energy"  → "transEnergy"
+ *
+ * Why slugified identifiers rather than the display strings themselves:
+ * - The construction API surfaces flags as TS members (e.g.
+ *   `item.header.flags` typed as a literal-name union); identifier-shaped
+ *   names get the canonical dot-trigger autocomplete with per-flag JSDoc
+ *   visible inline, which a quoted-display-string union does not.
+ * - JSON Schema `items.enum` autocomplete in editors works for both shapes,
+ *   but identifier tokens are faster to type and avoid case/spacing
+ *   ambiguities ("No LOS required" vs "No los required" vs "No LOS Required"
+ *   when a modder is guessing from the engine docs).
+ * - Schema validation messages quote the canonical key, so a typo error
+ *   reads `"loghtThru" not in [..., lightThru, ...]` rather than the same
+ *   error decorated with spaces and punctuation.
+ * - The display string remains the parsed-tree label and the engine-doc
+ *   parlance; the slug is the toolchain token. One translation point
+ *   (label ↔ slug) is the simplest split for a single-vocabulary toolchain.
  */
 export function slugifyCodedName(displayName: string): string {
     const normalized = displayName
@@ -128,6 +144,95 @@ export function intToFlagDict(table: Readonly<Record<number, string>>, value: nu
         out._bits = `0x${reservoir.toString(16)}`;
     }
     return out;
+}
+
+/**
+ * Build a default array projection — empty `flags`, no `flagsRaw`. Used by
+ * structural-edit transitions and as a default in test fixtures or
+ * construction APIs.
+ */
+export function emptyFlagArray(_table: Readonly<Record<number, string>>): FlagArray {
+    return { flags: [] };
+}
+
+/**
+ * Sorted-array projection of a flag word — `flags` lists every set bit by its
+ * canonical (slugified-camelCase) name, `flagsRaw` carries any wire bits the
+ * spec table doesn't name as a hex string. Both fields are wire-shape:
+ * `flags` order is alphabetical for stable diffs, `flagsRaw` is omitted in
+ * the common case where every set bit has a name.
+ */
+export interface FlagArray {
+    readonly flags: readonly string[];
+    readonly flagsRaw?: string;
+}
+
+/**
+ * Project an integer flag word to a sorted array of slugified names. Each
+ * named bit that's set contributes its canonical key; unnamed bits land in
+ * `flagsRaw` as a lowercase hex string. `flagsRaw` is omitted when all set
+ * bits are named.
+ *
+ * `codecBitWidth` (8 / 16 / 24 / 32) masks `flagsRaw` to the wire width so
+ * sign-extended bits a JS bit-OR might surface don't leak in.
+ */
+export function intToFlagArray(
+    table: Readonly<Record<number, string>>,
+    value: number,
+    codecBitWidth: number,
+): FlagArray {
+    const { entries, namedMask } = compileFlagTable(table);
+    const flags: string[] = [];
+    for (const entry of entries) {
+        if ((value & entry.mask) !== 0) flags.push(entry.key);
+    }
+    const codecMask = codecBitWidth >= 32 ? 0xffffffff : (1 << codecBitWidth) - 1;
+    const reservoir = (value & ~namedMask & codecMask) >>> 0;
+    if (reservoir !== 0) {
+        return { flags, flagsRaw: `0x${reservoir.toString(16)}` };
+    }
+    return { flags };
+}
+
+/**
+ * Pack a flag array back to an integer. Every name in `flags` contributes its
+ * mask; `flagsRaw` (hex) ORs in. Throws on unknown names, duplicate names,
+ * malformed `flagsRaw`, or a `flagsRaw` value overlapping a named bit
+ * (strict-disjoint invariant — the hand-edit surface should not let the same
+ * bit be specified twice).
+ */
+export function flagArrayToInt(table: Readonly<Record<number, string>>, projection: FlagArray): number {
+    const { entries, namedMask } = compileFlagTable(table);
+    const byKey = new Map(entries.map((entry) => [entry.key, entry.mask]));
+    const seen = new Set<string>();
+    let value = 0;
+    for (const name of projection.flags) {
+        if (seen.has(name)) {
+            throw new Error(`flagArrayToInt: duplicate flag name "${name}"`);
+        }
+        seen.add(name);
+        const mask = byKey.get(name);
+        if (mask === undefined) {
+            throw new Error(`flagArrayToInt: unknown flag "${name}" (known: ${entries.map((e) => e.key).join(", ")})`);
+        }
+        value = (value | mask) >>> 0;
+    }
+    if (projection.flagsRaw !== undefined) {
+        if (typeof projection.flagsRaw !== "string" || !/^0x[0-9a-f]+$/i.test(projection.flagsRaw)) {
+            throw new TypeError(
+                `flagArrayToInt: flagsRaw must be a hex string ("0x..."); got ${String(projection.flagsRaw)}`,
+            );
+        }
+        const reservoir = Number.parseInt(projection.flagsRaw, 16);
+        if ((reservoir & namedMask) !== 0) {
+            const overlapHex = (reservoir & namedMask).toString(16);
+            throw new Error(
+                `flagArrayToInt: flagsRaw ${projection.flagsRaw} overlaps named-bit mask 0x${overlapHex}; named bits must be set via the flags array`,
+            );
+        }
+        value = (value | reservoir) >>> 0;
+    }
+    return value;
 }
 
 export type EnumValue = string | number;
