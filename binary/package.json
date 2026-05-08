@@ -1,6 +1,6 @@
 {
     "name": "@bgforge/binary",
-    "version": "3.7.0",
+    "version": "0.1.0",
     "description": "Library and CLI for parsing and serialising Fallout PRO and MAP binary files (round-trip to canonical JSON snapshots).",
     "keywords": [
         "binary",

@@ -127,7 +127,9 @@ cd grammars/weidu-tp2 && pnpm test   # or any grammars/*/
 
 Three artifact streams, all triggered by `git tag vX.Y.Z` -> GitHub Actions. See `docs/architecture.md` for packaging details.
 
-**Version management:** Root `package.json`, `server/package.json`, `transpilers/package.json` (the published `@bgforge/transpile` library), `format/package.json` (the published `@bgforge/format` library), and `binary/package.json` (the published `@bgforge/binary` library) must carry identical versions; check the current value with `node -p "require('./package.json').version"`. Other packages have independent versions. Bump all five together, commit as "Update changelog, bump version: X.Y.Z", then tag.
+**Version management:** Root `package.json` and `server/package.json` must carry identical versions — they ship together as the VSIX and the `@bgforge/mls-server` npm package, gated by the same `git tag vX.Y.Z`. Check the current value with `node -p "require('./package.json').version"`. Bump both together, commit as "Update changelog, bump version: X.Y.Z", then tag.
+
+The three published library packages — `@bgforge/binary`, `@bgforge/format`, `@bgforge/transpile` — version independently. Each library and its bundled CLI (`fgbin`, `fgfmt`, `fgtp`) share a single package.json and therefore a single version, so the library API and the CLI surface always move together. Cross-library coupling is not enforced: a binary-format addition does not force a format or transpile bump. Workspace consumers (`server/`, `client/`) reference these packages via `workspace:*`, so bumping a library version does not require updating dependents. Each library's release is its own `git tag` namespace (e.g., `binary/v0.2.0`) when published; the repo-level `vX.Y.Z` tag governs only the VSIX + server release.
 
 **Changelog entries:** Document only user-facing changes (new features, bug fixes, behavior changes). Do not include implementation details (refactoring, test additions, code quality improvements, internal constants). Users care about what changed, not how it was implemented.
 
