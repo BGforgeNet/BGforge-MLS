@@ -253,11 +253,6 @@
         // object is the idiomatic copy-on-write pattern here.
         "oxc/no-map-spread": "off",
 
-        // Closure-over-loop-var is safe here: the loop declares `const`
-        // bindings inside the body, so the closed-over values don't leak
-        // across iterations.
-        "no-loop-func": "off",
-
         // Same readability rationale as `no-negated-condition` above; the
         // `unicorn/` variant is a duplicate.
         "unicorn/no-negated-condition": "off",

@@ -194,6 +194,7 @@ function sortItemsInStanzaBody(body: string): string {
             continue;
         }
 
+        // eslint-disable-next-line no-loop-func -- .map runs synchronously within the iteration; the closure does not outlive it
         const slices: ItemSlice[] = pair.value.items.map((item: unknown, index: number, items: readonly unknown[]) => {
             const name = getTopLevelName(item);
             if (name === undefined) {
