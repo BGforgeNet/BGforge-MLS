@@ -57,14 +57,26 @@ try {
 }
 ```
 
-## CLI
+## `fgtp` CLI
 
-Installing globally also exposes the `fgtp` CLI:
+Installing globally exposes the `fgtp` CLI:
 
 ```bash
 pnpm add -g @bgforge/transpile
-fgtp script.tssl --save
 ```
+
+```
+fgtp <file.td|file.tbaf|file.tssl|dir> [--save] [--check] [--save-and-check] [-r] [-q]
+```
+
+- `--save` — write the transpiled output alongside the source
+  (`.td` → `.d`, `.tbaf` → `.baf`, `.tssl` → `.ssl`)
+- `--check` — exit 1 if any output is not up to date
+- `--save-and-check` — save and verify in one pass
+- `-r` — recurse into directories
+- `-q` — quiet mode (suppress summary)
+
+Without `--save`, the transpiled output is printed to stdout.
 
 ## Per-language transpiler guides
 

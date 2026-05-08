@@ -9,24 +9,46 @@ Round-trips bytes ↔ structured data ↔ canonical JSON snapshots, suitable for
 diff-friendly version control of binary fixtures and for the BGforge MLS
 binary editor.
 
-For internals (spec system, primitives, derivation, format-adapter pattern,
-adding a new format), see [INTERNALS.md](INTERNALS.md).
+## Install
+
+```bash
+pnpm add @bgforge/binary
+```
+
+Requires Node 20 or newer.
 
 ## Library API
 
+Pick a parser by file extension, parse bytes, and round-trip through a
+canonical JSON snapshot:
+
 ```ts
-import {
-    parserRegistry,
-    createBinaryJsonSnapshot,
-    loadBinaryJsonSnapshot,
-    parseBinaryJsonSnapshot,
-} from "@bgforge/binary";
+import { readFileSync, writeFileSync } from "node:fs";
+import { parserRegistry, createBinaryJsonSnapshot, parseBinaryJsonSnapshot } from "@bgforge/binary";
+
+const parser = parserRegistry.getByExtension(".pro");
+if (!parser) throw new Error("unsupported extension");
+
+// Bytes → structured ParseResult.
+const bytes = readFileSync("scout.pro");
+const result = parser.parse(new Uint8Array(bytes));
+
+// ParseResult → canonical JSON snapshot (diff-friendly, version-controllable).
+const snapshot = createBinaryJsonSnapshot(result);
+writeFileSync("scout.pro.json", snapshot);
+
+// JSON snapshot → ParseResult → bytes.
+const reloaded = parseBinaryJsonSnapshot(snapshot);
+const out = parser.serialize?.(reloaded);
+if (out) writeFileSync("scout-out.pro", out);
 ```
 
-Public exports include the parser registry (`parserRegistry`), parser types
-(`BinaryParser`, `ParseOptions`, `ParseResult`, `ParsedField`, `ParsedGroup`,
-`ParseOpaqueRange`), JSON snapshot helpers, format-adapter registration, and
-presentation-schema lookups.
+The same pattern works for `.map`, `.itm`, `.spl`, and `.eff`. To load a
+JSON snapshot directly from disk, use `loadBinaryJsonSnapshot(jsonText, options)`.
+
+Public exports also include parser types (`BinaryParser`, `ParseOptions`,
+`ParseResult`, `ParsedField`, `ParsedGroup`, `ParseOpaqueRange`),
+format-adapter registration, and presentation-schema lookups.
 
 ## `fgbin` CLI
 
@@ -51,9 +73,3 @@ fgbin <file.pro|file.map|file.itm|file.spl|file.eff|dir> [--save] [--check] [--l
 - `.itm` — Infinity Engine item files (v1: BG1, BG2, IWD).
 - `.spl` — Infinity Engine spell files (v1: BG1, BG2, IWD).
 - `.eff` — Infinity Engine sub-effect files (v2: BG2EE, IWDEE).
-
-Infinity Engine wire specs are generated from
-[IESDP](https://github.com/BGforgeNet/iesdp)'s `_data/file_formats/` YAML;
-checked-in `.ts` outputs in `binary/src/{itm,spl,ie-common}/specs/` carry an
-auto-generation banner. To refresh against upstream IESDP, run
-`scripts/ie-binary-update.sh`.
