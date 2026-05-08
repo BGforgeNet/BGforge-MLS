@@ -1,7 +1,7 @@
 /**
  * Tests for variable DeclarationKind inference in TP2 header parsing.
  * Verifies that READ_ASCII and READ_STRREF produce string declaration kinds,
- * not integer (which was a bug — they read strings, not numbers).
+ * not integer (which was a bug - they read strings, not numbers).
  *
  * Uses COPY blocks instead of DEFINE_PATCH_FUNCTION wrappers because
  * parseHeaderToSymbols skips function bodies (separate scope in WeiDU).

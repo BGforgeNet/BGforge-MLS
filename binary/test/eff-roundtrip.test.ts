@@ -28,12 +28,12 @@ function findEffFixtures(root: string): string[] {
     return out.sort();
 }
 
-describe("effParser — round-trip on real EFF v2 fixtures", () => {
+describe("effParser - round-trip on real EFF v2 fixtures", () => {
     const fixtures = findEffFixtures(EXTERNAL_ROOT);
     if (fixtures.length === 0) {
         test.skip("no EFF fixtures present", () => {});
     } else {
-        test.each(fixtures)("parse → serialize is byte-identical for %s", (fixturePath) => {
+        test.each(fixtures)("parse -> serialize is byte-identical for %s", (fixturePath) => {
             const bytes = new Uint8Array(fs.readFileSync(fixturePath));
             const result = effParser.parse(bytes);
             if (result.errors) throw new Error(result.errors.join(", "));

@@ -14,9 +14,9 @@ import { parse as parseIni } from "ini";
  * Simple glob matching for editorconfig patterns.
  *
  * Supported patterns:
- *   - `*`           — matches any filename
- *   - `*.ext`       — matches by single extension
- *   - `*.{a,b,c}`   — matches by extension list (brace expansion only)
+ *   - `*`           - matches any filename
+ *   - `*.ext`       - matches by single extension
+ *   - `*.{a,b,c}`   - matches by extension list (brace expansion only)
  *   - exact filename match (no globbing)
  *
  * NOT supported (silently treated as non-match):

@@ -2,18 +2,18 @@
 
 See also: [README.md](README.md) (npm-facing) | [docs/architecture.md](../docs/architecture.md) (system overview)
 
-`@bgforge/binary` parses and serialises Fallout `.pro` / `.map` and Infinity Engine `.itm` / `.spl` (v1) and `.eff` (v2) files. Round-trips bytes ↔ structured data ↔ canonical JSON snapshots. Bundled `fgbin` CLI uses the same code as the binary editor in the VSCode extension.
+`@bgforge/binary` parses and serialises Fallout `.pro` / `.map` and Infinity Engine `.itm` / `.spl` (v1) and `.eff` (v2) files. Round-trips bytes <-> structured data <-> canonical JSON snapshots. Bundled `fgbin` CLI uses the same code as the binary editor in the VSCode extension.
 
-The IE `.itm` / `.spl` / `.eff` wire specs are generated from [IESDP](https://github.com/BGforgeNet/iesdp)'s `_data/file_formats/` YAML by `scripts/ie-binary-update/`; effect-opcode lookups are generated from `_opcodes/op<N>.html` frontmatter (250+ entries). Checked-in `.ts` outputs carry an `Auto-generated from IESDP …` banner. Run `scripts/ie-binary-update.sh` to refresh.
+The IE `.itm` / `.spl` / `.eff` wire specs are generated from [IESDP](https://github.com/BGforgeNet/iesdp)'s `_data/file_formats/` YAML by `scripts/ie-binary-update/`; effect-opcode lookups are generated from `_opcodes/op<N>.html` frontmatter (250+ entries). Checked-in `.ts` outputs carry an `Auto-generated from IESDP ...` banner. Run `scripts/ie-binary-update.sh` to refresh.
 
 ## Layered model
 
 ```
 +----------------------------------------------------+
-| Display tree (ParsedGroup) — editor + JSON snapshot|
-| Canonical doc  (zod-validated)  — round-trip data  |
-| Wire codec     (typed-binary)   — bytes ↔ data     |
-| Wire spec      (StructSpec)     — single source    |
+| Display tree (ParsedGroup) - editor + JSON snapshot|
+| Canonical doc  (zod-validated)  - round-trip data  |
+| Wire codec     (typed-binary)   - bytes <-> data     |
+| Wire spec      (StructSpec)     - single source    |
 +----------------------------------------------------+
 ```
 
@@ -22,7 +22,7 @@ One `StructSpec` per wire chunk drives every downstream artifact: typed-binary c
 Two architectural splits:
 
 - **Data layer vs presentation layer.** `FieldSpec` carries everything the data layer cares about (codec, enum/flags lookups, bit-packing layout, domain bounds). `FieldPresentation` carries only display concerns (label override, unit, format hint). Same `enum`/`flags` table serves validation, codec output, and display.
-- **Spec vs orchestrator.** The spec system describes one chunk of bytes. Orchestration — subtype dispatch, recursion, conditional presence, environmental safety (clamping malformed counts) — lives in `parse-sections.ts` / `parse-objects.ts` / `canonical-writer.ts`, not in spec primitives.
+- **Spec vs orchestrator.** The spec system describes one chunk of bytes. Orchestration - subtype dispatch, recursion, conditional presence, environmental safety (clamping malformed counts) - lives in `parse-sections.ts` / `parse-objects.ts` / `canonical-writer.ts`, not in spec primitives.
 
 ## File layout
 
@@ -30,7 +30,7 @@ Two architectural splits:
 binary/src/
   index.ts                     # Public API surface; pinned by public-api.test.ts
   cli.ts                       # fgbin entry point
-  registry.ts                  # parserRegistry (ext → BinaryParser)
+  registry.ts                  # parserRegistry (ext -> BinaryParser)
   format-adapter.ts            # BinaryFormatAdapter interface + registry; eager bottom-imports
                                #   register every per-format adapter and wire setDomainRangeLookup
   json-snapshot.ts             # Schema-versioned snapshot create/load/parse
@@ -40,7 +40,7 @@ binary/src/
                                #   lives in <format>/presentation-schema.ts.
   presentation-schema-types.ts # Type definitions + zod parsers + compilePatternFields helper.
                                #   Type-only consumer for format-adapter.ts (cycle-free).
-  display-lookups.ts           # Resolve enum/flag display ↔ raw values via resolveFieldPresentation
+  display-lookups.ts           # Resolve enum/flag display <-> raw values via resolveFieldPresentation
   binary-format-contract.ts    # Codec primitives (zodNumericType) + value helpers
                                #   (validateNumericValue, clampNumericValue, zodFieldNumber,
                                #   getDomainRange) with a setDomainRangeLookup setter installed
@@ -55,9 +55,9 @@ binary/src/
   spec/                        # Spec-system primitives (format-agnostic)
     types.ts                   # FieldSpec, StructSpec, SpecData, arraySpec, enforceLinkedCounts
     codec-meta.ts              # codecByteLength, codecNumericTypeName
-    derive-typed-binary.ts     # toTypedBinarySchema → SpecCodec<Doc, Ctx>
+    derive-typed-binary.ts     # toTypedBinarySchema -> SpecCodec<Doc, Ctx>
     derive-zod.ts              # toZodSchema (canonical validator from spec)
-    walk-display.ts            # walkStruct (data → ParsedGroup), walkGroup (inverse)
+    walk-display.ts            # walkStruct (data -> ParsedGroup), walkGroup (inverse)
     derive-domain-ranges.ts    # SpecDomainRanges (per-key min/max)
     derive-presentation.ts     # Presentation-table helpers
     presentation.ts            # FieldPresentation, StructPresentation, humanize()
@@ -66,8 +66,8 @@ binary/src/
     schemas.ts                 # Wire helpers (parseHeader, parsers per subtype)
     specs/*.ts                 # Per-subtype StructSpec (header, armor, weapon, ...)
     canonical-schemas.ts       # zod canonical document schema
-    canonical-reader.ts        # ParsedGroup → canonical doc
-    canonical-writer.ts        # canonical doc → bytes
+    canonical-reader.ts        # ParsedGroup -> canonical doc
+    canonical-writer.ts        # canonical doc -> bytes
     canonical.ts               # Barrel re-exports
     format-adapter.ts          # BinaryFormatAdapter for PRO
     presentation-schema.ts     # proPresentationSchema + proCompiledPatternFields + proDomainRanges
@@ -86,8 +86,8 @@ binary/src/
     parse-helpers.ts           # field()/makeGroup()/flagsField()/enumField() builders
     parse-scoring.ts           # Boundary heuristic for graceful-map mode
     canonical-schemas.ts       # zod canonical document schema (some derived, some hand-written)
-    canonical-reader.ts        # ParsedGroup → canonical doc (walkGroup-driven)
-    canonical-writer.ts        # canonical doc → bytes (spec.write-driven)
+    canonical-reader.ts        # ParsedGroup -> canonical doc (walkGroup-driven)
+    canonical-writer.ts        # canonical doc -> bytes (spec.write-driven)
     format-adapter.ts          # BinaryFormatAdapter for MAP
     presentation-schema.ts     # mapPresentationSchema + mapCompiledPatternFields + mapDomainRanges
     json-snapshot.ts           # MAP-specific snapshot adapter
@@ -147,9 +147,9 @@ type FieldSpec = ScalarFieldSpec | ArrayFieldSpec | CharsFieldSpec;
 interface ScalarFieldSpec {
     codec: ISchema<number>; // typed-binary codec (i8/u8/i16/...)
     domain?: { min; max }; // tighter than codec range
-    enum?: Record<number, string>; // value → display name
+    enum?: Record<number, string>; // value -> display name
     enumOpen?: boolean; // enum is advisory (display only); strict mode does not enforce membership
-    flags?: Record<number, string>; // bit → display name
+    flags?: Record<number, string>; // bit -> display name
     packedAs?: string; // bit-packed slot name
     bitRange?: [bitOffset, bitWidth]; // required when packedAs is set
 }
@@ -177,9 +177,9 @@ arraySpec({ element: { codec: i32 }, count: { fromField: "n" } }); // same-struc
 arraySpec<H>({ element: { codec: i32 }, count: { fromCtx: (h: H) => h.numItems } }); // cross-struct
 ```
 
-- **Fixed** — N elements always.
-- **fromField** — N decoded earlier in the same struct. zod refinement enforces `array.length === doc.n` at save; `enforceLinkedCounts(spec, doc)` is the pre-serialise sync helper that copies `doc.array.length` back into `doc.n`.
-- **fromCtx** — N lives in another struct decoded earlier in the file (e.g. a header field driving a variable section's length). The orchestrator owns the binding; zod cannot refine across structs. The clamp/safety check belongs in the orchestrator (e.g. `clampVarCount` in `parse-sections.ts` rejects malformed header counts before invoking the spec).
+- **Fixed** - N elements always.
+- **fromField** - N decoded earlier in the same struct. zod refinement enforces `array.length === doc.n` at save; `enforceLinkedCounts(spec, doc)` is the pre-serialise sync helper that copies `doc.array.length` back into `doc.n`.
+- **fromCtx** - N lives in another struct decoded earlier in the file (e.g. a header field driving a variable section's length). The orchestrator owns the binding; zod cannot refine across structs. The clamp/safety check belongs in the orchestrator (e.g. `clampVarCount` in `parse-sections.ts` rejects malformed header counts before invoking the spec).
 
 ### Chars fields
 
@@ -192,7 +192,7 @@ charsSpec(4); // 4-byte signature like 'ITM '
 
 The spec primitive drives every artifact:
 
-- **typed-binary**: read converts N bytes → JS string verbatim (every byte = one Latin-1 char, including NULs); write encodes N bytes back, NUL-padding shorter values.
+- **typed-binary**: read converts N bytes -> JS string verbatim (every byte = one Latin-1 char, including NULs); write encodes N bytes back, NUL-padding shorter values.
 - **zod**: `z.string().max(N)` in canonical schemas; canonical doc has `string` at this field.
 - **`SpecData<S>`**: chars fields project as `string`, not `number[]`.
 - **walkStruct display**: trims trailing NULs so `"EFF\0\0\0\0\0"` renders as `"EFF"`. Interior NULs (rare; in IESDP-marked unused/garbage slots) are preserved verbatim so the display reflects the actual byte content.
@@ -210,7 +210,7 @@ vs the u8[8]-array shape it replaced, which scattered an 8-byte name change acro
 
 ### Bit-packed fields
 
-Multiple scalar entries share one wire codec read by tagging them with the same `packedAs` slot name and disjoint `bitRange` slices. The canonical-doc shape stays flat — packed parts are peer scalar entries — so a 4-bit floor-flags field reads as `floorFlags: number`, not as `tilePair.floor.flags`.
+Multiple scalar entries share one wire codec read by tagging them with the same `packedAs` slot name and disjoint `bitRange` slices. The canonical-doc shape stays flat - packed parts are peer scalar entries - so a 4-bit floor-flags field reads as `floorFlags: number`, not as `tilePair.floor.flags`.
 
 ```ts
 const tilePairSpec = {
@@ -225,7 +225,7 @@ Construction-time guards: contiguous declaration order, matching codec across pa
 
 ### `SpecData<S>`
 
-Type-level projection. `SpecData<typeof spec>` projects per-field-kind: scalars as `number`, arrays as `number[]`, chars as `string`. Use `type FooData = SpecData<typeof fooSpec>` to keep the data shape and the spec declarations in sync — adding a field to the spec automatically adds it to the data type.
+Type-level projection. `SpecData<typeof spec>` projects per-field-kind: scalars as `number`, arrays as `number[]`, chars as `string`. Use `type FooData = SpecData<typeof fooSpec>` to keep the data shape and the spec declarations in sync - adding a field to the spec automatically adds it to the data type.
 
 ## Derivation
 
@@ -238,11 +238,11 @@ toTypedBinarySchema toZodSchema walkStruct  derive-domain  derive-presentation
    (read/write)    (validate)  (display)   (clamp table)  (humanize labels)
 ```
 
-- **`toTypedBinarySchema(spec): SpecCodec<Doc, Ctx>`** — typed-binary codec. `read(view, ctx?)` and `write(view, doc, ctx?)`. Pure-scalar specs without cross-struct deps default `Ctx = void`. Specs with `fromCtx` declare their ctx type and require it at call time. `SpecCodec` is a standalone interface (does NOT extend typed-binary's `ISchema<Doc>`) because typed-binary folds `ISchema<T>` through a `Parsed<T, Ctx>` simplification on `write` that defeats subtype refinement.
-- **`toZodSchema(spec): z.ZodType<SpecData<S>>`** — canonical-doc validator. Scalar fields map to `z.number().int().min().max()` based on codec signedness, narrowed by `domain` and refined to enum keys when `spec.enum` is set (read-permissive / write-strict). Same-struct `fromField` arrays add a save-time refinement asserting `array.length === doc[countField]`. Cross-struct `fromCtx` arrays do not refine (the relation crosses struct boundaries; orchestrator's responsibility).
-- **`walkStruct(spec, presentation, baseOffset, data, groupName, options?)`** — emits a `ParsedGroup` for the editor. Field labels come from `presentation.label` ?? `humanize(fieldName)`. `options.labelPrefix` prepends a per-iteration prefix (e.g. `"Entry 5"` for a script slot). `options.subGroups` rearranges output into nested groups. Array fields render as `"(N values)"` summary rows.
-- **`walkGroup(group, spec, presentation): SpecData<S>`** — inverse of `walkStruct`. Used by canonical-readers to extract typed data from a display group. Looks up by display label (presentation override or humanized field name); prefers `rawValue` over `value` for enum/flags. Throws on array fields — caller iterates the array group structure manually.
-- **`enforceLinkedCounts(spec, doc)`** — pre-serialise helper. Walks the spec, copies `doc[arrayName].length` into the linked `count` field. Returns a new object; does not mutate. Use as the pre-write step in canonical-writer flows that have linked counts.
+- **`toTypedBinarySchema(spec): SpecCodec<Doc, Ctx>`** - typed-binary codec. `read(view, ctx?)` and `write(view, doc, ctx?)`. Pure-scalar specs without cross-struct deps default `Ctx = void`. Specs with `fromCtx` declare their ctx type and require it at call time. `SpecCodec` is a standalone interface (does NOT extend typed-binary's `ISchema<Doc>`) because typed-binary folds `ISchema<T>` through a `Parsed<T, Ctx>` simplification on `write` that defeats subtype refinement.
+- **`toZodSchema(spec): z.ZodType<SpecData<S>>`** - canonical-doc validator. Scalar fields map to `z.number().int().min().max()` based on codec signedness, narrowed by `domain` and refined to enum keys when `spec.enum` is set (read-permissive / write-strict). Same-struct `fromField` arrays add a save-time refinement asserting `array.length === doc[countField]`. Cross-struct `fromCtx` arrays do not refine (the relation crosses struct boundaries; orchestrator's responsibility).
+- **`walkStruct(spec, presentation, baseOffset, data, groupName, options?)`** - emits a `ParsedGroup` for the editor. Field labels come from `presentation.label` ?? `humanize(fieldName)`. `options.labelPrefix` prepends a per-iteration prefix (e.g. `"Entry 5"` for a script slot). `options.subGroups` rearranges output into nested groups. Array fields render as `"(N values)"` summary rows.
+- **`walkGroup(group, spec, presentation): SpecData<S>`** - inverse of `walkStruct`. Used by canonical-readers to extract typed data from a display group. Looks up by display label (presentation override or humanized field name); prefers `rawValue` over `value` for enum/flags. Throws on array fields - caller iterates the array group structure manually.
+- **`enforceLinkedCounts(spec, doc)`** - pre-serialise helper. Walks the spec, copies `doc[arrayName].length` into the linked `count` field. Returns a new object; does not mutate. Use as the pre-write step in canonical-writer flows that have linked counts.
 
 ## Public API
 
@@ -256,53 +256,53 @@ toTypedBinarySchema toZodSchema walkStruct  derive-domain  derive-presentation
 | `getSnapshotPath`, `getOutputPathForJsonSnapshot`                                                                                                  | Sidecar path resolution                                                  |
 | `formatAdapterRegistry`, `BinaryFormatAdapter`, `ProjectedEntry`                                                                                   | Editor-facing format metadata                                            |
 | `createFieldKey`, `toSemanticFieldKey`, `createSemanticFieldKeyFromId`, `resolveFieldPresentation`                                                 | Stable semantic field-key system                                         |
-| `resolveDisplayValue`, `resolveEnumLookup`, `resolveFlagLookup`, `formatEnumDisplayValue`, `resolveRawValueFromDisplay`, `resolveStoredFieldValue` | Display ↔ raw value conversions                                          |
+| `resolveDisplayValue`, `resolveEnumLookup`, `resolveFlagLookup`, `formatEnumDisplayValue`, `resolveRawValueFromDisplay`, `resolveStoredFieldValue` | Display <-> raw value conversions                                        |
 | `validateNumericValue`                                                                                                                             | Type-aware numeric clamp                                                 |
 | `isFlagActive`                                                                                                                                     | Bit predicate                                                            |
 
-Internal modules (spec primitives, format-specific specs, parse helpers) are NOT exported — they're only consumed inside the package.
+Internal modules (spec primitives, format-specific specs, parse helpers) are NOT exported - they're only consumed inside the package.
 
 ## JSON snapshots
 
 Snapshots are canonical `schemaVersion: 1` documents, not raw `ParseResult` dumps:
 
-- `ParseResult.root` — display tree (editor)
-- `ParseResult.document` — canonical data (round-trip)
+- `ParseResult.root` - display tree (editor)
+- `ParseResult.document` - canonical data (round-trip)
 - Snapshots persist `document`; the display tree is reconstructed by re-parsing
 - Both PRO and MAP have format-specific canonical schemas (`canonical-schemas.ts`)
 - Dump and load both validate against the schema, then round-trip bytes through the parser as a safety check
 - `opaqueRanges` carry hex-chunked bytes for undecoded or intentionally-omitted regions (e.g. MAP tiles when the editor skips materialising them)
 - Presentation lookups use stable semantic keys (`pro.header.objectType`, `map.objects.elevations[].objects[].base.pid`), not display-path strings
 
-Sidecar paths preserve the original extension: `file.pro` → `file.pro.json`, `file.map` → `file.map.json`.
+Sidecar paths preserve the original extension: `file.pro` -> `file.pro.json`, `file.map` -> `file.map.json`.
 
 ## Format adapters
 
-`BinaryFormatAdapter` (in `format-adapter.ts`) is the single per-format extension point — every cross-cutting feature that needs format-specific data reads it from the adapter, so adding a new format means writing _one_ adapter rather than registering with N parallel module-level maps.
+`BinaryFormatAdapter` (in `format-adapter.ts`) is the single per-format extension point - every cross-cutting feature that needs format-specific data reads it from the adapter, so adding a new format means writing _one_ adapter rather than registering with N parallel module-level maps.
 
 Adapter responsibilities:
 
-- **Snapshots**: `createJsonSnapshot` / `loadJsonSnapshot` — canonical snapshot create/load.
-- **Canonical**: `rebuildCanonicalDocument` — reconstruct after tree edits.
-- **Semantic keys**: `toSemanticFieldKey` — display-path → semantic key for presentation lookup.
+- **Snapshots**: `createJsonSnapshot` / `loadJsonSnapshot` - canonical snapshot create/load.
+- **Canonical**: `rebuildCanonicalDocument` - reconstruct after tree edits.
+- **Semantic keys**: `toSemanticFieldKey` - display-path -> semantic key for presentation lookup.
 - **Editor presentation** (consolidated registries):
-    - `presentationSchema` — `FormatPresentationSchema` with `exactFields` + `patternFields` (labels, enum/flag dropdowns, numeric format, editability, charset). Built in each format's own `<format>/presentation-schema.ts`. Read by `getFormatPresentationSchema` and `resolveFieldPresentation` in the top-level `presentation-schema.ts`.
-    - `compiledPatternFields` — pre-compiled regex versions of `presentationSchema.patternFields`, computed once at module load via `compilePatternFields` (in `presentation-schema-types.ts`).
-    - `domainRanges` — per-field numeric domain narrowing keyed by semantic key. Read by `getDomainRange` in `binary-format-contract.ts`, consumed by `validateNumericValue` / `clampNumericValue` / `zodFieldNumber`.
-- **Editor projection** (optional): `shouldHideField`, `shouldHideGroup`, `projectDisplayRoot` — hide tile bulk, redundant slots, etc.
-- **Structural edits** (optional): `isStructuralFieldId`, `buildStructuralTransitionBytes` — layout-changing edits (PRO subtype change).
-- **Variable-length array editing** (optional): `buildAddEntryBytes` / `buildRemoveEntryBytes` / `buildInsertEntryBytes` / `buildMoveEntryBytes` / `isAddableArray` / `isRemovableEntry` — entity ops (MAP global vars, scripts).
+    - `presentationSchema` - `FormatPresentationSchema` with `exactFields` + `patternFields` (labels, enum/flag dropdowns, numeric format, editability, charset). Built in each format's own `<format>/presentation-schema.ts`. Read by `getFormatPresentationSchema` and `resolveFieldPresentation` in the top-level `presentation-schema.ts`.
+    - `compiledPatternFields` - pre-compiled regex versions of `presentationSchema.patternFields`, computed once at module load via `compilePatternFields` (in `presentation-schema-types.ts`).
+    - `domainRanges` - per-field numeric domain narrowing keyed by semantic key. Read by `getDomainRange` in `binary-format-contract.ts`, consumed by `validateNumericValue` / `clampNumericValue` / `zodFieldNumber`.
+- **Editor projection** (optional): `shouldHideField`, `shouldHideGroup`, `projectDisplayRoot` - hide tile bulk, redundant slots, etc.
+- **Structural edits** (optional): `isStructuralFieldId`, `buildStructuralTransitionBytes` - layout-changing edits (PRO subtype change).
+- **Variable-length array editing** (optional): `buildAddEntryBytes` / `buildRemoveEntryBytes` / `buildInsertEntryBytes` / `buildMoveEntryBytes` / `isAddableArray` / `isRemovableEntry` - entity ops (MAP global vars, scripts).
 
 Adapters are registered eagerly at the bottom of `format-adapter.ts`. The binary editor consumes the adapter registry; CLI / library users mostly interact with snapshot helpers and the parser registry directly.
 
-**Cycle break for the registry-driven domain-range lookup.** `binary-format-contract.ts` exports `setDomainRangeLookup`, which `format-adapter.ts` calls once after registering every adapter. The setter pattern keeps `binary-format-contract.ts` cycle-free so `derive-zod` and per-format `canonical-schemas.ts` can import codec primitives (`zodNumericType`, `clampNumericValue`, `zodFieldNumber`) without dragging in the format-adapter graph. The split mirrors the type-only `presentation-schema-types.ts`, which exists for the same reason — `format-adapter.ts` types `presentationSchema?` and `compiledPatternFields?` against those types without circular-importing the runtime `presentation-schema.ts`.
+**Cycle break for the registry-driven domain-range lookup.** `binary-format-contract.ts` exports `setDomainRangeLookup`, which `format-adapter.ts` calls once after registering every adapter. The setter pattern keeps `binary-format-contract.ts` cycle-free so `derive-zod` and per-format `canonical-schemas.ts` can import codec primitives (`zodNumericType`, `clampNumericValue`, `zodFieldNumber`) without dragging in the format-adapter graph. The split mirrors the type-only `presentation-schema-types.ts`, which exists for the same reason - `format-adapter.ts` types `presentationSchema?` and `compiledPatternFields?` against those types without circular-importing the runtime `presentation-schema.ts`.
 
 Type-only imports recap (load order, top to bottom):
 
-1. `binary-format-contract.ts` — codec primitives, no registry dependency.
-2. `presentation-schema-types.ts` — schema + compile helpers, type-only consumers.
-3. `format-adapter.ts` — interface + registry; eager bottom-imports register every per-format adapter and wire `setDomainRangeLookup`.
-4. `presentation-schema.ts` (runtime lookups) — queries the registry; safe because step 3 finishes before any test or CLI code touches it.
+1. `binary-format-contract.ts` - codec primitives, no registry dependency.
+2. `presentation-schema-types.ts` - schema + compile helpers, type-only consumers.
+3. `format-adapter.ts` - interface + registry; eager bottom-imports register every per-format adapter and wire `setDomainRangeLookup`.
+4. `presentation-schema.ts` (runtime lookups) - queries the registry; safe because step 3 finishes before any test or CLI code touches it.
 
 ## Architectural rules
 
@@ -310,9 +310,9 @@ These are non-negotiable across PRO and MAP:
 
 1. **Schema = data.** Where the wire is flat, canonical zod is flat. Aesthetic nesting is rejected. Bit-packed fields are peer scalar entries via `packedAs`+`bitRange`.
 2. **Presentation can nest** even when data is flat. The walker's `subGroups` option handles armor sub-categories, scenery layouts, etc., without warping the data shape.
-3. **Read permissive, write strict.** Out-of-range enum values display as `Unknown (N)` and parse succeeds; saving rejects via the zod refinement when `spec.enum` is set. Real-world exception: MAP object base `rotation`/`elevation` carry packed-PID-shaped values in shipped files — the canonical zod stays plain int32 for those even though the wire spec documents enum tables.
+3. **Read permissive, write strict.** Out-of-range enum values display as `Unknown (N)` and parse succeeds; saving rejects via the zod refinement when `spec.enum` is set. Real-world exception: MAP object base `rotation`/`elevation` carry packed-PID-shaped values in shipped files - the canonical zod stays plain int32 for those even though the wire spec documents enum tables.
 
-    **Closed vs open enums.** The strict gate fits enums whose value space is fixed by the engine (PRO `objectType`: Item/Critter/Scenery/Wall/Tile/Misc — adding a 7th would crash the engine). For fields whose value space is open by design — IE effect opcodes (mods can introduce new opcode numbers; the engine accepts any 16-bit value), ITM type (mod-extensible via `itemtype.2da`), ITM ability `damageType` / `projectileType` (engine treats out-of-table values as defaults), SPL `type` and `castingGraphics` — set `enumOpen: true` on the spec entry. The display lookup still resolves named values; the strict refinement does not enforce membership. Closed-default keeps PRO/MAP behaviour unchanged; opt-in keeps mod-friendly fields editable without producing false rejections at save time.
+    **Closed vs open enums.** The strict gate fits enums whose value space is fixed by the engine (PRO `objectType`: Item/Critter/Scenery/Wall/Tile/Misc - adding a 7th would crash the engine). For fields whose value space is open by design - IE effect opcodes (mods can introduce new opcode numbers; the engine accepts any 16-bit value), ITM type (mod-extensible via `itemtype.2da`), ITM ability `damageType` / `projectileType` (engine treats out-of-table values as defaults), SPL `type` and `castingGraphics` - set `enumOpen: true` on the spec entry. The display lookup still resolves named values; the strict refinement does not enforce membership. Closed-default keeps PRO/MAP behaviour unchanged; opt-in keeps mod-friendly fields editable without producing false rejections at save time.
 
 4. **No special-case sentinels.** Wire `0xFFFFFFFF` for "no script" reads naturally as `{type: -1, id: -1}` via signed `i8`/`i24` codecs. Don't add `if (value === 0xFFFFFFFF)` branches.
 
@@ -321,19 +321,19 @@ These are non-negotiable across PRO and MAP:
 5. **Linked structures.** Same-struct: array length drives count via `enforceLinkedCounts(spec, doc)` + zod refinement. Cross-struct (`fromCtx`): orchestrator owns the binding; the count flows in via the read-time ctx.
 6. **No work-time artifacts in the repo.** Exception: `tmp/` (in `.gitignore`).
 
-7. **Sorted-array projection for flag fields.** A flag-word spec entry (`{codec, flags: Table}`) surfaces in canonical-doc as a `{flags: string[], flagsRaw?: hexString}` strict-object wrapper, not as the raw int. `flags` lists the slugified-camelCase names of every set bit, alphabetically sorted; toggling one bit adds or removes one entry. `flagsRaw` is an optional hex-string reservoir for unnamed bits in the wire word, omitted when every set bit has a name. Strict-disjoint invariant: named bits never appear in `flagsRaw`, enforced at the wire boundary by `flagArrayToInt`. `compileFlagTable` slugifies the table's display strings to camelCase canonical keys (`"NoBlock"` → `noBlock`); `intToFlagArray` / `flagArrayToInt` translate at the wire codec boundary via the `FlagArraySchema` wrapper.
+7. **Sorted-array projection for flag fields.** A flag-word spec entry (`{codec, flags: Table}`) surfaces in canonical-doc as a `{flags: string[], flagsRaw?: hexString}` strict-object wrapper, not as the raw int. `flags` lists the slugified-camelCase names of every set bit, alphabetically sorted; toggling one bit adds or removes one entry. `flagsRaw` is an optional hex-string reservoir for unnamed bits in the wire word, omitted when every set bit has a name. Strict-disjoint invariant: named bits never appear in `flagsRaw`, enforced at the wire boundary by `flagArrayToInt`. `compileFlagTable` slugifies the table's display strings to camelCase canonical keys (`"NoBlock"` -> `noBlock`); `intToFlagArray` / `flagArrayToInt` translate at the wire codec boundary via the `FlagArraySchema` wrapper.
 
-    Slugified identifiers (rather than the raw display strings) are the canonical token shape because the construction API (`docs/todo.md`) surfaces flags as TS members typed against a literal-name union — identifier-shaped names get the canonical dot-trigger autocomplete with per-flag JSDoc visible inline, which a quoted-display-string union does not. Schema validation messages and JSON Schema `items.enum` autocomplete also benefit from identifier tokens (no spacing/casing ambiguities like "No LOS required" vs "No los required"). The display string remains the parsed-tree label; the slug is the toolchain token, with one translation point (label ↔ slug) at the projection boundary.
+    Slugified identifiers (rather than the raw display strings) are the canonical token shape because the construction API (`docs/todo.md`) surfaces flags as TS members typed against a literal-name union - identifier-shaped names get the canonical dot-trigger autocomplete with per-flag JSDoc visible inline, which a quoted-display-string union does not. Schema validation messages and JSON Schema `items.enum` autocomplete also benefit from identifier tokens (no spacing/casing ambiguities like "No LOS required" vs "No los required"). The display string remains the parsed-tree label; the slug is the toolchain token, with one translation point (label <-> slug) at the projection boundary.
 
-    The wrapper-at-canonical-doc shape (`header.flags = {flags: [...], flagsRaw: "..."}`) keeps the spec → canonical-doc orchestration one-key-per-spec-field; a flat sidecar `header.flagsRaw` would require a special case in `toZodSchema` to emit two parent keys per flag spec entry.
+    The wrapper-at-canonical-doc shape (`header.flags = {flags: [...], flagsRaw: "..."}`) keeps the spec -> canonical-doc orchestration one-key-per-spec-field; a flat sidecar `header.flagsRaw` would require a special case in `toZodSchema` to emit two parent keys per flag spec entry.
 
-    This is a consistent application of rule #1 — `packedAs`+`bitRange` already exposes byte-packed sub-fields as peer scalar entries; the named-bit projection exposes bit-packed sub-fields the same way (the wire packs N independent semantic units into one int; canonical separates them).
+    This is a consistent application of rule #1 - `packedAs`+`bitRange` already exposes byte-packed sub-fields as peer scalar entries; the named-bit projection exposes bit-packed sub-fields the same way (the wire packs N independent semantic units into one int; canonical separates them).
 
-8. **Lossless reservoirs preserve unnamed bits.** Adding a name to a flag table is a non-breaking spec evolution: old snapshots load via the `flagsRaw` path, re-saving promotes the bit to its new name. `schemaVersion` does NOT bump for additive name changes; bumping is reserved for _re-interpretive_ spec changes (a previously-parsed field's meaning changes), which require explicit migration code in the snapshot codec. The byte round-trip invariant `serialize(parse(b)) === b` is the load-bearing property — every existing `*-roundtrip.test.ts` enforces it.
+8. **Lossless reservoirs preserve unnamed bits.** Adding a name to a flag table is a non-breaking spec evolution: old snapshots load via the `flagsRaw` path, re-saving promotes the bit to its new name. `schemaVersion` does NOT bump for additive name changes; bumping is reserved for _re-interpretive_ spec changes (a previously-parsed field's meaning changes), which require explicit migration code in the snapshot codec. The byte round-trip invariant `serialize(parse(b)) === b` is the load-bearing property - every existing `*-roundtrip.test.ts` enforces it.
 
-9. **Enums and PIDs stay numeric in canonical-doc by design.** Where flag fields project to sorted-array name lists (rule #7), enum and PID fields stay as raw integers — the diff-friendliness gain doesn't justify the complication. Half the enum fields drive dispatch (`objectType`, `subType`, `scriptType`, MAP `version` / `rotation` / `elevation`) and would force a conversion at every dispatch site if projected to strings; the rest produce diffs of the same line count whether named or numeric (`5 → 0` vs `"Items" → "Background"`), unlike flags where the diff is fundamentally lossy. The display layer's `enum` table resolves names for editor dropdowns and hover; the snapshot stays close to the wire.
+9. **Enums and PIDs stay numeric in canonical-doc by design.** Where flag fields project to sorted-array name lists (rule #7), enum and PID fields stay as raw integers - the diff-friendliness gain doesn't justify the complication. Half the enum fields drive dispatch (`objectType`, `subType`, `scriptType`, MAP `version` / `rotation` / `elevation`) and would force a conversion at every dispatch site if projected to strings; the rest produce diffs of the same line count whether named or numeric (`5 -> 0` vs `"Items" -> "Background"`), unlike flags where the diff is fundamentally lossy. The display layer's `enum` table resolves names for editor dropdowns and hover; the snapshot stays close to the wire.
 
-## Orchestrator vs spec — what stays out of primitives
+## Orchestrator vs spec - what stays out of primitives
 
 These are evaluated and intentionally kept in orchestrator code rather than lifted to new spec primitives. Each has exactly one consumer in the current codebase, and lifting it would carry significant API surface for marginal payoff. Document the trade-off rather than re-evaluate every time.
 
@@ -341,14 +341,14 @@ These are evaluated and intentionally kept in orchestrator code rather than lift
 | ----------------------------------------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Per-element subtype dispatch (script slot variants by `getScriptType(sid)`)                     | `parse-sections.ts`, `canonical-writer.ts` | One consumer; variants share most layout; discriminator is a single peeked field; the orchestrator-side dispatch is ~10 lines                                                                                                                                       |
 | Recursive specs (object inventory: each entry is a full nested object record)                   | `parse-objects.ts`, `canonical-writer.ts`  | Self-referential `SpecData` projection is chicken-and-egg; orchestrator recursion is the cleanest expression                                                                                                                                                        |
-| Struct-element arrays (tile elevations as `arraySpec({ element: tilePairSpec, count: 10000 })`) | `parse-sections.ts` per-tile loop          | Sole consumer is tiles; scripts have variable-size elements, objects are recursive — neither would benefit                                                                                                                                                          |
+| Struct-element arrays (tile elevations as `arraySpec({ element: tilePairSpec, count: 10000 })`) | `parse-sections.ts` per-tile loop          | Sole consumer is tiles; scripts have variable-size elements, objects are recursive - neither would benefit                                                                                                                                                          |
 | Conditional per-elevation tile presence (`header.flags & SkipElevationN`)                       | `parse-sections.ts`                        | Avoids a `presentIf` primitive whose audience is also one consumer                                                                                                                                                                                                  |
 | Environmental safety (count clamp against remaining buffer for malformed inputs)                | `clampVarCount` in `parse-sections.ts`     | Depends on remaining-bytes state the spec layer cannot see                                                                                                                                                                                                          |
-| Per-format scaffolding (canonical reader/writer/snapshot/format-adapter wrappers for ITM, SPL)  | duplicated across `itm/` and `spl/`        | Two consumers with near-identical shapes (~250 LOC duplication). A generic factory in `ie-common/` is plausible but premature with N=2 — re-evaluate when a third IE format (EFF/CRE/STO/ARE) arrives. Until then, copies stay self-contained and obviously correct |
+| Per-format scaffolding (canonical reader/writer/snapshot/format-adapter wrappers for ITM, SPL)  | duplicated across `itm/` and `spl/`        | Two consumers with near-identical shapes (~250 LOC duplication). A generic factory in `ie-common/` is plausible but premature with N=2 - re-evaluate when a third IE format (EFF/CRE/STO/ARE) arrives. Until then, copies stay self-contained and obviously correct |
 
 ## Adding a new format
 
-The format-adapter consolidates per-format data (presentation schema, domain ranges, snapshot helpers, semantic keys) into one object — most of the wiring is local to the new format's directory. Touch-points outside `binary/src/<format>/` are listed below as **shared touch-points** so a format addition stays grep-able as a checklist.
+The format-adapter consolidates per-format data (presentation schema, domain ranges, snapshot helpers, semantic keys) into one object - most of the wiring is local to the new format's directory. Touch-points outside `binary/src/<format>/` are listed below as **shared touch-points** so a format addition stays grep-able as a checklist.
 
 **In the new format's directory** (`binary/src/<format>/`):
 
@@ -359,7 +359,7 @@ The format-adapter consolidates per-format data (presentation schema, domain ran
 5. **Presentation schema.** `presentation-schema.ts` exports `<format>PresentationSchema`, `<format>CompiledPatternFields`, `<format>DomainRanges`. For most fields you can derive entries via `toPresentationEntries(spec, presentation, prefix)` over the augmented spec; hand-write `exactFields` / `patternFields` only where the spec annotation isn't expressive enough.
 6. **Format adapter.** `format-adapter.ts` builds a `BinaryFormatAdapter` and attaches `presentationSchema`, `compiledPatternFields`, `domainRanges` from step 5 plus the snapshot helpers from step 4. Editor projection / structural-edit / entity-op methods are optional; implement only what the format needs.
 
-**Shared touch-points** (each must be updated together — they are cross-linked here so a search for any one surfaces the rest):
+**Shared touch-points** (each must be updated together - they are cross-linked here so a search for any one surfaces the rest):
 
 | Touch-point                                                                              | Why                                                                                                                                                                                                                                |
 | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -396,9 +396,9 @@ pnpm test                                                     # project partial 
 pnpm test:all                                                 # full target (CI gate)
 ```
 
-Tests run from repo root, not from `binary/` — fixture paths are repo-root-relative.
+Tests run from repo root, not from `binary/` - fixture paths are repo-root-relative.
 
 ## Known feature gaps
 
 - **MAP boundary ambiguity.** Some shipped maps have script/object section boundaries that aren't recoverable structurally. `--graceful-map` falls back to opaque-byte preservation; the editor stays strict by design (ambiguous bytes shouldn't propagate through normal workflows).
-- **Maps with engine-unloadable object records.** A handful of shipped maps contain object-array records that fallout2-ce itself can't load — typically an inventory item with `pid=0` (no proto exists), or a parent record with `pid=-1` followed by inventory bytes the engine would refuse via `protoGetProto` failing. The parser is more lenient than the engine here: it bails at the bad record, marks the surrounding group `editingLocked: true`, and captures everything from that offset to EOF as the `objects-tail` opaque range so the file still round-trips byte-identically. No fix is appropriate — making the parser silently advance past records the engine refuses would lose the signal that the input is genuinely malformed. `client/testFixture/maps/newr2.map` is the canonical example fixture; `binary/test/map-decode-vanilla.test.ts` pins the behavior so a future change that quietly hides the corruption surfaces as a regression.
+- **Maps with engine-unloadable object records.** A handful of shipped maps contain object-array records that fallout2-ce itself can't load - typically an inventory item with `pid=0` (no proto exists), or a parent record with `pid=-1` followed by inventory bytes the engine would refuse via `protoGetProto` failing. The parser is more lenient than the engine here: it bails at the bad record, marks the surrounding group `editingLocked: true`, and captures everything from that offset to EOF as the `objects-tail` opaque range so the file still round-trips byte-identically. No fix is appropriate - making the parser silently advance past records the engine refuses would lose the signal that the input is genuinely malformed. `client/testFixture/maps/newr2.map` is the canonical example fixture; `binary/test/map-decode-vanilla.test.ts` pins the behavior so a future change that quietly hides the corruption surfaces as a regression.

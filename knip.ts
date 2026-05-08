@@ -76,7 +76,7 @@ const config: KnipConfig = {
         transpilers: {
             entry: ["test/**/*.test.ts"],
             // esbuild-wasm is listed as a runtime dependency so the published bundle can
-            // resolve it from node_modules (it refuses to be inlined — see tsup.config.ts).
+            // resolve it from node_modules (it refuses to be inlined - see tsup.config.ts).
             // Knip sees no TS import within this workspace because the import lives in
             // transpilers/common (a separate workspace); ignoreDependencies suppresses the
             // false-positive "unused dependency" report.

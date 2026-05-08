@@ -1,5 +1,5 @@
 /**
- * Unit tests for TD parse helpers — specifically the getCallArg guarded helper
+ * Unit tests for TD parse helpers - specifically the getCallArg guarded helper
  * that narrows ts-morph Node[] call arguments to Expression with runtime checks.
  */
 

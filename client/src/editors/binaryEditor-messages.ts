@@ -57,7 +57,7 @@ interface EditMessage {
     readonly fieldId: string;
     /** Dot-separated path from root to the field, e.g. "Header.Object Type" */
     readonly fieldPath: string;
-    /** New raw value — numeric for int/uint/enum/flags fields, string for fixed-width string fields. */
+    /** New raw value - numeric for int/uint/enum/flags fields, string for fixed-width string fields. */
     readonly value: number | string;
 }
 
@@ -130,7 +130,7 @@ export interface InitMessage {
     readonly errors?: string[];
     /**
      * Mirror of the extension's `bgforge.debug` setting. The webview gates
-     * its own console diagnostics on this — passed in `init` rather than
+     * its own console diagnostics on this - passed in `init` rather than
      * read from the workspace because the webview has no `vscode` API.
      */
     readonly debug?: boolean;
@@ -149,7 +149,7 @@ interface UpdateFieldMessage {
     readonly fieldPath: string;
     /** New display value */
     readonly displayValue: string;
-    /** New raw value — numeric for int/uint/enum/flags, string for fixed-width string fields. */
+    /** New raw value - numeric for int/uint/enum/flags, string for fixed-width string fields. */
     readonly rawValue: number | string;
 }
 

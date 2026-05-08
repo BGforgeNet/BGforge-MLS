@@ -177,13 +177,13 @@ describe("normalizeHtmlFragment compactBlankLines: false", () => {
             resolveHref: (h: string) => h,
             compactBlankLines: false,
         });
-        // Three <br> = three newlines — not collapsed
+        // Three <br> = three newlines - not collapsed
         expect(result).toContain("\n\n\n");
     });
 
     it("strips nested tags without leaving residual brackets", () => {
         // CodeQL js/incomplete-multi-character-sanitization: same shape as
-        // htmlInlineToText — greedy single-pass strip leaves stray brackets.
+        // htmlInlineToText - greedy single-pass strip leaves stray brackets.
         const result = normalizeHtmlFragment("foo<bar<baz>>quux", {
             resolveHref: (h: string) => h,
             compactBlankLines: false,

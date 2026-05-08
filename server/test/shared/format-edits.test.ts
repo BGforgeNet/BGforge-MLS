@@ -1,5 +1,5 @@
 /**
- * Tests for shared/format-edits.ts — LSP document edit helpers.
+ * Tests for shared/format-edits.ts - LSP document edit helpers.
  */
 
 import { describe, expect, it } from "vitest";

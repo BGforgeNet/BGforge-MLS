@@ -148,7 +148,7 @@ export function buildTooltipBase(
             // Separate engine doc from user JSDoc with a horizontal rule.
             markdown += "\n\n---\n\n";
         } else {
-            // No user JSDoc — still need a blank line after the closing code fence.
+            // No user JSDoc - still need a blank line after the closing code fence.
             markdown += "\n\n";
         }
         markdown += engineDoc;

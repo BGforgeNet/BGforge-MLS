@@ -3,15 +3,15 @@
 # Shared logic for cloning the external repos used as test fixtures.
 #
 # Each line in external/*.txt is either:
-#   - blank or a # comment → ignored
-#   - "<url>"              → cloned shallow (--depth 1) at the upstream HEAD
-#   - "<url> <commit_sha>" → fetched shallow at the specific commit (pinned)
+#   - blank or a # comment -> ignored
+#   - "<url>"              -> cloned shallow (--depth 1) at the upstream HEAD
+#   - "<url> <commit_sha>" -> fetched shallow at the specific commit (pinned)
 #
 # Pinned commits make the integration tests reproducible across upstream
 # pushes; unpinned URLs follow upstream HEAD.
 
 # Clone each repo listed in $1 into $2.
-# If a target directory already exists, leave its checkout alone — callers
+# If a target directory already exists, leave its checkout alone - callers
 # rely on this for the "already cloned" optimisation.
 clone_repos() {
     local txt_file="$1"

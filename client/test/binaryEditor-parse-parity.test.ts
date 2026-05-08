@@ -11,7 +11,7 @@
  *
  * The concrete failure this would have caught: gecksetl.map decoded as
  * 43,838 lines through the editor's "Dump to JSON" while the CLI produced
- * 146,293 lines on the same file — because the editor's `getParseOptions`
+ * 146,293 lines on the same file - because the editor's `getParseOptions`
  * never picked up the sibling-proto/ auto-load added to the CLI.
  */
 
@@ -50,7 +50,7 @@ describe("editor parse parity with CLI for .map files", () => {
     it("a fixture map that fully decodes via the CLI also fully decodes via the editor", () => {
         // arcaves.json (the CLI snapshot) has zero objects-tail opaque ranges,
         // proving the CLI fully decodes it. The editor's parse path must
-        // match — divergence would mean the resolver wasn't applied and the
+        // match - divergence would mean the resolver wasn't applied and the
         // section bailed to opaque bytes.
         const result = parseFixture("arcaves.map");
         const objectsTail = result.opaqueRanges?.some((r) => r.label === "objects-tail");

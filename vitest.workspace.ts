@@ -3,7 +3,7 @@
  * Allows `vitest run` at the repo root to discover all test projects,
  * and `vitest run --project <name>` to target a specific one.
  *
- * This file is additive — it does not replace the per-package `test.sh`
+ * This file is additive - it does not replace the per-package `test.sh`
  * orchestration used by `pnpm test` and `pnpm test:all`.
  */
 import { defineConfig } from "vitest/config";

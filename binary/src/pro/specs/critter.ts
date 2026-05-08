@@ -4,7 +4,7 @@ import { CritterFlags, BodyType, KillType, DamageType, ScriptType } from "../typ
 import type { FieldSpec, SpecData } from "../../spec/types";
 
 /**
- * Wire spec for the PRO critter section. Flat shape — the data IS flat in the
+ * Wire spec for the PRO critter section. Flat shape - the data IS flat in the
  * file format. The canonical document used to nest these into named sub-objects
  * (basePrimaryStats, baseSecondaryStats, baseDamageThreshold, baseDamageResistance,
  * bonusPrimaryStats, bonusSecondaryStats, bonusDamageThreshold,

@@ -50,8 +50,8 @@ describe("binaryEditor-editability", () => {
         // which `derive-presentation` translates into `editable: false` on
         // every field with a non-`"data"` role. The header pointers into the
         // abilities + effects sections, and the per-ability slice into the
-        // global effect table, are all derived from doc shape — never user
-        // data — so the editor must not let them be typed in.
+        // global effect table, are all derived from doc shape - never user
+        // data - so the editor must not let them be typed in.
         expect(
             isEditableFieldForFormat(
                 "itm",

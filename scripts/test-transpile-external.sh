@@ -56,7 +56,7 @@ test_repo() {
         return 1
     fi
 
-    # Check git status — any modified files mean transpiler output changed
+    # Check git status - any modified files mean transpiler output changed
     local changed
     changed=$(git -C "$dir" diff --name-only)
     if [[ -n "$changed" ]]; then

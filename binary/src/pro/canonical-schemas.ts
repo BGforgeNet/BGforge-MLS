@@ -31,7 +31,7 @@ import { weaponSpec } from "./specs/weapon";
 // (out-of-enum, out-of-domain, linked-count drift) so that canonical-doc
 // creation from parsed bytes and snapshot load tolerate files the strict
 // save path would reject. Structural refinements (required subdata sections
-// per subType) stay in both modes — without them the doc is not walkable.
+// per subType) stay in both modes - without them the doc is not walkable.
 type Mode = "strict" | "permissive";
 
 function buildSectionsSchema(mode: Mode) {

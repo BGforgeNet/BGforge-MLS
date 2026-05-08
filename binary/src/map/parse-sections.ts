@@ -300,7 +300,7 @@ export function parseScripts(
                     errors.push(`Script extent ${extentIndex} metadata truncated for script type ${scriptType}`);
                 }
                 // The in-progress extent (and any successfully-read slots inside it)
-                // is dropped from the canonical doc — the writer would otherwise
+                // is dropped from the canonical doc - the writer would otherwise
                 // emit fewer bytes than the parser consumed for the same extent.
                 // Anchor the trailer at this extent's disk start; the writer will
                 // replay [extentStart..EOF] verbatim.

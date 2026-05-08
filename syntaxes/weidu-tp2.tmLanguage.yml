@@ -73,7 +73,7 @@ repository:
         name: entity.name.class.weidu-tp2.patch-function-name
 
   weidu-tp2-file:
-    # Auto-generated from weidu-tp2-base.yml — do not edit manually.
+    # Auto-generated from weidu-tp2-base.yml - do not edit manually.
     name: keyword.other.weidu-tp2
     patterns:
       - match: \b(AUTHOR)\b
@@ -81,7 +81,7 @@ repository:
       - match: \b(SUPPORT)\b
 
   weidu-tp2-flag:
-    # Auto-generated from weidu-tp2-base.yml — do not edit manually.
+    # Auto-generated from weidu-tp2-base.yml - do not edit manually.
     name: keyword.other.weidu-tp2
     patterns:
       - match: \b(ALLOW_MISSING)\b
@@ -98,13 +98,13 @@ repository:
       - match: \b(VERSION)\b
 
   weidu-tp2-language:
-    # Auto-generated from weidu-tp2-base.yml — do not edit manually.
+    # Auto-generated from weidu-tp2-base.yml - do not edit manually.
     name: keyword.other.weidu-tp2
     patterns:
       - match: \b(LANGUAGE)\b
 
   weidu-tp2-component-flag:
-    # Auto-generated from weidu-tp2-base.yml — do not edit manually.
+    # Auto-generated from weidu-tp2-base.yml - do not edit manually.
     name: keyword.other.weidu-tp2
     patterns:
       - match: \b(DEPRECATED)\b
@@ -192,7 +192,7 @@ repository:
             name: entity.name.function.weidu-tp2.patch
 
   weidu-tp2-action:
-    # Auto-generated from weidu-tp2-base.yml — do not edit manually.
+    # Auto-generated from weidu-tp2-base.yml - do not edit manually.
     name: support.function.weidu-tp2.action
     patterns:
       - match: \b(ABORT)\b
@@ -312,21 +312,21 @@ repository:
       - match: \b(WITH_TRA)\b
 
   weidu-tp2-optglob:
-    # Auto-generated from weidu-tp2-base.yml — do not edit manually.
+    # Auto-generated from weidu-tp2-base.yml - do not edit manually.
     name: constant.language.flag.weidu-tp2
     patterns:
       - match: \b(GLOB)\b
       - match: \b(NOGLOB)\b
 
   weidu-tp2-optcase:
-    # Auto-generated from weidu-tp2-base.yml — do not edit manually.
+    # Auto-generated from weidu-tp2-base.yml - do not edit manually.
     name: constant.language.flag.weidu-tp2
     patterns:
       - match: \b(CASE_INSENSITIVE)\b
       - match: \b(CASE_SENSITIVE)\b
 
   weidu-tp2-optexact:
-    # Auto-generated from weidu-tp2-base.yml — do not edit manually.
+    # Auto-generated from weidu-tp2-base.yml - do not edit manually.
     name: constant.language.flag.weidu-tp2
     patterns:
       - match: \b(EVALUATE_REGEXP)\b
@@ -334,21 +334,21 @@ repository:
       - match: \b(EXACT_MATCH)\b
 
   weidu-tp2-arrarindicessorttype:
-    # Auto-generated from weidu-tp2-base.yml — do not edit manually.
+    # Auto-generated from weidu-tp2-base.yml - do not edit manually.
     name: constant.language.flag.weidu-tp2
     patterns:
       - match: \b(LEXICOGRAPHICALLY)\b
       - match: \b(NUMERICALLY)\b
 
   weidu-tp2-caching:
-    # Auto-generated from weidu-tp2-base.yml — do not edit manually.
+    # Auto-generated from weidu-tp2-base.yml - do not edit manually.
     name: constant.language.flag.weidu-tp2
     patterns:
       - match: \b(CACHE)\b
       - match: \b(CLEAR)\b
 
   weidu-tp2-patch:
-    # Auto-generated from weidu-tp2-base.yml — do not edit manually.
+    # Auto-generated from weidu-tp2-base.yml - do not edit manually.
     name: entity.name.function.weidu-tp2.patch
     patterns:
       - match: \b(ADD_CRE_ITEM)\b
@@ -485,7 +485,7 @@ repository:
       - include: "#weidu-tp2-patch-string"
 
   weidu-tp2-patch-byte:
-    # Auto-generated from weidu-tp2-base.yml — do not edit manually.
+    # Auto-generated from weidu-tp2-base.yml - do not edit manually.
     name: entity.name.function.weidu-tp2.patch-byte
     patterns:
       - match: \b(READ_BYTE)\b
@@ -493,7 +493,7 @@ repository:
       - match: \b(WRITE_BYTE)\b
 
   weidu-tp2-patch-long:
-    # Auto-generated from weidu-tp2-base.yml — do not edit manually.
+    # Auto-generated from weidu-tp2-base.yml - do not edit manually.
     name: entity.name.function.weidu-tp2.patch-long
     patterns:
       - match: \b(READ_LONG)\b
@@ -501,7 +501,7 @@ repository:
       - match: \b(WRITE_LONG)\b
 
   weidu-tp2-patch-string:
-    # Auto-generated from weidu-tp2-base.yml — do not edit manually.
+    # Auto-generated from weidu-tp2-base.yml - do not edit manually.
     name: entity.name.function.weidu-tp2.patch-string
     patterns:
       - match: \b(READ_ASCII)\b
@@ -518,7 +518,7 @@ repository:
       - match: \b(WRITE_EVALUATED_ASCII)\b
 
   weidu-tp2-callable:
-    # Auto-generated from weidu-tp2-base.yml — do not edit manually.
+    # Auto-generated from weidu-tp2-base.yml - do not edit manually.
     name: support.function.weidu-tp2
     patterns:
       - match: \b(ADD_AREA_ITEM)\b
@@ -657,7 +657,7 @@ repository:
         name: support.function.weidu-tp2.action-macro
 
   weidu-tp2-when:
-    # Auto-generated from weidu-tp2-base.yml — do not edit manually.
+    # Auto-generated from weidu-tp2-base.yml - do not edit manually.
     name: keyword.control.when.weidu-tp2
     patterns:
       - match: \b(BUT_ONLY)\b
@@ -676,7 +676,7 @@ repository:
       - match: \b(MODULO|REM|NOT|OR|AND|BAND|BOR|BXOR|BNOT|BLSL|BLSR|BASR|EVAL|GLOBAL)\b
 
   weidu-tp2-values:
-    # Auto-generated from weidu-tp2-base.yml — do not edit manually.
+    # Auto-generated from weidu-tp2-base.yml - do not edit manually.
     name: support.class.weidu-tp2.value
     patterns:
       - match: \b(BIFF_IS_COMPRESSED)\b
@@ -783,7 +783,7 @@ repository:
             name: keyword.array-construct.weidu-tp2
 
   weidu-vars:
-    # Auto-generated from weidu-tp2-base.yml — do not edit manually.
+    # Auto-generated from weidu-tp2-base.yml - do not edit manually.
     name: constant.language.weidu-tp2
     patterns:
       - match: (%?ARE_V10_ACTORS%?)
@@ -1066,7 +1066,7 @@ repository:
             name: keyword.control.weidu-tp2
 
   infinity-constants:
-    # Auto-generated from weidu-tp2-base.yml — do not edit manually.
+    # Auto-generated from weidu-tp2-base.yml - do not edit manually.
     name: constant.language.infinity.weidu-tp2
     patterns:
       - match: \b(ATTACK)\b
@@ -1152,7 +1152,7 @@ repository:
   # Catch-all for constant-like identifiers in value position.
   # Matches names where the first word (before _) is fully uppercase: OPCODE_foo, MAX_LEVEL, CLERIC_BLESS.
   # Same heuristic as tree-utils.ts:looksLikeConstant.
-  # Requires underscore — single-word all-caps identifiers (e.g., BEGIN, END) are typically WeiDU
+  # Requires underscore - single-word all-caps identifiers (e.g., BEGIN, END) are typically WeiDU
   # keywords already matched by higher-priority rules.
   # This replaced the old hardcoded ielib-opcodes/ielib-int/ielib-resref patterns.
   # If this is too broad or too narrow, consider moving to semantic tokens (the server

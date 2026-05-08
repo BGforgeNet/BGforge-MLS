@@ -1027,7 +1027,7 @@ end
                 "/project",
             );
 
-            // Should return null — symbol is defined outside workspace, not renameable
+            // Should return null - symbol is defined outside workspace, not renameable
             expect(result).toBeNull();
         });
 
@@ -1490,7 +1490,7 @@ end
             const sslUri = Object.keys(files).find((u) => u.endsWith("dclara.ssl"))!;
             const sslText = files[sslUri]!.text;
             const sslLines = sslText.split("\n");
-            // Find the line with global_var(GVAR_DEN_GANGWAR) — the identifier usage
+            // Find the line with global_var(GVAR_DEN_GANGWAR) - the identifier usage
             const usageLine = sslLines.findIndex((l: string) => {
                 // Must contain the identifier outside of a string context
                 const callMatch = l.match(/global_var\(GVAR_DEN_GANGWAR\)/);
@@ -1502,7 +1502,7 @@ end
             // Skip past "global_var(" to land on the identifier
             const usageCol = callIdx + "global_var(".length;
 
-            // Rename from the .ssl file (external symbol — not locally defined)
+            // Rename from the .ssl file (external symbol - not locally defined)
             const result = await renameSymbolWorkspace(
                 sslText,
                 { line: usageLine, character: usageCol },

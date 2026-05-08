@@ -49,7 +49,7 @@ describe("weidu-tp2 provider hover()", () => {
 
         const result = weiduTp2Provider.hover!(text, "my_var", uri, position);
 
-        // hover() should return notHandled — resolveSymbol handles regular lookup
+        // hover() should return notHandled - resolveSymbol handles regular lookup
         expect(result.handled).toBe(false);
     });
 
@@ -61,7 +61,7 @@ describe("weidu-tp2 provider hover()", () => {
 
         const result = weiduTp2Provider.hover!(text, "COPY_EXISTING", uri, position);
 
-        // hover() should return notHandled — resolveSymbol handles this
+        // hover() should return notHandled - resolveSymbol handles this
         expect(result.handled).toBe(false);
     });
 
@@ -103,7 +103,7 @@ LAF my_func INT_VAR count = 5 END
             const value = (result.hover.contents as { value: string }).value;
             expect(value).toContain("count");
         }
-        // If not handled, that's acceptable — the AST may not resolve here in unit test.
+        // If not handled, that's acceptable - the AST may not resolve here in unit test.
         // The important thing is the regular symbol path is NOT triggered.
     });
 });

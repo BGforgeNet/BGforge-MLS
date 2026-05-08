@@ -1,5 +1,5 @@
 /**
- * Tests for shared/comment-check.ts — createIsInsideComment factory.
+ * Tests for shared/comment-check.ts - createIsInsideComment factory.
  * Covers the not-initialized branch (line 23) and the null-parse branch (line 27),
  * as well as the normal path where a position is checked against comment node types.
  */
@@ -10,7 +10,7 @@ import type { Position } from "vscode-languageserver/node";
 
 const COMMENT_TYPES = new Set(["comment", "line_comment"]);
 
-describe("shared/comment-check — createIsInsideComment", () => {
+describe("shared/comment-check - createIsInsideComment", () => {
     it("returns false when parser is not initialized", () => {
         const isInitialized = vi.fn().mockReturnValue(false);
         const parseWithCache = vi.fn();

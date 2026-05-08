@@ -4,7 +4,7 @@
  * The PRO canonical-doc creation path is permissive (proCanonicalDocumentSchemaPermissive)
  * so that out-of-enum / out-of-domain values produced by graceful parsing flow through to
  * the editor and JSON snapshots. The strict gate fires when the user explicitly serialises
- * a canonical document back to bytes — `serializeProCanonicalDocument` runs the strict
+ * a canonical document back to bytes - `serializeProCanonicalDocument` runs the strict
  * `proCanonicalSnapshotSchema` validation as its first step, rejecting committable garbage.
  *
  * `serializeProCanonicalSnapshot` (the inner helper) intentionally does NOT validate; it
@@ -31,7 +31,7 @@ function buildMiscDocument(overrides: Partial<{ lightRadius: number; frmType: nu
             frmId: 9,
             lightRadius: overrides.lightRadius ?? 0,
             lightIntensity: 0,
-            // PRO `HeaderFlags` value 0x20000000 → "lightThru" entry after the
+            // PRO `HeaderFlags` value 0x20000000 -> "lightThru" entry after the
             // named projection. Other named bits absent; `flagsRaw` empty.
             flags: { flags: ["lightThru"] },
         },
@@ -50,7 +50,7 @@ function permissiveSnapshot(document: ProCanonicalDocument): ProCanonicalSnapsho
     });
 }
 
-describe("PRO canonical-writer — strict gate on save", () => {
+describe("PRO canonical-writer - strict gate on save", () => {
     it("accepts an in-spec document via the document-validating entry point", () => {
         const doc = buildMiscDocument();
         const bytes = serializeProCanonicalDocument(doc);

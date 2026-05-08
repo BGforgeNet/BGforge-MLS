@@ -1,8 +1,8 @@
 /**
  * Branch-coverage tests for weidu-d/dialog-utils.ts.
  *
- * Covers transition-target variants beyond plain GOTO/EXIT — EXTERN, COPY_TRANS,
- * and the SHORT_GOTO single-token form — plus chain text, double-quoted
+ * Covers transition-target variants beyond plain GOTO/EXIT - EXTERN, COPY_TRANS,
+ * and the SHORT_GOTO single-token form - plus chain text, double-quoted
  * SAY content, and empty/whitespace trigger handling.
  */
 
@@ -72,7 +72,7 @@ END
     });
 
     it("parses SHORT_GOTO target (label only)", () => {
-        // SHORT_GOTO is `+ label` — a label-only target with no GOTO/EXIT keyword.
+        // SHORT_GOTO is `+ label` - a label-only target with no GOTO/EXIT keyword.
         const text = `
 BEGIN ~D1~
 

@@ -40,7 +40,7 @@ function createUnknownParamsCallable(): CallableInfo {
 }
 
 describe("weidu-tp2: function call snippet generation", () => {
-    // ---- No prefix (lafName/lpfName context — user already typed LAF/LPF) ----
+    // ---- No prefix (lafName/lpfName context - user already typed LAF/LPF) ----
 
     it("returns null without prefix when function has known-empty params", () => {
         const callable = createNoParamsCallable();
@@ -183,7 +183,7 @@ describe("weidu-tp2: function call snippet generation", () => {
         );
     });
 
-    // ---- LAM/LPM prefix (macro launch — no params, no END) ----
+    // ---- LAM/LPM prefix (macro launch - no params, no END) ----
 
     it("generates LAM snippet without END", () => {
         const callable: CallableInfo = {
@@ -240,7 +240,7 @@ describe("weidu-tp2: function call snippet generation", () => {
             context: CallableContext.Action,
             dtype: CallableDefType.Macro,
         };
-        // LAM/LPM don't take inline params — variables are set in calling scope
+        // LAM/LPM don't take inline params - variables are set in calling scope
         expect(buildFunctionCallSnippet(macroCallable, "my_macro", "LAM")).toBe("LAM my_macro$0");
     });
 
@@ -310,7 +310,7 @@ describe("weidu-tp2: function call snippet generation", () => {
 
     it("treats function with only RET params as having params (not empty)", () => {
         const callable = createCallableInfo([], [], ["result"]);
-        // Should NOT be null — there are RET params to show
+        // Should NOT be null - there are RET params to show
         expect(buildFunctionCallSnippet(callable, "my_func")).not.toBeNull();
     });
 

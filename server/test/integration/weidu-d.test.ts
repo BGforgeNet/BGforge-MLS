@@ -66,7 +66,7 @@ describe("weidu-d integration", () => {
         it("navigates from GOTO reference to state definition", () => {
             const f = loadFixture(BGT_BASE, "bgt/base/d_bg1/durlyle1.d");
 
-            // "GOTO 1" in state 0 — cursor on "1"
+            // "GOTO 1" in state 0 - cursor on "1"
             // The first GOTO target in the file
             const pos = findIdentifierPosition(f.text, "GOTO 1");
             expect(pos).not.toBeNull();
@@ -82,7 +82,7 @@ describe("weidu-d integration", () => {
         it("navigates from GOTO to a named state label", () => {
             const f = loadFixture(IE_FIXTURES, "Ascension/ascension/balthazar/d/balth.d");
 
-            // Find "GOTO a39" — this label is used in transitions and defined later
+            // Find "GOTO a39" - this label is used in transitions and defined later
             const pos = findIdentifierPosition(f.text, "a39", 1);
             expect(pos).not.toBeNull();
 
@@ -138,7 +138,7 @@ describe("weidu-d integration", () => {
         it("renames a named state label and all its references", () => {
             const f = loadFixture(IE_FIXTURES, "Ascension/ascension/balthazar/d/balth.d");
 
-            // Find state "a39" at its definition (BEGIN a39) — 5th occurrence
+            // Find state "a39" at its definition (BEGIN a39) - 5th occurrence
             // a39 has 4 GOTO refs + 1 definition, all within APPEND BALTH
             const pos = findIdentifierPosition(f.text, "a39", 5);
             expect(pos).not.toBeNull();

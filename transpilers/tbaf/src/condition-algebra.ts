@@ -88,7 +88,7 @@ function transformConditionExpr(ctx: TransformerContext, expr: Expression): BAFT
             if (Node.isParenthesizedExpression(operand)) {
                 const inner = operand.getExpression();
                 if (Node.isBinaryExpression(inner) && inner.getOperatorToken().getKind() === SyntaxKind.BarBarToken) {
-                    // !(a || b) → !a && !b - apply De Morgan
+                    // !(a || b) -> !a && !b - apply De Morgan
                     throw TranspileError.fromNode(
                         inner,
                         `Cannot represent "!(${inner.getText()})" in BAF.\n` +
@@ -268,7 +268,7 @@ function invertExpression(ctx: TransformerContext, expr: Expression): BAFTopCond
         const opKind = expr.getOperatorToken().getKind();
 
         if (opKind === SyntaxKind.AmpersandAmpersandToken) {
-            // !(a && b) → !a || !b
+            // !(a && b) -> !a || !b
             // Each inverted operand may be a conjunction (multiple ANDed conditions).
             // We need to OR these conjunctions, which produces DNF.
             // Convert DNF to CNF using the distributive law.
@@ -289,12 +289,12 @@ function invertExpression(ctx: TransformerContext, expr: Expression): BAFTopCond
                 return [{ conditions: [leftFirst, rightFirst] }];
             }
 
-            // Otherwise, use DNF→CNF conversion
+            // Otherwise, use DNF->CNF conversion
             return dnfToCnf([leftConds, rightConds]);
         }
 
         if (opKind === SyntaxKind.BarBarToken) {
-            // !(a || b) → !a && !b - produces multiple ANDed conditions
+            // !(a || b) -> !a && !b - produces multiple ANDed conditions
             const leftConds = invertExpression(ctx, expr.getLeft());
             const rightConds = invertExpression(ctx, expr.getRight());
             return [...leftConds, ...rightConds];
@@ -307,7 +307,7 @@ function invertExpression(ctx: TransformerContext, expr: Expression): BAFTopCond
 
     if (Node.isPrefixUnaryExpression(expr)) {
         if (expr.getOperatorToken() === SyntaxKind.ExclamationToken) {
-            // !!a → a (double negation)
+            // !!a -> a (double negation)
             const operand = expr.getOperand();
             if (Node.isCallExpression(operand)) {
                 const funcName = operand.getExpression().getText();

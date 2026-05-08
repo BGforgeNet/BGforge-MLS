@@ -35,15 +35,15 @@ grammar_corpus() {
 grammar_highlight() {
     # Highlight query validation has two parts:
     #
-    # 1. Assertion tests in test/highlight/ — validated by `tree-sitter test`
+    # 1. Assertion tests in test/highlight/ - validated by `tree-sitter test`
     #    in grammar_corpus(). These verify that specific source positions get
     #    the expected capture names. This is the primary correctness check.
     #
-    # 2. `tree-sitter highlight --check` — validates capture names against
+    # 2. `tree-sitter highlight --check` - validates capture names against
     #    tree-sitter's built-in list. Skipped because:
     #    a) It requires tree-sitter-* directory naming for CLI auto-discovery,
     #       but our grammars use domain names (weidu-baf, fallout-ssl, etc.).
-    #       Only the CLI cares about this — editors (Neovim, Helix, Zed, Emacs)
+    #       Only the CLI cares about this - editors (Neovim, Helix, Zed, Emacs)
     #       discover grammars through their own config, not directory names.
     #    b) Its built-in list is very conservative and doesn't include
     #       Neovim-convention captures (keyword.conditional, function.builtin,
@@ -55,7 +55,7 @@ grammar_highlight() {
         step "$GRAMMAR_NAME: Skipping highlight validation (no queries/highlights.scm)"
         return
     fi
-    step "$GRAMMAR_NAME: Confirming queries/highlights.scm is present (capture-name validation skipped — see comment above)"
+    step "$GRAMMAR_NAME: Confirming queries/highlights.scm is present (capture-name validation skipped - see comment above)"
 }
 
 grammar_parse() {

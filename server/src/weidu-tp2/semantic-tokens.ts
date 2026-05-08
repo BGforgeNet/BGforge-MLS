@@ -8,10 +8,10 @@
  * TP2 uses collect-then-scan: parameter and loop variable names are gathered
  * into a set per scope, then the body is scanned for matching identifiers
  * and %var% references in string content. This is because TP2 lacks a unified
- * symbol resolution chain — variable, callable, and parameter resolution are
+ * symbol resolution chain - variable, callable, and parameter resolution are
  * separate subsystems. The set-based approach avoids coupling to any one of them.
  *
- * Typed constant names are provided by the provider from the symbol index — variables
+ * Typed constant names are provided by the provider from the symbol index - variables
  * annotated with @type {resref|byte|char|dword} in headers get custom token types,
  * replacing the old hardcoded TextMate ielib patterns with a data-driven approach.
  */
@@ -80,7 +80,7 @@ function pushSpan(node: Node, tokenType: string, out: SemanticTokenSpan[]): void
 
 /**
  * Scan string content (tilde_content, double_content, five_tilde_content) for %var% references.
- * These are raw text nodes — the grammar does not parse %var% inside strings.
+ * These are raw text nodes - the grammar does not parse %var% inside strings.
  * The resolver callback maps a variable name to its token type, or returns undefined to skip it.
  */
 function scanStringContentForMatches(

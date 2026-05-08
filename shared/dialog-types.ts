@@ -2,7 +2,7 @@
  * Shared data model types for dialog tree parsing.
  * Two dialects: Fallout SSL (SSLDialog*) and WeiDU D (DDialog*).
  * Server-side parsers populate these and the client webview previews consume them.
- * Single source of truth for both sides — eliminates client/server type drift.
+ * Single source of truth for both sides - eliminates client/server type drift.
  */
 
 // ---------------------------------------------------------------------------

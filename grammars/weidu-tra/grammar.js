@@ -41,7 +41,7 @@ export default grammar({
         // tilde_string is handled entirely by the external scanner:
         // matches both ~text~ and ~~~~~text~~~~~
 
-        // "text" — double-quote delimited, can span multiple lines
+        // "text" - double-quote delimited, can span multiple lines
         double_string: () => token(seq('"', /[^"]*/, '"')),
 
         // [SOUNDREF]

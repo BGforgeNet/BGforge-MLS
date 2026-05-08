@@ -3,19 +3,19 @@
  *
  * Each format's `<format>/canonical-reader.ts` calls `createIeCanonicalReader`
  * to get the three operations every IE format needs:
- *   - `getDocument(result)`     — pull the canonical doc off `result.document`
+ *   - `getDocument(result)`     - pull the canonical doc off `result.document`
  *                                 with permissive schema validation, undefined
  *                                 if absent.
- *   - `rebuildDocument(result)` — same plus a non-null assertion; the parser
+ *   - `rebuildDocument(result)` - same plus a non-null assertion; the parser
  *                                 always sets `result.document`, so a missing
  *                                 doc here is a programming error.
- *   - `createSnapshot(result)`  — wrap the doc in the IE snapshot envelope
+ *   - `createSnapshot(result)`  - wrap the doc in the IE snapshot envelope
  *                                 (`schemaVersion: 1`, `format`, `formatName`,
  *                                 optional `opaqueRanges` / `warnings`).
  *
  * The body of each operation was byte-identical across the three formats
  * (`s/itm/spl/eff/`); only the schema types and the format-id discriminant
- * varied. Hand-rolling the same shape per format guaranteed they'd drift —
+ * varied. Hand-rolling the same shape per format guaranteed they'd drift -
  * one format could grow a snapshot field the others didn't get.
  */
 

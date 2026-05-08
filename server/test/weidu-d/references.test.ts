@@ -160,7 +160,7 @@ BEGIN ~MYMOD~
     IF ~~ THEN EXTERN ~OTHER~ missing_state
   END
 `;
-            // cursor on "missing_state" — EXTERN to another dialog, no definition here
+            // cursor on "missing_state" - EXTERN to another dialog, no definition here
             const refs = findReferences(text, { line: 4, character: 29 }, TEST_URI, true);
             // The label belongs to dialog OTHER, which has no definition in this file
             expect(refs).toHaveLength(0);
@@ -191,7 +191,7 @@ BEGIN ~MYMOD~
                 ]),
             );
 
-            // cursor on "missing_state" — EXTERN to OTHER dialog (starts at col 30)
+            // cursor on "missing_state" - EXTERN to OTHER dialog (starts at col 30)
             const refs = findReferences(text, { line: 4, character: 30 }, TEST_URI, true, index);
             // No local definition, but cross-file index has the definition in other.d
             expect(refs).toHaveLength(1);
@@ -215,7 +215,7 @@ BEGIN ~MYMOD~
             // "mymod:state1" key (normalizeDialogFile lowercases)
             index.updateFile(normalizeUri(OTHER_URI), new Map([["mymod:state1", [crossLoc]]]));
 
-            // cursor on "state1" definition — local definition exists
+            // cursor on "state1" definition - local definition exists
             const refs = findReferences(text, { line: 2, character: 28 }, TEST_URI, true, index);
             // local (def + GOTO) + cross-file = 3
             const crossRefs = refs.filter((r) => r.uri === OTHER_URI);

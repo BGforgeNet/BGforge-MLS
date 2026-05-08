@@ -63,7 +63,7 @@ function cancelledToken() {
 // Test: Symbols.searchWorkspaceSymbols with pre-cancelled token
 // =============================================================================
 
-describe("Symbols.searchWorkspaceSymbols — cancellation", () => {
+describe("Symbols.searchWorkspaceSymbols - cancellation", () => {
     let index: Symbols;
 
     beforeEach(() => {
@@ -92,7 +92,7 @@ describe("Symbols.searchWorkspaceSymbols — cancellation", () => {
 // Test: ProviderRegistry.workspaceSymbols with pre-cancelled token
 // =============================================================================
 
-describe("ProviderRegistry.workspaceSymbols — cancellation", () => {
+describe("ProviderRegistry.workspaceSymbols - cancellation", () => {
     async function createRegistry() {
         vi.resetModules();
         return import("../../src/provider-registry").then((m) => m.registry);
@@ -126,7 +126,7 @@ describe("ProviderRegistry.workspaceSymbols — cancellation", () => {
 // Test: ProviderRegistry.references with pre-cancelled token
 // =============================================================================
 
-describe("ProviderRegistry.references — cancellation", () => {
+describe("ProviderRegistry.references - cancellation", () => {
     async function createRegistry() {
         vi.resetModules();
         return import("../../src/provider-registry").then((m) => m.registry);

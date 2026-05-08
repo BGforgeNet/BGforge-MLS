@@ -1,7 +1,7 @@
 /**
  * Dumps sfall completion data into server/data/fallout-ssl-sfall.yml.
  * Round-trip: reads the existing file, updates sfall_functions and hooks stanzas,
- * and writes back — preserving all other content and comments.
+ * and writes back - preserving all other content and comments.
  *
  * Shared helpers (makeBlockScalar, YAML_DUMP_OPTIONS) are in utils/yaml-helpers.
  */

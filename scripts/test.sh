@@ -2,7 +2,7 @@
 
 # Run all tests across the monorepo.
 # Uses parallel execution for independent stages to minimize wall time.
-# Each parallel job logs to tmp/test-logs/ — silent on success, full output on failure.
+# Each parallel job logs to tmp/test-logs/ - silent on success, full output on failure.
 set -eu -o pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -31,7 +31,7 @@ step "Building transpile library bundle"
 pnpm build:transpile
 
 # --- Phase 1: Static analysis + dead code (all independent, run in parallel) ---
-# Coverage runs are deliberately NOT in this block — see Phase 1.5 for why.
+# Coverage runs are deliberately NOT in this block - see Phase 1.5 for why.
 step "Phase 1: Static Analysis + Dead Code"
 parallel \
     "Shell lint" "pnpm lint:shell" \

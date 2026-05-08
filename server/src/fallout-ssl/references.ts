@@ -62,7 +62,7 @@ export function findReferences(
     }
 
     if (scopeInfo.scope === ScopeKind.External) {
-        // Symbol not defined in the current file — fall back to cross-file lookup.
+        // Symbol not defined in the current file - fall back to cross-file lookup.
         // This handles cases like GVAR_DEN_GANGWAR used in den.h but defined in global.h.
         if (!refsIndex) {
             return [];

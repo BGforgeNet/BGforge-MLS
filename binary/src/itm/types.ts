@@ -118,8 +118,8 @@ export const ItmType: Readonly<Record<number, string>> = {
  * ITM header `usabilityFlags` is a 4-byte block (offset 0x1E) where each
  * byte carries a *different* bitmap. Per IESDP `#Header_Usability`:
  *
- * - Byte 1: alignment matrix (bits 0–5 form chaotic/lawful/neutral × evil/
- *   good/neutral combinations) plus class flags Bard, Cleric (bits 6–7).
+ * - Byte 1: alignment matrix (bits 0-5 form chaotic/lawful/neutral × evil/
+ *   good/neutral combinations) plus class flags Bard, Cleric (bits 6-7).
  * - Byte 2: class flags (Cleric/Mage, Cleric/Thief, Cleric/Ranger, Fighter,
  *   Fighter/Druid, Fighter/Mage, Fighter/Cleric, Fighter/Mage/Cleric).
  * - Byte 3: more class flags (multi-class permutations) plus race Elf.
@@ -218,7 +218,7 @@ export const ItmAbilityDamageType: Readonly<Record<number, string>> = {
     9: "Blunt Missile",
 };
 
-/** ITM ability `depletion` (word) — what happens when charges hit 0. */
+/** ITM ability `depletion` (word) - what happens when charges hit 0. */
 export const ItmAbilityDepletion: Readonly<Record<number, string>> = {
     0: "Item remains",
     1: "Item vanishes",

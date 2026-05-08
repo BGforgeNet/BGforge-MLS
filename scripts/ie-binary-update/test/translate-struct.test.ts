@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { translateStruct } from "../src/translate.ts";
 
-describe("translateStruct — empty", () => {
+describe("translateStruct - empty", () => {
     test("empty input yields no fields and no imports", () => {
         const result = translateStruct([]);
         expect(result.fields).toEqual([]);
@@ -9,7 +9,7 @@ describe("translateStruct — empty", () => {
     });
 });
 
-describe("translateStruct — multiple fields", () => {
+describe("translateStruct - multiple fields", () => {
     test("collects fields in order and tracks codec imports", () => {
         const result = translateStruct([
             { type: "byte", id: "a", desc: "A" },
@@ -31,7 +31,7 @@ describe("translateStruct — multiple fields", () => {
     });
 });
 
-describe("translateStruct — offset validation", () => {
+describe("translateStruct - offset validation", () => {
     test("running offset mismatch throws", () => {
         // First field is byte (1 byte), so the next runs at 0x01.
         // Declaring offset: 0x05 on the second field is a mismatch.
@@ -52,7 +52,7 @@ describe("translateStruct — offset validation", () => {
     });
 });
 
-describe("translateStruct — unused/unknown fields", () => {
+describe("translateStruct - unused/unknown fields", () => {
     test("unused fields are emitted as padding to keep wire bytes round-trippable", () => {
         const result = translateStruct([
             { type: "byte", id: "a", desc: "A" },

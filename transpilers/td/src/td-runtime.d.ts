@@ -1,6 +1,6 @@
 /**
  * Core TD (TypeScript to D) runtime API declarations.
- * This is the transpiler API — functions that map to WeiDU D constructs.
+ * This is the transpiler API - functions that map to WeiDU D constructs.
  * Engine-specific functions (triggers, actions, constants) are separate
  * and generated per-project from server/data/*.yml.
  *

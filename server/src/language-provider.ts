@@ -3,7 +3,7 @@
  *
  * LanguageProvider is composed from capability interfaces defined in
  * core/capabilities.ts. Each capability represents a cohesive feature set.
- * All capabilities are optional (Partial) — providers implement only what
+ * All capabilities are optional (Partial) - providers implement only what
  * their language supports.
  *
  * Concrete providers can declare explicit `implements` clauses for type safety:
@@ -53,7 +53,7 @@ import type {
 } from "./core/capabilities";
 
 /**
- * The core type for language support — composed from capability interfaces.
+ * The core type for language support - composed from capability interfaces.
  *
  * All capabilities are optional (Partial). Providers implement only what
  * their language supports. The ProviderRegistry routes requests by checking

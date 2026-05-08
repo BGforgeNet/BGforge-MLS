@@ -73,7 +73,7 @@ function parseWeiduOutput(text: string) {
 
                 // Extract up to 4 non-empty detail lines after the error header.
                 // WeiDU always stops at the first error, so there's no risk of bleeding
-                // into a second error block — but we still limit to 4 lines for readability.
+                // into a second error block - but we still limit to 4 lines for readability.
                 const afterMatch = text.slice(match.index + match[0].length);
                 const detailLines = afterMatch
                     .split(/\r?\n/)
@@ -93,7 +93,7 @@ function parseWeiduOutput(text: string) {
                     // 0-based (column 0-5) for tokens at the start of a line. Clamp to
                     // 0 so we never produce an invalid negative LSP character offset.
                     // End column is kept as-is: WeiDU's end already aligns with LSP's
-                    // exclusive end (e.g. "column 1-10" → LSP start=0, end=10).
+                    // exclusive end (e.g. "column 1-10" -> LSP start=0, end=10).
                     columnStart: Math.max(0, parseInt(matchColStart, 10) - 1),
                     columnEnd: parseInt(matchColEnd, 10),
                     message,

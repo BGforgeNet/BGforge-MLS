@@ -764,7 +764,7 @@ translation~`;
             await t.init();
 
             const traUri = `file://${tempDir}/partial.tra`;
-            // Cursor on @10 (line 0) — should NOT find @100 references
+            // Cursor on @10 (line 0) - should NOT find @100 references
             const refs = await t.getReferences(traUri, "weidu-tra", { line: 0, character: 0 }, false);
 
             expect(refs).toEqual([]);
@@ -806,7 +806,7 @@ translation~`;
             // Initially maps to test.tra by basename
             translation.reloadConsumer(bafUri, bafContent, "weidu-baf");
 
-            // Now change @tra comment to point to other.tra — update both in-memory and on disk
+            // Now change @tra comment to point to other.tra - update both in-memory and on disk
             const bafContentWithComment = `/** @tra other.tra */\n${bafContent}`;
             fs.writeFileSync(path.join(tempDir, "test.baf"), bafContentWithComment);
             translation.reloadConsumer(bafUri, bafContentWithComment, "weidu-baf");

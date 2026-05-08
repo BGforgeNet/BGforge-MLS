@@ -84,7 +84,7 @@ describe("SSL declaration-site detection", () => {
         });
 
         it("does not match #define with value (past the name)", () => {
-            // "#define NAME value" — cursor at end, NAME already has a space after it
+            // "#define NAME value" - cursor at end, NAME already has a space after it
             expectDeclaration("#define NAME 42", false);
         });
     });
@@ -112,7 +112,7 @@ describe("SSL declaration-site detection", () => {
             // Full line: "variable x := 5" but cursor at position 10 => "variable x"
             const text = "variable x := 5";
             expect(isSslDeclarationSite(text, { line: 0, character: 10 })).toBe(true);
-            // Full line considered — past the := sign
+            // Full line considered - past the := sign
             expect(isSslDeclarationSite(text, { line: 0, character: 16 })).toBe(false);
         });
     });

@@ -46,7 +46,7 @@ export function validateEnum(value: number, lookup: Record<number, string>): str
  * the editor and the on-disk truncation point agree on length: anything the
  * editor accepts round-trips without silent truncation.
  *
- * Charset semantics live in `@bgforge/binary/string-charset` — the same module
+ * Charset semantics live in `@bgforge/binary/string-charset` - the same module
  * the webview's live sanitizer imports, so host validation and keystroke
  * filtering cannot drift apart.
  */

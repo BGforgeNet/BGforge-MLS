@@ -115,7 +115,7 @@ procedure startup begin
 end
 `;
         const spans = getSemanticTokenSpans(text);
-        // No parameters → no parameter semantic tokens emitted
+        // No parameters -> no parameter semantic tokens emitted
         expect(spans).toHaveLength(0);
     });
 });

@@ -1709,7 +1709,7 @@
         "category": "component_flag",
         "documentation": {
             "kind": "markdown",
-            "value": "```weidu-tp2-tooltip\nNO_LOG_RECORD\n```\nNormally all module components are recorded in WeiDU.log and can be uninstalled later. This component flag prevents this component from writing a log record when it is successfully installed. As a result it is “invisible” to WeiDU, can be installed multiple times, and cannot be uninstalled with WeiDU. Do not use this flag without a real reason."
+            "value": "```weidu-tp2-tooltip\nNO_LOG_RECORD\n```\nNormally all module components are recorded in WeiDU.log and can be uninstalled later. This component flag prevents this component from writing a log record when it is successfully installed. As a result it is "invisible" to WeiDU, can be installed multiple times, and cannot be uninstalled with WeiDU. Do not use this flag without a real reason."
         }
     },
     {

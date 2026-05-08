@@ -187,7 +187,7 @@ describe("walkStruct", () => {
     });
 
     it("emits a per-slot named sub-group when array view is 'slots'", () => {
-        // A view: "slots" array carries indexed semantic slots — each element
+        // A view: "slots" array carries indexed semantic slots - each element
         // has a stable label that survives reorder/append. Walker emits a
         // ParsedGroup with N child fields labelled from `slotLabels` rather
         // than the "(N values) padding" fallback used for opaque byte runs.

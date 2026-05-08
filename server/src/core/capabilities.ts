@@ -84,7 +84,7 @@ export interface ProviderContext {
 }
 
 // =============================================================================
-// Base — required for all providers
+// Base - required for all providers
 // =============================================================================
 
 export interface ProviderBase {

@@ -121,8 +121,8 @@ export async function bundleWithEsbuild(config: BundleConfig): Promise<BundleRes
     }
 
     // Accumulate externalized enum names from .d.ts files.
-    // These are `declare enum` that esbuild drops — their property accesses
-    // need prefix stripping (ClassID.ANKHEG → ANKHEG) in post-processing.
+    // These are `declare enum` that esbuild drops - their property accesses
+    // need prefix stripping (ClassID.ANKHEG -> ANKHEG) in post-processing.
     const externalEnumNames = config.sharedExternalEnumNames ?? new Set<string>();
 
     // Prepend marker, append extra code if provided
@@ -157,7 +157,7 @@ export async function bundleWithEsbuild(config: BundleConfig): Promise<BundleRes
             externalDeclarationsPlugin(externalEnumNames),
             ...(config.extraPlugins ?? []),
             // Transform enums in imported .ts files (shared across all transpilers).
-            // Only .ts — transpiler source files (.tbaf, .td, .tssl) are not imported
+            // Only .ts - transpiler source files (.tbaf, .td, .tssl) are not imported
             // by other transpiler files. Placed after extraPlugins so language-specific
             // resolvers run first.
             enumTransformPlugin(allEnumNames, /\.ts$/),
@@ -180,7 +180,7 @@ export async function bundleWithEsbuild(config: BundleConfig): Promise<BundleRes
 
     // Extract input files from metafile if requested.
     // Only .ts files, not .d.ts.
-    // Metafile paths are relative to absWorkingDir — resolve to absolute.
+    // Metafile paths are relative to absWorkingDir - resolve to absolute.
     const inputFiles =
         metafile && result.metafile
             ? Object.keys(result.metafile.inputs)
@@ -194,11 +194,11 @@ export async function bundleWithEsbuild(config: BundleConfig): Promise<BundleRes
 /**
  * Clean up esbuild output by stripping marker prefix and fixing import aliases.
  *
- * esbuild renames identifiers when there are name collisions (e.g., See → See2).
+ * esbuild renames identifiers when there are name collisions (e.g., See -> See2).
  * This function:
  * 1. Strips everything before the marker (runtime helpers like __defProp, __name)
  * 2. Builds alias map from import statements (regex)
- * 3. Detects collision patterns (name2 → name22)
+ * 3. Detects collision patterns (name2 -> name22)
  * 4. Uses original constants to restore esbuild-renamed identifiers
  * 5. Renames identifiers back to originals (string-aware, skips string literals)
  * 6. Removes import declarations
@@ -206,7 +206,7 @@ export async function bundleWithEsbuild(config: BundleConfig): Promise<BundleRes
  * Uses regex + string-aware tokenization instead of a full TypeScript AST parser.
  * esbuild output is predictable (no regex literals, no exotic syntax), making
  * this safe. Verified against the ts-morph implementation on all three transpiler
- * outputs (TSSL, TBAF, TD) — produces identical results.
+ * outputs (TSSL, TBAF, TD) - produces identical results.
  *
  * @param code Bundled code from esbuild
  * @param marker Marker string to find start of user code
@@ -236,7 +236,7 @@ export function cleanupEsbuildOutput(code: string, marker: string, originalConst
     }
 
     // Step 3: Detect esbuild's collision avoidance
-    // If alias See2 exists and identifier See22 exists in code → See22→See2
+    // If alias See2 exists and identifier See22 exists in code -> See22->See2
     const allIdentifiers = new Set<string>();
     forEachCodeSegment(code, (segment) => {
         const wordRegex = /\b[A-Za-z_$]\w*\b/g;
@@ -262,15 +262,15 @@ export function cleanupEsbuildOutput(code: string, marker: string, originalConst
     // Problem: When TSSL defines a constant that also exists in folib imports,
     // esbuild renames the local constant by appending a single digit to avoid collision.
     // Example: `const DIK_F4 = 62` in TSSL + `DIK_F4` exported from folib
-    //          → esbuild outputs `var DIK_F42 = 62` (appended '2')
+    //          -> esbuild outputs `var DIK_F42 = 62` (appended '2')
     //
     // Solution: Use the original constants extracted from the TSSL source file
     // (passed via originalConstants parameter) to identify and reverse these renames.
     //
     // Algorithm:
-    // 1. Find all var declarations in bundled code via regex: name → value
+    // 1. Find all var declarations in bundled code via regex: name -> value
     // 2. For each var ending in a digit, strip the last char to get candidate original name
-    // 3. If originalConstants has that name with the SAME value, it's a rename → restore it
+    // 3. If originalConstants has that name with the SAME value, it's a rename -> restore it
     //
     // Why this is robust:
     // - Requires BOTH name pattern match AND exact value equality
@@ -409,7 +409,7 @@ export function skipTemplateLiteral(code: string, start: number): number {
         }
         if (code[i] === "`") return i + 1;
         if (code[i] === "$" && i + 1 < code.length && code[i + 1] === "{") {
-            // Template expression — scan for matching }, handling nested strings/templates
+            // Template expression - scan for matching }, handling nested strings/templates
             i += 2;
             let braceDepth = 1;
             while (i < code.length && braceDepth > 0) {

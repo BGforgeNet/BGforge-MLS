@@ -9,7 +9,7 @@ export const LSP_COMMAND_PARSE_DIALOG = "bgforge.parseDialog";
 
 /**
  * Prefix for per-language workspace-symbol executeCommand IDs.
- * Full ID is `{prefix}{languageId}` — see {@link lspWorkspaceSymbolsCommand}.
+ * Full ID is `{prefix}{languageId}` - see {@link lspWorkspaceSymbolsCommand}.
  *
  * Standard LSP `workspace/symbol` returns aggregated symbols across all
  * providers; clients that want results scoped to the active document's

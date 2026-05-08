@@ -1,7 +1,7 @@
 /**
  * Completion item filtering based on context.
  *
- * Design: only two positions require filtering — all others show everything unfiltered
+ * Design: only two positions require filtering - all others show everything unfiltered
  * (VSCode's prefix matching handles the rest). This avoids context misdetection bugs
  * from tree-sitter error recovery in broken/incomplete code.
  *
@@ -11,7 +11,7 @@
  * C) Context-required categories: some categories (FuncVarKeyword) are suppressed in
  *    general context (empty array) because they are only meaningful inside function calls.
  *
- * Snippets are applied globally (not gated by context) — the snippet prefix is determined
+ * Snippets are applied globally (not gated by context) - the snippet prefix is determined
  * from the symbol's own callable data (action/patch function/macro), not cursor position.
  * In name contexts, no prefix is added (user already typed LAF/LPF/etc).
  */
@@ -133,7 +133,7 @@ const CATEGORY_EXCLUSIONS: Partial<Record<CompletionCategory, CompletionContext[
 };
 
 /**
- * Contexts referenced in CATEGORY_EXCLUSIONS — used by tests to validate rule consistency.
+ * Contexts referenced in CATEGORY_EXCLUSIONS - used by tests to validate rule consistency.
  * Comment and Jsdoc are intentionally absent: they are early-exit gates in provider.ts
  * (returning [] or JSDoc items) and never reach filterItemsByContext.
  */
@@ -153,7 +153,7 @@ export { CATEGORY_EXCLUSIONS, VALID_CONTEXTS };
  * Filter completion items based on exclusion rules.
  *
  * - Empty contexts: show everything except context-required categories (e.g. FuncVarKeyword).
- * - With contexts: exclude item only if ALL active contexts exclude it (permissive —
+ * - With contexts: exclude item only if ALL active contexts exclude it (permissive -
  *   if even one context allows the item, it is shown).
  */
 export function filterItemsByContext(items: Tp2CompletionItem[], contexts: CompletionContext[]): CompletionItem[] {

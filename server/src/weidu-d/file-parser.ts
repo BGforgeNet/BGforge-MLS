@@ -96,7 +96,7 @@ export function parseFile(uri: string, text: string, workspaceRoot?: string): Pa
                     symbols.push(createStateSymbol(uri, dialogFile, label, displayPath));
                 });
             }
-            // Don't recurse — collectRefsInScope handles children
+            // Don't recurse - collectRefsInScope handles children
             return;
         }
 

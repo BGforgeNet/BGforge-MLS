@@ -59,7 +59,7 @@ export function register(ctx: HandlerContext): void {
     });
 
     ctx.documents.onDidOpen(async (event) => {
-        // Await the context barrier — covers the (now-very-small) window where
+        // Await the context barrier - covers the (now-very-small) window where
         // onInitialize's async work has not finished yet.
         const serverCtx = await getServerContext();
 
@@ -97,7 +97,7 @@ export function register(ctx: HandlerContext): void {
 
         const docSettings = await ctx.getDocumentSettings(uri);
         if (shouldValidateOnSave(docSettings.validate)) {
-            // Cancel any pending debounced compile for this URI — save takes priority
+            // Cancel any pending debounced compile for this URI - save takes priority
             // and must not race with a stale onDidChangeContent compilation.
             ctx.compileDebouncer.cancel(normUri);
             void compile(uri, langId, false, text).catch(logCompileError);

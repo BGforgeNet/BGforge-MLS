@@ -148,7 +148,7 @@ class WeiduDProvider
         if (!isInitialized()) {
             return [];
         }
-        // Single-file AST traversal — bounded work; no per-iteration cancellation needed.
+        // Single-file AST traversal - bounded work; no per-iteration cancellation needed.
         return findReferences(text, position, uri, includeDeclaration, this.fileIndex?.refs);
     }
 

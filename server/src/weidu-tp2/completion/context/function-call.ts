@@ -20,7 +20,7 @@ import { findBeginEndBoundaries } from "./position";
  * Retrieved by getFuncParamsContext() for parameter completion.
  *
  * Request-scoped memoisation: safe as module state because LSP callbacks are
- * sequential — a new completion request always overwrites this before it reads it.
+ * sequential - a new completion request always overwrites this before it reads it.
  */
 let lastFuncParamsContext: FuncParamsContext | null = null;
 
@@ -504,7 +504,7 @@ function isAtMacroName(cursorOffset: number, macroCall: SyntaxNode): boolean {
             if (cursorOffset >= child.startIndex && cursorOffset <= child.endIndex) {
                 return true;
             }
-            // Past the identifier — not at macro name position
+            // Past the identifier - not at macro name position
             if (cursorOffset > child.endIndex) {
                 return false;
             }

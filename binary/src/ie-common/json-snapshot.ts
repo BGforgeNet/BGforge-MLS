@@ -3,14 +3,14 @@
  *
  * Each format's `<format>/json-snapshot.ts` calls `createIeJsonSnapshot` to
  * get a serialise/load pair that follows the same round-trip discipline:
- *   - `createJson(result)`     — JSON.stringify the canonical snapshot.
- *   - `loadJson(text, opts)`   — parse the JSON, validate against the
+ *   - `createJson(result)`     - JSON.stringify the canonical snapshot.
+ *   - `loadJson(text, opts)`   - parse the JSON, validate against the
  *                                permissive snapshot schema, serialise to
  *                                bytes, re-parse, and assert the re-parsed
  *                                snapshot stringifies identically. The
  *                                parser is provided as a thunk so per-format
- *                                callers can avoid the canonical layer →
- *                                parser → canonical layer import cycle.
+ *                                callers can avoid the canonical layer ->
+ *                                parser -> canonical layer import cycle.
  *
  * Failure-mode design: load throws on either parser-level errors or a
  * semantic round-trip mismatch. Both indicate a hand-edited snapshot whose
@@ -28,7 +28,7 @@ export interface IeJsonSnapshotConfig<Snap> {
     readonly createSnapshot: (result: ParseResult) => Snap;
     readonly serializeSnapshot: (snapshot: Snap) => Uint8Array;
     /**
-     * Lazy parser accessor — the parser usually transitively imports the
+     * Lazy parser accessor - the parser usually transitively imports the
      * canonical layer, so resolving it eagerly here would create a cycle.
      * The thunk is invoked on first load.
      */

@@ -69,7 +69,7 @@ export enum TDPatchOp {
 
 /** Shared warning message template for orphan state detection.
  * Used by both detectOrphansFromOriginal() (index.ts) and TDParser.collectOrphanWarnings() (parse.ts).
- * Must stay in sync — mergeWarnings() deduplicates by exact message equality. */
+ * Must stay in sync - mergeWarnings() deduplicates by exact message equality. */
 export const ORPHAN_WARNING_TEMPLATE = (name: string) =>
     `Function "${name}" looks like an orphan state (not collected by any begin/append and not called as a helper)`;
 

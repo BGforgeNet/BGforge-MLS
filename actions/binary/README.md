@@ -65,7 +65,7 @@ jobs:
 | `version`             | `latest`                                                | npm version specifier for `@bgforge/binary`.                                                              |
 | `commit-message`      | `chore: update binary JSON snapshots`                   | Commit subject when snapshots change.                                                                     |
 | `commit-author-name`  | `github-actions[bot]`                                   | git author name.                                                                                          |
-| `commit-author-email` | `41898282+github-actions[bot]@users.noreply.github.com` | git author email — the numeric prefix links the commit to the bot account.                                |
+| `commit-author-email` | `41898282+github-actions[bot]@users.noreply.github.com` | git author email - the numeric prefix links the commit to the bot account.                                |
 | `check`               | `false`                                                 | If `true`, verify snapshots match the binaries (exit 1 on diff or missing snapshot) and skip commit/push. |
 
 ## Outputs

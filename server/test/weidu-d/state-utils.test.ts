@@ -142,7 +142,7 @@ describe("findLabelNodeAtPosition", () => {
     });
 
     it("finds ADD_STATE_TRIGGER state field (non-ExtendAction TOP_LEVEL type)", () => {
-        // ADD_STATE_TRIGGER has a "state" field — exercises the else-branch of ExtendAction check
+        // ADD_STATE_TRIGGER has a "state" field - exercises the else-branch of ExtendAction check
         const text = "ADD_STATE_TRIGGER ~DIALOG~ my_state ~True()~\n";
         const root = parse(text);
         // "my_state" in ADD_STATE_TRIGGER

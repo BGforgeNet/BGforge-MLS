@@ -15,7 +15,7 @@ export type OutputMode = "save" | "stdout" | "check" | "save-and-check";
 /**
  * Optional source-location metadata that error throwers can attach for
  * file:line:column formatting in CLI output. Duck-typed so this module does
- * not need to depend on any specific error class — the transpilers' own
+ * not need to depend on any specific error class - the transpilers' own
  * TranspileError satisfies the shape, and other domains can attach the same
  * fields without sharing a class hierarchy.
  */
@@ -173,7 +173,7 @@ export async function runCli(options: RunOptions): Promise<void> {
             unchanged = 0;
 
         for (const file of files) {
-            // Sequential processing — CLI mode needs deterministic output and
+            // Sequential processing - CLI mode needs deterministic output and
             // early exit on first mismatch in check mode.
             // eslint-disable-next-line no-await-in-loop
             const result = await processFile(file, args.mode);

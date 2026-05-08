@@ -2148,8 +2148,8 @@ actions:
               ```
 
               * This action will never stop, (unless interrupted in specific situations), and thus never leave the action list.
-              * Executes [Wait()](https://gibberlings3.github.io/iesdp/scripting/actions/bg2actions.htm#63) for a random amount of time, (1–40 seconds), if the creature goes off-screen.
-              * Waits 1–10 seconds between each evaluation.
+              * Executes [Wait()](https://gibberlings3.github.io/iesdp/scripting/actions/bg2actions.htm#63) for a random amount of time, (1-40 seconds), if the creature goes off-screen.
+              * Waits 1-10 seconds between each evaluation.
         - name: RandomWalk
           detail: RandomWalk()
           doc: |
@@ -2167,7 +2167,7 @@ actions:
               ```
 
               * This action will never stop, (unless interrupted in specific situations), and thus never leave the action list.
-              * Executes [Wait()](https://gibberlings3.github.io/iesdp/scripting/actions/bg2actions.htm#63) for a random amount of time, (1–40 seconds), if the creature goes off-screen.
+              * Executes [Wait()](https://gibberlings3.github.io/iesdp/scripting/actions/bg2actions.htm#63) for a random amount of time, (1-40 seconds), if the creature goes off-screen.
               * Has a 50/50 chance to [MoveToPoint()](https://gibberlings3.github.io/iesdp/scripting/actions/bg2actions.htm#23), or do a pass of [RandomTurn()](https://gibberlings3.github.io/iesdp/scripting/actions/bg2actions.htm#130), (including [RandomTurn()](https://gibberlings3.github.io/iesdp/scripting/actions/bg2actions.htm#130)'s wait time).
         - name: RandomWalkContinuous
           detail: RandomWalkContinuous()

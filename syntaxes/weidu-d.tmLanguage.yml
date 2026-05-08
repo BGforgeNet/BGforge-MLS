@@ -36,7 +36,7 @@ repository:
         name: "constant.numeric.weidu-d"
 
   d-action:
-    # Auto-generated from weidu-d-base.yml — do not edit manually.
+    # Auto-generated from weidu-d-base.yml - do not edit manually.
     name: support.function.weidu-baf.action
     patterns:
       - match: \b(ADD_STATE_TRIGGER)\b
@@ -69,21 +69,21 @@ repository:
       - match: \b(SET_WEIGHT)\b
 
   action-when:
-    # Auto-generated from weidu-d-base.yml — do not edit manually.
+    # Auto-generated from weidu-d-base.yml - do not edit manually.
     name: keyword.other.weidu-d
     patterns:
       - match: \b(IF)\b
       - match: \b(UNLESS)\b
 
   chain-epilogue:
-    # Auto-generated from weidu-d-base.yml — do not edit manually.
+    # Auto-generated from weidu-d-base.yml - do not edit manually.
     name: keyword.other.weidu-d
     patterns:
       - match: \b(COPY_TRANS)\b
       - match: \b(COPY_TRANS_LATE)\b
 
   state:
-    # Auto-generated from weidu-d-base.yml — do not edit manually.
+    # Auto-generated from weidu-d-base.yml - do not edit manually.
     name: keyword.other.weidu-d
     patterns:
       - match: \b(APPENDI)\b
@@ -91,14 +91,14 @@ repository:
       - match: \b(SAY)\b
 
   transition:
-    # Auto-generated from weidu-d-base.yml — do not edit manually.
+    # Auto-generated from weidu-d-base.yml - do not edit manually.
     name: keyword.other.weidu-d
     patterns:
       - match: \b(COPY_TRANS)\b
       - match: \b(COPY_TRANS_LATE)\b
 
   transfeature:
-    # Auto-generated from weidu-d-base.yml — do not edit manually.
+    # Auto-generated from weidu-d-base.yml - do not edit manually.
     name: keyword.other.weidu-d
     patterns:
       - match: \b(DO)\b
@@ -109,7 +109,7 @@ repository:
       - match: \b(UNSOLVED_JOURNAL)\b
 
   transnext:
-    # Auto-generated from weidu-d-base.yml — do not edit manually.
+    # Auto-generated from weidu-d-base.yml - do not edit manually.
     name: keyword.other.weidu-d
     patterns:
       - match: \b(EXIT)\b
@@ -187,7 +187,7 @@ repository:
     patterns:
       - match: '(%[^%]+%)'
 
-  # Non-word operators that can't use \b word boundaries — kept separate
+  # Non-word operators that can't use \b word boundaries - kept separate
   # from the auto-generated sugar stanza.
   sugar-operators:
     patterns:
@@ -195,7 +195,7 @@ repository:
         match: \+
 
   sugar:
-    # Auto-generated from weidu-d-base.yml — do not edit manually.
+    # Auto-generated from weidu-d-base.yml - do not edit manually.
     name: keyword.weidu-d
     patterns:
       - match: \b(BRANCH)\b

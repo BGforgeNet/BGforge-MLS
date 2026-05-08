@@ -220,7 +220,7 @@ class MapParser implements BinaryParser {
         // Design notes:
         // - `resolved` is set true BEFORE the try block to prevent infinite recursion if
         //   rebuildMapCanonicalDocument reads result.document internally.
-        // - On failure, document stays undefined permanently (no retry) — matches the
+        // - On failure, document stays undefined permanently (no retry) - matches the
         //   original eager behavior where a failed rebuild left document as undefined.
         // - enumerable: true so JSON.stringify (used by cloneParseResult) triggers the
         //   getter and includes the property. The clone gets a plain property, not a getter.

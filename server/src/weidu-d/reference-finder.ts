@@ -24,10 +24,10 @@ export interface LabelRef {
 /**
  * Find all references to (dialogFile, labelName) in the entire tree.
  *
- * Group A — inside begin_action/append_action with matching fileNode:
+ * Group A - inside begin_action/append_action with matching fileNode:
  *   State.label (definition), GotoNext.label, ShortGoto.label
  *
- * Group B — top-level actions with matching file field:
+ * Group B - top-level actions with matching file field:
  *   ExternNext, ChainAction, InterjectAction, InterjectCopyTrans,
  *   ExtendAction, AddStateTrigger, AddTransTrigger, CopyTrans,
  *   ReplaceSay, ReplaceStateTrigger, SetWeight, ChainEpilogue
@@ -42,7 +42,7 @@ export function findAllDialogLabelRefs(root: SyntaxNode, dialogFile: string, lab
             if (fileNode && normalizeDialogFile(fileNode.text) === dialogFile) {
                 collectRefsInScope(node, dialogFile, labelName, refs);
             }
-            // Don't recurse — collectRefsInScope handles children
+            // Don't recurse - collectRefsInScope handles children
             return;
         }
 
@@ -89,7 +89,7 @@ function collectRefsInScope(scopeNode: SyntaxNode, scopeDialog: string, labelNam
             }
         }
 
-        // ExternNext inside a scope — match only if pointing to same dialog
+        // ExternNext inside a scope - match only if pointing to same dialog
         if (node.type === SyntaxType.ExternNext) {
             const fileNode = node.childForFieldName("file");
             const label = node.childForFieldName("label");

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Parallel job runner for test scripts.
-# Each job's output goes to a log file — silent on success, full output on failure.
+# Each job's output goes to a log file - silent on success, full output on failure.
 #
 # Usage: parallel "label1" "cmd1" "label2" "cmd2" ...
 #

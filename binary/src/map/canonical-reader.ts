@@ -222,7 +222,7 @@ function parseMapObject(group: ParsedGroup): z.infer<typeof mapObjectSchema> {
                 quantity: readNumber(entry, "Quantity"),
                 object: parseMapObject(
                     // Inventory recursion creates names like "Object 0.0.0 (Item)" /
-                    // "Object 0.0.0.0 (Item)" — match any dotted index path, not
+                    // "Object 0.0.0.0 (Item)" - match any dotted index path, not
                     // just the two-level "elevation.index" form used at top level.
                     entry.fields.find(
                         (field): field is ParsedGroup => isGroup(field) && /^Object [\d.]+ /.test(field.name),

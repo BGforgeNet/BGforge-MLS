@@ -2,9 +2,9 @@
 
 TypeScript-to-scripting-language transpilers for classic RPG mod development:
 
-- **TSSL** → Fallout SSL
-- **TBAF** → Infinity Engine BAF (AI scripts)
-- **TD** → Infinity Engine D (dialog files)
+- **TSSL** -> Fallout SSL
+- **TBAF** -> Infinity Engine BAF (AI scripts)
+- **TD** -> Infinity Engine D (dialog files)
 
 ## Install
 
@@ -41,7 +41,7 @@ const baf = await tbaf("script.tbaf", sourceText);
 const dResult = await td("dialog.td", sourceText);
 ```
 
-The named exports are direct re-exports of each transpiler's underlying function — no wrapping. Pass any extra arguments the underlying function accepts (e.g. TSSL's optional `batchState` for cross-file inline-function caching).
+The named exports are direct re-exports of each transpiler's underlying function - no wrapping. Pass any extra arguments the underlying function accepts (e.g. TSSL's optional `batchState` for cross-file inline-function caching).
 
 ### Errors
 
@@ -69,17 +69,17 @@ pnpm add -g @bgforge/transpile
 fgtp <file.td|file.tbaf|file.tssl|dir> [--save] [--check] [--save-and-check] [-r] [-q]
 ```
 
-- `--save` — write the transpiled output alongside the source
-  (`.td` → `.d`, `.tbaf` → `.baf`, `.tssl` → `.ssl`)
-- `--check` — exit 1 if any output is not up to date
-- `--save-and-check` — save and verify in one pass
-- `-r` — recurse into directories
-- `-q` — quiet mode (suppress summary)
+- `--save` - write the transpiled output alongside the source
+  (`.td` -> `.d`, `.tbaf` -> `.baf`, `.tssl` -> `.ssl`)
+- `--check` - exit 1 if any output is not up to date
+- `--save-and-check` - save and verify in one pass
+- `-r` - recurse into directories
+- `-q` - quiet mode (suppress summary)
 
 Without `--save`, the transpiled output is printed to stdout.
 
 ## Per-language transpiler guides
 
-- [TSSL](./tssl/docs/) — TypeScript to Fallout SSL
-- [TBAF](./tbaf/docs/) — TypeScript to Infinity Engine BAF
-- [TD](./td/docs/) — TypeScript to Infinity Engine D
+- [TSSL](./tssl/docs/) - TypeScript to Fallout SSL
+- [TBAF](./tbaf/docs/) - TypeScript to Infinity Engine BAF
+- [TD](./td/docs/) - TypeScript to Infinity Engine D

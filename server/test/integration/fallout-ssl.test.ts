@@ -78,7 +78,7 @@ describe("fallout-ssl integration", () => {
 
             const printScenery = symbols.find((s) => s.name === "print_scenery");
             expect(printScenery).toBeDefined();
-            // print_scenery has "variable s, scenery = ..." — 2 children
+            // print_scenery has "variable s, scenery = ..." - 2 children
             expect(printScenery!.children).toBeDefined();
             expect(printScenery!.children!.map((c) => c.name)).toEqual(["s", "scenery"]);
         });
@@ -106,7 +106,7 @@ describe("fallout-ssl integration", () => {
         it("navigates to a variable declaration within a procedure", () => {
             const f = loadFixture(TWEAKS_BASE, "source_test/gl_g_scenepid.ssl");
 
-            // "s" variable used in foreach — find its usage
+            // "s" variable used in foreach - find its usage
             const pos = findIdentifierPosition(f.text, "scenery", 2);
             expect(pos).not.toBeNull();
 
@@ -132,7 +132,7 @@ describe("fallout-ssl integration", () => {
         it("returns null for built-in functions (not locally defined)", () => {
             const f = loadFixture(TWEAKS_BASE, "source_test/gl_g_scenepid.ssl");
 
-            // "debug_msg" is a built-in — should return null for local definition
+            // "debug_msg" is a built-in - should return null for local definition
             const pos = findIdentifierPosition(f.text, "obj_name");
             expect(pos).not.toBeNull();
 

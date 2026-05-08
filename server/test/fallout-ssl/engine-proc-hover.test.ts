@@ -64,7 +64,7 @@ end
         const userDocPos = value.indexOf("My custom description.");
         const engineDocPos = value.indexOf("Called once by the engine");
         expect(engineDocPos).toBeGreaterThan(userDocPos);
-        // There must be a separator (my \n\n---\n\n) between them — check the specific form
+        // There must be a separator (my \n\n---\n\n) between them - check the specific form
         const between = value.slice(userDocPos, engineDocPos);
         expect(between).toContain("---");
     });

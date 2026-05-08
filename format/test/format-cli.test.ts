@@ -317,7 +317,7 @@ describe("format CLI integration", () => {
         it("preserves blank-continuation termination of a multiline #define", () => {
             // Three consecutive directives are needed because the merge induced
             // by stripping the load-bearing newline only changes the layout
-            // *between* later directives — a 2-directive case collapses on the
+            // *between* later directives - a 2-directive case collapses on the
             // first pass and is then stably idempotent in its degraded form.
             const input = "#define A  (foo)                  \\\n\n#define B  bar\n\n#define C  baz\n";
             const file = path.join(tmpDir, "preproc.ssl");

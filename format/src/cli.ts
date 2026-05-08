@@ -130,16 +130,16 @@ function parseAndFormat(
             lineLimit: opts.lineLimit,
         });
     } else if (fileType === "tra") {
-        // Pure string processing — no parser init required
+        // Pure string processing - no parser init required
         return { text: extractFormatResultText(text, formatTra(text)) };
     } else if (fileType === "msg") {
-        // Pure string processing — no parser init required
+        // Pure string processing - no parser init required
         return { text: extractFormatResultText(text, formatMsg(text)) };
     } else if (fileType === "scripts-lst") {
-        // Pure string processing — no parser init required
+        // Pure string processing - no parser init required
         return { text: extractFormatResultText(text, formatScriptsLst(text)) };
     } else {
-        // 2da — pure string processing, no parser init required
+        // 2da - pure string processing, no parser init required
         return { text: extractFormatResultText(text, format2da(text)) };
     }
 }
@@ -247,7 +247,7 @@ async function main() {
         extensions: EXTENSIONS,
         description: ".ssl, .baf, .d, .tp2, .tra, .msg, .2da, and scripts.lst",
         async init() {
-            // tra/msg/2da are pure string formatters — no parser init required
+            // tra/msg/2da are pure string formatters - no parser init required
             if (isDir || fileType === "ssl") await initSslParser();
             if (isDir || fileType === "baf") await initBafParser();
             if (isDir || fileType === "d") await initDParser();

@@ -2,7 +2,7 @@
  * MAP file format helpers.
  *
  * MAP files are big-endian and have several variable-length sections. The
- * fixed-size header is now spec-driven (`specs/header.ts` → typed-binary
+ * fixed-size header is now spec-driven (`specs/header.ts` -> typed-binary
  * codec); the variable-length sections (header vars, tiles, scripts, objects)
  * are still hand-parsed in `parse-sections.ts` / `parse-objects.ts`.
  */
@@ -26,7 +26,7 @@ export interface MapHeader {
      * `flags` is the sorted-array projection produced by the wire codec
      * (`FlagArraySchema`). Consumers that need a numeric mask use the
      * `FlagArray` overload of `hasElevation` (see `./types.ts`); raw-int
-     * access goes through `flagArrayToInt(MapFlags, …)` if needed.
+     * access goes through `flagArrayToInt(MapFlags, ...)` if needed.
      */
     flags: { flags: string[]; flagsRaw?: string };
     darkness: number;

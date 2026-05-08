@@ -78,7 +78,7 @@ repository:
       - match: \b(?i)(texttrunc)\b
       - match: \b(?i)(textunderline)\b
   fallout-base-functions:
-    # Auto-generated from fallout-ssl-base.yml — do not edit manually.
+    # Auto-generated from fallout-ssl-base.yml - do not edit manually.
     name: support.function.fallout-ssl.base
     patterns:
       - match: \b(?i)(ActivateRegion)\b
@@ -449,7 +449,7 @@ repository:
       #
       # Known false positive: in #define PASTE(a,b) a##b, the parameter 'a' gets
       # entity.name.function coloring rather than variable.parameter. This is a minor
-      # visual inaccuracy — acceptable because ## never appears outside macro bodies
+      # visual inaccuracy - acceptable because ## never appears outside macro bodies
       # in valid SSL code, comments and strings are protected by their own begin/end
       # scopes, and a stricter lookahead (\b\w+(?=(?:##\w+)+\()) would fix only the
       # function-call case while breaking bare a##b expressions.
@@ -565,7 +565,7 @@ repository:
       - match: (=|:|>|<|\+\+|\-|\+|;|!|%|\^)
         name: keyword.control.fallout-ssl
   sfall-functions:
-    # Auto-generated from fallout-ssl-sfall.yml — do not edit manually.
+    # Auto-generated from fallout-ssl-sfall.yml - do not edit manually.
     name: support.function.fallout-ssl.sfall
     patterns:
       - match: \b(?i)(abs)\b
@@ -994,7 +994,7 @@ repository:
       - match: \b(([0-9]+)|(0x[0-9a-fA-F]+))\b
         name: constant.numeric.fallout-ssl
   hooks:
-    # Auto-generated from fallout-ssl-sfall.yml — do not edit manually.
+    # Auto-generated from fallout-ssl-sfall.yml - do not edit manually.
     name: constant.language.fallout-ssl
     patterns:
       - match: \b(HOOK_ADJUSTFID)\b

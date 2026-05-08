@@ -7,7 +7,7 @@
  * Exposes `functionInfoToSymbol()` and `variableInfoToSymbol()` helpers that
  * convert parsed AST data into IndexedSymbol with WeiDU-specific formatting
  * (INT_VAR/STR_VAR tables, TP2 code fences). This is the best pattern among
- * all providers — helpers are independently testable, reusable by both
+ * all providers - helpers are independently testable, reusable by both
  * header-parser and local-symbols, and cleanly separate parsing from symbol
  * construction. Future providers should follow this approach.
  */
@@ -58,7 +58,7 @@ export interface VariableInfo {
     jsdoc?: jsdoc.JSdoc;
     value?: string; // Source text from AST, truncated if long
     declarationKind: DeclarationKind;
-    inferredType: "int" | "string"; // Derived: "set"/assignment → "int", "sprint"/"text_sprint" → "string"
+    inferredType: "int" | "string"; // Derived: "set"/assignment -> "int", "sprint"/"text_sprint" -> "string"
 }
 
 /** Node types for function/macro definitions. */
@@ -74,7 +74,7 @@ const FUNCTION_DEF_TYPES = new Set([
  *
  * Narrower than `VARIABLE_DECL_TYPES` in `weidu-tp2/variable-symbols.ts`: this set
  * tracks file-scope decls only and intentionally omits loop variables, parameter
- * declarations, array definitions, and `READ_2DA_*` reads — those are valid only
+ * declarations, array definitions, and `READ_2DA_*` reads - those are valid only
  * inside function/macro bodies.
  */
 const VARIABLE_TYPES = new Set([

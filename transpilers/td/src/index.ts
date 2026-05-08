@@ -7,7 +7,7 @@
  * Orphan detection runs on the ORIGINAL source (before bundling) because
  * esbuild tree-shakes unreferenced function declarations. A function like
  * `function state29() { ... }` that isn't passed to begin/append is dead code
- * from esbuild's perspective and gets removed from the bundled output — making
+ * from esbuild's perspective and gets removed from the bundled output - making
  * it invisible to the parser. By scanning the original source, we detect these
  * orphans regardless of tree-shaking.
  */

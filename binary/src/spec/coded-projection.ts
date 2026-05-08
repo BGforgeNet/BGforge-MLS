@@ -1,11 +1,11 @@
 /**
- * Int ↔ named-projection helpers for coded scalar fields (flag words, enums,
+ * Int <-> named-projection helpers for coded scalar fields (flag words, enums,
  * composite refs). Bridges the wire-shape (raw integer) and canonical-doc
  * shape (sorted-array of slug names / named string / tagged object) for any
  * spec entry that carries a `flags` or `enum` table.
  *
- * Used by canonical-reader (int → projection on inbound) and canonical-writer
- * (projection → int before passing to the wire codec). The wire codec itself
+ * Used by canonical-reader (int -> projection on inbound) and canonical-writer
+ * (projection -> int before passing to the wire codec). The wire codec itself
  * stays int-shaped so the byte layout primitives in `derive-typed-binary.ts`
  * need no change.
  */
@@ -22,11 +22,11 @@ const IDENTIFIER_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
  * runtime.
  *
  * Examples:
- *   "Flat"          → "flat"
- *   "NoBlock"       → "noBlock"
- *   "MultiHex"      → "multiHex"
- *   "Magic Hands"   → "magicHands"
- *   "Trans-Energy"  → "transEnergy"
+ *   "Flat"          -> "flat"
+ *   "NoBlock"       -> "noBlock"
+ *   "MultiHex"      -> "multiHex"
+ *   "Magic Hands"   -> "magicHands"
+ *   "Trans-Energy"  -> "transEnergy"
  *
  * Why slugified identifiers rather than the display strings themselves:
  * - The construction API surfaces flags as TS members (e.g.
@@ -42,7 +42,7 @@ const IDENTIFIER_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
  *   error decorated with spaces and punctuation.
  * - The display string remains the parsed-tree label and the engine-doc
  *   parlance; the slug is the toolchain token. One translation point
- *   (label ↔ slug) is the simplest split for a single-vocabulary toolchain.
+ *   (label <-> slug) is the simplest split for a single-vocabulary toolchain.
  */
 export function slugifyCodedName(displayName: string): string {
     const normalized = displayName
@@ -83,7 +83,7 @@ export interface FlagBitEntry {
  * canonical keys, plus the OR'd `namedMask` covering every named bit.
  *
  * Sorted alphabetically by canonical key so the projected `flags` array
- * serialises in stable order — toggling one bit adds or removes one entry
+ * serialises in stable order - toggling one bit adds or removes one entry
  * at its alphabetical position, regardless of bit position.
  *
  * Returns frozen entries to discourage in-place mutation.
@@ -108,7 +108,7 @@ export function compileFlagTable(table: Readonly<Record<number, string>>): {
 }
 
 /**
- * Build a default array projection — empty `flags`, no `flagsRaw`. Used by
+ * Build a default array projection - empty `flags`, no `flagsRaw`. Used by
  * structural-edit transitions and as a default in test fixtures or
  * construction APIs.
  */
@@ -117,7 +117,7 @@ export function emptyFlagArray(_table: Readonly<Record<number, string>>): FlagAr
 }
 
 /**
- * Sorted-array projection of a flag word — `flags` lists every set bit by its
+ * Sorted-array projection of a flag word - `flags` lists every set bit by its
  * canonical (slugified-camelCase) name, `flagsRaw` carries any wire bits the
  * spec table doesn't name as a hex string. Both fields are wire-shape:
  * `flags` order is alphabetical for stable diffs, `flagsRaw` is omitted in
@@ -159,7 +159,7 @@ export function intToFlagArray(
  * Pack a flag array back to an integer. Every name in `flags` contributes its
  * mask; `flagsRaw` (hex) ORs in. Throws on unknown names, duplicate names,
  * malformed `flagsRaw`, or a `flagsRaw` value overlapping a named bit
- * (strict-disjoint invariant — the hand-edit surface should not let the same
+ * (strict-disjoint invariant - the hand-edit surface should not let the same
  * bit be specified twice).
  */
 export function flagArrayToInt(table: Readonly<Record<number, string>>, projection: FlagArray): number {

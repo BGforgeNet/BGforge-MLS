@@ -13,13 +13,13 @@ import { cmpStr, findFiles } from "../../../utils/src/yaml-helpers.ts";
 /** Classification of a #define extracted from header files */
 export type DefineKind = "constant" | "variable" | "procedure" | "define_with_vars" | "alias";
 
-/** Matches: #define NAME (value) or #define NAME value — numeric constants */
+/** Matches: #define NAME (value) or #define NAME value - numeric constants */
 const REGEX_CONSTANT = /^#define\s+(\w+)\s+\(?([0-9]+)\)?/;
 
-/** Names that are already proper constants (UPPER_CASE) — skip from constant category */
+/** Names that are already proper constants (UPPER_CASE) - skip from constant category */
 const REGEX_CONSTANT_REAL = /^([A-Z][A-Z0-9]*(_[\w]+)?)$/;
 
-/** Matches: #define NAME(args) — defines with arguments */
+/** Matches: #define NAME(args) - defines with arguments */
 const REGEX_DEFINE_WITH_ARGS = /^#define\s+(\w+)\([\w\s,]+\)/;
 
 // TODO: this regex only matches argless procedures. The optional arg group never
@@ -27,10 +27,10 @@ const REGEX_DEFINE_WITH_ARGS = /^#define\s+(\w+)\([\w\s,]+\)/;
 // doesn't account for the actual syntax. Fix to match `procedure foo(variable x) begin`.
 const REGEX_PROCEDURE = /^procedure\s+(\w+)(\((variable\s+[\w+])(\s*,\s*variable\s+[\w+])?\))?\s+begin/;
 
-/** Matches: #define (GVAR|MVAR|LVAR)_NAME (value) — game variables */
+/** Matches: #define (GVAR|MVAR|LVAR)_NAME (value) - game variables */
 const REGEX_VARIABLE = /^#define\s+((GVAR|MVAR|LVAR)_\w+)\s+\(?([0-9]+)\)?/;
 
-/** Matches: #define NAME (OTHER_NAME) — aliases */
+/** Matches: #define NAME (OTHER_NAME) - aliases */
 const REGEX_ALIAS = /^#define\s+(\w+)\s+\(?\w+\)?\s*$/;
 
 /**

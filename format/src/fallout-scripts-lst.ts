@@ -101,14 +101,14 @@ export function formatScriptsLst(rawText: string): FormatOutput {
             out += entry.comment.padEnd(maxCommentWidth + MIN_GAP);
             out += entry.metadata;
         } else {
-            // Comment only — no metadata to align
+            // Comment only - no metadata to align
             out += entry.comment;
         }
 
         outputLines.push(out.trimEnd());
     }
 
-    // Always output CRLF — Fallout engine convention for scripts.lst.
+    // Always output CRLF - Fallout engine convention for scripts.lst.
     const formatted = outputLines.join("\r\n") + "\r\n";
 
     if (formatted === rawText) {

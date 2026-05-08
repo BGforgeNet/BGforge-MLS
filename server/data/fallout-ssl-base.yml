@@ -412,7 +412,7 @@ base_functions:
         - name: game_ui_disable
           detail: void game_ui_disable
           doc: |-
-              Disables game user-interface input from the player (to ‘lock-out' the player). You *MUST* make sure to re-enable the UI at some point afterwards.
+              Disables game user-interface input from the player (to 'lock-out' the player). You *MUST* make sure to re-enable the UI at some point afterwards.
 
         - name: game_ui_enable
           detail: void game_ui_enable
@@ -422,7 +422,7 @@ base_functions:
         - name: game_ui_is_disabled
           detail: int game_ui_is_disabled
           doc: |-
-              Returns True if the game UI is currently disabled (the player is currently ‘locked-out'), and False otherwise.
+              Returns True if the game UI is currently disabled (the player is currently 'locked-out'), and False otherwise.
 
         - name: gdialog_barter
           detail: int gdialog_barter
@@ -742,7 +742,7 @@ base_functions:
         - name: obj_type
           detail: int obj_type(ObjectPtr obj)
           doc: |-
-              Returns the type of an object (obj). This would be ‘Item', ‘Wall', ‘Scenery', etc.
+              Returns the type of an object (obj). This would be 'Item', 'Wall', 'Scenery', etc.
 
         - name: obj_unlock
           detail: void obj_unlock(ObjectPtr what)
@@ -831,7 +831,7 @@ base_functions:
         - name: reg_anim_animate_forever
           detail: void reg_anim_animate_forever(ObjectPtr what, int anim, int delay)
           doc: |-
-              Adds a single, in-place animation on an object (what) to an animation sequence-list, at a given delay from the previous animation (delay should always be -1)! This animation will animate continuously until something in the system interrupts it. To be used *very* sparingly, for instance Gizmo's sign and the ‘pray' signs in the children of the cathedral (which will have to be toned down).
+              Adds a single, in-place animation on an object (what) to an animation sequence-list, at a given delay from the previous animation (delay should always be -1)! This animation will animate continuously until something in the system interrupts it. To be used *very* sparingly, for instance Gizmo's sign and the 'pray' signs in the children of the cathedral (which will have to be toned down).
 
         - name: reg_anim_animate_reverse
           detail: void reg_anim_animate_reverse(ObjectPtr what, int anim, int delay)

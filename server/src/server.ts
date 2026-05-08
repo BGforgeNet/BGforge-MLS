@@ -56,7 +56,7 @@ const fileReloadDebouncer = new UriDebouncer<NormalizedUri>(RELOAD_DEBOUNCE_MS);
 // Debouncing for validate-on-type to avoid rapid-fire compilations.
 // Without this, every keystroke with validate="type"/"saveAndType" would spawn a new
 // compiler process. This is especially problematic for SSL compilation which
-// writes a shared .tmp.ssl file — concurrent compilations corrupt each other.
+// writes a shared .tmp.ssl file - concurrent compilations corrupt each other.
 const COMPILE_DEBOUNCE_MS = 300;
 const compileDebouncer = new UriDebouncer<NormalizedUri>(COMPILE_DEBOUNCE_MS);
 

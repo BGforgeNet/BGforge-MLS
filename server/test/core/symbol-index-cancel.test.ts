@@ -44,7 +44,7 @@ function tokenCancelledAfter(n: number): CancellationToken {
     };
 }
 
-describe("Symbols.searchWorkspaceSymbols — cancellation responsiveness", () => {
+describe("Symbols.searchWorkspaceSymbols - cancellation responsiveness", () => {
     it("returns within CANCEL_CHECK_INTERVAL (16) of cancellation on a large index", () => {
         const index = new Symbols({ maxFiles: 1000 });
         for (let i = 1; i <= 500; i++) {

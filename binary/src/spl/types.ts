@@ -29,7 +29,7 @@ export const SplFlags: Readonly<Record<number, string>> = {
 };
 
 /**
- * SPL header `type` (Spell type — wizard/priest/innate/etc.). Drives which
+ * SPL header `type` (Spell type - wizard/priest/innate/etc.). Drives which
  * casting message and SPELLFAILURE stat the engine uses.
  */
 export const SplType: Readonly<Record<number, string>> = {
@@ -70,7 +70,7 @@ export const SplExclusionFlags: Readonly<Record<number, string>> = {
     0x00100000: "Generalist",
 };
 
-/** SPL header `castingGraphics` (word) — visual effect during cast. */
+/** SPL header `castingGraphics` (word) - visual effect during cast. */
 export const SplCastingGraphics: Readonly<Record<number, string>> = {
     0: "Necromancy",
     1: "Alteration",
@@ -98,7 +98,7 @@ export const SplAbilityForm: Readonly<Record<number, string>> = {
     2: "Projectile",
 };
 
-/** SPL ability `friendly` (char) — friendly-fire bit flags. */
+/** SPL ability `friendly` (char) - friendly-fire bit flags. */
 export const SplAbilityFriendly: Readonly<Record<number, string>> = {
     0x01: "Hostile",
     0x02: "Friendly",

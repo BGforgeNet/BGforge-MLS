@@ -4,7 +4,7 @@
  * statement processor, and transition field helpers.
  *
  * Extracted from state-transitions.ts. Has no dependency on state-transitions.ts
- * to avoid circular imports — callers provide any inlining behaviour via callback.
+ * to avoid circular imports - callers provide any inlining behaviour via callback.
  */
 
 import { CallExpression, ForOfStatement, ForStatement, IfStatement, Node, Statement, SyntaxKind } from "ts-morph";
@@ -162,7 +162,7 @@ function setTransitionTextField(
  * that already has its trigger set from the enclosing if block.
  *
  * Note: mutates target in place. This is part of the IR builder pattern used
- * throughout processTransitionStatement/processStateStatement — transitions are
+ * throughout processTransitionStatement/processStateStatement - transitions are
  * created as skeletons and progressively filled. The mutation is contained
  * within a single parse pass and transitions are never shared or read concurrently.
  */
@@ -214,7 +214,7 @@ export function processTransitionStatement(
             }
 
             // Create context wrapper for single transition.
-            // addTransition should never be called here — if blocks already have
+            // addTransition should never be called here - if blocks already have
             // their transition created by processIfTransition.
             const context = {
                 getLastTransition: () => trans,

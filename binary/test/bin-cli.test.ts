@@ -4,10 +4,10 @@
  * exit codes, stdout output, and stderr diff reporting.
  *
  * Fixture sources:
- * - FIXTURES (`client/testFixture/proto/`) — tracked in git, always present.
+ * - FIXTURES (`client/testFixture/proto/`) - tracked in git, always present.
  *   Tests that read only from FIXTURES are safe to run in parallel with any
  *   other phase.
- * - RP_MAPS (`external/fallout/Fallout2_Restoration_Project/data/maps/`) —
+ * - RP_MAPS (`external/fallout/Fallout2_Restoration_Project/data/maps/`) -
  *   populated by `scripts/test-external.sh`, which also resets the external
  *   repos on exit via a trap. Tests that read from RP_MAPS must run in the
  *   same serialized chain as test-external.sh; otherwise the reset trap can

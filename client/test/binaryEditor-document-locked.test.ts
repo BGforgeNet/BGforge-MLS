@@ -2,8 +2,8 @@
  * Host-level enforcement of `editingLocked`.
  *
  * `BinaryDocument.applyEdit` routes its field lookup through
- * `findEditableField` from the binary package, so any caller — webview-bound
- * or programmatic — that targets a field inside an `editingLocked` group
+ * `findEditableField` from the binary package, so any caller - webview-bound
+ * or programmatic - that targets a field inside an `editingLocked` group
  * receives `undefined` and the parsed tree is not mutated. The flag itself
  * lives on `ParsedGroup`; this test asserts the host honours it.
  */

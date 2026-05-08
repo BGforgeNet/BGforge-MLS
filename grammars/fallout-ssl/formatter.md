@@ -277,5 +277,5 @@ Multi-line macro definitions with backslash continuation are preserved:
 
 ## Related
 
-- [Fallout SSL Grammar README](./README.md) — SSL syntax reference
-- [Format CLI](../../docs/architecture.md#format-cli) — General format CLI documentation
+- [Fallout SSL Grammar README](./README.md) - SSL syntax reference
+- [Format CLI](../../docs/architecture.md#format-cli) - General format CLI documentation

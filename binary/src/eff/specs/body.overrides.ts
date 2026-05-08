@@ -13,7 +13,7 @@ import { effBodySpec } from "./body";
 
 export const effBodySpecAnnotated = {
     ...effBodySpec,
-    // Open enums — mods can extend opcodes and timing modes; strict canonical
+    // Open enums - mods can extend opcodes and timing modes; strict canonical
     // mode does not reject unrecognised values. See `ie-common/specs/effect.overrides.ts`.
     opcode: { ...effBodySpec.opcode, enum: Opcodes, enumOpen: true },
     target: { ...effBodySpec.target, enum: EffectTarget },

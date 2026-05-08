@@ -157,7 +157,7 @@ export function buildBinaryEditorTreeState(parseResult: ParseResult): BinaryEdit
     // edits are only safe when the surrounding record's byte layout is fully
     // determined.
     const visitEntry = (projected: ProjectedEntry, parentId: string, parentPath: string, locked: boolean): string => {
-        // Node ids are derived from sourceSegments so they survive a reparse —
+        // Node ids are derived from sourceSegments so they survive a reparse -
         // a structural change (entity add/remove, undo/redo) produces a tree
         // with the same id for any node whose path didn't change. The host
         // can then post targeted `children` / `updateField` deltas keyed by
@@ -197,7 +197,7 @@ export function buildBinaryEditorTreeState(parseResult: ParseResult): BinaryEdit
         const presentation = resolveFieldPresentation(parseResult.format, fieldKey, entry.name);
         const numericFormat = resolveNumericFormat(parseResult.format, fieldKey, entry.name);
         // Adapter (path-keyed presentation schema) lookup is the override
-        // surface — explicit per-path tweaks like MAP's filtered ScriptProc
+        // surface - explicit per-path tweaks like MAP's filtered ScriptProc
         // dropdown live there. When the adapter has no entry (e.g. for slot
         // children of a `view: "slots"` array, whose semantic-key collapses
         // to the array's parent key), fall back to the walker-emitted spec

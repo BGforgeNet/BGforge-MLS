@@ -76,7 +76,7 @@ async function waitForFile(filePath: string, timeoutMs = 10000): Promise<void> {
     const start = Date.now();
     while (Date.now() - start < timeoutMs) {
         try {
-            // Polling loop — the await is the polling mechanism itself.
+            // Polling loop - the await is the polling mechanism itself.
             // eslint-disable-next-line no-await-in-loop
             await access(filePath);
             return;

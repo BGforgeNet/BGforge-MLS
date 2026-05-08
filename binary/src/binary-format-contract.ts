@@ -1,7 +1,7 @@
 /**
  * Codec-numeric primitives, plus the per-field domain-range and value
  * validation helpers. Intentionally has no module-load dependency on the
- * format-adapter registry — `format-adapter.ts` injects its registry-driven
+ * format-adapter registry - `format-adapter.ts` injects its registry-driven
  * domain-range lookup via `setDomainRangeLookup` after registering each
  * format's adapter. This lets `derive-zod` and per-format canonical schemas
  * import primitives from this file freely without creating a load-time cycle
@@ -42,7 +42,7 @@ export function zodNumericType(type: NumericTypeName): z.ZodNumber {
 // Setter installed by `format-adapter.ts` after the format adapters
 // register. Default no-op lookup keeps `validateNumericValue` /
 // `clampNumericValue` correct when called before adapters load (returns
-// undefined → no domain narrowing applies).
+// undefined -> no domain narrowing applies).
 
 type DomainRangeLookup = (format: string, fieldKey: string) => NumericRange | undefined;
 let domainRangeLookup: DomainRangeLookup = () => undefined;

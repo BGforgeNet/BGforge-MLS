@@ -301,7 +301,7 @@ function g_familiar_confirm() {
 }
 
 // ---------------------------------------------------------------------------
-// EXTEND_TOP — add menu transitions to existing state
+// EXTEND_TOP - add menu transitions to existing state
 // ---------------------------------------------------------------------------
 
 extendTop("%dialog%", "%state%", () => {
@@ -320,7 +320,7 @@ extendTop("%dialog%", "%state%", () => {
 })
 
 // ---------------------------------------------------------------------------
-// APPEND — register all states under %dialog%
+// APPEND - register all states under %dialog%
 // ---------------------------------------------------------------------------
 
 append("%dialog%",

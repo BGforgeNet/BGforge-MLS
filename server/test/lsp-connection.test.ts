@@ -1,5 +1,5 @@
 /**
- * Tests for lsp-connection.ts — init/getter pattern for the LSP connection holder.
+ * Tests for lsp-connection.ts - init/getter pattern for the LSP connection holder.
  *
  * The module uses module-level mutable state. To isolate tests from each other
  * the module is reset via vi.resetModules() and re-imported before each test.

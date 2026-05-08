@@ -87,7 +87,7 @@ function scanEntryRest(text: string, pos: number): { rest: string; nextPos: numb
             pos = strEnd;
             lastFlush = pos;
         } else if (text[pos] === "\n") {
-            // End of entry (not inside a string — strings handle their own newlines)
+            // End of entry (not inside a string - strings handle their own newlines)
             break;
         } else {
             pos++;
@@ -113,7 +113,7 @@ function processLine(text: string, pos: number): ProcessedLine {
         return { text: "", nextPos };
     }
 
-    // Comment line (// or /*) — trim trailing whitespace only
+    // Comment line (// or /*) - trim trailing whitespace only
     if ((text[pos] === "/" && text[pos + 1] === "/") || (text[pos] === "/" && text[pos + 1] === "*")) {
         const nlPos = text.indexOf("\n", pos);
         const end = nlPos === -1 ? text.length : nlPos;
@@ -137,7 +137,7 @@ function processLine(text: string, pos: number): ProcessedLine {
         }
     }
 
-    // Unknown / unrecognized line — pass through trimming trailing whitespace
+    // Unknown / unrecognized line - pass through trimming trailing whitespace
     const nlPos = text.indexOf("\n", pos);
     const end = nlPos === -1 ? text.length : nlPos;
     const line = text.slice(pos, end).trimEnd();

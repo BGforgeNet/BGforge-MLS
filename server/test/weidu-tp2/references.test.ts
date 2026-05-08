@@ -130,7 +130,7 @@ DEFINE_PATCH_FUNCTION my_func BEGIN
     SET result = SOURCE_SIZE
 END
 `;
-            // cursor on "SOURCE_SIZE" — automatic variable, not renameable
+            // cursor on "SOURCE_SIZE" - automatic variable, not renameable
             const refs = findReferences(text, { line: 2, character: 17 }, TEST_URI, true);
             expect(refs).toHaveLength(0);
         });
@@ -179,7 +179,7 @@ LAF my_func END
             };
 
             const index = new ReferencesIndex();
-            // Same URI as TEST_URI — should be filtered out (loc.uri !== uri check)
+            // Same URI as TEST_URI - should be filtered out (loc.uri !== uri check)
             index.updateFile(normalizeUri(TEST_URI), new Map([["my_func", [selfLoc]]]));
 
             const refs = findReferences(text, { line: 1, character: 23 }, TEST_URI, true, index);
@@ -210,7 +210,7 @@ OUTER_SET result = %my_var% + 1
                 ]),
             );
 
-            // cursor on variable declaration — kind is "variable", not "function"
+            // cursor on variable declaration - kind is "variable", not "function"
             const refs = findReferences(text, { line: 1, character: 10 }, TEST_URI, true, index);
             // No cross-file refs for variable symbols
             const crossRefs = refs.filter((r) => r.uri === otherUri);

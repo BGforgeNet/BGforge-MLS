@@ -2,7 +2,7 @@
  * Writer helpers for serialising ItmCanonicalDocument back to ITM v1 bytes.
  *
  * Recomputes the derived header fields (`extendedHeadersOffset/Count`,
- * `featureBlocksOffset`) from the doc shape via `enforceDerivedFields` —
+ * `featureBlocksOffset`) from the doc shape via `enforceDerivedFields` -
  * a hand-edited canonical doc with stale or wrong offsets cannot produce
  * a corrupt file; the recompute fills in the truth. `featureBlocksIndex`
  * and `featureBlocksCount` encode the *equipping* effect subset (per IESDP

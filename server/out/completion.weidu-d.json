@@ -318,7 +318,7 @@
         "category": "keywords",
         "documentation": {
             "kind": "markdown",
-            "value": "```weidu-d-tooltip\nEND\n```\nBlock terminator for APPEND, EXTEND_TOP, EXTEND_BOTTOM, state, ALTER_TRANS, and other constructs.\n\n---\nChain epilogue: `END transition list` — execute the given transitions after the final state in the CHAIN."
+            "value": "```weidu-d-tooltip\nEND\n```\nBlock terminator for APPEND, EXTEND_TOP, EXTEND_BOTTOM, state, ALTER_TRANS, and other constructs.\n\n---\nChain epilogue: `END transition list` - execute the given transitions after the final state in the CHAIN."
         }
     },
     {
@@ -519,7 +519,7 @@
         "category": "trans_next",
         "documentation": {
             "kind": "markdown",
-            "value": "```weidu-d-tooltip\nEXTERN [ IF_FILE_EXISTS ] filename stateLabel\n```\nThe dialogue continues at the state with label stateLabel in the file filename.DLG. The whole transition is not compiled if there's IF_FILE_EXISTS and the file filename doesn't exist.\n\n---\nChain epilogue: `EXTERN filename stateNumber` — transfer to the given state in the given dialogue file."
+            "value": "```weidu-d-tooltip\nEXTERN [ IF_FILE_EXISTS ] filename stateLabel\n```\nThe dialogue continues at the state with label stateLabel in the file filename.DLG. The whole transition is not compiled if there's IF_FILE_EXISTS and the file filename doesn't exist.\n\n---\nChain epilogue: `EXTERN filename stateNumber` - transfer to the given state in the given dialogue file."
         }
     },
     {

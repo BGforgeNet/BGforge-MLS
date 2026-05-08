@@ -2,9 +2,9 @@
  * Property-based tests for the Fallout SSL document symbol extractor.
  *
  * Three properties are verified:
- *   1. No-crash   — arbitrary string input does not throw; returns an array.
- *   2. Range sanity — every symbol's location ranges are non-negative and ordered.
- *   3. Idempotence — calling getDocumentSymbols twice on the same text returns
+ *   1. No-crash   - arbitrary string input does not throw; returns an array.
+ *   2. Range sanity - every symbol's location ranges are non-negative and ordered.
+ *   3. Idempotence - calling getDocumentSymbols twice on the same text returns
  *                    deep-equal results (no hidden mutable state).
  *
  * numRuns capped at 50 per property to keep the suite under ~500ms.
@@ -53,7 +53,7 @@ const sslFragments: fc.Arbitrary<string> = fc.oneof(
     fc.constant(""),
 );
 
-/** Concatenates 1–5 fragments with newlines. */
+/** Concatenates 1-5 fragments with newlines. */
 const arbSslText: fc.Arbitrary<string> = fc
     .array(sslFragments, { minLength: 1, maxLength: 5 })
     .map((parts) => parts.join("\n"));

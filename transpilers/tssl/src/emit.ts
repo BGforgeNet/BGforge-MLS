@@ -479,7 +479,7 @@ function processFunctionBody(bodyNode: Node, indent: string = "", ctx: TsslConte
                 result += `${indent}break;\n`;
                 break;
             case SyntaxKind.EmptyStatement:
-                // bare `;` — no output needed
+                // bare `;` - no output needed
                 break;
             default:
                 throw new Error(

@@ -328,7 +328,7 @@ function buildParamTable(
     const mapVarRows = (params: { name: string; defaultValue?: string }[], defaultType: string): readonly VarRow[] =>
         params.map((p) => {
             const jsdoc = jsdocArgs.get(p.name);
-            // Hide default value for required params (don't show _required_ — user code
+            // Hide default value for required params (don't show _required_ - user code
             // can have required params with syntactic defaults that shouldn't be shown)
             const showDefault = !jsdoc?.required && p.defaultValue !== undefined;
             return {

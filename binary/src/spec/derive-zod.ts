@@ -7,11 +7,11 @@ import { isArraySpec, isCharsSpec, isFromFieldCount, type FieldSpec, type SpecDa
 /**
  * Validation strictness for `toZodSchema`.
  *
- * - **`"strict"`** (default) — full refinement: codec range, packed bit width,
+ * - **`"strict"`** (default) - full refinement: codec range, packed bit width,
  *   array length, strictObject keys, plus value-level checks (enum membership,
  *   domain bounds, linked-count consistency). Used by canonical-writers to
  *   gate bytes that are about to be saved.
- * - **`"permissive"`** — structural refinements only; value-level refinements
+ * - **`"permissive"`** - structural refinements only; value-level refinements
  *   are dropped. Used by canonical-doc creation from parsed bytes and by
  *   snapshot load, so a file with an out-of-enum or out-of-domain value still
  *   produces a walkable canonical doc. The save path is the strict gate; the
@@ -91,7 +91,7 @@ function fieldSpecToZod(fs: FieldSpec, mode: "strict" | "permissive"): z.ZodType
         // bit); `flagsRaw` is an optional hex string carrying any wire bits
         // the spec table doesn't name. The strict-disjoint invariant (named
         // bits never appear in `flagsRaw`) is enforced by `flagArrayToInt`
-        // at the wire boundary; the schema gates shape only — uniqueness and
+        // at the wire boundary; the schema gates shape only - uniqueness and
         // codec-bound `flagsRaw` width.
         return flagArrayZodSchema(fs.flags, codecByteLength(fs.codec) * 8);
     }
@@ -101,16 +101,16 @@ function fieldSpecToZod(fs: FieldSpec, mode: "strict" | "permissive"): z.ZodType
         // still surfaces "Unknown (N)" in the display tree, but committing a
         // value back to bytes is rejected here so .pro.json snapshots stay
         // round-trippable. Open enums (`enumOpen: true`, e.g. effect opcodes,
-        // ITM type) skip this refinement — the table is advisory, not
+        // ITM type) skip this refinement - the table is advisory, not
         // exhaustive.
         //
         // Enums stay numeric in canonical-doc by design: half the enum fields
         // drive dispatch (`objectType`, `subType`, `scriptType`, MAP `version`
         // / `rotation` / `elevation`) and have to convert to int at every
         // dispatch site if projected to strings. The diff-friendliness gain
-        // from named projection is also marginal compared to flags — toggling
-        // an enum changes one number to another (`5 → 0`) at the same line
-        // count as `"Items" → "Background"`. The display layer's `enum` table
+        // from named projection is also marginal compared to flags - toggling
+        // an enum changes one number to another (`5 -> 0`) at the same line
+        // count as `"Items" -> "Background"`. The display layer's `enum` table
         // resolves names for dropdowns and hover; the snapshot stays close to
         // the wire.
         const allowed = new Set(Object.keys(fs.enum).map(Number));
@@ -123,7 +123,7 @@ function fieldSpecToZod(fs: FieldSpec, mode: "strict" | "permissive"): z.ZodType
     }
     // Packed-field parts: bounds come from bitRange (unsigned bit field),
     // not from the wire codec's full numeric range. The wire codec on a
-    // packed part is the SLOT codec (e.g., u32 for a 26-bit subfield) —
+    // packed part is the SLOT codec (e.g., u32 for a 26-bit subfield) -
     // applying its range would let `destTile = 0x04000000` pass even though
     // it overflows the 26-bit slot. The bit-width bound is structural (the
     // value cannot fit in the wire slot) so it stays in permissive mode too.
@@ -167,13 +167,13 @@ export function enumValueZodSchema(
     // value already satisfies:
     //   1. `z.literal("foo")` types as `ZodLiteral<"foo">`, which is not
     //      assignable to the wider `ZodType<string | number>` declared as
-    //      this function's return — even though every literal accepts a
+    //      this function's return - even though every literal accepts a
     //      string at runtime.
     //   2. `z.union(...)` requires its argument typed as the tuple
     //      `[ZodType, ZodType, ...ZodType[]]` (min two members). We've
     //      already filtered the empty case above, so when we reach a union
     //      call `literalSchemas.length >= 2` and the runtime tuple shape is
-    //      satisfied; TS just can't see through `Array<ZodType>` → tuple.
+    //      satisfied; TS just can't see through `Array<ZodType>` -> tuple.
     if (closedStrict) {
         return literalSchemas.length === 1
             ? (literalSchemas[0] as unknown as z.ZodType<string | number>)
@@ -192,7 +192,7 @@ export function enumValueZodSchema(
  * Build the zod schema for a flag-array canonical-doc field. Exported so
  * hand-written canonical schemas (e.g. MAP) can declare flag fields without
  * re-deriving the shape from a spec entry. `codecBitWidth` is 8 / 16 / 24 / 32
- * — must match the wire codec's width so `flagsRaw` cannot carry bits outside
+ * - must match the wire codec's width so `flagsRaw` cannot carry bits outside
  * the wire word. Sort order is the writer's responsibility (`intToFlagArray`
  * emits alphabetically); the schema enforces uniqueness but accepts any order
  * so a hand-edit doesn't fail validation just for inserting a name in the
@@ -222,7 +222,7 @@ export function flagArrayZodSchema(
         .optional();
     // strictObject inference produces a wrapper-typed schema whose `flags`
     // element is `ZodEnum<...>` (or `ZodLiteral`/`ZodNever` in the edge
-    // cases above) — TS cannot widen those to `string[]` directly. The
+    // cases above) - TS cannot widen those to `string[]` directly. The
     // runtime shape is exactly `{flags: string[]; flagsRaw?: string}` per
     // the field constructions above.
     return z.strictObject({

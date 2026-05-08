@@ -48,7 +48,7 @@ describe("REGEX_TRA_REF: regex behaviour", () => {
     it("matches @42 in source text", () => {
         const re = REGEX_TRA_REF("42");
         const matches = "use @42 here, also @421".match(re);
-        // Only @42 should match — @421 fails the (?!\\d) lookahead.
+        // Only @42 should match - @421 fails the (?!\\d) lookahead.
         expect(matches).toEqual(["@42"]);
     });
 
@@ -79,7 +79,7 @@ describe("REGEX_MSG_REF: regex behaviour", () => {
 
     it("rejects partial-prefix matches via (?!\\d)", () => {
         const re = REGEX_MSG_REF("12");
-        // mstr(123) should NOT count as a match for entry 12 — the lookahead blocks it.
+        // mstr(123) should NOT count as a match for entry 12 - the lookahead blocks it.
         expect("mstr(123)".match(re)).toBeNull();
     });
 });

@@ -2,11 +2,11 @@
  * Incomplete-object marker on the parsed display tree.
  *
  * Item and Scenery records carry a subtype-keyed trailer whose layout depends
- * on the referenced `.pro`. The bundled `pid → subType` table resolves vanilla
+ * on the referenced `.pro`. The bundled `pid -> subType` table resolves vanilla
  * pids; for modded or unknown pids the resolver returns `undefined` and the
  * parser falls back to its legacy bail. The bailed group's already-decoded
  * fields still render so the user can inspect them, but the enclosing group
- * is marked `editingLocked` — field edits are unsafe when the trailing-byte
+ * is marked `editingLocked` - field edits are unsafe when the trailing-byte
  * width is unknown (changing `inventoryLength` or the upper byte of `pid`
  * would re-interpret the opaque trailer on reparse). Wall / Tile records
  * have no subtype trailer (fallout2-ce's `objectDataRead` switch doesn't

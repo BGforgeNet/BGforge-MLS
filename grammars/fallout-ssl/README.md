@@ -82,13 +82,13 @@ This is enforced by the external scanner (`src/scanner.c`).
 
 #### Omitting the trailing `;` in macro bodies
 
-The C preprocessor performs textual substitution — the macro body is pasted into the
+The C preprocessor performs textual substitution - the macro body is pasted into the
 call site as-is. Whether a trailing `;` is needed depends on how the macro is invoked,
 not on the macro body itself. It is therefore common to omit the final `;`:
 
 ```ssl
-#define set_counter  counter := 0    // no ; — pasted as-is at call site
-#define reset        x := 0; y := 0  // ; on all but last — valid
+#define set_counter  counter := 0    // no ; - pasted as-is at call site
+#define reset        x := 0; y := 0  // ; on all but last - valid
 ```
 
 The grammar supports this for the simple case where the final statement is a top-level
@@ -98,7 +98,7 @@ assignment directly inside the macro body.
 grammar does not handle it and will produce a parse error:
 
 ```ssl
-// NOT supported — assignment inside else branch lacks ;
+// NOT supported - assignment inside else branch lacks ;
 #define set_obj  if (x) then a := 1 else a := 0
 ```
 
@@ -527,7 +527,7 @@ and or not bwand bwor bwxor bwnot
 
 ### Technical Notes
 
-SSL does not formally reserve most keywords — the language spec allows identifiers
+SSL does not formally reserve most keywords - the language spec allows identifiers
 like `default` or `begin` as variable names. However, tree-sitter's `word` property
 (set to `$.identifier`) causes the lexer to prefer a keyword token over the identifier
 token whenever that keyword appears in the current lookahead set. In practice, keywords
@@ -536,15 +536,15 @@ because a `switch` statement can appear anywhere a statement is expected.
 
 Tree-sitter's regex-based lexer cannot exclude keywords from the identifier pattern
 (negative lookahead is not supported). The formatter detects keyword-as-identifier
-usage and reports it as an error — this semantic check keeps the grammar simple.
+usage and reports it as an error - this semantic check keeps the grammar simple.
 
 #### External Scanner
 
 `src/scanner.c` handles three tokens:
 
-- **`_newline`** — newlines outside `#define` bodies (treated as whitespace via `extras`)
-- **`_line_end`** — newline inside a `#define` body (terminates the macro)
-- **`_token_paste`** — the `##` operator; only emitted when `_line_end` is also valid
+- **`_newline`** - newlines outside `#define` bodies (treated as whitespace via `extras`)
+- **`_line_end`** - newline inside a `#define` body (terminates the macro)
+- **`_token_paste`** - the `##` operator; only emitted when `_line_end` is also valid
   (i.e. inside a `#define` body), making `##` context-sensitive
 
 The scanner runs in both native and WASM builds. `TREE_SITTER_WASM` is not defined

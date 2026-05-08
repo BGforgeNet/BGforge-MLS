@@ -187,12 +187,12 @@ function replaceEnumPropertyAccesses(sourceFile: SourceFile, enumInfos: readonly
  * 1. Replaces those var/let/const statements with individual `var EnumName_Member = value;`
  * 2. Replaces remaining `EnumName.Member` property accesses with `EnumName_Member`
  * 3. For externalized enums (from .d.ts files), strips the enum prefix:
- *    `ClassID.ANKHEG` → `ANKHEG` (keeps symbolic name for the game engine)
+ *    `ClassID.ANKHEG` -> `ANKHEG` (keeps symbolic name for the game engine)
  *
  * @param code Post-bundled code from esbuild
  * @param enumNames Set of bundled enum names to look for (have compat objects)
  * @param externalEnumNames Set of externalized enum names from .d.ts files
- *   (no compat objects — prefix is stripped instead of replaced with underscore)
+ *   (no compat objects - prefix is stripped instead of replaced with underscore)
  * @returns Expanded code
  */
 export function expandEnumPropertyAccess(
@@ -257,7 +257,7 @@ export function expandEnumPropertyAccess(
 
         const usedMembers = referencedMembers.get(name);
 
-        // No members referenced — remove the compat object entirely
+        // No members referenced - remove the compat object entirely
         if (!usedMembers || usedMembers.size === 0) {
             varStmt.remove();
             continue;
@@ -294,7 +294,7 @@ export function expandEnumPropertyAccess(
     }
 
     // Strip prefix for externalized enums (declare enum from .d.ts files).
-    // These have no compat object in the bundled code — just bare Enum.Member
+    // These have no compat object in the bundled code - just bare Enum.Member
     // property accesses that need to become bare Member identifiers.
     if (externalEnumNames.size > 0) {
         stripExternalEnumPrefixes(sourceFile, externalEnumNames);
@@ -305,12 +305,12 @@ export function expandEnumPropertyAccess(
 
 /**
  * Strip enum prefix from externalized enum property accesses.
- * `ClassID.ANKHEG` → `ANKHEG` (keeps the symbolic member name for the game engine).
+ * `ClassID.ANKHEG` -> `ANKHEG` (keeps the symbolic member name for the game engine).
  *
  * Externalized enums come from `declare enum` in .d.ts files. esbuild drops them
  * entirely, leaving bare `Enum.Member` property accesses in the output. Unlike
  * bundled enums (which get `Enum_Member = value` flat vars), externalized enums
- * need to keep the symbolic name — the game engine resolves them at runtime.
+ * need to keep the symbolic name - the game engine resolves them at runtime.
  */
 function stripExternalEnumPrefixes(sourceFile: SourceFile, externalEnumNames: ReadonlySet<string>): void {
     const accesses = sourceFile.getDescendantsOfKind(SyntaxKind.PropertyAccessExpression);
@@ -324,7 +324,7 @@ function stripExternalEnumPrefixes(sourceFile: SourceFile, externalEnumNames: Re
 
         const objName = expr.getText();
         if (externalEnumNames.has(objName)) {
-            // Strip prefix: ClassID.ANKHEG → ANKHEG
+            // Strip prefix: ClassID.ANKHEG -> ANKHEG
             access.replaceWithText(access.getName());
         }
     }

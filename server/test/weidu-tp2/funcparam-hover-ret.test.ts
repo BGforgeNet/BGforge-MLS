@@ -78,7 +78,7 @@ END
 
     it("returns hover with @arg description for RET parameter", () => {
         // @arg overrides description on the RET branch (@return tag layout depends on
-        // the JSDoc parser's grammar — exercise the description-fallback path instead).
+        // the JSDoc parser's grammar - exercise the description-fallback path instead).
         const headerText = `
 /**
  * @arg out_value computed result token
@@ -180,8 +180,8 @@ END
         const position: Position = { line: 1, character: 8 };
         const result = weiduTp2Provider.hover?.(text, "INT_VAR", uri, position);
 
-        // Symbol "INT_VAR" is not a parameter — hover should not be handled by funcparam path.
-        // Either not handled or fall-through — the test is that it does not pretend to be a param.
+        // Symbol "INT_VAR" is not a parameter - hover should not be handled by funcparam path.
+        // Either not handled or fall-through - the test is that it does not pretend to be a param.
         if (result?.handled) {
             expect(hoverValue(result)).not.toContain("int INT_VAR");
         }

@@ -18,7 +18,7 @@ export type { SSLDialogData as DialogData };
 
 // Membership sets for SSL option/message types. Using ReadonlySet<string>
 // (rather than Set<SSLDialogOptionType>) lets the .has() check act as a
-// type guard via `isOptionFn`/`isMessageFn` below — no `as` cast needed.
+// type guard via `isOptionFn`/`isMessageFn` below - no `as` cast needed.
 const OPTION_FN_NAMES: ReadonlySet<string> = new Set<SSLDialogOptionType>([
     "NOption",
     "NLowOption",
@@ -125,7 +125,7 @@ function parseProcedure(proc: SyntaxNode, name: string): SSLDialogNode {
                 });
             }
 
-            // NOption, GOption, BOption, and Low variants — narrows funcName.
+            // NOption, GOption, BOption, and Low variants - narrows funcName.
             if (isOptionFn(funcName) && arg0 && arg1) {
                 const target = arg1.text;
                 options.push({
@@ -137,7 +137,7 @@ function parseProcedure(proc: SyntaxNode, name: string): SSLDialogNode {
                 });
             }
 
-            // NMessage, GMessage, BMessage (terminal) — narrows funcName.
+            // NMessage, GMessage, BMessage (terminal) - narrows funcName.
             if (isMessageFn(funcName) && arg0) {
                 options.push({
                     type: funcName,

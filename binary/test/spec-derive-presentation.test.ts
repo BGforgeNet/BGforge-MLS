@@ -43,7 +43,7 @@ describe("toPresentationEntries", () => {
         const pres: StructPresentation<T> = {
             a: { format: "hex32" },
             b: { editable: false },
-            // c has no overrides — should be omitted entirely.
+            // c has no overrides - should be omitted entirely.
         };
 
         expect(toPresentationEntries(spec, pres, "pro.header")).toEqual({
@@ -64,7 +64,7 @@ describe("toPresentationEntries", () => {
     it("emits editable: false for fields with a non-data role", () => {
         // Structural fields (offsets, counts, indexes into sibling tables) are
         // declared with a `role` on the spec. The role is the source of truth
-        // for "this is a derived field, not user-meaningful data" — the editor
+        // for "this is a derived field, not user-meaningful data" - the editor
         // must lock such fields, and the canonical writer must recompute them.
         // Presentation derivation translates the role into `editable: false`
         // so the editor's existing presentation pipeline picks it up without

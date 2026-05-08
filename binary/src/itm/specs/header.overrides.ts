@@ -25,7 +25,7 @@ export const itmHeaderSpecAnnotated = {
     flags: { ...itmHeaderSpec.flags, flags: ItmFlags },
     // ItmType is backed by `itemtype.2da` which mods can extend with custom
     // item categories; the engine accepts any 16-bit value. Display lookup
-    // only — strict canonical mode does not reject unrecognised types.
+    // only - strict canonical mode does not reject unrecognised types.
     type: { ...itmHeaderSpec.type, enum: ItmType, enumOpen: true },
     // Usability flags is a 4-byte block where each byte carries a distinct
     // flag table per IESDP. Slots view with per-slot element overrides
@@ -63,7 +63,7 @@ export const itmHeaderSpecAnnotated = {
         derivedFrom: { section: "effects" } as const,
     },
     // featureBlocksIndex partitions effects between equipped (global) and
-    // ability-triggered subsets — see IESDP. The split is decided at the
+    // ability-triggered subsets - see IESDP. The split is decided at the
     // canonical-doc level, not by a single sibling array's length, but the
     // value remains derived rather than user data; the writer is responsible
     // for emitting it correctly. Locking the editor input is still right.

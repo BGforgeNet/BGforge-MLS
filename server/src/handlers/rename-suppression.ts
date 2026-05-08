@@ -24,10 +24,10 @@ export interface RenameSuppression {
     markAffected(uris: Iterable<NormalizedUri>): void;
     /**
      * Returns true if the URI is tracked and removes it from the set.
-     * Called by onDidSave — after save, subsequent edits should compile normally.
+     * Called by onDidSave - after save, subsequent edits should compile normally.
      */
     consumeAffected(uri: NormalizedUri): boolean;
-    /** Non-consuming check used by onDidChangeContent — keep the URI tracked for the later save. */
+    /** Non-consuming check used by onDidChangeContent - keep the URI tracked for the later save. */
     isAffected(uri: NormalizedUri): boolean;
     /** Clear timer. Called once at shutdown; the instance is unusable after dispose. */
     dispose(): void;

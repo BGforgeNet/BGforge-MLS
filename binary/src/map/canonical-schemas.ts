@@ -116,7 +116,7 @@ export const mapObjectBaseSchema = z.strictObject({
     scriptIndex: int32Schema,
 });
 
-// Derived from inventoryHeaderSpec / critterDataSpec — both are plain
+// Derived from inventoryHeaderSpec / critterDataSpec - both are plain
 // int32 fields with no enum or flags refinement, so the spec system's
 // derived zod produces an identical strictObject without duplicating
 // the field list.
@@ -150,9 +150,9 @@ const mapExitGridSchema = z.strictObject({
 // Stores the trailing per-subtype payload of an item/scenery record. `values`
 // holds the raw int32 fields in wire order (length 0/1/2 depending on subType
 // + map version); the writer emits exactly those bytes. `subType` is recorded
-// so a snapshot reparse can rebuild a pid → subType resolver from the
+// so a snapshot reparse can rebuild a pid -> subType resolver from the
 // document itself, without consulting the original filesystem-backed
-// resolver — the canonical doc is otherwise self-describing for round-trip.
+// resolver - the canonical doc is otherwise self-describing for round-trip.
 const mapSubtypeDataSchema = z.strictObject({
     subType: int32Schema,
     values: z.array(int32Schema),

@@ -9,7 +9,7 @@ import type { SSLDialogData, SSLDialogNode, SSLDialogOption } from "../../../sha
 import { escapeHtml, registerDialogPanel, type DialogPreviewController } from "./shared";
 
 // ---------------------------------------------------------------------------
-// Data model — shared with server/src/dialog.ts via shared/dialog-types.ts.
+// Data model - shared with server/src/dialog.ts via shared/dialog-types.ts.
 // Re-export under shorter local names so the rest of this module reads naturally.
 // ---------------------------------------------------------------------------
 

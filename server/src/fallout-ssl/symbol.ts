@@ -2,7 +2,7 @@
  * Document symbol provider for Fallout SSL files.
  * Extracts procedures (with local variables as children), macros, and global
  * variables. Procedure children include params, variable declarations, and
- * for loop declarations — all as flat children (two-level nesting max).
+ * for loop declarations - all as flat children (two-level nesting max).
  * Only actual declarations (using the `variable` keyword) are collected,
  * not assignments or loop iteration variables.
  */
@@ -36,7 +36,7 @@ function makeSymbol(
 
 /**
  * Collect all variable declarations inside a procedure body as flat DocumentSymbol children.
- * Walks recursively — variables inside conditionals/loops still belong to the procedure.
+ * Walks recursively - variables inside conditionals/loops still belong to the procedure.
  * No deduplication needed: SSL requires the `variable` keyword for declarations,
  * and the compiler rejects redeclarations within the same procedure.
  */
@@ -125,8 +125,8 @@ function extractSymbols(root: Node): DocumentSymbol[] {
                     const macro = macros.find((m) => m.name === name);
                     if (!macro) continue;
 
-                    // Determine symbol kind: parameterized macros → Method,
-                    // constant-like macros → Constant
+                    // Determine symbol kind: parameterized macros -> Method,
+                    // constant-like macros -> Constant
                     const kind = macro.hasParams ? SymbolKind.Method : SymbolKind.Constant;
 
                     const sym = makeSymbol(child, nameNode, kind);

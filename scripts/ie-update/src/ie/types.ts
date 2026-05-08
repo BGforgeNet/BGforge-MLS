@@ -36,9 +36,9 @@ export interface OffsetItem {
     readonly length?: number;
     readonly mult?: number;
     readonly id?: string;
-    /** Truthy marker — YAML data uses 1, not true */
+    /** Truthy marker - YAML data uses 1, not true */
     readonly unused?: number | boolean;
-    /** Truthy marker — YAML data uses 1, not true */
+    /** Truthy marker - YAML data uses 1, not true */
     readonly unknown?: number | boolean;
 }
 
@@ -109,7 +109,7 @@ export interface FuncParam {
     readonly desc: string;
     readonly type: string;
     readonly required?: number;
-    /** Default value — may be string or number in YAML data */
+    /** Default value - may be string or number in YAML data */
     readonly default?: string | number;
 }
 

@@ -16,7 +16,7 @@ import { SyntaxType } from "./tree-sitter.d";
 /** Macro definition types (subset of function defs). */
 const MACRO_DEF_TYPES: ReadonlySet<string> = new Set([SyntaxType.ActionDefineMacro, SyntaxType.ActionDefinePatchMacro]);
 
-/** Array definition types — shown with Array icon in outline. */
+/** Array definition types - shown with Array icon in outline. */
 const ARRAY_DEF_TYPES: ReadonlySet<string> = new Set([
     SyntaxType.ActionDefineArray,
     SyntaxType.ActionDefineAssociativeArray,
@@ -112,7 +112,7 @@ function firstIdentifierFromVarNodes(node: Node): Node | null {
 
 /**
  * Determine SymbolKind for a variable-assigning node.
- * Arrays → Array, constant-like names → Constant, rest → Variable.
+ * Arrays -> Array, constant-like names -> Constant, rest -> Variable.
  * Constant heuristic: first word fully uppercase (see tree-utils.ts:looksLikeConstant,
  * weidu-tp2.tmLanguage.yml:set-sprint-constant-vars, hover.ts:buildVariableHover).
  */
@@ -149,14 +149,14 @@ function extractVarNameNode(node: Node): Node | null {
 
 /**
  * Extract file-level variable symbols from a node, recursing into children.
- * TP2 variables are global — assignments inside conditionals/loops are still file-level.
+ * TP2 variables are global - assignments inside conditionals/loops are still file-level.
  * Skips function/macro definitions (those have their own scope via collectBodyVars).
- * Uses `seen` set to deduplicate — only the first occurrence of each variable is collected.
+ * Uses `seen` set to deduplicate - only the first occurrence of each variable is collected.
  */
 function extractFileLevelVars(node: Node, seen: Set<string>): DocumentSymbol[] {
     const results: DocumentSymbol[] = [];
 
-    // Skip variable extraction from error-recovery nodes — tree-sitter can wrap garbage
+    // Skip variable extraction from error-recovery nodes - tree-sitter can wrap garbage
     // text in valid-looking node types (e.g. patch_assignment) with hasError set.
     // Still recurse into children: a parent ACTION_IF may have errors but contain valid vars.
     if (!node.hasError && FILE_LEVEL_VAR_TYPES.has(node.type)) {
@@ -205,7 +205,7 @@ function collectFuncParams(funcNode: Node, funcName: string, seen: Set<string>):
         for (const paramChild of child.children) {
             if (paramChild.type === SyntaxType.Identifier && paramChild.text && !seen.has(paramChild.text)) {
                 seen.add(paramChild.text);
-                // Use identifier node for range too — all params share the parent
+                // Use identifier node for range too - all params share the parent
                 // decl node range, which causes VSCode to sort alphabetically.
                 const sym = makeVarSymbol(paramChild, paramChild, funcName);
                 if (sym) params.push(sym);
@@ -217,8 +217,8 @@ function collectFuncParams(funcNode: Node, funcName: string, seen: Set<string>):
 
 /**
  * Collect all variable declarations inside a function/macro body as flat children.
- * Walks recursively — variables inside conditionals/loops still belong to the function.
- * Uses `seen` set to deduplicate — only the first occurrence of each variable is collected.
+ * Walks recursively - variables inside conditionals/loops still belong to the function.
+ * Uses `seen` set to deduplicate - only the first occurrence of each variable is collected.
  */
 function collectBodyVars(node: Node, parentName: string, seen: Set<string> = new Set()): DocumentSymbol[] {
     const vars: DocumentSymbol[] = [];
@@ -245,7 +245,7 @@ function collectBodyVars(node: Node, parentName: string, seen: Set<string> = new
         }
     }
 
-    // Spread is fine here — TP2 ASTs are shallow (typically 3-5 levels deep).
+    // Spread is fine here - TP2 ASTs are shallow (typically 3-5 levels deep).
     for (const child of node.children) {
         vars.push(...collectBodyVars(child, parentName, seen));
     }

@@ -1,5 +1,5 @@
 /**
- * @bgforge/transpile — public API.
+ * @bgforge/transpile - public API.
  *
  * Wraps the four internal transpiler workspace packages (common, tssl, tbaf,
  * td). The internal packages stay private; their code is bundled into this

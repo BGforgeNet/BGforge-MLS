@@ -25,8 +25,8 @@ const TBAF_CODE_MARKER = "/* __TBAF_CODE_START__ */";
 /**
  * Bundle a TBAF file and its imports into a single TypeScript string.
  *
- * Skips bundling for files without imports — esbuild tree-shakes block-scoped
- * functions and applies number folding (1000 → 1e3) that breaks transpiler output.
+ * Skips bundling for files without imports - esbuild tree-shakes block-scoped
+ * functions and applies number folding (1000 -> 1e3) that breaks transpiler output.
  *
  * @param filePath Absolute path to the .tbaf/.td file
  * @param sourceText Content of the source file
@@ -68,7 +68,7 @@ export async function bundle(filePath: string, sourceText: string): Promise<stri
 
 /**
  * Resolve and load .tbaf imports as TypeScript, transforming enums.
- * No custom namespace — keeps resolution simple so noSideEffectsPlugin's
+ * No custom namespace - keeps resolution simple so noSideEffectsPlugin's
  * build.resolve() can use esbuild's default resolver for all imports.
  */
 function tbafResolverPlugin(sharedEnumNames: Set<string>): esbuild.Plugin {
@@ -109,14 +109,14 @@ function tsExtensionResolverPlugin(sharedExternalEnumNames: Set<string>): esbuil
             build.onResolve({ filter: /^\./ }, (args) => {
                 if (path.extname(args.path)) return null;
                 const base = path.resolve(args.resolveDir, args.path);
-                // .d.ts — declaration file, externalize it
+                // .d.ts - declaration file, externalize it
                 if (fs.existsSync(base + ".d.ts")) {
                     collectDeclareEnums(base + ".d.ts", sharedExternalEnumNames);
                     return { path: args.path + ".d.ts", external: true };
                 }
-                // .ts — regular source, bundle it
+                // .ts - regular source, bundle it
                 if (fs.existsSync(base + ".ts")) return { path: base + ".ts" };
-                // index.ts — directory import
+                // index.ts - directory import
                 const indexTs = path.join(base, "index.ts");
                 if (fs.existsSync(indexTs)) return { path: indexTs };
                 return null;

@@ -11,8 +11,8 @@ TypeScript Language Service Plugin for `.tssl` (TypeScript-to-SSL transpiler) fi
 
 Intercepts tsserver via a `Proxy` on `LanguageService`:
 
-- `getSemanticDiagnostics` — filters out TS6133 for names in `fallout-ssl-engine-procedures.json`
-- `getQuickInfoAtPosition` — appends engine procedure docs from `fallout-ssl-engine-proc-docs.json`
+- `getSemanticDiagnostics` - filters out TS6133 for names in `fallout-ssl-engine-procedures.json`
+- `getQuickInfoAtPosition` - appends engine procedure docs from `fallout-ssl-engine-proc-docs.json`
 
 Only active for `.tssl` files; passes through unchanged for other file types.
 
@@ -28,8 +28,8 @@ Only active for `.tssl` files; passes through unchanged for other file types.
 
 Bundled by esbuild as a standalone CJS module. Two outputs:
 
-- `node_modules/bgforge-tssl-plugin/index.js` — loaded by tsserver in VSCode
-- `server/out/tssl-plugin.js` — bundled into `@bgforge/mls-server` for other editors
+- `node_modules/bgforge-tssl-plugin/index.js` - loaded by tsserver in VSCode
+- `server/out/tssl-plugin.js` - bundled into `@bgforge/mls-server` for other editors
 
 Build dependency: `fallout-ssl-engine-procedures.json` and `fallout-ssl-engine-proc-docs.json` must be generated from YAML before bundling (done by `generate-data.sh`).
 

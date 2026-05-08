@@ -30,7 +30,7 @@ describe("weidu-d/hover", () => {
             "END",
         ].join("\n");
 
-        // Cursor on "greeting" label (line 3, char 25 — inside "greeting" at col 23-30)
+        // Cursor on "greeting" label (line 3, char 25 - inside "greeting" at col 23-30)
         const result = getStateLabelHover(text, "greeting", URI, { line: 3, character: 25 });
 
         expect(result.handled).toBe(true);
@@ -85,7 +85,7 @@ describe("weidu-d/hover", () => {
     it("returns notHandled for non-state symbols", () => {
         const text = ["BEGIN ~DIALOG~", "", "IF ~~ THEN BEGIN s1", "    SAY ~Hello~", "END"].join("\n");
 
-        // Cursor on SAY keyword — not a state label
+        // Cursor on SAY keyword - not a state label
         const result = getStateLabelHover(text, "SAY", URI, { line: 3, character: 5 });
 
         expect(result.handled).toBe(false);
@@ -145,7 +145,7 @@ describe("weidu-d/hover", () => {
 
     it("returns notHandled when label is a GOTO to an undefined state (no definition found)", () => {
         // The cursor is on "missing_state" in GOTO, but there is no state definition for it.
-        // findStateInDialog returns null → line 48 return HR.notHandled()
+        // findStateInDialog returns null -> line 48 return HR.notHandled()
         const text = [
             "BEGIN ~DIALOG~",
             "",
@@ -161,7 +161,7 @@ describe("weidu-d/hover", () => {
     });
 
     it("returns notHandled when JSDoc comment has no description body", () => {
-        // A JSDoc with only the delimiters and no text — jsdoc.desc is falsy → line 60
+        // A JSDoc with only the delimiters and no text - jsdoc.desc is falsy -> line 60
         const text = ["BEGIN ~DIALOG~", "", "/***/", "IF ~~ THEN BEGIN empty_jsdoc", "    SAY ~Hello~", "END"].join(
             "\n",
         );

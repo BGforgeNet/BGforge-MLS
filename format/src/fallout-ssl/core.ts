@@ -85,7 +85,7 @@ function contentEndRow(node: SyntaxNode): number {
 // js/polynomial-redos).
 function normalizePreprocessor(text: string): string {
     // Identify the trailing `[\r\n]*` tail, then search the body for a comment.
-    // The comment branches return `code + indent + comment`, with no tail —
+    // The comment branches return `code + indent + comment`, with no tail -
     // matching the original regexes' `[\r\n]*$` consumption.
     let tailStart = text.length;
     while (tailStart > 0) {
@@ -123,7 +123,7 @@ function normalizePreprocessor(text: string): string {
 
     // No comment branch: strip exactly one `\r?\n` at the end, matching the
     // original `text.replace(/\r?\n$/, "")`. Trailing newlines beyond the
-    // first are load-bearing — a multiline `#define` whose body ends with
+    // first are load-bearing - a multiline `#define` whose body ends with
     // `\<newline><blank-line-newline>` relies on that blank-continuation
     // newline to terminate the macro on the next reparse. Eating it would
     // make the parser merge the following directive into this one and break
@@ -186,7 +186,7 @@ export function formatDocument(node: SyntaxNode, options: FormatOptions = DEFAUL
         indent: " ".repeat(options.indentSize),
         lineLimit: options.lineLimit,
     };
-    // Strip \r from output — tree-sitter node.text preserves original line endings,
+    // Strip \r from output - tree-sitter node.text preserves original line endings,
     // but the formatter joins parts with \n. Mixed endings cause non-idempotent output.
     const text = formatNode(node, 0).replace(/\r/g, "");
     return { text };
@@ -296,7 +296,7 @@ function formatChildren(node: SyntaxNode, depth: number): string {
             let preprocessorText = normalizePreprocessor(child.text);
             // Check if next sibling is a line comment on the same line
             // Use contentEndRow: #define nodes include trailing \n, so endPosition.row
-            // is 1 past the content — would falsely match a comment on the next line.
+            // is 1 past the content - would falsely match a comment on the next line.
             if (
                 nextChild &&
                 nextChild.type === SyntaxType.LineComment &&

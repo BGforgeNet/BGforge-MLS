@@ -2,17 +2,17 @@
  * Shared file-derived ParseOptions builder.
  *
  * `ParseOptions` has two distinct axes:
- *   - **File-derived** — values that are a function of where the file sits
+ *   - **File-derived** - values that are a function of where the file sits
  *     on disk (which sibling resources exist, which mod tree it belongs to).
  *     Must agree across frontends; divergence here is always a bug.
- *   - **Frontend-preference** — values that legitimately differ per caller
+ *   - **Frontend-preference** - values that legitimately differ per caller
  *     (`skipMapTiles` for editor render perf, `gracefulMapBoundaries` for
  *     CLI flag exposure). These stay per-frontend.
  *
  * This module owns the file-derived axis. Both the CLI and the VS Code
  * editor call `buildFileDerivedParseOptions(filePath)` and merge their own
- * preferences on top. Adding a new file-derived behavior — e.g. scanning
- * a sibling manifest for proto-search-path overrides — is a single edit
+ * preferences on top. Adding a new file-derived behavior - e.g. scanning
+ * a sibling manifest for proto-search-path overrides - is a single edit
  * here that propagates to every caller.
  *
  * Today the only file-derived option is `pidResolver`, auto-loaded from
@@ -32,7 +32,7 @@ import type { ParseOptions } from "./types";
 export interface FileDerivedDiagnostics {
     /** Absolute path of the proto/ tree that was scanned. */
     readonly protoDir: string;
-    /** Stats reported by `loadProDirResolver` — files scanned, errors, duration. */
+    /** Stats reported by `loadProDirResolver` - files scanned, errors, duration. */
     readonly stats: ProResolverStats;
 }
 

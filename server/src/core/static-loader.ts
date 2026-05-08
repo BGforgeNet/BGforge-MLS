@@ -171,7 +171,7 @@ function convertToSymbol(item: StaticCompletionItem): IndexedSymbol {
     // Extract hover content from completion documentation (pre-formatted at build time)
     const hover = extractHover(item);
 
-    // Build completion item — derive documentation from hover (single source of truth).
+    // Build completion item - derive documentation from hover (single source of truth).
     // This ensures any transformations (e.g., callable prefix injection) are consistent.
     const completion: CompletionItemWithCategory = {
         label: name,

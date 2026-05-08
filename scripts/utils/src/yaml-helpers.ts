@@ -105,7 +105,7 @@ export function findFiles(
  * Parses a YAML document and rejects duplicate map keys (and any other
  * structural error) by throwing. The default `parseDocument` records errors
  * on `doc.errors` but still yields a deduplicated document, so editing
- * pipelines that read → mutate → serialise would silently drop one of the
+ * pipelines that read -> mutate -> serialise would silently drop one of the
  * duplicate entries on the next write. Use this whenever the parsed YAML
  * is going to be edited and re-emitted, or whenever a duplicate key would
  * indicate a data-source mistake (typo, copy-paste).
@@ -123,7 +123,7 @@ export function parseYamlDocStrict(
 
 /**
  * Creates a YAML Scalar node with literal block style (|-).
- * Matches Python ruamel.yaml's LiteralScalarString — always emits as a block scalar.
+ * Matches Python ruamel.yaml's LiteralScalarString - always emits as a block scalar.
  */
 export function makeBlockScalar(doc: Document, value: string): Scalar {
     const node = doc.createNode(value);

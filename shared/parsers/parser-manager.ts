@@ -47,7 +47,7 @@ class ParserManager {
 
     /**
      * Register a language parser with its WASM grammar file.
-     * Safe to call multiple times — subsequent calls for the same langId are no-ops.
+     * Safe to call multiple times - subsequent calls for the same langId are no-ops.
      */
     register(langId: string, wasmFileName: string, name: string): void {
         if (this.parsers.has(langId)) {
@@ -62,7 +62,7 @@ class ParserManager {
      * Used by per-language parser re-export modules so tests can init parsers
      * without going through the full server startup.
      *
-     * Not safe to call concurrently with initAll() — both await Language.load()
+     * Not safe to call concurrently with initAll() - both await Language.load()
      * which races on web-tree-sitter's shared TRANSFER_BUFFER. In practice this
      * is fine: the server calls initAll() once at startup, tests call initOne()
      * per language, and these paths never overlap.
@@ -81,19 +81,19 @@ class ParserManager {
      * web-tree-sitter uses a shared TRANSFER_BUFFER for JS/WASM communication
      * (see https://github.com/tree-sitter/tree-sitter/pull/570). When multiple
      * Language.load() calls run concurrently, they race on this buffer and
-     * corrupt parser state — parsing returns ERROR nodes for valid input.
+     * corrupt parser state - parsing returns ERROR nodes for valid input.
      *
      * This method owns the sequential constraint so callers don't need to
      * worry about it.
      */
     async initAll(): Promise<void> {
-        // Failures are logged but not re-thrown — matches the existing ProviderRegistry
+        // Failures are logged but not re-thrown - matches the existing ProviderRegistry
         // pattern. Providers guard all parser access with isInitialized() checks, so a
         // failed parser degrades gracefully (features return empty results) rather than
         // crashing the server.
         for (const parser of this.parsers.values()) {
             try {
-                // Tree-sitter WASM init must be sequential — parallel init
+                // Tree-sitter WASM init must be sequential - parallel init
                 // causes WASM memory corruption on some runtimes.
                 // eslint-disable-next-line no-await-in-loop
                 await parser.module.init();
@@ -121,7 +121,7 @@ class ParserManager {
     /**
      * Get the raw Parser instance for a language.
      * Throws if the parser is not registered or not initialized.
-     * Prefer parseWithCache() for normal usage — this is for cases that need
+     * Prefer parseWithCache() for normal usage - this is for cases that need
      * direct parser access (e.g., incremental parsing).
      */
     getParser(langId: string): Parser {

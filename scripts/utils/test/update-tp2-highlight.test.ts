@@ -56,7 +56,7 @@ describe("buildHighlightPatterns", () => {
     it("skipCatchall excludes items matching upper-case-constants regex", () => {
         const all = buildHighlightPatterns(DATA, "value_constant");
         const filtered = buildHighlightPatterns(DATA, "value_constant", true);
-        // Filtered should be smaller — UPPER_CASE items with underscore are excluded
+        // Filtered should be smaller - UPPER_CASE items with underscore are excluded
         expect(filtered.length).toBeLessThan(all.length);
         // Single-word items like BIT0, DAMAGE should remain
         expect(filtered.some((p) => p.match === "\\b(BIT0)\\b")).toBe(true);

@@ -11,7 +11,7 @@
  * Symbol-building pattern: Delegates to header-parser helpers.
  * Reuses `parseFile()` from header-parser.ts, which internally
  * uses the `functionInfoToSymbol()`/`variableInfoToSymbol()` helpers.
- * This file is a thin caching wrapper — all symbol construction logic
+ * This file is a thin caching wrapper - all symbol construction logic
  * lives in header-parser.ts.
  */
 

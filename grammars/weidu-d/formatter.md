@@ -56,15 +56,15 @@ EXTEND_BOTTOM dlg 0
 END
 ```
 
-The formatter is **idempotent** — running it multiple times produces the same output.
+The formatter is **idempotent** - running it multiple times produces the same output.
 
 ## Whitespace Normalization
 
 Code whitespace (outside strings and comments) is normalized:
 
-- Multiple spaces → single space
-- Leading/trailing whitespace on lines → trimmed
-- Indentation → consistent based on `.editorconfig` or default (4 spaces)
+- Multiple spaces -> single space
+- Leading/trailing whitespace on lines -> trimmed
+- Indentation -> consistent based on `.editorconfig` or default (4 spaces)
 
 ## Complete Example
 
@@ -116,5 +116,5 @@ node format-cli.js file.d --check
 
 ## Related
 
-- [WeiDU D Grammar README](./README.md) — D syntax reference
-- [Format CLI](../../docs/architecture.md#format-cli) — General format CLI documentation
+- [WeiDU D Grammar README](./README.md) - D syntax reference
+- [Format CLI](../../docs/architecture.md#format-cli) - General format CLI documentation

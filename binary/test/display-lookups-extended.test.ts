@@ -87,7 +87,7 @@ describe("formatEnumDisplayValue", () => {
 
 describe("resolveDisplayValue", () => {
     it("returns formatted enum label for known value", () => {
-        // enum path — objectType 5 = Misc
+        // enum path - objectType 5 = Misc
         const result = resolveDisplayValue("pro", "pro.header.objectType", "Object Type", 5);
         expect(result).toBe("Misc (5)");
     });
@@ -99,14 +99,14 @@ describe("resolveDisplayValue", () => {
     });
 
     it("returns joined active flag labels for flags field", () => {
-        // flags path — headerFlags 0x20000000 = NoRemove flag (if set)
+        // flags path - headerFlags 0x20000000 = NoRemove flag (if set)
         const result = resolveDisplayValue("pro", "pro.header.flags", "Flags", 0);
         // When rawValue=0 and no flags are set, display is "(none)"
         expect(result).toBe("(none)");
     });
 
     it("returns string representation of raw value when no lookup exists", () => {
-        // Line 72: no enum, no flags — falls through to String(rawValue)
+        // Line 72: no enum, no flags - falls through to String(rawValue)
         const result = resolveDisplayValue("testbin", "testbin.any.key", "Unknown Field", 42);
         expect(result).toBe("42");
     });
@@ -180,7 +180,7 @@ describe("resolveRawValueFromDisplay", () => {
     });
 
     it("resolves map flag field that uses 'clear' activation", () => {
-        // mapFlags has flagActivation "clear" for some bits — "Has Elevation 0" means bit 2 is clear
+        // mapFlags has flagActivation "clear" for some bits - "Has Elevation 0" means bit 2 is clear
         const result = resolveRawValueFromDisplay("map", "map.header.mapFlags", "Map Flags", "Has Elevation 0");
         expect(typeof result).toBe("number");
     });

@@ -130,10 +130,10 @@ type ResolveResult =
 export class Translation {
     private directory: string;
     private data: TraData;
-    /** Forward index: traFileKey → set of absolute consumer file paths */
+    /** Forward index: traFileKey -> set of absolute consumer file paths */
     private consumers: Map<string, Set<string>>;
     /**
-     * Inverse of `consumers`: absolute consumer file path → its current traFileKey.
+     * Inverse of `consumers`: absolute consumer file path -> its current traFileKey.
      *
      * A consumer file references exactly one tra/msg file at a time (resolved by
      * `resolveTraFileKey`), so this is a 1:1 lookup, not 1:many. Maintained in
@@ -490,7 +490,7 @@ export class Translation {
                         result.set(relPath, lines);
                         results.push(result);
                     } catch (e) {
-                        // Collect per-file failures instead of failing fast — a single unreadable
+                        // Collect per-file failures instead of failing fast - a single unreadable
                         // file shouldn't abort the whole load pass.
                         errors.push(e);
                     }
@@ -965,7 +965,7 @@ export class Translation {
      *  untrusted `.bgforge.yml`, but trust can be bypassed (or absent in
      *  non-VSCode LSP clients), so the LSP layer also checks. A `directory`
      *  that escapes via `..` or names an absolute path elsewhere on disk is
-     *  ignored — `loadDir` is never called against it, so unrelated `.tra`/
+     *  ignored - `loadDir` is never called against it, so unrelated `.tra`/
      *  `.msg` files outside the workspace never reach hover/inlay output.
      *
      *  The check is path-math only (no realpath): a tra directory that does
@@ -984,7 +984,7 @@ export class Translation {
             const rel = path.relative(this.workspaceRoot, resolved);
             if (rel === ".." || rel.startsWith(".." + path.sep) || path.isAbsolute(rel)) {
                 conlog(
-                    `Translation: ignoring tra directory '${this.directory}' — resolves outside workspace root`,
+                    `Translation: ignoring tra directory '${this.directory}' - resolves outside workspace root`,
                     "warn",
                 );
                 return undefined;

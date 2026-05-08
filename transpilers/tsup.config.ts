@@ -4,7 +4,7 @@ export default defineConfig({
     entry: ["src/index.ts", "src/cli.ts"],
     format: ["esm"],
     // Only the library entry gets DTS. The CLI is a bin script, not a module
-    // consumers import — emitting .d.ts for it would be misleading.
+    // consumers import - emitting .d.ts for it would be misleading.
     dts: { entry: "src/index.ts" },
     clean: true,
     sourcemap: false,
@@ -24,7 +24,7 @@ export default defineConfig({
     // require(), __filename, and __dirname at module-evaluation time. The banner
     // re-creates these CJS globals at the top of the ESM bundle so the inlined
     // code resolves correctly. Using fileURLToPath/dirname (vs URL.pathname) is
-    // required for cross-platform correctness — URL.pathname produces malformed
+    // required for cross-platform correctness - URL.pathname produces malformed
     // paths on Windows (leading slash, forward separators).
     banner: {
         js: [

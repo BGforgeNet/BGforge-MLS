@@ -11,7 +11,7 @@ describe("mapHeaderSpec", () => {
     it("derives a typed-binary schema that round-trips a known header", () => {
         const schema = toTypedBinarySchema(mapHeaderSpec);
 
-        // 16-char chars field — explicit NUL-padding preserved verbatim by
+        // 16-char chars field - explicit NUL-padding preserved verbatim by
         // the codec for round-trip safety.
         const filename = "map.map\0\0\0\0\0\0\0\0\0";
         const field_3C = Array.from({ length: 44 }, (_, i) => i + 1);

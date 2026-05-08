@@ -6,7 +6,7 @@
  * `ie-common/specs/effect.ts`). Ability size is per-format and lives in
  * `<format>/types.ts`.
  *
- * Enum / flag tables in this file are the IE-wide ones — used for fields
+ * Enum / flag tables in this file are the IE-wide ones - used for fields
  * that appear in multiple formats (effect blocks, ability target conventions,
  * IDS-derived lookups). Format-specific tables (header flags / item type /
  * spell type / etc.) live in `<format>/types.ts`.
@@ -81,7 +81,7 @@ export const EffectSaveTypeFlags: Record<number, string> = {
 // -- Ability lookups (overlap between ITM and SPL ability shapes) -----------
 
 /**
- * Ability target type — semantically shared between ITM `target` and SPL
+ * Ability target type - semantically shared between ITM `target` and SPL
  * `target`, though the value sets differ slightly. Common entries listed
  * here; format-specific extras can be added at the call site.
  */

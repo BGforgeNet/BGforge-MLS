@@ -166,7 +166,7 @@ describe("TD plugin", () => {
         });
 
         it("uses current host file list, not stale pre-override reference", () => {
-            // Start with no .td files — getCompilationSettings should not override
+            // Start with no .td files - getCompilationSettings should not override
             const info = createMockInfo(["/project/utils.ts"], { target: 99 });
             plugin.create(info);
 
@@ -260,7 +260,7 @@ describe("TD plugin", () => {
 
             const host = info.languageServiceHost;
             const files = host.getScriptFileNames();
-            // Should NOT inject runtime — .td is a directory, not a file extension
+            // Should NOT inject runtime - .td is a directory, not a file extension
             expect(files).not.toContain(FAKE_RUNTIME_PATH);
         });
     });
@@ -288,7 +288,7 @@ describe("TD plugin", () => {
             const info = createMockInfo(["/project/dialog.td"]);
             const service = freshPlugin.create(info);
 
-            // Runtime found via npm path — plugin should be active (proxy, not original)
+            // Runtime found via npm path - plugin should be active (proxy, not original)
             expect(service).not.toBe(info.languageService);
         });
     });
@@ -346,7 +346,7 @@ describe("TD plugin", () => {
     describe("runtime declaration shapes", () => {
         it("extracts names from `declare var` statements (variable declarations)", async () => {
             const { readFileSync } = await import("fs");
-            // Runtime content using `declare var` — exercises the VariableStatement branch
+            // Runtime content using `declare var` - exercises the VariableStatement branch
             // in extractDeclaredNames. Multiple declarators in one statement are also covered.
             vi.mocked(readFileSync).mockImplementationOnce(
                 () => "declare var declaredVarOne: number, declaredVarTwo: string",

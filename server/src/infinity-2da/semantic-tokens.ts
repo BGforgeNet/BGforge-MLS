@@ -5,9 +5,9 @@
  * distinct color so readers can visually trace columns across wide tables.
  *
  * 2DA structure:
- *   Line 0: "2DA V1.0" (file header — handled by TextMate grammar)
- *   Line 1: default value  (used when a cell is empty — also TextMate)
- *   Line 2: column names   (leading-whitespace line — also TextMate)
+ *   Line 0: "2DA V1.0" (file header - handled by TextMate grammar)
+ *   Line 1: default value  (used when a cell is empty - also TextMate)
+ *   Line 2: column names   (leading-whitespace line - also TextMate)
  *   Lines 3+: data rows    (first token = row label, rest = cell values)
  *
  * Row labels keep their existing TextMate highlighting (entity.name.function).
@@ -44,10 +44,10 @@ function tokenPositions(line: string): { start: number; length: number }[] {
  *     after the signature is the default value and is also skipped.
  *
  *   - Lines starting with whitespace are column-name headers
- *     (TextMate rule `column_names: ^\s+`) — skip.
+ *     (TextMate rule `column_names: ^\s+`) - skip.
  *
  *   - Lines starting with non-whitespace are data rows
- *     (TextMate rule `rows: ^\S+`) — emit tokens.
+ *     (TextMate rule `rows: ^\S+`) - emit tokens.
  *
  * The TextMate header's `end: (\w+)` may land on line 1 (word default value) or
  * extend to the first column name on line 2 (non-word default such as `****`).
@@ -57,8 +57,8 @@ export function getSemanticTokenSpans(text: string): SemanticTokenSpan[] {
     const lines = stripBom(text).split("\n");
     const spans: SemanticTokenSpan[] = [];
 
-    // Detect whether a "2DA V…" signature line is present (it is optional).
-    // When present, skip lines 0 (signature) and 1 (default value) — TextMate handles them.
+    // Detect whether a "2DA V..." signature line is present (it is optional).
+    // When present, skip lines 0 (signature) and 1 (default value) - TextMate handles them.
     // Semantic tokens only cover data cell values; uncovered ranges keep TextMate colors.
     let skipUntil = 0;
     const firstLine = lines[0] ?? "";

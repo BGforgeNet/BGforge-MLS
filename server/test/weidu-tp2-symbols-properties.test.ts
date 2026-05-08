@@ -2,9 +2,9 @@
  * Property-based tests for the WeiDU TP2 document symbol extractor.
  *
  * Three properties are verified:
- *   1. No-crash   — arbitrary string input does not throw; returns an array.
- *   2. Range sanity — every symbol's location ranges are non-negative and ordered.
- *   3. Idempotence — calling getDocumentSymbols twice on the same text returns
+ *   1. No-crash   - arbitrary string input does not throw; returns an array.
+ *   2. Range sanity - every symbol's location ranges are non-negative and ordered.
+ *   3. Idempotence - calling getDocumentSymbols twice on the same text returns
  *                    deep-equal results (no hidden mutable state).
  *
  * numRuns capped at 50 per property to keep the suite under ~500ms.
@@ -45,7 +45,7 @@ const tp2Fragments: fc.Arbitrary<string> = fc.oneof(
     fc.constant(""),
 );
 
-/** Concatenates 1–4 fragments with newlines. */
+/** Concatenates 1-4 fragments with newlines. */
 const arbTp2Text: fc.Arbitrary<string> = fc
     .array(tp2Fragments, { minLength: 1, maxLength: 4 })
     .map((parts) => parts.join("\n"));

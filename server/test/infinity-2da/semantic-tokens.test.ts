@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import { getSemanticTokenSpans } from "../../src/infinity-2da/semantic-tokens";
 import { CELL_2DA_C0, CELL_2DA_C1, CELL_2DA_COL_TYPES } from "../../src/shared/semantic-tokens";
 
-/** Default value is `****` (no \w chars) — TM header end lands on first column name (line 2). */
+/** Default value is `****` (no \w chars) - TM header end lands on first column name (line 2). */
 const SAMPLE_STAR_DEFAULT = [
     "2DA V1.0",
     "****",
@@ -16,7 +16,7 @@ const SAMPLE_STAR_DEFAULT = [
     "Sleep           SPWI116     3",
 ].join("\n");
 
-/** Default value is `0` (\w char) — TM header end lands on line 1. Column names still line 2. */
+/** Default value is `0` (\w char) - TM header end lands on line 1. Column names still line 2. */
 const SAMPLE_WORD_DEFAULT = [
     "2DA V1.0",
     "0",
@@ -25,7 +25,7 @@ const SAMPLE_WORD_DEFAULT = [
     "Friends         SPWI107     3",
 ].join("\n");
 
-/** Header absent — file starts directly with column names. */
+/** Header absent - file starts directly with column names. */
 const SAMPLE_NO_HEADER = [
     "                ResRef      Type",
     "Charm_Person    SPWI104     3",
@@ -52,14 +52,14 @@ describe("infinity-2da/semantic-tokens", () => {
 
     it("skips the header, default-value, and column-name lines (star default)", () => {
         const spans = getSemanticTokenSpans(SAMPLE_STAR_DEFAULT);
-        // Lines 0-2 are signature/default/column-names — only lines 3+ should have spans.
+        // Lines 0-2 are signature/default/column-names - only lines 3+ should have spans.
         const lines = new Set(spans.map((s) => s.line));
         expect([...lines].every((l) => l >= 3)).toBe(true);
     });
 
     it("skips the header, default-value, and column-name lines (word default)", () => {
         const spans = getSemanticTokenSpans(SAMPLE_WORD_DEFAULT);
-        // Lines 0-2 are signature/default/column-names — only lines 3+ should have spans.
+        // Lines 0-2 are signature/default/column-names - only lines 3+ should have spans.
         const lines = new Set(spans.map((s) => s.line));
         expect([...lines].every((l) => l >= 3)).toBe(true);
     });
@@ -79,7 +79,7 @@ describe("infinity-2da/semantic-tokens", () => {
         for (const span of spans) {
             const line = sampleLines[span.line] ?? "";
             const valueText = line.slice(span.startChar, span.startChar + span.length);
-            // Row labels are "Charm_Person", "Friends", "Sleep" — none should appear as spans
+            // Row labels are "Charm_Person", "Friends", "Sleep" - none should appear as spans
             expect(["Charm_Person", "Friends", "Sleep"]).not.toContain(valueText);
         }
     });
@@ -99,7 +99,7 @@ describe("infinity-2da/semantic-tokens", () => {
         expect(row0[1]?.tokenType).toBe(CELL_2DA_C1);
 
         const row1 = byLine.get(4) ?? [];
-        // Same column indices → same types as row 0
+        // Same column indices -> same types as row 0
         expect(row1[0]?.tokenType).toBe(CELL_2DA_C0);
         expect(row1[1]?.tokenType).toBe(CELL_2DA_C1);
 

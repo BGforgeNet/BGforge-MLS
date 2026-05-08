@@ -8,7 +8,7 @@
  * to support write-side editing without corrupting downstream sections.
  * A fixture that violates it is one where some part of the on-disk
  * layout the parser consumed is dropped on the path through the
- * canonical doc back to bytes — i.e. the parser/canonical-reader pair
+ * canonical doc back to bytes - i.e. the parser/canonical-reader pair
  * is not lossless.
  *
  * PRO already has a focused round-trip test in `pro-roundtrip.test.ts`
@@ -77,7 +77,7 @@ const parsers = parserRegistry.getAllParsers();
 for (const parser of parsers) {
     const cases = fixturesFor(parser);
 
-    describe(`${parser.id}: parse → serialize is byte-identity`, () => {
+    describe(`${parser.id}: parse -> serialize is byte-identity`, () => {
         if (cases.length === 0) {
             it.skip(`${parser.id} has no fixtures registered for round-trip`, () => {});
             return;

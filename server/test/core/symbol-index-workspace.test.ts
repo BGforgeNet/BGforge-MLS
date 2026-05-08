@@ -51,7 +51,7 @@ function createSymbol(
 // Tests
 // =============================================================================
 
-describe("Symbols — workspace symbol search", () => {
+describe("Symbols - workspace symbol search", () => {
     let index: Symbols;
 
     beforeEach(() => {

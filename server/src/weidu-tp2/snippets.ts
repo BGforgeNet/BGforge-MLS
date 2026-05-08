@@ -15,7 +15,7 @@ import { SyntaxType } from "./tree-sitter.d";
  * SPRINT-style: `KEYWORD var "value"` (uses SyntaxType.*Sprint/*TextSprint)
  *
  * Tied to SyntaxType rather than plain strings so adding/removing a keyword
- * requires updating the grammar first — the compiler catches stale entries.
+ * requires updating the grammar first - the compiler catches stale entries.
  */
 const SET_SYNTAX_TYPES: ReadonlySet<SyntaxType> = new Set([SyntaxType.PatchSet, SyntaxType.ActionOuterSet]);
 
@@ -82,7 +82,7 @@ export function buildFunctionCallSnippet(callable: CallableInfo, name: string, p
         return null;
     }
 
-    // Macro launch (LAM/LPM) is a simple statement — no params, no END
+    // Macro launch (LAM/LPM) is a simple statement - no params, no END
     if (prefix === "LAM" || prefix === "LPM") {
         return `${prefix} ${name}$0`;
     }

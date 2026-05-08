@@ -84,7 +84,7 @@ describe("ITM display tree presentation", () => {
         const usability = findGroup(result.root, "Usability Flags");
         expect(usability).toBeDefined();
         // Four child rows, one per IESDP byte. Each byte carries its own
-        // flag table — bytes are not interchangeable.
+        // flag table - bytes are not interchangeable.
         expect(usability!.fields).toHaveLength(4);
         for (const field of usability!.fields) {
             expect("type" in field && field.type).toBe("flags");
@@ -100,7 +100,7 @@ describe("ITM display tree presentation", () => {
         const byte1 = usability!.fields[0] as ParsedField;
         const byte2 = usability!.fields[1] as ParsedField;
         expect(byte1.flagOptions).toBeDefined();
-        // Byte 1 carries class / alignment flags per IESDP — Bard should be
+        // Byte 1 carries class / alignment flags per IESDP - Bard should be
         // one of the entries.
         expect(Object.values(byte1.flagOptions!)).toContain("Bard");
         expect(byte2.flagOptions).toBeDefined();
@@ -170,7 +170,7 @@ describe("SPL display tree presentation", () => {
     });
 });
 
-describe("Open enums — unknown values display + round-trip", () => {
+describe("Open enums - unknown values display + round-trip", () => {
     test("unknown effect opcode displays as 'Unknown (N)' and survives canonical round-trip", async () => {
         const { createCanonicalItmJsonSnapshot, loadCanonicalItmJsonSnapshot } =
             await import("../src/itm/json-snapshot");

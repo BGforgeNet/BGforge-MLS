@@ -69,7 +69,7 @@ args:
       required: true # Marks as required, hides default in hover (optional)
 ```
 
-`default` and `required` may coexist on the same parameter. In WeiDU, all variables must be initialized before calling a function, so every parameter technically has a default (the WeiDU runtime zero-initializes INT*VAR to 0 and STR_VAR to ""). `required: true` is a semantic annotation on top of that: it signals that the caller \_must* set this parameter to a meaningful value — the default is present but not useful on its own (e.g. an empty resref or a name that selects nothing). The generator uses `required` to suppress the default in hover output, so users see it as a required field rather than an optional one with a default.
+`default` and `required` may coexist on the same parameter. In WeiDU, all variables must be initialized before calling a function, so every parameter technically has a default (the WeiDU runtime zero-initializes INT*VAR to 0 and STR_VAR to ""). `required: true` is a semantic annotation on top of that: it signals that the caller \_must* set this parameter to a meaningful value - the default is present but not useful on its own (e.g. an empty resref or a name that selects nothing). The generator uses `required` to suppress the default in hover output, so users see it as a required field rather than an optional one with a default.
 
 ### Format detection
 

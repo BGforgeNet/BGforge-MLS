@@ -1,5 +1,5 @@
 /**
- * Unit tests for weidu-d/file-parser.ts — workspace symbol and reference extraction.
+ * Unit tests for weidu-d/file-parser.ts - workspace symbol and reference extraction.
  * Tests parseFile() which collects state label symbols and cross-file reference maps.
  */
 
@@ -101,7 +101,7 @@ END
 `;
         const result = parseFile(TEST_URI, text);
 
-        // IMOEN2 normalized → "imoen2"
+        // IMOEN2 normalized -> "imoen2"
         const key = "imoen2:imoen_state";
         expect(result.refs.has(key)).toBe(true);
     });

@@ -4,7 +4,7 @@
  * Strategy: read the canonical document, mutate the array (and the linked
  * count field that mirrors its length), serialize via the existing
  * canonical writer, and let the caller reparse. Keeps add/remove on the
- * same byte-rebuild pipeline as every other MAP write — no buffer splicing.
+ * same byte-rebuild pipeline as every other MAP write - no buffer splicing.
  *
  * Scope is intentionally limited to header-counted uniform-int32 arrays
  * (Global/Local Variables). The objects section and the script section are
@@ -19,7 +19,7 @@
  *
  * - Script extents always carry 16 fixed slots regardless of `count`. Slots
  *   round-trip byte-identically because the canonical doc keeps all 16 per
- *   extent — but each slot's serialised width is selected by `getScriptType`
+ *   extent - but each slot's serialised width is selected by `getScriptType`
  *   on its sid byte, and the padding slots (`count..15`) carry whatever sid
  *   bits the engine had in scratch memory at the time of the original write.
  *   Adding a real slot in place of a padding one only stays width-neutral
@@ -44,7 +44,7 @@
  * region must be re-anchored in the new layout before serialization, or the
  * resulting bytes will be silently misaligned. The local helper
  * `shiftOpaqueRangesAfterVarSection` is specialised to the var-section
- * boundary; it is not a general "shift past offset X" — a structural
+ * boundary; it is not a general "shift past offset X" - a structural
  * transition that resizes (e.g.) a single object record needs a new helper
  * that shifts opaque ranges past the resize point, or a writer mode that
  * re-anchors trailing ranges from semantic anchors instead of recorded
@@ -68,7 +68,7 @@ function readDocument(parseResult: ParseResult): MapCanonicalDocument | undefine
 /**
  * Per-section binding from a parsed-tree group name (the label the parser
  * emits) to the canonical-doc keys that mirror it. This is the only
- * legitimately per-format work — the *capabilities* (addable/removable,
+ * legitimately per-format work - the *capabilities* (addable/removable,
  * default element) come from the array spec itself, queried below. Adding
  * another header-counted variable section is one row in this table plus a
  * spec entry that already declares its own addable/defaultElement.
@@ -136,7 +136,7 @@ export function buildMapAddEntryBytes(parseResult: ParseResult, arrayPath: reado
  * The MAP writer applies opaque ranges at their stored offsets verbatim.
  * Adding or removing a var entry shifts every byte after that var section,
  * so any opaque range whose offset falls at-or-after the var-section
- * boundary in the OLD layout has to be re-anchored in the new layout —
+ * boundary in the OLD layout has to be re-anchored in the new layout -
  * otherwise the writer drops the opaque payload at the original (now-stale)
  * offset and the resulting bytes are misaligned by `delta`. The misalignment
  * is silent on the very first remove because skipMapTiles makes the corrupted
@@ -145,7 +145,7 @@ export function buildMapAddEntryBytes(parseResult: ParseResult, arrayPath: reado
  * reparse finally errors out.
  *
  * `delta` is the byte change in the var-section size:
- *   add → +4, remove → -4, insert → +4, move → 0 (no shift needed; callers
+ *   add -> +4, remove -> -4, insert -> +4, move -> 0 (no shift needed; callers
  *   that don't change length pass 0 or skip this helper entirely).
  */
 function shiftOpaqueRangesAfterVarSection(
@@ -202,7 +202,7 @@ export function buildMapInsertEntryBytes(
     position: "before" | "after",
 ): Uint8Array | undefined {
     // An entry can be inserted next to any entry that itself is recognised as
-    // a removable target — the addressing rules are the same.
+    // a removable target - the addressing rules are the same.
     if (!isMapRemovableEntry(entryPath)) return undefined;
     return mutateVarSectionEntry(parseResult, entryPath, (values, index) => {
         const insertAt = position === "before" ? index : index + 1;

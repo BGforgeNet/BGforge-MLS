@@ -3,7 +3,7 @@ import type { OffsetItem } from "../../ie-update/src/ie/types.ts";
 export interface TranslatedField {
     readonly name: string;
     readonly fieldSource: string;
-    /** Identifiers the emitted source depends on — typed-binary codecs, spec helpers. */
+    /** Identifiers the emitted source depends on - typed-binary codecs, spec helpers. */
     readonly imports: ReadonlyArray<string>;
 }
 
@@ -44,7 +44,7 @@ export function descToCamelCase(desc: string): string {
     let cleaned = desc;
     cleaned = cleaned.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
 
-    // Repeat-until-stable strip — handles nested tags like `<a<b>>` that a
+    // Repeat-until-stable strip - handles nested tags like `<a<b>>` that a
     // single greedy pass would leave residue from.
     let prev: string;
     do {
@@ -57,7 +57,7 @@ export function descToCamelCase(desc: string): string {
 }
 
 /**
- * IESDP scalar type → typed-binary codec name.
+ * IESDP scalar type -> typed-binary codec name.
  *
  * `strref` is signed (`i32`) so the −1 "no string" sentinel reads naturally
  * (binary/INTERNALS.md "no special-case sentinels" rule). `char` reads as `u8`;
@@ -90,7 +90,7 @@ export function translateField(item: OffsetItem): TranslatedField {
     const isUnused = item.unused !== undefined || item.unknown !== undefined;
     const name = isUnused ? "" : item.id !== undefined ? snakeToCamel(item.id) : descToCamelCase(item.desc);
 
-    // resref / char array → first-class chars primitive. The wire footprint
+    // resref / char array -> first-class chars primitive. The wire footprint
     // stays N raw bytes; the data layer surfaces a NUL-stripped string. Used
     // by IESDP for fixed-size name / signature / version fields.
     if (item.type === "resref") {
@@ -147,7 +147,7 @@ function fieldByteSize(item: OffsetItem): number {
  * Validates declared `offset` values against a running counter; throws on
  * mismatch (which signals upstream IESDP data is wrong, not user error).
  * Names unused/unknown fields `unused1..N` so the wire bytes round-trip
- * verbatim — they're padding from the parser's POV but real bytes on disk.
+ * verbatim - they're padding from the parser's POV but real bytes on disk.
  */
 export function translateStruct(items: readonly OffsetItem[]): TranslatedStruct {
     const fields: TranslatedField[] = [];

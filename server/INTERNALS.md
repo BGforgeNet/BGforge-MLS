@@ -400,9 +400,9 @@ interface LanguageProvider {
 
 **HoverResult**: Discriminated union replacing the ambiguous `Hover | null | undefined`:
 
-- `{ handled: true, hover: Hover }` — provider found a result (show it)
-- `{ handled: true, hover: null }` — provider handled it, nothing to show (block fallthrough)
-- `{ handled: false }` — provider didn't handle it, fall through to data-driven hover
+- `{ handled: true, hover: Hover }` - provider found a result (show it)
+- `{ handled: true, hover: null }` - provider handled it, nothing to show (block fallthrough)
+- `{ handled: false }` - provider didn't handle it, fall through to data-driven hover
 
 Factory helpers: `HoverResult.found(hover)`, `HoverResult.empty()`, `HoverResult.notHandled()`
 
@@ -495,7 +495,7 @@ Reusable infrastructure that providers consume via configuration, not inheritanc
 | `comment-check.ts`      | Factory: `createIsInsideComment(init, parse, commentTypes)`                             | BAF, D, TP2         |
 | `provider-helpers.ts`   | Helpers: `resolveSymbolWithLocal()`, `formatWithValidation()`, `getStaticCompletions()` | All providers       |
 | `references-index.ts`   | Index: `ReferencesIndex` for cross-file Find References                                 | SSL, TP2, D         |
-| `jsdoc.ts`              | Parser: `parse(text, { returnMode })` — unnamed (SSL) or named (TP2) returns            | SSL, TP2, D         |
+| `jsdoc.ts`              | Parser: `parse(text, { returnMode })` - unnamed (SSL) or named (TP2) returns            | SSL, TP2, D         |
 | `jsdoc-completions.ts`  | Completions: JSDoc tag and type completions                                             | All 4               |
 | `signature.ts`          | Data: `SigInfoEx`, `loadStatic()`, `getRequest()`, `getResponse()`                      | SSL (TP2 ready)     |
 | `completion-context.ts` | Framework: `CompletionCategory`, `CompletionItemWithCategory`, context-based filtering  | TP2                 |
@@ -510,7 +510,7 @@ Reusable infrastructure that providers consume via configuration, not inheritanc
 
 Features are shared via **factory functions with language-specific configuration**, not class inheritance. Each provider passes its own block types, comment types, or return modes to shared factories. This keeps providers decoupled while eliminating boilerplate.
 
-Example: folding ranges require only a `Set<SyntaxType>` of foldable node types per language — the walking algorithm is shared.
+Example: folding ranges require only a `Set<SyntaxType>` of foldable node types per language - the walking algorithm is shared.
 
 The indexing lifecycle is also shared, but symbol visibility rules remain provider-specific. `ProviderRegistry` owns startup scan, watched-file create/change/delete handling, and reload dispatch via each provider's `indexExtensions`; providers still decide which indexed symbols are visible to fallback lookup, completion, or rename.
 
@@ -534,15 +534,15 @@ onDidSave / onDidChangeContent / manual command
                .tssl --> TSSL transpiler --> .ssl file --> sslc compile
 ```
 
-**Temporary files**: External compilers need files on disk. SSL writes `.tmp.ssl` (exported as `TMP_SSL_NAME` in `fallout-ssl/compiler.ts`) in the same directory as the source file so that relative `#include` paths resolve correctly. WeiDU writes to a system temp directory (`os.tmpdir()/bgforge-mls`) with unique filenames per URI (MD5 hash prefix) to prevent concurrent compilations of same-extension files from overwriting each other. The `.tmp.ssl` name is excluded from VS Code file watchers via `configurationDefaults` in `package.json` — these two locations must be kept in sync. Both SSL and WeiDU write tmp files inside `try/finally` so that cleanup runs even if `writeFile` fails (e.g., `ENOSPC`).
+**Temporary files**: External compilers need files on disk. SSL writes `.tmp.ssl` (exported as `TMP_SSL_NAME` in `fallout-ssl/compiler.ts`) in the same directory as the source file so that relative `#include` paths resolve correctly. WeiDU writes to a system temp directory (`os.tmpdir()/bgforge-mls`) with unique filenames per URI (MD5 hash prefix) to prevent concurrent compilations of same-extension files from overwriting each other. The `.tmp.ssl` name is excluded from VS Code file watchers via `configurationDefaults` in `package.json` - these two locations must be kept in sync. Both SSL and WeiDU write tmp files inside `try/finally` so that cleanup runs even if `writeFile` fails (e.g., `ENOSPC`).
 
-**Compile debouncing**: `onDidChangeContent` debounces compilation via the `compileDebouncer` (`UriDebouncer` instance, 300ms) to prevent rapid-fire compiler spawning when `validateOnChange` is enabled. `onDidSave` and manual compile are not debounced. Both `compileDebouncer` and `fileReloadDebouncer` are disposed in `onShutdown`. Both SSL and WeiDU compilation are async (return `Promise<void>`), which is essential for debouncing to work — if `compile()` returned synchronously, the debounce timer couldn't prevent overlapping processes.
+**Compile debouncing**: `onDidChangeContent` debounces compilation via the `compileDebouncer` (`UriDebouncer` instance, 300ms) to prevent rapid-fire compiler spawning when `validateOnChange` is enabled. `onDidSave` and manual compile are not debounced. Both `compileDebouncer` and `fileReloadDebouncer` are disposed in `onShutdown`. Both SSL and WeiDU compilation are async (return `Promise<void>`), which is essential for debouncing to work - if `compile()` returned synchronously, the debounce timer couldn't prevent overlapping processes.
 
-**Process cancellation**: Both SSL and WeiDU compilers track in-flight compilations per URI via `AbortController`. When a new compilation starts for the same URI, the previous one is aborted — `runProcess()` passes the abort signal to `cp.execFile`, and results from aborted compiles are silently discarded. The built-in WASM compiler (`ssl_compile`) also supports cancellation by killing the forked child process when the signal fires.
+**Process cancellation**: Both SSL and WeiDU compilers track in-flight compilations per URI via `AbortController`. When a new compilation starts for the same URI, the previous one is aborted - `runProcess()` passes the abort signal to `cp.execFile`, and results from aborted compiles are silently discarded. The built-in WASM compiler (`ssl_compile`) also supports cancellation by killing the forked child process when the signal fires.
 
-**Cleanup**: Both SSL and WeiDU compilation use `try/finally` to ensure tmp files are always deleted, even if the compiler throws. Cleanup errors (e.g., `EPERM`) are logged and swallowed — they must not mask compiler results or cause unhandled rejections. External compiler processes are promisified so callers (e.g., transpile chains TD→D→WeiDU, TBAF→BAF→WeiDU, TSSL→SSL→sslc) correctly await completion. File I/O uses `fs.promises` (async) to avoid blocking the LSP thread. Fire-and-forget compile calls in `server.ts` use `.catch()` to log and swallow rejections.
+**Cleanup**: Both SSL and WeiDU compilation use `try/finally` to ensure tmp files are always deleted, even if the compiler throws. Cleanup errors (e.g., `EPERM`) are logged and swallowed - they must not mask compiler results or cause unhandled rejections. External compiler processes are promisified so callers (e.g., transpile chains TD->D->WeiDU, TBAF->BAF->WeiDU, TSSL->SSL->sslc) correctly await completion. File I/O uses `fs.promises` (async) to avoid blocking the LSP thread. Fire-and-forget compile calls in `server.ts` use `.catch()` to log and swallow rejections.
 
-**Shared compilation infrastructure** (`common.ts`): Both SSL and WeiDU compilers share `runProcess()` (Promise-wrapped `execFile` with logging and optional `AbortSignal`), `addFallbackDiagnostic()` (returns a new `ParseResult` with a line-1 diagnostic appended — does not mutate the input), `reportCompileResult()` (shows interactive success/failure messages based on `ParseResult` — intentionally treats warnings as failures since sslc warnings indicate real issues), `removeTmpFile()` (cleanup with ENOENT tolerance), and `sendParseResult()` (aggregates diagnostics by URI). Output parsing is language-specific: `parseCompileOutput()` in `compiler.ts` (uses extracted `resolveMatchFilePath()` and `execAll()` helpers) and `parseWeiduOutput()` in `weidu-compile.ts`.
+**Shared compilation infrastructure** (`common.ts`): Both SSL and WeiDU compilers share `runProcess()` (Promise-wrapped `execFile` with logging and optional `AbortSignal`), `addFallbackDiagnostic()` (returns a new `ParseResult` with a line-1 diagnostic appended - does not mutate the input), `reportCompileResult()` (shows interactive success/failure messages based on `ParseResult` - intentionally treats warnings as failures since sslc warnings indicate real issues), `removeTmpFile()` (cleanup with ENOENT tolerance), and `sendParseResult()` (aggregates diagnostics by URI). Output parsing is language-specific: `parseCompileOutput()` in `compiler.ts` (uses extracted `resolveMatchFilePath()` and `execAll()` helpers) and `parseWeiduOutput()` in `weidu-compile.ts`.
 
 **Diagnostics**: Compiler output parsed via regex into `ParseResult { errors, warnings }`. `sendParseResult()` aggregates by URI and sends LSP diagnostics. Both compilers always send diagnostics (even on success) to clear stale errors from previous runs. Multi-file error reporting supported (SSL includes can fail in header files). WeiDU deduplicates errors by location since WeiDU emits both `PARSE ERROR` and `ERROR` for the same location. WeiDU error messages include up to 4 detail lines from WeiDU output verbatim. When a compiler fails but output isn't parseable (e.g., binary not found, unexpected output format), both compilers use `addFallbackDiagnostic()` instead of silently clearing diagnostics. WeiDU shows an actionable `showError` when the binary is not found (ENOENT). All transpiler branches (TD, TBAF, TSSL) clear diagnostics before compilation.
 
@@ -550,25 +550,25 @@ onDidSave / onDidChangeContent / manual command
 
 ## Translation Service
 
-Centralized service (`translation.ts`) for `.tra`/`.msg` translation files. Provides hover, inlay hints, go-to-definition, and find-references for translation references. No provider implements these — it's a single shared implementation.
+Centralized service (`translation.ts`) for `.tra`/`.msg` translation files. Provides hover, inlay hints, go-to-definition, and find-references for translation references. No provider implements these - it's a single shared implementation.
 
 **Supported patterns** (by file type):
 
-- `.ssl`, `.tssl`: `mstr(123)`, `NOption(123)`, `Reply(456)`, etc. → `.msg` files
-- `.baf`, `.d`, `.tp2`: `@123` → `.tra` files
-- `.tbaf`, `.td`: `tra(123)` → `.tra` files
+- `.ssl`, `.tssl`: `mstr(123)`, `NOption(123)`, `Reply(456)`, etc. -> `.msg` files
+- `.baf`, `.d`, `.tp2`: `@123` -> `.tra` files
+- `.tbaf`, `.td`: `tra(123)` -> `.tra` files
 
 **Translation file resolution**: Checks `/** @tra filename */` comment in first line, falls back to auto-matching by basename if `auto_tra` setting is enabled.
 
 **Inlay hints**: Shows truncated string previews (max 30 chars) as inline `/* text */` comments after each reference. Tooltip shows full text if truncated.
 
-**Find references**: From a `.tra`/`.msg` file, finds all usages of an entry across consumer files. Cursor can be on the entry number or anywhere in the value (including multiline). Uses a reverse index (`traFileKey → Set<consumerPath>`) built at startup and updated on document open/save/change. Consumer files are matched by `@tra` comment or basename convention.
+**Find references**: From a `.tra`/`.msg` file, finds all usages of an entry across consumer files. Cursor can be on the entry number or anywhere in the value (including multiline). Uses a reverse index (`traFileKey -> Set<consumerPath>`) built at startup and updated on document open/save/change. Consumer files are matched by `@tra` comment or basename convention.
 
 **Caching**: All `.tra`/`.msg` files in configured translation directory loaded at startup. Updated incrementally on file save/change. The consumer reverse index is updated atomically with the forward index.
 
 ### Rename (Scope-Aware)
 
-Rename uses a three-module pipeline: `symbol-scope.ts` → `reference-finder.ts` → `rename.ts`.
+Rename uses a three-module pipeline: `symbol-scope.ts` -> `reference-finder.ts` -> `rename.ts`.
 
 **Scope determination** (`symbol-scope.ts`): Given a cursor position, determines whether
 the symbol is file-scoped (procedure name, macro, export) or procedure-scoped (param,
@@ -612,7 +612,7 @@ Find References Request
 **Per-language call-site extractors** (`call-sites.ts`):
 
 - **SSL**: Collects all `Identifier` nodes grouped by name. Cross-file lookup uses exact match.
-- **TP2**: Collects `FUNCTION_DEF_TYPES` and `FUNCTION_CALL_TYPES` name fields. Keys are case-sensitive. Variables are not indexed — they are function/loop-scoped.
+- **TP2**: Collects `FUNCTION_DEF_TYPES` and `FUNCTION_CALL_TYPES` name fields. Keys are case-sensitive. Variables are not indexed - they are function/loop-scoped.
 - **D**: Collects state label references with `dialogFile:labelName` composite keys. Dialog files are normalized to lowercase. Workspace symbols use the same dialog-scoped key so labels like `0` remain distinguishable in multi-dialog files.
 
 **Index population**: Populated uniformly by `ProviderRegistry` using each provider's `indexExtensions`. The same extension list drives startup scan, watched-file create/change/delete handling, and provider reload cleanup. Open documents still update incrementally via `onDidChangeContent`.
@@ -634,12 +634,12 @@ Find References Request
 5. Return `documentChanges` (TextDocumentEdit[]) for atomic cross-file undo
 
 Uses the same `ReferencesIndex` as Find References rather than a separate include graph.
-This handles cases where headers use symbols they don't directly `#include` — e.g., `den.h`
+This handles cases where headers use symbols they don't directly `#include` - e.g., `den.h`
 uses `GVAR_DEN_GANGWAR` from `global.h`, relying on `.ssl` files to include both.
 
 ## Key Design Decisions
 
-Moved to [`docs/architecture.md`](../docs/architecture.md#key-design-decisions) — see that document for the consolidated design decisions, including tree-sitter error recovery defenses, URI normalization, and per-language implementation rationale.
+Moved to [`docs/architecture.md`](../docs/architecture.md#key-design-decisions) - see that document for the consolidated design decisions, including tree-sitter error recovery defenses, URI normalization, and per-language implementation rationale.
 
 ## Static Data Pipeline
 
@@ -662,9 +662,9 @@ Moved to [`docs/architecture.md`](../docs/architecture.md#key-design-decisions) 
                                                   +------------------+
 ```
 
-All formatting is pre-computed at build time by `generate-data.ts`. WeiDU/TP2 items use `buildWeiduHoverContent()` — the same composition function used by runtime JSDoc hover formatters — ensuring identical output. Fallout items use the lower-level building blocks (`buildSignatureBlock`, `buildFalloutArgsTable`, `formatDeprecation`) directly. The static loader is a pure pass-through — no runtime transforms. See `server/data/README.md` for the YAML schema and formatting pipeline.
+All formatting is pre-computed at build time by `generate-data.ts`. WeiDU/TP2 items use `buildWeiduHoverContent()` - the same composition function used by runtime JSDoc hover formatters - ensuring identical output. Fallout items use the lower-level building blocks (`buildSignatureBlock`, `buildFalloutArgsTable`, `formatDeprecation`) directly. The static loader is a pure pass-through - no runtime transforms. See `server/data/README.md` for the YAML schema and formatting pipeline.
 
-**Engine procedure hover enrichment (Fallout SSL only):** `extract-engine-proc-docs.ts` reads the `engine_procedures` stanza from `fallout-ssl-base.yml` and writes `fallout-ssl-engine-proc-docs.json` — a name→doc map. `local-symbols.ts` imports this at bundle time and passes the doc to `buildProcedureSymbol` for any engine procedure name. The engine doc is appended after user JSDoc (separated by `---`), or shown alone if the user wrote no JSDoc. This enriches the local hover without touching the static symbol pipeline.
+**Engine procedure hover enrichment (Fallout SSL only):** `extract-engine-proc-docs.ts` reads the `engine_procedures` stanza from `fallout-ssl-base.yml` and writes `fallout-ssl-engine-proc-docs.json` - a name->doc map. `local-symbols.ts` imports this at bundle time and passes the doc to `buildProcedureSymbol` for any engine procedure name. The engine doc is appended after user JSDoc (separated by `---`), or shown alone if the user wrote no JSDoc. This enriches the local hover without touching the static symbol pipeline.
 
 ## Testing
 
@@ -686,10 +686,10 @@ The shared LSP connection mock is in `test/integration/setup.ts`, loaded via `se
 
 Unit coverage measures every source file the tests actually import, with two exclusions:
 
-- `src/**/format/**/*.ts` — tree-sitter format sub-modules that operate on parsed AST nodes. Exercised by grammar-corpus tests (`grammars/*/test/corpus`), not unit tests. Top-level format orchestrators (`infinity-2da/format.ts`, `weidu-tra/format.ts`, `fallout-msg/format.ts`) remain unit-tested and measured.
-- `src/fallout-ssl/provider.ts`, `src/weidu-tp2/provider.ts` — LSP dispatcher glue whose methods delegate to unit-tested sub-modules. End-to-end behaviour is verified by `test/integration/` against real mod files.
+- `src/**/format/**/*.ts` - tree-sitter format sub-modules that operate on parsed AST nodes. Exercised by grammar-corpus tests (`grammars/*/test/corpus`), not unit tests. Top-level format orchestrators (`infinity-2da/format.ts`, `weidu-tra/format.ts`, `fallout-msg/format.ts`) remain unit-tested and measured.
+- `src/fallout-ssl/provider.ts`, `src/weidu-tp2/provider.ts` - LSP dispatcher glue whose methods delegate to unit-tested sub-modules. End-to-end behaviour is verified by `test/integration/` against real mod files.
 
-Thresholds: 90% lines, 80% branches, 90% functions, 90% statements — enforced by `pnpm exec vitest run --coverage`. Branches are held to 80% (vs 90% on the other metrics) because tree-sitter happy-path traversals dominate over error-recovery branches in the surface area; demanding 90% branch coverage would force tests for parser failure modes that are already exercised end-to-end by the integration suite.
+Thresholds: 90% lines, 80% branches, 90% functions, 90% statements - enforced by `pnpm exec vitest run --coverage`. Branches are held to 80% (vs 90% on the other metrics) because tree-sitter happy-path traversals dominate over error-recovery branches in the surface area; demanding 90% branch coverage would force tests for parser failure modes that are already exercised end-to-end by the integration suite.
 
 ## Adding a New Provider
 

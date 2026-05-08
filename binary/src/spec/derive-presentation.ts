@@ -27,8 +27,8 @@ function regexEscape(literal: string): string {
  * collected.
  *
  * Emit rules:
- *  - `spec.enum` → `presentationType: "enum"` + `enumOptions`.
- *  - `spec.flags` → `presentationType: "flags"` + `flagOptions`.
+ *  - `spec.enum` -> `presentationType: "enum"` + `enumOptions`.
+ *  - `spec.flags` -> `presentationType: "flags"` + `flagOptions`.
  *  - Otherwise: emit only when the presentation carries an override the walker
  *    cannot infer from the spec (`numericFormat`, `editable`, explicit `label`),
  *    or when the spec's `role` is non-`"data"` (locks the field).

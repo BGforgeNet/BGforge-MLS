@@ -141,7 +141,7 @@ function field(
 
 /**
  * Helper to render an enum-valued ParsedField. Out-of-range values display as
- * `Unknown (N)` — the same fallback `walkStruct` produces for spec-driven
+ * `Unknown (N)` - the same fallback `walkStruct` produces for spec-driven
  * fields. The strict gate against committable garbage lives at the canonical
  * write path (zod refinement in `serializeProCanonicalDocument`); the parser
  * is tolerant by design so the editor and snapshot dump never block on a

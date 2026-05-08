@@ -55,7 +55,7 @@ bool tree_sitter_ssl_external_scanner_scan(
             lexer->result_symbol = TOKEN_PASTE;
             return true;
         }
-        /* Only one # — not a token-paste operator.
+        /* Only one # - not a token-paste operator.
          * mark_end was not called after advancing past the first #, so tree-sitter
          * resets the lexer to the position of the # and re-lexes it normally. */
         return false;
@@ -93,7 +93,7 @@ bool tree_sitter_ssl_external_scanner_scan(
             while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
                 lexer->advance(lexer, false);
             }
-            /* Blank line or EOF after continuation → LINE_END terminates macro. */
+            /* Blank line or EOF after continuation -> LINE_END terminates macro. */
             if (lexer->lookahead == '\n' || lexer->lookahead == '\r' ||
                 lexer->eof(lexer)) {
                 if (lexer->lookahead == '\r') lexer->advance(lexer, false);

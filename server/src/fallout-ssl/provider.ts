@@ -203,7 +203,7 @@ class FalloutSslProvider
         if (!isInitialized()) {
             return [];
         }
-        // Single-file AST traversal — bounded work; no per-iteration cancellation needed.
+        // Single-file AST traversal - bounded work; no per-iteration cancellation needed.
         return findReferences(text, position, uri, includeDeclaration, this.fileIndex?.refs);
     }
 
@@ -228,7 +228,7 @@ class FalloutSslProvider
         }
 
         // At declaration sites (e.g. procedure <name>, variable <name>, #define <name>),
-        // the user is naming a new symbol — completions are not useful.
+        // the user is naming a new symbol - completions are not useful.
         if (isSslDeclarationSite(text, position)) {
             return [];
         }

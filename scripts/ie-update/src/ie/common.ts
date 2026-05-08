@@ -60,7 +60,7 @@ function sortLongerFirst(a: string, b: string): number {
         if (a[i]! < b[i]!) return -1;
         if (a[i]! > b[i]!) return 1;
     }
-    // One is a prefix of the other — longer string first
+    // One is a prefix of the other - longer string first
     if (a.length > b.length) return -1;
     if (b.length > a.length) return 1;
     return 0;

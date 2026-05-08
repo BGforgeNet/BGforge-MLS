@@ -106,7 +106,7 @@ describe("weidu-d/format/core", () => {
         });
 
         it("preserves space before standalone comment after code token", () => {
-            // EXIT is code, // comment is a comment token — space between them must be preserved
+            // EXIT is code, // comment is a comment token - space between them must be preserved
             const input = `BEGIN ~dlg~\nIF ~~ THEN BEGIN state\n  SAY ~hello~\n  IF ~~ THEN EXIT // done\nEND\n`;
             const output = format(input);
             expect(output).toMatch(/EXIT\s+\/\/ done/);

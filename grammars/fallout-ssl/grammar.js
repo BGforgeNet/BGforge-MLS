@@ -82,7 +82,7 @@ export default grammar({
         macro_body: ($) =>
             choice(repeat1($._statement), seq(repeat($._statement), alias($.macro_final_assign, $.assignment))),
 
-        // Assignment without trailing semicolon — valid only as the final statement of a macro body.
+        // Assignment without trailing semicolon - valid only as the final statement of a macro body.
         // The C preprocessor pastes macro bodies verbatim, so a trailing `;` is not required.
         macro_final_assign: ($) =>
             seq(
@@ -479,7 +479,7 @@ export default grammar({
         // the external scanner only emits _token_paste when LINE_END is also valid).
         // Added to: call_expr.func, assignment.left, macro_final_assign.left, var_init.name,
         // and _expression (covers return/expression contexts).
-        // Not added to: subscript_expr.object, member_expr.object, macro_call_stmt —
+        // Not added to: subscript_expr.object, member_expr.object, macro_call_stmt -
         // ## in those positions does not occur in real SSL macro bodies.
         token_paste_identifier: ($) => seq($.identifier, repeat1(seq($._token_paste, $.identifier))),
 
@@ -497,7 +497,7 @@ export default grammar({
         paren_expr: ($) => seq("(", $._expression, ")"),
 
         // Terminals
-        // NOTE: SSL does not formally reserve most keywords — the language spec allows identifiers
+        // NOTE: SSL does not formally reserve most keywords - the language spec allows identifiers
         // like `default` or `begin` as variable names. However, tree-sitter's `word` property
         // (set to `$.identifier`) causes the lexer to prefer a keyword token over the identifier
         // token whenever that keyword appears in the current lookahead set. In practice this means

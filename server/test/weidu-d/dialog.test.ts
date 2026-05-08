@@ -489,7 +489,7 @@ END
             expect(result.blocks).toHaveLength(1);
             expect(result.blocks[0]!.kind).toBe("modify");
             expect(result.blocks[0]!.actionName).toBe("ALTER_TRANS");
-            // No AlterTransChange children → description is undefined
+            // No AlterTransChange children -> description is undefined
             expect(result.blocks[0]!.description).toBeUndefined();
         });
 
@@ -529,7 +529,7 @@ SET_WEIGHT wsmith01 5 #100
         });
 
         it("parses EXTEND_TOP block with no additional transitions", () => {
-            // EXTEND_TOP with only state ref and empty transitions — exercises
+            // EXTEND_TOP with only state ref and empty transitions - exercises
             // the false branch of (transitions.length > 0) in parseExtendAction
             const text = `
 EXTEND_TOP DIALOG 5

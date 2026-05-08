@@ -1,5 +1,5 @@
 /**
- * Tests for shared/text-cache.ts — LRU text cache with version-based invalidation.
+ * Tests for shared/text-cache.ts - LRU text cache with version-based invalidation.
  * Covers cache hits, cache misses, null-returning parse functions, LRU eviction,
  * targeted clear, full clear, and the size getter.
  */
@@ -40,7 +40,7 @@ describe("shared/text-cache", () => {
             expect(parse).toHaveBeenCalledTimes(2);
         });
 
-        it("bypasses the cache when version is undefined — never caches, always re-parses", () => {
+        it("bypasses the cache when version is undefined - never caches, always re-parses", () => {
             const cache = new TextCache<string>();
             const parse = vi.fn().mockReturnValue("parsed");
 

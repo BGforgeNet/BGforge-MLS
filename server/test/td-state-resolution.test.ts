@@ -1,5 +1,5 @@
 /**
- * Unit tests for TD state resolution — transitive collection and orphan detection.
+ * Unit tests for TD state resolution - transitive collection and orphan detection.
  * Tests resolveTransitiveStates, collectOrphanWarnings, detectOrphansFromOriginal,
  * and mergeWarnings.
  */

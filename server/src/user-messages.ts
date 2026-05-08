@@ -4,7 +4,7 @@
  * Wraps LSP showMessage methods to automatically decode file:// URIs
  * into human-readable paths before display. All user-visible messages
  * should use these helpers instead of connection.window.show*Message()
- * directly — enforced via ESLint no-restricted-syntax rule.
+ * directly - enforced via ESLint no-restricted-syntax rule.
  */
 
 import { fileURLToPath } from "node:url";

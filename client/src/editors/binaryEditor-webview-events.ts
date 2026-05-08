@@ -169,7 +169,7 @@ export function setupTreeEventListeners(ctx: EventContext, ensureChildrenLoaded:
         if (target.dataset.valueType === "string") {
             // Live keystroke sanitization mirrors the host-side validator.
             // Both the byte budget and the charset come down from the host on
-            // the field's render payload — the webview never invents them.
+            // the field's render payload - the webview never invents them.
             const maxBytes = Number.parseInt(target.dataset.maxBytes ?? "", 10);
             const charset: StringFieldCharset =
                 target.dataset.stringCharset === "ascii-printable" ? "ascii-printable" : "utf8";

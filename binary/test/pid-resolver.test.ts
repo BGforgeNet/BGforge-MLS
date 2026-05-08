@@ -14,11 +14,11 @@ describe("resolvePidSubType (default Fallout 2 table)", () => {
         expect(resolvePidSubType(458)).toBe(5);
     });
 
-    it("resolves a scenery-door pid (pid 0x02000002 → Door=0)", () => {
+    it("resolves a scenery-door pid (pid 0x02000002 -> Door=0)", () => {
         expect(resolvePidSubType(0x02000002)).toBe(0);
     });
 
-    it("resolves a scenery-generic pid (pid 0x02000001 → Generic=5)", () => {
+    it("resolves a scenery-generic pid (pid 0x02000001 -> Generic=5)", () => {
         expect(resolvePidSubType(0x02000001)).toBe(5);
     });
 

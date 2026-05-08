@@ -28,7 +28,7 @@ const tbaf = createTranspiler<string>({
         // in transpilers/common/shared-project.ts. The shared pattern fits
         // short-lived source files whose AST is consumed synchronously within
         // a single call (as in parseExpressionFromText). Here the bundled
-        // source flows through the full transform → emit pipeline, and a
+        // source flows through the full transform -> emit pipeline, and a
         // concurrent transpile would overwrite the virtual file mid-walk.
         // Fresh-Project construction at this granularity (one per compile) is
         // a small fraction of total compile time.

@@ -71,9 +71,9 @@ function makePendingTransition(): PendingTransition {
 /**
  * Transform a function to a STATE.
  *
- * Accepts both `FunctionDeclaration` (named, top-level — the common path from
+ * Accepts both `FunctionDeclaration` (named, top-level - the common path from
  * parse-constructs / state-resolution) and `FunctionExpression` (anonymous,
- * value-position — used by `replace()` patch state-object literals). Both
+ * value-position - used by `replace()` patch state-object literals). Both
  * shapes implement `getName()` and `getBody()` via the `NameableNode` /
  * `BodiedNode` ts-morph mixins.
  */
@@ -129,7 +129,7 @@ function processStateStatement(
         if (isChainExpression(expr)) {
             const trans = parseTransitionChain(expr as CallExpression, vars);
             state.transitions.push(trans);
-            // Chain transitions are complete — clear pending so goTo()/exit()
+            // Chain transitions are complete - clear pending so goTo()/exit()
             // after this don't accidentally modify it.
             pending.ref = undefined;
             return;

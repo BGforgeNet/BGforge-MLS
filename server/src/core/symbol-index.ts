@@ -73,14 +73,14 @@ interface SymbolsOptions {
      * Maximum number of files to retain in the index.
      *
      * When the limit is exceeded the least-recently-updated file is evicted
-     * (Map insertion order — mirroring text-cache.ts).  2000 files is a
+     * (Map insertion order - mirroring text-cache.ts).  2000 files is a
      * generous upper bound for typical workspaces; keeps memory bounded while
      * allowing large mod projects to stay fully indexed during a session.
      */
     maxFiles?: number;
 }
 
-/** Default cap — enough for large workspaces, bounded against runaway growth. */
+/** Default cap - enough for large workspaces, bounded against runaway growth. */
 const DEFAULT_MAX_FILES = 2000;
 
 // =============================================================================
@@ -160,7 +160,7 @@ export class Symbols {
             for (const symbols of this.files.values()) {
                 for (const symbol of symbols) flat.push(symbol);
             }
-            // Static is not included here — searchWorkspaceSymbols skips it.
+            // Static is not included here - searchWorkspaceSymbols skips it.
             this.allSymbolsWithNavCache = flat;
         }
         return this.allSymbolsWithNavCache;
@@ -359,7 +359,7 @@ export class Symbols {
      * Reserved API: no production caller uses this path today (providers call
      * {@link query} and merge locally instead). When the first redefinition-
      * sensitive caller lands, that caller must apply its own deterministic
-     * tiebreaker — `getVisibleSymbols` follows {@link query}'s file-load-order
+     * tiebreaker - `getVisibleSymbols` follows {@link query}'s file-load-order
      * convention rather than imposing one here, since the right tiebreaker
      * depends on the caller's policy (header-precedence, last-loaded-wins, etc.).
      */
@@ -454,7 +454,7 @@ export class Symbols {
     /**
      * Search all workspace file symbols by case-insensitive substring match.
      * Includes Navigation, Workspace, Document, and External symbols.
-     * Excludes Static (built-in) symbols — those have no navigable source file.
+     * Excludes Static (built-in) symbols - those have no navigable source file.
      *
      * Empty query returns all symbols (capped at maxResults).
      * LSP clients perform their own fuzzy filtering on top of these results.

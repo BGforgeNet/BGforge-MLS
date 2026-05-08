@@ -186,7 +186,7 @@ OUTER_TEXT_SPRINT MOD_FOLDER ~mymod~
         const contents = symbol?.hover?.contents;
         expect(contents).toBeDefined();
         const value = (contents as { kind: string; value: string }).value;
-        // First word uppercase → constant, SHOULD show value
+        // First word uppercase -> constant, SHOULD show value
         expect(value).toContain("MOD_FOLDER = ~mymod~");
     });
 
@@ -203,7 +203,7 @@ OUTER_TEXT_SPRINT MOD_folder ~mymod~
         const contents = symbol?.hover?.contents;
         expect(contents).toBeDefined();
         const value = (contents as { kind: string; value: string }).value;
-        // First word "MOD" is uppercase → constant, SHOULD show value
+        // First word "MOD" is uppercase -> constant, SHOULD show value
         expect(value).toContain("MOD_folder = ~mymod~");
     });
 
@@ -220,7 +220,7 @@ OUTER_SET Max_Level = 40
         const contents = symbol?.hover?.contents;
         expect(contents).toBeDefined();
         const value = (contents as { kind: string; value: string }).value;
-        // First word "Max" is mixed case → NOT constant
+        // First word "Max" is mixed case -> NOT constant
         expect(value).not.toContain("= 40");
     });
 

@@ -1,7 +1,7 @@
 /**
  * Go to Definition for Fallout SSL files.
  * Finds local definitions (procedures, macros, variables) in the current file.
- * Also handles #include directives — navigates to the included file.
+ * Also handles #include directives - navigates to the included file.
  * Returns null if not found locally, allowing fallback to header definitions.
  */
 

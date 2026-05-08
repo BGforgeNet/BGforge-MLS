@@ -5,7 +5,7 @@
  * rejects raw int and dict), the strict-disjoint invariant (`flagsRaw`
  * overlapping a named bit fails to load), and the reservoir-adaptation
  * property (a snapshot with unnamed bits in `flagsRaw` round-trips
- * byte-identically through parse → serialize).
+ * byte-identically through parse -> serialize).
  */
 
 import { describe, it, expect } from "vitest";
@@ -37,7 +37,7 @@ const validBase = (flagOverrides: Partial<{ flags: string[]; flagsRaw: string }>
     sections: { miscProperties: { unknown: 0 } },
 });
 
-describe("PRO header.flags — sorted-array shape", () => {
+describe("PRO header.flags - sorted-array shape", () => {
     it("accepts an empty flags array with no flagsRaw", () => {
         expect(() => proCanonicalDocumentSchema.parse(validBase())).not.toThrow();
     });
@@ -73,7 +73,7 @@ describe("PRO header.flags — sorted-array shape", () => {
     });
 
     it("accepts an optional flagsRaw hex string within the codec width", () => {
-        // u32 codec: any 1–8 digit hex value is shape-valid (disjointness check
+        // u32 codec: any 1-8 digit hex value is shape-valid (disjointness check
         // fires at the wire boundary, not in the schema).
         expect(() => proCanonicalDocumentSchema.parse(validBase({ flagsRaw: "0x000000" }))).not.toThrow();
     });
@@ -84,7 +84,7 @@ describe("PRO header.flags — sorted-array shape", () => {
     });
 });
 
-describe("PRO header.flags — round-trip via parser", () => {
+describe("PRO header.flags - round-trip via parser", () => {
     // Skips when run from binary/ with no fixture symlink; pnpm test
     // orchestrator runs from workspace root where `client/testFixture/...`
     // resolves correctly.
@@ -93,7 +93,7 @@ describe("PRO header.flags — round-trip via parser", () => {
         .filter(({ abs }) => fs.existsSync(abs));
 
     if (fixtures.length === 0) {
-        it.skip("(no fixtures available — skipping)", () => {});
+        it.skip("(no fixtures available - skipping)", () => {});
         return;
     }
 
@@ -106,7 +106,7 @@ describe("PRO header.flags — round-trip via parser", () => {
     });
 });
 
-describe("PRO header.flags — strict-disjoint invariant at the wire boundary", () => {
+describe("PRO header.flags - strict-disjoint invariant at the wire boundary", () => {
     it("rejects writing a projection whose flagsRaw overlaps a named bit", () => {
         // `lightThru` is bit 0x20000000 in HeaderFlags; the wire codec rejects
         // a projection that sets `flagsRaw: "0x20000000"` because it duplicates
@@ -120,7 +120,7 @@ describe("PRO header.flags — strict-disjoint invariant at the wire boundary", 
         ).toThrow(/overlaps named-bit mask/);
     });
 
-    it("packs the array back to the same int through intToFlagArray ↔ flagArrayToInt", () => {
+    it("packs the array back to the same int through intToFlagArray <-> flagArrayToInt", () => {
         // 0x20000000 lightThru + 0x00004000 transRed (per pro/types.ts).
         const original = 0x20004000;
         const projection = intToFlagArray(HeaderFlags, original, 32);

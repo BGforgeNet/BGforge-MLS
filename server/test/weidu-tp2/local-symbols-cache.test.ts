@@ -64,7 +64,7 @@ describe("weidu-tp2 local-symbols cache lifecycle", () => {
         getLocalSymbols(SAMPLE, 1, URI_A);
         getLocalSymbols(SAMPLE, 1, URI_B);
         clearLocalSymbolsCache(URI_A);
-        // Both URIs still return correct results — re-parse on miss
+        // Both URIs still return correct results - re-parse on miss
         expect(getLocalSymbols(SAMPLE, 2, URI_A).length).toBeGreaterThan(0);
         expect(getLocalSymbols(SAMPLE, 1, URI_B).length).toBeGreaterThan(0);
     });

@@ -140,7 +140,7 @@ describe("shared/folding-ranges", () => {
     });
 });
 
-describe("shared/folding-ranges — createFoldingRangesProvider", () => {
+describe("shared/folding-ranges - createFoldingRangesProvider", () => {
     const blockTypes = new Set(["procedure", "if_stmt"]);
 
     function makeRoot(children: ReturnType<typeof mockNode>[] = []) {

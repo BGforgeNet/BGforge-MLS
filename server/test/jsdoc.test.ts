@@ -458,7 +458,7 @@ describe("jsdoc.parse", () => {
  * @ret spells {array} A hand-picked list
  */`;
             const result = jsdoc.parse(input, { returnMode: "named" });
-            // Name-before-type is not supported in named mode — only @ret {type} name
+            // Name-before-type is not supported in named mode - only @ret {type} name
             expect(result.rets).toBeUndefined();
             expect(result.ret).toBeUndefined();
         });
@@ -587,7 +587,7 @@ describe("jsdoc.parse", () => {
         });
 
         it("skips args with neither description nor required", () => {
-            // arg has no description and no required flag → not added to map
+            // arg has no description and no required flag -> not added to map
             const map = jsdoc.buildParamInfoMap({
                 args: [{ name: "unused", type: "int" }],
             });

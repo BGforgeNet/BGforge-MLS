@@ -22,12 +22,12 @@ function findSplFixtures(root: string): string[] {
     return out.sort();
 }
 
-describe("splParser — round-trip on real SPL v1 fixtures", () => {
+describe("splParser - round-trip on real SPL v1 fixtures", () => {
     const fixtures = findSplFixtures(WILDMAGE_ROOT);
     if (fixtures.length === 0) {
         test.skip("no wildmage SPL fixtures present", () => {});
     } else {
-        test.each(fixtures)("parse → serialize is byte-identical for %s", (fixturePath) => {
+        test.each(fixtures)("parse -> serialize is byte-identical for %s", (fixturePath) => {
             const bytes = new Uint8Array(fs.readFileSync(fixturePath));
             const result = splParser.parse(bytes);
             if (result.errors) throw new Error(result.errors.join(", "));

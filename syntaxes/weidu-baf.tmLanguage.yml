@@ -172,7 +172,7 @@ repository:
       - include: '#kit-ids'
 
   triggers:
-    # Auto-generated from weidu-baf-iesdp.yml — do not edit manually.
+    # Auto-generated from weidu-baf-iesdp.yml - do not edit manually.
     name: entity.name.function.trigger.weidu-baf
     patterns:
       - match: \b(Acquired)\b
@@ -435,7 +435,7 @@ repository:
       - match: \b(XPLT)\b
 
   actions:
-    # Auto-generated from weidu-baf-iesdp.yml — do not edit manually.
+    # Auto-generated from weidu-baf-iesdp.yml - do not edit manually.
     name: support.function.weidu-baf
     patterns:
       - match: \b(ActionOverride)\b

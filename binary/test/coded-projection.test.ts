@@ -125,7 +125,7 @@ describe("flagArrayToInt", () => {
         expect(() => flagArrayToInt(table, { flags: ["hidden", "hidden"] })).toThrow(/duplicate/i);
     });
 
-    it("round-trips int → array → int through arbitrary bits", () => {
+    it("round-trips int -> array -> int through arbitrary bits", () => {
         const u32 = 0xdeadbeef >>> 0;
         const codecBits = 32;
         const tableLarge = {
@@ -185,7 +185,7 @@ describe("flagArrayZodSchema", () => {
     });
 
     it("rejects flagsRaw exceeding codec hex digits", () => {
-        // u8 codec → max 2 hex digits.
+        // u8 codec -> max 2 hex digits.
         const schema = flagArrayZodSchema(table, 8);
         expect(() => schema.parse({ flags: [], flagsRaw: "0x100" })).toThrow();
     });

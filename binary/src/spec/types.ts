@@ -19,13 +19,13 @@ import type { ISchema } from "typed-binary";
  * Semantic role of a scalar field. Defaults to `"data"` (user-editable game
  * value). Non-`"data"` roles mark fields the user must not hand-edit:
  *
- * - `"derivedCount"` — the length of a sibling array.
- * - `"derivedOffset"` — the byte offset of a section within the file.
- * - `"derivedIndex"` — the index of a record into a sibling table.
- * - `"reserved"` — engine-set value the user must not edit, but the writer
+ * - `"derivedCount"` - the length of a sibling array.
+ * - `"derivedOffset"` - the byte offset of a section within the file.
+ * - `"derivedIndex"` - the index of a record into a sibling table.
+ * - `"reserved"` - engine-set value the user must not edit, but the writer
  *   has no derivation formula for (unknown fields, runtime pointers,
  *   tool-generated metadata). Editor lock applies; enforceDerivedFields and
- *   validateDerivedFields are no-ops on these — the writer trusts whatever
+ *   validateDerivedFields are no-ops on these - the writer trusts whatever
  *   value was on the wire and round-trips it byte-identically.
  *
  * The role flows into three downstream behaviours from one declaration:
@@ -51,7 +51,7 @@ export interface ScalarFieldSpec {
      * When `true`, treat `enum` as an advisory display lookup rather than a
      * closed value set: walkStruct still resolves named values, but the
      * `toZodSchema` strict-mode refinement does NOT enforce membership.
-     * Used for fields whose value space is open by design — e.g. effect
+     * Used for fields whose value space is open by design - e.g. effect
      * opcodes (mods can define new ones; the engine accepts any 16-bit
      * value) or item types backed by `itemtype.2da` (mod-extensible). The
      * default (`undefined`) keeps the existing strict-enforce behaviour
@@ -63,7 +63,7 @@ export interface ScalarFieldSpec {
      * Bit-packed wire layout: this field is one part of a multi-field packed
      * slot named `packedAs`. All ScalarFieldSpec entries sharing one
      * `packedAs` value share one wire codec read; the canonical-doc shape
-     * stays flat — each part is a peer scalar entry, same as a byte-aligned
+     * stays flat - each part is a peer scalar entry, same as a byte-aligned
      * split (e.g. `objectType`+`objectId`). The wire codec is the codec
      * declared on every part (they must match); each part must declare a
      * `bitRange`. Parts of one group must appear consecutively in spec
@@ -74,7 +74,7 @@ export interface ScalarFieldSpec {
     /**
      * `[bitOffset, bitWidth]`, LSB=0 numbering. `bitOffset + bitWidth` must
      * fit within the wire codec's width in bits. On write, each part is
-     * masked to its width before being shifted into the wire word — the
+     * masked to its width before being shifted into the wire word - the
      * caller (zod refinement, walker validation) is responsible for the
      * value-range check; this layer only enforces the bit-width invariant.
      */
@@ -101,11 +101,11 @@ export interface ArrayFieldSpec {
      * single arraySpec catch-all into the cases that have meaningfully
      * different display shapes:
      *
-     * - `"bytes"` (default) — opaque byte run / trailing reserve. Walker
+     * - `"bytes"` (default) - opaque byte run / trailing reserve. Walker
      *   emits a single `(N values)` summary row of type `padding`. Used for
      *   genuine reserves like `field_3C` (44×i32 trailing space) and
      *   pre-`charsSpec`-era u8[] strings.
-     * - `"slots"` — N elements with stable per-index semantic labels (e.g.
+     * - `"slots"` - N elements with stable per-index semantic labels (e.g.
      *   melee animation's `Overhand` / `Backhand` / `Thrust`). Walker emits a
      *   `ParsedGroup` named after the field, with one child per element
      *   labelled from `slotLabels`. The element values stay individually
@@ -120,7 +120,7 @@ export interface ArrayFieldSpec {
     /**
      * Optional per-slot element override. When supplied, the walker uses
      * `slotElements[i]` for slot `i` instead of the shared `element` spec.
-     * Use when slots have semantically different content — e.g. an ITM
+     * Use when slots have semantically different content - e.g. an ITM
      * `usabilityFlags: u8[4]` where each byte carries a distinct flag table
      * (per IESDP class / race / kit breakdown). Wire codec must remain
      * identical across slots; only the enum / flags / domain annotations
@@ -174,10 +174,10 @@ export type StructSpec<T> = { readonly [K in keyof T]: FieldSpec };
  * Construct an array field spec.
  *
  * Length sources, in order of locality:
- *   - `count: N` — fixed wire length.
- *   - `count: { fromField: "X" }` — same-struct sibling: count and array
+ *   - `count: N` - fixed wire length.
+ *   - `count: { fromField: "X" }` - same-struct sibling: count and array
  *     decoded together; zod refinement keeps the two in sync at save time.
- *   - `count: { fromCtx: (ctx) => N }` — cross-struct: count decoded earlier
+ *   - `count: { fromCtx: (ctx) => N }` - cross-struct: count decoded earlier
  *     in the file (e.g., a header field) and supplied as `ctx` at the
  *     spec's `read()` call. The orchestrator owns the binding; zod cannot
  *     refine across structs, so out-of-band count drift is the
@@ -251,12 +251,12 @@ export function isFromCtxCount(count: ArrayFieldSpec["count"]): count is { reado
  * Type-level projection from a spec object to the data shape it describes.
  *
  * Use as `type FooData = SpecData<typeof fooSpec>;` to keep the data shape and
- * the spec declarations in sync — adding a field to the spec automatically
+ * the spec declarations in sync - adding a field to the spec automatically
  * adds it to the data type, removing the prior duplication between
  * `interface FooData` and the spec field list.
  *
  * Scalars with a `flags` annotation project to `{flags: string[], flagsRaw?: string}`
- * — the sorted-array projection the wire codec produces. The exact name set
+ * - the sorted-array projection the wire codec produces. The exact name set
  * is loose at the type level (the spec's flag table values are
  * `Record<number, string>` and cannot be lifted to literal types without
  * `as const` migration); strict structural validation lives in the zod schema.
@@ -290,11 +290,11 @@ export interface DerivedFieldsContext {
  * Recompute derived (structural) scalar fields from doc state.
  *
  * Two declaration shapes converge here:
- *   - **Sibling array linkage** — `arraySpec({ count: { fromField: "X" } })`.
+ *   - **Sibling array linkage** - `arraySpec({ count: { fromField: "X" } })`.
  *     The scalar field `X` is the on-wire count paired with the same-struct
  *     array. The helper sets `doc[X] = doc[arrayKey].length`. This is the
  *     within-struct shape used by MAP variable-length sections.
- *   - **Cross-struct role** — `{ codec, role: "derivedCount" | "derivedOffset"
+ *   - **Cross-struct role** - `{ codec, role: "derivedCount" | "derivedOffset"
  *     | "derivedIndex", derivedFrom: { array | section | table } }`. The
  *     source name resolves against the supplied `ctx` (`ctx.arrays[name]`
  *     for counts, `ctx.sectionOffsets[name]` for offsets, etc.) rather

@@ -9,23 +9,23 @@ TSSL is a TypeScript subset that transpiles to Fallout SSL (Star-Trek Scripting 
 **Top-level `const`** becomes `#define` (compile-time constant):
 
 ```typescript
-const MY_VALUE = 42; // → #define MY_VALUE 42
-const MSG_HELLO = 100; // → #define MSG_HELLO 100
+const MY_VALUE = 42; // -> #define MY_VALUE 42
+const MSG_HELLO = 100; // -> #define MSG_HELLO 100
 ```
 
 **`let`** becomes `variable` (runtime variable):
 
 ```typescript
-let count = 0; // → variable count = 0;
-let name: string; // → variable name;
+let count = 0; // -> variable count = 0;
+let name: string; // -> variable name;
 ```
 
 **`const` inside a function** also becomes `variable` (same as `let`):
 
 ```typescript
 function example() {
-    const x = 5; // → variable x = 5;
-    let y = 10; // → variable y = 10;
+    const x = 5; // -> variable x = 5;
+    let y = 10; // -> variable y = 10;
 }
 ```
 
@@ -41,7 +41,7 @@ Regular `function` declarations become SSL `procedure`:
 function my_proc() {
     debug_msg("hello");
 }
-// → procedure my_proc begin
+// -> procedure my_proc begin
 //       debug_msg("hello");
 //   end
 ```
@@ -52,7 +52,7 @@ function my_proc() {
 function damage(target: ObjectPtr, amount = 10) {
     // ...
 }
-// → procedure damage(variable target, variable amount = 10)
+// -> procedure damage(variable target, variable amount = 10)
 ```
 
 **Return values:**
@@ -61,7 +61,7 @@ function damage(target: ObjectPtr, amount = 10) {
 function get_hp(who: CritterPtr): number {
     return get_critter_stat(who, STAT_hp);
 }
-// → procedure get_hp(variable who) begin
+// -> procedure get_hp(variable who) begin
 //       return get_critter_stat(who, STAT_hp);
 //   end
 ```
@@ -69,9 +69,9 @@ function get_hp(who: CritterPtr): number {
 **`call` keyword:** User-defined functions (defined in the same file or bundled imports) called as standalone statements get the `call` keyword automatically. External engine functions do not:
 
 ```typescript
-my_proc(); // → call my_proc();    (user-defined, gets call)
-debug_msg("hello"); // → debug_msg("hello"); (external, no call)
-let x = get_hp(dude_obj); // → variable x = get_hp(dude_obj);  (assignment, no call)
+my_proc(); // -> call my_proc();    (user-defined, gets call)
+debug_msg("hello"); // -> debug_msg("hello"); (external, no call)
+let x = get_hp(dude_obj); // -> variable x = get_hp(dude_obj);  (assignment, no call)
 ```
 
 ### Control Flow
@@ -84,7 +84,7 @@ if (x > 0) {
 } else {
     // ...
 }
-// → if (x > 0) then begin ... end else begin ... end
+// -> if (x > 0) then begin ... end else begin ... end
 ```
 
 **while:**
@@ -93,7 +93,7 @@ if (x > 0) {
 while (condition) {
     // ...
 }
-// → while (condition) do begin ... end
+// -> while (condition) do begin ... end
 ```
 
 **for:**
@@ -102,7 +102,7 @@ while (condition) {
 for (let i = 0; i < 10; i++) {
     // ...
 }
-// → for (variable i = 0; i < 10; i++) begin ... end
+// -> for (variable i = 0; i < 10; i++) begin ... end
 ```
 
 **do...while:**
@@ -111,7 +111,7 @@ for (let i = 0; i < 10; i++) {
 do {
     // ...
 } while (condition);
-// → Emulated with a flag variable and while loop
+// -> Emulated with a flag variable and while loop
 ```
 
 **for...of** (sfall foreach):
@@ -120,7 +120,7 @@ do {
 for (const item of arr) {
     // ...
 }
-// → foreach (variable item in arr) begin ... end
+// -> foreach (variable item in arr) begin ... end
 ```
 
 **for...of with destructuring** (key-value iteration, exactly 2 elements):
@@ -129,7 +129,7 @@ for (const item of arr) {
 for (const [k, v] of myMap as unknown as [string, number][]) {
     // ...
 }
-// → foreach (variable k: v in myMap) begin ... end
+// -> foreach (variable k: v in myMap) begin ... end
 ```
 
 **for...in:**
@@ -138,7 +138,7 @@ for (const [k, v] of myMap as unknown as [string, number][]) {
 for (const key in obj) {
     // ...
 }
-// → foreach (variable key in obj) begin ... end
+// -> foreach (variable key in obj) begin ... end
 ```
 
 **switch/case:**
@@ -154,7 +154,7 @@ switch (x) {
     default:
     // ...
 }
-// → switch (x) begin case 1: ... case 2: ... default: ... end
+// -> switch (x) begin case 1: ... case 2: ... default: ... end
 ```
 
 **break, continue, return** all work as expected.
@@ -179,7 +179,7 @@ Operators that pass through unchanged: `==`, `!=`, `<`, `>`, `<=`, `>=`, `+`, `-
 
 ```typescript
 const result = x > 0 ? a : b;
-// → #define result (x > 0) ? a : b
+// -> #define result (x > 0) ? a : b
 ```
 
 ### Enums
@@ -192,9 +192,9 @@ enum DamageType {
     Fire = 3,
     Electrical = 6,
 }
-// → #define DamageType_Normal 0
-// → #define DamageType_Fire 3
-// → #define DamageType_Electrical 6
+// -> #define DamageType_Normal 0
+// -> #define DamageType_Fire 3
+// -> #define DamageType_Electrical 6
 ```
 
 Enum member accesses (`DamageType.Fire`) are replaced with the flat constant (`DamageType_Fire`). Unused enum members are tree-shaken from the output.
@@ -208,7 +208,7 @@ Functions tagged with `@inline` in JSDoc become `#define` macros instead of proc
 function dude_tile(): number {
     return tile_num(dude_obj);
 }
-// → #define dude_tile tile_num(dude_obj)
+// -> #define dude_tile tile_num(dude_obj)
 ```
 
 **With parameters:**
@@ -218,13 +218,13 @@ function dude_tile(): number {
 function get_stat(who: CritterPtr, stat: number): number {
     return get_critter_stat(who, stat);
 }
-// → #define get_stat(who, stat) get_critter_stat(who, stat)
+// -> #define get_stat(who, stat) get_critter_stat(who, stat)
 ```
 
 **Zero-arg inline functions:** At call sites, parentheses are stripped:
 
 ```typescript
-const t = dude_tile(); // → dude_tile  (no parens in output)
+const t = dude_tile(); // -> dude_tile  (no parens in output)
 ```
 
 The `@inline` tag must appear in a JSDoc comment (`/** @inline */`), not a regular comment.
@@ -235,10 +235,10 @@ The special functions `list()` and `map()` convert to SSL array/map literals:
 
 ```typescript
 const arr = list(1, 2, 3);
-// → [1, 2, 3]
+// -> [1, 2, 3]
 
 const m = map({ [PID_MINIGUN]: 9, [PID_SHOTGUN]: 5 });
-// → {PID_MINIGUN: 9, PID_SHOTGUN: 5}
+// -> {PID_MINIGUN: 9, PID_SHOTGUN: 5}
 ```
 
 ### Array and Object Literals
@@ -246,14 +246,14 @@ const m = map({ [PID_MINIGUN]: 9, [PID_SHOTGUN]: 5 });
 Array literals pass through:
 
 ```typescript
-const arr = [1, 2, 3]; // → [1, 2, 3]
+const arr = [1, 2, 3]; // -> [1, 2, 3]
 ```
 
 Object literals require **computed property keys** when using constants:
 
 ```typescript
 const weapons = { [PID_MINIGUN]: 9, [PID_SHOTGUN]: 5 };
-// → {PID_MINIGUN: 9, PID_SHOTGUN: 5}
+// -> {PID_MINIGUN: 9, PID_SHOTGUN: 5}
 ```
 
 See [Gotchas](#gotchas-and-pitfalls) for why non-computed keys don't work.
@@ -261,8 +261,8 @@ See [Gotchas](#gotchas-and-pitfalls) for why non-computed keys don't work.
 ### Element and Property Access
 
 ```typescript
-arr[i]; // → arr[i]
-obj[key]; // → obj[key]
+arr[i]; // -> arr[i]
+obj[key]; // -> obj[key]
 ```
 
 ### Imports
@@ -316,7 +316,7 @@ TypeScript reserves the `typeof` keyword, so use `sfall_typeof()` instead:
 if (sfall_typeof(x) == 2) {
     /* string */
 }
-// → if (typeof(x) == 2) then begin ... end
+// -> if (typeof(x) == 2) then begin ... end
 ```
 
 The transpiler replaces all `sfall_typeof` occurrences with `typeof` in the output.
@@ -327,7 +327,7 @@ esbuild strips `.0` from float literals (e.g., `1.0` becomes `1`). To force floa
 
 ```typescript
 const ratio = (FLOAT1 * a) / b;
-// → #define ratio 1.0 * a / b
+// -> #define ratio 1.0 * a / b
 ```
 
 `FLOAT1` is replaced with `1.0` in the output.
@@ -411,7 +411,7 @@ All `let` variables are hoisted to function scope, including their initializers.
 ```typescript
 // WRONG: assignment hoisted, runs once
 for (const pid of pids) {
-    let divisor = 100; // → variable divisor = 100; at function top!
+    let divisor = 100; // -> variable divisor = 100; at function top!
 }
 
 // CORRECT: separate declaration from assignment
@@ -427,7 +427,7 @@ External functions (from `.d.ts` or folib) with zero arguments have their parent
 
 ```typescript
 if (game_loaded()) {
-} // → if (game_loaded) then begin ... end
+} // -> if (game_loaded) then begin ... end
 game_loaded; // Wrong: this is a reference, not a call
 ```
 
@@ -471,8 +471,8 @@ Importing the same function from different module paths causes esbuild to rename
 esbuild optimizes `1.0` to `1`, losing the float type in SSL. Use the `FLOAT1` constant to force float context:
 
 ```typescript
-const ratio = (FLOAT1 * a) / b; // → 1.0 * a / b  (float division)
-const ratio = (1.0 * a) / b; // → 1 * a / b    (integer division!)
+const ratio = (FLOAT1 * a) / b; // -> 1.0 * a / b  (float division)
+const ratio = (1.0 * a) / b; // -> 1 * a / b    (integer division!)
 ```
 
 ## Compilation

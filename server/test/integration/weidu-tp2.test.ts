@@ -106,7 +106,7 @@ describe("weidu-tp2 integration", () => {
         it("navigates to a function definition from LAF call", () => {
             const f = loadFixture(TNT_BASE, "tnt/lib/functions.tph");
 
-            // LAF CREATE_SHELL_BLINDNESS on line 90 — cursor on the function name in the call
+            // LAF CREATE_SHELL_BLINDNESS on line 90 - cursor on the function name in the call
             const pos = findIdentifierPosition(f.text, "CREATE_SHELL_BLINDNESS", 1);
             expect(pos).not.toBeNull();
 
@@ -199,7 +199,7 @@ describe("weidu-tp2 integration", () => {
         it("renames a function and all its call sites", () => {
             const f = loadFixture(TNT_BASE, "tnt/lib/functions.tph");
 
-            // Rename CREATE_SHELL_BLINDNESS — defined and called
+            // Rename CREATE_SHELL_BLINDNESS - defined and called
             const pos = findIdentifierPosition(f.text, "CREATE_SHELL_BLINDNESS", 1);
             expect(pos).not.toBeNull();
 

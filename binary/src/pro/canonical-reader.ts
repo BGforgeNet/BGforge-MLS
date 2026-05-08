@@ -82,7 +82,7 @@ function readFieldNumber(group: ParsedGroup, fieldName: string, fieldPath: strin
 /**
  * Read every field declared in a CritterFieldDef-style table out of `group`,
  * producing a flat `dataKey -> number` map. Trailing tuple entries (offset,
- * type) are unused here — we only need the displayName/dataKey pair to drive
+ * type) are unused here - we only need the displayName/dataKey pair to drive
  * the lookup against the parsed display tree.
  */
 function mapGroupFromDefs(
@@ -107,7 +107,7 @@ function readClampedFieldNumber(
 /**
  * Read a flag-word field from the display tree and project it to the
  * sorted-array `{flags, flagsRaw?}` shape canonical-doc expects. Width is
- * hard-coded per call site to match the underlying spec codec — every PRO
+ * hard-coded per call site to match the underlying spec codec - every PRO
  * flag word is u8 / u24 / u32 in the spec, mapped to the matching
  * `codecBitWidth` here.
  */

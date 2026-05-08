@@ -1,5 +1,5 @@
 /**
- * Unit tests for weidu-tra/format.ts — whitespace-normalized .tra formatter.
+ * Unit tests for weidu-tra/format.ts - whitespace-normalized .tra formatter.
  */
 
 import { describe, expect, it } from "vitest";
@@ -137,7 +137,7 @@ describe("weidu-tra/format", () => {
         expect(fmt("@1 = ~text~\n   \n   \n@2 = ~other~\n")).toBe("@1 = ~text~\n\n@2 = ~other~\n");
     });
 
-    // The safety check (entry-number mismatch → warning) is a defensive invariant:
+    // The safety check (entry-number mismatch -> warning) is a defensive invariant:
     // the formatter only touches whitespace and never alters entry numbers, so valid
     // inputs cannot trigger it. These tests verify warning is absent for edge cases
     // most likely to stress the safety check.

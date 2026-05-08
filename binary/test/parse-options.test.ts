@@ -8,7 +8,7 @@
  * so a behavior added here propagates to every frontend.
  *
  * Frontend-preference axes (`skipMapTiles`, `gracefulMapBoundaries`) stay
- * out of this builder by design — those legitimately differ per caller.
+ * out of this builder by design - those legitimately differ per caller.
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
@@ -73,7 +73,7 @@ describe("buildFileDerivedParseOptions", () => {
     it("layers proto/ overrides on top of the bundled vanilla defaults", () => {
         const mapPath = makeMapDirWithProto();
         const opts = buildFileDerivedParseOptions(mapPath);
-        // pid 161 is a vanilla weapon in the bundled table → subType 3 (Weapon).
+        // pid 161 is a vanilla weapon in the bundled table -> subType 3 (Weapon).
         // It is NOT in the temp proto dir, so this exercises fallback.
         expect(opts.pidResolver!(161)).toBe(3);
     });
@@ -93,7 +93,7 @@ describe("buildFileDerivedParseOptions", () => {
         const protoDir = path.join(tmpDir, "proto");
         fs.mkdirSync(mapsDir);
         fs.mkdirSync(path.join(protoDir, "items"), { recursive: true });
-        // Empty proto/items/ — filesScanned will be 0, no resolver attached.
+        // Empty proto/items/ - filesScanned will be 0, no resolver attached.
         const opts = buildFileDerivedParseOptions(path.join(mapsDir, "any.map"));
         expect(opts.pidResolver).toBeUndefined();
         expect(opts.diagnostics).toBeUndefined();

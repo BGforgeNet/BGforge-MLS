@@ -119,7 +119,7 @@ const ASSIGNMENT_NODE_TYPES: ReadonlySet<string> = new Set([SyntaxType.PatchAssi
  *
  * Using a Set rather than hardcoded if-chain so that adding an operator to the grammar
  * only requires adding it here. If a new operator is missed, the function falls through
- * to "no operator found" and returns true (phantom) — this is the safe direction
+ * to "no operator found" and returns true (phantom) - this is the safe direction
  * (rejects a real assignment rather than accepting a phantom one).
  */
 const ASSIGN_OPS: ReadonlySet<string> = new Set(["=", "+=", "-=", "*=", "/=", "|=", "&=", "||=", "&&="]);
@@ -161,7 +161,7 @@ export function isPhantomAssignment(node: SyntaxNode): boolean {
         }
     }
 
-    // No operator child found at all — also phantom
+    // No operator child found at all - also phantom
     return true;
 }
 
@@ -172,7 +172,7 @@ export function isPhantomAssignment(node: SyntaxNode): boolean {
 /**
  * Check if a variable name looks like a constant based on WeiDU naming convention.
  * Returns true if the first word (before `_` or end of string) is all uppercase.
- * Examples: `OPCODE_overlay_grease` → true, `over_exists` → false, `FOO` → true.
+ * Examples: `OPCODE_overlay_grease` -> true, `over_exists` -> false, `FOO` -> true.
  *
  * WeiDU has no `const` keyword, so this is a heuristic. Used to assign
  * CompletionItemKind.Constant vs Variable for better icon differentiation.

@@ -52,7 +52,7 @@ export interface ParsedField {
      * semantic key); carrying the table on the field closes that gap and
      * makes the spec the single source of truth for enum/flags display.
      * Path-based overrides in the presentation schema still win when
-     * present — the tree builder consults them first.
+     * present - the tree builder consults them first.
      */
     enumOptions?: Readonly<Record<string, string>>;
     flagOptions?: Readonly<Record<string, string>>;
@@ -74,8 +74,8 @@ export interface ParsedGroup {
      * `.pro` file). The group's already-decoded fields render for inspection,
      * but editors must not expose field edits inside it: width-preserving
      * field changes are not interpretation-preserving when the byte width
-     * of the rest of the record — and therefore where downstream sections
-     * actually start — depends on undecoded data. Propagates to descendants;
+     * of the rest of the record - and therefore where downstream sections
+     * actually start - depends on undecoded data. Propagates to descendants;
      * the tree builder threads it down so individual fields show as
      * non-editable.
      */
@@ -135,7 +135,7 @@ export interface ParseOptions {
      */
     skipMapTiles?: boolean;
     /**
-     * Override the default pid → subType resolver used when decoding the
+     * Override the default pid -> subType resolver used when decoding the
      * trailing per-subtype payload of MAP item / scenery records. Defaults to
      * the bundled vanilla Fallout 2 table (`pid-resolver.ts`). Supplying a
      * resolver lets callers extend coverage to modded pids that the bundled

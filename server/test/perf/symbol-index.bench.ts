@@ -10,7 +10,7 @@ import { ScopeLevel, SourceType, SymbolKind, type IndexedSymbol } from "../../sr
 import type { NormalizedUri } from "../../src/core/normalized-uri";
 
 // ComponentSymbol has no discriminator-specific fields beyond BaseSymbol's
-// completion/hover — the lightest shape for seeding the index in a bench.
+// completion/hover - the lightest shape for seeding the index in a bench.
 function makeSym(name: string, uri: NormalizedUri): IndexedSymbol {
     return {
         name,
@@ -44,7 +44,7 @@ describe("symbol-index hot paths", () => {
         }
     });
 
-    bench("query({}) — no filters (x100)", () => {
+    bench("query({}) - no filters (x100)", () => {
         for (let i = 0; i < 100; i++) sink += symbols.query({}).length;
     });
 

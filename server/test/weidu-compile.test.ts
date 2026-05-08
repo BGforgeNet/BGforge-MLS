@@ -301,7 +301,7 @@ describe("weidu-compile", () => {
             const eperm = Object.assign(new Error("EPERM"), { code: "EPERM" });
             mockUnlink.mockRejectedValue(eperm);
 
-            // Should not throw — cleanup errors must not mask compiler results
+            // Should not throw - cleanup errors must not mask compiler results
             await compile(normalizeUri("file:///test.tp2"), baseSettings, false, "content");
 
             // Diagnostics should still have been sent despite cleanup failure

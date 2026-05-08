@@ -23,7 +23,7 @@ function findItmFixtures(root: string): string[] {
     return out.sort();
 }
 
-describe("itmParser — round-trip on real ITM v1 fixtures", () => {
+describe("itmParser - round-trip on real ITM v1 fixtures", () => {
     test("decoded header has the V1 signature", () => {
         const bytes = new Uint8Array(fs.readFileSync(FIRST_FIXTURE));
         const result = itmParser.parse(bytes);
@@ -43,7 +43,7 @@ describe("itmParser — round-trip on real ITM v1 fixtures", () => {
     if (fixtures.length === 0) {
         test.skip("no wildmage ITM fixtures present", () => {});
     } else {
-        test.each(fixtures)("parse → serialize is byte-identical for %s", (fixturePath) => {
+        test.each(fixtures)("parse -> serialize is byte-identical for %s", (fixturePath) => {
             const bytes = new Uint8Array(fs.readFileSync(fixturePath));
             const result = itmParser.parse(bytes);
             if (result.errors) throw new Error(result.errors.join(", "));

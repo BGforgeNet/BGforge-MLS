@@ -79,7 +79,7 @@ function main(): void {
     fs.mkdirSync(outDir, { recursive: true });
 
     for (const lang of LANGUAGES) {
-        // Skip languages with no YAML data — they get hand-written static files instead
+        // Skip languages with no YAML data - they get hand-written static files instead
         if (lang.yamlFiles.length === 0) continue;
 
         const conf = generateGeanyConf(lang);

@@ -65,9 +65,9 @@ export function getSslCompletionContext(text: string, position: Position): SslCo
  *
  * Why regex instead of tree-sitter AST:
  * At declaration sites the user is mid-typing a new identifier (e.g. `procedure fo|`).
- * Tree-sitter cannot produce a valid declaration node for incomplete input — the grammar
+ * Tree-sitter cannot produce a valid declaration node for incomplete input - the grammar
  * requires a complete construct, so partial input lands in an ERROR node with no reliable
- * node type to match against. This is a known tree-sitter limitation — error recovery
+ * node type to match against. This is a known tree-sitter limitation - error recovery
  * does not produce typed incomplete nodes, only ERROR nodes
  * (see https://github.com/tree-sitter/tree-sitter/issues/923).
  * Line-text regex is the fallback convention used throughout this codebase for similar

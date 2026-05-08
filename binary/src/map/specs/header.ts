@@ -45,9 +45,9 @@ export type MapHeaderWireData = SpecData<typeof mapHeaderSpec>;
 
 /**
  * Display labels for the header fields. Keys without an entry fall back to
- * `humanize(fieldName)`. Overrides cover acronyms (`scriptId`→"Script ID"),
- * the `flags`→"Map Flags" rename used in the binary editor, and the
- * `mapId`→"Map ID" disambiguation.
+ * `humanize(fieldName)`. Overrides cover acronyms (`scriptId`->"Script ID"),
+ * the `flags`->"Map Flags" rename used in the binary editor, and the
+ * `mapId`->"Map ID" disambiguation.
  */
 export const mapHeaderPresentation: StructPresentation<MapHeaderWireData> = {
     scriptId: { label: "Script ID" },

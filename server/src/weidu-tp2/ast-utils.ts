@@ -138,7 +138,7 @@ export function isOnLoopVariableBinding(root: import("web-tree-sitter").Node, po
     let current: import("web-tree-sitter").Node | null = node;
     while (current) {
         if (LOOP_BINDING_TYPES.has(current.type as SyntaxType)) {
-            // Found a loop node — check if the cursor is on a variable binding field
+            // Found a loop node - check if the cursor is on a variable binding field
             for (const fieldName of LOOP_VARIABLE_FIELDS) {
                 const fieldNode = current.childForFieldName(fieldName);
                 if (fieldNode && node.startIndex >= fieldNode.startIndex && node.endIndex <= fieldNode.endIndex) {

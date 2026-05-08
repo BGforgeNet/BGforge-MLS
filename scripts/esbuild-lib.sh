@@ -11,12 +11,12 @@
 #   but esbuild's CJS output shims import.meta as an empty object.
 #   --banner + --define works reliably with --minify (unlike the old sed approach).
 
-# JS banner without shebang — for library bundles (server, format CLI, transpile CLI).
+# JS banner without shebang - for library bundles (server, format CLI, transpile CLI).
 # Pass as: --banner:js="$imu_banner"
 # shellcheck disable=SC2034  # exported for use by sourcing scripts
 imu_banner='var __imu=require("url").pathToFileURL(__filename).href;'
 
-# JS banner with shebang prefix — for executable entry points.
+# JS banner with shebang prefix - for executable entry points.
 # Pass as: --banner:js="$imu_banner_with_shebang"
 # shellcheck disable=SC2034  # exported for use by sourcing scripts
 imu_banner_with_shebang='#!/usr/bin/env node

@@ -71,7 +71,7 @@ function serializeHeader(
     // the actual variable arrays before writing the header. Otherwise a
     // hand-edited canonical doc with mismatched counts would yield a wire
     // header whose section-length prefix is out of sync with the variables
-    // section that follows it — silent file corruption.
+    // section that follows it - silent file corruption.
     const recomputed = enforceDerivedFields(mapHeaderSpec, header, {
         arrays: { globalVariables, localVariables },
     });
@@ -223,7 +223,7 @@ function objectSerializedLength(object: z.infer<typeof mapObjectSchema>): number
 function serializeMapObject(bytes: Uint8Array, object: z.infer<typeof mapObjectSchema>, offset: number): number {
     objectBaseCodec.write(bufferWriterAt(bytes, offset), object.base);
     let currentOffset = offset + MAP_OBJECT_BASE_SIZE;
-    // Recompute inventoryLength from the actual inventory array — a stale
+    // Recompute inventoryLength from the actual inventory array - a stale
     // count in a hand-edited canonical doc would otherwise yield a wire
     // header out of sync with the inventory entries that follow.
     const recomputedInventoryHeader = enforceDerivedFields(inventoryHeaderSpec, object.inventoryHeader, {
@@ -330,7 +330,7 @@ function scriptSectionLength(scripts: z.infer<typeof mapScriptSectionSchema>[]):
 }
 
 /**
- * Caller contract: `opaqueRanges` offsets are written verbatim — the writer
+ * Caller contract: `opaqueRanges` offsets are written verbatim - the writer
  * does not adjust them to match the new layout it computes from `document`.
  * For round-trip and JSON-snapshot paths the document and opaqueRanges come
  * from the same parse, so the offsets already match. For structural

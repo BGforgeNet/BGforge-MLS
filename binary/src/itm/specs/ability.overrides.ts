@@ -21,7 +21,7 @@ export const itmAbilitySpecAnnotated = {
     idRequired: { ...itmAbilitySpec.idRequired, flags: AbilityIdRequiredFlags },
     location: { ...itmAbilitySpec.location, enum: ItmAbilityLocation },
     target: { ...itmAbilitySpec.target, enum: AbilityTargetType },
-    // Three named animation slots per IESDP — overhand / backhand / thrust.
+    // Three named animation slots per IESDP - overhand / backhand / thrust.
     // Walker emits them as a sub-group with stable per-index labels instead
     // of the opaque "(3 values) padding" array fallback.
     meleeAnimation: {
@@ -38,7 +38,7 @@ export const itmAbilitySpecAnnotated = {
     flags: { ...itmAbilitySpec.flags, flags: ItmAbilityFlags },
     // Per-ability slice into the global effect table. The values are decided
     // by which effects belong to this ability and where the ability sits in
-    // the writer's serialisation order — not user data.
+    // the writer's serialisation order - not user data.
     featureBlockCount: {
         ...itmAbilitySpec.featureBlockCount,
         role: "derivedCount" as const,

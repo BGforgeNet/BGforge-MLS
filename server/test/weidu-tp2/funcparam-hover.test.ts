@@ -459,7 +459,7 @@ BUT_ONLY
         const position: Position = { line: 1, character: col };
 
         const result = weiduTp2Provider.hover?.(text, "opcode", uri, position);
-        // Should return handled+null — loop binding, not a reference
+        // Should return handled+null - loop binding, not a reference
         expect(result?.handled).toBe(true);
         if (result?.handled) {
             expect(result.hover).toBeNull();
@@ -524,7 +524,7 @@ BUT_ONLY
         const position: Position = { line: 2, character: col };
 
         const result = weiduTp2Provider.hover?.(text, "opcode", uri, position);
-        // Should NOT be handled+null — this is a reference, not a binding
+        // Should NOT be handled+null - this is a reference, not a binding
         // It should either return found hover or not-handled (fall through)
         if (result?.handled) {
             expect(result.hover).not.toBeNull();

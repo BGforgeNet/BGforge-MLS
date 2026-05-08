@@ -129,7 +129,7 @@ export function findScopedReferences(rootNode: Node, symbolInfo: SslSymbolScope)
             return;
         }
 
-        // Skip macro_params entirely for file-scope searches — param names
+        // Skip macro_params entirely for file-scope searches - param names
         // are definitions, not references to file-scope symbols.
         if (symbolInfo.scope === ScopeKind.File && node.type === SyntaxType.MacroParams) {
             return;

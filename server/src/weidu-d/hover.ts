@@ -49,7 +49,7 @@ export function getStateLabelHover(text: string, _symbol: string, _uri: string, 
         return HR.notHandled();
     }
 
-    // Parse JSDoc — D only uses the description, no tags
+    // Parse JSDoc - D only uses the description, no tags
     const jsdoc = parseJSDoc(comment.text);
     if (!jsdoc.desc) {
         return HR.notHandled();

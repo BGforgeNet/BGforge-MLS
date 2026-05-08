@@ -1,7 +1,7 @@
 // Auto-generated from IESDP _opcodes/opNNN.html. Do not hand-edit.
 
 /**
- * Effect / EFF body opcode → display name. Sourced from IESDP `_opcodes/op<NNN>.html`
+ * Effect / EFF body opcode -> display name. Sourced from IESDP `_opcodes/op<NNN>.html`
  * frontmatter `opname` fields (canonical files only, not engine-variant overrides).
  */
 export const Opcodes: Readonly<Record<number, string>> = {

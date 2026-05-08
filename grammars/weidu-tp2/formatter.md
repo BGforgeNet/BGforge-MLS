@@ -299,5 +299,5 @@ END
 
 ## Related
 
-- [WeiDU TP2 Grammar README](./README.md) — TP2 syntax reference
-- [Format CLI](../../docs/architecture.md#format-cli) — General format CLI documentation
+- [WeiDU TP2 Grammar README](./README.md) - TP2 syntax reference
+- [Format CLI](../../docs/architecture.md#format-cli) - General format CLI documentation

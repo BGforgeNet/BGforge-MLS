@@ -23,9 +23,9 @@ interface SignatureData {
  * Single formatter ensures consistent output across all code paths.
  *
  * Examples:
- * - { name: "foo", prefix: "void ", params: [{name: "x", type: "int"}] } → "void foo(int x)"
- * - { name: "bar", prefix: "procedure ", params: [] } → "procedure bar"
- * - { name: "baz", prefix: "", params: [{name: "a"}, {name: "b"}] } → "baz(a, b)"
+ * - { name: "foo", prefix: "void ", params: [{name: "x", type: "int"}] } -> "void foo(int x)"
+ * - { name: "bar", prefix: "procedure ", params: [] } -> "procedure bar"
+ * - { name: "baz", prefix: "", params: [{name: "a"}, {name: "b"}] } -> "baz(a, b)"
  */
 export function formatSignature(sig: SignatureData): string {
     if (sig.params.length === 0) {

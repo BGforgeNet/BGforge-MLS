@@ -1,5 +1,5 @@
 /**
- * Tree-sitter parser for WeiDU D — thin re-export from ParserManager.
+ * Tree-sitter parser for WeiDU D - thin re-export from ParserManager.
  */
 
 import { parserManager } from "./parser-manager";

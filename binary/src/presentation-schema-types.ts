@@ -4,7 +4,7 @@
  * Lives in its own module so `BinaryFormatAdapter` can reference these types
  * without importing the runtime `presentation-schema.ts` (which itself
  * imports `formatAdapterRegistry`). One-direction type-only dependency:
- * `format-adapter.ts` → these types; runtime `presentation-schema.ts` →
+ * `format-adapter.ts` -> these types; runtime `presentation-schema.ts` ->
  * `formatAdapterRegistry` (lookup) + these types.
  */
 
@@ -27,7 +27,7 @@ export const fieldPresentationSchema = z.strictObject({
      * Charset restriction for `string` field types. Defaults to "utf8" (any
      * value within the byte budget). Set to "ascii-printable" for fields
      * consumed by 1990s-era game engines that don't honour multi-byte
-     * encodings — accepted bytes stay within the engine's documented input.
+     * encodings - accepted bytes stay within the engine's documented input.
      */
     stringCharset: stringCharsetSchema.optional(),
 });

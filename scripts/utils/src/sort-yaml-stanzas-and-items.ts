@@ -355,7 +355,7 @@ export function sortYamlStanzasAndItems(source: string): string {
         return {
             key: pair.key.value,
             leading: source.slice(start, keyStart),
-            // Strip trailing blank lines — they belong to the gap between
+            // Strip trailing blank lines - they belong to the gap between
             // stanzas in the original order and must not travel with the body
             // when stanzas are reordered.
             body: sortItemsInStanzaBody(source.slice(keyStart, end)).replace(/\n{2,}$/, "\n"),

@@ -1,5 +1,5 @@
 /**
- * Unit tests for fallout-msg/format.ts — whitespace-normalized .msg formatter.
+ * Unit tests for fallout-msg/format.ts - whitespace-normalized .msg formatter.
  */
 
 import { describe, expect, it } from "vitest";
@@ -107,7 +107,7 @@ describe("fallout-msg/format", () => {
         expect(formatMsg("").text).toBe("");
     });
 
-    // The safety check (entry-number mismatch → warning) is a defensive invariant:
+    // The safety check (entry-number mismatch -> warning) is a defensive invariant:
     // the formatter only trims whitespace inside number/audio braces and never alters
     // entry numbers, so valid inputs cannot trigger it. These tests verify warning is
     // absent for edge cases most likely to stress the safety check.

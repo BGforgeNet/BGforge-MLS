@@ -33,7 +33,7 @@ Tree-based formatters (`formatFalloutSsl`, `formatWeiduBaf`, `formatWeiduD`,
 see the source for the exact signatures.
 
 Other helpers cover comment stripping (`stripCommentsWeidu`, `stripCommentsFalloutSsl`,
-…), formatting validation (`validateFormatting`), tokenisation (`tokenizeWeidu`),
+...), formatting validation (`validateFormatting`), tokenisation (`tokenizeWeidu`),
 and editorconfig discovery (`getEditorconfigSettings`).
 
 ## `fgfmt` CLI
@@ -42,11 +42,11 @@ and editorconfig discovery (`getEditorconfigSettings`).
 fgfmt <file|dir> [--save] [--check] [--save-and-check] [-r] [-q]
 ```
 
-- `--save` — write formatted output back to file(s)
-- `--check` — exit 1 if any file is not already formatted
-- `--save-and-check` — save and verify idempotency in one pass
-- `-r` — recurse into directories
-- `-q` — quiet mode (suppress summary)
+- `--save` - write formatted output back to file(s)
+- `--check` - exit 1 if any file is not already formatted
+- `--save-and-check` - save and verify idempotency in one pass
+- `-r` - recurse into directories
+- `-q` - quiet mode (suppress summary)
 
 ## Supported file types
 

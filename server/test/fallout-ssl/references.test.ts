@@ -211,7 +211,7 @@ procedure main begin
     display_msg(GVAR_DEN_GANGWAR);
 end
 `;
-            // No refsIndex — should return empty for non-local symbol
+            // No refsIndex - should return empty for non-local symbol
             const refs = findReferences(text, { line: 2, character: 16 }, TEST_URI, true);
             expect(refs).toHaveLength(0);
         });
@@ -253,7 +253,7 @@ end
                 range: { start: { line: 3, character: 4 }, end: { line: 3, character: 10 } },
             };
             const index = new ReferencesIndex();
-            // Add index entry for same URI — should be filtered
+            // Add index entry for same URI - should be filtered
             index.updateFile(normalizeUri(TEST_URI), new Map([["helper", [selfLoc]]]));
 
             const refs = findReferences(text, { line: 1, character: 10 }, TEST_URI, true, index);
@@ -271,7 +271,7 @@ procedure foo begin
     display_msg("hello");
 end
 `;
-            // cursor on "display_msg" — not a local definition
+            // cursor on "display_msg" - not a local definition
             const refs = findReferences(text, { line: 2, character: 4 }, TEST_URI, true);
             expect(refs).toHaveLength(0);
         });
@@ -296,9 +296,9 @@ procedure foo begin
     x := x + 1;
 end
 `;
-            // cursor on "x" at line 3, character 4 (assignment lvalue — may not be the def location)
+            // cursor on "x" at line 3, character 4 (assignment lvalue - may not be the def location)
             const refs = findReferences(text, { line: 3, character: 4 }, TEST_URI, false);
-            // Should not be empty — refs found even if definition could not be excluded
+            // Should not be empty - refs found even if definition could not be excluded
             expect(refs.length).toBeGreaterThanOrEqual(0);
         });
     });

@@ -4,7 +4,7 @@
  * each format's `presentation-schema.ts`. This file routes lookups through
  * `formatAdapterRegistry`, so adding a new format means writing one
  * `<format>/presentation-schema.ts` and attaching it to that format's
- * adapter — no parallel registry to maintain here.
+ * adapter - no parallel registry to maintain here.
  */
 
 import { formatAdapterRegistry } from "./format-adapter";

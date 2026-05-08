@@ -6,10 +6,10 @@ import type { FieldSpec, SpecData } from "../../spec/types";
  * elevation has 10 000 of these laid end-to-end.
  *
  * Bit layout (LSB=0):
- *   bits  0-11 — floor tile id   (12 bits)
- *   bits 12-15 — floor flags     (4 bits)
- *   bits 16-27 — roof tile id    (12 bits)
- *   bits 28-31 — roof flags      (4 bits)
+ *   bits  0-11 - floor tile id   (12 bits)
+ *   bits 12-15 - floor flags     (4 bits)
+ *   bits 16-27 - roof tile id    (12 bits)
+ *   bits 28-31 - roof flags      (4 bits)
  */
 export const tilePairSpec = {
     floorTileId: { codec: u32, packedAs: "tilePair", bitRange: [0, 12], domain: { min: 0, max: 0xfff } },

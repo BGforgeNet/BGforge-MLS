@@ -1,11 +1,11 @@
 /**
- * ServerContext — session-scoped container for LSP server state constructed
+ * ServerContext - session-scoped container for LSP server state constructed
  * during `onInitialize` and read by request handlers. Module-level mutable
  * `let` globals in server.ts were moved here to satisfy rules/coding.md
  * "avoid shared mutable module state and import-time side effects".
  *
  * The internal barrier promise (`contextReady`) ensures that handlers racing
- * the initialization window never see an error — they simply await until the
+ * the initialization window never see an error - they simply await until the
  * context is available and then return real results.
  *
  * The barrier deliberately has no rejection path. Catastrophic init failure
@@ -13,7 +13,7 @@
  * surfaces via the LSP wire: the connection returns an error response to the
  * `initialize` request, and a conformant client stops dispatching subsequent
  * requests. Handlers therefore cannot legitimately observe a "never-resolved"
- * barrier in the field — only a server-side programming bug (an early return
+ * barrier in the field - only a server-side programming bug (an early return
  * between `registry.init()` and `initServerContext()` in handlers/initialize.ts)
  * could create that state, and any such bug would be caught by integration
  * tests on the first request the client sends.
@@ -60,7 +60,7 @@ const contextReady = new Promise<ServerContext>((resolve) => {
 });
 
 // Watchdog: emits a single warn-level log if initServerContext does not arrive
-// within INIT_WATCHDOG_MS. Does NOT reject the barrier — the no-rejection
+// within INIT_WATCHDOG_MS. Does NOT reject the barrier - the no-rejection
 // invariant on contextReady is preserved (handlers can still resolve later if
 // init eventually fires). This exists to surface the silent-hang failure mode
 // in the operator-visible output channel rather than waiting for the user to
@@ -88,14 +88,14 @@ export function initServerContext(value: ServerContext): void {
 /**
  * Get the session context. Returns a promise that resolves once
  * initServerContext has been called. Handlers that arrive before init
- * simply wait — they never throw or return partial results.
+ * simply wait - they never throw or return partial results.
  */
 export function getServerContext(): Promise<ServerContext> {
     return contextReady;
 }
 
 /**
- * Get the session context without waiting — returns undefined before
+ * Get the session context without waiting - returns undefined before
  * initServerContext completes. Use only for handlers that must bail out
  * immediately (e.g. onDidChangeConfiguration, which can fire before init).
  */

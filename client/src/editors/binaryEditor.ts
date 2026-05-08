@@ -44,8 +44,8 @@ type EditableBinaryParser = BinaryParser & {
 /**
  * Decide whether a group's children list needs to be replaced wholesale on
  * the webview side. `updateField` only refreshes value/rawValue, so any
- * change in display metadata (offset, size, type, name, kind) — e.g. local
- * vars whose offsets shift after a global var is added — has to go through
+ * change in display metadata (offset, size, type, name, kind) - e.g. local
+ * vars whose offsets shift after a global var is added - has to go through
  * the children-replacement path.
  */
 function groupChildrenStructureChanged(
@@ -80,7 +80,7 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
     /**
      * Per-panel tree state. Keyed by `WebviewPanel` rather than by `BinaryDocument`
      * because `supportsMultipleEditorsPerDocument: true` permits two panels to view
-     * the same document — keying by document would cause the second panel's
+     * the same document - keying by document would cause the second panel's
      * lazy-expand state to overwrite the first's.
      */
     private readonly treeStates = new Map<vscode.WebviewPanel, BinaryEditorTreeState>();
@@ -113,7 +113,7 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
 
     private panelKey(panel: vscode.WebviewPanel): string {
         // Stable per-panel key. Panels are reference-typed and we only need
-        // identity equality, so a Map<panel, key> would be redundant — we
+        // identity equality, so a Map<panel, key> would be redundant - we
         // synthesize a key from a WeakMap-backed counter.
         let key = this.panelKeys.get(panel);
         if (key === undefined) {
@@ -186,7 +186,7 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
         // listener that the closed panel registered.
         const panelSubscriptions: vscode.Disposable[] = [];
 
-        // Register panel↔document binding + view-state tracking for the
+        // Register panel<->document binding + view-state tracking for the
         // selection model. Commands consult `getActiveContext` to learn which
         // document the focused webview belongs to.
         this.panelDocuments.set(webviewPanel, document);
@@ -204,7 +204,7 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
         // extension's own webview JS (loaded under the nonce-gated CSP set in
         // binaryEditor.html), so external injection is not possible. A runtime
         // discriminated-union guard would only catch bugs in our own webview
-        // code — not a trust-boundary concern — and is intentionally omitted to
+        // code - not a trust-boundary concern - and is intentionally omitted to
         // keep the dispatcher legible.
         panelSubscriptions.push(
             webviewPanel.webview.onDidReceiveMessage((msg: WebviewToExtension) => {
@@ -385,7 +385,7 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
      * Run an add/remove/insert/move operation and post a targeted delta to the
      * webview instead of triggering a full re-init. The refresh gate is set
      * before the document mutation so the synchronous `onDidChangeContent`
-     * fire from `applyByteRebuild` skips the wholesale rebuild — the delta
+     * fire from `applyByteRebuild` skips the wholesale rebuild - the delta
      * messages here put the new state on screen without tearing down the DOM.
      *
      * Falls back to `sendInit` when the operation didn't apply, when there's
@@ -475,11 +475,11 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
                 continue;
             }
 
-            // Same structure and metadata at this group's children — only
+            // Same structure and metadata at this group's children - only
             // values may have changed. Post `updateField` for each leaf field
             // whose value/rawValue differs. Nested groups (e.g. Header has no
             // nested groups, but Tiles/Scripts/Objects do) are not recursed
-            // into — entity ops today only mutate variable arrays + their
+            // into - entity ops today only mutate variable arrays + their
             // header-counter scalars, all reachable at this depth.
             for (let j = 0; j < newChildren.length; j++) {
                 const oldChild = oldChildren[j]!;

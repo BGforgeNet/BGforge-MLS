@@ -26,7 +26,7 @@
         <DetectChar attribute="Bracket" context="Audio" char="{"/>
       </context>
 
-      <!-- {audio} — may be empty -->
+      <!-- {audio} - may be empty -->
       <context name="Audio" attribute="Sound" lineEndContext="#stay">
         <DetectChar attribute="Bracket" context="TextOpen" char="}"/>
       </context>
@@ -36,7 +36,7 @@
         <DetectChar attribute="Bracket" context="Text" char="{"/>
       </context>
 
-      <!-- {text} — may be empty, may span multiple lines -->
+      <!-- {text} - may be empty, may span multiple lines -->
       <context name="Text" attribute="String" lineEndContext="#stay">
         <DetectChar attribute="Bracket" context="Normal" char="}"/>
       </context>

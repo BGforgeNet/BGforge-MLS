@@ -50,7 +50,7 @@ export { validateNumericValue } from "./binary-format-contract";
 // Flags
 export { isFlagActive } from "./flags";
 
-// String field charsets — single source of truth for "what does ascii-printable mean".
+// String field charsets - single source of truth for "what does ascii-printable mean".
 export type { StringCharset } from "./string-charset";
 export { isCharAllowedInCharset, isStringAllowedInCharset } from "./string-charset";
 
@@ -61,10 +61,10 @@ export { itmParser } from "./itm";
 export { splParser } from "./spl";
 export { effParser } from "./eff";
 
-// Pid → subType resolution for MAP item / scenery decode. The default
+// Pid -> subType resolution for MAP item / scenery decode. The default
 // resolver is backed by a bundled vanilla Fallout 2 lookup table; consumers
-// extend coverage by composing custom resolvers — typically a filesystem
-// loader pointed at a mod's own `proto/` tree — on top of the default.
+// extend coverage by composing custom resolvers - typically a filesystem
+// loader pointed at a mod's own `proto/` tree - on top of the default.
 export { resolvePidSubType, type PidResolver } from "./pid-resolver";
 export {
     loadProDirResolver,

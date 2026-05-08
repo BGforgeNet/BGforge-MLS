@@ -8,7 +8,7 @@ Release builds produce a CycloneDX SBOM (`dist/sbom.cdx.json`) attached to the G
 
 Static analysis runs alongside: OpenSSF Scorecard (`.github/workflows/scorecard.yml`) for project-process hygiene, and CodeQL (`.github/workflows/codeql.yml`) for JavaScript/TypeScript SAST queries. Findings publish to the repository's GitHub code-scanning surface. The `pnpm supply-chain:verify` script (run as the first CI step) confirms all four workflow artifacts are present before install.
 
-Dependabot version-update PRs are intentionally disabled — there is no `.github/dependabot.yml`, and one should not be added back. Dependency bumps are performed manually as coordinated changes so the LSP `vscode-languageclient` / `vscode-languageserver` / `vscode-languageserver-protocol` triplet (see _Pinned dependency constraints_), major-version updates, and any required `pnpm.overrides` adjustments stay grouped with their rationale rather than landing as separate noisy PRs. Dependabot _security_ updates are a separate channel toggled in repo Settings → Code security and remain enabled; the absence of `dependabot.yml` does not affect them. If a security advisory needs by-name suppression (e.g., the prior `uuid` case where the vulnerable code path was unreachable), close the PR with a rationale rather than re-introducing `dependabot.yml` solely to host an `ignore:` entry.
+Dependabot version-update PRs are intentionally disabled - there is no `.github/dependabot.yml`, and one should not be added back. Dependency bumps are performed manually as coordinated changes so the LSP `vscode-languageclient` / `vscode-languageserver` / `vscode-languageserver-protocol` triplet (see _Pinned dependency constraints_), major-version updates, and any required `pnpm.overrides` adjustments stay grouped with their rationale rather than landing as separate noisy PRs. Dependabot _security_ updates are a separate channel toggled in repo Settings -> Code security and remain enabled; the absence of `dependabot.yml` does not affect them. If a security advisory needs by-name suppression (e.g., the prior `uuid` case where the vulnerable code path was unreachable), close the PR with a rationale rather than re-introducing `dependabot.yml` solely to host an `ignore:` entry.
 
 ## Important Rules
 
@@ -16,7 +16,7 @@ Dependabot version-update PRs are intentionally disabled — there is no `.githu
 - **Use `SyntaxType` enum for tree-sitter node types.** Never hardcode strings like `"action_copy"`. Import from `./tree-sitter.d` and use `SyntaxType.ActionCopy`. The enum is generated from the grammar.
 - **External library packaging:** Libraries imported by transpiler files (iets, folib) must use **named re-exports** (`export { X } from './module'`), not star re-exports (`export * from './module'`). Ambient declarations (`declare function`, `declare const`) must live in `.d.ts` files, not `.ts` files. See folib's `src/index.ts` for the correct pattern.
 - **URI normalization:** All URIs entering the provider system are normalized via `normalizeUri()` from `core/normalized-uri.ts`. The `ProviderRegistry` handles this at the gateway. If you add new URI-accepting methods to the registry, normalize them. If you use URIs as Map/Set keys elsewhere, use `NormalizedUri` branded type.
-- **User-facing messages:** Never call `connection.window.showInformationMessage/showWarningMessage/showErrorMessage` directly in server code. Use `showInfo()`, `showWarning()`, `showError()`, or `showErrorWithActions()` from `user-messages.ts` — they auto-decode `file://` URIs to readable paths. An oxlint rule enforces this.
+- **User-facing messages:** Never call `connection.window.showInformationMessage/showWarningMessage/showErrorMessage` directly in server code. Use `showInfo()`, `showWarning()`, `showError()`, or `showErrorWithActions()` from `user-messages.ts` - they auto-decode `file://` URIs to readable paths. An oxlint rule enforces this.
 - **Temporary artifacts:** Put transient test/build files under the repo-level `tmp/` directory (or `os.tmpdir()` when system temp is required). Do not create ad hoc temp directories under source trees like `server/test/`, `binary/test/`, or `scripts/**`.
 - **Avoid parallel logic when extending an existing transform/helper path.** If a change adds a second implementation of behavior that already exists elsewhere in the repo (for example a second HTML-to-markdown normalizer, parser cleanup path, or provider indexing lifecycle), stop and check whether the logic should be shared instead. Treat this as a review concern, not optional cleanup.
 - **Prefer guarded helpers over scattered type assertions.** When third-party typings are too loose, isolate narrowing in small runtime-checked helper functions instead of spreading raw `as` casts through the implementation. Use direct casts only as a last resort and keep them localized.
@@ -25,8 +25,8 @@ Dependabot version-update PRs are intentionally disabled — there is no `.githu
 - **Prefer canonical tool scoping over hardcoded file lists.** When wiring linters, formatters, or link checkers, use the tool's normal config and ignore mechanisms (`.gitignore`, `.remarkignore`, config files, ignore flags) instead of manually enumerating repo paths in scripts. Only hardcode file lists as a last resort, and document why if you must.
 - **Do not change documentation structure just to satisfy a checker.** Never add fake headings, placeholder sections, or other invented doc structure solely to make anchors pass. Fix the link target, remove the bad link, or add a real section only when the document genuinely needs it.
 - **After completing a milestone, run the full verification pass and review the result.** Default milestone close-out is: run `pnpm build:all`, run `pnpm test:all`, report results.
-- **Rebuild TextMate grammars after editing YAML sources.** After modifying any `syntaxes/*.tmLanguage.yml` file, run `scripts/syntaxes-to-json.sh` to regenerate the compiled JSON before testing or committing. **Never hand-edit `syntaxes/*.tmLanguage.json` files** — they are fully generated from the YAML sources and any manual edits will be overwritten.
-- **Do not hand-edit auto-generated TextMate stanzas.** Several stanzas across `syntaxes/*.tmLanguage.yml` are generated from `server/data/*.yml` via `generate-data.sh` — see `docs/data-pipeline.md` for the full list. Edit the YAML data source, then regenerate. Auto-generated stanzas are marked with a `# Auto-generated` comment. Because both the `.yml` sources (generator-maintained stanzas) and `.json` outputs (emitted by `yaml2json.ts`) are generator-owned, `syntaxes/*.tmLanguage.{yml,json}` are excluded from `oxfmt` via `.oxfmtrc.json`; running `oxfmt` on them would be undone on the next regen.
+- **Rebuild TextMate grammars after editing YAML sources.** After modifying any `syntaxes/*.tmLanguage.yml` file, run `scripts/syntaxes-to-json.sh` to regenerate the compiled JSON before testing or committing. **Never hand-edit `syntaxes/*.tmLanguage.json` files** - they are fully generated from the YAML sources and any manual edits will be overwritten.
+- **Do not hand-edit auto-generated TextMate stanzas.** Several stanzas across `syntaxes/*.tmLanguage.yml` are generated from `server/data/*.yml` via `generate-data.sh` - see `docs/data-pipeline.md` for the full list. Edit the YAML data source, then regenerate. Auto-generated stanzas are marked with a `# Auto-generated` comment. Because both the `.yml` sources (generator-maintained stanzas) and `.json` outputs (emitted by `yaml2json.ts`) are generator-owned, `syntaxes/*.tmLanguage.{yml,json}` are excluded from `oxfmt` via `.oxfmtrc.json`; running `oxfmt` on them would be undone on the next regen.
 - **Sort YAML data files with the existing script.** To sort `server/data/*.yml` files, use `pnpm exec tsx scripts/utils/src/sort-yaml-stanzas-and-items.ts <file>`. Do not write custom sorting code. See `scripts/README.md` for all available script utilities.
 - **Changelog entries must be user-facing only.** Document new features, bug fixes, and behavior changes. Never include implementation details such as refactoring, test additions, code quality improvements, or internal constants. Users care about what changed, not how it was implemented.
 
@@ -70,7 +70,7 @@ themes/                  # Color themes (bgforge-monokai) + icon theme
 language-configurations/ # VSCode language config files (brackets, comments, indentation)
 snippets/                # Code snippets: fallout-ssl.json, weidu-baf.json, weidu-tp2.json
 scripts/                 # Build, test, data generation scripts
-actions/                 # Reusable composite GitHub Actions published from this repo (currently: binary/ — refresh/check JSON snapshots for any format @bgforge/binary supports; format list discovered at runtime via `fgbin --extensions`)
+actions/                 # Reusable composite GitHub Actions published from this repo (currently: binary/ - refresh/check JSON snapshots for any format @bgforge/binary supports; format list discovered at runtime via `fgbin --extensions`)
 transpilers/             # Transpiler implementations + user documentation
   common/                # Shared transpiler utilities (not a package)
   tssl/                  # @bgforge/tssl package: TypeScript to Fallout SSL
@@ -96,7 +96,7 @@ pnpm test:all          # Full test suite: test + grammars + transpile-external. 
 pnpm test:grammars     # Grammar tests (generate, lint, corpus, highlight, parse, format)
 pnpm test:cli          # CLI mode tests (check/save/stdout exit codes, diff output)
 pnpm test:e2e          # E2E tests (requires build and host Electron libraries)
-pnpm bench             # Run server perf benches (server/test/perf/*.bench.ts) — manual/local only, not in CI
+pnpm bench             # Run server perf benches (server/test/perf/*.bench.ts) - manual/local only, not in CI
 pnpm package           # Create VSIX
 ```
 
@@ -127,18 +127,18 @@ cd grammars/weidu-tp2 && pnpm test   # or any grammars/*/
 
 Three artifact streams, all triggered by `git tag vX.Y.Z` -> GitHub Actions. See `docs/architecture.md` for packaging details.
 
-**Version management:** Root `package.json` and `server/package.json` must carry identical versions — they ship together as the VSIX and the `@bgforge/mls-server` npm package, gated by the same `git tag vX.Y.Z`. Check the current value with `node -p "require('./package.json').version"`. Bump both together, commit as "Update changelog, bump version: X.Y.Z", then tag.
+**Version management:** Root `package.json` and `server/package.json` must carry identical versions - they ship together as the VSIX and the `@bgforge/mls-server` npm package, gated by the same `git tag vX.Y.Z`. Check the current value with `node -p "require('./package.json').version"`. Bump both together, commit as "Update changelog, bump version: X.Y.Z", then tag.
 
-The three published library packages — `@bgforge/binary`, `@bgforge/format`, `@bgforge/transpile` — version independently. Each library and its bundled CLI (`fgbin`, `fgfmt`, `fgtp`) share a single package.json and therefore a single version, so the library API and the CLI surface always move together. Cross-library coupling is not enforced: a binary-format addition does not force a format or transpile bump. Workspace consumers (`server/`, `client/`) reference these packages via `workspace:*`, so bumping a library version does not require updating dependents. Each library's release is its own `git tag` namespace (e.g., `binary/v0.2.0`) when published; the repo-level `vX.Y.Z` tag governs only the VSIX + server release.
+The three published library packages - `@bgforge/binary`, `@bgforge/format`, `@bgforge/transpile` - version independently. Each library and its bundled CLI (`fgbin`, `fgfmt`, `fgtp`) share a single package.json and therefore a single version, so the library API and the CLI surface always move together. Cross-library coupling is not enforced: a binary-format addition does not force a format or transpile bump. Workspace consumers (`server/`, `client/`) reference these packages via `workspace:*`, so bumping a library version does not require updating dependents. Each library's release is its own `git tag` namespace (e.g., `binary/v0.2.0`) when published; the repo-level `vX.Y.Z` tag governs only the VSIX + server release.
 
 **Changelog entries:** Document only user-facing changes (new features, bug fixes, behavior changes). Do not include implementation details (refactoring, test additions, code quality improvements, internal constants). Users care about what changed, not how it was implemented.
 
 **Pinned dependency constraints:**
 
-- `client/package.json:vscode-languageserver-protocol` is pinned to the same patch level as the `vscode-languageclient` and `vscode-languageserver` majors (currently `8.1.0` / protocol `3.17.3`). Bumping the protocol patch independently breaks `client.sendRequest(ExecuteCommandRequest.type, ...)` overloads — the LSP client/server/protocol triplet must move together when the LSP majors are upgraded.
+- `client/package.json:vscode-languageserver-protocol` is pinned to the same patch level as the `vscode-languageclient` and `vscode-languageserver` majors (currently `8.1.0` / protocol `3.17.3`). Bumping the protocol patch independently breaks `client.sendRequest(ExecuteCommandRequest.type, ...)` overloads - the LSP client/server/protocol triplet must move together when the LSP majors are upgraded.
 - `vscode-languageclient` / `vscode-languageserver` themselves remain on `8.1.0` while the `9.x` line is `9.0.x` only; the cross-major bump waits for a `9.1` release that proves the major has matured.
 - `pnpm.overrides` for `mocha>diff` and `mocha>serialize-javascript` exist for security-advisory reasons; revisit only when the underlying advisories are closed.
-- `ts-morph` is pinned to `^27.0.2` across the server runtime and all transpiler subpackages so the bundled TypeScript matches the project's own `typescript ^5.9.3` pin. ts-morph bundles its TypeScript dependency rather than treating it as a peer, so the ts-morph version effectively chooses the TS compiler that runs against transpiler ASTs regardless of the workspace `typescript` pin. ts-morph 28 bundles TS 6.0 — TS 6 is on a 6.0.x line with no 6.1 published, fails the standard "matured target major" upgrade rule, and ts-morph 28 is therefore deferred until TS 6.1 ships. ts-morph 27.0.x is technically also on a 0-minor line, but the TS 5.9 alignment is the deciding factor. Bump in lockstep with the project's `typescript` pin: when `typescript` moves to 6.x, ts-morph moves to whichever ts-morph major bundles that TS line.
+- `ts-morph` is pinned to `^27.0.2` across the server runtime and all transpiler subpackages so the bundled TypeScript matches the project's own `typescript ^5.9.3` pin. ts-morph bundles its TypeScript dependency rather than treating it as a peer, so the ts-morph version effectively chooses the TS compiler that runs against transpiler ASTs regardless of the workspace `typescript` pin. ts-morph 28 bundles TS 6.0 - TS 6 is on a 6.0.x line with no 6.1 published, fails the standard "matured target major" upgrade rule, and ts-morph 28 is therefore deferred until TS 6.1 ships. ts-morph 27.0.x is technically also on a 0-minor line, but the TS 5.9 alignment is the deciding factor. Bump in lockstep with the project's `typescript` pin: when `typescript` moves to 6.x, ts-morph moves to whichever ts-morph major bundles that TS line.
 
 ## Architecture
 
@@ -150,9 +150,9 @@ LSP-based extension with provider-registry pattern. Monorepo with separate `clie
 
 For detailed architecture, see:
 
-- `docs/architecture.md` — system overview, build pipeline, client, CLIs, grammars, packaging
-- `server/INTERNALS.md` — server internals: provider registry, symbol system, data flow, tree-sitter, feature implementations, design decisions
-- `binary/INTERNALS.md` — binary library internals: spec system, primitives, derivation, orchestrator/spec boundary, format adapters, adding a new format
+- `docs/architecture.md` - system overview, build pipeline, client, CLIs, grammars, packaging
+- `server/INTERNALS.md` - server internals: provider registry, symbol system, data flow, tree-sitter, feature implementations, design decisions
+- `binary/INTERNALS.md` - binary library internals: spec system, primitives, derivation, orchestrator/spec boundary, format adapters, adding a new format
 
 ### Tree-Sitter Type Generation
 

@@ -37,7 +37,7 @@ function ctx(textWithCursor: string): CompletionContext[] {
 }
 
 // ---------------------------------------------------------------------------
-// isAtMacroName — exercised only when tree-sitter parses the LAM/LPM as an
+// isAtMacroName - exercised only when tree-sitter parses the LAM/LPM as an
 // ActionLaunchMacro / PatchLaunchMacro node. Bare "LAM |" routes through the
 // text fallback in context/index.ts, so we use complete macro calls plus a
 // trailing line so the cursor lands inside or past the parsed identifier.
@@ -65,13 +65,13 @@ describe("isAtMacroName via parsed LAM/LPM nodes", () => {
     });
 
     it("LPM cursor past identifier returns null context (not at name)", () => {
-        // Cursor on a trailing token after the macro name — isAtMacroName
+        // Cursor on a trailing token after the macro name - isAtMacroName
         // must hit the "past the identifier" branch and return false.
         const { text, line, character } = cursor(
             `DEFINE_PATCH_MACRO my_macro BEGIN END\nCOPY ~a~ ~b~\n  LPM my_macro |\n`,
         );
         const contexts = getContextAtPosition(text, line, character);
-        // Either empty (no filtering) or some non-LpmName context — but never LpmName.
+        // Either empty (no filtering) or some non-LpmName context - but never LpmName.
         expect(contexts).not.toContain(CompletionContext.LpmName);
     });
 });
@@ -94,7 +94,7 @@ describe("isAtFunctionName edge cases", () => {
     });
 
     it("cursor between LAF and END (no args) hits END marker tracking", () => {
-        // No INT_VAR/STR_VAR/RET — the END-token branch in isAtFunctionName
+        // No INT_VAR/STR_VAR/RET - the END-token branch in isAtFunctionName
         // has to fire to bound the function-name region.
         const contexts = ctx(`LAF | END`);
         expect(contexts).toContain(CompletionContext.LafName);
@@ -129,7 +129,7 @@ describe("isAtFunctionName edge cases", () => {
 });
 
 // ---------------------------------------------------------------------------
-// findCallItemAtCursor — covers each param-node type in both call and
+// findCallItemAtCursor - covers each param-node type in both call and
 // definition position. The decl branches are reachable only via
 // DEFINE_*_FUNCTION/MACRO with cursor inside the parameter list.
 // ---------------------------------------------------------------------------
@@ -176,7 +176,7 @@ describe("findCallItemAtCursor over each decl/call_item type", () => {
 });
 
 // ---------------------------------------------------------------------------
-// detectParamNameOrValue — the "no = found" and "cursor exactly on =" branches.
+// detectParamNameOrValue - the "no = found" and "cursor exactly on =" branches.
 // ---------------------------------------------------------------------------
 describe("detectParamNameOrValue branches", () => {
     it("no = present -> FuncParamName", () => {
@@ -198,7 +198,7 @@ describe("detectParamNameOrValue branches", () => {
 });
 
 // ---------------------------------------------------------------------------
-// extractFuncParamsContext / getFuncParamsContext — verifies the enriched
+// extractFuncParamsContext / getFuncParamsContext - verifies the enriched
 // module-level cache populated by the parsed-call path. Each section type
 // has its own branch in searchKeywordNodes.
 // ---------------------------------------------------------------------------
@@ -257,7 +257,7 @@ describe("getFuncParamsContext after detection", () => {
     it("getFuncParamsContext is null when cursor is at function-name position", () => {
         // detectFunctionCallContext returns LafName before extractFuncParamsContext runs;
         // however the field starts cleared on each call only when extractFuncParamsContext
-        // executes — verify the simple "no params parsed yet" path doesn't leak stale data.
+        // executes - verify the simple "no params parsed yet" path doesn't leak stale data.
         detect(`LAF my_f|unc END`);
         // We don't assert null vs non-null absolutely (depends on prior call's residue),
         // but the surface API must not throw.
@@ -266,7 +266,7 @@ describe("getFuncParamsContext after detection", () => {
 });
 
 // ---------------------------------------------------------------------------
-// LPM in patch context — separate from LAM tests because the parse path
+// LPM in patch context - separate from LAM tests because the parse path
 // goes through PatchLaunchMacro instead of ActionLaunchMacro.
 // ---------------------------------------------------------------------------
 describe("LPM patched-context branches", () => {
@@ -282,7 +282,7 @@ describe("LPM patched-context branches", () => {
 });
 
 // ---------------------------------------------------------------------------
-// detectFunctionCallContext returns null when not on a function-call node —
+// detectFunctionCallContext returns null when not on a function-call node -
 // covered by completion-context tests, but include a couple here so
 // regression in the exit branches is caught locally.
 // ---------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Regenerate binary/src/<format>/specs/*.ts from IESDP _data/file_formats/.
-# Mirrors scripts/ie-update.sh — clones IESDP on the ielib branch into
+# Mirrors scripts/ie-update.sh - clones IESDP on the ielib branch into
 # external/infinity-engine/iesdp if missing, then runs the generator.
 
 set -xeu -o pipefail

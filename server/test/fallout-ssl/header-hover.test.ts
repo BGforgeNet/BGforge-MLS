@@ -297,7 +297,7 @@ end
    variable rnd = random(1, 100);
    return rnd;
 end`;
-            // No reloadFileData — test purely local lookup (text-based)
+            // No reloadFileData - test purely local lookup (text-based)
             const resolved = falloutSslProvider.resolveSymbol!("roll_vs_stat", headerText, testUri);
 
             expect(resolved).toBeDefined();

@@ -34,7 +34,7 @@ describe("skipString", () => {
 
     it("handles escaped backslash before closing quote", () => {
         const code = '"hello\\\\" + x';
-        // "hello\\" — backslash escapes backslash, then " closes
+        // "hello\\" - backslash escapes backslash, then " closes
         expect(skipString(code, 0)).toBe(9);
     });
 
@@ -127,7 +127,7 @@ describe("skipBlockComment", () => {
     });
 
     it("handles block comment with asterisks inside", () => {
-        // /*** star ***/ — first `*/` is at the `**` after "star ", index 12
+        // /*** star ***/ - first `*/` is at the `**` after "star ", index 12
         const code = "/*** star ***/ + x";
         expect(skipBlockComment(code, 0)).toBe(14);
     });

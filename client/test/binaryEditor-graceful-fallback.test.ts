@@ -2,7 +2,7 @@
  * Editor graceful-map auto-fallback contract.
  *
  * The editor's purpose is best-effort display. The CLI's purpose is batch
- * verification. Same library, different jobs — so when a `.map` strict
+ * verification. Same library, different jobs - so when a `.map` strict
  * parse returns errors that prevent display, the editor retries with
  * `gracefulMapBoundaries: true` while the CLI surfaces the error. Without
  * this fallback, opening sfsheng.map (and similar ambiguous-boundary
@@ -11,7 +11,7 @@
  * Contract: `parseForEditor(parser, bytes, filePath)` strict-parses first;
  * on `.map` files with errors, retries permissively. Returns the actual
  * options used so downstream reparses (incremental edits, revert) reuse
- * the same shape — otherwise editing a graceful-loaded map would
+ * the same shape - otherwise editing a graceful-loaded map would
  * silently re-fail at the next byte rebuild.
  */
 
@@ -48,7 +48,7 @@ describe("parseForEditor: graceful-map auto-fallback", () => {
     });
 
     it("preserves file-derived options (pidResolver) across the fallback", () => {
-        // The graceful retry must keep the sibling-proto resolver — losing
+        // The graceful retry must keep the sibling-proto resolver - losing
         // it would mean falling into the unresolved-pid opaque-tail bail
         // for any modded items in the file, defeating step 1's fix.
         const filePath = path.join(FIXTURE_MAPS, "sfsheng.map");

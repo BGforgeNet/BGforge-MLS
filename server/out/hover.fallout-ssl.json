@@ -458,7 +458,7 @@
     "game_ui_disable": {
         "contents": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid game_ui_disable\n```\nDisables game user-interface input from the player (to ‘lock-out' the player). You *MUST* make sure to re-enable the UI at some point afterwards."
+            "value": "```fallout-ssl-tooltip\nvoid game_ui_disable\n```\nDisables game user-interface input from the player (to 'lock-out' the player). You *MUST* make sure to re-enable the UI at some point afterwards."
         }
     },
     "game_ui_enable": {
@@ -470,7 +470,7 @@
     "game_ui_is_disabled": {
         "contents": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint game_ui_is_disabled\n```\nReturns True if the game UI is currently disabled (the player is currently ‘locked-out'), and False otherwise."
+            "value": "```fallout-ssl-tooltip\nint game_ui_is_disabled\n```\nReturns True if the game UI is currently disabled (the player is currently 'locked-out'), and False otherwise."
         }
     },
     "gdialog_barter": {
@@ -842,7 +842,7 @@
     "obj_type": {
         "contents": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint obj_type(ObjectPtr obj)\n```\nReturns the type of an object (obj). This would be ‘Item', ‘Wall', ‘Scenery', etc."
+            "value": "```fallout-ssl-tooltip\nint obj_type(ObjectPtr obj)\n```\nReturns the type of an object (obj). This would be 'Item', 'Wall', 'Scenery', etc."
         }
     },
     "obj_unlock": {
@@ -944,7 +944,7 @@
     "reg_anim_animate_forever": {
         "contents": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid reg_anim_animate_forever(ObjectPtr what, int anim, int delay)\n```\nAdds a single, in-place animation on an object (what) to an animation sequence-list, at a given delay from the previous animation (delay should always be -1)! This animation will animate continuously until something in the system interrupts it. To be used *very* sparingly, for instance Gizmo's sign and the ‘pray' signs in the children of the cathedral (which will have to be toned down)."
+            "value": "```fallout-ssl-tooltip\nvoid reg_anim_animate_forever(ObjectPtr what, int anim, int delay)\n```\nAdds a single, in-place animation on an object (what) to an animation sequence-list, at a given delay from the previous animation (delay should always be -1)! This animation will animate continuously until something in the system interrupts it. To be used *very* sparingly, for instance Gizmo's sign and the 'pray' signs in the children of the cathedral (which will have to be toned down)."
         }
     },
     "reg_anim_animate_reverse": {

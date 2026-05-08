@@ -58,7 +58,7 @@ describe("loadProDirResolver", () => {
     it("returns undefined for pidTypes other than item/scenery", () => {
         copyFixture("items", "00000031.pro");
         const { resolver } = loadProDirResolver(tmpDir);
-        // Critter pid (pidType=1) — loader only walks items/scenery dirs.
+        // Critter pid (pidType=1) - loader only walks items/scenery dirs.
         expect(resolver(0x01000031)).toBeUndefined();
     });
 
@@ -134,7 +134,7 @@ describe("composePidResolvers", () => {
         const overrides = (pid: number) => (pid === 1 ? 99 : undefined);
         const composed = composePidResolvers(overrides, resolvePidSubType);
         expect(composed(1)).toBe(99);
-        // pid 161 is a vanilla weapon in the bundled table → subType 3.
+        // pid 161 is a vanilla weapon in the bundled table -> subType 3.
         expect(composed(161)).toBe(3);
     });
 

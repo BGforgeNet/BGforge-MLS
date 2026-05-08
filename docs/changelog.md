@@ -73,7 +73,7 @@
 - Hovering over engine procedure definitions (e.g. `map_enter_p_proc`, `start`) now shows the built-in engine description. If the procedure has user JSDoc, the engine description is appended after a separator.
 - Strings with escape sequences (e.g. `\"` and `\\`) now parse correctly.
 - `for` loop update expressions now support compound assignment operators (`+=`, `-=`, `*=`, `/=`), e.g. `for (i := 0; i < 10; i += 2)`.
-- `##` token-paste operator is now supported in macro bodies — variable declarations, assignments, and expressions — in addition to procedure names. Fixes parse errors in files that use `##` outside of identifiers.
+- `##` token-paste operator is now supported in macro bodies - variable declarations, assignments, and expressions - in addition to procedure names. Fixes parse errors in files that use `##` outside of identifiers.
 - Fixed hover not working for procedures defined in header files that contain macros using the `##` token-paste operator (e.g. `animate_##type##_to_tile`). The grammar now parses `##` correctly as a context-sensitive operator inside `#define` bodies, preventing a parse error that previously swallowed the rest of the file.
 - `##` token-paste operator is now syntax-highlighted as a preprocessor keyword; surrounding identifier segments get function coloring.
 - `#include` directives now accept bare identifier paths (without quotes), as used in some real-world scripts.

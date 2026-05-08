@@ -35,7 +35,7 @@ export function setDebugLogging(enabled: boolean): void {
  * Logs target the VSCode "BGforge MLS" output channel, read by humans. They are
  * not consumed programmatically (no metrics sink, no log-shipping integration),
  * so structured-field / JSON / per-request correlation-ID emission is not
- * pursued — it would add ceremony without a downstream consumer to benefit. The
+ * pursued - it would add ceremony without a downstream consumer to benefit. The
  * slow-request wrapper in shared/time-handler.ts already encodes the latency
  * timing that an operator would care about, in a human-readable line.
  */
@@ -120,7 +120,7 @@ export function sendParseResult(parseResult: ParseResult, mainUri: string, tmpUr
 /**
  * Check if 1st dir contains the 2nd. Resolves `outerPath` via realpathSync on
  * every call. Use this only when the outer is short-lived or rarely the same
- * twice — for hot paths where the outer is stable (workspace root, translation
+ * twice - for hot paths where the outer is stable (workspace root, translation
  * directory), use `isSubpathResolved` with a cached resolved value instead.
  * Current callers all run on debounced reload paths, not LSP-request hot paths.
  */
@@ -153,8 +153,8 @@ export function isSubpathResolved(resolvedOuter: string, innerPath: string): boo
 
 /**
  * Like `isSubpathResolved`, but assumes BOTH paths have already been resolved
- * via `fs.realpathSync` (or are otherwise canonical). Pure string check — no
- * syscall — suitable for the LSP-request hot path. Callers must resolve the
+ * via `fs.realpathSync` (or are otherwise canonical). Pure string check - no
+ * syscall - suitable for the LSP-request hot path. Callers must resolve the
  * inner once at request entry (via `tryRealpathSync`) before calling.
  */
 export function isSubpathFullyResolved(resolvedOuter: string, resolvedInner: string): boolean {
@@ -257,7 +257,7 @@ export function symbolAtPosition(text: string, position: Position) {
     }
 
     // and if pure numeric, check if it's a tra reference
-    // Use [^\s(] instead of \S to treat ( as a boundary — prevents matching
+    // Use [^\s(] instead of \S to treat ( as a boundary - prevents matching
     // through nested calls like display_msg(mstr(101)) where \S+ would grab
     // the entire "display_msg(mstr(101" and fail to match REGEX_MSG_HOVER.
     if (onlyDigits(result)) {

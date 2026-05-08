@@ -54,7 +54,7 @@ COPY_EXISTING ~file.itm~ ~override~
 describe("renameSymbol: rejection paths", () => {
     it("returns null when cursor is on whitespace (no symbol to rename)", () => {
         const text = `\nOUTER_SET my_var = 5\n`;
-        // Position 0,0 is on the leading newline — no symbol there
+        // Position 0,0 is on the leading newline - no symbol there
         const position: Position = { line: 0, character: 0 };
         const result = renameSymbol(text, position, "anything", URI);
         expect(result).toBeNull();

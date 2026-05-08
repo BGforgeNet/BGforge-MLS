@@ -1,5 +1,5 @@
 /**
- * Unit tests for infinity-2da/format.ts — column-aligned 2DA formatter.
+ * Unit tests for infinity-2da/format.ts - column-aligned 2DA formatter.
  */
 
 import { describe, expect, it } from "vitest";

@@ -268,7 +268,7 @@ export function normalizeWhitespaceWeidu(text: string): string {
         }
     }
 
-    // Join parts directly (no separator) — whitespace is already in Code tokens
+    // Join parts directly (no separator) - whitespace is already in Code tokens
     return parts.join("").trim();
 }
 
@@ -341,7 +341,7 @@ export function stripCommentsTra(text: string): string {
             if (i < text.length) i++; // skip closing "
             continue;
         }
-        // Sound references [SOUNDFILE] — remove entirely
+        // Sound references [SOUNDFILE] - remove entirely
         if (text[i] === "[") {
             const end = text.indexOf("]", i + 1);
             if (end !== -1) {
@@ -375,21 +375,21 @@ export function stripCommentsFalloutMsg(text: string): string {
         }
         // Entry line: starts with {
         if (text[i] === "{") {
-            // Group 1: number — emit number, skip braces
+            // Group 1: number - emit number, skip braces
             i++; // skip {
             const numStart = i;
             while (i < text.length && text[i] !== "}") i++;
             result += text.slice(numStart, i).trim();
             if (i < text.length) i++; // skip }
 
-            // Group 2: audio — skip entirely
+            // Group 2: audio - skip entirely
             if (i < text.length && text[i] === "{") {
                 i++; // skip {
                 while (i < text.length && text[i] !== "}") i++;
                 if (i < text.length) i++; // skip }
             }
 
-            // Group 3: text — emit content, skip braces
+            // Group 3: text - emit content, skip braces
             if (i < text.length && text[i] === "{") {
                 i++; // skip {
                 const textStart = i;
@@ -428,7 +428,7 @@ export function stripComments2da(text: string): string {
 /**
  * Strip comments from Fallout scripts.lst text for formatting validation.
  * The scripts.lst formatter only rearranges whitespace between columns without
- * removing any text content, so no stripping is needed — all non-whitespace
+ * removing any text content, so no stripping is needed - all non-whitespace
  * tokens are preserved exactly.
  */
 export function stripCommentsFalloutScriptsLst(text: string): string {

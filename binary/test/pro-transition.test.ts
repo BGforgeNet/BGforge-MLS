@@ -60,11 +60,11 @@ describe("isProStructuralFieldId", () => {
 });
 
 // ---------------------------------------------------------------------------
-// buildProStructuralTransitionBytes — Object Type changes
+// buildProStructuralTransitionBytes - Object Type changes
 // ---------------------------------------------------------------------------
 
 describe("buildProStructuralTransitionBytes - object type transitions", () => {
-    it("transitions from Misc (5) to Misc (5) — same type produces valid bytes", () => {
+    it("transitions from Misc (5) to Misc (5) - same type produces valid bytes", () => {
         const parseResult = loadMisc();
         const fieldId = JSON.stringify(["Header", "Object Type"]);
         const result = buildProStructuralTransitionBytes(parseResult, fieldId, 5);
@@ -86,7 +86,7 @@ describe("buildProStructuralTransitionBytes - object type transitions", () => {
         expect(result).toBeInstanceOf(Uint8Array);
     });
 
-    it("transitions from Misc (5) to Item (0) — sets item common defaults", () => {
+    it("transitions from Misc (5) to Item (0) - sets item common defaults", () => {
         const parseResult = loadMisc();
         const fieldId = JSON.stringify(["Header", "Object Type"]);
         // objectType 0 = Item; item common defaults are written
@@ -94,7 +94,7 @@ describe("buildProStructuralTransitionBytes - object type transitions", () => {
         expect(result).toBeInstanceOf(Uint8Array);
     });
 
-    it("transitions from Misc (5) to Scenery (2) — sets scenery common defaults", () => {
+    it("transitions from Misc (5) to Scenery (2) - sets scenery common defaults", () => {
         const parseResult = loadMisc();
         const fieldId = JSON.stringify(["Header", "Object Type"]);
         // objectType 2 = Scenery
@@ -118,7 +118,7 @@ describe("buildProStructuralTransitionBytes - object type transitions", () => {
 });
 
 // ---------------------------------------------------------------------------
-// buildProStructuralTransitionBytes — item subtype changes
+// buildProStructuralTransitionBytes - item subtype changes
 // ---------------------------------------------------------------------------
 
 describe("buildProStructuralTransitionBytes - item subtype transitions", () => {
@@ -147,7 +147,7 @@ describe("buildProStructuralTransitionBytes - item subtype transitions", () => {
 });
 
 // ---------------------------------------------------------------------------
-// buildProStructuralTransitionBytes — scenery subtype changes
+// buildProStructuralTransitionBytes - scenery subtype changes
 // ---------------------------------------------------------------------------
 
 describe("buildProStructuralTransitionBytes - scenery subtype transitions", () => {
@@ -174,7 +174,7 @@ describe("buildProStructuralTransitionBytes - scenery subtype transitions", () =
 });
 
 // ---------------------------------------------------------------------------
-// buildProStructuralTransitionBytes — edge cases
+// buildProStructuralTransitionBytes - edge cases
 // ---------------------------------------------------------------------------
 
 describe("buildProStructuralTransitionBytes - edge cases", () => {

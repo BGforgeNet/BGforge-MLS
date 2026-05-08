@@ -6,17 +6,17 @@ import { ScriptFlags, ScriptProc, Skill } from "../types";
 /**
  * Wire specs for one MAP script-slot entry, dispatched by `getScriptType(sid)`:
  *
- *   - other (0, 3, etc.): `sid` + `nextScriptLink` + 14 commons → 64 bytes.
- *   - spatial (1):       `sid` + `nextScriptLink` + `builtTile` + `spatialRadius` + 14 commons → 72 bytes.
- *   - timer (2):         `sid` + `nextScriptLink` + `timerTime` + 14 commons → 68 bytes.
+ *   - other (0, 3, etc.): `sid` + `nextScriptLink` + 14 commons -> 64 bytes.
+ *   - spatial (1):       `sid` + `nextScriptLink` + `builtTile` + `spatialRadius` + 14 commons -> 72 bytes.
+ *   - timer (2):         `sid` + `nextScriptLink` + `timerTime` + 14 commons -> 68 bytes.
  *
  * The orchestrator peeks at the first 4 bytes (sid) to choose the variant
- * before invoking the spec — a discriminator look-ahead, not a primary
+ * before invoking the spec - a discriminator look-ahead, not a primary
  * decode. The spec then re-decodes sid as part of the slot's first field.
  *
  * Subtype dispatch lives in the orchestrator rather than a new spec
  * primitive because the discriminator is a simple per-element peek and
- * the variants share most of their layout — a per-element subtype
+ * the variants share most of their layout - a per-element subtype
  * primitive would carry a large API surface for one consumer.
  */
 

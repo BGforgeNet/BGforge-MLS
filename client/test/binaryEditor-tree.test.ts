@@ -130,7 +130,7 @@ describe("buildBinaryEditorTreeState", () => {
 
     it(
         "keeps MAP init payload tiny for large real maps",
-        // Parses navarro.map end-to-end — v8 coverage instrumentation pushes
+        // Parses navarro.map end-to-end - v8 coverage instrumentation pushes
         // this past the 5s default; raise the ceiling so the size assertion
         // still runs under --coverage.
         { timeout: 15000 },

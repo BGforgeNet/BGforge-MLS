@@ -16,14 +16,14 @@ import type { ParsedField, ParsedGroup, ParsedFieldType } from "../types";
  * Inverse of `walkStruct`: walk a `ParsedGroup` produced by the display
  * layer and rebuild the typed data object from it. Used by canonical
  * readers that previously routed each field through a hand-coded
- * `readFieldNumber(group, "Display Label")` lookup — instead the spec +
+ * `readFieldNumber(group, "Display Label")` lookup - instead the spec +
  * presentation declares the label/key mapping once, and this helper
  * uses it to extract the data.
  *
  * For scalar fields, prefers `rawValue` when present (enum/flags display
  * the resolved name in `value`; the number is in `rawValue`). For
  * pure-numeric fields, `value` holds the number directly. Array fields
- * are not handled here — callers walk the surrounding group structure
+ * are not handled here - callers walk the surrounding group structure
  * for those cases.
  *
  * Throws if a spec field's display label is missing from the group.
@@ -74,7 +74,7 @@ export function walkGroup<S extends Record<string, FieldSpec>>(
         // Flag fields project to a sorted-array `{flags, flagsRaw?}`; enum
         // fields project to `string | number` (skipping when `enumOpaque` is
         // set). Display tree carries the int via `rawValue`, so the
-        // round-trip is int → projected → int through `intToFlagArray` /
+        // round-trip is int -> projected -> int through `intToFlagArray` /
         // `flagArrayToInt`.
         out[key] = fs.flags ? intToFlagArray(fs.flags, numeric, codecByteLength(fs.codec) * 8) : numeric;
     }
@@ -93,7 +93,7 @@ interface WalkOptions {
     /**
      * Prepended (with a separating space) to every emitted field's display
      * label. Use for per-iteration prefixes that the surrounding wrapper
-     * group cannot supply — e.g. `"Entry 5"` for a script slot whose
+     * group cannot supply - e.g. `"Entry 5"` for a script slot whose
      * sibling slots share the same field labels and need disambiguation
      * inside the wrapper group.
      */
@@ -209,7 +209,7 @@ function fieldSize<T>(fs: FieldSpec, data: T, key: keyof T & string): number {
             return fs.count * codecByteLength(fs.element.codec);
         }
         // lengthFrom: size from data[arrayKey].length × element bytes. The
-        // count field's value is redundant here — array.length is the source
+        // count field's value is redundant here - array.length is the source
         // of truth (enforceLinkedCounts keeps the count field in sync).
         const arr = data[key];
         if (!Array.isArray(arr)) {
@@ -299,7 +299,7 @@ function scalarFieldFor(
         // through here as raw `number` since the enclosing array's wire shape
         // is `number[]` (the per-slot flag annotation is a presentation hint,
         // not a structural change to the array element type). Accept both
-        // shapes: projection → repack via `flagArrayToInt`, number → use
+        // shapes: projection -> repack via `flagArrayToInt`, number -> use
         // directly.
         const numeric = typeof value === "number" ? value : flagArrayToInt(fs.flags, value as FlagArray);
         const active = Object.entries(fs.flags)

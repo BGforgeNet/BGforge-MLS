@@ -1,5 +1,5 @@
 /**
- * Unit tests for fallout-scripts-lst/format.ts — column-aligned scripts.lst formatter.
+ * Unit tests for fallout-scripts-lst/format.ts - column-aligned scripts.lst formatter.
  * Output always uses CRLF line endings.
  */
 

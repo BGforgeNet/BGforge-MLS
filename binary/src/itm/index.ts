@@ -29,7 +29,7 @@ import type { ItmCanonicalDocument } from "./canonical-schemas";
 import { serializeItm } from "./serializer";
 
 /**
- * Empty presentation tables — `humanize(fieldName)` supplies labels in the
+ * Empty presentation tables - `humanize(fieldName)` supplies labels in the
  * display tree. Hand-written overrides for flag/enum tables and friendlier
  * labels can be added here when needed without affecting wire round-trip.
  */
@@ -88,7 +88,7 @@ class ItmParser implements BinaryParser {
         // The product `abilityCount * ITM_ABILITY_SIZE` cannot overflow JS safe
         // integers: the codec types abilityCount as uint32 (≤ 4 294 967 295) and
         // ITM_ABILITY_SIZE is a small fixed constant, so the maximum product is
-        // well below 2^48 — inside double-precision exactness — and the bounds
+        // well below 2^48 - inside double-precision exactness - and the bounds
         // check below stays meaningful even for adversarial inputs.
         const abilitiesOffset = header.extendedHeadersOffset;
         const abilityCount = header.extendedHeadersCount;

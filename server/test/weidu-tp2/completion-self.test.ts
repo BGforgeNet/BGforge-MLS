@@ -218,7 +218,7 @@ describe("weidu-tp2: isPhantomAssignment direct unit tests", () => {
     });
 
     it("should detect phantom when value is a number", () => {
-        // "FOO 42" — broken keyword with numeric value
+        // "FOO 42" - broken keyword with numeric value
         const tree = parseWithCache("FOO 42");
         expect(tree!).not.toBeNull();
         const node = findNodeByType(tree!.rootNode, "patch_assignment");

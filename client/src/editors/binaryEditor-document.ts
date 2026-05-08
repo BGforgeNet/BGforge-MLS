@@ -191,7 +191,7 @@ export class BinaryDocument implements vscode.CustomDocument {
      * `undefined` when any group on the path carries `editingLocked: true`.
      * That flag is the parser's statement that the surrounding record's wire
      * layout couldn't be fully decoded, so width-preserving field changes
-     * inside it are not safe — the helper is the canonical API gate every
+     * inside it are not safe - the helper is the canonical API gate every
      * edit path runs through.
      */
     private findFieldById(fieldId: string): ParsedField | undefined {

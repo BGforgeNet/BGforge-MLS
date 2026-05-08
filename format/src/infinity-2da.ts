@@ -46,10 +46,10 @@ function parse(text: string): Parsed {
     let signature: string | null = null;
     let defaultValue: string | null = null;
 
-    // Detect optional "2DA V…" signature on line 0
+    // Detect optional "2DA V..." signature on line 0
     const firstLine = lines[0] ?? "";
     if (/^2DA\s/i.test(firstLine)) {
-        // Normalize to single space between tokens (e.g. "2DA    V1.0" → "2DA V1.0").
+        // Normalize to single space between tokens (e.g. "2DA    V1.0" -> "2DA V1.0").
         signature = firstLine.trim().replace(/\s+/g, " ");
         cursor++;
         // The line immediately after the signature is the default value

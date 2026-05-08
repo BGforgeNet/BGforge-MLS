@@ -32,7 +32,7 @@ import { createWebviewState, registerNode, resetState } from "./binaryEditor-web
     }
 
     // Mirrored from the extension's `bgforge.debug` setting via the init
-    // message — the webview has no `vscode.workspace` API of its own. Gate
+    // message - the webview has no `vscode.workspace` API of its own. Gate
     // for `debugLog` so diagnostic console output stays quiet by default.
     let debugEnabled = false;
     function debugLog(message: string): void {

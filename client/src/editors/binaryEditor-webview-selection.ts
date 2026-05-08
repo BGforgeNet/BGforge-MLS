@@ -78,7 +78,7 @@ export function setupSelection(ctx: SelectionContext): void {
 
     // Right-click selects too, so the host's selection tracker matches the
     // row VSCode is about to open the native webview context menu over.
-    // We don't preventDefault — the menu still opens via `data-vscode-context`
+    // We don't preventDefault - the menu still opens via `data-vscode-context`
     // attributes the renderer puts on each row.
     ctx.treeEl.addEventListener("contextmenu", (event) => {
         const row = findRowFromTarget(event.target as HTMLElement | null);

@@ -47,7 +47,7 @@ describe.skipIf(picked === null)("weidu-tp2 parseFile", () => {
     const uri = picked ? pathToFileURL(picked.path).toString() : "";
     const text = picked?.text ?? "";
 
-    bench(`parseFile — ${picked?.path.split("/").pop()} (${text.split("\n").length} lines)`, () => {
+    bench(`parseFile - ${picked?.path.split("/").pop()} (${text.split("\n").length} lines)`, () => {
         const r = parseFile(uri, text);
         sink += r.symbols.length + r.refs.size;
     });

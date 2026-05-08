@@ -82,7 +82,7 @@ describe("symbolAtPosition", () => {
 
     it("returns tra(100) when cursor on tra part of $tra(100)", () => {
         const text = "const x = $tra(100);";
-        // Position 12 is on 'r' in 'tra' — \b matches between $ and t
+        // Position 12 is on 'r' in 'tra' - \b matches between $ and t
         const result = symbolAtPosition(text, { line: 0, character: 12 });
         expect(result).toBe("tra(100)");
     });
@@ -266,7 +266,7 @@ describe("isSubpathFullyResolved", () => {
     });
 
     it("returns false for the outer being a string-prefix but not a directory parent", () => {
-        // /a/bcd is not under /a/b — naive string-prefix would say yes
+        // /a/bcd is not under /a/b - naive string-prefix would say yes
         expect(isSubpathFullyResolved("/a/b", "/a/bcd/x.txt")).toBe(false);
     });
 });

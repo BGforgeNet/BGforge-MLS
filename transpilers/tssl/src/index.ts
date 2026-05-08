@@ -138,7 +138,7 @@ export interface TSSLCompileResult {
  * Used by the LSP compile handler.
  */
 export async function compile(uri: string, text: string): Promise<TSSLCompileResult> {
-    // No batch state on the LSP compile path — TSSL CLI directory mode is the only batch consumer.
+    // No batch state on the LSP compile path - TSSL CLI directory mode is the only batch consumer.
     const { outPath, events } = await tssl.compile(uri, text, undefined);
     return { sslPath: outPath, events };
 }

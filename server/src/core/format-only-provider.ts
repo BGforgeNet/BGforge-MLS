@@ -1,7 +1,7 @@
 /**
  * Factory for format-only language providers.
  *
- * Produces providers that implement only FormattingCapability — no symbols,
+ * Produces providers that implement only FormattingCapability - no symbols,
  * navigation, completion, or other capabilities. Use for languages whose sole
  * LSP feature is document formatting.
  */

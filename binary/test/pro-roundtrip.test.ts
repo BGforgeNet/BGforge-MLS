@@ -2,7 +2,7 @@
  * Round-trip tests for PRO binary parser + serializer.
  * Reads .pro fixture bytes, parses via typed-binary schema,
  * writes back, and asserts output bytes are identical to input.
- * Proves the write path is correct — foundation for the editor.
+ * Proves the write path is correct - foundation for the editor.
  */
 
 import { describe, expect, it } from "vitest";

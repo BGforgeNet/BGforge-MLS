@@ -6,7 +6,7 @@ import { MapElevation, ObjectFlags, Rotation } from "../types";
 /**
  * Wire specs for the fixed-size byte chunks of one MAP object record.
  *
- * The object record itself is recursively nested — each object carries an
+ * The object record itself is recursively nested - each object carries an
  * inventory of `{quantity, object}` pairs and the inner object is a full
  * record. The recursion lives in the orchestrator (`parseObjectAt` in
  * `parse-objects.ts`), not in the spec layer: a self-referential spec
@@ -14,11 +14,11 @@ import { MapElevation, ObjectFlags, Rotation } from "../types";
  * describe the flat per-record chunks; the orchestrator stitches them.
  *
  * Per-record chunks:
- *   - `objectBaseSpec`    72 bytes — the always-present preamble.
- *   - `inventoryHeaderSpec` 12 bytes — count/capacity/legacy pointer for the
+ *   - `objectBaseSpec`    72 bytes - the always-present preamble.
+ *   - `inventoryHeaderSpec` 12 bytes - count/capacity/legacy pointer for the
  *     inventory list that follows the payload.
- *   - `critterDataSpec`   44 bytes — present iff PID type is critter.
- *   - `exitGridSpec`      16 bytes — present iff PID names an exit grid.
+ *   - `critterDataSpec`   44 bytes - present iff PID type is critter.
+ *   - `exitGridSpec`      16 bytes - present iff PID names an exit grid.
  *
  * Item/scenery payloads are not yet decoded here; they require external
  * PRO-resolved subtype information (see parseObjectAt).
@@ -52,7 +52,7 @@ export const inventoryHeaderSpec = {
     // Length of the per-object inventory list. The canonical writer calls
     // enforceDerivedFields with the inventory array as ctx, so a stale
     // inventoryLength in a hand-edited JSON snapshot is silently corrected
-    // before serialisation — the writer-side invariant matches the spec
+    // before serialisation - the writer-side invariant matches the spec
     // role tag.
     inventoryLength: {
         codec: i32,
@@ -104,7 +104,7 @@ export const objectBasePresentation: StructPresentation<ObjectBaseData> = {
     field74: { label: "Field 74" },
 };
 
-// Inventory header keys all humanize cleanly — empty presentation table.
+// Inventory header keys all humanize cleanly - empty presentation table.
 export const inventoryHeaderPresentation: StructPresentation<InventoryHeaderData> = {};
 
 export const critterPresentation: StructPresentation<CritterData> = {
@@ -114,5 +114,5 @@ export const critterPresentation: StructPresentation<CritterData> = {
     currentHp: { label: "Current HP" },
 };
 
-// Exit grid keys all humanize cleanly — empty presentation table.
+// Exit grid keys all humanize cleanly - empty presentation table.
 export const exitGridPresentation: StructPresentation<ExitGridData> = {};

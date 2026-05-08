@@ -34,7 +34,7 @@ describe("enforceDerivedFields", () => {
         expect(enforceDerivedFields(fixedSpec, doc)).toBe(doc);
     });
 
-    it("ignores fromCtx arrays — their count lives outside the doc", () => {
+    it("ignores fromCtx arrays - their count lives outside the doc", () => {
         const ctxSpec = {
             xs: arraySpec({ element: { codec: u32 }, count: { fromCtx: (ctx: { n: number }) => ctx.n } }),
         } satisfies Record<string, FieldSpec>;

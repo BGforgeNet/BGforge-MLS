@@ -379,7 +379,7 @@ OUTER_TEXT_SPRINT spell ~SPWI101~`;
 
 describe("weidu-tp2: JSDoc comment completions", () => {
     it("returns JSDoc tags at @ position inside single-line JSDoc comment", () => {
-        // "/** @ */" — cursor at col 5, right after @
+        // "/** @ */" - cursor at col 5, right after @
         const text = `/** @ */\nOUTER_SET x = 1\n`;
         const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 0, character: 5 };
@@ -390,14 +390,14 @@ describe("weidu-tp2: JSDoc comment completions", () => {
         const labels = filteredItems.map((item) => item.label);
         expect(labels).toContain("@type");
         expect(labels).toContain("@param");
-        // Tags only — types not shown at @ position
+        // Tags only - types not shown at @ position
         expect(labels).not.toContain("int");
         // Should NOT have code completions
         expect(labels).not.toContain("x");
     });
 
     it("returns JSDoc types at type position inside single-line JSDoc comment", () => {
-        // "/** @type  */" — cursor at col 10, after "@type "
+        // "/** @type  */" - cursor at col 10, after "@type "
         const text = `/** @type  */\nOUTER_SET x = 1\n`;
         const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 0, character: 10 };
@@ -408,14 +408,14 @@ describe("weidu-tp2: JSDoc comment completions", () => {
         const labels = filteredItems.map((item) => item.label);
         expect(labels).toContain("int");
         expect(labels).toContain("string");
-        // Types only — tags not shown at type position
+        // Types only - tags not shown at type position
         expect(labels).not.toContain("@type");
         // Should NOT have code completions
         expect(labels).not.toContain("x");
     });
 
     it("returns JSDoc tags at @ position inside multi-line JSDoc comment", () => {
-        // Line 1 is " * @" — cursor at col 4, right after @
+        // Line 1 is " * @" - cursor at col 4, right after @
         const text = `/**\n * @\n */\nOUTER_SET x = 1\n`;
         const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 1, character: 4 };
@@ -429,7 +429,7 @@ describe("weidu-tp2: JSDoc comment completions", () => {
     });
 
     it("returns no JSDoc completions on empty JSDoc line", () => {
-        // Line 1 is " * " — cursor at col 3, no @ typed yet
+        // Line 1 is " * " - cursor at col 3, no @ typed yet
         const text = `/**\n * \n */\nOUTER_SET x = 1\n`;
         const uri = normalizeUri("file:///test.tp2");
         const position: Position = { line: 1, character: 3 };

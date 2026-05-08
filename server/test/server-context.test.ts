@@ -1,5 +1,5 @@
 /**
- * Tests for server-context.ts — async barrier pattern.
+ * Tests for server-context.ts - async barrier pattern.
  *
  * The module uses module-level mutable state. Tests use vi.resetModules() and
  * re-import before each test so the barrier promise is fresh per test.
@@ -59,13 +59,13 @@ describe("server-context", () => {
     });
 
     describe("getServerContext (async barrier)", () => {
-        it("resolves after initServerContext is called — even when init arrives later", async () => {
-            // Start waiting before init completes — simulates a request arriving
+        it("resolves after initServerContext is called - even when init arrives later", async () => {
+            // Start waiting before init completes - simulates a request arriving
             // during the window between initialize and initialized.
             const promise = getServerContext();
 
             // Confirm it's still pending (a resolved promise settles microtasks, not
-            // synchronously — but we can set up init *after* registering the waiter).
+            // synchronously - but we can set up init *after* registering the waiter).
             const ctx = makeStubContext();
             initServerContext(ctx);
 

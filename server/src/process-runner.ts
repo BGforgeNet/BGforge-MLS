@@ -63,7 +63,7 @@ export function parseCommandPath(commandPath: string): { executable: string; pre
 }
 
 /** Run an external process and return a promise that resolves when it finishes.
- *  timeoutMs defaults to 60 000 ms — long enough for real sslc/weidu compiles on
+ *  timeoutMs defaults to 60 000 ms - long enough for real sslc/weidu compiles on
  *  slow machines, short enough to surface hangs. Node kills the child on timeout
  *  and calls back with err.killed === true + err.signal === "SIGTERM". */
 export function runProcess(

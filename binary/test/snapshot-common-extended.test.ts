@@ -93,7 +93,7 @@ describe("parseScalarFieldValue", () => {
     });
 
     it("resolves lookup for known enum string value", () => {
-        // Line 33-35: lookedUp !== undefined branch — enum lookup via display-lookups
+        // Line 33-35: lookedUp !== undefined branch - enum lookup via display-lookups
         const f = field({ value: "NE", type: "enum" });
         const result = parseScalarFieldValue("map", "map.objects.elevations[].objects[].base.rotation", f);
         expect(typeof result).toBe("number");

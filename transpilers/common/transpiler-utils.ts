@@ -40,7 +40,7 @@ const wordBoundaryRegexCache = new QuickLRU<string, RegExp>({ maxSize: 256 });
 
 /**
  * Return a cached word-boundary regex matching the given identifier globally.
- * Same name → same RegExp instance.
+ * Same name -> same RegExp instance.
  */
 export function getWordBoundaryRegex(name: string): RegExp {
     let cached = wordBoundaryRegexCache.get(name);
@@ -285,7 +285,7 @@ export const SCOPE_CONSTANTS: ReadonlySet<string> = new Set([
  * not redundant:
  *   - AST-level resolution (TD's expressionToActionString in parse-helpers.ts,
  *     TBAF's evaluateExpression in transform.ts) is where vars-context
- *     substitution happens — e.g. `obj(npc)` where `const npc = "[ANYONE]"`
+ *     substitution happens - e.g. `obj(npc)` where `const npc = "[ANYONE]"`
  *     resolves through the variable binding. The regex pass below cannot
  *     reach that information; it sees only the rendered string.
  *   - applyHelperFixups is the unified last-mile pass over rendered IR
@@ -301,7 +301,7 @@ export const SCOPE_CONSTANTS: ReadonlySet<string> = new Set([
  *
  * Note: operates on individual arg strings extracted from the AST, not on
  * arbitrary text. WeiDU scripting args are identifiers, numbers, or quoted
- * strings — they don't contain function-call-like patterns that would cause
+ * strings - they don't contain function-call-like patterns that would cause
  * false matches.
  */
 export function applyHelperFixups(text: string): string {

@@ -1,5 +1,5 @@
 /**
- * LRU eviction tests for Symbols — verifies that the file index is bounded.
+ * LRU eviction tests for Symbols - verifies that the file index is bounded.
  *
  * Without a cap the index grows monotonically for every file opened in a
  * session, which causes unbounded memory growth on large (10k+ file)
@@ -43,7 +43,7 @@ function makeSymbol(name: string, uri: string): IndexedSymbol {
 
 describe("Symbols LRU cap", () => {
     it("evicts oldest file when maxFiles is exceeded", () => {
-        // Cap at 3, insert 5 files — files 1 and 2 must be evicted.
+        // Cap at 3, insert 5 files - files 1 and 2 must be evicted.
         const index = new Symbols({ maxFiles: 3 });
 
         for (let i = 1; i <= 5; i++) {
@@ -95,9 +95,9 @@ describe("Symbols LRU cap", () => {
         index.updateFile(uri1, [makeSymbol("sym1", makeUri(1))]);
         index.updateFile(uri2, [makeSymbol("sym2", makeUri(2))]);
         index.updateFile(uri3, [makeSymbol("sym3", makeUri(3))]);
-        // Re-touch uri1 — it should move to "most recent"
+        // Re-touch uri1 - it should move to "most recent"
         index.updateFile(uri1, [makeSymbol("sym1_updated", makeUri(1))]);
-        // Insert a 4th distinct file — uri2 is now oldest
+        // Insert a 4th distinct file - uri2 is now oldest
         index.updateFile(uri4, [makeSymbol("sym4", makeUri(4))]);
 
         // uri2 (oldest) must have been evicted

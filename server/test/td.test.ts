@@ -1305,11 +1305,11 @@ begin("DLG", [start]);
         it("does not leak state between calls when first call throws", () => {
             const project = new Project({ useInMemoryFileSystem: true });
 
-            // First call: invalid begin() with no arguments — should throw
+            // First call: invalid begin() with no arguments - should throw
             const badSource = project.createSourceFile("bad.td", `begin();`);
             expect(() => parse(badSource)).toThrow();
 
-            // Second call: valid source — must succeed without contamination
+            // Second call: valid source - must succeed without contamination
             const goodSource = project.createSourceFile(
                 "good.td",
                 `

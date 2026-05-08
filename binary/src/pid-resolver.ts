@@ -1,5 +1,5 @@
 /**
- * Default `pid → subType` resolver backed by a packaged Fallout 2 lookup table.
+ * Default `pid -> subType` resolver backed by a packaged Fallout 2 lookup table.
  *
  * MAP records of `pidType` ITEM (0) or SCENERY (2) carry a per-subtype trailer
  * whose layout fallout2-ce determines by reading the referenced `.pro` file
@@ -10,8 +10,8 @@
  * `undefined`; callers can supply a richer resolver via `ParseOptions.pidResolver`.
  *
  * Returned subType values match `ItemSubType` / `ScenerySubType` in
- * `pro/types.ts`: items 0–6 (Armor/Container/Drug/Weapon/Ammo/Misc/Key),
- * scenery 0–5 (Door/Stairs/Elevator/LadderUp/LadderDown/Generic).
+ * `pro/types.ts`: items 0-6 (Armor/Container/Drug/Weapon/Ammo/Misc/Key),
+ * scenery 0-5 (Door/Stairs/Elevator/LadderUp/LadderDown/Generic).
  */
 
 import data from "../data/fallout2-pidtypes.json" with { type: "json" };

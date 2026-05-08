@@ -204,10 +204,10 @@ describe("expandEnumPropertyAccess", () => {
     });
 });
 
-describe("expandEnumPropertyAccess — externalized enums", () => {
+describe("expandEnumPropertyAccess - externalized enums", () => {
     it("strips prefix for externalized enum property access", () => {
-        // ClassID is a declare enum in a .d.ts file — externalized by esbuild,
-        // so no compat object exists in the bundled code. ClassID.ANKHEG → ANKHEG.
+        // ClassID is a declare enum in a .d.ts file - externalized by esbuild,
+        // so no compat object exists in the bundled code. ClassID.ANKHEG -> ANKHEG.
         const input = `var x = ClassID.ANKHEG;`;
         const result = expandEnumPropertyAccess(input, new Set(), new Set(["ClassID"]));
 
@@ -285,10 +285,10 @@ describe("bundle (esbuild integration)", () => {
     }
 
     it("resolves enum values from imported packages with extensionless .d.ts imports", async () => {
-        // Mimics ielib structure: index.ts re-exports from ./actions (→ actions.d.ts)
-        // and ./dir.ids (→ dir.ids.ts with enum), using extensionless imports.
+        // Mimics ielib structure: index.ts re-exports from ./actions (-> actions.d.ts)
+        // and ./dir.ids (-> dir.ids.ts with enum), using extensionless imports.
         try {
-            // Enum file — should be bundled so values are resolved
+            // Enum file - should be bundled so values are resolved
             writeTmpFile(
                 "pkg/dir.ids.ts",
                 `
@@ -297,7 +297,7 @@ export enum Direction {
 }
 `,
             );
-            // Declaration file — should be externalized (type-only)
+            // Declaration file - should be externalized (type-only)
             writeTmpFile(
                 "pkg/actions.d.ts",
                 `
@@ -358,7 +358,7 @@ Foo();
 `,
             );
             const source = fs.readFileSync(tbafPath, "utf-8");
-            // Should not throw — .d.ts externalization + extensionless resolution should handle this
+            // Should not throw - .d.ts externalization + extensionless resolution should handle this
             const output = await bundle(tbafPath, source);
             expect(output).toContain("Foo");
         } finally {
@@ -410,7 +410,7 @@ const c = Color.Red;
         // index.ts re-exports it with extensionless import, user code
         // references ClassID.ANKHEG. Since it's in a .d.ts, esbuild
         // externalizes it. Post-processing should strip prefix:
-        // ClassID.ANKHEG → ANKHEG.
+        // ClassID.ANKHEG -> ANKHEG.
         try {
             writeTmpFile(
                 "lib/classes.d.ts",
@@ -491,8 +491,8 @@ const y = CLASS.MAGE;
     });
 
     it("handles mixed bundled and externalized enums in imports", async () => {
-        // Direction is a regular enum (.ts file, bundled → resolved to values).
-        // ClassID is a declare enum (.d.ts file, externalized → prefix stripped).
+        // Direction is a regular enum (.ts file, bundled -> resolved to values).
+        // ClassID is a declare enum (.d.ts file, externalized -> prefix stripped).
         try {
             writeTmpFile(
                 "lib/dir.ids.ts",

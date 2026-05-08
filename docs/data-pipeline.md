@@ -24,7 +24,7 @@ HAND-MAINTAINED (server/data/)
   weidu-tp2-base.yml          weidu-d-base.yml
 
 
-generate-data.sh   (runs at build time — produces all runtime outputs)
+generate-data.sh   (runs at build time - produces all runtime outputs)
 ─────────────────────────────────────────────────────────────────────────────
 
   fallout-ssl-base.yml  ──┐
@@ -36,7 +36,7 @@ generate-data.sh   (runs at build time — produces all runtime outputs)
                                   ├──► fallout-ssl-engine-proc-docs.json    (SSL LSP hover enrichment + TSSL plugin hover docs)
                                   └──► fallout-ssl-engine-procedures.json   (server tree-shaking + TSSL plugin TS6133 suppression)
 
-  Note: extract-engine-proc-docs.ts reads item.doc directly from YAML — no intermediate hover JSON needed.
+  Note: extract-engine-proc-docs.ts reads item.doc directly from YAML - no intermediate hover JSON needed.
 
   fallout-ssl-base.yml  ──► update-fallout-base-functions-highlight.ts ──┐
   fallout-ssl-sfall.yml ──► update-sfall-highlight.ts                    ├──► fallout-ssl.tmLanguage.yml

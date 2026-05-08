@@ -3,7 +3,7 @@
  *
  * `stringCharset` is declared per-field in `presentation-schema.ts` and resolved
  * via `resolveStringCharset`. Both the host-side validator and the webview's
- * live keystroke sanitizer must agree on what each charset *means* — the
+ * live keystroke sanitizer must agree on what each charset *means* - the
  * predicate below is the authoritative answer, imported by both sides.
  *
  * `ascii-printable`: codepoints 0x20..0x7E inclusive. Engines that consume

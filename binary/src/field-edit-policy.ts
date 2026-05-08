@@ -2,7 +2,7 @@
  * Edit-policy gate for parsed-tree mutations.
  *
  * `editingLocked` on a ParsedGroup is the parser's statement that the
- * surrounding record's wire layout couldn't be fully decoded — typically
+ * surrounding record's wire layout couldn't be fully decoded - typically
  * because it depends on metadata external to the file (e.g. MAP object
  * subtype payloads described in `.pro` files). Field edits inside such a
  * subtree are width-preserving but not interpretation-preserving: changing

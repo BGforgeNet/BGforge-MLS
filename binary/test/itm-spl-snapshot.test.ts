@@ -16,7 +16,7 @@ const ITM_FIXTURE = path.join(REPO_ROOT, "external/infinity-engine/bg2-wildmage/
 const SPL_FIXTURE = path.join(REPO_ROOT, "external/infinity-engine/bg2-wildmage/wildmage/wild_spells/spl/wm_word.spl");
 
 describe("ITM canonical snapshot round-trip", () => {
-    test("createCanonical → loadCanonical produces byte-identical output", () => {
+    test("createCanonical -> loadCanonical produces byte-identical output", () => {
         const bytes = new Uint8Array(fs.readFileSync(ITM_FIXTURE));
         const result = itmParser.parse(bytes);
         const json = createCanonicalItmJsonSnapshot(result);
@@ -47,13 +47,13 @@ describe("ITM canonical snapshot round-trip", () => {
         [["Effects", "Effect 1", "Opcode"], "itm.effects[].opcode"],
         [["Other"], "itm.other"],
         [[], undefined],
-    ])("itmFormatAdapter.toSemanticFieldKey %j → %j", (segments, expected) => {
+    ])("itmFormatAdapter.toSemanticFieldKey %j -> %j", (segments, expected) => {
         expect(itmFormatAdapter.toSemanticFieldKey(segments)).toBe(expected);
     });
 });
 
 describe("SPL canonical snapshot round-trip", () => {
-    test("createCanonical → loadCanonical produces byte-identical output", () => {
+    test("createCanonical -> loadCanonical produces byte-identical output", () => {
         const bytes = new Uint8Array(fs.readFileSync(SPL_FIXTURE));
         const result = splParser.parse(bytes);
         const json = createCanonicalSplJsonSnapshot(result);
@@ -84,7 +84,7 @@ describe("SPL canonical snapshot round-trip", () => {
         [["Effects", "Effect 1", "Opcode"], "spl.effects[].opcode"],
         [["Other"], "spl.other"],
         [[], undefined],
-    ])("splFormatAdapter.toSemanticFieldKey %j → %j", (segments, expected) => {
+    ])("splFormatAdapter.toSemanticFieldKey %j -> %j", (segments, expected) => {
         expect(splFormatAdapter.toSemanticFieldKey(segments)).toBe(expected);
     });
 });
@@ -176,7 +176,7 @@ describe("ITM corruption handling", () => {
     });
 
     test("rejects featureBlocksOffset past EOF", () => {
-        // featureBlocksOffset = 0xffffffff (huge) → effectsBytes goes negative.
+        // featureBlocksOffset = 0xffffffff (huge) -> effectsBytes goes negative.
         const bytes = forgeItmHeader({
             extendedHeadersOffset: 0x72,
             extendedHeadersCount: 0,

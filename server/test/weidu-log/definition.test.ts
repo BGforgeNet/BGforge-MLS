@@ -103,7 +103,7 @@ describe("weidu-log/definition", () => {
         const text = "~NO_SUCH_DIR/SETUP.TP2~ #0 #0 // missing";
         const position: Position = { line: 0, character: 5 };
         const result = await getDefinition(text, logUri, position);
-        // NO_SUCH_DIR doesn't exist so readdir rejects → returns null
+        // NO_SUCH_DIR doesn't exist so readdir rejects -> returns null
         expect(result).toBeNull();
     });
 
@@ -116,7 +116,7 @@ describe("weidu-log/definition", () => {
         const text = `~NESTED_MOD~ #0 #0 // nested dir`;
         const position: Position = { line: 0, character: 5 };
         const result = await getDefinition(text, logUri, position);
-        // NESTED_MOD resolves to a directory, not a file → returns null
+        // NESTED_MOD resolves to a directory, not a file -> returns null
         expect(result).toBeNull();
     });
 });

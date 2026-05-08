@@ -87,7 +87,7 @@ function getStyledTokenType(symbol: IndexedSymbol): string | undefined {
     if (!type) {
         return undefined;
     }
-    // Extract base type: "resref offset" → "resref", "byte array offset" → "byte"
+    // Extract base type: "resref offset" -> "resref", "byte array offset" -> "byte"
     const baseType = type.split(" ", 1)[0]!;
     return JSDOC_TYPE_TO_TOKEN.get(baseType);
 }
@@ -347,7 +347,7 @@ class WeiduTp2Provider
             return getJsdocCompletions(getLinePrefix(text, position));
         }
 
-        // @ is a trigger character for translation references (@123) — suppress general completions
+        // @ is a trigger character for translation references (@123) - suppress general completions
         if (triggerCharacter === "@") {
             return [];
         }
@@ -367,7 +367,7 @@ class WeiduTp2Provider
         // local variables from partially typed text (e.g. phantom patch_assignment nodes).
         //
         // The (\S+)$ regex matches the last non-whitespace run before the cursor.
-        // This may include WeiDU delimiters (e.g. `%my_var%` → "%my_var%"), but that's
+        // This may include WeiDU delimiters (e.g. `%my_var%` -> "%my_var%"), but that's
         // safe: completion labels are bare names ("my_var"), so a delimited match like
         // "%my_var%" won't falsely exclude the bare label. Over-matching is harmless;
         // under-matching (empty string) disables exclusion, which is also safe.
@@ -481,7 +481,7 @@ class WeiduTp2Provider
         if (!isInitialized()) {
             return [];
         }
-        // Single-file AST traversal — bounded work; no per-iteration cancellation needed.
+        // Single-file AST traversal - bounded work; no per-iteration cancellation needed.
         return findReferences(text, position, uri, includeDeclaration, this.fileIndex?.refs);
     }
 

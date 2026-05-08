@@ -46,7 +46,7 @@ function makeTestResult(): ParseResult {
                 frmId: 9,
                 lightRadius: 8,
                 lightIntensity: 65536,
-                // HeaderFlags 0x20000000 → "lightThru" entry in the
+                // HeaderFlags 0x20000000 -> "lightThru" entry in the
                 // sorted-array projection (the only named-projection change in
                 // canonical-doc; enums stay numeric).
                 flags: { flags: ["lightThru"] },

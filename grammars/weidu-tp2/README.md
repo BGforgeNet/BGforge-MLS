@@ -114,10 +114,10 @@ Valid: `patch` OR `when` OR end COPY (continue with actions)
 
 Note: Only unambiguous if patch-only or when-only keyword appears below:
 
-- `REPLACE_TEXTUALLY` below → `patch` context only
-- `BUT_ONLY` below → `when` context only
-- `IF ~foo~` below → still ambiguous (could be `PATCH_IF` or when `IF`)
-- Another `COPY` below → still ambiguous (first COPY not ended yet)
+- `REPLACE_TEXTUALLY` below -> `patch` context only
+- `BUT_ONLY` below -> `when` context only
+- `IF ~foo~` below -> still ambiguous (could be `PATCH_IF` or when `IF`)
+- Another `COPY` below -> still ambiguous (first COPY not ended yet)
 
 #### 3. After COPY Patches
 

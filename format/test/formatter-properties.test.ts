@@ -2,8 +2,8 @@
  * Property-based tests for the three pure document formatters: format2da, formatTra, formatMsg.
  *
  * Two properties are verified for each formatter:
- *   1. Idempotence — formatting the output a second time produces no further change.
- *   2. No-crash   — any arbitrary string input returns a string without throwing.
+ *   1. Idempotence - formatting the output a second time produces no further change.
+ *   2. No-crash   - any arbitrary string input returns a string without throwing.
  *
  * Generators for idempotence are shaped like valid file content so the formatter's
  * core logic is exercised; the no-crash property uses unrestricted fc.string().
@@ -68,7 +68,7 @@ const arbTra: fc.Arbitrary<string> = fc
     .array(traEntry, { minLength: 1, maxLength: 10 })
     .map((entries) => entries.join("\n") + "\n");
 
-/** Content safe inside a MSG brace group — no braces. */
+/** Content safe inside a MSG brace group - no braces. */
 const msgContent = fc.string({ maxLength: 8 }).filter((s) => !/[{}]/.test(s));
 
 /** Generates one `{number}{audio}{text}` MSG entry line. */
@@ -87,7 +87,7 @@ const arbMsg: fc.Arbitrary<string> = fc
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("formatter properties — format2da", () => {
+describe("formatter properties - format2da", () => {
     it("idempotence: formatting twice equals formatting once", () => {
         fc.assert(
             fc.property(arb2da, (input) => {
@@ -110,7 +110,7 @@ describe("formatter properties — format2da", () => {
     });
 });
 
-describe("formatter properties — formatTra", () => {
+describe("formatter properties - formatTra", () => {
     it("idempotence: formatting twice equals formatting once", () => {
         fc.assert(
             fc.property(arbTra, (input) => {
@@ -133,7 +133,7 @@ describe("formatter properties — formatTra", () => {
     });
 });
 
-describe("formatter properties — formatMsg", () => {
+describe("formatter properties - formatMsg", () => {
     it("idempotence: formatting twice equals formatting once", () => {
         fc.assert(
             fc.property(arbMsg, (input) => {

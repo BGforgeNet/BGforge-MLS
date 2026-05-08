@@ -73,7 +73,7 @@ const MIN_OBJECT_BYTES = MAP_OBJECT_BASE_SIZE + MAP_OBJECT_DATA_HEADER_SIZE;
  * per-iteration buffer check terminated the loop. Negative counts are a
  * benign legacy sentinel for "empty elevation" / "no inventory" in
  * real-world MAP files (e.g., Fallout 2 RP's `sfchina2.map` carries
- * `objectCount = -1` for unused elevations) — quietly treat as 0; the old
+ * `objectCount = -1` for unused elevations) - quietly treat as 0; the old
  * `for (i = 0; i < count; i++)` loop did the same. Surface an error only
  * for the positive-overflow case where a count exceeds what the remaining
  * buffer can hold.
@@ -126,7 +126,7 @@ function parseInventoryHeaderGroup(data: Uint8Array, offset: number): { group: P
 /**
  * Decode the per-subtype trailing payload that follows the 4-byte data flags
  * for an Item record. Field shapes mirror fallout2-ce `proto.cc:objectDataRead`
- * (lines 583–599): armor/container/drug carry no trailer; weapon, ammo, misc,
+ * (lines 583-599): armor/container/drug carry no trailer; weapon, ammo, misc,
  * and key each carry their type-specific int32 fields.
  *
  * Returns the new cursor offset and the field list to splice into the object
@@ -150,14 +150,14 @@ export function decodeItemSubtypeTrailer(
             return { fields: [int32Field("Charges", data, offset)], offset: offset + 4 };
         case 6: // Key
             return { fields: [int32Field("Key Code", data, offset)], offset: offset + 4 };
-        default: // 0 Armor / 1 Container / 2 Drug — no trailer
+        default: // 0 Armor / 1 Container / 2 Drug - no trailer
             return { fields: [], offset };
     }
 }
 
 /**
  * Decode the per-subtype trailing payload for a Scenery record. Mirrors
- * fallout2-ce `proto.cc:objectDataRead` (lines 605–633). Ladders read 8 bytes
+ * fallout2-ce `proto.cc:objectDataRead` (lines 605-633). Ladders read 8 bytes
  * on v20 (Fallout 2) but only 4 bytes on v19 (Fallout 1, builtTile only).
  */
 export function decodeScenerySubtypeTrailer(
@@ -198,7 +198,7 @@ export function decodeScenerySubtypeTrailer(
                 ],
                 offset: offset + 8,
             };
-        default: // 5 Generic — no trailer
+        default: // 5 Generic - no trailer
             return { fields: [], offset };
     }
 }
@@ -206,7 +206,7 @@ export function decodeScenerySubtypeTrailer(
 // Records the parser couldn't fully decode get `editingLocked: true` so the
 // editor's tree builder threads it down to descendant fields. Field edits
 // are width-preserving but not interpretation-preserving when the trailing
-// payload is unknown — changing `inventoryLength` or the upper byte of `pid`
+// payload is unknown - changing `inventoryLength` or the upper byte of `pid`
 // (the type tag) would re-bind the opaque-trailer bytes to a different
 // structure on reparse, silently corrupting the file.
 function incompleteObjectResult(group: ParsedGroup, offset: number): ParsedObjectResult {
@@ -216,7 +216,7 @@ function incompleteObjectResult(group: ParsedGroup, offset: number): ParsedObjec
 // Game-format invariant: inventory items can themselves carry an inventory
 // (a critter's items) but no further. Cap recursion at 2 to bail out on
 // hostile inputs where a crafted MAP advertises non-zero `inventoryLength`
-// inside a nested inventory entry — without the cap, parseObjectAt would
+// inside a nested inventory entry - without the cap, parseObjectAt would
 // recurse until the JS stack overflows. Real files never reach depth 2.
 const MAX_INVENTORY_RECURSION_DEPTH = 2;
 
@@ -341,8 +341,8 @@ function parseObjectAt(
                     data.length,
                 );
             }
-            // Always emit the Subtype Data group when the resolver succeeded —
-            // even for 0-byte-trailer subtypes (Armor/Container/Drug/Generic) —
+            // Always emit the Subtype Data group when the resolver succeeded -
+            // even for 0-byte-trailer subtypes (Armor/Container/Drug/Generic) -
             // so the canonical doc can record the subType for reparse without
             // re-running the original filesystem-backed resolver.
             objectFields.push(

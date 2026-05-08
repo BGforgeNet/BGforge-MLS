@@ -8,10 +8,10 @@ export const FUNC_CALL_KEYWORDS =
     /^\s*(LAF|LPF|LAM|LPM|LAUNCH_ACTION_FUNCTION|LAUNCH_PATCH_FUNCTION|LAUNCH_ACTION_MACRO|LAUNCH_PATCH_MACRO)\s+\S*$/i;
 
 /**
- * LAF/LPF keywords followed by a function name and whitespace — cursor is past the name,
+ * LAF/LPF keywords followed by a function name and whitespace - cursor is past the name,
  * in parameter position (INT_VAR/STR_VAR/RET). Used as text fallback when tree-sitter
  * can't parse incomplete function calls (e.g., no END yet).
- * Does not match LAM/LPM — macros have no parameters.
+ * Does not match LAM/LPM - macros have no parameters.
  */
 export const FUNC_PARAM_KEYWORDS = /^\s*(?:LAF|LPF|LAUNCH_ACTION_FUNCTION|LAUNCH_PATCH_FUNCTION)\s+\S+\s+/i;
 
@@ -23,11 +23,11 @@ export const FUNC_PARAM_KEYWORDS = /^\s*(?:LAF|LPF|LAUNCH_ACTION_FUNCTION|LAUNCH
  *
  * Why regex instead of tree-sitter AST:
  * At declaration sites the user is mid-typing a new identifier (e.g. `OUTER_SET fo|`).
- * Tree-sitter cannot produce a valid declaration node for incomplete input — the grammar
+ * Tree-sitter cannot produce a valid declaration node for incomplete input - the grammar
  * requires both a name and a value (`OUTER_SET name = expr`), so partial input lands in
  * an ERROR node. An earlier attempt modified the grammar to make parts optional, but this
  * introduced unresolvable ambiguities (e.g. optional `BEGIN...END` on function definitions
- * conflicted with the `component` rule). This is a known tree-sitter limitation —
+ * conflicted with the `component` rule). This is a known tree-sitter limitation -
  * error recovery does not produce typed incomplete nodes, only ERROR nodes with no
  * reliable structure to match against (see https://github.com/tree-sitter/tree-sitter/issues/923).
  * Line-text regex is the fallback convention used throughout this codebase for similar

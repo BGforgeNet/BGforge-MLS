@@ -1,5 +1,5 @@
 /**
- * Unit tests for shared/semantic-tokens.ts — encoding and sort-order branches.
+ * Unit tests for shared/semantic-tokens.ts - encoding and sort-order branches.
  */
 
 import { describe, expect, it } from "vitest";
@@ -21,7 +21,7 @@ describe("shared/semantic-tokens", () => {
                 { line: 0, startChar: 0, length: 0, tokenType: INT_TOKEN_TYPE, tokenModifiers: 0 },
                 { line: 0, startChar: 5, length: -1, tokenType: INT_TOKEN_TYPE, tokenModifiers: 0 },
             ];
-            // All spans skipped — builder produces empty data
+            // All spans skipped - builder produces empty data
             const result = encodeSemanticTokens(spans);
             expect(result.data).toHaveLength(0);
         });
@@ -44,7 +44,7 @@ describe("shared/semantic-tokens", () => {
         });
 
         it("sorts spans on the same line by startChar (branch: same line, different startChar)", () => {
-            // Two spans on same line — second has earlier startChar, should sort first
+            // Two spans on same line - second has earlier startChar, should sort first
             const spans: SemanticTokenSpan[] = [
                 { line: 1, startChar: 10, length: 3, tokenType: INT_TOKEN_TYPE, tokenModifiers: 0 },
                 { line: 1, startChar: 2, length: 3, tokenType: INT_TOKEN_TYPE, tokenModifiers: 0 },

@@ -47,7 +47,7 @@ describe("buildTreeHtml - remaining reply rendering", () => {
     });
 
     it("renders node with call targets only (no replies, no options)", () => {
-        // Lines 138-147: callTargets branch — shows inline transition node
+        // Lines 138-147: callTargets branch - shows inline transition node
         const data: DialogData = {
             nodes: [
                 node({ name: "Node001", callTargets: ["Node002"] }),
@@ -115,7 +115,7 @@ describe("buildTreeHtml - option target rendering variants", () => {
     });
 
     it("renders node with no children (no replies, no options) as single inline line", () => {
-        // Line 224-226: !children branch — node-inline div
+        // Line 224-226: !children branch - node-inline div
         const data: DialogData = {
             nodes: [
                 node({
@@ -133,7 +133,7 @@ describe("buildTreeHtml - option target rendering variants", () => {
     });
 
     it("renders option where shouldRenderChild=false (target already rendered)", () => {
-        // Lines 211-213: shouldRenderChild false — renders as link only (no child expansion)
+        // Lines 211-213: shouldRenderChild false - renders as link only (no child expansion)
         const data: DialogData = {
             nodes: [
                 node({

@@ -9,7 +9,7 @@ import { splHeaderSpec } from "./header";
 export const splHeaderSpecAnnotated = {
     ...splHeaderSpec,
     flags: { ...splHeaderSpec.flags, flags: SplFlags },
-    // Per IESDP, type values 6–65535 behave as Psionic/Bard-song; the engine
+    // Per IESDP, type values 6-65535 behave as Psionic/Bard-song; the engine
     // tolerates out-of-table values, so the lookup is advisory.
     type: { ...splHeaderSpec.type, enum: SplType, enumOpen: true },
     exclusionFlags: { ...splHeaderSpec.exclusionFlags, flags: SplExclusionFlags },

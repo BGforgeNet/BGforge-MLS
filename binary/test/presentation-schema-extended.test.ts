@@ -77,7 +77,7 @@ describe("createSemanticFieldKeyFromId", () => {
 });
 
 // ---------------------------------------------------------------------------
-// resolveFieldPresentation — pattern merge + exact override
+// resolveFieldPresentation - pattern merge + exact override
 // ---------------------------------------------------------------------------
 
 describe("resolveFieldPresentation", () => {

@@ -3,7 +3,7 @@
  *
  * Pre-resolver, `parseObjectAt` bailed at the first item/scenery on each
  * elevation and dumped the rest of the file as an `objects-tail` opaque range
- * (see `parse-objects.ts:193–214`). With the bundled pidtypes resolver wired
+ * (see `parse-objects.ts:193-214`). With the bundled pidtypes resolver wired
  * in, fully-resolvable vanilla maps decode every record and emit no
  * `objects-tail`. These tests gate that closure.
  */
@@ -64,12 +64,12 @@ describe("vanilla MAP item/scenery decode via bundled pidtypes resolver", () => 
     });
 
     it("artemple emits no objects-tail opaque range when every object resolves", () => {
-        // The bundled fallout2-pidtypes.json is a snapshot — a few fixtures
+        // The bundled fallout2-pidtypes.json is a snapshot - a few fixtures
         // reference pids that weren't in the source master.dat (RP-adjacent,
         // patched, or omitted at extraction time). To prove the pipeline does
         // close objects-tail when every pid is resolvable, supply a custom
         // resolver that maps every pid to scenery/item subType 5 (Generic /
-        // Misc) — both produce zero trailer bytes, so pids of any type advance
+        // Misc) - both produce zero trailer bytes, so pids of any type advance
         // cleanly to the next record. A real-world consumer would supply a
         // pids+protos table from their own data set.
         const data = new Uint8Array(fs.readFileSync(path.resolve("client/testFixture/maps/artemple.map")));
@@ -123,7 +123,7 @@ describe("vanilla MAP item/scenery decode via bundled pidtypes resolver", () => 
         // regression here. See binary/INTERNALS.md "Known feature gaps".
         //
         // The resolver below covers every legitimate pid (bundled defaults +
-        // sibling proto/ overrides — exactly what the CLI auto-applies) but
+        // sibling proto/ overrides - exactly what the CLI auto-applies) but
         // still returns undefined for pid=0, so what's left is the corrupt-
         // data path.
         const { resolver: protoResolver } = loadProDirResolver(path.resolve("client/testFixture/proto"));

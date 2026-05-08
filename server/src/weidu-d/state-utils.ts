@@ -129,7 +129,7 @@ export function findLabelNodeAtPosition(root: SyntaxNode, position: Position): L
             }
         }
 
-        // EXTERN target — has its own file field
+        // EXTERN target - has its own file field
         if (node.type === SyntaxType.ExternNext) {
             const label = node.childForFieldName("label");
             if (label && isPositionInNode(position, label)) {
@@ -140,7 +140,7 @@ export function findLabelNodeAtPosition(root: SyntaxNode, position: Position): L
             }
         }
 
-        // COPY_TRANS in transitions — has its own file field
+        // COPY_TRANS in transitions - has its own file field
         if (node.type === SyntaxType.CopyTrans) {
             const stateNode = node.childForFieldName("state");
             if (stateNode && isPositionInNode(position, stateNode)) {

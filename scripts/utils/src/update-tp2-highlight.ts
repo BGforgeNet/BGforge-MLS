@@ -52,7 +52,7 @@ const STANZA_MAP: ReadonlyMap<string, StanzaConfig> = new Map([
     ["prologue", { repoKey: "weidu-tp2-file" }],
     ["value_constant", { repoKey: "infinity-constants", skipCatchall: true }],
     ["value_function", { repoKey: "weidu-tp2-values" }],
-    // value_operator not generated — TextMate stanza has non-word-boundary operator regexes
+    // value_operator not generated - TextMate stanza has non-word-boundary operator regexes
     ["when", { repoKey: "weidu-tp2-when" }],
 ]);
 
@@ -98,7 +98,7 @@ export function updateHighlightStanza(
         throw new Error(`Expected 'repository.${repositoryKey}' map`);
     }
     if (sourceFile !== undefined) {
-        stanzaPair.value.commentBefore = ` Auto-generated from ${sourceFile} — do not edit manually.`;
+        stanzaPair.value.commentBefore = ` Auto-generated from ${sourceFile} - do not edit manually.`;
     }
     const stanzaNode = stanzaPair.value;
 

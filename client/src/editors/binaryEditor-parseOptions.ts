@@ -2,9 +2,9 @@
  * Editor-side ParseOptions builder.
  *
  * Composes `ParseOptions` for the binary custom editor by combining:
- *   - File-derived options (`buildFileDerivedParseOptions`) — shared with
+ *   - File-derived options (`buildFileDerivedParseOptions`) - shared with
  *     the CLI; today this is the sibling proto/ pidResolver auto-load.
- *   - Editor-preference options — `skipMapTiles: true` to skip tile field
+ *   - Editor-preference options - `skipMapTiles: true` to skip tile field
  *     materialization, which would otherwise cost ~40k field allocations
  *     per tree render.
  *

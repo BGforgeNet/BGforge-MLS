@@ -65,13 +65,13 @@ describe("toZodSchema", () => {
             destMap: 0,
         });
 
-        // 26-bit max + 1 → reject.
+        // 26-bit max + 1 -> reject.
         expect(() => z.parse({ destTile: 0x04000000, destElevation: 0, destMap: 0 })).toThrow();
 
-        // 6-bit max + 1 → reject.
+        // 6-bit max + 1 -> reject.
         expect(() => z.parse({ destTile: 0, destElevation: 0x40, destMap: 0 })).toThrow();
 
-        // Negative values → reject (parts are unsigned bit fields).
+        // Negative values -> reject (parts are unsigned bit fields).
         expect(() => z.parse({ destTile: -1, destElevation: 0, destMap: 0 })).toThrow();
     });
 
@@ -119,7 +119,7 @@ describe("toZodSchema", () => {
 // bounds, linked-count consistency) so that canonical-doc creation and
 // snapshot load tolerate values the strict write-to-bytes path would reject.
 // Structural refinements (codec-range, bit-width, array length, strictObject
-// keys, integer/numeric typing) stay on — the doc shape must remain walkable
+// keys, integer/numeric typing) stay on - the doc shape must remain walkable
 // regardless of mode.
 describe("toZodSchema (permissive mode)", () => {
     it("accepts out-of-enum values that strict mode rejects", () => {

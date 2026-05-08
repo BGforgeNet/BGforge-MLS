@@ -107,7 +107,7 @@ describe("toTypedBinarySchema", () => {
         } satisfies Record<string, FieldSpec>;
         const derived = toTypedBinarySchema(spec);
 
-        // tile=5 in low 26 bits, elevation=2 in high 6 bits → packed = 0x08000005.
+        // tile=5 in low 26 bits, elevation=2 in high 6 bits -> packed = 0x08000005.
         const buf = new ArrayBuffer(8);
         const w = new BufferWriter(buf, { endianness: "big" });
         object({ packed: u32, destMap: u32 }).write(w, { packed: 0x08000005, destMap: 0x12345678 });

@@ -108,7 +108,7 @@ export const KillType: Record<number, string> = {
 // emitted by the engine's proto_scenery_subdata_init (proto.cc:976). The
 // per-object map record always supplies the live value at runtime; for
 // script-spawned elevators (rare) the proto value is the seed, and -1 there
-// signals "no default — caller must set it" (scripts.cc:1152 bails on -1).
+// signals "no default - caller must set it" (scripts.cc:1152 bails on -1).
 export const ElevatorType: Record<number, string> = {
     [-1]: "None",
     0: "Elevator 0",

@@ -82,7 +82,7 @@ export interface BinaryFormatAdapter {
      * format.
      *
      * Adapters only declare arrays as addable when the entry's serialized
-     * byte width is fully determined by the array spec — i.e., the format
+     * byte width is fully determined by the array spec - i.e., the format
      * can deterministically encode an inserted entry without external
      * metadata. Arrays whose entries depend on out-of-file resolution (e.g.,
      * MAP object records that need PRO subtype layouts) are not exposed

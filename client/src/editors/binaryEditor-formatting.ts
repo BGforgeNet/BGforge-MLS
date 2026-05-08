@@ -25,8 +25,8 @@ export function formatEditableNumberValue(rawValue: number, numericFormat: Numer
 /**
  * Live keystroke sanitization for `string` field inputs.
  *
- * Charset semantics come from `@bgforge/binary/string-charset` — the same
- * module the host-side validator imports — so the keystroke filter and the
+ * Charset semantics come from `@bgforge/binary/string-charset` - the same
+ * module the host-side validator imports - so the keystroke filter and the
  * authoritative validator cannot drift apart.
  *
  * Under both charsets the result is clamped to `maxBytes` of UTF-8 storage.

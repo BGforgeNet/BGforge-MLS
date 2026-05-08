@@ -515,7 +515,7 @@ export function formatControlFlow(
             if (isControlFlowBodyContent(child.type)) {
                 // Reference row for gap detection: BEGIN row when available (first body
                 // item after BEGIN), else the previous body item's row. This matters for
-                // ELSE BEGIN — a fresh body shouldn't measure gap against the previous
+                // ELSE BEGIN - a fresh body shouldn't measure gap against the previous
                 // branch's last content.
                 const rowToCheck = state.beginRow >= 0 ? state.beginRow : state.lastContentRow;
                 pushBlankIfGap(state.lines, child, rowToCheck);

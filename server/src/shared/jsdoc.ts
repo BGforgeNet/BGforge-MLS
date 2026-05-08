@@ -15,8 +15,8 @@
  *   @type {type}                            Variable type annotation
  *
  * Return modes:
- *   'unnamed' (default) — SSL behavior: unnamed @return populates ret field, named goes to rets[].
- *   'named' — TP2 behavior: only type-before-name syntax is recognized, consistent with @param.
+ *   'unnamed' (default) - SSL behavior: unnamed @return populates ret field, named goes to rets[].
+ *   'named' - TP2 behavior: only type-before-name syntax is recognized, consistent with @param.
  *     Braced: @return {type} name desc. Braceless: @return type name desc (known types only).
  *     All matches go to rets[]. Unnamed ret is never set.
  *
@@ -59,8 +59,8 @@ export interface JSdoc {
 interface ParseOptions {
     /**
      * How to interpret @return tags.
-     * - 'unnamed' (default): SSL behavior — unnamed @return populates ret, named goes to rets[].
-     * - 'named': TP2 behavior — all @return tags go to rets[] as named returns. ret is never set.
+     * - 'unnamed' (default): SSL behavior - unnamed @return populates ret, named goes to rets[].
+     * - 'named': TP2 behavior - all @return tags go to rets[] as named returns. ret is never set.
      */
     returnMode?: "unnamed" | "named";
 }
@@ -188,7 +188,7 @@ export function parse(text: string, options?: ParseOptions): JSdoc {
             continue;
         }
 
-        // Parse @return tags — behavior depends on returnMode
+        // Parse @return tags - behavior depends on returnMode
         if (returnMode === "named") {
             // Named mode (TP2): only type-before-name braced (@ret {type} name desc),
             // consistent with @param syntax. Unnamed @ret and name-before-type are ignored.

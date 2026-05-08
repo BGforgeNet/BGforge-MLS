@@ -23,7 +23,7 @@ function makeBlock(kind: DDialogBlock["kind"], file: string, overrides: Partial<
 
 describe("buildDTreeHtml - multiple blocks for same file (line 235 branch)", () => {
     it("groups multiple begin blocks under the same file", () => {
-        // Line 235: existing.push(block) — second block pushed to same file entry
+        // Line 235: existing.push(block) - second block pushed to same file entry
         const data: DDialogData = {
             blocks: [makeBlock("begin", "NPC"), makeBlock("modify", "NPC", { actionName: "DO_THING", stateRefs: [] })],
             states: [makeState("s1", "NPC")],
@@ -123,7 +123,7 @@ describe("buildDTreeHtml - transition with trigger and replyText", () => {
 describe("buildDTreeHtml - speaker label display", () => {
     it("shows speaker label when state speaker differs from block file (chain block)", () => {
         // Line 141-143: speakerHtml rendered when speaker !== defaultSpeaker.
-        // Chain blocks are matched by blockLabel, not speaker — so a state can have
+        // Chain blocks are matched by blockLabel, not speaker - so a state can have
         // a different speaker from the block's file, triggering the speaker label.
         const data: DDialogData = {
             blocks: [makeBlock("chain", "GAELAN", { label: "mychain" })],
@@ -157,7 +157,7 @@ describe("buildDTreeHtml - speaker label display", () => {
 
 describe("buildDTreeHtml - state with no sayText", () => {
     it("omits sayDisplay when sayText is empty", () => {
-        // Line 137-138: state.sayText falsy — sayHtml = ""
+        // Line 137-138: state.sayText falsy - sayHtml = ""
         // The <span class="reply msg-text"> is only added for the say text.
         // Transition text also uses msg-text, so check for "reply msg-text" specifically.
         const data: DDialogData = {
@@ -182,7 +182,7 @@ describe("buildDTreeHtml - state with no sayText", () => {
 
 describe("buildDTreeHtml - goto transition where target already rendered (no expand)", () => {
     it("renders goto back-reference as a node-link (not expanded child) when target was already rendered", () => {
-        // Line 168-169: shouldExpand=false for back-reference — transition renders as a flat div,
+        // Line 168-169: shouldExpand=false for back-reference - transition renders as a flat div,
         // not a <details> expansion. The back-reference to s1 from s2 appears as a node-link anchor.
         const data: DDialogData = {
             blocks: [makeBlock("begin", "NPC")],

@@ -85,7 +85,7 @@ function detectFuncNameFromLineText(text: string, line: number, character: numbe
 /**
  * Text-based fallback for detecting funcParamName context.
  * Used when tree-sitter can't parse incomplete function calls (e.g., no END yet).
- * Matches "LAF/LPF funcname " — cursor is past the function name, in parameter position.
+ * Matches "LAF/LPF funcname " - cursor is past the function name, in parameter position.
  */
 function detectFuncParamFromLineText(text: string, line: number, character: number): CompletionContext | null {
     const lineText = getLinePrefixAt(text, line, character);

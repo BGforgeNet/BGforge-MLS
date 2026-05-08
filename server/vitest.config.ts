@@ -2,7 +2,7 @@
  * Vitest configuration for server unit tests with coverage reporting.
  *
  * Coverage measures every source file the unit tests import. Exclusions:
- *   - `src/fallout-ssl/provider.ts`, `src/weidu-tp2/provider.ts` — LSP
+ *   - `src/fallout-ssl/provider.ts`, `src/weidu-tp2/provider.ts` - LSP
  *     dispatcher glue that delegates to unit-tested sub-modules; end-to-end
  *     behaviour is verified by integration tests under `test/integration/`.
  *
@@ -38,7 +38,7 @@ export default defineConfig({
             // #4943, #5903). scripts/test.sh also serialises coverage jobs.
             clean: false,
             // Coverage is intentionally scoped to "files actually loaded by tests"
-            // (the v8 default — no `include`). Adding `include: ["src/**/*.ts"]`
+            // (the v8 default - no `include`). Adding `include: ["src/**/*.ts"]`
             // would also count integration-only modules and the tree-sitter
             // generated types in the denominator, which the unit slice cannot
             // realistically cover. The `@bgforge/format` alias above resolves

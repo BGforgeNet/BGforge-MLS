@@ -41,7 +41,7 @@ for dir in fallout-ssl weidu-baf weidu-d weidu-tp2; do
     )
 done
 
-# Copy WASM files to server and format CLI output directories (sequential — depends on all builds)
+# Copy WASM files to server and format CLI output directories (sequential - depends on all builds)
 for dir in fallout-ssl weidu-baf weidu-d weidu-tp2; do
     cp "grammars/$dir"/*.wasm server/out/
     cp "grammars/$dir"/*.wasm format/out/
@@ -54,7 +54,7 @@ cp server/node_modules/web-tree-sitter/web-tree-sitter.wasm server/out/
 # vitest resolves __dirname to the source directory (shared/parsers/), not the
 # build output (server/out/). These symlinks let parser-factory.ts find WASM files
 # during testing without a full build. Pointing into server/out/ couples the symlink
-# target but not the source — shared/parsers/ stays free of server-specific imports.
+# target but not the source - shared/parsers/ stays free of server-specific imports.
 mkdir -p shared/parsers
 for wasm in server/out/*.wasm; do
     target="shared/parsers/$(basename "$wasm")"

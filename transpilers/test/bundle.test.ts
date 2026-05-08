@@ -2,7 +2,7 @@
  * Spawn-node smoke test for the published bundle.
  *
  * Imports `../out/index.js` (the tsup output) in a child node process.
- * Proves the bundle is self-contained — no missing externals (ts-morph,
+ * Proves the bundle is self-contained - no missing externals (ts-morph,
  * esbuild-wasm), no broken DTS that tsc would refuse to consume.
  *
  * Runs in addition to api.test.ts (which covers the source). This file
@@ -148,7 +148,7 @@ describe("@bgforge/transpile bundle smoke", () => {
 
             // Use the repo's tsc JS entry directly (not the shell wrapper in .bin/).
             // node_modules/.bin/tsc is a POSIX shell script and cannot be passed to
-            // process.execPath (node) — use the actual JS entrypoint instead.
+            // process.execPath (node) - use the actual JS entrypoint instead.
             const tsc = path.resolve("node_modules/typescript/bin/tsc");
             const result = spawnSync(process.execPath, [tsc, "-p", tsconfig], { encoding: "utf-8" });
             if (result.status !== 0) {

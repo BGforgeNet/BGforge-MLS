@@ -5,7 +5,7 @@ import type { FieldSpec, SpecData } from "../../spec/types";
 import type { StructPresentation } from "../../spec/presentation";
 
 // `materialId` uses a signed codec so the wire's `0xffffffff` "no proto
-// default" pattern (proto.cc:956 — proto_scenery_init) reads naturally as -1.
+// default" pattern (proto.cc:956 - proto_scenery_init) reads naturally as -1.
 // MaterialType maps -1 to "None"; the per-object material is what scripts and
 // the engine use, so the proto field is informational for scenery.
 export const sceneryCommonSpec = {

@@ -33,7 +33,7 @@ export class TextCache<T> {
      * Get cached data or parse and cache new data.
      *
      * @param uri Document URI (cache key)
-     * @param version Document version counter (cache validation key — usually
+     * @param version Document version counter (cache validation key - usually
      *   `TextDocument.version`). When `undefined` the cache is bypassed: parse
      *   runs on every call and nothing is stored. Lets callers without access
      *   to a real document version (tests, ad-hoc parses) avoid stale-cache hits

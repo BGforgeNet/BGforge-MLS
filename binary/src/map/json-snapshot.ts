@@ -21,7 +21,7 @@ function hasOpaqueRange(snapshot: MapCanonicalSnapshot, label: string): boolean 
 }
 
 /**
- * Build a `pid → subType` resolver from a canonical document. Walks every
+ * Build a `pid -> subType` resolver from a canonical document. Walks every
  * object (including nested inventory items) and indexes the `subtypeData`
  * entries the original parse decoded. Used to seed snapshot reparse with
  * the same resolution the original parse had, without re-consulting the

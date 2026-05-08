@@ -34,7 +34,7 @@ describe("logging", () => {
 
     describe("conlog before initOutputChannel", () => {
         it("falls back to console.log for info messages", () => {
-            // Fresh module — no channel registered yet (the conlog tests below
+            // Fresh module - no channel registered yet (the conlog tests below
             // run against a channel; this case must run first to capture the
             // pre-init fallback path).
             const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
@@ -44,7 +44,7 @@ describe("logging", () => {
                 // The fallback path can only have run if we are in fact pre-init,
                 // which holds in the very first call before initOutputChannel.
                 // Once initOutputChannel runs in a later test, this assertion
-                // would no longer be valid — that's why this test runs first.
+                // would no longer be valid - that's why this test runs first.
                 if (createOutputChannelMock.mock.calls.length === 0) {
                     expect(consoleSpy).toHaveBeenCalledWith("[client] pre-init fallback");
                 }

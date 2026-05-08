@@ -1,5 +1,5 @@
 /**
- * Filesystem-backed pid → subType resolver.
+ * Filesystem-backed pid -> subType resolver.
  *
  * Scans `<protoBaseDir>/items/*.pro` and `<protoBaseDir>/scenery/*.pro` (top
  * level only, no recursion), reads each file's `subType` via the existing
@@ -49,7 +49,7 @@ export interface ProResolverResult {
 
 /**
  * Walk the standard Fallout 2 proto layout under `protoBaseDir` and build a
- * `pid → subType` lookup. Missing subdirs are silently empty; malformed
+ * `pid -> subType` lookup. Missing subdirs are silently empty; malformed
  * `.pro` files are recorded in `stats.errors` and skipped. Files whose name
  * doesn't match the 8-digit pid convention are ignored without comment.
  */
@@ -66,7 +66,7 @@ export function loadProDirResolver(protoBaseDir: string): ProResolverResult {
         try {
             entries = fs.readdirSync(dir, { withFileTypes: true });
         } catch (err) {
-            // Missing dir is the common case for partial mod trees — silently empty.
+            // Missing dir is the common case for partial mod trees - silently empty.
             if ((err as NodeJS.ErrnoException).code === "ENOENT") continue;
             errors.push(`Failed to list ${dir}: ${(err as Error).message}`);
             continue;

@@ -207,13 +207,13 @@ when you need grammars and editor bundles too.
    engine declarations. esbuild externalizes these; they pass through as bare identifiers.
    Libraries must use named re-exports, not `export *`.
 4. **Library bundlers (tsup)**: `@bgforge/binary`, `@bgforge/format`, and `@bgforge/transpile`
-   bundle via tsup. tsdown — the named successor to tsup, Rolldown-based — was evaluated
+   bundle via tsup. tsdown - the named successor to tsup, Rolldown-based - was evaluated
    and rejected for now: the format package imports the runtime `SyntaxType` enum from
    auto-generated `tree-sitter.d.ts` declaration files (`from "../../../server/src/<lang>/tree-sitter.d"`).
    esbuild (under tsup) inlines those enum members as the literal string at each use site
    (`child.type === "value" /* Value */`); Rolldown (under tsdown) follows tsc's strict
    "`.d.ts` is types-only" rule, so the imported references resolve to placeholder objects
-   at runtime and every `child.type === SyntaxType.X` comparison silently returns false —
+   at runtime and every `child.type === SyntaxType.X` comparison silently returns false -
    dropping content during formatting. (Reproducer: Ascension.tp2's
    `BEGIN @104001 DESIGNATED 0 ... INCLUDE` block collapses to `BEGIN INCLUDE` when the
    format CLI is built with tsdown.) Switching off tsup requires either making the
@@ -252,9 +252,9 @@ activate()
 
 **VSCode engine floor (1.73):** The extension requires VSCode 1.73 or later. The
 binding constraint is `vscode.l10n.t()` in `client/src/indicator.ts`, which was
-introduced in VSCode 1.73 (November 2022). Earlier APIs used by the extension —
+introduced in VSCode 1.73 (November 2022). Earlier APIs used by the extension -
 `vscode.CustomEditorProvider` (1.46) and the `semanticTokenTypes` contribution
-point (1.43) — are all satisfied by 1.73. The floor should be raised if a feature
+point (1.43) - are all satisfied by 1.73. The floor should be raised if a feature
 requiring a later release is added.
 
 ### TypeScript Language Service Plugins
@@ -262,8 +262,8 @@ requiring a later release is added.
 Plugins intercept tsserver calls for transpiler files. They run inside the tsserver
 process, not the extension host.
 
-- **TSSL Plugin** — suppresses TS6133 for engine procedures, adds hover docs. See [plugins/tssl-plugin/README.md](../plugins/tssl-plugin/README.md).
-- **TD Plugin** — injects `td-runtime.d.ts`, filters completions per file type. See [plugins/td-plugin/README.md](../plugins/td-plugin/README.md).
+- **TSSL Plugin** - suppresses TS6133 for engine procedures, adds hover docs. See [plugins/tssl-plugin/README.md](../plugins/tssl-plugin/README.md).
+- **TD Plugin** - injects `td-runtime.d.ts`, filters completions per file type. See [plugins/td-plugin/README.md](../plugins/td-plugin/README.md).
 
 ### Webview Panels
 
@@ -276,7 +276,7 @@ Two webview-based features, each with a host-side and browser-side module:
 | Dialog Tree (TSSL) | `dialog-tree/dialogTree.ts`   | `dialogTree-webview.ts`   | Ctrl+Shift+V in TSSL          |
 | Binary Editor      | `editors/binaryEditor.ts`     | `binaryEditor-webview.ts` | Open .pro/.map/.itm/.spl/.eff |
 
-For the binary library internals — spec system, primitives, derivation, format-adapter pattern, adding a new format — see [binary/INTERNALS.md](../binary/INTERNALS.md).
+For the binary library internals - spec system, primitives, derivation, format-adapter pattern, adding a new format - see [binary/INTERNALS.md](../binary/INTERNALS.md).
 
 Binary editor design choice:
 
@@ -320,7 +320,7 @@ Two recent behavior points are easy to miss:
 
 Each provider implements `ProviderBase` plus relevant capability interfaces from `core/capabilities.ts`
 (e.g., `FormattingCapability`, `CompletionCapability`). The `LanguageProvider` type is a
-`Partial<>` intersection of all capabilities — providers declare explicit `implements` clauses
+`Partial<>` intersection of all capabilities - providers declare explicit `implements` clauses
 for compile-time enforcement:
 
 | Provider         | Completion | Hover | Signature | Definition | References | Format | Symbols | Workspace Symbols | Rename | Inlay | Folding | Diagnostics | JSDoc |
@@ -353,10 +353,10 @@ publishable library lives at the `transpilers/` root as `@bgforge/transpile`
 and bundles all four into a single ESM artifact via `tsup`. Internal consumers
 (LSP server, TS plugins) keep importing the per-language packages directly;
 external consumers use the bundled library. `esbuild-wasm` is the only runtime
-dependency — it cannot be inlined because it detects bundling at load time.
+dependency - it cannot be inlined because it detects bundling at load time.
 
 **Shared pipeline** (`transpilers/common/transpiler-pipeline.ts`): `createTranspiler()` factory
-handles the common orchestration — extension validation, @tra tag extraction, file I/O,
+handles the common orchestration - extension validation, @tra tag extraction, file I/O,
 and structured compile events such as `output_written`. The shared pipeline does not
 write to stdout; host-specific callers decide whether to surface those events as LSP
 messages, CLI stderr output, or ignore them. TBAF and TD use this factory; TSSL has
@@ -401,7 +401,7 @@ with state machines, method chain parsing, and dual-pass orphan detection.
 | `types.ts`             | IR types (TDScript, TDConstruct, TDState, TDSay, etc.)     |
 | `td-runtime.d.ts`      | TypeScript declarations for TD API                         |
 
-`dialog.ts` (dialog tree preview, `parseTDDialog`) lives in `server/src/td/` — it depends on tree-sitter parsers and LSP infrastructure and was not extracted.
+`dialog.ts` (dialog tree preview, `parseTDDialog`) lives in `server/src/td/` - it depends on tree-sitter parsers and LSP infrastructure and was not extracted.
 
 ## CLI Tools
 
@@ -539,8 +539,8 @@ by other layers:
 - **`@bgforge/format`** (`format/vitest.config.ts`): 27/17/12/27 (lines/functions/branches/statements). The formatter surface is exercised end-to-end by grammar-corpus fixtures under `grammars/*/test/corpus/` and by the directory-mode `--save-and-check` invocation in `scripts/test.sh`. The vitest project here covers only the standalone unit slice (utilities, helpers, dispatch); the broader surface is covered but in a different layer.
 - **`@bgforge/transpile`** (`transpilers/vitest.config.ts`): 15/25/8/15. The bulk of transpiler correctness is enforced by Stryker mutation testing (`stryker.conf.json`, breaks at 60% mutation score) plus the TD/TBAF fixture-driven integration suites in `scripts/test.sh`. The vitest project here covers the public API and shared helpers; the per-language transformer surface is covered through mutation and integration.
 
-The other workspaces — `server`, `client`, `binary`, `shared`, `scripts`, and the
-two TypeScript plugins — run at 90/80/90/90 (or higher for the plugins) because
+The other workspaces - `server`, `client`, `binary`, `shared`, `scripts`, and the
+two TypeScript plugins - run at 90/80/90/90 (or higher for the plugins) because
 their unit suites are responsible for the bulk of their own behaviour. `server`
 additionally excludes `src/fallout-ssl/provider.ts` and `src/weidu-tp2/provider.ts`
 (LSP dispatcher glue verified by the integration tests under `server/test/integration/`)
@@ -580,7 +580,7 @@ When a handler exceeds the threshold it logs a `[lsp-timing]` warning to the LSP
 The threshold is `DEFAULT_THRESHOLD_MS = 50` ms and can be overridden at startup via the
 `BGFORGE_LSP_SLOW_MS` environment variable.
 
-The threshold is a per-request, per-call budget — not an aggregate. A single request that
+The threshold is a per-request, per-call budget - not an aggregate. A single request that
 takes longer than 50 ms triggers a warning regardless of prior request history.
 
 Handlers currently wrapped: `onCompletion`, `onHover`, `onDefinition`, `onReferences`,
@@ -654,7 +654,7 @@ tooling (type checking, refactoring, go-to-definition) alongside transpiler feat
 
 Dependency bumps stay within the current major version. `pnpm update -r` is run
 periodically to pick up minor and patch releases across the workspace; major bumps
-(including 0.x → 0.y where y > current, which npm treats as breaking) are deferred
+(including 0.x -> 0.y where y > current, which npm treats as breaking) are deferred
 until an explicit, motivated upgrade pass. This trades currency for stability: strict
 mode, `verbatimModuleSyntax`, and the custom TS config make major-bump churn expensive,
 and the extension's user surface is small enough that we gain little from being on the
@@ -797,10 +797,10 @@ worthwhile.
 
 The feature matrix appears in two forms serving different audiences; both are maintained.
 
-- **README** — user-facing languages ("Fallout SSL", "WeiDU TP2"), ✓ marks, includes a
+- **README** - user-facing languages ("Fallout SSL", "WeiDU TP2"), ✓ marks, includes a
   "Dialog preview" row. Optimized for someone deciding whether the extension supports
   their workflow.
-- **`server/INTERNALS.md#feature-matrix`** — provider names (`fallout-ssl`, `weidu-tp2`),
+- **`server/INTERNALS.md#feature-matrix`** - provider names (`fallout-ssl`, `weidu-tp2`),
   `Y`/`n/a`/blank distinction, covers extra providers (`weidu-log`, `worldmap`, `weidu-tra`,
   `fallout-msg`, `infinity-2da`, `scripts-lst`) that are internals relevant only to
   implementers.

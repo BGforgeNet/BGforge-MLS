@@ -4,9 +4,9 @@
  * symbol name being declared.
  *
  * Declaration site types:
- * - "assignment": SET/SPRINT variable name — local variable completions allowed
- * - "definition": function/macro/array/loop name — all completions suppressed
- * - false: not a declaration site — normal completions
+ * - "assignment": SET/SPRINT variable name - local variable completions allowed
+ * - "definition": function/macro/array/loop name - all completions suppressed
+ * - false: not a declaration site - normal completions
  */
 
 import { describe, expect, it, beforeAll, vi } from "vitest";
@@ -216,9 +216,9 @@ describe("TP2 declaration-site detection", () => {
 
         it("uses character offset to trim line", () => {
             const text = "OUTER_SET x = 5";
-            // Cursor at position 11 => "OUTER_SET x" — assignment site
+            // Cursor at position 11 => "OUTER_SET x" - assignment site
             expect(isAtDeclarationSite(text, { line: 0, character: 11 })).toBe("assignment");
-            // Past the = sign — not a declaration site
+            // Past the = sign - not a declaration site
             expect(isAtDeclarationSite(text, { line: 0, character: 15 })).toBe(false);
         });
     });

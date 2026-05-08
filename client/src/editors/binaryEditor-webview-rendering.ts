@@ -38,7 +38,7 @@ function createGroupElement(node: BinaryEditorNode): HTMLElement {
     contentEl.className = "group-content";
     contentEl.dataset.parentNodeId = node.id;
 
-    // The add-entry row is owned by renderChildren — it has to re-append after
+    // The add-entry row is owned by renderChildren - it has to re-append after
     // every lazy-load round-trip (which calls replaceChildren() on contentEl)
     // and the source-of-truth `addable` flag may change across re-renders
     // (undo/redo). Adding the row here would only put it on screen for the
@@ -113,7 +113,7 @@ function createFieldElement(node: BinaryEditorNode): HTMLElement {
     // Append the remove button into .field-meta (col 3, row 1) so it sits
     // inline at the row's right edge. Appending it at the field level instead
     // would leave it unplaced in the 3-column subgrid and auto-flow drops it
-    // to row 2 col 1 — visually below the row, not on it.
+    // to row 2 col 1 - visually below the row, not on it.
     if (node.removable && node.entryPath) {
         metaEl.append(createRemoveEntryButton(node.entryPath));
     }
@@ -167,7 +167,7 @@ function createStringInput(fieldId: string, fieldPath: string, node: BinaryEdito
     input.dataset.fieldPath = fieldPath;
     input.dataset.valueType = "string";
     // Both attributes are sourced from the host (presentation schema +
-    // parsed-field size), not invented by the webview — see binaryEditor-tree.
+    // parsed-field size), not invented by the webview - see binaryEditor-tree.
     if (typeof node.size === "number") {
         input.dataset.maxBytes = String(node.size);
     }

@@ -19,7 +19,7 @@ export default grammar({
         source_file: ($) => repeat(choice($.entry, $.comment)),
 
         // {number}{audio}{text}
-        // Text can span multiple lines — closing } terminates.
+        // Text can span multiple lines - closing } terminates.
         entry: ($) =>
             seq(
                 "{",
@@ -38,7 +38,7 @@ export default grammar({
         // Audio filename (non-empty content between second pair of braces)
         audio: () => /[^}]+/,
 
-        // Message text — may contain newlines, terminated by }
+        // Message text - may contain newlines, terminated by }
         text: () => /[^}]+/,
 
         // Anything outside {n}{a}{t} entries is a comment.

@@ -5,7 +5,7 @@
  * the server-instance state it needs (connection, documents, debouncers, the
  * rename-suppression instance, the connection-bound getDocumentSettings closure,
  * timing options) through ctx. This is the only state that must flow through the
- * context — module-level singletons (`registry`, `conlog`, `getServerContext`,
+ * context - module-level singletons (`registry`, `conlog`, `getServerContext`,
  * `normalizeUri`, static data loaders, etc.) are stateless or pre-created and
  * are imported directly by the handlers that use them.
  */

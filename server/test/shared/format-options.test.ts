@@ -1,5 +1,5 @@
 /**
- * Tests for shared/format-options.ts — getFormatOptions reads editorconfig settings
+ * Tests for shared/format-options.ts - getFormatOptions reads editorconfig settings
  * and falls back to defaults (indent=4, lineLimit=120) when settings are unavailable.
  */
 

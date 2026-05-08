@@ -512,8 +512,8 @@ function getExtendHeader(node: SyntaxNode): string {
         )
             break;
         if (child.text.toUpperCase() === "END") break;
-        // Don't insert space after "#" — keep "#N" as a single token (position number).
-        // TODO: fix in grammar instead — tokenize "#N" as a single node (like tlk_ref does),
+        // Don't insert space after "#" - keep "#N" as a single token (position number).
+        // TODO: fix in grammar instead - tokenize "#N" as a single node (like tlk_ref does),
         // also for _weight_value. Then this workaround can be removed.
         if (result.length > 0 && !result.endsWith("#")) {
             result += " ";

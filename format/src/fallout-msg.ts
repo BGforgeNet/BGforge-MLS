@@ -6,7 +6,7 @@
  *   - audio field: whitespace is trimmed inside the braces
  *   - text field: content is preserved verbatim (including internal spaces/newlines)
  *
- * Lines that do not start with `{` are comment lines — trailing whitespace is
+ * Lines that do not start with `{` are comment lines - trailing whitespace is
  * trimmed but the content is otherwise unchanged. Blank lines are preserved.
  *
  * Multiline text fields (closing `}` on a later line) are supported.
@@ -92,7 +92,7 @@ function processItem(text: string, pos: number): ProcessedLine {
         }
     }
 
-    // Comment or unrecognized line — trim trailing whitespace
+    // Comment or unrecognized line - trim trailing whitespace
     const nlPos = text.indexOf("\n", pos);
     const end = nlPos === -1 ? text.length : nlPos;
     const line = text.slice(pos, end).trimEnd();

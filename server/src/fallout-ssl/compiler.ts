@@ -172,7 +172,7 @@ export function abortInFlightSSLCompiles(): void {
 }
 
 /**
- * Reset cached compiler state. Exported for testing only — module-level
+ * Reset cached compiler state. Exported for testing only - module-level
  * state persists across test cases, so each test must call this in beforeEach
  * to avoid cross-test contamination.
  */

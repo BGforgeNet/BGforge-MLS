@@ -46,7 +46,7 @@ function getOutputPath(filePath: string, type: TranspileType): string {
     return filePath.replace(/\.tbaf$/i, ".baf");
 }
 
-// Shared batch state for TSSL files — reuses ts-morph Project and caches
+// Shared batch state for TSSL files - reuses ts-morph Project and caches
 // inline function extraction across files, avoiding redundant parsing of
 // shared libraries like folib.
 let tsslBatchState: TranspileBatchState | undefined;
@@ -78,7 +78,7 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
 
         const outPath = getOutputPath(filePath, type);
 
-        // Read with try/catch instead of existsSync→readFileSync to avoid the
+        // Read with try/catch instead of existsSync->readFileSync to avoid the
         // TOCTOU window CodeQL js/file-system-race flags.
         const readExisting = (): string | null => {
             try {

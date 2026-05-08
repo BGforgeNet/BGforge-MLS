@@ -303,7 +303,7 @@ export function foo(): void { bar(); }
 `,
             );
             const project = new Project();
-            // Use a path relative to tmpDir, not cwd — this simulates the absWorkingDir mismatch
+            // Use a path relative to tmpDir, not cwd - this simulates the absWorkingDir mismatch
             const relativePath = path.relative(tmpDir, filePath);
 
             // From cwd, this relative path doesn't resolve to the actual file

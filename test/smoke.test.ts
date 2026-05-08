@@ -2,7 +2,7 @@
  * Smoke tests for CLI entry points.
  *
  * Each release CLI ships as its own published artefact but cannot carry a
- * numeric v8 coverage gate — subprocess instrumentation via child_process
+ * numeric v8 coverage gate - subprocess instrumentation via child_process
  * does not capture in-process coverage. These tests substitute for a
  * coverage threshold by asserting that each entry point starts, parses
  * flags, and exits cleanly. A broken shebang, missing bundle, or startup
@@ -35,7 +35,7 @@ function runHelp(cliPath: string): { code: number; stdout: string; stderr: strin
     };
 }
 
-describe("CLI smoke tests — entry-point presence and startup", () => {
+describe("CLI smoke tests - entry-point presence and startup", () => {
     beforeAll(() => {
         const missing = Object.entries(CLIS)
             .filter(([, p]) => !fs.existsSync(p))

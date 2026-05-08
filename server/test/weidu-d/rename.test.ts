@@ -53,7 +53,7 @@ describe("weidu-d/rename", () => {
                 "    SAY ~Bye~",
                 "END",
             ].join("\n");
-            // "s2" in GOTO at line 4: "    IF ~~ THEN GOTO s2" — s2 starts at char 20
+            // "s2" in GOTO at line 4: "    IF ~~ THEN GOTO s2" - s2 starts at char 20
             const position: Position = { line: 4, character: 20 };
             const result = prepareRenameSymbol(text, position);
 
@@ -124,7 +124,7 @@ describe("weidu-d/rename", () => {
             expect(count).toBe(2); // Definition + GOTO ref
         });
 
-        it("scopes rename to the correct dialog — does not cross BEGIN boundaries", () => {
+        it("scopes rename to the correct dialog - does not cross BEGIN boundaries", () => {
             const text = [
                 "BEGIN ~DIALOG_A~",
                 "",
@@ -272,8 +272,8 @@ describe("weidu-d/rename", () => {
         it("returns null when cursor is on EXTERN label pointing to an external dialog not present in file", () => {
             // Cursor on "ext_state" in EXTERN ~OTHER_DIALOG~ ext_state.
             // findLabelNodeAtPosition returns dialogFile="other_dialog", but the file has
-            // no BEGIN ~OTHER_DIALOG~ block, so findAllDialogLabelRefs returns empty →
-            // refs.length === 0 → returns null.
+            // no BEGIN ~OTHER_DIALOG~ block, so findAllDialogLabelRefs returns empty ->
+            // refs.length === 0 -> returns null.
             const text = [
                 "BEGIN ~DIALOG~",
                 "",

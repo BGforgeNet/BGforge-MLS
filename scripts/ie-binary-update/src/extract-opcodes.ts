@@ -1,9 +1,9 @@
 /**
- * Extracts opcode-number → name mapping from IESDP `_opcodes/op<NNN>.html`
+ * Extracts opcode-number -> name mapping from IESDP `_opcodes/op<NNN>.html`
  * frontmatter and emits a generated TS lookup table.
  *
  * IESDP files come in two flavours: `opNNN.html` (canonical, primary
- * opname) and `opNNN-<engine>.html` (engine-specific variant — same
+ * opname) and `opNNN-<engine>.html` (engine-specific variant - same
  * number, alternative opname). We only consume the canonical files; the
  * variants describe alternate behaviours rather than alternate names.
  */
@@ -43,7 +43,7 @@ function parseFrontmatter(text: string): OpcodeFrontmatter | undefined {
     return { n, opname };
 }
 
-/** Returns a sorted-by-number map of opcode → name. */
+/** Returns a sorted-by-number map of opcode -> name. */
 export function extractOpcodes(opcodesDir: string): ReadonlyMap<number, string> {
     const out = new Map<number, string>();
     if (!fs.existsSync(opcodesDir)) {
@@ -66,7 +66,7 @@ export function emitOpcodesModule(opcodes: ReadonlyMap<number, string>, sourceRe
     lines.push(`// Auto-generated from IESDP ${sourceRel}. Do not hand-edit.`);
     lines.push("");
     lines.push("/**");
-    lines.push(" * Effect / EFF body opcode → display name. Sourced from IESDP `_opcodes/op<NNN>.html`");
+    lines.push(" * Effect / EFF body opcode -> display name. Sourced from IESDP `_opcodes/op<NNN>.html`");
     lines.push(" * frontmatter `opname` fields (canonical files only, not engine-variant overrides).");
     lines.push(" */");
     lines.push("export const Opcodes: Readonly<Record<number, string>> = {");

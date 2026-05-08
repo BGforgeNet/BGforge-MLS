@@ -948,7 +948,7 @@ component_flag:
 
         - name: NO_LOG_RECORD
           doc: |-
-              Normally all module components are recorded in WeiDU.log and can be uninstalled later. This component flag prevents this component from writing a log record when it is successfully installed. As a result it is “invisible” to WeiDU, can be installed multiple times, and cannot be uninstalled with WeiDU. Do not use this flag without a real reason.
+              Normally all module components are recorded in WeiDU.log and can be uninstalled later. This component flag prevents this component from writing a log record when it is successfully installed. As a result it is "invisible" to WeiDU, can be installed multiple times, and cannot be uninstalled with WeiDU. Do not use this flag without a real reason.
 
         - name: REQUIRE_COMPONENT
           detail: REQUIRE_COMPONENT modToUninstall modComponent String
@@ -4788,7 +4788,7 @@ prologue:
               The AUTHOR/SUPPORT directive gives an email address for users to send bugs to if there are problems during the installation. You may use SUPPORT as an alias for AUTHOR. The TP2_AUTHOR variable is set to the "emailAddress" value.
 
 # Residual value-position items not covered by other stanzas.
-# Keywords (ALWAYS_ASK, ANY, ELSE, END, etc.) removed — already in weidu-keywords.
+# Keywords (ALWAYS_ASK, ANY, ELSE, END, etc.) removed - already in weidu-keywords.
 # Operators (AND, OR, BAND, etc.) split to value_operator.
 # Functions (FILE_EXISTS, BYTE_AT, etc.) split to value_function.
 # Constants (BIT0, DAMAGE, etc.) split to value_constant.

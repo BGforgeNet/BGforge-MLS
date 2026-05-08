@@ -1,5 +1,5 @@
 /**
- * Unit tests for shared/signature-format.ts — formatSignature.
+ * Unit tests for shared/signature-format.ts - formatSignature.
  * These tests pin the contract for the module now living in root shared/.
  */
 

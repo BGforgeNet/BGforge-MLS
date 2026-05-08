@@ -1,5 +1,5 @@
 /**
- * Tests for shared/static-data.ts — loadStaticMap helper.
+ * Tests for shared/static-data.ts - loadStaticMap helper.
  * Covers the happy path (data file found) and the fallback branch (file missing or unreadable)
  * that returns an empty Map (line 36).
  */

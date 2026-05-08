@@ -38,7 +38,7 @@ const CLI_QUIET = process.argv.includes("-q") || process.argv.includes("--quiet"
 // multi-GB allocation prior to header validation. Real-world files stay well
 // below these (largest published Fallout MAPs are ~250 KB; ITM/SPL/EFF are
 // in the low KB range; PRO has a 1 KB hard limit enforced inside its parser).
-// Override by editing this map, not by passing a flag — there is no
+// Override by editing this map, not by passing a flag - there is no
 // legitimate use case for parsing files at the cap.
 const MAX_FILE_SIZES: Record<string, number> = {
     map: 16 * 1024 * 1024, // 16 MB
@@ -119,7 +119,7 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
         const jsonPath = getSnapshotPath(filePath);
 
         if (mode === "save") {
-            // Read with try/catch instead of existsSync→readFileSync to avoid
+            // Read with try/catch instead of existsSync->readFileSync to avoid
             // the TOCTOU window CodeQL js/file-system-race flags.
             let existing: string | null = null;
             try {
@@ -187,7 +187,7 @@ Examples:
 function loadJsonToBinary(jsonPath: string): void {
     let jsonText: string;
     try {
-        // Read with try/catch instead of existsSync→readFileSync to avoid
+        // Read with try/catch instead of existsSync->readFileSync to avoid
         // the TOCTOU window CodeQL js/file-system-race flags.
         jsonText = fs.readFileSync(jsonPath, "utf-8");
     } catch (err) {

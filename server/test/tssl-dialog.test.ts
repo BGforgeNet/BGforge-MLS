@@ -14,7 +14,7 @@ vi.mock("../src/lsp-connection", () => ({
     }),
 }));
 
-// Mock the TSSL transpiler — it requires esbuild, ts-morph, and file I/O.
+// Mock the TSSL transpiler - it requires esbuild, ts-morph, and file I/O.
 // We return pre-built SSL text so the test focuses on the dialog parsing pipeline.
 vi.mock("../../transpilers/tssl/src/index", () => ({
     transpile: vi.fn(),

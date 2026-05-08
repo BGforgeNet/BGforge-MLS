@@ -1,5 +1,5 @@
 /**
- * Tree-sitter parser for Fallout SSL — thin re-export from ParserManager.
+ * Tree-sitter parser for Fallout SSL - thin re-export from ParserManager.
  */
 
 import { parserManager } from "./parser-manager";

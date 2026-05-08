@@ -21,7 +21,7 @@ function makeSimpleResult(overrides: Partial<ParseResult> = {}): ParseResult {
     };
 }
 
-describe("loadBinaryJsonSnapshot — accepts a single ParseOptions bag", () => {
+describe("loadBinaryJsonSnapshot - accepts a single ParseOptions bag", () => {
     it("forwards a flat parseOptions bag to format-adapter snapshots without per-format keys", () => {
         // The pre-change shape was `{ proParseOptions, mapParseOptions }`,
         // requiring the call site to know each format's option bag. The
@@ -45,7 +45,7 @@ describe("loadBinaryJsonSnapshot — accepts a single ParseOptions bag", () => {
     });
 });
 
-describe("loadBinaryJsonSnapshot — error handling", () => {
+describe("loadBinaryJsonSnapshot - error handling", () => {
     it("throws a wrapped error for completely invalid JSON", () => {
         // Line 266-268: catch branch
         expect(() => loadBinaryJsonSnapshot("{not json")).toThrow(/invalid json snapshot/i);
@@ -57,7 +57,7 @@ describe("loadBinaryJsonSnapshot — error handling", () => {
     });
 
     it("falls through to generic schema when format field is absent", () => {
-        // Line 251: parsed has no "format" key — skips adapter lookup
+        // Line 251: parsed has no "format" key - skips adapter lookup
         const withoutFormat = JSON.stringify({
             schemaVersion: 1,
             format: "testbin",
@@ -91,7 +91,7 @@ describe("loadBinaryJsonSnapshot — error handling", () => {
     });
 });
 
-describe("loadBinaryJsonSnapshot — field types in generic schema", () => {
+describe("loadBinaryJsonSnapshot - field types in generic schema", () => {
     it("round-trips a snapshot with warnings and errors arrays", () => {
         const result = makeSimpleResult({ warnings: ["w1"], errors: ["e1"] });
         const json = createBinaryJsonSnapshot(result);
@@ -152,7 +152,7 @@ describe("loadBinaryJsonSnapshot — field types in generic schema", () => {
     });
 });
 
-describe("parseFieldValue — enum/flags with string input", () => {
+describe("parseFieldValue - enum/flags with string input", () => {
     it("round-trips an enum field where value is already a display string", () => {
         // parseFieldValue: field.value is a string, valueType is "enum", rawValue lookup succeeds
         const result: ParseResult = {

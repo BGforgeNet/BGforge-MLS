@@ -22,7 +22,7 @@ import { escapeHtml } from "../utils";
     // Align .msg-text widths within each sibling group so action icons and targets line up.
     // Sets flex-basis to the widest sibling's natural width (scrollWidth).
     // flex-basis (not min-width) allows graceful shrinking when the container is narrow.
-    // Uses three-pass approach (reset → measure → apply) to avoid layout thrashing.
+    // Uses three-pass approach (reset -> measure -> apply) to avoid layout thrashing.
     function alignSiblingMsgTexts(): void {
         // Collect groups: each group is the sibling .msg-text elements within one .children container
         const groups: HTMLElement[][] = [];

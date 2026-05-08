@@ -71,7 +71,7 @@ const TD_KEYWORDS = {
 } as const;
 
 /**
- * Per-call parse context. Fresh instance for every parse() invocation — no
+ * Per-call parse context. Fresh instance for every parse() invocation - no
  * state is shared across calls.
  *
  * `vars` is intentionally mutable throughout a single pass: inlineUserFunction
@@ -81,14 +81,14 @@ const TD_KEYWORDS = {
  */
 interface ParseContext {
     readonly sourceFile: SourceFile;
-    readonly vars: VarsContext; // mutable by design — inlineUserFunction mutates it
+    readonly vars: VarsContext; // mutable by design - inlineUserFunction mutates it
     readonly funcs: FuncsContext;
     readonly calledAsFunction: Set<string>;
 }
 
 /**
  * Parse a bundled TypeScript source file to TD IR.
- * Each call receives a fresh ParseContext — no state leaks between calls.
+ * Each call receives a fresh ParseContext - no state leaks between calls.
  */
 export function parse(sourceFile: SourceFile): TDScript {
     const ctx: ParseContext = {

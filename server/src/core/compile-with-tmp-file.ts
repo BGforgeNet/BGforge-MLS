@@ -59,7 +59,7 @@ export async function compileWithTmpFile(params: CompileWithTmpFileParams): Prom
     try {
         // Pre-unlink and atomic create: predictable paths in os.tmpdir() can
         // be hijacked by a symlink. Unlink removes any stale path (including a
-        // symlink), then `wx` makes the create atomic with O_EXCL — if an
+        // symlink), then `wx` makes the create atomic with O_EXCL - if an
         // attacker raced a symlink in, the open fails rather than redirecting
         // the write to the symlink target. Mode 0o600 keeps the file owner-only.
         // (CodeQL js/insecure-temporary-file.)

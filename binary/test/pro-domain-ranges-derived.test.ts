@@ -14,7 +14,7 @@ import { ladderSpec } from "../src/pro/specs/ladder";
  * The path-keyed `proDomainRanges` table is consumed by `validateNumericValue`
  * for editor input bounds; the spec `domain:` field is consumed by
  * `fieldSpecToZod` as the save-time refinement. Both encode the same
- * constraint — derivation keeps them locked together.
+ * constraint - derivation keeps them locked together.
  */
 describe("proDomainRanges", () => {
     it("equals the union of toDomainRanges() over every PRO spec that declares domains", () => {

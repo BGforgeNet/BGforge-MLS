@@ -1,7 +1,7 @@
 /**
  * typed-binary schemas for ITM v1.
  *
- * ITM is little-endian (Intel x86 era — IESDP convention). typed-binary's
+ * ITM is little-endian (Intel x86 era - IESDP convention). typed-binary's
  * default endianness on a `BufferReader` constructed without an explicit
  * setting is little-endian, so callers create readers without an
  * `endianness` option (cf. PRO/MAP, which pass `{ endianness: "big" }`).
@@ -13,7 +13,7 @@ import { itmHeaderSpecAnnotated } from "./specs/header.overrides";
 import { itmAbilitySpecAnnotated } from "./specs/ability.overrides";
 
 // Wire codecs use the *annotated* specs so flag fields project through
-// `intToFlagArray` / `flagArrayToInt` at the byte boundary — the
+// `intToFlagArray` / `flagArrayToInt` at the byte boundary - the
 // canonical-doc surface (which is built off the same annotated specs) sees
 // flags as sorted-array `{flags, flagsRaw?}` projections, matching what the
 // zod schema validates.

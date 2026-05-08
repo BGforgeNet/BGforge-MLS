@@ -35,8 +35,8 @@ export function register(ctx: HandlerContext): void {
                     return providerResult;
                 }
 
-                // Try translation references (for tra/msg files — find usages across consumer files)
-                // Translation lookup is a single-file index lookup — bounded work, no token check needed.
+                // Try translation references (for tra/msg files - find usages across consumer files)
+                // Translation lookup is a single-file index lookup - bounded work, no token check needed.
                 const serverCtx = await getServerContext();
                 const traResult = await serverCtx.translation.getReferences(
                     uri,

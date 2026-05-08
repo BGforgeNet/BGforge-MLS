@@ -3,7 +3,7 @@
  * Imports from `../src/index` (TypeScript source) so this layer is independent
  * of the bundler step.
  *
- * Each transpiler requires a real filesystem path — they call ts-morph's
+ * Each transpiler requires a real filesystem path - they call ts-morph's
  * addSourceFileAtPath (TSSL) and esbuild resolvers (TD) against disk.
  * Fixtures are written to os.tmpdir() in beforeAll and cleaned up in afterAll.
  */
@@ -21,9 +21,9 @@ import { transpile as tdDirect } from "../td/src/index";
 // TSSL: a single TypeScript function (no imports). TSSL transpiles TypeScript
 // to SSL; the input is TypeScript syntax, not SSL syntax.
 const TSSL_SRC = `function start() {}\n`;
-// TBAF: simplest IF/THEN/END block — no imports, so bundle() passes through unchanged.
+// TBAF: simplest IF/THEN/END block - no imports, so bundle() passes through unchanged.
 const TBAF_SRC = `if (See(Player1)) {\n    Attack(Player1);\n}\n`;
-// TD: minimal begin() call — no imports, so bundle() passes through unchanged.
+// TD: minimal begin() call - no imports, so bundle() passes through unchanged.
 const TD_SRC = `export default begin("MYFOO", []);\n`;
 
 let tmpDir: string;

@@ -3,7 +3,7 @@
  *
  * fallout2-ce reads the trailer through `objectDataRead` (proto.cc:554) by
  * loading the referenced .pro and switching on `proto->item.type` /
- * `proto->scenery.type`. This codebase substitutes a precomputed pid→subType
+ * `proto->scenery.type`. This codebase substitutes a precomputed pid->subType
  * resolver, then advances the cursor by per-subtype byte counts:
  *
  *   item:    armor=0, container=0, drug=0, weapon=8, ammo=4, misc=4, key=4

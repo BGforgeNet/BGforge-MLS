@@ -8,7 +8,7 @@ import type { HandlerContext } from "./context";
 export function register(ctx: HandlerContext): void {
     ctx.connection.onDidChangeConfiguration(async (change) => {
         conlog("did change configuration");
-        // LSP event ordering is uncertain — this may fire before onInitialized completes.
+        // LSP event ordering is uncertain - this may fire before onInitialized completes.
         const serverCtx = tryGetServerContext();
         if (!serverCtx) {
             return;
@@ -30,7 +30,7 @@ export function register(ctx: HandlerContext): void {
     });
 
     ctx.connection.onDidChangeWatchedFiles((params) => {
-        // Each handleWatchedFileChange call is async — fan out in parallel and
+        // Each handleWatchedFileChange call is async - fan out in parallel and
         // let the LSP event loop continue immediately. Errors are logged inside
         // the handler; we surface unexpected promise rejections via conlog.
         for (const event of params.changes) {

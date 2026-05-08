@@ -119,7 +119,7 @@ export function tryAppendInlineComment(lines: string[], child: SyntaxNode, lastE
  * Handle a comment node: try to append as inline comment, otherwise add on its own line.
  * This is the standard pattern for handling comments in body contexts.
  *
- * Returns the row that subsequent gap-detection should compare against — i.e. the
+ * Returns the row that subsequent gap-detection should compare against - i.e. the
  * comment's end row. Callers in body contexts must propagate this to their `lastEndRow`
  * tracker, otherwise a body item following a standalone comment will see a false gap
  * (the comment occupies a row that lastEndRow didn't advance past).

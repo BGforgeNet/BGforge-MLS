@@ -1,5 +1,5 @@
 /**
- * Tests for core/parser-manager.ts — registration, initialization, and lookup.
+ * Tests for core/parser-manager.ts - registration, initialization, and lookup.
  *
  * web-tree-sitter and the underlying WASM files are not available in the unit-test
  * environment. The shared/parser-factory module is mocked so ParserManager tests
