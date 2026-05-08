@@ -71,7 +71,11 @@ function roundTrip(input: Uint8Array): Uint8Array {
             ][itemCommon.subType];
             if (subSchema) {
                 const subData = subSchema.read(reader(input, ITEM_SUBTYPE_OFFSET));
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- generic dispatch across heterogeneous schemas
+                // typed-binary's `ISchema<T>.write` is contravariant in T; indexing the schema array
+                // resolves `subSchema.write` to a union signature accepting none of the individual
+                // `subData` shapes. The cast is bounded by the read above: `subData` was produced by
+                // the same `subSchema` we write through, so the runtime shape matches by construction.
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- see comment above
                 (subSchema as any).write(writer(output, ITEM_SUBTYPE_OFFSET), subData);
             }
             break;
@@ -97,7 +101,9 @@ function roundTrip(input: Uint8Array): Uint8Array {
             ][scenery.subType];
             if (subSchema) {
                 const subData = subSchema.read(reader(input, SCENERY_SUBTYPE_OFFSET));
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- generic dispatch across heterogeneous schemas
+                // Same shape-guarantee as the item subtype branch above: `subData` came from this
+                // exact `subSchema`, so the contravariant-write cast is sound by construction.
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- see comment above
                 (subSchema as any).write(writer(output, SCENERY_SUBTYPE_OFFSET), subData);
             }
             break;

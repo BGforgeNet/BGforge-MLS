@@ -165,6 +165,17 @@ export function enumValueZodSchema(
         // anything; fall through to z.number(). Should not occur in practice.
         return z.number().int();
     }
+    // Casts in this block bridge two zod-typing limitations that the runtime
+    // value already satisfies:
+    //   1. `z.literal("foo")` types as `ZodLiteral<"foo">`, which is not
+    //      assignable to the wider `ZodType<string | number>` declared as
+    //      this function's return — even though every literal accepts a
+    //      string at runtime.
+    //   2. `z.union(...)` requires its argument typed as the tuple
+    //      `[ZodType, ZodType, ...ZodType[]]` (min two members). We've
+    //      already filtered the empty case above, so when we reach a union
+    //      call `literalSchemas.length >= 2` and the runtime tuple shape is
+    //      satisfied; TS just can't see through `Array<ZodType>` → tuple.
     if (closedStrict) {
         return literalSchemas.length === 1
             ? (literalSchemas[0] as unknown as z.ZodType<string | number>)
@@ -179,13 +190,6 @@ export function enumValueZodSchema(
     return z.union([stringPart, z.number().int()]) as unknown as z.ZodType<string | number>;
 }
 
-/**
- * Build the zod schema for a flag-dict canonical-doc field. Exported so
- * hand-written canonical schemas (e.g. MAP) can declare flag fields without
- * re-deriving the shape from a spec entry. `codecBitWidth` is 8 / 16 / 24 / 32
- * — must match the wire codec's width so `_bits` cannot carry bits outside
- * the wire word.
- */
 /**
  * Build the zod schema for a flag-array canonical-doc field. Exported so
  * hand-written canonical schemas (e.g. MAP) can declare flag fields without
@@ -218,6 +222,11 @@ export function flagArrayZodSchema(
             message: `flagsRaw must match /^0x[0-9a-fA-F]{1,${codecMaxHexDigits}}$/`,
         })
         .optional();
+    // strictObject inference produces a wrapper-typed schema whose `flags`
+    // element is `ZodEnum<...>` (or `ZodLiteral`/`ZodNever` in the edge
+    // cases above) — TS cannot widen those to `string[]` directly. The
+    // runtime shape is exactly `{flags: string[]; flagsRaw?: string}` per
+    // the field constructions above.
     return z.strictObject({
         flags: flagsArray,
         flagsRaw: reservoirSchema,
