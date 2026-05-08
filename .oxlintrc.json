@@ -146,10 +146,6 @@
         // signature requires the argument. Broken across test mocks.
         "unicorn/no-useless-undefined": "off",
 
-        // Noisy: flags `"${x}"` patterns inside docs, regex examples, and
-        // intentionally-literal strings. False-positive rate too high.
-        "no-template-curly-in-string": "off",
-
         // `T[]` and `Array<T>` are both idiomatic; forcing one is churn.
         "typescript/array-type": "off",
 
@@ -331,6 +327,15 @@
             "files": ["binary/**", "client/src/editors/binaryEditor-formatting.ts"],
             "rules": {
                 "unicorn/prefer-math-trunc": "off"
+            }
+        },
+        {
+            // Tests intentionally compare against the literal string `"${x}"`
+            // (snippet output, esbuild template fixtures); the rule's
+            // "forgotten backticks" heuristic does not apply.
+            "files": ["**/test/**", "**/*.test.ts"],
+            "rules": {
+                "no-template-curly-in-string": "off"
             }
         }
     ],
