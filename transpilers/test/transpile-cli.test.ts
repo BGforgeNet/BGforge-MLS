@@ -43,6 +43,22 @@ describe("transpile CLI integration", () => {
         fs.rmSync(tmpDir, { recursive: true, force: true });
     });
 
+    describe("smoke", () => {
+        // Subprocess execution doesn't propagate v8 coverage, so the published
+        // CLI entry point cannot be gated by a coverage threshold. The smoke
+        // checks substitute by asserting the bundle starts, parses flags, and
+        // exits cleanly before any feature test runs.
+        it("exits 0 with --help", () => {
+            const { code } = run("--help");
+            expect(code).toBe(0);
+        });
+
+        it("prints a usage banner to stdout with --help", () => {
+            const { stdout } = run("--help");
+            expect(stdout).toContain("Usage: fgtp");
+        });
+    });
+
     describe("stdout mode", () => {
         it("outputs transpiled D content to stdout", () => {
             const sample = path.join(SAMPLES_DIR, "botsmith.td");

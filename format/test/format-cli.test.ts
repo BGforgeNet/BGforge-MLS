@@ -40,6 +40,24 @@ describe("format CLI integration", () => {
         fs.rmSync(tmpDir, { recursive: true, force: true });
     });
 
+    describe("smoke", () => {
+        // Each release CLI ships as its own published artefact but cannot carry
+        // a numeric v8 coverage gate - subprocess instrumentation via
+        // child_process does not capture in-process coverage. The smoke checks
+        // substitute by asserting the bundle starts, parses flags, and exits
+        // cleanly. A broken shebang, missing bundle, or startup crash fails here
+        // before any feature test runs.
+        it("exits 0 with --help", () => {
+            const { code } = run("--help");
+            expect(code).toBe(0);
+        });
+
+        it("prints a usage banner to stdout with --help", () => {
+            const { stdout } = run("--help");
+            expect(stdout).toContain("Usage: format-cli");
+        });
+    });
+
     describe("stdout mode", () => {
         it("outputs formatted content to stdout", () => {
             // Valid BAF with wrong indentation (content is preserved, only whitespace changes)

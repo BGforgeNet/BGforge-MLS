@@ -22,7 +22,7 @@ export default defineConfig({
             "transpilers/vitest.config.ts",
             "binary/vitest.config.ts",
             "format/vitest.config.ts",
-            "test/vitest.cli.config.ts",
+            "scripts/vitest.cli.config.ts",
         ],
     },
 });
