@@ -98,10 +98,6 @@
         // TS lib target predates it. Re-enable when lib is bumped.
         "unicorn/no-array-sort": "off",
 
-        // False positive when mocking Node.js `child_process` (which uses
-        // EventEmitter, not EventTarget, as the base class).
-        "unicorn/prefer-event-target": "off",
-
         // Sequential-condition ternaries (`a ? X : b ? Y : Z`) are used
         // idiomatically in the codebase for short classification chains
         // (enum-like lookups, type-narrowing fallbacks). Forbidding them
@@ -316,6 +312,15 @@
             "files": ["client/src/editors/**", "client/src/dialog-tree/**"],
             "rules": {
                 "unicorn/require-post-message-target-origin": "off"
+            }
+        },
+        {
+            // SSL-compiler tests mock Node `child_process` (EventEmitter-based);
+            // converting the mock to EventTarget would break the surface they
+            // stand in for.
+            "files": ["server/test/**"],
+            "rules": {
+                "unicorn/prefer-event-target": "off"
             }
         }
     ],
