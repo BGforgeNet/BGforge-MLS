@@ -4,9 +4,8 @@
  * Populated by server.ts during initialization to avoid circular imports.
  */
 
-import { TextDocument } from "vscode-languageserver-textdocument";
-import { type Connection, TextDocuments } from "vscode-languageserver/node";
-
+import type { TextDocument } from "vscode-languageserver-textdocument";
+import { type TextDocuments, type Connection } from "vscode-languageserver/node";
 let connection: Connection | undefined;
 let documents: TextDocuments<TextDocument> | undefined;
 

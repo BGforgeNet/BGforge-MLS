@@ -6,7 +6,7 @@
  * via reloadFileData when files change.
  */
 
-import { Location } from "vscode-languageserver/node";
+import type { Location } from "vscode-languageserver/node";
 import type { NormalizedUri } from "../core/normalized-uri";
 
 /**

@@ -9,7 +9,7 @@
  */
 
 import * as fs from "fs";
-import * as esbuild from "esbuild-wasm";
+import type * as esbuild from "esbuild-wasm";
 import { SyntaxKind, type EnumDeclaration, type SourceFile } from "ts-morph";
 import { getSharedProject } from "./shared-project";
 

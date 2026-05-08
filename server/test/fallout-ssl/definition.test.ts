@@ -6,7 +6,7 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import { describe, expect, it, beforeAll, afterAll, vi } from "vitest";
-import { Position } from "vscode-languageserver/node";
+import type { Position } from "vscode-languageserver/node";
 import { pathToUri } from "../../src/common";
 
 // Mock the server module to avoid LSP connection issues

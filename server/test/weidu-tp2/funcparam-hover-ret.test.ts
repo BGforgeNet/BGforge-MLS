@@ -9,7 +9,7 @@
 
 import * as path from "path";
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { Position } from "vscode-languageserver/node";
+import type { Position } from "vscode-languageserver/node";
 
 vi.mock("../../src/lsp-connection", () => ({
     getConnection: vi.fn(() => ({

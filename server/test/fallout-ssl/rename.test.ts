@@ -5,7 +5,13 @@
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, expect, it, beforeAll, vi } from "vitest";
-import { MarkupKind, Position, TextDocumentEdit, TextEdit, WorkspaceEdit } from "vscode-languageserver/node";
+import {
+    type Position,
+    type TextEdit,
+    type WorkspaceEdit,
+    MarkupKind,
+    TextDocumentEdit,
+} from "vscode-languageserver/node";
 import { SymbolKind, ScopeLevel, SourceType } from "../../src/core/symbol";
 
 // Mock the LSP connection to avoid initialization issues in tests

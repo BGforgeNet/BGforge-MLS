@@ -5,7 +5,7 @@
  */
 
 import type { Node } from "web-tree-sitter";
-import { Position, Range } from "vscode-languageserver/node";
+import type { Position, Range } from "vscode-languageserver/node";
 
 /**
  * Create an LSP Position from tree-sitter row/column.

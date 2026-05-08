@@ -5,7 +5,7 @@
  * Supports array destructuring, nested arrays, and variable substitution.
  */
 
-import { ForOfStatement, ForStatement, SyntaxKind } from "ts-morph";
+import { type ForOfStatement, type ForStatement, SyntaxKind } from "ts-morph";
 import type { BAFAction } from "./ir";
 import * as utils from "../../common/transpiler-utils";
 import type { TransformerContext } from "./transformer-context";

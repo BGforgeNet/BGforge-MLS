@@ -6,19 +6,19 @@
  */
 
 import {
-    ArrayLiteralExpression,
-    Block,
-    CallExpression,
-    CaseClause,
-    Expression,
-    ForOfStatement,
-    ForStatement,
-    FunctionDeclaration,
-    IfStatement,
+    type ArrayLiteralExpression,
+    type Block,
+    type CallExpression,
+    type CaseClause,
+    type Expression,
+    type ForOfStatement,
+    type ForStatement,
+    type FunctionDeclaration,
+    type IfStatement,
+    type SourceFile,
+    type Statement,
+    type SwitchStatement,
     Node,
-    SourceFile,
-    Statement,
-    SwitchStatement,
     SyntaxKind,
 } from "ts-morph";
 import type { BAFAction, BAFBlock, BAFCondition, BAFScript, BAFTopCondition } from "./ir";

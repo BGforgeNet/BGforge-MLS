@@ -6,7 +6,7 @@
  * invoked by transformTopLevelCall() in parse.ts.
  */
 
-import { ArrayLiteralExpression, Block, CallExpression, Expression, Node } from "ts-morph";
+import { type ArrayLiteralExpression, type Block, type CallExpression, type Expression, Node } from "ts-morph";
 import {
     TDConstructType,
     TDPatchOp,

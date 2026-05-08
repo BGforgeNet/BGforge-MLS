@@ -7,7 +7,15 @@
  * to avoid circular imports - callers provide any inlining behaviour via callback.
  */
 
-import { CallExpression, ForOfStatement, ForStatement, IfStatement, Node, Statement, SyntaxKind } from "ts-morph";
+import {
+    type CallExpression,
+    type ForOfStatement,
+    type ForStatement,
+    type IfStatement,
+    type Statement,
+    Node,
+    SyntaxKind,
+} from "ts-morph";
 import { TDTransitionType, type TDTransition } from "./types";
 import * as utils from "../../common/transpiler-utils";
 import type { VarsContext } from "../../common/transpiler-utils";

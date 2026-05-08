@@ -7,7 +7,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 import { pathToFileURL } from "url";
-import { CompletionItemKind, Position } from "vscode-languageserver/node";
+import { type Position, CompletionItemKind } from "vscode-languageserver/node";
 import { SymbolKind, ScopeLevel, SourceType } from "../../src/core/symbol";
 
 // Mock the server module to avoid LSP connection issues

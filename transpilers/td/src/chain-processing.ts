@@ -8,12 +8,12 @@
  */
 
 import {
-    CallExpression,
-    FunctionDeclaration,
-    FunctionExpression,
-    IfStatement,
+    type CallExpression,
+    type FunctionDeclaration,
+    type FunctionExpression,
+    type IfStatement,
+    type Statement,
     Node,
-    Statement,
     SyntaxKind,
 } from "ts-morph";
 import { TDEpilogueType, TDConstructType, type TDChain, type TDChainEntry, type TDChainEpilogue } from "./types";

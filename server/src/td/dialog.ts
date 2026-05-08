@@ -4,7 +4,7 @@
  * with the existing D parser.
  */
 
-import { Project, SourceFile } from "ts-morph";
+import { type SourceFile, Project } from "ts-morph";
 import { uriToPath } from "../common";
 import { extractTraTag } from "../../../transpilers/common/transpiler-utils";
 import { bundle } from "../../../transpilers/common/bundle";

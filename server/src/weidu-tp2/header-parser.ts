@@ -13,7 +13,7 @@
  */
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
-import { Location, CompletionItemKind, type Hover, type MarkupContent } from "vscode-languageserver/node";
+import { type Location, CompletionItemKind, type Hover, type MarkupContent } from "vscode-languageserver/node";
 import { computeDisplayPath, extractFilename } from "../core/location-utils";
 import { type ParseResult, EMPTY_PARSE_RESULT } from "../core/parse-result";
 import { makeRange } from "../core/position-utils";

@@ -3,7 +3,7 @@
  * Used by both rename and go-to-definition features.
  */
 
-import { Location, Position } from "vscode-languageserver/node";
+import type { Location, Position } from "vscode-languageserver/node";
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import { makeRange } from "../core/position-utils";
 import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-tp2";

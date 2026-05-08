@@ -13,14 +13,14 @@
  */
 
 import {
-    CallExpression,
-    ForOfStatement,
-    ForStatement,
-    FunctionDeclaration,
-    FunctionExpression,
-    IfStatement,
+    type CallExpression,
+    type ForOfStatement,
+    type ForStatement,
+    type FunctionDeclaration,
+    type FunctionExpression,
+    type IfStatement,
+    type Statement,
     Node,
-    Statement,
     SyntaxKind,
 } from "ts-morph";
 import { TDTransitionType, type TDState, type TDTransition } from "./types";

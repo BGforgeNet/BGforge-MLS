@@ -6,7 +6,7 @@
  * the vars context as a parameter.
  */
 
-import { Expression, Node, SyntaxKind } from "ts-morph";
+import { type Expression, Node, SyntaxKind } from "ts-morph";
 import { TDTextType, type TDText } from "./types";
 import * as utils from "../../common/transpiler-utils";
 import type { VarsContext } from "../../common/transpiler-utils";

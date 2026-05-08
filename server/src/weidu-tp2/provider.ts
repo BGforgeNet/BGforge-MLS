@@ -25,7 +25,7 @@ import type { NormalizedUri } from "../core/normalized-uri";
 import { EXT_WEIDU_TP2, LANG_WEIDU_TP2 } from "../core/languages";
 import { isHeaderFile } from "../core/location-utils";
 import { FileIndex } from "../core/file-index";
-import { Symbols } from "../core/symbol-index";
+import type { Symbols } from "../core/symbol-index";
 import { loadStaticSymbols } from "../core/static-loader";
 import {
     type FormatResult,

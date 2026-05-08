@@ -16,7 +16,14 @@
  * - patch-operations.ts: patch operation transforms (ALTER_TRANS, etc.)
  */
 
-import { CallExpression, FunctionDeclaration, Node, SourceFile, Statement, SyntaxKind } from "ts-morph";
+import {
+    type CallExpression,
+    type FunctionDeclaration,
+    type SourceFile,
+    type Statement,
+    Node,
+    SyntaxKind,
+} from "ts-morph";
 import { TDConstructType, TDPatchOp, type TDScript, type TDConstruct } from "./types";
 import type { VarsContext } from "../../common/transpiler-utils";
 import { evaluateExpression } from "./parse-helpers";

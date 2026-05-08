@@ -5,7 +5,7 @@
  * Handles &&, ||, !, De Morgan's law, function inlining, and OR groups.
  */
 
-import { CallExpression, Expression, FunctionDeclaration, Node, SyntaxKind } from "ts-morph";
+import { type CallExpression, type Expression, type FunctionDeclaration, Node, SyntaxKind } from "ts-morph";
 import type { BAFCondition, BAFOrGroup, BAFTopCondition } from "./ir";
 import { dnfToCnf } from "./cnf";
 import * as utils from "../../common/transpiler-utils";

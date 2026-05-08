@@ -13,7 +13,7 @@
  * must be updated.
  */
 
-import { CompletionItemKind, InsertTextFormat, Location, MarkupKind } from "vscode-languageserver/node";
+import { type Location, CompletionItemKind, InsertTextFormat, MarkupKind } from "vscode-languageserver/node";
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import { computeDisplayPath, extractFilename } from "../core/location-utils";
 import { type ParseResult, EMPTY_PARSE_RESULT } from "../core/parse-result";

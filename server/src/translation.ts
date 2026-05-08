@@ -9,7 +9,15 @@ import * as fs from "fs";
 import pLimit from "p-limit";
 import * as path from "path";
 import { fileURLToPath } from "url";
-import { Hover, InlayHint, Location, MarkupContent, MarkupKind, Position, Range } from "vscode-languageserver/node";
+import {
+    type Hover,
+    type InlayHint,
+    type Location,
+    type MarkupContent,
+    type Position,
+    type Range,
+    MarkupKind,
+} from "vscode-languageserver/node";
 import {
     conlog,
     errorMessage,

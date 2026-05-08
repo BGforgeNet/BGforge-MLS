@@ -1,4 +1,4 @@
-import { type CompletionParams, CompletionItem } from "vscode-languageserver/node";
+import { type CompletionItem, type CompletionParams } from "vscode-languageserver/node";
 import { timeHandler } from "../shared/time-handler";
 import { registry } from "../provider-registry";
 import type { HandlerContext } from "./context";

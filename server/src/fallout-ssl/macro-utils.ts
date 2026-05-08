@@ -3,10 +3,15 @@
  * Used by header-parser.ts and local-symbols.ts for building macro hover, completion, and signature.
  */
 
-import { CompletionItem, CompletionItemKind, ParameterInformation, MarkupKind } from "vscode-languageserver/node";
-import * as jsdoc from "../shared/jsdoc";
+import {
+    type CompletionItem,
+    type ParameterInformation,
+    CompletionItemKind,
+    MarkupKind,
+} from "vscode-languageserver/node";
+import type * as jsdoc from "../shared/jsdoc";
 import { formatSignature } from "../../../shared/signature-format";
-import * as signature from "../shared/signature";
+import type * as signature from "../shared/signature";
 import { LANG_FALLOUT_SSL_TOOLTIP } from "../core/languages";
 import { buildSignatureBlock } from "../../../shared/tooltip-format";
 import { buildTooltipBase } from "./utils";

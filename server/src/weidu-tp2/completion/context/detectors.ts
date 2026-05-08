@@ -5,7 +5,7 @@
  */
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
-import { CompletionContext } from "../types";
+import type { CompletionContext } from "../types";
 import { detectFunctionCallContext, detectFunctionDefContext } from "./function-call";
 
 /**

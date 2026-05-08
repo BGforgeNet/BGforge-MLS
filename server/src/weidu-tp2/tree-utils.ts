@@ -3,7 +3,7 @@
  * Common functions used across rename, definition, and variable-symbols features.
  */
 
-import { Position } from "vscode-languageserver/node";
+import type { Position } from "vscode-languageserver/node";
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import { SyntaxType } from "./tree-sitter.d";
 

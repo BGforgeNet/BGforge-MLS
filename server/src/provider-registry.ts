@@ -12,20 +12,20 @@
  */
 
 import {
+    type CompletionItem,
+    type DocumentSymbol,
+    type FileChangeType,
+    type FoldingRange,
+    type Hover,
+    type Location,
+    type Position,
+    type Range,
+    type InlayHint,
+    type SemanticTokens,
+    type SymbolInformation,
+    type WorkspaceEdit,
     type CancellationToken,
     type SignatureHelp,
-    CompletionItem,
-    DocumentSymbol,
-    FileChangeType,
-    FoldingRange,
-    Hover,
-    Location,
-    Position,
-    Range,
-    InlayHint,
-    SemanticTokens,
-    SymbolInformation,
-    WorkspaceEdit,
 } from "vscode-languageserver/node";
 import { type FormatResult, type LanguageProvider, type ProviderContext, HoverResult } from "./language-provider";
 import { conlog, errorMessage } from "./common";

@@ -3,7 +3,7 @@
  * Converts TypeScript AST to Fallout SSL output, handling all statement types.
  */
 
-import { SourceFile, Node } from "ts-morph";
+import type { SourceFile, Node } from "ts-morph";
 import {
     SyntaxKind,
     conlog,

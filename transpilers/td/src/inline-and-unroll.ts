@@ -6,7 +6,7 @@
  * for statement processing so they remain decoupled from state-transitions.ts.
  */
 
-import { ForOfStatement, ForStatement, Statement, SyntaxKind } from "ts-morph";
+import { type ForOfStatement, type ForStatement, type Statement, SyntaxKind } from "ts-morph";
 import type { VarsContext } from "../../common/transpiler-utils";
 import * as utils from "../../common/transpiler-utils";
 import { resolveArrayElements } from "./parse-helpers";

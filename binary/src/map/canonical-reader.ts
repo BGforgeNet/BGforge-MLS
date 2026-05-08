@@ -3,7 +3,7 @@
  * from a parsed display tree (ParseResult).
  */
 
-import { z } from "zod";
+import type { z } from "zod";
 import { clampNumericValue } from "../binary-format-contract";
 import { parseWithSchemaValidation } from "../schema-validation";
 import { walkGroup } from "../spec/walk-display";
@@ -31,17 +31,16 @@ import {
     timerSlotPresentation,
 } from "./specs/script-slot";
 import {
+    type mapTileElevationSchema,
+    type mapScriptSlotSchema,
+    type mapScriptSectionSchema,
+    type mapObjectSchema,
+    type mapObjectsSchema,
     mapCanonicalDocumentSchema,
     mapCanonicalSnapshotSchema,
-    mapTileElevationSchema,
-    mapScriptSlotSchema,
-    mapScriptSectionSchema,
-    mapObjectSchema,
-    mapObjectsSchema,
     type MapCanonicalDocument,
     type MapCanonicalSnapshot,
 } from "./canonical-schemas";
-
 function isGroup(entry: ParsedField | ParsedGroup): entry is ParsedGroup {
     return "fields" in entry;
 }

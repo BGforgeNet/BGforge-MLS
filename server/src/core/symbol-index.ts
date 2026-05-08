@@ -15,17 +15,16 @@
 import { type CancellationToken, type Location, type SymbolInformation } from "vscode-languageserver/node";
 import type { NormalizedUri } from "./normalized-uri";
 import {
+    type SymbolKind,
     type IndexedSymbol,
     type CallableSymbol,
     type VariableSymbol,
     ScopeLevel,
     SourceType,
-    SymbolKind,
     isCallableSymbol,
     isVariableSymbol,
     symbolKindToVscodeKind,
 } from "./symbol";
-
 // =============================================================================
 // Types
 // =============================================================================

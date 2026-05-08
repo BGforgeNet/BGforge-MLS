@@ -6,7 +6,7 @@
  * keeping the modules loosely coupled.
  */
 
-import { CallExpression, Expression, FunctionDeclaration, Statement } from "ts-morph";
+import type { CallExpression, Expression, FunctionDeclaration, Statement } from "ts-morph";
 import type { BAFAction, BAFCondition } from "./ir";
 import type { VarsContext } from "../../common/transpiler-utils";
 

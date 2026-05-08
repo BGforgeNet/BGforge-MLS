@@ -8,7 +8,7 @@
  * Public API: prepareRenameSymbol, renameSymbol.
  */
 
-import { Position, TextEdit, WorkspaceEdit } from "vscode-languageserver/node";
+import type { Position, TextEdit, WorkspaceEdit } from "vscode-languageserver/node";
 import { makeRange } from "../core/position-utils";
 import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-d";
 import { findLabelNodeAtPosition } from "./state-utils";

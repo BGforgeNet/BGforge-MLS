@@ -3,7 +3,7 @@
  * Provides function signature information for parameter hints while typing.
  */
 
-import { Position, SignatureInformation } from "vscode-languageserver/node";
+import type { Position, SignatureInformation } from "vscode-languageserver/node";
 import { loadStaticMap } from "./static-data";
 
 export interface SigInfoEx extends SignatureInformation {

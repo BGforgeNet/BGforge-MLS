@@ -6,7 +6,7 @@
  * parser context (vars) as a parameter.
  */
 
-import { CallExpression, Node, SyntaxKind } from "ts-morph";
+import { type CallExpression, Node, SyntaxKind } from "ts-morph";
 import {
     TDConstructType,
     TDPatchOp,

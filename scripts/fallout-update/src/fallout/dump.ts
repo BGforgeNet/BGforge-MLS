@@ -7,7 +7,7 @@
  */
 
 import fs from "node:fs";
-import { Document, YAMLMap, YAMLSeq, isMap } from "yaml";
+import { type Document, YAMLMap, YAMLSeq, isMap } from "yaml";
 import { makeBlockScalar, parseYamlDocStrict, YAML_DUMP_OPTIONS } from "../../../utils/src/yaml-helpers.ts";
 import {
     type FalloutCompletionItem,

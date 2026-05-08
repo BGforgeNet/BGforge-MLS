@@ -10,11 +10,11 @@ import { isAbsolute, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Node } from "web-tree-sitter";
 import {
+    type Position,
+    type TextEdit,
+    type WorkspaceEdit,
     OptionalVersionedTextDocumentIdentifier,
-    Position,
     TextDocumentEdit,
-    TextEdit,
-    WorkspaceEdit,
 } from "vscode-languageserver/node";
 import { conlog } from "../common";
 import { normalizeUri } from "../core/normalized-uri";

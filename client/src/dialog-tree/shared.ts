@@ -9,7 +9,7 @@
 import * as vscode from "vscode";
 import * as path from "path";
 import { randomBytes } from "crypto";
-import { type ExecuteCommandParams, LanguageClient, ExecuteCommandRequest } from "vscode-languageclient/node";
+import { type LanguageClient, type ExecuteCommandParams, ExecuteCommandRequest } from "vscode-languageclient/node";
 import { conlog } from "../logging";
 import { escapeHtml } from "../utils";
 import { getCachedCssAsset, getCachedHtmlAsset, getCachedJsAsset } from "../webview-assets";

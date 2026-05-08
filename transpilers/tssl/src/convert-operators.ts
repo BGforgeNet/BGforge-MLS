@@ -3,7 +3,7 @@
  * Converts TypeScript operators and expressions to SSL syntax using the AST.
  */
 
-import { Node } from "ts-morph";
+import type { Node } from "ts-morph";
 import { SyntaxKind, FORBIDDEN_GLOBALS, RESERVED_VAR_NAMES, type TsslContext } from "./types";
 import { TranspileError } from "../../common/transpile-error";
 

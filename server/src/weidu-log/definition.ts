@@ -6,7 +6,7 @@
 
 import * as fs from "fs/promises";
 import * as path from "path";
-import { Location, Position } from "vscode-languageserver/node";
+import type { Location, Position } from "vscode-languageserver/node";
 import { uriToPath, pathToUri } from "../common";
 
 /**

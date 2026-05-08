@@ -6,8 +6,7 @@
  */
 
 import { describe, expect, it, beforeAll, vi } from "vitest";
-import { CompletionItemKind, Position } from "vscode-languageserver/node";
-
+import { type Position, CompletionItemKind } from "vscode-languageserver/node";
 // Mock LSP connection before importing provider
 vi.mock("../../src/lsp-connection", () => ({
     getConnection: vi.fn(() => ({

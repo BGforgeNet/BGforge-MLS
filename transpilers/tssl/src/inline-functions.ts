@@ -4,7 +4,7 @@
  */
 
 import * as fs from "fs";
-import { Project, SourceFile, Node } from "ts-morph";
+import type { Project, SourceFile, Node } from "ts-morph";
 import { SyntaxKind, type InlineFunc, type InlineArg, type TsslContext } from "./types";
 import { convertOperatorsAST } from "./convert-operators";
 

@@ -1,4 +1,5 @@
 import {
+    type MaxValue,
     u8,
     u16,
     u32,
@@ -7,13 +8,11 @@ import {
     i32,
     Schema,
     Measurer,
-    MaxValue,
     type ISchema,
     type ISerialInput,
     type ISerialOutput,
     type IMeasurer,
 } from "typed-binary";
-
 type NumericTypeName = "uint8" | "uint16" | "uint24" | "uint32" | "int8" | "int16" | "int24" | "int32";
 
 /**

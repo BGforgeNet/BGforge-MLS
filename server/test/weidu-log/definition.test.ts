@@ -5,7 +5,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { describe, expect, it, beforeAll, afterAll, vi } from "vitest";
-import { Position } from "vscode-languageserver/node";
+import type { Position } from "vscode-languageserver/node";
 import { pathToUri } from "../../src/common";
 
 vi.mock("../../src/server", () => ({

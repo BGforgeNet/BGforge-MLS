@@ -11,7 +11,7 @@ import { pathToFileURL } from "node:url";
 import * as os from "os";
 import * as path from "path";
 import { fileURLToPath } from "url";
-import { Diagnostic, DiagnosticSeverity, Position } from "vscode-languageserver/node";
+import { type Diagnostic, type Position, DiagnosticSeverity } from "vscode-languageserver/node";
 import type { NormalizedUri } from "./core/normalized-uri";
 import { REGEX_MSG_INLAY, REGEX_MSG_INLAY_FLOATER_RAND } from "./core/patterns";
 import { getConnection } from "./lsp-connection";

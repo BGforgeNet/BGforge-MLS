@@ -3,8 +3,8 @@
  * Uses shared panel infrastructure from ./shared.ts.
  */
 
-import * as vscode from "vscode";
-import { LanguageClient } from "vscode-languageclient/node";
+import type * as vscode from "vscode";
+import type { LanguageClient } from "vscode-languageclient/node";
 import type { SSLDialogData, SSLDialogNode, SSLDialogOption } from "../../../shared/dialog-types";
 import { escapeHtml, registerDialogPanel, type DialogPreviewController } from "./shared";
 

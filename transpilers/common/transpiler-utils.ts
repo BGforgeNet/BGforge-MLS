@@ -6,14 +6,14 @@
  */
 
 import {
-    ArrayBindingPattern,
-    ArrayLiteralExpression,
-    Block,
-    CallExpression,
-    Expression,
-    FunctionDeclaration,
-    SpreadElement,
-    Statement,
+    type ArrayBindingPattern,
+    type ArrayLiteralExpression,
+    type Block,
+    type CallExpression,
+    type Expression,
+    type FunctionDeclaration,
+    type SpreadElement,
+    type Statement,
     SyntaxKind,
 } from "ts-morph";
 import QuickLRU from "quick-lru";

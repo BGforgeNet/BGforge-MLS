@@ -7,7 +7,7 @@
  * The unique key is (dialogFile, labelName).
  */
 
-import { Position } from "vscode-languageserver/node";
+import type { Position } from "vscode-languageserver/node";
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import { SyntaxType } from "./tree-sitter.d";
 

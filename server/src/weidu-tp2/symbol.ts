@@ -5,7 +5,7 @@
  * their direct children.
  */
 
-import { DocumentSymbol, SymbolKind } from "vscode-languageserver/node";
+import { type DocumentSymbol, SymbolKind } from "vscode-languageserver/node";
 import type { Node } from "web-tree-sitter";
 import { makeRange } from "../core/position-utils";
 import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-tp2";

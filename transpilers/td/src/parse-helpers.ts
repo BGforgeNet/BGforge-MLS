@@ -6,7 +6,7 @@
  * receive parser context (vars map) as a parameter.
  */
 
-import { ArrayLiteralExpression, Expression, Node, SyntaxKind } from "ts-morph";
+import { type ArrayLiteralExpression, type Expression, Node, SyntaxKind } from "ts-morph";
 import * as utils from "../../common/transpiler-utils";
 import type { VarsContext } from "../../common/transpiler-utils";
 import { TranspileError } from "../../common/transpile-error";

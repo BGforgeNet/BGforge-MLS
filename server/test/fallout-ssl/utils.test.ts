@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it, beforeAll, vi } from "vitest";
-import { Position } from "vscode-languageserver/node";
+import type { Position } from "vscode-languageserver/node";
 
 // Mock the server module to avoid LSP connection issues
 vi.mock("../../src/server", () => ({

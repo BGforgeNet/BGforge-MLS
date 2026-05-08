@@ -7,7 +7,7 @@
  * if no JSDoc is found.
  */
 
-import { MarkupKind, Position } from "vscode-languageserver/node";
+import { type Position, MarkupKind } from "vscode-languageserver/node";
 import { type HoverResult, HoverResult as HR } from "../language-provider";
 import { LANG_WEIDU_D_TOOLTIP } from "../core/languages";
 import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-d";

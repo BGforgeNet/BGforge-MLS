@@ -3,7 +3,7 @@
  * Provides local variable extraction and position-based analysis.
  */
 
-import { CompletionItemKind, Position } from "vscode-languageserver/node";
+import { type Position, CompletionItemKind } from "vscode-languageserver/node";
 import { createIsInsideComment } from "../shared/comment-check";
 import { CompletionCategory, type Tp2CompletionItem } from "./completion/types";
 import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-tp2";

@@ -4,7 +4,7 @@
  * Uses dialog-scoped matching: labels are unique within a (dialogFile, labelName) pair.
  */
 
-import { Location, Position } from "vscode-languageserver/node";
+import type { Location, Position } from "vscode-languageserver/node";
 import { makeRange } from "../core/position-utils";
 import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-d";
 import { findLabelNodeAtPosition, findStateInDialog } from "./state-utils";

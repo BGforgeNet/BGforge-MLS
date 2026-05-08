@@ -2,7 +2,7 @@
  * Writer helpers for serializing MapCanonicalDocument back to binary MAP format bytes.
  */
 
-import { z } from "zod";
+import type { z } from "zod";
 import { BufferWriter } from "typed-binary";
 import { decodeOpaqueRange } from "../opaque-range";
 import { toTypedBinarySchema } from "../spec/derive-typed-binary";
@@ -22,19 +22,18 @@ import { objectBaseSpec, inventoryHeaderSpec, critterDataSpec, exitGridSpec } fr
 import { hasElevation } from "./types";
 import type { ParseOpaqueRange } from "../types";
 import {
-    mapHeaderSchema,
-    mapTileElevationSchema,
-    mapScriptSectionSchema,
-    mapScriptSlotSchema,
-    mapObjectSchema,
-    mapObjectsSchema,
+    type mapHeaderSchema,
+    type mapTileElevationSchema,
+    type mapScriptSectionSchema,
+    type mapScriptSlotSchema,
+    type mapObjectSchema,
+    type mapObjectsSchema,
     MAP_OBJECT_BASE_SIZE,
     MAP_OBJECT_DATA_HEADER_SIZE,
     PID_TYPE_CRITTER,
     PID_TYPE_MISC,
     type MapCanonicalDocument,
 } from "./canonical-schemas";
-
 const headerCodec = toTypedBinarySchema(mapHeaderSpec);
 const varSectionCodec = toTypedBinarySchema<typeof varSectionSpec, VarSectionCtx>(varSectionSpec);
 const otherSlotCodec = toTypedBinarySchema(otherSlotSpec);

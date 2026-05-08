@@ -19,13 +19,12 @@
  */
 
 import {
-    CompletionItem,
+    type CompletionItem,
+    type Hover,
+    type SignatureInformation,
     CompletionItemKind,
-    Hover,
-    SignatureInformation,
     SymbolKind as VscodeSymbolKind,
 } from "vscode-languageserver/node";
-
 // =============================================================================
 // Symbol Kind
 // =============================================================================

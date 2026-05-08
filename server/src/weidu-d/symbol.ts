@@ -2,7 +2,7 @@
  * Document symbol provider for WeiDU D files.
  */
 
-import { DocumentSymbol, SymbolKind } from "vscode-languageserver/node";
+import { type DocumentSymbol, SymbolKind } from "vscode-languageserver/node";
 import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-d";
 import { SyntaxType } from "./tree-sitter.d";
 

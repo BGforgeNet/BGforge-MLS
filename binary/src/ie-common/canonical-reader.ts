@@ -19,7 +19,7 @@
  * one format could grow a snapshot field the others didn't get.
  */
 
-import { z } from "zod";
+import type { z } from "zod";
 import { parseWithSchemaValidation } from "../schema-validation";
 import type { ParseResult } from "../types";
 

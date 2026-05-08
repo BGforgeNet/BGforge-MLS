@@ -5,7 +5,7 @@
  * Each language provider passes its own set of foldable node types.
  */
 
-import { FoldingRange, FoldingRangeKind } from "vscode-languageserver/node";
+import { type FoldingRange, FoldingRangeKind } from "vscode-languageserver/node";
 import type { Node as SyntaxNode } from "web-tree-sitter";
 
 /** Comment node type names recognized across all grammars. */

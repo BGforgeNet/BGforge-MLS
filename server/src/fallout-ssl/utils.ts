@@ -4,7 +4,7 @@
  */
 
 import type { Node } from "web-tree-sitter";
-import { CompletionItemKind, MarkupKind, Position } from "vscode-languageserver/node";
+import { type Position, CompletionItemKind, MarkupKind } from "vscode-languageserver/node";
 import { LANG_FALLOUT_SSL_TOOLTIP } from "../core/languages";
 import { makeRange } from "../core/position-utils";
 import {

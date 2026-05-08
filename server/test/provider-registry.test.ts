@@ -7,22 +7,22 @@
 
 import { describe, expect, it, vi } from "vitest";
 import {
+    type CompletionItem,
+    type DocumentSymbol,
+    type Hover,
+    type Location,
+    type Position,
+    type Range,
+    type InlayHint,
+    type SemanticTokens,
+    type SymbolInformation,
+    type WorkspaceEdit,
     CancellationToken,
-    CompletionItem,
     CompletionItemKind,
-    DocumentSymbol,
-    Hover,
-    Location,
-    Position,
-    Range,
     SymbolKind,
-    InlayHint,
     InlayHintKind,
     SemanticTokenTypes,
     type SignatureHelp,
-    SemanticTokens,
-    SymbolInformation,
-    WorkspaceEdit,
 } from "vscode-languageserver/node";
 import type { LanguageProvider, ProviderContext, FormatResult } from "../src/language-provider";
 

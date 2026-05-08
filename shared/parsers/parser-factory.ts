@@ -3,7 +3,7 @@
  * Creates parser modules for different grammars with optional caching.
  */
 
-import { Parser, Language, Tree } from "web-tree-sitter";
+import { type Tree, Parser, Language } from "web-tree-sitter";
 import * as path from "path";
 import * as fs from "fs";
 import QuickLRU from "quick-lru";

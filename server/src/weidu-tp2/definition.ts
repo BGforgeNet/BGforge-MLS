@@ -6,7 +6,7 @@
  * - INCLUDE directive to file
  */
 
-import { Location, Position } from "vscode-languageserver/node";
+import type { Location, Position } from "vscode-languageserver/node";
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import * as path from "path";
 import * as fs from "fs";

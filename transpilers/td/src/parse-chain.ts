@@ -5,7 +5,7 @@
  * Extracted from parse.ts. Called by transformTopLevelCall() in parse.ts.
  */
 
-import { Block, CallExpression, Expression, FunctionExpression, Node } from "ts-morph";
+import { type Block, type CallExpression, type Expression, type FunctionExpression, Node } from "ts-morph";
 import { TDConstructType, TDEpilogueType, type TDConstruct, type TDChainEntry, type TDChainEpilogue } from "./types";
 import type { VarsContext } from "../../common/transpiler-utils";
 import { resolveStringExpr } from "./parse-helpers";

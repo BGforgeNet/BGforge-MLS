@@ -1,10 +1,9 @@
 import {
+    type SemanticTokens,
     type SemanticTokensLegend,
     SemanticTokenTypes,
-    SemanticTokens,
     SemanticTokensBuilder,
 } from "vscode-languageserver/node";
-
 export interface SemanticTokenSpan {
     readonly line: number;
     readonly startChar: number;

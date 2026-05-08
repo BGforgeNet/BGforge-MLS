@@ -120,10 +120,12 @@
         // impls are sync).
         "require-await": "off",
 
-        // Autofix rewrites `import { X }` to `import type { X }` based on
-        // type-position usage, but misses runtime usages (class
-        // constructors, static members) and breaks the build.
-        "typescript/consistent-type-imports": "off",
+        // Inline `import("module").Type` annotations are used in places where
+        // hoisting to a top-level import would create a circular import or
+        // expand the import block for a one-off type reference. Keep the
+        // top-level `import { X }` -> `import type { X }` enforcement active
+        // (controlled by `prefer: "type-imports"`) but allow the inline form.
+        "typescript/consistent-type-imports": ["error", { "disallowTypeAnnotations": false }],
 
         // `T[]` and `Array<T>` are both idiomatic; forcing one is churn.
         "typescript/array-type": "off",

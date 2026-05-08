@@ -10,7 +10,7 @@
  */
 
 import type { Node } from "web-tree-sitter";
-import { Position } from "vscode-languageserver/node";
+import type { Position } from "vscode-languageserver/node";
 import { findIdentifierNodeAtPosition } from "./utils";
 import { ScopeKind, type ScopeKind as ScopeKindValue } from "./scope-kinds";
 import {

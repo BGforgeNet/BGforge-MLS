@@ -6,7 +6,7 @@
  * by walking the chain inside-out and collecting each method call.
  */
 
-import { CallExpression, Expression, Node } from "ts-morph";
+import { type CallExpression, type Expression, Node } from "ts-morph";
 import { TDTransitionType, type TDTransition } from "./types";
 import * as utils from "../../common/transpiler-utils";
 import type { VarsContext } from "../../common/transpiler-utils";

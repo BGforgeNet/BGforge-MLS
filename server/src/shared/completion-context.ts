@@ -12,7 +12,7 @@
  * - Filtering: Generic logic to filter items based on category and context
  */
 
-import { CompletionItem } from "vscode-languageserver/node";
+import type { CompletionItem } from "vscode-languageserver/node";
 import { WEIDU_TP2_STANZAS } from "../../../shared/stanza-names";
 
 /**

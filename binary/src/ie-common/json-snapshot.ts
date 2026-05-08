@@ -18,7 +18,7 @@
  * silently get an out-of-sync result.
  */
 
-import { z } from "zod";
+import type { z } from "zod";
 import { parseWithSchemaValidation } from "../schema-validation";
 import type { BinaryParser, ParseOptions, ParseResult } from "../types";
 

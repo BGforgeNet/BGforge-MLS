@@ -4,7 +4,7 @@
  * Also provides hover info for function parameters at call sites.
  */
 
-import { Hover, MarkupKind, Position } from "vscode-languageserver/node";
+import { type Hover, type Position, MarkupKind } from "vscode-languageserver/node";
 import { isCallableSymbol, type CallableInfo } from "../core/symbol";
 import { buildParamInfoMap, type Ret } from "../shared/jsdoc";
 import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-tp2";
