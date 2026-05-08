@@ -223,28 +223,3 @@ export function flagArrayZodSchema(
         flagsRaw: reservoirSchema,
     }) as unknown as z.ZodType<{ flags: string[]; flagsRaw?: string }>;
 }
-
-export function flagDictZodSchema(
-    table: Readonly<Record<number, string>>,
-    codecBitWidth: number,
-): z.ZodType<Record<string, boolean | string>> {
-    const codecMaxHexDigits = Math.ceil(codecBitWidth / 4);
-    const { entries } = compileFlagTable(table);
-    const shape: Record<string, z.ZodType<unknown>> = {};
-    for (const entry of entries) {
-        shape[entry.key] = z.boolean();
-    }
-    // `_bits` is the reservoir for unnamed bits in the wire word. Width-bound
-    // to the codec so a hand-edit cannot smuggle bits beyond the wire shape.
-    // Disjointness with named bits is checked by `flagDictToInt` (the
-    // wire-boundary validator); enforcing it here too would require wiring
-    // the named mask through every refinement, doubled for permissive mode.
-    const reservoirSchema = z
-        .string()
-        .regex(new RegExp(`^0x[0-9a-fA-F]{1,${codecMaxHexDigits}}$`), {
-            message: `_bits must match /^0x[0-9a-fA-F]{1,${codecMaxHexDigits}}$/`,
-        })
-        .optional();
-    shape._bits = reservoirSchema;
-    return z.strictObject(shape) as unknown as z.ZodType<Record<string, boolean | string>>;
-}
