@@ -42,6 +42,29 @@ This includes:
 
 Architecture-only docs are not enough for those cases. Document the wire-level contract and compatibility expectations explicitly.
 
+## Public-surface contracts
+
+The three published library packages each have a snapshot test that pins
+their public surface. Adding a new public export means extending the
+corresponding list; removing one fails the test before downstream consumers
+see the break.
+
+| Package              | Pinned by                                                                                     |
+| -------------------- | --------------------------------------------------------------------------------------------- |
+| `@bgforge/binary`    | `binary/test/public-api.test.ts`                                                              |
+| `@bgforge/format`    | `format/test/public-api.test.ts`                                                              |
+| `@bgforge/transpile` | `transpilers/test/public-api.test.ts` (presence) + `transpilers/test/api.test.ts` (behaviour) |
+
+The bundled CLIs (`fgbin`, `fgfmt`, `fgtp`) ship from the same package as
+their library and therefore share its version; their flag and exit-code
+contracts are covered by `pnpm test:cli` integration tests.
+
+The on-disk shape of `*.{pro,map,itm,spl,eff}.json` snapshots is its own
+consumer-facing contract (committed snapshots, [`actions/binary`](actions/binary/README.md) CI checks)
+and moves with `@bgforge/binary`. A versioned consumer-facing specification
+is queued in [docs/todo.md](docs/todo.md); until that lands, treat any
+change to `createBinaryJsonSnapshot` output as breaking.
+
 ## Debugging
 
 Press F5 in VSCode to launch the Extension Development Host. Server attaches on port 6009.
