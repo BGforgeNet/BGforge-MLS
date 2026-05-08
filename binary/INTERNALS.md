@@ -99,7 +99,7 @@ binary/src/
     specs/header.ts            # Generated from IESDP itm_v1/header.yml
     specs/ability.ts           # Generated from IESDP itm_v1/extended_header.yml
     presentation-schema.ts     # itmPresentationSchema (derived via toPresentationEntries from
-                               #   *SpecAnnotated) + itmCompiledPatternFields + itmDomainRanges
+                               #   *SpecAnnotated) + itmCompiledPatternFields
     schemas.ts, canonical-{schemas,reader,writer}.ts, canonical.ts,
     format-adapter.ts, json-snapshot.ts, serializer.ts, index.ts, types.ts
 

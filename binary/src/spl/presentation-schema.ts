@@ -13,7 +13,6 @@ import { effectSpecAnnotated } from "../ie-common/specs/effect.overrides";
 import { toPresentationEntries } from "../spec/derive-presentation";
 import { splAbilitySpecAnnotated } from "./specs/ability.overrides";
 import { splHeaderSpecAnnotated } from "./specs/header.overrides";
-import type { NumericRange } from "../binary-format-contract";
 
 export const splPresentationSchema: FormatPresentationSchema = formatPresentationSchema.parse({
     schemaVersion: 1,
@@ -29,5 +28,3 @@ export const splPresentationSchema: FormatPresentationSchema = formatPresentatio
 export const splCompiledPatternFields: readonly CompiledPatternFieldPresentation[] = compilePatternFields(
     splPresentationSchema.patternFields,
 );
-
-export const splDomainRanges: Readonly<Record<string, NumericRange>> = {};

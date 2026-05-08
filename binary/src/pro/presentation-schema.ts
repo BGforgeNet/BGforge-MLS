@@ -33,6 +33,11 @@ import {
     stringifyKeys,
 } from "../presentation-schema-types";
 import type { NumericRange } from "../binary-format-contract";
+import { toDomainRanges } from "../spec/derive-domain-ranges";
+import { headerSpec } from "./specs/header";
+import { doorSpec } from "./specs/door";
+import { stairsSpec } from "./specs/stairs";
+import { ladderSpec } from "./specs/ladder";
 
 export const proPresentationSchema: FormatPresentationSchema = formatPresentationSchema.parse({
     schemaVersion: 1,
@@ -193,12 +198,14 @@ export const proCompiledPatternFields: readonly CompiledPatternFieldPresentation
     proPresentationSchema.patternFields,
 );
 
+// Derived from each spec's `domain:` declarations. Single source of truth:
+// the spec's `domain:` field gates the canonical-doc save-time refinement
+// (`fieldSpecToZod`); deriving the path-keyed lookup here ensures the
+// editor's input bounds (consumed by `validateNumericValue`) cannot drift
+// from the save-time bounds.
 export const proDomainRanges: Readonly<Record<string, NumericRange>> = {
-    "pro.header.lightRadius": { min: 0, max: 8 },
-    "pro.header.lightIntensity": { min: 0, max: 65536 },
-    "pro.doorProperties.walkThruFlag": { min: 0, max: 1 },
-    "pro.stairsProperties.destTile": { min: 0, max: 0x03ffffff },
-    "pro.stairsProperties.destElevation": { min: 0, max: 0x3f },
-    "pro.ladderProperties.destTile": { min: 0, max: 0x03ffffff },
-    "pro.ladderProperties.destElevation": { min: 0, max: 0x3f },
+    ...toDomainRanges(headerSpec, "pro.header"),
+    ...toDomainRanges(doorSpec, "pro.doorProperties"),
+    ...toDomainRanges(stairsSpec, "pro.stairsProperties"),
+    ...toDomainRanges(ladderSpec, "pro.ladderProperties"),
 };

@@ -10,7 +10,6 @@ import {
 } from "../presentation-schema-types";
 import { toPresentationEntries } from "../spec/derive-presentation";
 import { effBodySpecAnnotated } from "./specs/body.overrides";
-import type { NumericRange } from "../binary-format-contract";
 
 export const effPresentationSchema: FormatPresentationSchema = formatPresentationSchema.parse({
     schemaVersion: 1,
@@ -24,5 +23,3 @@ export const effPresentationSchema: FormatPresentationSchema = formatPresentatio
 export const effCompiledPatternFields: readonly CompiledPatternFieldPresentation[] = compilePatternFields(
     effPresentationSchema.patternFields,
 );
-
-export const effDomainRanges: Readonly<Record<string, NumericRange>> = {};

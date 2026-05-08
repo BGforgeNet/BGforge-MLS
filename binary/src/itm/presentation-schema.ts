@@ -14,7 +14,6 @@ import { effectSpecAnnotated } from "../ie-common/specs/effect.overrides";
 import { toPresentationEntries } from "../spec/derive-presentation";
 import { itmAbilitySpecAnnotated } from "./specs/ability.overrides";
 import { itmHeaderSpecAnnotated } from "./specs/header.overrides";
-import type { NumericRange } from "../binary-format-contract";
 
 export const itmPresentationSchema: FormatPresentationSchema = formatPresentationSchema.parse({
     schemaVersion: 1,
@@ -30,5 +29,3 @@ export const itmPresentationSchema: FormatPresentationSchema = formatPresentatio
 export const itmCompiledPatternFields: readonly CompiledPatternFieldPresentation[] = compilePatternFields(
     itmPresentationSchema.patternFields,
 );
-
-export const itmDomainRanges: Readonly<Record<string, NumericRange>> = {};
