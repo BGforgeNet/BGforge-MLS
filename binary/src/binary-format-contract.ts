@@ -45,6 +45,7 @@ export function zodNumericType(type: NumericTypeName): z.ZodNumber {
 // undefined -> no domain narrowing applies).
 
 type DomainRangeLookup = (format: string, fieldKey: string) => NumericRange | undefined;
+// eslint-disable-next-line unicorn/no-useless-undefined -- DomainRangeLookup returns `NumericRange | undefined`; `() => {}` would have return type `void`, breaking the assignment
 let domainRangeLookup: DomainRangeLookup = () => undefined;
 
 /** Installed by `format-adapter.ts` after format adapters register. */

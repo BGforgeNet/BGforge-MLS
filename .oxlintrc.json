@@ -125,11 +125,6 @@
         // constructors, static members) and breaks the build.
         "typescript/consistent-type-imports": "off",
 
-        // Autofix strips `undefined` from typed calls like
-        // `vi.fn().mockResolvedValue(undefined)` even though the type
-        // signature requires the argument. Broken across test mocks.
-        "unicorn/no-useless-undefined": "off",
-
         // `T[]` and `Array<T>` are both idiomatic; forcing one is churn.
         "typescript/array-type": "off",
 
@@ -303,6 +298,16 @@
             "files": ["**/test/**", "**/*.test.ts"],
             "rules": {
                 "no-template-curly-in-string": "off"
+            }
+        },
+        {
+            // Test mocks like `vi.fn().mockResolvedValue(undefined)` pass
+            // `undefined` to satisfy a typed signature that requires the
+            // argument; the rule's "useless undefined" heuristic doesn't
+            // distinguish that case from a genuinely-redundant pass.
+            "files": ["**/test/**", "**/*.test.ts"],
+            "rules": {
+                "unicorn/no-useless-undefined": "off"
             }
         }
     ],

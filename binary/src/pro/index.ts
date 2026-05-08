@@ -158,7 +158,7 @@ function enumFieldTolerant(
     // table, raw int otherwise). Pass strings through directly; resolve ints
     // via the lookup table for display, falling through to `Unknown (N)`.
     if (typeof value === "string") {
-        return field(name, value, offset, size, "enum", undefined, undefined);
+        return field(name, value, offset, size, "enum");
     }
     return field(name, lookup[value] ?? `Unknown (${value})`, offset, size, "enum", undefined, value);
 }

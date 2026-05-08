@@ -145,7 +145,7 @@ export function register(ctx: HandlerContext): void {
         conlog("onInitialized started");
         if (capabilityFlags.configuration) {
             // Register for all configuration changes.
-            await ctx.connection.client.register(DidChangeConfigurationNotification.type, undefined);
+            await ctx.connection.client.register(DidChangeConfigurationNotification.type);
         }
 
         // Fetch the real user settings now that the client is ready to respond,

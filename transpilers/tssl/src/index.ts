@@ -139,6 +139,7 @@ export interface TSSLCompileResult {
  */
 export async function compile(uri: string, text: string): Promise<TSSLCompileResult> {
     // No batch state on the LSP compile path - TSSL CLI directory mode is the only batch consumer.
+    // eslint-disable-next-line unicorn/no-useless-undefined -- the third arg is a non-optional rest tuple element typed `TranspileBatchState | undefined`; omitting fails the typecheck
     const { outPath, events } = await tssl.compile(uri, text, undefined);
     return { sslPath: outPath, events };
 }

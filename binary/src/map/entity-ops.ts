@@ -215,10 +215,10 @@ export function buildMapMoveEntryBytes(
     entryPath: readonly string[],
     direction: "up" | "down",
 ): Uint8Array | undefined {
-    if (!isMapRemovableEntry(entryPath)) return undefined;
+    if (!isMapRemovableEntry(entryPath)) return;
     return mutateVarSectionEntry(parseResult, entryPath, (values, index) => {
         const targetIndex = direction === "up" ? index - 1 : index + 1;
-        if (targetIndex < 0 || targetIndex >= values.length) return undefined;
+        if (targetIndex < 0 || targetIndex >= values.length) return;
         const next = [...values];
         [next[index], next[targetIndex]] = [next[targetIndex]!, next[index]!];
         return next;

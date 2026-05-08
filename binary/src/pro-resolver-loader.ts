@@ -119,6 +119,7 @@ export function composePidResolvers(...resolvers: PidResolver[]): PidResolver {
             const value = resolver(pid);
             if (value !== undefined) return value;
         }
+        // eslint-disable-next-line unicorn/no-useless-undefined -- TS noImplicitReturns flags the implicit-undefined path; explicit return needed
         return undefined;
     };
 }

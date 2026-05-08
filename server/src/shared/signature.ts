@@ -33,7 +33,7 @@ interface Request {
 export function getRequest(text: string, position: Position) {
     const lines = text.split(/\r?\n/g);
     const line = lines[position.line];
-    if (!line) return undefined;
+    if (!line) return;
     const pos = position.character;
 
     // only left side matters for signature

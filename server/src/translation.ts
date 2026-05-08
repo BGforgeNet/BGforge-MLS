@@ -1060,6 +1060,7 @@ export class Translation {
                     const text = await fs.promises.readFile(absPath, "utf8");
                     return { absPath, text };
                 } catch {
+                    // eslint-disable-next-line unicorn/no-useless-undefined -- TS noImplicitReturns flags the implicit-undefined path
                     return undefined;
                 }
             }),

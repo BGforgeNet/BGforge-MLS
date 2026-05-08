@@ -112,6 +112,7 @@ export function register(ctx: HandlerContext): void {
         const text = textDoc.getText();
 
         void compile(uri, langId, true, text).catch(logCompileError);
+        // eslint-disable-next-line unicorn/no-useless-undefined -- TS noImplicitReturns flags the implicit-undefined path
         return undefined;
     });
 }
