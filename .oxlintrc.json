@@ -116,11 +116,6 @@
         // `.slice` vs `.substring` - both are fine; no correctness value.
         "unicorn/prefer-string-slice": "off",
 
-        // Top-level await forces a module-boundary shape change that isn't
-        // always desirable (e.g., CLI entrypoints where errors should be
-        // caught and translated).
-        "unicorn/prefer-top-level-await": "off",
-
         // Readability preference; `if (!x)` is idiomatic in this codebase.
         "no-negated-condition": "off",
 
@@ -321,6 +316,15 @@
             "files": ["server/test/**"],
             "rules": {
                 "unicorn/prefer-event-target": "off"
+            }
+        },
+        {
+            // CLI entrypoints catch errors at the top level and translate them
+            // to exit codes; top-level await would force a module-shape change
+            // that breaks that pattern.
+            "files": ["**/src/cli.ts", "client/src/test/runTest.ts"],
+            "rules": {
+                "unicorn/prefer-top-level-await": "off"
             }
         }
     ],
