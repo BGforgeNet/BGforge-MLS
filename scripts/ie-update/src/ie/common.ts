@@ -130,7 +130,7 @@ export function dumpCompletion(fpath: string, iedata: IEData): void {
  */
 export function checkCompletion(doc: Document): void {
     const items: string[] = [];
-    const allowDupes = ["EVALUATE_BUFFER"];
+    const allowDupes: ReadonlySet<string> = new Set(["EVALUATE_BUFFER"]);
 
     if (isMap(doc.contents)) {
         for (const pair of doc.contents.items) {
@@ -157,7 +157,7 @@ export function checkCompletion(doc: Document): void {
         counts.set(name, (counts.get(name) ?? 0) + 1);
     }
     const uniqueDupes = [...counts.entries()]
-        .filter(([name, count]) => count > 1 && !allowDupes.includes(name))
+        .filter(([name, count]) => count > 1 && !allowDupes.has(name))
         .map(([name]) => name);
 
     if (uniqueDupes.length > 0) {

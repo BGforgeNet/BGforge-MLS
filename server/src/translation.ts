@@ -75,7 +75,7 @@ type TraExt = "msg" | "tra";
 const languages = TRANSLATION_FILE_LANGUAGES;
 
 /** Languages that can have translation references */
-const translatableLanguages = [...TRA_LANGUAGES, ...MSG_LANGUAGES];
+const translatableLanguages: ReadonlySet<string> = new Set([...TRA_LANGUAGES, ...MSG_LANGUAGES]);
 
 const extensions: Array<TraExt> = ["msg", "tra"];
 
@@ -312,7 +312,7 @@ export class Translation {
      */
     reloadConsumer(uri: string, text: string, langId: string): void {
         if (!this.initialized) return;
-        if (!translatableLanguages.includes(langId)) return;
+        if (!translatableLanguages.has(langId)) return;
 
         const wsRoot = this.resolvedWsRoot;
         if (wsRoot === undefined) return;
@@ -373,7 +373,7 @@ export class Translation {
     private resolveRelPath(uri: string, langId: string, symbol: string): string | null {
         if (!this.initialized) return null;
         if (this.data.size === 0) return null;
-        if (!translatableLanguages.includes(langId)) return null;
+        if (!translatableLanguages.has(langId)) return null;
 
         const wsRoot = this.resolvedWsRoot;
         if (wsRoot === undefined) return null;

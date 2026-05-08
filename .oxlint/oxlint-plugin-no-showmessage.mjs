@@ -8,7 +8,7 @@ const rule = defineRule({
         },
     },
     create(context) {
-        const restrictedMethods = ["showInformationMessage", "showWarningMessage", "showErrorMessage"];
+        const restrictedMethods = new Set(["showInformationMessage", "showWarningMessage", "showErrorMessage"]);
         const messages = {
             showInformationMessage:
                 "Use showInfo() from user-messages.ts instead of connection.window.showInformationMessage(). It auto-decodes file:// URIs.",
@@ -25,7 +25,7 @@ const rule = defineRule({
                     node.object.property.type === "Identifier" &&
                     node.object.property.name === "window" &&
                     node.property.type === "Identifier" &&
-                    restrictedMethods.includes(node.property.name)
+                    restrictedMethods.has(node.property.name)
                 ) {
                     context.report({
                         node,

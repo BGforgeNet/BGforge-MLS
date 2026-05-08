@@ -131,7 +131,7 @@ const DEPRECATED_PATTERN = /@deprecated(?:\s+(.*))?/;
 const TYPE_PATTERN = /@type\s+(?:\{([^}]+)\}|(\w+))(?:\s+-\s+|\s+)?(.+)?/;
 
 /** Valid compound type suffixes after the base type word (e.g., "resref offset", "byte array offset"). */
-const COMPOUND_TYPE_SUFFIXES: readonly string[] = ["offset", "array offset"];
+const COMPOUND_TYPE_SUFFIXES: ReadonlySet<string> = new Set(["offset", "array offset"]);
 
 /** Pattern for JSDoc line prefix " * " or " *" */
 const LINE_PREFIX_PATTERN = /^\s*\*\s?/;
@@ -359,7 +359,7 @@ function parseType(line: string): { type: string; desc?: string } | null {
     const spaceIdx = trimmed.indexOf(" ");
     if (spaceIdx !== -1) {
         const suffix = trimmed.slice(spaceIdx + 1).trim();
-        if (!COMPOUND_TYPE_SUFFIXES.includes(suffix)) {
+        if (!COMPOUND_TYPE_SUFFIXES.has(suffix)) {
             return null;
         }
     }

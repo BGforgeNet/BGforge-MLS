@@ -124,10 +124,6 @@
         // (not equivalent - return types differ), leaving callers broken.
         "unicorn/prefer-code-point": "off",
 
-        // Autofix is buggy: rewrites array literal to `new Set(...)` without
-        // updating the type annotation, breaking typecheck.
-        "unicorn/prefer-set-has": "off",
-
         // Autofix is buggy: renames `catch (e)` parameter but misses
         // references to `e` elsewhere in scope (e.g. `{ cause: e }`).
         "unicorn/catch-error-name": "off",
