@@ -35,6 +35,7 @@ external/*
 !external/infinity-engine-exclude.txt
 node_modules
 .npmrc
+.pnpm-store/
 tmp
 
 *.wasm
