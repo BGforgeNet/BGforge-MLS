@@ -255,6 +255,6 @@ export function formatDocument(root: SyntaxNode, options?: Partial<FormatOptions
         result.pop();
     }
     return {
-        text: result.join("\n").replace(/\r/g, "") + "\n",
+        text: result.join("\n").replaceAll("\r", "") + "\n",
     };
 }

@@ -16,7 +16,7 @@ interface PatternEntry extends PresentationEntry {
 }
 
 function regexEscape(literal: string): string {
-    return literal.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return literal.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 /**

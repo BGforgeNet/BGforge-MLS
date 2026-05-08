@@ -28,7 +28,7 @@ export type StructPresentation<T> = Partial<Record<keyof T, FieldPresentation>>;
  */
 export function humanize(fieldName: string): string {
     return fieldName
-        .replace(/([a-z])([A-Z])/g, "$1 $2")
-        .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
+        .replaceAll(/([a-z])([A-Z])/g, "$1 $2")
+        .replaceAll(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
         .replace(/^(.)/, (c) => c.toUpperCase());
 }

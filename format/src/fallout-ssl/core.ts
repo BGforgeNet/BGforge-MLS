@@ -188,7 +188,7 @@ export function formatDocument(node: SyntaxNode, options: FormatOptions = DEFAUL
     };
     // Strip \r from output - tree-sitter node.text preserves original line endings,
     // but the formatter joins parts with \n. Mixed endings cause non-idempotent output.
-    const text = formatNode(node, 0).replace(/\r/g, "");
+    const text = formatNode(node, 0).replaceAll("\r", "");
     return { text };
 }
 
@@ -207,7 +207,7 @@ export function formatNode(node: SyntaxNode, depth: number): string {
             // starting position on input with internal `\n` runs, giving O(n²)
             // (CodeQL js/polynomial-redos). The leading-`/^\n+/` is anchored
             // and therefore linear.
-            const expanded = content.replace(/\t/g, ctx.indent).replace(/^\n+/, "");
+            const expanded = content.replaceAll("\t", ctx.indent).replace(/^\n+/, "");
             let endIdx = expanded.length;
             while (endIdx > 0 && expanded.codePointAt(endIdx - 1) === 10) endIdx--;
             return expanded.slice(0, endIdx) + "\n";

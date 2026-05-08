@@ -172,7 +172,7 @@ export function normalizeWhitespace(text: string): string {
             const t = currentLineTokens[i];
             if (!t) continue;
             if (t.type === WeiduTokenType.Code) {
-                let normalized = t.text.replace(/\s+/g, " ");
+                let normalized = t.text.replaceAll(/\s+/g, " ");
                 if (i === 0) normalized = normalized.trimStart();
                 if (i === currentLineTokens.length - 1) normalized = normalized.trimEnd();
                 lineText += normalized;

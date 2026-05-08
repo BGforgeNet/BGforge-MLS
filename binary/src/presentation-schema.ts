@@ -22,7 +22,7 @@ export type {
 } from "./presentation-schema-types";
 
 export function createFieldKey(segments: readonly string[]): string {
-    return `/${segments.map((segment) => segment.replace(/~/g, "~0").replace(/\//g, "~1")).join("/")}`;
+    return `/${segments.map((segment) => segment.replaceAll("~", "~0").replaceAll("/", "~1")).join("/")}`;
 }
 
 export function toSemanticFieldKey(format: string, segments: readonly string[]): string | undefined {

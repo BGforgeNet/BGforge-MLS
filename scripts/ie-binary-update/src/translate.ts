@@ -42,17 +42,17 @@ export function snakeToCamel(id: string): string {
  */
 export function descToCamelCase(desc: string): string {
     let cleaned = desc;
-    cleaned = cleaned.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
+    cleaned = cleaned.replaceAll(/\[([^\]]+)\]\([^)]+\)/g, "$1");
 
     // Repeat-until-stable strip - handles nested tags like `<a<b>>` that a
     // single greedy pass would leave residue from.
     let prev: string;
     do {
         prev = cleaned;
-        cleaned = cleaned.replace(/<[^<>]*>/g, "");
+        cleaned = cleaned.replaceAll(/<[^<>]*>/g, "");
     } while (cleaned !== prev);
 
-    cleaned = cleaned.replace(/\([^)]*\)/g, "");
+    cleaned = cleaned.replaceAll(/\([^)]*\)/g, "");
     return camelCaseWords(cleaned.trim().split(/\s+/).filter(Boolean), desc);
 }
 

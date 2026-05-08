@@ -50,7 +50,7 @@ function parse(text: string): Parsed {
     const firstLine = lines[0] ?? "";
     if (/^2DA\s/i.test(firstLine)) {
         // Normalize to single space between tokens (e.g. "2DA    V1.0" -> "2DA V1.0").
-        signature = firstLine.trim().replace(/\s+/g, " ");
+        signature = firstLine.trim().replaceAll(/\s+/g, " ");
         cursor++;
         // The line immediately after the signature is the default value
         if (cursor < lines.length) {

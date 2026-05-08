@@ -23,7 +23,7 @@ function noop(text: string): void {
 
 /** Shorthand: convert LF string to CRLF for use in expected values. */
 function crlf(text: string): string {
-    return text.replace(/\n/g, "\r\n");
+    return text.replaceAll("\n", "\r\n");
 }
 
 describe("fallout-scripts-lst/format", () => {

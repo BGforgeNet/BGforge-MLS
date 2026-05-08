@@ -201,7 +201,7 @@ function inlineFunctionConditions(
     const paramMap = utils.buildParamMap(call, funcDecl, ctx.vars);
     let returnText = returnExpr.getText();
     paramMap.forEach((value, key) => {
-        returnText = returnText.replace(new RegExp(`\\b${key}\\b`, "g"), value);
+        returnText = returnText.replaceAll(new RegExp(`\\b${key}\\b`, "g"), value);
     });
 
     // Parse the substituted return expression

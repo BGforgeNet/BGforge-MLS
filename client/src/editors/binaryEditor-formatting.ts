@@ -67,14 +67,14 @@ export function sanitizeEditableStringValue(text: string, maxBytes: number, char
 
 export function sanitizeEditableNumberValue(text: string, numericFormat: NumericFormat): string {
     if (numericFormat === "hex32") {
-        return text.replace(/[^0-9a-fA-F]/g, "").toUpperCase();
+        return text.replaceAll(/[^0-9a-fA-F]/g, "").toUpperCase();
     }
 
-    const trimmed = text.replace(/[^\d-]/g, "");
+    const trimmed = text.replaceAll(/[^\d-]/g, "");
     if (trimmed.startsWith("-")) {
-        return `-${trimmed.slice(1).replace(/-/g, "")}`;
+        return `-${trimmed.slice(1).replaceAll("-", "")}`;
     }
-    return trimmed.replace(/-/g, "");
+    return trimmed.replaceAll("-", "");
 }
 
 export function parseEditableNumberValue(text: string, numericFormat: NumericFormat, valueType?: string): number {

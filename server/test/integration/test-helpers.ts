@@ -52,7 +52,7 @@ export function loadFixtures(basePath: string, relPaths: readonly string[]): Map
  * Searches for the pattern surrounded by word boundaries.
  */
 export function findIdentifierPosition(text: string, identifier: string, occurrence = 1): Position | null {
-    const regex = new RegExp(`\\b${identifier.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "g");
+    const regex = new RegExp(`\\b${identifier.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "g");
     let match: RegExpExecArray | null;
     let count = 0;
     while ((match = regex.exec(text)) !== null) {

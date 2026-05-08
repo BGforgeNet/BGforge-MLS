@@ -4,8 +4,8 @@ import type { ParsedField } from "./types";
 
 export function slugify(label: string): string {
     const normalized = label
-        .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-        .replace(/[^A-Za-z0-9]+/g, " ")
+        .replaceAll(/([a-z0-9])([A-Z])/g, "$1 $2")
+        .replaceAll(/[^A-Za-z0-9]+/g, " ")
         .trim()
         .toLowerCase();
 

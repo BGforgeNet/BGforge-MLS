@@ -151,7 +151,7 @@ function expandEnumAccess(value: string, enumNames: ReadonlySet<string>): string
         return value;
     }
     // Match word.word patterns where the first word is a known enum name
-    return value.replace(/\b(\w+)\.(\w+)\b/g, (match, obj: string, prop: string) =>
+    return value.replaceAll(/\b(\w+)\.(\w+)\b/g, (match, obj: string, prop: string) =>
         enumNames.has(obj) ? `${obj}_${prop}` : match,
     );
 }

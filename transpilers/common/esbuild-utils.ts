@@ -294,7 +294,7 @@ export function cleanupEsbuildOutput(code: string, marker: string, originalConst
     }
 
     // Step 5: Remove import declarations (single-line and multi-line)
-    code = code.replace(/^import\s*\{[^}]*\}\s*from\s*"[^"]*"\s*;?[^\S\n]*\n?/gm, "");
+    code = code.replaceAll(/^import\s*\{[^}]*\}\s*from\s*"[^"]*"\s*;?[^\S\n]*\n?/gm, "");
 
     // Step 6: Rename identifiers (string-aware, skips string literals and comments)
     if (aliasMap.size > 0) {
@@ -438,7 +438,7 @@ export function skipBlockComment(code: string, start: number): number {
 }
 
 function escapeRegex(s: string): string {
-    return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return s.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 /**

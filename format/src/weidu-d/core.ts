@@ -138,7 +138,7 @@ function normalizeTransitionText(text: string): string {
     for (const token of tokens) {
         if (token.type === WeiduTokenType.Code) {
             // Collapse whitespace in code parts
-            parts.push(token.text.replace(/\s+/g, " "));
+            parts.push(token.text.replaceAll(/\s+/g, " "));
         } else {
             // Preserve strings and comments exactly as-is
             parts.push(token.text);
@@ -241,7 +241,7 @@ function formatTransitionNode(node: SyntaxNode, indent: string, innerIndent: str
             const linePart = lines[i];
             if (linePart !== undefined) {
                 const processed = isCode
-                    ? linePart.trim().replace(/\s+/g, " ")
+                    ? linePart.trim().replaceAll(/\s+/g, " ")
                     : i === 0
                       ? linePart
                       : linePart.trimStart();
@@ -282,7 +282,7 @@ function formatTransitionNode(node: SyntaxNode, indent: string, innerIndent: str
         if (token.text.includes("\n")) {
             processMultiLineToken(token.text, true);
         } else {
-            const normalized = token.text.trim().replace(/\s+/g, " ");
+            const normalized = token.text.trim().replaceAll(/\s+/g, " ");
             if (normalized) {
                 if (currentLine && !currentLine.endsWith(" ")) {
                     currentLine += " ";
@@ -589,6 +589,6 @@ export function formatDocument(root: SyntaxNode, options?: Partial<FormatOptions
     }
 
     return {
-        text: result.join("\n").replace(/\r/g, "") + "\n",
+        text: result.join("\n").replaceAll("\r", "") + "\n",
     };
 }

@@ -46,8 +46,8 @@ const IDENTIFIER_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
  */
 export function slugifyCodedName(displayName: string): string {
     const normalized = displayName
-        .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-        .replace(/[^A-Za-z0-9]+/g, " ")
+        .replaceAll(/([a-z0-9])([A-Z])/g, "$1 $2")
+        .replaceAll(/[^A-Za-z0-9]+/g, " ")
         .trim();
 
     if (!normalized) {

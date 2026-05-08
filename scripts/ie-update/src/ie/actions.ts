@@ -90,7 +90,7 @@ export function actionDescAbsoluteUrls(
     const twoda = game["2da"].replace(/^\//, "");
     const actionsUrl = game.actions;
 
-    let result = desc.replace(/\{\{ ids \}\}/g, ids).replace(/\{\{ 2da \}\}/g, twoda);
+    let result = desc.replaceAll("{{ ids }}", ids).replaceAll("{{ 2da }}", twoda);
 
     const currentUrl = resolveUrl(iesdpBaseUrl, actionsUrl.replace(/^\//, ""));
     const urls = [...result.matchAll(/\[([^\]]*)\]\(([^)]*)\)/g)];
@@ -162,7 +162,7 @@ function replaceTriggerLinkIncludes(desc: string, currentUrl: string): string {
         triggerUrl = triggerUrl.replace(/\/([^/]+?)(?=#|$)/, "/$1triggers.htm");
     }
 
-    return desc.replace(
+    return desc.replaceAll(
         /\{%-?\s*assign\s+text\s*=\s*"([\s\S]*?)"\s*-?%\}\s*\{%-?\s*assign\s+anchor\s*=\s*"([^"]+)"\s*-?%\}\s*\{%-?\s*include\s+trigger_link\.html\s*-?%\}/g,
         (_m, text: string, anchor: string) => `[${htmlInlineToText(text)}](${triggerUrl}#${anchor})`,
     );

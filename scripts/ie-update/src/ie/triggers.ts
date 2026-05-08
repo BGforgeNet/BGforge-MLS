@@ -99,10 +99,10 @@ function normalizeLiquidHref(href: string): string {
 
 function normalizeLiquidMarkup(html: string): string {
     return html
-        .replace(/{% capture note %}/g, "")
-        .replace(/{% capture info %}/g, "")
-        .replace(/{% endcapture %}\s*{% include note\.html %}/g, "")
-        .replace(/{% endcapture %}\s*{% include info\.html %}/g, "")
-        .replace(/{% endcapture %}\s*{% include bug\.html %}/g, "")
-        .replace(/{% include relurl\.html %}/g, "");
+        .replaceAll("{% capture note %}", "")
+        .replaceAll("{% capture info %}", "")
+        .replaceAll(/{% endcapture %}\s*{% include note\.html %}/g, "")
+        .replaceAll(/{% endcapture %}\s*{% include info\.html %}/g, "")
+        .replaceAll(/{% endcapture %}\s*{% include bug\.html %}/g, "")
+        .replaceAll("{% include relurl.html %}", "");
 }

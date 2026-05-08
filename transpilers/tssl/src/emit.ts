@@ -109,7 +109,7 @@ export function exportSSL(
     }
 
     // Replace sfall_typeof with typeof (TS keyword conflict workaround)
-    output = output.replace(/\bsfall_typeof\b/g, "typeof");
+    output = output.replaceAll(/\bsfall_typeof\b/g, "typeof");
 
     return output;
 }

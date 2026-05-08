@@ -87,7 +87,7 @@ function tryIncludeDefinition(root: Node, position: Position, uri: string): Loca
 
     // Strip delimiters: "file.h" -> file.h, <file.h> -> file.h
     const raw = pathNode.text;
-    const includePath = raw.replace(/^["<]|[">]$/g, "");
+    const includePath = raw.replaceAll(/^["<]|[">]$/g, "");
     if (!includePath) {
         return null;
     }

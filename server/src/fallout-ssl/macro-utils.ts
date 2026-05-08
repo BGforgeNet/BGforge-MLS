@@ -40,7 +40,7 @@ function isNumericValue(value: string): boolean {
  */
 export function parseMacroParams(params: string): string[] {
     // Remove parentheses if present
-    const cleaned = params.replace(/^\(|\)$/g, "").trim();
+    const cleaned = params.replaceAll(/^\(|\)$/g, "").trim();
     if (!cleaned) return [];
 
     return cleaned

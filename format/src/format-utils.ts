@@ -260,7 +260,7 @@ export function normalizeWhitespaceWeidu(text: string): string {
     for (const token of tokens) {
         if (token.type === WeiduTokenType.Code) {
             // Collapse whitespace in code parts
-            const normalized = token.text.replace(/\s+/g, " ");
+            const normalized = token.text.replaceAll(/\s+/g, " ");
             parts.push(normalized);
         } else {
             // Preserve strings and comments exactly
@@ -441,7 +441,7 @@ export function stripCommentsFalloutScriptsLst(text: string): string {
  * @param stripComments Language-specific function to strip comments while respecting strings
  */
 export function validateFormatting(original: string, formatted: string, stripComments: CommentStripper): string | null {
-    const normalize = (text: string) => stripComments(text).replace(/\s+/g, "");
+    const normalize = (text: string) => stripComments(text).replaceAll(/\s+/g, "");
     const normalizedOriginal = normalize(original);
     const normalizedFormatted = normalize(formatted);
 

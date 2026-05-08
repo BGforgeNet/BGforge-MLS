@@ -53,7 +53,7 @@ function parseLine(line: string): ParsedLine | null {
  */
 export function formatScriptsLst(rawText: string): FormatOutput {
     // Normalize CRLF to LF before processing; $ in the LINE_RE does not match before \r.
-    const text = stripBom(rawText).replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+    const text = stripBom(rawText).replaceAll("\r\n", "\n").replaceAll("\r", "\n");
 
     if (text.length === 0) {
         return { text: rawText };

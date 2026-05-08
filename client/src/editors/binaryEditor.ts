@@ -708,7 +708,7 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
         const nonce = randomBytes(16).toString("base64");
         return (
             this.getHtmlTemplate()
-                .replace(/\{\{fileName\}\}/g, escapeHtml(fileName))
+                .replaceAll("{{fileName}}", escapeHtml(fileName))
                 .replace("{{formatName}}", escapeHtml(document.parseResult.formatName))
                 .replace("{{styles}}", this.getCss())
                 // The {{errors}}/{{warnings}} placeholders sit in the static HTML
@@ -719,7 +719,7 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
                 .replace("{{warnings}}", "")
                 .replace("{{tree}}", '<div class="loading">Loading...</div>')
                 .replace("/* __SCRIPT__ */", this.getJs())
-                .replace(/\{\{nonce\}\}/g, nonce)
+                .replaceAll("{{nonce}}", nonce)
         );
     }
 }

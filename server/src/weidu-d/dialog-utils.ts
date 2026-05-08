@@ -288,7 +288,7 @@ export function getNodeFieldText(node: SyntaxNode, fieldName: string): string | 
 }
 
 export function truncate(text: string, maxLen: number): string {
-    const singleLine = text.replace(/\s+/g, " ").trim();
+    const singleLine = text.replaceAll(/\s+/g, " ").trim();
     if (singleLine.length <= maxLen) return singleLine;
     return singleLine.slice(0, maxLen - 1) + "\u2026";
 }

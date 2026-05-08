@@ -194,7 +194,7 @@ export function getBlockStatements(stmt: Statement): Statement[] {
  * stripQuotes('plain')    // => "plain"
  */
 export function stripQuotes(text: string): string {
-    return text.replace(/^["'`]|["'`]$/g, "");
+    return text.replaceAll(/^["'`]|["'`]$/g, "");
 }
 
 /**
@@ -317,17 +317,17 @@ export function applyHelperFixups(text: string): string {
 
     let result = text;
     // obj("[ANYONE]") or $obj("[ANYONE]") => [ANYONE]
-    result = result.replace(/\$?obj\("\[(.*?)\]"\)/g, "[$1]");
+    result = result.replaceAll(/\$?obj\("\[(.*?)\]"\)/g, "[$1]");
     // obj("string") or $obj("string") => "string"
-    result = result.replace(/\$?obj\("(.*?)"\)/g, '"$1"');
+    result = result.replaceAll(/\$?obj\("(.*?)"\)/g, '"$1"');
     // tra(123) or $tra(123) => @123
-    result = result.replace(/\$?tra\((\d+)\)/g, "@$1");
+    result = result.replaceAll(/\$?tra\((\d+)\)/g, "@$1");
     // tlk(123) or $tlk(123) => bare number (# prefix is only for D text contexts)
-    result = result.replace(/\$?tlk\((\d+)\)/g, "$1");
+    result = result.replaceAll(/\$?tlk\((\d+)\)/g, "$1");
 
     // [2791, 831] => [2791.831] (BAF point notation: dot-separated, not comma)
     // Supports negative coordinates (e.g. [-1, -1] for "current location")
-    result = result.replace(/\[(-?\d+),\s*(-?\d+)\]/g, "[$1.$2]");
+    result = result.replaceAll(/\[(-?\d+),\s*(-?\d+)\]/g, "[$1.$2]");
 
     return result;
 }

@@ -32,7 +32,7 @@ function createCompletionSeq(doc: Document, items: readonly FalloutCompletionIte
         }
 
         if (item.doc !== undefined) {
-            const cleanDoc = item.doc.replace(/ +$/gm, "");
+            const cleanDoc = item.doc.replaceAll(/ +$/gm, "");
             const docValue = makeBlockScalar(doc, cleanDoc);
             map.add(doc.createPair("doc", docValue));
         }

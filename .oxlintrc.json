@@ -129,10 +129,6 @@
         // constructors, static members) and breaks the build.
         "typescript/consistent-type-imports": "off",
 
-        // `.replaceAll()` requires ES2021 lib target; the project's current
-        // lib is older (server/src/bin/dump.ts errors on it).
-        "unicorn/prefer-string-replace-all": "off",
-
         // Autofix strips `undefined` from typed calls like
         // `vi.fn().mockResolvedValue(undefined)` even though the type
         // signature requires the argument. Broken across test mocks.
