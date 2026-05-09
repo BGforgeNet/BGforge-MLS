@@ -34,7 +34,7 @@ Deferred to v2 (see below): selection model and VSCode commands. Both naturally 
 
 Out of scope for v1: variant arrays, insert-at-index, multi-select, context menu, bulk ops, copy/paste, move up/down, `minSize`/`maxSize` validation gating (spec carries `defaultElement` only so far).
 
-### v2 - selection, commands, variant arrays, ordering, context menu
+### v2 - selection, commands, ordering, context menu
 
 #### v2.1 - selection model + commands (shipped)
 
@@ -46,7 +46,7 @@ Out of scope for v1: variant arrays, insert-at-index, multi-select, context menu
 
 - Right-click on an addable group header or a removable entry opens the VSCode-native webview context menu via `data-vscode-context` + `contributes.menus.webview/context`. Items dispatch to the v2.1 commands; `Shift+F10` and the keyboard menu key open the same menu.
 
-#### v2.4 - ordering (shipped)
+#### v2.3 - ordering (shipped)
 
 - `buildInsertEntryBytes(parseResult, entryPath, position)` and `buildMoveEntryBytes(parseResult, entryPath, direction)` on the adapter. `BinaryDocument` exposes `insertEntityBefore` / `insertEntityAfter` / `moveEntityUp` / `moveEntityDown` (each one undo-able through the existing pipeline).
 - VSCode commands `bgforge.binaryEditor.insertEntryBefore` / `insertEntryAfter` / `moveEntryUp` / `moveEntryDown`, all surfaced in the Command Palette and webview context menu (grouped separately from add/remove for readability).
@@ -105,7 +105,7 @@ item.abilities.add(makeAbility({ type: "ranged", damage: 8, range: 12 }));
 const bytes = item.toBytes();
 ```
 
-The named-projection shape gives `flags.unidentified = true` for free. Sub-record factories
+Surfacing flags as typed members (`flags.unidentified = true`) is a thin accessor wrapper over the canonical flag-set shape. Sub-record factories
 (`makeAbility`, `makeEffect`, `makeHeader`, ...) fill defaults from spec; constructors take a
 sparse `Partial<Document>` and merge over defaults.
 
@@ -140,9 +140,10 @@ sparse `Partial<Document>` and merge over defaults.
 
 ### Prerequisites
 
-The named-bit dict projection for flag fields (rule #7) is in place across all five formats -
-flag fields surface as `Record<string, boolean | string>` in canonical-doc, and the construction
-API inherits that shape directly (`item.header.flags.unidentified = true`). For enums and PIDs,
+The flat sorted-array projection for flag fields (rule #7) is in place across all five formats -
+flag fields surface as `string[]` in canonical-doc. The construction API exposes
+`item.header.flags.unidentified = true` as a typed-accessor wrapper over that shape, not as
+direct inheritance of the canonical shape. For enums and PIDs,
 canonical-doc carries raw ints (rule #9); the construction API can either use the int form
 directly (`item.header.frmType = 0`) or wrap a per-format helper that accepts the named string
 and resolves via `enumValueToInt` from `coded-projection.ts`. Default-value derivation
@@ -169,7 +170,7 @@ consumer with committed snapshots even if the library API is unchanged.
 ### Pieces
 
 - A versioned schema document - `binary/SNAPSHOT-FORMAT.md` or similar - listing
-  per-format JSON shape: top-level keys, group structure, named-bit dict
+  per-format JSON shape: top-level keys, group structure, flat sorted-array
   layout for flag fields (rule #7), enum encoding (raw int per rule #9), header
   fields, canonicalisation rules (key order, number formatting, whitespace).
 - A schema version embedded in the JSON itself (e.g. top-level `"$snapshot": 1`),
