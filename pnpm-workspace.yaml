@@ -21,9 +21,11 @@ allowBuilds:
     keytar: false
     tree-sitter: false
 
-# Transitive pins addressing security advisories in mocha's bundled dependencies
-# and msal-node's uuid (GHSA-w5hq-g745-h8pq).
+# Transitive pins addressing security advisories in mocha's bundled dependencies,
+# msal-node's uuid (GHSA-w5hq-g745-h8pq), and ajv's fast-uri
+# (GHSA-q3j6-qgpj-74h6, GHSA-v39h-62p7-jpjc).
 overrides:
     mocha>diff: ">=8.0.3"
     mocha>serialize-javascript: ">=7.0.5"
     uuid: ">=14"
+    fast-uri: ">=3.1.2"
