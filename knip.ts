@@ -32,7 +32,10 @@ const config: KnipConfig = {
         server: {
             // Point knip at the TypeScript source entry directly.
             // The package.json "main" field targets the built JS output.
-            entry: ["src/server.ts"],
+            // vitest.mutation.config.ts is referenced from stryker.conf.json
+            // (vitest.configFile); knip's Stryker plugin resolves runner/checker
+            // package names but not vitest configFile paths, so list it explicitly.
+            entry: ["src/server.ts", "vitest.mutation.config.ts"],
             // Created at runtime by enum-transform.test.ts, may exist during parallel Knip runs
             ignore: [
                 "**/*.d.ts",

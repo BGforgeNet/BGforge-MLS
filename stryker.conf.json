@@ -2,20 +2,24 @@
     "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
     "packageManager": "pnpm",
     "testRunner": "vitest",
+    "plugins": ["@stryker-mutator/typescript-checker", "@stryker-mutator/vitest-runner"],
+    "vitest": {
+        "configFile": "server/vitest.mutation.config.ts",
+        "dir": "server"
+    },
     "mutate": [
-        "transpilers/*/src/**/*.ts",
-        "!transpilers/*/src/**/*.test.ts",
         "server/src/core/normalized-uri.ts",
         "server/src/core/symbol-index.ts",
         "server/src/provider-registry.ts"
     ],
     "checkers": ["typescript"],
-    "tsconfigFile": "tsconfig.base.json",
+    "tsconfigFile": "server/tsconfig.json",
+    "ignorePatterns": ["external", "tmp", ".vscode-test"],
     "coverageAnalysis": "perTest",
     "thresholds": {
         "high": 80,
-        "low": 60,
-        "break": 60
+        "low": 70,
+        "break": 70
     },
     "reporters": ["clear-text", "progress", "html"],
     "htmlReporter": {
