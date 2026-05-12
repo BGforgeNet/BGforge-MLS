@@ -33,7 +33,7 @@ All settings are under the `bgforge` namespace.
 
 | Setting            | Default | Description                                                                                  |
 | ------------------ | ------- | -------------------------------------------------------------------------------------------- |
-| `bgforge.lua.path` | `luac`  | Path to Lua 5.2 compiler used for syntax validation (`luac -p`) for Lua and `.menu` files. Keep default if in PATH. |
+| `bgforge.lua.path` | `luac`  | Path to Lua 5.2 compiler used for syntax validation (`luac -p`) for `.lua` and `.menu` files. Keep default if in PATH. |
 
 ### Install Official `luac` (Optional, for `bgforge.lua.path`)
 
