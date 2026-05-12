@@ -1,4 +1,4 @@
-# EEex-specific Lua APIs from official EEex docs/tutorials (https://eeex-docs.readthedocs.io/en/latest/index.html)
+# EEex-specific Lua APIs from official EEex docs/tutorials (https://eeex-docs.readthedocs.io/en/latest/EEex%20Functions/index.html)
 
 eeex_functions_action:
     type: 3
