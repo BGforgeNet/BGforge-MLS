@@ -54,7 +54,7 @@ Requires MSYS2 / MinGW toolchain in shell PATH.
 
 ```powershell
 cd $env:TEMP
-curl.exe -LO https://www.lua.org/ftp/lua-5.2.4.tar.gz
+curl.exe -LO https://www.lua.org/ftp/lua-5.2.4.tar.gz # add the -k (insecure) flag if needed (will skip SSL verification)
 tar -xzf lua-5.2.4.tar.gz
 cd lua-5.2.4
 mingw32-make mingw
@@ -62,7 +62,7 @@ mingw32-make mingw
 
 `luac.exe` will be in `src\luac.exe`.
 
-Clean up temporary build folder:
+Clean up temporary build folder (if needed):
 
 ```powershell
 cd $env:TEMP
@@ -93,7 +93,7 @@ make macosx
 sudo make INSTALL_TOP=/usr/local/lua-5.2.4 install
 ```
 
-Clean up temporary build folder:
+Clean up temporary build folder (if needed):
 
 ```bash
 rm -rf /tmp/lua-5.2.4 /tmp/lua-5.2.4.tar.gz
@@ -117,7 +117,7 @@ make linux
 sudo make INSTALL_TOP=/usr/local/lua-5.2.4 install
 ```
 
-Clean up temporary build folder:
+Clean up temporary build folder (if needed):
 
 ```bash
 rm -rf /tmp/lua-5.2.4 /tmp/lua-5.2.4.tar.gz
