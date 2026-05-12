@@ -1,0 +1,40 @@
+{
+    "comments": {
+        "lineComment": "--",
+        "blockComment": ["--[[", "]]"]
+    },
+    "brackets": [
+        ["(", ")"],
+        ["[", "]"],
+        ["{", "}"],
+        ["do", "end"],
+        ["then", "end"],
+        ["repeat", "until"],
+        ["function", "end"]
+    ],
+    "autoClosingPairs": [
+        { "open": "[", "close": "]" },
+        { "open": "(", "close": ")" },
+        { "open": "{", "close": "}" },
+        { "open": "\"", "close": "\"", "notIn": ["string", "comment"] },
+        { "open": "'", "close": "'", "notIn": ["string", "comment"] }
+    ],
+    "surroundingPairs": [
+        ["(", ")"],
+        ["[", "]"],
+        ["{", "}"],
+        ["\"", "\""],
+        ["'", "'"]
+    ],
+    "indentationRules": {
+        "increaseIndentPattern": "^\\s*(function|if|for|while|do|then|else|elseif|local\\s+\\w+\\s*=\\s*\\{)\\b",
+        "decreaseIndentPattern": "^\\s*(end|else|elseif|until|\\})"
+    },
+    "folding": {
+        "offSide": true,
+        "markers": {
+            "start": "^\\s*--\\s*<editor-fold",
+            "end": "^\\s*--\\s*</editor-fold>"
+        }
+    }
+}

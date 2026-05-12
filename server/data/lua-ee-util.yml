@@ -1,0 +1,405 @@
+# Utility helpers from UTIL.LUA (auto-extracted with inferred docs)
+
+ee_util_functions:
+    type: 3
+    items:
+        - name: needsEscape
+          detail: needsEscape(value)
+          doc: |-
+              return true if we need to use the string literal escape format
+
+        - name: printIni
+          detail: printIni(fp)
+          doc: |-
+              Write ini out.
+
+        - name: initLanguage
+          detail: initLanguage(locale, credits, notes, name)
+          doc: |-
+              Initializes or updates language metadata for the specified locale entry.
+
+        - name: displaySubtitles
+          detail: displaySubtitles(frame, name)
+          doc: |-
+              Displays subtitle lines for a matching movie/frame window.
+
+        - name: loadBindings
+          detail: loadBindings()
+          doc: |-
+              Loads keybinding values from INI and applies them to runtime key state.
+
+        - name: setKey
+          detail: setKey(newValue)
+          doc: |-
+              Assigns a keybinding, resolves conflicts, persists INI changes, and updates runtime keys.
+
+        - name: revertKeymap
+          detail: revertKeymap()
+          doc: |-
+              Restores keybindings to defaults and clears custom INI key entries.
+
+        - name: findKeyNameById
+          detail: findKeyNameById(id)
+          doc: |-
+              Finds and returns the key display name for a binding id, or 0 if not found.
+
+        - name: keyExists
+          detail: keyExists(name, col)
+          doc: |-
+              Checks whether a keybinding value exists in the selected binding column.
+
+        - name: checkEntryComplete
+          detail: checkEntryComplete(journalId, stateType)
+          doc: |-
+              Checks whether a journal entry belongs to a quest already marked complete.
+
+        - name: initQuestsOld
+          detail: initQuestsOld()
+          doc: |-
+              Initializes legacy quest/journal state tables and refreshes displayed journal data.
+
+        - name: buildJournalTable
+          detail: buildJournalTable()
+          doc: |-
+              Build a table that we can access by strref in constant time.
+
+        - name: updateJournalEntryOld
+          detail: updateJournalEntryOld(journalId, recvTime, stateType, chapter, timeStamp)
+          doc: |-
+              Update a journal entry by the strref/journalId
+
+        - name: updateQuestState
+          detail: updateQuestState()
+          doc: |-
+              Derive the quest states from journal entries
+
+        - name: addInfoEntry
+          detail: addInfoEntry(journalId, recvTime, chapter, timeStamp)
+          doc: |-
+              Add an info entry.
+
+        - name: addUserEntry
+          detail: addUserEntry(journalId, recvTime, chapter, timeStamp)
+          doc: |-
+              Add a user entry.
+
+        - name: removeJournalEntry
+          detail: removeJournalEntry(id)
+          doc: |-
+              Marks a quest entry as removed and rebuilds quest display state.
+
+        - name: removeUserEntry
+          detail: removeUserEntry(id)
+          doc: |-
+              Removes a matching user-note entry and rebuilds quest display state.
+
+        - name: highlightJournalButton
+          detail: highlightJournalButton(journalId)
+          doc: |-
+              Highlights the journal button for entries associated with the main quest.
+
+        - name: clearSessionsBefore
+          detail: clearSessionsBefore(updated)
+          doc: |-
+              Utility helper extracted from UTIL.LUA; behavior inferred from implementation.
+
+        - name: quicksort
+          detail: quicksort(t, start, endi, sorti)
+          doc: |-
+              in-place quicksort
+
+        - name: length
+          detail: length(t)
+          doc: |-
+              Returns the Lua length operator result (#) for the provided table or sequence.
+
+        - name: showTextFlash
+          detail: showTextFlash(title, str, displayTime)
+          doc: |-
+              Queues a text flash entry (title, subtitle, body, timing) for timed UI display.
+
+        - name: inOutExpo
+          detail: inOutExpo(t, b, c, d)
+          doc: |-
+              Computes exponential in/out interpolation value for animation timing.
+
+        - name: fadeInOut
+          detail: fadeInOut(t, startTime, rampTime, showTime)
+          doc: |-
+              Computes opacity for fade-in, hold, and fade-out phases over time.
+
+        - name: updateDisplayJournal
+          detail: updateDisplayJournal()
+          doc: |-
+              Journal update functions
+
+        - name: updateDisplayTitles
+          detail: updateDisplayTitles(source, stateIdx, chapterIdx, recvIdx)
+          doc: |-
+              update a table of quests based on the current state.
+
+        - name: updateDisplayEntries
+          detail: updateDisplayEntries()
+          doc: |-
+              update a string for the entries to display
+
+        - name: getTitleText
+          detail: getTitleText(rowNumber)
+          doc: |-
+              Returns title text for a journal list row based on current journal mode/state.
+
+        - name: getEntriesText
+          detail: getEntriesText()
+          doc: |-
+              Returns the body text for the selected journal item in the current mode/state.
+
+        - name: toggleDoneState
+          detail: toggleDoneState()
+          doc: |-
+              Toggles between in-progress and complete quest journal states and refreshes display.
+
+        - name: setDoneState
+          detail: setDoneState(newState)
+          doc: |-
+              Sets the current journal state directly and refreshes display.
+
+        - name: incrChapter
+          detail: incrChapter(amount)
+          doc: |-
+              Increments/decrements chapter within valid campaign bounds.
+
+        - name: doneText
+          detail: doneText()
+          doc: |-
+              Returns localized label text for toggling between quests and done quests.
+
+        - name: chapterText
+          detail: chapterText()
+          doc: |-
+              Returns localized chapter/arena title text for the current chapter index.
+
+        - name: setSelectedQuest
+          detail: setSelectedQuest(id)
+          doc: |-
+              Selects journal mode according to entry type for the specified quest entry id.
+
+        - name: getDisplayQuestComplete
+          detail: getDisplayQuestComplete()
+          doc: |-
+              Returns whether the currently displayed text flash points to a completed quest entry.
+
+        - name: getOpacityForInfoBlock
+          detail: getOpacityForInfoBlock(rampTime)
+          doc: |-
+              Returns animated opacity for current text-flash info block and expires finished entries.
+
+        - name: getTitleString
+          detail: getTitleString()
+          doc: |-
+              Returns current text-flash title string or empty string when none is active.
+
+        - name: getSubtitleString
+          detail: getSubtitleString()
+          doc: |-
+              Returns current text-flash subtitle string or empty string when none is active.
+
+        - name: getBodyString
+          detail: getBodyString()
+          doc: |-
+              Returns current text-flash body string or empty string when none is active.
+
+        - name: trim
+          detail: trim(s)
+          doc: |-
+              Trims leading and trailing whitespace from a string.
+
+        - name: uniqueFromTable
+          detail: uniqueFromTable(t, idx)
+          doc: |-
+              Builds a table with unique rows keyed by the specified row field index.
+
+        - name: filter
+          detail: filter(func, tbl)
+          doc: |-
+              filter(function, table) e.g: filter(is_even, {1,2,3,4}) -> {2,4}
+
+        - name: popupInfo
+          detail: popupInfo(info)
+          doc: |-
+              Stores popup info text and pushes the POPUP_INFO menu.
+
+        - name: popup2Button
+          detail: popup2Button(info, okText, okFunc, cancelText, cancelFunc)
+          doc: |-
+              Configures and opens a two-button popup menu with callbacks.
+
+        - name: popup3Button
+          detail: popup3Button(info, leftText, leftFunc, midText, midFunc, rightText, rightFunc)
+          doc: |-
+              Configures and opens a three-button popup menu with callbacks.
+
+        - name: popup4Button
+          detail: popup4Button(info, farLeftText, farLeftFunc, leftText, leftFunc, rightText, rightFunc, farRightText, farRightFunc)
+          doc: |-
+              Configures and opens a four-button popup menu with callbacks.
+
+        - name: popupDetails
+          detail: popupDetails(title, name, description, icon)
+          doc: |-
+              Configures and opens the detail popup with title, name, description, and icon.
+
+        - name: popupRequester
+          detail: popupRequester(maxCount, func, selling)
+          doc: |-
+              Configures requester state and opens the POPUP_REQUESTER menu.
+
+        - name: pushSidebars
+          detail: pushSidebars()
+          doc: |-
+              Pushes both left and right sidebar menus onto the UI stack.
+
+        - name: popSidebars
+          detail: popSidebars()
+          doc: |-
+              Pops left and right sidebar menus (including hidden variants) from the UI stack.
+
+        - name: greySidebars
+          detail: greySidebars()
+          doc: |-
+              Marks sidebars as greyed/disabled.
+
+        - name: ungreySidebars
+          detail: ungreySidebars()
+          doc: |-
+              Clears the sidebar greyed/disabled marker.
+
+        - name: getTooltipWithHotkey
+          detail: getTooltipWithHotkey(hotkeyIndex, tooltipRef)
+          doc: |-
+              Builds tooltip text prefix with hotkey formatting and appends localized tooltip string.
+
+        - name: resetScrollbar
+          detail: resetScrollbar(top, height, contentHeight)
+          doc: |-
+              Handles deferred scrollbar reset behavior and otherwise falls back to default handling.
+
+        - name: print_r
+          detail: print_r(t)
+          doc: |-
+              Recursively logs table contents for debugging, with cycle detection.
+
+        - name: autopickMageSpells
+          detail: autopickMageSpells()
+          doc: |-
+              Automatically picks specialist/autopick mage spells while extra picks are available.
+
+        - name: deepcopy
+          detail: deepcopy(orig)
+          doc: |-
+              Creates a deep copy of a value, including nested tables and metatables.
+
+        - name: getFileNameStringRef
+          detail: getFileNameStringRef(rowNumber, tab)
+          doc: |-
+              Resolves a filename row to localized stringref text when available.
+
+        - name: currentCellCheck
+          detail: currentCellCheck(cellNum)
+          doc: |-
+              Returns 1 if current UI cell/row matches the active selection, else 0.
+
+        - name: plusButtonClickable
+          detail: plusButtonClickable(row)
+          doc: |-
+              Returns whether the proficiency increment button is currently clickable.
+
+        - name: minusButtonClickable
+          detail: minusButtonClickable(row)
+          doc: |-
+              Returns whether the proficiency decrement button is currently clickable.
+
+        - name: getPlusFrame
+          detail: getPlusFrame(cellNum)
+          doc: |-
+              Returns frame index for plus button (disabled or current-cell state).
+
+        - name: getMinusFrame
+          detail: getMinusFrame(cellNum)
+          doc: |-
+              Returns frame index for minus button (disabled or current-cell state).
+
+        - name: sortBySpellName
+          detail: sortBySpellName(a, b)
+          doc: |-
+              Comparator for sorting spell choices by localized spell name.
+
+        - name: sortByMageSpellName
+          detail: sortByMageSpellName(a, b)
+          doc: |-
+              Comparator for sorting mage spell choices by localized spell name.
+
+        - name: sortByPriestSpellName
+          detail: sortByPriestSpellName(a, b)
+          doc: |-
+              Comparator for sorting priest spell choices by localized spell name.
+
+        - name: t
+          detail: t(stringName)
+          doc: |-
+              Returns localized UI string by key and applies active string token substitutions.
+
+        - name: processStringTokensLua
+          detail: processStringTokensLua(stringToProcess)
+          doc: |-
+              Applies registered string token substitutions to the provided string.
+
+        - name: setStringTokenLua
+          detail: setStringTokenLua(tokenName, tokenValue)
+          doc: |-
+              Adds or updates a string token replacement pair.
+
+        - name: removeStringTokenLua
+          detail: removeStringTokenLua(tokenName)
+          doc: |-
+              Removes a string token replacement pair by token name.
+
+        - name: adjustItemGroup
+          detail: adjustItemGroup(group, xDelta, yDelta, wDelta, hDelta)
+          doc: |-
+              Adjusts area rectangle for each UI item in the group by provided deltas.
+
+        - name: highlightString
+          detail: highlightString(s, pat, color)
+          doc: |-
+              Highlights case-insensitive pattern occurrences in a string using color tags.
+
+        - name: findQuest
+          detail: findQuest(questId)
+          doc: |-
+              journal builder functions
+
+        - name: findObjective
+          detail: findObjective(objectiveId, questId)
+          doc: |-
+              Finds and returns an objective by objective id within a quest.
+
+        - name: createQuest
+          detail: createQuest(questId)
+          doc: |-
+              Creates and appends a quest entry with empty objective list.
+
+        - name: createObjective
+          detail: createObjective(questId, objectiveId)
+          doc: |-
+              Placeholder objective creation hook (currently no-op for data model).
+
+        - name: createEntry
+          detail: createEntry(questId, objectiveId, entryId, previousObjectives, subGroup)
+          doc: |-
+              Creates and appends a quest objective/entry parsed from localized journal text.
+
+        - name: getStringFromAmbiguousSource
+          detail: getStringFromAmbiguousSource(stringReference)
+          doc: |-
+              Resolves either a UI string key or numeric string reference into display text.
+

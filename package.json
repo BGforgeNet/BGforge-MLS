@@ -192,6 +192,13 @@
                 ]
             },
             {
+                "id": "lua",
+                "extensions": [
+                    ".menu"
+                ],
+                "configuration": "./language-configurations/lua.language-configuration.json"
+            },
+            {
                 "id": "weidu-ssl",
                 "aliases": [
                     "WeiDU Stratagems script"
@@ -635,6 +642,11 @@
                     "default": "",
                     "description": "Absolute path to an IE game. Needed to use parse feature on BAF and D files."
                 },
+                "bgforge.lua.path": {
+                    "type": "string",
+                    "default": "luac",
+                    "description": "Path to Lua 5.2 compiler (luac) used for syntax validation. You can keep default if luac is in PATH or set an absolute path."
+                },
                 "bgforge.validate": {
                     "type": "string",
                     "default": "saveAndType",
@@ -692,6 +704,7 @@
         "onLanguage:fallout-ssl",
         "onLanguage:fallout-worldmap-txt",
         "onLanguage:infinity-2da",
+        "onLanguage:lua",
         "onLanguage:weidu-baf",
         "onLanguage:weidu-d",
         "onLanguage:weidu-log",

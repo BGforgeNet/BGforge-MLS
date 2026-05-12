@@ -39,12 +39,17 @@ vi.mock("../src/settings-service", () => ({
             compileOptions: "",
             outputDirectory: "",
             headersDirectory: "",
+            compileOnValidate: true,
         },
         weidu: {
             path: "weidu",
             gamePath: "/games/bg2",
         },
+        lua: {
+            path: "luac",
+        },
         validate: "saveAndType",
+        debug: false,
     }),
 }));
 

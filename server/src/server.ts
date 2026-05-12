@@ -30,6 +30,7 @@ import * as documentLifecycleHandler from "./handlers/document-lifecycle";
 import * as executeCommandHandler from "./handlers/execute-command";
 import { abortInFlightSSLCompiles } from "./fallout-ssl/compiler";
 import { abortInFlightWeiduCompiles } from "./weidu-compile";
+import { abortInFlightLuaCompiles } from "./lua-compile";
 
 // Create a connection for the server.
 // createConnection() auto-detects transport from process.argv:
@@ -103,6 +104,7 @@ connection.onShutdown(() => {
     // started with via runProcess; aborting clears the per-URI tracking maps.
     abortInFlightSSLCompiles();
     abortInFlightWeiduCompiles();
+    abortInFlightLuaCompiles();
 });
 
 // Attach the document manager and start the LSP transport.

@@ -29,6 +29,95 @@ All settings are under the `bgforge` namespace.
 | `bgforge.weidu.path`     | `weidu` | Path to WeiDU binary (or add to system PATH)                      |
 | `bgforge.weidu.gamePath` | `""`    | Absolute path to IE game directory (needed for BAF/D diagnostics) |
 
+## Lua
+
+| Setting            | Default | Description                                                                                  |
+| ------------------ | ------- | -------------------------------------------------------------------------------------------- |
+| `bgforge.lua.path` | `luac`  | Path to Lua 5.2 compiler used for syntax validation (`luac -p`) for Lua and `.menu` files. Keep default if in PATH. |
+
+### Install Official `luac` (Optional, for `bgforge.lua.path`)
+
+If `luac` is already in your PATH, you can keep:
+
+- `bgforge.lua.path = "luac"`
+
+If not, install Lua from official source and either:
+
+- set `bgforge.lua.path` to an absolute `luac` path, or
+- add the install directory to your PATH and keep `bgforge.lua.path = "luac"`.
+
+Official source releases: https://www.lua.org/ftp/
+
+### Windows (PowerShell, official source build)
+
+Requires MSYS2 / MinGW toolchain in shell PATH.
+
+```powershell
+cd $env:TEMP
+curl.exe -LO https://www.lua.org/ftp/lua-5.2.4.tar.gz
+tar -xzf lua-5.2.4.tar.gz
+cd lua-5.2.4
+mingw32-make mingw
+```
+
+`luac.exe` will be in `src\luac.exe`.
+
+Optional: add that folder to your user PATH:
+
+```powershell
+[Environment]::SetEnvironmentVariable(
+	"Path",
+	$env:Path + ";C:\path\to\lua-5.2.4\src",
+	"User"
+)
+```
+
+Restart terminal/VS Code after PATH changes.
+
+### macOS (Terminal, official source build)
+
+```bash
+cd /tmp
+curl -LO https://www.lua.org/ftp/lua-5.2.4.tar.gz
+tar -xzf lua-5.2.4.tar.gz
+cd lua-5.2.4
+make macosx
+sudo make INSTALL_TOP=/usr/local/lua-5.2.4 install
+```
+
+Optional: add to PATH (zsh):
+
+```bash
+echo 'export PATH="/usr/local/lua-5.2.4/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+### Linux (bash, official source build)
+
+```bash
+cd /tmp
+curl -LO https://www.lua.org/ftp/lua-5.2.4.tar.gz
+tar -xzf lua-5.2.4.tar.gz
+cd lua-5.2.4
+make linux
+sudo make INSTALL_TOP=/usr/local/lua-5.2.4 install
+```
+
+Optional: add to PATH:
+
+```bash
+echo 'export PATH="/usr/local/lua-5.2.4/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+### Verify
+
+```bash
+luac -v
+```
+
+If `luac` is not in PATH, set `bgforge.lua.path` to the absolute executable path.
+
 ## How to Pass Settings
 
 Depends on the editor. See the editor-specific pages for examples:

@@ -15,6 +15,10 @@ describe("lspWorkspaceSymbolsCommand", () => {
         expect(lspWorkspaceSymbolsCommand("fallout-ssl")).toBe(`${LSP_COMMAND_WORKSPACE_SYMBOLS_PREFIX}fallout-ssl`);
     });
 
+    it("supports lua scoped workspace-symbol command", () => {
+        expect(lspWorkspaceSymbolsCommand("lua")).toBe(`${LSP_COMMAND_WORKSPACE_SYMBOLS_PREFIX}lua`);
+    });
+
     it("produces a unique ID for every supported language", () => {
         const ids = WORKSPACE_SYMBOL_SCOPED_LANGUAGES.map((lang) => lspWorkspaceSymbolsCommand(lang));
         expect(new Set(ids).size).toBe(ids.length);

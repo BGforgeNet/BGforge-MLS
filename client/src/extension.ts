@@ -85,6 +85,8 @@ export async function activate(context: ExtensionContext) {
         documentSelector: [
             { scheme: "file", language: "infinity-2da" },
 
+            { scheme: "file", language: "lua" },
+
             { scheme: "file", language: "fallout-msg" },
             { scheme: "file", language: "fallout-scripts-lst" },
             { scheme: "file", language: "fallout-ssl" },

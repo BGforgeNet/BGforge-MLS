@@ -30,6 +30,7 @@ import { infinity2daProvider } from "../infinity-2da/provider";
 import { createFormatOnlyProvider } from "../core/format-only-provider";
 import { formatTra, formatMsg, formatScriptsLst } from "@bgforge/format";
 import { weiduLogProvider } from "../weidu-log/provider";
+import { luaProvider } from "../lua/provider";
 import { Translation } from "../translation";
 import { initServerContext, updateServerSettings } from "../server-context";
 import { getServerCapabilities } from "../server-capabilities";
@@ -89,6 +90,7 @@ export function register(ctx: HandlerContext): void {
 
         // Register and initialize providers
         registry.register(falloutSslProvider);
+        registry.register(luaProvider);
         registry.register(falloutWorldmapProvider);
         registry.register(weiduBafProvider);
         registry.register(weiduDProvider);

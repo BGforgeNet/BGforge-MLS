@@ -21,11 +21,16 @@ export interface WeiDUsettings {
     gamePath: string;
 }
 
+export interface LuaSettings {
+    path: string;
+}
+
 type ValidationMode = "manual" | "save" | "type" | "saveAndType";
 
 export interface MLSsettings {
     falloutSSL: SSLsettings;
     weidu: WeiDUsettings;
+    lua: LuaSettings;
     validate: ValidationMode;
     debug: boolean;
 }
@@ -43,6 +48,7 @@ export const defaultSettings: MLSsettings = {
         compileOnValidate: true,
     },
     weidu: { path: "weidu", gamePath: "" },
+    lua: { path: "luac" },
     validate: "saveAndType",
     debug: false,
 };
@@ -56,6 +62,7 @@ export function normalizeSettings(value: unknown): MLSsettings {
     const raw = (value ?? {}) as Partial<MLSsettings> & {
         falloutSSL?: Partial<SSLsettings>;
         weidu?: Partial<WeiDUsettings>;
+        lua?: Partial<LuaSettings>;
     };
 
     return {
@@ -66,6 +73,10 @@ export function normalizeSettings(value: unknown): MLSsettings {
         weidu: {
             ...defaultSettings.weidu,
             ...raw.weidu,
+        },
+        lua: {
+            ...defaultSettings.lua,
+            ...raw.lua,
         },
         validate: raw.validate ?? defaultSettings.validate,
         debug: raw.debug ?? defaultSettings.debug,

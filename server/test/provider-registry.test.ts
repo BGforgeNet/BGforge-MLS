@@ -79,6 +79,9 @@ describe("ProviderRegistry", () => {
                 path: "weidu",
                 gamePath: "",
             },
+            lua: {
+                path: "luac",
+            },
             validate: "saveAndType",
             debug: false,
         },

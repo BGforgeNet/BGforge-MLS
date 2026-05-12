@@ -40,6 +40,11 @@ describe("settings", () => {
             expect(defaultSettings.weidu.gamePath).toBe("");
         });
 
+        it("should have correct lua defaults", async () => {
+            const { defaultSettings } = await import("../src/settings");
+            expect(defaultSettings.lua.path).toBe("luac");
+        });
+
         it("should have correct validation defaults", async () => {
             const { defaultSettings } = await import("../src/settings");
             expect(defaultSettings.validate).toBe("saveAndType");
@@ -49,6 +54,7 @@ describe("settings", () => {
             const { defaultSettings } = await import("../src/settings");
             expect(defaultSettings).toHaveProperty("falloutSSL");
             expect(defaultSettings).toHaveProperty("weidu");
+            expect(defaultSettings).toHaveProperty("lua");
             expect(defaultSettings).toHaveProperty("validate");
         });
 
@@ -57,6 +63,7 @@ describe("settings", () => {
             const settings = normalizeSettings({
                 falloutSSL: { compilePath: "compile" },
                 weidu: { gamePath: "/game" },
+                lua: { path: "lua52" },
             });
             expect(settings.validate).toBe("saveAndType");
             expect(settings.debug).toBe(false);
@@ -64,6 +71,7 @@ describe("settings", () => {
             expect(settings.falloutSSL.compileOptions).toBe("-q -p -l -O2 -d -s -n");
             expect(settings.weidu.path).toBe("weidu");
             expect(settings.weidu.gamePath).toBe("/game");
+            expect(settings.lua.path).toBe("lua52");
         });
     });
 

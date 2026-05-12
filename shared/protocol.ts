@@ -21,7 +21,7 @@ export const LSP_COMMAND_PARSE_DIALOG = "bgforge.parseDialog";
 export const LSP_COMMAND_WORKSPACE_SYMBOLS_PREFIX = "bgforge.workspaceSymbols.";
 
 /** Languages whose providers implement workspace-symbol search. */
-export const WORKSPACE_SYMBOL_SCOPED_LANGUAGES = ["fallout-ssl", "weidu-d", "weidu-tp2"] as const;
+export const WORKSPACE_SYMBOL_SCOPED_LANGUAGES = ["fallout-ssl", "weidu-d", "weidu-tp2", "lua"] as const;
 
 export type WorkspaceSymbolScopedLanguage = (typeof WORKSPACE_SYMBOL_SCOPED_LANGUAGES)[number];
 

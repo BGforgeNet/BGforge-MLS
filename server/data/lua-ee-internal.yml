@@ -1,0 +1,4650 @@
+# Internal EE Lua APIs from official EE Game Lua Functions docs (https://eeex-docs.readthedocs.io/en/latest/index.html)
+
+buttonArray:
+    type: 3
+    items:
+        - name: buttonArray:GetButtonBam
+          detail: buttonArray:GetButtonBam(int buttonIndex)
+          doc: |-
+              Currently unknown.
+
+        - name: buttonArray:GetButtonEnabled
+          detail: buttonArray:GetButtonEnabled(int buttonIndex)
+          doc: |-
+              Currently unknown.
+
+        - name: buttonArray:GetButtonSequence
+          detail: buttonArray:GetButtonSequence(int buttonIndex)
+          doc: |-
+              Currently unknown.
+
+        - name: buttonArray:GetButtonType
+          detail: buttonArray:GetButtonType(int buttonIndex)
+          doc: |-
+              Currently unknown - seems to return the type of the specified button. If `EEex` is installed,
+              you can use the `EEex_Actionbar_ButtonType` table to get the button type from the returned value, which is an integer:
+
+              ```lua
+              EEex_Actionbar_ButtonType = {
+                ["BARD_SONG"] = 2,
+                ["CAST_SPELL"] = 3,
+                ["FIND_TRAPS"] = 4,
+                ["TALK"] = 5,
+                ["GUARD"] = 7,
+                ["ATTACK"] = 8,
+                ["SPECIAL_ABILITIES"] = 10,
+                ["STEALTH"] = 11,
+                ["THIEVING"] = 12,
+                ["TURN_UNDEAD"] = 13,
+                ["USE_ITEM"] = 14,
+                ["STOP"] = 15,
+                ["QUICK_ITEM_1"] = 21,
+                ["QUICK_ITEM_2"] = 22,
+                ["QUICK_ITEM_3"] = 23,
+                ["QUICK_SPELL_1"] = 24,
+                ["QUICK_SPELL_2"] = 25,
+                ["QUICK_SPELL_3"] = 26,
+                ["QUICK_WEAPON_1"] = 27,
+                ["QUICK_WEAPON_2"] = 28,
+                ["QUICK_WEAPON_3"] = 29,
+                ["QUICK_WEAPON_4"] = 30,
+                ["NONE"] = 100,
+              }
+              ```
+
+        - name: buttonArray:OnLButtonPressed
+          detail: buttonArray:OnLButtonPressed()
+          doc: |-
+              Currently unknown.
+
+        - name: buttonArray:OnRButtonPressed
+          detail: buttonArray:OnRButtonPressed()
+          doc: |-
+              Currently unknown.
+
+C:
+    type: 3
+    items:
+        - name: C:AddGold
+          detail: C:AddGold(Gold)
+          doc: |-
+              Adds/removes gold to/from the party (f.i.: `C:AddGold("1000")` will add 1000 gold to the party, `C:AddGold("-1000")` will remove 1000 gold from the party).
+
+        - name: C:AddSpell
+          detail: C:AddSpell(SpellName)
+          doc: |-
+              Adds a spell to the specified character (f.i.: `C:AddSpell("SPWI112")`). Keep in mind that:
+              - Spell resource reference (`ResRef`) used in `SpellName` must be 8 characters or less and must be valid.
+              - A character must be selected for this to work.
+
+        - name: C:AdvanceRealTime
+          detail: C:AdvanceRealTime(GameTime)
+          doc: |-
+              Advance time.
+
+              **Parameters**
+
+              * ``integer`` *GameTime* -> amount of time in milliseconds to advance.
+
+              **Example**
+
+              Speed up 1 hour real time: `C:AdvanceRealTime(60000)`.
+
+        - name: C:CreateCreature
+          detail: C:CreateCreature(CreatureName)
+          doc: |-
+              Spawns the creature specified.
+
+              **Parameters**
+
+              * ``string`` *CreatureName* -> string containing resource reference (`ResRef`) of creature to spawn.
+
+              **Notes**
+
+              Creature resource reference (`ResRef`) used in *CreatureName* must be 8 characters or less and must be valid.
+
+              This spawns a creature to the center of the screen (or nearest valid point).
+
+              **Example**
+
+              Spawn a gibberling using ``GIBBER.CRE``: `C:CreateCreature("GIBBER")`.
+
+        - name: C:CreateEngine
+          detail: C:CreateEngine(nEngine)
+          doc: |-
+              Unknown - seems to start a new single ``0`` or multi ``1`` player game.
+
+        - name: C:CreateItem
+          detail: C:CreateItem(ItemName,Usage)
+          doc: |-
+              Create an item.
+
+              **Parameters**
+
+              * ``string`` *ItemName* -> string containing resource reference (`ResRef`) of the item to create.
+              * ``integer`` *Usage* -> amount / charges (optional parameter).
+
+              **Notes**
+
+              Item resource reference (`ResRef`) used in *ItemName* must be 8 characters or less and must be valid.
+
+              This spawns an item, based on its item file name, or a stack of the same item, in the inventory of the current party leader.
+
+              **Examples**
+
+              - Create a long sword: `C:CreateItem("SW1H01")`.
+              - Create 10 potions of cure light wounds: `C:CreateItem("POTN08", 10)`.
+              - Greenstone Amulet with 50 charges: `C:CreateItem("amul17", 50)`.
+
+        - name: C:CreateVEFVidCell
+          detail: C:CreateVEFVidCell(VidCell)
+          doc: |-
+              Create `VEFVidCell`.
+
+              **Parameters**
+
+              * ``string`` *VidCell* -> string containing resource reference (`ResRef`) of `VEFVidCell` to create.
+
+        - name: C:DisplayAllBAMFiles
+          detail: C:DisplayAllBAMFiles()
+          doc: |-
+              Display all `BAM` files.
+
+        - name: C:DisplayText
+          detail: C:DisplayText(text)
+          doc: |-
+              Displays the specified text on screen.
+
+              **Parameters**
+
+              * ``string`` *text* -> string containing text to display.
+
+              **Example**
+
+              `C:DisplayText("This is some text to display")`.
+
+        - name: C:EnableCheatKeys
+          detail: C:EnableCheatKeys()
+          doc: |-
+              Enables cheat keys.
+
+              **Notes**
+
+              The following cheat key combination are available once cheat keys has been enabled:
+
+              | **Key** | **Notes** |
+              | --- | --- |
+              | CTRL+1 | Change armor level animation |
+              | CTRL+2 | Fade screen to black |
+              | CTRL+3 | Fade screen to normal |
+              | CTRL+4 | Highlight background-interactive objects |
+              | CTRL+5 | Displays animation information |
+              | CTRL+6 | Change avatar animation previous |
+              | CTRL+7 | Change avatar animation next |
+              | CTRL+8 | Highlights the text boxes |
+              | CTRL+9 | Highlight the sprites |
+              | CTRL+0 | Unknown |
+              | CTRL+A | Change Selected Animation Sequence |
+              | CTRL+C | Jump to next chapter |
+              | CTRL+D | Display some numbers (framerate related?) |
+              | CTRL+E | Alters visual range |
+              | CTRL+F | Turn the character |
+              | CTRL+G | Display loaded area ref |
+              | CTRL+I | Play Selected Animation effect |
+              | CTRL+J | Teleport to cursor position |
+              | CTRL+K | Creature under cursor kick out party |
+              | CTRL+L | Play Selected Animation effect |
+              | CTRL+M | (Followed by ENTER) Debug Dump |
+              | CTRL+N | Freeze screen for 5 seconds |
+              | CTRL+O | (Followed by ENTER) Write Debug To Log |
+              | CTRL+P | Center screen on selected character |
+              | CTRL+Q | Creature under cursor joins party |
+              | CTRL+R | Heals character under cursor |
+              | CTRL+S | Change Selected Animation Sequence |
+              | CTRL+T | Advances game time by 1 hour |
+              | CTRL+U | Highlight doors and ground objects |
+              | CTRL+X | Extended position information |
+              | CTRL+Y | Kills creature under cursor |
+
+              In addition `CTRL+8` during character creation will set all attributes to 18 (STR 18/100).
+                - See also ``createCharScreen:OnCheatyMcCheaterson``.
+
+              `CTRL+SHIFT+Z` while hovering over a character will grant every spell file in the game - may crash due to invalid spells.
+
+        - name: C:Eval
+          detail: C:Eval(Script)
+          doc: |-
+              Evaluate a string containing script actions for a character.
+
+              **Parameters**
+
+              * ``string`` *Script* -> string containing script actions to evaluate.
+
+              **Notes**
+
+              The whole string can be enclosed into single quotes (`'`) so that double quotes can still be used within the script action.
+
+              **Example**
+
+              Move Cernd to the specified location using evaluated script actions.
+                - `C:Eval("ActionOverride(\"Cernd\",MoveGlobal(\"AR0406\",Myself,[1368.1922]))")`.
+
+        - name: C:Exec
+          detail: C:Exec(File)
+          doc: |-
+              Execute console commands contained in the specified file.
+
+              **Parameters**
+
+              * ``string`` *File* -> string containing filename to execute.
+
+              **Example**
+
+              Execute all the commands in the file ``test.txt``: `C:Exec("test.txt")`.
+
+        - name: C:ExploreArea
+          detail: C:ExploreArea()
+          doc: |-
+              Reveals the entire map for the current area.
+
+              **Notes**
+
+              This doesn't remove the fog of war; if a creature is out of your field of vision it will still remain hidden.
+
+        - name: C:GetGlobal
+          detail: C:GetGlobal(VariableName,AreaName)
+          doc: |-
+              Gets a global variable value.
+
+              **Parameters**
+
+              * ``string`` *VariableName* -> string containing the name of the global variable to retrieve the value of.
+              * ``string`` *AreaName* -> string containing the resource reference (`ResRef`) of the area in which the variable is stored, or ``"GLOBAL"`` for all.
+
+              **Returns**
+
+              Value of the variable specified.
+
+              **Notes**
+
+              Area resource reference (`ResRef`) used in *AreaName* must be 8 characters or less and must be valid.
+
+              **Examples**
+
+              - Returns the value of ``CHAPTER`` variable: `C:GetGlobal("CHAPTER", "GLOBAL")`. Will display current `GLOBAL` setting.
+              - Returns the value of ``TestValue`` variable stored in area ``AR0600.ARE``: `C:GetGlobal("TestValue", "AR0600")`.
+
+        - name: C:LogMessages
+          detail: C:LogMessages()
+          doc: |-
+              Enables logging output to console.
+
+        - name: C:LogSet
+          detail: C:LogSet(LogFile)
+          doc: |-
+              Sets logging to a file instead of to console if logging is enabled.
+
+              **Parameters**
+
+              * ``string`` *LogFile* -> string containing log filename.
+
+        - name: C:MoveToArea
+          detail: C:MoveToArea(Area)
+          doc: |-
+              Move the selected characters to the area specified.
+
+              **Parameters**
+
+              * ``string`` *Area* -> string containing the resource reference (`ResRef`) of the area to move players to.
+
+              **Notes**
+
+              Area resource reference (`ResRef`) used in *Area* must be 8 characters or less and must be valid.
+
+              **Example**
+
+              Move the selected players to the Friendly Arms Inn ``AR2300.ARE``: `C:MoveToArea("AR2300")`.
+
+        - name: C:new
+          detail: C:new()
+          doc: |-
+              Create a new instance of the CLUAConsole.
+
+              **Notes**
+
+              This is used in the game engine to assign ``C:`` to CLUAConsole: `C = CLUAConsole:new()`.
+
+        - name: C:PickDialog
+          detail: C:PickDialog(Table)
+          doc: |-
+              Unknown.
+
+        - name: C:PlayMovie
+          detail: C:PlayMovie(Movie)
+          doc: |-
+              Plays the specified movie.
+
+              **Parameters**
+
+              * ``string`` *Movie* - string containing resource reference (`ResRef`) of the movie to play.
+
+              **Notes**
+
+              Movie resource reference (`ResRef`) used in *Movie* must be 8 characters or less and must be valid.
+
+              Plays WebM file format movies (``.wbm``).
+
+              **Example**
+
+              Plays ``LOGO.WBM``: `C:PlayMovie("LOGO")`.
+
+        - name: C:PlaySound
+          detail: C:PlaySound(Sound)
+          doc: |-
+              Plays the specified sound.
+
+              **Parameters**
+
+              * ``string`` *Sound* - string containing resource reference (`ResRef`) of the sound, music, voices to play.
+
+              **Notes**
+
+              Sound resource reference (`ResRef`) used in *Sound* must be 8 characters or less and must be valid.
+
+              Plays WAV file format audio (``.wav``).
+
+              **Example**
+
+              Play cow moo sound ``COW01.WAV``: `C:PlaySound("COW01")`.
+
+        - name: C:ResetAchievements
+          detail: C:ResetAchievements()
+          doc: |-
+              Reset achievements.
+
+              **Notes**
+
+              Applies to Steam installation only!
+
+        - name: C:SetCurrentXP
+          detail: C:SetCurrentXP(ExperiencePoints)
+          doc: |-
+              Sets the experience points (XP) of the selected character.
+
+              **Parameters**
+
+              * ``string`` *ExperiencePoints* -> string containing the numeric value of experience points to set for selected character.
+
+              **Notes**
+
+              This sets the total, rather than adding a value to your current experience points. A level up will be triggered for characters that qualify, based on the experince points table for the character's class level.
+
+              **Example**
+
+              Set current character at 1000 experience points: `C:SetCurrentXP("1000")`.
+
+        - name: C:SetGlobal
+          detail: C:SetGlobal(VariableName,AreaName,Value)
+          doc: |-
+              Set a global variable to the specified value.
+
+              **Parameters**
+
+              * ``string`` *VariableName* -> string containing the name of the global variable to set.
+              * ``string`` *AreaName* -> string containing the resource reference (`ResRef`) of the area in which the variable is stored, or ``"GLOBAL"`` for all.
+              * ``integer`` *Value* -> new value to set the variable to.
+
+              **Notes**
+
+              Area resource reference (`ResRef`) used in *AreaName* must be 8 characters or less and must be valid.
+
+              **Examples**
+
+              - Set the value of ``CHAPTER`` to ``2`` (and advance to Chapter 2): `C:SetGlobal("CHAPTER", "GLOBAL", 2)`.
+              - Sets the value of ``TestValue`` variable stored in area ``AR0600.ARE`` to ``16``: `C:GetGlobal("TestValue", "AR0600", 16)`.
+
+        - name: C:SetWaterAlpha
+          detail: C:SetWaterAlpha(AlphaLevel)
+          doc: |-
+              Sets the alpha blend level for water transparency.
+
+              **Parameters**
+
+              * ``integer`` *AlphaLevel* -> value to set for alpha blending of water transparency.
+
+              **Notes**
+
+              Not tested / verified!
+
+              **Example**
+
+              `C:SetWaterAlpha(100)`
+
+        - name: C:SetWeather
+          detail: C:SetWeather(WeatherID)
+          doc: |-
+              Sets the current weather.
+
+              **Parameters**
+
+              * ``string`` *WeatherID* -> string containing the weather id.
+
+              **Notes**
+
+              Not tested / verified: may be an ``integer`` value for *WeatherID*.
+
+              Valid values to set can be found in ``WEATHER.IDS``:
+
+              - `0 NOWEATHER`
+              - `1 RAIN`
+              - `2 SNOW`
+              - `3 FOG`
+
+              **Example**
+
+              `C:SetWeather("1")`.
+
+        - name: C:StartStore
+          detail: C:StartStore(StoreName)
+          doc: |-
+              Starts the specified store.
+
+              **Parameters**
+
+              * ``string`` *StoreName* -> string containing resource reference (`ResRef`) of store to start.
+
+              **Notes**
+
+              - Store resource reference (`ResRef`) used in *StoreName* must be 8 characters or less and must be valid.
+              - May be unstable, leading to crashes!
+
+              **Example**
+
+              `C:StartStore("INN0103")`.
+
+        - name: C:StrrefOff
+          detail: C:StrrefOff()
+          doc: |-
+              Strings are not displayed with their associated string reference (`StrRef`) id.
+
+        - name: C:StrrefOn
+          detail: C:StrrefOn()
+          doc: |-
+              Strings are displayed with their associated string reference (`StrRef`) id.
+
+        - name: C:TestAllDialog
+          detail: C:TestAllDialog()
+          doc: |-
+              Lists all dialog file in the game, and checks for errors.
+
+        - name: C:WorkshopUpload
+          detail: C:WorkshopUpload(ModuleName,ModulePath)
+          doc: |-
+              Upload a module to the Steam Workshop - Not tested or verified!
+
+              **Parameters**
+
+              * ``string`` *ModuleName* -> string containing name of the workshop module.
+              * ``string`` *ModulePath* -> string containing the full filepath to the module to upload.
+
+              **Notes**
+
+              Applies to Steam installation only!
+
+        - name: C:WriteScript
+          detail: C:WriteScript(Folder)
+          doc: |-
+              Output scripts to directory.
+
+              **Parameters**
+
+              * ``string`` *Folder* -> string containing filepath of folder to output scripts to.
+
+              **Notes**
+
+              If the mouse is over a creature, the command will evaluate the scripts attached to that creature. Otherwise it will evaluate the area scripts.
+
+              **Example**
+
+              Output the script results to a folder called DebugScripts in the root of your game install: `C:WriteScript("DebugScripts")`.
+
+chapterScreen:
+    type: 3
+    items:
+        - name: chapterScreen:IsDoneButtonClickable
+          detail: chapterScreen:IsDoneButtonClickable()
+          doc: |-
+              Determines if the ``Done`` button is enabled and clickable by user.
+
+              **Returns**
+
+              Returns true ``1`` if successful or false ``0`` otherwise.
+
+              Pushes onto lua stack a lua boolean ``true`` if button is clickable or a lua boolean ``false`` otherwise.
+
+              **Notes**
+
+              - The lua ``action`` occurs if the button is enabled (clickable) and is clicked.
+              - Calls the `tolua_BaldurLUA_CScreenChapter_IsDoneButtonClickable00` function.
+
+              **Example**
+
+              The ``Done`` button as defined in ``UI.MENU``:
+
+              ```lua
+              button
+              {
+                area 532 714 234 44
+                bam GUIOSTUR
+                text "DONE_BUTTON"
+                text style "button"
+                clickable lua "chapterScreen:IsDoneButtonClickable()"
+                action
+                "
+                  chapterScreen:OnDoneButtonClick()
+                "
+              }
+              ```
+
+        - name: chapterScreen:IsReplayButtonClickable
+          detail: chapterScreen:IsReplayButtonClickable()
+          doc: |-
+              Determines if the ``Replay`` button is enabled and clickable by user.
+
+              **Returns**
+
+              Returns true ``1`` if successful or false ``0`` otherwise.
+
+              Pushes onto lua stack a lua boolean ``true`` if button is clickable or a lua boolean ``false`` otherwise.
+
+              **Notes**
+
+              - The lua ``action`` occurs if the button is enabled (clickable) and is clicked.
+              - Calls the `tolua_BaldurLUA_CScreenChapter_IsReplayButtonClickable00` function.
+
+              **Example**
+
+              The ``Replay`` button as defined in ``UI.MENU``:
+
+              ```lua
+              button
+              {
+                area 280 714 234 44
+                bam GUIOSTUL
+                text "REPLAY_BUTTON"
+                text style "button"
+                clickable lua "chapterScreen:IsReplayButtonClickable()"
+                action
+                "
+                  chapterScreen:OnReplayButtonClick()
+                "
+              }
+              ```
+
+        - name: chapterScreen:OnDoneButtonClick
+          detail: chapterScreen:OnDoneButtonClick()
+          doc: |-
+              Event action for when the ``Done`` button is clicked.
+
+              **Notes**
+
+              Exits the chapter text screen when this button is clicked.
+
+              The lua ``action`` occurs if the button is enabled (clickable) and is clicked.
+
+              Calls the `tolua_BaldurLUA_CScreenChapter_OnDoneButtonClick00` function.
+
+              **Example**
+
+              The ``Done`` button as defined in ``UI.MENU``:
+
+              ```lua
+              button
+              {
+                area 532 714 234 44
+                bam GUIOSTUR
+                text "DONE_BUTTON"
+                text style "button"
+                clickable lua "chapterScreen:IsDoneButtonClickable()"
+                action
+                "
+                  chapterScreen:OnDoneButtonClick()
+                "
+              }
+              ```
+
+        - name: chapterScreen:OnReplayButtonClick
+          detail: chapterScreen:OnReplayButtonClick()
+          doc: |-
+              Event action for when the ``Replay`` button is clicked.
+
+              **Notes**
+
+              The lua ``action`` occurs if the button is enabled (clickable) and is clicked.
+
+              Calls the `tolua_BaldurLUA_CScreenChapter_OnReplayButtonClick00` function.
+
+              **Example**
+
+              The ``Replay`` button as defined in ``UI.MENU``:
+
+              ```lua
+              button
+              {
+                area 280 714 234 44
+                bam GUIOSTUL
+                text "REPLAY_BUTTON"
+                text style "button"
+                clickable lua "chapterScreen:IsReplayButtonClickable()"
+                action
+                "
+                  chapterScreen:OnReplayButtonClick()
+                "
+              }
+              ```
+
+        - name: chapterScreen:StartTextScreen
+          detail: chapterScreen:StartTextScreen()
+          doc: |-
+              Load chapter text into UI elements.
+
+              **Parameters**
+
+              * ``string`` *textscreenOverride* -> unknown, process custom `2DA`?
+
+              **Notes**
+
+              - Processes string references (`StrRef`) stored in ``CHPTXT?.2DA`` (where ``?`` is the chapter number). For the ``DEFAULT`` row in the 2DA file, column 0 stores the `StrRef` of the chapter number: *"Chapter 1"* and column 1 stores the `StrRef` of the chapter text: *"Disaster comes on the heels of your victory in Baldur's Gate"...*.
+              - Assigns the strings loaded to UI elements.
+              - Loads chapter backgrounds, starts music and the scrolling text (? - to be confirmed).
+              - Calls the `tolua_BaldurLUA_CScreenChapter_StartTextScreen00` function.
+
+characterScreen:
+    type: 3
+    items:
+        - name: characterScreen:GetTempSmartScriptLocal
+          detail: characterScreen:GetTempSmartScriptLocal()
+          doc: |-
+              Currently unknown.
+
+        - name: characterScreen:IsAppearanceButtonClickable
+          detail: characterScreen:IsAppearanceButtonClickable()
+          doc: |-
+              Currently unknown.
+
+        - name: characterScreen:IsCharacterViewable
+          detail: characterScreen:IsCharacterViewable()
+          doc: |-
+              Currently unknown.
+
+        - name: characterScreen:IsDoneButtonClickable
+          detail: characterScreen:IsDoneButtonClickable()
+          doc: |-
+              Currently unknown - seems to determine whether the done button is clickable or not.
+
+        - name: characterScreen:IsDualClassButtonClickable
+          detail: characterScreen:IsDualClassButtonClickable()
+          doc: |-
+              Currently unknown - seems to determine whether the dual class button is clickable or not.
+
+        - name: characterScreen:IsExportButtonClickable
+          detail: characterScreen:IsExportButtonClickable()
+          doc: |-
+              Currently unknown - seems to determine whether the export character button is clickable or not.
+
+        - name: characterScreen:IsInGame
+          detail: characterScreen:IsInGame()
+          doc: |-
+              Currently unknown.
+
+        - name: characterScreen:IsLevelUpButtonClickable
+          detail: characterScreen:IsLevelUpButtonClickable()
+          doc: |-
+              Currently unknown - seems to determine whether the level up button is clickable or not.
+
+        - name: characterScreen:IsMultiPlayerModifyable
+          detail: characterScreen:IsMultiPlayerModifyable()
+          doc: |-
+              Currently unknown.
+
+        - name: characterScreen:IsReformPartyButtonClickable
+          detail: characterScreen:IsReformPartyButtonClickable()
+          doc: |-
+              Currently unknown - seems to determine whether the reform party button is clickable or not.
+
+        - name: characterScreen:OnAppearanceButtonClick
+          detail: characterScreen:OnAppearanceButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: characterScreen:OnCancelButtonClick
+          detail: characterScreen:OnCancelButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: characterScreen:OnCustomizeBiographyButtonClick
+          detail: characterScreen:OnCustomizeBiographyButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: characterScreen:OnCustomizeButtonClick
+          detail: characterScreen:OnCustomizeButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: characterScreen:OnDoneButtonClick
+          detail: characterScreen:OnDoneButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: characterScreen:OnDualClassButtonClick
+          detail: characterScreen:OnDualClassButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: characterScreen:OnErrorButtonClick
+          detail: characterScreen:OnErrorButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: characterScreen:OnExportButtonClick
+          detail: characterScreen:OnExportButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: characterScreen:OnHairSkinButtonClick
+          detail: characterScreen:OnHairSkinButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: characterScreen:OnLevelUpButtonClick
+          detail: characterScreen:OnLevelUpButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: characterScreen:OnPlayButtonClick
+          detail: characterScreen:OnPlayButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: characterScreen:OnReformPartyButtonClick
+          detail: characterScreen:OnReformPartyButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: characterScreen:OnScriptButtonClick
+          detail: characterScreen:OnScriptButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: characterScreen:OnSoundsButtonClick
+          detail: characterScreen:OnSoundsButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: characterScreen:SetTempSmartScriptLocal
+          detail: characterScreen:SetTempSmartScriptLocal()
+          doc: |-
+              Currently unknown.
+
+connectionScreen:
+    type: 3
+    items:
+        - name: connectionScreen:CancelJoinGame
+          detail: connectionScreen:CancelJoinGame()
+          doc: |-
+              Currently unknown.
+
+        - name: connectionScreen:ClearSessions
+          detail: connectionScreen:ClearSessions()
+          doc: |-
+              Currently unknown.
+
+        - name: connectionScreen:HasServiceProvider
+          detail: connectionScreen:HasServiceProvider()
+          doc: |-
+              Currently unknown.
+
+        - name: connectionScreen:IsValidAddress
+          detail: connectionScreen:IsValidAddress()
+          doc: |-
+              Currently unknown.
+
+        - name: connectionScreen:JoinGame
+          detail: connectionScreen:JoinGame()
+          doc: |-
+              Currently unknown.
+
+        - name: connectionScreen:JoinGameIPAddress
+          detail: connectionScreen:JoinGameIPAddress()
+          doc: |-
+              Currently unknown.
+
+        - name: connectionScreen:OnJoinGameButtonClick
+          detail: connectionScreen:OnJoinGameButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: connectionScreen:OnLoadGameButtonClick
+          detail: connectionScreen:OnLoadGameButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: connectionScreen:OnMainCancelButtonClick
+          detail: connectionScreen:OnMainCancelButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: connectionScreen:OnNewGameButtonClick
+          detail: connectionScreen:OnNewGameButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: connectionScreen:SelectServiceProvider
+          detail: connectionScreen:SelectServiceProvider()
+          doc: |-
+              Currently unknown.
+
+        - name: connectionScreen:SetPlayerName
+          detail: connectionScreen:SetPlayerName()
+          doc: |-
+              Currently unknown.
+
+        - name: connectionScreen:StopConnectingToProvider
+          detail: connectionScreen:StopConnectingToProvider()
+          doc: |-
+              Currently unknown.
+
+createCharScreen:
+    type: 3
+    items:
+        - name: createCharScreen:AcceptCharacter
+          detail: createCharScreen:AcceptCharacter()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:DecCurrentPortrait
+          detail: createCharScreen:DecCurrentPortrait()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:GetCurrentPortrait
+          detail: createCharScreen:GetCurrentPortrait()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:GetCurrentStep
+          detail: createCharScreen:GetCurrentStep()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:GetEngineState
+          detail: createCharScreen:GetEngineState()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:GetImportableCharacters
+          detail: createCharScreen:GetImportableCharacters()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:GetImportState
+          detail: createCharScreen:GetImportState()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:HasMoreMageLevels
+          detail: createCharScreen:HasMoreMageLevels()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:IncCurrentPortrait
+          detail: createCharScreen:IncCurrentPortrait()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:IsAbilityRecallButtonClickable
+          detail: createCharScreen:IsAbilityRecallButtonClickable()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:IsAdvancedButtonClickable
+          detail: createCharScreen:IsAdvancedButtonClickable()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:IsChargenComplete
+          detail: createCharScreen:IsChargenComplete()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:IsDoneButtonClickable
+          detail: createCharScreen:IsDoneButtonClickable()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:IsHighLevelAbilitiesButtonClickable
+          detail: createCharScreen:IsHighLevelAbilitiesButtonClickable()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:IsMainBackButtonClickable
+          detail: createCharScreen:IsMainBackButtonClickable()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:IsThiefSkillPlusMinusButtonClickable
+          detail: createCharScreen:IsThiefSkillPlusMinusButtonClickable()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:OnAbilityPlusMinusButtonClick
+          detail: createCharScreen:OnAbilityPlusMinusButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:OnAbilityRecallButtonClick
+          detail: createCharScreen:OnAbilityRecallButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:OnAbilityReRollButtonClick
+          detail: createCharScreen:OnAbilityReRollButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:OnAbilityStoreButtonClick
+          detail: createCharScreen:OnAbilityStoreButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:OnAdvancedButtonClick
+          detail: createCharScreen:OnAdvancedButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:OnAlignmentSelectButtonClick
+          detail: createCharScreen:OnAlignmentSelectButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:OnBiographyButtonClick
+          detail: createCharScreen:OnBiographyButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:OnCancelButtonClick
+          detail: createCharScreen:OnCancelButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:OnCharacterExportItemSelect
+          detail: createCharScreen:OnCharacterExportItemSelect()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:OnCheatyMcCheaterson
+          detail: createCharScreen:OnCheatyMcCheaterson()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:OnClassSelectButtonClick
+          detail: createCharScreen:OnClassSelectButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:OnDoneButtonClick
+          detail: createCharScreen:OnDoneButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:OnGenderSelectButtonClick
+          detail: createCharScreen:OnGenderSelectButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:OnHighLevelAbilitiesButtonClick
+          detail: createCharScreen:OnHighLevelAbilitiesButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:OnHLAButtonClick
+          detail: createCharScreen:OnHLAButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:OnImportCharacterButtonClick
+          detail: createCharScreen:OnImportCharacterButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:OnImportCharacterFileButtonClick
+          detail: createCharScreen:OnImportCharacterFileButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:OnImportSaveButtonClick
+          detail: createCharScreen:OnImportSaveButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:OnKitSelectButtonClick
+          detail: createCharScreen:OnKitSelectButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:OnLearnMageSpellButtonClick
+          detail: createCharScreen:OnLearnMageSpellButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:OnMainBackButtonClick
+          detail: createCharScreen:OnMainBackButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:OnMainCancelButtonClick
+          detail: createCharScreen:OnMainCancelButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:OnMemorizeMageSpellButtonClick
+          detail: createCharScreen:OnMemorizeMageSpellButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:OnMemorizePriestSpellButtonClick
+          detail: createCharScreen:OnMemorizePriestSpellButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:OnMenuButtonClick
+          detail: createCharScreen:OnMenuButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:OnPlayButtonClick
+          detail: createCharScreen:OnPlayButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:OnPrerollCancelButtonClick
+          detail: createCharScreen:OnPrerollCancelButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:OnPrerollCharacterPick
+          detail: createCharScreen:OnPrerollCharacterPick()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:OnProficiencyPlusMinusButtonClick
+          detail: createCharScreen:OnProficiencyPlusMinusButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:OnRaceSelectButtonClick
+          detail: createCharScreen:OnRaceSelectButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:OnRacialEnemySelectButtonClick
+          detail: createCharScreen:OnRacialEnemySelectButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:OnSoundItemSelect
+          detail: createCharScreen:OnSoundItemSelect()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:OnThiefSkillPlusMinusButtonClick
+          detail: createCharScreen:OnThiefSkillPlusMinusButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:SetAbilityHelpInfo
+          detail: createCharScreen:SetAbilityHelpInfo(stat)
+          doc: |-
+              Set tokens for ability score information.
+
+              **Parameters**
+
+              * ``integer`` *stat* -> value representing the ability score to set token information for.
+
+              **Notes**
+
+              - Sets ability score tokens ``<MINIMUM>`` and ``<MAXIMUM>`` for the panel that displays the specifics of each ability score, recommended scores and minimum required scores for specific classes.
+              - The full text and description for the ability score help information is fetched outside of this function. By using the `Infinity_FetchString()` function in ``UI.MENU`` to fetch a string reference (`StrRef`) and combining with the ability score tokens fetched by `createCharScreen:SetAbilityHelpInfo`, this full text is then output into the help panel.
+
+              The ``stat`` parameter can be one of the following values, which equate to the ability score to set information for:
+
+              | **Stat** | **Ability** |
+              | --- | --- |
+              | 1 | Strength |
+              | 2 | Dexterity |
+              | 3 | Constitution |
+              | 4 | Intelligence |
+              | 5 | Wisdom |
+              | 6 | Charisma |
+
+              **Examples**
+
+              - Set ability score help info for Dexterity:
+
+                ```lua
+                createCharScreen:SetAbilityHelpInfo(2)
+                DexterityAbilityInfo = Infinity_FetchString(9584)
+                ```
+
+              - Using a lua function and an array to dynamically set text for ability score information in ``UI.MENU``:
+
+                ```lua
+                `
+                chargen.ability = {
+                    {name = 'STRENGTH_LABEL', desc = 9582},
+                    {name = 'DEXTERITY_LABEL', desc = 9584},
+                    {name = 'CONSTITUTION_LABEL', desc = 9583},
+                    {name = 'INTELLIGENCE_LABEL', desc = 9585},
+                    {name = 'WISDOM_LABEL', desc = 9586},
+                    {name = 'CHARISMA_LABEL', desc = 9587},
+                }
+
+                function abilityOrGeneralHelp()
+                    ability = chargen.ability[currentChargenAbility]
+                    if ability and ability.desc ~= -1 then
+                        createCharScreen:SetAbilityHelpInfo(currentChargenAbility)
+                        return Infinity_FetchString(ability.desc)
+                    else
+                        return Infinity_FetchString(17247)
+                    end
+                end
+                `
+
+                --[[
+                  This is a comment. Part of the code is excluded for example purposes
+                  Later on the function is used to fetch the ability score description
+                  The ability score description is stored as a ResRef in the array above
+                  The text of the UI control is set via the lua abilityOrGeneralHelp
+                --]]
+
+                text
+                {
+                    area 582 196 404 400
+                    text lua "abilityOrGeneralHelp()"
+                    text style "normal"
+                    scrollbar   'GUISCRC'
+                }
+                ```
+
+        - name: createCharScreen:SetEngineState
+          detail: createCharScreen:SetEngineState()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:SetSpriteId
+          detail: createCharScreen:SetSpriteId()
+          doc: |-
+              Currently unknown.
+
+        - name: createCharScreen:ShowPortraitPanel
+          detail: createCharScreen:ShowPortraitPanel()
+          doc: |-
+              Currently unknown.
+
+createPartyScreen:
+    type: 3
+    items:
+        - name: createPartyScreen:OnBackButtonClick
+          detail: createPartyScreen:OnBackButtonClick()
+          doc: |-
+              Event action for when the ``Back`` button is clicked.
+
+              **Notes**
+
+              - Returns to previous menu when the back button is clicked.
+              - Calls the `tolua_BaldurLUA_CScreenCreateParty_OnBackButtonClick00` function which calls the `CScreenCreateParty::OnBackButtonClick` method.
+
+        - name: createPartyScreen:OnCreateDeleteButtonClick
+          detail: createPartyScreen:OnCreateDeleteButtonClick()
+          doc: |-
+              Event action for when the ``Delete`` button is clicked.
+
+              **Parameters**
+
+              * ``integer`` *Index* -> 0 based index of created character's delete button clicked.
+
+              **Notes**
+
+              - The selected character, that has been previously created, is deleted when this button is clicked.
+              - Calls the `tolua_BaldurLUA_CScreenCreateParty_OnCreateDeleteButtonClick00` function which calls the `CScreenCreateParty::OnCreateDeleteButtonClick` method.
+
+        - name: createPartyScreen:OnDoneButtonClick
+          detail: createPartyScreen:OnDoneButtonClick()
+          doc: |-
+              Event action for when the ``Done`` button is clicked.
+
+              **Notes**
+
+              - Finishes the create party process.
+              - Calls the `tolua_BaldurLUA_CScreenCreateParty_OnDoneButtonClick00` function which calls the `CScreenCreateParty::OnDoneButtonClick` method.
+
+        - name: createPartyScreen:OnPortraitButtonClick
+          detail: createPartyScreen:OnPortraitButtonClick(Index)
+          doc: |-
+              Event action for when a portrait button is clicked.
+
+              **Parameters**
+
+              * ``integer`` *Index* -> 0 based index of portrait clicked.
+
+              **Notes**
+
+              - Selects the character for the portrait that is clicked.
+              - Lua arrays use 1 based index when accessing arrays.
+              - Calls the `tolua_BaldurLUA_CScreenCreateParty_OnPortraitButtonClick00` function which calls the `CScreenCreateParty::OnPortraitButtonClick` method.
+
+dlcScreen:
+    type: 3
+    items:
+        - name: dlcScreen:DecrementDLCIndex
+          detail: dlcScreen:DecrementDLCIndex()
+          doc: |-
+              Currently unknown.
+
+        - name: dlcScreen:GetDLCBought
+          detail: dlcScreen:GetDLCBought()
+          doc: |-
+              Currently unknown.
+
+        - name: dlcScreen:GetDLCCount
+          detail: dlcScreen:GetDLCCount()
+          doc: |-
+              Currently unknown.
+
+        - name: dlcScreen:GetDLCDescription
+          detail: dlcScreen:GetDLCDescription()
+          doc: |-
+              Currently unknown.
+
+        - name: dlcScreen:GetDLCImage
+          detail: dlcScreen:GetDLCImage()
+          doc: |-
+              Currently unknown.
+
+        - name: dlcScreen:GetDLCIndex
+          detail: dlcScreen:GetDLCIndex()
+          doc: |-
+              Currently unknown.
+
+        - name: dlcScreen:GetDLCName
+          detail: dlcScreen:GetDLCName()
+          doc: |-
+              Currently unknown.
+
+        - name: dlcScreen:GetDLCState
+          detail: dlcScreen:GetDLCState()
+          doc: |-
+              Currently unknown.
+
+        - name: dlcScreen:GetDLCTitle
+          detail: dlcScreen:GetDLCTitle()
+          doc: |-
+              Currently unknown.
+
+        - name: dlcScreen:GetDownloadString
+          detail: dlcScreen:GetDownloadString()
+          doc: |-
+              Currently unknown.
+
+        - name: dlcScreen:IncrementDLCIndex
+          detail: dlcScreen:IncrementDLCIndex()
+          doc: |-
+              Currently unknown.
+
+        - name: dlcScreen:OnBuyButtonClick
+          detail: dlcScreen:OnBuyButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: dlcScreen:OnDoneButtonClick
+          detail: dlcScreen:OnDoneButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: dlcScreen:OnErrorButtonClick
+          detail: dlcScreen:OnErrorButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: dlcScreen:RestorePurchases
+          detail: dlcScreen:RestorePurchases()
+          doc: |-
+              Currently unknown.
+
+        - name: dlcScreen:SetDLCIndex
+          detail: dlcScreen:SetDLCIndex()
+          doc: |-
+              Currently unknown.
+
+        - name: dlcScreen:UpdateDLCState
+          detail: dlcScreen:UpdateDLCState()
+          doc: |-
+              Currently unknown.
+
+e:
+    type: 3
+    items:
+        - name: e:CheckGUISong
+          detail: e:CheckGUISong()
+          doc: |-
+              Currently unknown.
+
+        - name: e:FullScreen
+          detail: e:FullScreen()
+          doc: |-
+              Currently unknown.
+
+        - name: e:GetActiveEngine
+          detail: e:GetActiveEngine()
+          doc: |-
+              Currently unknown.
+
+        - name: e:GetEngineChapter
+          detail: e:GetEngineChapter()
+          doc: |-
+              Currently unknown.
+
+        - name: e:GetEngineCharacter
+          detail: e:GetEngineCharacter()
+          doc: |-
+              Currently unknown.
+
+        - name: e:GetEngineConnection
+          detail: e:GetEngineConnection()
+          doc: |-
+              Currently unknown.
+
+        - name: e:GetEngineCreateChar
+          detail: e:GetEngineCreateChar()
+          doc: |-
+              Currently unknown.
+
+        - name: e:GetEngineCreateParty
+          detail: e:GetEngineCreateParty()
+          doc: |-
+              Currently unknown.
+
+        - name: e:GetEngineDLC
+          detail: e:GetEngineDLC()
+          doc: |-
+              Currently unknown.
+
+        - name: e:GetEngineInventory
+          detail: e:GetEngineInventory()
+          doc: |-
+              Currently unknown.
+
+        - name: e:GetEngineJournal
+          detail: e:GetEngineJournal()
+          doc: |-
+              Currently unknown.
+
+        - name: e:GetEngineLoad
+          detail: e:GetEngineLoad()
+          doc: |-
+              Currently unknown.
+
+        - name: e:GetEngineMap
+          detail: e:GetEngineMap()
+          doc: |-
+              Currently unknown.
+
+        - name: e:GetEngineMovies
+          detail: e:GetEngineMovies()
+          doc: |-
+              Currently unknown.
+
+        - name: e:GetEngineMultiPlayer
+          detail: e:GetEngineMultiPlayer()
+          doc: |-
+              Currently unknown.
+
+        - name: e:GetEngineOptions
+          detail: e:GetEngineOptions()
+          doc: |-
+              Currently unknown.
+
+        - name: e:GetEnginePriestSpell
+          detail: e:GetEnginePriestSpell()
+          doc: |-
+              Currently unknown.
+
+        - name: e:GetEngineProjector
+          detail: e:GetEngineProjector()
+          doc: |-
+              Currently unknown.
+
+        - name: e:GetEngineSave
+          detail: e:GetEngineSave()
+          doc: |-
+              Currently unknown.
+
+        - name: e:GetEngineStart
+          detail: e:GetEngineStart()
+          doc: |-
+              Currently unknown.
+
+        - name: e:GetEngineStore
+          detail: e:GetEngineStore()
+          doc: |-
+              Currently unknown.
+
+        - name: e:GetEngineWizSpell
+          detail: e:GetEngineWizSpell()
+          doc: |-
+              Currently unknown.
+
+        - name: e:GetEngineWorld
+          detail: e:GetEngineWorld()
+          doc: |-
+              Currently unknown.
+
+        - name: e:GetEngineWorldMap
+          detail: e:GetEngineWorldMap()
+          doc: |-
+              Currently unknown.
+
+        - name: e:GetObjectGame
+          detail: e:GetObjectGame()
+          doc: |-
+              Currently unknown.
+
+        - name: e:GetSoundMixer
+          detail: e:GetSoundMixer()
+          doc: |-
+              Currently unknown.
+
+        - name: e:GetVersionString
+          detail: e:GetVersionString()
+          doc: |-
+              Currently unknown.
+
+        - name: e:IsAndroid
+          detail: e:IsAndroid()
+          doc: |-
+              Currently unknown.
+
+        - name: e:IsIOS
+          detail: e:IsIOS()
+          doc: |-
+              Currently unknown.
+
+        - name: e:IsTouchUI
+          detail: e:IsTouchUI()
+          doc: |-
+              Currently unknown.
+
+        - name: e:SelectEngine
+          detail: e:SelectEngine()
+          doc: |-
+              Currently unknown.
+
+        - name: e:SetDisableBrightest
+          detail: e:SetDisableBrightest()
+          doc: |-
+              Currently unknown.
+
+game:
+    type: 3
+    items:
+        - name: game:CenterOnGroupLeader
+          detail: game:CenterOnGroupLeader()
+          doc: |-
+              Currently unknown.
+
+        - name: game:GetButtonArray
+          detail: game:GetButtonArray()
+          doc: |-
+              Currently unknown.
+
+        - name: game:GetCharacterOverflowCount
+          detail: game:GetCharacterOverflowCount()
+          doc: |-
+              Currently unknown.
+
+        - name: game:GetJournalOpenable
+          detail: game:GetJournalOpenable()
+          doc: |-
+              Currently unknown.
+
+        - name: game:GetMissionPackInfo
+          detail: game:GetMissionPackInfo()
+          doc: |-
+              Currently unknown.
+
+        - name: game:GetMissionPackInfo25
+          detail: game:GetMissionPackInfo25()
+          doc: |-
+              Currently unknown.
+
+        - name: game:GetMissionPackInfoTBP
+          detail: game:GetMissionPackInfoTBP()
+          doc: |-
+              Currently unknown.
+
+        - name: game:GetOptions
+          detail: game:GetOptions()
+          doc: |-
+              Currently unknown.
+
+        - name: game:GetPaletteSize
+          detail: game:GetPaletteSize()
+          doc: |-
+              Currently unknown.
+
+        - name: game:GetPartyAI
+          detail: game:GetPartyAI()
+          doc: |-
+              Currently unknown.
+
+        - name: game:GetPartyGold
+          detail: game:GetPartyGold()
+          doc: |-
+              Returns the current amount of gold the party has.
+
+        - name: game:GetWorldTimer
+          detail: game:GetWorldTimer()
+          doc: |-
+              Currently unknown.
+
+        - name: game:IsClient
+          detail: game:IsClient()
+          doc: |-
+              Currently unknown.
+
+        - name: game:RestParty
+          detail: game:RestParty()
+          doc: |-
+              Currently unknown.
+
+        - name: game:SelectAll
+          detail: game:SelectAll()
+          doc: |-
+              Currently unknown.
+
+        - name: game:SetCampaign
+          detail: game:SetCampaign()
+          doc: |-
+              Currently unknown.
+
+        - name: game:ToggleAI
+          detail: game:ToggleAI()
+          doc: |-
+              Currently unknown.
+
+Infinity:
+    type: 3
+    items:
+        - name: Infinity_ActivateInventory
+          detail: Infinity_ActivateInventory()
+          doc: |-
+              Opens and activates the inventory screen and updates stats for the character.
+
+              **Notes**
+
+              - Calls `CScreenInventory::ResetGroundPile` and
+                `CScreenInventory::UpdateLua`, which in turn calls `CGameSprite::UpdateLuaStats`.
+              - Updates ability scores, stats, skills, equiptment, paperdoll and items for display in the inventory screen for the current character.
+
+        - name: Infinity_ActivateRecord
+          detail: Infinity_ActivateRecord(index)
+          doc: |-
+              Opens and activates the level up dialog.
+
+              **Parameters**
+
+              * ``integer`` *index* -> 0 based index of the character to level up.
+
+              **Notes**
+
+              Calls `CScreenCharacter::OnLevelUpButtonClick` to open and activate the level up dialog.
+
+              **Example**
+
+              Enables the level up button if character 5 (index 4) can level up, and on clicking the enabled button, the ``action`` opens the level up dialog via `Infinity_ActivateRecord`:
+
+              ```lua
+              button
+              {
+                enabled "Infinity_CanLevelUp(4)"
+                bam GUIOSW
+                area 0 382 44 44
+                sequence 0
+                action "Infinity_ActivateRecord(4)"
+                pulse 1
+              }
+              ```
+
+        - name: Infinity_AddDLC
+          detail: Infinity_AddDLC(name,image,title,description,ios_name,purchased,android_name)
+          doc: |-
+              Add DLC to game.
+
+              **Parameters**
+
+              * ``string`` *name* -> text or `ResRef` ?
+              * ``string`` *image* -> DLC image -> `ResRef` to image ?
+              * ``integer`` *title* -> long pointer to string or `StrRef` ?
+              * ``integer`` *description* -> long pointer to string or `StrRef` ?
+              * ``string`` *ios_name* -> text or `ResRef` ?
+              * ``integer`` *purchased* -> date time stamp ?
+              * ``string`` *android_name* -> text or `ResRef` ?
+
+              **Notes**
+
+              - Fills in a `CDLC` structure from the parameters passed and calls the `DLCInsert` function, which is defined as:
+
+                ```cpp
+                void __cdecl DLCInsert(CDLC toInsert);
+                ```
+
+              - Only available on ios or android builds ?
+
+        - name: Infinity_AddDLCContent
+          detail: Infinity_AddDLCContent(name,dlc_id)
+          doc: |-
+              Add DLC content to game.
+
+              **Parameters**
+
+              * ``string`` *name* - text or `ResRef` ?
+              * ``integer`` *dlc_id* - dlc id
+
+              **Notes**
+
+              - Fills in a `CDLC_Content` structure from the parameters passed and calls the `DLCInsertContent` function, which is defined as:
+
+                ```cpp
+                  void __cdecl DLCInsertContent(CDLC_Content toInsert);
+                ```
+
+              - Only available on ios or android builds ?
+
+        - name: Infinity_CanCloudSave
+          detail: Infinity_CanCloudSave()
+          doc: |-
+              Determines if cloud saves are supported by the platform, for example Steam.
+
+              **Return Value**
+
+              Returns a ``boolean`` value: ``true`` if cloud saves are supported on the platform or ``false`` otherwise.
+
+              **Notes**
+
+              Calls `CPlatform::IsPlatformServiceConnected` and reads `CBaldurChitin.m_cChitin` => `CChitin.m_cSteam` => `CSteam.m_isSteamConnected`.
+
+              **Example**
+
+              ```lua
+              if Infinity_CanCloudSave() == false and (toggleTitles[1][3] == 60 or toggleTitles[2][3] == 60) then
+                  removeOptionFromList(toggleTitles,60)
+              end
+              ```
+
+        - name: Infinity_CanLevelUp
+          detail: Infinity_CanLevelUp(index)
+          doc: |-
+              Determines if the specified character can level up, i.e., has enough experience points to qualify for a level up.
+
+              **Parameters**
+
+              * ``integer`` *index* -> 0 based index of the character to check if level up is available for.
+
+              **Return Value**
+
+              Returns a ``boolean`` value: ``true`` if character can level up or ``false`` otherwise.
+
+              **Example**
+
+              Enables the level up button if character 5 (index 4) can level up, and on clicking the enabled button, the ``action`` opens the level up dialog via `Infinity_ActivateRecord`:
+
+              ```lua
+              button
+              {
+                enabled "Infinity_CanLevelUp(4)"
+                bam GUIOSW
+                area 0 382 44 44
+                sequence 0
+                action "Infinity_ActivateRecord(4)"
+                pulse 1
+              }
+              ```
+
+        - name: Infinity_ChangeOption
+          detail: Infinity_ChangeOption(option_id,value,panel_id)
+          doc: |-
+              Set the value of an option in a panel.
+
+              **Parameters**
+
+              * ``integer`` *option_id* -> id of the option to set.
+              * ``integer`` *value* -> value to set the option to.
+              * ``integer`` *panel_id* -> id of the panel.
+
+              **Notes**
+
+              Calls `CGameOptions::SetOption`.
+
+              **Example**
+
+              Get the value of option id ``1`` in panel id ``8`` (``panelID`` = ``8``) to a variable ``ttDelaySLDR`` and then set option id ``1`` in panel id ``8`` (``panelID`` = ``8``) to the value of the ``ttDelaySLDR`` variable.
+
+              ```lua
+              panelID = 8
+              ttDelaySLDR = Infinity_GetOption(1, panelID)
+              Infinity_ChangeOption( 1, ttDelaySLDR, panelID)
+              ```
+
+        - name: Infinity_CheckItemIdentify
+          detail: Infinity_CheckItemIdentify(nSlot)
+          doc: |-
+              Checks lore skill for identifying an item in an inventory slot.
+
+              **Parameters**
+
+              * ``integer`` *nSlot* -> slot number that item occupies.
+
+              **Notes**
+
+              - Calls the `CScreenInventory::CheckItemIdentify` method.
+              - If character has a high enough lore skill value then the item specified in the inventory slot `nSlot` is identified, the item's name and description is updated in the inventory slot and in any quick slot buttons that it currently occupies.
+
+              **Example**
+
+              ```lua
+              function showItemDescriptionInventory(slotName)
+                if(characters[id].equipment[slotName].empty ~= 0) then
+                    return
+                end
+
+                selectedSlot = slotName
+
+                Infinity_CheckItemIdentify(characters[id].equipment[slotName].id)
+                showItemDescription(characters[id].equipment[slotName].item, 0)
+              end
+              ```
+
+        - name: Infinity_ClickItem
+          detail: Infinity_ClickItem(???)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_ClickObjectInWorld
+          detail: Infinity_ClickObjectInWorld(ScriptName)
+          doc: |-
+              Clicks the ground at the location of the object in the world.
+
+              **Parameters**
+
+              * ``string`` *ScriptName* -> name of the script (for the object) to click the ground at.
+
+              **Example**
+
+              Click the ground at ``MINSC.BS``:
+
+              ```lua
+              Infinity_ClickObjectInWorld("Minsc")
+              ```
+
+        - name: Infinity_ClickScreen
+          detail: Infinity_ClickScreen()
+          doc: |-
+              Clicks the center of the viewscreen.
+
+        - name: Infinity_ClickWorldAt
+          detail: Infinity_ClickWorldAt(x,y)
+          doc: |-
+              Clicks the ground at the specified coordinates, relative to the viewscreen.
+
+              **Parameters**
+
+              * ``integer`` *x* -> x coordinate to click world at.
+              * ``integer`` *y* -> y coordinate to click world at.
+
+              **Notes**
+
+              Appears entirely broken. It seems to always click the top-left of the current viewscreen.
+                - If your mouse cursor is not in the world (such as on the ActionBar or on a SideBar), it clicks on the world coordinates at ``0``, ``0``.
+                - If you don't include `Infinity_HoverMouseOver` before `Infinity_ClickWorldAt`, it will click at world coordinates ``0``, ``0`` by assuming your cursor is over the interface.
+
+              You can force a click in the game world like so:
+
+              ```lua
+              Infinity_HoverMouseOver(x,y)
+              Infinity_ClickWorldAt(x,y)
+              ```
+
+        - name: Infinity_CloseEngine
+          detail: Infinity_CloseEngine()
+          doc: |-
+              Close active engine - unknown.
+
+        - name: Infinity_DestroyAnimation
+          detail: Infinity_DestroyAnimation(instanceId,templateName)
+          doc: |-
+              Remove and free memory for the UI items that match the template name and instance id specified.
+
+              **Parameters**
+
+              * ``integer`` *instanceId* -> instance id.
+              * ``string`` *templateName* -> name of the template to remove.
+
+              **Notes**
+
+              Calls `uiRemoveFromTemplate` function, defined as:
+
+              ```cpp
+              void __cdecl uiRemoveFromTemplate(CString sTemplate, int id);
+              ```
+
+        - name: Infinity_DisplayString
+          detail: Infinity_DisplayString(...)
+          doc: |-
+              Displays to the screen the passed content as a string.
+
+              **Parameters**
+
+              * *...* -> special, see notes.
+
+              **Notes**
+
+              Similar to `printf` function, this function can accept a variable amount of parameters. Each parameter passed is evaluated, converted to a string if necessary and concatenated to form the final string to display on the screen.
+
+              Parameters that are:
+
+              * Integers -> converted to a string.
+              * Variables -> evaluated and the value of the variable is taken and converted to a string.
+              * Functions -> evaluated and the result used in other nested functions and/or evaluated to a string.
+
+              Paramters supports simple math and other lua functions.
+
+              You can inline concatenate strings and variables by using ``..`` between the string and variable and/or the next parameter, for example the ``class`` variable is concatenated to the string:
+
+              ```lua
+              Infinity_DisplayString("WARNING: unrecognized class argument: " .. class)
+              ```
+
+              **Examples**
+
+              - Display to screen using inline concatenate using 2 parameters, both using a string and a variable to evaluate:
+
+                ```lua
+                Infinity_DisplayString("config: "..config..", state: "..state)
+                ```
+
+              - Display to screen the result of simple math: (result is displayed as ``20000001``):
+
+                ```lua
+                Infinity_DisplayString(20000000 + 1)
+                ```
+
+        - name: Infinity_DoFile
+          detail: Infinity_DoFile(filename)
+          doc: |-
+              Loads and executes the lua file specified.
+
+              **Parameters**
+
+              * *filename* -> full filepath to lua filename to load and process.
+
+              **Notes**
+
+              The ``includes.lua`` file used by the game engine uses `Infinity_DoFile` to setup the lua environement for the ``UI.MENU`` and provides support for running any lua file that begins with ``M_`` found in the games ``override`` folder. The ``M_`` lua files are designated for modders.
+
+              **Example**
+
+              Load and execute the lua file: ``MyLuaFile.lua``:
+
+              ```lua
+              Infinity_DoFile("MyLuaFile")
+              ```
+
+        - name: Infinity_EnterEdit
+          detail: Infinity_EnterEdit(newText,oldText)
+          doc: |-
+              Enters new text into a UI edit control.
+
+              **Parameters**
+
+              * ``string`` *newText* -> string containing the new text content.
+              * ``string`` *oldText* -> string containing the old text content to replace.
+
+              **Notes**
+
+              - Searches through all UI edit controls looking for one that has a string containing `oldText` and replaces it with the `newText` string.
+              - Reads `uiItem`.edit => `uiItem::edit.var` to compare against `oldText`, if it matches then it is replaced with `newText`.
+              - Not tested or verified!
+
+              **Example**
+
+              ```lua
+              Infinity_EnterEdit("New text to replace","This is a test")
+              ```
+
+        - name: Infinity_FetchString
+          detail: Infinity_FetchString(StrRef)
+          doc: |-
+              Returns the string for the string reference id specified.
+
+              **Parameters**
+
+              * ``integer`` *StrRef* -> the string reference (`StrRef`) id to fetch.
+
+              **Return Value**
+
+              Returns the string for the StrRef id specified in the `StrRef` parameter.
+
+              **Notes**
+
+              Calls the `CTlkTable::Fetch` method to fetch the `StrRef` string into a `STR_RES` structure and pushes `STR_RES`.szText => `CString.m_pchData` onto the lua stack.
+
+              **Example**
+
+              Returns the string for StrRef ``38848`` (*"Greetings, good customer. A pearl to you."*):
+
+              ```lua
+              local pearl = Infinity_FetchString(38848)
+              ```
+
+        - name: Infinity_FindItemWithBam
+          detail: Infinity_FindItemWithBam(BamResRef,Sequence)
+          doc: |-
+              Find a UI control that has the specified bam resource reference.
+
+              **Parameters**
+
+              * ``string`` *BamResRef* -> the resource reference (`ResRef`) to search for that matches an existing UI control's bam `ResRef`.
+              * ``integer`` *Sequence* -> the bam sequence to match as well (optional).
+
+              **Return Value**
+
+              Returns userdata version of the item (a pointer to the `uiItem` structure of the matched UI control or a lua ``NIL``).
+
+              **Notes**
+
+              Searches through all UI controls from the main stack menu and linked list of UI controls:
+
+              * Reads `uiMenu`.items for an array of pointers. Each pointer in the array is a `uiItem` structure.
+
+              * Reads offset ``0x98``: `uiItem`.bam => `uiItem::bam`.resref
+
+              * If the `uiItem::bam`.resref field is ``0`` then the process looks for next uiItem in the linked list to process: reads `uiItem`.next field (offset ``0x22C``) and repeats the same step above by reading the `uiItem::bam`.resref field. If the `uiItem`.next field is ``0`` then the next pointer in the array of pointers from `uiMenu`.items is read and repeats the same step above by reading the `uiItem::bam`.resref field.
+
+              * If the `uiItem::bam`.resref field is not ``0`` then it converts the field value (a `uiVariant` type field) to a string. This string is a ResRef. This is then used in comparison with the *BamResRef* ResRef  string parameter.
+
+              * If the ResRef strings compared match, and the *Sequence* parameter is **not** specified, then the pointer the `uiItem` structure of the currently matched UI control, is pushed onto the lua stack and the function exits.
+
+              * If the ResRef strings compared match, and the *Sequence* parameter is specified and matches the value in the `uiItem::bam`.sequence field, then the pointer to the `uiItem` structure of the currently matched UI control, is pushed onto the lua stack and the function exits.
+
+              * If the ResRef strings compared match, and the *Sequence* parameter does **not** match the value in the `uiItem::bam`.sequence field, then the `uiItem`.slot => `uiItem::slot`.icon field (a `uiVariant` type) is read, the value converted to a ResRef string and compared to the *BamResRef* string parameter. If this comparison matches then the pointer to the `uiItem` structure of the currently matched UI control, is pushed onto the lua stack and the function exits.
+
+              * If the ResRef strings compared do **not** match, then the `uiItem`.slot => `uiItem::slot`.icon field (a `uiVariant` type) is read, the value converted to a ResRef string and compared to the *BamResRef* string parameter. If this comparison matches then the pointer to the `uiItem` structure of the currently matched UI control, is pushed onto the lua stack and the function exits.
+
+              * If the ResRef strings compared do **not** match, and there is a valid `uiItem`.next then the search and comparison process continues.
+
+              * If the ResRef strings compared do **not** match, and there is a no valid `uiItem`.next, but there is another pointer in array of pointers found at `uiMenu`.items then the search and comparison process continues.
+
+              * If the ResRef strings compared do **not** match and there are no more `uiItem` (via `uiItem`.next or `uiMenu`.items) then a lua nil is pushed to the lua stack and the function exits.
+
+              It is unknown how to exactly use this function as there are no known examples.
+
+              **Example**
+
+              Find the UI control that uses sequence ``3`` of ``GUIOSTLM.BAM`` (*which is the reform party button*).
+
+              ```lua
+              reformpartycontrol = Infinity_FindItemWithBam("GUIOSTLM",3)
+              ```
+
+        - name: Infinity_FindItemWithText
+          detail: Infinity_FindItemWithText(OriginalText)
+          doc: |-
+              Find a UI control that has the specified text.
+
+              **Parameters**
+
+              * ``string`` *OriginalText* -> the text to search for that matches an existing UI control's text.
+
+              **Return Value**
+
+              Returns userdata version of the item (a pointer to the `uiItem` structure of the matched UI control or a lua ``NIL``).
+
+              **Notes**
+
+              Searches through all UI controls from the main stack menu and linked list of UI controls:
+
+              * Reads `uiMenu`.items for an array of pointers. Each pointer in the array is a `uiItem` structure.
+
+              * Reads 140 bytes of the `uiItem` structure into a local buffer and checks offset ``0x70`` of the local buffer, which corresponds to the `uiItem`.text => `uiItem::text`.text field.
+
+              * If the `uiItem::text`.text field is ``0`` then the process looks for next uiItem in the linked list to process: reads `uiItem`.next field (offset ``0x22C``) and repeats the same step above by reading the `uiItem::text`.text field. If the `uiItem`.next field is ``0`` then the next pointer in the array of pointers from `uiMenu`.items is read and repeats the same step above by reading the `uiItem::text`.text field.
+
+              * If the `uiItem::text`.text field is not ``0`` then it converts the field value (a `uiVariant` type field) to an integer. This integer is a string reference (`StrRef`) id from the TLK table. The (`StrRef`) string is loaded into a buffer and this is then used in comparison with the *OriginalText* string parameter.
+
+              * If the strings compared match, then the pointer to the `uiItem` structure of the currently matched UI control, is pushed onto the lua stack and the function exits.
+
+              * If the strings compared do **not** match, and there is a valid `uiItem`.next then the search and comparison process continues.
+
+              * If the strings compared do **not** match, and there is a no valid `uiItem`.next, but there is another pointer in array of pointers found at `uiMenu`.items then the search and comparison process continues.
+
+              * If the strings compared do **not** match and there are no more `uiItem` (via `uiItem`.next or `uiMenu`.items) then a lua nil is pushed to the lua stack and the function exits.
+
+              It is unknown how to exactly use this function as there are no known examples.
+
+              **Example**
+
+              ```lua
+              -- Find the text control that has "Hello"
+
+              hellocontrol = Infinity_FindItemWithText("Hello")
+              ```
+
+        - name: Infinity_FindUIItemByName
+          detail: Infinity_FindUIItemByName(UIItemName)
+          doc: |-
+              Find a UI item by the name specified.
+
+              **Parameters**
+
+              * ``string`` *UIItemName* -> name of the UI item to find.
+
+              **Return Value**
+
+              Returns a pointer to a UI item.
+
+              **Notes**
+
+              Returns the pointer to the item stored in the ``nameToItem`` array, which is defined internally in the game executable as:
+
+              ```lua
+              nameToItem = {}
+              ```
+
+              Items are stored in the array like so:
+
+              ```lua
+              nameToItem['%s'] = nameToItemPointer
+              ```
+
+              The ``nameToItem`` array can be accessed directly in ``UI.MENU`` or other lua files.
+
+              For example, `Infinity_ClickItem` takes a `menuItem` userdata type and clicks the center of its area:
+
+              ```lua
+              Infinity_ClickItem(nameToItem["whaterNameHere"])
+              ```
+
+              **Example**
+
+              Get the inventory menu item:
+
+              ```lua
+              inventory = Infinity_FindUIItemByName("INVENTORY")
+              ```
+
+              Get the button control for the peasant room to rent at an inn:
+
+              ```lua
+              selectedRoom = Infinity_FindUIItemByName('BUTTON_room_peasant')
+              ```
+
+        - name: Infinity_FocusTextEdit
+          detail: Infinity_FocusTextEdit(element_name)
+          doc: |-
+              Set the keyboard focus to the specified text edit contol, so that typing will occur in the text edit control.
+
+              **Parameters**
+
+              * ``string`` *element_name* -> name of the text edit control to set the keyboard focus to.
+
+              **Notes**
+
+              Calls the `uiFocusTextEdit` function.
+
+              **Example**
+
+              Partial example of the CLUAConsole cheat text edit control being displayed and the focus moving to it so that typing occurs in that text edit control:
+
+              ```lua
+              name 'cheatConsole'
+              align center bottom
+              ignoreEsc
+
+              onOpen
+              "
+                toolbarTop = 50
+                Infinity_PushMenu('WORLD_MESSAGES')
+                Infinity_PushMenu('cheatMenu', 0, 0);
+                Infinity_FocusTextEdit('luaEditArea');
+                luaEdit = trim(luaEdit)
+                loadLuaHistory()
+              "
+              ```
+
+        - name: Infinity_GetArea
+          detail: Infinity_GetArea(element_name)
+          doc: |-
+              Returns the bounding rectangle (area) for the specified UI Control name.
+
+              **Parameters**
+
+              * ``string`` *element_name* -> name of the UI Control to return the bounding rectangle for.
+
+              **Return Value**
+
+              Returns as ``integer`` values: `x`, `y`, `w`, `h` -> x coordinate, y coordinate, width and height of rectangle.
+
+              **Example**
+
+              With a UI Label control named ``messagesRect``:
+
+              ```lua
+              label
+              {
+                  name 'messagesRect'
+                  area 0 111 863 142
+                  rectangle 4
+              }
+              ```
+
+              To get the area of the ``messagesRect`` label control:
+
+              ```lua
+              local x,y,w,h = Infinity_GetArea('messagesRect')
+              ```
+
+        - name: Infinity_GetClockTicks
+          detail: Infinity_GetClockTicks()
+          doc: |-
+              Returns the clock tick count in milliseconds.
+
+              **Return Value**
+
+              Returns an ``integer`` value of the clock tick in milliseconds.
+
+              **Notes**
+
+              - Calls the `SDL_GetTicks` function, coverts it to a lua number and pushes it onto the lua stack.
+              - Can be used to measure the time elapsed between calls to `Infinity_GetClockTicks`.
+
+              **Example**
+
+              Get tick count and store it to a variable:
+
+              ```lua
+              chatboxScrollTimeLast = Infinity_GetClockTicks()
+              ```
+
+              Later on, get tick count and use previously stored tick count value (``chatboxScrollTimeLast``) to measure time elapsed, and store it to a ``dT`` variable:
+
+              ```lua
+              local dT = Infinity_GetClockTicks() - chatboxScrollTimeLast
+              chatboxScrollTimeLast = Infinity_GetClockTicks()
+              ```
+
+              The ``dT`` variable now contains the elapsed time since `Infinity_GetClockTicks` was last called.
+
+        - name: Infinity_GetContainerItemDescription
+          detail: Infinity_GetContainerItemDescription(nSlotNum)
+          doc: |-
+              Updates the description and usability text of an item from a specified slot in a container.
+
+              **Parameters**
+
+              * ``integer`` *nSlotNum* -> slot number to return the item description and and usability text for.
+
+              **Notes**
+
+              Calls the following class methods: `CGameContainer::GetItem`, `CItem::GetUsabilityText` and `CItem::GetDescription`.
+
+              Updates an existing array named ``loot``, which is defined in ``UI.MENU`` as:
+
+              ```lua
+              loot =
+              {
+                  containerItems = {},
+                  groupItems = {},
+                  groundItems = {}
+              }
+              ```
+
+              The ``loot`` array is updated with the description and usability text of the item occupying the slot ``nSlotNum`` in the container.
+
+              **Example**
+
+              Update the item description using `Infinity_GetContainerItemDescription` and then access the ``loot`` array via the internal ``UI.MENU`` function ``showItemDescription``:
+
+              ```lua
+              function showContainerItemDescription(index)
+                local idxScrolled = index + worldScreen:GetTopContainerItem()
+                if(loot.containerItems[idxScrolled] == nil or loot.containerItems[idxScrolled].item == nil) then
+                    return nil
+                end
+                Infinity_GetContainerItemDescription(idxScrolled)
+                showItemDescription(loot.containerItems[idxScrolled].item, 2)
+              end
+              ```
+
+              The ``showItemDescription`` function, stores some of the ``loot`` array entries into another array ``itemDesc``. ``showItemDescription`` is defined as:
+
+              ```lua
+              itemDesc = {}
+              function showItemDescription(item, mode)
+                itemDesc.item = item
+                itemDesc.mode = mode
+                Infinity_PushMenu('ITEM_DESCRIPTION',0,0)
+              end
+              ```
+
+              The ``ITEM_DESCRIPTION`` menu, which uses the values in the ``itemDesc`` array is defined as:
+
+              ```lua
+              menu
+              {
+                name 'ITEM_DESCRIPTION'
+                align center center
+                modal
+                label
+                {
+                    area 0 0 864 710
+                    mosaic GUIINVHI
+                }
+                label
+                {
+                    area 81 11 700 44
+                    text "ITEM_TITLE"
+                    text style title
+                }
+                label
+                {
+                    area 402 66 52 52
+                    icon lua "itemDesc.item.icon"
+                }
+                label
+                {
+                    area 57 170 295 40
+                    text lua "itemDesc.item.name"
+                    text align center center
+                    text style "label"
+                    text color '5'
+                }
+                text
+                {
+                    area 356 180 430 353
+                    text lua "itemDesc.item.description"
+                    scrollbar 'GUISCRC'
+                    text style "normal_parchment"
+                }
+                label
+                {
+                    area 66 210 280 327
+                    bam lua "itemDesc.item.descPicture"
+                    sequence 0
+                    frame 0
+                    align center center
+                }
+                button
+                {
+                    bam         GUIOSTUL
+                    sequence    6
+                    area        57 638 234 44
+                    enabled "itemDescLeftButtonEnabled()"
+                    text lua "itemDescLeftButtonText()"
+                    text style "button"
+                    action
+                    "
+                        itemDescLeftButtonAction()
+                    "
+                }
+                button
+                {
+                    bam         GUIOSTUM
+                    sequence    6
+                    area        326 638 204 44
+                    text  "DONE_BUTTON"
+                    text style "button"
+                    action
+                    "
+                        Infinity_PopMenu();
+                    "
+                }
+                button
+                {
+                    bam         GUIOSTUR
+                    sequence    6
+                    area        572 638 234 44
+                    enabled "itemDescRightButtonEnabled()"
+                    text lua "itemDescRightButtonText()"
+                    text style "button"
+                    action
+                    "
+                        itemDescRightButtonAction()
+                    "
+                }
+              }
+
+              Note the use of ``itemDesc.item.name`` and ``itemDesc.item.description`` etc.
+
+        - name: Infinity_GetContentHeight
+          detail: Infinity_GetContentHeight(font,width,textcontent,point,indent,useFontZoom)
+          doc: |-
+              Returns the height of the text content in a UI control.
+
+              **Parameters**
+
+              * ``string`` *font* -> string containing resource reference (`ResRef`) of font.
+              * ``integer`` *width* -> width of the UI control hosting the content.
+              * ``string`` *textcontent* -> string containing the text content.
+              * ``integer`` *point* -> font size.
+              * ``integer`` *indent* -> a boolean value if indented ``1``, or ``0`` otherwise.
+              * ``integer`` *useFontZoom* -> boolean value if using font zoom ``1``, or ``0`` otherwise.
+
+              **Return Value**
+
+              Returns an ``integer`` of the calculated content height.
+
+              **Notes**
+
+              - Calculates the height of the text content in a UI control, taking into account the font used, the font size, word wrapping for the width of the UI control, indentation and/or font zooming.
+              - You should account for the width of the scrollbar when specifying the *width* parameter.
+              - ``useFontZoom`` is used for font scaling based on the font size (the ``point`` parameter). If ``useFontZoom`` is ``0``, the text content (the ``textcontent`` parameter) will always appear at the defined font size, if ``useFontZoom`` is ``1`` then font scaling will occur for the text content.
+
+              **Example**
+
+              ```lua
+              --Calculate running total of dialog content height
+              local x,y,w,h = Infinity_GetArea("worldPlayerDialogChoicesList")
+              w = w - 18 --account for scrollbar influence on width
+              local delta = Infinity_GetContentHeight(styles.normal.font, w, text, styles.normal.point, 1, styles.normal.useFontZoom) --1 for indent.
+              chatboxContentHeight = chatboxContentHeight + delta
+              ```
+
+              Note: styles are defined in the ``BGEE.LUA`` file.
+
+        - name: Infinity_GetCurrentGroundPage
+          detail: Infinity_GetCurrentGroundPage()
+          doc: |-
+              Returns the current page number of the ground inventory slots.
+
+              **Return Value**
+
+              Returns an ``integer`` representing the page number of the ground inventory slots.
+
+              **Notes**
+
+              - A ground page is a series of inventory slots representing ground items available to pick up or empty slots for items to be dropped into.
+              - Ground pages are used to scroll through the groupings of those ground based inventory slots. See also `Infinity_GetMaxGroundPage` and `Infinity_GetGroundItemDescription`.
+              - Calls the `CScreenInventory::GetCurrentGroundPage` method.
+
+        - name: Infinity_GetCurrentMovie
+          detail: Infinity_GetCurrentMovie()
+          doc: |-
+              Returns the current movie.
+
+              **Return Value**
+
+              Returns a ``string`` containing the resource reference (`ResRef`) of the current movie file (`WebM` file format).
+
+              **Notes**
+
+              - Reads `CBaldurChitin.m_pEngineProjector` => `CBaldurProjector.m_pMovie` => `CResWebM.CRes`.
+              - Compares active engine (`CWarp`).
+              - Pushes lua string onto stack or lua ``nil``.
+
+              Note: more research required!
+
+        - name: Infinity_GetCurrentScreenName
+          detail: Infinity_GetCurrentScreenName()
+          doc: |-
+              Returns current menu name.
+
+              **Return Value**
+
+              Returns a ``string`` of the current menu name, or an empty string if no menu active.
+
+              **Notes**
+
+              Uses `getMenuStackTop` and `getStackMenu` functions, and if successful, reads the value at `uiMenu.name` and pushes this value to the lua stack as a lua string.
+
+              **Examples**
+
+              Get the current menu name:
+
+              ```lua
+              curMenuName = Infinity_GetCurrentScreenName()
+              ```
+
+              Sets the button to clickable only if the current menu equals ``CHARGEN``:
+
+              ```lua
+              button
+              {
+                area 770 552 204 44
+                text "IMPORT_BUTTON"
+                text style "button"
+                bam GUIOSTUM
+                clickable lua "Infinity_GetCurrentScreenName() == 'CHARGEN'"
+                action "createCharScreen:OnImportCharacterButtonClick()"
+              }
+              ```
+
+        - name: Infinity_GetFilesOfType
+          detail: Infinity_GetFilesOfType(extension)
+          doc: |-
+              Returns a list of files that match the specified file extension.
+
+              **Parameters**
+
+              * ``string`` *extension* -> string containing file extension.
+
+              **Return Value**
+
+              An array of filenames that matched the specified file extension.
+
+              **Notes**
+
+              Converts extension to resource file type using the `chExtToType` function and fetches those filenames that match the resource type and stores them into an array.
+
+              The following extensions are supported:
+
+              * `bmp`
+              * `mve`
+              * `tga`
+              * `wav`
+              * `wfx`
+              * `plt`
+              * `bam`
+              * `wed`
+              * `chu`
+              * `tis`
+              * `spl`
+              * `bcs`
+              * `ids`
+              * `cre`
+              * `are`
+              * `dlg`
+              * `2da`
+              * `gam`
+              * `sto`
+              * `wmp`
+              * `chr`
+              * `bs`
+              * `eff`
+              * `vvc`
+              * `vef`
+              * `pro`
+              * `bio`
+              * `wbm`
+              * `gui`
+              * `sql`
+              * `pvrz`
+              * `glsl`
+              * `tot`
+              * `toh`
+              * `menu`
+              * `lua`
+              * `ttf`
+              * `png`
+              * `ini`
+
+              **Example**
+
+              ```lua
+              bamfilelist = Infinity_GetFilesOfType("bam")
+              ```
+
+        - name: Infinity_GetFrameCounter
+          detail: Infinity_GetFrameCounter()
+          doc: |-
+              Returns frame counter.
+
+              **Return Value**
+
+              Returns an ``int`` value representing frame counter.
+
+              **Notes**
+
+              Reads the value stored at offset ``0xC48`` of `CChitin`: `CChitin.nAUCounter`, converts it to a float and pushes it onto the lua stack.
+
+        - name: Infinity_GetGameTicks
+          detail: Infinity_GetGameTicks()
+          doc: |-
+              Returns game ticks.
+
+              **Return Value**
+
+              Returns an ``int`` value representing game ticks.
+
+              **Notes**
+
+              Reads `CBaldurChitin.m_pObjectGame` => `CInfGame.m_worldTime` => `CTimerWorld.m_gameTime` and multiplies it by the value stored in the variable ``TIMER_UPDATES_PER_SECOND``. The result is added together with itself, converted to a float and pushed onto the lua stack.
+
+              The variable ``TIMER_UPDATES_PER_SECOND`` located at offset ``0x00938778`` is initially set to ``30`` (``0x1E``).
+
+        - name: Infinity_GetGroundItemDescription
+          detail: Infinity_GetGroundItemDescription(item_index,slot_id,container_id)
+          doc: |-
+              Returns a string containing the item's description as seen on the ground.
+
+              **Parameters**
+
+              * *item_index* -
+              * *slot_id* -
+              * *container_id* -
+
+              **Return Value**
+
+              ``string``.
+
+        - name: Infinity_GetGroupItemDescription
+          detail: Infinity_GetGroupItemDescription(item_index)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_GetInCutsceneMode
+          detail: Infinity_GetInCutsceneMode(???)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_GetINIString
+          detail: Infinity_GetINIString(section_name,value_name,default_value)
+          doc: |-
+              Returns a string containing an ini section key value.
+
+              **Parameters**
+
+              * *section_name* -> section name in an ini file.
+              * *value_name* -> the key in the section to return the value for.
+              * *default_value* -> the default value to return if key does not exist.
+
+              **Return Value**
+
+              ``string``.
+
+        - name: Infinity_GetINIValue
+          detail: Infinity_GetINIValue(section_name,value_name,default_value)
+          doc: |-
+              Returns an integer value containing an ini section key value.
+
+              **Parameters**
+
+              * *section_name* -> section name in an ini file.
+              * *value_name* -> the key in the section to return the value for.
+              * *default_value* -> the default value to return if key does not exist.
+
+              **Return Value**
+
+              ``int``.
+
+        - name: Infinity_GetListHeight
+          detail: Infinity_GetListHeight(list_name)
+          doc: |-
+              Returns the height of the specified UI List control.
+
+              **Parameters**
+
+              * ``string`` *list_name* -> name of the UI List control.
+
+              **Return Value**
+
+              Returns an ``integer`` value of the specified list's height.
+
+              **Example**
+
+              Get the height of the ``worldPlayerDialogChoicesList`` list in ``UI.MENU``:
+
+              ```lua
+              local choicesHeight = Infinity_GetListHeight('worldPlayerDialogChoicesList')
+              ```
+
+        - name: Infinity_GetMaxChapterPage
+          detail: Infinity_GetMaxChapterPage()
+          doc: |-
+              Returns the chapter number that the game campaign is at currently.
+
+              **Return Value**
+
+              Returns an ``integer`` containing the current chapter number.
+
+              **Notes**
+
+              Returns the value of the ``CHAPTER`` token. Calls the `CVariableHash::FindKey` method and reads offset ``0x28`` of `CVariable`: `CVariable.m_cAreaVariable` => `CAreaVariable.m_intValue`, and pushes that value to the lua stack.
+
+              **Example**
+
+              Used in the ``JOURNAL`` menu in ``UI.MENU`` to update the current chapter number:
+
+              ```lua
+              menu
+              {
+                  name 'JOURNAL'
+                  align left top
+                  offset 80 0
+                  ignoreEsc
+                  enabled "sidebarsGreyed ~= 1"
+                  onopen "
+                      reinitQuests()
+                      buildQuestDisplay()
+                      chapter = math.max(0,Infinity_GetMaxChapterPage());
+              ```
+
+        - name: Infinity_GetMaxGroundPage
+          detail: Infinity_GetMaxGroundPage()
+          doc: |-
+              Returns maximum ground pages.
+
+              **Return Value**
+
+              Returns an ``integer`` value of the maximum ground pages.
+
+              **Notes**
+
+              - A ground page is a series of inventory slots representing ground items available to pick up or empty slots for items to be dropped into.
+              - Ground pages are used to scroll through the groupings of those ground based inventory slots. See also `Infinity_GetCurrentGroundPage` and `Infinity_GetGroundItemDescription`.
+              - Calls the `CScreenInventory::GetMaxGroundPage` method and pushed the value to the lua stack.
+
+        - name: Infinity_GetMenuArea
+          detail: Infinity_GetMenuArea(menu_name)
+          doc: |-
+              Returns the bounding rectangle (area) for the specified UI Menu name.
+
+              **Parameters**
+
+              * ``string`` *menu_name* -> name of the UI Menu to return the bounding rectangle for.
+
+              **Return Value**
+
+              Returns as ``integer`` values: `x`, `y`, `w`, `h` -> x coordinate, y coordinate, width and height of rectangle.
+
+              **Example**
+
+              Get the area of the ``JOURNAL`` menu:
+
+              ```lua
+              local offsetX,offsetY,menuWidth,menuHeight = Infinity_GetMenuArea('JOURNAL')
+              ```
+
+        - name: Infinity_GetMenuItemByName
+          detail: Infinity_GetMenuItemByName(item_name)
+          doc: |-
+              Returns the UI menu item that has the specified name.
+
+              **Parameters**
+
+              * ``string`` *item_name* -> name of the menu item.
+
+              **Return Value**
+
+              Returns userdata version of the menu item (a pointer to the `uiItem` structure of the matched UI control or a lua ``NIL``).
+
+              **Example**
+
+              ```lua
+              MenuItem_InvSlot1 = Infinity_GetMenuItemByName("slot_inv_1")
+              ```
+
+        - name: Infinity_GetMousePosition
+          detail: Infinity_GetMousePosition()
+          doc: |-
+              Returns mouse position.
+
+              **Return Value**
+
+              Returns as ``integer`` `x`, `y` -> x coordinate and y coordinate of mouse position.
+
+              **Example**
+
+              ```lua
+              x,y = Infinity_GetMousePosition();
+              ```
+
+        - name: Infinity_GetNumCharacters
+          detail: Infinity_GetNumCharacters()
+          doc: |-
+              Returns total number of characters currently in the party.
+
+              **Return Value**
+
+              Returns an ``integer`` value of the number of characters in the party.
+
+              **Example**
+
+              From ``UI.MENU`` -> enable a portrait button for the 4th character, if there is greater than 3 characters in the party:
+
+              ```lua
+              button
+              {
+                area 11 290 64 90
+                portrait 3
+                bam GUIRSP10
+                enabled "Infinity_GetNumCharacters() > 3"
+              ```
+
+        - name: Infinity_GetOffset
+          detail: Infinity_GetOffset(menu_name)
+          doc: |-
+              Get the position of a menu on the screen.
+
+              **Parameters**
+
+              * ``string`` *menu_name* -> name of the menu to return the position for.
+
+              **Return Value**
+
+              Returns as ``integer`` values: `x`, `y` -> x coordinate and y coordinate of the menu position.
+
+              **Example**
+
+              ```lua
+              Infinity_GetOffset("JOURNAL")
+              ```
+
+        - name: Infinity_GetOption
+          detail: Infinity_GetOption(option_id,panel_id)
+          doc: |-
+              Get the value of an option in a panel.
+
+              **Parameters**
+
+              * ``integer`` *option_id* -> id of the option to get value for.
+              * ``integer`` *panel_id* -> id of the panel.
+
+              **Return Value**
+
+              Returns an ``integer`` value of the option id specified: *option_id* in *panel_id*.
+
+              See also `Infinity_ChangeOption`.
+
+              **Example**
+
+              Get the value of option id ``1`` in panel id ``8`` (``panelID`` = ``8``) to a variable ``ttDelaySLDR`` and then set option id ``1`` in panel id ``8`` (``panelID`` = ``8``) to the value of the ``ttDelaySLDR`` variable.
+
+              ```lua
+              panelID = 8
+              ttDelaySLDR = Infinity_GetOption(1, panelID)
+              Infinity_ChangeOption( 1, ttDelaySLDR, panelID)
+              ```
+
+        - name: Infinity_GetPasswordRequired
+          detail: Infinity_GetPasswordRequired(id)
+          doc: |-
+              Updates the ``passwordReq`` lua variable with the password requirement.
+
+              **Parameters**
+
+              * ``integer`` *id* -> ``1`` based index of the ``mp_sessions`` array entry to update.
+
+              **Notes**
+
+              Updates an existing multidimensional array named ``mp_sessions`` defined in the EE game executable and an existing lua variable ``passwordReq``.
+
+              ``passwordReq`` is defined in ``UI.MENU`` as:
+
+              ```lua
+              passwordReq = 0
+              ```
+
+              Each entry in ``mp_sessions`` has the following elements:
+
+              * ``description``
+              * ``flags``
+              * ``max_players``
+              * ``players``
+              * ``port``
+              * ``name``
+              * ``password``
+
+              After the ``mp_sessions`` array has been updated, the ``flags`` value (which contains amongst other things the password requirement) is placed into the ``passwordReq`` lua variable as a ``boolean`` value: ``1`` true or ``0`` false.
+
+              **Example**
+
+              The ``gameHasPassword`` function from ``UI.MENU``:
+
+              ```lua
+              function gameHasPassword(slot)
+                if(mp_sessions[mp_shownSessions[slot]["actualIndex"]] == nil) then
+                  --if the session isn't loaded don't show anything.
+                  return ""
+                end
+                Infinity_GetPasswordRequired(mp_shownSessions[slot]["actualIndex"])
+                if passwordReq ~= 0 then
+                  ret = t("YES")
+                else
+                  ret = t("NO")
+                end
+                return ret
+              end
+              ```
+
+        - name: Infinity_GetPortraitTooltip
+          detail: Infinity_GetPortraitTooltip(index)
+          doc: |-
+              Returns a string containing the tooltip for a specified portrait index.
+
+              **Parameters**
+
+              * ``integer`` *index* -> a ``0`` based index of the portrait to return the tooltip text for.
+
+              **Return Value**
+
+              Returns a ``string`` containing the tooltip for a specified portrait index.
+
+              **Example**
+
+              Get tooltip for portrait of character 1:
+
+              ```lua
+              char1tooltip = Infinity_GetPortraitTooltip(0)
+              ```
+
+        - name: Infinity_GetScreenSize
+          detail: Infinity_GetScreenSize()
+          doc: |-
+              Returns the width and height of the screen -> the screen resolution.
+
+              **Return Value**
+
+              Returns as ``integer``: `w`, `h` -> width and height.
+
+              **Example**
+
+              ```lua
+              local screenWidth, screenHeight = Infinity_GetScreenSize()
+              ```
+
+        - name: Infinity_GetScriptVarInt
+          detail: Infinity_GetScriptVarInt(ScriptVar)
+          doc: |-
+              Returns the value of a script variable as an ``integer``.
+
+              **Parameters**
+
+              * ``string`` *ScriptVar* -> the script variable to return the value of.
+
+              **Return Value**
+
+              Returns the value of a script variable as an ``integer``.
+
+              **Notes**
+
+              Calls the `CVariableHash::FindKey` method.
+
+        - name: Infinity_GetScrollIdentifyEnabled
+          detail: Infinity_GetScrollIdentifyEnabled(item_id)
+          doc: |-
+              Determines if the specified item requires identification, and can be identified via an Indentify scroll.
+
+              **Parameters**
+
+              * ``integer`` *item_id* -> item id.
+
+              **Return Value**
+
+              Returns a ``boolean`` value: ``1`` true, or ``0`` false.
+
+              **Notes**
+
+              - Calls the `CScreenInventory::GetScrollIdentifyEnabled` method.
+              - See also `Infinity_GetSpellIdentifyEnabled`.
+
+              **Example**
+
+              The Indentify via a scroll button is enabled if the item requires identification (and there is an Identify scroll in the character's possession). Defined in ``UI.MENU`` as:
+
+              ```lua
+              button
+              {
+                  area 52 214 302 44
+                  bam GUIOSTCL
+                  text style "button"
+                  text "SCROLL_BUTTON"
+
+                  clickable lua "Infinity_GetScrollIdentifyEnabled(characters[id].equipment[selectedSlot].id)"
+                  action
+                  "
+                      Infinity_OnScrollIdentify(characters[id].equipment[selectedSlot].id)
+                      Infinity_PopMenu()
+                      itemDesc.item = characters[id].equipment[selectedSlot].item --update itemDesc item
+                  "
+              }
+              ```
+
+        - name: Infinity_GetSelectedCharacterName
+          detail: Infinity_GetSelectedCharacterName()
+          doc: |-
+              Returns a string containing the currently selected character's name.
+
+              **Return Value**
+
+              Returns a ``string`` containing the currently selected character's name.
+
+              **Example**
+
+              Set a label UI control's text with the current characters name:
+
+              ```lua
+              label
+              {
+                  area 467 116 250 30
+                  text  lua "Infinity_GetSelectedCharacterName()"
+                  text style "label"
+                  align left center
+              }
+              ```
+
+        - name: Infinity_GetSpellIdentifyEnabled
+          detail: Infinity_GetSpellIdentifyEnabled(item_id)
+          doc: |-
+              Determines if the specified item requires identification, and can be identified via an Indentify spell (or a magical item that can cast an Identify spell).
+
+              **Parameters**
+
+              * ``string`` *item_id* ->  item id.
+
+              **Return Value**
+
+              Returns a ``boolean`` value: ``1`` true, or ``0`` false.
+
+              **Notes**
+
+              - Calls the `CScreenInventory::GetSpellIdentifyEnabled` method.
+              - See also `Infinity_GetScrollIdentifyEnabled`.
+
+              **Example**
+
+              The Indentify via a spell button is enabled if the item requires identification (and there is an Identify spell in the character's possession). Defined in ``UI.MENU`` as:
+
+              ```lua
+              button
+              {
+                  area 52 258 302 44
+                  bam GUIOSTCL
+                  text style "button"
+                  text "SPELL_BUTTON"
+
+                  clickable lua "Infinity_GetSpellIdentifyEnabled(characters[id].equipment[selectedSlot].id)"
+                  action
+                  "
+                      Infinity_OnSpellIdentify(characters[id].equipment[selectedSlot].id);
+                      Infinity_PopMenu()
+                      itemDesc.item = characters[id].equipment[selectedSlot].item --update itemDesc item
+                  "
+              }
+              ```
+
+        - name: Infinity_GetTimeString
+          detail: Infinity_GetTimeString()
+          doc: |-
+              Returns a formatted date and time string.
+
+              **Return Value**
+
+              Returns a ``string`` containing the date and time -> a timestamp.
+
+              **Notes**
+
+              Calls the `CTimerWorld::GetCurrentTimeString` method.
+
+              **Example**
+
+              Editing a journal entry will automatically place a date time value, defined in ``UI.MENU`` as:
+
+              ```lua
+              label
+              {
+                  enabled "journalMode == const.JOURNAL_MODE_EDIT"
+                  area 58 144 382 42
+                  text style "label"
+                  text color 0 120 0 255
+                  text lua "Infinity_GetTimeString()"
+              }
+              ```
+
+        - name: Infinity_GetTransitionInProgress
+          detail: Infinity_GetTransitionInProgress()
+          doc: |-
+              Returns the transition value.
+
+              **Return Value**
+
+              Pushes the ``transition`` variable value to the lua stack.
+
+              **Notes**
+
+              - ``transition`` variable located at offset ``0x00986720`` in BG2:EE.
+              - ``transition`` variable value set in `Infinity_TransitionMenu`, `drawTop`, and `eventMenu` functions.
+
+        - name: Infinity_GetUseButtonText
+          detail: Infinity_GetUseButtonText(item_id,mode)
+          doc: |-
+              Returns "Use x" button text of an item name for an item specified.
+
+              **Parameters**
+
+              * ``integer`` *item_id* -> item id.
+              * ``integer`` *mode* -> mode.
+
+              **Return Value**
+
+              Returns a ``string`` containing the "Use x" of the item specified.
+
+              **Notes**
+
+              Calls the `CScreenInventory::GetUseButtonText` method.
+
+        - name: Infinity_GooglePlaySignedIn
+          detail: Infinity_GooglePlaySignedIn()
+          doc: |-
+              Determines if signed into Google Play.
+
+              **Return Value**
+
+              Returns an ``integer`` value representing ``1`` true, or ``0`` false otherwise.
+
+              **Notes**
+
+              - Calls the `CPlatform::IsPlatformServiceConnected` function.
+              - Reads `CChitin.cSteam` => `CSteam.m_isSteamConnected`.
+
+              On builds that are not android returns ``false``.
+
+              **Example**
+
+              A Google Play sign in/out button from ``UI.MENU``:
+
+              ```lua
+              function getGooglePlaySignInText()
+                if(Infinity_GooglePlaySignedIn() == 1) then
+                  return t("SIGN_OUT_BUTTON")
+                else
+                  return t("SIGN_IN_BUTTON")
+                end
+              end
+              ```
+
+        - name: Infinity_HighlightJournalButton
+          detail: Infinity_HighlightJournalButton()
+          doc: |-
+              Unknown purpose.
+
+              **Notes**
+
+              - Returns ``0`` false.
+              - Called from `highlightJournalButton` function in ``UTIL.LUA``.
+
+              **Example**
+
+              See `highlightJournalButton` function in ``UTIL.LUA``.
+
+        - name: Infinity_HoverMouseOver
+          detail: Infinity_HoverMouseOver(x,y)
+          doc: |-
+              Moves where your mouse cursor is in the game world.
+
+              **Parameters**
+
+              * ``integer`` *x* -> x coordinate to click world at.
+              * ``integer`` *y* -> y coordinate to click world at.
+
+              **Notes**
+
+              - It doesn't actaully move the mouse cursor, but the game engine thinks it does.
+              - `Infinity_HoverMouseOver` will instantly move your mouse into the game world, but it won't move to the proper `x`,`y` for one frame (I think?).
+              - If you don't include `Infinity_HoverMouseOver` before `Infinity_ClickWorldAt`, it will click at world coordinates ``0``, ``0`` by assuming your cursor is over the interface.
+
+              You can force a click in the game world like so:
+
+              ```lua
+              Infinity_HoverMouseOver(x,y)
+              Infinity_ClickWorldAt(x,y)
+              ```
+
+        - name: Infinity_HoverMouseOverObject
+          detail: Infinity_HoverMouseOverObject(objectname)
+          doc: |-
+              Activate AI script file for object that mouse is hovering over (?) - not tested/verified!
+
+              **Parameters**
+
+              * ``string`` *objectname* -> name of the object.
+
+              **Return Value**
+
+              ??? - Unknown
+
+              **Notes**
+
+              Calls the `CAIScriptFile::CAIScriptFile` method.
+
+        - name: Infinity_InstanceAnimation
+          detail: Infinity_InstanceAnimation(Template,BamResRef,x,y,w,h,list,list_index)
+          doc: |-
+              Creates a temporary single instance animation of a bam, based on the UI template provided. Once the animation has finished, the UI control that was created and based on the UI template provided, is no longer present or visible.
+
+              **Parameters**
+
+              * ``string`` *Template* -> UI template name.
+              * ``string`` *BamResRef* -> resource reference of bam to show/animate.
+              * ``integer`` *x* -> left position.
+              * ``integer`` *y* -> top position.
+              * ``integer`` *w* -> width.
+              * ``integer`` *h* -> height.
+              * ``string`` *list* -> list/array.
+              * ``integer`` *list_index* -> 1 based index of entry in *list*.
+
+              **Notes**
+
+              As defined in ``UI.MENU`` on memorizing a spell: is set to play the default ``GAM_24.WAV`` sound and to play the ``FLASHBR.BAM`` animation.
+
+              **Example**
+
+              Shows sparkle as user clicks on mage spell to memorize:
+
+              ```lua
+              Infinity_InstanceAnimation("TEMPLATE_mageMemorizationSparkle","FLASHBR",x,y,w,h,fromList,listIndex)
+              ```
+
+        - name: Infinity_IsItemEnabled
+          detail: Infinity_IsItemEnabled(???)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_IsMenuOnStack
+          detail: Infinity_IsMenuOnStack(menu_name)
+          doc: |-
+              Currently undocumented, but appears to return a boolean value if the specified menu is on the lua stack.
+
+        - name: Infinity_IsPlayerMoving
+          detail: Infinity_IsPlayerMoving(???)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_JoinMultiplayerGame
+          detail: Infinity_JoinMultiplayerGame(id)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_LaunchURL
+          detail: Infinity_LaunchURL(???)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_LevelUp
+          detail: Infinity_LevelUp()
+          doc: |-
+              Opens level up dialog.
+
+              **Notes**
+
+              - Calls `CScreenCharacter::OnLevelUpButtonClick` to open the level up dialog.
+              - Unknown if calling this will work without specifying a character like `Infinity_ActivateRecord` does.
+
+        - name: Infinity_Log
+          detail: Infinity_Log(msg)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_LookAtObjectInWorld
+          detail: Infinity_LookAtObjectInWorld(???)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_LuaConsoleInput
+          detail: Infinity_LuaConsoleInput(???,???)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_OnAddUserEntry
+          detail: Infinity_OnAddUserEntry(string)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_OnCharacterImportItemSelect
+          detail: Infinity_OnCharacterImportItemSelect(table_index)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_OnCharacterItemSelect
+          detail: Infinity_OnCharacterItemSelect(table_index)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_OnEditUserEntry
+          detail: Infinity_OnEditUserEntry(string1,string2)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_OnGroundPage
+          detail: Infinity_OnGroundPage(increment)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_OnPortraitDblClick
+          detail: Infinity_OnPortraitDblClick(index)
+          doc: |-
+              Event action when mouse double clicks a character portrait.
+
+              **Parameters**
+
+              * *index* -> index of portrait being double clicked.
+
+        - name: Infinity_OnPortraitItemSelect
+          detail: Infinity_OnPortraitItemSelect(???)
+          doc: |-
+              Event action when character portrait is selected.
+
+              **Parameters**
+
+              ???
+
+              **Return Value**
+
+              ???
+
+        - name: Infinity_OnPortraitLClick
+          detail: Infinity_OnPortraitLClick(index)
+          doc: |-
+              Event action when mouse left clicks a character portrait.
+
+              **Parameters**
+
+              * *index* -> index of portrait being clicked.
+
+        - name: Infinity_OnPortraitRClick
+          detail: Infinity_OnPortraitRClick(index)
+          doc: |-
+              Event action when mouse right clicks a character portrait.
+
+              **Parameters**
+
+              * *index* -> index of portrait being clicked.
+
+        - name: Infinity_OnRemoveUserEntry
+          detail: Infinity_OnRemoveUserEntry(string)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_OnRest
+          detail: Infinity_OnRest(???)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_OnScriptItemSelect
+          detail: Infinity_OnScriptItemSelect(table_index)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_OnScrollIdentify
+          detail: Infinity_OnScrollIdentify(item_id)
+          doc: |-
+              Event action when a scroll identifies an item.
+
+              **Parameters**
+
+              * ``integer`` *item_id* -> id of the item being identified.
+
+        - name: Infinity_OnSoundItemSelect
+          detail: Infinity_OnSoundItemSelect(table_index)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_OnSpellIdentify
+          detail: Infinity_OnSpellIdentify(item_id)
+          doc: |-
+              Event action when a spell identifies an item.
+
+              **Parameters**
+
+              * ``integer`` *item_id* -> id of the item being identified.
+
+        - name: Infinity_OnUseButtonClick
+          detail: Infinity_OnUseButtonClick(item_id,mode)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_OpenInventoryContainer
+          detail: Infinity_OpenInventoryContainer(resref)
+          doc: |-
+              Currently unknown.
+
+              **Parameters**
+
+              * ``string`` *resref* -> resource reference of the container being opened.
+
+        - name: Infinity_PlayMovie
+          detail: Infinity_PlayMovie(movie_name,element_name)
+          doc: |-
+              Plays a movie (a `WebM` file format).
+
+              **Parameters**
+
+              * *movie_name* -> resource reference of the movie to play.
+              * *element_name* -> unknown.
+
+        - name: Infinity_PlaySound
+          detail: Infinity_PlaySound(resref)
+          doc: |-
+              Plays a sound.
+
+              **Parameters**
+
+              * ``string`` *resref* -> resource reference of the sound to play.
+
+        - name: Infinity_PopMenu
+          detail: Infinity_PopMenu(menu_name)
+          doc: |-
+              Removes the specified menu from the lua stack.
+
+              **Parameters**
+
+              * ``string`` *menu_name* -> name of the menu to remove.
+
+        - name: Infinity_PressKeyboardButton
+          detail: Infinity_PressKeyboardButton(???)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_PushMenu
+          detail: Infinity_PushMenu(menu_name)
+          doc: |-
+              Adds the specified menu to the lua stack.
+
+              **Parameters**
+
+              * ``string`` *menu_name* -> name of the menu to add.
+
+        - name: Infinity_RandomNumber
+          detail: Infinity_RandomNumber(min,range)
+          doc: |-
+              Returns an random number.
+
+              **Parameters**
+
+              * ``int`` *min* -> minimum value of random number.
+              * ``int`` *range* -> maximum value of random number.
+
+              **Return Value**
+
+              ``int``.
+
+        - name: Infinity_RemoveINIEntry
+          detail: Infinity_RemoveINIEntry(section_name,value_name)
+          doc: |-
+              Removes an ini section key value.
+
+              **Parameters**
+
+              * ``string`` *section_name* -> ini section name.
+              * ``string`` *value_name* -> key in the ini section to remove.
+
+        - name: Infinity_RequestMultiplayerGameDetails
+          detail: Infinity_RequestMultiplayerGameDetails(???)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_ScaleToText
+          detail: Infinity_ScaleToText(element_name)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_ScrollLists
+          detail: Infinity_ScrollLists(???)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_SelectDialogueOption
+          detail: Infinity_SelectDialogueOption(???)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_SelectItemAbility
+          detail: Infinity_SelectItemAbility(ability_index,item_num,item_id)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_SelectListItem
+          detail: Infinity_SelectListItem(???)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_SendChatMessage
+          detail: Infinity_SendChatMessage(msg,boolean)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_SetArea
+          detail: Infinity_SetArea(element_name,x,y,w,h)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_SetBackground
+          detail: Infinity_SetBackground(menu_name)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_SetCloudEnabled
+          detail: Infinity_SetCloudEnabled(???)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_SetGooglePlaySigninState
+          detail: Infinity_SetGooglePlaySigninState(???)
+          doc: |-
+                Currently unknown.
+
+        - name: Infinity_SetHairColor
+          detail: Infinity_SetHairColor(index)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_SetHighlightColors
+          detail: Infinity_SetHighlightColors(lr,lg,lb,la,cr,cg,cb,ca,rr,rg,rb,ra)
+          doc: |-
+              Set a color or color gradient for UI elements in the options dialogs that are currently selected.
+
+              **Parameters**
+
+              * ``hexidecimal`` *lr* -> left color: the intensity of the red color channel.
+              * ``hexidecimal`` *lg* -> left color: the intensity of the green color channel.
+              * ``hexidecimal`` *lb* -> left color: the intensity of the blue color channel.
+              * ``hexidecimal`` *la* -> left color: the transparency level of the alpha channel.
+              * ``hexidecimal`` *cr* -> center color: the intensity of the red color channel.
+              * ``hexidecimal`` *cg* -> center color: the intensity of the green color channel.
+              * ``hexidecimal`` *cb* -> center color: the intensity of the blue color channel.
+              * ``hexidecimal`` *ca* -> center color: the transparency level of the alpha channel.
+              * ``hexidecimal`` *rr* -> right color: the intensity of the red color channel.
+              * ``hexidecimal`` *rg* -> right color: the intensity of the green color channel.
+              * ``hexidecimal`` *rb* -> right color: the intensity of the blue color channel.
+              * ``hexidecimal`` *ra* -> right color: the transparency level of the alpha channel.
+
+              **Notes**
+
+              - User three color definitions: left, center and right.
+              - Parameters use **hexidecimal** values (prefixed with ``0x``) for each color color and the alpha channel level.
+
+              **Example**
+
+              ```lua
+              Infinity_SetHighlightColors(0x7F,0x00,0x7F,0xff, 0x00,0x7F,0x00,0xff, 0x00,0x00,0x7F,0xff)
+              ```
+
+        - name: Infinity_SetINIValue
+          detail: Infinity_SetINIValue(section_name,value_name,value)
+          doc: |-
+              Sets a value of an ini section key.
+
+              **Parameters**
+
+              * ``string`` *section_name* -> ini section to set the key value for.
+              * ``string`` *value_name* -> the key in the ini section to set the value for.
+              * ``string`` *value* -> the new value of the key.
+
+              **Example**
+
+              Set the ``Player Name`` key in ``Multiplayer`` section to the value of the variable ``connectionPlayerNameEdit``.
+
+              ```lua
+              if connectionPlayerNameEdit == "" then
+                connectionPlayerNameEdit = Infinity_GetINIString('Multiplayer', 'Player Name', player)
+                Infinity_SetINIValue('Multiplayer', 'Player Name', connectionPlayerNameEdit)
+              end
+              ```
+
+        - name: Infinity_SetKey
+          detail: Infinity_SetKey(value,type)
+          doc: |-
+              Sets key in C++ memory. See function ``setKey(newValue)``.
+
+        - name: Infinity_SetLanguage
+          detail: Infinity_SetLanguage(lang_id,showSubTitles)
+          doc: |-
+              Currently unknown, but appears to set the language of the game based on a language id and whether to show subtitles or not.
+
+        - name: Infinity_SetMajorColor
+          detail: Infinity_SetMajorColor(index)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_SetMinorColor
+          detail: Infinity_SetMinorColor(index)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_SetOffset
+          detail: Infinity_SetOffset(menu_name,x,y)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_SetOverlay
+          detail: Infinity_SetOverlay(menu_name)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_SetScreenSize
+          detail: Infinity_SetScreenSize(w,h)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_SetScrollTop
+          detail: Infinity_SetScrollTop(???)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_SetSkinColor
+          detail: Infinity_SetSkinColor(index)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_SetToken
+          detail: Infinity_SetToken(token_name,value)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_ShutdownGame
+          detail: Infinity_ShutdownGame()
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_SignInOutButtonEnabled
+          detail: Infinity_SignInOutButtonEnabled(???)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_SplitItemStack
+          detail: Infinity_SplitItemStack(item_id,count,slot_name)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_StartItemCapture
+          detail: Infinity_StartItemCapture(map_name)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_StartKeybind
+          detail: Infinity_StartKeybind(action)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_StopItemCapture
+          detail: Infinity_StopItemCapture(map_name)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_StopKeybind
+          detail: Infinity_StopKeybind()
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_StopMovie
+          detail: Infinity_StopMovie(element_name)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_SwapSlot
+          detail: Infinity_SwapSlot(???)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_SwapWithAppearance
+          detail: Infinity_SwapWithAppearance()
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_SwapWithPortrait
+          detail: Infinity_SwapWithPortrait(index)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_TakeScreenshot
+          detail: Infinity_TakeScreenshot()
+          doc: |-
+              Currently unknown, but appears to take a screenshot of the game when called.
+
+        - name: Infinity_TextEditHasFocus
+          detail: Infinity_TextEditHasFocus()
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_TransitionMenu
+          detail: Infinity_TransitionMenu(menu_name)
+          doc: |-
+              As per `Infinity_PushMenu`, but also plays a transition animation when changing menu.
+
+        - name: Infinity_UpdateCharacterRecordExportPanel
+          detail: Infinity_UpdateCharacterRecordExportPanel()
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_UpdateCloudSaveState
+          detail: Infinity_UpdateCloudSaveState()
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_UpdateInventoryRequesterPanel
+          detail: Infinity_UpdateInventoryRequesterPanel(???)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_UpdateLuaStats
+          detail: Infinity_UpdateLuaStats()
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_UpdateStoreMainPanel
+          detail: Infinity_UpdateStoreMainPanel(???)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_UpdateStoreRequesterPanel
+          detail: Infinity_UpdateStoreRequesterPanel(???)
+          doc: |-
+              Currently unknown.
+
+        - name: Infinity_WriteINILine
+          detail: Infinity_WriteINILine(file_handle,string)
+          doc: |-
+              Write a line of text to an ini file.
+
+              **Parameters**
+
+              * *file_handle* -> unknown.
+              * *string* - text to write out to ini file.
+
+inventoryScreen:
+    type: 3
+    items:
+        - name: inventoryScreen:IsMultiPlayerViewable
+          detail: inventoryScreen:IsMultiPlayerViewable()
+          doc: |-
+              Currently unknown.
+
+        - name: inventoryScreen:IsSpriteOrderable
+          detail: inventoryScreen:IsSpriteOrderable()
+          doc: |-
+              Currently unknown.
+
+loadScreen:
+    type: 3
+    items:
+        - name: loadScreen:DeleteGame
+          detail: loadScreen:DeleteGame()
+          doc: |-
+              Currently unknown.
+
+        - name: loadScreen:LoadGame
+          detail: loadScreen:LoadGame()
+          doc: |-
+              Currently unknown.
+
+        - name: loadScreen:OnMainCancelButtonClick
+          detail: loadScreen:OnMainCancelButtonClick()
+          doc: |-
+              Currently unknown.
+
+mageScreen:
+    type: 3
+    items:
+        - name: mageScreen:CancelSequencingSpells
+          detail: mageScreen:CancelSequencingSpells()
+          doc: |-
+              Currently unknown.
+
+        - name: mageScreen:DoneSequencingSpells
+          detail: mageScreen:DoneSequencingSpells()
+          doc: |-
+              Currently unknown.
+
+        - name: mageScreen:EraseKnownSpell
+          detail: mageScreen:EraseKnownSpell()
+          doc: |-
+              Currently unknown.
+
+        - name: mageScreen:GetSpellLevel
+          detail: mageScreen:GetSpellLevel()
+          doc: |-
+              Currently unknown.
+
+        - name: mageScreen:MemorizeSpell
+          detail: mageScreen:MemorizeSpell()
+          doc: |-
+              Currently unknown.
+
+        - name: mageScreen:OnDispellButtonClick
+          detail: mageScreen:OnDispellButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: mageScreen:SequenceSpell
+          detail: mageScreen:SequenceSpell()
+          doc: |-
+              Currently unknown.
+
+        - name: mageScreen:SetSpellLevel
+          detail: mageScreen:SetSpellLevel()
+          doc: |-
+              Currently unknown.
+
+        - name: mageScreen:SpellAllowedForContingency
+          detail: mageScreen:SpellAllowedForContingency()
+          doc: |-
+              Currently unknown.
+
+        - name: mageScreen:SpellSwappedInContingency
+          detail: mageScreen:SpellSwappedInContingency()
+          doc: |-
+              Currently unknown.
+
+        - name: mageScreen:UnmemorizeSpell
+          detail: mageScreen:UnmemorizeSpell()
+          doc: |-
+              Currently unknown.
+
+        - name: mageScreen:UnSequenceSpell
+          detail: mageScreen:UnSequenceSpell()
+          doc: |-
+              Currently unknown.
+
+mapScreen:
+    type: 3
+    items:
+        - name: mapScreen:DisplayExploredMap
+          detail: mapScreen:DisplayExploredMap()
+          doc: |-
+              Currently unknown.
+
+        - name: mapScreen:GetColorChoice
+          detail: mapScreen:GetColorChoice()
+          doc: |-
+              Currently unknown.
+
+        - name: mapScreen:IsNoteVisible
+          detail: mapScreen:IsNoteVisible()
+          doc: |-
+              Currently unknown.
+
+        - name: mapScreen:OnColorChoice
+          detail: mapScreen:OnColorChoice()
+          doc: |-
+              Currently unknown.
+
+        - name: mapScreen:OnMapAddNote
+          detail: mapScreen:OnMapAddNote()
+          doc: |-
+              Currently unknown.
+
+        - name: mapScreen:OnUserNoteClick
+          detail: mapScreen:OnUserNoteClick()
+          doc: |-
+              Currently unknown.
+
+        - name: mapScreen:OnUserNoteDeleteButtonClick
+          detail: mapScreen:OnUserNoteDeleteButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: mapScreen:OnUserNoteDoneButtonClick
+          detail: mapScreen:OnUserNoteDoneButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: mapScreen:ToggleDisplayExploredMap
+          detail: mapScreen:ToggleDisplayExploredMap()
+          doc: |-
+              Currently unknown.
+
+mixer:
+    type: 3
+    items:
+        - name: mixer:StartSong
+          detail: mixer:StartSong()
+          doc: |-
+              Currently unknown.
+
+moviesScreen:
+    type: 3
+    items:
+        - name: moviesScreen:IsPlayButtonClickable
+          detail: moviesScreen:IsPlayButtonClickable()
+          doc: |-
+              Currently unknown.
+
+        - name: moviesScreen:OnCreditsButtonClick
+          detail: moviesScreen:OnCreditsButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: moviesScreen:OnDoneButtonClick
+          detail: moviesScreen:OnDoneButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: moviesScreen:OnMovieItemSelect
+          detail: moviesScreen:OnMovieItemSelect()
+          doc: |-
+              Currently unknown.
+
+        - name: moviesScreen:OnPlayButtonClick
+          detail: moviesScreen:OnPlayButtonClick()
+          doc: |-
+              Currently unknown.
+
+multiplayerScreen:
+    type: 3
+    items:
+        - name: multiplayerScreen:GetEngineState
+          detail: multiplayerScreen:GetEngineState()
+          doc: |-
+              Currently unknown.
+
+        - name: multiplayerScreen:KickPlayer
+          detail: multiplayerScreen:KickPlayer()
+          doc: |-
+              Currently unknown.
+
+        - name: multiplayerScreen:Logout
+          detail: multiplayerScreen:Logout()
+          doc: |-
+              Currently unknown.
+
+        - name: multiplayerScreen:ModifyCharacters
+          detail: multiplayerScreen:ModifyCharacters()
+          doc: |-
+              Currently unknown.
+
+        - name: multiplayerScreen:OnCancelButtonClick
+          detail: multiplayerScreen:OnCancelButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: multiplayerScreen:OnDoneButtonClick
+          detail: multiplayerScreen:OnDoneButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: multiplayerScreen:OnKickPlayerButtonClick
+          detail: multiplayerScreen:OnKickPlayerButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: multiplayerScreen:OnLogoutButtonClick
+          detail: multiplayerScreen:OnLogoutButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: multiplayerScreen:OnMainDoneButtonClick
+          detail: multiplayerScreen:OnMainDoneButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: multiplayerScreen:OnModifyButtonClick
+          detail: multiplayerScreen:OnModifyButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: multiplayerScreen:OnModifyCharacterDelete
+          detail: multiplayerScreen:OnModifyCharacterDelete()
+          doc: |-
+              Currently unknown.
+
+        - name: multiplayerScreen:OnPermissionButtonClick
+          detail: multiplayerScreen:OnPermissionButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: multiplayerScreen:OnPlayerSelection
+          detail: multiplayerScreen:OnPlayerSelection()
+          doc: |-
+              Currently unknown.
+
+        - name: multiplayerScreen:OnPortraitButtonClick
+          detail: multiplayerScreen:OnPortraitButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: multiplayerScreen:OnReadyButtonClick
+          detail: multiplayerScreen:OnReadyButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: multiplayerScreen:SetCharacterSlot
+          detail: multiplayerScreen:SetCharacterSlot()
+          doc: |-
+              Currently unknown.
+
+        - name: multiplayerScreen:SetImportSetting
+          detail: multiplayerScreen:SetImportSetting()
+          doc: |-
+              Currently unknown.
+
+        - name: multiplayerScreen:SetModifiedCharacterSlot
+          detail: multiplayerScreen:SetModifiedCharacterSlot()
+          doc: |-
+              Currently unknown.
+
+        - name: multiplayerScreen:ToggleAllowReformParty
+          detail: multiplayerScreen:ToggleAllowReformParty()
+          doc: |-
+              Currently unknown.
+
+        - name: multiplayerScreen:ToggleListenToJoin
+          detail: multiplayerScreen:ToggleListenToJoin()
+          doc: |-
+              Currently unknown.
+
+        - name: multiplayerScreen:UpdateModifyCharacterPanel
+          detail: multiplayerScreen:UpdateModifyCharacterPanel()
+          doc: |-
+              Currently unknown.
+
+optionsScreen:
+    type: 3
+    items:
+        - name: optionsScreen:LoadGame
+          detail: optionsScreen:LoadGame()
+          doc: |-
+              Currently unknown.
+
+        - name: optionsScreen:QuitGame
+          detail: optionsScreen:QuitGame()
+          doc: |-
+              Currently unknown.
+
+        - name: optionsScreen:SaveGame
+          detail: optionsScreen:SaveGame()
+          doc: |-
+              Currently unknown.
+
+        - name: optionsScreen:SetEngineState
+          detail: optionsScreen:SetEngineState()
+          doc: |-
+              Currently unknown.
+
+priestScreen:
+    type: 3
+    items:
+        - name: priestScreen:GetSpellLevel
+          detail: priestScreen:GetSpellLevel()
+          doc: |-
+              Currently unknown.
+
+        - name: priestScreen:MemorizeSpell
+          detail: priestScreen:MemorizeSpell()
+          doc: |-
+              Currently unknown.
+
+        - name: priestScreen:SetSpellLevel
+          detail: priestScreen:SetSpellLevel()
+          doc: |-
+              Currently unknown.
+
+        - name: priestScreen:UnmemorizeSpell
+          detail: priestScreen:UnmemorizeSpell()
+          doc: |-
+              Currently unknown.
+
+projector:
+    type: 3
+    items:
+        - name: projector:PlayMovie
+          detail: projector:PlayMovie()
+          doc: |-
+              Currently unknown.
+
+saveScreen:
+    type: 3
+    items:
+        - name: saveScreen:DeleteGame
+          detail: saveScreen:DeleteGame()
+          doc: |-
+              Currently unknown.
+
+        - name: saveScreen:OnMainCancelButtonClick
+          detail: saveScreen:OnMainCancelButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: saveScreen:RefreshGameSlots
+          detail: saveScreen:RefreshGameSlots()
+          doc: |-
+              Currently unknown.
+
+        - name: saveScreen:SaveGame
+          detail: saveScreen:SaveGame()
+          doc: |-
+              Currently unknown.
+
+startEngine:
+    type: 3
+    items:
+        - name: startEngine:DismissChooseCampaignPopup
+          detail: startEngine:DismissChooseCampaignPopup()
+          doc: |-
+              Currently unknown.
+
+        - name: startEngine:GetCampaign
+          detail: startEngine:GetCampaign()
+          doc: |-
+              Currently unknown.
+
+        - name: startEngine:GetEngineState
+          detail: startEngine:GetEngineState()
+          doc: |-
+              Currently unknown.
+
+        - name: startEngine:HasGameToContinue
+          detail: startEngine:HasGameToContinue()
+          doc: |-
+              Currently unknown.
+
+        - name: startEngine:OnCampaignButtonClick
+          detail: startEngine:OnCampaignButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: startEngine:OnContinueGame
+          detail: startEngine:OnContinueGame()
+          doc: |-
+              Currently unknown.
+
+        - name: startEngine:OnCreatePartyButtonClick
+          detail: startEngine:OnCreatePartyButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: startEngine:OnDLCImageClick
+          detail: startEngine:OnDLCImageClick()
+          doc: |-
+              Currently unknown.
+
+        - name: startEngine:OnImportCharacterButtonClick
+          detail: startEngine:OnImportCharacterButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: startEngine:OnLoadGameButtonClick
+          detail: startEngine:OnLoadGameButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: startEngine:OnMultiPlayerButtonClick
+          detail: startEngine:OnMultiPlayerButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: startEngine:OnNewGameButtonClick
+          detail: startEngine:OnNewGameButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: startEngine:OnOptionsButtonClick
+          detail: startEngine:OnOptionsButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: startEngine:OnPreGenerateButtonClick
+          detail: startEngine:OnPreGenerateButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: startEngine:OnPregenSelectButtonClick
+          detail: startEngine:OnPregenSelectButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: startEngine:OnQuitButtonClick
+          detail: startEngine:OnQuitButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: startEngine:OnSoAButtonClick
+          detail: startEngine:OnSoAButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: startEngine:OnTBPButtonClick
+          detail: startEngine:OnTBPButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: startEngine:OnToBButtonClick
+          detail: startEngine:OnToBButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: startEngine:OnTutorialButtonClick
+          detail: startEngine:OnTutorialButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: startEngine:SetEngineState
+          detail: startEngine:SetEngineState()
+          doc: |-
+              Currently unknown.
+
+storeScreen:
+    type: 3
+    items:
+        - name: storeScreen:GetGroupCost
+          detail: storeScreen:GetGroupCost()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:GetIdentifyCost
+          detail: storeScreen:GetIdentifyCost()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:GetMenuName
+          detail: storeScreen:GetMenuName()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:GetPanelButtonEnabled
+          detail: storeScreen:GetPanelButtonEnabled()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:GetPanelButtonId
+          detail: storeScreen:GetPanelButtonId()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:GetPanelButtonPanelId
+          detail: storeScreen:GetPanelButtonPanelId()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:GetPanelButtonSequence
+          detail: storeScreen:GetPanelButtonSequence()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:GetPanelButtonToolTip
+          detail: storeScreen:GetPanelButtonToolTip()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:GetRoomCost
+          detail: storeScreen:GetRoomCost()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:GetRoomType
+          detail: storeScreen:GetRoomType()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:GetSpellCost
+          detail: storeScreen:GetSpellCost()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:GetStoreCost
+          detail: storeScreen:GetStoreCost()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:GetStoreName
+          detail: storeScreen:GetStoreName()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:IsBuyItemButtonClickable
+          detail: storeScreen:IsBuyItemButtonClickable()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:IsBuySpellButtonClickable
+          detail: storeScreen:IsBuySpellButtonClickable()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:IsCloseBagButtonClickable
+          detail: storeScreen:IsCloseBagButtonClickable()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:IsContainer
+          detail: storeScreen:IsContainer()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:IsDonateButtonClickable
+          detail: storeScreen:IsDonateButtonClickable()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:IsDoneButtonClickable
+          detail: storeScreen:IsDoneButtonClickable()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:IsIdentifyItemButtonClickable
+          detail: storeScreen:IsIdentifyItemButtonClickable()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:IsMainCancelButtonClickable
+          detail: storeScreen:IsMainCancelButtonClickable()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:IsMainDoneButtonClickable
+          detail: storeScreen:IsMainDoneButtonClickable()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:IsRentRoomButtonClickable
+          detail: storeScreen:IsRentRoomButtonClickable()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:IsRoomTypeClickable
+          detail: storeScreen:IsRoomTypeClickable()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:IsSellItemButtonClickable
+          detail: storeScreen:IsSellItemButtonClickable()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:IsSpriteOrderable
+          detail: storeScreen:IsSpriteOrderable()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:IsStealEnabled
+          detail: storeScreen:IsStealEnabled()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:IsStealItemButtonClickable
+          detail: storeScreen:IsStealItemButtonClickable()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:OnBuyDrinkButtonClick
+          detail: storeScreen:OnBuyDrinkButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:OnBuyItemButtonClick
+          detail: storeScreen:OnBuyItemButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:OnBuySpellButtonClick
+          detail: storeScreen:OnBuySpellButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:OnCloseBagButtonClick
+          detail: storeScreen:OnCloseBagButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:OnDonateButtonClick
+          detail: storeScreen:OnDonateButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:OnIdentifyItemButtonClick
+          detail: storeScreen:OnIdentifyItemButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:OnMainDoneButtonClick
+          detail: storeScreen:OnMainDoneButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:OnRentRoomButtonClick
+          detail: storeScreen:OnRentRoomButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:OnSellItemButtonClick
+          detail: storeScreen:OnSellItemButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:OnStealItemButtonClick
+          detail: storeScreen:OnStealItemButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:OpenBag
+          detail: storeScreen:OpenBag()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:RestParty
+          detail: storeScreen:RestParty()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:SelectGroupItem
+          detail: storeScreen:SelectGroupItem()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:SelectIdentifyItem
+          detail: storeScreen:SelectIdentifyItem()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:SelectSpellItem
+          detail: storeScreen:SelectSpellItem()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:SelectStoreItem
+          detail: storeScreen:SelectStoreItem()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:SetGroupItemCount
+          detail: storeScreen:SetGroupItemCount()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:SetRoomType
+          detail: storeScreen:SetRoomType()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:SetStoreItemCount
+          detail: storeScreen:SetStoreItemCount()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:UpdateBuyDrinksPanel
+          detail: storeScreen:UpdateBuyDrinksPanel()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:UpdateBuySellPanel
+          detail: storeScreen:UpdateBuySellPanel()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:UpdateBuySpellPanel
+          detail: storeScreen:UpdateBuySpellPanel()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:UpdateDonatePanel
+          detail: storeScreen:UpdateDonatePanel()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:UpdateIdentifyPanel
+          detail: storeScreen:UpdateIdentifyPanel()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:UpdateRentRoomPanel
+          detail: storeScreen:UpdateRentRoomPanel()
+          doc: |-
+              Currently unknown.
+
+        - name: storeScreen:UpdateStealPanel
+          detail: storeScreen:UpdateStealPanel()
+          doc: |-
+              Currently unknown.
+
+timer:
+    type: 3
+    items:
+        - name: timer:AdvanceCurrentTime
+          detail: timer:AdvanceCurrentTime()
+          doc: |-
+              Currently unknown.
+
+        - name: timer:GetCurrentHour
+          detail: timer:GetCurrentHour()
+          doc: |-
+              Currently unknown.
+
+        - name: timer:GetCurrentTime
+          detail: timer:GetCurrentTime()
+          doc: |-
+              Currently unknown.
+
+worldMapScreen:
+    type: 3
+    items:
+        - name: worldMapScreen:CenterMarker
+          detail: worldMapScreen:CenterMarker()
+          doc: |-
+              Currently unknown.
+
+        - name: worldMapScreen:IsTravelButtonClickable
+          detail: worldMapScreen:IsTravelButtonClickable()
+          doc: |-
+              Currently unknown.
+
+        - name: worldMapScreen:IsTravelButtonVisible
+          detail: worldMapScreen:IsTravelButtonVisible()
+          doc: |-
+              Currently unknown.
+
+        - name: worldMapScreen:OnCancelButtonClick
+          detail: worldMapScreen:OnCancelButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: worldMapScreen:OnMapMouseDown
+          detail: worldMapScreen:OnMapMouseDown()
+          doc: |-
+              Currently unknown.
+
+        - name: worldMapScreen:OnMapMouseMove
+          detail: worldMapScreen:OnMapMouseMove()
+          doc: |-
+              Currently unknown.
+
+        - name: worldMapScreen:StartWorldMap
+          detail: worldMapScreen:StartWorldMap()
+          doc: |-
+              Currently unknown.
+
+        - name: worldMapScreen:TravelToSelected
+          detail: worldMapScreen:TravelToSelected()
+          doc: |-
+              Currently unknown.
+
+worldScreen:
+    type: 3
+    items:
+        - name: worldScreen:CheckIfPaused
+          detail: worldScreen:CheckIfPaused()
+          doc: |-
+              Currently unknown.
+
+        - name: worldScreen:ContainerScrollEnabled
+          detail: worldScreen:ContainerScrollEnabled()
+          doc: |-
+              Currently unknown.
+
+        - name: worldScreen:GetCurrentTimeString
+          detail: worldScreen:GetCurrentTimeString()
+          doc: |-
+              Currently unknown.
+
+        - name: worldScreen:GetHardPaused
+          detail: worldScreen:GetHardPaused()
+          doc: |-
+              Currently unknown.
+
+        - name: worldScreen:GetInControlOfDialog
+          detail: worldScreen:GetInControlOfDialog()
+          doc: |-
+              Currently unknown.
+
+        - name: worldScreen:GetPickPartyCharacterId
+          detail: worldScreen:GetPickPartyCharacterId()
+          doc: |-
+              Currently unknown.
+
+        - name: worldScreen:GetPickPartyPortrait
+          detail: worldScreen:GetPickPartyPortrait()
+          doc: |-
+              Currently unknown.
+
+        - name: worldScreen:GetPickPartyRemoveCharacterId
+          detail: worldScreen:GetPickPartyRemoveCharacterId()
+          doc: |-
+              Currently unknown.
+
+        - name: worldScreen:GetTopContainerItem
+          detail: worldScreen:GetTopContainerItem()
+          doc: |-
+              Currently unknown.
+
+        - name: worldScreen:GetTopGroundItem
+          detail: worldScreen:GetTopGroundItem()
+          doc: |-
+              Currently unknown.
+
+        - name: worldScreen:GetTopGroupItem
+          detail: worldScreen:GetTopGroupItem()
+          doc: |-
+              Currently unknown.
+
+        - name: worldScreen:GroundScrollEnabled
+          detail: worldScreen:GroundScrollEnabled()
+          doc: |-
+              Currently unknown.
+
+        - name: worldScreen:GroupScrollEnabled
+          detail: worldScreen:GroupScrollEnabled()
+          doc: |-
+              Currently unknown.
+
+        - name: worldScreen:IsPickPartyDoneButtonClickable
+          detail: worldScreen:IsPickPartyDoneButtonClickable()
+          doc: |-
+              Currently unknown.
+
+        - name: worldScreen:IsPickPartyRemoveButtonClickable
+          detail: worldScreen:IsPickPartyRemoveButtonClickable()
+          doc: |-
+              Currently unknown.
+
+        - name: worldScreen:OnContainerButtonClick
+          detail: worldScreen:OnContainerButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: worldScreen:OnContainerScroll
+          detail: worldScreen:OnContainerScroll()
+          doc: |-
+              Currently unknown.
+
+        - name: worldScreen:OnDeathLoad
+          detail: worldScreen:OnDeathLoad()
+          doc: |-
+              Currently unknown.
+
+        - name: worldScreen:OnDeathQuit
+          detail: worldScreen:OnDeathQuit()
+          doc: |-
+              Currently unknown.
+
+        - name: worldScreen:OnDialogReplyClick
+          detail: worldScreen:OnDialogReplyClick()
+          doc: |-
+              Currently unknown.
+
+        - name: worldScreen:OnGroundButtonClick
+          detail: worldScreen:OnGroundButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: worldScreen:OnGroundScroll
+          detail: worldScreen:OnGroundScroll()
+          doc: |-
+              Currently unknown.
+
+        - name: worldScreen:OnGroupScroll
+          detail: worldScreen:OnGroupScroll()
+          doc: |-
+              Currently unknown.
+
+        - name: worldScreen:OnHelpButtonClick
+          detail: worldScreen:OnHelpButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: worldScreen:OnPickPartyDoneButtonClick
+          detail: worldScreen:OnPickPartyDoneButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: worldScreen:OnPickPartyPortraitButtonClick
+          detail: worldScreen:OnPickPartyPortraitButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: worldScreen:OnQuickSaveButtonClick
+          detail: worldScreen:OnQuickSaveButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: worldScreen:OnSelectionButtonClick
+          detail: worldScreen:OnSelectionButtonClick()
+          doc: |-
+              Currently unknown.
+
+        - name: worldScreen:RemoveCharacterFromParty
+          detail: worldScreen:RemoveCharacterFromParty()
+          doc: |-
+              Currently unknown.
+
+        - name: worldScreen:SetHighlightEnabled
+          detail: worldScreen:SetHighlightEnabled()
+          doc: |-
+              Currently unknown.
+
+        - name: worldScreen:StartGroundItems
+          detail: worldScreen:StartGroundItems()
+          doc: |-
+              Currently unknown.
+
+        - name: worldScreen:StepDialog
+          detail: worldScreen:StepDialog()
+          doc: |-
+              Currently unknown.
+
+        - name: worldScreen:StopGroundItems
+          detail: worldScreen:StopGroundItems()
+          doc: |-
+              Currently unknown.
+
+        - name: worldScreen:SwapPortraits
+          detail: worldScreen:SwapPortraits()
+          doc: |-
+              Currently unknown.
+
+        - name: worldScreen:TakeAllFromContainer
+          detail: worldScreen:TakeAllFromContainer()
+          doc: |-
+              Currently unknown.
+
+        - name: worldScreen:TogglePauseGame
+          detail: worldScreen:TogglePauseGame()
+          doc: |-
+              Currently unknown.

@@ -43,11 +43,16 @@ export const LANG_WEIDU_TRA = "weidu-tra" as const;
 // Fallout scripts list
 export const LANG_FALLOUT_SCRIPTS_LST = "fallout-scripts-lst" as const;
 
+// Lua languages
+export const LANG_LUA = "lua" as const;
+
 // --- File extensions and exact-filename matchers ---
 
 // Fallout
 export const EXT_FALLOUT_SSL = ".ssl" as const;
 export const EXT_FALLOUT_MSG = ".msg" as const;
+export const EXT_LUA = ".lua" as const;
+export const EXT_MENU = ".menu" as const;
 /** SSL header file extensions for file watching */
 const EXT_FALLOUT_SSL_HEADERS = [".h"] as const;
 /** All SSL file extensions (headers + source) for workspace-wide features */

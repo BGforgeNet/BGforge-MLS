@@ -537,6 +537,38 @@ describe("generateSignatures", () => {
         expect(Object.keys(result)).toHaveLength(0);
     });
 
+    it("infers lua signature params from detail when args are missing", () => {
+        const data = {
+            funcs: {
+                type: 3,
+                items: [
+                    {
+                        name: "assert",
+                        detail: "assert (v [, message])",
+                        doc: "Asserts condition.",
+                    },
+                ],
+            },
+        };
+        const result = generateSignatures(data, "lua");
+        expect(result["assert"]).toBeDefined();
+        expect(result["assert"]!.label).toBe("assert (v [, message])");
+        expect(result["assert"]!.parameters).toHaveLength(2);
+        expect(result["assert"]!.parameters[0]!.label).toBe("v");
+        expect(result["assert"]!.parameters[1]!.label).toBe("message");
+    });
+
+    it("does not infer params from detail for non-lua languages", () => {
+        const data = {
+            funcs: {
+                type: 3,
+                items: [{ name: "assert", detail: "assert (v [, message])" }],
+            },
+        };
+        const result = generateSignatures(data, "fallout-ssl-tooltip");
+        expect(Object.keys(result)).toHaveLength(0);
+    });
+
     it("emits signature object keys in sorted order", () => {
         const data = {
             zeta: {

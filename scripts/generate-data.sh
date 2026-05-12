@@ -65,3 +65,13 @@ pnpm exec tsx scripts/utils/src/update-baf-highlight.ts \
 pnpm exec tsx scripts/utils/src/update-d-highlight.ts \
     --yaml $data_dir/weidu-d-base.yml \
     --highlight syntaxes/weidu-d.tmLanguage.yml
+
+"${generate_data[@]}" \
+    -i "$data_dir/lua52-base.yml" \
+    -i "$data_dir/lua-ee-internal.yml" \
+    -i "$data_dir/lua-eeex.yml" \
+    -i "$data_dir/lua-ee-util.yml" \
+    --completion "$dest_dir/completion.lua.json" \
+    --hover "$dest_dir/hover.lua.json" \
+    --signature "$dest_dir/signature.lua.json" \
+    --tooltip-lang lua

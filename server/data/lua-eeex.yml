@@ -1,0 +1,3981 @@
+# EEex-specific Lua APIs from official EEex docs/tutorials (https://eeex-docs.readthedocs.io/en/latest/index.html)
+
+eeex_functions_action:
+    type: 3
+    category: eeex_functions
+    items:
+        - name: EEex_Action_AddEnabledSpriteStartedActionListener
+          detail: EEex_Action_AddEnabledSpriteStartedActionListener()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Action_AddSpriteStartedActionListener
+          detail: EEex_Action_AddSpriteStartedActionListener()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Action_AddSpriteStartedNextActionListener
+          detail: EEex_Action_AddSpriteStartedNextActionListener()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Action_ExecuteResponseStringOnAIBaseInstantly
+          detail: EEex_Action_ExecuteResponseStringOnAIBaseInstantly(responseStr, pGameAIBase)
+          doc: |-
+              **Summary**
+
+              Has `pGameAIBase` instantly execute the actions contained in `responseStr`
+              without interrupting `pGameAIBase`'s current action / readying `pGameAIBase`.
+
+              `EEex_Action_ParseResponseString()` is used to compile `responseStr`; prefer using this function
+              in conjunction with `EEex_Action_ExecuteScriptFileResponseAsAIBaseInstantly()` when efficiency is required.
+
+              ***Running this function with actions not defined in `INSTANT.IDS` is undefined behavior.***
+
+              **Parameters:**
+
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | responseStr | string |  | The string to parse. |
+              | pGameAIBase | CGameAIBase |  | The AI base that will execute the actions. |
+
+        - name: EEex_Action_ExecuteScriptFileResponseAsAIBaseInstantly
+          detail: EEex_Action_ExecuteScriptFileResponseAsAIBaseInstantly(pScriptFile, pGameAIBase)
+          doc: |-
+              **Instance Name:** `executeResponseAsAIBaseInstantly`
+              
+              **Summary**
+              
+              Has `pGameAIBase` instantly execute compiled actions returned by `EEex_Action_ParseResponseString()`
+              without interrupting `pGameAIBase`'s current action / readying `pGameAIBase`.
+              
+              ***Running this function with actions not defined in `INSTANT.IDS` is undefined behavior.***
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | pScriptFile | CAIScriptFile |  | The AI script file returned by `EEex_Action_ParseResponseString()`. |
+              | pGameAIBase | CGameAIBase |  | The AI base that will execute the actions. |
+
+        - name: EEex_Action_FreeScriptFile
+          detail: EEex_Action_FreeScriptFile(pScriptFile)
+          doc: |-
+              **Instance Name:** `free`
+              
+              **Summary**
+              
+              Frees the value returned by `EEex_Action_ParseResponseString()`.
+              
+              ***Attempting to use*** `pScriptFile` ***after calling*** `:free()` ***will result in a crash.***
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | pScriptFile | CAIScriptFile |  | The AI script file to free. |
+
+        - name: EEex_Action_NextSpellToPoint
+          detail: EEex_Action_NextSpellToPoint()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Action_ParseResponseString
+          detail: EEex_Action_ParseResponseString(responseStr)
+          doc: |-
+              **Summary**
+              
+              Parses `responseStr` as if it was fed through `C:Eval()` and
+              returns the compiled script object, (only filled with actions).
+              
+              ***Remember to call*** `:free()` ***on the returned value when it is no longer being used.***
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | responseStr | string |  | The string to parse. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | CAIScriptFile | See summary. |
+
+        - name: EEex_Action_QueueResponseStringOnAIBase
+          detail: EEex_Action_QueueResponseStringOnAIBase(responseStr, pGameAIBase)
+          doc: |-
+              **Summary**
+              
+              Adds the actions contained in `responseStr` to the end of `pGameAIBase`'s action queue.
+              Behavior identical to `C:Eval()`.
+              
+              `EEex_Action_ParseResponseString()` is used to compile `responseStr`; prefer using this function
+              in conjunction with `EEex_Action_QueueScriptFileResponseOnAIBase()` when efficiency is required.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | responseStr | string |  | The string to parse. |
+              | pGameAIBase | CGameAIBase |  | The AI base to queue the actions on. |
+
+        - name: EEex_Action_QueueScriptFileResponseOnAIBase
+          detail: EEex_Action_QueueScriptFileResponseOnAIBase(pScriptFile, pGameAIBase)
+          doc: |-
+              **Instance Name:** `queueResponseOnAIBase`
+              
+              **Summary**
+              
+              Adds compiled actions returned by `EEex_Action_ParseResponseString()` to the end of `pGameAIBase`'s action queue.
+              Behavior identical to `C:Eval()`.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | pScriptFile | CAIScriptFile |  | The AI script file returned by `EEex_Action_ParseResponseString()`. |
+              | pGameAIBase | CGameAIBase |  | The AI base to queue the actions on. |
+
+eeex_functions_actionbar:
+    type: 3
+    category: eeex_functions
+    items:
+        - name: EEex_Actionbar_AddButtonsUpdatedListener
+          detail: EEex_Actionbar_AddButtonsUpdatedListener()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Actionbar_AddListener
+          detail: EEex_Actionbar_AddListener(listener, Name, config, state, Config, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30)
+          doc: |-
+              **Summary**
+              
+              Registers a function as an actionbar listener. Actionbar listeners are called whenever the actionbar changes state.
+              See `EEex_Actionbar_GetState` for more details.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | listener | function |  | The listener to register. |
+              
+              **The listener function**
+              
+              **Parameters:**
+              
+              | Name | Type | Description |
+              | --- | --- | --- |
+              | config | number | Certain actionbar states map to the same button configuration, albeit with different   <br/> |
+              |  |  | functionality. This value represents a unique button configuration; see below for more <br/> |
+              |  |  | details. |
+              | state | number | See `EEex_Actionbar_GetState`. |
+              
+              **The following shows what actionbar states each** `config` **encompases:**
+              
+              | Config | Matching States |
+              | --- | --- |
+              | 0 | 1 |
+              | 1 | 2 |
+              | 2 | 3 |
+              | 3 | 4 |
+              | 4 | 5 |
+              | 5 | 6 |
+              | 6 | 7 |
+              | 7 | 8 |
+              | 8 | 9 |
+              | 9 | 10 |
+              | 10 | 11 |
+              | 11 | 12 |
+              | 12 | 13 |
+              | 13 | 14 |
+              | 14 | 15 |
+              | 15 | 16 |
+              | 16 | 17 |
+              | 17 | 18 |
+              | 18 | 20 |
+              | 19 | 21 |
+              | 20 | 101 |
+              | 21 | 102, 103 |
+              | 22 | 104, 105 |
+              | 23 | 106 |
+              | 24 | 107 |
+              | 25 | 108 |
+              | 26 | 109 |
+              | 27 | 110 |
+              | 28 | 111 |
+              | 29 | 112 |
+              | 30 | 113, 114 |
+
+        - name: EEex_Actionbar_GetArray
+          detail: EEex_Actionbar_GetArray()
+          doc: |-
+              **Summary**
+              
+              Returns the actionbar button array. This structure holds the current state of the actionbar.
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | CInfButtonArray | See summary. |
+
+        - name: EEex_Actionbar_GetLastState
+          detail: EEex_Actionbar_GetLastState()
+          doc: |-
+              **Summary**
+              
+              Returns the previous actionbar state. See `EEex_Actionbar_GetState` for more details.
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | number | See summary. |
+
+        - name: EEex_Actionbar_GetOp214ButtonDataIterator
+          detail: EEex_Actionbar_GetOp214ButtonDataIterator()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Actionbar_GetSpellButtonData
+          detail: EEex_Actionbar_GetSpellButtonData()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Actionbar_GetSpellButtonDataIterator
+          detail: EEex_Actionbar_GetSpellButtonDataIterator()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Actionbar_GetState
+          detail: EEex_Actionbar_GetState()
+          doc: |-
+              **Summary**
+              
+              Returns the current actionbar state, which is a number that represents what the actionbar is displaying.
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | number | See summary. |
+              
+              **Actionbar State Ordinals**
+              
+              | State | Description |
+              | --- | --- |
+              | 1 | Mage / Sorcerer |
+              | 2 | Fighter |
+              | 3 | Cleric |
+              | 4 | Thief |
+              | 5 | Bard |
+              | 6 | Paladin |
+              | 7 | Fighter Mage |
+              | 8 | Fighter Cleric |
+              | 9 | Fighter Thief |
+              | 10 | Fighter Mage Thief |
+              | 11 | Druid |
+              | 12 | Ranger |
+              | 13 | Mage Thief |
+              | 14 | Cleric Mage |
+              | 15 | Cleric Thief |
+              | 16 | Fighter Druid |
+              | 17 | Fighter Mage Cleric |
+              | 18 | Cleric Ranger |
+              | 20 | Monk |
+              | 21 | Shaman |
+              | 101 | Select Weapon Ability |
+              | 102 | Spells (Select Quick Spell) |
+              | 103 | Spells (Cast) |
+              | 104 | Select Quick Item Ability |
+              | 105 | Use Item |
+              | 106 | Special Abilities |
+              | 107 | Select Quick Formation |
+              | 108 | Defunct Select Quick Formation (Not used) |
+              | 109 | Group Selected |
+              | 110 | Unknown (No buttons defined; not used?) |
+              | 111 | Internal List (Opcode #214) |
+              | 112 | Controlled (Class doesn't have a dedicated state) |
+              | 113 | Cleric / Mage Spells (Cast) |
+              | 114 | Cleric / Mage Spells (Select Quick Spell) |
+
+        - name: EEex_Actionbar_IsThievingHotkeyOpeningSpecialAbilities
+          detail: EEex_Actionbar_IsThievingHotkeyOpeningSpecialAbilities()
+          doc: |-
+              **Summary**
+              
+              Returns `true` if the thieving hotkey is currently in the middle of opening the special abilities menu.
+              It does this if the thieving button is not a part of the character's main actionbar state.
+              This function allows actionbar listeners to differentiate between a user opening the special abilities menu,
+              and the hotkey automatically doing so.
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | boolean | See summary. |
+
+        - name: EEex_Actionbar_RestoreLastState
+          detail: EEex_Actionbar_RestoreLastState()
+          doc: |-
+              **Summary**
+              
+              Restores the previous actionbar state. This is useful for exiting sub-states, such as the spell list.
+
+        - name: EEex_Actionbar_RunWithListenersSuppressed
+          detail: EEex_Actionbar_RunWithListenersSuppressed()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Actionbar_SetButton
+          detail: EEex_Actionbar_SetButton(index, buttonType, Ordinal Name, BARD_SONG, CAST_SPELL, FIND_TRAPS, TALK, GUARD, ATTACK, SPECIAL_ABILITIES, STEALTH, THIEVING, TURN_UNDEAD, USE_ITEM, STOP, QUICK_ITEM_1, QUICK_ITEM_2, QUICK_ITEM_3, QUICK_SPELL_1, QUICK_SPELL_2, QUICK_SPELL_3, QUICK_WEAPON_1, QUICK_WEAPON_2, QUICK_WEAPON_3, QUICK_WEAPON_4, NONE)
+          doc: |-
+              **Summary**
+              
+              Changes the button at the given `index` to the given `buttonType`.
+              Use this function in combination with an actionbar listener to permanently
+              change a button on the actionbar.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | index | number |  | The button index to change. Valid values are [0-11]. |
+              | buttonType | EEex_Actionbar_ButtonType |  | The button type to set. |
+              
+              **EEex_Actionbar_ButtonType**
+              
+              | Ordinal Name |
+              | --- |
+              | BARD_SONG |
+              | CAST_SPELL |
+              | FIND_TRAPS |
+              | TALK |
+              | GUARD |
+              | ATTACK |
+              | SPECIAL_ABILITIES |
+              | STEALTH |
+              | THIEVING |
+              | TURN_UNDEAD |
+              | USE_ITEM |
+              | STOP |
+              | QUICK_ITEM_1 |
+              | QUICK_ITEM_2 |
+              | QUICK_ITEM_3 |
+              | QUICK_SPELL_1 |
+              | QUICK_SPELL_2 |
+              | QUICK_SPELL_3 |
+              | QUICK_WEAPON_1 |
+              | QUICK_WEAPON_2 |
+              | QUICK_WEAPON_3 |
+              | QUICK_WEAPON_4 |
+              | NONE |
+
+        - name: EEex_Actionbar_SetState
+          detail: EEex_Actionbar_SetState(state)
+          doc: |-
+              **Summary**
+              
+              Sets the current actionbar state. See `EEex_Actionbar_GetState` for more details.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | state | number |  | The state to set. |
+
+        - name: EEex_Actionbar_SuppressListeners
+          detail: EEex_Actionbar_SuppressListeners()
+          doc: |-
+              This function is currently undocumented.
+
+eeex_functions_aibase:
+    type: 3
+    category: eeex_functions
+    items:
+        - name: EEex_AIBase_AddScriptingObjectUpdatedListener
+          detail: EEex_AIBase_AddScriptingObjectUpdatedListener()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_AIBase_GetScriptLevel
+          detail: EEex_AIBase_GetScriptLevel(aiBase, scriptLevel)
+          doc: |-
+              **Instance Name:** `getScriptLevel`
+              
+              **Summary**
+              
+              Returns the `aiBase`'s `CAIScript` for the given `scriptLevel`.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | aiBase | CGameAIBase |  | The object whose script is being fetched. |
+              | scriptLevel | number |  | The level of the script to fetch. Valid values identical to `SCRLEV.IDS`. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | CAIScript | See summary. |
+              
+              **SCRLEV.IDS**
+              
+              | Script Level | Symbolic Name |
+              | --- | --- |
+              | 0 | OVERRIDE |
+              | 1 | AREA |
+              | 2 | SPECIFICS |
+              | 4 | CLASS |
+              | 5 | RACE |
+              | 6 | GENERAL |
+              | 7 | DEFAULT |
+
+        - name: EEex_AIBase_GetScriptLevelResRef
+          detail: EEex_AIBase_GetScriptLevelResRef(aiBase, scriptLevel)
+          doc: |-
+              **Instance Name:** `getScriptLevelResRef`
+              
+              **Summary**
+              
+              Returns a string that represents the `aiBase`'s `CResRef` for the given `scriptLevel`.
+              If the given `scriptLevel` is not populated, returns `""`.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | aiBase | CGameAIBase |  | The object whose script resref is being fetched. |
+              | scriptLevel | number |  | The level of the script resref to fetch. Valid values identical to `SCRLEV.IDS`. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | string | See summary. |
+
+        - name: EEex_AIBase_GetStoredScriptingTarget
+          detail: EEex_AIBase_GetStoredScriptingTarget()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_AIBase_SetScriptLevel
+          detail: EEex_AIBase_SetScriptLevel(aiBase, scriptLevel, script)
+          doc: |-
+              **Instance Name:** `setScriptLevel`
+              
+              **Summary**
+              
+              Sets the `aiBase`'s `CAIScript` for the given `scriptLevel` to `script`.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | aiBase | CGameAIBase |  | The object whose script level is being set. |
+              | scriptLevel | number |  | The level of the script to set. Valid values identical to `SCRLEV.IDS`. |
+              | script | CAIScript |  | The script to assign to `scriptLevel`. <br/>  <br/> **Note:** `aiBase` **holds a reference to this parameter; do not free it.** |
+
+        - name: EEex_AIBase_SetScriptLevelResRef
+          detail: EEex_AIBase_SetScriptLevelResRef(aiBase, scriptLevel, resref, bPlayerScript)
+          doc: |-
+              **Instance Name:** `setScriptLevelResRef`
+              
+              **Summary**
+              
+              Loads the script with the given `resref` and sets the `aiBase`'s `CAIScript` for the given `scriptLevel` to it.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | aiBase | CGameAIBase |  | The object whose script level is being set. |
+              | scriptLevel | number |  | The level of the script to set. Valid values identical to `SCRLEV.IDS`. |
+              | resref | string |  | The script resref to assign to `scriptLevel`. |
+              | bPlayerScript | boolean | `false` | If `true`, signifies that `resref` has the extension `.BS` instead of `.BCS`. <br/>  <br/> **Note:** Due to the enhanced edition’s use of script caching, the engine has trouble <br/> differentiating between `.BS` and `.BCS` files with the same name. If a script <br/> with the given `resref` has already been loaded by the engine, that script will be <br/> used, regardless of `bPlayerScript`. |
+
+        - name: EEex_AIBase_SetStoredScriptingTarget
+          detail: EEex_AIBase_SetStoredScriptingTarget(aiBase, targetKey, target)
+          doc: |-
+              **Instance Name:** `setStoredScriptingTarget`
+              
+              **Summary**
+              
+              Stores `target` on `aiBase` for use with the `EEex_Target` scripting object.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | aiBase | CGameAIBase |  | The object that the target is being stored on. |
+              | targetKey | string |  | The name to be used to refer to the target being stored. |
+              | target | CGameObject |  | The target being stored on `aiBase` as `targetKey`. |
+              
+              **Example**
+              
+              A combination of `EEex_AIBase_SetStoredScriptingTarget` and `EEex_LuaTrigger` can be used to target specific
+              objects programmatically. The following example shows how you could use this concept to have a creature start
+              dialog once they see the current party leader:
+              
+              **In M_*.lua file:**
+              
+              ```lua
+              function StoreAlivePartyLeader()
+              
+                  local partyLeader = nil
+              
+                  for i = 0, 5 do
+                      local partyMember = EEex_Sprite_GetInPortrait(i)
+                      if partyMember and EEex_BAnd(partyMember.m_baseStats.m_generalState, 0xFC0) == 0 then
+                          partyLeader = partyMember
+                          break
+                      end
+                  end
+              
+                  EEex_LuaTrigger_Object:setStoredScriptingTarget("AlivePartyLeader", partyLeader)
+                  return partyLeader ~= nil
+              end
+              
+              ```
+              **In script:**
+              
+              ```
+              IF
+                  EEex_LuaTrigger("return StoreAlivePartyLeader()")
+                  See(EEex_Target("AlivePartyLeader"))
+              THEN
+                  RESPONSE #100
+                      Dialog(EEex_Target("AlivePartyLeader"))
+              END
+              ```
+
+eeex_functions_area:
+    type: 3
+    category: eeex_functions
+    items:
+        - name: EEex_Area_CountAllOfTypeInRange
+          detail: EEex_Area_CountAllOfTypeInRange(area, centerX, centerY, aiObjectType, range, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
+          doc: |-
+              **Instance Name:** `countAllOfTypeInRange`
+              
+              **Summary**
+              
+              Returns the number of creatures that match `aiObjectType` around (`centerX`, `centerY`)
+              in the given `range`, as per the `NumCreature()` trigger.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | area | CGameArea |  | The area to search. |
+              | centerX | number |  | The x coordinate to use as the center of the search radius. |
+              | centerY | number |  | The y coordinate to use as the center of the search radius. |
+              | aiObjectType | CAIObjectType |  | The AI object type used to filter the objects passed to `func`. <br/> Most commonly retrieved from `EEex_Object_ParseString()`. Remember to call `:free()`. |
+              | range | number |  | The radius to search around (`centerX`, `centerY`). `448` is a sprite's default visual range. |
+              | bCheckForLineOfSight | boolean | `true` | Determines whether LOS is required from (`centerX`, `centerY`) to considered objects. |
+              | bCheckForNonSprites | boolean | `false` | Determines whether non-sprite objects in the main objects list are considered. |
+              | terrainTable | Array<byte,16> | `CGameObject.DEFAULT_VISIBLE_TERRAIN_TABLE` | The terrain table to use for determining LOS. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | number | See summary. |
+
+        - name: EEex_Area_CountAllOfTypeStringInRange
+          detail: EEex_Area_CountAllOfTypeStringInRange(area, centerX, centerY, aiObjectTypeString, range, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
+          doc: |-
+              **Instance Name:** `countAllOfTypeStringInRange`
+              
+              **Summary**
+              
+              Returns the number of creatures that match `aiObjectTypeString` around (`centerX`, `centerY`)
+              in the given `range`, as per the `NumCreature()` trigger.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | area | CGameArea |  | The area to search. |
+              | centerX | number |  | The x coordinate to use as the center of the search radius. |
+              | centerY | number |  | The y coordinate to use as the center of the search radius. |
+              | aiObjectTypeString | string |  | The AI object type string used to filter the objects added to the return table. <br/> Automatically parsed by `EEex_Object_ParseString()`; the resulting object is freed before return. |
+              | range | number |  | The radius to search around (`centerX`, `centerY`). `448` is a sprite's default visual range. |
+              | bCheckForLineOfSight | boolean | `true` | Determines whether LOS is required from (`centerX`, `centerY`) to considered objects. |
+              | bCheckForNonSprites | boolean | `false` | Determines whether non-sprite objects in the main objects list are considered. |
+              | terrainTable | Array<byte,16> | `CGameObject.DEFAULT_VISIBLE_TERRAIN_TABLE` | The terrain table to use for determining LOS. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | number | See summary. |
+
+        - name: EEex_Area_CreateVisualEffect
+          detail: EEex_Area_CreateVisualEffect()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Area_ForAllOfTypeInRange
+          detail: EEex_Area_ForAllOfTypeInRange(area, centerX, centerY, aiObjectType, range, func, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
+          doc: |-
+              **Instance Name:** `forAllOfTypeInRange`
+              
+              **Summary**
+              
+              Calls `func` for every creature that matches `aiObjectType` around (`centerX`, `centerY`)
+              in the given `range`, as per the `NumCreature()` trigger.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | area | CGameArea |  | The area to search. |
+              | centerX | number |  | The x coordinate to use as the center of the search radius. |
+              | centerY | number |  | The y coordinate to use as the center of the search radius. |
+              | aiObjectType | CAIObjectType |  | The AI object type used to filter the objects passed to `func`. <br/> Most commonly retrieved from `EEex_Object_ParseString()`. Remember to call `:free()`. |
+              | range | number |  | The radius to search around (`centerX`, `centerY`). `448` is a sprite's default visual range. |
+              | func | function |  | The function to call for every creature in the search area. |
+              | bCheckForLineOfSight | boolean | `true` | Determines whether LOS is required from (`centerX`, `centerY`) to considered objects. |
+              | bCheckForNonSprites | boolean | `false` | Determines whether non-sprite objects in the main objects list are considered. |
+              | terrainTable | Array<byte,16> | `CGameObject.DEFAULT_VISIBLE_TERRAIN_TABLE` | The terrain table to use for determining LOS. |
+
+        - name: EEex_Area_ForAllOfTypeStringInRange
+          detail: EEex_Area_ForAllOfTypeStringInRange(area, centerX, centerY, aiObjectTypeString, range, func, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
+          doc: |-
+              **Instance Name:** `forAllOfTypeStringInRange`
+              
+              **Summary**
+              
+              Calls `func` for every creature that matches `aiObjectTypeString` around (`centerX`, `centerY`)
+              in the given `range`, as per the `NumCreature()` trigger.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | area | CGameArea |  | The area to search. |
+              | centerX | number |  | The x coordinate to use as the center of the search radius. |
+              | centerY | number |  | The y coordinate to use as the center of the search radius. |
+              | aiObjectTypeString | string |  | The AI object type string used to filter the objects passed to `func`. <br/> Automatically parsed by `EEex_Object_ParseString()`; the resulting object is freed before return. |
+              | range | number |  | The radius to search around (`centerX`, `centerY`). `448` is a sprite's default visual range. |
+              | func | function |  | The function to call for every creature in the search area. |
+              | bCheckForLineOfSight | boolean | `true` | Determines whether LOS is required from (`centerX`, `centerY`) to considered objects. |
+              | bCheckForNonSprites | boolean | `false` | Determines whether non-sprite objects in the main objects list are considered. |
+              | terrainTable | Array<byte,16> | `CGameObject.DEFAULT_VISIBLE_TERRAIN_TABLE` | The terrain table to use for determining LOS. |
+
+        - name: EEex_Area_GetAllOfTypeInRange
+          detail: EEex_Area_GetAllOfTypeInRange(area, centerX, centerY, aiObjectType, range, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
+          doc: |-
+              **Instance Name:** `getAllOfTypeInRange`
+              
+              **Summary**
+              
+              Returns a table populated by every creature that matches `aiObjectType` around (`centerX`, `centerY`)
+              in the given `range`, as per the `NumCreature()` trigger.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | area | CGameArea |  | The area to search. |
+              | centerX | number |  | The x coordinate to use as the center of the search radius. |
+              | centerY | number |  | The y coordinate to use as the center of the search radius. |
+              | aiObjectType | CAIObjectType |  | The AI object type used to filter the objects passed to `func`. <br/> Most commonly retrieved from `EEex_Object_ParseString()`. Remember to call `:free()`. |
+              | range | number |  | The radius to search around (`centerX`, `centerY`). `448` is a sprite's default visual range. |
+              | bCheckForLineOfSight | boolean | `true` | Determines whether LOS is required from (`centerX`, `centerY`) to considered objects. |
+              | bCheckForNonSprites | boolean | `false` | Determines whether non-sprite objects in the main objects list are considered. |
+              | terrainTable | Array<byte,16> | `CGameObject.DEFAULT_VISIBLE_TERRAIN_TABLE` | The terrain table to use for determining LOS. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | table | See summary. |
+
+        - name: EEex_Area_GetAllOfTypeStringInRange
+          detail: EEex_Area_GetAllOfTypeStringInRange(area, centerX, centerY, aiObjectTypeString, range, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
+          doc: |-
+              **Instance Name:** `getAllOfTypeStringInRange`
+              
+              **Summary**
+              
+              Returns a table populated by every creature that matches `aiObjectTypeString` around (`centerX`, `centerY`)
+              in the given `range`, as per the `NumCreature()` trigger.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | area | CGameArea |  | The area to search. |
+              | centerX | number |  | The x coordinate to use as the center of the search radius. |
+              | centerY | number |  | The y coordinate to use as the center of the search radius. |
+              | aiObjectTypeString | string |  | The AI object type string used to filter the objects added to the return table. <br/> Automatically parsed by `EEex_Object_ParseString()`; the resulting object is freed before return. |
+              | range | number |  | The radius to search around (`centerX`, `centerY`). `448` is a sprite's default visual range. |
+              | bCheckForLineOfSight | boolean | `true` | Determines whether LOS is required from (`centerX`, `centerY`) to considered objects. |
+              | bCheckForNonSprites | boolean | `false` | Determines whether non-sprite objects in the main objects list are considered. |
+              | terrainTable | Array<byte,16> | `CGameObject.DEFAULT_VISIBLE_TERRAIN_TABLE` | The terrain table to use for determining LOS. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | table | See summary. |
+
+        - name: EEex_Area_GetNearestOpenPosition
+          detail: EEex_Area_GetNearestOpenPosition()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Area_GetVariableInt
+          detail: EEex_Area_GetVariableInt(area, variableName)
+          doc: |-
+              **Instance Name:** `getVariableInt`
+              
+              **Summary**
+              
+              Returns the integer value of the `variableName` Global scoped to `area`.
+              If no variable named `variableName` exists, returns `0`.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | area | CGameArea |  | The area that the variable being fetched is scoped to. |
+              | variableName | string |  | The name of the variable to fetch. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | number | See summary. |
+
+        - name: EEex_Area_GetVariableString
+          detail: EEex_Area_GetVariableString(area, variableName)
+          doc: |-
+              **Instance Name:** `getVariableString`
+              
+              **Summary**
+              
+              Returns the string value of the `variableName` Global scoped to `area`.
+              If no variable named `variableName` exists, returns `""`.
+              
+              **Note**
+              Global string values can only be accessed through EEex functions.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | area | CGameArea |  | The area that the variable being fetched is scoped to. |
+              | variableName | string |  | The name of the variable to fetch. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | string | See summary. |
+
+        - name: EEex_Area_GetVisible
+          detail: EEex_Area_GetVisible()
+          doc: |-
+              **Summary**
+              
+              Returns the currently-visible `CGameArea`, or `nil` if the worldscreen is not initialized.
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | CGameArea | nil | See summary. |
+
+        - name: EEex_Area_SetVariableInt
+          detail: EEex_Area_SetVariableInt(area, variableName, value)
+          doc: |-
+              **Instance Name:** `setVariableInt`
+              
+              **Summary**
+              
+              Sets the integer value of the `variableName` Global scoped to `area` to `value`.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | area | CGameArea |  | The area that the variable being set is scoped to. |
+              | variableName | string |  | The name of the variable to set. |
+              | value | number |  | The value to set the variable to. |
+
+        - name: EEex_Area_SetVariableString
+          detail: EEex_Area_SetVariableString(area, variableName, value)
+          doc: |-
+              This function is currently undocumented.
+
+eeex_functions_debug:
+    type: 3
+    category: eeex_functions
+    items:
+        - name: EEex_Debug_DumpScriptEncoding
+          detail: EEex_Debug_DumpScriptEncoding()
+          doc: |-
+              This function is currently undocumented.
+
+eeex_functions_gameobject:
+    type: 3
+    category: eeex_functions
+    items:
+        - name: EEex_GameObject_ApplyEffect
+          detail: EEex_GameObject_ApplyEffect(object, args, diceSize, duration, durationType, dwFlags, effectAmount, effectID, effectList, immediateResolve, m_casterLevel, m_effectAmount2, m_effectAmount3, m_effectAmount4, m_effectAmount5, m_flags, m_maxLevel, m_minLevel, m_projectileType, m_res2, m_res3, m_school, m_scriptName, m_secondaryType, m_slotNum, m_sourceFlags, m_sourceRes, m_sourceType, noSave, numDice, probabilityLower, probabilityUpper, res, saveMod, savingThrow, sourceID, sourceTarget, sourceX, sourceY, special, spellLevel, targetType, targetX, targetY)
+          doc: |-
+              **Instance Name:** `applyEffect`
+              
+              **Summary**
+              
+              Applies an effect to the given `object` based on the `args` table.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | object | CGameObject |  | The object to apply the effect to. |
+              | args | table |  | The table that describes the effect to apply. |
+              
+              Valid keys for the `args` table are as follows:
+              
+              | **Name** | **Default Value** | **Description** |
+              | --- | --- | --- |
+              | diceSize | `0` | As per offset [+0x3C] of .EFF v2.0. |
+              | duration | `0` | As per offset [+0x28] of .EFF v2.0. |
+              | durationType | `0` | As per offset [+0x24] of .EFF v2.0. |
+              | dwFlags | `0` | As per offset [+0x20] of .EFF v2.0. |
+              | effectAmount | `0` | As per offset [+0x1C] of .EFF v2.0. |
+              | effectID | `<ERROR>` | As per offset [+0x10] of .EFF v2.0. |
+              | effectList | `1` | If 1, adds the effect to the sprite's timed list. <br/> |
+              |  |  | If 2, adds the effect to the sprite's equipped list. |
+              | immediateResolve | `1` | Determines whether the engine immediately applies the effect during the <br/> |
+              |  |  | function call, or the next time the sprite's effect list is processed. |
+              | m_casterLevel | `0` | As per offset [+0xC8] of .EFF v2.0. |
+              | m_effectAmount2 | `0` | As per offset [+0x60] of .EFF v2.0. |
+              | m_effectAmount3 | `0` | As per offset [+0x64] of .EFF v2.0. |
+              | m_effectAmount4 | `0` | As per offset [+0x68] of .EFF v2.0. |
+              | m_effectAmount5 | `0` | As per offset [+0x6C] of .EFF v2.0. |
+              | m_flags | `0` | As per offset [+0x5C] of .EFF v2.0. |
+              | m_maxLevel | `0` | As per offset [+0x58] of .EFF v2.0. |
+              | m_minLevel | `0` | As per offset [+0x54] of .EFF v2.0. |
+              | m_projectileType | `0` | As per offset [+0xA0] of .EFF v2.0. |
+              | m_res2 | `""` | As per offset [+0x70] of .EFF v2.0. |
+              | m_res3 | `""` | As per offset [+0x78] of .EFF v2.0. |
+              | m_school | `0` | As per offset [+0x4C] of .EFF v2.0. |
+              | m_scriptName | `""` | As per offset [+0xA8] of .EFF v2.0. |
+              | m_secondaryType | `0` | As per offset [+0xD0] of .EFF v2.0. |
+              | m_slotNum | `0` | As per offset [+0xA4] of .EFF v2.0. |
+              | m_sourceFlags | `0` | As per offset [+0x9C] of .EFF v2.0. |
+              | m_sourceRes | `""` | As per offset [+0x94] of .EFF v2.0. |
+              | m_sourceType | `0` | As per offset [+0x90] of .EFF v2.0. |
+              | noSave | `0` | If true, the effect bypasses any immunities the sprite might have to its application. |
+              | numDice | `0` | As per offset [+0x38] of .EFF v2.0. |
+              | probabilityLower | `0` | As per offset [+0x2E] of .EFF v2.0. |
+              | probabilityUpper | `100` | As per offset [+0x2C] of .EFF v2.0. |
+              | res | `""` | As per offset [+0x30] of .EFF v2.0. |
+              | saveMod | `0` | As per offset [+0x44] of .EFF v2.0. |
+              | savingThrow | `0` | As per offset [+0x40] of .EFF v2.0. |
+              | sourceID | `-1` | The object id of the effect's source, as per `CGameEffect.m_sourceId`. |
+              | sourceTarget | `-1` | The object id of the source's target, as per `CGameEffect.m_sourceTarget`; <br/> |
+              |  |  | you might need to set this if the opcode applies additional effects. |
+              | sourceX | `-1` | As per offset [+0x80] of .EFF v2.0. |
+              | sourceY | `-1` | As per offset [+0x84] of .EFF v2.0. |
+              | special | `0` | As per offset [+0x48] of .EFF v2.0. |
+              | spellLevel | `0` | As per offset [+0x18] of .EFF v2.0. |
+              | targetType | `1` | As per offset [+0x14] of .EFF v2.0. |
+              | targetX | `-1` | As per offset [+0x88] of .EFF v2.0. |
+              | targetY | `-1` | As per offset [+0x8C] of .EFF v2.0. |
+
+        - name: EEex_GameObject_AttachVisualEffect
+          detail: EEex_GameObject_AttachVisualEffect()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_GameObject_CastUserType
+          detail: EEex_GameObject_CastUserType(object)
+          doc: |-
+              **Aliases:** `EEex_GameObject_CastUT`
+              
+              **Summary**
+              
+              Takes the given `object` and returns a cast userdata that represents `object`'s true type.
+              
+              Most EEex functions will call this function before passing an object to the modder API.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | object | CGameObject |  | The object to cast. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              |  CGameAIArea | CGameAIBase | CGameAIGame | CGameContainer | CGameDoor | CGameFireball3d | CGameSound | <br/> \CGameSpawning | CGameSprite | CGameStatic | CGameTemporal | CGameTiledObject | CGameTrigger | CObjectMarker | nil  | See summary. |
+
+        - name: EEex_GameObject_Get
+          detail: EEex_GameObject_Get(objectID)
+          doc: |-
+              **Summary**
+              
+              Returns the object associated with `objectID`, or `nil` if `objectID` is invalid.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | objectID | number |  | The id of the object to fetch. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              |  CGameAIArea | CGameAIBase | CGameAIGame | CGameContainer | CGameDoor | CGameFireball3d | CGameSound | <br/> \CGameSpawning | CGameSprite | CGameStatic | CGameTemporal | CGameTiledObject | CGameTrigger | CObjectMarker | nil  | See summary. |
+
+        - name: EEex_GameObject_GetAllSelectedIDs
+          detail: EEex_GameObject_GetAllSelectedIDs()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_GameObject_GetClass
+          detail: EEex_GameObject_GetClass(object)
+          doc: |-
+              **Instance Name:** `getClass`
+              
+              **Summary**
+              
+              Returns the given `object`'s class.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | object | CGameObject |  | The object whose class is being fetched. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | number | See summary. |
+
+        - name: EEex_GameObject_GetSelected
+          detail: EEex_GameObject_GetSelected()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_GameObject_GetSelectedID
+          detail: EEex_GameObject_GetSelectedID()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_GameObject_GetUnderCursor
+          detail: EEex_GameObject_GetUnderCursor()
+          doc: |-
+              **Summary**
+              
+              Returns the interactable object currently under the cursor, or `nil` if none exists.
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | CGameContainer | CGameDoor | CGameSprite | CGameTrigger | nil | See summary. |
+
+        - name: EEex_GameObject_GetUnderCursorID
+          detail: EEex_GameObject_GetUnderCursorID()
+          doc: |-
+              **Summary**
+              
+              Returns the id of the interactable object currently under the cursor, or `-1` if none exists.
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | number | See summary. |
+
+        - name: EEex_GameObject_IsSprite
+          detail: EEex_GameObject_IsSprite(object, allowDead)
+          doc: |-
+              **Instance Name:** `isSprite`
+              
+              **Summary**
+              
+              Returns whether the given `object` is a sprite.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | object | CGameObject |  | The object to check. |
+              | allowDead | boolean | `false` | Determines whether `object` is allowed to be dead. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | boolean | See summary. |
+
+        - name: EEex_GameObject_IsSpriteID
+          detail: EEex_GameObject_IsSpriteID(objectID, allowDead)
+          doc: |-
+              **Summary**
+              
+              Returns whether the given `objectID` is associated with a sprite.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | objectID | number |  | The object id to check. |
+              | allowDead | boolean | `false` | Determines whether the sprite associated with `objectID` is allowed to be dead. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | boolean | See summary. |
+
+        - name: EEex_GameObject_IterateSelected
+          detail: EEex_GameObject_IterateSelected()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_GameObject_IterateSelectedIDs
+          detail: EEex_GameObject_IterateSelectedIDs()
+          doc: |-
+              This function is currently undocumented.
+
+eeex_functions_gamestate:
+    type: 3
+    category: eeex_functions
+    items:
+        - name: EEex_GameState_AddAfterIncludesListener
+          detail: EEex_GameState_AddAfterIncludesListener()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_GameState_AddBeforeIncludesListener
+          detail: EEex_GameState_AddBeforeIncludesListener()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_GameState_AddDestroyedListener
+          detail: EEex_GameState_AddDestroyedListener(listener)
+          doc: |-
+              **Summary**
+              
+              Registers a listener function that is called immediately after the engine has cleaned up a game session.
+              Examples of when this occurs include the user quitting to the main menu, loading a save, etc.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | listener | function |  | The listener to register. |
+
+        - name: EEex_GameState_AddInitializedListener
+          detail: EEex_GameState_AddInitializedListener(listener)
+          doc: |-
+              **Summary**
+              
+              Registers a listener function that is called immediately after the engine's Lua environment has been initialized.
+              This only occurs once during the engine's early start up process. If the engine has already been initialized,
+              `listener` is called immediately.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | listener | function |  | The listener to register. |
+
+        - name: EEex_GameState_AddShutdownListener
+          detail: EEex_GameState_AddShutdownListener()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_GameState_GetGlobalInt
+          detail: EEex_GameState_GetGlobalInt(variableName)
+          doc: |-
+              **Summary**
+              
+              Returns the integer value of the `variableName` Global scoped to `GLOBAL`.
+              If no variable named `variableName` exists, returns `0`.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | variableName | string |  | The name of the variable to fetch. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | number | See summary. |
+
+        - name: EEex_GameState_GetGlobalString
+          detail: EEex_GameState_GetGlobalString(variableName)
+          doc: |-
+              **Summary**
+              
+              Returns the string value of the `variableName` Global scoped to `GLOBAL`.
+              If no variable named `variableName` exists, returns `""`.
+              
+              **Note**
+              Global string values can only be accessed through EEex functions.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | variableName | string |  | The name of the variable to fetch. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | string | See summary. |
+
+        - name: EEex_GameState_SetGlobalInt
+          detail: EEex_GameState_SetGlobalInt(variableName, value)
+          doc: |-
+              **Summary**
+              
+              Sets the integer value of the `variableName` Global scoped to `GLOBAL` to `value`.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | variableName | string |  | The name of the variable to set. |
+              | value | number |  | The value to set the variable to. |
+
+        - name: EEex_GameState_SetGlobalString
+          detail: EEex_GameState_SetGlobalString(variableName, value)
+          doc: |-
+              This function is currently undocumented.
+
+eeex_functions_key:
+    type: 3
+    category: eeex_functions
+    items:
+        - name: EEex_Key_AddPressedListener
+          detail: EEex_Key_AddPressedListener(func, Name, key)
+          doc: |-
+              **Summary**
+              
+              Registers a listener function that is called whenever a key is pressed. See `SDL_Keycode` for valid `key` values.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | func | function |  | The listener to register. |
+              
+              The listener function
+              
+              **Parameters:**
+              
+              | Name | Type | Description |
+              | --- | --- | --- |
+              | key | SDL_Keycode | The key that was pressed. |
+
+        - name: EEex_Key_AddReleasedListener
+          detail: EEex_Key_AddReleasedListener(func, Name, key)
+          doc: |-
+              **Summary**
+              
+              Registers a listener function that is called whenever a key is released. See `SDL_Keycode` for valid `key` values.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | func | function |  | The listener to register. |
+              
+              The listener function
+              
+              **Parameters:**
+              
+              | Name | Type | Description |
+              | --- | --- | --- |
+              | key | SDL_Keycode | The key that was released. |
+
+        - name: EEex_Key_EnterCaptureMode
+          detail: EEex_Key_EnterCaptureMode()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Key_ExitCaptureMode
+          detail: EEex_Key_ExitCaptureMode()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Key_GetFromName
+          detail: EEex_Key_GetFromName(keyName)
+          doc: |-
+              **Summary**
+              
+              Returns a `SDL_Keycode` value that represents the given `keyName`.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | keyName | string |  | The name of the key whose `SDL_Keycode` value is being fetched. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | SDL_Keycode | See summary. |
+              
+              Recognized `keyName` values
+              
+              UTF-8 character encodings are recognized. For example, all of the following lines would be considered valid:
+              
+              ```lua
+              EEex_Key_GetFromName("a")
+              EEex_Key_GetFromName("$")
+              EEex_Key_GetFromName("£")
+              EEex_Key_GetFromName("€")
+              EEex_Key_GetFromName("𐍈")
+              
+              ```
+              Additionally, the following table provides a list of all the specially-recognized key names:
+              
+              | Recognized Key Name |
+              | --- |
+              | Return |
+              | Escape |
+              | Backspace |
+              | Tab |
+              | Space |
+              | CapsLock |
+              | F1 |
+              | F2 |
+              | F3 |
+              | F4 |
+              | F5 |
+              | F6 |
+              | F7 |
+              | F8 |
+              | F9 |
+              | F10 |
+              | F11 |
+              | F12 |
+              | PrintScreen |
+              | ScrollLock |
+              | Pause |
+              | Insert |
+              | Home |
+              | PageUp |
+              | Delete |
+              | End |
+              | PageDown |
+              | Right |
+              | Left |
+              | Down |
+              | Up |
+              | Numlock |
+              | Keypad / |
+              | Keypad * |
+              | Keypad - |
+              | Keypad + |
+              | Keypad Enter |
+              | Keypad 1 |
+              | Keypad 2 |
+              | Keypad 3 |
+              | Keypad 4 |
+              | Keypad 5 |
+              | Keypad 6 |
+              | Keypad 7 |
+              | Keypad 8 |
+              | Keypad 9 |
+              | Keypad 0 |
+              | Keypad . |
+              | Menu |
+              | Power |
+              | Keypad = |
+              | F13 |
+              | F14 |
+              | F15 |
+              | F16 |
+              | F17 |
+              | F18 |
+              | F19 |
+              | F20 |
+              | F21 |
+              | F22 |
+              | F23 |
+              | F24 |
+              | Execute |
+              | Help |
+              | Menu |
+              | Select |
+              | Stop |
+              | Again |
+              | Undo |
+              | Cut |
+              | Copy |
+              | Paste |
+              | Find |
+              | Mute |
+              | VolumeUp |
+              | VolumeDown |
+              | Keypad , |
+              | Keypad = (AS400) |
+              | AltErase |
+              | SysReq |
+              | Cancel |
+              | Clear |
+              | Prior |
+              | Return |
+              | Separator |
+              | Out |
+              | Oper |
+              | Clear / Again |
+              | CrSel |
+              | ExSel |
+              | Keypad 00 |
+              | Keypad 000 |
+              | ThousandsSeparator |
+              | DecimalSeparator |
+              | CurrencyUnit |
+              | CurrencySubUnit |
+              | Keypad ( |
+              | Keypad ) |
+              | Keypad { |
+              | Keypad } |
+              | Keypad Tab |
+              | Keypad Backspace |
+              | Keypad A |
+              | Keypad B |
+              | Keypad C |
+              | Keypad D |
+              | Keypad E |
+              | Keypad F |
+              | Keypad XOR |
+              | Keypad ^ |
+              | Keypad % |
+              | Keypad < |
+              | Keypad > |
+              | Keypad & |
+              | Keypad && |
+              | Keypad |  |
+              | Keypad |  |  |
+              | Keypad : |
+              | Keypad # |
+              | Keypad Space |
+              | Keypad @ |
+              | Keypad ! |
+              | Keypad MemStore |
+              | Keypad MemRecall |
+              | Keypad MemClear |
+              | Keypad MemAdd |
+              | Keypad MemSubtract |
+              | Keypad MemMultiply |
+              | Keypad MemDivide |
+              | Keypad +/- |
+              | Keypad Clear |
+              | Keypad ClearEntry |
+              | Keypad Binary |
+              | Keypad Octal |
+              | Keypad Decimal |
+              | Keypad Hexadecimal |
+              | Left Ctrl |
+              | Left Shift |
+              | Left Alt |
+              | Left Windows |
+              | Right Ctrl |
+              | Right Shift |
+              | Right Alt |
+              | Right Windows |
+              | ModeSwitch |
+              | AudioNext |
+              | AudioPrev |
+              | AudioStop |
+              | AudioPlay |
+              | AudioMute |
+              | MediaSelect |
+              | WWW |
+              | Mail |
+              | Calculator |
+              | Computer |
+              | AC Search |
+              | AC Home |
+              | AC Back |
+              | AC Forward |
+              | AC Stop |
+              | AC Refresh |
+              | AC Bookmarks |
+              | BrightnessDown |
+              | BrightnessUp |
+              | DisplaySwitch |
+              | KBDIllumToggle |
+              | KBDIllumDown |
+              | KBDIllumUp |
+              | Eject |
+              | Sleep |
+
+        - name: EEex_Key_GetName
+          detail: EEex_Key_GetName()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Key_GetPressedCount
+          detail: EEex_Key_GetPressedCount()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Key_GetPressedStack
+          detail: EEex_Key_GetPressedStack()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Key_IsDown
+          detail: EEex_Key_IsDown(key)
+          doc: |-
+              **Summary**
+              
+              Returns `true` if the given `key` is currently pressed. See `SDL_Keycode` for valid `key` values.
+              
+              It is recommended to use `EEex_Key_GetFromName` if you are unsure which `SDL_Keycode` matches the desired character.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | key | SDL_Keycode |  | The key whose pressed status is being checked. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | boolean | See summary. |
+              
+              **SDL_Keycode**
+              
+              | Ordinal Name | Value |
+              | --- | --- |
+              | SDLK_UNKNOWN | 0 |
+              | SDLK_BACKSPACE | 8 |
+              | SDLK_TAB | 9 |
+              | SDLK_RETURN | 13 |
+              | SDLK_ESCAPE | 27 |
+              | SDLK_SPACE | 32 |
+              | SDLK_EXCLAIM | 33 |
+              | SDLK_QUOTEDBL | 34 |
+              | SDLK_HASH | 35 |
+              | SDLK_DOLLAR | 36 |
+              | SDLK_PERCENT | 37 |
+              | SDLK_AMPERSAND | 38 |
+              | SDLK_QUOTE | 39 |
+              | SDLK_LEFTPAREN | 40 |
+              | SDLK_RIGHTPAREN | 41 |
+              | SDLK_ASTERISK | 42 |
+              | SDLK_PLUS | 43 |
+              | SDLK_COMMA | 44 |
+              | SDLK_MINUS | 45 |
+              | SDLK_PERIOD | 46 |
+              | SDLK_SLASH | 47 |
+              | SDLK_0 | 48 |
+              | SDLK_1 | 49 |
+              | SDLK_2 | 50 |
+              | SDLK_3 | 51 |
+              | SDLK_4 | 52 |
+              | SDLK_5 | 53 |
+              | SDLK_6 | 54 |
+              | SDLK_7 | 55 |
+              | SDLK_8 | 56 |
+              | SDLK_9 | 57 |
+              | SDLK_COLON | 58 |
+              | SDLK_SEMICOLON | 59 |
+              | SDLK_LESS | 60 |
+              | SDLK_EQUALS | 61 |
+              | SDLK_GREATER | 62 |
+              | SDLK_QUESTION | 63 |
+              | SDLK_AT | 64 |
+              | SDLK_LEFTBRACKET | 91 |
+              | SDLK_BACKSLASH | 92 |
+              | SDLK_RIGHTBRACKET | 93 |
+              | SDLK_CARET | 94 |
+              | SDLK_UNDERSCORE | 95 |
+              | SDLK_BACKQUOTE | 96 |
+              | SDLK_a | 97 |
+              | SDLK_b | 98 |
+              | SDLK_c | 99 |
+              | SDLK_d | 100 |
+              | SDLK_e | 101 |
+              | SDLK_f | 102 |
+              | SDLK_g | 103 |
+              | SDLK_h | 104 |
+              | SDLK_i | 105 |
+              | SDLK_j | 106 |
+              | SDLK_k | 107 |
+              | SDLK_l | 108 |
+              | SDLK_m | 109 |
+              | SDLK_n | 110 |
+              | SDLK_o | 111 |
+              | SDLK_p | 112 |
+              | SDLK_q | 113 |
+              | SDLK_r | 114 |
+              | SDLK_s | 115 |
+              | SDLK_t | 116 |
+              | SDLK_u | 117 |
+              | SDLK_v | 118 |
+              | SDLK_w | 119 |
+              | SDLK_x | 120 |
+              | SDLK_y | 121 |
+              | SDLK_z | 122 |
+              | SDLK_DELETE | 127 |
+              | SDLK_CAPSLOCK | 0x40000039 |
+              | SDLK_F1 | 0x4000003A |
+              | SDLK_F2 | 0x4000003B |
+              | SDLK_F3 | 0x4000003C |
+              | SDLK_F4 | 0x4000003D |
+              | SDLK_F5 | 0x4000003E |
+              | SDLK_F6 | 0x4000003F |
+              | SDLK_F7 | 0x40000040 |
+              | SDLK_F8 | 0x40000041 |
+              | SDLK_F9 | 0x40000042 |
+              | SDLK_F10 | 0x40000043 |
+              | SDLK_F11 | 0x40000044 |
+              | SDLK_F12 | 0x40000045 |
+              | SDLK_PRINTSCREEN | 0x40000046 |
+              | SDLK_SCROLLLOCK | 0x40000047 |
+              | SDLK_PAUSE | 0x40000048 |
+              | SDLK_INSERT | 0x40000049 |
+              | SDLK_HOME | 0x4000004A |
+              | SDLK_PAGEUP | 0x4000004B |
+              | SDLK_END | 0x4000004D |
+              | SDLK_PAGEDOWN | 0x4000004E |
+              | SDLK_RIGHT | 0x4000004F |
+              | SDLK_LEFT | 0x40000050 |
+              | SDLK_DOWN | 0x40000051 |
+              | SDLK_UP | 0x40000052 |
+              | SDLK_NUMLOCKCLEAR | 0x40000053 |
+              | SDLK_KP_DIVIDE | 0x40000054 |
+              | SDLK_KP_MULTIPLY | 0x40000055 |
+              | SDLK_KP_MINUS | 0x40000056 |
+              | SDLK_KP_PLUS | 0x40000057 |
+              | SDLK_KP_ENTER | 0x40000058 |
+              | SDLK_KP_1 | 0x40000059 |
+              | SDLK_KP_2 | 0x4000005A |
+              | SDLK_KP_3 | 0x4000005B |
+              | SDLK_KP_4 | 0x4000005C |
+              | SDLK_KP_5 | 0x4000005D |
+              | SDLK_KP_6 | 0x4000005E |
+              | SDLK_KP_7 | 0x4000005F |
+              | SDLK_KP_8 | 0x40000060 |
+              | SDLK_KP_9 | 0x40000061 |
+              | SDLK_KP_0 | 0x40000062 |
+              | SDLK_KP_PERIOD | 0x40000063 |
+              | SDLK_APPLICATION | 0x40000065 |
+              | SDLK_POWER | 0x40000066 |
+              | SDLK_KP_EQUALS | 0x40000067 |
+              | SDLK_F13 | 0x40000068 |
+              | SDLK_F14 | 0x40000069 |
+              | SDLK_F15 | 0x4000006A |
+              | SDLK_F16 | 0x4000006B |
+              | SDLK_F17 | 0x4000006C |
+              | SDLK_F18 | 0x4000006D |
+              | SDLK_F19 | 0x4000006E |
+              | SDLK_F20 | 0x4000006F |
+              | SDLK_F21 | 0x40000070 |
+              | SDLK_F22 | 0x40000071 |
+              | SDLK_F23 | 0x40000072 |
+              | SDLK_F24 | 0x40000073 |
+              | SDLK_EXECUTE | 0x40000074 |
+              | SDLK_HELP | 0x40000075 |
+              | SDLK_MENU | 0x40000076 |
+              | SDLK_SELECT | 0x40000077 |
+              | SDLK_STOP | 0x40000078 |
+              | SDLK_AGAIN | 0x40000079 |
+              | SDLK_UNDO | 0x4000007A |
+              | SDLK_CUT | 0x4000007B |
+              | SDLK_COPY | 0x4000007C |
+              | SDLK_PASTE | 0x4000007D |
+              | SDLK_FIND | 0x4000007E |
+              | SDLK_MUTE | 0x4000007F |
+              | SDLK_VOLUMEUP | 0x40000080 |
+              | SDLK_VOLUMEDOWN | 0x40000081 |
+              | SDLK_KP_COMMA | 0x40000085 |
+              | SDLK_KP_EQUALSAS400 | 0x40000086 |
+              | SDLK_ALTERASE | 0x40000099 |
+              | SDLK_SYSREQ | 0x4000009A |
+              | SDLK_CANCEL | 0x4000009B |
+              | SDLK_CLEAR | 0x4000009C |
+              | SDLK_PRIOR | 0x4000009D |
+              | SDLK_RETURN2 | 0x4000009E |
+              | SDLK_SEPARATOR | 0x4000009F |
+              | SDLK_OUT | 0x400000A0 |
+              | SDLK_OPER | 0x400000A1 |
+              | SDLK_CLEARAGAIN | 0x400000A2 |
+              | SDLK_CRSEL | 0x400000A3 |
+              | SDLK_EXSEL | 0x400000A4 |
+              | SDLK_KP_00 | 0x400000B0 |
+              | SDLK_KP_000 | 0x400000B1 |
+              | SDLK_THOUSANDSSEPARATOR | 0x400000B2 |
+              | SDLK_DECIMALSEPARATOR | 0x400000B3 |
+              | SDLK_CURRENCYUNIT | 0x400000B4 |
+              | SDLK_CURRENCYSUBUNIT | 0x400000B5 |
+              | SDLK_KP_LEFTPAREN | 0x400000B6 |
+              | SDLK_KP_RIGHTPAREN | 0x400000B7 |
+              | SDLK_KP_LEFTBRACE | 0x400000B8 |
+              | SDLK_KP_RIGHTBRACE | 0x400000B9 |
+              | SDLK_KP_TAB | 0x400000BA |
+              | SDLK_KP_BACKSPACE | 0x400000BB |
+              | SDLK_KP_A | 0x400000BC |
+              | SDLK_KP_B | 0x400000BD |
+              | SDLK_KP_C | 0x400000BE |
+              | SDLK_KP_D | 0x400000BF |
+              | SDLK_KP_E | 0x400000C0 |
+              | SDLK_KP_F | 0x400000C1 |
+              | SDLK_KP_XOR | 0x400000C2 |
+              | SDLK_KP_POWER | 0x400000C3 |
+              | SDLK_KP_PERCENT | 0x400000C4 |
+              | SDLK_KP_LESS | 0x400000C5 |
+              | SDLK_KP_GREATER | 0x400000C6 |
+              | SDLK_KP_AMPERSAND | 0x400000C7 |
+              | SDLK_KP_DBLAMPERSAND | 0x400000C8 |
+              | SDLK_KP_VERTICALBAR | 0x400000C9 |
+              | SDLK_KP_DBLVERTICALBAR | 0x400000CA |
+              | SDLK_KP_COLON | 0x400000CB |
+              | SDLK_KP_HASH | 0x400000CC |
+              | SDLK_KP_SPACE | 0x400000CD |
+              | SDLK_KP_AT | 0x400000CE |
+              | SDLK_KP_EXCLAM | 0x400000CF |
+              | SDLK_KP_MEMSTORE | 0x400000D0 |
+              | SDLK_KP_MEMRECALL | 0x400000D1 |
+              | SDLK_KP_MEMCLEAR | 0x400000D2 |
+              | SDLK_KP_MEMADD | 0x400000D3 |
+              | SDLK_KP_MEMSUBTRACT | 0x400000D4 |
+              | SDLK_KP_MEMMULTIPLY | 0x400000D5 |
+              | SDLK_KP_MEMDIVIDE | 0x400000D6 |
+              | SDLK_KP_PLUSMINUS | 0x400000D7 |
+              | SDLK_KP_CLEAR | 0x400000D8 |
+              | SDLK_KP_CLEARENTRY | 0x400000D9 |
+              | SDLK_KP_BINARY | 0x400000DA |
+              | SDLK_KP_OCTAL | 0x400000DB |
+              | SDLK_KP_DECIMAL | 0x400000DC |
+              | SDLK_KP_HEXADECIMAL | 0x400000DD |
+              | SDLK_LCTRL | 0x400000E0 |
+              | SDLK_LSHIFT | 0x400000E1 |
+              | SDLK_LALT | 0x400000E2 |
+              | SDLK_LGUI | 0x400000E3 |
+              | SDLK_RCTRL | 0x400000E4 |
+              | SDLK_RSHIFT | 0x400000E5 |
+              | SDLK_RALT | 0x400000E6 |
+              | SDLK_RGUI | 0x400000E7 |
+              | SDLK_MODE | 0x40000101 |
+              | SDLK_AUDIONEXT | 0x40000102 |
+              | SDLK_AUDIOPREV | 0x40000103 |
+              | SDLK_AUDIOSTOP | 0x40000104 |
+              | SDLK_AUDIOPLAY | 0x40000105 |
+              | SDLK_AUDIOMUTE | 0x40000106 |
+              | SDLK_MEDIASELECT | 0x40000107 |
+              | SDLK_WWW | 0x40000108 |
+              | SDLK_MAIL | 0x40000109 |
+              | SDLK_CALCULATOR | 0x4000010A |
+              | SDLK_COMPUTER | 0x4000010B |
+              | SDLK_AC_SEARCH | 0x4000010C |
+              | SDLK_AC_HOME | 0x4000010D |
+              | SDLK_AC_BACK | 0x4000010E |
+              | SDLK_AC_FORWARD | 0x4000010F |
+              | SDLK_AC_STOP | 0x40000110 |
+              | SDLK_AC_REFRESH | 0x40000111 |
+              | SDLK_AC_BOOKMARKS | 0x40000112 |
+              | SDLK_BRIGHTNESSDOWN | 0x40000113 |
+              | SDLK_BRIGHTNESSUP | 0x40000114 |
+              | SDLK_DISPLAYSWITCH | 0x40000115 |
+              | SDLK_KBDILLUMTOGGLE | 0x40000116 |
+              | SDLK_KBDILLUMDOWN | 0x40000117 |
+              | SDLK_KBDILLUMUP | 0x40000118 |
+              | SDLK_EJECT | 0x40000119 |
+              | SDLK_SLEEP | 0x4000011A |
+
+eeex_functions_keybinds:
+    type: 3
+    category: eeex_functions
+    items:
+        - name: EEex_Keybinds_Cast
+          detail: EEex_Keybinds_Cast(resref)
+          doc: |-
+              **Summary**
+              
+              Attempts to cast `resref` as the leader of the currently selected sprites.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | resref | string |  | The resref of the spell to cast. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | boolean | `true` if the casting was started successfully; `false` otherwise. |
+
+        - name: EEex_Keybinds_CastTwoStep
+          detail: EEex_Keybinds_CastTwoStep(firstResref, secondResref)
+          doc: |-
+              **Summary**
+              
+              Attempts to cast `firstResref` |rarr| `secondResref` as the leader of the currently selected sprites.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | firstResref | string |  | The resref of the first spell to cast. <br/> This spell should invoke op214. |
+              | secondResref | string |  | The resref of the second spell to cast. <br/> This spell should be provided by the previously invoked op214. |
+
+        - name: EEex_Keybinds_Get
+          detail: EEex_Keybinds_Get(id)
+          doc: |-
+              **Summary**
+              
+              Returns a table representing the keybind with the given `id`.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | id | string |  | The unique id of the associated keybind. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | table | nil | See summary. |
+              
+              
+              **The Keybind Table**
+              
+              | Key | Value Type | Description |
+              | --- | --- | --- |
+              | callback | function | Function that is called when the conditions required by `fireType` are satisfied. |
+              | fireType | EEex_Keybinds_FireType | The situation in which `callback` is invoked. |
+              | keys | table | Table of keycodes defining the keybind's main sequence of keys.                                       <br/> |
+              |  |  | These keys must be pressed in the defined order for the keybind to be satisfied. |
+              | modifierKeys | table | Table of keycodes defining the keys that are required to be down when the main sequence is satisfied. <br/> |
+              |  |  | Allowed keys include the left / right variants of Ctrl, Shift, and Alt. |
+              
+              **EEex_Keybinds_FireType**
+              
+              | Ordinal Name | Description |
+              | --- | --- |
+              | UP | Fires when any key is released after the keybind has been satisfied. <br/> |
+              |  | Additional key presses will cancel the satisfaction of the keybind. |
+              | DOWN | Fires when the keybind has been satisfied. |
+
+        - name: EEex_Keybinds_SelectPortrait
+          detail: EEex_Keybinds_SelectPortrait(portraitIndex, dontUnselect)
+          doc: |-
+              **Summary**
+              
+              Attempts to select the portrait in `portraitIndex`.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | portraitIndex | number |  | The index of the portrait to select. |
+              | dontUnselect | boolean | `false` | If `true`, prevents the deselection of already-selected sprites. <br/> This is analogous to holding Shift in the original keybindings. |
+
+        - name: EEex_Keybinds_Update
+          detail: EEex_Keybinds_Update(id, args)
+          doc: |-
+              **Summary**
+
+              Updates the keybind with the given `id` with the fields present in `args`.
+
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | id | string |  | The unique id of the associated keybind. |
+              | args | table |  | A table containing fields used to update the keybind. <br/> See `The Keybind Table ` for more details. |
+
+eeex_functions_menu:
+    type: 3
+    category: eeex_functions
+    items:
+        - name: EEex_Menu_AddAfterMainFileLoadedListener
+          detail: EEex_Menu_AddAfterMainFileLoadedListener()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Menu_AddAfterMainFileReloadedListener
+          detail: EEex_Menu_AddAfterMainFileReloadedListener()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Menu_AddBeforeListRendersItemListener
+          detail: EEex_Menu_AddBeforeListRendersItemListener()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Menu_AddBeforeMainFileLoadedListener
+          detail: EEex_Menu_AddBeforeMainFileLoadedListener()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Menu_AddBeforeMainFileReloadedListener
+          detail: EEex_Menu_AddBeforeMainFileReloadedListener()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Menu_AddBeforeUIItemRenderListener
+          detail: EEex_Menu_AddBeforeUIItemRenderListener()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Menu_AddMainFileLoadedListener
+          detail: EEex_Menu_AddMainFileLoadedListener()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Menu_AddTranslationLoadedListener
+          detail: EEex_Menu_AddTranslationLoadedListener()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Menu_AddWindowSizeChangedListener
+          detail: EEex_Menu_AddWindowSizeChangedListener()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Menu_DestroyAllTemplates
+          detail: EEex_Menu_DestroyAllTemplates()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Menu_DestroyInjectedTemplate
+          detail: EEex_Menu_DestroyInjectedTemplate()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Menu_Eval
+          detail: EEex_Menu_Eval()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Menu_Find
+          detail: EEex_Menu_Find()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Menu_GetArea
+          detail: EEex_Menu_GetArea()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Menu_GetItem
+          detail: EEex_Menu_GetItem()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Menu_GetItemArea
+          detail: EEex_Menu_GetItemArea()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Menu_GetItemFunction
+          detail: EEex_Menu_GetItemFunction()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Menu_GetItemVariant
+          detail: EEex_Menu_GetItemVariant()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Menu_GetMousePos
+          detail: EEex_Menu_GetMousePos()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Menu_GetUIItemArea
+          detail: EEex_Menu_GetUIItemArea()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Menu_GetUIMenuArea
+          detail: EEex_Menu_GetUIMenuArea()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Menu_InjectTemplate
+          detail: EEex_Menu_InjectTemplate()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Menu_InjectTemplateInstance
+          detail: EEex_Menu_InjectTemplateInstance()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Menu_IsCursorWithin
+          detail: EEex_Menu_IsCursorWithin()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Menu_IsCursorWithinRect
+          detail: EEex_Menu_IsCursorWithinRect()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Menu_IsNative
+          detail: EEex_Menu_IsNative()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Menu_LoadFile
+          detail: EEex_Menu_LoadFile()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Menu_SetForceScrollbarRender
+          detail: EEex_Menu_SetForceScrollbarRender()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Menu_SetItemExtraScrollbarPad
+          detail: EEex_Menu_SetItemExtraScrollbarPad()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Menu_SetItemFunction
+          detail: EEex_Menu_SetItemFunction()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Menu_SetItemVariant
+          detail: EEex_Menu_SetItemVariant()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Menu_SetTemplateArea
+          detail: EEex_Menu_SetTemplateArea()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Menu_StoreTemplateInstance
+          detail: EEex_Menu_StoreTemplateInstance()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Menu_TranslateXYFromGame
+          detail: EEex_Menu_TranslateXYFromGame()
+          doc: |-
+              This function is currently undocumented.
+
+eeex_functions_object:
+    type: 3
+    category: eeex_functions
+    items:
+        - name: EEex_Object_AddToArea
+          detail: EEex_Object_AddToArea()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Object_EvalAsAIBase
+          detail: EEex_Object_EvalAsAIBase()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Object_EvalStringAsAIBase
+          detail: EEex_Object_EvalStringAsAIBase()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Object_ParseString
+          detail: EEex_Object_ParseString()
+          doc: |-
+              This function is currently undocumented.
+
+eeex_functions_opcode:
+    type: 3
+    category: eeex_functions
+    items:
+        - name: EEex_Opcode_AddListsResolvedListener
+          detail: EEex_Opcode_AddListsResolvedListener()
+          doc: |-
+              This function is currently undocumented.
+
+eeex_functions_options:
+    type: 3
+    category: eeex_functions
+    items:
+        - name: EEex_Options_AddTab
+          detail: EEex_Options_AddTab()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Options_Check
+          detail: EEex_Options_Check(id, value)
+          doc: |-
+              **Summary**
+              
+              Checks if the option with the given `id` exists and is equal to the given `value`.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | id | string |  | The id of the option whose value is to be checked. |
+              | value | `<non-nil>` |  | The value to check against the option. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | boolean | `true` if the option with `id` exists and it is equal to the given `value`; `false` otherwise. |
+
+        - name: EEex_Options_Close
+          detail: EEex_Options_Close()
+          doc: |-
+              **Summary**
+              
+              Closes the "EEex Options" menu if it is currently open.
+
+        - name: EEex_Options_Get
+          detail: EEex_Options_Get(id)
+          doc: |-
+              **Summary**
+              
+              Returns the option object with the given `id`.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | id | string |  | The id of the option to be fetched. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | EEex_Options_Option | nil | See summary / `The Option Table ` for more details. |
+
+        - name: EEex_Options_MarshalKeybind
+          detail: EEex_Options_MarshalKeybind(keybind)
+          doc: |-
+              **Summary**
+              
+              Returns a string representing the given `keybind` table.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | keybind | table |  | A table representing the keybind to marshal. <br/> See `The Keybind Table ` for more details. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | string | See summary. |
+
+        - name: EEex_Options_Open
+          detail: EEex_Options_Open(o)
+          doc: |-
+              **Summary**
+              
+              Opens the "EEex Options" menu if it is currently closed.
+              
+              .. _EEex_Options_Option.new:
+              
+              EEex_Options_Option.new
+              
+              **Summary**
+              
+              Creates a new `EEex_Options_Option` instance.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | o | table | `{}` | The object to become the `EEex_Options_Option` instance. <br/> See `The Option Table ` for more details. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | EEex_Options_Option | See summary. |
+              
+              
+              **The Option Table**
+              
+              | Key | Value Type | Description |
+              | --- | --- | --- |
+              | accessor | EEex_Options_Accessor | This field is currently undocumented. |
+              | default | `<non-nil>` | This field is currently undocumented. |
+              | requiresRestart | boolean | This field is currently undocumented. |
+              | storage | EEex_Options_Private_Storage | This field is currently undocumented. |
+              
+              
+              EEex_Options_Option:get()
+              
+              **Summary**
+              
+              Returns the current, in-effect value of the option.
+              
+              **Note**
+              Some options delay applying changes made to their value; these changes
+              will only be visible at a later time, such as after a restart.
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | `<non-nil>` | See summary. |
+              
+              
+              EEex_Options_Option:getDefault()
+              
+              **Summary**
+              
+              Returns the default value of the option.
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | `<non-nil>` | See summary. |
+              
+              
+              EEex_Options_Option:set()
+              
+              **Summary**
+              
+              Sets the value of the option.
+              
+              **Note**
+              Some options delay applying changes made to their value; these changes
+              will only be visible at a later time, such as after a restart.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | newValue | `<any>` |  | The value to set the option to. <br/> If `nil`, sets the option to its default value. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | `<non-nil>` | Returns the value the option was set to after constraints were applied to `newValue`. |
+
+        - name: EEex_Options_Register
+          detail: EEex_Options_Register(id, option)
+          doc: |-
+              **Summary**
+              
+              Registers `option` under `id`. Options must be registered to be functional.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | id | string |  | The unique id to register `option` under. |
+              | option | EEex_Options_Option |  | The option being registered. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | EEex_Options_Option | Returns `option`. |
+
+        - name: EEex_Options_UnmarshalKeybind
+          detail: EEex_Options_UnmarshalKeybind(keybindStr)
+          doc: |-
+              **Summary**
+              
+              Returns a table representing the given `keybindStr` string.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | keybindStr | string |  | A string representing the keybind to unmarshal. <br/> This string is of the format `<SDL key name>+<SDL key name>... | <UP or DOWN>` |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | table | See summary / `The Keybind Table ` for more details. |
+
+eeex_functions_projectile:
+    type: 3
+    category: eeex_functions
+    items:
+        - name: EEex_Projectile_CastUserType
+          detail: EEex_Projectile_CastUserType(projectile)
+          doc: |-
+              **Aliases:** `EEex_Projectile_CastUT`
+              
+              **Summary**
+              
+              Takes the given `projectile` and returns a cast userdata that represents `projectile`'s true type.
+              
+              Most EEex functions will call this function before passing a projectile to the modder API.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | projectile | CProjectile |  | The projectile to cast. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              |  CProjectile | CProjectileAmbiant | CProjectileArea | <br/> \CProjectileBAM | CProjectileCallLightning | CProjectileCastingGlow | <br/> \CProjectileChain | CProjectileColorSpray | CProjectileConeOfCold | <br/> \CProjectileFall | CProjectileFireHands | CProjectileInstant | <br/> \CProjectileInvisibleTravelling | CProjectileLightningBolt | CProjectileLightningBoltGround | <br/> \CProjectileLightningBounce | CProjectileLightningStorm | CProjectileMagicMissileMulti | <br/> \CProjectileMulti | CProjectileMushroom | CProjectileNewScorcher | <br/> \CProjectileScorcher | CProjectileSegment | CProjectileSkyStrike | <br/> \CProjectileSkyStrikeBAM | CProjectileSpellHit | CProjectileTravelDoor | nil  | See summary. |
+
+        - name: EEex_Projectile_GetStartingPos
+          detail: EEex_Projectile_GetStartingPos()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Projectile_GetStartingPosForID
+          detail: EEex_Projectile_GetStartingPosForID()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Projectile_GetType
+          detail: EEex_Projectile_GetType(projectile)
+          doc: |-
+              **Instance Name:** `getType`
+              
+              **Summary**
+              
+              Returns the `EEex_Projectile_Type` of the given `projectile`.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | projectile | CProjectile |  | The projectile whose type is being fetched. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | EEex_Projectile_Type | See summary. |
+              
+              **EEex_Projectile_Type**
+              | Name | Description |
+              | --- | --- |
+              | Unknown |  |
+              | CProjectile |  |
+              | CProjectileAmbiant |  |
+              | CProjectileArea |  |
+              | CProjectileBAM |  |
+              | CProjectileChain |  |
+              | CProjectileColorSpray |  |
+              | CProjectileConeOfCold |  |
+              | CProjectileFall |  |
+              | CProjectileFireHands |  |
+              | CProjectileInstant |  |
+              | CProjectileMulti |  |
+              | CProjectileMushroom |  |
+              | CProjectileNewScorcher |  |
+              | CProjectileScorcher |  |
+              | CProjectileSegment |  |
+              | CProjectileSkyStrike |  |
+              | CProjectileSkyStrikeBAM |  |
+              | CProjectileSpellHit |  |
+              | CProjectileTravelDoor |  |
+
+        - name: EEex_Projectile_IsOfType
+          detail: EEex_Projectile_IsOfType(projectile, checkType)
+          doc: |-
+              **Instance Name:** `isOfType`
+              
+              **Summary**
+              
+              Returns `true` if `projectile` has the type `checkType` or is a derivative thereof.
+              
+              This is useful to ensure that a projectile is of a certain type before accessing members
+              it may or may not have.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | projectile | CProjectile |  | The projectile whose type is being checked. |
+              | checkType | EEex_Projectile_Type |  | The type to check against. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | boolean | See summary. |
+
+        - name: EEex_Projectile_RegisterGlobalMutator
+          detail: EEex_Projectile_RegisterGlobalMutator(mutatorTableName, Name, context, Context Key, decodeSource, originatingEffect, originatingSprite, projectileType)
+          doc: |-
+              **Summary**
+              
+              Registers a global Lua table as a global (always processed) projectile mutator.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | mutatorTableName | string |  | The name of the table to register. |
+              
+              **The Mutator Table**
+              
+              A mutator table can contain three optional keys, each of which should be assigned a respective mutator function.
+              
+              The valid function keys are: `typeMutator`, `projectileMutator`, and `effectMutator`:
+              
+              **typeMutator**
+              
+              **Parameters:**
+              
+              | Name | Type | Description |
+              | --- | --- | --- |
+              | context | table | A table containing the context of the hook. |
+              
+              `context` **keys:**
+              
+              | Context Key | Value Type | Description |
+              | --- | --- | --- |
+              | decodeSource | EEex_Projectile_DecodeSource | The source of the hook, such as `EEex_Projectile_DecodeSource.CGameSprite_Spell`                           <br/> |
+              |  |  | for the `Spell()` action, `EEex_Projectile_DecodeSource.CGameSprite_SpellPoint`                          <br/> |
+              |  |  | for the `SpellPoint()` action, etc. |
+              | originatingEffect | CGameEffect | nil | The op408 (ProjectileMutator) effect that registered the containing mutator table.                           <br/> <br/> |
+              |  |  |  |
+              |  |  | This is always `nil` for global mutator tables registered via `EEex_Projectile_RegisterGlobalMutator()`. |
+              | originatingSprite | CGameSprite | nil | The sprite that is decoding (creating) the projectile.                                                       <br/> <br/> |
+              |  |  |  |
+              |  |  | Global mutator tables registered via `EEex_Projectile_RegisterGlobalMutator()`                             <br/> |
+              |  |  | also run for non-sprite decode sources; in these cases this is `nil`. |
+              | projectileType | number | The projectile type about to be decoded.                                                                     <br/> <br/> |
+              |  |  |  |
+              |  |  | This is equivalent to the value at `.SPL->Ability Header->[+0x26]`.                                        <br/> <br/> |
+              |  |  |  |
+              |  |  | Subtract one from this value to get the corresponding `PROJECTL.IDS` index. |
+              
+              **Return Values:**
+              
+              | Type | Description |
+              | --- | --- |
+              | number | nil | The new projectile type, or `nil` if the type should not be overridden.     <br/> <br/> |
+              |  |  |
+              |  | This is equivalent to the value at `.SPL->Ability Header->[+0x26]`.         <br/> <br/> |
+              |  |  |
+              |  | Subtract one from this value to get the corresponding `PROJECTL.IDS` index. |
+              
+              **projectileMutator**
+              
+              **Parameters:**
+              
+              | Name | Type | Description |
+              | --- | --- | --- |
+              | context | table | A table containing the context of the hook. |
+              
+              `context` **keys:**
+              
+              | Context Key | Value Type | Description |
+              | --- | --- | --- |
+              | decodeSource | EEex_Projectile_DecodeSource | The source of the hook, such as `EEex_Projectile_DecodeSource.CGameSprite_Spell`                           <br/> |
+              |  |  | for the `Spell()` action, `EEex_Projectile_DecodeSource.CGameSprite_SpellPoint`                          <br/> |
+              |  |  | for the `SpellPoint()` action, etc. |
+              | originatingEffect | CGameEffect | nil | The op408 (ProjectileMutator) effect that registered the containing mutator table.                           <br/> <br/> |
+              |  |  |  |
+              |  |  | This is always `nil` for global mutator tables registered via `EEex_Projectile_RegisterGlobalMutator()`. |
+              | originatingSprite | CGameSprite | nil | The sprite that is decoding (creating) the projectile.                                                       <br/> <br/> |
+              |  |  |  |
+              |  |  | Global mutator tables registered via `EEex_Projectile_RegisterGlobalMutator()`                             <br/> |
+              |  |  | also run for non-sprite decode sources; in these cases this is `nil`. |
+              | projectile | CProjectile | The projectile about to be returned from the decoding process. |
+              
+              **effectMutator**
+              
+              **Parameters:**
+              
+              | Name | Type | Description |
+              | --- | --- | --- |
+              | context | table | A table containing the context of the hook. |
+              
+              `context` **keys:**
+              
+              | Context Key | Value Type | Description |
+              | --- | --- | --- |
+              | addEffectSource | EEex_Projectile_AddEffectSource | The source of the hook, such as `EEex_Projectile_AddEffectSource.CGameSprite_Spell`                           <br/> |
+              |  |  | for the `Spell()` action, `EEex_Projectile_AddEffectSource.CGameSprite_SpellPoint`                          <br/> |
+              |  |  | for the `SpellPoint()` action, etc. |
+              | effect | CGameEffect | The effect that is being added to `projectile`. |
+              | originatingEffect | CGameEffect | nil | The op408 (ProjectileMutator) effect that registered the containing mutator table.                           <br/> <br/> |
+              |  |  |  |
+              |  |  | This is always `nil` for global mutator tables registered via `EEex_Projectile_RegisterGlobalMutator()`. |
+              | originatingSprite | CGameSprite | nil | The sprite that decoded (created) the projectile.                                                            <br/> <br/> |
+              |  |  |  |
+              |  |  | Global mutator tables registered via `EEex_Projectile_RegisterGlobalMutator()`                             <br/> |
+              |  |  | also run for non-sprite sources; in these cases this is `nil`. |
+              | projectile | CProjectile | The projectile that `effect` is being added to. |
+              
+              **EEex_Projectile_DecodeSource**
+              | Name | Description |
+              | --- | --- |
+              | CBounceList_Add |  |
+              | CGameAIBase_FireItem |  |
+              | CGameAIBase_FireItemPoint |  |
+              | CGameAIBase_FireSpell |  |
+              | CGameAIBase_FireSpellPoint |  |
+              | CGameAIBase_ForceSpell |  |
+              | CGameAIBase_ForceSpellPoint |  |
+              | CGameEffect_FireSpell |  |
+              | CGameEffectCastingGlow_ApplyEffect |  |
+              | CGameEffectChangeStatic_ApplyEffect |  |
+              | CGameEffectSummon_ApplyVisualEffect |  |
+              | CGameEffectVisualSpellHitIWD_ApplyEffect |  |
+              | CGameSprite_Spell |  |
+              | CGameSprite_SpellPoint |  |
+              | CGameSprite_Swing |  |
+              | CGameSprite_UpdateAOE |  |
+              | CGameSprite_UseItem |  |
+              | CGameSprite_UseItemPoint |  |
+              | CMessageFireProjectile_Run |  |
+              | CProjectile_DecodeProjectile_MultiMagicMissile |  |
+              | CProjectile_DecodeProjectile_ChainCallLightning |  |
+              | CProjectile_DecodeProjectile_MultiProjectile |  |
+              | CProjectileArea_CreateSecondary |  |
+              | CProjectileArea_Explode |  |
+              | CProjectileChain_AIUpdate |  |
+              | CProjectileChain_Fire |  |
+              | CProjectileFall_AIUpdate |  |
+              
+              **EEex_Projectile_AddEffectSource**
+              | Name | Description |
+              | --- | --- |
+              | CBounceList_Add |  |
+              | CGameAIBase_FireItem |  |
+              | CGameAIBase_FireItemPoint |  |
+              | CGameAIBase_FireSpell |  |
+              | CGameAIBase_FireSpellPoint |  |
+              | CGameAIBase_ForceSpell |  |
+              | CGameAIBase_ForceSpellPoint |  |
+              | CGameEffect_FireSpell |  |
+              | CGameSprite_LoadProjectile |  |
+              | CGameSprite_Spell |  |
+              | CGameSprite_SpellPoint |  |
+              | CGameSprite_Swing |  |
+              | CGameSprite_UseItem |  |
+              | CGameSprite_UseItemPoint |  |
+
+eeex_functions_resource:
+    type: 3
+    category: eeex_functions
+    items:
+        - name: EEex_Resource_Demand
+          detail: EEex_Resource_Demand()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Resource_ExtToType
+          detail: EEex_Resource_ExtToType()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Resource_ExtToUserType
+          detail: EEex_Resource_ExtToUserType()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Resource_Fetch
+          detail: EEex_Resource_Fetch()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Resource_Find2DAColumnIndex
+          detail: EEex_Resource_Find2DAColumnIndex(array, rowIndex, toSearchFor)
+          doc: |-
+              **Instance Name:** `findColumnIndex`
+              
+              **Summary**
+              
+              Searches the values of the row specified by `rowIndex` and returns the first column index that matches `toSearchFor`.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | array | C2DArray |  | The .2DA file being operated on. This is usually the object returned by `EEex_Resource_Load2DA()`. |
+              | rowIndex | number |  | The index of the row to be searched. |
+              | toSearchFor | string |  | The value to search for. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | number | See summary. |
+
+        - name: EEex_Resource_Find2DAColumnLabel
+          detail: EEex_Resource_Find2DAColumnLabel(array, toSearchFor)
+          doc: |-
+              **Instance Name:** `findColumnLabel`
+              
+              **Summary**
+              
+              Searches the .2DA's column labels and returns the first column index that matches `toSearchFor`.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | array | C2DArray |  | The .2DA file being operated on. This is usually the object returned by `EEex_Resource_Load2DA()`. |
+              | toSearchFor | string |  | The label to search for. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | number | See summary. |
+
+        - name: EEex_Resource_Find2DARowIndex
+          detail: EEex_Resource_Find2DARowIndex(array, columnIndex, toSearchFor)
+          doc: |-
+              **Instance Name:** `findRowIndex`
+              
+              **Summary**
+              
+              Searches the values of the column specified by `columnIndex` and returns the first row index that matches `toSearchFor`.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | array | C2DArray |  | The .2DA file being operated on. This is usually the object returned by `EEex_Resource_Load2DA()`. |
+              | columnIndex | number |  | The index of the column to be searched. |
+              | toSearchFor | string |  | The value to search for. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | number | See summary. |
+
+        - name: EEex_Resource_Find2DARowLabel
+          detail: EEex_Resource_Find2DARowLabel(array, toSearchFor)
+          doc: |-
+              **Instance Name:** `findRowLabel`
+              
+              **Summary**
+              
+              Searches the .2DA's row labels and returns the first row index that matches `toSearchFor`.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | array | C2DArray |  | The .2DA file being operated on. This is usually the object returned by `EEex_Resource_Load2DA()`. |
+              | toSearchFor | string |  | The label to search for. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | number | See summary. |
+
+        - name: EEex_Resource_Free2DA
+          detail: EEex_Resource_Free2DA(array)
+          doc: |-
+              **Instance Name:** `free`
+              
+              **Summary**
+              
+              Frees the memory associated with `array`. ***Only use this if you know what you are doing!***
+              
+              **Note**
+              `C2DArray` objects returned by `EEex_Resource_Load2DA()` are subject to garbage-collection
+              – meaning `EEex_Resource_Free2DA()` should ***not*** be called on these instances.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | array | C2DArray |  | The .2DA file being operated on. This is usually the object returned by `EEex_Resource_Load2DA()`. |
+
+        - name: EEex_Resource_FreeIDS
+          detail: EEex_Resource_FreeIDS(ids)
+          doc: |-
+              **Instance Name:** `free`
+              
+              **Summary**
+              
+              Frees the memory associated with `ids`. ***Only use this if you know what you are doing!***
+              
+              **Note**
+              `CAIIdList` objects returned by `EEex_Resource_LoadIDS()` are subject to garbage-collection
+              – meaning `EEex_Resource_FreeIDS()` should ***not*** be called on these instances.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | ids | CAIIdList |  | The .IDS file being operated on. This is usually the object returned by `EEex_Resource_LoadIDS()`. |
+
+        - name: EEex_Resource_FreeScript
+          detail: EEex_Resource_FreeScript(script)
+          doc: |-
+              **Instance Name:** `free`
+              
+              **Summary**
+              
+              Frees the memory associated with `script`. ***Only use this if you know what you are doing!***
+              
+              **Note**
+              `CAIScript` objects returned by `EEex_Resource_LoadScript()` are subject to garbage-collection
+              – meaning `EEex_Resource_FreeScript()` should ***not*** be called on these instances.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | script | CAIScript |  | The .BCS / .BS file being operated on. This is usually the object returned by `EEex_Resource_LoadScript()`. |
+
+        - name: EEex_Resource_Get2DAColumnLabel
+          detail: EEex_Resource_Get2DAColumnLabel(array, columnIndex)
+          doc: |-
+              **Instance Name:** `getColumnLabel`
+              
+              **Summary**
+              
+              Returns the label of the column specified by `columnIndex`.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | array | C2DArray |  | The .2DA file being operated on. This is usually the object returned by `EEex_Resource_Load2DA()`. |
+              | columnIndex | number |  | The column index of the label to be fetched. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | string | See summary. |
+
+        - name: EEex_Resource_Get2DADefault
+          detail: EEex_Resource_Get2DADefault(array)
+          doc: |-
+              **Instance Name:** `getDefault`
+              
+              **Summary**
+              
+              Returns the "default" value of the `.2DA`.
+              
+              **Note**
+                - A `.2DA`'s default value is defined by the line directly below the version header – it is usually an asterisk ('*').
+                - If the engine (or any EEex function) indexes a `.2DA` out-of-bounds, the default value is returned instead.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | array | C2DArray |  | The `.2DA` file being operated on. This is usually the object returned by `EEex_Resource_Load2DA()`. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | string | See summary. |
+
+        - name: EEex_Resource_Get2DADimensions
+          detail: EEex_Resource_Get2DADimensions(array)
+          doc: |-
+              **Instance Name:** `getDimensions`
+              
+              **Summary**
+              
+              Returns the x and y dimensions of the `.2DA`. That is the number of columns, and the number of rows respectively.
+              
+              **Note**
+              * The returned 'x' dimension **includes** the row labels, (that is to say, its value is 1 more than expected).
+              * The returned 'y' dimension **excludes** the column labels.
+              
+              When indexing a `.2DA`, column / row labels **are always excluded**.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | array | C2DArray |  | The `.2DA` file being operated on. This is usually the object returned by `EEex_Resource_Load2DA()`. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | number | The `.2DA`'s 'x' dimension. |
+              | number | The `.2DA`'s 'y' dimension. |
+
+        - name: EEex_Resource_Get2DARowColumnsByLabelIterator
+          detail: EEex_Resource_Get2DARowColumnsByLabelIterator()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Resource_Get2DARowColumnsIterator
+          detail: EEex_Resource_Get2DARowColumnsIterator()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Resource_Get2DARowLabel
+          detail: EEex_Resource_Get2DARowLabel(array, rowIndex)
+          doc: |-
+              **Instance Name:** `getRowLabel`
+              
+              **Summary**
+              
+              Returns the label of the row specified by `rowIndex`.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | array | C2DArray |  | The `.2DA` file being operated on. This is usually the object returned by `EEex_Resource_Load2DA()`. |
+              | rowIndex | number |  | The row index of the label to be fetched. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | string | See summary. |
+
+        - name: EEex_Resource_Get2DARowTableIterator
+          detail: EEex_Resource_Get2DARowTableIterator()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Resource_Get2DARowValuesIterator
+          detail: EEex_Resource_Get2DARowValuesIterator()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Resource_GetAt2DALabels
+          detail: EEex_Resource_GetAt2DALabels(array, columnLabel, rowLabel)
+          doc: |-
+              **Instance Name:** `getAtLabels`
+              
+              **Summary**
+              
+              Returns the value at the intersection of `columnLabel` and `rowLabel`. If either label is missing, returns the `.2DA`'s
+              default value, (see `EEex_Resource_Get2DADefault()`).
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | array | C2DArray |  | The .2DA file being operated on. This is usually the object returned by `EEex_Resource_Load2DA()`. |
+              | columnLabel | string |  | The column label of the value to be fetched. |
+              | rowLabel | string |  | The row label of the value to be fetched. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | string | See summary. |
+
+        - name: EEex_Resource_GetAt2DAPoint
+          detail: EEex_Resource_GetAt2DAPoint(array, columnIndex, rowIndex)
+          doc: |-
+              **Instance Name:** `getAtPoint`
+              
+              **Summary**
+              
+              Returns the value at the intersection of `columnIndex` and `rowIndex`. If either index exceeds the `.2DA`'s dimensions, returns the
+              `.2DA`'s default value, (see `EEex_Resource_Get2DADefault()`).
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | array | C2DArray |  | The `.2DA` file being operated on. This is usually the object returned by `EEex_Resource_Load2DA()`. |
+              | columnIndex | number |  | The column index of the value to be fetched. |
+              | rowIndex | number |  | The row index of the value to be fetched. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | string | See summary. |
+
+        - name: EEex_Resource_GetCItemAbility
+          detail: EEex_Resource_GetCItemAbility()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Resource_GetIDSCount
+          detail: EEex_Resource_GetIDSCount(ids)
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Resource_GetIDSEntry
+          detail: EEex_Resource_GetIDSEntry(ids, id)
+          doc: |-
+              **Instance Name:** `getEntry`
+              
+              **Summary**
+              
+              Returns the `CAIId` entry with the given `id`, or `nil` if `id` is not present in the `.IDS`.
+              
+              **Note**
+              This function performs a linear search unless the `.IDS` was loaded with `cacheAsArray=true`.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | ids | CAIIdList |  | The `.IDS` file being operated on. This is usually the object returned by `EEex_Resource_LoadIDS()`. |
+              | id | number |  | The id of the entry to be fetched. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | CAIId | See summary. |
+
+        - name: EEex_Resource_GetIDSLine
+          detail: EEex_Resource_GetIDSLine(ids, id)
+          doc: |-
+              **Instance Name:** `getLine`
+              
+              **Summary**
+              
+              Returns the symbol associated with the given `id`, or `nil` if `id` is not present in the .IDS.
+              
+              **Note**
+              This function performs a linear search unless the `.IDS` was loaded with `cacheAsArray=true`.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | ids | CAIIdList |  | The `.IDS` file being operated on. This is usually the object returned by `EEex_Resource_LoadIDS()`. |
+              | id | number |  | The id of the symbol to be fetched. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | string | See summary. |
+
+        - name: EEex_Resource_GetIDSStart
+          detail: EEex_Resource_GetIDSStart(ids, id)
+          doc: |-
+              **Instance Name:** `getStart`
+              
+              **Summary**
+              
+              Returns the symbol value associated with the given `id` up until (and not including)
+              the first '(' character, or `nil` if `id` is not present in the `.IDS`.
+              
+              **Note**
+              This function performs a linear search unless the `.IDS` was loaded with `cacheAsArray=true`.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | ids | CAIIdList |  | The `.IDS` file being operated on. This is usually the object returned by `EEex_Resource_LoadIDS()`. |
+              | id | number |  | The id of the symbol to be fetched. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | string | See summary. |
+
+        - name: EEex_Resource_GetItemAbility
+          detail: EEex_Resource_GetItemAbility()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Resource_GetMax2DAIndices
+          detail: EEex_Resource_GetMax2DAIndices(array)
+          doc: |-
+              **Instance Name:** `getMaxIndices`
+              
+              **Summary**
+              
+              Returns the maximum x and y indices of the `.2DA`. That is the maximum indexable column, and the maximum indexable row respectively.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | array | C2DArray |  | The `.2DA` file being operated on. This is usually the object returned by `EEex_Resource_Load2DA()`. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | number | The `.2DA`'s maximum 'x' index. |
+              | number | The `.2DA`'s maximum 'y' index. |
+
+        - name: EEex_Resource_GetSpellAbility
+          detail: EEex_Resource_GetSpellAbility()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Resource_GetSpellAbilityForLevel
+          detail: EEex_Resource_GetSpellAbilityForLevel()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Resource_GetValidSpellsIterator
+          detail: EEex_Resource_GetValidSpellsIterator()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Resource_IDSHasID
+          detail: EEex_Resource_IDSHasID(ids, id)
+          doc: |-
+              **Instance Name:** `hasID`
+              
+              **Summary**
+              
+              Returns `true` if the given `id` is present in the .IDS.
+              
+              **Note**
+              This function performs a linear search unless the .IDS was loaded with `cacheAsArray=true`.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | ids | CAIIdList |  | The .IDS file being operated on. This is usually the object returned by `EEex_Resource_LoadIDS()`. |
+              | id | number |  | The id to search for. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | boolean | See summary. |
+
+        - name: EEex_Resource_ItemCategoryIDSToSymbol
+          detail: EEex_Resource_ItemCategoryIDSToSymbol()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Resource_ItemCategorySymbolToIDS
+          detail: EEex_Resource_ItemCategorySymbolToIDS()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Resource_Iterate2DAColumnIndex
+          detail: EEex_Resource_Iterate2DAColumnIndex(array, columnIndex, func)
+          doc: |-
+              **Instance Name:** `iterateColumnIndex`
+              
+              **Summary**
+              
+              Calls `func` for every value in the column specified by `columnIndex`. If `func` returns `true` the iteration ends early.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | array | C2DArray |  | The `.2DA` file being operated on. This is usually the object returned by `EEex_Resource_Load2DA()`. |
+              | columnIndex | number |  | The index of the column whose values are to be iterated. |
+              | func | function(i: number, value: string) -> boolean |  | The function to be called. |
+
+        - name: EEex_Resource_Iterate2DAColumnLabel
+          detail: EEex_Resource_Iterate2DAColumnLabel(array, columnLabel, func)
+          doc: |-
+              **Instance Name:** `iterateColumnLabel`
+              
+              **Summary**
+              
+              Calls `func` for every value in the column specified by `columnLabel`. If `func` returns `true` the iteration ends early.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | array | C2DArray |  | The `.2DA` file being operated on. This is usually the object returned by `EEex_Resource_Load2DA()`. |
+              | columnLabel | string |  | The label of the column whose values are to be iterated. |
+              | func | function(i: number, value: string) -> boolean |  | The function to be called. |
+
+        - name: EEex_Resource_Iterate2DARowIndex
+          detail: EEex_Resource_Iterate2DARowIndex(array, rowIndex, func)
+          doc: |-
+              **Instance Name:** `iterateRowIndex`
+              
+              **Summary**
+              
+              Calls `func` for every value in the row specified by `rowIndex`. If `func` returns `true` the iteration ends early.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | array | C2DArray |  | The `.2DA` file being operated on. This is usually the object returned by `EEex_Resource_Load2DA()`. |
+              | rowIndex | number |  | The index of the row whose values are to be iterated. |
+              | func | function(i: number, value: string) -> boolean |  | The function to be called. |
+
+        - name: EEex_Resource_Iterate2DARowLabel
+          detail: EEex_Resource_Iterate2DARowLabel(array, rowLabel, func)
+          doc: |-
+              **Instance Name:** `iterateRowLabel`
+              
+              **Summary**
+              
+              Calls `func` for every value in the row specified by `rowLabel`. If `func` returns `true` the iteration ends early.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | array | C2DArray |  | The `.2DA` file being operated on. This is usually the object returned by `EEex_Resource_Load2DA()`. |
+              | rowLabel | string |  | The label of the row whose values are to be iterated. |
+              | func | function(i: number, value: string) -> boolean |  | The function to be called. |
+
+        - name: EEex_Resource_IterateIDSEntries
+          detail: EEex_Resource_IterateIDSEntries(ids, func)
+          doc: |-
+              **Instance Name:** `iterateEntries`
+              
+              **Summary**
+              
+              Calls `func` for every `CAIId` entry of the `.IDS`. If `func` returns `true` the iteration ends early.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | ids | CAIIdList |  | The `.IDS` file being operated on. This is usually the object returned by `EEex_Resource_LoadIDS()`. |
+              | func | function(entry: CAIId) -> boolean |  | The function to be called. |
+
+        - name: EEex_Resource_IterateUnpackedIDSEntries
+          detail: EEex_Resource_IterateUnpackedIDSEntries(ids, func)
+          doc: |-
+              **Instance Name:** `iterateUnpackedEntries`
+              
+              **Summary**
+              
+              Calls `func` for every `CAIId` entry of the `.IDS`, unpacking the entry's members for convenience.
+              If `func` returns `true` the iteration ends early.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | ids | CAIIdList |  | The `.IDS` file being operated on. This is usually the object returned by `EEex_Resource_LoadIDS()`. |
+              | func | function(id: number, line: string, start: string) -> boolean |  | The function to be called. <br/>  <br/> `id` – the entry's numerical value. <br/> `line` – the entry's complete symbol value. <br/> `start` – the entry's symbol value up until (and not including) the first '(' character. |
+
+        - name: EEex_Resource_KitIDSToSymbol
+          detail: EEex_Resource_KitIDSToSymbol()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Resource_KitSymbolToIDS
+          detail: EEex_Resource_KitSymbolToIDS()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Resource_Load2DA
+          detail: EEex_Resource_Load2DA(resref)
+          doc: |-
+              **Summary**
+              
+              Returns a `C2DArray` instance that represents the `.2DA` with `resref`.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | resref | string |  | The resref of the `.2DA` to be loaded – (should omit the file extension). |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | C2DArray | See summary. |
+
+        - name: EEex_Resource_LoadIDS
+          detail: EEex_Resource_LoadIDS(resref, cacheAsArray)
+          doc: |-
+              **Summary**
+              
+              Returns a `CAIIdList` instance that represents the `.IDS` with `resref`.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | resref | string |  | The resref of the `.IDS` to be loaded – (should omit the file extension). |
+              | cacheAsArray | boolean | `false` | If `true`, internally builds an array that maps every id of the `.IDS` to its corresponding `CAIId` entry in the <br/> range [0, <max id in `.IDS>`]. <br/>  <br/> Setting this parameter to `true` can speed up entry lookups for the returned `CAIIdList` instance – ***however***\, <br/> care must be taken that the given `.IDS` does not have a large max id value. <br/>  <br/> For example, it would be a bad idea to load `KIT.IDS` with `cacheAsArray=true`, as the max id of `KIT.IDS`, <br/> `0x80000000`, would cause the `CAIIdList` instance to attempt to allocate an array that has a size of <br/> `(0x80000000 + 1) * 8 bytes` ***= ~16 gigabytes!*** |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | CAIIdList | See summary. |
+
+        - name: EEex_Resource_LoadScript
+          detail: EEex_Resource_LoadScript(resref, bPlayerScript)
+          doc: |-
+              **Summary**
+              
+              Returns a `CAIScript` instance that represents the `.BCS` / `.BS` with `resref`.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | resref | string |  | The resref of the `.BCS` / `.BS` to be loaded – (should omit the file extension). |
+              | bPlayerScript | boolean | `false` | If `true`, signifies that `resref` has the extension `.BS` instead of `.BCS`. <br/>  <br/> **Note:** Due to the enhanced edition’s use of script caching, the engine has trouble <br/> differentiating between `.BS` and `.BCS` files with the same name. If a script <br/> with the given `resref` has already been loaded by the engine, that script will be <br/> used, regardless of `bPlayerScript`. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | CAIScript | See summary. |
+
+eeex_functions_script:
+    type: 3
+    category: eeex_functions
+    items:
+        - name: EEex_Script_GetResRef
+          detail: EEex_Script_GetResRef()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Script_IsPlayerScript
+          detail: EEex_Script_IsPlayerScript()
+          doc: |-
+              This function is currently undocumented.
+
+eeex_functions_sprite:
+    type: 3
+    category: eeex_functions
+    items:
+        - name: EEex_Sprite_AddAlterBaseWeaponDamageListener
+          detail: EEex_Sprite_AddAlterBaseWeaponDamageListener()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_AddBlockWeaponHitListener
+          detail: EEex_Sprite_AddBlockWeaponHitListener()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_AddLoadedListener
+          detail: EEex_Sprite_AddLoadedListener()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_AddMarshalHandlers
+          detail: EEex_Sprite_AddMarshalHandlers()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_AddQuickListCountsResetListener
+          detail: EEex_Sprite_AddQuickListCountsResetListener()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_AddQuickListNotifyRemovedListener
+          detail: EEex_Sprite_AddQuickListNotifyRemovedListener()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_AddQuickListsCheckedListener
+          detail: EEex_Sprite_AddQuickListsCheckedListener()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_AddSpellDisableStateChangedListener
+          detail: EEex_Sprite_AddSpellDisableStateChangedListener()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_CountAllOfTypeInRange
+          detail: EEex_Sprite_CountAllOfTypeInRange(sprite, aiObjectType, range, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
+          doc: |-
+              **Instance Name:** `countAllOfTypeInRange`
+              
+              **Summary**
+              
+              Returns the number of creatures that match `aiObjectType` around
+              `sprite` in the given `range`, as per the `NumCreature()` trigger.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | sprite | CGameSprite |  | The sprite to search around. |
+              | aiObjectType | CAIObjectType |  | The AI object type used to filter the objects passed to `func`. <br/> Most commonly retrieved from `EEex_Object_ParseString()`. Remember to call `:free()`. |
+              | range | number |  | The radius to search around `sprite`. `448` is a sprite's default visual range. |
+              | bCheckForLineOfSight | boolean | `true` | Determines whether LOS is required from `sprite` to considered objects. |
+              | bCheckForNonSprites | boolean | `false` | Determines whether non-sprite objects in the main objects list are considered. |
+              | terrainTable | Array<byte,16> | `sprite:virtual_GetVisibleTerrainTable()` | The terrain table to use for determining LOS. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | number | See summary. |
+
+        - name: EEex_Sprite_CountAllOfTypeStringInRange
+          detail: EEex_Sprite_CountAllOfTypeStringInRange(sprite, aiObjectTypeString, range, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
+          doc: |-
+              **Instance Name:** `countAllOfTypeStringInRange`
+              
+              **Summary**
+              
+              Returns the number of creatures that match `aiObjectTypeString` around
+              `sprite` in the given `range`, as per the `NumCreature()` trigger.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | sprite | CGameSprite |  | The sprite to search around. |
+              | aiObjectTypeString | string |  | The AI object type string used to filter the objects added to the return table. <br/> Automatically parsed by `EEex_Object_ParseString()`; the resulting object is freed before return. |
+              | range | number |  | The radius to search around `sprite`. `448` is a sprite's default visual range. |
+              | bCheckForLineOfSight | boolean | `true` | Determines whether LOS is required from `sprite` to considered objects. |
+              | bCheckForNonSprites | boolean | `false` | Determines whether non-sprite objects in the main objects list are considered. |
+              | terrainTable | Array<byte,16> | `sprite:virtual_GetVisibleTerrainTable()` | The terrain table to use for determining LOS. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | number | See summary. |
+
+        - name: EEex_Sprite_CreateCopy
+          detail: EEex_Sprite_CreateCopy()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_CreateFromResref
+          detail: EEex_Sprite_CreateFromResref()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_DisplayTextRef
+          detail: EEex_Sprite_DisplayTextRef()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_ForAllOfTypeInRange
+          detail: EEex_Sprite_ForAllOfTypeInRange(sprite, aiObjectType, range, func, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
+          doc: |-
+              **Instance Name:** `forAllOfTypeInRange`
+              
+              **Summary**
+              
+              Calls `func` for every creature that matches `aiObjectType` around
+              `sprite` in the given `range`, as per the `NumCreature()` trigger.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | sprite | CGameSprite |  | The sprite to search around. |
+              | aiObjectType | CAIObjectType |  | The AI object type used to filter the objects passed to `func`. <br/> Most commonly retrieved from `EEex_Object_ParseString()`. Remember to call `:free()`. |
+              | range | number |  | The radius to search around `sprite`. `448` is a sprite's default visual range. |
+              | func | function |  | The function to call for every creature in the search area. |
+              | bCheckForLineOfSight | boolean | `true` | Determines whether LOS is required from `sprite` to considered objects. |
+              | bCheckForNonSprites | boolean | `false` | Determines whether non-sprite objects in the main objects list are considered. |
+              | terrainTable | Array<byte,16> | `sprite:virtual_GetVisibleTerrainTable()` | The terrain table to use for determining LOS. |
+
+        - name: EEex_Sprite_ForAllOfTypeStringInRange
+          detail: EEex_Sprite_ForAllOfTypeStringInRange(sprite, aiObjectTypeString, range, func, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
+          doc: |-
+              **Instance Name:** `forAllOfTypeStringInRange`
+              
+              **Summary**
+              
+              Calls `func` for every creature that matches `aiObjectTypeString` around
+              `sprite` in the given `range`, as per the `NumCreature()` trigger.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | sprite | CGameSprite |  | The sprite to search around. |
+              | aiObjectTypeString | string |  | The AI object type string used to filter the objects passed to `func`. <br/> Automatically parsed by `EEex_Object_ParseString()`; the resulting object is freed before return. |
+              | range | number |  | The radius to search around `sprite`. `448` is a sprite's default visual range. |
+              | func | function |  | The function to call for every creature in the search area. |
+              | bCheckForLineOfSight | boolean | `true` | Determines whether LOS is required from `sprite` to considered objects. |
+              | bCheckForNonSprites | boolean | `false` | Determines whether non-sprite objects in the main objects list are considered. |
+              | terrainTable | Array<byte,16> | `sprite:virtual_GetVisibleTerrainTable()` | The terrain table to use for determining LOS. |
+
+        - name: EEex_Sprite_GetActiveStats
+          detail: EEex_Sprite_GetActiveStats(sprite)
+          doc: |-
+              **Instance Name:** `getActiveStats`
+              
+              **Summary**
+              
+              Returns the given `sprite`'s active stats structure. If the creature is in the middle of an effects list process,
+              using this function ensures that the work-in-progress stats structure isn't used.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | sprite | CGameSprite |  | The sprite whose stats structure is being fetched. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | CDerivedStats | See summary. |
+
+        - name: EEex_Sprite_GetAllOfTypeInRange
+          detail: EEex_Sprite_GetAllOfTypeInRange(sprite, aiObjectType, range, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
+          doc: |-
+              **Instance Name:** `getAllOfTypeInRange`
+              
+              **Summary**
+              
+              Returns a table populated by every creature that matches `aiObjectType` around
+              `sprite` in the given `range`, as per the `NumCreature()` trigger.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | sprite | CGameSprite |  | The sprite to search around. |
+              | aiObjectType | CAIObjectType |  | The AI object type used to filter the objects passed to `func`. <br/> Most commonly retrieved from `EEex_Object_ParseString()`. Remember to call `:free()`. |
+              | range | number |  | The radius to search around `sprite`. `448` is a sprite's default visual range. |
+              | bCheckForLineOfSight | boolean | `true` | Determines whether LOS is required from `sprite` to considered objects. |
+              | bCheckForNonSprites | boolean | `false` | Determines whether non-sprite objects in the main objects list are considered. |
+              | terrainTable | Array<byte,16> | `sprite:virtual_GetVisibleTerrainTable()` | The terrain table to use for determining LOS. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | table | See summary. |
+
+        - name: EEex_Sprite_GetAllOfTypeStringInRange
+          detail: EEex_Sprite_GetAllOfTypeStringInRange(sprite, aiObjectTypeString, range, bCheckForLineOfSight, bCheckForNonSprites, terrainTable)
+          doc: |-
+              **Instance Name:** `getAllOfTypeStringInRange`
+              
+              **Summary**
+              
+              Returns a table populated by every creature that matches `aiObjectTypeString` around
+              `sprite` in the given `range`, as per the `NumCreature()` trigger.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | sprite | CGameSprite |  | The sprite to search around. |
+              | aiObjectTypeString | string |  | The AI object type string used to filter the objects added to the return table. <br/> Automatically parsed by `EEex_Object_ParseString()`; the resulting object is freed before return. |
+              | range | number |  | The radius to search around `sprite`. `448` is a sprite's default visual range. |
+              | bCheckForLineOfSight | boolean | `true` | Determines whether LOS is required from `sprite` to considered objects. |
+              | bCheckForNonSprites | boolean | `false` | Determines whether non-sprite objects in the main objects list are considered. |
+              | terrainTable | Array<byte,16> | `sprite:virtual_GetVisibleTerrainTable()` | The terrain table to use for determining LOS. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | table | See summary. |
+
+        - name: EEex_Sprite_GetAllSelectedIDs
+          detail: EEex_Sprite_GetAllSelectedIDs()
+          doc: |-
+              **Summary**
+              
+              Returns a table populated with the object ids of all the sprites the player currently has selected and is controlling.
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | table | See summary. |
+
+        - name: EEex_Sprite_GetCasterLevelForSpell
+          detail: EEex_Sprite_GetCasterLevelForSpell()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_GetCastTimer
+          detail: EEex_Sprite_GetCastTimer()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_GetCastTimerPercentage
+          detail: EEex_Sprite_GetCastTimerPercentage()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_GetCharacterIndex
+          detail: EEex_Sprite_GetCharacterIndex()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_GetContingencyTimer
+          detail: EEex_Sprite_GetContingencyTimer()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_GetContingencyTimerPercentage
+          detail: EEex_Sprite_GetContingencyTimerPercentage()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_GetExtendedStat
+          detail: EEex_Sprite_GetExtendedStat(sprite)
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_GetFromUUID
+          detail: EEex_Sprite_GetFromUUID()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_GetInPortrait
+          detail: EEex_Sprite_GetInPortrait(portraitIndex)
+          doc: |-
+              **Summary**
+              
+              Returns the sprite of the party member in the given `portraitIndex`, or `nil` if none exists.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | portraitIndex | number |  | The portrait index of the sprite to fetch; valid values are [0-5]. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | CGameSprite | nil | See summary. |
+
+        - name: EEex_Sprite_GetInPortraitID
+          detail: EEex_Sprite_GetInPortraitID(portraitIndex)
+          doc: |-
+              **Summary**
+              
+              Returns the object id of the party member in the given `portraitIndex`, or `-1` if none exists.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | portraitIndex | number |  | The portrait index of the sprite to fetch; valid values are [0-5]. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | number | See summary. |
+
+        - name: EEex_Sprite_GetKnownInnateSpellsIterator
+          detail: EEex_Sprite_GetKnownInnateSpellsIterator()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_GetKnownInnateSpellsWithAbilityIterator
+          detail: EEex_Sprite_GetKnownInnateSpellsWithAbilityIterator()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_GetKnownMageSpellsIterator
+          detail: EEex_Sprite_GetKnownMageSpellsIterator()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_GetKnownMageSpellsWithAbilityIterator
+          detail: EEex_Sprite_GetKnownMageSpellsWithAbilityIterator()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_GetKnownPriestSpellsIterator
+          detail: EEex_Sprite_GetKnownPriestSpellsIterator()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_GetKnownPriestSpellsWithAbilityIterator
+          detail: EEex_Sprite_GetKnownPriestSpellsWithAbilityIterator()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_GetLauncher
+          detail: EEex_Sprite_GetLauncher()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_GetLocalInt
+          detail: EEex_Sprite_GetLocalInt()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_GetLocalString
+          detail: EEex_Sprite_GetLocalString()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_GetModalState
+          detail: EEex_Sprite_GetModalState()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_GetModalTimer
+          detail: EEex_Sprite_GetModalTimer()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_GetModalTimerPercentage
+          detail: EEex_Sprite_GetModalTimerPercentage()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_GetName
+          detail: EEex_Sprite_GetName()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_GetNameRef
+          detail: EEex_Sprite_GetNameRef()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_GetNumCharacters
+          detail: EEex_Sprite_GetNumCharacters()
+          doc: |-
+              **Summary**
+              
+              Returns the number of characters currently in the party.
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | number | See summary. |
+
+        - name: EEex_Sprite_GetPersonalSpace
+          detail: EEex_Sprite_GetPersonalSpace()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_GetPortraitIndex
+          detail: EEex_Sprite_GetPortraitIndex(sprite)
+          doc: |-
+              **Instance Name:** `getPortraitIndex`
+              
+              **Summary**
+              
+              Returns the given `sprite`'s portrait index, or `-1` if it isn't a party member.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | sprite | CGameSprite |  | The sprite whose portrait index is being fetched. |
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | number | See summary. |
+
+        - name: EEex_Sprite_GetSelected
+          detail: EEex_Sprite_GetSelected()
+          doc: |-
+              **Summary**
+              
+              Returns the sprite that is the "leader" of the sprites the player currently has selected and is controlling.
+              
+              The leader is the party member with the highest portrait slot, (lowest index), or the creature
+              that was selected first.
+              
+              If no creatures are currently selected, returns `nil`.
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | CGameSprite | nil | See summary. |
+
+        - name: EEex_Sprite_GetSelectedID
+          detail: EEex_Sprite_GetSelectedID()
+          doc: |-
+              **Summary**
+              
+              Returns the object id associated with the "leader" of the sprites the player currently has selected and is controlling.
+              
+              The leader is the party member with the highest portrait slot, (lowest index), or the creature
+              that was selected first.
+              
+              If no creatures are currently selected, returns `-1`.
+              
+              **Return Values:**
+              
+              | **Type** | **Description** |
+              | --- | --- |
+              | number | See summary. |
+
+        - name: EEex_Sprite_GetSpellButtonDataIteratorFrom2DA
+          detail: EEex_Sprite_GetSpellButtonDataIteratorFrom2DA()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_GetSpellState
+          detail: EEex_Sprite_GetSpellState()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_GetSpellsWithAbilityIterator
+          detail: EEex_Sprite_GetSpellsWithAbilityIterator()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_GetStat
+          detail: EEex_Sprite_GetStat()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_GetState
+          detail: EEex_Sprite_GetState()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_GetUUID
+          detail: EEex_Sprite_GetUUID()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_GetValidKnownInnateSpellsIterator
+          detail: EEex_Sprite_GetValidKnownInnateSpellsIterator()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_GetValidKnownMageSpellsIterator
+          detail: EEex_Sprite_GetValidKnownMageSpellsIterator()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_GetValidKnownPriestSpellsIterator
+          detail: EEex_Sprite_GetValidKnownPriestSpellsIterator()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_GetValidSpellsWithAbilityIterator
+          detail: EEex_Sprite_GetValidSpellsWithAbilityIterator()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_IterateSelected
+          detail: EEex_Sprite_IterateSelected(func)
+          doc: |-
+              **Summary**
+              
+              Calls `func` for every sprite the player currently has selected and is controlling, (passing the sprite).
+              Return `true` from `func` to stop iteration.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | func | function |  | The function to call. |
+
+        - name: EEex_Sprite_IterateSelectedIDs
+          detail: EEex_Sprite_IterateSelectedIDs(func)
+          doc: |-
+              **Summary**
+              
+              Calls `func` for every sprite the player currently has selected and is controlling, (passing the sprite's object id).
+              Return `true` from `func` to stop iteration.
+              
+              **Parameters:**
+              
+              | **Name** | **Type** | **Default Value** | **Description** |
+              | --- | --- | --- | --- |
+              | func | function |  | The function to call. |
+
+        - name: EEex_Sprite_LoadedWithUUIDCallback
+          detail: EEex_Sprite_LoadedWithUUIDCallback()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_OpenOp214Interface
+          detail: EEex_Sprite_OpenOp214Interface()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_SetLocalInt
+          detail: EEex_Sprite_SetLocalInt()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Sprite_SetLocalString
+          detail: EEex_Sprite_SetLocalString()
+          doc: |-
+              This function is currently undocumented.
+
+eeex_functions_test:
+    type: 3
+    category: eeex_functions
+    items:
+        - name: EEex_Test_2DAFunctions
+          detail: EEex_Test_2DAFunctions()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Test_IDSFunctions
+          detail: EEex_Test_IDSFunctions()
+          doc: |-
+              This function is currently undocumented.
+
+eeex_functions_trigger:
+    type: 3
+    category: eeex_functions
+    items:
+        - name: EEex_Trigger_EvalConditionalStringAsAIBase
+          detail: EEex_Trigger_EvalConditionalStringAsAIBase()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Trigger_EvalScriptFileConditionalAsAIBase
+          detail: EEex_Trigger_EvalScriptFileConditionalAsAIBase()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Trigger_ParseConditionalString
+          detail: EEex_Trigger_ParseConditionalString()
+          doc: |-
+              This function is currently undocumented.
+
+eeex_functions_utility:
+    type: 3
+    category: eeex_functions
+    items:
+        - name: EEex_Utility_AlphanumericCompare
+          detail: EEex_Utility_AlphanumericCompare()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Utility_AlphanumericSortTable
+          detail: EEex_Utility_AlphanumericSortTable()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Utility_ApplyIterator
+          detail: EEex_Utility_ApplyIterator()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Utility_AugmentIterator
+          detail: EEex_Utility_AugmentIterator()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Utility_CallIfExists
+          detail: EEex_Utility_CallIfExists()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Utility_CallSuper
+          detail: EEex_Utility_CallSuper()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Utility_ChainIteratorGenerators
+          detail: EEex_Utility_ChainIteratorGenerators()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Utility_ChainIteratorGeneratorsTable
+          detail: EEex_Utility_ChainIteratorGeneratorsTable()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Utility_ChainIterators
+          detail: EEex_Utility_ChainIterators()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Utility_ChainIteratorsTable
+          detail: EEex_Utility_ChainIteratorsTable()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Utility_CollectIteratorValue
+          detail: EEex_Utility_CollectIteratorValue()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Utility_CollectIteratorValues
+          detail: EEex_Utility_CollectIteratorValues()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Utility_DeepCopy
+          detail: EEex_Utility_DeepCopy()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Utility_Default
+          detail: EEex_Utility_Default()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Utility_Eval
+          detail: EEex_Utility_Eval()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Utility_FilterIterator
+          detail: EEex_Utility_FilterIterator()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Utility_Find
+          detail: EEex_Utility_Find()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Utility_FreeCPtrList
+          detail: EEex_Utility_FreeCPtrList()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Utility_GetOrCreate
+          detail: EEex_Utility_GetOrCreate()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Utility_GetOrCreateTable
+          detail: EEex_Utility_GetOrCreateTable()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Utility_IterateCPtrList
+          detail: EEex_Utility_IterateCPtrList()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Utility_IterateMapAsSorted
+          detail: EEex_Utility_IterateMapAsSorted()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Utility_MapIteratorValues
+          detail: EEex_Utility_MapIteratorValues()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Utility_MapToSortedTable
+          detail: EEex_Utility_MapToSortedTable()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Utility_Merge
+          detail: EEex_Utility_Merge()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Utility_MutateIterator
+          detail: EEex_Utility_MutateIterator()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Utility_NewScope
+          detail: EEex_Utility_NewScope()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Utility_ProcessIteratorValues
+          detail: EEex_Utility_ProcessIteratorValues()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Utility_RangeIterator
+          detail: EEex_Utility_RangeIterator()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Utility_SelectIterator
+          detail: EEex_Utility_SelectIterator()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Utility_Split
+          detail: EEex_Utility_Split()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Utility_Switch
+          detail: EEex_Utility_Switch()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Utility_TableIterator
+          detail: EEex_Utility_TableIterator()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Utility_Ternary
+          detail: EEex_Utility_Ternary()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Utility_TryFinally
+          detail: EEex_Utility_TryFinally()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Utility_ValuesIterator
+          detail: EEex_Utility_ValuesIterator()
+          doc: |-
+              This function is currently undocumented.
+
+eeex_functions_variable:
+    type: 3
+    category: eeex_functions
+    items:
+        - name: EEex_Variable_Find
+          detail: EEex_Variable_Find()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Variable_GetInt
+          detail: EEex_Variable_GetInt()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Variable_GetOrCreate
+          detail: EEex_Variable_GetOrCreate()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Variable_GetString
+          detail: EEex_Variable_GetString()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Variable_SetInt
+          detail: EEex_Variable_SetInt()
+          doc: |-
+              This function is currently undocumented.
+
+        - name: EEex_Variable_SetString
+          detail: EEex_Variable_SetString()
+          doc: |-
+              This function is currently undocumented.

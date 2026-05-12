@@ -460,14 +460,29 @@ export function generateSignatures(data: DataFile, langId: string): Record<strin
     const result: Record<string, SignatureResult> = {};
     for (const [, stanza] of Object.entries(sortedData)) {
         for (const item of stanza.items) {
-            if (item.args === undefined) {
+            const explicitArgs = item.args;
+            const inferredArgNames =
+                explicitArgs === undefined && langId === "lua" ? inferLuaArgNamesFromDetail(item.detail) : undefined;
+
+            if (explicitArgs === undefined && inferredArgNames === undefined) {
                 continue;
             }
 
             const name = item.name;
             const weidu = isWeiduFormat(item);
-            const label = getDetail(item, false);
-            const parameters: SignatureParam[] = item.args.map((arg) => {
+            const signatureArgs: readonly DataArg[] =
+                explicitArgs ??
+                inferredArgNames!.map((argName) => ({
+                    name: argName,
+                    type: "any",
+                    doc: "Inferred from detail signature.",
+                }));
+
+            const label =
+                explicitArgs !== undefined
+                    ? getDetail(item, false)
+                    : getInferredSignatureLabel(item, inferredArgNames!);
+            const parameters: SignatureParam[] = signatureArgs.map((arg) => {
                 const categoryPrefix = weidu ? getCategoryPrefix(arg.type) : "";
                 const docStr = arg.doc ?? "";
                 return {
@@ -491,6 +506,84 @@ function getCategoryPrefix(type: string): string {
     if (category === "int") return "INT_VAR ";
     if (category === "str") return "STR_VAR ";
     return "";
+}
+
+/**
+ * Infer Lua argument names from a detail string like:
+ * - "assert (v [, message])"
+ * - "foo(a, b)"
+ * - "print (...)"
+ */
+function inferLuaArgNamesFromDetail(detail: string | undefined): readonly string[] | undefined {
+    if (detail === undefined) {
+        return undefined;
+    }
+
+    if (typeof detail !== "string") {
+        return undefined;
+    }
+
+    const open = detail.indexOf("(");
+    const close = detail.indexOf(")", open + 1);
+    if (open === -1 || close <= open) {
+        return undefined;
+    }
+
+    const rawInside = detail.slice(open + 1, close).trim();
+    if (rawInside === "") {
+        return [];
+    }
+
+    const seen = new Set<string>();
+    const names = rawInside
+        .split(",")
+        .map((rawToken, index) => {
+            let token = rawToken.trim();
+
+            while (token.startsWith("[") && token.endsWith("]")) {
+                token = token.slice(1, -1).trim();
+            }
+            token = token.replaceAll(/^\[+|\]+$/g, "").trim();
+            token = token.replaceAll(/\[|\]/g, " ").trim();
+            token = token.split("=")[0]!.trim();
+
+            if (token === "..." || token === "…") {
+                return "...";
+            }
+
+            token = token.replace(/^\.\.\./, "").trim();
+            if (token === "" || token === "???" || token === "?") {
+                return `arg${index + 1}`;
+            }
+
+            const parts = token.split(/\s+/);
+            let candidate = parts[parts.length - 1] ?? "";
+            candidate = candidate.replaceAll(/^[^A-Za-z_]+|[^A-Za-z0-9_]+$/g, "");
+            if (candidate === "") {
+                return `arg${index + 1}`;
+            }
+            return candidate;
+        })
+        .map((name, index) => {
+            if (name === "...") {
+                return name;
+            }
+            if (seen.has(name)) {
+                return `arg${index + 1}`;
+            }
+            seen.add(name);
+            return name;
+        });
+
+    return names;
+}
+
+function getInferredSignatureLabel(item: DataItem, inferredArgNames: readonly string[]): string {
+    const detail = item.detail?.trim();
+    if (detail !== undefined && detail.includes("(") && detail.includes(")")) {
+        return detail;
+    }
+    return `${item.name}(${inferredArgNames.join(", ")})`;
 }
 
 // -- CLI entry point (tested via subprocess in generate-data-cli.test.ts) --

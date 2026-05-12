@@ -5,11 +5,11 @@
 [![Discord](https://img.shields.io/discord/420268540700917760?logo=discord&label=discord&color=blue&logoColor=FEE75C)](https://discord.gg/4Yqfggm)
 [![IRC](https://img.shields.io/badge/%23IRC-join%20%20%20%20%E2%9D%B1%E2%9D%B1%E2%9D%B1-darkorange)](https://bgforge.net/irc)
 
-BGforge MLS is a collection of tools for working with classic RPG modding languages and file formats. It supports [Star-Trek Scripting Language](https://falloutmods.fandom.com/wiki/Fallout_1_and_Fallout_2_scripting_-_commands,_reference,_tutorials) (`.ssl`) used in Fallout 1 and 2, several [WeiDU](https://weidu.org/~thebigg/README-WeiDU.html) and [Infinity Engine](https://iesdp.bgforge.net) formats (`.d`, `.baf`, `.tp2`, `.tra`, `.2da`), [Sword Coast Stratagems Scripting Language](https://www.gibberlings3.net/forums/topic/13725-coding-scripts-in-ssl-some-lessons/) (`.ssl`, `.slb`), and the TypeScript-based transpilers [TSSL](https://forums.bgforge.net/viewtopic.php?p=2574), [TBAF](https://forums.bgforge.net/viewtopic.php?t=448), and [TD](https://forums.bgforge.net/viewtopic.php?t=1333).
+BGforge MLS is a collection of tools for working with classic RPG modding languages and file formats. It supports [Star-Trek Scripting Language](https://falloutmods.fandom.com/wiki/Fallout_1_and_Fallout_2_scripting_-_commands,_reference,_tutorials) (`.ssl`) used in Fallout 1 and 2, several [WeiDU](https://weidu.org/~thebigg/README-WeiDU.html) and [Infinity Engine](https://iesdp.bgforge.net) formats (`.d`, `.baf`, `.tp2`, `.tra`, `.2da`), [Sword Coast Stratagems Scripting Language](https://www.gibberlings3.net/forums/topic/13725-coding-scripts-in-ssl-some-lessons/) (`.ssl`, `.slb`), Lua 5.2 tailored for the Enhanced Edition Infinity Engine games (`.lua`, `.menu` embedded Lua), and the TypeScript-based transpilers [TSSL](https://forums.bgforge.net/viewtopic.php?p=2574), [TBAF](https://forums.bgforge.net/viewtopic.php?t=448), and [TD](https://forums.bgforge.net/viewtopic.php?t=1333).
 
 Originally a VS Code extension, it now also works with various other editors. Setup guides are available for [Sublime](docs/editors/sublime-text.md), [Neovim](docs/editors/neovim.md), [Emacs](docs/editors/emacs.md), [JetBrains](docs/editors/jetbrains.md), [Helix](docs/editors/helix.md), [Zed](docs/editors/zed.md), [Kate](docs/editors/kate.md), [Notepad++](docs/editors/notepadpp.md), and [Geany](docs/editors/geany.md). Standalone LSP server is [published](https://www.npmjs.com/package/@bgforge/mls-server) in NPM.
 
-- [**Languages**](#languages): Fallout SSL; WeiDU BAF, D, TP2.
+- [**Languages**](#languages): Fallout SSL; WeiDU BAF, D, TP2; Lua 5.2 (EE).
 - [**Transpilers**](#transpilers): TSSL, TBAF, TD.
 - [**Other formats**](#other-formats): TRA, MSG, 2DA; Fallout PRO, MAP, worldmap.txt, scripts.lst; weidu.log.
 - [**Installation**](#installation)
@@ -19,24 +19,24 @@ Originally a VS Code extension, it now also works with various other editors. Se
 
 ## Languages
 
-| Feature           | Fallout SSL  |     WeiDU BAF/SSL      | WeiDU D |           WeiDU TP2            |
-| ----------------- | :----------: | :--------------------: | :-----: | :----------------------------: |
-| Extensions        | `.ssl`, `.h` | `.baf`, `.ssl`, `.slb` |  `.d`   | `.tp2`, `.tpa`, `.tph`, `.tpp` |
-| Completion        |      ✓       |           ✓            |    ✓    |               ✓                |
-| Hover             |      ✓       |           ✓            |    ✓    |               ✓                |
-| Signature help    |      ✓       |                        |         |                                |
-| Go to definition  |      ✓       |                        |    ✓    |               ✓                |
-| Find references   |      ✓       |                        |    ✓    |               ✓                |
-| Formatting        |      ✓       |           ✓            |    ✓    |               ✓                |
-| Document symbols  |      ✓       |                        |    ✓    |               ✓                |
-| Workspace symbols |      ✓       |                        |    ✓    |               ✓                |
-| Semantic tokens   |      ✓       |                        |         |               ✓                |
-| Rename            |      ✓       |                        |    ✓    |           Same file            |
-| Inlay hints       |    `.msg`    |         `.tra`         | `.tra`  |             `.tra`             |
-| Diagnostics       |      ✓       |           ✓            |    ✓    |               ✓                |
-| JSDoc             |      ✓       |                        |    ✓    |               ✓                |
-| Folding           |      ✓       |           ✓            |    ✓    |               ✓                |
-| Dialog preview    |      ✓       |                        |    ✓    |                                |
+| Feature           | Fallout SSL  |     WeiDU BAF/SSL      | WeiDU D |           WeiDU TP2            | Lua 5.2 (EE) |
+| ----------------- | :----------: | :--------------------: | :-----: | :----------------------------: | :-----------: |
+| Extensions        | `.ssl`, `.h` | `.baf`, `.ssl`, `.slb` |  `.d`   | `.tp2`, `.tpa`, `.tph`, `.tpp` | `.lua`, `.menu` |
+| Completion        |      ✓       |           ✓            |    ✓    |               ✓                |       ✓       |
+| Hover             |      ✓       |           ✓            |    ✓    |               ✓                |       ✓       |
+| Signature help    |      ✓       |                        |         |                                |       ✓       |
+| Go to definition  |      ✓       |                        |    ✓    |               ✓                |       ✓       |
+| Find references   |      ✓       |                        |    ✓    |               ✓                |       ✓       |
+| Formatting        |      ✓       |           ✓            |    ✓    |               ✓                |       ✓       |
+| Document symbols  |      ✓       |                        |    ✓    |               ✓                |       ✓       |
+| Workspace symbols |      ✓       |                        |    ✓    |               ✓                |       ✓       |
+| Semantic tokens   |      ✓       |                        |         |               ✓                |       ✓       |
+| Rename            |      ✓       |                        |    ✓    |           Same file            |       ✓       |
+| Inlay hints       |    `.msg`    |         `.tra`         | `.tra`  |             `.tra`             |               |
+| Diagnostics       |      ✓       |           ✓            |    ✓    |               ✓                |       ✓       |
+| JSDoc             |      ✓       |                        |    ✓    |               ✓                |       ✓       |
+| Folding           |      ✓       |           ✓            |    ✓    |               ✓                |       ✓       |
+| Dialog preview    |      ✓       |                        |    ✓    |                                |               |
 
 ## Transpilers
 
