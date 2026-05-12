@@ -62,6 +62,14 @@ mingw32-make mingw
 
 `luac.exe` will be in `src\luac.exe`.
 
+Clean up temporary build folder:
+
+```powershell
+cd $env:TEMP
+Remove-Item -Recurse -Force lua-5.2.4
+Remove-Item lua-5.2.4.tar.gz
+```
+
 Optional: add that folder to your user PATH:
 
 ```powershell
@@ -85,6 +93,12 @@ make macosx
 sudo make INSTALL_TOP=/usr/local/lua-5.2.4 install
 ```
 
+Clean up temporary build folder:
+
+```bash
+rm -rf /tmp/lua-5.2.4 /tmp/lua-5.2.4.tar.gz
+```
+
 Optional: add to PATH (zsh):
 
 ```bash
@@ -101,6 +115,12 @@ tar -xzf lua-5.2.4.tar.gz
 cd lua-5.2.4
 make linux
 sudo make INSTALL_TOP=/usr/local/lua-5.2.4 install
+```
+
+Clean up temporary build folder:
+
+```bash
+rm -rf /tmp/lua-5.2.4 /tmp/lua-5.2.4.tar.gz
 ```
 
 Optional: add to PATH:
