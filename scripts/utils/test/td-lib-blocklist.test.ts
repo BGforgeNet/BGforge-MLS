@@ -14,11 +14,10 @@ import { describe, expect, it } from "vitest";
 
 describe("ES_LIB_BLOCKLIST", () => {
     it("matches the current TypeScript lib (run pnpm regen:td-blocklist if this fails)", () => {
-        const result = spawnSync(
-            "pnpm",
-            ["exec", "tsx", "scripts/utils/src/generate-td-lib-blocklist.ts", "--check"],
-            { cwd: process.cwd(), encoding: "utf8" },
-        );
+        const result = spawnSync("pnpm", ["exec", "tsx", "scripts/utils/src/generate-td-lib-blocklist.ts", "--check"], {
+            cwd: process.cwd(),
+            encoding: "utf8",
+        });
         if (result.status !== 0) {
             const out = `${result.stdout ?? ""}${result.stderr ?? ""}`;
             throw new Error(out.trim() || "generate-td-lib-blocklist --check failed without output");

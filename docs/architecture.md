@@ -167,18 +167,18 @@ All bundles use **esbuild** (not tsc). The monorepo uses **pnpm workspaces**.
 
 ### Build Targets
 
-| Target        | Input                                   | Output                                      | Notes                                      |
-| ------------- | --------------------------------------- | ------------------------------------------- | ------------------------------------------ |
-| Client        | `client/src/extension.ts`               | `client/out/extension.js`                   | CJS, `vscode` external                     |
-| Server        | `server/src/server.ts`                  | `server/out/server.js`                      | CJS, patches `import_meta` for WASM        |
-| TSSL Plugin   | `plugins/tssl-plugin/src/index.ts`      | `node_modules/bgforge-tssl-plugin/index.js` | CJS, standalone                            |
-| TD Plugin     | `plugins/td-plugin/src/index.ts`        | `node_modules/bgforge-td-plugin/index.js`   | CJS, standalone                            |
-| Webviews      | `client/src/dialog-tree/dialogTree-webview.ts`, `client/src/editors/binaryEditor-webview.ts` | `client/out/*.js` | Browser context, built as part of `build:client` |
-| Format lib    | `format/src/{index,cli}.ts`             | `format/out/{index,cli}.js`                 | ESM, tsup-bundled; cli.js is the fgfmt bin |
-| Transpile lib | `transpilers/src/{index,cli}.ts`        | `transpilers/out/{index,cli}.js`            | ESM, tsup-bundled; cli.js is the fgtp bin  |
-| Binary lib    | `binary/src/{index,cli}.ts`             | `binary/out/{index,cli}.js`                 | ESM, tsup-bundled; cli.js is the fgbin bin |
-| Grammars      | `grammars/*/grammar.js`                 | `grammars/*/*.wasm` -> `server/out/`        | tree-sitter build --wasm                   |
-| TextMate      | `syntaxes/*.tmLanguage.yml`             | `syntaxes/*.tmLanguage.json`                | YAML -> JSON conversion                    |
+| Target        | Input                                                                                        | Output                                      | Notes                                            |
+| ------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------- | ------------------------------------------------ |
+| Client        | `client/src/extension.ts`                                                                    | `client/out/extension.js`                   | CJS, `vscode` external                           |
+| Server        | `server/src/server.ts`                                                                       | `server/out/server.js`                      | CJS, patches `import_meta` for WASM              |
+| TSSL Plugin   | `plugins/tssl-plugin/src/index.ts`                                                           | `node_modules/bgforge-tssl-plugin/index.js` | CJS, standalone                                  |
+| TD Plugin     | `plugins/td-plugin/src/index.ts`                                                             | `node_modules/bgforge-td-plugin/index.js`   | CJS, standalone                                  |
+| Webviews      | `client/src/dialog-tree/dialogTree-webview.ts`, `client/src/editors/binaryEditor-webview.ts` | `client/out/*.js`                           | Browser context, built as part of `build:client` |
+| Format lib    | `format/src/{index,cli}.ts`                                                                  | `format/out/{index,cli}.js`                 | ESM, tsup-bundled; cli.js is the fgfmt bin       |
+| Transpile lib | `transpilers/src/{index,cli}.ts`                                                             | `transpilers/out/{index,cli}.js`            | ESM, tsup-bundled; cli.js is the fgtp bin        |
+| Binary lib    | `binary/src/{index,cli}.ts`                                                                  | `binary/out/{index,cli}.js`                 | ESM, tsup-bundled; cli.js is the fgbin bin       |
+| Grammars      | `grammars/*/grammar.js`                                                                      | `grammars/*/*.wasm` -> `server/out/`        | tree-sitter build --wasm                         |
+| TextMate      | `syntaxes/*.tmLanguage.yml`                                                                  | `syntaxes/*.tmLanguage.json`                | YAML -> JSON conversion                          |
 
 ### Build Pipeline
 
@@ -392,24 +392,24 @@ with state machines, method chain parsing, and dual-pass orphan detection.
 
 **TD module structure** (`transpilers/td/src/`):
 
-| Module                  | Purpose                                                            |
-| ----------------------- | ------------------------------------------------------------------ |
-| `index.ts`              | Entry point, bundling, orphan detection on original source         |
-| `parse.ts`              | AST walker: ts-morph AST -> IR                                     |
-| `parse-helpers.ts`      | Utility functions (evaluate, resolve, validate)                    |
-| `parse-constructs.ts`   | Top-level construct dispatch (states, dialogs, patch ops)          |
-| `parse-chain.ts`        | Per-construct method-chain entry parsing                           |
-| `expression-eval.ts`    | Expression -> trigger/action/text conversion                       |
-| `chain-parsing.ts`      | Method chain transition parsing                                    |
-| `chain-processing.ts`   | Chain body processing (from/fromWhen/say)                          |
-| `transition-calls.ts`   | Transition call-site collection across chains                      |
-| `state-transitions.ts`  | State/transition processing, loop unrolling                        |
-| `state-resolution.ts`   | Post-parse BFS transitive collection, orphan detection             |
-| `inline-and-unroll.ts`  | Inline-function and loop-unroll expansion before emit              |
-| `patch-operations.ts`   | Patch operation transforms (ALTER_TRANS, etc.)                     |
-| `emit.ts`               | IR -> D text serialization                                         |
-| `types.ts`              | IR types (TDScript, TDConstruct, TDState, TDSay, etc.)             |
-| `td-runtime.d.ts`       | TypeScript declarations for TD API                                 |
+| Module                 | Purpose                                                    |
+| ---------------------- | ---------------------------------------------------------- |
+| `index.ts`             | Entry point, bundling, orphan detection on original source |
+| `parse.ts`             | AST walker: ts-morph AST -> IR                             |
+| `parse-helpers.ts`     | Utility functions (evaluate, resolve, validate)            |
+| `parse-constructs.ts`  | Top-level construct dispatch (states, dialogs, patch ops)  |
+| `parse-chain.ts`       | Per-construct method-chain entry parsing                   |
+| `expression-eval.ts`   | Expression -> trigger/action/text conversion               |
+| `chain-parsing.ts`     | Method chain transition parsing                            |
+| `chain-processing.ts`  | Chain body processing (from/fromWhen/say)                  |
+| `transition-calls.ts`  | Transition call-site collection across chains              |
+| `state-transitions.ts` | State/transition processing, loop unrolling                |
+| `state-resolution.ts`  | Post-parse BFS transitive collection, orphan detection     |
+| `inline-and-unroll.ts` | Inline-function and loop-unroll expansion before emit      |
+| `patch-operations.ts`  | Patch operation transforms (ALTER_TRANS, etc.)             |
+| `emit.ts`              | IR -> D text serialization                                 |
+| `types.ts`             | IR types (TDScript, TDConstruct, TDState, TDSay, etc.)     |
+| `td-runtime.d.ts`      | TypeScript declarations for TD API                         |
 
 `dialog.ts` (dialog tree preview, `parseTDDialog`) lives in `server/src/td/` - it depends on tree-sitter parsers and LSP infrastructure and was not extracted.
 

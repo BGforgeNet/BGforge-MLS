@@ -13,7 +13,13 @@ import * as cp from "child_process";
 import * as crypto from "crypto";
 import * as os from "os";
 import * as path from "path";
-import { addFallbackDiagnostic, errorMessage, reportCompileResult, sendParseResult, type ParseItemList } from "../diagnostics";
+import {
+    addFallbackDiagnostic,
+    errorMessage,
+    reportCompileResult,
+    sendParseResult,
+    type ParseItemList,
+} from "../diagnostics";
 import { conlog } from "../logger";
 import { tmpDir } from "../path-utils";
 import { pathToUri, uriToPath } from "../uri-utils";

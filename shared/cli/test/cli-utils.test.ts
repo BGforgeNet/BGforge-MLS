@@ -7,6 +7,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as fs from "fs";
 import * as path from "path";
 import {
+    checkFileSize,
     reportDiff,
     safeProcess,
     findFiles,
@@ -411,5 +412,52 @@ describe("runCli", () => {
         });
         expect(init).toHaveBeenCalledOnce();
         expect(processFile).toHaveBeenCalledOnce();
+    });
+});
+
+describe("checkFileSize", () => {
+    let tmpDir: string;
+    let errorSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+        tmpDir = fs.mkdtempSync(path.join("tmp", ".cli-checksize-"));
+        errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+        errorSpy.mockRestore();
+    });
+
+    it("accepts files within the per-extension cap", () => {
+        const p = path.join(tmpDir, "a.ssl");
+        fs.writeFileSync(p, "x".repeat(100));
+        expect(checkFileSize(p, { ssl: 1024 })).toBe(true);
+        expect(errorSpy).not.toHaveBeenCalled();
+    });
+
+    it("rejects files larger than the cap and logs the refusal", () => {
+        const p = path.join(tmpDir, "a.ssl");
+        fs.writeFileSync(p, "x".repeat(2000));
+        expect(checkFileSize(p, { ssl: 1024 })).toBe(false);
+        expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining(".ssl cap is 1024"));
+    });
+
+    it("passes through when the extension has no cap entry", () => {
+        const p = path.join(tmpDir, "a.unknown");
+        fs.writeFileSync(p, "x".repeat(10_000_000));
+        expect(checkFileSize(p, { ssl: 1024 })).toBe(true);
+    });
+
+    it("treats extension comparison case-insensitively", () => {
+        const p = path.join(tmpDir, "a.TP2");
+        fs.writeFileSync(p, "x".repeat(100));
+        expect(checkFileSize(p, { tp2: 1024 })).toBe(true);
+    });
+
+    it("rejects oversized files when extension key has no leading dot", () => {
+        const p = path.join(tmpDir, "a.td");
+        fs.writeFileSync(p, "x".repeat(2000));
+        expect(checkFileSize(p, { td: 1024 })).toBe(false);
     });
 });

@@ -20,7 +20,15 @@ import {
 } from "vscode-languageserver/node";
 import { errorMessage } from "./diagnostics";
 import { conlog } from "./logger";
-import { findFiles, getRelPath, isDirectory, isSubpath, isSubpathFullyResolved, isSubpathResolved, tryRealpathSync } from "./path-utils";
+import {
+    findFiles,
+    getRelPath,
+    isDirectory,
+    isSubpath,
+    isSubpathFullyResolved,
+    isSubpathResolved,
+    tryRealpathSync,
+} from "./path-utils";
 import { pathToUri } from "./uri-utils";
 import {
     CONSUMER_EXTENSIONS_MSG,

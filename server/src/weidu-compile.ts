@@ -5,7 +5,15 @@
 
 import * as crypto from "crypto";
 import * as path from "path";
-import { addFallbackDiagnostic, errorMessage, getErrnoCode, reportCompileResult, sendParseResult, type DiagnosticParseResult, type ParseItemList } from "./diagnostics";
+import {
+    addFallbackDiagnostic,
+    errorMessage,
+    getErrnoCode,
+    reportCompileResult,
+    sendParseResult,
+    type DiagnosticParseResult,
+    type ParseItemList,
+} from "./diagnostics";
 import { conlog } from "./logger";
 import { tmpDir } from "./path-utils";
 import { pathToUri, uriToPath } from "./uri-utils";
