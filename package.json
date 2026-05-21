@@ -57,6 +57,7 @@
         "test:transpile-external": "./scripts/test-transpile-external.sh",
         "test:grammar": "./scripts/test-grammar.sh",
         "regenerate-expected": "./scripts/regenerate-expected.sh",
+        "regen:td-blocklist": "tsx scripts/utils/src/generate-td-lib-blocklist.ts",
         "test:cli": "vitest run --config scripts/vitest.cli.config.ts",
         "test:cli:external": "RUN_EXTERNAL_CLI_TESTS=1 vitest run --config scripts/vitest.cli.config.ts",
         "test:server:smoke": "cd server && pnpm exec vitest run test/smoke-stdio.test.ts",
