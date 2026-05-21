@@ -105,6 +105,34 @@ export function findFiles(dir: string, extensions: readonly string[]): string[] 
     return files;
 }
 
+/**
+ * Stat-then-cap guard: refuse to read files that exceed the per-extension
+ * cap. Returns true if the file is within the cap (or the extension has no
+ * cap entry), false after logging the refusal to stderr. fgbin uses an
+ * equivalent inline check in its own CLI because the per-format max sizes
+ * are tied to format-specific allocation hazards; fgfmt and fgtp use this
+ * helper with a generic source-file cap.
+ *
+ * Pre-allocation defense, not validation: oversized inputs cause Node to
+ * allocate a Buffer of declared size before header inspection. The hard
+ * upper bound here keeps a truncated-or-malicious file from triggering an
+ * unbounded read of the whole filesystem entry.
+ */
+export function checkFileSize(filePath: string, maxSizes: Record<string, number>): boolean {
+    const ext = path.extname(filePath);
+    const extKey = ext.startsWith(".") ? ext.slice(1).toLowerCase() : ext.toLowerCase();
+    const maxSize = maxSizes[extKey];
+    if (maxSize === undefined) return true;
+    const stat = fs.statSync(filePath);
+    if (stat.size > maxSize) {
+        console.error(
+            `File too large: ${stat.size} bytes (.${extKey} cap is ${maxSize}); refusing to read ${filePath}`,
+        );
+        return false;
+    }
+    return true;
+}
+
 /** Prints a unified-diff style block between expected and actual content. */
 export function reportDiff(label: string, expected: string, actual: string): void {
     console.error(`DIFF: ${label}`);

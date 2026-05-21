@@ -18,6 +18,7 @@ import {
 import {
     type FileResult,
     type OutputMode,
+    checkFileSize,
     parseCliArgs,
     runCli,
     safeProcess,
@@ -27,6 +28,17 @@ import {
 type TranspileType = "td" | "tbaf" | "tssl";
 
 const EXTENSIONS = [EXT_TD, EXT_TBAF, EXT_TSSL];
+
+// Per-extension input-size cap. TSSL/TBAF/TD source files are TypeScript
+// modules; even the largest mod source corpora keep them under 200 KB.
+// The cap is a defense against an oversized or truncated input triggering
+// a large Buffer allocation before the parser sees it. Mirrors fgbin's
+// MAX_FILE_SIZES and fgfmt's equivalent table.
+const MAX_FILE_SIZES: Record<string, number> = {
+    tssl: 8 * 1024 * 1024,
+    tbaf: 8 * 1024 * 1024,
+    td: 8 * 1024 * 1024,
+};
 
 function getTranspileType(filePath: string): TranspileType | null {
     const lower = filePath.toLowerCase();
@@ -59,6 +71,8 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
     }
 
     return safeProcess(filePath, async () => {
+        if (!checkFileSize(filePath, MAX_FILE_SIZES)) return "error";
+
         const text = fs.readFileSync(filePath, "utf-8");
         const resolved = path.resolve(filePath);
 

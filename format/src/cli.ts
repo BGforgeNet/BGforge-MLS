@@ -43,11 +43,32 @@ import {
 import {
     type FileResult,
     type OutputMode,
+    checkFileSize,
     parseCliArgs,
     runCli,
     safeProcess,
     reportDiff,
 } from "../../shared/cli/cli-utils";
+
+// Per-extension input-size cap. Real-world source files stay well below
+// these (the largest checked-in TP2s in the WeiDU corpus are ~100 KB; SSL
+// scripts are sub-50 KB; .2da tables and .tra/.msg translation banks
+// occasionally cross 1 MB). The cap is a defense against an oversized or
+// truncated input triggering a multi-GB Buffer allocation before the
+// parser sees it, not a usability limit. Mirrors fgbin's MAX_FILE_SIZES.
+const MAX_FILE_SIZES: Record<string, number> = {
+    ssl: 8 * 1024 * 1024,
+    baf: 8 * 1024 * 1024,
+    d: 16 * 1024 * 1024,
+    tp2: 8 * 1024 * 1024,
+    tph: 8 * 1024 * 1024,
+    tpa: 8 * 1024 * 1024,
+    tpp: 8 * 1024 * 1024,
+    tra: 16 * 1024 * 1024,
+    msg: 16 * 1024 * 1024,
+    "2da": 16 * 1024 * 1024,
+    lst: 4 * 1024 * 1024,
+};
 
 const DEFAULT_INDENT = 4;
 const EXTENSIONS = [
@@ -151,6 +172,8 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
             console.error(`Error: Unsupported file type: ${filePath}`);
             return "error";
         }
+
+        if (!checkFileSize(filePath, MAX_FILE_SIZES)) return "error";
 
         const text = fs.readFileSync(filePath, "utf-8");
         const opts = getFormatOptions(path.resolve(filePath));
