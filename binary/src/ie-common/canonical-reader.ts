@@ -92,8 +92,14 @@ export function createIeCanonicalReader<Doc, Snap extends IeSnapshotEnvelope<Doc
             );
         }
         if (result.warnings) {
+            // cast: Snap extends IeSnapshotEnvelope<Doc> + the optional warnings field;
+            // the spread produces exactly the warnings-bearing variant of the snapshot union,
+            // but TS can't see through the per-format schema constraint without a runtime parse.
             return { ...envelope, warnings: result.warnings } as unknown as Snap;
         }
+        // cast: bare envelope is the {document}-only variant of the snapshot union; same
+        // structural-narrowing limitation as above. Validation runs at the boundary where
+        // opaqueRanges/warnings actually need it.
         return envelope as unknown as Snap;
     };
 
