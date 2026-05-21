@@ -288,15 +288,12 @@ export function getBlockStates(block: DDialogBlock, states: DDialogState[]): DDi
 // ---------------------------------------------------------------------------
 
 export function registerDDialogTree(context: vscode.ExtensionContext, client: LanguageClient): DialogPreviewController {
-    return registerDialogPanel(context, client, {
+    return registerDialogPanel<DDialogData>(context, client, {
         matchDocument: (doc) => doc.languageId === "weidu-d" || doc.fileName.toLowerCase().endsWith(".td"),
         warningMessage: "Open a D or TD file to preview dialog",
         translationLangId: "weidu-tra",
-        buildTreeHtml: (data) => buildDTreeHtml(data as DDialogData),
-        hasData: (data) => {
-            const d = data as DDialogData;
-            return d.blocks.length > 0;
-        },
+        buildTreeHtml: (data) => buildDTreeHtml(data),
+        hasData: (data) => data.blocks.length > 0,
         tabIconPath: "themes/icons/weidu.svg",
     });
 }

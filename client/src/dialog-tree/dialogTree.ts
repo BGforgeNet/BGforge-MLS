@@ -235,15 +235,12 @@ export function buildTreeHtml(data: DialogData): string {
 // ---------------------------------------------------------------------------
 
 export function registerDialogTree(context: vscode.ExtensionContext, client: LanguageClient): DialogPreviewController {
-    return registerDialogPanel(context, client, {
+    return registerDialogPanel<DialogData>(context, client, {
         matchDocument: (doc) => doc.languageId === "fallout-ssl" || doc.fileName.toLowerCase().endsWith(".tssl"),
         warningMessage: "Open a Fallout SSL or TSSL file to preview dialog",
         translationLangId: "fallout-msg",
-        buildTreeHtml: (data) => buildTreeHtml(data as DialogData),
-        hasData: (data) => {
-            const d = data as DialogData;
-            return d.nodes.length > 0;
-        },
+        buildTreeHtml: (data) => buildTreeHtml(data),
+        hasData: (data) => data.nodes.length > 0,
         tabIconPath: "themes/icons/fallout-ssl.svg",
     });
 }

@@ -130,7 +130,7 @@ function getDialogPreviewHtml(
 // Panel lifecycle
 // ---------------------------------------------------------------------------
 
-interface DialogPanelConfig {
+interface DialogPanelConfig<TData> {
     /** Check whether a document should use this panel. */
     matchDocument: (doc: vscode.TextDocument) => boolean;
     /** Warning message shown when no matching file is open */
@@ -138,9 +138,9 @@ interface DialogPanelConfig {
     /** Language ID of translation files that trigger refresh on save */
     translationLangId: string;
     /** Build the tree HTML from server response data */
-    buildTreeHtml: (data: unknown) => string;
+    buildTreeHtml: (data: TData) => string;
     /** Check if data is non-empty (to decide whether to show "no data" warning) */
-    hasData: (data: unknown) => boolean;
+    hasData: (data: TData) => boolean;
     /** Relative path within extension to the tab icon (e.g. "themes/icons/fallout-ssl.svg") */
     tabIconPath: string;
 }
@@ -161,10 +161,10 @@ export interface DialogPreviewController {
  * Handles panel creation, debounced refresh, document change watching,
  * save watching, and command registration.
  */
-export function registerDialogPanel(
+export function registerDialogPanel<TData>(
     context: vscode.ExtensionContext,
     client: LanguageClient,
-    config: DialogPanelConfig,
+    config: DialogPanelConfig<TData>,
 ): DialogPreviewController {
     let dialogPanel: vscode.WebviewPanel | undefined;
     let currentDocumentUri: string | undefined;
@@ -194,7 +194,10 @@ export function registerDialogPanel(
         };
 
         try {
-            const data = (await client.sendRequest(ExecuteCommandRequest.type, params)) as unknown;
+            // cast: LSP executeCommand returns unknown; the call sites pin TData per
+            // language (DialogData for SSL, DDialogData for D). config.hasData
+            // guards against malformed/empty payloads before buildTreeHtml runs.
+            const data = (await client.sendRequest(ExecuteCommandRequest.type, params)) as TData | null;
             // The panel can be disposed (synchronously nulling `dialogPanel` via
             // onDidDispose at line 309) while sendRequest is in flight. Re-check
             // before touching `.webview`; the pre-await guard above does not
@@ -268,7 +271,9 @@ export function registerDialogPanel(
         };
 
         try {
-            const data = (await client.sendRequest(ExecuteCommandRequest.type, params)) as unknown;
+            // cast: same trust boundary as the refreshPreview cast above; per-language
+            // TData is pinned at the call site (DialogData / DDialogData).
+            const data = (await client.sendRequest(ExecuteCommandRequest.type, params)) as TData | null;
 
             if (data == null || !config.hasData(data)) {
                 vscode.window.showWarningMessage("No dialog data found");
