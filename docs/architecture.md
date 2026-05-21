@@ -226,9 +226,18 @@ separate top-level step - it runs inside `build:client`.
    generated tree-sitter types a runtime `.ts` file (project-wide rename across ~50 import
    sites plus the `dts-tree-sitter` generation pipeline and gitignore patterns) or
    hand-maintaining a runtime SyntaxType shim per grammar; neither is justified by tsup's
-   current state alone. Revisit when tsdown matures (an esbuild-style enum-inlining option
-   would unblock the swap), when tsup actually breaks, or when one of those refactors
-   lands for an unrelated reason.
+   current state alone. Re-evaluated 2026-05-21 against tsdown 0.22.0 / Rolldown 1.0.0:
+   cross-module `const enum` inlining did land (rolldown/rolldown#8796, oxc-project/oxc#20508),
+   but the implementation reads the enum value map from the declaring module's JS scoping,
+   so modules the bundler classifies as `.d.ts` (types-only, erased) never produce a scoping
+   entry and the references stay un-inlined. No tsdown or Rolldown issue tracks the
+   `.d.ts`-only variant specifically, and follow-up regressions on the supported `.ts` path
+   (rolldown/rolldown#9442, #9494) suggest the feature is not yet fully stable even where
+   it does apply. Revisit when Rolldown adds ambient/`.d.ts` const-enum support, when tsup
+   actually breaks, or when one of the source-side refactors lands for an unrelated reason.
+   A third workaround - wiring `rollup-plugin-const-enum` into tsdown's plugin slot to
+   pre-inline via `ts.transpileModule` - would shrink the diff but adds a tsc-driven pre-pass
+   and a new dependency for no current gain.
 
 ### TypeScript configuration
 
