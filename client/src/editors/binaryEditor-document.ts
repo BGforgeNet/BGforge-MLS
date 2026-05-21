@@ -99,6 +99,14 @@ export class BinaryDocument implements vscode.CustomDocument {
     }
 
     replaceParseResult(parseResult: ParseResult, label: string): void {
+        // Three clones, each load-bearing:
+        //   previousParseResult: captured pristine by the undo closure
+        //   nextParseResult:     captured pristine by the redo closure
+        //   this._parseResult:   working copy that subsequent applyEdit calls mutate
+        // If the working copy aliased nextParseResult, edits between this call and a
+        // later redo would corrupt the redo snapshot. The redo/undo closures also
+        // re-clone on each invocation so repeated undo-then-redo cycles keep
+        // restoring the original snapshot rather than a previously-restored mutation.
         const previousParseResult = cloneParseResult(this._parseResult);
         const nextParseResult = cloneParseResult(parseResult);
         this._parseResult = cloneParseResult(nextParseResult);
@@ -248,6 +256,8 @@ export class BinaryDocument implements vscode.CustomDocument {
             return false;
         }
 
+        // Same three-clone discipline as replaceParseResult; see the comment there
+        // for why each clone is load-bearing.
         const previousParseResult = cloneParseResult(this._parseResult);
         const nextParseResult = cloneParseResult(reparsed);
         this._parseResult = cloneParseResult(nextParseResult);
