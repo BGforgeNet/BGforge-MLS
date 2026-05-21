@@ -549,6 +549,8 @@ by other layers:
 - **`@bgforge/format`** (`format/vitest.config.ts`): 27/17/12/27 (lines/functions/branches/statements). The formatter surface is exercised end-to-end by grammar-corpus fixtures under `grammars/*/test/corpus/` and by the directory-mode `--save-and-check` invocation in `scripts/test.sh`. The vitest project here covers only the standalone unit slice (utilities, helpers, dispatch); the broader surface is covered but in a different layer.
 - **`@bgforge/transpile`** (`transpilers/vitest.config.ts`): 15/25/8/15. The bulk of transpiler correctness is enforced by Stryker mutation testing (`stryker.conf.json`, breaks at 70% mutation score) plus the TD/TBAF fixture-driven integration suites in `scripts/test.sh`. The vitest project here covers the public API and shared helpers; the per-language transformer surface is covered through mutation and integration.
 
+The mutation `break` threshold sits at 70 (with `high` at 80, `low` at 70) because the current scoped score is 70.09 - `normalized-uri.ts` mutates at 100%, `provider-registry.ts` at 84.3%, and `symbol-index.ts` at 65.2% with ~40 surviving mutants and ~22 no-coverage mutants pulling the file average down. Raising the threshold to 80 would require landing additional `symbol-index.ts` test coverage first; until that work is done, keep the threshold tracking actual current state rather than aspirational state, so a routine refactor cannot trip the gate without a real regression.
+
 The other workspaces - `server`, `client`, `binary`, `shared`, `scripts`, and the
 two TypeScript plugins - run at 90/80/90/90 (or higher for the plugins) because
 their unit suites are responsible for the bulk of their own behaviour. `server`
