@@ -3,7 +3,7 @@
 Library and CLI for parsing and serialising:
 
 - Fallout `.pro` (prototype) and `.map` (savegame/map) files.
-- Infinity Engine `.itm` (item) and `.spl` (spell) v1 files, and `.eff` (effect) v2 files.
+- Infinity Engine `.itm` (item) and `.spl` (spell) v1 files, `.eff` (effect) v2 files, and `.cre` (creature) v1 files.
 
 Round-trips bytes <-> structured data <-> canonical JSON snapshots, suitable for
 diff-friendly version control of binary fixtures and for the BGforge MLS
@@ -43,7 +43,7 @@ const out = parser.serialize?.(reloaded);
 if (out) writeFileSync("scout-out.pro", out);
 ```
 
-The same pattern works for `.map`, `.itm`, `.spl`, and `.eff`. To load a
+The same pattern works for `.map`, `.itm`, `.spl`, `.eff`, and `.cre`. To load a
 JSON snapshot directly from disk, use `loadBinaryJsonSnapshot(jsonText, options)`.
 
 Public exports also include parser types (`BinaryParser`, `ParseOptions`,
@@ -53,11 +53,11 @@ format-adapter registration, and presentation-schema lookups.
 ## `fgbin` CLI
 
 ```
-fgbin <file.pro|file.map|file.itm|file.spl|file.eff|dir> [--save] [--check] [--load] [-r] [-q]
+fgbin <file.pro|file.map|file.itm|file.spl|file.eff|file.cre|dir> [--save] [--check] [--load] [-r] [-q]
 ```
 
 - `--save` - write parsed JSON snapshot alongside the binary file
-  (`.pro.json` / `.map.json` / `.itm.json` / `.spl.json` / `.eff.json`)
+  (`.pro.json` / `.map.json` / `.itm.json` / `.spl.json` / `.eff.json` / `.cre.json`)
 - `--check` - exit 1 if the binary does not match its existing JSON snapshot
 - `--load` - read a JSON snapshot and write the binary back out using the
   parser's native extension
@@ -73,3 +73,4 @@ fgbin <file.pro|file.map|file.itm|file.spl|file.eff|dir> [--save] [--check] [--l
 - `.itm` - Infinity Engine item files (v1: BG1, BG2, IWD).
 - `.spl` - Infinity Engine spell files (v1: BG1, BG2, IWD).
 - `.eff` - Infinity Engine sub-effect files (v2: BG2EE, IWDEE).
+- `.cre` - Infinity Engine creature files (v1: BG1, BG2, BGEE).

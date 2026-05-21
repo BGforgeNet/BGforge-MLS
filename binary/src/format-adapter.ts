@@ -152,11 +152,13 @@ import { mapFormatAdapter } from "./map/format-adapter";
 import { itmFormatAdapter } from "./itm/format-adapter";
 import { splFormatAdapter } from "./spl/format-adapter";
 import { effFormatAdapter } from "./eff/format-adapter";
+import { creFormatAdapter } from "./cre/format-adapter";
 
 formatAdapterRegistry.register(proFormatAdapter);
 formatAdapterRegistry.register(mapFormatAdapter);
 formatAdapterRegistry.register(itmFormatAdapter);
 formatAdapterRegistry.register(splFormatAdapter);
 formatAdapterRegistry.register(effFormatAdapter);
+formatAdapterRegistry.register(creFormatAdapter);
 
 setDomainRangeLookup((format, fieldKey) => formatAdapterRegistry.get(format)?.domainRanges?.[fieldKey]);

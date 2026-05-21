@@ -23,7 +23,7 @@ import type { z } from "zod";
 import { parseWithSchemaValidation } from "../schema-validation";
 import type { ParseResult } from "../types";
 
-export type IeFormatId = "itm" | "spl" | "eff";
+export type IeFormatId = "itm" | "spl" | "eff" | "cre";
 
 interface IeSnapshotEnvelope<Doc> {
     readonly schemaVersion: 1;
