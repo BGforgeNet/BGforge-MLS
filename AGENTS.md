@@ -84,8 +84,8 @@ external/                # Third-party mod sources (test fixtures, not project c
 ## Commands
 
 ```bash
-pnpm build             # Default repo-wide build: client + server + test bundles + webviews
-pnpm build:all         # Full build: build + grammars + editor bundles
+pnpm build             # Default repo-wide build: client (+ webviews + TS plugins) + server + test bundles + transpile + format + binary CLIs
+pnpm build:all         # Full build: build + grammars + editor bundles + transpile
 pnpm build:dev         # Minimal build for F5 development (skips CLIs, linting, tests)
 pnpm build:grammar     # Build tree-sitter grammars to WASM
 pnpm build:transpile   # Build transpile library + CLI (tsup, produces out/index.js + out/cli.js)

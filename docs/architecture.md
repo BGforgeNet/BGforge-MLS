@@ -79,9 +79,11 @@ vscode-mls/
 |
 +-- client/                 VSCode extension client
 |   +-- src/
-|   |   +-- extension.ts        Entry point (activate/deactivate, LSP client)
-|   |   +-- (TS plugins moved to plugins/ directory)
-|   |   +-- indicator.ts            Server initialization progress indicator
+|   |   +-- extension.ts            Entry point (activate/deactivate, LSP client)
+|   |   +-- logging.ts              Output channel + conlog wrapper (gated on bgforge.debug)
+|   |   +-- utils.ts                escapeHtml + small extension-host helpers
+|   |   +-- webview-assets.ts       HTML/CSS/JS asset cache shared by webview panels
+|   |   +-- webview-error.ts        Webview runtime error surfacing (DevTools + output + toast)
 |   |   +-- dialog-tree/            Dialog tree preview (webview panels)
 |   |   +-- editors/                Binary .pro/.map/.itm/.spl/.eff/.cre editor (custom editor; uses @bgforge/binary)
 |   |   +-- test/                   E2E tests (mocha + vscode test runner)
@@ -95,18 +97,20 @@ vscode-mls/
 |   |   +-- compile.ts              Compilation dispatch
 |   |   +-- translation.ts          .tra/.msg inlay hints, hover, definition, and find references
 |   |   +-- user-messages.ts        User message wrappers (auto-decode file:// URIs)
-|   |   +-- safe-eval.ts            Safe expression evaluator (no eval())
 |   |   +-- common.ts               Logging, file utilities
 |   |   +-- settings.ts             User settings
+|   |   +-- process-runner.ts       External-compiler spawn with whitelist wrapper parsing
 |   |   +-- handlers/               Per-feature LSP request handlers (HandlerContext shared)
 |   |   +-- core/                   Symbol system, URI normalization, patterns, debouncer, file index, compile-tmp helper
 |   |   +-- shared/                 Cross-provider utilities
 |   |   +-- fallout-ssl/            Fallout SSL provider (full IDE support)
 |   |   +-- fallout-worldmap/       Worldmap provider (completion + hover)
+|   |   +-- infinity-2da/           Infinity Engine 2DA provider (semantic tokens)
 |   |   +-- weidu-baf/              WeiDU BAF provider (format + compile)
 |   |   +-- weidu-d/                WeiDU D provider (symbols, definition, rename, JSDoc hover)
 |   |   +-- weidu-log/              WeiDU log provider (go-to-definition for mod paths)
 |   |   +-- weidu-tp2/              WeiDU TP2 provider (full IDE support)
+|   |   +-- sslc/                   Built-in WASM SSL compiler bridge (sslc-emscripten-noderawfs)
 |   |   +-- tssl/                   TSSL dialog bridge (depends on tree-sitter + LSP)
 |   |   +-- td/                     TD dialog bridge (depends on tree-sitter + LSP)
 |   +-- data/                   YAML data files (game engine definitions)
@@ -169,7 +173,7 @@ All bundles use **esbuild** (not tsc). The monorepo uses **pnpm workspaces**.
 | Server        | `server/src/server.ts`                  | `server/out/server.js`                      | CJS, patches `import_meta` for WASM        |
 | TSSL Plugin   | `plugins/tssl-plugin/src/index.ts`      | `node_modules/bgforge-tssl-plugin/index.js` | CJS, standalone                            |
 | TD Plugin     | `plugins/td-plugin/src/index.ts`        | `node_modules/bgforge-td-plugin/index.js`   | CJS, standalone                            |
-| Webviews      | `client/src/{dialog,binary}-webview.ts` | `client/out/*.js`                           | Browser context                            |
+| Webviews      | `client/src/dialog-tree/dialogTree-webview.ts`, `client/src/editors/binaryEditor-webview.ts` | `client/out/*.js` | Browser context, built as part of `build:client` |
 | Format lib    | `format/src/{index,cli}.ts`             | `format/out/{index,cli}.js`                 | ESM, tsup-bundled; cli.js is the fgfmt bin |
 | Transpile lib | `transpilers/src/{index,cli}.ts`        | `transpilers/out/{index,cli}.js`            | ESM, tsup-bundled; cli.js is the fgtp bin  |
 | Binary lib    | `binary/src/{index,cli}.ts`             | `binary/out/{index,cli}.js`                 | ESM, tsup-bundled; cli.js is the fgbin bin |
@@ -181,18 +185,20 @@ All bundles use **esbuild** (not tsc). The monorepo uses **pnpm workspaces**.
 ```
 pnpm build
   |
-  +-> build:client        esbuild client + TS plugins
-  +-> build:binary        @bgforge/binary library + fgbin CLI
+  +-> build:client        esbuild client + TS plugins + webview bundles
   +-> build:server        esbuild server + copy WASM to server/out/
   +-> build:test          esbuild E2E test bundles
-  +-> build:webviews      esbuild webview bundles
+  +-> build:transpile     @bgforge/transpile library + fgtp CLI (tsup)
+  +-> build:format        @bgforge/format library + fgfmt CLI (tsup)
+  +-> build:binary        @bgforge/binary library + fgbin CLI (tsup)
 
-pnpm build:all            Full build: build:grammar + build + build:editors
-pnpm build:dev            Minimal build for F5 development (skips CLIs)
+pnpm build:all            Full build: build:grammar + build + build:editors + build:transpile
+pnpm build:dev            Minimal build for F5 development (skips CLIs, linting, tests)
 ```
 
 `pnpm build` is the default repo-wide build, not the full build. Use `pnpm build:all`
-when you need grammars and editor bundles too.
+when you need grammars and editor bundles too. `build:webviews` is no longer a
+separate top-level step - it runs inside `build:client`.
 
 ### Key Build Constraints
 
@@ -386,20 +392,24 @@ with state machines, method chain parsing, and dual-pass orphan detection.
 
 **TD module structure** (`transpilers/td/src/`):
 
-| Module                 | Purpose                                                    |
-| ---------------------- | ---------------------------------------------------------- |
-| `index.ts`             | Entry point, bundling, orphan detection on original source |
-| `parse.ts`             | AST walker: ts-morph AST -> IR                             |
-| `parse-helpers.ts`     | Utility functions (evaluate, resolve, validate)            |
-| `expression-eval.ts`   | Expression -> trigger/action/text conversion               |
-| `chain-parsing.ts`     | Method chain transition parsing                            |
-| `chain-processing.ts`  | Chain body processing (from/fromWhen/say)                  |
-| `state-transitions.ts` | State/transition processing, loop unrolling                |
-| `state-resolution.ts`  | Post-parse BFS transitive collection, orphan detection     |
-| `patch-operations.ts`  | Patch operation transforms (ALTER_TRANS, etc.)             |
-| `emit.ts`              | IR -> D text serialization                                 |
-| `types.ts`             | IR types (TDScript, TDConstruct, TDState, TDSay, etc.)     |
-| `td-runtime.d.ts`      | TypeScript declarations for TD API                         |
+| Module                  | Purpose                                                            |
+| ----------------------- | ------------------------------------------------------------------ |
+| `index.ts`              | Entry point, bundling, orphan detection on original source         |
+| `parse.ts`              | AST walker: ts-morph AST -> IR                                     |
+| `parse-helpers.ts`      | Utility functions (evaluate, resolve, validate)                    |
+| `parse-constructs.ts`   | Top-level construct dispatch (states, dialogs, patch ops)          |
+| `parse-chain.ts`        | Per-construct method-chain entry parsing                           |
+| `expression-eval.ts`    | Expression -> trigger/action/text conversion                       |
+| `chain-parsing.ts`      | Method chain transition parsing                                    |
+| `chain-processing.ts`   | Chain body processing (from/fromWhen/say)                          |
+| `transition-calls.ts`   | Transition call-site collection across chains                      |
+| `state-transitions.ts`  | State/transition processing, loop unrolling                        |
+| `state-resolution.ts`   | Post-parse BFS transitive collection, orphan detection             |
+| `inline-and-unroll.ts`  | Inline-function and loop-unroll expansion before emit              |
+| `patch-operations.ts`   | Patch operation transforms (ALTER_TRANS, etc.)                     |
+| `emit.ts`               | IR -> D text serialization                                         |
+| `types.ts`              | IR types (TDScript, TDConstruct, TDState, TDSay, etc.)             |
+| `td-runtime.d.ts`       | TypeScript declarations for TD API                                 |
 
 `dialog.ts` (dialog tree preview, `parseTDDialog`) lives in `server/src/td/` - it depends on tree-sitter parsers and LSP infrastructure and was not extracted.
 
@@ -537,7 +547,7 @@ packages run intentionally low floors because their broader behaviour is verifie
 by other layers:
 
 - **`@bgforge/format`** (`format/vitest.config.ts`): 27/17/12/27 (lines/functions/branches/statements). The formatter surface is exercised end-to-end by grammar-corpus fixtures under `grammars/*/test/corpus/` and by the directory-mode `--save-and-check` invocation in `scripts/test.sh`. The vitest project here covers only the standalone unit slice (utilities, helpers, dispatch); the broader surface is covered but in a different layer.
-- **`@bgforge/transpile`** (`transpilers/vitest.config.ts`): 15/25/8/15. The bulk of transpiler correctness is enforced by Stryker mutation testing (`stryker.conf.json`, breaks at 60% mutation score) plus the TD/TBAF fixture-driven integration suites in `scripts/test.sh`. The vitest project here covers the public API and shared helpers; the per-language transformer surface is covered through mutation and integration.
+- **`@bgforge/transpile`** (`transpilers/vitest.config.ts`): 15/25/8/15. The bulk of transpiler correctness is enforced by Stryker mutation testing (`stryker.conf.json`, breaks at 70% mutation score) plus the TD/TBAF fixture-driven integration suites in `scripts/test.sh`. The vitest project here covers the public API and shared helpers; the per-language transformer surface is covered through mutation and integration.
 
 The other workspaces - `server`, `client`, `binary`, `shared`, `scripts`, and the
 two TypeScript plugins - run at 90/80/90/90 (or higher for the plugins) because
@@ -749,7 +759,7 @@ comment explaining the gateway guarantee.
 All user-visible messages (`showInformationMessage`, `showWarningMessage`,
 `showErrorMessage`) go through wrappers in `user-messages.ts` that auto-decode
 `file://` URIs to human-readable paths. A custom oxlint rule
-(`.oxlint/oxlint-plugin-no-showmessage.ts`) enforces this -- direct
+(`.oxlint/oxlint-plugin-no-showmessage.mjs`) enforces this -- direct
 `connection.window.show*Message()` calls in server code produce lint errors.
 Debug logs intentionally keep raw URIs to preserve diagnostic ability.
 

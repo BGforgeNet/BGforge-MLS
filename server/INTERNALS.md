@@ -108,53 +108,103 @@ server/src/
 +-- fallout-ssl/              # Fallout 1/2 scripting
 |   +-- tree-sitter.d.ts      # Generated SyntaxType enum
 |   +-- provider.ts
-|   +-- parser.ts             # Thin re-export from ParserManager
-|   +-- format.ts
+|   +-- compiler.ts           # External / built-in sslc orchestration
 |   +-- header-parser.ts      # .h file parsing
 |   +-- symbol.ts             # DocumentSymbol extraction (procedures with param/var children)
-|   +-- completion.ts
-|   +-- hover.ts
+|   +-- symbol-definitions.ts # Built-in + project-wide symbol assembly
+|   +-- local-symbols.ts      # Per-file local symbol scan
+|   +-- completion-context.ts # Cursor-context classification for completion
 |   +-- definition.ts
 |   +-- references.ts         # Find References (single-file + cross-file via ReferencesIndex)
-|   +-- call-sites.ts         # Call-site extractor for cross-file references index
+|   +-- reference-finder.ts   # Scope-restricted reference finding (rename + references)
 |   +-- rename.ts             # Single-file + workspace-wide rename orchestration
 |   +-- symbol-scope.ts       # Scope determination (file vs procedure) for rename
-|   +-- reference-finder.ts   # Scope-restricted reference finding for rename
+|   +-- scope-kinds.ts        # Scope-kind enum shared by rename/references
 |   +-- signature.ts
+|   +-- semantic-tokens.ts
+|   +-- jsdoc-format.ts       # JSDoc rendering for hover/completion
+|   +-- macro-utils.ts        # Macro expansion + deprecated-flag handling
+|   +-- utils.ts              # Tree-sitter helpers (parse + traversal)
 |
 +-- weidu-baf/                # WeiDU BAF scripts
+|   +-- provider.ts           # Format + compile only; BAF has no named symbols
 |   +-- tree-sitter.d.ts      # Generated SyntaxType enum
 +-- weidu-d/                  # WeiDU dialog files
 |   +-- tree-sitter.d.ts      # Generated SyntaxType enum
+|   +-- provider.ts
 |   +-- state-utils.ts        # Dialog-scoped state label utilities (shared by definition, rename, hover)
 |   +-- references.ts         # Find References (single-file + cross-file via ReferencesIndex)
-|   +-- call-sites.ts         # Call-site extractor for cross-file references index
+|   +-- reference-finder.ts   # Scope-restricted reference finding
 |   +-- rename.ts             # Dialog-scoped state label rename
+|   +-- definition.ts
 |   +-- hover.ts              # JSDoc hover for state labels
+|   +-- symbol.ts             # DocumentSymbol extraction
+|   +-- ast-utils.ts          # Tree-sitter helpers
+|   +-- file-parser.ts        # .d file parser (drives indexer)
+|   +-- dialog.ts             # Dialog preview integration (server/td/dialog.ts mirror)
+|   +-- dialog-utils.ts       # Dialog-tree shape helpers
+|   +-- dialog-modify.ts      # Dialog-tree mutators (used by webview-driven edits)
 +-- weidu-tp2/                # WeiDU mod installers
 |   +-- tree-sitter.d.ts      # Generated SyntaxType enum
+|   +-- provider.ts
 |   +-- references.ts         # Find References (single-file + cross-file via ReferencesIndex)
-|   +-- call-sites.ts         # Call-site extractor for cross-file references index
+|   +-- reference-finder.ts   # Scope-restricted reference finding
+|   +-- rename.ts
+|   +-- definition.ts
+|   +-- hover.ts
+|   +-- callable-symbols.ts   # FUNCTION/MACRO/ACTION definitions
+|   +-- callable-definitions.ts
+|   +-- variable-symbols.ts   # INT_VAR / STR_VAR definitions
+|   +-- local-symbols.ts      # Per-file scan
+|   +-- header-parser.ts      # External .tpa/.tph header parsing
+|   +-- symbol-discovery.ts   # Workspace-wide symbol assembly
+|   +-- symbol.ts
+|   +-- ast-utils.ts
+|   +-- tree-utils.ts
+|   +-- scope-kinds.ts
+|   +-- semantic-tokens.ts
+|   +-- snippets.ts
+|   +-- completion/           # Cursor-context-driven completion subsystem
++-- weidu-log/                # WeiDU.log go-to-definition
++-- infinity-2da/             # Infinity Engine 2DA semantic tokens
 +-- fallout-worldmap/         # Fallout worldmap.txt
 |
++-- sslc/                     # Built-in WASM SSL compiler bridge (sslc-emscripten-noderawfs)
 +-- tssl/                     # TSSL dialog bridge (depends on tree-sitter + LSP)
 +-- td/                       # TD dialog bridge (depends on tree-sitter + LSP)
++-- handlers/                 # Per-feature LSP request handlers (HandlerContext shared)
 |
 +-- shared/
-|   +-- hash.ts               # Shared djb2 hash for cache keys
-|   +-- parser-factory.ts     # Cached tree-sitter parser factory (used by ParserManager)
 |   +-- references-index.ts   # ReferencesIndex for cross-file Find References
-|   +-- completion.ts         # Shared completion utilities
-|   +-- hover.ts              # Shared hover utilities
-|   +-- signature.ts          # Signature help utilities
 |   +-- jsdoc.ts              # JSDoc parsing
+|   +-- jsdoc-completions.ts  # JSDoc-driven completion contribution
+|   +-- jsdoc-types.ts        # JSDoc type lookup
+|   +-- signature.ts          # Signature help utilities
+|   +-- semantic-tokens.ts    # Shared semantic-token helpers
+|   +-- folding-ranges.ts     # Shared folding-range helper
+|   +-- format-edits.ts       # Document format-edit helpers
+|   +-- format-options.ts     # Format option resolution
+|   +-- comment-check.ts
+|   +-- completion-context.ts # Cross-language completion context types
+|   +-- fallout-types.ts      # Fallout-domain shared types
+|   +-- provider-helpers.ts   # Cross-provider utility helpers
+|   +-- static-data.ts        # Static map loader (game-data JSON)
+|   +-- text-cache.ts         # Version-keyed per-document parse cache
+|   +-- time-handler.ts       # Slow-request threshold wrapper
 |
 +-- translation.ts            # .tra/.msg translation service
 +-- compile.ts                # Compilation dispatch
 +-- user-messages.ts          # User-facing message wrappers (auto-decode file:// URIs)
 +-- settings.ts               # User settings
++-- process-runner.ts         # Compiler-spawn helper (wrapper whitelist, shell-true guards)
 +-- common.ts                 # Logging, file utils
 ```
+
+Cross-package note: the **root-level `shared/` workspace** (not `server/src/shared/`) owns the
+tree-sitter parser factory (`shared/parsers/parser-factory.ts`, `parser-manager.ts`) and the
+per-language parser facade modules. The server, the format CLI, and any future consumer all
+load parsers through that workspace - the server-internal `shared/` directory above is for
+cross-provider helpers, not parser bootstrap.
 
 ## Data Flow
 
