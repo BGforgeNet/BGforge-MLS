@@ -1,12 +1,13 @@
 /**
  * ITM file serializer: converts a ParseResult back to binary ITM v1 bytes.
- * The canonical document is the source of truth.
+ * Built on the shared IE serializer factory; see ie-common/serializer.ts.
  */
 
+import { createIeSerializer } from "../ie-common/serializer";
 import { getItmCanonicalDocument, rebuildItmCanonicalDocument, serializeItmCanonicalDocument } from "./canonical";
-import type { ParseResult } from "../types";
 
-export function serializeItm(result: ParseResult): Uint8Array {
-    const document = getItmCanonicalDocument(result) ?? rebuildItmCanonicalDocument(result);
-    return serializeItmCanonicalDocument(document);
-}
+export const serializeItm = createIeSerializer({
+    getDocument: getItmCanonicalDocument,
+    rebuildDocument: rebuildItmCanonicalDocument,
+    serializeDocument: serializeItmCanonicalDocument,
+});

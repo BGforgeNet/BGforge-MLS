@@ -1,11 +1,13 @@
 /**
  * EFF file serializer: converts a ParseResult back to binary EFF v2 bytes.
+ * Built on the shared IE serializer factory; see ie-common/serializer.ts.
  */
 
+import { createIeSerializer } from "../ie-common/serializer";
 import { getEffCanonicalDocument, rebuildEffCanonicalDocument, serializeEffCanonicalDocument } from "./canonical";
-import type { ParseResult } from "../types";
 
-export function serializeEff(result: ParseResult): Uint8Array {
-    const document = getEffCanonicalDocument(result) ?? rebuildEffCanonicalDocument(result);
-    return serializeEffCanonicalDocument(document);
-}
+export const serializeEff = createIeSerializer({
+    getDocument: getEffCanonicalDocument,
+    rebuildDocument: rebuildEffCanonicalDocument,
+    serializeDocument: serializeEffCanonicalDocument,
+});

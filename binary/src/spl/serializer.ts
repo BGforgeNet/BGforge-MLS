@@ -1,11 +1,13 @@
 /**
  * SPL file serializer: converts a ParseResult back to binary SPL v1 bytes.
+ * Built on the shared IE serializer factory; see ie-common/serializer.ts.
  */
 
+import { createIeSerializer } from "../ie-common/serializer";
 import { getSplCanonicalDocument, rebuildSplCanonicalDocument, serializeSplCanonicalDocument } from "./canonical";
-import type { ParseResult } from "../types";
 
-export function serializeSpl(result: ParseResult): Uint8Array {
-    const document = getSplCanonicalDocument(result) ?? rebuildSplCanonicalDocument(result);
-    return serializeSplCanonicalDocument(document);
-}
+export const serializeSpl = createIeSerializer({
+    getDocument: getSplCanonicalDocument,
+    rebuildDocument: rebuildSplCanonicalDocument,
+    serializeDocument: serializeSplCanonicalDocument,
+});
