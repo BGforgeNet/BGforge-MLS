@@ -7,6 +7,7 @@ import {
     type CompletionItem,
     type ParameterInformation,
     CompletionItemKind,
+    CompletionItemTag,
     MarkupKind,
 } from "vscode-languageserver/node";
 import type * as jsdoc from "../shared/jsdoc";
@@ -201,8 +202,7 @@ export function buildMacroCompletion(macro: MacroData, _uri: string, filePath: s
     }
 
     if (macro.jsdoc?.deprecated !== undefined) {
-        const COMPLETION_TAG_deprecated = 1;
-        item.tags = [COMPLETION_TAG_deprecated];
+        item.tags = [CompletionItemTag.Deprecated];
     }
 
     return item;
