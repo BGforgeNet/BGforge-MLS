@@ -3,6 +3,7 @@
  * specs; the item-slot block uses pattern entries (one per slot label).
  */
 
+import type { NumericRange } from "../binary-format-contract";
 import {
     type CompiledPatternFieldPresentation,
     type FormatPresentationSchema,
@@ -11,6 +12,7 @@ import {
 } from "../presentation-schema-types";
 import { effBodySpecAnnotated } from "../eff/specs/body.overrides";
 import { toPresentationEntries } from "../spec/derive-presentation";
+import { toDomainRanges } from "../spec/derive-domain-ranges";
 import { slugify } from "../snapshot-common";
 import { creEffectV1Spec } from "./specs/effect-v1";
 import { creHeaderSpecAnnotated } from "./specs/header.overrides";
@@ -48,3 +50,15 @@ export const crePresentationSchema: FormatPresentationSchema = formatPresentatio
 export const creCompiledPatternFields: readonly CompiledPatternFieldPresentation[] = compilePatternFields(
     crePresentationSchema.patternFields,
 );
+
+// See itm/presentation-schema.ts for rationale; empty until specs declare
+// per-field `domain` annotations.
+export const creDomainRanges: Readonly<Record<string, NumericRange>> = {
+    ...toDomainRanges(creHeaderSpecAnnotated, "cre.header"),
+    ...toDomainRanges(creKnownSpellSpecAnnotated, "cre.knownSpells[]"),
+    ...toDomainRanges(creSpellMemInfoSpecAnnotated, "cre.spellMemInfo[]"),
+    ...toDomainRanges(creMemorizedSpellSpecAnnotated, "cre.memorizedSpells[]"),
+    ...toDomainRanges(creItemSpecAnnotated, "cre.items[]"),
+    ...toDomainRanges(creEffectV1Spec, "cre.effects[].v1"),
+    ...toDomainRanges(effBodySpecAnnotated, "cre.effects[].v2"),
+};

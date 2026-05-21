@@ -2,7 +2,7 @@ import type { BinaryFormatAdapter } from "../format-adapter";
 import type { ParseOptions, ParseResult } from "../types";
 import { rebuildCreCanonicalDocument } from "./canonical";
 import { createCanonicalCreJsonSnapshot, loadCanonicalCreJsonSnapshot } from "./json-snapshot";
-import { creCompiledPatternFields, crePresentationSchema } from "./presentation-schema";
+import { creCompiledPatternFields, creDomainRanges, crePresentationSchema } from "./presentation-schema";
 import { slugify } from "../snapshot-common";
 import { CRE_GROUP_LABELS } from "./types";
 
@@ -45,6 +45,7 @@ export const creFormatAdapter: BinaryFormatAdapter = {
     formatId: "cre",
     presentationSchema: crePresentationSchema,
     compiledPatternFields: creCompiledPatternFields,
+    domainRanges: creDomainRanges,
 
     createJsonSnapshot(parseResult: ParseResult): string {
         return createCanonicalCreJsonSnapshot(parseResult);

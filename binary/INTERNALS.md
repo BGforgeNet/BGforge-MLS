@@ -99,7 +99,7 @@ binary/src/
     specs/header.ts            # Generated from IESDP itm_v1/header.yml
     specs/ability.ts           # Generated from IESDP itm_v1/extended_header.yml
     presentation-schema.ts     # itmPresentationSchema (derived via toPresentationEntries from
-                               #   *SpecAnnotated) + itmCompiledPatternFields
+                               #   *SpecAnnotated) + itmCompiledPatternFields + itmDomainRanges
     schemas.ts, canonical-{schemas,reader,writer}.ts, canonical.ts,
     format-adapter.ts, json-snapshot.ts, serializer.ts, index.ts, types.ts
 
@@ -124,7 +124,7 @@ binary/src/
                                # Hand-written from IESDP cre_v1.htm sub-record tables; CRE v2
                                # effects reuse `eff/specs/body.ts` (264-byte body, no eff-file header)
     *.overrides.ts             # Enum/flag tables + structural-field role annotations per sub-record
-    presentation-schema.ts     # crePresentationSchema (derived) + per-item-slot exact entries
+    presentation-schema.ts     # crePresentationSchema (derived) + per-item-slot exact entries + creDomainRanges
     schemas.ts, canonical-{schemas,reader,writer}.ts, canonical.ts,
     format-adapter.ts, json-snapshot.ts, serializer.ts, index.ts, types.ts
 
