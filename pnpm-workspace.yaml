@@ -22,10 +22,13 @@ allowBuilds:
     tree-sitter: false
 
 # Transitive pins addressing security advisories in mocha's bundled dependencies,
-# msal-node's uuid (GHSA-w5hq-g745-h8pq), and ajv's fast-uri
-# (GHSA-q3j6-qgpj-74h6, GHSA-v39h-62p7-jpjc).
+# msal-node's uuid (GHSA-w5hq-g745-h8pq), ajv's fast-uri (GHSA-q3j6-qgpj-74h6,
+# GHSA-v39h-62p7-jpjc), and minimatch's brace-expansion 5.0.x (GHSA-jxxr-4gwj-5jf2:
+# numeric-range expansion ignored the `max` guard, allowing DoS via large ranges;
+# fixed in 5.0.6).
 overrides:
     mocha>diff: ">=8.0.3"
     mocha>serialize-javascript: ">=7.0.5"
     uuid: ">=14"
     fast-uri: ">=3.1.2"
+    brace-expansion@>=5.0.0 <5.0.6: "^5.0.6"
