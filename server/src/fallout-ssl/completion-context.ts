@@ -4,7 +4,7 @@
  */
 
 import type { Position } from "vscode-languageserver/node";
-import { getLinePrefix } from "../common";
+import { getLinePrefix } from "../cursor-utils";
 import { isInitialized, parseWithCache } from "../../../shared/parsers/fallout-ssl";
 import { SyntaxType } from "./tree-sitter.d";
 

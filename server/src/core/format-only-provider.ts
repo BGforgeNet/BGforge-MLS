@@ -6,7 +6,7 @@
  * LSP feature is document formatting.
  */
 
-import { conlog } from "../common";
+import { conlog } from "../logger";
 import type { FormatResult, ProviderContext } from "./capabilities";
 import type { LanguageProvider } from "../language-provider";
 import { createFullDocumentEdit } from "../shared/format-edits";

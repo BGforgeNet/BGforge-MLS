@@ -6,7 +6,7 @@
  */
 
 import type { CompletionItem } from "vscode-languageserver/node";
-import { conlog } from "../common";
+import { conlog } from "../logger";
 import { LANG_FALLOUT_WORLDMAP_TXT } from "../core/languages";
 import type { IndexedSymbol } from "../core/symbol";
 import { Symbols } from "../core/symbol-index";

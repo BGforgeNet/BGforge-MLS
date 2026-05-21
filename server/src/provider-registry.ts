@@ -28,7 +28,8 @@ import {
     type SignatureHelp,
 } from "vscode-languageserver/node";
 import { type FormatResult, type LanguageProvider, type ProviderContext, HoverResult } from "./language-provider";
-import { conlog, errorMessage } from "./common";
+import { errorMessage } from "./diagnostics";
+import { conlog } from "./logger";
 import { showError } from "./user-messages";
 import { validLocationOrNull } from "./core/location-utils";
 import { normalizeUri } from "./core/normalized-uri";

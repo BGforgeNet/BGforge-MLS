@@ -18,10 +18,19 @@ import type { LanguageProvider } from "../../src/language-provider";
 // Mocks (required for provider-registry which uses conlog / file I/O)
 // =============================================================================
 
-vi.mock("../../src/common", () => ({
+vi.mock("../../src/logger", () => ({
     conlog: vi.fn(),
+}));
+
+vi.mock("../../src/diagnostics", () => ({
     errorMessage: (err: unknown) => (err instanceof Error ? err.message : String(err)),
+}));
+
+vi.mock("../../src/path-utils", () => ({
     findFiles: vi.fn().mockReturnValue([]),
+}));
+
+vi.mock("../../src/uri-utils", () => ({
     pathToUri: vi.fn((p: string) => `file://${p}`),
 }));
 

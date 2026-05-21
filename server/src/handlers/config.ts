@@ -1,4 +1,4 @@
-import { conlog } from "../common";
+import { conlog } from "../logger";
 import { registry } from "../provider-registry";
 import { tryGetServerContext, updateServerSettings } from "../server-context";
 import { defaultSettings, normalizeSettings } from "../settings";

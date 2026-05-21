@@ -5,7 +5,10 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { conlog, errorMessage, isDirectory, pathToUri, tmpDir } from "./common";
+import { errorMessage } from "./diagnostics";
+import { conlog } from "./logger";
+import { isDirectory, tmpDir } from "./path-utils";
+import { pathToUri } from "./uri-utils";
 import { EXT_TBAF, EXT_TD, EXT_TSSL, LANG_FALLOUT_SSL } from "./core/languages";
 import { getConnection } from "./lsp-connection";
 import { showError, showInfo, showWarning } from "./user-messages";

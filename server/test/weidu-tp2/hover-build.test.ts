@@ -13,9 +13,12 @@ import { describe, expect, it, vi, beforeAll } from "vitest";
 import { MarkupKind } from "vscode-languageserver/node";
 import { DeclarationKind, CallableContext, CallableDefType } from "../../src/core/symbol";
 
-vi.mock("../../src/common", () => ({
-    conlog: vi.fn(),
+vi.mock("../../src/diagnostics", () => ({
     errorMessage: (err: unknown) => (err instanceof Error ? err.message : String(err)),
+}));
+
+vi.mock("../../src/logger", () => ({
+    conlog: vi.fn(),
 }));
 
 import { buildVariableHover, buildFunctionHover } from "../../src/weidu-tp2/hover";

@@ -18,7 +18,7 @@ import * as path from "path";
 import { type CompletionItem, CompletionItemKind, type MarkupContent } from "vscode-languageserver/node";
 import type { CompletionItemWithCategory, CompletionCategory } from "../shared/completion-context";
 import { WEIDU_TP2_STANZAS } from "../../../shared/stanza-names";
-import { conlog } from "../common";
+import { conlog } from "../logger";
 import {
     type IndexedSymbol,
     type CallableSymbol,

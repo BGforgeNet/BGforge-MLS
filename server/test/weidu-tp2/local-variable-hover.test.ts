@@ -10,9 +10,12 @@ import { describe, expect, it, beforeAll, vi } from "vitest";
 import { MarkupKind } from "vscode-languageserver/node";
 
 // Mock LSP connection before importing modules that use it
-vi.mock("../../src/common", () => ({
-    conlog: vi.fn(),
+vi.mock("../../src/diagnostics", () => ({
     errorMessage: (err: unknown) => (err instanceof Error ? err.message : String(err)),
+}));
+
+vi.mock("../../src/logger", () => ({
+    conlog: vi.fn(),
 }));
 
 import { lookupLocalSymbol, clearAllLocalSymbolsCache } from "../../src/weidu-tp2/local-symbols";

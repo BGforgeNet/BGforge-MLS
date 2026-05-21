@@ -1,7 +1,7 @@
 import type { Connection } from "vscode-languageserver/node";
 import { isHeaderFile } from "../core/location-utils";
 import { normalizeUri } from "../core/normalized-uri";
-import { conlog } from "../common";
+import { conlog } from "../logger";
 import { registry } from "../provider-registry";
 import { getServerContext, tryGetServerContext } from "../server-context";
 import { compile, clearDiagnostics } from "../compile";

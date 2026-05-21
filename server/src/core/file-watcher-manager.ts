@@ -16,7 +16,8 @@ import { extname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { FileChangeType, WatchKind } from "vscode-languageserver/node";
 import type { LanguageProvider } from "../language-provider";
-import { conlog, errorMessage } from "../common";
+import { errorMessage } from "../diagnostics";
+import { conlog } from "../logger";
 import { normalizeUri } from "./normalized-uri";
 
 /**

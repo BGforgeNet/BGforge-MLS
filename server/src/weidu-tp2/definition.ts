@@ -11,7 +11,7 @@ import type { Node as SyntaxNode } from "web-tree-sitter";
 import * as path from "path";
 import * as fs from "fs";
 import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-tp2";
-import { pathToUri, uriToPath } from "../common";
+import { pathToUri, uriToPath } from "../uri-utils";
 import { SyntaxType } from "./tree-sitter.d";
 import { FUNCTION_CALL_TYPES, getCallableSymbolAtPosition } from "./callable-symbols";
 import { findLocalCallableDefinition } from "./callable-definitions";

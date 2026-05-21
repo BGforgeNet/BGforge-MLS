@@ -1,5 +1,5 @@
 import { timeHandler } from "../shared/time-handler";
-import { symbolAtPosition } from "../common";
+import { symbolAtPosition } from "../cursor-utils";
 import { registry } from "../provider-registry";
 import { getServerContext } from "../server-context";
 import type { HandlerContext } from "./context";

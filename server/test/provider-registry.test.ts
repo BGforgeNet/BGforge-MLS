@@ -26,11 +26,20 @@ import {
 } from "vscode-languageserver/node";
 import type { LanguageProvider, ProviderContext, FormatResult } from "../src/language-provider";
 
-// Mock the common module to suppress logs and control file finding during tests
-vi.mock("../src/common", () => ({
+// Mock per-concern modules to suppress logs and control file finding during tests
+vi.mock("../src/logger", () => ({
     conlog: vi.fn(),
+}));
+
+vi.mock("../src/diagnostics", () => ({
     errorMessage: (err: unknown) => (err instanceof Error ? err.message : String(err)),
+}));
+
+vi.mock("../src/path-utils", () => ({
     findFiles: vi.fn().mockReturnValue([]),
+}));
+
+vi.mock("../src/uri-utils", () => ({
     pathToUri: vi.fn((p: string) => `file://${p}`),
 }));
 
@@ -786,7 +795,7 @@ describe("ProviderRegistry", () => {
             );
 
             // Mock findFiles to return test files
-            const { findFiles } = await import("../src/common");
+            const { findFiles } = await import("../src/path-utils");
             vi.mocked(findFiles).mockReturnValue(["lib/utils.tph", "lib/other.tph"]);
 
             await registry.scanWorkspaceFiles("/test/workspace");
@@ -820,7 +829,7 @@ describe("ProviderRegistry", () => {
                 }),
             );
 
-            const { findFiles } = await import("../src/common");
+            const { findFiles } = await import("../src/path-utils");
             vi.mocked(findFiles).mockClear(); // Clear any previous calls
             vi.mocked(findFiles).mockReturnValue([]);
 
@@ -839,7 +848,7 @@ describe("ProviderRegistry", () => {
                 }),
             );
 
-            const { findFiles } = await import("../src/common");
+            const { findFiles } = await import("../src/path-utils");
             vi.mocked(findFiles).mockReturnValue(["file.tph"]);
 
             // Should not throw
@@ -863,7 +872,7 @@ describe("ProviderRegistry", () => {
                 }),
             );
 
-            const { findFiles } = await import("../src/common");
+            const { findFiles } = await import("../src/path-utils");
             vi.mocked(findFiles)
                 .mockReturnValueOnce(["lib/a.tph"]) // First call for .tph
                 .mockReturnValueOnce(["lib/b.h"]); // Second call for .h

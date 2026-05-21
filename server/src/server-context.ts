@@ -19,7 +19,7 @@
  * tests on the first request the client sends.
  */
 
-import { conlog, setDebugLogging } from "./common";
+import { conlog, setDebugLogging } from "./logger";
 import type { MLSsettings, ProjectSettings } from "./settings";
 import type { Translation } from "./translation";
 

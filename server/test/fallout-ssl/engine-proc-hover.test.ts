@@ -6,9 +6,12 @@
 
 import { describe, expect, it, beforeAll, vi } from "vitest";
 
-vi.mock("../../src/common", () => ({
-    conlog: vi.fn(),
+vi.mock("../../src/diagnostics", () => ({
     errorMessage: (err: unknown) => (err instanceof Error ? err.message : String(err)),
+}));
+
+vi.mock("../../src/logger", () => ({
+    conlog: vi.fn(),
 }));
 
 import { lookupLocalSymbol, clearAllLocalSymbolsCache } from "../../src/fallout-ssl/local-symbols";

@@ -7,9 +7,15 @@ import { describe, expect, it, beforeAll, beforeEach, vi } from "vitest";
 import { MarkupKind } from "vscode-languageserver/node";
 
 // Mock LSP connection before importing modules that use it
-vi.mock("../../src/common", () => ({
-    conlog: vi.fn(),
+vi.mock("../../src/diagnostics", () => ({
     errorMessage: (err: unknown) => (err instanceof Error ? err.message : String(err)),
+}));
+
+vi.mock("../../src/logger", () => ({
+    conlog: vi.fn(),
+}));
+
+vi.mock("../../src/path-utils", () => ({
     findFiles: vi.fn(() => []),
 }));
 

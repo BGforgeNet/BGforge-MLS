@@ -18,18 +18,10 @@ import {
     type Range,
     MarkupKind,
 } from "vscode-languageserver/node";
-import {
-    conlog,
-    errorMessage,
-    findFiles,
-    getRelPath,
-    isDirectory,
-    isSubpath,
-    isSubpathFullyResolved,
-    isSubpathResolved,
-    pathToUri,
-    tryRealpathSync,
-} from "./common";
+import { errorMessage } from "./diagnostics";
+import { conlog } from "./logger";
+import { findFiles, getRelPath, isDirectory, isSubpath, isSubpathFullyResolved, isSubpathResolved, tryRealpathSync } from "./path-utils";
+import { pathToUri } from "./uri-utils";
 import {
     CONSUMER_EXTENSIONS_MSG,
     CONSUMER_EXTENSIONS_TRA,

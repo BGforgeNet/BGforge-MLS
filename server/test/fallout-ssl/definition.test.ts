@@ -7,7 +7,7 @@ import * as os from "os";
 import * as path from "path";
 import { describe, expect, it, beforeAll, afterAll, vi } from "vitest";
 import type { Position } from "vscode-languageserver/node";
-import { pathToUri } from "../../src/common";
+import { pathToUri } from "../../src/uri-utils";
 
 // Mock the server module to avoid LSP connection issues
 vi.mock("../../src/server", () => ({

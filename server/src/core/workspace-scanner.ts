@@ -11,7 +11,9 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { LanguageProvider } from "../language-provider";
-import { conlog, findFiles, pathToUri } from "../common";
+import { conlog } from "../logger";
+import { findFiles } from "../path-utils";
+import { pathToUri } from "../uri-utils";
 
 /**
  * Minimal interface required by the scanner for reloading file data.

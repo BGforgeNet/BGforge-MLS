@@ -5,7 +5,7 @@
  */
 
 import { type SourceFile, Project } from "ts-morph";
-import { uriToPath } from "../common";
+import { uriToPath } from "../uri-utils";
 import { extractTraTag } from "../../../transpilers/common/transpiler-utils";
 import { bundle } from "../../../transpilers/common/bundle";
 import { emitD } from "../../../transpilers/td/src/emit";

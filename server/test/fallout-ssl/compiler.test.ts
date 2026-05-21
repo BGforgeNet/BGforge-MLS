@@ -43,8 +43,8 @@ vi.mock("../../src/lsp-connection", () => ({
 }));
 
 const mockSendParseResult = vi.fn();
-vi.mock("../../src/common", async (importOriginal) => {
-    const actual = await importOriginal<typeof import("../../src/common")>();
+vi.mock("../../src/diagnostics", async (importOriginal) => {
+    const actual = await importOriginal<typeof import("../../src/diagnostics")>();
     return {
         ...actual,
         sendParseResult: (...args: unknown[]) => mockSendParseResult(...args),

@@ -5,7 +5,7 @@ import {
     DidChangeConfigurationNotification,
     DidChangeWatchedFilesNotification,
 } from "vscode-languageserver/node";
-import { conlog } from "../common";
+import { conlog } from "../logger";
 import {
     LANG_FALLOUT_MSG,
     LANG_FALLOUT_SCRIPTS_LST,

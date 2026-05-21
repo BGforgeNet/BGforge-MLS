@@ -38,7 +38,7 @@ import { parseFile } from "../../src/fallout-ssl/header-parser";
 const extractCallSites = (text: string, uri: string) => parseFile(uri, text).refs;
 import { Symbols } from "../../src/core/symbol-index";
 import { FileIndex } from "../../src/core/file-index";
-import { pathToUri } from "../../src/common";
+import { pathToUri } from "../../src/uri-utils";
 import { isHeaderFile } from "../../src/core/location-utils";
 import { normalizeUri } from "../../src/core/normalized-uri";
 

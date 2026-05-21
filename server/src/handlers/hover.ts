@@ -1,5 +1,6 @@
 import type { TextDocumentPositionParams } from "vscode-languageserver/node";
-import { conlog, symbolAtPosition } from "../common";
+import { symbolAtPosition } from "../cursor-utils";
+import { conlog } from "../logger";
 import { timeHandler } from "../shared/time-handler";
 import { registry } from "../provider-registry";
 import { getServerContext } from "../server-context";

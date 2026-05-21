@@ -13,17 +13,10 @@ import * as cp from "child_process";
 import * as crypto from "crypto";
 import * as os from "os";
 import * as path from "path";
-import {
-    type ParseItemList,
-    addFallbackDiagnostic,
-    conlog,
-    errorMessage,
-    pathToUri,
-    reportCompileResult,
-    sendParseResult,
-    tmpDir,
-    uriToPath,
-} from "../common";
+import { addFallbackDiagnostic, errorMessage, reportCompileResult, sendParseResult, type ParseItemList } from "../diagnostics";
+import { conlog } from "../logger";
+import { tmpDir } from "../path-utils";
+import { pathToUri, uriToPath } from "../uri-utils";
 import { needsShell, parseCommandPath, runProcess } from "../process-runner";
 import { abortAllCompiles, compileWithTmpFile } from "../core/compile-with-tmp-file";
 import type { NormalizedUri } from "../core/normalized-uri";

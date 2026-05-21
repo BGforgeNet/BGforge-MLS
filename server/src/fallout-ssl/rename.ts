@@ -16,7 +16,7 @@ import {
     OptionalVersionedTextDocumentIdentifier,
     TextDocumentEdit,
 } from "vscode-languageserver/node";
-import { conlog } from "../common";
+import { conlog } from "../logger";
 import { normalizeUri } from "../core/normalized-uri";
 import type { ReferencesIndex } from "../shared/references-index";
 import { SourceType } from "../core/symbol";

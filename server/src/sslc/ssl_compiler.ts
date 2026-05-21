@@ -5,7 +5,7 @@
 
 import path from "node:path";
 import fs from "node:fs";
-import { conlog } from "../common";
+import { conlog } from "../logger";
 import { showWarning } from "../user-messages";
 import { fork } from "child_process";
 

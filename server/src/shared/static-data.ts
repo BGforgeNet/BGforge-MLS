@@ -6,7 +6,7 @@
 
 import { readFileSync } from "fs";
 import * as path from "path";
-import { conlog } from "../common";
+import { conlog } from "../logger";
 
 /**
  * Load a static JSON data file for a given language.

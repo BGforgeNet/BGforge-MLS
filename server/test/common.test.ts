@@ -19,16 +19,9 @@ vi.mock("../src/lsp-connection", () => ({
     }),
 }));
 
-import {
-    symbolAtPosition,
-    sendParseResult,
-    isSubpath,
-    isSubpathFullyResolved,
-    tryRealpathSync,
-    errorMessage,
-    addFallbackDiagnostic,
-    type ParseResult,
-} from "../src/common";
+import { symbolAtPosition } from "../src/cursor-utils";
+import { addFallbackDiagnostic, errorMessage, sendParseResult, type DiagnosticParseResult } from "../src/diagnostics";
+import { isSubpath, isSubpathFullyResolved, tryRealpathSync } from "../src/path-utils";
 import { expandHome, needsShell, parseCommandPath, runProcess } from "../src/process-runner";
 
 describe("symbolAtPosition", () => {
@@ -161,7 +154,7 @@ describe("sendParseResult", () => {
     });
 
     it("sends multiple errors for the same URI", () => {
-        const parseResult: ParseResult = {
+        const parseResult: DiagnosticParseResult = {
             errors: [
                 { uri: "file:///a.tp2", line: 1, columnStart: 0, columnEnd: 10, message: "error 1" },
                 { uri: "file:///a.tp2", line: 5, columnStart: 0, columnEnd: 20, message: "error 2" },
@@ -177,7 +170,7 @@ describe("sendParseResult", () => {
     });
 
     it("replaces tmpUri with mainUri for errors", () => {
-        const parseResult: ParseResult = {
+        const parseResult: DiagnosticParseResult = {
             errors: [{ uri: "file:///tmp.tp2", line: 3, columnStart: 0, columnEnd: 5, message: "err" }],
             warnings: [],
         };
@@ -188,7 +181,7 @@ describe("sendParseResult", () => {
     });
 
     it("replaces tmpUri with mainUri for warnings", () => {
-        const parseResult: ParseResult = {
+        const parseResult: DiagnosticParseResult = {
             errors: [],
             warnings: [{ uri: "file:///tmp.tp2", line: 3, columnStart: 0, columnEnd: 5, message: "warn" }],
         };
@@ -199,7 +192,7 @@ describe("sendParseResult", () => {
     });
 
     it("accumulates errors and warnings for the same URI", () => {
-        const parseResult: ParseResult = {
+        const parseResult: DiagnosticParseResult = {
             errors: [{ uri: "file:///a.tp2", line: 1, columnStart: 0, columnEnd: 10, message: "error" }],
             warnings: [{ uri: "file:///a.tp2", line: 2, columnStart: 0, columnEnd: 10, message: "warning" }],
         };
@@ -211,7 +204,7 @@ describe("sendParseResult", () => {
     });
 
     it("groups diagnostics by URI across multiple files", () => {
-        const parseResult: ParseResult = {
+        const parseResult: DiagnosticParseResult = {
             errors: [
                 { uri: "file:///a.tp2", line: 1, columnStart: 0, columnEnd: 10, message: "err a" },
                 { uri: "file:///b.h", line: 2, columnStart: 0, columnEnd: 5, message: "err b" },
@@ -417,8 +410,8 @@ describe("needsShell", () => {
 });
 
 describe("addFallbackDiagnostic", () => {
-    it("returns a new ParseResult with the fallback error appended", () => {
-        const original: ParseResult = { errors: [], warnings: [] };
+    it("returns a new DiagnosticParseResult with the fallback error appended", () => {
+        const original: DiagnosticParseResult = { errors: [], warnings: [] };
         const err = { message: "Command failed" } as import("child_process").ExecFileException;
 
         const result = addFallbackDiagnostic(original, err, "file:///test.tp2", "");
@@ -429,8 +422,8 @@ describe("addFallbackDiagnostic", () => {
         expect(result.errors[0]!.line).toBe(1);
     });
 
-    it("does not mutate the original ParseResult", () => {
-        const original: ParseResult = {
+    it("does not mutate the original DiagnosticParseResult", () => {
+        const original: DiagnosticParseResult = {
             errors: [{ uri: "file:///a.tp2", line: 5, columnStart: 0, columnEnd: 10, message: "existing" }],
             warnings: [],
         };
@@ -465,7 +458,7 @@ describe("addFallbackDiagnostic", () => {
     });
 
     it("preserves existing errors and warnings from input", () => {
-        const original: ParseResult = {
+        const original: DiagnosticParseResult = {
             errors: [{ uri: "file:///a.tp2", line: 1, columnStart: 0, columnEnd: 5, message: "err1" }],
             warnings: [{ uri: "file:///a.tp2", line: 2, columnStart: 0, columnEnd: 5, message: "warn1" }],
         };

@@ -1,4 +1,4 @@
-import { conlog } from "../common";
+import { conlog } from "../logger";
 import { COMMAND_compile, compile } from "../compile";
 import { showInfo } from "../user-messages";
 import { parseDialog } from "../dialog";

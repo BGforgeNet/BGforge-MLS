@@ -4,7 +4,7 @@
  * with the existing Fallout SSL dialog parser.
  */
 
-import { uriToPath } from "../common";
+import { uriToPath } from "../uri-utils";
 import { parseDialog, type DialogData } from "../dialog";
 import { isInitialized } from "../../../shared/parsers/fallout-ssl";
 import { transpile } from "../../../transpilers/tssl/src/index";

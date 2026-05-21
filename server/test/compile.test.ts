@@ -73,15 +73,24 @@ vi.mock("fs", () => ({
     readFileSync: vi.fn().mockReturnValue("file content"),
 }));
 
-vi.mock("../src/common", () => ({
+vi.mock("../src/logger", () => ({
     conlog: vi.fn(),
+}));
+
+vi.mock("../src/diagnostics", () => ({
     errorMessage: (error: unknown) => (error instanceof Error ? error.message : String(error)),
+}));
+
+vi.mock("../src/path-utils", () => ({
     isDirectory: vi.fn().mockReturnValue(true),
-    pathToUri: vi.fn((p: string) => `file://${p}`),
     tmpDir: "/tmp/bgforge-mls",
 }));
 
-import { conlog } from "../src/common";
+vi.mock("../src/uri-utils", () => ({
+    pathToUri: vi.fn((p: string) => `file://${p}`),
+}));
+
+import { conlog } from "../src/logger";
 import { compile, clearDiagnostics } from "../src/compile";
 
 describe("compile dispatcher", () => {

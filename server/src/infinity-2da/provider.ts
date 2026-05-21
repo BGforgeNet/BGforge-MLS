@@ -4,7 +4,7 @@
  * for .2da table files.
  */
 
-import { conlog } from "../common";
+import { conlog } from "../logger";
 import { LANG_INFINITY_2DA } from "../core/languages";
 import type { FormatResult } from "../core/capabilities";
 import type {

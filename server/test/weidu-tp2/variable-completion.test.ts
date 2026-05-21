@@ -16,10 +16,10 @@ vi.mock("../../src/lsp-connection", () => ({
 }));
 
 // Mock isSubpath to always return true (files don't actually exist on disk for these tests)
-vi.mock("../../src/common", async (importOriginal) => {
-    const mod = await importOriginal<typeof import("../../src/common")>();
+vi.mock("../../src/path-utils", async (importOriginal) => {
+    const actual = await importOriginal<typeof import("../../src/path-utils")>();
     return {
-        ...mod,
+        ...actual,
         isSubpath: vi.fn(() => true),
     };
 });

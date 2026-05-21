@@ -20,7 +20,8 @@ import {
 } from "vscode-languageserver/node";
 import { extname } from "path";
 import { fileURLToPath } from "url";
-import { conlog, getLinePrefix } from "../common";
+import { getLinePrefix } from "../cursor-utils";
+import { conlog } from "../logger";
 import type { NormalizedUri } from "../core/normalized-uri";
 import { EXT_WEIDU_TP2, LANG_WEIDU_TP2 } from "../core/languages";
 import { isHeaderFile } from "../core/location-utils";

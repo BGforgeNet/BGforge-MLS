@@ -6,7 +6,7 @@
  */
 
 import type { CompletionItem, FoldingRange, Position } from "vscode-languageserver/node";
-import { conlog } from "../common";
+import { conlog } from "../logger";
 import type { NormalizedUri } from "../core/normalized-uri";
 import { LANG_WEIDU_BAF } from "../core/languages";
 import type { IndexedSymbol } from "../core/symbol";

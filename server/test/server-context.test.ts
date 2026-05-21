@@ -10,7 +10,7 @@ import type { MLSsettings, ProjectSettings } from "../src/settings";
 import type { Translation } from "../src/translation";
 
 const { mockConlog } = vi.hoisted(() => ({ mockConlog: vi.fn() }));
-vi.mock("../src/common", () => ({
+vi.mock("../src/logger", () => ({
     conlog: mockConlog,
     setDebugLogging: vi.fn(),
 }));

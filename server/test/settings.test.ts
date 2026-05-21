@@ -9,9 +9,12 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import * as path from "path";
 
 // Mock the common module to suppress logs during tests
-vi.mock("../src/common", () => ({
-    conlog: vi.fn(),
+vi.mock("../src/diagnostics", () => ({
     errorMessage: (err: unknown) => (err instanceof Error ? err.message : String(err)),
+}));
+
+vi.mock("../src/logger", () => ({
+    conlog: vi.fn(),
 }));
 
 // Mock fs module with hoisted mock

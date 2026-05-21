@@ -23,10 +23,10 @@ vi.mock("../../src/lsp-connection", () => ({
     initLspConnection: vi.fn(),
 }));
 
-vi.mock("../../src/common", async (importOriginal) => {
-    const mod = await importOriginal<typeof import("../../src/common")>();
+vi.mock("../../src/path-utils", async (importOriginal) => {
+    const actual = await importOriginal<typeof import("../../src/path-utils")>();
     return {
-        ...mod,
+        ...actual,
         isSubpath: vi.fn(() => true),
     };
 });

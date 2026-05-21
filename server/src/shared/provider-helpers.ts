@@ -9,7 +9,7 @@ import type { CompletionItem } from "vscode-languageserver/node";
 import type { IndexedSymbol } from "../core/symbol";
 import type { Symbols } from "../core/symbol-index";
 import type { FormatResult } from "../language-provider";
-import { conlog } from "../common";
+import { conlog } from "../logger";
 import { createFullDocumentEdit } from "./format-edits";
 import { validateFormatting, type CommentStripper, type FormatOutput } from "@bgforge/format";
 

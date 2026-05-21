@@ -4,7 +4,7 @@
  * appear in `weidu.log`; the file has no other addressable constructs.
  */
 
-import { conlog } from "../common";
+import { conlog } from "../logger";
 import { LANG_WEIDU_LOG } from "../core/languages";
 import type { LanguageProvider, ProviderBase, ProviderContext, NavigationCapability } from "../language-provider";
 import { getDefinition as getWeiduLogDefinition } from "./definition";

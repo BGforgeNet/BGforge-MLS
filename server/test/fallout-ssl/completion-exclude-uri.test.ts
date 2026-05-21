@@ -15,11 +15,23 @@ vi.mock("../../src/lsp-connection", () => ({
     }),
 }));
 
-vi.mock("../../src/common", () => ({
-    conlog: vi.fn(),
-    errorMessage: (err: unknown) => (err instanceof Error ? err.message : String(err)),
-    findFiles: vi.fn().mockReturnValue([]),
+vi.mock("../../src/cursor-utils", () => ({
     getLinePrefix: vi.fn(),
+}));
+
+vi.mock("../../src/diagnostics", () => ({
+    errorMessage: (err: unknown) => (err instanceof Error ? err.message : String(err)),
+}));
+
+vi.mock("../../src/logger", () => ({
+    conlog: vi.fn(),
+}));
+
+vi.mock("../../src/path-utils", () => ({
+    findFiles: vi.fn().mockReturnValue([]),
+}));
+
+vi.mock("../../src/uri-utils", () => ({
     pathToUri: vi.fn(),
 }));
 

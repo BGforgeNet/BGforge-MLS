@@ -5,19 +5,10 @@
 
 import * as crypto from "crypto";
 import * as path from "path";
-import {
-    type ParseItemList,
-    type ParseResult,
-    addFallbackDiagnostic,
-    conlog,
-    errorMessage,
-    getErrnoCode,
-    pathToUri,
-    reportCompileResult,
-    sendParseResult,
-    tmpDir,
-    uriToPath,
-} from "./common";
+import { addFallbackDiagnostic, errorMessage, getErrnoCode, reportCompileResult, sendParseResult, type DiagnosticParseResult, type ParseItemList } from "./diagnostics";
+import { conlog } from "./logger";
+import { tmpDir } from "./path-utils";
+import { pathToUri, uriToPath } from "./uri-utils";
 import { parseCommandPath, runProcess } from "./process-runner";
 import { abortAllCompiles, compileWithTmpFile } from "./core/compile-with-tmp-file";
 import { showError, showInfo, showWarning } from "./user-messages";
@@ -105,7 +96,7 @@ function parseWeiduOutput(text: string) {
     } catch (error) {
         conlog(`weidu parse output failed: ${errorMessage(error)}`, "error");
     }
-    const result: ParseResult = { errors: errors, warnings: warnings };
+    const result: DiagnosticParseResult = { errors: errors, warnings: warnings };
     return result;
 }
 

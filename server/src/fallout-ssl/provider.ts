@@ -23,7 +23,9 @@ import {
 } from "vscode-languageserver/node";
 import type { NormalizedUri } from "../core/normalized-uri";
 import { type IndexedSymbol, SourceType } from "../core/symbol";
-import { conlog, errorMessage, getLinePrefix } from "../common";
+import { getLinePrefix } from "../cursor-utils";
+import { errorMessage } from "../diagnostics";
+import { conlog } from "../logger";
 import { EXT_FALLOUT_SSL_ALL, LANG_FALLOUT_SSL } from "../core/languages";
 import { isHeaderFile } from "../core/location-utils";
 import { FileIndex } from "../core/file-index";

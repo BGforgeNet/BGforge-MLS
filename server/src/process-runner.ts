@@ -12,7 +12,8 @@ import * as cp from "child_process";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import { conlog, errorMessage, getErrnoCode } from "./common";
+import { errorMessage, getErrnoCode } from "./diagnostics";
+import { conlog } from "./logger";
 
 /** Expand leading ~ to the user's home directory. execFile doesn't use a shell, so ~ is not expanded. */
 export function expandHome(filePath: string): string {

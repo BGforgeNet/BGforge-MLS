@@ -14,7 +14,7 @@ import type {
     Position,
     SymbolInformation,
 } from "vscode-languageserver/node";
-import { conlog } from "../common";
+import { conlog } from "../logger";
 import type { NormalizedUri } from "../core/normalized-uri";
 import { EXT_WEIDU_D, LANG_WEIDU_D } from "../core/languages";
 import { type IndexedSymbol, SourceType } from "../core/symbol";

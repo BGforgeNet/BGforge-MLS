@@ -6,7 +6,8 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as yaml from "yaml";
-import { conlog, errorMessage } from "./common";
+import { errorMessage } from "./diagnostics";
+import { conlog } from "./logger";
 
 export interface SSLsettings {
     compilePath: string;
