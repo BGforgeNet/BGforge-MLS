@@ -36,10 +36,7 @@ export const FUNC_PARAM_KEYWORDS = /^\s*(?:LAF|LPF|LAUNCH_ACTION_FUNCTION|LAUNCH
  */
 
 /** Variable assignment keywords (SET/SPRINT) with optional EVAL/EVALUATE_BUFFER/GLOBAL modifier. */
-export const ASSIGNMENT_SITE_PATTERN = new RegExp(
-    "^\\s*(?:OUTER_)?(?:SET|SPRINT|TEXT_SPRINT)\\s+(?:(?:EVAL(?:UATE_BUFFER)?|GLOBAL)\\s+)?\\S*$",
-    "i",
-);
+export const ASSIGNMENT_SITE_PATTERN = /^\s*(?:OUTER_)?(?:SET|SPRINT|TEXT_SPRINT)\s+(?:(?:EVAL(?:UATE_BUFFER)?|GLOBAL)\s+)?\S*$/i;
 
 /** Definition keywords (function/macro/array/loop) where a new unique name is being declared. */
 export const DEFINITION_SITE_PATTERN = new RegExp(
