@@ -4,6 +4,7 @@
 
 import { describe, expect, it, beforeAll, vi } from "vitest";
 import type { Position } from "vscode-languageserver/node";
+import { findPrecedingDocComment } from "../../src/core/doc-comment";
 
 // Mock the server module to avoid LSP connection issues
 vi.mock("../../src/server", () => ({
@@ -15,7 +16,6 @@ vi.mock("../../src/server", () => ({
 
 import {
     makeRange,
-    findPrecedingDocComment,
     extractProcedures,
     findProcedure,
     findIdentifierAtPosition,
@@ -366,7 +366,7 @@ procedure foo begin end
             const proc = findProcedure(tree!.rootNode, "foo");
             expect(proc).not.toBeNull();
 
-            const docComment = findPrecedingDocComment(tree!.rootNode, proc!);
+            const docComment = findPrecedingDocComment(proc!);
             expect(docComment).toBe("/** This is foo */");
         });
 
@@ -378,7 +378,7 @@ procedure foo begin end
             const proc = findProcedure(tree!.rootNode, "foo");
             expect(proc).not.toBeNull();
 
-            const docComment = findPrecedingDocComment(tree!.rootNode, proc!);
+            const docComment = findPrecedingDocComment(proc!);
             expect(docComment).toBeNull();
         });
 
@@ -393,8 +393,22 @@ procedure foo begin end
             const proc = findProcedure(tree!.rootNode, "foo");
             expect(proc).not.toBeNull();
 
-            const docComment = findPrecedingDocComment(tree!.rootNode, proc!);
+            const docComment = findPrecedingDocComment(proc!);
             expect(docComment).toBeNull();
+        });
+
+        it("finds JSDoc separated from the procedure by a blank line", () => {
+            const text = `
+/** Docs for foo */
+
+procedure foo begin end
+`;
+            const tree = parseWithCache(text);
+            const proc = findProcedure(tree!.rootNode, "foo");
+            expect(proc).not.toBeNull();
+
+            const docComment = findPrecedingDocComment(proc!);
+            expect(docComment).toBe("/** Docs for foo */");
         });
     });
 

@@ -23,10 +23,10 @@ import {
     extractMacros,
     extractParams,
     extractProcedures,
-    findPrecedingDocComment,
     makeRange,
 } from "./utils";
 import { isInitialized, parseWithCache } from "../../../shared/parsers/fallout-ssl";
+import { findPrecedingDocComment } from "../core/doc-comment";
 import { SyntaxType } from "./tree-sitter.d";
 
 // =============================================================================
@@ -78,7 +78,7 @@ function extractSymbols(
     // Extract procedures via tree-sitter AST
     const procedures = extractProcedures(root);
     for (const [name, { node }] of procedures) {
-        const docComment = findPrecedingDocComment(root, node);
+        const docComment = findPrecedingDocComment(node);
         const parsed = docComment ? jsdoc.parse(docComment) : null;
         const astParams = extractParams(node);
         result.push(buildProcedureSymbol(name, uri, node, astParams, parsed, { displayPath }));
@@ -93,7 +93,7 @@ function extractSymbols(
     // Extract top-level variables and exports
     for (const node of root.children) {
         if (node.type === SyntaxType.VariableDecl) {
-            const docComment = findPrecedingDocComment(root, node);
+            const docComment = findPrecedingDocComment(node);
             const parsed = docComment ? jsdoc.parse(docComment) : null;
             for (const child of node.children) {
                 if (child.type === SyntaxType.VarInit) {
@@ -106,7 +106,7 @@ function extractSymbols(
                 }
             }
         } else if (node.type === SyntaxType.ExportDecl) {
-            const docComment = findPrecedingDocComment(root, node);
+            const docComment = findPrecedingDocComment(node);
             const parsed = docComment ? jsdoc.parse(docComment) : null;
             const nameNode = node.childForFieldName("name");
             if (nameNode) {

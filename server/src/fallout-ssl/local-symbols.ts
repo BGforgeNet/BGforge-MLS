@@ -14,13 +14,13 @@ import { parseWithCache, isInitialized } from "../../../shared/parsers/fallout-s
 import {
     extractProcedures,
     extractMacros,
-    findPrecedingDocComment,
     makeRange,
     extractParams,
     buildProcedureSymbol,
     buildMacroSymbol,
     buildVariableSymbol,
 } from "./utils";
+import { findPrecedingDocComment } from "../core/doc-comment";
 import * as jsdoc from "../shared/jsdoc";
 import { SyntaxType } from "./tree-sitter.d";
 // Generated from server/data/fallout-ssl-base.yml by generate-data.sh.
@@ -58,7 +58,7 @@ function parseLocalSymbols(text: string, uri: string): LocalSymbolsData | null {
     // Extract procedures
     const procedures = extractProcedures(root);
     for (const [name, { node }] of procedures) {
-        const docComment = findPrecedingDocComment(root, node);
+        const docComment = findPrecedingDocComment(node);
         const parsed = docComment ? jsdoc.parse(docComment) : null;
         const astParams = extractParams(node);
         const engineDoc = ENGINE_PROC_DOCS[name];
@@ -74,7 +74,7 @@ function parseLocalSymbols(text: string, uri: string): LocalSymbolsData | null {
     // Extract file-level variables and exports - use language-tagged code fence
     for (const node of root.children) {
         if (node.type === SyntaxType.VariableDecl) {
-            const docComment = findPrecedingDocComment(root, node);
+            const docComment = findPrecedingDocComment(node);
             const parsed = docComment ? jsdoc.parse(docComment) : null;
             for (const child of node.children) {
                 if (child.type === SyntaxType.VarInit) {
@@ -85,7 +85,7 @@ function parseLocalSymbols(text: string, uri: string): LocalSymbolsData | null {
                 }
             }
         } else if (node.type === SyntaxType.ExportDecl) {
-            const docComment = findPrecedingDocComment(root, node);
+            const docComment = findPrecedingDocComment(node);
             const parsed = docComment ? jsdoc.parse(docComment) : null;
             const nameNode = node.childForFieldName("name");
             if (nameNode) {

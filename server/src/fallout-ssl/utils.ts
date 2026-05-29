@@ -7,6 +7,7 @@ import type { Node } from "web-tree-sitter";
 import { type Position, CompletionItemKind, MarkupKind } from "vscode-languageserver/node";
 import { LANG_FALLOUT_SSL_TOOLTIP } from "../core/languages";
 import { containsPosition, makeRange } from "../core/position-utils";
+import { findPrecedingDocComment } from "../core/doc-comment";
 import {
     type CallableSymbol,
     type ConstantSymbol,
@@ -154,28 +155,6 @@ export function buildTooltipBase(
         markdown += engineDoc;
     }
     return markdown;
-}
-
-/**
- * Find doc comment immediately preceding a node.
- * Comments are siblings in the tree.
- */
-export function findPrecedingDocComment(root: Node, defNode: Node): string | null {
-    const defLine = defNode.startPosition.row;
-
-    for (const node of root.children) {
-        if (node.type === SyntaxType.Comment) {
-            const text = node.text;
-            if (!text.startsWith("/**")) {
-                continue;
-            }
-            const commentEndLine = node.endPosition.row;
-            if (commentEndLine === defLine - 1 || commentEndLine === defLine) {
-                return text;
-            }
-        }
-    }
-    return null;
 }
 
 /**
@@ -373,7 +352,7 @@ export function extractMacros(root: Node): MacroData[] {
         const multiline = actualBody.includes("\n");
         const firstline = multiline ? (actualBody.split("\n")[0] || "").trim() : actualBody.trim();
 
-        const docComment = findPrecedingDocComment(root, parentNode);
+        const docComment = findPrecedingDocComment(parentNode);
         const parsedJsdoc = docComment ? jsdoc.parse(docComment) : undefined;
 
         macros.push({
@@ -449,7 +428,7 @@ export function extractMacros(root: Node): MacroData[] {
         const multiline = bodyText.includes("\n");
         const firstline = multiline ? (bodyText.split("\n")[0] || "").trim() : bodyText.trim();
 
-        const docComment = findPrecedingDocComment(root, parentNode);
+        const docComment = findPrecedingDocComment(parentNode);
         const parsedJsdoc = docComment ? jsdoc.parse(docComment) : undefined;
 
         macros.push({

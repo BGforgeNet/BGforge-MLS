@@ -11,7 +11,7 @@ import { type Position, MarkupKind } from "vscode-languageserver/node";
 import { type HoverResult, HoverResult as HR } from "../language-provider";
 import { LANG_WEIDU_D_TOOLTIP } from "../core/languages";
 import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-d";
-import { SyntaxType } from "./tree-sitter.d";
+import { findPrecedingDocComment } from "../core/doc-comment";
 import { findLabelNodeAtPosition, findStateInDialog } from "./state-utils";
 import { parse as parseJSDoc } from "../shared/jsdoc";
 import { buildSignatureBlock } from "../../../shared/tooltip-format";
@@ -43,14 +43,14 @@ export function getStateLabelHover(text: string, _symbol: string, _uri: string, 
         return HR.notHandled();
     }
 
-    // Check for JSDoc comment preceding the state
-    const comment = state.stateNode.previousNamedSibling;
-    if (!comment || comment.type !== SyntaxType.Comment || !comment.text.startsWith("/**")) {
+    // Check for a JSDoc comment preceding the state
+    const docComment = findPrecedingDocComment(state.stateNode);
+    if (docComment === null) {
         return HR.notHandled();
     }
 
     // Parse JSDoc - D only uses the description, no tags
-    const jsdoc = parseJSDoc(comment.text);
+    const jsdoc = parseJSDoc(docComment);
     if (!jsdoc.desc) {
         return HR.notHandled();
     }

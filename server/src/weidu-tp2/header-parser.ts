@@ -17,6 +17,7 @@ import { type Location, CompletionItemKind, type Hover, type MarkupContent } fro
 import { computeDisplayPath, extractFilename } from "../core/location-utils";
 import { type ParseResult, EMPTY_PARSE_RESULT } from "../core/parse-result";
 import { makeRange } from "../core/position-utils";
+import { findPrecedingDocComment } from "../core/doc-comment";
 import * as jsdoc from "../shared/jsdoc";
 import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-tp2";
 import { SyntaxType } from "./tree-sitter.d";
@@ -326,53 +327,6 @@ function parseDefType(type: string): { context: CallableContext; dtype: Callable
     const context = type.includes("patch") ? CallableContext.Patch : CallableContext.Action;
     const dtype = type.includes("macro") ? CallableDefType.Macro : CallableDefType.Function;
     return { context, dtype };
-}
-
-/**
- * Find preceding JSDoc comment (block comment starting with /**) for a node.
- * Looks at previous siblings within the same parent.
- */
-function findPrecedingDocComment(node: SyntaxNode): string | null {
-    const parent = node.parent;
-    if (!parent) {
-        return null;
-    }
-
-    // Find this node's index in parent by position (web-tree-sitter creates new objects per .child() call)
-    let nodeIndex = -1;
-    for (let i = 0; i < parent.childCount; i++) {
-        const sibling = parent.child(i);
-        if (sibling && sibling.startIndex === node.startIndex && sibling.endIndex === node.endIndex) {
-            nodeIndex = i;
-            break;
-        }
-    }
-    if (nodeIndex < 0) {
-        return null;
-    }
-
-    // Look backwards for a JSDoc comment
-    for (let i = nodeIndex - 1; i >= 0; i--) {
-        const prev = parent.child(i);
-        if (!prev) continue;
-
-        if (prev.type === SyntaxType.Comment) {
-            const text = prev.text.trim();
-            // Only return if it's a JSDoc comment (starts with /**)
-            if (text.startsWith("/**")) {
-                return text;
-            }
-            // If we hit a non-JSDoc comment, stop looking
-            return null;
-        }
-
-        // If we hit a non-comment node, stop looking
-        if (prev.type !== SyntaxType.LineComment) {
-            return null;
-        }
-    }
-
-    return null;
 }
 
 /**

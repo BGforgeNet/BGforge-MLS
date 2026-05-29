@@ -6,7 +6,8 @@
 import type { SignatureHelp } from "vscode-languageserver/node";
 import { parseWithCache, isInitialized } from "../../../shared/parsers/fallout-ssl";
 import * as jsdoc from "../shared/jsdoc";
-import { findProcedure, findPrecedingDocComment, extractMacros, extractParams } from "./utils";
+import { findProcedure, extractMacros, extractParams } from "./utils";
+import { findPrecedingDocComment } from "../core/doc-comment";
 import { buildSignatureHelp } from "./macro-utils";
 
 /**
@@ -27,7 +28,7 @@ export function getLocalSignature(text: string, symbol: string, paramIndex: numb
     const procNode = findProcedure(tree.rootNode, symbol);
     if (procNode) {
         const params = extractParams(procNode);
-        const docComment = findPrecedingDocComment(tree.rootNode, procNode);
+        const docComment = findPrecedingDocComment(procNode);
         const parsed = docComment ? jsdoc.parse(docComment) : null;
 
         const sig = buildSignatureHelp(symbol, params, parsed, "");

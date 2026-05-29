@@ -169,4 +169,27 @@ describe("weidu-d/hover", () => {
         const result = getStateLabelHover(text, "empty_jsdoc", URI, { line: 3, character: 22 });
         expect(result.handled).toBe(false);
     });
+
+    it("shows JSDoc when a line comment sits between the doc and the state (lenient association)", () => {
+        const text = [
+            "BEGIN ~DIALOG~",
+            "",
+            "/** Greeting state */",
+            "// editor note",
+            "IF ~True()~ THEN BEGIN greeting",
+            "    SAY ~Hello!~",
+            "END",
+        ].join("\n");
+
+        // Cursor on "greeting" (line 4, char 25)
+        const result = getStateLabelHover(text, "greeting", URI, { line: 4, character: 25 });
+
+        expect(result.handled).toBe(true);
+        if (result.handled) {
+            const contents = result.hover?.contents;
+            expect(contents).toBeDefined();
+            const value = (contents as { value: string }).value;
+            expect(value).toContain("Greeting state");
+        }
+    });
 });
