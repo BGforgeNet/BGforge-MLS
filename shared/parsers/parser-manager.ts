@@ -31,10 +31,6 @@ export function setParserLogger(next: ParserLogger): void {
     logger = next;
 }
 
-function errorMessage(error: unknown): string {
-    return error instanceof Error ? error.message : String(error);
-}
-
 /** Per-language cached parser module, stored internally by the manager. */
 interface ManagedParser {
     readonly langId: string;
@@ -98,7 +94,9 @@ class ParserManager {
                 // eslint-disable-next-line no-await-in-loop
                 await parser.module.init();
             } catch (error) {
-                logger.error(`Failed to initialize ${parser.name} parser: ${errorMessage(error)}`);
+                logger.error(
+                    `Failed to initialize ${parser.name} parser: ${error instanceof Error ? error.message : String(error)}`,
+                );
             }
         }
         logger.info(`ParserManager: initialized ${this.parsers.size} parsers`);
