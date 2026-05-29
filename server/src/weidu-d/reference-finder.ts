@@ -36,11 +36,14 @@ export function findAllDialogLabelRefs(root: SyntaxNode, dialogFile: string, lab
     const refs: LabelRef[] = [];
 
     function visit(node: SyntaxNode): void {
-        // Group A: begin_action or append_action scope
+        // Group A: begin_action or append_action scope. Enter every scope, not
+        // only ones whose dialog matches the target: an EXTERN pointing at the
+        // target dialog from inside a different dialog's block is still a
+        // reference to it (matched on the EXTERN's own file inside the scope).
         if (node.type === SyntaxType.BeginAction || node.type === SyntaxType.AppendAction) {
             const fileNode = node.childForFieldName("file");
-            if (fileNode && normalizeDialogFile(fileNode.text) === dialogFile) {
-                collectRefsInScope(node, dialogFile, labelName, refs);
+            if (fileNode) {
+                collectRefsInScope(node, normalizeDialogFile(fileNode.text), dialogFile, labelName, refs);
             }
             // Don't recurse - collectRefsInScope handles children
             return;
@@ -62,50 +65,61 @@ export function findAllDialogLabelRefs(root: SyntaxNode, dialogFile: string, lab
     return refs;
 }
 
-/** Collect state label refs inside a begin_action or append_action scope. */
-function collectRefsInScope(scopeNode: SyntaxNode, scopeDialog: string, labelName: string, refs: LabelRef[]): void {
+/**
+ * Collect state label refs inside a begin_action or append_action scope.
+ * State definitions and GOTO/ShortGoto belong to the enclosing dialog
+ * (`scopeDialog`), while EXTERN/COPY_TRANS reference the dialog named on
+ * themselves - so each is matched against the target `dialogFile` accordingly.
+ */
+function collectRefsInScope(
+    scopeNode: SyntaxNode,
+    scopeDialog: string,
+    dialogFile: string,
+    labelName: string,
+    refs: LabelRef[],
+): void {
     function visit(node: SyntaxNode): void {
-        // State definition
+        // State definition - belongs to the enclosing dialog
         if (node.type === SyntaxType.State) {
             const label = node.childForFieldName("label");
-            if (label && label.text === labelName) {
+            if (label && scopeDialog === dialogFile && label.text === labelName) {
                 refs.push({ node: label, isDefinition: true });
             }
         }
 
-        // GOTO reference
+        // GOTO reference - belongs to the enclosing dialog
         if (node.type === SyntaxType.GotoNext) {
             const label = node.childForFieldName("label");
-            if (label && label.text === labelName) {
+            if (label && scopeDialog === dialogFile && label.text === labelName) {
                 refs.push({ node: label, isDefinition: false });
             }
         }
 
-        // Short GOTO (+ label)
+        // Short GOTO (+ label) - belongs to the enclosing dialog
         if (node.type === SyntaxType.ShortGoto) {
             const label = node.childForFieldName("label");
-            if (label && label.text === labelName) {
+            if (label && scopeDialog === dialogFile && label.text === labelName) {
                 refs.push({ node: label, isDefinition: false });
             }
         }
 
-        // ExternNext inside a scope - match only if pointing to same dialog
+        // ExternNext - references the dialog named on the EXTERN itself
         if (node.type === SyntaxType.ExternNext) {
             const fileNode = node.childForFieldName("file");
             const label = node.childForFieldName("label");
-            if (fileNode && label && normalizeDialogFile(fileNode.text) === scopeDialog && label.text === labelName) {
+            if (fileNode && label && normalizeDialogFile(fileNode.text) === dialogFile && label.text === labelName) {
                 refs.push({ node: label, isDefinition: false });
             }
         }
 
-        // CopyTrans inside transitions
+        // CopyTrans - references the dialog named on the COPY_TRANS itself
         if (node.type === SyntaxType.CopyTrans) {
             const fileNode = node.childForFieldName("file");
             const stateNode = node.childForFieldName("state");
             if (
                 fileNode &&
                 stateNode &&
-                normalizeDialogFile(fileNode.text) === scopeDialog &&
+                normalizeDialogFile(fileNode.text) === dialogFile &&
                 stateNode.text === labelName
             ) {
                 refs.push({ node: stateNode, isDefinition: false });

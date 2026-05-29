@@ -139,6 +139,31 @@ SET_WEIGHT ~MYMOD~ my_state #50
         });
     });
 
+    describe("cross-dialog EXTERN within the same file", () => {
+        // An EXTERN inside dialog B that points to state s1 in dialog A is a
+        // reference to (A, s1). When A's s1 is defined in the same file, finding
+        // references to it must include that EXTERN so rename keeps the link.
+        const text = `
+BEGIN ~DLGA~
+  IF ~True()~ THEN BEGIN s1
+    SAY ~In A~
+  END
+
+BEGIN ~DLGB~
+  IF ~True()~ THEN BEGIN b1
+    SAY ~In B~
+    IF ~~ THEN EXTERN ~DLGA~ s1
+  END
+`;
+        it("includes the EXTERN that targets the renamed state from another dialog scope", () => {
+            // cursor on the s1 definition in DLGA (line 2, char 26)
+            const refs = findReferences(text, { line: 2, character: 26 }, TEST_URI, true);
+            // definition in DLGA + EXTERN ~DLGA~ s1 inside DLGB = 2
+            expect(refs).toHaveLength(2);
+            expect(refs.some((r) => r.range.start.line === 9)).toBe(true);
+        });
+    });
+
     describe("edge cases", () => {
         it("returns empty for position not on a label", () => {
             const text = `
