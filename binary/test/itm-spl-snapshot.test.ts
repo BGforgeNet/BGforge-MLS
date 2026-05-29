@@ -226,4 +226,34 @@ describe("SPL corruption handling", () => {
         expect(result.errors).toBeDefined();
         expect(result.errors![0]).toMatch(/misaligned/i);
     });
+
+    // SPL and ITM share one parser factory, so SPL's corrupt-file diagnostics now
+    // carry the same detailed wording ITM emits (computed end offset + actual file
+    // size). These pin that wording: the pre-factory SPL messages were terser
+    // ("Abilities extend past EOF: 0x.. + ..*0x.. > size", "bytes past 0x.. not a
+    // multiple of") and would not match the patterns below.
+    test("abilities-past-EOF error carries the detailed offset/size wording", () => {
+        const bytes = forgeSplHeader({
+            extendedHeadersOffset: 0x72,
+            extendedHeadersCount: 1000,
+            featureBlocksOffset: 0x72,
+        });
+        const result = splParser.parse(bytes);
+        expect(result.errors![0]).toMatch(
+            /Abilities extend past EOF: offset 0x[0-9a-f]+ \+ \d+\*0x[0-9a-f]+ = 0x[0-9a-f]+ > size 0x[0-9a-f]+/i,
+        );
+    });
+
+    test("misaligned-effects error carries the detailed offset wording", () => {
+        const header = forgeSplHeader({
+            extendedHeadersOffset: 0x72,
+            extendedHeadersCount: 0,
+            featureBlocksOffset: 0x72,
+        });
+        const bytes = concatBytes(header, new Uint8Array(0x10));
+        const result = splParser.parse(bytes);
+        expect(result.errors![0]).toMatch(
+            /Effects region misaligned: \d+ bytes past offset 0x[0-9a-f]+ is not a multiple of 0x[0-9a-f]+/i,
+        );
+    });
 });
