@@ -3,30 +3,7 @@ import type { ParseOptions, ParseResult } from "../types";
 import { rebuildItmCanonicalDocument } from "./canonical";
 import { createCanonicalItmJsonSnapshot, loadCanonicalItmJsonSnapshot } from "./json-snapshot";
 import { itmCompiledPatternFields, itmDomainRanges, itmPresentationSchema } from "./presentation-schema";
-import { slugify } from "../snapshot-common";
-
-function itmSemanticFieldKey(segments: readonly string[]): string | undefined {
-    if (segments.length === 0) return undefined;
-    const [first, second, third] = segments;
-
-    if (first === "ITM Header") {
-        return `itm.header.${slugify(second ?? "")}`;
-    }
-    if (first === "Abilities") {
-        // second is "Ability N", third is the field display label
-        if (third) {
-            return `itm.abilities[].${slugify(third)}`;
-        }
-        return "itm.abilities[]";
-    }
-    if (first === "Effects") {
-        if (third) {
-            return `itm.effects[].${slugify(third)}`;
-        }
-        return "itm.effects[]";
-    }
-    return `itm.${segments.map((s) => slugify(s)).join(".")}`;
-}
+import { abilityEffectsSemanticFieldKey } from "../ie-common/semantic-keys";
 
 export const itmFormatAdapter: BinaryFormatAdapter = {
     formatId: "itm",
@@ -48,6 +25,6 @@ export const itmFormatAdapter: BinaryFormatAdapter = {
     },
 
     toSemanticFieldKey(segments: readonly string[]): string | undefined {
-        return itmSemanticFieldKey(segments);
+        return abilityEffectsSemanticFieldKey("itm", "ITM Header", segments);
     },
 };
