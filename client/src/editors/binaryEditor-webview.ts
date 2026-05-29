@@ -11,6 +11,7 @@ import {
     type SearchContext,
 } from "./binaryEditor-webview-search";
 import { createWebviewState, registerNode, resetState } from "./binaryEditor-webview-state";
+import { installFatalErrorHandler } from "../webview-utils";
 
 /**
  * Binary editor webview script.
@@ -73,37 +74,17 @@ import { createWebviewState, registerNode, resetState } from "./binaryEditor-web
     const collapseAllBtn = document.getElementById("collapse-all");
     const dumpJsonBtn = document.getElementById("dump-json");
     const loadJsonBtn = document.getElementById("load-json");
-    let fatalErrorShown = false;
 
     // -- Error handling -------------------------------------------------------
 
-    function showFatalError(message: string, error?: unknown): void {
-        if (fatalErrorShown) {
-            return;
-        }
-        fatalErrorShown = true;
-
-        const detail = error instanceof Error ? `${message}\n${error.stack ?? error.message}` : message;
-        console.error("Binary editor runtime error:", error ?? message);
-        vscode.postMessage({
-            type: "runtimeError",
-            message,
-            stack: error instanceof Error ? error.stack : undefined,
-        });
-
-        renderMessages(errorsEl, "errors", [detail]);
-        treeEl.replaceChildren();
-        sidebarEl?.classList.add("hidden");
-    }
-
-    globalThis.addEventListener("error", (event) => {
-        showFatalError(event.message || "Unhandled binary editor error", event.error);
-    });
-
-    globalThis.addEventListener("unhandledrejection", (event) => {
-        const reason = event.reason;
-        const message = reason instanceof Error ? reason.message : String(reason);
-        showFatalError(message || "Unhandled binary editor promise rejection", reason);
+    installFatalErrorHandler({
+        vscode,
+        label: "Binary editor",
+        render: (detail) => {
+            renderMessages(errorsEl, "errors", [detail]);
+            treeEl.replaceChildren();
+            sidebarEl?.classList.add("hidden");
+        },
     });
 
     // -- Lazy loading ---------------------------------------------------------

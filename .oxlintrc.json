@@ -260,7 +260,7 @@
             // VS Code's `webview.postMessage()` (extension side) and
             // `acquireVsCodeApi().postMessage()` (webview side) are not the
             // browser's `window.postMessage`; neither takes a `targetOrigin`.
-            "files": ["client/src/editors/**", "client/src/dialog-tree/**"],
+            "files": ["client/src/editors/**", "client/src/dialog-tree/**", "client/src/webview-utils.ts"],
             "rules": {
                 "unicorn/require-post-message-target-origin": "off"
             }
