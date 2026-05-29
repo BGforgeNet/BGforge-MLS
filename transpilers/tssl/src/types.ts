@@ -3,10 +3,9 @@
  * Interfaces and constants used across multiple TSSL modules.
  */
 
-import { SyntaxKind } from "ts-morph";
-
-// Re-export SyntaxKind for convenience (avoids redundant imports in each file)
-export { SyntaxKind };
+// Re-export SyntaxKind for convenience (avoids redundant imports in each file).
+// Direct `export ... from` form so the bundler doesn't flag an unused local import.
+export { SyntaxKind } from "ts-morph";
 
 /** Inline function metadata: maps function name to its expansion */
 export interface InlineFunc {
