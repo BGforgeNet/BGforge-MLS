@@ -16,18 +16,12 @@ import { formatExpression, formatCallStmt, formatAssignment, formatExpressionStm
 import { SyntaxType } from "../../../server/src/fallout-ssl/tree-sitter.d";
 
 import { throwOnParseError, normalizeComment } from "@bgforge/format";
+import { type FormatOptions, DEFAULT_OPTIONS, type FormatResult } from "../format-types";
 
-interface FormatOptions {
-    indentSize: number;
-    lineLimit: number;
-}
+// Shared format-pipeline helper; re-export so `./core` importers (expressions) keep their path.
+export { throwFormatError } from "../format-types";
 
-const DEFAULT_OPTIONS: FormatOptions = {
-    indentSize: 4,
-    lineLimit: 120,
-};
-
-// Format context passed through all functions
+// Format context passed through all functions (SSL-specific shape)
 interface FormatContext {
     indent: string;
     lineLimit: number;
@@ -51,11 +45,6 @@ export function getCtx(): FormatContext {
 // Regex patterns for keyword matching
 const BEGIN_END_REGEX = /^(begin|end)$/i;
 const BEGIN_END_PROCEDURE_REGEX = /^(begin|end|procedure)$/i;
-
-/** Abort formatting with a descriptive error including source location. */
-export function throwFormatError(message: string, line: number, column: number): never {
-    throw new Error(`${line}:${column}: ${message}`);
-}
 
 // Helper: check if node is a comment
 export function isComment(node: SyntaxNode): boolean {
@@ -136,10 +125,6 @@ function normalizePreprocessor(text: string): string {
 // Comment normalization is shared across all formatters; re-export the imported
 // binding so existing `./core` importers (e.g. control-flow) keep their path.
 export { normalizeComment };
-
-interface FormatResult {
-    text: string;
-}
 
 export function formatDocument(node: SyntaxNode, options: FormatOptions = DEFAULT_OPTIONS): FormatResult {
     throwOnParseError(node);

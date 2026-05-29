@@ -6,29 +6,16 @@
 // Public types
 // ============================================
 
-export interface FormatOptions {
-    indentSize: number;
-    lineLimit: number;
-}
+// Shared format-pipeline types/helpers live in ../format-types; re-export so
+// TP2 sibling modules keep importing them from "./types" and the public index
+// keeps re-exporting DEFAULT_OPTIONS as weiduTp2DefaultOptions.
+export { type FormatOptions, DEFAULT_OPTIONS, type FormatResult, throwFormatError } from "../format-types";
 
-export const DEFAULT_OPTIONS: FormatOptions = {
-    indentSize: 4,
-    lineLimit: 120,
-};
-
-export interface FormatResult {
-    text: string;
-}
-
+// TP2-specific context shape (carries indentSize for nested alignment).
 export interface FormatContext {
     indent: string;
     lineLimit: number;
     indentSize: number;
-}
-
-/** Abort formatting with a descriptive error including source location. */
-export function throwFormatError(message: string, line: number, column: number): never {
-    throw new Error(`${line}:${column}: ${message}`);
 }
 
 // ============================================

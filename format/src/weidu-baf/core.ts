@@ -9,10 +9,12 @@
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import { SyntaxType } from "../../../server/src/weidu-baf/tree-sitter.d";
 import { throwOnParseError, normalizeComment } from "@bgforge/format";
+import { type FormatResult } from "../format-types";
 
-// Formatting options.
-// Note: BAF doesn't need lineLimit - its format is inherently line-based
-// (one trigger/action per line) with no long expressions to wrap.
+// Formatting options. BAF intentionally declares its own narrower options type
+// instead of the shared FormatOptions: its format is line-based (one
+// trigger/action per line) with no long expressions to wrap, so it has no
+// lineLimit.
 interface FormatOptions {
     indentSize: number;
 }
@@ -22,10 +24,6 @@ const DEFAULT_OPTIONS: FormatOptions = {
 };
 
 const INLINE_COMMENT_SPACING = "  ";
-
-interface FormatResult {
-    text: string;
-}
 
 // Format context - passed through to avoid global state
 interface FormatContext {

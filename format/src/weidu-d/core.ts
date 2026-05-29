@@ -15,21 +15,9 @@ import {
     normalizeComment,
     normalizeLineComment,
 } from "@bgforge/format";
+import { type FormatOptions, DEFAULT_OPTIONS, type FormatResult } from "../format-types";
 
-interface FormatOptions {
-    indentSize: number;
-    lineLimit: number;
-}
-
-const DEFAULT_OPTIONS: FormatOptions = {
-    indentSize: 4,
-    lineLimit: 120,
-};
-
-interface FormatResult {
-    text: string;
-}
-
+// WeiDU D-specific context shape (carries indent2 for nested transitions).
 interface FormatContext {
     indent: string;
     indent2: string;
