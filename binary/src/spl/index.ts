@@ -3,11 +3,11 @@
  * the on-wire layout with ITM via `binary/src/ie-common/specs`.
  */
 
-import { BufferReader } from "typed-binary";
+import { group, readerAt } from "../ie-common/parse-helpers";
 import { walkStruct } from "../spec/walk-display";
 import { effectSpecAnnotated } from "../ie-common/specs/effect.overrides";
 import { EFFECT_SIZE, bytesEqual } from "../ie-common/types";
-import type { BinaryParser, ParseOptions, ParseResult, ParsedField, ParsedGroup } from "../types";
+import type { BinaryParser, ParseOptions, ParseResult, ParsedGroup } from "../types";
 import {
     effectSchema,
     splAbilitySchema,
@@ -28,14 +28,6 @@ const effectPresentation = {} as const;
 
 const FORMAT_ID = "spl";
 const FORMAT_NAME = "Infinity Engine SPL v1";
-
-function group(name: string, fields: (ParsedField | ParsedGroup)[]): ParsedGroup {
-    return { name, fields, expanded: true };
-}
-
-function readerAt(data: Uint8Array, offset: number): BufferReader {
-    return new BufferReader(data.buffer, { byteOffset: data.byteOffset + offset });
-}
 
 function parseHeader(data: SplHeaderData): ParsedGroup {
     return walkStruct(splHeaderSpecAnnotated, splHeaderPresentation, 0, data, "SPL Header");

@@ -9,11 +9,11 @@
  * two formats and live in each format's own `specs/ability.ts`.
  */
 
-import { BufferReader } from "typed-binary";
+import { group, readerAt } from "../ie-common/parse-helpers";
 import { walkStruct } from "../spec/walk-display";
 import { effectSpecAnnotated } from "../ie-common/specs/effect.overrides";
 import { EFFECT_SIZE, bytesEqual } from "../ie-common/types";
-import type { BinaryParser, ParseOptions, ParseResult, ParsedField, ParsedGroup } from "../types";
+import type { BinaryParser, ParseOptions, ParseResult, ParsedGroup } from "../types";
 import {
     effectSchema,
     itmAbilitySchema,
@@ -39,14 +39,6 @@ const effectPresentation = {} as const;
 
 const FORMAT_ID = "itm";
 const FORMAT_NAME = "Infinity Engine ITM v1";
-
-function group(name: string, fields: (ParsedField | ParsedGroup)[]): ParsedGroup {
-    return { name, fields, expanded: true };
-}
-
-function readerAt(data: Uint8Array, offset: number): BufferReader {
-    return new BufferReader(data.buffer, { byteOffset: data.byteOffset + offset });
-}
 
 function parseHeader(data: ItmHeaderData): ParsedGroup {
     return walkStruct(itmHeaderSpecAnnotated, itmHeaderPresentation, 0, data, "ITM Header");

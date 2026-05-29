@@ -4,10 +4,10 @@
  * for sub-effects spawned by spell opcodes that reference an external EFF.
  */
 
-import { BufferReader } from "typed-binary";
+import { group, readerAt } from "../ie-common/parse-helpers";
 import { walkStruct } from "../spec/walk-display";
 import { bytesEqual } from "../ie-common/types";
-import type { BinaryParser, ParseOptions, ParseResult, ParsedField, ParsedGroup } from "../types";
+import type { BinaryParser, ParseOptions, ParseResult } from "../types";
 import { effBodySchema, effHeaderSchema, type EffBodyData, type EffHeaderData } from "./schemas";
 import { effBodySpecAnnotated } from "./specs/body.overrides";
 import { effHeaderSpec } from "./specs/header";
@@ -20,14 +20,6 @@ const effBodyPresentation = {} as const;
 
 const FORMAT_ID = "eff";
 const FORMAT_NAME = "Infinity Engine EFF v2";
-
-function group(name: string, fields: (ParsedField | ParsedGroup)[]): ParsedGroup {
-    return { name, fields, expanded: true };
-}
-
-function readerAt(data: Uint8Array, offset: number): BufferReader {
-    return new BufferReader(data.buffer, { byteOffset: data.byteOffset + offset });
-}
 
 class EffParser implements BinaryParser {
     readonly id = FORMAT_ID;
