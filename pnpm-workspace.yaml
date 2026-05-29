@@ -21,14 +21,25 @@ allowBuilds:
     keytar: false
     tree-sitter: false
 
-# Transitive pins addressing security advisories in mocha's bundled dependencies,
-# msal-node's uuid (GHSA-w5hq-g745-h8pq), ajv's fast-uri (GHSA-q3j6-qgpj-74h6,
-# GHSA-v39h-62p7-jpjc), and minimatch's brace-expansion 5.0.x (GHSA-jxxr-4gwj-5jf2:
-# numeric-range expansion ignored the `max` guard, allowing DoS via large ranges;
-# fixed in 5.0.6).
+# Transitive pins addressing security advisories. Each is still load-bearing: with
+# it removed, `pnpm install` resolves the dependency back to a vulnerable version
+# and `pnpm audit` re-flags the advisory.
+#   - mocha's bundled diff (GHSA-73rr-hh4g-fpgx: parsePatch/applyPatch DoS; fixed
+#     in 8.0.3) and serialize-javascript (GHSA-5c6j-r48x-rmvq RCE, GHSA-qj8w-gfj5-8c6v
+#     DoS; fixed in 7.0.5).
+#   - msal-node's uuid (GHSA-w5hq-g745-h8pq: missing buffer bounds check; the tree
+#     otherwise pulls uuid 8.3.2).
+#   - tmp via @vscode/vsce (GHSA-ph9p-34f9-6g65: path traversal via unsanitized
+#     prefix/postfix; fixed in 0.2.6).
+#   - qs via typed-rest-client under @vscode/vsce and the Stryker packages
+#     (GHSA-q8mj-m7cp-5q26: qs.stringify DoS; fixed in 6.15.2).
+# The top-level deps (@vscode/vsce, Stryker) are already at their latest versions,
+# so these are transitive pins, not direct bumps. The former fast-uri and
+# brace-expansion pins were dropped: their upstreams (ajv, minimatch) now resolve
+# to patched versions (3.1.2, 5.0.6) on their own, leaving the overrides redundant.
 overrides:
     mocha>diff: ">=8.0.3"
     mocha>serialize-javascript: ">=7.0.5"
     uuid: ">=14"
-    fast-uri: ">=3.1.2"
-    brace-expansion@>=5.0.0 <5.0.6: "^5.0.6"
+    tmp: ">=0.2.6"
+    qs: ">=6.15.2"
