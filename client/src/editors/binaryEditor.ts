@@ -113,7 +113,11 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
     private panelKey(panel: vscode.WebviewPanel): string {
         // Stable per-panel key. Panels are reference-typed and we only need
         // identity equality, so a Map<panel, key> would be redundant - we
-        // synthesize a key from a WeakMap-backed counter.
+        // synthesize a key from a WeakMap-backed counter. The synthesized string
+        // key (rather than keying BinaryEditorSelectionTracker by the panel
+        // reference directly) is deliberate: it keeps the tracker free of any
+        // vscode dependency so it stays unit-testable with plain string keys
+        // (see binaryEditor-selectionTracker.test.ts).
         let key = this.panelKeys.get(panel);
         if (key === undefined) {
             key = `panel-${this.nextPanelKey++}`;
