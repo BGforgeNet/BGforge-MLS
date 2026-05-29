@@ -11,9 +11,10 @@ export {
     tokenizeWeidu,
     normalizeWhitespaceWeidu,
     throwOnParseError,
+    scanTildeDelimiter,
     WeiduTokenType,
 } from "./format-utils";
-export type { CommentStripper, WeiduToken, FormatOutput } from "./format-utils";
+export type { CommentStripper, WeiduToken, FormatOutput, TildeDelimiter } from "./format-utils";
 
 // Editorconfig discovery (CLI uses directly; server's format-options wraps this)
 export { getEditorconfigSettings } from "./editorconfig";

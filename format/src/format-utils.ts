@@ -46,6 +46,38 @@ export function throwOnParseError(root: SyntaxNode): void {
 /** WeiDU multi-tilde delimiter count (~~~~~...~~~~~). */
 const WEIDU_MULTI_TILDE_COUNT = 5;
 
+/** Result of scanning a WeiDU tilde-delimited string opener. */
+export interface TildeDelimiter {
+    /** Delimiter length: 1 for `~`, 5 for `~~~~~` (multi-tilde mode). */
+    readonly delimLen: number;
+    /** Index where the string content begins (just past the opening delimiter). */
+    readonly contentStart: number;
+    /** Index of the closing delimiter, or -1 if the string is unclosed. */
+    readonly closerStart: number;
+}
+
+/**
+ * Scan a WeiDU tilde-delimited string whose opening delimiter starts at `pos`
+ * (which must point at a `~`). WeiDU recognizes only 1 or 5 tildes as delimiters:
+ * 5+ consecutive tildes select multi-tilde mode (~~~~~...~~~~~), fewer select a
+ * single-tilde string (so `~~` is an empty single-tilde string, not a delimiter).
+ * Returns the delimiter length plus the content and closer positions; the caller
+ * decides what to emit and how to advance, since the call sites diverge on what
+ * they keep (delimiters, content, or a token) and on unclosed-string handling.
+ */
+export function scanTildeDelimiter(text: string, pos: number): TildeDelimiter {
+    let i = pos;
+    let tildeCount = 0;
+    while (i < text.length && text[i] === "~") {
+        tildeCount++;
+        i++;
+    }
+    const delimLen = tildeCount >= WEIDU_MULTI_TILDE_COUNT ? WEIDU_MULTI_TILDE_COUNT : 1;
+    const contentStart = pos + delimLen;
+    const closerStart = text.indexOf("~".repeat(delimLen), contentStart);
+    return { delimLen, contentStart, closerStart };
+}
+
 /**
  * Options for stripCommentsCommon.
  * When handleTildeStrings is true, tilde-delimited WeiDU string literals are
@@ -66,28 +98,16 @@ function stripCommentsCommon(text: string, options: StripCommentsOptions): strin
     let i = 0;
     while (i < text.length) {
         // Tilde strings: WeiDU uses 1 tilde or 5 tildes as delimiters
-        // ~content~ or ~~~~~content~~~~~
+        // ~content~ or ~~~~~content~~~~~. Preserve delimiters and content verbatim.
         if (options.handleTildeStrings && text[i] === "~") {
-            const start = i;
-            let tildeCount = 0;
-            while (i < text.length && text[i] === "~") {
-                tildeCount++;
-                i++;
-            }
-            // WeiDU only recognizes 1 or 5 tildes as delimiters
-            // If we see ~~, it's ~~ = ~ + empty + ~ (two single-tilde strings)
-            // If we see ~~~, it's ~ + ~ + ~ (single tilde delimiters)
-            // Only 5+ consecutive tildes use multi-tilde mode
-            const delimiterCount = tildeCount >= WEIDU_MULTI_TILDE_COUNT ? WEIDU_MULTI_TILDE_COUNT : 1;
-            // Rewind: we consumed all tildes but may need to re-parse some
-            i = start + delimiterCount;
-            result += text.slice(start, i);
-            // Find matching closing tildes
-            const closer = "~".repeat(delimiterCount);
-            const end = text.indexOf(closer, i);
-            if (end !== -1) {
-                result += text.slice(i, end + delimiterCount);
-                i = end + delimiterCount;
+            const { delimLen, contentStart, closerStart } = scanTildeDelimiter(text, i);
+            result += text.slice(i, contentStart); // opening delimiter
+            if (closerStart !== -1) {
+                result += text.slice(contentStart, closerStart + delimLen); // content + closer
+                i = closerStart + delimLen;
+            } else {
+                // Unclosed: keep scanning the remainder for comments/quotes.
+                i = contentStart;
             }
             continue;
         }
@@ -164,24 +184,18 @@ export function tokenizeWeidu(text: string): WeiduToken[] {
     while (i < text.length) {
         // Tilde strings: WeiDU uses 1 tilde or 5 tildes as delimiters
         if (text[i] === "~") {
-            const start = i;
-            let tildeCount = 0;
-            while (i < text.length && text[i] === "~") {
-                tildeCount++;
-                i++;
-            }
-            const delimiterCount = tildeCount >= WEIDU_MULTI_TILDE_COUNT ? WEIDU_MULTI_TILDE_COUNT : 1;
-            i = start + delimiterCount;
-            const closer = "~".repeat(delimiterCount);
-            const end = text.indexOf(closer, i);
-            if (end !== -1) {
-                flushCode(start);
+            const { delimLen, contentStart, closerStart } = scanTildeDelimiter(text, i);
+            if (closerStart !== -1) {
+                flushCode(i);
                 tokens.push({
                     type: WeiduTokenType.String,
-                    text: text.slice(start, end + delimiterCount),
+                    text: text.slice(i, closerStart + delimLen),
                 });
-                i = end + delimiterCount;
+                i = closerStart + delimLen;
                 lastCodeStart = i;
+            } else {
+                // Unclosed: treat the consumed tildes as code.
+                i = contentStart;
             }
             continue;
         }
@@ -306,21 +320,11 @@ export function stripCommentsTra(text: string): string {
         }
         // Tilde strings: strip delimiters, keep content
         if (text[i] === "~") {
-            const start = i;
-            let tildeCount = 0;
-            while (i < text.length && text[i] === "~") {
-                tildeCount++;
-                i++;
-            }
-            const delimLen = tildeCount >= WEIDU_MULTI_TILDE_COUNT ? WEIDU_MULTI_TILDE_COUNT : 1;
-            // Rewind to just after the opening delimiter
-            i = start + delimLen;
-            const closer = "~".repeat(delimLen);
-            const end = text.indexOf(closer, i);
-            const contentEnd = end !== -1 ? end : text.length;
+            const { delimLen, contentStart, closerStart } = scanTildeDelimiter(text, i);
+            const contentEnd = closerStart !== -1 ? closerStart : text.length;
             // Emit the content without delimiters
-            result += text.slice(i, contentEnd);
-            i = end !== -1 ? end + delimLen : text.length;
+            result += text.slice(contentStart, contentEnd);
+            i = closerStart !== -1 ? closerStart + delimLen : text.length;
             continue;
         }
         // Double-quoted strings: strip delimiters, keep content (handle escapes)

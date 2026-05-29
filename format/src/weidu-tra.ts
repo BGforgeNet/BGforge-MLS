@@ -14,31 +14,20 @@
  * whitespace trimmed only.
  */
 
-import { stripBom, type FormatOutput } from "@bgforge/format";
+import { stripBom, scanTildeDelimiter, type FormatOutput } from "@bgforge/format";
 
 /** Matches the entry prefix: @<optional_whitespace><number><optional_whitespace>=<optional_whitespace> */
 const ENTRY_PREFIX_RE = /^(@)\s*(-?\d+)\s*=\s*/;
 
-/** Count of tildes that triggers multi-tilde string mode in WeiDU. */
-const MULTI_TILDE_COUNT = 5;
-
 /**
  * Scan forward from `pos` past a tilde-delimited string.
  * Returns the index immediately after the closing delimiter.
- * If the closing delimiter is not found, returns `text.length`.
+ * If the closing delimiter is not found, returns `text.length` so the rest of
+ * the entry is preserved verbatim as string content.
  */
 function scanTildeString(text: string, pos: number): number {
-    const start = pos;
-    let tildeCount = 0;
-    while (pos < text.length && text[pos] === "~") {
-        tildeCount++;
-        pos++;
-    }
-    const delimLen = tildeCount >= MULTI_TILDE_COUNT ? MULTI_TILDE_COUNT : 1;
-    pos = start + delimLen;
-    const closer = "~".repeat(delimLen);
-    const end = text.indexOf(closer, pos);
-    return end === -1 ? text.length : end + delimLen;
+    const { delimLen, closerStart } = scanTildeDelimiter(text, pos);
+    return closerStart === -1 ? text.length : closerStart + delimLen;
 }
 
 /**

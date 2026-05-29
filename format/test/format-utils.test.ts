@@ -11,9 +11,47 @@ import {
     stripComments2da,
     stripCommentsFalloutScriptsLst,
     validateFormatting,
+    scanTildeDelimiter,
 } from "@bgforge/format";
 
 describe("shared/format-utils", () => {
+    describe("scanTildeDelimiter()", () => {
+        it("scans a single-tilde string", () => {
+            expect(scanTildeDelimiter("~hello~", 0)).toEqual({ delimLen: 1, contentStart: 1, closerStart: 6 });
+        });
+
+        it("scans a multi-tilde (five-tilde) string", () => {
+            expect(scanTildeDelimiter("~~~~~hi~~~~~", 0)).toEqual({ delimLen: 5, contentStart: 5, closerStart: 7 });
+        });
+
+        it("treats 2-4 consecutive tildes as single-tilde delimiters", () => {
+            // ~~ is an empty single-tilde string: opener at 0, closer (the second ~) at 1
+            expect(scanTildeDelimiter("~~rest", 0)).toEqual({ delimLen: 1, contentStart: 1, closerStart: 1 });
+        });
+
+        it("reports closerStart -1 for an unclosed single-tilde string", () => {
+            expect(scanTildeDelimiter("~unterminated", 0)).toEqual({ delimLen: 1, contentStart: 1, closerStart: -1 });
+        });
+
+        it("reports closerStart -1 for an unclosed multi-tilde string", () => {
+            expect(scanTildeDelimiter("~~~~~unterminated", 0)).toEqual({
+                delimLen: 5,
+                contentStart: 5,
+                closerStart: -1,
+            });
+        });
+
+        it("ignores internal single tildes inside a multi-tilde string", () => {
+            // The internal ` ~ ` must not be mistaken for the closer.
+            const text = "~~~~~a ~ b~~~~~";
+            expect(scanTildeDelimiter(text, 0)).toEqual({ delimLen: 5, contentStart: 5, closerStart: 10 });
+        });
+
+        it("scans from a non-zero start position", () => {
+            expect(scanTildeDelimiter("code ~x~", 5)).toEqual({ delimLen: 1, contentStart: 6, closerStart: 7 });
+        });
+    });
+
     describe("stripCommentsWeidu()", () => {
         it("should remove line comments", () => {
             const input = "code // comment\nmore";
