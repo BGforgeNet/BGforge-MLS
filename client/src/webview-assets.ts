@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
+import { randomBytes } from "crypto";
 
 type AssetCacheEntry = {
     extensionPath: string;
@@ -48,4 +49,13 @@ export function getCachedJsAsset(cacheKey: string, extensionPath: string, relati
         cacheEntry.js = loadAsset(extensionPath, relativePath);
     }
     return cacheEntry.js;
+}
+
+/**
+ * Generate a base64 nonce for a webview's CSP. Both webviews lock their inline
+ * <style>/<script> to a fresh per-load nonce; 16 random bytes is the standard
+ * width.
+ */
+export function generateNonce(): string {
+    return randomBytes(16).toString("base64");
 }

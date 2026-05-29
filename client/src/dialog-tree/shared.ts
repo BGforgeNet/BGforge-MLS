@@ -8,11 +8,10 @@
 
 import * as vscode from "vscode";
 import * as path from "path";
-import { randomBytes } from "crypto";
 import { type LanguageClient, type ExecuteCommandParams, ExecuteCommandRequest } from "vscode-languageclient/node";
 import { conlog } from "../logging";
 import { escapeHtml } from "../utils";
-import { getCachedCssAsset, getCachedHtmlAsset, getCachedJsAsset } from "../webview-assets";
+import { getCachedCssAsset, getCachedHtmlAsset, getCachedJsAsset, generateNonce } from "../webview-assets";
 import { LSP_COMMAND_PARSE_DIALOG } from "../../../shared/protocol";
 import { surfaceWebviewRuntimeError } from "../webview-error";
 
@@ -110,7 +109,7 @@ function getDialogPreviewHtml(
     filePath: string,
     iconUri: string,
 ): string {
-    const nonce = randomBytes(16).toString("base64");
+    const nonce = generateNonce();
     // Function replacers prevent $-pattern interpretation in replacement strings
     // ($&, $', $` are special even with string search patterns).
     return getHtmlTemplate(extensionPath)

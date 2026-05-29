@@ -5,7 +5,6 @@
 
 import * as vscode from "vscode";
 import * as path from "path";
-import { randomBytes } from "crypto";
 import {
     type BinaryParser,
     type ParseOptions,
@@ -17,7 +16,7 @@ import {
     loadBinaryJsonSnapshot,
 } from "@bgforge/binary";
 import { escapeHtml } from "../utils";
-import { getCachedCssAsset, getCachedHtmlAsset, getCachedJsAsset } from "../webview-assets";
+import { getCachedCssAsset, getCachedHtmlAsset, getCachedJsAsset, generateNonce } from "../webview-assets";
 import { BinaryDocument } from "./binaryEditor-document";
 import { BinaryEditorSelectionTracker, type BinaryEditorSelection } from "./binaryEditor-selectionTracker";
 import { type BinaryEditorTreeState, buildBinaryEditorTreeState } from "./binaryEditor-tree";
@@ -705,7 +704,7 @@ class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryDocument
      */
     private getHtmlShell(document: BinaryDocument): string {
         const fileName = path.basename(document.uri.fsPath);
-        const nonce = randomBytes(16).toString("base64");
+        const nonce = generateNonce();
         return (
             this.getHtmlTemplate()
                 .replaceAll("{{fileName}}", escapeHtml(fileName))
