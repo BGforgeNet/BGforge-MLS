@@ -6,6 +6,7 @@
 import type { Position } from "vscode-languageserver/node";
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import { SyntaxType } from "./tree-sitter.d";
+import { containsPosition } from "../core/position-utils";
 
 // ============================================
 // Tree traversal utilities
@@ -16,16 +17,7 @@ import { SyntaxType } from "./tree-sitter.d";
  */
 export function findNodeAtPosition(root: SyntaxNode, position: Position): SyntaxNode | null {
     function visit(node: SyntaxNode): SyntaxNode | null {
-        const startRow = node.startPosition.row;
-        const endRow = node.endPosition.row;
-        const startCol = node.startPosition.column;
-        const endCol = node.endPosition.column;
-
-        const inRange =
-            (position.line > startRow || (position.line === startRow && position.character >= startCol)) &&
-            (position.line < endRow || (position.line === endRow && position.character <= endCol));
-
-        if (!inRange) {
+        if (!containsPosition(position, node)) {
             return null;
         }
 

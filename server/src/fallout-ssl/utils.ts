@@ -6,7 +6,7 @@
 import type { Node } from "web-tree-sitter";
 import { type Position, CompletionItemKind, MarkupKind } from "vscode-languageserver/node";
 import { LANG_FALLOUT_SSL_TOOLTIP } from "../core/languages";
-import { makeRange } from "../core/position-utils";
+import { containsPosition, makeRange } from "../core/position-utils";
 import {
     type CallableSymbol,
     type ConstantSymbol,
@@ -229,16 +229,7 @@ export function findIdentifierAtPosition(root: Node, position: Position): string
  */
 export function findIdentifierNodeAtPosition(root: Node, position: Position): Node | null {
     function visit(node: Node): Node | null {
-        const startRow = node.startPosition.row;
-        const endRow = node.endPosition.row;
-        const startCol = node.startPosition.column;
-        const endCol = node.endPosition.column;
-
-        const inRange =
-            (position.line > startRow || (position.line === startRow && position.character >= startCol)) &&
-            (position.line < endRow || (position.line === endRow && position.character <= endCol));
-
-        if (!inRange) {
+        if (!containsPosition(position, node)) {
             return null;
         }
 

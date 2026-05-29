@@ -10,6 +10,7 @@
 import type { Position } from "vscode-languageserver/node";
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import { SyntaxType } from "./tree-sitter.d";
+import { containsPosition } from "../core/position-utils";
 
 /** Strip ~ or " delimiters from a string node text. */
 function stripDelimiters(text: string): string {
@@ -103,14 +104,14 @@ const TOP_LEVEL_ACTION_TYPES_WITH_LABEL = new Set([
  */
 export function findLabelNodeAtPosition(root: SyntaxNode, position: Position): LabelAtPosition | null {
     function visit(node: SyntaxNode): LabelAtPosition | null {
-        if (!isPositionInNode(position, node)) {
+        if (!containsPosition(position, node)) {
             return null;
         }
 
         // State definition label
         if (node.type === SyntaxType.State) {
             const label = node.childForFieldName("label");
-            if (label && isPositionInNode(position, label)) {
+            if (label && containsPosition(position, label)) {
                 const scope = findScopeBlock(node);
                 if (scope) {
                     return { labelNode: label, dialogFile: scope.dialogFile };
@@ -121,7 +122,7 @@ export function findLabelNodeAtPosition(root: SyntaxNode, position: Position): L
         // GOTO target
         if (node.type === SyntaxType.GotoNext || node.type === SyntaxType.ShortGoto) {
             const label = node.childForFieldName("label");
-            if (label && isPositionInNode(position, label)) {
+            if (label && containsPosition(position, label)) {
                 const scope = findScopeBlock(node);
                 if (scope) {
                     return { labelNode: label, dialogFile: scope.dialogFile };
@@ -132,7 +133,7 @@ export function findLabelNodeAtPosition(root: SyntaxNode, position: Position): L
         // EXTERN target - has its own file field
         if (node.type === SyntaxType.ExternNext) {
             const label = node.childForFieldName("label");
-            if (label && isPositionInNode(position, label)) {
+            if (label && containsPosition(position, label)) {
                 const fileNode = node.childForFieldName("file");
                 if (fileNode) {
                     return { labelNode: label, dialogFile: normalizeDialogFile(fileNode.text) };
@@ -143,7 +144,7 @@ export function findLabelNodeAtPosition(root: SyntaxNode, position: Position): L
         // COPY_TRANS in transitions - has its own file field
         if (node.type === SyntaxType.CopyTrans) {
             const stateNode = node.childForFieldName("state");
-            if (stateNode && isPositionInNode(position, stateNode)) {
+            if (stateNode && containsPosition(position, stateNode)) {
                 const fileNode = node.childForFieldName("file");
                 if (fileNode) {
                     return { labelNode: stateNode, dialogFile: normalizeDialogFile(fileNode.text) };
@@ -154,7 +155,7 @@ export function findLabelNodeAtPosition(root: SyntaxNode, position: Position): L
         // ChainEpilogue with file+label (after grammar change)
         if (node.type === SyntaxType.ChainEpilogue) {
             const label = node.childForFieldName("label");
-            if (label && isPositionInNode(position, label)) {
+            if (label && containsPosition(position, label)) {
                 const fileNode = node.childForFieldName("file");
                 if (fileNode) {
                     return { labelNode: label, dialogFile: normalizeDialogFile(fileNode.text) };
@@ -169,7 +170,7 @@ export function findLabelNodeAtPosition(root: SyntaxNode, position: Position): L
             if (node.type === SyntaxType.ExtendAction) {
                 const statesNodes = node.childrenForFieldName("states");
                 for (const stateNode of statesNodes) {
-                    if (isPositionInNode(position, stateNode)) {
+                    if (containsPosition(position, stateNode)) {
                         const fileNode = node.childForFieldName("file");
                         if (fileNode) {
                             return { labelNode: stateNode, dialogFile: normalizeDialogFile(fileNode.text) };
@@ -178,7 +179,7 @@ export function findLabelNodeAtPosition(root: SyntaxNode, position: Position): L
                 }
             } else {
                 const stateNode = node.childForFieldName("state");
-                if (stateNode && isPositionInNode(position, stateNode)) {
+                if (stateNode && containsPosition(position, stateNode)) {
                     const fileNode = node.childForFieldName("file");
                     if (fileNode) {
                         return { labelNode: stateNode, dialogFile: normalizeDialogFile(fileNode.text) };
@@ -191,7 +192,7 @@ export function findLabelNodeAtPosition(root: SyntaxNode, position: Position): L
         // SyntaxNode.type is string in web-tree-sitter; cast is safe since SyntaxType extends string
         if (TOP_LEVEL_ACTION_TYPES_WITH_LABEL.has(node.type as SyntaxType)) {
             const label = node.childForFieldName("label");
-            if (label && isPositionInNode(position, label)) {
+            if (label && containsPosition(position, label)) {
                 const fileNode = node.childForFieldName("file");
                 if (fileNode) {
                     return { labelNode: label, dialogFile: normalizeDialogFile(fileNode.text) };
@@ -234,14 +235,4 @@ export function findStateInDialog(root: SyntaxNode, dialogFile: string, labelNam
         return null;
     }
     return visit(root);
-}
-
-/** Check if a position falls within a node's range. */
-function isPositionInNode(position: Position, node: SyntaxNode): boolean {
-    const { row: startRow, column: startCol } = node.startPosition;
-    const { row: endRow, column: endCol } = node.endPosition;
-    return (
-        (position.line > startRow || (position.line === startRow && position.character >= startCol)) &&
-        (position.line < endRow || (position.line === endRow && position.character <= endCol))
-    );
 }

@@ -24,3 +24,17 @@ export function makeRange(node: Node): Range {
         end: makePosition(node.endPosition.row, node.endPosition.column),
     };
 }
+
+/**
+ * Check whether an LSP position falls within a tree-sitter node's range.
+ * Both boundaries are inclusive. The parameter is narrowed to the start/end
+ * positions actually read, so any `Node` satisfies it.
+ */
+export function containsPosition(position: Position, node: Pick<Node, "startPosition" | "endPosition">): boolean {
+    const { row: startRow, column: startCol } = node.startPosition;
+    const { row: endRow, column: endCol } = node.endPosition;
+    return (
+        (position.line > startRow || (position.line === startRow && position.character >= startCol)) &&
+        (position.line < endRow || (position.line === endRow && position.character <= endCol))
+    );
+}
