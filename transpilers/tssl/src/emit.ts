@@ -497,60 +497,21 @@ function processFunctionBody(bodyNode: Node, indent: string = "", ctx: TsslConte
  * @returns The processed call expression as a string
  */
 function processCallExpression(callExpr: Node, ctx: TsslContext): string {
-    // We need to cast to the appropriate type
     const callExpression = callExpr.asKindOrThrow(SyntaxKind.CallExpression);
+    const fnName = callExpression.getExpression().getText();
 
-    // Get the expression being called (usually an identifier)
-    const expression = callExpression.getExpression();
-
-    // Get the arguments
-    const args = callExpression.getArguments();
-
-    // Get function name
-    const fnName = expression.getText();
-
-    // Special handling for list() and map() - convert to SSL array/map literals
-    if (fnName === "list") {
-        const processedArgs = args.map((arg: Node) => convertOperatorsAST(arg, ctx));
-        return `[${processedArgs.join(", ")}]`;
-    }
-    if (fnName === "map") {
-        if (args.length === 0) {
-            return "{}";
-        }
-        // map() takes a single object argument, just output it directly
-        const arg0 = args[0];
-        if (args.length === 1 && arg0) {
-            return convertOperatorsAST(arg0, ctx);
-        }
-    }
-
-    // Convert arguments with operator conversion
-    const processedArgs = args.map((arg: Node) => convertOperatorsAST(arg, ctx));
-
-    // Check if this is a standalone call expression (not part of an assignment or return)
+    // The only call rule unique to statement context is SSL's `call` keyword for a
+    // standalone call to a function defined in this file (not an inline macro).
     const parent = callExpr.getParent();
-    const isStandaloneCall = parent && parent.getKind() === SyntaxKind.ExpressionStatement;
-
-    // Only add 'call' keyword if it's a standalone call AND the function is defined in our file (not inline)
+    const isStandaloneCall = parent !== undefined && parent.getKind() === SyntaxKind.ExpressionStatement;
     if (isStandaloneCall && ctx.definedFunctions.has(fnName) && !ctx.inlineFunctions.has(fnName)) {
+        const processedArgs = callExpression.getArguments().map((arg: Node) => convertOperatorsAST(arg, ctx));
         return `call ${fnName}(${processedArgs.join(", ")})`;
     }
 
-    // For zero-arg inline macros, don't include parentheses
-    const inlineFunc = ctx.inlineFunctions.get(fnName);
-    if (args.length === 0 && inlineFunc?.params.length === 0) {
-        return fnName;
-    }
-
-    // For zero-arg external function calls (not defined in this file), don't include parentheses
-    // SSL doesn't use parens for zero-arg calls like get_light_level, game_loaded, etc.
-    if (args.length === 0 && !ctx.definedFunctions.has(fnName)) {
-        return fnName;
-    }
-
-    // Otherwise keep as is (either it's an external function or part of an assignment)
-    return `${fnName}(${processedArgs.join(", ")})`;
+    // Everything else - list()/map() literals, zero-arg paren elision, and the
+    // default `fn(args)` form - is the shared call transform in convert-operators.
+    return convertOperatorsAST(callExpr, ctx);
 }
 
 /**
