@@ -5,7 +5,7 @@
  */
 
 import * as path from "path";
-import { applyHelperFixups } from "../../common/transpiler-utils";
+import { applyHelperFixups, makeGeneratedHeader } from "../../common/transpiler-utils";
 import {
     type TDScript,
     type TDConstruct,
@@ -33,8 +33,7 @@ const INDENT = "    ";
  */
 export function emitD(script: TDScript): string {
     const filename = path.basename(script.sourceFile);
-    const traLine = script.traTag ? `/** @tra ${script.traTag} */\n` : "";
-    const header = `${traLine}/* Generated from ${filename} - do not edit */\n\n`;
+    const header = makeGeneratedHeader(filename, script.traTag, true);
     const body = script.constructs.map(emitConstruct).join("\n\n");
     return header + body + "\n";
 }

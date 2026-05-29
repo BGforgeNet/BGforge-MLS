@@ -13,12 +13,12 @@ import {
     type BAFTopCondition,
     isOrGroup,
 } from "./ir";
+import { makeGeneratedHeader } from "../../common/transpiler-utils";
 
 /** Emit a complete BAF script */
 export function emitBAF(script: BAFScript): string {
     const fileName = path.basename(script.sourceFile);
-    const traLine = script.traTag ? `/** @tra ${script.traTag} */\n` : "";
-    let output = `${traLine}/* Do not edit. This file is generated from ${fileName}. Make your changes there and regenerate this file. */\n\n`;
+    let output = makeGeneratedHeader(fileName, script.traTag);
 
     for (const block of script.blocks) {
         output += emitBlock(block);

@@ -14,6 +14,7 @@ import {
 } from "./types";
 import { convertOperatorsAST, convertVarOrConstToVariable } from "./convert-operators";
 import { findUsedInlineFunctions, generateInlineMacros } from "./inline-functions";
+import { makeGeneratedHeader } from "../../common/transpiler-utils";
 
 /**
  * Export typescript code as SSL string.
@@ -33,8 +34,7 @@ export function exportSSL(
 ): string {
     conlog(`Starting conversion of: ${sourceName}`);
 
-    const traLine = traTag ? `/** @tra ${traTag} */\n` : "";
-    const header = `${traLine}/* Do not edit. This file is generated from ${sourceName}. Make your changes there and regenerate this file. */\n\n`;
+    const header = makeGeneratedHeader(sourceName, traTag);
     const { sections } = processInput(sourceFile, mainFileData, ctx);
     let output = header;
 

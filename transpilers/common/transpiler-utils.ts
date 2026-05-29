@@ -465,3 +465,20 @@ export function getBindingNames(pattern: ArrayBindingPattern): (string | null)[]
         return null;
     });
 }
+
+/**
+ * Build the standard generated-file header shared by all transpilers: an
+ * optional `@tra <tag>` doc-comment line followed by a "do not edit" block
+ * and a trailing blank line.
+ *
+ * @param sourceName Source file name referenced in the comment.
+ * @param traTag Optional `@tra` filename to preserve in the output header.
+ * @param terse TD uses a terser one-line wording; TSSL/TBAF use the verbose form.
+ */
+export function makeGeneratedHeader(sourceName: string, traTag: string | undefined, terse = false): string {
+    const traLine = traTag ? `/** @tra ${traTag} */\n` : "";
+    const message = terse
+        ? `Generated from ${sourceName} - do not edit`
+        : `Do not edit. This file is generated from ${sourceName}. Make your changes there and regenerate this file.`;
+    return `${traLine}/* ${message} */\n\n`;
+}
