@@ -16,24 +16,12 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 cd "$ROOT_DIR"
 
+# shellcheck source=scripts/publish-lib.sh
+source "$SCRIPT_DIR/publish-lib.sh"
+
 if [ "${SKIP_BUILD:-}" != "1" ]; then
     echo "=== Building @bgforge/format ==="
     pnpm build:format
 fi
 
-echo ""
-echo "=== Publishing @bgforge/format ==="
-cd format
-
-provenance=""
-if [ -n "${GITHUB_ACTIONS:-}" ]; then
-    provenance="--provenance"
-fi
-
-if [ -n "$(git status --porcelain)" ]; then
-    echo "Error: Git working tree is not clean. Aborting publish."
-    git status --short
-    exit 1
-fi
-
-pnpm publish --access public --no-git-checks $provenance "$@"
+do_publish "@bgforge/format" format "$@"
