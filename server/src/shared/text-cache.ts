@@ -1,10 +1,16 @@
 /**
- * Generic LRU text cache for parsed document data.
+ * Generic FIFO text cache for parsed document data.
  *
  * Caches parsed results by URI with version-based invalidation. Callers pass the
  * LSP `TextDocument.version` (a monotonic per-document counter); a stable version
  * means the document hasn't changed, so the cache hit short-circuits the parse
  * without scanning the text.
+ *
+ * Eviction is FIFO, not LRU: a cache hit returns without re-inserting, so entries
+ * are dropped in insertion order once `maxSize` distinct URIs are held. Entries
+ * are one-per-URI and version-invalidated, and both callers keep tiny per-document
+ * working sets, so the eviction policy is effectively never exercised - FIFO keeps
+ * the implementation a plain insertion-ordered Map with no reordering on read.
  */
 
 /** Cache entry with version and parsed data */
@@ -17,7 +23,8 @@ interface CacheEntry<T> {
 const DEFAULT_MAX_SIZE = 50;
 
 /**
- * Generic LRU cache for text-based parsing results.
+ * Generic FIFO cache for text-based parsing results (see file header for why
+ * the eviction policy is insertion-order rather than LRU).
  *
  * @typeParam T - The type of parsed data to cache
  */
