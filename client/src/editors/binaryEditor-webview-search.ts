@@ -1,3 +1,5 @@
+import { setSearchPlaceholder, debounce } from "../webview-utils";
+
 export interface SearchContext {
     readonly treeEl: Element;
     readonly ensureChildrenLoaded: (nodeId: string) => void;
@@ -66,14 +68,9 @@ export function filterTree(query: string, ctx: SearchContext): void {
 }
 
 export function setupSearchInput(searchInput: HTMLInputElement, ctx: SearchContext): void {
-    const isMac = /Macintosh|Mac OS X/.test(navigator.userAgent);
-    searchInput.placeholder = isMac ? "Cmd+F or / to search" : "Ctrl+F or / to search";
-
-    let debounceTimer: ReturnType<typeof setTimeout>;
-    searchInput.addEventListener("input", () => {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => filterTree(searchInput.value, ctx), 150);
-    });
+    setSearchPlaceholder(searchInput);
+    const debouncedFilter = debounce(() => filterTree(searchInput.value, ctx), 150);
+    searchInput.addEventListener("input", debouncedFilter);
 }
 
 export function setupGlobalKeyboardShortcuts(searchInput: HTMLInputElement | null, ctx: SearchContext): void {

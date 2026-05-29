@@ -5,20 +5,11 @@
 //   - Keyboard shortcuts (Ctrl+F / Escape)
 //   - Expand/collapse all button handlers
 import { escapeHtml } from "../utils";
-import { installFatalErrorHandler } from "../webview-utils";
+import { installFatalErrorHandler, setSearchPlaceholder, debounce } from "../webview-utils";
 
 (function () {
     // @ts-expect-error -- acquireVsCodeApi is injected by VSCode webview runtime
     const vscode = acquireVsCodeApi();
-
-    // Simple debounce helper
-    function debounce<T extends (..._args: unknown[]) => void>(fn: T, ms: number): T {
-        let timeout: ReturnType<typeof setTimeout>;
-        return ((...args: unknown[]) => {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => fn(...args), ms);
-        }) as T;
-    }
 
     // Align .msg-text widths within each sibling group so action icons and targets line up.
     // Sets flex-basis to the widest sibling's natural width (scrollWidth).
@@ -137,8 +128,7 @@ import { installFatalErrorHandler } from "../webview-utils";
     });
 
     // Set platform-aware search placeholder
-    const isMac = /Macintosh|Mac OS X/.test(navigator.userAgent);
-    searchInput.placeholder = isMac ? "Cmd+F or / to search" : "Ctrl+F or / to search";
+    setSearchPlaceholder(searchInput);
 
     interface SearchResult {
         type: "node" | "item";
