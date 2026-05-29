@@ -76,7 +76,14 @@ export function isDirectory(fsPath: string): boolean {
     return false;
 }
 
-/** find files in directory by extension */
+/**
+ * Find files by a single extension, returning paths relative to `dirName`
+ * (fast-glob semantics). Deliberately distinct from `shared/cli/cli-utils.ts`'s
+ * `findFiles`, which takes an extension array and returns absolute paths via
+ * manual recursion: server callers want cwd-relative single-extension results,
+ * the CLIs want absolute multi-extension results. Different contracts, not
+ * unified.
+ */
 export function findFiles(dirName: string, extension: string) {
     const entries = fg.sync(`**/*.${extension}`, { cwd: dirName, caseSensitiveMatch: false });
     return entries;

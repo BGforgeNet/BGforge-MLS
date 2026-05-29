@@ -89,6 +89,13 @@ export function parseCliArgs(helpText: string): CliArgs | null {
     return { target, mode, recursive: recursive ?? false, quiet: quiet ?? false };
 }
 
+/**
+ * Recursively collect absolute paths of files matching any of `extensions`
+ * (each including the leading dot), skipping node_modules/.git. Deliberately
+ * distinct from `server/src/path-utils.ts`'s `findFiles` (single extension,
+ * fast-glob, paths relative to the search root): the CLIs feed absolute paths
+ * straight to per-file processing. Different contracts, not unified.
+ */
 export function findFiles(dir: string, extensions: readonly string[]): string[] {
     const files: string[] = [];
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
