@@ -350,6 +350,23 @@ export function isVariableSymbol(symbol: IndexedSymbol): symbol is VariableSymbo
     return VARIABLE_KINDS.has(symbol.kind);
 }
 
+/**
+ * Override the source type on a batch of parsed symbols. Header parsers tag
+ * workspace headers as SourceType.Workspace; when the same parser is reused for
+ * a non-header file (e.g. Navigation for Ctrl+T) the caller passes the desired
+ * type here. `undefined` and Workspace are no-ops that return the input array
+ * unchanged, so the common header-parse path allocates nothing.
+ */
+export function remapSourceType(
+    symbols: readonly IndexedSymbol[],
+    type: SourceType | undefined,
+): readonly IndexedSymbol[] {
+    if (type === undefined || type === SourceType.Workspace) {
+        return symbols;
+    }
+    return symbols.map((s) => ({ ...s, source: { ...s.source, type } }));
+}
+
 // =============================================================================
 // Conversion Helpers
 // =============================================================================

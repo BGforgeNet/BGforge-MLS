@@ -463,6 +463,7 @@ import {
     type CallableSymbol,
     type VariableSymbol,
     type IndexedSymbol,
+    remapSourceType,
     type CallableInfo,
     type VariableInfoData,
     SymbolKind,
@@ -663,19 +664,11 @@ export function parseFile(uri: string, text: string, options?: ParseSymbolsOptio
 
     const displayPath = opts.skipPath ? null : computeDisplayPath(uri, opts.workspaceRoot);
 
-    let symbols: IndexedSymbol[] = [
+    const symbols: IndexedSymbol[] = [
         ...functions.map((func) => functionInfoToSymbol(func, displayPath)),
         ...variables.map((varInfo) => variableInfoToSymbol(varInfo, displayPath)),
     ];
 
     // Remap source type when called for non-header files (e.g., Navigation for Ctrl+T)
-    const overrideType = opts.sourceType;
-    if (overrideType !== undefined && overrideType !== SourceType.Workspace) {
-        symbols = symbols.map((s) => ({
-            ...s,
-            source: { ...s.source, type: overrideType },
-        }));
-    }
-
-    return { symbols, refs };
+    return { symbols: remapSourceType(symbols, opts.sourceType), refs };
 }

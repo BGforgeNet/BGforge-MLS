@@ -14,7 +14,7 @@ import type { Node } from "web-tree-sitter";
 import { computeDisplayPath } from "../core/location-utils";
 import { type ParseResult, EMPTY_PARSE_RESULT } from "../core/parse-result";
 import { makeRange as makeRangeFromNode } from "../core/position-utils";
-import { type IndexedSymbol, SourceType } from "../core/symbol";
+import { type IndexedSymbol, type SourceType, remapSourceType } from "../core/symbol";
 import * as jsdoc from "../shared/jsdoc";
 import {
     buildProcedureSymbol,
@@ -117,15 +117,7 @@ function extractSymbols(
         }
     }
 
-    // Remap source type when called for non-header files (e.g., Navigation for Ctrl+T)
-    if (sourceType !== undefined && sourceType !== SourceType.Workspace) {
-        return result.map((s) => ({
-            ...s,
-            source: { ...s.source, type: sourceType },
-        }));
-    }
-
-    return result;
+    return remapSourceType(result, sourceType);
 }
 
 /**

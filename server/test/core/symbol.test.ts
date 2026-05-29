@@ -18,6 +18,7 @@ import {
     CallableContext,
     symbolKindToCompletionKind,
     symbolKindToVscodeKind,
+    remapSourceType,
 } from "../../src/core/symbol";
 
 describe("core/symbol", () => {
@@ -254,5 +255,44 @@ describe("core/symbol", () => {
 
             expect(symbol.source.displayPath).toBe("lib/utils.tph");
         });
+    });
+});
+
+describe("remapSourceType", () => {
+    function sym(name: string, type: SourceType): IndexedSymbol {
+        return {
+            name,
+            kind: SymbolKind.Procedure,
+            location: {
+                uri: "file:///a.ssl",
+                range: { start: { line: 0, character: 0 }, end: { line: 0, character: name.length } },
+            },
+            scope: { level: ScopeLevel.Workspace },
+            source: { type, uri: "file:///a.ssl", displayPath: "a.ssl" },
+            completion: { label: name, kind: CompletionItemKind.Function },
+            hover: { contents: { kind: "markdown", value: name } },
+        } as IndexedSymbol;
+    }
+
+    it("returns the same array unchanged when type is undefined (hot-path no-op)", () => {
+        const symbols = [sym("a", SourceType.Workspace), sym("b", SourceType.Workspace)];
+        expect(remapSourceType(symbols, undefined)).toBe(symbols);
+    });
+
+    it("returns the same array unchanged when type is Workspace", () => {
+        const symbols = [sym("a", SourceType.Workspace)];
+        expect(remapSourceType(symbols, SourceType.Workspace)).toBe(symbols);
+    });
+
+    it("overrides every symbol's source type otherwise, preserving other fields and the input", () => {
+        const symbols = [sym("a", SourceType.Workspace), sym("b", SourceType.Workspace)];
+        const result = remapSourceType(symbols, SourceType.Navigation);
+
+        expect(result).not.toBe(symbols);
+        expect(result.map((s) => s.source.type)).toEqual([SourceType.Navigation, SourceType.Navigation]);
+        expect(result.map((s) => s.name)).toEqual(["a", "b"]);
+        expect(result.map((s) => s.source.displayPath)).toEqual(["a.ssl", "a.ssl"]);
+        // input array is not mutated
+        expect(symbols.every((s) => s.source.type === SourceType.Workspace)).toBe(true);
     });
 });
