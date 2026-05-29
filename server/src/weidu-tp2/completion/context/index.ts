@@ -42,23 +42,13 @@ export function isAtDeclarationSite(text: string, position: Position): Declarati
     return false;
 }
 
-/** Extract the line prefix up to the cursor, or null if position is out of bounds. */
-function getLinePrefixAt(text: string, line: number, character: number): string | null {
-    const lines = text.split("\n");
-    if (line >= lines.length) return null;
-    const currentLine = lines[line];
-    if (currentLine === undefined) return null;
-    return currentLine.substring(0, character);
-}
-
 /**
  * Text-based fallback for detecting lafName/lpfName/lamName/lpmName context.
  * Used when tree-sitter can't parse incomplete function/macro calls.
  * Returns the context or null if not at a function/macro name position.
  */
 function detectFuncNameFromLineText(text: string, line: number, character: number): CompletionContext | null {
-    const lineText = getLinePrefixAt(text, line, character);
-    if (lineText === null) return null;
+    const lineText = getLinePrefix(text, { line, character });
 
     const match = lineText.match(FUNC_CALL_KEYWORDS);
     if (!match || !match[1]) return null;
@@ -88,8 +78,7 @@ function detectFuncNameFromLineText(text: string, line: number, character: numbe
  * Matches "LAF/LPF funcname " - cursor is past the function name, in parameter position.
  */
 function detectFuncParamFromLineText(text: string, line: number, character: number): CompletionContext | null {
-    const lineText = getLinePrefixAt(text, line, character);
-    if (lineText === null) return null;
+    const lineText = getLinePrefix(text, { line, character });
 
     if (FUNC_PARAM_KEYWORDS.test(lineText)) {
         return CompletionContext.FuncParamName;
