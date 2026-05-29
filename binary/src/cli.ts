@@ -28,10 +28,6 @@ import {
 } from "../../shared/cli/cli-utils";
 
 const EXTENSIONS = parserRegistry.getExtensions().map((ext) => `.${ext}`);
-const CLI_PARSE_OPTIONS: ParseOptions = {
-    gracefulMapBoundaries: process.argv.includes("--graceful-map"),
-};
-const CLI_QUIET = process.argv.includes("-q") || process.argv.includes("--quiet");
 
 // Per-format maximum input file size, applied via stat() before allocating a
 // Buffer. Caps a malicious or accidentally-truncated file from triggering a
@@ -51,13 +47,13 @@ const MAX_FILE_SIZES: Record<string, number> = {
 /**
  * Builds per-file ParseOptions for the CLI: file-derived options come from
  * the shared `@bgforge/binary` builder (today: sibling proto/ pidResolver),
- * the CLI's own preference axes (--graceful-map) layer on top. Reports
- * proto-load stats to stderr (unless -q).
+ * the CLI's own preference axes (--graceful-map, carried in `baseOptions`)
+ * layer on top. Reports proto-load stats to stderr (unless quiet).
  */
-function buildParseOptionsForFile(filePath: string): ParseOptions {
+function buildParseOptionsForFile(filePath: string, quiet: boolean, baseOptions: ParseOptions): ParseOptions {
     const fileDerived = buildFileDerivedParseOptions(filePath);
 
-    if (!CLI_QUIET && fileDerived.diagnostics) {
+    if (!quiet && fileDerived.diagnostics) {
         const { protoDir, stats } = fileDerived.diagnostics;
         const errSuffix = stats.errors.length > 0 ? `, ${stats.errors.length} errors` : "";
         console.error(
@@ -67,10 +63,15 @@ function buildParseOptionsForFile(filePath: string): ParseOptions {
         for (const err of stats.errors) console.error(`  ${err}`);
     }
 
-    return { ...CLI_PARSE_OPTIONS, ...(fileDerived.pidResolver ? { pidResolver: fileDerived.pidResolver } : {}) };
+    return { ...baseOptions, ...(fileDerived.pidResolver ? { pidResolver: fileDerived.pidResolver } : {}) };
 }
 
-async function processFile(filePath: string, mode: OutputMode): Promise<FileResult> {
+async function processFile(
+    filePath: string,
+    mode: OutputMode,
+    quiet: boolean,
+    baseOptions: ParseOptions,
+): Promise<FileResult> {
     return safeProcess(filePath, () => {
         const ext = path.extname(filePath);
         const parser = parserRegistry.getByExtension(ext);
@@ -93,7 +94,7 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
         }
 
         const data = fs.readFileSync(filePath);
-        const result = parser.parse(new Uint8Array(data), buildParseOptionsForFile(filePath));
+        const result = parser.parse(new Uint8Array(data), buildParseOptionsForFile(filePath, quiet, baseOptions));
 
         if (result.errors && result.errors.length > 0) {
             console.error(`Error parsing ${filePath}:`);
@@ -182,7 +183,7 @@ Examples:
  * Load a JSON file and serialize it back to binary format.
  * Validation and semantic round-trip checks happen inside the shared snapshot loader.
  */
-function loadJsonToBinary(jsonPath: string): void {
+function loadJsonToBinary(jsonPath: string, parseOptions: ParseOptions): void {
     let jsonText: string;
     try {
         // Read with try/catch instead of existsSync->readFileSync to avoid
@@ -196,7 +197,7 @@ function loadJsonToBinary(jsonPath: string): void {
         throw error;
     }
 
-    const loaded = loadBinaryJsonSnapshot(jsonText, CLI_PARSE_OPTIONS);
+    const loaded = loadBinaryJsonSnapshot(jsonText, parseOptions);
     const result: ParseResult = loaded.parseResult;
 
     // Determine the parser from the format field
@@ -226,6 +227,14 @@ function loadJsonToBinary(jsonPath: string): void {
 async function main() {
     const argv = process.argv.slice(2);
 
+    // `--graceful-map` is a binary-specific preference axis, so it stays out of
+    // the shared cac parser (`parseCliArgs`, also backing fgfmt/fgtp) and is
+    // read straight from argv. The `--load` branch below returns before
+    // `parseCliArgs` runs, so this single read is the one point that serves both
+    // the --load and the normal parse paths. `-q`/`--quiet`, by contrast, is a
+    // shared flag and comes from `parseCliArgs` on the normal path (args.quiet).
+    const cliParseOptions: ParseOptions = { gracefulMapBoundaries: argv.includes("--graceful-map") };
+
     // --extensions: print the registry's extension list one per line and exit.
     // Consumed by the actions/binary/ shell scripts to build their file
     // filters from the same source the parsers register, so a new format
@@ -245,7 +254,7 @@ async function main() {
             console.error("Error: No file specified");
             process.exit(1);
         }
-        loadJsonToBinary(jsonPath);
+        loadJsonToBinary(jsonPath, cliParseOptions);
         return;
     }
 
@@ -256,7 +265,7 @@ async function main() {
         args,
         extensions: EXTENSIONS,
         description: ".pro binary",
-        processFile,
+        processFile: (filePath, mode) => processFile(filePath, mode, args.quiet, cliParseOptions),
     });
 }
 
