@@ -6,26 +6,15 @@
  * flat effects array (feature blocks, 0x30 each) at
  * `header.featureBlocksOffset`. Effects share the on-wire layout with SPL
  * via `binary/src/ie-common/specs/effect`; abilities differ between the
- * two formats and live in each format's own `specs/ability.ts`.
+ * two formats and live in each format's own `specs/ability.ts`. The parse
+ * discipline itself is shared with SPL via `createIeAbilityEffectsParser`.
  */
 
-import { group, readerAt } from "../ie-common/parse-helpers";
-import { walkStruct } from "../spec/walk-display";
-import { effectSpecAnnotated } from "../ie-common/specs/effect.overrides";
-import { EFFECT_SIZE, bytesEqual } from "../ie-common/types";
-import type { BinaryParser, ParseOptions, ParseResult, ParsedGroup } from "../types";
-import {
-    effectSchema,
-    itmAbilitySchema,
-    itmHeaderSchema,
-    type EffectData,
-    type ItmAbilityData,
-    type ItmHeaderData,
-} from "./schemas";
+import { createIeAbilityEffectsParser } from "../ie-common/ability-effects-parser";
+import { itmAbilitySchema, itmHeaderSchema } from "./schemas";
 import { itmHeaderSpecAnnotated } from "./specs/header.overrides";
 import { itmAbilitySpecAnnotated } from "./specs/ability.overrides";
 import { ITM_ABILITY_SIZE, ITM_HEADER_SIZE, ITM_SIGNATURE, ITM_VERSION_V1 } from "./types";
-import type { ItmCanonicalDocument } from "./canonical-schemas";
 import { serializeItm } from "./serializer";
 
 /**
@@ -35,121 +24,17 @@ import { serializeItm } from "./serializer";
  */
 const itmHeaderPresentation = {} as const;
 const abilityPresentation = {} as const;
-const effectPresentation = {} as const;
 
-const FORMAT_ID = "itm";
-const FORMAT_NAME = "Infinity Engine ITM v1";
-
-function parseHeader(data: ItmHeaderData): ParsedGroup {
-    return walkStruct(itmHeaderSpecAnnotated, itmHeaderPresentation, 0, data, "ITM Header");
-}
-
-class ItmParser implements BinaryParser {
-    readonly id = FORMAT_ID;
-    readonly name = FORMAT_NAME;
-    readonly extensions = ["itm"];
-
-    private fail(message: string): ParseResult {
-        return {
-            format: this.id,
-            formatName: this.name,
-            root: group("ITM File", []),
-            errors: [message],
-        };
-    }
-
-    parse(data: Uint8Array, _options?: ParseOptions): ParseResult {
-        if (data.byteLength < ITM_HEADER_SIZE) {
-            return this.fail(`File too small: ${data.byteLength} bytes, need at least ${ITM_HEADER_SIZE} for header`);
-        }
-
-        const signature = [...data.subarray(0, 4)];
-        if (!bytesEqual(signature, [...ITM_SIGNATURE])) {
-            return this.fail(`Not an ITM file: signature ${JSON.stringify(String.fromCodePoint(...signature))}`);
-        }
-        const version = [...data.subarray(4, 8)];
-        if (!bytesEqual(version, [...ITM_VERSION_V1])) {
-            return this.fail(
-                `Unsupported ITM version: ${JSON.stringify(String.fromCodePoint(...version))} (only V1 is supported)`,
-            );
-        }
-
-        const header: ItmHeaderData = itmHeaderSchema.read(readerAt(data, 0));
-
-        // Abilities live at header.extendedHeadersOffset, count given by header.
-        // The product `abilityCount * ITM_ABILITY_SIZE` cannot overflow JS safe
-        // integers: the codec types abilityCount as uint32 (≤ 4 294 967 295) and
-        // ITM_ABILITY_SIZE is a small fixed constant, so the maximum product is
-        // well below 2^48 - inside double-precision exactness - and the bounds
-        // check below stays meaningful even for adversarial inputs.
-        const abilitiesOffset = header.extendedHeadersOffset;
-        const abilityCount = header.extendedHeadersCount;
-        const abilitiesEnd = abilitiesOffset + abilityCount * ITM_ABILITY_SIZE;
-        if (abilitiesEnd > data.byteLength) {
-            return this.fail(
-                `Abilities extend past EOF: offset 0x${abilitiesOffset.toString(16)} + ${abilityCount}*0x${ITM_ABILITY_SIZE.toString(16)} = 0x${abilitiesEnd.toString(16)} > size 0x${data.byteLength.toString(16)}`,
-            );
-        }
-        const abilities: ItmAbilityData[] = [];
-        for (let i = 0; i < abilityCount; i++) {
-            abilities.push(itmAbilitySchema.read(readerAt(data, abilitiesOffset + i * ITM_ABILITY_SIZE)));
-        }
-
-        // Effects: total count is determined by file size minus the offset, since
-        // the header only carries the *equipping* effect range. Per-ability ranges
-        // index into the same flat array.
-        const effectsOffset = header.featureBlocksOffset;
-        const effectsBytes = data.byteLength - effectsOffset;
-        if (effectsBytes < 0 || effectsBytes % EFFECT_SIZE !== 0) {
-            return this.fail(
-                `Effects region misaligned: ${effectsBytes} bytes past offset 0x${effectsOffset.toString(16)} is not a multiple of 0x${EFFECT_SIZE.toString(16)}`,
-            );
-        }
-        const effectCount = effectsBytes / EFFECT_SIZE;
-        const effects: EffectData[] = [];
-        for (let i = 0; i < effectCount; i++) {
-            effects.push(effectSchema.read(readerAt(data, effectsOffset + i * EFFECT_SIZE)));
-        }
-
-        const headerGroup = parseHeader(header);
-        const abilitiesGroup = group(
-            "Abilities",
-            abilities.map((ability, i) =>
-                walkStruct(
-                    itmAbilitySpecAnnotated,
-                    abilityPresentation,
-                    abilitiesOffset + i * ITM_ABILITY_SIZE,
-                    ability,
-                    `Ability ${i + 1}`,
-                ),
-            ),
-        );
-        const effectsGroup = group(
-            "Effects",
-            effects.map((effect, i) =>
-                walkStruct(
-                    effectSpecAnnotated,
-                    effectPresentation,
-                    effectsOffset + i * EFFECT_SIZE,
-                    effect,
-                    `Effect ${i + 1}`,
-                ),
-            ),
-        );
-
-        const document: ItmCanonicalDocument = { header, abilities, effects };
-
-        return {
-            format: this.id,
-            formatName: this.name,
-            root: group("ITM File", [headerGroup, abilitiesGroup, effectsGroup]),
-            document,
-        };
-    }
-
-    serialize(result: ParseResult): Uint8Array {
-        return serializeItm(result);
-    }
-}
-
-export const itmParser = new ItmParser();
+export const itmParser = createIeAbilityEffectsParser({
+    formatId: "itm",
+    formatName: "Infinity Engine ITM v1",
+    label: "ITM",
+    extension: "itm",
+    headerSize: ITM_HEADER_SIZE,
+    abilitySize: ITM_ABILITY_SIZE,
+    signature: [...ITM_SIGNATURE],
+    versionV1: [...ITM_VERSION_V1],
+    header: { schema: itmHeaderSchema, spec: itmHeaderSpecAnnotated, presentation: itmHeaderPresentation },
+    ability: { schema: itmAbilitySchema, spec: itmAbilitySpecAnnotated, presentation: abilityPresentation },
+    serialize: serializeItm,
+});
