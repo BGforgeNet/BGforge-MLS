@@ -18,7 +18,7 @@ COPY_EXISTING ~weapprof.2da~ override
     archer_column = $col_index(FERALAN)
     /**
    * 0-indexed, MAGE column
-   */
+ */
     start_column = 4
     COUNT_2DA_COLS columns
     // test123 = 111
@@ -43,7 +43,7 @@ COPY_EXISTING ~weapprof.2da~ override
         FOR (c=start_column; c<test123; ++c) BEGIN
             /** 
        * default max limit for everyone
-       */
+ */
             pip_limit = 2
             // archer, restrictions are the same
             PATCH_IF (c == archer_column) BEGIN

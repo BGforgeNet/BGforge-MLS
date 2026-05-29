@@ -43,12 +43,12 @@ ActionID("param")  // This is preserved on the same line
 IF
 ```
 
-**Block comments** (multi-line preserved):
+**Block comments** (multi-line interior preserved; only the spacing adjacent to `/*` and `*/` is normalized, and a `/**` doc-comment opener is kept intact):
 
 ```baf
 /*
  * Multi-line block comment
- * Preserved exactly as written
+ * Interior preserved as written
  */
 ```
 

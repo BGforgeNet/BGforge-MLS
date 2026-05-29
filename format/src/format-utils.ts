@@ -43,6 +43,67 @@ export function throwOnParseError(root: SyntaxNode): void {
     }
 }
 
+// ============================================
+// Comment normalization (shared by every formatter)
+// ============================================
+//
+// One canonical normalizer drives Fallout SSL, WeiDU BAF/D/TP2. Behavior:
+//   - Line comments: exactly one space after `//`, leading whitespace collapsed,
+//     trailing whitespace trimmed. Empty -> `//`.
+//   - All-slash decorative dividers (`//////`) are preserved verbatim so visual
+//     separators are not mangled into `// ////`.
+//   - Block comments: single-line -> `/* text */`; multiline normalizes only the
+//     spacing adjacent to `/*` and `*/`, leaving interior lines untouched.
+
+/** Normalize a line comment. Input must be a comment token (may have outer whitespace). */
+export function normalizeLineComment(text: string): string {
+    const trimmed = text.trim();
+    if (!trimmed.startsWith("//")) return trimmed;
+    const content = trimmed.slice(2);
+    // Decorative separator (all slashes, e.g. //////): preserve verbatim.
+    if (/^\/+$/.test(content)) return trimmed;
+    const body = content.trimStart();
+    return body.length === 0 ? "//" : `// ${body}`;
+}
+
+/** Normalize a block comment. Input must be a comment token (may have outer whitespace). */
+export function normalizeBlockComment(text: string): string {
+    const trimmed = text.trim();
+    if (!trimmed.startsWith("/*")) return trimmed;
+    const inner = trimmed.slice(2, -2);
+    // A `/**` doc-comment opener leaves `*` as the first inner char. Preserve it
+    // rather than inserting a leading space and splitting `/**` into `/* *`.
+    // An empty block (`/**/`) has no inner char, so it is not a doc comment.
+    const isDoc = inner.startsWith("*");
+    if (inner.includes("\n")) {
+        // Multiline: normalize only the edges abutting /* and */; preserve interior.
+        let result = inner;
+        if (!isDoc && result.length > 0 && result[0] !== "\n") {
+            result = result.replace(/^[ \t]*/, " ");
+        }
+        if (result.length > 0 && !result.endsWith("\n")) {
+            result = result.replace(/[ \t]*$/, " ");
+        }
+        return `/*${result}*/`;
+    }
+    const innerTrimmed = inner.trim();
+    if (innerTrimmed.length === 0) return "/* */";
+    if (isDoc) {
+        // Single-line doc comment: keep the `/**` opener, one space, then the body.
+        const docBody = innerTrimmed.slice(1).trim();
+        return docBody.length === 0 ? "/** */" : `/** ${docBody} */`;
+    }
+    return `/* ${innerTrimmed} */`;
+}
+
+/** Normalize a comment node's text, dispatching by delimiter. */
+export function normalizeComment(text: string): string {
+    const trimmed = text.trim();
+    if (trimmed.startsWith("//")) return normalizeLineComment(trimmed);
+    if (trimmed.startsWith("/*")) return normalizeBlockComment(trimmed);
+    return trimmed;
+}
+
 /** WeiDU multi-tilde delimiter count (~~~~~...~~~~~). */
 const WEIDU_MULTI_TILDE_COUNT = 5;
 

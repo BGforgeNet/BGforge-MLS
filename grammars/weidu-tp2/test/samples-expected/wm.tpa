@@ -6,7 +6,7 @@ OUTER_SPRINT comp_dir ~%MOD_FOLDER%/wild_spells~
 ACTION_IF pansy = 0 BEGIN  // Ironman
     OUTER_SET rhia_xp = 19000  // Written later to wm_rhia1.cre
 
-    EXTEND_TOP ~baldur.bcs~ ~%comp_dir%/baf/baldur.baf~  //  Have to use EXTEND_TOP because of PartyRested/SmallWait in baldur.bcs
+    EXTEND_TOP ~baldur.bcs~ ~%comp_dir%/baf/baldur.baf~  // Have to use EXTEND_TOP because of PartyRested/SmallWait in baldur.bcs
     EXTEND_TOP ~baldur25.bcs~ ~%comp_dir%/baf/baldur.baf~
 END ELSE BEGIN  // Stationary Rhialto: create outside Candlekeep's wall and give scroll with a hint to Gorion's body
 
@@ -129,18 +129,18 @@ COPY ~%comp_dir%/spl/wm_glph.cre~ ~override/wm_glph.cre~
     SAY NAME2 @20711
 
 // ------------------------------------------------------
-//     Projectiles
+// Projectiles
 // ------------------------------------------------------
 ADD_PROJECTILE ~%comp_dir%/spl/wm_cf_60.pro~
 ADD_PROJECTILE ~%comp_dir%/spl/wm_chaob.pro~
 
 // ------------------------------------------------------
-//   Copy Stuff to Override Folder
+// Copy Stuff to Override Folder
 // ------------------------------------------------------
 COPY ~%comp_dir%/copy~ ~override~
 
 // --------------------------------------------------------------------------
-//               SPELLS
+// SPELLS
 // --------------------------------------------------------------------------
 
 // -----------------------------------------------------------
@@ -440,7 +440,7 @@ COPY ~%comp_dir%/spl/wm_armor.spl~ ~override/wm_armor.spl~  // Wizard Spell: Mee
     SAY UNIDENTIFIED_DESC @23102
 
 // --------------------------------------------------------------------------
-//               Items
+// Items
 // --------------------------------------------------------------------------
 // bear bam is missing a frame in EEs
 COPY ~%comp_dir%/bam/wm_bear.bam~ ~override~
@@ -454,7 +454,7 @@ COPY ~%comp_dir%/itm/wm_bear.itm~ ~override/wm_bear.itm~  // "Teddy Bear of Prot
 APPEND itemexcl.2da "wm_bear 1" UNLESS wm_bear
 
 // ------------------------------------------------------
-//   Spellbook "Talking Item" with dialogue
+// Spellbook "Talking Item" with dialogue
 
 COPY ~%comp_dir%/itm/wm_sbook.itm~ ~override/wm_sbook.itm~
     SAY NAME1 @40501

@@ -12,6 +12,9 @@ export {
     normalizeWhitespaceWeidu,
     throwOnParseError,
     scanTildeDelimiter,
+    normalizeLineComment,
+    normalizeBlockComment,
+    normalizeComment,
     WeiduTokenType,
 } from "./format-utils";
 export type { CommentStripper, WeiduToken, FormatOutput, TildeDelimiter } from "./format-utils";
@@ -36,9 +39,6 @@ export { DEFAULT_OPTIONS as weiduTp2DefaultOptions, KW_BEGIN, KW_END } from "./w
 
 // TP2 utilities used by server symbol provider, snippets, and tests
 export {
-    normalizeLineComment,
-    normalizeBlockComment,
-    normalizeComment,
     normalizeWhitespace,
     withNormalizedComment,
     isAction,

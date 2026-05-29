@@ -15,7 +15,7 @@ import { formatIfStmt, formatWhileStmt, formatForStmt, formatForeachStmt, format
 import { formatExpression, formatCallStmt, formatAssignment, formatExpressionStmt } from "./expressions";
 import { SyntaxType } from "../../../server/src/fallout-ssl/tree-sitter.d";
 
-import { throwOnParseError } from "@bgforge/format";
+import { throwOnParseError, normalizeComment } from "@bgforge/format";
 
 interface FormatOptions {
     indentSize: number;
@@ -133,47 +133,9 @@ function normalizePreprocessor(text: string): string {
     return text;
 }
 
-// Normalize comment spacing:
-// - Block comments: exactly one space after opening and before closing
-// - Line comments: exactly one space after //
-export function normalizeComment(text: string): string {
-    if (text.startsWith("/*")) {
-        // Block comment - normalize spaces
-        const inner = text.slice(2, -2);
-        const isMultiline = inner.includes("\n");
-
-        if (isMultiline) {
-            // For multiline: ensure space after /* if content on same line,
-            // and space before */ if content on same line
-            let result = inner;
-            // Fix start: if first char is not newline, ensure single space
-            if (result.length > 0 && result[0] !== "\n") {
-                result = result.replace(/^[ \t]*/, " ");
-            }
-            // Fix end: if last char is not newline, ensure single space before */
-            if (result.length > 0 && !result.endsWith("\n")) {
-                result = result.replace(/[ \t]*$/, " ");
-            }
-            return `/*${result}*/`;
-        } else {
-            // Single line block comment: /* text */
-            const trimmed = inner.trim();
-            if (trimmed.length === 0) {
-                return "/* */";
-            }
-            return `/* ${trimmed} */`;
-        }
-    } else if (text.startsWith("//")) {
-        // Line comment - ensure single space after //
-        const inner = text.slice(2);
-        const trimmed = inner.replace(/^[ \t]*/, "");
-        if (trimmed.length === 0) {
-            return "//";
-        }
-        return `// ${trimmed}`;
-    }
-    return text;
-}
+// Comment normalization is shared across all formatters; re-export the imported
+// binding so existing `./core` importers (e.g. control-flow) keep their path.
+export { normalizeComment };
 
 interface FormatResult {
     text: string;

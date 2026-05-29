@@ -12,9 +12,90 @@ import {
     stripCommentsFalloutScriptsLst,
     validateFormatting,
     scanTildeDelimiter,
+    normalizeComment,
+    normalizeLineComment,
+    normalizeBlockComment,
 } from "@bgforge/format";
 
 describe("shared/format-utils", () => {
+    describe("normalizeLineComment()", () => {
+        it("adds one space after // when missing", () => {
+            expect(normalizeLineComment("//foo")).toBe("// foo");
+        });
+
+        it("keeps a single existing space", () => {
+            expect(normalizeLineComment("// foo")).toBe("// foo");
+        });
+
+        it("collapses intentional multi-space alignment", () => {
+            expect(normalizeLineComment("//   aligned")).toBe("// aligned");
+        });
+
+        it("collapses a leading tab to one space", () => {
+            expect(normalizeLineComment("//\tindented")).toBe("// indented");
+        });
+
+        it("trims trailing whitespace", () => {
+            expect(normalizeLineComment("//foo   ")).toBe("// foo");
+        });
+
+        it("returns bare // for an empty comment", () => {
+            expect(normalizeLineComment("//")).toBe("//");
+        });
+
+        it("preserves all-slash decorative dividers verbatim", () => {
+            expect(normalizeLineComment("//////////")).toBe("//////////");
+        });
+    });
+
+    describe("normalizeBlockComment()", () => {
+        it("normalizes single-line block spacing", () => {
+            expect(normalizeBlockComment("/*foo*/")).toBe("/* foo */");
+            expect(normalizeBlockComment("/*  x  */")).toBe("/* x */");
+        });
+
+        it("returns /* */ for an empty block", () => {
+            expect(normalizeBlockComment("/**/")).toBe("/* */");
+        });
+
+        it("normalizes only the edges of a multiline block, preserving interior", () => {
+            expect(normalizeBlockComment("/*Multi\n * line\n * end*/")).toBe("/* Multi\n * line\n * end */");
+        });
+
+        it("leaves a JSDoc-shaped multiline block unchanged", () => {
+            const jsdoc = "/*\n * line one\n * line two\n */";
+            expect(normalizeBlockComment(jsdoc)).toBe(jsdoc);
+        });
+
+        it("preserves a /** doc-comment opener instead of splitting it into /* *", () => {
+            const doc = "/**\n * test\n * @arg {int} x\n */";
+            expect(normalizeBlockComment(doc)).toBe(doc);
+        });
+
+        it("keeps a single-line /** opener tight", () => {
+            expect(normalizeBlockComment("/** foo */")).toBe("/** foo */");
+            expect(normalizeBlockComment("/**foo*/")).toBe("/** foo */");
+        });
+
+        it("treats empty /**/ as an empty block, not a doc comment", () => {
+            expect(normalizeBlockComment("/**/")).toBe("/* */");
+        });
+    });
+
+    describe("normalizeComment()", () => {
+        it("dispatches to line normalization", () => {
+            expect(normalizeComment("//   x")).toBe("// x");
+        });
+
+        it("dispatches to block normalization", () => {
+            expect(normalizeComment("/*  x  */")).toBe("/* x */");
+        });
+
+        it("preserves dividers via the line branch", () => {
+            expect(normalizeComment("//////")).toBe("//////");
+        });
+    });
+
     describe("scanTildeDelimiter()", () => {
         it("scans a single-tilde string", () => {
             expect(scanTildeDelimiter("~hello~", 0)).toEqual({ delimLen: 1, contentStart: 1, closerStart: 6 });

@@ -8,7 +8,7 @@
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import { SyntaxType } from "../../../server/src/weidu-baf/tree-sitter.d";
-import { throwOnParseError } from "@bgforge/format";
+import { throwOnParseError, normalizeComment } from "@bgforge/format";
 
 // Formatting options.
 // Note: BAF doesn't need lineLimit - its format is inherently line-based
@@ -36,23 +36,6 @@ interface FormatContext {
 // Helper: check if node is a comment
 function isComment(node: SyntaxNode): boolean {
     return node.type === SyntaxType.Comment || node.type === SyntaxType.LineComment;
-}
-
-// Normalize comment spacing (preserves multi-line block comments)
-function normalizeComment(text: string): string {
-    if (text.startsWith("/*")) {
-        const inner = text.slice(2, -2);
-        // Check if multi-line
-        if (inner.includes("\n")) {
-            return text; // Preserve as-is
-        }
-        return "/* " + inner.trim() + " */";
-    }
-    if (text.startsWith("//")) {
-        const inner = text.slice(2);
-        return "// " + inner.trimStart();
-    }
-    return text;
 }
 
 // Helper: append inline comment or push standalone comment

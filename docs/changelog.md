@@ -34,6 +34,7 @@
 ### Formatter
 
 - New: WeiDU TP2 formatter preserves blank lines inside body blocks and keeps `BEGIN` on the header line for macros.
+- Change: comment spacing is now normalized consistently across every formatter (Fallout SSL, WeiDU BAF/D/TP2): exactly one space after `//`, a single space inside `/* ... */`, and hand-aligned multi-space indentation after `//` collapsed to one space. All-slash divider lines (`//////`) and `/**` doc-comment openers are preserved verbatim. Previously each format normalized comments differently (some preserved multi-space alignment, some left block-comment spacing untouched).
 
 ### Extension / server
 

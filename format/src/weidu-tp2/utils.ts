@@ -16,7 +16,18 @@ import {
     CollectedItemType,
 } from "./types";
 import { SyntaxType } from "../../../server/src/weidu-tp2/tree-sitter.d";
-import { type WeiduToken, tokenizeWeidu, WeiduTokenType, normalizeWhitespaceWeidu } from "@bgforge/format";
+import {
+    type WeiduToken,
+    tokenizeWeidu,
+    WeiduTokenType,
+    normalizeWhitespaceWeidu,
+    normalizeComment,
+    normalizeLineComment,
+} from "@bgforge/format";
+
+// Comment normalizers now live in @bgforge/format (shared across all formatters);
+// re-export so sibling TP2 modules keep importing them from "./utils".
+export { normalizeComment, normalizeLineComment } from "@bgforge/format";
 
 // ============================================
 // Type lookup sets (O(1) instead of O(n) array includes)
@@ -51,37 +62,6 @@ const SPECIAL_PATCH_TYPES = new Set(["write_var", "read_var", "set_var"]);
 /** Check if a node is a comment. */
 export function isComment(node: SyntaxNode): boolean {
     return node.type === SyntaxType.LineComment || node.type === SyntaxType.Comment;
-}
-
-/** Normalize block comment: preserve content, just trim outer whitespace. */
-export function normalizeBlockComment(text: string): string {
-    return text.trim();
-}
-
-/** Normalize line comment: ensure space after // but preserve intentional indentation. */
-export function normalizeLineComment(text: string): string {
-    const trimmed = text.trim();
-    if (trimmed.startsWith("//")) {
-        const afterSlashes = trimmed.slice(2);
-        if (afterSlashes.length === 0) {
-            return "//";
-        }
-        // If no space after //, add one; otherwise preserve original spacing
-        if (afterSlashes[0] !== " " && afterSlashes[0] !== "\t") {
-            return "// " + afterSlashes;
-        }
-        return trimmed;
-    }
-    return trimmed;
-}
-
-/** Normalize a comment node's text. */
-export function normalizeComment(text: string): string {
-    const trimmed = text.trim();
-    if (trimmed.startsWith("//")) {
-        return normalizeLineComment(trimmed);
-    }
-    return normalizeBlockComment(trimmed);
 }
 
 /** Normalize line with potential inline comment. */

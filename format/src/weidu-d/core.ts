@@ -7,7 +7,14 @@
  */
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
-import { normalizeWhitespaceWeidu, throwOnParseError, tokenizeWeidu, WeiduTokenType } from "@bgforge/format";
+import {
+    normalizeWhitespaceWeidu,
+    throwOnParseError,
+    tokenizeWeidu,
+    WeiduTokenType,
+    normalizeComment,
+    normalizeLineComment,
+} from "@bgforge/format";
 
 interface FormatOptions {
     indentSize: number;
@@ -75,21 +82,6 @@ function withNormalizedComment(line: string): string {
 // Normalize whitespace in a string: collapse runs of whitespace to single space, preserve strings
 function normalizeWhitespace(text: string): string {
     return normalizeWhitespaceWeidu(text);
-}
-
-// Normalize a line comment: ensure "// comment" format (1 space after //), but preserve decorative separators
-function normalizeLineComment(text: string): string {
-    const trimmed = text.trim();
-    if (trimmed.startsWith("//")) {
-        const content = trimmed.slice(2);
-        // Preserve decorative separators (//////) exactly - don't add space
-        if (/^\/+$/.test(content)) {
-            return "//" + content;
-        }
-        const normalized = content.trimStart();
-        return normalized ? "// " + normalized : "//";
-    }
-    return trimmed;
 }
 
 // Normalize inline comment: ensure 2 spaces before //, 1 space after
@@ -413,7 +405,7 @@ function formatStateExpanded(node: SyntaxNode, ctx: FormatContext): string {
         } else if (isCopyOrMacro(child)) {
             lines.push(indent2 + normalizeWhitespace(child.text));
         } else if (isComment(child)) {
-            lines.push(indent2 + normalizeLineComment(child.text));
+            lines.push(indent2 + normalizeComment(child.text));
         }
     }
 
@@ -457,7 +449,7 @@ function getActionHeader(node: SyntaxNode): string {
         if (child.text.toUpperCase() === "END") break;
         // Stop at comments that are NOT on the header line
         if (isComment(child) && child.startPosition.row !== headerRow) break;
-        parts.push(isComment(child) ? normalizeLineComment(child.text) : child.text);
+        parts.push(isComment(child) ? normalizeComment(child.text) : child.text);
     }
     return normalizeWhitespace(parts.join(" "));
 }
@@ -488,7 +480,7 @@ function formatStateAction(node: SyntaxNode, ctx: FormatContext, trailingEnd: bo
         } else if (isComment(child)) {
             // Skip comments on the header line - already included via getActionHeader()
             if (child.startPosition.row === headerRow) return null;
-            return ctx.indent + normalizeLineComment(child.text);
+            return ctx.indent + normalizeComment(child.text);
         }
         return null;
     });
@@ -535,7 +527,7 @@ function formatExtendAction(node: SyntaxNode, ctx: FormatContext): string {
         } else if (isCopyOrMacro(child)) {
             return indent + normalizeWhitespace(child.text);
         } else if (isComment(child)) {
-            return indent + normalizeLineComment(child.text);
+            return indent + normalizeComment(child.text);
         }
         return null;
     });
@@ -571,7 +563,7 @@ export function formatDocument(root: SyntaxNode, options?: Partial<FormatOptions
                 if (lastEndRow >= 0 && child.startPosition.row > lastEndRow + 1) {
                     result.push("");
                 }
-                result.push(normalizeLineComment(child.text));
+                result.push(normalizeComment(child.text));
             }
         } else {
             // Non-comment node - preserve blank lines

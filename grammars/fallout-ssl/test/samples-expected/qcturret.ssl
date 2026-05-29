@@ -44,13 +44,13 @@ import variable Frank_Ptr;
 variable countdown;
 variable gvar_security = GVAR_ENCLAVE_TURRET_MAIN;
 
-/* *
+/**
  * Used to track when maintenance status changes, to animate stand down/up. Nothing more.
  * Actual behaviour is controlled by global_var(gvar_security).
  */
 #define LVAR_maintenance 0
 
-/* *
+/**
  * Put guns down, indicating to the player that turrets are in maintenance.
  */
 #define stand_down \
@@ -73,7 +73,7 @@ procedure map_enter_p_proc begin
     gvar_security = get_gvar_security;
 end
 
-/* *
+/**
  * Get turret security GVAR corresponding to current level.
  */
 procedure get_gvar_security begin
@@ -94,7 +94,7 @@ procedure get_gvar_security begin
     return ret;
 end
 
-/* *
+/**
  * Animate stand up/down, visually indicating maintenance status to the player.
  */
 procedure update_stance begin

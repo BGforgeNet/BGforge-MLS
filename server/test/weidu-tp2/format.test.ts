@@ -54,16 +54,16 @@ describe("format-utils: normalizeLineComment", () => {
         expect(normalizeLineComment("// comment")).toBe("// comment");
     });
 
-    it("preserves multiple spaces after //", () => {
-        expect(normalizeLineComment("//  indented")).toBe("//  indented");
+    it("collapses multiple spaces after // to one", () => {
+        expect(normalizeLineComment("//  indented")).toBe("// indented");
     });
 
     it("handles empty comment", () => {
         expect(normalizeLineComment("//")).toBe("//");
     });
 
-    it("handles tab after //", () => {
-        expect(normalizeLineComment("//\tindented")).toBe("//\tindented");
+    it("collapses a leading tab after // to one space", () => {
+        expect(normalizeLineComment("//\tindented")).toBe("// indented");
     });
 
     it("trims leading whitespace", () => {
@@ -230,11 +230,11 @@ BEGIN @1`;
         expect(output).toContain("// comment without space");
     });
 
-    it("preserves intentional comment indentation", () => {
+    it("collapses intentional comment indentation to one space", () => {
         const input = `//     indented content
 BEGIN @1`;
         const output = format(input);
-        expect(output).toContain("//     indented content");
+        expect(output).toContain("// indented content");
     });
 
     it("formats ALWAYS block", () => {
