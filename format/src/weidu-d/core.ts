@@ -13,7 +13,7 @@ import {
     tokenizeWeidu,
     WeiduTokenType,
     normalizeComment,
-    normalizeLineComment,
+    withNormalizedComment,
 } from "@bgforge/format";
 import { type FormatOptions, DEFAULT_OPTIONS, type FormatResult } from "../format-types";
 
@@ -54,33 +54,9 @@ function findKeyword(node: SyntaxNode, keyword: string): string {
     return keyword; // fallback
 }
 
-// Apply inline comment normalization to a line (only if there's code before //)
-function withNormalizedComment(line: string): string {
-    if (!line.includes("//")) return line;
-    // Check if this is a standalone comment line (only whitespace before //)
-    const idx = line.indexOf("//");
-    const before = line.slice(0, idx);
-    if (!before.trim()) {
-        // Standalone comment - preserve indent, normalize comment
-        return before + normalizeLineComment(line.slice(idx));
-    }
-    return normalizeInlineComment(line);
-}
-
-// Normalize whitespace in a string: collapse runs of whitespace to single space, preserve strings
-function normalizeWhitespace(text: string): string {
-    return normalizeWhitespaceWeidu(text);
-}
-
-// Normalize inline comment: ensure 2 spaces before //, 1 space after
-function normalizeInlineComment(line: string): string {
-    const idx = line.indexOf("//");
-    if (idx === -1) return line;
-
-    const code = line.slice(0, idx).trimEnd();
-    const comment = line.slice(idx + 2).trimStart();
-    return comment ? code + "  // " + comment : code + "  //";
-}
+// withNormalizedComment (inline + standalone comment handling) is shared with
+// TP2 via @bgforge/format; D used a byte-equivalent local copy. Whitespace
+// normalization uses normalizeWhitespaceWeidu directly (no D-specific logic).
 
 // Normalize a trigger/action string - collapse whitespace inside delimiters
 // But if contains //, preserve line structure
@@ -341,7 +317,7 @@ function formatState(node: SyntaxNode, ctx: FormatContext): string {
 
     // Single line state - normalize whitespace if fits
     if (!text.includes("\n")) {
-        const line = withNormalizedComment(ctx.indent + normalizeWhitespace(text));
+        const line = withNormalizedComment(ctx.indent + normalizeWhitespaceWeidu(text));
         if (line.length <= ctx.lineLimit) {
             return line;
         }
@@ -391,7 +367,7 @@ function formatStateExpanded(node: SyntaxNode, ctx: FormatContext): string {
         if (trans) {
             lines.push(formatTransitionNode(trans, indent2, indent2 + indent, lineLimit));
         } else if (isCopyOrMacro(child)) {
-            lines.push(indent2 + normalizeWhitespace(child.text));
+            lines.push(indent2 + normalizeWhitespaceWeidu(child.text));
         } else if (isComment(child)) {
             lines.push(indent2 + normalizeComment(child.text));
         }
@@ -439,7 +415,7 @@ function getActionHeader(node: SyntaxNode): string {
         if (isComment(child) && child.startPosition.row !== headerRow) break;
         parts.push(isComment(child) ? normalizeComment(child.text) : child.text);
     }
-    return normalizeWhitespace(parts.join(" "));
+    return normalizeWhitespaceWeidu(parts.join(" "));
 }
 
 // Iterate children with blank line preservation, calling handler for each
@@ -513,7 +489,7 @@ function formatExtendAction(node: SyntaxNode, ctx: FormatContext): string {
         if (trans) {
             return formatTransitionNode(trans, indent, indent2, lineLimit);
         } else if (isCopyOrMacro(child)) {
-            return indent + normalizeWhitespace(child.text);
+            return indent + normalizeWhitespaceWeidu(child.text);
         } else if (isComment(child)) {
             return indent + normalizeComment(child.text);
         }
