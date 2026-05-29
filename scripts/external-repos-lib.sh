@@ -42,3 +42,23 @@ clone_repos() {
         fi
     done <"$txt_file"
 }
+
+# Clone IESDP into $1 if missing, then check out the latest remote ielib branch.
+# Shared by ie-update.sh (BAF actions/triggers data) and ie-binary-update.sh
+# (binary format specs), which both source the data off the ielib branch.
+checkout_iesdp_ielib() {
+    local iesdp_dir="$1"
+    local iesdp_repo="https://github.com/BGforgeNet/iesdp.git"
+
+    mkdir -p "$(dirname "$iesdp_dir")"
+    if [ ! -d "$iesdp_dir" ]; then
+        git clone "$iesdp_repo" "$iesdp_dir"
+    fi
+    # Works whether the local repo came from `git clone` (full history, branches
+    # tracked) or from clone_repos' `git init + git fetch <SHA>` (shallow, detached
+    # HEAD, no local branches). Both cases land on the latest remote ielib. Use
+    # `git -C` (like clone_repos) instead of cd/pushd so the lib needs no `set -e`
+    # guard against a failed cd.
+    git -C "$iesdp_dir" fetch --depth 1 origin ielib
+    git -C "$iesdp_dir" checkout -B ielib FETCH_HEAD
+}
