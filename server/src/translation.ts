@@ -22,7 +22,6 @@ import { errorMessage } from "./diagnostics";
 import { conlog } from "./logger";
 import {
     findFiles,
-    getRelPath,
     isDirectory,
     isSubpath,
     isSubpathFullyResolved,
@@ -271,7 +270,7 @@ export class Translation {
         if (resolvedFilePath === undefined) return;
         if (!isSubpathFullyResolved(wsRoot, resolvedFilePath)) return;
 
-        const wsPath = getRelPath(wsRoot, filePath);
+        const wsPath = path.relative(wsRoot, filePath);
         this.reloadFileLines(wsPath, text);
     }
 
@@ -329,7 +328,7 @@ export class Translation {
         if (resolvedFilePath === undefined) return;
         if (!isSubpathFullyResolved(wsRoot, resolvedFilePath)) return;
 
-        const wsRelPath = getRelPath(wsRoot, filePath);
+        const wsRelPath = path.relative(wsRoot, filePath);
 
         // Remove this file from its previous consumer set in O(1) via the reverse index.
         this.removeConsumer(filePath);
@@ -370,6 +369,9 @@ export class Translation {
     // Internal methods
     // =========================================================================
 
+    // Tolerates a value that is already a plain filesystem path by returning it
+    // unchanged; the shared uri-utils.uriToPath assumes a file:// URI and throws
+    // on a bare path. Kept local for that reason.
     private uriToPath(uri: string): string {
         return uri.startsWith("file://") ? fileURLToPath(uri) : uri;
     }
@@ -391,7 +393,7 @@ export class Translation {
         if (resolvedFilePath === undefined) return null;
         if (!isSubpathFullyResolved(wsRoot, resolvedFilePath)) return null;
 
-        return getRelPath(wsRoot, filePath);
+        return path.relative(wsRoot, filePath);
     }
 
     /**
@@ -603,7 +605,7 @@ export class Translation {
     private getTraPath(wsPath: string): string | undefined {
         if (isDirectory(this.directory)) {
             if (isSubpath(this.directory, wsPath)) {
-                return getRelPath(this.directory, wsPath);
+                return path.relative(this.directory, wsPath);
             }
         }
         return undefined;
@@ -962,7 +964,7 @@ export class Translation {
         const traDir = this.resolvedTraDir;
         if (!traDir) return undefined;
         if (!isSubpathResolved(traDir, filePath)) return undefined;
-        return getRelPath(traDir, filePath);
+        return path.relative(traDir, filePath);
     }
 
     /** Resolve the tra directory to an absolute path, refusing values that

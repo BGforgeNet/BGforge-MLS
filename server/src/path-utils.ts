@@ -81,8 +81,3 @@ export function findFiles(dirName: string, extension: string) {
     const entries = fg.sync(`**/*.${extension}`, { cwd: dirName, caseSensitiveMatch: false });
     return entries;
 }
-
-/** Get the relative path from `root` to `other_dir`. */
-export function getRelPath(root: string, other_dir: string) {
-    return path.relative(root, other_dir);
-}
