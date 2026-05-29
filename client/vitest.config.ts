@@ -52,6 +52,9 @@ export default defineConfig({
                 "client/src/dialog-tree/dialogTree-webview.ts",
                 "client/src/editors/binaryEditor-webview*.ts",
                 "client/src/editors/binaryEditor.ts",
+                // Shared webview-context helpers (navigator/globalThis/document); like the
+                // bundle entry points above, they run only inside the webview, not in vitest.
+                "client/src/webview-utils.ts",
                 // editors/binaryEditor-messages.ts is a types-only file with no executable
                 // branches; its surface is exercised transitively via document/tree tests.
                 "client/src/editors/binaryEditor-messages.ts",
