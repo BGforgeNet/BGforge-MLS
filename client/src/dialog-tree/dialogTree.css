@@ -2,7 +2,7 @@
  * Dialog tree preview styles (SSL, D, TD, TSSL).
  * Loaded after webview-common.css which provides shared layout
  * (header, sidebar, toolbar, search-box, hidden).
- * See also: ../webview-common.css, ../editors/binaryEditor.css
+ * See also: ../webview-common.css
  */
 
 body {

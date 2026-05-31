@@ -167,18 +167,18 @@ All bundles use **esbuild** (not tsc). The monorepo uses **pnpm workspaces**.
 
 ### Build Targets
 
-| Target        | Input                                                                                        | Output                                      | Notes                                            |
-| ------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------- | ------------------------------------------------ |
-| Client        | `client/src/extension.ts`                                                                    | `client/out/extension.js`                   | CJS, `vscode` external                           |
-| Server        | `server/src/server.ts`                                                                       | `server/out/server.js`                      | CJS, patches `import_meta` for WASM              |
-| TSSL Plugin   | `plugins/tssl-plugin/src/index.ts`                                                           | `node_modules/bgforge-tssl-plugin/index.js` | CJS, standalone                                  |
-| TD Plugin     | `plugins/td-plugin/src/index.ts`                                                             | `node_modules/bgforge-td-plugin/index.js`   | CJS, standalone                                  |
-| Webviews      | `client/src/dialog-tree/dialogTree-webview.ts`, `client/src/editors/binaryEditor-webview.ts` | `client/out/*.js`                           | Browser context, built as part of `build:client` |
-| Format lib    | `format/src/{index,cli}.ts`                                                                  | `format/out/{index,cli}.js`                 | ESM, tsup-bundled; cli.js is the fgfmt bin       |
-| Transpile lib | `transpilers/src/{index,cli}.ts`                                                             | `transpilers/out/{index,cli}.js`            | ESM, tsup-bundled; cli.js is the fgtp bin        |
-| Binary lib    | `binary/src/{index,cli}.ts`                                                                  | `binary/out/{index,cli}.js`                 | ESM, tsup-bundled; cli.js is the fgbin bin       |
-| Grammars      | `grammars/*/grammar.js`                                                                      | `grammars/*/*.wasm` -> `server/out/`        | tree-sitter build --wasm                         |
-| TextMate      | `syntaxes/*.tmLanguage.yml`                                                                  | `syntaxes/*.tmLanguage.json`                | YAML -> JSON conversion                          |
+| Target        | Input                                                                                      | Output                                      | Notes                                            |
+| ------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------- | ------------------------------------------------ |
+| Client        | `client/src/extension.ts`                                                                  | `client/out/extension.js`                   | CJS, `vscode` external                           |
+| Server        | `server/src/server.ts`                                                                     | `server/out/server.js`                      | CJS, patches `import_meta` for WASM              |
+| TSSL Plugin   | `plugins/tssl-plugin/src/index.ts`                                                         | `node_modules/bgforge-tssl-plugin/index.js` | CJS, standalone                                  |
+| TD Plugin     | `plugins/td-plugin/src/index.ts`                                                           | `node_modules/bgforge-td-plugin/index.js`   | CJS, standalone                                  |
+| Webviews      | `client/src/dialog-tree/dialogTree-webview.ts`, `client/src/binary-editor/webview/main.ts` | `client/out/*.js`                           | Browser context, built as part of `build:client` |
+| Format lib    | `format/src/{index,cli}.ts`                                                                | `format/out/{index,cli}.js`                 | ESM, tsup-bundled; cli.js is the fgfmt bin       |
+| Transpile lib | `transpilers/src/{index,cli}.ts`                                                           | `transpilers/out/{index,cli}.js`            | ESM, tsup-bundled; cli.js is the fgtp bin        |
+| Binary lib    | `binary/src/{index,cli}.ts`                                                                | `binary/out/{index,cli}.js`                 | ESM, tsup-bundled; cli.js is the fgbin bin       |
+| Grammars      | `grammars/*/grammar.js`                                                                    | `grammars/*/*.wasm` -> `server/out/`        | tree-sitter build --wasm                         |
+| TextMate      | `syntaxes/*.tmLanguage.yml`                                                                | `syntaxes/*.tmLanguage.json`                | YAML -> JSON conversion                          |
 
 ### Build Pipeline
 
@@ -284,12 +284,12 @@ process, not the extension host.
 
 Two webview-based features, each with a host-side and browser-side module:
 
-| Feature            | Host Module                   | Webview Module            | Trigger                            |
-| ------------------ | ----------------------------- | ------------------------- | ---------------------------------- |
-| Dialog Tree (SSL)  | `dialog-tree/dialogTree.ts`   | `dialogTree-webview.ts`   | Ctrl+Shift+V in SSL                |
-| Dialog Tree (D/TD) | `dialog-tree/dialogTree-d.ts` | `dialogTree-webview.ts`   | Ctrl+Shift+V in D/TD               |
-| Dialog Tree (TSSL) | `dialog-tree/dialogTree.ts`   | `dialogTree-webview.ts`   | Ctrl+Shift+V in TSSL               |
-| Binary Editor      | `editors/binaryEditor.ts`     | `binaryEditor-webview.ts` | Open .pro/.map/.itm/.spl/.eff/.cre |
+| Feature            | Host Module                   | Webview Module                  | Trigger                            |
+| ------------------ | ----------------------------- | ------------------------------- | ---------------------------------- |
+| Dialog Tree (SSL)  | `dialog-tree/dialogTree.ts`   | `dialogTree-webview.ts`         | Ctrl+Shift+V in SSL                |
+| Dialog Tree (D/TD) | `dialog-tree/dialogTree-d.ts` | `dialogTree-webview.ts`         | Ctrl+Shift+V in D/TD               |
+| Dialog Tree (TSSL) | `dialog-tree/dialogTree.ts`   | `dialogTree-webview.ts`         | Ctrl+Shift+V in TSSL               |
+| Binary Editor      | `binary-editor/provider.ts`   | `binary-editor/webview/main.ts` | Open .pro/.map/.itm/.spl/.eff/.cre |
 
 For the binary library internals - spec system, primitives, derivation, format-adapter pattern, adding a new format - see [binary/INTERNALS.md](../binary/INTERNALS.md).
 

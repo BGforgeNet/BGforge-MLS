@@ -4,7 +4,7 @@
 
 /**
  * Escape HTML special characters to prevent XSS.
- * Imported by extension host code (shared.ts, binaryEditor.ts) and by the
+ * Imported by extension host code (dialog-tree/shared.ts) and by the
  * dialog-tree webview bundle (esbuild inlines the import).
  */
 export function escapeHtml(text: string): string {

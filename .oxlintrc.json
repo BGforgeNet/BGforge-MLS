@@ -257,7 +257,7 @@
             // VS Code idiom: a private `_onDidX` EventEmitter exposes its
             // public `.event` as `onDidX`. The pattern is used by `vscode.d.ts`
             // itself; renaming would diverge from the host API style.
-            "files": ["client/src/editors/binaryEditor*.ts"],
+            "files": ["client/src/editors/binaryEditor*.ts", "client/src/binary-editor/**/*.ts"],
             "rules": {
                 "no-underscore-dangle": "off"
             }

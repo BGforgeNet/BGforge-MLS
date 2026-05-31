@@ -1,9 +1,5 @@
 // Dialog tree webview script (SSL, D, TD, TSSL).
 // Wrapped in IIFE to avoid global scope conflicts with other webview scripts.
-// Shares patterns with ../editors/binaryEditor-webview.ts:
-//   - Platform-aware search placeholder (isMac detection)
-//   - Keyboard shortcuts (Ctrl+F / Escape)
-//   - Expand/collapse all button handlers
 import { escapeHtml } from "../utils";
 import { installFatalErrorHandler, setSearchPlaceholder, debounce } from "../webview-utils";
 

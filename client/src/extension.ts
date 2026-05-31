@@ -18,7 +18,7 @@ import {
     type WorkspaceSymbolScopedLanguage,
     lspWorkspaceSymbolsCommand,
 } from "../../shared/protocol";
-import { registerBinaryEditor } from "./editors/binaryEditor";
+import { registerBinaryEditor } from "./binary-editor/register";
 import { registerDialogTree } from "./dialog-tree/dialogTree";
 import { registerDDialogTree } from "./dialog-tree/dialogTree-d";
 import { conlog, initOutputChannel, setDebugLogging } from "./logging";
