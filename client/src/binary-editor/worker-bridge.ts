@@ -1,3 +1,4 @@
+import type { Worker } from "node:worker_threads";
 import type { Request, Response } from "@bgforge/binary-editor";
 import type { WorkerRequest, WorkerResponse } from "./worker-core";
 
@@ -38,4 +39,17 @@ export class WorkerBridge {
         this.pending.clear();
         this.port.dispose();
     }
+}
+
+/** Adapts a real worker_threads Worker to the Port the bridge needs. */
+export function workerPort(worker: Worker): Port {
+    return {
+        postMessage: (msg) => worker.postMessage(msg),
+        onMessage: (cb) => {
+            worker.on("message", cb);
+        },
+        dispose: () => {
+            void worker.terminate();
+        },
+    };
 }
