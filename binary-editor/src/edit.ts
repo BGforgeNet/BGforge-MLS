@@ -28,6 +28,11 @@ export function editField(session: EditorSession, nodeId: NodeId, value: number 
     field.rawValue = value;
     session.dirty = true;
 
+    // Deferred: discriminator-driven sibling re-shaping. When the edited field is a discriminator
+    // (e.g. an IE effect opcode that changes a sibling parameter's type), dependent sibling rows must
+    // be re-evaluated and added to changeSet.changed. The relationship model that drives this lands in
+    // a later plan; for now only the edited row is re-projected.
+
     // Format-validity for the slice: the structure still serializes.
     let formatValid = true;
     try {

@@ -23,7 +23,7 @@ export type Request =
 export type Response =
     | { type: "opened"; result: OpenResult }
     | { type: "closed" }
-    | { type: "window"; rows: Row[] }
+    | { type: "window"; rows: Row[]; dirty: boolean }
     | { type: "edited"; result: EditResult }
     | { type: "structure"; result: StructureResult }
     | { type: "serialized"; bytes: Uint8Array }
@@ -47,12 +47,14 @@ export function dispatch(req: Request): Response {
             case "close":
                 closeSession(req.sessionId);
                 return { type: "closed" };
-            case "getWindow":
-                return { type: "window", rows: getWindow(need(req.sessionId).model, req.start, req.end) };
+            case "getWindow": {
+                const s = need(req.sessionId);
+                return { type: "window", rows: getWindow(s.model, req.start, req.end), dirty: s.dirty };
+            }
             case "expand": {
                 const s = need(req.sessionId);
                 setExpanded(s.model, req.nodeId, req.expanded);
-                return { type: "window", rows: getWindow(s.model, 0, 500) };
+                return { type: "window", rows: getWindow(s.model, 0, 500), dirty: s.dirty };
             }
             case "editField":
                 return { type: "edited", result: editField(need(req.sessionId), req.nodeId, req.value) };
@@ -61,12 +63,12 @@ export function dispatch(req: Request): Response {
             case "undo": {
                 const s = need(req.sessionId);
                 doUndo(s);
-                return { type: "window", rows: getWindow(s.model, 0, 500) };
+                return { type: "window", rows: getWindow(s.model, 0, 500), dirty: s.dirty };
             }
             case "redo": {
                 const s = need(req.sessionId);
                 doRedo(s);
-                return { type: "window", rows: getWindow(s.model, 0, 500) };
+                return { type: "window", rows: getWindow(s.model, 0, 500), dirty: s.dirty };
             }
             case "serialize":
                 return { type: "serialized", bytes: serializeSession(need(req.sessionId)) };

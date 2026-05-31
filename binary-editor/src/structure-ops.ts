@@ -23,6 +23,9 @@ function commit(session: EditorSession, label: string, next: ParseResult): Struc
     session.redo = [];
     session.model = buildModel(next);
     session.dirty = true;
+    // StructureResult.selection is intentionally left unset in the add slice: the new entry's NodeId
+    // is not yet resolved here. Populating it (to select/scroll-to the added entry) lands with the
+    // insert/remove/reorder ops in a later plan.
     return {
         changeSet: {
             changed: getWindow(session.model, 0, 200),

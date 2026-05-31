@@ -16,4 +16,5 @@ export type {
 
 export { dispatch } from "./protocol";
 export type { Request, Response } from "./protocol";
+export type { StructureOpRequest } from "./structure-ops";
 export { openSession, closeSession } from "./session";
