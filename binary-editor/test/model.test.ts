@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { mapParser } from "@bgforge/binary";
-import { buildModel } from "../src/model";
+import { buildModel, visibleNodes, setExpanded } from "../src/model";
 
 const MAP_FIXTURE = path.resolve(__dirname, "../../client/testFixture/maps/arcaves.map");
 
@@ -33,5 +33,24 @@ describe("buildModel", () => {
         const m = model();
         const names = m.nodes.filter((n) => n.depth === 0).map((n) => n.name);
         expect(names).toContain("Global Variables");
+    });
+});
+
+describe("visibility", () => {
+    it("shows only depth-0 nodes when nothing is expanded", () => {
+        const m = model();
+        const vis = visibleNodes(m);
+        expect(vis.every((n) => n.depth === 0)).toBe(true);
+    });
+
+    it("reveals a group's children after expanding it", () => {
+        const m = model();
+        const gv = m.nodes.find((n) => n.depth === 0 && n.name === "Global Variables");
+        expect(gv).toBeDefined();
+        if (!gv) return; // narrow for TS
+        setExpanded(m, gv.id, true);
+        const vis = visibleNodes(m);
+        const children = vis.filter((n) => n.parentId === gv.id);
+        expect(children.length).toBe(gv.childCount);
     });
 });

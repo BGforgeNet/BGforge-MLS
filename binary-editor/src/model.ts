@@ -23,6 +23,8 @@ export interface Model {
     nodes: FlatNode[];
     /** id -> index into `nodes`. */
     byId: Map<NodeId, number>;
+    /** Set of group NodeIds that are currently expanded. */
+    expanded: Set<NodeId>;
 }
 
 /** Pre-order flatten of the parsed tree. The root group is not itself a node;
@@ -31,6 +33,7 @@ export interface Model {
 export function buildModel(parseResult: ParseResult): Model {
     const nodes: FlatNode[] = [];
     const byId = new Map<NodeId, number>();
+    const expanded = new Set<NodeId>();
 
     const walk = (
         entries: (ParsedField | ParsedGroup)[],
@@ -58,5 +61,30 @@ export function buildModel(parseResult: ParseResult): Model {
     };
 
     walk(parseResult.root.fields, 0, undefined, []);
-    return { parseResult, nodes, byId };
+    return { parseResult, nodes, byId, expanded };
+}
+
+export function setExpanded(model: Model, id: NodeId, value: boolean): void {
+    if (value) model.expanded.add(id);
+    else model.expanded.delete(id);
+}
+
+export function visibleNodes(model: Model): FlatNode[] {
+    const out: FlatNode[] = [];
+    for (const node of model.nodes) {
+        if (node.parentId === undefined || isAncestorChainExpanded(model, node.parentId)) {
+            out.push(node);
+        }
+    }
+    return out;
+}
+
+function isAncestorChainExpanded(model: Model, parentId: NodeId): boolean {
+    let current: NodeId | undefined = parentId;
+    while (current !== undefined) {
+        if (!model.expanded.has(current)) return false;
+        const idx = model.byId.get(current);
+        current = idx === undefined ? undefined : model.nodes[idx]?.parentId;
+    }
+    return true;
 }
