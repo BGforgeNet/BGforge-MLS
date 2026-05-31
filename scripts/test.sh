@@ -39,6 +39,7 @@ parallel \
     "Typecheck plugins" "(cd plugins/tssl-plugin && pnpm exec tsc --noEmit) && (cd plugins/td-plugin && pnpm exec tsc --noEmit)" \
     "Typecheck server" "(cd server && pnpm exec tsc --noEmit)" \
     "Typecheck binary" "(cd binary && pnpm exec tsc --noEmit)" \
+    "Typecheck binary-editor" "(cd binary-editor && pnpm exec tsc --noEmit)" \
     "Typecheck format" "(cd format && pnpm exec tsc --noEmit)" \
     "Typecheck transpilers" "(cd transpilers && pnpm exec tsc --noEmit)" \
     "Oxlint" "pnpm exec oxlint" \
@@ -67,6 +68,8 @@ vitest run --config plugins/td-plugin/vitest.config.ts --coverage
 vitest run --config transpilers/vitest.config.ts --coverage
 vitest run --config format/vitest.config.ts --coverage
 vitest run --config binary/vitest.config.ts --coverage
+# binary-editor has no coverage thresholds configured yet, so it runs pass/fail only.
+vitest run --config binary-editor/vitest.config.ts
 vitest run --config shared/vitest.config.ts --coverage
 
 # --- Phase 2: Builds (server and CLIs in parallel, independent of each other) ---
