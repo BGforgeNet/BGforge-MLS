@@ -33,6 +33,10 @@ function extOf(uri: string): string {
     return dot === -1 ? "" : uri.slice(dot + 1);
 }
 
+export function closeSession(id: SessionId): void {
+    sessionStore.delete(id);
+}
+
 export function openSession(uri: string, bytes: Uint8Array, options: ParseOptions = {}): OpenResult {
     const ext = extOf(uri);
     const parser = parserRegistry.getByExtension(ext);

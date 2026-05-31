@@ -13,3 +13,7 @@ export type {
     LayoutDescriptor,
     OpenResult,
 } from "./types";
+
+export { dispatch } from "./protocol";
+export type { Request, Response } from "./protocol";
+export { openSession, closeSession } from "./session";
