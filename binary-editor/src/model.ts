@@ -16,6 +16,10 @@ export interface FlatNode {
     /** Number of direct children (0 for fields). */
     childCount: number;
     name: string;
+    /** True when an ancestor group has editingLocked === true. Propagated from
+     *  the parent during buildModel so field projection can mark rows non-editable
+     *  without re-walking the tree at render time. */
+    parentLocked?: boolean;
 }
 
 export interface Model {
@@ -40,11 +44,14 @@ export function buildModel(parseResult: ParseResult): Model {
         depth: number,
         parentId: NodeId | undefined,
         parentNamePath: NamePath,
+        parentLocked: boolean,
     ): void => {
         entries.forEach((entry, index) => {
             const id = parentId === undefined ? String(index) : `${parentId}/${index}`;
             const namePath: NamePath = [...parentNamePath, entry.name];
             const group = isGroup(entry) ? entry : undefined;
+            // A node is locked if any ancestor group carries editingLocked === true.
+            const locked = parentLocked || group?.editingLocked === true;
             byId.set(id, nodes.length);
             nodes.push({
                 id,
@@ -55,12 +62,13 @@ export function buildModel(parseResult: ParseResult): Model {
                 source: entry,
                 childCount: group ? group.fields.length : 0,
                 name: entry.name,
+                parentLocked: parentLocked || undefined,
             });
-            if (group) walk(group.fields, depth + 1, id, namePath);
+            if (group) walk(group.fields, depth + 1, id, namePath, locked);
         });
     };
 
-    walk(parseResult.root.fields, 0, undefined, []);
+    walk(parseResult.root.fields, 0, undefined, [], false);
     return { parseResult, nodes, byId, expanded };
 }
 
