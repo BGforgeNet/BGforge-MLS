@@ -272,10 +272,16 @@
             }
         },
         {
-            // VS Code's `webview.postMessage()` (extension side) and
-            // `acquireVsCodeApi().postMessage()` (webview side) are not the
-            // browser's `window.postMessage`; neither takes a `targetOrigin`.
-            "files": ["client/src/editors/**", "client/src/dialog-tree/**", "client/src/webview-utils.ts"],
+            // VS Code's `webview.postMessage()` (extension side),
+            // `acquireVsCodeApi().postMessage()` (webview side), and
+            // `worker_threads` `parentPort.postMessage()` are not the browser's
+            // `window.postMessage`; none take a `targetOrigin`.
+            "files": [
+                "client/src/editors/**",
+                "client/src/dialog-tree/**",
+                "client/src/webview-utils.ts",
+                "client/src/binary-editor/**"
+            ],
             "rules": {
                 "unicorn/require-post-message-target-origin": "off"
             }

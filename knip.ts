@@ -21,6 +21,8 @@ const config: KnipConfig = {
                 "src/extension.ts",
                 "src/editors/binaryEditor-webview.ts",
                 "src/dialog-tree/dialogTree-webview.ts",
+                "src/binary-editor/worker.ts",
+                "src/binary-editor/webview/main.ts",
                 // test entry points for @vscode/test-electron
                 "src/test/runTest.ts",
                 "src/test/index.ts",
@@ -28,6 +30,9 @@ const config: KnipConfig = {
                 // vitest unit tests (run via client/vitest.config.ts)
                 "test/*.test.ts",
             ],
+            // @bgforge/binary-editor is imported in the worker/webview stubs; the
+            // static import is added in a later task once the host wiring is in place.
+            ignoreDependencies: ["@bgforge/binary-editor"],
         },
         server: {
             // Point knip at the TypeScript source entry directly.

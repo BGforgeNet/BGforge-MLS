@@ -7,6 +7,7 @@ set -eu -o pipefail
 esbuild \
   ./client/src/editors/binaryEditor-webview.ts \
   ./client/src/dialog-tree/dialogTree-webview.ts \
+  ./client/src/binary-editor/webview/main.ts \
   --outdir=client/out \
   --bundle \
   "$@"

@@ -140,6 +140,9 @@ importers:
       '@bgforge/binary':
         specifier: workspace:*
         version: link:../binary
+      '@bgforge/binary-editor':
+        specifier: workspace:*
+        version: link:../binary-editor
       vscode-languageclient:
         specifier: 8.1.0
         version: 8.1.0
