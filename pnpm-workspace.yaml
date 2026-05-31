@@ -1,5 +1,6 @@
 packages:
     - binary
+    - binary-editor
     - client
     - format
     - server

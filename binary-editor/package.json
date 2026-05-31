@@ -1,0 +1,18 @@
+{
+    "name": "@bgforge/binary-editor",
+    "version": "0.0.0",
+    "private": true,
+    "type": "module",
+    "main": "src/index.ts",
+    "scripts": {
+        "test:unit": "vitest run --config vitest.config.ts",
+        "test": "tsc --noEmit && vitest run --config vitest.config.ts"
+    },
+    "dependencies": {
+        "@bgforge/binary": "workspace:*"
+    },
+    "devDependencies": {
+        "typescript": "^5.9.3",
+        "vitest": "^4.1.7"
+    }
+}

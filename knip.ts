@@ -104,6 +104,9 @@ const config: KnipConfig = {
             // workspace; knip's per-workspace dep tracing doesn't reach across that boundary.
             ignoreDependencies: ["cac", "diff"],
         },
+        "binary-editor": {
+            entry: ["test/**/*.test.ts"],
+        },
     },
     ignore: [
         // tree-sitter grammars, not TypeScript
