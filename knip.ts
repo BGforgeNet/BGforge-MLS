@@ -28,11 +28,8 @@ const config: KnipConfig = {
                 "src/test/index.ts",
                 "src/test/*.test.ts",
                 // vitest unit tests (run via client/vitest.config.ts)
-                "test/*.test.ts",
+                "test/**/*.test.ts",
             ],
-            // @bgforge/binary-editor is imported in the worker/webview stubs; the
-            // static import is added in a later task once the host wiring is in place.
-            ignoreDependencies: ["@bgforge/binary-editor"],
         },
         server: {
             // Point knip at the TypeScript source entry directly.
