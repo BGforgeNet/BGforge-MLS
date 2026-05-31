@@ -37,4 +37,14 @@ describe("dispatch", () => {
         const res = dispatch({ type: "getWindow", sessionId: "nope", start: 0, end: 1 });
         expect(res.type).toBe("error");
     });
+
+    it("returns a json snapshot for an open session", () => {
+        const opened = dispatch({ type: "open", uri: "file:///arcaves.map", bytes: bytes() });
+        if (opened.type !== "opened") throw new Error("expected opened");
+        const snap = dispatch({ type: "snapshot", sessionId: opened.result.sessionId });
+        expect(snap.type).toBe("snapshot");
+        if (snap.type !== "snapshot") return;
+        expect(snap.json.length).toBeGreaterThan(0);
+        expect(() => JSON.parse(snap.json)).not.toThrow();
+    });
 });

@@ -1,4 +1,4 @@
-import type { ParseOptions } from "@bgforge/binary";
+import { formatAdapterRegistry, type ParseOptions } from "@bgforge/binary";
 import { closeSession, openSession, sessionStore, type EditorSession } from "./session";
 import { setExpanded } from "./model";
 import { getWindow } from "./window";
@@ -18,7 +18,8 @@ export type Request =
     | { type: "undo"; sessionId: SessionId }
     | { type: "redo"; sessionId: SessionId }
     | { type: "serialize"; sessionId: SessionId }
-    | { type: "validate"; sessionId: SessionId };
+    | { type: "validate"; sessionId: SessionId }
+    | { type: "snapshot"; sessionId: SessionId };
 
 export type Response =
     | { type: "opened"; result: OpenResult }
@@ -28,6 +29,7 @@ export type Response =
     | { type: "structure"; result: StructureResult }
     | { type: "serialized"; bytes: Uint8Array }
     | { type: "diagnostics"; diagnostics: ReturnType<typeof validate> }
+    | { type: "snapshot"; json: string }
     | { type: "error"; message: string };
 
 function need(sessionId: SessionId): EditorSession {
@@ -74,6 +76,12 @@ export function dispatch(req: Request): Response {
                 return { type: "serialized", bytes: serializeSession(need(req.sessionId)) };
             case "validate":
                 return { type: "diagnostics", diagnostics: validate(need(req.sessionId)) };
+            case "snapshot": {
+                const s = need(req.sessionId);
+                const adapter = formatAdapterRegistry.get(s.parserId);
+                if (!adapter) throw new Error(`No format adapter for ${s.parserId}`);
+                return { type: "snapshot", json: adapter.createJsonSnapshot(s.model.parseResult) };
+            }
             default: {
                 // Exhaustiveness guard: every member of the Request union is handled above.
                 // This branch is unreachable at runtime; it exists only to satisfy tsc's
