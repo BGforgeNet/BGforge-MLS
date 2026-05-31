@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest";
 import { openSession, sessionStore } from "../src/session";
 import { setExpanded } from "../src/model";
 import { editField } from "../src/edit";
+import { undo } from "../src/structure-ops";
+import type { ParsedField } from "@bgforge/binary";
 
 const MAP_FIXTURE = path.resolve(__dirname, "../../client/testFixture/maps/arcaves.map");
 
@@ -39,4 +41,18 @@ describe("editField", () => {
         editField(session, child.id, 7);
         expect(session.undo.length).toBe(1);
     });
+});
+
+it("undo after a field edit restores the prior value", () => {
+    const { session, gv } = openAndExpandGlobals();
+    const child = session.model.nodes.find((n) => n.parentId === gv.id && n.kind === "field");
+    expect(child).toBeDefined();
+    if (!child) return;
+    const original = (child.source as ParsedField).value;
+    editField(session, child.id, 999);
+    undo(session);
+    const after = session.model.nodes.find((n) => n.id === child.id);
+    expect(after).toBeDefined();
+    if (!after) return;
+    expect((after.source as ParsedField).value).toBe(original);
 });
