@@ -39,6 +39,7 @@
 ### Extension / server
 
 - Fallout SSL and WeiDU D hover and signature help now recognise a `/** */` doc comment that is separated from its definition by a blank line or a line comment; previously Fallout SSL required the comment to sit immediately above. This matches TypeScript/JSDoc behaviour.
+- WeiDU D find references and rename now include cross-dialog `EXTERN` targets: an `EXTERN` in one dialog that points at a state defined in another dialog of the same file is now found when locating references to (or renaming) that state. Previously such references were missed.
 - Minimum supported Node.js version raised to 20.
 - Fix: `quick-lru` is now correctly declared as a runtime dependency in `@bgforge/mls-server` (previously misclassified as devDependency, which would cause module-not-found errors for downstream npm consumers).
 - New setting `bgforge.debug` enables debug logging in the BGforge MLS output panel. Useful for troubleshooting rename, include resolution, and other issues.
