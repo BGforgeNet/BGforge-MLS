@@ -107,12 +107,41 @@ jobs:
                   # produced from a recent push or PR.
                   retention-days: 14
 
+            # The GitHub Release (carrying the SLSA-provenance subjects and the SBOM) is
+            # the canonical record of the build, so it is created before the extension is
+            # pushed to the external marketplaces. All three reference env.VSIX_PATH (set
+            # in the Package step) rather than the Open VSX step output, which no longer
+            # precedes them.
+            - name: Compute artifact hashes for SLSA provenance (release only)
+              id: artifact-hashes
+              if: startsWith(github.ref, 'refs/tags/')
+              run: |
+                  set -euo pipefail
+                  # sha256sum emits "<hash>  <filename>" lines; slsa-github-generator
+                  # expects base64(sha256sum-output) as base64-subjects.
+                  subjects="$(sha256sum \
+                    "$VSIX_PATH" \
+                    dist/sbom.cdx.json \
+                    dist/*.zip \
+                    | base64 -w0)"
+                  echo "subjects=$subjects" >> "$GITHUB_OUTPUT"
+
+            - name: GitHub Release
+              if: "startsWith(github.ref, 'refs/tags/')"
+              uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+              with:
+                  name: ${{ github.ref_name }}
+                  fail_on_unmatched_files: true
+                  files: |
+                      ${{ env.VSIX_PATH }}
+                      dist/*.zip
+                      dist/sbom.cdx.json
+
             # Use pre-built VSIX for publishing: pnpm package (scripts/package.sh)
             # dereferences pnpm symlinks that vsce can't follow.
             - name: Publish to Open VSX Registry
               if: "startsWith(github.ref, 'refs/tags/')"
               uses: HaaLeo/publish-vscode-extension@ca5561daa085dee804bf9f37fe0165785a9b14db # v2
-              id: publishToOpenVSX
               with:
                   pat: ${{ secrets.OPEN_VSX_TOKEN }}
                   extensionFile: ${{ env.VSIX_PATH }}
@@ -123,7 +152,7 @@ jobs:
               with:
                   pat: ${{ secrets.VS_MARKETPLACE_TOKEN }}
                   registryUrl: https://marketplace.visualstudio.com
-                  extensionFile: ${{ steps.publishToOpenVSX.outputs.vsixPath }}
+                  extensionFile: ${{ env.VSIX_PATH }}
 
             # Libraries publish before the server: @bgforge/mls-server declares a
             # runtime dependency on @bgforge/format (workspace:*, substituted with the
@@ -152,31 +181,6 @@ jobs:
               run: SKIP_BUILD=1 ./scripts/publish-server.sh
               env:
                   NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-            - name: Compute artifact hashes for SLSA provenance (release only)
-              id: artifact-hashes
-              if: startsWith(github.ref, 'refs/tags/')
-              run: |
-                  set -euo pipefail
-                  # sha256sum emits "<hash>  <filename>" lines; slsa-github-generator
-                  # expects base64(sha256sum-output) as base64-subjects.
-                  subjects="$(sha256sum \
-                    "${{ steps.publishToOpenVSX.outputs.vsixPath }}" \
-                    dist/sbom.cdx.json \
-                    dist/*.zip \
-                    | base64 -w0)"
-                  echo "subjects=$subjects" >> "$GITHUB_OUTPUT"
-
-            - name: GitHub Release
-              if: "startsWith(github.ref, 'refs/tags/')"
-              uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
-              with:
-                  name: ${{ github.ref_name }}
-                  fail_on_unmatched_files: true
-                  files: |
-                      ${{ steps.publishToOpenVSX.outputs.vsixPath }}
-                      dist/*.zip
-                      dist/sbom.cdx.json
 
     provenance:
         name: SLSA provenance
