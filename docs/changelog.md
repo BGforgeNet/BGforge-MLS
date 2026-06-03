@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.8.1
+
+- Publishes the npm packages introduced in 3.8.0 - `@bgforge/binary`, `@bgforge/format`, `@bgforge/transpile`, and `@bgforge/mls-server` - which did not reach npm in the 3.8.0 release. The extension is otherwise unchanged from 3.8.0.
+
 ## 3.8.0
 
 ### NPM packages
