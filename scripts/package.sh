@@ -13,7 +13,30 @@
 
 set -e
 
-trap 'echo "Restoring node_modules..." && pnpm install --frozen-lockfile' EXIT
+# Workspace package symlinks under server/node_modules (e.g. @bgforge/format ->
+# ../../../format) are captured here before the strip below removes them. pnpm
+# install treats an existing node_modules as already satisfied and will NOT
+# recreate a symlink we deleted by hand, so the restore recreates them itself.
+# They are esbuild-bundled into server/out, so the VSIX does not need them - but
+# the later `pnpm publish` of @bgforge/mls-server needs the link present to
+# resolve its workspace:* dependency version.
+workspace_links=()
+
+restore_node_modules() {
+    echo "Restoring node_modules..."
+    pnpm install --frozen-lockfile
+    local entry path target
+    for entry in "${workspace_links[@]}"; do
+        path="${entry%%=*}"
+        target="${entry#*=}"
+        if [ ! -e "$path" ] && [ ! -L "$path" ]; then
+            mkdir -p "$(dirname "$path")"
+            ln -s "$target" "$path"
+        fi
+    done
+}
+
+trap restore_node_modules EXIT
 
 # Step 1: Build with full deps available.
 ./scripts/prepublish.sh
@@ -28,14 +51,28 @@ for dep in server/node_modules/sslc-emscripten-noderawfs server/node_modules/esb
     fi
 done
 
+# Record workspace package symlinks (target outside the pnpm store) before the
+# strip removes them, so restore_node_modules can recreate them. Dev-dep symlinks
+# (targets in .pnpm/) are left for pnpm install to handle and are not recorded.
+for entry in server/node_modules/@*/*; do
+    [ -L "$entry" ] || continue
+    target=$(readlink "$entry")
+    case "$target" in
+        *.pnpm/*) ;;
+        *) workspace_links+=("$entry=$target") ;;
+    esac
+done
+
 # Strip all remaining pnpm symlinks from server/node_modules.
 for entry in server/node_modules/*; do
     [ -L "$entry" ] && rm "$entry"
 done
 
 # Strip pnpm internal real dirs from server/node_modules.
-# All @scoped dirs here are dev-only (pnpm symlinks to @types, @supercharge, etc).
-# If a runtime @scoped dep is ever added, it must be dereffed in Step 2 above.
+# @scoped dirs here are pnpm symlinks to dev deps (@types, @supercharge, etc) plus
+# any @bgforge/* workspace links. All are stripped so vsce's zip writer does not
+# choke on symlinks; the workspace links are recreated afterward by the EXIT trap
+# (see workspace_links above), which the publish step needs.
 rm -rf server/node_modules/.bin server/node_modules/.vite
 for dir in server/node_modules/@*/; do
     [ -d "$dir" ] && rm -rf "$dir"
