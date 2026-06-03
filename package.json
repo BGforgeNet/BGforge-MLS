@@ -87,30 +87,30 @@
         "bench": "cd server && pnpm bench"
     },
     "devDependencies": {
-        "@oxlint/plugins": "1.66.0",
+        "@oxlint/plugins": "1.68.0",
         "@stryker-mutator/core": "^9.6.1",
         "@stryker-mutator/typescript-checker": "^9.6.1",
         "@stryker-mutator/vitest-runner": "^9.6.1",
         "@types/mocha": "^10.0.10",
         "@types/node": "^24.12.2",
-        "@vitest/coverage-v8": "^4.1.7",
+        "@vitest/coverage-v8": "^4.1.8",
         "@vscode/codicons": "^0.0.45",
         "@vscode/vsce": "^3.9.1",
         "cac": "^7.0.0",
         "diff": "^9.0.0",
         "esbuild": "^0.28.0",
-        "knip": "^6.14.1",
-        "mocha": "^11.7.5",
-        "oxfmt": "^0.51.0",
-        "oxlint": "1.66.0",
+        "knip": "^6.15.0",
+        "mocha": "^11.7.6",
+        "oxfmt": "^0.53.0",
+        "oxlint": "1.68.0",
         "quick-lru": "^7.3.0",
         "remark-cli": "^12.0.1",
         "remark-validate-links": "^13.1.0",
         "tree-sitter-cli": "0.26.9",
-        "tsx": "^4.22.3",
+        "tsx": "^4.22.4",
         "typescript": "^5.9.3",
-        "vite": "^8.0.13",
-        "vitest": "^4.1.7",
+        "vite": "^8.0.16",
+        "vitest": "^4.1.8",
         "vscode-oniguruma": "^2.0.1",
         "vscode-textmate": "^9.3.2",
         "web-tree-sitter": "^0.26.9",
@@ -712,5 +712,5 @@
     "engines": {
         "vscode": "^1.73.0"
     },
-    "packageManager": "pnpm@11.0.8"
+    "packageManager": "pnpm@11.5.1"
 }

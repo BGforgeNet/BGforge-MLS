@@ -203,7 +203,22 @@
         // code point). The codebase parses ASCII-only formats (Fallout SSL,
         // WeiDU, binary headers) where the flag adds no correctness value
         // and risks behavior changes on patterns with literal backslashes.
-        "require-unicode-regexp": "off"
+        "require-unicode-regexp": "off",
+
+        // Newly enabled by oxlint 1.68. The codebase's regexes parse ASCII
+        // formats (Fallout SSL, WeiDU, binary headers) and address capture
+        // groups positionally; naming every group is churn across parser and
+        // grammar regexes with no correctness value. Same "out of scope for a
+        // lint upgrade" rationale as `unicorn/filename-case` above.
+        "prefer-named-capture-group": "off",
+
+        // Also newly enabled by oxlint 1.68. Method-signature vs
+        // property-signature (`foo(): T` vs `foo: () => T`) in interfaces is a
+        // style preference with no correctness value; the codebase uses method
+        // signatures idiomatically. Converting the call sites is churn out of
+        // scope for a lint upgrade, same as the other `typescript/` style
+        // rules disabled above (`array-type`, `consistent-type-definitions`).
+        "typescript/method-signature-style": "off"
     },
     "overrides": [
         {
