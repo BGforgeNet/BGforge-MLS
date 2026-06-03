@@ -83,7 +83,16 @@ jobs:
               if: startsWith(github.ref, 'refs/tags/')
               run: |
                   set -euo pipefail
-                  pnpm dlx @cyclonedx/cyclonedx-npm@4.2.1 --output-file dist/sbom.cdx.json
+                  # --allow-build=libxmljs2: cyclonedx pulls libxmljs2 (native; ships a prebuilt binary
+                  # via prebuild-install) as a transitive dep. pnpm 11 fails closed on an unclassified
+                  # install script (ERR_PNPM_IGNORED_BUILDS), and `pnpm dlx` resolves in a throwaway dir
+                  # outside the workspace, so the pnpm-workspace.yaml allowBuilds list does not apply -
+                  # allow it inline.
+                  # --ignore-npm-errors: cyclonedx-npm shells out to `npm ls`, which misreads pnpm's
+                  # symlinked store and reports transitive devDependencies (e.g. isexe's) as missing.
+                  # The component tree is still walked in full, so treat those npm-ls warnings as
+                  # non-fatal rather than failing the release.
+                  pnpm dlx --allow-build=libxmljs2 @cyclonedx/cyclonedx-npm@4.2.1 --ignore-npm-errors --output-file dist/sbom.cdx.json
 
             - name: Build editor bundles (TextMate, Kate, Notepad++, Geany)
               run: pnpm build:editors
