@@ -125,12 +125,10 @@ jobs:
                   registryUrl: https://marketplace.visualstudio.com
                   extensionFile: ${{ steps.publishToOpenVSX.outputs.vsixPath }}
 
-            - name: Publish server to npm
-              if: startsWith(github.ref, 'refs/tags/')
-              run: SKIP_BUILD=1 ./scripts/publish-server.sh
-              env:
-                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
+            # Libraries publish before the server: @bgforge/mls-server declares a
+            # runtime dependency on @bgforge/format (workspace:*, substituted with the
+            # concrete version on publish), so format must already exist on npm for a
+            # freshly installed server package to resolve it.
             - name: Publish transpile library to npm
               if: startsWith(github.ref, 'refs/tags/')
               run: SKIP_BUILD=1 ./scripts/publish-transpile.sh
@@ -146,6 +144,12 @@ jobs:
             - name: Publish binary library to npm
               if: startsWith(github.ref, 'refs/tags/')
               run: SKIP_BUILD=1 ./scripts/publish-binary.sh
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+            - name: Publish server to npm
+              if: startsWith(github.ref, 'refs/tags/')
+              run: SKIP_BUILD=1 ./scripts/publish-server.sh
               env:
                   NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
