@@ -3,7 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { mapParser, type ParseResult } from "@bgforge/binary";
 import { buildModel, setExpanded } from "../src/model";
-import { getWindow } from "../src/window";
+import { getWindow, projectRow } from "../src/window";
 
 const MAP_FIXTURE = path.resolve(__dirname, "../../client/testFixture/maps/arcaves.map");
 function model() {
@@ -119,5 +119,53 @@ describe("getWindow", () => {
         expect(unlockedFieldRow).toBeDefined();
         if (!unlockedFieldRow) return;
         expect(unlockedFieldRow.editable).toBe(true);
+    });
+});
+
+function enumFlagResult(): ParseResult {
+    return {
+        format: "test",
+        formatName: "Test Format",
+        root: {
+            name: "Root",
+            fields: [
+                {
+                    name: "Stats",
+                    fields: [
+                        {
+                            name: "Race",
+                            value: 1,
+                            offset: 0,
+                            size: 1,
+                            type: "enum",
+                            enumOptions: { "0": "Human", "1": "Mutant" },
+                            description: "Critter race",
+                        },
+                        {
+                            name: "Flags",
+                            value: 3,
+                            offset: 1,
+                            size: 1,
+                            type: "flags",
+                            flagOptions: { "0": "Visible", "1": "Dead" },
+                        },
+                    ],
+                },
+            ],
+        },
+    };
+}
+
+describe("projectRow metadata", () => {
+    it("carries enumOptions, flagOptions, and description from the field", () => {
+        const m = buildModel(enumFlagResult());
+        const stats = m.nodes.find((n) => n.name === "Stats")!;
+        const race = m.nodes.find((n) => n.name === "Race")!;
+        const flags = m.nodes.find((n) => n.name === "Flags")!;
+        expect(projectRow(m, race).enumOptions).toEqual({ "0": "Human", "1": "Mutant" });
+        expect(projectRow(m, race).description).toBe("Critter race");
+        expect(projectRow(m, flags).flagOptions).toEqual({ "0": "Visible", "1": "Dead" });
+        // groups carry none of these
+        expect(projectRow(m, stats).enumOptions).toBeUndefined();
     });
 });

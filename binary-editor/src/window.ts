@@ -27,6 +27,9 @@ export function projectRow(model: Model, node: FlatNode): Row {
     // Fields inside an editingLocked ancestor group are not editable; padding and
     // note fields carry no user-editable data regardless of lock state.
     base.editable = node.parentLocked !== true && field.type !== "padding" && field.type !== "note";
+    if (field.description !== undefined) base.description = field.description;
+    if (field.enumOptions !== undefined) base.enumOptions = field.enumOptions;
+    if (field.flagOptions !== undefined) base.flagOptions = field.flagOptions;
     return base;
 }
 

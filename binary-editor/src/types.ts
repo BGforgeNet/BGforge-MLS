@@ -27,6 +27,9 @@ export interface Row {
     offset?: number;
     size?: number;
     editable?: boolean;
+    description?: string;
+    enumOptions?: Readonly<Record<string, string>>;
+    flagOptions?: Readonly<Record<string, string>>;
 }
 
 export interface Diagnostic {
