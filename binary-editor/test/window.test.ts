@@ -3,7 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { mapParser, type ParseResult } from "@bgforge/binary";
 import { buildModel, setExpanded } from "../src/model";
-import { getWindow, projectRow } from "../src/window";
+import { getChildren, getWindow, projectRow } from "../src/window";
 
 const MAP_FIXTURE = path.resolve(__dirname, "../../client/testFixture/maps/arcaves.map");
 function model() {
@@ -167,5 +167,27 @@ describe("projectRow metadata", () => {
         expect(projectRow(m, flags).flagOptions).toEqual({ "0": "Visible", "1": "Dead" });
         // groups carry none of these
         expect(projectRow(m, stats).enumOptions).toBeUndefined();
+    });
+});
+
+describe("getChildren", () => {
+    it("returns depth-0 roots when parentId is null, with total", () => {
+        const m = model(); // MAP fixture helper already defined at the top of this file
+        const roots = m.nodes.filter((n) => n.parentId === undefined);
+        const r = getChildren(m, null, 0, 1000);
+        expect(r.total).toBe(roots.length);
+        expect(r.rows.map((row) => row.id)).toEqual(roots.map((n) => n.id));
+        expect(r.rows.every((row) => row.depth === 0)).toBe(true);
+    });
+
+    it("returns a [start,end) slice of a group's direct children", () => {
+        const m = buildModel(enumFlagResult()); // enumFlagResult() was added by Task 1
+        const stats = m.nodes.find((n) => n.name === "Stats")!;
+        const all = getChildren(m, stats.id, 0, 100);
+        expect(all.total).toBe(2);
+        expect(all.rows.map((row) => row.name)).toEqual(["Race", "Flags"]);
+        const sliced = getChildren(m, stats.id, 1, 2);
+        expect(sliced.rows.map((row) => row.name)).toEqual(["Flags"]);
+        expect(sliced.total).toBe(2);
     });
 });

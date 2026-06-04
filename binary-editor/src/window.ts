@@ -1,6 +1,6 @@
 import type { ParsedField, ParsedGroup } from "@bgforge/binary";
 import { type FlatNode, type Model, visibleNodes } from "./model";
-import type { Row } from "./types";
+import type { NodeId, Row } from "./types";
 
 export function projectRow(model: Model, node: FlatNode): Row {
     const base: Row = {
@@ -36,4 +36,15 @@ export function projectRow(model: Model, node: FlatNode): Row {
 export function getWindow(model: Model, start: number, end: number): Row[] {
     const visible = visibleNodes(model);
     return visible.slice(start, end).map((node) => projectRow(model, node));
+}
+
+export function getChildren(
+    model: Model,
+    parentId: NodeId | null,
+    start: number,
+    end: number,
+): { rows: Row[]; total: number } {
+    const indices = model.childrenByParent.get(parentId ?? "") ?? [];
+    const rows = indices.slice(start, end).map((i) => projectRow(model, model.nodes[i]!));
+    return { rows, total: indices.length };
 }

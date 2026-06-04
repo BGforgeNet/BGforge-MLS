@@ -29,6 +29,8 @@ export interface Model {
     byId: Map<NodeId, number>;
     /** Set of group NodeIds that are currently expanded. */
     expanded: Set<NodeId>;
+    /** Direct-children indices into `nodes`, keyed by parent NodeId; "" holds the depth-0 roots. */
+    childrenByParent: Map<NodeId | "", number[]>;
 }
 
 /** Pre-order flatten of the parsed tree. The root group is not itself a node;
@@ -38,6 +40,7 @@ export function buildModel(parseResult: ParseResult): Model {
     const nodes: FlatNode[] = [];
     const byId = new Map<NodeId, number>();
     const expanded = new Set<NodeId>();
+    const childrenByParent = new Map<NodeId | "", number[]>();
 
     const walk = (
         entries: (ParsedField | ParsedGroup)[],
@@ -53,6 +56,10 @@ export function buildModel(parseResult: ParseResult): Model {
             // A node is locked if any ancestor group carries editingLocked === true.
             const locked = parentLocked || group?.editingLocked === true;
             byId.set(id, nodes.length);
+            const parentKey = parentId ?? "";
+            const siblings = childrenByParent.get(parentKey);
+            if (siblings) siblings.push(nodes.length);
+            else childrenByParent.set(parentKey, [nodes.length]);
             nodes.push({
                 id,
                 namePath,
@@ -69,7 +76,7 @@ export function buildModel(parseResult: ParseResult): Model {
     };
 
     walk(parseResult.root.fields, 0, undefined, [], false);
-    return { parseResult, nodes, byId, expanded };
+    return { parseResult, nodes, byId, expanded, childrenByParent };
 }
 
 export function setExpanded(model: Model, id: NodeId, value: boolean): void {
