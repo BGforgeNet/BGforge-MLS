@@ -1,5 +1,6 @@
 import * as path from "node:path";
 import * as vscode from "vscode";
+import { getSnapshotPath } from "@bgforge/binary";
 import { generateNonce, getCachedHtmlAsset, getCachedJsAsset } from "../webview-assets";
 import { BinaryEditorDocument } from "./document";
 import { planSave } from "./save";
@@ -45,6 +46,7 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
         const workerScript = path.join(this.extensionUri.fsPath, WORKER_SCRIPT);
         const document = await BinaryEditorDocument.open(uri, workerScript);
         document.onDidChange((event) => this._onDidChangeCustomDocument.fire(event));
+        document.onDidRefresh(() => this.refreshDocumentPanels(document));
         return document;
     }
 
@@ -67,26 +69,74 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
         });
 
         panel.webview.onDidReceiveMessage(async (message: WebviewToHost) => {
-            if (message.type === "ready") {
-                this.post(panel, { type: "init", open: document.openResult });
-            } else if (message.type === "editField") {
-                const edited = await document.bridge.send({
-                    type: "editField",
-                    sessionId: document.sessionId,
-                    nodeId: message.nodeId,
-                    value: message.value,
-                });
-                if (edited.type === "error") {
-                    this.post(panel, { type: "error", message: edited.message });
-                    return;
+            switch (message.type) {
+                case "ready":
+                    this.post(panel, { type: "init", open: document.openResult });
+                    await this.pushDiagnosticsToDocument(document);
+                    break;
+                case "requestChildren": {
+                    const r = await document.bridge.send({
+                        type: "getChildren",
+                        sessionId: document.sessionId,
+                        nodeId: message.nodeId,
+                        start: message.start,
+                        end: message.end,
+                    });
+                    if (r.type === "children") {
+                        this.post(panel, {
+                            type: "children",
+                            requestId: message.requestId,
+                            parentId: r.parentId,
+                            rows: r.rows,
+                            total: r.total,
+                        });
+                    } else if (r.type === "error") {
+                        this.post(panel, { type: "error", requestId: message.requestId, message: r.message });
+                    }
+                    break;
                 }
-                if (edited.type === "edited") {
-                    document.pushEdit("Edit field");
-                    // Plan 3: send changeSet after edit instead of the legacy flat-window response.
-                    this.post(panel, { type: "changeSet", changeSet: edited.result.changeSet });
+                case "editField": {
+                    const r = await document.bridge.send({
+                        type: "editField",
+                        sessionId: document.sessionId,
+                        nodeId: message.nodeId,
+                        value: message.value,
+                    });
+                    if (r.type === "error") {
+                        this.post(panel, { type: "error", message: r.message });
+                        break;
+                    }
+                    if (r.type === "edited") {
+                        document.pushEdit("Edit field");
+                        this.postToDocumentPanels(document, { type: "changeSet", changeSet: r.result.changeSet });
+                        await this.pushDiagnosticsToDocument(document);
+                    }
+                    break;
                 }
+                case "addEntry": {
+                    const r = await document.bridge.send({
+                        type: "structureOp",
+                        sessionId: document.sessionId,
+                        op: { op: "add", namePath: message.namePath },
+                    });
+                    if (r.type === "error") {
+                        this.post(panel, { type: "error", message: r.message });
+                        break;
+                    }
+                    if (r.type === "structure") {
+                        document.pushEdit("Add entry");
+                        this.postToDocumentPanels(document, { type: "changeSet", changeSet: r.result.changeSet });
+                        await this.pushDiagnosticsToDocument(document);
+                    }
+                    break;
+                }
+                case "dumpJson":
+                    await this.dumpJson(document);
+                    break;
+                case "loadJson":
+                    await this.loadJson(document, panel);
+                    break;
             }
-            // requestChildren, addEntry, dumpJson, loadJson: handled in Plan 3 provider rewrite.
         });
     }
 
@@ -148,6 +198,57 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
 
     private post(panel: vscode.WebviewPanel, message: HostToWebview): void {
         void panel.webview.postMessage(message);
+    }
+
+    /** Post a message to every webview panel currently showing the given document. */
+    private postToDocumentPanels(document: BinaryEditorDocument, message: HostToWebview): void {
+        for (const [panel, doc] of this.active) {
+            if (doc === document) this.post(panel, message);
+        }
+    }
+
+    /** Run the worker validate pass and push the advisory diagnostics to all of the document's panels. */
+    private async pushDiagnosticsToDocument(document: BinaryEditorDocument): Promise<void> {
+        const v = await document.bridge.send({ type: "validate", sessionId: document.sessionId });
+        if (v.type === "diagnostics") {
+            this.postToDocumentPanels(document, { type: "diagnostics", diagnostics: v.diagnostics });
+        }
+    }
+
+    /** After an undo/redo: tell every panel to clear its cache and re-fetch (layout is unchanged, so
+     *  selection/tab state in the webview is preserved - no re-init). */
+    private refreshDocumentPanels(document: BinaryEditorDocument): void {
+        this.postToDocumentPanels(document, { type: "invalidated" });
+        void this.pushDiagnosticsToDocument(document);
+    }
+
+    private async dumpJson(document: BinaryEditorDocument): Promise<void> {
+        const json = await document.getSnapshotJson();
+        const target = await vscode.window.showSaveDialog({
+            defaultUri: vscode.Uri.file(getSnapshotPath(document.uri.fsPath)),
+            filters: { JSON: ["json"] },
+        });
+        if (!target) return; // cancelled
+        await vscode.workspace.fs.writeFile(target, Buffer.from(json, "utf8"));
+    }
+
+    private async loadJson(document: BinaryEditorDocument, panel: vscode.WebviewPanel): Promise<void> {
+        const picked = await vscode.window.showOpenDialog({ canSelectMany: false, filters: { JSON: ["json"] } });
+        if (!picked || picked.length === 0 || !picked[0]) return; // cancelled
+        const bytes = await vscode.workspace.fs.readFile(picked[0]);
+        const json = Buffer.from(bytes).toString("utf8");
+        const r = await document.bridge.send({ type: "loadJson", sessionId: document.sessionId, json });
+        if (r.type === "error") {
+            this.post(panel, { type: "error", message: r.message });
+            return;
+        }
+        if (r.type === "opened") {
+            document.applyOpenResult(r.result);
+            document.pushEdit("Load JSON");
+            // A load can change the layout, so re-init all panels (rebuilds their view from the new model).
+            this.postToDocumentPanels(document, { type: "init", open: r.result });
+            await this.pushDiagnosticsToDocument(document);
+        }
     }
 
     private getHtml(): string {

@@ -13,11 +13,15 @@ export class BinaryEditorDocument implements vscode.CustomDocument {
     readonly uri: vscode.Uri;
     readonly bridge: WorkerBridge;
     readonly sessionId: string;
-    readonly openResult: OpenResult;
+    openResult: OpenResult;
 
     private readonly worker: Worker;
     private readonly _onDidChange = new vscode.EventEmitter<vscode.CustomDocumentEditEvent<BinaryEditorDocument>>();
     readonly onDidChange = this._onDidChange.event;
+
+    private readonly _onDidRefresh = new vscode.EventEmitter<void>();
+    /** Fires after an undo/redo has been applied in the worker, so the provider can refresh panels. */
+    readonly onDidRefresh = this._onDidRefresh.event;
 
     private constructor(uri: vscode.Uri, worker: Worker, bridge: WorkerBridge, openResult: OpenResult) {
         this.uri = uri;
@@ -50,16 +54,23 @@ export class BinaryEditorDocument implements vscode.CustomDocument {
         return new BinaryEditorDocument(uri, worker, bridge, response.result);
     }
 
+    /** Replace the cached OpenResult (after loadJson or a disk revert that changed the model/layout). */
+    applyOpenResult(result: OpenResult): void {
+        this.openResult = result;
+    }
+
     /** Records an edit on the VSCode undo stack, delegating undo/redo to the worker session. */
     pushEdit(label: string): void {
         this._onDidChange.fire({
             document: this,
             label,
-            undo: () => {
-                void this.bridge.send({ type: "undo", sessionId: this.sessionId });
+            undo: async () => {
+                await this.bridge.send({ type: "undo", sessionId: this.sessionId });
+                this._onDidRefresh.fire();
             },
-            redo: () => {
-                void this.bridge.send({ type: "redo", sessionId: this.sessionId });
+            redo: async () => {
+                await this.bridge.send({ type: "redo", sessionId: this.sessionId });
+                this._onDidRefresh.fire();
             },
         });
     }
@@ -81,6 +92,7 @@ export class BinaryEditorDocument implements vscode.CustomDocument {
 
     dispose(): void {
         this._onDidChange.dispose();
+        this._onDidRefresh.dispose();
         this.bridge.dispose();
         void this.worker.terminate();
     }
