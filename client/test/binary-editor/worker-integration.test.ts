@@ -45,4 +45,21 @@ describe("worker integration", () => {
         if (ser.type !== "serialized") throw new Error("expected serialized");
         expect(Buffer.from(ser.bytes).equals(Buffer.from(original))).toBe(true);
     });
+
+    it("answers getChildren and round-trips loadJson through the spawned worker", async () => {
+        const bytes = new Uint8Array(fs.readFileSync(MAP_FIXTURE));
+        const opened = await bridge.send({ type: "open", uri: `file://${MAP_FIXTURE}`, bytes });
+        expect(opened.type).toBe("opened");
+        if (opened.type !== "opened") throw new Error("expected opened");
+        const sid = opened.result.sessionId;
+
+        const kids = await bridge.send({ type: "getChildren", sessionId: sid, nodeId: null, start: 0, end: 10 });
+        expect(kids.type).toBe("children");
+
+        const snap = await bridge.send({ type: "snapshot", sessionId: sid });
+        expect(snap.type).toBe("snapshot");
+        if (snap.type !== "snapshot") throw new Error("expected snapshot");
+        const loaded = await bridge.send({ type: "loadJson", sessionId: sid, json: snap.json });
+        expect(loaded.type).toBe("opened");
+    });
 });
