@@ -1,13 +1,14 @@
 <script lang="ts">
-    import type { NodeId, Row } from "@bgforge/binary-editor";
+    import type { Diagnostic, NodeId, Row } from "@bgforge/binary-editor";
     import type { Bridge } from "../state/bridge";
     import type { ViewModel } from "../state/view-model";
     import Field from "./Field.svelte";
     import Self from "./FormSection.svelte";
 
-    const { nodeId, bridge, vm, version, onedit }:
+    const { nodeId, bridge, vm, version, onedit, byNode }:
         { nodeId: NodeId; bridge: Bridge; vm: ViewModel; version: number;
-          onedit: (id: string, v: number | string) => void } = $props();
+          onedit: (id: string, v: number | string) => void;
+          byNode: Map<string, Diagnostic[]> } = $props();
 
     let rows = $state<Row[]>([]);
     $effect(() => {
@@ -25,11 +26,11 @@
                 <button class="caret" class:open={vm.isExpanded(row.id)}
                         onclick={() => vm.toggleExpanded(row.id)}>{row.name}</button>
                 {#if vm.isExpanded(row.id)}
-                    <Self nodeId={row.id} {bridge} {vm} {version} {onedit} />
+                    <Self nodeId={row.id} {bridge} {vm} {version} {onedit} {byNode} />
                 {/if}
             </div>
         {:else}
-            <Field {row} {onedit} />
+            <Field {row} {onedit} diagnostics={byNode.get(row.id)} />
         {/if}
     {/each}
 </div>

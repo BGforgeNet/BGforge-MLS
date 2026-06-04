@@ -1,13 +1,18 @@
 <script lang="ts">
-    import type { Row } from "@bgforge/binary-editor";
+    import type { Diagnostic, Row } from "@bgforge/binary-editor";
     import { controlKind } from "../state/controls";
     import NumberField from "./controls/NumberField.svelte";
     import StringField from "./controls/StringField.svelte";
     import EnumField from "./controls/EnumField.svelte";
     import FlagsField from "./controls/FlagsField.svelte";
-    const { row, onedit }: { row: Row; onedit: (nodeId: string, value: number | string) => void } = $props();
+    const { row, onedit, diagnostics = [] }:
+        { row: Row; onedit: (nodeId: string, value: number | string) => void;
+          diagnostics?: Diagnostic[] } = $props();
     const kind = $derived(controlKind(row));
     const emit = (v: number | string) => onedit(row.id, v);
+    const hasDiag = $derived(diagnostics.length > 0);
+    const diagTitle = $derived(diagnostics.map((d) => d.message).join("; "));
+    const firstFix = $derived(diagnostics.find((d) => d.quickFix));
 </script>
 <div class="field">
     <span class="label" title={row.description ?? ""}>{row.name}</span>
@@ -16,4 +21,10 @@
     {:else if kind === "enum"}<EnumField {row} onedit={emit} />
     {:else}<FlagsField {row} onedit={emit} />{/if}
     {#if row.offset !== undefined}<span class="offset">0x{row.offset.toString(16)}</span>{/if}
+    {#if hasDiag}
+        <span class="diag warning" title={diagTitle}>!</span>
+        {#if firstFix}
+            <button class="quick-fix" onclick={() => { for (const e of firstFix.quickFix!.edits) onedit(e.nodeId, e.value); }}>{firstFix.quickFix!.label}</button>
+        {/if}
+    {/if}
 </div>

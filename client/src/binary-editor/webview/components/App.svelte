@@ -3,6 +3,7 @@
     import type { Bridge } from "../state/bridge";
     import type { HostToWebview } from "../messages";
     import { ViewModel } from "../state/view-model";
+    import { diagnosticsByNode, bannerSummary } from "../state/diagnostics";
     import SectionTabs from "./SectionTabs.svelte";
     import FormSection from "./FormSection.svelte";
     import ListSection from "./ListSection.svelte";
@@ -17,6 +18,8 @@
 
     const active = $derived<SectionDescriptor | undefined>(
         open?.layout.sections.find((s) => s.id === activeId));
+    const byNode = $derived(diagnosticsByNode(diagnostics));
+    const summary = $derived(bannerSummary(diagnostics));
 
     $effect(() => {
         const onMsg = (event: MessageEvent<HostToWebview>) => {
@@ -61,14 +64,21 @@
         <button onclick={() => bridge.loadJson()}>Load JSON</button>
     </div>
     {#if diagnostics.length > 0}
-        <div class="banner warning">{diagnostics.map((d) => d.message).join("; ")}</div>
+        <div class="banner warning">
+            <span class="banner-summary">{summary}</span>
+            <ul class="banner-list">
+                {#each diagnostics as d (d.nodeId + d.message)}
+                    <li>{d.message}</li>
+                {/each}
+            </ul>
+        </div>
     {/if}
     <SectionTabs sections={open.layout.sections} {activeId} onselect={selectSection} />
     {#if active && vm}
         {#if active.kind === "list"}
-            <ListSection nodeId={active.nodeId} {bridge} {vm} {version} onadd={add} onedit={edit} />
+            <ListSection nodeId={active.nodeId} {bridge} {vm} {version} onadd={add} onedit={edit} {byNode} />
         {:else}
-            <FormSection nodeId={active.nodeId} {bridge} {vm} {version} onedit={edit} />
+            <FormSection nodeId={active.nodeId} {bridge} {vm} {version} onedit={edit} {byNode} />
         {/if}
     {/if}
 {/if}
