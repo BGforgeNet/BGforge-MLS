@@ -1,6 +1,8 @@
 import { parserRegistry, type ParseOptions, type ParseResult } from "@bgforge/binary";
 import { buildLayout } from "./layout";
 import { buildModel, type Model } from "./model";
+import { getRelationshipModel } from "./relationship/registry";
+import type { RelationshipModel } from "./relationship/types";
 import { getWindow } from "./window";
 import type { OpenResult, SessionId } from "./types";
 
@@ -15,6 +17,7 @@ export interface EditorSession {
     parserId: string;
     parseOptions: ParseOptions;
     model: Model;
+    relationshipModel?: RelationshipModel;
     undo: UndoEntry[];
     redo: UndoEntry[];
     dirty: boolean;
@@ -66,12 +69,14 @@ export function openSession(uri: string, bytes: Uint8Array, options: ParseOption
         };
     }
     const model = buildModel(parseResult);
+    const relationshipModel = getRelationshipModel(parser.id);
     const session: EditorSession = {
         id: nextId(),
         uri,
         parserId: parser.id,
         parseOptions: options,
         model,
+        relationshipModel,
         undo: [],
         redo: [],
         dirty: false,
@@ -84,6 +89,6 @@ export function openSession(uri: string, bytes: Uint8Array, options: ParseOption
         layout: buildLayout(parser.id, model),
         warnings: parseResult.warnings ?? [],
         errors: parseResult.errors ?? [],
-        rootWindow: getWindow(model, 0, 200),
+        rootWindow: getWindow(model, 0, 200, relationshipModel),
     };
 }

@@ -51,7 +51,7 @@ function reopenResult(s: EditorSession): OpenResult {
         layout: buildLayout(s.parserId, s.model),
         warnings: pr.warnings ?? [],
         errors: pr.errors ?? [],
-        rootWindow: getWindow(s.model, 0, 200),
+        rootWindow: getWindow(s.model, 0, 200, s.relationshipModel),
     };
 }
 
@@ -68,17 +68,21 @@ export function dispatch(req: Request): Response {
                 return { type: "closed" };
             case "getWindow": {
                 const s = need(req.sessionId);
-                return { type: "window", rows: getWindow(s.model, req.start, req.end), dirty: s.dirty };
+                return {
+                    type: "window",
+                    rows: getWindow(s.model, req.start, req.end, s.relationshipModel),
+                    dirty: s.dirty,
+                };
             }
             case "getChildren": {
                 const s = need(req.sessionId);
-                const { rows, total } = getChildren(s.model, req.nodeId, req.start, req.end);
+                const { rows, total } = getChildren(s.model, req.nodeId, req.start, req.end, s.relationshipModel);
                 return { type: "children", parentId: req.nodeId, rows, total };
             }
             case "expand": {
                 const s = need(req.sessionId);
                 setExpanded(s.model, req.nodeId, req.expanded);
-                return { type: "window", rows: getWindow(s.model, 0, 500), dirty: s.dirty };
+                return { type: "window", rows: getWindow(s.model, 0, 500, s.relationshipModel), dirty: s.dirty };
             }
             case "editField":
                 return { type: "edited", result: editField(need(req.sessionId), req.nodeId, req.value) };
@@ -87,12 +91,12 @@ export function dispatch(req: Request): Response {
             case "undo": {
                 const s = need(req.sessionId);
                 doUndo(s);
-                return { type: "window", rows: getWindow(s.model, 0, 500), dirty: s.dirty };
+                return { type: "window", rows: getWindow(s.model, 0, 500, s.relationshipModel), dirty: s.dirty };
             }
             case "redo": {
                 const s = need(req.sessionId);
                 doRedo(s);
-                return { type: "window", rows: getWindow(s.model, 0, 500), dirty: s.dirty };
+                return { type: "window", rows: getWindow(s.model, 0, 500, s.relationshipModel), dirty: s.dirty };
             }
             case "serialize":
                 return { type: "serialized", bytes: serializeSession(need(req.sessionId)) };

@@ -1,8 +1,9 @@
 import type { ParsedField, ParsedGroup } from "@bgforge/binary";
 import { type FlatNode, type Model, visibleNodes } from "./model";
+import type { RelationshipModel } from "./relationship/types";
 import type { NodeId, Row } from "./types";
 
-export function projectRow(model: Model, node: FlatNode): Row {
+export function projectRow(model: Model, node: FlatNode, rel?: RelationshipModel): Row {
     const base: Row = {
         id: node.id,
         namePath: node.namePath,
@@ -34,12 +35,23 @@ export function projectRow(model: Model, node: FlatNode): Row {
     if (field.description !== undefined) base.description = field.description;
     if (field.enumOptions !== undefined) base.enumOptions = field.enumOptions;
     if (field.flagOptions !== undefined) base.flagOptions = field.flagOptions;
+    // Apply relationship-model overlay last so it can rename/redescribe/re-type a field
+    // without touching the underlying ParsedField or the canonical document bytes.
+    if (rel !== undefined) {
+        const ov = rel.fieldOverride(model, node);
+        if (ov !== undefined) {
+            if (ov.label !== undefined) base.name = ov.label;
+            if (ov.description !== undefined) base.description = ov.description;
+            if (ov.enumOptions !== undefined) base.enumOptions = ov.enumOptions;
+            if (ov.editable !== undefined) base.editable = ov.editable;
+        }
+    }
     return base;
 }
 
-export function getWindow(model: Model, start: number, end: number): Row[] {
+export function getWindow(model: Model, start: number, end: number, rel?: RelationshipModel): Row[] {
     const visible = visibleNodes(model);
-    return visible.slice(start, end).map((node) => projectRow(model, node));
+    return visible.slice(start, end).map((node) => projectRow(model, node, rel));
 }
 
 export function getChildren(
@@ -47,8 +59,9 @@ export function getChildren(
     parentId: NodeId | null,
     start: number,
     end: number,
+    rel?: RelationshipModel,
 ): { rows: Row[]; total: number } {
     const indices = model.childrenByParent.get(parentId ?? "") ?? [];
-    const rows = indices.slice(start, end).map((i) => projectRow(model, model.nodes[i]!));
+    const rows = indices.slice(start, end).map((i) => projectRow(model, model.nodes[i]!, rel));
     return { rows, total: indices.length };
 }
