@@ -114,6 +114,8 @@ const config: KnipConfig = {
         },
         "binary-editor": {
             entry: ["test/**/*.test.ts"],
+            // Bench files invoked explicitly; not reachable from any declared entry point.
+            ignore: ["test/perf/**"],
         },
     },
     ignore: [
