@@ -51,6 +51,15 @@ export const ieEffectsModel: RelationshipModel = {
         }
         return Object.keys(override).length > 0 ? override : undefined;
     },
-    dependents: () => [], // implemented in a later task
+    dependents(model, editedNode) {
+        if (editedNode.kind !== "field" || editedNode.name !== "opcode") return [];
+        const sibs = model.childrenByParent.get(editedNode.parentId ?? "") ?? [];
+        const out: string[] = [];
+        for (const i of sibs) {
+            const n = model.nodes[i];
+            if (n && n.kind === "field" && PARAM_FIELDS.has(n.name)) out.push(n.id);
+        }
+        return out;
+    },
     constraints: () => [], // implemented in a later task
 };

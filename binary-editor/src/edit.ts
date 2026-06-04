@@ -28,11 +28,6 @@ export function editField(session: EditorSession, nodeId: NodeId, value: number 
     field.rawValue = value;
     session.dirty = true;
 
-    // Deferred: discriminator-driven sibling re-shaping. When the edited field is a discriminator
-    // (e.g. an IE effect opcode that changes a sibling parameter's type), dependent sibling rows must
-    // be re-evaluated and added to changeSet.changed. The relationship model that drives this lands in
-    // a later plan; for now only the edited row is re-projected.
-
     // Format-validity for the slice: the structure still serializes.
     let formatValid = true;
     try {
@@ -41,9 +36,19 @@ export function editField(session: EditorSession, nodeId: NodeId, value: number 
         formatValid = false;
     }
 
+    const rel = session.relationshipModel;
+    const changed = [projectRow(session.model, node, rel)];
+    if (rel) {
+        for (const depId of rel.dependents(session.model, node)) {
+            const depIdx = session.model.byId.get(depId);
+            const depNode = depIdx === undefined ? undefined : session.model.nodes[depIdx];
+            if (depNode) changed.push(projectRow(session.model, depNode, rel));
+        }
+    }
+
     return {
         changeSet: {
-            changed: [projectRow(session.model, node)],
+            changed,
             diagnostics: [],
             dirty: session.dirty,
             formatValid,
