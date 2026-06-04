@@ -1,6 +1,7 @@
-import { formatAdapterRegistry, type ParseOptions } from "@bgforge/binary";
+import { formatAdapterRegistry, loadBinaryJsonSnapshot, type ParseOptions } from "@bgforge/binary";
 import { closeSession, openSession, sessionStore, type EditorSession } from "./session";
-import { setExpanded } from "./model";
+import { buildModel, setExpanded } from "./model";
+import { buildLayout } from "./layout";
 import { getChildren, getWindow } from "./window";
 import { editField } from "./edit";
 import { structureOp, undo as doUndo, redo as doRedo, type StructureOpRequest } from "./structure-ops";
@@ -20,7 +21,8 @@ export type Request =
     | { type: "serialize"; sessionId: SessionId }
     | { type: "validate"; sessionId: SessionId }
     | { type: "snapshot"; sessionId: SessionId }
-    | { type: "getChildren"; sessionId: SessionId; nodeId: NodeId | null; start: number; end: number };
+    | { type: "getChildren"; sessionId: SessionId; nodeId: NodeId | null; start: number; end: number }
+    | { type: "loadJson"; sessionId: SessionId; json: string };
 
 export type Response =
     | { type: "opened"; result: OpenResult }
@@ -38,6 +40,19 @@ function need(sessionId: SessionId): EditorSession {
     const s = sessionStore.get(sessionId);
     if (!s) throw new Error(`Unknown session ${sessionId}`);
     return s;
+}
+
+function reopenResult(s: EditorSession): OpenResult {
+    const pr = s.model.parseResult;
+    return {
+        sessionId: s.id,
+        format: s.parserId,
+        formatName: pr.formatName ?? s.parserId,
+        layout: buildLayout(s.parserId, s.model),
+        warnings: pr.warnings ?? [],
+        errors: pr.errors ?? [],
+        rootWindow: getWindow(s.model, 0, 200),
+    };
 }
 
 export function dispatch(req: Request): Response {
@@ -88,6 +103,17 @@ export function dispatch(req: Request): Response {
                 const adapter = formatAdapterRegistry.get(s.parserId);
                 if (!adapter) throw new Error(`No format adapter for ${s.parserId}`);
                 return { type: "snapshot", json: adapter.createJsonSnapshot(s.model.parseResult) };
+            }
+            case "loadJson": {
+                const s = need(req.sessionId);
+                // loadBinaryJsonSnapshot throws on malformed/wrong-format input; the throw
+                // happens before any state mutation, so a failed load leaves the session unchanged.
+                const { parseResult } = loadBinaryJsonSnapshot(req.json, s.parseOptions);
+                s.undo.push({ label: "Load JSON", before: s.model.parseResult });
+                s.redo = [];
+                s.model = buildModel(parseResult);
+                s.dirty = true;
+                return { type: "opened", result: reopenResult(s) };
             }
             default: {
                 // Exhaustiveness guard: every member of the Request union is handled above.

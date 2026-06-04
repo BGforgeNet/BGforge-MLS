@@ -66,4 +66,44 @@ describe("dispatch", () => {
         if (kids.type !== "children") throw new Error("expected children");
         expect(kids.parentId).toBe(firstGroup.id);
     });
+
+    it("loadJson rebuilds the model from a snapshot round-trip and is undoable", () => {
+        const opened = dispatch({ type: "open", uri: "file:///arcaves.map", bytes: bytes() });
+        if (opened.type !== "opened") throw new Error("open failed");
+        const sid = opened.result.sessionId;
+
+        const snap = dispatch({ type: "snapshot", sessionId: sid });
+        if (snap.type !== "snapshot") throw new Error("snapshot failed");
+
+        const loaded = dispatch({ type: "loadJson", sessionId: sid, json: snap.json });
+        expect(loaded.type).toBe("opened");
+        if (loaded.type !== "opened") throw new Error("expected opened");
+        expect(loaded.result.sessionId).toBe(sid);
+        expect(loaded.result.format).toBe(opened.result.format);
+
+        const undone = dispatch({ type: "undo", sessionId: sid });
+        expect(undone.type).toBe("window");
+    });
+
+    it("loadJson rejects malformed JSON without changing the session", () => {
+        const opened = dispatch({ type: "open", uri: "file:///arcaves.map", bytes: bytes() });
+        if (opened.type !== "opened") throw new Error("open failed");
+        const before = dispatch({
+            type: "getChildren",
+            sessionId: opened.result.sessionId,
+            nodeId: null,
+            start: 0,
+            end: 1,
+        });
+        const bad = dispatch({ type: "loadJson", sessionId: opened.result.sessionId, json: "{not json" });
+        expect(bad.type).toBe("error");
+        const after = dispatch({
+            type: "getChildren",
+            sessionId: opened.result.sessionId,
+            nodeId: null,
+            start: 0,
+            end: 1,
+        });
+        expect(after).toEqual(before);
+    });
 });
