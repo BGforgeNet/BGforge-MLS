@@ -3,6 +3,7 @@ import { buildModel, type Model } from "../src/model";
 import { projectRow } from "../src/window";
 import type { RelationshipModel } from "../src/relationship/types";
 import { ieEffectsModel } from "../src/relationship/ie-effects";
+import { getRelationshipModel } from "../src/relationship/registry";
 import type { ParseResult } from "@bgforge/binary";
 
 function effectModel(opcode: number, p1: number, p2: number): Model {
@@ -117,4 +118,19 @@ describe("projectRow overlay", () => {
         expect(row.valueType).toBe("enum");
         expect(row.enumOptions).toEqual({ "0": "A", "1": "B" });
     });
+});
+
+describe("IE relationship model parity across formats", () => {
+    for (const fmt of ["itm", "spl", "eff", "cre"]) {
+        it(`${fmt} resolves to the IE effect model and overlays params`, () => {
+            const model = getRelationshipModel(fmt);
+            expect(model).toBe(ieEffectsModel);
+            // Structural detection uses lowercase field names (matching the
+            // effectModel() helper below, which mirrors the raw spec key names
+            // rather than the humanized display names produced by walkStruct).
+            const m = effectModel(1, 5, 2);
+            const p1 = m.nodes.find((n) => n.name === "parameter1")!;
+            expect(model!.fieldOverride(m, p1)?.label).toBe("Key Modifier");
+        });
+    }
 });
