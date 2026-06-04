@@ -136,7 +136,6 @@ const config: KnipConfig = {
         // imported by scripts/build-webviews.mjs (esbuild JS API build script for webview bundles);
         // scripts/** is excluded from knip's analysis, so the import is invisible to it.
         "esbuild-svelte",
-        "svelte",
     ],
 };
 
