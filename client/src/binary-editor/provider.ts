@@ -80,19 +80,13 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
                     this.post(panel, { type: "error", message: edited.message });
                     return;
                 }
-                document.pushEdit("Edit field");
-                const window = await document.bridge.send({
-                    type: "getWindow",
-                    sessionId: document.sessionId,
-                    start: 0,
-                    end: 500,
-                });
-                if (window.type === "window") {
-                    this.post(panel, { type: "window", rows: window.rows, dirty: window.dirty });
+                if (edited.type === "edited") {
+                    document.pushEdit("Edit field");
+                    // Plan 3: send changeSet after edit instead of the legacy flat-window response.
+                    this.post(panel, { type: "changeSet", changeSet: edited.result.changeSet });
                 }
-            } else if (message.type === "requestSave") {
-                await vscode.commands.executeCommand("workbench.action.files.save");
             }
+            // requestChildren, addEntry, dumpJson, loadJson: handled in Plan 3 provider rewrite.
         });
     }
 

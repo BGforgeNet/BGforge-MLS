@@ -1,5 +1,5 @@
 // Placeholder browser-side webview script. Renders the worker-backed editor's rows as
-// plain text and wires editable fields plus a Save button. Replaced wholesale in Plan 3.
+// plain text and wires editable fields. Replaced wholesale in Plan 3 (Svelte webview).
 import type { Row } from "@bgforge/binary-editor";
 import type { HostToWebview, WebviewToHost } from "./messages";
 
@@ -34,19 +34,14 @@ function render(rows: Row[]): void {
         }
         app.append(line);
     }
-
-    const save = document.createElement("button");
-    save.textContent = "Save";
-    save.addEventListener("click", () => post({ type: "requestSave" }));
-    app.append(save);
 }
 
 window.addEventListener("message", (event: MessageEvent<HostToWebview>) => {
     const message = event.data;
     if (message.type === "init") {
         render(message.open.rootWindow);
-    } else if (message.type === "window") {
-        render(message.rows);
+    } else if (message.type === "changeSet") {
+        render(message.changeSet.changed);
     } else if (message.type === "error") {
         const app = document.querySelector("#app");
         if (app) app.textContent = message.message;

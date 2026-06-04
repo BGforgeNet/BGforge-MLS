@@ -13,6 +13,7 @@ export default defineConfig({
         // pnpm --filter @bgforge/binary build runs, but tests run from source.
         alias: {
             "@bgforge/binary": path.resolve(__dirname, "../binary/src/index.ts"),
+            "@bgforge/binary-editor": path.resolve(__dirname, "../binary-editor/src/index.ts"),
         },
     },
     test: {
