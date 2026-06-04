@@ -1,12 +1,12 @@
 import { formatAdapterRegistry, type ParseOptions } from "@bgforge/binary";
 import { closeSession, openSession, sessionStore, type EditorSession } from "./session";
 import { setExpanded } from "./model";
-import { getWindow } from "./window";
+import { getChildren, getWindow } from "./window";
 import { editField } from "./edit";
 import { structureOp, undo as doUndo, redo as doRedo, type StructureOpRequest } from "./structure-ops";
 import { serializeSession } from "./serialize";
 import { validate } from "./validate";
-import type { EditResult, OpenResult, Row, SessionId, StructureResult } from "./types";
+import type { EditResult, NodeId, OpenResult, Row, SessionId, StructureResult } from "./types";
 
 export type Request =
     | { type: "open"; uri: string; bytes: Uint8Array; options?: ParseOptions }
@@ -19,7 +19,8 @@ export type Request =
     | { type: "redo"; sessionId: SessionId }
     | { type: "serialize"; sessionId: SessionId }
     | { type: "validate"; sessionId: SessionId }
-    | { type: "snapshot"; sessionId: SessionId };
+    | { type: "snapshot"; sessionId: SessionId }
+    | { type: "getChildren"; sessionId: SessionId; nodeId: NodeId | null; start: number; end: number };
 
 export type Response =
     | { type: "opened"; result: OpenResult }
@@ -30,6 +31,7 @@ export type Response =
     | { type: "serialized"; bytes: Uint8Array }
     | { type: "diagnostics"; diagnostics: ReturnType<typeof validate> }
     | { type: "snapshot"; json: string }
+    | { type: "children"; parentId: NodeId | null; rows: Row[]; total: number }
     | { type: "error"; message: string };
 
 function need(sessionId: SessionId): EditorSession {
@@ -52,6 +54,11 @@ export function dispatch(req: Request): Response {
             case "getWindow": {
                 const s = need(req.sessionId);
                 return { type: "window", rows: getWindow(s.model, req.start, req.end), dirty: s.dirty };
+            }
+            case "getChildren": {
+                const s = need(req.sessionId);
+                const { rows, total } = getChildren(s.model, req.nodeId, req.start, req.end);
+                return { type: "children", parentId: req.nodeId, rows, total };
             }
             case "expand": {
                 const s = need(req.sessionId);

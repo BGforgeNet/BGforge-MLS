@@ -47,4 +47,23 @@ describe("dispatch", () => {
         expect(snap.json.length).toBeGreaterThan(0);
         expect(() => JSON.parse(snap.json)).not.toThrow();
     });
+
+    it("getChildren returns roots for null nodeId and a node's children otherwise", () => {
+        const opened = dispatch({ type: "open", uri: "file:///arcaves.map", bytes: bytes() });
+        if (opened.type !== "opened") throw new Error("open failed");
+        const sid = opened.result.sessionId;
+
+        const roots = dispatch({ type: "getChildren", sessionId: sid, nodeId: null, start: 0, end: 1000 });
+        expect(roots.type).toBe("children");
+        if (roots.type !== "children") throw new Error("expected children");
+        expect(roots.parentId).toBeNull();
+        expect(roots.total).toBeGreaterThan(0);
+        expect(roots.rows.every((r) => r.depth === 0)).toBe(true);
+
+        const firstGroup = roots.rows.find((r) => r.kind === "group")!;
+        const kids = dispatch({ type: "getChildren", sessionId: sid, nodeId: firstGroup.id, start: 0, end: 1000 });
+        expect(kids.type).toBe("children");
+        if (kids.type !== "children") throw new Error("expected children");
+        expect(kids.parentId).toBe(firstGroup.id);
+    });
 });
