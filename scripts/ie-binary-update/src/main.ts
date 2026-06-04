@@ -10,7 +10,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
-import { extractOpcodes, emitOpcodesModule } from "./extract-opcodes.ts";
+import {
+    extractOpcodes,
+    emitOpcodesModule,
+    extractOpcodeRelationships,
+    emitOpcodeRelationshipsModule,
+} from "./extract-opcodes.ts";
 import { type FormatTarget, generate } from "./generate.ts";
 
 /**
@@ -99,6 +104,24 @@ function main(): void {
     } else {
         fs.mkdirSync(path.dirname(opcodesPath), { recursive: true });
         fs.writeFileSync(opcodesPath, opcodesExpected, "utf8");
+    }
+
+    // Opcode relationship data: param labels and engine availability flags,
+    // harvested from the same `_opcodes/opNNN.html` frontmatter as the opname lookup.
+    const relOutputRel = "binary/src/ie-common/opcode-relationships.ts";
+    const relExpected = emitOpcodeRelationshipsModule(
+        extractOpcodeRelationships(path.join(iesdpDir, "_opcodes")),
+        "_opcodes/opNNN.html",
+    );
+    const relPath = path.join(outputDir, relOutputRel);
+    if (values.check) {
+        const actual = fs.existsSync(relPath) ? fs.readFileSync(relPath, "utf8") : "";
+        if (actual !== relExpected) {
+            diffs.push({ outputRelPath: relOutputRel, expected: relExpected, actual });
+        }
+    } else {
+        fs.mkdirSync(path.dirname(relPath), { recursive: true });
+        fs.writeFileSync(relPath, relExpected, "utf8");
     }
 
     if (diffs.length > 0) {
