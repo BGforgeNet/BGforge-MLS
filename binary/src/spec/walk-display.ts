@@ -81,6 +81,70 @@ export function walkGroup<S extends Record<string, FieldSpec>>(
     return out as SpecData<S>;
 }
 
+/**
+ * Inverse of `walkStruct`: rebuild a typed data object from a flat `ParsedGroup`
+ * produced by the display layer. Extends `walkGroup`'s scalar-only contract to
+ * also cover `charsSpec` fields - the display field's `value` is read back as a
+ * string directly (mirroring how `walkStruct` emitted it: trailing spaces trimmed,
+ * interior bytes preserved).
+ *
+ * Array fields are not handled; callers are responsible for iterating the
+ * surrounding group structure for those cases, matching the contract of
+ * `walkGroup`.
+ *
+ * Throws if any spec field's display label is absent from the group.
+ */
+export function structFromDisplay<S extends Record<string, FieldSpec>>(
+    group: ParsedGroup,
+    spec: S,
+    presentation: StructPresentation<SpecData<S>>,
+): SpecData<S> {
+    const byName = new Map<string, ParsedField>();
+    for (const entry of group.fields) {
+        if ("fields" in entry) continue; // sub-groups skipped
+        byName.set(entry.name, entry);
+    }
+    const out: Record<string, unknown> = {};
+    for (const key of Object.keys(spec)) {
+        const fs = spec[key]!;
+        if (isArraySpec(fs)) {
+            throw new Error(
+                `structFromDisplay: array field "${key}" is not supported; iterate the array group at the call site.`,
+            );
+        }
+        const presKey = key as keyof SpecData<S>;
+        const label = presentation[presKey]?.label ?? humanize(key);
+        const found = byName.get(label);
+        if (!found) {
+            throw new Error(
+                `structFromDisplay: field "${key}" expected display label "${label}" but no such field in "${group.name}".`,
+            );
+        }
+        if (isCharsSpec(fs)) {
+            // walkStruct emits the string directly as `value` (trailing spaces
+            // stripped). Read it back as-is; no re-padding needed because the
+            // canonical doc shape for a charsSpec field is the stripped string.
+            out[key] = typeof found.value === "string" ? found.value : String(found.value);
+            continue;
+        }
+        // Scalar field: prefer rawValue (enum/flags fields encode the resolved
+        // name in value and the original number in rawValue).
+        const numeric =
+            typeof found.rawValue === "number"
+                ? found.rawValue
+                : typeof found.value === "number"
+                  ? found.value
+                  : undefined;
+        if (typeof numeric !== "number") {
+            throw new TypeError(
+                `structFromDisplay: field "${key}" (label "${label}") in "${group.name}" had no numeric rawValue/value.`,
+            );
+        }
+        out[key] = fs.flags ? intToFlagArray(fs.flags, numeric, codecByteLength(fs.codec) * 8) : numeric;
+    }
+    return out as SpecData<S>;
+}
+
 interface SubGroupSpec {
     readonly name: string;
     readonly fields: readonly string[];
