@@ -48,6 +48,7 @@ transpilers/
 # "not a file"). server/node_modules is the exception - package.sh derefs the
 # externalised esbuild-wasm and strips all other symlinks before vsce runs.
 binary/node_modules/
+binary-editor/node_modules/
 format/node_modules/
 
 # Source YAML for TextMate grammars (only .json ships)
