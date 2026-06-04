@@ -1,10 +1,10 @@
 import { parserRegistry } from "@bgforge/binary";
 import type { EditorSession } from "./session";
 
-/** Permissive serialize seam. For now this delegates to the parser's existing
- *  writer; a later task replaces it with a per-format wire-level writer that
- *  bypasses strict canonical validation. Centralizing it here keeps that
- *  future swap to one file. */
+/** Serializes the session through the parser's canonical writer. There is no
+ *  separate permissive write path - the editor uses the single strict canonical
+ *  writer for all formats. Centralizing here keeps any future format-dispatch
+ *  logic in one place. */
 export function serializeSession(session: EditorSession): Uint8Array {
     const parser = parserRegistry.getById(session.parserId);
     if (!parser?.serialize) {
