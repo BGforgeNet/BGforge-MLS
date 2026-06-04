@@ -6,7 +6,7 @@ the workflow. Use this so changes to binaries land in git history alongside thei
 
 The set of binary formats handled is discovered at runtime from the installed `@bgforge/binary` (`fgbin --extensions`),
 so any format newly registered there is picked up by the action without a matching action release. At the time of
-writing that is `.pro` / `.map` (Fallout) and `.itm` / `.spl` / `.eff` (Infinity Engine).
+writing that is `.pro` / `.map` (Fallout) and `.itm` / `.spl` / `.eff` / `.cre` (Infinity Engine).
 
 ## Usage
 
@@ -24,6 +24,7 @@ on:
             - "**/*.itm"
             - "**/*.spl"
             - "**/*.eff"
+            - "**/*.cre"
 
 permissions:
     contents: write
@@ -33,7 +34,7 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v6
-            - uses: BGforgeNet/BGforge-MLS/actions/binary@v1
+            - uses: BGforgeNet/BGforge-MLS/actions/binary@actions/binary/v1
 ```
 
 ### Check mode: validate snapshots without committing
@@ -52,10 +53,28 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v6
-            - uses: BGforgeNet/BGforge-MLS/actions/binary@v1
+            - uses: BGforgeNet/BGforge-MLS/actions/binary@actions/binary/v1
               with:
                   check: "true"
 ```
+
+## Versioning
+
+Pin the moving major alias to receive fixes automatically:
+
+```yaml
+- uses: BGforgeNet/BGforge-MLS/actions/binary@actions/binary/v1
+```
+
+or an immutable exact tag for a fully reproducible action revision:
+
+```yaml
+- uses: BGforgeNet/BGforge-MLS/actions/binary@actions/binary/v1.0.0
+```
+
+`actions/binary/v1` is re-pointed to the latest `actions/binary/v1.x` release; a breaking change bumps the major.
+Pinning the tag fixes the _action code_ only - the `@bgforge/binary` it installs is governed by the `version` input
+(default `latest`), so set `version` too if you need the binary parser pinned as well.
 
 ## Inputs
 
