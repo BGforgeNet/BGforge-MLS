@@ -79,6 +79,10 @@ export {
     type FileDerivedDiagnostics,
 } from "./parse-options";
 
+// IE opcode relationship data (param labels, enum tables, engine availability)
+export { OpcodeRelationships } from "./ie-common/opcode-relationships";
+export type { OpcodeRelationship } from "./ie-common/opcode-relationships";
+
 // Side-effect: register the bundled parsers on the registry.
 import { proParser } from "./pro";
 import { mapParser } from "./map";

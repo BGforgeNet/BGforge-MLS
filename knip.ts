@@ -110,9 +110,6 @@ const config: KnipConfig = {
             // cac and diff are imported via shared/cli/cli-utils.ts, which lives outside any
             // workspace; knip's per-workspace dep tracing doesn't reach across that boundary.
             ignoreDependencies: ["cac", "diff"],
-            // Generated files not yet wired to a consumer; knip reports them as unused until
-            // the code that imports them lands in a later task.
-            ignore: ["src/ie-common/opcode-relationships.ts"],
         },
         "binary-editor": {
             entry: ["test/**/*.test.ts"],

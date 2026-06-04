@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildModel, type Model } from "../src/model";
 import { projectRow } from "../src/window";
 import type { RelationshipModel } from "../src/relationship/types";
+import { ieEffectsModel } from "../src/relationship/ie-effects";
 import type { ParseResult } from "@bgforge/binary";
 
 function effectModel(opcode: number, p1: number, p2: number): Model {
@@ -49,6 +50,32 @@ const enumModel: RelationshipModel = {
     dependents: () => [],
     constraints: () => [],
 };
+
+describe("ieEffectsModel.fieldOverride", () => {
+    it("relabels parameter1 from IESDP data for a known opcode", () => {
+        const model = effectModel(1, 5, 2);
+        const p1 = model.nodes.find((n) => n.name === "parameter1")!;
+        expect(ieEffectsModel.fieldOverride(model, p1)?.label).toBe("Key Modifier");
+    });
+    it("re-types parameter2 to an enum dropdown when the opcode has a value table", () => {
+        const model = effectModel(1, 5, 2);
+        const p2 = model.nodes.find((n) => n.name === "parameter2")!;
+        const ov = ieEffectsModel.fieldOverride(model, p2);
+        expect(ov?.label).toBe("Type");
+        expect(ov?.presentationType).toBe("enum");
+        expect(ov?.enumOptions?.["0"]).toBe("Cumulative Modifier");
+    });
+    it("adds an engine-availability description to the opcode field", () => {
+        const model = effectModel(1, 5, 2);
+        const op = model.nodes.find((n) => n.name === "opcode")!;
+        expect(ieEffectsModel.fieldOverride(model, op)?.description).toMatch(/BG1|BG2|engine/i);
+    });
+    it("produces no override for an unknown/modded opcode", () => {
+        const model = effectModel(65000, 5, 2);
+        const p1 = model.nodes.find((n) => n.name === "parameter1")!;
+        expect(ieEffectsModel.fieldOverride(model, p1)).toBeUndefined();
+    });
+});
 
 describe("projectRow overlay", () => {
     it("applies fieldOverride label to the row name", () => {
