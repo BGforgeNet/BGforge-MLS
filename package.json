@@ -366,21 +366,9 @@
                 "command": "extension.bgforge.dialogPreview",
                 "title": "BGforge MLS: Dialog Preview",
                 "icon": "$(open-preview)"
-            },
-            {
-                "command": "bgforge.binaryEditor.addEntry",
-                "title": "BGforge: Add entry to selected array",
-                "category": "Binary Editor"
             }
         ],
-        "menus": {
-            "commandPalette": [
-                {
-                    "command": "bgforge.binaryEditor.addEntry",
-                    "when": "activeCustomEditorId == 'bgforge.binaryEditor'"
-                }
-            ]
-        },
+        "menus": {},
         "customEditors": [
             {
                 "viewType": "bgforge.binaryEditor",

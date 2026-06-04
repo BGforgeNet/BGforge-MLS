@@ -152,9 +152,10 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
         await this.writeSave(document, destination.fsPath, destination);
     }
 
-    async revertCustomDocument(_document: BinaryEditorDocument, _token: vscode.CancellationToken): Promise<void> {
-        // Plan 3: re-open the session from disk and refresh the webview. A no-op revert is
-        // acceptable for the placeholder editor, which has no in-webview dirty state yet.
+    async revertCustomDocument(document: BinaryEditorDocument, _token: vscode.CancellationToken): Promise<void> {
+        await document.reloadFromDisk();
+        this.postToDocumentPanels(document, { type: "init", open: document.openResult });
+        await this.pushDiagnosticsToDocument(document);
     }
 
     async backupCustomDocument(

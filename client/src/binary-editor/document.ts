@@ -12,7 +12,7 @@ import { WorkerBridge, workerPort } from "./worker-bridge";
 export class BinaryEditorDocument implements vscode.CustomDocument {
     readonly uri: vscode.Uri;
     readonly bridge: WorkerBridge;
-    readonly sessionId: string;
+    sessionId: string;
     openResult: OpenResult;
 
     private readonly worker: Worker;
@@ -57,6 +57,23 @@ export class BinaryEditorDocument implements vscode.CustomDocument {
     /** Replace the cached OpenResult (after loadJson or a disk revert that changed the model/layout). */
     applyOpenResult(result: OpenResult): void {
         this.openResult = result;
+    }
+
+    /** Re-open the session from the file on disk (used by revert). Replaces the session and OpenResult. */
+    async reloadFromDisk(): Promise<void> {
+        const bytes = await vscode.workspace.fs.readFile(this.uri);
+        const opened = await this.bridge.send({
+            type: "open",
+            uri: this.uri.toString(),
+            bytes: new Uint8Array(bytes),
+        });
+        if (opened.type !== "opened" || !opened.result.sessionId) {
+            throw new Error(opened.type === "error" ? opened.message : "Failed to reopen binary file");
+        }
+        const oldSessionId = this.sessionId;
+        this.sessionId = opened.result.sessionId;
+        this.applyOpenResult(opened.result);
+        await this.bridge.send({ type: "close", sessionId: oldSessionId });
     }
 
     /** Records an edit on the VSCode undo stack, delegating undo/redo to the worker session. */
