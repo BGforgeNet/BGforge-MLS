@@ -13,6 +13,7 @@
     $effect(() => {
         void version; // dependency: a bump re-fetches after the cache is cleared
         let cancelled = false;
+        // Form groups are small; 1000 covers every real record. A windowed fetch for pathological cases is deferred.
         bridge.requestChildren(nodeId, 0, 1000).then((w) => { if (!cancelled) rows = w.rows; });
         return () => { cancelled = true; };
     });

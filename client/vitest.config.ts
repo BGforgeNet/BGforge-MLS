@@ -77,13 +77,7 @@ export default defineConfig({
             // up turns the gate into a ratchet against future regressions.
             thresholds: {
                 lines: 90,
-                // Temporary floor: the untested residual is split between dialog-tree functions
-                // (dialogTree.ts ~79%, dialogTree-d.ts ~81%, webview-assets.ts ~86%) and the
-                // bridge.ts webview-state module (~56%). The dialog-tree gap is ~4 functions;
-                // bridge.ts is covered by the spawned-worker integration test but that path
-                // runs out-of-process and is not measured by v8 coverage. Close by backfilling
-                // in-process tests for those two areas.
-                functions: 86,
+                functions: 90,
                 branches: 80,
                 statements: 90,
             },

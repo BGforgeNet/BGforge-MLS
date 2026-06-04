@@ -1,10 +1,11 @@
+import { SvelteSet } from "svelte/reactivity";
 import type { LayoutDescriptor, NodeId, SectionDescriptor } from "@bgforge/binary-editor";
 
 export class ViewModel {
     private layout: LayoutDescriptor;
     private activeId: string | undefined;
     selectedEntity: NodeId | undefined;
-    private expanded = new Set<NodeId>();
+    private expanded = new SvelteSet<NodeId>();
 
     constructor(layout: LayoutDescriptor) {
         this.layout = layout;

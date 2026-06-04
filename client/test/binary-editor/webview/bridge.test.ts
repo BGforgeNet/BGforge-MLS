@@ -33,4 +33,19 @@ describe("Bridge", () => {
         bridge.handle({ type: "error", requestId: sent[0].requestId, message: "boom" });
         await expect(p).rejects.toThrow("boom");
     });
+
+    it("posts editField/addEntry/dumpJson/loadJson messages verbatim", () => {
+        const sent: unknown[] = [];
+        const bridge = new Bridge((m) => sent.push(m));
+        bridge.editField("0/1", 7);
+        bridge.addEntry(["Global Variables"]);
+        bridge.dumpJson();
+        bridge.loadJson();
+        expect(sent).toEqual([
+            { type: "editField", nodeId: "0/1", value: 7 },
+            { type: "addEntry", namePath: ["Global Variables"] },
+            { type: "dumpJson" },
+            { type: "loadJson" },
+        ]);
+    });
 });

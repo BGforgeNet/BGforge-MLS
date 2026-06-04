@@ -25,12 +25,6 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
 
     /** Open panel-to-document map. */
     private readonly active = new Map<vscode.WebviewPanel, BinaryEditorDocument>();
-    /** Most-recently-focused document, the target for editor commands (addEntry). */
-    private activeDocument: BinaryEditorDocument | undefined;
-
-    getActiveDocument(): BinaryEditorDocument | undefined {
-        return this.activeDocument;
-    }
 
     private readonly extensionUri: vscode.Uri;
 
@@ -59,13 +53,8 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
         panel.webview.html = this.getHtml();
 
         this.active.set(panel, document);
-        if (panel.active) this.activeDocument = document;
-        panel.onDidChangeViewState((event) => {
-            if (event.webviewPanel.active) this.activeDocument = document;
-        });
         panel.onDidDispose(() => {
             this.active.delete(panel);
-            if (this.activeDocument === document) this.activeDocument = undefined;
         });
 
         panel.webview.onDidReceiveMessage(async (message: WebviewToHost) => {

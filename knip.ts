@@ -30,10 +30,9 @@ const config: KnipConfig = {
                 "test/**/*.test.ts",
             ],
             ignore: [
-                // Svelte components for the binary editor webview; not yet imported from the
-                // placeholder main.ts (wired in a later task when main.ts is replaced with the
-                // Svelte App root). Knip can't trace .svelte imports through the esbuild-svelte
-                // transform, so suppress the false-positive "unused file" report here.
+                // Svelte components for the binary editor webview. Knip cannot resolve .svelte
+                // imports through the esbuild-svelte transform (main.ts imports App.svelte, which
+                // transitively uses all components here), so it false-positives them as unused files.
                 "src/binary-editor/webview/components/**",
             ],
         },
