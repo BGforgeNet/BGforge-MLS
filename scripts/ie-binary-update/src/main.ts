@@ -13,7 +13,7 @@ import { parseArgs } from "node:util";
 import {
     extractOpcodes,
     emitOpcodesModule,
-    extractOpcodeRelationships,
+    buildMergedRelationships,
     emitOpcodeRelationshipsModule,
 } from "./extract-opcodes.ts";
 import { type FormatTarget, generate } from "./generate.ts";
@@ -110,7 +110,7 @@ function main(): void {
     // harvested from the same `_opcodes/opNNN.html` frontmatter as the opname lookup.
     const relOutputRel = "binary/src/ie-common/opcode-relationships.ts";
     const relExpected = emitOpcodeRelationshipsModule(
-        extractOpcodeRelationships(path.join(iesdpDir, "_opcodes")),
+        buildMergedRelationships(path.join(iesdpDir, "_opcodes")),
         "_opcodes/opNNN.html",
     );
     const relPath = path.join(outputDir, relOutputRel);

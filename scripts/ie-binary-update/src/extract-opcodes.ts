@@ -10,6 +10,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { OpcodeRelationshipOverrides } from "./opcode-relationships.overrides.ts";
 
 interface OpcodeFrontmatter {
     readonly n: number;
@@ -131,6 +132,52 @@ export function extractOpcodeRelationships(opcodesDir: string): ReadonlyMap<numb
     return new Map([...out].sort((a, b) => a[0] - b[0]));
 }
 
+/**
+ * Merges harvested opcode relationship data with curated overrides. For each opcode
+ * the override wins on a per-field basis: if the override supplies an `enum`, it
+ * replaces any harvested enum; if the override supplies a `label`, it replaces the
+ * harvested label. Fields absent from the override fall back to the harvested value.
+ */
+export function buildMergedRelationships(opcodesDir: string): ReadonlyMap<number, OpcodeRelationship> {
+    const harvested = extractOpcodeRelationships(opcodesDir);
+    const out = new Map<number, OpcodeRelationship>(harvested);
+
+    for (const [n, override] of Object.entries(OpcodeRelationshipOverrides)) {
+        const num = Number(n);
+        const base = out.get(num) ?? {};
+        const merged: OpcodeRelationship = { ...base };
+
+        if (override.param1 !== undefined) {
+            merged.param1 = {
+                label: override.param1.label ?? base.param1?.label,
+                ...(override.param1.enum !== undefined ? { enum: override.param1.enum } : {}),
+            };
+        }
+        if (override.param2 !== undefined) {
+            merged.param2 = {
+                label: override.param2.label ?? base.param2?.label,
+                ...(override.param2.enum !== undefined ? { enum: override.param2.enum } : {}),
+            };
+        }
+        if (override.availability !== undefined) {
+            merged.availability = override.availability;
+        }
+
+        out.set(num, merged);
+    }
+
+    return new Map([...out].sort((a, b) => a[0] - b[0]));
+}
+
+/** Serializes a numeric-keyed string enum to an inline object literal fragment, or returns undefined. */
+function emitEnumLiteral(e: Readonly<Record<number, string>> | undefined): string | undefined {
+    if (e === undefined) return undefined;
+    const entries = Object.entries(e)
+        .map(([k, v]) => `${k}: ${JSON.stringify(v)}`)
+        .join(", ");
+    return `enum: { ${entries} }`;
+}
+
 /** Emit the generated `opcode-relationships.ts` source for the IE-common module. */
 export function emitOpcodeRelationshipsModule(
     rels: ReadonlyMap<number, OpcodeRelationship>,
@@ -151,11 +198,13 @@ export function emitOpcodeRelationshipsModule(
         const parts: string[] = [];
         if (rel.param1 !== undefined) {
             const label = rel.param1.label !== undefined ? `label: ${JSON.stringify(rel.param1.label)}` : undefined;
-            parts.push(`param1: { ${label ?? ""} }`);
+            const enumPart = emitEnumLiteral(rel.param1.enum);
+            parts.push(`param1: { ${[label, enumPart].filter(Boolean).join(", ")} }`);
         }
         if (rel.param2 !== undefined) {
             const label = rel.param2.label !== undefined ? `label: ${JSON.stringify(rel.param2.label)}` : undefined;
-            parts.push(`param2: { ${label ?? ""} }`);
+            const enumPart = emitEnumLiteral(rel.param2.enum);
+            parts.push(`param2: { ${[label, enumPart].filter(Boolean).join(", ")} }`);
         }
         if (rel.availability !== undefined) {
             const entries = Object.entries(rel.availability)
