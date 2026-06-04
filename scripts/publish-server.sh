@@ -19,6 +19,18 @@ cd "$ROOT_DIR"
 # shellcheck source=scripts/publish-lib.sh
 source "$SCRIPT_DIR/publish-lib.sh"
 
+# Preflight: the published server resolves its @bgforge/format workspace dep to format's
+# concrete version, so that version must already be on npm or a fresh `npm install
+# @bgforge/mls-server` cannot resolve it. The libraries release independently on their own
+# <lib>/vX.Y.Z tags (publish-library.yml), so fail fast if format was bumped here without
+# its tag being released first.
+format_version="$(node -p "require('./format/package.json').version")"
+if ! pnpm view "@bgforge/format@${format_version}" version >/dev/null 2>&1; then
+    echo "Error: @bgforge/format@${format_version} is not published on npm." >&2
+    echo "Release the format/v${format_version} tag before this server publish." >&2
+    exit 1
+fi
+
 if [ "${SKIP_BUILD:-}" != "1" ]; then
     echo "=== Building grammars ==="
     pnpm build:grammar

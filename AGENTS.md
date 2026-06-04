@@ -124,11 +124,7 @@ cd grammars/weidu-tp2 && pnpm test   # or any grammars/*/
 
 ## Publishing & Release
 
-Three artifact streams, all triggered by `git tag vX.Y.Z` -> GitHub Actions. See `docs/architecture.md` for packaging details.
-
-**Version management:** Root `package.json` and `server/package.json` must carry identical versions - they ship together as the VSIX and the `@bgforge/mls-server` npm package, gated by the same `git tag vX.Y.Z`. Check the current value with `node -p "require('./package.json').version"`. Bump both together, commit as "Update changelog, bump version: X.Y.Z", then tag.
-
-The three published library packages - `@bgforge/binary`, `@bgforge/format`, `@bgforge/transpile` - version independently. Each library and its bundled CLI (`fgbin`, `fgfmt`, `fgtp`) share a single package.json and therefore a single version, so the library API and the CLI surface always move together. Cross-library coupling is not enforced: a binary-format addition does not force a format or transpile bump. Workspace consumers (`server/`, `client/`) reference these packages via `workspace:*`, so bumping a library version does not require updating dependents. Each library's release is its own `git tag` namespace (e.g., `binary/v0.2.0`) when published; the repo-level `vX.Y.Z` tag governs only the VSIX + server release.
+Releases are tag-driven via GitHub Actions. `docs/releasing.md` is the canonical reference: the tag scheme (which tag form triggers which workflow), and the per-stream release procedures for the extension, the three libraries, and the reusable Action - including the root/`server` version-identity invariant and the `format`-before-server ordering. Consult it before cutting any release. See `docs/architecture.md` for packaging mechanics.
 
 **Changelog entries:** Document only user-facing changes (new features, bug fixes, behavior changes). Do not include implementation details (refactoring, test additions, code quality improvements, internal constants). Users care about what changed, not how it was implemented.
 
@@ -204,3 +200,4 @@ See `server/INTERNALS.md` for the full feature matrix and cross-language feature
 | Build scripts           | `scripts/README.md`                                                                                                        |
 | Reusable GH Actions     | `actions/binary/README.md`                                                                                                 |
 | Packaging               | `docs/ignore-files.md`                                                                                                     |
+| Releasing               | `docs/releasing.md`                                                                                                        |
