@@ -168,6 +168,15 @@ describe("projectRow metadata", () => {
         // groups carry none of these
         expect(projectRow(m, stats).enumOptions).toBeUndefined();
     });
+
+    it("falls back to field.value for rawValue when the parser left it unset", () => {
+        // Plain numeric fields carry `value` but no `rawValue` (the parser only sets rawValue when it
+        // differs from value, e.g. enums/flags). Projection must fall back to value so numeric controls
+        // are not rendered blank. enumFlagResult sets no rawValue on its fields.
+        const m = buildModel(enumFlagResult());
+        const race = m.nodes.find((n) => n.name === "Race")!;
+        expect(projectRow(m, race).rawValue).toBe(1);
+    });
 });
 
 describe("getChildren", () => {

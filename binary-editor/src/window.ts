@@ -21,7 +21,11 @@ export function projectRow(model: Model, node: FlatNode): Row {
     const field = node.source as ParsedField;
     base.valueType = field.type;
     base.displayValue = String(field.value);
-    base.rawValue = field.rawValue;
+    // `rawValue` is the underlying editable value. The parser only sets `field.rawValue` when it
+    // differs from `field.value` (enums/flags carry the numeric code); plain numbers leave it unset,
+    // so fall back to `field.value` - otherwise numeric controls render with no value.
+    const rawCandidate = field.rawValue ?? field.value;
+    if (typeof rawCandidate === "number" || typeof rawCandidate === "string") base.rawValue = rawCandidate;
     base.offset = field.offset;
     base.size = field.size;
     // Fields inside an editingLocked ancestor group are not editable; padding and

@@ -213,20 +213,24 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
     }
 
     private async dumpJson(document: BinaryEditorDocument): Promise<void> {
+        // Write the canonical snapshot to the automatic sidecar path (<file>.json) - the same path the
+        // autoDumpJson save-time sidecar uses - with no dialog.
         const json = await document.getSnapshotJson();
-        const target = await vscode.window.showSaveDialog({
-            defaultUri: vscode.Uri.file(getSnapshotPath(document.uri.fsPath)),
-            filters: { JSON: ["json"] },
-        });
-        if (!target) return; // cancelled
+        const target = vscode.Uri.file(getSnapshotPath(document.uri.fsPath));
         await vscode.workspace.fs.writeFile(target, Buffer.from(json, "utf8"));
     }
 
     private async loadJson(document: BinaryEditorDocument, panel: vscode.WebviewPanel): Promise<void> {
-        const picked = await vscode.window.showOpenDialog({ canSelectMany: false, filters: { JSON: ["json"] } });
-        if (!picked || picked.length === 0 || !picked[0]) return; // cancelled
-        const bytes = await vscode.workspace.fs.readFile(picked[0]);
-        const json = Buffer.from(bytes).toString("utf8");
+        // Read from the automatic sidecar path (<file>.json), no dialog. Missing file -> advisory error.
+        const source = vscode.Uri.file(getSnapshotPath(document.uri.fsPath));
+        let json: string;
+        try {
+            const bytes = await vscode.workspace.fs.readFile(source);
+            json = Buffer.from(bytes).toString("utf8");
+        } catch {
+            this.post(panel, { type: "error", message: `No JSON sidecar to load at ${source.fsPath}` });
+            return;
+        }
         const r = await document.bridge.send({ type: "loadJson", sessionId: document.sessionId, json });
         if (r.type === "error") {
             this.post(panel, { type: "error", message: r.message });
