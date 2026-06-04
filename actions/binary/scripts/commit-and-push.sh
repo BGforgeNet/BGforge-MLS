@@ -1,6 +1,7 @@
 #!/bin/bash
-# Stage refreshed snapshot files, commit them under the configured author,
-# rebase against the latest remote tip, and push. No-op when nothing changed.
+# Stage refreshed snapshot files, commit them under the configured author, and
+# push. Rebase onto the remote tip only if a concurrent push rejects ours. No-op
+# when nothing changed.
 #
 # Inputs (env):  COMMIT_MESSAGE, COMMIT_AUTHOR_NAME, COMMIT_AUTHOR_EMAIL,
 #                EXTENSIONS (csv list of binary extensions, sourced from the
@@ -47,5 +48,13 @@ files="$(git diff --cached --name-only)"
 } >> "$GITHUB_OUTPUT"
 
 git commit -m "$COMMIT_MESSAGE"
-git pull --rebase --autostash
-git push
+
+# Push directly. In the common case the branch has not moved since checkout, so this
+# succeeds with no fetch at all. Only when a concurrent push moved the branch do we
+# rebase onto the remote and retry. The earlier unconditional `git pull --rebase` ran
+# on every invocation and fetched the repo's entire ref namespace (every branch and
+# tag); on a large binary repo that dominated the action's runtime (~2 minutes).
+if ! git push; then
+    git pull --rebase --autostash --no-tags
+    git push
+fi
