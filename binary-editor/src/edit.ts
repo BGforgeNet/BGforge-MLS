@@ -49,7 +49,7 @@ export function editField(session: EditorSession, nodeId: NodeId, value: number 
     return {
         changeSet: {
             changed,
-            diagnostics: [],
+            diagnostics: rel ? rel.constraints(session.model) : [],
             dirty: session.dirty,
             formatValid,
         },

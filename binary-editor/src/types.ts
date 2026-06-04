@@ -36,6 +36,7 @@ export interface Diagnostic {
     nodeId: NodeId;
     severity: "warning" | "error";
     message: string;
+    quickFix?: { label: string; edits: { nodeId: NodeId; value: number | string }[] };
 }
 
 /** Returned by every mutation. `changed` lists rows whose value OR shape changed

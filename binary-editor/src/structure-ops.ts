@@ -29,7 +29,7 @@ function commit(session: EditorSession, label: string, next: ParseResult): Struc
     return {
         changeSet: {
             changed: getWindow(session.model, 0, 200),
-            diagnostics: [],
+            diagnostics: session.relationshipModel ? session.relationshipModel.constraints(session.model) : [],
             dirty: true,
             formatValid: true,
         },

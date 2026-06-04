@@ -77,6 +77,27 @@ describe("ieEffectsModel.fieldOverride", () => {
     });
 });
 
+describe("ieEffectsModel.constraints", () => {
+    it("flags an empty probability range with a swap quick-fix", () => {
+        const model = effectModel(1, 5, 2);
+        const p1 = model.nodes.find((n) => n.name === "probability1")!;
+        const p2 = model.nodes.find((n) => n.name === "probability2")!;
+        (p1.source as { value: number }).value = 10; // upper < lower => empty range
+        (p2.source as { value: number }).value = 40;
+        const diags = ieEffectsModel.constraints(model);
+        const d = diags.find((x) => x.nodeId === p1.id);
+        expect(d?.severity).toBe("warning");
+        expect(d?.quickFix?.edits).toEqual([
+            { nodeId: p1.id, value: 40 },
+            { nodeId: p2.id, value: 10 },
+        ]);
+    });
+    it("no diagnostic when the probability range is valid", () => {
+        const model = effectModel(1, 5, 2); // prob1=100, prob2=0 by default in the helper
+        expect(ieEffectsModel.constraints(model)).toEqual([]);
+    });
+});
+
 describe("projectRow overlay", () => {
     it("applies fieldOverride label to the row name", () => {
         const model = effectModel(1, 5, 2);
