@@ -29,6 +29,13 @@ const config: KnipConfig = {
                 // vitest unit tests (run via client/vitest.config.ts)
                 "test/**/*.test.ts",
             ],
+            ignore: [
+                // Svelte components for the binary editor webview; not yet imported from the
+                // placeholder main.ts (wired in a later task when main.ts is replaced with the
+                // Svelte App root). Knip can't trace .svelte imports through the esbuild-svelte
+                // transform, so suppress the false-positive "unused file" report here.
+                "src/binary-editor/webview/components/**",
+            ],
         },
         server: {
             // Point knip at the TypeScript source entry directly.
