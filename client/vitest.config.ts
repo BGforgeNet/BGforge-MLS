@@ -77,11 +77,12 @@ export default defineConfig({
             // up turns the gate into a ratchet against future regressions.
             thresholds: {
                 lines: 90,
-                // Temporary floor: removing the legacy binary editor deleted ~82 well-tested
-                // functions, shrinking the denominator and exposing pre-existing untested
-                // dialog-tree functions (dialogTree.ts, dialogTree-d.ts, webview-assets.ts) that
-                // the old volume had averaged above the line. Ratchet back to 90 by backfilling
-                // those dialog-tree tests - the gap is ~3 functions.
+                // Temporary floor: the untested residual is split between dialog-tree functions
+                // (dialogTree.ts ~79%, dialogTree-d.ts ~81%, webview-assets.ts ~86%) and the
+                // bridge.ts webview-state module (~56%). The dialog-tree gap is ~4 functions;
+                // bridge.ts is covered by the spawned-worker integration test but that path
+                // runs out-of-process and is not measured by v8 coverage. Close by backfilling
+                // in-process tests for those two areas.
                 functions: 86,
                 branches: 80,
                 statements: 90,
