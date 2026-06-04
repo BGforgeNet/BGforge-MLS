@@ -42,6 +42,14 @@ const labelModel: RelationshipModel = {
     constraints: () => [],
 };
 
+const enumModel: RelationshipModel = {
+    formatId: "eff",
+    fieldOverride: (_m, node) =>
+        node.name === "parameter2" ? { presentationType: "enum", enumOptions: { "0": "A", "1": "B" } } : undefined,
+    dependents: () => [],
+    constraints: () => [],
+};
+
 describe("projectRow overlay", () => {
     it("applies fieldOverride label to the row name", () => {
         const model = effectModel(1, 5, 2);
@@ -52,5 +60,13 @@ describe("projectRow overlay", () => {
         const model = effectModel(1, 5, 2);
         const p2 = model.nodes.find((n) => n.name === "parameter2")!;
         expect(projectRow(model, p2).name).toBe("parameter2");
+    });
+    it("re-types a numeric field to enum so the view renders a dropdown", () => {
+        const model = effectModel(1, 5, 2);
+        const p2 = model.nodes.find((n) => n.name === "parameter2")!;
+        const row = projectRow(model, p2, enumModel);
+        // controlKind() in the view keys the dropdown off valueType === "enum" plus enumOptions.
+        expect(row.valueType).toBe("enum");
+        expect(row.enumOptions).toEqual({ "0": "A", "1": "B" });
     });
 });

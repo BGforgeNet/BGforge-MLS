@@ -44,6 +44,12 @@ export function projectRow(model: Model, node: FlatNode, rel?: RelationshipModel
             if (ov.description !== undefined) base.description = ov.description;
             if (ov.enumOptions !== undefined) base.enumOptions = ov.enumOptions;
             if (ov.editable !== undefined) base.editable = ov.editable;
+            // `presentationType: "enum"` re-types a numeric field so the view renders the named
+            // dropdown - the field's underlying `valueType`/codec is unchanged (display only).
+            // This is what makes a discriminator (e.g. an IE effect opcode) reinterpret a sibling
+            // parameter as a named value. Only "enum" is mapped: a flags overlay would also need
+            // flagOptions, which the IE relationship layer does not produce.
+            if (ov.presentationType === "enum") base.valueType = "enum";
         }
     }
     return base;
