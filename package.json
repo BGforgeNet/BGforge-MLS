@@ -100,6 +100,7 @@
         "diff": "^9.0.0",
         "esbuild": "^0.28.0",
         "esbuild-svelte": "^0.9.5",
+        "jsonc-parser": "^3.3.1",
         "knip": "^6.15.0",
         "mocha": "^11.7.6",
         "oxfmt": "^0.53.0",
