@@ -41,25 +41,44 @@ function getChildGroups(parent: ParsedGroup): ParsedGroup[] {
 
 /**
  * Rebuild a typed data struct from a `ParsedGroup` produced by `walkStruct`,
- * extending `structFromDisplay` to handle fixed-count `view: "slots"` array
- * fields. For those, `walkStruct` emits a named sub-group whose children each
- * carry the slot value in `rawValue`. All other fields are delegated to
- * `structFromDisplay`.
+ * extending `structFromDisplay` to handle fixed-count array fields:
+ *
+ *   - `view: "slots"` arrays: `walkStruct` emits a named sub-group whose
+ *     children carry the slot value in `rawValue`; these are read back field
+ *     by field.
+ *   - Plain padding arrays (no `view: "slots"`): `walkStruct` renders them as
+ *     a single "(N values)" padding field; the original values are not
+ *     recoverable from the display tree, so they are zero-filled. Callers are
+ *     responsible for ensuring the affected fields are genuinely padding
+ *     (reserved / unused) so the zero-fill is safe.
+ *
+ * All non-array fields are delegated to `structFromDisplay`.
+ *
+ * Exported so format-specific canonical readers (e.g. EFF) can share the
+ * same array-handling logic without duplicating it.
  */
-function structFromDisplayFull<S extends Record<string, FieldSpec>>(
+export function structFromDisplayFull<S extends Record<string, FieldSpec>>(
     group: ParsedGroup,
     spec: S,
     presentation: StructPresentation<SpecData<S>>,
 ): SpecData<S> {
-    // Collect array-field keys that need special handling (view: "slots" only;
-    // other array variants are not present in the IE header/ability structs).
-    const arrayKeys = new Set<string>();
+    // Collect array-field keys that need special handling. Two kinds:
+    //   - view:"slots" arrays: sub-group children carry per-slot values.
+    //   - plain (no view) arrays: rendered as a single padding entry in the
+    //     display tree; values are not recoverable, so they are zero-filled.
+    const slotsKeys = new Set<string>();
+    const paddingKeys = new Set<string>();
     for (const key of Object.keys(spec)) {
         const fs = spec[key]!;
-        if (isArraySpec(fs) && fs.view === "slots") {
-            arrayKeys.add(key);
+        if (isArraySpec(fs)) {
+            if (fs.view === "slots") {
+                slotsKeys.add(key);
+            } else {
+                paddingKeys.add(key);
+            }
         }
     }
+    const arrayKeys = new Set<string>([...slotsKeys, ...paddingKeys]);
 
     if (arrayKeys.size === 0) {
         // No array fields: delegate entirely to structFromDisplay.
@@ -93,7 +112,7 @@ function structFromDisplayFull<S extends Record<string, FieldSpec>>(
         ) => Record<string, unknown>
     )(group, scalarSpec, presentation as StructPresentation<Record<string, unknown>>);
 
-    // Read each array field from its named sub-group.
+    // Read each array field: slots from a named sub-group, plain padding by zero-fill.
     const presTyped = presentation as Record<string, { label?: string } | undefined>;
     for (const key of arrayKeys) {
         const fs = spec[key]!;
@@ -101,6 +120,15 @@ function structFromDisplayFull<S extends Record<string, FieldSpec>>(
 
         const presKey = key as keyof SpecData<S>;
         const label: string = presTyped[presKey as string]?.label ?? humanize(key);
+
+        if (paddingKeys.has(key)) {
+            // Plain padding array: display layer emits a single "(N values)"
+            // field; the per-element values are not recoverable. Zero-fill.
+            // Callers must ensure these fields are genuinely reserved/padding.
+            const count = typeof fs.count === "number" ? fs.count : 0;
+            partial[key] = Array.from({ length: count }, () => 0);
+            continue;
+        }
 
         const subGroup = group.fields.find((e): e is ParsedGroup => isGroup(e) && e.name === label);
         if (!subGroup) {
