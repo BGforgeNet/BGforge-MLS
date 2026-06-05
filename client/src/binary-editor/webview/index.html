@@ -79,6 +79,24 @@
             .vrow.selected {
                 background: var(--vscode-list-activeSelectionBackground);
             }
+            .inline-list-toolbar {
+                flex: 0 0 auto;
+                padding: 0.25rem;
+            }
+            .vrow.inline {
+                display: flex;
+                gap: 0.5rem;
+                align-items: center;
+                padding: 0 0.25rem;
+            }
+            .vrow.inline .row-actions {
+                margin-left: auto;
+                display: flex;
+                gap: 0.15rem;
+            }
+            .vrow.inline .row-actions button {
+                padding: 0 0.3rem;
+            }
         </style>
     </head>
     <body>

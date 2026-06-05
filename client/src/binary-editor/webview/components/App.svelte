@@ -7,6 +7,7 @@
     import SectionTabs from "./SectionTabs.svelte";
     import FormSection from "./FormSection.svelte";
     import ListSection from "./ListSection.svelte";
+    import InlineList from "./InlineList.svelte";
 
     const { bridge }: { bridge: Bridge } = $props();
 
@@ -76,7 +77,14 @@
     <SectionTabs sections={open.layout.sections} {activeId} onselect={selectSection} />
     {#if active && vm}
         {#if active.kind === "list"}
-            <ListSection nodeId={active.nodeId} {bridge} {vm} {version} onadd={add} onedit={edit} {byNode} />
+            {#if active.render === "inline"}
+                <InlineList parentId={active.nodeId} title={active.title}
+                            caps={{ canAdd: active.canAdd, canModify: active.canModify }}
+                            {bridge} {version} onedit={edit}
+                            structureOp={(op) => bridge.structureOp(op)} />
+            {:else}
+                <ListSection nodeId={active.nodeId} {bridge} {vm} {version} onadd={add} onedit={edit} {byNode} />
+            {/if}
         {:else}
             <FormSection nodeId={active.nodeId} {bridge} {vm} {version} onedit={edit} {byNode} />
         {/if}
