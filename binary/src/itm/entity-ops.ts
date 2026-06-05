@@ -20,8 +20,12 @@
  * left undefined here; the byte-builder callers that need relink come next.
  */
 
-import type { EntryCollection } from "../spec/entity-ops";
+import { applyEntryMutation, type EntryCollection } from "../spec/entity-ops";
+import { getItmCanonicalDocument, rebuildItmCanonicalDocument } from "./canonical-reader";
+import { serializeItmCanonicalDocument } from "./canonical-writer";
+import { validateEffectPartition } from "./effect-partition";
 import type { ItmCanonicalDocument } from "./canonical-schemas";
+import type { ParseResult } from "../types";
 
 // ItmCanonicalDocument["abilities"][number] is SpecData<typeof itmAbilitySpecAnnotated>.
 // ItmCanonicalDocument["effects"][number] is SpecData<typeof effectSpecAnnotated>.
@@ -129,3 +133,190 @@ export const itmEffectsCollection: EntryCollection<ItmCanonicalDocument, ItmEffe
     removable: true,
     // relink added in Task 6: shifts per-ability featureBlockIndex/Count after removals
 };
+
+/**
+ * Re-derive every ability's featureBlockIndex as a running offset over the flat
+ * effects array, returning a NEW doc (no mutation of the input).
+ *
+ * The equipping range always sits first (index 0); abilities own contiguous
+ * slices in order after it. So the authoritative layout is fully determined by
+ * the per-owner COUNTS: walk equipping, then each ability in order, advancing a
+ * running cursor by each owner's count and stamping the cursor as that owner's
+ * start.
+ *
+ * Why re-derive instead of shiftEffectRefs: an ability op moves a whole effect
+ * SLICE (reorder swaps two adjacent slices, duplicate clones one, remove deletes
+ * an owner entirely). shiftEffectRefs is a per-position count adjust around a
+ * single edit point; it cannot express a slice move or an owner vanishing.
+ * Running-offset re-derivation from the counts is the slice-correct relink and
+ * is safe because the contiguous-in-order, equipping-first invariant is proven
+ * to hold for all real ITM data (see effect-partition.ts). It is idempotent: on
+ * an unedited doc it reproduces the identical indices, so a no-op round-trips
+ * byte-identically.
+ *
+ * The caller is responsible for keeping each ability's featureBlockCount in sync
+ * with the actual effects slice it splices; this helper trusts those counts.
+ */
+export function relinkAbilityEffectIndices(doc: ItmCanonicalDocument): ItmCanonicalDocument {
+    const equippingStart = 0;
+    let running = equippingStart + doc.header.featureBlocksCount;
+    const abilities = doc.abilities.map((ability) => {
+        const next = { ...ability, featureBlockIndex: running };
+        running += ability.featureBlockCount;
+        return next;
+    });
+    return {
+        ...doc,
+        header: { ...doc.header, featureBlocksIndex: equippingStart },
+        abilities,
+    };
+}
+
+function readDocument(parseResult: ParseResult): ItmCanonicalDocument | undefined {
+    return getItmCanonicalDocument(parseResult) ?? rebuildItmCanonicalDocument(parseResult);
+}
+
+/**
+ * Resolve a 0-based ability index from an entry path like ["Abilities", "Ability N"].
+ * The display tree labels abilities 1-based ("Ability 1" is abilities[0]), per
+ * ie-common/ability-effects-parser.ts. Returns undefined for any path that is
+ * not an in-range ability address.
+ */
+function resolveAbilityIndex(entryPath: readonly string[], abilityCount: number): number | undefined {
+    if (entryPath.length !== 2 || entryPath[0] !== "Abilities") return undefined;
+    const label = entryPath[1];
+    if (label === undefined || !label.startsWith("Ability ")) return undefined;
+    const oneBased = Number.parseInt(label.slice("Ability ".length), 10);
+    if (!Number.isInteger(oneBased)) return undefined;
+    const index = oneBased - 1;
+    if (index < 0 || index >= abilityCount) return undefined;
+    return index;
+}
+
+/** The pre-edit effect slice an ability owns, read from the ORIGINAL doc. */
+function abilitySlice(doc: ItmCanonicalDocument, index: number): { start: number; count: number } {
+    // Non-null is safe: every caller resolves `index` through resolveAbilityIndex, which returns
+    // undefined for any out-of-range slot; reorder's lo/hi both derive from that resolved index.
+    const ability = doc.abilities[index]!;
+    return { start: ability.featureBlockIndex, count: ability.featureBlockCount };
+}
+
+function cloneEffects(effects: readonly ItmEffect[]): ItmEffect[] {
+    // structuredClone gives an independent deep copy so a duplicated slice does
+    // not alias the source (flags arrays / nested fields stay distinct).
+    return effects.map((effect) => structuredClone(effect));
+}
+
+/**
+ * Finalize a structural ability edit: re-derive the running-offset indices, then
+ * validate the partition. A non-empty issue list means the slice op and the
+ * counts disagree (a relink bug) - throw rather than emit a corrupt file, since
+ * this module is the sole guard for per-ability effect ranges.
+ */
+function finalizeAndSerialize(doc: ItmCanonicalDocument): Uint8Array {
+    const relinked = relinkAbilityEffectIndices(doc);
+    const issues = validateEffectPartition(relinked);
+    if (issues.length > 0) {
+        throw new Error(`ITM ability relink produced an inconsistent effect partition: ${issues.join("; ")}`);
+    }
+    return serializeItmCanonicalDocument(relinked);
+}
+
+/** Append a new empty-slice ability. effects[] is unchanged. */
+export function buildItmAddAbilityBytes(
+    parseResult: ParseResult,
+    arrayPath: readonly string[],
+): Uint8Array | undefined {
+    if (arrayPath.length !== 1 || arrayPath[0] !== "Abilities") return undefined;
+    const doc = readDocument(parseResult);
+    if (!doc) return undefined;
+    const mutation = applyEntryMutation(doc.abilities, "add", doc.abilities.length, defaultItmAbility);
+    if (!mutation) return undefined;
+    return finalizeAndSerialize({ ...doc, abilities: [...mutation.next] });
+}
+
+/** Insert a new empty-slice ability before/after the targeted slot. effects[] is unchanged. */
+export function buildItmInsertAbilityBytes(
+    parseResult: ParseResult,
+    entryPath: readonly string[],
+    position: "before" | "after",
+): Uint8Array | undefined {
+    const doc = readDocument(parseResult);
+    if (!doc) return undefined;
+    const index = resolveAbilityIndex(entryPath, doc.abilities.length);
+    if (index === undefined) return undefined;
+    const mutation = applyEntryMutation(doc.abilities, "insert", index, defaultItmAbility, position);
+    if (!mutation) return undefined;
+    return finalizeAndSerialize({ ...doc, abilities: [...mutation.next] });
+}
+
+/** Remove the targeted ability AND its owned effect slice. */
+export function buildItmRemoveAbilityBytes(
+    parseResult: ParseResult,
+    entryPath: readonly string[],
+): Uint8Array | undefined {
+    const doc = readDocument(parseResult);
+    if (!doc) return undefined;
+    const index = resolveAbilityIndex(entryPath, doc.abilities.length);
+    if (index === undefined) return undefined;
+    const mutation = applyEntryMutation(doc.abilities, "remove", index, defaultItmAbility);
+    if (!mutation) return undefined;
+
+    const { start, count } = abilitySlice(doc, index);
+    const effects = [...doc.effects.slice(0, start), ...doc.effects.slice(start + count)];
+    return finalizeAndSerialize({ ...doc, abilities: [...mutation.next], effects });
+}
+
+/**
+ * Reorder the targeted ability up/down by one, swapping the two adjacent ability
+ * records AND their two adjacent effect slices so each ability still owns a
+ * contiguous slice after the running-offset relink.
+ */
+export function buildItmReorderAbilityBytes(
+    parseResult: ParseResult,
+    entryPath: readonly string[],
+    direction: "up" | "down",
+): Uint8Array | undefined {
+    const doc = readDocument(parseResult);
+    if (!doc) return undefined;
+    const index = resolveAbilityIndex(entryPath, doc.abilities.length);
+    if (index === undefined) return undefined;
+    const mutation = applyEntryMutation(doc.abilities, "reorder", index, defaultItmAbility, undefined, direction);
+    if (!mutation) return undefined; // boundary no-op
+
+    // The two slots being swapped, in ascending order: lo precedes hi in effects[].
+    const lo = Math.min(index, mutation.index);
+    const hi = Math.max(index, mutation.index);
+    const loSlice = abilitySlice(doc, lo);
+    const hiSlice = abilitySlice(doc, hi);
+    // Swap the two adjacent slices: [..before lo][hi slice][lo slice][..after hi].
+    const effects = [
+        ...doc.effects.slice(0, loSlice.start),
+        ...doc.effects.slice(hiSlice.start, hiSlice.start + hiSlice.count),
+        ...doc.effects.slice(loSlice.start, loSlice.start + loSlice.count),
+        ...doc.effects.slice(hiSlice.start + hiSlice.count),
+    ];
+    return finalizeAndSerialize({ ...doc, abilities: [...mutation.next], effects });
+}
+
+/**
+ * Duplicate the targeted ability: clone the record (inserted right after the
+ * source) AND clone its effect slice (inserted right after the source slice, at
+ * start + count) so the clone owns an independent contiguous slice.
+ */
+export function buildItmDuplicateAbilityBytes(
+    parseResult: ParseResult,
+    entryPath: readonly string[],
+): Uint8Array | undefined {
+    const doc = readDocument(parseResult);
+    if (!doc) return undefined;
+    const index = resolveAbilityIndex(entryPath, doc.abilities.length);
+    if (index === undefined) return undefined;
+    const mutation = applyEntryMutation(doc.abilities, "duplicate", index, defaultItmAbility);
+    if (!mutation) return undefined;
+
+    const { start, count } = abilitySlice(doc, index);
+    const clonedSlice = cloneEffects(doc.effects.slice(start, start + count));
+    const effects = [...doc.effects.slice(0, start + count), ...clonedSlice, ...doc.effects.slice(start + count)];
+    return finalizeAndSerialize({ ...doc, abilities: [...mutation.next], effects });
+}
