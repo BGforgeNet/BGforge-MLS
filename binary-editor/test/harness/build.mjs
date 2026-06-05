@@ -19,8 +19,7 @@ const result = await build({
 });
 const js = result.outputFiles[0].text;
 
-const indexHtml = fs.readFileSync(path.join(repo, "client/src/binary-editor/webview/index.html"), "utf8");
-const css = indexHtml.match(/<style[^>]*>([\s\S]*?)<\/style>/)[1];
+const css = fs.readFileSync(path.join(repo, "client/src/binary-editor/webview/styles.css"), "utf8");
 
 const html = `<!doctype html>
 <html lang="en"><head><meta charset="UTF-8" />

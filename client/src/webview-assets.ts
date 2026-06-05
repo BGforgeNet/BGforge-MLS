@@ -61,6 +61,18 @@ export function generateNonce(): string {
 }
 
 /**
+ * Inline a stylesheet into an HTML template at the `{{styles}}` placeholder.
+ *
+ * The CSS is supplied as a function replacement for the same reason `inlineWebviewScript` uses one: a plain string
+ * replacement lets String.prototype.replace interpret `$$`/`$&`/`$'` as special patterns. CSS values are unlikely
+ * to contain those sequences today, but using a function replacement removes the hazard categorically and keeps the
+ * two helpers consistent.
+ */
+export function inlineWebviewStyles(html: string, css: string): string {
+    return html.replaceAll("{{styles}}", () => css);
+}
+
+/**
  * Inline a bundled script into an HTML template at the `/* __SCRIPT__ *​/` placeholder and stamp the CSP nonce.
  *
  * The script MUST be supplied as a *function* replacement so it is inlined verbatim. A plain string replacement

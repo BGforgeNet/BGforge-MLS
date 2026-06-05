@@ -2,7 +2,14 @@ import * as path from "node:path";
 import * as vscode from "vscode";
 import { getSnapshotPath } from "@bgforge/binary";
 import type { StructureOpRequest } from "@bgforge/binary-editor";
-import { generateNonce, getCachedHtmlAsset, getCachedJsAsset, inlineWebviewScript } from "../webview-assets";
+import {
+    generateNonce,
+    getCachedCssAsset,
+    getCachedHtmlAsset,
+    getCachedJsAsset,
+    inlineWebviewScript,
+    inlineWebviewStyles,
+} from "../webview-assets";
 import { surfaceWebviewRuntimeError } from "../webview-error";
 import { BinaryEditorDocument } from "./document";
 import { planSave } from "./save";
@@ -10,6 +17,7 @@ import type { HostToWebview, WebviewToHost } from "./webview/messages";
 
 const WORKER_SCRIPT = path.join("client", "out", "binary-editor", "worker.js");
 const WEBVIEW_HTML = path.join("client", "src", "binary-editor", "webview", "index.html");
+const WEBVIEW_CSS = path.join("client", "src", "binary-editor", "webview", "styles.css");
 const WEBVIEW_JS = path.join("client", "out", "binary-editor", "webview", "main.js");
 
 /** Human-readable undo-history label for a structure op. The worker keeps its own detailed label; this is the
@@ -286,7 +294,9 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
 
     private getHtml(): string {
         const extensionPath = this.extensionUri.fsPath;
-        const html = getCachedHtmlAsset("binary-editor-v2", extensionPath, WEBVIEW_HTML);
+        let html = getCachedHtmlAsset("binary-editor-v2", extensionPath, WEBVIEW_HTML);
+        const css = getCachedCssAsset("binary-editor-v2", extensionPath, [WEBVIEW_CSS]);
+        html = inlineWebviewStyles(html, css);
         const script = getCachedJsAsset("binary-editor-v2", extensionPath, WEBVIEW_JS);
         const nonce = generateNonce();
         return inlineWebviewScript(html, script, nonce);
