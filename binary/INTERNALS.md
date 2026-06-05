@@ -301,7 +301,7 @@ Adapter responsibilities:
   - `domainRanges` - per-field numeric domain narrowing keyed by semantic key. Read by `getDomainRange` in `binary-format-contract.ts`, consumed by `validateNumericValue` / `clampNumericValue` / `zodFieldNumber`.
 - **Editor projection** (optional): `shouldHideField`, `shouldHideGroup`, `projectDisplayRoot` - hide tile bulk, redundant slots, etc.
 - **Structural edits** (optional): `isStructuralFieldId`, `buildStructuralTransitionBytes` - layout-changing edits (PRO subtype change).
-- **Variable-length array editing** (optional): `buildAddEntryBytes` / `buildRemoveEntryBytes` / `buildInsertEntryBytes` / `buildMoveEntryBytes` / `isAddableArray` / `isRemovableEntry` - entity ops (MAP global vars, scripts).
+- **Variable-length array editing** (optional): `buildAddEntryBytes` / `buildRemoveEntryBytes` / `buildInsertEntryBytes` / `buildMoveEntryBytes` / `isAddableArray` / `isRemovableEntry` - entity ops (MAP global vars/scripts; ITM and SPL abilities and effects). EFF v2 is a single flat header+body record with no variable-length list section; these methods are not applicable and the EFF adapter does not implement them.
 
 Adapters are registered eagerly at the bottom of `format-adapter.ts`. The binary editor consumes the adapter registry; CLI / library users mostly interact with snapshot helpers and the parser registry directly.
 
