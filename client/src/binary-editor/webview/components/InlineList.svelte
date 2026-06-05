@@ -4,6 +4,7 @@
     import { visibleRange } from "../state/virtual-window";
     import { rowActions, type SectionCaps } from "../state/structure-actions";
     import Field from "./Field.svelte";
+    import RowActions from "./RowActions.svelte";
 
     const { parentId, title, caps, bridge, version, selection, onedit }:
         { parentId: NodeId; title: string; caps: SectionCaps; bridge: Bridge; version: number;
@@ -87,14 +88,7 @@
                      onkeydown={(e) => { if (e.key === "Enter") activeIndex = idx; }}>
                     {#if idx === activeIndex}
                         <Field {row} {onedit} />
-                        <span class="row-actions">
-                            <button disabled={!acts.insert} onclick={() => bridge.structureOp({ op: "insert", entryPath: entryPath(row), position: "before" })}>+before</button>
-                            <button disabled={!acts.insert} onclick={() => bridge.structureOp({ op: "insert", entryPath: entryPath(row), position: "after" })}>+after</button>
-                            <button disabled={!acts.duplicate} onclick={() => bridge.structureOp({ op: "duplicate", entryPath: entryPath(row) })}>dup</button>
-                            <button disabled={!acts.up} onclick={() => bridge.structureOp({ op: "reorder", entryPath: entryPath(row), direction: "up" })}>^</button>
-                            <button disabled={!acts.down} onclick={() => bridge.structureOp({ op: "reorder", entryPath: entryPath(row), direction: "down" })}>v</button>
-                            <button disabled={!acts.remove} onclick={() => bridge.structureOp({ op: "remove", entryPath: entryPath(row) })}>del</button>
-                        </span>
+                        <RowActions {acts} entryPath={entryPath(row)} {bridge} />
                     {:else}
                         <span class="label">{row.name}</span> <span class="value">{row.displayValue}</span>
                     {/if}

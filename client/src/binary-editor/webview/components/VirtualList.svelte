@@ -5,7 +5,7 @@
 
     const { parentId, bridge, version, selectedId, onselect }:
         { parentId: NodeId; bridge: Bridge; version: number; selectedId: NodeId | undefined;
-          onselect: (row: Row) => void } = $props();
+          onselect: (row: Row, index: number) => void } = $props();
 
     const rowHeight = 22;
     const overscan = 6;
@@ -45,8 +45,8 @@
             {#if row}
                 <div class="vrow" class:selected={row.id === selectedId}
                      style="position:absolute;top:{idx * rowHeight}px;height:{rowHeight}px;left:0;right:0"
-                     onclick={() => onselect(row)} role="button" tabindex="0"
-                     onkeydown={(e) => { if (e.key === "Enter") onselect(row); }}>
+                     onclick={() => onselect(row, idx)} role="button" tabindex="0"
+                     onkeydown={(e) => { if (e.key === "Enter") onselect(row, idx); }}>
                     {idx}  {summary(row)}
                 </div>
             {/if}

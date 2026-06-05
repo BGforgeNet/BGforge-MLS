@@ -85,7 +85,9 @@
                             caps={{ canAdd: active.canAdd, canModify: active.canModify }}
                             {bridge} {version} {selection} onedit={edit} />
             {:else}
-                <ListSection nodeId={active.nodeId} canAdd={active.canAdd} {bridge} {vm} {version} onadd={add} onedit={edit} {byNode} />
+                <ListSection nodeId={active.nodeId} title={active.title}
+                            caps={{ canAdd: active.canAdd, canModify: active.canModify }}
+                            {bridge} {vm} {version} {selection} onadd={add} onedit={edit} {byNode} />
             {/if}
         {:else}
             <FormSection nodeId={active.nodeId} {bridge} {vm} {version} onedit={edit} {byNode} />
