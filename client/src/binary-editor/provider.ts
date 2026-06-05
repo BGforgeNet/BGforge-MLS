@@ -1,6 +1,7 @@
 import * as path from "node:path";
 import * as vscode from "vscode";
 import { getSnapshotPath } from "@bgforge/binary";
+import type { StructureOpRequest } from "@bgforge/binary-editor";
 import { generateNonce, getCachedHtmlAsset, getCachedJsAsset, inlineWebviewScript } from "../webview-assets";
 import { surfaceWebviewRuntimeError } from "../webview-error";
 import { BinaryEditorDocument } from "./document";
@@ -10,6 +11,23 @@ import type { HostToWebview, WebviewToHost } from "./webview/messages";
 const WORKER_SCRIPT = path.join("client", "out", "binary-editor", "worker.js");
 const WEBVIEW_HTML = path.join("client", "src", "binary-editor", "webview", "index.html");
 const WEBVIEW_JS = path.join("client", "out", "binary-editor", "webview", "main.js");
+
+/** Human-readable undo-history label for a structure op. The worker keeps its own detailed label; this is the
+ *  coarse-grained entry shown in the host editor's undo stack. */
+function structureOpLabel(op: StructureOpRequest["op"]): string {
+    switch (op) {
+        case "add":
+            return "Add entry";
+        case "insert":
+            return "Insert entry";
+        case "remove":
+            return "Remove entry";
+        case "reorder":
+            return "Reorder entry";
+        case "duplicate":
+            return "Duplicate entry";
+    }
+}
 
 /**
  * Custom editor backed by a per-document worker session. The host stays thin: it owns
@@ -114,7 +132,7 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
                         break;
                     }
                     if (r.type === "structure") {
-                        document.pushEdit(message.op.op);
+                        document.pushEdit(structureOpLabel(message.op.op));
                         this.postToDocumentPanels(document, { type: "changeSet", changeSet: r.result.changeSet });
                         await this.pushDiagnosticsToDocument(document);
                     }

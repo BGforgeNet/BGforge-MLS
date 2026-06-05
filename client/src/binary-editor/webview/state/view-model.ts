@@ -24,12 +24,6 @@ export class ViewModel {
         this.selectedEntity = undefined;
     }
 
-    /** The namePath addEntry should target: the active list section's group name, else undefined. */
-    addEntryNamePath(): string[] | undefined {
-        const s = this.activeSection;
-        return s && s.kind === "list" ? [s.title] : undefined;
-    }
-
     isExpanded(id: NodeId): boolean {
         return this.expanded.has(id);
     }
