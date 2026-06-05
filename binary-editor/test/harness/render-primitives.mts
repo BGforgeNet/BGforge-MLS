@@ -71,8 +71,13 @@ const rootVars = `:root {
     --vscode-list-hoverBackground: #2a2d2e;
     --vscode-list-activeSelectionBackground: #094771;
     --vscode-list-activeSelectionForeground: #ffffff;
+    --vscode-errorForeground: #f48771;
     --vscode-button-background: #0e639c;
     --vscode-button-foreground: #ffffff;
+    --vscode-button-secondaryBackground: #3a3d41;
+    --vscode-button-secondaryForeground: #ffffff;
+    --vscode-button-secondaryHoverBackground: #45494e;
+    --vscode-button-border: transparent;
     --vscode-checkbox-background: #3c3c3c;
     --vscode-checkbox-foreground: #cccccc;
     --vscode-checkbox-border: #6b6b6b;
@@ -145,7 +150,9 @@ await page.waitForTimeout(200);
 const comboboxFilteredCount = await page.locator(".bb-combobox-item").count();
 
 // Close the combobox dropdown (still open from the filter step) before interacting with the Checkbox.
+// Wait for the content to detach (bits-ui resets body.style.pointerEvents only after close animation).
 await page.keyboard.press("Escape");
+await page.waitForSelector(".bb-combobox-content", { state: "detached", timeout: 3000 }).catch(() => {});
 await page.waitForTimeout(150);
 
 // ---- Exercise Checkbox: click checkbox-a (unchecked -> checked) and assert data-state changes ----
@@ -181,7 +188,43 @@ const checkboxBNamedCorrectly =
 const checkboxDisabledNamedCorrectly =
     (await page.getByRole("checkbox", { name: "Disabled checkbox", exact: true }).count()) === 1;
 
+// ---- Exercise Menu: click the trigger, assert items appear, click an enabled item, assert onselect ----
+// bits-ui DropdownMenu renders the trigger as a <button> with the aria-label set on DropdownMenu.Trigger.
+// Items render as role="menuitem". The harness has no codicon font so icon glyphs are empty, but that
+// does not affect item label text or role - assert on labels and roles only, not icon visuals.
+// Menu.svelte passes preventScroll={false} so it does not set body.style.pointerEvents:none (unlike the
+// prior combobox). Ensure the combobox scroll-lock (if any) is cleared before clicking.
+await page.waitForFunction(() => document.body.style.pointerEvents !== "none", { timeout: 500 }).catch(() => {});
+await page.waitForSelector("#menu-showcase .bb-menu-trigger", { timeout: 5000 });
+await page.locator("#menu-showcase .bb-menu-trigger").click();
+// Wait for at least one menu item to appear (the content is portalled to document body).
+await page.waitForSelector(".bb-menu-item", { timeout: 5000 });
+const menuItemCount = await page.locator(".bb-menu-item").count();
+
+// Locate and click "Add above" (enabled) to assert onselect fires with its id.
+// Assert by label text (not icon) so missing codicon glyphs don't interfere.
+const addAboveItem = page.locator(".bb-menu-item", { hasText: "Add above" });
+await addAboveItem.click();
+await page.waitForTimeout(100);
+const menuSelectedAfterAdd = await page.locator("#menu-selected").getAttribute("data-value");
+
+// Re-open the menu to test the disabled item. Menu.svelte uses preventScroll={false} so no scroll-lock
+// to wait for; just wait for the content to detach after the previous click closed the menu.
+await page.waitForSelector(".bb-menu-item", { state: "detached", timeout: 3000 }).catch(() => {});
+await page.locator("#menu-showcase .bb-menu-trigger").click();
+await page.waitForSelector(".bb-menu-item", { timeout: 5000 });
+// Assert the disabled item is present in the DOM with data-disabled set.
+const disabledItem = page.locator(".bb-menu-item[data-disabled]");
+const disabledItemCount = await disabledItem.count();
+// Click the disabled item - it must not fire onselect (the selected value must not change).
+await disabledItem.click({ force: true });
+await page.waitForTimeout(100);
+const menuSelectedAfterDisabled = await page.locator("#menu-selected").getAttribute("data-value");
+
+// Close the menu before the screenshot.
+await page.keyboard.press("Escape");
 await page.waitForTimeout(150);
+
 await page.screenshot({ path: path.join(here, "shot-primitives.png") });
 
 // Diagnostic: enumerate elements carrying a style attribute and any injected <style> tags.
@@ -224,6 +267,12 @@ const checkboxBToggled = checkboxBBefore === "checked" && checkboxBAfter === "un
 // Disabled checkbox must not change state on click.
 const checkboxDisabledUnchanged = checkboxDisabledBefore === checkboxDisabledAfter;
 
+// Menu: items rendered, onselect fired with correct id, disabled item does not fire.
+const menuItemsRendered = menuItemCount >= 5; // showcase has 5 items
+const menuOnselectFired = menuSelectedAfterAdd === "add-above";
+const menuDisabledItemPresent = disabledItemCount >= 1;
+const menuDisabledNoFire = menuSelectedAfterDisabled === menuSelectedAfterAdd; // unchanged
+
 // ---- Verdict ----
 console.log("\n=== Primitives CSP gate ===");
 console.log("Select: rendered trigger + opened content; visible items: " + selectItemCount);
@@ -248,6 +297,10 @@ console.log(
 console.log("Checkbox A accessible name ('Unchecked initially'): " + checkboxANamedCorrectly);
 console.log("Checkbox B accessible name ('Checked initially'): " + checkboxBNamedCorrectly);
 console.log("Checkbox disabled accessible name ('Disabled checkbox'): " + checkboxDisabledNamedCorrectly);
+console.log("Menu: items rendered (" + menuItemCount + " >= 5): " + menuItemsRendered);
+console.log("Menu: onselect fired with 'add-above': " + menuOnselectFired + " (got: " + menuSelectedAfterAdd + ")");
+console.log("Menu: disabled item present: " + menuDisabledItemPresent);
+console.log("Menu: disabled item does not fire onselect: " + menuDisabledNoFire);
 if (!typeToSearchWorks) {
     console.log(
         "\nTYPE-TO-SEARCH FAILED: filtered count (" +
@@ -289,6 +342,29 @@ if (!checkboxANamedCorrectly || !checkboxBNamedCorrectly || !checkboxDisabledNam
             " disabled=" +
             checkboxDisabledNamedCorrectly +
             ". The button's aria-label must equal the visible label text.",
+    );
+    process.exit(1);
+}
+if (!menuItemsRendered) {
+    console.log("\nMENU ITEMS FAILED: expected >= 5 items, got " + menuItemCount);
+    process.exit(1);
+}
+if (!menuOnselectFired) {
+    console.log("\nMENU ONSELECT FAILED: expected 'add-above', got '" + menuSelectedAfterAdd + "'");
+    process.exit(1);
+}
+if (!menuDisabledItemPresent) {
+    console.log("\nMENU DISABLED ITEM FAILED: expected >= 1 item with data-disabled, got " + disabledItemCount);
+    process.exit(1);
+}
+if (!menuDisabledNoFire) {
+    console.log(
+        "\nMENU DISABLED NO-FIRE FAILED: onselect changed after clicking disabled item " +
+            "(before: '" +
+            menuSelectedAfterAdd +
+            "', after: '" +
+            menuSelectedAfterDisabled +
+            "')",
     );
     process.exit(1);
 }

@@ -135,10 +135,10 @@
         onkeydown={handleKeydown}
     />
     <Combobox.Portal>
-        <Combobox.Content class="bb-combobox-content">
+        <Combobox.Content class="bb-combobox-content bb-popup-content">
             <Combobox.Viewport class="bb-combobox-viewport">
                 {#each visibleOptions as opt (opt.value)}
-                    <Combobox.Item class="bb-combobox-item" value={String(opt.value)} label={opt.label}>
+                    <Combobox.Item class="bb-combobox-item bb-popup-item" value={String(opt.value)} label={opt.label}>
                         {opt.label}
                     </Combobox.Item>
                 {/each}

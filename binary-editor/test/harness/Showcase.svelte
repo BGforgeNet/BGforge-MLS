@@ -1,9 +1,10 @@
 <script lang="ts">
-    // Showcase for primitives spike: renders Select, Combobox, and Checkbox wrappers so the Playwright
-    // driver can exercise them under the real strict CSP and assert no CSP violation occurs.
+    // Showcase for primitives spike: renders Select, Combobox, Checkbox, and Menu wrappers so the
+    // Playwright driver can exercise them under the real strict CSP and assert no CSP violation occurs.
     import Select from "../../../client/src/binary-editor/webview/components/primitives/Select.svelte";
     import Combobox from "../../../client/src/binary-editor/webview/components/primitives/Combobox.svelte";
     import Checkbox from "../../../client/src/binary-editor/webview/components/primitives/Checkbox.svelte";
+    import Menu from "../../../client/src/binary-editor/webview/components/primitives/Menu.svelte";
 
     const selectOptions = [
         { value: 0, label: "None" },
@@ -58,6 +59,18 @@
     let checkboxA = $state(false);
     let checkboxB = $state(true);
     const checkboxDisabled = false; // disabled prop demo - value is fixed
+
+    // Menu showcase: row-action items mimicking typical structure-op affordances.
+    // One disabled item (separator is visual only; bits-ui Separator has no id).
+    // One danger item (Delete). The selected id is reflected into #menu-selected for test assertion.
+    const menuItems = [
+        { id: "add-above", label: "Add above" },
+        { id: "add-below", label: "Add below" },
+        { id: "duplicate", label: "Duplicate" },
+        { id: "delete", label: "Delete", danger: true },
+        { id: "disabled-op", label: "Disabled op", disabled: true },
+    ];
+    let menuSelected = $state("");
 </script>
 
 <div class="showcase-root">
@@ -88,5 +101,18 @@
         <div id="checkbox-disabled">
             <Checkbox checked={false} label="Disabled checkbox" disabled={true} onchange={() => {}} />
         </div>
+    </div>
+    <div class="showcase-section">
+        <div class="showcase-label">Menu (row action dropdown)</div>
+        <!-- id used by render-primitives.mts to locate the menu trigger and assert item interactions -->
+        <div id="menu-showcase">
+            <Menu
+                items={menuItems}
+                ariaLabel="Row actions"
+                onselect={(id) => (menuSelected = id)}
+            />
+        </div>
+        <!-- Reflects the last selected menu item id so Playwright can assert onselect fired. -->
+        <div id="menu-selected" data-value={menuSelected}></div>
     </div>
 </div>

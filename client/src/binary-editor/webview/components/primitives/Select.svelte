@@ -56,10 +56,10 @@
         {selectedLabel}
     </Select.Trigger>
     <Select.Portal>
-        <Select.Content class="bb-select-content">
+        <Select.Content class="bb-select-content bb-popup-content">
             <Select.Viewport class="bb-select-viewport">
                 {#each options as opt (opt.value)}
-                    <Select.Item class="bb-select-item" value={String(opt.value)} label={opt.label}>
+                    <Select.Item class="bb-select-item bb-popup-item" value={String(opt.value)} label={opt.label}>
                         {opt.label}
                     </Select.Item>
                 {/each}
