@@ -74,8 +74,8 @@
 
     // NOTE: entryPath uses the display name [title, row.name]. For ITM abilities/effects row.name is
     // a positional label ("Ability N" / "Effect N"), which the ITM builder resolves by exactly that
-    // label. For formats with a relationship model (Plan 6 IE/PRO) revisit this addressing when those
-    // formats gain structure ops.
+    // label. For formats whose entry labels are derived rather than positional, revisit this addressing
+    // when those formats gain structure ops.
     const entryPath = (row: Row): string[] => [title, row.name];
 </script>
 <div class="master-detail">

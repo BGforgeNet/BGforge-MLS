@@ -14,10 +14,12 @@
  * whichever fixture happened to be used, which is a poor user-facing default
  * for a "new ability" workflow.
  *
- * Acceptance gate: a doc with the default ability/effect must serialize via
+ * A doc with the default ability/effect must serialize via
  * serializeItmCanonicalDocument and reparse without errors, and the default
- * ability must have featureBlockCount === 0. The relink hooks (Tasks 5/6) are
- * left undefined here; the byte-builder callers that need relink come next.
+ * ability must have featureBlockCount === 0. The EntryCollection descriptors set
+ * no relink hook; cross-reference maintenance (featureBlockIndex/Count) lives in
+ * the byte-builders, which relink via relinkAbilityEffectIndices (ability ops)
+ * or shiftEffectRefs (effect ops) after each mutation.
  */
 
 import { applyEntryMutation, type EntryCollection } from "../spec/entity-ops";
@@ -42,10 +44,12 @@ type ItmEffect = ItmCanonicalDocument["effects"][number];
 /**
  * Returns a valid default ITM ability with no owned effects.
  *
- * featureBlockCount is 0 and featureBlockIndex is 0; the relink hook in Task 5
- * fixes the index on insert. Every other field is the zero value for its type.
- * attackType 0 = "None", location 0 = "None", target 0 = "Invalid",
- * depletion 0 = "Item remains" - all valid closed-enum members.
+ * featureBlockCount is 0 and featureBlockIndex is 0; the byte-builder that
+ * inserts the ability re-derives the index via relinkAbilityEffectIndices before
+ * serializing, so the placeholder 0 here is corrected to the running offset.
+ * Every other field is the zero value for its type. attackType 0 = "None",
+ * location 0 = "None", target 0 = "Invalid", depletion 0 = "Item remains" - all
+ * valid closed-enum members.
  */
 export function defaultItmAbility(): ItmAbility {
     return {
@@ -109,9 +113,10 @@ export function defaultItmEffect(): ItmEffect {
  * EntryCollection descriptor for ITM abilities.
  *
  * read/write operate on the document-level abilities array. addable and
- * removable are both true because abilities are a standalone ordered list -
- * the relink hook (Task 5) maintains featureBlockIndex/Count on mutations.
- * relink is left undefined here and added in Task 5.
+ * removable are both true because abilities are a standalone ordered list. This
+ * descriptor sets no relink hook: the cross-reference maintenance
+ * (featureBlockIndex/Count) lives in the byte-builders below, which re-derive
+ * the indices via relinkAbilityEffectIndices after each array mutation.
  */
 export const itmAbilitiesCollection: EntryCollection<ItmCanonicalDocument, ItmAbility> = {
     read: (doc) => doc.abilities,
@@ -119,7 +124,7 @@ export const itmAbilitiesCollection: EntryCollection<ItmCanonicalDocument, ItmAb
     defaultElement: defaultItmAbility,
     addable: true,
     removable: true,
-    // relink added in Task 5: maintains featureBlockIndex/Count after mutations
+    // No relink hook: the byte-builders re-derive featureBlockIndex/Count via relinkAbilityEffectIndices.
 };
 
 /**
@@ -127,16 +132,18 @@ export const itmAbilitiesCollection: EntryCollection<ItmCanonicalDocument, ItmAb
  *
  * addable is false because a new effect has no unambiguous owner: callers
  * would not know which ability's featureBlockIndex/Count to update without
- * additional context. The UI gates "add effect" at the ability level (Task 5/6).
- * removable is true; the relink hook is added in Task 6.
+ * additional context. Effects are instead created via insert-relative to an
+ * existing effect, which inherits that effect's owner. removable is true. This
+ * descriptor sets no relink hook: the effect byte-builders below shift the
+ * owning range's index/count surgically via shiftEffectRefs after each edit.
  */
 export const itmEffectsCollection: EntryCollection<ItmCanonicalDocument, ItmEffect> = {
     read: (doc) => doc.effects,
     write: (doc, next) => ({ ...doc, effects: [...next] }),
     defaultElement: defaultItmEffect,
-    addable: false, // owner-ambiguous: callers must specify the owning ability to add
+    addable: false, // owner-ambiguous: a bare add has no owning range to attribute the effect to
     removable: true,
-    // relink added in Task 6: shifts per-ability featureBlockIndex/Count after removals
+    // No relink hook: the effect byte-builders shift the owning range via shiftEffectRefs.
 };
 
 /**

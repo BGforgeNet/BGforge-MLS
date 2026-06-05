@@ -112,8 +112,7 @@ describe("ITM default elements + collections", () => {
         expect(a.featureBlockIndex).toBe(0);
     });
 
-    it("a default ability appended to a real ITM round-trips with featureBlockCount 0", () => {
-        if (!hasFixture) return;
+    it.skipIf(!hasFixture)("a default ability appended to a real ITM round-trips with featureBlockCount 0", () => {
         const parsed = itmParser.parse(new Uint8Array(fs.readFileSync(FIXTURE)));
         if (parsed.errors) throw new Error(parsed.errors.join(", "));
         const doc = getItmCanonicalDocument(parsed);
@@ -131,16 +130,15 @@ describe("ITM default elements + collections", () => {
         expect(newAbility?.featureBlockIndex).toBe(0);
     });
 
-    it("default effect round-trips when appended with a default ability that owns it", () => {
-        if (!hasFixture) return;
+    it.skipIf(!hasFixture)("default effect round-trips when appended with a default ability that owns it", () => {
         const parsed = itmParser.parse(new Uint8Array(fs.readFileSync(FIXTURE)));
         if (parsed.errors) throw new Error(parsed.errors.join(", "));
         const doc = getItmCanonicalDocument(parsed);
         if (!doc) throw new Error("no canonical doc");
         // Append a default effect to doc.effects and a new ability whose
         // featureBlockIndex points at it and featureBlockCount is 1.
-        // This validates that the default effect serializes cleanly;
-        // the real owner-relink is handled in Tasks 5/6.
+        // This validates that the default effect serializes cleanly; the
+        // owner-relink itself is exercised by the structure-op tests below.
         const effectIndex = doc.effects.length;
         const newAbility = { ...defaultItmAbility(), featureBlockIndex: effectIndex, featureBlockCount: 1 };
         const next = {
@@ -158,8 +156,7 @@ describe("ITM default elements + collections", () => {
         expect(reparsedAbility?.featureBlockCount).toBe(1);
     });
 
-    it("collection read/write round-trip preserves the array via itmAbilitiesCollection", () => {
-        if (!hasFixture) return;
+    it.skipIf(!hasFixture)("collection read/write round-trip preserves the array via itmAbilitiesCollection", () => {
         const parsed = itmParser.parse(new Uint8Array(fs.readFileSync(FIXTURE)));
         if (parsed.errors) throw new Error(parsed.errors.join(", "));
         const doc = getItmCanonicalDocument(parsed);
@@ -169,8 +166,7 @@ describe("ITM default elements + collections", () => {
         expect(rebuilt.abilities.length).toBe(doc.abilities.length);
     });
 
-    it("collection read/write round-trip preserves the array via itmEffectsCollection", () => {
-        if (!hasFixture) return;
+    it.skipIf(!hasFixture)("collection read/write round-trip preserves the array via itmEffectsCollection", () => {
         const parsed = itmParser.parse(new Uint8Array(fs.readFileSync(FIXTURE)));
         if (parsed.errors) throw new Error(parsed.errors.join(", "));
         const doc = getItmCanonicalDocument(parsed);
@@ -182,8 +178,7 @@ describe("ITM default elements + collections", () => {
 });
 
 describe("ITM ability structure-ops with effect-slice relinking", () => {
-    it("the synthetic base has two abilities owning distinct, non-zero effect slices", () => {
-        if (!hasFixture) return;
+    it.skipIf(!hasFixture)("the synthetic base has two abilities owning distinct, non-zero effect slices", () => {
         const doc = reparse(itmParser.serialize!(makeTwoAbilityBase()));
         expect(doc.abilities.length).toBe(2);
         expect(doc.abilities[0]).toMatchObject({ featureBlockIndex: 0, featureBlockCount: 1 });
@@ -193,8 +188,7 @@ describe("ITM ability structure-ops with effect-slice relinking", () => {
         expect(validateEffectPartition(doc)).toEqual([]);
     });
 
-    it("add appends an empty-slice ability and leaves effects untouched", () => {
-        if (!hasFixture) return;
+    it.skipIf(!hasFixture)("add appends an empty-slice ability and leaves effects untouched", () => {
         const bytes = buildItmAddAbilityBytes(makeTwoAbilityBase(), ["Abilities"]);
         expect(bytes).toBeDefined();
         const doc = reparse(bytes!);
@@ -206,8 +200,7 @@ describe("ITM ability structure-ops with effect-slice relinking", () => {
         expect(validateEffectPartition(doc)).toEqual([]);
     });
 
-    it("remove drops the ability and its owned effect slice; survivor re-anchors", () => {
-        if (!hasFixture) return;
+    it.skipIf(!hasFixture)("remove drops the ability and its owned effect slice; survivor re-anchors", () => {
         // Remove ability0 (1-based label "Ability 1"); its single effect (opcode 10) goes,
         // leaving ability1's two effects (20, 21) starting at the equipping-end index 0.
         const bytes = buildItmRemoveAbilityBytes(makeTwoAbilityBase(), ["Abilities", "Ability 1"]);
@@ -219,8 +212,7 @@ describe("ITM ability structure-ops with effect-slice relinking", () => {
         expect(validateEffectPartition(doc)).toEqual([]);
     });
 
-    it("reorder down swaps abilities AND their adjacent effect slices", () => {
-        if (!hasFixture) return;
+    it.skipIf(!hasFixture)("reorder down swaps abilities AND their adjacent effect slices", () => {
         // Move ability0 ("Ability 1") down: ability1 (slice [20,21]) now precedes
         // ability0 (slice [10]); the physical effect order proves the slice moved.
         const bytes = buildItmReorderAbilityBytes(makeTwoAbilityBase(), ["Abilities", "Ability 1"], "down");
@@ -234,8 +226,7 @@ describe("ITM ability structure-ops with effect-slice relinking", () => {
         expect(validateEffectPartition(doc)).toEqual([]);
     });
 
-    it("reorder up on the second ability mirrors reorder down on the first", () => {
-        if (!hasFixture) return;
+    it.skipIf(!hasFixture)("reorder up on the second ability mirrors reorder down on the first", () => {
         const bytes = buildItmReorderAbilityBytes(makeTwoAbilityBase(), ["Abilities", "Ability 2"], "up");
         expect(bytes).toBeDefined();
         const doc = reparse(bytes!);
@@ -245,14 +236,12 @@ describe("ITM ability structure-ops with effect-slice relinking", () => {
         expect(validateEffectPartition(doc)).toEqual([]);
     });
 
-    it("reorder at the boundary is a no-op (returns undefined)", () => {
-        if (!hasFixture) return;
+    it.skipIf(!hasFixture)("reorder at the boundary is a no-op (returns undefined)", () => {
         expect(buildItmReorderAbilityBytes(makeTwoAbilityBase(), ["Abilities", "Ability 1"], "up")).toBeUndefined();
         expect(buildItmReorderAbilityBytes(makeTwoAbilityBase(), ["Abilities", "Ability 2"], "down")).toBeUndefined();
     });
 
-    it("duplicate clones the ability and its effect slice right after the source", () => {
-        if (!hasFixture) return;
+    it.skipIf(!hasFixture)("duplicate clones the ability and its effect slice right after the source", () => {
         // Duplicate ability1 ("Ability 2", owns [20,21]); the clone + its cloned slice
         // are inserted right after the original slice (at s_k + c_k == 3).
         const bytes = buildItmDuplicateAbilityBytes(makeTwoAbilityBase(), ["Abilities", "Ability 2"]);
@@ -268,8 +257,7 @@ describe("ITM ability structure-ops with effect-slice relinking", () => {
         expect(validateEffectPartition(doc)).toEqual([]);
     });
 
-    it("insert before adds an empty-slice ability at the slot; effects untouched", () => {
-        if (!hasFixture) return;
+    it.skipIf(!hasFixture)("insert before adds an empty-slice ability at the slot; effects untouched", () => {
         const bytes = buildItmInsertAbilityBytes(makeTwoAbilityBase(), ["Abilities", "Ability 1"], "before");
         expect(bytes).toBeDefined();
         const doc = reparse(bytes!);
@@ -282,8 +270,7 @@ describe("ITM ability structure-ops with effect-slice relinking", () => {
         expect(validateEffectPartition(doc)).toEqual([]);
     });
 
-    it("insert after adds an empty-slice ability after the slot; effects untouched", () => {
-        if (!hasFixture) return;
+    it.skipIf(!hasFixture)("insert after adds an empty-slice ability after the slot; effects untouched", () => {
         const bytes = buildItmInsertAbilityBytes(makeTwoAbilityBase(), ["Abilities", "Ability 1"], "after");
         expect(bytes).toBeDefined();
         const doc = reparse(bytes!);
@@ -296,8 +283,7 @@ describe("ITM ability structure-ops with effect-slice relinking", () => {
         expect(validateEffectPartition(doc)).toEqual([]);
     });
 
-    it("rejects a non-ability path (returns undefined)", () => {
-        if (!hasFixture) return;
+    it.skipIf(!hasFixture)("rejects a non-ability path (returns undefined)", () => {
         expect(buildItmAddAbilityBytes(makeTwoAbilityBase(), ["Header", "Signature"])).toBeUndefined();
         expect(buildItmRemoveAbilityBytes(makeTwoAbilityBase(), ["Header", "Signature"])).toBeUndefined();
         expect(buildItmRemoveAbilityBytes(makeTwoAbilityBase(), ["Abilities", "Ability 99"])).toBeUndefined();
@@ -305,8 +291,7 @@ describe("ITM ability structure-ops with effect-slice relinking", () => {
 });
 
 describe("ITM effect structure-ops with owner-aware relinking", () => {
-    it("the equipping base lays out equipping + two abilities over [99,10,20,21]", () => {
-        if (!hasFixture) return;
+    it.skipIf(!hasFixture)("the equipping base lays out equipping + two abilities over [99,10,20,21]", () => {
         const doc = reparse(itmParser.serialize!(makeEquippingPlusTwoAbilityBase()));
         expect(doc.header).toMatchObject({ featureBlocksIndex: 0, featureBlocksCount: 1 });
         expect(doc.abilities[0]).toMatchObject({ featureBlockIndex: 1, featureBlockCount: 1 });
@@ -315,8 +300,7 @@ describe("ITM effect structure-ops with owner-aware relinking", () => {
         expect(validateEffectPartition(doc)).toEqual([]);
     });
 
-    it("insert before an ability-owned effect grows that ability and shifts later ranges", () => {
-        if (!hasFixture) return;
+    it.skipIf(!hasFixture)("insert before an ability-owned effect grows that ability and shifts later ranges", () => {
         // "Effect 3" (1-based) is effects[2] (opcode 20), owned by ability1.
         const bytes = buildItmInsertEffectBytes(makeEquippingPlusTwoAbilityBase(), ["Effects", "Effect 3"], "before");
         expect(bytes).toBeDefined();
@@ -329,8 +313,7 @@ describe("ITM effect structure-ops with owner-aware relinking", () => {
         expect(validateEffectPartition(doc)).toEqual([]);
     });
 
-    it("insert after an ability-owned effect grows that ability and shifts later ranges", () => {
-        if (!hasFixture) return;
+    it.skipIf(!hasFixture)("insert after an ability-owned effect grows that ability and shifts later ranges", () => {
         // "Effect 2" is effects[1] (opcode 10), the sole effect of ability0.
         const bytes = buildItmInsertEffectBytes(makeEquippingPlusTwoAbilityBase(), ["Effects", "Effect 2"], "after");
         expect(bytes).toBeDefined();
@@ -342,8 +325,7 @@ describe("ITM effect structure-ops with owner-aware relinking", () => {
         expect(validateEffectPartition(doc)).toEqual([]);
     });
 
-    it("insert relative to the equipping effect grows the header and shifts all ability indices", () => {
-        if (!hasFixture) return;
+    it.skipIf(!hasFixture)("insert after the equipping effect grows the header and shifts all ability indices", () => {
         // "Effect 1" is effects[0] (opcode 99), the equipping effect.
         const bytes = buildItmInsertEffectBytes(makeEquippingPlusTwoAbilityBase(), ["Effects", "Effect 1"], "after");
         expect(bytes).toBeDefined();
@@ -356,8 +338,21 @@ describe("ITM effect structure-ops with owner-aware relinking", () => {
         expect(validateEffectPartition(doc)).toEqual([]);
     });
 
-    it("remove an ability-owned effect shrinks that ability and shifts later ranges", () => {
-        if (!hasFixture) return;
+    it.skipIf(!hasFixture)("insert before the equipping effect grows the header and shifts all ability indices", () => {
+        // "Effect 1" is effects[0] (opcode 99), the equipping effect. "before"
+        // inserts at index 0; the equipping range absorbs the new effect and every
+        // ability range shifts +1.
+        const bytes = buildItmInsertEffectBytes(makeEquippingPlusTwoAbilityBase(), ["Effects", "Effect 1"], "before");
+        expect(bytes).toBeDefined();
+        const doc = reparse(bytes!);
+        expect(opcodes(doc.effects)).toEqual([0, 99, 10, 20, 21]);
+        expect(doc.header).toMatchObject({ featureBlocksIndex: 0, featureBlocksCount: 2 });
+        expect(doc.abilities[0]).toMatchObject({ featureBlockIndex: 2, featureBlockCount: 1 });
+        expect(doc.abilities[1]).toMatchObject({ featureBlockIndex: 3, featureBlockCount: 2 });
+        expect(validateEffectPartition(doc)).toEqual([]);
+    });
+
+    it.skipIf(!hasFixture)("remove an ability-owned effect shrinks that ability and shifts later ranges", () => {
         // "Effect 3" is effects[2] (opcode 20), the first of ability1's two effects.
         const bytes = buildItmRemoveEffectBytes(makeEquippingPlusTwoAbilityBase(), ["Effects", "Effect 3"]);
         expect(bytes).toBeDefined();
@@ -369,8 +364,7 @@ describe("ITM effect structure-ops with owner-aware relinking", () => {
         expect(validateEffectPartition(doc)).toEqual([]);
     });
 
-    it("remove the equipping effect shrinks the header and shifts ability indices down", () => {
-        if (!hasFixture) return;
+    it.skipIf(!hasFixture)("remove the equipping effect shrinks the header and shifts ability indices down", () => {
         // "Effect 1" is effects[0] (opcode 99), the equipping effect.
         const bytes = buildItmRemoveEffectBytes(makeEquippingPlusTwoAbilityBase(), ["Effects", "Effect 1"]);
         expect(bytes).toBeDefined();
@@ -382,22 +376,40 @@ describe("ITM effect structure-ops with owner-aware relinking", () => {
         expect(validateEffectPartition(doc)).toEqual([]);
     });
 
-    it("duplicate an ability-owned effect grows that ability and clones the opcode adjacently", () => {
-        if (!hasFixture) return;
-        // "Effect 3" is effects[2] (opcode 20), owned by ability1.
-        const bytes = buildItmDuplicateEffectBytes(makeEquippingPlusTwoAbilityBase(), ["Effects", "Effect 3"]);
-        expect(bytes).toBeDefined();
-        const doc = reparse(bytes!);
-        // The clone (opcode 20) lands right after the source.
-        expect(opcodes(doc.effects)).toEqual([99, 10, 20, 20, 21]);
-        expect(doc.header).toMatchObject({ featureBlocksIndex: 0, featureBlocksCount: 1 });
-        expect(doc.abilities[0]).toMatchObject({ featureBlockIndex: 1, featureBlockCount: 1 });
-        expect(doc.abilities[1]).toMatchObject({ featureBlockIndex: 2, featureBlockCount: 3 });
-        expect(validateEffectPartition(doc)).toEqual([]);
-    });
+    it.skipIf(!hasFixture)(
+        "duplicate an ability-owned effect grows that ability and clones the opcode adjacently",
+        () => {
+            // "Effect 3" is effects[2] (opcode 20), owned by ability1.
+            const bytes = buildItmDuplicateEffectBytes(makeEquippingPlusTwoAbilityBase(), ["Effects", "Effect 3"]);
+            expect(bytes).toBeDefined();
+            const doc = reparse(bytes!);
+            // The clone (opcode 20) lands right after the source.
+            expect(opcodes(doc.effects)).toEqual([99, 10, 20, 20, 21]);
+            expect(doc.header).toMatchObject({ featureBlocksIndex: 0, featureBlocksCount: 1 });
+            expect(doc.abilities[0]).toMatchObject({ featureBlockIndex: 1, featureBlockCount: 1 });
+            expect(doc.abilities[1]).toMatchObject({ featureBlockIndex: 2, featureBlockCount: 3 });
+            expect(validateEffectPartition(doc)).toEqual([]);
+        },
+    );
 
-    it("the duplicated effect is a distinct object (deep clone, no aliasing)", () => {
-        if (!hasFixture) return;
+    it.skipIf(!hasFixture)(
+        "duplicate an equipping-owned effect grows the header and clones the opcode adjacently",
+        () => {
+            // "Effect 1" is effects[0] (opcode 99), the equipping effect.
+            const bytes = buildItmDuplicateEffectBytes(makeEquippingPlusTwoAbilityBase(), ["Effects", "Effect 1"]);
+            expect(bytes).toBeDefined();
+            const doc = reparse(bytes!);
+            // The clone (opcode 99) lands right after the source; header count grows.
+            expect(opcodes(doc.effects)).toEqual([99, 99, 10, 20, 21]);
+            expect(doc.header).toMatchObject({ featureBlocksIndex: 0, featureBlocksCount: 2 });
+            // Both abilities shift +1.
+            expect(doc.abilities[0]).toMatchObject({ featureBlockIndex: 2, featureBlockCount: 1 });
+            expect(doc.abilities[1]).toMatchObject({ featureBlockIndex: 3, featureBlockCount: 2 });
+            expect(validateEffectPartition(doc)).toEqual([]);
+        },
+    );
+
+    it.skipIf(!hasFixture)("the duplicated effect is a distinct object (deep clone, no aliasing)", () => {
         const base = makeEquippingPlusTwoAbilityBase();
         const doc = getItmCanonicalDocument(base) ?? rebuildItmCanonicalDocument(base);
         if (!doc) throw new Error("no canonical doc");
@@ -411,8 +423,7 @@ describe("ITM effect structure-ops with owner-aware relinking", () => {
         expect(twenties[0]).not.toBe(twenties[1]);
     });
 
-    it("reorder within the same owner swaps opcodes without changing counts or indices", () => {
-        if (!hasFixture) return;
+    it.skipIf(!hasFixture)("reorder within the same owner swaps opcodes without changing counts or indices", () => {
         // ability1 owns effects[2,3] (opcodes 20, 21). Reorder "Effect 3" (opcode 20)
         // down swaps it with its same-owner neighbor opcode 21.
         const bytes = buildItmReorderEffectBytes(makeEquippingPlusTwoAbilityBase(), ["Effects", "Effect 3"], "down");
@@ -425,8 +436,7 @@ describe("ITM effect structure-ops with owner-aware relinking", () => {
         expect(validateEffectPartition(doc)).toEqual([]);
     });
 
-    it("reorder up mirrors reorder down within the same owner", () => {
-        if (!hasFixture) return;
+    it.skipIf(!hasFixture)("reorder up mirrors reorder down within the same owner", () => {
         // "Effect 4" (opcode 21) up swaps with same-owner neighbor opcode 20.
         const bytes = buildItmReorderEffectBytes(makeEquippingPlusTwoAbilityBase(), ["Effects", "Effect 4"], "up");
         expect(bytes).toBeDefined();
@@ -435,8 +445,7 @@ describe("ITM effect structure-ops with owner-aware relinking", () => {
         expect(validateEffectPartition(doc)).toEqual([]);
     });
 
-    it("reorder across an owner boundary is rejected (returns undefined)", () => {
-        if (!hasFixture) return;
+    it.skipIf(!hasFixture)("reorder across an owner boundary is rejected (returns undefined)", () => {
         // ability0 owns the single effect[1] (opcode 10). Reordering it "down"
         // would cross into ability1; "up" would cross into equipping. Both rejected.
         const base = makeEquippingPlusTwoAbilityBase;
@@ -447,8 +456,7 @@ describe("ITM effect structure-ops with owner-aware relinking", () => {
         expect(buildItmReorderEffectBytes(base(), ["Effects", "Effect 1"], "down")).toBeUndefined();
     });
 
-    it("rejects a non-effects path or out-of-range effect (returns undefined)", () => {
-        if (!hasFixture) return;
+    it.skipIf(!hasFixture)("rejects a non-effects path or out-of-range effect (returns undefined)", () => {
         const base = makeEquippingPlusTwoAbilityBase;
         expect(buildItmInsertEffectBytes(base(), ["Abilities", "Ability 1"], "before")).toBeUndefined();
         expect(buildItmRemoveEffectBytes(base(), ["Header", "Signature"])).toBeUndefined();
@@ -457,8 +465,7 @@ describe("ITM effect structure-ops with owner-aware relinking", () => {
         expect(buildItmReorderEffectBytes(base(), ["Effects", "Effect 99"], "up")).toBeUndefined();
     });
 
-    it("removes the first effect of an equipping-free real item without throwing", () => {
-        if (!hasFixture) return;
+    it.skipIf(!hasFixture)("removes the first effect of an equipping-free real item without throwing", () => {
         // wm_sbook.itm has equipping count 0 and a single ability-owned effect.
         // Removing it drives the empty equipping range start to -1 under the raw
         // shift; the clamp keeps it at 0 so serialization succeeds (regression).

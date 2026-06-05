@@ -110,13 +110,29 @@ describe("itm adapter structure-op surface", () => {
         expect(itmParser.parse(moveBytes as Uint8Array).errors).toBeUndefined();
     });
 
-    it("routes effect remove end-to-end and produces reparseable bytes", () => {
+    it("routes effect ops end-to-end and produces reparseable bytes", () => {
         if (!hasFixture) return;
         const pr = makeTwoAbilityBase();
-        // Effect 3 is the second effect owned by ability1 (slice [1,2]); removing it shrinks an
-        // ability-owned range cleanly, unlike the degenerate equipping-owned lone effect in the raw fixture.
-        const effectBytes = itm.buildRemoveEntryBytes!(pr, ["Effects", "Effect 3"]);
-        expect(effectBytes).toBeInstanceOf(Uint8Array);
-        expect(itmParser.parse(effectBytes as Uint8Array).errors).toBeUndefined();
+        // Effect 2 is the first effect owned by ability1 (slice [1,2]); editing it touches an
+        // ability-owned range cleanly. Each op proves the adapter delegates Effects -> effect builders.
+        const effect = ["Effects", "Effect 2"];
+
+        const removeBytes = itm.buildRemoveEntryBytes!(pr, ["Effects", "Effect 3"]);
+        expect(removeBytes).toBeInstanceOf(Uint8Array);
+        expect(itmParser.parse(removeBytes as Uint8Array).errors).toBeUndefined();
+
+        const insertBytes = itm.buildInsertEntryBytes!(pr, effect, "after");
+        expect(insertBytes).toBeInstanceOf(Uint8Array);
+        expect(itmParser.parse(insertBytes as Uint8Array).errors).toBeUndefined();
+
+        const duplicateBytes = itm.buildDuplicateEntryBytes!(pr, effect);
+        expect(duplicateBytes).toBeInstanceOf(Uint8Array);
+        expect(itmParser.parse(duplicateBytes as Uint8Array).errors).toBeUndefined();
+
+        // Effect 2 (opcode 20) and Effect 3 (opcode 21) are both owned by ability1, so moving Effect 2
+        // down is a same-owner swap that returns bytes (not a cross-owner boundary no-op).
+        const moveBytes = itm.buildMoveEntryBytes!(pr, effect, "down");
+        expect(moveBytes).toBeInstanceOf(Uint8Array);
+        expect(itmParser.parse(moveBytes as Uint8Array).errors).toBeUndefined();
     });
 });
