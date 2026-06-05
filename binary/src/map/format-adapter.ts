@@ -4,6 +4,7 @@ import { createCanonicalMapJsonSnapshot, loadCanonicalMapJsonSnapshot } from "./
 import { rebuildMapCanonicalDocument } from "./canonical";
 import {
     buildMapAddEntryBytes,
+    buildMapDuplicateEntryBytes,
     buildMapInsertEntryBytes,
     buildMapMoveEntryBytes,
     buildMapRemoveEntryBytes,
@@ -212,6 +213,10 @@ export const mapFormatAdapter: BinaryFormatAdapter = {
 
     buildMoveEntryBytes(parseResult: ParseResult, entryPath: readonly string[], direction: "up" | "down") {
         return buildMapMoveEntryBytes(parseResult, entryPath, direction);
+    },
+
+    buildDuplicateEntryBytes(parseResult: ParseResult, entryPath: readonly string[]) {
+        return buildMapDuplicateEntryBytes(parseResult, entryPath);
     },
 
     isAddableArray(arrayPath: readonly string[]): boolean {

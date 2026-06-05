@@ -226,6 +226,23 @@ export function buildMapMoveEntryBytes(
 }
 
 /**
+ * Copy the targeted entry's value and insert the copy immediately after it.
+ * MAP variables have no slot-unique identity to relink, so the copy is verbatim:
+ * a var is just an int32 value.
+ */
+export function buildMapDuplicateEntryBytes(
+    parseResult: ParseResult,
+    entryPath: readonly string[],
+): Uint8Array | undefined {
+    if (!isMapRemovableEntry(entryPath)) return undefined;
+    return mutateVarSectionEntry(parseResult, entryPath, (values, index) => [
+        ...values.slice(0, index + 1),
+        values[index]!,
+        ...values.slice(index + 1),
+    ]);
+}
+
+/**
  * Shared boilerplate for entry-targeted var-section mutations: resolves the
  * binding row, runs the mutator on the current values, and re-serialises.
  * The mutator may return `undefined` to abort (e.g., move at the boundary).

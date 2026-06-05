@@ -117,6 +117,13 @@ export interface BinaryFormatAdapter {
         direction: "up" | "down",
     ): Uint8Array | undefined;
     /**
+     * Duplicate the targeted entry: copy its data, insert the copy immediately
+     * after it, then apply the per-format relink (identity-freshening) where the
+     * format needs it. Returns undefined if the path is not a duplicable entry.
+     * Fixed-width entries with no slot-unique identity (MAP variables) copy verbatim.
+     */
+    buildDuplicateEntryBytes?(parseResult: ParseResult, entryPath: readonly string[]): Uint8Array | undefined;
+    /**
      * Lightweight predicate the tree builder can call per group/entry. Decoupled
      * from the byte-builders above so `buildBinaryEditorTreeState` can decide
      * UI affordances without doing a full canonical-doc rebuild + serialize.
