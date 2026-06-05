@@ -1,10 +1,11 @@
 <script lang="ts">
-    // Showcase for primitives spike: renders Select, Combobox, Checkbox, and Menu wrappers so the
+    // Showcase for primitives spike: renders Select, Combobox, Checkbox, Menu, and Tabs wrappers so the
     // Playwright driver can exercise them under the real strict CSP and assert no CSP violation occurs.
     import Select from "../../../client/src/binary-editor/webview/components/primitives/Select.svelte";
     import Combobox from "../../../client/src/binary-editor/webview/components/primitives/Combobox.svelte";
     import Checkbox from "../../../client/src/binary-editor/webview/components/primitives/Checkbox.svelte";
     import Menu from "../../../client/src/binary-editor/webview/components/primitives/Menu.svelte";
+    import Tabs from "../../../client/src/binary-editor/webview/components/primitives/Tabs.svelte";
 
     const selectOptions = [
         { value: 0, label: "None" },
@@ -71,6 +72,16 @@
         { id: "disabled-op", label: "Disabled op", disabled: true },
     ];
     let menuSelected = $state("");
+
+    // Tabs showcase: horizontal and vertical, each with 3 tabs. Active is reflected via a data attr
+    // so render-primitives.mts can assert selection changes without reading internal Svelte state.
+    const tabsItems = [
+        { id: "general", label: "General" },
+        { id: "abilities", label: "Abilities" },
+        { id: "effects", label: "Effects" },
+    ];
+    let tabsHActive = $state("general");
+    let tabsVActive = $state("general");
 </script>
 
 <div class="showcase-root">
@@ -114,5 +125,34 @@
         </div>
         <!-- Reflects the last selected menu item id so Playwright can assert onselect fired. -->
         <div id="menu-selected" data-value={menuSelected}></div>
+    </div>
+    <div class="showcase-section">
+        <div class="showcase-label">Tabs (horizontal)</div>
+        <!-- id used by render-primitives.mts to locate the tablist and assert tab selection changes -->
+        <div id="tabs-h-showcase">
+            <Tabs
+                tabs={tabsItems}
+                active={tabsHActive}
+                orientation="horizontal"
+                ariaLabel="Form sections"
+                onselect={(id) => (tabsHActive = id)}
+            />
+        </div>
+        <!-- Reflects active tab id so Playwright can assert the correct tab is selected. -->
+        <div id="tabs-h-active" data-value={tabsHActive}></div>
+    </div>
+    <div class="showcase-section">
+        <div class="showcase-label">Tabs (vertical)</div>
+        <div id="tabs-v-showcase">
+            <Tabs
+                tabs={tabsItems}
+                active={tabsVActive}
+                orientation="vertical"
+                ariaLabel="Form groups"
+                onselect={(id) => (tabsVActive = id)}
+            />
+        </div>
+        <!-- Reflects active tab id so Playwright can assert the correct tab is selected. -->
+        <div id="tabs-v-active" data-value={tabsVActive}></div>
     </div>
 </div>

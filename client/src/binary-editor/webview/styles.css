@@ -447,6 +447,80 @@ input[type="text"]::placeholder {
     color: var(--vscode-foreground);
 }
 
+/* ---- bb-tabs (in-house accessible tablist strip for primitives/Tabs.svelte) ----
+ * Strip-only: no content panel rendering here - the consumer renders the active panel.
+ * Visually DISTINCT from the top-level .tabs section strip (heavier underline, full-opacity default):
+ *   .tabs:       primary section strip, 2px underline, default opacity 0.8.
+ *   .bb-tabs:    secondary level, pill/underline style (horizontal) or left-rail style (vertical),
+ *                smaller padding, subdued default, clearly subordinate hierarchy.
+ * bits-ui data-state="active"/"inactive" on the trigger (set via aria-selected mirror); we key styles
+ * on the .active class and [aria-selected="true"] for maximum portability. */
+.bb-tabs {
+    display: flex;
+    gap: 0;
+}
+.bb-tabs button {
+    appearance: none;
+    font: inherit;
+    cursor: pointer;
+    background: transparent;
+    color: var(--vscode-descriptionForeground, var(--vscode-foreground));
+    border: none;
+    border-radius: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    white-space: nowrap;
+    line-height: 1.3;
+}
+.bb-tabs button:hover {
+    color: var(--vscode-foreground);
+    background: var(--vscode-list-hoverBackground);
+}
+.bb-tabs button:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder, #007fd4);
+    outline-offset: -1px;
+    z-index: 1;
+    position: relative;
+}
+/* -- horizontal: pill-underline style (lighter than the top .tabs underline strip) -- */
+.bb-tabs.horizontal {
+    flex-direction: row;
+    border-bottom: 1px solid var(--vscode-panel-border, #2b2b2b);
+}
+.bb-tabs.horizontal button {
+    padding: 0.25rem 0.6rem;
+    margin-bottom: -1px; /* overlap the strip border so the active line covers it */
+    border-bottom: 2px solid transparent;
+}
+.bb-tabs.horizontal button.active,
+.bb-tabs.horizontal button[aria-selected="true"] {
+    color: var(--vscode-foreground);
+    border-bottom-color: var(--vscode-list-activeSelectionBackground, #094771);
+    /* Use list-activeSelectionBackground for the active indicator so it reads as secondary vs .tabs which
+       uses focusBorder. This makes nested levels visually distinct at a glance. */
+}
+/* -- vertical: left-rail style (stacked tabs, left-edge accent marks active) -- */
+.bb-tabs.vertical {
+    flex-direction: column;
+    border-right: 1px solid var(--vscode-panel-border, #2b2b2b);
+    min-width: 8rem;
+}
+.bb-tabs.vertical button {
+    padding: 0.3rem 0.75rem 0.3rem 0.5rem;
+    margin-right: -1px; /* overlap the rail border so the active accent covers it */
+    border-right: 2px solid transparent;
+    text-align: left;
+    width: 100%;
+    justify-content: flex-start;
+}
+.bb-tabs.vertical button.active,
+.bb-tabs.vertical button[aria-selected="true"] {
+    background: var(--vscode-list-activeSelectionBackground, #094771);
+    color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground));
+    border-right-color: var(--vscode-focusBorder, #007fd4);
+}
+
 /* ---- flags (checkbox group) ---- */
 .flags-grid {
     /* flex:1 + min-width:0 make the grid claim the available detail width as a flex child of .field;

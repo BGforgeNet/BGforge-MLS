@@ -225,6 +225,36 @@ const menuSelectedAfterDisabled = await page.locator("#menu-selected").getAttrib
 await page.keyboard.press("Escape");
 await page.waitForTimeout(150);
 
+// ---- Exercise Tabs (horizontal): assert initial active, click a different tab, assert selection moves ----
+// The showcase reflects active tab id into #tabs-h-active[data-value] so we can assert without reading
+// Svelte internals. Tabs render as role="tab" inside role="tablist" (#tabs-h-showcase).
+await page.waitForSelector("#tabs-h-showcase [role='tablist']", { timeout: 5000 });
+const tabsHInitial = await page.locator("#tabs-h-active").getAttribute("data-value");
+// Click the "Abilities" tab (second tab, id="abilities").
+const tabsHAbilities = page.locator("#tabs-h-showcase [role='tab'][aria-selected]", { hasText: "Abilities" });
+await tabsHAbilities.click();
+await page.waitForTimeout(100);
+const tabsHAfterClick = await page.locator("#tabs-h-active").getAttribute("data-value");
+
+// Arrow-key nav: with "Abilities" now active, press ArrowRight to move to "Effects".
+await page.keyboard.press("ArrowRight");
+await page.waitForTimeout(100);
+const tabsHAfterArrow = await page.locator("#tabs-h-active").getAttribute("data-value");
+
+// ---- Exercise Tabs (vertical): assert initial active, click a different tab, assert selection moves ----
+await page.waitForSelector("#tabs-v-showcase [role='tablist']", { timeout: 5000 });
+const tabsVInitial = await page.locator("#tabs-v-active").getAttribute("data-value");
+// Click the "Effects" tab (third tab, id="effects").
+const tabsVEffects = page.locator("#tabs-v-showcase [role='tab']", { hasText: "Effects" });
+await tabsVEffects.click();
+await page.waitForTimeout(100);
+const tabsVAfterClick = await page.locator("#tabs-v-active").getAttribute("data-value");
+
+// Arrow-key nav: with "Effects" now active, press ArrowUp to move to "Abilities" (vertical orientation).
+await page.keyboard.press("ArrowUp");
+await page.waitForTimeout(100);
+const tabsVAfterArrow = await page.locator("#tabs-v-active").getAttribute("data-value");
+
 await page.screenshot({ path: path.join(here, "shot-primitives.png") });
 
 // Diagnostic: enumerate elements carrying a style attribute and any injected <style> tags.
@@ -259,6 +289,16 @@ await browser.close();
 // ---- Assertions ----
 // type-to-search: filtering "fireball" should reduce the visible item count below the total.
 const typeToSearchWorks = comboboxFilteredCount < comboboxAllCount && comboboxFilteredCount > 0;
+
+// Tabs (horizontal): initial active is "general"; clicking "Abilities" moves selection; arrow moves again.
+const tabsHInitialCorrect = tabsHInitial === "general";
+const tabsHClickWorks = tabsHAfterClick === "abilities";
+const tabsHArrowWorks = tabsHAfterArrow === "effects";
+
+// Tabs (vertical): initial active is "general"; clicking "Effects" moves selection; ArrowUp moves to "Abilities".
+const tabsVInitialCorrect = tabsVInitial === "general";
+const tabsVClickWorks = tabsVAfterClick === "effects";
+const tabsVArrowWorks = tabsVAfterArrow === "abilities";
 
 // Checkbox toggle: checkbox-a started unchecked; clicking it must flip to checked.
 const checkboxAToggled = checkboxABefore === "unchecked" && checkboxAAfter === "checked";
@@ -301,6 +341,12 @@ console.log("Menu: items rendered (" + menuItemCount + " >= 5): " + menuItemsRen
 console.log("Menu: onselect fired with 'add-above': " + menuOnselectFired + " (got: " + menuSelectedAfterAdd + ")");
 console.log("Menu: disabled item present: " + menuDisabledItemPresent);
 console.log("Menu: disabled item does not fire onselect: " + menuDisabledNoFire);
+console.log("Tabs H: initial active=general: " + tabsHInitialCorrect + " (got: " + tabsHInitial + ")");
+console.log("Tabs H: click Abilities moves selection: " + tabsHClickWorks + " (got: " + tabsHAfterClick + ")");
+console.log("Tabs H: ArrowRight moves to Effects: " + tabsHArrowWorks + " (got: " + tabsHAfterArrow + ")");
+console.log("Tabs V: initial active=general: " + tabsVInitialCorrect + " (got: " + tabsVInitial + ")");
+console.log("Tabs V: click Effects moves selection: " + tabsVClickWorks + " (got: " + tabsVAfterClick + ")");
+console.log("Tabs V: ArrowUp moves to Abilities: " + tabsVArrowWorks + " (got: " + tabsVAfterArrow + ")");
 if (!typeToSearchWorks) {
     console.log(
         "\nTYPE-TO-SEARCH FAILED: filtered count (" +
@@ -366,6 +412,30 @@ if (!menuDisabledNoFire) {
             menuSelectedAfterDisabled +
             "')",
     );
+    process.exit(1);
+}
+if (!tabsHInitialCorrect) {
+    console.log("\nTABS-H INITIAL FAILED: expected 'general', got '" + tabsHInitial + "'");
+    process.exit(1);
+}
+if (!tabsHClickWorks) {
+    console.log("\nTABS-H CLICK FAILED: expected 'abilities', got '" + tabsHAfterClick + "'");
+    process.exit(1);
+}
+if (!tabsHArrowWorks) {
+    console.log("\nTABS-H ARROW FAILED: expected 'effects', got '" + tabsHAfterArrow + "'");
+    process.exit(1);
+}
+if (!tabsVInitialCorrect) {
+    console.log("\nTABS-V INITIAL FAILED: expected 'general', got '" + tabsVInitial + "'");
+    process.exit(1);
+}
+if (!tabsVClickWorks) {
+    console.log("\nTABS-V CLICK FAILED: expected 'effects', got '" + tabsVAfterClick + "'");
+    process.exit(1);
+}
+if (!tabsVArrowWorks) {
+    console.log("\nTABS-V ARROW FAILED: expected 'abilities', got '" + tabsVAfterArrow + "'");
     process.exit(1);
 }
 if (cspMessages.length > 0) {
