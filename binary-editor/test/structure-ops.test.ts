@@ -17,12 +17,50 @@ function globalVarCount(session: EditorSession): number {
     if (!gv) throw new Error("no Global Variables group");
     return session.model.nodes.filter((n) => n.parentId === gv.id).length;
 }
+function firstGlobalVarName(session: EditorSession): string {
+    const gv = session.model.nodes.find((n) => n.name === "Global Variables");
+    if (!gv) throw new Error("no Global Variables group");
+    const first = session.model.nodes.find((n) => n.parentId === gv.id);
+    if (!first) throw new Error("no children under Global Variables");
+    return first.name;
+}
 
 describe("structureOp add", () => {
     it("adds a Global Variable and grows the collection by one", () => {
         const session = open();
         const before = globalVarCount(session);
         const result = structureOp(session, { op: "add", namePath: ["Global Variables"] });
+        expect(result.changeSet.dirty).toBe(true);
+        expect(globalVarCount(session)).toBe(before + 1);
+    });
+});
+
+describe("structureOp remove", () => {
+    it("removes the targeted entry and shrinks the collection by one", () => {
+        const session = open();
+        const before = globalVarCount(session);
+        const name = firstGlobalVarName(session);
+        const result = structureOp(session, { op: "remove", entryPath: ["Global Variables", name] });
+        expect(result.changeSet.dirty).toBe(true);
+        expect(globalVarCount(session)).toBe(before - 1);
+    });
+});
+
+describe("structureOp reorder", () => {
+    it("moving the first entry up is a boundary no-op (not dirty)", () => {
+        const session = open();
+        const name = firstGlobalVarName(session);
+        const result = structureOp(session, { op: "reorder", entryPath: ["Global Variables", name], direction: "up" });
+        expect(result.changeSet.dirty).toBe(false);
+    });
+});
+
+describe("structureOp duplicate", () => {
+    it("duplicates the targeted entry and grows the collection by one", () => {
+        const session = open();
+        const before = globalVarCount(session);
+        const name = firstGlobalVarName(session);
+        const result = structureOp(session, { op: "duplicate", entryPath: ["Global Variables", name] });
         expect(result.changeSet.dirty).toBe(true);
         expect(globalVarCount(session)).toBe(before + 1);
     });

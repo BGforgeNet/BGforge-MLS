@@ -5,10 +5,12 @@ import { getWindow } from "./window";
 import type { EditorSession } from "./session";
 import type { NamePath, StructureResult } from "./types";
 
-export interface StructureOpRequest {
-    op: "add"; // insert/remove/reorder/duplicate land in later plans
-    namePath: NamePath;
-}
+export type StructureOpRequest =
+    | { op: "add"; namePath: NamePath }
+    | { op: "insert"; entryPath: NamePath; position: "before" | "after" }
+    | { op: "remove"; entryPath: NamePath }
+    | { op: "reorder"; entryPath: NamePath; direction: "up" | "down" }
+    | { op: "duplicate"; entryPath: NamePath };
 
 function reparse(session: EditorSession, bytes: Uint8Array): ParseResult {
     const parser = parserRegistry.getById(session.parserId);
@@ -38,11 +40,46 @@ function commit(session: EditorSession, label: string, next: ParseResult): Struc
     };
 }
 
+function buildOpBytes(
+    adapter: ReturnType<typeof formatAdapterRegistry.get>,
+    pr: ParseResult,
+    req: StructureOpRequest,
+): Uint8Array | undefined {
+    switch (req.op) {
+        case "add":
+            return adapter?.buildAddEntryBytes?.(pr, req.namePath);
+        case "insert":
+            return adapter?.buildInsertEntryBytes?.(pr, req.entryPath, req.position);
+        case "remove":
+            return adapter?.buildRemoveEntryBytes?.(pr, req.entryPath);
+        case "reorder":
+            return adapter?.buildMoveEntryBytes?.(pr, req.entryPath, req.direction);
+        case "duplicate":
+            return adapter?.buildDuplicateEntryBytes?.(pr, req.entryPath);
+    }
+}
+
+// Returns a result reflecting the current session state without any mutation.
+// Used when the adapter returns undefined - e.g. a boundary reorder where moving
+// up at index 0 is not possible. The UI disables controls at boundaries, so this
+// path is defensive rather than user-reachable.
+function noopResult(session: EditorSession): StructureResult {
+    return {
+        changeSet: {
+            changed: getWindow(session.model, 0, 200, session.relationshipModel),
+            diagnostics: session.relationshipModel ? session.relationshipModel.constraints(session.model) : [],
+            dirty: session.dirty,
+            formatValid: true,
+        },
+    };
+}
+
 export function structureOp(session: EditorSession, req: StructureOpRequest): StructureResult {
     const adapter = formatAdapterRegistry.get(session.parserId);
-    const bytes = adapter?.buildAddEntryBytes?.(session.model.parseResult, req.namePath);
-    if (!bytes) throw new Error(`Not an addable array: ${req.namePath.join(" / ")}`);
-    return commit(session, `Add to ${req.namePath.join(" / ")}`, reparse(session, bytes));
+    const bytes = buildOpBytes(adapter, session.model.parseResult, req);
+    if (!bytes) return noopResult(session);
+    const label = req.op === "add" ? `Add to ${req.namePath.join(" / ")}` : `${req.op} ${req.entryPath.join(" / ")}`;
+    return commit(session, label, reparse(session, bytes));
 }
 
 export function undo(session: EditorSession): void {
