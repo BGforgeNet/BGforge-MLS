@@ -271,7 +271,7 @@ function hostUp(m: WebviewToHost): HostToWebview[] {
         else if (id === "s0/3") rows = advancedFields;
         else if (id === "s0/4") rows = otherFields;
         else if (id === "s1") rows = sevenGroupSection;
-        else rows = sevenGroupChildren[id] ?? [];
+        else rows = (id != null ? sevenGroupChildren[id] : undefined) ?? [];
         const sliced = rows.slice(m.start, m.end);
         return [{ type: "children", requestId: m.requestId, parentId: id, rows: sliced, total: rows.length }];
     }

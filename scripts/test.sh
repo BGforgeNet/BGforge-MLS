@@ -40,6 +40,7 @@ parallel \
     "Typecheck server" "(cd server && pnpm exec tsc --noEmit)" \
     "Typecheck binary" "(cd binary && pnpm exec tsc --noEmit)" \
     "Typecheck binary-editor" "(cd binary-editor && pnpm exec tsc --noEmit)" \
+    "Typecheck binary-editor harness" "pnpm exec tsc --project binary-editor/test/harness/tsconfig.json" \
     "Typecheck format" "(cd format && pnpm exec tsc --noEmit)" \
     "Typecheck transpilers" "(cd transpilers && pnpm exec tsc --noEmit)" \
     "Oxlint" "pnpm exec oxlint" \

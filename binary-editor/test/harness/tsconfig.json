@@ -9,7 +9,8 @@
         "noEmit": true,
         "tsBuildInfoFile": "../../../tmp/binary-editor-harness.tsbuildinfo",
         "paths": {
-            "@bgforge/binary": ["../../../binary/src/index.ts"]
+            "@bgforge/binary": ["../../../binary/src/index.ts"],
+            "@bgforge/binary-editor": ["../../../binary-editor/src/index.ts"]
         }
     },
     "include": ["."]
