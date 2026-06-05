@@ -153,6 +153,23 @@ await page.waitForSelector("[role='tablist'] [role='tab']", { timeout: 5000 });
 check("baseline: 2 abilities", sectionKids(abilitiesNodeId).total === 2, `total=${sectionKids(abilitiesNodeId).total}`);
 check("baseline: 3 effects", sectionKids(effectsNodeId).total === 3, `total=${sectionKids(effectsNodeId).total}`);
 
+// ---- Summary dispatch-side check ----
+// Verify the dispatch produces non-empty summaries for effects rows before the webview assertion.
+{
+    const r = dispatch({ type: "getChildren", sessionId, nodeId: effectsNodeId, start: 0, end: 3 });
+    const summaries = r.type === "children" ? r.rows.map((row) => row.summary ?? "") : [];
+    check(
+        "summary: effect row 0 has a summary (opcode label)",
+        summaries[0] !== undefined && summaries[0].length > 0,
+        `summary="${summaries[0]}"`,
+    );
+    check(
+        "summary: effect row 1 has a summary (opcode label)",
+        summaries[1] !== undefined && summaries[1].length > 0,
+        `summary="${summaries[1]}"`,
+    );
+}
+
 // ---- Helper: navigate to a section tab and wait for rows ----
 // Section tabs are now rendered via the Tabs primitive: role=tablist + role=tab + aria-selected.
 // Scope to .bb-tabs.primary (the section strip) to avoid matching in-form group tabs.
@@ -424,6 +441,26 @@ check("controls: single Delete click does not remove (count unchanged)", afterAr
 // Cancel the confirm so the state is clean.
 await page.locator(`.row-actions button[aria-label="Cancel delete"]`).first().click();
 await page.waitForTimeout(100);
+
+// ---- Summary DOM render assertions ----
+// Confirm that the VirtualList rows now display the dispatch-provided opcode summary as
+// their primary label. Read the expected summaries from the dispatch (Node-side ground truth),
+// then assert the corresponding DOM .vrow elements contain those strings.
+{
+    const r = dispatch({ type: "getChildren", sessionId, nodeId: effectsNodeId, start: 0, end: 3 });
+    const summaries = r.type === "children" ? r.rows.map((row) => row.summary ?? "") : [];
+    await goToSection(page, "Effects", 3);
+    for (let i = 0; i < Math.min(summaries.length, 3); i++) {
+        const expected = summaries[i] ?? "";
+        if (expected.length === 0) continue;
+        const vrowText = (await page.locator(".vlist .vrow").nth(i).textContent()) ?? "";
+        check(
+            `summary DOM: effects row ${i} contains dispatch summary`,
+            vrowText.includes(expected),
+            `expected="${expected}" in "${vrowText}"`,
+        );
+    }
+}
 
 // ---- Screenshots ----
 await goToSection(page, "Abilities", 2);

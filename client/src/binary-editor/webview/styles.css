@@ -565,9 +565,10 @@ input[type="text"]::placeholder {
 }
 .vrow {
     box-sizing: border-box;
-    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
     overflow: hidden;
-    text-overflow: ellipsis;
     cursor: pointer;
     padding: 0 0.5rem;
     line-height: 22px; /* matches VirtualList rowHeight so single-line rows are vertically centred */
@@ -582,6 +583,27 @@ input[type="text"]::placeholder {
 }
 .vrow.selected:hover {
     background: var(--vscode-list-activeSelectionBackground);
+}
+/* Muted positional index - narrow, subdued, stays readable in both normal and selected states. */
+.vrow-index {
+    flex: 0 0 auto;
+    min-width: 1.4rem;
+    text-align: right;
+    font-size: 0.85em;
+    color: var(--vscode-descriptionForeground);
+    opacity: 0.75;
+    font-variant-numeric: tabular-nums;
+}
+.vrow.selected .vrow-index {
+    color: var(--vscode-list-activeSelectionForeground, var(--vscode-descriptionForeground));
+}
+/* Primary label - the summary (opcode name etc.) or positional name fallback; truncates on overflow. */
+.vrow-label {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 /* ---- inline list rows (editable in place) ---- */

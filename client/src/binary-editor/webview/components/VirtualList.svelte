@@ -35,7 +35,9 @@
         return () => { cancelled = true; };
     });
 
-    function summary(row: Row): string { return row.displayValue ? `${row.name}  ${row.displayValue}` : row.name; }
+    // Primary label: summary (e.g. opcode name "State: Invisibility") when provided by the core,
+    // otherwise the positional name ("Effect 1"). The index is rendered separately as a muted prefix.
+    function rowLabel(row: Row): string { return row.summary ?? row.name; }
 </script>
 <div class="vlist"
      bind:clientHeight={viewportHeight} onscroll={(e) => (scrollTop = (e.target as HTMLElement).scrollTop)}>
@@ -52,7 +54,7 @@
                      style="position:absolute;top:{idx * rowHeight}px;height:{rowHeight}px;left:0;right:0"
                      onclick={() => onselect(row, idx)} role="button" tabindex="0"
                      onkeydown={(e) => { if (e.key === "Enter") onselect(row, idx); }}>
-                    {idx}  {summary(row)}
+                    <span class="vrow-index">{idx}</span><span class="vrow-label">{rowLabel(row)}</span>
                 </div>
             {/if}
         {/each}
