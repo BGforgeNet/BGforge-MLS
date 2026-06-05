@@ -287,7 +287,14 @@ export function shiftEffectRefs<H extends EffectPartitionHeader, A extends Effec
     return { ...doc, header: newHeader, abilities: newAbilities, effects: doc.effects };
 }
 
-/** Shift a non-owner range start by `delta` iff it begins at or after `at`. */
+/**
+ * Shift a non-owner range start by `delta` iff it begins at or after `at`.
+ *
+ * Note: a count-0 range whose start sits at `at` (e.g. an empty equipping range
+ * at index 0 when an owner inserts at index 0) acquires a non-zero start here.
+ * This is harmless: count-0 ranges claim no effect indices, so validateEffectPartition
+ * skips them in its contiguity walk and the writer passes the inert index through.
+ */
 function shiftStart(start: number, at: number, delta: number): number {
     return start >= at ? start + delta : start;
 }

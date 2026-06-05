@@ -23,7 +23,7 @@
 import { applyEntryMutation, type EntryCollection } from "../spec/entity-ops";
 import { getItmCanonicalDocument, rebuildItmCanonicalDocument } from "./canonical-reader";
 import { serializeItmCanonicalDocument } from "./canonical-writer";
-import { validateEffectPartition } from "./effect-partition";
+import { effectOwners, shiftEffectRefs, validateEffectPartition, type EffectOwner } from "./effect-partition";
 import type { ItmCanonicalDocument } from "./canonical-schemas";
 import type { ParseResult } from "../types";
 
@@ -193,6 +193,23 @@ function resolveAbilityIndex(entryPath: readonly string[], abilityCount: number)
     return index;
 }
 
+/**
+ * Resolve a 0-based effect index from an entry path like ["Effects", "Effect N"].
+ * The display tree labels effects 1-based ("Effect 1" is effects[0]), per
+ * ie-common/ability-effects-parser.ts. Returns undefined for any path that is
+ * not an in-range effect address.
+ */
+function resolveEffectIndex(entryPath: readonly string[], effectCount: number): number | undefined {
+    if (entryPath.length !== 2 || entryPath[0] !== "Effects") return undefined;
+    const label = entryPath[1];
+    if (label === undefined || !label.startsWith("Effect ")) return undefined;
+    const oneBased = Number.parseInt(label.slice("Effect ".length), 10);
+    if (!Number.isInteger(oneBased)) return undefined;
+    const index = oneBased - 1;
+    if (index < 0 || index >= effectCount) return undefined;
+    return index;
+}
+
 /** The pre-edit effect slice an ability owns, read from the ORIGINAL doc. */
 function abilitySlice(doc: ItmCanonicalDocument, index: number): { start: number; count: number } {
     // Non-null is safe: every caller resolves `index` through resolveAbilityIndex, which returns
@@ -208,18 +225,30 @@ function cloneEffects(effects: readonly ItmEffect[]): ItmEffect[] {
 }
 
 /**
- * Finalize a structural ability edit: re-derive the running-offset indices, then
- * validate the partition. A non-empty issue list means the slice op and the
- * counts disagree (a relink bug) - throw rather than emit a corrupt file, since
- * this module is the sole guard for per-ability effect ranges.
+ * Validate the effect partition of an already-relinked doc, then serialize. A
+ * non-empty issue list means the edit left the ranges inconsistent - throw
+ * rather than emit a corrupt file, since this module is the sole guard for
+ * per-ability effect ranges. Effect ops call this directly: they relink the
+ * ranges surgically via shiftEffectRefs before splicing, so re-deriving the
+ * ability indices (as finalizeAndSerialize does) would clobber a just-applied
+ * equipping or cross-owner shift.
+ */
+function serializeWithValidation(doc: ItmCanonicalDocument): Uint8Array {
+    const issues = validateEffectPartition(doc);
+    if (issues.length > 0) {
+        throw new Error(`ITM structure-op produced an inconsistent effect partition: ${issues.join("; ")}`);
+    }
+    return serializeItmCanonicalDocument(doc);
+}
+
+/**
+ * Finalize a structural ABILITY edit: re-derive the running-offset indices, then
+ * validate and serialize. Ability ops move whole effect SLICES, so the
+ * running-offset re-derivation (not a surgical shift) is the slice-correct
+ * relink; see relinkAbilityEffectIndices.
  */
 function finalizeAndSerialize(doc: ItmCanonicalDocument): Uint8Array {
-    const relinked = relinkAbilityEffectIndices(doc);
-    const issues = validateEffectPartition(relinked);
-    if (issues.length > 0) {
-        throw new Error(`ITM ability relink produced an inconsistent effect partition: ${issues.join("; ")}`);
-    }
-    return serializeItmCanonicalDocument(relinked);
+    return serializeWithValidation(relinkAbilityEffectIndices(doc));
 }
 
 /** Append a new empty-slice ability. effects[] is unchanged. */
@@ -319,4 +348,144 @@ export function buildItmDuplicateAbilityBytes(
     const clonedSlice = cloneEffects(doc.effects.slice(start, start + count));
     const effects = [...doc.effects.slice(0, start + count), ...clonedSlice, ...doc.effects.slice(start + count)];
     return finalizeAndSerialize({ ...doc, abilities: [...mutation.next], effects });
+}
+
+/**
+ * Apply a surgical range shift then reattach the caller's typed effects array.
+ *
+ * shiftEffectRefs is generic over the header/ability types but widens `effects`
+ * to `unknown[]` (it only relinks the index/count references and passes effects
+ * through untouched). It is fed the PRE-splice doc so the owner's pre-edit range
+ * is what shiftEffectRefs validates `at` against; the post-splice typed effects
+ * are then layered back on, recovering the concrete ItmCanonicalDocument type
+ * without a cast.
+ */
+function applyEffectShift(
+    doc: ItmCanonicalDocument,
+    nextEffects: ItmEffect[],
+    args: { at: number; delta: number; owner: EffectOwner },
+): ItmCanonicalDocument {
+    const shifted = shiftEffectRefs(doc, args);
+    return { ...doc, header: shifted.header, abilities: shifted.abilities, effects: nextEffects };
+}
+
+/**
+ * Resolve the owner of a target effect index. Non-null is safe: callers gate on
+ * resolveEffectIndex which returns undefined for any out-of-range index, and a
+ * real ITM partition covers every index, so effectOwners[effIdx] is populated.
+ * If a hand-edited orphan slips through, the cast surfaces as an undefined that
+ * fails the subsequent shiftEffectRefs ownerRange lookup or partition validation
+ * rather than silently misattributing the edit.
+ */
+function effectOwnerAt(doc: ItmCanonicalDocument, effectIndex: number): EffectOwner {
+    const owner = effectOwners(doc)[effectIndex];
+    if (owner === undefined) {
+        throw new Error(`ITM effect index ${effectIndex} has no owning range (orphan); cannot apply structure-op`);
+    }
+    return owner;
+}
+
+/**
+ * Remove the targeted effect from its owning range. The owner's count drops by 1
+ * and every later range shifts down by 1 (shiftEffectRefs); doc.effects loses the
+ * one element at effIdx. The relink is owner-aware (it may be the equipping range
+ * or an ability), unlike the ability ops' running-offset re-derivation.
+ */
+export function buildItmRemoveEffectBytes(
+    parseResult: ParseResult,
+    entryPath: readonly string[],
+): Uint8Array | undefined {
+    const doc = readDocument(parseResult);
+    if (!doc) return undefined;
+    const effIdx = resolveEffectIndex(entryPath, doc.effects.length);
+    if (effIdx === undefined) return undefined;
+
+    const owner = effectOwnerAt(doc, effIdx);
+    const effects = [...doc.effects.slice(0, effIdx), ...doc.effects.slice(effIdx + 1)];
+    return serializeWithValidation(applyEffectShift(doc, effects, { at: effIdx, delta: -1, owner }));
+}
+
+/**
+ * Insert a new default effect before/after the targeted effect. The new effect
+ * INHERITS the reference effect's owner: its count grows by 1 and later ranges
+ * shift up by 1. "before" inserts at effIdx; "after" at effIdx+1, which for the
+ * owner's last effect is the owner's inclusive end boundary (allowed by
+ * shiftEffectRefs for inserts).
+ */
+export function buildItmInsertEffectBytes(
+    parseResult: ParseResult,
+    entryPath: readonly string[],
+    position: "before" | "after",
+): Uint8Array | undefined {
+    const doc = readDocument(parseResult);
+    if (!doc) return undefined;
+    const effIdx = resolveEffectIndex(entryPath, doc.effects.length);
+    if (effIdx === undefined) return undefined;
+
+    const owner = effectOwnerAt(doc, effIdx);
+    const at = position === "before" ? effIdx : effIdx + 1;
+    const effects = [...doc.effects.slice(0, at), defaultItmEffect(), ...doc.effects.slice(at)];
+    return serializeWithValidation(applyEffectShift(doc, effects, { at, delta: 1, owner }));
+}
+
+/**
+ * Duplicate the targeted effect, inserting a deep clone right after the source.
+ * The clone inherits the source's owner: that range's count grows by 1 and later
+ * ranges shift up by 1.
+ */
+export function buildItmDuplicateEffectBytes(
+    parseResult: ParseResult,
+    entryPath: readonly string[],
+): Uint8Array | undefined {
+    const doc = readDocument(parseResult);
+    if (!doc) return undefined;
+    const effIdx = resolveEffectIndex(entryPath, doc.effects.length);
+    if (effIdx === undefined) return undefined;
+
+    const owner = effectOwnerAt(doc, effIdx);
+    // Non-null is safe: effIdx is in range per resolveEffectIndex.
+    const clone = structuredClone(doc.effects[effIdx]!);
+    const at = effIdx + 1;
+    const effects = [...doc.effects.slice(0, at), clone, ...doc.effects.slice(at)];
+    return serializeWithValidation(applyEffectShift(doc, effects, { at, delta: 1, owner }));
+}
+
+/**
+ * Reorder the targeted effect up/down by swapping it with its neighbor, but ONLY
+ * when the neighbor belongs to the SAME owner - otherwise the swap would move an
+ * effect out of its owner's slice (ownership corruption), so return undefined at
+ * an owner boundary. A same-owner swap changes no counts or range starts, so
+ * doc.effects is swapped directly with no shiftEffectRefs.
+ */
+export function buildItmReorderEffectBytes(
+    parseResult: ParseResult,
+    entryPath: readonly string[],
+    direction: "up" | "down",
+): Uint8Array | undefined {
+    const doc = readDocument(parseResult);
+    if (!doc) return undefined;
+    const effIdx = resolveEffectIndex(entryPath, doc.effects.length);
+    if (effIdx === undefined) return undefined;
+
+    const neighborIdx = direction === "up" ? effIdx - 1 : effIdx + 1;
+    if (neighborIdx < 0 || neighborIdx >= doc.effects.length) return undefined; // edge of array
+
+    const owners = effectOwners(doc);
+    const owner = owners[effIdx];
+    const neighborOwner = owners[neighborIdx];
+    if (owner === undefined || neighborOwner === undefined) return undefined;
+    if (!sameOwner(owner, neighborOwner)) return undefined; // cross-owner move rejected
+
+    const effects = [...doc.effects];
+    // Non-null is safe: both indices are in [0, length) per the bound checks above.
+    const a = effects[effIdx]!;
+    const b = effects[neighborIdx]!;
+    effects[effIdx] = b;
+    effects[neighborIdx] = a;
+    return serializeWithValidation({ ...doc, effects });
+}
+
+function sameOwner(a: EffectOwner, b: EffectOwner): boolean {
+    if (a.kind === "equipping" || b.kind === "equipping") return a.kind === b.kind;
+    return a.index === b.index;
 }

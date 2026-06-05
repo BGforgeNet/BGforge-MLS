@@ -7,9 +7,13 @@ import { serializeItmCanonicalDocument } from "../src/itm/canonical-writer";
 import {
     buildItmAddAbilityBytes,
     buildItmDuplicateAbilityBytes,
+    buildItmDuplicateEffectBytes,
     buildItmInsertAbilityBytes,
+    buildItmInsertEffectBytes,
     buildItmRemoveAbilityBytes,
+    buildItmRemoveEffectBytes,
     buildItmReorderAbilityBytes,
+    buildItmReorderEffectBytes,
     defaultItmAbility,
     defaultItmEffect,
     itmAbilitiesCollection,
@@ -46,6 +50,37 @@ function makeTwoAbilityBase(): ParseResult {
             { ...defaultItmAbility(), featureBlockIndex: 1, featureBlockCount: 2 },
         ],
         effects: [effect(10), effect(20), effect(21)],
+    };
+
+    const reparsed = itmParser.parse(serializeItmCanonicalDocument(base));
+    if (reparsed.errors) throw new Error(`base reparse errors: ${reparsed.errors.join(", ")}`);
+    return reparsed;
+}
+
+/**
+ * Variant of the 2-ability base that ALSO carries one equipping effect, so the
+ * effect-op tests cover the equipping-owner case. Layout:
+ *   equipping range [0,1) owns effect[0] (opcode 99);
+ *   ability0 [1,1) owns effect[1] (opcode 10);
+ *   ability1 [2,2) owns effects[2,3] (opcodes 20, 21).
+ * effects = [99, 10, 20, 21]; each opcode is distinct so a test can PROVE which
+ * physical effect moved and which owner it stayed under.
+ */
+function makeEquippingPlusTwoAbilityBase(): ParseResult {
+    const parsed = itmParser.parse(new Uint8Array(fs.readFileSync(FIXTURE)));
+    if (parsed.errors) throw new Error(parsed.errors.join(", "));
+    const doc = getItmCanonicalDocument(parsed) ?? rebuildItmCanonicalDocument(parsed);
+    if (!doc) throw new Error("no canonical doc");
+
+    const effect = (opcode: number) => ({ ...defaultItmEffect(), opcode });
+    const base = {
+        ...doc,
+        header: { ...doc.header, featureBlocksIndex: 0, featureBlocksCount: 1 },
+        abilities: [
+            { ...defaultItmAbility(), featureBlockIndex: 1, featureBlockCount: 1 },
+            { ...defaultItmAbility(), featureBlockIndex: 2, featureBlockCount: 2 },
+        ],
+        effects: [effect(99), effect(10), effect(20), effect(21)],
     };
 
     const reparsed = itmParser.parse(serializeItmCanonicalDocument(base));
@@ -266,5 +301,159 @@ describe("ITM ability structure-ops with effect-slice relinking", () => {
         expect(buildItmAddAbilityBytes(makeTwoAbilityBase(), ["Header", "Signature"])).toBeUndefined();
         expect(buildItmRemoveAbilityBytes(makeTwoAbilityBase(), ["Header", "Signature"])).toBeUndefined();
         expect(buildItmRemoveAbilityBytes(makeTwoAbilityBase(), ["Abilities", "Ability 99"])).toBeUndefined();
+    });
+});
+
+describe("ITM effect structure-ops with owner-aware relinking", () => {
+    it("the equipping base lays out equipping + two abilities over [99,10,20,21]", () => {
+        if (!hasFixture) return;
+        const doc = reparse(itmParser.serialize!(makeEquippingPlusTwoAbilityBase()));
+        expect(doc.header).toMatchObject({ featureBlocksIndex: 0, featureBlocksCount: 1 });
+        expect(doc.abilities[0]).toMatchObject({ featureBlockIndex: 1, featureBlockCount: 1 });
+        expect(doc.abilities[1]).toMatchObject({ featureBlockIndex: 2, featureBlockCount: 2 });
+        expect(opcodes(doc.effects)).toEqual([99, 10, 20, 21]);
+        expect(validateEffectPartition(doc)).toEqual([]);
+    });
+
+    it("insert before an ability-owned effect grows that ability and shifts later ranges", () => {
+        if (!hasFixture) return;
+        // "Effect 3" (1-based) is effects[2] (opcode 20), owned by ability1.
+        const bytes = buildItmInsertEffectBytes(makeEquippingPlusTwoAbilityBase(), ["Effects", "Effect 3"], "before");
+        expect(bytes).toBeDefined();
+        const doc = reparse(bytes!);
+        // A default (opcode 0) effect lands before opcode 20.
+        expect(opcodes(doc.effects)).toEqual([99, 10, 0, 20, 21]);
+        expect(doc.header).toMatchObject({ featureBlocksIndex: 0, featureBlocksCount: 1 }); // equipping unchanged
+        expect(doc.abilities[0]).toMatchObject({ featureBlockIndex: 1, featureBlockCount: 1 });
+        expect(doc.abilities[1]).toMatchObject({ featureBlockIndex: 2, featureBlockCount: 3 });
+        expect(validateEffectPartition(doc)).toEqual([]);
+    });
+
+    it("insert after an ability-owned effect grows that ability and shifts later ranges", () => {
+        if (!hasFixture) return;
+        // "Effect 2" is effects[1] (opcode 10), the sole effect of ability0.
+        const bytes = buildItmInsertEffectBytes(makeEquippingPlusTwoAbilityBase(), ["Effects", "Effect 2"], "after");
+        expect(bytes).toBeDefined();
+        const doc = reparse(bytes!);
+        expect(opcodes(doc.effects)).toEqual([99, 10, 0, 20, 21]);
+        expect(doc.header).toMatchObject({ featureBlocksIndex: 0, featureBlocksCount: 1 });
+        expect(doc.abilities[0]).toMatchObject({ featureBlockIndex: 1, featureBlockCount: 2 });
+        expect(doc.abilities[1]).toMatchObject({ featureBlockIndex: 3, featureBlockCount: 2 });
+        expect(validateEffectPartition(doc)).toEqual([]);
+    });
+
+    it("insert relative to the equipping effect grows the header and shifts all ability indices", () => {
+        if (!hasFixture) return;
+        // "Effect 1" is effects[0] (opcode 99), the equipping effect.
+        const bytes = buildItmInsertEffectBytes(makeEquippingPlusTwoAbilityBase(), ["Effects", "Effect 1"], "after");
+        expect(bytes).toBeDefined();
+        const doc = reparse(bytes!);
+        expect(opcodes(doc.effects)).toEqual([99, 0, 10, 20, 21]);
+        expect(doc.header).toMatchObject({ featureBlocksIndex: 0, featureBlocksCount: 2 });
+        // Both abilities shift +1.
+        expect(doc.abilities[0]).toMatchObject({ featureBlockIndex: 2, featureBlockCount: 1 });
+        expect(doc.abilities[1]).toMatchObject({ featureBlockIndex: 3, featureBlockCount: 2 });
+        expect(validateEffectPartition(doc)).toEqual([]);
+    });
+
+    it("remove an ability-owned effect shrinks that ability and shifts later ranges", () => {
+        if (!hasFixture) return;
+        // "Effect 3" is effects[2] (opcode 20), the first of ability1's two effects.
+        const bytes = buildItmRemoveEffectBytes(makeEquippingPlusTwoAbilityBase(), ["Effects", "Effect 3"]);
+        expect(bytes).toBeDefined();
+        const doc = reparse(bytes!);
+        expect(opcodes(doc.effects)).toEqual([99, 10, 21]); // opcode 20 gone
+        expect(doc.header).toMatchObject({ featureBlocksIndex: 0, featureBlocksCount: 1 });
+        expect(doc.abilities[0]).toMatchObject({ featureBlockIndex: 1, featureBlockCount: 1 });
+        expect(doc.abilities[1]).toMatchObject({ featureBlockIndex: 2, featureBlockCount: 1 });
+        expect(validateEffectPartition(doc)).toEqual([]);
+    });
+
+    it("remove the equipping effect shrinks the header and shifts ability indices down", () => {
+        if (!hasFixture) return;
+        // "Effect 1" is effects[0] (opcode 99), the equipping effect.
+        const bytes = buildItmRemoveEffectBytes(makeEquippingPlusTwoAbilityBase(), ["Effects", "Effect 1"]);
+        expect(bytes).toBeDefined();
+        const doc = reparse(bytes!);
+        expect(opcodes(doc.effects)).toEqual([10, 20, 21]); // opcode 99 gone
+        expect(doc.header).toMatchObject({ featureBlocksIndex: 0, featureBlocksCount: 0 });
+        expect(doc.abilities[0]).toMatchObject({ featureBlockIndex: 0, featureBlockCount: 1 });
+        expect(doc.abilities[1]).toMatchObject({ featureBlockIndex: 1, featureBlockCount: 2 });
+        expect(validateEffectPartition(doc)).toEqual([]);
+    });
+
+    it("duplicate an ability-owned effect grows that ability and clones the opcode adjacently", () => {
+        if (!hasFixture) return;
+        // "Effect 3" is effects[2] (opcode 20), owned by ability1.
+        const bytes = buildItmDuplicateEffectBytes(makeEquippingPlusTwoAbilityBase(), ["Effects", "Effect 3"]);
+        expect(bytes).toBeDefined();
+        const doc = reparse(bytes!);
+        // The clone (opcode 20) lands right after the source.
+        expect(opcodes(doc.effects)).toEqual([99, 10, 20, 20, 21]);
+        expect(doc.header).toMatchObject({ featureBlocksIndex: 0, featureBlocksCount: 1 });
+        expect(doc.abilities[0]).toMatchObject({ featureBlockIndex: 1, featureBlockCount: 1 });
+        expect(doc.abilities[1]).toMatchObject({ featureBlockIndex: 2, featureBlockCount: 3 });
+        expect(validateEffectPartition(doc)).toEqual([]);
+    });
+
+    it("the duplicated effect is a distinct object (deep clone, no aliasing)", () => {
+        if (!hasFixture) return;
+        const base = makeEquippingPlusTwoAbilityBase();
+        const doc = getItmCanonicalDocument(base) ?? rebuildItmCanonicalDocument(base);
+        if (!doc) throw new Error("no canonical doc");
+        const bytes = buildItmDuplicateEffectBytes(base, ["Effects", "Effect 3"]);
+        expect(bytes).toBeDefined();
+        const result = reparse(bytes!);
+        // Two distinct effects carry opcode 20 (source + clone); reparse yields
+        // separate objects, proving the clone is not the same reference.
+        const twenties = result.effects.filter((e) => e.opcode === 20);
+        expect(twenties.length).toBe(2);
+        expect(twenties[0]).not.toBe(twenties[1]);
+    });
+
+    it("reorder within the same owner swaps opcodes without changing counts or indices", () => {
+        if (!hasFixture) return;
+        // ability1 owns effects[2,3] (opcodes 20, 21). Reorder "Effect 3" (opcode 20)
+        // down swaps it with its same-owner neighbor opcode 21.
+        const bytes = buildItmReorderEffectBytes(makeEquippingPlusTwoAbilityBase(), ["Effects", "Effect 3"], "down");
+        expect(bytes).toBeDefined();
+        const doc = reparse(bytes!);
+        expect(opcodes(doc.effects)).toEqual([99, 10, 21, 20]);
+        expect(doc.header).toMatchObject({ featureBlocksIndex: 0, featureBlocksCount: 1 });
+        expect(doc.abilities[0]).toMatchObject({ featureBlockIndex: 1, featureBlockCount: 1 });
+        expect(doc.abilities[1]).toMatchObject({ featureBlockIndex: 2, featureBlockCount: 2 });
+        expect(validateEffectPartition(doc)).toEqual([]);
+    });
+
+    it("reorder up mirrors reorder down within the same owner", () => {
+        if (!hasFixture) return;
+        // "Effect 4" (opcode 21) up swaps with same-owner neighbor opcode 20.
+        const bytes = buildItmReorderEffectBytes(makeEquippingPlusTwoAbilityBase(), ["Effects", "Effect 4"], "up");
+        expect(bytes).toBeDefined();
+        const doc = reparse(bytes!);
+        expect(opcodes(doc.effects)).toEqual([99, 10, 21, 20]);
+        expect(validateEffectPartition(doc)).toEqual([]);
+    });
+
+    it("reorder across an owner boundary is rejected (returns undefined)", () => {
+        if (!hasFixture) return;
+        // ability0 owns the single effect[1] (opcode 10). Reordering it "down"
+        // would cross into ability1; "up" would cross into equipping. Both rejected.
+        const base = makeEquippingPlusTwoAbilityBase;
+        expect(buildItmReorderEffectBytes(base(), ["Effects", "Effect 2"], "down")).toBeUndefined();
+        expect(buildItmReorderEffectBytes(base(), ["Effects", "Effect 2"], "up")).toBeUndefined();
+        // The equipping effect[0] has no lower neighbor and "down" crosses into ability0.
+        expect(buildItmReorderEffectBytes(base(), ["Effects", "Effect 1"], "up")).toBeUndefined();
+        expect(buildItmReorderEffectBytes(base(), ["Effects", "Effect 1"], "down")).toBeUndefined();
+    });
+
+    it("rejects a non-effects path or out-of-range effect (returns undefined)", () => {
+        if (!hasFixture) return;
+        const base = makeEquippingPlusTwoAbilityBase;
+        expect(buildItmInsertEffectBytes(base(), ["Abilities", "Ability 1"], "before")).toBeUndefined();
+        expect(buildItmRemoveEffectBytes(base(), ["Header", "Signature"])).toBeUndefined();
+        expect(buildItmRemoveEffectBytes(base(), ["Effects", "Effect 99"])).toBeUndefined();
+        expect(buildItmDuplicateEffectBytes(base(), ["Effects", "Effect 0"])).toBeUndefined();
+        expect(buildItmReorderEffectBytes(base(), ["Effects", "Effect 99"], "up")).toBeUndefined();
     });
 });
