@@ -33,8 +33,10 @@
         ariaLabel?: string;
     } = $props();
 
-    // bits-ui stores the selection as a string; keep a string mirror of the numeric prop.
-    let selected = $state(String(value));
+    // bits-ui stores the selection as a string; keep a string mirror of the numeric prop. Initialized to a
+    // literal (not String(value)) so it does not reference a reactive prop at $state init; the $effect below
+    // populates it on mount before first paint.
+    let selected = $state("");
     $effect(() => {
         selected = String(value);
     });

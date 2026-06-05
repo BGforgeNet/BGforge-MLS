@@ -45,8 +45,10 @@
         placeholder?: string;
     } = $props();
 
-    // bits-ui stores the selection as a string; keep a string mirror of the numeric prop.
-    let selected = $state(String(value));
+    // bits-ui stores the selection as a string; keep a string mirror of the numeric prop. Initialized to a
+    // literal (not String(value)) so it does not reference a reactive prop at $state init; the $effect below
+    // populates it on mount before first paint.
+    let selected = $state("");
     $effect(() => {
         selected = String(value);
     });
@@ -60,7 +62,9 @@
     // inputValue is the current search query. We own this state; bits-ui does NOT write back to us (inputValue
     // is not $bindable() in Combobox.Root). We update it via our oninput handler on Combobox.Input (which
     // fires alongside bits-ui's internal handler via mergeProps). On open we clear it; on close we restore it.
-    let inputValue = $state(selectedLabel);
+    // Initialized to a literal (not selectedLabel) so it does not reference a derived at $state init; the
+    // open-tracking $effect below populates it on mount before first paint.
+    let inputValue = $state("");
 
     $effect(() => {
         if (open) {
@@ -111,6 +115,8 @@
     }
 </script>
 
+<!-- inputValue guard: when closed, force selectedLabel rather than the local inputValue. This covers the brief
+     window after open flips false but before the open-tracking $effect resets inputValue, avoiding a stale frame. -->
 <Combobox.Root
     type="single"
     bind:value={selected}

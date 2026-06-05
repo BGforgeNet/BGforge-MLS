@@ -111,9 +111,18 @@ describe("parseCustomValue", () => {
         expect(parseCustomValue("  ")).toBeUndefined();
     });
 
+    it("accepts a leading plus sign", () => {
+        expect(parseCustomValue("+5")).toBe(5);
+    });
+
     it("returns undefined for non-integer numeric strings", () => {
         expect(parseCustomValue("3.14")).toBeUndefined();
         expect(parseCustomValue("1e2")).toBeUndefined();
+    });
+
+    it("returns undefined for hex strings (Number would coerce 0xff -> 255)", () => {
+        expect(parseCustomValue("0xff")).toBeUndefined();
+        expect(parseCustomValue("0xef")).toBeUndefined();
     });
 
     it("returns undefined for Infinity and NaN", () => {

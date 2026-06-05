@@ -52,15 +52,17 @@ export function filterOptions(
     return options.filter((o) => o.label.toLowerCase().includes(q));
 }
 
-/** Parses a query string as a finite integer, returning the number or undefined.
- * Accepts only strings whose trimmed form converts to a finite integer (no decimal point,
- * no scientific notation, no NaN/Infinity). Used by the combobox allowCustom mode. */
+/** Parses a query string as a decimal integer, returning the number or undefined.
+ * Accepts only plain decimal integers (optional leading sign): "42", "-5", "+5", "0". Rejects hex
+ * ("0xff"), decimals ("3.14"), and scientific notation ("1e2") uniformly via a strict regex.
+ * Used by the combobox allowCustom mode. */
 export function parseCustomValue(query: string): number | undefined {
     const s = query.trim();
-    if (!s) return undefined;
-    // Reject strings containing a decimal point or exponent - only plain integers are accepted.
-    if (s.includes(".") || s.toLowerCase().includes("e")) return undefined;
+    // Strict decimal-integer shape: optional sign then digits. This rejects hex/decimal/exponent forms
+    // that Number() would otherwise coerce (e.g. "0xff" -> 255). Empty string fails the regex too.
+    if (!/^[+-]?\d+$/.test(s)) return undefined;
     const n = Number(s);
+    // Redundant safety net: the regex already guarantees a finite integer.
     if (!Number.isFinite(n) || !Number.isInteger(n)) return undefined;
     return n;
 }
