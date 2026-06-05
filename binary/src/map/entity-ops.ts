@@ -55,6 +55,7 @@
 
 import type { ParseOpaqueRange, ParseResult } from "../types";
 import { isArraySpec } from "../spec/types";
+import { applyEntryMutation, type EntryCollection } from "../spec/entity-ops";
 import { getMapCanonicalDocument, rebuildMapCanonicalDocument } from "./canonical-reader";
 import { serializeMapCanonicalDocument } from "./canonical-writer";
 import type { MapCanonicalDocument } from "./canonical-schemas";
@@ -117,6 +118,17 @@ function applyVarSectionUpdate(
     };
 }
 
+/** Build the format-general EntryCollection descriptor for a var section. MAP int32 arrays have no cross-references to relink. */
+function makeVarSectionCollection(section: VarSection): EntryCollection<MapCanonicalDocument, number> {
+    return {
+        read: (doc) => doc[section.arrayKey],
+        write: (doc, next) => applyVarSectionUpdate(doc, section, [...next]),
+        defaultElement: defaultVarValue,
+        addable: varSectionAddable,
+        removable: varSectionRemovable,
+    };
+}
+
 export function buildMapAddEntryBytes(parseResult: ParseResult, arrayPath: readonly string[]): Uint8Array | undefined {
     if (!isMapAddableArray(arrayPath)) return undefined;
     const doc = readDocument(parseResult);
@@ -125,9 +137,14 @@ export function buildMapAddEntryBytes(parseResult: ParseResult, arrayPath: reado
     const section = findVarSectionByArrayName(arrayPath[0]);
     if (!section) return undefined;
 
-    const nextValues = [...doc[section.arrayKey], defaultVarValue()];
+    const collection = makeVarSectionCollection(section);
+    const current = collection.read(doc);
+    const mutation = applyEntryMutation(current, "add", current.length, collection.defaultElement);
+    if (!mutation) return undefined;
+
+    const nextDoc = collection.write(doc, mutation.next);
     return serializeMapCanonicalDocument(
-        applyVarSectionUpdate(doc, section, nextValues),
+        nextDoc,
         shiftOpaqueRangesAfterVarSection(parseResult.opaqueRanges, doc, section, +4),
     );
 }
@@ -199,10 +216,7 @@ export function buildMapRemoveEntryBytes(
     entryPath: readonly string[],
 ): Uint8Array | undefined {
     if (!isMapRemovableEntry(entryPath)) return undefined;
-    return mutateVarSectionEntry(parseResult, entryPath, (values, index) => [
-        ...values.slice(0, index),
-        ...values.slice(index + 1),
-    ]);
+    return mutateVarSectionEntry(parseResult, entryPath, "remove");
 }
 
 export function buildMapInsertEntryBytes(
@@ -213,10 +227,7 @@ export function buildMapInsertEntryBytes(
     // An entry can be inserted next to any entry that itself is recognised as
     // a removable target - the addressing rules are the same.
     if (!isMapRemovableEntry(entryPath)) return undefined;
-    return mutateVarSectionEntry(parseResult, entryPath, (values, index) => {
-        const insertAt = position === "before" ? index : index + 1;
-        return [...values.slice(0, insertAt), defaultVarValue(), ...values.slice(insertAt)];
-    });
+    return mutateVarSectionEntry(parseResult, entryPath, "insert", position);
 }
 
 export function buildMapMoveEntryBytes(
@@ -225,13 +236,7 @@ export function buildMapMoveEntryBytes(
     direction: "up" | "down",
 ): Uint8Array | undefined {
     if (!isMapRemovableEntry(entryPath)) return;
-    return mutateVarSectionEntry(parseResult, entryPath, (values, index) => {
-        const targetIndex = direction === "up" ? index - 1 : index + 1;
-        if (targetIndex < 0 || targetIndex >= values.length) return;
-        const next = [...values];
-        [next[index], next[targetIndex]] = [next[targetIndex]!, next[index]!];
-        return next;
-    });
+    return mutateVarSectionEntry(parseResult, entryPath, "reorder", undefined, direction);
 }
 
 /**
@@ -244,36 +249,39 @@ export function buildMapDuplicateEntryBytes(
     entryPath: readonly string[],
 ): Uint8Array | undefined {
     if (!isMapRemovableEntry(entryPath)) return undefined;
-    return mutateVarSectionEntry(parseResult, entryPath, (values, index) => [
-        ...values.slice(0, index + 1),
-        values[index]!,
-        ...values.slice(index + 1),
-    ]);
+    return mutateVarSectionEntry(parseResult, entryPath, "duplicate");
 }
 
 /**
  * Shared boilerplate for entry-targeted var-section mutations: resolves the
- * binding row, runs the mutator on the current values, and re-serialises.
- * The mutator may return `undefined` to abort (e.g., move at the boundary).
+ * binding row, calls applyEntryMutation on the current values, and re-serialises.
+ * Returns undefined on boundary no-ops (e.g. reorder at the boundary) or when the
+ * index is out of range.
  */
 function mutateVarSectionEntry(
     parseResult: ParseResult,
     entryPath: readonly string[],
-    mutate: (values: readonly number[], index: number) => readonly number[] | undefined,
+    op: "remove" | "insert" | "reorder" | "duplicate",
+    position?: "before" | "after",
+    direction?: "up" | "down",
 ): Uint8Array | undefined {
     const doc = readDocument(parseResult);
     if (!doc) return undefined;
+    // Every caller gates on isMapRemovableEntry, which validates entryPath length, the section
+    // name, and a parseable index - so the section lookup and index parse below cannot fail here.
     const section = findVarSectionByArrayName(entryPath[0])!;
     const index = parseEntryIndex(entryPath[1]!, section.entryPrefix)!;
-    const current = doc[section.arrayKey];
+    const collection = makeVarSectionCollection(section);
+    const current = collection.read(doc);
     if (index >= current.length) return undefined;
 
-    const nextValues = mutate(current, index);
-    if (!nextValues) return undefined;
+    const mutation = applyEntryMutation(current, op, index, collection.defaultElement, position, direction);
+    if (!mutation) return undefined;
 
-    const delta = (nextValues.length - current.length) * 4;
+    const delta = mutation.delta * 4;
+    const nextDoc = collection.write(doc, mutation.next);
     return serializeMapCanonicalDocument(
-        applyVarSectionUpdate(doc, section, [...nextValues]),
+        nextDoc,
         shiftOpaqueRangesAfterVarSection(parseResult.opaqueRanges, doc, section, delta),
     );
 }
