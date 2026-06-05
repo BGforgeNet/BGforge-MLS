@@ -1,3 +1,4 @@
+# Auto-generated from IDS files by scripts/utils/src/ids-to-yaml.ts. Do not hand-edit.
 bg2_animate_ids:
   type: 21
   items:

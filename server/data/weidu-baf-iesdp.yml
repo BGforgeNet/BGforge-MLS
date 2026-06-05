@@ -1,3 +1,5 @@
+# Auto-generated from IESDP by scripts/ie-update/src/iesdp-update.ts. Do not hand-edit.
+
 actions:
   type: 3 # function
   items:
@@ -1542,7 +1544,9 @@ actions:
     - name: IncrementChapter
       detail: IncrementChapter(S:RESREF)
       doc: |-
-        This action is used to increment the chapter, and display a text screen (specified by the resref parameter - a 2DA file). The example script is from ar1803.bcs.
+        This action is used to increment the chapter, and display a text screen (specified by the resref parameter - a 2DA file).
+        In IWD the resref is ignored and the text instead comes from the references in [chapters.2da](https://gibberlings3.github.io/iesdp/files/2da/2da_tob/chapters.htm)
+        The example script is from ar1803.bcs.
         ```
         IF
           Dead("Davaeorn")
@@ -2148,8 +2152,8 @@ actions:
         ```
 
         * This action will never stop, (unless interrupted in specific situations), and thus never leave the action list.
-        * Executes [Wait()](https://gibberlings3.github.io/iesdp/scripting/actions/bg2actions.htm#63) for a random amount of time, (1-40 seconds), if the creature goes off-screen.
-        * Waits 1-10 seconds between each evaluation.
+        * Executes [Wait()](https://gibberlings3.github.io/iesdp/scripting/actions/bg2actions.htm#63) for a random amount of time, (1–40 seconds), if the creature goes off-screen.
+        * Waits 1–10 seconds between each evaluation.
     - name: RandomWalk
       detail: RandomWalk()
       doc: |
@@ -2167,7 +2171,7 @@ actions:
         ```
 
         * This action will never stop, (unless interrupted in specific situations), and thus never leave the action list.
-        * Executes [Wait()](https://gibberlings3.github.io/iesdp/scripting/actions/bg2actions.htm#63) for a random amount of time, (1-40 seconds), if the creature goes off-screen.
+        * Executes [Wait()](https://gibberlings3.github.io/iesdp/scripting/actions/bg2actions.htm#63) for a random amount of time, (1–40 seconds), if the creature goes off-screen.
         * Has a 50/50 chance to [MoveToPoint()](https://gibberlings3.github.io/iesdp/scripting/actions/bg2actions.htm#23), or do a pass of [RandomTurn()](https://gibberlings3.github.io/iesdp/scripting/actions/bg2actions.htm#130), (including [RandomTurn()](https://gibberlings3.github.io/iesdp/scripting/actions/bg2actions.htm#130)'s wait time).
     - name: RandomWalkContinuous
       detail: RandomWalkContinuous()

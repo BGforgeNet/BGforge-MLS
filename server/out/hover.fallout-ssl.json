@@ -1589,6 +1589,12 @@
             "value": "```fallout-ssl-tooltip\nHOOK_DEATHANIM2\n```\nRuns after Fallout has calculated the death animation. Lets you set your own custom frame id, so more powerful than `HOOK_DEATHANIM1`, but performs no validation.<br>\nWhen using `critter_dmg` function, this script will also run. In that case weapon pid will be -1 and attacker will point to an object with `obj_art_fid == 0x20001F5`.\n\nDoes not run for critters in the knockdown/out state.\n\n```\nint     arg0 - The pid of the weapon performing the attack. (May be -1 if the attack is unarmed)\nCritter arg1 - The attacker\nCritter arg2 - The target\nint     arg3 - The amount of damage\nint     arg4 - The death anim id calculated by Fallout\n\nint     ret0 - The death anim id to override with\n```\n"
         }
     },
+    "HOOK_DEPRECATED HOOKS": {
+        "contents": {
+            "kind": "markdown",
+            "value": "```fallout-ssl-tooltip\nHOOK_DEPRECATED HOOKS\n```\n* `hs_hexmoveblocking.int`\n* `hs_hexaiblocking.int`\n* `hs_hexshootblocking.int`\n* `hs_hexsightblocking.int`\n\nRun when checking to see if a hex blocks movement or shooting. (or ai-ing, presumably...)\n\n__NOTE:__ These hook scripts can become very CPU-intensive and you should avoid using them.\nFor this reason, these hooks are not thoroughly supported in sfall, and may be removed in future versions.<br>\nIf you want to check if some tile or path is blocked, use functions: `obj_blocking_tile`, `obj_blocking_line`, `path_find_to`.<br>\nIf you want script to be called every time NPC moves by hex in combat, use `HOOK_MOVECOST` hook.\n\n```\nCritter arg0 - the critter doing the moving\nint     arg1 - the tile number being checked\nint     arg2 - the elevation being checked\nint     arg3 - 1 if the hex would normally be blocking\n\nObj     ret0 - 0 if the hex doesn't block, or any sort of object pointer if it does\n```\n"
+        }
+    },
     "HOOK_DESCRIPTIONOBJ": {
         "contents": {
             "kind": "markdown",
@@ -1943,6 +1949,12 @@
             "value": "```fallout-ssl-tooltip\nvoid SayStartPos(int position)\n```\nInitiates a new dialog sequence starting at the specified position index."
         }
     },
+    "^": {
+        "contents": {
+            "kind": "markdown",
+            "value": "```fallout-ssl-tooltip\nx^y\n```\nExponentiation. Use as any other arithmetic operator, like `5^(1/3)`.\nIf exponent is an integer, you can use a negative base, otherwise you will get \"NaN\" with a negative base.\nIf both arguments are integers, the result will be an integer.\n"
+        }
+    },
     "abs": {
         "contents": {
             "kind": "markdown",
@@ -1964,7 +1976,7 @@
     "add_extra_msg_file": {
         "contents": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint add_extra_msg_file(string fileName)\n```\nLoads the custom message file, and returns the file ID number assigned to it in range from 0x3000 to 0x3FFF for the `message_str_game` function to get messages from the file.\n- `fileName`: the name of the custom message file (including the .msg extension) in `text\\<language>\\game\\` directory.\n\nAlternative form: `int add_extra_msg_file(string fileName, int fileNumber)`\n- `fileNumber`: the file ID number for the `message_str_game` function. The available range is from 0x2000 to 0x2FFF (see `ExtraGameMsgFileList` setting in `ddraw.ini`)\nUse `fileNumber` only if you want to add a message file without editing `ddraw.ini` or existing scripts to support the old way.\n"
+            "value": "```fallout-ssl-tooltip\nint add_extra_msg_file(string fileName)\n```\nLoads a custom message file and returns the file ID number assigned to it, in the range of 0x3000 to 0x3FFF, for use with the `message_str_game` function.\n- `fileName`: the name of the custom message file (including the .msg extension) in `text\\<language>\\game\\` directory.\n- __NOTE:__ if the msg file does not exist in the current language directory, the function will try to load it from the `text\\English\\game\\` directory.\n\nAlternative form: `int add_extra_msg_file(string fileName, int fileNumber)` **[DEPRECATED]**\n- __Deprecation notice:__ Starting from sfall 4.5/3.8.50, the two-argument form is deprecated. The `fileNumber` argument is ignored, and the function behaves the same as the one-argument form.\n"
         }
     },
     "add_g_timer_event": {
@@ -2018,7 +2030,7 @@
     "art_exists": {
         "contents": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint art_exists(int artFID)\n```\nchecks if given artFID exists in the game. Useful when you want to check if critter can use specific weapon: `art_exists((artFid bwand 0xffff0fff) bwor (weaponAnim * 0x1000))`."
+            "value": "```fallout-ssl-tooltip\nint art_exists(int artFID)\n```\nChecks if the given `artFID` exists in the game.\n- Useful when you want to check if critter can use specific weapon: `art_exists((artFid bwand 0xffff0fff) bwor (weaponAnim * 0x1000))`.\n"
         }
     },
     "art_frame_data": {
@@ -2132,7 +2144,7 @@
     "charcode": {
         "contents": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint charcode(string text)\n```\nReturns ASCII code for the first character in given string."
+            "value": "```fallout-ssl-tooltip\nint charcode(string text)\n```\nReturns ASCII code for the first character in the given string."
         }
     },
     "clear_selectable_perks": {
@@ -2168,7 +2180,7 @@
     "create_spatial": {
         "contents": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nObjectPtr create_spatial(int scriptID, int tile, int elevation, int radius)\n```\nCreates new spatial script with given SID, at given tile, and radius."
+            "value": "```fallout-ssl-tooltip\nObjectPtr create_spatial(int scriptID, int tile, int elevation, int radius)\n```\nCreates new spatial script with the given scriptID at the given tile and radius."
         }
     },
     "create_win": {
@@ -2438,7 +2450,7 @@
     "get_bodypart_hit_modifier": {
         "contents": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint get_bodypart_hit_modifier(int bodypart)\n```\nGets the hit percentage modifiers for aiming at specific bodyparts. Valid bodypart id's are from 0 to 8."
+            "value": "```fallout-ssl-tooltip\nint get_bodypart_hit_modifier(int bodypart)\n```\nReturns the hit percentage modifiers for aiming at specific bodyparts. Valid bodypart id's are from 0 to 8."
         }
     },
     "get_can_rest_on_map": {
@@ -2456,7 +2468,7 @@
     "get_critical_table": {
         "contents": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint get_critical_table(int crittertype, int bodypart, int level, int valuetype)\n```\nGets current critical table. For details see [critical hit tables](http://falloutmods.wikia.com/wiki/Critical_hit_tables). Requires `OverrideCriticalTable` to be enabled in `ddraw.ini` (already enabled by default)."
+            "value": "```fallout-ssl-tooltip\nint get_critical_table(int crittertype, int bodypart, int level, int valuetype)\n```\nReturns the current critical table. For details see [critical hit tables](http://falloutmods.wikia.com/wiki/Critical_hit_tables). Requires `OverrideCriticalTable` to be enabled in `ddraw.ini` (already enabled by default)."
         }
     },
     "get_critter_base_stat": {
@@ -2504,7 +2516,7 @@
     "get_flags": {
         "contents": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint get_flags(ObjectPtr obj)\n```\nGets the current value of object flags (see **define_extra.h** for available flags)."
+            "value": "```fallout-ssl-tooltip\nint get_flags(ObjectPtr obj)\n```\nReturns the current value of object flags (see **define_extra.h** for available flags)."
         }
     },
     "get_game_mode": {
@@ -2576,7 +2588,7 @@
     "get_light_level": {
         "contents": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint get_light_level\n```\nReturns ambient light level in range 0..65536. The value returned by get_light_level may not exactly match that set by `set_light_level`, as `set_light_level` applies modifiers from the Night Vision perk."
+            "value": "```fallout-ssl-tooltip\nint get_light_level\n```\nReturns ambient light level in the range of 0 to 65536. The value returned by get_light_level may not exactly match that set by `set_light_level`, as `set_light_level` applies modifiers from the Night Vision perk."
         }
     },
     "get_map_enter_position": {
@@ -2630,7 +2642,7 @@
     "get_outline": {
         "contents": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint get_outline(ObjectPtr obj)\n```\nGets the current outline color for an object."
+            "value": "```fallout-ssl-tooltip\nint get_outline(ObjectPtr obj)\n```\nReturns the current outline color of an object."
         }
     },
     "get_pc_base_stat": {
@@ -2678,7 +2690,7 @@
     "get_script": {
         "contents": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint get_script(ObjectPtr obj)\n```\n- accepts a pointer to an object and returns its scriptID (line number in `scripts.lst`), or 0 if the object is unscripted.\n- returns -1 on argument error.\n"
+            "value": "```fallout-ssl-tooltip\nint get_script(ObjectPtr obj)\n```\nAccepts a pointer to an object and returns its `scriptID` (line number in `scripts.lst`), or 0 if the object is unscripted.\n- returns -1 on argument error.\n"
         }
     },
     "get_sfall_arg": {
@@ -2690,7 +2702,7 @@
     "get_sfall_arg_at": {
         "contents": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nmixed get_sfall_arg_at(int argNum)\n```\nGets the value of hook argument with the specified argument number (first argument of hook starts from 0)"
+            "value": "```fallout-ssl-tooltip\nmixed get_sfall_arg_at(int argNum)\n```\nReturns the value of hook argument with the specified argument number (first argument of hook starts from 0)"
         }
     },
     "get_sfall_args": {
@@ -2762,19 +2774,19 @@
     "get_tile_ground_fid": {
         "contents": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint get_tile_ground_fid(int tileNum, int elevation)\n```\nReturns FID of a ground tile at given tile number and elevation."
+            "value": "```fallout-ssl-tooltip\nint get_tile_ground_fid(int tileNum, int elevation)\n```\nReturns FID of a ground tile at the given tile number and elevation."
         }
     },
     "get_tile_roof_fid": {
         "contents": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint get_tile_roof_fid(int tileNum, int elevation)\n```\nReturns FID of a roof tile at given tile number and elevation. Note that FID of 1 is used when there is no actual roof."
+            "value": "```fallout-ssl-tooltip\nint get_tile_roof_fid(int tileNum, int elevation)\n```\nReturns FID of a roof tile at the given tile number and elevation. Note that FID of 1 is used when there is no actual roof."
         }
     },
     "get_unspent_ap_bonus": {
         "contents": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint get_unspent_ap_bonus\n```\nGets the AC bonus you receive per unused action point at the end of your turn in combat. To allow for fractional values, the value given if divided by 4. (Hence the default value is 4 and not 1.)"
+            "value": "```fallout-ssl-tooltip\nint get_unspent_ap_bonus\n```\nReturns the AC bonus you receive per unused action point at the end of your turn in combat. To allow for fractional values, the value given if divided by 4. (Hence the default value is 4 and not 1.)"
         }
     },
     "get_unspent_ap_perk_bonus": {
@@ -2900,7 +2912,7 @@
     "inc_npc_level": {
         "contents": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid inc_npc_level(int party_member_pid)\n```\nTakes a party member PID or an NPC name (deprecated, for compatibility with sfall 4.1.5/3.8.15 or earlier) as an argument. The NPC must be in your party. This function ignores player level requirements and the minimum 3 player level delay between NPC level gains. It also ignores the random element, regardless of sfall's `NPCAutoLevel` or `PartyMemberNonRandomLevelUp` setting."
+            "value": "```fallout-ssl-tooltip\nvoid inc_npc_level(int party_member_pid)\n```\nTakes a party member PID or an NPC name (deprecated, for compatibility with sfall 4.1.5/3.8.15 or earlier) as an argument. The NPC must be in your party.\n- This function ignores the player's minimum level and the required number of level-ups between NPC level gains. It also ignores the random element, regardless of sfall's `NPCAutoLevel` or `PartyMemberNonRandomLevelUp` setting.\n- Starting from sfall 4.5/3.8.50, the maximum possible NPC level is 10.\n"
         }
     },
     "init_hook": {
@@ -2972,13 +2984,13 @@
     "item_make_explosive": {
         "contents": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid item_make_explosive(int pid, int activePid, int minDamage, int maxDamage)\n```\n- makes the specified item (pid) an explosive item like Dynamite or Plastic Explosives\n- `maxDamage` is optional\n- `activePid` is for an item with an active timer, can be the same as the `pid` argument\n- the item proto must be the **Misc Item** type and have the **Use** action flag\n- minDamage/maxDamage are the minimum and maximum explosion damage\n- using the function on an item that is already set as an explosive will override its previous settings\n- NOTE: this function does not work for pids of Dynamite and Plastic Explosives\n"
+            "value": "```fallout-ssl-tooltip\nvoid item_make_explosive(int pid, int activePid, int minDamage, int maxDamage)\n```\n- makes the specified item (pid) an explosive item like Dynamite or Plastic Explosives\n- `maxDamage` is optional\n- `activePid` is for an item with an active timer, can be the same as the `pid` argument\n- the item proto must be of the **Misc Item** type and have the **Use** action flag\n- minDamage/maxDamage are the minimum and maximum explosion damage\n- using the function on an item that is already set as an explosive will override its previous settings\n- NOTE: this function does not work for pids of Dynamite and Plastic Explosives\n"
         }
     },
     "item_weight": {
         "contents": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint item_weight(ObjectPtr obj)\n```\nGets the current weight of an object."
+            "value": "```fallout-ssl-tooltip\nint item_weight(ObjectPtr obj)\n```\nReturns the weight of an item object."
         }
     },
     "key_pressed": {
@@ -3110,13 +3122,13 @@
     "obj_blocking_line": {
         "contents": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nObjectPtr obj_blocking_line(ObjectPtr objFrom, int tileTo, int blockingType)\n```\nReturns first object which blocks direct linear path from `objFrom` to `tileTo` using selected blocking function (see `BLOCKING_TYPE_*` constants in **sfall.h**). If path is clear (no blocker was encountered by selected function) - returns 0. `objFrom` is always excluded from calculations, but is required to be a valid object."
+            "value": "```fallout-ssl-tooltip\nObjectPtr obj_blocking_line(ObjectPtr objFrom, int tileTo, int blockingType)\n```\nReturns the first object which blocks direct linear path from `objFrom` to `tileTo` using selected blocking function (see `BLOCKING_TYPE_*` constants in **sfall.h**).\n- If path is clear (no blocker was encountered by selected function) - returns 0.\n- `objFrom` is always excluded from calculations, but is required to be a valid object.\n"
         }
     },
     "obj_blocking_tile": {
         "contents": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nObjectPtr obj_blocking_tile(int tileNum, int elevation, int blockingType)\n```\nReturns first object blocking given tile using given blocking function or 0 if tile is clear."
+            "value": "```fallout-ssl-tooltip\nObjectPtr obj_blocking_tile(int tileNum, int elevation, int blockingType)\n```\nReturns the first object blocking the given tile using the given blocking function, or 0 if the tile is clear."
         }
     },
     "obj_is_carrying_obj": {
@@ -3158,7 +3170,7 @@
     "path_find_to": {
         "contents": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\narray path_find_to(ObjectPtr objFrom, int tileTo, int blockingType)\n```\nReturns the shortest path to a given tile using given blocking function as an array of tile directions (0..5) to move on each step. Array length equals to a number of steps. Empty array means that specified target cannot be reached."
+            "value": "```fallout-ssl-tooltip\narray path_find_to(ObjectPtr objFrom, int tileTo, int blockingType)\n```\nReturns the shortest path to a given tile using the given blocking function as an array of tile directions (0..5) to move on each step.\n- Array length equals to a number of steps.\n- Empty array means that specified target cannot be reached.\n"
         }
     },
     "perk_add_mode": {
@@ -3170,7 +3182,7 @@
     "play_sfall_sound": {
         "contents": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint play_sfall_sound(string file, int mode)\n```\nUsed to play `mp3/wav/wma` files. The path given is relative to the Fallout folder. Specify mode as 1 to loop the file continuously, 2 to replace the current background game music with playing the specified file in loop mode, or 0 to play the file once. If you don't wish to loop, `play_sfall_sound` returns 0. If you do loop, it returns an ID which can be passed back to `stop_sfall_sound` when you want to stop the effect. All sounds effects will be stopped on game reload, looping or not. Does not require `AllowDShowSound` to be set to 1 in `ddraw.ini`.\n\nStarting from sfall 4.2.8/3.8.28, you can pass a value in the `mode` argument for a reduced sound volume. To set the volume, you need to convert the number to hexadecimal and use the argument format `0xZZZZ000Y`, where `ZZZZ` is the volume reduction value in range from 0 to 32767 (the value 32767 is mute), and `Y` is the playback mode.\n"
+            "value": "```fallout-ssl-tooltip\nint play_sfall_sound(string file, int mode)\n```\nUsed to play `mp3/wav/wma` files. The path given is relative to the Fallout folder. Specify mode as 1 to loop the file continuously, 2 to replace the current background game music with playing the specified file in loop mode, or 0 to play the file once. If you don't wish to loop, `play_sfall_sound` returns 0. If you do loop, it returns an ID which can be passed back to `stop_sfall_sound` when you want to stop the effect. All sounds effects will be stopped on game reload, looping or not. Does not require `AllowDShowSound` to be set to 1 in `ddraw.ini`.\n\nStarting from sfall 4.2.8/3.8.28, you can pass a value in the `mode` argument for a reduced sound volume. To set the volume, you need to convert the number to hexadecimal and use the argument format `0xZZZZ000Y`, where `ZZZZ` is the volume reduction value in the range of 0 to 32767 (the value 32767 is mute), and `Y` is the playback mode.\n"
         }
     },
     "read_byte": {
@@ -3254,13 +3266,13 @@
     "reg_anim_take_out": {
         "contents": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid reg_anim_take_out(ObjectPtr, holdFrameID, delay)\n```\nPlays \"take out weapon\" animation for given `holdFrameID`. It is not required to have such weapon in critter's inventory."
+            "value": "```fallout-ssl-tooltip\nvoid reg_anim_take_out(ObjectPtr, int weaponCode, int delay)\n```\nPlays \"take out weapon\" animation for the given `weaponCode` (see `WPN_ANIM_*` constants in **define_extra.h**).\n- It is not required for the critter to have this type of weapon in its inventory.\n"
         }
     },
     "reg_anim_turn_towards": {
         "contents": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid reg_anim_turn_towards(ObjectPtr, int tile/target, delay)\n```\nMakes object change its direction to face given tile number or target object."
+            "value": "```fallout-ssl-tooltip\nvoid reg_anim_turn_towards(ObjectPtr, int tile/target, delay)\n```\nMakes object change its direction to face the given tile number or target object."
         }
     },
     "register_hook": {
@@ -3578,7 +3590,7 @@
     "set_flags": {
         "contents": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid set_flags(ObjectPtr obj, int flags)\n```\nSets the current flags of an object. All flags are rewritten with given integer, so first get current flags with `get_flags` and use `bwor/bwand` to set/remove specific flag."
+            "value": "```fallout-ssl-tooltip\nvoid set_flags(ObjectPtr obj, int flags)\n```\nSets the current flags of an object.\n- All flags are rewritten with the given `flags` integer, so first get the current flags with `get_flags` and use `bwor`/`bwand` to set/remove specific flags.\n"
         }
     },
     "set_global_script_repeat": {
@@ -3608,7 +3620,7 @@
     "set_hit_chance_max": {
         "contents": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid set_hit_chance_max(int percentage)\n```\nEffects all critters rather than just the player and can set the maximum in range from 0 to 999."
+            "value": "```fallout-ssl-tooltip\nvoid set_hit_chance_max(int percentage)\n```\nEffects all critters rather than just the player and can set the maximum in the range of 0 to 999."
         }
     },
     "set_hp_per_level_mod": {
@@ -3848,7 +3860,7 @@
     "set_pickpocket_max": {
         "contents": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid set_pickpocket_max(int percentage)\n```\nEffects all critters rather than just the player and can set the maximum in range from 0 to 999."
+            "value": "```fallout-ssl-tooltip\nvoid set_pickpocket_max(int percentage)\n```\nEffects all critters rather than just the player and can set the maximum in the range of 0 to 999."
         }
     },
     "set_pipboy_available": {
@@ -3902,7 +3914,7 @@
     "set_script": {
         "contents": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid set_script(ObjectPtr obj, int scriptID)\n```\nAccepts a pointer to an object and scriptID, and applies the given script to an object (scriptID accept the same values as `create_object_sid `from sfall 3.6). If used on an object that is already scripted, it will remove the existing script first; you cannot have multiple scripts attached to a single object. Calling `set_script` on `self_obj` will have all sorts of wacky side effects, and should be avoided. If you add 0x80000000 to the sid when calling `set_script`, `map_enter_p_proc` will be SKIPPED. The `start` proc will always be run."
+            "value": "```fallout-ssl-tooltip\nvoid set_script(ObjectPtr obj, int scriptID)\n```\nAccepts a pointer to an object and scriptID, and applies the given script to an object (scriptID accept the same values as `create_object_sid` from sfall 3.6).\n- If used on an object that is already scripted, it will remove the existing script first; you cannot have multiple scripts attached to a single object.\n- Calling `set_script` on `self_obj` will have all sorts of wacky side effects, and should be avoided.\n- If you add 0x80000000 to the scriptID when calling `set_script`, `map_enter_p_proc` will be SKIPPED. The `start` proc will always be run.\n"
         }
     },
     "set_selectable_perk": {
@@ -4022,7 +4034,7 @@
     "set_unique_id": {
         "contents": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint set_unique_id(ObjectPtr object, int flag)\n```\nAssigns a unique ID number to the object and returns it. If a unique ID number has already been assigned to an object, then ID number is returned without reassignment. `flag` is optional.\n- items with unique IDs will not stack with other items of the same type in the inventory\n- to just get the current ID number of an object, use `get_object_data(object, OBJ_DATA_ID)`\n- unique ID numbers are saved in your savegame, and have a range from 0x10000000 to 0x7FFFFFFF\n- there is also a unique ID number range for the player and party members from 18000 to 83535\n- to assign a new ID number generated by the engine to the object (i.e. unassign a unique ID), call the function with two arguments and pass -1 for the flag argument\n"
+            "value": "```fallout-ssl-tooltip\nint set_unique_id(ObjectPtr object, int flag)\n```\nAssigns a unique ID number to the object and returns it. If a unique ID number has already been assigned to an object, then ID number is returned without reassignment. `flag` is optional.\n- items with unique IDs will not stack with other items of the same type in the inventory\n- to just get the current ID number of an object, use `get_object_data(object, OBJ_DATA_ID)`\n- unique ID numbers are saved in your savegame, and have a range from 0x10000000 to 0x7FFFFFFF\n- there is also a unique ID number range for the player and party members from 18000 to 16795215\n- to assign a new ID number generated by the engine to the object (i.e. unassign a unique ID), call the function with two arguments and pass -1 for the flag argument\n"
         }
     },
     "set_unjam_locks_time": {
@@ -4103,10 +4115,40 @@
             "value": "```fallout-ssl-tooltip\nany sfall_func0(char* funcName)\n```\nCalls script function with given name and no arguments."
         }
     },
+    "sfall_func0(\"hide_window\")": {
+        "contents": {
+            "kind": "markdown",
+            "value": "```fallout-ssl-tooltip\nvoid sfall_func0(\"hide_window\")\n```\nHides currently active (selected) script window."
+        }
+    },
+    "sfall_func0(\"show_window\")": {
+        "contents": {
+            "kind": "markdown",
+            "value": "```fallout-ssl-tooltip\nvoid sfall_func0(\"show_window\")\n```\nDisplays the script window previously hidden with the `sfall_func0(\"hide_window\")` function."
+        }
+    },
     "sfall_func1": {
         "contents": {
             "kind": "markdown",
             "value": "```fallout-ssl-tooltip\nany sfall_func1(char* funcName, arg1)\n```\nCalls script function with given name and 1 argument."
+        }
+    },
+    "sfall_func1(\"hide_window\", string winName)": {
+        "contents": {
+            "kind": "markdown",
+            "value": "```fallout-ssl-tooltip\nvoid sfall_func0(\"hide_window\")\n```\nHides the specified script window.\n- winName: the window name, assigned to the window by the `CreateWin/create_win` function\n"
+        }
+    },
+    "sfall_func1(\"remove_timer_event\", int fixedParam)": {
+        "contents": {
+            "kind": "markdown",
+            "value": "```fallout-ssl-tooltip\nvoid sfall_func1(\"remove_timer_event\", int fixedParam)\n```\nRemoves all timer events with the specified `fixedParam` value for the current global script."
+        }
+    },
+    "sfall_func1(\"show_window\", string winName)": {
+        "contents": {
+            "kind": "markdown",
+            "value": "```fallout-ssl-tooltip\nvoid sfall_func1(\"show_window\", string winName)\n```\nDisplays the specified hidden script window.\n`winName`: the window name, assigned to the window by the `CreateWin/create_win` function\n"
         }
     },
     "sfall_func2": {
@@ -4115,10 +4157,22 @@
             "value": "```fallout-ssl-tooltip\nany sfall_func2(char* funcName, arg1, arg2)\n```\nCalls script function with given name and 2 arguments."
         }
     },
+    "sfall_func2(\"string_compare\", string str1, string str2)": {
+        "contents": {
+            "kind": "markdown",
+            "value": "```fallout-ssl-tooltip\nbool sfall_func2(\"string_compare\", string str1, string str2)\n```\nCompares two strings case-insensitive, and returns `True` if the two strings are matched."
+        }
+    },
     "sfall_func3": {
         "contents": {
             "kind": "markdown",
             "value": "```fallout-ssl-tooltip\nany sfall_func3(char* funcName, arg1, arg2, arg3)\n```\nCalls script function with given name and 3 arguments."
+        }
+    },
+    "sfall_func3(\"string_compare\", string str1, string str2, int codePage)": {
+        "contents": {
+            "kind": "markdown",
+            "value": "```fallout-ssl-tooltip\nbool sfall_func3(\"string_compare\", string str1, string str2, int codePage)\n```\nCompares two strings case-insensitive, and returns `True` if the two strings are matched\n- `codePage`: code page number to properly compare national characters in the range 128-255 of the ASCII code table\navailable encodings: 1250-1252, 866\n"
         }
     },
     "sfall_func4": {
@@ -4202,13 +4256,13 @@
     "spatial_radius": {
         "contents": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint spatial_radius(ObjectPtr obj)\n```\nReturns radius of spatial script, associated with given dummy-object (returned by `create_spatial`)."
+            "value": "```fallout-ssl-tooltip\nint spatial_radius(ObjectPtr obj)\n```\nReturns radius of spatial script, associated with the given dummy object (returned by `create_spatial`)."
         }
     },
     "sprintf": {
         "contents": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nstring sprintf(string format, any value)\n```\nFormats given value using standart syntax of C `printf` function (google \"printf\" for format details). However, it is limited to formatting only 1 value.\n- Can be used to get character by ASCII code (\"%c\").\n"
+            "value": "```fallout-ssl-tooltip\nstring sprintf(string format, any value)\n```\nFormats the given value using standard syntax of C `printf` function (google \"printf\" for format details). However, it is limited to formatting only 1 value.\n- Can be used to get character by ASCII code (`%c`).\n"
         }
     },
     "sqrt": {
@@ -4310,13 +4364,13 @@
     "tile_get_objs": {
         "contents": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\narray tile_get_objs(int tileNum, int elevation)\n```\nReturns an array of all objects at given tile. It will include any hidden, dead or system objects (like cursor), so make sure to check properly when iterating."
+            "value": "```fallout-ssl-tooltip\narray tile_get_objs(int tileNum, int elevation)\n```\nReturns an array of all objects at the given tile.\n- It will include any hidden, dead or system objects (like cursor), so make sure to check properly when iterating.\n"
         }
     },
     "tile_light": {
         "contents": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint tile_light(int elevation, int tileNum)\n```\nReturns light intensity at the given tile in range from 0 to 65535."
+            "value": "```fallout-ssl-tooltip\nint tile_light(int elevation, int tileNum)\n```\nReturns light intensity at the given tile in the range of 0 to 65536."
         }
     },
     "tile_refresh_display": {
@@ -4353,6 +4407,12 @@
         "contents": {
             "kind": "markdown",
             "value": "```fallout-ssl-tooltip\nvoid sfall_func2(\"unwield_slot\", object critter, int slot)\n```\nunequips an item from the specified slot for a critter or the player\ncan take off player's equipped item when the inventory is opened, or the player is in the barter screen\nslot: 0 - armor slot, 1 - right slot, 2 - left slot (see `INVEN_TYPE_*` in **define.h**)\n"
+        }
+    },
+    "void sfall_func0(\"remove_timer_event\")": {
+        "contents": {
+            "kind": "markdown",
+            "value": "```fallout-ssl-tooltip\nvoid sfall_func0(\"remove_timer_event\")\n```\nClears all set timer events for the current global script."
         }
     },
     "win_fill_color": {

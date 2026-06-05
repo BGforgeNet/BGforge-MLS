@@ -1,3 +1,5 @@
+# Auto-generated from sfall by scripts/fallout-update/src/fallout-update.ts. Do not hand-edit.
+
 sfall_functions:
   type: 3
   items:
@@ -56,13 +58,14 @@ sfall_functions:
       doc: |-
         Change light of any object. Light argument is a light radius (0-8), but you can use highest 2 bytes to pass light intensity as well (example: 0xFFFF0008 - intensity 65535 and radius 8). If highest 2 bytes are 0, intensity will not be changed. Intensity range is from 0 to 65535 (0xFFFF)
     - name: reg_anim_take_out
-      detail: void reg_anim_take_out(ObjectPtr, holdFrameID, delay)
-      doc: |-
-        Plays "take out weapon" animation for given `holdFrameID`. It is not required to have such weapon in critter's inventory.
+      detail: void reg_anim_take_out(ObjectPtr, int weaponCode, int delay)
+      doc: |
+        Plays "take out weapon" animation for the given `weaponCode` (see `WPN_ANIM_*` constants in **define_extra.h**).
+        - It is not required for the critter to have this type of weapon in its inventory.
     - name: reg_anim_turn_towards
       detail: void reg_anim_turn_towards(ObjectPtr, int tile/target, delay)
       doc: |-
-        Makes object change its direction to face given tile number or target object.
+        Makes object change its direction to face the given tile number or target object.
     - name: array_key
       detail: mixed array_key(int arrayID, int index)
       doc: |
@@ -144,8 +147,9 @@ sfall_functions:
         Clears the cache of FRM image files loaded into memory.
     - name: art_exists
       detail: int art_exists(int artFID)
-      doc: |-
-        checks if given artFID exists in the game. Useful when you want to check if critter can use specific weapon: `art_exists((artFid bwand 0xffff0fff) bwor (weaponAnim * 0x1000))`.
+      doc: |
+        Checks if the given `artFID` exists in the game.
+        - Useful when you want to check if critter can use specific weapon: `art_exists((artFid bwand 0xffff0fff) bwor (weaponAnim * 0x1000))`.
     - name: refresh_pc_art
       detail: void refresh_pc_art
     - name: set_hero_race
@@ -161,7 +165,7 @@ sfall_functions:
       doc: |
         Used to play `mp3/wav/wma` files. The path given is relative to the Fallout folder. Specify mode as 1 to loop the file continuously, 2 to replace the current background game music with playing the specified file in loop mode, or 0 to play the file once. If you don't wish to loop, `play_sfall_sound` returns 0. If you do loop, it returns an ID which can be passed back to `stop_sfall_sound` when you want to stop the effect. All sounds effects will be stopped on game reload, looping or not. Does not require `AllowDShowSound` to be set to 1 in `ddraw.ini`.
 
-        Starting from sfall 4.2.8/3.8.28, you can pass a value in the `mode` argument for a reduced sound volume. To set the volume, you need to convert the number to hexadecimal and use the argument format `0xZZZZ000Y`, where `ZZZZ` is the volume reduction value in range from 0 to 32767 (the value 32767 is mute), and `Y` is the playback mode.
+        Starting from sfall 4.2.8/3.8.28, you can pass a value in the `mode` argument for a reduced sound volume. To set the volume, you need to convert the number to hexadecimal and use the argument format `0xZZZZ000Y`, where `ZZZZ` is the volume reduction value in the range of 0 to 32767 (the value 32767 is mute), and `Y` is the playback mode.
     - name: set_eax_environment
       detail: void set_eax_environment(int environment)
       doc: |-
@@ -212,7 +216,7 @@ sfall_functions:
     - name: get_bodypart_hit_modifier
       detail: int get_bodypart_hit_modifier(int bodypart)
       doc: |-
-        Gets the hit percentage modifiers for aiming at specific bodyparts. Valid bodypart id's are from 0 to 8.
+        Returns the hit percentage modifiers for aiming at specific bodyparts. Valid bodypart id's are from 0 to 8.
     - name: get_combat_free_move
       detail: int get_combat_free_move
       doc: |-
@@ -220,7 +224,7 @@ sfall_functions:
     - name: get_critical_table
       detail: int get_critical_table(int crittertype, int bodypart, int level, int valuetype)
       doc: |-
-        Gets current critical table. For details see [critical hit tables](http://falloutmods.wikia.com/wiki/Critical_hit_tables). Requires `OverrideCriticalTable` to be enabled in `ddraw.ini` (already enabled by default).
+        Returns the current critical table. For details see [critical hit tables](http://falloutmods.wikia.com/wiki/Critical_hit_tables). Requires `OverrideCriticalTable` to be enabled in `ddraw.ini` (already enabled by default).
     - name: get_critter_current_ap
       detail: int get_critter_current_ap(CritterPtr)
       doc: |-
@@ -283,7 +287,7 @@ sfall_functions:
         - makes the specified item (pid) an explosive item like Dynamite or Plastic Explosives
         - `maxDamage` is optional
         - `activePid` is for an item with an active timer, can be the same as the `pid` argument
-        - the item proto must be the **Misc Item** type and have the **Use** action flag
+        - the item proto must be of the **Misc Item** type and have the **Use** action flag
         - minDamage/maxDamage are the minimum and maximum explosion damage
         - using the function on an item that is already set as an explosive will override its previous settings
         - NOTE: this function does not work for pids of Dynamite and Plastic Explosives
@@ -421,7 +425,7 @@ sfall_functions:
     - name: get_sfall_arg_at
       detail: mixed get_sfall_arg_at(int argNum)
       doc: |-
-        Gets the value of hook argument with the specified argument number (first argument of hook starts from 0)
+        Returns the value of hook argument with the specified argument number (first argument of hook starts from 0)
     - name: get_sfall_args
       detail: int get_sfall_args
       doc: |-
@@ -662,6 +666,12 @@ sfall_functions:
         ```
         - areaID: the ID number of the town from city.txt
         ```
+    - name: ^
+      detail: x^y
+      doc: |
+        Exponentiation. Use as any other arithmetic operator, like `5^(1/3)`.
+        If exponent is an integer, you can use a negative base, otherwise you will get "NaN" with a negative base.
+        If both arguments are integers, the result will be an integer.
     - name: abs
       detail: int/float abs(int/float x)
       doc: |-
@@ -740,7 +750,7 @@ sfall_functions:
     - name: get_flags
       detail: int get_flags(ObjectPtr obj)
       doc: |-
-        Gets the current value of object flags (see **define_extra.h** for available flags).
+        Returns the current value of object flags (see **define_extra.h** for available flags).
     - name: get_object_data
       detail: get_object_data(ObjectPtr object, int offset)
       doc: |-
@@ -748,7 +758,7 @@ sfall_functions:
     - name: get_script
       detail: int get_script(ObjectPtr obj)
       doc: |
-        - accepts a pointer to an object and returns its scriptID (line number in `scripts.lst`), or 0 if the object is unscripted.
+        Accepts a pointer to an object and returns its `scriptID` (line number in `scripts.lst`), or 0 if the object is unscripted.
         - returns -1 on argument error.
     - name: loot_obj
       detail: ObjectPtr loot_obj
@@ -785,8 +795,9 @@ sfall_functions:
         Take control of a given critter. Passing value 0 will reset control back to "real" dude.
     - name: set_flags
       detail: void set_flags(ObjectPtr obj, int flags)
-      doc: |-
-        Sets the current flags of an object. All flags are rewritten with given integer, so first get current flags with `get_flags` and use `bwor/bwand` to set/remove specific flag.
+      doc: |
+        Sets the current flags of an object.
+        - All flags are rewritten with the given `flags` integer, so first get the current flags with `get_flags` and use `bwor`/`bwand` to set/remove specific flags.
     - name: set_object_data
       detail: set_object_data(ObjectPtr object, int offset, int data)
       doc: |-
@@ -800,8 +811,11 @@ sfall_functions:
         - __NOTE:__ this function is intended for use in normal game scripts and overrides the name only once for the same object until reset
     - name: set_script
       detail: void set_script(ObjectPtr obj, int scriptID)
-      doc: |-
-        Accepts a pointer to an object and scriptID, and applies the given script to an object (scriptID accept the same values as `create_object_sid `from sfall 3.6). If used on an object that is already scripted, it will remove the existing script first; you cannot have multiple scripts attached to a single object. Calling `set_script` on `self_obj` will have all sorts of wacky side effects, and should be avoided. If you add 0x80000000 to the sid when calling `set_script`, `map_enter_p_proc` will be SKIPPED. The `start` proc will always be run.
+      doc: |
+        Accepts a pointer to an object and scriptID, and applies the given script to an object (scriptID accept the same values as `create_object_sid` from sfall 3.6).
+        - If used on an object that is already scripted, it will remove the existing script first; you cannot have multiple scripts attached to a single object.
+        - Calling `set_script` on `self_obj` will have all sorts of wacky side effects, and should be avoided.
+        - If you add 0x80000000 to the scriptID when calling `set_script`, `map_enter_p_proc` will be SKIPPED. The `start` proc will always be run.
     - name: set_self
       detail: void set_self(ObjectPtr setObj)
       doc: |
@@ -818,7 +832,7 @@ sfall_functions:
         - items with unique IDs will not stack with other items of the same type in the inventory
         - to just get the current ID number of an object, use `get_object_data(object, OBJ_DATA_ID)`
         - unique ID numbers are saved in your savegame, and have a range from 0x10000000 to 0x7FFFFFFF
-        - there is also a unique ID number range for the player and party members from 18000 to 83535
+        - there is also a unique ID number range for the player and party members from 18000 to 16795215
         - to assign a new ID number generated by the engine to the object (i.e. unassign a unique ID), call the function with two arguments and pass -1 for the flag argument
     - name: active_hand
       detail: int active_hand
@@ -833,7 +847,7 @@ sfall_functions:
     - name: create_spatial
       detail: ObjectPtr create_spatial(int scriptID, int tile, int elevation, int radius)
       doc: |-
-        Creates new spatial script with given SID, at given tile, and radius.
+        Creates new spatial script with the given scriptID at the given tile and radius.
     - name: game_loaded
       detail: int game_loaded
       doc: |-
@@ -853,7 +867,7 @@ sfall_functions:
     - name: get_light_level
       detail: int get_light_level
       doc: |-
-        Returns ambient light level in range 0..65536. The value returned by get_light_level may not exactly match that set by `set_light_level`, as `set_light_level` applies modifiers from the Night Vision perk.
+        Returns ambient light level in the range of 0 to 65536. The value returned by get_light_level may not exactly match that set by `set_light_level`, as `set_light_level` applies modifiers from the Night Vision perk.
     - name: get_npc_level
       detail: int get_npc_level(string npc)
     - name: get_proto_data
@@ -863,7 +877,7 @@ sfall_functions:
     - name: get_unspent_ap_bonus
       detail: int get_unspent_ap_bonus
       doc: |-
-        Gets the AC bonus you receive per unused action point at the end of your turn in combat. To allow for fractional values, the value given if divided by 4. (Hence the default value is 4 and not 1.)
+        Returns the AC bonus you receive per unused action point at the end of your turn in combat. To allow for fractional values, the value given if divided by 4. (Hence the default value is 4 and not 1.)
     - name: get_unspent_ap_perk_bonus
       detail: int get_unspent_ap_perk_bonus
       doc: |-
@@ -882,8 +896,10 @@ sfall_functions:
       detail: void hero_select_win(int)
     - name: inc_npc_level
       detail: void inc_npc_level(int party_member_pid)
-      doc: |-
-        Takes a party member PID or an NPC name (deprecated, for compatibility with sfall 4.1.5/3.8.15 or earlier) as an argument. The NPC must be in your party. This function ignores player level requirements and the minimum 3 player level delay between NPC level gains. It also ignores the random element, regardless of sfall's `NPCAutoLevel` or `PartyMemberNonRandomLevelUp` setting.
+      doc: |
+        Takes a party member PID or an NPC name (deprecated, for compatibility with sfall 4.1.5/3.8.15 or earlier) as an argument. The NPC must be in your party.
+        - This function ignores the player's minimum level and the required number of level-ups between NPC level gains. It also ignores the random element, regardless of sfall's `NPCAutoLevel` or `PartyMemberNonRandomLevelUp` setting.
+        - Starting from sfall 4.5/3.8.50, the maximum possible NPC level is 10.
     - name: input_funcs_available
       detail: int input_funcs_available
       doc: |-
@@ -923,7 +939,7 @@ sfall_functions:
     - name: set_hit_chance_max
       detail: void set_hit_chance_max(int percentage)
       doc: |-
-        Effects all critters rather than just the player and can set the maximum in range from 0 to 999.
+        Effects all critters rather than just the player and can set the maximum in the range of 0 to 999.
     - name: set_hp_per_level_mod
       detail: void set_hp_per_level_mod(int mod)
     - name: set_inven_ap_cost
@@ -933,7 +949,7 @@ sfall_functions:
     - name: set_pickpocket_max
       detail: void set_pickpocket_max(int percentage)
       doc: |-
-        Effects all critters rather than just the player and can set the maximum in range from 0 to 999.
+        Effects all critters rather than just the player and can set the maximum in the range of 0 to 999.
     - name: set_pipboy_available
       detail: void set_pipboy_available(int available)
       doc: |
@@ -979,7 +995,7 @@ sfall_functions:
     - name: get_outline
       detail: int get_outline(ObjectPtr obj)
       doc: |-
-        Gets the current outline color for an object.
+        Returns the current outline color of an object.
     - name: outlined_object
       detail: ObjectPtr outlined_object
       doc: |-
@@ -1120,12 +1136,12 @@ sfall_functions:
     - name: add_extra_msg_file
       detail: int add_extra_msg_file(string fileName)
       doc: |
-        Loads the custom message file, and returns the file ID number assigned to it in range from 0x3000 to 0x3FFF for the `message_str_game` function to get messages from the file.
+        Loads a custom message file and returns the file ID number assigned to it, in the range of 0x3000 to 0x3FFF, for use with the `message_str_game` function.
         - `fileName`: the name of the custom message file (including the .msg extension) in `text\<language>\game\` directory.
+        - __NOTE:__ if the msg file does not exist in the current language directory, the function will try to load it from the `text\English\game\` directory.
 
-        Alternative form: `int add_extra_msg_file(string fileName, int fileNumber)`
-        - `fileNumber`: the file ID number for the `message_str_game` function. The available range is from 0x2000 to 0x2FFF (see `ExtraGameMsgFileList` setting in `ddraw.ini`)
-        Use `fileNumber` only if you want to add a message file without editing `ddraw.ini` or existing scripts to support the old way.
+        Alternative form: `int add_extra_msg_file(string fileName, int fileNumber)` **[DEPRECATED]**
+        - __Deprecation notice:__ Starting from sfall 4.5/3.8.50, the two-argument form is deprecated. The `fileNumber` argument is ignored, and the function behaves the same as the one-argument form.
     - name: critter_inven_obj2
       detail: ObjectPtr critter_inven_obj2(ObjectPtr obj, int type)
       doc: |-
@@ -1153,7 +1169,7 @@ sfall_functions:
     - name: item_weight
       detail: int item_weight(ObjectPtr obj)
       doc: |-
-        Gets the current weight of an object.
+        Returns the weight of an item object.
     - name: metarule_exist
       detail: bool metarule_exist(string metaruleName)
       doc: |-
@@ -1188,10 +1204,46 @@ sfall_functions:
         - passing 0 will revert to 1 second of real time (vanilla engine behavior)
         - passing -1 will disable healing during travel
         - the time interval will be reset each time the player reloads the game
+    - name: sfall_func0("hide_window")
+      detail: void sfall_func0("hide_window")
+      doc: |-
+        Hides currently active (selected) script window.
+    - name: sfall_func0("show_window")
+      detail: void sfall_func0("show_window")
+      doc: |-
+        Displays the script window previously hidden with the `sfall_func0("hide_window")` function.
+    - name: sfall_func1("hide_window", string winName)
+      detail: void sfall_func0("hide_window")
+      doc: |
+        Hides the specified script window.
+        - winName: the window name, assigned to the window by the `CreateWin/create_win` function
+    - name: sfall_func1("remove_timer_event", int fixedParam)
+      detail: void sfall_func1("remove_timer_event", int fixedParam)
+      doc: |-
+        Removes all timer events with the specified `fixedParam` value for the current global script.
+    - name: sfall_func1("show_window", string winName)
+      detail: void sfall_func1("show_window", string winName)
+      doc: |
+        Displays the specified hidden script window.
+        `winName`: the window name, assigned to the window by the `CreateWin/create_win` function
+    - name: sfall_func2("string_compare", string str1, string str2)
+      detail: bool sfall_func2("string_compare", string str1, string str2)
+      doc: |-
+        Compares two strings case-insensitive, and returns `True` if the two strings are matched.
+    - name: sfall_func3("string_compare", string str1, string str2, int codePage)
+      detail: bool sfall_func3("string_compare", string str1, string str2, int codePage)
+      doc: |
+        Compares two strings case-insensitive, and returns `True` if the two strings are matched
+        - `codePage`: code page number to properly compare national characters in the range 128-255 of the ASCII code table
+        available encodings: 1250-1252, 866
     - name: spatial_radius
       detail: int spatial_radius(ObjectPtr obj)
       doc: |-
-        Returns radius of spatial script, associated with given dummy-object (returned by `create_spatial`).
+        Returns radius of spatial script, associated with the given dummy object (returned by `create_spatial`).
+    - name: void sfall_func0("remove_timer_event")
+      detail: void sfall_func0("remove_timer_event")
+      doc: |-
+        Clears all set timer events for the current global script.
     - name: get_available_skill_points
       detail: int get_available_skill_points
     - name: get_critter_skill_points
@@ -1265,7 +1317,7 @@ sfall_functions:
     - name: charcode
       detail: int charcode(string text)
       doc: |-
-        Returns ASCII code for the first character in given string.
+        Returns ASCII code for the first character in the given string.
     - name: get_string_pointer
       detail: int get_string_pointer(string text)
       doc: |
@@ -1347,23 +1399,27 @@ sfall_functions:
     - name: get_tile_ground_fid
       detail: int get_tile_ground_fid(int tileNum, int elevation)
       doc: |-
-        Returns FID of a ground tile at given tile number and elevation.
+        Returns FID of a ground tile at the given tile number and elevation.
     - name: get_tile_roof_fid
       detail: int get_tile_roof_fid(int tileNum, int elevation)
       doc: |-
-        Returns FID of a roof tile at given tile number and elevation. Note that FID of 1 is used when there is no actual roof.
+        Returns FID of a roof tile at the given tile number and elevation. Note that FID of 1 is used when there is no actual roof.
     - name: obj_blocking_line
       detail: ObjectPtr obj_blocking_line(ObjectPtr objFrom, int tileTo, int blockingType)
-      doc: |-
-        Returns first object which blocks direct linear path from `objFrom` to `tileTo` using selected blocking function (see `BLOCKING_TYPE_*` constants in **sfall.h**). If path is clear (no blocker was encountered by selected function) - returns 0. `objFrom` is always excluded from calculations, but is required to be a valid object.
+      doc: |
+        Returns the first object which blocks direct linear path from `objFrom` to `tileTo` using selected blocking function (see `BLOCKING_TYPE_*` constants in **sfall.h**).
+        - If path is clear (no blocker was encountered by selected function) - returns 0.
+        - `objFrom` is always excluded from calculations, but is required to be a valid object.
     - name: obj_blocking_tile
       detail: ObjectPtr obj_blocking_tile(int tileNum, int elevation, int blockingType)
       doc: |-
-        Returns first object blocking given tile using given blocking function or 0 if tile is clear.
+        Returns the first object blocking the given tile using the given blocking function, or 0 if the tile is clear.
     - name: path_find_to
       detail: array path_find_to(ObjectPtr objFrom, int tileTo, int blockingType)
-      doc: |-
-        Returns the shortest path to a given tile using given blocking function as an array of tile directions (0..5) to move on each step. Array length equals to a number of steps. Empty array means that specified target cannot be reached.
+      doc: |
+        Returns the shortest path to a given tile using the given blocking function as an array of tile directions (0..5) to move on each step.
+        - Array length equals to a number of steps.
+        - Empty array means that specified target cannot be reached.
     - name: tile_by_position
       detail: int tile_by_position(int x, int y)
       doc: |
@@ -1371,12 +1427,13 @@ sfall_functions:
         - if the position is outside of the range of tiles, it will return -1
     - name: tile_get_objs
       detail: array tile_get_objs(int tileNum, int elevation)
-      doc: |-
-        Returns an array of all objects at given tile. It will include any hidden, dead or system objects (like cursor), so make sure to check properly when iterating.
+      doc: |
+        Returns an array of all objects at the given tile.
+        - It will include any hidden, dead or system objects (like cursor), so make sure to check properly when iterating.
     - name: tile_light
       detail: int tile_light(int elevation, int tileNum)
       doc: |-
-        Returns light intensity at the given tile in range from 0 to 65535.
+        Returns light intensity at the given tile in the range of 0 to 65536.
     - name: tile_refresh_display
       detail: void tile_refresh_display
       doc: |-
@@ -1390,8 +1447,8 @@ sfall_functions:
     - name: sprintf
       detail: string sprintf(string format, any value)
       doc: |
-        Formats given value using standart syntax of C `printf` function (google "printf" for format details). However, it is limited to formatting only 1 value.
-        - Can be used to get character by ASCII code ("%c").
+        Formats the given value using standard syntax of C `printf` function (google "printf" for format details). However, it is limited to formatting only 1 value.
+        - Can be used to get character by ASCII code (`%c`).
     - name: typeof
       detail: int typeof(any value)
       doc: |-
@@ -1966,6 +2023,28 @@ hooks:
         int     arg4 - The death anim id calculated by Fallout
 
         int     ret0 - The death anim id to override with
+        ```
+    - name: HOOK_DEPRECATED HOOKS
+      doc: |
+        * `hs_hexmoveblocking.int`
+        * `hs_hexaiblocking.int`
+        * `hs_hexshootblocking.int`
+        * `hs_hexsightblocking.int`
+
+        Run when checking to see if a hex blocks movement or shooting. (or ai-ing, presumably...)
+
+        __NOTE:__ These hook scripts can become very CPU-intensive and you should avoid using them.
+        For this reason, these hooks are not thoroughly supported in sfall, and may be removed in future versions.<br>
+        If you want to check if some tile or path is blocked, use functions: `obj_blocking_tile`, `obj_blocking_line`, `path_find_to`.<br>
+        If you want script to be called every time NPC moves by hex in combat, use `HOOK_MOVECOST` hook.
+
+        ```
+        Critter arg0 - the critter doing the moving
+        int     arg1 - the tile number being checked
+        int     arg2 - the elevation being checked
+        int     arg3 - 1 if the hex would normally be blocking
+
+        Obj     ret0 - 0 if the hex doesn't block, or any sort of object pointer if it does
         ```
     - name: HOOK_DESCRIPTIONOBJ
       doc: |
