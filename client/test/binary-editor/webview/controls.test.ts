@@ -7,6 +7,8 @@ import {
     controlKind,
     filterOptions,
     parseCustomValue,
+    isLargeEnum,
+    ENUM_SEARCH_THRESHOLD,
 } from "../../../src/binary-editor/webview/state/controls";
 
 const enumRow: Row = {
@@ -59,6 +61,22 @@ describe("controls", () => {
         ]);
         expect(composeFlags(5, 0, false)).toBe(4); // clear bit 0
         expect(composeFlags(4, 0, true)).toBe(5); // set bit 0
+    });
+});
+
+describe("isLargeEnum", () => {
+    it("returns false at the threshold boundary (exactly ENUM_SEARCH_THRESHOLD options)", () => {
+        expect(isLargeEnum(ENUM_SEARCH_THRESHOLD)).toBe(false);
+    });
+
+    it("returns true above the threshold boundary (ENUM_SEARCH_THRESHOLD + 1 options)", () => {
+        expect(isLargeEnum(ENUM_SEARCH_THRESHOLD + 1)).toBe(true);
+    });
+
+    it("returns false for small option counts", () => {
+        expect(isLargeEnum(0)).toBe(false);
+        expect(isLargeEnum(1)).toBe(false);
+        expect(isLargeEnum(5)).toBe(false);
     });
 });
 

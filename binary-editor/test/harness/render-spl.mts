@@ -119,7 +119,17 @@ function check(label: string, ok: boolean, detail: string): void {
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1200, height: 800 } });
 activePage = page;
-page.on("pageerror", (e) => console.log("[pageerror]", e.message));
+
+const cspMessages: string[] = [];
+const isCspViolation = (text: string): boolean => /Content Security Policy/i.test(text) || /Refused to/i.test(text);
+page.on("console", (msg) => {
+    const text = msg.text();
+    if (isCspViolation(text)) cspMessages.push("[console:" + msg.type() + "] " + text);
+});
+page.on("pageerror", (e) => {
+    if (isCspViolation(e.message)) cspMessages.push("[pageerror] " + e.message);
+    else console.log("[pageerror]", e.message);
+});
 
 await page.exposeFunction("__hostUp", async (m: WebviewToHost) => {
     for (const reply of hostUp(m)) await page.evaluate((rr) => window.postMessage(rr, "*"), reply);
@@ -399,4 +409,11 @@ console.log("\n=== SPL harness results ===");
 console.log(results.join("\n"));
 const failed = results.filter((r) => r.startsWith("FAIL")).length;
 console.log(failed === 0 ? "\nALL SPL OPS PASS" : `\n${failed} SPL OPS FAILED`);
+if (cspMessages.length > 0) {
+    console.log("\nCSP VIOLATION(S) detected:");
+    for (const m of cspMessages) console.log("  " + m);
+    console.log("\nSPL CSP FAILED");
+    process.exit(1);
+}
+console.log("CSP: no violations");
 if (failed > 0) process.exit(1);

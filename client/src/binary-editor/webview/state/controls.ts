@@ -41,6 +41,14 @@ export function composeFlags(current: number, bit: number, set: boolean): number
     return set ? current | (1 << bit) : current & ~(1 << bit);
 }
 
+/** Above this many options the searchable combobox beats scrolling through a plain select. */
+export const ENUM_SEARCH_THRESHOLD = 12;
+
+/** Returns true when an enum field has enough options that type-to-search is preferable to a plain select. */
+export function isLargeEnum(optionCount: number): boolean {
+    return optionCount > ENUM_SEARCH_THRESHOLD;
+}
+
 /** Case-insensitive substring filter over option labels, for the searchable combobox. Empty or
  * whitespace-only query returns all options unchanged. */
 export function filterOptions(

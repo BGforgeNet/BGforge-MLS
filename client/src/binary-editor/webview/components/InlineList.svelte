@@ -75,7 +75,7 @@
 <div class="inline-list-toolbar">
     {#if caps.canAdd}<button onclick={() => bridge.structureOp({ op: "add", namePath: [title] })}>+ add</button>{/if}
 </div>
-<div class="vlist" style="height:100%;overflow:auto"
+<div class="vlist"
      bind:clientHeight={viewportHeight} onscroll={(e) => (scrollTop = (e.target as HTMLElement).scrollTop)}>
     <div style="height:{total * rowHeight}px;position:relative">
         {#each Array.from({ length: range.end - range.start }, (_, k) => range.start + k) as idx (idx)}

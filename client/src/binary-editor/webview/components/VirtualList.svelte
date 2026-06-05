@@ -37,7 +37,7 @@
 
     function summary(row: Row): string { return row.displayValue ? `${row.name}  ${row.displayValue}` : row.name; }
 </script>
-<div class="vlist" style="height:100%;overflow:auto"
+<div class="vlist"
      bind:clientHeight={viewportHeight} onscroll={(e) => (scrollTop = (e.target as HTMLElement).scrollTop)}>
     <div style="height:{total * rowHeight}px;position:relative">
         {#each Array.from({ length: range.end - range.start }, (_, k) => range.start + k) as idx (idx)}

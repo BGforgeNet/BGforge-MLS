@@ -443,24 +443,16 @@ input[type="text"]::placeholder {
 }
 
 /* ---- flags (checkbox group) ---- */
-.flags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.25rem 1rem;
-}
-.flags label {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-    white-space: nowrap;
-}
-.flags input[type="checkbox"] {
-    accent-color: var(--vscode-checkbox-background, var(--vscode-button-background));
+.flags-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+    gap: 0.3rem 0.75rem;
 }
 
 /* ---- virtualized list rows ---- */
 .vlist {
     height: 100%;
+    overflow: auto; /* moved from inline style on VirtualList/InlineList to avoid CSP inline-style violation */
 }
 .vrow {
     box-sizing: border-box;
