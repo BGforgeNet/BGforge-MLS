@@ -166,6 +166,15 @@ function findVarSectionByArrayName(name: string | undefined): VarSection | undef
     return VAR_SECTIONS.find((entry) => entry.arrayName === name);
 }
 
+export function isMapListSection(arrayPath: readonly string[]): boolean {
+    return arrayPath.length === 1 && findVarSectionByArrayName(arrayPath[0]) !== undefined;
+}
+
+// Modifiability is the array-shape capability, independent of how many entries currently exist.
+export function isMapModifiableArray(arrayPath: readonly string[]): boolean {
+    return (varSectionAddable || varSectionRemovable) && isMapListSection(arrayPath);
+}
+
 export function isMapAddableArray(arrayPath: readonly string[]): boolean {
     if (!varSectionAddable || arrayPath.length !== 1) return false;
     return findVarSectionByArrayName(arrayPath[0]) !== undefined;

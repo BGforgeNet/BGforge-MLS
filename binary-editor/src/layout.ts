@@ -2,34 +2,20 @@ import { formatAdapterRegistry } from "@bgforge/binary";
 import type { Model } from "./model";
 import type { LayoutDescriptor, SectionDescriptor } from "./types";
 
-/** Format ids whose named depth-0 groups should render as entry collections (list) rather than a form. MAP's variable
- *  collections are lists. NOTE: this table must stay in sync with the adapter's `isAddableArray`/`isRemovableEntry`
- *  for the same names - a section listed here but not recognized by the adapter renders as a list with no working
- *  action bar (and vice versa). When a second format is wired (Plan 6), replace this table with an adapter
- *  `isListSection?` predicate so list-classification and modifiability live in one place. */
-const LIST_SECTION_NAMES: Record<string, ReadonlySet<string>> = {
-    map: new Set(["Global Variables", "Local Variables", "Scripts", "Objects"]),
-};
-
 export function buildLayout(formatId: string, model: Model): LayoutDescriptor {
     const adapter = formatAdapterRegistry.get(formatId);
-    const listNames = LIST_SECTION_NAMES[formatId] ?? new Set<string>();
     const sections: SectionDescriptor[] = model.nodes
         .filter((n) => n.depth === 0 && n.kind === "group")
         .map((n) => {
-            const isList = listNames.has(n.name);
+            const isList = adapter?.isListSection?.([n.name]) ?? false;
             const childIndices = model.childrenByParent.get(n.id) ?? [];
             const firstChild = childIndices.length > 0 ? model.nodes[childIndices[0]!] : undefined;
             const canAdd = adapter?.isAddableArray?.([n.name]) ?? false;
-            // Use a plausible entry path to probe removability; if the section has a child, use its name, otherwise fall
-            // back to the empty-array case which the adapter will decline. The predicate is shape-based, not count-based,
-            // so any valid entry name from the same array is representative.
-            const entryName = firstChild?.name;
-            const canModify =
-                entryName !== undefined ? (adapter?.isRemovableEntry?.([n.name, entryName]) ?? false) : false;
-            // Derive the render hint structurally: a list section whose entries are plain fields (e.g. MAP int32
-            // variables) displays inline (one field per row); anything else - non-list sections, or an empty list
-            // with no first child to inspect - uses master-detail.
+            // Shape-based, count-independent (fixes F1: an empty list section keeps its modify affordances).
+            const canModify = adapter?.isModifiableArray?.([n.name]) ?? false;
+            // A list section whose entries are plain fields (MAP int32 vars) renders inline (one field per row);
+            // anything else - non-list sections, or sections whose first entry is not a plain field - uses
+            // master-detail.
             const render: "inline" | "master-detail" =
                 isList && firstChild?.kind === "field" ? "inline" : "master-detail";
             return { id: n.id, title: n.name, kind: isList ? "list" : "form", nodeId: n.id, render, canAdd, canModify };

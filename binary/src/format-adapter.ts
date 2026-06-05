@@ -130,6 +130,21 @@ export interface BinaryFormatAdapter {
      */
     isAddableArray?(arrayPath: readonly string[]): boolean;
     isRemovableEntry?(entryPath: readonly string[]): boolean;
+    /**
+     * Does this depth-0 group render as an entry collection (list) rather than a form?
+     * Path/shape-based, not count-based, so it answers correctly for a currently-empty
+     * section. Replaces the binary-editor LIST_SECTION_NAMES table (single source of truth).
+     */
+    isListSection?(arrayPath: readonly string[]): boolean;
+    /**
+     * Can entries in this array be structurally mutated at all (added or removed)? A coarse
+     * signal, not a per-op capability check: it answers whether the array's structure is editable,
+     * leaving the individual byte-builders to accept or decline a specific op. Decoupled from the
+     * per-op byte-builders so the tree builder can decide UI affordances without a full canonical
+     * rebuild + serialize, and without probing a representative entry (which froze capabilities for
+     * an empty section - F1).
+     */
+    isModifiableArray?(arrayPath: readonly string[]): boolean;
 }
 
 class FormatAdapterRegistry {

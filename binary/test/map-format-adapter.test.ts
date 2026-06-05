@@ -205,6 +205,19 @@ describe("map adapter shouldHideField", () => {
     });
 });
 
+describe("MAP list/modifiable predicates", () => {
+    it("classifies variable sections as list sections", () => {
+        expect(adapter.isListSection!(["Global Variables"])).toBe(true);
+        expect(adapter.isListSection!(["Local Variables"])).toBe(true);
+        expect(adapter.isListSection!(["Header"])).toBe(false);
+    });
+    it("reports variable sections as modifiable independent of current entry count", () => {
+        expect(adapter.isModifiableArray!(["Global Variables"])).toBe(true);
+        expect(adapter.isModifiableArray!(["Local Variables"])).toBe(true);
+        expect(adapter.isModifiableArray!(["Header"])).toBe(false);
+    });
+});
+
 describe("map adapter shouldHideGroup", () => {
     it("hides a scripts group when it only has a Script Count field with value 0", () => {
         const group = {

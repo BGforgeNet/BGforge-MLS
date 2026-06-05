@@ -9,6 +9,8 @@ import {
     buildMapMoveEntryBytes,
     buildMapRemoveEntryBytes,
     isMapAddableArray,
+    isMapListSection,
+    isMapModifiableArray,
     isMapRemovableEntry,
 } from "./entity-ops";
 import { mapCompiledPatternFields, mapDomainRanges, mapPresentationSchema } from "./presentation-schema";
@@ -225,5 +227,13 @@ export const mapFormatAdapter: BinaryFormatAdapter = {
 
     isRemovableEntry(entryPath: readonly string[]): boolean {
         return isMapRemovableEntry(entryPath);
+    },
+
+    isListSection(arrayPath: readonly string[]): boolean {
+        return isMapListSection(arrayPath);
+    },
+
+    isModifiableArray(arrayPath: readonly string[]): boolean {
+        return isMapModifiableArray(arrayPath);
     },
 };
