@@ -74,8 +74,8 @@ await page.exposeFunction("__hostUp", async (m: WebviewToHost) => {
     for (const reply of hostUp(m)) await page.evaluate((rr) => window.postMessage(rr, "*"), reply);
 });
 await page.goto("file://" + path.join(here, "app.html"));
-await page.waitForSelector(".tabs button", { timeout: 5000 });
-await page.locator(".tabs button", { hasText: "Global Variables" }).first().click();
+await page.waitForSelector(".bb-tabs.primary [role='tab']", { timeout: 5000 });
+await page.locator(".bb-tabs.primary [role='tab']", { hasText: "Global Variables" }).first().click();
 await page.waitForSelector(".vrow.inline", { timeout: 5000 });
 
 const base = gv().total;

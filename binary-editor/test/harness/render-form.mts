@@ -299,7 +299,8 @@ await page.exposeFunction("__hostUp", async (m: WebviewToHost) => {
 await page.goto("file://" + htmlPath);
 
 // Wait for the form section to appear (the "Settings" tab is active by default).
-await page.waitForSelector(".tabs button", { timeout: 5000 });
+// Section tabs now render via the Tabs primitive with role=tab.
+await page.waitForSelector(".bb-tabs.primary [role='tab']", { timeout: 5000 });
 
 const results: string[] = [];
 function check(label: string, ok: boolean, detail: string): void {
@@ -315,11 +316,12 @@ const fieldCount = await page.locator(".form .field").count();
 check("ungrouped fields render (>= 2)", fieldCount >= 2, `fieldCount=${fieldCount}`);
 
 // ---- 3 groups -> role=tablist with 3 [role=tab] buttons ----
-// The top-level .tabs section strip also has role=tablist, so we scope to .bb-tabs (the in-form group tabs).
-const bbTabsListCount = await page.locator(".bb-tabs[role='tablist']").count();
+// Both the section strip (.bb-tabs.primary) and in-form group tabs (.bb-tabs.secondary) have role=tablist.
+// Scope to .bb-tabs.secondary to count only the in-form group tablist.
+const bbTabsListCount = await page.locator(".bb-tabs.secondary[role='tablist']").count();
 check("bb-tabs tablist renders for 3-group form", bbTabsListCount >= 1, `tablistCount=${bbTabsListCount}`);
 
-const groupTabButtons = page.locator(".bb-tabs[role='tablist'] [role='tab']");
+const groupTabButtons = page.locator(".bb-tabs.secondary[role='tablist'] [role='tab']");
 const tabCount = await groupTabButtons.count();
 check("3 group tabs render", tabCount === 3, `tabCount=${tabCount}`);
 
@@ -377,15 +379,15 @@ check("no accordion carets", caretCount === 0, `caretCount=${caretCount}`);
 await page.screenshot({ path: path.join(here, "shot-form-tabs.png") });
 
 // ---- 7-group fallback: switch to "Extra" section ----
-await page.locator(".tabs button", { hasText: "Extra" }).first().click();
+await page.locator(".bb-tabs.primary [role='tab']", { hasText: "Extra" }).first().click();
 // Wait for at least one .subgroup-title to appear (sections mode renders these; not present in tabs mode).
 await page.waitForSelector(".subgroup-title", { timeout: 3000 });
 await page.waitForTimeout(100);
 
 // The Extra form has 7 groups, which is > threshold (6), so organizeGroups returns sections mode.
-// In sections mode, no .bb-tabs strip is rendered. The top-level .tabs section strip always has role=tablist,
-// so we must count only .bb-tabs[role=tablist] (the in-form group tablist).
-const extraTablistCount = await page.locator(".bb-tabs[role='tablist']").count();
+// In sections mode, no .bb-tabs.secondary strip is rendered. The section strip (.bb-tabs.primary) is always
+// present, so we count only .bb-tabs.secondary[role=tablist] (the in-form group tablist).
+const extraTablistCount = await page.locator(".bb-tabs.secondary[role='tablist']").count();
 check("no tablist for 7-group form (sections mode)", extraTablistCount === 0, `tablistCount=${extraTablistCount}`);
 
 const subgroupTitles = await page.locator(".subgroup-title").allTextContents();

@@ -34,34 +34,15 @@ body {
     border-bottom: 1px solid var(--vscode-panel-border);
 }
 
-/* ---- section tabs ---- */
-.tabs {
-    flex: 0 0 auto;
-    display: flex;
-    gap: 0.25rem;
-    padding: 0 0.75rem;
-    border-bottom: 1px solid var(--vscode-panel-border);
+/* ---- toolbar buttons (icon + label, secondary appearance) ---- */
+.toolbar-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
 }
-.tabs button {
-    appearance: none;
-    background: transparent;
-    color: var(--vscode-foreground);
-    border: none;
-    border-bottom: 2px solid transparent;
-    padding: 0.4rem 0.7rem;
-    margin-bottom: -1px; /* overlap the strip's bottom border so the active underline sits on it */
-    cursor: pointer;
-    font: inherit;
-    opacity: 0.8;
-}
-.tabs button:hover {
-    opacity: 1;
-    background: var(--vscode-list-hoverBackground);
-}
-.tabs button.active {
-    opacity: 1;
-    border-bottom-color: var(--vscode-focusBorder);
-    color: var(--vscode-foreground);
+.toolbar-btn-label {
+    font-size: 0.9em;
+    white-space: nowrap;
 }
 
 /* ---- buttons (toolbar / actions): primary by default, secondary variant for low-emphasis controls ---- */
@@ -468,10 +449,12 @@ input[type="text"]::placeholder {
 
 /* ---- bb-tabs (in-house accessible tablist strip for primitives/Tabs.svelte) ----
  * Strip-only: no content panel rendering here - the consumer renders the active panel.
- * Visually DISTINCT from the top-level .tabs section strip (heavier underline, full-opacity default):
- *   .tabs:       primary section strip, 2px underline, default opacity 0.8.
- *   .bb-tabs:    secondary level, pill/underline style (horizontal) or left-rail style (vertical),
- *                smaller padding, subdued default, clearly subordinate hierarchy.
+ * Two variants defined here - the visual hierarchy must remain distinct:
+ *   .bb-tabs.primary:    top-level section strip (prominent, full-opacity, focusBorder active accent,
+ *                        heavier padding); used by SectionTabs for file-level section switching.
+ *   .bb-tabs.secondary:  in-form tabs (subdued descriptionForeground default, smaller padding,
+ *                        list-activeSelectionBackground accent, clearly subordinate hierarchy).
+ * Default variant is "secondary" so existing in-form usages are unaffected.
  * bits-ui data-state="active"/"inactive" on the trigger (set via aria-selected mirror); we key styles
  * on the .active class and [aria-selected="true"] for maximum portability. */
 .bb-tabs {
@@ -502,22 +485,46 @@ input[type="text"]::placeholder {
     z-index: 1;
     position: relative;
 }
-/* -- horizontal: pill-underline style (lighter than the top .tabs underline strip) -- */
-.bb-tabs.horizontal {
+/* -- horizontal secondary: pill-underline style (lighter, subdued, subordinate to the primary strip) -- */
+.bb-tabs.horizontal.secondary {
     flex-direction: row;
     border-bottom: 1px solid var(--vscode-panel-border, #2b2b2b);
 }
-.bb-tabs.horizontal button {
+.bb-tabs.horizontal.secondary button {
     padding: 0.25rem 0.6rem;
     margin-bottom: -1px; /* overlap the strip border so the active line covers it */
     border-bottom: 2px solid transparent;
 }
-.bb-tabs.horizontal button.active,
-.bb-tabs.horizontal button[aria-selected="true"] {
+.bb-tabs.horizontal.secondary button.active,
+.bb-tabs.horizontal.secondary button[aria-selected="true"] {
     color: var(--vscode-foreground);
     border-bottom-color: var(--vscode-list-activeSelectionBackground, #094771);
-    /* Use list-activeSelectionBackground for the active indicator so it reads as secondary vs .tabs which
-       uses focusBorder. This makes nested levels visually distinct at a glance. */
+    /* list-activeSelectionBackground for the active indicator: visually distinct from the primary strip
+       which uses focusBorder. Keeps the two levels clearly separated at a glance. */
+}
+/* -- horizontal primary: top-level section strip (prominent, full-opacity, focusBorder active accent) -- */
+.bb-tabs.horizontal.primary {
+    flex: 0 0 auto; /* stable height in the App column layout between toolbar and content */
+    flex-direction: row;
+    padding: 0 0.75rem;
+    border-bottom: 1px solid var(--vscode-panel-border, #2b2b2b);
+}
+.bb-tabs.horizontal.primary button {
+    padding: 0.4rem 0.7rem;
+    margin-bottom: -1px; /* overlap the strip's bottom border so the active underline sits on it */
+    border-bottom: 2px solid transparent;
+    opacity: 0.8;
+    color: var(--vscode-foreground);
+}
+.bb-tabs.horizontal.primary button:hover {
+    opacity: 1;
+    background: var(--vscode-list-hoverBackground);
+}
+.bb-tabs.horizontal.primary button.active,
+.bb-tabs.horizontal.primary button[aria-selected="true"] {
+    opacity: 1;
+    border-bottom-color: var(--vscode-focusBorder, #007fd4);
+    color: var(--vscode-foreground);
 }
 /* -- vertical: left-rail style (stacked tabs, left-edge accent marks active) -- */
 .bb-tabs.vertical {

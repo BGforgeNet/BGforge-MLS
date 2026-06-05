@@ -136,8 +136,8 @@ await page.exposeFunction("__hostUp", async (m: WebviewToHost) => {
 });
 await page.goto("file://" + path.join(here, "app.html"));
 
-// Wait for the SPL to open and tabs to appear.
-await page.waitForSelector(".tabs button", { timeout: 5000 });
+// Wait for the SPL to open and section tabs to appear (role=tab set by the Tabs primitive).
+await page.waitForSelector("[role='tablist'] [role='tab']", { timeout: 5000 });
 
 // ---- Layout / caps assertions ----
 // A second open on the same bytes gives us a fresh layout to inspect caps without
@@ -163,8 +163,10 @@ check("baseline: 2 abilities", sectionKids(abilitiesNodeId).total === 2, `total=
 check("baseline: 3 effects", sectionKids(effectsNodeId).total === 3, `total=${sectionKids(effectsNodeId).total}`);
 
 // ---- Helper: navigate to a section tab and wait for rows ----
+// Section tabs are now rendered via the Tabs primitive: role=tablist + role=tab + aria-selected.
+// Scope to .bb-tabs.primary (the section strip) to avoid matching in-form group tabs.
 async function goToSection(p: Page, tabLabel: string, expectedRows: number): Promise<void> {
-    await p.locator(".tabs button", { hasText: tabLabel }).first().click();
+    await p.locator(".bb-tabs.primary [role='tab']", { hasText: tabLabel }).first().click();
     await p.waitForTimeout(200);
     // Wait for VirtualList to render at least expectedRows .vrow elements.
     await p.waitForFunction((n) => document.querySelectorAll(".vlist .vrow").length >= n, expectedRows, {

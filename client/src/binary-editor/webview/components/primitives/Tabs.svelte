@@ -24,12 +24,17 @@
         active,
         onselect,
         orientation = "horizontal",
+        // variant controls visual weight: "primary" = prominent top section strip (heavier underline,
+        // full-opacity, focusBorder accent); "secondary" = lighter in-form tabs (subdued, subordinate).
+        // Default is "secondary" so existing in-form usages are unaffected without an explicit prop.
+        variant = "secondary",
         ariaLabel,
     }: {
         tabs: TabItem[];
         active: string;
         onselect: (id: string) => void;
         orientation?: "horizontal" | "vertical";
+        variant?: "primary" | "secondary";
         ariaLabel?: string;
     } = $props();
 
@@ -65,7 +70,7 @@
 </script>
 
 <div
-    class="bb-tabs {orientation}"
+    class="bb-tabs {orientation} {variant}"
     role="tablist"
     aria-orientation={orientation}
     aria-label={ariaLabel}

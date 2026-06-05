@@ -69,8 +69,14 @@
     </div>
 {:else}
     <div class="toolbar">
-        <button onclick={() => bridge.dumpJson()}>Dump JSON</button>
-        <button onclick={() => bridge.loadJson()}>Load JSON</button>
+        <button class="toolbar-btn" onclick={() => bridge.dumpJson()}
+                title="Export the current file contents as JSON to a new editor tab">
+            <Icon name="export" /><span class="toolbar-btn-label">Dump JSON</span>
+        </button>
+        <button class="toolbar-btn" onclick={() => bridge.loadJson()}
+                title="Import JSON from the active editor tab and apply it to the file">
+            <Icon name="go-to-file" /><span class="toolbar-btn-label">Load JSON</span>
+        </button>
         <Checkbox checked={showOffsets} label="Show offsets" onchange={(v) => { showOffsets = v; }} />
     </div>
     {#if diagnostics.length > 0}
