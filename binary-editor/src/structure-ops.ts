@@ -71,22 +71,18 @@ function noopResult(session: EditorSession): StructureResult {
 /** Find the node whose namePath exactly matches `namePath`, else undefined. */
 function findByNamePath(session: EditorSession, namePath: NamePath): FlatNode | undefined {
     return session.model.nodes.find(
-        (n): n is FlatNode => n.namePath.length === namePath.length && n.namePath.every((s, i) => s === namePath[i]),
+        (n) => n.namePath.length === namePath.length && n.namePath.every((s, i) => s === namePath[i]),
     );
 }
 
 /**
- * NodeId of the child at `index` under the group identified by `groupNamePath`, in the current
- * (post-op) model. `childrenByParent` stores indices into `nodes`, so we resolve through that.
- * Clamps to valid range; returns undefined if the group or its children list is missing.
+ * NodeId at `index` within a pre-fetched children index array.
+ * Clamps to valid range; returns undefined if the array is empty.
  */
-function childIdAt(session: EditorSession, groupNamePath: NamePath, index: number): NodeId | undefined {
-    const group = findByNamePath(session, groupNamePath);
-    if (!group) return undefined;
-    const kids = session.model.childrenByParent.get(group.id) ?? [];
+function childIdAt(model: EditorSession["model"], kids: number[], index: number): NodeId | undefined {
     if (!kids.length) return undefined;
     const clamped = Math.max(0, Math.min(index, kids.length - 1));
-    return session.model.nodes[kids[clamped]!]?.id;
+    return model.nodes[kids[clamped]!]?.id;
 }
 
 export function structureOp(session: EditorSession, req: StructureOpRequest): StructureResult {
@@ -125,10 +121,9 @@ export function structureOp(session: EditorSession, req: StructureOpRequest): St
     const result = commit(session, label, reparse(session, bytes));
 
     // Resolve the post-op selection in the NEW (rebuilt) model.
-    const newKids = (() => {
-        const g = findByNamePath(session, arrayPath);
-        return g ? (session.model.childrenByParent.get(g.id) ?? []) : [];
-    })();
+    // Single traversal: find the group once, get its children list once.
+    const postGroup = findByNamePath(session, arrayPath);
+    const newKids = postGroup ? (session.model.childrenByParent.get(postGroup.id) ?? []) : [];
     const newKidsCount = newKids.length;
     let selIndex: number;
     switch (req.op) {
@@ -142,13 +137,15 @@ export function structureOp(session: EditorSession, req: StructureOpRequest): St
             selIndex = targetIndex + 1;
             break;
         case "reorder":
+            // Boundary reorders (up at index 0, down at last) return undefined bytes and exit via
+            // the no-op path above, so targetIndex - 1 and targetIndex + 1 are both in range here.
             selIndex = req.direction === "up" ? targetIndex - 1 : targetIndex + 1;
             break;
         case "remove":
             selIndex = Math.min(targetIndex, newKidsCount - 1);
             break;
     }
-    result.selection = childIdAt(session, arrayPath, selIndex);
+    result.selection = childIdAt(session.model, newKids, selIndex);
     return result;
 }
 

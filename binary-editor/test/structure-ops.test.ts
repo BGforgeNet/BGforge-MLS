@@ -3,6 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { openSession, sessionStore, type EditorSession } from "../src/session";
 import { structureOp, undo, redo } from "../src/structure-ops";
+import type { FlatNode } from "../src/model";
 
 const MAP_FIXTURE = path.resolve(__dirname, "../../client/testFixture/maps/arcaves.map");
 
@@ -25,12 +26,12 @@ function firstGlobalVarName(session: EditorSession): string {
     return first.name;
 }
 /** Returns the NodeIds of all direct children of `parentId` in their stored order. */
-function varChildren(session: EditorSession, parentId: string): import("../src/model").FlatNode[] {
+function varChildren(session: EditorSession, parentId: string): FlatNode[] {
     const indices = session.model.childrenByParent.get(parentId) ?? [];
     return indices.map((i) => session.model.nodes[i]!);
 }
 /** Opens a fresh session and returns it along with the Global Variables group node. */
-function openMapWithGlobals(): { session: EditorSession; gv: import("../src/model").FlatNode } {
+function openMapWithGlobals(): { session: EditorSession; gv: FlatNode } {
     const session = open();
     const gv = session.model.nodes.find((n) => n.name === "Global Variables");
     if (!gv) throw new Error("no Global Variables group");
