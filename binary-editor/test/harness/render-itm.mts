@@ -421,6 +421,30 @@ check("controls: single Delete click does not remove (count unchanged)", afterAr
 await page.locator(`.row-actions button[aria-label="Cancel delete"]`).first().click();
 await page.waitForTimeout(100);
 
+// ---- Wrong-entry regression: arming delete on one entry must NOT carry over to a different entry. ----
+// ListSection reuses a single RowActions instance; without the entry-switch reset, the still-armed Confirm
+// would delete the now-selected entry. Arm on row 0, switch to row 1, assert the confirm affordance cleared
+// and a follow-up Confirm-delete would be impossible (button gone) - and the count is untouched.
+await goToSection(page, "Abilities", 2);
+await selectRow(page, 0);
+await clickAction(page, "Delete");
+// Confirm affordance is showing for row 0.
+const armedBeforeSwitch = await page.locator(`.row-actions button[aria-label="Confirm delete"]`).count();
+check("controls: confirm armed on entry A", armedBeforeSwitch === 1, `count=${armedBeforeSwitch}`);
+// Switch selection to a DIFFERENT entry (row 1). The reset effect must clear the pending confirm.
+await selectRow(page, 1);
+const armedAfterSwitch = await page.locator(`.row-actions button[aria-label="Confirm delete"]`).count();
+check(
+    "controls: switching entry clears pending confirm (no carry-over)",
+    armedAfterSwitch === 0,
+    `confirm-buttons=${armedAfterSwitch}`,
+);
+check(
+    "controls: switching entry while armed does not delete (count unchanged)",
+    sectionKids(abilitiesNodeId).total === 2,
+    `total=${sectionKids(abilitiesNodeId).total}`,
+);
+
 // ---- Screenshots ----
 await goToSection(page, "Abilities", 2);
 await page.screenshot({ path: path.join(here, "shot-itm-abilities.png") });

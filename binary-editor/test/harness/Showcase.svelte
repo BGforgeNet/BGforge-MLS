@@ -6,6 +6,9 @@
     import Checkbox from "../../../client/src/binary-editor/webview/components/primitives/Checkbox.svelte";
     import Menu from "../../../client/src/binary-editor/webview/components/primitives/Menu.svelte";
     import Tabs from "../../../client/src/binary-editor/webview/components/primitives/Tabs.svelte";
+    import RowActions from "../../../client/src/binary-editor/webview/components/RowActions.svelte";
+    import { Bridge } from "../../../client/src/binary-editor/webview/state/bridge";
+    import type { WebviewToHost } from "../../../client/src/binary-editor/webview/messages";
 
     const selectOptions = [
         { value: 0, label: "None" },
@@ -82,6 +85,15 @@
     ];
     let tabsHActive = $state("general");
     let tabsVActive = $state("general");
+
+    // Compact RowActions showcase: drives the InlineList (tight-row) layout, which is kebab-only. A real
+    // Bridge records the last structureOp message so the driver can assert the Menu->Delete->Confirm flow
+    // dispatches a remove (and only after Confirm, not on the menu click).
+    let lastStructureOp = $state("");
+    const showcaseBridge = new Bridge((m: WebviewToHost) => {
+        if (m.type === "structureOp") lastStructureOp = JSON.stringify(m.op);
+    });
+    const rowActionsCaps = { insert: true, duplicate: true, up: true, down: true, remove: true };
 </script>
 
 <div class="showcase-root">
@@ -154,5 +166,19 @@
         </div>
         <!-- Reflects active tab id so Playwright can assert the correct tab is selected. -->
         <div id="tabs-v-active" data-value={tabsVActive}></div>
+    </div>
+    <div class="showcase-section">
+        <div class="showcase-label">RowActions (compact / inline row)</div>
+        <!-- id used by render-primitives.mts to scope queries to this compact RowActions instance. -->
+        <div id="rowactions-compact">
+            <RowActions
+                acts={rowActionsCaps}
+                entryPath={["Variables", "var 1"]}
+                bridge={showcaseBridge}
+                compact={true}
+            />
+        </div>
+        <!-- Reflects the last dispatched structureOp so Playwright can assert remove fires only after Confirm. -->
+        <div id="rowactions-last-op" data-value={lastStructureOp}></div>
     </div>
 </div>

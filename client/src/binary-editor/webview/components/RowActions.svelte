@@ -11,6 +11,17 @@
     // Escape or clicking cancel disarms without dispatching. Literal false init - no confirm pending at mount.
     let confirmPending = $state(false);
 
+    // ListSection reuses a SINGLE RowActions instance across selections - only the entryPath prop changes
+    // when the user picks a different entry. Svelte 5 does not reset local $state on prop change, so without
+    // this effect an armed confirm would persist and Confirm would delete the NOW-selected entry (wrong-entry
+    // data loss). Key on the joined path (a primitive that changes with selection) rather than the array
+    // reference (recreated each render, which would reset on every render and lose a freshly-armed confirm).
+    const entryKey = $derived(entryPath.join("/"));
+    $effect(() => {
+        void entryKey; // reactive dependency: reset the pending confirm whenever the targeted entry changes
+        confirmPending = false;
+    });
+
     function armConfirm(): void {
         confirmPending = true;
     }
@@ -28,9 +39,9 @@
         if (e.key === "Escape") cancelConfirm();
     }
 
-    // Menu items for the "more actions" overflow. Delete is excluded from the menu because the inline
-    // two-step confirm is not available inside a floating menu; the toolbar Delete button handles it.
-    // Disabled items still appear so the full action set is always visible in the menu.
+    // Menu items for the compact-mode dropdown - the space-saving control that lists all six actions in a
+    // tight inline row. Delete is included; selecting it arms the inline confirm (handleMenuSelect) rather
+    // than dispatching, so removal stays gated. Disabled items still appear so the full action set is shown.
     const menuItems = $derived<MenuItem[]>([
         { id: "add-above",  label: "Add above",  icon: "insert",     disabled: !acts.insert },
         { id: "add-below",  label: "Add below",  icon: "add",        disabled: !acts.insert },
@@ -70,47 +81,50 @@
                 {#if !compact}<span class="row-actions-label">Cancel</span>{/if}
             </button>
         </span>
+    {:else if compact}
+        <!-- Compact (InlineList rows): the kebab dropdown is the space-saving control for a tight inline row.
+             It is the ONLY control here - a single "More actions" affordance instead of six icon buttons.
+             Menu "Delete" arms the inline confirm above (replacing the kebab) rather than dispatching, so
+             confirm-on-delete still gates removal. This template reference also keeps Menu consumed by app
+             code (knip clean). -->
+        <Menu items={menuItems} onselect={handleMenuSelect} ariaLabel="More actions" />
     {:else}
+        <!-- Non-compact (detail-pane toolbar): six labeled icon buttons, no kebab (all actions are visible). -->
         <button class="row-actions-btn" disabled={!acts.insert}
                 onclick={() => bridge.structureOp({ op: "insert", entryPath, position: "before" })}
                 aria-label="Add above" title="Add above">
             <Icon name="insert" />
-            {#if !compact}<span class="row-actions-label">Add above</span>{/if}
+            <span class="row-actions-label">Add above</span>
         </button>
         <button class="row-actions-btn" disabled={!acts.insert}
                 onclick={() => bridge.structureOp({ op: "insert", entryPath, position: "after" })}
                 aria-label="Add below" title="Add below">
             <Icon name="add" />
-            {#if !compact}<span class="row-actions-label">Add below</span>{/if}
+            <span class="row-actions-label">Add below</span>
         </button>
         <button class="row-actions-btn" disabled={!acts.duplicate}
                 onclick={() => bridge.structureOp({ op: "duplicate", entryPath })}
                 aria-label="Duplicate" title="Duplicate">
             <Icon name="copy" />
-            {#if !compact}<span class="row-actions-label">Duplicate</span>{/if}
+            <span class="row-actions-label">Duplicate</span>
         </button>
         <button class="row-actions-btn" disabled={!acts.up}
                 onclick={() => bridge.structureOp({ op: "reorder", entryPath, direction: "up" })}
                 aria-label="Move up" title="Move up">
             <Icon name="chevron-up" />
-            {#if !compact}<span class="row-actions-label">Move up</span>{/if}
+            <span class="row-actions-label">Move up</span>
         </button>
         <button class="row-actions-btn" disabled={!acts.down}
                 onclick={() => bridge.structureOp({ op: "reorder", entryPath, direction: "down" })}
                 aria-label="Move down" title="Move down">
             <Icon name="chevron-down" />
-            {#if !compact}<span class="row-actions-label">Move down</span>{/if}
+            <span class="row-actions-label">Move down</span>
         </button>
         <button class="row-actions-btn row-actions-btn-danger" disabled={!acts.remove}
                 onclick={armConfirm}
                 aria-label="Delete" title="Delete (click to confirm)">
             <Icon name="trash" />
-            {#if !compact}<span class="row-actions-label">Delete</span>{/if}
+            <span class="row-actions-label">Delete</span>
         </button>
-        <!-- "More actions" overflow menu: same ops, redundant accessor, useful in compact mode.
-             Consuming Menu here satisfies the app-usage requirement (knip clean). -->
-        {#if compact}
-            <Menu items={menuItems} onselect={handleMenuSelect} ariaLabel="More actions" />
-        {/if}
     {/if}
 </span>
