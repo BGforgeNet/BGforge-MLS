@@ -332,6 +332,33 @@
             "rules": {
                 "unicorn/no-useless-undefined": "off"
             }
+        },
+        {
+            // bits-ui is an accessible headless component primitive library.
+            // All imports must go through webview/components/primitives/ wrappers
+            // so the dependency has one swap point if it is ever replaced.
+            "files": ["client/src/binary-editor/webview/**"],
+            "rules": {
+                "no-restricted-imports": [
+                    "error",
+                    {
+                        "paths": [
+                            {
+                                "name": "bits-ui",
+                                "message": "Import bits-ui only via webview/components/primitives wrappers."
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            // The primitives wrapper directory is the designated single import
+            // point for bits-ui; the restriction above does not apply here.
+            "files": ["client/src/binary-editor/webview/components/primitives/**"],
+            "rules": {
+                "no-restricted-imports": "off"
+            }
         }
     ],
     "ignorePatterns": [

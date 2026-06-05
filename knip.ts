@@ -35,6 +35,10 @@ const config: KnipConfig = {
                 // transitively uses all components here), so it false-positives them as unused files.
                 "src/binary-editor/webview/components/**",
             ],
+            // bits-ui is imported from within Svelte components under webview/components/,
+            // which knip cannot trace through the esbuild-svelte transform. The components
+            // directory is already ignored above (same reason esbuild-svelte is globally ignored).
+            ignoreDependencies: ["bits-ui"],
         },
         server: {
             // Point knip at the TypeScript source entry directly.
