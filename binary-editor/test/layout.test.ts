@@ -18,3 +18,22 @@ describe("buildLayout (map)", () => {
         expect(gv.kind).toBe("list");
     });
 });
+
+describe("buildLayout capabilities", () => {
+    it("marks Global Variables addable, modifiable, and inline-rendered", () => {
+        const m = buildModel(mapParser.parse(new Uint8Array(fs.readFileSync(MAP_FIXTURE))));
+        const layout = buildLayout("map", m);
+        const gv = layout.sections.find((s) => s.title === "Global Variables")!;
+        expect(gv.canAdd).toBe(true);
+        expect(gv.canModify).toBe(true);
+        expect(gv.render).toBe("inline");
+    });
+
+    it("marks the Header form section non-addable", () => {
+        const m = buildModel(mapParser.parse(new Uint8Array(fs.readFileSync(MAP_FIXTURE))));
+        const layout = buildLayout("map", m);
+        const header = layout.sections.find((s) => s.kind === "form")!;
+        expect(header.canAdd).toBe(false);
+        expect(header.canModify).toBe(false);
+    });
+});

@@ -63,6 +63,12 @@ export interface SectionDescriptor {
     kind: "form" | "list";
     /** NodeId of the top-level group this section renders. */
     nodeId: NodeId;
+    /** "inline": single-field entries edited in the row (MAP variables). "master-detail": multi-field entries. */
+    render: "inline" | "master-detail";
+    /** Adapter says this collection accepts appended entries. */
+    canAdd: boolean;
+    /** Adapter says entries can be removed/inserted/reordered/duplicated. */
+    canModify: boolean;
 }
 
 export interface LayoutDescriptor {
