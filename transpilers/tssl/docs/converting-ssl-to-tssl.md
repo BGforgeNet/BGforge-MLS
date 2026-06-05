@@ -92,7 +92,7 @@ Constants that are already provided by folib (like standard PID values) should b
 // After
 /** @inline */
 function dude_tile(): number {
-    return tile_num(dude_obj);
+  return tile_num(dude_obj);
 }
 ```
 
@@ -107,7 +107,7 @@ function dude_tile(): number {
 // After
 /** @inline */
 function get_stat(who: CritterPtr, stat: number): number {
-    return get_critter_stat(who, stat);
+  return get_critter_stat(who, stat);
 }
 ```
 
@@ -125,7 +125,7 @@ end
 ```typescript
 // After
 function do_damage(target: CritterPtr, amount: number) {
-    critter_damage(target, amount);
+  critter_damage(target, amount);
 }
 ```
 
@@ -150,7 +150,7 @@ let name = "test";
 ```typescript
 let count: number; // Declaration at function level
 for (const x of items) {
-    count = 0; // Assignment in loop body
+  count = 0; // Assignment in loop body
 }
 ```
 
@@ -170,9 +170,9 @@ end
 ```typescript
 // After
 if (x > 0) {
-    display_msg("positive");
+  display_msg("positive");
 } else {
-    display_msg("not positive");
+  display_msg("not positive");
 }
 ```
 
@@ -205,7 +205,7 @@ end
 ```typescript
 // After
 if ((x > 0 && y > 0) || !z) {
-    val = a & b;
+  val = a & b;
 }
 ```
 
@@ -238,8 +238,8 @@ end
 ```typescript
 // After (TSSL)
 if (game_loaded()) {
-    x = active_hand();
-    y = get_sfall_arg();
+  x = active_hand();
+  y = get_sfall_arg();
 }
 ```
 
@@ -251,7 +251,7 @@ Types provide autocomplete, error checking, and documentation:
 
 ```typescript
 function get_weapon(who: CritterPtr): ItemPtr {
-    return critter_inven_obj(who, 0) as ItemPtr;
+  return critter_inven_obj(who, 0) as ItemPtr;
 }
 ```
 
@@ -276,9 +276,9 @@ import { ndebug } from "folib";
 import { game_loaded } from "folib/sfall";
 
 function start() {
-    if (game_loaded()) {
-        ndebug("Script loaded");
-    }
+  if (game_loaded()) {
+    ndebug("Script loaded");
+  }
 }
 ```
 
@@ -303,13 +303,13 @@ import { register_hook_proc, HOOK_COMBATTURN } from "folib/sfall";
 import { game_loaded } from "folib/sfall";
 
 function start() {
-    if (game_loaded()) {
-        register_hook_proc(HOOK_COMBATTURN, combat_hook);
-    }
+  if (game_loaded()) {
+    register_hook_proc(HOOK_COMBATTURN, combat_hook);
+  }
 }
 
 function combat_hook() {
-    // handle combat turn
+  // handle combat turn
 }
 ```
 
@@ -325,7 +325,7 @@ end
 ```typescript
 // TSSL
 for (const [k, v] of damage_map as unknown as [number, number][]) {
-    debug_msg("key=" + k + " val=" + v);
+  debug_msg("key=" + k + " val=" + v);
 }
 ```
 

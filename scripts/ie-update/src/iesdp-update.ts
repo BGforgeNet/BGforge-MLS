@@ -8,7 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import YAML, { isMap } from "yaml";
-import { parseYamlDocStrict } from "../../utils/src/yaml-helpers.ts";
+import { YAML_DUMP_OPTIONS, parseYamlDocStrict } from "../../utils/src/yaml-helpers.ts";
 import {
     type ActionItem,
     type CompletionItem,
@@ -109,7 +109,7 @@ function writeActionsCompletion(dataBaf: string, items: readonly CompletionItem[
     }
     const itemsSeq = createItemsSeq(bafDataDoc, items, true);
     actionsNode.set("items", itemsSeq);
-    fs.writeFileSync(dataBaf, bafDataDoc.toString({ lineWidth: 4096, indent: 2, indentSeq: true }), "utf8");
+    fs.writeFileSync(dataBaf, bafDataDoc.toString(YAML_DUMP_OPTIONS), "utf8");
 }
 
 /**
@@ -128,7 +128,7 @@ function writeTriggersCompletion(dataBaf: string, items: readonly CompletionItem
     triggersNode.set("type", 3);
     const itemsSeq = createItemsSeq(bafDataDoc, items, true);
     triggersNode.set("items", itemsSeq);
-    fs.writeFileSync(dataBaf, bafDataDoc.toString({ lineWidth: 4096, indent: 2, indentSeq: true }), "utf8");
+    fs.writeFileSync(dataBaf, bafDataDoc.toString(YAML_DUMP_OPTIONS), "utf8");
 }
 
 /**

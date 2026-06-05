@@ -1,9 +1,18 @@
 {
     "tabWidth": 4,
+    "overrides": [
+        {
+            "files": ["*.yml", "*.yaml", "*.md"],
+            "options": { "tabWidth": 2 }
+        }
+    ],
     "ignorePatterns": [
         "syntaxes/*.tmLanguage.json",
         "syntaxes/*.tmLanguage.yml",
         "server/out/*.json",
+        "server/data/weidu-baf-iesdp.yml",
+        "server/data/weidu-baf-ids.yml",
+        "server/data/fallout-ssl-sfall.yml",
         "format/out/**",
         "binary/out/**",
         "binary/src/ie-common/opcode-relationships.ts",

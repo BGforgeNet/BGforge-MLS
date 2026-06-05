@@ -20,14 +20,14 @@ Creates a new DLG file from scratch. Any existing DLG with the same name is over
 
 ```typescript
 function greeting() {
-    say(tra(1));
-    reply(tra(2)).goTo(quest);
-    reply(tra(3)).exit();
+  say(tra(1));
+  reply(tra(2)).goTo(quest);
+  reply(tra(3)).exit();
 }
 
 function quest() {
-    say(tra(4));
-    exit();
+  say(tra(4));
+  exit();
 }
 
 begin("MYDLG", [greeting, quest]);
@@ -44,10 +44,10 @@ Inline states with `state()`:
 
 ```typescript
 begin("MYDLG", [
-    state("greeting", () => {
-        say(tra(1));
-        exit();
-    }),
+  state("greeting", () => {
+    say(tra(1));
+    exit();
+  }),
 ]);
 ```
 
@@ -57,8 +57,8 @@ Options: `{ nonPausing: true }` as the last argument creates a non-pausing dialo
 
 ```typescript
 function newState() {
-    say(tra(10));
-    exit();
+  say(tra(10));
+  exit();
 }
 
 append("EXISTDLG", newState);
@@ -80,9 +80,9 @@ Add transitions to the top or bottom of an existing state's transition list:
 
 ```typescript
 extendBottom("MYDLG", "greeting", () => {
-    if (PartyHasItem("SWORD01")) {
-        reply(tra(20)).goTo(quest);
-    }
+  if (PartyHasItem("SWORD01")) {
+    reply(tra(20)).goTo(quest);
+  }
 });
 ```
 
@@ -90,7 +90,7 @@ With position (inserts at specific index):
 
 ```typescript
 extendBottom("MYDLG", "greeting", { position: 2 }, () => {
-    reply(tra(21)).goTo(quest);
+  reply(tra(21)).goTo(quest);
 });
 ```
 
@@ -100,8 +100,8 @@ Replace a state by numeric index:
 
 ```typescript
 replaceState("MYDLG", 5, () => {
-    say(tra(50));
-    exit();
+  say(tra(50));
+  exit();
 });
 ```
 
@@ -111,14 +111,14 @@ Replace multiple states by numeric index using a record:
 
 ```typescript
 replace("MYDLG", {
-    0: () => {
-        say(tra(60));
-        exit();
-    },
-    3: () => {
-        say(tra(61));
-        reply(tra(62)).exit();
-    },
+  0: () => {
+    say(tra(60));
+    exit();
+  },
+  3: () => {
+    say(tra(61));
+    reply(tra(62)).exit();
+  },
 });
 ```
 
@@ -132,8 +132,8 @@ Set the SAY text for the state. Variadic form creates multisay (random selection
 
 ```typescript
 function myState() {
-    say(tra(1)); // single text
-    say(tra(1), tra(2), tra(3)); // multisay: SAY @1 = @2 = @3
+  say(tra(1)); // single text
+  say(tra(1), tra(2), tra(3)); // multisay: SAY @1 = @2 = @3
 }
 ```
 
@@ -143,9 +143,9 @@ Lower weights are evaluated first. Only use for patching existing dialogs:
 
 ```typescript
 function myState() {
-    weight(5);
-    say(tra(1));
-    exit();
+  weight(5);
+  say(tra(1));
+  exit();
 }
 ```
 
@@ -155,9 +155,9 @@ Copy all transitions from another state. This copying takes place before all oth
 
 ```typescript
 function myState() {
-    say(tra(1));
-    copyTrans("OTHERDLG", "otherState");
-    copyTrans("OTHERDLG", "otherState", { safe: true }); // suppress warnings
+  say(tra(1));
+  copyTrans("OTHERDLG", "otherState");
+  copyTrans("OTHERDLG", "otherState", { safe: true }); // suppress warnings
 }
 ```
 
@@ -171,12 +171,12 @@ The builder pattern: `reply().action().goTo()`:
 
 ```typescript
 function myState() {
-    say(tra(1));
-    reply(tra(2))
-        .action(SetGlobal("quest", "GLOBAL", 1))
-        .goTo(nextState);
-    reply(tra(3)).exit();
-    reply(tra(4)).extern("OTHERDLG", "otherState");
+  say(tra(1));
+  reply(tra(2))
+    .action(SetGlobal("quest", "GLOBAL", 1))
+    .goTo(nextState);
+  reply(tra(3)).exit();
+  reply(tra(4)).extern("OTHERDLG", "otherState");
 }
 ```
 
@@ -205,14 +205,14 @@ Individual function calls that build transitions step by step:
 
 ```typescript
 function myState() {
-    say(tra(1));
+  say(tra(1));
 
-    reply(tra(2));
-    action(SetGlobal("quest", "GLOBAL", 1));
-    goTo(nextState);
+  reply(tra(2));
+  action(SetGlobal("quest", "GLOBAL", 1));
+  goTo(nextState);
 
-    reply(tra(3));
-    exit();
+  reply(tra(3));
+  exit();
 }
 ```
 
@@ -224,14 +224,14 @@ Transitions without player text (auto-transitions). Use `if` for conditional:
 
 ```typescript
 function myState() {
-    say(tra(1));
+  say(tra(1));
 
-    if (Global("quest", "GLOBAL", 1)) {
-        goTo(questComplete);
-    }
+  if (Global("quest", "GLOBAL", 1)) {
+    goTo(questComplete);
+  }
 
-    // Unconditional fallback
-    goTo(questActive);
+  // Unconditional fallback
+  goTo(questActive);
 }
 ```
 
@@ -253,19 +253,19 @@ Use `if` inside state functions for conditional transitions:
 
 ```typescript
 function myState() {
-    say(tra(1));
+  say(tra(1));
 
-    if (Global("quest", "GLOBAL", 0)) {
-        reply(tra(2))
-            .action(SetGlobal("quest", "GLOBAL", 1))
-            .goTo(questStart);
-    }
+  if (Global("quest", "GLOBAL", 0)) {
+    reply(tra(2))
+      .action(SetGlobal("quest", "GLOBAL", 1))
+      .goTo(questStart);
+  }
 
-    if (Global("quest", "GLOBAL", 1)) {
-        reply(tra(3)).goTo(questEnd);
-    }
+  if (Global("quest", "GLOBAL", 1)) {
+    reply(tra(3)).goTo(questEnd);
+  }
 
-    reply(tra(4)).exit();
+  reply(tra(4)).exit();
 }
 ```
 
@@ -275,10 +275,10 @@ Each `if` branch creates a transition with a trigger condition. The trigger is e
 
 ```typescript
 function myState() {
-    if (Global("active", "GLOBAL", 1)) {
-        say(tra(1));
-        reply(tra(2)).exit();
-    }
+  if (Global("active", "GLOBAL", 1)) {
+    say(tra(1));
+    reply(tra(2)).exit();
+  }
 }
 // -> IF ~Global("active","GLOBAL",1)~ myState SAY @1 ...
 ```
@@ -287,13 +287,13 @@ function myState() {
 
 ```typescript
 function myState() {
-    say(tra(1));
+  say(tra(1));
 
-    if (PartyHasItem("SWORD01")) {
-        reply(tra(2)).goTo(hasSword);
-    } else {
-        reply(tra(3)).goTo(noSword);
-    }
+  if (PartyHasItem("SWORD01")) {
+    reply(tra(2)).goTo(hasSword);
+  } else {
+    reply(tra(3)).goTo(noSword);
+  }
 }
 ```
 
@@ -305,16 +305,16 @@ Multi-speaker conversations where the PC says nothing.
 
 ```typescript
 chain("SPEAKER1", "chainLabel", () => {
-    say(tra(1));
+  say(tra(1));
 
-    from("SPEAKER2");
-    say(tra(2));
-    say(tra(3)); // multisay continuation
+  from("SPEAKER2");
+  say(tra(2));
+  say(tra(3)); // multisay continuation
 
-    from("SPEAKER1");
-    say(tra(4));
+  from("SPEAKER1");
+  say(tra(4));
 
-    exit();
+  exit();
 });
 ```
 
@@ -322,10 +322,10 @@ With entry trigger:
 
 ```typescript
 chain(Global("quest", "GLOBAL", 1) && See("Imoen2"), "BJKLSY", "myChain", () => {
-    say(tra(1));
-    from("IMOEN2J");
-    say(tra(2));
-    exit();
+  say(tra(1));
+  from("IMOEN2J");
+  say(tra(2));
+  exit();
 });
 ```
 
@@ -335,18 +335,18 @@ chain(Global("quest", "GLOBAL", 1) && See("Imoen2"), "BJKLSY", "myChain", () => 
 
 ```typescript
 chain("BJKLSY", "pizzaChain", () => {
-    say(tra(100));
+  say(tra(100));
 
-    from("IMOEN2J");
-    say(tra(101));
+  from("IMOEN2J");
+  say(tra(101));
 
-    fromWhen("BJKLSY", PartyHasItem("pepperoni"));
-    say(tra(102));
+  fromWhen("BJKLSY", PartyHasItem("pepperoni"));
+  say(tra(102));
 
-    fromWhen("IMOEN2J", !PartyHasItem("pepperoni"));
-    say(tra(103));
+  fromWhen("IMOEN2J", !PartyHasItem("pepperoni"));
+  say(tra(103));
 
-    exit();
+  exit();
 });
 ```
 
@@ -358,10 +358,10 @@ Pass a function expression to `chain()`:
 
 ```typescript
 chain(function myChain() {
-    say("SPEAKER1", tra(1));
-    say("SPEAKER2", tra(2));
-    say("SPEAKER1", tra(3));
-    exit();
+  say("SPEAKER1", tra(1));
+  say("SPEAKER2", tra(2));
+  say("SPEAKER1", tra(3));
+  exit();
 });
 ```
 
@@ -369,9 +369,9 @@ With trigger:
 
 ```typescript
 chain(Global("quest", "GLOBAL", 1), function myChain() {
-    say("SPEAKER1", tra(1));
-    say("SPEAKER2", tra(2));
-    exit();
+  say("SPEAKER1", tra(1));
+  say("SPEAKER2", tra(2));
+  exit();
 });
 ```
 
@@ -387,17 +387,17 @@ Creates a chain guarded by a global variable, with an explicit exit point:
 
 ```typescript
 interject(
-    "ENTERDLG",
-    "enterState",
-    "MyInterjectVar",
-    () => {
-        from("IMOEN2J");
-        say(tra(1));
-        from("MINSC");
-        say(tra(2));
-    },
-    "EXITDLG",
-    "exitState",
+  "ENTERDLG",
+  "enterState",
+  "MyInterjectVar",
+  () => {
+    from("IMOEN2J");
+    say(tra(1));
+    from("MINSC");
+    say(tra(2));
+  },
+  "EXITDLG",
+  "exitState",
 );
 ```
 
@@ -407,8 +407,8 @@ Like `interject`, but copies transitions from the entry state instead of using a
 
 ```typescript
 interjectCopyTrans("ENTERDLG", "enterState", "MyVar", () => {
-    from("IMOEN2J");
-    say(tra(1));
+  from("IMOEN2J");
+  say(tra(1));
 });
 ```
 
@@ -474,7 +474,7 @@ Fine-grained modification of transitions:
 
 ```typescript
 alterTrans("wsmith01", [32], [0], {
-    trigger: False(),
+  trigger: False(),
 });
 ```
 
@@ -568,16 +568,16 @@ Functions with parameters are helper functions. They are inlined at call sites, 
 
 ```typescript
 function setQuestStage(stage: number) {
-    action(SetGlobal("quest", "GLOBAL", stage));
-    goTo(nextState);
+  action(SetGlobal("quest", "GLOBAL", stage));
+  goTo(nextState);
 }
 
 function state1() {
-    say(tra(1));
-    if (PartyHasItem("SWORD01")) {
-        reply(tra(2));
-        setQuestStage(1); // Inlined: action(SetGlobal("quest", "GLOBAL", 1)); goTo(nextState);
-    }
+  say(tra(1));
+  if (PartyHasItem("SWORD01")) {
+    reply(tra(2));
+    setQuestStage(1); // Inlined: action(SetGlobal("quest", "GLOBAL", 1)); goTo(nextState);
+  }
 }
 ```
 
@@ -587,9 +587,9 @@ Functions with no parameters are state functions. Their name becomes the state l
 
 ```typescript
 function greeting() {
-    // -> state label "greeting"
-    say(tra(1));
-    exit();
+  // -> state label "greeting"
+  say(tra(1));
+  exit();
 }
 ```
 
@@ -607,11 +607,11 @@ Loops are unrolled at compile time (max 1000 iterations):
 const npcs = ["IMOEN2J", "MINSC", "JAHEIRA"];
 
 for (const npc of npcs) {
-    extendBottom("MYDLG", "greeting", () => {
-        if (InParty(npc)) {
-            reply(tra(10)).extern(npc, 0);
-        }
-    });
+  extendBottom("MYDLG", "greeting", () => {
+    if (InParty(npc)) {
+      reply(tra(10)).extern(npc, 0);
+    }
+  });
 }
 ```
 
@@ -619,12 +619,12 @@ Array destructuring is supported:
 
 ```typescript
 const patches: [string, number][] = [
-    ["state1", 5],
-    ["state2", 10],
+  ["state1", 5],
+  ["state2", 10],
 ];
 
 for (const [state, weight] of patches) {
-    setWeight("MYDLG", state, weight);
+  setWeight("MYDLG", state, weight);
 }
 ```
 
@@ -636,18 +636,18 @@ When you pass functions to `begin()` or `append()`, the transpiler follows all `
 
 ```typescript
 function start() {
-    say(tra(1));
-    goTo(middle); // middle is auto-collected
+  say(tra(1));
+  goTo(middle); // middle is auto-collected
 }
 
 function middle() {
-    say(tra(2));
-    goTo(ending); // ending is auto-collected
+  say(tra(2));
+  goTo(ending); // ending is auto-collected
 }
 
 function ending() {
-    say(tra(3));
-    exit();
+  say(tra(3));
+  exit();
 }
 
 begin("MYDLG", [start]); // Only start listed, but middle and ending are auto-collected
@@ -702,10 +702,10 @@ BAF uses dot-separated `[x.y]` notation for coordinate points. In TD actions, us
 
 ```typescript
 function myState() {
-    say(tra(1));
-    reply(tra(2))
-        .action(CreateCreature("ccguard2", [2791, 831], 6))
-        .exit();
+  say(tra(1));
+  reply(tra(2))
+    .action(CreateCreature("ccguard2", [2791, 831], 6))
+    .exit();
 }
 // -> DO ~CreateCreature("ccguard2",[2791.831],6)~ EXIT
 ```

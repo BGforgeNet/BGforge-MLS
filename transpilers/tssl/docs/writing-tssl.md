@@ -24,8 +24,8 @@ let name: string; // -> variable name;
 
 ```typescript
 function example() {
-    const x = 5; // -> variable x = 5;
-    let y = 10; // -> variable y = 10;
+  const x = 5; // -> variable x = 5;
+  let y = 10; // -> variable y = 10;
 }
 ```
 
@@ -39,7 +39,7 @@ Regular `function` declarations become SSL `procedure`:
 
 ```typescript
 function my_proc() {
-    debug_msg("hello");
+  debug_msg("hello");
 }
 // -> procedure my_proc begin
 //       debug_msg("hello");
@@ -50,7 +50,7 @@ function my_proc() {
 
 ```typescript
 function damage(target: ObjectPtr, amount = 10) {
-    // ...
+  // ...
 }
 // -> procedure damage(variable target, variable amount = 10)
 ```
@@ -59,7 +59,7 @@ function damage(target: ObjectPtr, amount = 10) {
 
 ```typescript
 function get_hp(who: CritterPtr): number {
-    return get_critter_stat(who, STAT_hp);
+  return get_critter_stat(who, STAT_hp);
 }
 // -> procedure get_hp(variable who) begin
 //       return get_critter_stat(who, STAT_hp);
@@ -80,9 +80,9 @@ let x = get_hp(dude_obj); // -> variable x = get_hp(dude_obj);  (assignment, no 
 
 ```typescript
 if (x > 0) {
-    // ...
+  // ...
 } else {
-    // ...
+  // ...
 }
 // -> if (x > 0) then begin ... end else begin ... end
 ```
@@ -91,7 +91,7 @@ if (x > 0) {
 
 ```typescript
 while (condition) {
-    // ...
+  // ...
 }
 // -> while (condition) do begin ... end
 ```
@@ -100,7 +100,7 @@ while (condition) {
 
 ```typescript
 for (let i = 0; i < 10; i++) {
-    // ...
+  // ...
 }
 // -> for (variable i = 0; i < 10; i++) begin ... end
 ```
@@ -109,7 +109,7 @@ for (let i = 0; i < 10; i++) {
 
 ```typescript
 do {
-    // ...
+  // ...
 } while (condition);
 // -> Emulated with a flag variable and while loop
 ```
@@ -118,7 +118,7 @@ do {
 
 ```typescript
 for (const item of arr) {
-    // ...
+  // ...
 }
 // -> foreach (variable item in arr) begin ... end
 ```
@@ -127,7 +127,7 @@ for (const item of arr) {
 
 ```typescript
 for (const [k, v] of myMap as unknown as [string, number][]) {
-    // ...
+  // ...
 }
 // -> foreach (variable k: v in myMap) begin ... end
 ```
@@ -136,7 +136,7 @@ for (const [k, v] of myMap as unknown as [string, number][]) {
 
 ```typescript
 for (const key in obj) {
-    // ...
+  // ...
 }
 // -> foreach (variable key in obj) begin ... end
 ```
@@ -145,14 +145,14 @@ for (const key in obj) {
 
 ```typescript
 switch (x) {
-    case 1:
-        // ...
-        break;
-    case 2:
-        // ...
-        break;
-    default:
+  case 1:
     // ...
+    break;
+  case 2:
+    // ...
+    break;
+  default:
+  // ...
 }
 // -> switch (x) begin case 1: ... case 2: ... default: ... end
 ```
@@ -188,9 +188,9 @@ TypeScript `enum` declarations are flattened to constants using the `EnumName_Me
 
 ```typescript
 enum DamageType {
-    Normal = 0,
-    Fire = 3,
-    Electrical = 6,
+  Normal = 0,
+  Fire = 3,
+  Electrical = 6,
 }
 // -> #define DamageType_Normal 0
 // -> #define DamageType_Fire 3
@@ -206,7 +206,7 @@ Functions tagged with `@inline` in JSDoc become `#define` macros instead of proc
 ```typescript
 /** @inline */
 function dude_tile(): number {
-    return tile_num(dude_obj);
+  return tile_num(dude_obj);
 }
 // -> #define dude_tile tile_num(dude_obj)
 ```
@@ -216,7 +216,7 @@ function dude_tile(): number {
 ```typescript
 /** @inline */
 function get_stat(who: CritterPtr, stat: number): number {
-    return get_critter_stat(who, stat);
+  return get_critter_stat(who, stat);
 }
 // -> #define get_stat(who, stat) get_critter_stat(who, stat)
 ```
@@ -314,7 +314,7 @@ TypeScript reserves the `typeof` keyword, so use `sfall_typeof()` instead:
 
 ```typescript
 if (sfall_typeof(x) == 2) {
-    /* string */
+  /* string */
 }
 // -> if (typeof(x) == 2) then begin ... end
 ```
@@ -344,7 +344,7 @@ Functions passed to `register_hook_proc` or `register_hook_proc_spec` are also p
 
 ```typescript
 function on_combat_turn(event: number) {
-    /* ... */
+  /* ... */
 }
 register_hook_proc(HOOK_COMBATTURN, on_combat_turn);
 ```
@@ -359,7 +359,7 @@ JSDoc comments on functions are preserved as SSL comments in the output:
  * @param mode The init mode
  */
 function init(mode: number) {
-    /* ... */
+  /* ... */
 }
 // JSDoc is preserved above the procedure in SSL output
 ```
@@ -411,13 +411,13 @@ All `let` variables are hoisted to function scope, including their initializers.
 ```typescript
 // WRONG: assignment hoisted, runs once
 for (const pid of pids) {
-    let divisor = 100; // -> variable divisor = 100; at function top!
+  let divisor = 100; // -> variable divisor = 100; at function top!
 }
 
 // CORRECT: separate declaration from assignment
 let divisor: number; // Declaration hoisted (fine)
 for (const pid of pids) {
-    divisor = 100; // Assignment stays in loop body
+  divisor = 100; // Assignment stays in loop body
 }
 ```
 

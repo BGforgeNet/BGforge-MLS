@@ -14,10 +14,10 @@ Each file contains one or more **stanzas**. A stanza groups items of the same [C
 
 ```yaml
 stanza_name:
-    type: 3 # CompletionItemKind (required, numeric)
-    category: patch # Category override (optional, string)
-    items: # Array of items (required)
-        - name: ...
+  type: 3 # CompletionItemKind (required, numeric)
+  category: patch # Category override (optional, string)
+  items: # Array of items (required)
+    - name: ...
 ```
 
 By default, the stanza name is used as the completion category identifier.
@@ -62,11 +62,11 @@ All fields except `name` are optional.
 
 ```yaml
 args:
-    - name: param_name # Parameter name (required)
-      type: int # Type: int, string, resref, bool, etc. (required)
-      doc: description # Parameter documentation (optional)
-      default: "0" # Default value (optional)
-      required: true # Marks as required, hides default in hover (optional)
+  - name: param_name # Parameter name (required)
+    type: int # Type: int, string, resref, bool, etc. (required)
+    doc: description # Parameter documentation (optional)
+    default: "0" # Default value (optional)
+    required: true # Marks as required, hides default in hover (optional)
 ```
 
 `default` and `required` may coexist on the same parameter. In WeiDU, all variables must be initialized before calling a function, so every parameter technically has a default (the WeiDU runtime zero-initializes INT*VAR to 0 and STR_VAR to ""). `required: true` is a semantic annotation on top of that: it signals that the caller \_must* set this parameter to a meaningful value - the default is present but not useful on its own (e.g. an empty resref or a name that selects nothing). The generator uses `required` to suppress the default in hover output, so users see it as a required field rather than an optional one with a default.
@@ -98,69 +98,69 @@ The build script uses shared building blocks from the server to produce consiste
 
 ```yaml
 functions:
-    type: 3
-    items:
-        - name: critter_mod_skill
+  type: 3
+  items:
+    - name: critter_mod_skill
+      type: int
+      args:
+        - name: who
+          type: ObjectPtr
+          doc: Must be `dude_obj`.
+        - name: skill
           type: int
-          args:
-              - name: who
-                type: ObjectPtr
-                doc: Must be `dude_obj`.
-              - name: skill
-                type: int
-                doc: "`SKILL_*` from `define.h`"
-              - name: amount
-                type: int
-                doc: Can be negative.
-          doc: |-
-              Modifies a given skill by a given amount.
+          doc: "`SKILL_*` from `define.h`"
+        - name: amount
+          type: int
+          doc: Can be negative.
+      doc: |-
+        Modifies a given skill by a given amount.
 ```
 
 ### Fallout format (detail string, deprecated)
 
 ```yaml
 functions:
-    type: 3
-    items:
-        - name: set_npc_stat_min
-          detail: void set_npc_stat_min(int stat, int value)
-          doc: |-
-              Sets the minimum valid range on a stat.
+  type: 3
+  items:
+    - name: set_npc_stat_min
+      detail: void set_npc_stat_min(int stat, int value)
+      doc: |-
+        Sets the minimum valid range on a stat.
 ```
 
 ### WeiDU format (structured args + rets)
 
 ```yaml
 dimorphic_functions:
-    type: 3
-    items:
-        - name: SUBSTRING
-          type: dimorphic
-          args:
-              - name: start
-                type: int
-                doc: the string index to start from
-              - name: length
-                type: int
-                doc: the length of the substring
-              - name: string
-                type: string
-                doc: the source string
-          rets:
-              - name: substring
-                type: string
-                doc: the extracted substring
-          doc: |-
-              Returns a substring of the provided string.
+  type: 3
+  items:
+    - name: SUBSTRING
+      type: dimorphic
+      args:
+        - name: start
+          type: int
+          doc: the string index to start from
+        - name: length
+          type: int
+          doc: the length of the substring
+        - name: string
+          type: string
+          doc: the source string
+      rets:
+        - name: substring
+          type: string
+          doc: the extracted substring
+      doc: |-
+        Returns a substring of the provided string.
 ```
 
 ### Simple keywords
 
 ```yaml
 keywords:
-    type: 14
-    items:
-        - name: IF
-        - name: THEN
-        - name: END
+  type: 14
+  items:
+    - name: IF
+    - name: THEN
+    - name: END
 ```

@@ -27,7 +27,7 @@ const result = await transpile("mydialog.td", sourceText);
 console.log(result.kind); // "td" | "tbaf" | "tssl"
 console.log(result.output); // generated script
 if (result.kind === "td") {
-    console.log(result.warnings); // TD only
+  console.log(result.warnings); // TD only
 }
 ```
 
@@ -49,11 +49,11 @@ The named exports are direct re-exports of each transpiler's underlying function
 import { transpile, UnknownTranspileExtensionError } from "@bgforge/transpile";
 
 try {
-    await transpile("file.unknown", "");
+  await transpile("file.unknown", "");
 } catch (err) {
-    if (err instanceof UnknownTranspileExtensionError) {
-        // err.message lists accepted extensions
-    }
+  if (err instanceof UnknownTranspileExtensionError) {
+    // err.message lists accepted extensions
+  }
 }
 ```
 

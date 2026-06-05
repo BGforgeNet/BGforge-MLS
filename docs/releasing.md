@@ -50,12 +50,12 @@ The Action is consumed as `uses: BGforgeNet/BGforge-MLS/actions/binary@<ref>`. R
 
 1. Choose the commit to release. It must contain both `actions/binary/` and the current, filtered `build.yml`. A commit from before the trigger was filtered is unsafe: its `build.yml` runs on every tag and would start a full extension release on the Action tag push.
 2. Create the immutable tag and move the major alias to it:
-    ```
-    git tag actions/binary/v1.0.0 <commit>
-    git tag -f actions/binary/v1 <commit>
-    git push origin actions/binary/v1.0.0
-    git push -f origin actions/binary/v1
-    ```
+   ```
+   git tag actions/binary/v1.0.0 <commit>
+   git tag -f actions/binary/v1 <commit>
+   git push origin actions/binary/v1.0.0
+   git push -f origin actions/binary/v1
+   ```
 3. Bump the major (`v2`) for breaking changes to the Action interface.
 
 The workflow that runs for any tag push is read from the tagged commit, not from the default branch - which is why the chosen commit must already carry the filtered `build.yml`.
