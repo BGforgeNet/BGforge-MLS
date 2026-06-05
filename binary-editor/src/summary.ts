@@ -52,8 +52,12 @@ interface FormatSummarySpec {
  * ITM abilities: "Abilities" section, child "Attack Type"
  *                (humanize("attackType") = "Attack Type"; enum e.g. "Ranged", "Melee").
  *
- * EFF and CRE only expose a flat effects list with no ability section, so
- * the same "Effects"/"Opcode" rule applies and no ability row is needed.
+ * The registry covers the formats that today render master-detail list
+ * sections with a meaningful key field: spl and itm. EFF is a single flat
+ * header+body record (form sections only, no list section), so it has no
+ * entry. CRE's effects group still renders as a form section (its adapter
+ * declares no list sections yet); a CRE summary spec lands with the CRE
+ * structure-ops workstream, alongside a CRE fixture test.
  */
 const FORMAT_SPECS: Readonly<Record<string, FormatSummarySpec>> = {
     spl: {
@@ -67,12 +71,6 @@ const FORMAT_SPECS: Readonly<Record<string, FormatSummarySpec>> = {
             { sectionName: "Effects", fieldName: "Opcode" },
             { sectionName: "Abilities", fieldName: "Attack Type" },
         ],
-    },
-    eff: {
-        sections: [{ sectionName: "Effects", fieldName: "Opcode" }],
-    },
-    cre: {
-        sections: [{ sectionName: "Effects", fieldName: "Opcode" }],
     },
 };
 
