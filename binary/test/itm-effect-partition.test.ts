@@ -90,6 +90,12 @@ describe("validateEffectPartition", () => {
             ).length,
         ).toBeGreaterThan(0);
     });
+
+    it("flags a contiguous-but-out-of-order partition", () => {
+        // equipping [3,2), ability0 [0,3): fully covers [0,5) with no gap/overlap,
+        // but the canonical order (equipping first) expects equipping to start at 0.
+        expect(validateEffectPartition(doc([3, 2], [[0, 3]], 5)).length).toBeGreaterThan(0);
+    });
 });
 
 describe("effectOwners", () => {
@@ -153,11 +159,9 @@ describe("shiftEffectRefs", () => {
     });
 
     it("shifts a later ability's start when an earlier ability grows", () => {
-        // insert at index 3 owned by ability0 (range [2,2) -> covers 2,3 after?);
-        // here ability0 is [2,2) covering 2,3; inserting AT its end boundary (4
-        // is ability1's start). Use a clearer case: ability0 [2,2), ability1
-        // [4,1). Insert at 4 owned by ability0: ability0 grows to 3, ability1
-        // start (>= at, not owner) shifts +1 to 5.
+        // ability0 [2,2), ability1 [4,1). Insert at 4 (ability0's end boundary)
+        // owned by ability0: ability0 grows to 3; ability1 start (>= at, not
+        // owner) shifts +1 to 5.
         const after = shiftEffectRefs(
             doc(
                 [0, 2],
@@ -231,5 +235,21 @@ describe("shiftEffectRefs", () => {
         const before = JSON.stringify(input);
         shiftEffectRefs(input, { at: 3, delta: 1, owner: { kind: "ability", index: 1 } });
         expect(JSON.stringify(input)).toBe(before);
+    });
+
+    it("throws when the edit point falls outside the owner's range", () => {
+        // ability0 range is [2,5); inserting at index 1 attributes the effect to
+        // ability0 but the physical effect would land before its range - corrupt.
+        expect(() =>
+            shiftEffectRefs(doc([0, 2], [[2, 3]], 5), { at: 1, delta: 1, owner: { kind: "ability", index: 0 } }),
+        ).toThrow();
+    });
+
+    it("throws when removing at the owner's exclusive end boundary", () => {
+        // ability0 range is [2,4); index 4 is one past the last owned effect, so
+        // a remove there does not address an owned effect.
+        expect(() =>
+            shiftEffectRefs(doc([0, 2], [[2, 2]], 4), { at: 4, delta: -1, owner: { kind: "ability", index: 0 } }),
+        ).toThrow();
     });
 });

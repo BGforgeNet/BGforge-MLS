@@ -119,7 +119,12 @@ function ownerLabel(owner: EffectOwner): string {
  *   - a negative start index or negative count on any range;
  *   - a range whose [start, start+count) runs past effects.length (out of bounds);
  *   - an effect index owned by NO range (orphan);
- *   - overlap: an effect index owned by more than one range.
+ *   - overlap: an effect index owned by more than one range;
+ *   - ordering: walking populated ranges in canonical owner order (equipping
+ *     first, then abilities by index), their starts must be non-decreasing and
+ *     tile contiguously (each populated range's start == the previous one's end).
+ *     shiftEffectRefs cannot produce a violation, but external hand-editing can,
+ *     and this validator defends hand-edited docs.
  */
 export function validateEffectPartition(doc: EffectPartitionDoc): string[] {
     const issues: string[] = [];
@@ -156,16 +161,55 @@ export function validateEffectPartition(doc: EffectPartitionDoc): string[] {
         }
     }
 
+    // Ordering/contiguity: walk POPULATED ranges (count > 0) in canonical owner
+    // order. Each must start exactly where the previous populated one ended.
+    // Empty ranges carry no position constraint and are skipped. This catches
+    // contiguous-but-out-of-order hand edits the coverage check above accepts.
+    let expectedStart = 0;
+    for (const range of ranges) {
+        if (range.count <= 0 || range.start < 0) continue; // negative/empty handled above
+        if (range.start !== expectedStart) {
+            issues.push(
+                `${ownerLabel(range.owner)} starts at ${range.start} but the canonical order expects ${expectedStart} (out-of-order or non-contiguous)`,
+            );
+        }
+        expectedStart = range.start + range.count;
+    }
+
     return issues;
 }
 
 export interface ShiftEffectRefsArgs {
-    /** Effect index at which effects are inserted (delta>0) or removed (delta<0). */
+    /**
+     * Effect index at which effects are inserted (delta>0) or removed (delta<0).
+     * Precondition: `at` must fall within the owner's pre-edit range.
+     *   - insert (delta > 0): `owner.start <= at <= owner.start + owner.count`
+     *   - remove (delta < 0): `owner.start <= at < owner.start + owner.count`
+     * A caller passing `at` outside the owner's range produces a result that
+     * validates clean but is corrupt (the physical effect lands under a
+     * different owner while the named owner's count grows). Since this module
+     * is the sole guard for per-ability ranges, `shiftEffectRefs` throws on
+     * violation rather than silently corrupting.
+     */
     at: number;
     /** Number of effects added (positive) or removed (negative). */
     delta: number;
     /** The range that gains/loses the effects. */
     owner: EffectOwner;
+}
+
+/** Resolve the owner's pre-edit [start, count) range from the doc. */
+function ownerRange(doc: EffectPartitionDoc, owner: EffectOwner): { start: number; count: number } {
+    if (owner.kind === "equipping") {
+        return { start: doc.header.featureBlocksIndex, count: doc.header.featureBlocksCount };
+    }
+    const ability = doc.abilities[owner.index];
+    if (ability === undefined) {
+        throw new Error(
+            `shiftEffectRefs: owner ability index ${owner.index} is out of range (abilities.length ${doc.abilities.length})`,
+        );
+    }
+    return { start: ability.featureBlockIndex, count: ability.featureBlockCount };
 }
 
 /**
@@ -194,11 +238,31 @@ export interface ShiftEffectRefsArgs {
  *     range); later ranges shift down by 1. Callers are responsible for not
  *     driving a count negative; this function performs the arithmetic the edit
  *     describes and `validateEffectPartition` catches an inconsistent result.
+ *
+ * Throws when `at` falls outside the owner's pre-edit range (see
+ * `ShiftEffectRefsArgs.at`) - a caller programming error that would otherwise
+ * silently corrupt the file.
  */
 export function shiftEffectRefs<H extends EffectPartitionHeader, A extends EffectPartitionAbility>(
     doc: EffectPartitionDoc<H, A>,
     { at, delta, owner }: ShiftEffectRefsArgs,
 ): EffectPartitionDoc<H, A> {
+    // Precondition: `at` must land within the owner's pre-edit range. For
+    // insert, `at` may sit at the owner's end boundary (appending one effect to
+    // the owner); for remove, `at` must address an existing owned effect, so the
+    // end boundary is exclusive. Throwing here is correct: this is the sole
+    // guard for per-ability ranges, so a misattributed edit must fail loud.
+    const { start: ownerStart, count: ownerCount } = ownerRange(doc, owner);
+    const upperInclusive = delta >= 0; // insert/no-op tolerates the end boundary; remove does not
+    const upperBound = ownerStart + ownerCount;
+    const withinRange = at >= ownerStart && (upperInclusive ? at <= upperBound : at < upperBound);
+    if (!withinRange) {
+        throw new Error(
+            `shiftEffectRefs: at=${at} is outside ${ownerLabel(owner)} range [${ownerStart}, ${upperBound})` +
+                ` for delta=${delta}; the edit point must fall within the owner's pre-edit range`,
+        );
+    }
+
     const ownerIsEquipping = owner.kind === "equipping";
 
     const newHeader: H = {
