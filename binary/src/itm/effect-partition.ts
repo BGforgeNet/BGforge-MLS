@@ -264,12 +264,16 @@ export function shiftEffectRefs<H extends EffectPartitionHeader, A extends Effec
     }
 
     const ownerIsEquipping = owner.kind === "equipping";
+    // Post-edit effect count: this function is fed the PRE-splice doc, so the new
+    // length is the pre-edit length plus delta. Used to clamp inert count-0 range
+    // starts into [0, newEffectCount] (see shiftStart).
+    const newEffectCount = doc.effects.length + delta;
 
     const newHeader: H = {
         ...doc.header,
         featureBlocksIndex: ownerIsEquipping
             ? doc.header.featureBlocksIndex // owner: start absorbs nothing, count carries the change
-            : shiftStart(doc.header.featureBlocksIndex, at, delta),
+            : shiftStart(doc.header.featureBlocksIndex, doc.header.featureBlocksCount, at, delta, newEffectCount),
         featureBlocksCount: ownerIsEquipping ? doc.header.featureBlocksCount + delta : doc.header.featureBlocksCount,
     };
 
@@ -279,7 +283,7 @@ export function shiftEffectRefs<H extends EffectPartitionHeader, A extends Effec
             ...ability,
             featureBlockIndex: isOwner
                 ? ability.featureBlockIndex // owner start does not move
-                : shiftStart(ability.featureBlockIndex, at, delta),
+                : shiftStart(ability.featureBlockIndex, ability.featureBlockCount, at, delta, newEffectCount),
             featureBlockCount: isOwner ? ability.featureBlockCount + delta : ability.featureBlockCount,
         };
     });
@@ -290,11 +294,20 @@ export function shiftEffectRefs<H extends EffectPartitionHeader, A extends Effec
 /**
  * Shift a non-owner range start by `delta` iff it begins at or after `at`.
  *
- * Note: a count-0 range whose start sits at `at` (e.g. an empty equipping range
- * at index 0 when an owner inserts at index 0) acquires a non-zero start here.
- * This is harmless: count-0 ranges claim no effect indices, so validateEffectPartition
- * skips them in its contiguity walk and the writer passes the inert index through.
+ * A count-0 (empty) range is positionless: it owns no effect index, so its stored
+ * start is semantically inert. But the start must remain a VALID index in
+ * [0, newEffectCount] - a negative or past-end start trips validateEffectPartition
+ * and serializes to a bogus u16 (e.g. -1 becomes 0xFFFF). The shift can drive an
+ * inert range out of bounds: an empty equipping range at start 0 shifted by an
+ * owner remove at index 0 would land at -1. So count-0 ranges are CLAMPED into the
+ * valid window after the raw shift.
+ *
+ * count>0 ranges keep the RAW shift (no clamp): a populated range driven negative
+ * or past-end is a genuine relink bug, and validateEffectPartition must still trip
+ * on it rather than have a clamp paper over real corruption.
  */
-function shiftStart(start: number, at: number, delta: number): number {
-    return start >= at ? start + delta : start;
+function shiftStart(start: number, count: number, at: number, delta: number, newEffectCount: number): number {
+    const shifted = start >= at ? start + delta : start;
+    if (count > 0) return shifted; // populated range: strict failsafe, no clamp
+    return Math.max(0, Math.min(shifted, newEffectCount)); // inert range: keep the index valid
 }

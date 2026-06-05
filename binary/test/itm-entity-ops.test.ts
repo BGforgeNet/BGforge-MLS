@@ -456,4 +456,23 @@ describe("ITM effect structure-ops with owner-aware relinking", () => {
         expect(buildItmDuplicateEffectBytes(base(), ["Effects", "Effect 0"])).toBeUndefined();
         expect(buildItmReorderEffectBytes(base(), ["Effects", "Effect 99"], "up")).toBeUndefined();
     });
+
+    it("removes the first effect of an equipping-free real item without throwing", () => {
+        if (!hasFixture) return;
+        // wm_sbook.itm has equipping count 0 and a single ability-owned effect.
+        // Removing it drives the empty equipping range start to -1 under the raw
+        // shift; the clamp keeps it at 0 so serialization succeeds (regression).
+        const pr = itmParser.parse(new Uint8Array(fs.readFileSync(FIXTURE)));
+        if (pr.errors) throw new Error(pr.errors.join(", "));
+        const before = getItmCanonicalDocument(pr) ?? rebuildItmCanonicalDocument(pr);
+        if (!before) throw new Error("no canonical doc");
+        expect(before.header.featureBlocksCount).toBe(0); // no equipping effects
+        expect(before.effects.length).toBe(1); // single ability-owned effect
+
+        const bytes = buildItmRemoveEffectBytes(pr, ["Effects", "Effect 1"]);
+        expect(bytes).toBeDefined();
+        const doc = reparse(bytes!);
+        expect(doc.effects.length).toBe(0);
+        expect(validateEffectPartition(doc)).toEqual([]);
+    });
 });

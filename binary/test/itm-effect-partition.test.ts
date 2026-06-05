@@ -252,4 +252,40 @@ describe("shiftEffectRefs", () => {
             shiftEffectRefs(doc([0, 2], [[2, 2]], 4), { at: 4, delta: -1, owner: { kind: "ability", index: 0 } }),
         ).toThrow();
     });
+
+    it("clamps an empty equipping range to 0 instead of -1 when an owner removes at index 0", () => {
+        // Equipping [0,0) (no equipping effects), ability0 [0,1) owns the single
+        // effect. Remove that effect (at 0, delta -1, owner ability0). The empty
+        // equipping range is a non-owner starting at 0 >= at, so a raw shift would
+        // drive it to -1 (out of bounds, serializes to 0xFFFF). It must clamp to 0.
+        const after = shiftEffectRefs(doc([0, 0], [[0, 1]], 1), {
+            at: 0,
+            delta: -1,
+            owner: { kind: "ability", index: 0 },
+        });
+        expect(after.header.featureBlocksIndex).toBe(0); // clamped from -1
+        expect(after.header.featureBlocksCount).toBe(0);
+        expect(after.abilities[0]!.featureBlockIndex).toBe(0); // owner start does not move
+        expect(after.abilities[0]!.featureBlockCount).toBe(0); // 1 -> 0
+        // Reattach the post-splice effects (length 0) and confirm the partition is clean.
+        expect(validateEffectPartition({ ...after, effects: [] })).toEqual([]);
+    });
+
+    it("clamps an empty equipping range to 0 (stays valid) when an owner inserts at index 0", () => {
+        // Equipping [0,0), ability0 [0,1). Insert before ability0's effect (at 0,
+        // delta +1, owner ability0). The empty equipping range shifts +1 to 1 under
+        // the raw rule; clamping into [0, newEffectCount=2] keeps it valid. The
+        // index is inert (count 0) but must not exceed the new effect length.
+        const after = shiftEffectRefs(doc([0, 0], [[0, 1]], 1), {
+            at: 0,
+            delta: 1,
+            owner: { kind: "ability", index: 0 },
+        });
+        expect(after.header.featureBlocksCount).toBe(0);
+        // Clamp window is [0, 2]; the shifted value 1 is in range, so it is preserved.
+        expect(after.header.featureBlocksIndex).toBe(1);
+        expect(after.abilities[0]!.featureBlockIndex).toBe(0); // owner start does not move
+        expect(after.abilities[0]!.featureBlockCount).toBe(2); // 1 -> 2
+        expect(validateEffectPartition({ ...after, effects: [0, 0] })).toEqual([]);
+    });
 });
