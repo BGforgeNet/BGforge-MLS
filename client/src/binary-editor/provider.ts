@@ -1,7 +1,8 @@
 import * as path from "node:path";
 import * as vscode from "vscode";
 import { getSnapshotPath } from "@bgforge/binary";
-import { generateNonce, getCachedHtmlAsset, getCachedJsAsset } from "../webview-assets";
+import { generateNonce, getCachedHtmlAsset, getCachedJsAsset, inlineWebviewScript } from "../webview-assets";
+import { surfaceWebviewRuntimeError } from "../webview-error";
 import { BinaryEditorDocument } from "./document";
 import { planSave } from "./save";
 import type { HostToWebview, WebviewToHost } from "./webview/messages";
@@ -125,6 +126,16 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
                 case "loadJson":
                     await this.loadJson(document, panel);
                     break;
+                case "runtimeError": {
+                    const file = path.basename(document.uri.fsPath);
+                    surfaceWebviewRuntimeError({
+                        label: `Binary editor for ${file}`,
+                        userFacingFile: file,
+                        message: message.message,
+                        stack: message.stack,
+                    });
+                    break;
+                }
             }
         });
     }
@@ -250,6 +261,6 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
         const html = getCachedHtmlAsset("binary-editor-v2", extensionPath, WEBVIEW_HTML);
         const script = getCachedJsAsset("binary-editor-v2", extensionPath, WEBVIEW_JS);
         const nonce = generateNonce();
-        return html.replace("/* __SCRIPT__ */", script).replaceAll("{{nonce}}", nonce);
+        return inlineWebviewScript(html, script, nonce);
     }
 }

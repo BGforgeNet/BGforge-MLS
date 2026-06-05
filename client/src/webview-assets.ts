@@ -59,3 +59,18 @@ export function getCachedJsAsset(cacheKey: string, extensionPath: string, relati
 export function generateNonce(): string {
     return randomBytes(16).toString("base64");
 }
+
+/**
+ * Inline a bundled script into an HTML template at the `/* __SCRIPT__ *​/` placeholder and stamp the CSP nonce.
+ *
+ * The script MUST be supplied as a *function* replacement so it is inlined verbatim. A plain string replacement
+ * lets `String.prototype.replace` interpret `$$`/`$&`/`` $` ``/`$'` inside the bundle as special patterns, silently
+ * mutating the inlined code. Svelte 5 / esbuild output contains hundreds of `$$` identifiers (`$$props`,
+ * `$$anchor`, ...): a string replacement collapses every `$$` to `$`. That particular mutation happens to stay
+ * self-consistent (every occurrence is rewritten the same way) so it does not currently break execution, but
+ * `$&`/`` $` ``/`$'` - or a future `$$`-vs-`$` identifier collision - would corrupt the script for real. Inlining
+ * verbatim removes the hazard entirely. The nonce is base64 (no `$`), so its replaceAll is safe as a plain string.
+ */
+export function inlineWebviewScript(html: string, script: string, nonce: string): string {
+    return html.replace("/* __SCRIPT__ */", () => script).replaceAll("{{nonce}}", nonce);
+}

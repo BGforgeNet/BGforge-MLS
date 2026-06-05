@@ -7,7 +7,8 @@ export type WebviewToHost =
     | { type: "editField"; nodeId: NodeId; value: number | string }
     | { type: "addEntry"; namePath: NamePath }
     | { type: "dumpJson" }
-    | { type: "loadJson" };
+    | { type: "loadJson" }
+    | { type: "runtimeError"; message: string; stack?: string };
 
 /** Messages the host posts down to the webview. */
 export type HostToWebview =
