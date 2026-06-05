@@ -10,9 +10,9 @@ BAF has no variables, loops, or functions at runtime. An AI script is a sequence
 // TBAF input
 const enemies = ["Player1", "Player2"];
 for (const enemy of enemies) {
-    if (See(enemy)) {
-        Attack(enemy);
-    }
+  if (See(enemy)) {
+    Attack(enemy);
+  }
 }
 ```
 
@@ -46,7 +46,7 @@ const TARGET = "Player1";
 const SPELL = "WIZARD_SHIELD";
 
 if (See(TARGET)) {
-    Spell(Myself, SPELL);
+  Spell(Myself, SPELL);
 }
 // -> IF See(Player1) THEN Spell(Myself, WIZARD_SHIELD) END
 ```
@@ -59,9 +59,9 @@ User-defined functions are **inlined at call sites**. They do not emit BAF const
 
 ```typescript
 function attackIfVisible(target: string) {
-    if (See(target)) {
-        Attack(target);
-    }
+  if (See(target)) {
+    Attack(target);
+  }
 }
 
 attackIfVisible("Player1");
@@ -74,10 +74,10 @@ Functions can contain conditions, actions, and control flow. All parameters are 
 
 ```typescript
 function buffAndAttack(target: string, spell: string) {
-    if (See(target)) {
-        Spell(Myself, spell);
-        Attack(target);
-    }
+  if (See(target)) {
+    Spell(Myself, spell);
+    Attack(target);
+  }
 }
 
 buffAndAttack("Player1", "WIZARD_SHIELD");
@@ -87,11 +87,11 @@ buffAndAttack("Player1", "WIZARD_SHIELD");
 
 ```typescript
 function isHostile(target: string) {
-    return See(target) && !InParty(target);
+  return See(target) && !InParty(target);
 }
 
 if (isHostile("Player1")) {
-    Attack(Player1);
+  Attack(Player1);
 }
 // -> IF See(Player1) !InParty(Player1) THEN Attack(Player1) END
 ```
@@ -104,11 +104,11 @@ Each branch becomes a separate `IF/THEN/END` block. The `else` branch accumulate
 
 ```typescript
 if (See(Player1)) {
-    Attack(Player1);
+  Attack(Player1);
 } else if (See(Player2)) {
-    Attack(Player2);
+  Attack(Player2);
 } else {
-    NoAction();
+  NoAction();
 }
 ```
 
@@ -143,9 +143,9 @@ Nested `if` inside `if` accumulates parent conditions:
 
 ```typescript
 if (See(Player1)) {
-    if (Global("aggressive", "LOCALS", 1)) {
-        Attack(Player1);
-    }
+  if (Global("aggressive", "LOCALS", 1)) {
+    Attack(Player1);
+  }
 }
 // -> IF See(Player1) Global("aggressive", "LOCALS", 1) THEN Attack(Player1) END
 ```
@@ -156,7 +156,7 @@ if (See(Player1)) {
 
 ```typescript
 if (See(Player1) && Global("hostile", "LOCALS", 1)) {
-    Attack(Player1);
+  Attack(Player1);
 }
 // -> IF See(Player1) Global("hostile", "LOCALS", 1) THEN ... END
 ```
@@ -165,7 +165,7 @@ if (See(Player1) && Global("hostile", "LOCALS", 1)) {
 
 ```typescript
 if (See(Player1) || See(Player2)) {
-    Attack(NearestEnemyOf(Myself));
+  Attack(NearestEnemyOf(Myself));
 }
 // -> IF OR(2) See(Player1) See(Player2) THEN ... END
 ```
@@ -174,7 +174,7 @@ if (See(Player1) || See(Player2)) {
 
 ```typescript
 if (!See(Player1)) {
-    NoAction();
+  NoAction();
 }
 // -> IF !See(Player1) THEN ... END
 ```
@@ -203,12 +203,12 @@ Each case becomes a separate `IF/THEN/END` block. The switch expression must be 
 ```typescript
 const state = Global("state", "LOCALS");
 switch (state) {
-    case 0:
-        ActionA();
-        break;
-    case 1:
-        ActionB();
-        break;
+  case 0:
+    ActionA();
+    break;
+  case 1:
+    ActionB();
+    break;
 }
 ```
 
@@ -240,7 +240,7 @@ Standard `for` loops are unrolled at compile time:
 
 ```typescript
 for (let i = 0; i < 3; i++) {
-    GiveItemCreate("POTN08", Player1, 1, 0, 0);
+  GiveItemCreate("POTN08", Player1, 1, 0, 0);
 }
 ```
 
@@ -257,9 +257,9 @@ Iterate over compile-time arrays:
 ```typescript
 const enemies = ["Player1", "Player2", "Player3"];
 for (const enemy of enemies) {
-    if (See(enemy)) {
-        Attack(enemy);
-    }
+  if (See(enemy)) {
+    Attack(enemy);
+  }
 }
 ```
 
@@ -269,14 +269,14 @@ Produces one `IF/THEN/END` block per array element with the variable substituted
 
 ```typescript
 const buffs: [string, string][] = [
-    ["Player1", "WIZARD_SHIELD"],
-    ["Player2", "WIZARD_ARMOR"],
+  ["Player1", "WIZARD_SHIELD"],
+  ["Player2", "WIZARD_ARMOR"],
 ];
 
 for (const [target, spell] of buffs) {
-    if (See(target)) {
-        Spell(Myself, spell);
-    }
+  if (See(target)) {
+    Spell(Myself, spell);
+  }
 }
 ```
 
@@ -289,9 +289,9 @@ const base = ["Player1", "Player2"];
 const all = [...base, "Player3", "Player4"];
 
 for (const target of all) {
-    if (See(target)) {
-        Attack(target);
-    }
+  if (See(target)) {
+    Attack(target);
+  }
 }
 ```
 
@@ -301,7 +301,7 @@ BAF uses dot-separated `[x.y]` notation for coordinate points. In TBAF, use stan
 
 ```typescript
 if (True()) {
-    CreateCreature("ccguard2", [2791, 831], 6);
+  CreateCreature("ccguard2", [2791, 831], 6);
 }
 // -> CreateCreature("ccguard2", [2791.831], 6)
 ```
@@ -317,14 +317,14 @@ Point tuples work through variable substitution, function inlining, and loop unr
 
 ```typescript
 const positions: [string, [number, number]][] = [
-    ["ccguard1", [100, 200]],
-    ["ccguard2", [300, 400]],
+  ["ccguard1", [100, 200]],
+  ["ccguard2", [300, 400]],
 ];
 
 for (const [resref, pos] of positions) {
-    if (True()) {
-        CreateCreature(resref, pos, 0);
-    }
+  if (True()) {
+    CreateCreature(resref, pos, 0);
+  }
 }
 ```
 
@@ -336,12 +336,12 @@ Numeric and string enums. Property access is substituted at compile time:
 
 ```typescript
 enum Spell {
-    Shield = "WIZARD_SHIELD",
-    Armor = "WIZARD_ARMOR",
+  Shield = "WIZARD_SHIELD",
+  Armor = "WIZARD_ARMOR",
 }
 
 if (See(Player1)) {
-    Spell(Myself, Spell.Shield);
+  Spell(Myself, Spell.Shield);
 }
 // -> IF See(Player1) THEN Spell(Myself, WIZARD_SHIELD) END
 ```

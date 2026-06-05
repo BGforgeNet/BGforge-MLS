@@ -15,26 +15,26 @@ writing that is `.pro` / `.map` (Fallout) and `.itm` / `.spl` / `.eff` / `.cre` 
 ```yaml
 name: Binary snapshots
 on:
-    push:
-        branches: [main]
-        # Trim this list to the formats your repo actually contains.
-        paths:
-            - "**/*.pro"
-            - "**/*.map"
-            - "**/*.itm"
-            - "**/*.spl"
-            - "**/*.eff"
-            - "**/*.cre"
+  push:
+    branches: [main]
+    # Trim this list to the formats your repo actually contains.
+    paths:
+      - "**/*.pro"
+      - "**/*.map"
+      - "**/*.itm"
+      - "**/*.spl"
+      - "**/*.eff"
+      - "**/*.cre"
 
 permissions:
-    contents: write
+  contents: write
 
 jobs:
-    snapshot:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v6
-            - uses: BGforgeNet/BGforge-MLS/actions/binary@actions/binary/v1
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: BGforgeNet/BGforge-MLS/actions/binary@actions/binary/v1
 ```
 
 ### Check mode: validate snapshots without committing
@@ -45,17 +45,17 @@ on any diff or missing snapshot, and never commits or pushes.
 ```yaml
 name: Validate binary snapshots
 on:
-    push:
-    pull_request:
+  push:
+  pull_request:
 
 jobs:
-    check:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v6
-            - uses: BGforgeNet/BGforge-MLS/actions/binary@actions/binary/v1
-              with:
-                  check: "true"
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: BGforgeNet/BGforge-MLS/actions/binary@actions/binary/v1
+        with:
+          check: "true"
 ```
 
 ## Versioning

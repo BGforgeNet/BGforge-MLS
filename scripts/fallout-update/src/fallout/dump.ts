@@ -76,6 +76,9 @@ export function dumpFalloutCompletion(
     hooksMap.add(doc.createPair("items", createCompletionSeq(doc, sfallHooks)));
     contents.set(SFALL_HOOKS_STANZA, hooksMap);
 
+    // First-line marker (leading space renders as "# Auto-generated ..."); the
+    // oxfmt-exclusion drift guard keys off it.
+    doc.commentBefore = " Auto-generated from sfall by scripts/fallout-update/src/fallout-update.ts. Do not hand-edit.";
     const output = doc.toString(YAML_DUMP_OPTIONS);
     fs.writeFileSync(fpath, output, "utf8");
 }

@@ -51,6 +51,9 @@ importers:
       esbuild:
         specifier: ^0.28.0
         version: 0.28.0
+      jsonc-parser:
+        specifier: ^3.3.1
+        version: 3.3.1
       knip:
         specifier: ^6.15.0
         version: 6.15.0

@@ -1,195 +1,195 @@
 name: "Build"
 
 on:
-    pull_request:
-    push:
-        # Only vX.Y.Z tags drive the release job; the internal release steps gate on
-        # startsWith(github.ref, 'refs/tags/'), which matches any tag, so non-release
-        # tags (e.g. the actions/binary/* action tag) must be filtered out here before
-        # they can reach those steps. branches: "**" preserves branch-push CI.
-        branches:
-            - "**"
-        tags:
-            - "v[0-9]+.[0-9]+.[0-9]+"
+  pull_request:
+  push:
+    # Only vX.Y.Z tags drive the release job; the internal release steps gate on
+    # startsWith(github.ref, 'refs/tags/'), which matches any tag, so non-release
+    # tags (e.g. the actions/binary/* action tag) must be filtered out here before
+    # they can reach those steps. branches: "**" preserves branch-push CI.
+    branches:
+      - "**"
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
 
 # Cancel superseded runs on the same ref. Release-tag runs use distinct refs
 # (refs/tags/vX.Y.Z) and are not affected; PR pushes and branch pushes get the
 # stale run cancelled when a newer push arrives.
 concurrency:
-    group: ${{ github.workflow }}-${{ github.ref }}
-    cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 permissions:
-    contents: read
+  contents: read
 
 jobs:
-    build:
-        name: build
-        runs-on: ubuntu-latest
-        # contents: write is needed for the GitHub Release step on tag pushes.
-        # id-token: write is needed for pnpm publish --provenance (npm OIDC attestation)
-        # in the server, transpile, format, and binary publish steps on release tags.
-        permissions:
-            contents: write
-            id-token: write
-        outputs:
-            # base64-encoded sha256 digests of release artifacts, consumed by the
-            # SLSA provenance job.  Empty on non-release runs.
-            artifact-subjects: ${{ steps.artifact-hashes.outputs.subjects }}
-        steps:
-            - name: Checkout
-              uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    # contents: write is needed for the GitHub Release step on tag pushes.
+    # id-token: write is needed for pnpm publish --provenance (npm OIDC attestation)
+    # in the server, transpile, format, and binary publish steps on release tags.
+    permissions:
+      contents: write
+      id-token: write
+    outputs:
+      # base64-encoded sha256 digests of release artifacts, consumed by the
+      # SLSA provenance job.  Empty on non-release runs.
+      artifact-subjects: ${{ steps.artifact-hashes.outputs.subjects }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-            - name: Verify supply-chain invariants
-              run: ./scripts/verify-supply-chain.sh
+      - name: Verify supply-chain invariants
+        run: ./scripts/verify-supply-chain.sh
 
-            - name: Install xvfb (release only)
-              if: startsWith(github.ref, 'refs/tags/')
-              run: sudo apt-get install -y xvfb
+      - name: Install xvfb (release only)
+        if: startsWith(github.ref, 'refs/tags/')
+        run: sudo apt-get install -y xvfb
 
-            - name: Install pnpm
-              uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3
-              with:
-                  run_install: false
-
-            - name: Install Node.js
-              uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
-              with:
-                  node-version: 22
-                  cache: pnpm
-                  registry-url: https://registry.npmjs.org
-
-            - name: Install dependencies
-              run: pnpm install --frozen-lockfile
-
-            - name: Build tree-sitter grammar
-              run: pnpm build:grammar
-
-            - name: Test
-              run: pnpm test:all
-
-            - name: Build
-              run: pnpm build
-
-            # E2E needs xvfb and a full Electron host, so it runs only on release tags.
-            # On every PR/push, the webview-bundle tests in client/test/ and the server
-            # stdio smoke test (server/vitest.smoke.config.ts, driven by scripts/test.sh
-            # Phase 3) cover the same surfaces the E2E driver would exercise.
-            - name: E2E tests (release only)
-              if: startsWith(github.ref, 'refs/tags/')
-              run: pnpm test:e2e
-
-            - name: Package
-              run: |
-                  if [[ "$GITHUB_REF" != refs/tags/* ]]; then
-                    export ARTIFACT_VERSION="${GITHUB_SHA::7}"
-                  fi
-                  pnpm package
-                  echo "VSIX_PATH=$(ls dist/*.vsix)" >> "$GITHUB_ENV"
-
-            - name: Generate CycloneDX SBOM
-              run: |
-                  set -euo pipefail
-                  # --allow-build=libxmljs2: cyclonedx pulls libxmljs2 (native; ships a prebuilt binary
-                  # via prebuild-install) as a transitive dep. pnpm 11 fails closed on an unclassified
-                  # install script (ERR_PNPM_IGNORED_BUILDS), and `pnpm dlx` resolves in a throwaway dir
-                  # outside the workspace, so the pnpm-workspace.yaml allowBuilds list does not apply -
-                  # allow it inline.
-                  # --ignore-npm-errors: cyclonedx-npm shells out to `npm ls`, which misreads pnpm's
-                  # symlinked store and reports transitive devDependencies (e.g. isexe's) as missing.
-                  # The component tree is still walked in full, so treat those npm-ls warnings as
-                  # non-fatal rather than failing the build.
-                  pnpm dlx --allow-build=libxmljs2 @cyclonedx/cyclonedx-npm@4.2.1 --ignore-npm-errors --output-file dist/sbom.cdx.json
-
-            - name: Build editor bundles (TextMate, Kate, Notepad++, Geany)
-              run: pnpm build:editors
-
-            - name: Upload build
-              uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-              if: "!startsWith(github.ref, 'refs/tags/')"
-              with:
-                  name: bgforge-mls
-                  path: dist/
-                  # Default 90-day retention is excessive for branch builds;
-                  # 14 days is enough for a developer to inspect a CI artifact
-                  # produced from a recent push or PR.
-                  retention-days: 14
-
-            # The GitHub Release (carrying the SLSA-provenance subjects and the SBOM) is
-            # the canonical record of the build, so it is created before the extension is
-            # pushed to the external marketplaces. All three reference env.VSIX_PATH (set
-            # in the Package step) rather than the Open VSX step output, which no longer
-            # precedes them.
-            - name: Compute artifact hashes for SLSA provenance (release only)
-              id: artifact-hashes
-              if: startsWith(github.ref, 'refs/tags/')
-              run: |
-                  set -euo pipefail
-                  # sha256sum emits "<hash>  <filename>" lines; slsa-github-generator
-                  # expects base64(sha256sum-output) as base64-subjects.
-                  subjects="$(sha256sum \
-                    "$VSIX_PATH" \
-                    dist/sbom.cdx.json \
-                    dist/*.zip \
-                    | base64 -w0)"
-                  echo "subjects=$subjects" >> "$GITHUB_OUTPUT"
-
-            - name: GitHub Release
-              if: "startsWith(github.ref, 'refs/tags/')"
-              uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
-              with:
-                  name: ${{ github.ref_name }}
-                  fail_on_unmatched_files: true
-                  files: |
-                      ${{ env.VSIX_PATH }}
-                      dist/*.zip
-                      dist/sbom.cdx.json
-
-            # Use pre-built VSIX for publishing: pnpm package (scripts/package.sh)
-            # dereferences pnpm symlinks that vsce can't follow.
-            - name: Publish to Open VSX Registry
-              if: "startsWith(github.ref, 'refs/tags/')"
-              uses: HaaLeo/publish-vscode-extension@ca5561daa085dee804bf9f37fe0165785a9b14db # v2
-              with:
-                  pat: ${{ secrets.OPEN_VSX_TOKEN }}
-                  extensionFile: ${{ env.VSIX_PATH }}
-
-            - name: Publish to Visual Studio Marketplace
-              if: "startsWith(github.ref, 'refs/tags/')"
-              uses: HaaLeo/publish-vscode-extension@ca5561daa085dee804bf9f37fe0165785a9b14db # v2
-              with:
-                  pat: ${{ secrets.VS_MARKETPLACE_TOKEN }}
-                  registryUrl: https://marketplace.visualstudio.com
-                  extensionFile: ${{ env.VSIX_PATH }}
-
-            # @bgforge/mls-server declares a runtime dependency on @bgforge/format
-            # (workspace:*, substituted with format's concrete version on publish). The
-            # libraries publish from their own <lib>/vX.Y.Z tags (publish-library.yml),
-            # independently of this vX.Y.Z run, so publish-server.sh preflights that the
-            # resolved @bgforge/format version is already on npm before publishing.
-            - name: Publish server to npm
-              if: startsWith(github.ref, 'refs/tags/')
-              run: SKIP_BUILD=1 ./scripts/publish-server.sh
-              env:
-                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-    provenance:
-        name: SLSA provenance
-        needs: build
-        # Only generate provenance for successful release-tag builds.
-        if: >-
-            needs.build.result == 'success' &&
-            startsWith(github.ref, 'refs/tags/')
-        permissions:
-            id-token: write
-            contents: write
-            actions: read
-        # MUST be pinned to a full @vX.Y.Z tag, NOT a commit SHA, despite the
-        # rest of this workflow's third-party-action SHA-pinning convention.
-        # slsa-verifier validates the workflow_ref recorded in the provenance
-        # attestation against the trusted builder's published tag - pinning by
-        # SHA would make the resulting attestation unverifiable. See
-        # https://github.com/slsa-framework/slsa-github-generator README.
-        uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0
+      - name: Install pnpm
+        uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3
         with:
-            base64-subjects: ${{ needs.build.outputs.artifact-subjects }}
+          run_install: false
+
+      - name: Install Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build tree-sitter grammar
+        run: pnpm build:grammar
+
+      - name: Test
+        run: pnpm test:all
+
+      - name: Build
+        run: pnpm build
+
+      # E2E needs xvfb and a full Electron host, so it runs only on release tags.
+      # On every PR/push, the webview-bundle tests in client/test/ and the server
+      # stdio smoke test (server/vitest.smoke.config.ts, driven by scripts/test.sh
+      # Phase 3) cover the same surfaces the E2E driver would exercise.
+      - name: E2E tests (release only)
+        if: startsWith(github.ref, 'refs/tags/')
+        run: pnpm test:e2e
+
+      - name: Package
+        run: |
+          if [[ "$GITHUB_REF" != refs/tags/* ]]; then
+            export ARTIFACT_VERSION="${GITHUB_SHA::7}"
+          fi
+          pnpm package
+          echo "VSIX_PATH=$(ls dist/*.vsix)" >> "$GITHUB_ENV"
+
+      - name: Generate CycloneDX SBOM
+        run: |
+          set -euo pipefail
+          # --allow-build=libxmljs2: cyclonedx pulls libxmljs2 (native; ships a prebuilt binary
+          # via prebuild-install) as a transitive dep. pnpm 11 fails closed on an unclassified
+          # install script (ERR_PNPM_IGNORED_BUILDS), and `pnpm dlx` resolves in a throwaway dir
+          # outside the workspace, so the pnpm-workspace.yaml allowBuilds list does not apply -
+          # allow it inline.
+          # --ignore-npm-errors: cyclonedx-npm shells out to `npm ls`, which misreads pnpm's
+          # symlinked store and reports transitive devDependencies (e.g. isexe's) as missing.
+          # The component tree is still walked in full, so treat those npm-ls warnings as
+          # non-fatal rather than failing the build.
+          pnpm dlx --allow-build=libxmljs2 @cyclonedx/cyclonedx-npm@4.2.1 --ignore-npm-errors --output-file dist/sbom.cdx.json
+
+      - name: Build editor bundles (TextMate, Kate, Notepad++, Geany)
+        run: pnpm build:editors
+
+      - name: Upload build
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: "!startsWith(github.ref, 'refs/tags/')"
+        with:
+          name: bgforge-mls
+          path: dist/
+          # Default 90-day retention is excessive for branch builds;
+          # 14 days is enough for a developer to inspect a CI artifact
+          # produced from a recent push or PR.
+          retention-days: 14
+
+      # The GitHub Release (carrying the SLSA-provenance subjects and the SBOM) is
+      # the canonical record of the build, so it is created before the extension is
+      # pushed to the external marketplaces. All three reference env.VSIX_PATH (set
+      # in the Package step) rather than the Open VSX step output, which no longer
+      # precedes them.
+      - name: Compute artifact hashes for SLSA provenance (release only)
+        id: artifact-hashes
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          set -euo pipefail
+          # sha256sum emits "<hash>  <filename>" lines; slsa-github-generator
+          # expects base64(sha256sum-output) as base64-subjects.
+          subjects="$(sha256sum \
+            "$VSIX_PATH" \
+            dist/sbom.cdx.json \
+            dist/*.zip \
+            | base64 -w0)"
+          echo "subjects=$subjects" >> "$GITHUB_OUTPUT"
+
+      - name: GitHub Release
+        if: "startsWith(github.ref, 'refs/tags/')"
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          name: ${{ github.ref_name }}
+          fail_on_unmatched_files: true
+          files: |
+            ${{ env.VSIX_PATH }}
+            dist/*.zip
+            dist/sbom.cdx.json
+
+      # Use pre-built VSIX for publishing: pnpm package (scripts/package.sh)
+      # dereferences pnpm symlinks that vsce can't follow.
+      - name: Publish to Open VSX Registry
+        if: "startsWith(github.ref, 'refs/tags/')"
+        uses: HaaLeo/publish-vscode-extension@ca5561daa085dee804bf9f37fe0165785a9b14db # v2
+        with:
+          pat: ${{ secrets.OPEN_VSX_TOKEN }}
+          extensionFile: ${{ env.VSIX_PATH }}
+
+      - name: Publish to Visual Studio Marketplace
+        if: "startsWith(github.ref, 'refs/tags/')"
+        uses: HaaLeo/publish-vscode-extension@ca5561daa085dee804bf9f37fe0165785a9b14db # v2
+        with:
+          pat: ${{ secrets.VS_MARKETPLACE_TOKEN }}
+          registryUrl: https://marketplace.visualstudio.com
+          extensionFile: ${{ env.VSIX_PATH }}
+
+      # @bgforge/mls-server declares a runtime dependency on @bgforge/format
+      # (workspace:*, substituted with format's concrete version on publish). The
+      # libraries publish from their own <lib>/vX.Y.Z tags (publish-library.yml),
+      # independently of this vX.Y.Z run, so publish-server.sh preflights that the
+      # resolved @bgforge/format version is already on npm before publishing.
+      - name: Publish server to npm
+        if: startsWith(github.ref, 'refs/tags/')
+        run: SKIP_BUILD=1 ./scripts/publish-server.sh
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  provenance:
+    name: SLSA provenance
+    needs: build
+    # Only generate provenance for successful release-tag builds.
+    if: >-
+      needs.build.result == 'success' &&
+      startsWith(github.ref, 'refs/tags/')
+    permissions:
+      id-token: write
+      contents: write
+      actions: read
+    # MUST be pinned to a full @vX.Y.Z tag, NOT a commit SHA, despite the
+    # rest of this workflow's third-party-action SHA-pinning convention.
+    # slsa-verifier validates the workflow_ref recorded in the provenance
+    # attestation against the trusted builder's published tag - pinning by
+    # SHA would make the resulting attestation unverifiable. See
+    # https://github.com/slsa-framework/slsa-github-generator README.
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0
+    with:
+      base64-subjects: ${{ needs.build.outputs.artifact-subjects }}

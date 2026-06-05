@@ -10,6 +10,7 @@
 
 import fs from "node:fs";
 import YAML from "yaml";
+import { YAML_DUMP_OPTIONS } from "./yaml-helpers.ts";
 
 interface IdsEntry {
     readonly name: string;
@@ -56,7 +57,9 @@ function main(): void {
 
     const content = fs.readFileSync(inputFile, "utf8");
     const entries = parseIdsFile(content, docValue);
-    const yamlStr = YAML.stringify(entries);
+    // First-line marker; the oxfmt-exclusion drift guard keys off it.
+    const marker = "# Auto-generated from IDS files by scripts/utils/src/ids-to-yaml.ts. Do not hand-edit.\n";
+    const yamlStr = marker + YAML.stringify(entries, null, YAML_DUMP_OPTIONS);
     fs.writeFileSync(outputFile, yamlStr, "utf8");
 
     console.log(`Output written to ${outputFile}`);

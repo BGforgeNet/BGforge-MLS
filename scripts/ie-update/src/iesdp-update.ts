@@ -8,7 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import YAML, { isMap } from "yaml";
-import { parseYamlDocStrict } from "../../utils/src/yaml-helpers.ts";
+import { YAML_DUMP_OPTIONS, parseYamlDocStrict } from "../../utils/src/yaml-helpers.ts";
 import {
     type ActionItem,
     type CompletionItem,
@@ -35,6 +35,11 @@ const ACTIONS_STANZA = "actions";
 const TRIGGERS_STANZA = "triggers";
 /** Relative path to the BGEE trigger page inside IESDP checkout */
 const BGEE_TRIGGERS_PATH = "scripting/triggers/bgeetriggers.htm";
+/**
+ * First-line marker stamped into the generated YAML. Leading space renders as
+ * "# Auto-generated ...". The oxfmt-exclusion drift guard keys off this marker.
+ */
+const GENERATED_MARKER = " Auto-generated from IESDP by scripts/ie-update/src/iesdp-update.ts. Do not hand-edit.";
 
 /**
  * Loads and filters IESDP action YAML files.
@@ -109,7 +114,8 @@ function writeActionsCompletion(dataBaf: string, items: readonly CompletionItem[
     }
     const itemsSeq = createItemsSeq(bafDataDoc, items, true);
     actionsNode.set("items", itemsSeq);
-    fs.writeFileSync(dataBaf, bafDataDoc.toString({ lineWidth: 4096, indent: 2, indentSeq: true }), "utf8");
+    bafDataDoc.commentBefore = GENERATED_MARKER;
+    fs.writeFileSync(dataBaf, bafDataDoc.toString(YAML_DUMP_OPTIONS), "utf8");
 }
 
 /**
@@ -128,7 +134,8 @@ function writeTriggersCompletion(dataBaf: string, items: readonly CompletionItem
     triggersNode.set("type", 3);
     const itemsSeq = createItemsSeq(bafDataDoc, items, true);
     triggersNode.set("items", itemsSeq);
-    fs.writeFileSync(dataBaf, bafDataDoc.toString({ lineWidth: 4096, indent: 2, indentSeq: true }), "utf8");
+    bafDataDoc.commentBefore = GENERATED_MARKER;
+    fs.writeFileSync(dataBaf, bafDataDoc.toString(YAML_DUMP_OPTIONS), "utf8");
 }
 
 /**

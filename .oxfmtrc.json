@@ -1,11 +1,28 @@
 {
     "tabWidth": 4,
+    "overrides": [
+        {
+            "files": ["*.yml", "*.yaml", "*.md"],
+            "options": { "tabWidth": 2 }
+        }
+    ],
     "ignorePatterns": [
         "syntaxes/*.tmLanguage.json",
         "syntaxes/*.tmLanguage.yml",
         "server/out/*.json",
+        "server/data/weidu-baf-iesdp.yml",
+        "server/data/weidu-baf-ids.yml",
+        "server/data/fallout-ssl-sfall.yml",
         "format/out/**",
         "binary/out/**",
+        "binary/src/ie-common/opcodes.ts",
+        "binary/src/ie-common/specs/effect.ts",
+        "binary/src/itm/specs/header.ts",
+        "binary/src/itm/specs/ability.ts",
+        "binary/src/spl/specs/header.ts",
+        "binary/src/spl/specs/ability.ts",
+        "binary/src/eff/specs/header.ts",
+        "binary/src/eff/specs/body.ts",
         "server/src/*/tree-sitter.d.ts",
         "grammars/*/src/tree-sitter.d.ts",
         "themes/vscode-monokai.json",

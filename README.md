@@ -86,8 +86,8 @@ Fallout PRO and MAP files have a built-in [binary editor](#binary-editor) with J
 - `CTRL+R`: compile a Fallout `.ssl` file or parse a WeiDU file, reporting [errors](#error-reporting) if any.
 - `CTRL+SHIFT+V`: open [dialog tree preview](#dialog-tree-preview) (SSL, TSSL, D, TD files).
 - Standard VS Code hotkeys:
-    - `CTRL+SHIFT+O`: document symbols
-    - `CTRL+T`: workspace symbols
+  - `CTRL+SHIFT+O`: document symbols
+  - `CTRL+T`: workspace symbols
 
 ## Screenshots
 

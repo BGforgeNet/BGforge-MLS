@@ -6,45 +6,45 @@ name: "Publish library"
 # `vX.Y.Z` tag that build.yml handles (VSIX + server). build.yml's push trigger is
 # filtered to `vX.Y.Z` precisely so these library tags do not also start a full release.
 on:
-    push:
-        tags:
-            - "binary/v[0-9]+.[0-9]+.[0-9]+"
-            - "format/v[0-9]+.[0-9]+.[0-9]+"
-            - "transpile/v[0-9]+.[0-9]+.[0-9]+"
+  push:
+    tags:
+      - "binary/v[0-9]+.[0-9]+.[0-9]+"
+      - "format/v[0-9]+.[0-9]+.[0-9]+"
+      - "transpile/v[0-9]+.[0-9]+.[0-9]+"
 
 permissions:
-    contents: read
+  contents: read
 
 jobs:
-    publish:
-        name: publish
-        runs-on: ubuntu-latest
-        # id-token: write is needed for `pnpm publish --provenance` (npm OIDC attestation).
-        permissions:
-            contents: read
-            id-token: write
-        steps:
-            - name: Checkout
-              uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+  publish:
+    name: publish
+    runs-on: ubuntu-latest
+    # id-token: write is needed for `pnpm publish --provenance` (npm OIDC attestation).
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-            - name: Install pnpm
-              uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3
-              with:
-                  run_install: false
+      - name: Install pnpm
+        uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3
+        with:
+          run_install: false
 
-            - name: Install Node.js
-              uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
-              with:
-                  node-version: 22
-                  cache: pnpm
-                  registry-url: https://registry.npmjs.org
+      - name: Install Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
 
-            - name: Install dependencies
-              run: pnpm install --frozen-lockfile
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
-            - name: Build, test, and publish the tagged library
-              shell: bash
-              env:
-                  TAG_NAME: ${{ github.ref_name }}
-                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-              run: ./.github/scripts/publish-library.sh
+      - name: Build, test, and publish the tagged library
+        shell: bash
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: ./.github/scripts/publish-library.sh

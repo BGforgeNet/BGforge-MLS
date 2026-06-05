@@ -155,27 +155,27 @@ binary/test/                   # Vitest unit tests, repo-root cwd for fixture pa
 type FieldSpec = ScalarFieldSpec | ArrayFieldSpec | CharsFieldSpec;
 
 interface ScalarFieldSpec {
-    codec: ISchema<number>; // typed-binary codec (i8/u8/i16/...)
-    domain?: { min; max }; // tighter than codec range
-    enum?: Record<number, string>; // value -> display name
-    enumOpen?: boolean; // enum is advisory (display only); strict mode does not enforce membership
-    flags?: Record<number, string>; // bit -> display name
-    packedAs?: string; // bit-packed slot name
-    bitRange?: [bitOffset, bitWidth]; // required when packedAs is set
+  codec: ISchema<number>; // typed-binary codec (i8/u8/i16/...)
+  domain?: { min; max }; // tighter than codec range
+  enum?: Record<number, string>; // value -> display name
+  enumOpen?: boolean; // enum is advisory (display only); strict mode does not enforce membership
+  flags?: Record<number, string>; // bit -> display name
+  packedAs?: string; // bit-packed slot name
+  bitRange?: [bitOffset, bitWidth]; // required when packedAs is set
 }
 
 interface CharsFieldSpec {
-    kind: "chars";
-    count: number; // fixed N raw bytes, surfaced as `string`
+  kind: "chars";
+  count: number; // fixed N raw bytes, surfaced as `string`
 }
 
 interface ArrayFieldSpec {
-    kind: "array";
-    element: ScalarFieldSpec;
-    count:
-        | number // fixed
-        | { fromField: string } // same-struct sibling
-        | { fromCtx: (ctx) => number }; // cross-struct, supplied at read
+  kind: "array";
+  element: ScalarFieldSpec;
+  count:
+    | number // fixed
+    | { fromField: string } // same-struct sibling
+    | { fromCtx: (ctx) => number }; // cross-struct, supplied at read
 }
 ```
 
@@ -224,10 +224,10 @@ Multiple scalar entries share one wire codec read by tagging them with the same 
 
 ```ts
 const tilePairSpec = {
-    floorTileId: { codec: u32, packedAs: "tilePair", bitRange: [0, 12] },
-    floorFlags: { codec: u32, packedAs: "tilePair", bitRange: [12, 4] },
-    roofTileId: { codec: u32, packedAs: "tilePair", bitRange: [16, 12] },
-    roofFlags: { codec: u32, packedAs: "tilePair", bitRange: [28, 4] },
+  floorTileId: { codec: u32, packedAs: "tilePair", bitRange: [0, 12] },
+  floorFlags: { codec: u32, packedAs: "tilePair", bitRange: [12, 4] },
+  roofTileId: { codec: u32, packedAs: "tilePair", bitRange: [16, 12] },
+  roofFlags: { codec: u32, packedAs: "tilePair", bitRange: [28, 4] },
 };
 ```
 
@@ -296,9 +296,9 @@ Adapter responsibilities:
 - **Canonical**: `rebuildCanonicalDocument` - reconstruct after tree edits.
 - **Semantic keys**: `toSemanticFieldKey` - display-path -> semantic key for presentation lookup.
 - **Editor presentation** (consolidated registries):
-    - `presentationSchema` - `FormatPresentationSchema` with `exactFields` + `patternFields` (labels, enum/flag dropdowns, numeric format, editability, charset). Built in each format's own `<format>/presentation-schema.ts`. Read by `getFormatPresentationSchema` and `resolveFieldPresentation` in the top-level `presentation-schema.ts`.
-    - `compiledPatternFields` - pre-compiled regex versions of `presentationSchema.patternFields`, computed once at module load via `compilePatternFields` (in `presentation-schema-types.ts`).
-    - `domainRanges` - per-field numeric domain narrowing keyed by semantic key. Read by `getDomainRange` in `binary-format-contract.ts`, consumed by `validateNumericValue` / `clampNumericValue` / `zodFieldNumber`.
+  - `presentationSchema` - `FormatPresentationSchema` with `exactFields` + `patternFields` (labels, enum/flag dropdowns, numeric format, editability, charset). Built in each format's own `<format>/presentation-schema.ts`. Read by `getFormatPresentationSchema` and `resolveFieldPresentation` in the top-level `presentation-schema.ts`.
+  - `compiledPatternFields` - pre-compiled regex versions of `presentationSchema.patternFields`, computed once at module load via `compilePatternFields` (in `presentation-schema-types.ts`).
+  - `domainRanges` - per-field numeric domain narrowing keyed by semantic key. Read by `getDomainRange` in `binary-format-contract.ts`, consumed by `validateNumericValue` / `clampNumericValue` / `zodFieldNumber`.
 - **Editor projection** (optional): `shouldHideField`, `shouldHideGroup`, `projectDisplayRoot` - hide tile bulk, redundant slots, etc.
 - **Structural edits** (optional): `isStructuralFieldId`, `buildStructuralTransitionBytes` - layout-changing edits (PRO subtype change).
 - **Variable-length array editing** (optional): `buildAddEntryBytes` / `buildRemoveEntryBytes` / `buildInsertEntryBytes` / `buildMoveEntryBytes` / `isAddableArray` / `isRemovableEntry` - entity ops (MAP global vars, scripts).
@@ -322,22 +322,22 @@ These are non-negotiable across PRO and MAP:
 2. **Presentation can nest** even when data is flat. The walker's `subGroups` option handles armor sub-categories, scenery layouts, etc., without warping the data shape.
 3. **Read permissive, write strict.** Out-of-range enum values display as `Unknown (N)` and parse succeeds; saving rejects via the zod refinement when `spec.enum` is set. Real-world exception: MAP object base `rotation`/`elevation` carry packed-PID-shaped values in shipped files - the canonical zod stays plain int32 for those even though the wire spec documents enum tables.
 
-    **Closed vs open enums.** The strict gate fits enums whose value space is fixed by the engine (PRO `objectType`: Item/Critter/Scenery/Wall/Tile/Misc - adding a 7th would crash the engine). For fields whose value space is open by design - IE effect opcodes (mods can introduce new opcode numbers; the engine accepts any 16-bit value), ITM type (mod-extensible via `itemtype.2da`), ITM ability `damageType` / `projectileType` (engine treats out-of-table values as defaults), SPL `type` and `castingGraphics` - set `enumOpen: true` on the spec entry. The display lookup still resolves named values; the strict refinement does not enforce membership. Closed-default keeps PRO/MAP behaviour unchanged; opt-in keeps mod-friendly fields editable without producing false rejections at save time.
+   **Closed vs open enums.** The strict gate fits enums whose value space is fixed by the engine (PRO `objectType`: Item/Critter/Scenery/Wall/Tile/Misc - adding a 7th would crash the engine). For fields whose value space is open by design - IE effect opcodes (mods can introduce new opcode numbers; the engine accepts any 16-bit value), ITM type (mod-extensible via `itemtype.2da`), ITM ability `damageType` / `projectileType` (engine treats out-of-table values as defaults), SPL `type` and `castingGraphics` - set `enumOpen: true` on the spec entry. The display lookup still resolves named values; the strict refinement does not enforce membership. Closed-default keeps PRO/MAP behaviour unchanged; opt-in keeps mod-friendly fields editable without producing false rejections at save time.
 
 4. **No special-case sentinels.** Wire `0xFFFFFFFF` for "no script" reads naturally as `{type: -1, id: -1}` via signed `i8`/`i24` codecs. Don't add `if (value === 0xFFFFFFFF)` branches.
 
-    The same pattern covers proto fields the engine seeds to `-1` in its `proto_*_init` / `proto_scenery_subdata_init` helpers (see fallout2-ce `proto.cc`). Vanilla protos that don't override the default save the seed verbatim, so the wire arrives with `0xFFFFFFFF` and the runtime per-object map record (or, rarely, a script-spawn caller) supplies the live value. Spec these fields with signed codecs (`i32`) and add `[-1]: "None"` (or a more specific sentinel label) to the enum table when one is attached. Known fields following this pattern: scenery `material` (`proto_scenery_init`), elevator `type` / `level`, stairs `destinationBuiltTile` / `destinationMap`, ladder `destinationMap` (`proto_scenery_subdata_init`); on the item side `armor.{perk,maleFid,femaleFid}`, `weapon.{projectilePid,perk,ammoTypePid}`, `misc.powerTypePid`, `key.keyCode` carry the same convention.
+   The same pattern covers proto fields the engine seeds to `-1` in its `proto_*_init` / `proto_scenery_subdata_init` helpers (see fallout2-ce `proto.cc`). Vanilla protos that don't override the default save the seed verbatim, so the wire arrives with `0xFFFFFFFF` and the runtime per-object map record (or, rarely, a script-spawn caller) supplies the live value. Spec these fields with signed codecs (`i32`) and add `[-1]: "None"` (or a more specific sentinel label) to the enum table when one is attached. Known fields following this pattern: scenery `material` (`proto_scenery_init`), elevator `type` / `level`, stairs `destinationBuiltTile` / `destinationMap`, ladder `destinationMap` (`proto_scenery_subdata_init`); on the item side `armor.{perk,maleFid,femaleFid}`, `weapon.{projectilePid,perk,ammoTypePid}`, `misc.powerTypePid`, `key.keyCode` carry the same convention.
 
 5. **Linked structures.** Same-struct: array length drives count via `enforceLinkedCounts(spec, doc)` + zod refinement. Cross-struct (`fromCtx`): orchestrator owns the binding; the count flows in via the read-time ctx.
 6. **No work-time artifacts in the repo.** Exception: `tmp/` (in `.gitignore`).
 
 7. **Flat-array projection for flag fields.** A flag-word spec entry (`{codec, flags: Table}`) surfaces in canonical-doc as a flat sorted `string[]`, not as the raw int. Each entry is either a named slug (slugified-camelCase from the table's display string) or `bit<N>` (zero-based bit position) for set bits the table doesn't name. Canonical sort order: named slugs first alphabetically, then `bit<N>` in ascending bit position. Toggling one bit adds or removes one entry at its sorted position - same shape for named and unnamed bits, so diffs read uniformly. `compileFlagTable` slugifies display strings to camelCase canonical keys (`"NoBlock"` -> `noBlock`); `slugifyCodedName` rejects display strings whose slug would collide with the `bit<N>` sentinel namespace. `intToFlagArray` / `flagArrayToInt` translate at the wire codec boundary via the `FlagArraySchema` wrapper.
 
-    Strict-disjoint invariant: a `bit<N>` entry whose position falls inside the named-mask is rejected at both the schema layer and the wire boundary - hand-edits must use the canonical slug for any spec-named bit. `bit<N>` with N >= codec width is also rejected at both layers, so synthesized entries cannot reference a bit past the wire word.
+   Strict-disjoint invariant: a `bit<N>` entry whose position falls inside the named-mask is rejected at both the schema layer and the wire boundary - hand-edits must use the canonical slug for any spec-named bit. `bit<N>` with N >= codec width is also rejected at both layers, so synthesized entries cannot reference a bit past the wire word.
 
-    Slugified identifiers (rather than the raw display strings) are the canonical token shape because the construction API (`docs/todo.md`) surfaces flags as TS members typed against a literal-name union - identifier-shaped names get the canonical dot-trigger autocomplete with per-flag JSDoc visible inline, which a quoted-display-string union does not. Schema validation messages and JSON Schema `items.enum` autocomplete also benefit from identifier tokens (no spacing/casing ambiguities like "No LOS required" vs "No los required"). The display string remains the parsed-tree label; the slug is the toolchain token, with one translation point (label <-> slug) at the projection boundary.
+   Slugified identifiers (rather than the raw display strings) are the canonical token shape because the construction API (`docs/todo.md`) surfaces flags as TS members typed against a literal-name union - identifier-shaped names get the canonical dot-trigger autocomplete with per-flag JSDoc visible inline, which a quoted-display-string union does not. Schema validation messages and JSON Schema `items.enum` autocomplete also benefit from identifier tokens (no spacing/casing ambiguities like "No LOS required" vs "No los required"). The display string remains the parsed-tree label; the slug is the toolchain token, with one translation point (label <-> slug) at the projection boundary.
 
-    This is a consistent application of rule #1 - `packedAs`+`bitRange` already exposes byte-packed sub-fields as peer scalar entries; the flat-array projection exposes bit-packed sub-fields the same way (the wire packs N independent semantic units into one int; canonical separates them into one entry per set bit).
+   This is a consistent application of rule #1 - `packedAs`+`bitRange` already exposes byte-packed sub-fields as peer scalar entries; the flat-array projection exposes bit-packed sub-fields the same way (the wire packs N independent semantic units into one int; canonical separates them into one entry per set bit).
 
 8. **Lossless preservation of unnamed bits.** Adding a name to a flag table is a non-breaking spec evolution: old snapshots load via `bit<N>` entries, re-saving promotes the bit to its new slug. `schemaVersion` does NOT bump for additive name changes; bumping is reserved for _re-interpretive_ spec changes (a previously-parsed field's meaning changes), which require explicit migration code in the snapshot codec. The byte round-trip invariant `serialize(parse(b)) === b` is the load-bearing property - every existing `*-roundtrip.test.ts` enforces it.
 
