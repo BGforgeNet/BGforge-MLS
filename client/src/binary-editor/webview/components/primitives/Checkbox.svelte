@@ -34,14 +34,17 @@
 <!-- A <label> wraps both the checkbox button and the visible text so clicking the label text toggles the
      checkbox (native label association). bits-ui renders its own <input type="checkbox"> hidden sibling for
      form semantics; the visible control is the <button role="checkbox"> emitted by Checkbox.Root.
-     aria-label on the Root overrides the wrapping label's text for screen readers when provided. -->
+     <label> provides click-target coupling but NOT an accessible name to a <button> (only labelable elements
+     like <input> are named by <label>). The button's accessible name therefore comes from aria-label. We
+     default to the visible `label` prop so screen readers announce the same text that is visible; pass
+     `ariaLabel` explicitly only when a different announcement is needed (e.g. to add units or extra context). -->
 <label class="bb-checkbox-label">
     <Checkbox.Root
         class="bb-checkbox-root"
         {checked}
         onCheckedChange={onchange}
         {disabled}
-        aria-label={ariaLabel}
+        aria-label={ariaLabel ?? label}
     >
         {#snippet children({ checked: isChecked })}
             <!-- CSS-drawn checkmark: bb-checkbox-indicator carries ::after that draws a rotated L-shape

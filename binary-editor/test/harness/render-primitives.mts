@@ -170,6 +170,17 @@ await page.locator("#checkbox-disabled [role='checkbox']").click({ force: true }
 await page.waitForTimeout(100);
 const checkboxDisabledAfter = await page.locator("#checkbox-disabled [role='checkbox']").getAttribute("data-state");
 
+// Accessible name check: getByRole('checkbox', { name, exact }) resolves via the button's aria-label attribute.
+// A label/for association does NOT name a <button>; the accessible name must come from aria-label.
+// If the fix is absent (aria-label={undefined}), getByRole finds nothing and the counts below equal 0.
+// exact: true avoids "Checked initially" matching "Unchecked initially" (substring match default).
+const checkboxANamedCorrectly =
+    (await page.getByRole("checkbox", { name: "Unchecked initially", exact: true }).count()) === 1;
+const checkboxBNamedCorrectly =
+    (await page.getByRole("checkbox", { name: "Checked initially", exact: true }).count()) === 1;
+const checkboxDisabledNamedCorrectly =
+    (await page.getByRole("checkbox", { name: "Disabled checkbox", exact: true }).count()) === 1;
+
 await page.waitForTimeout(150);
 await page.screenshot({ path: path.join(here, "shot-primitives.png") });
 
@@ -234,6 +245,9 @@ console.log(
         " : " +
         checkboxDisabledUnchanged,
 );
+console.log("Checkbox A accessible name ('Unchecked initially'): " + checkboxANamedCorrectly);
+console.log("Checkbox B accessible name ('Checked initially'): " + checkboxBNamedCorrectly);
+console.log("Checkbox disabled accessible name ('Disabled checkbox'): " + checkboxDisabledNamedCorrectly);
 if (!typeToSearchWorks) {
     console.log(
         "\nTYPE-TO-SEARCH FAILED: filtered count (" +
@@ -262,6 +276,19 @@ if (!checkboxDisabledUnchanged) {
             checkboxDisabledBefore +
             " -> " +
             checkboxDisabledAfter,
+    );
+    process.exit(1);
+}
+if (!checkboxANamedCorrectly || !checkboxBNamedCorrectly || !checkboxDisabledNamedCorrectly) {
+    console.log(
+        "\nCHECKBOX ACCESSIBLE NAME FAILED: expected getByRole('checkbox', { name }) to resolve for each " +
+            "checkbox. A=" +
+            checkboxANamedCorrectly +
+            " B=" +
+            checkboxBNamedCorrectly +
+            " disabled=" +
+            checkboxDisabledNamedCorrectly +
+            ". The button's aria-label must equal the visible label text.",
     );
     process.exit(1);
 }
