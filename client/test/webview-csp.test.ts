@@ -51,6 +51,11 @@ describe("webview CSP", () => {
         expect(html).toContain('<script nonce="{{nonce}}">');
     });
 
+    it("binary editor CSP allows codicon font via cspSource", () => {
+        const html = fs.readFileSync(path.resolve("client/src/binary-editor/webview/index.html"), "utf8");
+        expect(html).toContain("font-src {{cspSource}}");
+    });
+
     it("dialog tree template declares a nonce-based CSP", () => {
         const html = fs.readFileSync(path.resolve("client/src/dialog-tree/dialogTree.html"), "utf8");
         expect(html).not.toContain("'unsafe-inline'");

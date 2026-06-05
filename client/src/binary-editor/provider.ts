@@ -76,8 +76,9 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
         panel: vscode.WebviewPanel,
         _token: vscode.CancellationToken,
     ): Promise<void> {
-        panel.webview.options = { enableScripts: true, localResourceRoots: [] };
-        panel.webview.html = this.getHtml();
+        const codiconsDir = vscode.Uri.joinPath(this.extensionUri, "client", "out", "codicons");
+        panel.webview.options = { enableScripts: true, localResourceRoots: [codiconsDir] };
+        panel.webview.html = this.getHtml(panel.webview);
 
         this.active.set(panel, document);
         panel.onDidDispose(() => {
@@ -292,13 +293,28 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
         }
     }
 
-    private getHtml(): string {
+    private getHtml(webview: vscode.Webview): string {
         const extensionPath = this.extensionUri.fsPath;
         let html = getCachedHtmlAsset("binary-editor-v2", extensionPath, WEBVIEW_HTML);
         const css = getCachedCssAsset("binary-editor-v2", extensionPath, [WEBVIEW_CSS]);
         html = inlineWebviewStyles(html, css);
+        // Inline codicon.css with its font URL rewritten to a webview-resource URI so the font
+        // loads under the strict CSP (default-src 'none' blocks the raw relative path).
+        // The codicon @font-face src contains a relative url("./codicon.ttf?...") that must become
+        // a vscode-resource:// URI the webview trusts; localResourceRoots is set to the same dir.
+        const codiconTtfUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(this.extensionUri, "client", "out", "codicons", "codicon.ttf"),
+        );
+        const rawCodiconCss = getCachedCssAsset("binary-editor-v2-codicons", extensionPath, [
+            path.join("client", "out", "codicons", "codicon.css"),
+        ]);
+        // Replace the relative font url (which may include a cache-busting query string) with the
+        // absolute webview URI. The regex matches url("./codicon.ttf...") to url("./codicon.ttf?...").
+        const codiconCss = rawCodiconCss.replace(/url\("\.\/codicon\.ttf[^"]*"\)/, () => `url("${codiconTtfUri}")`);
+        html = html.replace("{{codiconStyles}}", () => codiconCss);
         const script = getCachedJsAsset("binary-editor-v2", extensionPath, WEBVIEW_JS);
         const nonce = generateNonce();
-        return inlineWebviewScript(html, script, nonce);
+        html = inlineWebviewScript(html, script, nonce);
+        return html.replaceAll("{{cspSource}}", webview.cspSource);
     }
 }
