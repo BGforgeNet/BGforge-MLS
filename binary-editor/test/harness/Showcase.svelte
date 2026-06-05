@@ -1,8 +1,9 @@
 <script lang="ts">
-    // Showcase for primitives spike: renders both Select and Combobox wrappers so the Playwright driver
-    // can exercise them under the real strict CSP and assert no CSP violation occurs.
+    // Showcase for primitives spike: renders Select, Combobox, and Checkbox wrappers so the Playwright
+    // driver can exercise them under the real strict CSP and assert no CSP violation occurs.
     import Select from "../../../client/src/binary-editor/webview/components/primitives/Select.svelte";
     import Combobox from "../../../client/src/binary-editor/webview/components/primitives/Combobox.svelte";
+    import Checkbox from "../../../client/src/binary-editor/webview/components/primitives/Checkbox.svelte";
 
     const selectOptions = [
         { value: 0, label: "None" },
@@ -52,6 +53,11 @@
         return { value: i, label: base + suffix };
     });
     let comboboxCurrent = $state(20);
+
+    // Checkbox showcase state: one initially unchecked, one initially checked, one disabled.
+    let checkboxA = $state(false);
+    let checkboxB = $state(true);
+    const checkboxDisabled = false; // disabled prop demo - value is fixed
 </script>
 
 <div class="showcase-root">
@@ -69,5 +75,18 @@
             allowCustom={true}
             onchange={(v) => (comboboxCurrent = v)}
         />
+    </div>
+    <div class="showcase-section">
+        <div class="showcase-label">Checkbox</div>
+        <!-- id used by render-primitives.mts to locate and toggle this checkbox -->
+        <div id="checkbox-a">
+            <Checkbox checked={checkboxA} label="Unchecked initially" onchange={(v) => (checkboxA = v)} />
+        </div>
+        <div id="checkbox-b">
+            <Checkbox checked={checkboxB} label="Checked initially" onchange={(v) => (checkboxB = v)} />
+        </div>
+        <div id="checkbox-disabled">
+            <Checkbox checked={false} label="Disabled checkbox" disabled={true} onchange={() => {}} />
+        </div>
     </div>
 </div>

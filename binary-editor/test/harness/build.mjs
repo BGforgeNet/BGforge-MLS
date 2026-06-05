@@ -50,6 +50,8 @@ const html = `<!doctype html>
     --vscode-input-border: #3c3c3c;
     --vscode-input-placeholderForeground: #a6a6a6;
     --vscode-checkbox-background: #3c3c3c;
+    --vscode-checkbox-foreground: #cccccc;
+    --vscode-checkbox-border: #6b6b6b;
     --vscode-list-hoverBackground: #2a2d2e;
     --vscode-list-activeSelectionBackground: #094771;
     --vscode-list-activeSelectionForeground: #ffffff;

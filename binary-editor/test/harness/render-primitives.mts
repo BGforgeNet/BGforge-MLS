@@ -73,6 +73,9 @@ const rootVars = `:root {
     --vscode-list-activeSelectionForeground: #ffffff;
     --vscode-button-background: #0e639c;
     --vscode-button-foreground: #ffffff;
+    --vscode-checkbox-background: #3c3c3c;
+    --vscode-checkbox-foreground: #cccccc;
+    --vscode-checkbox-border: #6b6b6b;
 }
 .showcase-root { padding: 1rem; }
 .showcase-section { margin-bottom: 1.5rem; }
@@ -141,6 +144,32 @@ await page.locator(".bb-combobox-input").pressSequentially("fireball");
 await page.waitForTimeout(200);
 const comboboxFilteredCount = await page.locator(".bb-combobox-item").count();
 
+// Close the combobox dropdown (still open from the filter step) before interacting with the Checkbox.
+await page.keyboard.press("Escape");
+await page.waitForTimeout(150);
+
+// ---- Exercise Checkbox: click checkbox-a (unchecked -> checked) and assert data-state changes ----
+// bits-ui sets data-state="checked"|"unchecked" on Checkbox.Root (role="checkbox"). We locate it inside
+// the #checkbox-a wrapper (the showcase positions each in a named wrapper div for test targeting).
+await page.waitForSelector("#checkbox-a [role='checkbox']", { timeout: 5000 });
+const checkboxABefore = await page.locator("#checkbox-a [role='checkbox']").getAttribute("data-state");
+
+await page.locator("#checkbox-a [role='checkbox']").click();
+await page.waitForTimeout(100);
+const checkboxAAfter = await page.locator("#checkbox-a [role='checkbox']").getAttribute("data-state");
+
+// Also confirm checkbox-b starts checked and can be untoggled.
+const checkboxBBefore = await page.locator("#checkbox-b [role='checkbox']").getAttribute("data-state");
+await page.locator("#checkbox-b [role='checkbox']").click();
+await page.waitForTimeout(100);
+const checkboxBAfter = await page.locator("#checkbox-b [role='checkbox']").getAttribute("data-state");
+
+// Disabled checkbox must not change on click.
+const checkboxDisabledBefore = await page.locator("#checkbox-disabled [role='checkbox']").getAttribute("data-state");
+await page.locator("#checkbox-disabled [role='checkbox']").click({ force: true });
+await page.waitForTimeout(100);
+const checkboxDisabledAfter = await page.locator("#checkbox-disabled [role='checkbox']").getAttribute("data-state");
+
 await page.waitForTimeout(150);
 await page.screenshot({ path: path.join(here, "shot-primitives.png") });
 
@@ -177,6 +206,13 @@ await browser.close();
 // type-to-search: filtering "fireball" should reduce the visible item count below the total.
 const typeToSearchWorks = comboboxFilteredCount < comboboxAllCount && comboboxFilteredCount > 0;
 
+// Checkbox toggle: checkbox-a started unchecked; clicking it must flip to checked.
+const checkboxAToggled = checkboxABefore === "unchecked" && checkboxAAfter === "checked";
+// Checkbox toggle: checkbox-b started checked; clicking it must flip to unchecked.
+const checkboxBToggled = checkboxBBefore === "checked" && checkboxBAfter === "unchecked";
+// Disabled checkbox must not change state on click.
+const checkboxDisabledUnchanged = checkboxDisabledBefore === checkboxDisabledAfter;
+
 // ---- Verdict ----
 console.log("\n=== Primitives CSP gate ===");
 console.log("Select: rendered trigger + opened content; visible items: " + selectItemCount);
@@ -184,6 +220,20 @@ console.log(
     "Combobox: all items (unfiltered): " + comboboxAllCount + "; after 'fireball' filter: " + comboboxFilteredCount,
 );
 console.log("type-to-search works: " + typeToSearchWorks);
+console.log(
+    "Checkbox A toggle (unchecked -> checked): " + checkboxABefore + " -> " + checkboxAAfter + " : " + checkboxAToggled,
+);
+console.log(
+    "Checkbox B toggle (checked -> unchecked): " + checkboxBBefore + " -> " + checkboxBAfter + " : " + checkboxBToggled,
+);
+console.log(
+    "Checkbox disabled (unchanged): " +
+        checkboxDisabledBefore +
+        " -> " +
+        checkboxDisabledAfter +
+        " : " +
+        checkboxDisabledUnchanged,
+);
 if (!typeToSearchWorks) {
     console.log(
         "\nTYPE-TO-SEARCH FAILED: filtered count (" +
@@ -191,6 +241,27 @@ if (!typeToSearchWorks) {
             ") should be < total (" +
             comboboxAllCount +
             ") and > 0",
+    );
+    process.exit(1);
+}
+if (!checkboxAToggled) {
+    console.log(
+        "\nCHECKBOX-A TOGGLE FAILED: expected unchecked -> checked, got " + checkboxABefore + " -> " + checkboxAAfter,
+    );
+    process.exit(1);
+}
+if (!checkboxBToggled) {
+    console.log(
+        "\nCHECKBOX-B TOGGLE FAILED: expected checked -> unchecked, got " + checkboxBBefore + " -> " + checkboxBAfter,
+    );
+    process.exit(1);
+}
+if (!checkboxDisabledUnchanged) {
+    console.log(
+        "\nCHECKBOX-DISABLED FAILED: state changed on click, got " +
+            checkboxDisabledBefore +
+            " -> " +
+            checkboxDisabledAfter,
     );
     process.exit(1);
 }

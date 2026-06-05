@@ -341,6 +341,78 @@ input[type="text"]::placeholder {
     cursor: default;
 }
 
+/* ---- bb-checkbox (themed boolean control via the Checkbox primitive wrapper) ----
+ * Generic, format-agnostic theming for the headless Checkbox primitive. bits-ui sets data-state="checked"
+ * | "unchecked" | "indeterminate" on the Root button, and data-disabled when the control is disabled.
+ * The checkmark is drawn with a CSS ::after pseudo-element so no icon font is required - the control
+ * renders correctly in both the real webview and the standalone harness. Falls back from the optional
+ * --vscode-checkbox-* vars (not always defined by all VS Code themes) to --vscode-input-* equivalents. */
+.bb-checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: pointer;
+    user-select: none;
+}
+.bb-checkbox-label:has([data-disabled]) {
+    opacity: 0.5;
+    cursor: default;
+}
+.bb-checkbox-root {
+    appearance: none;
+    flex: 0 0 auto;
+    width: 1em;
+    height: 1em;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--vscode-checkbox-background, var(--vscode-input-background));
+    border: 1px solid var(--vscode-checkbox-border, var(--vscode-input-border, #3c3c3c));
+    border-radius: 2px;
+    padding: 0;
+    cursor: pointer;
+    /* Reset the global button styles that override the checkbox look. */
+    color: var(--vscode-checkbox-foreground, var(--vscode-foreground));
+    line-height: 1;
+    white-space: normal;
+}
+.bb-checkbox-root:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: 1px;
+}
+.bb-checkbox-root[data-state="checked"] {
+    background: var(--vscode-checkbox-background, var(--vscode-input-background));
+    border-color: var(--vscode-focusBorder, var(--vscode-checkbox-border, #007fd4));
+}
+.bb-checkbox-root[data-disabled] {
+    cursor: default;
+}
+/* CSS-drawn checkmark inside .bb-checkbox-indicator: a rotated L-shape using ::after. Visible only when the
+ * sibling data-checked attribute is true (set by the Checkbox.svelte children snippet prop). */
+.bb-checkbox-indicator {
+    display: block;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    pointer-events: none;
+}
+.bb-checkbox-indicator[data-checked="true"]::after {
+    content: "";
+    position: absolute;
+    left: 20%;
+    top: 5%;
+    width: 35%;
+    height: 65%;
+    border-right: 2px solid var(--vscode-checkbox-foreground, var(--vscode-foreground));
+    border-bottom: 2px solid var(--vscode-checkbox-foreground, var(--vscode-foreground));
+    transform: rotate(45deg);
+}
+.bb-checkbox-text {
+    font: inherit;
+    color: var(--vscode-foreground);
+}
+
 /* ---- flags (checkbox group) ---- */
 .flags {
     display: flex;
