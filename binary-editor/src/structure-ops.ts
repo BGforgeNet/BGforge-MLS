@@ -3,7 +3,7 @@ import { buildModel } from "./model";
 import { invalidateCachedDocument } from "./edit";
 import { getWindow } from "./window";
 import type { EditorSession } from "./session";
-import type { NamePath, StructureResult } from "./types";
+import type { ChangeSet, NamePath, StructureResult } from "./types";
 
 export type StructureOpRequest =
     | { op: "add"; namePath: NamePath }
@@ -18,6 +18,15 @@ function reparse(session: EditorSession, bytes: Uint8Array): ParseResult {
     return parser.parse(bytes, session.parseOptions);
 }
 
+function buildChangeSet(session: EditorSession, dirty: boolean): ChangeSet {
+    return {
+        changed: getWindow(session.model, 0, 200, session.relationshipModel),
+        diagnostics: session.relationshipModel ? session.relationshipModel.constraints(session.model) : [],
+        dirty,
+        formatValid: true,
+    };
+}
+
 // Stores `before` by reference (no clone): safe because structureOp always replaces
 // session.model via buildModel(next), and editField always clones before mutating,
 // so no undo snapshot is ever mutated in place.
@@ -27,17 +36,9 @@ function commit(session: EditorSession, label: string, next: ParseResult): Struc
     session.model = buildModel(next);
     invalidateCachedDocument(session.model.parseResult);
     session.dirty = true;
-    // StructureResult.selection is intentionally left unset in the add slice: the new entry's NodeId
-    // is not yet resolved here. Populating it (to select/scroll-to the added entry) lands with the
-    // insert/remove/reorder ops in a later plan.
-    return {
-        changeSet: {
-            changed: getWindow(session.model, 0, 200, session.relationshipModel),
-            diagnostics: session.relationshipModel ? session.relationshipModel.constraints(session.model) : [],
-            dirty: true,
-            formatValid: true,
-        },
-    };
+    // Selection is left unset here; structureOp computes the post-op selection
+    // once the new entry's NodeId is resolved and assigned in a dedicated change.
+    return { changeSet: buildChangeSet(session, true) };
 }
 
 function buildOpBytes(
@@ -64,21 +65,31 @@ function buildOpBytes(
 // up at index 0 is not possible. The UI disables controls at boundaries, so this
 // path is defensive rather than user-reachable.
 function noopResult(session: EditorSession): StructureResult {
-    return {
-        changeSet: {
-            changed: getWindow(session.model, 0, 200, session.relationshipModel),
-            diagnostics: session.relationshipModel ? session.relationshipModel.constraints(session.model) : [],
-            dirty: session.dirty,
-            formatValid: true,
-        },
-    };
+    return { changeSet: buildChangeSet(session, session.dirty) };
 }
 
 export function structureOp(session: EditorSession, req: StructureOpRequest): StructureResult {
     const adapter = formatAdapterRegistry.get(session.parserId);
     const bytes = buildOpBytes(adapter, session.model.parseResult, req);
     if (!bytes) return noopResult(session);
-    const label = req.op === "add" ? `Add to ${req.namePath.join(" / ")}` : `${req.op} ${req.entryPath.join(" / ")}`;
+    let label: string;
+    switch (req.op) {
+        case "add":
+            label = `Add to ${req.namePath.join(" / ")}`;
+            break;
+        case "insert":
+            label = `Insert ${req.position} ${req.entryPath.join(" / ")}`;
+            break;
+        case "remove":
+            label = `Remove ${req.entryPath.join(" / ")}`;
+            break;
+        case "reorder":
+            label = `Move ${req.entryPath.join(" / ")} ${req.direction}`;
+            break;
+        case "duplicate":
+            label = `Duplicate ${req.entryPath.join(" / ")}`;
+            break;
+    }
     return commit(session, label, reparse(session, bytes));
 }
 

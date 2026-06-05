@@ -46,6 +46,17 @@ describe("structureOp remove", () => {
     });
 });
 
+describe("structureOp insert", () => {
+    it("inserts after the targeted entry and grows the collection by one", () => {
+        const session = open();
+        const before = globalVarCount(session);
+        const name = firstGlobalVarName(session);
+        const result = structureOp(session, { op: "insert", entryPath: ["Global Variables", name], position: "after" });
+        expect(result.changeSet.dirty).toBe(true);
+        expect(globalVarCount(session)).toBe(before + 1);
+    });
+});
+
 describe("structureOp reorder", () => {
     it("moving the first entry up is a boundary no-op (not dirty)", () => {
         const session = open();
