@@ -46,6 +46,8 @@ await build({
     plugins: [esbuildSvelte({ compilerOptions: { dev: true } })],
 });
 const js = fs.readFileSync(path.join(outdir, "showcase-main.js"), "utf8");
+// The JS is now in memory; drop the temp build dir so repeated runs don't litter os.tmpdir().
+fs.rmSync(outdir, { recursive: true, force: true });
 
 const css = fs.readFileSync(path.join(here, "../../../client/src/binary-editor/webview/styles.css"), "utf8");
 

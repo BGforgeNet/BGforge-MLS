@@ -12,5 +12,10 @@ await build({
     sourcemap: dev,
     minify,
     logLevel: "info",
+    // Keep esbuild-svelte in its default css: "external" mode. Component <style> blocks (e.g. bits-ui's
+    // Select.Viewport in the binary editor) are then emitted to a separate .css file the webview never loads,
+    // never injected at runtime. Switching to css: "injected" would inject those <style> tags without a
+    // nonce, which the strict webview CSP (style-src 'nonce-...') refuses. The render-primitives.mts harness
+    // gates this but is e2e-tier (not in CI), so this is the in-build warning.
     plugins: [esbuildSvelte({ compilerOptions: { dev } })],
 });
