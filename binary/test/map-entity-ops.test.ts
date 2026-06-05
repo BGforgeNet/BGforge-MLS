@@ -8,20 +8,30 @@ import * as fs from "fs";
 import * as path from "path";
 import { mapParser } from "../src/map";
 import { buildMapDuplicateEntryBytes } from "../src/map/entity-ops";
+import { formatAdapterRegistry } from "../src/format-adapter";
 
+const mapFormatAdapter = formatAdapterRegistry.get("map")!;
+
+// arcaves.map carries 21 global vars; gives headroom for both add and remove tests.
 const MAP_FIXTURE = path.resolve("client/testFixture/maps/arcaves.map");
 
+function loadMap() {
+    const data = new Uint8Array(fs.readFileSync(MAP_FIXTURE));
+    return { data, parseResult: mapParser.parse(data) };
+}
+
 type GlobalsDoc = { header: { numGlobalVars: number }; globalVariables: number[] };
+type LocalsDoc = { header: { numLocalVars: number }; localVariables: number[] };
 
 describe("buildMapDuplicateEntryBytes", () => {
     it("inserts a copy of the targeted global var immediately after it", () => {
-        const data = new Uint8Array(fs.readFileSync(MAP_FIXTURE));
-        const parseResult = mapParser.parse(data);
-        const before = parseResult.document as GlobalsDoc;
-        expect(before.globalVariables.length).toBeGreaterThanOrEqual(1);
+        const { parseResult } = loadMap();
+        const before = parseResult.document as GlobalsDoc | undefined;
+        expect(before).toBeDefined();
+        expect(before!.globalVariables.length).toBeGreaterThanOrEqual(1);
 
-        const originalCount = before.globalVariables.length;
-        const firstValue = before.globalVariables[0]!;
+        const originalCount = before!.globalVariables.length;
+        const firstValue = before!.globalVariables[0]!;
 
         const bytes = buildMapDuplicateEntryBytes(parseResult, ["Global Variables", "Global Var 0"]);
         expect(bytes).toBeInstanceOf(Uint8Array);
@@ -35,19 +45,44 @@ describe("buildMapDuplicateEntryBytes", () => {
         expect(after.globalVariables[0]).toBe(firstValue);
         expect(after.globalVariables[1]).toBe(firstValue);
         // the rest of the array is unchanged
-        expect(after.globalVariables.slice(2)).toEqual(before.globalVariables.slice(1));
+        expect(after.globalVariables.slice(2)).toEqual(before!.globalVariables.slice(1));
+    });
+
+    it("inserts a copy of a mid-array global var immediately after it", () => {
+        const { parseResult } = loadMap();
+        const before = parseResult.document as GlobalsDoc | undefined;
+        expect(before).toBeDefined();
+        expect(before!.globalVariables.length).toBeGreaterThanOrEqual(4);
+
+        const originalCount = before!.globalVariables.length;
+        const targetIndex = 2;
+        const targetValue = before!.globalVariables[targetIndex]!;
+
+        const bytes = buildMapDuplicateEntryBytes(parseResult, ["Global Variables", `Global Var ${targetIndex}`]);
+        expect(bytes).toBeInstanceOf(Uint8Array);
+
+        const reparsed = mapParser.parse(bytes!);
+        const after = reparsed.document as GlobalsDoc;
+        // array grew by one
+        expect(after.globalVariables.length).toBe(originalCount + 1);
+        expect(after.header.numGlobalVars).toBe(originalCount + 1);
+        // the copy lands immediately after the source
+        expect(after.globalVariables[targetIndex]).toBe(targetValue);
+        expect(after.globalVariables[targetIndex + 1]).toBe(targetValue);
+        // entries before the target are unchanged
+        expect(after.globalVariables.slice(0, targetIndex)).toEqual(before!.globalVariables.slice(0, targetIndex));
     });
 
     it("returns undefined for a non-removable path", () => {
-        const data = new Uint8Array(fs.readFileSync(MAP_FIXTURE));
-        const parseResult = mapParser.parse(data);
+        const { parseResult } = loadMap();
         expect(buildMapDuplicateEntryBytes(parseResult, ["Header", "Version"])).toBeUndefined();
     });
 
     it("survives the skipMapTiles opaque-range shift (tiles remain byte-clean after duplicate)", () => {
         const data = new Uint8Array(fs.readFileSync(MAP_FIXTURE));
         const parseResult = mapParser.parse(data, { skipMapTiles: true });
-        const before = parseResult.document as GlobalsDoc;
+        const before = parseResult.document as GlobalsDoc | undefined;
+        expect(before).toBeDefined();
 
         const bytes = buildMapDuplicateEntryBytes(parseResult, ["Global Variables", "Global Var 0"]);
         expect(bytes).toBeInstanceOf(Uint8Array);
@@ -55,7 +90,33 @@ describe("buildMapDuplicateEntryBytes", () => {
         const reparsed = mapParser.parse(bytes!, { skipMapTiles: true });
         expect(reparsed.errors).toBeUndefined();
         const after = reparsed.document as GlobalsDoc;
-        expect(after.globalVariables.length).toBe(before.globalVariables.length + 1);
-        expect(after.header.numGlobalVars).toBe(before.globalVariables.length + 1);
+        expect(after.globalVariables.length).toBe(before!.globalVariables.length + 1);
+        expect(after.header.numGlobalVars).toBe(before!.globalVariables.length + 1);
+    });
+
+    it("inserts a copy of a local var immediately after it", () => {
+        // arcaves.map has 0 local vars; seed two via add to set up a duplicatable state.
+        const { parseResult: base } = loadMap();
+        const seededOnce = mapFormatAdapter.buildAddEntryBytes!(base, ["Local Variables"]);
+        const seededTwice = mapFormatAdapter.buildAddEntryBytes!(mapParser.parse(seededOnce!), ["Local Variables"]);
+        const seeded = mapParser.parse(seededTwice!);
+
+        const before = seeded.document as LocalsDoc | undefined;
+        expect(before).toBeDefined();
+        expect(before!.localVariables.length).toBe(2);
+
+        const originalCount = before!.localVariables.length;
+        const targetValue = before!.localVariables[0]!;
+
+        const bytes = buildMapDuplicateEntryBytes(seeded, ["Local Variables", "Local Var 0"]);
+        expect(bytes).toBeInstanceOf(Uint8Array);
+
+        const reparsed = mapParser.parse(bytes!);
+        const after = reparsed.document as LocalsDoc;
+        expect(after.localVariables.length).toBe(originalCount + 1);
+        expect(after.header.numLocalVars).toBe(originalCount + 1);
+        // the copy equals the source
+        expect(after.localVariables[0]).toBe(targetValue);
+        expect(after.localVariables[1]).toBe(targetValue);
     });
 });
