@@ -2,8 +2,11 @@ import { formatAdapterRegistry } from "@bgforge/binary";
 import type { Model } from "./model";
 import type { LayoutDescriptor, SectionDescriptor } from "./types";
 
-/** Format ids whose named depth-0 groups should render as master-detail lists.
- *  Everything else renders as a form. MAP's variable collections are lists. */
+/** Format ids whose named depth-0 groups should render as entry collections (list) rather than a form. MAP's variable
+ *  collections are lists. NOTE: this table must stay in sync with the adapter's `isAddableArray`/`isRemovableEntry`
+ *  for the same names - a section listed here but not recognized by the adapter renders as a list with no working
+ *  action bar (and vice versa). When a second format is wired (Plan 6), replace this table with an adapter
+ *  `isListSection?` predicate so list-classification and modifiability live in one place. */
 const LIST_SECTION_NAMES: Record<string, ReadonlySet<string>> = {
     map: new Set(["Global Variables", "Local Variables", "Scripts", "Objects"]),
 };

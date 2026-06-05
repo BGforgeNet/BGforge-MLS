@@ -59,6 +59,11 @@ describe("structureOp remove", () => {
     });
 });
 
+function globalValues(session: EditorSession): number[] {
+    const gv = session.model.nodes.find((n) => n.name === "Global Variables")!;
+    return varChildren(session, gv.id).map((n) => (n.source as { value: number }).value);
+}
+
 describe("structureOp insert", () => {
     it("inserts after the targeted entry and grows the collection by one", () => {
         const session = open();
@@ -68,6 +73,22 @@ describe("structureOp insert", () => {
         expect(result.changeSet.dirty).toBe(true);
         expect(globalVarCount(session)).toBe(before + 1);
     });
+
+    it("inserts before the targeted entry and selects the inserted position", () => {
+        const { session, gv } = openMapWithGlobals();
+        const before = globalVarCount(session);
+        const targetName = varChildren(session, gv.id)[1]!.name; // second entry
+        const result = structureOp(session, {
+            op: "insert",
+            entryPath: ["Global Variables", targetName],
+            position: "before",
+        });
+        expect(result.changeSet.dirty).toBe(true);
+        expect(globalVarCount(session)).toBe(before + 1);
+        // inserted before index 1 -> the new entry occupies index 1, and selection points at it
+        const gv2 = session.model.nodes.find((n) => n.name === "Global Variables")!;
+        expect(result.selection).toBe(varChildren(session, gv2.id)[1]!.id);
+    });
 });
 
 describe("structureOp reorder", () => {
@@ -76,6 +97,23 @@ describe("structureOp reorder", () => {
         const name = firstGlobalVarName(session);
         const result = structureOp(session, { op: "reorder", entryPath: ["Global Variables", name], direction: "up" });
         expect(result.changeSet.dirty).toBe(false);
+    });
+
+    it("moving an entry down swaps it with its successor and selects the new position", () => {
+        const { session, gv } = openMapWithGlobals();
+        const [v0, v1] = globalValues(session).slice(0, 2);
+        const firstName = varChildren(session, gv.id)[0]!.name;
+        const result = structureOp(session, {
+            op: "reorder",
+            entryPath: ["Global Variables", firstName],
+            direction: "down",
+        });
+        expect(result.changeSet.dirty).toBe(true);
+        const [a0, a1] = globalValues(session).slice(0, 2);
+        expect(a0).toBe(v1);
+        expect(a1).toBe(v0);
+        const gv2 = session.model.nodes.find((n) => n.name === "Global Variables")!;
+        expect(result.selection).toBe(varChildren(session, gv2.id)[1]!.id);
     });
 });
 
