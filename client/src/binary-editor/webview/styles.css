@@ -1,7 +1,21 @@
+/*
+ * Binary-editor webview theme. Targets a refined, native VS Code look (Settings / JSON-editor altitude):
+ * comfortable spacing, clear hierarchy, theme-driven colors. All selectors are generic and class-based,
+ * driven by component structure - no format-specific rules. Variables carry fallbacks where a theme may
+ * omit them (notably the inputValidation/warning family) so nothing renders invisibly.
+ */
+
+/* ---- root / layout (re-themed; layout sizing preserved from the working baseline) ---- */
 html,
 body {
     height: 100%;
     margin: 0;
+}
+body {
+    font-family: var(--vscode-font-family, sans-serif);
+    font-size: var(--vscode-font-size, 13px);
+    color: var(--vscode-foreground);
+    background: var(--vscode-editor-background);
 }
 #app {
     height: 100%;
@@ -9,22 +23,107 @@ body {
     flex-direction: column;
     box-sizing: border-box;
 }
+
+/* ---- toolbar ---- */
 .toolbar {
     flex: 0 0 auto;
     display: flex;
+    align-items: center;
     gap: 0.5rem;
-    padding: 0.25rem;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--vscode-panel-border);
 }
+
+/* ---- section tabs ---- */
 .tabs {
     flex: 0 0 auto;
     display: flex;
     gap: 0.25rem;
-    padding: 0 0.25rem;
+    padding: 0 0.75rem;
+    border-bottom: 1px solid var(--vscode-panel-border);
 }
+.tabs button {
+    appearance: none;
+    background: transparent;
+    color: var(--vscode-foreground);
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 0.4rem 0.7rem;
+    margin-bottom: -1px; /* overlap the strip's bottom border so the active underline sits on it */
+    cursor: pointer;
+    font: inherit;
+    opacity: 0.8;
+}
+.tabs button:hover {
+    opacity: 1;
+    background: var(--vscode-list-hoverBackground);
+}
+.tabs button.active {
+    opacity: 1;
+    border-bottom-color: var(--vscode-focusBorder);
+    color: var(--vscode-foreground);
+}
+
+/* ---- buttons (toolbar / actions): primary by default, secondary variant for low-emphasis controls ---- */
+button {
+    appearance: none;
+    font: inherit;
+    cursor: pointer;
+    border: 1px solid transparent;
+    border-radius: 2px;
+    padding: 0.25rem 0.7rem;
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    line-height: 1.3;
+    white-space: nowrap;
+}
+button:hover {
+    background: var(--vscode-button-hoverBackground, var(--vscode-button-background));
+}
+button:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: -1px;
+}
+
+/* Row actions, quick-fixes, and the section-tab buttons are low-emphasis: render them as secondary. */
+.row-actions button,
+.quick-fix {
+    background: var(--vscode-button-secondaryBackground, transparent);
+    color: var(--vscode-button-secondaryForeground, var(--vscode-foreground));
+    border-color: var(--vscode-button-border, transparent);
+}
+.row-actions button:hover,
+.quick-fix:hover {
+    background: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground));
+}
+
+/* ---- warning banner ---- */
 .banner.warning {
     flex: 0 0 auto;
-    padding: 0.25rem 0.5rem;
+    margin: 0.5rem 0.75rem 0;
+    padding: 0.5rem 0.75rem;
+    border-radius: 2px;
+    background: var(--vscode-inputValidation-warningBackground, rgba(204, 167, 0, 0.15));
+    border: 1px solid var(--vscode-inputValidation-warningBorder, var(--vscode-editorWarning-foreground, #cca700));
+    color: var(--vscode-inputValidation-warningForeground, var(--vscode-foreground));
 }
+.banner-summary {
+    font-weight: 600;
+}
+.banner-list {
+    margin: 0.35rem 0 0;
+    padding-left: 1.2rem;
+    list-style: disc;
+}
+.banner-list li {
+    margin: 0.1rem 0;
+}
+
+/* ---- master / detail split ---- */
 .master-detail {
     flex: 1 1 auto;
     min-height: 0;
@@ -34,6 +133,12 @@ body {
     flex: 0 0 16rem;
     min-height: 0;
     overflow: auto;
+    border-right: 1px solid var(--vscode-panel-border);
+    display: flex;
+    flex-direction: column;
+}
+.master .toolbar {
+    border-bottom: 1px solid var(--vscode-panel-border);
 }
 .detail {
     flex: 1 1 auto;
@@ -41,48 +146,193 @@ body {
     min-height: 0;
     overflow: auto;
 }
+
+/* ---- form ---- */
 .form {
     flex: 1 1 auto;
     min-height: 0;
     overflow: auto;
-    padding: 0.25rem;
+    padding: 0.5rem 0.75rem;
 }
+
+/* ---- field row: stable label width + control, comfortable vertical rhythm for scannable long forms ---- */
 .field {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.75rem;
     align-items: center;
-    padding: 0.1rem 0;
+    padding: 0.2rem 0;
+    min-height: 1.6rem;
 }
 .field .label {
-    min-width: 12rem;
+    flex: 0 0 12rem;
+    color: var(--vscode-foreground);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 .field .offset {
     margin-left: auto;
-    opacity: 0.6;
+    color: var(--vscode-descriptionForeground);
+    font-family: var(--vscode-editor-font-family, monospace);
+    font-size: 0.9em;
+    text-align: right;
+}
+
+/* ---- inputs / selects ---- */
+input[type="text"],
+input[type="number"],
+select {
+    font: inherit;
+    color: var(--vscode-input-foreground, var(--vscode-foreground));
+    background: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border, transparent);
+    border-radius: 2px;
+    padding: 0.2rem 0.4rem;
+}
+input[type="text"]:focus,
+input[type="number"]:focus,
+select:focus {
+    outline: none;
+    border-color: var(--vscode-focusBorder);
+}
+input:disabled,
+select:disabled {
+    opacity: 0.5;
+}
+input[type="text"]::placeholder {
+    color: var(--vscode-input-placeholderForeground, var(--vscode-descriptionForeground));
+}
+
+/* ---- flags (checkbox group) ---- */
+.flags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+}
+.flags label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    white-space: nowrap;
+}
+.flags input[type="checkbox"] {
+    accent-color: var(--vscode-checkbox-background, var(--vscode-button-background));
+}
+
+/* ---- virtualized list rows ---- */
+.vlist {
+    height: 100%;
 }
 .vrow {
+    box-sizing: border-box;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     cursor: pointer;
-    padding: 0 0.25rem;
+    padding: 0 0.5rem;
+    line-height: 22px; /* matches VirtualList rowHeight so single-line rows are vertically centred */
+    color: var(--vscode-foreground);
+}
+.vrow:hover {
+    background: var(--vscode-list-hoverBackground);
 }
 .vrow.selected {
     background: var(--vscode-list-activeSelectionBackground);
+    color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground));
 }
+.vrow.selected:hover {
+    background: var(--vscode-list-activeSelectionBackground);
+}
+
+/* ---- inline list rows (editable in place) ---- */
 .inline-list-toolbar {
     flex: 0 0 auto;
-    padding: 0.25rem;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--vscode-panel-border);
 }
 .vrow.inline {
     display: flex;
     gap: 0.5rem;
     align-items: center;
-    padding: 0 0.25rem;
+    padding: 0 0.5rem;
+    line-height: normal; /* inline rows are taller (InlineList rowHeight); center via flex, not line-height */
+}
+.vrow.inline .value {
+    color: var(--vscode-descriptionForeground);
+}
+.vrow.inline.selected .value {
+    color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground));
 }
 .vrow.inline .row-actions {
     margin-left: auto;
     display: flex;
-    gap: 0.15rem;
+    gap: 0.2rem;
 }
 .vrow.inline .row-actions button {
-    padding: 0 0.3rem;
+    padding: 0.1rem 0.4rem;
+    font-size: 0.9em;
+}
+
+/* ---- row actions (master/detail header) ---- */
+.row-actions {
+    display: inline-flex;
+    gap: 0.2rem;
+    padding: 0.5rem 0.75rem;
+}
+
+/* ---- subgroup / expandable caret ---- */
+.subgroup {
+    margin: 0.15rem 0;
+}
+.caret {
+    background: transparent;
+    color: var(--vscode-foreground);
+    border: none;
+    padding: 0.2rem 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+.caret:hover {
+    color: var(--vscode-textLink-foreground, var(--vscode-foreground));
+}
+.caret::before {
+    content: "\25B8"; /* right-pointing triangle; rotates to down when the group is open */
+    display: inline-block;
+    transition: transform 0.1s ease;
+    color: var(--vscode-descriptionForeground);
+}
+.caret.open::before {
+    transform: rotate(90deg);
+}
+
+/* ---- diagnostics ---- */
+.diag.warning {
+    color: var(--vscode-editorWarning-foreground, #cca700);
+    font-weight: 700;
+    cursor: help;
+}
+
+/* ---- placeholder / error / loading states ---- */
+.placeholder {
+    color: var(--vscode-descriptionForeground);
+    padding: 0.75rem;
+    font-style: italic;
+}
+.error-state {
+    padding: 1rem 1.25rem;
+    color: var(--vscode-errorForeground);
+}
+.error-state h2 {
+    margin: 0 0 0.5rem;
+    font-size: 1.15em;
+    font-weight: 600;
+    color: var(--vscode-errorForeground);
+}
+.error-state p {
+    margin: 0;
+    color: var(--vscode-foreground);
 }

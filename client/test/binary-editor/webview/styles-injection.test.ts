@@ -19,4 +19,19 @@ describe("binary-editor styles injection", () => {
         const css = fs.readFileSync(path.resolve("client/src/binary-editor/webview/styles.css"), "utf8");
         expect(css).toContain("var(--vscode-");
     });
+    it("theme covers the core vscode surfaces", () => {
+        const css = fs.readFileSync(path.resolve("client/src/binary-editor/webview/styles.css"), "utf8");
+        for (const v of [
+            "--vscode-foreground",
+            "--vscode-input-background",
+            "--vscode-input-border",
+            "--vscode-focusBorder",
+            "--vscode-button-background",
+            "--vscode-list-hoverBackground",
+            "--vscode-list-activeSelectionBackground",
+            "--vscode-errorForeground",
+            "--vscode-font-family",
+        ])
+            expect(css).toContain(v);
+    });
 });

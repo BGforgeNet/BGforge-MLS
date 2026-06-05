@@ -21,15 +21,43 @@ const js = result.outputFiles[0].text;
 
 const css = fs.readFileSync(path.join(repo, "client/src/binary-editor/webview/styles.css"), "utf8");
 
+// VS Code Dark+ fallbacks for every --vscode-* variable styles.css consumes, so the harness renders the
+// themed UI faithfully outside the real VS Code webview (which would otherwise inject these at runtime).
 const html = `<!doctype html>
 <html lang="en"><head><meta charset="UTF-8" />
 <style>
-:root { --vscode-list-activeSelectionBackground: #094771; }
-body { margin: 0; background: #1e1e1e; color: #d4d4d4; font: 13px/1.4 system-ui, sans-serif; }
-button { background: #3a3d41; color: #d4d4d4; border: 1px solid #555; border-radius: 2px; cursor: pointer; }
-button:disabled { opacity: 0.4; cursor: default; }
-input { background: #3c3c3c; color: #d4d4d4; border: 1px solid #555; }
-.tabs button { padding: 0.15rem 0.6rem; }
+:root {
+    --vscode-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Ubuntu", "Droid Sans", sans-serif;
+    --vscode-font-size: 13px;
+    --vscode-editor-font-family: "Droid Sans Mono", "monospace", monospace;
+    --vscode-foreground: #cccccc;
+    --vscode-editor-background: #1e1e1e;
+    --vscode-editor-foreground: #d4d4d4;
+    --vscode-descriptionForeground: #9d9d9d;
+    --vscode-errorForeground: #f48771;
+    --vscode-panel-border: #2b2b2b;
+    --vscode-focusBorder: #007fd4;
+    --vscode-textLink-foreground: #3794ff;
+    --vscode-button-background: #0e639c;
+    --vscode-button-foreground: #ffffff;
+    --vscode-button-hoverBackground: #1177bb;
+    --vscode-button-border: transparent;
+    --vscode-button-secondaryBackground: #3a3d41;
+    --vscode-button-secondaryForeground: #ffffff;
+    --vscode-button-secondaryHoverBackground: #45494e;
+    --vscode-input-background: #3c3c3c;
+    --vscode-input-foreground: #cccccc;
+    --vscode-input-border: #3c3c3c;
+    --vscode-input-placeholderForeground: #a6a6a6;
+    --vscode-checkbox-background: #3c3c3c;
+    --vscode-list-hoverBackground: #2a2d2e;
+    --vscode-list-activeSelectionBackground: #094771;
+    --vscode-list-activeSelectionForeground: #ffffff;
+    --vscode-editorWarning-foreground: #cca700;
+    --vscode-inputValidation-warningBackground: #352a05;
+    --vscode-inputValidation-warningForeground: #cccccc;
+    --vscode-inputValidation-warningBorder: #cca700;
+}
 ${css}
 </style></head>
 <body><div id="app"></div><script>${js}</script></body></html>`;
