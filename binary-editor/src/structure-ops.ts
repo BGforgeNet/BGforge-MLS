@@ -30,7 +30,7 @@ function commit(session: EditorSession, label: string, next: ParseResult): Struc
     // insert/remove/reorder ops in a later plan.
     return {
         changeSet: {
-            changed: getWindow(session.model, 0, 200),
+            changed: getWindow(session.model, 0, 200, session.relationshipModel),
             diagnostics: session.relationshipModel ? session.relationshipModel.constraints(session.model) : [],
             dirty: true,
             formatValid: true,

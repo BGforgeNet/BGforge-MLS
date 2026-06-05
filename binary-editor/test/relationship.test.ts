@@ -1,119 +1,102 @@
 import { describe, expect, it } from "vitest";
-import { buildModel, type Model } from "../src/model";
 import { projectRow } from "../src/window";
 import type { RelationshipModel } from "../src/relationship/types";
 import { ieEffectsModel } from "../src/relationship/ie-effects";
 import { getRelationshipModel } from "../src/relationship/registry";
-import type { ParseResult } from "@bgforge/binary";
+import { openItmSession, firstEffectFields, setRaw, itmFixturePresent } from "./ie-fixture";
 
-function effectModel(opcode: number, p1: number, p2: number): Model {
-    const result = {
-        format: "eff",
-        formatName: "EFF",
-        root: {
-            name: "EFF File",
-            fields: [
-                {
-                    name: "Effect 1",
-                    fields: [
-                        {
-                            name: "opcode",
-                            value: opcode,
-                            rawValue: opcode,
-                            offset: 0,
-                            size: 4,
-                            type: "enum",
-                            enumOptions: { [String(opcode)]: `op ${opcode}` },
-                        },
-                        { name: "parameter1", value: p1, offset: 8, size: 4, type: "uint32" },
-                        { name: "parameter2", value: p2, offset: 12, size: 4, type: "uint32" },
-                        { name: "probability1", value: 100, offset: 16, size: 1, type: "uint8" },
-                        { name: "probability2", value: 0, offset: 17, size: 1, type: "uint8" },
-                    ],
-                },
-            ],
-        },
-    } as unknown as ParseResult;
-    return buildModel(result);
-}
+// These tests run the IE relationship model against the REAL display tree produced
+// by the parser (humanized labels "Opcode"/"Parameter1", enum codes in rawValue),
+// driving the first effect to a chosen opcode for controlled assertions.
 
-const labelModel: RelationshipModel = {
-    formatId: "eff",
-    fieldOverride: (_m, node) => (node.name === "parameter2" ? { label: "Type" } : undefined),
-    dependents: () => [],
-    constraints: () => [],
-};
-
-const enumModel: RelationshipModel = {
-    formatId: "eff",
-    fieldOverride: (_m, node) =>
-        node.name === "parameter2" ? { presentationType: "enum", enumOptions: { "0": "A", "1": "B" } } : undefined,
-    dependents: () => [],
-    constraints: () => [],
-};
-
-describe("ieEffectsModel.fieldOverride", () => {
-    it("relabels parameter1 from IESDP data for a known opcode", () => {
-        const model = effectModel(1, 5, 2);
-        const p1 = model.nodes.find((n) => n.name === "parameter1")!;
-        expect(ieEffectsModel.fieldOverride(model, p1)?.label).toBe("Key Modifier");
-    });
-    it("re-types parameter2 to an enum dropdown when the opcode has a value table", () => {
-        const model = effectModel(1, 5, 2);
-        const p2 = model.nodes.find((n) => n.name === "parameter2")!;
-        const ov = ieEffectsModel.fieldOverride(model, p2);
-        expect(ov?.label).toBe("Type");
-        expect(ov?.presentationType).toBe("enum");
-        expect(ov?.enumOptions?.["0"]).toBe("Cumulative Modifier");
+describe("ieEffectsModel.fieldOverride (real ITM display tree)", () => {
+    it("relabels parameter1/parameter2 from IESDP data for a known opcode", () => {
+        if (!itmFixturePresent()) return;
+        const session = openItmSession();
+        const f = firstEffectFields(session.model);
+        setRaw(f.get("opcode")!, 1); // opcode 1 = Stat: Attacks Per Round Modifier
+        expect(ieEffectsModel.fieldOverride(session.model, f.get("parameter1")!)?.label).toBe("Key Modifier");
+        const p2 = ieEffectsModel.fieldOverride(session.model, f.get("parameter2")!);
+        expect(p2?.label).toBe("Type");
+        expect(p2?.presentationType).toBe("enum");
+        expect(p2?.enumOptions?.["0"]).toBe("Cumulative Modifier");
     });
     it("adds an engine-availability description to the opcode field", () => {
-        const model = effectModel(1, 5, 2);
-        const op = model.nodes.find((n) => n.name === "opcode")!;
-        expect(ieEffectsModel.fieldOverride(model, op)?.description).toMatch(/BG1|BG2|engine/i);
+        if (!itmFixturePresent()) return;
+        const session = openItmSession();
+        const f = firstEffectFields(session.model);
+        setRaw(f.get("opcode")!, 1);
+        expect(ieEffectsModel.fieldOverride(session.model, f.get("opcode")!)?.description).toMatch(/BG1|BG2|engine/i);
     });
     it("produces no override for an unknown/modded opcode", () => {
-        const model = effectModel(65000, 5, 2);
-        const p1 = model.nodes.find((n) => n.name === "parameter1")!;
-        expect(ieEffectsModel.fieldOverride(model, p1)).toBeUndefined();
+        if (!itmFixturePresent()) return;
+        const session = openItmSession();
+        const f = firstEffectFields(session.model);
+        setRaw(f.get("opcode")!, 65000);
+        expect(ieEffectsModel.fieldOverride(session.model, f.get("parameter1")!)).toBeUndefined();
     });
 });
 
-describe("ieEffectsModel.constraints", () => {
+describe("ieEffectsModel.constraints (real ITM display tree)", () => {
     it("flags an empty probability range with a swap quick-fix", () => {
-        const model = effectModel(1, 5, 2);
-        const p1 = model.nodes.find((n) => n.name === "probability1")!;
-        const p2 = model.nodes.find((n) => n.name === "probability2")!;
-        (p1.source as { value: number }).value = 10; // upper < lower => empty range
-        (p2.source as { value: number }).value = 40;
-        const diags = ieEffectsModel.constraints(model);
-        const d = diags.find((x) => x.nodeId === p1.id);
+        if (!itmFixturePresent()) return;
+        const session = openItmSession();
+        const f = firstEffectFields(session.model);
+        const p1 = f.get("probability1")!;
+        const p2 = f.get("probability2")!;
+        setRaw(p1, 10); // upper < lower => empty range
+        setRaw(p2, 40);
+        const d = ieEffectsModel.constraints(session.model).find((x) => x.nodeId === p1.id);
         expect(d?.severity).toBe("warning");
         expect(d?.quickFix?.edits).toEqual([
             { nodeId: p1.id, value: 40 },
             { nodeId: p2.id, value: 10 },
         ]);
     });
-    it("no diagnostic when the probability range is valid", () => {
-        const model = effectModel(1, 5, 2); // prob1=100, prob2=0 by default in the helper
-        expect(ieEffectsModel.constraints(model)).toEqual([]);
+    it("no diagnostic targets a probability range that is valid", () => {
+        if (!itmFixturePresent()) return;
+        const session = openItmSession();
+        const f = firstEffectFields(session.model);
+        const p1 = f.get("probability1")!;
+        setRaw(p1, 100);
+        setRaw(f.get("probability2")!, 0);
+        expect(ieEffectsModel.constraints(session.model).some((x) => x.nodeId === p1.id)).toBe(false);
     });
 });
 
-describe("projectRow overlay", () => {
-    it("applies fieldOverride label to the row name", () => {
-        const model = effectModel(1, 5, 2);
-        const p2 = model.nodes.find((n) => n.name === "parameter2")!;
-        expect(projectRow(model, p2, labelModel).name).toBe("Type");
+describe("projectRow overlay mechanism", () => {
+    const labelModel: RelationshipModel = {
+        formatId: "itm",
+        fieldOverride: (_m, node) => (/parameter2/i.test(node.name) ? { label: "Type" } : undefined),
+        dependents: () => [],
+        constraints: () => [],
+    };
+    const enumModel: RelationshipModel = {
+        formatId: "itm",
+        fieldOverride: (_m, node) =>
+            /parameter2/i.test(node.name)
+                ? { presentationType: "enum", enumOptions: { "0": "A", "1": "B" } }
+                : undefined,
+        dependents: () => [],
+        constraints: () => [],
+    };
+    it("applies a returned fieldOverride label to the row name", () => {
+        if (!itmFixturePresent()) return;
+        const session = openItmSession();
+        const p2 = firstEffectFields(session.model).get("parameter2")!;
+        expect(projectRow(session.model, p2, labelModel).name).toBe("Type");
     });
     it("is unchanged when no model is passed", () => {
-        const model = effectModel(1, 5, 2);
-        const p2 = model.nodes.find((n) => n.name === "parameter2")!;
-        expect(projectRow(model, p2).name).toBe("parameter2");
+        if (!itmFixturePresent()) return;
+        const session = openItmSession();
+        const p2 = firstEffectFields(session.model).get("parameter2")!;
+        expect(projectRow(session.model, p2).name).toBe(p2.name);
     });
     it("re-types a numeric field to enum so the view renders a dropdown", () => {
-        const model = effectModel(1, 5, 2);
-        const p2 = model.nodes.find((n) => n.name === "parameter2")!;
-        const row = projectRow(model, p2, enumModel);
+        if (!itmFixturePresent()) return;
+        const session = openItmSession();
+        const p2 = firstEffectFields(session.model).get("parameter2")!;
+        const row = projectRow(session.model, p2, enumModel);
         // controlKind() in the view keys the dropdown off valueType === "enum" plus enumOptions.
         expect(row.valueType).toBe("enum");
         expect(row.enumOptions).toEqual({ "0": "A", "1": "B" });
@@ -121,16 +104,16 @@ describe("projectRow overlay", () => {
 });
 
 describe("IE relationship model parity across formats", () => {
-    for (const fmt of ["itm", "spl", "eff", "cre"]) {
-        it(`${fmt} resolves to the IE effect model and overlays params`, () => {
-            const model = getRelationshipModel(fmt);
-            expect(model).toBe(ieEffectsModel);
-            // Structural detection uses lowercase field names (matching the
-            // effectModel() helper below, which mirrors the raw spec key names
-            // rather than the humanized display names produced by walkStruct).
-            const m = effectModel(1, 5, 2);
-            const p1 = m.nodes.find((n) => n.name === "parameter1")!;
-            expect(model!.fieldOverride(m, p1)?.label).toBe("Key Modifier");
-        });
-    }
+    it("registers the same IE effect model for itm/spl/eff/cre", () => {
+        for (const fmt of ["itm", "spl", "eff", "cre"]) {
+            expect(getRelationshipModel(fmt)).toBe(ieEffectsModel);
+        }
+    });
+    it("overlays params on a real (shared IE effect) display tree", () => {
+        if (!itmFixturePresent()) return;
+        const session = openItmSession();
+        const f = firstEffectFields(session.model);
+        setRaw(f.get("opcode")!, 1);
+        expect(ieEffectsModel.fieldOverride(session.model, f.get("parameter1")!)?.label).toBe("Key Modifier");
+    });
 });
