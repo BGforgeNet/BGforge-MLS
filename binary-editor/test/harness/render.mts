@@ -62,14 +62,44 @@ async function activeIdx(page: Page): Promise<number> {
         return a ? Math.round(parseInt(a.style.top, 10) / 34) : -1;
     });
 }
-async function clickAction(page: Page, label: string): Promise<void> {
-    await page.locator(".row-actions button", { hasText: label }).first().click();
+
+// InlineList rows render RowActions in compact mode: a single kebab ("More actions") dropdown, not the six
+// labeled buttons of the master-detail layout. Structure ops are driven by opening the kebab and clicking the
+// menu item by its label ("Move up"/"Move down"/"Add above"/"Add below"/"Duplicate"). The menu content is
+// portalled to the document body, so menu items are selected globally via .bb-menu-item, not under .row-actions.
+async function clickMenuAction(page: Page, itemLabel: string): Promise<void> {
+    await page.locator(".row-actions .bb-menu-trigger").first().click();
+    await page.waitForSelector(".bb-menu-item", { timeout: 3000 });
+    await page.locator(".bb-menu-item", { hasText: itemLabel }).first().click();
+    await page.waitForTimeout(150);
+}
+
+// Delete is a two-step confirm: the menu "Delete" item arms the inline confirm affordance (it does NOT
+// dispatch), then clicking "Confirm delete" performs the removal. Mirrors the master-detail clickDelete flow.
+async function clickDelete(page: Page): Promise<void> {
+    await page.locator(".row-actions .bb-menu-trigger").first().click();
+    await page.waitForSelector(".bb-menu-item", { timeout: 3000 });
+    await page.locator(".bb-menu-item", { hasText: "Delete" }).first().click();
+    await page.waitForTimeout(150);
+    await page.locator('.row-actions button[aria-label="Confirm delete"]').first().click();
     await page.waitForTimeout(150);
 }
 
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1000, height: 680 } });
-page.on("pageerror", (e) => console.log("[pageerror]", e.message));
+
+// CSP gate (parity with render-itm/spl): capture any Content-Security-Policy violation so the run fails if the
+// webview bundle injects a non-nonced style/script under the strict nonce policy.
+const cspMessages: string[] = [];
+const isCspViolation = (text: string): boolean => /Content Security Policy/i.test(text) || /Refused to/i.test(text);
+page.on("console", (msg) => {
+    const text = msg.text();
+    if (isCspViolation(text)) cspMessages.push("[console:" + msg.type() + "] " + text);
+});
+page.on("pageerror", (e) => {
+    if (isCspViolation(e.message)) cspMessages.push("[pageerror] " + e.message);
+    else console.log("[pageerror]", e.message);
+});
 await page.exposeFunction("__hostUp", async (m: WebviewToHost) => {
     for (const reply of hostUp(m)) await page.evaluate((rr) => window.postMessage(rr, "*"), reply);
 });
@@ -94,7 +124,7 @@ check(
     `activeIdx=${await activeIdx(page)}`,
 );
 
-await clickAction(page, "v"); // reorder down
+await clickMenuAction(page, "Move down"); // reorder down
 const pairDown = gv().values.slice(j, j + 2);
 check(
     "reorder down: swaps values",
@@ -103,7 +133,7 @@ check(
 );
 check("reorder down: selects idx j+1", (await activeIdx(page)) === j + 1, `activeIdx=${await activeIdx(page)}`);
 
-await clickAction(page, "^"); // reorder up - restores
+await clickMenuAction(page, "Move up"); // reorder up - restores
 const pairUp = gv().values.slice(j, j + 2);
 check("reorder up: restores values", pairUp[0] === pairBefore[0] && pairUp[1] === pairBefore[1], `-> ${pairUp.join()}`);
 check("reorder up: selects idx j", (await activeIdx(page)) === j, `activeIdx=${await activeIdx(page)}`);
@@ -113,19 +143,19 @@ await page.locator(".vrow.inline").nth(3).click();
 await page.waitForTimeout(120);
 check("activate row 3", (await activeIdx(page)) === 3, `activeIdx=${await activeIdx(page)}`);
 
-await clickAction(page, "+after"); // insert after idx 3 -> new entry at idx 4
+await clickMenuAction(page, "Add below"); // insert after idx 3 -> new entry at idx 4
 check("insert after: total+1", gv().total === base + 1, `total=${gv().total}`);
 check("insert after: selects idx 4", (await activeIdx(page)) === 4, `activeIdx=${await activeIdx(page)}`);
 
-await clickAction(page, "+before"); // insert before active idx 4 -> inserted occupies idx 4
+await clickMenuAction(page, "Add above"); // insert before active idx 4 -> inserted occupies idx 4
 check("insert before: total+1", gv().total === base + 2, `total=${gv().total}`);
 check("insert before: selects idx 4", (await activeIdx(page)) === 4, `activeIdx=${await activeIdx(page)}`);
 
-await clickAction(page, "del"); // delete idx 4 -> neighbor at idx 4
+await clickDelete(page); // delete idx 4 (two-step confirm) -> neighbor at idx 4
 check("delete: total-1", gv().total === base + 1, `total=${gv().total}`);
 check("delete: selects neighbor idx 4", (await activeIdx(page)) === 4, `activeIdx=${await activeIdx(page)}`);
 
-await clickAction(page, "dup"); // duplicate idx 4 -> copy at idx 5
+await clickMenuAction(page, "Duplicate"); // duplicate idx 4 -> copy at idx 5
 check("duplicate: total+1", gv().total === base + 2, `total=${gv().total}`);
 check("duplicate: selects copy idx 5", (await activeIdx(page)) === 5, `activeIdx=${await activeIdx(page)}`);
 await page.screenshot({ path: path.join(here, "shot-ops-final.png") });
@@ -148,3 +178,11 @@ await browser.close();
 console.log(results.join("\n"));
 const failed = results.filter((r) => r.startsWith("FAIL")).length;
 console.log(failed === 0 ? "\nALL OPS PASS" : `\n${failed} FAILED`);
+if (cspMessages.length > 0) {
+    console.log("\nCSP VIOLATION(S) detected:");
+    for (const m of cspMessages) console.log("  " + m);
+    console.log("\nMAP CSP FAILED");
+    process.exit(1);
+}
+console.log("CSP: no violations");
+if (failed > 0) process.exit(1);

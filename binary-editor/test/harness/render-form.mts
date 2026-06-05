@@ -336,7 +336,10 @@ check("tab labels match group names (Other)", tabLabels.includes("Other"), `labe
 
 // ---- Active group's fields render ----
 // Initially "Basics" is the first group, so HP and MP fields should appear.
-const initialTabActive = await page.locator(".bb-tabs [role='tab'][aria-selected='true']").first().textContent();
+const initialTabActive = await page
+    .locator(".bb-tabs.secondary [role='tab'][aria-selected='true']")
+    .first()
+    .textContent();
 check("first tab is initially active", initialTabActive?.trim() === "Basics", `active='${initialTabActive?.trim()}'`);
 
 const basicsFieldLabels = await page.locator(".form .field .label").allTextContents();
@@ -344,10 +347,13 @@ check("Basics fields visible: HP", basicsFieldLabels.includes("HP"), `labels=${b
 check("Basics fields visible: MP", basicsFieldLabels.includes("MP"), `labels=${basicsFieldLabels.join(",")}`);
 
 // ---- Click "Advanced" tab -> field swap ----
-await page.locator(".bb-tabs [role='tab']", { hasText: "Advanced" }).first().click();
+await page.locator(".bb-tabs.secondary [role='tab']", { hasText: "Advanced" }).first().click();
 await page.waitForTimeout(200);
 
-const advancedTabActive = await page.locator(".bb-tabs [role='tab'][aria-selected='true']").first().textContent();
+const advancedTabActive = await page
+    .locator(".bb-tabs.secondary [role='tab'][aria-selected='true']")
+    .first()
+    .textContent();
 check(
     "Advanced tab active after click",
     advancedTabActive?.trim() === "Advanced",
