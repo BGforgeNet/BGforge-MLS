@@ -5,9 +5,10 @@ import { formatAdapterRegistry, type ParsedField } from "@bgforge/binary";
 import { openSession, sessionStore } from "../src/session";
 import { serializeSession } from "../src/serialize";
 import { editField } from "../src/edit";
-import type { FlatNode } from "../src/model";
+import { setExpanded, type FlatNode } from "../src/model";
 
 const ITM_FIXTURE = path.resolve(__dirname, "../../grammars/weidu-tp2/test/samples/core/items/misc8j.itm");
+const MAP_FIXTURE = path.resolve(__dirname, "../../client/testFixture/maps/arcaves.map");
 
 function openItm() {
     const bytes = new Uint8Array(fs.readFileSync(ITM_FIXTURE));
@@ -31,7 +32,7 @@ describe("save invariant - relationship model is presentation-only", () => {
     // Skipped pending Plan 4b: IE formats need a display-tree -> canonical-document rebuild so editor
     // edits reach the serializer (the IE serializer currently reads the stale parse-time document).
     // Re-enabled (it -> it) by Plan 4b Task B5 once the rebuild + on-edit document invalidation land.
-    it.skip("an edit survives serialize + reparse (single save path, no overlay leakage)", () => {
+    it("an edit survives serialize + reparse (single save path, no overlay leakage)", () => {
         if (!fs.existsSync(ITM_FIXTURE)) return;
         const { res, session } = openItm();
         expect(res.errors).toEqual([]);
@@ -65,6 +66,25 @@ describe("save invariant - relationship model is presentation-only", () => {
         expect(reparsedWeight).toBeDefined();
         if (!reparsedWeight) return;
         expect((reparsedWeight.source as ParsedField).value).toBe(newValue);
+
+        // A second edit on the same session must also survive: document
+        // invalidation must work repeatedly, not just on the first mutation.
+        const newValue2 = newValue + 1;
+        editField(session, weightNode.id, newValue2);
+        const out2 = serializeSession(session);
+
+        const reparsed2 = openSession("file:///misc8j-reparsed2.itm", out2);
+        expect(reparsed2.errors).toEqual([]);
+        const reparsedSession2 = sessionStore.get(reparsed2.sessionId);
+        expect(reparsedSession2).toBeDefined();
+        if (!reparsedSession2) return;
+
+        const reparsedWeight2 = reparsedSession2.model.nodes.find(
+            (n): n is FlatNode => n.kind === "field" && n.name === "Weight",
+        );
+        expect(reparsedWeight2).toBeDefined();
+        if (!reparsedWeight2) return;
+        expect((reparsedWeight2.source as ParsedField).value).toBe(newValue2);
     });
 
     it("the strict snapshot succeeds on the clean ITM document", () => {
@@ -94,5 +114,62 @@ describe("save invariant - relationship model is presentation-only", () => {
         }).not.toThrow();
         expect(typeof snapshot).toBe("string");
         expect((snapshot as string).length).toBeGreaterThan(0);
+    });
+});
+
+describe("save invariant - MAP lazy-getter document is not broken by document invalidation", () => {
+    it("round-trips an unedited MAP byte-for-byte (lazy getter still works)", () => {
+        if (!fs.existsSync(MAP_FIXTURE)) return;
+        const bytes = new Uint8Array(fs.readFileSync(MAP_FIXTURE));
+        const { sessionId } = openSession("file:///arcaves.map", bytes);
+        const session = sessionStore.get(sessionId);
+        expect(session).toBeDefined();
+        if (!session) return;
+        const out = serializeSession(session);
+        expect(Buffer.from(out).equals(Buffer.from(bytes))).toBe(true);
+    });
+
+    it("a MAP field edit survives serialize + reparse without breaking the lazy getter", () => {
+        if (!fs.existsSync(MAP_FIXTURE)) return;
+        const bytes = new Uint8Array(fs.readFileSync(MAP_FIXTURE));
+        const { sessionId } = openSession("file:///arcaves.map", bytes);
+        const session = sessionStore.get(sessionId);
+        expect(session).toBeDefined();
+        if (!session) return;
+
+        // Expand the Global Variables group to surface its child fields.
+        const gvGroup = session.model.nodes.find((n) => n.name === "Global Variables");
+        expect(gvGroup).toBeDefined();
+        if (!gvGroup) return;
+        setExpanded(session.model, gvGroup.id, true);
+
+        const gvField = session.model.nodes.find((n): n is FlatNode => n.kind === "field" && n.parentId === gvGroup.id);
+        expect(gvField).toBeDefined();
+        if (!gvField) return;
+
+        const originalValue = (gvField.source as ParsedField).value as number;
+        const newValue = originalValue + 1;
+
+        editField(session, gvField.id, newValue);
+        const out = serializeSession(session);
+
+        const reparsed = openSession("file:///arcaves-reparsed.map", out);
+        expect(reparsed.errors).toEqual([]);
+        const reparsedSession = sessionStore.get(reparsed.sessionId);
+        expect(reparsedSession).toBeDefined();
+        if (!reparsedSession) return;
+
+        // Expand the same group in the reparsed session to find the field.
+        const reparsedGvGroup = reparsedSession.model.nodes.find((n) => n.name === "Global Variables");
+        expect(reparsedGvGroup).toBeDefined();
+        if (!reparsedGvGroup) return;
+        setExpanded(reparsedSession.model, reparsedGvGroup.id, true);
+
+        const reparsedGvField = reparsedSession.model.nodes.find(
+            (n): n is FlatNode => n.kind === "field" && n.parentId === reparsedGvGroup.id,
+        );
+        expect(reparsedGvField).toBeDefined();
+        if (!reparsedGvField) return;
+        expect((reparsedGvField.source as ParsedField).value).toBe(newValue);
     });
 });

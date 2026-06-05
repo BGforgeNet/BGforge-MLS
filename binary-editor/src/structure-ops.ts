@@ -1,5 +1,6 @@
 import { formatAdapterRegistry, parserRegistry, type ParseResult } from "@bgforge/binary";
 import { buildModel } from "./model";
+import { invalidateCachedDocument } from "./edit";
 import { getWindow } from "./window";
 import type { EditorSession } from "./session";
 import type { NamePath, StructureResult } from "./types";
@@ -22,6 +23,7 @@ function commit(session: EditorSession, label: string, next: ParseResult): Struc
     session.undo.push({ label, before: session.model.parseResult });
     session.redo = [];
     session.model = buildModel(next);
+    invalidateCachedDocument(session.model.parseResult);
     session.dirty = true;
     // StructureResult.selection is intentionally left unset in the add slice: the new entry's NodeId
     // is not yet resolved here. Populating it (to select/scroll-to the added entry) lands with the
@@ -48,6 +50,7 @@ export function undo(session: EditorSession): void {
     if (!entry) return;
     session.redo.push({ label: entry.label, before: session.model.parseResult });
     session.model = buildModel(entry.before);
+    invalidateCachedDocument(session.model.parseResult);
     // Assumes an empty undo stack means the model is back at the saved state. Holds because the only
     // dirtying paths (editField, commit) each push an undo entry. A future dirtying path that does not
     // must revisit this.
@@ -59,5 +62,6 @@ export function redo(session: EditorSession): void {
     if (!entry) return;
     session.undo.push({ label: entry.label, before: session.model.parseResult });
     session.model = buildModel(entry.before);
+    invalidateCachedDocument(session.model.parseResult);
     session.dirty = true;
 }
