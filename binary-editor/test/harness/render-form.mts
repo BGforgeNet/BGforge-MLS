@@ -1,23 +1,42 @@
 /**
- * Grouped-form harness pass.
+ * Phantom-format harness pass.
  *
- * Drives the real App.svelte + FormSection with a synthetic display tree
- * that has both ungrouped fields and groups, so the tabs-over-accordion
- * organization is exercised. No real binary file is required.
+ * Drives the real App.svelte + FormSection + ListSection with a synthetic
+ * display tree for a made-up format ("gizmo") that does not exist in the
+ * binary adapter registry. The renderer is format-agnostic by construction
+ * and never branches on format id, so this proves the generic UI handles a
+ * novel descriptor with zero format-specific code paths.
  *
- * Synthetic tree (section "Settings", form, no-add/no-modify):
- *   - fields: "Name" (string), "Level" (int32)
- *   - groups: "Basics", "Advanced", "Other"  (3 groups -> vertical tablist at depth=1)
- *     - each group: 2 plain fields
+ * Sections in the "gizmo" layout:
  *
- * 7-group fallback tree (separate open):
- *   - groups g0..g6 (7 groups -> sections mode, no tablist)
+ *   "Settings" (form, kind="form"):
+ *     - fields: "Name" (string), "Level" (int32)
+ *     - groups: "Basics", "Advanced", "Other"  (3 groups -> vertical tablist at depth=1)
+ *       each group: 2 plain fields
  *
- * Assertions:
+ *   "Extra" (form, kind="form"):
+ *     - groups g0..g6 (7 groups -> sections mode, no tablist)
+ *
+ *   "Controls" (form, kind="form"):
+ *     - "Mode"     - small enum (5 options -> Select)
+ *     - "Target"   - large enum (15 options -> Combobox)
+ *     - "Flags"    - flags field (3 bits -> Checkbox grid)
+ *     - "Tag"      - string field (-> text input)
+ *     - "Power"    - int32 field (-> number input)
+ *
+ *   "Widgets" (list, kind="list", render="master-detail", canAdd=true, canModify=true):
+ *     - 3 list entries ("Widget 0", "Widget 1", "Widget 2")
+ *     - each entry has a detail form with a Name (string) and Value (int32) field
+ *
+ * Assertions (all from prior form-tabs pass, plus):
  *   - 2 ungrouped fields render outside any tab strip
  *   - 3 groups -> role=tablist with 3 [role=tab] buttons (group names)
  *   - clicking the second tab swaps the visible group's fields
  *   - 7 groups -> no tablist, headed sections visible
+ *   - "Controls" form: .bb-select-trigger (small enum), .bb-combobox-input (large enum),
+ *     .flags-grid with checkboxes, input[type="text"], input[type="number"] all render
+ *   - "Widgets" list: master list renders 3 .vrow entries; selecting one shows detail form
+ *     with RowActions structure-op controls (labeled "Move up", "Delete" etc.)
  */
 
 import { chromium } from "playwright";
@@ -225,8 +244,137 @@ const sevenGroupChildren: Record<string, Row[]> = Object.fromEntries(
     ]),
 );
 
+// ---- "Controls" form section: all four control types for the phantom format ----
+// "Mode": small enum (5 options -> Select; threshold is 12, so 5 < threshold -> Select)
+// "Target": large enum (15 options -> Combobox; 15 > threshold -> Combobox)
+// "Flags": flags field (3 bits -> Checkbox grid)
+// "Tag": string field (-> text input)
+// "Power": int32 field (-> number input)
+const controlsSection: Row[] = [
+    {
+        id: "s2/0",
+        namePath: ["Controls", "Mode"],
+        depth: 1,
+        kind: "field",
+        name: "Mode",
+        valueType: "enum",
+        displayValue: "Idle",
+        rawValue: 0,
+        editable: true,
+        enumOptions: { "0": "Idle", "1": "Active", "2": "Passive", "3": "Sleep", "4": "Error" },
+    },
+    {
+        id: "s2/1",
+        namePath: ["Controls", "Target"],
+        depth: 1,
+        kind: "field",
+        name: "Target",
+        valueType: "enum",
+        displayValue: "None",
+        rawValue: 0,
+        editable: true,
+        // 15 options -> isLargeEnum(15) = true -> Combobox
+        enumOptions: {
+            "0": "None",
+            "1": "Self",
+            "2": "Ally",
+            "3": "Enemy",
+            "4": "Area",
+            "5": "Point",
+            "6": "Ground",
+            "7": "Projectile",
+            "8": "ItemInSlot",
+            "9": "Container",
+            "10": "Door",
+            "11": "Trigger",
+            "12": "Waypoint",
+            "13": "Region",
+            "14": "Creature",
+        },
+    },
+    {
+        id: "s2/2",
+        namePath: ["Controls", "Flags"],
+        depth: 1,
+        kind: "field",
+        name: "Flags",
+        valueType: "flags",
+        displayValue: "0x00",
+        rawValue: 0,
+        editable: true,
+        flagOptions: { "0": "Enabled", "1": "Visible", "2": "Locked" },
+    },
+    {
+        id: "s2/3",
+        namePath: ["Controls", "Tag"],
+        depth: 1,
+        kind: "field",
+        name: "Tag",
+        valueType: "string",
+        displayValue: "gizmo_01",
+        rawValue: "gizmo_01",
+        editable: true,
+    },
+    {
+        id: "s2/4",
+        namePath: ["Controls", "Power"],
+        depth: 1,
+        kind: "field",
+        name: "Power",
+        valueType: "int32",
+        displayValue: "42",
+        rawValue: 42,
+        editable: true,
+    },
+];
+
+// ---- "Widgets" list section: 3 top-level list entries ----
+// Each entry is a "group" row (the master list item) served at the "Widgets" nodeId ("s3").
+// Selecting an entry requests its children (the detail form fields).
+const widgetsListRows: Row[] = Array.from({ length: 3 }, (_, i) => ({
+    id: `s3/${i}`,
+    namePath: ["Widgets", `Widget ${i}`],
+    depth: 1,
+    kind: "group" as const,
+    name: `Widget ${i}`,
+    hasChildren: true,
+}));
+
+// Each widget entry exposes a small detail form (Name + Value).
+const widgetDetailRows: Record<string, Row[]> = Object.fromEntries(
+    Array.from({ length: 3 }, (_, i) => [
+        `s3/${i}`,
+        [
+            {
+                id: `s3/${i}/0`,
+                namePath: ["Widgets", `Widget ${i}`, "Name"],
+                depth: 2,
+                kind: "field" as const,
+                name: "Name",
+                valueType: "string" as const,
+                displayValue: `widget_${i}`,
+                rawValue: `widget_${i}`,
+                editable: true,
+            },
+            {
+                id: `s3/${i}/1`,
+                namePath: ["Widgets", `Widget ${i}`, "Value"],
+                depth: 2,
+                kind: "field" as const,
+                name: "Value",
+                valueType: "int32" as const,
+                displayValue: String(i * 10),
+                rawValue: i * 10,
+                editable: true,
+            },
+        ],
+    ]),
+);
+
 const layout: LayoutDescriptor = {
-    formatId: "synthetic",
+    // "gizmo" is intentionally not one of the real format ids (pro/itm/spl/eff/cre/map).
+    // The renderer is format-agnostic and never branches on this id.
+    formatId: "gizmo",
     sections: [
         {
             id: "s0",
@@ -246,13 +394,31 @@ const layout: LayoutDescriptor = {
             canAdd: false,
             canModify: false,
         },
+        {
+            id: "s2",
+            title: "Controls",
+            kind: "form",
+            nodeId: "s2",
+            render: "master-detail",
+            canAdd: false,
+            canModify: false,
+        },
+        {
+            id: "s3",
+            title: "Widgets",
+            kind: "list",
+            nodeId: "s3",
+            render: "master-detail",
+            canAdd: true,
+            canModify: true,
+        },
     ],
 };
 
 const openResult: OpenResult = {
     sessionId: "syn-001",
-    format: "synthetic",
-    formatName: "Synthetic Test Format",
+    format: "gizmo",
+    formatName: "Gizmo (phantom format)",
     layout,
     warnings: [],
     errors: [],
@@ -271,7 +437,9 @@ function hostUp(m: WebviewToHost): HostToWebview[] {
         else if (id === "s0/3") rows = advancedFields;
         else if (id === "s0/4") rows = otherFields;
         else if (id === "s1") rows = sevenGroupSection;
-        else rows = (id != null ? sevenGroupChildren[id] : undefined) ?? [];
+        else if (id === "s2") rows = controlsSection;
+        else if (id === "s3") rows = widgetsListRows;
+        else rows = (id != null ? (sevenGroupChildren[id] ?? widgetDetailRows[id]) : undefined) ?? [];
         const sliced = rows.slice(m.start, m.end);
         return [{ type: "children", requestId: m.requestId, parentId: id, rows: sliced, total: rows.length }];
     }
@@ -406,17 +574,79 @@ check(
 
 await page.screenshot({ path: path.join(here, "shot-form-sections.png") });
 
+// ============================================================
+// PHANTOM-FORMAT CONTROL TYPES
+// Switch to the "Controls" section and assert each control type renders via its primitive.
+// ============================================================
+
+await page.locator(".bb-tabs.primary [role='tab']", { hasText: "Controls" }).first().click();
+await page.waitForTimeout(300);
+
+// Small enum (5 options) -> Select -> .bb-select-trigger
+const selectCount = await page.locator(".bb-select-trigger").count();
+check("phantom: small enum renders Select (.bb-select-trigger)", selectCount >= 1, `count=${selectCount}`);
+
+// Large enum (15 options) -> Combobox -> .bb-combobox-input
+const comboboxCount = await page.locator(".bb-combobox-input").count();
+check("phantom: large enum renders Combobox (.bb-combobox-input)", comboboxCount >= 1, `count=${comboboxCount}`);
+
+// Flags field -> .flags-grid with checkboxes (role="checkbox")
+const flagsGridCount = await page.locator(".flags-grid").count();
+check("phantom: flags field renders .flags-grid", flagsGridCount >= 1, `count=${flagsGridCount}`);
+const flagsCheckboxCount = await page.locator(".flags-grid [role='checkbox']").count();
+check("phantom: flags checkboxes present (>= 3)", flagsCheckboxCount >= 3, `count=${flagsCheckboxCount}`);
+
+// String field -> input[type="text"]
+const stringInputCount = await page.locator(".form input[type='text']").count();
+check("phantom: string field renders text input", stringInputCount >= 1, `count=${stringInputCount}`);
+
+// Number field -> input[type="number"]
+const numberInputCount = await page.locator(".form input[type='number']").count();
+check("phantom: number field renders number input", numberInputCount >= 1, `count=${numberInputCount}`);
+
+// ============================================================
+// PHANTOM-FORMAT LIST SECTION
+// Switch to "Widgets" and assert master-detail list: 3 entries, selection -> detail + RowActions.
+// ============================================================
+
+await page.locator(".bb-tabs.primary [role='tab']", { hasText: "Widgets" }).first().click();
+// Wait for VirtualList to render at least 3 .vrow entries.
+await page.waitForFunction(() => document.querySelectorAll(".vlist .vrow").length >= 3, { timeout: 5000 });
+await page.waitForTimeout(200);
+
+const vrowCount = await page.locator(".vlist .vrow").count();
+check("phantom: list section renders 3 master entries", vrowCount >= 3, `count=${vrowCount}`);
+
+// Select the first entry and wait for the detail form to appear.
+await page.locator(".vlist .vrow").first().click();
+await page.waitForSelector(".row-actions", { timeout: 3000 });
+await page.waitForSelector(".form .field", { timeout: 3000 });
+await page.waitForTimeout(100);
+
+// Detail form must show field labels for the selected widget entry.
+const detailLabels = await page.locator(".form .field .label").allTextContents();
+check("phantom: detail form has Name field", detailLabels.includes("Name"), `labels=${detailLabels.join(",")}`);
+check("phantom: detail form has Value field", detailLabels.includes("Value"), `labels=${detailLabels.join(",")}`);
+
+// Structure-op controls (RowActions, non-compact mode): labeled buttons must be present.
+const moveUpBtn = await page.locator('.row-actions button[aria-label="Move up"]').count();
+check("phantom: list RowActions has Move up button", moveUpBtn >= 1, `count=${moveUpBtn}`);
+const deleteBtn = await page.locator('.row-actions button[aria-label="Delete"]').count();
+check("phantom: list RowActions has Delete button", deleteBtn >= 1, `count=${deleteBtn}`);
+
+await page.screenshot({ path: path.join(here, "shot-phantom.png") });
+
 await browser.close();
 
 // ---- CSP ----
-console.log("\n=== Form tabs harness results ===");
+console.log("\n=== Phantom-format harness results ===");
 console.log(results.join("\n"));
 const failed = results.filter((r) => r.startsWith("FAIL")).length;
-console.log(failed === 0 ? "\nALL FORM TAB ASSERTIONS PASS" : `\n${failed} FORM TAB ASSERTIONS FAILED`);
+console.log(failed === 0 ? "\nALL PHANTOM-FORMAT ASSERTIONS PASS" : `\n${failed} PHANTOM-FORMAT ASSERTIONS FAILED`);
 if (cspMessages.length > 0) {
     console.log("\nCSP VIOLATION(S) detected:");
     for (const m of cspMessages) console.log("  " + m);
-    console.log("\nFORM CSP FAILED");
+    console.log("\nPHANTOM CSP FAILED");
     process.exit(1);
 }
 console.log("CSP: no violations");
