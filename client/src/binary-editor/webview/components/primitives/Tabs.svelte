@@ -69,6 +69,9 @@
     }
 </script>
 
+<!-- svelte-ignore a11y_interactive_supports_focus -->
+<!-- WAI-ARIA does not require tabindex on the tablist container; the roving tabindex is correctly placed on
+     the individual tab buttons (role=tab) below. Keyboard navigation is handled via onkeydown on this container. -->
 <div
     class="bb-tabs {orientation} {variant}"
     role="tablist"

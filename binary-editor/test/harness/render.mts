@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { dispatch } from "../../src/index";
 import type { HostToWebview, WebviewToHost } from "../../../client/src/binary-editor/webview/messages";
+import { installCspGate } from "./csp-gate";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, "../../..");
@@ -87,19 +88,7 @@ async function clickDelete(page: Page): Promise<void> {
 
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1000, height: 680 } });
-
-// CSP gate (parity with render-itm/spl): capture any Content-Security-Policy violation so the run fails if the
-// webview bundle injects a non-nonced style/script under the strict nonce policy.
-const cspMessages: string[] = [];
-const isCspViolation = (text: string): boolean => /Content Security Policy/i.test(text) || /Refused to/i.test(text);
-page.on("console", (msg) => {
-    const text = msg.text();
-    if (isCspViolation(text)) cspMessages.push("[console:" + msg.type() + "] " + text);
-});
-page.on("pageerror", (e) => {
-    if (isCspViolation(e.message)) cspMessages.push("[pageerror] " + e.message);
-    else console.log("[pageerror]", e.message);
-});
+const assertNoCsp = installCspGate(page, "MAP");
 await page.exposeFunction("__hostUp", async (m: WebviewToHost) => {
     for (const reply of hostUp(m)) await page.evaluate((rr) => window.postMessage(rr, "*"), reply);
 });
@@ -178,11 +167,5 @@ await browser.close();
 console.log(results.join("\n"));
 const failed = results.filter((r) => r.startsWith("FAIL")).length;
 console.log(failed === 0 ? "\nALL OPS PASS" : `\n${failed} FAILED`);
-if (cspMessages.length > 0) {
-    console.log("\nCSP VIOLATION(S) detected:");
-    for (const m of cspMessages) console.log("  " + m);
-    console.log("\nMAP CSP FAILED");
-    process.exit(1);
-}
-console.log("CSP: no violations");
+assertNoCsp();
 if (failed > 0) process.exit(1);

@@ -24,6 +24,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { dispatch } from "../../src/index";
 import type { HostToWebview, WebviewToHost } from "../../../client/src/binary-editor/webview/messages";
+import { installCspGate } from "./csp-gate";
 import { itmParser } from "../../../binary/src/itm/index";
 import { getItmCanonicalDocument, rebuildItmCanonicalDocument } from "../../../binary/src/itm/canonical-reader";
 import { serializeItmCanonicalDocument } from "../../../binary/src/itm/canonical-writer";
@@ -117,17 +118,7 @@ function check(label: string, ok: boolean, detail: string): void {
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1200, height: 800 } });
 activePage = page;
-
-const cspMessages: string[] = [];
-const isCspViolation = (text: string): boolean => /Content Security Policy/i.test(text) || /Refused to/i.test(text);
-page.on("console", (msg) => {
-    const text = msg.text();
-    if (isCspViolation(text)) cspMessages.push("[console:" + msg.type() + "] " + text);
-});
-page.on("pageerror", (e) => {
-    if (isCspViolation(e.message)) cspMessages.push("[pageerror] " + e.message);
-    else console.log("[pageerror]", e.message);
-});
+const assertNoCsp = installCspGate(page, "ITM");
 
 await page.exposeFunction("__hostUp", async (m: WebviewToHost) => {
     for (const reply of hostUp(m)) await page.evaluate((rr) => window.postMessage(rr, "*"), reply);
@@ -588,11 +579,5 @@ console.log("\n=== ITM harness results ===");
 console.log(results.join("\n"));
 const failed = results.filter((r) => r.startsWith("FAIL")).length;
 console.log(failed === 0 ? "\nALL ITM OPS PASS" : `\n${failed} ITM OPS FAILED`);
-if (cspMessages.length > 0) {
-    console.log("\nCSP VIOLATION(S) detected:");
-    for (const m of cspMessages) console.log("  " + m);
-    console.log("\nITM CSP FAILED");
-    process.exit(1);
-}
-console.log("CSP: no violations");
+assertNoCsp();
 if (failed > 0) process.exit(1);

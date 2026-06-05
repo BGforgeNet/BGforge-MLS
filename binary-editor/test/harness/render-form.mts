@@ -49,6 +49,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { HostToWebview, WebviewToHost } from "../../../client/src/binary-editor/webview/messages";
 import type { Row, LayoutDescriptor, OpenResult } from "@bgforge/binary-editor";
+import { installCspGate } from "./csp-gate";
+import { THEME_VARS } from "./theme-vars";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, "../../..");
@@ -74,35 +76,7 @@ const html = `<!doctype html>
 <meta http-equiv="Content-Security-Policy"
     content="default-src 'none'; font-src 'none'; style-src 'nonce-${nonce}'; script-src 'nonce-${nonce}';" />
 <style nonce="${nonce}">
-:root {
-    --vscode-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Ubuntu", "Droid Sans", sans-serif;
-    --vscode-font-size: 13px;
-    --vscode-foreground: #cccccc;
-    --vscode-editor-background: #1e1e1e;
-    --vscode-descriptionForeground: #9d9d9d;
-    --vscode-panel-border: #2b2b2b;
-    --vscode-focusBorder: #007fd4;
-    --vscode-textLink-foreground: #3794ff;
-    --vscode-button-background: #0e639c;
-    --vscode-button-foreground: #ffffff;
-    --vscode-button-hoverBackground: #1177bb;
-    --vscode-button-border: transparent;
-    --vscode-button-secondaryBackground: #3a3d41;
-    --vscode-button-secondaryForeground: #ffffff;
-    --vscode-button-secondaryHoverBackground: #45494e;
-    --vscode-input-background: #3c3c3c;
-    --vscode-input-foreground: #cccccc;
-    --vscode-input-border: #3c3c3c;
-    --vscode-input-placeholderForeground: #a6a6a6;
-    --vscode-checkbox-background: #3c3c3c;
-    --vscode-checkbox-foreground: #cccccc;
-    --vscode-checkbox-border: #6b6b6b;
-    --vscode-list-hoverBackground: #2a2d2e;
-    --vscode-list-activeSelectionBackground: #094771;
-    --vscode-list-activeSelectionForeground: #ffffff;
-    --vscode-editorWarning-foreground: #cca700;
-}
-${css}
+${THEME_VARS}${css}
 </style></head>
 <body><div id="app"></div><script nonce="${nonce}">${js}</script></body></html>`;
 
@@ -447,19 +421,9 @@ function hostUp(m: WebviewToHost): HostToWebview[] {
 }
 
 // ---- Browser ----
-const cspMessages: string[] = [];
-const isCspViolation = (text: string): boolean => /Content Security Policy/i.test(text) || /Refused to/i.test(text);
-
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1200, height: 800 } });
-page.on("console", (msg) => {
-    const text = msg.text();
-    if (isCspViolation(text)) cspMessages.push("[console:" + msg.type() + "] " + text);
-});
-page.on("pageerror", (e) => {
-    if (isCspViolation(e.message)) cspMessages.push("[pageerror] " + e.message);
-    else console.log("[pageerror]", e.message);
-});
+const assertNoCsp = installCspGate(page, "PHANTOM");
 
 await page.exposeFunction("__hostUp", async (m: WebviewToHost) => {
     for (const reply of hostUp(m)) await page.evaluate((rr) => window.postMessage(rr, "*"), reply);
@@ -638,16 +602,10 @@ await page.screenshot({ path: path.join(here, "shot-phantom.png") });
 
 await browser.close();
 
-// ---- CSP ----
+// ---- Results ----
 console.log("\n=== Phantom-format harness results ===");
 console.log(results.join("\n"));
 const failed = results.filter((r) => r.startsWith("FAIL")).length;
 console.log(failed === 0 ? "\nALL PHANTOM-FORMAT ASSERTIONS PASS" : `\n${failed} PHANTOM-FORMAT ASSERTIONS FAILED`);
-if (cspMessages.length > 0) {
-    console.log("\nCSP VIOLATION(S) detected:");
-    for (const m of cspMessages) console.log("  " + m);
-    console.log("\nPHANTOM CSP FAILED");
-    process.exit(1);
-}
-console.log("CSP: no violations");
+assertNoCsp();
 if (failed > 0) process.exit(1);

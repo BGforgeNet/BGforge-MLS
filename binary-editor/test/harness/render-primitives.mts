@@ -27,6 +27,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { installCspGate } from "./csp-gate";
+import { THEME_VARS } from "./theme-vars";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -51,38 +53,9 @@ fs.rmSync(outdir, { recursive: true, force: true });
 
 const css = fs.readFileSync(path.join(here, "../../../client/src/binary-editor/webview/styles.css"), "utf8");
 
-// VS Code Dark+ fallbacks for the --vscode-* vars the theme (.bb-select* and .bb-combobox* blocks) consume,
-// so the showcase renders themed outside the real webview. Same set build.mjs uses.
-const rootVars = `:root {
-    --vscode-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Ubuntu", "Droid Sans", sans-serif;
-    --vscode-font-size: 13px;
-    --vscode-editor-font-family: "Droid Sans Mono", "monospace", monospace;
-    --vscode-foreground: #cccccc;
-    --vscode-editor-background: #1e1e1e;
-    --vscode-editor-foreground: #d4d4d4;
-    --vscode-descriptionForeground: #9d9d9d;
-    --vscode-panel-border: #2b2b2b;
-    --vscode-focusBorder: #007fd4;
-    --vscode-textLink-foreground: #3794ff;
-    --vscode-input-background: #3c3c3c;
-    --vscode-input-foreground: #cccccc;
-    --vscode-input-border: #3c3c3c;
-    --vscode-input-placeholderForeground: #a6a6a6;
-    --vscode-list-hoverBackground: #2a2d2e;
-    --vscode-list-activeSelectionBackground: #094771;
-    --vscode-list-activeSelectionForeground: #ffffff;
-    --vscode-errorForeground: #f48771;
-    --vscode-button-background: #0e639c;
-    --vscode-button-foreground: #ffffff;
-    --vscode-button-secondaryBackground: #3a3d41;
-    --vscode-button-secondaryForeground: #ffffff;
-    --vscode-button-secondaryHoverBackground: #45494e;
-    --vscode-button-border: transparent;
-    --vscode-checkbox-background: #3c3c3c;
-    --vscode-checkbox-foreground: #cccccc;
-    --vscode-checkbox-border: #6b6b6b;
-}
-.showcase-root { padding: 1rem; }
+// VS Code Dark+ fallbacks for the --vscode-* vars styles.css consumes, loaded from the shared theme-vars
+// module so adding a new variable only needs one harness update.
+const showcaseExtras = `.showcase-root { padding: 1rem; }
 .showcase-section { margin-bottom: 1.5rem; }
 .showcase-label { font-weight: 600; margin-bottom: 0.4rem; }`;
 
@@ -93,7 +66,7 @@ const html = `<!doctype html>
 <meta http-equiv="Content-Security-Policy"
     content="default-src 'none'; font-src 'none'; style-src 'nonce-${nonce}'; script-src 'nonce-${nonce}';" />
 <style nonce="${nonce}">
-${rootVars}
+${THEME_VARS}${showcaseExtras}
 ${css}
 </style></head>
 <body><div id="app"></div><script nonce="${nonce}">${js}</script></body></html>`;
@@ -103,20 +76,9 @@ fs.writeFileSync(htmlPath, html);
 console.log("wrote showcase.html (" + (html.length / 1024).toFixed(0) + " kb)");
 
 // ---- Drive it under Chromium, capturing console + page errors ----
-const cspMessages: string[] = [];
-const isCspViolation = (text: string): boolean => /Content Security Policy/i.test(text) || /Refused to/i.test(text);
-
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 700, height: 600 } });
-
-page.on("console", (msg) => {
-    const text = msg.text();
-    if (isCspViolation(text)) cspMessages.push("[console:" + msg.type() + "] " + text);
-});
-page.on("pageerror", (e) => {
-    if (isCspViolation(e.message)) cspMessages.push("[pageerror] " + e.message);
-    else console.log("[pageerror]", e.message);
-});
+const assertNoCsp = installCspGate(page, "PRIMITIVES");
 
 await page.goto("file://" + htmlPath);
 
@@ -489,11 +451,6 @@ if (!tabsVArrowWorks) {
     console.log("\nTABS-V ARROW FAILED: expected 'abilities', got '" + tabsVAfterArrow + "'");
     process.exit(1);
 }
-if (cspMessages.length > 0) {
-    console.log("\nCSP VIOLATION(S) detected:");
-    for (const m of cspMessages) console.log("  " + m);
-    console.log("\nPRIMITIVES CSP FAILED");
-    process.exit(1);
-}
+assertNoCsp();
 console.log("\nPRIMITIVES CSP OK");
 console.log("screenshot: " + path.join(here, "shot-primitives.png"));
