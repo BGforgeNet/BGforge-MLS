@@ -10,6 +10,7 @@
 
 import fs from "node:fs";
 import YAML from "yaml";
+import { YAML_DUMP_OPTIONS } from "./yaml-helpers.ts";
 
 interface IdsEntry {
     readonly name: string;
@@ -56,7 +57,7 @@ function main(): void {
 
     const content = fs.readFileSync(inputFile, "utf8");
     const entries = parseIdsFile(content, docValue);
-    const yamlStr = YAML.stringify(entries);
+    const yamlStr = YAML.stringify(entries, null, YAML_DUMP_OPTIONS);
     fs.writeFileSync(outputFile, yamlStr, "utf8");
 
     console.log(`Output written to ${outputFile}`);
