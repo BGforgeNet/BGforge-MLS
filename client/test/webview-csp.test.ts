@@ -4,17 +4,16 @@ import { describe, expect, it } from "vitest";
 import { inlineWebviewScript } from "../src/webview-assets";
 
 describe("webview script inlining", () => {
-    it("preserves $$ sequences in the inlined script (no String.replace pattern corruption)", () => {
-        // Svelte 5 / esbuild output is full of `$$props`, `$$anchor`, etc. A string replacement would treat
-        // `$$` as an escaped `$` and collapse them, breaking the script. The helper must use a function replacement.
+    it("inlines the script verbatim (no String.replace $-pattern expansion)", () => {
+        // The minified production bundle contains `$&` (String.replace expands it to the matched placeholder text,
+        // a syntax error that blanks the webview) alongside `$$` (collapses to `$`). The helper must inline verbatim
+        // via a function replacement. `a$&2` and the `$$` identifiers below stand in for the real bundle's sequences.
         const html = '<script nonce="{{nonce}}">/* __SCRIPT__ */</script>';
-        const script = "function f($$anchor, $$props) { return $$props.x; } // and a bare $$ pair";
+        const script = "function f($$anchor,$$props){return $$props.x}var a$=1,b=a$&2;";
         const out = inlineWebviewScript(html, script, "NONCE-XYZ");
-        expect(out).toContain("$$anchor");
-        expect(out).toContain("$$props");
+        expect(out).toContain(script); // verbatim inlining - the decisive property
         expect(out).not.toContain("/* __SCRIPT__ */");
         expect(out).toContain('nonce="NONCE-XYZ"');
-        expect((out.match(/\$\$/g) ?? []).length).toBe((script.match(/\$\$/g) ?? []).length);
     });
 
     it("inlines the real built binary-editor bundle without corrupting it", () => {
