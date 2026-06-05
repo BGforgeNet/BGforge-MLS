@@ -4,6 +4,7 @@ import { buildModel, type Model } from "./model";
 import { getRelationshipModel } from "./relationship/registry";
 import type { RelationshipModel } from "./relationship/types";
 import { getWindow } from "./window";
+import { summaryComposerFor, type SummaryComposer } from "./summary";
 import type { OpenResult, SessionId } from "./types";
 
 export interface UndoEntry {
@@ -18,6 +19,8 @@ export interface EditorSession {
     parseOptions: ParseOptions;
     model: Model;
     relationshipModel?: RelationshipModel;
+    /** Per-format summary composer, resolved once at open time. Undefined when no spec is registered. */
+    composeSummary?: SummaryComposer;
     undo: UndoEntry[];
     redo: UndoEntry[];
     dirty: boolean;
@@ -77,6 +80,7 @@ export function openSession(uri: string, bytes: Uint8Array, options: ParseOption
         parseOptions: options,
         model,
         relationshipModel,
+        composeSummary: summaryComposerFor(parser.id),
         undo: [],
         redo: [],
         dirty: false,
@@ -89,6 +93,6 @@ export function openSession(uri: string, bytes: Uint8Array, options: ParseOption
         layout: buildLayout(parser.id, model),
         warnings: parseResult.warnings ?? [],
         errors: parseResult.errors ?? [],
-        rootWindow: getWindow(model, 0, 200, relationshipModel),
+        rootWindow: getWindow(model, 0, 200, relationshipModel, session.composeSummary),
     };
 }
