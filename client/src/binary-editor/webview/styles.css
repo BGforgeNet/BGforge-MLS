@@ -203,6 +203,79 @@ input[type="text"]::placeholder {
     color: var(--vscode-input-placeholderForeground, var(--vscode-descriptionForeground));
 }
 
+/* ---- bb-select (themed dropdown via the Select primitive wrapper) ----
+ * Generic, format-agnostic theming for the headless Select primitive. The primitive sets data-* state
+ * attributes (data-state open/closed, data-highlighted, data-selected, data-disabled) which drive the
+ * interaction styles below. Floating positioning is applied via CSSOM (not an injected <style> tag),
+ * so it stays CSP-safe under the webview's strict nonce policy. */
+.bb-select-trigger {
+    appearance: none;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem;
+    min-width: 8rem;
+    color: var(--vscode-input-foreground, var(--vscode-foreground));
+    background: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border, transparent);
+    border-radius: 2px;
+    padding: 0.2rem 0.4rem;
+}
+.bb-select-trigger::after {
+    content: "\25BE"; /* down-pointing triangle indicating a dropdown */
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.8em;
+}
+.bb-select-trigger:focus,
+.bb-select-trigger[data-state="open"] {
+    outline: none;
+    border-color: var(--vscode-focusBorder);
+}
+.bb-select-trigger[data-disabled] {
+    opacity: 0.5;
+    cursor: default;
+}
+.bb-select-content {
+    z-index: 50;
+    min-width: var(--bits-select-anchor-width, 8rem);
+    max-height: 18rem;
+    box-sizing: border-box;
+    color: var(--vscode-input-foreground, var(--vscode-foreground));
+    background: var(--vscode-input-background);
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 2px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.36);
+    padding: 0.2rem;
+}
+.bb-select-viewport {
+    max-height: 17rem;
+    overflow: auto;
+}
+.bb-select-item {
+    box-sizing: border-box;
+    cursor: pointer;
+    padding: 0.2rem 0.5rem;
+    border-radius: 2px;
+    color: var(--vscode-foreground);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.bb-select-item[data-highlighted] {
+    background: var(--vscode-list-hoverBackground);
+}
+.bb-select-item[data-selected] {
+    background: var(--vscode-list-activeSelectionBackground);
+    color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground));
+}
+.bb-select-item[data-disabled] {
+    opacity: 0.5;
+    cursor: default;
+}
+
 /* ---- flags (checkbox group) ---- */
 .flags {
     display: flex;
