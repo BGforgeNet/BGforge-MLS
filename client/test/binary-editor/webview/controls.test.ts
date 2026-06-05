@@ -5,6 +5,8 @@ import {
     decomposeFlags,
     composeFlags,
     controlKind,
+    filterOptions,
+    parseCustomValue,
 } from "../../../src/binary-editor/webview/state/controls";
 
 const enumRow: Row = {
@@ -57,5 +59,65 @@ describe("controls", () => {
         ]);
         expect(composeFlags(5, 0, false)).toBe(4); // clear bit 0
         expect(composeFlags(4, 0, true)).toBe(5); // set bit 0
+    });
+});
+
+const sampleOptions = [
+    { value: 0, label: "None" },
+    { value: 1, label: "Fire Damage" },
+    { value: 2, label: "Cold Damage" },
+    { value: 3, label: "Fireball" },
+    { value: 100, label: "Charm Animal" },
+];
+
+describe("filterOptions", () => {
+    it("returns all options for an empty query", () => {
+        expect(filterOptions(sampleOptions, "")).toEqual(sampleOptions);
+    });
+
+    it("returns all options for a whitespace-only query", () => {
+        expect(filterOptions(sampleOptions, "   ")).toEqual(sampleOptions);
+    });
+
+    it("filters case-insensitively", () => {
+        const result = filterOptions(sampleOptions, "fire");
+        expect(result).toContainEqual({ value: 1, label: "Fire Damage" });
+        expect(result).toContainEqual({ value: 3, label: "Fireball" });
+        expect(result).not.toContainEqual({ value: 2, label: "Cold Damage" });
+    });
+
+    it("matches substrings, not just prefixes", () => {
+        const result = filterOptions(sampleOptions, "damage");
+        expect(result).toContainEqual({ value: 1, label: "Fire Damage" });
+        expect(result).toContainEqual({ value: 2, label: "Cold Damage" });
+        expect(result).not.toContainEqual({ value: 3, label: "Fireball" });
+    });
+
+    it("returns empty array when no options match", () => {
+        expect(filterOptions(sampleOptions, "zzznomatch")).toEqual([]);
+    });
+});
+
+describe("parseCustomValue", () => {
+    it("returns a finite integer for a numeric string", () => {
+        expect(parseCustomValue("0")).toBe(0);
+        expect(parseCustomValue("42")).toBe(42);
+        expect(parseCustomValue("-5")).toBe(-5);
+    });
+
+    it("returns undefined for non-numeric input", () => {
+        expect(parseCustomValue("fire")).toBeUndefined();
+        expect(parseCustomValue("")).toBeUndefined();
+        expect(parseCustomValue("  ")).toBeUndefined();
+    });
+
+    it("returns undefined for non-integer numeric strings", () => {
+        expect(parseCustomValue("3.14")).toBeUndefined();
+        expect(parseCustomValue("1e2")).toBeUndefined();
+    });
+
+    it("returns undefined for Infinity and NaN", () => {
+        expect(parseCustomValue("Infinity")).toBeUndefined();
+        expect(parseCustomValue("NaN")).toBeUndefined();
     });
 });

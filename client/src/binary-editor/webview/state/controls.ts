@@ -40,3 +40,27 @@ export function decomposeFlags(row: Row): FlagBit[] {
 export function composeFlags(current: number, bit: number, set: boolean): number {
     return set ? current | (1 << bit) : current & ~(1 << bit);
 }
+
+/** Case-insensitive substring filter over option labels, for the searchable combobox. Empty or
+ * whitespace-only query returns all options unchanged. */
+export function filterOptions(
+    options: { value: number; label: string }[],
+    query: string,
+): { value: number; label: string }[] {
+    const q = query.trim().toLowerCase();
+    if (!q) return options;
+    return options.filter((o) => o.label.toLowerCase().includes(q));
+}
+
+/** Parses a query string as a finite integer, returning the number or undefined.
+ * Accepts only strings whose trimmed form converts to a finite integer (no decimal point,
+ * no scientific notation, no NaN/Infinity). Used by the combobox allowCustom mode. */
+export function parseCustomValue(query: string): number | undefined {
+    const s = query.trim();
+    if (!s) return undefined;
+    // Reject strings containing a decimal point or exponent - only plain integers are accepted.
+    if (s.includes(".") || s.toLowerCase().includes("e")) return undefined;
+    const n = Number(s);
+    if (!Number.isFinite(n) || !Number.isInteger(n)) return undefined;
+    return n;
+}

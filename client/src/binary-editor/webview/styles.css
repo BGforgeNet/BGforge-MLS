@@ -276,6 +276,71 @@ input[type="text"]::placeholder {
     cursor: default;
 }
 
+/* ---- bb-combobox (themed searchable combobox via the Combobox primitive wrapper) ----
+ * Generic, format-agnostic theming for the headless Combobox primitive. The input is always visible;
+ * the floating list opens on focus/typing. bits-ui sets the same data-* state attributes as Select
+ * (data-state open/closed, data-highlighted, data-selected, data-disabled). Floating positioning is
+ * applied via CSSOM, CSP-safe under the strict nonce policy. */
+.bb-combobox-input {
+    font: inherit;
+    color: var(--vscode-input-foreground, var(--vscode-foreground));
+    background: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border, transparent);
+    border-radius: 2px;
+    padding: 0.2rem 0.4rem;
+    min-width: 8rem;
+    width: 100%;
+    box-sizing: border-box;
+}
+.bb-combobox-input:focus {
+    outline: none;
+    border-color: var(--vscode-focusBorder);
+}
+.bb-combobox-input:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+.bb-combobox-input::placeholder {
+    color: var(--vscode-input-placeholderForeground, var(--vscode-descriptionForeground));
+}
+.bb-combobox-content {
+    z-index: 50;
+    min-width: var(--bits-combobox-anchor-width, 8rem);
+    max-height: 18rem;
+    box-sizing: border-box;
+    color: var(--vscode-input-foreground, var(--vscode-foreground));
+    background: var(--vscode-input-background);
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 2px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.36);
+    padding: 0.2rem;
+}
+.bb-combobox-viewport {
+    max-height: 17rem;
+    overflow: auto;
+}
+.bb-combobox-item {
+    box-sizing: border-box;
+    cursor: pointer;
+    padding: 0.2rem 0.5rem;
+    border-radius: 2px;
+    color: var(--vscode-foreground);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.bb-combobox-item[data-highlighted] {
+    background: var(--vscode-list-hoverBackground);
+}
+.bb-combobox-item[data-selected] {
+    background: var(--vscode-list-activeSelectionBackground);
+    color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground));
+}
+.bb-combobox-item[data-disabled] {
+    opacity: 0.5;
+    cursor: default;
+}
+
 /* ---- flags (checkbox group) ---- */
 .flags {
     display: flex;
