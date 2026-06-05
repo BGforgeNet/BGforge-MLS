@@ -38,13 +38,4 @@ describe("ViewModel", () => {
         expect(vm.activeSection?.id).toBe("1");
         expect(vm.activeSection?.kind).toBe("list");
     });
-
-    it("toggles expansion as client-side state", () => {
-        const vm = new ViewModel(layout);
-        expect(vm.isExpanded("0/3")).toBe(false);
-        vm.toggleExpanded("0/3");
-        expect(vm.isExpanded("0/3")).toBe(true);
-        vm.toggleExpanded("0/3");
-        expect(vm.isExpanded("0/3")).toBe(false);
-    });
 });

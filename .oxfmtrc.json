@@ -29,6 +29,7 @@
         "themes/vscode-monokai.json",
         "themes/vs-seti-icon-theme.json",
         "themes/bgforge-monokai.json",
-        "themes/bgforge-icon-theme.json"
+        "themes/bgforge-icon-theme.json",
+        "binary-editor/test/harness/*.html"
     ]
 }
