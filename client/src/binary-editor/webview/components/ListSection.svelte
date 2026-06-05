@@ -3,9 +3,11 @@
     import type { Bridge } from "../state/bridge";
     import type { ViewModel } from "../state/view-model";
     import { rowActions, type SectionCaps } from "../state/structure-actions";
+    import { filterRows } from "../state/filter";
     import VirtualList from "./VirtualList.svelte";
     import FormSection from "./FormSection.svelte";
     import RowActions from "./RowActions.svelte";
+    import Icon from "./Icon.svelte";
 
     // Max rows scanned when resolving a post-op host selection back to a list index. Exceeding this silently leaves the
     // detail pane unselected; safe for ITM abilities/effects (typically <10) but revisit if any list section can exceed it.
@@ -27,12 +29,43 @@
     // overrides a user click triggered by a structure op.
     let appliedSelectionVersion = -1;
 
-    // Switching sections is a full reset.
+    // Filter state: the search query typed by the user.
+    // eslint-disable-next-line prefer-const -- reassigned by the filter input
+    let filterQuery = $state("");
+    // Full row set fetched on demand when a filter query is active. Client-side full-fetch filtering is
+    // simple and correct for the entry counts in practice (effects/abilities are small; even thousands of
+    // MAP objects are lightweight rows). A core-side filter is deferred as not needed at current scale.
+    let allRows = $state<Row[]>([]);
+    // eslint-disable-next-line prefer-const -- reassigned by the full-fetch effect
+    let allRowsFetched = $state(false);
+
+    const activeQuery = $derived(filterQuery.trim().toLowerCase());
+    const filteredRows = $derived(activeQuery ? filterRows(allRows, filterQuery) : undefined);
+
+    // Switching sections is a full reset (including filter state).
     $effect(() => {
         void nodeId;
         selected = undefined;
         selectedIndex = undefined;
         appliedSelectionVersion = -1;
+        filterQuery = "";
+        allRows = [];
+        allRowsFetched = false;
+    });
+
+    // When a filter query becomes active, fetch all rows so filterRows has the complete set.
+    // Re-runs on version bumps so structure-op mutations are reflected in the filtered view.
+    $effect(() => {
+        void version;
+        if (!activeQuery) { allRows = []; allRowsFetched = false; return; }
+        if (total === 0) return; // wait until total is known
+        let cancelled = false;
+        bridge.requestChildren(nodeId, 0, total).then((w) => {
+            if (cancelled) return;
+            allRows = w.rows;
+            allRowsFetched = true;
+        });
+        return () => { cancelled = true; };
     });
 
     // After a structure op the host returns the NodeId to keep selected. Re-resolve it once the new
@@ -81,8 +114,33 @@
 <div class="master-detail">
     <div class="master">
         {#if caps.canAdd}<div class="toolbar"><button onclick={onadd}>+ add</button></div>{/if}
-        <VirtualList parentId={nodeId} {bridge} {version} selectedId={selected?.id}
-                     onselect={(r, idx) => { selected = r; selectedIndex = idx; }} />
+        <div class="list-filter">
+            <Icon name="search" />
+            <input
+                type="text"
+                class="list-filter-input"
+                placeholder="Filter..."
+                aria-label="Filter entries"
+                bind:value={filterQuery}
+            />
+            {#if filterQuery}
+                <button class="list-filter-clear" aria-label="Clear filter" onclick={() => { filterQuery = ""; }}>
+                    <Icon name="close" />
+                </button>
+            {/if}
+        </div>
+        {#if filteredRows !== undefined}
+            {#if filteredRows.length === 0}
+                <p class="placeholder list-filter-empty">No matches.</p>
+            {:else}
+                <VirtualList parentId={nodeId} {bridge} {version} selectedId={selected?.id}
+                             rows={filteredRows}
+                             onselect={(r, idx) => { selected = r; selectedIndex = idx; }} />
+            {/if}
+        {:else}
+            <VirtualList parentId={nodeId} {bridge} {version} selectedId={selected?.id}
+                         onselect={(r, idx) => { selected = r; selectedIndex = idx; }} />
+        {/if}
     </div>
     <div class="detail">
         {#if selected}

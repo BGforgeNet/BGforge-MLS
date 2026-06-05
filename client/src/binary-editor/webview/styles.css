@@ -123,6 +123,66 @@ button:disabled {
     margin: 0.1rem 0;
 }
 
+/* ---- list filter (master pane, above VirtualList) ---- */
+/* Sits between the optional add-toolbar and the VirtualList. Themed to blend with the input
+   palette so it reads as part of the list surface, not a toolbar. */
+.list-filter {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.3rem 0.5rem;
+    border-bottom: 1px solid var(--vscode-panel-border);
+    background: var(--vscode-input-background);
+}
+.list-filter .codicon {
+    flex: 0 0 auto;
+    font-size: 0.9em;
+    color: var(--vscode-descriptionForeground);
+}
+.list-filter-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    font: inherit;
+    color: var(--vscode-input-foreground, var(--vscode-foreground));
+    background: transparent;
+    border: none;
+    outline: none;
+    padding: 0;
+}
+.list-filter-input::placeholder {
+    color: var(--vscode-input-placeholderForeground, var(--vscode-descriptionForeground));
+}
+.list-filter:focus-within {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: -1px;
+}
+.list-filter-clear {
+    flex: 0 0 auto;
+    appearance: none;
+    font: inherit;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    /* Explicit min-size so the button is always visible even when the codicon font has not loaded. */
+    min-width: 1.2rem;
+    min-height: 1.2rem;
+    padding: 0 0.1rem;
+    color: var(--vscode-descriptionForeground);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 2px;
+    line-height: 1;
+}
+.list-filter-clear:hover {
+    color: var(--vscode-foreground);
+    background: var(--vscode-list-hoverBackground);
+}
+.list-filter-empty {
+    padding: 0.5rem 0.75rem;
+}
+
 /* ---- master / detail split ---- */
 .master-detail {
     flex: 1 1 auto;

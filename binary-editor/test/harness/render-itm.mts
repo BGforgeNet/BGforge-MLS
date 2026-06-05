@@ -599,10 +599,52 @@ if (diagNodeId !== "") {
     }
 }
 
+// ---- Filter assertions ----
+// Type a query into the effects filter input, assert visible row count narrows, clear, assert all return.
+// "Stat" is in the summary of effects 0 and 2 but not effect 1 ("State: Invisibility" starts with "State",
+// not "Stat" as a standalone word, but "Stat:" is a prefix of effect 0 and 2 summaries - use "Invisibility"
+// to match exactly one effect).
+await goToSection(page, "Effects", 3);
+{
+    const filterInput = page.locator(".list-filter-input").first();
+    // Type a query that matches exactly one effect row (effect 1: "State: Invisibility").
+    // pressSequentially fires keyboard events so Svelte's bind:value picks up the value.
+    await filterInput.click();
+    await filterInput.pressSequentially("invisibility");
+    await page.waitForTimeout(200);
+    const filteredCount = await page.locator(".vlist .vrow").count();
+    check("filter: 'invisibility' narrows effects to 1 row", filteredCount === 1, `vrow count=${filteredCount}`);
+    // Verify the visible row contains the expected label.
+    const filteredText = (await page.locator(".vlist .vrow").first().textContent()) ?? "";
+    check(
+        "filter: filtered row contains 'Invisibility'",
+        filteredText.toLowerCase().includes("invisibility"),
+        `text="${filteredText}"`,
+    );
+    // Clear the filter via the clear button and wait for it to appear.
+    await page.locator(".list-filter-clear").first().waitFor({ state: "visible", timeout: 3000 });
+    await page.locator(".list-filter-clear").first().click();
+    await page.waitForTimeout(200);
+    // After clearing, VirtualList returns to normal virtualized mode and should render all 3 rows.
+    const clearedCount = await page.locator(".vlist .vrow").count();
+    check("filter: after clear, all 3 effects return", clearedCount >= 3, `vrow count=${clearedCount}`);
+}
+
 // ---- Screenshots ----
 await goToSection(page, "Abilities", 2);
 await page.screenshot({ path: path.join(here, "shot-itm-abilities.png") });
 await goToSection(page, "Effects", 3);
+// Apply the filter and take a screenshot of the filtered state.
+{
+    const filterInput = page.locator(".list-filter-input").first();
+    await filterInput.click();
+    await filterInput.pressSequentially("invisibility");
+    await page.waitForTimeout(200);
+    await page.screenshot({ path: path.join(here, "shot-itm-effects-filtered.png") });
+    await page.locator(".list-filter-clear").first().waitFor({ state: "visible", timeout: 3000 });
+    await page.locator(".list-filter-clear").first().click();
+    await page.waitForTimeout(100);
+}
 await selectRow(page, 0);
 await page.waitForSelector(".form .field", { timeout: 3000 });
 await page.screenshot({ path: path.join(here, "shot-itm-effects.png") });

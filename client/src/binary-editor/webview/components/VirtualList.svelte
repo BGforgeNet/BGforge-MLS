@@ -3,9 +3,12 @@
     import type { Bridge } from "../state/bridge";
     import { visibleRange } from "../state/virtual-window";
 
-    const { parentId, bridge, version, selectedId, onselect }:
+    // When `rows` is provided (filtered mode), VirtualList renders that fixed array directly
+    // without fetching its own window. This keeps the virtualized fetch path for large unfiltered
+    // lists while letting ListSection supply a pre-filtered array when a query is active.
+    const { parentId, bridge, version, selectedId, onselect, rows: fixedRows }:
         { parentId: NodeId; bridge: Bridge; version: number; selectedId: NodeId | undefined;
-          onselect: (row: Row, index: number) => void } = $props();
+          onselect: (row: Row, index: number) => void; rows?: Row[] } = $props();
 
     const rowHeight = 22;
     const overscan = 6;
@@ -23,6 +26,8 @@
 
     $effect(() => {
         void version; // re-fetch the visible window after a mutation/reset
+        // Filtered mode: skip the internal fetch; rows come from the parent.
+        if (fixedRows !== undefined) return;
         const { start, end } = range;
         let cancelled = false;
         bridge.requestChildren(parentId, start, end).then((w) => {
@@ -46,17 +51,33 @@
          template style attributes are parsed from HTML and subject to the nonce CSP - that is why the root
          height/overflow lives on the .vlist class instead. The render-itm/spl harness CSP gate renders these
          very rows with zero violations. -->
-    <div style="height:{total * rowHeight}px;position:relative">
-        {#each Array.from({ length: range.end - range.start }, (_, k) => range.start + k) as idx (idx)}
-            {@const row = rowsByIndex.get(idx)}
-            {#if row}
+    {#if fixedRows !== undefined}
+        <!-- Filtered mode: render all provided rows as a flat list (no windowing). The fetch-all is done by
+             ListSection before passing rows here; windowing is not needed because entry counts in practice
+             are small enough that a full DOM render is negligible. -->
+        <div style="height:{fixedRows.length * rowHeight}px;position:relative">
+            {#each fixedRows as row, idx (row.id)}
                 <div class="vrow" class:selected={row.id === selectedId}
                      style="position:absolute;top:{idx * rowHeight}px;height:{rowHeight}px;left:0;right:0"
                      onclick={() => onselect(row, idx)} role="button" tabindex="0"
                      onkeydown={(e) => { if (e.key === "Enter") onselect(row, idx); }}>
                     <span class="vrow-index">{idx}</span><span class="vrow-label">{rowLabel(row)}</span>
                 </div>
-            {/if}
-        {/each}
-    </div>
+            {/each}
+        </div>
+    {:else}
+        <div style="height:{total * rowHeight}px;position:relative">
+            {#each Array.from({ length: range.end - range.start }, (_, k) => range.start + k) as idx (idx)}
+                {@const row = rowsByIndex.get(idx)}
+                {#if row}
+                    <div class="vrow" class:selected={row.id === selectedId}
+                         style="position:absolute;top:{idx * rowHeight}px;height:{rowHeight}px;left:0;right:0"
+                         onclick={() => onselect(row, idx)} role="button" tabindex="0"
+                         onkeydown={(e) => { if (e.key === "Enter") onselect(row, idx); }}>
+                        <span class="vrow-index">{idx}</span><span class="vrow-label">{rowLabel(row)}</span>
+                    </div>
+                {/if}
+            {/each}
+        </div>
+    {/if}
 </div>
