@@ -20,6 +20,8 @@ export interface Row {
     expanded?: boolean;
     hasChildren?: boolean;
     editingLocked?: boolean;
+    /** Composed human label for a list entry, e.g. an effect's opcode name; set by the per-format summary composer. */
+    summary?: string;
     // field-only
     valueType?: ParsedFieldType;
     displayValue?: string;

@@ -3,7 +3,12 @@ import { type FlatNode, type Model, visibleNodes } from "./model";
 import type { RelationshipModel } from "./relationship/types";
 import type { NodeId, Row } from "./types";
 
-export function projectRow(model: Model, node: FlatNode, rel?: RelationshipModel): Row {
+export function projectRow(
+    model: Model,
+    node: FlatNode,
+    rel?: RelationshipModel,
+    composeSummary?: (node: FlatNode, model: Model, rel?: RelationshipModel) => string | undefined,
+): Row {
     const base: Row = {
         id: node.id,
         namePath: node.namePath,
@@ -16,6 +21,10 @@ export function projectRow(model: Model, node: FlatNode, rel?: RelationshipModel
         base.expanded = model.expanded.has(node.id);
         base.hasChildren = node.childCount > 0;
         base.editingLocked = group.editingLocked === true;
+        if (composeSummary !== undefined) {
+            const s = composeSummary(node, model, rel);
+            if (s) base.summary = s;
+        }
         return base;
     }
     // kind === "field" guarantees the source is a ParsedField.
@@ -55,9 +64,15 @@ export function projectRow(model: Model, node: FlatNode, rel?: RelationshipModel
     return base;
 }
 
-export function getWindow(model: Model, start: number, end: number, rel?: RelationshipModel): Row[] {
+export function getWindow(
+    model: Model,
+    start: number,
+    end: number,
+    rel?: RelationshipModel,
+    composeSummary?: (node: FlatNode, model: Model, rel?: RelationshipModel) => string | undefined,
+): Row[] {
     const visible = visibleNodes(model);
-    return visible.slice(start, end).map((node) => projectRow(model, node, rel));
+    return visible.slice(start, end).map((node) => projectRow(model, node, rel, composeSummary));
 }
 
 export function getChildren(
@@ -66,8 +81,9 @@ export function getChildren(
     start: number,
     end: number,
     rel?: RelationshipModel,
+    composeSummary?: (node: FlatNode, model: Model, rel?: RelationshipModel) => string | undefined,
 ): { rows: Row[]; total: number } {
     const indices = model.childrenByParent.get(parentId ?? "") ?? [];
-    const rows = indices.slice(start, end).map((i) => projectRow(model, model.nodes[i]!, rel));
+    const rows = indices.slice(start, end).map((i) => projectRow(model, model.nodes[i]!, rel, composeSummary));
     return { rows, total: indices.length };
 }
