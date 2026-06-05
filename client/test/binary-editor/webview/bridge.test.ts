@@ -34,16 +34,16 @@ describe("Bridge", () => {
         await expect(p).rejects.toThrow("boom");
     });
 
-    it("posts editField/addEntry/dumpJson/loadJson messages verbatim", () => {
+    it("posts editField/structureOp/dumpJson/loadJson messages verbatim", () => {
         const sent: unknown[] = [];
         const bridge = new Bridge((m) => sent.push(m));
         bridge.editField("0/1", 7);
-        bridge.addEntry(["Global Variables"]);
+        bridge.structureOp({ op: "add", namePath: ["Global Variables"] });
         bridge.dumpJson();
         bridge.loadJson();
         expect(sent).toEqual([
             { type: "editField", nodeId: "0/1", value: 7 },
-            { type: "addEntry", namePath: ["Global Variables"] },
+            { type: "structureOp", op: { op: "add", namePath: ["Global Variables"] } },
             { type: "dumpJson" },
             { type: "loadJson" },
         ]);

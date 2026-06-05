@@ -103,18 +103,18 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
                     }
                     break;
                 }
-                case "addEntry": {
+                case "structureOp": {
                     const r = await document.bridge.send({
                         type: "structureOp",
                         sessionId: document.sessionId,
-                        op: { op: "add", namePath: message.namePath },
+                        op: message.op,
                     });
                     if (r.type === "error") {
                         this.post(panel, { type: "error", message: r.message });
                         break;
                     }
                     if (r.type === "structure") {
-                        document.pushEdit("Add entry");
+                        document.pushEdit(message.op.op);
                         this.postToDocumentPanels(document, { type: "changeSet", changeSet: r.result.changeSet });
                         await this.pushDiagnosticsToDocument(document);
                     }

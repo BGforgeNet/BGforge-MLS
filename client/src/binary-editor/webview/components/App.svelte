@@ -48,7 +48,7 @@
 
     function selectSection(id: string) { vm?.selectSection(id); activeId = id; }
     const edit = (id: string, v: number | string) => bridge.editField(id, v);
-    function add() { const np = vm?.addEntryNamePath(); if (np) bridge.addEntry(np); }
+    function add() { if (active) bridge.structureOp({ op: "add", namePath: [active.title] }); }
 </script>
 
 {#if !open}

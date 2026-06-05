@@ -1,4 +1,4 @@
-import type { NodeId, Row } from "@bgforge/binary-editor";
+import type { NodeId, Row, StructureOpRequest } from "@bgforge/binary-editor";
 import type { HostToWebview, WebviewToHost } from "../messages";
 import { WindowCache } from "./window-cache";
 
@@ -37,8 +37,8 @@ export class Bridge {
     editField(nodeId: NodeId, value: number | string): void {
         this.post({ type: "editField", nodeId, value });
     }
-    addEntry(namePath: readonly string[]): void {
-        this.post({ type: "addEntry", namePath });
+    structureOp(op: StructureOpRequest): void {
+        this.post({ type: "structureOp", op });
     }
     dumpJson(): void {
         this.post({ type: "dumpJson" });

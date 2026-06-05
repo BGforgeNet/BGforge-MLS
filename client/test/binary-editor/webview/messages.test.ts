@@ -8,7 +8,7 @@ describe("message contract", () => {
             { type: "requestChildren", requestId: 1, nodeId: null, start: 0, end: 50 },
             { type: "requestChildren", requestId: 2, nodeId: "0/1", start: 0, end: 50 },
             { type: "editField", nodeId: "0/1/2", value: 7 },
-            { type: "addEntry", namePath: ["Global Variables"] },
+            { type: "structureOp", op: { op: "add", namePath: ["Global Variables"] } },
             { type: "dumpJson" },
             { type: "loadJson" },
         ];

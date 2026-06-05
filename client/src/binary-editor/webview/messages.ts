@@ -1,11 +1,11 @@
-import type { ChangeSet, Diagnostic, NamePath, NodeId, OpenResult, Row } from "@bgforge/binary-editor";
+import type { ChangeSet, Diagnostic, NodeId, OpenResult, Row, StructureOpRequest } from "@bgforge/binary-editor";
 
 /** Messages the webview posts up to the host. */
 export type WebviewToHost =
     | { type: "ready" }
     | { type: "requestChildren"; requestId: number; nodeId: NodeId | null; start: number; end: number }
     | { type: "editField"; nodeId: NodeId; value: number | string }
-    | { type: "addEntry"; namePath: NamePath }
+    | { type: "structureOp"; op: StructureOpRequest }
     | { type: "dumpJson" }
     | { type: "loadJson" }
     | { type: "runtimeError"; message: string; stack?: string };
