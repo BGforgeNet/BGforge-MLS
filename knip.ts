@@ -107,9 +107,6 @@ const config: KnipConfig = {
         },
         binary: {
             entry: ["test/**/*.test.ts"],
-            // spl/entity-ops.ts has no importer yet: consumed by spl/format-adapter.ts in the
-            // next task (SPL format-adapter wiring). Remove this ignore once that wiring lands.
-            ignore: ["src/spl/entity-ops.ts"],
             // cac and diff are imported via shared/cli/cli-utils.ts, which lives outside any
             // workspace; knip's per-workspace dep tracing doesn't reach across that boundary.
             ignoreDependencies: ["cac", "diff"],
