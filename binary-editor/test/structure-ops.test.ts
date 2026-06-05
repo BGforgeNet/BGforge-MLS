@@ -24,6 +24,18 @@ function firstGlobalVarName(session: EditorSession): string {
     if (!first) throw new Error("no children under Global Variables");
     return first.name;
 }
+/** Returns the NodeIds of all direct children of `parentId` in their stored order. */
+function varChildren(session: EditorSession, parentId: string): import("../src/model").FlatNode[] {
+    const indices = session.model.childrenByParent.get(parentId) ?? [];
+    return indices.map((i) => session.model.nodes[i]!);
+}
+/** Opens a fresh session and returns it along with the Global Variables group node. */
+function openMapWithGlobals(): { session: EditorSession; gv: import("../src/model").FlatNode } {
+    const session = open();
+    const gv = session.model.nodes.find((n) => n.name === "Global Variables");
+    if (!gv) throw new Error("no Global Variables group");
+    return { session, gv };
+}
 
 describe("structureOp add", () => {
     it("adds a Global Variable and grows the collection by one", () => {
@@ -86,5 +98,23 @@ describe("undo / redo", () => {
         expect(globalVarCount(session)).toBe(before);
         redo(session);
         expect(globalVarCount(session)).toBe(before + 1);
+    });
+});
+
+describe("structureOp selection", () => {
+    it("selects the new entry after add (last child)", () => {
+        const { session } = openMapWithGlobals();
+        const res = structureOp(session, { op: "add", namePath: ["Global Variables"] });
+        const gv2 = session.model.nodes.find((n) => n.name === "Global Variables")!;
+        const kids = varChildren(session, gv2.id);
+        expect(res.selection).toBe(kids[kids.length - 1]!.id);
+    });
+
+    it("selects the copy after duplicate (index+1)", () => {
+        const { session, gv } = openMapWithGlobals();
+        const kids = varChildren(session, gv.id);
+        const res = structureOp(session, { op: "duplicate", entryPath: ["Global Variables", kids[0]!.name] });
+        const gv2 = session.model.nodes.find((n) => n.name === "Global Variables")!;
+        expect(res.selection).toBe(varChildren(session, gv2.id)[1]!.id);
     });
 });

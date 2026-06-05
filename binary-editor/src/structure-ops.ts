@@ -1,9 +1,9 @@
 import { formatAdapterRegistry, parserRegistry, type ParseResult } from "@bgforge/binary";
-import { buildModel } from "./model";
+import { buildModel, type FlatNode } from "./model";
 import { invalidateCachedDocument } from "./edit";
 import { getWindow } from "./window";
 import type { EditorSession } from "./session";
-import type { ChangeSet, NamePath, StructureResult } from "./types";
+import type { ChangeSet, NamePath, NodeId, StructureResult } from "./types";
 
 export type StructureOpRequest =
     | { op: "add"; namePath: NamePath }
@@ -68,6 +68,27 @@ function noopResult(session: EditorSession): StructureResult {
     return { changeSet: buildChangeSet(session, session.dirty) };
 }
 
+/** Find the node whose namePath exactly matches `namePath`, else undefined. */
+function findByNamePath(session: EditorSession, namePath: NamePath): FlatNode | undefined {
+    return session.model.nodes.find(
+        (n): n is FlatNode => n.namePath.length === namePath.length && n.namePath.every((s, i) => s === namePath[i]),
+    );
+}
+
+/**
+ * NodeId of the child at `index` under the group identified by `groupNamePath`, in the current
+ * (post-op) model. `childrenByParent` stores indices into `nodes`, so we resolve through that.
+ * Clamps to valid range; returns undefined if the group or its children list is missing.
+ */
+function childIdAt(session: EditorSession, groupNamePath: NamePath, index: number): NodeId | undefined {
+    const group = findByNamePath(session, groupNamePath);
+    if (!group) return undefined;
+    const kids = session.model.childrenByParent.get(group.id) ?? [];
+    if (!kids.length) return undefined;
+    const clamped = Math.max(0, Math.min(index, kids.length - 1));
+    return session.model.nodes[kids[clamped]!]?.id;
+}
+
 export function structureOp(session: EditorSession, req: StructureOpRequest): StructureResult {
     const adapter = formatAdapterRegistry.get(session.parserId);
     const bytes = buildOpBytes(adapter, session.model.parseResult, req);
@@ -90,7 +111,45 @@ export function structureOp(session: EditorSession, req: StructureOpRequest): St
             label = `Duplicate ${req.entryPath.join(" / ")}`;
             break;
     }
-    return commit(session, label, reparse(session, bytes));
+
+    // Capture the group path and the targeted entry's sibling index from the OLD model before
+    // commit replaces session.model. For "add" there is no pre-existing target entry.
+    const arrayPath: NamePath = req.op === "add" ? req.namePath : req.entryPath.slice(0, -1);
+    const groupBefore = findByNamePath(session, arrayPath);
+    const kidsBefore = groupBefore ? (session.model.childrenByParent.get(groupBefore.id) ?? []) : [];
+    const targetNode = req.op === "add" ? undefined : findByNamePath(session, req.entryPath);
+    // The children list stores node indices; find the entry's position among its siblings.
+    const targetIndex =
+        targetNode !== undefined ? kidsBefore.findIndex((ni) => session.model.nodes[ni] === targetNode) : -1;
+
+    const result = commit(session, label, reparse(session, bytes));
+
+    // Resolve the post-op selection in the NEW (rebuilt) model.
+    const newKids = (() => {
+        const g = findByNamePath(session, arrayPath);
+        return g ? (session.model.childrenByParent.get(g.id) ?? []) : [];
+    })();
+    const newKidsCount = newKids.length;
+    let selIndex: number;
+    switch (req.op) {
+        case "add":
+            selIndex = newKidsCount - 1;
+            break;
+        case "insert":
+            selIndex = req.position === "before" ? targetIndex : targetIndex + 1;
+            break;
+        case "duplicate":
+            selIndex = targetIndex + 1;
+            break;
+        case "reorder":
+            selIndex = req.direction === "up" ? targetIndex - 1 : targetIndex + 1;
+            break;
+        case "remove":
+            selIndex = Math.min(targetIndex, newKidsCount - 1);
+            break;
+    }
+    result.selection = childIdAt(session, arrayPath, selIndex);
+    return result;
 }
 
 export function undo(session: EditorSession): void {
