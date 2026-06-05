@@ -116,7 +116,12 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
                     }
                     if (r.type === "edited") {
                         document.pushEdit("Edit field");
-                        this.postToDocumentPanels(document, { type: "changeSet", changeSet: r.result.changeSet });
+                        // Keep the edited entry selected so an inline list does not collapse the row on commit.
+                        this.postToDocumentPanels(document, {
+                            type: "changeSet",
+                            changeSet: r.result.changeSet,
+                            selection: message.nodeId,
+                        });
                         await this.pushDiagnosticsToDocument(document);
                     }
                     break;
@@ -133,7 +138,12 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
                     }
                     if (r.type === "structure") {
                         document.pushEdit(structureOpLabel(message.op.op));
-                        this.postToDocumentPanels(document, { type: "changeSet", changeSet: r.result.changeSet });
+                        // Forward the post-op selection so the webview re-activates the new/moved/neighbor entry.
+                        this.postToDocumentPanels(document, {
+                            type: "changeSet",
+                            changeSet: r.result.changeSet,
+                            selection: r.result.selection,
+                        });
                         await this.pushDiagnosticsToDocument(document);
                     }
                     break;

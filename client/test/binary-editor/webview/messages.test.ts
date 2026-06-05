@@ -31,10 +31,16 @@ describe("message contract", () => {
             },
             { type: "children", requestId: 1, parentId: null, rows: [], total: 0 },
             { type: "changeSet", changeSet: { changed: [], diagnostics: [], dirty: true, formatValid: true } },
+            // changeSet carries an optional post-op selection NodeId for the view to re-activate (Plan 5).
+            {
+                type: "changeSet",
+                changeSet: { changed: [], diagnostics: [], dirty: true, formatValid: true },
+                selection: "0/1",
+            },
             { type: "invalidated" },
             { type: "diagnostics", diagnostics: [] },
             { type: "error", message: "boom" },
         ];
-        expect(msgs).toHaveLength(6);
+        expect(msgs).toHaveLength(7);
     });
 });

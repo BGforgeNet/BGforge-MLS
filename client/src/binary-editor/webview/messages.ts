@@ -14,7 +14,7 @@ export type WebviewToHost =
 export type HostToWebview =
     | { type: "init"; open: OpenResult }
     | { type: "children"; requestId: number; parentId: NodeId | null; rows: Row[]; total: number }
-    | { type: "changeSet"; changeSet: ChangeSet }
+    | { type: "changeSet"; changeSet: ChangeSet; selection?: NodeId }
     | { type: "invalidated" }
     | { type: "diagnostics"; diagnostics: Diagnostic[] }
     | { type: "error"; requestId?: number; message: string };

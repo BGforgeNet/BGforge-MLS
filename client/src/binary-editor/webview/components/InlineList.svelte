@@ -5,9 +5,9 @@
     import { rowActions, type SectionCaps } from "../state/structure-actions";
     import Field from "./Field.svelte";
 
-    const { parentId, title, caps, bridge, version, onedit }:
+    const { parentId, title, caps, bridge, version, selection, onedit }:
         { parentId: NodeId; title: string; caps: SectionCaps; bridge: Bridge; version: number;
-          onedit: (id: string, v: number | string) => void } = $props();
+          selection: NodeId | undefined; onedit: (id: string, v: number | string) => void } = $props();
 
     // Tall enough to contain the active row's inline Field control plus the action bar without overflowing into the
     // next absolutely-positioned row. Inactive rows show a single label/value line and have headroom to spare.
@@ -21,16 +21,23 @@
     let rowsByIndex = $state<Map<number, Row>>(new Map());
     // eslint-disable-next-line prefer-const -- reassigned via onclick/onkeydown in template
     let activeIndex = $state<number | undefined>();
+    // Guards applying the host selection at most once per version, so plain scrolling never overrides a user click.
+    let appliedSelectionVersion = -1;
 
     const range = $derived(visibleRange({ scrollTop, viewportHeight, rowHeight, overscan, total }));
 
-    // A version bump clears the per-index row map so the next fetch repopulates from a fresh model, and drops the
-    // active selection: after a structural op the index no longer maps to the same entry (a remove shifts everything
-    // up, an add lands elsewhere), so keeping it open would expand the wrong row.
+    // Switching sections is a full reset: a different collection, no carried-over active row.
+    $effect(() => {
+        void parentId;
+        rowsByIndex = new Map();
+        activeIndex = undefined;
+    });
+
+    // A version bump (mutation/edit) clears the per-index row map so the next fetch repopulates from a fresh model.
+    // The active row is re-derived from the host selection once the new rows load (below), not dropped here.
     $effect(() => {
         void version;
         rowsByIndex = new Map();
-        activeIndex = undefined;
     });
 
     $effect(() => {
@@ -43,10 +50,25 @@
             const next = new Map(rowsByIndex);
             w.rows.forEach((r, i) => next.set(start + i, r));
             rowsByIndex = next;
+            // After a mutation/edit the host returns the NodeId to keep active; resolve it to a row index once this
+            // version's rows are loaded. The new/moved/edited entry re-opens instead of the list collapsing.
+            if (appliedSelectionVersion !== version) {
+                appliedSelectionVersion = version;
+                let found: number | undefined;
+                if (selection !== undefined) {
+                    next.forEach((r, idx) => {
+                        if (r.id === selection) found = idx;
+                    });
+                }
+                activeIndex = found;
+            }
         });
         return () => { cancelled = true; };
     });
 
+    // Addresses the entry by [sectionTitle, rowName]; the editor resolves it via namePath. NOTE: row.name is the
+    // display name - for formats with a relationship model (Plan 6 IE/PRO) it may be a derived label rather than the
+    // raw slot name, so revisit this addressing when those formats gain structure ops.
     const entryPath = (row: Row): string[] => [title, row.name];
 </script>
 <div class="inline-list-toolbar">

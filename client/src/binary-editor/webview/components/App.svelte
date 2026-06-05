@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { Diagnostic, OpenResult, SectionDescriptor } from "@bgforge/binary-editor";
+    import type { Diagnostic, NodeId, OpenResult, SectionDescriptor } from "@bgforge/binary-editor";
     import type { Bridge } from "../state/bridge";
     import type { HostToWebview } from "../messages";
     import { ViewModel } from "../state/view-model";
@@ -16,6 +16,8 @@
     let version = $state(0);
     let vm = $state<ViewModel | undefined>();
     let activeId = $state<string | undefined>();
+    // NodeId the host asks the view to select after the latest edit/structure op (undefined = no change).
+    let selection = $state<NodeId | undefined>();
 
     const active = $derived<SectionDescriptor | undefined>(
         open?.layout.sections.find((s) => s.id === activeId));
@@ -36,6 +38,7 @@
                 diagnostics = m.diagnostics;
             } else if (m.type === "changeSet") {
                 diagnostics = m.changeSet.diagnostics;
+                selection = m.selection;
                 bridge.invalidate();
                 version++;
             } else if (m.type === "invalidated") {
@@ -80,9 +83,9 @@
             {#if active.render === "inline"}
                 <InlineList parentId={active.nodeId} title={active.title}
                             caps={{ canAdd: active.canAdd, canModify: active.canModify }}
-                            {bridge} {version} onedit={edit} />
+                            {bridge} {version} {selection} onedit={edit} />
             {:else}
-                <ListSection nodeId={active.nodeId} {bridge} {vm} {version} onadd={add} onedit={edit} {byNode} />
+                <ListSection nodeId={active.nodeId} canAdd={active.canAdd} {bridge} {vm} {version} onadd={add} onedit={edit} {byNode} />
             {/if}
         {:else}
             <FormSection nodeId={active.nodeId} {bridge} {vm} {version} onedit={edit} {byNode} />
