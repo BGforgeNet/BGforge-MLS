@@ -13,7 +13,7 @@ This is the only coverage of the real webview render/dispatch path. Unit tests i
 cover byte-level correctness and adapter routing, but they run against a mock host and never exercise
 App.svelte, VirtualList, RowActions, or the Svelte reactivity layer.
 
-Three drivers are provided:
+The drivers are:
 
 - `render.mts` - MAP format; exercises structure-ops on Global Variables (reorder, insert-before/after,
   delete, duplicate, undo/redo x6).
@@ -21,9 +21,25 @@ Three drivers are provided:
   wm_sbook.itm regression (remove the only effect of an item with equipping count 0).
 - `render-spl.mts` - SPL format; same op coverage as ITM, plus the casting-free spell regression
   (same equipping-range clamp path as ITM, via the shared IE structure-op core).
+- `render-form.mts` - phantom (synthetic) format; drives the generic form/list renderer with a made-up
+  descriptor to prove the UI handles a novel format with no format-specific code (all control types,
+  group tabs vs. headed sections, master-detail list).
+- `render-primitives.mts` - bits-ui primitives showcase + CSP gate (Select, Combobox, Checkbox, Menu,
+  Tabs, compact RowActions) under the real strict nonce CSP.
+- `render-pro-eff.mts` - PRO (Fallout item proto) and EFF (Infinity Engine effect); form-only formats,
+  asserts the generic form renders real fixtures without error under CSP.
 
 Each driver prints per-op `PASS`/`FAIL` lines and an `ALL <FMT> OPS PASS` summary; exits non-zero on any
 failure.
+
+Two shared helpers back the drivers:
+
+- `csp-gate.ts` - `installCspGate(page, label)` registers the Content-Security-Policy violation listeners
+  and returns an `assertNoViolations()` that fails the run if any violation was captured. Every driver
+  uses it so the CSP gate stays identical across formats.
+- `theme-vars.ts` - `THEME_VARS`, the canonical VS Code Dark+ fallback `:root` block defining every
+  `--vscode-*` variable `styles.css` consumes. `build.mts`, `render-form.mts`, and `render-primitives.mts`
+  import it so adding a new variable to `styles.css` only needs one harness update.
 
 ## When to use it
 
@@ -57,7 +73,7 @@ It is type-checked via `test/harness/tsconfig.json`, which includes the DOM lib 
 - **`tsx`** - available via the repo's dev dependencies (`pnpm exec tsx ...`).
 
 - **`esbuild` and `esbuild-svelte`** - present in `client/package.json`; the workspace root `node_modules`
-  resolves them for `build.mjs`.
+  resolves them for `build.mts`.
 
 ## How to run
 
@@ -72,11 +88,11 @@ cd binary && pnpm build
 
 **Step 2 - build the webview bundle.**
 
-`build.mjs` bundles `harness-main.ts` + `App.svelte` via esbuild+esbuild-svelte and writes the gitignored
-`app.html` into this directory:
+`build.mts` bundles `harness-main.ts` + `App.svelte` via esbuild+esbuild-svelte and writes the gitignored
+`app.html` into this directory. It runs under `tsx` (it imports `theme-vars.ts`):
 
 ```
-node binary-editor/test/harness/build.mjs
+pnpm exec tsx binary-editor/test/harness/build.mts
 ```
 
 The output `app.html` must exist before running any driver. Rebuild it after changing `harness-main.ts` or
@@ -88,10 +104,14 @@ any Svelte component it imports.
 pnpm exec tsx binary-editor/test/harness/render.mts
 pnpm exec tsx binary-editor/test/harness/render-itm.mts
 pnpm exec tsx binary-editor/test/harness/render-spl.mts
+pnpm exec tsx binary-editor/test/harness/render-form.mts
+pnpm exec tsx binary-editor/test/harness/render-primitives.mts
+pnpm exec tsx binary-editor/test/harness/render-pro-eff.mts
 ```
 
-Expected output ends with `ALL OPS PASS` / `ALL ITM OPS PASS` / `ALL SPL OPS PASS` (exit 0). Any
-assertion failure prints `FAIL  <label>  <detail>` and exits non-zero.
+Expected output ends with `ALL OPS PASS` / `ALL ITM OPS PASS` / `ALL SPL OPS PASS` (and the equivalent
+summary for the other drivers), exit 0. Any assertion failure prints `FAIL  <label>  <detail>` and exits
+non-zero.
 
 ## Gitignored outputs
 

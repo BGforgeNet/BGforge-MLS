@@ -55,7 +55,7 @@ import { THEME_VARS } from "./theme-vars";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, "../../..");
 
-// ---- Build the webview bundle (same pipeline as build.mjs) ----
+// ---- Build the webview bundle (same pipeline as build.mts) ----
 const outdir = fs.mkdtempSync(path.join(os.tmpdir(), "bb-form-"));
 await build({
     entryPoints: [path.join(here, "harness-main.ts")],
