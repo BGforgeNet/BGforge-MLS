@@ -39,6 +39,11 @@
 </script>
 <div class="vlist"
      bind:clientHeight={viewportHeight} onscroll={(e) => (scrollTop = (e.target as HTMLElement).scrollTop)}>
+    <!-- The interpolated style= attributes below are CSP-safe: Svelte compiles a `style="...{expr}..."`
+         attribute to element.style.cssText (a CSSOM mutation), which CSP does not govern. Only STATIC
+         template style attributes are parsed from HTML and subject to the nonce CSP - that is why the root
+         height/overflow lives on the .vlist class instead. The render-itm/spl harness CSP gate renders these
+         very rows with zero violations. -->
     <div style="height:{total * rowHeight}px;position:relative">
         {#each Array.from({ length: range.end - range.start }, (_, k) => range.start + k) as idx (idx)}
             {@const row = rowsByIndex.get(idx)}

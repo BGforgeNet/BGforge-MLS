@@ -14,7 +14,7 @@
     const diagTitle = $derived(diagnostics.map((d) => d.message).join("; "));
     const firstFix = $derived(diagnostics.find((d) => d.quickFix));
 </script>
-<div class="field">
+<div class="field" class:field-flags={kind === "flags"}>
     <span class="label" title={row.description ?? ""}>{row.name}</span>
     {#if kind === "number"}<NumberField {row} onedit={emit} />
     {:else if kind === "string"}<StringField {row} onedit={emit} />
