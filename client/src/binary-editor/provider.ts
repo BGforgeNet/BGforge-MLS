@@ -19,6 +19,7 @@ const WORKER_SCRIPT = path.join("client", "out", "binary-editor", "worker.js");
 const WEBVIEW_HTML = path.join("client", "src", "binary-editor", "webview", "index.html");
 const WEBVIEW_CSS = path.join("client", "src", "binary-editor", "webview", "styles.css");
 const WEBVIEW_JS = path.join("client", "out", "binary-editor", "webview", "main.js");
+const CODICONS_DIR = path.join("client", "out", "codicons");
 
 /** Human-readable undo-history label for a structure op. The worker keeps its own detailed label; this is the
  *  coarse-grained entry shown in the host editor's undo stack. */
@@ -76,7 +77,7 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
         panel: vscode.WebviewPanel,
         _token: vscode.CancellationToken,
     ): Promise<void> {
-        const codiconsDir = vscode.Uri.joinPath(this.extensionUri, "client", "out", "codicons");
+        const codiconsDir = vscode.Uri.joinPath(this.extensionUri, CODICONS_DIR);
         panel.webview.options = { enableScripts: true, localResourceRoots: [codiconsDir] };
         panel.webview.html = this.getHtml(panel.webview);
 
@@ -302,14 +303,16 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
         // loads under the strict CSP (default-src 'none' blocks the raw relative path).
         // The codicon @font-face src contains a relative url("./codicon.ttf?...") that must become
         // a vscode-resource:// URI the webview trusts; localResourceRoots is set to the same dir.
-        const codiconTtfUri = webview.asWebviewUri(
-            vscode.Uri.joinPath(this.extensionUri, "client", "out", "codicons", "codicon.ttf"),
-        );
+        const codiconTtfUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, CODICONS_DIR, "codicon.ttf"));
         const rawCodiconCss = getCachedCssAsset("binary-editor-v2-codicons", extensionPath, [
-            path.join("client", "out", "codicons", "codicon.css"),
+            path.join(CODICONS_DIR, "codicon.css"),
         ]);
-        // Replace the relative font url (which may include a cache-busting query string) with the
-        // absolute webview URI. The regex matches url("./codicon.ttf...") to url("./codicon.ttf?...").
+        // Replace the relative font url with the absolute webview URI. The regex matches the ttf url
+        // both with and without a cache-busting query string: url("./codicon.ttf") or url("./codicon.ttf?<hash>").
+        // Upgrade assumption: @vscode/codicons emits a double-quoted, "./"-prefixed url. If a future bump
+        // switches to single quotes or drops the "./", this silently no-matches and the font fails to load
+        // under default-src 'none' with no error surfaced. Re-verify the @font-face src format on any
+        // @vscode/codicons version bump.
         const codiconCss = rawCodiconCss.replace(/url\("\.\/codicon\.ttf[^"]*"\)/, () => `url("${codiconTtfUri}")`);
         html = html.replace("{{codiconStyles}}", () => codiconCss);
         const script = getCachedJsAsset("binary-editor-v2", extensionPath, WEBVIEW_JS);
