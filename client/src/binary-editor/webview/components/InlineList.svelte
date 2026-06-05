@@ -68,8 +68,8 @@
     });
 
     // Addresses the entry by [sectionTitle, rowName]; the editor resolves it via namePath. NOTE: row.name is the
-    // display name - for formats with a relationship model (Plan 6 IE/PRO) it may be a derived label rather than the
-    // raw slot name, so revisit this addressing when those formats gain structure ops.
+    // display name - for formats whose entry labels are derived rather than positional it may not be the raw slot
+    // name, so revisit this addressing if such a format gains structure ops.
     const entryPath = (row: Row): string[] => [title, row.name];
 </script>
 <div class="inline-list-toolbar">
