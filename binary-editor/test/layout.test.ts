@@ -35,5 +35,6 @@ describe("buildLayout capabilities", () => {
         const header = layout.sections.find((s) => s.kind === "form")!;
         expect(header.canAdd).toBe(false);
         expect(header.canModify).toBe(false);
+        expect(header.render).toBe("master-detail");
     });
 });

@@ -25,7 +25,8 @@ export function buildLayout(formatId: string, model: Model): LayoutDescriptor {
             const canModify =
                 entryName !== undefined ? (adapter?.isRemovableEntry?.([n.name, entryName]) ?? false) : false;
             // Derive the render hint structurally: a list section whose entries are plain fields (e.g. MAP int32
-            // variables) displays inline (one field per row); anything else uses master-detail.
+            // variables) displays inline (one field per row); anything else - non-list sections, or an empty list
+            // with no first child to inspect - uses master-detail.
             const render: "inline" | "master-detail" =
                 isList && firstChild?.kind === "field" ? "inline" : "master-detail";
             return { id: n.id, title: n.name, kind: isList ? "list" : "form", nodeId: n.id, render, canAdd, canModify };
