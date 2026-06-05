@@ -445,10 +445,30 @@ check(
     `total=${sectionKids(abilitiesNodeId).total}`,
 );
 
+// ---- Offset toggle assertions ----
+// Offsets are hidden by default (developer affordance, not needed by end users).
+// Selecting a row populates the detail form; in the default state no .offset elements should appear.
+await goToSection(page, "Effects", 3);
+await selectRow(page, 0);
+// Wait for the detail form to populate with fields.
+await page.waitForSelector(".form .field", { timeout: 3000 });
+const offsetsBeforeToggle = await page.locator(".offset").count();
+check("offsets: hidden by default (count=0)", offsetsBeforeToggle === 0, `count=${offsetsBeforeToggle}`);
+// Click the "Show offsets" checkbox in the toolbar to enable offsets.
+await page.locator(".toolbar label.bb-checkbox-label").click();
+await page.waitForTimeout(100);
+const offsetsAfterToggle = await page.locator(".offset").count();
+check("offsets: visible after toggle (count>0)", offsetsAfterToggle > 0, `count=${offsetsAfterToggle}`);
+// Turn offsets back off so the screenshots reflect the default (offsets hidden) state.
+await page.locator(".toolbar label.bb-checkbox-label").click();
+await page.waitForTimeout(100);
+
 // ---- Screenshots ----
 await goToSection(page, "Abilities", 2);
 await page.screenshot({ path: path.join(here, "shot-itm-abilities.png") });
 await goToSection(page, "Effects", 3);
+await selectRow(page, 0);
+await page.waitForSelector(".form .field", { timeout: 3000 });
 await page.screenshot({ path: path.join(here, "shot-itm-effects.png") });
 
 await browser.close();

@@ -6,9 +6,10 @@
     import Field from "./Field.svelte";
     import RowActions from "./RowActions.svelte";
 
-    const { parentId, title, caps, bridge, version, selection, onedit }:
+    const { parentId, title, caps, bridge, version, selection, onedit, showOffsets = false }:
         { parentId: NodeId; title: string; caps: SectionCaps; bridge: Bridge; version: number;
-          selection: NodeId | undefined; onedit: (id: string, v: number | string) => void } = $props();
+          selection: NodeId | undefined; onedit: (id: string, v: number | string) => void;
+          showOffsets?: boolean } = $props();
 
     // Tall enough to contain the active row's inline Field control plus the action bar without overflowing into the
     // next absolutely-positioned row. Inactive rows show a single label/value line and have headroom to spare.
@@ -92,7 +93,7 @@
                      onclick={() => (activeIndex = idx)} role="button" tabindex="0"
                      onkeydown={(e) => { if (e.key === "Enter") activeIndex = idx; }}>
                     {#if idx === activeIndex}
-                        <Field {row} {onedit} />
+                        <Field {row} {onedit} {showOffsets} />
                         <RowActions {acts} entryPath={entryPath(row)} {bridge} compact={true} />
                     {:else}
                         <span class="label">{row.name}</span> <span class="value">{row.displayValue}</span>

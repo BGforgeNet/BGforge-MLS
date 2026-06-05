@@ -10,11 +10,11 @@
     // depth: the group-nesting level this FormSection renders. depth=1 is the first level
     // of groups inside a detail form (sits under the horizontal section tabs) -> vertical tabs.
     // depth=2 -> horizontal tabs. depth>2 -> always headed sections (hard cap at 2 tab levels).
-    const { nodeId, bridge, vm, version, onedit, byNode, depth = 1 }:
+    const { nodeId, bridge, vm, version, onedit, byNode, depth = 1, showOffsets = false }:
         { nodeId: NodeId; bridge: Bridge; vm: ViewModel; version: number;
           onedit: (id: string, v: number | string) => void;
           byNode: Map<string, Diagnostic[]>;
-          depth?: number } = $props();
+          depth?: number; showOffsets?: boolean } = $props();
 
     let rows = $state<Row[]>([]);
     $effect(() => {
@@ -47,7 +47,7 @@
 </script>
 <div class="form">
     {#each fields as row (row.id)}
-        <Field {row} {onedit} diagnostics={byNode.get(row.id)} />
+        <Field {row} {onedit} diagnostics={byNode.get(row.id)} {showOffsets} />
     {/each}
     {#if org.mode === "tabs"}
         {@const tabItems = groups.map((g) => ({ id: g.id, label: g.name }))}
@@ -57,7 +57,7 @@
                   ariaLabel="Form groups" onselect={(id) => { activeTabId = id; }} />
             {#if activeGroup}
                 <div class="group-tab-content">
-                    <Self nodeId={activeGroup.id} {bridge} {vm} {version} {onedit} {byNode} depth={depth + 1} />
+                    <Self nodeId={activeGroup.id} {bridge} {vm} {version} {onedit} {byNode} depth={depth + 1} {showOffsets} />
                 </div>
             {/if}
         </div>
@@ -65,7 +65,7 @@
         {#each groups as group (group.id)}
             <div class="subgroup">
                 <h4 class="subgroup-title">{group.name}</h4>
-                <Self nodeId={group.id} {bridge} {vm} {version} {onedit} {byNode} depth={depth + 1} />
+                <Self nodeId={group.id} {bridge} {vm} {version} {onedit} {byNode} depth={depth + 1} {showOffsets} />
             </div>
         {/each}
     {/if}

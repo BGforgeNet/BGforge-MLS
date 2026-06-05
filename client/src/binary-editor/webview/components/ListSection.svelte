@@ -11,11 +11,11 @@
     // detail pane unselected; safe for ITM abilities/effects (typically <10) but revisit if any list section can exceed it.
     const SELECTION_RESOLVE_SCAN_LIMIT = 256;
 
-    const { nodeId, title, caps, bridge, vm, version, selection, onadd, onedit, byNode }:
+    const { nodeId, title, caps, bridge, vm, version, selection, onadd, onedit, byNode, showOffsets = false }:
         { nodeId: NodeId; title: string; caps: SectionCaps; bridge: Bridge; vm: ViewModel;
           version: number; selection: NodeId | undefined;
           onadd: () => void; onedit: (id: string, v: number | string) => void;
-          byNode: Map<string, Diagnostic[]> } = $props();
+          byNode: Map<string, Diagnostic[]>; showOffsets?: boolean } = $props();
 
     // eslint-disable-next-line prefer-const -- reassigned via onselect callback
     let selected = $state<Row | undefined>();
@@ -90,7 +90,7 @@
                 {@const acts = rowActions(selectedIndex, total, caps)}
                 <RowActions {acts} entryPath={entryPath(selected)} {bridge} />
             {/if}
-            <FormSection nodeId={selected.id} {bridge} {vm} {version} {onedit} {byNode} />
+            <FormSection nodeId={selected.id} {bridge} {vm} {version} {onedit} {byNode} {showOffsets} />
         {:else}
             <p class="placeholder">Select an entry.</p>
         {/if}

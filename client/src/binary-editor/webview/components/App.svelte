@@ -8,6 +8,7 @@
     import FormSection from "./FormSection.svelte";
     import ListSection from "./ListSection.svelte";
     import InlineList from "./InlineList.svelte";
+    import Checkbox from "./primitives/Checkbox.svelte";
 
     const { bridge }: { bridge: Bridge } = $props();
 
@@ -18,6 +19,9 @@
     let activeId = $state<string | undefined>();
     // NodeId the host asks the view to select after the latest edit/structure op (undefined = no change).
     let selection = $state<NodeId | undefined>();
+    // Off by default: byte offsets are a developer affordance, not needed by end users.
+    // eslint-disable-next-line prefer-const -- reassigned via the toolbar Checkbox onchange callback
+    let showOffsets = $state(false);
 
     const active = $derived<SectionDescriptor | undefined>(
         open?.layout.sections.find((s) => s.id === activeId));
@@ -66,6 +70,7 @@
     <div class="toolbar">
         <button onclick={() => bridge.dumpJson()}>Dump JSON</button>
         <button onclick={() => bridge.loadJson()}>Load JSON</button>
+        <Checkbox checked={showOffsets} label="Show offsets" onchange={(v) => { showOffsets = v; }} />
     </div>
     {#if diagnostics.length > 0}
         <div class="banner warning">
@@ -83,14 +88,14 @@
             {#if active.render === "inline"}
                 <InlineList parentId={active.nodeId} title={active.title}
                             caps={{ canAdd: active.canAdd, canModify: active.canModify }}
-                            {bridge} {version} {selection} onedit={edit} />
+                            {bridge} {version} {selection} onedit={edit} {showOffsets} />
             {:else}
                 <ListSection nodeId={active.nodeId} title={active.title}
                             caps={{ canAdd: active.canAdd, canModify: active.canModify }}
-                            {bridge} {vm} {version} {selection} onadd={add} onedit={edit} {byNode} />
+                            {bridge} {vm} {version} {selection} onadd={add} onedit={edit} {byNode} {showOffsets} />
             {/if}
         {:else}
-            <FormSection nodeId={active.nodeId} {bridge} {vm} {version} onedit={edit} {byNode} />
+            <FormSection nodeId={active.nodeId} {bridge} {vm} {version} onedit={edit} {byNode} {showOffsets} />
         {/if}
     {/if}
 {/if}

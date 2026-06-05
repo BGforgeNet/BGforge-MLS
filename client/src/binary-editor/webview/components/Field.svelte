@@ -5,9 +5,9 @@
     import StringField from "./controls/StringField.svelte";
     import EnumField from "./controls/EnumField.svelte";
     import FlagsField from "./controls/FlagsField.svelte";
-    const { row, onedit, diagnostics = [] }:
+    const { row, onedit, diagnostics = [], showOffsets = false }:
         { row: Row; onedit: (nodeId: string, value: number | string) => void;
-          diagnostics?: Diagnostic[] } = $props();
+          diagnostics?: Diagnostic[]; showOffsets?: boolean } = $props();
     const kind = $derived(controlKind(row));
     const emit = (v: number | string) => onedit(row.id, v);
     const hasDiag = $derived(diagnostics.length > 0);
@@ -20,7 +20,7 @@
     {:else if kind === "string"}<StringField {row} onedit={emit} />
     {:else if kind === "enum"}<EnumField {row} onedit={emit} />
     {:else}<FlagsField {row} onedit={emit} />{/if}
-    {#if row.offset !== undefined}<span class="offset">0x{row.offset.toString(16)}</span>{/if}
+    {#if showOffsets && row.offset !== undefined}<span class="offset">0x{row.offset.toString(16)}</span>{/if}
     {#if hasDiag}
         <span class="diag warning" title={diagTitle}>!</span>
         {#if firstFix}
