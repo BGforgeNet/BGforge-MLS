@@ -19,4 +19,7 @@ describe("rowActions", () => {
     it("enables insert/duplicate/remove for any modifiable row", () => {
         expect(rowActions(1, 3, caps)).toMatchObject({ insert: true, duplicate: true, remove: true });
     });
+    it("disables both directions for a lone entry", () => {
+        expect(rowActions(0, 1, caps)).toMatchObject({ up: false, down: false, insert: true, remove: true });
+    });
 });

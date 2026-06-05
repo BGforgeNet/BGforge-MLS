@@ -80,8 +80,7 @@
             {#if active.render === "inline"}
                 <InlineList parentId={active.nodeId} title={active.title}
                             caps={{ canAdd: active.canAdd, canModify: active.canModify }}
-                            {bridge} {version} onedit={edit}
-                            structureOp={(op) => bridge.structureOp(op)} />
+                            {bridge} {version} onedit={edit} />
             {:else}
                 <ListSection nodeId={active.nodeId} {bridge} {vm} {version} onadd={add} onedit={edit} {byNode} />
             {/if}

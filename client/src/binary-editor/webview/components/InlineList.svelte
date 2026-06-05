@@ -1,16 +1,17 @@
 <script lang="ts">
-    import type { NodeId, Row, StructureOpRequest } from "@bgforge/binary-editor";
+    import type { NodeId, Row } from "@bgforge/binary-editor";
     import type { Bridge } from "../state/bridge";
     import { visibleRange } from "../state/virtual-window";
     import { rowActions, type SectionCaps } from "../state/structure-actions";
     import Field from "./Field.svelte";
 
-    const { parentId, title, caps, bridge, version, onedit, structureOp }:
+    const { parentId, title, caps, bridge, version, onedit }:
         { parentId: NodeId; title: string; caps: SectionCaps; bridge: Bridge; version: number;
-          onedit: (id: string, v: number | string) => void;
-          structureOp: (op: StructureOpRequest) => void } = $props();
+          onedit: (id: string, v: number | string) => void } = $props();
 
-    const rowHeight = 26;
+    // Tall enough to contain the active row's inline Field control plus the action bar without overflowing into the
+    // next absolutely-positioned row. Inactive rows show a single label/value line and have headroom to spare.
+    const rowHeight = 34;
     const overscan = 6;
     // eslint-disable-next-line prefer-const -- reassigned via bind:clientHeight in template
     let viewportHeight = $state(400);
@@ -23,8 +24,14 @@
 
     const range = $derived(visibleRange({ scrollTop, viewportHeight, rowHeight, overscan, total }));
 
-    // A version bump clears the per-index row map so the next fetch repopulates from a fresh model.
-    $effect(() => { void version; rowsByIndex = new Map(); });
+    // A version bump clears the per-index row map so the next fetch repopulates from a fresh model, and drops the
+    // active selection: after a structural op the index no longer maps to the same entry (a remove shifts everything
+    // up, an add lands elsewhere), so keeping it open would expand the wrong row.
+    $effect(() => {
+        void version;
+        rowsByIndex = new Map();
+        activeIndex = undefined;
+    });
 
     $effect(() => {
         void version; // re-fetch the visible window after a mutation/reset
@@ -43,7 +50,7 @@
     const entryPath = (row: Row): string[] => [title, row.name];
 </script>
 <div class="inline-list-toolbar">
-    {#if caps.canAdd}<button onclick={() => structureOp({ op: "add", namePath: [title] })}>+ add</button>{/if}
+    {#if caps.canAdd}<button onclick={() => bridge.structureOp({ op: "add", namePath: [title] })}>+ add</button>{/if}
 </div>
 <div class="vlist" style="height:100%;overflow:auto"
      bind:clientHeight={viewportHeight} onscroll={(e) => (scrollTop = (e.target as HTMLElement).scrollTop)}>
@@ -59,12 +66,12 @@
                     {#if idx === activeIndex}
                         <Field {row} {onedit} />
                         <span class="row-actions">
-                            <button disabled={!acts.insert} onclick={() => structureOp({ op: "insert", entryPath: entryPath(row), position: "before" })}>+before</button>
-                            <button disabled={!acts.insert} onclick={() => structureOp({ op: "insert", entryPath: entryPath(row), position: "after" })}>+after</button>
-                            <button disabled={!acts.duplicate} onclick={() => structureOp({ op: "duplicate", entryPath: entryPath(row) })}>dup</button>
-                            <button disabled={!acts.up} onclick={() => structureOp({ op: "reorder", entryPath: entryPath(row), direction: "up" })}>^</button>
-                            <button disabled={!acts.down} onclick={() => structureOp({ op: "reorder", entryPath: entryPath(row), direction: "down" })}>v</button>
-                            <button disabled={!acts.remove} onclick={() => structureOp({ op: "remove", entryPath: entryPath(row) })}>del</button>
+                            <button disabled={!acts.insert} onclick={() => bridge.structureOp({ op: "insert", entryPath: entryPath(row), position: "before" })}>+before</button>
+                            <button disabled={!acts.insert} onclick={() => bridge.structureOp({ op: "insert", entryPath: entryPath(row), position: "after" })}>+after</button>
+                            <button disabled={!acts.duplicate} onclick={() => bridge.structureOp({ op: "duplicate", entryPath: entryPath(row) })}>dup</button>
+                            <button disabled={!acts.up} onclick={() => bridge.structureOp({ op: "reorder", entryPath: entryPath(row), direction: "up" })}>^</button>
+                            <button disabled={!acts.down} onclick={() => bridge.structureOp({ op: "reorder", entryPath: entryPath(row), direction: "down" })}>v</button>
+                            <button disabled={!acts.remove} onclick={() => bridge.structureOp({ op: "remove", entryPath: entryPath(row) })}>del</button>
                         </span>
                     {:else}
                         <span class="label">{row.name}</span> <span class="value">{row.displayValue}</span>
