@@ -5,6 +5,7 @@
     import StringField from "./controls/StringField.svelte";
     import EnumField from "./controls/EnumField.svelte";
     import FlagsField from "./controls/FlagsField.svelte";
+    import Icon from "./Icon.svelte";
     const { row, onedit, diagnostics = [], showOffsets = false }:
         { row: Row; onedit: (nodeId: string, value: number | string) => void;
           diagnostics?: Diagnostic[]; showOffsets?: boolean } = $props();
@@ -22,9 +23,13 @@
     {:else}<FlagsField {row} onedit={emit} />{/if}
     {#if showOffsets && row.offset !== undefined}<span class="offset">0x{row.offset.toString(16)}</span>{/if}
     {#if hasDiag}
-        <span class="diag warning" title={diagTitle}>!</span>
+        <!-- role="img" + aria-label expose the diagnostic message to screen readers; the Icon span
+             itself is aria-hidden so the glyph character is not announced separately. -->
+        <span class="diag warning" role="img" aria-label={diagTitle}><Icon name="warning" title={diagTitle} /></span>
         {#if firstFix}
-            <button class="quick-fix" onclick={() => { for (const e of firstFix.quickFix!.edits) onedit(e.nodeId, e.value); }}>{firstFix.quickFix!.label}</button>
+            <button class="quick-fix" onclick={() => { for (const e of firstFix.quickFix!.edits) onedit(e.nodeId, e.value); }}>
+                <Icon name="wrench" />{firstFix.quickFix!.label}
+            </button>
         {/if}
     {/if}
 </div>

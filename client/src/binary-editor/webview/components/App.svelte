@@ -9,6 +9,7 @@
     import ListSection from "./ListSection.svelte";
     import InlineList from "./InlineList.svelte";
     import Checkbox from "./primitives/Checkbox.svelte";
+    import Icon from "./Icon.svelte";
 
     const { bridge }: { bridge: Bridge } = $props();
 
@@ -74,7 +75,9 @@
     </div>
     {#if diagnostics.length > 0}
         <div class="banner warning">
-            <span class="banner-summary">{summary}</span>
+            <span class="banner-header">
+                <Icon name="warning" /><span class="banner-summary">{summary}</span>
+            </span>
             <ul class="banner-list">
                 {#each diagnostics as d (d.nodeId + d.message)}
                     <li>{d.message}</li>

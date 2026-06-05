@@ -119,6 +119,17 @@ button:disabled {
     border: 1px solid var(--vscode-inputValidation-warningBorder, var(--vscode-editorWarning-foreground, #cca700));
     color: var(--vscode-inputValidation-warningForeground, var(--vscode-foreground));
 }
+/* Row that holds the leading warning icon and the bold summary text, aligned by baseline. */
+.banner-header {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+.banner-header .codicon {
+    color: var(--vscode-editorWarning-foreground, #cca700);
+    font-size: 1em;
+    flex-shrink: 0;
+}
 .banner-summary {
     font-weight: 600;
 }
@@ -667,10 +678,23 @@ input[type="text"]::placeholder {
 }
 
 /* ---- diagnostics ---- */
+/* The .diag.warning wrapper is role="img" so it is announced as the aria-label by screen readers.
+   The icon sits inline next to the control; sizing matches the surrounding text line height. */
 .diag.warning {
+    display: inline-flex;
+    align-items: center;
     color: var(--vscode-editorWarning-foreground, #cca700);
-    font-weight: 700;
     cursor: help;
+    /* 1em matches the surrounding font size; line-height: 1 keeps the icon from adding vertical space. */
+    font-size: 1em;
+    line-height: 1;
+}
+/* Quick-fix button: secondary action button with a subtle wrench icon, visually associated with the warning.
+   Padding tightened slightly (vs generic button) so it stays compact within the field row. */
+.quick-fix {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
 }
 
 /* ---- placeholder / error / loading states ---- */

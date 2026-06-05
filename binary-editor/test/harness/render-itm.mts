@@ -463,6 +463,112 @@ check("offsets: visible after toggle (count>0)", offsetsAfterToggle > 0, `count=
 await page.locator(".toolbar label.bb-checkbox-label").click();
 await page.waitForTimeout(100);
 
+// ============================================================
+// DIAGNOSTIC AFFORDANCES: inject a synthetic diagnostic to verify
+// the warning icon marker, banner, and quick-fix button all render.
+//
+// We navigate to Effects, select row 0 (populates the detail form),
+// read one field's nodeId from the DOM, then post a synthetic
+// { type: "diagnostics" } message. The field must show a .diag.warning
+// wrapper with aria-label matching the message, the banner must render
+// with the .banner-header icon, and the .quick-fix button must appear.
+// A second post with [] clears the state so screenshots below are clean.
+// ============================================================
+
+await goToSection(page, "Effects", 3);
+await selectRow(page, 0);
+await page.waitForSelector(".form .field", { timeout: 3000 });
+
+// Grab the first field's DOM id attribute - Field.svelte sets the row's nodeId as
+// data-node-id on the .field div only if we added it; instead we read the first
+// field label text and use the dispatch Node side to get the matching row's id.
+// The simpler path: read the field list from dispatch (Node side), pick row 0's id.
+const effectsRows = dispatch({ type: "getChildren", sessionId, nodeId: effectsNodeId, start: 0, end: 1 });
+const firstEffectNodeId = effectsRows.type === "children" ? (effectsRows.rows[0]?.id ?? "") : "";
+
+// Get children of the first effect row (its form fields).
+let diagNodeId = "";
+if (firstEffectNodeId !== "") {
+    const fieldRows = dispatch({ type: "getChildren", sessionId, nodeId: firstEffectNodeId, start: 0, end: 1 });
+    if (fieldRows.type === "children") diagNodeId = fieldRows.rows[0]?.id ?? "";
+}
+
+if (diagNodeId !== "") {
+    const syntheticDiagMsg = "Value out of range";
+    const syntheticQuickFixLabel = "Reset to default";
+    const syntheticDiag: HostToWebview = {
+        type: "diagnostics",
+        diagnostics: [
+            {
+                nodeId: diagNodeId,
+                severity: "warning",
+                message: syntheticDiagMsg,
+                quickFix: {
+                    label: syntheticQuickFixLabel,
+                    edits: [{ nodeId: diagNodeId, value: 0 }],
+                },
+            },
+        ],
+    };
+    await page.evaluate((m) => window.postMessage(m, "*"), syntheticDiag);
+    await page.waitForTimeout(200);
+
+    // Assert: .diag.warning marker present on the field.
+    const diagMarkerCount = await page.locator(".form .diag.warning").count();
+    check(
+        "diagnostics: warning marker renders (.diag.warning present)",
+        diagMarkerCount >= 1,
+        `count=${diagMarkerCount}`,
+    );
+
+    // Assert: marker carries aria-label equal to the diagnostic message (screen reader accessible).
+    const ariaLabel = await page.locator(".form .diag.warning").first().getAttribute("aria-label");
+    check(
+        "diagnostics: marker aria-label matches message",
+        ariaLabel === syntheticDiagMsg,
+        `aria-label="${ariaLabel}"`,
+    );
+
+    // Assert: banner renders with the warning surface.
+    const bannerCount = await page.locator(".banner.warning").count();
+    check("diagnostics: warning banner renders (.banner.warning present)", bannerCount >= 1, `count=${bannerCount}`);
+
+    // Assert: banner carries the leading icon (.banner-header .codicon).
+    const bannerIconCount = await page.locator(".banner-header .codicon").count();
+    check(
+        "diagnostics: banner has leading icon (.banner-header .codicon)",
+        bannerIconCount >= 1,
+        `count=${bannerIconCount}`,
+    );
+
+    // Assert: banner summary text contains the word "warning".
+    const summaryText = await page.locator(".banner-summary").first().textContent();
+    check(
+        "diagnostics: banner summary mentions 'warning'",
+        (summaryText ?? "").includes("warning"),
+        `summary="${summaryText}"`,
+    );
+
+    // Assert: .quick-fix button renders with the fix label.
+    const quickFixCount = await page.locator(".form .quick-fix").count();
+    check("diagnostics: quick-fix button renders (.quick-fix present)", quickFixCount >= 1, `count=${quickFixCount}`);
+    const quickFixText = await page.locator(".form .quick-fix").first().textContent();
+    check(
+        "diagnostics: quick-fix button contains fix label",
+        (quickFixText ?? "").includes(syntheticQuickFixLabel),
+        `text="${quickFixText}"`,
+    );
+
+    // Screenshot the diagnostic state so it can be visually reviewed.
+    await page.screenshot({ path: path.join(here, "shot-diagnostics.png") });
+
+    // Clear diagnostics so subsequent screenshots show the clean state.
+    await page.evaluate((m) => window.postMessage(m, "*"), { type: "diagnostics", diagnostics: [] } as HostToWebview);
+    await page.waitForTimeout(150);
+} else {
+    check("diagnostics: could resolve a field nodeId for injection", false, "nodeId empty - skipped render check");
+}
+
 // ---- Screenshots ----
 await goToSection(page, "Abilities", 2);
 await page.screenshot({ path: path.join(here, "shot-itm-abilities.png") });
