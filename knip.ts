@@ -114,7 +114,9 @@ const config: KnipConfig = {
         "binary-editor": {
             entry: ["test/**/*.test.ts"],
             // Bench files invoked explicitly; not reachable from any declared entry point.
-            ignore: ["test/perf/**"],
+            // Harness files are environment-only (playwright, browser globals) and excluded from
+            // the package typecheck/lint - keep them out of knip's analysis too.
+            ignore: ["test/perf/**", "test/harness/**"],
         },
     },
     ignore: [

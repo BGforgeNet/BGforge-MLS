@@ -9,5 +9,6 @@
             "@bgforge/binary": ["../binary/src/index.ts"]
         }
     },
-    "include": ["src", "test"]
+    "include": ["src", "test"],
+    "exclude": ["test/harness"]
 }

@@ -334,5 +334,11 @@
             }
         }
     ],
-    "ignorePatterns": ["**/node_modules/**", "**/out/**", "**/*.d.ts", "server/src/user-messages.ts"]
+    "ignorePatterns": [
+        "**/node_modules/**",
+        "**/out/**",
+        "**/*.d.ts",
+        "server/src/user-messages.ts",
+        "binary-editor/test/harness/**"
+    ]
 }
