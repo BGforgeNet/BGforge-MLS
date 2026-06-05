@@ -107,10 +107,6 @@ const config: KnipConfig = {
         },
         binary: {
             entry: ["test/**/*.test.ts"],
-            // The generalized IE structure-op factory has no importer yet: it is consumed once ITM (and later SPL)
-            // are re-pointed at it. Until that wiring lands it is reachable from no entry point; drop this ignore
-            // when the first consumer imports it.
-            ignore: ["src/ie-common/structure-ops.ts"],
             // cac and diff are imported via shared/cli/cli-utils.ts, which lives outside any
             // workspace; knip's per-workspace dep tracing doesn't reach across that boundary.
             ignoreDependencies: ["cac", "diff"],

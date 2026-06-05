@@ -18,8 +18,8 @@ import {
     defaultItmEffect,
     itmAbilitiesCollection,
     itmEffectsCollection,
+    validateEffectPartition,
 } from "../src/itm/entity-ops";
-import { validateEffectPartition } from "../src/itm/effect-partition";
 import type { ParseResult } from "../src/types";
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
