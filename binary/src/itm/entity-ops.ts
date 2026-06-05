@@ -27,6 +27,11 @@ import { effectOwners, shiftEffectRefs, validateEffectPartition, type EffectOwne
 import type { ItmCanonicalDocument } from "./canonical-schemas";
 import type { ParseResult } from "../types";
 
+// Display-tree section names. Centralised here so the adapter predicates and
+// the resolve helpers always match without drift.
+export const ABILITIES_SECTION = "Abilities";
+export const EFFECTS_SECTION = "Effects";
+
 // ItmCanonicalDocument["abilities"][number] is SpecData<typeof itmAbilitySpecAnnotated>.
 // ItmCanonicalDocument["effects"][number] is SpecData<typeof effectSpecAnnotated>.
 // Using the structural array element type directly avoids importing the spec
@@ -183,7 +188,7 @@ function readDocument(parseResult: ParseResult): ItmCanonicalDocument | undefine
  * not an in-range ability address.
  */
 function resolveAbilityIndex(entryPath: readonly string[], abilityCount: number): number | undefined {
-    if (entryPath.length !== 2 || entryPath[0] !== "Abilities") return undefined;
+    if (entryPath.length !== 2 || entryPath[0] !== ABILITIES_SECTION) return undefined;
     const label = entryPath[1];
     if (label === undefined || !label.startsWith("Ability ")) return undefined;
     const oneBased = Number.parseInt(label.slice("Ability ".length), 10);
@@ -200,7 +205,7 @@ function resolveAbilityIndex(entryPath: readonly string[], abilityCount: number)
  * not an in-range effect address.
  */
 function resolveEffectIndex(entryPath: readonly string[], effectCount: number): number | undefined {
-    if (entryPath.length !== 2 || entryPath[0] !== "Effects") return undefined;
+    if (entryPath.length !== 2 || entryPath[0] !== EFFECTS_SECTION) return undefined;
     const label = entryPath[1];
     if (label === undefined || !label.startsWith("Effect ")) return undefined;
     const oneBased = Number.parseInt(label.slice("Effect ".length), 10);
@@ -256,7 +261,7 @@ export function buildItmAddAbilityBytes(
     parseResult: ParseResult,
     arrayPath: readonly string[],
 ): Uint8Array | undefined {
-    if (arrayPath.length !== 1 || arrayPath[0] !== "Abilities") return undefined;
+    if (arrayPath.length !== 1 || arrayPath[0] !== ABILITIES_SECTION) return undefined;
     const doc = readDocument(parseResult);
     if (!doc) return undefined;
     const mutation = applyEntryMutation(doc.abilities, "add", doc.abilities.length, defaultItmAbility);
@@ -488,4 +493,51 @@ export function buildItmReorderEffectBytes(
 function sameOwner(a: EffectOwner, b: EffectOwner): boolean {
     if (a.kind === "equipping" || b.kind === "equipping") return a.kind === b.kind;
     return a.index === b.index;
+}
+
+// ---------------------------------------------------------------------------
+// Adapter predicates - exported for use by itmFormatAdapter
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns true when arrayPath identifies one of the two top-level list sections
+ * in an ITM file (Abilities or Effects). Used by the binary editor to decide
+ * whether to render the group as a list panel rather than a form.
+ */
+export function isItmListSection(arrayPath: readonly string[]): boolean {
+    if (arrayPath.length !== 1) return false;
+    return arrayPath[0] === ABILITIES_SECTION || arrayPath[0] === EFFECTS_SECTION;
+}
+
+/**
+ * Returns true when the array at arrayPath supports structural mutations (add
+ * or remove). Both Abilities and Effects sections are structurally mutable;
+ * whether a specific op (e.g. add-effect) is available is handled per-builder.
+ */
+export function isItmModifiableArray(arrayPath: readonly string[]): boolean {
+    return isItmListSection(arrayPath);
+}
+
+/**
+ * Returns true only for the Abilities array. Effects have no unambiguous
+ * section-level add owner (the owning ability must be known), so section-add
+ * is gated off at the adapter level.
+ */
+export function isItmAddableArray(arrayPath: readonly string[]): boolean {
+    return isItmListSection(arrayPath) && arrayPath[0] === ABILITIES_SECTION;
+}
+
+/**
+ * Returns true when entryPath identifies a concrete ability or effect entry:
+ * length 2, recognised section name, entry label matches the expected prefix.
+ * Index range validation is left to the byte-builders themselves.
+ */
+export function isItmRemovableEntry(entryPath: readonly string[]): boolean {
+    if (entryPath.length !== 2) return false;
+    const section = entryPath[0];
+    const label = entryPath[1];
+    if (label === undefined) return false;
+    if (section === ABILITIES_SECTION) return label.startsWith("Ability ");
+    if (section === EFFECTS_SECTION) return label.startsWith("Effect ");
+    return false;
 }
