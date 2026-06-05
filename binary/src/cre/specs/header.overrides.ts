@@ -4,7 +4,8 @@
  * (`itm/specs/header.overrides.ts`, `spl/specs/header.overrides.ts`).
  */
 
-import type { FieldSpec } from "../../spec/types";
+import { arraySpec, type FieldSpec } from "../../spec/types";
+import { u8, u32 } from "typed-binary";
 import {
     CreAlignment,
     CreClass,
@@ -17,6 +18,20 @@ import {
     CreStatusFlags,
 } from "../types";
 import { creHeaderSpec } from "./header";
+
+// Slot labels for the three real-data array fields that the display layer must
+// render as individually-recoverable slots rather than an opaque "(N values)"
+// padding summary. Keeping labels here avoids repeating them in the spec and
+// in the rebuild helper that reads them back.
+
+/** 22 weapon-proficiency byte slots (BG1 named groups; BG2/EE engine-derived). */
+const PROFICIENCY_SLOT_LABELS: readonly string[] = Array.from({ length: 22 }, (_, i) => `Slot ${i + 1}`);
+
+/** 100 sound-set strref slots per SOUNDOFF.IDS / SNDSLOT.IDS. */
+const SOUND_SLOT_LABELS: readonly string[] = Array.from({ length: 100 }, (_, i) => `Sound ${i + 1}`);
+
+/** 5 OBJECT.IDS identifier slots. */
+const OBJECT_REF_LABELS: readonly string[] = Array.from({ length: 5 }, (_, i) => `Object ${i + 1}`);
 
 export const creHeaderSpecAnnotated = {
     ...creHeaderSpec,
@@ -40,6 +55,40 @@ export const creHeaderSpecAnnotated = {
     // `gender` mirrors GENDER.IDS - same lookup table as `sex`.
     gender: { ...creHeaderSpec.gender, enum: CreSex, enumOpen: true },
     alignment: { ...creHeaderSpec.alignment, enum: CreAlignment, enumOpen: true },
+    /**
+     * Weapon-proficiency block (22 x u8). Rendered as individually-labelled
+     * slots so each byte value is recoverable from the display tree on rebuild.
+     * BG1 uses the first 9 slots for named weapon groups; BG2/EE computes
+     * proficiencies from KIT.IDS/WEAPPROF.2DA at runtime and leaves most
+     * bytes unused, but all 22 bytes must round-trip byte-identically regardless.
+     */
+    proficiencies: arraySpec({
+        element: { codec: u8 },
+        count: 22,
+        view: "slots",
+        slotLabels: PROFICIENCY_SLOT_LABELS,
+    }),
+    /**
+     * Sound-set strref block (100 x u32). Each entry is a sound-set strref
+     * index per SOUNDOFF.IDS / SNDSLOT.IDS. Slots view makes each value
+     * recoverable from the display tree.
+     */
+    soundSlots: arraySpec({
+        element: { codec: u32 },
+        count: 100,
+        view: "slots",
+        slotLabels: SOUND_SLOT_LABELS,
+    }),
+    /**
+     * OBJECT.IDS reference block (5 x u8). The engine uses these as an ordered
+     * tuple of identifier IDs. Slots view makes each byte recoverable.
+     */
+    objectRefs: arraySpec({
+        element: { codec: u8 },
+        count: 5,
+        view: "slots",
+        slotLabels: OBJECT_REF_LABELS,
+    }),
     /**
      * Structural pointers / counts into the five variable-length sections
      * and the fixed item-slot block. The writer recomputes them from
