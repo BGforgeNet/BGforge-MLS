@@ -93,7 +93,7 @@
                      onkeydown={(e) => { if (e.key === "Enter") activeIndex = idx; }}>
                     {#if idx === activeIndex}
                         <Field {row} {onedit} />
-                        <RowActions {acts} entryPath={entryPath(row)} {bridge} />
+                        <RowActions {acts} entryPath={entryPath(row)} {bridge} compact={true} />
                     {:else}
                         <span class="label">{row.name}</span> <span class="value">{row.displayValue}</span>
                     {/if}

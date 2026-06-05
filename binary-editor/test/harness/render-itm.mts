@@ -177,9 +177,17 @@ async function selectRow(p: Page, idx: number): Promise<void> {
     await p.waitForTimeout(100);
 }
 
-// ---- Helper: click a RowActions button ----
-async function clickAction(p: Page, label: string): Promise<void> {
-    await p.locator(".row-actions button", { hasText: label }).first().click();
+// ---- Helper: click a RowActions button by aria-label ----
+async function clickAction(p: Page, ariaLabel: string): Promise<void> {
+    await p.locator(`.row-actions button[aria-label="${ariaLabel}"]`).first().click();
+    await p.waitForTimeout(200);
+}
+
+// ---- Helper: click Delete then confirm (two-step) ----
+async function clickDelete(p: Page): Promise<void> {
+    await clickAction(p, "Delete");
+    // After arming, the confirm button appears; click it to dispatch.
+    await p.locator(`.row-actions button[aria-label="Confirm delete"]`).first().click();
     await p.waitForTimeout(200);
 }
 
@@ -202,7 +210,7 @@ await doUndo();
 // --- Ability: insert before row 0 ---
 await goToSection(page, "Abilities", 2);
 await selectRow(page, 0);
-await clickAction(page, "+before");
+await clickAction(page, "Add above");
 check(
     "abilities: insert-before row0: count +1",
     sectionKids(abilitiesNodeId).total === 3,
@@ -213,7 +221,7 @@ await doUndo();
 // --- Ability: insert after row 0 ---
 await goToSection(page, "Abilities", 2);
 await selectRow(page, 0);
-await clickAction(page, "+after");
+await clickAction(page, "Add below");
 check(
     "abilities: insert-after row0: count +1",
     sectionKids(abilitiesNodeId).total === 3,
@@ -224,7 +232,7 @@ await doUndo();
 // --- Ability: reorder down row 0 ---
 await goToSection(page, "Abilities", 2);
 await selectRow(page, 0);
-await clickAction(page, "v");
+await clickAction(page, "Move down");
 check(
     "abilities: reorder-down row0: count unchanged",
     sectionKids(abilitiesNodeId).total === 2,
@@ -235,7 +243,7 @@ await doUndo();
 // --- Ability: reorder up row 1 ---
 await goToSection(page, "Abilities", 2);
 await selectRow(page, 1);
-await clickAction(page, "^");
+await clickAction(page, "Move up");
 check(
     "abilities: reorder-up row1: count unchanged",
     sectionKids(abilitiesNodeId).total === 2,
@@ -246,7 +254,7 @@ await doUndo();
 // --- Ability: duplicate row 0 ---
 await goToSection(page, "Abilities", 2);
 await selectRow(page, 0);
-await clickAction(page, "dup");
+await clickAction(page, "Duplicate");
 check(
     "abilities: duplicate row0: count +1",
     sectionKids(abilitiesNodeId).total === 3,
@@ -254,10 +262,23 @@ check(
 );
 await doUndo();
 
-// --- Ability: remove row 1 ---
+// --- Ability: delete single-click must NOT remove (confirm-required gate) ---
 await goToSection(page, "Abilities", 2);
 await selectRow(page, 1);
-await clickAction(page, "del");
+await clickAction(page, "Delete");
+check(
+    "abilities: delete single-click does NOT remove (confirm pending)",
+    sectionKids(abilitiesNodeId).total === 2,
+    `total=${sectionKids(abilitiesNodeId).total}`,
+);
+// Cancel the pending confirm so state resets for the next step.
+await page.locator(`.row-actions button[aria-label="Cancel delete"]`).first().click();
+await page.waitForTimeout(100);
+
+// --- Ability: remove row 1 (two-step confirm) ---
+await goToSection(page, "Abilities", 2);
+await selectRow(page, 1);
+await clickDelete(page);
 check(
     "abilities: remove row1: count -1",
     sectionKids(abilitiesNodeId).total === 1,
@@ -273,7 +294,7 @@ await goToSection(page, "Effects", 3);
 
 // --- Effect: insert before row 0 ---
 await selectRow(page, 0);
-await clickAction(page, "+before");
+await clickAction(page, "Add above");
 check(
     "effects: insert-before row0: count +1",
     sectionKids(effectsNodeId).total === 4,
@@ -284,7 +305,7 @@ await doUndo();
 // --- Effect: insert after row 0 ---
 await goToSection(page, "Effects", 3);
 await selectRow(page, 0);
-await clickAction(page, "+after");
+await clickAction(page, "Add below");
 check(
     "effects: insert-after row0: count +1",
     sectionKids(effectsNodeId).total === 4,
@@ -295,7 +316,7 @@ await doUndo();
 // --- Effect: reorder down row 1 (ability1 owns effects[1,2] - valid same-owner swap) ---
 await goToSection(page, "Effects", 3);
 await selectRow(page, 1);
-await clickAction(page, "v");
+await clickAction(page, "Move down");
 check(
     "effects: reorder-down row1 (same owner): count unchanged",
     sectionKids(effectsNodeId).total === 3,
@@ -306,7 +327,7 @@ await doUndo();
 // --- Effect: reorder up row 2 ---
 await goToSection(page, "Effects", 3);
 await selectRow(page, 2);
-await clickAction(page, "^");
+await clickAction(page, "Move up");
 check(
     "effects: reorder-up row2 (same owner): count unchanged",
     sectionKids(effectsNodeId).total === 3,
@@ -317,7 +338,7 @@ await doUndo();
 // --- Effect: duplicate row 1 ---
 await goToSection(page, "Effects", 3);
 await selectRow(page, 1);
-await clickAction(page, "dup");
+await clickAction(page, "Duplicate");
 check(
     "effects: duplicate row1: count +1",
     sectionKids(effectsNodeId).total === 4,
@@ -325,10 +346,10 @@ check(
 );
 await doUndo();
 
-// --- Effect: remove row 1 ---
+// --- Effect: remove row 1 (two-step confirm) ---
 await goToSection(page, "Effects", 3);
 await selectRow(page, 1);
-await clickAction(page, "del");
+await clickDelete(page);
 check(
     "effects: remove row1: count -1",
     sectionKids(effectsNodeId).total === 2,
@@ -382,6 +403,23 @@ await doUndo();
         check("regression: effect count dropped to 0", afterCount === 0, `count=${afterCount}`);
     }
 }
+
+// ---- Labeled-controls + delete-confirm assertions ----
+// Verify the toolbar has clearly labeled controls and that Delete is a two-step operation.
+await goToSection(page, "Abilities", 2);
+await selectRow(page, 1);
+
+// "Move up" button must exist with the correct aria-label.
+const moveUpBtn = page.locator(`.row-actions button[aria-label="Move up"]`).first();
+check("controls: Move up button is present", await moveUpBtn.isVisible(), "visible check");
+
+// Delete requires a deliberate second click: first click arms confirm, count must still be 2.
+await clickAction(page, "Delete");
+const afterArm = sectionKids(abilitiesNodeId).total;
+check("controls: single Delete click does not remove (count unchanged)", afterArm === 2, `total=${afterArm}`);
+// Cancel the confirm so the state is clean.
+await page.locator(`.row-actions button[aria-label="Cancel delete"]`).first().click();
+await page.waitForTimeout(100);
 
 // ---- Screenshots ----
 await goToSection(page, "Abilities", 2);

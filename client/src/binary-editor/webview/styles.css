@@ -90,14 +90,22 @@ button:disabled {
 }
 
 /* Row actions, quick-fixes, and the section-tab buttons are low-emphasis: render them as secondary. */
-.row-actions button,
+.row-actions-btn,
 .quick-fix {
     background: var(--vscode-button-secondaryBackground, transparent);
     color: var(--vscode-button-secondaryForeground, var(--vscode-foreground));
     border-color: var(--vscode-button-border, transparent);
 }
-.row-actions button:hover,
+.row-actions-btn:hover,
 .quick-fix:hover {
+    background: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground));
+}
+/* Danger variant (Delete / Confirm delete): uses the error foreground on hover so intent is obvious. */
+.row-actions-btn-danger {
+    color: var(--vscode-button-secondaryForeground, var(--vscode-foreground));
+}
+.row-actions-btn-danger:hover:not(:disabled) {
+    color: var(--vscode-errorForeground, #f48771);
     background: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground));
 }
 
@@ -582,16 +590,43 @@ input[type="text"]::placeholder {
     display: flex;
     gap: 0.2rem;
 }
-.vrow.inline .row-actions button {
-    padding: 0.1rem 0.4rem;
+/* In compact (InlineList) rows: keep icon buttons tight; no text label is rendered. */
+.vrow.inline .row-actions-btn {
+    padding: 0.1rem 0.3rem;
     font-size: 0.9em;
 }
 
 /* ---- row actions (master/detail header) ---- */
 .row-actions {
     display: inline-flex;
+    align-items: center;
     gap: 0.2rem;
     padding: 0.5rem 0.75rem;
+}
+/* Icon+label buttons in the non-compact (detail toolbar) layout. */
+.row-actions .row-actions-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.25rem 0.5rem;
+}
+/* Text label alongside the codicon glyph - hidden in compact mode (no .row-actions-label rendered). */
+.row-actions-label {
+    font-size: 0.9em;
+    white-space: nowrap;
+}
+/* Confirm affordance: shown instead of the Delete button while awaiting user confirmation.
+   Keeps the same flex row layout; the "Delete?" text label is de-emphasised. */
+.row-actions-confirm {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+.row-actions-confirm-label {
+    font-size: 0.9em;
+    color: var(--vscode-errorForeground, #f48771);
+    white-space: nowrap;
+    padding: 0 0.2rem;
 }
 
 /* ---- subgroup (headed section, always visible, no accordion) ---- */
