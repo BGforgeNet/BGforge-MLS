@@ -28,6 +28,9 @@ The drivers are:
   Tabs, compact RowActions) under the real strict nonce CSP.
 - `render-pro-eff.mts` - PRO (Fallout item proto) and EFF (Infinity Engine effect); form-only formats,
   asserts the generic form renders real fixtures without error under CSP.
+- `render-map-objects.mts` - MAP per-elevation object sections (the projection seam); opens a clean MAP
+  whose objects fully decode, drives every structure-op on a lifted "Elevation 0 Objects" master-detail
+  section, and asserts the read-only "Objects" counts form renders with no editable input.
 
 Each driver prints per-op `PASS`/`FAIL` lines and an `ALL <FMT> OPS PASS` summary; exits non-zero on any
 failure.
@@ -107,6 +110,7 @@ pnpm exec tsx binary-editor/test/harness/render-spl.mts
 pnpm exec tsx binary-editor/test/harness/render-form.mts
 pnpm exec tsx binary-editor/test/harness/render-primitives.mts
 pnpm exec tsx binary-editor/test/harness/render-pro-eff.mts
+pnpm exec tsx binary-editor/test/harness/render-map-objects.mts
 ```
 
 Expected output ends with `ALL OPS PASS` / `ALL ITM OPS PASS` / `ALL SPL OPS PASS` (and the equivalent
