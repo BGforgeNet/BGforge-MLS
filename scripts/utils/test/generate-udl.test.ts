@@ -35,15 +35,6 @@ const BAF_LANG = {
 const XSD_URL =
     "https://raw.githubusercontent.com/notepad-plus-plus/userDefinedLanguages/master/.validators/userDefineLangs.xsd";
 
-function hasXmllint(): boolean {
-    try {
-        execSync("xmllint --version", { stdio: "ignore" });
-        return true;
-    } catch {
-        return false;
-    }
-}
-
 describe("generateUdlXml", () => {
     it("produces valid XML structure", () => {
         const xml = generateUdlXml(SSL_LANG);
@@ -116,7 +107,7 @@ describe("generateUdlXml", () => {
         expect(xml).toContain("&gt;");
     });
 
-    it.skipIf(!hasXmllint())("validates against official Notepad++ UDL XSD", () => {
+    it("validates against official Notepad++ UDL XSD", () => {
         fs.mkdirSync("tmp", { recursive: true });
         const xsdPath = "tmp/userDefineLangs.xsd";
         const xmlPath = "tmp/test-udl.xml";
@@ -143,7 +134,7 @@ describe("generateUdlXml", () => {
         }
     });
 
-    it.skipIf(!hasXmllint())("validates static UDL files against official XSD", () => {
+    it("validates static UDL files against official XSD", () => {
         const staticDir = "editors/notepadpp";
         const staticFiles = fs.readdirSync(staticDir).filter((f) => f.endsWith(".udl.xml"));
         expect(staticFiles.length).toBeGreaterThan(0);
