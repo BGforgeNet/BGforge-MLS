@@ -4,12 +4,13 @@
     import type { FieldRef, Row } from "@bgforge/binary-editor";
     import CellControl from "../CellControl.svelte";
 
-    const { valueColumns, groups, columnWidthPx = 190, fields, onedit }: {
+    const { valueColumns, groups, columnWidthPx = 190, fields, onedit, showBytes = false }: {
         valueColumns: { key: string; label: string }[];
         groups: { label: string; rows: { label: string; cells: Record<string, FieldRef> }[] }[];
         columnWidthPx?: number;
         fields: Record<FieldRef, Row>;
         onedit: (id: string, v: number | string) => void;
+        showBytes?: boolean;
     } = $props();
 
     const gridStyle = $derived(`grid-template-columns:repeat(${groups.length},${columnWidthPx}px)`);
@@ -27,7 +28,7 @@
                     {#each valueColumns as vc (vc.key)}
                         {@const ref = r.cells[vc.key]}
                         {@const row = ref ? fields[ref] : undefined}
-                        <span class="c">{#if row}<CellControl {row} {onedit} />{/if}</span>
+                        <span class="c">{#if row}<CellControl {row} {onedit} {showBytes} />{/if}</span>
                     {/each}
                 </div>
             {/each}

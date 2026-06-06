@@ -974,3 +974,13 @@ input[type="text"]::placeholder {
     min-width: 0;
     width: auto;
 }
+
+/* Per-cell byte annotation (offset) shown in matrix/grid cells when "Show bytes" is on. Compact and
+ * dim so it does not crowd the dense layout; sits under the control in the narrow stat/skill cells. */
+.layout-root .cell-bytes {
+    display: block;
+    color: var(--vscode-descriptionForeground);
+    font-family: var(--vscode-editor-font-family, monospace);
+    font-size: 0.82em;
+    line-height: 1.1;
+}

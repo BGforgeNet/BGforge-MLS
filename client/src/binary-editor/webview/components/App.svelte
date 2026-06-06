@@ -78,7 +78,7 @@
                 title="Import JSON from the active editor tab and apply it to the file">
             <Icon name="go-to-file" /><span class="toolbar-btn-label">Load JSON</span>
         </button>
-        <Checkbox checked={showOffsets} label="Show offsets" onchange={(v) => { showOffsets = v; }} />
+        <Checkbox checked={showOffsets} label="Show bytes" onchange={(v) => { showOffsets = v; }} />
     </div>
     {#if diagnostics.length > 0}
         <div class="banner warning">

@@ -35,10 +35,11 @@
                                              fields={layout.fields} {onedit} />
                             {:else if block.kind === "matrix"}
                                 <MatrixBlock valueColumns={block.valueColumns} groups={block.groups}
-                                             columnWidthPx={block.columnWidthPx} fields={layout.fields} {onedit} />
+                                             columnWidthPx={block.columnWidthPx} fields={layout.fields}
+                                             {onedit} showBytes={showOffsets} />
                             {:else if block.kind === "grid"}
                                 <GridBlock columns={block.columns} items={block.items}
-                                           fields={layout.fields} {onedit} />
+                                           fields={layout.fields} {onedit} showBytes={showOffsets} />
                             {:else if block.kind === "list"}
                                 <ListBlock sectionKey={block.sectionKey} />
                             {:else}

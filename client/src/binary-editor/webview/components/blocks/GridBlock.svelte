@@ -3,11 +3,12 @@
     import type { FieldRef, Row } from "@bgforge/binary-editor";
     import CellControl from "../CellControl.svelte";
 
-    const { columns, items, fields, onedit }: {
+    const { columns, items, fields, onedit, showBytes = false }: {
         columns: number;
         items: FieldRef[];
         fields: Record<FieldRef, Row>;
         onedit: (id: string, v: number | string) => void;
+        showBytes?: boolean;
     } = $props();
 
     const cells = $derived(
@@ -21,7 +22,7 @@
     {#each cells as cell (cell.row.id)}
         <div class="skill">
             <span class="nm" title={cell.row.description ?? ""}>{cell.row.name}</span>
-            <CellControl row={cell.row} {onedit} />
+            <CellControl row={cell.row} {onedit} {showBytes} />
         </div>
     {/each}
 </div>
