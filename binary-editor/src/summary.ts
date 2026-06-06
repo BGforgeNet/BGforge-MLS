@@ -52,12 +52,17 @@ interface FormatSummarySpec {
  * ITM abilities: "Abilities" section, child "Attack Type"
  *                (humanize("attackType") = "Attack Type"; enum e.g. "Ranged", "Melee").
  *
- * The registry covers the formats that today render master-detail list
- * sections with a meaningful key field: spl and itm. EFF is a single flat
+ * The registry covers the formats that render master-detail list sections
+ * with a meaningful key field: spl, itm, and cre. EFF is a single flat
  * header+body record (form sections only, no list section), so it has no
- * entry. CRE's effects group still renders as a form section (its adapter
- * declares no list sections yet); a CRE summary spec lands with the CRE
- * structure-ops workstream, alongside a CRE fixture test.
+ * entry.
+ *
+ * CRE list sections (field names are the humanized walkStruct labels):
+ *   - Known Spells / Memorized Spells -> the spell resref ("Spell").
+ *   - Effects -> the opcode ("Opcode"; resolved to a label for v2, raw for v1
+ *     which carries no opcode enum).
+ *   - Items -> the item resref ("Item").
+ *   - Spell Memorization Info -> the priest/wizard/innate class ("Spell Type").
  */
 const FORMAT_SPECS: Readonly<Record<string, FormatSummarySpec>> = {
     spl: {
@@ -70,6 +75,15 @@ const FORMAT_SPECS: Readonly<Record<string, FormatSummarySpec>> = {
         sections: [
             { sectionName: "Effects", fieldName: "Opcode" },
             { sectionName: "Abilities", fieldName: "Attack Type" },
+        ],
+    },
+    cre: {
+        sections: [
+            { sectionName: "Known Spells", fieldName: "Spell" },
+            { sectionName: "Memorized Spells", fieldName: "Spell" },
+            { sectionName: "Effects", fieldName: "Opcode" },
+            { sectionName: "Items", fieldName: "Item" },
+            { sectionName: "Spell Memorization Info", fieldName: "Spell Type" },
         ],
     },
 };

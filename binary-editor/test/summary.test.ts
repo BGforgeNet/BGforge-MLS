@@ -32,8 +32,26 @@ const ITM_ABILITY_FIXTURE = path.resolve(
 // Standard ITM fixture shared with relationship tests (has effects, no abilities).
 const ITM_EFFECTS_FIXTURE = path.resolve(__dirname, "../../grammars/weidu-tp2/test/samples/core/items/misc8j.itm");
 
+// A CRE (EFF v2) with known + memorized spells, spell-mem-info, effects, and items.
+const CRE_FIXTURE = path.resolve(
+    __dirname,
+    "../../external/infinity-engine/Ascension/ascension/ascensionmain/demon/finaluf.CRE",
+);
+
 function splFixturePresent(): boolean {
     return fs.existsSync(SPL_FIXTURE);
+}
+
+function creFixturePresent(): boolean {
+    return fs.existsSync(CRE_FIXTURE);
+}
+
+function openCreSession(): { model: Model; rel: RelationshipModel | undefined } {
+    const bytes = new Uint8Array(fs.readFileSync(CRE_FIXTURE));
+    const { sessionId: sid } = openSession("file:///summary-cre.cre", bytes);
+    const session = sessionStore.get(sid);
+    if (!session) throw new Error("CRE session did not open");
+    return { model: session.model, rel: getRelationshipModel("cre") };
 }
 
 function itmAbilityFixturePresent(): boolean {
@@ -184,6 +202,37 @@ describe("summaryComposerFor itm - abilities", () => {
         expect(composer).toBeDefined();
         expect(composer!(abilityEntry, model, rel)).toBe(expected);
     });
+});
+
+// ---------------------------------------------------------------------------
+// CRE list sections (known/memorized spells, spell-mem-info, effects, items)
+// ---------------------------------------------------------------------------
+
+describe("summaryComposerFor cre", () => {
+    const cases: ReadonlyArray<{ section: string; field: string }> = [
+        { section: "Known Spells", field: "Spell" },
+        { section: "Memorized Spells", field: "Spell" },
+        { section: "Spell Memorization Info", field: "Spell Type" },
+        { section: "Effects", field: "Opcode" },
+        { section: "Items", field: "Item" },
+    ];
+
+    for (const { section, field } of cases) {
+        it(`returns the projected ${field} displayValue for a ${section} entry`, () => {
+            if (!creFixturePresent()) return;
+            const { model, rel } = openCreSession();
+
+            const entry = firstEntryIn(model, section);
+            if (!entry) throw new Error(`no ${section} entry in CRE fixture`);
+
+            const expected = projectChild(model, entry, field, rel);
+            expect(expected).toBeDefined();
+
+            const composer = summaryComposerFor("cre");
+            expect(composer).toBeDefined();
+            expect(composer!(entry, model, rel)).toBe(expected);
+        });
+    }
 });
 
 // ---------------------------------------------------------------------------

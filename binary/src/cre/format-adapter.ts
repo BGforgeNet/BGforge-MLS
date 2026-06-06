@@ -5,6 +5,17 @@ import { createCanonicalCreJsonSnapshot, loadCanonicalCreJsonSnapshot } from "./
 import { creCompiledPatternFields, creDomainRanges, crePresentationSchema } from "./presentation-schema";
 import { slugify } from "../snapshot-common";
 import { CRE_GROUP_LABELS } from "./types";
+import {
+    buildCreAddEntryBytes,
+    buildCreDuplicateEntryBytes,
+    buildCreInsertEntryBytes,
+    buildCreMoveEntryBytes,
+    buildCreRemoveEntryBytes,
+    isCreAddableArray,
+    isCreListSection,
+    isCreModifiableArray,
+    isCreRemovableEntry,
+} from "./entity-ops";
 
 /**
  * Maps a top-level display-group label to the semantic-key namespace plus
@@ -62,5 +73,49 @@ export const creFormatAdapter: BinaryFormatAdapter = {
 
     toSemanticFieldKey(segments: readonly string[]): string | undefined {
         return creSemanticFieldKey(segments);
+    },
+
+    isListSection(arrayPath: readonly string[]): boolean {
+        return isCreListSection(arrayPath);
+    },
+
+    isModifiableArray(arrayPath: readonly string[]): boolean {
+        return isCreModifiableArray(arrayPath);
+    },
+
+    isAddableArray(arrayPath: readonly string[]): boolean {
+        return isCreAddableArray(arrayPath);
+    },
+
+    isRemovableEntry(entryPath: readonly string[]): boolean {
+        return isCreRemovableEntry(entryPath);
+    },
+
+    buildAddEntryBytes(parseResult: ParseResult, arrayPath: readonly string[]): Uint8Array | undefined {
+        return buildCreAddEntryBytes(parseResult, arrayPath);
+    },
+
+    buildRemoveEntryBytes(parseResult: ParseResult, entryPath: readonly string[]): Uint8Array | undefined {
+        return buildCreRemoveEntryBytes(parseResult, entryPath);
+    },
+
+    buildInsertEntryBytes(
+        parseResult: ParseResult,
+        entryPath: readonly string[],
+        position: "before" | "after",
+    ): Uint8Array | undefined {
+        return buildCreInsertEntryBytes(parseResult, entryPath, position);
+    },
+
+    buildMoveEntryBytes(
+        parseResult: ParseResult,
+        entryPath: readonly string[],
+        direction: "up" | "down",
+    ): Uint8Array | undefined {
+        return buildCreMoveEntryBytes(parseResult, entryPath, direction);
+    },
+
+    buildDuplicateEntryBytes(parseResult: ParseResult, entryPath: readonly string[]): Uint8Array | undefined {
+        return buildCreDuplicateEntryBytes(parseResult, entryPath);
     },
 };
