@@ -3,6 +3,7 @@ import type { ParseOptions, ParseResult } from "../types";
 import { rebuildSplCanonicalDocument } from "./canonical";
 import { createCanonicalSplJsonSnapshot, loadCanonicalSplJsonSnapshot } from "./json-snapshot";
 import { splCompiledPatternFields, splDomainRanges, splPresentationSchema } from "./presentation-schema";
+import { splLayout } from "./layout-schema";
 import { abilityEffectsSemanticFieldKey } from "../ie-common/semantic-keys";
 import {
     ABILITIES_SECTION,
@@ -29,6 +30,7 @@ export const splFormatAdapter: BinaryFormatAdapter = {
     domainRanges: splDomainRanges,
     // IE formats cache a rebuildable canonical document (own writable property); clear it on edit.
     documentCacheStrategy: "clear",
+    layout: splLayout,
 
     createJsonSnapshot(parseResult: ParseResult): string {
         return createCanonicalSplJsonSnapshot(parseResult);

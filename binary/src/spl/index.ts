@@ -26,4 +26,5 @@ export const splParser = createIeAbilityEffectsParser({
     header: { schema: splHeaderSchema, spec: splHeaderSpecAnnotated, presentation: splHeaderPresentation },
     ability: { schema: splAbilitySchema, spec: splAbilitySpecAnnotated, presentation: abilityPresentation },
     serialize: serializeSpl,
+    variantId: "spell",
 });
