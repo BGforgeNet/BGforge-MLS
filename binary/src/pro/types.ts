@@ -265,6 +265,12 @@ export const CritterFlags: Record<number, string> = {
     0x00004000: "NoKnock",
 };
 
+// Critter gender (demographics)
+export const Gender: Record<number, string> = {
+    0: "Male",
+    1: "Female",
+};
+
 // Script types (upper byte of Script ID field)
 export const ScriptType: Record<number, string> = {
     [-1]: "(none)",
@@ -302,126 +308,3 @@ export const SCENERY_SUBTYPE_SIZES: Record<number, number> = {
 export const WALL_SIZE = 0x24; // 36 bytes
 export const TILE_SIZE = 0x1c; // 28 bytes
 export const MISC_SIZE = 0x1c; // 28 bytes
-
-// Critter field definitions for data-driven parsing
-// [displayName, dataKey, offset, type, group?]
-export type CritterFieldDef = [string, string, number, "int32" | "uint32" | "percent" | "scriptType" | "scriptId"];
-
-export const CRITTER_PROPERTIES: CritterFieldDef[] = [
-    ["Script Type", "scriptType", 0x1c, "scriptType"],
-    ["Script ID", "scriptId", 0x1d, "scriptId"],
-    ["Head FRM ID", "headFrmId", 0x20, "int32"],
-    ["AI Packet", "aiPacket", 0x24, "uint32"],
-    ["Team Number", "teamNumber", 0x28, "uint32"],
-];
-
-export const CRITTER_BASE_PRIMARY: CritterFieldDef[] = [
-    ["Strength", "strength", 0x30, "int32"],
-    ["Perception", "perception", 0x34, "int32"],
-    ["Endurance", "endurance", 0x38, "int32"],
-    ["Charisma", "charisma", 0x3c, "int32"],
-    ["Intelligence", "intelligence", 0x40, "int32"],
-    ["Agility", "agility", 0x44, "int32"],
-    ["Luck", "luck", 0x48, "int32"],
-];
-
-export const CRITTER_BASE_SECONDARY: CritterFieldDef[] = [
-    ["Hit Points", "hitPoints", 0x4c, "int32"],
-    ["Action Points", "actionPoints", 0x50, "int32"],
-    ["Armor Class", "armorClass", 0x54, "int32"],
-    ["Unarmed Damage", "unarmedDamage", 0x58, "int32"],
-    ["Melee Damage", "meleeDamage", 0x5c, "int32"],
-    ["Carry Weight", "carryWeight", 0x60, "int32"],
-    ["Sequence", "sequence", 0x64, "int32"],
-    ["Healing Rate", "healingRate", 0x68, "int32"],
-    ["Critical Chance", "criticalChance", 0x6c, "int32"],
-    ["Better Criticals", "betterCriticals", 0x70, "int32"],
-];
-
-export const CRITTER_BASE_DT: CritterFieldDef[] = [
-    ["Normal", "dtNormal", 0x74, "int32"],
-    ["Laser", "dtLaser", 0x78, "int32"],
-    ["Fire", "dtFire", 0x7c, "int32"],
-    ["Plasma", "dtPlasma", 0x80, "int32"],
-    ["Electrical", "dtElectrical", 0x84, "int32"],
-    ["EMP", "dtEmp", 0x88, "int32"],
-    ["Explosive", "dtExplosive", 0x8c, "int32"],
-];
-
-export const CRITTER_BASE_DR: CritterFieldDef[] = [
-    ["Normal", "drNormal", 0x90, "percent"],
-    ["Laser", "drLaser", 0x94, "percent"],
-    ["Fire", "drFire", 0x98, "percent"],
-    ["Plasma", "drPlasma", 0x9c, "percent"],
-    ["Electrical", "drElectrical", 0xa0, "percent"],
-    ["EMP", "drEmp", 0xa4, "percent"],
-    ["Explosive", "drExplosive", 0xa8, "percent"],
-    ["Radiation", "drRadiation", 0xac, "percent"],
-    ["Poison", "drPoison", 0xb0, "percent"],
-];
-
-export const CRITTER_BONUS_PRIMARY: CritterFieldDef[] = [
-    ["Strength", "strengthBonus", 0xbc, "int32"],
-    ["Perception", "perceptionBonus", 0xc0, "int32"],
-    ["Endurance", "enduranceBonus", 0xc4, "int32"],
-    ["Charisma", "charismaBonus", 0xc8, "int32"],
-    ["Intelligence", "intelligenceBonus", 0xcc, "int32"],
-    ["Agility", "agilityBonus", 0xd0, "int32"],
-    ["Luck", "luckBonus", 0xd4, "int32"],
-];
-
-export const CRITTER_BONUS_SECONDARY: CritterFieldDef[] = [
-    ["Hit Points", "hitPointsBonus", 0xd8, "int32"],
-    ["Action Points", "actionPointsBonus", 0xdc, "int32"],
-    ["Armor Class", "armorClassBonus", 0xe0, "int32"],
-    ["Unarmed Damage", "unarmedDamageBonus", 0xe4, "int32"],
-    ["Melee Damage", "meleeDamageBonus", 0xe8, "int32"],
-    ["Carry Weight", "carryWeightBonus", 0xec, "int32"],
-    ["Sequence", "sequenceBonus", 0xf0, "int32"],
-    ["Healing Rate", "healingRateBonus", 0xf4, "int32"],
-    ["Critical Chance", "criticalChanceBonus", 0xf8, "int32"],
-    ["Better Criticals", "betterCriticalsBonus", 0xfc, "int32"],
-];
-
-export const CRITTER_BONUS_DT: CritterFieldDef[] = [
-    ["Normal", "dtNormalBonus", 0x100, "int32"],
-    ["Laser", "dtLaserBonus", 0x104, "int32"],
-    ["Fire", "dtFireBonus", 0x108, "int32"],
-    ["Plasma", "dtPlasmaBonus", 0x10c, "int32"],
-    ["Electrical", "dtElectricalBonus", 0x110, "int32"],
-    ["EMP", "dtEmpBonus", 0x114, "int32"],
-    ["Explosive", "dtExplosiveBonus", 0x118, "int32"],
-];
-
-export const CRITTER_BONUS_DR: CritterFieldDef[] = [
-    ["Normal", "drNormalBonus", 0x11c, "int32"],
-    ["Laser", "drLaserBonus", 0x120, "int32"],
-    ["Fire", "drFireBonus", 0x124, "int32"],
-    ["Plasma", "drPlasmaBonus", 0x128, "int32"],
-    ["Electrical", "drElectricalBonus", 0x12c, "int32"],
-    ["EMP", "drEmpBonus", 0x130, "int32"],
-    ["Explosive", "drExplosiveBonus", 0x134, "int32"],
-    ["Radiation", "drRadiationBonus", 0x138, "int32"],
-    ["Poison", "drPoisonBonus", 0x13c, "int32"],
-];
-
-export const CRITTER_SKILLS: CritterFieldDef[] = [
-    ["Small Guns", "skillSmallGuns", 0x148, "int32"],
-    ["Big Guns", "skillBigGuns", 0x14c, "int32"],
-    ["Energy Weapons", "skillEnergyWeapons", 0x150, "int32"],
-    ["Unarmed", "skillUnarmed", 0x154, "int32"],
-    ["Melee", "skillMelee", 0x158, "int32"],
-    ["Throwing", "skillThrowing", 0x15c, "int32"],
-    ["First Aid", "skillFirstAid", 0x160, "int32"],
-    ["Doctor", "skillDoctor", 0x164, "int32"],
-    ["Sneak", "skillSneak", 0x168, "int32"],
-    ["Lockpick", "skillLockpick", 0x16c, "int32"],
-    ["Steal", "skillSteal", 0x170, "int32"],
-    ["Traps", "skillTraps", 0x174, "int32"],
-    ["Science", "skillScience", 0x178, "int32"],
-    ["Repair", "skillRepair", 0x17c, "int32"],
-    ["Speech", "skillSpeech", 0x180, "int32"],
-    ["Barter", "skillBarter", 0x184, "int32"],
-    ["Gambling", "skillGambling", 0x188, "int32"],
-    ["Outdoorsman", "skillOutdoorsman", 0x18c, "int32"],
-];

@@ -830,6 +830,7 @@ input[type="text"]::placeholder {
 }
 .layout-row {
     display: flex;
+    flex-wrap: wrap;
     gap: 10px;
     align-items: flex-start;
 }
@@ -851,7 +852,7 @@ input[type="text"]::placeholder {
 }
 .panel-blocks {
     display: flex;
-    gap: 26px;
+    gap: 16px;
     align-items: flex-start;
 }
 /* key/value list: a vertical stack of Field rows (label + control); multi-column variant is set inline. */
@@ -869,7 +870,7 @@ input[type="text"]::placeholder {
 /* flag checkbox columns */
 .flag-columns {
     display: flex;
-    gap: 26px;
+    gap: 16px;
     align-items: flex-start;
 }
 .flag-columns .gcol {
@@ -939,4 +940,37 @@ input[type="text"]::placeholder {
     color: var(--vscode-descriptionForeground);
     font-style: italic;
     padding: 6px 0;
+}
+
+/* Compact controls inside the dense layout so panels hug their content and clump left (per the
+ * approved mockup), instead of the wider inputs the tab/form path uses. Scoped to .layout-root. */
+.layout-root .field {
+    gap: 6px;
+    align-items: baseline;
+}
+.layout-root .field .label {
+    min-width: 92px;
+}
+.layout-root .field input {
+    width: 84px;
+    min-width: 0;
+}
+.layout-root .kv.kv-multi .field .label {
+    min-width: 80px;
+}
+.layout-root .matrix .strow .c input {
+    width: 48px;
+    min-width: 0;
+    text-align: right;
+}
+.layout-root .grid .skill input {
+    width: 52px;
+    min-width: 0;
+}
+/* Enum dropdown triggers (bits-ui) shrink to content in the dense layout. */
+.layout-root .field [role="combobox"],
+.layout-root .field button[aria-haspopup],
+.layout-root .field select {
+    min-width: 0;
+    width: auto;
 }

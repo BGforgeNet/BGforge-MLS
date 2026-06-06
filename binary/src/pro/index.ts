@@ -1,7 +1,6 @@
 import { BufferReader } from "typed-binary";
-import type { BinaryParser, ParseOptions, ParseResult, ParsedGroup, ParsedField, ParsedFieldType } from "../types";
+import type { BinaryParser, ParseOptions, ParseResult, ParsedGroup, ParsedField } from "../types";
 import { walkStruct } from "../spec/walk-display";
-import { flagArrayToInt } from "../spec/coded-projection";
 import { armorSpec, armorPresentation } from "./specs/armor";
 import { headerSpec, headerPresentation } from "./specs/header";
 import { itemCommonSpec, itemCommonPresentation } from "./specs/item-common";
@@ -23,13 +22,7 @@ import { miscSpec, miscPresentation } from "./specs/misc";
 import { createProCanonicalSnapshot } from "./canonical";
 import { serializePro } from "./serializer";
 import {
-    type CritterFieldDef,
     ObjectType,
-    DamageType,
-    BodyType,
-    KillType,
-    ScriptType,
-    CritterFlags,
     HEADER_SIZE,
     ITEM_COMMON_SIZE,
     ITEM_SUBTYPE_OFFSET,
@@ -41,17 +34,8 @@ import {
     WALL_SIZE,
     TILE_SIZE,
     MISC_SIZE,
-    CRITTER_PROPERTIES,
-    CRITTER_BASE_PRIMARY,
-    CRITTER_BASE_SECONDARY,
-    CRITTER_BASE_DT,
-    CRITTER_BASE_DR,
-    CRITTER_BONUS_PRIMARY,
-    CRITTER_BONUS_SECONDARY,
-    CRITTER_BONUS_DT,
-    CRITTER_BONUS_DR,
-    CRITTER_SKILLS,
 } from "./types";
+import { critterSpec, critterPresentation } from "./specs/critter";
 import {
     headerSchema,
     itemCommonSchema,
@@ -100,82 +84,35 @@ function reader(data: Uint8Array, byteOffset = 0): BufferReader {
     return new BufferReader(data.buffer, { endianness: "big", byteOffset: data.byteOffset + byteOffset });
 }
 
+const ITEM_VARIANT_NAMES = ["armor", "container", "drug", "weapon", "ammo", "misc", "key"] as const;
+const SCENERY_VARIANT_NAMES = ["door", "stairs", "elevator", "ladderBottom", "ladderTop", "generic"] as const;
+
 /**
- * Parse flags into array of names
+ * Stable layout-variant id for the declarative renderer, derived from object type (+ item/scenery
+ * subtype). Used to select the matching variant in `pro/layout-schema.ts`; an unknown subtype falls
+ * back to the bare object-type id (which has no layout variant -> the editor uses the legacy tabs path).
  */
-function parseFlags(value: number, flagDefs: Record<number, string>): string[] {
-    const flags: string[] = [];
-    for (const [bit, name] of Object.entries(flagDefs)) {
-        const bitVal = Number(bit);
-        if (bitVal === 0) {
-            // Special case: 0 means default/no flags set for this position
-            if (value === 0) flags.push(name);
-        } else if (value & bitVal) {
-            flags.push(name);
-        }
+function proVariantId(objectType: number, subType: number | undefined): string {
+    switch (objectType) {
+        case 0:
+            return subType !== undefined && ITEM_VARIANT_NAMES[subType]
+                ? `item.${ITEM_VARIANT_NAMES[subType]}`
+                : "item";
+        case 1:
+            return "critter";
+        case 2:
+            return subType !== undefined && SCENERY_VARIANT_NAMES[subType]
+                ? `scenery.${SCENERY_VARIANT_NAMES[subType]}`
+                : "scenery";
+        case 3:
+            return "wall";
+        case 4:
+            return "tile";
+        case 5:
+            return "misc";
+        default:
+            return `type${objectType}`;
     }
-    return flags;
-}
-
-/**
- * Helper to format a percent value
- */
-function percent(value: number): string {
-    return `${value}%`;
-}
-
-/**
- * Helper to create a ParsedField
- */
-function field(
-    name: string,
-    value: unknown,
-    offset: number,
-    size: number,
-    type: ParsedFieldType,
-    description?: string,
-    rawValue?: number,
-): ParsedField {
-    return { name, value, offset, size, type, description, rawValue };
-}
-
-/**
- * Helper to render an enum-valued ParsedField. Out-of-range values display as
- * `Unknown (N)` - the same fallback `walkStruct` produces for spec-driven
- * fields. The strict gate against committable garbage lives at the canonical
- * write path (zod refinement in `serializeProCanonicalDocument`); the parser
- * is tolerant by design so the editor and snapshot dump never block on a
- * value that's outside the documented range but otherwise readable.
- */
-function enumFieldTolerant(
-    name: string,
-    value: number | string,
-    lookup: Record<number, string>,
-    offset: number,
-    size: number,
-): ParsedField {
-    // Canonical-doc surfaces enum values as `string | number` (named when in
-    // table, raw int otherwise). Pass strings through directly; resolve ints
-    // via the lookup table for display, falling through to `Unknown (N)`.
-    if (typeof value === "string") {
-        return field(name, value, offset, size, "enum");
-    }
-    return field(name, lookup[value] ?? `Unknown (${value})`, offset, size, "enum", undefined, value);
-}
-
-/**
- * Helper to create a flags field with parsed names
- */
-function flagsField(
-    name: string,
-    value: number,
-    flagDefs: Record<number, string>,
-    offset: number,
-    size: number,
-): ParsedField {
-    const flags = parseFlags(value, flagDefs);
-    const display = flags.length > 0 ? flags.join(", ") : "(none)";
-    return field(name, display, offset, size, "flags", undefined, value);
 }
 
 /**
@@ -188,25 +125,6 @@ function group(
     description?: string,
 ): ParsedGroup {
     return { name, fields, expanded, description };
-}
-
-/**
- * Generate fields from data-driven definitions.
- */
-function fieldsFromDefs(defs: CritterFieldDef[], data: Record<string, number>): ParsedField[] {
-    return defs.map(([displayName, dataKey, offset, type]) => {
-        const value = data[dataKey] ?? 0;
-        if (type === "percent") {
-            return field(displayName, percent(value), offset, 4, "int32");
-        }
-        if (type === "scriptType") {
-            return enumFieldTolerant(displayName, value, ScriptType, offset, 1);
-        }
-        if (type === "scriptId") {
-            return field(displayName, value, offset, 3, "int24");
-        }
-        return field(displayName, value, offset, 4, type);
-    });
 }
 
 /**
@@ -306,55 +224,16 @@ function parseKey(data: KeyData, baseOffset: number): ParsedGroup {
 }
 
 /**
- * Build the critter display tree as 11 sibling groups under the PRO root.
- *
- * Reads via `enumFieldTolerant` for `scriptType`/`bodyType`/`killType`/
- * `damageType`, so out-of-range values render as `Unknown (N)` and the parser
- * stays graceful. The strict committed-bytes gate lives in the canonical-write
- * path; here we just describe what the file actually says.
+ * Build the critter display tree as ONE faithful, flat group via `walkStruct` - the same
+ * spec-driven mechanism every other PRO subtype uses. The old hand-built 11 cosmetic groups
+ * (and their `CRITTER_*` positional arrays) were presentation, not data; that grouping now lives
+ * in the declarative layout schema (`pro/layout-schema.ts`), and the editor renders the flat fields
+ * on one dense page. Enum/flags (scriptType / gender / bodyType / killType / damageType /
+ * critterFlags) render from the spec's own `enum:` / `flags:` tables. The critter struct is read at
+ * `HEADER_SIZE`, so field offsets accumulate from there.
  */
-function parseCritter(data: CritterData): ParsedGroup[] {
-    // CritterData has mostly numeric fields; `critterFlags` is now a sorted
-    // array projection (see `FlagArraySchema`) and is rendered separately via
-    // flagsField. The dynamic-access subset for fieldsFromDefs is the
-    // numeric-only view.
-    const critterData = data as unknown as Record<string, number>;
-    const critterFlagsInt = flagArrayToInt(CritterFlags, data.critterFlags, 32);
-
-    return [
-        group("Critter Properties", [
-            field(
-                "Flags Ext",
-                `0x${data.flagsExt.toString(16).padStart(8, "0")}`,
-                0x18,
-                4,
-                "flags",
-                undefined,
-                data.flagsExt,
-            ),
-            ...fieldsFromDefs(CRITTER_PROPERTIES, critterData),
-            flagsField("Critter Flags", critterFlagsInt, CritterFlags, 0x2c, 4),
-        ]),
-        group("Base Primary Stats", fieldsFromDefs(CRITTER_BASE_PRIMARY, critterData)),
-        group("Base Secondary Stats", fieldsFromDefs(CRITTER_BASE_SECONDARY, critterData)),
-        group("Base Damage Threshold", fieldsFromDefs(CRITTER_BASE_DT, critterData), false),
-        group("Base Damage Resistance", fieldsFromDefs(CRITTER_BASE_DR, critterData), false),
-        group("Demographics", [
-            field("Age", data.age, 0xb4, 4, "int32"),
-            field("Gender", data.gender === 0 ? "Male" : "Female", 0xb8, 4, "enum", undefined, data.gender),
-        ]),
-        group("Bonus Primary Stats", fieldsFromDefs(CRITTER_BONUS_PRIMARY, critterData), false),
-        group("Bonus Secondary Stats", fieldsFromDefs(CRITTER_BONUS_SECONDARY, critterData), false),
-        group("Bonus Damage Threshold", fieldsFromDefs(CRITTER_BONUS_DT, critterData), false),
-        group("Bonus Damage Resistance", fieldsFromDefs(CRITTER_BONUS_DR, critterData), false),
-        group("Skills", fieldsFromDefs(CRITTER_SKILLS, critterData)),
-        group("Final Properties", [
-            enumFieldTolerant("Body Type", data.bodyType, BodyType, 0x190, 4),
-            field("Experience Value", data.expValue, 0x194, 4, "uint32"),
-            enumFieldTolerant("Kill Type", data.killType, KillType, 0x198, 4),
-            enumFieldTolerant("Damage Type", data.damageType, DamageType, 0x19c, 4),
-        ]),
-    ];
+function parseCritter(data: CritterData): ParsedGroup {
+    return walkStruct(critterSpec, critterPresentation, HEADER_SIZE, data, "Critter");
 }
 
 /**
@@ -605,7 +484,7 @@ class ProParser implements BinaryParser {
             case 1: {
                 // Critter
                 const critter: CritterData = critterSchema.read(reader(data, HEADER_SIZE));
-                groups.push(...parseCritter(critter));
+                groups.push(parseCritter(critter));
                 break;
             }
             case 2: {
@@ -639,6 +518,9 @@ class ProParser implements BinaryParser {
             formatName: this.name,
             root: group("PRO File", groups),
             errors: errors.length > 0 ? errors : undefined,
+            // Layout-variant id for the declarative renderer (object type + item/scenery subtype).
+            // Only "critter" has a layout today; other variants resolve to undefined and fall back to tabs.
+            variantId: proVariantId(objectType, subType),
         };
         try {
             result.document = createProCanonicalSnapshot(result).document;

@@ -8,23 +8,9 @@ import { resolveRawValueFromDisplay } from "../display-lookups";
 import { createFieldKey, toSemanticFieldKey } from "../presentation-schema";
 import { parseWithSchemaValidation } from "../schema-validation";
 import { intToFlagArray, type FlagArray } from "../spec/coded-projection";
-import {
-    ActionFlags,
-    ContainerFlags,
-    CritterFlags,
-    CRITTER_BASE_DR,
-    CRITTER_BASE_DT,
-    CRITTER_BASE_PRIMARY,
-    CRITTER_BASE_SECONDARY,
-    CRITTER_BONUS_DR,
-    CRITTER_BONUS_DT,
-    CRITTER_BONUS_PRIMARY,
-    CRITTER_BONUS_SECONDARY,
-    CRITTER_SKILLS,
-    HeaderFlags,
-    ItemFlagsExt,
-    WallLightFlags,
-} from "./types";
+import { structFromDisplay } from "../spec/walk-display";
+import { ActionFlags, ContainerFlags, HeaderFlags, ItemFlagsExt, WallLightFlags } from "./types";
+import { critterSpec, critterPresentation } from "./specs/critter";
 import type { ParsedField, ParsedGroup, ParseResult } from "../types";
 import {
     proCanonicalSnapshotSchemaPermissive,
@@ -77,21 +63,6 @@ function readFieldNumber(group: ParsedGroup, fieldName: string, fieldPath: strin
         }
     }
     throw new Error(`Field is not numeric: ${fullFieldPath}`);
-}
-
-/**
- * Read every field declared in a CritterFieldDef-style table out of `group`,
- * producing a flat `dataKey -> number` map. Trailing tuple entries (offset,
- * type) are unused here - we only need the displayName/dataKey pair to drive
- * the lookup against the parsed display tree.
- */
-function mapGroupFromDefs(
-    group: ParsedGroup,
-    defs: ReadonlyArray<readonly [displayName: string, dataKey: string, ...rest: unknown[]]>,
-): Record<string, number> {
-    return Object.fromEntries(
-        defs.map(([displayName, dataKey]) => [dataKey, readFieldNumber(group, displayName, `${group.name}`)]),
-    );
 }
 
 function readClampedFieldNumber(
@@ -271,48 +242,14 @@ function rebuildProCanonicalSnapshot(parseResult: ParseResult): ProCanonicalSnap
         };
     }
 
-    const critterProperties = getOptionalGroup(parseResult.root, "Critter Properties");
-    if (critterProperties) {
-        const basePrimary = getGroup(parseResult.root, "Base Primary Stats");
-        const baseSecondary = getGroup(parseResult.root, "Base Secondary Stats");
-        const baseDt = getGroup(parseResult.root, "Base Damage Threshold");
-        const baseDr = getGroup(parseResult.root, "Base Damage Resistance");
-        const demographics = getGroup(parseResult.root, "Demographics");
-        const bonusPrimary = getGroup(parseResult.root, "Bonus Primary Stats");
-        const bonusSecondary = getGroup(parseResult.root, "Bonus Secondary Stats");
-        const bonusDt = getGroup(parseResult.root, "Bonus Damage Threshold");
-        const bonusDr = getGroup(parseResult.root, "Bonus Damage Resistance");
-        const skills = getGroup(parseResult.root, "Skills");
-        const finalProperties = getGroup(parseResult.root, "Final Properties");
-
-        sections.critterStats = {
-            flagsExt: readFieldNumber(critterProperties, "Flags Ext", "Critter Properties"),
-            scriptType: readFieldNumber(critterProperties, "Script Type", "Critter Properties"),
-            scriptId: readFieldNumber(critterProperties, "Script ID", "Critter Properties"),
-            headFrmId: readFieldNumber(critterProperties, "Head FRM ID", "Critter Properties"),
-            aiPacket: readFieldNumber(critterProperties, "AI Packet", "Critter Properties"),
-            teamNumber: readFieldNumber(critterProperties, "Team Number", "Critter Properties"),
-            critterFlags: readFlagArray(critterProperties, "Critter Flags", CritterFlags, 32),
-            ...mapGroupFromDefs(basePrimary, CRITTER_BASE_PRIMARY),
-            ...mapGroupFromDefs(baseSecondary, CRITTER_BASE_SECONDARY),
-            ...mapGroupFromDefs(baseDt, CRITTER_BASE_DT),
-            ...mapGroupFromDefs(baseDr, CRITTER_BASE_DR),
-            age: readFieldNumber(demographics, "Age", "Demographics"),
-            gender: readFieldNumber(demographics, "Gender", "Demographics"),
-            ...mapGroupFromDefs(bonusPrimary, CRITTER_BONUS_PRIMARY),
-            ...mapGroupFromDefs(bonusSecondary, CRITTER_BONUS_SECONDARY),
-            ...mapGroupFromDefs(bonusDt, CRITTER_BONUS_DT),
-            ...mapGroupFromDefs(bonusDr, CRITTER_BONUS_DR),
-            // No "Bonus Demographics" group exists in the display tree; the wire
-            // bytes for ageBonus/genderBonus are always written as 0 by the engine.
-            ageBonus: 0,
-            genderBonus: 0,
-            ...mapGroupFromDefs(skills, CRITTER_SKILLS),
-            bodyType: readFieldNumber(finalProperties, "Body Type", "Final Properties"),
-            expValue: readFieldNumber(finalProperties, "Experience Value", "Final Properties"),
-            killType: readFieldNumber(finalProperties, "Kill Type", "Final Properties"),
-            damageType: readFieldNumber(finalProperties, "Damage Type", "Final Properties"),
-        };
+    // The critter section is one flat "Critter" group emitted by walkStruct(critterSpec, ...). Rebuild
+    // the typed critterStats with the inverse walker, which reads each spec field back by its display
+    // label (critterPresentation label or humanized key) and re-projects enums/flags - byte-identical to
+    // what walkStruct wrote. critterStats === SpecData<critterSpec> === toZodSchema(critterSpec) (see
+    // canonical-schemas), so the shape matches the canonical doc exactly.
+    const critterGroup = getOptionalGroup(parseResult.root, "Critter");
+    if (critterGroup) {
+        sections.critterStats = structFromDisplay(critterGroup, critterSpec, critterPresentation);
     }
 
     const sceneryProperties = getOptionalGroup(parseResult.root, "Scenery Properties");

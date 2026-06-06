@@ -103,6 +103,7 @@ describe("formatLayoutSchema (zod validation)", () => {
 describe("resolveLayout", () => {
     it("maps a referenced field's semantic key to its projected row", () => {
         const model = proModel();
+        model.parseResult.variantId = "only"; // select the synthetic variant explicitly
         const fieldNode = model.nodes.find((n) => n.kind === "field");
         expect(fieldNode).toBeDefined();
         if (!fieldNode) return;
@@ -113,7 +114,6 @@ describe("resolveLayout", () => {
         const resolved = resolveLayout("pro", layoutFor("pro", "only", key), model);
         expect(resolved).toBeDefined();
         if (!resolved) return;
-        // parseResult.variantId is unset for an un-migrated PRO -> first declared variant is chosen.
         expect(resolved.variantId).toBe("only");
         expect(resolved.rows.length).toBe(1);
         // The referenced field resolves to the exact node's row.
@@ -124,11 +124,18 @@ describe("resolveLayout", () => {
 
     it("resolves the full field set, not only the referenced keys", () => {
         const model = proModel();
+        model.parseResult.variantId = "only";
         const fieldNodeCount = model.nodes.filter((n) => n.kind === "field").length;
         const someKey = toSemanticFieldKey("pro", model.nodes.find((n) => n.kind === "field")!.sourceSegments)!;
         const resolved = resolveLayout("pro", layoutFor("pro", "only", someKey), model)!;
         // Every field node contributes a row (keys are unique per field), so the map covers them all.
         expect(Object.keys(resolved.fields).length).toBe(fieldNodeCount);
+    });
+
+    it("returns undefined when the parse result reports no variantId (falls back to tabs)", () => {
+        const model = proModel();
+        model.parseResult.variantId = undefined;
+        expect(resolveLayout("pro", layoutFor("pro", "only", "pro.x.a"), model)).toBeUndefined();
     });
 
     it("selects the variant the parse result reports", () => {

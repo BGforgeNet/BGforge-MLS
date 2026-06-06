@@ -7,16 +7,13 @@
 
 import {
     ActionFlags,
-    BodyType,
     ContainerFlags,
-    CritterFlags,
     DamageType,
     ElevatorType,
     FRMType,
     HeaderFlags,
     ItemFlagsExt,
     ItemSubType,
-    KillType,
     MaterialType,
     ObjectType,
     ScenerySubType,
@@ -85,21 +82,6 @@ export const proPresentationSchema: FormatPresentationSchema = formatPresentatio
             presentationType: "enum",
             enumOptions: stringifyKeys(DamageType),
         },
-        "pro.finalProperties.bodyType": {
-            label: "Body Type",
-            presentationType: "enum",
-            enumOptions: stringifyKeys(BodyType),
-        },
-        "pro.finalProperties.killType": {
-            label: "Kill Type",
-            presentationType: "enum",
-            enumOptions: stringifyKeys(KillType),
-        },
-        "pro.finalProperties.damageType": {
-            label: "Damage Type",
-            presentationType: "enum",
-            enumOptions: stringifyKeys(DamageType),
-        },
         "pro.elevatorProperties.elevatorType": {
             label: "Elevator Type",
             presentationType: "enum",
@@ -125,11 +107,6 @@ export const proPresentationSchema: FormatPresentationSchema = formatPresentatio
             presentationType: "enum",
             enumOptions: stringifyKeys(StatType),
         },
-        "pro.critterProperties.scriptType": {
-            label: "Script Type",
-            presentationType: "enum",
-            enumOptions: stringifyKeys(ProScriptType),
-        },
         "pro.itemProperties.scriptType": {
             label: "Script Type",
             presentationType: "enum",
@@ -144,11 +121,6 @@ export const proPresentationSchema: FormatPresentationSchema = formatPresentatio
             label: "Script Type",
             presentationType: "enum",
             enumOptions: stringifyKeys(ProScriptType),
-        },
-        "pro.demographics.gender": {
-            label: "Gender",
-            presentationType: "enum",
-            enumOptions: { "0": "Male", "1": "Female" },
         },
         "pro.doorProperties.walkThrough": {
             label: "Walk Through",
@@ -184,11 +156,6 @@ export const proPresentationSchema: FormatPresentationSchema = formatPresentatio
             label: "Open Flags",
             presentationType: "flags",
             flagOptions: stringifyKeys(ContainerFlags),
-        },
-        "pro.critterProperties.critterFlags": {
-            label: "Critter Flags",
-            presentationType: "flags",
-            flagOptions: stringifyKeys(CritterFlags),
         },
     },
     patternFields: [],

@@ -27,7 +27,11 @@ The drivers are:
 - `render-primitives.mts` - bits-ui primitives showcase + CSP gate (Select, Combobox, Checkbox, Menu,
   Tabs, compact RowActions) under the real strict nonce CSP.
 - `render-pro-eff.mts` - PRO (Fallout item proto) and EFF (Infinity Engine effect); form-only formats,
-  asserts the generic form renders real fixtures without error under CSP.
+  asserts the generic form renders real fixtures without error under CSP. (PRO items/scenery still use
+  the legacy tabs path until their layout variants are authored.)
+- `render-pro.mts` - PRO critter via the declarative single-page layout (LayoutRenderer); asserts the
+  Header / Demographics / Final / Stats-matrix / Skills-grid panels render with two flag columns and NO
+  section tabs, and screenshots at 1400x860 for visual review against the approved mockup.
 - `render-map-objects.mts` - MAP per-elevation object sections (the projection seam); opens a clean MAP
   whose objects fully decode, drives every structure-op on a lifted "Elevation 0 Objects" master-detail
   section, and asserts the read-only "Objects" counts form renders with no editable input.
@@ -110,6 +114,7 @@ pnpm exec tsx binary-editor/test/harness/render-spl.mts
 pnpm exec tsx binary-editor/test/harness/render-form.mts
 pnpm exec tsx binary-editor/test/harness/render-primitives.mts
 pnpm exec tsx binary-editor/test/harness/render-pro-eff.mts
+pnpm exec tsx binary-editor/test/harness/render-pro.mts
 pnpm exec tsx binary-editor/test/harness/render-map-objects.mts
 ```
 

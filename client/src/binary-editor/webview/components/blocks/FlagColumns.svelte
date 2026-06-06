@@ -20,19 +20,19 @@
         Array.from({ length: columns }, (_, c) => bits.slice(c * perCol, (c + 1) * perCol)).filter((c) => c.length > 0),
     );
 
-    function toggle(bit: number, checked: boolean): void {
+    function toggle(mask: number, checked: boolean): void {
         if (!row) return;
         const current = typeof row.rawValue === "number" ? row.rawValue : Number(row.rawValue ?? 0);
-        onedit(row.id, composeFlags(current, bit, checked));
+        onedit(row.id, composeFlags(current, mask, checked));
     }
 </script>
 {#if row}
     <div class="flag-columns">
         {#each cols as col, ci (ci)}
             <div class="gcol">
-                {#each col as b (b.bit)}
+                {#each col as b (b.mask)}
                     <Checkbox checked={b.set} label={b.label} disabled={!row.editable}
-                              onchange={(checked) => toggle(b.bit, checked)} />
+                              onchange={(checked) => toggle(b.mask, checked)} />
                 {/each}
             </div>
         {/each}

@@ -1,7 +1,8 @@
 import { u32, i8, i32 } from "typed-binary";
 import { i24 } from "../../spec/codec-meta";
-import { CritterFlags, BodyType, KillType, DamageType, ScriptType } from "../types";
+import { CritterFlags, BodyType, KillType, DamageType, ScriptType, Gender } from "../types";
 import type { FieldSpec, SpecData } from "../../spec/types";
+import type { StructPresentation } from "../../spec/presentation";
 
 /**
  * Wire spec for the PRO critter section. Flat shape - the data IS flat in the
@@ -59,7 +60,7 @@ export const critterSpec = {
     drPoison: { codec: u32 },
     // Demographics
     age: { codec: u32 },
-    gender: { codec: u32 },
+    gender: { codec: u32, enum: Gender },
     // Bonus primary stats
     strengthBonus: { codec: i32 },
     perceptionBonus: { codec: i32 },
@@ -127,3 +128,44 @@ export const critterSpec = {
 } satisfies Record<string, FieldSpec>;
 
 export type CritterData = SpecData<typeof critterSpec>;
+
+/**
+ * Display labels for the flat critter struct. Labels must be unique across the whole struct (the
+ * display tree is one flat "Critter" group, and the canonical reader maps fields back by label).
+ * Header / Demographics / Final / Skills fields carry friendly labels (shown in the layout's field
+ * and grid blocks); the stat fields are left to `humanize()` (which yields unique, spec-key-derived
+ * labels) because the Stats matrix supplies its own row labels and never shows the field's own name.
+ * Enum/flags rendering comes from the spec (`enum:` / `flags:`), not from here.
+ */
+export const critterPresentation: StructPresentation<CritterData> = {
+    scriptType: { label: "Script Type" },
+    scriptId: { label: "Script ID" },
+    headFrmId: { label: "Head FRM ID" },
+    aiPacket: { label: "AI Packet" },
+    teamNumber: { label: "Team Number" },
+    critterFlags: { label: "Critter Flags" },
+    age: { label: "Age" },
+    gender: { label: "Gender" },
+    bodyType: { label: "Body Type" },
+    expValue: { label: "Experience Value" },
+    killType: { label: "Kill Type" },
+    damageType: { label: "Damage Type" },
+    skillSmallGuns: { label: "Small Guns" },
+    skillBigGuns: { label: "Big Guns" },
+    skillEnergyWeapons: { label: "Energy Weapons" },
+    skillUnarmed: { label: "Unarmed" },
+    skillMelee: { label: "Melee" },
+    skillThrowing: { label: "Throwing" },
+    skillFirstAid: { label: "First Aid" },
+    skillDoctor: { label: "Doctor" },
+    skillSneak: { label: "Sneak" },
+    skillLockpick: { label: "Lockpick" },
+    skillSteal: { label: "Steal" },
+    skillTraps: { label: "Traps" },
+    skillScience: { label: "Science" },
+    skillRepair: { label: "Repair" },
+    skillSpeech: { label: "Speech" },
+    skillBarter: { label: "Barter" },
+    skillGambling: { label: "Gambling" },
+    skillOutdoorsman: { label: "Outdoorsman" },
+};

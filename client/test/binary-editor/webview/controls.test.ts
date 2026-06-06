@@ -23,6 +23,8 @@ const enumRow: Row = {
     editable: true,
     enumOptions: { "0": "Human", "1": "Mutant" },
 };
+// flagOptions are keyed by bit MASK, matching real producer output (walkStruct emits
+// stringifyKeys(fs.flags), and every PRO/IE flag table is mask-keyed: { "1": ..., "4": ... }).
 const flagRow: Row = {
     id: "1",
     namePath: ["Flags"],
@@ -33,7 +35,7 @@ const flagRow: Row = {
     rawValue: 5,
     displayValue: "5",
     editable: true,
-    flagOptions: { "0": "Visible", "2": "Dead" },
+    flagOptions: { "1": "Visible", "4": "Dead" },
 };
 
 describe("controls", () => {
@@ -53,14 +55,22 @@ describe("controls", () => {
         expect(oor).toContainEqual({ value: 9, label: "Unknown (9)" });
     });
 
-    it("decomposes and recomposes flag bits", () => {
-        // rawValue 5 = bits 0 and 2 set
+    it("decomposes and recomposes flag bits by mask", () => {
+        // rawValue 5 = masks 0x1 and 0x4 set
         expect(decomposeFlags(flagRow)).toEqual([
-            { bit: 0, label: "Visible", set: true },
-            { bit: 2, label: "Dead", set: true },
+            { mask: 1, label: "Visible", set: true },
+            { mask: 4, label: "Dead", set: true },
         ]);
-        expect(composeFlags(5, 0, false)).toBe(4); // clear bit 0
-        expect(composeFlags(4, 0, true)).toBe(5); // set bit 0
+        expect(composeFlags(5, 1, false)).toBe(4); // clear mask 0x1
+        expect(composeFlags(4, 1, true)).toBe(5); // set mask 0x1
+    });
+
+    it("handles a high-bit mask without producing a negative value", () => {
+        // 0x80000000 would go negative under signed bitwise ops without the unsigned guard.
+        expect(composeFlags(0, 0x80000000, true)).toBe(0x80000000);
+        expect(composeFlags(0xffffffff, 0x80000000, false)).toBe(0x7fffffff);
+        const highRow: Row = { ...flagRow, rawValue: 0x80000000, flagOptions: { "2147483648": "High" } };
+        expect(decomposeFlags(highRow)).toEqual([{ mask: 0x80000000, label: "High", set: true }]);
     });
 });
 

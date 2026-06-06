@@ -1,6 +1,7 @@
 import type { BinaryFormatAdapter } from "../format-adapter";
 import { createCanonicalProJsonSnapshot, loadCanonicalProJsonSnapshot } from "./json-snapshot";
 import { rebuildProCanonicalDocument } from "./canonical";
+import { proLayout } from "./layout-schema";
 import { proCompiledPatternFields, proDomainRanges, proPresentationSchema } from "./presentation-schema";
 import { isProStructuralFieldId, buildProStructuralTransitionBytes } from "./transition";
 import { slugify } from "../snapshot-common";
@@ -13,6 +14,9 @@ export const proFormatAdapter: BinaryFormatAdapter = {
     domainRanges: proDomainRanges,
     // PRO caches a rebuildable canonical document (own writable property); clear it on edit.
     documentCacheStrategy: "clear",
+    // Declarative single-page layout. Only the "critter" variant is authored so far; other PRO
+    // object/sub types report a variantId with no matching variant and fall back to the tabs path.
+    layout: proLayout,
 
     createJsonSnapshot(parseResult: ParseResult): string {
         return createCanonicalProJsonSnapshot(parseResult);

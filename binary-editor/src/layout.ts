@@ -5,16 +5,18 @@ import type { LayoutDescriptor, ResolvedLayout, Row, SectionDescriptor } from ".
 
 /**
  * Resolve a format's declarative layout for the model's active variant: select the variant the parser
- * reported (`parseResult.variantId`, or the first declared variant as a fallback) and build a
- * `FieldRef -> Row` map by projecting every field node and keying it by its semantic field key
- * (`toSemanticFieldKey(format, sourceSegments)`) - the same key the layout schema references. Returns
- * undefined when the selected variant does not exist, so `buildLayout` can fall back to the legacy path.
+ * reported (`parseResult.variantId`) and build a `FieldRef -> Row` map by projecting every field node
+ * and keying it by its semantic field key (`toSemanticFieldKey(format, sourceSegments)`) - the same key
+ * the layout schema references. Returns undefined when the parse result reports no variantId or the
+ * reported variant is not in the schema (e.g. a PRO subtype with no authored layout), so `buildLayout`
+ * falls back to the legacy tabs path. No first-variant fallback: an un-stamped or unrecognised file must
+ * never be forced into an arbitrary variant's layout.
  *
  * The whole field set is resolved up front (not just referenced keys): the layout formats are small
  * and form-only, so this avoids a per-ref lookup pass and keeps the renderer a pure data consumer.
  */
 export function resolveLayout(formatId: string, layout: FormatLayout, model: Model): ResolvedLayout | undefined {
-    const variantId = model.parseResult.variantId ?? Object.keys(layout.variants)[0];
+    const variantId = model.parseResult.variantId;
     const variant = variantId === undefined ? undefined : layout.variants[variantId];
     if (variantId === undefined || !variant) return undefined;
 
