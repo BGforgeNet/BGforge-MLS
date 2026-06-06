@@ -293,6 +293,23 @@ Two webview-based features, each with a host-side and browser-side module:
 
 For the binary library internals - spec system, primitives, derivation, format-adapter pattern, adding a new format - see [binary/INTERNALS.md](../binary/INTERNALS.md).
 
+#### Webview CSP: styles need `cspSource`, not a bare nonce
+
+Both webviews lock the inline `<script>` bundle to a per-load CSP nonce (`script-src 'nonce-...'`). Styles are
+different: a webview's `style-src` **must include `{{cspSource}}`**. VS Code wraps the webview in its own CSP layer
+and only honours `style-src` sources it can attribute to the webview origin (`cspSource`); a `style-src 'nonce-...'`
+with no `cspSource` is honoured by raw Chromium - so it passes any headless or standalone render - but is silently
+dropped by the wrapped VS Code webview. The symptom is a fully unstyled panel (default user-agent buttons, no theme
+colors) while the nonce'd script still runs, so the editor looks live but flat. The CSP shapes are pinned by
+`client/test/webview-csp.test.ts` as a regression guard.
+
+- `binary-editor/webview/index.html`: `style-src {{cspSource}}`; `styles.css` and `codicon.css` load as
+  `webview.asWebviewUri()` `<link>` elements (the documented custom-editor pattern). Both `client/src/binary-editor/webview`
+  and `client/out/codicons` are in the panel's `localResourceRoots`. Because codicon.css links directly, its
+  `@font-face` `url("./codicon.ttf")` resolves relative to the stylesheet URI - no font-URL rewrite is needed.
+- `dialog-tree/dialogTree.html`: `style-src {{cspSource}} 'nonce-{{nonce}}'`; codicons via `<link>`, panel CSS inlined
+  as a nonce'd `<style>`. Inlining is fine here only because `cspSource` is also present in `style-src`.
+
 Binary editor design choice:
 
 - `.map` files are parsed strictly in the custom editor. If strict parsing fails, the editor shows the parse errors instead of silently falling back to heuristic recovery.

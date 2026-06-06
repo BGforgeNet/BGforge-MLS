@@ -5,15 +5,18 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <meta
             http-equiv="Content-Security-Policy"
-            content="default-src 'none'; font-src {{cspSource}}; style-src 'nonce-{{nonce}}'; script-src 'nonce-{{nonce}}';"
+            content="default-src 'none'; font-src {{cspSource}}; style-src {{cspSource}}; script-src 'nonce-{{nonce}}';"
         />
         <title>Binary Editor</title>
-        <style nonce="{{nonce}}">
-            {{styles}}
-        </style>
-        <style nonce="{{nonce}}">
-            {{codiconStyles}}
-        </style>
+        <!--
+            Stylesheets load as link elements resolved through webview.asWebviewUri and authorised by
+            `style-src {{cspSource}}`. They are NOT inlined as nonce'd style elements: VS Code's wrapped
+            webview only honours style-src sources it can attribute to the webview origin (cspSource). A
+            bare `style-src 'nonce-...'` is honoured by raw Chromium but silently ignored by the VS Code
+            webview layer, leaving the panel unstyled. See docs/architecture.md (Webview CSP).
+        -->
+        <link href="{{codiconsUri}}" rel="stylesheet" />
+        <link href="{{stylesUri}}" rel="stylesheet" />
     </head>
     <body>
         <div id="app"></div>

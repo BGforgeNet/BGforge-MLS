@@ -1,19 +1,17 @@
 import * as fs from "fs";
 import * as path from "path";
 import { describe, expect, it } from "vitest";
-import { inlineWebviewStyles } from "../../../src/webview-assets";
 
-describe("binary-editor styles injection", () => {
-    it("inlines the stylesheet at the {{styles}} placeholder", () => {
-        const html = '<style nonce="{{nonce}}">{{styles}}</style>';
-        const out = inlineWebviewStyles(html, ".field{color:red}");
-        expect(out).toContain(".field{color:red}");
-        expect(out).not.toContain("{{styles}}");
-    });
-    it("index.html declares a {{styles}} placeholder, no literal rules", () => {
+describe("binary-editor styles loading", () => {
+    it("index.html links styles.css via an asWebviewUri <link>, no inline rules", () => {
         const html = fs.readFileSync(path.resolve("client/src/binary-editor/webview/index.html"), "utf8");
-        expect(html).toContain("{{styles}}");
-        expect(html).not.toMatch(/\.field\s*\{/); // CSS lives in styles.css now
+        // Styles load as a cspSource-authorised <link> (placeholder filled by the provider with
+        // webview.asWebviewUri), never inlined: VS Code's webview layer drops nonce-only inline
+        // stylesheets, leaving the panel unstyled. The CSP shape is guarded in webview-csp.test.ts.
+        expect(html).toContain("{{stylesUri}}");
+        expect(html).toContain('rel="stylesheet"');
+        expect(html).not.toContain("<style");
+        expect(html).not.toMatch(/\.field\s*\{/); // CSS lives in styles.css, not inlined here
     });
     it("styles.css is themed with vscode variables", () => {
         const css = fs.readFileSync(path.resolve("client/src/binary-editor/webview/styles.css"), "utf8");

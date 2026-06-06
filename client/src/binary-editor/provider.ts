@@ -2,22 +2,16 @@ import * as path from "node:path";
 import * as vscode from "vscode";
 import { getSnapshotPath } from "@bgforge/binary";
 import type { StructureOpRequest } from "@bgforge/binary-editor";
-import {
-    generateNonce,
-    getCachedCssAsset,
-    getCachedHtmlAsset,
-    getCachedJsAsset,
-    inlineWebviewScript,
-    inlineWebviewStyles,
-} from "../webview-assets";
+import { generateNonce, getCachedHtmlAsset, getCachedJsAsset, inlineWebviewScript } from "../webview-assets";
 import { surfaceWebviewRuntimeError } from "../webview-error";
 import { BinaryEditorDocument } from "./document";
 import { planSave } from "./save";
 import type { HostToWebview, WebviewToHost } from "./webview/messages";
 
 const WORKER_SCRIPT = path.join("client", "out", "binary-editor", "worker.js");
-const WEBVIEW_HTML = path.join("client", "src", "binary-editor", "webview", "index.html");
-const WEBVIEW_CSS = path.join("client", "src", "binary-editor", "webview", "styles.css");
+const WEBVIEW_DIR = path.join("client", "src", "binary-editor", "webview");
+const WEBVIEW_HTML = path.join(WEBVIEW_DIR, "index.html");
+const WEBVIEW_CSS = path.join(WEBVIEW_DIR, "styles.css");
 const WEBVIEW_JS = path.join("client", "out", "binary-editor", "webview", "main.js");
 const CODICONS_DIR = path.join("client", "out", "codicons");
 
@@ -78,7 +72,10 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
         _token: vscode.CancellationToken,
     ): Promise<void> {
         const codiconsDir = vscode.Uri.joinPath(this.extensionUri, CODICONS_DIR);
-        panel.webview.options = { enableScripts: true, localResourceRoots: [codiconsDir] };
+        const webviewDir = vscode.Uri.joinPath(this.extensionUri, WEBVIEW_DIR);
+        // Both roots must be readable for the <link> stylesheets: codicon.css/.ttf live under CODICONS_DIR,
+        // styles.css under WEBVIEW_DIR. asWebviewUri only resolves resources beneath a declared root.
+        panel.webview.options = { enableScripts: true, localResourceRoots: [codiconsDir, webviewDir] };
         panel.webview.html = this.getHtml(panel.webview);
 
         this.active.set(panel, document);
@@ -297,24 +294,19 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
     private getHtml(webview: vscode.Webview): string {
         const extensionPath = this.extensionUri.fsPath;
         let html = getCachedHtmlAsset("binary-editor-v2", extensionPath, WEBVIEW_HTML);
-        const css = getCachedCssAsset("binary-editor-v2", extensionPath, [WEBVIEW_CSS]);
-        html = inlineWebviewStyles(html, css);
-        // Inline codicon.css with its font URL rewritten to a webview-resource URI so the font
-        // loads under the strict CSP (default-src 'none' blocks the raw relative path).
-        // The codicon @font-face src contains a relative url("./codicon.ttf?...") that must become
-        // a vscode-resource:// URI the webview trusts; localResourceRoots is set to the same dir.
-        const codiconTtfUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, CODICONS_DIR, "codicon.ttf"));
-        const rawCodiconCss = getCachedCssAsset("binary-editor-v2-codicons", extensionPath, [
-            path.join(CODICONS_DIR, "codicon.css"),
-        ]);
-        // Replace the relative font url with the absolute webview URI. The regex matches the ttf url
-        // both with and without a cache-busting query string: url("./codicon.ttf") or url("./codicon.ttf?<hash>").
-        // Upgrade assumption: @vscode/codicons emits a double-quoted, "./"-prefixed url. If a future bump
-        // switches to single quotes or drops the "./", this silently no-matches and the font fails to load
-        // under default-src 'none' with no error surfaced. Re-verify the @font-face src format on any
-        // @vscode/codicons version bump.
-        const codiconCss = rawCodiconCss.replace(/url\("\.\/codicon\.ttf[^"]*"\)/, () => `url("${codiconTtfUri}")`);
-        html = html.replace("{{codiconStyles}}", () => codiconCss);
+        // Styles load as <link> stylesheets resolved through asWebviewUri and authorised by
+        // `style-src {{cspSource}}` - not inlined as <style nonce>. The VS Code webview layer only honours
+        // style-src sources it attributes to the webview origin (cspSource); a bare `style-src 'nonce-...'`
+        // is honoured by raw Chromium but silently ignored here, leaving the panel unstyled. The dialog-tree
+        // webview relies on the same cspSource rule. See docs/architecture.md (Webview CSP).
+        // codicon.css links directly too: its @font-face `url("./codicon.ttf")` resolves relative to the
+        // stylesheet's webview URI (same dir, both under localResourceRoots), so no font-URL rewrite is needed.
+        const stylesUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, WEBVIEW_CSS));
+        const codiconsUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, CODICONS_DIR, "codicon.css"));
+        // Function replacers: the URIs contain `$`-adjacent characters that String.replace would otherwise
+        // interpret as `$&`/`$'` patterns.
+        html = html.replace("{{stylesUri}}", () => stylesUri.toString());
+        html = html.replace("{{codiconsUri}}", () => codiconsUri.toString());
         const script = getCachedJsAsset("binary-editor-v2", extensionPath, WEBVIEW_JS);
         const nonce = generateNonce();
         html = inlineWebviewScript(html, script, nonce);

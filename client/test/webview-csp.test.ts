@@ -42,11 +42,17 @@ describe("webview script inlining", () => {
 });
 
 describe("webview CSP", () => {
-    it("binary editor template uses nonce-based CSP (no unsafe-inline)", () => {
+    it("binary editor loads styles via cspSource <link>, scripts via nonce (no unsafe-inline)", () => {
         const html = fs.readFileSync(path.resolve("client/src/binary-editor/webview/index.html"), "utf8");
         expect(html).not.toContain("'unsafe-inline'");
         expect(html).toContain("default-src 'none'");
-        expect(html).toContain("style-src 'nonce-{{nonce}}'");
+        // Styles MUST be authorised via cspSource, NOT a bare nonce. VS Code's webview layer silently drops
+        // a nonce-only `style-src` inline stylesheet, leaving the panel unstyled (raw Chromium honours it,
+        // the wrapped VS Code webview does not). Regression guard: keep styles as cspSource-authorised links.
+        expect(html).toContain("style-src {{cspSource}}");
+        expect(html).not.toContain("style-src 'nonce-{{nonce}}'");
+        expect(html).not.toContain("<style");
+        expect(html).toContain('rel="stylesheet"');
         expect(html).toContain("script-src 'nonce-{{nonce}}'");
         expect(html).toContain('<script nonce="{{nonce}}">');
     });
