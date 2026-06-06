@@ -15,7 +15,7 @@ export const effectSpecAnnotated = {
     // new opcode numbers and the engine accepts any 16-bit value. The lookup
     // is advisory (display only); strict canonical mode does not reject
     // unrecognised opcodes.
-    opcode: { ...effectSpec.opcode, enum: Opcodes, enumOpen: true },
+    opcode: { ...effectSpec.opcode, enum: Opcodes, enumOpen: true, searchableEnum: true },
     target: { ...effectSpec.target, enum: EffectTarget },
     // Timing has gaps (10 + 4096); mods occasionally use other values.
     timing: { ...effectSpec.timing, enum: EffectTiming, enumOpen: true },

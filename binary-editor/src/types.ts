@@ -32,6 +32,8 @@ export interface Row {
     description?: string;
     enumOptions?: Readonly<Record<string, string>>;
     flagOptions?: Readonly<Record<string, string>>;
+    /** Display hint: render this enum as a searchable combobox (set for large enums like IE opcodes). */
+    searchableEnum?: boolean;
 }
 
 export interface Diagnostic {
@@ -79,11 +81,20 @@ export interface SectionDescriptor {
  * fields), so the editor sends all field rows up front; list blocks (when other formats migrate) keep
  * using the windowed getChildren path keyed by `sectionKey`.
  */
+/** A list section a layout `list` block targets: the model node to render and its structure-op caps. */
+export interface LayoutSection {
+    nodeId: NodeId;
+    canAdd: boolean;
+    canModify: boolean;
+}
+
 export interface ResolvedLayout {
     variantId: string;
     rows: LayoutRow[];
     maxContentWidthPx?: number;
     fields: Record<FieldRef, Row>;
+    /** Depth-0 group sections (keyed by group name) a `list` block can target, with their caps. */
+    sections: Record<string, LayoutSection>;
 }
 
 export interface LayoutDescriptor {

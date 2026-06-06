@@ -102,10 +102,12 @@
             </ul>
         </div>
     {/if}
-    {#if open.layout.layout}
-        <!-- Layout-schema formats (PRO) render as a single dense page via the generic LayoutRenderer;
-             the legacy section-tabs + form/list path below is unchanged for every other format. -->
-        <LayoutRenderer layout={open.layout.layout} onedit={edit} {byNode} {showOffsets} />
+    {#if open.layout.layout && vm}
+        <!-- Layout-schema formats render as a single dense page via the generic LayoutRenderer; the legacy
+             section-tabs + form/list path below is unchanged for every other format. bridge/vm/version/
+             selection are forwarded for `list` blocks (variable-length sections use the windowed path). -->
+        <LayoutRenderer layout={open.layout.layout} onedit={edit} {byNode} {showOffsets}
+                        {bridge} {vm} {version} {selection} />
     {:else}
         <SectionTabs sections={open.layout.sections} {activeId} onselect={selectSection} />
         {#if active && vm}

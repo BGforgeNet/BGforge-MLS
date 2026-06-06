@@ -6,9 +6,9 @@
     import EnumField from "./controls/EnumField.svelte";
     import FlagsField from "./controls/FlagsField.svelte";
     import Icon from "./Icon.svelte";
-    const { row, onedit, diagnostics = [], showOffsets = false, searchable = false }:
+    const { row, onedit, diagnostics = [], showOffsets = false }:
         { row: Row; onedit: (nodeId: string, value: number | string) => void;
-          diagnostics?: Diagnostic[]; showOffsets?: boolean; searchable?: boolean } = $props();
+          diagnostics?: Diagnostic[]; showOffsets?: boolean } = $props();
     const kind = $derived(controlKind(row));
     const emit = (v: number | string) => onedit(row.id, v);
     const hasDiag = $derived(diagnostics.length > 0);
@@ -23,7 +23,7 @@
     <span class="field-control">
         {#if kind === "number"}<NumberField {row} onedit={emit} />
         {:else if kind === "string"}<StringField {row} onedit={emit} />
-        {:else if kind === "enum"}<EnumField {row} onedit={emit} {searchable} />
+        {:else if kind === "enum"}<EnumField {row} onedit={emit} />
         {:else}<FlagsField {row} onedit={emit} />{/if}
         {#if showOffsets && row.offset !== undefined}
             <span class="offset" title="byte offset / size / raw value">0x{row.offset.toString(16)}{#if row.size !== undefined} +{row.size}{/if}{#if typeof row.rawValue === "number"} = 0x{(row.rawValue >>> 0).toString(16)}{/if}</span>

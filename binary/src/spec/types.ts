@@ -58,6 +58,12 @@ export interface ScalarFieldSpec {
      * suitable for closed enums like PRO `objectType`.
      */
     readonly enumOpen?: boolean;
+    /**
+     * Display hint: render this enum as a searchable combobox rather than a plain dropdown. Set on the
+     * rare large enum (e.g. the ~300 IE effect opcodes) where scrolling a Select is unusable. Declared
+     * explicitly per field, never inferred from option count - small enums stay plain dropdowns.
+     */
+    readonly searchableEnum?: boolean;
     readonly flags?: Readonly<Record<number, string>>;
     /**
      * Bit-packed wire layout: this field is one part of a multi-field packed

@@ -1,7 +1,7 @@
 import { formatAdapterRegistry, toSemanticFieldKey, type FormatLayout } from "@bgforge/binary";
 import type { Model } from "./model";
 import { projectRow } from "./window";
-import type { LayoutDescriptor, ResolvedLayout, Row, SectionDescriptor } from "./types";
+import type { LayoutDescriptor, LayoutSection, ResolvedLayout, Row, SectionDescriptor } from "./types";
 
 /**
  * Resolve a format's declarative layout for the model's active variant: select the variant the parser
@@ -28,7 +28,21 @@ export function resolveLayout(formatId: string, layout: FormatLayout, model: Mod
         // field once, so collisions would only arise from a malformed duplicate - keep the first.
         if (key !== undefined && !(key in fields)) fields[key] = projectRow(model, node);
     }
-    return { variantId, rows: variant.rows, maxContentWidthPx: layout.maxContentWidthPx, fields };
+
+    // Depth-0 group sections a `list` block can target, keyed by group name. Caps come from the adapter's
+    // array predicates (same source the legacy tabs path uses); a `list` block's render mode is declared
+    // on the block itself, so it is not stored here.
+    const adapter = formatAdapterRegistry.get(formatId);
+    const sections: Record<string, LayoutSection> = {};
+    for (const node of model.nodes) {
+        if (node.depth !== 0 || node.kind !== "group") continue;
+        sections[node.name] = {
+            nodeId: node.id,
+            canAdd: adapter?.isAddableArray?.([node.name]) ?? false,
+            canModify: adapter?.isModifiableArray?.([node.name]) ?? false,
+        };
+    }
+    return { variantId, rows: variant.rows, maxContentWidthPx: layout.maxContentWidthPx, fields, sections };
 }
 
 export function buildLayout(formatId: string, model: Model): LayoutDescriptor {

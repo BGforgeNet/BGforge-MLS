@@ -54,6 +54,7 @@ export function projectRow(
     if (field.description !== undefined) base.description = field.description;
     if (field.enumOptions !== undefined) base.enumOptions = field.enumOptions;
     if (field.flagOptions !== undefined) base.flagOptions = field.flagOptions;
+    if (field.searchableEnum === true) base.searchableEnum = true;
     // Apply relationship-model overlay last so it can rename/redescribe/re-type a field
     // without touching the underlying ParsedField or the canonical document bytes.
     if (rel !== undefined) {

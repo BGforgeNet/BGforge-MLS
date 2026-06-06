@@ -58,6 +58,8 @@ export interface ParsedField {
      */
     enumOptions?: Readonly<Record<string, string>>;
     flagOptions?: Readonly<Record<string, string>>;
+    /** Display hint (from the spec's `searchableEnum`): render this enum as a searchable combobox. */
+    searchableEnum?: boolean;
 }
 
 /**

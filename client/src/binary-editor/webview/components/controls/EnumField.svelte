@@ -4,20 +4,16 @@
     import Select from "../primitives/Select.svelte";
     import Combobox from "../primitives/Combobox.svelte";
 
-    const { row, onedit, searchable = false }: {
-        row: Row;
-        onedit: (value: number) => void;
-        /** Render a searchable combobox instead of a plain dropdown. Opt-in per field via the layout's
-         * `searchable` list (e.g. the ~300 IE opcodes); never inferred from option count. */
-        searchable?: boolean;
-    } = $props();
+    const { row, onedit }: { row: Row; onedit: (value: number) => void } = $props();
     const options = $derived(enumOptionList(row));
     const current = $derived(typeof row.rawValue === "number" ? row.rawValue : Number(row.rawValue));
 
     // Control is spec-driven: a field is an enum because the spec declares `enum:`, so it renders as a
-    // dropdown. Select carries bits-ui's built-in keyboard typeahead, so even moderately large enums stay
-    // usable. A field explicitly marked `searchable` in the layout uses the substring-search Combobox
-    // instead (allowCustom=false: pick from the list; out-of-range values surface as Unknown(N)).
+    // dropdown. Select carries bits-ui's built-in keyboard typeahead, so moderately large enums stay
+    // usable. A field whose spec marks it `searchableEnum` (the rare large enum, e.g. the ~300 IE opcodes)
+    // renders the substring-search Combobox instead - declared in the spec, never inferred from option
+    // count. allowCustom=false: pick from the list; out-of-range values surface as Unknown(N).
+    const searchable = $derived(row.searchableEnum === true);
 </script>
 
 {#if searchable}

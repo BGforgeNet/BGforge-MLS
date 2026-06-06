@@ -354,6 +354,7 @@ function scalarFieldFor(
             type: "enum",
             rawValue: value as number,
             enumOptions: stringifyKeys(fs.enum),
+            ...(fs.searchableEnum === true && { searchableEnum: true }),
         };
     }
 

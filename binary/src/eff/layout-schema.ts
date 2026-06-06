@@ -7,7 +7,7 @@
  * verified against the model). The two signature/version magic fields (header and body) and the reserved
  * padding (`unused1`..`unused7`) are intentionally omitted - they are constants/padding, not user data;
  * leaving them out of the layout does not affect round-trip (the serializer rebuilds from the model). The
- * ~300-entry `opcode` enum is marked searchable so it renders as a combobox rather than a giant dropdown.
+ * ~300-entry `opcode` enum renders as a searchable combobox via the spec's `searchableEnum` flag.
  */
 
 import { formatLayoutSchema, type FormatLayout } from "../layout-schema-types";
@@ -38,7 +38,6 @@ export const effLayout: FormatLayout = formatLayoutSchema.parse({
                                         k("probability1"),
                                         k("probability2"),
                                     ],
-                                    searchable: [k("opcode")],
                                 },
                             ],
                         },
