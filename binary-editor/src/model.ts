@@ -1,4 +1,10 @@
-import type { ParsedField, ParsedGroup, ParseResult } from "@bgforge/binary";
+import {
+    formatAdapterRegistry,
+    type ParsedField,
+    type ParsedGroup,
+    type ParseResult,
+    type ProjectedEntry,
+} from "@bgforge/binary";
 import type { NamePath, NodeId } from "./types";
 
 function isGroup(entry: ParsedField | ParsedGroup): entry is ParsedGroup {
@@ -20,6 +26,10 @@ export interface FlatNode {
      *  the parent during buildModel so field projection can mark rows non-editable
      *  without re-walking the tree at render time. */
     parentLocked?: boolean;
+    /** Raw structural path (pre-projection) for this node. Identity projection makes
+     *  this equal to namePath; a format's projectDisplayRoot may differ (e.g. MAP
+     *  lifts objects out of "Objects Section"). Used to address bytes/semantic keys. */
+    sourceSegments: readonly string[];
 }
 
 export interface Model {
@@ -33,7 +43,37 @@ export interface Model {
     childrenByParent: Map<NodeId | "", number[]>;
 }
 
-/** Pre-order flatten of the parsed tree. The root group is not itself a node;
+/** Recursively project one raw entry, applying the adapter's hide predicates.
+ *  Returns undefined when the entry is hidden. */
+function projectEntry(
+    adapter: ReturnType<typeof formatAdapterRegistry.get>,
+    entry: ParsedField | ParsedGroup,
+    sourceSegments: readonly string[],
+): ProjectedEntry | undefined {
+    if (isGroup(entry)) {
+        if (adapter?.shouldHideGroup?.(entry)) return undefined;
+        const children = entry.fields
+            .map((c) => projectEntry(adapter, c, [...sourceSegments, c.name]))
+            .filter((c): c is ProjectedEntry => c !== undefined);
+        return { kind: "group", entry, sourceSegments, children };
+    }
+    if (adapter?.shouldHideField?.(entry)) return undefined;
+    return { kind: "field", entry, sourceSegments };
+}
+
+/** Per-format display projection; identity (no regroup, no hiding) when the adapter
+ *  declares no projectDisplayRoot, so non-projecting formats are unchanged. */
+function projectRoot(parseResult: ParseResult): ProjectedEntry[] {
+    const adapter = formatAdapterRegistry.get(parseResult.format);
+    if (adapter?.projectDisplayRoot) {
+        return adapter.projectDisplayRoot(parseResult, (_pr, entry, segs) => projectEntry(adapter, entry, segs));
+    }
+    return parseResult.root.fields
+        .map((e) => projectEntry(adapter, e, [e.name]))
+        .filter((e): e is ProjectedEntry => e !== undefined);
+}
+
+/** Pre-order flatten of the projected tree. The root group is not itself a node;
  *  its children are the depth-0 nodes. Ids are positional (`parentId/childIndex`)
  *  so they are stable for a given tree shape and unique by construction. */
 export function buildModel(parseResult: ParseResult): Model {
@@ -43,16 +83,17 @@ export function buildModel(parseResult: ParseResult): Model {
     const childrenByParent = new Map<NodeId | "", number[]>();
 
     const walk = (
-        entries: (ParsedField | ParsedGroup)[],
+        entries: readonly ProjectedEntry[],
         depth: number,
         parentId: NodeId | undefined,
         parentNamePath: NamePath,
         parentLocked: boolean,
     ): void => {
-        entries.forEach((entry, index) => {
+        entries.forEach((pe, index) => {
+            const entry = pe.entry;
             const id = parentId === undefined ? String(index) : `${parentId}/${index}`;
             const namePath: NamePath = [...parentNamePath, entry.name];
-            const group = isGroup(entry) ? entry : undefined;
+            const group = pe.kind === "group" ? (entry as ParsedGroup) : undefined;
             // A node is locked if any ancestor group carries editingLocked === true.
             const locked = parentLocked || group?.editingLocked === true;
             byId.set(id, nodes.length);
@@ -65,17 +106,18 @@ export function buildModel(parseResult: ParseResult): Model {
                 namePath,
                 depth,
                 parentId,
-                kind: group ? "group" : "field",
+                kind: pe.kind,
                 source: entry,
-                childCount: group ? group.fields.length : 0,
+                childCount: pe.kind === "group" ? pe.children.length : 0,
                 name: entry.name,
                 parentLocked: parentLocked || undefined,
+                sourceSegments: pe.sourceSegments,
             });
-            if (group) walk(group.fields, depth + 1, id, namePath, locked);
+            if (pe.kind === "group") walk(pe.children, depth + 1, id, namePath, locked);
         });
     };
 
-    walk(parseResult.root.fields, 0, undefined, [], false);
+    walk(projectRoot(parseResult), 0, undefined, [], false);
     return { parseResult, nodes, byId, expanded, childrenByParent };
 }
 

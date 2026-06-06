@@ -175,26 +175,42 @@ function projectObjectsSection(
         (f): f is ParsedGroup => isGroup(f) && /^Elevation \d+ Objects$/.test(f.name),
     );
 
-    const countFields: ParsedField[] = [];
-    if (totalObjects) countFields.push(readonlyCountField("Total Objects", totalObjects));
+    // sourceSegments stay rooted at the raw "Objects Section" path so a projected
+    // node still maps back to its true structural location even though the display
+    // lifts it to depth 0.
+    const SECTION = section.name;
+    const countChildren: ProjectedEntry[] = [];
+    if (totalObjects) {
+        countChildren.push({
+            kind: "field",
+            entry: readonlyCountField("Total Objects", totalObjects),
+            sourceSegments: [SECTION, "Total Objects"],
+        });
+    }
     elevationGroups.forEach((g, i) => {
         const c = g.fields.find((f): f is ParsedField => !isGroup(f) && f.name === "Object Count");
-        if (c) countFields.push(readonlyCountField(`Elevation ${i} Object Count`, c));
+        if (c) {
+            countChildren.push({
+                kind: "field",
+                entry: readonlyCountField(`Elevation ${i} Object Count`, c),
+                sourceSegments: [SECTION, g.name, "Object Count"],
+            });
+        }
     });
-    const objectsForm: ParsedGroup = { name: "Objects", fields: countFields, editingLocked: true };
-    out.push({
-        kind: "group",
-        entry: objectsForm,
-        sourceSegments: ["Objects"],
-        children: countFields.map((f) => ({ kind: "field", entry: f, sourceSegments: ["Objects", f.name] })),
-    });
+    const objectsForm: ParsedGroup = {
+        name: "Objects",
+        // countChildren is built above with only kind:"field" entries, so every entry is a ParsedField.
+        fields: countChildren.map((c) => c.entry as ParsedField),
+        editingLocked: true,
+    };
+    out.push({ kind: "group", entry: objectsForm, sourceSegments: [SECTION], children: countChildren });
 
     for (const g of elevationGroups) {
         const children = g.fields
             .filter((f) => isGroup(f) || f.name !== "Object Count")
-            .map((c) => projectEntry(parseResult, c, [g.name, c.name]))
+            .map((c) => projectEntry(parseResult, c, [SECTION, g.name, c.name]))
             .filter((c): c is ProjectedEntry => c !== undefined);
-        out.push({ kind: "group", entry: g, sourceSegments: [g.name], children });
+        out.push({ kind: "group", entry: g, sourceSegments: [SECTION, g.name], children });
     }
     return out;
 }
