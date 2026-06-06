@@ -29,6 +29,7 @@
                         {#each panel.blocks as block, bi (bi)}
                             {#if block.kind === "fields"}
                                 <FieldsBlock fieldRefs={block.fields} columns={block.columns}
+                                             searchable={block.searchable}
                                              fields={layout.fields} {onedit} {byNode} {showOffsets} />
                             {:else if block.kind === "flags"}
                                 <FlagColumns field={block.field} columns={block.columns}

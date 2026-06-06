@@ -1,17 +1,16 @@
 /**
  * PRO and EFF harness pass.
  *
- * Opens one Fallout PRO (item proto) and one Infinity Engine EFF in the real webview bundle
- * (app.html). Both formats are form-only (no list sections), so this pass confirms the
- * generic FormSection render path handles them without errors under the strict nonce CSP.
- *
- * No structure-op exercises are performed - PRO and EFF have no canModify list sections.
- * The phantom-format driver (render-form.mts) and the static generic-renderer guard already
- * cover the generic rendering guarantee; this driver adds real-fixture smoke coverage.
+ * Opens one Fallout PRO (item proto) and one Infinity Engine EFF in the real webview bundle (app.html).
+ * The PRO item is a subtype with no authored layout, so it still renders via the legacy FormSection/tabs
+ * path. EFF is migrated to the declarative layout, so it renders as a single dense page via LayoutRenderer
+ * (Effect / Dice & Save / Resistance / Parameters / Resources / Caster panels), with the ~300-entry opcode
+ * enum as a searchable combobox. Both run under the strict nonce CSP.
  *
  * Assertions:
- *   - PRO: opens without error, layout has at least one section, form fields render (.form .field).
- *   - EFF: opens without error, layout has at least one section, form fields render (.form .field).
+ *   - PRO (item): opens without error, legacy form path renders fields (.form .field), has sections.
+ *   - EFF: opens without error, resolves the "effect" layout variant, panels + fields render via
+ *     .layout-root, opcode renders as a searchable combobox, and no section tabs appear.
  *   - CSP: no Content-Security-Policy violations in either page.
  */
 
@@ -107,13 +106,33 @@ await page2.exposeFunction("__hostUp", async (m: WebviewToHost) => {
     for (const reply of hostUp(m)) await page2.evaluate((rr) => window.postMessage(rr, "*"), reply);
 });
 await page2.goto("file://" + path.join(here, "app.html"));
-await page2.waitForSelector(".form, .bb-tabs.primary [role='tab']", { timeout: 5000 });
+await page2.waitForSelector(".layout-root", { timeout: 5000 });
 await page2.waitForTimeout(200);
 
-const effSections = effOpen.result.layout.sections.length;
-check("eff: layout has sections (>= 1)", effSections >= 1, `count=${effSections}`);
-const effFields = await page2.locator(".form .field").count();
-check("eff: form fields render (> 0)", effFields > 0, `count=${effFields}`);
+check(
+    "eff: resolves the 'effect' layout variant",
+    effOpen.result.layout.layout?.variantId === "effect",
+    `variantId=${effOpen.result.layout.layout?.variantId}`,
+);
+const effDom = await page2.evaluate(() => ({
+    panels: Array.from(document.querySelectorAll(".layout-root .panel > h3"), (e) => e.textContent),
+    fields: document.querySelectorAll(".layout-root .field").length,
+    combobox: document.querySelectorAll(".layout-root .bb-combobox-input").length,
+    selects: document.querySelectorAll(".layout-root .bb-select-trigger").length,
+    flagCols: document.querySelectorAll(".layout-root .flag-columns").length,
+    tabs: document.querySelectorAll(".bb-tabs").length,
+}));
+check(
+    "eff: panels render (Effect / Dice & Save / Resistance / Parameters / Resources / Caster & Projectile)",
+    JSON.stringify(effDom.panels) ===
+        JSON.stringify(["Effect", "Dice & Save", "Resistance", "Parameters", "Resources", "Caster & Projectile"]),
+    JSON.stringify(effDom.panels),
+);
+check("eff: layout fields render (> 20)", effDom.fields > 20, `count=${effDom.fields}`);
+check("eff: opcode renders as a searchable combobox", effDom.combobox >= 1, `count=${effDom.combobox}`);
+check("eff: small enums render as Select (target/timing)", effDom.selects >= 2, `count=${effDom.selects}`);
+check("eff: flags render (saveType + resistance)", effDom.flagCols >= 2, `count=${effDom.flagCols}`);
+check("eff: no section tabs (single page)", effDom.tabs === 0, `count=${effDom.tabs}`);
 
 await page2.screenshot({ path: path.join(here, "shot-eff.png") });
 

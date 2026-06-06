@@ -26,6 +26,10 @@ const fieldsBlockSchema = z.strictObject({
     kind: z.literal("fields"),
     fields: z.array(fieldRefSchema).min(1),
     columns: z.number().int().positive().optional(),
+    /** Field refs (a subset of `fields`) whose enum should render as a searchable combobox instead of a
+     * plain dropdown. Declared explicitly per field (not inferred from option count) for the rare large
+     * enum - e.g. the ~300 IE effect opcodes - where scrolling a Select is unusable. */
+    searchable: z.array(fieldRefSchema).optional(),
 });
 
 /** One flags field rendered as N vertical checkbox columns. */

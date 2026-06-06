@@ -64,6 +64,8 @@ class EffParser implements BinaryParser {
         return {
             format: this.id,
             formatName: this.name,
+            // EFF has a single shape; the layout has one "effect" variant the renderer selects on.
+            variantId: "effect",
             root: group("EFF File", [headerGroup, bodyGroup]),
             document,
         };
