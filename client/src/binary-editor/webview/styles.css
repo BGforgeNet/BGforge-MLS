@@ -548,6 +548,10 @@ input[type="text"]::placeholder {
 /* -- horizontal secondary: pill-underline style (lighter, subdued, subordinate to the primary strip) -- */
 .bb-tabs.horizontal.secondary {
     flex-direction: row;
+    /* Wrap rather than horizontally scroll when a form has many in-line tabs (same rationale as the
+       primary strip below; row-gap offsets the buttons' -1px margin-bottom). */
+    flex-wrap: wrap;
+    row-gap: 1px;
     border-bottom: 1px solid var(--vscode-panel-border, #2b2b2b);
 }
 .bb-tabs.horizontal.secondary button {
@@ -566,6 +570,11 @@ input[type="text"]::placeholder {
 .bb-tabs.horizontal.primary {
     flex: 0 0 auto; /* stable height in the App column layout between toolbar and content */
     flex-direction: row;
+    /* Wrap to multiple rows rather than overflowing into a horizontal scroll when a format has many
+       sections (e.g. .pro files). row-gap cancels the buttons' -1px margin-bottom so wrapped rows don't
+       overlap; the active underline still renders per button on whichever row it lands. */
+    flex-wrap: wrap;
+    row-gap: 1px;
     padding: 0 0.75rem;
     border-bottom: 1px solid var(--vscode-panel-border, #2b2b2b);
 }
