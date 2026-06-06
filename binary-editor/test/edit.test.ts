@@ -3,9 +3,9 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { openSession, sessionStore } from "../src/session";
 import { setExpanded } from "../src/model";
-import { editField } from "../src/edit";
+import { editField, invalidateCachedDocument } from "../src/edit";
 import { undo } from "../src/structure-ops";
-import type { ParsedField } from "@bgforge/binary";
+import { formatAdapterRegistry, type ParseResult, type ParsedField } from "@bgforge/binary";
 import { openItmSession, firstEffectFields, itmFixturePresent } from "./ie-fixture";
 
 const MAP_FIXTURE = path.resolve(__dirname, "../../client/testFixture/maps/arcaves.map");
@@ -65,6 +65,43 @@ describe("reactive shaping (real ITM display tree)", () => {
         const p1Id = f.get("parameter1")!.id;
         const result = editField(session, p1Id, 9);
         expect(result.changeSet.changed.map((r) => r.id)).toEqual([p1Id]);
+    });
+});
+
+// Finding #6a: cache invalidation is driven by the adapter's explicit `documentCacheStrategy`, not by
+// reflecting on the shape of the `document` property. A new format that forgets to declare the strategy
+// fails to compile (it is required); these pin the dispatch behaviour at runtime.
+describe("invalidateCachedDocument (per-adapter cache strategy)", () => {
+    // invalidateCachedDocument only reads `format` and writes `document`; the document's contents are
+    // irrelevant to the dispatch, so a single opaque placeholder is cast in at this test boundary and
+    // checked by reference identity / undefined-ness rather than by shape.
+    const sentinelDoc = {} as ParseResult["document"];
+    function fakeResult(format: string): ParseResult {
+        return {
+            format,
+            formatName: format,
+            root: { name: "root", fields: [], expanded: true },
+            document: sentinelDoc,
+        };
+    }
+
+    it("every built-in format declares a documentCacheStrategy", () => {
+        for (const id of ["pro", "map", "itm", "spl", "eff", "cre"]) {
+            const strategy = formatAdapterRegistry.get(id)?.documentCacheStrategy;
+            expect(strategy === "clear" || strategy === "none").toBe(true);
+        }
+    });
+
+    it("clears the cached document for a 'clear' format", () => {
+        const pr = fakeResult("pro");
+        invalidateCachedDocument(pr);
+        expect(pr.document).toBeUndefined();
+    });
+
+    it("leaves the cached document untouched for an unregistered format (no strategy)", () => {
+        const pr = fakeResult("not-a-real-format");
+        invalidateCachedDocument(pr);
+        expect(pr.document).toBe(sentinelDoc);
     });
 });
 

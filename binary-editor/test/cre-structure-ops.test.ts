@@ -33,12 +33,17 @@ function sectionCount(session: EditorSession, sectionName: string): number {
     return (session.model.childrenByParent.get(node.id) ?? []).length;
 }
 
-function firstEntryName(session: EditorSession, sectionName: string): string {
+function sectionId(session: EditorSession, sectionName: string): string {
+    const node = session.model.nodes.find((n) => n.kind === "group" && n.name === sectionName);
+    if (!node) throw new Error(`no section "${sectionName}"`);
+    return node.id;
+}
+function firstEntryId(session: EditorSession, sectionName: string): string {
     const node = session.model.nodes.find((n) => n.kind === "group" && n.name === sectionName)!;
     const kids = session.model.childrenByParent.get(node.id) ?? [];
     const first = kids.map((i) => session.model.nodes[i]!).find((n) => n.kind === "group");
     if (!first) throw new Error(`no entry in "${sectionName}"`);
-    return first.name;
+    return first.id;
 }
 
 const maybe = present ? describe : describe.skip;
@@ -63,7 +68,7 @@ maybe("CRE editor structure ops", () => {
     it("adds and removes a known spell (flat)", () => {
         const session = open();
         const before = sectionCount(session, "Known Spells");
-        const r = structureOp(session, { op: "add", namePath: ["Known Spells"] });
+        const r = structureOp(session, { op: "add", sectionId: sectionId(session, "Known Spells") });
         expect(r.changeSet.dirty).toBe(true);
         expect(sectionCount(session, "Known Spells")).toBe(before + 1);
         undo(session);
@@ -74,7 +79,7 @@ maybe("CRE editor structure ops", () => {
         const session = open();
         const ownersBefore = sectionCount(session, "Spell Memorization Info");
         const slicesBefore = sectionCount(session, "Memorized Spells");
-        structureOp(session, { op: "add", namePath: ["Spell Memorization Info"] });
+        structureOp(session, { op: "add", sectionId: sectionId(session, "Spell Memorization Info") });
         expect(sectionCount(session, "Spell Memorization Info")).toBe(ownersBefore + 1);
         expect(sectionCount(session, "Memorized Spells")).toBe(slicesBefore); // slices unchanged
     });
@@ -82,10 +87,10 @@ maybe("CRE editor structure ops", () => {
     it("inserts and removes a memorized spell (slice, owner-relative)", () => {
         const session = open();
         const before = sectionCount(session, "Memorized Spells");
-        const target = firstEntryName(session, "Memorized Spells");
+        const target = firstEntryId(session, "Memorized Spells");
         const ins = structureOp(session, {
             op: "insert",
-            entryPath: ["Memorized Spells", target],
+            entryId: target,
             position: "after",
         });
         expect(ins.changeSet.dirty).toBe(true);
@@ -93,7 +98,7 @@ maybe("CRE editor structure ops", () => {
         undo(session);
         expect(sectionCount(session, "Memorized Spells")).toBe(before);
 
-        const rem = structureOp(session, { op: "remove", entryPath: ["Memorized Spells", target] });
+        const rem = structureOp(session, { op: "remove", entryId: firstEntryId(session, "Memorized Spells") });
         expect(rem.changeSet.dirty).toBe(true);
         expect(sectionCount(session, "Memorized Spells")).toBe(before - 1);
     });
@@ -101,7 +106,7 @@ maybe("CRE editor structure ops", () => {
     it("rejects a section-level add on memorized spells (owner-ambiguous)", () => {
         const session = open();
         const before = sectionCount(session, "Memorized Spells");
-        const r = structureOp(session, { op: "add", namePath: ["Memorized Spells"] });
+        const r = structureOp(session, { op: "add", sectionId: sectionId(session, "Memorized Spells") });
         expect(r.changeSet.dirty).toBe(false);
         expect(sectionCount(session, "Memorized Spells")).toBe(before);
     });
@@ -109,19 +114,18 @@ maybe("CRE editor structure ops", () => {
     it("adds a v2 effect (flat)", () => {
         const session = open();
         const before = sectionCount(session, "Effects");
-        structureOp(session, { op: "add", namePath: ["Effects"] });
+        structureOp(session, { op: "add", sectionId: sectionId(session, "Effects") });
         expect(sectionCount(session, "Effects")).toBe(before + 1);
     });
 
     it("adds, duplicates, and removes an item (flat + itemSlots relink)", () => {
         const session = open();
         const before = sectionCount(session, "Items");
-        structureOp(session, { op: "add", namePath: ["Items"] });
+        structureOp(session, { op: "add", sectionId: sectionId(session, "Items") });
         expect(sectionCount(session, "Items")).toBe(before + 1);
-        const name = firstEntryName(session, "Items");
-        structureOp(session, { op: "duplicate", entryPath: ["Items", name] });
+        structureOp(session, { op: "duplicate", entryId: firstEntryId(session, "Items") });
         expect(sectionCount(session, "Items")).toBe(before + 2);
-        structureOp(session, { op: "remove", entryPath: ["Items", name] });
+        structureOp(session, { op: "remove", entryId: firstEntryId(session, "Items") });
         expect(sectionCount(session, "Items")).toBe(before + 1);
     });
 });

@@ -6,8 +6,8 @@
     import Field from "./Field.svelte";
     import RowActions from "./RowActions.svelte";
 
-    const { parentId, title, caps, bridge, version, selection, onedit, showOffsets = false }:
-        { parentId: NodeId; title: string; caps: SectionCaps; bridge: Bridge; version: number;
+    const { parentId, caps, bridge, version, selection, onedit, showOffsets = false }:
+        { parentId: NodeId; caps: SectionCaps; bridge: Bridge; version: number;
           selection: NodeId | undefined; onedit: (id: string, v: number | string) => void;
           showOffsets?: boolean } = $props();
 
@@ -68,13 +68,9 @@
         return () => { cancelled = true; };
     });
 
-    // Addresses the entry by [sectionTitle, rowName]; the editor resolves it via namePath. NOTE: row.name is the
-    // display name - for formats whose entry labels are derived rather than positional it may not be the raw slot
-    // name, so revisit this addressing if such a format gains structure ops.
-    const entryPath = (row: Row): string[] => [title, row.name];
 </script>
 <div class="inline-list-toolbar">
-    {#if caps.canAdd}<button onclick={() => bridge.structureOp({ op: "add", namePath: [title] })}>+ add</button>{/if}
+    {#if caps.canAdd}<button onclick={() => bridge.structureOp({ op: "add", sectionId: parentId })}>+ add</button>{/if}
 </div>
 <div class="vlist"
      bind:clientHeight={viewportHeight} onscroll={(e) => (scrollTop = (e.target as HTMLElement).scrollTop)}>
@@ -94,7 +90,7 @@
                      onkeydown={(e) => { if (e.key === "Enter") activeIndex = idx; }}>
                     {#if idx === activeIndex}
                         <Field {row} {onedit} {showOffsets} />
-                        <RowActions {acts} entryPath={entryPath(row)} {bridge} compact={true} />
+                        <RowActions {acts} entryId={row.id} {bridge} compact={true} />
                     {:else}
                         <span class="label">{row.name}</span> <span class="value">{row.displayValue}</span>
                     {/if}

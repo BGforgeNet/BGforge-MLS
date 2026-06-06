@@ -2,7 +2,7 @@ import { formatAdapterRegistry, loadBinaryJsonSnapshot, type ParseOptions } from
 import { closeSession, openSession, sessionStore, type EditorSession } from "./session";
 import { buildModel, setExpanded } from "./model";
 import { buildLayout } from "./layout";
-import { getChildren, getWindow } from "./window";
+import { DEFAULT_WINDOW, getChildren, getWindow } from "./window";
 import { editField } from "./edit";
 import { structureOp, undo as doUndo, redo as doRedo, type StructureOpRequest } from "./structure-ops";
 import { serializeSession } from "./serialize";
@@ -51,7 +51,7 @@ function reopenResult(s: EditorSession): OpenResult {
         layout: buildLayout(s.parserId, s.model),
         warnings: pr.warnings ?? [],
         errors: pr.errors ?? [],
-        rootWindow: getWindow(s.model, 0, 200, s.relationshipModel, s.composeSummary),
+        rootWindow: getWindow(s.model, 0, DEFAULT_WINDOW, s.relationshipModel, s.composeSummary),
     };
 }
 
@@ -91,7 +91,7 @@ export function dispatch(req: Request): Response {
                 setExpanded(s.model, req.nodeId, req.expanded);
                 return {
                     type: "window",
-                    rows: getWindow(s.model, 0, 500, s.relationshipModel, s.composeSummary),
+                    rows: getWindow(s.model, 0, DEFAULT_WINDOW, s.relationshipModel, s.composeSummary),
                     dirty: s.dirty,
                 };
             }
@@ -104,7 +104,7 @@ export function dispatch(req: Request): Response {
                 doUndo(s);
                 return {
                     type: "window",
-                    rows: getWindow(s.model, 0, 500, s.relationshipModel, s.composeSummary),
+                    rows: getWindow(s.model, 0, DEFAULT_WINDOW, s.relationshipModel, s.composeSummary),
                     dirty: s.dirty,
                 };
             }
@@ -113,7 +113,7 @@ export function dispatch(req: Request): Response {
                 doRedo(s);
                 return {
                     type: "window",
-                    rows: getWindow(s.model, 0, 500, s.relationshipModel, s.composeSummary),
+                    rows: getWindow(s.model, 0, DEFAULT_WINDOW, s.relationshipModel, s.composeSummary),
                     dirty: s.dirty,
                 };
             }

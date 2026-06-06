@@ -1,4 +1,4 @@
-import type { ParsedField, ParseResult } from "@bgforge/binary";
+import { formatAdapterRegistry, type ParsedField, type ParseResult } from "@bgforge/binary";
 import type { EditorSession } from "./session";
 import { projectRow } from "./window";
 import { serializeSession } from "./serialize";
@@ -8,24 +8,18 @@ import type { EditResult, NodeId } from "./types";
  * Clear a stale cached canonical document after a display-tree mutation so the
  * next serialize/snapshot rebuilds from the edited tree.
  *
- * IE formats (ITM, SPL, EFF, CRE) store `document` as a plain own writable
- * property. Setting it to undefined causes the IE serializer to fall through
- * from getDocument (returns undefined) to rebuildFromDisplay (reads the current
- * display tree).
- *
- * MAP stores `document` as a configurable getter+setter. The lazy getter caches
- * after first access; once cached, mutations to the display tree are not visible
- * through the getter. Setting the property to undefined via the setter resets
- * the cache. When the MAP serializer then accesses result.document it gets
- * undefined, falls through to rebuildMapCanonicalDocument, which reads the
- * current (mutated) display tree.
- *
- * No-op for formats that have no own `document` descriptor (e.g. PRO, FRM).
+ * The per-format choice is declared explicitly on the adapter as
+ * `documentCacheStrategy` (review finding #6a) rather than inferred from the
+ * shape of the `document` property: a "clear" format has a rebuildable cached
+ * document (IE/PRO own writable property, MAP lazy getter+setter) and the
+ * assignment to undefined either nulls the property or invokes the setter that
+ * resets the lazy cache; the serializer then falls through to rebuild-from-display.
+ * A "none" format keeps no editor-invalidatable cache, so it is left untouched.
+ * The adapter is resolved by `parseResult.format`, which carries the formatId.
  */
 export function invalidateCachedDocument(parseResult: ParseResult): void {
-    const desc = Object.getOwnPropertyDescriptor(parseResult, "document");
-    if (!desc) return;
-    if (desc.writable === true || desc.set !== undefined) {
+    const adapter = formatAdapterRegistry.get(parseResult.format);
+    if (adapter?.documentCacheStrategy === "clear") {
         parseResult.document = undefined;
     }
 }

@@ -213,67 +213,65 @@ function parseEntryIndex(label: string, prefix: string): number | undefined {
 
 export function buildMapRemoveEntryBytes(
     parseResult: ParseResult,
-    entryPath: readonly string[],
+    arrayPath: readonly string[],
+    index: number,
 ): Uint8Array | undefined {
-    if (!isMapRemovableEntry(entryPath)) return undefined;
-    return mutateVarSectionEntry(parseResult, entryPath, "remove");
+    return mutateVarSectionEntry(parseResult, arrayPath, index, "remove");
 }
 
 export function buildMapInsertEntryBytes(
     parseResult: ParseResult,
-    entryPath: readonly string[],
+    arrayPath: readonly string[],
+    index: number,
     position: "before" | "after",
 ): Uint8Array | undefined {
-    // An entry can be inserted next to any entry that itself is recognised as
-    // a removable target - the addressing rules are the same.
-    if (!isMapRemovableEntry(entryPath)) return undefined;
-    return mutateVarSectionEntry(parseResult, entryPath, "insert", position);
+    return mutateVarSectionEntry(parseResult, arrayPath, index, "insert", position);
 }
 
 export function buildMapMoveEntryBytes(
     parseResult: ParseResult,
-    entryPath: readonly string[],
+    arrayPath: readonly string[],
+    index: number,
     direction: "up" | "down",
 ): Uint8Array | undefined {
-    if (!isMapRemovableEntry(entryPath)) return;
-    return mutateVarSectionEntry(parseResult, entryPath, "reorder", undefined, direction);
+    return mutateVarSectionEntry(parseResult, arrayPath, index, "reorder", undefined, direction);
 }
 
 /**
- * Copy the targeted entry's value and insert the copy immediately after it.
+ * Copy the entry at `index` and insert the copy immediately after it.
  * MAP variables have no slot-unique identity to relink, so the copy is verbatim:
  * a var is just an int32 value.
  */
 export function buildMapDuplicateEntryBytes(
     parseResult: ParseResult,
-    entryPath: readonly string[],
+    arrayPath: readonly string[],
+    index: number,
 ): Uint8Array | undefined {
-    if (!isMapRemovableEntry(entryPath)) return undefined;
-    return mutateVarSectionEntry(parseResult, entryPath, "duplicate");
+    return mutateVarSectionEntry(parseResult, arrayPath, index, "duplicate");
 }
 
 /**
- * Shared boilerplate for entry-targeted var-section mutations: resolves the
- * binding row, calls applyEntryMutation on the current values, and re-serialises.
- * Returns undefined on boundary no-ops (e.g. reorder at the boundary) or when the
- * index is out of range.
+ * Shared boilerplate for entry-targeted var-section mutations: resolves the var
+ * section from `arrayPath`, calls applyEntryMutation at the structural `index` on
+ * the current values, and re-serialises. Returns undefined when `arrayPath` is not
+ * a removable var section, `index` is out of range, or the op is a boundary no-op.
  */
 function mutateVarSectionEntry(
     parseResult: ParseResult,
-    entryPath: readonly string[],
+    arrayPath: readonly string[],
+    index: number,
     op: "remove" | "insert" | "reorder" | "duplicate",
     position?: "before" | "after",
     direction?: "up" | "down",
 ): Uint8Array | undefined {
+    if (!varSectionRemovable || arrayPath.length !== 1) return undefined;
+    const section = findVarSectionByArrayName(arrayPath[0]);
+    if (!section) return undefined;
     const doc = readDocument(parseResult);
     if (!doc) return undefined;
-    // Every caller gates on isMapRemovableEntry, which validates entryPath length, the section
-    // name, and a parseable index - so the section lookup and index parse below cannot fail here.
-    const section = findVarSectionByArrayName(entryPath[0])!;
-    const index = parseEntryIndex(entryPath[1]!, section.entryPrefix)!;
     const collection = makeVarSectionCollection(section);
     const current = collection.read(doc);
-    if (index >= current.length) return undefined;
+    if (index < 0 || index >= current.length) return undefined;
 
     const mutation = applyEntryMutation(current, op, index, collection.defaultElement, position, direction);
     if (!mutation) return undefined;

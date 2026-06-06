@@ -391,10 +391,12 @@ await doUndo();
         const beforeCount = wmBefore.type === "children" ? wmBefore.total : -1;
         check("regression: wm_sbook has 1 effect before remove", beforeCount === 1, `count=${beforeCount}`);
 
+        // Address the only effect by its stable NodeId (structure ops are NodeId-keyed, not label-keyed).
+        const firstEffectId = wmBefore.type === "children" ? (wmBefore.rows[0]?.id ?? "") : "";
         const removeR = dispatch({
             type: "structureOp",
             sessionId: wmSession,
-            op: { op: "remove", entryPath: ["Effects", "Effect 1"] },
+            op: { op: "remove", entryId: firstEffectId },
         });
         check("regression: remove-first-effect did not return error", removeR.type !== "error", `type=${removeR.type}`);
 

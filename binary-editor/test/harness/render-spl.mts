@@ -402,10 +402,12 @@ await doUndo();
         const beforeCount = regrBefore.type === "children" ? regrBefore.total : -1;
         check("regression: casting-free spl has 1 effect before remove", beforeCount === 1, `count=${beforeCount}`);
 
+        // Address the only effect by its stable NodeId (structure ops are NodeId-keyed, not label-keyed).
+        const firstEffectId = regrBefore.type === "children" ? (regrBefore.rows[0]?.id ?? "") : "";
         const removeR = dispatch({
             type: "structureOp",
             sessionId: regrSession,
-            op: { op: "remove", entryPath: ["Effects", "Effect 1"] },
+            op: { op: "remove", entryId: firstEffectId },
         });
         check("regression: remove-first-effect did not return error", removeR.type !== "error", `type=${removeR.type}`);
 

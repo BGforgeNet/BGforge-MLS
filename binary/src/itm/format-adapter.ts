@@ -27,6 +27,8 @@ export const itmFormatAdapter: BinaryFormatAdapter = {
     presentationSchema: itmPresentationSchema,
     compiledPatternFields: itmCompiledPatternFields,
     domainRanges: itmDomainRanges,
+    // IE formats cache a rebuildable canonical document (own writable property); clear it on edit.
+    documentCacheStrategy: "clear",
 
     createJsonSnapshot(parseResult: ParseResult): string {
         return createCanonicalItmJsonSnapshot(parseResult);
@@ -68,40 +70,50 @@ export const itmFormatAdapter: BinaryFormatAdapter = {
         return undefined;
     },
 
-    buildRemoveEntryBytes(parseResult: ParseResult, entryPath: readonly string[]): Uint8Array | undefined {
-        const section = entryPath[0];
-        if (section === ABILITIES_SECTION) return buildItmRemoveAbilityBytes(parseResult, entryPath);
-        if (section === EFFECTS_SECTION) return buildItmRemoveEffectBytes(parseResult, entryPath);
+    buildRemoveEntryBytes(
+        parseResult: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+    ): Uint8Array | undefined {
+        const section = arrayPath[0];
+        if (section === ABILITIES_SECTION) return buildItmRemoveAbilityBytes(parseResult, arrayPath, index);
+        if (section === EFFECTS_SECTION) return buildItmRemoveEffectBytes(parseResult, arrayPath, index);
         return undefined;
     },
 
     buildInsertEntryBytes(
         parseResult: ParseResult,
-        entryPath: readonly string[],
+        arrayPath: readonly string[],
+        index: number,
         position: "before" | "after",
     ): Uint8Array | undefined {
-        const section = entryPath[0];
-        if (section === ABILITIES_SECTION) return buildItmInsertAbilityBytes(parseResult, entryPath, position);
-        if (section === EFFECTS_SECTION) return buildItmInsertEffectBytes(parseResult, entryPath, position);
+        const section = arrayPath[0];
+        if (section === ABILITIES_SECTION) return buildItmInsertAbilityBytes(parseResult, arrayPath, index, position);
+        if (section === EFFECTS_SECTION) return buildItmInsertEffectBytes(parseResult, arrayPath, index, position);
         return undefined;
     },
 
     // The interface method is named "move"; the ITM builders are named "reorder" (entity-ops naming).
     buildMoveEntryBytes(
         parseResult: ParseResult,
-        entryPath: readonly string[],
+        arrayPath: readonly string[],
+        index: number,
         direction: "up" | "down",
     ): Uint8Array | undefined {
-        const section = entryPath[0];
-        if (section === ABILITIES_SECTION) return buildItmReorderAbilityBytes(parseResult, entryPath, direction);
-        if (section === EFFECTS_SECTION) return buildItmReorderEffectBytes(parseResult, entryPath, direction);
+        const section = arrayPath[0];
+        if (section === ABILITIES_SECTION) return buildItmReorderAbilityBytes(parseResult, arrayPath, index, direction);
+        if (section === EFFECTS_SECTION) return buildItmReorderEffectBytes(parseResult, arrayPath, index, direction);
         return undefined;
     },
 
-    buildDuplicateEntryBytes(parseResult: ParseResult, entryPath: readonly string[]): Uint8Array | undefined {
-        const section = entryPath[0];
-        if (section === ABILITIES_SECTION) return buildItmDuplicateAbilityBytes(parseResult, entryPath);
-        if (section === EFFECTS_SECTION) return buildItmDuplicateEffectBytes(parseResult, entryPath);
+    buildDuplicateEntryBytes(
+        parseResult: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+    ): Uint8Array | undefined {
+        const section = arrayPath[0];
+        if (section === ABILITIES_SECTION) return buildItmDuplicateAbilityBytes(parseResult, arrayPath, index);
+        if (section === EFFECTS_SECTION) return buildItmDuplicateEffectBytes(parseResult, arrayPath, index);
         return undefined;
     },
 };

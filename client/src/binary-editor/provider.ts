@@ -84,95 +84,110 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
         });
 
         panel.webview.onDidReceiveMessage(async (message: WebviewToHost) => {
-            switch (message.type) {
-                case "ready":
-                    this.post(panel, { type: "init", open: document.openResult });
-                    await this.pushDiagnosticsToDocument(document);
-                    break;
-                case "requestChildren": {
-                    const r = await document.bridge.send({
-                        type: "getChildren",
-                        sessionId: document.sessionId,
-                        nodeId: message.nodeId,
-                        start: message.start,
-                        end: message.end,
-                    });
-                    if (r.type === "children") {
-                        this.post(panel, {
-                            type: "children",
-                            requestId: message.requestId,
-                            parentId: r.parentId,
-                            rows: r.rows,
-                            total: r.total,
-                        });
-                    } else if (r.type === "error") {
-                        this.post(panel, { type: "error", requestId: message.requestId, message: r.message });
-                    }
-                    break;
-                }
-                case "editField": {
-                    const r = await document.bridge.send({
-                        type: "editField",
-                        sessionId: document.sessionId,
-                        nodeId: message.nodeId,
-                        value: message.value,
-                    });
-                    if (r.type === "error") {
-                        this.post(panel, { type: "error", message: r.message });
-                        break;
-                    }
-                    if (r.type === "edited") {
-                        document.pushEdit("Edit field");
-                        // Keep the edited entry selected so an inline list does not collapse the row on commit.
-                        this.postToDocumentPanels(document, {
-                            type: "changeSet",
-                            changeSet: r.result.changeSet,
-                            selection: message.nodeId,
-                        });
-                        await this.pushDiagnosticsToDocument(document);
-                    }
-                    break;
-                }
-                case "structureOp": {
-                    const r = await document.bridge.send({
-                        type: "structureOp",
-                        sessionId: document.sessionId,
-                        op: message.op,
-                    });
-                    if (r.type === "error") {
-                        this.post(panel, { type: "error", message: r.message });
-                        break;
-                    }
-                    if (r.type === "structure") {
-                        document.pushEdit(structureOpLabel(message.op.op));
-                        // Forward the post-op selection so the webview re-activates the new/moved/neighbor entry.
-                        this.postToDocumentPanels(document, {
-                            type: "changeSet",
-                            changeSet: r.result.changeSet,
-                            selection: r.result.selection,
-                        });
-                        await this.pushDiagnosticsToDocument(document);
-                    }
-                    break;
-                }
-                case "dumpJson":
-                    await this.dumpJson(document);
-                    break;
-                case "loadJson":
-                    await this.loadJson(document, panel);
-                    break;
-                case "runtimeError": {
-                    const file = path.basename(document.uri.fsPath);
-                    surfaceWebviewRuntimeError({
-                        label: `Binary editor for ${file}`,
-                        userFacingFile: file,
-                        message: message.message,
-                        stack: message.stack,
-                    });
-                    break;
-                }
+            try {
+                await this.handleWebviewMessage(document, panel, message);
+            } catch (error) {
+                // A rejected bridge send (worker crash/hang timeout) lands here instead of becoming an
+                // unhandled promise rejection. Surface it in the webview's error banner so the failure is
+                // visible rather than a silently dead editor.
+                this.post(panel, { type: "error", message: error instanceof Error ? error.message : String(error) });
             }
         });
+    }
+
+    private async handleWebviewMessage(
+        document: BinaryEditorDocument,
+        panel: vscode.WebviewPanel,
+        message: WebviewToHost,
+    ): Promise<void> {
+        switch (message.type) {
+            case "ready":
+                this.post(panel, { type: "init", open: document.openResult });
+                await this.pushDiagnosticsToDocument(document);
+                break;
+            case "requestChildren": {
+                const r = await document.bridge.send({
+                    type: "getChildren",
+                    sessionId: document.sessionId,
+                    nodeId: message.nodeId,
+                    start: message.start,
+                    end: message.end,
+                });
+                if (r.type === "children") {
+                    this.post(panel, {
+                        type: "children",
+                        requestId: message.requestId,
+                        parentId: r.parentId,
+                        rows: r.rows,
+                        total: r.total,
+                    });
+                } else if (r.type === "error") {
+                    this.post(panel, { type: "error", requestId: message.requestId, message: r.message });
+                }
+                break;
+            }
+            case "editField": {
+                const r = await document.bridge.send({
+                    type: "editField",
+                    sessionId: document.sessionId,
+                    nodeId: message.nodeId,
+                    value: message.value,
+                });
+                if (r.type === "error") {
+                    this.post(panel, { type: "error", message: r.message });
+                    break;
+                }
+                if (r.type === "edited") {
+                    document.pushEdit("Edit field");
+                    // Keep the edited entry selected so an inline list does not collapse the row on commit.
+                    this.postToDocumentPanels(document, {
+                        type: "changeSet",
+                        changeSet: r.result.changeSet,
+                        selection: message.nodeId,
+                    });
+                    await this.pushDiagnosticsToDocument(document);
+                }
+                break;
+            }
+            case "structureOp": {
+                const r = await document.bridge.send({
+                    type: "structureOp",
+                    sessionId: document.sessionId,
+                    op: message.op,
+                });
+                if (r.type === "error") {
+                    this.post(panel, { type: "error", message: r.message });
+                    break;
+                }
+                if (r.type === "structure") {
+                    document.pushEdit(structureOpLabel(message.op.op));
+                    // Forward the post-op selection so the webview re-activates the new/moved/neighbor entry.
+                    this.postToDocumentPanels(document, {
+                        type: "changeSet",
+                        changeSet: r.result.changeSet,
+                        selection: r.result.selection,
+                    });
+                    await this.pushDiagnosticsToDocument(document);
+                }
+                break;
+            }
+            case "dumpJson":
+                await this.dumpJson(document);
+                break;
+            case "loadJson":
+                await this.loadJson(document, panel);
+                break;
+            case "runtimeError": {
+                const file = path.basename(document.uri.fsPath);
+                surfaceWebviewRuntimeError({
+                    label: `Binary editor for ${file}`,
+                    userFacingFile: file,
+                    message: message.message,
+                    stack: message.stack,
+                });
+                break;
+            }
+        }
     }
 
     async saveCustomDocument(document: BinaryEditorDocument, _token: vscode.CancellationToken): Promise<void> {

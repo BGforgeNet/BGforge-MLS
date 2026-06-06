@@ -89,23 +89,22 @@ describe("spl adapter structure-op surface", () => {
     it("routes ability ops end-to-end and produces reparseable bytes", () => {
         if (!hasFixture) return;
         const pr = makeTwoAbilityBase();
-        const ability = ["Abilities", "Ability 1"];
 
-        const removeBytes = spl.buildRemoveEntryBytes!(pr, ability);
+        const removeBytes = spl.buildRemoveEntryBytes!(pr, ["Abilities"], 0);
         expect(removeBytes).toBeInstanceOf(Uint8Array);
         expect(splParser.parse(removeBytes as Uint8Array).errors).toBeUndefined();
 
-        const insertBytes = spl.buildInsertEntryBytes!(pr, ability, "after");
+        const insertBytes = spl.buildInsertEntryBytes!(pr, ["Abilities"], 0, "after");
         expect(insertBytes).toBeInstanceOf(Uint8Array);
         expect(splParser.parse(insertBytes as Uint8Array).errors).toBeUndefined();
 
-        const duplicateBytes = spl.buildDuplicateEntryBytes!(pr, ability);
+        const duplicateBytes = spl.buildDuplicateEntryBytes!(pr, ["Abilities"], 0);
         expect(duplicateBytes).toBeInstanceOf(Uint8Array);
         expect(splParser.parse(duplicateBytes as Uint8Array).errors).toBeUndefined();
 
-        // Two abilities, so moving Ability 1 down swaps with Ability 2 and yields bytes (not a boundary
+        // Two abilities, so moving index 0 down swaps with index 1 and yields bytes (not a boundary
         // no-op). The contract stays bytes-or-undefined; when bytes come back they must reparse cleanly.
-        const moveBytes = spl.buildMoveEntryBytes!(pr, ability, "down");
+        const moveBytes = spl.buildMoveEntryBytes!(pr, ["Abilities"], 0, "down");
         expect(moveBytes).toBeInstanceOf(Uint8Array);
         expect(splParser.parse(moveBytes as Uint8Array).errors).toBeUndefined();
     });
@@ -113,25 +112,24 @@ describe("spl adapter structure-op surface", () => {
     it("routes effect ops end-to-end and produces reparseable bytes", () => {
         if (!hasFixture) return;
         const pr = makeTwoAbilityBase();
-        // Effect 2 is the first effect owned by ability1 (slice [1,2]); editing it touches an
+        // effects[1] (index 1) is the first effect owned by ability1 (slice [1,2]); editing it touches an
         // ability-owned range cleanly. Each op proves the adapter delegates Effects -> effect builders.
-        const effect = ["Effects", "Effect 2"];
 
-        const removeBytes = spl.buildRemoveEntryBytes!(pr, ["Effects", "Effect 3"]);
+        const removeBytes = spl.buildRemoveEntryBytes!(pr, ["Effects"], 2);
         expect(removeBytes).toBeInstanceOf(Uint8Array);
         expect(splParser.parse(removeBytes as Uint8Array).errors).toBeUndefined();
 
-        const insertBytes = spl.buildInsertEntryBytes!(pr, effect, "after");
+        const insertBytes = spl.buildInsertEntryBytes!(pr, ["Effects"], 1, "after");
         expect(insertBytes).toBeInstanceOf(Uint8Array);
         expect(splParser.parse(insertBytes as Uint8Array).errors).toBeUndefined();
 
-        const duplicateBytes = spl.buildDuplicateEntryBytes!(pr, effect);
+        const duplicateBytes = spl.buildDuplicateEntryBytes!(pr, ["Effects"], 1);
         expect(duplicateBytes).toBeInstanceOf(Uint8Array);
         expect(splParser.parse(duplicateBytes as Uint8Array).errors).toBeUndefined();
 
-        // Effect 2 (opcode 20) and Effect 3 (opcode 21) are both owned by ability1, so moving Effect 2
-        // down is a same-owner swap that returns bytes (not a cross-owner boundary no-op).
-        const moveBytes = spl.buildMoveEntryBytes!(pr, effect, "down");
+        // effects[1] (opcode 20) and effects[2] (opcode 21) are both owned by ability1, so moving
+        // index 1 down is a same-owner swap that returns bytes (not a cross-owner boundary no-op).
+        const moveBytes = spl.buildMoveEntryBytes!(pr, ["Effects"], 1, "down");
         expect(moveBytes).toBeInstanceOf(Uint8Array);
         expect(splParser.parse(moveBytes as Uint8Array).errors).toBeUndefined();
     });

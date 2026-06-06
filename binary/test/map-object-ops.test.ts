@@ -72,10 +72,7 @@ describe("map object-ops round-trip", () => {
         const addedDoc = getMapCanonicalDocument(addedPr) ?? rebuildMapCanonicalDocument(addedPr)!;
         expect(addedDoc!.objects.elevations[elev]!.objects.length).toBe(count + 1);
         // The appended object is the new last entry; removing it restores the bytes.
-        const removed = buildMapObjectRemoveEntryBytes(addedPr, [
-            `Elevation ${elev} Objects`,
-            `Object ${elev}.${count} (Misc)`,
-        ]);
+        const removed = buildMapObjectRemoveEntryBytes(addedPr, [`Elevation ${elev} Objects`], count);
         expect(removed).toBeDefined();
         expect([...removed!]).toEqual([...original]);
     });
@@ -85,11 +82,10 @@ describe("map object-ops round-trip", () => {
         const { elev, count } = elevationWithObjects(pr);
         if (count < 2) return; // needs >=2 objects to reorder
         const original = pr.sourceData as Uint8Array;
-        const up = buildMapObjectMoveEntryBytes(pr, [`Elevation ${elev} Objects`, `Object ${elev}.1 (`], "up");
-        // NOTE: the label match below is resolved by index prefix; see object-ops parseObjectIndex.
+        const up = buildMapObjectMoveEntryBytes(pr, [`Elevation ${elev} Objects`], 1, "up");
         expect(up).toBeDefined();
         const upPr = mapParser.parse(up!, { gracefulMapBoundaries: true });
-        const down = buildMapObjectMoveEntryBytes(upPr, [`Elevation ${elev} Objects`, `Object ${elev}.0 (`], "down");
+        const down = buildMapObjectMoveEntryBytes(upPr, [`Elevation ${elev} Objects`], 0, "down");
         expect(down).toBeDefined();
         expect([...down!]).toEqual([...original]);
     });
@@ -99,7 +95,7 @@ describe("map object-ops round-trip", () => {
         const { elev } = elevationWithObjects(pr);
         const doc = getMapCanonicalDocument(pr) ?? rebuildMapCanonicalDocument(pr)!;
         const target = doc!.objects.elevations[elev]!.objects[0]!;
-        const dup = buildMapObjectDuplicateEntryBytes(pr, [`Elevation ${elev} Objects`, `Object ${elev}.0 (`]);
+        const dup = buildMapObjectDuplicateEntryBytes(pr, [`Elevation ${elev} Objects`], 0);
         expect(dup).toBeDefined();
         const dupPr = mapParser.parse(dup!, { gracefulMapBoundaries: true });
         const dupDoc = getMapCanonicalDocument(dupPr) ?? rebuildMapCanonicalDocument(dupPr)!;
@@ -134,10 +130,7 @@ describe("map object-ops add/remove inverse across fixtures", () => {
         const added = buildMapObjectAddEntryBytes(pr, [`Elevation ${elev} Objects`]);
         expect(added).toBeDefined();
         const addedPr = mapParser.parse(added!, { gracefulMapBoundaries: true });
-        const removed = buildMapObjectRemoveEntryBytes(addedPr, [
-            `Elevation ${elev} Objects`,
-            `Object ${elev}.${count} (Misc)`,
-        ]);
+        const removed = buildMapObjectRemoveEntryBytes(addedPr, [`Elevation ${elev} Objects`], count);
         expect(removed).toBeDefined();
         expect([...removed!]).toEqual([...data]);
     });
@@ -153,9 +146,7 @@ describe("map object-ops refuse on incomplete decode", () => {
         );
         expect(hasTail).toBe(true);
         expect(buildMapObjectAddEntryBytes(pr, ["Elevation 0 Objects"])).toBeUndefined();
-        expect(
-            buildMapObjectInsertEntryBytes(pr, ["Elevation 0 Objects", "Object 0.0 (Critter)"], "after"),
-        ).toBeUndefined();
+        expect(buildMapObjectInsertEntryBytes(pr, ["Elevation 0 Objects"], 0, "after")).toBeUndefined();
     });
 
     it("refuses when the last object is truncated to EOF (no opaque tail, but a truncation error)", () => {

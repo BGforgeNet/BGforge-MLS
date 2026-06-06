@@ -33,7 +33,7 @@ describe("buildMapDuplicateEntryBytes", () => {
         const originalCount = before!.globalVariables.length;
         const firstValue = before!.globalVariables[0]!;
 
-        const bytes = buildMapDuplicateEntryBytes(parseResult, ["Global Variables", "Global Var 0"]);
+        const bytes = buildMapDuplicateEntryBytes(parseResult, ["Global Variables"], 0);
         expect(bytes).toBeInstanceOf(Uint8Array);
 
         const reparsed = mapParser.parse(bytes!);
@@ -58,7 +58,7 @@ describe("buildMapDuplicateEntryBytes", () => {
         const targetIndex = 2;
         const targetValue = before!.globalVariables[targetIndex]!;
 
-        const bytes = buildMapDuplicateEntryBytes(parseResult, ["Global Variables", `Global Var ${targetIndex}`]);
+        const bytes = buildMapDuplicateEntryBytes(parseResult, ["Global Variables"], targetIndex);
         expect(bytes).toBeInstanceOf(Uint8Array);
 
         const reparsed = mapParser.parse(bytes!);
@@ -75,7 +75,7 @@ describe("buildMapDuplicateEntryBytes", () => {
 
     it("returns undefined for a non-removable path", () => {
         const { parseResult } = loadMap();
-        expect(buildMapDuplicateEntryBytes(parseResult, ["Header", "Version"])).toBeUndefined();
+        expect(buildMapDuplicateEntryBytes(parseResult, ["Header"], 0)).toBeUndefined();
     });
 
     it("survives the skipMapTiles opaque-range shift (tiles remain byte-clean after duplicate)", () => {
@@ -84,7 +84,7 @@ describe("buildMapDuplicateEntryBytes", () => {
         const before = parseResult.document as GlobalsDoc | undefined;
         expect(before).toBeDefined();
 
-        const bytes = buildMapDuplicateEntryBytes(parseResult, ["Global Variables", "Global Var 0"]);
+        const bytes = buildMapDuplicateEntryBytes(parseResult, ["Global Variables"], 0);
         expect(bytes).toBeInstanceOf(Uint8Array);
 
         const reparsed = mapParser.parse(bytes!, { skipMapTiles: true });
@@ -108,7 +108,7 @@ describe("buildMapDuplicateEntryBytes", () => {
         const originalCount = before!.localVariables.length;
         const targetValue = before!.localVariables[0]!;
 
-        const bytes = buildMapDuplicateEntryBytes(seeded, ["Local Variables", "Local Var 0"]);
+        const bytes = buildMapDuplicateEntryBytes(seeded, ["Local Variables"], 0);
         expect(bytes).toBeInstanceOf(Uint8Array);
 
         const reparsed = mapParser.parse(bytes!);

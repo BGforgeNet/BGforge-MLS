@@ -38,6 +38,13 @@ function elevationObjects(session: EditorSession, elev: number): FlatNode[] {
         .filter((n) => n.kind === "group" && /^Object \d+\.\d+ /.test(n.name));
 }
 
+/** NodeId of the lifted "Elevation N Objects" section group. */
+function elevationSectionId(session: EditorSession, elev: number): string {
+    const section = session.model.nodes.find((n) => n.depth === 0 && n.name === `Elevation ${elev} Objects`);
+    if (!section) throw new Error(`no Elevation ${elev} Objects section`);
+    return section.id;
+}
+
 function firstElevationWithObjects(session: EditorSession): number {
     for (let e = 0; e < 3; e++) {
         if (elevationObjects(session, e).length > 0) return e;
@@ -51,7 +58,7 @@ describe.skipIf(!present)("editor MAP object structure ops", () => {
         const elev = firstElevationWithObjects(session);
         const before = elevationObjects(session, elev).length;
 
-        const result = structureOp(session, { op: "add", namePath: [`Elevation ${elev} Objects`] });
+        const result = structureOp(session, { op: "add", sectionId: elevationSectionId(session, elev) });
         expect(result.changeSet.dirty).toBe(true);
         expect(elevationObjects(session, elev).length).toBe(before + 1);
 
@@ -70,7 +77,7 @@ describe.skipIf(!present)("editor MAP object structure ops", () => {
 
         const result = structureOp(session, {
             op: "remove",
-            entryPath: [`Elevation ${elev} Objects`, target.name],
+            entryId: target.id,
         });
         expect(result.changeSet.dirty).toBe(true);
         expect(elevationObjects(session, elev).length).toBe(before - 1);

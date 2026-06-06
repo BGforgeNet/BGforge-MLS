@@ -309,38 +309,48 @@ export function buildCreAddEntryBytes(pr: ParseResult, arrayPath: readonly strin
     return flatOpsFor(section)?.buildAddEntryBytes(pr, arrayPath);
 }
 
-export function buildCreRemoveEntryBytes(pr: ParseResult, entryPath: readonly string[]): Uint8Array | undefined {
-    const section = entryPath[0];
-    if (section === OWNER_SECTION) return memoOps.buildRemoveOwnerBytes(pr, entryPath);
-    if (section === SLICE_SECTION) return memoOps.buildRemoveSliceBytes(pr, entryPath);
-    return flatOpsFor(section)?.buildRemoveEntryBytes(pr, entryPath);
+export function buildCreRemoveEntryBytes(
+    pr: ParseResult,
+    arrayPath: readonly string[],
+    index: number,
+): Uint8Array | undefined {
+    const section = arrayPath[0];
+    if (section === OWNER_SECTION) return memoOps.buildRemoveOwnerBytes(pr, arrayPath, index);
+    if (section === SLICE_SECTION) return memoOps.buildRemoveSliceBytes(pr, arrayPath, index);
+    return flatOpsFor(section)?.buildRemoveEntryBytes(pr, arrayPath, index);
 }
 
 export function buildCreInsertEntryBytes(
     pr: ParseResult,
-    entryPath: readonly string[],
+    arrayPath: readonly string[],
+    index: number,
     position: "before" | "after",
 ): Uint8Array | undefined {
-    const section = entryPath[0];
-    if (section === OWNER_SECTION) return memoOps.buildInsertOwnerBytes(pr, entryPath, position);
-    if (section === SLICE_SECTION) return memoOps.buildInsertSliceBytes(pr, entryPath, position);
-    return flatOpsFor(section)?.buildInsertEntryBytes(pr, entryPath, position);
+    const section = arrayPath[0];
+    if (section === OWNER_SECTION) return memoOps.buildInsertOwnerBytes(pr, arrayPath, index, position);
+    if (section === SLICE_SECTION) return memoOps.buildInsertSliceBytes(pr, arrayPath, index, position);
+    return flatOpsFor(section)?.buildInsertEntryBytes(pr, arrayPath, index, position);
 }
 
 export function buildCreMoveEntryBytes(
     pr: ParseResult,
-    entryPath: readonly string[],
+    arrayPath: readonly string[],
+    index: number,
     direction: "up" | "down",
 ): Uint8Array | undefined {
-    const section = entryPath[0];
-    if (section === OWNER_SECTION) return memoOps.buildReorderOwnerBytes(pr, entryPath, direction);
-    if (section === SLICE_SECTION) return memoOps.buildReorderSliceBytes(pr, entryPath, direction);
-    return flatOpsFor(section)?.buildMoveEntryBytes(pr, entryPath, direction);
+    const section = arrayPath[0];
+    if (section === OWNER_SECTION) return memoOps.buildReorderOwnerBytes(pr, arrayPath, index, direction);
+    if (section === SLICE_SECTION) return memoOps.buildReorderSliceBytes(pr, arrayPath, index, direction);
+    return flatOpsFor(section)?.buildMoveEntryBytes(pr, arrayPath, index, direction);
 }
 
-export function buildCreDuplicateEntryBytes(pr: ParseResult, entryPath: readonly string[]): Uint8Array | undefined {
-    const section = entryPath[0];
-    if (section === OWNER_SECTION) return memoOps.buildDuplicateOwnerBytes(pr, entryPath);
-    if (section === SLICE_SECTION) return memoOps.buildDuplicateSliceBytes(pr, entryPath);
-    return flatOpsFor(section)?.buildDuplicateEntryBytes(pr, entryPath);
+export function buildCreDuplicateEntryBytes(
+    pr: ParseResult,
+    arrayPath: readonly string[],
+    index: number,
+): Uint8Array | undefined {
+    const section = arrayPath[0];
+    if (section === OWNER_SECTION) return memoOps.buildDuplicateOwnerBytes(pr, arrayPath, index);
+    if (section === SLICE_SECTION) return memoOps.buildDuplicateSliceBytes(pr, arrayPath, index);
+    return flatOpsFor(section)?.buildDuplicateEntryBytes(pr, arrayPath, index);
 }

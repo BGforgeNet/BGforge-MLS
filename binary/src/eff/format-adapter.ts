@@ -23,6 +23,8 @@ export const effFormatAdapter: BinaryFormatAdapter = {
     presentationSchema: effPresentationSchema,
     compiledPatternFields: effCompiledPatternFields,
     domainRanges: effDomainRanges,
+    // IE formats cache a rebuildable canonical document (own writable property); clear it on edit.
+    documentCacheStrategy: "clear",
 
     createJsonSnapshot(parseResult: ParseResult): string {
         return createCanonicalEffJsonSnapshot(parseResult);

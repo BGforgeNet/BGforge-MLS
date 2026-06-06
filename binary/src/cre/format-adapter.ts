@@ -57,6 +57,8 @@ export const creFormatAdapter: BinaryFormatAdapter = {
     presentationSchema: crePresentationSchema,
     compiledPatternFields: creCompiledPatternFields,
     domainRanges: creDomainRanges,
+    // IE formats cache a rebuildable canonical document (own writable property); clear it on edit.
+    documentCacheStrategy: "clear",
 
     createJsonSnapshot(parseResult: ParseResult): string {
         return createCanonicalCreJsonSnapshot(parseResult);
@@ -95,27 +97,37 @@ export const creFormatAdapter: BinaryFormatAdapter = {
         return buildCreAddEntryBytes(parseResult, arrayPath);
     },
 
-    buildRemoveEntryBytes(parseResult: ParseResult, entryPath: readonly string[]): Uint8Array | undefined {
-        return buildCreRemoveEntryBytes(parseResult, entryPath);
+    buildRemoveEntryBytes(
+        parseResult: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+    ): Uint8Array | undefined {
+        return buildCreRemoveEntryBytes(parseResult, arrayPath, index);
     },
 
     buildInsertEntryBytes(
         parseResult: ParseResult,
-        entryPath: readonly string[],
+        arrayPath: readonly string[],
+        index: number,
         position: "before" | "after",
     ): Uint8Array | undefined {
-        return buildCreInsertEntryBytes(parseResult, entryPath, position);
+        return buildCreInsertEntryBytes(parseResult, arrayPath, index, position);
     },
 
     buildMoveEntryBytes(
         parseResult: ParseResult,
-        entryPath: readonly string[],
+        arrayPath: readonly string[],
+        index: number,
         direction: "up" | "down",
     ): Uint8Array | undefined {
-        return buildCreMoveEntryBytes(parseResult, entryPath, direction);
+        return buildCreMoveEntryBytes(parseResult, arrayPath, index, direction);
     },
 
-    buildDuplicateEntryBytes(parseResult: ParseResult, entryPath: readonly string[]): Uint8Array | undefined {
-        return buildCreDuplicateEntryBytes(parseResult, entryPath);
+    buildDuplicateEntryBytes(
+        parseResult: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+    ): Uint8Array | undefined {
+        return buildCreDuplicateEntryBytes(parseResult, arrayPath, index);
     },
 };

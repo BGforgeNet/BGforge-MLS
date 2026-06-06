@@ -220,6 +220,8 @@ export const mapFormatAdapter: BinaryFormatAdapter = {
     presentationSchema: mapPresentationSchema,
     compiledPatternFields: mapCompiledPatternFields,
     domainRanges: mapDomainRanges,
+    // MAP caches its canonical document behind a lazy getter+setter; assigning undefined resets that cache.
+    documentCacheStrategy: "clear",
 
     createJsonSnapshot(parseResult: ParseResult): string {
         return createCanonicalMapJsonSnapshot(parseResult);
@@ -289,30 +291,41 @@ export const mapFormatAdapter: BinaryFormatAdapter = {
         return buildMapAddEntryBytes(parseResult, arrayPath) ?? buildMapObjectAddEntryBytes(parseResult, arrayPath);
     },
 
-    buildRemoveEntryBytes(parseResult: ParseResult, entryPath: readonly string[]) {
+    buildRemoveEntryBytes(parseResult: ParseResult, arrayPath: readonly string[], index: number) {
         return (
-            buildMapRemoveEntryBytes(parseResult, entryPath) ?? buildMapObjectRemoveEntryBytes(parseResult, entryPath)
+            buildMapRemoveEntryBytes(parseResult, arrayPath, index) ??
+            buildMapObjectRemoveEntryBytes(parseResult, arrayPath, index)
         );
     },
 
-    buildInsertEntryBytes(parseResult: ParseResult, entryPath: readonly string[], position: "before" | "after") {
+    buildInsertEntryBytes(
+        parseResult: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+        position: "before" | "after",
+    ) {
         return (
-            buildMapInsertEntryBytes(parseResult, entryPath, position) ??
-            buildMapObjectInsertEntryBytes(parseResult, entryPath, position)
+            buildMapInsertEntryBytes(parseResult, arrayPath, index, position) ??
+            buildMapObjectInsertEntryBytes(parseResult, arrayPath, index, position)
         );
     },
 
-    buildMoveEntryBytes(parseResult: ParseResult, entryPath: readonly string[], direction: "up" | "down") {
+    buildMoveEntryBytes(
+        parseResult: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+        direction: "up" | "down",
+    ) {
         return (
-            buildMapMoveEntryBytes(parseResult, entryPath, direction) ??
-            buildMapObjectMoveEntryBytes(parseResult, entryPath, direction)
+            buildMapMoveEntryBytes(parseResult, arrayPath, index, direction) ??
+            buildMapObjectMoveEntryBytes(parseResult, arrayPath, index, direction)
         );
     },
 
-    buildDuplicateEntryBytes(parseResult: ParseResult, entryPath: readonly string[]) {
+    buildDuplicateEntryBytes(parseResult: ParseResult, arrayPath: readonly string[], index: number) {
         return (
-            buildMapDuplicateEntryBytes(parseResult, entryPath) ??
-            buildMapObjectDuplicateEntryBytes(parseResult, entryPath)
+            buildMapDuplicateEntryBytes(parseResult, arrayPath, index) ??
+            buildMapObjectDuplicateEntryBytes(parseResult, arrayPath, index)
         );
     },
 

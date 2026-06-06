@@ -3,6 +3,16 @@ import { type FlatNode, type Model, visibleNodes } from "./model";
 import type { RelationshipModel } from "./relationship/types";
 import type { NodeId, Row } from "./types";
 
+/**
+ * Row count for the initial/refresh window the editor sends for a document's root: open, reopen,
+ * expand/collapse, undo/redo, and the post-mutation changeset. One shared value so these paths cannot
+ * drift apart (the old mix of 200 and 500 risked a changeset truncating a tree with >200 visible rows
+ * while expand returned 500). Sized well above the visible-depth-0 row count of every current format
+ * (sections + one expanded list); the windowed getChildren path serves anything larger. Forms that
+ * render all fields at once (the declarative PRO layout) send their full field set rather than a windowed slice.
+ */
+export const DEFAULT_WINDOW = 500;
+
 export function projectRow(
     model: Model,
     node: FlatNode,

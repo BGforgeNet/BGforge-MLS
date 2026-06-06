@@ -221,9 +221,9 @@ describe("SPL ability structure-ops with effect-slice relinking", () => {
     });
 
     it.skipIf(!hasFixture)("remove drops the ability and its owned effect slice; survivor re-anchors", () => {
-        // Remove ability0 (1-based label "Ability 1"); its single effect (opcode 10) goes,
+        // Remove ability0 (index 0); its single effect (opcode 10) goes,
         // leaving ability1's two effects (20, 21) starting at the casting-end index 0.
-        const bytes = buildSplRemoveAbilityBytes(makeTwoAbilityBase(), ["Abilities", "Ability 1"]);
+        const bytes = buildSplRemoveAbilityBytes(makeTwoAbilityBase(), ["Abilities"], 0);
         expect(bytes).toBeDefined();
         const doc = reparseSpl(bytes!);
         expect(doc.abilities.length).toBe(1);
@@ -233,9 +233,9 @@ describe("SPL ability structure-ops with effect-slice relinking", () => {
     });
 
     it.skipIf(!hasFixture)("reorder down swaps abilities AND their adjacent effect slices", () => {
-        // Move ability0 ("Ability 1") down: ability1 (slice [20,21]) now precedes
+        // Move ability0 (index 0) down: ability1 (slice [20,21]) now precedes
         // ability0 (slice [10]); the physical effect order proves the slice moved.
-        const bytes = buildSplReorderAbilityBytes(makeTwoAbilityBase(), ["Abilities", "Ability 1"], "down");
+        const bytes = buildSplReorderAbilityBytes(makeTwoAbilityBase(), ["Abilities"], 0, "down");
         expect(bytes).toBeDefined();
         const doc = reparseSpl(bytes!);
         expect(doc.abilities.length).toBe(2);
@@ -247,7 +247,7 @@ describe("SPL ability structure-ops with effect-slice relinking", () => {
     });
 
     it.skipIf(!hasFixture)("reorder up on the second ability mirrors reorder down on the first", () => {
-        const bytes = buildSplReorderAbilityBytes(makeTwoAbilityBase(), ["Abilities", "Ability 2"], "up");
+        const bytes = buildSplReorderAbilityBytes(makeTwoAbilityBase(), ["Abilities"], 1, "up");
         expect(bytes).toBeDefined();
         const doc = reparseSpl(bytes!);
         expect(doc.abilities[0]).toMatchObject({ featureBlocksOffset: 0, featureBlocksCount: 2 });
@@ -257,14 +257,14 @@ describe("SPL ability structure-ops with effect-slice relinking", () => {
     });
 
     it.skipIf(!hasFixture)("reorder at the boundary is a no-op (returns undefined)", () => {
-        expect(buildSplReorderAbilityBytes(makeTwoAbilityBase(), ["Abilities", "Ability 1"], "up")).toBeUndefined();
-        expect(buildSplReorderAbilityBytes(makeTwoAbilityBase(), ["Abilities", "Ability 2"], "down")).toBeUndefined();
+        expect(buildSplReorderAbilityBytes(makeTwoAbilityBase(), ["Abilities"], 0, "up")).toBeUndefined();
+        expect(buildSplReorderAbilityBytes(makeTwoAbilityBase(), ["Abilities"], 1, "down")).toBeUndefined();
     });
 
     it.skipIf(!hasFixture)("duplicate clones the ability and its effect slice right after the source", () => {
-        // Duplicate ability1 ("Ability 2", owns [20,21]); the clone + its cloned slice
+        // Duplicate ability1 (index 1, owns [20,21]); the clone + its cloned slice
         // are inserted right after the original slice (at s_k + c_k == 3).
-        const bytes = buildSplDuplicateAbilityBytes(makeTwoAbilityBase(), ["Abilities", "Ability 2"]);
+        const bytes = buildSplDuplicateAbilityBytes(makeTwoAbilityBase(), ["Abilities"], 1);
         expect(bytes).toBeDefined();
         const doc = reparseSpl(bytes!);
         expect(doc.abilities.length).toBe(3);
@@ -278,7 +278,7 @@ describe("SPL ability structure-ops with effect-slice relinking", () => {
     });
 
     it.skipIf(!hasFixture)("insert before adds an empty-slice ability at the slot; effects untouched", () => {
-        const bytes = buildSplInsertAbilityBytes(makeTwoAbilityBase(), ["Abilities", "Ability 1"], "before");
+        const bytes = buildSplInsertAbilityBytes(makeTwoAbilityBase(), ["Abilities"], 0, "before");
         expect(bytes).toBeDefined();
         const doc = reparseSpl(bytes!);
         expect(doc.abilities.length).toBe(3);
@@ -291,7 +291,7 @@ describe("SPL ability structure-ops with effect-slice relinking", () => {
     });
 
     it.skipIf(!hasFixture)("insert after adds an empty-slice ability after the slot; effects untouched", () => {
-        const bytes = buildSplInsertAbilityBytes(makeTwoAbilityBase(), ["Abilities", "Ability 1"], "after");
+        const bytes = buildSplInsertAbilityBytes(makeTwoAbilityBase(), ["Abilities"], 0, "after");
         expect(bytes).toBeDefined();
         const doc = reparseSpl(bytes!);
         expect(doc.abilities.length).toBe(3);
@@ -305,8 +305,8 @@ describe("SPL ability structure-ops with effect-slice relinking", () => {
 
     it.skipIf(!hasFixture)("rejects a non-ability path (returns undefined)", () => {
         expect(buildSplAddAbilityBytes(makeTwoAbilityBase(), ["Header", "Signature"])).toBeUndefined();
-        expect(buildSplRemoveAbilityBytes(makeTwoAbilityBase(), ["Header", "Signature"])).toBeUndefined();
-        expect(buildSplRemoveAbilityBytes(makeTwoAbilityBase(), ["Abilities", "Ability 99"])).toBeUndefined();
+        expect(buildSplRemoveAbilityBytes(makeTwoAbilityBase(), ["Header"], 0)).toBeUndefined();
+        expect(buildSplRemoveAbilityBytes(makeTwoAbilityBase(), ["Abilities"], 98)).toBeUndefined();
     });
 });
 
@@ -321,8 +321,8 @@ describe("SPL effect structure-ops with owner-aware relinking", () => {
     });
 
     it.skipIf(!hasFixture)("insert before an ability-owned effect grows that ability and shifts later ranges", () => {
-        // "Effect 3" (1-based) is effects[2] (opcode 20), owned by ability1.
-        const bytes = buildSplInsertEffectBytes(makeCastingPlusTwoAbilityBase(), ["Effects", "Effect 3"], "before");
+        // effects[2] (opcode 20), owned by ability1.
+        const bytes = buildSplInsertEffectBytes(makeCastingPlusTwoAbilityBase(), ["Effects"], 2, "before");
         expect(bytes).toBeDefined();
         const doc = reparseSpl(bytes!);
         // A default (opcode 0) effect lands before opcode 20.
@@ -334,8 +334,8 @@ describe("SPL effect structure-ops with owner-aware relinking", () => {
     });
 
     it.skipIf(!hasFixture)("insert after an ability-owned effect grows that ability and shifts later ranges", () => {
-        // "Effect 2" is effects[1] (opcode 10), the sole effect of ability0.
-        const bytes = buildSplInsertEffectBytes(makeCastingPlusTwoAbilityBase(), ["Effects", "Effect 2"], "after");
+        // effects[1] (opcode 10), the sole effect of ability0.
+        const bytes = buildSplInsertEffectBytes(makeCastingPlusTwoAbilityBase(), ["Effects"], 1, "after");
         expect(bytes).toBeDefined();
         const doc = reparseSpl(bytes!);
         expect(opcodesOf(doc.effects)).toEqual([99, 10, 0, 20, 21]);
@@ -346,8 +346,8 @@ describe("SPL effect structure-ops with owner-aware relinking", () => {
     });
 
     it.skipIf(!hasFixture)("insert after the casting effect grows the header and shifts all ability indices", () => {
-        // "Effect 1" is effects[0] (opcode 99), the casting effect.
-        const bytes = buildSplInsertEffectBytes(makeCastingPlusTwoAbilityBase(), ["Effects", "Effect 1"], "after");
+        // effects[0] (opcode 99), the casting effect.
+        const bytes = buildSplInsertEffectBytes(makeCastingPlusTwoAbilityBase(), ["Effects"], 0, "after");
         expect(bytes).toBeDefined();
         const doc = reparseSpl(bytes!);
         expect(opcodesOf(doc.effects)).toEqual([99, 0, 10, 20, 21]);
@@ -359,10 +359,9 @@ describe("SPL effect structure-ops with owner-aware relinking", () => {
     });
 
     it.skipIf(!hasFixture)("insert before the casting effect grows the header and shifts all ability indices", () => {
-        // "Effect 1" is effects[0] (opcode 99), the casting effect. "before"
-        // inserts at index 0; the casting range absorbs the new effect and every
-        // ability range shifts +1.
-        const bytes = buildSplInsertEffectBytes(makeCastingPlusTwoAbilityBase(), ["Effects", "Effect 1"], "before");
+        // effects[0] (opcode 99), the casting effect. "before" inserts at index 0;
+        // the casting range absorbs the new effect and every ability range shifts +1.
+        const bytes = buildSplInsertEffectBytes(makeCastingPlusTwoAbilityBase(), ["Effects"], 0, "before");
         expect(bytes).toBeDefined();
         const doc = reparseSpl(bytes!);
         expect(opcodesOf(doc.effects)).toEqual([0, 99, 10, 20, 21]);
@@ -373,8 +372,8 @@ describe("SPL effect structure-ops with owner-aware relinking", () => {
     });
 
     it.skipIf(!hasFixture)("remove an ability-owned effect shrinks that ability and shifts later ranges", () => {
-        // "Effect 3" is effects[2] (opcode 20), the first of ability1's two effects.
-        const bytes = buildSplRemoveEffectBytes(makeCastingPlusTwoAbilityBase(), ["Effects", "Effect 3"]);
+        // effects[2] (opcode 20), the first of ability1's two effects.
+        const bytes = buildSplRemoveEffectBytes(makeCastingPlusTwoAbilityBase(), ["Effects"], 2);
         expect(bytes).toBeDefined();
         const doc = reparseSpl(bytes!);
         expect(opcodesOf(doc.effects)).toEqual([99, 10, 21]); // opcode 20 gone
@@ -385,8 +384,8 @@ describe("SPL effect structure-ops with owner-aware relinking", () => {
     });
 
     it.skipIf(!hasFixture)("remove the casting effect shrinks the header and shifts ability indices down", () => {
-        // "Effect 1" is effects[0] (opcode 99), the casting effect.
-        const bytes = buildSplRemoveEffectBytes(makeCastingPlusTwoAbilityBase(), ["Effects", "Effect 1"]);
+        // effects[0] (opcode 99), the casting effect.
+        const bytes = buildSplRemoveEffectBytes(makeCastingPlusTwoAbilityBase(), ["Effects"], 0);
         expect(bytes).toBeDefined();
         const doc = reparseSpl(bytes!);
         expect(opcodesOf(doc.effects)).toEqual([10, 20, 21]); // opcode 99 gone
@@ -399,8 +398,8 @@ describe("SPL effect structure-ops with owner-aware relinking", () => {
     it.skipIf(!hasFixture)(
         "duplicate an ability-owned effect grows that ability and clones the opcode adjacently",
         () => {
-            // "Effect 3" is effects[2] (opcode 20), owned by ability1.
-            const bytes = buildSplDuplicateEffectBytes(makeCastingPlusTwoAbilityBase(), ["Effects", "Effect 3"]);
+            // effects[2] (opcode 20), owned by ability1.
+            const bytes = buildSplDuplicateEffectBytes(makeCastingPlusTwoAbilityBase(), ["Effects"], 2);
             expect(bytes).toBeDefined();
             const doc = reparseSpl(bytes!);
             // The clone (opcode 20) lands right after the source.
@@ -413,8 +412,8 @@ describe("SPL effect structure-ops with owner-aware relinking", () => {
     );
 
     it.skipIf(!hasFixture)("duplicate a casting-owned effect grows the header and clones the opcode adjacently", () => {
-        // "Effect 1" is effects[0] (opcode 99), the casting effect.
-        const bytes = buildSplDuplicateEffectBytes(makeCastingPlusTwoAbilityBase(), ["Effects", "Effect 1"]);
+        // effects[0] (opcode 99), the casting effect.
+        const bytes = buildSplDuplicateEffectBytes(makeCastingPlusTwoAbilityBase(), ["Effects"], 0);
         expect(bytes).toBeDefined();
         const doc = reparseSpl(bytes!);
         // The clone (opcode 99) lands right after the source; header count grows.
@@ -428,7 +427,7 @@ describe("SPL effect structure-ops with owner-aware relinking", () => {
 
     it.skipIf(!hasFixture)("the duplicated effect is a distinct object (deep clone, no aliasing)", () => {
         const base = makeCastingPlusTwoAbilityBase();
-        const bytes = buildSplDuplicateEffectBytes(base, ["Effects", "Effect 3"]);
+        const bytes = buildSplDuplicateEffectBytes(base, ["Effects"], 2);
         expect(bytes).toBeDefined();
         const result = reparseSpl(bytes!);
         // Two distinct effects carry opcode 20 (source + clone); reparse yields
@@ -439,9 +438,9 @@ describe("SPL effect structure-ops with owner-aware relinking", () => {
     });
 
     it.skipIf(!hasFixture)("reorder within the same owner swaps opcodes without changing counts or indices", () => {
-        // ability1 owns effects[2,3] (opcodes 20, 21). Reorder "Effect 3" (opcode 20)
+        // ability1 owns effects[2,3] (opcodes 20, 21). Reorder effects[2] (opcode 20)
         // down swaps it with its same-owner neighbor opcode 21.
-        const bytes = buildSplReorderEffectBytes(makeCastingPlusTwoAbilityBase(), ["Effects", "Effect 3"], "down");
+        const bytes = buildSplReorderEffectBytes(makeCastingPlusTwoAbilityBase(), ["Effects"], 2, "down");
         expect(bytes).toBeDefined();
         const doc = reparseSpl(bytes!);
         expect(opcodesOf(doc.effects)).toEqual([99, 10, 21, 20]);
@@ -452,8 +451,8 @@ describe("SPL effect structure-ops with owner-aware relinking", () => {
     });
 
     it.skipIf(!hasFixture)("reorder up mirrors reorder down within the same owner", () => {
-        // "Effect 4" (opcode 21) up swaps with same-owner neighbor opcode 20.
-        const bytes = buildSplReorderEffectBytes(makeCastingPlusTwoAbilityBase(), ["Effects", "Effect 4"], "up");
+        // effects[3] (opcode 21) up swaps with same-owner neighbor opcode 20.
+        const bytes = buildSplReorderEffectBytes(makeCastingPlusTwoAbilityBase(), ["Effects"], 3, "up");
         expect(bytes).toBeDefined();
         const doc = reparseSpl(bytes!);
         expect(opcodesOf(doc.effects)).toEqual([99, 10, 21, 20]);
@@ -464,20 +463,20 @@ describe("SPL effect structure-ops with owner-aware relinking", () => {
         // ability0 owns the single effect[1] (opcode 10). Reordering it "down"
         // would cross into ability1; "up" would cross into casting. Both rejected.
         const base = makeCastingPlusTwoAbilityBase;
-        expect(buildSplReorderEffectBytes(base(), ["Effects", "Effect 2"], "down")).toBeUndefined();
-        expect(buildSplReorderEffectBytes(base(), ["Effects", "Effect 2"], "up")).toBeUndefined();
+        expect(buildSplReorderEffectBytes(base(), ["Effects"], 1, "down")).toBeUndefined();
+        expect(buildSplReorderEffectBytes(base(), ["Effects"], 1, "up")).toBeUndefined();
         // The casting effect[0] has no lower neighbor and "down" crosses into ability0.
-        expect(buildSplReorderEffectBytes(base(), ["Effects", "Effect 1"], "up")).toBeUndefined();
-        expect(buildSplReorderEffectBytes(base(), ["Effects", "Effect 1"], "down")).toBeUndefined();
+        expect(buildSplReorderEffectBytes(base(), ["Effects"], 0, "up")).toBeUndefined();
+        expect(buildSplReorderEffectBytes(base(), ["Effects"], 0, "down")).toBeUndefined();
     });
 
     it.skipIf(!hasFixture)("rejects a non-effects path or out-of-range effect (returns undefined)", () => {
         const base = makeCastingPlusTwoAbilityBase;
-        expect(buildSplInsertEffectBytes(base(), ["Abilities", "Ability 1"], "before")).toBeUndefined();
-        expect(buildSplRemoveEffectBytes(base(), ["Header", "Signature"])).toBeUndefined();
-        expect(buildSplRemoveEffectBytes(base(), ["Effects", "Effect 99"])).toBeUndefined();
-        expect(buildSplDuplicateEffectBytes(base(), ["Effects", "Effect 0"])).toBeUndefined();
-        expect(buildSplReorderEffectBytes(base(), ["Effects", "Effect 99"], "up")).toBeUndefined();
+        expect(buildSplInsertEffectBytes(base(), ["Abilities"], 0, "before")).toBeUndefined();
+        expect(buildSplRemoveEffectBytes(base(), ["Header"], 0)).toBeUndefined();
+        expect(buildSplRemoveEffectBytes(base(), ["Effects"], 98)).toBeUndefined();
+        expect(buildSplDuplicateEffectBytes(base(), ["Effects"], -1)).toBeUndefined();
+        expect(buildSplReorderEffectBytes(base(), ["Effects"], 98, "up")).toBeUndefined();
     });
 
     it.skipIf(!hasFixture)("removes the first effect of a casting-free spell without throwing", () => {
@@ -500,7 +499,7 @@ describe("SPL effect structure-ops with owner-aware relinking", () => {
         expect(before.header.castingFeatureBlocksCount).toBe(0); // no casting effects
         expect(before.effects.length).toBe(1); // single ability-owned effect
 
-        const bytes = buildSplRemoveEffectBytes(pr, ["Effects", "Effect 1"]);
+        const bytes = buildSplRemoveEffectBytes(pr, ["Effects"], 0);
         expect(bytes).toBeDefined();
         const result = reparseSpl(bytes!);
         expect(result.effects.length).toBe(0);

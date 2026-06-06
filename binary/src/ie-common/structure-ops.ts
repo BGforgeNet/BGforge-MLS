@@ -82,26 +82,46 @@ export interface IeStructureOps<Doc, Ability> {
     readonly buildAddAbilityBytes: (pr: ParseResult, arrayPath: readonly string[]) => Uint8Array | undefined;
     readonly buildInsertAbilityBytes: (
         pr: ParseResult,
-        entryPath: readonly string[],
+        arrayPath: readonly string[],
+        index: number,
         position: "before" | "after",
     ) => Uint8Array | undefined;
-    readonly buildRemoveAbilityBytes: (pr: ParseResult, entryPath: readonly string[]) => Uint8Array | undefined;
+    readonly buildRemoveAbilityBytes: (
+        pr: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+    ) => Uint8Array | undefined;
     readonly buildReorderAbilityBytes: (
         pr: ParseResult,
-        entryPath: readonly string[],
+        arrayPath: readonly string[],
+        index: number,
         direction: "up" | "down",
     ) => Uint8Array | undefined;
-    readonly buildDuplicateAbilityBytes: (pr: ParseResult, entryPath: readonly string[]) => Uint8Array | undefined;
-    readonly buildRemoveEffectBytes: (pr: ParseResult, entryPath: readonly string[]) => Uint8Array | undefined;
+    readonly buildDuplicateAbilityBytes: (
+        pr: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+    ) => Uint8Array | undefined;
+    readonly buildRemoveEffectBytes: (
+        pr: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+    ) => Uint8Array | undefined;
     readonly buildInsertEffectBytes: (
         pr: ParseResult,
-        entryPath: readonly string[],
+        arrayPath: readonly string[],
+        index: number,
         position: "before" | "after",
     ) => Uint8Array | undefined;
-    readonly buildDuplicateEffectBytes: (pr: ParseResult, entryPath: readonly string[]) => Uint8Array | undefined;
+    readonly buildDuplicateEffectBytes: (
+        pr: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+    ) => Uint8Array | undefined;
     readonly buildReorderEffectBytes: (
         pr: ParseResult,
-        entryPath: readonly string[],
+        arrayPath: readonly string[],
+        index: number,
         direction: "up" | "down",
     ) => Uint8Array | undefined;
     readonly isListSection: (arrayPath: readonly string[]) => boolean;
@@ -169,36 +189,27 @@ export function createIeStructureOps<
     };
 
     /**
-     * Resolve a 0-based ability index from an entry path like ["Abilities", "Ability N"].
-     * The display tree labels abilities 1-based ("Ability 1" is abilities[0]), per
-     * ie-common/ability-effects-parser.ts. Returns undefined for any path that is
-     * not an in-range ability address.
+     * Validate a structural ability target: `arrayPath` must be the Abilities section and
+     * `index` must be an in-range 0-based ordinal. The editor supplies the ordinal from the
+     * model's child order, so no display label is parsed here. Returns the index or undefined.
      */
-    function resolveAbilityIndex(entryPath: readonly string[], abilityCount: number): number | undefined {
-        if (entryPath.length !== 2 || entryPath[0] !== ABILITIES_SECTION) return undefined;
-        const label = entryPath[1];
-        if (label === undefined || !label.startsWith(ABILITY_LABEL_PREFIX)) return undefined;
-        const oneBased = Number.parseInt(label.slice(ABILITY_LABEL_PREFIX.length), 10);
-        if (!Number.isInteger(oneBased)) return undefined;
-        const index = oneBased - 1;
-        if (index < 0 || index >= abilityCount) return undefined;
+    function resolveAbilityIndex(
+        arrayPath: readonly string[],
+        index: number,
+        abilityCount: number,
+    ): number | undefined {
+        if (arrayPath.length !== 1 || arrayPath[0] !== ABILITIES_SECTION) return undefined;
+        if (!Number.isInteger(index) || index < 0 || index >= abilityCount) return undefined;
         return index;
     }
 
     /**
-     * Resolve a 0-based effect index from an entry path like ["Effects", "Effect N"].
-     * The display tree labels effects 1-based ("Effect 1" is effects[0]), per
-     * ie-common/ability-effects-parser.ts. Returns undefined for any path that is
-     * not an in-range effect address.
+     * Validate a structural effect target: `arrayPath` must be the Effects section and `index`
+     * must be an in-range 0-based ordinal (the global effect index). No display label is parsed.
      */
-    function resolveEffectIndex(entryPath: readonly string[], effectCount: number): number | undefined {
-        if (entryPath.length !== 2 || entryPath[0] !== EFFECTS_SECTION) return undefined;
-        const label = entryPath[1];
-        if (label === undefined || !label.startsWith(EFFECT_LABEL_PREFIX)) return undefined;
-        const oneBased = Number.parseInt(label.slice(EFFECT_LABEL_PREFIX.length), 10);
-        if (!Number.isInteger(oneBased)) return undefined;
-        const index = oneBased - 1;
-        if (index < 0 || index >= effectCount) return undefined;
+    function resolveEffectIndex(arrayPath: readonly string[], index: number, effectCount: number): number | undefined {
+        if (arrayPath.length !== 1 || arrayPath[0] !== EFFECTS_SECTION) return undefined;
+        if (!Number.isInteger(index) || index < 0 || index >= effectCount) return undefined;
         return index;
     }
 
@@ -256,25 +267,30 @@ export function createIeStructureOps<
     /** Insert a new empty-slice ability before/after the targeted slot. effects[] is unchanged. */
     function buildInsertAbilityBytes(
         parseResult: ParseResult,
-        entryPath: readonly string[],
+        arrayPath: readonly string[],
+        index: number,
         position: "before" | "after",
     ): Uint8Array | undefined {
         const doc = readDocument(parseResult);
         if (!doc) return undefined;
-        const index = resolveAbilityIndex(entryPath, doc.abilities.length);
-        if (index === undefined) return undefined;
-        const mutation = applyEntryMutation(doc.abilities, "insert", index, defaultAbility, position);
+        const resolved = resolveAbilityIndex(arrayPath, index, doc.abilities.length);
+        if (resolved === undefined) return undefined;
+        const mutation = applyEntryMutation(doc.abilities, "insert", resolved, defaultAbility, position);
         if (!mutation) return undefined;
         return finalizeAndSerialize({ ...doc, abilities: [...mutation.next] });
     }
 
     /** Remove the targeted ability AND its owned effect slice. */
-    function buildRemoveAbilityBytes(parseResult: ParseResult, entryPath: readonly string[]): Uint8Array | undefined {
+    function buildRemoveAbilityBytes(
+        parseResult: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+    ): Uint8Array | undefined {
         const doc = readDocument(parseResult);
         if (!doc) return undefined;
-        const index = resolveAbilityIndex(entryPath, doc.abilities.length);
-        if (index === undefined) return undefined;
-        const mutation = applyEntryMutation(doc.abilities, "remove", index, defaultAbility);
+        const resolved = resolveAbilityIndex(arrayPath, index, doc.abilities.length);
+        if (resolved === undefined) return undefined;
+        const mutation = applyEntryMutation(doc.abilities, "remove", resolved, defaultAbility);
         if (!mutation) return undefined;
 
         const { start, count } = abilitySlice(doc, index);
@@ -289,13 +305,13 @@ export function createIeStructureOps<
      */
     function buildReorderAbilityBytes(
         parseResult: ParseResult,
-        entryPath: readonly string[],
+        arrayPath: readonly string[],
+        index: number,
         direction: "up" | "down",
     ): Uint8Array | undefined {
         const doc = readDocument(parseResult);
         if (!doc) return undefined;
-        const index = resolveAbilityIndex(entryPath, doc.abilities.length);
-        if (index === undefined) return undefined;
+        if (resolveAbilityIndex(arrayPath, index, doc.abilities.length) === undefined) return undefined;
         const mutation = applyEntryMutation(doc.abilities, "reorder", index, defaultAbility, undefined, direction);
         if (!mutation) return undefined; // boundary no-op
 
@@ -321,12 +337,12 @@ export function createIeStructureOps<
      */
     function buildDuplicateAbilityBytes(
         parseResult: ParseResult,
-        entryPath: readonly string[],
+        arrayPath: readonly string[],
+        index: number,
     ): Uint8Array | undefined {
         const doc = readDocument(parseResult);
         if (!doc) return undefined;
-        const index = resolveAbilityIndex(entryPath, doc.abilities.length);
-        if (index === undefined) return undefined;
+        if (resolveAbilityIndex(arrayPath, index, doc.abilities.length) === undefined) return undefined;
         const mutation = applyEntryMutation(doc.abilities, "duplicate", index, defaultAbility);
         if (!mutation) return undefined;
 
@@ -375,10 +391,14 @@ export function createIeStructureOps<
      * one element at effIdx. The relink is owner-aware (it may be the equipping range
      * or an ability), unlike the ability ops' running-offset re-derivation.
      */
-    function buildRemoveEffectBytes(parseResult: ParseResult, entryPath: readonly string[]): Uint8Array | undefined {
+    function buildRemoveEffectBytes(
+        parseResult: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+    ): Uint8Array | undefined {
         const doc = readDocument(parseResult);
         if (!doc) return undefined;
-        const effIdx = resolveEffectIndex(entryPath, doc.effects.length);
+        const effIdx = resolveEffectIndex(arrayPath, index, doc.effects.length);
         if (effIdx === undefined) return undefined;
 
         const owner = effectOwnerAt(doc, effIdx);
@@ -395,12 +415,13 @@ export function createIeStructureOps<
      */
     function buildInsertEffectBytes(
         parseResult: ParseResult,
-        entryPath: readonly string[],
+        arrayPath: readonly string[],
+        index: number,
         position: "before" | "after",
     ): Uint8Array | undefined {
         const doc = readDocument(parseResult);
         if (!doc) return undefined;
-        const effIdx = resolveEffectIndex(entryPath, doc.effects.length);
+        const effIdx = resolveEffectIndex(arrayPath, index, doc.effects.length);
         if (effIdx === undefined) return undefined;
 
         const owner = effectOwnerAt(doc, effIdx);
@@ -414,10 +435,14 @@ export function createIeStructureOps<
      * The clone inherits the source's owner: that range's count grows by 1 and later
      * ranges shift up by 1.
      */
-    function buildDuplicateEffectBytes(parseResult: ParseResult, entryPath: readonly string[]): Uint8Array | undefined {
+    function buildDuplicateEffectBytes(
+        parseResult: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+    ): Uint8Array | undefined {
         const doc = readDocument(parseResult);
         if (!doc) return undefined;
-        const effIdx = resolveEffectIndex(entryPath, doc.effects.length);
+        const effIdx = resolveEffectIndex(arrayPath, index, doc.effects.length);
         if (effIdx === undefined) return undefined;
 
         const owner = effectOwnerAt(doc, effIdx);
@@ -437,12 +462,13 @@ export function createIeStructureOps<
      */
     function buildReorderEffectBytes(
         parseResult: ParseResult,
-        entryPath: readonly string[],
+        arrayPath: readonly string[],
+        index: number,
         direction: "up" | "down",
     ): Uint8Array | undefined {
         const doc = readDocument(parseResult);
         if (!doc) return undefined;
-        const effIdx = resolveEffectIndex(entryPath, doc.effects.length);
+        const effIdx = resolveEffectIndex(arrayPath, index, doc.effects.length);
         if (effIdx === undefined) return undefined;
 
         const neighborIdx = direction === "up" ? effIdx - 1 : effIdx + 1;

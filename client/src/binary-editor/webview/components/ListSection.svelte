@@ -13,8 +13,8 @@
     // detail pane unselected; safe for ITM abilities/effects (typically <10) but revisit if any list section can exceed it.
     const SELECTION_RESOLVE_SCAN_LIMIT = 256;
 
-    const { nodeId, title, caps, bridge, vm, version, selection, onadd, onedit, byNode, showOffsets = false }:
-        { nodeId: NodeId; title: string; caps: SectionCaps; bridge: Bridge; vm: ViewModel;
+    const { nodeId, caps, bridge, vm, version, selection, onadd, onedit, byNode, showOffsets = false }:
+        { nodeId: NodeId; caps: SectionCaps; bridge: Bridge; vm: ViewModel;
           version: number; selection: NodeId | undefined;
           onadd: () => void; onedit: (id: string, v: number | string) => void;
           byNode: Map<string, Diagnostic[]>; showOffsets?: boolean } = $props();
@@ -105,11 +105,6 @@
         return () => { cancelled = true; };
     });
 
-    // NOTE: entryPath uses the display name [title, row.name]. For ITM abilities/effects row.name is
-    // a positional label ("Ability N" / "Effect N"), which the ITM builder resolves by exactly that
-    // label. For formats whose entry labels are derived rather than positional, revisit this addressing
-    // when those formats gain structure ops.
-    const entryPath = (row: Row): string[] => [title, row.name];
 </script>
 <div class="master-detail">
     <div class="master">
@@ -146,7 +141,7 @@
         {#if selected}
             {#if selectedIndex !== undefined}
                 {@const acts = rowActions(selectedIndex, total, caps)}
-                <RowActions {acts} entryPath={entryPath(selected)} {bridge} />
+                <RowActions {acts} entryId={selected.id} {bridge} />
             {/if}
             <FormSection nodeId={selected.id} {bridge} {vm} {version} {onedit} {byNode} {showOffsets} />
         {:else}

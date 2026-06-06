@@ -41,18 +41,28 @@ export interface FlatListOpsConfig<Doc, Entry> {
 
 export interface FlatListOps {
     readonly buildAddEntryBytes: (pr: ParseResult, arrayPath: readonly string[]) => Uint8Array | undefined;
-    readonly buildRemoveEntryBytes: (pr: ParseResult, entryPath: readonly string[]) => Uint8Array | undefined;
+    readonly buildRemoveEntryBytes: (
+        pr: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+    ) => Uint8Array | undefined;
     readonly buildInsertEntryBytes: (
         pr: ParseResult,
-        entryPath: readonly string[],
+        arrayPath: readonly string[],
+        index: number,
         position: "before" | "after",
     ) => Uint8Array | undefined;
     readonly buildMoveEntryBytes: (
         pr: ParseResult,
-        entryPath: readonly string[],
+        arrayPath: readonly string[],
+        index: number,
         direction: "up" | "down",
     ) => Uint8Array | undefined;
-    readonly buildDuplicateEntryBytes: (pr: ParseResult, entryPath: readonly string[]) => Uint8Array | undefined;
+    readonly buildDuplicateEntryBytes: (
+        pr: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+    ) => Uint8Array | undefined;
     readonly isListSection: (arrayPath: readonly string[]) => boolean;
     readonly isModifiableArray: (arrayPath: readonly string[]) => boolean;
     readonly isAddableArray: (arrayPath: readonly string[]) => boolean;
@@ -62,14 +72,9 @@ export interface FlatListOps {
 export function createFlatListOps<Doc, Entry>(config: FlatListOpsConfig<Doc, Entry>): FlatListOps {
     const { section, prefix, readDocument, read, write, defaultElement, addable, relink, serialize } = config;
 
-    function resolveIndex(entryPath: readonly string[], count: number): number | undefined {
-        if (entryPath.length !== 2 || entryPath[0] !== section) return undefined;
-        const label = entryPath[1];
-        if (label === undefined || !label.startsWith(prefix)) return undefined;
-        const oneBased = Number.parseInt(label.slice(prefix.length), 10);
-        if (!Number.isInteger(oneBased)) return undefined;
-        const index = oneBased - 1;
-        if (index < 0 || index >= count) return undefined;
+    function resolveIndex(arrayPath: readonly string[], index: number, count: number): number | undefined {
+        if (arrayPath.length !== 1 || arrayPath[0] !== section) return undefined;
+        if (!Number.isInteger(index) || index < 0 || index >= count) return undefined;
         return index;
     }
 
@@ -105,44 +110,54 @@ export function createFlatListOps<Doc, Entry>(config: FlatListOpsConfig<Doc, Ent
         return finalize(doc, mutation, current.length);
     }
 
-    function buildRemoveEntryBytes(parseResult: ParseResult, entryPath: readonly string[]): Uint8Array | undefined {
+    function buildRemoveEntryBytes(
+        parseResult: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+    ): Uint8Array | undefined {
         const doc = readDocument(parseResult);
         if (!doc) return undefined;
-        const index = resolveIndex(entryPath, read(doc).length);
-        if (index === undefined) return undefined;
-        return mutateAt(parseResult, index, "remove");
+        const resolved = resolveIndex(arrayPath, index, read(doc).length);
+        if (resolved === undefined) return undefined;
+        return mutateAt(parseResult, resolved, "remove");
     }
 
     function buildInsertEntryBytes(
         parseResult: ParseResult,
-        entryPath: readonly string[],
+        arrayPath: readonly string[],
+        index: number,
         position: "before" | "after",
     ): Uint8Array | undefined {
         const doc = readDocument(parseResult);
         if (!doc) return undefined;
-        const index = resolveIndex(entryPath, read(doc).length);
-        if (index === undefined) return undefined;
-        return mutateAt(parseResult, index, "insert", position);
+        const resolved = resolveIndex(arrayPath, index, read(doc).length);
+        if (resolved === undefined) return undefined;
+        return mutateAt(parseResult, resolved, "insert", position);
     }
 
     function buildMoveEntryBytes(
         parseResult: ParseResult,
-        entryPath: readonly string[],
+        arrayPath: readonly string[],
+        index: number,
         direction: "up" | "down",
     ): Uint8Array | undefined {
         const doc = readDocument(parseResult);
         if (!doc) return undefined;
-        const index = resolveIndex(entryPath, read(doc).length);
-        if (index === undefined) return undefined;
-        return mutateAt(parseResult, index, "reorder", undefined, direction);
+        const resolved = resolveIndex(arrayPath, index, read(doc).length);
+        if (resolved === undefined) return undefined;
+        return mutateAt(parseResult, resolved, "reorder", undefined, direction);
     }
 
-    function buildDuplicateEntryBytes(parseResult: ParseResult, entryPath: readonly string[]): Uint8Array | undefined {
+    function buildDuplicateEntryBytes(
+        parseResult: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+    ): Uint8Array | undefined {
         const doc = readDocument(parseResult);
         if (!doc) return undefined;
-        const index = resolveIndex(entryPath, read(doc).length);
-        if (index === undefined) return undefined;
-        return mutateAt(parseResult, index, "duplicate");
+        const resolved = resolveIndex(arrayPath, index, read(doc).length);
+        if (resolved === undefined) return undefined;
+        return mutateAt(parseResult, resolved, "duplicate");
     }
 
     function isListSection(arrayPath: readonly string[]): boolean {

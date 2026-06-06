@@ -173,7 +173,7 @@
         <div id="rowactions-compact">
             <RowActions
                 acts={rowActionsCaps}
-                entryPath={["Variables", "var 1"]}
+                entryId="0/1"
                 bridge={showcaseBridge}
                 compact={true}
             />

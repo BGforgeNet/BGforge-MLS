@@ -44,6 +44,18 @@ export interface BinaryFormatAdapter {
      */
     readonly domainRanges?: Readonly<Record<string, NumericRange>>;
 
+    /**
+     * How the editor invalidates this format's cached canonical `document` after a display-tree
+     * mutation (field edit / structure op). Required so a new format must consciously choose rather
+     * than silently inherit a reflection heuristic (review finding #6a):
+     *  - "clear": the format caches a canonical document (own property or lazy getter/setter) that is
+     *    rebuildable from the display tree; the editor sets `parseResult.document = undefined` so the
+     *    next serialize/snapshot rebuilds from the edited tree. All current formats use this.
+     *  - "none": the format keeps no editor-invalidatable cached document, or its document is
+     *    authoritative and must NOT be cleared. The editor leaves `document` untouched.
+     */
+    readonly documentCacheStrategy: "clear" | "none";
+
     // -- Snapshots -------------------------------------------------------------
     createJsonSnapshot(parseResult: ParseResult): string;
     loadJsonSnapshot(jsonText: string, parseOptions?: ParseOptions): { parseResult: ParseResult; bytes?: Uint8Array };
@@ -90,39 +102,53 @@ export interface BinaryFormatAdapter {
      */
     buildAddEntryBytes?(parseResult: ParseResult, arrayPath: readonly string[]): Uint8Array | undefined;
     /**
-     * Produce the bytes for `parseResult` with the entry at `entryPath` removed
-     * from its array (tree-segment names, e.g. `["Global Variables", "Global Var 3"]`).
-     * Returns `undefined` if the path is not a known removable entry for this
-     * format.
+     * Produce the bytes for `parseResult` with the entry at ordinal `index` removed
+     * from the array at `arrayPath` (tree-segment section names, e.g. `["Global Variables"]`).
+     * `index` is the entry's 0-based position among its siblings, resolved by the editor
+     * from structural identity (NodeId) - NOT parsed from a display label, so a relabel /
+     * i18n / presentation override cannot misaddress the byte op. Returns `undefined` if
+     * `arrayPath` is not a known mutable array or `index` is out of range for this format.
      */
-    buildRemoveEntryBytes?(parseResult: ParseResult, entryPath: readonly string[]): Uint8Array | undefined;
+    buildRemoveEntryBytes?(
+        parseResult: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+    ): Uint8Array | undefined;
     /**
-     * Insert a new default entry adjacent to the targeted entry. Used by the
-     * Insert before / Insert after editor actions for arrays where slot index
-     * carries identity (e.g. MAP global vars referenced by index from scripts).
+     * Insert a new default entry adjacent to the entry at ordinal `index` in the array
+     * at `arrayPath`. Used by the Insert before / Insert after editor actions for arrays
+     * where slot index carries identity (e.g. MAP global vars referenced by index from
+     * scripts). `index` is the structural ordinal (see `buildRemoveEntryBytes`).
      */
     buildInsertEntryBytes?(
         parseResult: ParseResult,
-        entryPath: readonly string[],
+        arrayPath: readonly string[],
+        index: number,
         position: "before" | "after",
     ): Uint8Array | undefined;
     /**
-     * Swap the targeted entry with its neighbour in the given direction.
-     * Returns undefined when the move is at the array boundary (no-op) or the
-     * path is not a known movable entry.
+     * Swap the entry at ordinal `index` in the array at `arrayPath` with its neighbour in
+     * the given direction. Returns undefined when the move is at the array boundary (no-op)
+     * or `arrayPath`/`index` is not a known movable entry. `index` is the structural ordinal.
      */
     buildMoveEntryBytes?(
         parseResult: ParseResult,
-        entryPath: readonly string[],
+        arrayPath: readonly string[],
+        index: number,
         direction: "up" | "down",
     ): Uint8Array | undefined;
     /**
-     * Duplicate the targeted entry: copy its data, insert the copy immediately
-     * after it, then apply the per-format relink (identity-freshening) where the
-     * format needs it. Returns undefined if the path is not a duplicable entry.
-     * Fixed-width entries with no slot-unique identity (MAP variables) copy verbatim.
+     * Duplicate the entry at ordinal `index` in the array at `arrayPath`: copy its data,
+     * insert the copy immediately after it, then apply the per-format relink
+     * (identity-freshening) where the format needs it. Returns undefined if `arrayPath`/`index`
+     * is not a duplicable entry. Fixed-width entries with no slot-unique identity (MAP
+     * variables) copy verbatim. `index` is the structural ordinal.
      */
-    buildDuplicateEntryBytes?(parseResult: ParseResult, entryPath: readonly string[]): Uint8Array | undefined;
+    buildDuplicateEntryBytes?(
+        parseResult: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+    ): Uint8Array | undefined;
     /**
      * Lightweight predicate the tree builder can call per group/entry. Decoupled
      * from the byte-builders above so `buildBinaryEditorTreeState` can decide

@@ -70,26 +70,46 @@ export interface SliceStructureOps<Doc, Owner, Slice> {
     readonly buildAddOwnerBytes: (pr: ParseResult, arrayPath: readonly string[]) => Uint8Array | undefined;
     readonly buildInsertOwnerBytes: (
         pr: ParseResult,
-        entryPath: readonly string[],
+        arrayPath: readonly string[],
+        index: number,
         position: "before" | "after",
     ) => Uint8Array | undefined;
-    readonly buildRemoveOwnerBytes: (pr: ParseResult, entryPath: readonly string[]) => Uint8Array | undefined;
+    readonly buildRemoveOwnerBytes: (
+        pr: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+    ) => Uint8Array | undefined;
     readonly buildReorderOwnerBytes: (
         pr: ParseResult,
-        entryPath: readonly string[],
+        arrayPath: readonly string[],
+        index: number,
         direction: "up" | "down",
     ) => Uint8Array | undefined;
-    readonly buildDuplicateOwnerBytes: (pr: ParseResult, entryPath: readonly string[]) => Uint8Array | undefined;
-    readonly buildRemoveSliceBytes: (pr: ParseResult, entryPath: readonly string[]) => Uint8Array | undefined;
+    readonly buildDuplicateOwnerBytes: (
+        pr: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+    ) => Uint8Array | undefined;
+    readonly buildRemoveSliceBytes: (
+        pr: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+    ) => Uint8Array | undefined;
     readonly buildInsertSliceBytes: (
         pr: ParseResult,
-        entryPath: readonly string[],
+        arrayPath: readonly string[],
+        index: number,
         position: "before" | "after",
     ) => Uint8Array | undefined;
-    readonly buildDuplicateSliceBytes: (pr: ParseResult, entryPath: readonly string[]) => Uint8Array | undefined;
+    readonly buildDuplicateSliceBytes: (
+        pr: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+    ) => Uint8Array | undefined;
     readonly buildReorderSliceBytes: (
         pr: ParseResult,
-        entryPath: readonly string[],
+        arrayPath: readonly string[],
+        index: number,
         direction: "up" | "down",
     ) => Uint8Array | undefined;
     readonly isListSection: (arrayPath: readonly string[]) => boolean;
@@ -126,18 +146,13 @@ export function createSliceStructureOps<Doc, Owner extends Record<string, unknow
     // -- generic index/label resolution --------------------------------------
 
     function resolveIndex(
-        entryPath: readonly string[],
+        arrayPath: readonly string[],
+        index: number,
         section: string,
-        prefix: string,
         count: number,
     ): number | undefined {
-        if (entryPath.length !== 2 || entryPath[0] !== section) return undefined;
-        const label = entryPath[1];
-        if (label === undefined || !label.startsWith(prefix)) return undefined;
-        const oneBased = Number.parseInt(label.slice(prefix.length), 10);
-        if (!Number.isInteger(oneBased)) return undefined;
-        const index = oneBased - 1;
-        if (index < 0 || index >= count) return undefined;
+        if (arrayPath.length !== 1 || arrayPath[0] !== section) return undefined;
+        if (!Number.isInteger(index) || index < 0 || index >= count) return undefined;
         return index;
     }
 
@@ -198,26 +213,29 @@ export function createSliceStructureOps<Doc, Owner extends Record<string, unknow
 
     function buildInsertOwnerBytes(
         parseResult: ParseResult,
-        entryPath: readonly string[],
+        arrayPath: readonly string[],
+        index: number,
         position: "before" | "after",
     ): Uint8Array | undefined {
         const doc = readDocument(parseResult);
         if (!doc) return undefined;
         const owners = readOwners(doc);
-        const index = resolveIndex(entryPath, ownerSection, ownerPrefix, owners.length);
-        if (index === undefined) return undefined;
+        if (resolveIndex(arrayPath, index, ownerSection, owners.length) === undefined) return undefined;
         const mutation = applyEntryMutation(owners, "insert", index, defaultOwner, position);
         if (!mutation) return undefined;
         // The inserted owner has count 0, so slices are unchanged.
         return serializeWithValidation([...mutation.next], readSlices(doc), doc);
     }
 
-    function buildRemoveOwnerBytes(parseResult: ParseResult, entryPath: readonly string[]): Uint8Array | undefined {
+    function buildRemoveOwnerBytes(
+        parseResult: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+    ): Uint8Array | undefined {
         const doc = readDocument(parseResult);
         if (!doc) return undefined;
         const owners = readOwners(doc);
-        const index = resolveIndex(entryPath, ownerSection, ownerPrefix, owners.length);
-        if (index === undefined) return undefined;
+        if (resolveIndex(arrayPath, index, ownerSection, owners.length) === undefined) return undefined;
         // Non-null safe: index is in range per resolveIndex.
         const { start, count } = ownerRange(owners[index]!);
 
@@ -233,14 +251,14 @@ export function createSliceStructureOps<Doc, Owner extends Record<string, unknow
 
     function buildReorderOwnerBytes(
         parseResult: ParseResult,
-        entryPath: readonly string[],
+        arrayPath: readonly string[],
+        index: number,
         direction: "up" | "down",
     ): Uint8Array | undefined {
         const doc = readDocument(parseResult);
         if (!doc) return undefined;
         const owners = readOwners(doc);
-        const index = resolveIndex(entryPath, ownerSection, ownerPrefix, owners.length);
-        if (index === undefined) return undefined;
+        if (resolveIndex(arrayPath, index, ownerSection, owners.length) === undefined) return undefined;
         const mutation = applyEntryMutation(owners, "reorder", index, defaultOwner, undefined, direction);
         if (!mutation) return undefined; // boundary no-op
         // Each owner carries its own start/count, so swapping records keeps every
@@ -248,12 +266,15 @@ export function createSliceStructureOps<Doc, Owner extends Record<string, unknow
         return serializeWithValidation([...mutation.next], readSlices(doc), doc);
     }
 
-    function buildDuplicateOwnerBytes(parseResult: ParseResult, entryPath: readonly string[]): Uint8Array | undefined {
+    function buildDuplicateOwnerBytes(
+        parseResult: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+    ): Uint8Array | undefined {
         const doc = readDocument(parseResult);
         if (!doc) return undefined;
         const owners = readOwners(doc);
-        const index = resolveIndex(entryPath, ownerSection, ownerPrefix, owners.length);
-        if (index === undefined) return undefined;
+        if (resolveIndex(arrayPath, index, ownerSection, owners.length) === undefined) return undefined;
         // Non-null safe: index is in range per resolveIndex.
         const source = owners[index]!;
         const { start, count } = ownerRange(source);
@@ -295,12 +316,16 @@ export function createSliceStructureOps<Doc, Owner extends Record<string, unknow
         return shifted.abilities;
     }
 
-    function buildRemoveSliceBytes(parseResult: ParseResult, entryPath: readonly string[]): Uint8Array | undefined {
+    function buildRemoveSliceBytes(
+        parseResult: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+    ): Uint8Array | undefined {
         const doc = readDocument(parseResult);
         if (!doc) return undefined;
         const owners = readOwners(doc);
         const slices = readSlices(doc);
-        const sliceIdx = resolveIndex(entryPath, sliceSection, slicePrefix, slices.length);
+        const sliceIdx = resolveIndex(arrayPath, index, sliceSection, slices.length);
         if (sliceIdx === undefined) return undefined;
 
         const view = partitionView(owners, slices);
@@ -312,14 +337,15 @@ export function createSliceStructureOps<Doc, Owner extends Record<string, unknow
 
     function buildInsertSliceBytes(
         parseResult: ParseResult,
-        entryPath: readonly string[],
+        arrayPath: readonly string[],
+        index: number,
         position: "before" | "after",
     ): Uint8Array | undefined {
         const doc = readDocument(parseResult);
         if (!doc) return undefined;
         const owners = readOwners(doc);
         const slices = readSlices(doc);
-        const sliceIdx = resolveIndex(entryPath, sliceSection, slicePrefix, slices.length);
+        const sliceIdx = resolveIndex(arrayPath, index, sliceSection, slices.length);
         if (sliceIdx === undefined) return undefined;
 
         const view = partitionView(owners, slices);
@@ -330,12 +356,16 @@ export function createSliceStructureOps<Doc, Owner extends Record<string, unknow
         return serializeWithValidation(nextOwners, nextSlices, doc);
     }
 
-    function buildDuplicateSliceBytes(parseResult: ParseResult, entryPath: readonly string[]): Uint8Array | undefined {
+    function buildDuplicateSliceBytes(
+        parseResult: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+    ): Uint8Array | undefined {
         const doc = readDocument(parseResult);
         if (!doc) return undefined;
         const owners = readOwners(doc);
         const slices = readSlices(doc);
-        const sliceIdx = resolveIndex(entryPath, sliceSection, slicePrefix, slices.length);
+        const sliceIdx = resolveIndex(arrayPath, index, sliceSection, slices.length);
         if (sliceIdx === undefined) return undefined;
 
         const view = partitionView(owners, slices);
@@ -350,14 +380,15 @@ export function createSliceStructureOps<Doc, Owner extends Record<string, unknow
 
     function buildReorderSliceBytes(
         parseResult: ParseResult,
-        entryPath: readonly string[],
+        arrayPath: readonly string[],
+        index: number,
         direction: "up" | "down",
     ): Uint8Array | undefined {
         const doc = readDocument(parseResult);
         if (!doc) return undefined;
         const owners = readOwners(doc);
         const slices = readSlices(doc);
-        const sliceIdx = resolveIndex(entryPath, sliceSection, slicePrefix, slices.length);
+        const sliceIdx = resolveIndex(arrayPath, index, sliceSection, slices.length);
         if (sliceIdx === undefined) return undefined;
 
         const neighborIdx = direction === "up" ? sliceIdx - 1 : sliceIdx + 1;

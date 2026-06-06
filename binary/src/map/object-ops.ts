@@ -165,15 +165,14 @@ interface ResolvedEntry {
     readonly current: readonly MapObject[];
 }
 
-function resolveEntry(pr: ParseResult, entryPath: readonly string[]): ResolvedEntry | undefined {
-    if (entryPath.length !== 2) return undefined;
-    const elev = parseElevation(entryPath[0]);
+function resolveEntry(pr: ParseResult, arrayPath: readonly string[], index: number): ResolvedEntry | undefined {
+    if (arrayPath.length !== 1) return undefined;
+    const elev = parseElevation(arrayPath[0]);
     if (elev === undefined) return undefined;
     const doc = readDocument(pr);
     if (!doc || !objectsFullyDecoded(pr)) return undefined;
     const current = doc.objects.elevations[elev]!.objects;
-    const index = parseObjectIndex(entryPath[1], elev);
-    if (index === undefined || index >= current.length) return undefined;
+    if (index < 0 || index >= current.length) return undefined;
     return { doc, elev, index, current };
 }
 
@@ -198,10 +197,11 @@ export function buildMapObjectAddEntryBytes(pr: ParseResult, arrayPath: readonly
 
 export function buildMapObjectInsertEntryBytes(
     pr: ParseResult,
-    entryPath: readonly string[],
+    arrayPath: readonly string[],
+    index: number,
     position: "before" | "after",
 ): Uint8Array | undefined {
-    const r = resolveEntry(pr, entryPath);
+    const r = resolveEntry(pr, arrayPath, index);
     if (!r) return undefined;
     const mutation = applyEntryMutation(r.current, "insert", r.index, defaultMapObject, position);
     if (!mutation) return undefined;
@@ -209,8 +209,12 @@ export function buildMapObjectInsertEntryBytes(
     return serializeWithReanchor(pr, r.doc, newDoc);
 }
 
-export function buildMapObjectRemoveEntryBytes(pr: ParseResult, entryPath: readonly string[]): Uint8Array | undefined {
-    const r = resolveEntry(pr, entryPath);
+export function buildMapObjectRemoveEntryBytes(
+    pr: ParseResult,
+    arrayPath: readonly string[],
+    index: number,
+): Uint8Array | undefined {
+    const r = resolveEntry(pr, arrayPath, index);
     if (!r) return undefined;
     const mutation = applyEntryMutation(r.current, "remove", r.index, defaultMapObject);
     if (!mutation) return undefined;
@@ -220,10 +224,11 @@ export function buildMapObjectRemoveEntryBytes(pr: ParseResult, entryPath: reado
 
 export function buildMapObjectMoveEntryBytes(
     pr: ParseResult,
-    entryPath: readonly string[],
+    arrayPath: readonly string[],
+    index: number,
     direction: "up" | "down",
 ): Uint8Array | undefined {
-    const r = resolveEntry(pr, entryPath);
+    const r = resolveEntry(pr, arrayPath, index);
     if (!r) return undefined;
     const mutation = applyEntryMutation(r.current, "reorder", r.index, defaultMapObject, undefined, direction);
     if (!mutation) return undefined; // boundary no-op
@@ -233,9 +238,10 @@ export function buildMapObjectMoveEntryBytes(
 
 export function buildMapObjectDuplicateEntryBytes(
     pr: ParseResult,
-    entryPath: readonly string[],
+    arrayPath: readonly string[],
+    index: number,
 ): Uint8Array | undefined {
-    const r = resolveEntry(pr, entryPath);
+    const r = resolveEntry(pr, arrayPath, index);
     if (!r) return undefined;
     // Deep clone so nested inventory objects are independent; preserve pid (proto
     // reference), freshen base.id (max+1) so the clone aliases no existing object.

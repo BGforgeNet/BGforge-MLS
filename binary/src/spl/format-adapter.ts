@@ -27,6 +27,8 @@ export const splFormatAdapter: BinaryFormatAdapter = {
     presentationSchema: splPresentationSchema,
     compiledPatternFields: splCompiledPatternFields,
     domainRanges: splDomainRanges,
+    // IE formats cache a rebuildable canonical document (own writable property); clear it on edit.
+    documentCacheStrategy: "clear",
 
     createJsonSnapshot(parseResult: ParseResult): string {
         return createCanonicalSplJsonSnapshot(parseResult);
@@ -68,40 +70,50 @@ export const splFormatAdapter: BinaryFormatAdapter = {
         return undefined;
     },
 
-    buildRemoveEntryBytes(parseResult: ParseResult, entryPath: readonly string[]): Uint8Array | undefined {
-        const section = entryPath[0];
-        if (section === ABILITIES_SECTION) return buildSplRemoveAbilityBytes(parseResult, entryPath);
-        if (section === EFFECTS_SECTION) return buildSplRemoveEffectBytes(parseResult, entryPath);
+    buildRemoveEntryBytes(
+        parseResult: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+    ): Uint8Array | undefined {
+        const section = arrayPath[0];
+        if (section === ABILITIES_SECTION) return buildSplRemoveAbilityBytes(parseResult, arrayPath, index);
+        if (section === EFFECTS_SECTION) return buildSplRemoveEffectBytes(parseResult, arrayPath, index);
         return undefined;
     },
 
     buildInsertEntryBytes(
         parseResult: ParseResult,
-        entryPath: readonly string[],
+        arrayPath: readonly string[],
+        index: number,
         position: "before" | "after",
     ): Uint8Array | undefined {
-        const section = entryPath[0];
-        if (section === ABILITIES_SECTION) return buildSplInsertAbilityBytes(parseResult, entryPath, position);
-        if (section === EFFECTS_SECTION) return buildSplInsertEffectBytes(parseResult, entryPath, position);
+        const section = arrayPath[0];
+        if (section === ABILITIES_SECTION) return buildSplInsertAbilityBytes(parseResult, arrayPath, index, position);
+        if (section === EFFECTS_SECTION) return buildSplInsertEffectBytes(parseResult, arrayPath, index, position);
         return undefined;
     },
 
     // The interface method is named "move"; the SPL builders are named "reorder" (entity-ops naming).
     buildMoveEntryBytes(
         parseResult: ParseResult,
-        entryPath: readonly string[],
+        arrayPath: readonly string[],
+        index: number,
         direction: "up" | "down",
     ): Uint8Array | undefined {
-        const section = entryPath[0];
-        if (section === ABILITIES_SECTION) return buildSplReorderAbilityBytes(parseResult, entryPath, direction);
-        if (section === EFFECTS_SECTION) return buildSplReorderEffectBytes(parseResult, entryPath, direction);
+        const section = arrayPath[0];
+        if (section === ABILITIES_SECTION) return buildSplReorderAbilityBytes(parseResult, arrayPath, index, direction);
+        if (section === EFFECTS_SECTION) return buildSplReorderEffectBytes(parseResult, arrayPath, index, direction);
         return undefined;
     },
 
-    buildDuplicateEntryBytes(parseResult: ParseResult, entryPath: readonly string[]): Uint8Array | undefined {
-        const section = entryPath[0];
-        if (section === ABILITIES_SECTION) return buildSplDuplicateAbilityBytes(parseResult, entryPath);
-        if (section === EFFECTS_SECTION) return buildSplDuplicateEffectBytes(parseResult, entryPath);
+    buildDuplicateEntryBytes(
+        parseResult: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+    ): Uint8Array | undefined {
+        const section = arrayPath[0];
+        if (section === ABILITIES_SECTION) return buildSplDuplicateAbilityBytes(parseResult, arrayPath, index);
+        if (section === EFFECTS_SECTION) return buildSplDuplicateEffectBytes(parseResult, arrayPath, index);
         return undefined;
     },
 };

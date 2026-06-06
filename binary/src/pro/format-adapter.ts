@@ -11,6 +11,8 @@ export const proFormatAdapter: BinaryFormatAdapter = {
     presentationSchema: proPresentationSchema,
     compiledPatternFields: proCompiledPatternFields,
     domainRanges: proDomainRanges,
+    // PRO caches a rebuildable canonical document (own writable property); clear it on edit.
+    documentCacheStrategy: "clear",
 
     createJsonSnapshot(parseResult: ParseResult): string {
         return createCanonicalProJsonSnapshot(parseResult);

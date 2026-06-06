@@ -57,12 +57,17 @@ describe("MAP perf on denbus1.map (~68,948 nodes, skipMapTiles=true)", () => {
 
     // Bench 3: structureOp add on a session opened ONCE - each add reparses the whole file.
     // "Global Variables" is the addable list on the MAP format (confirmed by prior bench).
-    const addSid = openSid();
+    const addOpen = open();
+    if (addOpen.type !== "opened") throw new Error(`open failed: ${JSON.stringify(addOpen)}`);
+    const addSid = addOpen.result.sessionId;
+    // Address the section by its stable NodeId (structure ops no longer take display paths).
+    const globalVarsSectionId = addOpen.result.layout.sections.find((s) => s.title === "Global Variables")?.nodeId;
+    if (!globalVarsSectionId) throw new Error("no Global Variables section in layout");
     bench("structureOp add (per add, reparses)", () => {
         const r = dispatch({
             type: "structureOp",
             sessionId: addSid,
-            op: { op: "add", namePath: ["Global Variables"] },
+            op: { op: "add", sectionId: globalVarsSectionId },
         });
         if (r.type !== "structure") throw new Error(`structureOp failed: ${JSON.stringify(r)}`);
         void r;

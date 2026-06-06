@@ -1,16 +1,24 @@
 import { formatAdapterRegistry, parserRegistry, type ParseResult } from "@bgforge/binary";
 import { buildModel, type FlatNode } from "./model";
 import { invalidateCachedDocument } from "./edit";
-import { getWindow } from "./window";
+import { DEFAULT_WINDOW, getWindow } from "./window";
 import type { EditorSession } from "./session";
 import type { ChangeSet, NamePath, NodeId, StructureResult } from "./types";
 
+/**
+ * Structure ops address their target by stable NodeId, never by display label.
+ * `add` targets the section group (sectionId); the other ops target a concrete
+ * entry (entryId). The editor resolves each NodeId to the section's structural
+ * path plus the entry's 0-based ordinal among its siblings before calling the
+ * byte-builders - so a presentation relabel / i18n / override cannot misaddress
+ * a byte op (review finding #1).
+ */
 export type StructureOpRequest =
-    | { op: "add"; namePath: NamePath }
-    | { op: "insert"; entryPath: NamePath; position: "before" | "after" }
-    | { op: "remove"; entryPath: NamePath }
-    | { op: "reorder"; entryPath: NamePath; direction: "up" | "down" }
-    | { op: "duplicate"; entryPath: NamePath };
+    | { op: "add"; sectionId: NodeId }
+    | { op: "insert"; entryId: NodeId; position: "before" | "after" }
+    | { op: "remove"; entryId: NodeId }
+    | { op: "reorder"; entryId: NodeId; direction: "up" | "down" }
+    | { op: "duplicate"; entryId: NodeId };
 
 function reparse(session: EditorSession, bytes: Uint8Array): ParseResult {
     const parser = parserRegistry.getById(session.parserId);
@@ -20,7 +28,7 @@ function reparse(session: EditorSession, bytes: Uint8Array): ParseResult {
 
 function buildChangeSet(session: EditorSession, dirty: boolean): ChangeSet {
     return {
-        changed: getWindow(session.model, 0, 200, session.relationshipModel),
+        changed: getWindow(session.model, 0, DEFAULT_WINDOW, session.relationshipModel),
         diagnostics: session.relationshipModel ? session.relationshipModel.constraints(session.model) : [],
         dirty,
         formatValid: true,
@@ -45,18 +53,20 @@ function buildOpBytes(
     adapter: ReturnType<typeof formatAdapterRegistry.get>,
     pr: ParseResult,
     req: StructureOpRequest,
+    target: ResolvedTarget,
 ): Uint8Array | undefined {
+    const { arrayPath, index } = target;
     switch (req.op) {
         case "add":
-            return adapter?.buildAddEntryBytes?.(pr, req.namePath);
+            return adapter?.buildAddEntryBytes?.(pr, arrayPath);
         case "insert":
-            return adapter?.buildInsertEntryBytes?.(pr, req.entryPath, req.position);
+            return adapter?.buildInsertEntryBytes?.(pr, arrayPath, index, req.position);
         case "remove":
-            return adapter?.buildRemoveEntryBytes?.(pr, req.entryPath);
+            return adapter?.buildRemoveEntryBytes?.(pr, arrayPath, index);
         case "reorder":
-            return adapter?.buildMoveEntryBytes?.(pr, req.entryPath, req.direction);
+            return adapter?.buildMoveEntryBytes?.(pr, arrayPath, index, req.direction);
         case "duplicate":
-            return adapter?.buildDuplicateEntryBytes?.(pr, req.entryPath);
+            return adapter?.buildDuplicateEntryBytes?.(pr, arrayPath, index);
     }
 }
 
@@ -75,6 +85,39 @@ function findByNamePath(session: EditorSession, namePath: NamePath): FlatNode | 
     );
 }
 
+interface ResolvedTarget {
+    /** The section group's display path the byte-builders route on (parent of the entry, or the section itself for "add"). */
+    arrayPath: NamePath;
+    /** 0-based ordinal of the target entry among its siblings; -1 for "add" (no pre-existing entry). */
+    index: number;
+}
+
+/**
+ * Resolve a structure-op request's NodeId target to the section's display path
+ * and the entry's 0-based ordinal among its siblings. The ordinal is read from
+ * the model's structural child order (never parsed from a label), so it is the
+ * exact index the byte-builders expect regardless of how the entry is displayed.
+ */
+function resolveTarget(session: EditorSession, req: StructureOpRequest): ResolvedTarget | undefined {
+    const model = session.model;
+    if (req.op === "add") {
+        const idx = model.byId.get(req.sectionId);
+        const section = idx === undefined ? undefined : model.nodes[idx];
+        if (!section || section.kind !== "group") return undefined;
+        return { arrayPath: section.namePath, index: -1 };
+    }
+    const entryIdx = model.byId.get(req.entryId);
+    const entry = entryIdx === undefined ? undefined : model.nodes[entryIdx];
+    if (!entry || entry.parentId === undefined) return undefined;
+    const parentIdx = model.byId.get(entry.parentId);
+    const parent = parentIdx === undefined ? undefined : model.nodes[parentIdx];
+    if (!parent) return undefined;
+    const kids = model.childrenByParent.get(entry.parentId) ?? [];
+    const index = kids.findIndex((ni) => model.nodes[ni] === entry);
+    if (index === -1) return undefined;
+    return { arrayPath: parent.namePath, index };
+}
+
 /**
  * NodeId at `index` within a pre-fetched children index array.
  * Clamps to valid range; returns undefined if the array is empty.
@@ -87,41 +130,38 @@ function childIdAt(model: EditorSession["model"], kids: number[], index: number)
 
 export function structureOp(session: EditorSession, req: StructureOpRequest): StructureResult {
     const adapter = formatAdapterRegistry.get(session.parserId);
-    const bytes = buildOpBytes(adapter, session.model.parseResult, req);
+    // Resolve the NodeId target to the section path + the entry's structural ordinal from the OLD
+    // model, before commit replaces session.model.
+    const target = resolveTarget(session, req);
+    if (!target) return noopResult(session);
+    const bytes = buildOpBytes(adapter, session.model.parseResult, req, target);
     if (!bytes) return noopResult(session);
+
+    const { arrayPath, index } = target;
+    const arrayLabel = arrayPath.join(" / ");
     let label: string;
     switch (req.op) {
         case "add":
-            label = `Add to ${req.namePath.join(" / ")}`;
+            label = `Add to ${arrayLabel}`;
             break;
         case "insert":
-            label = `Insert ${req.position} ${req.entryPath.join(" / ")}`;
+            label = `Insert ${req.position} ${arrayLabel} #${index + 1}`;
             break;
         case "remove":
-            label = `Remove ${req.entryPath.join(" / ")}`;
+            label = `Remove ${arrayLabel} #${index + 1}`;
             break;
         case "reorder":
-            label = `Move ${req.entryPath.join(" / ")} ${req.direction}`;
+            label = `Move ${arrayLabel} #${index + 1} ${req.direction}`;
             break;
         case "duplicate":
-            label = `Duplicate ${req.entryPath.join(" / ")}`;
+            label = `Duplicate ${arrayLabel} #${index + 1}`;
             break;
     }
 
-    // Capture the group path and the targeted entry's sibling index from the OLD model before
-    // commit replaces session.model. For "add" there is no pre-existing target entry.
-    const arrayPath: NamePath = req.op === "add" ? req.namePath : req.entryPath.slice(0, -1);
-    const groupBefore = findByNamePath(session, arrayPath);
-    const kidsBefore = groupBefore ? (session.model.childrenByParent.get(groupBefore.id) ?? []) : [];
-    const targetNode = req.op === "add" ? undefined : findByNamePath(session, req.entryPath);
-    // The children list stores node indices; find the entry's position among its siblings.
-    const targetIndex =
-        targetNode !== undefined ? kidsBefore.findIndex((ni) => session.model.nodes[ni] === targetNode) : -1;
-
     const result = commit(session, label, reparse(session, bytes));
 
-    // Resolve the post-op selection in the NEW (rebuilt) model.
-    // Single traversal: find the group once, get its children list once.
+    // Resolve the post-op selection in the NEW (rebuilt) model: locate the section by its
+    // (stable) display path, then pick the slot the op leaves selected.
     const postGroup = findByNamePath(session, arrayPath);
     const newKids = postGroup ? (session.model.childrenByParent.get(postGroup.id) ?? []) : [];
     const newKidsCount = newKids.length;
@@ -131,18 +171,18 @@ export function structureOp(session: EditorSession, req: StructureOpRequest): St
             selIndex = newKidsCount - 1;
             break;
         case "insert":
-            selIndex = req.position === "before" ? targetIndex : targetIndex + 1;
+            selIndex = req.position === "before" ? index : index + 1;
             break;
         case "duplicate":
-            selIndex = targetIndex + 1;
+            selIndex = index + 1;
             break;
         case "reorder":
             // Boundary reorders (up at index 0, down at last) return undefined bytes and exit via
-            // the no-op path above, so targetIndex - 1 and targetIndex + 1 are both in range here.
-            selIndex = req.direction === "up" ? targetIndex - 1 : targetIndex + 1;
+            // the no-op path above, so index - 1 and index + 1 are both in range here.
+            selIndex = req.direction === "up" ? index - 1 : index + 1;
             break;
         case "remove":
-            selIndex = Math.min(targetIndex, newKidsCount - 1);
+            selIndex = Math.min(index, newKidsCount - 1);
             break;
     }
     result.selection = childIdAt(session.model, newKids, selIndex);

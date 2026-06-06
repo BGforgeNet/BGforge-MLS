@@ -57,7 +57,7 @@
 
     function selectSection(id: string) { vm?.selectSection(id); activeId = id; }
     const edit = (id: string, v: number | string) => bridge.editField(id, v);
-    function add() { if (active) bridge.structureOp({ op: "add", namePath: [active.title] }); }
+    function add() { if (active) bridge.structureOp({ op: "add", sectionId: active.nodeId }); }
 </script>
 
 {#if !open}
@@ -95,11 +95,11 @@
     {#if active && vm}
         {#if active.kind === "list"}
             {#if active.render === "inline"}
-                <InlineList parentId={active.nodeId} title={active.title}
+                <InlineList parentId={active.nodeId}
                             caps={{ canAdd: active.canAdd, canModify: active.canModify }}
                             {bridge} {version} {selection} onedit={edit} {showOffsets} />
             {:else}
-                <ListSection nodeId={active.nodeId} title={active.title}
+                <ListSection nodeId={active.nodeId}
                             caps={{ canAdd: active.canAdd, canModify: active.canModify }}
                             {bridge} {vm} {version} {selection} onadd={add} onedit={edit} {byNode} {showOffsets} />
             {/if}

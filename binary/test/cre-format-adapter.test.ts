@@ -97,7 +97,7 @@ maybe("cre adapter structure-op surface", () => {
 
     it("routes remove-item through the registered adapter", () => {
         const base = baseWithLists();
-        const bytes = cre.buildRemoveEntryBytes!(base, [CRE_GROUP_LABELS.items, "Item 1"]);
+        const bytes = cre.buildRemoveEntryBytes!(base, [CRE_GROUP_LABELS.items], 0);
         expect(bytes).toBeDefined();
         const doc = getCreCanonicalDocument(creParser.parse(bytes!))!;
         expect(doc.items).toHaveLength(0);

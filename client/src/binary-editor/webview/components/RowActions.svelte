@@ -4,21 +4,20 @@
     import Icon from "./Icon.svelte";
     import Menu, { type MenuItem } from "./primitives/Menu.svelte";
 
-    const { acts, entryPath, bridge, compact = false }:
-        { acts: RowActions; entryPath: string[]; bridge: Bridge; compact?: boolean } = $props();
+    const { acts, entryId, bridge, compact = false }:
+        { acts: RowActions; entryId: string; bridge: Bridge; compact?: boolean } = $props();
 
     // Two-step delete confirmation: first click arms the confirm state; second click (confirm) fires.
     // Escape or clicking cancel disarms without dispatching. Literal false init - no confirm pending at mount.
     let confirmPending = $state(false);
 
-    // ListSection reuses a SINGLE RowActions instance across selections - only the entryPath prop changes
+    // ListSection reuses a SINGLE RowActions instance across selections - only the entryId prop changes
     // when the user picks a different entry. Svelte 5 does not reset local $state on prop change, so without
     // this effect an armed confirm would persist and Confirm would delete the NOW-selected entry (wrong-entry
-    // data loss). Key on the joined path (a primitive that changes with selection) rather than the array
-    // reference (recreated each render, which would reset on every render and lose a freshly-armed confirm).
-    const entryKey = $derived(entryPath.join("/"));
+    // data loss). entryId is a stable per-entry NodeId, so keying on it resets the confirm exactly when the
+    // targeted entry changes.
     $effect(() => {
-        void entryKey; // reactive dependency: reset the pending confirm whenever the targeted entry changes
+        void entryId; // reactive dependency: reset the pending confirm whenever the targeted entry changes
         confirmPending = false;
     });
 
@@ -32,7 +31,7 @@
 
     function doRemove(): void {
         confirmPending = false;
-        bridge.structureOp({ op: "remove", entryPath });
+        bridge.structureOp({ op: "remove", entryId });
     }
 
     function handleKeydown(e: KeyboardEvent): void {
@@ -53,11 +52,11 @@
 
     function handleMenuSelect(id: string): void {
         switch (id) {
-            case "add-above":  bridge.structureOp({ op: "insert", entryPath, position: "before" }); break;
-            case "add-below":  bridge.structureOp({ op: "insert", entryPath, position: "after" });  break;
-            case "duplicate":  bridge.structureOp({ op: "duplicate", entryPath });                  break;
-            case "move-up":    bridge.structureOp({ op: "reorder", entryPath, direction: "up" });   break;
-            case "move-down":  bridge.structureOp({ op: "reorder", entryPath, direction: "down" }); break;
+            case "add-above":  bridge.structureOp({ op: "insert", entryId, position: "before" }); break;
+            case "add-below":  bridge.structureOp({ op: "insert", entryId, position: "after" });  break;
+            case "duplicate":  bridge.structureOp({ op: "duplicate", entryId });                  break;
+            case "move-up":    bridge.structureOp({ op: "reorder", entryId, direction: "up" });   break;
+            case "move-down":  bridge.structureOp({ op: "reorder", entryId, direction: "down" }); break;
             // Menu Delete arms the same inline confirm rather than dispatching immediately.
             case "delete":     armConfirm(); break;
         }
@@ -91,31 +90,31 @@
     {:else}
         <!-- Non-compact (detail-pane toolbar): six labeled icon buttons, no kebab (all actions are visible). -->
         <button class="row-actions-btn" disabled={!acts.insert}
-                onclick={() => bridge.structureOp({ op: "insert", entryPath, position: "before" })}
+                onclick={() => bridge.structureOp({ op: "insert", entryId, position: "before" })}
                 aria-label="Add above" title="Add above">
             <Icon name="insert" />
             <span class="row-actions-label">Add above</span>
         </button>
         <button class="row-actions-btn" disabled={!acts.insert}
-                onclick={() => bridge.structureOp({ op: "insert", entryPath, position: "after" })}
+                onclick={() => bridge.structureOp({ op: "insert", entryId, position: "after" })}
                 aria-label="Add below" title="Add below">
             <Icon name="add" />
             <span class="row-actions-label">Add below</span>
         </button>
         <button class="row-actions-btn" disabled={!acts.duplicate}
-                onclick={() => bridge.structureOp({ op: "duplicate", entryPath })}
+                onclick={() => bridge.structureOp({ op: "duplicate", entryId })}
                 aria-label="Duplicate" title="Duplicate">
             <Icon name="copy" />
             <span class="row-actions-label">Duplicate</span>
         </button>
         <button class="row-actions-btn" disabled={!acts.up}
-                onclick={() => bridge.structureOp({ op: "reorder", entryPath, direction: "up" })}
+                onclick={() => bridge.structureOp({ op: "reorder", entryId, direction: "up" })}
                 aria-label="Move up" title="Move up">
             <Icon name="chevron-up" />
             <span class="row-actions-label">Move up</span>
         </button>
         <button class="row-actions-btn" disabled={!acts.down}
-                onclick={() => bridge.structureOp({ op: "reorder", entryPath, direction: "down" })}
+                onclick={() => bridge.structureOp({ op: "reorder", entryId, direction: "down" })}
                 aria-label="Move down" title="Move down">
             <Icon name="chevron-down" />
             <span class="row-actions-label">Move down</span>

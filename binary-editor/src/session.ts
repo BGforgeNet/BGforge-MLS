@@ -3,7 +3,7 @@ import { buildLayout } from "./layout";
 import { buildModel, type Model } from "./model";
 import { getRelationshipModel } from "./relationship/registry";
 import type { RelationshipModel } from "./relationship/types";
-import { getWindow } from "./window";
+import { DEFAULT_WINDOW, getWindow } from "./window";
 import { summaryComposerFor, type SummaryComposer } from "./summary";
 import type { OpenResult, SessionId } from "./types";
 
@@ -93,6 +93,6 @@ export function openSession(uri: string, bytes: Uint8Array, options: ParseOption
         layout: buildLayout(parser.id, model),
         warnings: parseResult.warnings ?? [],
         errors: parseResult.errors ?? [],
-        rootWindow: getWindow(model, 0, 200, relationshipModel, session.composeSummary),
+        rootWindow: getWindow(model, 0, DEFAULT_WINDOW, relationshipModel, session.composeSummary),
     };
 }

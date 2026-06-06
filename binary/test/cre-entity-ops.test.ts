@@ -135,14 +135,17 @@ describe("CRE memorization owner+slice ops", () => {
         };
     }
 
-    const ownerPath = (n: number) => [CRE_GROUP_LABELS.spellMemInfo, `Entry ${n}`];
-    const slicePath = (n: number) => [CRE_GROUP_LABELS.memorizedSpells, `Memorized Spell ${n}`];
     const memrefs = (d: CreCanonicalDocument) => d.memorizedSpells.map((m) => strip(m.spell));
     const ranges = (d: CreCanonicalDocument) =>
         d.spellMemInfo.map((e) => [e.firstMemorizedSpellIndex, e.memorizedSpellCount]);
 
     it("insert memorized spell into owner0 grows owner0 and shifts owner1", () => {
-        const bytes = buildCreInsertEntryBytes(parseResultFrom(inOrderBase()), slicePath(1), "after");
+        const bytes = buildCreInsertEntryBytes(
+            parseResultFrom(inOrderBase()),
+            [CRE_GROUP_LABELS.memorizedSpells],
+            0,
+            "after",
+        );
         const d = docOf(creParser.parse(bytes!));
         expect(memrefs(d)).toEqual(["AAA", "", "BBB", "CCC"]); // new empty spell after AAA
         expect(ranges(d)).toEqual([
@@ -152,7 +155,7 @@ describe("CRE memorization owner+slice ops", () => {
     });
 
     it("remove a memorized spell shrinks its owner and shifts later owners", () => {
-        const bytes = buildCreRemoveEntryBytes(parseResultFrom(inOrderBase()), slicePath(2)); // remove BBB (owner1)
+        const bytes = buildCreRemoveEntryBytes(parseResultFrom(inOrderBase()), [CRE_GROUP_LABELS.memorizedSpells], 1); // remove BBB (owner1)
         const d = docOf(creParser.parse(bytes!));
         expect(memrefs(d)).toEqual(["AAA", "CCC"]);
         expect(ranges(d)).toEqual([
@@ -162,7 +165,11 @@ describe("CRE memorization owner+slice ops", () => {
     });
 
     it("duplicate a memorized spell clones it under the same owner", () => {
-        const bytes = buildCreDuplicateEntryBytes(parseResultFrom(inOrderBase()), slicePath(2)); // duplicate BBB
+        const bytes = buildCreDuplicateEntryBytes(
+            parseResultFrom(inOrderBase()),
+            [CRE_GROUP_LABELS.memorizedSpells],
+            1,
+        ); // duplicate BBB
         const d = docOf(creParser.parse(bytes!));
         expect(memrefs(d)).toEqual(["AAA", "BBB", "BBB", "CCC"]);
         expect(ranges(d)).toEqual([
@@ -172,10 +179,17 @@ describe("CRE memorization owner+slice ops", () => {
     });
 
     it("reorder memorized spells within an owner swaps them; rejects a cross-owner move", () => {
-        const within = buildCreMoveEntryBytes(parseResultFrom(inOrderBase()), slicePath(2), "down"); // BBB<->CCC, same owner1
+        const within = buildCreMoveEntryBytes(
+            parseResultFrom(inOrderBase()),
+            [CRE_GROUP_LABELS.memorizedSpells],
+            1,
+            "down",
+        ); // BBB<->CCC, same owner1
         expect(memrefs(docOf(creParser.parse(within!)))).toEqual(["AAA", "CCC", "BBB"]);
-        // slicePath(1)=AAA (owner0) moving down would cross into owner1 -> rejected.
-        expect(buildCreMoveEntryBytes(parseResultFrom(inOrderBase()), slicePath(1), "down")).toBeUndefined();
+        // index 0 = AAA (owner0) moving down would cross into owner1 -> rejected.
+        expect(
+            buildCreMoveEntryBytes(parseResultFrom(inOrderBase()), [CRE_GROUP_LABELS.memorizedSpells], 0, "down"),
+        ).toBeUndefined();
     });
 
     it("add an owner appends an empty memorization entry, slices unchanged", () => {
@@ -187,14 +201,19 @@ describe("CRE memorization owner+slice ops", () => {
     });
 
     it("remove an owner drops its slice and shifts later owners down", () => {
-        const bytes = buildCreRemoveEntryBytes(parseResultFrom(inOrderBase()), ownerPath(1)); // remove owner0 ([AAA])
+        const bytes = buildCreRemoveEntryBytes(parseResultFrom(inOrderBase()), [CRE_GROUP_LABELS.spellMemInfo], 0); // remove owner0 ([AAA])
         const d = docOf(creParser.parse(bytes!));
         expect(memrefs(d)).toEqual(["BBB", "CCC"]);
         expect(ranges(d)).toEqual([[0, 2]]);
     });
 
     it("reorder owners swaps records without moving slices", () => {
-        const bytes = buildCreMoveEntryBytes(parseResultFrom(inOrderBase()), ownerPath(1), "down");
+        const bytes = buildCreMoveEntryBytes(
+            parseResultFrom(inOrderBase()),
+            [CRE_GROUP_LABELS.spellMemInfo],
+            0,
+            "down",
+        );
         const d = docOf(creParser.parse(bytes!));
         expect(memrefs(d)).toEqual(["AAA", "BBB", "CCC"]); // slices untouched
         expect(ranges(d)).toEqual([
@@ -204,7 +223,7 @@ describe("CRE memorization owner+slice ops", () => {
     });
 
     it("duplicate an owner clones its slice in place and points the clone at it", () => {
-        const bytes = buildCreDuplicateEntryBytes(parseResultFrom(inOrderBase()), ownerPath(2)); // duplicate owner1 ([BBB,CCC])
+        const bytes = buildCreDuplicateEntryBytes(parseResultFrom(inOrderBase()), [CRE_GROUP_LABELS.spellMemInfo], 1); // duplicate owner1 ([BBB,CCC])
         const d = docOf(creParser.parse(bytes!));
         expect(memrefs(d)).toEqual(["AAA", "BBB", "CCC", "BBB", "CCC"]);
         expect(ranges(d)).toEqual([
@@ -215,7 +234,11 @@ describe("CRE memorization owner+slice ops", () => {
     });
 
     it("handles an OUT-OF-ORDER partition (quayle case): duplicate owner1 -> CCC", () => {
-        const bytes = buildCreDuplicateEntryBytes(parseResultFrom(outOfOrderBase()), ownerPath(2)); // owner1 owns idx2 = CCC
+        const bytes = buildCreDuplicateEntryBytes(
+            parseResultFrom(outOfOrderBase()),
+            [CRE_GROUP_LABELS.spellMemInfo],
+            1,
+        ); // owner1 (index 1) owns idx2 = CCC
         const d = docOf(creParser.parse(bytes!));
         // Clone slice inserted at owner1.start+count = 3 (append). Clone owns the new CCC.
         expect(memrefs(d)).toEqual(["AAA", "BBB", "CCC", "CCC"]);
@@ -226,8 +249,8 @@ describe("CRE memorization owner+slice ops", () => {
     });
 
     it("out-of-order remove owner shifts only later-starting owners", () => {
-        // Remove owner0 (idx0). owner1 start 2 -> 1, owner2 start 1 -> 1 (start 1 < removed end 1? removed [0,1))
-        const bytes = buildCreRemoveEntryBytes(parseResultFrom(outOfOrderBase()), ownerPath(1));
+        // Remove owner0 (index 0). owner1 start 2 -> 1, owner2 start 1 -> 1 (start 1 < removed end 1? removed [0,1))
+        const bytes = buildCreRemoveEntryBytes(parseResultFrom(outOfOrderBase()), [CRE_GROUP_LABELS.spellMemInfo], 0);
         const d = docOf(creParser.parse(bytes!));
         expect(memrefs(d)).toEqual(["BBB", "CCC"]); // AAA removed
         // After removing index0: BBB now idx0, CCC idx1. owner1 owned CCC, owner2 owned BBB.
@@ -257,21 +280,13 @@ describe("CRE flat-list ops (known spells, effects)", () => {
         const KS = CRE_GROUP_LABELS.knownSpells;
         const add = docOf(creParser.parse(buildCreAddEntryBytes(parseResultFrom(knownBase()), [KS])!));
         expect(krefs(add)).toEqual(["K1", "K2", ""]);
-        const ins = docOf(
-            creParser.parse(buildCreInsertEntryBytes(parseResultFrom(knownBase()), [KS, "Known Spell 1"], "before")!),
-        );
+        const ins = docOf(creParser.parse(buildCreInsertEntryBytes(parseResultFrom(knownBase()), [KS], 0, "before")!));
         expect(krefs(ins)).toEqual(["", "K1", "K2"]);
-        const rem = docOf(
-            creParser.parse(buildCreRemoveEntryBytes(parseResultFrom(knownBase()), [KS, "Known Spell 1"])!),
-        );
+        const rem = docOf(creParser.parse(buildCreRemoveEntryBytes(parseResultFrom(knownBase()), [KS], 0)!));
         expect(krefs(rem)).toEqual(["K2"]);
-        const dup = docOf(
-            creParser.parse(buildCreDuplicateEntryBytes(parseResultFrom(knownBase()), [KS, "Known Spell 2"])!),
-        );
+        const dup = docOf(creParser.parse(buildCreDuplicateEntryBytes(parseResultFrom(knownBase()), [KS], 1)!));
         expect(krefs(dup)).toEqual(["K1", "K2", "K2"]);
-        const mv = docOf(
-            creParser.parse(buildCreMoveEntryBytes(parseResultFrom(knownBase()), [KS, "Known Spell 1"], "down")!),
-        );
+        const mv = docOf(creParser.parse(buildCreMoveEntryBytes(parseResultFrom(knownBase()), [KS], 0, "down")!));
         expect(krefs(mv)).toEqual(["K2", "K1"]);
     });
 
@@ -312,12 +327,11 @@ describe("CRE items + itemSlots relink", () => {
             itemSlots,
         };
     }
-    const itemPath = (n: number) => [CRE_GROUP_LABELS.items, `Item ${n}`];
 
     it("remove item clears its slot and shifts higher refs down", () => {
         // slot0 -> item0, slot1 -> item2, slot38 -> 9 (weapon slot, untouched).
         const base = itemsBase({ 0: 0, 1: 2, 38: 9 });
-        const d = docOf(creParser.parse(buildCreRemoveEntryBytes(parseResultFrom(base), itemPath(1))!)); // remove item0
+        const d = docOf(creParser.parse(buildCreRemoveEntryBytes(parseResultFrom(base), [CRE_GROUP_LABELS.items], 0)!)); // remove item0
         expect(d.items.map((i) => strip(i.item))).toEqual(["ITM1", "ITM2"]);
         expect(d.itemSlots[0]).toBe(-1); // referenced removed item
         expect(d.itemSlots[1]).toBe(1); // item2 (now index1) still pointed at
@@ -326,7 +340,9 @@ describe("CRE items + itemSlots relink", () => {
 
     it("insert item shifts refs at/after the insertion point up", () => {
         const base = itemsBase({ 0: 0, 1: 2 });
-        const d = docOf(creParser.parse(buildCreInsertEntryBytes(parseResultFrom(base), itemPath(1), "before")!)); // insert at 0
+        const d = docOf(
+            creParser.parse(buildCreInsertEntryBytes(parseResultFrom(base), [CRE_GROUP_LABELS.items], 0, "before")!),
+        ); // insert at 0
         expect(d.items.map((i) => strip(i.item))).toEqual(["", "ITM0", "ITM1", "ITM2"]);
         expect(d.itemSlots[0]).toBe(1); // item0 -> index1
         expect(d.itemSlots[1]).toBe(3); // item2 -> index3
@@ -334,7 +350,9 @@ describe("CRE items + itemSlots relink", () => {
 
     it("reorder items swaps the two referencing slots", () => {
         const base = itemsBase({ 0: 0, 5: 1 });
-        const d = docOf(creParser.parse(buildCreMoveEntryBytes(parseResultFrom(base), itemPath(1), "down")!)); // swap item0,item1
+        const d = docOf(
+            creParser.parse(buildCreMoveEntryBytes(parseResultFrom(base), [CRE_GROUP_LABELS.items], 0, "down")!),
+        ); // swap item0,item1
         expect(d.items.map((i) => strip(i.item))).toEqual(["ITM1", "ITM0", "ITM2"]);
         expect(d.itemSlots[0]).toBe(1); // was ref to 0
         expect(d.itemSlots[5]).toBe(0); // was ref to 1
@@ -416,11 +434,12 @@ describe("CRE owner ops preserve cross-reference identity over real fixtures", (
     it.each(withOwner)("duplicate + remove first populated owner is identity-preserving: %s", (f) => {
         const base = docOf(creParser.parse(new Uint8Array(fs.readFileSync(f))));
         const idx = base.spellMemInfo.findIndex((o) => o.memorizedSpellCount > 0);
-        const entry = [CRE_GROUP_LABELS.spellMemInfo, `Entry ${idx + 1}`];
         const sourceSig = ownerSigs(base)[idx]!;
 
         // Duplicate: clone owner appears right after source with the same multiset; nothing else changes.
-        const dup = docOf(creParser.parse(buildCreDuplicateEntryBytes(parseResultFrom(base), entry)!));
+        const dup = docOf(
+            creParser.parse(buildCreDuplicateEntryBytes(parseResultFrom(base), [CRE_GROUP_LABELS.spellMemInfo], idx)!),
+        );
         expect(ownerSigs(dup)[idx]).toEqual(sourceSig); // source unchanged
         expect(ownerSigs(dup)[idx + 1]).toEqual(sourceSig); // clone matches
         expect(dup.memorizedSpells.length).toBe(
@@ -428,7 +447,9 @@ describe("CRE owner ops preserve cross-reference identity over real fixtures", (
         );
 
         // Remove: source owner gone, every other owner's multiset preserved.
-        const rem = docOf(creParser.parse(buildCreRemoveEntryBytes(parseResultFrom(base), entry)!));
+        const rem = docOf(
+            creParser.parse(buildCreRemoveEntryBytes(parseResultFrom(base), [CRE_GROUP_LABELS.spellMemInfo], idx)!),
+        );
         const before = ownerSigs(base).filter((_, i) => i !== idx);
         expect(ownerSigs(rem)).toEqual(before);
     });
