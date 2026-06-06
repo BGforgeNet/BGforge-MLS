@@ -305,6 +305,7 @@ class CreParser implements BinaryParser {
         return {
             format: this.id,
             formatName: this.name,
+            variantId: "creature",
             root: group(CRE_GROUP_LABELS.file, [
                 headerGroup,
                 knownSpellsGroup,

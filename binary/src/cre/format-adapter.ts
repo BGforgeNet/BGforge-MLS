@@ -3,6 +3,7 @@ import type { ParseOptions, ParseResult } from "../types";
 import { rebuildCreCanonicalDocument } from "./canonical";
 import { createCanonicalCreJsonSnapshot, loadCanonicalCreJsonSnapshot } from "./json-snapshot";
 import { creCompiledPatternFields, creDomainRanges, crePresentationSchema } from "./presentation-schema";
+import { creLayout } from "./layout-schema";
 import { slugify } from "../snapshot-common";
 import { CRE_GROUP_LABELS } from "./types";
 import {
@@ -59,6 +60,7 @@ export const creFormatAdapter: BinaryFormatAdapter = {
     domainRanges: creDomainRanges,
     // IE formats cache a rebuildable canonical document (own writable property); clear it on edit.
     documentCacheStrategy: "clear",
+    layout: creLayout,
 
     createJsonSnapshot(parseResult: ParseResult): string {
         return createCanonicalCreJsonSnapshot(parseResult);
