@@ -382,3 +382,54 @@ describe("CRE adapter predicates", () => {
         expect(isCreRemovableEntry([CRE_GROUP_LABELS.itemSlots, "Helmet"])).toBe(false);
     });
 });
+
+// ---------------------------------------------------------------------------
+// Fixture-driven semantic-identity regression (per the corruption-critical
+// review): over EVERY real fixture, an owner duplicate/remove must preserve
+// each surviving owner's memorized-spell resref multiset and keep the relaxed
+// partition consistent. This catches a complete-but-wrong cross-reference that
+// reparse-clean coverage alone would miss.
+// ---------------------------------------------------------------------------
+describe("CRE owner ops preserve cross-reference identity over real fixtures", () => {
+    /** Each owner's slice as a sorted multiset of (level|resref) signatures. */
+    function ownerSigs(doc: CreCanonicalDocument): string[][] {
+        return doc.spellMemInfo.map((o) => {
+            const start = o.firstMemorizedSpellIndex;
+            return doc.memorizedSpells
+                .slice(start, start + o.memorizedSpellCount)
+                .map((m) => `${o.spellLevel}|${strip(m.spell)}`)
+                .sort();
+        });
+    }
+
+    const withOwner = fixtures.filter((f) => {
+        const r = creParser.parse(new Uint8Array(fs.readFileSync(f)));
+        if (r.errors) return false;
+        const doc = getCreCanonicalDocument(r) ?? rebuildCreCanonicalDocument(r);
+        return doc !== undefined && doc.spellMemInfo.some((o) => o.memorizedSpellCount > 0);
+    });
+
+    it("has fixtures with populated memorization owners to exercise", () => {
+        expect(withOwner.length).toBeGreaterThan(0);
+    });
+
+    it.each(withOwner)("duplicate + remove first populated owner is identity-preserving: %s", (f) => {
+        const base = docOf(creParser.parse(new Uint8Array(fs.readFileSync(f))));
+        const idx = base.spellMemInfo.findIndex((o) => o.memorizedSpellCount > 0);
+        const entry = [CRE_GROUP_LABELS.spellMemInfo, `Entry ${idx + 1}`];
+        const sourceSig = ownerSigs(base)[idx]!;
+
+        // Duplicate: clone owner appears right after source with the same multiset; nothing else changes.
+        const dup = docOf(creParser.parse(buildCreDuplicateEntryBytes(parseResultFrom(base), entry)!));
+        expect(ownerSigs(dup)[idx]).toEqual(sourceSig); // source unchanged
+        expect(ownerSigs(dup)[idx + 1]).toEqual(sourceSig); // clone matches
+        expect(dup.memorizedSpells.length).toBe(
+            base.memorizedSpells.length + base.spellMemInfo[idx]!.memorizedSpellCount,
+        );
+
+        // Remove: source owner gone, every other owner's multiset preserved.
+        const rem = docOf(creParser.parse(buildCreRemoveEntryBytes(parseResultFrom(base), entry)!));
+        const before = ownerSigs(base).filter((_, i) => i !== idx);
+        expect(ownerSigs(rem)).toEqual(before);
+    });
+});
