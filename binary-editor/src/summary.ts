@@ -86,6 +86,17 @@ const FORMAT_SPECS: Readonly<Record<string, FormatSummarySpec>> = {
             { sectionName: "Spell Memorization Info", fieldName: "Spell Type" },
         ],
     },
+    // MAP object groups already carry their type in the row name (e.g. "Object 0.0
+    // (Scenery)"); the summary adds the proto identity. PID is the per-object "what
+    // is it" field available without an external proto-name resolver. The three
+    // elevation sections are lifted to depth 0 by MAP's projectDisplayRoot.
+    map: {
+        sections: [
+            { sectionName: "Elevation 0 Objects", fieldName: "PID" },
+            { sectionName: "Elevation 1 Objects", fieldName: "PID" },
+            { sectionName: "Elevation 2 Objects", fieldName: "PID" },
+        ],
+    },
 };
 
 // ---------------------------------------------------------------------------
