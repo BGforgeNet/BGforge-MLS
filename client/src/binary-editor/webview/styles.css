@@ -815,3 +815,128 @@ input[type="text"]::placeholder {
     margin: 0;
     color: var(--vscode-foreground);
 }
+
+/* ============================================================================
+ * Declarative layout renderer (single dense page; PRO and future migrated formats).
+ * Ported from the approved PRO critter mockup, themed via --vscode-* vars. Provides the panel /
+ * grid / matrix / flag-column STRUCTURE; field cells are real control components that bring their
+ * own input styling. Content hugs maxContentWidthPx and clumps left (no full-pane stretch).
+ * ============================================================================ */
+.layout-root {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 4px 2px 10px;
+}
+.layout-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+.layout-root .panel {
+    background: var(--vscode-editorWidget-background);
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 5px;
+    padding: 8px 10px 10px;
+}
+.layout-root .panel > h3 {
+    margin: 0 0 7px;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--vscode-textLink-foreground);
+    font-weight: 600;
+    border-bottom: 1px solid var(--vscode-panel-border);
+    padding-bottom: 4px;
+}
+.panel-blocks {
+    display: flex;
+    gap: 26px;
+    align-items: flex-start;
+}
+/* key/value list: a vertical stack of Field rows (label + control); multi-column variant is set inline. */
+.layout-root .kv {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    align-items: stretch;
+}
+.layout-root .kv.kv-multi {
+    display: grid;
+    gap: 2px 22px;
+    align-items: center;
+}
+/* flag checkbox columns */
+.flag-columns {
+    display: flex;
+    gap: 26px;
+    align-items: flex-start;
+}
+.flag-columns .gcol {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+/* stats matrix: N fixed-width column groups, each Base|Bonus */
+.layout-root .matrix {
+    display: grid;
+    justify-content: start;
+    gap: 0 36px;
+}
+.layout-root .matrix .mcol .sub {
+    display: flex;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--vscode-foreground);
+    margin: 2px 0 4px;
+    border-bottom: 1px solid var(--vscode-panel-border);
+    padding-bottom: 2px;
+}
+.layout-root .matrix .mcol .sub .lbl {
+    flex: 1;
+}
+.layout-root .matrix .mcol .sub .bb {
+    color: var(--vscode-descriptionForeground);
+    width: 56px;
+    text-align: center;
+    font-weight: 400;
+}
+.layout-root .matrix .strow {
+    display: flex;
+    align-items: center;
+    padding: 1px 0;
+    gap: 4px;
+}
+.layout-root .matrix .strow .nm {
+    flex: 1;
+    color: var(--vscode-foreground);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 6px;
+}
+.layout-root .matrix .strow .c {
+    width: 56px;
+}
+/* skills grid: N columns of label + control, clumped left */
+.layout-root .grid {
+    display: grid;
+    justify-content: start;
+    gap: 4px 40px;
+}
+.layout-root .grid .skill {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.layout-root .grid .skill .nm {
+    flex: 0 0 96px;
+    color: var(--vscode-descriptionForeground);
+    white-space: nowrap;
+}
+.layout-stub {
+    color: var(--vscode-descriptionForeground);
+    font-style: italic;
+    padding: 6px 0;
+}

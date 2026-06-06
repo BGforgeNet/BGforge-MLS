@@ -8,6 +8,7 @@
 
 import { type NumericRange, setDomainRangeLookup } from "./binary-format-contract";
 import type { CompiledPatternFieldPresentation, FormatPresentationSchema } from "./presentation-schema-types";
+import type { FormatLayout } from "./layout-schema-types";
 import type { ParsedField, ParsedGroup, ParseOptions, ParseResult } from "./types";
 
 export type ProjectedEntry =
@@ -55,6 +56,15 @@ export interface BinaryFormatAdapter {
      *    authoritative and must NOT be cleared. The editor leaves `document` untouched.
      */
     readonly documentCacheStrategy: "clear" | "none";
+
+    /**
+     * Optional declarative layout. When present, the editor renders this format via the generic
+     * layout renderer (panels/matrix/grid/flag-columns on a single dense page, variant chosen by the
+     * parse result's `variantId`) instead of the legacy depth-0-groups-as-tabs path. Absent => the
+     * format keeps the tabs path. This is presentation-only data (sibling of `presentationSchema`);
+     * keep parser/codec free of it.
+     */
+    readonly layout?: FormatLayout;
 
     // -- Snapshots -------------------------------------------------------------
     createJsonSnapshot(parseResult: ParseResult): string;

@@ -112,6 +112,12 @@ export interface ParseResult extends ParseDisplayModel, ParseSerializationContex
     formatName: string;
     /** Format-specific canonical data model, separate from the editor/display tree */
     document?: BinaryCanonicalDocument;
+    /**
+     * Layout-variant id the parser reports for object/sub-type dispatch (e.g. "critter",
+     * "item.weapon"). Selects the matching variant from the format's declarative `layout`.
+     * Optional: formats without a layout schema leave it unset and use the legacy tabs path.
+     */
+    variantId?: string;
 }
 
 /**

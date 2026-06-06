@@ -1,9 +1,43 @@
-import { formatAdapterRegistry } from "@bgforge/binary";
+import { formatAdapterRegistry, toSemanticFieldKey, type FormatLayout } from "@bgforge/binary";
 import type { Model } from "./model";
-import type { LayoutDescriptor, SectionDescriptor } from "./types";
+import { projectRow } from "./window";
+import type { LayoutDescriptor, ResolvedLayout, Row, SectionDescriptor } from "./types";
+
+/**
+ * Resolve a format's declarative layout for the model's active variant: select the variant the parser
+ * reported (`parseResult.variantId`, or the first declared variant as a fallback) and build a
+ * `FieldRef -> Row` map by projecting every field node and keying it by its semantic field key
+ * (`toSemanticFieldKey(format, sourceSegments)`) - the same key the layout schema references. Returns
+ * undefined when the selected variant does not exist, so `buildLayout` can fall back to the legacy path.
+ *
+ * The whole field set is resolved up front (not just referenced keys): the layout formats are small
+ * and form-only, so this avoids a per-ref lookup pass and keeps the renderer a pure data consumer.
+ */
+export function resolveLayout(formatId: string, layout: FormatLayout, model: Model): ResolvedLayout | undefined {
+    const variantId = model.parseResult.variantId ?? Object.keys(layout.variants)[0];
+    const variant = variantId === undefined ? undefined : layout.variants[variantId];
+    if (variantId === undefined || !variant) return undefined;
+
+    const fields: Record<string, Row> = {};
+    for (const node of model.nodes) {
+        if (node.kind !== "field") continue;
+        const key = toSemanticFieldKey(formatId, node.sourceSegments);
+        // First write wins: a semantic key is the field's stable identity, and the model lists each
+        // field once, so collisions would only arise from a malformed duplicate - keep the first.
+        if (key !== undefined && !(key in fields)) fields[key] = projectRow(model, node);
+    }
+    return { variantId, rows: variant.rows, maxContentWidthPx: layout.maxContentWidthPx, fields };
+}
 
 export function buildLayout(formatId: string, model: Model): LayoutDescriptor {
     const adapter = formatAdapterRegistry.get(formatId);
+
+    // Layout-schema formats render via the generic layout renderer; the legacy tabs path is skipped.
+    if (adapter?.layout) {
+        const layout = resolveLayout(formatId, adapter.layout, model);
+        if (layout) return { formatId, sections: [], layout };
+    }
+
     const sections: SectionDescriptor[] = model.nodes
         .filter((n) => n.depth === 0 && n.kind === "group")
         .map((n) => {

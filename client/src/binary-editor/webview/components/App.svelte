@@ -5,6 +5,7 @@
     import { ViewModel } from "../state/view-model";
     import { diagnosticsByNode, bannerSummary } from "../state/diagnostics";
     import SectionTabs from "./SectionTabs.svelte";
+    import LayoutRenderer from "./LayoutRenderer.svelte";
     import FormSection from "./FormSection.svelte";
     import ListSection from "./ListSection.svelte";
     import InlineList from "./InlineList.svelte";
@@ -91,20 +92,26 @@
             </ul>
         </div>
     {/if}
-    <SectionTabs sections={open.layout.sections} {activeId} onselect={selectSection} />
-    {#if active && vm}
-        {#if active.kind === "list"}
-            {#if active.render === "inline"}
-                <InlineList parentId={active.nodeId}
-                            caps={{ canAdd: active.canAdd, canModify: active.canModify }}
-                            {bridge} {version} {selection} onedit={edit} {showOffsets} />
+    {#if open.layout.layout}
+        <!-- Layout-schema formats (PRO) render as a single dense page via the generic LayoutRenderer;
+             the legacy section-tabs + form/list path below is unchanged for every other format. -->
+        <LayoutRenderer layout={open.layout.layout} onedit={edit} {byNode} {showOffsets} />
+    {:else}
+        <SectionTabs sections={open.layout.sections} {activeId} onselect={selectSection} />
+        {#if active && vm}
+            {#if active.kind === "list"}
+                {#if active.render === "inline"}
+                    <InlineList parentId={active.nodeId}
+                                caps={{ canAdd: active.canAdd, canModify: active.canModify }}
+                                {bridge} {version} {selection} onedit={edit} {showOffsets} />
+                {:else}
+                    <ListSection nodeId={active.nodeId}
+                                caps={{ canAdd: active.canAdd, canModify: active.canModify }}
+                                {bridge} {vm} {version} {selection} onadd={add} onedit={edit} {byNode} {showOffsets} />
+                {/if}
             {:else}
-                <ListSection nodeId={active.nodeId}
-                            caps={{ canAdd: active.canAdd, canModify: active.canModify }}
-                            {bridge} {vm} {version} {selection} onadd={add} onedit={edit} {byNode} {showOffsets} />
+                <FormSection nodeId={active.nodeId} {bridge} {vm} {version} onedit={edit} {byNode} {showOffsets} />
             {/if}
-        {:else}
-            <FormSection nodeId={active.nodeId} {bridge} {vm} {version} onedit={edit} {byNode} {showOffsets} />
         {/if}
     {/if}
 {/if}

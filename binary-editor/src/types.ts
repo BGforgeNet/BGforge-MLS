@@ -1,4 +1,4 @@
-import type { ParsedFieldType } from "@bgforge/binary";
+import type { FieldRef, LayoutRow, ParsedFieldType } from "@bgforge/binary";
 
 export type SessionId = string;
 
@@ -73,9 +73,25 @@ export interface SectionDescriptor {
     canModify: boolean;
 }
 
+/**
+ * A format's layout resolved for the active variant: the layout-schema rows verbatim plus a map from
+ * every field's semantic key (`FieldRef`) to its renderable `Row`. PRO is form-only and small (~90
+ * fields), so the editor sends all field rows up front; list blocks (when other formats migrate) keep
+ * using the windowed getChildren path keyed by `sectionKey`.
+ */
+export interface ResolvedLayout {
+    variantId: string;
+    rows: LayoutRow[];
+    maxContentWidthPx?: number;
+    fields: Record<FieldRef, Row>;
+}
+
 export interface LayoutDescriptor {
     formatId: string;
+    /** Legacy depth-0-groups-as-tabs path. Empty/unused when `layout` is present. */
     sections: SectionDescriptor[];
+    /** Present only for formats whose adapter declares a declarative `layout` schema. */
+    layout?: ResolvedLayout;
 }
 
 export interface OpenResult {

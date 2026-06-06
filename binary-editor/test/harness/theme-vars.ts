@@ -24,6 +24,7 @@ export const THEME_VARS = `:root {
     --vscode-descriptionForeground: #9d9d9d;
     --vscode-errorForeground: #f48771;
     --vscode-panel-border: #2b2b2b;
+    --vscode-editorWidget-background: #252526;
     --vscode-focusBorder: #007fd4;
     --vscode-textLink-foreground: #3794ff;
     --vscode-input-background: #3c3c3c;
