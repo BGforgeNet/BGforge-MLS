@@ -13,6 +13,17 @@ import {
     isMapModifiableArray,
     isMapRemovableEntry,
 } from "./entity-ops";
+import {
+    buildMapObjectAddEntryBytes,
+    buildMapObjectDuplicateEntryBytes,
+    buildMapObjectInsertEntryBytes,
+    buildMapObjectMoveEntryBytes,
+    buildMapObjectRemoveEntryBytes,
+    isMapObjectAddableArray,
+    isMapObjectListSection,
+    isMapObjectModifiableArray,
+    isMapObjectRemovableEntry,
+} from "./object-ops";
 import { mapCompiledPatternFields, mapDomainRanges, mapPresentationSchema } from "./presentation-schema";
 import { slugify } from "../snapshot-common";
 
@@ -136,6 +147,58 @@ function shouldHideMapGroup(entry: ParsedGroup): boolean {
     );
 }
 
+/** Synthetic read-only field carrying an existing field's value under a distinct display name. */
+function readonlyCountField(name: string, source: ParsedField): ParsedField {
+    return { name, value: source.value, type: source.type, offset: source.offset, size: source.size };
+}
+
+/**
+ * Project the raw "Objects Section" group into a read-only "Objects" counts form
+ * plus one top-level list section per elevation (children = object groups, the
+ * per-elevation "Object Count" field moved into the counts form). The counts
+ * form is editingLocked so its fields render read-only. Counts are derived and
+ * recompute on serialize; surfacing them read-only lets the user see totals
+ * without editing them.
+ */
+function projectObjectsSection(
+    parseResult: ParseResult,
+    section: ParsedGroup,
+    projectEntry: (
+        pr: ParseResult,
+        entry: ParsedField | ParsedGroup,
+        sourceSegments: readonly string[],
+    ) => ProjectedEntry | undefined,
+): ProjectedEntry[] {
+    const out: ProjectedEntry[] = [];
+    const totalObjects = section.fields.find((f): f is ParsedField => !isGroup(f) && f.name === "Total Objects");
+    const elevationGroups = section.fields.filter(
+        (f): f is ParsedGroup => isGroup(f) && /^Elevation \d+ Objects$/.test(f.name),
+    );
+
+    const countFields: ParsedField[] = [];
+    if (totalObjects) countFields.push(readonlyCountField("Total Objects", totalObjects));
+    elevationGroups.forEach((g, i) => {
+        const c = g.fields.find((f): f is ParsedField => !isGroup(f) && f.name === "Object Count");
+        if (c) countFields.push(readonlyCountField(`Elevation ${i} Object Count`, c));
+    });
+    const objectsForm: ParsedGroup = { name: "Objects", fields: countFields, editingLocked: true };
+    out.push({
+        kind: "group",
+        entry: objectsForm,
+        sourceSegments: ["Objects"],
+        children: countFields.map((f) => ({ kind: "field", entry: f, sourceSegments: ["Objects", f.name] })),
+    });
+
+    for (const g of elevationGroups) {
+        const children = g.fields
+            .filter((f) => isGroup(f) || f.name !== "Object Count")
+            .map((c) => projectEntry(parseResult, c, [g.name, c.name]))
+            .filter((c): c is ProjectedEntry => c !== undefined);
+        out.push({ kind: "group", entry: g, sourceSegments: [g.name], children });
+    }
+    return out;
+}
+
 export const mapFormatAdapter: BinaryFormatAdapter = {
     formatId: "map",
     presentationSchema: mapPresentationSchema,
@@ -192,6 +255,11 @@ export const mapFormatAdapter: BinaryFormatAdapter = {
                 continue;
             }
 
+            if (isGroup(entry) && entry.name === "Objects Section") {
+                projectedFields.push(...projectObjectsSection(parseResult, entry, projectEntry));
+                continue;
+            }
+
             const projectedEntry = projectEntry(parseResult, entry, [entry.name]);
             if (projectedEntry) {
                 projectedFields.push(projectedEntry);
@@ -202,38 +270,49 @@ export const mapFormatAdapter: BinaryFormatAdapter = {
     },
 
     buildAddEntryBytes(parseResult: ParseResult, arrayPath: readonly string[]) {
-        return buildMapAddEntryBytes(parseResult, arrayPath);
+        return buildMapAddEntryBytes(parseResult, arrayPath) ?? buildMapObjectAddEntryBytes(parseResult, arrayPath);
     },
 
     buildRemoveEntryBytes(parseResult: ParseResult, entryPath: readonly string[]) {
-        return buildMapRemoveEntryBytes(parseResult, entryPath);
+        return (
+            buildMapRemoveEntryBytes(parseResult, entryPath) ?? buildMapObjectRemoveEntryBytes(parseResult, entryPath)
+        );
     },
 
     buildInsertEntryBytes(parseResult: ParseResult, entryPath: readonly string[], position: "before" | "after") {
-        return buildMapInsertEntryBytes(parseResult, entryPath, position);
+        return (
+            buildMapInsertEntryBytes(parseResult, entryPath, position) ??
+            buildMapObjectInsertEntryBytes(parseResult, entryPath, position)
+        );
     },
 
     buildMoveEntryBytes(parseResult: ParseResult, entryPath: readonly string[], direction: "up" | "down") {
-        return buildMapMoveEntryBytes(parseResult, entryPath, direction);
+        return (
+            buildMapMoveEntryBytes(parseResult, entryPath, direction) ??
+            buildMapObjectMoveEntryBytes(parseResult, entryPath, direction)
+        );
     },
 
     buildDuplicateEntryBytes(parseResult: ParseResult, entryPath: readonly string[]) {
-        return buildMapDuplicateEntryBytes(parseResult, entryPath);
+        return (
+            buildMapDuplicateEntryBytes(parseResult, entryPath) ??
+            buildMapObjectDuplicateEntryBytes(parseResult, entryPath)
+        );
     },
 
     isAddableArray(arrayPath: readonly string[]): boolean {
-        return isMapAddableArray(arrayPath);
+        return isMapAddableArray(arrayPath) || isMapObjectAddableArray(arrayPath);
     },
 
     isRemovableEntry(entryPath: readonly string[]): boolean {
-        return isMapRemovableEntry(entryPath);
+        return isMapRemovableEntry(entryPath) || isMapObjectRemovableEntry(entryPath);
     },
 
     isListSection(arrayPath: readonly string[]): boolean {
-        return isMapListSection(arrayPath);
+        return isMapListSection(arrayPath) || isMapObjectListSection(arrayPath);
     },
 
     isModifiableArray(arrayPath: readonly string[]): boolean {
-        return isMapModifiableArray(arrayPath);
+        return isMapModifiableArray(arrayPath) || isMapObjectModifiableArray(arrayPath);
     },
 };
