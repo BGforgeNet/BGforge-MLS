@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Binary editor
+
+- Fallout critter `.pro` files now open as a single dense page - a script/AI header with the critter flags as checkbox columns, demographics, the SPECIAL / secondary / damage stats as Base|Bonus tables, and a skills grid - instead of a dozen separate tabs. A "Show bytes" toggle annotates each field with its byte offset, size, and raw value.
+
 ## 3.8.2
 
 ### WeiDU
