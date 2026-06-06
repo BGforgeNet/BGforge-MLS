@@ -301,7 +301,17 @@ Adapter responsibilities:
   - `domainRanges` - per-field numeric domain narrowing keyed by semantic key. Read by `getDomainRange` in `binary-format-contract.ts`, consumed by `validateNumericValue` / `clampNumericValue` / `zodFieldNumber`.
 - **Editor projection** (optional): `shouldHideField`, `shouldHideGroup`, `projectDisplayRoot` - hide tile bulk, redundant slots, etc.
 - **Structural edits** (optional): `isStructuralFieldId`, `buildStructuralTransitionBytes` - layout-changing edits (PRO subtype change).
-- **Variable-length array editing** (optional): `buildAddEntryBytes` / `buildRemoveEntryBytes` / `buildInsertEntryBytes` / `buildMoveEntryBytes` / `isAddableArray` / `isRemovableEntry` - entity ops (MAP global vars/scripts; ITM and SPL abilities and effects). EFF v2 is a single flat header+body record with no variable-length list section; these methods are not applicable and the EFF adapter does not implement them.
+- **Variable-length array editing** (optional): `buildAddEntryBytes` / `buildRemoveEntryBytes` / `buildInsertEntryBytes` / `buildMoveEntryBytes` / `buildDuplicateEntryBytes` / `isListSection` / `isModifiableArray` / `isAddableArray` / `isRemovableEntry` - entity ops (MAP global/local vars; ITM and SPL abilities and effects; CRE known/memorized spells, spell-memorization entries, effects, items). EFF v2 is a single flat header+body record with no variable-length list section; these methods are not applicable and the EFF adapter does not implement them.
+
+### Structure-op cores (`ie-common/`)
+
+Three shared cores produce the byte-builders; each format's `entity-ops.ts` injects its doc accessors, defaults, and canonical serializer:
+
+- **`structure-ops.ts`** - the in-order ability+effects core for ITM/SPL. Its ability ops relink via running-offset re-derivation, which is correct ONLY because every real ITM/SPL fixture's effect partition is equipping-first and contiguous in owner order.
+- **`slice-structure-ops.ts`** - the order-AGNOSTIC owner+slice core for CRE's spell-memorization partition (`spellMemInfo` entries owning `memorizedSpells` slices). Relinks SURGICALLY and never assumes owner-order == physical-order: 2 of 165 real `.cre` fixtures (quayle4/6) lay slices out of owner order, so the running-offset core would corrupt them. Validates with the relaxed partition (coverage + overlap + bounds, no ordering).
+- **`flat-list-ops.ts`** - single flat array + optional relink hook. CRE binds it for known spells, effects (kind-preserving v1/v2), and items (the hook is `relinkItemSlots`, which remaps the 40-entry itemSlots back-references; slots [0,38) hold item-table indices, slots 38/39 are weapon-slot/ability indices and are never remapped).
+
+`ie-common/effect-partition.ts` underpins the first two: its header equipping range is optional and `requireContiguousOrder` is tunable, so one body serves both the in-order ITM/SPL config and the orderless CRE config.
 
 Adapters are registered eagerly at the bottom of `format-adapter.ts`. The binary editor consumes the adapter registry; CLI / library users mostly interact with snapshot helpers and the parser registry directly.
 
