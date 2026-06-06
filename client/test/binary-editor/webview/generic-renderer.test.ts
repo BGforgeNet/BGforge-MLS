@@ -1,6 +1,7 @@
-import { execFileSync } from "node:child_process";
+import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { listSourceFiles } from "./source-scan";
 
 // Absolute path to the webview source directory so cwd does not matter.
 const webviewSrc = path.resolve(__dirname, "../../../src/binary-editor/webview");
@@ -23,28 +24,26 @@ describe("generic webview (no format-specific code)", () => {
         // JavaScript .map() array method calls. The quoted-literal form avoids that: .map() never
         // appears as a quoted string. The languageId/format === pattern avoids .map() entirely.
         // Comments mentioning "ITM", "itm/spl", "render-itm/spl harness" do appear in the source
-        // as documentation, but rg's default mode is case-sensitive and those are prose, not string
+        // as documentation, but matching is case-sensitive and those are prose, not string
         // literals or equality tests, so they are not captured by any of the patterns below.
-        // The -i flag is intentionally NOT used here so "map" in .map() and "Map" in "new Map()"
+        // The patterns are deliberately case-sensitive so "map" in .map() and "Map" in "new Map()"
         // do not collide with the quoted "map" format id check.
         const patterns = [
-            String.raw`["'](itm|spl|eff|cre|pro|map)["']`, // quoted format-id string literal
-            String.raw`(languageId|format|formatId|fmt) ?===`, // equality on a format discriminator variable
-            String.raw`case ["'](itm|spl|eff|cre|pro|map)["']`, // switch arm keyed on format identity
+            /["'](itm|spl|eff|cre|pro|map)["']/, // quoted format-id string literal
+            /(languageId|format|formatId|fmt) ?===/, // equality on a format discriminator variable
+            /case ["'](itm|spl|eff|cre|pro|map)["']/, // switch arm keyed on format identity
         ];
 
-        let out = "";
-        try {
-            out = execFileSync("rg", ["-n", "--color=never", "-e", patterns.join("|"), componentsDir, stateDir], {
-                encoding: "utf8",
-            });
-        } catch (error) {
-            // rg exits 1 when it finds NO matches - that is the expected success case.
-            // Any other non-zero exit (e.g., 2 = usage/IO error) is a real failure.
-            if ((error as { status?: number }).status === 1) out = "";
-            else throw error;
+        // Read files in-process rather than via `rg` so the test does not depend on a tool absent in CI.
+        const hits: string[] = [];
+        for (const file of [...listSourceFiles(componentsDir), ...listSourceFiles(stateDir)]) {
+            fs.readFileSync(file, "utf8")
+                .split("\n")
+                .forEach((line, i) => {
+                    if (patterns.some((re) => re.test(line))) hits.push(`${file}:${i + 1}:${line}`);
+                });
         }
 
-        expect(out, `format-specific code found in webview:\n${out}`).toBe("");
+        expect(hits, `format-specific code found in webview:\n${hits.join("\n")}`).toEqual([]);
     });
 });
