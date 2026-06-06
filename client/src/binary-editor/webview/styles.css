@@ -207,6 +207,29 @@ button:disabled {
     overflow: auto;
 }
 
+/* Variable-length lists embedded in the dense declarative layout need a bounded, scrollable viewport.
+   VirtualList sizes its render window from the .vlist clientHeight; an unbounded layout panel otherwise lets
+   a master-detail list expand to every row (thousands for a MAP elevation, making the page tens of thousands
+   of px tall) and collapses an inline list (whose .vlist is height:100% of an auto-height parent) to zero so
+   no rows show. Cap both so each list scrolls within its panel. Outside .layout-root (the legacy tabs path),
+   the list fills a flex-bounded body and these rules do not apply. */
+.layout-root .master-detail {
+    max-height: 24rem;
+}
+.layout-root .inline-list {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+.layout-root .inline-list .vlist {
+    height: auto;
+    max-height: 16rem;
+    /* The inline list's rows are absolutely positioned, so the .vlist has no intrinsic width and the
+       content-hugging layout panel would collapse it (and the row text) to a sliver. Give it a definite
+       width sized for a "Label  value" int32 row. */
+    width: 20rem;
+}
+
 /* ---- form ---- */
 .form {
     flex: 1 1 auto;

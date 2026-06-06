@@ -25,6 +25,7 @@ import {
     isMapObjectRemovableEntry,
 } from "./object-ops";
 import { mapCompiledPatternFields, mapDomainRanges, mapPresentationSchema } from "./presentation-schema";
+import { mapLayout } from "./layout-schema";
 import { slugify } from "../snapshot-common";
 
 function mapSemanticFieldKey(segments: readonly string[]): string | undefined {
@@ -222,6 +223,7 @@ export const mapFormatAdapter: BinaryFormatAdapter = {
     domainRanges: mapDomainRanges,
     // MAP caches its canonical document behind a lazy getter+setter; assigning undefined resets that cache.
     documentCacheStrategy: "clear",
+    layout: mapLayout,
 
     createJsonSnapshot(parseResult: ParseResult): string {
         return createCanonicalMapJsonSnapshot(parseResult);

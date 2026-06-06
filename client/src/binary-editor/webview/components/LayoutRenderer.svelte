@@ -26,11 +26,23 @@
     } = $props();
 
     const rootStyle = $derived(`max-width:${layout.maxContentWidthPx ?? 900}px`);
+
+    // A `list` block targeting a section absent from this file (e.g. a MAP with no local variables, or fewer
+    // than three elevations) produces no content. Prune its panel - and any row left with only such panels -
+    // so absent optional sections leave no empty titled box. Non-list blocks always count as content.
+    function blockHasContent(block: ResolvedLayout["rows"][number]["panels"][number]["blocks"][number]): boolean {
+        return block.kind !== "list" || layout.sections[block.sectionKey] !== undefined;
+    }
+    const panelHasContent = (panel: ResolvedLayout["rows"][number]["panels"][number]): boolean =>
+        panel.blocks.some(blockHasContent);
+    const rowHasContent = (row: ResolvedLayout["rows"][number]): boolean => row.panels.some(panelHasContent);
 </script>
 <div class="layout-root" style={rootStyle}>
     {#each layout.rows as row, ri (ri)}
+        {#if rowHasContent(row)}
         <div class="layout-row">
             {#each row.panels as panel, pi (pi)}
+                {#if panelHasContent(panel)}
                 <div class="panel" style={panel.widthPx ? `width:${panel.widthPx}px` : ""}>
                     {#if panel.title}<h3>{panel.title}</h3>{/if}
                     <div class="panel-blocks">
@@ -59,7 +71,9 @@
                         {/each}
                     </div>
                 </div>
+                {/if}
             {/each}
         </div>
+        {/if}
     {/each}
 </div>

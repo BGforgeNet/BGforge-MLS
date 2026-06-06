@@ -29,9 +29,14 @@
     }
 </script>
 {#if !section}
-    <div class="layout-stub">List section "{sectionKey}" not found in the model.</div>
+    <!-- An optional section absent from this file (e.g. a MAP with zero local variables) renders nothing.
+         A genuine sectionKey typo is caught by the per-format harness, which asserts each section resolves. -->
 {:else if render === "inline"}
-    <InlineList parentId={section.nodeId} caps={caps!} {bridge} {version} {selection} {onedit} {showOffsets} />
+    <!-- Wrap so the toolbar (+add) and the row list stack vertically within the flex-row panel-blocks,
+         matching the master-detail toolbar-above-list layout (InlineList itself emits two sibling roots). -->
+    <div class="inline-list">
+        <InlineList parentId={section.nodeId} caps={caps!} {bridge} {version} {selection} {onedit} {showOffsets} />
+    </div>
 {:else}
     <ListSection nodeId={section.nodeId} caps={caps!} {bridge} {vm} {version} {selection}
                  onadd={add} {onedit} {byNode} {showOffsets} />

@@ -206,6 +206,7 @@ class MapParser implements BinaryParser {
         const result: ParseResult = {
             format: this.id,
             formatName: this.name,
+            variantId: "map",
             root: makeGroup("MAP File", rootFields),
             opaqueRanges: opaqueRanges.length > 0 ? opaqueRanges : undefined,
             errors: errors.length > 0 ? errors : undefined,
