@@ -109,6 +109,40 @@ describe("map object-ops round-trip", () => {
     });
 });
 
+// Fixtures whose objects fully decode (no opaque objects-tail), so structure ops apply.
+const CLEAN_ROUNDTRIP_MAPS = [
+    "external/fallout/Fallout2_Restoration_Project/data/maps/cave6.map",
+    "external/fallout/Fallout2_Restoration_Project/data/maps/cave7.map",
+    "external/fallout/Fallout2_Restoration_Project/data/maps/arvill2.map",
+];
+
+describe("map object-ops add/remove inverse across fixtures", () => {
+    it.each(CLEAN_ROUNDTRIP_MAPS)("is byte-identity for %s", (rel) => {
+        const data = new Uint8Array(fs.readFileSync(path.resolve(rel)));
+        const pr = mapParser.parse(data, { gracefulMapBoundaries: true });
+        const doc = getMapCanonicalDocument(pr) ?? rebuildMapCanonicalDocument(pr);
+        // These fixtures are selected for full object decode; assert that precondition
+        // rather than silently skipping, so a regression in decoding surfaces here.
+        const hasTail = (pr.opaqueRanges ?? []).some(
+            (r) => (r.label === "objects-tail" || r.label === "script-section-tail") && r.size > 0,
+        );
+        expect(hasTail).toBe(false);
+        const elev = doc!.objects.elevations.findIndex((e) => e.objects.length > 0);
+        expect(elev).toBeGreaterThanOrEqual(0);
+        const count = doc!.objects.elevations[elev]!.objects.length;
+
+        const added = buildMapObjectAddEntryBytes(pr, [`Elevation ${elev} Objects`]);
+        expect(added).toBeDefined();
+        const addedPr = mapParser.parse(added!, { gracefulMapBoundaries: true });
+        const removed = buildMapObjectRemoveEntryBytes(addedPr, [
+            `Elevation ${elev} Objects`,
+            `Object ${elev}.${count} (Misc)`,
+        ]);
+        expect(removed).toBeDefined();
+        expect([...removed!]).toEqual([...data]);
+    });
+});
+
 describe("map object-ops refuse on incomplete decode", () => {
     it("returns undefined when the objects section keeps an opaque tail", () => {
         const pr = parseDenbus1();
