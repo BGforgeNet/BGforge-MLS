@@ -880,7 +880,9 @@ input[type="text"]::placeholder {
     display: flex;
     align-items: center;
     padding: 1px 0;
-    gap: 4px;
+    /* Clear separation between the label, the Base value, and the Bonus value - at 4px the two value
+       inputs (same background) read as a single merged box. */
+    gap: 10px;
 }
 .layout-root .matrix .strow .nm {
     flex: 1;
@@ -935,7 +937,11 @@ input[type="text"]::placeholder {
     display: grid;
     grid-template-columns: subgrid;
     grid-column: 1 / -1;
-    gap: 0;
+    /* Set the column gap explicitly rather than relying on subgrid gap inheritance: a bare `gap: 0` here
+       zeroed the space between the (max-content) label column and the value, so the WIDEST label in a
+       panel butted right against its value. Match the parent's 10px. */
+    column-gap: 10px;
+    align-items: baseline;
 }
 .layout-root .kv:not(.kv-multi) .field-control {
     width: 100%;
@@ -950,7 +956,10 @@ input[type="text"]::placeholder {
     min-width: 80px;
 }
 .layout-root .matrix .strow .c input {
-    width: 48px;
+    /* border-box + 100% so the input fills its cell exactly instead of overflowing (content-box padding +
+       border made it ~7px wider than the cell, swallowing the strow gap so Base|Bonus read as one box). */
+    box-sizing: border-box;
+    width: 100%;
     min-width: 0;
     text-align: right;
 }

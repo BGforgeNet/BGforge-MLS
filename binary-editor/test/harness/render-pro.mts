@@ -79,6 +79,30 @@ check("all 11 critter flags carry a tooltip", dom.flagTooltips === 11, `count=${
 check("no section tabs (single page)", dom.tabs === 0, `count=${dom.tabs}`);
 check("editable controls render (> 80)", dom.controls > 80, `count=${dom.controls}`);
 
+// Spacing guards (regression for the "labels overlap values" / "no base|bonus separator" reports).
+// Measure real geometry rather than eyeballing a screenshot: the label must sit clearly left of its
+// control, and the two matrix value inputs (Base | Bonus) must have a visible gap between them.
+const spacing = await page.evaluate(() => {
+    let minFieldGap = Infinity;
+    for (const field of Array.from(document.querySelectorAll(".layout-root .kv:not(.kv-multi) .field"))) {
+        const label = field.querySelector(".label");
+        const control = field.querySelector(".field-control");
+        if (!label || !control) continue;
+        const gap = control.getBoundingClientRect().left - label.getBoundingClientRect().right;
+        if (gap < minFieldGap) minFieldGap = gap;
+    }
+    let minCellGap = Infinity;
+    for (const strow of Array.from(document.querySelectorAll(".layout-root .matrix .strow"))) {
+        const inputs = strow.querySelectorAll(".c input");
+        if (inputs.length < 2) continue;
+        const gap = inputs[1]!.getBoundingClientRect().left - inputs[0]!.getBoundingClientRect().right;
+        if (gap < minCellGap) minCellGap = gap;
+    }
+    return { minFieldGap, minCellGap };
+});
+check("spacing: label/value gap is positive (no overlap)", spacing.minFieldGap >= 4, `minGap=${spacing.minFieldGap}px`);
+check("spacing: matrix Base|Bonus gap is visible", spacing.minCellGap >= 4, `minGap=${spacing.minCellGap}px`);
+
 // Reactivity regression: the host snapshots the resolved layout fields at init, so the App's changeSet
 // handler must patch that snapshot for an edit to re-render. Simulate the host posting a changeSet for
 // one field with a new value and assert the rendered control reflects it (the "editing a value / dropdown
