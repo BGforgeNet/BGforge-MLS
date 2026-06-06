@@ -242,6 +242,16 @@ button:disabled {
     font-size: 0.9em;
     text-align: right;
 }
+/* Wraps the control plus its trailing chrome (offset/diagnostic) so .field has exactly two children
+   (label + value). In the flex tabs path this is the value side; the layout path makes it the subgrid's
+   second column. The offset's margin-left:auto pushes it to the right edge here as before. */
+.field-control {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1 1 auto;
+    min-width: 0;
+}
 
 /* ---- inputs / selects ---- */
 input[type="text"],
@@ -348,43 +358,6 @@ input[type="text"]::placeholder {
     min-width: var(--bits-select-anchor-width, 8rem);
 }
 .bb-select-viewport {
-    max-height: 17rem;
-    overflow: auto;
-}
-
-/* ---- bb-combobox (themed searchable combobox via the Combobox primitive wrapper) ----
- * Generic, format-agnostic theming for the headless Combobox primitive. The input is always visible;
- * the floating list opens on focus/typing. bits-ui sets the same data-* state attributes as Select
- * (data-state open/closed, data-highlighted, data-selected, data-disabled). Floating positioning is
- * applied via CSSOM, CSP-safe under the strict nonce policy.
- * Content/item rules are shared via .bb-popup-content and .bb-popup-item above. */
-.bb-combobox-input {
-    font: inherit;
-    color: var(--vscode-input-foreground, var(--vscode-foreground));
-    background: var(--vscode-input-background);
-    border: 1px solid var(--vscode-input-border, transparent);
-    border-radius: 2px;
-    padding: 0.2rem 0.4rem;
-    min-width: 8rem;
-    width: 100%;
-    box-sizing: border-box;
-}
-.bb-combobox-input:focus {
-    outline: none;
-    border-color: var(--vscode-focusBorder);
-}
-.bb-combobox-input:disabled {
-    opacity: 0.5;
-    cursor: default;
-}
-.bb-combobox-input::placeholder {
-    color: var(--vscode-input-placeholderForeground, var(--vscode-descriptionForeground));
-}
-.bb-combobox-content {
-    /* Anchor-width: the content panel matches the input width. */
-    min-width: var(--bits-combobox-anchor-width, 8rem);
-}
-.bb-combobox-viewport {
     max-height: 17rem;
     overflow: auto;
 }
@@ -882,7 +855,7 @@ input[type="text"]::placeholder {
 .layout-root .matrix {
     display: grid;
     justify-content: start;
-    gap: 0 36px;
+    gap: 0 24px;
 }
 .layout-root .matrix .mcol .sub {
     display: flex;
@@ -932,7 +905,9 @@ input[type="text"]::placeholder {
     gap: 10px;
 }
 .layout-root .grid .skill .nm {
-    flex: 0 0 96px;
+    /* Fixed at the widest skill label ("Energy Weapons") so no label overflows and every value box
+       aligns down the column. */
+    flex: 0 0 108px;
     color: var(--vscode-descriptionForeground);
     white-space: nowrap;
 }
@@ -942,17 +917,33 @@ input[type="text"]::placeholder {
     padding: 6px 0;
 }
 
-/* Compact controls inside the dense layout so panels hug their content and clump left (per the
- * approved mockup), instead of the wider inputs the tab/form path uses. Scoped to .layout-root. */
+/* Dense layout sizing (scoped to .layout-root). The single-column fields list (Header / Demographics /
+ * Final) is a 2-column grid: column 1 hugs the widest label (max-content) so labels stay tight, column 2
+ * is a fixed width so every control - number, dropdown, string - aligns and shares one length. Each
+ * .field is a subgrid spanning both columns so its label and value land in the shared tracks. */
 .layout-root .field {
-    gap: 6px;
     align-items: baseline;
 }
-.layout-root .field .label {
-    min-width: 92px;
+.layout-root .kv:not(.kv-multi) {
+    display: grid;
+    grid-template-columns: max-content 7rem;
+    column-gap: 10px;
+    row-gap: 2px;
+    align-items: baseline;
 }
-.layout-root .field input {
-    width: 84px;
+.layout-root .kv:not(.kv-multi) .field {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-column: 1 / -1;
+    gap: 0;
+}
+.layout-root .kv:not(.kv-multi) .field-control {
+    width: 100%;
+}
+.layout-root .kv:not(.kv-multi) .field-control > input,
+.layout-root .kv:not(.kv-multi) .field-control .bb-select-trigger,
+.layout-root .kv:not(.kv-multi) .field-control select {
+    width: 100%;
     min-width: 0;
 }
 .layout-root .kv.kv-multi .field .label {
@@ -967,12 +958,15 @@ input[type="text"]::placeholder {
     width: 52px;
     min-width: 0;
 }
-/* Enum dropdown triggers (bits-ui) shrink to content in the dense layout. */
-.layout-root .field [role="combobox"],
-.layout-root .field button[aria-haspopup],
-.layout-root .field select {
-    min-width: 0;
-    width: auto;
+/* Hide the native number spinner in the dense layout: it overlaps the right-aligned value in the narrow
+ * stat/field inputs, and values here are typed, not stepped. */
+.layout-root input[type="number"] {
+    appearance: textfield;
+}
+.layout-root input[type="number"]::-webkit-inner-spin-button,
+.layout-root input[type="number"]::-webkit-outer-spin-button {
+    appearance: none;
+    margin: 0;
 }
 
 /* Per-cell byte annotation (offset) shown in matrix/grid cells when "Show bytes" is on. Compact and

@@ -45,6 +45,16 @@
             } else if (m.type === "changeSet") {
                 diagnostics = m.changeSet.diagnostics;
                 selection = m.selection;
+                // The tabs path re-fetches rows through the bridge on the version bump, but the layout
+                // renderer reads the resolved field snapshot directly - so patch each changed row into it
+                // (matched by node id) to reflect edits. Without this, a layout edit never re-renders.
+                const fields = open?.layout.layout?.fields;
+                if (fields) {
+                    for (const row of m.changeSet.changed) {
+                        const ref = Object.keys(fields).find((k) => fields[k]?.id === row.id);
+                        if (ref) fields[ref] = row;
+                    }
+                }
                 bridge.invalidate();
                 version++;
             } else if (m.type === "invalidated") {

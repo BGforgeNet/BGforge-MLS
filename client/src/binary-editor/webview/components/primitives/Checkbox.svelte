@@ -22,12 +22,15 @@
         onchange,
         disabled = false,
         ariaLabel,
+        title,
     }: {
         checked: boolean;
         label: string;
         onchange: (checked: boolean) => void;
         disabled?: boolean;
         ariaLabel?: string;
+        /** Hover tooltip on the whole control (label + box). */
+        title?: string;
     } = $props();
 </script>
 
@@ -38,7 +41,7 @@
      like <input> are named by <label>). The button's accessible name therefore comes from aria-label. We
      default to the visible `label` prop so screen readers announce the same text that is visible; pass
      `ariaLabel` explicitly only when a different announcement is needed (e.g. to add units or extra context). -->
-<label class="bb-checkbox-label">
+<label class="bb-checkbox-label" {title}>
     <Checkbox.Root
         class="bb-checkbox-root"
         {checked}

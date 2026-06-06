@@ -19,7 +19,7 @@
  *
  *   "Controls" (form, kind="form"):
  *     - "Mode"     - small enum (5 options -> Select)
- *     - "Target"   - large enum (15 options -> Combobox)
+ *     - "Target"   - large enum (15 options -> Select; control is spec-driven, not count-driven)
  *     - "Flags"    - flags field (3 bits -> Checkbox grid)
  *     - "Tag"      - string field (-> text input)
  *     - "Power"    - int32 field (-> number input)
@@ -33,7 +33,7 @@
  *   - 3 groups -> role=tablist with 3 [role=tab] buttons (group names)
  *   - clicking the second tab swaps the visible group's fields
  *   - 7 groups -> no tablist, headed sections visible
- *   - "Controls" form: .bb-select-trigger (small enum), .bb-combobox-input (large enum),
+ *   - "Controls" form: .bb-select-trigger (small AND large enum - all enums are Select),
  *     .flags-grid with checkboxes, input[type="text"], input[type="number"] all render
  *   - "Widgets" list: master list renders 3 .vrow entries; selecting one shows detail form
  *     with RowActions structure-op controls (labeled "Move up", "Delete" etc.)
@@ -220,7 +220,7 @@ const sevenGroupChildren: Record<string, Row[]> = Object.fromEntries(
 
 // ---- "Controls" form section: all four control types for the phantom format ----
 // "Mode": small enum (5 options -> Select; threshold is 12, so 5 < threshold -> Select)
-// "Target": large enum (15 options -> Combobox; 15 > threshold -> Combobox)
+// "Target": large enum (15 options) - renders a Select like every other enum (spec-driven, not count-driven)
 // "Flags": flags field (3 bits -> Checkbox grid)
 // "Tag": string field (-> text input)
 // "Power": int32 field (-> number input)
@@ -247,7 +247,7 @@ const controlsSection: Row[] = [
         displayValue: "None",
         rawValue: 0,
         editable: true,
-        // 15 options -> isLargeEnum(15) = true -> Combobox
+        // 15 options - still a Select (control is spec-driven, not chosen by option count)
         enumOptions: {
             "0": "None",
             "1": "Self",
@@ -546,13 +546,15 @@ await page.screenshot({ path: path.join(here, "shot-form-sections.png") });
 await page.locator(".bb-tabs.primary [role='tab']", { hasText: "Controls" }).first().click();
 await page.waitForTimeout(300);
 
-// Small enum (5 options) -> Select -> .bb-select-trigger
+// Every spec enum renders as a Select dropdown (.bb-select-trigger), regardless of option count -
+// the control is chosen from the spec, not an option-count heuristic. The "Controls" form has a small
+// (5-option) and a large (15-option) enum, so both render a Select.
 const selectCount = await page.locator(".bb-select-trigger").count();
-check("phantom: small enum renders Select (.bb-select-trigger)", selectCount >= 1, `count=${selectCount}`);
-
-// Large enum (15 options) -> Combobox -> .bb-combobox-input
-const comboboxCount = await page.locator(".bb-combobox-input").count();
-check("phantom: large enum renders Combobox (.bb-combobox-input)", comboboxCount >= 1, `count=${comboboxCount}`);
+check(
+    "phantom: enums render Select (.bb-select-trigger), small and large alike",
+    selectCount >= 2,
+    `count=${selectCount}`,
+);
 
 // Flags field -> .flags-grid with checkboxes (role="checkbox")
 const flagsGridCount = await page.locator(".flags-grid").count();

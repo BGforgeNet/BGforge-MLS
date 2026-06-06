@@ -61,6 +61,7 @@ const dom = await page.evaluate(() => ({
     matrixGroups: document.querySelectorAll(".matrix .mcol").length,
     skills: document.querySelectorAll(".grid .skill").length,
     flagCols: document.querySelectorAll(".flag-columns .gcol").length,
+    flagTooltips: document.querySelectorAll(".flag-columns label[title]").length,
     tabs: document.querySelectorAll(".bb-tabs").length,
     controls: document.querySelectorAll(
         ".layout-root input, .layout-root [role='combobox'], .layout-root [role='checkbox']",
@@ -74,8 +75,47 @@ check(
 check("Stats matrix has 4 column groups", dom.matrixGroups === 4, `count=${dom.matrixGroups}`);
 check("Skills grid has 18 entries", dom.skills === 18, `count=${dom.skills}`);
 check("Header flags render as 2 columns", dom.flagCols === 2, `count=${dom.flagCols}`);
+check("all 11 critter flags carry a tooltip", dom.flagTooltips === 11, `count=${dom.flagTooltips}`);
 check("no section tabs (single page)", dom.tabs === 0, `count=${dom.tabs}`);
 check("editable controls render (> 80)", dom.controls > 80, `count=${dom.controls}`);
+
+// Reactivity regression: the host snapshots the resolved layout fields at init, so the App's changeSet
+// handler must patch that snapshot for an edit to re-render. Simulate the host posting a changeSet for
+// one field with a new value and assert the rendered control reflects it (the "editing a value / dropdown
+// does not update the page" bug). aiPacket is a plain number field in the Header panel.
+const fields = result.layout.layout?.fields ?? {};
+const target = fields["pro.critter.aiPacket"];
+if (!target) {
+    check("reactivity: aiPacket field resolved", false, "missing pro.critter.aiPacket");
+} else {
+    const NEW_VALUE = "31337";
+    const valuesBefore = await page.$$eval(".layout-root input", (els) =>
+        els.map((e) => (e as HTMLInputElement).value),
+    );
+    await page.evaluate(
+        ({ row, v }) =>
+            window.postMessage(
+                {
+                    type: "changeSet",
+                    changeSet: {
+                        changed: [{ ...row, rawValue: Number(v), displayValue: v }],
+                        diagnostics: [],
+                        dirty: true,
+                        formatValid: true,
+                    },
+                },
+                "*",
+            ),
+        { row: target, v: NEW_VALUE },
+    );
+    await page.waitForTimeout(150);
+    const valuesAfter = await page.$$eval(".layout-root input", (els) => els.map((e) => (e as HTMLInputElement).value));
+    check(
+        "reactivity: a changeSet edit re-renders the control",
+        !valuesBefore.includes(NEW_VALUE) && valuesAfter.includes(NEW_VALUE),
+        `before-has=${valuesBefore.includes(NEW_VALUE)} after-has=${valuesAfter.includes(NEW_VALUE)}`,
+    );
+}
 
 await page.screenshot({ path: path.join(here, "shot-pro-critter.png") });
 await browser.close();

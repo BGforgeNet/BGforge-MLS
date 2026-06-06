@@ -17,21 +17,26 @@
 </script>
 <div class="field" class:field-flags={kind === "flags"}>
     <span class="label" title={row.description ?? ""}>{row.name}</span>
-    {#if kind === "number"}<NumberField {row} onedit={emit} />
-    {:else if kind === "string"}<StringField {row} onedit={emit} />
-    {:else if kind === "enum"}<EnumField {row} onedit={emit} />
-    {:else}<FlagsField {row} onedit={emit} />{/if}
-    {#if showOffsets && row.offset !== undefined}
-        <span class="offset" title="byte offset / size / raw value">0x{row.offset.toString(16)}{#if row.size !== undefined} +{row.size}{/if}{#if typeof row.rawValue === "number"} = 0x{(row.rawValue >>> 0).toString(16)}{/if}</span>
-    {/if}
-    {#if hasDiag}
-        <!-- role="img" + aria-label expose the diagnostic message to screen readers; the Icon span
-             itself is aria-hidden so the glyph character is not announced separately. -->
-        <span class="diag warning" role="img" aria-label={diagTitle}><Icon name="warning" title={diagTitle} /></span>
-        {#if firstFix}
-            <button class="quick-fix" onclick={() => { for (const e of firstFix.quickFix!.edits) onedit(e.nodeId, e.value); }}>
-                <Icon name="wrench" />{firstFix.quickFix!.label}
-            </button>
+    <!-- The control and its trailing chrome (offset/diagnostic) are wrapped so .field always has exactly
+         two children (label + value); the layout path makes .field a 2-column subgrid so labels share a
+         max-content column and every control aligns at a uniform width. -->
+    <span class="field-control">
+        {#if kind === "number"}<NumberField {row} onedit={emit} />
+        {:else if kind === "string"}<StringField {row} onedit={emit} />
+        {:else if kind === "enum"}<EnumField {row} onedit={emit} />
+        {:else}<FlagsField {row} onedit={emit} />{/if}
+        {#if showOffsets && row.offset !== undefined}
+            <span class="offset" title="byte offset / size / raw value">0x{row.offset.toString(16)}{#if row.size !== undefined} +{row.size}{/if}{#if typeof row.rawValue === "number"} = 0x{(row.rawValue >>> 0).toString(16)}{/if}</span>
         {/if}
-    {/if}
+        {#if hasDiag}
+            <!-- role="img" + aria-label expose the diagnostic message to screen readers; the Icon span
+                 itself is aria-hidden so the glyph character is not announced separately. -->
+            <span class="diag warning" role="img" aria-label={diagTitle}><Icon name="warning" title={diagTitle} /></span>
+            {#if firstFix}
+                <button class="quick-fix" onclick={() => { for (const e of firstFix.quickFix!.edits) onedit(e.nodeId, e.value); }}>
+                    <Icon name="wrench" />{firstFix.quickFix!.label}
+                </button>
+            {/if}
+        {/if}
+    </span>
 </div>

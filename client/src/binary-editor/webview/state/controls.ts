@@ -55,13 +55,11 @@ export function composeFlags(current: number, mask: number, set: boolean): numbe
     return next >>> 0;
 }
 
-/** Above this many options the searchable combobox beats scrolling through a plain select. */
-export const ENUM_SEARCH_THRESHOLD = 12;
-
-/** Returns true when an enum field has enough options that type-to-search is preferable to a plain select. */
-export function isLargeEnum(optionCount: number): boolean {
-    return optionCount > ENUM_SEARCH_THRESHOLD;
-}
+// The searchable Combobox primitive relies on these two helpers. No enum control uses the combobox today
+// (enums are spec-driven Selects, with bits-ui typeahead, regardless of option count), but the primitive is
+// kept available for a field that explicitly opts into search via the spec - e.g. an IE effect-opcode list
+// with hundreds of options where a plain dropdown is unwieldy. That opt-in would be a spec/presentation
+// flag, never an option-count threshold.
 
 /** Case-insensitive substring filter over option labels, for the searchable combobox. Empty or
  * whitespace-only query returns all options unchanged. */

@@ -31,7 +31,25 @@ const critterRows: LayoutRow[] = [
                         kind: "fields",
                         fields: [k("scriptType"), k("scriptId"), k("headFrmId"), k("aiPacket"), k("teamNumber")],
                     },
-                    { kind: "flags", field: k("critterFlags"), columns: 2 },
+                    {
+                        kind: "flags",
+                        field: k("critterFlags"),
+                        columns: 2,
+                        // Plain-language tooltips for the cryptic engine flag names (keyed by flag label).
+                        descriptions: {
+                            Barter: "Can trade with",
+                            NoSteal: "Cannot steal from",
+                            NoDrop: "Doesn't drop items",
+                            NoLimbs: "Cannot lose limbs",
+                            NoAges: "Dead body does not disappear",
+                            NoHeal: "Damage is not cured with time",
+                            Invulnerable: "Cannot be hurt",
+                            NoFlatten: "Leaves no dead body",
+                            SpecialDeath: "There is a special type of death",
+                            RangeMelee: "Melee attack is possible at a distance",
+                            NoKnock: "Cannot be knocked down",
+                        },
+                    },
                 ],
             },
             { title: "Demographics", blocks: [{ kind: "fields", fields: [k("age"), k("gender")] }] },
@@ -51,7 +69,7 @@ const critterRows: LayoutRow[] = [
                 blocks: [
                     {
                         kind: "matrix",
-                        columnWidthPx: 200,
+                        columnWidthPx: 230,
                         valueColumns: [
                             { key: "base", label: "Base" },
                             { key: "bonus", label: "Bonus" },
@@ -155,7 +173,7 @@ const critterRows: LayoutRow[] = [
 export const proLayout: FormatLayout = formatLayoutSchema.parse({
     schemaVersion: 1,
     format: "pro",
-    maxContentWidthPx: 920,
+    maxContentWidthPx: 1000,
     variants: {
         critter: { rows: critterRows },
     },

@@ -32,6 +32,7 @@
                                              fields={layout.fields} {onedit} {byNode} {showOffsets} />
                             {:else if block.kind === "flags"}
                                 <FlagColumns field={block.field} columns={block.columns}
+                                             descriptions={block.descriptions}
                                              fields={layout.fields} {onedit} />
                             {:else if block.kind === "matrix"}
                                 <MatrixBlock valueColumns={block.valueColumns} groups={block.groups}

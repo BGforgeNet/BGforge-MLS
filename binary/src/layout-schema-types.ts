@@ -33,6 +33,9 @@ const flagsBlockSchema = z.strictObject({
     kind: z.literal("flags"),
     field: fieldRefSchema,
     columns: z.number().int().positive().optional(),
+    /** Optional hover tooltip per flag, keyed by the flag's label (the name in the field's flag table).
+     * Descriptions are presentation text and live here in the layout, not in the parser/spec. */
+    descriptions: z.record(z.string(), z.string()).optional(),
 });
 
 /** A flat multi-column grid of label+value cells (e.g. skills). */

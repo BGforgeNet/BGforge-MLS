@@ -5,9 +5,10 @@
     import { decomposeFlags, composeFlags } from "../../state/controls";
     import Checkbox from "../primitives/Checkbox.svelte";
 
-    const { field, columns = 2, fields, onedit }: {
+    const { field, columns = 2, descriptions, fields, onedit }: {
         field: FieldRef;
         columns?: number;
+        descriptions?: Record<string, string>;
         fields: Record<FieldRef, Row>;
         onedit: (id: string, v: number | string) => void;
     } = $props();
@@ -31,8 +32,8 @@
         {#each cols as col, ci (ci)}
             <div class="gcol">
                 {#each col as b (b.mask)}
-                    <Checkbox checked={b.set} label={b.label} disabled={!row.editable}
-                              onchange={(checked) => toggle(b.mask, checked)} />
+                    <Checkbox checked={b.set} label={b.label} title={descriptions?.[b.label]}
+                              disabled={!row.editable} onchange={(checked) => toggle(b.mask, checked)} />
                 {/each}
             </div>
         {/each}
