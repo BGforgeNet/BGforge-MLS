@@ -32,6 +32,10 @@ pnpm build:transpile
 
 # --- Phase 1: Static analysis + dead code (all independent, run in parallel) ---
 # Coverage runs are deliberately NOT in this block - see Phase 1.5 for why.
+# The binary-editor Playwright harness is intentionally NOT typechecked here: it imports `playwright`, an
+# environment prerequisite that is not a repo dependency (see binary-editor/test/harness/README.md) and is
+# absent in CI, so `tsc` would fail with TS2307. It is typechecked in the lefthook pre-commit hook, where
+# playwright is present.
 step "Phase 1: Static Analysis + Dead Code"
 parallel \
     "Shell lint" "pnpm lint:shell" \
@@ -40,7 +44,6 @@ parallel \
     "Typecheck server" "(cd server && pnpm exec tsc --noEmit)" \
     "Typecheck binary" "(cd binary && pnpm exec tsc --noEmit)" \
     "Typecheck binary-editor" "(cd binary-editor && pnpm exec tsc --noEmit)" \
-    "Typecheck binary-editor harness" "pnpm exec tsc --project binary-editor/test/harness/tsconfig.json" \
     "Typecheck format" "(cd format && pnpm exec tsc --noEmit)" \
     "Typecheck transpilers" "(cd transpilers && pnpm exec tsc --noEmit)" \
     "Oxlint" "pnpm exec oxlint" \
