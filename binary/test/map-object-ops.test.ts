@@ -157,4 +157,23 @@ describe("map object-ops refuse on incomplete decode", () => {
             buildMapObjectInsertEntryBytes(pr, ["Elevation 0 Objects", "Object 0.0 (Critter)"], "after"),
         ).toBeUndefined();
     });
+
+    it("refuses when the last object is truncated to EOF (no opaque tail, but a truncation error)", () => {
+        // Truncating a clean map mid-last-object decodes a partial object that consumes every
+        // remaining byte, so NO opaque tail is emitted - the guard must catch it via the
+        // truncation error instead, or a structure op would re-serialize the partial object at
+        // full width and corrupt the file.
+        const full = new Uint8Array(fs.readFileSync(CLEAN_MAP));
+        const pr = mapParser.parse(full.slice(0, -40), { gracefulMapBoundaries: true });
+        const hasTail = (pr.opaqueRanges ?? []).some(
+            (r) => (r.label === "objects-tail" || r.label === "script-section-tail") && r.size > 0,
+        );
+        const hasTruncationError = (pr.errors ?? []).some((e) => /truncated/i.test(e) && /object|elevation/i.test(e));
+        expect(hasTail).toBe(false); // the case the opaque-tail check alone would miss
+        expect(hasTruncationError).toBe(true);
+        const elev = (getMapCanonicalDocument(pr) ?? rebuildMapCanonicalDocument(pr)!)!.objects.elevations.findIndex(
+            (e) => e.objects.length > 0,
+        );
+        expect(buildMapObjectAddEntryBytes(pr, [`Elevation ${elev} Objects`])).toBeUndefined();
+    });
 });

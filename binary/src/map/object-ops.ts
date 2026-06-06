@@ -74,11 +74,20 @@ function readDocument(pr: ParseResult): MapCanonicalDocument | undefined {
  * at the incomplete object before it reaches the edit, so the new object lands
  * in the opaque region and the byte layout desyncs. Refuse the op rather than
  * risk silent corruption; field-level edits on decoded objects are unaffected.
+ *
+ * Two distinct incompleteness signals, both refused:
+ *  - an opaque object tail (some objects undecoded), or
+ *  - an object/elevation truncation error. A last object truncated exactly to
+ *    EOF consumes every remaining byte, so NO opaque tail is emitted, yet the
+ *    decoded array holds a partial object the writer would re-serialize at full
+ *    width. The parser always reports a truncation error on that path.
  */
 function objectsFullyDecoded(pr: ParseResult): boolean {
-    return !(pr.opaqueRanges ?? []).some(
+    const hasOpaqueObjectTail = (pr.opaqueRanges ?? []).some(
         (r) => (r.label === "objects-tail" || r.label === "script-section-tail") && r.size > 0,
     );
+    const hasTruncationError = (pr.errors ?? []).some((e) => /truncated/i.test(e) && /object|elevation/i.test(e));
+    return !hasOpaqueObjectTail && !hasTruncationError;
 }
 
 function parseElevation(section: string | undefined): number | undefined {
