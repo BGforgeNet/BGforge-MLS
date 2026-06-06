@@ -37,4 +37,5 @@ export const itmParser = createIeAbilityEffectsParser({
     header: { schema: itmHeaderSchema, spec: itmHeaderSpecAnnotated, presentation: itmHeaderPresentation },
     ability: { schema: itmAbilitySchema, spec: itmAbilitySpecAnnotated, presentation: abilityPresentation },
     serialize: serializeItm,
+    variantId: "item",
 });

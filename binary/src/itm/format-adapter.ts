@@ -3,6 +3,7 @@ import type { ParseOptions, ParseResult } from "../types";
 import { rebuildItmCanonicalDocument } from "./canonical";
 import { createCanonicalItmJsonSnapshot, loadCanonicalItmJsonSnapshot } from "./json-snapshot";
 import { itmCompiledPatternFields, itmDomainRanges, itmPresentationSchema } from "./presentation-schema";
+import { itmLayout } from "./layout-schema";
 import { abilityEffectsSemanticFieldKey } from "../ie-common/semantic-keys";
 import {
     ABILITIES_SECTION,
@@ -29,6 +30,7 @@ export const itmFormatAdapter: BinaryFormatAdapter = {
     domainRanges: itmDomainRanges,
     // IE formats cache a rebuildable canonical document (own writable property); clear it on edit.
     documentCacheStrategy: "clear",
+    layout: itmLayout,
 
     createJsonSnapshot(parseResult: ParseResult): string {
         return createCanonicalItmJsonSnapshot(parseResult);

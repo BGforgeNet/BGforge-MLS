@@ -51,6 +51,8 @@ export interface IeAbilityEffectsParserConfig<HeaderData extends IeAbilityEffect
     readonly header: IeStructCodec<HeaderData>;
     readonly ability: IeStructCodec<AbilityData>;
     readonly serialize: (result: ParseResult) => Uint8Array;
+    /** Layout variant id stamped on the parse result so the declarative layout selects this format's layout. */
+    readonly variantId?: string;
 }
 
 // Shared effects wire codec. `toTypedBinarySchema` caches by spec reference, so
@@ -76,6 +78,7 @@ export function createIeAbilityEffectsParser<HeaderData extends IeAbilityEffects
         header: headerCodec,
         ability: abilityCodec,
         serialize,
+        variantId,
     } = config;
 
     const fail = (message: string): ParseResult => ({
@@ -167,6 +170,7 @@ export function createIeAbilityEffectsParser<HeaderData extends IeAbilityEffects
         return {
             format: formatId,
             formatName,
+            ...(variantId !== undefined && { variantId }),
             root: group(`${label} File`, [headerGroup, abilitiesGroup, effectsGroup]),
             // cast: the constructed { header, abilities, effects } is structurally each
             // format's canonical document, but in this generic factory HeaderData/AbilityData
