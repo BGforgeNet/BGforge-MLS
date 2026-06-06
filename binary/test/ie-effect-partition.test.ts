@@ -1,21 +1,29 @@
 import { describe, expect, it } from "vitest";
 import { createEffectPartition, type IeEffectRangeFields } from "../src/ie-common/effect-partition";
 
-const ITM_FIELDS: IeEffectRangeFields = {
+// The header equipping range is optional in IeEffectRangeFields (CRE memo omits it).
+// The ITM/SPL describe.each block always supplies it, so this local type narrows the
+// header fields to required strings - keeping them usable as computed property keys.
+interface FullRangeFields extends IeEffectRangeFields {
+    readonly headerStart: string;
+    readonly headerCount: string;
+}
+
+const ITM_FIELDS: FullRangeFields = {
     headerStart: "featureBlocksIndex",
     headerCount: "featureBlocksCount",
     abilityStart: "featureBlockIndex",
     abilityCount: "featureBlockCount",
 };
 
-const SPL_FIELDS: IeEffectRangeFields = {
+const SPL_FIELDS: FullRangeFields = {
     headerStart: "castingFeatureBlocksOffset",
     headerCount: "castingFeatureBlocksCount",
     abilityStart: "featureBlocksOffset",
     abilityCount: "featureBlocksCount",
 };
 
-function makeDoc(fields: IeEffectRangeFields) {
+function makeDoc(fields: FullRangeFields) {
     return (equip: [number, number], abilities: Array<[number, number]>, effectCount: number) => ({
         header: { [fields.headerStart]: equip[0], [fields.headerCount]: equip[1] },
         abilities: abilities.map(([start, count]) => ({ [fields.abilityStart]: start, [fields.abilityCount]: count })),
@@ -279,5 +287,116 @@ describe.each([
             expect(relinked.abilities[0]![fields.abilityStart]).toBe(2);
             expect(relinked.abilities[1]![fields.abilityStart]).toBe(3);
         });
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Headerless + orderless config (CRE memorization: spellMemInfo -> memorizedSpells).
+// No header equipping range; the partition may be complete-but-out-of-owner-order
+// (quayle4/6 fixtures), so requireContiguousOrder is false.
+// ---------------------------------------------------------------------------
+const CRE_MEMO_FIELDS: IeEffectRangeFields = {
+    abilityStart: "firstMemorizedSpellIndex",
+    abilityCount: "memorizedSpellCount",
+};
+
+describe("effect-partition (headerless, orderless CRE memo config)", () => {
+    const { effectOwners, validateEffectPartition, shiftEffectRefs } = createEffectPartition(CRE_MEMO_FIELDS, {
+        requireContiguousOrder: false,
+        ownerNoun: "memorization entry",
+    });
+    // No header range: doc.header carries no range fields; owners are the abilities array.
+    const memoDoc = (owners: Array<[number, number]>, total: number) => ({
+        header: {},
+        abilities: owners.map(([start, count]) => ({
+            firstMemorizedSpellIndex: start,
+            memorizedSpellCount: count,
+        })),
+        effects: Array.from({ length: total }, (_, i) => i),
+    });
+
+    it("throws when only one header field is supplied", () => {
+        expect(() => createEffectPartition({ headerStart: "x", abilityStart: "a", abilityCount: "c" })).toThrow();
+    });
+
+    it("accepts an in-order contiguous partition", () => {
+        expect(
+            validateEffectPartition(
+                memoDoc(
+                    [
+                        [0, 3],
+                        [3, 2],
+                    ],
+                    5,
+                ),
+            ),
+        ).toEqual([]);
+    });
+
+    it("ACCEPTS a complete out-of-order partition (the quayle case)", () => {
+        // starts=[0,5,3,7,8] counts=[3,2,2,1,1] covers [0,9) exactly, out of owner order.
+        expect(
+            validateEffectPartition(
+                memoDoc(
+                    [
+                        [0, 3],
+                        [5, 2],
+                        [3, 2],
+                        [7, 1],
+                        [8, 1],
+                    ],
+                    9,
+                ),
+            ),
+        ).toEqual([]);
+    });
+
+    it("still flags an orphan even when ordering is not required", () => {
+        expect(validateEffectPartition(memoDoc([[0, 2]], 4)).length).toBeGreaterThan(0);
+    });
+
+    it("still flags overlap even when ordering is not required", () => {
+        expect(
+            validateEffectPartition(
+                memoDoc(
+                    [
+                        [0, 3],
+                        [2, 3],
+                    ],
+                    5,
+                ),
+            ).length,
+        ).toBeGreaterThan(0);
+    });
+
+    it("effectOwners attributes each index to its owner with no equipping range", () => {
+        const owners = effectOwners(
+            memoDoc(
+                [
+                    [0, 2],
+                    [2, 1],
+                ],
+                3,
+            ),
+        );
+        expect(owners).toEqual([
+            { kind: "ability", index: 0 },
+            { kind: "ability", index: 0 },
+            { kind: "ability", index: 1 },
+        ]);
+    });
+
+    it("shiftEffectRefs grows the owner and shifts later owners, leaving header untouched", () => {
+        const base = memoDoc(
+            [
+                [0, 2],
+                [2, 2],
+            ],
+            4,
+        );
+        const after = shiftEffectRefs(base, { at: 1, delta: 1, owner: { kind: "ability", index: 0 } });
+        expect(after.header).toEqual({}); // no header range to touch
+        expect(after.abilities[0]).toEqual({ firstMemorizedSpellIndex: 0, memorizedSpellCount: 3 });
+        expect(after.abilities[1]).toEqual({ firstMemorizedSpellIndex: 3, memorizedSpellCount: 2 });
     });
 });

@@ -45,12 +45,35 @@
  * remove/reorder ambiguous (one effect owned by two ranges).
  */
 
-/** Names the doc fields the partition/relink logic reads and writes, per format. */
+/**
+ * Names the doc fields the partition/relink logic reads and writes, per format.
+ *
+ * The header equipping range (`headerStart`/`headerCount`) is OPTIONAL: ITM/SPL
+ * have a header-level equipping/casting effect range that always sits first;
+ * CRE's spellMemInfo->memorizedSpells relationship has NO such header range
+ * (memorizedSpells is partitioned entirely by the per-owner spellMemInfo ranges).
+ * Omit both header fields for the headerless case; supply both or neither.
+ */
 export interface IeEffectRangeFields {
-    readonly headerStart: string; // ITM "featureBlocksIndex" / SPL "castingFeatureBlocksOffset"
-    readonly headerCount: string; // ITM "featureBlocksCount" / SPL "castingFeatureBlocksCount"
-    readonly abilityStart: string; // ITM "featureBlockIndex" / SPL "featureBlocksOffset"
-    readonly abilityCount: string; // ITM "featureBlockCount" / SPL "featureBlocksCount"
+    readonly headerStart?: string; // ITM "featureBlocksIndex" / SPL "castingFeatureBlocksOffset"; omit for CRE memo
+    readonly headerCount?: string; // ITM "featureBlocksCount" / SPL "castingFeatureBlocksCount"; omit for CRE memo
+    readonly abilityStart: string; // ITM "featureBlockIndex" / SPL "featureBlocksOffset" / CRE "firstMemorizedSpellIndex"
+    readonly abilityCount: string; // ITM "featureBlockCount" / SPL "featureBlocksCount" / CRE "memorizedSpellCount"
+}
+
+/** Tuning for the partition factory. */
+export interface EffectPartitionOptions {
+    /**
+     * When true (default), `validateEffectPartition` additionally requires the
+     * populated ranges to tile contiguously in canonical owner order (the proven
+     * ITM/SPL equipping-first invariant). CRE's memorization partition is complete
+     * and non-overlapping but NOT necessarily owner-ordered (quayle4/quayle6
+     * fixtures), so CRE passes false to keep the coverage/overlap/bounds checks
+     * while dropping the ordering walk.
+     */
+    readonly requireContiguousOrder?: boolean;
+    /** Diagnostic noun for a per-owner range ("ability" for ITM/SPL, "memorization entry" for CRE). Default "ability". */
+    readonly ownerNoun?: string;
 }
 
 /** Loosely-typed structural views: a range record is any object carrying the named numeric fields. */
@@ -91,10 +114,6 @@ interface OwnedRange {
     owner: EffectOwner;
     start: number;
     count: number;
-}
-
-function ownerLabel(owner: EffectOwner): string {
-    return owner.kind === "equipping" ? "equipping range" : `ability ${owner.index}`;
 }
 
 export interface ShiftEffectRefsArgs {
@@ -139,16 +158,35 @@ function shiftStart(start: number, count: number, at: number, delta: number, new
 
 export function createEffectPartition<H extends RangeRecord = RangeRecord, A extends RangeRecord = RangeRecord>(
     fields: IeEffectRangeFields,
+    options: EffectPartitionOptions = {},
 ) {
-    /** All effect-owning ranges, equipping first then abilities in order. */
+    const { requireContiguousOrder = true, ownerNoun = "ability" } = options;
+    // Supply both header fields or neither; partial config is a programming error.
+    if ((fields.headerStart === undefined) !== (fields.headerCount === undefined)) {
+        throw new Error("createEffectPartition: headerStart and headerCount must be supplied together or both omitted");
+    }
+    // Single narrowable handle for the optional equipping-range field names: present
+    // for ITM/SPL, undefined for CRE memorization. Bundling the two names lets TS
+    // narrow both at once at each `if (headerFields)` guard (no non-null assertions).
+    const headerFields =
+        fields.headerStart !== undefined && fields.headerCount !== undefined
+            ? { start: fields.headerStart, count: fields.headerCount }
+            : undefined;
+
+    function ownerLabel(owner: EffectOwner): string {
+        return owner.kind === "equipping" ? "equipping range" : `${ownerNoun} ${owner.index}`;
+    }
+
+    /** All effect-owning ranges, equipping first (when present) then abilities in order. */
     function ownedRanges(doc: EffectPartitionDoc<H, A>): OwnedRange[] {
-        const ranges: OwnedRange[] = [
-            {
+        const ranges: OwnedRange[] = [];
+        if (headerFields) {
+            ranges.push({
                 owner: { kind: "equipping" },
-                start: readNum(doc.header, fields.headerStart),
-                count: readNum(doc.header, fields.headerCount),
-            },
-        ];
+                start: readNum(doc.header, headerFields.start),
+                count: readNum(doc.header, headerFields.count),
+            });
+        }
         doc.abilities.forEach((ability, index) => {
             ranges.push({
                 owner: { kind: "ability", index },
@@ -234,15 +272,21 @@ export function createEffectPartition<H extends RangeRecord = RangeRecord, A ext
         // order. Each must start exactly where the previous populated one ended.
         // Empty ranges carry no position constraint and are skipped. This catches
         // contiguous-but-out-of-order hand edits the coverage check above accepts.
-        let expectedStart = 0;
-        for (const range of ranges) {
-            if (range.count <= 0 || range.start < 0) continue; // negative/empty handled above
-            if (range.start !== expectedStart) {
-                issues.push(
-                    `${ownerLabel(range.owner)} starts at ${range.start} but the canonical order expects ${expectedStart} (out-of-order or non-contiguous)`,
-                );
+        //
+        // Gated by requireContiguousOrder: CRE's memorization partition is complete
+        // and non-overlapping but may be laid out out of owner order (quayle4/6), so
+        // CRE drops this walk while keeping the coverage/overlap/bounds checks above.
+        if (requireContiguousOrder) {
+            let expectedStart = 0;
+            for (const range of ranges) {
+                if (range.count <= 0 || range.start < 0) continue; // negative/empty handled above
+                if (range.start !== expectedStart) {
+                    issues.push(
+                        `${ownerLabel(range.owner)} starts at ${range.start} but the canonical order expects ${expectedStart} (out-of-order or non-contiguous)`,
+                    );
+                }
+                expectedStart = range.start + range.count;
             }
-            expectedStart = range.start + range.count;
         }
 
         return issues;
@@ -251,7 +295,10 @@ export function createEffectPartition<H extends RangeRecord = RangeRecord, A ext
     /** Resolve the owner's pre-edit [start, count) range from the doc. */
     function ownerRange(doc: EffectPartitionDoc<H, A>, owner: EffectOwner): { start: number; count: number } {
         if (owner.kind === "equipping") {
-            return { start: readNum(doc.header, fields.headerStart), count: readNum(doc.header, fields.headerCount) };
+            if (!headerFields) {
+                throw new Error("shiftEffectRefs: equipping owner used on a headerless partition (no header range)");
+            }
+            return { start: readNum(doc.header, headerFields.start), count: readNum(doc.header, headerFields.count) };
         }
         const ability = doc.abilities[owner.index];
         if (ability === undefined) {
@@ -319,19 +366,25 @@ export function createEffectPartition<H extends RangeRecord = RangeRecord, A ext
         // starts into [0, newEffectCount] (see shiftStart).
         const newEffectCount = doc.effects.length + delta;
 
-        const headerStart = readNum(doc.header, fields.headerStart);
-        const headerCount = readNum(doc.header, fields.headerCount);
-        const newHeader: H = setNum(
-            setNum(
-                doc.header,
-                fields.headerStart,
-                ownerIsEquipping
-                    ? headerStart // owner: start absorbs nothing, count carries the change
-                    : shiftStart(headerStart, headerCount, at, delta, newEffectCount),
-            ),
-            fields.headerCount,
-            ownerIsEquipping ? headerCount + delta : headerCount,
-        );
+        // Headerless partition (CRE memo): there is no header range to shift; the
+        // header is passed through untouched and every owner is an "ability".
+        const newHeader: H = !headerFields
+            ? doc.header
+            : ((): H => {
+                  const hStart = readNum(doc.header, headerFields.start);
+                  const hCount = readNum(doc.header, headerFields.count);
+                  return setNum(
+                      setNum(
+                          doc.header,
+                          headerFields.start,
+                          ownerIsEquipping
+                              ? hStart // owner: start absorbs nothing, count carries the change
+                              : shiftStart(hStart, hCount, at, delta, newEffectCount),
+                      ),
+                      headerFields.count,
+                      ownerIsEquipping ? hCount + delta : hCount,
+                  );
+              })();
 
         const newAbilities = doc.abilities.map((ability, index): A => {
             const isOwner = owner.kind === "ability" && owner.index === index;
@@ -377,8 +430,8 @@ export function createEffectPartition<H extends RangeRecord = RangeRecord, A ext
      * actual effects slice it splices; this helper trusts those counts.
      */
     function relinkAbilityEffectIndices(doc: EffectPartitionDoc<H, A>): EffectPartitionDoc<H, A> {
-        const equippingStart = 0;
-        let running = equippingStart + readNum(doc.header, fields.headerCount);
+        // Running offset starts after the equipping range's count (0 when headerless).
+        let running = headerFields ? readNum(doc.header, headerFields.count) : 0;
         const abilities = doc.abilities.map((ability) => {
             const next = setNum(ability, fields.abilityStart, running);
             running += readNum(ability, fields.abilityCount);
@@ -386,7 +439,7 @@ export function createEffectPartition<H extends RangeRecord = RangeRecord, A ext
         });
         return {
             ...doc,
-            header: setNum(doc.header, fields.headerStart, equippingStart),
+            header: headerFields ? setNum(doc.header, headerFields.start, 0) : doc.header,
             abilities,
         };
     }
