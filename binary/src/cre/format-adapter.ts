@@ -42,7 +42,13 @@ function creSemanticFieldKey(segments: readonly string[]): string | undefined {
     const route = GROUP_ROUTES[segments[0]!];
     if (route) {
         const fieldName = segments[route.fieldSegment];
-        return fieldName ? `${route.prefix}.${slugify(fieldName)}` : route.prefix;
+        if (!fieldName) return route.prefix;
+        // A header sub-group leaf (a Proficiencies / Sound Slots / Object Refs slot) keeps its slot in the
+        // key so each slot gets a distinct key instead of all of them collapsing to the sub-group's key.
+        const leaf = segments[route.fieldSegment + 1];
+        return leaf
+            ? `${route.prefix}.${slugify(fieldName)}.${slugify(leaf)}`
+            : `${route.prefix}.${slugify(fieldName)}`;
     }
     // Fall-through for nested walkStruct sub-groups (e.g. future packed-field
     // sub-groups). Slugified path keeps presentation lookup routable.

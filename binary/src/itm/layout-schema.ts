@@ -5,14 +5,13 @@
  * and the per-entry detail form all come for free). One variant ("item"), stamped by the parser.
  *
  * Field refs are the semantic keys the ITM adapter produces (`itm.header.<camelCase>`, verified against the
- * model). Omitted from the layout (round-trip is unaffected - the serializer rebuilds from the model):
+ * model). The four usability-flag bytes each have a distinct flag table (Class/Alignment, Class, Class/Race,
+ * Race per IESDP) and a distinct semantic key (`itm.header.usabilityFlags.byteN...`), rendered as four flag
+ * columns in the Usability panel. Omitted from the layout (round-trip is unaffected - the serializer rebuilds
+ * from the model):
  *   - signature/version magic (constants);
  *   - the derived offset/count fields (extendedHeadersOffset/Count, featureBlocksOffset/Index/Count) which
- *     the serializer recomputes and the parser marks non-editable;
- *   - `usabilityFlags`: 4 separate per-byte flag fields that currently collapse to one semantic key
- *     (`itm.header.usabilityFlags`), so the layout cannot reference all four. Deferred: a future
- *     parser-key change can give the four bytes distinct keys; until then usability flags are not editable
- *     in the dense view (the bytes still round-trip).
+ *     the serializer recomputes and the parser marks non-editable.
  *
  * The Effects detail form renders the ~300-entry opcode as a searchable combobox via the spec's
  * `searchableEnum` flag (it flows through to the FormSection-rendered detail field, not just layout blocks).
@@ -98,6 +97,19 @@ export const itmLayout: FormatLayout = formatLayoutSchema.parse({
                                         k("kitUsability4"),
                                     ],
                                 },
+                            ],
+                        },
+                    ],
+                },
+                {
+                    panels: [
+                        {
+                            title: "Usability",
+                            blocks: [
+                                { kind: "flags", field: k("usabilityFlags.byte1ClassAlignment"), columns: 1 },
+                                { kind: "flags", field: k("usabilityFlags.byte2Class"), columns: 1 },
+                                { kind: "flags", field: k("usabilityFlags.byte3ClassRace"), columns: 1 },
+                                { kind: "flags", field: k("usabilityFlags.byte4Race"), columns: 1 },
                             ],
                         },
                     ],

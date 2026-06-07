@@ -13,12 +13,9 @@
  *     memorizedSpellsOffset/Count, itemSlotsOffset, itemsOffset/Count, effectsOffset/Count);
  *   - `effStructureVersion` (selects the on-wire effect record kind; editing it would desync the effects
  *     section, so it is parser/serializer-managed, not user-editable here);
- *   - the slot arrays whose per-slot fields currently collapse to one semantic key - proficiencies (22),
- *     soundSlots (100), objectRefs (5). Each routes through the header namespace with the sub-group name as
- *     the field segment, so all entries share one key and the layout cannot reference them individually.
- *     Deferred: a future parser-key change can give the bytes distinct keys; until then they are not
- *     editable in the dense view (the bytes still round-trip). Item slots do NOT collapse (distinct slot
- *     labels -> distinct slugs), so they are included as a grid.
+ * The header slot arrays - proficiencies (22), soundSlots (100), objectRefs (5) - each get a per-slot key
+ * (`cre.header.<group>.<slot>`, the adapter keeps the slot leaf in the key) and render as their own grids,
+ * alongside the equipped item slots (40, distinct slot labels -> distinct slugs).
  *
  * The Effects detail form renders the ~300-entry opcode as a searchable combobox via the spec's
  * `searchableEnum` flag (it flows through to the FormSection-rendered detail field, not just layout blocks).
@@ -28,6 +25,9 @@ import { formatLayoutSchema, type FormatLayout } from "../layout-schema-types";
 
 const k = (key: string): string => `cre.header.${key}`;
 const slot = (key: string): string => `cre.itemSlots.${key}`;
+/** Keys for a 1-based header slot array (proficiencies/soundSlots/objectRefs), e.g. `proficiencies`,`slot`,22. */
+const slotKeys = (group: string, prefix: string, count: number): string[] =>
+    Array.from({ length: count }, (_, i) => k(`${group}.${prefix}${i + 1}`));
 
 export const creLayout: FormatLayout = formatLayoutSchema.parse({
     schemaVersion: 1,
@@ -313,6 +313,26 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                                     ],
                                 },
                             ],
+                        },
+                    ],
+                },
+                {
+                    panels: [
+                        {
+                            title: "Proficiencies",
+                            blocks: [{ kind: "grid", columns: 4, items: slotKeys("proficiencies", "slot", 22) }],
+                        },
+                        {
+                            title: "Object Refs",
+                            blocks: [{ kind: "grid", columns: 5, items: slotKeys("objectRefs", "object", 5) }],
+                        },
+                    ],
+                },
+                {
+                    panels: [
+                        {
+                            title: "Sound Slots",
+                            blocks: [{ kind: "grid", columns: 6, items: slotKeys("soundSlots", "sound", 100) }],
                         },
                     ],
                 },

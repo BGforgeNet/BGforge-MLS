@@ -175,6 +175,11 @@ const dom = await page.evaluate(() => {
     const panels = Array.from(document.querySelectorAll(".layout-root .panel > h3"), (e) => e.textContent);
     const masterDetails = document.querySelectorAll(".layout-root .master-detail").length;
     const tabs = document.querySelectorAll(".bb-tabs").length;
+    // The Usability panel holds the four per-byte usability-flag fields, each its own flag column.
+    const usabilityPanel = Array.from(document.querySelectorAll(".layout-root .panel")).find(
+        (p) => p.querySelector("h3")?.textContent === "Usability",
+    );
+    const usabilityFlagCols = usabilityPanel?.querySelectorAll(".flag-columns").length ?? 0;
     // Spacing guard: in a fields panel, the label right edge must sit clearly left of the control - a
     // zero/negative gap means labels overlap values (regression). Check the widest-label row in each panel.
     let minGap = Infinity;
@@ -185,14 +190,23 @@ const dom = await page.evaluate(() => {
         const gap = control.getBoundingClientRect().left - label.getBoundingClientRect().right;
         if (gap < minGap) minGap = gap;
     }
-    return { panels, masterDetails, tabs, minGap };
+    return { panels, masterDetails, tabs, usabilityFlagCols, minGap };
 });
 check(
-    "layout: header + list panels render",
+    "layout: header + usability + list panels render",
     JSON.stringify(dom.panels) ===
-        JSON.stringify(["Identity", "Value & Lore", "Appearance & Text", "Requirements", "Abilities", "Effects"]),
+        JSON.stringify([
+            "Identity",
+            "Value & Lore",
+            "Appearance & Text",
+            "Requirements",
+            "Usability",
+            "Abilities",
+            "Effects",
+        ]),
     JSON.stringify(dom.panels),
 );
+check("layout: four usability-flag columns render", dom.usabilityFlagCols === 4, `count=${dom.usabilityFlagCols}`);
 check("layout: two master-detail list sections render", dom.masterDetails === 2, `count=${dom.masterDetails}`);
 check("layout: no section tabs (single page)", dom.tabs === 0, `count=${dom.tabs}`);
 check("layout: label/value gap is positive (no overlap)", dom.minGap >= 4, `minGap=${dom.minGap}px`);

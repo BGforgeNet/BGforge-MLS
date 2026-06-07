@@ -18,7 +18,11 @@ export function abilityEffectsSemanticFieldKey(
     const [first, second, third] = segments;
 
     if (first === headerLabel) {
-        return `${formatId}.header.${slugify(second ?? "")}`;
+        // A header sub-group leaf (e.g. ITM "Usability Flags" -> its four per-byte flag fields) keeps the
+        // leaf in the key so each byte gets a distinct semantic key instead of all collapsing to the group's.
+        return third
+            ? `${formatId}.header.${slugify(second ?? "")}.${slugify(third)}`
+            : `${formatId}.header.${slugify(second ?? "")}`;
     }
     if (first === "Abilities") {
         return third ? `${formatId}.abilities[].${slugify(third)}` : `${formatId}.abilities[]`;

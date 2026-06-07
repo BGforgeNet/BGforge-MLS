@@ -157,7 +157,19 @@ const dom = await page.evaluate(() => {
     const panels = Array.from(document.querySelectorAll(".layout-root .panel > h3"), (e) => e.textContent);
     const masterDetails = document.querySelectorAll(".layout-root .master-detail").length;
     const tabs = document.querySelectorAll(".bb-tabs").length;
-    const gridCells = document.querySelectorAll(".layout-root .grid .skill").length;
+    // Cells of each named grid panel (inline map - a named arrow inside evaluate trips esbuild's __name).
+    const [itemSlots, proficiencies, objectRefs, soundSlots] = [
+        "Item Slots",
+        "Proficiencies",
+        "Object Refs",
+        "Sound Slots",
+    ].map((title) => {
+        const panel = Array.from(document.querySelectorAll(".layout-root .panel")).find(
+            (pnl) => pnl.querySelector("h3")?.textContent === title,
+        );
+        return panel?.querySelectorAll(".grid .skill").length ?? 0;
+    });
+    const gridCounts = { itemSlots, proficiencies, objectRefs, soundSlots };
     // Spacing guard: in any fields panel, the label right edge must sit clearly left of the control.
     let minFieldGap = Infinity;
     for (const field of Array.from(document.querySelectorAll(".layout-root .kv:not(.kv-multi) .field"))) {
@@ -176,7 +188,7 @@ const dom = await page.evaluate(() => {
         const gap = control.getBoundingClientRect().left - label.getBoundingClientRect().right;
         if (gap < minGridGap) minGridGap = gap;
     }
-    return { panels, masterDetails, tabs, gridCells, minFieldGap, minGridGap };
+    return { panels, masterDetails, tabs, gridCounts, minFieldGap, minGridGap };
 });
 const expectedPanels = [
     "Identity",
@@ -194,6 +206,9 @@ const expectedPanels = [
     "Scripts",
     "References",
     "Item Slots",
+    "Proficiencies",
+    "Object Refs",
+    "Sound Slots",
     "Known Spells",
     "Spell Memorization Info",
     "Memorized Spells",
@@ -207,7 +222,12 @@ check(
 );
 check("layout: five master-detail list sections render", dom.masterDetails === 5, `count=${dom.masterDetails}`);
 check("layout: no section tabs (single page)", dom.tabs === 0, `count=${dom.tabs}`);
-check("layout: item-slots grid renders 40 cells", dom.gridCells === 40, `count=${dom.gridCells}`);
+check("layout: item-slots grid renders 40 cells", dom.gridCounts.itemSlots === 40, `count=${dom.gridCounts.itemSlots}`);
+check(
+    "layout: header slot grids render (proficiencies 22 / objectRefs 5 / soundSlots 100)",
+    dom.gridCounts.proficiencies === 22 && dom.gridCounts.objectRefs === 5 && dom.gridCounts.soundSlots === 100,
+    JSON.stringify(dom.gridCounts),
+);
 check(
     "layout: field label/value gap is positive (no overlap)",
     dom.minFieldGap >= 4,
