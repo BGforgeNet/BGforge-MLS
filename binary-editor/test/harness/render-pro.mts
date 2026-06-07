@@ -60,7 +60,10 @@ const dom = await page.evaluate(() => ({
     panelTitles: Array.from(document.querySelectorAll(".layout-root .panel > h3"), (e) => e.textContent),
     matrixGroups: document.querySelectorAll(".matrix .mcol").length,
     skills: document.querySelectorAll(".grid .skill").length,
-    flagCols: document.querySelectorAll(".flag-columns .gcol").length,
+    flagCols:
+        Array.from(document.querySelectorAll(".layout-root .panel"))
+            .find((p) => p.querySelector("h3")?.textContent === "Scripts & AI")
+            ?.querySelectorAll(".flag-columns .gcol").length ?? 0,
     flagTooltips: document.querySelectorAll(".flag-columns label[title]").length,
     tabs: document.querySelectorAll(".bb-tabs").length,
     controls: document.querySelectorAll(
@@ -68,13 +71,14 @@ const dom = await page.evaluate(() => ({
     ).length,
 }));
 check(
-    "panels are Header / Demographics / Final / Stats / Skills",
-    JSON.stringify(dom.panelTitles) === JSON.stringify(["Header", "Demographics", "Final", "Stats", "Skills"]),
+    "panels are Header / Scripts & AI / Demographics / Combat & Classification / Stats / Skills",
+    JSON.stringify(dom.panelTitles) ===
+        JSON.stringify(["Header", "Scripts & AI", "Demographics", "Combat & Classification", "Stats", "Skills"]),
     JSON.stringify(dom.panelTitles),
 );
 check("Stats matrix has 4 column groups", dom.matrixGroups === 4, `count=${dom.matrixGroups}`);
 check("Skills grid has 18 entries", dom.skills === 18, `count=${dom.skills}`);
-check("Header flags render as 2 columns", dom.flagCols === 2, `count=${dom.flagCols}`);
+check("Critter flags render as 2 columns", dom.flagCols === 2, `count=${dom.flagCols}`);
 check("all 11 critter flags carry a tooltip", dom.flagTooltips === 11, `count=${dom.flagTooltips}`);
 check("no section tabs (single page)", dom.tabs === 0, `count=${dom.tabs}`);
 check("editable controls render (> 80)", dom.controls > 80, `count=${dom.controls}`);

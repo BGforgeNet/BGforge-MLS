@@ -85,12 +85,14 @@ await page.exposeFunction("__hostUp", async (m: WebviewToHost) => {
     for (const reply of hostUp(m)) await page.evaluate((rr) => window.postMessage(rr, "*"), reply);
 });
 await page.goto("file://" + path.join(here, "app.html"));
-await page.waitForSelector(".layout-root", { timeout: 5000 });
-// Three elevation object lists render at once (no tabs); wait for their master-detail panes.
-await page.waitForFunction(() => document.querySelectorAll(".layout-root .master-detail").length >= 3, undefined, {
-    timeout: 5000,
-});
-await page.waitForTimeout(150);
+await page.waitForSelector(".layout-root .bb-tabs", { timeout: 5000 });
+await page.waitForTimeout(200);
+// MAP is tabbed (Header / Objects [per-elevation subtabs] / Scripts [pruned when absent]); capture Header.
+await page.screenshot({ path: path.join(here, "shot-map.png"), fullPage: true });
+async function clickTab(label: string): Promise<void> {
+    await page.locator('.bb-tabs.primary button[role="tab"]').filter({ hasText: label }).first().click();
+    await page.waitForTimeout(200);
+}
 
 // ============================================================
 // Layout assertions
@@ -135,29 +137,23 @@ const dom = await page.evaluate(() => {
     }
     return { panels, masterDetails, tabs, stubs, minFieldGap };
 });
-// Only present panels render; absent sections (the four script sections) leave no panel.
-const expectedPanels = [
-    "Header",
-    "Map Flags",
-    "Global Variables",
-    "Local Variables",
-    "Elevation 0 Objects",
-    "Elevation 1 Objects",
-    "Elevation 2 Objects",
-];
+// The Header tab carries the header fields, map flags, and the global/local variable inline lists; the
+// per-elevation object lists live in the Objects tab (checked below), and absent sections leave no panel.
+const expectedPanels = ["Header", "Map Flags", "Global Variables", "Local Variables"];
 check(
-    "layout: only present panels render, in order",
+    "layout: Header tab panels render, in order",
     JSON.stringify(dom.panels) === JSON.stringify(expectedPanels),
     JSON.stringify(dom.panels),
 );
-check(
-    "layout: three elevation object lists render (master-detail)",
-    dom.masterDetails >= 3,
-    `count=${dom.masterDetails}`,
-);
-check("layout: no section tabs (single page)", dom.tabs === 0, `count=${dom.tabs}`);
+check("layout: top-level tabs render (Header / Objects)", dom.tabs >= 1, `tabStrips=${dom.tabs}`);
 check("layout: absent sections leave no 'not found' stub", dom.stubs === 0, `stubs=${dom.stubs}`);
 check("layout: label/value gap is positive (no overlap)", dom.minFieldGap >= 4, `minFieldGap=${dom.minFieldGap}px`);
+
+// Objects tab: the active elevation subtab renders its object list (master-detail).
+await clickTab("Objects");
+const elevMd = await page.locator(".layout-root .master-detail").count();
+check("layout: objects tab renders an elevation object list", elevMd >= 1, `count=${elevMd}`);
+await page.screenshot({ path: path.join(here, "shot-map-objects.png"), fullPage: true });
 
 // ============================================================
 // Baseline + structure ops (dispatch-level; the interactive DOM path is covered by ITM/CRE)

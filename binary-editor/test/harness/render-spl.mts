@@ -113,11 +113,14 @@ await page.exposeFunction("__hostUp", async (m: WebviewToHost) => {
     for (const reply of hostUp(m)) await page.evaluate((rr) => window.postMessage(rr, "*"), reply);
 });
 await page.goto("file://" + path.join(here, "app.html"));
-await page.waitForSelector(".layout-root", { timeout: 5000 });
-await page.waitForFunction(() => document.querySelectorAll(".layout-root .master-detail").length >= 2, undefined, {
-    timeout: 5000,
-});
-await page.waitForTimeout(150);
+await page.waitForSelector(".layout-root .bb-tabs", { timeout: 5000 });
+await page.waitForTimeout(200);
+// SPL is tabbed (General / Abilities / Effects); capture the default (General) tab, then navigate per op.
+await page.screenshot({ path: path.join(here, "shot-spl.png"), fullPage: true });
+async function clickTab(label: string): Promise<void> {
+    await page.locator('.bb-tabs.primary button[role="tab"]').filter({ hasText: label }).first().click();
+    await page.waitForTimeout(200);
+}
 
 const abilitiesPanel = page.locator(".panel").filter({ has: page.locator("h3", { hasText: "Abilities" }) });
 const effectsPanel = page.locator(".panel").filter({ has: page.locator("h3", { hasText: "Effects" }) });
@@ -178,12 +181,11 @@ const dom = await page.evaluate(() => {
     return { panels, masterDetails, tabs, minGap };
 });
 check(
-    "layout: panels render (Spell / Flags / Exclusion / Abilities / Effects)",
-    JSON.stringify(dom.panels) === JSON.stringify(["Spell", "Flags", "Exclusion", "Abilities", "Effects"]),
+    "layout: General tab panels render (Spell / Flags / Exclusion)",
+    JSON.stringify(dom.panels) === JSON.stringify(["Spell", "Flags", "Exclusion"]),
     JSON.stringify(dom.panels),
 );
-check("layout: two master-detail list sections render", dom.masterDetails === 2, `count=${dom.masterDetails}`);
-check("layout: no section tabs (single page)", dom.tabs === 0, `count=${dom.tabs}`);
+check("layout: top-level tabs render (General / Abilities / Effects)", dom.tabs >= 1, `tabStrips=${dom.tabs}`);
 check("layout: label/value gap is positive (no overlap)", dom.minGap >= 4, `minGap=${dom.minGap}px`);
 
 // ---- Baseline ----
@@ -191,6 +193,7 @@ check("baseline: 2 abilities", sectionKids(abilitiesNodeId) === 2, `total=${sect
 check("baseline: 3 effects", sectionKids(effectsNodeId) === 3, `total=${sectionKids(effectsNodeId)}`);
 
 // ---- Abilities ops ----
+await clickTab("Abilities");
 await waitRows(abilitiesPanel, 2);
 await abilitiesPanel.locator(".master .toolbar button").first().click();
 await page.waitForTimeout(200);
@@ -230,6 +233,7 @@ const armedB = await abilitiesPanel.locator(`.row-actions button[aria-label="Con
 check("abilities: switching entry clears pending confirm", armedB === 0, `count=${armedB}`);
 
 // ---- Effects ops ----
+await clickTab("Effects");
 await waitRows(effectsPanel, 3);
 await selectRow(effectsPanel, 0);
 await clickAction(effectsPanel, "Add above");

@@ -131,9 +131,17 @@ const effDom = await page2.evaluate(() => ({
     tabs: document.querySelectorAll(".bb-tabs").length,
 }));
 check(
-    "eff: panels render (Effect / Dice & Save / Resistance / Parameters / Resources / Caster & Projectile)",
+    "eff: panels render (Effect / Dice & Save / Resistance / Parameters / Resources / Classification / Caster & Projectile)",
     JSON.stringify(effDom.panels) ===
-        JSON.stringify(["Effect", "Dice & Save", "Resistance", "Parameters", "Resources", "Caster & Projectile"]),
+        JSON.stringify([
+            "Effect",
+            "Dice & Save",
+            "Resistance",
+            "Parameters",
+            "Resources",
+            "Classification",
+            "Caster & Projectile",
+        ]),
     JSON.stringify(effDom.panels),
 );
 check("eff: layout fields render (> 20)", effDom.fields > 20, `count=${effDom.fields}`);

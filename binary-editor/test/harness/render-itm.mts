@@ -117,12 +117,14 @@ await page.exposeFunction("__hostUp", async (m: WebviewToHost) => {
     for (const reply of hostUp(m)) await page.evaluate((rr) => window.postMessage(rr, "*"), reply);
 });
 await page.goto("file://" + path.join(here, "app.html"));
-await page.waitForSelector(".layout-root", { timeout: 5000 });
-// Both list sections render at once (no tabs); wait for both master-detail panes.
-await page.waitForFunction(() => document.querySelectorAll(".layout-root .master-detail").length >= 2, undefined, {
-    timeout: 5000,
-});
-await page.waitForTimeout(150);
+await page.waitForSelector(".layout-root .bb-tabs", { timeout: 5000 });
+await page.waitForTimeout(200);
+// ITM is tabbed (General / Abilities / Effects); capture the default (General) tab, then navigate per op.
+await page.screenshot({ path: path.join(here, "shot-itm.png"), fullPage: true });
+async function clickTab(label: string): Promise<void> {
+    await page.locator('.bb-tabs.primary button[role="tab"]').filter({ hasText: label }).first().click();
+    await page.waitForTimeout(200);
+}
 
 // Panel-scoped locators: each list section is a master-detail inside the panel with the matching h3.
 const abilitiesPanel = page.locator(".panel").filter({ has: page.locator("h3", { hasText: "Abilities" }) });
@@ -193,22 +195,13 @@ const dom = await page.evaluate(() => {
     return { panels, masterDetails, tabs, usabilityFlagCols, minGap };
 });
 check(
-    "layout: header + usability + list panels render",
+    "layout: General tab panels render",
     JSON.stringify(dom.panels) ===
-        JSON.stringify([
-            "Identity",
-            "Value & Lore",
-            "Appearance & Text",
-            "Requirements",
-            "Usability",
-            "Abilities",
-            "Effects",
-        ]),
+        JSON.stringify(["Identity", "Value & Lore", "Appearance & Text", "Requirements", "Usability"]),
     JSON.stringify(dom.panels),
 );
 check("layout: four usability-flag columns render", dom.usabilityFlagCols === 4, `count=${dom.usabilityFlagCols}`);
-check("layout: two master-detail list sections render", dom.masterDetails === 2, `count=${dom.masterDetails}`);
-check("layout: no section tabs (single page)", dom.tabs === 0, `count=${dom.tabs}`);
+check("layout: top-level tabs render (General / Abilities / Effects)", dom.tabs >= 1, `tabStrips=${dom.tabs}`);
 check("layout: label/value gap is positive (no overlap)", dom.minGap >= 4, `minGap=${dom.minGap}px`);
 
 // ============================================================
@@ -220,6 +213,7 @@ check("baseline: 3 effects", sectionKids(effectsNodeId).total === 3, `total=${se
 // ============================================================
 // ABILITIES ops (scoped to the Abilities panel)
 // ============================================================
+await clickTab("Abilities");
 await waitRows(abilitiesPanel, 2);
 
 await abilitiesPanel.locator(".master .toolbar button").first().click();
@@ -313,6 +307,7 @@ check(
 // ============================================================
 // EFFECTS ops (scoped to the Effects panel)
 // ============================================================
+await clickTab("Effects");
 await waitRows(effectsPanel, 3);
 
 await selectRow(effectsPanel, 0);
