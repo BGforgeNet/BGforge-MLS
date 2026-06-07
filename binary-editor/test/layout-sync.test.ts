@@ -334,6 +334,22 @@ describe("UX packing guardrails", () => {
     });
 });
 
+describe("PRO read-only discriminators", () => {
+    // I. objectType selects the variant, so it must be SHOWN (every variant incl. critter) but READ-ONLY -
+    // editing it would desync the stamped variant from the bytes. subType is read-only wherever it appears.
+    const proFixtures = runnable.filter((f) => f.format === "pro");
+    it.each(proFixtures)("$variant: objectType shown + read-only; subType read-only where present", (fx) => {
+        const parseResult = proParser.parse(new Uint8Array(fs.readFileSync(fx.file)));
+        const resolved = resolveLayout("pro", layoutFor("pro"), buildModel(parseResult));
+        expect(resolved?.fields["pro.header.objectType"], "objectType not shown in this variant").toBeDefined();
+        expect(resolved?.fields["pro.header.objectType"]?.editable, "objectType must be read-only").toBe(false);
+        for (const key of ["pro.itemProperties.subType", "pro.sceneryProperties.subType"]) {
+            const row = resolved?.fields[key];
+            if (row) expect(row.editable, `${key} must be read-only`).toBe(false);
+        }
+    });
+});
+
 describe("UX label guardrails", () => {
     const panels = collectPanelLabels();
 

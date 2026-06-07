@@ -105,11 +105,12 @@ function baseBonus(label: string, key: string): { label: string; cells: Record<s
 }
 
 const critterRows: LayoutRow[] = [
-    // Top row: Header (fields + two flag columns) | Demographics | Final - clumped left.
+    // Top row: file Header (incl. read-only object type) | Scripts & AI | Demographics | Combat - clumped left.
     {
         panels: [
+            headerPanel,
             {
-                title: "Header",
+                title: "Scripts & AI",
                 blocks: [
                     {
                         kind: "fields",
@@ -138,7 +139,7 @@ const critterRows: LayoutRow[] = [
             },
             { title: "Demographics", blocks: [{ kind: "fields", fields: [k("age"), k("gender")] }] },
             {
-                title: "Final",
+                title: "Combat & Classification",
                 blocks: [
                     { kind: "fields", fields: [k("bodyType"), k("experienceValue"), k("killType"), k("damageType")] },
                 ],
@@ -268,6 +269,8 @@ export const proLayout: FormatLayout = formatLayoutSchema.parse({
     format: "pro",
     maxContentWidthPx: 1000,
     labels: proLabels,
+    // Variant discriminators: shown for context but read-only (editing them desyncs the stamped variant).
+    readOnlyFields: [p("header.objectType"), p("itemProperties.subType"), p("sceneryProperties.subType")],
     variants: {
         critter: { rows: critterRows },
 

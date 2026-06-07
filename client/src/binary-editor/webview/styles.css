@@ -925,14 +925,16 @@ input[type="text"]::placeholder {
     gap: 4px 40px;
 }
 .layout-root .grid .skill {
-    display: flex;
+    /* Subgrid spanning this column's (label, control) track pair, so labels share a max-content track and
+       controls align - the same technique .field uses. Replaces a fixed 108px label width that a longer
+       label (e.g. "Selected weapon ability") overflowed, misaligning its control. */
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-column: span 2;
+    column-gap: 10px;
     align-items: center;
-    gap: 10px;
 }
 .layout-root .grid .skill .nm {
-    /* Fixed at the widest skill label ("Energy Weapons") so no label overflows and every value box
-       aligns down the column. */
-    flex: 0 0 108px;
     color: var(--vscode-descriptionForeground);
     white-space: nowrap;
 }
@@ -977,6 +979,13 @@ input[type="text"]::placeholder {
 }
 .layout-root .kv.kv-multi .field .label {
     min-width: 80px;
+}
+/* Multi-column panels (e.g. Resistances) have no fixed control track, so a number input would otherwise take
+ * a browser/min-width default far wider than its 1-4 byte value needs. Size it to the value's range via the
+ * --num-ch var NumberField sets. Enums/strings are unaffected (rule is scoped to number inputs). */
+.layout-root .kv.kv-multi .field-control input[type="number"] {
+    width: var(--num-ch, 8ch);
+    min-width: 0;
 }
 .layout-root .matrix .strow .c input {
     /* border-box + 100% so the input fills its cell exactly instead of overflowing (content-box padding +

@@ -16,7 +16,10 @@
             .map((ref) => ({ ref, row: fields[ref] }))
             .filter((c): c is { ref: FieldRef; row: Row } => c.row !== undefined),
     );
-    const gridStyle = $derived(`grid-template-columns:repeat(${columns},max-content)`);
+    // Two tracks per column (label max-content, control) so each .skill is a subgrid: every label in a visual
+    // column shares one max-content track and the controls align - regardless of label length (a long label
+    // like "Selected weapon ability" widens only its column, it no longer shoves its own control out of line).
+    const gridStyle = $derived(`grid-template-columns:repeat(${columns},max-content auto)`);
 </script>
 <div class="grid" style={gridStyle}>
     {#each cells as cell (cell.row.id)}

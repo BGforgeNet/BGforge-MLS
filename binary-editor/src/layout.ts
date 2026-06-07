@@ -32,6 +32,9 @@ export function resolveLayout(formatId: string, layout: FormatLayout, model: Mod
             // stable parse name - so renaming for display never changes the semantic key a ref resolves by.
             const labelOverride = layout.labels?.[key];
             if (labelOverride !== undefined) row.name = labelOverride;
+            // Read-only fields (variant discriminators) stay visible but non-editable - the controls render
+            // disabled off row.editable, which is the reliable lock (presentation `editable` doesn't reach here).
+            if (layout.readOnlyFields?.includes(key)) row.editable = false;
             fields[key] = row;
         }
     }

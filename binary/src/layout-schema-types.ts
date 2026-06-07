@@ -133,6 +133,13 @@ export const formatLayoutSchema = z.strictObject({
      * its humanized name.
      */
     labels: z.record(fieldRefSchema, z.string()).optional(),
+    /**
+     * Semantic field keys rendered read-only - shown for context but non-editable. Use for the
+     * variant-discriminating fields (PRO `objectType` / `subType`): they must stay visible, but editing them
+     * would desync the stamped variant from the bytes (the half-broken "change type" path), so the editor
+     * disables them. Applied in resolveLayout to the resolved row's `editable`.
+     */
+    readOnlyFields: z.array(fieldRefSchema).optional(),
 });
 
 export type LayoutBlock = z.infer<typeof layoutBlockSchema>;
