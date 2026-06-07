@@ -171,19 +171,19 @@ const critterRows: LayoutRow[] = [
                                 label: "Secondary",
                                 rows: [
                                     baseBonus("Hit Points", "hitPoints"),
-                                    baseBonus("Action Pts", "actionPoints"),
+                                    baseBonus("Action Points", "actionPoints"),
                                     baseBonus("Armor Class", "armorClass"),
-                                    baseBonus("Unarmed Dmg", "unarmedDamage"),
-                                    baseBonus("Melee Dmg", "meleeDamage"),
+                                    baseBonus("Unarmed Damage", "unarmedDamage"),
+                                    baseBonus("Melee Damage", "meleeDamage"),
                                     baseBonus("Carry Weight", "carryWeight"),
                                     baseBonus("Sequence", "sequence"),
                                     baseBonus("Healing Rate", "healingRate"),
                                     baseBonus("Critical %", "criticalChance"),
-                                    baseBonus("Better Crit", "betterCriticals"),
+                                    baseBonus("Better Criticals", "betterCriticals"),
                                 ],
                             },
                             {
-                                label: "Dmg Threshold",
+                                label: "Damage Threshold",
                                 rows: [
                                     baseBonus("Normal", "dtNormal"),
                                     baseBonus("Laser", "dtLaser"),
@@ -195,7 +195,7 @@ const critterRows: LayoutRow[] = [
                                 ],
                             },
                             {
-                                label: "Dmg Resist",
+                                label: "Damage Resistance",
                                 rows: [
                                     baseBonus("Normal", "drNormal"),
                                     baseBonus("Laser", "drLaser"),
@@ -250,10 +250,20 @@ const critterRows: LayoutRow[] = [
     },
 ];
 
+/** Display-label overrides (see `FormatLayout.labels`) - expand the "Dest" truncation on scenery targets. */
+const proLabels: Record<string, string> = {
+    [p("stairsProperties.destTile")]: "Destination Tile",
+    [p("stairsProperties.destElevation")]: "Destination Elevation",
+    [p("stairsProperties.destMap")]: "Destination Map",
+    [p("ladderProperties.destTile")]: "Destination Tile",
+    [p("ladderProperties.destElevation")]: "Destination Elevation",
+};
+
 export const proLayout: FormatLayout = formatLayoutSchema.parse({
     schemaVersion: 1,
     format: "pro",
     maxContentWidthPx: 1000,
+    labels: proLabels,
     variants: {
         critter: { rows: critterRows },
 

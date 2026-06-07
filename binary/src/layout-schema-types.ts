@@ -124,6 +124,15 @@ export const formatLayoutSchema = z.strictObject({
     variants: z.record(z.string(), layoutVariantSchema),
     /** Content hugs and clumps left within the pane up to this width (~900 default in the renderer). */
     maxContentWidthPx: z.number().int().positive().optional(),
+    /**
+     * Display-label overrides keyed by semantic field key (`FieldRef`). Applied at resolve time to a field's
+     * display NAME only - the parse name (and therefore the field's semantic-key identity) is unchanged, so
+     * every layout ref keeps resolving. This is the correct layer for dropping a category prefix the panel
+     * title already states ("Resist Fire" -> "Fire"), expanding abbreviations, or naming positional slots:
+     * none of those may touch identity, and the parser/rebuild stay byte-faithful. A key with no entry keeps
+     * its humanized name.
+     */
+    labels: z.record(fieldRefSchema, z.string()).optional(),
 });
 
 export type LayoutBlock = z.infer<typeof layoutBlockSchema>;

@@ -21,10 +21,18 @@ import { formatLayoutSchema, type FormatLayout } from "../layout-schema-types";
 
 const k = (key: string): string => `itm.header.${key}`;
 
+/** Display-label overrides (see `FormatLayout.labels`) - expand "Desc", fix the "Id" casing. */
+const itmLabels: Record<string, string> = {
+    [k("unidentifiedDesc")]: "Unidentified Description",
+    [k("identifiedDesc")]: "Identified Description",
+    [k("loreToId")]: "Lore to ID",
+};
+
 export const itmLayout: FormatLayout = formatLayoutSchema.parse({
     schemaVersion: 1,
     format: "itm",
     maxContentWidthPx: 1180,
+    labels: itmLabels,
     variants: {
         item: {
             rows: [

@@ -29,10 +29,83 @@ const slot = (key: string): string => `cre.itemSlots.${key}`;
 const slotKeys = (group: string, prefix: string, count: number): string[] =>
     Array.from({ length: count }, (_, i) => k(`${group}.${prefix}${i + 1}`));
 
+/** BG1 weapon-proficiency names for the first 8 slots; the rest are unused in BG1/BG2 (kept generic). */
+const PROFICIENCY_LABELS: readonly string[] = [
+    "Large Swords",
+    "Small Swords",
+    "Bows",
+    "Spears",
+    "Blunt",
+    "Spiked",
+    "Axe",
+    "Missile",
+    ...Array.from({ length: 14 }, (_, i) => `Proficiency ${i + 9}`),
+];
+
+/**
+ * Display-label overrides (see `FormatLayout.labels`): concise names applied at render time WITHOUT touching
+ * field identity. Drops the category prefix the panel title already states, expands abbreviations, uppercases
+ * acronyms, and names the proficiency / object-ref slots. Script-slot labels are intentionally NOT here (they
+ * keep "Script X" - bare "Class"/"Race" would be ambiguous and the panel groups them anyway).
+ */
+const creLabels: Record<string, string> = {
+    [k("animationId")]: "Animation ID",
+    [k("levelFirstClass")]: "1st Level",
+    [k("levelSecondClass")]: "2nd Level",
+    [k("levelThirdClass")]: "3rd Level",
+    [k("general")]: "General Type",
+    [k("specific")]: "Specific Type",
+    [k("enemyAlly")]: "Enemy / Ally",
+    [k("moraleBreak")]: "Break",
+    [k("moraleRecoveryTime")]: "Recovery Time",
+    [k("thaco")]: "THAC0",
+    [k("numAttacks")]: "Attacks",
+    [k("acNatural")]: "AC: Natural",
+    [k("acEffective")]: "AC: Effective",
+    [k("acCrushingMod")]: "AC: Crushing",
+    [k("acMissileMod")]: "AC: Missile",
+    [k("acPiercingMod")]: "AC: Piercing",
+    [k("acSlashingMod")]: "AC: Slashing",
+    [k("currentHp")]: "Current HP",
+    [k("maxHp")]: "Maximum HP",
+    [k("xpForKilling")]: "XP for Killing",
+    [k("powerLevelOrXp")]: "Power Level / XP",
+    [k("goldCarried")]: "Gold",
+    [k("saveVsDeath")]: "Death",
+    [k("saveVsWands")]: "Wands",
+    [k("saveVsPolymorph")]: "Polymorph",
+    [k("saveVsBreath")]: "Breath",
+    [k("saveVsSpells")]: "Spells",
+    [k("resistFire")]: "Fire",
+    [k("resistCold")]: "Cold",
+    [k("resistElectricity")]: "Electricity",
+    [k("resistAcid")]: "Acid",
+    [k("resistMagic")]: "Magic",
+    [k("resistMagicFire")]: "Magic Fire",
+    [k("resistMagicCold")]: "Magic Cold",
+    [k("resistSlashing")]: "Slashing",
+    [k("resistCrushing")]: "Crushing",
+    [k("resistPiercing")]: "Piercing",
+    [k("resistMissile")]: "Missile",
+    [k("metalColor")]: "Metal",
+    [k("minorColor")]: "Minor",
+    [k("majorColor")]: "Major",
+    [k("skinColor")]: "Skin",
+    [k("leatherColor")]: "Leather",
+    [k("armorColor")]: "Armor",
+    [k("hairColor")]: "Hair",
+    [k("globalActorEnum")]: "Global Actor ID",
+    [k("localActorEnum")]: "Local Actor ID",
+    ...Object.fromEntries(PROFICIENCY_LABELS.map((label, i) => [k(`proficiencies.slot${i + 1}`), label])),
+    // objectRefs stay positional ("Object 1".."5") under the clearer "Tracked Objects" panel - they are an
+    // ordered OBJECT.IDS tuple with no per-slot meaning, like the sound slots.
+};
+
 export const creLayout: FormatLayout = formatLayoutSchema.parse({
     schemaVersion: 1,
     format: "cre",
     maxContentWidthPx: 1180,
+    labels: creLabels,
     variants: {
         creature: {
             rows: [
@@ -43,6 +116,7 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                             blocks: [
                                 {
                                     kind: "fields",
+                                    columns: 2,
                                     fields: [
                                         k("longName"),
                                         k("shortName"),
@@ -58,8 +132,8 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                                 },
                             ],
                         },
-                        { title: "Creature Flags", blocks: [{ kind: "flags", field: k("creatureFlags"), columns: 1 }] },
-                        { title: "Status Flags", blocks: [{ kind: "flags", field: k("statusFlags"), columns: 1 }] },
+                        { title: "Flags", blocks: [{ kind: "flags", field: k("creatureFlags"), columns: 2 }] },
+                        { title: "Status Flags", blocks: [{ kind: "flags", field: k("statusFlags"), columns: 3 }] },
                     ],
                 },
                 {
@@ -69,25 +143,30 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                             blocks: [
                                 {
                                     kind: "fields",
+                                    columns: 2,
                                     fields: [
                                         k("class"),
                                         k("levelFirstClass"),
                                         k("levelSecondClass"),
                                         k("levelThirdClass"),
                                         k("race"),
-                                        k("general"),
-                                        k("specific"),
                                         k("alignment"),
-                                        k("enemyAlly"),
                                     ],
                                 },
                             ],
+                        },
+                        {
+                            // enemyAlly (EA.IDS allegiance) + general/specific (GENERAL/SPECIFIC.IDS creature-type
+                            // identifiers) are classification, not class/alignment - split out per the UX redesign.
+                            title: "Classification",
+                            blocks: [{ kind: "fields", fields: [k("enemyAlly"), k("general"), k("specific")] }],
                         },
                         {
                             title: "Attributes",
                             blocks: [
                                 {
                                     kind: "fields",
+                                    columns: 2,
                                     fields: [
                                         k("strength"),
                                         k("strengthBonus"),
@@ -101,11 +180,16 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                             ],
                         },
                         {
+                            // Luck is a SPECIAL-style stat (not morale); Lore is a knowledge stat (not a thief skill).
+                            title: "Stats",
+                            blocks: [{ kind: "fields", fields: [k("luck"), k("lore")] }],
+                        },
+                        {
                             title: "Morale",
                             blocks: [
                                 {
                                     kind: "fields",
-                                    fields: [k("morale"), k("moraleBreak"), k("moraleRecoveryTime"), k("luck")],
+                                    fields: [k("morale"), k("moraleBreak"), k("moraleRecoveryTime")],
                                 },
                             ],
                         },
@@ -118,6 +202,7 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                             blocks: [
                                 {
                                     kind: "fields",
+                                    columns: 2,
                                     fields: [
                                         k("thaco"),
                                         k("numAttacks"),
@@ -127,7 +212,6 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                                         k("acMissileMod"),
                                         k("acPiercingMod"),
                                         k("acSlashingMod"),
-                                        k("hideInShadows"),
                                     ],
                                 },
                             ],
@@ -189,7 +273,9 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                             ],
                         },
                         {
-                            title: "Skills",
+                            // Thief skills proper. Lore (knowledge) -> Stats; Fatigue/Intoxication (condition)
+                            // -> Condition; Hide In Shadows moved in from Combat (it is a thief skill byte).
+                            title: "Thief Skills",
                             blocks: [
                                 {
                                     kind: "fields",
@@ -197,16 +283,18 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                                     fields: [
                                         k("detectIllusion"),
                                         k("setTraps"),
-                                        k("lore"),
                                         k("lockpicking"),
                                         k("moveSilently"),
                                         k("findDisarmTraps"),
                                         k("pickPockets"),
-                                        k("fatigue"),
-                                        k("intoxication"),
+                                        k("hideInShadows"),
                                     ],
                                 },
                             ],
+                        },
+                        {
+                            title: "Condition",
+                            blocks: [{ kind: "fields", fields: [k("fatigue"), k("intoxication")] }],
                         },
                     ],
                 },
@@ -230,7 +318,7 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                             ],
                         },
                         {
-                            title: "Scripts",
+                            title: "Scripts and Dialogs",
                             blocks: [
                                 {
                                     kind: "fields",
@@ -323,7 +411,7 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                             blocks: [{ kind: "grid", columns: 4, items: slotKeys("proficiencies", "slot", 22) }],
                         },
                         {
-                            title: "Object Refs",
+                            title: "Tracked Objects",
                             blocks: [{ kind: "grid", columns: 5, items: slotKeys("objectRefs", "object", 5) }],
                         },
                     ],

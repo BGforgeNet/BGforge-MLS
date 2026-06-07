@@ -238,3 +238,124 @@ describe("layout/model sync", () => {
         expect(unresolved, `${format} list-section keys that resolve in no fixture`).toEqual([]);
     });
 });
+
+// ---------------------------------------------------------------------------------------------------------
+// UX LABEL GUARDRAILS (issue classes B/C/D from the UX redesign). These assert label QUALITY against real
+// resolved labels, not just resolution. A panel may opt out of the generic/redundant checks when its labels
+// are intentionally numeric/opcode-dependent (e.g. EFF parameters), via GENERIC_OK.
+// ---------------------------------------------------------------------------------------------------------
+
+const STOPWORDS = new Set(["of", "the", "and", "or", "to", "vs", "a", "an", "per", "by", "id"]);
+// Panels whose generic/numbered labels are intentional (opcode-dependent resrefs/params have no static name).
+// cre Sound Slots stays here until the SNDSLOT.IDS event names are applied (then it must come off this list).
+const GENERIC_OK = new Set<string>([
+    "eff/effect/Parameters",
+    "eff/effect/Resources",
+    "cre/creature/Sound Slots",
+    // Script-slot labels conventionally keep "Script" (bare "Class"/"Race"/"General" would collide with the
+    // class/race/general fields in the same flat header struct, which the canonical rebuild matches by label).
+    "cre/creature/Scripts and Dialogs",
+    // Positional drug stat slots (each is a StatType dropdown); "Stat N" pairs with the "Amount N" effect rows.
+    "pro/item.drug/Affected Stats",
+    // Ordered OBJECT.IDS tuple with no per-slot meaning (positional, like sound slots).
+    "cre/creature/Tracked Objects",
+]);
+// Truncations that must be spelled out (whole-word, case-insensitive). Genuine domain acronyms that stay
+// (uppercased) are NOT here: PID (proto id), FRM, THAC0, EMP, AC, HP, DR.
+const ABBREVIATIONS = new Set(["pts", "dmg", "crit", "desc", "ext", "coord", "num", "dest"]);
+// Acronyms that must be upper-cased, flagged when they appear title-cased (exact case).
+const MISCASED_ACRONYMS = new Set(["Id", "Ai", "Frm"]);
+
+const labelWords = (label: string): string[] => label.split(/[^A-Za-z0-9%]+/).filter(Boolean);
+
+interface PanelLabels {
+    key: string;
+    title: string;
+    labels: string[];
+}
+
+/** Collect the rendered field/grid/matrix labels of every panel of every present variant. (Pre-tab: variants
+ * have `rows`; revisit when the tab schema lands.) */
+function collectPanelLabels(): PanelLabels[] {
+    const out: PanelLabels[] = [];
+    for (const fx of runnable) {
+        const parseResult = PARSERS[fx.format]!.parse(new Uint8Array(fs.readFileSync(fx.file)));
+        if (parseResult.errors || parseResult.variantId !== fx.variant) continue;
+        const resolved = resolveLayout(fx.format, layoutFor(fx.format), buildModel(parseResult));
+        if (!resolved) continue;
+        for (const row of layoutFor(fx.format).variants[fx.variant]!.rows)
+            for (const panel of row.panels) {
+                const labels: string[] = [];
+                for (const block of panel.blocks) {
+                    if (block.kind === "fields" || block.kind === "grid") {
+                        const refs = block.kind === "fields" ? block.fields : block.items;
+                        for (const ref of refs) {
+                            const r = resolved.fields[ref];
+                            if (r) labels.push(r.name);
+                        }
+                    } else if (block.kind === "matrix") {
+                        for (const g of block.groups) {
+                            labels.push(g.label);
+                            for (const r of g.rows) labels.push(r.label);
+                        }
+                        for (const c of block.valueColumns) labels.push(c.label);
+                    }
+                }
+                out.push({ key: `${fx.format}/${fx.variant}/${panel.title ?? ""}`, title: panel.title ?? "", labels });
+            }
+    }
+    return out;
+}
+
+describe("UX label guardrails", () => {
+    const panels = collectPanelLabels();
+
+    // B. No word common to most of a panel's sibling labels that also names the panel itself (the category
+    // word the title already states, e.g. "Resist" under "Resistances"). A word shared by siblings but NOT in
+    // the title (e.g. "Type" across Body/Kill/Damage Type) is a legitimate distinction, not a repeat.
+    const stem3 = (w: string): string => w.slice(0, 3);
+    it("no panel repeats its title's category word across its field labels", () => {
+        const violations: string[] = [];
+        for (const p of panels) {
+            if (GENERIC_OK.has(p.key) || p.labels.length < 3) continue;
+            const titleStems = new Set(
+                labelWords(p.title)
+                    .map((x) => x.toLowerCase())
+                    .filter((x) => x.length >= 3 && !STOPWORDS.has(x))
+                    .map((w) => stem3(w)),
+            );
+            const counts = new Map<string, number>();
+            for (const label of p.labels)
+                for (const w of new Set(labelWords(label).map((x) => x.toLowerCase())))
+                    if (w.length >= 4 && !STOPWORDS.has(w)) counts.set(w, (counts.get(w) ?? 0) + 1);
+            const threshold = Math.ceil(p.labels.length * 0.7);
+            for (const [w, c] of counts)
+                if (c >= threshold && titleStems.has(stem3(w)))
+                    violations.push(`${p.key}: "${w}" in ${c}/${p.labels.length}`);
+        }
+        expect(violations, `panels repeating the title's category word:\n${violations.join("\n")}`).toEqual([]);
+    });
+
+    // C. No denylisted truncation, and no title-cased acronym that should be upper-case.
+    it("no label uses a denylisted abbreviation or miscased acronym", () => {
+        const violations: string[] = [];
+        for (const p of panels)
+            for (const label of p.labels)
+                for (const w of labelWords(label)) {
+                    if (ABBREVIATIONS.has(w.toLowerCase())) violations.push(`${p.key}: "${label}" (abbr "${w}")`);
+                    if (MISCASED_ACRONYMS.has(w)) violations.push(`${p.key}: "${label}" (case "${w}")`);
+                }
+        expect(violations, `abbreviations / miscased acronyms:\n${violations.join("\n")}`).toEqual([]);
+    });
+
+    // D. No bare numbered slot labels (Slot 1, Object 3, Sound 12, Field 74) unless the panel opts out.
+    it("no bare numbered slot labels", () => {
+        const numbered = /^(Slot|Object|Sound|Field) \d+$/;
+        const violations: string[] = [];
+        for (const p of panels) {
+            if (GENERIC_OK.has(p.key)) continue;
+            for (const label of p.labels) if (numbered.test(label)) violations.push(`${p.key}: "${label}"`);
+        }
+        expect(violations, `bare numbered labels:\n${violations.join("\n")}`).toEqual([]);
+    });
+});

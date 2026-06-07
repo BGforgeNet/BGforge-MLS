@@ -15,10 +15,20 @@ import { formatLayoutSchema, type FormatLayout } from "../layout-schema-types";
 /** Semantic key for an EFF body field. */
 const k = (key: string): string => `eff.body.${key}`;
 
+/** Display-label overrides (see `FormatLayout.labels`) - expand "Coord", fix "Id"/jargon. */
+const effLabels: Record<string, string> = {
+    [k("casterXCoord")]: "Caster X Coordinate",
+    [k("casterYCoord")]: "Caster Y Coordinate",
+    [k("targetXCoord")]: "Target X Coordinate",
+    [k("targetYCoord")]: "Target Y Coordinate",
+    [k("stackingIdTobex")]: "Stacking ID (ToBEx)",
+};
+
 export const effLayout: FormatLayout = formatLayoutSchema.parse({
     schemaVersion: 1,
     format: "eff",
     maxContentWidthPx: 1000,
+    labels: effLabels,
     variants: {
         effect: {
             rows: [

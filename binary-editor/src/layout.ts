@@ -26,7 +26,14 @@ export function resolveLayout(formatId: string, layout: FormatLayout, model: Mod
         const key = toSemanticFieldKey(formatId, node.sourceSegments);
         // First write wins: a semantic key is the field's stable identity, and the model lists each
         // field once, so collisions would only arise from a malformed duplicate - keep the first.
-        if (key !== undefined && !(key in fields)) fields[key] = projectRow(model, node);
+        if (key !== undefined && !(key in fields)) {
+            const row = projectRow(model, node);
+            // Display-label override (layout.labels) is applied here, AFTER identity is computed from the
+            // stable parse name - so renaming for display never changes the semantic key a ref resolves by.
+            const labelOverride = layout.labels?.[key];
+            if (labelOverride !== undefined) row.name = labelOverride;
+            fields[key] = row;
+        }
     }
 
     // Sections a `list` block targets, keyed by the depth-0 group name the block names (`sectionKey`).
