@@ -108,140 +108,96 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
     labels: creLabels,
     variants: {
         creature: {
-            rows: [
+            tabs: [
                 {
-                    panels: [
+                    id: "identity",
+                    label: "Identity",
+                    rows: [
                         {
-                            title: "Identity",
-                            blocks: [
+                            panels: [
                                 {
-                                    kind: "fields",
-                                    columns: 2,
-                                    fields: [
-                                        k("longName"),
-                                        k("shortName"),
-                                        k("smallPortrait"),
-                                        k("largePortrait"),
-                                        k("animationId"),
-                                        k("sex"),
-                                        k("gender"),
-                                        k("reputation"),
-                                        k("kit"),
-                                        k("racialEnemy"),
+                                    title: "Identity",
+                                    blocks: [
+                                        {
+                                            kind: "fields",
+                                            columns: 2,
+                                            fields: [
+                                                k("longName"),
+                                                k("shortName"),
+                                                k("smallPortrait"),
+                                                k("largePortrait"),
+                                                k("animationId"),
+                                                k("sex"),
+                                                k("gender"),
+                                                k("reputation"),
+                                                k("kit"),
+                                                k("racialEnemy"),
+                                            ],
+                                        },
                                     ],
                                 },
+                                { title: "Flags", blocks: [{ kind: "flags", field: k("creatureFlags"), columns: 2 }] },
+                                {
+                                    title: "Status Flags",
+                                    blocks: [{ kind: "flags", field: k("statusFlags"), columns: 3 }],
+                                },
                             ],
                         },
-                        { title: "Flags", blocks: [{ kind: "flags", field: k("creatureFlags"), columns: 2 }] },
-                        { title: "Status Flags", blocks: [{ kind: "flags", field: k("statusFlags"), columns: 3 }] },
-                    ],
-                },
-                {
-                    panels: [
                         {
-                            title: "Class & Alignment",
-                            blocks: [
+                            panels: [
                                 {
-                                    kind: "fields",
-                                    columns: 2,
-                                    fields: [
-                                        k("class"),
-                                        k("levelFirstClass"),
-                                        k("levelSecondClass"),
-                                        k("levelThirdClass"),
-                                        k("race"),
-                                        k("alignment"),
+                                    title: "Class & Alignment",
+                                    blocks: [
+                                        {
+                                            kind: "fields",
+                                            columns: 2,
+                                            fields: [
+                                                k("class"),
+                                                k("levelFirstClass"),
+                                                k("levelSecondClass"),
+                                                k("levelThirdClass"),
+                                                k("race"),
+                                                k("alignment"),
+                                            ],
+                                        },
                                     ],
                                 },
-                            ],
-                        },
-                        {
-                            // enemyAlly (EA.IDS allegiance) + general/specific (GENERAL/SPECIFIC.IDS creature-type
-                            // identifiers) are classification, not class/alignment - split out per the UX redesign.
-                            title: "Classification",
-                            blocks: [{ kind: "fields", fields: [k("enemyAlly"), k("general"), k("specific")] }],
-                        },
-                        {
-                            title: "Attributes",
-                            blocks: [
                                 {
-                                    kind: "fields",
-                                    columns: 2,
-                                    fields: [
-                                        k("strength"),
-                                        k("strengthBonus"),
-                                        k("intelligence"),
-                                        k("wisdom"),
-                                        k("dexterity"),
-                                        k("constitution"),
-                                        k("charisma"),
+                                    // enemyAlly (EA.IDS allegiance) + general/specific (GENERAL/SPECIFIC.IDS creature-type
+                                    // identifiers) are classification, not class/alignment - split out per the UX redesign.
+                                    title: "Classification",
+                                    blocks: [{ kind: "fields", fields: [k("enemyAlly"), k("general"), k("specific")] }],
+                                },
+                                {
+                                    title: "Attributes",
+                                    blocks: [
+                                        {
+                                            kind: "fields",
+                                            columns: 2,
+                                            fields: [
+                                                k("strength"),
+                                                k("strengthBonus"),
+                                                k("intelligence"),
+                                                k("wisdom"),
+                                                k("dexterity"),
+                                                k("constitution"),
+                                                k("charisma"),
+                                            ],
+                                        },
                                     ],
                                 },
-                            ],
-                        },
-                        {
-                            // Luck is a SPECIAL-style stat (not morale); Lore is a knowledge stat (not a thief skill).
-                            title: "Stats",
-                            blocks: [{ kind: "fields", fields: [k("luck"), k("lore")] }],
-                        },
-                        {
-                            title: "Morale",
-                            blocks: [
                                 {
-                                    kind: "fields",
-                                    fields: [k("morale"), k("moraleBreak"), k("moraleRecoveryTime")],
+                                    // Luck is a SPECIAL-style stat (not morale); Lore is a knowledge stat (not a thief skill).
+                                    title: "Stats",
+                                    blocks: [{ kind: "fields", fields: [k("luck"), k("lore")] }],
                                 },
-                            ],
-                        },
-                    ],
-                },
-                {
-                    panels: [
-                        {
-                            title: "Combat",
-                            blocks: [
                                 {
-                                    kind: "fields",
-                                    columns: 2,
-                                    fields: [
-                                        k("thaco"),
-                                        k("numAttacks"),
-                                        k("acNatural"),
-                                        k("acEffective"),
-                                        k("acCrushingMod"),
-                                        k("acMissileMod"),
-                                        k("acPiercingMod"),
-                                        k("acSlashingMod"),
-                                    ],
-                                },
-                            ],
-                        },
-                        {
-                            title: "Health & XP",
-                            blocks: [
-                                {
-                                    kind: "fields",
-                                    fields: [
-                                        k("currentHp"),
-                                        k("maxHp"),
-                                        k("xpForKilling"),
-                                        k("powerLevelOrXp"),
-                                        k("goldCarried"),
-                                    ],
-                                },
-                            ],
-                        },
-                        {
-                            title: "Saving Throws",
-                            blocks: [
-                                {
-                                    kind: "fields",
-                                    fields: [
-                                        k("saveVsDeath"),
-                                        k("saveVsWands"),
-                                        k("saveVsPolymorph"),
-                                        k("saveVsBreath"),
-                                        k("saveVsSpells"),
+                                    title: "Morale",
+                                    blocks: [
+                                        {
+                                            kind: "fields",
+                                            fields: [k("morale"), k("moraleBreak"), k("moraleRecoveryTime")],
+                                        },
                                     ],
                                 },
                             ],
@@ -249,155 +205,165 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                     ],
                 },
                 {
-                    panels: [
+                    id: "combat",
+                    label: "Combat",
+                    rows: [
                         {
-                            title: "Resistances",
-                            blocks: [
+                            panels: [
                                 {
-                                    kind: "fields",
-                                    columns: 2,
-                                    fields: [
-                                        k("resistFire"),
-                                        k("resistCold"),
-                                        k("resistElectricity"),
-                                        k("resistAcid"),
-                                        k("resistMagic"),
-                                        k("resistMagicFire"),
-                                        k("resistMagicCold"),
-                                        k("resistSlashing"),
-                                        k("resistCrushing"),
-                                        k("resistPiercing"),
-                                        k("resistMissile"),
+                                    title: "Combat",
+                                    blocks: [
+                                        {
+                                            kind: "fields",
+                                            columns: 2,
+                                            fields: [
+                                                k("thaco"),
+                                                k("numAttacks"),
+                                                k("acNatural"),
+                                                k("acEffective"),
+                                                k("acCrushingMod"),
+                                                k("acMissileMod"),
+                                                k("acPiercingMod"),
+                                                k("acSlashingMod"),
+                                            ],
+                                        },
+                                    ],
+                                },
+                                {
+                                    title: "Health & XP",
+                                    blocks: [
+                                        {
+                                            kind: "fields",
+                                            fields: [
+                                                k("currentHp"),
+                                                k("maxHp"),
+                                                k("xpForKilling"),
+                                                k("powerLevelOrXp"),
+                                                k("goldCarried"),
+                                            ],
+                                        },
+                                    ],
+                                },
+                                {
+                                    title: "Saving Throws",
+                                    blocks: [
+                                        {
+                                            kind: "fields",
+                                            fields: [
+                                                k("saveVsDeath"),
+                                                k("saveVsWands"),
+                                                k("saveVsPolymorph"),
+                                                k("saveVsBreath"),
+                                                k("saveVsSpells"),
+                                            ],
+                                        },
                                     ],
                                 },
                             ],
                         },
                         {
-                            // Thief skills proper. Lore (knowledge) -> Stats; Fatigue/Intoxication (condition)
-                            // -> Condition; Hide In Shadows moved in from Combat (it is a thief skill byte).
-                            title: "Thief Skills",
-                            blocks: [
+                            panels: [
                                 {
-                                    kind: "fields",
-                                    columns: 2,
-                                    fields: [
-                                        k("detectIllusion"),
-                                        k("setTraps"),
-                                        k("lockpicking"),
-                                        k("moveSilently"),
-                                        k("findDisarmTraps"),
-                                        k("pickPockets"),
-                                        k("hideInShadows"),
+                                    title: "Resistances",
+                                    blocks: [
+                                        {
+                                            kind: "fields",
+                                            columns: 2,
+                                            fields: [
+                                                k("resistFire"),
+                                                k("resistCold"),
+                                                k("resistElectricity"),
+                                                k("resistAcid"),
+                                                k("resistMagic"),
+                                                k("resistMagicFire"),
+                                                k("resistMagicCold"),
+                                                k("resistSlashing"),
+                                                k("resistCrushing"),
+                                                k("resistPiercing"),
+                                                k("resistMissile"),
+                                            ],
+                                        },
                                     ],
                                 },
-                            ],
-                        },
-                        {
-                            title: "Condition",
-                            blocks: [{ kind: "fields", fields: [k("fatigue"), k("intoxication")] }],
-                        },
-                    ],
-                },
-                {
-                    panels: [
-                        {
-                            title: "Colors",
-                            blocks: [
                                 {
-                                    kind: "fields",
-                                    fields: [
-                                        k("metalColor"),
-                                        k("minorColor"),
-                                        k("majorColor"),
-                                        k("skinColor"),
-                                        k("leatherColor"),
-                                        k("armorColor"),
-                                        k("hairColor"),
+                                    // Thief skills proper. Lore (knowledge) -> Stats; Fatigue/Intoxication (condition)
+                                    // -> Condition; Hide In Shadows moved in from Combat (it is a thief skill byte).
+                                    title: "Thief Skills",
+                                    blocks: [
+                                        {
+                                            kind: "fields",
+                                            columns: 2,
+                                            fields: [
+                                                k("detectIllusion"),
+                                                k("setTraps"),
+                                                k("lockpicking"),
+                                                k("moveSilently"),
+                                                k("findDisarmTraps"),
+                                                k("pickPockets"),
+                                                k("hideInShadows"),
+                                            ],
+                                        },
                                     ],
                                 },
-                            ],
-                        },
-                        {
-                            title: "Scripts and Dialogs",
-                            blocks: [
                                 {
-                                    kind: "fields",
-                                    fields: [
-                                        k("scriptOverride"),
-                                        k("scriptClass"),
-                                        k("scriptRace"),
-                                        k("scriptGeneral"),
-                                        k("scriptDefault"),
-                                        k("dialogFile"),
-                                    ],
-                                },
-                            ],
-                        },
-                        {
-                            title: "References",
-                            blocks: [
-                                {
-                                    kind: "fields",
-                                    fields: [
-                                        k("deathVariable"),
-                                        k("trackingTarget"),
-                                        k("globalActorEnum"),
-                                        k("localActorEnum"),
-                                    ],
+                                    title: "Condition",
+                                    blocks: [{ kind: "fields", fields: [k("fatigue"), k("intoxication")] }],
                                 },
                             ],
                         },
                     ],
                 },
                 {
-                    panels: [
+                    id: "appearance",
+                    label: "Appearance & Scripts",
+                    rows: [
                         {
-                            title: "Item Slots",
-                            blocks: [
+                            panels: [
                                 {
-                                    kind: "grid",
-                                    columns: 4,
-                                    items: [
-                                        slot("helmet"),
-                                        slot("armor"),
-                                        slot("shield"),
-                                        slot("gloves"),
-                                        slot("leftRing"),
-                                        slot("rightRing"),
-                                        slot("amulet"),
-                                        slot("belt"),
-                                        slot("boots"),
-                                        slot("weapon1"),
-                                        slot("weapon2"),
-                                        slot("weapon3"),
-                                        slot("weapon4"),
-                                        slot("quiver1"),
-                                        slot("quiver2"),
-                                        slot("quiver3"),
-                                        slot("quiver4"),
-                                        slot("cloak"),
-                                        slot("quickItem1"),
-                                        slot("quickItem2"),
-                                        slot("quickItem3"),
-                                        slot("inventory1"),
-                                        slot("inventory2"),
-                                        slot("inventory3"),
-                                        slot("inventory4"),
-                                        slot("inventory5"),
-                                        slot("inventory6"),
-                                        slot("inventory7"),
-                                        slot("inventory8"),
-                                        slot("inventory9"),
-                                        slot("inventory10"),
-                                        slot("inventory11"),
-                                        slot("inventory12"),
-                                        slot("inventory13"),
-                                        slot("inventory14"),
-                                        slot("inventory15"),
-                                        slot("inventory16"),
-                                        slot("magicWeapon"),
-                                        slot("selectedWeapon"),
-                                        slot("selectedWeaponAbility"),
+                                    title: "Colors",
+                                    blocks: [
+                                        {
+                                            kind: "fields",
+                                            fields: [
+                                                k("metalColor"),
+                                                k("minorColor"),
+                                                k("majorColor"),
+                                                k("skinColor"),
+                                                k("leatherColor"),
+                                                k("armorColor"),
+                                                k("hairColor"),
+                                            ],
+                                        },
+                                    ],
+                                },
+                                {
+                                    title: "Scripts and Dialogs",
+                                    blocks: [
+                                        {
+                                            kind: "fields",
+                                            fields: [
+                                                k("scriptOverride"),
+                                                k("scriptClass"),
+                                                k("scriptRace"),
+                                                k("scriptGeneral"),
+                                                k("scriptDefault"),
+                                                k("dialogFile"),
+                                            ],
+                                        },
+                                    ],
+                                },
+                                {
+                                    title: "References",
+                                    blocks: [
+                                        {
+                                            kind: "fields",
+                                            fields: [
+                                                k("deathVariable"),
+                                                k("trackingTarget"),
+                                                k("globalActorEnum"),
+                                                k("localActorEnum"),
+                                            ],
+                                        },
                                     ],
                                 },
                             ],
@@ -405,99 +371,209 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                     ],
                 },
                 {
-                    panels: [
+                    id: "inventory",
+                    label: "Inventory",
+                    rows: [
                         {
-                            title: "Proficiencies",
-                            blocks: [{ kind: "grid", columns: 4, items: slotKeys("proficiencies", "slot", 22) }],
-                        },
-                        {
-                            title: "Tracked Objects",
-                            blocks: [{ kind: "grid", columns: 5, items: slotKeys("objectRefs", "object", 5) }],
-                        },
-                    ],
-                },
-                {
-                    panels: [
-                        {
-                            title: "Sound Slots",
-                            blocks: [{ kind: "grid", columns: 6, items: slotKeys("soundSlots", "sound", 100) }],
-                        },
-                    ],
-                },
-                {
-                    panels: [
-                        {
-                            title: "Known Spells",
-                            blocks: [
+                            panels: [
                                 {
-                                    kind: "list",
-                                    sectionKey: "Known Spells",
-                                    render: "master-detail",
-                                    canAdd: true,
-                                    canModify: true,
+                                    title: "Item Slots",
+                                    blocks: [
+                                        {
+                                            kind: "grid",
+                                            columns: 4,
+                                            items: [
+                                                slot("helmet"),
+                                                slot("armor"),
+                                                slot("shield"),
+                                                slot("gloves"),
+                                                slot("leftRing"),
+                                                slot("rightRing"),
+                                                slot("amulet"),
+                                                slot("belt"),
+                                                slot("boots"),
+                                                slot("weapon1"),
+                                                slot("weapon2"),
+                                                slot("weapon3"),
+                                                slot("weapon4"),
+                                                slot("quiver1"),
+                                                slot("quiver2"),
+                                                slot("quiver3"),
+                                                slot("quiver4"),
+                                                slot("cloak"),
+                                                slot("quickItem1"),
+                                                slot("quickItem2"),
+                                                slot("quickItem3"),
+                                                slot("inventory1"),
+                                                slot("inventory2"),
+                                                slot("inventory3"),
+                                                slot("inventory4"),
+                                                slot("inventory5"),
+                                                slot("inventory6"),
+                                                slot("inventory7"),
+                                                slot("inventory8"),
+                                                slot("inventory9"),
+                                                slot("inventory10"),
+                                                slot("inventory11"),
+                                                slot("inventory12"),
+                                                slot("inventory13"),
+                                                slot("inventory14"),
+                                                slot("inventory15"),
+                                                slot("inventory16"),
+                                                slot("magicWeapon"),
+                                                slot("selectedWeapon"),
+                                                slot("selectedWeaponAbility"),
+                                            ],
+                                        },
+                                    ],
                                 },
                             ],
                         },
                     ],
                 },
                 {
-                    panels: [
+                    id: "slots",
+                    label: "Proficiencies & Sounds",
+                    rows: [
                         {
-                            title: "Spell Memorization Info",
-                            blocks: [
+                            panels: [
                                 {
-                                    kind: "list",
-                                    sectionKey: "Spell Memorization Info",
-                                    render: "master-detail",
-                                    canAdd: true,
-                                    canModify: true,
+                                    title: "Proficiencies",
+                                    blocks: [
+                                        { kind: "grid", columns: 4, items: slotKeys("proficiencies", "slot", 22) },
+                                    ],
+                                },
+                                {
+                                    title: "Tracked Objects",
+                                    blocks: [{ kind: "grid", columns: 5, items: slotKeys("objectRefs", "object", 5) }],
+                                },
+                            ],
+                        },
+                        {
+                            panels: [
+                                {
+                                    title: "Sound Slots",
+                                    blocks: [{ kind: "grid", columns: 6, items: slotKeys("soundSlots", "sound", 100) }],
                                 },
                             ],
                         },
                     ],
                 },
                 {
-                    panels: [
+                    id: "spells",
+                    label: "Spells",
+                    tabs: [
                         {
-                            title: "Memorized Spells",
-                            blocks: [
+                            id: "known",
+                            label: "Known",
+                            countFrom: "Known Spells",
+                            rows: [
                                 {
-                                    kind: "list",
-                                    sectionKey: "Memorized Spells",
-                                    render: "master-detail",
-                                    canModify: true,
+                                    panels: [
+                                        {
+                                            title: "Known Spells",
+                                            blocks: [
+                                                {
+                                                    kind: "list",
+                                                    sectionKey: "Known Spells",
+                                                    render: "master-detail",
+                                                    canAdd: true,
+                                                    canModify: true,
+                                                },
+                                            ],
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
+                        {
+                            id: "memorization",
+                            label: "Memorization",
+                            countFrom: "Spell Memorization Info",
+                            rows: [
+                                {
+                                    panels: [
+                                        {
+                                            title: "Spell Memorization Info",
+                                            blocks: [
+                                                {
+                                                    kind: "list",
+                                                    sectionKey: "Spell Memorization Info",
+                                                    render: "master-detail",
+                                                    canAdd: true,
+                                                    canModify: true,
+                                                },
+                                            ],
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
+                        {
+                            id: "memorized",
+                            label: "Memorized",
+                            countFrom: "Memorized Spells",
+                            rows: [
+                                {
+                                    panels: [
+                                        {
+                                            title: "Memorized Spells",
+                                            blocks: [
+                                                {
+                                                    kind: "list",
+                                                    sectionKey: "Memorized Spells",
+                                                    render: "master-detail",
+                                                    canModify: true,
+                                                },
+                                            ],
+                                        },
+                                    ],
                                 },
                             ],
                         },
                     ],
                 },
                 {
-                    panels: [
+                    id: "effects",
+                    label: "Effects",
+                    countFrom: "Effects",
+                    rows: [
                         {
-                            title: "Effects",
-                            blocks: [
+                            panels: [
                                 {
-                                    kind: "list",
-                                    sectionKey: "Effects",
-                                    render: "master-detail",
-                                    canAdd: true,
-                                    canModify: true,
+                                    title: "Effects",
+                                    blocks: [
+                                        {
+                                            kind: "list",
+                                            sectionKey: "Effects",
+                                            render: "master-detail",
+                                            canAdd: true,
+                                            canModify: true,
+                                        },
+                                    ],
                                 },
                             ],
                         },
                     ],
                 },
                 {
-                    panels: [
+                    id: "items",
+                    label: "Items",
+                    countFrom: "Items",
+                    rows: [
                         {
-                            title: "Items",
-                            blocks: [
+                            panels: [
                                 {
-                                    kind: "list",
-                                    sectionKey: "Items",
-                                    render: "master-detail",
-                                    canAdd: true,
-                                    canModify: true,
+                                    title: "Items",
+                                    blocks: [
+                                        {
+                                            kind: "list",
+                                            sectionKey: "Items",
+                                            render: "master-detail",
+                                            canAdd: true,
+                                            canModify: true,
+                                        },
+                                    ],
                                 },
                             ],
                         },

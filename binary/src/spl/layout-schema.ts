@@ -18,54 +18,84 @@ export const splLayout: FormatLayout = formatLayoutSchema.parse({
     maxContentWidthPx: 1180,
     variants: {
         spell: {
-            rows: [
+            tabs: [
                 {
-                    panels: [
+                    id: "general",
+                    label: "General",
+                    rows: [
                         {
-                            title: "Spell",
-                            blocks: [
+                            panels: [
                                 {
-                                    kind: "fields",
-                                    columns: 2,
-                                    fields: [
-                                        k("unidentifiedName"),
-                                        k("description"),
-                                        k("type"),
-                                        k("level"),
-                                        k("school"),
-                                        k("sectype"),
-                                        k("castingGraphics"),
-                                        k("completionSound"),
-                                        k("spellbookIcon"),
+                                    title: "Spell",
+                                    blocks: [
+                                        {
+                                            kind: "fields",
+                                            columns: 2,
+                                            fields: [
+                                                k("unidentifiedName"),
+                                                k("description"),
+                                                k("type"),
+                                                k("level"),
+                                                k("school"),
+                                                k("sectype"),
+                                                k("castingGraphics"),
+                                                k("completionSound"),
+                                                k("spellbookIcon"),
+                                            ],
+                                        },
+                                    ],
+                                },
+                                { title: "Flags", blocks: [{ kind: "flags", field: k("flags"), columns: 1 }] },
+                                {
+                                    title: "Exclusion",
+                                    blocks: [{ kind: "flags", field: k("exclusionFlags"), columns: 1 }],
+                                },
+                            ],
+                        },
+                    ],
+                },
+                {
+                    id: "abilities",
+                    label: "Abilities",
+                    countFrom: "Abilities",
+                    rows: [
+                        {
+                            panels: [
+                                {
+                                    title: "Abilities",
+                                    blocks: [
+                                        {
+                                            kind: "list",
+                                            sectionKey: "Abilities",
+                                            render: "master-detail",
+                                            canAdd: true,
+                                            canModify: true,
+                                        },
                                     ],
                                 },
                             ],
                         },
-                        { title: "Flags", blocks: [{ kind: "flags", field: k("flags"), columns: 1 }] },
-                        { title: "Exclusion", blocks: [{ kind: "flags", field: k("exclusionFlags"), columns: 1 }] },
                     ],
                 },
                 {
-                    panels: [
+                    id: "effects",
+                    label: "Effects",
+                    countFrom: "Effects",
+                    rows: [
                         {
-                            title: "Abilities",
-                            blocks: [
+                            panels: [
                                 {
-                                    kind: "list",
-                                    sectionKey: "Abilities",
-                                    render: "master-detail",
-                                    canAdd: true,
-                                    canModify: true,
+                                    title: "Effects",
+                                    blocks: [
+                                        {
+                                            kind: "list",
+                                            sectionKey: "Effects",
+                                            render: "master-detail",
+                                            canModify: true,
+                                        },
+                                    ],
                                 },
                             ],
-                        },
-                    ],
-                },
-                {
-                    panels: [
-                        {
-                            title: "Effects",
-                            blocks: [{ kind: "list", sectionKey: "Effects", render: "master-detail", canModify: true }],
                         },
                     ],
                 },

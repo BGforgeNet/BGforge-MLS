@@ -111,7 +111,40 @@ const layoutPanelSchema = z.strictObject({
 /** A row of panels, left-to-right, clumped left. */
 const layoutRowSchema = z.strictObject({ panels: z.array(layoutPanelSchema).min(1) });
 
-const layoutVariantSchema = z.strictObject({ rows: z.array(layoutRowSchema).min(1) });
+/**
+ * A subtab: a leaf tab whose body is always rows (subtabs do not nest further). `countFrom` shows a count
+ * badge sourced from the named list section's resolved entry count (e.g. "Known (12)").
+ */
+const layoutSubTabSchema = z.strictObject({
+    id: z.string().min(1),
+    label: z.string().min(1),
+    icon: z.string().optional(),
+    countFrom: z.string().min(1).optional(),
+    rows: z.array(layoutRowSchema).min(1),
+});
+
+/** A top-level tab. Its body is EITHER rows or one level of subtabs (never both). */
+const layoutTabSchema = z
+    .strictObject({
+        id: z.string().min(1),
+        label: z.string().min(1),
+        icon: z.string().optional(),
+        countFrom: z.string().min(1).optional(),
+        rows: z.array(layoutRowSchema).min(1).optional(),
+        tabs: z.array(layoutSubTabSchema).min(1).optional(),
+    })
+    .refine((t) => (t.rows === undefined) !== (t.tabs === undefined), "a tab must have rows xor subtabs");
+
+/**
+ * A variant is either a flat list of rows (untabbed - the default for formats that fit one page) or a set of
+ * top-level tabs. Tabs are how a large format (CRE, MAP) is broken up so the default view fits one page.
+ */
+const layoutVariantSchema = z
+    .strictObject({
+        rows: z.array(layoutRowSchema).min(1).optional(),
+        tabs: z.array(layoutTabSchema).min(1).optional(),
+    })
+    .refine((v) => (v.rows === undefined) !== (v.tabs === undefined), "a variant must have rows xor tabs");
 
 /**
  * A format's full layout: one variant per object/sub type the parser can report (PRO dispatches by
@@ -145,5 +178,17 @@ export const formatLayoutSchema = z.strictObject({
 export type LayoutBlock = z.infer<typeof layoutBlockSchema>;
 export type LayoutPanel = z.infer<typeof layoutPanelSchema>;
 export type LayoutRow = z.infer<typeof layoutRowSchema>;
+export type LayoutSubTab = z.infer<typeof layoutSubTabSchema>;
+export type LayoutTab = z.infer<typeof layoutTabSchema>;
 export type LayoutVariant = z.infer<typeof layoutVariantSchema>;
 export type FormatLayout = z.infer<typeof formatLayoutSchema>;
+
+/**
+ * All rows of a variant, flattening tabs and subtabs. For code that must see every row regardless of tab
+ * grouping - field resolution, list-section discovery, structural guardrails. The renderer walks the
+ * structured tabs instead (so it can render the tab strip), but resolution is tab-agnostic.
+ */
+export function variantRows(variant: LayoutVariant): LayoutRow[] {
+    if (variant.rows) return variant.rows;
+    return (variant.tabs ?? []).flatMap((t) => t.rows ?? (t.tabs ?? []).flatMap((st) => st.rows));
+}

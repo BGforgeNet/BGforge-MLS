@@ -36,6 +36,7 @@ import {
     mapParser,
     proParser,
     splParser,
+    variantRows,
 } from "@bgforge/binary";
 import { buildModel } from "../src/model";
 import { resolveLayout } from "../src/layout";
@@ -147,7 +148,7 @@ function blockRefs(block: LayoutBlock): { fields: string[]; sections: string[] }
 function variantRefs(variant: LayoutVariant): { fields: string[]; sections: string[] } {
     const fields: string[] = [];
     const sections: string[] = [];
-    for (const row of variant.rows)
+    for (const row of variantRows(variant))
         for (const panel of row.panels)
             for (const block of panel.blocks) {
                 const r = blockRefs(block);
@@ -283,7 +284,7 @@ function collectPanelLabels(): PanelLabels[] {
         if (parseResult.errors || parseResult.variantId !== fx.variant) continue;
         const resolved = resolveLayout(fx.format, layoutFor(fx.format), buildModel(parseResult));
         if (!resolved) continue;
-        for (const row of layoutFor(fx.format).variants[fx.variant]!.rows)
+        for (const row of variantRows(layoutFor(fx.format).variants[fx.variant]!))
             for (const panel of row.panels) {
                 const labels: string[] = [];
                 for (const block of panel.blocks) {
@@ -316,7 +317,7 @@ describe("UX packing guardrails", () => {
         const violations: string[] = [];
         for (const format of Object.keys(PARSERS))
             for (const [variant, v] of Object.entries(layoutFor(format).variants))
-                for (const row of v.rows)
+                for (const row of variantRows(v))
                     for (const panel of row.panels)
                         for (const block of panel.blocks)
                             if (
@@ -331,6 +332,20 @@ describe("UX packing guardrails", () => {
             violations,
             `single-column fields blocks that should be multi-column:\n${violations.join("\n")}`,
         ).toEqual([]);
+    });
+
+    // A. A variant with many panels must use tabs - otherwise it is the one-long-scroll mega-page (#14). Tabs
+    // break it into per-page sections. Small variants (PRO item subtypes, EFF) may stay untabbed.
+    it("a large variant uses tabs instead of one mega-page", () => {
+        const PANEL_CAP = 10;
+        const violations: string[] = [];
+        for (const format of Object.keys(PARSERS))
+            for (const [variant, v] of Object.entries(layoutFor(format).variants)) {
+                const panelCount = variantRows(v).reduce((n, row) => n + row.panels.length, 0);
+                if (panelCount > PANEL_CAP && v.rows !== undefined)
+                    violations.push(`${format}/${variant}: ${panelCount} panels, untabbed`);
+            }
+        expect(violations, `large untabbed variants (should use tabs):\n${violations.join("\n")}`).toEqual([]);
     });
 });
 

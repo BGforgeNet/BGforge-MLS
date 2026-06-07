@@ -55,7 +55,10 @@ maybe("CRE editor structure ops", () => {
         expect(resolved?.variantId).toBe("creature");
         // Render mode is declared on the `list` block; structure-op caps live in the resolved sections map.
         const listBlocks = new Map<string, "inline" | "master-detail">();
-        for (const row of resolved?.rows ?? []) {
+        const rows =
+            resolved?.rows ??
+            (resolved?.tabs ?? []).flatMap((t) => t.rows ?? (t.tabs ?? []).flatMap((st) => st.rows ?? []));
+        for (const row of rows) {
             for (const panel of row.panels) {
                 for (const block of panel.blocks) {
                     if (block.kind === "list") listBlocks.set(block.sectionKey, block.render);

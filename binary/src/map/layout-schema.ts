@@ -37,68 +37,121 @@ export const mapLayout: FormatLayout = formatLayoutSchema.parse({
     maxContentWidthPx: 1180,
     variants: {
         map: {
-            rows: [
+            tabs: [
                 {
-                    panels: [
+                    id: "header",
+                    label: "Header",
+                    rows: [
                         {
-                            title: "Header",
-                            blocks: [
+                            panels: [
                                 {
-                                    kind: "fields",
-                                    columns: 2,
-                                    fields: [
-                                        k("version"),
-                                        k("filename"),
-                                        k("defaultPosition"),
-                                        k("defaultElevation"),
-                                        k("defaultOrientation"),
-                                        k("scriptId"),
-                                        k("darkness"),
-                                        k("mapId"),
-                                        k("timestamp"),
+                                    title: "Header",
+                                    blocks: [
+                                        {
+                                            kind: "fields",
+                                            columns: 2,
+                                            fields: [
+                                                k("version"),
+                                                k("filename"),
+                                                k("defaultPosition"),
+                                                k("defaultElevation"),
+                                                k("defaultOrientation"),
+                                                k("scriptId"),
+                                                k("darkness"),
+                                                k("mapId"),
+                                                k("timestamp"),
+                                            ],
+                                        },
+                                    ],
+                                },
+                                { title: "Map Flags", blocks: [{ kind: "flags", field: k("mapFlags"), columns: 1 }] },
+                            ],
+                        },
+                        {
+                            panels: [
+                                {
+                                    title: "Global Variables",
+                                    blocks: [
+                                        {
+                                            kind: "list",
+                                            sectionKey: "Global Variables",
+                                            render: "inline",
+                                            canAdd: true,
+                                            canModify: true,
+                                        },
+                                    ],
+                                },
+                                {
+                                    title: "Local Variables",
+                                    blocks: [
+                                        {
+                                            kind: "list",
+                                            sectionKey: "Local Variables",
+                                            render: "inline",
+                                            canAdd: true,
+                                            canModify: true,
+                                        },
                                     ],
                                 },
                             ],
                         },
-                        { title: "Map Flags", blocks: [{ kind: "flags", field: k("mapFlags"), columns: 1 }] },
                     ],
                 },
                 {
-                    panels: [
+                    id: "objects",
+                    label: "Objects",
+                    tabs: [
                         {
-                            title: "Global Variables",
-                            blocks: [
-                                {
-                                    kind: "list",
-                                    sectionKey: "Global Variables",
-                                    render: "inline",
-                                    canAdd: true,
-                                    canModify: true,
-                                },
-                            ],
+                            id: "elev0",
+                            label: "Elevation 0",
+                            countFrom: "Elevation 0 Objects",
+                            rows: [listRow("Elevation 0 Objects", "master-detail", true, true)],
                         },
                         {
-                            title: "Local Variables",
-                            blocks: [
-                                {
-                                    kind: "list",
-                                    sectionKey: "Local Variables",
-                                    render: "inline",
-                                    canAdd: true,
-                                    canModify: true,
-                                },
-                            ],
+                            id: "elev1",
+                            label: "Elevation 1",
+                            countFrom: "Elevation 1 Objects",
+                            rows: [listRow("Elevation 1 Objects", "master-detail", true, true)],
+                        },
+                        {
+                            id: "elev2",
+                            label: "Elevation 2",
+                            countFrom: "Elevation 2 Objects",
+                            rows: [listRow("Elevation 2 Objects", "master-detail", true, true)],
                         },
                     ],
                 },
-                listRow("Elevation 0 Objects", "master-detail", true, true),
-                listRow("Elevation 1 Objects", "master-detail", true, true),
-                listRow("Elevation 2 Objects", "master-detail", true, true),
                 // Scripts are browse/edit-only (the parser refuses structural add/remove on script extents).
-                listRow("System Scripts", "master-detail"),
-                listRow("Spatial Scripts", "master-detail"),
-                listRow("Timer Scripts", "master-detail"),
-                listRow("Item Scripts", "master-detail"),
+                {
+                    id: "scripts",
+                    label: "Scripts",
+                    tabs: [
+                        {
+                            id: "system",
+                            label: "System",
+                            countFrom: "System Scripts",
+                            rows: [listRow("System Scripts", "master-detail")],
+                        },
+                        {
+                            id: "spatial",
+                            label: "Spatial",
+                            countFrom: "Spatial Scripts",
+                            rows: [listRow("Spatial Scripts", "master-detail")],
+                        },
+                        {
+                            id: "timer",
+                            label: "Timer",
+                            countFrom: "Timer Scripts",
+                            rows: [listRow("Timer Scripts", "master-detail")],
+                        },
+                        {
+                            id: "item",
+                            label: "Item",
+                            countFrom: "Item Scripts",
+                            rows: [listRow("Item Scripts", "master-detail")],
+                        },
+                    ],
+                },
             ],
         },
     },

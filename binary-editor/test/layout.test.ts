@@ -22,7 +22,9 @@ function emptyGroupParseResult(groupName: string): ParseResult {
 
 /** The render mode of a `list` block, found by section key across the variant's rows. */
 function listRender(layout: ResolvedLayout, sectionKey: string): "inline" | "master-detail" | undefined {
-    for (const row of layout.rows) {
+    const rows =
+        layout.rows ?? (layout.tabs ?? []).flatMap((t) => t.rows ?? (t.tabs ?? []).flatMap((st) => st.rows ?? []));
+    for (const row of rows) {
         for (const panel of row.panels) {
             for (const block of panel.blocks) {
                 if (block.kind === "list" && block.sectionKey === sectionKey) return block.render;

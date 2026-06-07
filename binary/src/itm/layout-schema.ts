@@ -35,46 +35,98 @@ export const itmLayout: FormatLayout = formatLayoutSchema.parse({
     labels: itmLabels,
     variants: {
         item: {
-            rows: [
+            tabs: [
                 {
-                    panels: [
+                    id: "general",
+                    label: "General",
+                    rows: [
                         {
-                            title: "Identity",
-                            blocks: [
+                            panels: [
                                 {
-                                    kind: "fields",
-                                    fields: [k("unidentifiedName"), k("identifiedName"), k("replacement"), k("type")],
+                                    title: "Identity",
+                                    blocks: [
+                                        {
+                                            kind: "fields",
+                                            fields: [
+                                                k("unidentifiedName"),
+                                                k("identifiedName"),
+                                                k("replacement"),
+                                                k("type"),
+                                            ],
+                                        },
+                                        { kind: "flags", field: k("flags"), columns: 1 },
+                                    ],
                                 },
-                                { kind: "flags", field: k("flags"), columns: 1 },
-                            ],
-                        },
-                        {
-                            title: "Value & Lore",
-                            blocks: [
                                 {
-                                    kind: "fields",
-                                    fields: [
-                                        k("price"),
-                                        k("weight"),
-                                        k("stackAmount"),
-                                        k("enchantment"),
-                                        k("loreToId"),
+                                    title: "Value & Lore",
+                                    blocks: [
+                                        {
+                                            kind: "fields",
+                                            fields: [
+                                                k("price"),
+                                                k("weight"),
+                                                k("stackAmount"),
+                                                k("enchantment"),
+                                                k("loreToId"),
+                                            ],
+                                        },
+                                    ],
+                                },
+                                {
+                                    title: "Appearance & Text",
+                                    blocks: [
+                                        {
+                                            kind: "fields",
+                                            fields: [
+                                                k("inventoryIcon"),
+                                                k("groundIcon"),
+                                                k("descriptionIcon"),
+                                                k("animation"),
+                                                k("unidentifiedDesc"),
+                                                k("identifiedDesc"),
+                                            ],
+                                        },
                                     ],
                                 },
                             ],
                         },
                         {
-                            title: "Appearance & Text",
-                            blocks: [
+                            panels: [
                                 {
-                                    kind: "fields",
-                                    fields: [
-                                        k("inventoryIcon"),
-                                        k("groundIcon"),
-                                        k("descriptionIcon"),
-                                        k("animation"),
-                                        k("unidentifiedDesc"),
-                                        k("identifiedDesc"),
+                                    title: "Requirements",
+                                    blocks: [
+                                        {
+                                            kind: "fields",
+                                            columns: 2,
+                                            fields: [
+                                                k("minLevel"),
+                                                k("weaponProficiency"),
+                                                k("minStrength"),
+                                                k("minStrengthBonus"),
+                                                k("minIntelligence"),
+                                                k("minDexterity"),
+                                                k("minWisdom"),
+                                                k("minConstitution"),
+                                                k("minCharisma"),
+                                                k("kitUsability1"),
+                                                k("kitUsability2"),
+                                                k("kitUsability3"),
+                                                k("kitUsability4"),
+                                            ],
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
+                        {
+                            panels: [
+                                {
+                                    title: "Usability",
+                                    blocks: [
+                                        { kind: "flags", field: k("usabilityFlags.byte1ClassAlignment"), columns: 1 },
+                                        { kind: "flags", field: k("usabilityFlags.byte2Class"), columns: 1 },
+                                        { kind: "flags", field: k("usabilityFlags.byte3ClassRace"), columns: 1 },
+                                        { kind: "flags", field: k("usabilityFlags.byte4Race"), columns: 1 },
                                     ],
                                 },
                             ],
@@ -82,27 +134,22 @@ export const itmLayout: FormatLayout = formatLayoutSchema.parse({
                     ],
                 },
                 {
-                    panels: [
+                    id: "abilities",
+                    label: "Abilities",
+                    countFrom: "Abilities",
+                    rows: [
                         {
-                            title: "Requirements",
-                            blocks: [
+                            panels: [
                                 {
-                                    kind: "fields",
-                                    columns: 2,
-                                    fields: [
-                                        k("minLevel"),
-                                        k("weaponProficiency"),
-                                        k("minStrength"),
-                                        k("minStrengthBonus"),
-                                        k("minIntelligence"),
-                                        k("minDexterity"),
-                                        k("minWisdom"),
-                                        k("minConstitution"),
-                                        k("minCharisma"),
-                                        k("kitUsability1"),
-                                        k("kitUsability2"),
-                                        k("kitUsability3"),
-                                        k("kitUsability4"),
+                                    title: "Abilities",
+                                    blocks: [
+                                        {
+                                            kind: "list",
+                                            sectionKey: "Abilities",
+                                            render: "master-detail",
+                                            canAdd: true,
+                                            canModify: true,
+                                        },
                                     ],
                                 },
                             ],
@@ -110,39 +157,24 @@ export const itmLayout: FormatLayout = formatLayoutSchema.parse({
                     ],
                 },
                 {
-                    panels: [
+                    id: "effects",
+                    label: "Effects",
+                    countFrom: "Effects",
+                    rows: [
                         {
-                            title: "Usability",
-                            blocks: [
-                                { kind: "flags", field: k("usabilityFlags.byte1ClassAlignment"), columns: 1 },
-                                { kind: "flags", field: k("usabilityFlags.byte2Class"), columns: 1 },
-                                { kind: "flags", field: k("usabilityFlags.byte3ClassRace"), columns: 1 },
-                                { kind: "flags", field: k("usabilityFlags.byte4Race"), columns: 1 },
-                            ],
-                        },
-                    ],
-                },
-                {
-                    panels: [
-                        {
-                            title: "Abilities",
-                            blocks: [
+                            panels: [
                                 {
-                                    kind: "list",
-                                    sectionKey: "Abilities",
-                                    render: "master-detail",
-                                    canAdd: true,
-                                    canModify: true,
+                                    title: "Effects",
+                                    blocks: [
+                                        {
+                                            kind: "list",
+                                            sectionKey: "Effects",
+                                            render: "master-detail",
+                                            canModify: true,
+                                        },
+                                    ],
                                 },
                             ],
-                        },
-                    ],
-                },
-                {
-                    panels: [
-                        {
-                            title: "Effects",
-                            blocks: [{ kind: "list", sectionKey: "Effects", render: "master-detail", canModify: true }],
                         },
                     ],
                 },

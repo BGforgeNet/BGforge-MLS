@@ -101,12 +101,15 @@ await page.exposeFunction("__hostUp", async (m: WebviewToHost) => {
     for (const reply of hostUp(m)) await page.evaluate((rr) => window.postMessage(rr, "*"), reply);
 });
 await page.goto("file://" + path.join(here, "app.html"));
-await page.waitForSelector(".layout-root", { timeout: 5000 });
-// All five list sections render at once (no tabs); wait for the master-detail panes.
-await page.waitForFunction(() => document.querySelectorAll(".layout-root .master-detail").length >= 5, undefined, {
-    timeout: 5000,
-});
-await page.waitForTimeout(150);
+await page.waitForSelector(".layout-root .bb-tabs", { timeout: 5000 });
+await page.waitForTimeout(200);
+// CRE is now tabbed; capture the default (Identity) tab immediately so the screenshot exists regardless of
+// the later structure-op steps (which navigate into the Spells / Effects tabs).
+await page.screenshot({ path: path.join(here, "shot-cre.png"), fullPage: true });
+async function clickTab(label: string): Promise<void> {
+    await page.locator('.bb-tabs.primary button[role="tab"]').filter({ hasText: label }).first().click();
+    await page.waitForTimeout(200);
+}
 
 const knownSpellsPanel = page.locator(".panel").filter({ has: page.locator("h3", { hasText: "Known Spells" }) });
 const effectsPanel = page.locator(".panel").filter({ has: page.locator("h3", { hasText: /^Effects$/ }) });
@@ -153,87 +156,78 @@ async function clickDelete(scope: Locator): Promise<void> {
         );
     }
 }
-const dom = await page.evaluate(() => {
-    const panels = Array.from(document.querySelectorAll(".layout-root .panel > h3"), (e) => e.textContent);
-    const masterDetails = document.querySelectorAll(".layout-root .master-detail").length;
-    const tabs = document.querySelectorAll(".bb-tabs").length;
-    // Cells of each named grid panel (inline map - a named arrow inside evaluate trips esbuild's __name).
-    const [itemSlots, proficiencies, objectRefs, soundSlots] = [
-        "Item Slots",
-        "Proficiencies",
-        "Object Refs",
-        "Sound Slots",
-    ].map((title) => {
-        const panel = Array.from(document.querySelectorAll(".layout-root .panel")).find(
-            (pnl) => pnl.querySelector("h3")?.textContent === title,
-        );
-        return panel?.querySelectorAll(".grid .skill").length ?? 0;
-    });
-    const gridCounts = { itemSlots, proficiencies, objectRefs, soundSlots };
-    // Spacing guard: in any fields panel, the label right edge must sit clearly left of the control.
-    let minFieldGap = Infinity;
+// CRE is tabbed: assert the top-level tab strip (count badges stripped), then visit the tabs that carry the
+// grids/fields to verify they render and align. (The five list sections live in the Spells/Effects/Items tabs
+// and are exercised below.)
+const topTabs = await page.evaluate(() =>
+    Array.from(document.querySelectorAll('.bb-tabs.primary button[role="tab"]'), (e) =>
+        (e.textContent ?? "").replace(/ \(\d+\)$/, "").trim(),
+    ),
+);
+check(
+    "layout: top-level tabs render in order",
+    JSON.stringify(topTabs) ===
+        JSON.stringify([
+            "Identity",
+            "Combat",
+            "Appearance & Scripts",
+            "Inventory",
+            "Proficiencies & Sounds",
+            "Spells",
+            "Effects",
+            "Items",
+        ]),
+    JSON.stringify(topTabs),
+);
+
+await clickTab("Identity");
+const fieldGap = await page.evaluate(() => {
+    let min = Infinity;
     for (const field of Array.from(document.querySelectorAll(".layout-root .kv:not(.kv-multi) .field"))) {
         const label = field.querySelector(".label");
         const control = field.querySelector(".field-control");
         if (!label || !control) continue;
-        const gap = control.getBoundingClientRect().left - label.getBoundingClientRect().right;
-        if (gap < minFieldGap) minFieldGap = gap;
+        min = Math.min(min, control.getBoundingClientRect().left - label.getBoundingClientRect().right);
     }
-    // Spacing guard for the item-slots grid: each grid cell's label must not overlap its value.
+    return min;
+});
+check("layout: field label/value gap is positive (no overlap)", fieldGap >= 4, `minFieldGap=${fieldGap}px`);
+
+await clickTab("Inventory");
+const itemSlots = await page.locator('.layout-root .panel:has(h3:text-is("Item Slots")) .grid .skill').count();
+check("layout: item-slots grid renders 40 cells", itemSlots === 40, `count=${itemSlots}`);
+
+await clickTab("Proficiencies & Sounds");
+const slots = await page.evaluate(() => {
+    const counts: Record<string, number> = {};
+    for (const p of Array.from(document.querySelectorAll(".layout-root .panel"))) {
+        const title = p.querySelector("h3")?.textContent ?? "";
+        counts[title] = p.querySelectorAll(".grid .skill").length;
+    }
     let minGridGap = Infinity;
     for (const cell of Array.from(document.querySelectorAll(".layout-root .grid .skill"))) {
         const label = cell.querySelector(".nm");
         const control = cell.querySelector(".field-control, input, select");
         if (!label || !control) continue;
-        const gap = control.getBoundingClientRect().left - label.getBoundingClientRect().right;
-        if (gap < minGridGap) minGridGap = gap;
+        minGridGap = Math.min(minGridGap, control.getBoundingClientRect().left - label.getBoundingClientRect().right);
     }
-    return { panels, masterDetails, tabs, gridCounts, minFieldGap, minGridGap };
+    return {
+        prof: counts["Proficiencies"] ?? 0,
+        obj: counts["Tracked Objects"] ?? 0,
+        sound: counts["Sound Slots"] ?? 0,
+        minGridGap,
+    };
 });
-const expectedPanels = [
-    "Identity",
-    "Creature Flags",
-    "Status Flags",
-    "Class & Alignment",
-    "Attributes",
-    "Morale",
-    "Combat",
-    "Health & XP",
-    "Saving Throws",
-    "Resistances",
-    "Skills",
-    "Colors",
-    "Scripts",
-    "References",
-    "Item Slots",
-    "Proficiencies",
-    "Object Refs",
-    "Sound Slots",
-    "Known Spells",
-    "Spell Memorization Info",
-    "Memorized Spells",
-    "Effects",
-    "Items",
-];
 check(
-    "layout: all header + grid + list panels render in order",
-    JSON.stringify(dom.panels) === JSON.stringify(expectedPanels),
-    JSON.stringify(dom.panels),
-);
-check("layout: five master-detail list sections render", dom.masterDetails === 5, `count=${dom.masterDetails}`);
-check("layout: no section tabs (single page)", dom.tabs === 0, `count=${dom.tabs}`);
-check("layout: item-slots grid renders 40 cells", dom.gridCounts.itemSlots === 40, `count=${dom.gridCounts.itemSlots}`);
-check(
-    "layout: header slot grids render (proficiencies 22 / objectRefs 5 / soundSlots 100)",
-    dom.gridCounts.proficiencies === 22 && dom.gridCounts.objectRefs === 5 && dom.gridCounts.soundSlots === 100,
-    JSON.stringify(dom.gridCounts),
+    "layout: header slot grids render (proficiencies 22 / tracked objects 5 / sound slots 100)",
+    slots.prof === 22 && slots.obj === 5 && slots.sound === 100,
+    JSON.stringify(slots),
 );
 check(
-    "layout: field label/value gap is positive (no overlap)",
-    dom.minFieldGap >= 4,
-    `minFieldGap=${dom.minFieldGap}px`,
+    "layout: grid label/value gap is positive (no overlap)",
+    slots.minGridGap >= 4,
+    `minGridGap=${slots.minGridGap}px`,
 );
-check("layout: grid label/value gap is positive (no overlap)", dom.minGridGap >= 4, `minGridGap=${dom.minGridGap}px`);
 
 // ============================================================
 // Baseline counts (Node-side ground truth)
@@ -246,6 +240,7 @@ check("baseline: effects count >= 1", baseEffects >= 1, `count=${baseEffects}`);
 // ============================================================
 // KNOWN SPELLS: add via section toolbar, then undo
 // ============================================================
+await clickTab("Spells");
 await knownSpellsPanel.locator(".master .toolbar button").first().click();
 await page.waitForTimeout(200);
 check(
@@ -263,6 +258,7 @@ check(
 // ============================================================
 // EFFECTS: insert-before / duplicate / remove, each undone
 // ============================================================
+await clickTab("Effects");
 await selectRow(effectsPanel, 0);
 await clickAction(effectsPanel, "Add above");
 check(
@@ -317,8 +313,8 @@ check("effects: opcode detail field is a searchable combobox", opcodeCombobox >=
     }
 }
 
-// ---- Screenshots ----
-await page.screenshot({ path: path.join(here, "shot-cre.png"), fullPage: true });
+// ---- Screenshots ---- (shot-cre.png = the Identity tab, captured at load; here capture the Effects tab detail)
+await clickTab("Effects");
 await selectRow(effectsPanel, 0);
 await effectsPanel.locator(".detail .form .field").first().waitFor({ timeout: 3000 });
 await page.screenshot({ path: path.join(here, "shot-cre-effects.png"), fullPage: true });

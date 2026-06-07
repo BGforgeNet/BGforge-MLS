@@ -115,7 +115,7 @@ describe("resolveLayout", () => {
         expect(resolved).toBeDefined();
         if (!resolved) return;
         expect(resolved.variantId).toBe("only");
-        expect(resolved.rows.length).toBe(1);
+        expect(resolved.rows!.length).toBe(1);
         // The referenced field resolves to the exact node's row.
         expect(resolved.fields[key]).toBeDefined();
         expect(resolved.fields[key]!.id).toBe(fieldNode.id);
@@ -151,7 +151,7 @@ describe("resolveLayout", () => {
         });
         const resolved = resolveLayout("pro", layout, model)!;
         expect(resolved.variantId).toBe("second");
-        expect(resolved.rows[0]!.panels.length).toBe(2);
+        expect(resolved.rows![0]!.panels.length).toBe(2);
     });
 
     it("returns undefined when the reported variant is absent (caller falls back to tabs)", () => {

@@ -22,8 +22,17 @@ export { formatAdapterRegistry } from "./format-adapter";
 export type { BinaryFormatAdapter, ProjectedEntry } from "./format-adapter";
 
 // Declarative layout schema (per-format editor UI as data)
-export { formatLayoutSchema } from "./layout-schema-types";
-export type { FieldRef, FormatLayout, LayoutBlock, LayoutPanel, LayoutRow, LayoutVariant } from "./layout-schema-types";
+export { formatLayoutSchema, variantRows } from "./layout-schema-types";
+export type {
+    FieldRef,
+    FormatLayout,
+    LayoutBlock,
+    LayoutPanel,
+    LayoutRow,
+    LayoutSubTab,
+    LayoutTab,
+    LayoutVariant,
+} from "./layout-schema-types";
 
 // Edit policy
 export { findEditableField } from "./field-edit-policy";

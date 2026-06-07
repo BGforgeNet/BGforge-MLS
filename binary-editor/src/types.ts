@@ -61,25 +61,41 @@ export interface StructureResult {
     selection?: NodeId;
 }
 
-/** A list section a layout `list` block targets: the model node to render and its structure-op caps. */
+/** A list section a layout `list` block targets: the model node to render, its structure-op caps, and its
+ *  current entry count (for tab count badges). */
 export interface LayoutSection {
     nodeId: NodeId;
     canAdd: boolean;
     canModify: boolean;
+    entryCount: number;
+}
+
+/** A tab resolved for rendering: its label, an optional count badge (resolved from a `countFrom` section's
+ *  entry count, omitted when the section is absent), and a body that is EITHER rows or one level of subtabs. */
+export interface ResolvedTab {
+    id: string;
+    label: string;
+    icon?: string;
+    count?: number;
+    rows?: LayoutRow[];
+    tabs?: ResolvedTab[];
 }
 
 /**
- * A format's layout resolved for the active variant: the layout-schema rows verbatim, a map from every
- * field's semantic key (`FieldRef`) to its renderable `Row`, and a map of the `list`-block sections (keyed
- * by group name) to the model node + structure-op caps. The whole field set is resolved up front (the
- * formats are small/form-heavy); variable-length list sections use the windowed getChildren path.
+ * A format's layout resolved for the active variant: the layout-schema structure (rows when untabbed, or
+ * tabs when the variant declares them), a map from every field's semantic key (`FieldRef`) to its renderable
+ * `Row`, and a map of the `list`-block sections (keyed by group name). The whole field set is resolved up
+ * front (the formats are small/form-heavy); variable-length list sections use the windowed getChildren path.
  */
 export interface ResolvedLayout {
     variantId: string;
-    rows: LayoutRow[];
+    /** Present when the variant is untabbed. Mutually exclusive with `tabs`. */
+    rows?: LayoutRow[];
+    /** Present when the variant declares top-level tabs. Mutually exclusive with `rows`. */
+    tabs?: ResolvedTab[];
     maxContentWidthPx?: number;
     fields: Record<FieldRef, Row>;
-    /** `list`-block sections (keyed by group name) with their model node id and structure-op caps. */
+    /** `list`-block sections (keyed by group name) with their model node id, structure-op caps, entry count. */
     sections: Record<string, LayoutSection>;
 }
 
