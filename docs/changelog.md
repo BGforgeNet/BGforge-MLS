@@ -5,6 +5,10 @@
 ### Binary editor
 
 - Fallout critter `.pro` files now open as a single dense page - a script/AI header with the critter flags as checkbox columns, demographics, the SPECIAL / secondary / damage stats as Base|Bonus tables, and a skills grid - instead of a dozen separate tabs. A "Show bytes" toggle annotates each field with its byte offset, size, and raw value.
+- The larger binary editors group their fields into tabs instead of one long scroll: a creature (`.cre`) opens to Identity / Combat / Inventory / Proficiencies & Sounds / Spells / Effects / Items, Fallout maps to Header / Objects / Scripts, and items (`.itm`) / spells (`.spl`) to General / Abilities / Effects. List tabs show their entry count, e.g. "Effects (2)".
+- Clearer field labels throughout: redundant category prefixes are dropped (a creature's resistances now read "Fire" / "Cold" rather than "Resist Fire" / "Resist Cold"), abbreviations are spelled out, and acronyms are cased correctly (HP, XP, AC, THAC0). Creature weapon-proficiency slots are named (Large Swords, Bows, and so on).
+- The creature editor regroups its fields into clearer panels (Stats, Condition, Classification, Thief Skills) and packs panels into multiple columns; value boxes are sized to the field instead of stretched to a fixed width.
+- Fixed: editing a Fallout proto's object type left the file in an inconsistent state. Object type and subtype are now shown read-only - they select the file's structure, so they are not directly editable.
 
 ## 3.8.2
 
