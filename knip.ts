@@ -119,8 +119,9 @@ const config: KnipConfig = {
             entry: ["test/**/*.test.ts"],
             // Bench files invoked explicitly; not reachable from any declared entry point.
             // Harness files are environment-only (playwright, browser globals) and excluded from
-            // the package typecheck/lint - keep them out of knip's analysis too.
-            ignore: ["test/perf/**", "test/harness/**"],
+            // the package typecheck/lint - keep them out of knip's analysis too. test/fixtures holds
+            // fixture data plus standalone generators run via `pnpm exec tsx`, not imported by tests.
+            ignore: ["test/perf/**", "test/harness/**", "test/fixtures/**"],
         },
     },
     ignore: [
