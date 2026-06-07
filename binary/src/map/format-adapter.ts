@@ -8,9 +8,6 @@ import {
     buildMapInsertEntryBytes,
     buildMapMoveEntryBytes,
     buildMapRemoveEntryBytes,
-    isMapAddableArray,
-    isMapListSection,
-    isMapModifiableArray,
     isMapRemovableEntry,
 } from "./entity-ops";
 import {
@@ -19,9 +16,6 @@ import {
     buildMapObjectInsertEntryBytes,
     buildMapObjectMoveEntryBytes,
     buildMapObjectRemoveEntryBytes,
-    isMapObjectAddableArray,
-    isMapObjectListSection,
-    isMapObjectModifiableArray,
     isMapObjectRemovableEntry,
 } from "./object-ops";
 import { mapCompiledPatternFields, mapDomainRanges, mapPresentationSchema } from "./presentation-schema";
@@ -331,19 +325,7 @@ export const mapFormatAdapter: BinaryFormatAdapter = {
         );
     },
 
-    isAddableArray(arrayPath: readonly string[]): boolean {
-        return isMapAddableArray(arrayPath) || isMapObjectAddableArray(arrayPath);
-    },
-
     isRemovableEntry(entryPath: readonly string[]): boolean {
         return isMapRemovableEntry(entryPath) || isMapObjectRemovableEntry(entryPath);
-    },
-
-    isListSection(arrayPath: readonly string[]): boolean {
-        return isMapListSection(arrayPath) || isMapObjectListSection(arrayPath);
-    },
-
-    isModifiableArray(arrayPath: readonly string[]): boolean {
-        return isMapModifiableArray(arrayPath) || isMapObjectModifiableArray(arrayPath);
     },
 };

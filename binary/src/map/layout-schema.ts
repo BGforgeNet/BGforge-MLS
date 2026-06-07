@@ -27,8 +27,8 @@ import { formatLayoutSchema, type FormatLayout } from "../layout-schema-types";
 
 const k = (key: string): string => `map.header.${key}`;
 
-const listRow = (sectionKey: string, render: "inline" | "master-detail") => ({
-    panels: [{ title: sectionKey, blocks: [{ kind: "list" as const, sectionKey, render }] }],
+const listRow = (sectionKey: string, render: "inline" | "master-detail", canAdd = false, canModify = false) => ({
+    panels: [{ title: sectionKey, blocks: [{ kind: "list" as const, sectionKey, render, canAdd, canModify }] }],
 });
 
 export const mapLayout: FormatLayout = formatLayoutSchema.parse({
@@ -66,17 +66,34 @@ export const mapLayout: FormatLayout = formatLayoutSchema.parse({
                     panels: [
                         {
                             title: "Global Variables",
-                            blocks: [{ kind: "list", sectionKey: "Global Variables", render: "inline" }],
+                            blocks: [
+                                {
+                                    kind: "list",
+                                    sectionKey: "Global Variables",
+                                    render: "inline",
+                                    canAdd: true,
+                                    canModify: true,
+                                },
+                            ],
                         },
                         {
                             title: "Local Variables",
-                            blocks: [{ kind: "list", sectionKey: "Local Variables", render: "inline" }],
+                            blocks: [
+                                {
+                                    kind: "list",
+                                    sectionKey: "Local Variables",
+                                    render: "inline",
+                                    canAdd: true,
+                                    canModify: true,
+                                },
+                            ],
                         },
                     ],
                 },
-                listRow("Elevation 0 Objects", "master-detail"),
-                listRow("Elevation 1 Objects", "master-detail"),
-                listRow("Elevation 2 Objects", "master-detail"),
+                listRow("Elevation 0 Objects", "master-detail", true, true),
+                listRow("Elevation 1 Objects", "master-detail", true, true),
+                listRow("Elevation 2 Objects", "master-detail", true, true),
+                // Scripts are browse/edit-only (the parser refuses structural add/remove on script extents).
                 listRow("System Scripts", "master-detail"),
                 listRow("Spatial Scripts", "master-detail"),
                 listRow("Timer Scripts", "master-detail"),

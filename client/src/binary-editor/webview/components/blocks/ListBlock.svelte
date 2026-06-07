@@ -6,16 +6,14 @@
     // resolveLayout; the render mode is declared on the block.
     import type { Diagnostic, LayoutSection, NodeId } from "@bgforge/binary-editor";
     import type { Bridge } from "../../state/bridge";
-    import type { ViewModel } from "../../state/view-model";
     import ListSection from "../ListSection.svelte";
     import InlineList from "../InlineList.svelte";
 
-    const { sectionKey, section, render, bridge, vm, version, selection, onedit, byNode, showOffsets = false }: {
+    const { sectionKey, section, render, bridge, version, selection, onedit, byNode, showOffsets = false }: {
         sectionKey: string;
         section: LayoutSection | undefined;
         render: "inline" | "master-detail";
         bridge: Bridge;
-        vm: ViewModel;
         version: number;
         selection: NodeId | undefined;
         onedit: (id: string, v: number | string) => void;
@@ -38,6 +36,6 @@
         <InlineList parentId={section.nodeId} caps={caps!} {bridge} {version} {selection} {onedit} {showOffsets} />
     </div>
 {:else}
-    <ListSection nodeId={section.nodeId} caps={caps!} {bridge} {vm} {version} {selection}
+    <ListSection nodeId={section.nodeId} caps={caps!} {bridge} {version} {selection}
                  onadd={add} {onedit} {byNode} {showOffsets} />
 {/if}

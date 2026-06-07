@@ -12,7 +12,7 @@ describe("dispatch", () => {
         if (opened.type !== "opened") throw new Error("expected opened");
         const sessionId = opened.result.sessionId;
 
-        const gvSection = opened.result.layout.sections.find((s) => s.title === "Global Variables");
+        const gvSection = opened.result.layout.layout?.sections["Global Variables"];
         expect(gvSection).toBeDefined();
         if (!gvSection) throw new Error("no Global Variables section");
         const exp = dispatch({ type: "expand", sessionId, nodeId: gvSection.nodeId, expanded: true });

@@ -6,6 +6,7 @@
 
 import { describe, expect, it } from "vitest";
 import { formatAdapterRegistry } from "../src/format-adapter";
+import { isMapListSection, isMapModifiableArray } from "../src/map/entity-ops";
 
 const adapter = formatAdapterRegistry.get("map")!;
 
@@ -207,14 +208,14 @@ describe("map adapter shouldHideField", () => {
 
 describe("MAP list/modifiable predicates", () => {
     it("classifies variable sections as list sections", () => {
-        expect(adapter.isListSection!(["Global Variables"])).toBe(true);
-        expect(adapter.isListSection!(["Local Variables"])).toBe(true);
-        expect(adapter.isListSection!(["Header"])).toBe(false);
+        expect(isMapListSection(["Global Variables"])).toBe(true);
+        expect(isMapListSection(["Local Variables"])).toBe(true);
+        expect(isMapListSection(["Header"])).toBe(false);
     });
     it("reports variable sections as modifiable independent of current entry count", () => {
-        expect(adapter.isModifiableArray!(["Global Variables"])).toBe(true);
-        expect(adapter.isModifiableArray!(["Local Variables"])).toBe(true);
-        expect(adapter.isModifiableArray!(["Header"])).toBe(false);
+        expect(isMapModifiableArray(["Global Variables"])).toBe(true);
+        expect(isMapModifiableArray(["Local Variables"])).toBe(true);
+        expect(isMapModifiableArray(["Header"])).toBe(false);
     });
 });
 

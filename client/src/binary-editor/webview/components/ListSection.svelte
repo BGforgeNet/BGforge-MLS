@@ -1,7 +1,6 @@
 <script lang="ts">
     import type { Diagnostic, NodeId, Row } from "@bgforge/binary-editor";
     import type { Bridge } from "../state/bridge";
-    import type { ViewModel } from "../state/view-model";
     import { rowActions, type SectionCaps } from "../state/structure-actions";
     import { filterRows } from "../state/filter";
     import VirtualList from "./VirtualList.svelte";
@@ -13,8 +12,8 @@
     // detail pane unselected; safe for ITM abilities/effects (typically <10) but revisit if any list section can exceed it.
     const SELECTION_RESOLVE_SCAN_LIMIT = 256;
 
-    const { nodeId, caps, bridge, vm, version, selection, onadd, onedit, byNode, showOffsets = false }:
-        { nodeId: NodeId; caps: SectionCaps; bridge: Bridge; vm: ViewModel;
+    const { nodeId, caps, bridge, version, selection, onadd, onedit, byNode, showOffsets = false }:
+        { nodeId: NodeId; caps: SectionCaps; bridge: Bridge;
           version: number; selection: NodeId | undefined;
           onadd: () => void; onedit: (id: string, v: number | string) => void;
           byNode: Map<string, Diagnostic[]>; showOffsets?: boolean } = $props();
@@ -143,7 +142,7 @@
                 {@const acts = rowActions(selectedIndex, total, caps)}
                 <RowActions {acts} entryId={selected.id} {bridge} />
             {/if}
-            <FormSection nodeId={selected.id} {bridge} {vm} {version} {onedit} {byNode} {showOffsets} />
+            <FormSection nodeId={selected.id} {bridge} {version} {onedit} {byNode} {showOffsets} />
         {:else}
             <p class="placeholder">Select an entry.</p>
         {/if}

@@ -51,18 +51,27 @@ const maybe = present ? describe : describe.skip;
 maybe("CRE editor structure ops", () => {
     it("renders the five list sections as master-detail with the right caps", () => {
         const { layout } = openSession("file:///finaluf-caps.cre", new Uint8Array(fs.readFileSync(CRE_FIXTURE)));
-        const find = (title: string) => layout.sections.find((s) => s.title === title);
-        for (const title of ["Known Spells", "Spell Memorization Info", "Memorized Spells", "Effects", "Items"]) {
-            expect(find(title)?.render).toBe("master-detail");
-            expect(find(title)?.canModify).toBe(true);
+        const resolved = layout.layout;
+        expect(resolved?.variantId).toBe("creature");
+        // Render mode is declared on the `list` block; structure-op caps live in the resolved sections map.
+        const listBlocks = new Map<string, "inline" | "master-detail">();
+        for (const row of resolved?.rows ?? []) {
+            for (const panel of row.panels) {
+                for (const block of panel.blocks) {
+                    if (block.kind === "list") listBlocks.set(block.sectionKey, block.render);
+                }
+            }
+        }
+        for (const name of ["Known Spells", "Spell Memorization Info", "Memorized Spells", "Effects", "Items"]) {
+            expect(listBlocks.get(name)).toBe("master-detail");
+            expect(resolved?.sections[name]?.canModify).toBe(true);
         }
         // Memorized spells are owner-ambiguous: no section-level add.
-        expect(find("Memorized Spells")?.canAdd).toBe(false);
-        expect(find("Spell Memorization Info")?.canAdd).toBe(true);
-        expect(find("Items")?.canAdd).toBe(true);
-        // Item Slots is a fixed form section, not a list (no structural mutation).
-        expect(find("Item Slots")?.kind).toBe("form");
-        expect(find("Item Slots")?.canModify).toBe(false);
+        expect(resolved?.sections["Memorized Spells"]?.canAdd).toBe(false);
+        expect(resolved?.sections["Spell Memorization Info"]?.canAdd).toBe(true);
+        expect(resolved?.sections["Items"]?.canAdd).toBe(true);
+        // Item Slots is a grid of fixed slots, not a list section - absent from the list-section map.
+        expect(resolved?.sections["Item Slots"]).toBeUndefined();
     });
 
     it("adds and removes a known spell (flat)", () => {

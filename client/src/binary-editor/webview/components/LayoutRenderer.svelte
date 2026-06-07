@@ -4,7 +4,6 @@
     // single dense page the PRO redesign targets). Field rows are pre-resolved in `layout.fields`.
     import type { Diagnostic, NodeId, ResolvedLayout } from "@bgforge/binary-editor";
     import type { Bridge } from "../state/bridge";
-    import type { ViewModel } from "../state/view-model";
     import FieldsBlock from "./blocks/FieldsBlock.svelte";
     import FlagColumns from "./blocks/FlagColumns.svelte";
     import MatrixBlock from "./blocks/MatrixBlock.svelte";
@@ -12,15 +11,14 @@
     import ListBlock from "./blocks/ListBlock.svelte";
     import RawBlock from "./blocks/RawBlock.svelte";
 
-    // bridge/vm/version/selection are only needed by `list` blocks (variable-length sections render via the
+    // bridge/version/selection are only needed by `list` blocks (variable-length sections render via the
     // live windowed getChildren path); form-only layouts (PRO/EFF) ignore them.
-    const { layout, onedit, byNode, showOffsets = false, bridge, vm, version, selection }: {
+    const { layout, onedit, byNode, showOffsets = false, bridge, version, selection }: {
         layout: ResolvedLayout;
         onedit: (id: string, v: number | string) => void;
         byNode: Map<string, Diagnostic[]>;
         showOffsets?: boolean;
         bridge: Bridge;
-        vm: ViewModel;
         version: number;
         selection: NodeId | undefined;
     } = $props();
@@ -63,7 +61,7 @@
                                            fields={layout.fields} {onedit} showBytes={showOffsets} />
                             {:else if block.kind === "list"}
                                 <ListBlock sectionKey={block.sectionKey} section={layout.sections[block.sectionKey]}
-                                           render={block.render} {bridge} {vm} {version} {selection}
+                                           render={block.render} {bridge} {version} {selection}
                                            {onedit} {byNode} {showOffsets} />
                             {:else}
                                 <RawBlock />

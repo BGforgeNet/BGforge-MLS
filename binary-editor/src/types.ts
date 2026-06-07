@@ -61,26 +61,6 @@ export interface StructureResult {
     selection?: NodeId;
 }
 
-export interface SectionDescriptor {
-    id: string;
-    title: string;
-    kind: "form" | "list";
-    /** NodeId of the top-level group this section renders. */
-    nodeId: NodeId;
-    /** "inline": single-field entries edited in the row (MAP variables). "master-detail": multi-field entries. */
-    render: "inline" | "master-detail";
-    /** Adapter says this collection accepts appended entries. */
-    canAdd: boolean;
-    /** Adapter says entries can be removed/inserted/reordered/duplicated. */
-    canModify: boolean;
-}
-
-/**
- * A format's layout resolved for the active variant: the layout-schema rows verbatim plus a map from
- * every field's semantic key (`FieldRef`) to its renderable `Row`. PRO is form-only and small (~90
- * fields), so the editor sends all field rows up front; list blocks (when other formats migrate) keep
- * using the windowed getChildren path keyed by `sectionKey`.
- */
 /** A list section a layout `list` block targets: the model node to render and its structure-op caps. */
 export interface LayoutSection {
     nodeId: NodeId;
@@ -88,20 +68,24 @@ export interface LayoutSection {
     canModify: boolean;
 }
 
+/**
+ * A format's layout resolved for the active variant: the layout-schema rows verbatim, a map from every
+ * field's semantic key (`FieldRef`) to its renderable `Row`, and a map of the `list`-block sections (keyed
+ * by group name) to the model node + structure-op caps. The whole field set is resolved up front (the
+ * formats are small/form-heavy); variable-length list sections use the windowed getChildren path.
+ */
 export interface ResolvedLayout {
     variantId: string;
     rows: LayoutRow[];
     maxContentWidthPx?: number;
     fields: Record<FieldRef, Row>;
-    /** Depth-0 group sections (keyed by group name) a `list` block can target, with their caps. */
+    /** `list`-block sections (keyed by group name) with their model node id and structure-op caps. */
     sections: Record<string, LayoutSection>;
 }
 
 export interface LayoutDescriptor {
     formatId: string;
-    /** Legacy depth-0-groups-as-tabs path. Empty/unused when `layout` is present. */
-    sections: SectionDescriptor[];
-    /** Present only for formats whose adapter declares a declarative `layout` schema. */
+    /** Present for any successfully parsed file (every format ships a layout); absent for error results. */
     layout?: ResolvedLayout;
 }
 

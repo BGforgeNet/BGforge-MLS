@@ -71,14 +71,18 @@ const matrixBlockSchema = z.strictObject({
 });
 
 /**
- * A variable-length array section (ITM/CRE lists). Renders via the existing window/getChildren path
- * keyed by `sectionKey`. Specified now; the webview `ListBlock` is a stub until the remaining formats
- * migrate (follow-up section 12 of the plan).
+ * A variable-length array section (ITM/CRE/MAP lists). Renders via the window/getChildren path keyed by
+ * `sectionKey` (the depth-0 model group name). The structure-op affordances are declared here as data:
+ * `canAdd` (the section toolbar offers "+ add") and `canModify` (per-entry insert/duplicate/move/remove).
+ * These replace the former `BinaryFormatAdapter.isAddableArray`/`isModifiableArray` presentation predicates
+ * (the adapter now holds only data concerns); the byte-builders still validate the arrayPath internally.
  */
 const listBlockSchema = z.strictObject({
     kind: z.literal("list"),
     sectionKey: z.string().min(1),
     render: z.enum(["inline", "master-detail"]),
+    canAdd: z.boolean().default(false),
+    canModify: z.boolean().default(false),
 });
 
 /** A hex/raw-bytes pane. Specified now; webview `RawBlock` is a stub (follow-up tier). */

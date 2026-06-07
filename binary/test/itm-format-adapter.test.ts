@@ -5,7 +5,13 @@ import { formatAdapterRegistry } from "../src/format-adapter";
 import { itmParser } from "../src/itm";
 import { getItmCanonicalDocument, rebuildItmCanonicalDocument } from "../src/itm/canonical-reader";
 import { serializeItmCanonicalDocument } from "../src/itm/canonical-writer";
-import { defaultItmAbility, defaultItmEffect } from "../src/itm/entity-ops";
+import {
+    defaultItmAbility,
+    defaultItmEffect,
+    isItmAddableArray,
+    isItmListSection,
+    isItmModifiableArray,
+} from "../src/itm/entity-ops";
 import type { ParseResult } from "../src/types";
 
 const itm = formatAdapterRegistry.get("itm")!;
@@ -46,16 +52,16 @@ function makeTwoAbilityBase(): ParseResult {
 
 describe("itm adapter structure-op surface", () => {
     it("classifies Abilities and Effects as modifiable list sections", () => {
-        expect(itm.isListSection!(["Abilities"])).toBe(true);
-        expect(itm.isListSection!(["Effects"])).toBe(true);
-        expect(itm.isListSection!(["ITM Header"])).toBe(false);
-        expect(itm.isModifiableArray!(["Abilities"])).toBe(true);
-        expect(itm.isModifiableArray!(["Effects"])).toBe(true);
+        expect(isItmListSection(["Abilities"])).toBe(true);
+        expect(isItmListSection(["Effects"])).toBe(true);
+        expect(isItmListSection(["ITM Header"])).toBe(false);
+        expect(isItmModifiableArray(["Abilities"])).toBe(true);
+        expect(isItmModifiableArray(["Effects"])).toBe(true);
     });
 
     it("offers add only on Abilities (Effects add is gated off)", () => {
-        expect(itm.isAddableArray!(["Abilities"])).toBe(true);
-        expect(itm.isAddableArray!(["Effects"])).toBe(false);
+        expect(isItmAddableArray(["Abilities"])).toBe(true);
+        expect(isItmAddableArray(["Effects"])).toBe(false);
     });
 
     it("recognizes ability and effect entry paths as removable", () => {
@@ -65,9 +71,9 @@ describe("itm adapter structure-op surface", () => {
     });
 
     it("rejects non-list-section paths for all predicates", () => {
-        expect(itm.isListSection!(["ITM File"])).toBe(false);
-        expect(itm.isModifiableArray!(["ITM File"])).toBe(false);
-        expect(itm.isAddableArray!(["ITM File"])).toBe(false);
+        expect(isItmListSection(["ITM File"])).toBe(false);
+        expect(isItmModifiableArray(["ITM File"])).toBe(false);
+        expect(isItmAddableArray(["ITM File"])).toBe(false);
         expect(itm.isRemovableEntry!(["ITM File", "Abilities"])).toBe(false);
     });
 

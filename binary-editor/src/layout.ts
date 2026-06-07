@@ -1,16 +1,16 @@
-import { formatAdapterRegistry, toSemanticFieldKey, type FormatLayout } from "@bgforge/binary";
+import { type FormatLayout, formatAdapterRegistry, toSemanticFieldKey } from "@bgforge/binary";
 import type { Model } from "./model";
 import { projectRow } from "./window";
-import type { LayoutDescriptor, LayoutSection, ResolvedLayout, Row, SectionDescriptor } from "./types";
+import type { LayoutDescriptor, LayoutSection, ResolvedLayout, Row } from "./types";
 
 /**
  * Resolve a format's declarative layout for the model's active variant: select the variant the parser
  * reported (`parseResult.variantId`) and build a `FieldRef -> Row` map by projecting every field node
  * and keying it by its semantic field key (`toSemanticFieldKey(format, sourceSegments)`) - the same key
  * the layout schema references. Returns undefined when the parse result reports no variantId or the
- * reported variant is not in the schema (e.g. a PRO subtype with no authored layout), so `buildLayout`
- * falls back to the legacy tabs path. No first-variant fallback: an un-stamped or unrecognised file must
- * never be forced into an arbitrary variant's layout.
+ * reported variant is not in the schema (e.g. an error result with no model), so `buildLayout` returns a
+ * layout-less descriptor. No first-variant fallback: an un-stamped or unrecognised file must never be
+ * forced into an arbitrary variant's layout.
  *
  * The whole field set is resolved up front (not just referenced keys): the layout formats are small
  * and form-only, so this avoids a per-ref lookup pass and keeps the renderer a pure data consumer.
@@ -29,46 +29,37 @@ export function resolveLayout(formatId: string, layout: FormatLayout, model: Mod
         if (key !== undefined && !(key in fields)) fields[key] = projectRow(model, node);
     }
 
-    // Depth-0 group sections a `list` block can target, keyed by group name. Caps come from the adapter's
-    // array predicates (same source the legacy tabs path uses); a `list` block's render mode is declared
-    // on the block itself, so it is not stored here.
-    const adapter = formatAdapterRegistry.get(formatId);
-    const sections: Record<string, LayoutSection> = {};
+    // Sections a `list` block targets, keyed by the depth-0 group name the block names (`sectionKey`).
+    // The node id is resolved from the model; the structure-op caps (canAdd/canModify) are declared on the
+    // block itself - presentation data in the layout schema, no longer derived from adapter predicates. A
+    // block whose section is absent from this file (e.g. a MAP elevation that does not exist) is simply not
+    // added, and the renderer prunes its panel.
+    const depth0Groups = new Map<string, string>();
     for (const node of model.nodes) {
-        if (node.depth !== 0 || node.kind !== "group") continue;
-        sections[node.name] = {
-            nodeId: node.id,
-            canAdd: adapter?.isAddableArray?.([node.name]) ?? false,
-            canModify: adapter?.isModifiableArray?.([node.name]) ?? false,
-        };
+        if (node.depth === 0 && node.kind === "group") depth0Groups.set(node.name, node.id);
+    }
+    const sections: Record<string, LayoutSection> = {};
+    for (const row of variant.rows) {
+        for (const panel of row.panels) {
+            for (const block of panel.blocks) {
+                if (block.kind !== "list") continue;
+                const nodeId = depth0Groups.get(block.sectionKey);
+                if (nodeId !== undefined) {
+                    sections[block.sectionKey] = { nodeId, canAdd: block.canAdd, canModify: block.canModify };
+                }
+            }
+        }
     }
     return { variantId, rows: variant.rows, maxContentWidthPx: layout.maxContentWidthPx, fields, sections };
 }
 
+/**
+ * Build the editor layout for an open file. Every format ships a declarative layout, so a successfully
+ * parsed file always resolves one; an error result (no model variant) yields a layout-less descriptor and
+ * the webview shows the error banner instead. The legacy depth-0-groups-as-tabs path has been retired.
+ */
 export function buildLayout(formatId: string, model: Model): LayoutDescriptor {
     const adapter = formatAdapterRegistry.get(formatId);
-
-    // Layout-schema formats render via the generic layout renderer; the legacy tabs path is skipped.
-    if (adapter?.layout) {
-        const layout = resolveLayout(formatId, adapter.layout, model);
-        if (layout) return { formatId, sections: [], layout };
-    }
-
-    const sections: SectionDescriptor[] = model.nodes
-        .filter((n) => n.depth === 0 && n.kind === "group")
-        .map((n) => {
-            const isList = adapter?.isListSection?.([n.name]) ?? false;
-            const childIndices = model.childrenByParent.get(n.id) ?? [];
-            const firstChild = childIndices.length > 0 ? model.nodes[childIndices[0]!] : undefined;
-            const canAdd = adapter?.isAddableArray?.([n.name]) ?? false;
-            // Shape-based, count-independent (fixes F1: an empty list section keeps its modify affordances).
-            const canModify = adapter?.isModifiableArray?.([n.name]) ?? false;
-            // A list section whose entries are plain fields (MAP int32 vars) renders inline (one field per row);
-            // anything else - non-list sections, or sections whose first entry is not a plain field - uses
-            // master-detail.
-            const render: "inline" | "master-detail" =
-                isList && firstChild?.kind === "field" ? "inline" : "master-detail";
-            return { id: n.id, title: n.name, kind: isList ? "list" : "form", nodeId: n.id, render, canAdd, canModify };
-        });
-    return { formatId, sections };
+    const layout = adapter?.layout ? resolveLayout(formatId, adapter.layout, model) : undefined;
+    return { formatId, layout };
 }

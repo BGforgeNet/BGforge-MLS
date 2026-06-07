@@ -2,13 +2,14 @@
  * PRO and EFF harness pass.
  *
  * Opens one Fallout PRO (item proto) and one Infinity Engine EFF in the real webview bundle (app.html).
- * The PRO item is a subtype with no authored layout, so it still renders via the legacy FormSection/tabs
- * path. EFF is migrated to the declarative layout, so it renders as a single dense page via LayoutRenderer
- * (Effect / Dice & Save / Resistance / Parameters / Resources / Caster panels), with the ~300-entry opcode
- * enum as a searchable combobox. Both run under the strict nonce CSP.
+ * Both are migrated to the declarative layout (PRO via its per-subtype item variant, EFF via the "effect"
+ * variant) and render as a single dense page through LayoutRenderer - the legacy section-tabs path is gone.
+ * EFF lays out Effect / Dice & Save / Resistance / Parameters / Resources / Caster panels with the
+ * ~300-entry opcode enum as a searchable combobox. Both run under the strict nonce CSP.
  *
  * Assertions:
- *   - PRO (item): opens without error, legacy form path renders fields (.form .field), has sections.
+ *   - PRO (item): opens without error, resolves an `item.*` layout variant, fields render via .layout-root,
+ *     and no section tabs appear.
  *   - EFF: opens without error, resolves the "effect" layout variant, panels + fields render via
  *     .layout-root, opcode renders as a searchable combobox, and no section tabs appear.
  *   - CSP: no Content-Security-Policy violations in either page.
@@ -81,14 +82,21 @@ await page.exposeFunction("__hostUp", async (m: WebviewToHost) => {
 // ---- PRO pass ----
 currentOpenResult = proOpen.result;
 await page.goto("file://" + path.join(here, "app.html"));
-// PRO is a form-only format (header + subtype-conditional groups). Wait for at least one section tab or field.
-await page.waitForSelector(".form, .bb-tabs.primary [role='tab']", { timeout: 5000 });
+// PRO renders as a single dense page via the declarative layout (every object/sub type has a variant).
+await page.waitForSelector(".layout-root", { timeout: 5000 });
 await page.waitForTimeout(200);
 
-const proSections = proOpen.result.layout.sections.length;
-check("pro: layout has sections (>= 1)", proSections >= 1, `count=${proSections}`);
-const proFields = await page.locator(".form .field").count();
-check("pro: form fields render (> 0)", proFields > 0, `count=${proFields}`);
+check(
+    "pro: resolves an item layout variant",
+    proOpen.result.layout.layout?.variantId?.startsWith("item.") === true,
+    `variantId=${proOpen.result.layout.layout?.variantId}`,
+);
+const proDom = await page.evaluate(() => ({
+    fields: document.querySelectorAll(".layout-root .field").length,
+    tabs: document.querySelectorAll(".bb-tabs").length,
+}));
+check("pro: layout fields render (> 0)", proDom.fields > 0, `count=${proDom.fields}`);
+check("pro: no section tabs (single page)", proDom.tabs === 0, `count=${proDom.tabs}`);
 
 await page.screenshot({ path: path.join(here, "shot-pro.png") });
 

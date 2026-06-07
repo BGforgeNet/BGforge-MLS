@@ -17,9 +17,6 @@ import {
     buildSplReorderAbilityBytes,
     buildSplReorderEffectBytes,
     EFFECTS_SECTION,
-    isSplAddableArray,
-    isSplListSection,
-    isSplModifiableArray,
     isSplRemovableEntry,
 } from "./entity-ops";
 
@@ -47,18 +44,6 @@ export const splFormatAdapter: BinaryFormatAdapter = {
 
     toSemanticFieldKey(segments: readonly string[]): string | undefined {
         return abilityEffectsSemanticFieldKey("spl", "SPL Header", segments);
-    },
-
-    isListSection(arrayPath: readonly string[]): boolean {
-        return isSplListSection(arrayPath);
-    },
-
-    isModifiableArray(arrayPath: readonly string[]): boolean {
-        return isSplModifiableArray(arrayPath);
-    },
-
-    isAddableArray(arrayPath: readonly string[]): boolean {
-        return isSplAddableArray(arrayPath);
     },
 
     isRemovableEntry(entryPath: readonly string[]): boolean {

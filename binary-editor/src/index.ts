@@ -9,7 +9,6 @@ export type {
     ChangeSet,
     EditResult,
     StructureResult,
-    SectionDescriptor,
     LayoutDescriptor,
     OpenResult,
 } from "./types";

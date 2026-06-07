@@ -5,7 +5,13 @@ import { formatAdapterRegistry } from "../src/format-adapter";
 import { creParser } from "../src/cre";
 import { getCreCanonicalDocument, rebuildCreCanonicalDocument } from "../src/cre/canonical-reader";
 import { serializeCreCanonicalDocument } from "../src/cre/canonical-writer";
-import { defaultCreItem, defaultCreKnownSpell } from "../src/cre/entity-ops";
+import {
+    defaultCreItem,
+    defaultCreKnownSpell,
+    isCreAddableArray,
+    isCreListSection,
+    isCreModifiableArray,
+} from "../src/cre/entity-ops";
 import { CRE_GROUP_LABELS } from "../src/cre/types";
 import { computeCreSectionOffsets, type CreCanonicalDocument } from "../src/cre/canonical-schemas";
 import type { ParseResult } from "../src/types";
@@ -74,17 +80,17 @@ maybe("cre adapter structure-op surface", () => {
             CRE_GROUP_LABELS.effects,
             CRE_GROUP_LABELS.items,
         ]) {
-            expect(cre.isListSection!([s])).toBe(true);
-            expect(cre.isModifiableArray!([s])).toBe(true);
+            expect(isCreListSection([s])).toBe(true);
+            expect(isCreModifiableArray([s])).toBe(true);
         }
-        expect(cre.isListSection!([CRE_GROUP_LABELS.itemSlots])).toBe(false);
-        expect(cre.isListSection!([CRE_GROUP_LABELS.header])).toBe(false);
+        expect(isCreListSection([CRE_GROUP_LABELS.itemSlots])).toBe(false);
+        expect(isCreListSection([CRE_GROUP_LABELS.header])).toBe(false);
     });
 
     it("offers section-add everywhere except memorized spells", () => {
-        expect(cre.isAddableArray!([CRE_GROUP_LABELS.knownSpells])).toBe(true);
-        expect(cre.isAddableArray!([CRE_GROUP_LABELS.items])).toBe(true);
-        expect(cre.isAddableArray!([CRE_GROUP_LABELS.memorizedSpells])).toBe(false);
+        expect(isCreAddableArray([CRE_GROUP_LABELS.knownSpells])).toBe(true);
+        expect(isCreAddableArray([CRE_GROUP_LABELS.items])).toBe(true);
+        expect(isCreAddableArray([CRE_GROUP_LABELS.memorizedSpells])).toBe(false);
     });
 
     it("routes add-known-spell through the registered adapter", () => {

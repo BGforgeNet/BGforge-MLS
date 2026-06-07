@@ -61,7 +61,7 @@ describe("MAP perf on denbus1.map (~68,948 nodes, skipMapTiles=true)", () => {
     if (addOpen.type !== "opened") throw new Error(`open failed: ${JSON.stringify(addOpen)}`);
     const addSid = addOpen.result.sessionId;
     // Address the section by its stable NodeId (structure ops no longer take display paths).
-    const globalVarsSectionId = addOpen.result.layout.sections.find((s) => s.title === "Global Variables")?.nodeId;
+    const globalVarsSectionId = addOpen.result.layout.layout?.sections["Global Variables"]?.nodeId;
     if (!globalVarsSectionId) throw new Error("no Global Variables section in layout");
     bench("structureOp add (per add, reparses)", () => {
         const r = dispatch({

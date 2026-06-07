@@ -15,26 +15,27 @@ App.svelte, VirtualList, RowActions, or the Svelte reactivity layer.
 
 The drivers are:
 
-- `render.mts` - MAP format; exercises structure-ops on Global Variables (reorder, insert-before/after,
-  delete, duplicate, undo/redo x6).
 - `render-itm.mts` - ITM format; exercises every structure-op on Abilities and Effects, plus the
   wm_sbook.itm regression (remove the only effect of an item with equipping count 0).
 - `render-spl.mts` - SPL format; same op coverage as ITM, plus the casting-free spell regression
   (same equipping-range clamp path as ITM, via the shared IE structure-op core).
-- `render-form.mts` - phantom (synthetic) format; drives the generic form/list renderer with a made-up
-  descriptor to prove the UI handles a novel format with no format-specific code (all control types,
-  group tabs vs. headed sections, master-detail list).
 - `render-primitives.mts` - bits-ui primitives showcase + CSP gate (Select, Combobox, Checkbox, Menu,
   Tabs, compact RowActions) under the real strict nonce CSP.
-- `render-pro-eff.mts` - PRO (Fallout item proto) and EFF (Infinity Engine effect); form-only formats,
-  asserts the generic form renders real fixtures without error under CSP. (PRO items/scenery still use
-  the legacy tabs path until their layout variants are authored.)
+- `render-pro-eff.mts` - PRO (Fallout item proto) and EFF (Infinity Engine effect), both via the
+  declarative layout; asserts each resolves its variant, renders fields with NO section tabs under CSP, and
+  that the EFF opcode is a searchable combobox.
 - `render-pro.mts` - PRO critter via the declarative single-page layout (LayoutRenderer); asserts the
   Header / Demographics / Final / Stats-matrix / Skills-grid panels render with two flag columns and NO
   section tabs, and screenshots at 1400x860 for visual review against the approved mockup.
-- `render-map-objects.mts` - MAP per-elevation object sections (the projection seam); opens a clean MAP
-  whose objects fully decode, drives every structure-op on a lifted "Elevation 0 Objects" master-detail
-  section, and asserts the read-only "Objects" counts form renders with no editable input.
+- `render-pro-subtypes.mts` - the remaining PRO variants (item weapon/drug/armor, scenery door, wall, tile,
+  misc); per fixture asserts the variant resolves, the page renders with no tabs and a non-zero label/value
+  gap, and the bytes round-trip identically.
+- `render-cre.mts` - CRE via the declarative layout; asserts the curated header panels, item-slots grid,
+  and the five master-detail list sections (with caps) render with no tabs, the effect opcode is a
+  searchable combobox, structure ops on two sections round-trip, and the file round-trips byte-identical.
+- `render-map.mts` - MAP via the declarative layout; asserts header + flag panel, inline variable lists, the
+  per-elevation object lists and present script sections render with no tabs, absent optional sections leave
+  no panel, structure ops apply, and the file round-trips byte-identical.
 
 Each driver prints per-op `PASS`/`FAIL` lines and an `ALL <FMT> OPS PASS` summary; exits non-zero on any
 failure.
@@ -45,8 +46,8 @@ Two shared helpers back the drivers:
   and returns an `assertNoViolations()` that fails the run if any violation was captured. Every driver
   uses it so the CSP gate stays identical across formats.
 - `theme-vars.ts` - `THEME_VARS`, the canonical VS Code Dark+ fallback `:root` block defining every
-  `--vscode-*` variable `styles.css` consumes. `build.mts`, `render-form.mts`, and `render-primitives.mts`
-  import it so adding a new variable to `styles.css` only needs one harness update.
+  `--vscode-*` variable `styles.css` consumes. `build.mts` and `render-primitives.mts` import it so adding a
+  new variable to `styles.css` only needs one harness update.
 
 ## When to use it
 
@@ -108,14 +109,14 @@ any Svelte component it imports.
 **Step 3 - run a driver.**
 
 ```
-pnpm exec tsx binary-editor/test/harness/render.mts
 pnpm exec tsx binary-editor/test/harness/render-itm.mts
 pnpm exec tsx binary-editor/test/harness/render-spl.mts
-pnpm exec tsx binary-editor/test/harness/render-form.mts
 pnpm exec tsx binary-editor/test/harness/render-primitives.mts
 pnpm exec tsx binary-editor/test/harness/render-pro-eff.mts
 pnpm exec tsx binary-editor/test/harness/render-pro.mts
-pnpm exec tsx binary-editor/test/harness/render-map-objects.mts
+pnpm exec tsx binary-editor/test/harness/render-pro-subtypes.mts
+pnpm exec tsx binary-editor/test/harness/render-cre.mts
+pnpm exec tsx binary-editor/test/harness/render-map.mts
 ```
 
 Expected output ends with `ALL OPS PASS` / `ALL ITM OPS PASS` / `ALL SPL OPS PASS` (and the equivalent

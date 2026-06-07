@@ -16,8 +16,8 @@
  *   - the slot arrays whose per-slot fields currently collapse to one semantic key - proficiencies (22),
  *     soundSlots (100), objectRefs (5). Each routes through the header namespace with the sub-group name as
  *     the field segment, so all entries share one key and the layout cannot reference them individually.
- *     Deferred to Phase 7, which cleans the parser and can give the bytes distinct keys; until then they are
- *     not editable in the dense view (the bytes still round-trip). Item slots do NOT collapse (distinct slot
+ *     Deferred: a future parser-key change can give the bytes distinct keys; until then they are not
+ *     editable in the dense view (the bytes still round-trip). Item slots do NOT collapse (distinct slot
  *     labels -> distinct slugs), so they are included as a grid.
  *
  * The Effects detail form renders the ~300-entry opcode as a searchable combobox via the spec's
@@ -320,7 +320,15 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                     panels: [
                         {
                             title: "Known Spells",
-                            blocks: [{ kind: "list", sectionKey: "Known Spells", render: "master-detail" }],
+                            blocks: [
+                                {
+                                    kind: "list",
+                                    sectionKey: "Known Spells",
+                                    render: "master-detail",
+                                    canAdd: true,
+                                    canModify: true,
+                                },
+                            ],
                         },
                     ],
                 },
@@ -328,7 +336,15 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                     panels: [
                         {
                             title: "Spell Memorization Info",
-                            blocks: [{ kind: "list", sectionKey: "Spell Memorization Info", render: "master-detail" }],
+                            blocks: [
+                                {
+                                    kind: "list",
+                                    sectionKey: "Spell Memorization Info",
+                                    render: "master-detail",
+                                    canAdd: true,
+                                    canModify: true,
+                                },
+                            ],
                         },
                     ],
                 },
@@ -336,7 +352,14 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                     panels: [
                         {
                             title: "Memorized Spells",
-                            blocks: [{ kind: "list", sectionKey: "Memorized Spells", render: "master-detail" }],
+                            blocks: [
+                                {
+                                    kind: "list",
+                                    sectionKey: "Memorized Spells",
+                                    render: "master-detail",
+                                    canModify: true,
+                                },
+                            ],
                         },
                     ],
                 },
@@ -344,7 +367,15 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                     panels: [
                         {
                             title: "Effects",
-                            blocks: [{ kind: "list", sectionKey: "Effects", render: "master-detail" }],
+                            blocks: [
+                                {
+                                    kind: "list",
+                                    sectionKey: "Effects",
+                                    render: "master-detail",
+                                    canAdd: true,
+                                    canModify: true,
+                                },
+                            ],
                         },
                     ],
                 },
@@ -352,7 +383,15 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                     panels: [
                         {
                             title: "Items",
-                            blocks: [{ kind: "list", sectionKey: "Items", render: "master-detail" }],
+                            blocks: [
+                                {
+                                    kind: "list",
+                                    sectionKey: "Items",
+                                    render: "master-detail",
+                                    canAdd: true,
+                                    canModify: true,
+                                },
+                            ],
                         },
                     ],
                 },

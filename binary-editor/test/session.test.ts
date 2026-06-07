@@ -13,7 +13,8 @@ describe("openSession", () => {
         const result = openSession("file:///arcaves.map", bytes());
         expect(result.format).toBe("map");
         expect(result.formatName.length).toBeGreaterThan(0);
-        expect(result.layout.sections.length).toBeGreaterThan(0);
+        expect(result.layout.layout?.variantId).toBe("map");
+        expect(Object.keys(result.layout.layout?.sections ?? {}).length).toBeGreaterThan(0);
         expect(result.rootWindow.length).toBeGreaterThan(0);
         expect(sessionStore.get(result.sessionId)).toBeDefined();
     });

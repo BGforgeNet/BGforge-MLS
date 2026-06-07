@@ -5,7 +5,7 @@ import { formatAdapterRegistry } from "../src/format-adapter";
 import { splParser } from "../src/spl";
 import { getSplCanonicalDocument, rebuildSplCanonicalDocument } from "../src/spl/canonical-reader";
 import { serializeSplCanonicalDocument } from "../src/spl/canonical-writer";
-import { defaultSplAbility } from "../src/spl/entity-ops";
+import { defaultSplAbility, isSplAddableArray, isSplListSection, isSplModifiableArray } from "../src/spl/entity-ops";
 import { defaultIeEffect } from "../src/ie-common/structure-ops";
 import type { ParseResult } from "../src/types";
 
@@ -46,16 +46,16 @@ function makeTwoAbilityBase(): ParseResult {
 
 describe("spl adapter structure-op surface", () => {
     it("classifies Abilities and Effects as modifiable list sections", () => {
-        expect(spl.isListSection!(["Abilities"])).toBe(true);
-        expect(spl.isListSection!(["Effects"])).toBe(true);
-        expect(spl.isListSection!(["SPL Header"])).toBe(false);
-        expect(spl.isModifiableArray!(["Abilities"])).toBe(true);
-        expect(spl.isModifiableArray!(["Effects"])).toBe(true);
+        expect(isSplListSection(["Abilities"])).toBe(true);
+        expect(isSplListSection(["Effects"])).toBe(true);
+        expect(isSplListSection(["SPL Header"])).toBe(false);
+        expect(isSplModifiableArray(["Abilities"])).toBe(true);
+        expect(isSplModifiableArray(["Effects"])).toBe(true);
     });
 
     it("offers add only on Abilities (Effects add is gated off)", () => {
-        expect(spl.isAddableArray!(["Abilities"])).toBe(true);
-        expect(spl.isAddableArray!(["Effects"])).toBe(false);
+        expect(isSplAddableArray(["Abilities"])).toBe(true);
+        expect(isSplAddableArray(["Effects"])).toBe(false);
     });
 
     it("recognizes ability and effect entry paths as removable", () => {
@@ -65,9 +65,9 @@ describe("spl adapter structure-op surface", () => {
     });
 
     it("rejects non-list-section paths for all predicates", () => {
-        expect(spl.isListSection!(["SPL File"])).toBe(false);
-        expect(spl.isModifiableArray!(["SPL File"])).toBe(false);
-        expect(spl.isAddableArray!(["SPL File"])).toBe(false);
+        expect(isSplListSection(["SPL File"])).toBe(false);
+        expect(isSplModifiableArray(["SPL File"])).toBe(false);
+        expect(isSplAddableArray(["SPL File"])).toBe(false);
         expect(spl.isRemovableEntry!(["SPL File", "Abilities"])).toBe(false);
     });
 

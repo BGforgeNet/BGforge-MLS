@@ -10,8 +10,8 @@
  *   - the derived offset/count fields (extendedHeadersOffset/Count, featureBlocksOffset/Index/Count) which
  *     the serializer recomputes and the parser marks non-editable;
  *   - `usabilityFlags`: 4 separate per-byte flag fields that currently collapse to one semantic key
- *     (`itm.header.usabilityFlags`), so the layout cannot reference all four. Deferred to Phase 7, which
- *     cleans the parser and can give the bytes distinct keys; until then usability flags are not editable
+ *     (`itm.header.usabilityFlags`), so the layout cannot reference all four. Deferred: a future
+ *     parser-key change can give the four bytes distinct keys; until then usability flags are not editable
  *     in the dense view (the bytes still round-trip).
  *
  * The Effects detail form renders the ~300-entry opcode as a searchable combobox via the spec's
@@ -106,7 +106,15 @@ export const itmLayout: FormatLayout = formatLayoutSchema.parse({
                     panels: [
                         {
                             title: "Abilities",
-                            blocks: [{ kind: "list", sectionKey: "Abilities", render: "master-detail" }],
+                            blocks: [
+                                {
+                                    kind: "list",
+                                    sectionKey: "Abilities",
+                                    render: "master-detail",
+                                    canAdd: true,
+                                    canModify: true,
+                                },
+                            ],
                         },
                     ],
                 },
@@ -114,7 +122,7 @@ export const itmLayout: FormatLayout = formatLayoutSchema.parse({
                     panels: [
                         {
                             title: "Effects",
-                            blocks: [{ kind: "list", sectionKey: "Effects", render: "master-detail" }],
+                            blocks: [{ kind: "list", sectionKey: "Effects", render: "master-detail", canModify: true }],
                         },
                     ],
                 },

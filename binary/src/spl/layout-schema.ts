@@ -48,7 +48,15 @@ export const splLayout: FormatLayout = formatLayoutSchema.parse({
                     panels: [
                         {
                             title: "Abilities",
-                            blocks: [{ kind: "list", sectionKey: "Abilities", render: "master-detail" }],
+                            blocks: [
+                                {
+                                    kind: "list",
+                                    sectionKey: "Abilities",
+                                    render: "master-detail",
+                                    canAdd: true,
+                                    canModify: true,
+                                },
+                            ],
                         },
                     ],
                 },
@@ -56,7 +64,7 @@ export const splLayout: FormatLayout = formatLayoutSchema.parse({
                     panels: [
                         {
                             title: "Effects",
-                            blocks: [{ kind: "list", sectionKey: "Effects", render: "master-detail" }],
+                            blocks: [{ kind: "list", sectionKey: "Effects", render: "master-detail", canModify: true }],
                         },
                     ],
                 },

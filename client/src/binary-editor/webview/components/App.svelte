@@ -1,14 +1,9 @@
 <script lang="ts">
-    import type { Diagnostic, NodeId, OpenResult, SectionDescriptor } from "@bgforge/binary-editor";
+    import type { Diagnostic, NodeId, OpenResult } from "@bgforge/binary-editor";
     import type { Bridge } from "../state/bridge";
     import type { HostToWebview } from "../messages";
-    import { ViewModel } from "../state/view-model";
     import { diagnosticsByNode, bannerSummary } from "../state/diagnostics";
-    import SectionTabs from "./SectionTabs.svelte";
     import LayoutRenderer from "./LayoutRenderer.svelte";
-    import FormSection from "./FormSection.svelte";
-    import ListSection from "./ListSection.svelte";
-    import InlineList from "./InlineList.svelte";
     import Checkbox from "./primitives/Checkbox.svelte";
     import Icon from "./Icon.svelte";
 
@@ -17,16 +12,12 @@
     let open = $state<OpenResult | undefined>();
     let diagnostics = $state<Diagnostic[]>([]);
     let version = $state(0);
-    let vm = $state<ViewModel | undefined>();
-    let activeId = $state<string | undefined>();
     // NodeId the host asks the view to select after the latest edit/structure op (undefined = no change).
     let selection = $state<NodeId | undefined>();
     // Off by default: byte offsets are a developer affordance, not needed by end users.
     // eslint-disable-next-line prefer-const -- reassigned via the toolbar Checkbox onchange callback
     let showOffsets = $state(false);
 
-    const active = $derived<SectionDescriptor | undefined>(
-        open?.layout.sections.find((s) => s.id === activeId));
     const byNode = $derived(diagnosticsByNode(diagnostics));
     const summary = $derived(bannerSummary(diagnostics));
 
@@ -36,8 +27,6 @@
             if (bridge.handle(m)) return; // resolved a pending requestChildren
             if (m.type === "init") {
                 open = m.open;
-                vm = new ViewModel(m.open.layout);
-                activeId = m.open.layout.sections[0]?.id;
                 bridge.invalidate();
                 version++;
             } else if (m.type === "diagnostics") {
@@ -45,9 +34,8 @@
             } else if (m.type === "changeSet") {
                 diagnostics = m.changeSet.diagnostics;
                 selection = m.selection;
-                // The tabs path re-fetches rows through the bridge on the version bump, but the layout
-                // renderer reads the resolved field snapshot directly - so patch each changed row into it
-                // (matched by node id) to reflect edits. Without this, a layout edit never re-renders.
+                // The layout renderer reads the resolved field snapshot directly, so patch each changed row
+                // into it (matched by node id) to reflect edits. Without this, a layout edit never re-renders.
                 const fields = open?.layout.layout?.fields;
                 if (fields) {
                     for (const row of m.changeSet.changed) {
@@ -66,9 +54,7 @@
         return () => window.removeEventListener("message", onMsg);
     });
 
-    function selectSection(id: string) { vm?.selectSection(id); activeId = id; }
     const edit = (id: string, v: number | string) => bridge.editField(id, v);
-    function add() { if (active) bridge.structureOp({ op: "add", sectionId: active.nodeId }); }
 </script>
 
 {#if !open}
@@ -102,28 +88,14 @@
             </ul>
         </div>
     {/if}
-    {#if open.layout.layout && vm}
-        <!-- Layout-schema formats render as a single dense page via the generic LayoutRenderer; the legacy
-             section-tabs + form/list path below is unchanged for every other format. bridge/vm/version/
+    {#if open.layout.layout}
+        <!-- Every format renders as a single dense page via the generic LayoutRenderer; bridge/version/
              selection are forwarded for `list` blocks (variable-length sections use the windowed path). -->
         <LayoutRenderer layout={open.layout.layout} onedit={edit} {byNode} {showOffsets}
-                        {bridge} {vm} {version} {selection} />
+                        {bridge} {version} {selection} />
     {:else}
-        <SectionTabs sections={open.layout.sections} {activeId} onselect={selectSection} />
-        {#if active && vm}
-            {#if active.kind === "list"}
-                {#if active.render === "inline"}
-                    <InlineList parentId={active.nodeId}
-                                caps={{ canAdd: active.canAdd, canModify: active.canModify }}
-                                {bridge} {version} {selection} onedit={edit} {showOffsets} />
-                {:else}
-                    <ListSection nodeId={active.nodeId}
-                                caps={{ canAdd: active.canAdd, canModify: active.canModify }}
-                                {bridge} {vm} {version} {selection} onadd={add} onedit={edit} {byNode} {showOffsets} />
-                {/if}
-            {:else}
-                <FormSection nodeId={active.nodeId} {bridge} {vm} {version} onedit={edit} {byNode} {showOffsets} />
-            {/if}
-        {/if}
+        <!-- A successfully parsed file always resolves a layout; this only shows if a format ships an adapter
+             with no layout schema (a developer error caught here rather than rendering a blank page). -->
+        <p class="placeholder">No layout is available for this format.</p>
     {/if}
 {/if}

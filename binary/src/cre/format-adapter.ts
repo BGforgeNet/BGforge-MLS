@@ -12,9 +12,6 @@ import {
     buildCreInsertEntryBytes,
     buildCreMoveEntryBytes,
     buildCreRemoveEntryBytes,
-    isCreAddableArray,
-    isCreListSection,
-    isCreModifiableArray,
     isCreRemovableEntry,
 } from "./entity-ops";
 
@@ -77,18 +74,6 @@ export const creFormatAdapter: BinaryFormatAdapter = {
 
     toSemanticFieldKey(segments: readonly string[]): string | undefined {
         return creSemanticFieldKey(segments);
-    },
-
-    isListSection(arrayPath: readonly string[]): boolean {
-        return isCreListSection(arrayPath);
-    },
-
-    isModifiableArray(arrayPath: readonly string[]): boolean {
-        return isCreModifiableArray(arrayPath);
-    },
-
-    isAddableArray(arrayPath: readonly string[]): boolean {
-        return isCreAddableArray(arrayPath);
     },
 
     isRemovableEntry(entryPath: readonly string[]): boolean {

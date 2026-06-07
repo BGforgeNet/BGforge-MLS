@@ -17,9 +17,6 @@ import {
     buildItmReorderAbilityBytes,
     buildItmReorderEffectBytes,
     EFFECTS_SECTION,
-    isItmAddableArray,
-    isItmListSection,
-    isItmModifiableArray,
     isItmRemovableEntry,
 } from "./entity-ops";
 
@@ -47,18 +44,6 @@ export const itmFormatAdapter: BinaryFormatAdapter = {
 
     toSemanticFieldKey(segments: readonly string[]): string | undefined {
         return abilityEffectsSemanticFieldKey("itm", "ITM Header", segments);
-    },
-
-    isListSection(arrayPath: readonly string[]): boolean {
-        return isItmListSection(arrayPath);
-    },
-
-    isModifiableArray(arrayPath: readonly string[]): boolean {
-        return isItmModifiableArray(arrayPath);
-    },
-
-    isAddableArray(arrayPath: readonly string[]): boolean {
-        return isItmAddableArray(arrayPath);
     },
 
     isRemovableEntry(entryPath: readonly string[]): boolean {

@@ -4,62 +4,68 @@ import { describe, expect, it } from "vitest";
 import { mapParser, type ParseResult } from "@bgforge/binary";
 import { buildModel } from "../src/model";
 import { buildLayout } from "../src/layout";
+import type { ResolvedLayout } from "../src/types";
 
 const MAP_FIXTURE = path.resolve(__dirname, "../../client/testFixture/maps/arcaves.map");
 
-/** Minimal ParseResult carrying a single empty depth-0 group (no children). Used to prove
- *  F1: the layout must report canModify and list-kind for an empty variable section where
- *  the old entry-probe approach could not find a representative child. */
+/** Minimal ParseResult carrying a single empty depth-0 group (no children), stamped with the map variant so
+ *  the layout resolves. Used to prove the caps for an empty variable section come from the layout block, not
+ *  from probing a representative entry (which the retired adapter predicates needed). */
 function emptyGroupParseResult(groupName: string): ParseResult {
     return {
         format: "map",
         formatName: "MAP",
+        variantId: "map",
         root: { name: "Root", fields: [{ name: groupName, fields: [] }] },
     };
 }
 
+/** The render mode of a `list` block, found by section key across the variant's rows. */
+function listRender(layout: ResolvedLayout, sectionKey: string): "inline" | "master-detail" | undefined {
+    for (const row of layout.rows) {
+        for (const panel of row.panels) {
+            for (const block of panel.blocks) {
+                if (block.kind === "list" && block.sectionKey === sectionKey) return block.render;
+            }
+        }
+    }
+    return undefined;
+}
+
 describe("buildLayout (map)", () => {
-    it("produces one section per depth-0 group, marking Global Variables a list", () => {
+    it("resolves the map layout with Global Variables as an inline list section", () => {
         const m = buildModel(mapParser.parse(new Uint8Array(fs.readFileSync(MAP_FIXTURE))));
         const layout = buildLayout("map", m);
         expect(layout.formatId).toBe("map");
-        const gv = layout.sections.find((s) => s.title === "Global Variables");
-        expect(gv).toBeDefined();
-        if (!gv) return;
-        expect(gv.kind).toBe("list");
+        expect(layout.layout?.variantId).toBe("map");
+        expect(layout.layout?.sections["Global Variables"]).toBeDefined();
+        expect(listRender(layout.layout!, "Global Variables")).toBe("inline");
     });
 });
 
 describe("buildLayout capabilities", () => {
-    it("marks Global Variables addable, modifiable, and inline-rendered", () => {
+    it("marks Global Variables addable + modifiable (caps declared on the list block)", () => {
         const m = buildModel(mapParser.parse(new Uint8Array(fs.readFileSync(MAP_FIXTURE))));
-        const layout = buildLayout("map", m);
-        const gv = layout.sections.find((s) => s.title === "Global Variables")!;
-        expect(gv.canAdd).toBe(true);
-        expect(gv.canModify).toBe(true);
-        expect(gv.render).toBe("inline");
+        const gv = buildLayout("map", m).layout?.sections["Global Variables"];
+        expect(gv?.canAdd).toBe(true);
+        expect(gv?.canModify).toBe(true);
     });
 
-    it("marks the Header form section non-addable", () => {
+    it("does not expose the Header group as a list section (only `list` blocks populate the sections map)", () => {
         const m = buildModel(mapParser.parse(new Uint8Array(fs.readFileSync(MAP_FIXTURE))));
-        const layout = buildLayout("map", m);
-        const header = layout.sections.find((s) => s.kind === "form")!;
-        expect(header.canAdd).toBe(false);
-        expect(header.canModify).toBe(false);
-        expect(header.render).toBe("master-detail");
+        expect(buildLayout("map", m).layout?.sections["Header"]).toBeUndefined();
     });
 });
 
-describe("buildLayout F1: empty list section", () => {
-    it("reports canModify and list-kind for an empty Local Variables section (no children to probe)", () => {
-        // F1: the old entry-probe approach returned canModify === false when the section had
-        // zero entries because there was no representative child name to pass to isRemovableEntry.
-        // isModifiableArray is shape-based and must return true regardless of entry count.
+describe("buildLayout: empty list section caps are count-independent", () => {
+    it("reports canAdd/canModify for an empty Local Variables section (caps from the layout block)", () => {
+        // The retired adapter entry-probe returned canModify === false for a zero-entry section because there
+        // was no representative child to pass to isRemovableEntry. Caps now come from the `list` block, so an
+        // empty section still reports its declared affordances.
         const m = buildModel(emptyGroupParseResult("Local Variables"));
-        const layout = buildLayout("map", m);
-        const lv = layout.sections.find((s) => s.title === "Local Variables")!;
+        const lv = buildLayout("map", m).layout?.sections["Local Variables"];
         expect(lv).toBeDefined();
-        expect(lv.kind).toBe("list");
-        expect(lv.canModify).toBe(true);
+        expect(lv?.canModify).toBe(true);
+        expect(lv?.canAdd).toBe(true);
     });
 });

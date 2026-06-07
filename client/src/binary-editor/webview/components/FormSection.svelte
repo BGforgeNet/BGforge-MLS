@@ -1,17 +1,16 @@
 <script lang="ts">
     import type { Diagnostic, NodeId, Row } from "@bgforge/binary-editor";
     import type { Bridge } from "../state/bridge";
-    import type { ViewModel } from "../state/view-model";
     import { splitForm, organizeGroups } from "../state/form-groups";
     import Tabs from "./primitives/Tabs.svelte";
     import Field from "./Field.svelte";
     import Self from "./FormSection.svelte";
 
     // depth: the group-nesting level this FormSection renders. depth=1 is the first level
-    // of groups inside a detail form (sits under the horizontal section tabs) -> vertical tabs.
+    // of groups inside a detail form (a list entry's nested sub-groups) -> vertical tabs.
     // depth=2 -> horizontal tabs. depth>2 -> always headed sections (hard cap at 2 tab levels).
-    const { nodeId, bridge, vm, version, onedit, byNode, depth = 1, showOffsets = false }:
-        { nodeId: NodeId; bridge: Bridge; vm: ViewModel; version: number;
+    const { nodeId, bridge, version, onedit, byNode, depth = 1, showOffsets = false }:
+        { nodeId: NodeId; bridge: Bridge; version: number;
           onedit: (id: string, v: number | string) => void;
           byNode: Map<string, Diagnostic[]>;
           depth?: number; showOffsets?: boolean } = $props();
@@ -57,7 +56,7 @@
                   ariaLabel="Form groups" onselect={(id) => { activeTabId = id; }} />
             {#if activeGroup}
                 <div class="group-tab-content">
-                    <Self nodeId={activeGroup.id} {bridge} {vm} {version} {onedit} {byNode} depth={depth + 1} {showOffsets} />
+                    <Self nodeId={activeGroup.id} {bridge} {version} {onedit} {byNode} depth={depth + 1} {showOffsets} />
                 </div>
             {/if}
         </div>
@@ -65,7 +64,7 @@
         {#each groups as group (group.id)}
             <div class="subgroup">
                 <h4 class="subgroup-title">{group.name}</h4>
-                <Self nodeId={group.id} {bridge} {vm} {version} {onedit} {byNode} depth={depth + 1} {showOffsets} />
+                <Self nodeId={group.id} {bridge} {version} {onedit} {byNode} depth={depth + 1} {showOffsets} />
             </div>
         {/each}
     {/if}
