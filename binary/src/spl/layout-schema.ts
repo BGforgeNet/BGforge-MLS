@@ -26,6 +26,7 @@ export const splLayout: FormatLayout = formatLayoutSchema.parse({
                             blocks: [
                                 {
                                     kind: "fields",
+                                    columns: 2,
                                     fields: [
                                         k("unidentifiedName"),
                                         k("description"),

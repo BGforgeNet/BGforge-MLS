@@ -307,6 +307,33 @@ function collectPanelLabels(): PanelLabels[] {
     return out;
 }
 
+describe("UX packing guardrails", () => {
+    // F. A `fields` block with many entries must use >=2 columns, or it runs as one tall single column down a
+    // wide page (the #7 waste). grid blocks carry an explicit `columns` (required by the schema); flags blocks
+    // have a runtime bit count not visible here, so both are out of scope. Pure layout-structure check.
+    it("no fields block with >=8 entries is single-column", () => {
+        const MAX_SINGLE_COLUMN = 8;
+        const violations: string[] = [];
+        for (const format of Object.keys(PARSERS))
+            for (const [variant, v] of Object.entries(layoutFor(format).variants))
+                for (const row of v.rows)
+                    for (const panel of row.panels)
+                        for (const block of panel.blocks)
+                            if (
+                                block.kind === "fields" &&
+                                block.fields.length >= MAX_SINGLE_COLUMN &&
+                                (block.columns ?? 1) < 2
+                            )
+                                violations.push(
+                                    `${format}/${variant}/${panel.title ?? ""}: ${block.fields.length} fields, 1 column`,
+                                );
+        expect(
+            violations,
+            `single-column fields blocks that should be multi-column:\n${violations.join("\n")}`,
+        ).toEqual([]);
+    });
+});
+
 describe("UX label guardrails", () => {
     const panels = collectPanelLabels();
 

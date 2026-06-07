@@ -83,18 +83,15 @@ export const effLayout: FormatLayout = formatLayoutSchema.parse({
                         },
                         {
                             title: "Resources",
+                            blocks: [{ kind: "fields", fields: [k("resource"), k("resource2"), k("resource3")] }],
+                        },
+                        {
+                            // school/sectype/stacking/variableName are effect metadata, not resref resources.
+                            title: "Classification",
                             blocks: [
                                 {
                                     kind: "fields",
-                                    fields: [
-                                        k("resource"),
-                                        k("resource2"),
-                                        k("resource3"),
-                                        k("variableName"),
-                                        k("school"),
-                                        k("sectype"),
-                                        k("stackingIdTobex"),
-                                    ],
+                                    fields: [k("school"), k("sectype"), k("stackingIdTobex"), k("variableName")],
                                 },
                             ],
                         },
@@ -107,6 +104,7 @@ export const effLayout: FormatLayout = formatLayoutSchema.parse({
                             blocks: [
                                 {
                                     kind: "fields",
+                                    columns: 2,
                                     fields: [
                                         k("casterLevel"),
                                         k("casterXCoord"),

@@ -49,6 +49,7 @@ const itemPropertiesPanel: LayoutPanel = {
     blocks: [
         {
             kind: "fields",
+            columns: 2,
             fields: [
                 p("itemProperties.subType"),
                 p("itemProperties.material"),
@@ -93,7 +94,10 @@ const variant = (commonPanels: LayoutPanel[], subtypePanels: LayoutPanel[]): { r
 const itemVariant = (subtypePanels: LayoutPanel[]) => variant([headerPanel, itemPropertiesPanel], subtypePanels);
 const sceneryVariant = (subtypePanels: LayoutPanel[]) => variant([headerPanel, sceneryPropertiesPanel], subtypePanels);
 
-const fieldsPanel = (title: string, fields: string[]): LayoutPanel => ({ title, blocks: [{ kind: "fields", fields }] });
+const fieldsPanel = (title: string, fields: string[], columns?: number): LayoutPanel => ({
+    title,
+    blocks: [{ kind: "fields", fields, ...(columns !== undefined && { columns }) }],
+});
 
 /** A matrix row whose Base/Bonus cells are `<key>` and `<key>Bonus`. */
 function baseBonus(label: string, key: string): { label: string; cells: Record<string, string> } {
@@ -295,25 +299,29 @@ export const proLayout: FormatLayout = formatLayoutSchema.parse({
             ]),
         ]),
         "item.weapon": itemVariant([
-            fieldsPanel("Weapon", [
-                p("weaponStats.animationCode"),
-                p("weaponStats.damageType"),
-                p("weaponStats.minDamage"),
-                p("weaponStats.maxDamage"),
-                p("weaponStats.minStrength"),
-                p("weaponStats.maxRange1"),
-                p("weaponStats.maxRange2"),
-                p("weaponStats.apCost1"),
-                p("weaponStats.apCost2"),
-                p("weaponStats.rounds"),
-                p("weaponStats.caliber"),
-                p("weaponStats.ammoPid"),
-                p("weaponStats.maxAmmo"),
-                p("weaponStats.projectilePid"),
-                p("weaponStats.criticalFail"),
-                p("weaponStats.perk"),
-                p("weaponStats.soundId"),
-            ]),
+            fieldsPanel(
+                "Weapon",
+                [
+                    p("weaponStats.animationCode"),
+                    p("weaponStats.damageType"),
+                    p("weaponStats.minDamage"),
+                    p("weaponStats.maxDamage"),
+                    p("weaponStats.minStrength"),
+                    p("weaponStats.maxRange1"),
+                    p("weaponStats.maxRange2"),
+                    p("weaponStats.apCost1"),
+                    p("weaponStats.apCost2"),
+                    p("weaponStats.rounds"),
+                    p("weaponStats.caliber"),
+                    p("weaponStats.ammoPid"),
+                    p("weaponStats.maxAmmo"),
+                    p("weaponStats.projectilePid"),
+                    p("weaponStats.criticalFail"),
+                    p("weaponStats.perk"),
+                    p("weaponStats.soundId"),
+                ],
+                2,
+            ),
         ]),
         "item.ammo": itemVariant([
             fieldsPanel("Ammo", [

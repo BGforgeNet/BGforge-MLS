@@ -45,6 +45,7 @@ export const mapLayout: FormatLayout = formatLayoutSchema.parse({
                             blocks: [
                                 {
                                     kind: "fields",
+                                    columns: 2,
                                     fields: [
                                         k("version"),
                                         k("filename"),
