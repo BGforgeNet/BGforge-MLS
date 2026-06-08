@@ -27,7 +27,7 @@ import { creHeaderSpec } from "./header";
 // in the rebuild helper that reads them back.
 
 /** 22 weapon-proficiency byte slots (BG1 named groups; BG2/EE engine-derived). */
-const PROFICIENCY_SLOT_LABELS: readonly string[] = Array.from({ length: 22 }, (_, i) => `Slot ${i + 1}`);
+const PROFICIENCY_SLOT_LABELS: readonly string[] = Array.from({ length: 20 }, (_, i) => `Slot ${i + 1}`);
 
 /** 100 sound-set strref slots per SOUNDOFF.IDS / SNDSLOT.IDS. */
 const SOUND_SLOT_LABELS: readonly string[] = Array.from({ length: 100 }, (_, i) => `Sound ${i + 1}`);
@@ -68,15 +68,15 @@ export const creHeaderSpecAnnotated = {
      */
     kit: { ...creHeaderSpec.kit, enum: CreKit, enumOpen: true },
     /**
-     * Weapon-proficiency block (22 x u8). Rendered as individually-labelled
+     * Weapon-proficiency block (20 x u8). Rendered as individually-labelled
      * slots so each byte value is recoverable from the display tree on rebuild.
-     * BG1 uses the first 9 slots for named weapon groups; BG2/EE computes
+     * BG1 uses the first 8 slots for named weapon groups; BG2/EE computes
      * proficiencies from KIT.IDS/WEAPPROF.2DA at runtime and leaves most
-     * bytes unused, but all 22 bytes must round-trip byte-identically regardless.
+     * bytes unused, but all 20 bytes must round-trip byte-identically regardless.
      */
     proficiencies: arraySpec({
         element: { codec: u8 },
-        count: 22,
+        count: 20,
         view: "slots",
         slotLabels: PROFICIENCY_SLOT_LABELS,
     }),

@@ -68,17 +68,19 @@ export const creHeaderSpec = {
     intoxication: { codec: u8 },
     luck: { codec: u8 },
     /**
-     * Proficiencies. BG1 uses the first nine slots for weapon-group bonuses
-     * (large swords / small swords / bows / spears / blunt / spiked / axe /
-     * missile / large swords secondary). BG2 and EE leave most slots unused
-     * (3-bit primary + 3-bit secondary chunks per weapon-group; the engine
-     * computes them from KIT.IDS / WEAPPROF.2DA at runtime). The fixed-width
-     * 22-byte block round-trips byte-identically regardless.
+     * Weapon proficiencies: 20 bytes (IESDP cre_v1.htm 0x006e-0x0081). BG1 names the first 8 (large swords,
+     * small swords, bows, spears, blunt, spiked, axe, missile); the rest are unused in BG1/BG2 (EE computes
+     * them from KIT.IDS / WEAPPROF.2DA at runtime). Each byte packs an active-class value (bits 0-2) and an
+     * original-class value (bits 3-5); kept as raw bytes here. Round-trips byte-identically regardless.
      */
     proficiencies: arraySpec({
         element: { codec: u8 },
-        count: 22,
+        count: 20,
     }),
+    // Turn-undead level (paladin/cleric) and the ranger tracking skill (0-100). IESDP cre_v1.htm 0x0082 / 0x0083;
+    // previously absorbed into the 22-byte proficiencies block, now named so the editor can surface them.
+    turnUndeadLevel: { codec: u8 },
+    trackingSkill: { codec: u8 },
     /**
      * 32 bytes. BG1 / BG2 / BGEE: tracking-target resref-like string. PSTEE
      * reinterprets the same range as several distinct fields (thief / mage
@@ -138,8 +140,9 @@ export const creHeaderSpec = {
         count: 5,
     }),
     alignment: { codec: u8 },
-    globalActorEnum: { codec: u16 },
-    localActorEnum: { codec: u16 },
+    // Actor enumeration values, set at runtime; 0xFFFF (-1) is the "unassigned" sentinel, so signed.
+    globalActorEnum: { codec: i16 },
+    localActorEnum: { codec: i16 },
     deathVariable: charsSpec(32),
     knownSpellsOffset: { codec: u32 },
     knownSpellsCount: { codec: u32 },

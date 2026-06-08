@@ -157,8 +157,8 @@ async function clickDelete(scope: Locator): Promise<void> {
     }
 }
 // CRE is tabbed: assert the top-level tab strip (count badges stripped), then visit the tabs that carry the
-// grids/fields to verify they render and align. (The five list sections live in the Spells/Effects/Items tabs
-// and are exercised below.)
+// grids/fields to verify they render and align. (The five list sections live in the Spells/Effects/Inventory
+// tabs and are exercised below.)
 const topTabs = await page.evaluate(() =>
     Array.from(document.querySelectorAll('.bb-tabs.primary button[role="tab"]'), (e) =>
         (e.textContent ?? "").replace(/ \(\d+\)$/, "").trim(),
@@ -167,16 +167,7 @@ const topTabs = await page.evaluate(() =>
 check(
     "layout: top-level tabs render in order",
     JSON.stringify(topTabs) ===
-        JSON.stringify([
-            "Identity",
-            "Combat",
-            "Appearance & Scripts",
-            "Inventory",
-            "Proficiencies & Sounds",
-            "Spells",
-            "Effects",
-            "Items",
-        ]),
+        JSON.stringify(["Identity", "Combat", "Inventory", "Proficiencies", "Sounds", "Spells", "Effects"]),
     JSON.stringify(topTabs),
 );
 
@@ -197,36 +188,47 @@ await clickTab("Inventory");
 const itemSlots = await page.locator('.layout-root .panel:has(h3:text-is("Item Slots")) .grid .skill').count();
 check("layout: item-slots grid renders 40 cells", itemSlots === 40, `count=${itemSlots}`);
 
-await clickTab("Proficiencies & Sounds");
-const slots = await page.evaluate(() => {
-    const counts: Record<string, number> = {};
-    for (const p of Array.from(document.querySelectorAll(".layout-root .panel"))) {
-        const title = p.querySelector("h3")?.textContent ?? "";
-        counts[title] = p.querySelectorAll(".grid .skill").length;
-    }
-    let minGridGap = Infinity;
-    for (const cell of Array.from(document.querySelectorAll(".layout-root .grid .skill"))) {
-        const label = cell.querySelector(".nm");
-        const control = cell.querySelector(".field-control, input, select");
-        if (!label || !control) continue;
-        minGridGap = Math.min(minGridGap, control.getBoundingClientRect().left - label.getBoundingClientRect().right);
-    }
-    return {
-        prof: counts["Proficiencies"] ?? 0,
-        obj: counts["Tracked Objects"] ?? 0,
-        sound: counts["Sound Slots"] ?? 0,
-        minGridGap,
-    };
-});
+// Proficiencies and Tracked Objects share the "Proficiencies" tab; Sound Slots is its own "Sounds" tab.
+const gridCounts = async (): Promise<{ counts: Record<string, number>; minGridGap: number }> =>
+    page.evaluate(() => {
+        const counts: Record<string, number> = {};
+        for (const p of Array.from(document.querySelectorAll(".layout-root .panel"))) {
+            const title = p.querySelector("h3")?.textContent ?? "";
+            counts[title] = p.querySelectorAll(".grid .skill").length;
+        }
+        let minGridGap = Infinity;
+        for (const cell of Array.from(document.querySelectorAll(".layout-root .grid .skill"))) {
+            const label = cell.querySelector(".nm");
+            const control = cell.querySelector(".field-control, input, select");
+            if (!label || !control) continue;
+            minGridGap = Math.min(
+                minGridGap,
+                control.getBoundingClientRect().left - label.getBoundingClientRect().right,
+            );
+        }
+        return { counts, minGridGap };
+    });
+
+await clickTab("Proficiencies");
+const prof = await gridCounts();
 check(
-    "layout: header slot grids render (proficiencies 22 / tracked objects 5 / sound slots 100)",
-    slots.prof === 22 && slots.obj === 5 && slots.sound === 100,
-    JSON.stringify(slots),
+    "layout: proficiencies grid renders (20 slots)",
+    prof.counts["Proficiencies"] === 20,
+    JSON.stringify(prof.counts),
 );
 check(
-    "layout: grid label/value gap is positive (no overlap)",
-    slots.minGridGap >= 4,
-    `minGridGap=${slots.minGridGap}px`,
+    "layout: proficiencies grid label/value gap is positive",
+    prof.minGridGap >= 4,
+    `minGridGap=${prof.minGridGap}px`,
+);
+
+await clickTab("Sounds");
+const sound = await gridCounts();
+check("layout: sound-slots grid renders 100 cells", sound.counts["Sound Slots"] === 100, JSON.stringify(sound.counts));
+check(
+    "layout: sound-slots grid label/value gap is positive",
+    sound.minGridGap >= 4,
+    `minGridGap=${sound.minGridGap}px`,
 );
 
 // ============================================================

@@ -13,7 +13,7 @@
  *     memorizedSpellsOffset/Count, itemSlotsOffset, itemsOffset/Count, effectsOffset/Count);
  *   - `effStructureVersion` (selects the on-wire effect record kind; editing it would desync the effects
  *     section, so it is parser/serializer-managed, not user-editable here);
- * The header slot arrays - proficiencies (22), soundSlots (100), objectRefs (5) - each get a per-slot key
+ * The header slot arrays - proficiencies (20), soundSlots (100), objectRefs (5) - each get a per-slot key
  * (`cre.header.<group>.<slot>`, the adapter keeps the slot leaf in the key) and render as their own grids,
  * alongside the equipped item slots (40, distinct slot labels -> distinct slugs).
  *
@@ -25,7 +25,7 @@ import { formatLayoutSchema, type FormatLayout } from "../layout-schema-types";
 
 const k = (key: string): string => `cre.header.${key}`;
 const slot = (key: string): string => `cre.itemSlots.${key}`;
-/** Keys for a 1-based header slot array (proficiencies/soundSlots/objectRefs), e.g. `proficiencies`,`slot`,22. */
+/** Keys for a 1-based header slot array (proficiencies/soundSlots/objectRefs), e.g. `proficiencies`,`slot`,20. */
 const slotKeys = (group: string, prefix: string, count: number): string[] =>
     Array.from({ length: count }, (_, i) => k(`${group}.${prefix}${i + 1}`));
 
@@ -39,14 +39,14 @@ const PROFICIENCY_LABELS: readonly string[] = [
     "Spiked",
     "Axe",
     "Missile",
-    ...Array.from({ length: 14 }, (_, i) => `Proficiency ${i + 9}`),
+    ...Array.from({ length: 12 }, (_, i) => `Proficiency ${i + 9}`),
 ];
 
 /**
  * Display-label overrides (see `FormatLayout.labels`): concise names applied at render time WITHOUT touching
  * field identity. Drops the category prefix the panel title already states, expands abbreviations, uppercases
- * acronyms, and names the proficiency / object-ref slots. Script-slot labels are intentionally NOT here (they
- * keep "Script X" - bare "Class"/"Race" would be ambiguous and the panel groups them anyway).
+ * acronyms, and names the proficiency / object-ref slots. Script-slot labels drop the "Script " prefix - the
+ * "Scripts" subgroup already states the category, so bare "Override"/"Class"/"Race"/etc. read cleanly there.
  */
 const creLabels: Record<string, string> = {
     [k("animationId")]: "Animation ID",
@@ -60,12 +60,12 @@ const creLabels: Record<string, string> = {
     [k("moraleRecoveryTime")]: "Recovery Time",
     [k("thaco")]: "THAC0",
     [k("numAttacks")]: "Attacks",
-    [k("acNatural")]: "AC: Natural",
-    [k("acEffective")]: "AC: Effective",
-    [k("acCrushingMod")]: "AC: Crushing",
-    [k("acMissileMod")]: "AC: Missile",
-    [k("acPiercingMod")]: "AC: Piercing",
-    [k("acSlashingMod")]: "AC: Slashing",
+    [k("acNatural")]: "Natural",
+    [k("acEffective")]: "Effective",
+    [k("acCrushingMod")]: "Crushing",
+    [k("acMissileMod")]: "Missile",
+    [k("acPiercingMod")]: "Piercing",
+    [k("acSlashingMod")]: "Slashing",
     [k("currentHp")]: "Current HP",
     [k("maxHp")]: "Maximum HP",
     [k("xpForKilling")]: "XP for Killing",
@@ -96,9 +96,17 @@ const creLabels: Record<string, string> = {
     [k("hairColor")]: "Hair",
     [k("globalActorEnum")]: "Global Actor ID",
     [k("localActorEnum")]: "Local Actor ID",
+    // The death variable IS the creature's unique script name (the DV used in scripts and the
+    // SPRITE_IS_DEAD_<name> global set on death).
+    [k("deathVariable")]: "Script Name",
+    [k("scriptOverride")]: "Override",
+    [k("scriptClass")]: "Class",
+    [k("scriptRace")]: "Race",
+    [k("scriptGeneral")]: "General",
+    [k("scriptDefault")]: "Default",
     ...Object.fromEntries(PROFICIENCY_LABELS.map((label, i) => [k(`proficiencies.slot${i + 1}`), label])),
-    // objectRefs stay positional ("Object 1".."5") under the clearer "Tracked Objects" panel - they are an
-    // ordered OBJECT.IDS tuple with no per-slot meaning, like the sound slots.
+    // objectRefs (OBJECT.IDS references) are intentionally not surfaced in the layout (see the Proficiencies
+    // tab note), so they get no display labels here.
 };
 
 export const creLayout: FormatLayout = formatLayoutSchema.parse({
@@ -117,24 +125,53 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                             panels: [
                                 {
                                     title: "Identity",
-                                    stack: true,
                                     blocks: [
                                         {
                                             kind: "fields",
+                                            columns: 2,
                                             fields: [
                                                 k("longName"),
                                                 k("shortName"),
                                                 k("smallPortrait"),
                                                 k("largePortrait"),
                                                 k("animationId"),
+                                                k("xpForKilling"),
+                                                k("powerLevelOrXp"),
+                                                k("goldCarried"),
+                                                k("reputation"),
+                                                k("lore"),
                                             ],
                                         },
+                                    ],
+                                },
+                                {
+                                    // The Identity row's second column: boxed subgroups stacked vertically. Death Variable is
+                                    // a plain field between the Stats and Scripts boxes, so it sits directly above Scripts.
+                                    stack: true,
+                                    blocks: [
                                         {
-                                            // Reputation (party reputation) and Lore (item-identification knowledge) are
-                                            // loose character stats - boxed below the identity fields as a "Stats" subgroup.
+                                            // Scripting cluster: the dialog file, above the Script Name (death variable)
+                                            // and the BCS script slots.
                                             kind: "group",
-                                            label: "Stats",
-                                            fields: [k("reputation"), k("lore")],
+                                            label: "Scripting",
+                                            fields: [k("dialogFile")],
+                                        },
+                                        {
+                                            kind: "fields",
+                                            fields: [k("deathVariable")],
+                                        },
+                                        {
+                                            // The five creature script slots, boxed. The dialog file is a separate plain field
+                                            // in the identity list, deliberately not inside this box.
+                                            kind: "group",
+                                            label: "Scripts",
+                                            fields: [
+                                                k("scriptOverride"),
+                                                k("scriptClass"),
+                                                k("scriptRace"),
+                                                k("scriptGeneral"),
+                                                k("scriptDefault"),
+                                            ],
                                         },
                                     ],
                                 },
@@ -201,13 +238,6 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                                         },
                                     ],
                                 },
-                                {
-                                    // 24 status bits: this panel tends to wrap onto its own full-width row, so
-                                    // use enough columns to spread the checkboxes across that width rather than
-                                    // clumping them into the left third.
-                                    title: "Status Flags",
-                                    blocks: [{ kind: "flags", field: k("statusFlags"), columns: 6, spread: true }],
-                                },
                             ],
                         },
                         {
@@ -233,6 +263,46 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                                         },
                                     ],
                                 },
+                                {
+                                    title: "Class Abilities",
+                                    blocks: [
+                                        {
+                                            kind: "fields",
+                                            fields: [k("turnUndeadLevel"), k("trackingSkill")],
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
+                        {
+                            panels: [
+                                {
+                                    title: "Other",
+                                    blocks: [
+                                        {
+                                            kind: "fields",
+                                            fields: [k("trackingTarget"), k("globalActorEnum"), k("localActorEnum")],
+                                        },
+                                    ],
+                                },
+                                {
+                                    title: "Colors",
+                                    blocks: [
+                                        {
+                                            kind: "fields",
+                                            columns: 2,
+                                            fields: [
+                                                k("metalColor"),
+                                                k("minorColor"),
+                                                k("majorColor"),
+                                                k("skinColor"),
+                                                k("leatherColor"),
+                                                k("armorColor"),
+                                                k("hairColor"),
+                                            ],
+                                        },
+                                    ],
+                                },
                             ],
                         },
                     ],
@@ -245,6 +315,7 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                             panels: [
                                 {
                                     title: "Combat",
+                                    stack: true,
                                     blocks: [
                                         {
                                             kind: "fields",
@@ -252,31 +323,32 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                                             fields: [
                                                 k("thaco"),
                                                 k("numAttacks"),
+                                                // Racial Enemy (ranger favoured-enemy race, RACE.IDS) - a combat-targeting
+                                                // attribute, moved here from the Identity panel.
+                                                k("racialEnemy"),
+                                            ],
+                                        },
+                                        {
+                                            kind: "group",
+                                            label: "AC",
+                                            columns: 2,
+                                            fields: [
                                                 k("acNatural"),
                                                 k("acEffective"),
                                                 k("acCrushingMod"),
                                                 k("acMissileMod"),
                                                 k("acPiercingMod"),
                                                 k("acSlashingMod"),
-                                                // Racial Enemy (ranger favoured-enemy race, RACE.IDS) - a combat-targeting
-                                                // attribute, moved here from the Identity panel.
-                                                k("racialEnemy"),
                                             ],
                                         },
                                     ],
                                 },
                                 {
-                                    title: "Health & XP",
+                                    title: "Health",
                                     blocks: [
                                         {
                                             kind: "fields",
-                                            fields: [
-                                                k("currentHp"),
-                                                k("maxHp"),
-                                                k("xpForKilling"),
-                                                k("powerLevelOrXp"),
-                                                k("goldCarried"),
-                                            ],
+                                            fields: [k("currentHp"), k("maxHp")],
                                         },
                                     ],
                                 },
@@ -338,60 +410,12 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                                 },
                             ],
                         },
-                    ],
-                },
-                {
-                    id: "appearance",
-                    label: "Appearance & Scripts",
-                    rows: [
                         {
                             panels: [
                                 {
-                                    title: "Colors",
-                                    blocks: [
-                                        {
-                                            kind: "fields",
-                                            fields: [
-                                                k("metalColor"),
-                                                k("minorColor"),
-                                                k("majorColor"),
-                                                k("skinColor"),
-                                                k("leatherColor"),
-                                                k("armorColor"),
-                                                k("hairColor"),
-                                            ],
-                                        },
-                                    ],
-                                },
-                                {
-                                    title: "Scripts and Dialogs",
-                                    blocks: [
-                                        {
-                                            kind: "fields",
-                                            fields: [
-                                                k("scriptOverride"),
-                                                k("scriptClass"),
-                                                k("scriptRace"),
-                                                k("scriptGeneral"),
-                                                k("scriptDefault"),
-                                                k("dialogFile"),
-                                            ],
-                                        },
-                                    ],
-                                },
-                                {
-                                    title: "References",
-                                    blocks: [
-                                        {
-                                            kind: "fields",
-                                            fields: [
-                                                k("deathVariable"),
-                                                k("trackingTarget"),
-                                                k("globalActorEnum"),
-                                                k("localActorEnum"),
-                                            ],
-                                        },
-                                    ],
+                                    // 24 status bits: spread across the full-width row.
+                                    title: "Status Flags",
+                                    blocks: [{ kind: "flags", field: k("statusFlags"), columns: 6, spread: true }],
                                 },
                             ],
                         },
@@ -400,6 +424,7 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                 {
                     id: "inventory",
                     label: "Inventory",
+                    countFrom: "Items",
                     rows: [
                         {
                             panels: [
@@ -456,26 +481,49 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                                 },
                             ],
                         },
+                        {
+                            panels: [
+                                {
+                                    title: "Items",
+                                    blocks: [
+                                        {
+                                            kind: "list",
+                                            sectionKey: "Items",
+                                            render: "master-detail",
+                                            canAdd: true,
+                                            canModify: true,
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
                     ],
                 },
                 {
-                    id: "slots",
-                    label: "Proficiencies & Sounds",
+                    id: "proficiencies",
+                    label: "Proficiencies",
                     rows: [
                         {
                             panels: [
                                 {
                                     title: "Proficiencies",
                                     blocks: [
-                                        { kind: "grid", columns: 4, items: slotKeys("proficiencies", "slot", 22) },
+                                        { kind: "grid", columns: 4, items: slotKeys("proficiencies", "slot", 20) },
                                     ],
                                 },
-                                {
-                                    title: "Tracked Objects",
-                                    blocks: [{ kind: "grid", columns: 5, items: slotKeys("objectRefs", "object", 5) }],
-                                },
+                                // Design choice: the objectRefs field (0x0276, IESDP "OBJECT.IDS references" - 5 bytes
+                                // the engine sets at runtime to target this creature in scripts) is intentionally NOT
+                                // surfaced in the editor. The per-byte split has no hand-editable meaning, the value is
+                                // effectively always zero, and exposing it ("Tracked Objects") only confused. It stays in
+                                // the parser/model, so the file still round-trips byte-identically; only the UI omits it.
                             ],
                         },
+                    ],
+                },
+                {
+                    id: "sounds",
+                    label: "Sounds",
+                    rows: [
                         {
                             panels: [
                                 {
@@ -573,29 +621,6 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                                         {
                                             kind: "list",
                                             sectionKey: "Effects",
-                                            render: "master-detail",
-                                            canAdd: true,
-                                            canModify: true,
-                                        },
-                                    ],
-                                },
-                            ],
-                        },
-                    ],
-                },
-                {
-                    id: "items",
-                    label: "Items",
-                    countFrom: "Items",
-                    rows: [
-                        {
-                            panels: [
-                                {
-                                    title: "Items",
-                                    blocks: [
-                                        {
-                                            kind: "list",
-                                            sectionKey: "Items",
                                             render: "master-detail",
                                             canAdd: true,
                                             canModify: true,
