@@ -36,6 +36,11 @@ const flagsBlockSchema = z.strictObject({
     /** Optional hover tooltip per flag, keyed by the flag's label (the name in the field's flag table).
      * Descriptions are presentation text and live here in the layout, not in the parser/spec. */
     descriptions: z.record(z.string(), z.string()).optional(),
+    /** Optional DISPLAY-label override per flag, keyed by the flag's canonical table name. The canonical name
+     * (the key in the spec's flag table) is the round-trip / canonical-document identifier and is unchanged;
+     * this only swaps what the checkbox shows. Use it to humanize a flag table authored with terse/CamelCase
+     * names (e.g. MAP `SkipElevation0Tiles` -> "Skip elevation 0 tiles") without touching the canonical keys. */
+    labels: z.record(z.string(), z.string()).optional(),
 });
 
 /** A flat multi-column grid of label+value cells (e.g. skills). */

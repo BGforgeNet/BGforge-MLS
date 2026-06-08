@@ -5,12 +5,20 @@
     import { decomposeFlags, composeFlags } from "../../state/controls";
     import Checkbox from "../primitives/Checkbox.svelte";
 
-    const { field, columns = 2, descriptions, fields, onedit }: {
+    // `boxed`: wrap the checkboxes in a titled group box (the field's display name as legend). Set when the
+    // flags share a panel with other blocks, so the bitfield reads as one labelled set - matching the
+    // detail-form flag boxes. Sole-in-titled-panel flags pass boxed=false and lean on the panel chrome
+    // (its border + h3) as the group box, avoiding a redundant inner border.
+    const { field, columns = 2, descriptions, labels, fields, onedit, boxed = false }: {
         field: FieldRef;
         columns?: number;
         descriptions?: Record<string, string>;
+        // Display-label override keyed by canonical flag name (b.label). Display only - the mask drives the
+        // toggle and the canonical name still keys descriptions, so the round-trip identity is unchanged.
+        labels?: Record<string, string>;
         fields: Record<FieldRef, Row>;
         onedit: (id: string, v: number | string) => void;
+        boxed?: boolean;
     } = $props();
 
     const row = $derived(fields[field]);
@@ -28,14 +36,17 @@
     }
 </script>
 {#if row}
-    <div class="flag-columns">
-        {#each cols as col, ci (ci)}
-            <div class="gcol">
-                {#each col as b (b.mask)}
-                    <Checkbox checked={b.set} label={b.label} title={descriptions?.[b.label]}
-                              disabled={!row.editable} onchange={(checked) => toggle(b.mask, checked)} />
-                {/each}
-            </div>
-        {/each}
-    </div>
+    <fieldset class="flag-group" class:bare={!boxed}>
+        {#if boxed}<legend>{row.name}</legend>{/if}
+        <div class="flag-columns">
+            {#each cols as col, ci (ci)}
+                <div class="gcol">
+                    {#each col as b (b.mask)}
+                        <Checkbox checked={b.set} label={labels?.[b.label] ?? b.label} title={descriptions?.[b.label]}
+                                  disabled={!row.editable} onchange={(checked) => toggle(b.mask, checked)} />
+                    {/each}
+                </div>
+            {/each}
+        </div>
+    </fieldset>
 {/if}

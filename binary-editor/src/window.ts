@@ -13,12 +13,6 @@ import type { NodeId, Row } from "./types";
  */
 export const DEFAULT_WINDOW = 500;
 
-/** Keep only printable-ASCII characters (0x20..0x7E) for display, dropping control/high bytes that render as
- *  mojibake. Used for chars/resref fields whose unused records may hold garbage bytes. Display-only. */
-function toPrintableDisplay(s: string): string {
-    return s.replaceAll(/[^ -~]/g, "");
-}
-
 export function projectRow(
     model: Model,
     node: FlatNode,
@@ -37,6 +31,7 @@ export function projectRow(
         base.expanded = model.expanded.has(node.id);
         base.hasChildren = node.childCount > 0;
         base.editingLocked = group.editingLocked === true;
+        if (group.columns !== undefined) base.columns = group.columns;
         if (composeSummary !== undefined) {
             const s = composeSummary(node, model, rel);
             if (s) base.summary = s;
@@ -46,11 +41,10 @@ export function projectRow(
     // kind === "field" guarantees the source is a ParsedField.
     const field = node.source as ParsedField;
     base.valueType = field.type;
-    // A `string` (chars/resref) field can hold non-printable bytes in unused records, which render as mojibake
-    // glyphs. Show only the printable-ASCII subset. Display-only: the model keeps the raw bytes (field.value),
-    // so an untouched field still round-trips byte-identically; an explicit edit normalises it, which is the
-    // intent when editing a resource name.
-    base.displayValue = field.type === "string" ? toPrintableDisplay(String(field.value)) : String(field.value);
+    // Show the field's value verbatim - including non-printable / high bytes that render as mojibake in unused
+    // records. Faithful display is preferred over prettifying; the model keeps the raw bytes either way, so an
+    // untouched field round-trips byte-identically.
+    base.displayValue = String(field.value);
     // `rawValue` is the underlying editable value. The parser only sets `field.rawValue` when it
     // differs from `field.value` (enums/flags carry the numeric code); plain numbers leave it unset,
     // so fall back to `field.value` - otherwise numeric controls render with no value.

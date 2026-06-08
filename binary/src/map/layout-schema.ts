@@ -67,7 +67,21 @@ export const mapLayout: FormatLayout = formatLayoutSchema.parse({
                                 {
                                     title: "Map Flags",
                                     fit: true,
-                                    blocks: [{ kind: "flags", field: k("mapFlags"), columns: 1 }],
+                                    blocks: [
+                                        {
+                                            kind: "flags",
+                                            field: k("mapFlags"),
+                                            columns: 1,
+                                            // Humanize the terse canonical flag names (MapFlags table) for display only;
+                                            // the CamelCase keys stay the canonical-document / round-trip identity.
+                                            labels: {
+                                                Savegame: "Save game",
+                                                SkipElevation0Tiles: "Skip elevation 0 tiles",
+                                                SkipElevation1Tiles: "Skip elevation 1 tiles",
+                                                SkipElevation2Tiles: "Skip elevation 2 tiles",
+                                            },
+                                        },
+                                    ],
                                 },
                             ],
                         },

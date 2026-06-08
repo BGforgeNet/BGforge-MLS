@@ -79,6 +79,13 @@ export interface ParsedGroup {
     /** Whether this group is expanded by default */
     expanded?: boolean;
     /**
+     * Display hint: render this group's scalar fields in N columns instead of the form's default. Set by the
+     * `view: "slots"` walker for a small fixed slot array (e.g. ITM ability Melee Animation's 3 named slots)
+     * so the slots sit on one row rather than wrapping awkwardly in the 2-column detail grid. Presentation
+     * only - it carries no structural meaning.
+     */
+    columns?: number;
+    /**
      * Set when the parser couldn't fully decode this record's wire layout
      * (e.g. a MAP object whose subtype payload is described by an unavailable
      * `.pro` file). The group's already-decoded fields render for inspection,

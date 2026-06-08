@@ -9,11 +9,13 @@
     // depth: the group-nesting level this FormSection renders. depth=1 is the first level
     // of groups inside a detail form (a list entry's nested sub-groups) -> vertical tabs.
     // depth=2 -> horizontal tabs. depth>2 -> always headed sections (hard cap at 2 tab levels).
-    const { nodeId, bridge, version, onedit, byNode, depth = 1, showOffsets = false }:
+    // columns: how many columns the scalar-field grid uses. Default 2; a `view: "slots"` group passes its
+    // own slot count (via the group Row's `columns`) so a small fixed slot array sits on one row.
+    const { nodeId, bridge, version, onedit, byNode, depth = 1, showOffsets = false, columns = 2 }:
         { nodeId: NodeId; bridge: Bridge; version: number;
           onedit: (id: string, v: number | string) => void;
           byNode: Map<string, Diagnostic[]>;
-          depth?: number; showOffsets?: boolean } = $props();
+          depth?: number; showOffsets?: boolean; columns?: number } = $props();
 
     let rows = $state<Row[]>([]);
     $effect(() => {
@@ -55,7 +57,7 @@
     {#if scalarFields.length > 0}
         <!-- style: directive (not a static style attribute) compiles to el.style.setProperty, which the
              webview CSP allows; a literal style="..." attribute would be blocked by style-src. -->
-        <div class="kv kv-multi form-fields" style:grid-template-columns="repeat(2, max-content auto)">
+        <div class="kv kv-multi form-fields" style:grid-template-columns="repeat({columns}, max-content auto)">
             {#each scalarFields as row (row.id)}
                 <Field {row} {onedit} diagnostics={byNode.get(row.id)} {showOffsets} />
             {/each}
@@ -76,7 +78,8 @@
                   ariaLabel="Form groups" onselect={(id) => { activeTabId = id; }} />
             {#if activeGroup}
                 <div class="group-tab-content">
-                    <Self nodeId={activeGroup.id} {bridge} {version} {onedit} {byNode} depth={depth + 1} {showOffsets} />
+                    <Self nodeId={activeGroup.id} {bridge} {version} {onedit} {byNode} depth={depth + 1}
+                          columns={activeGroup.columns ?? 2} {showOffsets} />
                 </div>
             {/if}
         </div>
@@ -84,7 +87,8 @@
         {#each groups as group (group.id)}
             <div class="subgroup">
                 <h4 class="subgroup-title">{group.name}</h4>
-                <Self nodeId={group.id} {bridge} {version} {onedit} {byNode} depth={depth + 1} {showOffsets} />
+                <Self nodeId={group.id} {bridge} {version} {onedit} {byNode} depth={depth + 1}
+                      columns={group.columns ?? 2} {showOffsets} />
             </div>
         {/each}
     {/if}

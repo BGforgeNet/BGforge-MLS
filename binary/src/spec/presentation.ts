@@ -25,6 +25,12 @@ export type StructPresentation<T> = Partial<Record<keyof T, FieldPresentation>>;
  * Convert a camelCase field name to a Title Case display label. Used as a
  * fallback when no `label` override is provided. Handles consecutive uppercase
  * runs as acronyms ("acID" -> "Ac ID", not "Ac I D").
+ *
+ * NB: humanize does NOT separate a trailing slot digit ("parameter1" stays
+ * "Parameter1"). It is tempting to, but the humanized label is load-bearing -
+ * the IE effect relationship overlay matches parameter fields by this exact
+ * string. Per-field display tweaks (e.g. "Kit Usability 1") belong in a
+ * `labels` override, which changes only the display name, not this key.
  */
 export function humanize(fieldName: string): string {
     return fieldName

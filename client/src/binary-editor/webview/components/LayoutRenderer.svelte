@@ -87,8 +87,11 @@
                                 <FieldsBlock fieldRefs={block.fields} columns={block.columns}
                                              fields={layout.fields} {onedit} {byNode} {showOffsets} />
                             {:else if block.kind === "flags"}
+                                <!-- Box the flag group unless it is the sole block of a titled panel (then the
+                                     panel border + h3 already is its group box - boxing again double-borders). -->
                                 <FlagColumns field={block.field} columns={block.columns}
-                                             descriptions={block.descriptions}
+                                             descriptions={block.descriptions} labels={block.labels}
+                                             boxed={!(panel.blocks.length === 1 && panel.title !== undefined)}
                                              fields={layout.fields} {onedit} />
                             {:else if block.kind === "matrix"}
                                 <MatrixBlock valueColumns={block.valueColumns} groups={block.groups}

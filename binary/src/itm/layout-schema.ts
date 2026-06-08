@@ -21,11 +21,24 @@ import { formatLayoutSchema, type FormatLayout } from "../layout-schema-types";
 
 const k = (key: string): string => `itm.header.${key}`;
 
-/** Display-label overrides (see `FormatLayout.labels`) - expand "Desc", fix the "Id" casing. */
+/** Display-label overrides (see `FormatLayout.labels`) - expand "Desc", fix the "Id" casing, and give the
+ *  four usability-flag bytes concise legends (each renders as its own boxed flag group in the Usability
+ *  panel; the humanized field key "Byte1 Class Alignment" reads poorly as a group legend). */
 const itmLabels: Record<string, string> = {
     [k("unidentifiedDesc")]: "Unidentified Description",
     [k("identifiedDesc")]: "Identified Description",
     [k("loreToId")]: "Lore to ID",
+    [k("usabilityFlags.byte1ClassAlignment")]: "Class / Alignment",
+    [k("usabilityFlags.byte2Class")]: "Class",
+    [k("usabilityFlags.byte3ClassRace")]: "Class / Race",
+    [k("usabilityFlags.byte4Race")]: "Race",
+    // Space the trailing slot digit that humanize leaves attached ("Kit Usability1"); display only. They stay
+    // in the Requirements panel (a dedicated panel would repeat "Usability" across all its labels, which the
+    // layout guardrails reject; the lone last-row field is a minor, accepted imbalance).
+    [k("kitUsability1")]: "Kit Usability 1",
+    [k("kitUsability2")]: "Kit Usability 2",
+    [k("kitUsability3")]: "Kit Usability 3",
+    [k("kitUsability4")]: "Kit Usability 4",
 };
 
 export const itmLayout: FormatLayout = formatLayoutSchema.parse({

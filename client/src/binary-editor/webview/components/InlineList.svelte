@@ -88,11 +88,12 @@
                      style="position:absolute;top:{idx * rowHeight}px;height:{rowHeight}px;left:0;right:0"
                      onclick={() => (activeIndex = idx)} role="button" tabindex="0"
                      onkeydown={(e) => { if (e.key === "Enter") activeIndex = idx; }}>
+                    <!-- Every inline row renders its editable control (a variable is a single scalar - there is
+                         no "detail" to open, so requiring a click to reveal an input just hides the value behind
+                         an interaction). Selecting a row (click) reveals its structure-op actions. -->
+                    <Field {row} {onedit} {showOffsets} />
                     {#if idx === activeIndex}
-                        <Field {row} {onedit} {showOffsets} />
                         <RowActions {acts} entryId={row.id} {bridge} compact={true} />
-                    {:else}
-                        <span class="label">{row.name}</span> <span class="value">{row.displayValue}</span>
                     {/if}
                 </div>
             {/if}

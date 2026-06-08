@@ -323,7 +323,9 @@ function fieldFor(
                 const elementSpec = slotElements?.[i] ?? fs.element;
                 return scalarFieldFor(slotLabel, elementSpec, offset + i * elementSize, elementSize, elementValue);
             });
-            return { name: label, fields: children, expanded: false };
+            // Lay the slots on a single row (capped so a large slot array can't mint an absurdly wide grid;
+            // only small scalar slot groups like Melee Animation actually render in the detail form).
+            return { name: label, fields: children, expanded: false, columns: Math.min(children.length, 4) };
         }
         // Trailing reserves and other byte-array fields are presented as a
         // single "(N values)" summary row rather than N unrolled scalars;

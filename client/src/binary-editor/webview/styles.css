@@ -250,9 +250,12 @@ button:disabled {
    checkboxes, which otherwise read as unrelated toggles next to a same-named label. */
 .form-flags .field {
     align-items: flex-start;
-    border: 1px solid var(--vscode-panel-border);
+    /* Match the layout-schema flag groups (.flag-group): input-border + a darker inset fill, so the box reads
+       clearly against the form/panel interior (a 1px panel-border there is near-invisible - same reason). */
+    border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
     border-radius: 4px;
     padding: 5px 10px;
+    background: var(--vscode-editor-background);
 }
 
 /* ---- field row: stable label width + control, comfortable vertical rhythm for scannable long forms ---- */
@@ -750,12 +753,6 @@ input[type="text"]::placeholder {
     padding: 0 0.5rem;
     line-height: normal; /* inline rows are taller (InlineList rowHeight); center via flex, not line-height */
 }
-.vrow.inline .value {
-    color: var(--vscode-descriptionForeground);
-}
-.vrow.inline.selected .value {
-    color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground));
-}
 .vrow.inline .row-actions {
     margin-left: auto;
     display: flex;
@@ -939,6 +936,36 @@ input[type="text"]::placeholder {
     gap: 2px 22px;
     align-items: center;
 }
+/* A flag group sharing a panel with other blocks gets its own boxed group (fieldset + legend) so the
+   bitfield reads as one labelled set, matching the detail-form flag boxes. The `.bare` variant (flags that
+   are the sole block of a titled panel) drops the border/legend and leans on the panel chrome as its box. */
+.layout-root .flag-group {
+    /* `input-border` (a control outline, ~#3c3c3c) not `panel-border` (~#2b2b2b): panel-border is tuned to read
+       against the darker page bg, but a flag group sits on the lighter panel interior (editorWidget-background),
+       where panel-border is near-invisible for an isolated box. input-border has the contrast to read there, and
+       semantically it is a box of inputs. The darker editor-background fill backs it up so the well reads even
+       where the 1px edge thins out at render scale. */
+    border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+    border-radius: 4px;
+    margin: 0;
+    padding: 3px 10px 8px;
+    min-inline-size: 0;
+    background: var(--vscode-editor-background);
+}
+.layout-root .flag-group.bare {
+    border: 0;
+    padding: 0;
+    background: none;
+}
+.layout-root .flag-group > legend {
+    padding: 0 4px;
+    margin-left: -4px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--vscode-descriptionForeground);
+}
 /* flag checkbox columns */
 .flag-columns {
     display: flex;
@@ -1047,16 +1074,19 @@ input[type="text"]::placeholder {
 }
 /* Display-width tier -> control box width. The tier is classified once per field in TS (valueTier - it
  * depends on char-array length / hex format / longest dropdown label, which CSS can't read); the WIDTHS
- * live here so the stylesheet owns all dimensions. S: small decimals / short strings. M: hex, 8-char
- * resref, dropdowns, mid strings. L: long char arrays and long dropdown labels. */
+ * live here so the stylesheet owns all dimensions. --val-ch is the BORDER-BOX (outer) width of every control
+ * type, so a tier renders one identical width whether the control is a text input, a dropdown, or the hex
+ * wrapper (a plain input is content-box by default and would otherwise render ~2ch wider than a same-tier
+ * dropdown). ~2ch of the box is input chrome (padding + border), so visible content is roughly S:6 / M:14 /
+ * L:32 chars - small decimals/short strings, hex/8-char resref/dropdowns, long char arrays/long labels. */
 .layout-root .field-control.tier-s {
-    --val-ch: 6ch;
+    --val-ch: 8ch;
 }
 .layout-root .field-control.tier-m {
-    --val-ch: 14ch;
+    --val-ch: 16ch;
 }
 .layout-root .field-control.tier-l {
-    --val-ch: 32ch;
+    --val-ch: 34ch;
 }
 .layout-root .kv:not(.kv-multi) .field-control {
     justify-self: start;
@@ -1064,7 +1094,11 @@ input[type="text"]::placeholder {
 .layout-root .kv:not(.kv-multi) .field-control > input,
 .layout-root .kv:not(.kv-multi) .field-control .bb-select-trigger,
 .layout-root .kv:not(.kv-multi) .field-control select {
-    width: var(--val-ch, 14ch);
+    width: var(--val-ch, 16ch);
+    /* border-box so --val-ch is the outer width for the plain input too (it is content-box by default,
+       unlike the dropdown trigger / hex wrapper / matrix input, which are already border-box) - otherwise a
+       text input renders ~2ch wider than a same-tier dropdown beside it. */
+    box-sizing: border-box;
     min-width: 0;
 }
 /* Multi-column fields: each column is a (max-content label, auto value) pair, and the Field is a subgrid
@@ -1091,7 +1125,18 @@ input[type="text"]::placeholder {
 .layout-root .kv.kv-multi .field-control > input,
 .layout-root .kv.kv-multi .field-control .bb-select-trigger,
 .layout-root .kv.kv-multi .field-control select {
-    width: var(--val-ch, 14ch);
+    width: var(--val-ch, 16ch);
+    box-sizing: border-box; /* outer width = --val-ch for every control type (see kv:not(.kv-multi) above) */
+    min-width: 0;
+}
+/* Inline-list rows (MAP variables) render an editable Field but sit in a flex .vrow, outside the .kv grid, so
+   the tier-width rules above don't reach them - without this the input falls back to its intrinsic width and
+   reads ragged next to the tier-sized panels. Same tier var + border-box, so it matches a panel control. */
+.layout-root .vrow.inline .field-control > input,
+.layout-root .vrow.inline .field-control .bb-select-trigger,
+.layout-root .vrow.inline .field-control select {
+    width: var(--val-ch, 16ch);
+    box-sizing: border-box;
     min-width: 0;
 }
 
@@ -1101,7 +1146,7 @@ input[type="text"]::placeholder {
     display: inline-flex;
     align-items: center;
     gap: 0.05rem;
-    width: var(--val-ch, 14ch);
+    width: var(--val-ch, 16ch);
     background: var(--vscode-input-background);
     border: 1px solid var(--vscode-input-border, transparent);
     border-radius: 2px;

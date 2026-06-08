@@ -7,7 +7,7 @@ import { createIeCanonicalReader } from "../ie-common/canonical-reader";
 import { parseWithSchemaValidation } from "../schema-validation";
 import { rebuildAbilityEffectsDocument } from "../ie-common/rebuild-ability-effects";
 import { splHeaderSpecAnnotated } from "./specs/header.overrides";
-import { splAbilitySpecAnnotated } from "./specs/ability.overrides";
+import { splAbilityPresentation, splAbilitySpecAnnotated } from "./specs/ability.overrides";
 import {
     type SplCanonicalDocument,
     type SplCanonicalSnapshot,
@@ -21,7 +21,7 @@ const splRebuildConfig = {
     headerSpec: splHeaderSpecAnnotated,
     abilitySpec: splAbilitySpecAnnotated,
     headerPresentation: {},
-    abilityPresentation: {},
+    abilityPresentation: splAbilityPresentation,
 } as const;
 
 function rebuildFromDisplay(result: ParseResult): SplCanonicalDocument {

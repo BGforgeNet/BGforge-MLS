@@ -91,13 +91,6 @@ export const effLayout: FormatLayout = formatLayoutSchema.parse({
                                 },
                             ],
                         },
-                        {
-                            // Two dispel/magic-resistance bits: `fit` keeps it content-width sharing the row
-                            // with the other small panels rather than stretching into a lonely full-width strip.
-                            title: "Resistance",
-                            fit: true,
-                            blocks: [{ kind: "flags", field: k("resistance"), columns: 1 }],
-                        },
                     ],
                 },
                 {
@@ -122,6 +115,14 @@ export const effLayout: FormatLayout = formatLayoutSchema.parse({
                                     ],
                                 },
                             ],
+                        },
+                        {
+                            // Two dispel/magic-resistance bits. `fit` keeps it content-width beside the
+                            // Caster & Projectile panel rather than wrapping onto its own near-empty row (it
+                            // had stranded as a 4th panel that overflowed the row above).
+                            title: "Resistance",
+                            fit: true,
+                            blocks: [{ kind: "flags", field: k("resistance"), columns: 1 }],
                         },
                     ],
                 },

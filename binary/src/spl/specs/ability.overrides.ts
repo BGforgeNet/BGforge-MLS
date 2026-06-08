@@ -26,3 +26,14 @@ export const splAbilitySpecAnnotated = {
         derivedFrom: { section: "effects" } as const,
     },
 } satisfies Record<string, FieldSpec>;
+
+/**
+ * Ability display-label overrides. The `friendly` flags field humanizes to "Friendly" - the same word as one
+ * of its own two bits (Hostile / Friendly), so the group label reads as a duplicate of a checkbox under it.
+ * Relabel the group to "Disposition" (the field selects a hostile vs friendly disposition). Shared by BOTH the
+ * parser (writes the display label) and the canonical rebuild (looks the field back up by that label), so the
+ * displayed label and the round-trip lookup key stay identical - a mismatch would break the round-trip.
+ */
+export const splAbilityPresentation = {
+    friendly: { label: "Disposition" },
+};

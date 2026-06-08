@@ -4,7 +4,7 @@
  * Opens one Fallout PRO (item proto) and one Infinity Engine EFF in the real webview bundle (app.html).
  * Both are migrated to the declarative layout (PRO via its per-subtype item variant, EFF via the "effect"
  * variant) and render as a single dense page through LayoutRenderer - the legacy section-tabs path is gone.
- * EFF lays out Effect / Dice & Save / Parameters / Resources / Classification / Resistance / Caster panels with the
+ * EFF lays out Effect / Dice & Save / Parameters / Resources / Classification / Caster / Resistance panels with the
  * ~300-entry opcode enum as a searchable combobox. Both run under the strict nonce CSP.
  *
  * Assertions:
@@ -131,7 +131,7 @@ const effDom = await page2.evaluate(() => ({
     tabs: document.querySelectorAll(".bb-tabs").length,
 }));
 check(
-    "eff: panels render (Effect / Dice & Save / Parameters / Resources / Classification / Resistance / Caster & Projectile)",
+    "eff: panels render (Effect / Dice & Save / Parameters / Resources / Classification / Caster & Projectile / Resistance)",
     JSON.stringify(effDom.panels) ===
         JSON.stringify([
             "Effect",
@@ -139,8 +139,8 @@ check(
             "Parameters",
             "Resources",
             "Classification",
-            "Resistance",
             "Caster & Projectile",
+            "Resistance",
         ]),
     JSON.stringify(effDom.panels),
 );
