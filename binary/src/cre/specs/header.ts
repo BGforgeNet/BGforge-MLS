@@ -6,6 +6,22 @@
 import { i16, i32, i8, u16, u32, u8 } from "typed-binary";
 import { arraySpec, charsSpec, type FieldSpec, type SpecData } from "../../spec/types";
 
+/**
+ * The 20 weapon-proficiency bytes (IESDP cre_v1.htm 0x006e-0x0081), each split into two packed sub-values:
+ * "active class" (bits 0-2) and "original class" (bits 3-5); bits 6-7 are unused. Emits 40 consecutive
+ * fields keyed `proficiency{N}Active` / `proficiency{N}Original` for N in 1..20, each pair sharing one
+ * `packedAs: "proficiency{N}"` u8 wire slot so the byte round-trips byte-identically.
+ */
+function creProficiencyFields(): Record<string, FieldSpec> {
+    const fields: Record<string, FieldSpec> = {};
+    for (let n = 1; n <= 20; n++) {
+        const slot = `proficiency${n}`;
+        fields[`${slot}Active`] = { codec: u8, packedAs: slot, bitRange: [0, 3], domain: { min: 0, max: 7 } };
+        fields[`${slot}Original`] = { codec: u8, packedAs: slot, bitRange: [3, 3], domain: { min: 0, max: 7 } };
+    }
+    return fields;
+}
+
 export const creHeaderSpec = {
     signature: charsSpec(4),
     version: charsSpec(4),
@@ -70,13 +86,12 @@ export const creHeaderSpec = {
     /**
      * Weapon proficiencies: 20 bytes (IESDP cre_v1.htm 0x006e-0x0081). BG1 names the first 8 (large swords,
      * small swords, bows, spears, blunt, spiked, axe, missile); the rest are unused in BG1/BG2 (EE computes
-     * them from KIT.IDS / WEAPPROF.2DA at runtime). Each byte packs an active-class value (bits 0-2) and an
-     * original-class value (bits 3-5); kept as raw bytes here. Round-trips byte-identically regardless.
+     * them from KIT.IDS / WEAPPROF.2DA at runtime). Per cre_v1.htm each proficiency BYTE bit-packs two
+     * sub-values: the "active class" proficiency in bits 0-2 and the "original class" proficiency in bits 3-5
+     * (each 0-7); bits 6-7 are unused (read/written as 0). The 20 bytes are split into 40 packed parts below
+     * (two per byte, sharing one `packedAs` wire slot), so the pair round-trips byte-identically.
      */
-    proficiencies: arraySpec({
-        element: { codec: u8 },
-        count: 20,
-    }),
+    ...creProficiencyFields(),
     // Turn-undead level (paladin/cleric) and the ranger tracking skill (0-100). IESDP cre_v1.htm 0x0082 / 0x0083;
     // previously absorbed into the 22-byte proficiencies block, now named so the editor can surface them.
     turnUndeadLevel: { codec: u8 },

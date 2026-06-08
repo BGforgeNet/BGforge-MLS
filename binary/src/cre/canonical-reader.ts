@@ -46,8 +46,9 @@ function getChildGroups(parent: ParsedGroup): ParsedGroup[] {
  * and not yet re-parsed from bytes).
  *
  * Sections:
- *   - Header: one struct rebuilt via `structFromDisplayFull` (handles the
- *     three `view:"slots"` arrays: `proficiencies`, `soundSlots`, `objectRefs`).
+ *   - Header: one struct rebuilt via `structFromDisplayFull` (handles the two
+ *     `view:"slots"` arrays `soundSlots` and `objectRefs`; the 40 packed
+ *     proficiency parts flow through the scalar path with no special-casing).
  *   - Known spells, spell-mem-info, memorized spells, items: each section is
  *     a group of child groups; each child is rebuilt via `structFromDisplayFull`.
  *   - Effects: dispatched on `effStructureVersion` recovered from the header.

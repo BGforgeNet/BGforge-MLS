@@ -210,16 +210,31 @@ const gridCounts = async (): Promise<{ counts: Record<string, number>; minGridGa
     });
 
 await clickTab("Proficiencies");
-const prof = await gridCounts();
+// Proficiencies render as a 2-column matrix (Active Class / Original Class), one `.strow` per slot with two
+// value cells (`.c`) - not a grid. 20 slots x 2 columns = 40 cells.
+const prof = await page.evaluate(() => {
+    const matrix = document.querySelector(".layout-root .panel .matrix");
+    return {
+        rows: matrix ? matrix.querySelectorAll(".strow").length : 0,
+        cells: matrix ? matrix.querySelectorAll(".strow .c").length : 0,
+        colHeaders: matrix ? Array.from(matrix.querySelectorAll(".sub .bb"), (e) => (e.textContent ?? "").trim()) : [],
+        firstRowLabel: matrix?.querySelector(".strow .nm")?.textContent?.trim() ?? "",
+    };
+});
 check(
-    "layout: proficiencies grid renders (20 slots)",
-    prof.counts["Proficiencies"] === 20,
-    JSON.stringify(prof.counts),
+    "layout: proficiencies matrix renders 20 rows x 2 value columns (40 cells)",
+    prof.rows === 20 && prof.cells === 40,
+    JSON.stringify(prof),
 );
 check(
-    "layout: proficiencies grid label/value gap is positive",
-    prof.minGridGap >= 4,
-    `minGridGap=${prof.minGridGap}px`,
+    "layout: proficiencies matrix column headers are Active/Original Class",
+    JSON.stringify(prof.colHeaders) === JSON.stringify(["Active Class", "Original Class"]),
+    JSON.stringify(prof.colHeaders),
+);
+check(
+    "layout: proficiencies matrix first row labelled 'Large Swords'",
+    prof.firstRowLabel === "Large Swords",
+    prof.firstRowLabel,
 );
 
 await clickTab("Sounds");

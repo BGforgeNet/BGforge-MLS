@@ -13,9 +13,11 @@
  *     memorizedSpellsOffset/Count, itemSlotsOffset, itemsOffset/Count, effectsOffset/Count);
  *   - `effStructureVersion` (selects the on-wire effect record kind; editing it would desync the effects
  *     section, so it is parser/serializer-managed, not user-editable here);
- * The header slot arrays - proficiencies (20), soundSlots (100), objectRefs (5) - each get a per-slot key
+ * The header slot arrays - soundSlots (100), objectRefs (5) - each get a per-slot key
  * (`cre.header.<group>.<slot>`, the adapter keeps the slot leaf in the key) and render as their own grids,
- * alongside the equipped item slots (40, distinct slot labels -> distinct slugs).
+ * alongside the equipped item slots (40, distinct slot labels -> distinct slugs). Proficiencies are no longer
+ * a slot array: the 20 bytes are 40 packed scalar header fields (`cre.header.proficiency<N>Active` /
+ * `...Original`) rendered as a 2-column matrix (Active Class / Original Class).
  *
  * The Effects detail form renders the ~300-entry opcode as a searchable combobox via the spec's
  * `searchableEnum` flag (it flows through to the FormSection-rendered detail field, not just layout blocks).
@@ -25,7 +27,7 @@ import { formatLayoutSchema, type FormatLayout } from "../layout-schema-types";
 
 const k = (key: string): string => `cre.header.${key}`;
 const slot = (key: string): string => `cre.itemSlots.${key}`;
-/** Keys for a 1-based header slot array (proficiencies/soundSlots/objectRefs), e.g. `proficiencies`,`slot`,20. */
+/** Keys for a 1-based header slot array (soundSlots/objectRefs), e.g. `soundSlots`,`sound`,100. */
 const slotKeys = (group: string, prefix: string, count: number): string[] =>
     Array.from({ length: count }, (_, i) => k(`${group}.${prefix}${i + 1}`));
 
@@ -45,7 +47,7 @@ const PROFICIENCY_LABELS: readonly string[] = [
 /**
  * Display-label overrides (see `FormatLayout.labels`): concise names applied at render time WITHOUT touching
  * field identity. Drops the category prefix the panel title already states, expands abbreviations, uppercases
- * acronyms, and names the proficiency / object-ref slots. Script-slot labels drop the "Script " prefix - the
+ * acronyms, and names the object-ref slots (proficiency rows are labelled by the matrix). Script-slot labels drop the "Script " prefix - the
  * "Scripts" subgroup already states the category, so bare "Override"/"Class"/"Race"/etc. read cleanly there.
  */
 const creLabels: Record<string, string> = {
@@ -104,7 +106,8 @@ const creLabels: Record<string, string> = {
     [k("scriptRace")]: "Race",
     [k("scriptGeneral")]: "General",
     [k("scriptDefault")]: "Default",
-    ...Object.fromEntries(PROFICIENCY_LABELS.map((label, i) => [k(`proficiencies.slot${i + 1}`), label])),
+    // Proficiency row labels are supplied by the matrix block (PROFICIENCY_LABELS); the per-field
+    // active/original packed keys need no separate display-label overrides.
     // objectRefs (OBJECT.IDS references) are intentionally not surfaced in the layout (see the Proficiencies
     // tab note), so they get no display labels here.
 };
@@ -508,7 +511,28 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                                 {
                                     title: "Proficiencies",
                                     blocks: [
-                                        { kind: "grid", columns: 4, items: slotKeys("proficiencies", "slot", 20) },
+                                        {
+                                            // Each of the 20 proficiency bytes packs an "active class" (bits 0-2) and an
+                                            // "original class" (bits 3-5) sub-value (IESDP cre_v1.htm); render as a 2-column
+                                            // matrix, one row per slot.
+                                            kind: "matrix",
+                                            valueColumns: [
+                                                { key: "active", label: "Active Class" },
+                                                { key: "original", label: "Original Class" },
+                                            ],
+                                            groups: [
+                                                {
+                                                    label: "Proficiencies",
+                                                    rows: PROFICIENCY_LABELS.map((label, i) => ({
+                                                        label,
+                                                        cells: {
+                                                            active: k(`proficiency${i + 1}Active`),
+                                                            original: k(`proficiency${i + 1}Original`),
+                                                        },
+                                                    })),
+                                                },
+                                            ],
+                                        },
                                     ],
                                 },
                                 // Design choice: the objectRefs field (0x0276, IESDP "OBJECT.IDS references" - 5 bytes

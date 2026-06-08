@@ -43,8 +43,9 @@ function creSemanticFieldKey(segments: readonly string[]): string | undefined {
     if (route) {
         const fieldName = segments[route.fieldSegment];
         if (!fieldName) return route.prefix;
-        // A header sub-group leaf (a Proficiencies / Sound Slots / Object Refs slot) keeps its slot in the
-        // key so each slot gets a distinct key instead of all of them collapsing to the sub-group's key.
+        // A header sub-group leaf (a Sound Slots / Object Refs slot) keeps its slot in the key so each slot
+        // gets a distinct key instead of all of them collapsing to the sub-group's key. (Proficiencies are now
+        // flat packed header fields - no slot leaf - so they take the plain `cre.header.<field>` branch below.)
         const leaf = segments[route.fieldSegment + 1];
         return leaf
             ? `${route.prefix}.${slugify(fieldName)}.${slugify(leaf)}`
