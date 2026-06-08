@@ -516,6 +516,10 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                                             // "original class" (bits 3-5) sub-value (IESDP cre_v1.htm); render as a 2-column
                                             // matrix, one row per slot.
                                             kind: "matrix",
+                                            // Wider than the 190 default: the proficiency row labels ("Large Swords",
+                                            // "Proficiency 9") are longer than the short stat-table labels the matrix
+                                            // defaults to, so the label column needs the extra width to not ellipsize.
+                                            columnWidthPx: 280,
                                             valueColumns: [
                                                 { key: "active", label: "Active Class" },
                                                 { key: "original", label: "Original Class" },
