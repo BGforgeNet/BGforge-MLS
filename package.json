@@ -30,6 +30,7 @@
         "vscode:prepublish": "./scripts/prepublish.sh",
         "build": "pnpm build:client && pnpm build:server && pnpm build:test && pnpm build:transpile && pnpm build:format && pnpm build:binary",
         "build:dev": "./scripts/build-dev.sh",
+        "dev:web": "./scripts/dev-web.sh",
         "build:all": "pnpm build:grammar && pnpm build && pnpm build:editors",
         "build:ts-plugin": "./scripts/build-ts-plugin.sh tssl-plugin",
         "build:td-plugin": "./scripts/build-ts-plugin.sh td-plugin",
