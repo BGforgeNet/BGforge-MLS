@@ -117,66 +117,78 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                             panels: [
                                 {
                                     title: "Identity",
+                                    stack: true,
                                     blocks: [
                                         {
                                             kind: "fields",
-                                            columns: 2,
                                             fields: [
                                                 k("longName"),
                                                 k("shortName"),
                                                 k("smallPortrait"),
                                                 k("largePortrait"),
                                                 k("animationId"),
-                                                k("sex"),
-                                                k("gender"),
-                                                k("reputation"),
-                                                k("kit"),
-                                                k("racialEnemy"),
                                             ],
+                                        },
+                                        {
+                                            // Reputation (party reputation) and Lore (item-identification knowledge) are
+                                            // loose character stats - boxed below the identity fields as a "Stats" subgroup.
+                                            kind: "group",
+                                            label: "Stats",
+                                            fields: [k("reputation"), k("lore")],
                                         },
                                     ],
                                 },
-                                { title: "Flags", blocks: [{ kind: "flags", field: k("creatureFlags"), columns: 2 }] },
                                 {
-                                    // 24 status bits: this panel tends to wrap onto its own full-width row, so
-                                    // use enough columns to spread the checkboxes across that width rather than
-                                    // clumping them into the left third.
-                                    title: "Status Flags",
-                                    blocks: [{ kind: "flags", field: k("statusFlags"), columns: 6 }],
-                                },
-                            ],
-                        },
-                        {
-                            panels: [
-                                {
-                                    title: "Class & Alignment",
+                                    // What the creature *is*: enemyAlly (EA.IDS allegiance), general/specific
+                                    // (GENERAL/SPECIFIC.IDS creature-type identifiers), race (RACE.IDS), sex/gender
+                                    // (GENDER.IDS), and alignment (ALIGNMENT.IDS) - descriptive identifiers. The whole class
+                                    // build (CLASS.IDS dropdown + kit + the multiclass Level row) nests below as a boxed
+                                    // "Class" subgroup. 1-column (narrow) so it pairs beside the Identity panel; `stack`
+                                    // puts the subgroup under the field list rather than beside it.
+                                    title: "Classification",
+                                    stack: true,
                                     blocks: [
                                         {
                                             kind: "fields",
-                                            columns: 2,
                                             fields: [
-                                                k("class"),
-                                                k("levelFirstClass"),
-                                                k("levelSecondClass"),
-                                                k("levelThirdClass"),
+                                                k("enemyAlly"),
+                                                k("general"),
+                                                k("specific"),
                                                 k("race"),
+                                                k("sex"),
+                                                k("gender"),
                                                 k("alignment"),
                                             ],
                                         },
+                                        {
+                                            kind: "group",
+                                            label: "Class",
+                                            fields: [
+                                                k("class"),
+                                                k("kit"),
+                                                k("levelFirstClass"),
+                                                k("levelSecondClass"),
+                                                k("levelThirdClass"),
+                                            ],
+                                            joins: [
+                                                {
+                                                    label: "Level",
+                                                    separator: " ",
+                                                    fields: [
+                                                        k("levelFirstClass"),
+                                                        k("levelSecondClass"),
+                                                        k("levelThirdClass"),
+                                                    ],
+                                                },
+                                            ],
+                                        },
                                     ],
-                                },
-                                {
-                                    // enemyAlly (EA.IDS allegiance) + general/specific (GENERAL/SPECIFIC.IDS creature-type
-                                    // identifiers) are classification, not class/alignment - split out per the UX redesign.
-                                    title: "Classification",
-                                    blocks: [{ kind: "fields", fields: [k("enemyAlly"), k("general"), k("specific")] }],
                                 },
                                 {
                                     title: "Attributes",
                                     blocks: [
                                         {
                                             kind: "fields",
-                                            columns: 2,
                                             fields: [
                                                 k("strength"),
                                                 k("strengthBonus"),
@@ -190,20 +202,33 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                                     ],
                                 },
                                 {
-                                    // Luck/Lore (SPECIAL-style stat + knowledge stat) and the morale trio are each
-                                    // too few fields to warrant their own panel; combined they make one balanced
-                                    // panel rather than two tiny ones that strand a lonely full-width row.
-                                    title: "Stats & Morale",
+                                    // 24 status bits: this panel tends to wrap onto its own full-width row, so
+                                    // use enough columns to spread the checkboxes across that width rather than
+                                    // clumping them into the left third.
+                                    title: "Status Flags",
+                                    blocks: [{ kind: "flags", field: k("statusFlags"), columns: 6, spread: true }],
+                                },
+                            ],
+                        },
+                        {
+                            panels: [
+                                { title: "Flags", blocks: [{ kind: "flags", field: k("creatureFlags"), columns: 2 }] },
+                                {
+                                    // Thief skills, moved here from the Combat tab. Lore -> Identity Stats subgroup,
+                                    // Fatigue/Intoxication -> Combat Condition; Hide In Shadows stays (a thief-skill byte).
+                                    title: "Thief Skills",
                                     blocks: [
                                         {
                                             kind: "fields",
                                             columns: 2,
                                             fields: [
-                                                k("luck"),
-                                                k("lore"),
-                                                k("morale"),
-                                                k("moraleBreak"),
-                                                k("moraleRecoveryTime"),
+                                                k("detectIllusion"),
+                                                k("setTraps"),
+                                                k("lockpicking"),
+                                                k("moveSilently"),
+                                                k("findDisarmTraps"),
+                                                k("pickPockets"),
+                                                k("hideInShadows"),
                                             ],
                                         },
                                     ],
@@ -233,6 +258,9 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                                                 k("acMissileMod"),
                                                 k("acPiercingMod"),
                                                 k("acSlashingMod"),
+                                                // Racial Enemy (ranger favoured-enemy race, RACE.IDS) - a combat-targeting
+                                                // attribute, moved here from the Identity panel.
+                                                k("racialEnemy"),
                                             ],
                                         },
                                     ],
@@ -294,28 +322,19 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                                     ],
                                 },
                                 {
-                                    // Thief skills proper. Lore (knowledge) -> Stats; Fatigue/Intoxication (condition)
-                                    // -> Condition; Hide In Shadows moved in from Combat (it is a thief skill byte).
-                                    title: "Thief Skills",
+                                    title: "Condition",
+                                    blocks: [{ kind: "fields", fields: [k("fatigue"), k("intoxication")] }],
+                                },
+                                {
+                                    // Luck (a SPECIAL-style dice-roll modifier, not a condition) grouped with the morale
+                                    // trio (current morale, break threshold, recovery time). Moved here from Identity.
+                                    title: "Luck & Morale",
                                     blocks: [
                                         {
                                             kind: "fields",
-                                            columns: 2,
-                                            fields: [
-                                                k("detectIllusion"),
-                                                k("setTraps"),
-                                                k("lockpicking"),
-                                                k("moveSilently"),
-                                                k("findDisarmTraps"),
-                                                k("pickPockets"),
-                                                k("hideInShadows"),
-                                            ],
+                                            fields: [k("luck"), k("morale"), k("moraleBreak"), k("moraleRecoveryTime")],
                                         },
                                     ],
-                                },
-                                {
-                                    title: "Condition",
-                                    blocks: [{ kind: "fields", fields: [k("fatigue"), k("intoxication")] }],
                                 },
                             ],
                         },

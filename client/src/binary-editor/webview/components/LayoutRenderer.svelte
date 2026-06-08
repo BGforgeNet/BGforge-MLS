@@ -81,16 +81,25 @@
                 {#if panelHasContent(panel)}
                 <div class="panel" class:panel-fit={panel.fit} style={panel.widthPx ? `width:${panel.widthPx}px` : ""}>
                     {#if panel.title}<h3>{panel.title}</h3>{/if}
-                    <div class="panel-blocks">
+                    <div class="panel-blocks" class:stack={panel.stack}>
                         {#each panel.blocks as block, bi (bi)}
                             {#if block.kind === "fields"}
-                                <FieldsBlock fieldRefs={block.fields} columns={block.columns}
+                                <FieldsBlock fieldRefs={block.fields} columns={block.columns} joins={block.joins}
                                              fields={layout.fields} {onedit} {byNode} {showOffsets} />
+                            {:else if block.kind === "group"}
+                                <!-- Boxed, labelled subgroup: a fieldset (flag-group box chrome) wrapping a
+                                     nested fields block. Used to nest a cluster (e.g. CRE Class) in a panel. -->
+                                <fieldset class="flag-group">
+                                    <legend>{block.label}</legend>
+                                    <FieldsBlock fieldRefs={block.fields} columns={block.columns} joins={block.joins}
+                                                 fields={layout.fields} {onedit} {byNode} {showOffsets} />
+                                </fieldset>
                             {:else if block.kind === "flags"}
                                 <!-- Box the flag group unless it is the sole block of a titled panel (then the
                                      panel border + h3 already is its group box - boxing again double-borders). -->
                                 <FlagColumns field={block.field} columns={block.columns}
                                              descriptions={block.descriptions} labels={block.labels}
+                                             spread={block.spread}
                                              boxed={!(panel.blocks.length === 1 && panel.title !== undefined)}
                                              fields={layout.fields} {onedit} />
                             {:else if block.kind === "matrix"}

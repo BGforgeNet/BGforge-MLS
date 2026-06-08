@@ -296,6 +296,29 @@ button:disabled {
     min-width: 0;
 }
 
+/* Inline "joined" field row: a labelled run of small numeric inputs with a separator between (e.g. CRE Level
+   "1 / 2 / 3"). The inputs hug ~2 digits; spinners are dropped so the box stays compact. */
+.field-control.joined {
+    flex-wrap: nowrap;
+    gap: 0;
+}
+.field-control.joined .joined-sep {
+    padding: 0 0.3rem;
+    color: var(--vscode-descriptionForeground);
+}
+.field-control.joined .joined-input input[type="number"] {
+    width: 3.5ch;
+    box-sizing: border-box;
+    padding: 0.2rem 0.25rem;
+    text-align: center;
+    appearance: textfield;
+}
+.field-control.joined .joined-input input[type="number"]::-webkit-inner-spin-button,
+.field-control.joined .joined-input input[type="number"]::-webkit-outer-spin-button {
+    appearance: none;
+    margin: 0;
+}
+
 /* ---- inputs / selects ---- */
 input[type="text"],
 input[type="number"],
@@ -934,6 +957,13 @@ input[type="text"]::placeholder {
     gap: 16px;
     align-items: flex-start;
 }
+/* A stacked panel flows its blocks top-to-bottom (a fields list above a boxed `group` subgroup) instead of
+   the default left-to-right. align-items:stretch so the subgroup box spans the panel width. */
+.panel-blocks.stack {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+}
 /* key/value list: a vertical stack of Field rows (label + control); multi-column variant is set inline. */
 .layout-root .kv {
     display: flex;
@@ -981,6 +1011,17 @@ input[type="text"]::placeholder {
     display: flex;
     gap: 16px;
     align-items: flex-start;
+}
+/* Spread the columns across the full panel width (set via the flags block `spread` flag) - for a wide
+   full-width flag panel whose content-width columns would otherwise leave dead space on the right. The
+   fieldset must claim the full panel width (it is a content-width flex child of .panel-blocks otherwise) so
+   the inner row's 100% / space-between has the room to spread into. */
+.layout-root .flag-group.spread {
+    flex: 1 1 auto;
+}
+.flag-columns.spread {
+    width: 100%;
+    justify-content: space-between;
 }
 .flag-columns .gcol {
     display: flex;

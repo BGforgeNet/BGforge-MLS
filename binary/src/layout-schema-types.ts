@@ -22,10 +22,37 @@ export type FieldRef = string;
 const fieldRefSchema = z.string().min(1);
 
 /** A key/value list of fields (label + control), optionally laid out in N columns. */
+/**
+ * Fold a run of numeric fields into a single labelled inline row "Label  a / b / c" (small inputs with a
+ * separator between) instead of one row each - e.g. CRE multiclass levels as "Level  1 / 2 / 3". Each join's
+ * `fields` must all also appear in the surrounding block's `fields`; the joined row renders at the first
+ * member's position and the rest are folded into it. Numeric fields only (the inputs are small number boxes).
+ */
+const joinSchema = z.strictObject({
+    label: z.string().min(1),
+    fields: z.array(fieldRefSchema).min(2),
+    separator: z.string().default(" / "),
+});
+
 const fieldsBlockSchema = z.strictObject({
     kind: z.literal("fields"),
     fields: z.array(fieldRefSchema).min(1),
     columns: z.number().int().positive().optional(),
+    joins: z.array(joinSchema).optional(),
+});
+
+/**
+ * A boxed, labelled subgroup of fields inside a panel - a fieldset with a legend, the same box chrome as a
+ * flag group. Use to nest a coherent cluster (e.g. CRE class: the CLASS.IDS dropdown, kit, and the multiclass
+ * Level row) inside a larger panel. Place it after the panel's plain fields block and set the panel `stack`
+ * flag so the subgroup sits below those fields rather than beside them.
+ */
+const fieldGroupBlockSchema = z.strictObject({
+    kind: z.literal("group"),
+    label: z.string().min(1),
+    fields: z.array(fieldRefSchema).min(1),
+    columns: z.number().int().positive().optional(),
+    joins: z.array(joinSchema).optional(),
 });
 
 /** One flags field rendered as N vertical checkbox columns. */
@@ -33,6 +60,10 @@ const flagsBlockSchema = z.strictObject({
     kind: z.literal("flags"),
     field: fieldRefSchema,
     columns: z.number().int().positive().optional(),
+    /** Spread the checkbox columns edge-to-edge across the panel width instead of clumping them left. Use for a
+     * wide full-width flag panel (e.g. CRE Status Flags) whose columns would otherwise leave dead space on the
+     * right. Leave off for narrow flag groups, where spreading just opens a gap between the columns. */
+    spread: z.boolean().optional(),
     /** Optional hover tooltip per flag, keyed by the flag's label (the name in the field's flag table).
      * Descriptions are presentation text and live here in the layout, not in the parser/spec. */
     descriptions: z.record(z.string(), z.string()).optional(),
@@ -95,6 +126,7 @@ const rawBlockSchema = z.strictObject({ kind: z.literal("raw") });
 
 const layoutBlockSchema = z.discriminatedUnion("kind", [
     fieldsBlockSchema,
+    fieldGroupBlockSchema,
     flagsBlockSchema,
     gridBlockSchema,
     matrixBlockSchema,
@@ -114,6 +146,9 @@ const layoutPanelSchema = z.strictObject({
     blocks: z.array(layoutBlockSchema).min(1),
     widthPx: z.number().int().positive().optional(),
     fit: z.boolean().optional(),
+    /** Stack the panel's blocks vertically instead of left-to-right - for a panel that holds a fields block
+     *  plus a boxed subgroup (kind "group") that should sit below it, not beside it. */
+    stack: z.boolean().optional(),
 });
 
 /** A row of panels, left-to-right, clumped left. */

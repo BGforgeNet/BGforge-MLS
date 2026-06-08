@@ -16,6 +16,7 @@ import {
     CreKit,
     CreRace,
     CreSex,
+    CreSpecific,
     CreStatusFlags,
 } from "../types";
 import { creHeaderSpec } from "./header";
@@ -51,7 +52,11 @@ export const creHeaderSpecAnnotated = {
     sex: { ...creHeaderSpec.sex, enum: CreSex, enumOpen: true },
     enemyAlly: { ...creHeaderSpec.enemyAlly, enum: CreEnemyAlly, enumOpen: true },
     general: { ...creHeaderSpec.general, enum: CreGeneral, enumOpen: true },
+    // SPECIFIC.IDS: open enum, mostly game/mod-defined (see CreSpecific).
+    specific: { ...creHeaderSpec.specific, enum: CreSpecific, enumOpen: true },
     race: { ...creHeaderSpec.race, enum: CreRace, enumOpen: true },
+    // `racialEnemy` is a RACE.IDS value (the ranger favoured-enemy race) - same lookup table as `race`.
+    racialEnemy: { ...creHeaderSpec.racialEnemy, enum: CreRace, enumOpen: true },
     class: { ...creHeaderSpec.class, enum: CreClass, enumOpen: true },
     // `gender` mirrors GENDER.IDS - same lookup table as `sex`.
     gender: { ...creHeaderSpec.gender, enum: CreSex, enumOpen: true },

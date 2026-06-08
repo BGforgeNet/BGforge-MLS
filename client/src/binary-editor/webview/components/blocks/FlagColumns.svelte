@@ -9,7 +9,7 @@
     // flags share a panel with other blocks, so the bitfield reads as one labelled set - matching the
     // detail-form flag boxes. Sole-in-titled-panel flags pass boxed=false and lean on the panel chrome
     // (its border + h3) as the group box, avoiding a redundant inner border.
-    const { field, columns = 2, descriptions, labels, fields, onedit, boxed = false }: {
+    const { field, columns = 2, descriptions, labels, fields, onedit, boxed = false, spread = false }: {
         field: FieldRef;
         columns?: number;
         descriptions?: Record<string, string>;
@@ -19,6 +19,8 @@
         fields: Record<FieldRef, Row>;
         onedit: (id: string, v: number | string) => void;
         boxed?: boolean;
+        // Spread columns edge-to-edge across the panel width (wide full-width flag panels) instead of clumping left.
+        spread?: boolean;
     } = $props();
 
     const row = $derived(fields[field]);
@@ -36,9 +38,9 @@
     }
 </script>
 {#if row}
-    <fieldset class="flag-group" class:bare={!boxed}>
+    <fieldset class="flag-group" class:bare={!boxed} class:spread>
         {#if boxed}<legend>{row.name}</legend>{/if}
-        <div class="flag-columns">
+        <div class="flag-columns" class:spread>
             {#each cols as col, ci (ci)}
                 <div class="gcol">
                     {#each col as b (b.mask)}

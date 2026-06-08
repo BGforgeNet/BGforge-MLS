@@ -131,6 +131,10 @@ const present = (file: string): boolean => fs.existsSync(file);
 function blockRefs(block: LayoutBlock): { fields: string[]; sections: string[] } {
     switch (block.kind) {
         case "fields":
+            // `joins` members are a subset of `fields`, so `fields` already covers them.
+            return { fields: block.fields, sections: [] };
+        case "group":
+            // A boxed subgroup of fields (its `joins` members are a subset of its `fields`).
             return { fields: block.fields, sections: [] };
         case "flags":
             return { fields: [block.field], sections: [] };

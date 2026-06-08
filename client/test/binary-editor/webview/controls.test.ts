@@ -95,10 +95,15 @@ describe("valueTier", () => {
         expect(valueTier(stringRow(32))).toBe("l"); // long char array
     });
 
-    it("sizes enums by their longest option label, floored at medium for dropdown chrome", () => {
-        expect(valueTier(enumRow)).toBe("m"); // "Human"/"Mutant" are short but a dropdown floors at m
+    it("sizes plain enum dropdowns at medium; a long option ellipsizes rather than forcing the wide L tier", () => {
+        expect(valueTier(enumRow)).toBe("m"); // short labels -> m
         const longEnum: Row = { ...enumRow, enumOptions: { "0": "A very long dropdown option label" } };
-        expect(valueTier(longEnum)).toBe("l");
+        expect(valueTier(longEnum)).toBe("m"); // a long option no longer widens the box; it ellipsizes in m
+    });
+
+    it("keeps the searchable combobox (e.g. the effect opcode) at the wide L tier", () => {
+        const searchable: Row = { ...enumRow, searchableEnum: true };
+        expect(valueTier(searchable)).toBe("l");
     });
 });
 

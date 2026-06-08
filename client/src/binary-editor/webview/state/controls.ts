@@ -110,12 +110,12 @@ function tierForChars(n: number): SizeTier {
 
 export function valueTier(row: Row): SizeTier {
     const kind = controlKind(row);
-    // Dropdowns always carry arrow + padding chrome, so the S box is too tight for their label - floor at M.
-    // Size by the LONGEST option label (not the current value) so changing the selection never clips.
-    if (kind === "enum") {
-        const longest = enumOptionList(row).reduce((m, o) => Math.max(m, o.label.length), 0);
-        return longest <= 12 ? "m" : "l";
-    }
+    // Plain dropdowns sit at M: the arrow + padding chrome make the S box too tight, and M keeps them compact.
+    // A label longer than the M box ellipsizes in the trigger (a title tooltip + the open menu show the full
+    // text), so one long option in a table no longer forces the whole dropdown to the wide L tier. The
+    // searchable combobox (the ~300-entry effect opcode) is the exception: its long free-text labels and
+    // text-box selection need the room, so it keeps L.
+    if (kind === "enum") return row.searchableEnum === true ? "l" : "m";
     if (row.numericFormat === "hex32") return "m"; // "0x" + 8 hex digits = 10 chars
     if (kind === "string") return tierForChars(row.size ?? 8); // char[N] field: N chars max
     // Decimal: realistic display width in these formats is <= 7 digits (stats, ids, strrefs, counts, Kit).

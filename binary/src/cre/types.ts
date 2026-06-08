@@ -160,6 +160,27 @@ export const CreGeneral: Readonly<Record<number, string>> = {
     255: "Anything",
 };
 
+/**
+ * CRE header `specific` (byte, 0x0274) - SPECIFIC.IDS, from
+ * `external/infinity-engine/iesdp/files/ids/bgee/specific.htm` (names humanized to match the sibling tables).
+ * `0: "None"` is a curated sentinel for the common unset value - it is NOT in the BGEE IDS, but mirrors the
+ * `0` entries in CreGeneral / CreRace. Open enum: SPECIFIC.IDS varies by game and is mod-extensible, so
+ * unlisted values round-trip as `Unknown (N)`.
+ */
+export const CreSpecific: Readonly<Record<number, string>> = {
+    0: "None",
+    1: "Normal",
+    10: "Cultist",
+    12: "Sharran",
+    64: "Shou monk",
+    65: "Shou flayer",
+    66: "Quadim spider",
+    67: "Culak spider",
+    101: "Magic",
+    102: "No magic",
+    250: "Spirit",
+};
+
 /** CRE header `race` (byte, 0x0272) - RACE.IDS common values. */
 export const CreRace: Readonly<Record<number, string>> = {
     0: "None",
