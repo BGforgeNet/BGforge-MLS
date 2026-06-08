@@ -113,7 +113,8 @@ export const creHeaderSpec = {
      * Kit information (KIT.IDS). Read as a little-endian u32; the value matches the IESDP "KIT_*" dword
      * hex directly - the Edwin fixture stores `00 00 80 00` -> 0x00800000 = Conjurer, and Edwin is a
      * Conjurer, so no byte-swap is needed. The named-kit lookup + dropdown are applied in
-     * `header.overrides.ts` (CreKit). (IESDP's "big endian" note does not hold for the fixtures we parse.)
+     * `header.overrides.ts` (CreKit). IESDP's "big endian" note does not hold here: the LE read matches
+     * KIT.IDS across the vendored CRE v1 corpus, including 34 warrior-range kits a big-endian read garbles.
      */
     kit: { codec: u32 },
     scriptOverride: charsSpec(8),

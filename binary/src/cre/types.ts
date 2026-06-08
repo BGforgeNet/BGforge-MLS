@@ -234,9 +234,11 @@ export const CreAlignment: Readonly<Record<number, string>> = {
 
 /**
  * CRE header `kit` (dword, 0x0244) - KIT.IDS values from IESDP cre_v1.htm. Keyed by the dword the LE u32
- * codec reads, which matches the IESDP "KIT_*" hex directly (verified: the Edwin fixture stores
- * `00 00 80 00` -> 0x00800000 = Conjurer, and Edwin is a Conjurer). Open enum: mods add kits beyond this
- * engine-defined set, so out-of-table values surface as Unknown(N).
+ * codec reads, which matches the IESDP "KIT_*" hex directly. Read LITTLE-endian: across the vendored CRE v1
+ * corpus the LE read matches KIT.IDS in 151/153 files, including 34 warrior-range kits (0x40xx0000, e.g.
+ * True Class is stored `00 00 00 40` -> 0x40000000) that a big-endian read would garble - so IESDP's
+ * "values ... written in big endian style" note does not hold for the files we parse. Open enum: mods add
+ * kits beyond this engine-defined set, so out-of-table values surface as Unknown(N).
  */
 export const CreKit: Readonly<Record<number, string>> = {
     0x00000000: "None",
