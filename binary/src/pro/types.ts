@@ -201,7 +201,13 @@ export const StatType: Record<number, string> = {
     37: "Current Rad",
 };
 
-// Flag definitions
+// Flag definitions.
+//
+// The CamelCase flag names here (NoBlock, MultiHex, TransRed, ShootThru, BigGun, ...) are kept verbatim and
+// deliberately NOT humanized to "No Block" / "Multi Hex": these are the canonical token names the Fallout proto
+// format and the modding community use, so they are more recognizable to the user as-is. This is the opposite
+// call from the Infinity Engine MAP flags, whose CamelCase keys (SkipElevation0Tiles) are internal and humanize
+// far better - those carry a presentation-layer `labels` override; these intentionally do not.
 export const HeaderFlags: Record<number, string> = {
     0x00000008: "Flat",
     0x00000010: "NoBlock",

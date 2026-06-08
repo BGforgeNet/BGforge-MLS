@@ -8,7 +8,7 @@ import { createIeCanonicalReader } from "../ie-common/canonical-reader";
 import { parseWithSchemaValidation } from "../schema-validation";
 import { rebuildAbilityEffectsDocument } from "../ie-common/rebuild-ability-effects";
 import { itmHeaderSpecAnnotated } from "./specs/header.overrides";
-import { itmAbilitySpecAnnotated } from "./specs/ability.overrides";
+import { itmAbilityPresentation, itmAbilitySpecAnnotated } from "./specs/ability.overrides";
 import {
     type ItmCanonicalDocument,
     type ItmCanonicalSnapshot,
@@ -22,7 +22,9 @@ const itmRebuildConfig = {
     headerSpec: itmHeaderSpecAnnotated,
     abilitySpec: itmAbilitySpecAnnotated,
     headerPresentation: {},
-    abilityPresentation: {},
+    // Must match the parser's ability presentation (itm/index.ts) - the rebuild
+    // looks each field back up by the label the parser wrote.
+    abilityPresentation: itmAbilityPresentation,
 } as const;
 
 function rebuildFromDisplay(result: ParseResult): ItmCanonicalDocument {

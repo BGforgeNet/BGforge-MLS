@@ -246,7 +246,7 @@ button:disabled {
     margin-top: 6px;
 }
 /* Box each flag field (its label + the checkboxes that are bits of the SAME field) so it is visually obvious
-   which checkboxes belong together - e.g. the "Id Required" field owns the "ID Required" / "Non-ID Required"
+   which checkboxes belong together - e.g. the "Identification" field owns the "ID Required" / "Non-ID Required"
    checkboxes, which otherwise read as unrelated toggles next to a same-named label. */
 .form-flags .field {
     align-items: flex-start;
@@ -797,17 +797,27 @@ input[type="text"]::placeholder {
     padding: 0 0.2rem;
 }
 
-/* ---- subgroup (headed section, always visible, no accordion) ---- */
+/* ---- subgroup (headed section, always visible, no accordion) ----
+   A subgroup is a set of related fields from one sub-struct or fixed slot array (e.g. an ITM ability's
+   Melee Animation Overhand/Backhand/Thrust slots). Box it with the same input-border + inset fill as the
+   detail-form flag groups (.form-flags .field) so a named group of controls reads as one unit instead of a
+   bare heading floating above a row - the "make relationships visible" principle, applied consistently to
+   both flag groups and slot/struct groups. */
 .subgroup {
     margin: 0.6rem 0 0.25rem;
+    border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+    border-radius: 4px;
+    padding: 5px 10px;
+    background: var(--vscode-editor-background);
 }
 .subgroup-title {
-    margin: 0 0 0.25rem;
-    padding: 0.1rem 0;
+    /* The box now carries the grouping; the title is a header inside it (no underline, which would double the
+       box's top edge). */
+    margin: 0 0 0.4rem;
+    padding: 0;
     font-size: 0.95em;
     font-weight: 600;
     color: var(--vscode-descriptionForeground);
-    border-bottom: 1px solid var(--vscode-panel-border, #2b2b2b);
 }
 
 /* ---- group-tabs-wrap: positions the bb-tabs strip beside (vertical) or above (horizontal) the active content ---- */

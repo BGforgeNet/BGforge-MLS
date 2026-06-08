@@ -33,7 +33,16 @@ export const splAbilitySpecAnnotated = {
  * Relabel the group to "Disposition" (the field selects a hostile vs friendly disposition). Shared by BOTH the
  * parser (writes the display label) and the canonical rebuild (looks the field back up by that label), so the
  * displayed label and the round-trip lookup key stay identical - a mismatch would break the round-trip.
+ *
+ * The six reserved `unused*` slots are real wire fields (they round-trip and so must stay in the display tree),
+ * but humanize leaves the trailing digit attached ("Unused1"). Space it for legibility; display only.
  */
 export const splAbilityPresentation = {
     friendly: { label: "Disposition" },
+    unused1: { label: "Unused 1" },
+    unused2: { label: "Unused 2" },
+    unused3: { label: "Unused 3" },
+    unused4: { label: "Unused 4" },
+    unused5: { label: "Unused 5" },
+    unused6: { label: "Unused 6" },
 };
