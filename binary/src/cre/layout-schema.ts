@@ -55,8 +55,8 @@ const creLabels: Record<string, string> = {
     [k("levelFirstClass")]: "1st Level",
     [k("levelSecondClass")]: "2nd Level",
     [k("levelThirdClass")]: "3rd Level",
-    [k("general")]: "General Type",
-    [k("specific")]: "Specific Type",
+    [k("general")]: "General",
+    [k("specific")]: "Specific",
     [k("enemyAlly")]: "Enemy / Ally",
     [k("moraleBreak")]: "Break",
     [k("moraleRecoveryTime")]: "Recovery Time",
@@ -64,6 +64,8 @@ const creLabels: Record<string, string> = {
     [k("numAttacks")]: "Attacks",
     [k("acNatural")]: "Natural",
     [k("acEffective")]: "Effective",
+    // acCrushing/Missile/Piercing/SlashingMod are per-damage-type AC modifiers; the "Mods" subgroup in the AC
+    // panel gives the context, so the labels can be the bare damage type.
     [k("acCrushingMod")]: "Crushing",
     [k("acMissileMod")]: "Missile",
     [k("acPiercingMod")]: "Piercing",
@@ -106,6 +108,8 @@ const creLabels: Record<string, string> = {
     [k("scriptRace")]: "Race",
     [k("scriptGeneral")]: "General",
     [k("scriptDefault")]: "Default",
+    [k("turnUndeadLevel")]: "Turn Undead",
+    [k("trackingSkill")]: "Tracking",
     // Proficiency row labels are supplied by the matrix block (PROFICIENCY_LABELS); the per-field
     // active/original packed keys need no separate display-label overrides.
     // objectRefs (OBJECT.IDS references) are intentionally not surfaced in the layout (see the Proficiencies
@@ -131,7 +135,6 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                                     blocks: [
                                         {
                                             kind: "fields",
-                                            columns: 2,
                                             fields: [
                                                 k("longName"),
                                                 k("shortName"),
@@ -148,24 +151,16 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                                     ],
                                 },
                                 {
-                                    // The Identity row's second column: boxed subgroups stacked vertically. Death Variable is
-                                    // a plain field between the Stats and Scripts boxes, so it sits directly above Scripts.
+                                    // The Identity row's second column = the Scripting panel: the dialog file and Script Name
+                                    // (death variable) as fields, with the five BCS script slots boxed as a subgroup below.
+                                    title: "Scripting",
                                     stack: true,
                                     blocks: [
                                         {
-                                            // Scripting cluster: the dialog file, above the Script Name (death variable)
-                                            // and the BCS script slots.
-                                            kind: "group",
-                                            label: "Scripting",
-                                            fields: [k("dialogFile")],
-                                        },
-                                        {
                                             kind: "fields",
-                                            fields: [k("deathVariable")],
+                                            fields: [k("dialogFile"), k("deathVariable")],
                                         },
                                         {
-                                            // The five creature script slots, boxed. The dialog file is a separate plain field
-                                            // in the identity list, deliberately not inside this box.
                                             kind: "group",
                                             label: "Scripts",
                                             fields: [
@@ -224,6 +219,10 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                                         },
                                     ],
                                 },
+                            ],
+                        },
+                        {
+                            panels: [
                                 {
                                     title: "Attributes",
                                     blocks: [
@@ -241,18 +240,20 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                                         },
                                     ],
                                 },
-                            ],
-                        },
-                        {
-                            panels: [
-                                { title: "Flags", blocks: [{ kind: "flags", field: k("creatureFlags"), columns: 2 }] },
                                 {
-                                    // Thief skills, moved here from the Combat tab. Lore -> Identity Stats subgroup,
-                                    // Fatigue/Intoxication -> Combat Condition; Hide In Shadows stays (a thief-skill byte).
-                                    title: "Thief Skills",
+                                    // Skills: turn-undead level and ranger tracking, with the thief skills boxed as a
+                                    // "Thief" subgroup below (Fatigue/Intoxication live in Combat).
+                                    title: "Skills",
+                                    stack: true,
                                     blocks: [
                                         {
                                             kind: "fields",
+                                            columns: 2,
+                                            fields: [k("turnUndeadLevel"), k("trackingSkill")],
+                                        },
+                                        {
+                                            kind: "group",
+                                            label: "Thief",
                                             columns: 2,
                                             fields: [
                                                 k("detectIllusion"),
@@ -266,14 +267,13 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                                         },
                                     ],
                                 },
+                            ],
+                        },
+                        {
+                            panels: [
                                 {
-                                    title: "Class Abilities",
-                                    blocks: [
-                                        {
-                                            kind: "fields",
-                                            fields: [k("turnUndeadLevel"), k("trackingSkill")],
-                                        },
-                                    ],
+                                    title: "Flags",
+                                    blocks: [{ kind: "flags", field: k("creatureFlags"), columns: 4, spread: true }],
                                 },
                             ],
                         },
@@ -317,41 +317,45 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                         {
                             panels: [
                                 {
+                                    // Combat stats merged into one group: attacks + health + condition + luck. Morale and AC
+                                    // are their own groups beside this one.
                                     title: "Combat",
-                                    stack: true,
                                     blocks: [
                                         {
                                             kind: "fields",
-                                            columns: 2,
                                             fields: [
                                                 k("thaco"),
                                                 k("numAttacks"),
-                                                // Racial Enemy (ranger favoured-enemy race, RACE.IDS) - a combat-targeting
-                                                // attribute, moved here from the Identity panel.
+                                                // Racial Enemy (ranger favoured-enemy race, RACE.IDS) - a combat-targeting attribute.
                                                 k("racialEnemy"),
-                                            ],
-                                        },
-                                        {
-                                            kind: "group",
-                                            label: "AC",
-                                            columns: 2,
-                                            fields: [
-                                                k("acNatural"),
-                                                k("acEffective"),
-                                                k("acCrushingMod"),
-                                                k("acMissileMod"),
-                                                k("acPiercingMod"),
-                                                k("acSlashingMod"),
+                                                k("currentHp"),
+                                                k("maxHp"),
+                                                k("fatigue"),
+                                                k("intoxication"),
+                                                k("luck"),
                                             ],
                                         },
                                     ],
                                 },
                                 {
-                                    title: "Health",
+                                    title: "AC",
+                                    stack: true,
                                     blocks: [
                                         {
                                             kind: "fields",
-                                            fields: [k("currentHp"), k("maxHp")],
+                                            fields: [k("acNatural"), k("acEffective")],
+                                        },
+                                        {
+                                            // Per-damage-type AC modifiers, boxed - the "Mod" label gives the context so the
+                                            // entries can be bare damage types.
+                                            kind: "group",
+                                            label: "Mod",
+                                            fields: [
+                                                k("acCrushingMod"),
+                                                k("acMissileMod"),
+                                                k("acPiercingMod"),
+                                                k("acSlashingMod"),
+                                            ],
                                         },
                                     ],
                                 },
@@ -367,6 +371,15 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                                                 k("saveVsBreath"),
                                                 k("saveVsSpells"),
                                             ],
+                                        },
+                                    ],
+                                },
+                                {
+                                    title: "Morale",
+                                    blocks: [
+                                        {
+                                            kind: "fields",
+                                            fields: [k("morale"), k("moraleBreak"), k("moraleRecoveryTime")],
                                         },
                                     ],
                                 },
@@ -396,28 +409,13 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                                         },
                                     ],
                                 },
-                                {
-                                    title: "Condition",
-                                    blocks: [{ kind: "fields", fields: [k("fatigue"), k("intoxication")] }],
-                                },
-                                {
-                                    // Luck (a SPECIAL-style dice-roll modifier, not a condition) grouped with the morale
-                                    // trio (current morale, break threshold, recovery time). Moved here from Identity.
-                                    title: "Luck & Morale",
-                                    blocks: [
-                                        {
-                                            kind: "fields",
-                                            fields: [k("luck"), k("morale"), k("moraleBreak"), k("moraleRecoveryTime")],
-                                        },
-                                    ],
-                                },
                             ],
                         },
                         {
                             panels: [
                                 {
                                     // 24 status bits: spread across the full-width row.
-                                    title: "Status Flags",
+                                    title: "Status",
                                     blocks: [{ kind: "flags", field: k("statusFlags"), columns: 6, spread: true }],
                                 },
                             ],

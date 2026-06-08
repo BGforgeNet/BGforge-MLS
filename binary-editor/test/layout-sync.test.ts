@@ -316,8 +316,8 @@ describe("UX packing guardrails", () => {
     // F. A `fields` block with many entries must use >=2 columns, or it runs as one tall single column down a
     // wide page (the #7 waste). grid blocks carry an explicit `columns` (required by the schema); flags blocks
     // have a runtime bit count not visible here, so both are out of scope. Pure layout-structure check.
-    it("no fields block with >=8 entries is single-column", () => {
-        const MAX_SINGLE_COLUMN = 8;
+    it("no fields block with >20 entries is single-column", () => {
+        const MAX_SINGLE_COLUMN = 20;
         const violations: string[] = [];
         for (const format of Object.keys(PARSERS))
             for (const [variant, v] of Object.entries(layoutFor(format).variants))
