@@ -35,8 +35,12 @@ export const splHeaderSpecAnnotated = {
         role: "derivedOffset" as const,
         derivedFrom: { section: "effects" } as const,
     },
-    castingFeatureBlocksOffset: {
-        ...splHeaderSpec.castingFeatureBlocksOffset,
+    // Renamed from `castingFeatureBlocksOffset` per IESDP (it is, and always was, the casting-range START
+    // INDEX into the flat effects array - see spl/entity-ops.ts - not a byte offset). The role/derivedFrom
+    // are kept exactly as before to preserve round-trip behavior; the `derivedOffset` classification predates
+    // the rename and is a separate cleanup, not changed here.
+    castingFeatureBlocksIndex: {
+        ...splHeaderSpec.castingFeatureBlocksIndex,
         role: "derivedOffset" as const,
         derivedFrom: { section: "castingEffects" } as const,
     },

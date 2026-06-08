@@ -237,6 +237,23 @@ button:disabled {
     overflow: auto;
     padding: 0.5rem 0.75rem;
 }
+/* Flag fields in a detail form render full-width below the 2-column scalar grid (their checkbox grid uses
+   the whole width and would otherwise strand the scalar columns by their height). */
+.form-flags {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 6px;
+}
+/* Box each flag field (its label + the checkboxes that are bits of the SAME field) so it is visually obvious
+   which checkboxes belong together - e.g. the "Id Required" field owns the "ID Required" / "Non-ID Required"
+   checkboxes, which otherwise read as unrelated toggles next to a same-named label. */
+.form-flags .field {
+    align-items: flex-start;
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 4px;
+    padding: 5px 10px;
+}
 
 /* ---- field row: stable label width + control, comfortable vertical rhythm for scannable long forms ---- */
 .field {
@@ -279,7 +296,8 @@ button:disabled {
 /* ---- inputs / selects ---- */
 input[type="text"],
 input[type="number"],
-select {
+select,
+.bb-combobox-input {
     font: inherit;
     color: var(--vscode-input-foreground, var(--vscode-foreground));
     background: var(--vscode-input-background);
@@ -289,7 +307,8 @@ select {
 }
 input[type="text"]:focus,
 input[type="number"]:focus,
-select:focus {
+select:focus,
+.bb-combobox-input:focus {
     outline: none;
     border-color: var(--vscode-focusBorder);
 }
@@ -299,6 +318,35 @@ select:disabled {
 }
 input[type="text"]::placeholder {
     color: var(--vscode-input-placeholderForeground, var(--vscode-descriptionForeground));
+}
+
+/* Read-only (non-editable / derived / locked) controls in the dense layout render as plain muted text -
+ * no input box, no dropdown arrow - rather than a dimmed input, so it is obvious at a glance which fields
+ * are editable (a control with input chrome) vs read-only (#17). Editable controls keep their box + a
+ * focus ring on focus only. */
+.layout-root input:disabled,
+.layout-root select:disabled,
+.layout-root .bb-combobox-input:disabled {
+    opacity: 1;
+    border-color: transparent;
+    background: transparent;
+    color: var(--vscode-descriptionForeground);
+    cursor: default;
+}
+.layout-root .bb-select-trigger[data-disabled] {
+    opacity: 1;
+    border-color: transparent;
+    background: transparent;
+    color: var(--vscode-descriptionForeground);
+    cursor: default;
+}
+.layout-root .bb-select-trigger[data-disabled]::after {
+    content: none; /* no dropdown affordance on a read-only enum */
+}
+.layout-root .hex-input.disabled {
+    opacity: 1;
+    border-color: transparent;
+    background: transparent;
 }
 
 /* ---- bb-popup-* (shared popup surface rules for Select, Combobox, and Menu primitives) ----
@@ -362,10 +410,25 @@ input[type="text"]::placeholder {
     border-radius: 2px;
     padding: 0.2rem 0.4rem;
 }
+/* The selected-value label ellipsizes (with a title tooltip on the trigger) rather than hard-cutting when
+   the trigger is narrower than the text - e.g. a long opcode/timing name in a cramped multi-column cell. */
+.bb-select-trigger .bb-select-label {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 .bb-select-trigger::after {
     content: "\25BE"; /* down-pointing triangle indicating a dropdown */
     color: var(--vscode-descriptionForeground);
     font-size: 0.8em;
+    flex: 0 0 auto;
+}
+/* In the dense layout, let the trigger shrink to its grid cell so the label ellipsizes (tooltip shows the
+   full value) instead of the 8rem min-width forcing it past a narrow multi-column cell and hard-cutting. */
+.layout-root .field-control .bb-select-trigger {
+    min-width: 0;
 }
 .bb-select-trigger:focus,
 .bb-select-trigger[data-state="open"] {
@@ -614,13 +677,16 @@ input[type="text"]::placeholder {
 
 /* ---- flags (checkbox group) ---- */
 .flags-grid {
-    /* flex:1 + min-width:0 make the grid claim the available detail width as a flex child of .field;
-       without them it shrinks to content width and the auto-fill track stays a single column. */
+    /* flex:1 + min-width:0 make the group claim the available detail width as a flex child of .field. The
+       checkboxes wrap and PACK LEFT (content-width, not stretched 1fr grid tracks) so a 2-bit field like
+       "Id Required" reads as a tight "ID Required / Non-ID Required" pair instead of two toggles stranded at
+       opposite column edges; a many-bit field still wraps to fill the width. */
     flex: 1;
     min-width: 0;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
-    gap: 0.3rem 0.75rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    gap: 0.3rem 1.25rem;
 }
 
 /* ---- virtualized list rows ---- */
@@ -835,6 +901,16 @@ input[type="text"]::placeholder {
     border: 1px solid var(--vscode-panel-border);
     border-radius: 5px;
     padding: 8px 10px 10px;
+    /* Grow to fill the row: panels share leftover width instead of leaving dead space after the last one,
+       and a panel that would otherwise wrap onto its own row (e.g. CRE Status Flags) shrinks to fit the row
+       (down to its content) rather than dropping to a half-empty new line (#18). flex-basis stays content. */
+    flex: 1 1 auto;
+}
+/* A `fit` panel hugs its content and does NOT grow, so a small panel (a couple of fields/checkboxes) sharing
+   a row with a larger field panel stays compact while the larger panel absorbs the leftover width - instead
+   of a tiny panel stretching across half/all of the row with its content clumped in one corner. */
+.layout-root .panel.panel-fit {
+    flex-grow: 0;
 }
 .layout-root .panel > h3 {
     margin: 0 0 7px;
@@ -945,15 +1021,16 @@ input[type="text"]::placeholder {
 }
 
 /* Dense layout sizing (scoped to .layout-root). The single-column fields list (Header / Demographics /
- * Final) is a 2-column grid: column 1 hugs the widest label (max-content) so labels stay tight, column 2
- * is a fixed width so every control - number, dropdown, string - aligns and shares one length. Each
- * .field is a subgrid spanning both columns so its label and value land in the shared tracks. */
+ * Final) is a 2-column grid: column 1 hugs the widest label (max-content) so labels stay tight; column 2
+ * is `auto`, so it sizes to the widest control in the panel (= the widest display-width tier present) and
+ * every control left-aligns within it. The tier varies a control's right edge; its left edge and the next
+ * column stay fixed, so columns remain aligned. Each .field is a subgrid spanning both columns. */
 .layout-root .field {
     align-items: baseline;
 }
 .layout-root .kv:not(.kv-multi) {
     display: grid;
-    grid-template-columns: max-content 7rem;
+    grid-template-columns: max-content auto;
     column-gap: 10px;
     row-gap: 2px;
     align-items: baseline;
@@ -968,24 +1045,91 @@ input[type="text"]::placeholder {
     column-gap: 10px;
     align-items: baseline;
 }
+/* Display-width tier -> control box width. The tier is classified once per field in TS (valueTier - it
+ * depends on char-array length / hex format / longest dropdown label, which CSS can't read); the WIDTHS
+ * live here so the stylesheet owns all dimensions. S: small decimals / short strings. M: hex, 8-char
+ * resref, dropdowns, mid strings. L: long char arrays and long dropdown labels. */
+.layout-root .field-control.tier-s {
+    --val-ch: 6ch;
+}
+.layout-root .field-control.tier-m {
+    --val-ch: 14ch;
+}
+.layout-root .field-control.tier-l {
+    --val-ch: 32ch;
+}
 .layout-root .kv:not(.kv-multi) .field-control {
-    width: 100%;
+    justify-self: start;
 }
 .layout-root .kv:not(.kv-multi) .field-control > input,
 .layout-root .kv:not(.kv-multi) .field-control .bb-select-trigger,
 .layout-root .kv:not(.kv-multi) .field-control select {
-    width: 100%;
+    width: var(--val-ch, 14ch);
     min-width: 0;
+}
+/* Multi-column fields: each column is a (max-content label, auto value) pair, and the Field is a subgrid
+ * spanning its pair, so the label hugs its text (shared per column, so values still align vertically)
+ * instead of the fixed 12rem box that pushed short labels far from their value (#1). The field's own
+ * column-gap is the tight label/value gap; the wider inter-column gap comes from the parent .kv-multi grid. */
+.layout-root .kv.kv-multi .field {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-column: span 2;
+    column-gap: 10px;
+    align-items: baseline;
 }
 .layout-root .kv.kv-multi .field .label {
     min-width: 80px;
 }
-/* Multi-column panels (e.g. Resistances) have no fixed control track, so a number input would otherwise take
- * a browser/min-width default far wider than its 1-4 byte value needs. Size it to the value's range via the
- * --num-ch var NumberField sets. Enums/strings are unaffected (rule is scoped to number inputs). */
-.layout-root .kv.kv-multi .field-control input[type="number"] {
-    width: var(--num-ch, 8ch);
+/* Multi-column panels have no fixed control track, so every control is sized to its display-width tier
+ * (--val-ch, set by the tier class on .field-control) and left-aligned within its (auto) value track, so
+ * columns stay aligned while each box hugs its tier. See the UX rule "Size fields to a small display-width
+ * scale". */
+.layout-root .kv.kv-multi .field-control {
+    justify-self: start;
+}
+.layout-root .kv.kv-multi .field-control > input,
+.layout-root .kv.kv-multi .field-control .bb-select-trigger,
+.layout-root .kv.kv-multi .field-control select {
+    width: var(--val-ch, 14ch);
     min-width: 0;
+}
+
+/* Hex field (e.g. MAP PID): a static, non-editable "0x" prefix plus a borderless digit input, wrapped so the
+ * pair reads as one control. The wrapper carries the input chrome; the user can only edit the hex digits. */
+.layout-root .hex-input {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.05rem;
+    width: var(--val-ch, 14ch);
+    background: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border, transparent);
+    border-radius: 2px;
+    padding: 0.2rem 0.4rem;
+    box-sizing: border-box;
+}
+.layout-root .hex-input:focus-within {
+    border-color: var(--vscode-focusBorder);
+}
+.layout-root .hex-input.disabled {
+    opacity: 0.6;
+}
+.layout-root .hex-prefix {
+    color: var(--vscode-descriptionForeground);
+    user-select: none;
+    font-family: var(--vscode-editor-font-family, monospace);
+}
+.layout-root .hex-input input.hex-digits {
+    border: none;
+    background: transparent;
+    padding: 0;
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    font-family: var(--vscode-editor-font-family, monospace);
+}
+.layout-root .hex-input input.hex-digits:focus {
+    outline: none;
 }
 .layout-root .matrix .strow .c input {
     /* border-box + 100% so the input fills its cell exactly instead of overflowing (content-box padding +

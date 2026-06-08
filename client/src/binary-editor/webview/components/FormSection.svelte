@@ -25,6 +25,11 @@
     });
 
     const { fields, groups } = $derived(splitForm(rows));
+    // Flag fields are multi-row checkbox grids; in the 2-column scalar grid their height strands the scalar
+    // columns (the last left-column field ends up far below its neighbour). Keep scalars in the 2-col grid
+    // and render flag fields full-width below, where their checkbox grid uses the whole width anyway.
+    const scalarFields = $derived(fields.filter((f) => f.valueType !== "flags"));
+    const flagFields = $derived(fields.filter((f) => f.valueType === "flags"));
 
     // Hard cap at 2 tab levels: depth > 2 always renders headed sections so nested tabs
     // never stack more than two deep (vertical then horizontal, then sections).
@@ -45,9 +50,24 @@
     });
 </script>
 <div class="form">
-    {#each fields as row (row.id)}
-        <Field {row} {onedit} diagnostics={byNode.get(row.id)} {showOffsets} />
-    {/each}
+    <!-- Top-level scalar fields pack into two label/value columns (same subgrid as multi-column panels) so a
+         detail pane doesn't waste the right half on a single tall column. Nested groups below span full width. -->
+    {#if scalarFields.length > 0}
+        <!-- style: directive (not a static style attribute) compiles to el.style.setProperty, which the
+             webview CSP allows; a literal style="..." attribute would be blocked by style-src. -->
+        <div class="kv kv-multi form-fields" style:grid-template-columns="repeat(2, max-content auto)">
+            {#each scalarFields as row (row.id)}
+                <Field {row} {onedit} diagnostics={byNode.get(row.id)} {showOffsets} />
+            {/each}
+        </div>
+    {/if}
+    {#if flagFields.length > 0}
+        <div class="form-flags">
+            {#each flagFields as row (row.id)}
+                <Field {row} {onedit} diagnostics={byNode.get(row.id)} {showOffsets} />
+            {/each}
+        </div>
+    {/if}
     {#if org.mode === "tabs"}
         {@const tabItems = groups.map((g) => ({ id: g.id, label: g.name }))}
         {@const activeGroup = groups.find((g) => g.id === activeTabId)}

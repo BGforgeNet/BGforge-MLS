@@ -109,7 +109,7 @@ function check(label: string, ok: boolean, detail: string): void {
 
 // ---- Browser setup ----
 const browser = await chromium.launch({ headless: true });
-const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, deviceScaleFactor: 2 });
+const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, deviceScaleFactor: 1 });
 activePage = page;
 const assertNoCsp = installCspGate(page, "ITM");
 
@@ -124,6 +124,12 @@ await page.screenshot({ path: path.join(here, "shot-itm.png"), fullPage: true })
 async function clickTab(label: string): Promise<void> {
     await page.locator('.bb-tabs.primary button[role="tab"]').filter({ hasText: label }).first().click();
     await page.waitForTimeout(200);
+}
+// Guard against the "captured the wrong tab" regression: each per-tab screenshot must be taken while that
+// tab is actually the selected one. Returns the active primary tab's label (includes its count badge text).
+async function activeTabLabel(): Promise<string> {
+    const t = await page.locator('.bb-tabs.primary button[role="tab"][aria-selected="true"]').first().textContent();
+    return (t ?? "").trim();
 }
 
 // Panel-scoped locators: each list section is a master-detail inside the panel with the matching h3.
@@ -396,10 +402,27 @@ check("effects: opcode detail field is a searchable combobox", opcodeCombobox >=
     }
 }
 
-// ---- Screenshots (full page + a selected effect detail) ----
+// ---- Screenshots: each tab captured on the tab it names, with a row selected so the detail pane renders.
+// (Regression: both were previously captured while the Effects tab was active, producing duplicate images.)
+await clickTab("Abilities");
+await waitRows(abilitiesPanel, 2);
+await selectRow(abilitiesPanel, 0);
+check(
+    "screenshot: Abilities tab active for shot-itm-abilities",
+    (await activeTabLabel()).includes("Abilities"),
+    await activeTabLabel(),
+);
 await page.screenshot({ path: path.join(here, "shot-itm-abilities.png"), fullPage: true });
+
+await clickTab("Effects");
+await waitRows(effectsPanel, 3);
 await selectRow(effectsPanel, 0);
 await effectsPanel.locator(".detail .form .field").first().waitFor({ timeout: 3000 });
+check(
+    "screenshot: Effects tab active for shot-itm-effects",
+    (await activeTabLabel()).includes("Effects"),
+    await activeTabLabel(),
+);
 await page.screenshot({ path: path.join(here, "shot-itm-effects.png"), fullPage: true });
 
 await browser.close();

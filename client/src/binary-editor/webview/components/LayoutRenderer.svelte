@@ -79,7 +79,7 @@
         <div class="layout-row">
             {#each row.panels as panel, pi (pi)}
                 {#if panelHasContent(panel)}
-                <div class="panel" style={panel.widthPx ? `width:${panel.widthPx}px` : ""}>
+                <div class="panel" class:panel-fit={panel.fit} style={panel.widthPx ? `width:${panel.widthPx}px` : ""}>
                     {#if panel.title}<h3>{panel.title}</h3>{/if}
                     <div class="panel-blocks">
                         {#each panel.blocks as block, bi (bi)}

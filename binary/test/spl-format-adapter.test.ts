@@ -31,7 +31,7 @@ function makeTwoAbilityBase(): ParseResult {
     const effect = (opcode: number) => ({ ...defaultIeEffect(), opcode });
     const base = {
         ...doc,
-        header: { ...doc.header, castingFeatureBlocksOffset: 0, castingFeatureBlocksCount: 0 },
+        header: { ...doc.header, castingFeatureBlocksIndex: 0, castingFeatureBlocksCount: 0 },
         abilities: [
             { ...defaultSplAbility(), featureBlocksOffset: 0, featureBlocksCount: 1 },
             { ...defaultSplAbility(), featureBlocksOffset: 1, featureBlocksCount: 2 },

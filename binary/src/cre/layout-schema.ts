@@ -138,8 +138,11 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                                 },
                                 { title: "Flags", blocks: [{ kind: "flags", field: k("creatureFlags"), columns: 2 }] },
                                 {
+                                    // 24 status bits: this panel tends to wrap onto its own full-width row, so
+                                    // use enough columns to spread the checkboxes across that width rather than
+                                    // clumping them into the left third.
                                     title: "Status Flags",
-                                    blocks: [{ kind: "flags", field: k("statusFlags"), columns: 3 }],
+                                    blocks: [{ kind: "flags", field: k("statusFlags"), columns: 6 }],
                                 },
                             ],
                         },
@@ -187,16 +190,21 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                                     ],
                                 },
                                 {
-                                    // Luck is a SPECIAL-style stat (not morale); Lore is a knowledge stat (not a thief skill).
-                                    title: "Stats",
-                                    blocks: [{ kind: "fields", fields: [k("luck"), k("lore")] }],
-                                },
-                                {
-                                    title: "Morale",
+                                    // Luck/Lore (SPECIAL-style stat + knowledge stat) and the morale trio are each
+                                    // too few fields to warrant their own panel; combined they make one balanced
+                                    // panel rather than two tiny ones that strand a lonely full-width row.
+                                    title: "Stats & Morale",
                                     blocks: [
                                         {
                                             kind: "fields",
-                                            fields: [k("morale"), k("moraleBreak"), k("moraleRecoveryTime")],
+                                            columns: 2,
+                                            fields: [
+                                                k("luck"),
+                                                k("lore"),
+                                                k("morale"),
+                                                k("moraleBreak"),
+                                                k("moraleRecoveryTime"),
+                                            ],
                                         },
                                     ],
                                 },

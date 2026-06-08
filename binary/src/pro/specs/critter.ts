@@ -140,7 +140,8 @@ export type CritterData = SpecData<typeof critterSpec>;
 export const critterPresentation: StructPresentation<CritterData> = {
     scriptType: { label: "Script Type" },
     scriptId: { label: "Script ID" },
-    headFrmId: { label: "Head FRM ID" },
+    // Packed type-encoded FID (FRM type in the high byte); hex like MAP FID/PID. -1 (0xffffffff) = none.
+    headFrmId: { label: "Head FRM ID", format: "hex32" },
     aiPacket: { label: "AI Packet" },
     teamNumber: { label: "Team Number" },
     critterFlags: { label: "Critter Flags" },

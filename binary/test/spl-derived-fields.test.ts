@@ -8,7 +8,7 @@ describe("SPL derived (structural) fields are locked from editing", () => {
         "spl.header.extendedHeadersOffset",
         "spl.header.extendedHeadersCount",
         "spl.header.featureBlocksOffset",
-        "spl.header.castingFeatureBlocksOffset",
+        "spl.header.castingFeatureBlocksIndex",
         "spl.header.castingFeatureBlocksCount",
     ])("%s carries editable: false", (key) => {
         expect(entries[key]).toMatchObject({ editable: false });

@@ -13,6 +13,12 @@ import type { NodeId, Row } from "./types";
  */
 export const DEFAULT_WINDOW = 500;
 
+/** Keep only printable-ASCII characters (0x20..0x7E) for display, dropping control/high bytes that render as
+ *  mojibake. Used for chars/resref fields whose unused records may hold garbage bytes. Display-only. */
+function toPrintableDisplay(s: string): string {
+    return s.replaceAll(/[^ -~]/g, "");
+}
+
 export function projectRow(
     model: Model,
     node: FlatNode,
@@ -40,7 +46,11 @@ export function projectRow(
     // kind === "field" guarantees the source is a ParsedField.
     const field = node.source as ParsedField;
     base.valueType = field.type;
-    base.displayValue = String(field.value);
+    // A `string` (chars/resref) field can hold non-printable bytes in unused records, which render as mojibake
+    // glyphs. Show only the printable-ASCII subset. Display-only: the model keeps the raw bytes (field.value),
+    // so an untouched field still round-trips byte-identically; an explicit edit normalises it, which is the
+    // intent when editing a resource name.
+    base.displayValue = field.type === "string" ? toPrintableDisplay(String(field.value)) : String(field.value);
     // `rawValue` is the underlying editable value. The parser only sets `field.rawValue` when it
     // differs from `field.value` (enums/flags carry the numeric code); plain numbers leave it unset,
     // so fall back to `field.value` - otherwise numeric controls render with no value.
@@ -55,6 +65,7 @@ export function projectRow(
     if (field.enumOptions !== undefined) base.enumOptions = field.enumOptions;
     if (field.flagOptions !== undefined) base.flagOptions = field.flagOptions;
     if (field.searchableEnum === true) base.searchableEnum = true;
+    if (field.numericFormat !== undefined) base.numericFormat = field.numericFormat;
     // Apply relationship-model overlay last so it can rename/redescribe/re-type a field
     // without touching the underlying ParsedField or the canonical document bytes.
     if (rel !== undefined) {

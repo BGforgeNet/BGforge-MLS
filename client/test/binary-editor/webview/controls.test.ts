@@ -7,6 +7,7 @@ import {
     controlKind,
     filterOptions,
     parseCustomValue,
+    valueTier,
 } from "../../../src/binary-editor/webview/state/controls";
 
 const enumRow: Row = {
@@ -69,6 +70,35 @@ describe("controls", () => {
         expect(composeFlags(0xffffffff, 0x80000000, false)).toBe(0x7fffffff);
         const highRow: Row = { ...flagRow, rawValue: 0x80000000, flagOptions: { "2147483648": "High" } };
         expect(decomposeFlags(highRow)).toEqual([{ mask: 0x80000000, label: "High", set: true }]);
+    });
+});
+
+describe("valueTier", () => {
+    // A plain numeric field (not enum/flags/string). controlKind() -> "number".
+    const numberRow: Row = { ...enumRow, valueType: "uint16", enumOptions: undefined, rawValue: 5, displayValue: "5" };
+    const stringRow = (size: number): Row => ({ ...numberRow, valueType: "string", size, displayValue: "x" });
+
+    it("puts plain decimal numbers in the small tier regardless of byte size", () => {
+        expect(valueTier(numberRow)).toBe("s");
+        expect(valueTier({ ...numberRow, valueType: "uint32", size: 4 })).toBe("s");
+    });
+
+    it("puts hex-formatted numbers in the medium tier", () => {
+        expect(valueTier({ ...numberRow, numericFormat: "hex32" })).toBe("m");
+    });
+
+    it("sizes string fields by their char-array length", () => {
+        expect(valueTier(stringRow(4))).toBe("s"); // <= 6 chars
+        expect(valueTier(stringRow(6))).toBe("s");
+        expect(valueTier(stringRow(8))).toBe("m"); // resref: 7-12 chars
+        expect(valueTier(stringRow(12))).toBe("m");
+        expect(valueTier(stringRow(32))).toBe("l"); // long char array
+    });
+
+    it("sizes enums by their longest option label, floored at medium for dropdown chrome", () => {
+        expect(valueTier(enumRow)).toBe("m"); // "Human"/"Mutant" are short but a dropdown floors at m
+        const longEnum: Row = { ...enumRow, enumOptions: { "0": "A very long dropdown option label" } };
+        expect(valueTier(longEnum)).toBe("l");
     });
 });
 

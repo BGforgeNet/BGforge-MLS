@@ -141,6 +141,8 @@ describe("vanilla MAP item/scenery decode via bundled pidtypes resolver", () => 
         const parsed = loadFixture("artemple");
         const obj = findGroup(parsed.root, (g) => g.name === "Object 0.0 (Scenery)")!;
         const pid = findField(obj, "PID");
-        expect(pid?.value).toBe(0x02000158);
+        // PID renders as a packed hex dword; rawValue carries the decoded number.
+        expect(pid?.value).toBe("0x02000158");
+        expect(pid?.rawValue).toBe(0x02000158);
     });
 });

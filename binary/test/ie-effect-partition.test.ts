@@ -17,7 +17,7 @@ const ITM_FIELDS: FullRangeFields = {
 };
 
 const SPL_FIELDS: FullRangeFields = {
-    headerStart: "castingFeatureBlocksOffset",
+    headerStart: "castingFeatureBlocksIndex",
     headerCount: "castingFeatureBlocksCount",
     abilityStart: "featureBlocksOffset",
     abilityCount: "featureBlocksCount",

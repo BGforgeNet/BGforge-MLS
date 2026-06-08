@@ -47,8 +47,10 @@ export const splLayout: FormatLayout = formatLayoutSchema.parse({
                                 },
                                 { title: "Flags", blocks: [{ kind: "flags", field: k("flags"), columns: 1 }] },
                                 {
+                                    // 22 exclusion bits: two columns halve the height so the panel doesn't
+                                    // tower over the Spell/Flags panels beside it.
                                     title: "Exclusion",
-                                    blocks: [{ kind: "flags", field: k("exclusionFlags"), columns: 1 }],
+                                    blocks: [{ kind: "flags", field: k("exclusionFlags"), columns: 2 }],
                                 },
                             ],
                         },

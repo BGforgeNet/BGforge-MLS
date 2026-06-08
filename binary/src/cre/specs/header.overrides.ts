@@ -5,7 +5,7 @@
  */
 
 import { arraySpec, type FieldSpec } from "../../spec/types";
-import { u8, u32 } from "typed-binary";
+import { i32, u8 } from "typed-binary";
 import {
     CreAlignment,
     CreClass,
@@ -13,6 +13,7 @@ import {
     CreEffStructureVersion,
     CreEnemyAlly,
     CreGeneral,
+    CreKit,
     CreRace,
     CreSex,
     CreStatusFlags,
@@ -56,6 +57,12 @@ export const creHeaderSpecAnnotated = {
     gender: { ...creHeaderSpec.gender, enum: CreSex, enumOpen: true },
     alignment: { ...creHeaderSpec.alignment, enum: CreAlignment, enumOpen: true },
     /**
+     * `kit` is KIT.IDS (CRE header 0x244). Open enum: mods add kits beyond the engine-defined set, so
+     * out-of-table values surface as Unknown(N). The LE u32 read matches the IESDP KIT_* dword values
+     * directly (verified against the Edwin/Conjurer fixture - see CreKit).
+     */
+    kit: { ...creHeaderSpec.kit, enum: CreKit, enumOpen: true },
+    /**
      * Weapon-proficiency block (22 x u8). Rendered as individually-labelled
      * slots so each byte value is recoverable from the display tree on rebuild.
      * BG1 uses the first 9 slots for named weapon groups; BG2/EE computes
@@ -74,7 +81,8 @@ export const creHeaderSpecAnnotated = {
      * recoverable from the display tree.
      */
     soundSlots: arraySpec({
-        element: { codec: u32 },
+        // Sound-set strrefs into dialog.tlk: signed, -1 = "no sound" (the common value for unused slots).
+        element: { codec: i32 },
         count: 100,
         view: "slots",
         slotLabels: SOUND_SLOT_LABELS,

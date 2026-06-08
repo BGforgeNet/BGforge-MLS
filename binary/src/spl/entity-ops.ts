@@ -20,9 +20,9 @@
  * Field-config note: SPL has two "Offset" fields with different semantics.
  *   - header `featureBlocksOffset` (u32): the effects-section BYTE OFFSET, recomputed
  *     by the writer. Not a range-index field; must NOT be used in SPL_FIELDS.
- *   - header `castingFeatureBlocksOffset` (u16): the casting range START INDEX.
+ *   - header `castingFeatureBlocksIndex` (u16): the casting range START INDEX.
  *   - ability `featureBlocksOffset` (u16): the per-ability range START INDEX.
- * SPL_FIELDS binds headerStart to `castingFeatureBlocksOffset`, never to the header's
+ * SPL_FIELDS binds headerStart to `castingFeatureBlocksIndex`, never to the header's
  * `featureBlocksOffset`.
  */
 
@@ -71,11 +71,11 @@ export function defaultSplAbility(): SplAbility {
     };
 }
 
-// headerStart binds to castingFeatureBlocksOffset (the casting range start INDEX in the flat effects array), NOT to the
+// headerStart binds to castingFeatureBlocksIndex (the casting range start INDEX in the flat effects array), NOT to the
 // header's featureBlocksOffset (which is the recomputed effects-section byte offset written by the serializer).
 // abilityStart binds to the ability's featureBlocksOffset (its per-ability range start index).
 const SPL_FIELDS: IeEffectRangeFields = {
-    headerStart: "castingFeatureBlocksOffset",
+    headerStart: "castingFeatureBlocksIndex",
     headerCount: "castingFeatureBlocksCount",
     abilityStart: "featureBlocksOffset",
     abilityCount: "featureBlocksCount",

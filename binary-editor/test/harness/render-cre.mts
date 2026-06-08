@@ -93,7 +93,7 @@ function check(label: string, ok: boolean, detail: string): void {
 
 // ---- Browser setup ----
 const browser = await chromium.launch({ headless: true });
-const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, deviceScaleFactor: 2 });
+const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, deviceScaleFactor: 1 });
 activePage = page;
 const assertNoCsp = installCspGate(page, "CRE");
 

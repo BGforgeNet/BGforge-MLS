@@ -38,6 +38,8 @@ export const itemCommonPresentation: StructPresentation<ItemCommonData> = {
     size: { label: "Size" },
     weight: { label: "Weight", unit: "pounds" },
     cost: { label: "Cost", unit: "caps" },
-    inventoryFrmId: { label: "Inventory FRM ID" },
+    // Packed type-encoded FID (FRM type in the high byte, e.g. 0x07000189 = type 7); hex makes the type
+    // nibble legible, like MAP FID/PID. All sampled inventory FIDs are 0x07......; -1 (0xffffffff) = none.
+    inventoryFrmId: { label: "Inventory FRM ID", format: "hex32" },
     soundId: { label: "Sound ID" },
 };

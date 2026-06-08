@@ -130,13 +130,16 @@ export const ItmType: Readonly<Record<number, string>> = {
  * decode each byte independently. Used as the `slotElements` for the
  * `usabilityFlags` arraySpec in `header.overrides.ts`.
  */
+// Byte 1 packs a two-axis alignment matrix: a law/chaos-axis bit (Chaotic / Lawful / Neutral) ORed with a
+// good/evil-axis bit (Evil / Good / Neutral). The two "Neutral" bits are disambiguated by axis so the labels
+// aren't interchangeable (the prior "Chaotic..."/"...Neutral" ellipsis labels were ambiguous).
 export const ItmUsabilityByte1Flags: Readonly<Record<number, string>> = {
-    0x01: "Chaotic...",
-    0x02: "...Evil",
-    0x04: "...Good",
-    0x08: "...Neutral",
-    0x10: "Lawful...",
-    0x20: "Neutral...",
+    0x01: "Chaotic",
+    0x02: "Evil",
+    0x04: "Good",
+    0x08: "Neutral (good/evil)",
+    0x10: "Lawful",
+    0x20: "Neutral (law/chaos)",
     0x40: "Bard",
     0x80: "Cleric",
 };

@@ -58,10 +58,6 @@ export const effLayout: FormatLayout = formatLayoutSchema.parse({
                                 { kind: "flags", field: k("saveType"), columns: 1 },
                             ],
                         },
-                        {
-                            title: "Resistance",
-                            blocks: [{ kind: "flags", field: k("resistance"), columns: 1 }],
-                        },
                     ],
                 },
                 {
@@ -94,6 +90,13 @@ export const effLayout: FormatLayout = formatLayoutSchema.parse({
                                     fields: [k("school"), k("sectype"), k("stackingIdTobex"), k("variableName")],
                                 },
                             ],
+                        },
+                        {
+                            // Two dispel/magic-resistance bits: `fit` keeps it content-width sharing the row
+                            // with the other small panels rather than stretching into a lonely full-width strip.
+                            title: "Resistance",
+                            fit: true,
+                            blocks: [{ kind: "flags", field: k("resistance"), columns: 1 }],
                         },
                     ],
                 },

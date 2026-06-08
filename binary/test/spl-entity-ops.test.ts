@@ -24,7 +24,7 @@ import type { ParseResult } from "../src/types";
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
 const SPL_FIELDS: IeEffectRangeFields = {
-    headerStart: "castingFeatureBlocksOffset",
+    headerStart: "castingFeatureBlocksIndex",
     headerCount: "castingFeatureBlocksCount",
     abilityStart: "featureBlocksOffset",
     abilityCount: "featureBlocksCount",
@@ -50,7 +50,7 @@ function makeTwoAbilityBase(): ParseResult {
     const effect = (opcode: number) => ({ ...defaultIeEffect(), opcode });
     const base = {
         ...doc,
-        header: { ...doc.header, castingFeatureBlocksOffset: 0, castingFeatureBlocksCount: 0 },
+        header: { ...doc.header, castingFeatureBlocksIndex: 0, castingFeatureBlocksCount: 0 },
         abilities: [
             { ...defaultSplAbility(), featureBlocksOffset: 0, featureBlocksCount: 1 },
             { ...defaultSplAbility(), featureBlocksOffset: 1, featureBlocksCount: 2 },
@@ -78,7 +78,7 @@ function makeCastingPlusTwoAbilityBase(): ParseResult {
     const effect = (opcode: number) => ({ ...defaultIeEffect(), opcode });
     const base = {
         ...doc,
-        header: { ...doc.header, castingFeatureBlocksOffset: 0, castingFeatureBlocksCount: 1 },
+        header: { ...doc.header, castingFeatureBlocksIndex: 0, castingFeatureBlocksCount: 1 },
         abilities: [
             { ...defaultSplAbility(), featureBlocksOffset: 1, featureBlocksCount: 1 },
             { ...defaultSplAbility(), featureBlocksOffset: 2, featureBlocksCount: 2 },
@@ -313,7 +313,7 @@ describe("SPL ability structure-ops with effect-slice relinking", () => {
 describe("SPL effect structure-ops with owner-aware relinking", () => {
     it.skipIf(!hasFixture)("the casting base lays out casting + two abilities over [99,10,20,21]", () => {
         const doc = reparseSpl(splParser.serialize!(makeCastingPlusTwoAbilityBase()));
-        expect(doc.header).toMatchObject({ castingFeatureBlocksOffset: 0, castingFeatureBlocksCount: 1 });
+        expect(doc.header).toMatchObject({ castingFeatureBlocksIndex: 0, castingFeatureBlocksCount: 1 });
         expect(doc.abilities[0]).toMatchObject({ featureBlocksOffset: 1, featureBlocksCount: 1 });
         expect(doc.abilities[1]).toMatchObject({ featureBlocksOffset: 2, featureBlocksCount: 2 });
         expect(opcodesOf(doc.effects)).toEqual([99, 10, 20, 21]);
@@ -327,7 +327,7 @@ describe("SPL effect structure-ops with owner-aware relinking", () => {
         const doc = reparseSpl(bytes!);
         // A default (opcode 0) effect lands before opcode 20.
         expect(opcodesOf(doc.effects)).toEqual([99, 10, 0, 20, 21]);
-        expect(doc.header).toMatchObject({ castingFeatureBlocksOffset: 0, castingFeatureBlocksCount: 1 }); // casting unchanged
+        expect(doc.header).toMatchObject({ castingFeatureBlocksIndex: 0, castingFeatureBlocksCount: 1 }); // casting unchanged
         expect(doc.abilities[0]).toMatchObject({ featureBlocksOffset: 1, featureBlocksCount: 1 });
         expect(doc.abilities[1]).toMatchObject({ featureBlocksOffset: 2, featureBlocksCount: 3 });
         expect(validateEffectPartition(doc)).toEqual([]);
@@ -339,7 +339,7 @@ describe("SPL effect structure-ops with owner-aware relinking", () => {
         expect(bytes).toBeDefined();
         const doc = reparseSpl(bytes!);
         expect(opcodesOf(doc.effects)).toEqual([99, 10, 0, 20, 21]);
-        expect(doc.header).toMatchObject({ castingFeatureBlocksOffset: 0, castingFeatureBlocksCount: 1 });
+        expect(doc.header).toMatchObject({ castingFeatureBlocksIndex: 0, castingFeatureBlocksCount: 1 });
         expect(doc.abilities[0]).toMatchObject({ featureBlocksOffset: 1, featureBlocksCount: 2 });
         expect(doc.abilities[1]).toMatchObject({ featureBlocksOffset: 3, featureBlocksCount: 2 });
         expect(validateEffectPartition(doc)).toEqual([]);
@@ -351,7 +351,7 @@ describe("SPL effect structure-ops with owner-aware relinking", () => {
         expect(bytes).toBeDefined();
         const doc = reparseSpl(bytes!);
         expect(opcodesOf(doc.effects)).toEqual([99, 0, 10, 20, 21]);
-        expect(doc.header).toMatchObject({ castingFeatureBlocksOffset: 0, castingFeatureBlocksCount: 2 });
+        expect(doc.header).toMatchObject({ castingFeatureBlocksIndex: 0, castingFeatureBlocksCount: 2 });
         // Both abilities shift +1.
         expect(doc.abilities[0]).toMatchObject({ featureBlocksOffset: 2, featureBlocksCount: 1 });
         expect(doc.abilities[1]).toMatchObject({ featureBlocksOffset: 3, featureBlocksCount: 2 });
@@ -365,7 +365,7 @@ describe("SPL effect structure-ops with owner-aware relinking", () => {
         expect(bytes).toBeDefined();
         const doc = reparseSpl(bytes!);
         expect(opcodesOf(doc.effects)).toEqual([0, 99, 10, 20, 21]);
-        expect(doc.header).toMatchObject({ castingFeatureBlocksOffset: 0, castingFeatureBlocksCount: 2 });
+        expect(doc.header).toMatchObject({ castingFeatureBlocksIndex: 0, castingFeatureBlocksCount: 2 });
         expect(doc.abilities[0]).toMatchObject({ featureBlocksOffset: 2, featureBlocksCount: 1 });
         expect(doc.abilities[1]).toMatchObject({ featureBlocksOffset: 3, featureBlocksCount: 2 });
         expect(validateEffectPartition(doc)).toEqual([]);
@@ -377,7 +377,7 @@ describe("SPL effect structure-ops with owner-aware relinking", () => {
         expect(bytes).toBeDefined();
         const doc = reparseSpl(bytes!);
         expect(opcodesOf(doc.effects)).toEqual([99, 10, 21]); // opcode 20 gone
-        expect(doc.header).toMatchObject({ castingFeatureBlocksOffset: 0, castingFeatureBlocksCount: 1 });
+        expect(doc.header).toMatchObject({ castingFeatureBlocksIndex: 0, castingFeatureBlocksCount: 1 });
         expect(doc.abilities[0]).toMatchObject({ featureBlocksOffset: 1, featureBlocksCount: 1 });
         expect(doc.abilities[1]).toMatchObject({ featureBlocksOffset: 2, featureBlocksCount: 1 });
         expect(validateEffectPartition(doc)).toEqual([]);
@@ -389,7 +389,7 @@ describe("SPL effect structure-ops with owner-aware relinking", () => {
         expect(bytes).toBeDefined();
         const doc = reparseSpl(bytes!);
         expect(opcodesOf(doc.effects)).toEqual([10, 20, 21]); // opcode 99 gone
-        expect(doc.header).toMatchObject({ castingFeatureBlocksOffset: 0, castingFeatureBlocksCount: 0 });
+        expect(doc.header).toMatchObject({ castingFeatureBlocksIndex: 0, castingFeatureBlocksCount: 0 });
         expect(doc.abilities[0]).toMatchObject({ featureBlocksOffset: 0, featureBlocksCount: 1 });
         expect(doc.abilities[1]).toMatchObject({ featureBlocksOffset: 1, featureBlocksCount: 2 });
         expect(validateEffectPartition(doc)).toEqual([]);
@@ -404,7 +404,7 @@ describe("SPL effect structure-ops with owner-aware relinking", () => {
             const doc = reparseSpl(bytes!);
             // The clone (opcode 20) lands right after the source.
             expect(opcodesOf(doc.effects)).toEqual([99, 10, 20, 20, 21]);
-            expect(doc.header).toMatchObject({ castingFeatureBlocksOffset: 0, castingFeatureBlocksCount: 1 });
+            expect(doc.header).toMatchObject({ castingFeatureBlocksIndex: 0, castingFeatureBlocksCount: 1 });
             expect(doc.abilities[0]).toMatchObject({ featureBlocksOffset: 1, featureBlocksCount: 1 });
             expect(doc.abilities[1]).toMatchObject({ featureBlocksOffset: 2, featureBlocksCount: 3 });
             expect(validateEffectPartition(doc)).toEqual([]);
@@ -418,7 +418,7 @@ describe("SPL effect structure-ops with owner-aware relinking", () => {
         const doc = reparseSpl(bytes!);
         // The clone (opcode 99) lands right after the source; header count grows.
         expect(opcodesOf(doc.effects)).toEqual([99, 99, 10, 20, 21]);
-        expect(doc.header).toMatchObject({ castingFeatureBlocksOffset: 0, castingFeatureBlocksCount: 2 });
+        expect(doc.header).toMatchObject({ castingFeatureBlocksIndex: 0, castingFeatureBlocksCount: 2 });
         // Both abilities shift +1.
         expect(doc.abilities[0]).toMatchObject({ featureBlocksOffset: 2, featureBlocksCount: 1 });
         expect(doc.abilities[1]).toMatchObject({ featureBlocksOffset: 3, featureBlocksCount: 2 });
@@ -444,7 +444,7 @@ describe("SPL effect structure-ops with owner-aware relinking", () => {
         expect(bytes).toBeDefined();
         const doc = reparseSpl(bytes!);
         expect(opcodesOf(doc.effects)).toEqual([99, 10, 21, 20]);
-        expect(doc.header).toMatchObject({ castingFeatureBlocksOffset: 0, castingFeatureBlocksCount: 1 });
+        expect(doc.header).toMatchObject({ castingFeatureBlocksIndex: 0, castingFeatureBlocksCount: 1 });
         expect(doc.abilities[0]).toMatchObject({ featureBlocksOffset: 1, featureBlocksCount: 1 });
         expect(doc.abilities[1]).toMatchObject({ featureBlocksOffset: 2, featureBlocksCount: 2 });
         expect(validateEffectPartition(doc)).toEqual([]);
@@ -489,7 +489,7 @@ describe("SPL effect structure-ops with owner-aware relinking", () => {
         const doc = getSplCanonicalDocument(parsed) ?? rebuildSplCanonicalDocument(parsed);
         const base = {
             ...doc,
-            header: { ...doc.header, castingFeatureBlocksOffset: 0, castingFeatureBlocksCount: 0 },
+            header: { ...doc.header, castingFeatureBlocksIndex: 0, castingFeatureBlocksCount: 0 },
             abilities: [{ ...defaultSplAbility(), featureBlocksOffset: 0, featureBlocksCount: 1 }],
             effects: [{ ...defaultIeEffect(), opcode: 7 }],
         };

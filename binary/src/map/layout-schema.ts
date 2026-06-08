@@ -64,7 +64,11 @@ export const mapLayout: FormatLayout = formatLayoutSchema.parse({
                                         },
                                     ],
                                 },
-                                { title: "Map Flags", blocks: [{ kind: "flags", field: k("mapFlags"), columns: 1 }] },
+                                {
+                                    title: "Map Flags",
+                                    fit: true,
+                                    blocks: [{ kind: "flags", field: k("mapFlags"), columns: 1 }],
+                                },
                             ],
                         },
                         {

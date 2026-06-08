@@ -1,13 +1,13 @@
 // Auto-generated from IESDP _data/file_formats/spl_v1/header.yml. Do not hand-edit.
 
-import { u16, u32, u8 } from "typed-binary";
+import { i32, u16, u32, u8 } from "typed-binary";
 import { charsSpec, type FieldSpec, type SpecData } from "../../spec/types";
 
 export const splHeaderSpec = {
     signature: charsSpec(4),
     version: charsSpec(4),
-    unidentifiedName: { codec: u32 },
-    unused1: { codec: u32 },
+    unidentifiedName: { codec: i32 },
+    unused1: { codec: i32 },
     completionSound: charsSpec(8),
     flags: { codec: u32 },
     type: { codec: u16 },
@@ -33,14 +33,14 @@ export const splHeaderSpec = {
     unused15: { codec: u16 },
     unused16: charsSpec(8),
     unused17: { codec: u32 },
-    description: { codec: u32 },
-    unused18: { codec: u32 },
+    description: { codec: i32 },
+    unused18: { codec: i32 },
     unused19: charsSpec(8),
     unused20: { codec: u32 },
     extendedHeadersOffset: { codec: u32 },
     extendedHeadersCount: { codec: u16 },
     featureBlocksOffset: { codec: u32 },
-    castingFeatureBlocksOffset: { codec: u16 },
+    castingFeatureBlocksIndex: { codec: u16 },
     castingFeatureBlocksCount: { codec: u16 },
 } satisfies Record<string, FieldSpec>;
 

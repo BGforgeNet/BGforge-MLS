@@ -385,7 +385,9 @@ describe("MAP parser - real maps", () => {
         expect(firstObject).toBeDefined();
         expect(findFieldByName(firstObject!.fields, "Rotation").rawValue).toBe(0);
         expect(findFieldByName(firstObject!.fields, "Elevation").rawValue).toBe(0);
-        expect(findFieldByName(firstObject!.fields, "PID").value).toBe(83886092);
+        // PID is a packed dword shown in hex (0x0500000C == 83886092); rawValue keeps the decoded number.
+        expect(findFieldByName(firstObject!.fields, "PID").value).toBe("0x0500000c");
+        expect(findFieldByName(firstObject!.fields, "PID").rawValue).toBe(83886092);
         expect(findFieldByName(firstObject!.fields, "SID").value).toBe(-1);
         expect(findFieldByName(firstObject!.fields, "Field 74").value).toBe(0);
     });

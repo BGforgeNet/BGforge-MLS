@@ -129,6 +129,7 @@
     <Combobox.Input
         class="bb-combobox-input"
         aria-label={ariaLabel}
+        title={inputValue || selectedLabel}
         {placeholder}
         oninput={handleInput}
         onblur={handleBlur}

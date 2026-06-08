@@ -78,7 +78,7 @@ function check(label: string, ok: boolean, detail: string): void {
 
 // ---- Browser setup ----
 const browser = await chromium.launch({ headless: true });
-const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, deviceScaleFactor: 2 });
+const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, deviceScaleFactor: 1 });
 const assertNoCsp = installCspGate(page, "MAP");
 
 await page.exposeFunction("__hostUp", async (m: WebviewToHost) => {
@@ -87,12 +87,23 @@ await page.exposeFunction("__hostUp", async (m: WebviewToHost) => {
 await page.goto("file://" + path.join(here, "app.html"));
 await page.waitForSelector(".layout-root .bb-tabs", { timeout: 5000 });
 await page.waitForTimeout(200);
-// MAP is tabbed (Header / Objects [per-elevation subtabs] / Scripts [pruned when absent]); capture Header.
-await page.screenshot({ path: path.join(here, "shot-map.png"), fullPage: true });
 async function clickTab(label: string): Promise<void> {
     await page.locator('.bb-tabs.primary button[role="tab"]').filter({ hasText: label }).first().click();
     await page.waitForTimeout(200);
 }
+// Guard against the "captured the wrong tab" regression: each per-tab screenshot must be taken while that
+// tab is actually the selected one. Returns the active primary tab's label (includes its count badge text).
+async function activeTabLabel(): Promise<string> {
+    const t = await page.locator('.bb-tabs.primary button[role="tab"][aria-selected="true"]').first().textContent();
+    return (t ?? "").trim();
+}
+// MAP is tabbed (Header / Objects [per-elevation subtabs] / Scripts [pruned when absent]); capture Header first.
+check(
+    "screenshot: Header tab active for shot-map",
+    (await activeTabLabel()).includes("Header"),
+    await activeTabLabel(),
+);
+await page.screenshot({ path: path.join(here, "shot-map.png"), fullPage: true });
 
 // ============================================================
 // Layout assertions
@@ -151,8 +162,18 @@ check("layout: label/value gap is positive (no overlap)", dom.minFieldGap >= 4, 
 
 // Objects tab: the active elevation subtab renders its object list (master-detail).
 await clickTab("Objects");
+const objectsMd = page.locator(".layout-root .master-detail").first();
 const elevMd = await page.locator(".layout-root .master-detail").count();
 check("layout: objects tab renders an elevation object list", elevMd >= 1, `count=${elevMd}`);
+// Select the first object so the detail pane renders (otherwise the shot is just an empty "Select an entry." pane).
+await objectsMd.locator(".vlist .vrow").first().waitFor({ timeout: 5000 });
+await objectsMd.locator(".vlist .vrow").first().click();
+await page.waitForTimeout(200);
+check(
+    "screenshot: Objects tab active for shot-map-objects",
+    (await activeTabLabel()).includes("Objects"),
+    await activeTabLabel(),
+);
 await page.screenshot({ path: path.join(here, "shot-map-objects.png"), fullPage: true });
 
 // ============================================================
@@ -224,13 +245,6 @@ check("baseline: elevation 0 objects >= 1", baseElev0 >= 1, `count=${baseElev0}`
             `outLen=${out.length} srcLen=${mapBytes.length}`,
         );
     }
-}
-
-// ---- Screenshot (best-effort: the stacked single page can exceed Chromium's capture limit) ----
-try {
-    await page.screenshot({ path: path.join(here, "shot-map.png"), fullPage: true });
-} catch {
-    await page.screenshot({ path: path.join(here, "shot-map.png") });
 }
 
 await browser.close();

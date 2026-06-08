@@ -51,6 +51,16 @@ describe("walkStruct", () => {
         expect((result.fields[0] as { value: unknown }).value).toBe("0xdeadbeef");
     });
 
+    it("hex32 presentation format carries numericFormat so the editable control can render/parse hex", () => {
+        type Data = { pid: number };
+        const spec: StructSpec<Data> = { pid: { codec: u32 } };
+        const pres: StructPresentation<Data> = { pid: { format: "hex32" } };
+        const result = walkStruct(spec, pres, 0, { pid: 0x0500000c }, "G");
+        // value is the hex display string; rawValue keeps the number; numericFormat flows to the Row so the
+        // NumberField renders the 0x control and parses edits back. Round-trip is byte-identical.
+        expect(result.fields[0]).toMatchObject({ value: "0x0500000c", rawValue: 0x0500000c, numericFormat: "hex32" });
+    });
+
     it("groups fields per subGroups option, preserving non-grouped fields in declaration order", () => {
         type Data = { ac: number; drN: number; drL: number; perk: number };
         const spec: StructSpec<Data> = {

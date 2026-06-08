@@ -153,8 +153,10 @@ const critterRows: LayoutRow[] = [
                 title: "Stats",
                 blocks: [
                     {
+                        // 260px: the longest secondary-stat label ("Better Criticals" / "Unarmed Damage")
+                        // plus the two Base|Bonus value cells fit without the label ellipsizing (#16).
                         kind: "matrix",
-                        columnWidthPx: 230,
+                        columnWidthPx: 260,
                         valueColumns: [
                             { key: "base", label: "Base" },
                             { key: "bonus", label: "Bonus" },
@@ -327,14 +329,18 @@ export const proLayout: FormatLayout = formatLayoutSchema.parse({
             ),
         ]),
         "item.ammo": itemVariant([
-            fieldsPanel("Ammo", [
-                p("ammoStats.caliber"),
-                p("ammoStats.quantity"),
-                p("ammoStats.acModifier"),
-                p("ammoStats.drModifier"),
-                p("ammoStats.damageMultiplier"),
-                p("ammoStats.damageDivisor"),
-            ]),
+            fieldsPanel(
+                "Ammo",
+                [
+                    p("ammoStats.caliber"),
+                    p("ammoStats.quantity"),
+                    p("ammoStats.acModifier"),
+                    p("ammoStats.drModifier"),
+                    p("ammoStats.damageMultiplier"),
+                    p("ammoStats.damageDivisor"),
+                ],
+                2,
+            ),
         ]),
         "item.container": itemVariant([
             {
@@ -426,7 +432,27 @@ export const proLayout: FormatLayout = formatLayoutSchema.parse({
                 },
             ],
         ),
-        tile: variant([headerPanel], [fieldsPanel("Tile Properties", [p("tileProperties.material")])]),
-        misc: variant([headerPanel], [fieldsPanel("Misc Properties", [p("miscProperties.unknown")])]),
+        // Single-field property panels: `fit` keeps them content-width (sharing the row with the Header
+        // panel, which grows) instead of stretching one field across half the screen.
+        tile: variant(
+            [headerPanel],
+            [
+                {
+                    title: "Tile Properties",
+                    fit: true,
+                    blocks: [{ kind: "fields", fields: [p("tileProperties.material")] }],
+                },
+            ],
+        ),
+        misc: variant(
+            [headerPanel],
+            [
+                {
+                    title: "Misc Properties",
+                    fit: true,
+                    blocks: [{ kind: "fields", fields: [p("miscProperties.unknown")] }],
+                },
+            ],
+        ),
     },
 });

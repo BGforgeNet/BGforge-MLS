@@ -52,8 +52,8 @@
 </script>
 
 <Select.Root type="single" bind:value={selected} onValueChange={handleValueChange} {disabled} {items}>
-    <Select.Trigger class="bb-select-trigger" aria-label={ariaLabel}>
-        {selectedLabel}
+    <Select.Trigger class="bb-select-trigger" aria-label={ariaLabel} title={selectedLabel}>
+        <span class="bb-select-label">{selectedLabel}</span>
     </Select.Trigger>
     <Select.Portal>
         <Select.Content class="bb-select-content bb-popup-content">

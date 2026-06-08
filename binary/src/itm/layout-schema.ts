@@ -54,7 +54,7 @@ export const itmLayout: FormatLayout = formatLayoutSchema.parse({
                                                 k("type"),
                                             ],
                                         },
-                                        { kind: "flags", field: k("flags"), columns: 1 },
+                                        { kind: "flags", field: k("flags"), columns: 2 },
                                     ],
                                 },
                                 {

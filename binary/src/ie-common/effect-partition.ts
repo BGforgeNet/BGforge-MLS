@@ -55,7 +55,7 @@
  * Omit both header fields for the headerless case; supply both or neither.
  */
 export interface IeEffectRangeFields {
-    readonly headerStart?: string; // ITM "featureBlocksIndex" / SPL "castingFeatureBlocksOffset"; omit for CRE memo
+    readonly headerStart?: string; // ITM "featureBlocksIndex" / SPL "castingFeatureBlocksIndex"; omit for CRE memo
     readonly headerCount?: string; // ITM "featureBlocksCount" / SPL "castingFeatureBlocksCount"; omit for CRE memo
     readonly abilityStart: string; // ITM "featureBlockIndex" / SPL "featureBlocksOffset" / CRE "firstMemorizedSpellIndex"
     readonly abilityCount: string; // ITM "featureBlockCount" / SPL "featureBlocksCount" / CRE "memorizedSpellCount"

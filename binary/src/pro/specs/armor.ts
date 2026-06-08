@@ -42,6 +42,7 @@ export const armorPresentation: StructPresentation<ArmorData> = {
     dtEmp: { label: "EMP" },
     dtExplosion: { label: "Explosion" },
     perk: { label: "Perk" },
-    maleFrmId: { label: "Male FRM ID" },
-    femaleFrmId: { label: "Female FRM ID" },
+    // Packed type-encoded FIDs (FRM type in the high byte, e.g. 0x01000096 = type 1); hex like MAP FID/PID.
+    maleFrmId: { label: "Male FRM ID", format: "hex32" },
+    femaleFrmId: { label: "Female FRM ID", format: "hex32" },
 };

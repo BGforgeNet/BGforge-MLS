@@ -3,14 +3,16 @@
 // preserves byte-exact round-trip for all engines via opaque or generic
 // representations of those overlapping ranges.
 
-import { i16, i8, u16, u32, u8 } from "typed-binary";
+import { i16, i32, i8, u16, u32, u8 } from "typed-binary";
 import { arraySpec, charsSpec, type FieldSpec, type SpecData } from "../../spec/types";
 
 export const creHeaderSpec = {
     signature: charsSpec(4),
     version: charsSpec(4),
-    longName: { codec: u32 },
-    shortName: { codec: u32 },
+    // Strrefs into dialog.tlk: signed, -1 = "no string". (IESDP/the generator map strref -> i32; CRE is
+    // hand-written here, so the signed codec is set directly.)
+    longName: { codec: i32 },
+    shortName: { codec: i32 },
     creatureFlags: { codec: u32 },
     xpForKilling: { codec: u32 },
     powerLevelOrXp: { codec: u32 },
@@ -108,10 +110,10 @@ export const creHeaderSpec = {
     racialEnemy: { codec: u8 },
     moraleRecoveryTime: { codec: u16 },
     /**
-     * Kit information. Stored big-endian on the wire per IESDP; the spec
-     * uses the same u32 codec as adjacent dwords (little-endian) so the raw
-     * value differs from the IESDP "KIT_*" hex by a byte-swap. Editors and
-     * tooling that need the named kit should swap bytes before lookup.
+     * Kit information (KIT.IDS). Read as a little-endian u32; the value matches the IESDP "KIT_*" dword
+     * hex directly - the Edwin fixture stores `00 00 80 00` -> 0x00800000 = Conjurer, and Edwin is a
+     * Conjurer, so no byte-swap is needed. The named-kit lookup + dropdown are applied in
+     * `header.overrides.ts` (CreKit). (IESDP's "big endian" note does not hold for the fixtures we parse.)
      */
     kit: { codec: u32 },
     scriptOverride: charsSpec(8),

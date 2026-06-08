@@ -60,6 +60,12 @@ export interface ParsedField {
     flagOptions?: Readonly<Record<string, string>>;
     /** Display hint (from the spec's `searchableEnum`): render this enum as a searchable combobox. */
     searchableEnum?: boolean;
+    /**
+     * Numeric display format (from the presentation `format` hint), carried so the editable control can
+     * format AND parse the value: `hex32` shows/edits `0x...`. Display-only - `rawValue` stays the stored
+     * number, so the round-trip is byte-identical. (Signedness is the codec's job, not a display format.)
+     */
+    numericFormat?: "hex32";
 }
 
 /**

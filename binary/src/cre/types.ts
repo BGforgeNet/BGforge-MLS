@@ -232,6 +232,47 @@ export const CreAlignment: Readonly<Record<number, string>> = {
     0x44: "Anything",
 };
 
+/**
+ * CRE header `kit` (dword, 0x0244) - KIT.IDS values from IESDP cre_v1.htm. Keyed by the dword the LE u32
+ * codec reads, which matches the IESDP "KIT_*" hex directly (verified: the Edwin fixture stores
+ * `00 00 80 00` -> 0x00800000 = Conjurer, and Edwin is a Conjurer). Open enum: mods add kits beyond this
+ * engine-defined set, so out-of-table values surface as Unknown(N).
+ */
+export const CreKit: Readonly<Record<number, string>> = {
+    0x00000000: "None",
+    0x00004000: "Barbarian",
+    0x40000000: "True class",
+    0x40010000: "Berserker",
+    0x40020000: "Wizard slayer",
+    0x40030000: "Kensai",
+    0x40040000: "Cavalier",
+    0x40050000: "Inquisitor",
+    0x40060000: "Undead hunter",
+    0x40070000: "Archer",
+    0x40080000: "Stalker",
+    0x40090000: "Beast master",
+    0x400a0000: "Assassin",
+    0x400b0000: "Bounty hunter",
+    0x400c0000: "Swashbuckler",
+    0x400d0000: "Blade",
+    0x400e0000: "Jester",
+    0x400f0000: "Skald",
+    0x40100000: "Totemic druid",
+    0x40110000: "Shapeshifter",
+    0x40120000: "Avenger",
+    0x40130000: "Priest of Talos",
+    0x40140000: "Priest of Helm",
+    0x40150000: "Priest of Lathander",
+    0x00400000: "Abjurer",
+    0x00800000: "Conjurer",
+    0x01000000: "Diviner",
+    0x02000000: "Enchanter",
+    0x04000000: "Illusionist",
+    0x08000000: "Invoker",
+    0x10000000: "Necromancer",
+    0x20000000: "Transmuter",
+};
+
 // `gender` (byte, 0x0275) reuses the GENDER.IDS table via `CreSex` directly -
 // no separate `CreGender` alias to avoid a duplicate export.
 

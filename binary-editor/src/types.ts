@@ -34,6 +34,9 @@ export interface Row {
     flagOptions?: Readonly<Record<string, string>>;
     /** Display hint: render this enum as a searchable combobox (set for large enums like IE opcodes). */
     searchableEnum?: boolean;
+    /** Numeric display format: `hex32` renders/edits as `0x...`. `rawValue` stays the stored number.
+     *  (Signedness is the field codec's job, not a display format.) */
+    numericFormat?: "hex32";
 }
 
 export interface Diagnostic {

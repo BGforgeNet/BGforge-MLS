@@ -99,13 +99,16 @@ const layoutBlockSchema = z.discriminatedUnion("kind", [
 
 /**
  * A titled panel containing one or more blocks laid left-to-right. Multiple blocks let a single panel
- * hold, e.g., a fields list plus two flag columns (the critter Header). `widthPx` hugs the panel to its
- * content rather than stretching.
+ * hold, e.g., a fields list plus two flag columns (the critter Header). `widthPx` hugs the panel to a
+ * fixed width; `fit` hugs it to its content (no growing to fill the row) - use it for a small panel (a
+ * couple of fields/checkboxes) sharing a row with a larger one, so the small panel stays compact and the
+ * larger field panel absorbs the leftover width instead of both stretching.
  */
 const layoutPanelSchema = z.strictObject({
     title: z.string().optional(),
     blocks: z.array(layoutBlockSchema).min(1),
     widthPx: z.number().int().positive().optional(),
+    fit: z.boolean().optional(),
 });
 
 /** A row of panels, left-to-right, clumped left. */

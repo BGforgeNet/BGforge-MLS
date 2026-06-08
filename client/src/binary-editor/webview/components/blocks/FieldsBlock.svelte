@@ -14,10 +14,11 @@
     } = $props();
 
     const rows = $derived(fieldRefs.map((ref) => fields[ref]).filter((r): r is Row => r !== undefined));
-    // Each rendered cell is a self-contained Field (label + control), so a multi-column list is N
-    // max-content columns of whole Fields - not the label/value sub-columns a static kv list would use.
+    // Multi-column list: each column is a (label, value) pair of tracks - `max-content` so the label hugs
+    // its text (shared per column, so values still align vertically), `auto` for the control. Each Field is
+    // a subgrid spanning its pair, so short labels no longer sit in a fixed-width box far from their value.
     const multi = $derived(columns !== undefined && columns > 1);
-    const style = $derived(multi ? `grid-template-columns:repeat(${columns},max-content)` : "");
+    const style = $derived(multi ? `grid-template-columns:repeat(${columns},max-content auto)` : "");
 </script>
 <div class="kv" class:kv-multi={multi} {style}>
     {#each rows as row (row.id)}

@@ -384,9 +384,14 @@ function scalarFieldFor(
 
     const typeName: ParsedFieldType = codecNumericTypeName(fs.codec);
     let displayValue: unknown = value;
+    let numericFormat: "hex32" | undefined;
     if (typeof value === "number") {
-        if (pres?.unit === "%") displayValue = `${value}%`;
-        else if (pres?.format === "hex32") displayValue = `0x${value.toString(16).padStart(8, "0")}`;
+        // `hex32` is a true display concern (the stored number rendered in base 16). Signedness is NOT - it
+        // is the codec's job (`i32` reads negative natively), so there is no signed branch here.
+        if (pres?.format === "hex32") {
+            displayValue = `0x${value.toString(16).padStart(8, "0")}`;
+            numericFormat = "hex32";
+        } else if (pres?.unit === "%") displayValue = `${value}%`;
     }
     return {
         name: label,
@@ -395,5 +400,6 @@ function scalarFieldFor(
         size,
         type: typeName,
         rawValue: typeof value === "number" ? value : undefined,
+        ...(numericFormat !== undefined && { numericFormat }),
     };
 }

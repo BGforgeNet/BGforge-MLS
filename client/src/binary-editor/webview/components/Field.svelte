@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { Diagnostic, Row } from "@bgforge/binary-editor";
-    import { controlKind } from "../state/controls";
+    import { controlKind, valueTier } from "../state/controls";
     import NumberField from "./controls/NumberField.svelte";
     import StringField from "./controls/StringField.svelte";
     import EnumField from "./controls/EnumField.svelte";
@@ -10,6 +10,10 @@
         { row: Row; onedit: (nodeId: string, value: number | string) => void;
           diagnostics?: Diagnostic[]; showOffsets?: boolean } = $props();
     const kind = $derived(controlKind(row));
+    // Display-width tier -> a `tier-{s,m,l}` class on .field-control; CSS maps it to the control box width
+    // (--val-ch) so the box sizes to its tier and left-aligns in a fixed grid track (columns stay aligned).
+    // Flag grids are full-width, not tiered, so they get no tier class.
+    const tier = $derived(kind === "flags" ? null : valueTier(row));
     const emit = (v: number | string) => onedit(row.id, v);
     const hasDiag = $derived(diagnostics.length > 0);
     const diagTitle = $derived(diagnostics.map((d) => d.message).join("; "));
@@ -20,7 +24,7 @@
     <!-- The control and its trailing chrome (offset/diagnostic) are wrapped so .field always has exactly
          two children (label + value); the layout path makes .field a 2-column subgrid so labels share a
          max-content column and every control aligns at a uniform width. -->
-    <span class="field-control">
+    <span class="field-control" class:tier-s={tier === "s"} class:tier-m={tier === "m"} class:tier-l={tier === "l"}>
         {#if kind === "number"}<NumberField {row} onedit={emit} />
         {:else if kind === "string"}<StringField {row} onedit={emit} />
         {:else if kind === "enum"}<EnumField {row} onedit={emit} />
