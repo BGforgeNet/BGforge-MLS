@@ -225,7 +225,7 @@ button:disabled {
    no rows show. Cap both so each list scrolls within its panel. Outside .layout-root (the legacy tabs path),
    the list fills a flex-bounded body and these rules do not apply. */
 .layout-root .master-detail {
-    max-height: 36rem;
+    max-height: 46.8rem;
 }
 .layout-root .inline-list {
     display: flex;
