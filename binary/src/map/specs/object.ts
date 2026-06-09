@@ -41,11 +41,20 @@ export const objectBaseSpec = {
     lightDistance: { codec: i32 },
     lightIntensity: { codec: i32 },
     field74: { codec: i32, role: "reserved" as const },
+    // The object's script reference. The engine binds an object to its script
+    // by `sid` alone: scriptGetScript() linearly searches the map's script
+    // lists for a slot whose `sid` matches (fallout2-ce src/scripts.cc). `sid`
+    // is `(scriptType << 24) | id`; -1 means no script.
     sid: { codec: i32 },
-    // Index into the global script table. Position-dependent on serialisation
-    // order; not user data. Editor lock currently still flows through
-    // mapPresentationSchema.patternFields.
-    scriptIndex: { codec: i32, role: "derivedIndex" as const, derivedFrom: { table: "scripts" } as const },
+    // NOT a cross-record reference, despite the name. This is an engine runtime
+    // cache, not the link the engine reads - object->script binding is by `sid`
+    // (above), and fallout2-ce marks this field `// TODO: remove` on its Object
+    // struct (src/obj_types.h). It holds a non-positional engine value (e.g.
+    // 511, 750, 1473 in artemple.map, with only a handful of scripts present),
+    // so it is neither an index into nor a count of the script table. Tagged
+    // `reserved`: round-tripped byte-identically, locked in the editor, never
+    // recomputed or validated. Do not build a cross-record check against it.
+    scriptIndex: { codec: i32, role: "reserved" as const },
 } as const satisfies Record<string, FieldSpec>;
 
 export const inventoryHeaderSpec = {
