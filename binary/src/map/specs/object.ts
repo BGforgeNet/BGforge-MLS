@@ -45,6 +45,18 @@ export const objectBaseSpec = {
     // by `sid` alone: scriptGetScript() linearly searches the map's script
     // lists for a slot whose `sid` matches (fallout2-ce src/scripts.cc). `sid`
     // is `(scriptType << 24) | id`; -1 means no script.
+    //
+    // Not a validatable cross-record reference either. A non-(-1) `sid` with no
+    // matching script slot is NOT corruption: at map load objectLoadAllInternal
+    // does `if (scriptGetScript(sid) == -1) obj->sid = -1;` - it silently drops
+    // the unresolved sid, no error (fallout2-ce src/object.cc). Objects also get
+    // scripts from their proto via objectSetScriptFromProto at creation,
+    // independent of the map's stored script lists, so a scripted object need
+    // not have a local script slot at all. Verified against the fixture corpus:
+    // unmatched object sids occur only in maps that already fail to fully parse
+    // (objects-tail opaque), i.e. parser artifacts, not real dangling refs. So
+    // do not build a sid-membership cross-record check; it would flag data the
+    // engine treats as routine.
     sid: { codec: i32 },
     // NOT a cross-record reference, despite the name. This is an engine runtime
     // cache, not the link the engine reads - object->script binding is by `sid`
