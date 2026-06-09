@@ -91,13 +91,14 @@ export function indexRefFieldOverride(
     const targetGroup = findGroup(model, rel.targetGroup);
     if (!targetGroup) return;
     const labelKey = normKey(rel.targetLabelField);
-    // "<index> <ResRef>" (or "-1 None" for the empty sentinel); the index prefixes the item so the option
-    // reads against the raw stored value.
-    const enumOptions: Record<string, string> = { "-1": "-1 None" };
+    // Bare option names; the view (enumOptionList) prefixes each with its stored value, so an in-range slot
+    // reads "<index> <ResRef>" and the empty sentinel reads "-1 None". A target with no ResRef has a blank
+    // name and renders as just its index.
+    const enumOptions: Record<string, string> = { "-1": "None" };
     childGroups(model, targetGroup).forEach((entry, i) => {
         const labelField = fieldsByKey(model, entry).get(labelKey);
         const label = labelField ? fieldText(labelField) : undefined;
-        enumOptions[String(i)] = label ? `${i} ${label}` : String(i);
+        enumOptions[String(i)] = label ?? "";
     });
     return { presentationType: "enum", enumOptions };
 }

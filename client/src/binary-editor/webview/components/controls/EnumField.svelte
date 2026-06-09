@@ -12,7 +12,7 @@
     // dropdown. Select carries bits-ui's built-in keyboard typeahead, so moderately large enums stay
     // usable. A field whose spec marks it `searchableEnum` (the rare large enum, e.g. the ~300 IE opcodes)
     // renders the substring-search Combobox instead - declared in the spec, never inferred from option
-    // count. allowCustom=false: pick from the list; out-of-range values surface as Unknown(N).
+    // count. allowCustom=false: pick from the list; out-of-range values surface as "<n> Unknown".
     const searchable = $derived(row.searchableEnum === true);
 </script>
 

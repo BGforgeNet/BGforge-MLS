@@ -105,20 +105,21 @@ describe("CRE item-slot dropdowns: index references render as named-item enums",
         const slots = fullInventory({ 0: 1, 1: -1, 2: 0, 38: 1000, 39: 0 });
         return buildModel(creResult({ memSpells: 0, items: 2, slots, meminfos: [], itemNames: ["SW1H01", "BOW03"] }));
     }
-    it("builds a NONE/-1 + indexed-ResRef enum for an in-range slot", () => {
+    it("builds a NONE + per-item ResRef enum for an in-range slot (bare names; the view adds the value prefix)", () => {
         const ov = indexRefFieldOverride(
             inventory(),
             findGroupNodeField(inventory(), "Item Slots", "Slot 0"),
             creItemSlotRel,
         );
         expect(ov?.presentationType).toBe("enum");
-        expect(ov?.enumOptions).toEqual({ "-1": "-1 None", "0": "0 SW1H01", "1": "1 BOW03" });
+        // Bare names; enumOptionList renders these as "-1 None", "0 SW1H01", "1 BOW03".
+        expect(ov?.enumOptions).toEqual({ "-1": "None", "0": "SW1H01", "1": "BOW03" });
     });
     it("renders through projectRow as an enum dropdown row", () => {
         const m = inventory();
         const row = projectRow(m, findGroupNodeField(m, "Item Slots", "Slot 2"), getRelationshipModel("cre"));
         expect(row.valueType).toBe("enum");
-        expect(row.enumOptions).toEqual({ "-1": "-1 None", "0": "0 SW1H01", "1": "1 BOW03" });
+        expect(row.enumOptions).toEqual({ "-1": "None", "0": "SW1H01", "1": "BOW03" });
     });
     it("leaves selected-weapon slots 38/39 as plain numeric fields", () => {
         const m = inventory();
@@ -131,7 +132,7 @@ describe("CRE item-slot dropdowns: index references render as named-item enums",
     it("still offers NONE/-1 when the creature carries no items", () => {
         const m = buildModel(creResult({ memSpells: 0, items: 0, slots: fullInventory({ 0: -1 }), meminfos: [] }));
         const ov = indexRefFieldOverride(m, findGroupNodeField(m, "Item Slots", "Slot 0"), creItemSlotRel);
-        expect(ov?.enumOptions).toEqual({ "-1": "-1 None" });
+        expect(ov?.enumOptions).toEqual({ "-1": "None" });
     });
     it("re-projects in-range slots (not 38/39) when an item's ResRef is edited", () => {
         // Editing an item's ResRef changes every slot dropdown's label, so the slots are dependents of the
@@ -167,12 +168,13 @@ describe("CRE selected-weapon / ability dropdowns (document-derived, via project
         const m = weaponModel();
         const row = projectRow(m, findGroupNodeField(m, "Item Slots", "Selected weapon"), getRelationshipModel("cre"));
         expect(row.valueType).toBe("enum");
+        // Bare names; enumOptionList renders these as "0 SW1H01", "1 None" ... "1000 Fist".
         expect(row.enumOptions).toEqual({
-            "0": "0 SW1H01",
-            "1": "1 None",
-            "2": "2 None",
-            "3": "3 None",
-            "1000": "1000 Fist",
+            "0": "SW1H01",
+            "1": "None",
+            "2": "None",
+            "3": "None",
+            "1000": "Fist",
         });
     });
     it("selected weapon ability is a fixed-range dropdown", () => {

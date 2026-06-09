@@ -45,13 +45,39 @@ describe("controls", () => {
         expect(controlKind({ ...enumRow, valueType: "string", enumOptions: undefined })).toBe("string");
     });
 
-    it("builds an enum option list, injecting Unknown(N) for an out-of-range value", () => {
+    it("builds an enum option list with value-prefixed labels, injecting '<n> Unknown' for an out-of-range value", () => {
+        // Every option label carries its stored value as a prefix ("<value> <name>"), so a dropdown reads
+        // against the raw byte uniformly across formats; the synthetic out-of-range option follows the same form.
         expect(enumOptionList(enumRow)).toEqual([
-            { value: 0, label: "Human" },
-            { value: 1, label: "Mutant" },
+            { value: 0, label: "0 Human" },
+            { value: 1, label: "1 Mutant" },
         ]);
         const oor = enumOptionList({ ...enumRow, rawValue: 9 });
-        expect(oor).toContainEqual({ value: 9, label: "Unknown (9)" });
+        expect(oor).toContainEqual({ value: 9, label: "9 Unknown" });
+        // A blank label (e.g. an item with no ResRef) renders as just the value, with no trailing space.
+        expect(enumOptionList({ ...enumRow, enumOptions: { "5": "" }, rawValue: 5 })).toContainEqual({
+            value: 5,
+            label: "5",
+        });
+    });
+
+    it("renders just the value when the name already carries it, instead of doubling the number", () => {
+        // MapElevation names ARE the elevation number ("0"); CRE "Ability N" embeds the index. Prefixing would
+        // show the number twice ("0 0", "0 Ability 0"), so the option renders the value alone.
+        expect(enumOptionList({ ...enumRow, enumOptions: { "0": "0", "1": "1" }, rawValue: 0 })).toEqual([
+            { value: 0, label: "0" },
+            { value: 1, label: "1" },
+        ]);
+        expect(
+            enumOptionList({ ...enumRow, enumOptions: { "0": "Ability 0", "1": "Ability 1" }, rawValue: 0 }),
+        ).toEqual([
+            { value: 0, label: "0" },
+            { value: 1, label: "1" },
+        ]);
+        // A name that merely contains the digit as part of a larger token is NOT a double (value 1 vs "BOW03").
+        expect(enumOptionList({ ...enumRow, enumOptions: { "1": "BOW03" }, rawValue: 1 })).toEqual([
+            { value: 1, label: "1 BOW03" },
+        ]);
     });
 
     it("decomposes and recomposes flag bits by mask", () => {

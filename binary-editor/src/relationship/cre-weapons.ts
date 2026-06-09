@@ -46,10 +46,11 @@ function selectedWeaponOptions(model: Model): Record<string, string> {
     const slotFields = slotsGroup ? childFields(model, slotsGroup) : [];
     const items = itemsGroup ? childGroups(model, itemsGroup) : [];
     const options: Record<string, string> = {};
-    // Label each option with the raw STORED value (0-3 = Weapon 1-4, 1000 = fist) plus the item in that
-    // weapon slot, consistent with the item dropdown's "<value> <ResRef>" form.
-    for (let w = 1; w <= 4; w++) options[String(w - 1)] = `${w - 1} ${weaponSlotItem(model, slotFields, items, w)}`;
-    options["1000"] = "1000 Fist";
+    // Bare names: each weapon slot labelled with the item it holds, plus the fist sentinel. The view
+    // (enumOptionList) prefixes each option with its stored value (0-3 = Weapon 1-4, 1000 = fist), giving the
+    // same "<value> <item>" form as the item-slot dropdown.
+    for (let w = 1; w <= 4; w++) options[String(w - 1)] = weaponSlotItem(model, slotFields, items, w);
+    options["1000"] = "Fist";
     return options;
 }
 
