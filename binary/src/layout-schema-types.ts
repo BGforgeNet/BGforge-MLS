@@ -151,6 +151,14 @@ const listBlockSchema = z.strictObject({
     canAdd: z.boolean().default(false),
     canModify: z.boolean().default(false),
     detailVariant: z.array(detailRowSchema).min(1).optional(),
+    /**
+     * Additional candidate variants for a list whose entries can be one of SEVERAL record kinds under the same
+     * section (e.g. CRE Effects: a file embeds EFF v2 OR the older EFF v1 by `effStructureVersion`). The detail
+     * pane renders the FIRST of `[detailVariant, ...detailVariantFallbacks]` whose field refs all resolve
+     * against the selected entry, else the auto-form. The primary `detailVariant` is the common case; a fallback
+     * is the shorter/older record's fragment, which the primary cleanly declines (its refs are absent).
+     */
+    detailVariantFallbacks: z.array(z.array(detailRowSchema).min(1)).optional(),
 });
 
 /** A hex/raw-bytes pane. Specified now; webview `RawBlock` is a stub (follow-up tier). */

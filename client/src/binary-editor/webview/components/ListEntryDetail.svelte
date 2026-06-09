@@ -14,9 +14,11 @@
     import LayoutRenderer from "./LayoutRenderer.svelte";
     import FormSection from "./FormSection.svelte";
 
-    const { nodeId, detailVariant, labels, bridge, version, onedit, byNode, showOffsets = false }: {
+    const { nodeId, detailVariant, detailVariantFallbacks, labels, bridge, version, onedit, byNode, showOffsets = false }: {
         nodeId: NodeId;
         detailVariant?: DetailRow[];
+        // Additional candidate fragments for a multi-record-kind list (e.g. CRE v2 vs v1 effects).
+        detailVariantFallbacks?: DetailRow[][];
         labels?: Record<string, string>;
         bridge: Bridge;
         version: number;
@@ -39,14 +41,20 @@
     });
 
     const fieldMap = $derived(buildDetailFieldMap(rows, labels));
-    // Use the shared fragment only when the entry actually has all its fields (a shorter record kind under a
-    // longer variant - e.g. a v1 effect under the v2 fragment - fails this and falls back to the auto-form).
-    const useVariant = $derived(
-        detailVariant !== undefined && rows.length > 0 && detailVariantResolves(detailVariant, fieldMap),
+    // Candidate fragments in priority order: the primary variant, then any fallbacks (alternate record kinds).
+    const candidates = $derived(
+        [detailVariant, ...(detailVariantFallbacks ?? [])].filter((c): c is DetailRow[] => c !== undefined),
     );
+    // Render the FIRST candidate whose refs all resolve against this entry. A shorter/older record kind (e.g. a
+    // v1 effect under the v2 fragment) fails the primary and falls through to its own fallback fragment; if none
+    // resolve, the auto-form renders.
+    const activeVariant = $derived(
+        rows.length > 0 ? candidates.find((c) => detailVariantResolves(c, fieldMap)) : undefined,
+    );
+    const useVariant = $derived(activeVariant !== undefined);
     const detailLayout = $derived<ResolvedLayout>({
         variantId: "detail",
-        rows: detailVariant ?? [],
+        rows: activeVariant ?? [],
         fields: fieldMap,
         sections: {},
     });

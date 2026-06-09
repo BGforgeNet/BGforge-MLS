@@ -13,12 +13,13 @@
     const SELECTION_RESOLVE_SCAN_LIMIT = 256;
 
     const { nodeId, caps, bridge, version, selection, onadd, onedit, byNode, showOffsets = false,
-            detailVariant, labels }:
+            detailVariant, detailVariantFallbacks, labels }:
         { nodeId: NodeId; caps: SectionCaps; bridge: Bridge;
           version: number; selection: NodeId | undefined;
           onadd: () => void; onedit: (id: string, v: number | string) => void;
           byNode: Map<string, Diagnostic[]>; showOffsets?: boolean;
-          detailVariant?: DetailRow[]; labels?: Record<string, string> } = $props();
+          detailVariant?: DetailRow[]; detailVariantFallbacks?: DetailRow[][];
+          labels?: Record<string, string> } = $props();
 
     // eslint-disable-next-line prefer-const -- reassigned via onselect callback
     let selected = $state<Row | undefined>();
@@ -141,7 +142,7 @@
                 {@const acts = rowActions(selectedIndex, total, caps)}
                 <RowActions {acts} entryId={selected.id} {bridge} />
             {/if}
-            <ListEntryDetail nodeId={selected.id} {detailVariant} {labels} {bridge} {version} {onedit} {byNode} {showOffsets} />
+            <ListEntryDetail nodeId={selected.id} {detailVariant} {detailVariantFallbacks} {labels} {bridge} {version} {onedit} {byNode} {showOffsets} />
         {:else}
             <p class="placeholder">Select an entry.</p>
         {/if}

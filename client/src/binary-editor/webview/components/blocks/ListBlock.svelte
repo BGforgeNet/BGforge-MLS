@@ -10,7 +10,7 @@
     import InlineList from "../InlineList.svelte";
 
     const { sectionKey, section, render, bridge, version, selection, onedit, byNode, showOffsets = false,
-            detailVariant, labels }: {
+            detailVariant, detailVariantFallbacks, labels }: {
         sectionKey: string;
         section: LayoutSection | undefined;
         render: "inline" | "master-detail";
@@ -22,6 +22,9 @@
         showOffsets?: boolean;
         // master-detail only: the shared per-entry layout fragment and the label overrides it applies.
         detailVariant?: DetailRow[];
+        // Additional candidate fragments for a multi-record-kind list (e.g. CRE v2 vs v1 effects); the detail
+        // pane renders the first of [detailVariant, ...fallbacks] whose refs resolve.
+        detailVariantFallbacks?: DetailRow[][];
         labels?: Record<string, string>;
     } = $props();
 
@@ -41,5 +44,5 @@
     </div>
 {:else}
     <ListSection nodeId={section.nodeId} caps={caps!} {bridge} {version} {selection}
-                 onadd={add} {onedit} {byNode} {showOffsets} {detailVariant} {labels} />
+                 onadd={add} {onedit} {byNode} {showOffsets} {detailVariant} {detailVariantFallbacks} {labels} />
 {/if}

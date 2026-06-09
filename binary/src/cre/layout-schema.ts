@@ -25,6 +25,7 @@
 
 import { formatLayoutSchema, type FormatLayout } from "../layout-schema-types";
 import { effV2BodyLabels, effV2BodyRows } from "./../eff/effect-body-layout";
+import { creEffectV1BodyLabels, creEffectV1BodyRows } from "./effect-v1-layout";
 
 // CRE embeds an effect record per `effStructureVersion`; v2 effects are byte-identical to a standalone `.eff`,
 // so the Effects master-detail pane renders the SAME shared fragment (at the per-entry `cre.effects[].v2.`
@@ -124,6 +125,8 @@ const creLabels: Record<string, string> = {
     // tab note), so they get no display labels here.
     // Embedded v2 effect labels, shared with the standalone `.eff` layout so the detail pane reads identically.
     ...effV2BodyLabels(CRE_EFFECTS_PREFIX),
+    // EFF v1 effect labels (effStructureVersion 0); same prefix, distinct field slugs from v2.
+    ...creEffectV1BodyLabels(CRE_EFFECTS_PREFIX),
 };
 
 export const creLayout: FormatLayout = formatLayoutSchema.parse({
@@ -662,6 +665,9 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                                             canModify: true,
                                             // Shared with standalone `.eff`: a CRE v2 effect renders the same panels.
                                             detailVariant: effV2BodyRows(CRE_EFFECTS_PREFIX),
+                                            // effStructureVersion 0 embeds the older EFF v1 record (a distinct,
+                                            // smaller layout); the v2 fragment declines it and this fallback renders.
+                                            detailVariantFallbacks: [creEffectV1BodyRows(CRE_EFFECTS_PREFIX)],
                                         },
                                     ],
                                 },

@@ -136,6 +136,54 @@ describe("formatLayoutSchema (zod validation)", () => {
         ).not.toThrow();
     });
 
+    it("accepts detailVariantFallbacks - alternate candidate variants for multi-record-kind lists", () => {
+        expect(() =>
+            formatLayoutSchema.parse({
+                schemaVersion: 1,
+                format: "cre",
+                variants: {
+                    v: {
+                        rows: [
+                            {
+                                panels: [
+                                    {
+                                        blocks: [
+                                            {
+                                                kind: "list",
+                                                sectionKey: "Effects",
+                                                render: "master-detail",
+                                                detailVariant: [
+                                                    {
+                                                        panels: [
+                                                            { blocks: [{ kind: "fields", fields: ["e.timing"] }] },
+                                                        ],
+                                                    },
+                                                ],
+                                                detailVariantFallbacks: [
+                                                    [
+                                                        {
+                                                            panels: [
+                                                                {
+                                                                    blocks: [
+                                                                        { kind: "fields", fields: ["e.timingMode"] },
+                                                                    ],
+                                                                },
+                                                            ],
+                                                        },
+                                                    ],
+                                                ],
+                                            },
+                                        ],
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                },
+            }),
+        ).not.toThrow();
+    });
+
     it("rejects a detailVariant that nests another list block (a detail pane holds no sub-lists)", () => {
         expect(() =>
             formatLayoutSchema.parse({

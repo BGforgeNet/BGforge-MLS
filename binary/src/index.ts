@@ -31,6 +31,8 @@ export { featureBlockBodyLabels, featureBlockBodyRows } from "./ie-common/featur
 // Shared layout fragments: the ITM/SPL ability headers (parallel records, curated panels per format).
 export { itmAbilityBodyLabels, itmAbilityBodyRows } from "./itm/ability-layout";
 export { splAbilityBodyLabels, splAbilityBodyRows } from "./spl/ability-layout";
+// Shared layout fragment: the CRE EFF v1 effect body (fallback for effStructureVersion 0, parallel to v2).
+export { creEffectV1BodyLabels, creEffectV1BodyRows } from "./cre/effect-v1-layout";
 export type {
     DetailBlock,
     DetailPanel,
