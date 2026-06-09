@@ -12,6 +12,25 @@ import type { Row } from "./types";
  * entry's own child rows. Within one entry semantic keys are unique, so the collision is gone.
  */
 
+/** Collect a selected entry's FULL descendant row set, recursing into nested groups, given an async child
+ *  fetcher. A flat one-level fetch misses slot-array leaves nested under a sub-group (e.g. an ITM ability's
+ *  `Melee Animation` Overhand/Backhand/Thrust slots), so they would never reach the per-entry field map and
+ *  the fragment's group block could not resolve them. Returns rows depth-first in tree order. */
+export async function collectEntryRows(rootId: string, fetchChildren: (id: string) => Promise<Row[]>): Promise<Row[]> {
+    const walk = async (id: string): Promise<Row[]> => {
+        const rows = await fetchChildren(id);
+        // Fetch sibling subtrees concurrently (each group's children), then splice each group's descendants in
+        // right after the group row to keep a stable depth-first preorder.
+        const nested = await Promise.all(
+            rows.map((row) =>
+                row.kind === "group" && row.hasChildren === true ? walk(row.id) : Promise.resolve<Row[]>([]),
+            ),
+        );
+        return rows.flatMap((row, i) => [row, ...nested[i]!]);
+    };
+    return walk(rootId);
+}
+
 /** Build a `FieldRef -> Row` map for one selected entry from its child rows, keyed by each row's semantic
  *  key. Rows without a semantic key (padding/notes/unkeyed) are skipped; the optional `labels` map overrides
  *  a row's display name without touching its key (the same label layer the global layout applies). */

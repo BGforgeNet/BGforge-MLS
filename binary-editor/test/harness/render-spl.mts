@@ -321,6 +321,23 @@ check("effects: opcode detail field is a searchable combobox", opcodeCombobox >=
 await clickTab("Abilities");
 await waitRows(abilitiesPanel, 2);
 await selectRow(abilitiesPanel, 0);
+// A SPL ability renders through the SHARED ability fragment (curated panels parallel to ITM abilities), not a
+// generic auto-form: the detail shows `.layout-root` panels, and the reserved/derived fields are omitted.
+await abilitiesPanel.locator(".detail .layout-root .field").first().waitFor({ timeout: 3000 });
+const splAbilityPanels = (await abilitiesPanel.locator(".detail .layout-root .panel h3").allInnerTexts()).map((t) =>
+    t.toUpperCase(),
+);
+check(
+    "abilities: SPL ability detail renders the shared panels (Ability/Casting/Projectile/Appearance)",
+    ["ABILITY", "CASTING", "PROJECTILE", "APPEARANCE"].every((p) => splAbilityPanels.includes(p)),
+    JSON.stringify(splAbilityPanels),
+);
+const splAbilityDetailText = await abilitiesPanel.locator(".detail .layout-root").first().innerText();
+check(
+    "abilities: reserved (unused) and serializer-managed pointers omitted from the detail",
+    !splAbilityDetailText.includes("Unused") && !splAbilityDetailText.includes("Feature Blocks"),
+    `hasUnused=${splAbilityDetailText.includes("Unused")} hasFeatureBlocks=${splAbilityDetailText.includes("Feature Blocks")}`,
+);
 check(
     "screenshot: Abilities tab active for shot-spl-abilities",
     (await activeTabLabel()).includes("Abilities"),

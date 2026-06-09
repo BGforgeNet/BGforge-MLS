@@ -10,18 +10,22 @@
 
 import { formatLayoutSchema, type FormatLayout } from "../layout-schema-types";
 import { featureBlockBodyLabels, featureBlockBodyRows } from "../ie-common/feature-block-layout";
+import { splAbilityBodyLabels, splAbilityBodyRows } from "./ability-layout";
 
 const k = (key: string): string => `spl.header.${key}`;
 
 // SPL Effects are 48-byte feature blocks; render them through the shared fragment (same as ITM, parallel to
 // the EFF v2 body) at the per-entry `spl.effects[]` prefix, instead of a generic auto-form.
 const SPL_EFFECTS_PREFIX = "spl.effects[]";
+// SPL Abilities render through the shared ability fragment (parallel to ITM abilities), curated panels rather
+// than a flat auto-form.
+const SPL_ABILITIES_PREFIX = "spl.abilities[]";
 
 export const splLayout: FormatLayout = formatLayoutSchema.parse({
     schemaVersion: 1,
     format: "spl",
     maxContentWidthPx: 1180,
-    labels: featureBlockBodyLabels(SPL_EFFECTS_PREFIX),
+    labels: { ...featureBlockBodyLabels(SPL_EFFECTS_PREFIX), ...splAbilityBodyLabels(SPL_ABILITIES_PREFIX) },
     variants: {
         spell: {
             tabs: [
@@ -78,6 +82,7 @@ export const splLayout: FormatLayout = formatLayoutSchema.parse({
                                             render: "master-detail",
                                             canAdd: true,
                                             canModify: true,
+                                            detailVariant: splAbilityBodyRows(SPL_ABILITIES_PREFIX),
                                         },
                                     ],
                                 },

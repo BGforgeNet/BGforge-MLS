@@ -24,11 +24,17 @@ export function abilityEffectsSemanticFieldKey(
             ? `${formatId}.header.${slugify(second ?? "")}.${slugify(third)}`
             : `${formatId}.header.${slugify(second ?? "")}`;
     }
-    if (first === "Abilities") {
-        return third ? `${formatId}.abilities[].${slugify(third)}` : `${formatId}.abilities[]`;
-    }
-    if (first === "Effects") {
-        return third ? `${formatId}.effects[].${slugify(third)}` : `${formatId}.effects[]`;
+    if (first === "Abilities" || first === "Effects") {
+        const section = first === "Abilities" ? "abilities" : "effects";
+        if (!third) return `${formatId}.${section}[]`;
+        // Keep every segment past the entry (`third` and any deeper leaf) so a nested slot-array - e.g. the ITM
+        // ability `Melee Animation` group's Overhand/Backhand/Thrust slots - gets a distinct key per slot rather
+        // than all three collapsing to the group's key (which a flat per-entry detail map could not tell apart).
+        const leaf = segments
+            .slice(2)
+            .map((s) => slugify(s))
+            .join(".");
+        return `${formatId}.${section}[].${leaf}`;
     }
     return `${formatId}.${segments.map((s) => slugify(s)).join(".")}`;
 }

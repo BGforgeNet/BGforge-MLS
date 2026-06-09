@@ -19,11 +19,15 @@
 
 import { formatLayoutSchema, type FormatLayout } from "../layout-schema-types";
 import { featureBlockBodyLabels, featureBlockBodyRows } from "../ie-common/feature-block-layout";
+import { itmAbilityBodyLabels, itmAbilityBodyRows } from "./ability-layout";
 
 // ITM Effects are 48-byte feature blocks; render them through the shared fragment (parallel to the EFF v2
 // body and to SPL effects) so an effect reads the same wherever it appears, at the per-entry `itm.effects[]`
 // prefix - instead of a generic auto-form.
 const ITM_EFFECTS_PREFIX = "itm.effects[]";
+// ITM Abilities render through the shared ability fragment (parallel to SPL abilities), so an ability reads
+// as curated panels consistent with the effects beside it instead of a flat auto-form.
+const ITM_ABILITIES_PREFIX = "itm.abilities[]";
 
 const k = (key: string): string => `itm.header.${key}`;
 
@@ -47,6 +51,8 @@ const itmLabels: Record<string, string> = {
     [k("kitUsability4")]: "Kit Usability 4",
     // Effect feature-block labels, shared with SPL and parallel to the EFF v2 fragment.
     ...featureBlockBodyLabels(ITM_EFFECTS_PREFIX),
+    // Ability panel labels (short names inside the boxed Alternative / Ammo Type groups).
+    ...itmAbilityBodyLabels(ITM_ABILITIES_PREFIX),
 };
 
 export const itmLayout: FormatLayout = formatLayoutSchema.parse({
@@ -170,6 +176,7 @@ export const itmLayout: FormatLayout = formatLayoutSchema.parse({
                                             render: "master-detail",
                                             canAdd: true,
                                             canModify: true,
+                                            detailVariant: itmAbilityBodyRows(ITM_ABILITIES_PREFIX),
                                         },
                                     ],
                                 },

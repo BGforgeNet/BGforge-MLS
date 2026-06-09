@@ -9,10 +9,14 @@
 
 import { describe, expect, it } from "vitest";
 import type { DetailRow, Row } from "../src";
-import { buildDetailFieldMap, detailVariantRefs, detailVariantResolves } from "../src/detail-layout";
+import { buildDetailFieldMap, collectEntryRows, detailVariantRefs, detailVariantResolves } from "../src/detail-layout";
 
 function fieldRow(id: string, semanticKey: string | undefined, name: string): Row {
     return { id, namePath: [name], depth: 2, kind: "field", name, ...(semanticKey !== undefined && { semanticKey }) };
+}
+
+function groupRow(id: string, name: string): Row {
+    return { id, namePath: [name], depth: 2, kind: "group", name, hasChildren: true };
 }
 
 describe("buildDetailFieldMap", () => {
@@ -31,6 +35,26 @@ describe("buildDetailFieldMap", () => {
     it("skips rows that carry no semantic key", () => {
         const rows = [fieldRow("0/0/2", undefined, "padding")];
         expect(Object.keys(buildDetailFieldMap(rows))).toHaveLength(0);
+    });
+});
+
+describe("collectEntryRows", () => {
+    it("flattens nested groups so slot-array leaves reach the per-entry map", async () => {
+        // An ability whose direct children include a "Melee Animation" group with three nested slot leaves.
+        const tree: Record<string, Row[]> = {
+            ability: [fieldRow("ability/0", "itm.abilities[].range", "Range"), groupRow("melee", "Melee Animation")],
+            melee: [
+                fieldRow("melee/0", "itm.abilities[].meleeAnimation.overhand", "Overhand"),
+                fieldRow("melee/1", "itm.abilities[].meleeAnimation.backhand", "Backhand"),
+                fieldRow("melee/2", "itm.abilities[].meleeAnimation.thrust", "Thrust"),
+            ],
+        };
+        const rows = await collectEntryRows("ability", (id) => Promise.resolve(tree[id] ?? []));
+        const map = buildDetailFieldMap(rows);
+        expect(map["itm.abilities[].range"]).toBeDefined();
+        expect(map["itm.abilities[].meleeAnimation.overhand"]).toBeDefined();
+        expect(map["itm.abilities[].meleeAnimation.backhand"]).toBeDefined();
+        expect(map["itm.abilities[].meleeAnimation.thrust"]).toBeDefined();
     });
 });
 

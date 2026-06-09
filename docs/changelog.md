@@ -12,6 +12,7 @@
 - A creature's inventory slots now render as dropdowns instead of bare index numbers. Each item slot lists the file's actual items (with a "None" choice for an empty slot); the selected-weapon slot lists the equipped weapons; and the selected-weapon ability is a short fixed list. The dropdowns refresh as you add, remove, or reorder items.
 - Fixed: editing a Fallout proto's object type left the file in an inconsistent state. Object type and subtype are now shown read-only - they select the file's structure, so they are not directly editable.
 - Effects now read the same across every editor. A creature's embedded v2 effects open with the same detailed panel layout as a standalone `.eff` file (Effect, Dice & Save, Parameters, Resources, Classification, Caster & Projectile, Resistance), and item (`.itm`) / spell (`.spl`) effects get a matching set of panels (Effect, Level & Save, Parameters, Resources, Classification, Resistance) instead of a plain field list - so an effect is laid out consistently whether it stands alone or is embedded.
+- Item (`.itm`) and spell (`.spl`) abilities now open as grouped panels instead of one long field list, matching the way effects are laid out. An item ability shows Ability, Damage, Projectile, Charges, and Flags panels (with the three melee-animation swings and the arrow/bolt/bullet flags in their own boxes); a spell ability shows Ability, Casting, Projectile, and Appearance. Internal bookkeeping fields (the effect-table pointers and reserved slots) are no longer shown.
 
 ## 3.8.2
 

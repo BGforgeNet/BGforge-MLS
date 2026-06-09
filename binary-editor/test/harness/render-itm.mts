@@ -399,6 +399,28 @@ check("effects: opcode detail field is a searchable combobox", opcodeCombobox >=
 await clickTab("Abilities");
 await waitRows(abilitiesPanel, 2);
 await selectRow(abilitiesPanel, 0);
+// An ITM ability renders through the SHARED ability fragment (curated panels parallel to SPL abilities and
+// consistent with the effects beside it), not a generic auto-form: the detail shows `.layout-root` panels.
+await abilitiesPanel.locator(".detail .layout-root .field").first().waitFor({ timeout: 3000 });
+const itmAbilityPanels = (await abilitiesPanel.locator(".detail .layout-root .panel h3").allInnerTexts()).map((t) =>
+    t.toUpperCase(),
+);
+check(
+    "abilities: ITM ability detail renders the shared panels (Ability/Damage/Projectile/Charges/Flags)",
+    ["ABILITY", "DAMAGE", "PROJECTILE", "CHARGES", "FLAGS"].every((p) => itmAbilityPanels.includes(p)),
+    JSON.stringify(itmAbilityPanels),
+);
+const itmAbilityDetailText = await abilitiesPanel.locator(".detail .layout-root").first().innerText();
+check(
+    "abilities: Melee Animation renders all three distinct slots (distinct slot-key fix)",
+    ["Overhand", "Backhand", "Thrust"].every((s) => itmAbilityDetailText.includes(s)),
+    JSON.stringify(["Overhand", "Backhand", "Thrust"].filter((s) => itmAbilityDetailText.includes(s))),
+);
+check(
+    "abilities: serializer-managed feature-block pointers omitted from the detail",
+    !itmAbilityDetailText.includes("Feature Block"),
+    `hasFeatureBlock=${itmAbilityDetailText.includes("Feature Block")}`,
+);
 check(
     "screenshot: Abilities tab active for shot-itm-abilities",
     (await activeTabLabel()).includes("Abilities"),

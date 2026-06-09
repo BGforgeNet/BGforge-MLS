@@ -9,7 +9,7 @@
     // Import the pure helpers from their own module, NOT the package barrel: the barrel re-exports
     // dispatch/openSession (protocol/session), which transitively pull node `fs`/`path` and would break the
     // browser webview bundle. `detail-layout.ts` only type-imports binary, so its graph stays browser-safe.
-    import { buildDetailFieldMap, detailVariantResolves } from "@bgforge/binary-editor/src/detail-layout";
+    import { buildDetailFieldMap, collectEntryRows, detailVariantResolves } from "@bgforge/binary-editor/src/detail-layout";
     import type { Bridge } from "../state/bridge";
     import LayoutRenderer from "./LayoutRenderer.svelte";
     import FormSection from "./FormSection.svelte";
@@ -30,7 +30,11 @@
         void version; // a bump re-fetches after the cache is cleared
         let cancelled = false;
         // Detail entries are small records; 1000 covers every real one (the auto-form uses the same bound).
-        bridge.requestChildren(nodeId, 0, 1000).then((w) => { if (!cancelled) rows = w.rows; });
+        // Flatten nested groups (e.g. an ITM ability's Melee Animation slot array) so a fragment's group block
+        // referencing the slot leaves can resolve them in the per-entry field map.
+        collectEntryRows(nodeId, (id) => bridge.requestChildren(id, 0, 1000).then((w) => w.rows)).then((r) => {
+            if (!cancelled) rows = r;
+        });
         return () => { cancelled = true; };
     });
 

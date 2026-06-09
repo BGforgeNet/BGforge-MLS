@@ -28,6 +28,9 @@ export { formatLayoutSchema, variantRows } from "./layout-schema-types";
 export { effV2BodyLabels, effV2BodyRows } from "./eff/effect-body-layout";
 // Shared layout fragment: the ITM/SPL feature block (parallel to the EFF v2 body, distinct record).
 export { featureBlockBodyLabels, featureBlockBodyRows } from "./ie-common/feature-block-layout";
+// Shared layout fragments: the ITM/SPL ability headers (parallel records, curated panels per format).
+export { itmAbilityBodyLabels, itmAbilityBodyRows } from "./itm/ability-layout";
+export { splAbilityBodyLabels, splAbilityBodyRows } from "./spl/ability-layout";
 export type {
     DetailBlock,
     DetailPanel,
