@@ -2,27 +2,11 @@ import { OpcodeRelationships } from "@bgforge/binary";
 import type { FlatNode, Model } from "../model";
 import type { Diagnostic } from "../types";
 import type { FieldOverride, RelationshipModel } from "./types";
+// Display field names are the humanized spec key (walkStruct labels `parameter1` as "Parameter1"), so the model
+// matches on a normalized key. `normKey`/`fieldNumber` are the shared helpers; `fieldValue` keeps the local name.
+import { normKey, fieldNumber as fieldValue } from "./model-helpers";
 
 const PARAM_FIELDS = new Set(["parameter1", "parameter2"]);
-
-// Display field names are the humanized form of the spec key (walkStruct labels
-// `parameter1` as "Parameter1", `opcode` as "Opcode", etc.), so the model matches
-// on a normalized key - lowercased with non-alphanumerics stripped - rather than
-// the raw spec key. This stays correct regardless of humanize's capitalization
-// and spacing ("Max Level" -> "maxlevel") without coupling the model to a fixed
-// label spelling.
-function normKey(name: string): string {
-    return name.toLowerCase().replaceAll(/[^a-z0-9]/g, "");
-}
-
-function fieldValue(node: FlatNode): number | undefined {
-    // Enum/flag fields carry the numeric code in `rawValue` (their `value` is the
-    // resolved display string); plain numerics leave `rawValue` unset. Read
-    // `rawValue` first, falling back to `value`.
-    const source = node.source as { value?: unknown; rawValue?: unknown };
-    const v = source.rawValue ?? source.value;
-    return typeof v === "number" ? v : undefined;
-}
 
 function siblingValue(model: Model, node: FlatNode, key: string): number | undefined {
     const sibs = model.childrenByParent.get(node.parentId ?? "") ?? [];
@@ -110,3 +94,9 @@ export const ieEffectsModel: RelationshipModel = {
         return diags;
     },
 };
+
+// Reusable pieces so the registry can recompose the shared opcode/parameter overlay + probability check with
+// per-format cross-record constraints, instead of registering this whole model verbatim for every IE format.
+export const ieEffectsFieldOverride = ieEffectsModel.fieldOverride;
+export const ieEffectsDependents = ieEffectsModel.dependents;
+export const ieEffectsProbabilityConstraint = ieEffectsModel.constraints;

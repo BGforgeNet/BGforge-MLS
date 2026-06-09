@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { projectRow } from "../src/window";
 import type { RelationshipModel } from "../src/relationship/types";
-import { ieEffectsModel } from "../src/relationship/ie-effects";
+import { ieEffectsModel, ieEffectsFieldOverride, ieEffectsDependents } from "../src/relationship/ie-effects";
 import { getRelationshipModel } from "../src/relationship/registry";
 import { openItmSession, firstEffectFields, setRaw, itmFixturePresent } from "./ie-fixture";
 
@@ -104,9 +104,14 @@ describe("projectRow overlay mechanism", () => {
 });
 
 describe("IE relationship model parity across formats", () => {
-    it("registers the same IE effect model for itm/spl/eff/cre", () => {
+    it("shares the IE field overlay across itm/spl/eff/cre (constraints differ per format)", () => {
         for (const fmt of ["itm", "spl", "eff", "cre"]) {
-            expect(getRelationshipModel(fmt)).toBe(ieEffectsModel);
+            const model = getRelationshipModel(fmt);
+            expect(model, fmt).toBeDefined();
+            // Each format reuses the same opcode/parameter overlay + dependents, but composes its own
+            // constraint set (cross-record checks), so the models are no longer the same object.
+            expect(model!.fieldOverride).toBe(ieEffectsFieldOverride);
+            expect(model!.dependents).toBe(ieEffectsDependents);
         }
     });
     it("overlays params on a real (shared IE effect) display tree", () => {
