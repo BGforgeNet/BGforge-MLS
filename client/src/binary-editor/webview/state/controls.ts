@@ -2,7 +2,7 @@ import type { Row } from "@bgforge/binary-editor";
 // Import the pure label helpers from `shared/` directly, NOT through the @bgforge/binary-editor barrel: the
 // barrel re-exports the core (openSession etc.), which transitively pulls Node built-ins (fs/path) and breaks
 // the browser webview bundle. The webview must only ever import the package's TYPES, never its runtime.
-import { enumValueLabel, enumSelectedLabel } from "../../../../../shared/enum-label";
+import { enumValueLabel, enumSelectedLabel, enumHexDigits } from "../../../../../shared/enum-label";
 
 export type ControlKind = "number" | "string" | "enum" | "flags";
 
@@ -24,15 +24,18 @@ export interface EnumOption {
 export function enumOptionList(row: Row): EnumOption[] {
     // The option maps carry bare names; enumValueLabel (shared with the list-entry summary composer) adds the
     // value prefix here, the single point every enum control renders through - so the synthetic out-of-range
-    // option below follows the same form, and no map hand-bakes it.
+    // option below follows the same form, and no map hand-bakes it. A hex32-typed enum (a packed bitfield like
+    // a CRE kit/alignment) prefixes in hex at the field's byte width, so options read "0x00800000 Conjurer" /
+    // "0x13 Lawful evil", not the meaningless decimal.
+    const hexDigits = enumHexDigits(row.numericFormat, row.size);
     const opts = Object.entries(row.enumOptions ?? {}).map(([k, label]) => {
         const value = Number(k);
-        return { value, label: enumValueLabel(value, label) };
+        return { value, label: enumValueLabel(value, label, hexDigits) };
     });
     const raw = typeof row.rawValue === "number" ? row.rawValue : Number(row.rawValue);
     if (Number.isFinite(raw) && !opts.some((o) => o.value === raw)) {
         // Out of range: enumSelectedLabel falls back to "0 Unknown" (raw is absent from enumOptions here).
-        opts.push({ value: raw, label: enumSelectedLabel(raw, row.enumOptions) });
+        opts.push({ value: raw, label: enumSelectedLabel(raw, row.enumOptions, hexDigits) });
     }
     return opts.sort((a, b) => a.value - b.value);
 }

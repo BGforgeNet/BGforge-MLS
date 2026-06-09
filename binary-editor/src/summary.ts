@@ -15,7 +15,7 @@
 
 import type { FlatNode, Model } from "./model";
 import type { RelationshipModel } from "./relationship/types";
-import { enumSelectedLabel } from "../../shared/enum-label";
+import { enumSelectedLabel, enumHexDigits } from "../../shared/enum-label";
 import { projectRow } from "./window";
 
 /** Computes a one-line display summary for a list-section group entry. */
@@ -135,7 +135,7 @@ function resolveFieldSummary(
         if (child?.kind === "field" && child.name === fieldName) {
             const row = projectRow(model, child, rel);
             if (row.valueType === "enum" && typeof row.rawValue === "number") {
-                return enumSelectedLabel(row.rawValue, row.enumOptions);
+                return enumSelectedLabel(row.rawValue, row.enumOptions, enumHexDigits(row.numericFormat, row.size));
             }
             return row.displayValue;
         }

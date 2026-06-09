@@ -371,6 +371,10 @@ function scalarFieldFor(
             rawValue: value as number,
             enumOptions: stringifyKeys(fs.enum),
             ...(fs.searchableEnum === true && { searchableEnum: true }),
+            // A packed/bitfield enum (e.g. a CRE kit dword) declares `format: "hex32"`; carry it so the value
+            // prefix renders in hex ("0x00800000 Conjurer"). The enum NAME is still the display value - this
+            // only tags how the numeric code is shown, never inferred from the value's magnitude.
+            ...(pres?.format === "hex32" && { numericFormat: "hex32" as const }),
         };
     }
 

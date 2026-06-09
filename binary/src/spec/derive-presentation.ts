@@ -55,6 +55,9 @@ function emitPresentationEntries<T>(
                 ...(pres?.label !== undefined && { label: pres.label }),
                 presentationType: "enum",
                 enumOptions: stringifyKeys(fs.enum),
+                // A packed/bitfield enum (declares `format: "hex32"`) carries the hex format so its value
+                // prefix renders in hex everywhere the schema feeds, matching the walk path.
+                ...(pres?.format === "hex32" && { numericFormat: "hex32" as const }),
             });
             continue;
         }

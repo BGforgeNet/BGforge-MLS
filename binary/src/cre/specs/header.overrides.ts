@@ -4,7 +4,8 @@
  * (`itm/specs/header.overrides.ts`, `spl/specs/header.overrides.ts`).
  */
 
-import { arraySpec, type FieldSpec } from "../../spec/types";
+import { arraySpec, type FieldSpec, type SpecData } from "../../spec/types";
+import type { StructPresentation } from "../../spec/presentation";
 import { i32, u8 } from "typed-binary";
 import {
     CreAlignment,
@@ -151,3 +152,16 @@ export const creHeaderSpecAnnotated = {
         derivedFrom: { array: "effects" } as const,
     },
 } satisfies Record<string, FieldSpec>;
+
+/**
+ * Header presentation overrides for the packed bitfield enums - rendered in hex so the value reads as the
+ * bitfield it is rather than a meaningless decimal (the prefix width follows the field's byte size):
+ *  - `kit` is a packed KIT.IDS dword (0x00800000 = Conjurer, 0x40010000 = Berserker) -> "0x00800000".
+ *  - `alignment` is a packed ALIGNMEN.IDS byte: high nibble law-axis, low nibble morality (0x13 = lawful
+ *    evil) -> "0x13", not the structure-hiding "19".
+ * Shared by the field walk (`cre/index.ts`) and the derived presentation schema so both agree.
+ */
+export const creHeaderPresentation: StructPresentation<SpecData<typeof creHeaderSpecAnnotated>> = {
+    kit: { format: "hex32" },
+    alignment: { format: "hex32" },
+};

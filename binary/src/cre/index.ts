@@ -31,7 +31,7 @@ import {
 } from "./schemas";
 import { serializeCre } from "./serializer";
 import { creEffectV1SpecAnnotated } from "./specs/effect-v1.overrides";
-import { creHeaderSpecAnnotated } from "./specs/header.overrides";
+import { creHeaderPresentation, creHeaderSpecAnnotated } from "./specs/header.overrides";
 import { creItemSpecAnnotated } from "./specs/item.overrides";
 import { creKnownSpellSpecAnnotated } from "./specs/known-spell.overrides";
 import { creMemorizedSpellSpecAnnotated } from "./specs/memorized-spell.overrides";
@@ -53,7 +53,7 @@ import {
     CRE_VERSION_V1,
 } from "./types";
 
-const headerPresentation = {} as const;
+const headerPresentation = creHeaderPresentation;
 const knownSpellPresentation = {} as const;
 const spellMemInfoPresentation = {} as const;
 const memorizedSpellPresentation = {} as const;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { enumValueLabel, enumSelectedLabel } from "../../shared/enum-label";
+import { enumValueLabel, enumSelectedLabel, enumHexDigits } from "../../shared/enum-label";
 
 describe("enumValueLabel", () => {
     it("prefixes the stored value before the name", () => {
@@ -21,6 +21,38 @@ describe("enumValueLabel", () => {
 
     it("renders just the value for a blank name, with no trailing space", () => {
         expect(enumValueLabel(5, "")).toBe("5");
+    });
+
+    it("hex-formats the prefix to the requested digit width, for packed values", () => {
+        // A CRE kit is a packed dword (0x00800000 = Conjurer); decimal 8388608 is meaningless. 8 digits for a
+        // 4-byte field.
+        expect(enumValueLabel(0x00800000, "Conjurer", 8)).toBe("0x00800000 Conjurer");
+        expect(enumValueLabel(0x40010000, "Berserker", 8)).toBe("0x40010000 Berserker");
+        // A CRE alignment is a packed BYTE (0x13 = lawful|evil); 2 digits, not "0x00000013".
+        expect(enumValueLabel(0x13, "Lawful evil", 2)).toBe("0x13 Lawful evil");
+    });
+
+    it("treats a high-bit hex value as unsigned (no negative sign)", () => {
+        // 0x80000000 read as i32 would be negative; the hex prefix is unsigned.
+        expect(enumValueLabel(0x80000000, "X", 8)).toBe("0x80000000 X");
+    });
+
+    it("hexDigits 0 (the default) renders decimal", () => {
+        expect(enumValueLabel(19, "Lawful evil", 0)).toBe("19 Lawful evil");
+        expect(enumValueLabel(19, "Lawful evil")).toBe("19 Lawful evil");
+    });
+});
+
+describe("enumHexDigits", () => {
+    it("is 0 (decimal) unless the field declares hex32", () => {
+        expect(enumHexDigits(undefined, 4)).toBe(0);
+        expect(enumHexDigits("decimal", 4)).toBe(0);
+    });
+
+    it("follows the field's byte size: a u8 -> 2 digits, a u32 -> 8", () => {
+        expect(enumHexDigits("hex32", 1)).toBe(2); // packed byte (alignment) -> 0x13
+        expect(enumHexDigits("hex32", 4)).toBe(8); // packed dword (kit) -> 0x00800000
+        expect(enumHexDigits("hex32", undefined)).toBe(8); // missing size: assume 4-byte
     });
 });
 

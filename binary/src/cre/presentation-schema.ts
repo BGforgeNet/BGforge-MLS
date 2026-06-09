@@ -15,7 +15,7 @@ import { toPresentationEntries } from "../spec/derive-presentation";
 import { toDomainRanges } from "../spec/derive-domain-ranges";
 import { slugify } from "../snapshot-common";
 import { creEffectV1Spec } from "./specs/effect-v1";
-import { creHeaderSpecAnnotated } from "./specs/header.overrides";
+import { creHeaderPresentation, creHeaderSpecAnnotated } from "./specs/header.overrides";
 import { creItemSpecAnnotated } from "./specs/item.overrides";
 import { creKnownSpellSpecAnnotated } from "./specs/known-spell.overrides";
 import { creMemorizedSpellSpecAnnotated } from "./specs/memorized-spell.overrides";
@@ -46,7 +46,7 @@ export const crePresentationSchema: FormatPresentationSchema = formatPresentatio
     schemaVersion: 1,
     format: "cre",
     exactFields: {
-        ...toPresentationEntries(creHeaderSpecAnnotated, {}, "cre.header"),
+        ...toPresentationEntries(creHeaderSpecAnnotated, creHeaderPresentation, "cre.header"),
         ...toPresentationEntries(creKnownSpellSpecAnnotated, {}, "cre.knownSpells[]"),
         ...toPresentationEntries(creSpellMemInfoSpecAnnotated, {}, "cre.spellMemInfo[]"),
         ...toPresentationEntries(creMemorizedSpellSpecAnnotated, {}, "cre.memorizedSpells[]"),
