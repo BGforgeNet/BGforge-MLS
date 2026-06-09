@@ -1,6 +1,6 @@
 import type { Diagnostic } from "../types";
 import type { Model } from "../model";
-import { findGroup, childGroups, fieldsByKey, fieldNumber } from "./model-helpers";
+import { findGroup, childGroups, childFields, fieldsByKey, fieldNumber } from "./model-helpers";
 
 /** CRE spell-memorization-info entries slice [firstMemorizedSpellIndex, +memorizedSpellCount) into the
  *  Memorized Spells list. A slice running past the list end (or starting past it) is a dangling reference:
@@ -26,6 +26,28 @@ export function creMeminfoRefConstraint(model: Model): Diagnostic[] {
             severity: "warning",
             message: `Memorized-spell slice [${start}, ${start + count}) runs past the Memorized Spells list (${listLen}).`,
             quickFix: { label: "Clamp count to fit", edits: [{ nodeId: countField.id, value: clamped }] },
+        });
+    }
+    return diags;
+}
+
+/** CRE item slots are int16 indices into the Items list (-1 = empty). An index >= the item count is a dangling
+ *  reference: warn on that slot field and offer to clear it (-1). */
+export function creItemSlotRefConstraint(model: Model): Diagnostic[] {
+    const slotsGroup = findGroup(model, "Item Slots");
+    const itemsGroup = findGroup(model, "Items");
+    if (!slotsGroup || !itemsGroup) return [];
+    const itemsLen = childGroups(model, itemsGroup).length;
+    const diags: Diagnostic[] = [];
+    for (const slot of childFields(model, slotsGroup)) {
+        const v = fieldNumber(slot);
+        if (v === undefined || v < 0) continue; // negative (incl. -1) = empty slot
+        if (v < itemsLen) continue; // valid reference
+        diags.push({
+            nodeId: slot.id,
+            severity: "warning",
+            message: `${slot.name} references item #${v} but only ${itemsLen} item(s) exist.`,
+            quickFix: { label: "Clear slot (-1)", edits: [{ nodeId: slot.id, value: -1 }] },
         });
     }
     return diags;

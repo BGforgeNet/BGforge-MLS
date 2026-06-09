@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildModel, creResult, findGroupNode } from "./cross-record-fixture";
-import { creMeminfoRefConstraint } from "../src/relationship/cross-record";
+import { buildModel, creResult, findGroupNode, findGroupNodeField } from "./cross-record-fixture";
+import { creMeminfoRefConstraint, creItemSlotRefConstraint } from "../src/relationship/cross-record";
 
 describe("creMeminfoRefConstraint", () => {
     it("warns + clamps when a meminfo slice runs past the memorized-spell list", () => {
@@ -31,5 +31,22 @@ describe("creMeminfoRefConstraint", () => {
     it("ignores empty (count 0) slices", () => {
         const m = buildModel(creResult({ memSpells: 0, items: 0, slots: [], meminfos: [{ start: 0, count: 0 }] }));
         expect(creMeminfoRefConstraint(m)).toHaveLength(0);
+    });
+});
+
+describe("creItemSlotRefConstraint", () => {
+    it("warns + clears a slot that references a nonexistent item", () => {
+        // 2 items (valid indices 0,1); slot 0 -> 3 (out of range), slot 1 -> -1 (empty, ignored).
+        const m = buildModel(creResult({ memSpells: 0, items: 2, slots: [3, -1], meminfos: [] }));
+        const diags = creItemSlotRefConstraint(m);
+        expect(diags).toHaveLength(1);
+        const slot0 = findGroupNodeField(m, "Item Slots", "Slot 0");
+        expect(diags[0]!.nodeId).toBe(slot0.id);
+        expect(diags[0]!.severity).toBe("warning");
+        expect(diags[0]!.quickFix?.edits).toEqual([{ nodeId: slot0.id, value: -1 }]);
+    });
+    it("no diagnostic when all slot indices are valid or empty", () => {
+        const m = buildModel(creResult({ memSpells: 0, items: 3, slots: [0, 2, -1], meminfos: [] }));
+        expect(creItemSlotRefConstraint(m)).toHaveLength(0);
     });
 });
