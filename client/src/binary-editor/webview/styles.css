@@ -697,8 +697,13 @@ input[type="text"]::placeholder {
 }
 .bb-tabs.vertical button.active,
 .bb-tabs.vertical button[aria-selected="true"] {
-    background: var(--vscode-list-activeSelectionBackground, #094771);
-    color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground));
+    /* A muted selection background plus the focusBorder right-edge accent - NOT the strong solid
+       list-activeSelectionBackground fill, which reads as a filled action button next to the toolbar's blue
+       buttons. This matches the horizontal tabs' border-accent language (active = accent edge, not a fill) so
+       an active vertical tab reads as a selected tab. inactiveSelectionBackground is the VS Code convention for
+       a selected-but-unfocused row, which is exactly this strip's semantic. */
+    background: var(--vscode-list-inactiveSelectionBackground, #37373d);
+    color: var(--vscode-foreground);
     border-right-color: var(--vscode-focusBorder, #007fd4);
 }
 
