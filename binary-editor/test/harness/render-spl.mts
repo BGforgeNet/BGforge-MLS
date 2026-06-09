@@ -252,7 +252,18 @@ check("effects: remove row1: -1", sectionKids(effectsNodeId) === 2, `total=${sec
 await doUndo();
 
 await selectRow(effectsPanel, 0);
-await effectsPanel.locator(".detail .form .field").first().waitFor({ timeout: 3000 });
+await effectsPanel.locator(".detail .layout-root .field").first().waitFor({ timeout: 3000 });
+// h3 titles render uppercased by CSS (innerText returns the transformed text); compare case-insensitively.
+const splEffectPanels = (await effectsPanel.locator(".detail .layout-root .panel h3").allInnerTexts()).map((t) =>
+    t.toUpperCase(),
+);
+check(
+    "effects: SPL effect detail renders the shared feature-block panels (Effect/Level & Save/Parameters/...)",
+    splEffectPanels.includes("EFFECT") &&
+        splEffectPanels.includes("LEVEL & SAVE") &&
+        splEffectPanels.includes("RESISTANCE"),
+    JSON.stringify(splEffectPanels),
+);
 const opcodeCombobox = await effectsPanel.locator(".detail .bb-combobox-input").count();
 check("effects: opcode detail field is a searchable combobox", opcodeCombobox >= 1, `count=${opcodeCombobox}`);
 
@@ -320,7 +331,7 @@ await page.screenshot({ path: path.join(here, "shot-spl-abilities.png"), fullPag
 await clickTab("Effects");
 await waitRows(effectsPanel, 3);
 await selectRow(effectsPanel, 0);
-await effectsPanel.locator(".detail .form .field").first().waitFor({ timeout: 3000 });
+await effectsPanel.locator(".detail .layout-root .field").first().waitFor({ timeout: 3000 });
 check(
     "screenshot: Effects tab active for shot-spl-effects",
     (await activeTabLabel()).includes("Effects"),

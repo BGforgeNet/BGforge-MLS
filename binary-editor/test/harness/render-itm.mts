@@ -329,11 +329,23 @@ check("effects: remove row1: -1", sectionKids(effectsNodeId).total === 2, `total
 await doUndo();
 
 // ============================================================
-// Effect detail: opcode renders as a searchable combobox (spec searchableEnum), even in the list-detail
-// form (the flag flows to the Row, not just layout fields blocks).
+// Effect detail: an ITM effect renders through the SHARED feature-block fragment (parallel panels to the EFF
+// v2 body and to CRE effects), not a generic auto-form - so the detail shows `.layout-root` panels, and the
+// opcode renders as a searchable combobox (spec searchableEnum).
 // ============================================================
 await selectRow(effectsPanel, 0);
-await effectsPanel.locator(".detail .form .field").first().waitFor({ timeout: 3000 });
+await effectsPanel.locator(".detail .layout-root .field").first().waitFor({ timeout: 3000 });
+// h3 titles render uppercased by CSS (innerText returns the transformed text); compare case-insensitively.
+const itmEffectPanels = (await effectsPanel.locator(".detail .layout-root .panel h3").allInnerTexts()).map((t) =>
+    t.toUpperCase(),
+);
+check(
+    "effects: ITM effect detail renders the shared feature-block panels (Effect/Level & Save/Parameters/...)",
+    itmEffectPanels.includes("EFFECT") &&
+        itmEffectPanels.includes("LEVEL & SAVE") &&
+        itmEffectPanels.includes("RESISTANCE"),
+    JSON.stringify(itmEffectPanels),
+);
 const opcodeCombobox = await effectsPanel.locator(".detail .bb-combobox-input").count();
 check("effects: opcode detail field is a searchable combobox", opcodeCombobox >= 1, `count=${opcodeCombobox}`);
 
@@ -397,7 +409,7 @@ await page.screenshot({ path: path.join(here, "shot-itm-abilities.png"), fullPag
 await clickTab("Effects");
 await waitRows(effectsPanel, 3);
 await selectRow(effectsPanel, 0);
-await effectsPanel.locator(".detail .form .field").first().waitFor({ timeout: 3000 });
+await effectsPanel.locator(".detail .layout-root .field").first().waitFor({ timeout: 3000 });
 check(
     "screenshot: Effects tab active for shot-itm-effects",
     (await activeTabLabel()).includes("Effects"),

@@ -18,6 +18,12 @@
  */
 
 import { formatLayoutSchema, type FormatLayout } from "../layout-schema-types";
+import { featureBlockBodyLabels, featureBlockBodyRows } from "../ie-common/feature-block-layout";
+
+// ITM Effects are 48-byte feature blocks; render them through the shared fragment (parallel to the EFF v2
+// body and to SPL effects) so an effect reads the same wherever it appears, at the per-entry `itm.effects[]`
+// prefix - instead of a generic auto-form.
+const ITM_EFFECTS_PREFIX = "itm.effects[]";
 
 const k = (key: string): string => `itm.header.${key}`;
 
@@ -39,6 +45,8 @@ const itmLabels: Record<string, string> = {
     [k("kitUsability2")]: "Kit Usability 2",
     [k("kitUsability3")]: "Kit Usability 3",
     [k("kitUsability4")]: "Kit Usability 4",
+    // Effect feature-block labels, shared with SPL and parallel to the EFF v2 fragment.
+    ...featureBlockBodyLabels(ITM_EFFECTS_PREFIX),
 };
 
 export const itmLayout: FormatLayout = formatLayoutSchema.parse({
@@ -184,6 +192,7 @@ export const itmLayout: FormatLayout = formatLayoutSchema.parse({
                                             sectionKey: "Effects",
                                             render: "master-detail",
                                             canModify: true,
+                                            detailVariant: featureBlockBodyRows(ITM_EFFECTS_PREFIX),
                                         },
                                     ],
                                 },

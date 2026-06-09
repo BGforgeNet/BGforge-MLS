@@ -9,13 +9,19 @@
  */
 
 import { formatLayoutSchema, type FormatLayout } from "../layout-schema-types";
+import { featureBlockBodyLabels, featureBlockBodyRows } from "../ie-common/feature-block-layout";
 
 const k = (key: string): string => `spl.header.${key}`;
+
+// SPL Effects are 48-byte feature blocks; render them through the shared fragment (same as ITM, parallel to
+// the EFF v2 body) at the per-entry `spl.effects[]` prefix, instead of a generic auto-form.
+const SPL_EFFECTS_PREFIX = "spl.effects[]";
 
 export const splLayout: FormatLayout = formatLayoutSchema.parse({
     schemaVersion: 1,
     format: "spl",
     maxContentWidthPx: 1180,
+    labels: featureBlockBodyLabels(SPL_EFFECTS_PREFIX),
     variants: {
         spell: {
             tabs: [
@@ -94,6 +100,7 @@ export const splLayout: FormatLayout = formatLayoutSchema.parse({
                                             sectionKey: "Effects",
                                             render: "master-detail",
                                             canModify: true,
+                                            detailVariant: featureBlockBodyRows(SPL_EFFECTS_PREFIX),
                                         },
                                     ],
                                 },
