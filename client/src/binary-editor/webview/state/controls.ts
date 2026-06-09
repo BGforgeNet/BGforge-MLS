@@ -119,14 +119,25 @@ function tierForChars(n: number): SizeTier {
     return "l";
 }
 
+/** Longest dropdown option, in characters, exactly as the trigger renders it: the value-prefixed label from
+ *  `enumOptionList` (including the synthetic out-of-range option). Drives the dropdown's width tier off the
+ *  WIDEST option, not the current one, so changing the selection never clips. */
+function enumLongestLabelChars(row: Row): number {
+    return enumOptionList(row).reduce((max, o) => Math.max(max, o.label.length), 0);
+}
+
 export function valueTier(row: Row): SizeTier {
     const kind = controlKind(row);
-    // Plain dropdowns sit at M: the arrow + padding chrome make the S box too tight, and M keeps them compact.
-    // A label longer than the M box ellipsizes in the trigger (a title tooltip + the open menu show the full
-    // text), so one long option in a table no longer forces the whole dropdown to the wide L tier. The
-    // searchable combobox (the ~300-entry effect opcode) is the exception: its long free-text labels and
-    // text-box selection need the room, so it keeps L.
-    if (kind === "enum") return row.searchableEnum === true ? "l" : "m";
+    // Dropdowns are sized to their LONGEST option label (value-prefixed, as the trigger renders it) so changing
+    // the selection never clips - the UI-GUIDELINES contract. The arrow + padding chrome make the S box too
+    // tight, so a dropdown is floored at M and widens to L only when its longest option needs the room (e.g. an
+    // effect's Timing "Instant/Permanent (after Death)", a CRE Kit name). The searchable combobox (the ~370-entry
+    // effect opcode) keeps L regardless - its free-text labels and text-box selection need it.
+    if (kind === "enum") {
+        if (row.searchableEnum === true) return "l";
+        const tier = tierForChars(enumLongestLabelChars(row));
+        return tier === "s" ? "m" : tier;
+    }
     if (row.numericFormat === "hex32") return "m"; // "0x" + 8 hex digits = 10 chars
     if (kind === "string") return tierForChars(row.size ?? 8); // char[N] field: N chars max
     // Decimal: realistic display width in these formats is <= 7 digits (stats, ids, strrefs, counts, Kit).

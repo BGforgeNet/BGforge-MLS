@@ -405,6 +405,26 @@ check(
 );
 await page.screenshot({ path: path.join(here, "shot-itm-effects.png"), fullPage: true });
 
+// ---- Dropdown never-clip guard (UI-GUIDELINES: a dropdown is sized to its LONGEST option label so changing
+// the selection never clips). The risk is invisible at the default selection - the current value may be short
+// while a longer option clips - so drive Timing to its longest option ("Instant/Permanent (after Death)") and
+// assert the trigger label is not ellipsis-truncated (scrollWidth <= clientWidth). Measures the real rendered
+// width, not a char-count estimate, since valueTier maps char counts to fixed ch tiers.
+const timingTrigger = effectsPanel.locator('.detail .bb-select-trigger[aria-label="Timing"]');
+await timingTrigger.click();
+await page.locator(".bb-select-item", { hasText: "after Death" }).first().click();
+const timingLabel = effectsPanel.locator('.detail .bb-select-trigger[aria-label="Timing"] .bb-select-label');
+await timingLabel.filter({ hasText: "after Death" }).waitFor({ timeout: 3000 });
+const timingClip = await timingLabel.evaluate((el) => ({
+    text: el.textContent ?? "",
+    clipped: el.scrollWidth > el.clientWidth + 1,
+}));
+check(
+    "dropdown: longest Timing option fits the trigger without clipping",
+    !timingClip.clipped,
+    `label="${timingClip.text}" clipped=${timingClip.clipped}`,
+);
+
 await browser.close();
 
 console.log("\n=== ITM layout harness results ===");
