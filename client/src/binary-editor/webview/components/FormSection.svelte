@@ -4,6 +4,7 @@
     import { splitForm, organizeGroups } from "../state/form-groups";
     import Tabs from "./primitives/Tabs.svelte";
     import Field from "./Field.svelte";
+    import FlagColumns from "./blocks/FlagColumns.svelte";
     import Self from "./FormSection.svelte";
 
     // depth: the group-nesting level this FormSection renders. depth=1 is the first level
@@ -35,6 +36,16 @@
     // and render flag fields full-width below, where their checkbox grid uses the whole width anyway.
     const scalarFields = $derived(fields.filter((f) => f.valueType !== "flags"));
     const flagFields = $derived(fields.filter((f) => f.valueType === "flags"));
+    // FlagColumns looks a field up by id in a record; the detail form's flag rows are keyed by node id.
+    const flagFieldMap: Record<string, Row> = $derived(Object.fromEntries(flagFields.map((r) => [r.id, r])));
+
+    // Render a flag field as aligned vertical checkbox columns (the same FlagColumns the layout path uses),
+    // not the pack-left FlagsField grid: a many-bit field like an effect's Save Type otherwise wraps raggedly
+    // with no column alignment. Two columns once a field is tall enough to warrant splitting; one tidy column
+    // below that, so a small 2-bit field stays compact rather than stranded across two columns.
+    function flagColumns(row: Row): number {
+        return Object.keys(row.flagOptions ?? {}).length > 6 ? 2 : 1;
+    }
 
     // Hard cap at 2 tab levels: depth > 2 always renders headed sections so nested tabs
     // never stack more than two deep (vertical then horizontal, then sections).
@@ -69,7 +80,7 @@
     {#if flagFields.length > 0}
         <div class="form-flags">
             {#each flagFields as row (row.id)}
-                <Field {row} {onedit} diagnostics={byNode.get(row.id)} {showOffsets} />
+                <FlagColumns field={row.id} columns={flagColumns(row)} boxed fields={flagFieldMap} {onedit} />
             {/each}
         </div>
     {/if}

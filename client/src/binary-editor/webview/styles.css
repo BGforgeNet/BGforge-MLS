@@ -249,24 +249,14 @@ button:disabled {
     padding: 0.5rem 0.75rem;
 }
 /* Flag fields in a detail form render full-width below the 2-column scalar grid (their checkbox grid uses
-   the whole width and would otherwise strand the scalar columns by their height). */
+   the whole width and would otherwise strand the scalar columns by their height). Each flag field is a boxed
+   FlagColumns group (.layout-root .flag-group), so its bits read as aligned columns rather than a ragged
+   pack-left wrap - the box/legend styling is shared with the layout path. */
 .form-flags {
     display: flex;
     flex-direction: column;
     gap: 6px;
     margin-top: 6px;
-}
-/* Box each flag field (its label + the checkboxes that are bits of the SAME field) so it is visually obvious
-   which checkboxes belong together - e.g. the "Identification" field owns the "ID Required" / "Non-ID Required"
-   checkboxes, which otherwise read as unrelated toggles next to a same-named label. */
-.form-flags .field {
-    align-items: flex-start;
-    /* Match the layout-schema flag groups (.flag-group): input-border + a darker inset fill, so the box reads
-       clearly against the form/panel interior (a 1px panel-border there is near-invisible - same reason). */
-    border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
-    border-radius: 4px;
-    padding: 5px 10px;
-    background: var(--vscode-editor-background);
 }
 
 /* ---- field row: stable label width + control, comfortable vertical rhythm for scannable long forms ---- */
