@@ -1,5 +1,5 @@
 import type { Diagnostic } from "../types";
-import type { Model } from "../model";
+import type { FlatNode, Model } from "../model";
 import { findGroup, childGroups, childFields, fieldsByKey, fieldNumber } from "./model-helpers";
 
 /** CRE spell-memorization-info entries slice [firstMemorizedSpellIndex, +memorizedSpellCount) into the
@@ -76,4 +76,66 @@ export function creOrphanItemsConstraint(model: Model): Diagnostic[] {
             message: `${orphans.length} unreferenced item(s) (used by no slot): #${orphans.join(", #")}.`,
         },
     ];
+}
+
+// Field-name variants across ITM (singular "Block") and SPL (plural "Blocks", "Casting" header).
+const ABILITY_START_KEYS = ["featureblockindex", "featureblocksoffset"];
+const ABILITY_COUNT_KEYS = ["featureblockcount", "featureblockscount"];
+const HEADER_START_KEYS = ["featureblocksindex", "castingfeatureblocksindex"];
+const HEADER_COUNT_KEYS = ["featureblockscount", "castingfeatureblockscount"];
+
+function pick(fields: Map<string, FlatNode>, keys: string[]): FlatNode | undefined {
+    for (const k of keys) {
+        const node = fields.get(k);
+        if (node) return node;
+    }
+    return undefined;
+}
+
+interface EffectRange {
+    startNode?: FlatNode;
+    countNode?: FlatNode;
+}
+
+/** Collect every [start, count) range into the flat Effects table: one per ability, plus the header
+ *  equipping (ITM) / casting (SPL) range. Shared by the broken-ref and orphan-effects checks. */
+function collectEffectRanges(model: Model): EffectRange[] {
+    const ranges: EffectRange[] = [];
+    const abilities = findGroup(model, "Abilities");
+    if (abilities) {
+        for (const ability of childGroups(model, abilities)) {
+            const f = fieldsByKey(model, ability);
+            ranges.push({ startNode: pick(f, ABILITY_START_KEYS), countNode: pick(f, ABILITY_COUNT_KEYS) });
+        }
+    }
+    const header = findGroup(model, "ITM Header") ?? findGroup(model, "SPL Header");
+    if (header) {
+        const f = fieldsByKey(model, header);
+        ranges.push({ startNode: pick(f, HEADER_START_KEYS), countNode: pick(f, HEADER_COUNT_KEYS) });
+    }
+    return ranges;
+}
+
+/** ITM/SPL abilities (and the header equipping/casting range) slice into the shared flat Effects table.
+ *  A slice running past the table is a dangling reference: warn on the count field, offer to clamp it. */
+export function abilityEffectRefConstraint(model: Model): Diagnostic[] {
+    const effGroup = findGroup(model, "Effects");
+    if (!effGroup) return [];
+    const effLen = childGroups(model, effGroup).length;
+    const diags: Diagnostic[] = [];
+    for (const r of collectEffectRanges(model)) {
+        if (!r.countNode) continue;
+        const start = r.startNode ? (fieldNumber(r.startNode) ?? 0) : 0;
+        const count = fieldNumber(r.countNode);
+        if (count === undefined || count <= 0) continue;
+        if (start >= 0 && start + count <= effLen) continue;
+        const clamped = Math.max(0, effLen - Math.max(0, start));
+        diags.push({
+            nodeId: r.countNode.id,
+            severity: "warning",
+            message: `Effect slice [${start}, ${start + count}) runs past the Effects list (${effLen}).`,
+            quickFix: { label: "Clamp count to fit", edits: [{ nodeId: r.countNode.id, value: clamped }] },
+        });
+    }
+    return diags;
 }
