@@ -1,10 +1,12 @@
 // Hand-written from IESDP _data/file_formats/eff_v1/header.yml (48 bytes / 0x30).
 //
-// EFF v1 is the pre-BG2 effect record layout, used inside CRE files whose
-// header byte 0x33 (`effStructureVersion`) is 0. Every BG2/EE-era CRE uses
-// the larger EFF v2 body (264 bytes / 0x108, shared with ITM/SPL via
-// `ie-common/specs/effect`), so this spec is only consumed via the parser's
-// dispatch on `effStructureVersion`.
+// EFF v1 is the pre-BG2 effect record layout. A CRE embeds it inline only when its header byte 0x33
+// (`effStructureVersion`) is 0; when 0x33 is 1 the CRE embeds the larger EFF v2 body instead (264 bytes /
+// 0x108, `../../eff/specs/body`, the same record a standalone `.eff` file holds). So this spec is consumed
+// only via the parser's dispatch on `effStructureVersion`.
+//
+// NB: this is NOT the ITM/SPL effect format. ITM/SPL embed their own 48-byte feature block
+// (`ie-common/specs/effect`) - same size as EFF v1 but a distinct layout - and never carry an EFF v2 body.
 
 import { u16, u32, u8 } from "typed-binary";
 import { charsSpec, type FieldSpec, type SpecData } from "../../spec/types";

@@ -11,122 +11,19 @@
  */
 
 import { formatLayoutSchema, type FormatLayout } from "../layout-schema-types";
+import { effV2BodyLabels, effV2BodyRows } from "./effect-body-layout";
 
-/** Semantic key for an EFF body field. */
-const k = (key: string): string => `eff.body.${key}`;
-
-/** Display-label overrides (see `FormatLayout.labels`) - expand "Coord", fix "Id"/jargon. */
-const effLabels: Record<string, string> = {
-    [k("casterXCoord")]: "Caster X Coordinate",
-    [k("casterYCoord")]: "Caster Y Coordinate",
-    [k("targetXCoord")]: "Target X Coordinate",
-    [k("targetYCoord")]: "Target Y Coordinate",
-    [k("stackingIdTobex")]: "Stacking ID (ToBEx)",
-};
+// The EFF v2 body layout is shared with CRE's embedded v2 effects (`cre.effects[].v2.`) via the fragment in
+// `effect-body-layout.ts`, so a standalone `.eff` and a CRE-embedded effect render identical panels. Here the
+// standalone effect IS the body, at the `eff.body.` prefix.
+const EFF_BODY_PREFIX = "eff.body";
 
 export const effLayout: FormatLayout = formatLayoutSchema.parse({
     schemaVersion: 1,
     format: "eff",
     maxContentWidthPx: 1000,
-    labels: effLabels,
+    labels: effV2BodyLabels(EFF_BODY_PREFIX),
     variants: {
-        effect: {
-            rows: [
-                {
-                    panels: [
-                        {
-                            title: "Effect",
-                            blocks: [
-                                {
-                                    kind: "fields",
-                                    fields: [
-                                        k("opcode"),
-                                        k("target"),
-                                        k("power"),
-                                        k("timing"),
-                                        k("duration"),
-                                        k("probability1"),
-                                        k("probability2"),
-                                    ],
-                                },
-                            ],
-                        },
-                        {
-                            title: "Dice & Save",
-                            blocks: [
-                                { kind: "fields", fields: [k("diceThrown"), k("diceSides"), k("saveBonus")] },
-                                { kind: "flags", field: k("saveType"), columns: 1 },
-                            ],
-                        },
-                    ],
-                },
-                {
-                    panels: [
-                        {
-                            title: "Parameters",
-                            blocks: [
-                                {
-                                    kind: "fields",
-                                    fields: [
-                                        k("parameter1"),
-                                        k("parameter2"),
-                                        k("parameter3"),
-                                        k("parameter4"),
-                                        k("parameter5"),
-                                    ],
-                                },
-                            ],
-                        },
-                        {
-                            title: "Resources",
-                            blocks: [{ kind: "fields", fields: [k("resource"), k("resource2"), k("resource3")] }],
-                        },
-                        {
-                            // school/sectype/stacking/variableName are effect metadata, not resref resources.
-                            title: "Classification",
-                            blocks: [
-                                {
-                                    kind: "fields",
-                                    fields: [k("school"), k("sectype"), k("stackingIdTobex"), k("variableName")],
-                                },
-                            ],
-                        },
-                    ],
-                },
-                {
-                    panels: [
-                        {
-                            title: "Caster & Projectile",
-                            blocks: [
-                                {
-                                    kind: "fields",
-                                    columns: 2,
-                                    fields: [
-                                        k("casterLevel"),
-                                        k("casterXCoord"),
-                                        k("casterYCoord"),
-                                        k("targetXCoord"),
-                                        k("targetYCoord"),
-                                        k("parentResourceType"),
-                                        k("parentResource"),
-                                        k("parentResourceFlags"),
-                                        k("projectile"),
-                                        k("timeApplied"),
-                                    ],
-                                },
-                            ],
-                        },
-                        {
-                            // Two dispel/magic-resistance bits. `fit` keeps it content-width beside the
-                            // Caster & Projectile panel rather than wrapping onto its own near-empty row (it
-                            // had stranded as a 4th panel that overflowed the row above).
-                            title: "Resistance",
-                            fit: true,
-                            blocks: [{ kind: "flags", field: k("resistance"), columns: 1 }],
-                        },
-                    ],
-                },
-            ],
-        },
+        effect: { rows: effV2BodyRows(EFF_BODY_PREFIX) },
     },
 });
