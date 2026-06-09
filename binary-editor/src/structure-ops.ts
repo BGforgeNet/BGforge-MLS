@@ -2,6 +2,7 @@ import { formatAdapterRegistry, parserRegistry, type ParseResult } from "@bgforg
 import { buildModel, type FlatNode } from "./model";
 import { invalidateCachedDocument } from "./edit";
 import { DEFAULT_WINDOW, getWindow } from "./window";
+import { buildLayout } from "./layout";
 import type { EditorSession } from "./session";
 import type { ChangeSet, NamePath, NodeId, StructureResult } from "./types";
 
@@ -27,8 +28,16 @@ function reparse(session: EditorSession, bytes: Uint8Array): ParseResult {
 }
 
 function buildChangeSet(session: EditorSession, dirty: boolean): ChangeSet {
+    // A structure op rebuilds the whole model, so any layout/form field whose presentation derives from
+    // another record goes stale in the webview's resolved-field snapshot - the CRE item-slot item dropdowns
+    // and the selected-weapon dropdown read the Items list, and a reorder/remove/add changes both their
+    // options and (via relink) their values. Re-project the layout fields and include them so the webview
+    // patches them by id (form-field node ids are stable across list add/remove/move). The tree window covers
+    // the list/tree blocks; the layout fields cover the form/grid blocks.
+    const layout = buildLayout(session.parserId, session.model, session.relationshipModel).layout;
+    const layoutRows = layout ? Object.values(layout.fields) : [];
     return {
-        changed: getWindow(session.model, 0, DEFAULT_WINDOW, session.relationshipModel),
+        changed: [...getWindow(session.model, 0, DEFAULT_WINDOW, session.relationshipModel), ...layoutRows],
         diagnostics: session.relationshipModel ? session.relationshipModel.constraints(session.model) : [],
         dirty,
         formatValid: true,

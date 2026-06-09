@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest";
 import { formatLayoutSchema, proParser, toSemanticFieldKey, type FormatLayout } from "@bgforge/binary";
 import { buildModel } from "../src/model";
 import { resolveLayout } from "../src/layout";
+import { projectRow } from "../src/window";
+import type { RelationshipModel } from "../src/relationship/types";
 
 const PRO_FIXTURE = path.resolve(__dirname, "../../client/testFixture/proto/items/00000031.pro");
 
@@ -120,6 +122,28 @@ describe("resolveLayout", () => {
         expect(resolved.fields[key]).toBeDefined();
         expect(resolved.fields[key]!.id).toBe(fieldNode.id);
         expect(resolved.fields[key]!.kind).toBe("field");
+    });
+
+    it("applies the relationship-model field overlay to projected layout rows", () => {
+        // Regression: layout/form fields (e.g. the CRE Item Slots grid) are rendered from this `fields` map,
+        // so resolveLayout must thread the relationship model into projectRow - otherwise a fieldOverride that
+        // re-types a field to an enum dropdown is silently dropped for everything outside list blocks.
+        const model = proModel();
+        model.parseResult.variantId = "only";
+        // A plain numeric field (not one the parser already renders as an enum), so the enum can only come
+        // from the relationship overlay below.
+        const fieldNode = model.nodes.find((n) => n.kind === "field" && projectRow(model, n).valueType !== "enum")!;
+        const key = toSemanticFieldKey("pro", fieldNode.sourceSegments)!;
+        const rel: RelationshipModel = {
+            formatId: "pro",
+            fieldOverride: (_m, node) =>
+                node.id === fieldNode.id ? { presentationType: "enum", enumOptions: { "0": "Zero" } } : undefined,
+            dependents: () => [],
+            constraints: () => [],
+        };
+        const resolved = resolveLayout("pro", layoutFor("pro", "only", key), model, rel)!;
+        expect(resolved.fields[key]!.valueType).toBe("enum");
+        expect(resolved.fields[key]!.enumOptions).toEqual({ "0": "Zero" });
     });
 
     it("resolves the full field set, not only the referenced keys", () => {

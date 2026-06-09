@@ -48,7 +48,7 @@ function reopenResult(s: EditorSession): OpenResult {
         sessionId: s.id,
         format: s.parserId,
         formatName: pr.formatName ?? s.parserId,
-        layout: buildLayout(s.parserId, s.model),
+        layout: buildLayout(s.parserId, s.model, s.relationshipModel),
         warnings: pr.warnings ?? [],
         errors: pr.errors ?? [],
         rootWindow: getWindow(s.model, 0, DEFAULT_WINDOW, s.relationshipModel, s.composeSummary),

@@ -31,6 +31,8 @@ const creCrossRefRelationships: readonly CrossRefRelationship[] = [
         refNoun: "item",
         refFieldCount: CRE_ITEM_REF_SLOT_COUNT,
         orphanInfo: true,
+        // The 8-char ResRef (`item` field) names each entry; the editor renders slots as a dropdown of these.
+        targetLabelField: "item",
     },
     {
         kind: "slice",

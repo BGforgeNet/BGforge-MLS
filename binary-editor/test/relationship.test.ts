@@ -104,15 +104,25 @@ describe("projectRow overlay mechanism", () => {
 });
 
 describe("IE relationship model parity across formats", () => {
-    it("shares the IE field overlay across itm/spl/eff/cre (constraints differ per format)", () => {
-        for (const fmt of ["itm", "spl", "eff", "cre"]) {
+    it("shares the IE field overlay across itm/spl/eff (constraints differ per format)", () => {
+        // itm/spl/eff carry only slice relationships (no index dropdown), so they use the shared overlay
+        // object verbatim. CRE composes a named-item slot dropdown on top, so its fieldOverride differs (see
+        // the cre case below); all four still share dependents and compose their own per-format constraints.
+        for (const fmt of ["itm", "spl", "eff"]) {
             const model = getRelationshipModel(fmt);
             expect(model, fmt).toBeDefined();
-            // Each format reuses the same opcode/parameter overlay + dependents, but composes its own
-            // constraint set (cross-record checks), so the models are no longer the same object.
             expect(model!.fieldOverride).toBe(ieEffectsFieldOverride);
             expect(model!.dependents).toBe(ieEffectsDependents);
         }
+    });
+    it("cre composes a named-item slot overlay + dependents over the shared IE behavior", () => {
+        const model = getRelationshipModel("cre");
+        expect(model).toBeDefined();
+        // The item-slot dropdown overlay wraps - not replaces - the IE overlay (slot labels) and its
+        // dependents (re-project slots when an item ResRef changes), so both objects differ from the shared
+        // ones while still delegating to them for non-slot fields.
+        expect(model!.fieldOverride).not.toBe(ieEffectsFieldOverride);
+        expect(model!.dependents).not.toBe(ieEffectsDependents);
     });
     it("overlays params on a real (shared IE effect) display tree", () => {
         if (!itmFixturePresent()) return;

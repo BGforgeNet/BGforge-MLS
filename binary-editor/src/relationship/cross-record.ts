@@ -1,7 +1,8 @@
 import type { CrossRefRelationship, IndexRefRelationship, SliceRefRelationship } from "@bgforge/binary";
-import type { Diagnostic } from "../types";
+import type { Diagnostic, NodeId } from "../types";
+import type { FieldOverride } from "./types";
 import type { FlatNode, Model } from "../model";
-import { findGroup, childGroups, childFields, fieldsByKey, fieldNumber, normKey } from "./model-helpers";
+import { findGroup, childGroups, childFields, fieldsByKey, fieldNumber, fieldText, normKey } from "./model-helpers";
 
 /**
  * Cross-record consistency diagnostics, driven entirely by the per-format `crossRefRelationship`
@@ -63,6 +64,42 @@ export function orphanTargetDiagnostics(model: Model, rel: IndexRefRelationship)
             message: `${orphans.length} unreferenced ${rel.refNoun}(s) (used by no slot): #${orphans.join(", #")}.`,
         },
     ];
+}
+
+/** The in-range referring fields of an index relationship (CRE slots 0..refFieldCount), in order. The trailing
+ *  non-index fields (CRE's selected-weapon slot/ability) are excluded - the same boundary the diagnostic uses. */
+function inRangeRefFields(model: Model, rel: IndexRefRelationship): FlatNode[] {
+    const refGroup = findGroup(model, rel.refGroup);
+    if (!refGroup) return [];
+    const fields = childFields(model, refGroup);
+    const refCount = rel.refFieldCount ?? fields.length;
+    return fields.slice(0, refCount);
+}
+
+/** Display overlay turning an in-range index field into a dropdown of the named targets: a `NONE` entry for
+ *  the empty sentinel (-1) plus one `i: <label>` per target entry, labelled by the relationship's
+ *  `targetLabelField` (e.g. the item ResRef). Returns undefined when `node` is not an in-range referring field
+ *  or the relationship declares no label field, leaving the field a plain number. View-only: the stored int16
+ *  index is unchanged, so byte round-trip is unaffected. */
+export function indexRefFieldOverride(
+    model: Model,
+    node: FlatNode,
+    rel: IndexRefRelationship,
+): FieldOverride | undefined {
+    if (rel.targetLabelField === undefined || node.kind !== "field") return;
+    if (!inRangeRefFields(model, rel).some((f) => f.id === node.id)) return;
+    const targetGroup = findGroup(model, rel.targetGroup);
+    if (!targetGroup) return;
+    const labelKey = normKey(rel.targetLabelField);
+    // "<index> <ResRef>" (or "-1 None" for the empty sentinel); the index prefixes the item so the option
+    // reads against the raw stored value.
+    const enumOptions: Record<string, string> = { "-1": "-1 None" };
+    childGroups(model, targetGroup).forEach((entry, i) => {
+        const labelField = fieldsByKey(model, entry).get(labelKey);
+        const label = labelField ? fieldText(labelField) : undefined;
+        enumOptions[String(i)] = label ? `${i} ${label}` : String(i);
+    });
+    return { presentationType: "enum", enumOptions };
 }
 
 interface SliceRange {
@@ -146,6 +183,42 @@ export function orphanSliceDiagnostics(model: Model, rel: SliceRefRelationship):
             message: `${orphans.length} unreferenced ${rel.sliceNoun.toLowerCase()}(s) (covered by no ability or equipping/casting range): #${orphans.join(", #")}.`,
         },
     ];
+}
+
+/** First index-reference dropdown override matching `node` across a format's relationships, or undefined.
+ *  (Only `index` relationships carrying a `targetLabelField` produce a dropdown; slices never do.) */
+export function crossRefFieldOverride(
+    model: Model,
+    node: FlatNode,
+    rels: readonly CrossRefRelationship[],
+): FieldOverride | undefined {
+    for (const rel of rels) {
+        if (rel.kind !== "index") continue;
+        const ov = indexRefFieldOverride(model, node, rel);
+        if (ov) return ov;
+    }
+    return undefined;
+}
+
+/** When `editedNode` is a target entry's label field (an item ResRef), every in-range referring field's
+ *  dropdown label is now stale - return those field ids so the edit pipeline re-projects them. */
+export function crossRefDependents(
+    model: Model,
+    editedNode: FlatNode,
+    rels: readonly CrossRefRelationship[],
+): NodeId[] {
+    if (editedNode.kind !== "field") return [];
+    const out: NodeId[] = [];
+    for (const rel of rels) {
+        if (rel.kind !== "index" || rel.targetLabelField === undefined) continue;
+        if (normKey(editedNode.name) !== normKey(rel.targetLabelField)) continue;
+        const targetGroup = findGroup(model, rel.targetGroup);
+        if (!targetGroup) continue;
+        const entryIds = new Set(childGroups(model, targetGroup).map((entry) => entry.id));
+        if (editedNode.parentId === undefined || !entryIds.has(editedNode.parentId)) continue;
+        for (const slot of inRangeRefFields(model, rel)) out.push(slot.id);
+    }
+    return out;
 }
 
 /** Run every relationship in a format's descriptor list and collect its diagnostics. */

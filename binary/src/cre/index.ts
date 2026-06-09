@@ -45,6 +45,7 @@ import {
     CRE_ITEM_SLOTS_SIZE,
     CRE_ITEM_SLOT_COUNT,
     CRE_ITEM_SLOT_LABELS,
+    CRE_SELECTED_WEAPON_OPTIONS,
     CRE_KNOWN_SPELL_SIZE,
     CRE_MEMORIZED_SPELL_SIZE,
     CRE_SIGNATURE,
@@ -272,13 +273,25 @@ class CreParser implements BinaryParser {
                 ),
             ),
         );
-        const itemSlotFields: ParsedField[] = itemSlots.map((value, i) => ({
-            name: CRE_ITEM_SLOT_LABELS[i] ?? `Slot ${i}`,
-            offset: header.itemSlotsOffset + i * 2,
-            size: 2,
-            type: "int16" as const,
-            value,
-        }));
+        const itemSlotFields: ParsedField[] = itemSlots.map((value, i) => {
+            const name = CRE_ITEM_SLOT_LABELS[i] ?? `Slot ${i}`;
+            const offset = header.itemSlotsOffset + i * 2;
+            // "Selected weapon" (slot 38) is a fixed engine enum (which weapon slot is active, or fists), so
+            // it is emitted as an enum field - the editor reads field.type/enumOptions to render the dropdown.
+            // The other slots are item-table indices the editor turns into item dropdowns at edit time.
+            if (name === "Selected weapon") {
+                return {
+                    name,
+                    offset,
+                    size: 2,
+                    type: "enum" as const,
+                    value: CRE_SELECTED_WEAPON_OPTIONS[String(value)] ?? `Unknown (${value})`,
+                    rawValue: value,
+                    enumOptions: CRE_SELECTED_WEAPON_OPTIONS,
+                };
+            }
+            return { name, offset, size: 2, type: "int16" as const, value };
+        });
         const itemSlotsGroup = group(CRE_GROUP_LABELS.itemSlots, itemSlotFields);
 
         const document: CreCanonicalDocument =

@@ -14,6 +14,12 @@ export function fieldNumber(node: FlatNode): number | undefined {
     return typeof v === "number" ? v : undefined;
 }
 
+/** String value of a field node (e.g. a ResRef). Undefined when the field is not string-typed. */
+export function fieldText(node: FlatNode): string | undefined {
+    const src = node.source as { value?: unknown };
+    return typeof src.value === "string" ? src.value : undefined;
+}
+
 /** First group node with the given exact display name (top-level group labels are unique in these formats). */
 export function findGroup(model: Model, name: string): FlatNode | undefined {
     return model.nodes.find((n) => n.kind === "group" && n.name === name);

@@ -7,6 +7,7 @@ import type { FlatNode, Model } from "../src/model";
 export { buildModel } from "../src/model";
 
 const f = (name: string, value: number) => ({ name, value, rawValue: value });
+const s = (name: string, value: string) => ({ name, value });
 const g = (name: string, fields: unknown[]) => ({ name, fields });
 
 export interface CreOpts {
@@ -14,6 +15,26 @@ export interface CreOpts {
     items: number;
     slots: number[];
     meminfos: { start: number; count: number }[];
+    /** Per-item ResRef label (the item's `item` field). Defaults to a generated `ITEMi` when absent. */
+    itemNames?: string[];
+    /** Use the parser's real slot labels for the slots the weapon dropdowns key on (instead of `Slot i`). */
+    realSlotLabels?: boolean;
+}
+
+// Mirrors the parser's CRE_ITEM_SLOT_LABELS for the slots the weapon dropdowns match by name. The real-parser
+// test in binary/test/cre-rebuild.test.ts asserts these exact names appear in parser output, so this map cannot
+// silently drift from the producer.
+const REAL_SLOT_LABELS: Readonly<Record<number, string>> = {
+    9: "Weapon 1",
+    10: "Weapon 2",
+    11: "Weapon 3",
+    12: "Weapon 4",
+    38: "Selected weapon",
+    39: "Selected weapon ability",
+};
+
+function slotLabel(i: number, real: boolean): string {
+    return real ? (REAL_SLOT_LABELS[i] ?? `Slot ${i}`) : `Slot ${i}`;
 }
 
 /** Build a synthetic CRE ParseResult with the faithful group labels the constraints match on.
@@ -39,11 +60,13 @@ export function creResult(o: CreOpts): ParseResult {
             ),
             g(
                 "Items",
-                Array.from({ length: o.items }, (_, i) => g(`Item ${i + 1}`, [f("Quantity", 1)])),
+                Array.from({ length: o.items }, (_, i) =>
+                    g(`Item ${i + 1}`, [s("Item", o.itemNames?.[i] ?? `ITEM${i}`), f("Quantity", 1)]),
+                ),
             ),
             g(
                 "Item Slots",
-                o.slots.map((v, i) => f(`Slot ${i}`, v)),
+                o.slots.map((v, i) => f(slotLabel(i, o.realSlotLabels === true), v)),
             ),
         ]),
     } as unknown as ParseResult;

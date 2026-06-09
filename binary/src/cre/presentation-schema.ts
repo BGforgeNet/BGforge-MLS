@@ -20,15 +20,26 @@ import { creItemSpecAnnotated } from "./specs/item.overrides";
 import { creKnownSpellSpecAnnotated } from "./specs/known-spell.overrides";
 import { creMemorizedSpellSpecAnnotated } from "./specs/memorized-spell.overrides";
 import { creSpellMemInfoSpecAnnotated } from "./specs/spell-mem-info.overrides";
-import { CRE_ITEM_SLOT_LABELS } from "./types";
+import { CRE_ITEM_SLOT_LABELS, CRE_SELECTED_WEAPON_OPTIONS } from "./types";
 
 // One stable semantic key per slot label so the editor can attach the same
 // `int16` editor behaviour regardless of which slot the user clicks. The
 // canonical key shape is `cre.itemSlots.<slug>`; pattern coverage would
 // over-match (slugs are not regular), so exact keys per slot are used.
-const itemSlotEntries: Record<string, { label: string; editable: boolean }> = {};
+// "Selected weapon" is a fixed engine enum (which weapon slot is active, or fists), so it carries the
+// weapon-slot option map; the other slots are item-table indices the editor renders as item dropdowns at runtime.
+type ItemSlotEntry = {
+    label: string;
+    editable: boolean;
+    presentationType?: "enum";
+    enumOptions?: Readonly<Record<string, string>>;
+};
+const itemSlotEntries: Record<string, ItemSlotEntry> = {};
 for (const label of CRE_ITEM_SLOT_LABELS) {
-    itemSlotEntries[`cre.itemSlots.${slugify(label)}`] = { label, editable: true };
+    itemSlotEntries[`cre.itemSlots.${slugify(label)}`] =
+        label === "Selected weapon"
+            ? { label, editable: true, presentationType: "enum", enumOptions: CRE_SELECTED_WEAPON_OPTIONS }
+            : { label, editable: true };
 }
 
 export const crePresentationSchema: FormatPresentationSchema = formatPresentationSchema.parse({

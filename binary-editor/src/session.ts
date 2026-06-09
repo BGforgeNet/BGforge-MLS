@@ -90,7 +90,7 @@ export function openSession(uri: string, bytes: Uint8Array, options: ParseOption
         sessionId: session.id,
         format: parser.id,
         formatName: parser.name,
-        layout: buildLayout(parser.id, model),
+        layout: buildLayout(parser.id, model, relationshipModel),
         warnings: parseResult.warnings ?? [],
         errors: parseResult.errors ?? [],
         rootWindow: getWindow(model, 0, DEFAULT_WINDOW, relationshipModel, session.composeSummary),

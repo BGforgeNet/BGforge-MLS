@@ -9,6 +9,7 @@
 - Clearer field labels throughout: redundant category prefixes are dropped (a creature's resistances now read "Fire" / "Cold" rather than "Resist Fire" / "Resist Cold"), abbreviations are spelled out, and acronyms are cased correctly (HP, XP, AC, THAC0). Creature weapon-proficiency slots are named (Large Swords, Bows, and so on).
 - The creature editor regroups its fields into clearer panels (Stats, Condition, Classification, Thief Skills) and packs panels into multiple columns; value boxes are sized to the field instead of stretched to a fixed width.
 - The binary editor now flags cross-record inconsistencies. A creature spell-memorization or item-slot entry that points past its list, or an item/spell ability (or equipping/casting effect range) that runs past the effects list, is shown as a warning with a one-click fix to bring it back in range. Items used by no slot, and effects covered by no ability, are noted for information only - nothing is changed automatically.
+- A creature's inventory slots now render as dropdowns instead of bare index numbers. Each item slot lists the file's actual items (with a "None" choice for an empty slot); the selected-weapon slot lists the equipped weapons; and the selected-weapon ability is a short fixed list. The dropdowns refresh as you add, remove, or reorder items.
 - Fixed: editing a Fallout proto's object type left the file in an inconsistent state. Object type and subtype are now shown read-only - they select the file's structure, so they are not directly editable.
 
 ## 3.8.2

@@ -30,6 +30,10 @@ export interface IndexRefRelationship {
     readonly refFieldCount?: number;
     /** Emit an info note for targets referenced by no in-range field. */
     readonly orphanInfo?: boolean;
+    /** Canonical field key of a target entry that labels it in a reference dropdown (e.g. the item ResRef).
+     *  When set, the editor renders each in-range referring field as a NONE/-1 + indexed-target dropdown
+     *  instead of a raw number; omitted leaves the reference a plain numeric field. */
+    readonly targetLabelField?: string;
 }
 
 /**

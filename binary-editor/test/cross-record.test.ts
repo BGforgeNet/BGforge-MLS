@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { formatAdapterRegistry, type IndexRefRelationship, type SliceRefRelationship } from "@bgforge/binary";
 import { buildModel, creResult, findGroupNode, findGroupNodeField } from "./cross-record-fixture";
-import { indexRefDiagnostics, orphanTargetDiagnostics, sliceRefDiagnostics } from "../src/relationship/cross-record";
+import {
+    indexRefDiagnostics,
+    indexRefFieldOverride,
+    orphanTargetDiagnostics,
+    sliceRefDiagnostics,
+} from "../src/relationship/cross-record";
 import { getRelationshipModel } from "../src/relationship/registry";
+import { projectRow } from "../src/window";
 
 // The real CRE relationship descriptors (single source of truth, declared on the cre adapter in @bgforge/binary).
 const creRels = formatAdapterRegistry.get("cre")!.crossRefRelationships!;
@@ -87,6 +93,97 @@ describe("creOrphanItemsConstraint", () => {
     it("no note when there are no items", () => {
         const m = buildModel(creResult({ memSpells: 0, items: 0, slots: [], meminfos: [] }));
         expect(orphanTargetDiagnostics(m, creItemSlotRel)).toHaveLength(0);
+    });
+});
+
+describe("CRE item-slot dropdowns: index references render as named-item enums", () => {
+    // Item Slots [0, CRE_ITEM_REF_SLOT_COUNT) index into the Items list. Rendering them as a dropdown of the
+    // actual items (plus a NONE entry for -1 = empty) is the view-side complement of the index relationship:
+    // the descriptor's `targetLabelField` ("item" ResRef) is the same single source of truth the diagnostic
+    // and relink key on, so the dropdown excludes the trailing selected-weapon slots automatically.
+    function inventory(): ReturnType<typeof buildModel> {
+        const slots = fullInventory({ 0: 1, 1: -1, 2: 0, 38: 1000, 39: 0 });
+        return buildModel(creResult({ memSpells: 0, items: 2, slots, meminfos: [], itemNames: ["SW1H01", "BOW03"] }));
+    }
+    it("builds a NONE/-1 + indexed-ResRef enum for an in-range slot", () => {
+        const ov = indexRefFieldOverride(
+            inventory(),
+            findGroupNodeField(inventory(), "Item Slots", "Slot 0"),
+            creItemSlotRel,
+        );
+        expect(ov?.presentationType).toBe("enum");
+        expect(ov?.enumOptions).toEqual({ "-1": "-1 None", "0": "0 SW1H01", "1": "1 BOW03" });
+    });
+    it("renders through projectRow as an enum dropdown row", () => {
+        const m = inventory();
+        const row = projectRow(m, findGroupNodeField(m, "Item Slots", "Slot 2"), getRelationshipModel("cre"));
+        expect(row.valueType).toBe("enum");
+        expect(row.enumOptions).toEqual({ "-1": "-1 None", "0": "0 SW1H01", "1": "1 BOW03" });
+    });
+    it("leaves selected-weapon slots 38/39 as plain numeric fields", () => {
+        const m = inventory();
+        for (const name of ["Slot 38", "Slot 39"]) {
+            const slot = findGroupNodeField(m, "Item Slots", name);
+            expect(indexRefFieldOverride(m, slot, creItemSlotRel)).toBeUndefined();
+            expect(projectRow(m, slot, getRelationshipModel("cre")).enumOptions).toBeUndefined();
+        }
+    });
+    it("still offers NONE/-1 when the creature carries no items", () => {
+        const m = buildModel(creResult({ memSpells: 0, items: 0, slots: fullInventory({ 0: -1 }), meminfos: [] }));
+        const ov = indexRefFieldOverride(m, findGroupNodeField(m, "Item Slots", "Slot 0"), creItemSlotRel);
+        expect(ov?.enumOptions).toEqual({ "-1": "-1 None" });
+    });
+    it("re-projects in-range slots (not 38/39) when an item's ResRef is edited", () => {
+        // Editing an item's ResRef changes every slot dropdown's label, so the slots are dependents of the
+        // item label field - the edit pipeline re-projects them. The trailing selected-weapon slots are not
+        // item dropdowns, so they are excluded.
+        const m = inventory();
+        const deps = getRelationshipModel("cre")!.dependents(m, findGroupNode(m, "Items", 0, "Item"));
+        expect(deps).toContain(findGroupNodeField(m, "Item Slots", "Slot 0").id);
+        expect(deps).toContain(findGroupNodeField(m, "Item Slots", "Slot 37").id);
+        expect(deps).not.toContain(findGroupNodeField(m, "Item Slots", "Slot 38").id);
+    });
+});
+
+describe("CRE selected-weapon / ability dropdowns (document-derived, via projection)", () => {
+    // Asserts through projectRow + the composed CRE relationship model - the exact path the editor renders
+    // from (controlKind reads row.valueType/enumOptions). Real slot labels so the override's name-matching is
+    // exercised faithfully.
+    function weaponModel(): ReturnType<typeof buildModel> {
+        // Weapon 1 (slot 9) holds item 0 (SW1H01); Weapon 2-4 empty; selected = Weapon 1 (38=0); ability 1 (39=1).
+        const slots = fullInventory({ 9: 0, 10: -1, 38: 0, 39: 1 });
+        return buildModel(
+            creResult({
+                memSpells: 0,
+                items: 2,
+                slots,
+                meminfos: [],
+                itemNames: ["SW1H01", "BOW03"],
+                realSlotLabels: true,
+            }),
+        );
+    }
+    it("selected weapon is a dropdown labelled with the item each weapon slot holds", () => {
+        const m = weaponModel();
+        const row = projectRow(m, findGroupNodeField(m, "Item Slots", "Selected weapon"), getRelationshipModel("cre"));
+        expect(row.valueType).toBe("enum");
+        expect(row.enumOptions).toEqual({
+            "0": "0 SW1H01",
+            "1": "1 None",
+            "2": "2 None",
+            "3": "3 None",
+            "1000": "1000 Fist",
+        });
+    });
+    it("selected weapon ability is a fixed-range dropdown", () => {
+        const m = weaponModel();
+        const row = projectRow(
+            m,
+            findGroupNodeField(m, "Item Slots", "Selected weapon ability"),
+            getRelationshipModel("cre"),
+        );
+        expect(row.valueType).toBe("enum");
+        expect(row.enumOptions).toEqual({ "0": "Ability 0", "1": "Ability 1", "2": "Ability 2" });
     });
 });
 

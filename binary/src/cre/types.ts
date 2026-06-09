@@ -387,3 +387,16 @@ export const CRE_ITEM_SLOT_LABELS = [
     "Selected weapon",
     "Selected weapon ability",
 ] as const;
+
+/**
+ * Valid values for the "Selected weapon" slot (entry 38). Per IESDP cre_v1.htm: the value is the slots.ids
+ * index minus 35, and the four weapon slots begin at slots.ids index 35 - so 0-3 select Weapon 1-4, and the
+ * special value 1000 means fists (no weapon equipped). A fixed engine enum, not an item-table reference.
+ */
+export const CRE_SELECTED_WEAPON_OPTIONS: Readonly<Record<string, string>> = {
+    "0": "Weapon 1",
+    "1": "Weapon 2",
+    "2": "Weapon 3",
+    "3": "Weapon 4",
+    "1000": "Fist",
+};

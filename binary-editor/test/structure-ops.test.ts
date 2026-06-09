@@ -3,6 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { openSession, sessionStore, type EditorSession } from "../src/session";
 import { structureOp, undo, redo } from "../src/structure-ops";
+import { buildLayout } from "../src/layout";
 import type { FlatNode } from "../src/model";
 
 const MAP_FIXTURE = path.resolve(__dirname, "../../client/testFixture/maps/arcaves.map");
@@ -42,6 +43,24 @@ function globalValues(session: EditorSession): number[] {
     const gv = globalVarsNode(session);
     return varChildren(session, gv.id).map((n) => (n.source as { value: number }).value);
 }
+
+describe("structureOp refreshes form/layout fields", () => {
+    // A structure op rebuilds the model, so the webview's resolved layout-field snapshot (which renders the
+    // form/grid blocks, incl. document-derived dropdowns like CRE item slots / selected weapon) must be
+    // re-sent. The tree window alone covers only the list/tree blocks - with nothing expanded it carries the
+    // depth-0 groups, not the form fields - so without this the dropdowns kept stale options/values after a
+    // move/remove/add. Mechanism guard (the CRE-specific dropdown refresh is covered in cre-structure-ops).
+    it("includes the layout fields in the structure-op changeSet", () => {
+        const session = open();
+        const layoutFields = buildLayout(session.parserId, session.model, session.relationshipModel).layout?.fields;
+        const sampleId = Object.values(layoutFields ?? {})[0]?.id;
+        expect(sampleId, "MAP layout resolves at least one form field").toBeDefined();
+        const result = structureOp(session, { op: "add", sectionId: globalVarsNode(session).id });
+        // The sampled form field is under a collapsed group, so the tree window does not carry it; it only
+        // appears in `changed` because the structure op re-projects the layout fields.
+        expect(result.changeSet.changed.some((r) => r.id === sampleId)).toBe(true);
+    });
+});
 
 describe("structureOp add", () => {
     it("adds a Global Variable and grows the collection by one", () => {

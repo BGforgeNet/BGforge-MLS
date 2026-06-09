@@ -1,20 +1,45 @@
 import { formatAdapterRegistry } from "@bgforge/binary";
-import type { Model } from "../model";
-import type { RelationshipModel } from "./types";
+import type { FlatNode, Model } from "../model";
+import type { NodeId } from "../types";
+import type { FieldOverride, RelationshipModel } from "./types";
 import { ieEffectsFieldOverride, ieEffectsDependents, ieEffectsProbabilityConstraint } from "./ie-effects";
-import { crossRefDiagnostics } from "./cross-record";
+import { crossRefDiagnostics, crossRefDependents, crossRefFieldOverride } from "./cross-record";
+import { creWeaponFieldOverride, creWeaponDependents } from "./cre-weapons";
+
+/** An optional format-specific overlay composed AHEAD of the generic ones (its override wins; its dependents
+ *  are added). Used for CRE's selected-weapon / ability dropdowns, which are neither IE effects nor index refs. */
+interface ExtraOverlay {
+    fieldOverride: (model: Model, node: FlatNode) => FieldOverride | undefined;
+    dependents: (model: Model, node: FlatNode) => NodeId[];
+}
 
 /** Build an IE relationship model: the shared opcode/parameter field overlay + probability check, plus the
- *  format's declarative cross-record relationships (resolved from its `@bgforge/binary` adapter). */
-function ieModel(formatId: string): RelationshipModel {
+ *  format's declarative cross-record relationships (resolved from its `@bgforge/binary` adapter). A format
+ *  with an index relationship that names a target label (CRE Item Slots -> Items) also overlays a named-item
+ *  dropdown on those slots, falling back to the shared IE overlay for every other field. An optional `extra`
+ *  overlay is tried first (CRE weapon dropdowns). */
+function ieModel(formatId: string, extra?: ExtraOverlay): RelationshipModel {
+    const rels = formatAdapterRegistry.get(formatId)?.crossRefRelationships ?? [];
+    const hasIndexDropdown = rels.some((r) => r.kind === "index" && r.targetLabelField !== undefined);
+    const baseOverride = hasIndexDropdown
+        ? (model: Model, node: FlatNode) =>
+              crossRefFieldOverride(model, node, rels) ?? ieEffectsFieldOverride(model, node)
+        : ieEffectsFieldOverride;
+    const baseDependents = hasIndexDropdown
+        ? (model: Model, node: FlatNode) => [
+              ...crossRefDependents(model, node, rels),
+              ...ieEffectsDependents(model, node),
+          ]
+        : ieEffectsDependents;
     return {
         formatId,
-        fieldOverride: ieEffectsFieldOverride,
-        dependents: ieEffectsDependents,
-        constraints: (model: Model) => [
-            ...ieEffectsProbabilityConstraint(model),
-            ...crossRefDiagnostics(model, formatAdapterRegistry.get(formatId)?.crossRefRelationships ?? []),
-        ],
+        fieldOverride: extra
+            ? (model: Model, node: FlatNode) => extra.fieldOverride(model, node) ?? baseOverride(model, node)
+            : baseOverride,
+        dependents: extra
+            ? (model: Model, node: FlatNode) => [...extra.dependents(model, node), ...baseDependents(model, node)]
+            : baseDependents,
+        constraints: (model: Model) => [...ieEffectsProbabilityConstraint(model), ...crossRefDiagnostics(model, rels)],
     };
 }
 
@@ -23,7 +48,7 @@ const registry = new Map<string, RelationshipModel>([
     ["itm", ieModel("itm")],
     ["spl", ieModel("spl")],
     ["eff", ieModel("eff")],
-    ["cre", ieModel("cre")],
+    ["cre", ieModel("cre", { fieldOverride: creWeaponFieldOverride, dependents: creWeaponDependents })],
 ]);
 
 export function getRelationshipModel(formatId: string): RelationshipModel | undefined {

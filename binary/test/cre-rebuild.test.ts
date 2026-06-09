@@ -27,7 +27,7 @@ import { creMemorizedSpellSpecAnnotated } from "../src/cre/specs/memorized-spell
 import { creSpellMemInfoSpecAnnotated } from "../src/cre/specs/spell-mem-info.overrides";
 import { effBodySpecAnnotated } from "../src/eff/specs/body.overrides";
 import { EFF_SIGNATURE, EFF_VERSION_V2 } from "../src/eff/types";
-import { CRE_SIGNATURE, CRE_VERSION_V1, CRE_ITEM_SLOT_COUNT } from "../src/cre/types";
+import { CRE_SIGNATURE, CRE_VERSION_V1, CRE_ITEM_SLOT_COUNT, CRE_GROUP_LABELS } from "../src/cre/types";
 import { walkStruct } from "../src/spec/walk-display";
 import { structFromDisplayFull } from "../src/ie-common/rebuild-ability-effects";
 import { isArraySpec, isCharsSpec, type FieldSpec } from "../src/spec/types";
@@ -197,6 +197,37 @@ describe("CRE per-struct walkStruct -> structFromDisplayFull round-trip", () => 
 // ---------------------------------------------------------------------------
 // 2. Format-level byte round-trip: both effect versions
 // ---------------------------------------------------------------------------
+
+describe("CRE display tree - Selected weapon is emitted as the engine weapon-slot enum", () => {
+    // Real-producer, end-to-end guard. The editor renders a dropdown ONLY when the PARSED field carries
+    // type:"enum" + enumOptions (projectRow uses field.type as the control's valueType and copies
+    // field.enumOptions). Asserting resolveFieldPresentation in isolation passed while creParser still emitted
+    // a plain int16 slot field - dead feature, green test. So this drives creParser.parse on real bytes and
+    // checks the exact field the editor reads.
+    it("the parsed Selected weapon field is an enum with the weapon-slot options", () => {
+        const rawDoc = buildMinimalCreDoc({ kind: "v1", records: [buildZeroEffV1()] });
+        (rawDoc.itemSlots as number[])[38] = 0; // 0 = Weapon 1 selected
+        const doc = parseWithSchemaValidation(creCanonicalDocumentSchemaPermissive, rawDoc, "minimal CRE v1 doc");
+        const parsed = creParser.parse(new Uint8Array(serializeCreCanonicalDocument(doc)));
+        expect(parsed.errors).toBeUndefined();
+
+        const slots = parsed.root.fields.find(
+            (e): e is ParsedGroup => "fields" in e && e.name === CRE_GROUP_LABELS.itemSlots,
+        );
+        const slotName = (n: string) => slots?.fields.find((e): e is ParsedField => !("fields" in e) && e.name === n);
+        const selected = slotName("Selected weapon");
+        expect(selected?.type).toBe("enum");
+        expect(selected?.rawValue).toBe(0);
+        expect(selected?.value).toBe("Weapon 1");
+        expect(selected?.enumOptions).toMatchObject({ "0": "Weapon 1", "1000": "Fist" });
+
+        // Producer-label guard: the editor's CRE weapon dropdowns (binary-editor/relationship/cre-weapons.ts)
+        // match these slot fields BY NAME, and the cross-record test fixture mirrors them. Assert the real
+        // parser emits exactly these labels so the editor-side name-matching cannot silently drift.
+        expect(slotName("Weapon 1"), "Weapon 1 slot label").toBeDefined();
+        expect(slotName("Selected weapon ability"), "Selected weapon ability slot label").toBeDefined();
+    });
+});
 
 describe("CRE rebuild - byte round-trip", () => {
     it("v2 effects: rebuild -> serialize produces the same bytes as eager -> serialize", () => {

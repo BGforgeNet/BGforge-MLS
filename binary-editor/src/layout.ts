@@ -8,6 +8,7 @@ import {
 } from "@bgforge/binary";
 import type { Model } from "./model";
 import { projectRow } from "./window";
+import type { RelationshipModel } from "./relationship/types";
 import type { LayoutDescriptor, LayoutSection, ResolvedLayout, ResolvedTab, Row } from "./types";
 
 /**
@@ -22,7 +23,12 @@ import type { LayoutDescriptor, LayoutSection, ResolvedLayout, ResolvedTab, Row 
  * The whole field set is resolved up front (not just referenced keys): the layout formats are small
  * and form-only, so this avoids a per-ref lookup pass and keeps the renderer a pure data consumer.
  */
-export function resolveLayout(formatId: string, layout: FormatLayout, model: Model): ResolvedLayout | undefined {
+export function resolveLayout(
+    formatId: string,
+    layout: FormatLayout,
+    model: Model,
+    rel?: RelationshipModel,
+): ResolvedLayout | undefined {
     const variantId = model.parseResult.variantId;
     const variant = variantId === undefined ? undefined : layout.variants[variantId];
     if (variantId === undefined || !variant) return undefined;
@@ -34,7 +40,9 @@ export function resolveLayout(formatId: string, layout: FormatLayout, model: Mod
         // First write wins: a semantic key is the field's stable identity, and the model lists each
         // field once, so collisions would only arise from a malformed duplicate - keep the first.
         if (key !== undefined && !(key in fields)) {
-            const row = projectRow(model, node);
+            // Thread the relationship model so a field overlay (e.g. the CRE item-slot dropdown) reaches
+            // layout/form fields too - not just list-block rows projected via getWindow/getChildren.
+            const row = projectRow(model, node, rel);
             // Display-label override (layout.labels) is applied here, AFTER identity is computed from the
             // stable parse name - so renaming for display never changes the semantic key a ref resolves by.
             const labelOverride = layout.labels?.[key];
@@ -101,8 +109,8 @@ export function resolveLayout(formatId: string, layout: FormatLayout, model: Mod
  * parsed file always resolves one; an error result (no model variant) yields a layout-less descriptor and
  * the webview shows the error banner instead. The legacy depth-0-groups-as-tabs path has been retired.
  */
-export function buildLayout(formatId: string, model: Model): LayoutDescriptor {
+export function buildLayout(formatId: string, model: Model, rel?: RelationshipModel): LayoutDescriptor {
     const adapter = formatAdapterRegistry.get(formatId);
-    const layout = adapter?.layout ? resolveLayout(formatId, adapter.layout, model) : undefined;
+    const layout = adapter?.layout ? resolveLayout(formatId, adapter.layout, model, rel) : undefined;
     return { formatId, layout };
 }
