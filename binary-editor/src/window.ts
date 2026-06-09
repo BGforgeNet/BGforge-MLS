@@ -1,4 +1,4 @@
-import type { ParsedField, ParsedGroup } from "@bgforge/binary";
+import { type ParsedField, type ParsedGroup, toSemanticFieldKey } from "@bgforge/binary";
 import { type FlatNode, type Model, visibleNodes } from "./model";
 import type { RelationshipModel } from "./relationship/types";
 import type { NodeId, Row } from "./types";
@@ -62,6 +62,10 @@ export function projectRow(
     if (field.flagOptions !== undefined) base.flagOptions = field.flagOptions;
     if (field.searchableEnum === true) base.searchableEnum = true;
     if (field.numericFormat !== undefined) base.numericFormat = field.numericFormat;
+    // Semantic key (stable, index-collapsed) lets a list entry's detail pane key its child rows for a shared
+    // layout fragment. Computed for fields only; undefined when the format/segments don't resolve to a key.
+    const semanticKey = toSemanticFieldKey(model.parseResult.format, node.sourceSegments);
+    if (semanticKey !== undefined) base.semanticKey = semanticKey;
     // Apply relationship-model overlay last so it can rename/redescribe/re-type a field
     // without touching the underlying ParsedField or the canonical document bytes.
     if (rel !== undefined) {

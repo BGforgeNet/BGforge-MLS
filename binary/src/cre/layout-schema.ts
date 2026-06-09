@@ -24,6 +24,13 @@
  */
 
 import { formatLayoutSchema, type FormatLayout } from "../layout-schema-types";
+import { effV2BodyLabels, effV2BodyRows } from "./../eff/effect-body-layout";
+
+// CRE embeds an effect record per `effStructureVersion`; v2 effects are byte-identical to a standalone `.eff`,
+// so the Effects master-detail pane renders the SAME shared fragment (at the per-entry `cre.effects[].v2.`
+// prefix) instead of a generic auto-form. v1 effects lack the v2 fields, so the fragment's refs won't all
+// resolve and the editor falls back to the auto-form until a v1 fragment lands.
+const CRE_EFFECTS_PREFIX = "cre.effects[].v2";
 
 const k = (key: string): string => `cre.header.${key}`;
 const slot = (key: string): string => `cre.itemSlots.${key}`;
@@ -115,6 +122,8 @@ const creLabels: Record<string, string> = {
     // active/original packed keys need no separate display-label overrides.
     // objectRefs (OBJECT.IDS references) are intentionally not surfaced in the layout (see the Proficiencies
     // tab note), so they get no display labels here.
+    // Embedded v2 effect labels, shared with the standalone `.eff` layout so the detail pane reads identically.
+    ...effV2BodyLabels(CRE_EFFECTS_PREFIX),
 };
 
 export const creLayout: FormatLayout = formatLayoutSchema.parse({
@@ -651,6 +660,8 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                                             render: "master-detail",
                                             canAdd: true,
                                             canModify: true,
+                                            // Shared with standalone `.eff`: a CRE v2 effect renders the same panels.
+                                            detailVariant: effV2BodyRows(CRE_EFFECTS_PREFIX),
                                         },
                                     ],
                                 },

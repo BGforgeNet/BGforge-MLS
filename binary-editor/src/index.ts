@@ -13,7 +13,11 @@ export type {
     OpenResult,
 } from "./types";
 
+export type { LayoutSection, ResolvedLayout, ResolvedTab } from "./types";
+export type { DetailBlock, DetailPanel, DetailRow, FieldRef, LayoutRow } from "@bgforge/binary";
+
 export { dispatch } from "./protocol";
 export type { Request, Response } from "./protocol";
 export type { StructureOpRequest } from "./structure-ops";
 export { openSession, closeSession } from "./session";
+export { buildDetailFieldMap, detailVariantRefs, detailVariantResolves } from "./detail-layout";

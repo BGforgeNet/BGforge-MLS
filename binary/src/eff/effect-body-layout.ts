@@ -6,15 +6,17 @@
  * uniform-shared-layout principle. The genuinely-different 48-byte EFF v1 body has its own fragment.
  */
 
-import type { LayoutRow } from "../layout-schema-types";
+import type { DetailRow } from "../layout-schema-types";
 
 /** Field ref for an EFF v2 body field under a given semantic-key prefix. */
 const refAt = (prefix: string, key: string): string => `${prefix}.${key}`;
 
 /** The EFF v2 body panels (Effect / Dice & Save / Parameters / Resources / Classification / Caster & Projectile
- *  / Resistance), emitted for any field-ref prefix. Signature/version magic and reserved padding are omitted
- *  (constants, not user data); the serializer rebuilds them from the model. */
-export function effV2BodyRows(prefix: string): LayoutRow[] {
+ *  / Resistance), emitted for any field-ref prefix. Returns detail rows (no `list`/`raw` blocks) so the same
+ *  fragment serves both as the standalone EFF variant's rows and as a master-detail list's `detailVariant`
+ *  (CRE-embedded v2 effects). Signature/version magic and reserved padding are omitted (constants, not user
+ *  data); the serializer rebuilds them from the model. */
+export function effV2BodyRows(prefix: string): DetailRow[] {
     const k = (key: string): string => refAt(prefix, key);
     return [
         {

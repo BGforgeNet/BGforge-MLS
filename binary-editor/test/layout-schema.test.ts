@@ -100,6 +100,84 @@ describe("formatLayoutSchema (zod validation)", () => {
             }),
         ).toThrow();
     });
+
+    it("accepts a master-detail list block with a detailVariant of detail rows", () => {
+        expect(() =>
+            formatLayoutSchema.parse({
+                schemaVersion: 1,
+                format: "cre",
+                variants: {
+                    v: {
+                        rows: [
+                            {
+                                panels: [
+                                    {
+                                        blocks: [
+                                            {
+                                                kind: "list",
+                                                sectionKey: "Effects",
+                                                render: "master-detail",
+                                                detailVariant: [
+                                                    {
+                                                        panels: [
+                                                            { blocks: [{ kind: "fields", fields: ["e.opcode"] }] },
+                                                        ],
+                                                    },
+                                                ],
+                                            },
+                                        ],
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                },
+            }),
+        ).not.toThrow();
+    });
+
+    it("rejects a detailVariant that nests another list block (a detail pane holds no sub-lists)", () => {
+        expect(() =>
+            formatLayoutSchema.parse({
+                schemaVersion: 1,
+                format: "cre",
+                variants: {
+                    v: {
+                        rows: [
+                            {
+                                panels: [
+                                    {
+                                        blocks: [
+                                            {
+                                                kind: "list",
+                                                sectionKey: "Effects",
+                                                render: "master-detail",
+                                                detailVariant: [
+                                                    {
+                                                        panels: [
+                                                            {
+                                                                blocks: [
+                                                                    {
+                                                                        kind: "list",
+                                                                        sectionKey: "Sub",
+                                                                        render: "inline",
+                                                                    },
+                                                                ],
+                                                            },
+                                                        ],
+                                                    },
+                                                ],
+                                            },
+                                        ],
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                },
+            }),
+        ).toThrow();
+    });
 });
 
 describe("resolveLayout", () => {

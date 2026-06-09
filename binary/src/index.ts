@@ -24,7 +24,12 @@ export type { CrossRefRelationship, IndexRefRelationship, SliceRefRelationship }
 
 // Declarative layout schema (per-format editor UI as data)
 export { formatLayoutSchema, variantRows } from "./layout-schema-types";
+// Shared layout fragment: the EFF v2 body, reused by standalone `.eff` and CRE-embedded v2 effects.
+export { effV2BodyLabels, effV2BodyRows } from "./eff/effect-body-layout";
 export type {
+    DetailBlock,
+    DetailPanel,
+    DetailRow,
     FieldRef,
     FormatLayout,
     LayoutBlock,

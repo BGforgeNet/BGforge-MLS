@@ -111,7 +111,8 @@
                                            fields={layout.fields} {onedit} showBytes={showOffsets} />
                             {:else if block.kind === "list"}
                                 <ListBlock sectionKey={block.sectionKey} section={layout.sections[block.sectionKey]}
-                                           render={block.render} {bridge} {version} {selection}
+                                           render={block.render} detailVariant={block.detailVariant} labels={layout.labels}
+                                           {bridge} {version} {selection}
                                            {onedit} {byNode} {showOffsets} />
                             {:else}
                                 <RawBlock />

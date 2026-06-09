@@ -303,17 +303,28 @@ check(
 await doUndo();
 
 // ============================================================
-// Effect detail: opcode renders as a searchable combobox (spec searchableEnum) in the list-detail form.
+// Effect detail: a CRE v2 effect renders through the SHARED EFF v2 fragment (the same LayoutRenderer panels
+// a standalone `.eff` uses), not a generic auto-form - so the detail pane shows `.layout-root` panels, and
+// opcode renders as a searchable combobox (spec searchableEnum).
 // ============================================================
 await selectRow(effectsPanel, 0);
-await effectsPanel.locator(".detail .form .field").first().waitFor({ timeout: 3000 });
+await effectsPanel.locator(".detail .layout-root .field").first().waitFor({ timeout: 3000 });
+// h3 titles render uppercased by CSS (innerText returns the transformed text); compare case-insensitively.
+const sharedPanels = (await effectsPanel.locator(".detail .layout-root .panel h3").allInnerTexts()).map((t) =>
+    t.toUpperCase(),
+);
+check(
+    "effects: v2 effect detail renders the shared EFF panels (Effect/Parameters/Resources/...)",
+    sharedPanels.includes("EFFECT") && sharedPanels.includes("PARAMETERS") && sharedPanels.includes("RESOURCES"),
+    JSON.stringify(sharedPanels),
+);
 const opcodeCombobox = await effectsPanel.locator(".detail .bb-combobox-input").count();
 check("effects: opcode detail field is a searchable combobox", opcodeCombobox >= 1, `count=${opcodeCombobox}`);
 
-// Reserved/padding fields (signature2, version2, unused1-7) carry the spec `hidden` flag, so the v2 effect
-// detail must NOT render them (edwin6 uses effStructureVersion 1 = EFF v2 body, which has all of them). They
-// stay in the model for the byte round-trip (asserted below) - only the form omits them.
-const effectDetailText = (await effectsPanel.locator(".detail .form").first().innerText()).toLowerCase();
+// Reserved/padding fields (signature2, version2, unused1-7) are not referenced by the shared fragment, so the
+// v2 effect detail must NOT render them (edwin6 uses effStructureVersion 1 = EFF v2 body, which has all of
+// them). They stay in the model for the byte round-trip (asserted below) - only the form omits them.
+const effectDetailText = (await effectsPanel.locator(".detail").first().innerText()).toLowerCase();
 const showsReserved = /signature|version\s*2|unused/.test(effectDetailText);
 check(
     "effects: reserved/padding fields are hidden from the detail form",
@@ -343,7 +354,7 @@ check(
 // ---- Screenshots ---- (shot-cre.png = the Identity tab, captured at load; here capture the Effects tab detail)
 await clickTab("Effects");
 await selectRow(effectsPanel, 0);
-await effectsPanel.locator(".detail .form .field").first().waitFor({ timeout: 3000 });
+await effectsPanel.locator(".detail .layout-root .field").first().waitFor({ timeout: 3000 });
 await page.screenshot({ path: path.join(here, "shot-cre-effects.png"), fullPage: true });
 
 await browser.close();

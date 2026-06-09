@@ -43,6 +43,10 @@ export interface Row {
     /** Numeric display format: `hex32` renders/edits as `0x...`. `rawValue` stays the stored number.
      *  (Signedness is the field codec's job, not a display format.) */
     numericFormat?: "hex32";
+    /** Semantic field key (`toSemanticFieldKey(format, sourceSegments)`) for field rows, e.g.
+     *  `cre.effects[].v2.opcode`. Lets a list entry's detail pane build a per-entry `FieldRef -> Row` map and
+     *  render through a shared layout fragment; undefined for groups and fields whose key does not resolve. */
+    semanticKey?: string;
 }
 
 export interface Diagnostic {
@@ -106,6 +110,9 @@ export interface ResolvedLayout {
     fields: Record<FieldRef, Row>;
     /** `list`-block sections (keyed by group name) with their model node id, structure-op caps, entry count. */
     sections: Record<string, LayoutSection>;
+    /** Raw display-label overrides (the schema's `labels`), passed through so a master-detail `detailVariant`
+     *  can apply them when building its per-entry field map (the global `fields` map only holds one entry). */
+    labels?: Record<FieldRef, string>;
 }
 
 export interface LayoutDescriptor {

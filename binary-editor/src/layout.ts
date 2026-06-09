@@ -101,6 +101,7 @@ export function resolveLayout(
         maxContentWidthPx: layout.maxContentWidthPx,
         fields,
         sections,
+        ...(layout.labels !== undefined && { labels: layout.labels }),
     };
 }
 

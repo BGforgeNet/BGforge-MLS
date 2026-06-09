@@ -107,11 +107,42 @@ const matrixBlockSchema = z.strictObject({
 });
 
 /**
+ * Blocks valid inside a list entry's detail layout: the scalar/flag/table block kinds, but NOT `list` (a
+ * detail pane never nests another variable-length section) or `raw`. A detail variant is the per-entry
+ * presentation a master-detail list applies to its SELECTED entry, so the same record renders identically
+ * whether it stands alone (its own format) or is embedded in a list (e.g. an EFF v2 effect, standalone or
+ * inside a CRE). Defined before `listBlockSchema` so the list block can reference detail rows without the
+ * full block union recursing back into `list`.
+ */
+const detailBlockSchema = z.discriminatedUnion("kind", [
+    fieldsBlockSchema,
+    fieldGroupBlockSchema,
+    flagsBlockSchema,
+    gridBlockSchema,
+    matrixBlockSchema,
+]);
+const detailPanelSchema = z.strictObject({
+    title: z.string().optional(),
+    blocks: z.array(detailBlockSchema).min(1),
+    widthPx: z.number().int().positive().optional(),
+    fit: z.boolean().optional(),
+    stack: z.boolean().optional(),
+});
+const detailRowSchema = z.strictObject({ panels: z.array(detailPanelSchema).min(1) });
+
+/**
  * A variable-length array section (ITM/CRE/MAP lists). Renders via the window/getChildren path keyed by
  * `sectionKey` (the depth-0 model group name). The structure-op affordances are declared here as data:
  * `canAdd` (the section toolbar offers "+ add") and `canModify` (per-entry insert/duplicate/move/remove).
  * These replace the former `BinaryFormatAdapter.isAddableArray`/`isModifiableArray` presentation predicates
  * (the adapter now holds only data concerns); the byte-builders still validate the arrayPath internally.
+ *
+ * `detailVariant` (master-detail only) declares the shared layout the SELECTED entry renders through - the
+ * same fragment its standalone format uses - instead of a generic auto-form. Its field refs resolve against
+ * a per-entry field map (the selected entry's subtree keyed by semantic field key), so a fragment authored
+ * once is reused verbatim. When the selected entry does not carry every field the variant references (e.g. a
+ * shorter record kind under a longer variant), the editor falls back to the auto-form rather than rendering a
+ * partial.
  */
 const listBlockSchema = z.strictObject({
     kind: z.literal("list"),
@@ -119,6 +150,7 @@ const listBlockSchema = z.strictObject({
     render: z.enum(["inline", "master-detail"]),
     canAdd: z.boolean().default(false),
     canModify: z.boolean().default(false),
+    detailVariant: z.array(detailRowSchema).min(1).optional(),
 });
 
 /** A hex/raw-bytes pane. Specified now; webview `RawBlock` is a stub (follow-up tier). */
@@ -221,6 +253,9 @@ export const formatLayoutSchema = z.strictObject({
 export type LayoutBlock = z.infer<typeof layoutBlockSchema>;
 export type LayoutPanel = z.infer<typeof layoutPanelSchema>;
 export type LayoutRow = z.infer<typeof layoutRowSchema>;
+export type DetailBlock = z.infer<typeof detailBlockSchema>;
+export type DetailPanel = z.infer<typeof detailPanelSchema>;
+export type DetailRow = z.infer<typeof detailRowSchema>;
 export type LayoutSubTab = z.infer<typeof layoutSubTabSchema>;
 export type LayoutTab = z.infer<typeof layoutTabSchema>;
 export type LayoutVariant = z.infer<typeof layoutVariantSchema>;

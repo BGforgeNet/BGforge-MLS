@@ -1,10 +1,10 @@
 <script lang="ts">
-    import type { Diagnostic, NodeId, Row } from "@bgforge/binary-editor";
+    import type { DetailRow, Diagnostic, NodeId, Row } from "@bgforge/binary-editor";
     import type { Bridge } from "../state/bridge";
     import { rowActions, type SectionCaps } from "../state/structure-actions";
     import { filterRows } from "../state/filter";
     import VirtualList from "./VirtualList.svelte";
-    import FormSection from "./FormSection.svelte";
+    import ListEntryDetail from "./ListEntryDetail.svelte";
     import RowActions from "./RowActions.svelte";
     import Icon from "./Icon.svelte";
 
@@ -12,11 +12,13 @@
     // detail pane unselected; safe for ITM abilities/effects (typically <10) but revisit if any list section can exceed it.
     const SELECTION_RESOLVE_SCAN_LIMIT = 256;
 
-    const { nodeId, caps, bridge, version, selection, onadd, onedit, byNode, showOffsets = false }:
+    const { nodeId, caps, bridge, version, selection, onadd, onedit, byNode, showOffsets = false,
+            detailVariant, labels }:
         { nodeId: NodeId; caps: SectionCaps; bridge: Bridge;
           version: number; selection: NodeId | undefined;
           onadd: () => void; onedit: (id: string, v: number | string) => void;
-          byNode: Map<string, Diagnostic[]>; showOffsets?: boolean } = $props();
+          byNode: Map<string, Diagnostic[]>; showOffsets?: boolean;
+          detailVariant?: DetailRow[]; labels?: Record<string, string> } = $props();
 
     // eslint-disable-next-line prefer-const -- reassigned via onselect callback
     let selected = $state<Row | undefined>();
@@ -139,7 +141,7 @@
                 {@const acts = rowActions(selectedIndex, total, caps)}
                 <RowActions {acts} entryId={selected.id} {bridge} />
             {/if}
-            <FormSection nodeId={selected.id} {bridge} {version} {onedit} {byNode} {showOffsets} />
+            <ListEntryDetail nodeId={selected.id} {detailVariant} {labels} {bridge} {version} {onedit} {byNode} {showOffsets} />
         {:else}
             <p class="placeholder">Select an entry.</p>
         {/if}
