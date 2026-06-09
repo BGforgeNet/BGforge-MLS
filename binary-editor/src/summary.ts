@@ -15,6 +15,7 @@
 
 import type { FlatNode, Model } from "./model";
 import type { RelationshipModel } from "./relationship/types";
+import { enumSelectedLabel } from "../../shared/enum-label";
 import { projectRow } from "./window";
 
 /** Computes a one-line display summary for a list-section group entry. */
@@ -117,8 +118,10 @@ function findSpec(node: FlatNode, model: Model, specs: readonly SectionSummarySp
 }
 
 /**
- * Project a named child field of `node` and return its displayValue.
- * Returns undefined when the field is absent (robust fallback path).
+ * Project a named child field of `node` and return its summary text.
+ * An enum field is value-prefixed ("<value> <name>") so the list entry reads the same way as its dropdown
+ * (the opcode/form/attack-type names the user picks from); a non-enum field (a resref string, a raw number)
+ * keeps its plain displayValue. Returns undefined when the field is absent (robust fallback path).
  */
 function resolveFieldSummary(
     node: FlatNode,
@@ -130,7 +133,11 @@ function resolveFieldSummary(
     for (const idx of childIndices) {
         const child = model.nodes[idx];
         if (child?.kind === "field" && child.name === fieldName) {
-            return projectRow(model, child, rel).displayValue;
+            const row = projectRow(model, child, rel);
+            if (row.valueType === "enum" && typeof row.rawValue === "number") {
+                return enumSelectedLabel(row.rawValue, row.enumOptions);
+            }
+            return row.displayValue;
         }
     }
     return undefined;

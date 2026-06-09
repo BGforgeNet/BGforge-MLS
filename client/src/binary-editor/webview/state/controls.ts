@@ -1,4 +1,8 @@
 import type { Row } from "@bgforge/binary-editor";
+// Import the pure label helpers from `shared/` directly, NOT through the @bgforge/binary-editor barrel: the
+// barrel re-exports the core (openSession etc.), which transitively pulls Node built-ins (fs/path) and breaks
+// the browser webview bundle. The webview must only ever import the package's TYPES, never its runtime.
+import { enumValueLabel, enumSelectedLabel } from "../../../../../shared/enum-label";
 
 export type ControlKind = "number" | "string" | "enum" | "flags";
 
@@ -17,29 +21,18 @@ export interface EnumOption {
     label: string;
 }
 
-// An enum option's display label. Value-prefixed ("<value> <name>") so a dropdown reads against the raw byte
-// uniformly across formats (an opcode, an object type, an item-slot index) - EXCEPT when the name already
-// carries that value as a whitespace-delimited token, where the prefix would only show the number twice
-// (MapElevation names ARE the elevation number, "0" -> "0" not "0 0"; CRE "Ability 0" embeds the index -> "0"
-// not "0 Ability 0"). The token test is exact, so a value embedded in a larger token does not count (value 1
-// vs "BOW03" -> "1 BOW03"). A blank name renders as just the value.
-function enumOptionLabel(value: number, name: string): string {
-    const v = String(value);
-    if (!name || name.split(/\s+/).includes(v)) return v;
-    return `${v} ${name}`;
-}
-
 export function enumOptionList(row: Row): EnumOption[] {
-    // The option maps carry bare names; enumOptionLabel adds the value prefix here, the single point every enum
-    // control renders through - so the synthetic out-of-range option below follows the same form, and no map
-    // hand-bakes it.
+    // The option maps carry bare names; enumValueLabel (shared with the list-entry summary composer) adds the
+    // value prefix here, the single point every enum control renders through - so the synthetic out-of-range
+    // option below follows the same form, and no map hand-bakes it.
     const opts = Object.entries(row.enumOptions ?? {}).map(([k, label]) => {
         const value = Number(k);
-        return { value, label: enumOptionLabel(value, label) };
+        return { value, label: enumValueLabel(value, label) };
     });
     const raw = typeof row.rawValue === "number" ? row.rawValue : Number(row.rawValue);
     if (Number.isFinite(raw) && !opts.some((o) => o.value === raw)) {
-        opts.push({ value: raw, label: enumOptionLabel(raw, "Unknown") });
+        // Out of range: enumSelectedLabel falls back to "0 Unknown" (raw is absent from enumOptions here).
+        opts.push({ value: raw, label: enumSelectedLabel(raw, row.enumOptions) });
     }
     return opts.sort((a, b) => a.value - b.value);
 }

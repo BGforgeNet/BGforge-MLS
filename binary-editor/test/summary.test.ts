@@ -14,8 +14,10 @@ import { openSession, sessionStore } from "../src/session";
 import { projectRow } from "../src/window";
 import { getRelationshipModel } from "../src/relationship/registry";
 import { summaryComposerFor } from "../src/summary";
+import { enumSelectedLabel } from "../../shared/enum-label";
 import type { FlatNode, Model } from "../src/model";
 import type { RelationshipModel } from "../src/relationship/types";
+import type { Row } from "../src/types";
 
 // ---------------------------------------------------------------------------
 // Fixture paths
@@ -98,17 +100,28 @@ function firstEntryIn(model: Model, sectionName: string): FlatNode | undefined {
     return kidIndices.map((i) => model.nodes[i]!).find((n) => n.kind === "group");
 }
 
-/** Project a named child field of a group node and return its displayValue. */
-function projectChild(
+/** Project a named child field of a group node and return its full projected row. */
+function projectChildRow(
     model: Model,
     groupNode: FlatNode,
     fieldName: string,
     rel: RelationshipModel | undefined,
-): string | undefined {
+): Row | undefined {
     const childIndices = model.childrenByParent.get(groupNode.id) ?? [];
     const child = childIndices.map((i) => model.nodes[i]!).find((n) => n.kind === "field" && n.name === fieldName);
     if (!child) return undefined;
-    return projectRow(model, child, rel).displayValue;
+    return projectRow(model, child, rel);
+}
+
+/** The summary the composer must produce for a projected key field: an enum value reads value-prefixed
+ *  ("<value> <name>"), reconstructed from the option map exactly as the dropdown's selected label is, so the
+ *  list entry matches its dropdown; a non-enum field (a resref string, a raw number) shows its plain
+ *  displayValue. */
+function expectedSummary(row: Row): string {
+    if (row.valueType === "enum" && typeof row.rawValue === "number") {
+        return enumSelectedLabel(row.rawValue, row.enumOptions);
+    }
+    return row.displayValue ?? "";
 }
 
 // ---------------------------------------------------------------------------
@@ -123,14 +136,19 @@ describe("summaryComposerFor spl - effects", () => {
         const effectEntry = firstEntryIn(model, "Effects");
         if (!effectEntry) throw new Error("no effect entry in SPL fixture");
 
-        // Expected: same value the composer must return, derived from the real producer.
-        const expected = projectChild(model, effectEntry, "Opcode", rel);
-        expect(expected).toBeDefined();
-        expect(expected!.length).toBeGreaterThan(0);
+        // The opcode is an enum, so the summary is value-prefixed to match the dropdown ("<opcode> <name>").
+        const row = projectChildRow(model, effectEntry, "Opcode", rel);
+        expect(row).toBeDefined();
+        expect(row!.valueType).toBe("enum");
+        expect(typeof row!.rawValue).toBe("number");
 
         const composer = summaryComposerFor("spl");
         expect(composer).toBeDefined();
-        expect(composer!(effectEntry, model, rel)).toBe(expected);
+        const summary = composer!(effectEntry, model, rel);
+        // Concrete shape: a number, a space, then the opcode name.
+        expect(summary).toMatch(/^\d+ \S/);
+        expect(summary).toContain(String(row!.displayValue));
+        expect(summary).toBe(expectedSummary(row!));
     });
 
     it("returns undefined for an unknown format", () => {
@@ -150,14 +168,18 @@ describe("summaryComposerFor spl - abilities", () => {
         const abilityEntry = firstEntryIn(model, "Abilities");
         if (!abilityEntry) throw new Error("no ability entry in SPL fixture");
 
-        // Expected: the Form field's displayValue (e.g. "Standard").
-        const expected = projectChild(model, abilityEntry, "Form", rel);
-        expect(expected).toBeDefined();
-        expect(expected!.length).toBeGreaterThan(0);
+        // The Form field is an enum (e.g. "Standard"), so the summary is value-prefixed.
+        const row = projectChildRow(model, abilityEntry, "Form", rel);
+        expect(row).toBeDefined();
 
         const composer = summaryComposerFor("spl");
         expect(composer).toBeDefined();
-        expect(composer!(abilityEntry, model, rel)).toBe(expected);
+        const summary = composer!(abilityEntry, model, rel);
+        expect(summary).toMatch(/^-?\d+ \S/); // "<value> <name>"
+        // Reconstructed from the option map, so an out-of-range value reads "0 Unknown" - never the parser's
+        // raw "Unknown (0)" displayValue with its redundant parenthesized number.
+        expect(summary).not.toContain("Unknown (");
+        expect(summary).toBe(expectedSummary(row!));
     });
 });
 
@@ -173,12 +195,12 @@ describe("summaryComposerFor itm - effects", () => {
         const effectEntry = firstEntryIn(model, "Effects");
         if (!effectEntry) throw new Error("no effect entry in ITM fixture");
 
-        const expected = projectChild(model, effectEntry, "Opcode", rel);
-        expect(expected).toBeDefined();
+        const row = projectChildRow(model, effectEntry, "Opcode", rel);
+        expect(row).toBeDefined();
 
         const composer = summaryComposerFor("itm");
         expect(composer).toBeDefined();
-        expect(composer!(effectEntry, model, rel)).toBe(expected);
+        expect(composer!(effectEntry, model, rel)).toBe(expectedSummary(row!));
     });
 });
 
@@ -194,13 +216,13 @@ describe("summaryComposerFor itm - abilities", () => {
         const abilityEntry = firstEntryIn(model, "Abilities");
         if (!abilityEntry) throw new Error("no ability entry in ITM fixture");
 
-        const expected = projectChild(model, abilityEntry, "Attack Type", rel);
-        expect(expected).toBeDefined();
-        expect(expected!.length).toBeGreaterThan(0);
+        // Attack Type is an enum (e.g. "Melee"), so the summary is value-prefixed.
+        const row = projectChildRow(model, abilityEntry, "Attack Type", rel);
+        expect(row).toBeDefined();
 
         const composer = summaryComposerFor("itm");
         expect(composer).toBeDefined();
-        expect(composer!(abilityEntry, model, rel)).toBe(expected);
+        expect(composer!(abilityEntry, model, rel)).toBe(expectedSummary(row!));
     });
 });
 
@@ -209,28 +231,36 @@ describe("summaryComposerFor itm - abilities", () => {
 // ---------------------------------------------------------------------------
 
 describe("summaryComposerFor cre", () => {
-    const cases: ReadonlyArray<{ section: string; field: string }> = [
-        { section: "Known Spells", field: "Spell" },
-        { section: "Memorized Spells", field: "Spell" },
-        { section: "Spell Memorization Info", field: "Spell Type" },
-        { section: "Effects", field: "Opcode" },
-        { section: "Items", field: "Item" },
+    // `enum` marks the key field whose value is a named code (value-prefixed in the summary); the resref
+    // string fields (Spell, Item) carry no numeric identity and show their plain displayValue.
+    const cases: ReadonlyArray<{ section: string; field: string; enum: boolean }> = [
+        { section: "Known Spells", field: "Spell", enum: false },
+        { section: "Memorized Spells", field: "Spell", enum: false },
+        { section: "Spell Memorization Info", field: "Spell Type", enum: true },
+        { section: "Effects", field: "Opcode", enum: true },
+        { section: "Items", field: "Item", enum: false },
     ];
 
-    for (const { section, field } of cases) {
-        it(`returns the projected ${field} displayValue for a ${section} entry`, () => {
+    for (const { section, field, enum: isEnum } of cases) {
+        it(`summarizes a ${section} entry by its ${field}${isEnum ? " (value-prefixed)" : ""}`, () => {
             if (!creFixturePresent()) return;
             const { model, rel } = openCreSession();
 
             const entry = firstEntryIn(model, section);
             if (!entry) throw new Error(`no ${section} entry in CRE fixture`);
 
-            const expected = projectChild(model, entry, field, rel);
-            expect(expected).toBeDefined();
+            const row = projectChildRow(model, entry, field, rel);
+            expect(row).toBeDefined();
+            const summary = summaryComposerFor("cre")!(entry, model, rel);
 
-            const composer = summaryComposerFor("cre");
-            expect(composer).toBeDefined();
-            expect(composer!(entry, model, rel)).toBe(expected);
+            if (isEnum) {
+                expect(row!.valueType).toBe("enum");
+                expect(summary).toMatch(/^-?\d+ \S/); // "<value> <name>"
+            } else {
+                // A resref string is shown as-is, with no numeric prefix.
+                expect(summary).toBe(row!.displayValue);
+            }
+            expect(summary).toBe(expectedSummary(row!));
         });
     }
 });

@@ -14,6 +14,7 @@ import { describe, expect, it } from "vitest";
 import { dispatch } from "../src/protocol";
 import { projectRow } from "../src/window";
 import { sessionStore } from "../src/session";
+import { enumSelectedLabel } from "../../shared/enum-label";
 import type { Row } from "../src/types";
 
 // ---------------------------------------------------------------------------
@@ -72,7 +73,10 @@ function firstEntryViaProtocol(sessionId: string, sectionName: string): Row | un
 /**
  * Derive the expected summary for an entry row by projecting the named child
  * field directly from the model + rel - the same path the composer takes.
- * This avoids hard-coding the string while still pinning to the real producer.
+ * An enum value is value-prefixed (reconstructed from the option map, exactly
+ * as the dropdown's selected label), matching the composer; a non-enum field
+ * shows its plain displayValue. This avoids hard-coding the string while still
+ * pinning to the real producer.
  */
 function expectedSummary(sessionId: string, entryRow: Row, fieldName: string): string | undefined {
     const session = sessionStore.get(sessionId);
@@ -81,7 +85,11 @@ function expectedSummary(sessionId: string, entryRow: Row, fieldName: string): s
     const childIndices = model.childrenByParent.get(entryRow.id) ?? [];
     const child = childIndices.map((i) => model.nodes[i]!).find((n) => n.kind === "field" && n.name === fieldName);
     if (!child) return undefined;
-    return projectRow(model, child, rel).displayValue;
+    const row = projectRow(model, child, rel);
+    if (row.valueType === "enum" && typeof row.rawValue === "number") {
+        return enumSelectedLabel(row.rawValue, row.enumOptions);
+    }
+    return row.displayValue;
 }
 
 // ---------------------------------------------------------------------------
@@ -89,7 +97,7 @@ function expectedSummary(sessionId: string, entryRow: Row, fieldName: string): s
 // ---------------------------------------------------------------------------
 
 describe("session getChildren summary - SPL effects", () => {
-    it("carries the Opcode displayValue as summary on each effect entry row", () => {
+    it("carries the value-prefixed Opcode as summary on each effect entry row", () => {
         if (!splPresent()) return;
         const sid = protocolOpen(SPL_FIXTURE, "file:///session-summary-spl.spl");
         const entry = firstEntryViaProtocol(sid, "Effects");
@@ -97,8 +105,8 @@ describe("session getChildren summary - SPL effects", () => {
 
         const expected = expectedSummary(sid, entry, "Opcode");
         expect(expected).toBeDefined();
-        expect(expected!.length).toBeGreaterThan(0);
-
+        // The opcode is an enum, so the summary reads "<opcode> <name>".
+        expect(entry.summary).toMatch(/^-?\d+ \S/);
         // The row returned by getChildren must carry the same value as summary.
         expect(entry.summary).toBe(expected);
     });
@@ -109,7 +117,7 @@ describe("session getChildren summary - SPL effects", () => {
 // ---------------------------------------------------------------------------
 
 describe("session getChildren summary - SPL abilities", () => {
-    it("carries the Form displayValue as summary on each ability entry row", () => {
+    it("carries the value-prefixed Form as summary on each ability entry row", () => {
         if (!splPresent()) return;
         const sid = protocolOpen(SPL_FIXTURE, "file:///session-summary-spl-abilities.spl");
         const entry = firstEntryViaProtocol(sid, "Abilities");
@@ -117,8 +125,8 @@ describe("session getChildren summary - SPL abilities", () => {
 
         const expected = expectedSummary(sid, entry, "Form");
         expect(expected).toBeDefined();
-        expect(expected!.length).toBeGreaterThan(0);
-
+        expect(entry.summary).toMatch(/^-?\d+ \S/);
+        expect(entry.summary).not.toContain("Unknown ("); // reconstructed from options, not the parser artifact
         expect(entry.summary).toBe(expected);
     });
 });
@@ -128,7 +136,7 @@ describe("session getChildren summary - SPL abilities", () => {
 // ---------------------------------------------------------------------------
 
 describe("session getChildren summary - ITM effects", () => {
-    it("carries the Opcode displayValue as summary on each effect entry row", () => {
+    it("carries the value-prefixed Opcode as summary on each effect entry row", () => {
         if (!itmPresent()) return;
         const sid = protocolOpen(ITM_FIXTURE, "file:///session-summary-itm.itm");
         const entry = firstEntryViaProtocol(sid, "Effects");
@@ -136,7 +144,7 @@ describe("session getChildren summary - ITM effects", () => {
 
         const expected = expectedSummary(sid, entry, "Opcode");
         expect(expected).toBeDefined();
-
+        expect(entry.summary).toMatch(/^-?\d+ \S/);
         expect(entry.summary).toBe(expected);
     });
 });
