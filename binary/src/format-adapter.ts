@@ -9,6 +9,7 @@
 import { type NumericRange, setDomainRangeLookup } from "./binary-format-contract";
 import type { CompiledPatternFieldPresentation, FormatPresentationSchema } from "./presentation-schema-types";
 import type { FormatLayout } from "./layout-schema-types";
+import type { CrossRefRelationship } from "./cross-ref-relationship";
 import type { ParsedField, ParsedGroup, ParseOptions, ParseResult } from "./types";
 
 export type ProjectedEntry =
@@ -44,6 +45,14 @@ export interface BinaryFormatAdapter {
      * canonical-write clamp path. Optional.
      */
     readonly domainRanges?: Readonly<Record<string, NumericRange>>;
+
+    /**
+     * Declarative cross-record relationships (index back-references, owner/slice partitions) keyed on
+     * display-group labels. The single source of truth the editor's advisory cross-record diagnostics
+     * consume, sharing the relink's range-field bindings and slot-exemption counts. Absent for formats
+     * with no structural cross-references (PRO, MAP, EFF).
+     */
+    readonly crossRefRelationships?: readonly CrossRefRelationship[];
 
     /**
      * How the editor invalidates this format's cached canonical `document` after a display-tree

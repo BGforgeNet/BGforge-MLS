@@ -1,4 +1,5 @@
 import type { BinaryFormatAdapter } from "../format-adapter";
+import type { CrossRefRelationship } from "../cross-ref-relationship";
 import type { ParseOptions, ParseResult } from "../types";
 import { rebuildItmCanonicalDocument } from "./canonical";
 import { createCanonicalItmJsonSnapshot, loadCanonicalItmJsonSnapshot } from "./json-snapshot";
@@ -18,7 +19,21 @@ import {
     buildItmReorderEffectBytes,
     EFFECTS_SECTION,
     isItmRemovableEntry,
+    ITM_FIELDS,
 } from "./entity-ops";
+
+/** Abilities (and the equipping header range) slice into the shared flat Effects table; orphan effects noted. */
+const itmCrossRefRelationships: readonly CrossRefRelationship[] = [
+    {
+        kind: "slice",
+        ownerGroup: ABILITIES_SECTION,
+        headerGroup: "ITM Header",
+        targetGroup: EFFECTS_SECTION,
+        sliceNoun: "Effect",
+        fields: ITM_FIELDS,
+        orphanInfo: true,
+    },
+];
 
 export const itmFormatAdapter: BinaryFormatAdapter = {
     formatId: "itm",
@@ -28,6 +43,7 @@ export const itmFormatAdapter: BinaryFormatAdapter = {
     // IE formats cache a rebuildable canonical document (own writable property); clear it on edit.
     documentCacheStrategy: "clear",
     layout: itmLayout,
+    crossRefRelationships: itmCrossRefRelationships,
 
     createJsonSnapshot(parseResult: ParseResult): string {
         return createCanonicalItmJsonSnapshot(parseResult);

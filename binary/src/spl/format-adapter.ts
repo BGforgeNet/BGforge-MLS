@@ -1,4 +1,5 @@
 import type { BinaryFormatAdapter } from "../format-adapter";
+import type { CrossRefRelationship } from "../cross-ref-relationship";
 import type { ParseOptions, ParseResult } from "../types";
 import { rebuildSplCanonicalDocument } from "./canonical";
 import { createCanonicalSplJsonSnapshot, loadCanonicalSplJsonSnapshot } from "./json-snapshot";
@@ -18,7 +19,21 @@ import {
     buildSplReorderEffectBytes,
     EFFECTS_SECTION,
     isSplRemovableEntry,
+    SPL_FIELDS,
 } from "./entity-ops";
+
+/** Abilities (and the casting header range) slice into the shared flat Effects table; orphan effects noted. */
+const splCrossRefRelationships: readonly CrossRefRelationship[] = [
+    {
+        kind: "slice",
+        ownerGroup: ABILITIES_SECTION,
+        headerGroup: "SPL Header",
+        targetGroup: EFFECTS_SECTION,
+        sliceNoun: "Effect",
+        fields: SPL_FIELDS,
+        orphanInfo: true,
+    },
+];
 
 export const splFormatAdapter: BinaryFormatAdapter = {
     formatId: "spl",
@@ -28,6 +43,7 @@ export const splFormatAdapter: BinaryFormatAdapter = {
     // IE formats cache a rebuildable canonical document (own writable property); clear it on edit.
     documentCacheStrategy: "clear",
     layout: splLayout,
+    crossRefRelationships: splCrossRefRelationships,
 
     createJsonSnapshot(parseResult: ParseResult): string {
         return createCanonicalSplJsonSnapshot(parseResult);

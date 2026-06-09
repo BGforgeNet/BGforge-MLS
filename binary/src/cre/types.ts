@@ -38,6 +38,12 @@ export const CRE_EFFECT_V1_SIZE = 0x30;
 export const CRE_EFFECT_V2_SIZE = 0x108;
 export const CRE_ITEM_SLOT_COUNT = 40;
 export const CRE_ITEM_SLOTS_SIZE = CRE_ITEM_SLOT_COUNT * 2;
+/**
+ * Inventory slots [0, CRE_ITEM_REF_SLOT_COUNT) hold item-table indices; the trailing two entries are the
+ * selected-weapon slot index and ability index (see CRE_ITEM_SLOT_LABELS), which are NOT item indices.
+ * The single source of truth shared by the itemSlots relink and the editor's cross-record diagnostics.
+ */
+export const CRE_ITEM_REF_SLOT_COUNT = CRE_ITEM_SLOT_COUNT - 2; // 38
 
 export const CRE_SIGNATURE = [0x43, 0x52, 0x45, 0x20] as const; // 'CRE '
 export const CRE_VERSION_V1 = [0x56, 0x31, 0x2e, 0x30] as const; // 'V1.0'

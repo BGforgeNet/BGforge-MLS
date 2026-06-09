@@ -1,167 +1,164 @@
+import type { CrossRefRelationship, IndexRefRelationship, SliceRefRelationship } from "@bgforge/binary";
 import type { Diagnostic } from "../types";
 import type { FlatNode, Model } from "../model";
-import { findGroup, childGroups, childFields, fieldsByKey, fieldNumber } from "./model-helpers";
+import { findGroup, childGroups, childFields, fieldsByKey, fieldNumber, normKey } from "./model-helpers";
 
-/** CRE spell-memorization-info entries slice [firstMemorizedSpellIndex, +memorizedSpellCount) into the
- *  Memorized Spells list. A slice running past the list end (or starting past it) is a dangling reference:
- *  warn on the count field and offer to clamp the count so the slice fits. */
-export function creMeminfoRefConstraint(model: Model): Diagnostic[] {
-    const memGroup = findGroup(model, "Memorized Spells");
-    const infoGroup = findGroup(model, "Spell Memorization Info");
-    if (!memGroup || !infoGroup) return [];
-    const listLen = childGroups(model, memGroup).length;
-    const diags: Diagnostic[] = [];
-    for (const entry of childGroups(model, infoGroup)) {
-        const f = fieldsByKey(model, entry);
-        const startField = f.get("firstmemorizedspellindex");
-        const countField = f.get("memorizedspellcount");
-        if (!startField || !countField) continue;
-        const start = fieldNumber(startField);
-        const count = fieldNumber(countField);
-        if (start === undefined || count === undefined || count <= 0) continue;
-        if (start >= 0 && start + count <= listLen) continue; // in range
-        const clamped = Math.max(0, listLen - Math.max(0, start));
-        diags.push({
-            nodeId: countField.id,
-            severity: "warning",
-            message: `Memorized-spell slice [${start}, ${start + count}) runs past the Memorized Spells list (${listLen}).`,
-            quickFix: { label: "Clamp count to fit", edits: [{ nodeId: countField.id, value: clamped }] },
-        });
-    }
-    return diags;
-}
+/**
+ * Cross-record consistency diagnostics, driven entirely by the per-format `crossRefRelationship`
+ * descriptors declared in `@bgforge/binary`. The descriptors are the single source of truth shared with
+ * the edit-time relink, so the diagnostics honor the same field bindings and reference ranges (e.g. CRE's
+ * trailing selected-weapon slots are excluded from the item-index check because the descriptor's
+ * `refFieldCount` is the same constant the relink uses).
+ */
 
-/** CRE item slots are int16 indices into the Items list (-1 = empty). An index >= the item count is a dangling
- *  reference: warn on that slot field and offer to clear it (-1). */
-export function creItemSlotRefConstraint(model: Model): Diagnostic[] {
-    const slotsGroup = findGroup(model, "Item Slots");
-    const itemsGroup = findGroup(model, "Items");
-    if (!slotsGroup || !itemsGroup) return [];
-    const itemsLen = childGroups(model, itemsGroup).length;
+/** Index back-references (CRE Item Slots -> Items): a leading field holding an index >= the target count is a
+ *  dangling reference. Warn on that field and offer to clear it (-1). Fields past `refFieldCount` (CRE's
+ *  selected-weapon slot/ability entries) are not indices and are skipped. */
+export function indexRefDiagnostics(model: Model, rel: IndexRefRelationship): Diagnostic[] {
+    const refGroup = findGroup(model, rel.refGroup);
+    const targetGroup = findGroup(model, rel.targetGroup);
+    if (!refGroup || !targetGroup) return [];
+    const targetLen = childGroups(model, targetGroup).length;
+    const fields = childFields(model, refGroup);
+    const refCount = rel.refFieldCount ?? fields.length;
     const diags: Diagnostic[] = [];
-    for (const slot of childFields(model, slotsGroup)) {
+    fields.forEach((slot, i) => {
+        if (i >= refCount) return; // trailing non-index fields are not references
         const v = fieldNumber(slot);
-        if (v === undefined || v < 0) continue; // negative (incl. -1) = empty slot
-        if (v < itemsLen) continue; // valid reference
+        if (v === undefined || v < 0) return; // negative (incl. -1) = empty slot
+        if (v < targetLen) return; // valid reference
         diags.push({
             nodeId: slot.id,
             severity: "warning",
-            message: `${slot.name} references item #${v} but only ${itemsLen} item(s) exist.`,
+            message: `${slot.name} references ${rel.refNoun} #${v} but only ${targetLen} ${rel.refNoun}(s) exist.`,
             quickFix: { label: "Clear slot (-1)", edits: [{ nodeId: slot.id, value: -1 }] },
         });
-    }
+    });
     return diags;
 }
 
-/** An item referenced by no slot is legal (e.g. a creature carrying more items than its slots use). Note it as
- *  info - never change anything. The Items list is written wholesale, so orphan items round-trip safely. */
-export function creOrphanItemsConstraint(model: Model): Diagnostic[] {
-    const slotsGroup = findGroup(model, "Item Slots");
-    const itemsGroup = findGroup(model, "Items");
-    if (!slotsGroup || !itemsGroup) return [];
-    const itemsLen = childGroups(model, itemsGroup).length;
-    if (itemsLen === 0) return [];
+/** A target referenced by no in-range field is legal (e.g. a creature carrying more items than its slots use).
+ *  Note it as info - never change anything. The list is written wholesale, so unreferenced targets round-trip. */
+export function orphanTargetDiagnostics(model: Model, rel: IndexRefRelationship): Diagnostic[] {
+    const refGroup = findGroup(model, rel.refGroup);
+    const targetGroup = findGroup(model, rel.targetGroup);
+    if (!refGroup || !targetGroup) return [];
+    const targetLen = childGroups(model, targetGroup).length;
+    if (targetLen === 0) return [];
+    const fields = childFields(model, refGroup);
+    const refCount = rel.refFieldCount ?? fields.length;
     const referenced = new Set<number>();
-    for (const slot of childFields(model, slotsGroup)) {
+    fields.forEach((slot, i) => {
+        if (i >= refCount) return;
         const v = fieldNumber(slot);
-        if (v !== undefined && v >= 0 && v < itemsLen) referenced.add(v);
-    }
+        if (v !== undefined && v >= 0 && v < targetLen) referenced.add(v);
+    });
     const orphans: number[] = [];
-    for (let i = 0; i < itemsLen; i++) if (!referenced.has(i)) orphans.push(i);
+    for (let i = 0; i < targetLen; i++) if (!referenced.has(i)) orphans.push(i);
     if (orphans.length === 0) return [];
     return [
         {
-            nodeId: itemsGroup.id,
+            nodeId: targetGroup.id,
             severity: "info",
-            message: `${orphans.length} unreferenced item(s) (used by no slot): #${orphans.join(", #")}.`,
+            message: `${orphans.length} unreferenced ${rel.refNoun}(s) (used by no slot): #${orphans.join(", #")}.`,
         },
     ];
 }
 
-// Field-name variants across ITM (singular "Block") and SPL (plural "Blocks", "Casting" header).
-const ABILITY_START_KEYS = ["featureblockindex", "featureblocksoffset"];
-const ABILITY_COUNT_KEYS = ["featureblockcount", "featureblockscount"];
-const HEADER_START_KEYS = ["featureblocksindex", "castingfeatureblocksindex"];
-const HEADER_COUNT_KEYS = ["featureblockscount", "castingfeatureblockscount"];
-
-function pick(fields: Map<string, FlatNode>, keys: string[]): FlatNode | undefined {
-    for (const k of keys) {
-        const node = fields.get(k);
-        if (node) return node;
-    }
-    return undefined;
-}
-
-interface EffectRange {
+interface SliceRange {
     startNode?: FlatNode;
     countNode?: FlatNode;
 }
 
-/** Collect every [start, count) range into the flat Effects table: one per ability, plus the header
- *  equipping (ITM) / casting (SPL) range. Shared by the broken-ref and orphan-effects checks. */
-function collectEffectRanges(model: Model): EffectRange[] {
-    const ranges: EffectRange[] = [];
-    const abilities = findGroup(model, "Abilities");
-    if (abilities) {
-        for (const ability of childGroups(model, abilities)) {
-            const f = fieldsByKey(model, ability);
-            ranges.push({ startNode: pick(f, ABILITY_START_KEYS), countNode: pick(f, ABILITY_COUNT_KEYS) });
+/** Collect every [start, count) range slicing into the target table: one per owner-group child, plus the
+ *  optional single header range (ITM/SPL equipping/casting). Field keys come from the descriptor's shared
+ *  range-field binding, matched against humanized labels via `normKey`. */
+function sliceRanges(model: Model, rel: SliceRefRelationship): SliceRange[] {
+    const ranges: SliceRange[] = [];
+    const ownerGroup = findGroup(model, rel.ownerGroup);
+    if (ownerGroup) {
+        const startKey = normKey(rel.fields.abilityStart);
+        const countKey = normKey(rel.fields.abilityCount);
+        for (const owner of childGroups(model, ownerGroup)) {
+            const f = fieldsByKey(model, owner);
+            ranges.push({ startNode: f.get(startKey), countNode: f.get(countKey) });
         }
     }
-    const header = findGroup(model, "ITM Header") ?? findGroup(model, "SPL Header");
-    if (header) {
-        const f = fieldsByKey(model, header);
-        ranges.push({ startNode: pick(f, HEADER_START_KEYS), countNode: pick(f, HEADER_COUNT_KEYS) });
+    if (rel.headerGroup && rel.fields.headerStart && rel.fields.headerCount) {
+        const headerGroup = findGroup(model, rel.headerGroup);
+        if (headerGroup) {
+            const f = fieldsByKey(model, headerGroup);
+            ranges.push({
+                startNode: f.get(normKey(rel.fields.headerStart)),
+                countNode: f.get(normKey(rel.fields.headerCount)),
+            });
+        }
     }
     return ranges;
 }
 
-/** ITM/SPL abilities (and the header equipping/casting range) slice into the shared flat Effects table.
- *  A slice running past the table is a dangling reference: warn on the count field, offer to clamp it. */
-export function abilityEffectRefConstraint(model: Model): Diagnostic[] {
-    const effGroup = findGroup(model, "Effects");
-    if (!effGroup) return [];
-    const effLen = childGroups(model, effGroup).length;
+/** Owner/header slices into a shared target table (ITM/SPL abilities -> Effects, CRE memorization info ->
+ *  Memorized Spells). A slice running past the table end is a dangling reference: warn on the count field
+ *  and offer to clamp the count so the slice fits. */
+export function sliceRefDiagnostics(model: Model, rel: SliceRefRelationship): Diagnostic[] {
+    const targetGroup = findGroup(model, rel.targetGroup);
+    if (!targetGroup) return [];
+    const targetLen = childGroups(model, targetGroup).length;
     const diags: Diagnostic[] = [];
-    for (const r of collectEffectRanges(model)) {
+    for (const r of sliceRanges(model, rel)) {
         if (!r.countNode) continue;
         const start = r.startNode ? (fieldNumber(r.startNode) ?? 0) : 0;
         const count = fieldNumber(r.countNode);
         if (count === undefined || count <= 0) continue;
-        if (start >= 0 && start + count <= effLen) continue;
-        const clamped = Math.max(0, effLen - Math.max(0, start));
+        if (start >= 0 && start + count <= targetLen) continue; // in range
+        const clamped = Math.max(0, targetLen - Math.max(0, start));
         diags.push({
             nodeId: r.countNode.id,
             severity: "warning",
-            message: `Effect slice [${start}, ${start + count}) runs past the Effects list (${effLen}).`,
+            message: `${rel.sliceNoun} slice [${start}, ${start + count}) runs past the ${rel.targetGroup} list (${targetLen}).`,
             quickFix: { label: "Clamp count to fit", edits: [{ nodeId: r.countNode.id, value: clamped }] },
         });
     }
     return diags;
 }
 
-/** An effect covered by no ability/header range is legal (the flat Effects table is written wholesale, so it
- *  round-trips). Note it as info - never change anything. Coverage set-difference only, not partition hygiene. */
-export function orphanEffectsConstraint(model: Model): Diagnostic[] {
-    const effGroup = findGroup(model, "Effects");
-    if (!effGroup) return [];
-    const effLen = childGroups(model, effGroup).length;
-    if (effLen === 0) return [];
-    const covered = Array.from<boolean>({ length: effLen }).fill(false);
-    for (const r of collectEffectRanges(model)) {
+/** A target covered by no slice is legal (the table is written wholesale, so it round-trips). Note it as info.
+ *  Coverage set-difference only, not partition hygiene. */
+export function orphanSliceDiagnostics(model: Model, rel: SliceRefRelationship): Diagnostic[] {
+    const targetGroup = findGroup(model, rel.targetGroup);
+    if (!targetGroup) return [];
+    const targetLen = childGroups(model, targetGroup).length;
+    if (targetLen === 0) return [];
+    const covered = Array.from<boolean>({ length: targetLen }).fill(false);
+    for (const r of sliceRanges(model, rel)) {
         const start = r.startNode ? fieldNumber(r.startNode) : undefined;
         const count = r.countNode ? fieldNumber(r.countNode) : undefined;
         if (start === undefined || count === undefined || count <= 0) continue;
-        for (let k = start; k < start + count; k++) if (k >= 0 && k < effLen) covered[k] = true;
+        for (let k = start; k < start + count; k++) if (k >= 0 && k < targetLen) covered[k] = true;
     }
     const orphans: number[] = [];
-    for (let i = 0; i < effLen; i++) if (!covered[i]) orphans.push(i);
+    for (let i = 0; i < targetLen; i++) if (!covered[i]) orphans.push(i);
     if (orphans.length === 0) return [];
     return [
         {
-            nodeId: effGroup.id,
+            nodeId: targetGroup.id,
             severity: "info",
-            message: `${orphans.length} unreferenced effect(s) (covered by no ability or equipping/casting range): #${orphans.join(", #")}.`,
+            message: `${orphans.length} unreferenced ${rel.sliceNoun.toLowerCase()}(s) (covered by no ability or equipping/casting range): #${orphans.join(", #")}.`,
         },
     ];
+}
+
+/** Run every relationship in a format's descriptor list and collect its diagnostics. */
+export function crossRefDiagnostics(model: Model, rels: readonly CrossRefRelationship[]): Diagnostic[] {
+    const out: Diagnostic[] = [];
+    for (const rel of rels) {
+        if (rel.kind === "index") {
+            out.push(...indexRefDiagnostics(model, rel));
+            if (rel.orphanInfo) out.push(...orphanTargetDiagnostics(model, rel));
+        } else {
+            out.push(...sliceRefDiagnostics(model, rel));
+            if (rel.orphanInfo) out.push(...orphanSliceDiagnostics(model, rel));
+        }
+    }
+    return out;
 }

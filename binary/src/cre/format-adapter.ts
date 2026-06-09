@@ -1,19 +1,45 @@
 import type { BinaryFormatAdapter } from "../format-adapter";
+import type { CrossRefRelationship } from "../cross-ref-relationship";
 import type { ParseOptions, ParseResult } from "../types";
 import { rebuildCreCanonicalDocument } from "./canonical";
 import { createCanonicalCreJsonSnapshot, loadCanonicalCreJsonSnapshot } from "./json-snapshot";
 import { creCompiledPatternFields, creDomainRanges, crePresentationSchema } from "./presentation-schema";
 import { creLayout } from "./layout-schema";
 import { slugify } from "../snapshot-common";
-import { CRE_GROUP_LABELS } from "./types";
+import { CRE_GROUP_LABELS, CRE_ITEM_REF_SLOT_COUNT } from "./types";
 import {
     buildCreAddEntryBytes,
     buildCreDuplicateEntryBytes,
     buildCreInsertEntryBytes,
     buildCreMoveEntryBytes,
     buildCreRemoveEntryBytes,
+    CRE_MEMINFO_FIELDS,
     isCreRemovableEntry,
 } from "./entity-ops";
+
+/**
+ * CRE cross-record relationships:
+ *  - Item Slots [0, CRE_ITEM_REF_SLOT_COUNT) index into Items (the trailing selected-weapon slot/ability
+ *    entries are not item indices and stay unchecked); orphan items are noted.
+ *  - Spell Memorization Info entries slice into Memorized Spells.
+ */
+const creCrossRefRelationships: readonly CrossRefRelationship[] = [
+    {
+        kind: "index",
+        refGroup: CRE_GROUP_LABELS.itemSlots,
+        targetGroup: CRE_GROUP_LABELS.items,
+        refNoun: "item",
+        refFieldCount: CRE_ITEM_REF_SLOT_COUNT,
+        orphanInfo: true,
+    },
+    {
+        kind: "slice",
+        ownerGroup: CRE_GROUP_LABELS.spellMemInfo,
+        targetGroup: CRE_GROUP_LABELS.memorizedSpells,
+        sliceNoun: "Memorized-spell",
+        fields: CRE_MEMINFO_FIELDS,
+    },
+];
 
 /**
  * Maps a top-level display-group label to the semantic-key namespace plus
@@ -65,6 +91,7 @@ export const creFormatAdapter: BinaryFormatAdapter = {
     // IE formats cache a rebuildable canonical document (own writable property); clear it on edit.
     documentCacheStrategy: "clear",
     layout: creLayout,
+    crossRefRelationships: creCrossRefRelationships,
 
     createJsonSnapshot(parseResult: ParseResult): string {
         return createCanonicalCreJsonSnapshot(parseResult);

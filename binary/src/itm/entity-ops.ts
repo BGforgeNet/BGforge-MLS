@@ -81,7 +81,7 @@ export function defaultItmAbility(): ItmAbility {
 // defaultItmEffect is now the shared default; keep the name for existing importers.
 export const defaultItmEffect = defaultIeEffect;
 
-const ITM_FIELDS: IeEffectRangeFields = {
+export const ITM_FIELDS: IeEffectRangeFields = {
     headerStart: "featureBlocksIndex",
     headerCount: "featureBlocksCount",
     abilityStart: "featureBlockIndex",

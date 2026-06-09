@@ -20,6 +20,7 @@ export { getSnapshotPath, getOutputPathForJsonSnapshot } from "./json-snapshot-p
 // Format adapters
 export { formatAdapterRegistry } from "./format-adapter";
 export type { BinaryFormatAdapter, ProjectedEntry } from "./format-adapter";
+export type { CrossRefRelationship, IndexRefRelationship, SliceRefRelationship } from "./cross-ref-relationship";
 
 // Declarative layout schema (per-format editor UI as data)
 export { formatLayoutSchema, variantRows } from "./layout-schema-types";

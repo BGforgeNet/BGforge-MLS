@@ -23,7 +23,8 @@ import { createFlatListOps, type FlatListOps } from "../ie-common/flat-list-ops"
 import { createSliceStructureOps } from "../ie-common/slice-structure-ops";
 import { getCreCanonicalDocument, rebuildCreCanonicalDocument } from "./canonical-reader";
 import { serializeCreCanonicalDocument } from "./canonical-writer";
-import { CRE_GROUP_LABELS, CRE_ITEM_SLOT_COUNT } from "./types";
+import { CRE_GROUP_LABELS, CRE_ITEM_REF_SLOT_COUNT } from "./types";
+import type { IeEffectRangeFields } from "../ie-common/effect-partition";
 import type { EntryMutation } from "../spec/entity-ops";
 import type { CreCanonicalDocument, CreEffectsDocument } from "./canonical-schemas";
 import type { ParseResult } from "../types";
@@ -47,8 +48,15 @@ const ITEM_PREFIX = "Item ";
  * Inventory slots [0, ITEM_TABLE_SLOTS) hold item-table indices (-1 = empty);
  * the last two slots are the selected-weapon slot index and ability index, NOT
  * item-table indices, so they are never remapped. See CRE_ITEM_SLOT_LABELS.
+ * Shared with the editor's cross-record diagnostics via CRE_ITEM_REF_SLOT_COUNT.
  */
-const ITEM_TABLE_SLOTS = CRE_ITEM_SLOT_COUNT - 2; // 38
+const ITEM_TABLE_SLOTS = CRE_ITEM_REF_SLOT_COUNT; // 38
+
+/** CRE memorization-info -> memorized-spells slice range fields; shared by the relink and the descriptor. */
+export const CRE_MEMINFO_FIELDS: IeEffectRangeFields = {
+    abilityStart: "firstMemorizedSpellIndex",
+    abilityCount: "memorizedSpellCount",
+};
 
 function readDocument(parseResult: ParseResult): CreCanonicalDocument | undefined {
     return getCreCanonicalDocument(parseResult) ?? rebuildCreCanonicalDocument(parseResult);
@@ -248,7 +256,7 @@ const itemsOps: FlatListOps = createFlatListOps<CreCanonicalDocument, CreItem>({
 // -- owner+slice binding (spellMemInfo / memorizedSpells) --------------------
 
 const memoOps = createSliceStructureOps<CreCanonicalDocument, CreSpellMemInfo, CreMemorizedSpell>({
-    fields: { abilityStart: "firstMemorizedSpellIndex", abilityCount: "memorizedSpellCount" },
+    fields: CRE_MEMINFO_FIELDS,
     ownerSection: CRE_GROUP_LABELS.spellMemInfo,
     ownerPrefix: SPELL_MEM_INFO_PREFIX,
     sliceSection: CRE_GROUP_LABELS.memorizedSpells,

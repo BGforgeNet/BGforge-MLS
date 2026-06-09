@@ -74,7 +74,7 @@ export function defaultSplAbility(): SplAbility {
 // headerStart binds to castingFeatureBlocksIndex (the casting range start INDEX in the flat effects array), NOT to the
 // header's featureBlocksOffset (which is the recomputed effects-section byte offset written by the serializer).
 // abilityStart binds to the ability's featureBlocksOffset (its per-ability range start index).
-const SPL_FIELDS: IeEffectRangeFields = {
+export const SPL_FIELDS: IeEffectRangeFields = {
     headerStart: "castingFeatureBlocksIndex",
     headerCount: "castingFeatureBlocksCount",
     abilityStart: "featureBlocksOffset",

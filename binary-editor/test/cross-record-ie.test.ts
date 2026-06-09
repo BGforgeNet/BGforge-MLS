@@ -1,9 +1,15 @@
 import { describe, expect, it } from "vitest";
-import type { ParseResult } from "@bgforge/binary";
+import { formatAdapterRegistry, type ParseResult, type SliceRefRelationship } from "@bgforge/binary";
 import { buildModel, type Model } from "../src/model";
-import { abilityEffectRefConstraint, orphanEffectsConstraint } from "../src/relationship/cross-record";
+import { sliceRefDiagnostics, orphanSliceDiagnostics } from "../src/relationship/cross-record";
 import { openItmSession, itmFixturePresent, setRaw } from "./ie-fixture";
 import { normKey } from "../src/relationship/model-helpers";
+
+// The real ITM/SPL slice descriptors (single source of truth, declared on each adapter in @bgforge/binary).
+const sliceRel = (fmt: "itm" | "spl") =>
+    formatAdapterRegistry.get(fmt)!.crossRefRelationships!.find((r) => r.kind === "slice") as SliceRefRelationship;
+const itmSliceRel = sliceRel("itm");
+const splSliceRel = sliceRel("spl");
 
 interface IeOpts {
     label: "ITM" | "SPL";
@@ -55,7 +61,7 @@ describe("abilityEffectRefConstraint", () => {
     it("ITM: warns + clamps an ability slice that overshoots the effects table", () => {
         // 4 effects; ability 0 claims [2, 2+5) -> end 7 > 4.
         const m = buildModel(ieResult({ label: "ITM", effects: 4, abilities: [{ start: 2, count: 5 }] }));
-        const diags = abilityEffectRefConstraint(m);
+        const diags = sliceRefDiagnostics(m, itmSliceRel);
         expect(diags).toHaveLength(1);
         const node = abilityCountNode(m, 0);
         expect(diags[0]!.nodeId).toBe(node.id);
@@ -72,7 +78,7 @@ describe("abilityEffectRefConstraint", () => {
                 equipping: { start: 0, count: 9 },
             }),
         );
-        const diags = abilityEffectRefConstraint(m);
+        const diags = sliceRefDiagnostics(m, splSliceRel);
         expect(diags.some((d) => d.message.includes("[0, 9)"))).toBe(true);
     });
     it("no diagnostic when all ranges fit", () => {
@@ -86,7 +92,7 @@ describe("abilityEffectRefConstraint", () => {
                 ],
             }),
         );
-        expect(abilityEffectRefConstraint(m)).toHaveLength(0);
+        expect(sliceRefDiagnostics(m, itmSliceRel)).toHaveLength(0);
     });
 });
 
@@ -94,7 +100,7 @@ describe("orphanEffectsConstraint", () => {
     it("notes effects covered by no range", () => {
         // 4 effects; ability covers [0,2); nothing else -> effects #2,#3 orphaned.
         const m = buildModel(ieResult({ label: "ITM", effects: 4, abilities: [{ start: 0, count: 2 }] }));
-        const diags = orphanEffectsConstraint(m);
+        const diags = orphanSliceDiagnostics(m, itmSliceRel);
         expect(diags).toHaveLength(1);
         expect(diags[0]!.severity).toBe("info");
         expect(diags[0]!.message).toContain("2 unreferenced");
@@ -112,7 +118,7 @@ describe("orphanEffectsConstraint", () => {
                 equipping: { start: 2, count: 1 },
             }),
         );
-        expect(orphanEffectsConstraint(m)).toHaveLength(0);
+        expect(orphanSliceDiagnostics(m, itmSliceRel)).toHaveLength(0);
     });
 });
 
@@ -139,20 +145,20 @@ describe("ITM/SPL checks against the real ITM parser", () => {
         expect(countNode, "real ITM header exposes a Feature Blocks Count field").toBeDefined();
 
         // Clean fixture: index 0 + count 5 over 5 effects -> consistent, fully covered.
-        expect(abilityEffectRefConstraint(model)).toHaveLength(0);
-        expect(orphanEffectsConstraint(model)).toHaveLength(0);
+        expect(sliceRefDiagnostics(model, itmSliceRel)).toHaveLength(0);
+        expect(orphanSliceDiagnostics(model, itmSliceRel)).toHaveLength(0);
 
         // Shrink the equipping range -> the now-uncovered effects surface as an orphan info note.
         setRaw(countNode!, 2);
-        const orphans = orphanEffectsConstraint(model);
+        const orphans = orphanSliceDiagnostics(model, itmSliceRel);
         expect(orphans).toHaveLength(1);
         expect(orphans[0]!.severity).toBe("info");
         expect(orphans[0]!.message).toContain("unreferenced");
-        expect(abilityEffectRefConstraint(model)).toHaveLength(0); // 2 <= 5 still fits
+        expect(sliceRefDiagnostics(model, itmSliceRel)).toHaveLength(0); // 2 <= 5 still fits
 
         // Overshoot the equipping range -> a broken-ref warning fires on that exact field node.
         setRaw(countNode!, 9999);
-        const broken = abilityEffectRefConstraint(model);
+        const broken = sliceRefDiagnostics(model, itmSliceRel);
         expect(broken.some((d) => d.nodeId === countNode!.id && d.severity === "warning")).toBe(true);
     });
 });
