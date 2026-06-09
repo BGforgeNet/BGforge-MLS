@@ -47,7 +47,7 @@ export interface Row {
 
 export interface Diagnostic {
     nodeId: NodeId;
-    severity: "warning" | "error";
+    severity: "warning" | "error" | "info";
     message: string;
     quickFix?: { label: string; edits: { nodeId: NodeId; value: number | string }[] };
 }
