@@ -85,6 +85,13 @@ export interface ScalarFieldSpec {
      * value-range check; this layer only enforces the bit-width invariant.
      */
     readonly bitRange?: readonly [bitOffset: number, bitWidth: number];
+    /**
+     * Display-only: omit this field from the rendered detail form. The field still parses, validates, and
+     * round-trips byte-identically (the rebuilder reads it back from the display tree by label); the editor
+     * just does not render a control for it. Use for reserved/padding/magic fields the user never edits
+     * (`unused*`, `unknown`, duplicated signature/version). Never changes wire layout.
+     */
+    readonly hidden?: boolean;
 }
 
 /**
@@ -144,6 +151,8 @@ export interface ArrayFieldSpec {
     readonly addable?: boolean;
     readonly removable?: boolean;
     readonly defaultElement?: () => unknown;
+    /** Display-only: omit from the rendered detail form (see `ScalarFieldSpec.hidden`). Round-trip unaffected. */
+    readonly hidden?: boolean;
 }
 
 /**
@@ -170,6 +179,8 @@ export interface ArrayFieldSpec {
 export interface CharsFieldSpec {
     readonly kind: "chars";
     readonly count: number;
+    /** Display-only: omit from the rendered detail form (see `ScalarFieldSpec.hidden`). Round-trip unaffected. */
+    readonly hidden?: boolean;
 }
 
 export type FieldSpec = ScalarFieldSpec | ArrayFieldSpec | CharsFieldSpec;

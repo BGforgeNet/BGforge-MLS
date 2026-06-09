@@ -14,6 +14,19 @@ import { effBodySpec } from "./body";
 
 export const effBodySpecAnnotated = {
     ...effBodySpec,
+    // Reserved padding and duplicated magic: real wire bytes that round-trip, but carry no value the user
+    // edits. Hide them from the detail form (the rebuilder reads them back by label, so the byte round-trip is
+    // unaffected). The standalone EFF layout already omits them by curation; this also hides them in the
+    // uncurated CRE v2 effect detail, which dumps every field.
+    signature2: { ...effBodySpec.signature2, hidden: true },
+    version2: { ...effBodySpec.version2, hidden: true },
+    unused1: { ...effBodySpec.unused1, hidden: true },
+    unused2: { ...effBodySpec.unused2, hidden: true },
+    unused3: { ...effBodySpec.unused3, hidden: true },
+    unused4: { ...effBodySpec.unused4, hidden: true },
+    unused5: { ...effBodySpec.unused5, hidden: true },
+    unused6: { ...effBodySpec.unused6, hidden: true },
+    unused7: { ...effBodySpec.unused7, hidden: true },
     // Open enums - mods can extend opcodes and timing modes; strict canonical
     // mode does not reject unrecognised values. See `ie-common/specs/effect.overrides.ts`.
     opcode: { ...effBodySpec.opcode, enum: Opcodes, enumOpen: true, searchableEnum: true },

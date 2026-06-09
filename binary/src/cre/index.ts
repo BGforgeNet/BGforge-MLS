@@ -30,7 +30,7 @@ import {
     type CreSpellMemInfoData,
 } from "./schemas";
 import { serializeCre } from "./serializer";
-import { creEffectV1Spec } from "./specs/effect-v1";
+import { creEffectV1SpecAnnotated } from "./specs/effect-v1.overrides";
 import { creHeaderSpecAnnotated } from "./specs/header.overrides";
 import { creItemSpecAnnotated } from "./specs/item.overrides";
 import { creKnownSpellSpecAnnotated } from "./specs/known-spell.overrides";
@@ -243,7 +243,7 @@ class CreParser implements BinaryParser {
             effectsKind === "v1"
                 ? (effectsRecords as CreEffectV1Data[]).map((e, i) =>
                       walkStruct(
-                          creEffectV1Spec,
+                          creEffectV1SpecAnnotated,
                           effectV1Presentation,
                           header.effectsOffset + i * effectSize,
                           e,

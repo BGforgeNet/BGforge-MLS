@@ -146,9 +146,8 @@ async function clickAction(scope: Locator, ariaLabel: string): Promise<void> {
     await page.waitForTimeout(200);
 }
 async function clickDelete(scope: Locator): Promise<void> {
+    // Delete fires immediately (no confirm step) - a single click on the Delete button removes the entry.
     await clickAction(scope, "Delete");
-    await scope.locator(`.row-actions button[aria-label="Confirm delete"]`).first().click();
-    await page.waitForTimeout(200);
 }
 async function waitRows(scope: Locator, n: number): Promise<void> {
     await scope
@@ -276,36 +275,17 @@ check(
 );
 await doUndo();
 
-// Delete is a two-step confirm: a single Delete click must NOT remove.
-await selectRow(abilitiesPanel, 1);
-await clickAction(abilitiesPanel, "Delete");
-check(
-    "abilities: single Delete click does not remove",
-    sectionKids(abilitiesNodeId).total === 2,
-    `total=${sectionKids(abilitiesNodeId).total}`,
-);
-await abilitiesPanel.locator(`.row-actions button[aria-label="Cancel delete"]`).first().click();
-await page.waitForTimeout(100);
-
+// Delete fires immediately - a single Delete click removes the entry (removal is undoable).
 await selectRow(abilitiesPanel, 1);
 await clickDelete(abilitiesPanel);
 check(
-    "abilities: remove row1: -1",
+    "abilities: single Delete click removes immediately",
     sectionKids(abilitiesNodeId).total === 1,
     `total=${sectionKids(abilitiesNodeId).total}`,
 );
 await doUndo();
-
-// Wrong-entry regression: arming delete on entry A then selecting entry B must clear the confirm.
-await selectRow(abilitiesPanel, 0);
-await clickAction(abilitiesPanel, "Delete");
-const armedA = await abilitiesPanel.locator(`.row-actions button[aria-label="Confirm delete"]`).count();
-check("abilities: confirm armed on entry A", armedA === 1, `count=${armedA}`);
-await selectRow(abilitiesPanel, 1);
-const armedB = await abilitiesPanel.locator(`.row-actions button[aria-label="Confirm delete"]`).count();
-check("abilities: switching entry clears pending confirm", armedB === 0, `count=${armedB}`);
 check(
-    "abilities: switching while armed does not delete",
+    "abilities: undo restores the removed entry",
     sectionKids(abilitiesNodeId).total === 2,
     `total=${sectionKids(abilitiesNodeId).total}`,
 );

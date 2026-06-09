@@ -24,9 +24,11 @@
     // eslint-disable-next-line prefer-const -- reassigned alongside selected via onselect
     let selectedIndex = $state<number | undefined>();
     let total = $state(0);
-    // Guards applying the host selection at most once per version, so navigating the master list never
-    // overrides a user click triggered by a structure op.
-    let appliedSelectionVersion = -1;
+    // The last host-provided selection actually applied, tracked by VALUE (not by version). A structure op or
+    // field edit hands back a NodeId to keep active; we apply it exactly once, when it changes. Tracking by
+    // value (rather than re-applying on every version bump) means an unrelated refresh never wipes a selection
+    // the user just made by clicking - the user's click stays authoritative until the host sends a NEW selection.
+    let lastAppliedSelection: NodeId | undefined;
 
     // Filter state: the search query typed by the user.
     // eslint-disable-next-line prefer-const -- reassigned by the filter input
@@ -46,7 +48,7 @@
         void nodeId;
         selected = undefined;
         selectedIndex = undefined;
-        appliedSelectionVersion = -1;
+        lastAppliedSelection = undefined;
         filterQuery = "";
         allRows = [];
         allRowsFetched = false;
@@ -67,39 +69,34 @@
         return () => { cancelled = true; };
     });
 
-    // After a structure op the host returns the NodeId to keep selected. Re-resolve it once the new
-    // version's rows are loaded so the detail pane re-opens on the mutated/inserted entry instead of
-    // collapsing. VirtualList owns the row-fetch loop; we request the first page here solely to learn
-    // the total and resolve the selection - VirtualList will separately fetch its visible window.
+    // Resolve selection and total after every version bump (open, edit, structure op). Two distinct jobs:
+    //   1. Apply a NEW host-provided selection (a structure op / edit hands back the entry to keep active).
+    //      Applied once per selection VALUE, so a user's manual click is never overridden by an unrelated
+    //      refresh - only a genuinely new host selection moves the detail pane.
+    //   2. Otherwise keep the user's current selection, refreshing its row snapshot and index in place so an
+    //      edit updates the summary without collapsing or visibly reloading the detail. A selected row that no
+    //      longer exists (removed) clears the pane.
+    // VirtualList owns the visible-window fetch; this scan exists to learn `total` (needed by rowActions) and
+    // to resolve selection by id. For lists longer than the scan limit a selection beyond it is not resolved.
     $effect(() => {
         void version;
-        selected = undefined;
-        selectedIndex = undefined;
-        if (selection === undefined || appliedSelectionVersion === version) return;
-        appliedSelectionVersion = version;
+        const hostSelection = selection;
         let cancelled = false;
-        // Fetch enough rows to find the selection. For large lists this may miss entries beyond the
-        // first page; in practice ITM ability/effect lists are small (typically <10 entries).
         bridge.requestChildren(nodeId, 0, SELECTION_RESOLVE_SCAN_LIMIT).then((w) => {
             if (cancelled) return;
             total = w.total;
-            w.rows.forEach((r, i) => {
-                if (r.id === selection) { selected = r; selectedIndex = i; }
-            });
-        });
-        return () => { cancelled = true; };
-    });
-
-    // Keep total in sync when VirtualList fetches rows (it drives the scroll, but we need total for
-    // rowActions). VirtualList exposes no callback for total, so we re-request a small window on
-    // version change just for the total when no selection resolve is pending.
-    $effect(() => {
-        void version;
-        if (selection !== undefined) return; // covered by the selection-resolve effect above
-        let cancelled = false;
-        bridge.requestChildren(nodeId, 0, 1).then((w) => {
-            if (cancelled) return;
-            total = w.total;
+            if (hostSelection !== undefined && hostSelection !== lastAppliedSelection) {
+                lastAppliedSelection = hostSelection;
+                const i = w.rows.findIndex((r) => r.id === hostSelection);
+                if (i !== -1) { selected = w.rows[i]; selectedIndex = i; return; }
+            }
+            // No new host selection to apply: keep the user's current pick, refreshing its snapshot/index.
+            const cur = selected;
+            if (cur !== undefined) {
+                const i = w.rows.findIndex((r) => r.id === cur.id);
+                if (i !== -1) { selected = w.rows[i]; selectedIndex = i; }
+                else { selected = undefined; selectedIndex = undefined; }
+            }
         });
         return () => { cancelled = true; };
     });

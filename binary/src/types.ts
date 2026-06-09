@@ -66,6 +66,13 @@ export interface ParsedField {
      * number, so the round-trip is byte-identical. (Signedness is the codec's job, not a display format.)
      */
     numericFormat?: "hex32";
+    /**
+     * Display hint (from the spec's `hidden` flag): omit this field from the rendered detail form. The field
+     * stays in the display tree with its value intact, so the byte round-trip is unaffected (the rebuilder
+     * reads it back by label) - only the editor view skips rendering it. Used for reserved/padding/magic
+     * fields (signature/version duplicates, `unused*`, `unknown`) that carry no value the user edits.
+     */
+    hidden?: boolean;
 }
 
 /**
@@ -97,6 +104,9 @@ export interface ParsedGroup {
      * non-editable.
      */
     editingLocked?: boolean;
+    /** Display hint: omit this group from the rendered detail form (mirrors `ParsedField.hidden`). The group
+     *  stays in the tree for the byte round-trip; only the editor view skips it. */
+    hidden?: boolean;
 }
 
 // ParseDisplayModel + ParseSerializationContext exist only as composition pieces of

@@ -141,9 +141,8 @@ async function clickAction(scope: Locator, ariaLabel: string): Promise<void> {
     await page.waitForTimeout(200);
 }
 async function clickDelete(scope: Locator): Promise<void> {
+    // Delete fires immediately (no confirm step) - a single click on the Delete button removes the entry.
     await clickAction(scope, "Delete");
-    await scope.locator(`.row-actions button[aria-label="Confirm delete"]`).first().click();
-    await page.waitForTimeout(200);
 }
 async function waitRows(scope: Locator, n: number): Promise<void> {
     await scope
@@ -229,14 +228,6 @@ await selectRow(abilitiesPanel, 1);
 await clickDelete(abilitiesPanel);
 check("abilities: remove row1: -1", sectionKids(abilitiesNodeId) === 1, `total=${sectionKids(abilitiesNodeId)}`);
 await doUndo();
-
-await selectRow(abilitiesPanel, 0);
-await clickAction(abilitiesPanel, "Delete");
-const armedA = await abilitiesPanel.locator(`.row-actions button[aria-label="Confirm delete"]`).count();
-check("abilities: confirm armed on entry A", armedA === 1, `count=${armedA}`);
-await selectRow(abilitiesPanel, 1);
-const armedB = await abilitiesPanel.locator(`.row-actions button[aria-label="Confirm delete"]`).count();
-check("abilities: switching entry clears pending confirm", armedB === 0, `count=${armedB}`);
 
 // ---- Effects ops ----
 await clickTab("Effects");

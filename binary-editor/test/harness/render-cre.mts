@@ -124,9 +124,8 @@ async function clickAction(scope: Locator, ariaLabel: string): Promise<void> {
     await page.waitForTimeout(200);
 }
 async function clickDelete(scope: Locator): Promise<void> {
+    // Delete fires immediately (no confirm step) - a single click on the Delete button removes the entry.
     await clickAction(scope, "Delete");
-    await scope.locator(`.row-actions button[aria-label="Confirm delete"]`).first().click();
-    await page.waitForTimeout(200);
 }
 
 // ============================================================
@@ -310,6 +309,17 @@ await selectRow(effectsPanel, 0);
 await effectsPanel.locator(".detail .form .field").first().waitFor({ timeout: 3000 });
 const opcodeCombobox = await effectsPanel.locator(".detail .bb-combobox-input").count();
 check("effects: opcode detail field is a searchable combobox", opcodeCombobox >= 1, `count=${opcodeCombobox}`);
+
+// Reserved/padding fields (signature2, version2, unused1-7) carry the spec `hidden` flag, so the v2 effect
+// detail must NOT render them (edwin6 uses effStructureVersion 1 = EFF v2 body, which has all of them). They
+// stay in the model for the byte round-trip (asserted below) - only the form omits them.
+const effectDetailText = (await effectsPanel.locator(".detail .form").first().innerText()).toLowerCase();
+const showsReserved = /signature|version\s*2|unused/.test(effectDetailText);
+check(
+    "effects: reserved/padding fields are hidden from the detail form",
+    !showsReserved,
+    `text-has-reserved=${showsReserved}`,
+);
 
 // ============================================================
 // REGRESSION: open -> serialize round-trips byte-identical (dispatch-level, DOM-independent).

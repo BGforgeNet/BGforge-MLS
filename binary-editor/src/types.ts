@@ -24,6 +24,10 @@ export interface Row {
     columns?: number;
     /** Composed human label for a list entry, e.g. an effect's opcode name; set by the per-format summary composer. */
     summary?: string;
+    /** Display hint (from the spec's `hidden` flag): omit this row from the rendered detail form. The node
+     *  stays in the tree so the byte round-trip is unaffected; only the view skips it. Set for reserved/
+     *  padding/magic fields (`unused*`, `unknown`, duplicated signature/version). */
+    hidden?: boolean;
     // field-only
     valueType?: ParsedFieldType;
     displayValue?: string;

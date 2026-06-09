@@ -31,6 +31,7 @@ export function projectRow(
         base.expanded = model.expanded.has(node.id);
         base.hasChildren = node.childCount > 0;
         base.editingLocked = group.editingLocked === true;
+        if (group.hidden === true) base.hidden = true;
         if (group.columns !== undefined) base.columns = group.columns;
         if (composeSummary !== undefined) {
             const s = composeSummary(node, model, rel);
@@ -52,6 +53,7 @@ export function projectRow(
     if (typeof rawCandidate === "number" || typeof rawCandidate === "string") base.rawValue = rawCandidate;
     base.offset = field.offset;
     base.size = field.size;
+    if (field.hidden === true) base.hidden = true;
     // Fields inside an editingLocked ancestor group are not editable; padding and
     // note fields carry no user-editable data regardless of lock state.
     base.editable = node.parentLocked !== true && field.type !== "padding" && field.type !== "note";

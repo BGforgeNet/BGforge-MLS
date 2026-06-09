@@ -21,9 +21,11 @@
 
     const range = $derived(visibleRange({ scrollTop, viewportHeight, rowHeight, overscan, total }));
 
-    // A version bump clears the per-index row map so the next fetch repopulates from a fresh model.
-    $effect(() => { void version; rowsByIndex = new Map(); });
-
+    // A version bump re-fetches the visible window (below) and overwrites those indices in place, rather than
+    // emptying the map first. Keeping the existing rows on screen until the fresh ones arrive means an edit or
+    // structure op refreshes the changed rows without visibly blanking and reloading the whole list. Indices
+    // that fall outside the new `total` simply stop being rendered (the template iterates the range derived
+    // from `total`), so stale entries beyond the list never show.
     $effect(() => {
         void version; // re-fetch the visible window after a mutation/reset
         // Filtered mode: skip the internal fetch; rows come from the parent.

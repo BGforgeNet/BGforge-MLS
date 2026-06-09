@@ -110,6 +110,7 @@ const creLabels: Record<string, string> = {
     [k("scriptDefault")]: "Default",
     [k("turnUndeadLevel")]: "Turn Undead",
     [k("trackingSkill")]: "Tracking",
+    [k("findDisarmTraps")]: "Find Traps",
     // Proficiency row labels are supplied by the matrix block (PROFICIENCY_LABELS); the per-field
     // active/original packed keys need no separate display-label overrides.
     // objectRefs (OBJECT.IDS references) are intentionally not surfaced in the layout (see the Proficiencies

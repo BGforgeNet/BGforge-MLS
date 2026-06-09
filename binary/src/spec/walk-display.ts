@@ -287,6 +287,17 @@ function fieldSize<T>(fs: FieldSpec, data: T, key: keyof T & string): number {
     return codecByteLength(fs.codec);
 }
 
+/**
+ * Apply the spec's display-only `hidden` flag to a built display node. The field/group stays in the tree
+ * (so the rebuilder reads it back by label and the byte round-trip is unaffected); the flag only tells the
+ * editor view not to render it. Used for reserved/padding/magic fields (`unused*`, `unknown`, duplicated
+ * signature/version) the user never edits.
+ */
+function withHidden<T extends ParsedField | ParsedGroup>(node: T, fs: FieldSpec): T {
+    if (fs.hidden === true) node.hidden = true;
+    return node;
+}
+
 function fieldFor(
     name: string,
     fs: FieldSpec,
@@ -307,7 +318,7 @@ function fieldFor(
         // verbatim so the display reflects the actual byte content.
         const raw = typeof value === "string" ? value : String(value);
         const trimmed = raw.replace(/ +$/, "");
-        return { name: label, value: trimmed, offset, size, type: "string" };
+        return withHidden({ name: label, value: trimmed, offset, size, type: "string" }, fs);
     }
 
     if (isArraySpec(fs)) {
@@ -325,17 +336,20 @@ function fieldFor(
             });
             // Lay the slots on a single row (capped so a large slot array can't mint an absurdly wide grid;
             // only small scalar slot groups like Melee Animation actually render in the detail form).
-            return { name: label, fields: children, expanded: false, columns: Math.min(children.length, 4) };
+            return withHidden(
+                { name: label, fields: children, expanded: false, columns: Math.min(children.length, 4) },
+                fs,
+            );
         }
         // Trailing reserves and other byte-array fields are presented as a
         // single "(N values)" summary row rather than N unrolled scalars;
         // the canonical doc carries the full array if a downstream tool
         // needs it.
         const summary = Array.isArray(value) ? `(${value.length} values)` : value;
-        return { name: label, value: summary, offset, size, type: "padding" };
+        return withHidden({ name: label, value: summary, offset, size, type: "padding" }, fs);
     }
 
-    return scalarFieldFor(label, fs, offset, size, value, pres);
+    return withHidden(scalarFieldFor(label, fs, offset, size, value, pres), fs);
 }
 
 function scalarFieldFor(

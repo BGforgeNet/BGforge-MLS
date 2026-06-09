@@ -81,7 +81,7 @@ button:disabled {
 .quick-fix:hover {
     background: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground));
 }
-/* Danger variant (Delete / Confirm delete): uses the error foreground on hover so intent is obvious. */
+/* Danger variant (Delete): uses the error foreground on hover so intent is obvious. */
 .row-actions-btn-danger {
     color: var(--vscode-button-secondaryForeground, var(--vscode-foreground));
 }
@@ -805,19 +805,6 @@ input[type="text"]::placeholder {
 .row-actions-label {
     font-size: 0.9em;
     white-space: nowrap;
-}
-/* Confirm affordance: shown instead of the Delete button while awaiting user confirmation.
-   Keeps the same flex row layout; the "Delete?" text label is de-emphasised. */
-.row-actions-confirm {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-}
-.row-actions-confirm-label {
-    font-size: 0.9em;
-    color: var(--vscode-errorForeground, #f48771);
-    white-space: nowrap;
-    padding: 0 0.2rem;
 }
 
 /* ---- subgroup (headed section, always visible, no accordion) ----

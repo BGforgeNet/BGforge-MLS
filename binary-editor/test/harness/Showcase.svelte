@@ -87,8 +87,8 @@
     let tabsVActive = $state("general");
 
     // Compact RowActions showcase: drives the InlineList (tight-row) layout, which is kebab-only. A real
-    // Bridge records the last structureOp message so the driver can assert the Menu->Delete->Confirm flow
-    // dispatches a remove (and only after Confirm, not on the menu click).
+    // Bridge records the last structureOp message so the driver can assert the Menu->Delete action dispatches
+    // a remove immediately (delete is undoable, so there is no confirm step).
     let lastStructureOp = $state("");
     const showcaseBridge = new Bridge((m: WebviewToHost) => {
         if (m.type === "structureOp") lastStructureOp = JSON.stringify(m.op);
@@ -178,7 +178,7 @@
                 compact={true}
             />
         </div>
-        <!-- Reflects the last dispatched structureOp so Playwright can assert remove fires only after Confirm. -->
+        <!-- Reflects the last dispatched structureOp so Playwright can assert Menu->Delete fires remove immediately. -->
         <div id="rowactions-last-op" data-value={lastStructureOp}></div>
     </div>
 </div>

@@ -217,29 +217,21 @@ await page.keyboard.press("ArrowUp");
 await page.waitForTimeout(100);
 const tabsVAfterArrow = await page.locator("#tabs-v-active").getAttribute("data-value");
 
-// ---- Exercise compact RowActions: kebab-only layout + Menu->Delete->Confirm flow ----
+// ---- Exercise compact RowActions: kebab-only layout + Menu->Delete fires immediately ----
 // Compact mode (InlineList rows) must render ONLY the kebab dropdown, not the six icon buttons. Selecting
-// "Delete" from the menu must arm the inline confirm affordance (it must NOT dispatch a remove on its own);
-// only clicking "Confirm delete" dispatches the structureOp. This verifies confirm-on-delete via the menu.
+// "Delete" from the menu dispatches the remove structureOp immediately (removal is undoable, so there is no
+// confirm step).
 await page.waitForSelector("#rowactions-compact .bb-menu-trigger", { timeout: 5000 });
 // Kebab-only: no labeled action buttons (Add above / Move up / Delete) render directly in compact mode.
 const compactDirectButtons = await page
     .locator('#rowactions-compact button[aria-label="Move up"], #rowactions-compact button[aria-label="Add above"]')
     .count();
-// Open the menu and pick Delete - this should arm the confirm, not dispatch.
+// Open the menu and pick Delete - this dispatches the remove immediately.
 await page.locator("#rowactions-compact .bb-menu-trigger").click();
 await page.waitForSelector(".bb-menu-item", { timeout: 5000 });
 await page.locator(".bb-menu-item", { hasText: "Delete" }).click();
 await page.waitForTimeout(150);
 const opAfterMenuDelete = await page.locator("#rowactions-last-op").getAttribute("data-value");
-// The inline confirm affordance must now be visible; the kebab is replaced by Delete?/Confirm/Cancel.
-const confirmVisibleAfterMenuDelete = await page
-    .locator('#rowactions-compact button[aria-label="Confirm delete"]')
-    .count();
-// Click Confirm - now the remove must dispatch.
-await page.locator('#rowactions-compact button[aria-label="Confirm delete"]').click();
-await page.waitForTimeout(150);
-const opAfterConfirm = await page.locator("#rowactions-last-op").getAttribute("data-value");
 
 await page.screenshot({ path: path.join(here, "shot-primitives.png") });
 
@@ -299,11 +291,9 @@ const menuOnselectFired = menuSelectedAfterAdd === "add-above";
 const menuDisabledItemPresent = disabledItemCount >= 1;
 const menuDisabledNoFire = menuSelectedAfterDisabled === menuSelectedAfterAdd; // unchanged
 
-// Compact RowActions: kebab-only (no direct labeled buttons); Menu Delete arms confirm without dispatching;
-// Confirm dispatches the remove.
+// Compact RowActions: kebab-only (no direct labeled buttons); Menu Delete dispatches the remove immediately.
 const compactIsKebabOnly = compactDirectButtons === 0;
-const compactMenuDeleteArmsNotFires = (opAfterMenuDelete ?? "") === "" && confirmVisibleAfterMenuDelete === 1;
-const compactConfirmFiresRemove = (opAfterConfirm ?? "").includes('"op":"remove"');
+const compactMenuDeleteFiresRemove = (opAfterMenuDelete ?? "").includes('"op":"remove"');
 
 // ---- Verdict ----
 console.log("\n=== Primitives CSP gate ===");
@@ -340,24 +330,17 @@ console.log("Tabs V: initial active=general: " + tabsVInitialCorrect + " (got: "
 console.log("Tabs V: click Effects moves selection: " + tabsVClickWorks + " (got: " + tabsVAfterClick + ")");
 console.log("Tabs V: ArrowUp moves to Abilities: " + tabsVArrowWorks + " (got: " + tabsVAfterArrow + ")");
 console.log("RowActions compact: kebab-only (no direct buttons): " + compactIsKebabOnly);
-console.log("RowActions compact: Menu Delete arms confirm (no dispatch): " + compactMenuDeleteArmsNotFires);
-console.log("RowActions compact: Confirm dispatches remove: " + compactConfirmFiresRemove);
+console.log("RowActions compact: Menu Delete dispatches remove immediately: " + compactMenuDeleteFiresRemove);
 if (!compactIsKebabOnly) {
     console.log("\nROWACTIONS COMPACT KEBAB-ONLY FAILED: direct labeled buttons present, got " + compactDirectButtons);
     process.exit(1);
 }
-if (!compactMenuDeleteArmsNotFires) {
+if (!compactMenuDeleteFiresRemove) {
     console.log(
-        "\nROWACTIONS COMPACT MENU-DELETE FAILED: Menu Delete should arm the inline confirm without dispatching. " +
-            "op-after-menu-delete='" +
+        "\nROWACTIONS COMPACT MENU-DELETE FAILED: expected an immediate remove structureOp, got '" +
             opAfterMenuDelete +
-            "', confirm-buttons=" +
-            confirmVisibleAfterMenuDelete,
+            "'",
     );
-    process.exit(1);
-}
-if (!compactConfirmFiresRemove) {
-    console.log("\nROWACTIONS COMPACT CONFIRM FAILED: expected a remove structureOp, got '" + opAfterConfirm + "'");
     process.exit(1);
 }
 if (!typeToSearchWorks) {

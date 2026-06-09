@@ -26,7 +26,10 @@
         return () => { cancelled = true; };
     });
 
-    const { fields, groups } = $derived(splitForm(rows));
+    // Hidden rows (spec `hidden` flag: reserved/padding/magic fields like unused*/unknown/duplicated
+    // signature-version) stay in the model for the byte round-trip but are not rendered in the form.
+    const visibleRows = $derived(rows.filter((r) => r.hidden !== true));
+    const { fields, groups } = $derived(splitForm(visibleRows));
     // Flag fields are multi-row checkbox grids; in the 2-column scalar grid their height strands the scalar
     // columns (the last left-column field ends up far below its neighbour). Keep scalars in the 2-col grid
     // and render flag fields full-width below, where their checkbox grid uses the whole width anyway.
