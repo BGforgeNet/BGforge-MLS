@@ -5,7 +5,7 @@ import { getRelationshipModel } from "./relationship/registry";
 import type { RelationshipModel } from "./relationship/types";
 import { DEFAULT_WINDOW, getWindow } from "./window";
 import { summaryComposerFor, type SummaryComposer } from "./summary";
-import type { OpenResult, SessionId } from "./types";
+import type { OpenResult, Row, SessionId } from "./types";
 
 export interface UndoEntry {
     label: string;
@@ -27,6 +27,22 @@ export interface EditorSession {
 }
 
 export const sessionStore = new Map<SessionId, EditorSession>();
+
+/**
+ * Every form/grid layout field of the open document, re-projected through the relationship overlay. Shared
+ * by both refresh paths - a single field edit (`editField`) and a structure op (`buildChangeSet`) - so a
+ * document-derived form field (the CRE item-slot and selected-weapon dropdowns, whose options/values read
+ * the Items list) refreshes after ANY mutation without each derived view registering itself as a dependent.
+ * The layout field set is bounded and form-only (the big list/tree blocks are served separately by the
+ * windowed getWindow/getChildren path), so resending it wholesale on every edit is cheap. This is the
+ * correctness guarantee for derived form fields; `RelationshipModel.dependents` is the precise-by-id
+ * complement that additionally covers list-block derived rows (effect params past the first entry, which are
+ * not in this layout-field set). Returns [] for a format with no declarative layout.
+ */
+export function layoutFieldRows(session: EditorSession): Row[] {
+    const layout = buildLayout(session.parserId, session.model, session.relationshipModel).layout;
+    return layout ? Object.values(layout.fields) : [];
+}
 
 let counter = 0;
 function nextId(): SessionId {

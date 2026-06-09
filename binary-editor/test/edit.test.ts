@@ -3,6 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { openSession, sessionStore } from "../src/session";
 import { setExpanded } from "../src/model";
+import { buildLayout } from "../src/layout";
 import { editField, invalidateCachedDocument } from "../src/edit";
 import { undo } from "../src/structure-ops";
 import { formatAdapterRegistry, type ParseResult, type ParsedField } from "@bgforge/binary";
@@ -58,13 +59,36 @@ describe("reactive shaping (real ITM display tree)", () => {
         expect(changed.some((r) => r.id === p2Id && r.name === "Type")).toBe(true);
     });
 
-    it("editing a non-discriminator field returns only that row", () => {
+    it("editing a non-discriminator field re-projects that row but not its sibling params", () => {
         if (!itmFixturePresent()) return;
         const session = openItmSession();
         const f = firstEffectFields(session.model);
         const p1Id = f.get("parameter1")!.id;
-        const result = editField(session, p1Id, 9);
-        expect(result.changeSet.changed.map((r) => r.id)).toEqual([p1Id]);
+        // parameter1 is not a discriminator, so the relationship model lists no dependents for it: editing it
+        // must not re-project parameter2 *through the dependents path*. (The blanket layout-field resend may
+        // still carry the first effect's params because they happen to be layout fields - that is covered by
+        // the dedicated blanket test below; here we assert the dependents contract directly.)
+        expect(session.relationshipModel!.dependents(session.model, f.get("parameter1")!)).toEqual([]);
+        const ids = editField(session, p1Id, 9).changeSet.changed.map((r) => r.id);
+        expect(ids).toContain(p1Id);
+    });
+});
+
+describe("editField blanket layout refresh", () => {
+    // A document-derived form field (e.g. a CRE item-slot / selected-weapon dropdown) must refresh after ANY
+    // field edit, not only edits its author remembered to register as a `dependents` source. The changeset
+    // therefore carries every layout field on every edit, the same set buildChangeSet sends after a structure
+    // op. Asserted on ITM (the mechanism reads the format's own declarative layout, so it is format-agnostic).
+    it("carries every layout field even when the edited field has no dependents", () => {
+        if (!itmFixturePresent()) return;
+        const session = openItmSession();
+        const f = firstEffectFields(session.model);
+        const layout = buildLayout(session.parserId, session.model, session.relationshipModel).layout;
+        const layoutIds = Object.values(layout!.fields).map((r) => r.id);
+        expect(layoutIds.length).toBeGreaterThan(0);
+        // parameter1 has no dependents (asserted above), so only the blanket resend can carry the layout fields.
+        const changedIds = new Set(editField(session, f.get("parameter1")!.id, 9).changeSet.changed.map((r) => r.id));
+        for (const id of layoutIds) expect(changedIds.has(id), `layout field ${id} missing from changeset`).toBe(true);
     });
 });
 

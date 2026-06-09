@@ -1,5 +1,5 @@
 import { formatAdapterRegistry, type ParsedField, type ParseResult } from "@bgforge/binary";
-import type { EditorSession } from "./session";
+import { layoutFieldRows, type EditorSession } from "./session";
 import { projectRow } from "./window";
 import { serializeSession } from "./serialize";
 import type { EditResult, NodeId } from "./types";
@@ -66,6 +66,11 @@ export function editField(session: EditorSession, nodeId: NodeId, value: number 
             if (depNode) changed.push(projectRow(session.model, depNode, rel));
         }
     }
+    // Blanket-resend every layout field so a document-derived form field (CRE item-slot / selected-weapon
+    // dropdown) refreshes after this edit even when nothing registered it as a dependent above. The big
+    // list/tree blocks are not here - they refresh via the windowed getWindow/getChildren path. Same set
+    // buildChangeSet sends after a structure op, so the two refresh paths cannot drift.
+    changed.push(...layoutFieldRows(session));
 
     return {
         changeSet: {
