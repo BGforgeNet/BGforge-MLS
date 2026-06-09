@@ -52,3 +52,28 @@ export function creItemSlotRefConstraint(model: Model): Diagnostic[] {
     }
     return diags;
 }
+
+/** An item referenced by no slot is legal (e.g. a creature carrying more items than its slots use). Note it as
+ *  info - never change anything. The Items list is written wholesale, so orphan items round-trip safely. */
+export function creOrphanItemsConstraint(model: Model): Diagnostic[] {
+    const slotsGroup = findGroup(model, "Item Slots");
+    const itemsGroup = findGroup(model, "Items");
+    if (!slotsGroup || !itemsGroup) return [];
+    const itemsLen = childGroups(model, itemsGroup).length;
+    if (itemsLen === 0) return [];
+    const referenced = new Set<number>();
+    for (const slot of childFields(model, slotsGroup)) {
+        const v = fieldNumber(slot);
+        if (v !== undefined && v >= 0 && v < itemsLen) referenced.add(v);
+    }
+    const orphans: number[] = [];
+    for (let i = 0; i < itemsLen; i++) if (!referenced.has(i)) orphans.push(i);
+    if (orphans.length === 0) return [];
+    return [
+        {
+            nodeId: itemsGroup.id,
+            severity: "info",
+            message: `${orphans.length} unreferenced item(s) (used by no slot): #${orphans.join(", #")}.`,
+        },
+    ];
+}

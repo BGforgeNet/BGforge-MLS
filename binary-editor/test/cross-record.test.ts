@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { buildModel, creResult, findGroupNode, findGroupNodeField } from "./cross-record-fixture";
-import { creMeminfoRefConstraint, creItemSlotRefConstraint } from "../src/relationship/cross-record";
+import {
+    creMeminfoRefConstraint,
+    creItemSlotRefConstraint,
+    creOrphanItemsConstraint,
+} from "../src/relationship/cross-record";
 
 describe("creMeminfoRefConstraint", () => {
     it("warns + clamps when a meminfo slice runs past the memorized-spell list", () => {
@@ -48,5 +52,29 @@ describe("creItemSlotRefConstraint", () => {
     it("no diagnostic when all slot indices are valid or empty", () => {
         const m = buildModel(creResult({ memSpells: 0, items: 3, slots: [0, 2, -1], meminfos: [] }));
         expect(creItemSlotRefConstraint(m)).toHaveLength(0);
+    });
+});
+
+describe("creOrphanItemsConstraint", () => {
+    it("emits one info note listing items referenced by no slot", () => {
+        // 3 items; slots reference 0 only -> items #1 and #2 are orphans.
+        const m = buildModel(creResult({ memSpells: 0, items: 3, slots: [0, -1], meminfos: [] }));
+        const diags = creOrphanItemsConstraint(m);
+        expect(diags).toHaveLength(1);
+        expect(diags[0]!.severity).toBe("info");
+        expect(diags[0]!.message).toContain("2 unreferenced");
+        expect(diags[0]!.message).toContain("#1");
+        expect(diags[0]!.message).toContain("#2");
+        expect(diags[0]!.quickFix).toBeUndefined();
+        const items = m.nodes.find((n) => n.kind === "group" && n.name === "Items")!;
+        expect(diags[0]!.nodeId).toBe(items.id);
+    });
+    it("no note when every item is referenced", () => {
+        const m = buildModel(creResult({ memSpells: 0, items: 2, slots: [0, 1], meminfos: [] }));
+        expect(creOrphanItemsConstraint(m)).toHaveLength(0);
+    });
+    it("no note when there are no items", () => {
+        const m = buildModel(creResult({ memSpells: 0, items: 0, slots: [], meminfos: [] }));
+        expect(creOrphanItemsConstraint(m)).toHaveLength(0);
     });
 });
