@@ -20,6 +20,10 @@
 
     const byNode = $derived(diagnosticsByNode(diagnostics));
     const summary = $derived(bannerSummary(diagnostics));
+    // Warning/error present -> warning styling; otherwise an info-only banner (orphan/unreferenced notes).
+    const bannerSeverity = $derived(
+        diagnostics.some((d) => d.severity === "warning" || d.severity === "error") ? "warning" : "info",
+    );
 
     $effect(() => {
         const onMsg = (event: MessageEvent<HostToWebview>) => {
@@ -77,9 +81,9 @@
         <Checkbox checked={showOffsets} label="Show bytes" onchange={(v) => { showOffsets = v; }} />
     </div>
     {#if diagnostics.length > 0}
-        <div class="banner warning">
+        <div class="banner {bannerSeverity}">
             <span class="banner-header">
-                <Icon name="warning" /><span class="banner-summary">{summary}</span>
+                <Icon name={bannerSeverity} /><span class="banner-summary">{summary}</span>
             </span>
             <ul class="banner-list">
                 {#each diagnostics as d (d.nodeId + d.message)}

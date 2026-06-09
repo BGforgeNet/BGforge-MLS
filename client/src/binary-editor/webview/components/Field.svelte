@@ -18,6 +18,15 @@
     const hasDiag = $derived(diagnostics.length > 0);
     const diagTitle = $derived(diagnostics.map((d) => d.message).join("; "));
     const firstFix = $derived(diagnostics.find((d) => d.quickFix));
+    // Highest severity present drives the marker's icon/colour (error > warning > info). Field-level info markers
+    // are not produced by the cross-record checks (orphan notes attach to group nodes), but keep this correct.
+    const diagSeverity = $derived(
+        diagnostics.some((d) => d.severity === "error")
+            ? "error"
+            : diagnostics.some((d) => d.severity === "warning")
+              ? "warning"
+              : "info",
+    );
 </script>
 <div class="field" class:field-flags={kind === "flags"}>
     <span class="label" title={row.description ?? ""}>{row.name}</span>
@@ -35,7 +44,7 @@
         {#if hasDiag}
             <!-- role="img" + aria-label expose the diagnostic message to screen readers; the Icon span
                  itself is aria-hidden so the glyph character is not announced separately. -->
-            <span class="diag warning" role="img" aria-label={diagTitle}><Icon name="warning" title={diagTitle} /></span>
+            <span class="diag {diagSeverity}" role="img" aria-label={diagTitle}><Icon name={diagSeverity === "info" ? "info" : "warning"} title={diagTitle} /></span>
             {#if firstFix}
                 <button class="quick-fix" onclick={() => { for (const e of firstFix.quickFix!.edits) onedit(e.nodeId, e.value); }}>
                     <Icon name="wrench" />{firstFix.quickFix!.label}
