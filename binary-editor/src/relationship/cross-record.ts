@@ -139,3 +139,29 @@ export function abilityEffectRefConstraint(model: Model): Diagnostic[] {
     }
     return diags;
 }
+
+/** An effect covered by no ability/header range is legal (the flat Effects table is written wholesale, so it
+ *  round-trips). Note it as info - never change anything. Coverage set-difference only, not partition hygiene. */
+export function orphanEffectsConstraint(model: Model): Diagnostic[] {
+    const effGroup = findGroup(model, "Effects");
+    if (!effGroup) return [];
+    const effLen = childGroups(model, effGroup).length;
+    if (effLen === 0) return [];
+    const covered = Array.from<boolean>({ length: effLen }).fill(false);
+    for (const r of collectEffectRanges(model)) {
+        const start = r.startNode ? fieldNumber(r.startNode) : undefined;
+        const count = r.countNode ? fieldNumber(r.countNode) : undefined;
+        if (start === undefined || count === undefined || count <= 0) continue;
+        for (let k = start; k < start + count; k++) if (k >= 0 && k < effLen) covered[k] = true;
+    }
+    const orphans: number[] = [];
+    for (let i = 0; i < effLen; i++) if (!covered[i]) orphans.push(i);
+    if (orphans.length === 0) return [];
+    return [
+        {
+            nodeId: effGroup.id,
+            severity: "info",
+            message: `${orphans.length} unreferenced effect(s) (covered by no ability or equipping/casting range): #${orphans.join(", #")}.`,
+        },
+    ];
+}

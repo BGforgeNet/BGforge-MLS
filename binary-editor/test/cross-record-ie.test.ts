@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { ParseResult } from "@bgforge/binary";
 import { buildModel, type Model } from "../src/model";
-import { abilityEffectRefConstraint } from "../src/relationship/cross-record";
+import { abilityEffectRefConstraint, orphanEffectsConstraint } from "../src/relationship/cross-record";
+import { openItmSession, itmFixturePresent, setRaw } from "./ie-fixture";
+import { normKey } from "../src/relationship/model-helpers";
 
 interface IeOpts {
     label: "ITM" | "SPL";
@@ -85,5 +87,72 @@ describe("abilityEffectRefConstraint", () => {
             }),
         );
         expect(abilityEffectRefConstraint(m)).toHaveLength(0);
+    });
+});
+
+describe("orphanEffectsConstraint", () => {
+    it("notes effects covered by no range", () => {
+        // 4 effects; ability covers [0,2); nothing else -> effects #2,#3 orphaned.
+        const m = buildModel(ieResult({ label: "ITM", effects: 4, abilities: [{ start: 0, count: 2 }] }));
+        const diags = orphanEffectsConstraint(m);
+        expect(diags).toHaveLength(1);
+        expect(diags[0]!.severity).toBe("info");
+        expect(diags[0]!.message).toContain("2 unreferenced");
+        expect(diags[0]!.message).toContain("#2");
+        expect(diags[0]!.message).toContain("#3");
+        const eff = m.nodes.find((n) => n.kind === "group" && n.name === "Effects")!;
+        expect(diags[0]!.nodeId).toBe(eff.id);
+    });
+    it("no note when ability + header ranges cover every effect", () => {
+        const m = buildModel(
+            ieResult({
+                label: "ITM",
+                effects: 3,
+                abilities: [{ start: 0, count: 2 }],
+                equipping: { start: 2, count: 1 },
+            }),
+        );
+        expect(orphanEffectsConstraint(m)).toHaveLength(0);
+    });
+});
+
+// Real-producer guard: the synthetic builders above encode assumed humanized labels. This drives the actual ITM
+// parser on a vendored fixture so a label/shape drift (e.g. "Feature Blocks Count" renamed) fails loudly instead
+// of passing against a wrong assumption. The vendored misc8j.itm has zero abilities and 5 equipping effects, so
+// it exercises the header equipping range (Feature Blocks Index/Count) and the Effects list; ability-entry labels
+// stay synthetic-only as no vendored fixture carries abilities. Skips when the fixture is absent.
+describe("ITM/SPL checks against the real ITM parser", () => {
+    it("matches the real header/effects labels and drives both checks via the equipping range", () => {
+        if (!itmFixturePresent()) return;
+        const model = openItmSession().model;
+        const header = model.nodes.find((n) => n.kind === "group" && n.name === "ITM Header");
+        const effects = model.nodes.find((n) => n.kind === "group" && n.name === "Effects");
+        expect(
+            model.nodes.some((n) => n.kind === "group" && n.name === "Abilities"),
+            "Abilities group",
+        ).toBe(true);
+        expect(header, "real ITM exposes an ITM Header group").toBeDefined();
+        expect(effects, "real ITM exposes an Effects group").toBeDefined();
+        const countNode = (model.childrenByParent.get(header!.id) ?? [])
+            .map((i) => model.nodes[i]!)
+            .find((n) => n.kind === "field" && normKey(n.name) === "featureblockscount");
+        expect(countNode, "real ITM header exposes a Feature Blocks Count field").toBeDefined();
+
+        // Clean fixture: index 0 + count 5 over 5 effects -> consistent, fully covered.
+        expect(abilityEffectRefConstraint(model)).toHaveLength(0);
+        expect(orphanEffectsConstraint(model)).toHaveLength(0);
+
+        // Shrink the equipping range -> the now-uncovered effects surface as an orphan info note.
+        setRaw(countNode!, 2);
+        const orphans = orphanEffectsConstraint(model);
+        expect(orphans).toHaveLength(1);
+        expect(orphans[0]!.severity).toBe("info");
+        expect(orphans[0]!.message).toContain("unreferenced");
+        expect(abilityEffectRefConstraint(model)).toHaveLength(0); // 2 <= 5 still fits
+
+        // Overshoot the equipping range -> a broken-ref warning fires on that exact field node.
+        setRaw(countNode!, 9999);
+        const broken = abilityEffectRefConstraint(model);
+        expect(broken.some((d) => d.nodeId === countNode!.id && d.severity === "warning")).toBe(true);
     });
 });
