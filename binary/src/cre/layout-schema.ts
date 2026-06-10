@@ -37,6 +37,11 @@ import { creEffectV1BodyLabels, creEffectV1BodyRows } from "./effect-v1-layout";
 // resolve and the editor falls back to the auto-form until a v1 fragment lands.
 const CRE_EFFECTS_PREFIX = "cre.effects[].v2";
 
+// Per-entry field-ref prefix for an inventory item in the Items master-detail list (the adapter keys each
+// item's fields under `cre.items[].<key>`); used by the Items detailVariant and its quantity label overrides.
+const CRE_ITEMS_PREFIX = "cre.items[]";
+const itemRef = (key: string): string => `${CRE_ITEMS_PREFIX}.${key}`;
+
 const k = (key: string): string => `cre.header.${key}`;
 const slot = (key: string): string => `cre.itemSlots.${key}`;
 /** Keys for a 1-based header slot array (soundSlots/objectRefs), e.g. `soundSlots`,`sound`,100. */
@@ -116,6 +121,11 @@ const creLabels: Record<string, string> = {
     [k("hairColor")]: "Hair",
     [k("globalActorEnum")]: "Global Actor ID",
     [k("localActorEnum")]: "Local Actor ID",
+    // Inventory-item quantities (the three charge/stack counts), spaced before the trailing digit that
+    // humanize leaves attached ("Quantity1"). They form the middle column of the Items detail.
+    [itemRef("quantity1")]: "Quantity 1",
+    [itemRef("quantity2")]: "Quantity 2",
+    [itemRef("quantity3")]: "Quantity 3",
     // The death variable IS the creature's unique script name (the DV used in scripts and the
     // SPRITE_IS_DEAD_<name> global set on death).
     [k("deathVariable")]: "Script Name",
@@ -544,6 +554,41 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                                             render: "master-detail",
                                             canAdd: true,
                                             canModify: true,
+                                            // Three side-by-side columns in a single untitled pane (no per-
+                                            // column group boxes): the item ref + its expiration, the charge/
+                                            // stack quantities, and the item flags.
+                                            detailVariant: [
+                                                {
+                                                    panels: [
+                                                        {
+                                                            blocks: [
+                                                                {
+                                                                    kind: "fields",
+                                                                    columns: 1,
+                                                                    fields: [
+                                                                        itemRef("item"),
+                                                                        itemRef("expirationTime"),
+                                                                    ],
+                                                                },
+                                                                {
+                                                                    kind: "fields",
+                                                                    columns: 1,
+                                                                    fields: [
+                                                                        itemRef("quantity1"),
+                                                                        itemRef("quantity2"),
+                                                                        itemRef("quantity3"),
+                                                                    ],
+                                                                },
+                                                                {
+                                                                    kind: "flags",
+                                                                    field: itemRef("itemFlags"),
+                                                                    columns: 1,
+                                                                },
+                                                            ],
+                                                        },
+                                                    ],
+                                                },
+                                            ],
                                         },
                                     ],
                                 },
