@@ -191,7 +191,10 @@ export function structureOp(session: EditorSession, req: StructureOpRequest): St
             selIndex = req.direction === "up" ? index - 1 : index + 1;
             break;
         case "remove":
-            selIndex = Math.min(index, newKidsCount - 1);
+            // Select the entry BEFORE the removed one so focus lands on a stable, still-present neighbor
+            // rather than the entry that shifted up into the freed slot. childIdAt clamps -1 -> 0, so removing
+            // the first entry falls back to the new first; an emptied list yields no selection.
+            selIndex = index - 1;
             break;
     }
     result.selection = childIdAt(session.model, newKids, selIndex);

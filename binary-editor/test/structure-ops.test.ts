@@ -169,6 +169,23 @@ describe("structureOp selection", () => {
         const gv2 = session.model.nodes.find((n) => n.name === "Global Variables")!;
         expect(res.selection).toBe(varChildren(session, gv2.id)[1]!.id);
     });
+
+    it("selects the previous entry after remove (index-1)", () => {
+        const { session } = openMapWithGlobals();
+        // Remove the second entry (index 1); selection lands on the previous one (index 0), not the entry
+        // that shifted up into the freed slot.
+        const res = structureOp(session, { op: "remove", entryId: globalVarId(session, 1) });
+        const gv2 = session.model.nodes.find((n) => n.name === "Global Variables")!;
+        expect(res.selection).toBe(varChildren(session, gv2.id)[0]!.id);
+    });
+
+    it("falls back to the new first entry when removing index 0", () => {
+        const { session } = openMapWithGlobals();
+        const res = structureOp(session, { op: "remove", entryId: globalVarId(session, 0) });
+        const gv2 = session.model.nodes.find((n) => n.name === "Global Variables")!;
+        // No previous entry exists; childIdAt clamps index -1 to the new first entry.
+        expect(res.selection).toBe(varChildren(session, gv2.id)[0]!.id);
+    });
 });
 
 // Finding #1 regression: structure ops are addressed by stable NodeId, and the editor resolves the
