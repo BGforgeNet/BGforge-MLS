@@ -1,9 +1,13 @@
 /**
- * CRE declarative layout. Renders the creature on a single dense page instead of the legacy tabs: the
- * 105-field header is curated into logical panels (Identity / Stats / Combat / Resistances / Skills /
- * Colors / Scripts), the two flag words become flag columns, the 40 equipped-item slots a 2-column grid,
- * and the five variable-length sections (Known Spells, Spell Memorization Info, Memorized Spells, Effects,
- * Items) become master-detail list blocks. One variant ("creature"), stamped by the parser.
+ * CRE declarative layout. The header scalars are grouped into compact single-column titled boxes packed side
+ * by side, split across a General tab (Main, Identity, Scripting on the first row; Attributes, Thief Skills,
+ * Extra Stats, Colors on the second; plus the creatureFlags grid and a short trailing table) and a Combat tab
+ * (Main attack stats, AC, Saving Throws, Resistances, and the statusFlags grid). Related fields nest into
+ * subgroups (Identity's Class/Level, Scripting's Scripts, AC's Mod, Extra Stats' Morale, the elemental/magic/
+ * physical resistance split). The structurally distinct header data keeps its own tabs (equipped item slots +
+ * the Items list under Inventory, the 100 sound slots, the 20 packed proficiency bytes as a matrix), and the
+ * variable-length sections (Known Spells, Spell Memorization Info, Memorized Spells, Effects) stay as
+ * master-detail list blocks under Spells / Effects. One variant ("creature"), stamped by the parser.
  *
  * Field refs are the CRE adapter's semantic keys (`cre.header.<camelCase>`, `cre.itemSlots.<slug>`, verified
  * against the model). Omitted from the layout (round-trip is unaffected - the serializer rebuilds from the
@@ -54,9 +58,10 @@ const PROFICIENCY_LABELS: readonly string[] = [
 
 /**
  * Display-label overrides (see `FormatLayout.labels`): concise names applied at render time WITHOUT touching
- * field identity. Drops the category prefix the panel title already states, expands abbreviations, uppercases
- * acronyms, and names the object-ref slots (proficiency rows are labelled by the matrix). Script-slot labels drop the "Script " prefix - the
- * "Scripts" subgroup already states the category, so bare "Override"/"Class"/"Race"/etc. read cleanly there.
+ * field identity. Fields that sit bare in the flat wire-order list carry their own context in the label
+ * ("Morale Break", "Script Class" - the latter so it never collides with the bare "class" field). Fields
+ * inside a boxed group (AC, Colors, Saving Throws, Resistances) use the bare leaf instead, since the group
+ * legend supplies the category.
  */
 const creLabels: Record<string, string> = {
     [k("animationId")]: "Animation ID",
@@ -66,14 +71,15 @@ const creLabels: Record<string, string> = {
     [k("general")]: "General",
     [k("specific")]: "Specific",
     [k("enemyAlly")]: "Enemy / Ally",
+    // Inside the "Morale" subgroup, so the members drop the "Morale" prefix.
     [k("moraleBreak")]: "Break",
-    [k("moraleRecoveryTime")]: "Recovery Time",
+    [k("moraleRecoveryTime")]: "Recovery",
     [k("thaco")]: "THAC0",
     [k("numAttacks")]: "Attacks",
     [k("acNatural")]: "Natural",
     [k("acEffective")]: "Effective",
-    // acCrushing/Missile/Piercing/SlashingMod are per-damage-type AC modifiers; the "Mods" subgroup in the AC
-    // panel gives the context, so the labels can be the bare damage type.
+    // The "Mods" subgroup inside the AC box marks these as per-damage-type modifiers, so each uses the bare
+    // damage type (distinct from the same damage types under Resistances by virtue of the subgroup).
     [k("acCrushingMod")]: "Crushing",
     [k("acMissileMod")]: "Missile",
     [k("acPiercingMod")]: "Piercing",
@@ -83,6 +89,8 @@ const creLabels: Record<string, string> = {
     [k("xpForKilling")]: "XP for Killing",
     [k("powerLevelOrXp")]: "Power Level / XP",
     [k("goldCarried")]: "Gold",
+    // Saving Throws / Resistances / Colors render as boxed groups whose legend states the category, so each
+    // member uses the bare leaf label.
     [k("saveVsDeath")]: "Death",
     [k("saveVsWands")]: "Wands",
     [k("saveVsPolymorph")]: "Polymorph",
@@ -111,6 +119,7 @@ const creLabels: Record<string, string> = {
     // The death variable IS the creature's unique script name (the DV used in scripts and the
     // SPRITE_IS_DEAD_<name> global set on death).
     [k("deathVariable")]: "Script Name",
+    // The "Scripts" subgroup supplies the category, so the five BCS script slots use the bare slot name.
     [k("scriptOverride")]: "Override",
     [k("scriptClass")]: "Class",
     [k("scriptRace")]: "Race",
@@ -138,79 +147,62 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
         creature: {
             tabs: [
                 {
-                    id: "identity",
-                    label: "Identity",
+                    id: "general",
+                    label: "General",
+                    // Header fields, drawn from specs/header.ts. The General tab packs single-column titled boxes across
+                    // two rows - Main (names + core stats), Identity, Scripting on the first; Attributes, Thief Skills,
+                    // Extra Stats, Colors on the second - then the creature-flag grid and a short trailing table. The
+                    // Combat tab carries Main (attack stats), AC, saving throws, resistances, and the status flags.
+                    // Boxing relaxes strict wire order. Omitted: signature/version magic, effStructureVersion
+                    // (parser/serializer-managed), the section offset/count pairs, and objectRefs (not surfaced).
+                    // proficiencies, soundSlots, and the equipped item slots live in their own tabs.
                     rows: [
                         {
+                            // The logical clusters as single-column titled panels in one row. `.layout-row` wraps them
+                            // and the panels grow to fill, so they pack as side-by-side stat boxes. Identity gathers the
+                            // IDS dropdowns; Scripting gathers the dialog file, script name, and the five BCS script
+                            // slots. hideInShadows is pulled into Thief Skills from its earlier wire slot; lore
+                            // (interleaved among the thief skills in wire order but a knowledge stat) stays loose below.
                             panels: [
                                 {
-                                    title: "Identity",
+                                    // The names plus core stats, leading the page: tooltip/dialog strrefs, experience/
+                                    // gold, health, animation, portraits, and reputation (THAC0/attacks live on Combat).
+                                    title: "Main",
                                     blocks: [
                                         {
                                             kind: "fields",
+                                            columns: 1,
                                             fields: [
                                                 k("longName"),
                                                 k("shortName"),
-                                                k("smallPortrait"),
-                                                k("largePortrait"),
-                                                k("animationId"),
                                                 k("xpForKilling"),
                                                 k("powerLevelOrXp"),
                                                 k("goldCarried"),
+                                                k("currentHp"),
+                                                k("maxHp"),
+                                                k("animationId"),
+                                                k("smallPortrait"),
+                                                k("largePortrait"),
                                                 k("reputation"),
-                                                k("lore"),
                                             ],
                                         },
                                     ],
                                 },
                                 {
-                                    // The Identity row's second column = the Scripting panel: the dialog file and Script Name
-                                    // (death variable) as fields, with the five BCS script slots boxed as a subgroup below.
-                                    title: "Scripting",
+                                    title: "Identity",
                                     stack: true,
                                     blocks: [
                                         {
                                             kind: "fields",
-                                            fields: [k("dialogFile"), k("deathVariable")],
-                                        },
-                                        {
-                                            kind: "group",
-                                            label: "Scripts",
-                                            fields: [
-                                                k("scriptOverride"),
-                                                k("scriptClass"),
-                                                k("scriptRace"),
-                                                k("scriptGeneral"),
-                                                k("scriptDefault"),
-                                            ],
-                                        },
-                                    ],
-                                },
-                                {
-                                    // What the creature *is*: enemyAlly (EA.IDS allegiance), general/specific
-                                    // (GENERAL/SPECIFIC.IDS creature-type identifiers), race (RACE.IDS), sex/gender
-                                    // (GENDER.IDS), and alignment (ALIGNMENT.IDS) - descriptive identifiers. The whole class
-                                    // build (CLASS.IDS dropdown + kit + the multiclass Level row) nests below as a boxed
-                                    // "Class" subgroup. 1-column (narrow) so it pairs beside the Identity panel; `stack`
-                                    // puts the subgroup under the field list rather than beside it.
-                                    title: "Classification",
-                                    stack: true,
-                                    blocks: [
-                                        {
-                                            kind: "fields",
-                                            fields: [
-                                                k("enemyAlly"),
-                                                k("general"),
-                                                k("specific"),
-                                                k("race"),
-                                                k("sex"),
-                                                k("gender"),
-                                                k("alignment"),
-                                            ],
+                                            columns: 1,
+                                            fields: [k("enemyAlly"), k("general"), k("specific"), k("race")],
                                         },
                                         {
                                             kind: "group",
                                             label: "Class",
+                                            columns: 1,
+                                            // The three multiclass level bytes fold into one "Level [] [] []" inline row
+                                            // via the join; a single-class creature uses only the first.
                                             fields: [
                                                 k("class"),
                                                 k("kit"),
@@ -230,74 +222,107 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                                                 },
                                             ],
                                         },
+                                        {
+                                            kind: "fields",
+                                            columns: 1,
+                                            fields: [k("sex"), k("gender"), k("alignment"), k("racialEnemy")],
+                                        },
+                                    ],
+                                },
+                                {
+                                    title: "Scripting",
+                                    stack: true,
+                                    blocks: [
+                                        {
+                                            kind: "fields",
+                                            columns: 1,
+                                            fields: [k("deathVariable"), k("dialogFile")],
+                                        },
+                                        {
+                                            kind: "group",
+                                            label: "Scripts",
+                                            columns: 1,
+                                            fields: [
+                                                k("scriptOverride"),
+                                                k("scriptClass"),
+                                                k("scriptRace"),
+                                                k("scriptGeneral"),
+                                                k("scriptDefault"),
+                                            ],
+                                        },
                                     ],
                                 },
                             ],
                         },
                         {
+                            // Second row: attributes, thief skills, extra stats, and colors.
                             panels: [
                                 {
                                     title: "Attributes",
                                     blocks: [
                                         {
                                             kind: "fields",
+                                            columns: 1,
+                                            // strength + strengthBonus fold into one "Strength [] / []" row (the
+                                            // percentile bonus applies only at STR 18).
                                             fields: [
                                                 k("strength"),
                                                 k("strengthBonus"),
-                                                k("intelligence"),
-                                                k("wisdom"),
                                                 k("dexterity"),
                                                 k("constitution"),
+                                                k("intelligence"),
+                                                k("wisdom"),
                                                 k("charisma"),
+                                            ],
+                                            joins: [
+                                                {
+                                                    label: "Strength",
+                                                    separator: "/",
+                                                    fields: [k("strength"), k("strengthBonus")],
+                                                },
                                             ],
                                         },
                                     ],
                                 },
                                 {
-                                    // Skills: turn-undead level and ranger tracking, with the thief skills boxed as a
-                                    // "Thief" subgroup below (Fatigue/Intoxication live in Combat).
-                                    title: "Skills",
+                                    title: "Thief Skills",
+                                    blocks: [
+                                        {
+                                            kind: "fields",
+                                            columns: 1,
+                                            fields: [
+                                                k("lockpicking"),
+                                                k("findDisarmTraps"),
+                                                k("pickPockets"),
+                                                k("moveSilently"),
+                                                k("hideInShadows"),
+                                                k("detectIllusion"),
+                                                k("setTraps"),
+                                            ],
+                                        },
+                                    ],
+                                },
+                                {
+                                    title: "Extra Stats",
                                     stack: true,
                                     blocks: [
                                         {
                                             kind: "fields",
-                                            columns: 2,
-                                            fields: [k("turnUndeadLevel"), k("trackingSkill")],
+                                            columns: 1,
+                                            fields: [
+                                                k("lore"),
+                                                k("fatigue"),
+                                                k("intoxication"),
+                                                k("luck"),
+                                                k("turnUndeadLevel"),
+                                                k("trackingSkill"),
+                                            ],
                                         },
                                         {
                                             kind: "group",
-                                            label: "Thief",
-                                            columns: 2,
-                                            fields: [
-                                                k("detectIllusion"),
-                                                k("setTraps"),
-                                                k("lockpicking"),
-                                                k("moveSilently"),
-                                                k("findDisarmTraps"),
-                                                k("pickPockets"),
-                                                k("hideInShadows"),
-                                            ],
-                                        },
-                                    ],
-                                },
-                            ],
-                        },
-                        {
-                            panels: [
-                                {
-                                    title: "Flags",
-                                    blocks: [{ kind: "flags", field: k("creatureFlags"), columns: 4, spread: true }],
-                                },
-                            ],
-                        },
-                        {
-                            panels: [
-                                {
-                                    title: "Other",
-                                    blocks: [
-                                        {
-                                            kind: "fields",
-                                            fields: [k("trackingTarget"), k("globalActorEnum"), k("localActorEnum")],
+                                            label: "Morale",
+                                            columns: 1,
+                                            fields: [k("morale"), k("moraleBreak"), k("moraleRecoveryTime")],
                                         },
                                     ],
                                 },
@@ -306,7 +331,7 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                                     blocks: [
                                         {
                                             kind: "fields",
-                                            columns: 2,
+                                            columns: 1,
                                             fields: [
                                                 k("metalColor"),
                                                 k("minorColor"),
@@ -321,6 +346,29 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                                 },
                             ],
                         },
+                        {
+                            // 32 creature-flag bits, full-width flag-column grid; legend = the field's display name.
+                            panels: [
+                                {
+                                    blocks: [{ kind: "flags", field: k("creatureFlags"), columns: 4, spread: true }],
+                                },
+                            ],
+                        },
+                        {
+                            // The few remaining loose scalars: the tracking-target resref and the two runtime actor
+                            // enums (the rest of the loose stats moved into the Extra Stats box above).
+                            panels: [
+                                {
+                                    blocks: [
+                                        {
+                                            kind: "fields",
+                                            columns: 4,
+                                            fields: [k("trackingTarget"), k("globalActorEnum"), k("localActorEnum")],
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
                     ],
                 },
                 {
@@ -328,25 +376,16 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                     label: "Combat",
                     rows: [
                         {
+                            // The combat boxes: Main (attack stats) and the defensive boxes (AC, saving throws,
+                            // resistances), packed side by side like the General clusters.
                             panels: [
                                 {
-                                    // Combat stats merged into one group: attacks + health + condition + luck. Morale and AC
-                                    // are their own groups beside this one.
-                                    title: "Combat",
+                                    title: "Main",
                                     blocks: [
                                         {
                                             kind: "fields",
-                                            fields: [
-                                                k("thaco"),
-                                                k("numAttacks"),
-                                                // Racial Enemy (ranger favoured-enemy race, RACE.IDS) - a combat-targeting attribute.
-                                                k("racialEnemy"),
-                                                k("currentHp"),
-                                                k("maxHp"),
-                                                k("fatigue"),
-                                                k("intoxication"),
-                                                k("luck"),
-                                            ],
+                                            columns: 1,
+                                            fields: [k("thaco"), k("numAttacks")],
                                         },
                                     ],
                                 },
@@ -356,13 +395,13 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                                     blocks: [
                                         {
                                             kind: "fields",
+                                            columns: 1,
                                             fields: [k("acNatural"), k("acEffective")],
                                         },
                                         {
-                                            // Per-damage-type AC modifiers, boxed - the "Mod" label gives the context so the
-                                            // entries can be bare damage types.
                                             kind: "group",
                                             label: "Mod",
+                                            columns: 1,
                                             fields: [
                                                 k("acCrushingMod"),
                                                 k("acMissileMod"),
@@ -377,6 +416,7 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                                     blocks: [
                                         {
                                             kind: "fields",
+                                            columns: 1,
                                             fields: [
                                                 k("saveVsDeath"),
                                                 k("saveVsWands"),
@@ -388,32 +428,31 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                                     ],
                                 },
                                 {
-                                    title: "Morale",
-                                    blocks: [
-                                        {
-                                            kind: "fields",
-                                            fields: [k("morale"), k("moraleBreak"), k("moraleRecoveryTime")],
-                                        },
-                                    ],
-                                },
-                            ],
-                        },
-                        {
-                            panels: [
-                                {
                                     title: "Resistances",
+                                    stack: true,
                                     blocks: [
                                         {
-                                            kind: "fields",
+                                            kind: "group",
+                                            label: "Elemental",
                                             columns: 2,
                                             fields: [
                                                 k("resistFire"),
                                                 k("resistCold"),
                                                 k("resistElectricity"),
                                                 k("resistAcid"),
-                                                k("resistMagic"),
-                                                k("resistMagicFire"),
-                                                k("resistMagicCold"),
+                                            ],
+                                        },
+                                        {
+                                            kind: "group",
+                                            label: "Magic",
+                                            columns: 2,
+                                            fields: [k("resistMagic"), k("resistMagicFire"), k("resistMagicCold")],
+                                        },
+                                        {
+                                            kind: "group",
+                                            label: "Physical",
+                                            columns: 2,
+                                            fields: [
                                                 k("resistSlashing"),
                                                 k("resistCrushing"),
                                                 k("resistPiercing"),
@@ -425,10 +464,9 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                             ],
                         },
                         {
+                            // 24 status bits, full-width.
                             panels: [
                                 {
-                                    // 24 status bits: spread across the full-width row.
-                                    title: "Status",
                                     blocks: [{ kind: "flags", field: k("statusFlags"), columns: 6, spread: true }],
                                 },
                             ],

@@ -1,14 +1,18 @@
 /**
- * CRE single-page layout harness pass.
+ * CRE tabbed layout harness pass.
  *
- * CRE is migrated to the declarative layout: the 105-field header is curated into panels (Identity / Stats /
- * Combat / Resistances / Skills / Colors / Scripts / References), the two flag words render as flag columns,
- * the 40 equipped-item slots as a grid, and the five variable-length sections (Known Spells, Spell
- * Memorization Info, Memorized Spells, Effects, Items) as master-detail `list` blocks - all on one page (no
- * section tabs). This driver opens a real BG2 mage CRE in the REAL webview bundle and:
- *   - asserts the layout resolves (variant "creature", sections map with correct caps, all header/grid panels,
- *     no tabs, the opcode renders as a searchable combobox in the effect detail, label/value spacing is
- *     non-zero in both the field panels and the item-slots grid);
+ * CRE renders through the declarative layout as a tabbed editor (General / Combat / Inventory / Proficiencies /
+ * Sounds / Spells / Effects). The header scalars are grouped into single-column titled boxes packed side by
+ * side: the General tab carries Main / Identity / Scripting on its first row and Attributes / Thief Skills /
+ * Extra Stats / Colors on its second, plus the creature-flag grid and a short trailing table; the Combat tab
+ * carries Main (attack stats) / AC / Saving Throws / Resistances and the status-flag grid. The 40 equipped-item
+ * slots render as a grid (Inventory), the 20 proficiency bytes as a matrix (Proficiencies), the 100 sound
+ * strrefs as a grid (Sounds), and the five variable-length sections (Known Spells, Spell Memorization Info,
+ * Memorized Spells, Effects, Items) as master-detail `list` blocks under Spells / Effects / Inventory. This
+ * driver opens a real BG2 mage CRE in the REAL webview bundle and:
+ *   - asserts the layout resolves (variant "creature", sections map with correct caps, the top-level tab strip,
+ *     the opcode renders as a searchable combobox in the effect detail, label/value spacing is non-zero in both
+ *     the field boxes and the item-slots grid);
  *   - drives a representative structure op on two sections (Known Spells add/undo, Effects insert/remove/undo)
  *     through the actual message path (webview posts structureOp -> hostUp -> dispatch -> changeSet reply);
  *   - keeps a dispatch-level round-trip regression (open -> serialize -> byte-identical).
@@ -103,13 +107,13 @@ await page.exposeFunction("__hostUp", async (m: WebviewToHost) => {
 await page.goto("file://" + path.join(here, "app.html"));
 await page.waitForSelector(".layout-root .bb-tabs", { timeout: 5000 });
 await page.waitForTimeout(200);
-// CRE is now tabbed; capture the default (Identity) tab immediately so the screenshot exists regardless of
+// CRE is tabbed; capture the default (General) tab immediately so the screenshot exists regardless of
 // the later structure-op steps (which navigate into the Spells / Effects tabs).
 await page.screenshot({ path: path.join(here, "shot-cre.png"), fullPage: true });
 
 // ---- Dropdown tier guard (UI-GUIDELINES: dropdowns size to their longest option, quantized to the S/M/ML/L
 // width tiers - mid-length IE IDS dropdowns land on ML, not the wide L, so the column is not over-wide; yet the
-// longest option must still fit). Classification's Alignment is a stable ML case: its longest of the nine fixed
+// longest option must still fit). The Identity box's Alignment is a stable ML case: its longest of the nine fixed
 // alignments is "0x32 Chaotic neutral" = 20ch. Assert it renders on the ML tier (24ch, the fixed middle width -
 // NOT the 34ch L box), then drive it to that longest option and assert the trigger label is not ellipsis-clipped
 // (scrollWidth <= clientWidth). ----
@@ -192,11 +196,11 @@ const topTabs = await page.evaluate(() =>
 check(
     "layout: top-level tabs render in order",
     JSON.stringify(topTabs) ===
-        JSON.stringify(["Identity", "Combat", "Inventory", "Proficiencies", "Sounds", "Spells", "Effects"]),
+        JSON.stringify(["General", "Combat", "Inventory", "Proficiencies", "Sounds", "Spells", "Effects"]),
     JSON.stringify(topTabs),
 );
 
-await clickTab("Identity");
+await clickTab("General");
 const fieldGap = await page.evaluate(() => {
     let min = Infinity;
     for (const field of Array.from(document.querySelectorAll(".layout-root .kv:not(.kv-multi) .field"))) {
@@ -377,7 +381,7 @@ check(
     }
 }
 
-// ---- Screenshots ---- (shot-cre.png = the Identity tab, captured at load; here capture the Effects tab detail)
+// ---- Screenshots ---- (shot-cre.png = the General tab, captured at load; here capture the Effects tab detail)
 await clickTab("Effects");
 await selectRow(effectsPanel, 0);
 await effectsPanel.locator(".detail .layout-root .field").first().waitFor({ timeout: 3000 });

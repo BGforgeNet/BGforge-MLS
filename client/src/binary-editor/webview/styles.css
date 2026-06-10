@@ -298,7 +298,8 @@ button:disabled {
 }
 
 /* Inline "joined" field row: a labelled run of small numeric inputs with a separator between (e.g. CRE Level
-   "1 / 2 / 3"). The inputs hug ~2 digits; spinners are dropped so the box stays compact. */
+   "1 / 2 / 3", CRE Strength "18 / 100"). The inputs fit up to 3 digits (a u8 max, e.g. the percentile strength
+   bonus); spinners are dropped so the box stays compact. */
 .field-control.joined {
     flex-wrap: nowrap;
     gap: 0;
@@ -308,7 +309,7 @@ button:disabled {
     color: var(--vscode-descriptionForeground);
 }
 .field-control.joined .joined-input input[type="number"] {
-    width: 3.5ch;
+    width: 4.5ch;
     box-sizing: border-box;
     padding: 0.2rem 0.25rem;
     text-align: center;
