@@ -43,6 +43,6 @@
         <InlineList parentId={section.nodeId} caps={caps!} {bridge} {version} {selection} {onedit} {showOffsets} />
     </div>
 {:else}
-    <ListSection nodeId={section.nodeId} caps={caps!} {bridge} {version} {selection}
+    <ListSection {sectionKey} nodeId={section.nodeId} caps={caps!} {bridge} {version} {selection}
                  onadd={add} {onedit} {byNode} {showOffsets} {detailVariant} {detailVariantFallbacks} {labels} />
 {/if}

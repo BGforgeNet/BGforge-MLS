@@ -3,6 +3,7 @@
     import type { Bridge } from "../state/bridge";
     import type { HostToWebview } from "../messages";
     import { diagnosticsByNode, bannerSummary } from "../state/diagnostics";
+    import { clearSelectionMemory } from "../state/list-selection-memory";
     import LayoutRenderer from "./LayoutRenderer.svelte";
     import Checkbox from "./primitives/Checkbox.svelte";
     import Icon from "./Icon.svelte";
@@ -31,6 +32,7 @@
             if (bridge.handle(m)) return; // resolved a pending requestChildren
             if (m.type === "init") {
                 open = m.open;
+                clearSelectionMemory(); // a fresh file load drops any remembered per-section list selections
                 bridge.invalidate();
                 version++;
             } else if (m.type === "diagnostics") {
