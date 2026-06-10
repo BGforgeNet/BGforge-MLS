@@ -106,6 +106,32 @@ await page.waitForTimeout(200);
 // CRE is now tabbed; capture the default (Identity) tab immediately so the screenshot exists regardless of
 // the later structure-op steps (which navigate into the Spells / Effects tabs).
 await page.screenshot({ path: path.join(here, "shot-cre.png"), fullPage: true });
+
+// ---- Dropdown tier guard (UI-GUIDELINES: dropdowns size to their longest option, quantized to the S/M/ML/L
+// width tiers - mid-length IE IDS dropdowns land on ML, not the wide L, so the column is not over-wide; yet the
+// longest option must still fit). Classification's Alignment is a stable ML case: its longest of the nine fixed
+// alignments is "0x32 Chaotic neutral" = 20ch. Assert it renders on the ML tier (24ch, the fixed middle width -
+// NOT the 34ch L box), then drive it to that longest option and assert the trigger label is not ellipsis-clipped
+// (scrollWidth <= clientWidth). ----
+{
+    const alignFc = page.locator('.field-control:has(.bb-select-trigger[aria-label="Alignment"])').first();
+    const alignTier = await alignFc.evaluate((el) => el.className.replace("field-control", "").trim());
+    check("dropdown: mid-length Alignment lands on the ML tier (not the wide L)", alignTier === "tier-ml", alignTier);
+    const alignTrigger = page.locator('.bb-select-trigger[aria-label="Alignment"]');
+    await alignTrigger.click();
+    await page.waitForTimeout(150);
+    await page.locator(".bb-popup-item", { hasText: "Chaotic neutral" }).first().click();
+    await page.waitForTimeout(150);
+    const alignClip = await page
+        .locator('.bb-select-trigger[aria-label="Alignment"] .bb-select-label')
+        .evaluate((el) => ({ text: el.textContent ?? "", clipped: el.scrollWidth > el.clientWidth + 1 }));
+    check(
+        "dropdown: longest Alignment option fits the ML trigger without clipping",
+        !alignClip.clipped,
+        JSON.stringify(alignClip),
+    );
+}
+
 async function clickTab(label: string): Promise<void> {
     await page.locator('.bb-tabs.primary button[role="tab"]').filter({ hasText: label }).first().click();
     await page.waitForTimeout(200);

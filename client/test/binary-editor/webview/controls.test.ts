@@ -118,18 +118,24 @@ describe("valueTier", () => {
         expect(valueTier(stringRow(6))).toBe("s");
         expect(valueTier(stringRow(8))).toBe("m"); // resref: 7-12 chars
         expect(valueTier(stringRow(12))).toBe("m");
+        expect(valueTier(stringRow(16))).toBe("ml"); // 13-20 chars -> mid-large
         expect(valueTier(stringRow(32))).toBe("l"); // long char array
     });
 
-    it("sizes plain enum dropdowns at medium; a long option ellipsizes rather than forcing the wide L tier", () => {
-        expect(valueTier(enumRow)).toBe("m"); // short labels -> m
+    it("sizes a plain enum dropdown by its longest option, floored at M and stepping M -> ML -> L", () => {
+        // enumRow longest option "1 Mutant" = 8ch -> within M; floored to M (the arrow chrome makes S too tight).
+        expect(valueTier(enumRow)).toBe("m");
+        // A mid-length option set (longest "11 Half elf werewolf" = 20ch) lands on the ML tier, not the wide L,
+        // so the common IE IDS dropdowns (General/Race/Alignment) no longer sit in a 34ch box.
+        const mid: Row = { ...enumRow, enumOptions: { "0": "Human", "11": "Half elf werewolf" }, rawValue: 0 };
+        expect(valueTier(mid)).toBe("ml");
+        // A genuinely long option (> 20ch) still takes L so its label never clips.
         const longEnum: Row = { ...enumRow, enumOptions: { "0": "A very long dropdown option label" } };
-        expect(valueTier(longEnum)).toBe("m"); // a long option no longer widens the box; it ellipsizes in m
+        expect(valueTier(longEnum)).toBe("l");
     });
 
     it("keeps the searchable combobox (e.g. the effect opcode) at the wide L tier", () => {
-        const searchable: Row = { ...enumRow, searchableEnum: true };
-        expect(valueTier(searchable)).toBe("l");
+        expect(valueTier({ ...enumRow, searchableEnum: true })).toBe("l");
     });
 });
 

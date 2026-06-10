@@ -1130,12 +1130,16 @@ input[type="text"]::placeholder {
  * type, so a tier renders one identical width whether the control is a text input, a dropdown, or the hex
  * wrapper (a plain input is content-box by default and would otherwise render ~2ch wider than a same-tier
  * dropdown). ~2ch of the box is input chrome (padding + border), so visible content is roughly S:6 / M:14 /
- * L:32 chars - small decimals/short strings, hex/8-char resref/dropdowns, long char arrays/long labels. */
+ * ML:22 / L:32 chars - small decimals/short strings, hex/8-char resref/dropdowns, mid-length IDS dropdowns,
+ * long char arrays/long labels. */
 .layout-root .field-control.tier-s {
     --val-ch: 8ch;
 }
 .layout-root .field-control.tier-m {
     --val-ch: 16ch;
+}
+.layout-root .field-control.tier-ml {
+    --val-ch: 24ch;
 }
 .layout-root .field-control.tier-l {
     --val-ch: 34ch;

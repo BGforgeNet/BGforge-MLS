@@ -14,8 +14,12 @@ not its byte size. The tier is classified in `client/src/binary-editor/webview/s
 `client/src/binary-editor/webview/styles.css`.
 
 - **S (6ch)** - decimal numbers: stats, levels, counts, IDs, strrefs up to ~6 digits. The common case.
-- **M (14ch)** - hex fields, 8-char resref strings, dropdowns, mid-length strings.
-- **L (32ch)** - long char arrays (e.g. a 32-char variable name) and long dropdown labels.
+- **M (14ch)** - hex fields, 8-char resref strings, short-option dropdowns, mid-length strings.
+- **ML (22ch)** - mid-length dropdowns (most IE IDS enums: General/Race/Alignment, whose longest option runs
+  ~13-20 chars) and 13-20 char strings. Exists so these do not jump the whole way to L and leave a column of
+  dead space.
+- **L (32ch)** - long char arrays (e.g. a 32-char variable name) and genuinely long dropdown labels (an
+  effect's Timing, a CRE Kit/Class).
 
 Fixed grid tracks keep columns aligned: a tier sets only a control's right edge, never its left edge or the
 next column's position. Rationale: one snug numeric width keeps the dominant small fields tight while the few
@@ -23,8 +27,9 @@ wider values still fit; per-value widths would read as ragged across records.
 
 INTENTIONAL - do not flag:
 
-- Dropdowns are sized to their LONGEST option label (so changing the selection never clips), so a dropdown
-  often looks roomy next to its current value.
+- Dropdowns are sized to their LONGEST option label (so changing the selection never clips), but quantized to
+  the S/M/ML/L tiers above - NOT hugged to the exact option width (per-field hug would read ragged). So a
+  dropdown often looks roomy next to its current short value, and same-tier dropdowns share one width.
 - A control narrower than its column track has empty space to its right - that is the fixed-track design, not
   misalignment, as long as the left edges line up.
 

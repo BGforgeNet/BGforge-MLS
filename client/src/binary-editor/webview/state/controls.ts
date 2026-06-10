@@ -112,13 +112,16 @@ export function parseCustomValue(query: string): number | undefined {
 // length / hex format / longest dropdown label, none of which a CSS selector can read. It runs once per
 // field render (a few comparisons), not per frame. See the UX rule "Size fields to a small display-width
 // scale". Widths/values themselves are owned by the stylesheet, not here.
-export type SizeTier = "s" | "m" | "l";
+export type SizeTier = "s" | "m" | "ml" | "l";
 
 // Char-count boundaries between tiers (how many characters the value shows). The ch box widths these map to
-// live in styles.css, tuned against the rendered forms.
+// live in styles.css, tuned against the rendered forms. The ML step exists so a mid-length value (most IE IDS
+// dropdowns: General/Race/Alignment, whose longest option is ~13-20 chars) lands on a fixed middle width
+// instead of jumping the whole way to the wide L box and leaving a column of dead space.
 function tierForChars(n: number): SizeTier {
     if (n <= 6) return "s";
     if (n <= 12) return "m";
+    if (n <= 20) return "ml";
     return "l";
 }
 
@@ -133,9 +136,10 @@ export function valueTier(row: Row): SizeTier {
     const kind = controlKind(row);
     // Dropdowns are sized to their LONGEST option label (value-prefixed, as the trigger renders it) so changing
     // the selection never clips - the UI-GUIDELINES contract. The arrow + padding chrome make the S box too
-    // tight, so a dropdown is floored at M and widens to L only when its longest option needs the room (e.g. an
-    // effect's Timing "Instant/Permanent (after Death)", a CRE Kit name). The searchable combobox (the ~370-entry
-    // effect opcode) keeps L regardless - its free-text labels and text-box selection need it.
+    // tight, so a dropdown is floored at M; from there it picks the smallest tier whose box fits its longest
+    // option (ML for the common IE IDS dropdowns, L only when an option genuinely runs long - an effect's Timing
+    // "Instant/Permanent (after Death)", a CRE Kit name). The searchable combobox (the ~370-entry effect opcode)
+    // keeps L regardless - its free-text labels and text-box selection need it.
     if (kind === "enum") {
         if (row.searchableEnum === true) return "l";
         const tier = tierForChars(enumLongestLabelChars(row));

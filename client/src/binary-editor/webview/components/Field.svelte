@@ -33,7 +33,7 @@
     <!-- The control and its trailing chrome (offset/diagnostic) are wrapped so .field always has exactly
          two children (label + value); the layout path makes .field a 2-column subgrid so labels share a
          max-content column and every control aligns at a uniform width. -->
-    <span class="field-control" class:tier-s={tier === "s"} class:tier-m={tier === "m"} class:tier-l={tier === "l"}>
+    <span class="field-control" class:tier-s={tier === "s"} class:tier-m={tier === "m"} class:tier-ml={tier === "ml"} class:tier-l={tier === "l"}>
         {#if kind === "number"}<NumberField {row} onedit={emit} />
         {:else if kind === "string"}<StringField {row} onedit={emit} />
         {:else if kind === "enum"}<EnumField {row} onedit={emit} />
