@@ -38,6 +38,12 @@ export const proFormatAdapter: BinaryFormatAdapter = {
         return `pro.${segments.map((segment) => slugify(segment)).join(".")}`;
     },
 
+    // Structural-transition capability: implemented but intentionally dormant. A PRO object-type/subtype
+    // change rewrites the entire record (each type has its own subtype specs), so it is a destructive
+    // whole-record retype the editor deliberately does not offer - objectType/subType are readOnlyFields
+    // (see layout-schema.ts), and editField never consults isStructuralFieldId. These methods are the
+    // scaffolding for a future explicit "retype" affordance; until one is wired, they never fire. Kept
+    // rather than removed so that affordance would not have to re-derive the transition logic.
     isStructuralFieldId(fieldId: string): boolean {
         return isProStructuralFieldId(fieldId);
     },
