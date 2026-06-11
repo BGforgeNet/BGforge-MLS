@@ -111,13 +111,14 @@ class MapParser implements BinaryParser {
             opaqueRanges.push(skippedRange);
         }
 
-        // TODO(map): Fallout 2 CE uses SCRIPT_TYPE_COUNT == 5 in
-        // tmp/fallout2-ce/src/scripts.cc and tmp/fallout2-ce/src/scripts.h, but
-        // real RP maps under external/fallout/Fallout2_Restoration_Project/data/maps
-        // appear to place objects after 4 script lists. Strict parsing follows the
-        // real RP files for now. The NMA format notes also differ in places from
-        // the CE code:
-        // https://nma-fallout.com/resources/fallout-2-memory-maps-and-file-formats.181/
+        // Script-list count: Fallout 2 CE's engine source (scripts.cc / scripts.h) defines
+        // SCRIPT_TYPE_COUNT == 5, but shipped maps serialize only 4 script lists before the objects
+        // section. A scan of the full Fallout 2 Restoration Project map set (174 maps) confirms it: 172
+        // decode cleanly at a count of 4, and the 2 that do not (sfsheng, reddown) fall back to an opaque
+        // objects tail at every count 0..5 - so none serialize 5 clean lists. Strict parsing fixes the
+        // count at 4 (STRICT_MAP_SCRIPT_TYPE_COUNT); graceful mode below still probes 0..5 and
+        // score-selects for robustness against odd tails. NMA format notes differ in places from the CE
+        // code: https://nma-fallout.com/resources/fallout-2-memory-maps-and-file-formats.181/
         if (options?.gracefulMapBoundaries) {
             const scriptTailCandidates = [0, 1, 2, 3, 4, 5].map((scriptTypeCount) => {
                 const candidateErrors: string[] = [];
