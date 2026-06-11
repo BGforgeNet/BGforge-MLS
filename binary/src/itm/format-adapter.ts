@@ -22,7 +22,8 @@ import {
     ITM_FIELDS,
 } from "./entity-ops";
 
-/** Abilities (and the equipping header range) slice into the shared flat Effects table; orphan effects noted. */
+/** Abilities (and the equipping header range) slice into the shared flat Effects table; orphan effects noted,
+ *  and an effect claimed by two ranges is warned (the ability/equipping slices should partition the table). */
 const itmCrossRefRelationships: readonly CrossRefRelationship[] = [
     {
         kind: "slice",
@@ -32,6 +33,7 @@ const itmCrossRefRelationships: readonly CrossRefRelationship[] = [
         sliceNoun: "Effect",
         fields: ITM_FIELDS,
         orphanInfo: true,
+        overlapWarn: true,
     },
 ];
 

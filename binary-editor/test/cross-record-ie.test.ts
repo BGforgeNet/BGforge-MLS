@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { formatAdapterRegistry, type ParseResult, type SliceRefRelationship } from "@bgforge/binary";
 import { buildModel, type Model } from "../src/model";
-import { sliceRefDiagnostics, orphanSliceDiagnostics } from "../src/relationship/cross-record";
+import { sliceRefDiagnostics, orphanSliceDiagnostics, overlapSliceDiagnostics } from "../src/relationship/cross-record";
 import { openItmSession, itmFixturePresent, setRaw } from "./ie-fixture";
 import { normKey } from "../src/relationship/model-helpers";
 
@@ -119,6 +119,38 @@ describe("orphanEffectsConstraint", () => {
             }),
         );
         expect(orphanSliceDiagnostics(m, itmSliceRel)).toHaveLength(0);
+    });
+});
+
+describe("overlapEffectsConstraint", () => {
+    it("warns when an ability range and the equipping header range cover a common effect", () => {
+        // 4 effects; ability covers [0,3) and the equipping header covers [2,2) -> effect #2 claimed twice.
+        const m = buildModel(
+            ieResult({
+                label: "ITM",
+                effects: 4,
+                abilities: [{ start: 0, count: 3 }],
+                equipping: { start: 2, count: 2 },
+            }),
+        );
+        const diags = overlapSliceDiagnostics(m, itmSliceRel);
+        expect(diags).toHaveLength(1);
+        expect(diags[0]!.severity).toBe("warning");
+        expect(diags[0]!.message).toContain("claimed by more than one ability or equipping/casting range");
+        expect(diags[0]!.message).toContain("#2");
+        const eff = m.nodes.find((n) => n.kind === "group" && n.name === "Effects")!;
+        expect(diags[0]!.nodeId).toBe(eff.id);
+    });
+    it("no warning when ranges partition the effects table", () => {
+        const m = buildModel(
+            ieResult({
+                label: "ITM",
+                effects: 3,
+                abilities: [{ start: 0, count: 2 }],
+                equipping: { start: 2, count: 1 },
+            }),
+        );
+        expect(overlapSliceDiagnostics(m, itmSliceRel)).toHaveLength(0);
     });
 });
 

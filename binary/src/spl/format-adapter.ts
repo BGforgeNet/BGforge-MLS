@@ -22,7 +22,8 @@ import {
     SPL_FIELDS,
 } from "./entity-ops";
 
-/** Abilities (and the casting header range) slice into the shared flat Effects table; orphan effects noted. */
+/** Abilities (and the casting header range) slice into the shared flat Effects table; orphan effects noted,
+ *  and an effect claimed by two ranges is warned (the ability/casting slices should partition the table). */
 const splCrossRefRelationships: readonly CrossRefRelationship[] = [
     {
         kind: "slice",
@@ -32,6 +33,7 @@ const splCrossRefRelationships: readonly CrossRefRelationship[] = [
         sliceNoun: "Effect",
         fields: SPL_FIELDS,
         orphanInfo: true,
+        overlapWarn: true,
     },
 ];
 
