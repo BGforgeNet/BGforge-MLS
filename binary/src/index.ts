@@ -33,6 +33,9 @@ export { itmAbilityBodyLabels, itmAbilityBodyRows } from "./itm/ability-layout";
 export { splAbilityBodyLabels, splAbilityBodyRows } from "./spl/ability-layout";
 // Shared layout fragment: the CRE EFF v1 effect body (fallback for effStructureVersion 0, parallel to v2).
 export { creEffectV1BodyLabels, creEffectV1BodyRows } from "./cre/effect-v1-layout";
+// Spellbook editor structural builders: memorize (append to a memorization range) and remove-orphan
+// (drop a memorized spell covered by no range).
+export { buildCreMemorizeBytes, buildCreRemoveOrphanMemorizedBytes } from "./cre/entity-ops";
 export type {
     DetailBlock,
     DetailPanel,

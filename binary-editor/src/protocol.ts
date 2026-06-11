@@ -5,8 +5,10 @@ import { buildLayout } from "./layout";
 import { DEFAULT_WINDOW, getChildren, getWindow } from "./window";
 import { editField } from "./edit";
 import { structureOp, undo as doUndo, redo as doRedo, type StructureOpRequest } from "./structure-ops";
+import { spellbookEdit, type SpellbookEditOp } from "./spellbook-ops";
 import { serializeSession } from "./serialize";
 import { validate } from "./validate";
+import { projectSpellbook, type SpellbookView } from "./spellbook";
 import type { EditResult, NodeId, OpenResult, Row, SessionId, StructureResult } from "./types";
 
 export type Request =
@@ -16,12 +18,14 @@ export type Request =
     | { type: "expand"; sessionId: SessionId; nodeId: string; expanded: boolean }
     | { type: "editField"; sessionId: SessionId; nodeId: string; value: number | string }
     | { type: "structureOp"; sessionId: SessionId; op: StructureOpRequest }
+    | { type: "spellbookEdit"; sessionId: SessionId; op: SpellbookEditOp }
     | { type: "undo"; sessionId: SessionId }
     | { type: "redo"; sessionId: SessionId }
     | { type: "serialize"; sessionId: SessionId }
     | { type: "validate"; sessionId: SessionId }
     | { type: "snapshot"; sessionId: SessionId }
     | { type: "getChildren"; sessionId: SessionId; nodeId: NodeId | null; start: number; end: number }
+    | { type: "getSpellbook"; sessionId: SessionId }
     | { type: "loadJson"; sessionId: SessionId; json: string };
 
 export type Response =
@@ -34,6 +38,7 @@ export type Response =
     | { type: "diagnostics"; diagnostics: ReturnType<typeof validate> }
     | { type: "snapshot"; json: string }
     | { type: "children"; parentId: NodeId | null; rows: Row[]; total: number }
+    | { type: "spellbook"; view: SpellbookView }
     | { type: "error"; message: string };
 
 function need(sessionId: SessionId): EditorSession {
@@ -86,6 +91,10 @@ export function dispatch(req: Request): Response {
                 );
                 return { type: "children", parentId: req.nodeId, rows, total };
             }
+            case "getSpellbook": {
+                const s = need(req.sessionId);
+                return { type: "spellbook", view: projectSpellbook(s.model) };
+            }
             case "expand": {
                 const s = need(req.sessionId);
                 setExpanded(s.model, req.nodeId, req.expanded);
@@ -99,6 +108,8 @@ export function dispatch(req: Request): Response {
                 return { type: "edited", result: editField(need(req.sessionId), req.nodeId, req.value) };
             case "structureOp":
                 return { type: "structure", result: structureOp(need(req.sessionId), req.op) };
+            case "spellbookEdit":
+                return { type: "structure", result: spellbookEdit(need(req.sessionId), req.op) };
             case "undo": {
                 const s = need(req.sessionId);
                 doUndo(s);

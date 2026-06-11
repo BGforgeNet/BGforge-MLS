@@ -101,6 +101,29 @@ export interface SliceStructureOps<Doc, Owner, Slice> {
         index: number,
         position: "before" | "after",
     ) => Uint8Array | undefined;
+    /**
+     * Append a default slice to the END of owner #`ownerIndex`'s range, attributing the +1 to that owner.
+     * Unlike `buildInsertSliceBytes` (which anchors on an existing slice), this targets an owner directly, so
+     * it works for an owner with an EMPTY range (start+count boundary == start) - the case a relative insert
+     * cannot reach. Used to memorize a spell into a specific level, including a level with capacity but no
+     * current entries.
+     */
+    readonly buildAddSliceToOwnerBytes: (
+        pr: ParseResult,
+        arrayPath: readonly string[],
+        ownerIndex: number,
+    ) => Uint8Array | undefined;
+    /**
+     * Remove an UNOWNED slice (one covered by no owner range - an orphan in an inconsistent file), shifting
+     * every owner that starts after it down by one. The owner-relative `buildRemoveSliceBytes` cannot do this
+     * (it requires an owning range). `serializeWithValidation` rejects the result if the index was actually
+     * owned, so this fails safe rather than corrupting a count. Used by the spellbook's "remove orphan" fix.
+     */
+    readonly buildRemoveUnownedSliceBytes: (
+        pr: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+    ) => Uint8Array | undefined;
     readonly buildDuplicateSliceBytes: (
         pr: ParseResult,
         arrayPath: readonly string[],
@@ -356,6 +379,47 @@ export function createSliceStructureOps<Doc, Owner extends Record<string, unknow
         return serializeWithValidation(nextOwners, nextSlices, doc);
     }
 
+    function buildAddSliceToOwnerBytes(
+        parseResult: ParseResult,
+        arrayPath: readonly string[],
+        ownerIndex: number,
+    ): Uint8Array | undefined {
+        const doc = readDocument(parseResult);
+        if (!doc) return undefined;
+        const owners = readOwners(doc);
+        const slices = readSlices(doc);
+        // arrayPath addresses the slice section (same as the other slice ops).
+        if (arrayPath.length !== 1 || arrayPath[0] !== sliceSection) return undefined;
+        if (!Number.isInteger(ownerIndex) || ownerIndex < 0 || ownerIndex >= owners.length) return undefined;
+        // Non-null safe: ownerIndex is in range. Append at the owner's end boundary so the new slice lands
+        // inside its (post-edit) range; shiftEffectRefs validates `at` against the owner range and bumps it.
+        const { start, count } = ownerRange(owners[ownerIndex]!);
+        const at = start + count;
+        const nextSlices = [...slices.slice(0, at), defaultSlice(), ...slices.slice(at)];
+        const nextOwners = applySliceShift(owners, slices, at, 1, { kind: "ability", index: ownerIndex });
+        return serializeWithValidation(nextOwners, nextSlices, doc);
+    }
+
+    function buildRemoveUnownedSliceBytes(
+        parseResult: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+    ): Uint8Array | undefined {
+        const doc = readDocument(parseResult);
+        if (!doc) return undefined;
+        const owners = readOwners(doc);
+        const slices = readSlices(doc);
+        const idx = resolveIndex(arrayPath, index, sliceSection, slices.length);
+        if (idx === undefined) return undefined;
+        const nextSlices = [...slices.slice(0, idx), ...slices.slice(idx + 1)];
+        // Owners starting after the removed slice shift down by one. Serialize WITHOUT the strict partition
+        // validation: this op exists to clean up an ALREADY-inconsistent file (an orphan), and removing one
+        // orphan from a file with several leaves the others - which the validator would reject. The caller
+        // (spellbook "remove orphan") only passes a genuinely unowned index, so no count is silently broken.
+        const nextOwners = remapStarts(owners, idx + 1, -1, nextSlices.length);
+        return serialize(writeSlices(writeOwners(doc, nextOwners), nextSlices));
+    }
+
     function buildDuplicateSliceBytes(
         parseResult: ParseResult,
         arrayPath: readonly string[],
@@ -467,6 +531,8 @@ export function createSliceStructureOps<Doc, Owner extends Record<string, unknow
         buildDuplicateOwnerBytes,
         buildRemoveSliceBytes,
         buildInsertSliceBytes,
+        buildAddSliceToOwnerBytes,
+        buildRemoveUnownedSliceBytes,
         buildDuplicateSliceBytes,
         buildReorderSliceBytes,
         isListSection,

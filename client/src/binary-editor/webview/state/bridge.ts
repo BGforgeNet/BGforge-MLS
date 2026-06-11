@@ -1,4 +1,4 @@
-import type { NodeId, Row, StructureOpRequest } from "@bgforge/binary-editor";
+import type { NodeId, Row, SpellbookEditOp, SpellbookView, StructureOpRequest } from "@bgforge/binary-editor";
 import type { HostToWebview, WebviewToHost } from "../messages";
 import { WindowCache } from "./window-cache";
 
@@ -13,11 +13,16 @@ interface Pending {
     resolve: (v: Window) => void;
     reject: (e: Error) => void;
 }
+interface PendingSpellbook {
+    resolve: (v: SpellbookView) => void;
+    reject: (e: Error) => void;
+}
 
 export class Bridge {
     private readonly post: (m: WebviewToHost) => void;
     private nextId = 1;
     private pending = new Map<number, Pending>();
+    private pendingSpellbook = new Map<number, PendingSpellbook>();
     private cache = new WindowCache();
 
     constructor(post: (m: WebviewToHost) => void) {
@@ -34,11 +39,24 @@ export class Bridge {
         });
     }
 
+    /** Fetch the joined spellbook view. Not cached - it is re-derived from the model on every call so a fresh
+     *  request after a mutation always reflects current state (the component re-requests on version change). */
+    requestSpellbook(): Promise<SpellbookView> {
+        const requestId = this.nextId++;
+        this.post({ type: "requestSpellbook", requestId });
+        return new Promise((resolve, reject) => {
+            this.pendingSpellbook.set(requestId, { resolve, reject });
+        });
+    }
+
     editField(nodeId: NodeId, value: number | string): void {
         this.post({ type: "editField", nodeId, value });
     }
     structureOp(op: StructureOpRequest): void {
         this.post({ type: "structureOp", op });
+    }
+    spellbookEdit(op: SpellbookEditOp): void {
+        this.post({ type: "spellbookEdit", op });
     }
     dumpJson(): void {
         this.post({ type: "dumpJson" });
@@ -64,11 +82,25 @@ export class Bridge {
                 return true;
             }
         }
+        if (message.type === "spellbook") {
+            const p = this.pendingSpellbook.get(message.requestId);
+            if (p) {
+                this.pendingSpellbook.delete(message.requestId);
+                p.resolve(message.view);
+                return true;
+            }
+        }
         if (message.type === "error" && message.requestId !== undefined) {
             const p = this.pending.get(message.requestId);
             if (p) {
                 this.pending.delete(message.requestId);
                 p.reject(new Error(message.message));
+                return true;
+            }
+            const ps = this.pendingSpellbook.get(message.requestId);
+            if (ps) {
+                this.pendingSpellbook.delete(message.requestId);
+                ps.reject(new Error(message.message));
                 return true;
             }
         }

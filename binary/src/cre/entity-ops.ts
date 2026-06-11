@@ -278,6 +278,25 @@ export { memoOps, knownSpellsOps, effectsOps, itemsOps };
 export const creMemorizedSpellsCollection = memoOps.slicesCollection;
 export const creSpellMemInfoCollection = memoOps.ownersCollection;
 
+/**
+ * Memorize a spell into a level: append a default memorized-spell entry to the END of memorization-row
+ * `ownerIndex`'s range, relinking the range and shifting subsequent ranges. The unified spellbook editor
+ * uses this (followed by setting the new entry's resref/flags) so a spell can be memorized into any level,
+ * including one with capacity but no current entries (which the owner-relative insert cannot reach).
+ */
+export function buildCreMemorizeBytes(pr: ParseResult, ownerIndex: number): Uint8Array | undefined {
+    return memoOps.buildAddSliceToOwnerBytes(pr, [SLICE_SECTION], ownerIndex);
+}
+
+/**
+ * Remove an orphaned memorized spell (one covered by no memorization range) at flat index `index`, shifting
+ * later ranges down. The spellbook's "remove" fix on an Unassigned-bucket entry uses this; the underlying
+ * builder fails safe (throws) if `index` turns out to be owned.
+ */
+export function buildCreRemoveOrphanMemorizedBytes(pr: ParseResult, index: number): Uint8Array | undefined {
+    return memoOps.buildRemoveUnownedSliceBytes(pr, [SLICE_SECTION], index);
+}
+
 // -- combined adapter predicates --------------------------------------------
 
 const FLAT_OPS: readonly FlatListOps[] = [knownSpellsOps, effectsOps, itemsOps];

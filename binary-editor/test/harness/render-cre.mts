@@ -7,14 +7,15 @@
  * Extra Stats / Colors on its second, plus the creature-flag grid and a short trailing table; the Combat tab
  * carries Main (attack stats) / AC / Saving Throws / Resistances and the status-flag grid. The 40 equipped-item
  * slots render as a grid (Inventory), the 20 proficiency bytes as a matrix (Proficiencies), the 100 sound
- * strrefs as a grid (Sounds), and the five variable-length sections (Known Spells, Spell Memorization Info,
- * Memorized Spells, Effects, Items) as master-detail `list` blocks under Spells / Effects / Inventory. This
- * driver opens a real BG2 mage CRE in the REAL webview bundle and:
+ * strrefs as a grid (Sounds). The three spell tables (Known Spells, Spell Memorization Info, Memorized Spells)
+ * render together through the unified `spellbook` block (spell-type subtabs over per-level cards) under the
+ * Spells tab; Effects and Items render as master-detail `list` blocks under Effects / Inventory. This driver
+ * opens a real BG2 mage CRE in the REAL webview bundle and:
  *   - asserts the layout resolves (variant "creature", sections map with correct caps, the top-level tab strip,
  *     the opcode renders as a searchable combobox in the effect detail, label/value spacing is non-zero in both
  *     the field boxes and the item-slots grid);
- *   - drives a representative structure op on two sections (Known Spells add/undo, Effects insert/remove/undo)
- *     through the actual message path (webview posts structureOp -> hostUp -> dispatch -> changeSet reply);
+ *   - drives structure ops through the actual message path (webview posts -> hostUp -> dispatch -> changeSet):
+ *     a spellbook "+ memorize" (and undo) on the Spells tab, and Effects insert/duplicate/remove/undo;
  *   - keeps a dispatch-level round-trip regression (open -> serialize -> byte-identical).
  *
  * Fixture: a real vendored CRE (edwin6 - a BG2 mage with known/memorized spells, effects, and items).
@@ -64,6 +65,16 @@ function hostUp(m: WebviewToHost): HostToWebview[] {
             return [{ type: "children", requestId: m.requestId, parentId: r.parentId, rows: r.rows, total: r.total }];
         }
         return [];
+    }
+    if (m.type === "requestSpellbook") {
+        const r = dispatch({ type: "getSpellbook", sessionId });
+        return r.type === "spellbook" ? [{ type: "spellbook", requestId: m.requestId, view: r.view }] : [];
+    }
+    if (m.type === "spellbookEdit") {
+        const r = dispatch({ type: "spellbookEdit", sessionId, op: m.op });
+        return r.type === "structure"
+            ? [{ type: "changeSet", changeSet: r.result.changeSet, selection: r.result.selection }]
+            : [];
     }
     if (m.type === "editField") {
         const r = dispatch({ type: "editField", sessionId, nodeId: m.nodeId, value: m.value });
@@ -141,7 +152,6 @@ async function clickTab(label: string): Promise<void> {
     await page.waitForTimeout(200);
 }
 
-const knownSpellsPanel = page.locator(".panel").filter({ has: page.locator("h3", { hasText: "Known Spells" }) });
 const effectsPanel = page.locator(".panel").filter({ has: page.locator("h3", { hasText: /^Effects$/ }) });
 
 async function selectRow(scope: Locator, idx: number): Promise<void> {
@@ -169,25 +179,24 @@ async function clickDelete(scope: Locator): Promise<void> {
         const L = r.result.layout.layout;
         check("layout: variant is 'creature'", L?.variantId === "creature", `variantId=${L?.variantId}`);
         check(
-            "layout: Known Spells canAdd+canModify",
-            L?.sections["Known Spells"]?.canAdd === true && L?.sections["Known Spells"]?.canModify === true,
-            JSON.stringify(L?.sections["Known Spells"]),
-        );
-        check(
             "layout: Effects canAdd+canModify",
             L?.sections["Effects"]?.canAdd === true && L?.sections["Effects"]?.canModify === true,
             JSON.stringify(L?.sections["Effects"]),
         );
+        // The three spell tables render through the spellbook block, not list blocks, so they are absent from
+        // the resolved sections map (their structure ops are driven by the spellbook, not a list toolbar).
         check(
-            "layout: Memorized Spells canModify, not canAdd (slice section)",
-            L?.sections["Memorized Spells"]?.canAdd === false && L?.sections["Memorized Spells"]?.canModify === true,
-            JSON.stringify(L?.sections["Memorized Spells"]),
+            "layout: spell tables are not list sections (handled by the spellbook)",
+            L?.sections["Known Spells"] === undefined &&
+                L?.sections["Spell Memorization Info"] === undefined &&
+                L?.sections["Memorized Spells"] === undefined,
+            JSON.stringify(Object.keys(L?.sections ?? {})),
         );
     }
 }
 // CRE is tabbed: assert the top-level tab strip (count badges stripped), then visit the tabs that carry the
-// grids/fields to verify they render and align. (The five list sections live in the Spells/Effects/Inventory
-// tabs and are exercised below.)
+// grids/fields to verify they render and align. (The spellbook lives under Spells; the Effects/Items list
+// sections under Effects/Inventory - both exercised below.)
 const topTabs = await page.evaluate(() =>
     Array.from(document.querySelectorAll('.bb-tabs.primary button[role="tab"]'), (e) =>
         (e.textContent ?? "").replace(/ \(\d+\)$/, "").trim(),
@@ -276,29 +285,48 @@ check(
 );
 
 // ============================================================
-// Baseline counts (Node-side ground truth)
+// Baseline counts (Node-side ground truth). The spell tables are no longer list sections (they render through
+// the spellbook), so they are absent from the sections map; the spellbook block is exercised via getSpellbook.
 // ============================================================
-const baseKnown = sectionCount(sectionNodeId["Known Spells"]!);
 const baseEffects = sectionCount(sectionNodeId["Effects"]!);
-check("baseline: known spells count >= 0", baseKnown >= 0, `count=${baseKnown}`);
 check("baseline: effects count >= 1", baseEffects >= 1, `count=${baseEffects}`);
+// Total memorized spells across the joined view (cleanly-owned slots + any unassigned-bucket entries).
+const memorizedTotal = (): number => {
+    const r = dispatch({ type: "getSpellbook", sessionId });
+    if (r.type !== "spellbook") return -1;
+    return (
+        r.view.types.reduce((n, t) => n + t.levels.reduce((m, l) => m + l.slots.length, 0), 0) + r.view.bucket.length
+    );
+};
 
 // ============================================================
-// KNOWN SPELLS: add via section toolbar, then undo
+// SPELLS: the three spell tables render through the unified spellbook (type subtabs over per-level cards),
+// not three flat lists. Assert it renders, then drive a "+ memorize" through the real message path and confirm
+// the level gains a memorized slot.
 // ============================================================
 await clickTab("Spells");
-await knownSpellsPanel.locator(".master .toolbar button").first().click();
-await page.waitForTimeout(200);
+await page.waitForSelector(".spellbook", { timeout: 3000 });
+const spellbookTypeTabs = await page.locator(".spellbook .bb-tabs button[role='tab']").allInnerTexts();
 check(
-    "known spells: add: count +1",
-    sectionCount(sectionNodeId["Known Spells"]!) === baseKnown + 1,
-    `count=${sectionCount(sectionNodeId["Known Spells"]!)}`,
+    "spells: spellbook renders a spell-type subtab (Wizard for the mage fixture)",
+    spellbookTypeTabs.some((t) => /Wizard/i.test(t)),
+    JSON.stringify(spellbookTypeTabs),
+);
+const baseMemorized = memorizedTotal();
+const firstLevelCard = page.locator(".spellbook .sb-level").first();
+check("spells: at least one level card renders", (await page.locator(".spellbook .sb-level").count()) >= 1, "");
+await firstLevelCard.locator("button.sb-add", { hasText: "memorize" }).first().click();
+await page.waitForTimeout(250);
+check(
+    "spells: + memorize adds a memorized spell (count +1)",
+    memorizedTotal() === baseMemorized + 1,
+    `count=${memorizedTotal()}`,
 );
 await doUndo();
 check(
-    "known spells: undo: back to baseline",
-    sectionCount(sectionNodeId["Known Spells"]!) === baseKnown,
-    `count=${sectionCount(sectionNodeId["Known Spells"]!)}`,
+    "spells: undo restores the memorized-spell count",
+    memorizedTotal() === baseMemorized,
+    `count=${memorizedTotal()}`,
 );
 
 // ============================================================

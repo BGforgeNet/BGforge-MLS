@@ -662,76 +662,10 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                 {
                     id: "spells",
                     label: "Spells",
-                    tabs: [
-                        {
-                            id: "known",
-                            label: "Known",
-                            countFrom: "Known Spells",
-                            rows: [
-                                {
-                                    panels: [
-                                        {
-                                            title: "Known Spells",
-                                            blocks: [
-                                                {
-                                                    kind: "list",
-                                                    sectionKey: "Known Spells",
-                                                    render: "master-detail",
-                                                    canAdd: true,
-                                                    canModify: true,
-                                                },
-                                            ],
-                                        },
-                                    ],
-                                },
-                            ],
-                        },
-                        {
-                            id: "memorization",
-                            label: "Memorization",
-                            countFrom: "Spell Memorization Info",
-                            rows: [
-                                {
-                                    panels: [
-                                        {
-                                            title: "Spell Memorization Info",
-                                            blocks: [
-                                                {
-                                                    kind: "list",
-                                                    sectionKey: "Spell Memorization Info",
-                                                    render: "master-detail",
-                                                    canAdd: true,
-                                                    canModify: true,
-                                                },
-                                            ],
-                                        },
-                                    ],
-                                },
-                            ],
-                        },
-                        {
-                            id: "memorized",
-                            label: "Memorized",
-                            countFrom: "Memorized Spells",
-                            rows: [
-                                {
-                                    panels: [
-                                        {
-                                            title: "Memorized Spells",
-                                            blocks: [
-                                                {
-                                                    kind: "list",
-                                                    sectionKey: "Memorized Spells",
-                                                    render: "master-detail",
-                                                    canModify: true,
-                                                },
-                                            ],
-                                        },
-                                    ],
-                                },
-                            ],
-                        },
-                    ],
+                    // The three on-disk spell tables (Known Spells, Spell Memorization Info, Memorized Spells)
+                    // render as one joined spellbook (spell type -> level) rather than three flat lists. The
+                    // host-side projection owns the join; the webview SpellbookBlock renders it.
+                    rows: [{ panels: [{ blocks: [{ kind: "spellbook" }] }] }],
                 },
                 {
                     id: "effects",

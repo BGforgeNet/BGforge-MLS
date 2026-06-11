@@ -21,3 +21,7 @@ export type { Request, Response } from "./protocol";
 export type { StructureOpRequest } from "./structure-ops";
 export { openSession, closeSession } from "./session";
 export { buildDetailFieldMap, detailVariantRefs, detailVariantResolves } from "./detail-layout";
+// Spellbook view + edit-op types crossing to the webview/client; the projection itself and its sub-types are
+// internal (the dispatch handler and the structural view are accessed through SpellbookView structurally).
+export type { SpellbookView } from "./spellbook";
+export type { SpellbookEditOp } from "./spellbook-ops";

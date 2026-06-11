@@ -20,7 +20,7 @@ export type StructureOpRequest =
     | { op: "reorder"; entryId: NodeId; direction: "up" | "down" }
     | { op: "duplicate"; entryId: NodeId };
 
-function reparse(session: EditorSession, bytes: Uint8Array): ParseResult {
+export function reparse(session: EditorSession, bytes: Uint8Array): ParseResult {
     const parser = parserRegistry.getById(session.parserId);
     if (!parser) throw new Error(`Unknown parser ${session.parserId}`);
     return parser.parse(bytes, session.parseOptions);
@@ -48,13 +48,20 @@ function buildChangeSet(session: EditorSession, dirty: boolean): ChangeSet {
 // session.model via buildModel(next), and editField always clones before mutating,
 // so no undo snapshot is ever mutated in place.
 function commit(session: EditorSession, label: string, next: ParseResult): StructureResult {
+    return commitModel(session, label, buildModel(next));
+}
+
+/**
+ * Commit an ALREADY-BUILT model (one undo entry). Used by compound ops that must mutate the rebuilt model's
+ * fields before commit - e.g. the spellbook "memorize"/"add known" ops add an entry, preset its fields, then
+ * commit the result atomically. Selection is left unset; callers assign the post-op selection.
+ */
+export function commitModel(session: EditorSession, label: string, model: EditorSession["model"]): StructureResult {
     session.undo.push({ label, before: session.model.parseResult });
     session.redo = [];
-    session.model = buildModel(next);
+    session.model = model;
     invalidateCachedDocument(session.model.parseResult);
     session.dirty = true;
-    // Selection is left unset here; structureOp computes the post-op selection
-    // once the new entry's NodeId is resolved and assigned in a dedicated change.
     return { changeSet: buildChangeSet(session, true) };
 }
 
@@ -83,7 +90,7 @@ function buildOpBytes(
 // Used when the adapter returns undefined - e.g. a boundary reorder where moving
 // up at index 0 is not possible. The UI disables controls at boundaries, so this
 // path is defensive rather than user-reachable.
-function noopResult(session: EditorSession): StructureResult {
+export function noopResult(session: EditorSession): StructureResult {
     return { changeSet: buildChangeSet(session, session.dirty) };
 }
 

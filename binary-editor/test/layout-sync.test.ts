@@ -144,6 +144,10 @@ function blockRefs(block: LayoutBlock): { fields: string[]; sections: string[] }
             return { fields: block.groups.flatMap((g) => g.rows.flatMap((r) => Object.values(r.cells))), sections: [] };
         case "list":
             return { fields: [], sections: [block.sectionKey] };
+        case "spellbook":
+            // The spellbook joins three fixed CRE sections internally (projectSpellbook) rather than declaring
+            // field/section refs, so it contributes none to the layout-ref reconciliation.
+            return { fields: [], sections: [] };
         case "raw":
             return { fields: [], sections: [] };
     }

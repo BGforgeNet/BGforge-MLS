@@ -49,12 +49,13 @@ function firstEntryId(session: EditorSession, sectionName: string): string {
 const maybe = present ? describe : describe.skip;
 
 maybe("CRE editor structure ops", () => {
-    it("renders the five list sections as master-detail with the right caps", () => {
+    it("renders Effects/Items as master-detail list sections; the spell tables render through the spellbook", () => {
         const { layout } = openSession("file:///finaluf-caps.cre", new Uint8Array(fs.readFileSync(CRE_FIXTURE)));
         const resolved = layout.layout;
         expect(resolved?.variantId).toBe("creature");
         // Render mode is declared on the `list` block; structure-op caps live in the resolved sections map.
         const listBlocks = new Map<string, "inline" | "master-detail">();
+        let hasSpellbook = false;
         const rows =
             resolved?.rows ??
             (resolved?.tabs ?? []).flatMap((t) => t.rows ?? (t.tabs ?? []).flatMap((st) => st.rows ?? []));
@@ -62,16 +63,22 @@ maybe("CRE editor structure ops", () => {
             for (const panel of row.panels) {
                 for (const block of panel.blocks) {
                     if (block.kind === "list") listBlocks.set(block.sectionKey, block.render);
+                    if (block.kind === "spellbook") hasSpellbook = true;
                 }
             }
         }
-        for (const name of ["Known Spells", "Spell Memorization Info", "Memorized Spells", "Effects", "Items"]) {
+        // The three spell tables (Known Spells, Spell Memorization Info, Memorized Spells) render through the
+        // unified spellbook block, not flat list blocks - so they are neither list blocks nor in the sections map.
+        expect(hasSpellbook).toBe(true);
+        for (const name of ["Known Spells", "Spell Memorization Info", "Memorized Spells"]) {
+            expect(listBlocks.has(name)).toBe(false);
+            expect(resolved?.sections[name]).toBeUndefined();
+        }
+        // Effects and Items remain master-detail list sections with structure-op caps.
+        for (const name of ["Effects", "Items"]) {
             expect(listBlocks.get(name)).toBe("master-detail");
             expect(resolved?.sections[name]?.canModify).toBe(true);
         }
-        // Memorized spells are owner-ambiguous: no section-level add.
-        expect(resolved?.sections["Memorized Spells"]?.canAdd).toBe(false);
-        expect(resolved?.sections["Spell Memorization Info"]?.canAdd).toBe(true);
         expect(resolved?.sections["Items"]?.canAdd).toBe(true);
         // Item Slots is a grid of fixed slots, not a list section - absent from the list-section map.
         expect(resolved?.sections["Item Slots"]).toBeUndefined();

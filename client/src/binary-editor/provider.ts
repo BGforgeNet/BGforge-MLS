@@ -126,6 +126,18 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
                 }
                 break;
             }
+            case "requestSpellbook": {
+                const r = await document.bridge.send({
+                    type: "getSpellbook",
+                    sessionId: document.sessionId,
+                });
+                if (r.type === "spellbook") {
+                    this.post(panel, { type: "spellbook", requestId: message.requestId, view: r.view });
+                } else if (r.type === "error") {
+                    this.post(panel, { type: "error", requestId: message.requestId, message: r.message });
+                }
+                break;
+            }
             case "editField": {
                 const r = await document.bridge.send({
                     type: "editField",
@@ -162,6 +174,27 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
                 if (r.type === "structure") {
                     document.pushEdit(structureOpLabel(message.op.op));
                     // Forward the post-op selection so the webview re-activates the new/moved/neighbor entry.
+                    this.postToDocumentPanels(document, {
+                        type: "changeSet",
+                        changeSet: r.result.changeSet,
+                        selection: r.result.selection,
+                    });
+                    await this.pushDiagnosticsToDocument(document);
+                }
+                break;
+            }
+            case "spellbookEdit": {
+                const r = await document.bridge.send({
+                    type: "spellbookEdit",
+                    sessionId: document.sessionId,
+                    op: message.op,
+                });
+                if (r.type === "error") {
+                    this.post(panel, { type: "error", message: r.message });
+                    break;
+                }
+                if (r.type === "structure") {
+                    document.pushEdit("Spellbook edit");
                     this.postToDocumentPanels(document, {
                         type: "changeSet",
                         changeSet: r.result.changeSet,

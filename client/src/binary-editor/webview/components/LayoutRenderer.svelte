@@ -12,6 +12,7 @@
     import MatrixBlock from "./blocks/MatrixBlock.svelte";
     import GridBlock from "./blocks/GridBlock.svelte";
     import ListBlock from "./blocks/ListBlock.svelte";
+    import SpellbookBlock from "./blocks/SpellbookBlock.svelte";
     import RawBlock from "./blocks/RawBlock.svelte";
 
     // bridge/version/selection are only needed by `list` blocks (variable-length sections render via the
@@ -116,6 +117,8 @@
                                            detailVariantFallbacks={block.detailVariantFallbacks} labels={layout.labels}
                                            {bridge} {version} {selection}
                                            {onedit} {byNode} {showOffsets} />
+                            {:else if block.kind === "spellbook"}
+                                <SpellbookBlock {bridge} {version} {onedit} />
                             {:else}
                                 <RawBlock />
                             {/if}

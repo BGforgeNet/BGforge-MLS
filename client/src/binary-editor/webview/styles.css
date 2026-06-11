@@ -1265,3 +1265,226 @@ input[type="text"]::placeholder {
     font-size: 0.82em;
     line-height: 1.1;
 }
+
+/* ============================================================================
+ * Unified CRE spellbook (SpellbookBlock): spell-type subtabs over per-level panels, each a Known | Memorized
+ * two-column split. Reuses the panel/flag-group idiom and theme tokens. Inconsistent data surfaces as the
+ * per-level flag note and the trailing Unassigned bucket.
+ * ========================================================================= */
+.spellbook {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+}
+/* Levels flow left-to-right as cards and wrap, so a 9-level mage packs into a few dense rows instead of one
+   tall scroll; each card grows to share the row width (panel idiom) down to a min, capped so two levels do not
+   stretch absurdly wide. */
+.spellbook .sb-levels {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: flex-start;
+}
+/* One level: a bordered well (matching the flag-group box treatment) so each level reads as a distinct unit. */
+.spellbook .sb-level {
+    flex: 1 1 340px;
+    max-width: 520px;
+    border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+    border-radius: 4px;
+    background: var(--vscode-editor-background);
+    padding: 6px 10px 8px;
+}
+/* A flagged level (inconsistent range) gets a warning accent edge so the problem reads at a glance. */
+.spellbook .sb-level.sb-flagged {
+    border-color: var(--vscode-inputValidation-warningBorder, var(--vscode-editorWarning-foreground));
+}
+.spellbook .sb-level-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 6px;
+    padding-bottom: 3px;
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+.spellbook .sb-level-name {
+    font-weight: 600;
+    color: var(--vscode-textLink-foreground);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+.spellbook .sb-counts {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.82em;
+    color: var(--vscode-descriptionForeground);
+}
+.spellbook .sb-num-lbl {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.spellbook .sb-num {
+    width: 3.5ch;
+    background: var(--vscode-input-background);
+    color: var(--vscode-input-foreground, var(--vscode-foreground));
+    border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+    border-radius: 3px;
+    padding: 1px 3px;
+    font-size: inherit;
+    font-family: var(--vscode-editor-font-family, monospace);
+    text-align: right;
+    -moz-appearance: textfield;
+}
+.spellbook .sb-num::-webkit-inner-spin-button,
+.spellbook .sb-num::-webkit-outer-spin-button {
+    appearance: none;
+    margin: 0;
+}
+.spellbook .sb-counts-sep {
+    color: var(--vscode-descriptionForeground);
+}
+.spellbook .sb-mem-count {
+    margin-left: auto;
+    color: var(--vscode-foreground);
+    font-size: 0.85em;
+}
+/* The flagged-level reason + clamp action. Wraps so the (sometimes long) reason text is always fully visible
+   inside the card rather than overflowing its right edge; the clamp button flows after the text, wrapping to
+   its own line on a narrow card. */
+.spellbook .sb-flag-note {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 8px;
+    color: var(--vscode-editorWarning-foreground);
+    font-size: 0.82em;
+    margin-bottom: 6px;
+}
+.spellbook .sb-flag-text {
+    flex: 1 1 200px;
+    min-width: 0;
+}
+/* Known | Memorized split inside a level card: Known hugs its resref column, Memorized takes the rest. Sized
+   to content (not 1fr 1fr) so narrow known/slot lists do not leave a dead gap down the middle of the card. */
+.spellbook .sb-cols {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 18px;
+    align-items: start;
+}
+.spellbook .sb-col-head {
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.78em;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 3px;
+}
+.spellbook .sb-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 1px 0;
+    font-size: 0.9em;
+}
+.spellbook .sb-slot-name {
+    font-family: var(--vscode-editor-font-family, monospace);
+    min-width: 9ch;
+}
+/* Flag toggles are subordinate to the resref (the primary datum), so dim their labels for hierarchy. */
+.spellbook .sb-slot-flags {
+    display: flex;
+    gap: 12px;
+    color: var(--vscode-descriptionForeground);
+}
+/* An editable resref cell (chars[8]); sized to its 8-char content tier, monospace like other resref fields. */
+.spellbook .sb-resref {
+    width: 9ch;
+    background: var(--vscode-input-background);
+    color: var(--vscode-input-foreground, var(--vscode-foreground));
+    border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+    border-radius: 3px;
+    padding: 1px 4px;
+    font-family: var(--vscode-editor-font-family, monospace);
+    font-size: inherit;
+}
+/* Per-row remove (x) and the "+ add"/"+ memorize"/"+ add level" buttons: quiet, text-weight chrome that
+   matches the dense layout; the add buttons sit at the end of their column. */
+.spellbook .sb-x {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1px;
+    border: 0;
+    border-radius: 3px;
+    background: transparent;
+    color: var(--vscode-descriptionForeground);
+    cursor: pointer;
+}
+.spellbook .sb-x:hover:not(:disabled) {
+    background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground));
+    color: var(--vscode-foreground);
+}
+.spellbook .sb-add {
+    margin-top: 3px;
+    padding: 1px 6px;
+    border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+    border-radius: 3px;
+    background: transparent;
+    color: var(--vscode-foreground);
+    font-size: 0.82em;
+    cursor: pointer;
+}
+.spellbook .sb-add:hover:not(:disabled) {
+    background: var(--vscode-list-hoverBackground);
+}
+.spellbook .sb-x:disabled,
+.spellbook .sb-add:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+.spellbook .sb-add-level {
+    align-self: flex-start;
+}
+/* A normalize action (clamp an overrun count, drop an orphan): a small accented button on the warning row. */
+.spellbook .sb-fix {
+    margin-left: 8px;
+    padding: 0 7px;
+    border: 1px solid var(--vscode-inputValidation-warningBorder, var(--vscode-editorWarning-foreground));
+    border-radius: 3px;
+    background: transparent;
+    color: var(--vscode-foreground);
+    font-size: 0.82em;
+    cursor: pointer;
+}
+.spellbook .sb-fix:hover {
+    background: var(--vscode-list-hoverBackground);
+}
+/* The Unassigned bucket: memorized entries not cleanly owned by one level (orphan / contested). */
+.spellbook .sb-bucket {
+    border: 1px solid var(--vscode-inputValidation-warningBorder, var(--vscode-editorWarning-foreground));
+    border-radius: 4px;
+    padding: 6px 10px 8px;
+    background: var(--vscode-editor-background);
+}
+.spellbook .sb-bucket-head {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--vscode-editorWarning-foreground);
+    font-size: 0.82em;
+    margin-bottom: 5px;
+}
+.spellbook .sb-bucket-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 1px 0;
+    font-size: 0.9em;
+}
+.spellbook .sb-bucket-reason {
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.88em;
+}

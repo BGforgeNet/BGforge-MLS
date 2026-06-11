@@ -167,6 +167,14 @@ const listBlockSchema = z.strictObject({
 /** A hex/raw-bytes pane. Specified now; webview `RawBlock` is a stub (follow-up tier). */
 const rawBlockSchema = z.strictObject({ kind: z.literal("raw") });
 
+/**
+ * The unified CRE spellbook: a single bespoke block that joins the three spell tables (Known Spells, Spell
+ * Memorization Info, Memorized Spells) into a spell-type -> level view. Unlike the other blocks it does not
+ * declare its inputs - the host-side `projectSpellbook` reads the three fixed CRE sections directly and ships a
+ * `SpellbookView` the webview `SpellbookBlock` renders. CRE-specific (the only format with this table triad).
+ */
+const spellbookBlockSchema = z.strictObject({ kind: z.literal("spellbook") });
+
 const layoutBlockSchema = z.discriminatedUnion("kind", [
     fieldsBlockSchema,
     fieldGroupBlockSchema,
@@ -174,6 +182,7 @@ const layoutBlockSchema = z.discriminatedUnion("kind", [
     gridBlockSchema,
     matrixBlockSchema,
     listBlockSchema,
+    spellbookBlockSchema,
     rawBlockSchema,
 ]);
 
