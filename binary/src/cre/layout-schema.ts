@@ -561,6 +561,9 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                                                 {
                                                     panels: [
                                                         {
+                                                            // Double the default 16px inter-block gap so the
+                                                            // three columns are not crammed.
+                                                            colGapPx: 32,
                                                             blocks: [
                                                                 {
                                                                     kind: "fields",

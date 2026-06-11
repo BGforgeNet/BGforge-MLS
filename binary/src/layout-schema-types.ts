@@ -127,6 +127,9 @@ const detailPanelSchema = z.strictObject({
     widthPx: z.number().int().positive().optional(),
     fit: z.boolean().optional(),
     stack: z.boolean().optional(),
+    /** Override the horizontal gap (px) between this panel's side-by-side blocks (default 16). Use when a
+     *  panel lays several columns of blocks directly (no per-column group boxes) and wants them spaced wider. */
+    colGapPx: z.number().int().positive().optional(),
 });
 const detailRowSchema = z.strictObject({ panels: z.array(detailPanelSchema).min(1) });
 
@@ -189,6 +192,8 @@ const layoutPanelSchema = z.strictObject({
     /** Stack the panel's blocks vertically instead of left-to-right - for a panel that holds a fields block
      *  plus a boxed subgroup (kind "group") that should sit below it, not beside it. */
     stack: z.boolean().optional(),
+    /** Override the horizontal gap (px) between this panel's side-by-side blocks (default 16). */
+    colGapPx: z.number().int().positive().optional(),
 });
 
 /** A row of panels, left-to-right, clumped left. */

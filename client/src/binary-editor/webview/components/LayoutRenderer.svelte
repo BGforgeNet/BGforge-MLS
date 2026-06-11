@@ -81,7 +81,8 @@
                 {#if panelHasContent(panel)}
                 <div class="panel" class:panel-fit={panel.fit} style={panel.widthPx ? `width:${panel.widthPx}px` : ""}>
                     {#if panel.title}<h3>{panel.title}</h3>{/if}
-                    <div class="panel-blocks" class:stack={panel.stack}>
+                    <div class="panel-blocks" class:stack={panel.stack}
+                         style={panel.colGapPx ? `gap:${panel.colGapPx}px` : ""}>
                         {#each panel.blocks as block, bi (bi)}
                             {#if block.kind === "fields"}
                                 <FieldsBlock fieldRefs={block.fields} columns={block.columns} joins={block.joins}
