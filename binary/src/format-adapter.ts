@@ -184,6 +184,21 @@ export interface BinaryFormatAdapter {
         childSection: string,
     ): Uint8Array | undefined;
     /**
+     * Remove the child entry at ordinal `childIndex` from the `childSection` collection owned by the parent
+     * entry at ordinal `index` in the array at `arrayPath` (the counterpart to `buildAddChildEntryBytes`).
+     * Used by the MAP object inventory (`childSection` = "Inventory"): the inventory entries are nested under
+     * an object and interleaved with its fields, so they are addressed by the owning object + the entry's
+     * 0-based position among inventory entries, not by a flat-section ordinal. Returns undefined for an
+     * unknown pairing or an out-of-range index.
+     */
+    buildRemoveChildEntryBytes?(
+        parseResult: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+        childSection: string,
+        childIndex: number,
+    ): Uint8Array | undefined;
+    /**
      * Lightweight predicate the byte-builders use to validate a removal target. The list-section
      * identity and structure-op affordances (canAdd/canModify) are now declared on the layout schema's
      * `list` block, not derived from the adapter - the adapter holds only data concerns.

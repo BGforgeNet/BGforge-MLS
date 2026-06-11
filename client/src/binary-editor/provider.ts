@@ -31,6 +31,8 @@ function structureOpLabel(op: StructureOpRequest["op"]): string {
             return "Duplicate entry";
         case "addChild":
             return "Add entry";
+        case "removeChild":
+            return "Remove entry";
     }
 }
 

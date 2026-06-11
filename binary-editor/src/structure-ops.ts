@@ -22,7 +22,11 @@ export type StructureOpRequest =
     | { op: "duplicate"; entryId: NodeId }
     // Owner-scoped child add: add a default entry to the `childSection` collection owned by the entry
     // `entryId` (e.g. add an effect to a specific ITM/SPL ability). Targets the parent entry, not a section.
-    | { op: "addChild"; entryId: NodeId; childSection: string };
+    | { op: "addChild"; entryId: NodeId; childSection: string }
+    // Owner-scoped child remove: drop the entry at `childIndex` from the `childSection` collection owned by
+    // `entryId` (e.g. remove a MAP object's inventory entry). childIndex is the 0-based position among the
+    // owner's child entries, supplied by the UI that lists them - not a flat-section ordinal.
+    | { op: "removeChild"; entryId: NodeId; childSection: string; childIndex: number };
 
 export function reparse(session: EditorSession, bytes: Uint8Array): ParseResult {
     const parser = parserRegistry.getById(session.parserId);
@@ -92,6 +96,8 @@ function buildOpBytes(
             return adapter?.buildDuplicateEntryBytes?.(pr, arrayPath, index);
         case "addChild":
             return adapter?.buildAddChildEntryBytes?.(pr, arrayPath, index, req.childSection);
+        case "removeChild":
+            return adapter?.buildRemoveChildEntryBytes?.(pr, arrayPath, index, req.childSection, req.childIndex);
     }
 }
 
@@ -192,6 +198,9 @@ export function structureOp(session: EditorSession, req: StructureOpRequest): St
         case "addChild":
             label = `Add ${req.childSection} to ${arrayLabel} #${index + 1}`;
             break;
+        case "removeChild":
+            label = `Remove ${req.childSection} #${req.childIndex + 1} from ${arrayLabel} #${index + 1}`;
+            break;
     }
 
     const result = commit(session, label, reparse(session, bytes));
@@ -224,7 +233,8 @@ export function structureOp(session: EditorSession, req: StructureOpRequest): St
             selIndex = index - 1;
             break;
         case "addChild":
-            // The child lands in another section (e.g. Effects); the parent list (Abilities) is unchanged,
+        case "removeChild":
+            // The child lives in another section / nested under the parent; the parent list is unchanged,
             // so keep the same parent entry selected.
             selIndex = index;
             break;

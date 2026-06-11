@@ -254,6 +254,63 @@ export function buildMapObjectDuplicateEntryBytes(
     return serializeWithReanchor(pr, r.doc, newDoc);
 }
 
+type MapInventoryEntry = MapObject["inventory"][number];
+
+/** A default inventory entry: one of a blank misc item (decodes with no PRO resolver, like defaultMapObject). */
+function defaultInventoryEntry(): MapInventoryEntry {
+    return { quantity: 1, object: defaultMapObject() };
+}
+
+/** Replace one elevation object's inventory array, leaving the top-level object/elevation counts unchanged
+ *  (inventory items are nested, not counted in objectCount/totalObjects). The writer re-derives the object's
+ *  inventoryLength from the array, so the header stays in sync without touching it here. */
+function withObjectInventory(
+    doc: MapCanonicalDocument,
+    elev: number,
+    objectIndex: number,
+    nextInventory: readonly MapInventoryEntry[],
+): MapCanonicalDocument {
+    const elevations = doc.objects.elevations.map((e, i) => {
+        if (i !== elev) return e;
+        const objects = e.objects.map((o, j) => (j === objectIndex ? { ...o, inventory: [...nextInventory] } : o));
+        return { ...e, objects };
+    });
+    return { ...doc, objects: { ...doc.objects, elevations } };
+}
+
+/**
+ * Append a default inventory entry to the object at `objectIndex` in the elevation named by `arrayPath`.
+ * Unlike the whole-object ops this changes no top-level count - it grows one object's nested inventory and
+ * re-anchors the objects tail by the byte delta (which objectsSerializedLength includes recursively).
+ */
+export function buildMapObjectInventoryAddBytes(
+    pr: ParseResult,
+    arrayPath: readonly string[],
+    objectIndex: number,
+): Uint8Array | undefined {
+    const r = resolveEntry(pr, arrayPath, objectIndex);
+    if (!r) return undefined;
+    const object = r.current[r.index]!;
+    const next = withObjectInventory(r.doc, r.elev, r.index, [...object.inventory, defaultInventoryEntry()]);
+    return serializeWithReanchor(pr, r.doc, next);
+}
+
+/** Remove the inventory entry at `inventoryIndex` from the object at `objectIndex` in the named elevation. */
+export function buildMapObjectInventoryRemoveBytes(
+    pr: ParseResult,
+    arrayPath: readonly string[],
+    objectIndex: number,
+    inventoryIndex: number,
+): Uint8Array | undefined {
+    const r = resolveEntry(pr, arrayPath, objectIndex);
+    if (!r) return undefined;
+    const object = r.current[r.index]!;
+    if (inventoryIndex < 0 || inventoryIndex >= object.inventory.length) return undefined;
+    const nextInventory = [...object.inventory.slice(0, inventoryIndex), ...object.inventory.slice(inventoryIndex + 1)];
+    const next = withObjectInventory(r.doc, r.elev, r.index, nextInventory);
+    return serializeWithReanchor(pr, r.doc, next);
+}
+
 export function isMapObjectListSection(arrayPath: readonly string[]): boolean {
     return arrayPath.length === 1 && parseElevation(arrayPath[0]) !== undefined;
 }

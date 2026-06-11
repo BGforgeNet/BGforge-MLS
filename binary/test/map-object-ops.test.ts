@@ -8,6 +8,8 @@ import {
     buildMapObjectAddEntryBytes,
     buildMapObjectDuplicateEntryBytes,
     buildMapObjectInsertEntryBytes,
+    buildMapObjectInventoryAddBytes,
+    buildMapObjectInventoryRemoveBytes,
     buildMapObjectMoveEntryBytes,
     buildMapObjectRemoveEntryBytes,
     isMapObjectListSection,
@@ -133,6 +135,47 @@ describe("map object-ops add/remove inverse across fixtures", () => {
         const removed = buildMapObjectRemoveEntryBytes(addedPr, [`Elevation ${elev} Objects`], count);
         expect(removed).toBeDefined();
         expect([...removed!]).toEqual([...data]);
+    });
+});
+
+describe("map object inventory ops", () => {
+    const docOf = (pr: ReturnType<typeof mapParser.parse>) =>
+        (getMapCanonicalDocument(pr) ?? rebuildMapCanonicalDocument(pr))!;
+
+    it("add inventory entry grows the object's inventory; add-then-remove is byte-identity", () => {
+        const pr = parseClean();
+        const { elev } = elevationWithObjects(pr);
+        const original = pr.sourceData as Uint8Array;
+        const beforeDoc = docOf(pr);
+        const invBefore = beforeDoc.objects.elevations[elev]!.objects[0]!.inventory.length;
+        const objCountBefore = beforeDoc.objects.elevations[elev]!.objects.length;
+
+        const added = buildMapObjectInventoryAddBytes(pr, [`Elevation ${elev} Objects`], 0);
+        expect(added).toBeDefined();
+        const addedPr = mapParser.parse(added!, { gracefulMapBoundaries: true });
+        const obj0 = docOf(addedPr).objects.elevations[elev]!.objects[0]!;
+        expect(obj0.inventory.length).toBe(invBefore + 1);
+        expect(obj0.inventory.at(-1)!.quantity).toBe(1);
+        // Inventory is nested - the top-level object count for the elevation is unchanged.
+        expect(docOf(addedPr).objects.elevations[elev]!.objects.length).toBe(objCountBefore);
+        // Removing the just-added entry restores the original bytes exactly.
+        const removed = buildMapObjectInventoryRemoveBytes(addedPr, [`Elevation ${elev} Objects`], 0, invBefore);
+        expect(removed).toBeDefined();
+        expect([...removed!]).toEqual([...original]);
+    });
+
+    it("refuses a non-object path, an out-of-range object, or an out-of-range inventory index", () => {
+        const pr = parseClean();
+        const { elev } = elevationWithObjects(pr);
+        expect(buildMapObjectInventoryAddBytes(pr, ["Global Variables"], 0)).toBeUndefined();
+        expect(buildMapObjectInventoryAddBytes(pr, [`Elevation ${elev} Objects`], 9999)).toBeUndefined();
+        expect(buildMapObjectInventoryRemoveBytes(pr, [`Elevation ${elev} Objects`], 0, 9999)).toBeUndefined();
+    });
+
+    it("refuses on an incompletely-decoded map (opaque objects-tail)", () => {
+        const pr = parseDenbus1();
+        expect(buildMapObjectInventoryAddBytes(pr, ["Elevation 0 Objects"], 0)).toBeUndefined();
+        expect(buildMapObjectInventoryRemoveBytes(pr, ["Elevation 0 Objects"], 0, 0)).toBeUndefined();
     });
 });
 

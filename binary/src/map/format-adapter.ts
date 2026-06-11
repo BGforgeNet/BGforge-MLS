@@ -14,6 +14,8 @@ import {
     buildMapObjectAddEntryBytes,
     buildMapObjectDuplicateEntryBytes,
     buildMapObjectInsertEntryBytes,
+    buildMapObjectInventoryAddBytes,
+    buildMapObjectInventoryRemoveBytes,
     buildMapObjectMoveEntryBytes,
     buildMapObjectRemoveEntryBytes,
     isMapObjectRemovableEntry,
@@ -323,6 +325,31 @@ export const mapFormatAdapter: BinaryFormatAdapter = {
             buildMapDuplicateEntryBytes(parseResult, arrayPath, index) ??
             buildMapObjectDuplicateEntryBytes(parseResult, arrayPath, index)
         );
+    },
+
+    // An object's nested inventory is an owner-scoped child collection (childSection "Inventory"); add/remove
+    // an entry to the object at `index` in the named elevation section.
+    buildAddChildEntryBytes(
+        parseResult: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+        childSection: string,
+    ): Uint8Array | undefined {
+        if (childSection === "Inventory") return buildMapObjectInventoryAddBytes(parseResult, arrayPath, index);
+        return undefined;
+    },
+
+    buildRemoveChildEntryBytes(
+        parseResult: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+        childSection: string,
+        childIndex: number,
+    ): Uint8Array | undefined {
+        if (childSection === "Inventory") {
+            return buildMapObjectInventoryRemoveBytes(parseResult, arrayPath, index, childIndex);
+        }
+        return undefined;
     },
 
     isRemovableEntry(entryPath: readonly string[]): boolean {

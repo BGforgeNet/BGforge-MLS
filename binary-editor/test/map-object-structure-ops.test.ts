@@ -83,3 +83,38 @@ describe.skipIf(!present)("editor MAP object structure ops", () => {
         expect(elevationObjects(session, elev).length).toBe(before - 1);
     });
 });
+
+/** "Inventory Entry N" groups directly under an object group, in order. */
+function inventoryEntries(session: EditorSession, objectId: string): FlatNode[] {
+    return (session.model.childrenByParent.get(objectId) ?? [])
+        .map((i) => session.model.nodes[i]!)
+        .filter((n) => n.kind === "group" && /^Inventory Entry \d+/.test(n.name));
+}
+
+describe("MAP object inventory add/remove via the session", () => {
+    it("addChild then removeChild on an object's inventory round-trips the entry count", () => {
+        if (!present) return;
+        const session = open();
+        const elev = firstElevationWithObjects(session);
+        expect(elev).toBeGreaterThanOrEqual(0);
+        const obj = elevationObjects(session, elev)[0]!;
+        const invBefore = inventoryEntries(session, obj.id).length;
+
+        const addRes = structureOp(session, { op: "addChild", entryId: obj.id, childSection: "Inventory" });
+        expect(addRes.changeSet.dirty).toBe(true);
+        const objAfterAdd = elevationObjects(session, elev)[0]!;
+        expect(inventoryEntries(session, objAfterAdd.id).length).toBe(invBefore + 1);
+        // The added entry serializes and reparses cleanly through the editor pipeline.
+        expect(() => serializeSession(session)).not.toThrow();
+
+        // Remove the just-added inventory entry (last index) -> back to the original count.
+        const rmRes = structureOp(session, {
+            op: "removeChild",
+            entryId: objAfterAdd.id,
+            childSection: "Inventory",
+            childIndex: invBefore,
+        });
+        expect(rmRes.changeSet.dirty).toBe(true);
+        expect(inventoryEntries(session, elevationObjects(session, elev)[0]!.id).length).toBe(invBefore);
+    });
+});
