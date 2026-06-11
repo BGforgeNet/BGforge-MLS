@@ -4,13 +4,13 @@
     // path uses, via the windowed getChildren bridge - so filtering, virtualization, structure ops, and
     // nested detail forms all come for free. The section node + caps are resolved by sectionKey in
     // resolveLayout; the render mode is declared on the block.
-    import type { DetailRow, Diagnostic, LayoutSection, NodeId } from "@bgforge/binary-editor";
+    import type { DetailRow, Diagnostic, LayoutChildList, LayoutSection, NodeId } from "@bgforge/binary-editor";
     import type { Bridge } from "../../state/bridge";
     import ListSection from "../ListSection.svelte";
     import InlineList from "../InlineList.svelte";
 
     const { sectionKey, section, render, bridge, version, selection, onedit, byNode, showOffsets = false,
-            detailVariant, detailVariantFallbacks, labels }: {
+            detailVariant, detailVariantFallbacks, childList, labels }: {
         sectionKey: string;
         section: LayoutSection | undefined;
         render: "inline" | "master-detail";
@@ -25,6 +25,8 @@
         // Additional candidate fragments for a multi-record-kind list (e.g. CRE v2 vs v1 effects); the detail
         // pane renders the first of [detailVariant, ...fallbacks] whose refs resolve.
         detailVariantFallbacks?: DetailRow[][];
+        // master-detail only: an owner-scoped child list shown in each entry's detail (e.g. MAP object inventory).
+        childList?: LayoutChildList;
         labels?: Record<string, string>;
     } = $props();
 
@@ -48,5 +50,6 @@
     </div>
 {:else}
     <ListSection {sectionKey} nodeId={section.nodeId} caps={caps!} {bridge} {version} {selection}
-                 onadd={add} {onedit} {byNode} {showOffsets} {detailVariant} {detailVariantFallbacks} {labels} />
+                 onadd={add} {onedit} {byNode} {showOffsets} {detailVariant} {detailVariantFallbacks}
+                 {childList} {labels} />
 {/if}

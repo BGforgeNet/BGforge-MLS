@@ -14,7 +14,7 @@ export type {
 } from "./types";
 
 export type { LayoutSection, ResolvedLayout, ResolvedTab } from "./types";
-export type { DetailBlock, DetailPanel, DetailRow, FieldRef, LayoutRow } from "@bgforge/binary";
+export type { DetailBlock, DetailPanel, DetailRow, FieldRef, LayoutChildList, LayoutRow } from "@bgforge/binary";
 
 export { dispatch } from "./protocol";
 export type { Request, Response } from "./protocol";

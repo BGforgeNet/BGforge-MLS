@@ -1596,3 +1596,106 @@ input[type="text"]::placeholder {
     border-color: var(--vscode-inputValidation-errorBorder, var(--vscode-errorForeground));
     color: var(--vscode-errorForeground);
 }
+
+/* Owner-scoped child mini-list (e.g. a MAP object's nested inventory) rendered inside an entry's detail. An
+   accordion list: rows carry a remove (x) and expand to the entry's full form; the header carries the add. */
+.child-list {
+    margin-top: 0.8rem;
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 4px;
+}
+.child-list-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+.child-list-title {
+    font-size: 0.85em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--vscode-descriptionForeground);
+}
+.child-list-add {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border: none;
+    border-radius: 3px;
+    padding: 3px 8px;
+    font-size: 0.85em;
+    color: var(--vscode-button-foreground);
+    background: var(--vscode-button-background);
+    cursor: pointer;
+}
+.child-list-add:hover {
+    background: var(--vscode-button-hoverBackground, var(--vscode-button-background));
+}
+.child-list-empty {
+    margin: 0;
+    padding: 6px 8px;
+    font-style: italic;
+    color: var(--vscode-descriptionForeground);
+}
+.child-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px 2px 4px;
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+.child-row:last-child {
+    border-bottom: none;
+}
+.child-row:hover {
+    background: var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.04));
+}
+.child-row.selected {
+    background: var(--vscode-list-activeSelectionBackground);
+    color: var(--vscode-list-activeSelectionForeground);
+}
+/* On a selected row the error-red remove glyph can lose contrast against the selection highlight; inherit the
+   selection foreground so it stays legible (the remove intent stays clear from the icon + tooltip). */
+.child-row.selected .child-row-remove {
+    color: var(--vscode-list-activeSelectionForeground);
+}
+.child-row-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: none;
+    color: inherit;
+    text-align: left;
+    padding: 2px 0;
+    cursor: pointer;
+}
+.child-row-label span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.child-row-remove {
+    border: none;
+    background: none;
+    color: var(--vscode-errorForeground);
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 3px;
+}
+.child-row-remove:hover {
+    background: var(--vscode-toolbar-hoverBackground, rgba(255, 255, 255, 0.08));
+}
+/* The expanded entry is a whole nested record (the item-object's own form). Set it apart with an accent left
+   border + inset so the nesting boundary is obvious and the inner fields don't read as a continuation of the
+   outer object's form. */
+.child-row-detail {
+    margin: 0 0 2px 10px;
+    padding: 6px 10px 8px;
+    border-left: 2px solid var(--vscode-focusBorder, var(--vscode-panel-border));
+    background: var(--vscode-editor-background);
+}

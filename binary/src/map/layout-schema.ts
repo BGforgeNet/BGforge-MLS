@@ -27,8 +27,28 @@ import { formatLayoutSchema, type FormatLayout } from "../layout-schema-types";
 
 const k = (key: string): string => `map.header.${key}`;
 
-const listRow = (sectionKey: string, render: "inline" | "master-detail", canAdd = false, canModify = false) => ({
-    panels: [{ title: sectionKey, blocks: [{ kind: "list" as const, sectionKey, render, canAdd, canModify }] }],
+// A map object's nested inventory: shown in the object detail as an editable mini-list (add/remove items),
+// keyed by the "Inventory Entry N" groups the parser emits under each object.
+const OBJECT_INVENTORY_CHILD_LIST = {
+    childSection: "Inventory",
+    entryPrefix: "Inventory Entry",
+    title: "Inventory",
+    addLabel: "add item",
+} as const;
+
+const listRow = (
+    sectionKey: string,
+    render: "inline" | "master-detail",
+    canAdd = false,
+    canModify = false,
+    childList?: typeof OBJECT_INVENTORY_CHILD_LIST,
+) => ({
+    panels: [
+        {
+            title: sectionKey,
+            blocks: [{ kind: "list" as const, sectionKey, render, canAdd, canModify, ...(childList && { childList }) }],
+        },
+    ],
 });
 
 export const mapLayout: FormatLayout = formatLayoutSchema.parse({
@@ -123,19 +143,43 @@ export const mapLayout: FormatLayout = formatLayoutSchema.parse({
                             id: "elev0",
                             label: "Elevation 0",
                             countFrom: "Elevation 0 Objects",
-                            rows: [listRow("Elevation 0 Objects", "master-detail", true, true)],
+                            rows: [
+                                listRow(
+                                    "Elevation 0 Objects",
+                                    "master-detail",
+                                    true,
+                                    true,
+                                    OBJECT_INVENTORY_CHILD_LIST,
+                                ),
+                            ],
                         },
                         {
                             id: "elev1",
                             label: "Elevation 1",
                             countFrom: "Elevation 1 Objects",
-                            rows: [listRow("Elevation 1 Objects", "master-detail", true, true)],
+                            rows: [
+                                listRow(
+                                    "Elevation 1 Objects",
+                                    "master-detail",
+                                    true,
+                                    true,
+                                    OBJECT_INVENTORY_CHILD_LIST,
+                                ),
+                            ],
                         },
                         {
                             id: "elev2",
                             label: "Elevation 2",
                             countFrom: "Elevation 2 Objects",
-                            rows: [listRow("Elevation 2 Objects", "master-detail", true, true)],
+                            rows: [
+                                listRow(
+                                    "Elevation 2 Objects",
+                                    "master-detail",
+                                    true,
+                                    true,
+                                    OBJECT_INVENTORY_CHILD_LIST,
+                                ),
+                            ],
                         },
                     ],
                 },

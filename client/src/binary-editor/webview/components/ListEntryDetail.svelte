@@ -5,7 +5,7 @@
     // v2 effect) looks identical to its standalone form. Otherwise fall back to the generic auto-form. The
     // per-entry field map is built from the entry's own child rows keyed by semantic key (the global layout
     // `fields` map collapses every list entry to one key, so it can't render a selected entry).
-    import type { DetailRow, Diagnostic, NodeId, ResolvedLayout, Row } from "@bgforge/binary-editor";
+    import type { DetailRow, Diagnostic, LayoutChildList, NodeId, ResolvedLayout, Row } from "@bgforge/binary-editor";
     // Import the pure helpers from their own module, NOT the package barrel: the barrel re-exports
     // dispatch/openSession (protocol/session), which transitively pull node `fs`/`path` and would break the
     // browser webview bundle. `detail-layout.ts` only type-imports binary, so its graph stays browser-safe.
@@ -13,12 +13,15 @@
     import type { Bridge } from "../state/bridge";
     import LayoutRenderer from "./LayoutRenderer.svelte";
     import FormSection from "./FormSection.svelte";
+    import ChildEntryList from "./ChildEntryList.svelte";
 
-    const { nodeId, detailVariant, detailVariantFallbacks, labels, bridge, version, onedit, byNode, showOffsets = false }: {
+    const { nodeId, detailVariant, detailVariantFallbacks, childList, labels, bridge, version, onedit, byNode, showOffsets = false }: {
         nodeId: NodeId;
         detailVariant?: DetailRow[];
         // Additional candidate fragments for a multi-record-kind list (e.g. CRE v2 vs v1 effects).
         detailVariantFallbacks?: DetailRow[][];
+        // An owner-scoped child list rendered below this entry's form (e.g. MAP object inventory).
+        childList?: LayoutChildList;
         labels?: Record<string, string>;
         bridge: Bridge;
         version: number;
@@ -63,5 +66,10 @@
     <!-- selection/bridge/version are only consumed by `list` blocks, which a detailVariant never contains. -->
     <LayoutRenderer layout={detailLayout} {onedit} {byNode} {showOffsets} {bridge} {version} selection={undefined} />
 {:else}
-    <FormSection {nodeId} {bridge} {version} {onedit} {byNode} {showOffsets} />
+    <!-- The auto-form hides the childList's entry groups (e.g. "Inventory Entry N") so they are not rendered
+         twice - the ChildEntryList below presents them as an editable mini master-detail with add/remove. -->
+    <FormSection {nodeId} {bridge} {version} {onedit} {byNode} {showOffsets} hideGroupPrefix={childList?.entryPrefix} />
+{/if}
+{#if childList}
+    <ChildEntryList ownerId={nodeId} {childList} {bridge} {version} {onedit} {byNode} {showOffsets} />
 {/if}

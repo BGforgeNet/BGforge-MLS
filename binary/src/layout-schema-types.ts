@@ -169,6 +169,21 @@ const listBlockSchema = z.strictObject({
      * is the shorter/older record's fragment, which the primary cleanly declines (its refs are absent).
      */
     detailVariantFallbacks: z.array(z.array(detailRowSchema).min(1)).optional(),
+    /**
+     * When set, the SELECTED entry's detail also renders an owner-scoped child list - a mini master-detail of
+     * the entry's variable-length nested collection, with its own add/remove. Used by the MAP object detail to
+     * edit a map object's nested `inventory` (a list of item-objects). The entry groups matching `entryPrefix`
+     * are pulled out of the auto-form and shown as the mini-list instead, so they are not rendered twice.
+     * `childSection` is the op-routing name (matches `buildAddChildEntryBytes`/`buildRemoveChildEntryBytes`).
+     */
+    childList: z
+        .strictObject({
+            childSection: z.string().min(1), // op routing name, e.g. "Inventory"
+            entryPrefix: z.string().min(1), // entry group-name prefix in the model, e.g. "Inventory Entry"
+            title: z.string().min(1), // section heading, e.g. "Inventory"
+            addLabel: z.string().min(1), // add-button text, e.g. "add item"
+        })
+        .optional(),
 });
 
 /** A hex/raw-bytes pane. Specified now; webview `RawBlock` is a stub (follow-up tier). */
@@ -289,6 +304,7 @@ export type LayoutRow = z.infer<typeof layoutRowSchema>;
 export type DetailBlock = z.infer<typeof detailBlockSchema>;
 export type DetailPanel = z.infer<typeof detailPanelSchema>;
 export type DetailRow = z.infer<typeof detailRowSchema>;
+export type LayoutChildList = NonNullable<z.infer<typeof listBlockSchema>["childList"]>;
 export type LayoutSubTab = z.infer<typeof layoutSubTabSchema>;
 export type LayoutTab = z.infer<typeof layoutTabSchema>;
 export type LayoutVariant = z.infer<typeof layoutVariantSchema>;

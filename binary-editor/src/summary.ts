@@ -170,10 +170,39 @@ function makeComposer(spec: FormatSummarySpec): SummaryComposer {
 // Public API
 // ---------------------------------------------------------------------------
 
-// Pre-built composers, one per format.
-const COMPOSERS: Readonly<Record<string, SummaryComposer>> = Object.fromEntries(
+/**
+ * MAP inventory-entry summary. The "Inventory Entry N" groups sit under an object group (whose name varies),
+ * so the section-name table cannot key them; compose directly instead, so the inventory mini-list rows read as
+ * items rather than positional placeholders. Uses the nested item-object's PID (its "what is it" identity, no
+ * external proto-name resolver available) and the entry's quantity, e.g. "0x0500000c x2".
+ */
+function inventoryEntrySummary(node: FlatNode, model: Model, rel: RelationshipModel | undefined): string | undefined {
+    if (node.kind !== "group" || !node.name.startsWith("Inventory Entry")) return undefined;
+    const children = (model.childrenByParent.get(node.id) ?? []).map((i) => model.nodes[i]!);
+    const qtyNode = children.find((c) => c?.kind === "field" && c.name === "Quantity");
+    const objNode = children.find((c) => c?.kind === "group" && c.name.startsWith("Object "));
+    const qty = qtyNode ? projectRow(model, qtyNode, rel).displayValue : undefined;
+    let item: string | undefined;
+    if (objNode) {
+        const pidNode = (model.childrenByParent.get(objNode.id) ?? [])
+            .map((i) => model.nodes[i]!)
+            .find((c) => c?.kind === "field" && c.name === "PID");
+        item = pidNode ? projectRow(model, pidNode, rel).displayValue : objNode.name;
+    }
+    const segments: string[] = [];
+    if (item) segments.push(item);
+    if (qty !== undefined) segments.push(`x${qty}`);
+    return segments.length > 0 ? segments.join(" ") : undefined;
+}
+
+// Pre-built composers, one per format. MAP also composes inventory-entry rows (handled before the table).
+const BASE_COMPOSERS: Readonly<Record<string, SummaryComposer>> = Object.fromEntries(
     Object.entries(FORMAT_SPECS).map(([id, spec]) => [id, makeComposer(spec)]),
 );
+const COMPOSERS: Readonly<Record<string, SummaryComposer>> = {
+    ...BASE_COMPOSERS,
+    map: (node, model, rel) => inventoryEntrySummary(node, model, rel) ?? BASE_COMPOSERS.map!(node, model, rel),
+};
 
 /**
  * Return the summary composer for the given format id, or undefined when no

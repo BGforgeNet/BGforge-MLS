@@ -59,6 +59,21 @@ function hostUp(m: WebviewToHost): HostToWebview[] {
         }
         return [];
     }
+    if (m.type === "structureOp") {
+        // Drive interactive structure ops (e.g. the inventory mini-list add) back through the real dispatch and
+        // hand the webview the resulting changeSet, the same shape the host provider posts.
+        const r = dispatch({ type: "structureOp", sessionId, op: m.op });
+        if (r.type === "structure") {
+            return [
+                {
+                    type: "changeSet",
+                    changeSet: r.result.changeSet,
+                    ...(r.result.selection !== undefined && { selection: r.result.selection }),
+                },
+            ];
+        }
+        return [];
+    }
     return [];
 }
 
@@ -175,6 +190,41 @@ check(
     await activeTabLabel(),
 );
 await page.screenshot({ path: path.join(here, "shot-map-objects.png"), fullPage: true });
+
+// Inventory mini-list (interactive): cave6's first object has no inventory, so the list opens on its empty
+// state. Add two items through the "+ add item" button (real addChild dispatch -> changeSet refresh), expand
+// the first item's nested form, and screenshot the populated list with its per-row remove + accordion detail.
+const inventoryList = page.locator(".child-list").first();
+check("inventory: the object detail renders a child mini-list", (await inventoryList.count()) >= 1, "");
+check(
+    "inventory: starts on the empty state",
+    (await inventoryList.locator(".child-list-empty").count()) === 1,
+    (await inventoryList
+        .locator(".child-list-empty")
+        .textContent()
+        .catch(() => "")) ?? "",
+);
+await inventoryList.locator(".child-list-add").click();
+await page.waitForTimeout(150);
+await inventoryList.locator(".child-list-add").click();
+await page.waitForTimeout(150);
+const invRows = await inventoryList.locator(".child-row").count();
+check("inventory: + add item grew the list to two rows", invRows === 2, `rows=${invRows}`);
+await inventoryList.locator(".child-row .child-row-label").first().click();
+await page.waitForTimeout(200);
+// The row label is the item's identity (PID) + quantity, not the bare "Inventory Entry N" group name.
+const firstRowLabel = (await inventoryList.locator(".child-row .child-row-label").first().textContent()) ?? "";
+check(
+    "inventory: row label shows the item PID + quantity",
+    /0x[0-9a-f]+/i.test(firstRowLabel) && /x\d+/.test(firstRowLabel),
+    `label="${firstRowLabel.trim()}"`,
+);
+check(
+    "inventory: expanding a row reveals its nested item form",
+    (await inventoryList.locator(".child-row-detail .form").count()) >= 1,
+    "",
+);
+await page.screenshot({ path: path.join(here, "shot-map-inventory.png"), fullPage: true });
 
 // ============================================================
 // Baseline + structure ops (dispatch-level; the interactive DOM path is covered by ITM/CRE)

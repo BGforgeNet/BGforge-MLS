@@ -12,11 +12,14 @@
     // depth=2 -> horizontal tabs. depth>2 -> always headed sections (hard cap at 2 tab levels).
     // columns: how many columns the scalar-field grid uses. Default 2; a `view: "slots"` group passes its
     // own slot count (via the group Row's `columns`) so a small fixed slot array sits on one row.
-    const { nodeId, bridge, version, onedit, byNode, depth = 1, showOffsets = false, columns = 2 }:
+    const { nodeId, bridge, version, onedit, byNode, depth = 1, showOffsets = false, columns = 2, hideGroupPrefix }:
         { nodeId: NodeId; bridge: Bridge; version: number;
           onedit: (id: string, v: number | string) => void;
           byNode: Map<string, Diagnostic[]>;
-          depth?: number; showOffsets?: boolean; columns?: number } = $props();
+          depth?: number; showOffsets?: boolean; columns?: number;
+          // Suppress nested groups whose name starts with this prefix (e.g. "Inventory Entry") - they are
+          // rendered by a sibling ChildEntryList mini-list instead, so showing them here would duplicate.
+          hideGroupPrefix?: string } = $props();
 
     let rows = $state<Row[]>([]);
     $effect(() => {
@@ -29,7 +32,9 @@
 
     // Hidden rows (spec `hidden` flag: reserved/padding/magic fields like unused*/unknown/duplicated
     // signature-version) stay in the model for the byte round-trip but are not rendered in the form.
-    const visibleRows = $derived(rows.filter((r) => r.hidden !== true));
+    const visibleRows = $derived(
+        rows.filter((r) => r.hidden !== true && !(hideGroupPrefix !== undefined && r.name.startsWith(hideGroupPrefix))),
+    );
     const { fields, groups } = $derived(splitForm(visibleRows));
     // Flag fields are multi-row checkbox grids; in the 2-column scalar grid their height strands the scalar
     // columns (the last left-column field ends up far below its neighbour). Keep scalars in the 2-col grid

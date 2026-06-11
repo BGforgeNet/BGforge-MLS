@@ -43,6 +43,7 @@ export type {
     FieldRef,
     FormatLayout,
     LayoutBlock,
+    LayoutChildList,
     LayoutPanel,
     LayoutRow,
     LayoutSubTab,

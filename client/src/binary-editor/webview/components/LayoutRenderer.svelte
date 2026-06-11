@@ -114,7 +114,8 @@
                             {:else if block.kind === "list"}
                                 <ListBlock sectionKey={block.sectionKey} section={layout.sections[block.sectionKey]}
                                            render={block.render} detailVariant={block.detailVariant}
-                                           detailVariantFallbacks={block.detailVariantFallbacks} labels={layout.labels}
+                                           detailVariantFallbacks={block.detailVariantFallbacks}
+                                           childList={block.childList} labels={layout.labels}
                                            {bridge} {version} {selection}
                                            {onedit} {byNode} {showOffsets} />
                             {:else if block.kind === "spellbook"}

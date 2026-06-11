@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { DetailRow, Diagnostic, NodeId, Row } from "@bgforge/binary-editor";
+    import type { DetailRow, Diagnostic, LayoutChildList, NodeId, Row } from "@bgforge/binary-editor";
     import type { Bridge } from "../state/bridge";
     import { rowActions, type SectionCaps } from "../state/structure-actions";
     import { filterRows } from "../state/filter";
@@ -14,12 +14,13 @@
     const SELECTION_RESOLVE_SCAN_LIMIT = 256;
 
     const { sectionKey, nodeId, caps, bridge, version, selection, onadd, onedit, byNode, showOffsets = false,
-            detailVariant, detailVariantFallbacks, labels }:
+            detailVariant, detailVariantFallbacks, childList, labels }:
         { sectionKey: string; nodeId: NodeId; caps: SectionCaps; bridge: Bridge;
           version: number; selection: NodeId | undefined;
           onadd: () => void; onedit: (id: string, v: number | string) => void;
           byNode: Map<string, Diagnostic[]>; showOffsets?: boolean;
           detailVariant?: DetailRow[]; detailVariantFallbacks?: DetailRow[][];
+          childList?: LayoutChildList;
           labels?: Record<string, string> } = $props();
 
     // eslint-disable-next-line prefer-const -- reassigned via onselect callback
@@ -161,7 +162,7 @@
                 {@const acts = rowActions(selectedIndex, total, caps)}
                 <RowActions {acts} entryId={selected.id} {bridge} />
             {/if}
-            <ListEntryDetail nodeId={selected.id} {detailVariant} {detailVariantFallbacks} {labels} {bridge} {version} {onedit} {byNode} {showOffsets} />
+            <ListEntryDetail nodeId={selected.id} {detailVariant} {detailVariantFallbacks} {childList} {labels} {bridge} {version} {onedit} {byNode} {showOffsets} />
         {:else}
             <p class="placeholder">Select an entry.</p>
         {/if}
