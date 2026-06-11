@@ -51,6 +51,12 @@ export interface SliceRefRelationship {
     readonly fields: IeEffectRangeFields;
     /** Emit an info note for targets covered by no slice. */
     readonly orphanInfo?: boolean;
+    /** Warn when two slices cover a common target (an entry claimed by more than one owner). Opt-in because
+     *  only partitioning slices - CRE memorization info, ITM/SPL ability effects - expect disjoint coverage. */
+    readonly overlapWarn?: boolean;
+    /** Noun naming an owning slice in the orphan/overlap messages ("covered by no <X>", "claimed by more than
+     *  one <X>"). Defaults to the ITM/SPL "ability or equipping/casting range"; CRE overrides it. */
+    readonly coverageNoun?: string;
 }
 
 export type CrossRefRelationship = IndexRefRelationship | SliceRefRelationship;

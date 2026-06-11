@@ -4,7 +4,9 @@ import { buildModel, creResult, findGroupNode, findGroupNodeField } from "./cros
 import {
     indexRefDiagnostics,
     indexRefFieldOverride,
+    orphanSliceDiagnostics,
     orphanTargetDiagnostics,
+    overlapSliceDiagnostics,
     sliceRefDiagnostics,
 } from "../src/relationship/cross-record";
 import { getRelationshipModel } from "../src/relationship/registry";
@@ -52,6 +54,112 @@ describe("creMeminfoRefConstraint", () => {
     it("ignores empty (count 0) slices", () => {
         const m = buildModel(creResult({ memSpells: 0, items: 0, slots: [], meminfos: [{ start: 0, count: 0 }] }));
         expect(sliceRefDiagnostics(m, creMeminfoRel)).toHaveLength(0);
+    });
+});
+
+describe("creOrphanMemorizedSpellsConstraint", () => {
+    it("notes memorized spells covered by no memorization range", () => {
+        // 4 memorized spells; one meminfo range covers [0,2) -> spells #2,#3 are memorized by no level.
+        const m = buildModel(creResult({ memSpells: 4, items: 0, slots: [], meminfos: [{ start: 0, count: 2 }] }));
+        const diags = orphanSliceDiagnostics(m, creMeminfoRel);
+        expect(diags).toHaveLength(1);
+        expect(diags[0]!.severity).toBe("info");
+        expect(diags[0]!.message).toContain("2 unreferenced");
+        expect(diags[0]!.message).toContain("memorization range");
+        expect(diags[0]!.message).toContain("#2");
+        expect(diags[0]!.message).toContain("#3");
+        const mem = m.nodes.find((n) => n.kind === "group" && n.name === "Memorized Spells")!;
+        expect(diags[0]!.nodeId).toBe(mem.id);
+    });
+    it("no note when the ranges cover every memorized spell", () => {
+        const m = buildModel(
+            creResult({
+                memSpells: 3,
+                items: 0,
+                slots: [],
+                meminfos: [
+                    { start: 0, count: 2 },
+                    { start: 2, count: 1 },
+                ],
+            }),
+        );
+        expect(orphanSliceDiagnostics(m, creMeminfoRel)).toHaveLength(0);
+    });
+});
+
+describe("creOverlapMemorizedSpellsConstraint", () => {
+    it("warns when two memorization ranges claim the same memorized spell", () => {
+        // 4 memorized spells; ranges [0,3) and [2,2) both cover index 2.
+        const m = buildModel(
+            creResult({
+                memSpells: 4,
+                items: 0,
+                slots: [],
+                meminfos: [
+                    { start: 0, count: 3 },
+                    { start: 2, count: 2 },
+                ],
+            }),
+        );
+        const diags = overlapSliceDiagnostics(m, creMeminfoRel);
+        expect(diags).toHaveLength(1);
+        expect(diags[0]!.severity).toBe("warning");
+        expect(diags[0]!.message).toContain("claimed by more than one memorization range");
+        expect(diags[0]!.message).toContain("#2");
+        expect(diags[0]!.quickFix).toBeUndefined();
+        const mem = m.nodes.find((n) => n.kind === "group" && n.name === "Memorized Spells")!;
+        expect(diags[0]!.nodeId).toBe(mem.id);
+    });
+    it("no warning for disjoint ranges", () => {
+        const m = buildModel(
+            creResult({
+                memSpells: 4,
+                items: 0,
+                slots: [],
+                meminfos: [
+                    { start: 0, count: 2 },
+                    { start: 2, count: 2 },
+                ],
+            }),
+        );
+        expect(overlapSliceDiagnostics(m, creMeminfoRel)).toHaveLength(0);
+    });
+});
+
+describe("CRE memorized-spell orphan/overlap notes reach the composed constraints", () => {
+    // The opt-in flags (orphanInfo/overlapWarn) live on the cre adapter descriptor, so assert through the real
+    // relationship-model pipeline the editor reads diagnostics from - not just the helper functions.
+    it("surfaces both the orphan info note and the overlap warning", () => {
+        // 5 memorized spells; ranges [0,3) and [2,2) overlap at #2 and leave #4 covered by nothing.
+        const m = buildModel(
+            creResult({
+                memSpells: 5,
+                items: 0,
+                slots: [],
+                meminfos: [
+                    { start: 0, count: 3 },
+                    { start: 2, count: 2 },
+                ],
+            }),
+        );
+        const diags = getRelationshipModel("cre")!.constraints(m);
+        expect(diags.some((d) => d.severity === "warning" && /claimed by more than one/.test(d.message))).toBe(true);
+        expect(diags.some((d) => d.severity === "info" && /unreferenced memorized-spell/.test(d.message))).toBe(true);
+    });
+    it("emits neither for a clean partition", () => {
+        const m = buildModel(
+            creResult({
+                memSpells: 4,
+                items: 0,
+                slots: [],
+                meminfos: [
+                    { start: 0, count: 2 },
+                    { start: 2, count: 2 },
+                ],
+            }),
+        );
+        const diags = getRelationshipModel("cre")!.constraints(m);
+        expect(diags.some((d) => /claimed by more than one|unreferenced memorized-spell/.test(d.message))).toBe(false);
     });
 });
 

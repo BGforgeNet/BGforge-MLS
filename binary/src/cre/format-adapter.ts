@@ -21,7 +21,9 @@ import {
  * CRE cross-record relationships:
  *  - Item Slots [0, CRE_ITEM_REF_SLOT_COUNT) index into Items (the trailing selected-weapon slot/ability
  *    entries are not item indices and stay unchecked); orphan items are noted.
- *  - Spell Memorization Info entries slice into Memorized Spells.
+ *  - Spell Memorization Info entries slice into Memorized Spells; memorized spells covered by no range are
+ *    noted (info) and a spell claimed by two ranges is warned (the memorization slices should partition the
+ *    memorized-spell table).
  */
 const creCrossRefRelationships: readonly CrossRefRelationship[] = [
     {
@@ -40,6 +42,9 @@ const creCrossRefRelationships: readonly CrossRefRelationship[] = [
         targetGroup: CRE_GROUP_LABELS.memorizedSpells,
         sliceNoun: "Memorized-spell",
         fields: CRE_MEMINFO_FIELDS,
+        orphanInfo: true,
+        overlapWarn: true,
+        coverageNoun: "memorization range",
     },
 ];
 

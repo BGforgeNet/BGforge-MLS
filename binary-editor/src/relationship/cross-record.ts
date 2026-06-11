@@ -103,6 +103,10 @@ export function indexRefFieldOverride(
     return { presentationType: "enum", enumOptions };
 }
 
+/** Default owning-slice noun for the orphan/overlap messages, matching the ITM/SPL relationships (abilities +
+ *  the equipping/casting header range). A relationship's `coverageNoun` overrides it (CRE: "memorization range"). */
+const DEFAULT_COVERAGE_NOUN = "ability or equipping/casting range";
+
 interface SliceRange {
     startNode?: FlatNode;
     countNode?: FlatNode;
@@ -181,7 +185,35 @@ export function orphanSliceDiagnostics(model: Model, rel: SliceRefRelationship):
         {
             nodeId: targetGroup.id,
             severity: "info",
-            message: `${orphans.length} unreferenced ${rel.sliceNoun.toLowerCase()}(s) (covered by no ability or equipping/casting range): #${orphans.join(", #")}.`,
+            message: `${orphans.length} unreferenced ${rel.sliceNoun.toLowerCase()}(s) (covered by no ${rel.coverageNoun ?? DEFAULT_COVERAGE_NOUN}): #${orphans.join(", #")}.`,
+        },
+    ];
+}
+
+/** Two slices covering a common target index mean the entry is claimed by more than one owner (e.g. a memorized
+ *  spell assigned to two memorization ranges) - a genuine inconsistency the engine would mis-count. Report the
+ *  over-claimed targets as a warning; which owner should keep the entry is the user's call, so there is no
+ *  unambiguous auto-fix and no quickFix. Opt-in via the relationship's `overlapWarn`. */
+export function overlapSliceDiagnostics(model: Model, rel: SliceRefRelationship): Diagnostic[] {
+    const targetGroup = findGroup(model, rel.targetGroup);
+    if (!targetGroup) return [];
+    const targetLen = childGroups(model, targetGroup).length;
+    if (targetLen === 0) return [];
+    const coverCount = Array.from<number>({ length: targetLen }).fill(0);
+    for (const r of sliceRanges(model, rel)) {
+        const start = r.startNode ? fieldNumber(r.startNode) : undefined;
+        const count = r.countNode ? fieldNumber(r.countNode) : undefined;
+        if (start === undefined || count === undefined || count <= 0) continue;
+        for (let k = start; k < start + count; k++) if (k >= 0 && k < targetLen) coverCount[k]!++;
+    }
+    const overlapped: number[] = [];
+    for (let i = 0; i < targetLen; i++) if ((coverCount[i] ?? 0) > 1) overlapped.push(i);
+    if (overlapped.length === 0) return [];
+    return [
+        {
+            nodeId: targetGroup.id,
+            severity: "warning",
+            message: `${overlapped.length} ${rel.sliceNoun.toLowerCase()}(s) claimed by more than one ${rel.coverageNoun ?? DEFAULT_COVERAGE_NOUN}: #${overlapped.join(", #")}.`,
         },
     ];
 }
@@ -232,6 +264,7 @@ export function crossRefDiagnostics(model: Model, rels: readonly CrossRefRelatio
         } else {
             out.push(...sliceRefDiagnostics(model, rel));
             if (rel.orphanInfo) out.push(...orphanSliceDiagnostics(model, rel));
+            if (rel.overlapWarn) out.push(...overlapSliceDiagnostics(model, rel));
         }
     }
     return out;
