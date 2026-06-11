@@ -169,6 +169,21 @@ export interface BinaryFormatAdapter {
         index: number,
     ): Uint8Array | undefined;
     /**
+     * Add a new default CHILD entry to the parent entry at ordinal `index` in the array at `arrayPath`,
+     * targeting the child collection named `childSection`. Unlike a section-level add, this is owner-scoped:
+     * it reaches a child collection that has no top-level list of its own, or whose first child cannot be
+     * inserted because the parent owns an empty slice. ITM/SPL use it to add an effect to a specific ability
+     * (`arrayPath` = ["Abilities"], `childSection` = "Effects"); the MAP object inventory uses the same shape.
+     * `index` is the structural ordinal (see `buildRemoveEntryBytes`). Returns undefined for an unknown
+     * parent/child pairing or an out-of-range index.
+     */
+    buildAddChildEntryBytes?(
+        parseResult: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+        childSection: string,
+    ): Uint8Array | undefined;
+    /**
      * Lightweight predicate the byte-builders use to validate a removal target. The list-section
      * identity and structure-op affordances (canAdd/canModify) are now declared on the layout schema's
      * `list` block, not derived from the adapter - the adapter holds only data concerns.

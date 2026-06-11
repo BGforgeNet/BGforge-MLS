@@ -19,7 +19,10 @@ export type StructureOpRequest =
     | { op: "insert"; entryId: NodeId; position: "before" | "after" }
     | { op: "remove"; entryId: NodeId }
     | { op: "reorder"; entryId: NodeId; direction: "up" | "down" }
-    | { op: "duplicate"; entryId: NodeId };
+    | { op: "duplicate"; entryId: NodeId }
+    // Owner-scoped child add: add a default entry to the `childSection` collection owned by the entry
+    // `entryId` (e.g. add an effect to a specific ITM/SPL ability). Targets the parent entry, not a section.
+    | { op: "addChild"; entryId: NodeId; childSection: string };
 
 export function reparse(session: EditorSession, bytes: Uint8Array): ParseResult {
     const parser = parserRegistry.getById(session.parserId);
@@ -87,6 +90,8 @@ function buildOpBytes(
             return adapter?.buildMoveEntryBytes?.(pr, arrayPath, index, req.direction);
         case "duplicate":
             return adapter?.buildDuplicateEntryBytes?.(pr, arrayPath, index);
+        case "addChild":
+            return adapter?.buildAddChildEntryBytes?.(pr, arrayPath, index, req.childSection);
     }
 }
 
@@ -184,6 +189,9 @@ export function structureOp(session: EditorSession, req: StructureOpRequest): St
         case "duplicate":
             label = `Duplicate ${arrayLabel} #${index + 1}`;
             break;
+        case "addChild":
+            label = `Add ${req.childSection} to ${arrayLabel} #${index + 1}`;
+            break;
     }
 
     const result = commit(session, label, reparse(session, bytes));
@@ -214,6 +222,11 @@ export function structureOp(session: EditorSession, req: StructureOpRequest): St
             // rather than the entry that shifted up into the freed slot. childIdAt clamps -1 -> 0, so removing
             // the first entry falls back to the new first; an emptied list yields no selection.
             selIndex = index - 1;
+            break;
+        case "addChild":
+            // The child lands in another section (e.g. Effects); the parent list (Abilities) is unchanged,
+            // so keep the same parent entry selected.
+            selIndex = index;
             break;
     }
     result.selection = childIdAt(session.model, newKids, selIndex);

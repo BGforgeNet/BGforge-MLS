@@ -28,7 +28,11 @@
         labels?: Record<string, string>;
     } = $props();
 
-    const caps = $derived(section ? { canAdd: section.canAdd, canModify: section.canModify } : undefined);
+    const caps = $derived(
+        section
+            ? { canAdd: section.canAdd, canModify: section.canModify, childAddSection: section.childAddSection }
+            : undefined,
+    );
     function add(): void {
         if (section) bridge.structureOp({ op: "add", sectionId: section.nodeId });
     }

@@ -6,6 +6,8 @@ import { getItmCanonicalDocument, rebuildItmCanonicalDocument } from "../src/itm
 import { serializeItmCanonicalDocument } from "../src/itm/canonical-writer";
 import {
     buildItmAddAbilityBytes,
+    buildItmAddEffectBytes,
+    buildItmAddEffectToAbilityBytes,
     buildItmDuplicateAbilityBytes,
     buildItmDuplicateEffectBytes,
     buildItmInsertAbilityBytes,
@@ -83,6 +85,50 @@ function makeEquippingPlusTwoAbilityBase(): ParseResult {
         effects: [effect(99), effect(10), effect(20), effect(21)],
     };
 
+    const reparsed = itmParser.parse(serializeItmCanonicalDocument(base));
+    if (reparsed.errors) throw new Error(`base reparse errors: ${reparsed.errors.join(", ")}`);
+    return reparsed;
+}
+
+/**
+ * An ITM with one ability that owns NO effects and no equipping effects (zero
+ * effects total) - the "effect-less item" empty state that 1.2a is about.
+ */
+function makeEmptyEffectsBase(): ParseResult {
+    const parsed = itmParser.parse(new Uint8Array(fs.readFileSync(FIXTURE)));
+    if (parsed.errors) throw new Error(parsed.errors.join(", "));
+    const doc = getItmCanonicalDocument(parsed) ?? rebuildItmCanonicalDocument(parsed);
+    if (!doc) throw new Error("no canonical doc");
+    const base = {
+        ...doc,
+        header: { ...doc.header, featureBlocksIndex: 0, featureBlocksCount: 0 },
+        abilities: [{ ...defaultItmAbility(), featureBlockIndex: 0, featureBlockCount: 0 }],
+        effects: [],
+    };
+    const reparsed = itmParser.parse(serializeItmCanonicalDocument(base));
+    if (reparsed.errors) throw new Error(`base reparse errors: ${reparsed.errors.join(", ")}`);
+    return reparsed;
+}
+
+/**
+ * ability0 owns effect[0] (opcode 10); ability1 is a PRE-EXISTING empty ability
+ * (count 0, start 1). Used to prove per-ability add gives an effect-less ability
+ * its first effect.
+ */
+function makeTrailingEmptyAbilityBase(): ParseResult {
+    const parsed = itmParser.parse(new Uint8Array(fs.readFileSync(FIXTURE)));
+    if (parsed.errors) throw new Error(parsed.errors.join(", "));
+    const doc = getItmCanonicalDocument(parsed) ?? rebuildItmCanonicalDocument(parsed);
+    if (!doc) throw new Error("no canonical doc");
+    const base = {
+        ...doc,
+        header: { ...doc.header, featureBlocksIndex: 0, featureBlocksCount: 0 },
+        abilities: [
+            { ...defaultItmAbility(), featureBlockIndex: 0, featureBlockCount: 1 },
+            { ...defaultItmAbility(), featureBlockIndex: 1, featureBlockCount: 0 },
+        ],
+        effects: [{ ...defaultItmEffect(), opcode: 10 }],
+    };
     const reparsed = itmParser.parse(serializeItmCanonicalDocument(base));
     if (reparsed.errors) throw new Error(`base reparse errors: ${reparsed.errors.join(", ")}`);
     return reparsed;
@@ -188,15 +234,15 @@ describe("ITM ability structure-ops with effect-slice relinking", () => {
         expect(validateEffectPartition(doc)).toEqual([]);
     });
 
-    it.skipIf(!hasFixture)("add appends an empty-slice ability and leaves effects untouched", () => {
+    it.skipIf(!hasFixture)("add appends an ability seeded with one effect (usable at once)", () => {
         const bytes = buildItmAddAbilityBytes(makeTwoAbilityBase(), ["Abilities"]);
         expect(bytes).toBeDefined();
         const doc = reparse(bytes!);
         expect(doc.abilities.length).toBe(3);
-        expect(doc.abilities[2]).toMatchObject({ featureBlockCount: 0 });
-        // New empty slice sits at the end (running offset == effects.length).
-        expect(doc.abilities[2]!.featureBlockIndex).toBe(3);
-        expect(opcodes(doc.effects)).toEqual([10, 20, 21]);
+        // The new ability is seeded with one default (opcode 0) effect at the tail so it is not an
+        // effect-less dead end; its slice sits at the end (running offset == old effects.length).
+        expect(doc.abilities[2]).toMatchObject({ featureBlockIndex: 3, featureBlockCount: 1 });
+        expect(opcodes(doc.effects)).toEqual([10, 20, 21, 0]);
         expect(validateEffectPartition(doc)).toEqual([]);
     });
 
@@ -257,29 +303,29 @@ describe("ITM ability structure-ops with effect-slice relinking", () => {
         expect(validateEffectPartition(doc)).toEqual([]);
     });
 
-    it.skipIf(!hasFixture)("insert before adds an empty-slice ability at the slot; effects untouched", () => {
+    it.skipIf(!hasFixture)("insert before adds an ability seeded with one effect at the slot", () => {
         const bytes = buildItmInsertAbilityBytes(makeTwoAbilityBase(), ["Abilities"], 0, "before");
         expect(bytes).toBeDefined();
         const doc = reparse(bytes!);
         expect(doc.abilities.length).toBe(3);
-        // New empty ability at slot 0; the two real abilities keep their slices.
-        expect(doc.abilities[0]).toMatchObject({ featureBlockCount: 0 });
-        expect(doc.abilities[1]).toMatchObject({ featureBlockIndex: 0, featureBlockCount: 1 });
-        expect(doc.abilities[2]).toMatchObject({ featureBlockIndex: 1, featureBlockCount: 2 });
-        expect(opcodes(doc.effects)).toEqual([10, 20, 21]);
+        // New seeded ability at slot 0 owns the new effect at index 0; the two real abilities shift up.
+        expect(doc.abilities[0]).toMatchObject({ featureBlockIndex: 0, featureBlockCount: 1 });
+        expect(doc.abilities[1]).toMatchObject({ featureBlockIndex: 1, featureBlockCount: 1 });
+        expect(doc.abilities[2]).toMatchObject({ featureBlockIndex: 2, featureBlockCount: 2 });
+        expect(opcodes(doc.effects)).toEqual([0, 10, 20, 21]);
         expect(validateEffectPartition(doc)).toEqual([]);
     });
 
-    it.skipIf(!hasFixture)("insert after adds an empty-slice ability after the slot; effects untouched", () => {
+    it.skipIf(!hasFixture)("insert after adds an ability seeded with one effect after the slot", () => {
         const bytes = buildItmInsertAbilityBytes(makeTwoAbilityBase(), ["Abilities"], 0, "after");
         expect(bytes).toBeDefined();
         const doc = reparse(bytes!);
         expect(doc.abilities.length).toBe(3);
         expect(doc.abilities[0]).toMatchObject({ featureBlockIndex: 0, featureBlockCount: 1 });
-        // New empty ability at slot 1 (after ability0).
-        expect(doc.abilities[1]).toMatchObject({ featureBlockCount: 0 });
-        expect(doc.abilities[2]).toMatchObject({ featureBlockIndex: 1, featureBlockCount: 2 });
-        expect(opcodes(doc.effects)).toEqual([10, 20, 21]);
+        // New seeded ability at slot 1 (after ability0) owns the new effect spliced after ability0's slice.
+        expect(doc.abilities[1]).toMatchObject({ featureBlockIndex: 1, featureBlockCount: 1 });
+        expect(doc.abilities[2]).toMatchObject({ featureBlockIndex: 2, featureBlockCount: 2 });
+        expect(opcodes(doc.effects)).toEqual([10, 0, 20, 21]);
         expect(validateEffectPartition(doc)).toEqual([]);
     });
 
@@ -480,5 +526,59 @@ describe("ITM effect structure-ops with owner-aware relinking", () => {
         const doc = reparse(bytes!);
         expect(doc.effects.length).toBe(0);
         expect(validateEffectPartition(doc)).toEqual([]);
+    });
+});
+
+describe("ITM effect add (section + per-ability)", () => {
+    it.skipIf(!hasFixture)("section add appends a new effect to the equipping (global) range", () => {
+        // The flat-list toolbar "+ add": a new effect with no ability is a global/equipping effect.
+        // Equipping range is [0,1) over [99,...], so the new opcode-0 effect lands at index 1.
+        const bytes = buildItmAddEffectBytes(makeEquippingPlusTwoAbilityBase(), ["Effects"]);
+        expect(bytes).toBeDefined();
+        const doc = reparse(bytes!);
+        expect(opcodes(doc.effects)).toEqual([99, 0, 10, 20, 21]);
+        expect(doc.header).toMatchObject({ featureBlocksIndex: 0, featureBlocksCount: 2 });
+        // Both abilities shift +1 to make room for the new equipping effect.
+        expect(doc.abilities[0]).toMatchObject({ featureBlockIndex: 2, featureBlockCount: 1 });
+        expect(doc.abilities[1]).toMatchObject({ featureBlockIndex: 3, featureBlockCount: 2 });
+        expect(validateEffectPartition(doc)).toEqual([]);
+    });
+
+    it.skipIf(!hasFixture)("section add creates the FIRST effect on an effect-less item (1.2a)", () => {
+        const bytes = buildItmAddEffectBytes(makeEmptyEffectsBase(), ["Effects"]);
+        expect(bytes).toBeDefined();
+        const doc = reparse(bytes!);
+        expect(opcodes(doc.effects)).toEqual([0]); // a single default effect, owned by equipping
+        expect(doc.header).toMatchObject({ featureBlocksIndex: 0, featureBlocksCount: 1 });
+        expect(doc.abilities[0]).toMatchObject({ featureBlockIndex: 1, featureBlockCount: 0 });
+        expect(validateEffectPartition(doc)).toEqual([]);
+    });
+
+    it.skipIf(!hasFixture)("per-ability add appends to that ability's slice and shifts later ranges", () => {
+        // ability0 owns [10] at [0,1). Adding to ability0 appends a default effect at its end (index 1).
+        const bytes = buildItmAddEffectToAbilityBytes(makeTwoAbilityBase(), ["Abilities"], 0);
+        expect(bytes).toBeDefined();
+        const doc = reparse(bytes!);
+        expect(opcodes(doc.effects)).toEqual([10, 0, 20, 21]);
+        expect(doc.abilities[0]).toMatchObject({ featureBlockIndex: 0, featureBlockCount: 2 });
+        expect(doc.abilities[1]).toMatchObject({ featureBlockIndex: 2, featureBlockCount: 2 });
+        expect(validateEffectPartition(doc)).toEqual([]);
+    });
+
+    it.skipIf(!hasFixture)("per-ability add gives a PRE-EXISTING empty ability its first effect", () => {
+        // ability1 is empty (count 0, start 1). Adding to it appends a default effect at index 1.
+        const bytes = buildItmAddEffectToAbilityBytes(makeTrailingEmptyAbilityBase(), ["Abilities"], 1);
+        expect(bytes).toBeDefined();
+        const doc = reparse(bytes!);
+        expect(opcodes(doc.effects)).toEqual([10, 0]);
+        expect(doc.abilities[0]).toMatchObject({ featureBlockIndex: 0, featureBlockCount: 1 });
+        expect(doc.abilities[1]).toMatchObject({ featureBlockIndex: 1, featureBlockCount: 1 });
+        expect(validateEffectPartition(doc)).toEqual([]);
+    });
+
+    it.skipIf(!hasFixture)("rejects bad paths / out-of-range ability (returns undefined)", () => {
+        expect(buildItmAddEffectBytes(makeTwoAbilityBase(), ["Abilities"])).toBeUndefined();
+        expect(buildItmAddEffectToAbilityBytes(makeTwoAbilityBase(), ["Effects"], 0)).toBeUndefined();
+        expect(buildItmAddEffectToAbilityBytes(makeTwoAbilityBase(), ["Abilities"], 98)).toBeUndefined();
     });
 });

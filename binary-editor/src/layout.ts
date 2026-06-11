@@ -76,6 +76,7 @@ export function resolveLayout(
                         canAdd: block.canAdd,
                         canModify: block.canModify,
                         entryCount: group.entryCount,
+                        ...(block.childAddSection !== undefined && { childAddSection: block.childAddSection }),
                     };
                 }
             }

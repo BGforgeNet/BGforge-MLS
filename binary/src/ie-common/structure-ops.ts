@@ -29,7 +29,7 @@
  */
 
 import { applyEntryMutation, type EntryCollection } from "../spec/entity-ops";
-import { createEffectPartition, readNum, type EffectOwner, type IeEffectRangeFields } from "./effect-partition";
+import { createEffectPartition, readNum, setNum, type EffectOwner, type IeEffectRangeFields } from "./effect-partition";
 import type { effectSpecAnnotated } from "./specs/effect.overrides";
 import type { SpecData } from "../spec/types";
 import type { ParseResult } from "../types";
@@ -43,7 +43,11 @@ const EFFECT_LABEL_PREFIX = "Effect ";
 /** The shared effect element type (ITM and SPL both use ie-common/specs/effect). */
 export type IeEffect = SpecData<typeof effectSpecAnnotated>;
 
-/** A valid default effect (opcode 0 = "None"), all fields zero/empty. Shared by every IE ability+effects format. */
+/**
+ * A structurally-valid default effect: every field its natural zero/empty value (opcode 0, which is a real
+ * effect - "Stat: AC vs. Damage Type Modifier" - not a no-op, so a freshly added effect must be edited to be
+ * meaningful). Shared by every IE ability+effects format.
+ */
 export function defaultIeEffect(): IeEffect {
     return {
         opcode: 0,
@@ -123,6 +127,12 @@ export interface IeStructureOps<Doc, Ability> {
         arrayPath: readonly string[],
         index: number,
         direction: "up" | "down",
+    ) => Uint8Array | undefined;
+    readonly buildAddEffectBytes: (pr: ParseResult, arrayPath: readonly string[]) => Uint8Array | undefined;
+    readonly buildAddEffectToAbilityBytes: (
+        pr: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
     ) => Uint8Array | undefined;
     readonly isListSection: (arrayPath: readonly string[]) => boolean;
     readonly isModifiableArray: (arrayPath: readonly string[]) => boolean;
@@ -254,17 +264,29 @@ export function createIeStructureOps<
         return serializeWithValidation(relinkAbilityEffectIndices(doc));
     }
 
-    /** Append a new empty-slice ability. effects[] is unchanged. */
+    /**
+     * A new ability seeded with one owned effect: count 1, so a freshly added ability is never an
+     * effect-less dead end (it has an anchor for further per-row inserts, mirroring the spellbook's
+     * "seed a memorizable slot on addLevel"). The seeded effect is a default (opcode 0) effect the
+     * user edits; the caller splices that one effect into effects[] at the ability's slice position.
+     */
+    function seededAbility(): Ability {
+        return setNum(defaultAbility(), fields.abilityCount, 1);
+    }
+
+    /** Append a new ability seeded with one effect (spliced at the tail of effects[]). */
     function buildAddAbilityBytes(parseResult: ParseResult, arrayPath: readonly string[]): Uint8Array | undefined {
         if (arrayPath.length !== 1 || arrayPath[0] !== ABILITIES_SECTION) return undefined;
         const doc = readDocument(parseResult);
         if (!doc) return undefined;
-        const mutation = applyEntryMutation(doc.abilities, "add", doc.abilities.length, defaultAbility);
+        const mutation = applyEntryMutation(doc.abilities, "add", doc.abilities.length, seededAbility);
         if (!mutation) return undefined;
-        return finalizeAndSerialize({ ...doc, abilities: [...mutation.next] });
+        // The appended ability owns the last (running-offset == old length) slice; seed one effect there.
+        const effects = [...doc.effects, defaultEffect()];
+        return finalizeAndSerialize({ ...doc, abilities: [...mutation.next], effects });
     }
 
-    /** Insert a new empty-slice ability before/after the targeted slot. effects[] is unchanged. */
+    /** Insert a new ability seeded with one effect before/after the targeted slot. */
     function buildInsertAbilityBytes(
         parseResult: ParseResult,
         arrayPath: readonly string[],
@@ -275,9 +297,15 @@ export function createIeStructureOps<
         if (!doc) return undefined;
         const resolved = resolveAbilityIndex(arrayPath, index, doc.abilities.length);
         if (resolved === undefined) return undefined;
-        const mutation = applyEntryMutation(doc.abilities, "insert", resolved, defaultAbility, position);
+        const mutation = applyEntryMutation(doc.abilities, "insert", resolved, seededAbility, position);
         if (!mutation) return undefined;
-        return finalizeAndSerialize({ ...doc, abilities: [...mutation.next] });
+        // The seeded ability takes slot `mutation.index`; its 1-effect slice begins where the ability that
+        // was at that slot began (or the effects tail when inserting past the last ability). relink then
+        // re-derives every start from the counts.
+        const at = mutation.index;
+        const spliceAt = at < doc.abilities.length ? abilitySlice(doc, at).start : doc.effects.length;
+        const effects = [...doc.effects.slice(0, spliceAt), defaultEffect(), ...doc.effects.slice(spliceAt)];
+        return finalizeAndSerialize({ ...doc, abilities: [...mutation.next], effects });
     }
 
     /** Remove the targeted ability AND its owned effect slice. */
@@ -489,6 +517,58 @@ export function createIeStructureOps<
         return serializeWithValidation({ ...doc, effects });
     }
 
+    /** The current {start, count} of an effect owner. undefined for an equipping owner on a headerless format. */
+    function ownerRangeOf(doc: Doc, owner: EffectOwner): { start: number; count: number } | undefined {
+        if (owner.kind === "equipping") {
+            if (fields.headerStart === undefined || fields.headerCount === undefined) return undefined;
+            return { start: readNum(doc.header, fields.headerStart), count: readNum(doc.header, fields.headerCount) };
+        }
+        return abilitySlice(doc, owner.index);
+    }
+
+    /**
+     * Append a new default effect to the END of `owner`'s slice (at start + count): the owner's count
+     * grows by 1 and every later range shifts up by 1 (shiftEffectRefs). Unlike insert-relative, this
+     * needs no existing effect to anchor on, so it works on an EMPTY owner - the missing capability for
+     * adding the first effect to an effect-less item (equipping owner) or effect-less ability.
+     */
+    function buildAddEffectToOwnerBytes(doc: Doc, owner: EffectOwner): Uint8Array | undefined {
+        const range = ownerRangeOf(doc, owner);
+        if (range === undefined) return undefined;
+        const at = range.start + range.count;
+        const effects = [...doc.effects.slice(0, at), defaultEffect(), ...doc.effects.slice(at)];
+        return serializeWithValidation(applyEffectShift(doc, effects, { at, delta: 1, owner }));
+    }
+
+    /**
+     * Section-level effect add (the flat Effects list's "+ add" toolbar): a new effect with no ability
+     * is a global/equipping effect, so it appends to the always-present equipping range. This is the
+     * empty-state add for an effect-less item, and matches CRE's flat addable-effects model.
+     */
+    function buildAddEffectBytes(parseResult: ParseResult, arrayPath: readonly string[]): Uint8Array | undefined {
+        if (arrayPath.length !== 1 || arrayPath[0] !== EFFECTS_SECTION) return undefined;
+        const doc = readDocument(parseResult);
+        if (!doc) return undefined;
+        return buildAddEffectToOwnerBytes(doc, { kind: "equipping" });
+    }
+
+    /**
+     * Owner-scoped effect add: append a new effect to a specific ability's slice, identified by its
+     * Abilities-section ordinal. Reaches an effect-less ability (new or pre-existing) that the flat
+     * insert-relative path cannot, since that ability has no effect row to anchor on.
+     */
+    function buildAddEffectToAbilityBytes(
+        parseResult: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+    ): Uint8Array | undefined {
+        const doc = readDocument(parseResult);
+        if (!doc) return undefined;
+        const resolved = resolveAbilityIndex(arrayPath, index, doc.abilities.length);
+        if (resolved === undefined) return undefined;
+        return buildAddEffectToOwnerBytes(doc, { kind: "ability", index: resolved });
+    }
+
     function sameOwner(a: EffectOwner, b: EffectOwner): boolean {
         if (a.kind === "equipping" || b.kind === "equipping") return a.kind === b.kind;
         return a.index === b.index;
@@ -518,12 +598,12 @@ export function createIeStructureOps<
     }
 
     /**
-     * Returns true only for the Abilities array. Effects have no unambiguous
-     * section-level add owner (the owning ability must be known), so section-add
-     * is gated off at the adapter level.
+     * Both list sections support a section-level add. Abilities append a new ability; Effects append a
+     * new global/equipping effect (buildAddEffectBytes), the always-present owner for an ability-less
+     * effect - so an effect-less item can gain its first effect from the empty state.
      */
     function isAddableArray(arrayPath: readonly string[]): boolean {
-        return isListSection(arrayPath) && arrayPath[0] === ABILITIES_SECTION;
+        return isListSection(arrayPath);
     }
 
     /**
@@ -554,6 +634,8 @@ export function createIeStructureOps<
         buildInsertEffectBytes,
         buildDuplicateEffectBytes,
         buildReorderEffectBytes,
+        buildAddEffectBytes,
+        buildAddEffectToAbilityBytes,
         isListSection,
         isModifiableArray,
         isAddableArray,

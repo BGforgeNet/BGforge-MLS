@@ -153,6 +153,13 @@ const listBlockSchema = z.strictObject({
     render: z.enum(["inline", "master-detail"]),
     canAdd: z.boolean().default(false),
     canModify: z.boolean().default(false),
+    /**
+     * When set, each entry's detail pane offers an "add a `childAddSection` entry to THIS entry" action - an
+     * owner-scoped child add routed through `BinaryFormatAdapter.buildAddChildEntryBytes`. Used by the ITM/SPL
+     * Abilities list to add an effect to a specific ability (`childAddSection: "Effects"`), reaching an
+     * effect-less ability the flat insert-relative path cannot. The named section is the child collection.
+     */
+    childAddSection: z.string().min(1).optional(),
     detailVariant: z.array(detailRowSchema).min(1).optional(),
     /**
      * Additional candidate variants for a list whose entries can be one of SEVERAL record kinds under the same

@@ -53,9 +53,9 @@ describe("spl adapter structure-op surface", () => {
         expect(isSplModifiableArray(["Effects"])).toBe(true);
     });
 
-    it("offers add only on Abilities (Effects add is gated off)", () => {
+    it("offers section-level add on both Abilities and Effects (Effects add appends a global effect)", () => {
         expect(isSplAddableArray(["Abilities"])).toBe(true);
-        expect(isSplAddableArray(["Effects"])).toBe(false);
+        expect(isSplAddableArray(["Effects"])).toBe(true);
     });
 
     it("recognizes ability and effect entry paths as removable", () => {
@@ -71,15 +71,17 @@ describe("spl adapter structure-op surface", () => {
         expect(spl.isRemovableEntry!(["SPL File", "Abilities"])).toBe(false);
     });
 
-    it("buildAddEntryBytes returns bytes for Abilities and undefined for Effects", () => {
+    it("buildAddEntryBytes returns bytes for Abilities and Effects (Effects adds a global effect)", () => {
         if (!hasFixture) return;
         const pr = splParser.parse(new Uint8Array(fs.readFileSync(FIXTURE)));
         expect(pr.errors).toBeUndefined();
         const abilityBytes = spl.buildAddEntryBytes!(pr, ["Abilities"]);
         expect(abilityBytes).toBeInstanceOf(Uint8Array);
         expect((abilityBytes as Uint8Array).byteLength).toBeGreaterThan(0);
+        // Effects now supports a section-level add (the new effect is a global/casting effect).
         const effectBytes = spl.buildAddEntryBytes!(pr, ["Effects"]);
-        expect(effectBytes).toBeUndefined();
+        expect(effectBytes).toBeInstanceOf(Uint8Array);
+        expect((effectBytes as Uint8Array).byteLength).toBeGreaterThan(0);
     });
 
     // End-to-end routing smoke tests: prove the adapter delegates Abilities->ability builders and

@@ -13,11 +13,20 @@
         bridge.structureOp({ op: "remove", entryId });
     }
 
-    // Menu items for the compact-mode dropdown - the space-saving control that lists all six actions in a
-    // tight inline row. Disabled items still appear so the full action set is shown.
+    // The owner-scoped child-add (e.g. "Add effect" on an ITM/SPL ability). The section name is plural
+    // ("Effects"); singularize for the button label. Empty when the section declares no childAddSection.
+    const childAddLabel = $derived(acts.childAdd ? `Add ${acts.childAdd.replace(/s$/, "").toLowerCase()}` : "");
+    function doAddChild(): void {
+        if (acts.childAdd) bridge.structureOp({ op: "addChild", entryId, childSection: acts.childAdd });
+    }
+
+    // Menu items for the compact-mode dropdown - the space-saving control that lists the actions in a tight
+    // inline row. Disabled items still appear so the full action set is shown; the owner-scoped child add is
+    // only present when the section declares one.
     const menuItems = $derived<MenuItem[]>([
         { id: "add-above",  label: "Add above",  icon: "insert",     disabled: !acts.insert },
         { id: "add-below",  label: "Add below",  icon: "add",        disabled: !acts.insert },
+        ...(acts.childAdd ? [{ id: "add-child", label: childAddLabel, icon: "add" } as MenuItem] : []),
         { id: "duplicate",  label: "Duplicate",  icon: "copy",       disabled: !acts.duplicate },
         { id: "move-up",    label: "Move up",    icon: "chevron-up", disabled: !acts.up },
         { id: "move-down",  label: "Move down",  icon: "chevron-down", disabled: !acts.down },
@@ -28,6 +37,7 @@
         switch (id) {
             case "add-above":  bridge.structureOp({ op: "insert", entryId, position: "before" }); break;
             case "add-below":  bridge.structureOp({ op: "insert", entryId, position: "after" });  break;
+            case "add-child":  doAddChild(); break;
             case "duplicate":  bridge.structureOp({ op: "duplicate", entryId });                  break;
             case "move-up":    bridge.structureOp({ op: "reorder", entryId, direction: "up" });   break;
             case "move-down":  bridge.structureOp({ op: "reorder", entryId, direction: "down" }); break;
@@ -61,6 +71,15 @@
             <Icon name="copy" />
             <span class="row-actions-label">Duplicate</span>
         </button>
+        {#if acts.childAdd}
+            <!-- Owner-scoped child add: e.g. "Add effect" appends an effect owned by THIS ability, the one
+                 add path that reaches an effect-less ability (the flat insert-relative add needs an anchor row). -->
+            <button class="row-actions-btn" onclick={doAddChild}
+                    aria-label={childAddLabel} title={childAddLabel}>
+                <Icon name="add" />
+                <span class="row-actions-label">{childAddLabel}</span>
+            </button>
+        {/if}
         <button class="row-actions-btn" disabled={!acts.up}
                 onclick={() => bridge.structureOp({ op: "reorder", entryId, direction: "up" })}
                 aria-label="Move up" title="Move up">

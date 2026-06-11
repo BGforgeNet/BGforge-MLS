@@ -84,6 +84,8 @@ export interface LayoutSection {
     canAdd: boolean;
     canModify: boolean;
     entryCount: number;
+    /** When set, each entry's detail offers an owner-scoped "add a `childAddSection` entry to this entry" action. */
+    childAddSection?: string;
 }
 
 /** A tab resolved for rendering: its label, an optional count badge (resolved from a `countFrom` section's

@@ -59,9 +59,9 @@ describe("itm adapter structure-op surface", () => {
         expect(isItmModifiableArray(["Effects"])).toBe(true);
     });
 
-    it("offers add only on Abilities (Effects add is gated off)", () => {
+    it("offers section-level add on both Abilities and Effects (Effects add appends a global effect)", () => {
         expect(isItmAddableArray(["Abilities"])).toBe(true);
-        expect(isItmAddableArray(["Effects"])).toBe(false);
+        expect(isItmAddableArray(["Effects"])).toBe(true);
     });
 
     it("recognizes ability and effect entry paths as removable", () => {
@@ -77,15 +77,17 @@ describe("itm adapter structure-op surface", () => {
         expect(itm.isRemovableEntry!(["ITM File", "Abilities"])).toBe(false);
     });
 
-    it("buildAddEntryBytes returns bytes for Abilities and undefined for Effects", () => {
+    it("buildAddEntryBytes returns bytes for Abilities and Effects (Effects adds a global effect)", () => {
         if (!hasFixture) return;
         const pr = itmParser.parse(new Uint8Array(fs.readFileSync(FIXTURE)));
         expect(pr.errors).toBeUndefined();
         const abilityBytes = itm.buildAddEntryBytes!(pr, ["Abilities"]);
         expect(abilityBytes).toBeInstanceOf(Uint8Array);
         expect((abilityBytes as Uint8Array).byteLength).toBeGreaterThan(0);
+        // Effects now supports a section-level add (the new effect is a global/equipping effect).
         const effectBytes = itm.buildAddEntryBytes!(pr, ["Effects"]);
-        expect(effectBytes).toBeUndefined();
+        expect(effectBytes).toBeInstanceOf(Uint8Array);
+        expect((effectBytes as Uint8Array).byteLength).toBeGreaterThan(0);
     });
 
     // End-to-end routing smoke tests: prove the adapter delegates Abilities->ability builders and

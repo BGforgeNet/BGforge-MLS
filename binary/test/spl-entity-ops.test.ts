@@ -6,6 +6,8 @@ import { getSplCanonicalDocument, rebuildSplCanonicalDocument } from "../src/spl
 import { serializeSplCanonicalDocument } from "../src/spl/canonical-writer";
 import {
     buildSplAddAbilityBytes,
+    buildSplAddEffectBytes,
+    buildSplAddEffectToAbilityBytes,
     buildSplDuplicateAbilityBytes,
     buildSplDuplicateEffectBytes,
     buildSplInsertAbilityBytes,
@@ -84,6 +86,41 @@ function makeCastingPlusTwoAbilityBase(): ParseResult {
             { ...defaultSplAbility(), featureBlocksOffset: 2, featureBlocksCount: 2 },
         ],
         effects: [effect(99), effect(10), effect(20), effect(21)],
+    };
+    const reparsed = splParser.parse(serializeSplCanonicalDocument(base));
+    if (reparsed.errors) throw new Error(`base reparse errors: ${reparsed.errors.join(", ")}`);
+    return reparsed;
+}
+
+/** A SPL with one ability that owns NO effects and no casting effects (zero effects total) - the empty state. */
+function makeEmptyEffectsBase(): ParseResult {
+    const parsed = splParser.parse(new Uint8Array(fs.readFileSync(FIXTURE)));
+    if (parsed.errors) throw new Error(parsed.errors.join(", "));
+    const doc = getSplCanonicalDocument(parsed) ?? rebuildSplCanonicalDocument(parsed);
+    const base = {
+        ...doc,
+        header: { ...doc.header, castingFeatureBlocksIndex: 0, castingFeatureBlocksCount: 0 },
+        abilities: [{ ...defaultSplAbility(), featureBlocksOffset: 0, featureBlocksCount: 0 }],
+        effects: [],
+    };
+    const reparsed = splParser.parse(serializeSplCanonicalDocument(base));
+    if (reparsed.errors) throw new Error(`base reparse errors: ${reparsed.errors.join(", ")}`);
+    return reparsed;
+}
+
+/** ability0 owns effect[0] (opcode 10); ability1 is a PRE-EXISTING empty ability (count 0, start 1). */
+function makeTrailingEmptyAbilityBase(): ParseResult {
+    const parsed = splParser.parse(new Uint8Array(fs.readFileSync(FIXTURE)));
+    if (parsed.errors) throw new Error(parsed.errors.join(", "));
+    const doc = getSplCanonicalDocument(parsed) ?? rebuildSplCanonicalDocument(parsed);
+    const base = {
+        ...doc,
+        header: { ...doc.header, castingFeatureBlocksIndex: 0, castingFeatureBlocksCount: 0 },
+        abilities: [
+            { ...defaultSplAbility(), featureBlocksOffset: 0, featureBlocksCount: 1 },
+            { ...defaultSplAbility(), featureBlocksOffset: 1, featureBlocksCount: 0 },
+        ],
+        effects: [{ ...defaultIeEffect(), opcode: 10 }],
     };
     const reparsed = splParser.parse(serializeSplCanonicalDocument(base));
     if (reparsed.errors) throw new Error(`base reparse errors: ${reparsed.errors.join(", ")}`);
@@ -208,15 +245,14 @@ describe("SPL ability structure-ops with effect-slice relinking", () => {
         expect(validateEffectPartition(doc)).toEqual([]);
     });
 
-    it.skipIf(!hasFixture)("add appends an empty-slice ability and leaves effects untouched", () => {
+    it.skipIf(!hasFixture)("add appends an ability seeded with one effect (usable at once)", () => {
         const bytes = buildSplAddAbilityBytes(makeTwoAbilityBase(), ["Abilities"]);
         expect(bytes).toBeDefined();
         const doc = reparseSpl(bytes!);
         expect(doc.abilities.length).toBe(3);
-        expect(doc.abilities[2]).toMatchObject({ featureBlocksCount: 0 });
-        // New empty slice sits at the end (running offset == effects.length).
-        expect(doc.abilities[2]!.featureBlocksOffset).toBe(3);
-        expect(opcodesOf(doc.effects)).toEqual([10, 20, 21]);
+        // The new ability is seeded with one default (opcode 0) effect at the tail (running offset == old length).
+        expect(doc.abilities[2]).toMatchObject({ featureBlocksOffset: 3, featureBlocksCount: 1 });
+        expect(opcodesOf(doc.effects)).toEqual([10, 20, 21, 0]);
         expect(validateEffectPartition(doc)).toEqual([]);
     });
 
@@ -277,29 +313,29 @@ describe("SPL ability structure-ops with effect-slice relinking", () => {
         expect(validateEffectPartition(doc)).toEqual([]);
     });
 
-    it.skipIf(!hasFixture)("insert before adds an empty-slice ability at the slot; effects untouched", () => {
+    it.skipIf(!hasFixture)("insert before adds an ability seeded with one effect at the slot", () => {
         const bytes = buildSplInsertAbilityBytes(makeTwoAbilityBase(), ["Abilities"], 0, "before");
         expect(bytes).toBeDefined();
         const doc = reparseSpl(bytes!);
         expect(doc.abilities.length).toBe(3);
-        // New empty ability at slot 0; the two real abilities keep their slices.
-        expect(doc.abilities[0]).toMatchObject({ featureBlocksCount: 0 });
-        expect(doc.abilities[1]).toMatchObject({ featureBlocksOffset: 0, featureBlocksCount: 1 });
-        expect(doc.abilities[2]).toMatchObject({ featureBlocksOffset: 1, featureBlocksCount: 2 });
-        expect(opcodesOf(doc.effects)).toEqual([10, 20, 21]);
+        // New seeded ability at slot 0 owns the new effect at index 0; the two real abilities shift up.
+        expect(doc.abilities[0]).toMatchObject({ featureBlocksOffset: 0, featureBlocksCount: 1 });
+        expect(doc.abilities[1]).toMatchObject({ featureBlocksOffset: 1, featureBlocksCount: 1 });
+        expect(doc.abilities[2]).toMatchObject({ featureBlocksOffset: 2, featureBlocksCount: 2 });
+        expect(opcodesOf(doc.effects)).toEqual([0, 10, 20, 21]);
         expect(validateEffectPartition(doc)).toEqual([]);
     });
 
-    it.skipIf(!hasFixture)("insert after adds an empty-slice ability after the slot; effects untouched", () => {
+    it.skipIf(!hasFixture)("insert after adds an ability seeded with one effect after the slot", () => {
         const bytes = buildSplInsertAbilityBytes(makeTwoAbilityBase(), ["Abilities"], 0, "after");
         expect(bytes).toBeDefined();
         const doc = reparseSpl(bytes!);
         expect(doc.abilities.length).toBe(3);
         expect(doc.abilities[0]).toMatchObject({ featureBlocksOffset: 0, featureBlocksCount: 1 });
-        // New empty ability at slot 1 (after ability0).
-        expect(doc.abilities[1]).toMatchObject({ featureBlocksCount: 0 });
-        expect(doc.abilities[2]).toMatchObject({ featureBlocksOffset: 1, featureBlocksCount: 2 });
-        expect(opcodesOf(doc.effects)).toEqual([10, 20, 21]);
+        // New seeded ability at slot 1 (after ability0) owns the new effect spliced after ability0's slice.
+        expect(doc.abilities[1]).toMatchObject({ featureBlocksOffset: 1, featureBlocksCount: 1 });
+        expect(doc.abilities[2]).toMatchObject({ featureBlocksOffset: 2, featureBlocksCount: 2 });
+        expect(opcodesOf(doc.effects)).toEqual([10, 0, 20, 21]);
         expect(validateEffectPartition(doc)).toEqual([]);
     });
 
@@ -528,4 +564,54 @@ describe("SPL effect partition characterization (real fixtures)", () => {
             expect(violations).toEqual([]);
         },
     );
+});
+
+describe("SPL effect add (section + per-ability)", () => {
+    it.skipIf(!hasFixture)("section add appends a new effect to the casting (global) range", () => {
+        // Casting range is [0,1) over [99,...], so the new opcode-0 effect lands at index 1.
+        const bytes = buildSplAddEffectBytes(makeCastingPlusTwoAbilityBase(), ["Effects"]);
+        expect(bytes).toBeDefined();
+        const doc = reparseSpl(bytes!);
+        expect(opcodesOf(doc.effects)).toEqual([99, 0, 10, 20, 21]);
+        expect(doc.header).toMatchObject({ castingFeatureBlocksIndex: 0, castingFeatureBlocksCount: 2 });
+        expect(doc.abilities[0]).toMatchObject({ featureBlocksOffset: 2, featureBlocksCount: 1 });
+        expect(doc.abilities[1]).toMatchObject({ featureBlocksOffset: 3, featureBlocksCount: 2 });
+        expect(validateEffectPartition(doc)).toEqual([]);
+    });
+
+    it.skipIf(!hasFixture)("section add creates the FIRST effect on an effect-less spell (1.2a)", () => {
+        const bytes = buildSplAddEffectBytes(makeEmptyEffectsBase(), ["Effects"]);
+        expect(bytes).toBeDefined();
+        const doc = reparseSpl(bytes!);
+        expect(opcodesOf(doc.effects)).toEqual([0]);
+        expect(doc.header).toMatchObject({ castingFeatureBlocksIndex: 0, castingFeatureBlocksCount: 1 });
+        expect(doc.abilities[0]).toMatchObject({ featureBlocksOffset: 1, featureBlocksCount: 0 });
+        expect(validateEffectPartition(doc)).toEqual([]);
+    });
+
+    it.skipIf(!hasFixture)("per-ability add appends to that ability's slice and shifts later ranges", () => {
+        const bytes = buildSplAddEffectToAbilityBytes(makeTwoAbilityBase(), ["Abilities"], 0);
+        expect(bytes).toBeDefined();
+        const doc = reparseSpl(bytes!);
+        expect(opcodesOf(doc.effects)).toEqual([10, 0, 20, 21]);
+        expect(doc.abilities[0]).toMatchObject({ featureBlocksOffset: 0, featureBlocksCount: 2 });
+        expect(doc.abilities[1]).toMatchObject({ featureBlocksOffset: 2, featureBlocksCount: 2 });
+        expect(validateEffectPartition(doc)).toEqual([]);
+    });
+
+    it.skipIf(!hasFixture)("per-ability add gives a PRE-EXISTING empty ability its first effect", () => {
+        const bytes = buildSplAddEffectToAbilityBytes(makeTrailingEmptyAbilityBase(), ["Abilities"], 1);
+        expect(bytes).toBeDefined();
+        const doc = reparseSpl(bytes!);
+        expect(opcodesOf(doc.effects)).toEqual([10, 0]);
+        expect(doc.abilities[0]).toMatchObject({ featureBlocksOffset: 0, featureBlocksCount: 1 });
+        expect(doc.abilities[1]).toMatchObject({ featureBlocksOffset: 1, featureBlocksCount: 1 });
+        expect(validateEffectPartition(doc)).toEqual([]);
+    });
+
+    it.skipIf(!hasFixture)("rejects bad paths / out-of-range ability (returns undefined)", () => {
+        expect(buildSplAddEffectBytes(makeTwoAbilityBase(), ["Abilities"])).toBeUndefined();
+        expect(buildSplAddEffectToAbilityBytes(makeTwoAbilityBase(), ["Effects"], 0)).toBeUndefined();
+        expect(buildSplAddEffectToAbilityBytes(makeTwoAbilityBase(), ["Abilities"], 98)).toBeUndefined();
+    });
 });

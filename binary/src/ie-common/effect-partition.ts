@@ -103,7 +103,7 @@ export function readNum(obj: RangeRecord, field: string): number {
  * inferred type; `field` is always one of the doc's own numeric range fields, so the runtime shape is unchanged. The
  * cast is isolated here so callers stay assertion-free.
  */
-function setNum<T extends RangeRecord>(obj: T, field: string, value: number): T {
+export function setNum<T extends RangeRecord>(obj: T, field: string, value: number): T {
     return { ...obj, [field]: value } as T;
 }
 

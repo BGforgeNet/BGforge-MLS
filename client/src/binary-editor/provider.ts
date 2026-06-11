@@ -29,6 +29,8 @@ function structureOpLabel(op: StructureOpRequest["op"]): string {
             return "Reorder entry";
         case "duplicate":
             return "Duplicate entry";
+        case "addChild":
+            return "Add entry";
     }
 }
 

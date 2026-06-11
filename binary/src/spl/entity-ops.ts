@@ -101,6 +101,8 @@ export const buildSplRemoveEffectBytes = ops.buildRemoveEffectBytes;
 export const buildSplInsertEffectBytes = ops.buildInsertEffectBytes;
 export const buildSplDuplicateEffectBytes = ops.buildDuplicateEffectBytes;
 export const buildSplReorderEffectBytes = ops.buildReorderEffectBytes;
+export const buildSplAddEffectBytes = ops.buildAddEffectBytes;
+export const buildSplAddEffectToAbilityBytes = ops.buildAddEffectToAbilityBytes;
 
 export const isSplListSection = ops.isListSection;
 export const isSplModifiableArray = ops.isModifiableArray;

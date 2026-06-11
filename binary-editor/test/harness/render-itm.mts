@@ -167,13 +167,15 @@ async function waitRows(scope: Locator, n: number): Promise<void> {
         const L = r.result.layout.layout;
         check("layout: variant is 'item'", L?.variantId === "item", `variantId=${L?.variantId}`);
         check(
-            "layout: Abilities canAdd+canModify",
-            L?.sections["Abilities"]?.canAdd === true && L?.sections["Abilities"]?.canModify === true,
+            "layout: Abilities canAdd+canModify+childAddSection Effects",
+            L?.sections["Abilities"]?.canAdd === true &&
+                L?.sections["Abilities"]?.canModify === true &&
+                L?.sections["Abilities"]?.childAddSection === "Effects",
             JSON.stringify(L?.sections["Abilities"]),
         );
         check(
-            "layout: Effects canModify, not canAdd",
-            L?.sections["Effects"]?.canAdd === false && L?.sections["Effects"]?.canModify === true,
+            "layout: Effects canAdd+canModify (section-level effect add enabled)",
+            L?.sections["Effects"]?.canAdd === true && L?.sections["Effects"]?.canModify === true,
             JSON.stringify(L?.sections["Effects"]),
         );
     }

@@ -113,6 +113,8 @@ export const buildItmRemoveEffectBytes = ops.buildRemoveEffectBytes;
 export const buildItmInsertEffectBytes = ops.buildInsertEffectBytes;
 export const buildItmDuplicateEffectBytes = ops.buildDuplicateEffectBytes;
 export const buildItmReorderEffectBytes = ops.buildReorderEffectBytes;
+export const buildItmAddEffectBytes = ops.buildAddEffectBytes;
+export const buildItmAddEffectToAbilityBytes = ops.buildAddEffectToAbilityBytes;
 
 export const isItmListSection = ops.isListSection;
 export const isItmModifiableArray = ops.isModifiableArray;

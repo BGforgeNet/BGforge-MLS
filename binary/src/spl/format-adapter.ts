@@ -9,6 +9,8 @@ import { abilityEffectsSemanticFieldKey } from "../ie-common/semantic-keys";
 import {
     ABILITIES_SECTION,
     buildSplAddAbilityBytes,
+    buildSplAddEffectBytes,
+    buildSplAddEffectToAbilityBytes,
     buildSplDuplicateAbilityBytes,
     buildSplDuplicateEffectBytes,
     buildSplInsertAbilityBytes,
@@ -71,7 +73,9 @@ export const splFormatAdapter: BinaryFormatAdapter = {
     buildAddEntryBytes(parseResult: ParseResult, arrayPath: readonly string[]): Uint8Array | undefined {
         const section = arrayPath[0];
         if (section === ABILITIES_SECTION) return buildSplAddAbilityBytes(parseResult, arrayPath);
-        // Effects have no section-level add (owner-ambiguous); return undefined.
+        // A section-level effect add appends a global/casting effect (the always-present owner for an
+        // effect with no ability), so an effect-less spell can gain its first effect from the empty state.
+        if (section === EFFECTS_SECTION) return buildSplAddEffectBytes(parseResult, arrayPath);
         return undefined;
     },
 
@@ -119,6 +123,20 @@ export const splFormatAdapter: BinaryFormatAdapter = {
         const section = arrayPath[0];
         if (section === ABILITIES_SECTION) return buildSplDuplicateAbilityBytes(parseResult, arrayPath, index);
         if (section === EFFECTS_SECTION) return buildSplDuplicateEffectBytes(parseResult, arrayPath, index);
+        return undefined;
+    },
+
+    // Owner-scoped effect add: append an effect to a specific ability's slice, so an effect-less ability
+    // (new or pre-existing) can gain its first effect, which the flat insert-relative path cannot reach.
+    buildAddChildEntryBytes(
+        parseResult: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+        childSection: string,
+    ): Uint8Array | undefined {
+        if (arrayPath[0] === ABILITIES_SECTION && childSection === EFFECTS_SECTION) {
+            return buildSplAddEffectToAbilityBytes(parseResult, arrayPath, index);
+        }
         return undefined;
     },
 };
