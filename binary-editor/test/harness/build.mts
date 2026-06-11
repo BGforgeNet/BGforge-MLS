@@ -30,6 +30,19 @@ fs.rmSync(outdir, { recursive: true, force: true });
 
 const css = fs.readFileSync(path.join(repo, "client/src/binary-editor/webview/styles.css"), "utf8");
 
+// Inline the codicon font (the X / arrow / warning / info glyphs) so the harness renders icon-only buttons the
+// same as the real webview. The real editor links codicon.css + codicon.ttf via asWebviewUri under
+// localResourceRoots; the harness has no file server, so the font is embedded as a data: URI (and the CSP below
+// allows font-src data:). Without this, icon buttons render blank and screenshot reviews misread them as missing.
+const codiconsDir = path.join(repo, "node_modules/@vscode/codicons/dist");
+const codiconTtf = fs.readFileSync(path.join(codiconsDir, "codicon.ttf")).toString("base64");
+const codiconCss = fs
+    .readFileSync(path.join(codiconsDir, "codicon.css"), "utf8")
+    .replace(
+        /src:\s*url\("[^"]*"\)\s*format\("truetype"\)/,
+        `src: url("data:font/ttf;base64,${codiconTtf}") format("truetype")`,
+    );
+
 // Harness-only capture override. The real editor caps a master-detail at 24rem with an internal scroll so a
 // long list (e.g. MAP's 2000+ objects) does not expand the page; that also clips the lower part of a detail
 // FORM in a screenshot, so a reviewer never sees the whole form. For capture, uncap the master-detail and the
@@ -42,9 +55,9 @@ const HARNESS_CAPTURE_CSS = `
 .layout-root .master .vlist { height: auto; max-height: 24rem; }
 `;
 
-// Strict nonce CSP mirrors the real binary-editor webview (provider.ts). font-src is omitted (none)
-// because the harness does not load the codicon font. The same nonce is applied to both the inlined
-// <style> and the inlined <script> so Chromium enforces the policy identically to the real webview.
+// Strict nonce CSP mirrors the real binary-editor webview (provider.ts). font-src allows data: so the inlined
+// codicon @font-face (data: URI above) loads; the same nonce is applied to both the inlined <style> and the
+// inlined <script> so Chromium enforces the policy identically to the real webview.
 const nonce = crypto.randomBytes(16).toString("base64");
 
 // VS Code Dark+ fallbacks for every --vscode-* variable styles.css consumes, so the harness renders the
@@ -52,9 +65,9 @@ const nonce = crypto.randomBytes(16).toString("base64");
 const html = `<!doctype html>
 <html lang="en"><head><meta charset="UTF-8" />
 <meta http-equiv="Content-Security-Policy"
-    content="default-src 'none'; font-src 'none'; style-src 'nonce-${nonce}'; script-src 'nonce-${nonce}';" />
+    content="default-src 'none'; font-src data:; style-src 'nonce-${nonce}'; script-src 'nonce-${nonce}';" />
 <style nonce="${nonce}">
-${THEME_VARS}${css}${HARNESS_CAPTURE_CSS}
+${THEME_VARS}${codiconCss}${css}${HARNESS_CAPTURE_CSS}
 </style></head>
 <body><div id="app"></div><script nonce="${nonce}">${js}</script></body></html>`;
 

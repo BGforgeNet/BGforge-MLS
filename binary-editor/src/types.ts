@@ -63,6 +63,9 @@ export interface ChangeSet {
     diagnostics: Diagnostic[];
     dirty: boolean;
     formatValid: boolean;
+    /** Refreshed tab count badges (tab id -> count) after a structure op that changed an entry count, so the
+     *  webview can update the live tab labels (e.g. the Spells tab's known/memorized). Absent for field edits. */
+    tabCounts?: Record<string, number | string>;
 }
 
 export interface EditResult {
@@ -89,7 +92,7 @@ export interface ResolvedTab {
     id: string;
     label: string;
     icon?: string;
-    count?: number;
+    count?: number | string; // a single entry count, or an "x/y" pair (e.g. the Spells tab's known/memorized)
     rows?: LayoutRow[];
     tabs?: ResolvedTab[];
 }

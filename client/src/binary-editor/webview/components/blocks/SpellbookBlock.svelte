@@ -32,13 +32,24 @@
     });
 
     const types = $derived(view?.types ?? []);
-    const active = $derived(types.find((t) => t.type === activeType) ?? types[0]);
-    const tabItems = $derived<TabItem[]>(types.map((t) => ({ id: String(t.type), label: t.typeName })));
+    // Honor the user's explicit subtab choice; otherwise default to the first type that actually has spells
+    // (so a pure mage opens on Wizard, not a Priest tab full of empty level rows), falling back to the first.
+    const active = $derived(
+        types.find((t) => t.type === activeType) ??
+        types.find((t) => t.knownCount + t.memorizedCount > 0) ??
+        types[0],
+    );
+    const tabItems = $derived<TabItem[]>(
+        types.map((t) => ({ id: String(t.type), label: t.typeName, count: `${t.knownCount}/${t.memorizedCount}` })),
+    );
 
     // memorizedFlags bitfield (CreMemorizedSpellFlags): bit0 = Memorized, bit1 = Disabled.
     const MEMORIZED = 1;
     const DISABLED = 2;
     const MAX_LEVEL = 8; // spell levels 0..8 (displayed 1..9)
+    const PRIEST_TYPE = 0;
+    const PRIEST_MAX_LEVEL = 6; // Priest spells go to level 7 (engine limit); Wizard/Innate to 9
+    const maxLevelFor = (type: number): number => (type === PRIEST_TYPE ? PRIEST_MAX_LEVEL : MAX_LEVEL);
     const hasBit = (flags: number, bit: number): boolean => (flags & bit) !== 0;
     const withBit = (flags: number, bit: number, on: boolean): number => (on ? flags | bit : flags & ~bit);
 
@@ -50,14 +61,22 @@
         bridge.spellbookEdit({ op: "addKnown", spellType, spellLevel, resref: "" });
     const addLevel = (spellType: number, spellLevel: number): void =>
         bridge.spellbookEdit({ op: "addLevel", spellType, spellLevel });
-    // Next absent level for a type's "+ add level" (one past its highest current level).
-    const nextLevel = (levels: readonly { level: number }[]): number =>
-        Math.max(-1, ...levels.map((l) => l.level)) + 1;
+    // Lowest absent level for a type's "+ add level" - fills a gap (e.g. levels [1,3] offers 2) before
+    // extending past the top, so any missing level is reachable. undefined when all of the type's levels (0..its
+    // max - Priest caps at 7 per the engine) are present.
+    const nextLevel = (levels: readonly { level: number }[], type: number): number | undefined => {
+        const present = new Set(levels.map((l) => l.level));
+        for (let l = 0; l <= maxLevelFor(type); l++) if (!present.has(l)) return l;
+        return undefined;
+    };
+    // Structural ops (reorder/duplicate of known/memorized entries) are intentionally omitted: the joined view
+    // is keyed by (type, level), not by physical slot order, so positional moves carry no user-meaningful
+    // result here. Add / remove / edit-resref / toggle-flags cover every spellbook change a level needs.
 </script>
 
 <div class="spellbook">
     {#if !view || view.empty}
-        <p class="placeholder">No spells known or memorized.</p>
+        <p class="placeholder">No spell tables in this record.</p>
     {:else}
         {#if tabItems.length > 0}
             <Tabs variant="secondary" ariaLabel="Spell types" tabs={tabItems}
@@ -66,6 +85,8 @@
         {#if active}
             <div class="sb-levels">
             {#each active.levels as level (level.type + ":" + level.level + ":" + (level.ownerNodeId ?? "syn"))}
+                {@const effCap = level.numMemorizableEffective ?? 0}
+                {@const emptyCount = Math.max(0, effCap - level.slots.length)}
                 <div class="sb-level" class:sb-flagged={level.flagged}>
                     <div class="sb-level-head">
                         <span class="sb-level-name">Level {level.level + 1}</span>
@@ -84,7 +105,6 @@
                                            onchange={(e) => onedit(effId, Number(e.currentTarget.value))} /></label>
                             </span>
                         {/if}
-                        <span class="sb-mem-count">{level.slots.length} memorized</span>
                     </div>
                     {#if level.flagged}
                         <div class="sb-flag-note">
@@ -95,40 +115,76 @@
                                 <button class="sb-fix" onclick={() => onedit(fix.nodeId, fix.value)}>
                                     Clamp count to {fix.value}</button>
                             {/if}
+                            {#if level.ownerNodeId !== undefined}
+                                {@const ownerId = level.ownerNodeId}
+                                <button class="sb-fix sb-remove-row"
+                                        title="Delete this memorization row and its memorized spells"
+                                        onclick={() => removeEntry(ownerId)}>Remove row</button>
+                            {/if}
                         </div>
                     {/if}
                     <div class="sb-cols">
                         <div class="sb-col">
                             <div class="sb-col-head">Known</div>
                             {#each level.known as k (k.nodeId)}
-                                <div class="sb-row">
-                                    <input class="sb-resref" type="text" maxlength="8" value={k.resref}
-                                           aria-label="Known spell resref" placeholder="resref" spellcheck="false"
-                                           onchange={(e) => editResref(k.resrefNodeId, e)} />
+                                <div class="sb-known-row">
                                     <button class="sb-x" aria-label="Remove known spell" title="Remove"
                                             disabled={level.flagged} onclick={() => removeEntry(k.nodeId)}>
                                         <Icon name="close" /></button>
+                                    <input class="sb-resref" type="text" maxlength="8" value={k.resref}
+                                           aria-label="Known spell resref" placeholder="resref" spellcheck="false"
+                                           onchange={(e) => editResref(k.resrefNodeId, e)} />
+                                    {#if level.ownerNodeId !== undefined}
+                                        {@const ownerId = level.ownerNodeId}
+                                        <button class="sb-arrow" title="Memorize this spell"
+                                                aria-label="Memorize {k.resref}" disabled={level.flagged}
+                                                onclick={() => bridge.spellbookEdit({ op: "memorize", ownerNodeId: ownerId, resref: k.resref })}>
+                                            <Icon name="arrow-right" /></button>
+                                    {/if}
                                 </div>
                             {/each}
-                            <button class="sb-add" disabled={level.flagged}
-                                    onclick={() => addKnown(level.type, level.level)}>+ known</button>
+                            <!-- Add row mirrors the entry grid (empty remove cell) so "+ known" lines up under the resrefs. -->
+                            <div class="sb-known-row">
+                                <span></span>
+                                <button class="sb-add" disabled={level.flagged}
+                                        onclick={() => addKnown(level.type, level.level)}>+ known</button>
+                            </div>
                         </div>
                         <div class="sb-col">
-                            <div class="sb-col-head">Memorized</div>
-                            {#each level.slots as s (s.nodeId)}
-                                <div class="sb-row">
+                            <div class="sb-mem-headrow">
+                                <span>Memorized</span>
+                                <span></span>
+                                {#if level.slots.length > 0}
+                                    <span class="sb-flags">
+                                        <span class="sb-flag" title="Memorized">mem</span>
+                                        <span class="sb-flag" title="Disabled">dis</span>
+                                    </span>
+                                {/if}
+                            </div>
+                            {#each level.slots as s, i (s.nodeId)}
+                                {#if i === effCap && level.slots.length > effCap}
+                                    <div class="sb-overcap-divider">--- over capacity ---</div>
+                                {/if}
+                                <div class="sb-mem-row" class:sb-slot-over={i >= effCap}>
                                     <input class="sb-resref" type="text" maxlength="8" value={s.resref}
                                            aria-label="Memorized spell resref" placeholder="resref" spellcheck="false"
                                            onchange={(e) => editResref(s.resrefNodeId, e)} />
-                                    <span class="sb-slot-flags">
-                                        <Checkbox checked={hasBit(s.flags, MEMORIZED)} label="mem"
-                                                  onchange={(c) => onedit(s.flagsNodeId, withBit(s.flags, MEMORIZED, c))} />
-                                        <Checkbox checked={hasBit(s.flags, DISABLED)} label="disabled"
-                                                  onchange={(c) => onedit(s.flagsNodeId, withBit(s.flags, DISABLED, c))} />
-                                    </span>
                                     <button class="sb-x" aria-label="Unmemorize" title="Remove"
                                             disabled={level.flagged} onclick={() => removeEntry(s.nodeId)}>
                                         <Icon name="close" /></button>
+                                    <span class="sb-flags">
+                                        <span class="sb-flag">
+                                            <Checkbox checked={hasBit(s.flags, MEMORIZED)} label="" ariaLabel="Memorized"
+                                                      onchange={(c) => onedit(s.flagsNodeId, withBit(s.flags, MEMORIZED, c))} /></span>
+                                        <span class="sb-flag">
+                                            <Checkbox checked={hasBit(s.flags, DISABLED)} label="" ariaLabel="Disabled"
+                                                      onchange={(c) => onedit(s.flagsNodeId, withBit(s.flags, DISABLED, c))} /></span>
+                                    </span>
+                                </div>
+                            {/each}
+                            {#each Array.from({ length: emptyCount }) as _slot, i (i)}
+                                <div class="sb-row sb-slot-empty">
+                                    <span class="sb-empty-box" title="Empty memorization slot"></span>
                                 </div>
                             {/each}
                             {#if level.ownerNodeId !== undefined}
@@ -141,10 +197,13 @@
                 </div>
             {/each}
             </div>
-            {#if nextLevel(active.levels) <= MAX_LEVEL}
-                <button class="sb-add sb-add-level"
-                        onclick={() => addLevel(active.type, nextLevel(active.levels))}>
-                    + add level {nextLevel(active.levels) + 1} to {active.typeName}</button>
+            {#if active.levels.length === 0}
+                <p class="sb-empty-type">No {active.typeName} spells yet - add a level to begin.</p>
+            {/if}
+            {@const next = nextLevel(active.levels, active.type)}
+            {#if next !== undefined}
+                <button class="sb-add sb-add-level" onclick={() => addLevel(active.type, next)}>
+                    + add level {next + 1} to {active.typeName}</button>
             {/if}
         {/if}
         {#if view.bucket.length > 0}
@@ -164,6 +223,12 @@
                             <button class="sb-fix" title="Drop this orphaned memorized spell"
                                     onclick={() => bridge.spellbookEdit({ op: "removeOrphan", memorizedIndex: b.memorizedIndex })}>
                                 Remove</button>
+                        {:else if b.resolveFix}
+                            {@const fix = b.resolveFix}
+                            <button class="sb-fix"
+                                    title="Clamp the overlapping level so it no longer claims this entry"
+                                    onclick={() => onedit(fix.nodeId, fix.value)}>
+                                Clamp {fix.levelLabel} to {fix.value}</button>
                         {/if}
                     </div>
                 {/each}

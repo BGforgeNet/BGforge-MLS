@@ -22,7 +22,7 @@
  */
 
 import type { Model } from "./model";
-import type { NodeId } from "./types";
+import type { Diagnostic, NodeId } from "./types";
 import { childGroups, fieldNumber, fieldsByKey, fieldText, findGroup, normKey } from "./relationship/model-helpers";
 
 const KNOWN_SECTION = "Known Spells";
@@ -91,6 +91,11 @@ export interface SpellbookTypeGroup {
     readonly type: number;
     readonly typeName: string;
     readonly levels: readonly SpellbookLevel[];
+    /** Known spells / cleanly-owned memorized spells under this type, summed across its levels - the renderer
+     *  shows them as a `known/memorized` badge on the type subtab. Bucketed (orphan/contested) memorized
+     *  entries are not counted - they belong to no type. */
+    readonly knownCount: number;
+    readonly memorizedCount: number;
 }
 
 /** A memorized entry that is not cleanly placed under a single level. */
@@ -104,12 +109,18 @@ export interface SpellbookBucketEntry {
     readonly reason: "orphan" | "contested";
     /** For a contested entry, the display labels of the levels claiming it (e.g. "Wizard L3"). */
     readonly claimedBy?: readonly string[];
+    /** For a contested entry, a one-click root-fix: clamp one claiming level's count to the slots it cleanly
+     *  owns, which releases its claim on this shared entry (resolving the overlap at its source). Absent when no
+     *  claiming level has a clamp (e.g. exact-duplicate ranges). Applied as a plain field edit via `onedit`. */
+    readonly resolveFix?: { readonly nodeId: NodeId; readonly value: number; readonly levelLabel: string };
 }
 
 export interface SpellbookView {
     readonly types: readonly SpellbookTypeGroup[];
     readonly bucket: readonly SpellbookBucketEntry[];
-    /** Present only when the file carries no spell tables at all (the Spells tab is then pruned by the renderer). */
+    /** True only when the file has NONE of the three spell sections (a non-spell record). A CRE always carries
+     *  the sections - even with zero entries - so for any creature this is false and the three type subtabs
+     *  (Priest/Wizard/Innate) always render, making the first spell of an absent type reachable. */
     readonly empty: boolean;
 }
 
@@ -213,7 +224,14 @@ export function projectSpellbook(model: Model): SpellbookView {
     const meminfo = readMeminfo(model, memorized.length);
     const known = readKnown(model);
 
-    if (memorized.length === 0 && meminfo.length === 0 && known.length === 0) {
+    // `empty` keys on SECTION presence, not entry counts: a CRE with empty-but-present spell tables must still
+    // render the three type subtabs (so the first spell of an absent type is reachable). Only a record that
+    // carries none of the three sections is truly spell-less.
+    const hasSpellSections =
+        findGroup(model, KNOWN_SECTION) !== undefined ||
+        findGroup(model, MEMINFO_SECTION) !== undefined ||
+        findGroup(model, MEMORIZED_SECTION) !== undefined;
+    if (!hasSpellSections) {
         return { types: [], bucket: [], empty: true };
     }
 
@@ -229,7 +247,9 @@ export function projectSpellbook(model: Model): SpellbookView {
 
     const slotsByRow: SpellbookSlot[][] = meminfo.map(() => []);
     const overlapRows = new Set<number>(); // rows that share at least one memorized entry with another row
-    const bucket: SpellbookBucketEntry[] = [];
+    // Bucket entries are collected with their claiming rows so a contested entry's resolveFix can reference one
+    // claimer's clamp - which is only computable after every slot is distributed (slotsByRow below).
+    const bucketTemp: (SpellbookBucketEntry & { claimerRows: number[] })[] = [];
     memorized.forEach((entry, k) => {
         const owners = claimers[k]!;
         const slot: SpellbookSlot = {
@@ -244,7 +264,7 @@ export function projectSpellbook(model: Model): SpellbookView {
             slotsByRow[owners[0]!]!.push(slot);
         } else {
             if (owners.length > 1) for (const r of owners) overlapRows.add(r);
-            bucket.push({
+            bucketTemp.push({
                 nodeId: entry.node,
                 resrefNodeId: entry.resrefNodeId,
                 flagsNodeId: entry.flagsNodeId,
@@ -252,6 +272,7 @@ export function projectSpellbook(model: Model): SpellbookView {
                 flags: entry.flags,
                 memorizedIndex: k,
                 reason: owners.length === 0 ? "orphan" : "contested",
+                claimerRows: owners,
                 ...(owners.length > 1 && {
                     claimedBy: owners.map((r) => levelLabel(meminfo[r]!.type, meminfo[r]!.level)),
                 }),
@@ -273,6 +294,21 @@ export function projectSpellbook(model: Model): SpellbookView {
         (knownByKey.get(key) ?? knownByKey.set(key, []).get(key)!).push(k.known);
     }
     const knownConsumed = new Set<string>();
+
+    // Per-row clamp normalize: when a row overruns/over-bounds or overlaps another and declares more entries
+    // than it cleanly owns, set its count to the cleanly-owned slot count - making it claim exactly its
+    // contiguous in-bounds slots (removing the overrun and its share of any tail overlap). Computed once here so
+    // both the level's clampCountFix and a contested bucket entry's resolveFix reference the same value.
+    const clampByRow: ({ nodeId: NodeId; value: number } | undefined)[] = [];
+    for (let r = 0; r < meminfo.length; r++) {
+        const row = meminfo[r]!;
+        const node = row.countNodeId;
+        const clean = slotsByRow[r]!.length;
+        clampByRow[r] =
+            node !== undefined && (row.overrunOrOob || overlapRows.has(r)) && row.count !== clean
+                ? { nodeId: node, value: clean }
+                : undefined;
+    }
 
     const levels: SpellbookLevel[] = meminfo.map((row, r) => {
         const key = `${row.type}:${row.level}`;
@@ -300,14 +336,7 @@ export function projectSpellbook(model: Model): SpellbookView {
             slots: slotsByRow[r]!,
             flagged: flagReasons.length > 0,
             flagReasons,
-            // Offer a clamp when an overrun/out-of-bounds OR overlapping range declares more entries than it
-            // cleanly owns: set the count to the cleanly-owned slot count, which makes the row claim exactly
-            // its contiguous in-bounds slots (removing the overrun and its share of any tail overlap).
-            ...((row.overrunOrOob || overlapRows.has(r)) &&
-                row.countNodeId !== undefined &&
-                row.count !== slotsByRow[r]!.length && {
-                    clampCountFix: { nodeId: row.countNodeId, value: slotsByRow[r]!.length },
-                }),
+            ...(clampByRow[r] && { clampCountFix: clampByRow[r] }),
         };
     });
 
@@ -326,22 +355,62 @@ export function projectSpellbook(model: Model): SpellbookView {
         });
     }
 
-    // Prune fully-empty levels (no known, no slots, no capacity, not flagged) - real files carry a Mem-Info row
-    // per level including empty ones. Group by type, sort types by code then levels ascending.
-    const kept = levels.filter(
-        (l) =>
-            l.flagged || l.known.length > 0 || l.slots.length > 0 || (l.numMemorizable ?? 0) > 0 || l.declaredCount > 0,
-    );
+    // Show every level faithfully - each physical Spell Memorization Info row (real files carry one per level,
+    // including empty ones) plus any synthetic known-only level. Nothing is pruned: hiding empty physical rows
+    // made them unreachable and let "add level" create a duplicate against the hidden row. Group by type.
     const byType = new Map<number, SpellbookLevel[]>();
-    for (const l of kept) (byType.get(l.type) ?? byType.set(l.type, []).get(l.type)!).push(l);
+    for (const l of levels) (byType.get(l.type) ?? byType.set(l.type, []).get(l.type)!).push(l);
 
-    const types: SpellbookTypeGroup[] = [...byType.entries()]
-        .sort(([a], [b]) => a - b)
-        .map(([type, ls]) => ({
-            type,
-            typeName: spellTypeName(type),
-            levels: ls.sort((a, b) => a.level - b.level),
-        }));
+    // Always surface the three canonical spell types (Priest/Wizard/Innate) as subtabs, even when empty, so the
+    // first spell of an absent type is reachable; include any other type code present in the data too.
+    const typeCodes = [...new Set<number>([0, 1, 2, ...byType.keys()])].sort((a, b) => a - b);
+    const types: SpellbookTypeGroup[] = typeCodes.map((type) => {
+        const ls = [...(byType.get(type) ?? [])].sort((a, b) => a.level - b.level);
+        const knownCount = ls.reduce((n, l) => n + l.known.length, 0);
+        const memorizedCount = ls.reduce((n, l) => n + l.slots.length, 0);
+        return { type, typeName: spellTypeName(type), levels: ls, knownCount, memorizedCount };
+    });
 
-    return { types, bucket, empty: types.length === 0 && bucket.length === 0 };
+    // Finalize the bucket: a contested entry gets a resolveFix pointing at the first claiming row that has a
+    // clamp - applying it releases that row's claim on the shared entry, resolving the overlap at its root.
+    const bucket: SpellbookBucketEntry[] = bucketTemp.map(({ claimerRows, ...entry }) => {
+        if (entry.reason !== "contested") return entry;
+        const claimer = claimerRows.find((r) => clampByRow[r] !== undefined);
+        if (claimer === undefined) return entry;
+        const fix = clampByRow[claimer]!;
+        return {
+            ...entry,
+            resolveFix: {
+                nodeId: fix.nodeId,
+                value: fix.value,
+                levelLabel: levelLabel(meminfo[claimer]!.type, meminfo[claimer]!.level),
+            },
+        };
+    });
+
+    return { types, bucket, empty: false };
+}
+
+/**
+ * File-level capacity diagnostics for the editor's diagnostics banner: one info note per level holding more
+ * memorized spells than its effective slot capacity. This is informational, never a flag and never a block -
+ * the file format stores the memorized count as a field independent of capacity, so an over-capacity level is
+ * representable and editable. Derived from the same projection the column renders, so the banner and the inline
+ * over-capacity marker always agree.
+ */
+export function spellbookCapacityDiagnostics(model: Model): Diagnostic[] {
+    const diags: Diagnostic[] = [];
+    for (const type of projectSpellbook(model).types) {
+        for (const level of type.levels) {
+            const eff = level.numMemorizableEffective;
+            const nodeId = level.numMemorizableEffectiveNodeId ?? level.ownerNodeId;
+            if (eff === undefined || nodeId === undefined || level.slots.length <= eff) continue;
+            diags.push({
+                nodeId,
+                severity: "info",
+                message: `${type.typeName} L${level.level + 1}: ${level.slots.length} memorized, ${eff} effective slots.`,
+            });
+        }
+    }
+    return diags;
 }

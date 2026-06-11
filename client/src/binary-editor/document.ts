@@ -1,6 +1,6 @@
 import { Worker } from "node:worker_threads";
 import * as vscode from "vscode";
-import type { OpenResult } from "@bgforge/binary-editor";
+import type { ChangeSet, OpenResult } from "@bgforge/binary-editor";
 import { WorkerBridge, workerPort } from "./worker-bridge";
 
 /**
@@ -19,8 +19,9 @@ export class BinaryEditorDocument implements vscode.CustomDocument {
     private readonly _onDidChange = new vscode.EventEmitter<vscode.CustomDocumentEditEvent<BinaryEditorDocument>>();
     readonly onDidChange = this._onDidChange.event;
 
-    private readonly _onDidRefresh = new vscode.EventEmitter<void>();
-    /** Fires after an undo/redo has been applied in the worker, so the provider can refresh panels. */
+    private readonly _onDidRefresh = new vscode.EventEmitter<ChangeSet | undefined>();
+    /** Fires after an undo/redo has been applied in the worker, carrying the resulting changeSet so the provider
+     *  can refresh panels exactly as it does after an edit (fields, tab counts, diagnostics, tree). */
     readonly onDidRefresh = this._onDidRefresh.event;
 
     private constructor(uri: vscode.Uri, worker: Worker, bridge: WorkerBridge, openResult: OpenResult) {
@@ -82,12 +83,12 @@ export class BinaryEditorDocument implements vscode.CustomDocument {
             document: this,
             label,
             undo: async () => {
-                await this.bridge.send({ type: "undo", sessionId: this.sessionId });
-                this._onDidRefresh.fire();
+                const r = await this.bridge.send({ type: "undo", sessionId: this.sessionId });
+                this._onDidRefresh.fire(r.type === "structure" ? r.result.changeSet : undefined);
             },
             redo: async () => {
-                await this.bridge.send({ type: "redo", sessionId: this.sessionId });
-                this._onDidRefresh.fire();
+                const r = await this.bridge.send({ type: "redo", sessionId: this.sessionId });
+                this._onDidRefresh.fire(r.type === "structure" ? r.result.changeSet : undefined);
             },
         });
     }

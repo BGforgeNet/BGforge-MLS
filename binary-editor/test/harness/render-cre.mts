@@ -96,8 +96,10 @@ function sectionCount(nodeId: string): number {
 }
 
 async function doUndo(): Promise<void> {
-    dispatch({ type: "undo", sessionId });
-    postToWebview({ type: "invalidated" });
+    // Mirror the real provider: undo returns a changeSet, posted so the webview refreshes fields/tab counts too.
+    const r = dispatch({ type: "undo", sessionId });
+    if (r.type === "structure") postToWebview({ type: "changeSet", changeSet: r.result.changeSet });
+    else postToWebview({ type: "invalidated" });
     await activePage?.waitForTimeout(150);
 }
 
@@ -199,7 +201,7 @@ async function clickDelete(scope: Locator): Promise<void> {
 // sections under Effects/Inventory - both exercised below.)
 const topTabs = await page.evaluate(() =>
     Array.from(document.querySelectorAll('.bb-tabs.primary button[role="tab"]'), (e) =>
-        (e.textContent ?? "").replace(/ \(\d+\)$/, "").trim(),
+        (e.textContent ?? "").replace(/\s*\(\d+(?:\/\d+)?\)\s*$/, "").trim(),
     ),
 );
 check(
@@ -306,6 +308,7 @@ const memorizedTotal = (): number => {
 // ============================================================
 await clickTab("Spells");
 await page.waitForSelector(".spellbook", { timeout: 3000 });
+await page.screenshot({ path: path.join(here, "shot-cre-spells.png"), fullPage: true });
 const spellbookTypeTabs = await page.locator(".spellbook .bb-tabs button[role='tab']").allInnerTexts();
 check(
     "spells: spellbook renders a spell-type subtab (Wizard for the mage fixture)",
@@ -315,18 +318,84 @@ check(
 const baseMemorized = memorizedTotal();
 const firstLevelCard = page.locator(".spellbook .sb-level").first();
 check("spells: at least one level card renders", (await page.locator(".spellbook .sb-level").count()) >= 1, "");
+const readSpellsTab = () =>
+    page.evaluate(() => {
+        const tabs = Array.from(document.querySelectorAll('.bb-tabs.primary button[role="tab"]'));
+        const tab = tabs.find((b) => (b.textContent ?? "").trim().startsWith("Spells"));
+        return (tab?.textContent ?? "").trim();
+    });
+const spellsTabBefore = await readSpellsTab();
 await firstLevelCard.locator("button.sb-add", { hasText: "memorize" }).first().click();
 await page.waitForTimeout(250);
+const spellsTabAfter = await readSpellsTab();
 check(
     "spells: + memorize adds a memorized spell (count +1)",
     memorizedTotal() === baseMemorized + 1,
     `count=${memorizedTotal()}`,
 );
+check(
+    "spells: top-level Spells tab count refreshes after the structure op",
+    spellsTabAfter !== spellsTabBefore && /\(\d+\/\d+\)/.test(spellsTabAfter),
+    `before="${spellsTabBefore}" after="${spellsTabAfter}"`,
+);
 await doUndo();
+const spellsTabUndone = await readSpellsTab();
 check(
     "spells: undo restores the memorized-spell count",
     memorizedTotal() === baseMemorized,
     `count=${memorizedTotal()}`,
+);
+check(
+    "spells: undo also restores the top-level Spells tab count",
+    spellsTabUndone === spellsTabBefore,
+    `before="${spellsTabBefore}" undone="${spellsTabUndone}"`,
+);
+
+// ---- Spellbook card layout: cards must be a uniform width (no flex-grow drift where a trailing odd card on a
+// partial row hits max-width and is wider), and a level's Known and Memorized entries must align row-for-row. ----
+await page.setViewportSize({ width: 900, height: 1500 });
+await page.waitForTimeout(150);
+const cardWidths = await page.evaluate(() =>
+    Array.from(document.querySelectorAll(".spellbook .sb-level"), (el) => Math.round(el.getBoundingClientRect().width)),
+);
+check("spells: all level cards have equal width", new Set(cardWidths).size === 1, JSON.stringify(cardWidths));
+await page.setViewportSize({ width: 1280, height: 1000 });
+await page.waitForTimeout(150);
+const entryAlign = await page.evaluate(() => {
+    for (const c of Array.from(document.querySelectorAll(".spellbook .sb-level"))) {
+        const cols = c.querySelectorAll(".sb-col");
+        const k = cols[0] ? cols[0].querySelector(".sb-resref") : null;
+        const m = cols[1] ? cols[1].querySelector(".sb-resref") : null;
+        if (k && m)
+            return { known: Math.round(k.getBoundingClientRect().top), mem: Math.round(m.getBoundingClientRect().top) };
+    }
+    return { known: -1, mem: -2 };
+});
+check(
+    "spells: Known and Memorized first entries align (same top)",
+    entryAlign.known === entryAlign.mem,
+    JSON.stringify(entryAlign),
+);
+const xPos = await page.evaluate(() => {
+    for (const c of Array.from(document.querySelectorAll(".spellbook .sb-level"))) {
+        const row = c.querySelector(".sb-mem-row");
+        if (!row) continue;
+        const resref = row.querySelector(".sb-resref");
+        const x = row.querySelector(".sb-x");
+        const cb = row.querySelector(".bb-checkbox-label");
+        if (resref && x && cb)
+            return {
+                resref: Math.round(resref.getBoundingClientRect().left),
+                x: Math.round(x.getBoundingClientRect().left),
+                cb: Math.round(cb.getBoundingClientRect().left),
+            };
+    }
+    return { resref: 0, x: 0, cb: 0 };
+});
+check(
+    "spells: memorized remove (x) follows the resref slot, before the flags",
+    xPos.resref < xPos.x && xPos.x < xPos.cb,
+    JSON.stringify(xPos),
 );
 
 // ============================================================

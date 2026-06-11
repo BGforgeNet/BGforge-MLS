@@ -67,6 +67,11 @@ export function spellbookEdit(session: EditorSession, op: SpellbookEditOp): Stru
             0;
         const count =
             (f.get(normKey("Memorized Spell Count")) && fieldNumber(f.get(normKey("Memorized Spell Count"))!)) ?? 0;
+        const base = (f.get(normKey("Num Memorizable")) && fieldNumber(f.get(normKey("Num Memorizable"))!)) ?? 0;
+        const eff =
+            (f.get(normKey("Num Memorizable Effective")) &&
+                fieldNumber(f.get(normKey("Num Memorizable Effective"))!)) ??
+            0;
         const at = start + count;
         const bytes = buildCreMemorizeBytes(pr, ownerIndex);
         if (!bytes) return noopResult(session);
@@ -76,6 +81,17 @@ export function spellbookEdit(session: EditorSession, op: SpellbookEditOp): Stru
         if (newSlice) {
             setField(model, newSlice, "Spell", op.resref);
             setField(model, newSlice, "Memorized Flags", MEMORIZED_FLAG);
+        }
+        // Memorizing past effective capacity auto-raises base + effective slots by 1 each so capacity keeps pace
+        // (the owner index is stable - memorize adds no rows). Only ever increases: removing a spell never lowers
+        // capacity, so a deliberately-set capacity is not silently eroded.
+        if (count + 1 > eff) {
+            const newMeminfo = findGroup(model, MEMINFO_SECTION);
+            const newOwner = newMeminfo ? childGroups(model, newMeminfo)[ownerIndex] : undefined;
+            if (newOwner) {
+                setField(model, newOwner, "Num Memorizable", base + 1);
+                setField(model, newOwner, "Num Memorizable Effective", eff + 1);
+            }
         }
         const result = commitModel(session, `Memorize ${op.resref}`, model);
         result.selection = newSlice?.id;
@@ -103,7 +119,26 @@ export function spellbookEdit(session: EditorSession, op: SpellbookEditOp): Stru
         return commitModel(session, "Remove orphan memorized spell", buildModel(reparse(session, bytes)));
     }
 
-    // addLevel: a new memorization row (owner) with an empty range, tagged to the requested level/type.
+    // addLevel: a new memorization row (owner) with an empty range, tagged to the requested level/type. The UI
+    // only offers levels with no existing row, so this normally adds a genuinely-absent level. Guard the
+    // invariant "at most one row per (type, level)" anyway: a double-click fires addLevel twice for the same
+    // target before the view refreshes; dispatches are sequential, so the second call sees the first's
+    // committed row and no-ops rather than creating the "more than one memorization row" inconsistency.
+    const meminfoGroup = findGroup(session.model, MEMINFO_SECTION);
+    const dupRow =
+        meminfoGroup &&
+        childGroups(session.model, meminfoGroup).some((row) => {
+            const rf = fieldsByKey(session.model, row);
+            const t = rf.get(normKey("Spell Type"));
+            const l = rf.get(normKey("Spell Level"));
+            return (
+                t !== undefined &&
+                l !== undefined &&
+                fieldNumber(t) === op.spellType &&
+                fieldNumber(l) === op.spellLevel
+            );
+        });
+    if (dupRow) return noopResult(session);
     const bytes = adapter?.buildAddEntryBytes?.(pr, [MEMINFO_SECTION]);
     if (!bytes) return noopResult(session);
     const model = buildModel(reparse(session, bytes));
@@ -111,6 +146,10 @@ export function spellbookEdit(session: EditorSession, op: SpellbookEditOp): Stru
     if (entry) {
         setField(model, entry, "Spell Level", op.spellLevel);
         setField(model, entry, "Spell Type", op.spellType);
+        // Seed one slot (base + effective) so the added level is immediately usable - it shows one empty slot
+        // ready to fill rather than an inert zero-capacity row. A UI default; the user can change the counts.
+        setField(model, entry, "Num Memorizable", 1);
+        setField(model, entry, "Num Memorizable Effective", 1);
     }
     const result = commitModel(session, "Add memorization level", model);
     result.selection = entry?.id;

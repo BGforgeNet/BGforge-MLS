@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import type { ParseResult } from "@bgforge/binary";
 import { buildModel } from "../src/model";
 import { openSession, sessionStore } from "../src/session";
-import { projectSpellbook, type SpellbookView } from "../src/spellbook";
+import { projectSpellbook, spellbookCapacityDiagnostics, type SpellbookView } from "../src/spellbook";
 
 // Synthetic CRE ParseResult builder for the spellbook join. Mirrors the real parser's humanized labels and
 // value/raw shapes (verified against finaluf.CRE): spellType is an enum (code in rawValue), spell levels are
@@ -107,14 +107,16 @@ describe("projectSpellbook - clean data", () => {
         expect(l2.slots.map((s) => s.resref)).toEqual(["SPWI201"]);
     });
 
-    it("prunes fully-empty levels but keeps levels with open capacity", () => {
+    it("shows every physical memorization row, including fully-empty ones (faithful to the file)", () => {
         const v = project({
             meminfo: [
                 { level: 0, type: 0, numMemorizable: 0, numMemorizableEffective: 0, start: 0, count: 0 }, // empty
                 { level: 1, type: 0, numMemorizable: 2, numMemorizableEffective: 2, start: 0, count: 0 }, // open slots
             ],
         });
-        expect(levelOf(v, 0, 0)).toBeUndefined();
+        // Both rows physically exist in the file, so both render - hiding the empty one made it unreachable and
+        // let "add level" duplicate it.
+        expect(levelOf(v, 0, 0)).toBeDefined();
         expect(levelOf(v, 0, 1)).toBeDefined();
     });
 
@@ -126,7 +128,8 @@ describe("projectSpellbook - clean data", () => {
                 { resref: "Z", level: 0, type: 5 },
             ],
         });
-        expect(v.types.map((t) => t.type)).toEqual([0, 2, 5]);
+        // Priest/Wizard/Innate (0/1/2) always render; type 5 present in data appears too.
+        expect(v.types.map((t) => t.type)).toEqual([0, 1, 2, 5]);
         expect(v.types.find((t) => t.type === 5)!.typeName).toBe("Type 5");
     });
 });
@@ -208,8 +211,78 @@ describe("projectSpellbook - inconsistent data is rendered losslessly", () => {
         expect(l.ownerNodeId).toBeUndefined();
     });
 
-    it("returns an empty view when the file carries no spell tables", () => {
-        expect(project({}).empty).toBe(true);
+    it("returns an empty view only when the record has NO spell sections at all", () => {
+        const pr = { format: "cre", formatName: "CRE", root: grp("CRE File", []) } as unknown as ParseResult;
+        expect(projectSpellbook(buildModel(pr)).empty).toBe(true);
+    });
+
+    it("empty-but-present spell tables render all three type subtabs (reachable from empty)", () => {
+        const v = project({});
+        expect(v.empty).toBe(false);
+        expect(v.types.map((t) => t.type)).toEqual([0, 1, 2]);
+        expect(v.types.every((t) => t.knownCount === 0 && t.memorizedCount === 0 && t.levels.length === 0)).toBe(true);
+    });
+
+    it("type group carries known and memorized counts for the x/y subtab badge", () => {
+        const v = project({
+            known: [
+                { resref: "A", level: 0, type: 1 },
+                { resref: "B", level: 1, type: 1 },
+            ],
+            meminfo: [{ level: 0, type: 1, numMemorizable: 1, numMemorizableEffective: 1, start: 0, count: 1 }],
+            memorized: [{ resref: "A" }],
+        });
+        const wiz = v.types.find((t) => t.type === 1)!;
+        expect(wiz.knownCount).toBe(2);
+        expect(wiz.memorizedCount).toBe(1);
+        const priest = v.types.find((t) => t.type === 0)!;
+        expect(priest.knownCount).toBe(0);
+        expect(priest.memorizedCount).toBe(0);
+    });
+
+    it("memorizing past effective capacity does NOT flag the level (capacity is advisory)", () => {
+        const v = project({
+            meminfo: [{ level: 0, type: 1, numMemorizable: 1, numMemorizableEffective: 1, start: 0, count: 2 }],
+            memorized: [{ resref: "A" }, { resref: "B" }],
+        });
+        const l = levelOf(v, 1, 0)!;
+        // Two memorized over an effective capacity of 1 - the renderer shows the overflow under a divider, but
+        // the projection does not flag it: capacity is advisory in the format, the count is an independent field.
+        expect(l.slots).toHaveLength(2);
+        expect(l.numMemorizableEffective).toBe(1);
+        expect(l.flagged).toBe(false);
+    });
+
+    it("spellbookCapacityDiagnostics emits one info note per over-capacity level (for the file banner)", () => {
+        const model = buildModel(
+            creResult({
+                meminfo: [
+                    { level: 0, type: 1, numMemorizable: 1, numMemorizableEffective: 1, start: 0, count: 2 }, // over
+                    { level: 1, type: 1, numMemorizable: 3, numMemorizableEffective: 3, start: 2, count: 2 }, // within
+                ],
+                memorized: [{ resref: "A" }, { resref: "B" }, { resref: "C" }, { resref: "D" }],
+            }),
+        );
+        const diags = spellbookCapacityDiagnostics(model);
+        expect(diags).toHaveLength(1);
+        expect(diags[0]!.severity).toBe("info");
+        expect(diags[0]!.message).toContain("Wizard L1");
+        expect(diags[0]!.message).toContain("2 memorized");
+    });
+
+    it("contested entry carries a resolveFix clamp pointing at a claiming level", () => {
+        const v = project({
+            meminfo: [
+                { level: 0, type: 1, start: 0, count: 3 }, // claims 0,1,2
+                { level: 1, type: 1, start: 2, count: 2 }, // claims 2,3 -> #2 contested
+            ],
+            memorized: [{ resref: "A" }, { resref: "B" }, { resref: "C" }, { resref: "D" }],
+        });
+        const contested = v.bucket.find((b) => b.reason === "contested")!;
+        // First claimer (Wizard L1) cleanly owns 0,1, so clamping its count to 2 releases the shared #2.
+        expect(contested.resolveFix).toBeDefined();
+        expect(contested.resolveFix!.value).toBe(2);
+        expect(contested.resolveFix!.levelLabel).toBe("Wizard L1");
     });
 });
 

@@ -90,6 +90,11 @@ export function resolveLayout(
         ...(t.icon !== undefined && { icon: t.icon }),
         ...(t.countFrom !== undefined &&
             sections[t.countFrom] !== undefined && { count: sections[t.countFrom]!.entryCount }),
+        // A two-section "x/y" badge (e.g. the Spells tab's known/memorized totals); the spell tables render as
+        // one joined block, not list sections, so the counts come straight from the depth-0 groups.
+        ...(t.countFromPair !== undefined && {
+            count: `${depth0Groups.get(t.countFromPair[0])?.entryCount ?? 0}/${depth0Groups.get(t.countFromPair[1])?.entryCount ?? 0}`,
+        }),
         ...(t.rows !== undefined && { rows: t.rows }),
         ...("tabs" in t && t.tabs !== undefined && { tabs: t.tabs.map((st) => resolveTab(st)) }),
     });
@@ -114,4 +119,32 @@ export function buildLayout(formatId: string, model: Model, rel?: RelationshipMo
     const adapter = formatAdapterRegistry.get(formatId);
     const layout = adapter?.layout ? resolveLayout(formatId, adapter.layout, model, rel) : undefined;
     return { formatId, layout };
+}
+
+/**
+ * Re-resolve just the tab count badges (id -> count) from the current model - cheap (no field rebuild). Tab
+ * counts derive from depth-0 group child counts, which change on structure ops (add/remove entries) but not on
+ * field edits; the webview patches the live tab labels with these so a count like the Spells "known/memorized"
+ * stays current after editing. Mirrors resolveTab's countFrom / countFromPair logic.
+ */
+export function resolveTabCounts(formatId: string, model: Model): Record<string, number | string> {
+    const out: Record<string, number | string> = {};
+    const variantId = model.parseResult.variantId;
+    const variant =
+        variantId === undefined ? undefined : formatAdapterRegistry.get(formatId)?.layout?.variants[variantId];
+    if (!variant?.tabs) return out;
+    const depth0 = new Map<string, number>();
+    for (const node of model.nodes) {
+        if (node.depth === 0 && node.kind === "group") depth0.set(node.name, node.childCount);
+    }
+    const walk = (tabs: readonly (LayoutTab | LayoutSubTab)[]): void => {
+        for (const t of tabs) {
+            if (t.countFrom !== undefined && depth0.has(t.countFrom)) out[t.id] = depth0.get(t.countFrom)!;
+            else if (t.countFromPair !== undefined)
+                out[t.id] = `${depth0.get(t.countFromPair[0]) ?? 0}/${depth0.get(t.countFromPair[1]) ?? 0}`;
+            if ("tabs" in t && t.tabs !== undefined) walk(t.tabs);
+        }
+    };
+    walk(variant.tabs);
+    return out;
 }

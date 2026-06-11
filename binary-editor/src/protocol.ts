@@ -110,24 +110,10 @@ export function dispatch(req: Request): Response {
                 return { type: "structure", result: structureOp(need(req.sessionId), req.op) };
             case "spellbookEdit":
                 return { type: "structure", result: spellbookEdit(need(req.sessionId), req.op) };
-            case "undo": {
-                const s = need(req.sessionId);
-                doUndo(s);
-                return {
-                    type: "window",
-                    rows: getWindow(s.model, 0, DEFAULT_WINDOW, s.relationshipModel, s.composeSummary),
-                    dirty: s.dirty,
-                };
-            }
-            case "redo": {
-                const s = need(req.sessionId);
-                doRedo(s);
-                return {
-                    type: "window",
-                    rows: getWindow(s.model, 0, DEFAULT_WINDOW, s.relationshipModel, s.composeSummary),
-                    dirty: s.dirty,
-                };
-            }
+            case "undo":
+                return { type: "structure", result: doUndo(need(req.sessionId)) };
+            case "redo":
+                return { type: "structure", result: doRedo(need(req.sessionId)) };
             case "serialize":
                 return { type: "serialized", bytes: serializeSession(need(req.sessionId)) };
             case "validate":

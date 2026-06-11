@@ -217,6 +217,9 @@ const layoutSubTabSchema = z.strictObject({
     label: z.string().min(1),
     icon: z.string().optional(),
     countFrom: z.string().min(1).optional(),
+    // Two depth-0 group names whose child counts render as an "x/y" badge (e.g. the Spells tab's joined spell
+    // tables, which are not single list sections countFrom can read).
+    countFromPair: z.tuple([z.string().min(1), z.string().min(1)]).optional(),
     rows: z.array(layoutRowSchema).min(1),
 });
 
@@ -227,6 +230,7 @@ const layoutTabSchema = z
         label: z.string().min(1),
         icon: z.string().optional(),
         countFrom: z.string().min(1).optional(),
+        countFromPair: z.tuple([z.string().min(1), z.string().min(1)]).optional(),
         rows: z.array(layoutRowSchema).min(1).optional(),
         tabs: z.array(layoutSubTabSchema).min(1).optional(),
     })

@@ -662,6 +662,8 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                 {
                     id: "spells",
                     label: "Spells",
+                    // Tab badge shows total known/memorized spells across all types.
+                    countFromPair: ["Known Spells", "Memorized Spells"],
                     // The three on-disk spell tables (Known Spells, Spell Memorization Info, Memorized Spells)
                     // render as one joined spellbook (spell type -> level) rather than three flat lists. The
                     // host-side projection owns the join; the webview SpellbookBlock renders it.

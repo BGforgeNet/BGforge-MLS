@@ -71,3 +71,29 @@ describe("buildLayout: empty list section caps are count-independent", () => {
         expect(lv?.canAdd).toBe(true);
     });
 });
+
+describe("buildLayout (cre): Spells tab total", () => {
+    // A minimal CRE carrying just the two spell sections (depth-0 groups) the Spells-tab count reads.
+    function creWithSpellCounts(known: number, memorized: number): ParseResult {
+        const kids = (prefix: string, n: number) =>
+            Array.from({ length: n }, (_v, i) => ({ name: `${prefix} ${i + 1}`, fields: [] }));
+        return {
+            format: "cre",
+            formatName: "CRE",
+            variantId: "creature",
+            root: {
+                name: "CRE File",
+                fields: [
+                    { name: "Known Spells", fields: kids("Known Spell", known) },
+                    { name: "Memorized Spells", fields: kids("Memorized Spell", memorized) },
+                ],
+            },
+        } as unknown as ParseResult;
+    }
+
+    it("shows total known/memorized on the Spells tab", () => {
+        const layout = buildLayout("cre", buildModel(creWithSpellCounts(3, 5))).layout!;
+        const spells = (layout.tabs ?? []).find((t) => t.label === "Spells")!;
+        expect(spells.count).toBe("3/5");
+    });
+});

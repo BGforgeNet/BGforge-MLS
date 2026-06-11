@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { openSession, sessionStore, type EditorSession } from "../src/session";
 import { spellbookEdit } from "../src/spellbook-ops";
 import { projectSpellbook, type SpellbookView } from "../src/spellbook";
-import { undo } from "../src/structure-ops";
+import { undo, structureOp } from "../src/structure-ops";
 import { editField } from "../src/edit";
 import { serializeSession } from "../src/serialize";
 import { childGroups, fieldsByKey, findGroup, normKey } from "../src/relationship/model-helpers";
@@ -44,6 +44,41 @@ maybe("spellbookEdit", () => {
         expect(level(view(s), 1, 0)!.slots.length).toBe(before);
     });
 
+    it("a spellbook structure op refreshes the Spells tab count in its changeSet", () => {
+        const s = open();
+        const l1 = level(view(s), 1, 0)!; // Wizard L1
+        // Edwin opens at 8 known / 11 memorized; memorizing one bumps the memorized total to 12.
+        const res = spellbookEdit(s, { op: "memorize", ownerNodeId: l1.ownerNodeId!, resref: "X" });
+        expect(res.changeSet.tabCounts?.spells).toBe("8/12");
+    });
+
+    it("memorize past capacity auto-bumps base and effective by 1 each", () => {
+        const s = open();
+        const l1 = level(view(s), 1, 0)!; // Wizard L1: at capacity (5/5, 5 memorized)
+        const base0 = l1.numMemorizable!;
+        const eff0 = l1.numMemorizableEffective!;
+        expect(l1.slots.length).toBe(eff0); // sanity: already at effective capacity
+        spellbookEdit(s, { op: "memorize", ownerNodeId: l1.ownerNodeId!, resref: "SPNEW1" });
+        const after = level(view(s), 1, 0)!;
+        expect(after.numMemorizable).toBe(base0 + 1);
+        expect(after.numMemorizableEffective).toBe(eff0 + 1);
+    });
+
+    it("memorize under capacity does NOT bump, and removing a slot never decreases capacity", () => {
+        const s = open();
+        const l1 = level(view(s), 1, 0)!;
+        // Make L1 under capacity: raise effective above the memorized count.
+        editField(s, l1.numMemorizableEffectiveNodeId!, l1.numMemorizableEffective! + 2);
+        const under = level(view(s), 1, 0)!;
+        const eff = under.numMemorizableEffective!;
+        spellbookEdit(s, { op: "memorize", ownerNodeId: under.ownerNodeId!, resref: "SPNEW2" });
+        expect(level(view(s), 1, 0)!.numMemorizableEffective).toBe(eff); // under capacity -> no bump
+        // Removing a memorized slot must never lower capacity.
+        const slot = level(view(s), 1, 0)!.slots[0]!;
+        structureOp(s, { op: "remove", entryId: slot.nodeId });
+        expect(level(view(s), 1, 0)!.numMemorizableEffective).toBe(eff);
+    });
+
     it("memorize into an empty level (capacity, no entries) works", () => {
         const s = open();
         // Find a wizard level with capacity but no slots (Edwin has higher empty rows). If none, skip the body.
@@ -66,13 +101,31 @@ maybe("spellbookEdit", () => {
         expect(level(view(s), 1, 7)?.known.some((k) => k.resref === "SPWI810") ?? false).toBe(false);
     });
 
-    it("addLevel: adds a memorization row for a new (type, level), making a fresh type group appear", () => {
+    it("addLevel adds an absent level, and a repeat for the same (type, level) is a no-op (double-click safe)", () => {
         const s = open();
-        expect(view(s).types.some((t) => t.type === 0)).toBe(false); // Edwin has no Priest rows
-        spellbookEdit(s, { op: "addLevel", spellType: 0, spellLevel: 0 });
-        const priest = view(s).types.find((t) => t.type === 0);
-        expect(priest).toBeDefined();
-        expect(priest!.levels.some((l) => l.level === 0 && l.ownerNodeId !== undefined)).toBe(true);
+        // Edwin has an Innate L0 row but none at L2; the UI offers "add level" only for absent levels like this.
+        const innateRows = (lvl: number) =>
+            view(s)
+                .types.find((t) => t.type === 2)
+                ?.levels.filter((l) => l.level === lvl).length ?? 0;
+        expect(innateRows(2)).toBe(0);
+        spellbookEdit(s, { op: "addLevel", spellType: 2, spellLevel: 2 });
+        expect(innateRows(2)).toBe(1);
+        const added = view(s)
+            .types.find((t) => t.type === 2)!
+            .levels.find((l) => l.level === 2)!;
+        expect(added.ownerNodeId).not.toBeUndefined();
+        // A double-click fires addLevel twice for the same target before the view refreshes; the second no-ops.
+        spellbookEdit(s, { op: "addLevel", spellType: 2, spellLevel: 2 });
+        expect(innateRows(2)).toBe(1);
+    });
+
+    it("addLevel seeds the new level with one memorizable slot (base 1, eff 1) so it is usable at once", () => {
+        const s = open();
+        spellbookEdit(s, { op: "addLevel", spellType: 2, spellLevel: 2 }); // Innate L2, absent on Edwin
+        const added = level(view(s), 2, 2)!;
+        expect(added.numMemorizable).toBe(1);
+        expect(added.numMemorizableEffective).toBe(1);
     });
 
     // Find the Memorized Spell Count field node of the Wizard Lvl-1 memorization row, to corrupt the range.

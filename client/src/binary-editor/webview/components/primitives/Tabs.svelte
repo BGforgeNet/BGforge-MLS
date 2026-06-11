@@ -17,6 +17,9 @@
         id: string;
         label: string;
         icon?: string;
+        // Optional count badge shown after the label - a number (items in this tab) or a string (e.g. an "x/y"
+        // pair). Rendered only when provided, so existing tab usages are unaffected. 0 is shown, not hidden.
+        count?: number | string;
     }
 
     const {
@@ -92,6 +95,9 @@
                 <Icon name={tab.icon} />
             {/if}
             {tab.label}
+            {#if tab.count !== undefined}
+                <span class="bb-tab-count">{tab.count}</span>
+            {/if}
         </button>
     {/each}
 </div>

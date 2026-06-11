@@ -39,7 +39,8 @@
                 diagnostics = m.diagnostics;
             } else if (m.type === "changeSet") {
                 diagnostics = m.changeSet.diagnostics;
-                selection = m.selection;
+                // Undo/redo refresh via a changeSet with no selection - preserve the current selection then.
+                if (m.selection !== undefined) selection = m.selection;
                 // The layout renderer reads the resolved field snapshot directly, so patch each changed row
                 // into it (matched by node id) to reflect edits. Without this, a layout edit never re-renders.
                 const fields = open?.layout.layout?.fields;
@@ -48,6 +49,18 @@
                         const ref = Object.keys(fields).find((k) => fields[k]?.id === row.id);
                         if (ref) fields[ref] = row;
                     }
+                }
+                // Refresh tab count badges (e.g. the Spells known/memorized total) after a structure op.
+                const counts = m.changeSet.tabCounts;
+                const tabs = open?.layout.layout?.tabs;
+                if (counts && tabs) {
+                    const patch = (ts: typeof tabs): void => {
+                        for (const t of ts) {
+                            if (t.id in counts) t.count = counts[t.id];
+                            if (t.tabs) patch(t.tabs);
+                        }
+                    };
+                    patch(tabs);
                 }
                 bridge.invalidate();
                 version++;

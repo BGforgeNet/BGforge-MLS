@@ -82,7 +82,8 @@ describe("dispatch", () => {
         expect(loaded.result.format).toBe(opened.result.format);
 
         const undone = dispatch({ type: "undo", sessionId: sid });
-        expect(undone.type).toBe("window");
+        // undo returns a full changeSet (so the webview refreshes fields/tab counts/diagnostics, not just the tree).
+        expect(undone.type).toBe("structure");
     });
 
     it("loadJson rejects malformed JSON without changing the session", () => {

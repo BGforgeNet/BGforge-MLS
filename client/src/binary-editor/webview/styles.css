@@ -632,6 +632,18 @@ input[type="text"]::placeholder {
     z-index: 1;
     position: relative;
 }
+/* Optional count badge after a tab label (e.g. items in this tab); a subtle pill using the theme badge tokens. */
+.bb-tabs .bb-tab-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.5em;
+    padding: 0 5px;
+    border-radius: 8px;
+    font-size: 0.78em;
+    background: var(--vscode-badge-background);
+    color: var(--vscode-badge-foreground);
+}
 /* -- horizontal secondary: pill-underline style (lighter, subdued, subordinate to the primary strip) -- */
 .bb-tabs.horizontal.secondary {
     flex-direction: row;
@@ -1280,16 +1292,17 @@ input[type="text"]::placeholder {
 /* Levels flow left-to-right as cards and wrap, so a 9-level mage packs into a few dense rows instead of one
    tall scroll; each card grows to share the row width (panel idiom) down to a min, capped so two levels do not
    stretch absurdly wide. */
+/* Uniform-width card grid: fixed-min tracks that grow equally. auto-fill keeps empty trailing tracks, so a
+   partial last row's cards stay the SAME width as every other card instead of a lone trailing card stretching
+   to max-width (the old flex-grow drift). align-items: start so a short card does not stretch to a tall sibling. */
 .spellbook .sb-levels {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
     gap: 8px;
-    align-items: flex-start;
+    align-items: start;
 }
 /* One level: a bordered well (matching the flag-group box treatment) so each level reads as a distinct unit. */
 .spellbook .sb-level {
-    flex: 1 1 340px;
-    max-width: 520px;
     border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
     border-radius: 4px;
     background: var(--vscode-editor-background);
@@ -1372,12 +1385,12 @@ input[type="text"]::placeholder {
 .spellbook .sb-cols {
     display: grid;
     grid-template-columns: max-content 1fr;
-    gap: 18px;
+    gap: 28px; /* roomy gutter between the Known and Memorized columns */
     align-items: start;
 }
 .spellbook .sb-col-head {
     color: var(--vscode-descriptionForeground);
-    font-size: 0.78em;
+    font-size: 0.85em;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin-bottom: 3px;
@@ -1387,17 +1400,57 @@ input[type="text"]::placeholder {
     align-items: center;
     gap: 10px;
     padding: 1px 0;
-    font-size: 0.9em;
+    font-size: 1em;
 }
 .spellbook .sb-slot-name {
     font-family: var(--vscode-editor-font-family, monospace);
     min-width: 9ch;
 }
-/* Flag toggles are subordinate to the resref (the primary datum), so dim their labels for hierarchy. */
-.spellbook .sb-slot-flags {
-    display: flex;
-    gap: 12px;
+/* Known column: remove | resref | memorize-arrow. The "+ known" add-row reuses this grid with an empty remove
+   cell, so it lines up under the resrefs (not under the remove button). */
+.spellbook .sb-known-row {
+    display: grid;
+    grid-template-columns: 1.5rem max-content max-content;
+    align-items: center;
+    column-gap: 10px;
+    padding: 1px 0;
+    font-size: 1em;
+}
+/* Memorized column: resref | remove (follows the slot) | flag group. Fixed rem tracks keep the header flag
+   labels aligned over the row controls regardless of each element's own font-size; the first track holds the
+   9ch monospace resref input. */
+.spellbook .sb-mem-row {
+    display: grid;
+    grid-template-columns: 5rem 1.5rem max-content;
+    align-items: center;
+    column-gap: 10px;
+    padding: 1px 0;
+    font-size: 1em;
+}
+/* The Memorized header is ONE row: the column title, an empty cell over the remove button, and the flag labels
+   share the same line (same grid tracks as the rows) so this column's header is the same height as the Known
+   column's single-line header - keeping the two columns' entries aligned row-for-row. */
+.spellbook .sb-mem-headrow {
+    display: grid;
+    grid-template-columns: 5rem 1.5rem max-content;
+    align-items: baseline;
+    column-gap: 10px;
     color: var(--vscode-descriptionForeground);
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 3px;
+}
+/* The two flag toggles as a tight group; each flag is a fixed-width cell with its checkbox (rows) or label
+   (header) centered, so "mem"/"dis" sit directly over their checkboxes with little space between them. */
+.spellbook .sb-flags {
+    display: flex;
+    gap: 3px;
+}
+.spellbook .sb-flag {
+    width: 1.7rem;
+    display: flex;
+    justify-content: center;
 }
 /* An editable resref cell (chars[8]); sized to its 8-char content tier, monospace like other resref fields. */
 .spellbook .sb-resref {
@@ -1487,4 +1540,59 @@ input[type="text"]::placeholder {
 .spellbook .sb-bucket-reason {
     color: var(--vscode-descriptionForeground);
     font-size: 0.88em;
+}
+/* Quick "memorize this known spell" arrow in the Known column: a compact accent button that copies the known
+   spell into this level's memorized slots (one click vs typing the resref into a new slot). */
+.spellbook .sb-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1px;
+    border: 0;
+    border-radius: 3px;
+    background: transparent;
+    color: var(--vscode-textLink-foreground);
+    cursor: pointer;
+}
+.spellbook .sb-arrow:hover:not(:disabled) {
+    background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground));
+}
+.spellbook .sb-arrow:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+/* An empty (unfilled) effective memorization slot: a faint dashed box sized to the resref column, so the
+   Memorized column visualizes the level's remaining capacity as empty slots. */
+.spellbook .sb-slot-empty {
+    opacity: 0.7;
+}
+.spellbook .sb-empty-box {
+    display: inline-block;
+    width: 9ch;
+    height: 1.5em;
+    border: 1px dashed var(--vscode-input-border, var(--vscode-panel-border));
+    border-radius: 3px;
+}
+/* Divider marking memorized spells beyond effective capacity - allowed by the file format (not an error), so
+   muted rather than alarming. The overflow rows below it are dimmed slightly to read as secondary. */
+.spellbook .sb-overcap-divider {
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.78em;
+    letter-spacing: 0.04em;
+    margin: 4px 0 1px;
+}
+.spellbook .sb-slot-over {
+    opacity: 0.85;
+}
+/* Empty-type hint shown when a type subtab has no levels yet; the "+ add level" button follows it. */
+.spellbook .sb-empty-type {
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.85em;
+    margin: 2px 0 6px;
+}
+/* "Remove row" resolve on a flagged level: a destructive-tinted variant of sb-fix (deletes the whole
+   memorization row and its memorized spells), set apart from the gentler clamp beside it. */
+.spellbook .sb-remove-row {
+    border-color: var(--vscode-inputValidation-errorBorder, var(--vscode-errorForeground));
+    color: var(--vscode-errorForeground);
 }

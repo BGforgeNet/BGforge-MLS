@@ -2,6 +2,7 @@ import { formatAdapterRegistry, parserRegistry, type ParseResult } from "@bgforg
 import { buildModel, type FlatNode } from "./model";
 import { invalidateCachedDocument } from "./edit";
 import { DEFAULT_WINDOW, getWindow } from "./window";
+import { resolveTabCounts } from "./layout";
 import { layoutFieldRows, type EditorSession } from "./session";
 import type { ChangeSet, NamePath, NodeId, StructureResult } from "./types";
 
@@ -41,6 +42,9 @@ function buildChangeSet(session: EditorSession, dirty: boolean): ChangeSet {
         diagnostics: session.relationshipModel ? session.relationshipModel.constraints(session.model) : [],
         dirty,
         formatValid: true,
+        // A structure op can change an entry count; refresh the tab badges so e.g. the Spells known/memorized
+        // total stays current (the subtab badges refresh separately via the spellbook re-fetch).
+        tabCounts: resolveTabCounts(session.parserId, session.model),
     };
 }
 
@@ -150,7 +154,15 @@ export function structureOp(session: EditorSession, req: StructureOpRequest): St
     // model, before commit replaces session.model.
     const target = resolveTarget(session, req);
     if (!target) return noopResult(session);
-    const bytes = buildOpBytes(adapter, session.model.parseResult, req, target);
+    // A structure op on already-inconsistent on-disk data can trip the partition validator (e.g. removing one
+    // flagged memorization row while another row remains inconsistent). Fail safe to a no-op rather than crash
+    // the editor; the user resolves the remaining inconsistency (clamp) and retries.
+    let bytes: Uint8Array | undefined;
+    try {
+        bytes = buildOpBytes(adapter, session.model.parseResult, req, target);
+    } catch {
+        return noopResult(session);
+    }
     if (!bytes) return noopResult(session);
 
     const { arrayPath, index } = target;
@@ -208,9 +220,12 @@ export function structureOp(session: EditorSession, req: StructureOpRequest): St
     return result;
 }
 
-export function undo(session: EditorSession): void {
+// Undo/redo return a full changeSet (same shape as a structure op) so the webview refreshes EVERYTHING the
+// restored model touched - form fields, tab count badges, cross-record dropdowns, diagnostics, and the tree -
+// not just the list/tree. Refreshing via a narrower "invalidated" left field values and tab counts stale.
+export function undo(session: EditorSession): StructureResult {
     const entry = session.undo.pop();
-    if (!entry) return;
+    if (!entry) return { changeSet: buildChangeSet(session, session.dirty) };
     session.redo.push({ label: entry.label, before: session.model.parseResult });
     session.model = buildModel(entry.before);
     invalidateCachedDocument(session.model.parseResult);
@@ -218,13 +233,15 @@ export function undo(session: EditorSession): void {
     // dirtying paths (editField, commit) each push an undo entry. A future dirtying path that does not
     // must revisit this.
     session.dirty = session.undo.length > 0;
+    return { changeSet: buildChangeSet(session, session.dirty) };
 }
 
-export function redo(session: EditorSession): void {
+export function redo(session: EditorSession): StructureResult {
     const entry = session.redo.pop();
-    if (!entry) return;
+    if (!entry) return { changeSet: buildChangeSet(session, session.dirty) };
     session.undo.push({ label: entry.label, before: session.model.parseResult });
     session.model = buildModel(entry.before);
     invalidateCachedDocument(session.model.parseResult);
     session.dirty = true;
+    return { changeSet: buildChangeSet(session, session.dirty) };
 }

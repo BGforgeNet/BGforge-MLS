@@ -1,7 +1,7 @@
 import * as path from "node:path";
 import * as vscode from "vscode";
 import { getSnapshotPath } from "@bgforge/binary";
-import type { StructureOpRequest } from "@bgforge/binary-editor";
+import type { ChangeSet, StructureOpRequest } from "@bgforge/binary-editor";
 import { generateNonce, getCachedHtmlAsset, getCachedJsAsset, inlineWebviewScript } from "../webview-assets";
 import { surfaceWebviewRuntimeError } from "../webview-error";
 import { BinaryEditorDocument } from "./document";
@@ -62,7 +62,7 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
         const workerScript = path.join(this.extensionUri.fsPath, WORKER_SCRIPT);
         const document = await BinaryEditorDocument.open(uri, workerScript);
         document.onDidChange((event) => this._onDidChangeCustomDocument.fire(event));
-        document.onDidRefresh(() => this.refreshDocumentPanels(document));
+        document.onDidRefresh((changeSet) => this.refreshDocumentPanels(document, changeSet));
         return document;
     }
 
@@ -301,7 +301,14 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
 
     /** After an undo/redo: tell every panel to clear its cache and re-fetch (layout is unchanged, so
      *  selection/tab state in the webview is preserved - no re-init). */
-    private refreshDocumentPanels(document: BinaryEditorDocument): void {
+    private refreshDocumentPanels(document: BinaryEditorDocument, changeSet?: ChangeSet): void {
+        // A full changeSet refreshes everything an edit would (fields, tab count badges, cross-record dropdowns,
+        // diagnostics, and the tree) while preserving selection/tab state - so undo/redo no longer leaves field
+        // values or tab counts stale. The dataless fallback (no changeSet) keeps the old invalidate behavior.
+        if (changeSet) {
+            this.postToDocumentPanels(document, { type: "changeSet", changeSet });
+            return;
+        }
         this.postToDocumentPanels(document, { type: "invalidated" });
         void this.pushDiagnosticsToDocument(document);
     }

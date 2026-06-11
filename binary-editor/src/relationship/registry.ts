@@ -1,10 +1,11 @@
 import { formatAdapterRegistry } from "@bgforge/binary";
 import type { FlatNode, Model } from "../model";
-import type { NodeId } from "../types";
+import type { Diagnostic, NodeId } from "../types";
 import type { FieldOverride, RelationshipModel } from "./types";
 import { ieEffectsFieldOverride, ieEffectsDependents, ieEffectsProbabilityConstraint } from "./ie-effects";
 import { crossRefDiagnostics, crossRefDependents, crossRefFieldOverride } from "./cross-record";
 import { creWeaponFieldOverride, creWeaponDependents } from "./cre-weapons";
+import { spellbookCapacityDiagnostics } from "../spellbook";
 
 /** An optional format-specific overlay composed AHEAD of the generic ones (its override wins; its dependents
  *  are added). Used for CRE's selected-weapon / ability dropdowns, which are neither IE effects nor index refs. */
@@ -18,7 +19,11 @@ interface ExtraOverlay {
  *  with an index relationship that names a target label (CRE Item Slots -> Items) also overlays a named-item
  *  dropdown on those slots, falling back to the shared IE overlay for every other field. An optional `extra`
  *  overlay is tried first (CRE weapon dropdowns). */
-function ieModel(formatId: string, extra?: ExtraOverlay): RelationshipModel {
+function ieModel(
+    formatId: string,
+    extra?: ExtraOverlay,
+    extraConstraints?: (model: Model) => Diagnostic[],
+): RelationshipModel {
     const rels = formatAdapterRegistry.get(formatId)?.crossRefRelationships ?? [];
     const hasIndexDropdown = rels.some((r) => r.kind === "index" && r.targetLabelField !== undefined);
     const baseOverride = hasIndexDropdown
@@ -39,7 +44,11 @@ function ieModel(formatId: string, extra?: ExtraOverlay): RelationshipModel {
         dependents: extra
             ? (model: Model, node: FlatNode) => [...extra.dependents(model, node), ...baseDependents(model, node)]
             : baseDependents,
-        constraints: (model: Model) => [...ieEffectsProbabilityConstraint(model), ...crossRefDiagnostics(model, rels)],
+        constraints: (model: Model) => [
+            ...(extraConstraints?.(model) ?? []),
+            ...ieEffectsProbabilityConstraint(model),
+            ...crossRefDiagnostics(model, rels),
+        ],
     };
 }
 
@@ -48,7 +57,14 @@ const registry = new Map<string, RelationshipModel>([
     ["itm", ieModel("itm")],
     ["spl", ieModel("spl")],
     ["eff", ieModel("eff")],
-    ["cre", ieModel("cre", { fieldOverride: creWeaponFieldOverride, dependents: creWeaponDependents })],
+    [
+        "cre",
+        ieModel(
+            "cre",
+            { fieldOverride: creWeaponFieldOverride, dependents: creWeaponDependents },
+            spellbookCapacityDiagnostics,
+        ),
+    ],
 ]);
 
 export function getRelationshipModel(formatId: string): RelationshipModel | undefined {
