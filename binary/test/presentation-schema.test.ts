@@ -84,6 +84,15 @@ describe("presentation-schema", () => {
         );
     });
 
+    it("covers ITM usability array-slot flags via the deriver's slots descent", () => {
+        // usabilityFlags is a 4-byte slots array, each byte a distinct flag table. The deriver now descends
+        // into the slots, so each resolves at its real semantic key (slugify of the array + slot labels).
+        expect(
+            resolveFieldPresentation("itm", "itm.header.usabilityFlags.byte1ClassAlignment", "Class / Alignment")
+                ?.presentationType,
+        ).toBe("flags");
+    });
+
     it("merges pattern metadata for dynamic MAP fields", () => {
         expect(resolveFieldPresentation("map", "map.objects.elevations[].objects[].base.pid", "PID")).toEqual({
             numericFormat: "hex32",

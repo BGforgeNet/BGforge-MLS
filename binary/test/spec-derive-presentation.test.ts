@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { u32 } from "typed-binary";
+import { u8, u32 } from "typed-binary";
 import { toPresentationEntries, toPresentationPatterns } from "../src/spec/derive-presentation";
-import { type StructSpec } from "../src/spec/types";
+import { arraySpec, type StructSpec } from "../src/spec/types";
 import { type StructPresentation } from "../src/spec/presentation";
 
 describe("toPresentationEntries", () => {
@@ -52,6 +52,29 @@ describe("toPresentationEntries", () => {
         ).toEqual({
             "pro.drugStats.affectedStats.stat0": { presentationType: "enum", enumOptions: { 0: "None" } },
             "pro.drugStats.other": { presentationType: "enum", enumOptions: { 0: "X" } },
+        });
+    });
+
+    it("descends into a slots-view array field with per-slot enum/flags", () => {
+        // A "slots" array (e.g. ITM usabilityFlags) renders as a subgroup named by the array label, each child
+        // named by its slot label and carrying that slot element's flags. The deriver mirrors that: one entry
+        // per slot keyed `${prefix}.${slugify(arrayLabel)}.${slugify(slotLabel)}`.
+        type T = { usabilityFlags: number[] };
+        const spec: StructSpec<T> = {
+            usabilityFlags: arraySpec({
+                element: { codec: u8 },
+                count: 2,
+                view: "slots",
+                slotLabels: ["Byte 1 (Class)", "Byte 2 (Race)"],
+                slotElements: [
+                    { codec: u8, flags: { 1: "A" } },
+                    { codec: u8, flags: { 2: "B" } },
+                ],
+            }),
+        };
+        expect(toPresentationEntries(spec, {}, "itm.header")).toEqual({
+            "itm.header.usabilityFlags.byte1Class": { presentationType: "flags", flagOptions: { 1: "A" } },
+            "itm.header.usabilityFlags.byte2Race": { presentationType: "flags", flagOptions: { 2: "B" } },
         });
     });
 

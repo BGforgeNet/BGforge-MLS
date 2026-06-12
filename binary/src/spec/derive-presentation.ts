@@ -47,13 +47,32 @@ function emitPresentationEntries<T>(
 ): void {
     for (const key of Object.keys(spec) as (keyof T & string)[]) {
         const fs = spec[key];
-        if (isArraySpec(fs) || isCharsSpec(fs)) continue;
+        if (isCharsSpec(fs)) continue;
         const pres = presentation[key];
         // Key by the slugified display label, not the spec field name: the consumer (resolveFieldPresentation)
         // is called with the field's semantic key, which the walker builds as slugify(pres.label ?? humanize).
         // For a default label these coincide; for a custom label (idRequired -> "Identification") they diverge,
         // and only slugify(label) matches what the consumer looks up.
         const fieldKey = slugify(pres?.label ?? humanize(key));
+
+        if (isArraySpec(fs)) {
+            // A "slots" array (e.g. ITM usabilityFlags) renders as a subgroup whose children carry per-slot
+            // enum/flags; mirror that as one entry per slot, keyed `${fieldKey}.${slugify(slotLabel)}`. Byte
+            // reserves and slot arrays whose element has no enum/flags emit nothing.
+            if (fs.view === "slots" && fs.slotLabels) {
+                fs.slotLabels.forEach((slotLabel, i) => {
+                    if (slotLabel === undefined) return;
+                    const el = fs.slotElements?.[i] ?? fs.element;
+                    const slotKey = `${fieldKey}.${slugify(slotLabel)}`;
+                    if (el.enum) {
+                        emit(key, slotKey, { presentationType: "enum", enumOptions: stringifyKeys(el.enum) });
+                    } else if (el.flags) {
+                        emit(key, slotKey, { presentationType: "flags", flagOptions: stringifyKeys(el.flags) });
+                    }
+                });
+            }
+            continue;
+        }
 
         if (fs.enum) {
             emit(key, fieldKey, {
