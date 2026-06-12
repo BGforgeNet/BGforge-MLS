@@ -47,6 +47,11 @@ export interface EffectJoin {
     readonly separator: string;
 }
 
+/** Fixed label-column width (ch) for every effect-body fields run. Stops the value columns jumping when the
+ *  opcode overlay rewrites the parameter labels; wide enough for the common longest label ("Statistic Modifier"
+ *  / "Stacking ID (ToBEx)"), with a rare longer opcode label wrapping rather than reflowing the columns. */
+const EFFECT_LABEL_WIDTH_CH = 17;
+
 /** The dice tuple, shown in dice notation `<thrown>d<sides>` (e.g. 1d6, 2d12), shared by the EFF v1/v2 bodies;
  *  the feature block has no dice. */
 export const DICE_JOIN: EffectJoin = { label: "Dice", fields: ["diceThrown", "diceSides"], separator: "d" };
@@ -86,6 +91,11 @@ export function effectBodyRows(
             kind: "fields",
             columns: 2,
             fields: run.map((key) => k(key)),
+            // Fixed label column: the opcode overlay rewrites parameter1/parameter2 labels per opcode, so a
+            // max-content label track would resize - and the value columns jump - on every opcode change. A
+            // fixed width keeps them put. Sized for the common longest effect label; the rare longer opcode
+            // label wraps instead of shifting the columns.
+            labelWidthCh: EFFECT_LABEL_WIDTH_CH,
             ...(runJoins.length > 0 && { joins: runJoins }),
         };
         rows.push({ panels: [{ blocks: [block] }] });

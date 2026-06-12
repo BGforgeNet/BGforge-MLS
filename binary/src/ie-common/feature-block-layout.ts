@@ -13,8 +13,13 @@
  * reinterprets parameter1/parameter2 per opcode).
  */
 
-import { effectBodyRows, PROBABILITY_JOIN, type EffectLayoutField } from "./effect-layout";
+import { effectBodyRows, type EffectJoin, PROBABILITY_JOIN, type EffectLayoutField } from "./effect-layout";
 import type { DetailRow } from "../layout-schema-types";
+
+/** The level range, shown low-to-high as `minLevel - maxLevel`. The feature block's level range occupies the
+ *  same two bytes the EFF v2 body reads as dice, so it folds into one inline cell exactly like `DICE_JOIN` -
+ *  two boxes side by side - only the separator differs (a range dash, matching `PROBABILITY_JOIN`). */
+const LEVEL_JOIN: EffectJoin = { label: "Level", fields: ["minLevel", "maxLevel"], separator: " - " };
 
 /** Feature-block fields in wire byte order; `resistance` / `saveType` carry flag tables, so they render as flag
  *  boxes. */
@@ -38,13 +43,14 @@ const FEATURE_BLOCK_FIELDS: readonly EffectLayoutField[] = [
 ];
 
 /** The feature-block rows for any field-ref prefix. The feature block has no dice (it carries a level range
- *  instead), so only the probability range folds. */
+ *  instead), so the probability range and the level range fold. */
 export function featureBlockBodyRows(prefix: string): DetailRow[] {
-    return effectBodyRows(prefix, FEATURE_BLOCK_FIELDS, [PROBABILITY_JOIN]);
+    return effectBodyRows(prefix, FEATURE_BLOCK_FIELDS, [PROBABILITY_JOIN, LEVEL_JOIN]);
 }
 
-/** Display-label overrides for the feature block at a given prefix - expand the level range and the ToBEx
- *  stacking id (kept verbatim with the EFF v2 fragment's "Stacking ID (ToBEx)" so the two read identically). */
+/** Display-label overrides for the feature block at a given prefix. `maxLevel`/`minLevel` fold into the "Level"
+ *  cell, but their labels still name the fields in the model/field-map (as the Coordinates axes do); the ToBEx
+ *  stacking id is kept verbatim with the EFF v2 fragment's "Stacking ID (ToBEx)" so the two read identically. */
 export function featureBlockBodyLabels(prefix: string): Record<string, string> {
     const k = (key: string): string => `${prefix}.${key}`;
     return {

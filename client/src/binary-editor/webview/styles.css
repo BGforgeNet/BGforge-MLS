@@ -1261,6 +1261,14 @@ input[type="text"]::placeholder {
 .layout-root .kv.kv-multi .field .label {
     min-width: 80px;
 }
+/* Fixed-width label column (kv-fixed-label): the track is a fixed `ch` width (set inline), so a label rewritten
+   at runtime (effect parameter names per opcode) can't resize the column. A label longer than the track wraps
+   within it - a local row-height change - rather than widening the track and shoving the value columns. */
+.layout-root .kv.kv-multi.kv-fixed-label .field .label {
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: break-word;
+}
 /* Multi-column panels have no fixed control track, so every control is sized to its display-width tier
  * (--val-ch, set by the tier class on .field-control) and left-aligned within its (auto) value track, so
  * columns stay aligned while each box hugs its tier. See the UX rule "Size fields to a small display-width

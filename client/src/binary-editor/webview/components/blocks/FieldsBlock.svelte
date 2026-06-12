@@ -5,7 +5,7 @@
     import Field from "../Field.svelte";
     import JoinedField from "../JoinedField.svelte";
 
-    const { fieldRefs, columns, fields, onedit, byNode, showOffsets = false, joins }: {
+    const { fieldRefs, columns, fields, onedit, byNode, showOffsets = false, joins, labelWidthCh }: {
         fieldRefs: FieldRef[];
         columns?: number;
         fields: Record<FieldRef, Row>;
@@ -14,6 +14,8 @@
         showOffsets?: boolean;
         // Runs of fields folded into one labelled inline row (see the layout `joins` schema).
         joins?: { label: string; fields: FieldRef[]; separator: string }[];
+        // Fixed label-column width (ch) - stable columns where labels are rewritten at runtime (see schema).
+        labelWidthCh?: number;
     } = $props();
 
     // Multi-column list: each column is a (label, value) pair of tracks - `max-content` so the label hugs
@@ -30,13 +32,16 @@
     // divided across the columns. The default row flow would instead snake left-to-right across rows.
     const rendered = $derived(fieldRefs.filter((ref) => !folded.has(ref)).length);
     const rows = $derived(multi ? Math.ceil(rendered / (columns ?? 1)) : 0);
+    // Label track: fixed `<labelWidthCh>ch` when given (stable columns despite runtime label rewrites), else
+    // `max-content` (hugs the widest current label - fine for static labels).
+    const labelTrack = $derived(labelWidthCh !== undefined ? `${labelWidthCh}ch` : "max-content");
     const style = $derived(
         multi
-            ? `grid-template-columns:repeat(${columns},max-content auto);grid-auto-flow:column;grid-template-rows:repeat(${rows},auto)`
+            ? `grid-template-columns:repeat(${columns},${labelTrack} auto);grid-auto-flow:column;grid-template-rows:repeat(${rows},auto)`
             : "",
     );
 </script>
-<div class="kv" class:kv-multi={multi} {style}>
+<div class="kv" class:kv-multi={multi} class:kv-fixed-label={labelWidthCh !== undefined} {style}>
     {#each fieldRefs as ref (ref)}
         {@const join = joinByAnchor.get(ref)}
         {#if join}

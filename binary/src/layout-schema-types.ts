@@ -39,6 +39,12 @@ const fieldsBlockSchema = z.strictObject({
     fields: z.array(fieldRefSchema).min(1),
     columns: z.number().int().positive().optional(),
     joins: z.array(joinSchema).optional(),
+    /** Fixed label-column width, in `ch`. By default the label track is `max-content` - it hugs the widest
+     * current label, which is fine when labels are static. Set this where a label is REWRITTEN at runtime (the
+     * effect detail relabels parameter1/parameter2 per opcode): a fixed track keeps the value columns from
+     * jumping left/right as the label text changes. Sized to the common longest label; a rare longer one wraps
+     * (a local row-height change) rather than shifting the columns. */
+    labelWidthCh: z.number().int().positive().optional(),
 });
 
 /**

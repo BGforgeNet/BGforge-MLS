@@ -54,6 +54,19 @@ are driven by one CSS variable (`--bb-col-gap` on `.layout-root`, consumed by `.
 so they cannot drift apart. When adding a new multi-column or multi-block layout, reuse that variable rather
 than minting a fresh gap value. Guarded by the ITM render harness ("inter-block gap equals inter-column gap").
 
+## Stable layout: columns don't jump on mutations
+
+Editing a value (or anything that rewrites a label) must not shift the layout. Column positions are fixed by
+construction, never derived from the current runtime content: value controls use fixed display-width tiers (so
+a longer value never widens its box), and where a LABEL is rewritten at runtime the label column is given a
+fixed width too. The live case is the effect detail - the opcode overlay relabels `parameter1`/`parameter2`
+per opcode ("Statistic Modifier", "Slot Amount Modifier", ...), so a `max-content` label track would resize and
+the value columns would jump left/right on every opcode change. The effect-body fields blocks therefore carry a
+fixed `labelWidthCh` (see the `fields` block schema), sized for the common longest label; a rare longer opcode
+label wraps within the track (a local row-height change) instead of reflowing the columns. A short label in a
+fixed track leaves space before its control - that is the intended fixed-track alignment, the same as the value
+tiers, not a defect. Guarded by the ITM render harness ("value columns stay put when ... labels change").
+
 ## Hex display for type-encoded IDs
 
 Some numeric fields display in hex rather than decimal because the value is a packed `(type << 24) | index`

@@ -450,6 +450,39 @@ check(
 const opcodeCombobox = await effectsPanel.locator(".detail .bb-combobox-input").count();
 check("effects: opcode detail field is a searchable combobox", opcodeCombobox >= 1, `count=${opcodeCombobox}`);
 
+// The feature block's min/max level range folds into one "Level" cell with two side-by-side boxes (the same
+// joined-field shape as Probability / Dice), not two separate "Minimum Level" / "Maximum Level" rows.
+const levelCell = effectsPanel
+    .locator(".detail .layout-root .field")
+    .filter({ has: page.locator(".label", { hasText: /^Level$/ }) })
+    .first();
+const levelInputs = await levelCell.locator(".field-control.joined input").count();
+check(
+    "effects: level range folds into one 'Level' cell with two boxes",
+    levelInputs === 2,
+    `levelInputs=${levelInputs}`,
+);
+
+// Stable-columns guard: the opcode overlay relabels parameter1/parameter2 per opcode, but the effect-body
+// label column is fixed-width, so the value columns must NOT shift left/right when a different effect (and so
+// a different opcode + parameter labels) is selected. Measure the col-2 "Timing" control's left edge across
+// all three effects (opcodes 10/20/21); they must coincide.
+const timingLefts: number[] = [];
+for (let i = 0; i < 3; i++) {
+    await selectRow(effectsPanel, i);
+    const left = await effectsPanel
+        .locator('.detail .bb-select-trigger[aria-label="Timing"]')
+        .first()
+        .evaluate((el) => Math.round(el.getBoundingClientRect().left));
+    timingLefts.push(left);
+}
+const stableCols = timingLefts.every((l) => Math.abs(l - timingLefts[0]!) <= 1);
+check(
+    "effects: value columns stay put when opcode/parameter labels change (fixed label column)",
+    stableCols,
+    `timingLefts=${JSON.stringify(timingLefts)}`,
+);
+
 // ============================================================
 // REGRESSION: wm_sbook.itm remove-first-effect (equipping count 0). Dispatch-level, DOM-independent.
 // ============================================================
