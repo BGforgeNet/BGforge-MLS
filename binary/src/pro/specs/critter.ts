@@ -1,6 +1,6 @@
 import { u32, i8, i32 } from "typed-binary";
 import { i24 } from "../../spec/codec-meta";
-import { CritterFlags, BodyType, KillType, DamageType, ScriptType, Gender } from "../types";
+import { CritterFlags, CritterFlagsExt, BodyType, KillType, DamageType, ScriptType, Gender } from "../types";
 import type { FieldSpec, SpecData } from "../../spec/types";
 import type { StructPresentation } from "../../spec/presentation";
 
@@ -14,7 +14,7 @@ import type { StructPresentation } from "../../spec/presentation";
  * schema matches the wire format.
  */
 export const critterSpec = {
-    flagsExt: { codec: u32 },
+    flagsExt: { codec: u32, flags: CritterFlagsExt },
     scriptType: { codec: i8, enum: ScriptType },
     scriptId: { codec: i24 },
     headFrmId: { codec: i32 },
@@ -138,6 +138,7 @@ export type CritterData = SpecData<typeof critterSpec>;
  * Enum/flags rendering comes from the spec (`enum:` / `flags:`), not from here.
  */
 export const critterPresentation: StructPresentation<CritterData> = {
+    flagsExt: { label: "Flags Ext" },
     scriptType: { label: "Script Type" },
     scriptId: { label: "Script ID" },
     // Packed type-encoded FID (FRM type in the high byte); hex like MAP FID/PID. -1 (0xffffffff) = none.

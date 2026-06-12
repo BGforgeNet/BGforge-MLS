@@ -135,6 +135,16 @@ const critterRows: LayoutRow[] = [
                             NoKnock: "Cannot be knocked down",
                         },
                     },
+                    {
+                        kind: "flags",
+                        field: k("flagsExt"),
+                        columns: 1,
+                        // Proto "Flags Ext" action flags - which interactions the critter allows.
+                        descriptions: {
+                            Look: "Can be examined",
+                            "Can talk to": "Conversation is possible",
+                        },
+                    },
                 ],
             },
             { title: "Demographics", blocks: [{ kind: "fields", fields: [k("age"), k("gender")] }] },

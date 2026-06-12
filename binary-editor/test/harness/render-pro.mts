@@ -78,8 +78,17 @@ check(
 );
 check("Stats matrix has 4 column groups", dom.matrixGroups === 4, `count=${dom.matrixGroups}`);
 check("Skills grid has 18 entries", dom.skills === 18, `count=${dom.skills}`);
-check("Critter flags render as 2 columns", dom.flagCols === 2, `count=${dom.flagCols}`);
-check("all 11 critter flags carry a tooltip", dom.flagTooltips === 11, `count=${dom.flagTooltips}`);
+// Scripts & AI holds two flag boxes: behavior `critterFlags` (2 columns) + `flagsExt` action flags (1 column).
+check(
+    "Critter flag boxes render (3 columns: critterFlags 2 + flagsExt 1)",
+    dom.flagCols === 3,
+    `count=${dom.flagCols}`,
+);
+check(
+    "all critter flags carry a tooltip (11 behavior + 2 action)",
+    dom.flagTooltips === 13,
+    `count=${dom.flagTooltips}`,
+);
 check("no section tabs (single page)", dom.tabs === 0, `count=${dom.tabs}`);
 check("editable controls render (> 80)", dom.controls > 80, `count=${dom.controls}`);
 

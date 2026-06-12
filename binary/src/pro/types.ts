@@ -271,6 +271,17 @@ export const CritterFlags: Record<number, string> = {
     0x00004000: "NoKnock",
 };
 
+/**
+ * Critter proto `flagsExt` (the proto "Flags Ext" / `extendedFlags` action-flag bitfield - distinct from the
+ * common object `flags` and the critter behavior `critterFlags`). Only two bits are defined for critters; the
+ * values are cross-checked against fallout2-ce `ItemProtoExtendedFlags` (`PROTO_EXT_FLAG_LOOK` /
+ * `_CAN_TALK_TO`) and the falloutmods PRO_File_Format wiki.
+ */
+export const CritterFlagsExt: Record<number, string> = {
+    0x00002000: "Look",
+    0x00004000: "Can talk to",
+};
+
 // Critter gender (demographics)
 export const Gender: Record<number, string> = {
     0: "Male",
