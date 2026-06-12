@@ -225,6 +225,42 @@ export const ItmKitUsabilityByte4Flags: Readonly<Record<number, string>> = {
     0x80: "Conjurer",
 };
 
+/**
+ * Required weapon proficiency (IESDP "Header Proficiency"): the proficiency-type code an item needs, not a
+ * scalar. Named values 0x59-0x73 plus 0 "None"; the gap below 0x59 is unused and 0x74+ are mod-extensible
+ * "Extra Proficiency" slots (PROFICIENCY.IDS), so callers mark the field `enumOpen`.
+ */
+export const ItmWeaponProficiency: Readonly<Record<number, string>> = {
+    0x00: "None",
+    0x59: "Bastard Sword",
+    0x5a: "Long Sword",
+    0x5b: "Short Sword",
+    0x5c: "Axe",
+    0x5d: "Two-Handed Sword",
+    0x5e: "Katana",
+    0x5f: "Scimitar / Wakizashi / Ninja-To",
+    0x60: "Dagger",
+    0x61: "War Hammer",
+    0x62: "Spear",
+    0x63: "Halberd",
+    0x64: "Flail / Morningstar",
+    0x65: "Mace",
+    0x66: "Quarterstaff",
+    0x67: "Crossbow",
+    0x68: "Long Bow",
+    0x69: "Short Bow",
+    0x6a: "Darts",
+    0x6b: "Sling",
+    0x6c: "Blackjack",
+    0x6d: "Gun",
+    0x6e: "Martial Arts",
+    0x6f: "Two-Handed Weapon Skill",
+    0x70: "Sword and Shield Skill",
+    0x71: "Single Weapon Skill",
+    0x72: "Two Weapon Skill",
+    0x73: "Club",
+};
+
 // -- Ability (extended_header) lookups --------------------------------------
 
 /** ITM ability `attackType` (char). */

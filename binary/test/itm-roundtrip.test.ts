@@ -45,6 +45,16 @@ describe("itmParser - round-trip on real ITM v1 fixtures", () => {
         expect(kit1?.flagOptions).toBeDefined();
     });
 
+    test("weapon proficiency decodes as a named enum, not a raw integer", () => {
+        // IESDP "Header Proficiency": the byte is a proficiency-type code (Long Sword, Crossbow, ...), not a
+        // scalar. It must carry that enum so the editor renders a dropdown.
+        const bytes = new Uint8Array(fs.readFileSync(FIRST_FIXTURE));
+        const result = itmParser.parse(bytes);
+        const header = result.root.fields[0] as { fields: Array<{ name?: string; type?: string }> };
+        const prof = header.fields.find((f) => f.name === "Weapon Proficiency");
+        expect(prof?.type).toBe("enum");
+    });
+
     test("canonical document has no opaqueRanges (full byte-level decode)", () => {
         const bytes = new Uint8Array(fs.readFileSync(FIRST_FIXTURE));
         const result = itmParser.parse(bytes);
