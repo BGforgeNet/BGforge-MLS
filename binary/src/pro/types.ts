@@ -157,6 +157,45 @@ export const WeaponAnimCode: Record<number, string> = {
     15: "Sfall 15",
 };
 
+// Weapon ammo caliber - values 0x00-0x12 (CALIBER_TYPE_NONE..CALIBER_TYPE_7_62). Names and ordering
+// cross-checked against fallout2-ce `proto_types.h` (CALIBER_TYPE_* enum, COUNT = 19).
+export const Caliber: Record<number, string> = {
+    0: "None",
+    1: "Rocket",
+    2: "Flamethrower Fuel",
+    3: "C Energy Cell",
+    4: "D Energy Cell",
+    5: ".223",
+    6: "5mm",
+    7: ".40 cal",
+    8: "10mm",
+    9: ".44 cal",
+    10: "14mm",
+    11: "12 gauge",
+    12: "9mm",
+    13: "BB",
+    14: ".45 cal",
+    15: "2mm",
+    16: "4.7mm Caseless",
+    17: "NH Needler",
+    18: "7.62",
+};
+
+// Item attack-mode subtype - the per-nibble value of the item-common "Attack modes" byte (primary in the low
+// nibble, secondary in the high nibble). Names and 0-8 ordering are from fallout2-ce `item.cc` `_attack_subtype`
+// (cross-checked against sfall `EngineUtils.cpp` `weapon_types`). 4-bit field, so values 9-15 are unused.
+export const AttackSubType: Record<number, string> = {
+    0: "None",
+    1: "Punch",
+    2: "Kick",
+    3: "Swing",
+    4: "Thrust",
+    5: "Throw",
+    6: "Single",
+    7: "Burst",
+    8: "Continuous",
+};
+
 // Stats (for drugs) - includes -2 (random) and -1 (none)
 export const StatType: Record<number, string> = {
     [-2]: "Random",

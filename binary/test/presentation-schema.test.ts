@@ -42,6 +42,28 @@ describe("presentation-schema", () => {
         });
     });
 
+    it("renders both the weapon and ammo caliber as named dropdowns", () => {
+        // PRO is not spec-derived (unlike the IE formats); a non-critter enum only reaches the editor as a
+        // dropdown when it is listed in the hand-written presentation schema. Caliber is the same table on the
+        // weapon and on the ammo that feeds it, so both paths must be wired.
+        for (const path of ["pro.weaponStats.caliber", "pro.ammoStats.caliber"] as const) {
+            expect(resolveFieldPresentation("pro", path, "Caliber")).toEqual({
+                label: "Caliber",
+                presentationType: "enum",
+                enumOptions: expect.objectContaining({ "0": "None", "6": "5mm", "8": "10mm" }),
+            });
+        }
+    });
+
+    it("renders the item attack-mode nibbles as named dropdowns", () => {
+        for (const slot of ["attackModePrimary", "attackModeSecondary"] as const) {
+            expect(resolveFieldPresentation("pro", `pro.itemProperties.${slot}`, "Attack Mode")).toMatchObject({
+                presentationType: "enum",
+                enumOptions: expect.objectContaining({ "0": "None", "1": "Punch", "8": "Continuous" }),
+            });
+        }
+    });
+
     it("merges pattern metadata for dynamic MAP fields", () => {
         expect(resolveFieldPresentation("map", "map.objects.elevations[].objects[].base.pid", "PID")).toEqual({
             numericFormat: "hex32",

@@ -16,7 +16,8 @@
         "sections": {
             "itemProperties": {
                 "flagsExt": ["look", "pickUp", "use"],
-                "attackModes": 5,
+                "attackModePrimary": 5,
+                "attackModeSecondary": 0,
                 "scriptType": -1,
                 "scriptId": -1,
                 "subType": 3,

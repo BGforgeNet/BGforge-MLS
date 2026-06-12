@@ -7,6 +7,8 @@
 
 import {
     ActionFlags,
+    AttackSubType,
+    Caliber,
     ContainerFlags,
     DamageType,
     ElevatorType,
@@ -92,6 +94,16 @@ export const proPresentationSchema: FormatPresentationSchema = formatPresentatio
             presentationType: "enum",
             enumOptions: stringifyKeys(WeaponAnimCode),
         },
+        "pro.weaponStats.caliber": {
+            label: "Caliber",
+            presentationType: "enum",
+            enumOptions: stringifyKeys(Caliber),
+        },
+        "pro.ammoStats.caliber": {
+            label: "Caliber",
+            presentationType: "enum",
+            enumOptions: stringifyKeys(Caliber),
+        },
         "pro.drugStats.affectedStats.stat0": {
             label: "Stat 0",
             presentationType: "enum",
@@ -131,6 +143,16 @@ export const proPresentationSchema: FormatPresentationSchema = formatPresentatio
             label: "Flags Ext",
             presentationType: "flags",
             flagOptions: stringifyKeys(ItemFlagsExt),
+        },
+        "pro.itemProperties.attackModePrimary": {
+            label: "Attack Mode (Primary)",
+            presentationType: "enum",
+            enumOptions: stringifyKeys(AttackSubType),
+        },
+        "pro.itemProperties.attackModeSecondary": {
+            label: "Attack Mode (Secondary)",
+            presentationType: "enum",
+            enumOptions: stringifyKeys(AttackSubType),
         },
         "pro.sceneryProperties.wallLightFlags": {
             label: "Wall Light Flags",

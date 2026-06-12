@@ -1,9 +1,11 @@
 import { u32 } from "typed-binary";
+import { Caliber } from "../types";
 import type { FieldSpec, SpecData } from "../../spec/types";
 import type { StructPresentation } from "../../spec/presentation";
 
 export const ammoSpec = {
-    caliber: { codec: u32 },
+    // Same caliber table as the weapon that fires it (the ammo must match the weapon's caliber).
+    caliber: { codec: u32, enum: Caliber },
     quantity: { codec: u32 },
     acModifier: { codec: u32 },
     drModifier: { codec: u32 },

@@ -48,7 +48,8 @@
         "sections": {
             "itemProperties": {
                 "flagsExt": [],
-                "attackModes": 0,
+                "attackModePrimary": 0,
+                "attackModeSecondary": 0,
                 "scriptType": -1,
                 "scriptId": -1,
                 "subType": 4,

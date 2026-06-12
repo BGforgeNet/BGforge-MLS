@@ -1,5 +1,5 @@
 import { u8, u32, i32 } from "typed-binary";
-import { DamageType, WeaponAnimCode } from "../types";
+import { Caliber, DamageType, WeaponAnimCode } from "../types";
 import type { FieldSpec, SpecData } from "../../spec/types";
 import type { StructPresentation } from "../../spec/presentation";
 
@@ -17,7 +17,7 @@ export const weaponSpec = {
     criticalFail: { codec: u32 },
     perk: { codec: u32 },
     rounds: { codec: u32 },
-    caliber: { codec: u32 },
+    caliber: { codec: u32, enum: Caliber },
     ammoPid: { codec: i32 },
     maxAmmo: { codec: u32 },
     soundId: { codec: u8 },

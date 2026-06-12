@@ -1,5 +1,5 @@
 import { u8, u32, i8, i32 } from "typed-binary";
-import { ItemFlagsExt, ItemSubType, MaterialType, ScriptType } from "../types";
+import { AttackSubType, ItemFlagsExt, ItemSubType, MaterialType, ScriptType } from "../types";
 import type { FieldSpec, SpecData } from "../../spec/types";
 import type { StructPresentation } from "../../spec/presentation";
 import { i24, u24 } from "../../spec/codec-meta";
@@ -14,7 +14,11 @@ import { i24, u24 } from "../../spec/codec-meta";
  */
 export const itemCommonSpec = {
     flagsExt: { codec: u24, flags: ItemFlagsExt },
-    attackModes: { codec: u8 },
+    // The "Attack modes" byte packs two independent attack-mode subtypes: primary in the low nibble, secondary
+    // in the high nibble (fallout2-ce reads `extendedFlags & 0xF` / `>> 4`). Split into two packed parts sharing
+    // the one wire byte so each renders as its own dropdown, the same shape as the CRE proficiency byte split.
+    attackModePrimary: { codec: u8, packedAs: "attackModes", bitRange: [0, 4], enum: AttackSubType, enumOpen: true },
+    attackModeSecondary: { codec: u8, packedAs: "attackModes", bitRange: [4, 4], enum: AttackSubType, enumOpen: true },
     scriptType: { codec: i8, enum: ScriptType },
     scriptId: { codec: i24 },
     subType: { codec: u32, enum: ItemSubType },
@@ -30,7 +34,8 @@ export type ItemCommonData = SpecData<typeof itemCommonSpec>;
 
 export const itemCommonPresentation: StructPresentation<ItemCommonData> = {
     flagsExt: { label: "Flags Ext" },
-    attackModes: { label: "Attack Modes" },
+    attackModePrimary: { label: "Attack Mode (Primary)" },
+    attackModeSecondary: { label: "Attack Mode (Secondary)" },
     scriptType: { label: "Script Type" },
     scriptId: { label: "Script ID" },
     subType: { label: "Sub Type" },
