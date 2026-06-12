@@ -43,18 +43,6 @@ const codiconCss = fs
         `src: url("data:font/ttf;base64,${codiconTtf}") format("truetype")`,
     );
 
-// Harness-only capture override. The real editor caps a master-detail at 24rem with an internal scroll so a
-// long list (e.g. MAP's 2000+ objects) does not expand the page; that also clips the lower part of a detail
-// FORM in a screenshot, so a reviewer never sees the whole form. For capture, uncap the master-detail and the
-// detail pane (show the entire form) while bounding the MASTER list via its own .vlist max-height (exactly how
-// inline lists stay bounded) - so a short list hugs its rows and a 2000-row list still scrolls instead of
-// rendering every row. Appended after styles.css so these rules win. Harness-only: never shipped to VS Code.
-const HARNESS_CAPTURE_CSS = `
-.layout-root .master-detail { max-height: none; align-items: flex-start; }
-.layout-root .detail { overflow: visible; max-height: none; }
-.layout-root .master .vlist { height: auto; max-height: 24rem; }
-`;
-
 // Strict nonce CSP mirrors the real binary-editor webview (provider.ts). font-src allows data: so the inlined
 // codicon @font-face (data: URI above) loads; the same nonce is applied to both the inlined <style> and the
 // inlined <script> so Chromium enforces the policy identically to the real webview.
@@ -67,7 +55,7 @@ const html = `<!doctype html>
 <meta http-equiv="Content-Security-Policy"
     content="default-src 'none'; font-src data:; style-src 'nonce-${nonce}'; script-src 'nonce-${nonce}';" />
 <style nonce="${nonce}">
-${THEME_VARS}${codiconCss}${css}${HARNESS_CAPTURE_CSS}
+${THEME_VARS}${codiconCss}${css}
 </style></head>
 <body><div id="app"></div><script nonce="${nonce}">${js}</script></body></html>`;
 

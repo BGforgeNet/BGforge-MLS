@@ -225,14 +225,23 @@ button:disabled {
     overflow: auto;
 }
 
-/* Variable-length lists embedded in the dense declarative layout need a bounded, scrollable viewport.
-   VirtualList sizes its render window from the .vlist clientHeight; an unbounded layout panel otherwise lets
-   a master-detail list expand to every row (thousands for a MAP elevation, making the page tens of thousands
-   of px tall) and collapses an inline list (whose .vlist is height:100% of an auto-height parent) to zero so
-   no rows show. Cap both so each list scrolls within its panel. Outside .layout-root (the legacy tabs path),
-   the list fills a flex-bounded body and these rules do not apply. */
+/* Variable-length lists embedded in the dense declarative layout need a bounded, scrollable viewport for the
+   VirtualList: it sizes its render window from the .vlist clientHeight, so without a bound a long list (a MAP
+   elevation has thousands of objects) would render every row. Bound the LIST viewport only (.master .vlist),
+   and let the detail FORM grow to its natural height and flow into the page scroll - so a tall detail (e.g. an
+   ITM ability) shows in full under one page scroll instead of a nested inner scrollbar. align-items:flex-start
+   keeps the short master column hugging the top instead of stretching to the detail's height. The inline-list
+   variant is bounded the same way below. Outside .layout-root (the legacy tabs path), the list fills a
+   flex-bounded body and these rules do not apply. */
 .layout-root .master-detail {
-    max-height: 46.8rem;
+    align-items: flex-start;
+}
+.layout-root .detail {
+    overflow: visible;
+}
+.layout-root .master .vlist {
+    height: auto;
+    max-height: 24rem;
 }
 .layout-root .inline-list {
     display: flex;
