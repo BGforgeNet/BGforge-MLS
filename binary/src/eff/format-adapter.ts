@@ -4,7 +4,7 @@ import { rebuildEffCanonicalDocument } from "./canonical";
 import { createCanonicalEffJsonSnapshot, loadCanonicalEffJsonSnapshot } from "./json-snapshot";
 import { effCompiledPatternFields, effDomainRanges, effPresentationSchema } from "./presentation-schema";
 import { effLayout } from "./layout-schema";
-import { slugify } from "../snapshot-common";
+import { slugify } from "../spec/presentation";
 
 function effSemanticFieldKey(segments: readonly string[]): string | undefined {
     if (segments.length === 0) return undefined;

@@ -13,7 +13,7 @@ import {
 import { effectSpecAnnotated } from "../ie-common/specs/effect.overrides";
 import { toPresentationEntries } from "../spec/derive-presentation";
 import { toDomainRanges } from "../spec/derive-domain-ranges";
-import { splAbilitySpecAnnotated } from "./specs/ability.overrides";
+import { splAbilityPresentation, splAbilitySpecAnnotated } from "./specs/ability.overrides";
 import { splHeaderSpecAnnotated } from "./specs/header.overrides";
 
 export const splPresentationSchema: FormatPresentationSchema = formatPresentationSchema.parse({
@@ -21,7 +21,7 @@ export const splPresentationSchema: FormatPresentationSchema = formatPresentatio
     format: "spl",
     exactFields: {
         ...toPresentationEntries(splHeaderSpecAnnotated, {}, "spl.header"),
-        ...toPresentationEntries(splAbilitySpecAnnotated, {}, "spl.abilities[]"),
+        ...toPresentationEntries(splAbilitySpecAnnotated, splAbilityPresentation, "spl.abilities[]"),
         ...toPresentationEntries(effectSpecAnnotated, {}, "spl.effects[]"),
     },
     patternFields: [],

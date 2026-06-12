@@ -38,3 +38,24 @@ export function humanize(fieldName: string): string {
         .replaceAll(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
         .replace(/^(.)/, (c) => c.toUpperCase());
 }
+
+/**
+ * Convert a display label to the camelCase segment used in a field's semantic key. Roughly the inverse of
+ * `humanize`: a default label `humanize(key)` slugifies back to `key`, while a custom label slugifies to its
+ * own camelCase form. Lives in this leaf (no imports) so the display walker and the presentation deriver key
+ * fields identically without an import cycle.
+ */
+export function slugify(label: string): string {
+    const normalized = label
+        .replaceAll(/([a-z0-9])([A-Z])/g, "$1 $2")
+        .replaceAll(/[^A-Za-z0-9]+/g, " ")
+        .trim()
+        .toLowerCase();
+
+    if (!normalized) {
+        return "field";
+    }
+
+    const parts = normalized.split(/\s+/);
+    return parts.map((part, index) => (index === 0 ? part : `${part[0]!.toUpperCase()}${part.slice(1)}`)).join("");
+}

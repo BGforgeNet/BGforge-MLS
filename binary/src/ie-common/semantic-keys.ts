@@ -7,7 +7,7 @@
  * own mappings in their format-adapter.ts.
  */
 
-import { slugify } from "../snapshot-common";
+import { slugify } from "../spec/presentation";
 
 export function abilityEffectsSemanticFieldKey(
     formatId: string,

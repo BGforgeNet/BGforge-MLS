@@ -13,8 +13,8 @@ import {
 import { effBodySpecAnnotated } from "../eff/specs/body.overrides";
 import { toPresentationEntries } from "../spec/derive-presentation";
 import { toDomainRanges } from "../spec/derive-domain-ranges";
-import { slugify } from "../snapshot-common";
-import { creEffectV1Spec } from "./specs/effect-v1";
+import { slugify } from "../spec/presentation";
+import { creEffectV1SpecAnnotated } from "./specs/effect-v1.overrides";
 import { creHeaderPresentation, creHeaderSpecAnnotated } from "./specs/header.overrides";
 import { creItemSpecAnnotated } from "./specs/item.overrides";
 import { creKnownSpellSpecAnnotated } from "./specs/known-spell.overrides";
@@ -51,7 +51,7 @@ export const crePresentationSchema: FormatPresentationSchema = formatPresentatio
         ...toPresentationEntries(creSpellMemInfoSpecAnnotated, {}, "cre.spellMemInfo[]"),
         ...toPresentationEntries(creMemorizedSpellSpecAnnotated, {}, "cre.memorizedSpells[]"),
         ...toPresentationEntries(creItemSpecAnnotated, {}, "cre.items[]"),
-        ...toPresentationEntries(creEffectV1Spec, {}, "cre.effects[].v1"),
+        ...toPresentationEntries(creEffectV1SpecAnnotated, {}, "cre.effects[].v1"),
         ...toPresentationEntries(effBodySpecAnnotated, {}, "cre.effects[].v2"),
         ...itemSlotEntries,
     },
@@ -70,6 +70,6 @@ export const creDomainRanges: Readonly<Record<string, NumericRange>> = {
     ...toDomainRanges(creSpellMemInfoSpecAnnotated, "cre.spellMemInfo[]"),
     ...toDomainRanges(creMemorizedSpellSpecAnnotated, "cre.memorizedSpells[]"),
     ...toDomainRanges(creItemSpecAnnotated, "cre.items[]"),
-    ...toDomainRanges(creEffectV1Spec, "cre.effects[].v1"),
+    ...toDomainRanges(creEffectV1SpecAnnotated, "cre.effects[].v1"),
     ...toDomainRanges(effBodySpecAnnotated, "cre.effects[].v2"),
 };

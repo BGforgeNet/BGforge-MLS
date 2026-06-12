@@ -43,9 +43,8 @@ describe("presentation-schema", () => {
     });
 
     it("renders both the weapon and ammo caliber as named dropdowns", () => {
-        // PRO is not spec-derived (unlike the IE formats); a non-critter enum only reaches the editor as a
-        // dropdown when it is listed in the hand-written presentation schema. Caliber is the same table on the
-        // weapon and on the ammo that feeds it, so both paths must be wired.
+        // Caliber is the same enum on the weapon and on the ammo that feeds it; PRO derives both from their
+        // specs, so both semantic keys resolve through the API.
         for (const path of ["pro.weaponStats.caliber", "pro.ammoStats.caliber"] as const) {
             expect(resolveFieldPresentation("pro", path, "Caliber")).toEqual({
                 label: "Caliber",
@@ -62,6 +61,27 @@ describe("presentation-schema", () => {
                 enumOptions: expect.objectContaining({ "0": "None", "1": "Punch", "8": "Continuous" }),
             });
         }
+    });
+
+    it("resolves custom-labeled IE flag fields at their real semantic key", () => {
+        // The walker keys these by slugify(custom label): idRequired -> "Identification" -> "identification",
+        // friendly -> "Disposition" -> "disposition". The derived schema must use the same key, which means it
+        // must be derived with the REAL parsing presentation, not {}.
+        expect(
+            resolveFieldPresentation("itm", "itm.abilities[].identification", "Identification")?.presentationType,
+        ).toBe("flags");
+        expect(resolveFieldPresentation("spl", "spl.abilities[].disposition", "Disposition")?.presentationType).toBe(
+            "flags",
+        );
+    });
+
+    it("covers Fallout critter enums once PRO derives from spec", () => {
+        // The hand-written PRO schema never listed critter fields (critter rendered spec-driven). Deriving PRO
+        // from the same specs closes that gap - the critter's enum/flag fields now resolve through the API too.
+        expect(resolveFieldPresentation("pro", "pro.critter.bodyType", "Body Type")?.presentationType).toBe("enum");
+        expect(resolveFieldPresentation("pro", "pro.critter.critterFlags", "Critter Flags")?.presentationType).toBe(
+            "flags",
+        );
     });
 
     it("merges pattern metadata for dynamic MAP fields", () => {

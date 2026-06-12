@@ -22,7 +22,7 @@ import {
 } from "./object-ops";
 import { mapCompiledPatternFields, mapDomainRanges, mapPresentationSchema } from "./presentation-schema";
 import { mapLayout } from "./layout-schema";
-import { slugify } from "../snapshot-common";
+import { slugify } from "../spec/presentation";
 
 function mapSemanticFieldKey(segments: readonly string[]): string | undefined {
     if (segments.length === 0) {

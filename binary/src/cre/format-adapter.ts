@@ -5,7 +5,7 @@ import { rebuildCreCanonicalDocument } from "./canonical";
 import { createCanonicalCreJsonSnapshot, loadCanonicalCreJsonSnapshot } from "./json-snapshot";
 import { creCompiledPatternFields, creDomainRanges, crePresentationSchema } from "./presentation-schema";
 import { creLayout } from "./layout-schema";
-import { slugify } from "../snapshot-common";
+import { slugify } from "../spec/presentation";
 import { CRE_GROUP_LABELS, CRE_ITEM_REF_SLOT_COUNT } from "./types";
 import {
     buildCreAddEntryBytes,

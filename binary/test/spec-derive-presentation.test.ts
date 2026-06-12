@@ -12,12 +12,46 @@ describe("toPresentationEntries", () => {
         };
         const pres: StructPresentation<T> = { kind: { label: "Object Type" } };
 
+        // Keyed by slugify(label) = "objectType" (what the consumer looks up), not the spec field name "kind".
         expect(toPresentationEntries(spec, pres, "pro.header")).toEqual({
-            "pro.header.kind": {
+            "pro.header.objectType": {
                 label: "Object Type",
                 presentationType: "enum",
                 enumOptions: { 0: "Item", 1: "Critter" },
             },
+        });
+    });
+
+    it("keys entries by slugify(label) so they match the consumer's semantic key", () => {
+        // The consumer (resolveFieldPresentation) is called with the field's semantic key, which is
+        // slugify(displayLabel) the same way walkStruct/toSemanticFieldKey derive it - NOT the spec field
+        // name. A custom label that does not slugify back to the field name (idRequired -> "Identification")
+        // must still resolve, so the entry must be keyed by slugify(label).
+        type T = { idRequired: number };
+        const spec: StructSpec<T> = { idRequired: { codec: u32, flags: { 1: "A" } } };
+        const pres: StructPresentation<T> = { idRequired: { label: "Identification" } };
+        expect(toPresentationEntries(spec, pres, "itm.abilities[]")).toEqual({
+            "itm.abilities[].identification": {
+                label: "Identification",
+                presentationType: "flags",
+                flagOptions: { 1: "A" },
+            },
+        });
+    });
+
+    it("nests a field's key under its walker subgroup", () => {
+        // When the walker wraps fields in a named subgroup (e.g. PRO drug "Affected Stats"), the field's
+        // semantic key gains that slugified segment. The deriver must mirror it so the keys still match.
+        type T = { stat0: number; other: number };
+        const spec: StructSpec<T> = {
+            stat0: { codec: u32, enum: { 0: "None" } },
+            other: { codec: u32, enum: { 0: "X" } },
+        };
+        expect(
+            toPresentationEntries(spec, {}, "pro.drugStats", [{ name: "Affected Stats", fields: ["stat0"] }]),
+        ).toEqual({
+            "pro.drugStats.affectedStats.stat0": { presentationType: "enum", enumOptions: { 0: "None" } },
+            "pro.drugStats.other": { presentationType: "enum", enumOptions: { 0: "X" } },
         });
     });
 

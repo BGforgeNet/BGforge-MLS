@@ -4,7 +4,7 @@ import { rebuildProCanonicalDocument } from "./canonical";
 import { proLayout } from "./layout-schema";
 import { proCompiledPatternFields, proDomainRanges, proPresentationSchema } from "./presentation-schema";
 import { isProStructuralFieldId, buildProStructuralTransitionBytes } from "./transition";
-import { slugify } from "../snapshot-common";
+import { slugify } from "../spec/presentation";
 import type { ParseOptions, ParseResult } from "../types";
 
 export const proFormatAdapter: BinaryFormatAdapter = {
