@@ -177,6 +177,54 @@ export const ItmUsabilityByte4Flags: Readonly<Record<number, string>> = {
     0x80: "Half-Orc",
 };
 
+// Kit-usability bitfields (IESDP "Header Kit Usability"): the four kitUsability bytes are bitmasks of kits the
+// item is unusable by, one distinct kit table per byte. Bit positions per the IESDP table; clear typos in the
+// source are normalized to the canonical kit names ("Beserker" -> "Berserker", "Inquisiter" -> "Inquisitor",
+// "Lathlander" -> "Lathander"). "Ferlain" (byte 3, bit 7) is kept verbatim - the source value, unverifiable.
+export const ItmKitUsabilityByte1Flags: Readonly<Record<number, string>> = {
+    0x01: "Cleric of Talos",
+    0x02: "Cleric of Helm",
+    0x04: "Cleric of Lathander",
+    0x08: "Totemic Druid",
+    0x10: "Shapeshifter Druid",
+    0x20: "Avenger Druid",
+    0x40: "Barbarian",
+    0x80: "Wild Mage",
+};
+
+export const ItmKitUsabilityByte2Flags: Readonly<Record<number, string>> = {
+    0x01: "Stalker Ranger",
+    0x02: "Beastmaster Ranger",
+    0x04: "Assassin Thief",
+    0x08: "Bounty Hunter Thief",
+    0x10: "Swashbuckler Thief",
+    0x20: "Blade Bard",
+    0x40: "Jester Bard",
+    0x80: "Skald Bard",
+};
+
+export const ItmKitUsabilityByte3Flags: Readonly<Record<number, string>> = {
+    0x01: "Diviner",
+    0x02: "Enchanter",
+    0x04: "Illusionist",
+    0x08: "Invoker",
+    0x10: "Necromancer",
+    0x20: "Transmuter",
+    0x40: "All (no kit)",
+    0x80: "Ferlain",
+};
+
+export const ItmKitUsabilityByte4Flags: Readonly<Record<number, string>> = {
+    0x01: "Berserker Fighter",
+    0x02: "Wizard Slayer Fighter",
+    0x04: "Kensai Fighter",
+    0x08: "Cavalier Paladin",
+    0x10: "Inquisitor Paladin",
+    0x20: "Undead Hunter Paladin",
+    0x40: "Abjurer",
+    0x80: "Conjurer",
+};
+
 // -- Ability (extended_header) lookups --------------------------------------
 
 /** ITM ability `attackType` (char). */

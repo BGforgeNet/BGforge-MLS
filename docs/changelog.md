@@ -17,6 +17,7 @@
 - Primary type (school) and secondary type now show as named dropdowns instead of raw numbers, wherever they appear - the spell (`.spl`) header, item (`.itm`) abilities, and effects (standalone `.eff` and embedded).
 - An effect's parent-resource flags now show as named checkboxes (Hostile, No LOS required, and so on) instead of a raw number, and its parent-resource type now shows as a named dropdown (None / Spell / Item).
 - An item (`.itm`) ability's arrow / bolt / bullet firing qualifiers now show as Yes / No dropdowns instead of raw 0 / 1 numbers.
+- An item's (`.itm`) kit-usability bytes now show as named checkboxes (Berserker, Kensai, the mage schools, and so on) in their own panel, instead of four raw numbers in the Requirements panel.
 - A Fallout critter proto's extended action flags (Look / Can talk to) now show as named checkboxes instead of being hidden.
 - A Fallout weapon or ammo proto's caliber now shows as a named dropdown (None, 5mm, 10mm, .44, 12 gauge, and so on) instead of a raw number.
 - A Fallout item proto's two attack modes (primary and secondary) now show as named dropdowns (Punch, Kick, Swing, Thrust, Throw, Single, Burst, Continuous) instead of one packed raw number.
