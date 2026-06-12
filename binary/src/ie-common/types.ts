@@ -94,6 +94,16 @@ export const EffectParentResourceFlags: Record<number, string> = {
     0x00010000: "Non-combat ability",
 };
 
+/**
+ * EFF v2 effect `parentResourceType` (the kind of resource that applied the effect). EFF v2 only; the 48-byte
+ * feature block has no parent-resource fields. Values per IESDP eff_v2/body (0x90): 0 None, 1 Spell, 2 Item.
+ */
+export const EffectParentResourceType: Record<number, string> = {
+    0: "None",
+    1: "Spell",
+    2: "Item",
+};
+
 // -- Classification lookups (shared across SPL/ITM/EFF) ---------------------
 
 /**

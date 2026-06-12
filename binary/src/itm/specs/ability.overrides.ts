@@ -15,6 +15,10 @@ import {
 } from "../types";
 import { itmAbilitySpec } from "./ability";
 
+// IESDP types the three firing qualifiers (0x32/0x34/0x36) as 0 = No / 1 = Yes (same shape as the
+// `pro/door` walkThruFlag yes/no field). Closed: the documented value space is exactly {0, 1}.
+const YesNo: Record<number, string> = { 0: "No", 1: "Yes" };
+
 export const itmAbilitySpecAnnotated = {
     ...itmAbilitySpec,
     attackType: { ...itmAbilitySpec.attackType, enum: ItmAbilityAttackType },
@@ -40,6 +44,10 @@ export const itmAbilitySpecAnnotated = {
     damageType: { ...itmAbilitySpec.damageType, enum: ItmAbilityDamageType, enumOpen: true },
     depletion: { ...itmAbilitySpec.depletion, enum: ItmAbilityDepletion },
     flags: { ...itmAbilitySpec.flags, flags: ItmAbilityFlags },
+    // Firing-animation qualifiers (IESDP 0x32/0x34/0x36): boolean 0 = No / 1 = Yes, were raw integers.
+    isArrow: { ...itmAbilitySpec.isArrow, enum: YesNo },
+    isBolt: { ...itmAbilitySpec.isBolt, enum: YesNo },
+    isBullet: { ...itmAbilitySpec.isBullet, enum: YesNo },
     // Per-ability slice into the global effect table. The values are decided
     // by which effects belong to this ability and where the ability sits in
     // the writer's serialisation order - not user data.

@@ -10,6 +10,7 @@ import { i32 } from "typed-binary";
 import { charsSpec, type FieldSpec } from "../../spec/types";
 import {
     EffectParentResourceFlags,
+    EffectParentResourceType,
     EffectResistanceFlags,
     EffectSaveTypeFlags,
     EffectTarget,
@@ -46,6 +47,9 @@ export const effBodySpecAnnotated = {
     // shared with the SPL header and ITM ability fields of the same name.
     school: { ...effBodySpec.school, enum: Schools, enumOpen: true },
     sectype: { ...effBodySpec.sectype, enum: SecondaryTypes, enumOpen: true },
+    // Parent resource kind (0 None / 1 Spell / 2 Item per IESDP eff_v2 0x90); was a raw integer next to the
+    // parent-resource flags. Open: EE/mod data occasionally carries values outside the documented three.
+    parentResourceType: { ...effBodySpec.parentResourceType, enum: EffectParentResourceType, enumOpen: true },
     // Bitfield (flags of the parent SPL); was rendering as a raw integer for want of a flag table.
     parentResourceFlags: { ...effBodySpec.parentResourceFlags, flags: EffectParentResourceFlags },
     // Caster/target coordinates are signed: -1 is a real engine value ("no/origin coordinate"), and
