@@ -9,7 +9,7 @@
     import ListSection from "../ListSection.svelte";
     import InlineList from "../InlineList.svelte";
 
-    const { sectionKey, section, render, bridge, version, selection, onedit, byNode, showOffsets = false,
+    const { sectionKey, section, render, bridge, version, selection, onedit, byNode,
             detailVariant, detailVariantFallbacks, childList, labels }: {
         sectionKey: string;
         section: LayoutSection | undefined;
@@ -19,7 +19,6 @@
         selection: NodeId | undefined;
         onedit: (id: string, v: number | string) => void;
         byNode: Map<string, Diagnostic[]>;
-        showOffsets?: boolean;
         // master-detail only: the shared per-entry layout fragment and the label overrides it applies.
         detailVariant?: DetailRow[];
         // Additional candidate fragments for a multi-record-kind list (e.g. CRE v2 vs v1 effects); the detail
@@ -46,10 +45,10 @@
     <!-- Wrap so the toolbar (+add) and the row list stack vertically within the flex-row panel-blocks,
          matching the master-detail toolbar-above-list layout (InlineList itself emits two sibling roots). -->
     <div class="inline-list">
-        <InlineList parentId={section.nodeId} caps={caps!} {bridge} {version} {selection} {onedit} {showOffsets} />
+        <InlineList parentId={section.nodeId} caps={caps!} {bridge} {version} {selection} {onedit} />
     </div>
 {:else}
     <ListSection {sectionKey} nodeId={section.nodeId} caps={caps!} {bridge} {version} {selection}
-                 onadd={add} {onedit} {byNode} {showOffsets} {detailVariant} {detailVariantFallbacks}
+                 onadd={add} {onedit} {byNode} {detailVariant} {detailVariantFallbacks}
                  {childList} {labels} />
 {/if}

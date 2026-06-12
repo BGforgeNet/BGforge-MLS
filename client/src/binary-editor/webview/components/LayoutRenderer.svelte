@@ -18,11 +18,10 @@
 
     // bridge/version/selection are only needed by `list` blocks (variable-length sections render via the
     // live windowed getChildren path); form-only layouts (PRO/EFF) ignore them.
-    const { layout, onedit, byNode, showOffsets = false, bridge, version, selection }: {
+    const { layout, onedit, byNode, bridge, version, selection }: {
         layout: ResolvedLayout;
         onedit: (id: string, v: number | string) => void;
         byNode: Map<string, Diagnostic[]>;
-        showOffsets?: boolean;
         bridge: Bridge;
         version: number;
         selection: NodeId | undefined;
@@ -89,14 +88,14 @@
                             {#if block.kind === "fields"}
                                 <FieldsBlock fieldRefs={block.fields} columns={block.columns} joins={block.joins}
                                              labelWidthCh={block.labelWidthCh}
-                                             fields={layout.fields} {onedit} {byNode} {showOffsets} />
+                                             fields={layout.fields} {onedit} {byNode} />
                             {:else if block.kind === "group"}
                                 <!-- Boxed, labelled subgroup: a fieldset (flag-group box chrome) wrapping a
                                      nested fields block. Used to nest a cluster (e.g. CRE Class) in a panel. -->
                                 <fieldset class="flag-group">
                                     <legend>{block.label}</legend>
                                     <FieldsBlock fieldRefs={block.fields} columns={block.columns} joins={block.joins}
-                                                 fields={layout.fields} {onedit} {byNode} {showOffsets} />
+                                                 fields={layout.fields} {onedit} {byNode} />
                                 </fieldset>
                             {:else if block.kind === "flags"}
                                 <!-- Box the flag group unless it is the sole block of a titled panel (then the
@@ -112,17 +111,17 @@
                             {:else if block.kind === "matrix"}
                                 <MatrixBlock valueColumns={block.valueColumns} groups={block.groups}
                                              columnWidthPx={block.columnWidthPx} fields={layout.fields}
-                                             {onedit} showBytes={showOffsets} />
+                                             {onedit} />
                             {:else if block.kind === "grid"}
                                 <GridBlock columns={block.columns} items={block.items}
-                                           fields={layout.fields} {onedit} showBytes={showOffsets} />
+                                           fields={layout.fields} {onedit} />
                             {:else if block.kind === "list"}
                                 <ListBlock sectionKey={block.sectionKey} section={layout.sections[block.sectionKey]}
                                            render={block.render} detailVariant={block.detailVariant}
                                            detailVariantFallbacks={block.detailVariantFallbacks}
                                            childList={block.childList} labels={layout.labels}
                                            {bridge} {version} {selection}
-                                           {onedit} {byNode} {showOffsets} />
+                                           {onedit} {byNode} />
                             {:else if block.kind === "spellbook"}
                                 <SpellbookBlock {bridge} {version} {onedit} />
                             {:else}

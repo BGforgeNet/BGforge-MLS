@@ -5,7 +5,6 @@
     import { diagnosticsByNode, bannerSummary } from "../state/diagnostics";
     import { clearSelectionMemory } from "../state/list-selection-memory";
     import LayoutRenderer from "./LayoutRenderer.svelte";
-    import Checkbox from "./primitives/Checkbox.svelte";
     import Icon from "./Icon.svelte";
 
     const { bridge }: { bridge: Bridge } = $props();
@@ -15,9 +14,6 @@
     let version = $state(0);
     // NodeId the host asks the view to select after the latest edit/structure op (undefined = no change).
     let selection = $state<NodeId | undefined>();
-    // Off by default: byte offsets are a developer affordance, not needed by end users.
-    // eslint-disable-next-line prefer-const -- reassigned via the toolbar Checkbox onchange callback
-    let showOffsets = $state(false);
 
     const byNode = $derived(diagnosticsByNode(diagnostics));
     const summary = $derived(bannerSummary(diagnostics));
@@ -85,15 +81,18 @@
     </div>
 {:else}
     <div class="toolbar">
-        <button class="toolbar-btn" onclick={() => bridge.dumpJson()}
-                title="Export the current file contents as JSON to a new editor tab">
-            <Icon name="export" /><span class="toolbar-btn-label">Dump JSON</span>
-        </button>
-        <button class="toolbar-btn" onclick={() => bridge.loadJson()}
-                title="Import JSON from the active editor tab and apply it to the file">
-            <Icon name="go-to-file" /><span class="toolbar-btn-label">Load JSON</span>
-        </button>
-        <Checkbox checked={showOffsets} label="Show bytes" onchange={(v) => { showOffsets = v; }} />
+        <!-- JSON import/export are pushed to the right (toolbar-actions margin-left:auto) so they sit apart
+             from the left-hand view options. -->
+        <div class="toolbar-actions">
+            <button class="toolbar-btn" onclick={() => bridge.dumpJson()}
+                    title="Export the current file contents as JSON to a new editor tab">
+                <Icon name="export" /><span class="toolbar-btn-label">Dump JSON</span>
+            </button>
+            <button class="toolbar-btn" onclick={() => bridge.loadJson()}
+                    title="Import JSON from the active editor tab and apply it to the file">
+                <Icon name="go-to-file" /><span class="toolbar-btn-label">Load JSON</span>
+            </button>
+        </div>
     </div>
     {#if diagnostics.length > 0}
         <div class="banner {bannerSeverity}">
@@ -110,7 +109,7 @@
     {#if open.layout.layout}
         <!-- Every format renders as a single dense page via the generic LayoutRenderer; bridge/version/
              selection are forwarded for `list` blocks (variable-length sections use the windowed path). -->
-        <LayoutRenderer layout={open.layout.layout} onedit={edit} {byNode} {showOffsets}
+        <LayoutRenderer layout={open.layout.layout} onedit={edit} {byNode}
                         {bridge} {version} {selection} />
     {:else}
         <!-- A successfully parsed file always resolves a layout; this only shows if a format ships an adapter

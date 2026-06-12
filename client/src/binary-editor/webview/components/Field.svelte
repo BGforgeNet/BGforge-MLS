@@ -6,9 +6,9 @@
     import EnumField from "./controls/EnumField.svelte";
     import FlagsField from "./controls/FlagsField.svelte";
     import Icon from "./Icon.svelte";
-    const { row, onedit, diagnostics = [], showOffsets = false }:
+    const { row, onedit, diagnostics = [] }:
         { row: Row; onedit: (nodeId: string, value: number | string) => void;
-          diagnostics?: Diagnostic[]; showOffsets?: boolean } = $props();
+          diagnostics?: Diagnostic[] } = $props();
     const kind = $derived(controlKind(row));
     // Display-width tier -> a `tier-{s,m,l}` class on .field-control; CSS maps it to the control box width
     // (--val-ch) so the box sizes to its tier and left-aligns in a fixed grid track (columns stay aligned).
@@ -38,9 +38,6 @@
         {:else if kind === "string"}<StringField {row} onedit={emit} />
         {:else if kind === "enum"}<EnumField {row} onedit={emit} />
         {:else}<FlagsField {row} onedit={emit} />{/if}
-        {#if showOffsets && row.offset !== undefined}
-            <span class="offset" title="byte offset / size / raw value">0x{row.offset.toString(16)}{#if row.size !== undefined} +{row.size}{/if}{#if typeof row.rawValue === "number"} = 0x{(row.rawValue >>> 0).toString(16)}{/if}</span>
-        {/if}
         {#if hasDiag}
             <!-- role="img" + aria-label expose the diagnostic message to screen readers; the Icon span
                  itself is aria-hidden so the glyph character is not announced separately. -->

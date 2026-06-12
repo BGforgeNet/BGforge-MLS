@@ -33,6 +33,13 @@ body {
     padding: 0.5rem 0.75rem;
     border-bottom: 1px solid var(--vscode-panel-border);
 }
+/* JSON import/export grouped on the right edge of the toolbar, apart from the left-hand view options. */
+.toolbar-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
 
 /* ---- toolbar buttons (icon + label, secondary appearance) ---- */
 .toolbar-btn {
@@ -279,16 +286,9 @@ button:disabled {
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.field .offset {
-    margin-left: auto;
-    color: var(--vscode-descriptionForeground);
-    font-family: var(--vscode-editor-font-family, monospace);
-    font-size: 0.9em;
-    text-align: right;
-}
-/* Wraps the control plus its trailing chrome (offset/diagnostic) so .field has exactly two children
+/* Wraps the control plus its trailing chrome (diagnostic) so .field has exactly two children
    (label + value). In the flex tabs path this is the value side; the layout path makes it the subgrid's
-   second column. The offset's margin-left:auto pushes it to the right edge here as before. */
+   second column. */
 .field-control {
     display: flex;
     align-items: center;
@@ -1351,16 +1351,6 @@ input[type="text"]::placeholder {
 .layout-root input[type="number"]::-webkit-outer-spin-button {
     appearance: none;
     margin: 0;
-}
-
-/* Per-cell byte annotation (offset) shown in matrix/grid cells when "Show bytes" is on. Compact and
- * dim so it does not crowd the dense layout; sits under the control in the narrow stat/skill cells. */
-.layout-root .cell-bytes {
-    display: block;
-    color: var(--vscode-descriptionForeground);
-    font-family: var(--vscode-editor-font-family, monospace);
-    font-size: 0.82em;
-    line-height: 1.1;
 }
 
 /* ============================================================================

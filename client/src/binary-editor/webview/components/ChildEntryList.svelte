@@ -9,14 +9,13 @@
     import FormSection from "./FormSection.svelte";
     import Icon from "./Icon.svelte";
 
-    const { ownerId, childList, bridge, version, onedit, byNode, showOffsets = false }: {
+    const { ownerId, childList, bridge, version, onedit, byNode }: {
         ownerId: NodeId;
         childList: LayoutChildList;
         bridge: Bridge;
         version: number;
         onedit: (id: string, v: number | string) => void;
         byNode: Map<string, Diagnostic[]>;
-        showOffsets?: boolean;
     } = $props();
 
     let entries = $state<Row[]>([]);
@@ -64,7 +63,7 @@
                 </div>
                 {#if entry.id === selectedId}
                     <div class="child-row-detail">
-                        <FormSection nodeId={entry.id} {bridge} {version} {onedit} {byNode} {showOffsets} />
+                        <FormSection nodeId={entry.id} {bridge} {version} {onedit} {byNode} />
                     </div>
                 {/if}
             {/each}

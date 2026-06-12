@@ -5,13 +5,12 @@
     import Field from "../Field.svelte";
     import JoinedField from "../JoinedField.svelte";
 
-    const { fieldRefs, columns, fields, onedit, byNode, showOffsets = false, joins, labelWidthCh }: {
+    const { fieldRefs, columns, fields, onedit, byNode, joins, labelWidthCh }: {
         fieldRefs: FieldRef[];
         columns?: number;
         fields: Record<FieldRef, Row>;
         onedit: (id: string, v: number | string) => void;
         byNode: Map<string, Diagnostic[]>;
-        showOffsets?: boolean;
         // Runs of fields folded into one labelled inline row (see the layout `joins` schema).
         joins?: { label: string; fields: FieldRef[]; separator: string }[];
         // Fixed label-column width (ch) - stable columns where labels are rewritten at runtime (see schema).
@@ -49,7 +48,7 @@
         {:else if !folded.has(ref)}
             {@const row = fields[ref]}
             {#if row}
-                <Field {row} {onedit} diagnostics={byNode.get(row.id)} {showOffsets} />
+                <Field {row} {onedit} diagnostics={byNode.get(row.id)} />
             {/if}
         {/if}
     {/each}

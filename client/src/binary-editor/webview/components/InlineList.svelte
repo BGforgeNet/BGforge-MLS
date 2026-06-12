@@ -6,10 +6,10 @@
     import Field from "./Field.svelte";
     import RowActions from "./RowActions.svelte";
 
-    const { parentId, caps, bridge, version, selection, onedit, showOffsets = false }:
+    const { parentId, caps, bridge, version, selection, onedit }:
         { parentId: NodeId; caps: SectionCaps; bridge: Bridge; version: number;
           selection: NodeId | undefined; onedit: (id: string, v: number | string) => void;
-          showOffsets?: boolean } = $props();
+        } = $props();
 
     // Tall enough to contain the active row's inline Field control plus the action bar without overflowing into the
     // next absolutely-positioned row. Inactive rows show a single label/value line and have headroom to spare.
@@ -91,7 +91,7 @@
                     <!-- Every inline row renders its editable control (a variable is a single scalar - there is
                          no "detail" to open, so requiring a click to reveal an input just hides the value behind
                          an interaction). Selecting a row (click) reveals its structure-op actions. -->
-                    <Field {row} {onedit} {showOffsets} />
+                    <Field {row} {onedit} />
                     {#if idx === activeIndex}
                         <RowActions {acts} entryId={row.id} {bridge} compact={true} />
                     {/if}

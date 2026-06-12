@@ -15,7 +15,7 @@
     import FormSection from "./FormSection.svelte";
     import ChildEntryList from "./ChildEntryList.svelte";
 
-    const { nodeId, detailVariant, detailVariantFallbacks, childList, labels, bridge, version, onedit, byNode, showOffsets = false }: {
+    const { nodeId, detailVariant, detailVariantFallbacks, childList, labels, bridge, version, onedit, byNode }: {
         nodeId: NodeId;
         detailVariant?: DetailRow[];
         // Additional candidate fragments for a multi-record-kind list (e.g. CRE v2 vs v1 effects).
@@ -27,7 +27,6 @@
         version: number;
         onedit: (id: string, v: number | string) => void;
         byNode: Map<string, Diagnostic[]>;
-        showOffsets?: boolean;
     } = $props();
 
     let rows = $state<Row[]>([]);
@@ -64,12 +63,12 @@
 </script>
 {#if useVariant}
     <!-- selection/bridge/version are only consumed by `list` blocks, which a detailVariant never contains. -->
-    <LayoutRenderer layout={detailLayout} {onedit} {byNode} {showOffsets} {bridge} {version} selection={undefined} />
+    <LayoutRenderer layout={detailLayout} {onedit} {byNode} {bridge} {version} selection={undefined} />
 {:else}
     <!-- The auto-form hides the childList's entry groups (e.g. "Inventory Entry N") so they are not rendered
          twice - the ChildEntryList below presents them as an editable mini master-detail with add/remove. -->
-    <FormSection {nodeId} {bridge} {version} {onedit} {byNode} {showOffsets} hideGroupPrefix={childList?.entryPrefix} />
+    <FormSection {nodeId} {bridge} {version} {onedit} {byNode} hideGroupPrefix={childList?.entryPrefix} />
 {/if}
 {#if childList}
-    <ChildEntryList ownerId={nodeId} {childList} {bridge} {version} {onedit} {byNode} {showOffsets} />
+    <ChildEntryList ownerId={nodeId} {childList} {bridge} {version} {onedit} {byNode} />
 {/if}

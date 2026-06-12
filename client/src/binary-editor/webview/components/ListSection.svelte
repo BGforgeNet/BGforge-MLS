@@ -13,12 +13,12 @@
     // detail pane unselected; safe for ITM abilities/effects (typically <10) but revisit if any list section can exceed it.
     const SELECTION_RESOLVE_SCAN_LIMIT = 256;
 
-    const { sectionKey, nodeId, caps, bridge, version, selection, onadd, onedit, byNode, showOffsets = false,
+    const { sectionKey, nodeId, caps, bridge, version, selection, onadd, onedit, byNode,
             detailVariant, detailVariantFallbacks, childList, labels }:
         { sectionKey: string; nodeId: NodeId; caps: SectionCaps; bridge: Bridge;
           version: number; selection: NodeId | undefined;
           onadd: () => void; onedit: (id: string, v: number | string) => void;
-          byNode: Map<string, Diagnostic[]>; showOffsets?: boolean;
+          byNode: Map<string, Diagnostic[]>;
           detailVariant?: DetailRow[]; detailVariantFallbacks?: DetailRow[][];
           childList?: LayoutChildList;
           labels?: Record<string, string> } = $props();
@@ -162,7 +162,7 @@
                 {@const acts = rowActions(selectedIndex, total, caps)}
                 <RowActions {acts} entryId={selected.id} {bridge} />
             {/if}
-            <ListEntryDetail nodeId={selected.id} {detailVariant} {detailVariantFallbacks} {childList} {labels} {bridge} {version} {onedit} {byNode} {showOffsets} />
+            <ListEntryDetail nodeId={selected.id} {detailVariant} {detailVariantFallbacks} {childList} {labels} {bridge} {version} {onedit} {byNode} />
         {:else}
             <p class="placeholder">Select an entry.</p>
         {/if}

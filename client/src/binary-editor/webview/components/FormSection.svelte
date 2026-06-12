@@ -12,11 +12,11 @@
     // depth=2 -> horizontal tabs. depth>2 -> always headed sections (hard cap at 2 tab levels).
     // columns: how many columns the scalar-field grid uses. Default 2; a `view: "slots"` group passes its
     // own slot count (via the group Row's `columns`) so a small fixed slot array sits on one row.
-    const { nodeId, bridge, version, onedit, byNode, depth = 1, showOffsets = false, columns = 2, hideGroupPrefix }:
+    const { nodeId, bridge, version, onedit, byNode, depth = 1, columns = 2, hideGroupPrefix }:
         { nodeId: NodeId; bridge: Bridge; version: number;
           onedit: (id: string, v: number | string) => void;
           byNode: Map<string, Diagnostic[]>;
-          depth?: number; showOffsets?: boolean; columns?: number;
+          depth?: number; columns?: number;
           // Suppress nested groups whose name starts with this prefix (e.g. "Inventory Entry") - they are
           // rendered by a sibling ChildEntryList mini-list instead, so showing them here would duplicate.
           hideGroupPrefix?: string } = $props();
@@ -78,7 +78,7 @@
              webview CSP allows; a literal style="..." attribute would be blocked by style-src. -->
         <div class="kv kv-multi form-fields" style:grid-template-columns="repeat({columns}, max-content auto)">
             {#each scalarFields as row (row.id)}
-                <Field {row} {onedit} diagnostics={byNode.get(row.id)} {showOffsets} />
+                <Field {row} {onedit} diagnostics={byNode.get(row.id)} />
             {/each}
         </div>
     {/if}
@@ -98,7 +98,7 @@
             {#if activeGroup}
                 <div class="group-tab-content">
                     <Self nodeId={activeGroup.id} {bridge} {version} {onedit} {byNode} depth={depth + 1}
-                          columns={activeGroup.columns ?? 2} {showOffsets} />
+                          columns={activeGroup.columns ?? 2} />
                 </div>
             {/if}
         </div>
@@ -107,7 +107,7 @@
             <div class="subgroup">
                 <h4 class="subgroup-title">{group.name}</h4>
                 <Self nodeId={group.id} {bridge} {version} {onedit} {byNode} depth={depth + 1}
-                      columns={group.columns ?? 2} {showOffsets} />
+                      columns={group.columns ?? 2} />
             </div>
         {/each}
     {/if}
