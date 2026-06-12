@@ -25,7 +25,12 @@ export const splLayout: FormatLayout = formatLayoutSchema.parse({
     schemaVersion: 1,
     format: "spl",
     maxContentWidthPx: 1180,
-    labels: { ...featureBlockBodyLabels(SPL_EFFECTS_PREFIX), ...splAbilityBodyLabels(SPL_ABILITIES_PREFIX) },
+    labels: {
+        ...featureBlockBodyLabels(SPL_EFFECTS_PREFIX),
+        ...splAbilityBodyLabels(SPL_ABILITIES_PREFIX),
+        // `sectype` humanizes to the unclear "Sectype"; it is the secondary type (msectype.2da).
+        [k("sectype")]: "Secondary Type",
+    },
     variants: {
         spell: {
             tabs: [

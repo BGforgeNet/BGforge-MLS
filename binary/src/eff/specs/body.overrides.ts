@@ -8,7 +8,15 @@
 
 import { i32 } from "typed-binary";
 import { charsSpec, type FieldSpec } from "../../spec/types";
-import { EffectResistanceFlags, EffectSaveTypeFlags, EffectTarget, EffectTiming } from "../../ie-common/types";
+import {
+    EffectParentResourceFlags,
+    EffectResistanceFlags,
+    EffectSaveTypeFlags,
+    EffectTarget,
+    EffectTiming,
+    Schools,
+    SecondaryTypes,
+} from "../../ie-common/types";
 import { Opcodes } from "../../ie-common/opcodes";
 import { effBodySpec } from "./body";
 
@@ -34,6 +42,12 @@ export const effBodySpecAnnotated = {
     timing: { ...effBodySpec.timing, enum: EffectTiming, enumOpen: true },
     resistance: { ...effBodySpec.resistance, flags: EffectResistanceFlags },
     saveType: { ...effBodySpec.saveType, flags: EffectSaveTypeFlags },
+    // Primary type / magic school (mschool.2da) and secondary type (msectype.2da); both mod-extensible 2DAs,
+    // shared with the SPL header and ITM ability fields of the same name.
+    school: { ...effBodySpec.school, enum: Schools, enumOpen: true },
+    sectype: { ...effBodySpec.sectype, enum: SecondaryTypes, enumOpen: true },
+    // Bitfield (flags of the parent SPL); was rendering as a raw integer for want of a flag table.
+    parentResourceFlags: { ...effBodySpec.parentResourceFlags, flags: EffectParentResourceFlags },
     // Caster/target coordinates are signed: -1 is a real engine value ("no/origin coordinate"), and
     // negative map coordinates occur. IESDP types them `dword` and has no signed-integer type, so the
     // generator emits u32 (surfacing -1 as 4294967295). Override to i32 here until IESDP/the generator gain

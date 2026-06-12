@@ -42,25 +42,6 @@ export const SplType: Readonly<Record<number, string>> = {
 };
 
 /**
- * SPL header `school` (Primary Type) - SCHOOL.IDS. The base-game primary types are stable and identical
- * across BG / IWD / PST and their EE versions; their specialist-school names corroborate the exclusion-flag
- * school bits below (Abjurer..Generalist). Marked `enumOpen` because mschool.2da is mod-extensible (WeiDU's
- * ADD_SCHOOL appends new identifiers), so an out-of-table value shows `Unknown (N)` rather than being forced.
- */
-export const SplPrimaryType: Readonly<Record<number, string>> = {
-    0: "None",
-    1: "Abjurer",
-    2: "Conjurer",
-    3: "Diviner",
-    4: "Enchanter",
-    5: "Illusionist",
-    6: "Invoker",
-    7: "Necromancer",
-    8: "Transmuter",
-    9: "Generalist",
-};
-
-/**
  * SPL header `exclusionFlags` (school-exclusion bitmap). Combinable with
  * other school flags via OR; engines use it for opposing schools and the
  * "school grants immunity" mechanic.

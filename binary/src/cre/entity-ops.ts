@@ -111,8 +111,8 @@ export function defaultCreEffectV1(): CreEffectV1 {
 /**
  * EFF v2 body default. Real CRE v2 effect records carry all-zero
  * signature2/version2 (surveyed across 585 records in 140 fixtures), so the
- * empty-string chars defaults are engine-correct. resistance/saveType are
- * flags fields ([]); variableName is surfaced as chars in the annotated spec
+ * empty-string chars defaults are engine-correct. resistance/saveType/
+ * parentResourceFlags are flags fields ([]); variableName is surfaced as chars in the annotated spec
  * (""); unused7 is a fixed 15-dword pad.
  */
 export function defaultCreEffectV2(): CreEffectV2 {
@@ -152,7 +152,7 @@ export function defaultCreEffectV2(): CreEffectV2 {
         targetYCoord: 0,
         parentResourceType: 0,
         parentResource: "",
-        parentResourceFlags: 0,
+        parentResourceFlags: [],
         projectile: 0,
         unused5: 0,
         variableName: "",

@@ -78,6 +78,65 @@ export const EffectSaveTypeFlags: Record<number, string> = {
     0x02000000: "Ignore difficulty / Limit stacking (EE/ToBEx)",
 };
 
+/**
+ * EFF v2 effect `parentResourceFlags` (dword bitfield - the flags of the parent SPL that applied the effect).
+ * EFF v2 only; the 48-byte feature block has no parent-resource fields. Bit positions per IESDP eff_v2/body
+ * (these are NOT the same layout as the SPL header `flags` field - `SplFlags` - despite naming some of the same
+ * concepts, so this is a distinct table).
+ */
+export const EffectParentResourceFlags: Record<number, string> = {
+    0x00000400: "Hostile",
+    0x00000800: "No LOS required",
+    0x00001000: "Allow spotting",
+    0x00002000: "Outdoors only",
+    0x00004000: "Non-magical ability",
+    0x00008000: "Ignore Wild Surge",
+    0x00010000: "Non-combat ability",
+};
+
+// -- Classification lookups (shared across SPL/ITM/EFF) ---------------------
+
+/**
+ * Primary type / magic school (`mschool.2da`; `school.2da` in IWD). Shared by the SPL header `school`, the ITM
+ * ability `primaryType`, and the EFF v2 effect `school` - all reference the same 2DA, so one table serves them.
+ * Mod-extensible (up to 256 rows), so callers mark the field `enumOpen`. Number-keyed, so it works for either
+ * the u8 (SPL/ITM) or u32 (EFF) wire width.
+ */
+export const Schools: Readonly<Record<number, string>> = {
+    0: "None",
+    1: "Abjurer",
+    2: "Conjurer",
+    3: "Diviner",
+    4: "Enchanter",
+    5: "Illusionist",
+    6: "Invoker",
+    7: "Necromancer",
+    8: "Transmuter",
+    9: "Generalist",
+};
+
+/**
+ * Secondary type (`msectype.2da`). Shared by the SPL header `sectype`, the ITM ability `secondaryType`, and the
+ * EFF v2 effect `sectype`. Mod-extensible, so callers mark the field `enumOpen`. Labels humanize the 2DA's
+ * CamelCase identifiers.
+ */
+export const SecondaryTypes: Readonly<Record<number, string>> = {
+    0: "None",
+    1: "Spell Protections",
+    2: "Specific Protections",
+    3: "Illusionary Protections",
+    4: "Magic Attack",
+    5: "Divination Attack",
+    6: "Conjuration",
+    7: "Combat Protections",
+    8: "Contingency",
+    9: "Battleground",
+    10: "Offensive Damage",
+    11: "Disabling",
+    12: "Combination",
+    13: "Non-combat",
+};
+
 // -- Ability lookups (overlap between ITM and SPL ability shapes) -----------
 
 /**

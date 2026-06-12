@@ -4,7 +4,7 @@
  */
 
 import type { FieldSpec } from "../../spec/types";
-import { AbilityIdRequiredFlags, AbilityTargetType } from "../../ie-common/types";
+import { AbilityIdRequiredFlags, AbilityTargetType, Schools, SecondaryTypes } from "../../ie-common/types";
 import {
     ItmAbilityAttackType,
     ItmAbilityDamageType,
@@ -21,6 +21,10 @@ export const itmAbilitySpecAnnotated = {
     idRequired: { ...itmAbilitySpec.idRequired, flags: AbilityIdRequiredFlags },
     location: { ...itmAbilitySpec.location, enum: ItmAbilityLocation },
     target: { ...itmAbilitySpec.target, enum: AbilityTargetType },
+    // Primary type / magic school (mschool.2da) and secondary type (msectype.2da); both mod-extensible 2DAs,
+    // shared with the SPL header and EFF effect fields of the same name.
+    primaryType: { ...itmAbilitySpec.primaryType, enum: Schools, enumOpen: true },
+    secondaryType: { ...itmAbilitySpec.secondaryType, enum: SecondaryTypes, enumOpen: true },
     // Three named animation slots per IESDP - overhand / backhand / thrust.
     // Walker emits them as a sub-group with stable per-index labels instead
     // of the opaque "(3 values) padding" array fallback.
