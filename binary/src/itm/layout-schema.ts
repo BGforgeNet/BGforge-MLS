@@ -5,9 +5,11 @@
  * and the per-entry detail form all come for free). One variant ("item"), stamped by the parser.
  *
  * Field refs are the semantic keys the ITM adapter produces (`itm.header.<camelCase>`, verified against the
- * model). The four usability-flag bytes each have a distinct flag table (Class/Alignment, Class, Class/Race,
- * Race per IESDP) and a distinct semantic key (`itm.header.usabilityFlags.byteN...`), rendered as four flag
- * columns in the Usability panel. Omitted from the layout (round-trip is unaffected - the serializer rebuilds
+ * model). The four usability bytes and four kit bytes are regrouped by semantic category in the "Unusable By"
+ * (Alignment / Class / Race) and "Unusable By Kit" (one subgroup per base class) panels via the `flagGroups`
+ * block - a category's bits cross the byte boundaries, so each checkbox names its own byte field + mask. The
+ * IESDP "Usability" bytes are exclusion masks (a set bit forbids that class/race/kit), so the panels are titled
+ * by effect. Omitted from the layout (round-trip is unaffected - the serializer rebuilds
  * from the model):
  *   - signature/version magic (constants);
  *   - the derived offset/count fields (extendedHeadersOffset/Count, featureBlocksOffset/Index/Count) which
@@ -31,24 +33,35 @@ const ITM_ABILITIES_PREFIX = "itm.abilities[]";
 
 const k = (key: string): string => `itm.header.${key}`;
 
-/** Display-label overrides (see `FormatLayout.labels`) - expand "Desc", fix the "Id" casing, and give the
- *  four usability-flag bytes concise legends (each renders as its own boxed flag group in the Usability
- *  panel; the humanized field key "Byte1 Class Alignment" reads poorly as a group legend). */
+// The four usability bytes and four kit bytes (each a distinct bitfield). The "Unusable By" and "Unusable By
+// Kit" panels regroup these bits by semantic category (alignment/class/race; base class) - groupings that
+// cross byte boundaries - so the flagGroups items below reference these byte fields with explicit masks.
+const uAlign = k("usabilityFlags.byte1ClassAlignment"); // alignment bits + Bard/Cleric
+const uClass2 = k("usabilityFlags.byte2Class");
+const uClass3 = k("usabilityFlags.byte3ClassRace"); // classes + Elf
+const uRace4 = k("usabilityFlags.byte4Race"); // races + Monk/Druid
+const kit1 = k("kitUsability1");
+const kit2 = k("kitUsability2");
+const kit3 = k("kitUsability3");
+const kit4 = k("kitUsability4");
+
+/** Display-label overrides (see `FormatLayout.labels`) - expand "Desc" and fix the "Id" casing. The four
+ *  usability bytes and four kit bytes carry no field-row labels: they render only as `flagGroups` checkboxes
+ *  (regrouped by category across bytes - see the "Unusable By" / "Unusable By Kit" panels), where the group
+ *  legends and per-item labels live on the block, not on the byte field. */
 const itmLabels: Record<string, string> = {
     [k("unidentifiedDesc")]: "Unidentified Description",
     [k("identifiedDesc")]: "Identified Description",
     [k("loreToId")]: "Lore to ID",
-    [k("usabilityFlags.byte1ClassAlignment")]: "Class / Alignment",
-    [k("usabilityFlags.byte2Class")]: "Class",
-    [k("usabilityFlags.byte3ClassRace")]: "Class / Race",
-    [k("usabilityFlags.byte4Race")]: "Race",
-    // Space the trailing slot digit that humanize leaves attached ("Kit Usability1"); display only. They stay
-    // in the Requirements panel (a dedicated panel would repeat "Usability" across all its labels, which the
-    // layout guardrails reject; the lone last-row field is a minor, accepted imbalance).
-    [k("kitUsability1")]: "Kit Usability 1",
-    [k("kitUsability2")]: "Kit Usability 2",
-    [k("kitUsability3")]: "Kit Usability 3",
-    [k("kitUsability4")]: "Kit Usability 4",
+    // The "Requirements, Min" panel carries the "Min" qualifier in its title, so the stat labels drop it.
+    [k("minLevel")]: "Level",
+    [k("minStrength")]: "Strength",
+    [k("minStrengthBonus")]: "Strength Bonus",
+    [k("minIntelligence")]: "Intelligence",
+    [k("minDexterity")]: "Dexterity",
+    [k("minWisdom")]: "Wisdom",
+    [k("minConstitution")]: "Constitution",
+    [k("minCharisma")]: "Charisma",
     // Effect feature-block labels, shared with SPL and parallel to the EFF v2 fragment.
     ...featureBlockBodyLabels(ITM_EFFECTS_PREFIX),
     // Ability panel labels (short names inside the boxed Alternative / Ammo Type groups).
@@ -70,49 +83,31 @@ export const itmLayout: FormatLayout = formatLayoutSchema.parse({
                         {
                             panels: [
                                 {
-                                    title: "Identity",
+                                    title: "Main",
+                                    // The former Identity + Value & Lore plus the descriptions/animation/
+                                    // proficiency, all in one panel. Scalars in wire (spec) order as far as the
+                                    // layout allows; the flags bitfield (wire-adjacent to `replacement`) renders
+                                    // as its own checkbox block beside the scalars rather than interleaved.
                                     blocks: [
                                         {
                                             kind: "fields",
+                                            columns: 2,
                                             fields: [
                                                 k("unidentifiedName"),
                                                 k("identifiedName"),
                                                 k("replacement"),
                                                 k("type"),
+                                                k("weaponProficiency"),
+                                                k("price"),
+                                                k("stackAmount"),
+                                                k("loreToId"),
+                                                k("weight"),
+                                                k("unidentifiedDesc"),
+                                                k("identifiedDesc"),
+                                                k("enchantment"),
                                             ],
                                         },
                                         { kind: "flags", field: k("flags"), columns: 2 },
-                                    ],
-                                },
-                                {
-                                    title: "Value & Lore",
-                                    blocks: [
-                                        {
-                                            kind: "fields",
-                                            fields: [
-                                                k("price"),
-                                                k("weight"),
-                                                k("stackAmount"),
-                                                k("enchantment"),
-                                                k("loreToId"),
-                                            ],
-                                        },
-                                    ],
-                                },
-                                {
-                                    title: "Appearance & Text",
-                                    blocks: [
-                                        {
-                                            kind: "fields",
-                                            fields: [
-                                                k("inventoryIcon"),
-                                                k("groundIcon"),
-                                                k("descriptionIcon"),
-                                                k("animation"),
-                                                k("unidentifiedDesc"),
-                                                k("identifiedDesc"),
-                                            ],
-                                        },
                                     ],
                                 },
                             ],
@@ -120,14 +115,28 @@ export const itmLayout: FormatLayout = formatLayoutSchema.parse({
                         {
                             panels: [
                                 {
-                                    title: "Requirements",
+                                    title: "Appearance",
+                                    blocks: [
+                                        {
+                                            kind: "fields",
+                                            fields: [
+                                                k("animation"),
+                                                k("inventoryIcon"),
+                                                k("groundIcon"),
+                                                k("descriptionIcon"),
+                                            ],
+                                        },
+                                    ],
+                                },
+                                {
+                                    // Title carries the shared "Min" qualifier, so each item label drops it.
+                                    title: "Requirements, Min",
                                     blocks: [
                                         {
                                             kind: "fields",
                                             columns: 2,
                                             fields: [
                                                 k("minLevel"),
-                                                k("weaponProficiency"),
                                                 k("minStrength"),
                                                 k("minStrengthBonus"),
                                                 k("minIntelligence"),
@@ -144,21 +153,173 @@ export const itmLayout: FormatLayout = formatLayoutSchema.parse({
                         {
                             panels: [
                                 {
-                                    title: "Usability",
+                                    title: "Unusable By",
+                                    // Alignment / Class / Race, one subgroup per column. A category's bits are
+                                    // split across the four usability bytes, so each item names its own byte +
+                                    // mask; default labels come from the byte's flag table. Order preserved
+                                    // byte-then-bit within each column.
                                     blocks: [
-                                        { kind: "flags", field: k("usabilityFlags.byte1ClassAlignment"), columns: 1 },
-                                        { kind: "flags", field: k("usabilityFlags.byte2Class"), columns: 1 },
-                                        { kind: "flags", field: k("usabilityFlags.byte3ClassRace"), columns: 1 },
-                                        { kind: "flags", field: k("usabilityFlags.byte4Race"), columns: 1 },
+                                        {
+                                            kind: "flagGroups",
+                                            bulkSelect: true,
+                                            columns: [
+                                                [
+                                                    {
+                                                        label: "Alignment",
+                                                        items: [
+                                                            { field: uAlign, mask: 0x01 },
+                                                            { field: uAlign, mask: 0x02 },
+                                                            { field: uAlign, mask: 0x04 },
+                                                            { field: uAlign, mask: 0x08 },
+                                                            { field: uAlign, mask: 0x10 },
+                                                            { field: uAlign, mask: 0x20 },
+                                                        ],
+                                                    },
+                                                ],
+                                                [
+                                                    {
+                                                        label: "Class",
+                                                        // 19 class flags - split into 3 sub-columns so the box
+                                                        // height balances the short Alignment/Race columns.
+                                                        columns: 3,
+                                                        items: [
+                                                            { field: uAlign, mask: 0x40 }, // Bard
+                                                            { field: uAlign, mask: 0x80 }, // Cleric
+                                                            { field: uClass2, mask: 0x01 },
+                                                            { field: uClass2, mask: 0x02 },
+                                                            { field: uClass2, mask: 0x04 },
+                                                            { field: uClass2, mask: 0x08 },
+                                                            { field: uClass2, mask: 0x10 },
+                                                            { field: uClass2, mask: 0x20 },
+                                                            { field: uClass2, mask: 0x40 },
+                                                            { field: uClass2, mask: 0x80 },
+                                                            { field: uClass3, mask: 0x01 },
+                                                            { field: uClass3, mask: 0x02 },
+                                                            { field: uClass3, mask: 0x04 },
+                                                            { field: uClass3, mask: 0x08 },
+                                                            { field: uClass3, mask: 0x10 },
+                                                            { field: uClass3, mask: 0x20 },
+                                                            { field: uClass3, mask: 0x40 },
+                                                            { field: uRace4, mask: 0x20 }, // Monk
+                                                            { field: uRace4, mask: 0x40 }, // Druid / Shaman
+                                                        ],
+                                                    },
+                                                ],
+                                                [
+                                                    {
+                                                        label: "Race",
+                                                        items: [
+                                                            { field: uClass3, mask: 0x80 }, // Elf
+                                                            { field: uRace4, mask: 0x01 },
+                                                            { field: uRace4, mask: 0x02 },
+                                                            { field: uRace4, mask: 0x04 },
+                                                            { field: uRace4, mask: 0x08 },
+                                                            { field: uRace4, mask: 0x10 },
+                                                            { field: uRace4, mask: 0x80 },
+                                                        ],
+                                                    },
+                                                ],
+                                            ],
+                                        },
                                     ],
                                 },
                                 {
-                                    title: "Kit Usability",
+                                    title: "Unusable By Kit",
+                                    // Kits grouped under their base class; a class's kits span several kit bytes,
+                                    // so each item names its byte + mask. Short labels drop the redundant class
+                                    // word ("Cleric of Talos" -> "Talos") since the subgroup legend carries it.
                                     blocks: [
-                                        { kind: "flags", field: k("kitUsability1"), columns: 1 },
-                                        { kind: "flags", field: k("kitUsability2"), columns: 1 },
-                                        { kind: "flags", field: k("kitUsability3"), columns: 1 },
-                                        { kind: "flags", field: k("kitUsability4"), columns: 1 },
+                                        {
+                                            kind: "flagGroups",
+                                            bulkSelect: true,
+                                            columns: [
+                                                [
+                                                    {
+                                                        label: "Cleric",
+                                                        items: [
+                                                            { field: kit1, mask: 0x01, label: "Talos" },
+                                                            { field: kit1, mask: 0x02, label: "Helm" },
+                                                            { field: kit1, mask: 0x04, label: "Lathander" },
+                                                        ],
+                                                    },
+                                                    {
+                                                        label: "Druid",
+                                                        items: [
+                                                            { field: kit1, mask: 0x08, label: "Totemic" },
+                                                            { field: kit1, mask: 0x10, label: "Shapeshifter" },
+                                                            { field: kit1, mask: 0x20, label: "Avenger" },
+                                                        ],
+                                                    },
+                                                ],
+                                                [
+                                                    {
+                                                        label: "Fighter",
+                                                        items: [
+                                                            { field: kit1, mask: 0x40, label: "Barbarian" },
+                                                            { field: kit4, mask: 0x01, label: "Berserker" },
+                                                            { field: kit4, mask: 0x02, label: "Wizard Slayer" },
+                                                            { field: kit4, mask: 0x04, label: "Kensai" },
+                                                        ],
+                                                    },
+                                                    {
+                                                        label: "Paladin",
+                                                        items: [
+                                                            { field: kit4, mask: 0x08, label: "Cavalier" },
+                                                            { field: kit4, mask: 0x10, label: "Inquisitor" },
+                                                            { field: kit4, mask: 0x20, label: "Undead Hunter" },
+                                                        ],
+                                                    },
+                                                ],
+                                                [
+                                                    {
+                                                        label: "Mage",
+                                                        items: [
+                                                            { field: kit1, mask: 0x80, label: "Wild Mage" },
+                                                            { field: kit3, mask: 0x01, label: "Diviner" },
+                                                            { field: kit3, mask: 0x02, label: "Enchanter" },
+                                                            { field: kit3, mask: 0x04, label: "Illusionist" },
+                                                            { field: kit3, mask: 0x08, label: "Invoker" },
+                                                            { field: kit3, mask: 0x10, label: "Necromancer" },
+                                                            { field: kit3, mask: 0x20, label: "Transmuter" },
+                                                            { field: kit4, mask: 0x40, label: "Abjurer" },
+                                                            { field: kit4, mask: 0x80, label: "Conjurer" },
+                                                        ],
+                                                    },
+                                                ],
+                                                [
+                                                    {
+                                                        label: "Ranger",
+                                                        items: [
+                                                            { field: kit2, mask: 0x01, label: "Stalker" },
+                                                            { field: kit2, mask: 0x02, label: "Beastmaster" },
+                                                            { field: kit3, mask: 0x80, label: "Feralan" },
+                                                        ],
+                                                    },
+                                                    {
+                                                        label: "Thief",
+                                                        items: [
+                                                            { field: kit2, mask: 0x04, label: "Assassin" },
+                                                            { field: kit2, mask: 0x08, label: "Bounty Hunter" },
+                                                            { field: kit2, mask: 0x10, label: "Swashbuckler" },
+                                                        ],
+                                                    },
+                                                ],
+                                                [
+                                                    {
+                                                        label: "Bard",
+                                                        items: [
+                                                            { field: kit2, mask: 0x20, label: "Blade" },
+                                                            { field: kit2, mask: 0x40, label: "Jester" },
+                                                            { field: kit2, mask: 0x80, label: "Skald" },
+                                                        ],
+                                                    },
+                                                    {
+                                                        label: "Other",
+                                                        items: [{ field: kit3, mask: 0x40, label: "All (no kit)" }],
+                                                    },
+                                                ],
+                                            ],
+                                        },
                                     ],
                                 },
                             ],

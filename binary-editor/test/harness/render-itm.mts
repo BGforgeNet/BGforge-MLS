@@ -184,11 +184,20 @@ const dom = await page.evaluate(() => {
     const panels = Array.from(document.querySelectorAll(".layout-root .panel > h3"), (e) => e.textContent);
     const masterDetails = document.querySelectorAll(".layout-root .master-detail").length;
     const tabs = document.querySelectorAll(".bb-tabs").length;
-    // The Usability panel holds the four per-byte usability-flag fields, each its own flag column.
-    const usabilityPanel = Array.from(document.querySelectorAll(".layout-root .panel")).find(
-        (p) => p.querySelector("h3")?.textContent === "Usability",
-    );
-    const usabilityFlagCols = usabilityPanel?.querySelectorAll(".flag-columns").length ?? 0;
+    // "Unusable By" regroups the four usability bytes into 3 category columns (Alignment / Class / Race), each
+    // a boxed subgroup. "Unusable By Kit" regroups the four kit bytes into 4 columns holding 9 base-class
+    // subgroups. Collect each panel's subgroup legends (no named helpers - keepNames would inject __name,
+    // undefined in the page context).
+    const groupsByPanel: Record<string, string[]> = {};
+    for (const p of Array.from(document.querySelectorAll(".layout-root .panel"))) {
+        const title = p.querySelector("h3")?.textContent ?? "";
+        const legends = Array.from(
+            p.querySelectorAll(".flag-group-cols > .flag-group-col > .flag-group > legend > .flag-group-name"),
+        ).map((e) => e.textContent ?? "");
+        if (legends.length > 0) groupsByPanel[title] = legends;
+    }
+    const usabilityGroups = groupsByPanel["Unusable By"] ?? [];
+    const kitGroups = groupsByPanel["Unusable By Kit"] ?? [];
     // Spacing guard: in a fields panel, the label right edge must sit clearly left of the control - a
     // zero/negative gap means labels overlap values (regression). Check the widest-label row in each panel.
     let minGap = Infinity;
@@ -199,17 +208,71 @@ const dom = await page.evaluate(() => {
         const gap = control.getBoundingClientRect().left - label.getBoundingClientRect().right;
         if (gap < minGap) minGap = gap;
     }
-    return { panels, masterDetails, tabs, usabilityFlagCols, minGap };
+    return { panels, masterDetails, tabs, usabilityGroups, kitGroups, minGap };
 });
 check(
     "layout: General tab panels render",
     JSON.stringify(dom.panels) ===
-        JSON.stringify(["Identity", "Value & Lore", "Appearance & Text", "Requirements", "Usability"]),
+        JSON.stringify(["Main", "Appearance", "Requirements, Min", "Unusable By", "Unusable By Kit"]),
     JSON.stringify(dom.panels),
 );
-check("layout: four usability-flag columns render", dom.usabilityFlagCols === 4, `count=${dom.usabilityFlagCols}`);
+check(
+    "layout: Unusable By groups by category (Alignment / Class / Race)",
+    JSON.stringify(dom.usabilityGroups) === JSON.stringify(["Alignment", "Class", "Race"]),
+    JSON.stringify(dom.usabilityGroups),
+);
+check(
+    "layout: Unusable By Kit groups by base class",
+    JSON.stringify(dom.kitGroups) ===
+        JSON.stringify(["Cleric", "Druid", "Fighter", "Paladin", "Mage", "Ranger", "Thief", "Bard", "Other"]),
+    JSON.stringify(dom.kitGroups),
+);
 check("layout: top-level tabs render (General / Abilities / Effects)", dom.tabs >= 1, `tabStrips=${dom.tabs}`);
 check("layout: label/value gap is positive (no overlap)", dom.minGap >= 4, `minGap=${dom.minGap}px`);
+
+// Bulk select/deselect on the "Unusable By" panel: clicking the buttons must drive the real edit pipeline
+// (editField -> changeSet) across all the byte fields the block spans, so every checkbox flips together.
+const unusablePanel = page
+    .locator(".panel")
+    .filter({ has: page.locator("h3", { hasText: "Unusable By" }) })
+    .first();
+const boxCounts = async (): Promise<{ total: number; checked: number }> => ({
+    total: await unusablePanel.locator('[role="checkbox"]').count(),
+    checked: await unusablePanel.locator('[role="checkbox"][aria-checked="true"]').count(),
+});
+await unusablePanel.getByRole("button", { name: "Select all", exact: true }).click();
+await page.waitForTimeout(150);
+const afterSelect = await boxCounts();
+check(
+    "bulk: Select all checks every flag in the panel",
+    afterSelect.total > 0 && afterSelect.checked === afterSelect.total,
+    `${afterSelect.checked}/${afterSelect.total}`,
+);
+await unusablePanel.getByRole("button", { name: "Deselect all", exact: true }).click();
+await page.waitForTimeout(150);
+const afterDeselect = await boxCounts();
+check(
+    "bulk: Deselect all clears every flag in the panel",
+    afterDeselect.checked === 0,
+    `checked=${afterDeselect.checked}`,
+);
+
+// Per-group bulk: each subgroup has its own select/deselect icon buttons (located by aria-label, since the
+// codicon glyph needs the editor's icon font absent from the harness). From the all-clear state above,
+// "Select all Alignment" must check exactly the Alignment subgroup's boxes and leave the rest clear.
+const alignmentGroup = unusablePanel
+    .locator(".flag-group")
+    .filter({ has: page.locator(".flag-group-name", { hasText: "Alignment" }) });
+await unusablePanel.getByRole("button", { name: "Select all Alignment", exact: true }).click();
+await page.waitForTimeout(150);
+const alignTotal = await alignmentGroup.locator('[role="checkbox"]').count();
+const alignChecked = await alignmentGroup.locator('[role="checkbox"][aria-checked="true"]').count();
+const panelChecked = (await boxCounts()).checked;
+check(
+    "bulk: per-group Select all checks only that group",
+    alignTotal > 0 && alignChecked === alignTotal && panelChecked === alignTotal,
+    `align=${alignChecked}/${alignTotal} panel=${panelChecked}`,
+);
 
 // ============================================================
 // Baseline

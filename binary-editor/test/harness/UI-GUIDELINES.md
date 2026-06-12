@@ -47,13 +47,22 @@ Flags are a full-width block below the scalar key-value grid, not members of the
 
 Boxing rule (INTENTIONAL and consistent - do NOT flag the difference as cross-format divergence): a flag block
 that SHARES a panel with other blocks gets its own titled inner box (a `fieldset` with a legend) so the
-bitfield reads as one labelled set - e.g. ITM Usability's four byte-flags, ITM General Flags inside the
-Identity panel, PRO Header Flags inside the Header panel, an effect's Save Type / Resistance beside its
-fields, a MAP object's Flags beside its fields. A flag block that is the SOLE content of a titled panel takes
-NO inner border and leans on the panel's own chrome (border + `h3`) as the group box - e.g. CRE Flags, CRE
-Status, SPL Flags, SPL Exclusion. So when you see one flag block with an inner border and another without, that
-is this share-vs-sole rule, not an inconsistency. Implemented by the `boxed` prop in `FlagColumns.svelte`
-(`boxed=false` for the sole-in-panel case).
+bitfield reads as one labelled set - e.g. ITM General Flags inside the Identity panel, PRO Header Flags inside
+the Header panel, an effect's Save Type / Resistance beside its fields, a MAP object's Flags beside its fields.
+A flag block that is the SOLE content of a titled panel takes NO inner border and leans on the panel's own
+chrome (border + `h3`) as the group box - e.g. CRE Flags, CRE Status, SPL Flags, SPL Exclusion. So when you see
+one flag block with an inner border and another without, that is this share-vs-sole rule, not an
+inconsistency. Implemented by the `boxed` prop in `FlagColumns.svelte` (`boxed=false` for the sole-in-panel
+case).
+
+Category-grouped flags (INTENTIONAL - `FlagGroups.svelte`, the `flagGroups` block): when a field's meaningful
+groupings cross the wire-format byte boundaries, its flags are regrouped by SEMANTIC CATEGORY rather than by
+storage byte. ITM "Unusable By" splits the four usability bytes into Alignment / Class / Race columns, and
+"Unusable By Kit" groups the kit bytes under each base class (Cleric, Druid, Fighter, Mage, Ranger, Thief,
+Bard, Paladin, plus Other). Each category is its own boxed subgroup (legend = the category); a column stacks
+one or more subgroups, and a large category (Class, ~19 flags) splits into balanced sub-columns. A checked box
+means that class/race/kit CANNOT use the item - the bytes are exclusion masks, hence the "Unusable By" panel
+titles. The boxed-subgroup look is by design and is not divergence from the per-byte FlagColumns treatment.
 
 ## Master-detail detail panels (shared / parallel fragments)
 

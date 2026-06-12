@@ -9,6 +9,7 @@
     import Tabs, { type TabItem } from "./primitives/Tabs.svelte";
     import FieldsBlock from "./blocks/FieldsBlock.svelte";
     import FlagColumns from "./blocks/FlagColumns.svelte";
+    import FlagGroups from "./blocks/FlagGroups.svelte";
     import MatrixBlock from "./blocks/MatrixBlock.svelte";
     import GridBlock from "./blocks/GridBlock.svelte";
     import ListBlock from "./blocks/ListBlock.svelte";
@@ -104,6 +105,9 @@
                                              spread={block.spread}
                                              boxed={!(panel.blocks.length === 1 && panel.title !== undefined)}
                                              fields={layout.fields} {onedit} />
+                            {:else if block.kind === "flagGroups"}
+                                <FlagGroups columns={block.columns} bulkSelect={block.bulkSelect}
+                                            fields={layout.fields} {onedit} />
                             {:else if block.kind === "matrix"}
                                 <MatrixBlock valueColumns={block.valueColumns} groups={block.groups}
                                              columnWidthPx={block.columnWidthPx} fields={layout.fields}

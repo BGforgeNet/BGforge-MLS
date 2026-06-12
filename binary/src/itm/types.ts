@@ -180,7 +180,7 @@ export const ItmUsabilityByte4Flags: Readonly<Record<number, string>> = {
 // Kit-usability bitfields (IESDP "Header Kit Usability"): the four kitUsability bytes are bitmasks of kits the
 // item is unusable by, one distinct kit table per byte. Bit positions per the IESDP table; clear typos in the
 // source are normalized to the canonical kit names ("Beserker" -> "Berserker", "Inquisiter" -> "Inquisitor",
-// "Lathlander" -> "Lathander"). "Ferlain" (byte 3, bit 7) is kept verbatim - the source value, unverifiable.
+// "Lathlander" -> "Lathander", and the garbled "Ferlain" -> "Feralan", the BG2 ranger kit at byte 3, bit 7).
 export const ItmKitUsabilityByte1Flags: Readonly<Record<number, string>> = {
     0x01: "Cleric of Talos",
     0x02: "Cleric of Helm",
@@ -211,7 +211,7 @@ export const ItmKitUsabilityByte3Flags: Readonly<Record<number, string>> = {
     0x10: "Necromancer",
     0x20: "Transmuter",
     0x40: "All (no kit)",
-    0x80: "Ferlain",
+    0x80: "Feralan",
 };
 
 export const ItmKitUsabilityByte4Flags: Readonly<Record<number, string>> = {

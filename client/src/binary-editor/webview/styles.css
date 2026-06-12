@@ -1042,6 +1042,78 @@ input[type="text"]::placeholder {
     flex-direction: column;
     gap: 4px;
 }
+/* Category-grouped flags (FlagGroups): columns laid left-to-right, each column stacking one or more boxed
+   subgroups top-to-bottom. Reuses the .flag-group box and .gcol checkbox stack; only the column scaffolding
+   is new. align-items:flex-start so a short subgroup box hugs its content instead of stretching to match a
+   taller sibling column. */
+/* The flagGroups block wrapper: category columns on the left at content width; the optional bulk-select bar
+   fills the free space to their right, so it never pushes the columns down. */
+.flag-groups {
+    display: flex;
+    flex-direction: row;
+    gap: 16px;
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    align-items: stretch;
+}
+/* Panel-level bulk bar: centred (vertically + horizontally) in the leftover width beside the columns. */
+.flag-bulk {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+/* "Select all" / "Deselect all": transparent buttons matching the spellbook .sb-add idiom. */
+.flag-bulk-btn {
+    padding: 6px 18px;
+    border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+    border-radius: 4px;
+    background: transparent;
+    color: var(--vscode-foreground);
+    font-size: 1em;
+    cursor: pointer;
+}
+.flag-bulk-btn:hover {
+    background: var(--vscode-list-hoverBackground);
+}
+/* Per-subgroup select/deselect: tiny icon buttons sitting in the group's legend, after its name. */
+.flag-group-cols .flag-group > legend {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.flag-group-actions {
+    display: inline-flex;
+    gap: 1px;
+}
+.flag-group-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 1px;
+    border: 0;
+    background: transparent;
+    color: var(--vscode-descriptionForeground);
+    cursor: pointer;
+    line-height: 1;
+}
+.flag-group-btn .codicon {
+    font-size: 13px;
+}
+.flag-group-btn:hover {
+    color: var(--vscode-foreground);
+}
+.flag-group-cols {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+}
+.flag-group-col {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+}
 /* stats matrix: N fixed-width column groups, each Base|Bonus */
 .layout-root .matrix {
     display: grid;

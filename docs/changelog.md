@@ -17,7 +17,8 @@
 - Primary type (school) and secondary type now show as named dropdowns instead of raw numbers, wherever they appear - the spell (`.spl`) header, item (`.itm`) abilities, and effects (standalone `.eff` and embedded).
 - An effect's parent-resource flags now show as named checkboxes (Hostile, No LOS required, and so on) instead of a raw number, and its parent-resource type now shows as a named dropdown (None / Spell / Item).
 - An item (`.itm`) ability's arrow / bolt / bullet firing qualifiers now show as Yes / No dropdowns instead of raw 0 / 1 numbers.
-- An item's (`.itm`) kit-usability bytes now show as named checkboxes (Berserker, Kensai, the mage schools, and so on) in their own panel, instead of four raw numbers in the Requirements panel.
+- An item's (`.itm`) usability restrictions - the classes, alignments, and races that cannot use it - now group into Alignment / Class / Race columns of named checkboxes in an "Unusable By" panel, instead of raw per-byte flag columns. Select all / Deselect all buttons - for the whole panel or a single group - toggle the flags at once.
+- An item's (`.itm`) kit restrictions now show as named checkboxes grouped under each base class (Cleric, Druid, Fighter, Mage, Ranger, Thief, Bard, Paladin) in an "Unusable By Kit" panel, instead of four raw numbers in the Requirements panel. Select all / Deselect all buttons - for the whole panel or a single group - toggle the flags at once.
 - An item's (`.itm`) required weapon proficiency now shows as a named dropdown (Long Sword, Crossbow, Quarterstaff, and so on) instead of a raw number.
 - A Fallout critter proto's extended action flags (Look / Can talk to) now show as named checkboxes instead of being hidden.
 - A Fallout weapon or ammo proto's caliber now shows as a named dropdown (None, 5mm, 10mm, .44, 12 gauge, and so on) instead of a raw number.

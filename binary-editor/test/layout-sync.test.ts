@@ -138,6 +138,12 @@ function blockRefs(block: LayoutBlock): { fields: string[]; sections: string[] }
             return { fields: block.fields, sections: [] };
         case "flags":
             return { fields: [block.field], sections: [] };
+        case "flagGroups":
+            // Bits regrouped by category across bytes: every checkbox names its own backing byte field.
+            return {
+                fields: block.columns.flatMap((col) => col.flatMap((g) => g.items.map((i) => i.field))),
+                sections: [],
+            };
         case "grid":
             return { fields: block.items, sections: [] };
         case "matrix":

@@ -186,6 +186,45 @@ const listBlockSchema = z.strictObject({
         .optional(),
 });
 
+/**
+ * Bitflags regrouped by SEMANTIC CATEGORY rather than by the wire-format byte that stores them - for fields
+ * whose meaningful groupings cross byte boundaries (the ITM usability bytes: alignment/class/race bits are
+ * scattered across all four bytes; the kit bytes: one base class's kits sit in several bytes). The block owns
+ * the column layout: `columns` lay left-to-right, each column stacks one or more boxed, labelled subgroups,
+ * and each checkbox names its own backing field + single-bit mask. The default checkbox label is the field's
+ * own flag-table name (single source of truth); `label` overrides it for terser display (e.g. "Cleric of
+ * Talos" -> "Talos" under a "Cleric" subgroup). Toggling composes back into the named byte, so the round-trip
+ * is unchanged - this is pure presentation over the same per-byte flag fields a `flags` block would render.
+ */
+const flagGroupItemSchema = z.strictObject({
+    field: fieldRefSchema,
+    mask: z.number().int().positive(),
+    label: z.string().optional(),
+});
+const flagGroupsBlockSchema = z.strictObject({
+    kind: z.literal("flagGroups"),
+    /** Render "Select all" / "Deselect all" controls that set or clear every bit the block references (across
+     *  all its backing byte fields). For a panel of restriction flags where toggling the whole set at once is
+     *  common (e.g. ITM Unusable By / Unusable By Kit). */
+    bulkSelect: z.boolean().optional(),
+    columns: z
+        .array(
+            z
+                .array(
+                    z.strictObject({
+                        label: z.string(),
+                        items: z.array(flagGroupItemSchema).min(1),
+                        /** Split this subgroup's checkboxes into N vertical sub-columns (column-major, order
+                         *  preserved) instead of one tall stack - for a large category like the ~19-member
+                         *  Class group. Defaults to 1. */
+                        columns: z.number().int().positive().optional(),
+                    }),
+                )
+                .min(1),
+        )
+        .min(1),
+});
+
 /** A hex/raw-bytes pane. Specified now; webview `RawBlock` is a stub (follow-up tier). */
 const rawBlockSchema = z.strictObject({ kind: z.literal("raw") });
 
@@ -201,6 +240,7 @@ const layoutBlockSchema = z.discriminatedUnion("kind", [
     fieldsBlockSchema,
     fieldGroupBlockSchema,
     flagsBlockSchema,
+    flagGroupsBlockSchema,
     gridBlockSchema,
     matrixBlockSchema,
     listBlockSchema,
