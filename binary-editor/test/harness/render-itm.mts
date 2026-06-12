@@ -208,12 +208,38 @@ const dom = await page.evaluate(() => {
         const gap = control.getBoundingClientRect().left - label.getBoundingClientRect().right;
         if (gap < minGap) minGap = gap;
     }
-    return { panels, masterDetails, tabs, usabilityGroups, kitGroups, minGap };
+    // Column-major fill guard: a multi-column fields panel fills column 1 top-to-bottom, then column 2 - so
+    // the 2nd field sits directly BELOW the 1st (same left edge, greater top), not to its right. Measure the
+    // Main panel's first two fields.
+    let mainColMajor = false;
+    const mainPanel = Array.from(document.querySelectorAll(".layout-root .panel")).find(
+        (p) => p.querySelector("h3")?.textContent === "Main",
+    );
+    const mainFields = mainPanel ? Array.from(mainPanel.querySelectorAll(".kv.kv-multi > .field")) : [];
+    if (mainFields.length >= 2) {
+        const a = mainFields[0]!.getBoundingClientRect();
+        const b = mainFields[1]!.getBoundingClientRect();
+        mainColMajor = Math.abs(a.left - b.left) < 2 && b.top > a.top + 2;
+    }
+    // Equal-spacing guard: the gap between the fields grid and the adjacent Flags box must equal the gap
+    // between the grid's own two columns - one uniform inter-column spacing, not a tighter inter-block one.
+    // With 12 fields in 2 column-major columns, col 2 row 1 is field index 6, so its left edge minus col 1
+    // row 1's right edge is the inter-column gap; the Flags box left minus the grid's right edge is the
+    // inter-block gap.
+    let mainColGap = -1;
+    let mainBlockGap = -1;
+    const kv = mainPanel?.querySelector(".kv.kv-multi");
+    const flagsBox = mainPanel?.querySelector(".flag-group");
+    if (kv && flagsBox && mainFields.length >= 7) {
+        mainColGap = mainFields[6]!.getBoundingClientRect().left - mainFields[0]!.getBoundingClientRect().right;
+        mainBlockGap = flagsBox.getBoundingClientRect().left - kv.getBoundingClientRect().right;
+    }
+    return { panels, masterDetails, tabs, usabilityGroups, kitGroups, minGap, mainColMajor, mainColGap, mainBlockGap };
 });
 check(
     "layout: General tab panels render",
     JSON.stringify(dom.panels) ===
-        JSON.stringify(["Main", "Appearance", "Requirements, Min", "Unusable By", "Unusable By Kit"]),
+        JSON.stringify(["Main", "Appearance", "Requirements", "Unusable By", "Unusable By Kit"]),
     JSON.stringify(dom.panels),
 );
 check(
@@ -229,6 +255,16 @@ check(
 );
 check("layout: top-level tabs render (General / Abilities / Effects)", dom.tabs >= 1, `tabStrips=${dom.tabs}`);
 check("layout: label/value gap is positive (no overlap)", dom.minGap >= 4, `minGap=${dom.minGap}px`);
+check(
+    "layout: multi-column fields fill top-down first (column-major), not by row",
+    dom.mainColMajor,
+    `mainColMajor=${dom.mainColMajor}`,
+);
+check(
+    "layout: inter-block gap equals inter-column gap (uniform spacing)",
+    dom.mainColGap > 0 && Math.abs(dom.mainColGap - dom.mainBlockGap) <= 2,
+    `colGap=${dom.mainColGap}px blockGap=${dom.mainBlockGap}px`,
+);
 
 // Bulk select/deselect on the "Unusable By" panel: clicking the buttons must drive the real edit pipeline
 // (editField -> changeSet) across all the byte fields the block spans, so every checkbox flips together.

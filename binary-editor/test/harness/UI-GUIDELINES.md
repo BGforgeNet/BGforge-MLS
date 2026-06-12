@@ -33,6 +33,27 @@ INTENTIONAL - do not flag:
 - A control narrower than its column track has empty space to its right - that is the fixed-track design, not
   misalignment, as long as the left edges line up.
 
+## Multi-column fill order: top-down first (column-major)
+
+A multi-column group fills column 1 top-to-bottom, then overflows to column 2, 3, ... - NOT left-to-right
+across rows. So reading order runs DOWN each column, and item N+1 sits below item N until the column is full.
+This holds for the scalar fields grid (`FieldsBlock.svelte`, via `grid-auto-flow:column` + a fixed row count),
+the flat label/control grid (`GridBlock.svelte` - CRE item/sound slots, same technique), and the flag grids
+(`FlagColumns.svelte` / `FlagGroups.svelte`, which slice the items into column-major runs). It applies to every
+format, not just one. The exception is `MatrixBlock.svelte` (CRE stats / proficiencies): a true 2D matrix whose
+column-groups are each a complete vertical sub-table, not a wrapped list, so there is nothing to fill
+column-major. Rationale: a reader scans a column at a time, and wire/byte order then reads naturally
+top-to-bottom. Guarded by the ITM and CRE render harnesses ("fills top-down first").
+
+## Uniform spacing: one inter-column / inter-block gap
+
+Strive for equal spacing between sibling things. Concretely, the gap between a multi-column fields grid's own
+columns and the gap between adjacent blocks in a panel (e.g. a fields grid next to a Flags box) are the SAME
+spacing - a panel reads as evenly-spaced columns, not a tight cluster with a wider seam (or vice-versa). Both
+are driven by one CSS variable (`--bb-col-gap` on `.layout-root`, consumed by `.kv-multi` and `.panel-blocks`)
+so they cannot drift apart. When adding a new multi-column or multi-block layout, reuse that variable rather
+than minting a fresh gap value. Guarded by the ITM render harness ("inter-block gap equals inter-column gap").
+
 ## Hex display for type-encoded IDs
 
 Some numeric fields display in hex rather than decimal because the value is a packed `(type << 24) | index`

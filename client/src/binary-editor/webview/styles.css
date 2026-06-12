@@ -929,6 +929,10 @@ input[type="text"]::placeholder {
  * own input styling. Content hugs maxContentWidthPx and clumps left (no full-pane stretch).
  * ============================================================================ */
 .layout-root {
+    /* One uniform inter-column / inter-block spacing: the gap between a multi-column fields grid's own
+       columns (.kv-multi) and the gap between sibling blocks in a panel (.panel-blocks, e.g. a fields grid
+       next to a flags box) read as the SAME spacing. Driven by one variable so they can't drift apart. */
+    --bb-col-gap: 22px;
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -968,7 +972,7 @@ input[type="text"]::placeholder {
 }
 .panel-blocks {
     display: flex;
-    gap: 16px;
+    gap: var(--bb-col-gap, 16px);
     align-items: flex-start;
 }
 /* A stacked panel flows its blocks top-to-bottom (a fields list above a boxed `group` subgroup) instead of
@@ -987,7 +991,7 @@ input[type="text"]::placeholder {
 }
 .layout-root .kv.kv-multi {
     display: grid;
-    gap: 2px 22px;
+    gap: 2px var(--bb-col-gap, 22px);
     align-items: center;
 }
 /* A flag group sharing a panel with other blocks gets its own boxed group (fieldset + legend) so the
@@ -1085,7 +1089,8 @@ input[type="text"]::placeholder {
 }
 .flag-group-actions {
     display: inline-flex;
-    gap: 1px;
+    /* Enough space that the adjacent select/deselect icons are not easy to misclick (1px read as one target). */
+    gap: 6px;
 }
 .flag-group-btn {
     display: inline-flex;

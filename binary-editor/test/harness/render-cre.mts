@@ -228,6 +228,21 @@ await clickTab("Inventory");
 const itemSlots = await page.locator('.layout-root .panel:has(h3:text-is("Item Slots")) .grid .skill').count();
 check("layout: item-slots grid renders 40 cells", itemSlots === 40, `count=${itemSlots}`);
 
+// Column-major fill guard: a grid block fills column 1 top-to-bottom, then column 2 - so the 2nd cell sits
+// directly BELOW the 1st (same left edge, greater top), not to its right.
+const gridColMajor = await page.evaluate(() => {
+    const cells = Array.from(document.querySelectorAll(".layout-root .panel:has(h3) .grid .skill"));
+    if (cells.length < 2) return false;
+    const a = cells[0]!.getBoundingClientRect();
+    const b = cells[1]!.getBoundingClientRect();
+    return Math.abs(a.left - b.left) < 2 && b.top > a.top + 2;
+});
+check(
+    "layout: grid block fills top-down first (column-major), not by row",
+    gridColMajor,
+    `gridColMajor=${gridColMajor}`,
+);
+
 // Proficiencies and Tracked Objects share the "Proficiencies" tab; Sound Slots is its own "Sounds" tab.
 const gridCounts = async (): Promise<{ counts: Record<string, number>; minGridGap: number }> =>
     page.evaluate(() => {

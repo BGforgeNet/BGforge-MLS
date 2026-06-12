@@ -53,7 +53,7 @@ const itmLabels: Record<string, string> = {
     [k("unidentifiedDesc")]: "Unidentified Description",
     [k("identifiedDesc")]: "Identified Description",
     [k("loreToId")]: "Lore to ID",
-    // The "Requirements, Min" panel carries the "Min" qualifier in its title, so the stat labels drop it.
+    // These sit under the "Requirements" panel (minimum stat requirements), so the stat labels drop the "min".
     [k("minLevel")]: "Level",
     [k("minStrength")]: "Strength",
     [k("minStrengthBonus")]: "Strength Bonus",
@@ -130,7 +130,7 @@ export const itmLayout: FormatLayout = formatLayoutSchema.parse({
                                 },
                                 {
                                     // Title carries the shared "Min" qualifier, so each item label drops it.
-                                    title: "Requirements, Min",
+                                    title: "Requirements",
                                     blocks: [
                                         {
                                             kind: "fields",

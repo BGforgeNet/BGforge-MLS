@@ -19,7 +19,12 @@
     // Two tracks per column (label max-content, control) so each .skill is a subgrid: every label in a visual
     // column shares one max-content track and the controls align - regardless of label length (a long label
     // like "Selected weapon ability" widens only its column, it no longer shoves its own control out of line).
-    const gridStyle = $derived(`grid-template-columns:repeat(${columns},max-content auto)`);
+    // Fill column-major (top-down first): `grid-auto-flow:column` + a fixed row count fills column 1 fully
+    // before column 2, so reading order runs down each column rather than snaking across rows.
+    const rows = $derived(Math.ceil(cells.length / columns));
+    const gridStyle = $derived(
+        `grid-template-columns:repeat(${columns},max-content auto);grid-auto-flow:column;grid-template-rows:repeat(${rows},auto)`,
+    );
 </script>
 <div class="grid" style={gridStyle}>
     {#each cells as cell (cell.row.id)}
