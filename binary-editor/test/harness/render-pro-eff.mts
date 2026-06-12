@@ -4,14 +4,15 @@
  * Opens one Fallout PRO (item proto) and one Infinity Engine EFF in the real webview bundle (app.html).
  * Both are migrated to the declarative layout (PRO via its per-subtype item variant, EFF via the "effect"
  * variant) and render as a single dense page through LayoutRenderer - the legacy section-tabs path is gone.
- * EFF lays out Effect / Dice & Save / Parameters / Resources / Classification / Caster / Resistance panels with the
- * ~300-entry opcode enum as a searchable combobox. Both run under the strict nonce CSP.
+ * EFF lays out its body fields in on-disk (wire) byte order as one untitled dense 2-column panel (flag boxes
+ * for Save Type / Resistance inline at their byte position), with the ~300-entry opcode enum as a searchable
+ * combobox. Both run under the strict nonce CSP.
  *
  * Assertions:
  *   - PRO (item): opens without error, resolves an `item.*` layout variant, fields render via .layout-root,
  *     and no section tabs appear.
- *   - EFF: opens without error, resolves the "effect" layout variant, panels + fields render via
- *     .layout-root, opcode renders as a searchable combobox, and no section tabs appear.
+ *   - EFF: opens without error, resolves the "effect" layout variant, renders as one untitled byte-order panel
+ *     (no semantic panel titles), opcode renders as a searchable combobox, and no section tabs appear.
  *   - CSP: no Content-Security-Policy violations in either page.
  */
 
@@ -131,17 +132,8 @@ const effDom = await page2.evaluate(() => ({
     tabs: document.querySelectorAll(".bb-tabs").length,
 }));
 check(
-    "eff: panels render (Effect / Dice & Save / Parameters / Resources / Classification / Caster & Projectile / Resistance)",
-    JSON.stringify(effDom.panels) ===
-        JSON.stringify([
-            "Effect",
-            "Dice & Save",
-            "Parameters",
-            "Resources",
-            "Classification",
-            "Caster & Projectile",
-            "Resistance",
-        ]),
+    "eff: renders as one untitled wire-byte-order panel (no semantic panel titles)",
+    effDom.panels.length === 0,
     JSON.stringify(effDom.panels),
 );
 check("eff: layout fields render (> 20)", effDom.fields > 20, `count=${effDom.fields}`);

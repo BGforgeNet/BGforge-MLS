@@ -3,8 +3,8 @@
  *
  * A CRE whose `effStructureVersion` is 0 embeds the older 48-byte EFF v1 effect record instead of the EFF v2
  * body. The CRE Effects list declares the v2 fragment as primary and the v1 fragment as a fallback; the detail
- * pane must render the FIRST whose refs resolve - so a v1 effect renders the v1 panels (Effect / Dice & Save /
- * Parameters / Resources / Resistance), NOT the auto-form and NOT the v2 panels. No v1 CRE exists in the
+ * pane must render the FIRST whose refs resolve - so a v1 effect renders the v1 fragment (its byte-order fields
+ * including the v1-only Timing Mode / Saving Throw), NOT the auto-form and NOT the v2 fragment. No v1 CRE exists in the
  * corpus (every vendored CRE is v2), so this synthesizes one through the real writer/parser round-trip, loads
  * it in the REAL webview bundle, selects an effect, and asserts the v1 fragment rendered.
  */
@@ -114,14 +114,15 @@ await clickTab("Effects");
 await selectRow(effectsPanel, 0);
 await effectsPanel.locator(".detail .layout-root .field").first().waitFor({ timeout: 3000 });
 
-// h3 titles render uppercased by CSS (innerText returns the transformed text); compare case-insensitively.
-const v1Panels = (await effectsPanel.locator(".detail .layout-root .panel h3").allInnerTexts()).map((t) =>
-    t.toUpperCase(),
-);
+// The shared v1 fragment renders through LayoutRenderer (`.detail .layout-root`), one untitled wire-byte-order
+// panel: layout fields present, and no semantic panel `h3` titles. The v1-vs-v2 discrimination is asserted
+// next (the v1-only Timing Mode / Saving Throw fields).
+const v1Fields = await effectsPanel.locator(".detail .layout-root .field").count();
+const v1PanelTitles = await effectsPanel.locator(".detail .layout-root .panel > h3").count();
 check(
-    "v1: CRE v1 effect detail renders the shared v1 panels (Effect / Dice & Save / Parameters / Resources)",
-    ["EFFECT", "DICE & SAVE", "PARAMETERS", "RESOURCES"].every((p) => v1Panels.includes(p)),
-    JSON.stringify(v1Panels),
+    "v1: CRE v1 effect detail renders the shared v1 fragment in wire byte order (no semantic panel titles)",
+    v1Fields > 10 && v1PanelTitles === 0,
+    `fields=${v1Fields} panelTitles=${v1PanelTitles}`,
 );
 const detailText = (await effectsPanel.locator(".detail .layout-root").first().innerText()).toLowerCase();
 check(

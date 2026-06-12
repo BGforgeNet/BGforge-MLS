@@ -337,16 +337,16 @@ await doUndo();
 // ============================================================
 await selectRow(effectsPanel, 0);
 await effectsPanel.locator(".detail .layout-root .field").first().waitFor({ timeout: 3000 });
-// h3 titles render uppercased by CSS (innerText returns the transformed text); compare case-insensitively.
-const itmEffectPanels = (await effectsPanel.locator(".detail .layout-root .panel h3").allInnerTexts()).map((t) =>
-    t.toUpperCase(),
-);
+// The shared feature-block fragment renders through LayoutRenderer (`.detail .layout-root`), not the generic
+// auto-form (which has no `.layout-root`) - so layout fields are the shared-fragment signal. The fragment is
+// one untitled wire-byte-order panel: no semantic panel `h3` titles (the Resistance / Save Type flag boxes
+// carry their own legends, not panel titles).
+const itmEffectFields = await effectsPanel.locator(".detail .layout-root .field").count();
+const itmEffectPanelTitles = await effectsPanel.locator(".detail .layout-root .panel > h3").count();
 check(
-    "effects: ITM effect detail renders the shared feature-block panels (Effect/Level & Save/Parameters/...)",
-    itmEffectPanels.includes("EFFECT") &&
-        itmEffectPanels.includes("LEVEL & SAVE") &&
-        itmEffectPanels.includes("RESISTANCE"),
-    JSON.stringify(itmEffectPanels),
+    "effects: ITM effect detail renders the shared feature-block fragment in wire byte order (no semantic panel titles)",
+    itmEffectFields > 10 && itmEffectPanelTitles === 0,
+    `fields=${itmEffectFields} panelTitles=${itmEffectPanelTitles}`,
 );
 const opcodeCombobox = await effectsPanel.locator(".detail .bb-combobox-input").count();
 check("effects: opcode detail field is a searchable combobox", opcodeCombobox >= 1, `count=${opcodeCombobox}`);

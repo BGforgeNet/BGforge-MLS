@@ -436,14 +436,16 @@ await doUndo();
 // ============================================================
 await selectRow(effectsPanel, 0);
 await effectsPanel.locator(".detail .layout-root .field").first().waitFor({ timeout: 3000 });
-// h3 titles render uppercased by CSS (innerText returns the transformed text); compare case-insensitively.
-const sharedPanels = (await effectsPanel.locator(".detail .layout-root .panel h3").allInnerTexts()).map((t) =>
-    t.toUpperCase(),
-);
+// The shared EFF v2 fragment renders through LayoutRenderer (`.detail .layout-root`), not the generic
+// auto-form (which has no `.layout-root`) - so the presence of layout fields is the shared-fragment signal.
+// The fragment is one untitled wire-byte-order panel: no semantic panel `h3` titles (the Save Type / Resistance
+// flag boxes carry their own legends, not panel titles).
+const sharedFields = await effectsPanel.locator(".detail .layout-root .field").count();
+const sharedPanelTitles = await effectsPanel.locator(".detail .layout-root .panel > h3").count();
 check(
-    "effects: v2 effect detail renders the shared EFF panels (Effect/Parameters/Resources/...)",
-    sharedPanels.includes("EFFECT") && sharedPanels.includes("PARAMETERS") && sharedPanels.includes("RESOURCES"),
-    JSON.stringify(sharedPanels),
+    "effects: v2 effect detail renders the shared EFF fragment in wire byte order (no semantic panel titles)",
+    sharedFields > 20 && sharedPanelTitles === 0,
+    `fields=${sharedFields} panelTitles=${sharedPanelTitles}`,
 );
 const opcodeCombobox = await effectsPanel.locator(".detail .bb-combobox-input").count();
 check("effects: opcode detail field is a searchable combobox", opcodeCombobox >= 1, `count=${opcodeCombobox}`);

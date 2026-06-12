@@ -343,12 +343,16 @@ describe("UX packing guardrails", () => {
     });
 
     // A. A variant with many panels must use tabs - otherwise it is the one-long-scroll mega-page (#14). Tabs
-    // break it into per-page sections. Small variants (PRO item subtypes, EFF) may stay untabbed.
+    // break it into per-page sections. Small variants (PRO item subtypes) may stay untabbed. EFF is exempt: it
+    // is a single effect record (no meaningful tab division), and it organizes its fields into content-width
+    // flag/subgroup boxes that pack side by side - so the panel count overcounts its (short) vertical length.
     it("a large variant uses tabs instead of one mega-page", () => {
         const PANEL_CAP = 10;
+        const EXEMPT_FORMATS = new Set(["eff"]);
         const violations: string[] = [];
         for (const format of Object.keys(PARSERS))
             for (const [variant, v] of Object.entries(layoutFor(format).variants)) {
+                if (EXEMPT_FORMATS.has(format)) continue;
                 const panelCount = variantRows(v).reduce((n, row) => n + row.panels.length, 0);
                 if (panelCount > PANEL_CAP && v.rows !== undefined)
                     violations.push(`${format}/${variant}: ${panelCount} panels, untabbed`);
