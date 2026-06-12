@@ -1,4 +1,5 @@
 import { u32, i32 } from "typed-binary";
+import { Perk } from "../types";
 import type { FieldSpec, SpecData } from "../../spec/types";
 import type { StructPresentation } from "../../spec/presentation";
 
@@ -18,7 +19,8 @@ export const armorSpec = {
     dtElectrical: { codec: u32 },
     dtEmp: { codec: u32 },
     dtExplosion: { codec: u32 },
-    perk: { codec: u32 },
+    // Granted perk (fallout2-ce Perk enum); signed because -1 = none. Open: sfall can add perks beyond 119.
+    perk: { codec: i32, enum: Perk, enumOpen: true },
     maleFrmId: { codec: i32 },
     femaleFrmId: { codec: i32 },
 } satisfies Record<string, FieldSpec>;

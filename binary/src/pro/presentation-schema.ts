@@ -17,6 +17,7 @@ import { toPresentationEntries } from "../spec/derive-presentation";
 import { headerPresentation, headerSpec } from "./specs/header";
 import { itemCommonPresentation, itemCommonSpec } from "./specs/item-common";
 import { weaponPresentation, weaponSpec } from "./specs/weapon";
+import { armorPresentation, armorSpec } from "./specs/armor";
 import { ammoPresentation, ammoSpec } from "./specs/ammo";
 import { containerPresentation, containerSpec } from "./specs/container";
 import { drugPresentation, drugSpec } from "./specs/drug";
@@ -40,6 +41,7 @@ export const proPresentationSchema: FormatPresentationSchema = formatPresentatio
         ...toPresentationEntries(headerSpec, headerPresentation, "pro.header"),
         ...toPresentationEntries(itemCommonSpec, itemCommonPresentation, "pro.itemProperties"),
         ...toPresentationEntries(weaponSpec, weaponPresentation, "pro.weaponStats"),
+        ...toPresentationEntries(armorSpec, armorPresentation, "pro.armorStats"),
         ...toPresentationEntries(ammoSpec, ammoPresentation, "pro.ammoStats"),
         ...toPresentationEntries(containerSpec, containerPresentation, "pro.containerStats"),
         ...toPresentationEntries(drugSpec, drugPresentation, "pro.drugStats", DRUG_SUBGROUPS),
