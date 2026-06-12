@@ -327,47 +327,23 @@ export const itmLayout: FormatLayout = formatLayoutSchema.parse({
                     ],
                 },
                 {
-                    id: "abilities",
-                    label: "Abilities",
-                    countFrom: "Abilities",
+                    // Abilities + effects as one two-level tree (effects nested under their owning ability;
+                    // equipping effects under "Global"). Replaces the former flat Abilities / Effects tabs.
+                    id: "tree",
+                    label: "Abilities & Effects",
+                    // Combined "abilities/effects" count badge (the model still has both groups, the tree just
+                    // joins them), parallel to the spellbook tab's known/memorized pair.
+                    countFromPair: ["Abilities", "Effects"],
                     rows: [
                         {
                             panels: [
                                 {
-                                    title: "Abilities",
                                     blocks: [
                                         {
-                                            kind: "list",
-                                            sectionKey: "Abilities",
-                                            render: "master-detail",
-                                            canAdd: true,
-                                            canModify: true,
-                                            childAddSection: "Effects",
-                                            detailVariant: itmAbilityBodyRows(ITM_ABILITIES_PREFIX),
-                                        },
-                                    ],
-                                },
-                            ],
-                        },
-                    ],
-                },
-                {
-                    id: "effects",
-                    label: "Effects",
-                    countFrom: "Effects",
-                    rows: [
-                        {
-                            panels: [
-                                {
-                                    title: "Effects",
-                                    blocks: [
-                                        {
-                                            kind: "list",
-                                            sectionKey: "Effects",
-                                            render: "master-detail",
-                                            canAdd: true,
-                                            canModify: true,
-                                            detailVariant: featureBlockBodyRows(ITM_EFFECTS_PREFIX),
+                                            kind: "effectTree",
+                                            abilityDetail: itmAbilityBodyRows(ITM_ABILITIES_PREFIX),
+                                            effectDetail: featureBlockBodyRows(ITM_EFFECTS_PREFIX),
+                                            childSection: "Effects",
                                         },
                                     ],
                                 },

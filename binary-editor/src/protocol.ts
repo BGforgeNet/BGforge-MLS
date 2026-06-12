@@ -9,6 +9,7 @@ import { spellbookEdit, type SpellbookEditOp } from "./spellbook-ops";
 import { serializeSession } from "./serialize";
 import { validate } from "./validate";
 import { projectSpellbook, type SpellbookView } from "./spellbook";
+import { projectEffectTree, type EffectTreeView } from "./effect-tree";
 import type { EditResult, NodeId, OpenResult, Row, SessionId, StructureResult } from "./types";
 
 export type Request =
@@ -26,6 +27,7 @@ export type Request =
     | { type: "snapshot"; sessionId: SessionId }
     | { type: "getChildren"; sessionId: SessionId; nodeId: NodeId | null; start: number; end: number }
     | { type: "getSpellbook"; sessionId: SessionId }
+    | { type: "getEffectTree"; sessionId: SessionId }
     | { type: "loadJson"; sessionId: SessionId; json: string };
 
 export type Response =
@@ -39,6 +41,7 @@ export type Response =
     | { type: "snapshot"; json: string }
     | { type: "children"; parentId: NodeId | null; rows: Row[]; total: number }
     | { type: "spellbook"; view: SpellbookView }
+    | { type: "effectTree"; view: EffectTreeView }
     | { type: "error"; message: string };
 
 function need(sessionId: SessionId): EditorSession {
@@ -94,6 +97,10 @@ export function dispatch(req: Request): Response {
             case "getSpellbook": {
                 const s = need(req.sessionId);
                 return { type: "spellbook", view: projectSpellbook(s.model) };
+            }
+            case "getEffectTree": {
+                const s = need(req.sessionId);
+                return { type: "effectTree", view: projectEffectTree(s.model) };
             }
             case "expand": {
                 const s = need(req.sessionId);

@@ -142,6 +142,18 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
                 }
                 break;
             }
+            case "requestEffectTree": {
+                const r = await document.bridge.send({
+                    type: "getEffectTree",
+                    sessionId: document.sessionId,
+                });
+                if (r.type === "effectTree") {
+                    this.post(panel, { type: "effectTree", requestId: message.requestId, view: r.view });
+                } else if (r.type === "error") {
+                    this.post(panel, { type: "error", requestId: message.requestId, message: r.message });
+                }
+                break;
+            }
             case "editField": {
                 const r = await document.bridge.send({
                     type: "editField",

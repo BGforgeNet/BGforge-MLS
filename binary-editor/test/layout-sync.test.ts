@@ -154,6 +154,11 @@ function blockRefs(block: LayoutBlock): { fields: string[]; sections: string[] }
             // The spellbook joins three fixed CRE sections internally (projectSpellbook) rather than declaring
             // field/section refs, so it contributes none to the layout-ref reconciliation.
             return { fields: [], sections: [] };
+        case "effectTree":
+            // Joins the Abilities + Effects sections internally (projectEffectTree); its detailVariant
+            // fragments resolve against per-entry field maps (like a list block's detailVariant), not the
+            // global field map - so it declares no layout-level refs, same as spellbook.
+            return { fields: [], sections: [] };
         case "raw":
             return { fields: [], sections: [] };
     }

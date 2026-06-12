@@ -1,16 +1,20 @@
 /**
  * SPL single-page layout harness pass.
  *
- * SPL is migrated to the declarative layout (same Header / Abilities / Effects shape as ITM): header
- * fields in panels, then the Abilities and Effects arrays as master-detail `list` blocks, all on one page
- * (no tabs). Opens a synthetic SPL (2 abilities, 3 effects) in the REAL webview bundle and:
- *   - asserts the layout resolves (variant "spell", sections map with correct caps, panels, no tabs,
- *     opcode searchable combobox in the effect detail, positive label/value spacing);
- *   - drives the structure-op matrix through the real message path, scoped to each section's panel;
+ * SPL renders a General tab plus a single "Abilities & Effects" TREE tab (the flat Abilities / Effects
+ * master-detail tabs were replaced by the tree, parallel to ITM). SPL ability rows additionally show a
+ * "Level Required" badge (ITM abilities carry no level). Opens a synthetic SPL (2 abilities with distinct
+ * required levels, 3 effects) in the REAL webview bundle and:
+ *   - asserts the General tab layout resolves (variant "spell", panels, positive label/value spacing);
+ *   - asserts the tree renders Global + per-ability groups with nested effects and a Level Required badge,
+ *     and that selecting an effect / ability renders the shared detail fragment;
  *   - keeps the casting-free SPL remove-first-effect regression (dispatch-level, DOM-independent).
+ *
+ * Structure ops left the UI with the old tabs; they remain covered by entity-ops unit tests and are
+ * re-exercised end-to-end here only via the regression below.
  */
 
-import { chromium, type Locator, type Page } from "playwright";
+import { chromium, type Page } from "playwright";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -37,8 +41,8 @@ const syntheticDoc = {
     ...baseDoc,
     header: { ...baseDoc.header, castingFeatureBlocksOffset: 0, castingFeatureBlocksCount: 0 },
     abilities: [
-        { ...defaultSplAbility(), featureBlocksOffset: 0, featureBlocksCount: 1 },
-        { ...defaultSplAbility(), featureBlocksOffset: 1, featureBlocksCount: 2 },
+        { ...defaultSplAbility(), featureBlocksOffset: 0, featureBlocksCount: 1, levelRequired: 1 },
+        { ...defaultSplAbility(), featureBlocksOffset: 1, featureBlocksCount: 2, levelRequired: 5 },
     ],
     effects: [mkEffect(10), mkEffect(20), mkEffect(21)],
 };
@@ -48,10 +52,12 @@ const splBytes = serializeSplCanonicalDocument(syntheticDoc);
 let sessionId = "";
 let abilitiesNodeId = "";
 let effectsNodeId = "";
-let activePage: Page | undefined;
 
-function postToWebview(m: HostToWebview): void {
-    if (activePage) activePage.evaluate((rr) => window.postMessage(rr, "*"), m).catch(() => undefined);
+/** Resolve a depth-0 group's node id by name (the tree joins Abilities/Effects internally, so the layout no
+ *  longer exposes them as `sections`). */
+function groupNodeId(name: string): string {
+    const r = dispatch({ type: "getChildren", sessionId, nodeId: null, start: 0, end: 50 });
+    return r.type === "children" ? (r.rows.find((row) => row.name === name)?.id ?? "") : "";
 }
 
 function hostUp(m: WebviewToHost): HostToWebview[] {
@@ -59,9 +65,8 @@ function hostUp(m: WebviewToHost): HostToWebview[] {
         const r = dispatch({ type: "open", uri: "file:///synthetic.spl", bytes: splBytes });
         if (r.type === "opened") {
             sessionId = r.result.sessionId;
-            const sections = r.result.layout.layout?.sections ?? {};
-            abilitiesNodeId = sections["Abilities"]?.nodeId ?? "";
-            effectsNodeId = sections["Effects"]?.nodeId ?? "";
+            abilitiesNodeId = groupNodeId("Abilities");
+            effectsNodeId = groupNodeId("Effects");
             return [{ type: "init", open: r.result }];
         }
         return [];
@@ -73,16 +78,13 @@ function hostUp(m: WebviewToHost): HostToWebview[] {
         }
         return [];
     }
+    if (m.type === "requestEffectTree") {
+        const r = dispatch({ type: "getEffectTree", sessionId });
+        return r.type === "effectTree" ? [{ type: "effectTree", requestId: m.requestId, view: r.view }] : [];
+    }
     if (m.type === "editField") {
         const r = dispatch({ type: "editField", sessionId, nodeId: m.nodeId, value: m.value });
         return r.type === "edited" ? [{ type: "changeSet", changeSet: r.result.changeSet, selection: m.nodeId }] : [];
-    }
-    if (m.type === "structureOp") {
-        const r = dispatch({ type: "structureOp", sessionId, op: m.op });
-        if (r.type === "structure") {
-            return [{ type: "changeSet", changeSet: r.result.changeSet, selection: r.result.selection }];
-        }
-        return [];
     }
     return [];
 }
@@ -92,12 +94,6 @@ function sectionKids(nodeId: string): number {
     return r.type === "children" ? r.total : -1;
 }
 
-async function doUndo(): Promise<void> {
-    dispatch({ type: "undo", sessionId });
-    postToWebview({ type: "invalidated" });
-    await activePage?.waitForTimeout(150);
-}
-
 const results: string[] = [];
 function check(label: string, ok: boolean, detail: string): void {
     results.push(`${ok ? "PASS" : "FAIL"}  ${label}  ${detail}`);
@@ -105,8 +101,7 @@ function check(label: string, ok: boolean, detail: string): void {
 
 // ---- Browser ----
 const browser = await chromium.launch({ headless: true });
-const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, deviceScaleFactor: 1 });
-activePage = page;
+const page: Page = await browser.newPage({ viewport: { width: 1280, height: 900 }, deviceScaleFactor: 1 });
 const assertNoCsp = installCspGate(page, "SPL");
 
 await page.exposeFunction("__hostUp", async (m: WebviewToHost) => {
@@ -115,43 +110,13 @@ await page.exposeFunction("__hostUp", async (m: WebviewToHost) => {
 await page.goto("file://" + path.join(here, "app.html"));
 await page.waitForSelector(".layout-root .bb-tabs", { timeout: 5000 });
 await page.waitForTimeout(200);
-// SPL is tabbed (General / Abilities / Effects); capture the default (General) tab, then navigate per op.
 await page.screenshot({ path: path.join(here, "shot-spl.png"), fullPage: true });
 async function clickTab(label: string): Promise<void> {
     await page.locator('.bb-tabs.primary button[role="tab"]').filter({ hasText: label }).first().click();
     await page.waitForTimeout(200);
 }
-// Guard against the "captured the wrong tab" regression: each per-tab screenshot must be taken while that
-// tab is actually the selected one. Returns the active primary tab's label (includes its count badge text).
-async function activeTabLabel(): Promise<string> {
-    const t = await page.locator('.bb-tabs.primary button[role="tab"][aria-selected="true"]').first().textContent();
-    return (t ?? "").trim();
-}
 
-const abilitiesPanel = page.locator(".panel").filter({ has: page.locator("h3", { hasText: "Abilities" }) });
-const effectsPanel = page.locator(".panel").filter({ has: page.locator("h3", { hasText: "Effects" }) });
-
-async function selectRow(scope: Locator, idx: number): Promise<void> {
-    await scope.locator(".vlist .vrow").nth(idx).click();
-    await scope.locator(".row-actions").first().waitFor({ timeout: 3000 });
-    await page.waitForTimeout(100);
-}
-async function clickAction(scope: Locator, ariaLabel: string): Promise<void> {
-    await scope.locator(`.row-actions button[aria-label="${ariaLabel}"]`).first().click();
-    await page.waitForTimeout(200);
-}
-async function clickDelete(scope: Locator): Promise<void> {
-    // Delete fires immediately (no confirm step) - a single click on the Delete button removes the entry.
-    await clickAction(scope, "Delete");
-}
-async function waitRows(scope: Locator, n: number): Promise<void> {
-    await scope
-        .locator(".vlist .vrow")
-        .nth(n - 1)
-        .waitFor({ timeout: 5000 });
-}
-
-// ---- Layout assertions ----
+// ---- Layout assertions (General tab) ----
 {
     const r = dispatch({ type: "open", uri: "file:///caps.spl", bytes: splBytes });
     if (r.type !== "opened") {
@@ -159,24 +124,16 @@ async function waitRows(scope: Locator, n: number): Promise<void> {
     } else {
         const L = r.result.layout.layout;
         check("layout: variant is 'spell'", L?.variantId === "spell", `variantId=${L?.variantId}`);
+        const tabIds = (L?.tabs ?? []).map((t) => t.id);
         check(
-            "layout: Abilities canAdd+canModify+childAddSection Effects",
-            L?.sections["Abilities"]?.canAdd === true &&
-                L?.sections["Abilities"]?.canModify === true &&
-                L?.sections["Abilities"]?.childAddSection === "Effects",
-            JSON.stringify(L?.sections["Abilities"]),
-        );
-        check(
-            "layout: Effects canAdd+canModify (section-level effect add enabled)",
-            L?.sections["Effects"]?.canAdd === true && L?.sections["Effects"]?.canModify === true,
-            JSON.stringify(L?.sections["Effects"]),
+            "layout: tabs are General + Abilities & Effects tree (flat Abilities/Effects tabs dropped)",
+            JSON.stringify(tabIds) === JSON.stringify(["general", "tree"]),
+            JSON.stringify(tabIds),
         );
     }
 }
 const dom = await page.evaluate(() => {
     const panels = Array.from(document.querySelectorAll(".layout-root .panel > h3"), (e) => e.textContent);
-    const masterDetails = document.querySelectorAll(".layout-root .master-detail").length;
-    const tabs = document.querySelectorAll(".bb-tabs").length;
     let minGap = Infinity;
     for (const field of Array.from(document.querySelectorAll(".layout-root .kv:not(.kv-multi) .field"))) {
         const label = field.querySelector(".label");
@@ -185,89 +142,103 @@ const dom = await page.evaluate(() => {
         const gap = control.getBoundingClientRect().left - label.getBoundingClientRect().right;
         if (gap < minGap) minGap = gap;
     }
-    return { panels, masterDetails, tabs, minGap };
+    return { panels, minGap };
 });
 check(
     "layout: General tab panels render (Spell / Flags / Exclusion)",
     JSON.stringify(dom.panels) === JSON.stringify(["Spell", "Flags", "Exclusion"]),
     JSON.stringify(dom.panels),
 );
-check("layout: top-level tabs render (General / Abilities / Effects)", dom.tabs >= 1, `tabStrips=${dom.tabs}`);
 check("layout: label/value gap is positive (no overlap)", dom.minGap >= 4, `minGap=${dom.minGap}px`);
 
-// ---- Baseline ----
+// ---- Baseline (dispatch-level) ----
 check("baseline: 2 abilities", sectionKids(abilitiesNodeId) === 2, `total=${sectionKids(abilitiesNodeId)}`);
 check("baseline: 3 effects", sectionKids(effectsNodeId) === 3, `total=${sectionKids(effectsNodeId)}`);
 
-// ---- Abilities ops ----
-await clickTab("Abilities");
-await waitRows(abilitiesPanel, 2);
-await abilitiesPanel.locator(".master .toolbar button").first().click();
+// ---- Abilities & Effects tree tab ----
+await clickTab("Abilities & Effects");
+await page.waitForSelector(".eff-tree .eff-tree-vrow", { timeout: 5000 });
 await page.waitForTimeout(200);
-check("abilities: add: +1", sectionKids(abilitiesNodeId) === 3, `total=${sectionKids(abilitiesNodeId)}`);
-await doUndo();
 
-await selectRow(abilitiesPanel, 0);
-await clickAction(abilitiesPanel, "Add below");
-check("abilities: insert-after row0: +1", sectionKids(abilitiesNodeId) === 3, `total=${sectionKids(abilitiesNodeId)}`);
-await doUndo();
+const treeTabText = (
+    (await page.locator('.bb-tabs.primary button[role="tab"][aria-selected="true"]').textContent()) ?? ""
+).trim();
+check("tab: tree tab shows combined abilities/effects count (2/3)", treeTabText.includes("2/3"), treeTabText);
 
-await selectRow(abilitiesPanel, 0);
-await clickAction(abilitiesPanel, "Move down");
+// Flat virtualized rows (header rows + effect rows in document order) - reconstruct groups by walking them.
+const treeShape = await page.evaluate(() => {
+    const groups: { head: string; level: string; effects: string[] }[] = [];
+    let cur: (typeof groups)[number] | undefined;
+    for (const r of Array.from(document.querySelectorAll(".eff-tree-vrow"))) {
+        const head = r.querySelector(".eff-tree-head");
+        const effLabel = r.querySelector(".eff-tree-effect-label");
+        if (head) {
+            cur = {
+                head: (head.querySelector(".eff-tree-head-label")?.textContent ?? "").trim(),
+                level: (head.querySelector(".eff-tree-level")?.textContent ?? "").trim(),
+                effects: [],
+            };
+            groups.push(cur);
+        } else if (effLabel && cur) {
+            cur.effects.push((effLabel.textContent ?? "").trim());
+        }
+    }
+    return { groups, effectRows: document.querySelectorAll(".eff-tree-effect").length };
+});
 check(
-    "abilities: reorder-down row0: unchanged",
-    sectionKids(abilitiesNodeId) === 2,
-    `total=${sectionKids(abilitiesNodeId)}`,
+    "tree: Global (Casting) + per-ability groups render with nested effects",
+    treeShape.groups.length >= 3 &&
+        (treeShape.groups[0]?.head ?? "").startsWith("Global") &&
+        treeShape.groups.filter((g) => g.head.startsWith("Ability")).length === 2,
+    JSON.stringify(treeShape.groups),
 );
-await doUndo();
-
-await selectRow(abilitiesPanel, 0);
-await clickAction(abilitiesPanel, "Duplicate");
-check("abilities: duplicate row0: +1", sectionKids(abilitiesNodeId) === 3, `total=${sectionKids(abilitiesNodeId)}`);
-await doUndo();
-
-await selectRow(abilitiesPanel, 1);
-await clickDelete(abilitiesPanel);
-check("abilities: remove row1: -1", sectionKids(abilitiesNodeId) === 1, `total=${sectionKids(abilitiesNodeId)}`);
-await doUndo();
-
-// ---- Effects ops ----
-await clickTab("Effects");
-await waitRows(effectsPanel, 3);
-await selectRow(effectsPanel, 0);
-await clickAction(effectsPanel, "Add above");
-check("effects: insert-before row0: +1", sectionKids(effectsNodeId) === 4, `total=${sectionKids(effectsNodeId)}`);
-await doUndo();
-
-await selectRow(effectsPanel, 1);
-await clickAction(effectsPanel, "Move down");
 check(
-    "effects: reorder-down row1 (same owner): unchanged",
-    sectionKids(effectsNodeId) === 3,
-    `total=${sectionKids(effectsNodeId)}`,
+    "tree: effects nest under their owning ability (1 under Ability 1, 2 under Ability 2)",
+    treeShape.effectRows === 3 &&
+        treeShape.groups.find((g) => g.head === "Ability 1")?.effects.length === 1 &&
+        treeShape.groups.find((g) => g.head === "Ability 2")?.effects.length === 2,
+    JSON.stringify(treeShape.groups.map((g) => ({ h: g.head, n: g.effects.length }))),
 );
-await doUndo();
-
-await selectRow(effectsPanel, 1);
-await clickDelete(effectsPanel);
-check("effects: remove row1: -1", sectionKids(effectsNodeId) === 2, `total=${sectionKids(effectsNodeId)}`);
-await doUndo();
-
-await selectRow(effectsPanel, 0);
-await effectsPanel.locator(".detail .layout-root .field").first().waitFor({ timeout: 3000 });
-// The shared feature-block fragment renders through LayoutRenderer (`.detail .layout-root`), not the generic
-// auto-form (which has no `.layout-root`) - so layout fields are the shared-fragment signal. The fragment is
-// one untitled wire-byte-order panel: no semantic panel `h3` titles (the Resistance / Save Type flag boxes
-// carry their own legends, not panel titles).
-const splEffectFields = await effectsPanel.locator(".detail .layout-root .field").count();
-const splEffectPanelTitles = await effectsPanel.locator(".detail .layout-root .panel > h3").count();
 check(
-    "effects: SPL effect detail renders the shared feature-block fragment in wire byte order (no semantic panel titles)",
-    splEffectFields > 10 && splEffectPanelTitles === 0,
-    `fields=${splEffectFields} panelTitles=${splEffectPanelTitles}`,
+    "tree: SPL ability rows show the Level Required badge (L1 / L5)",
+    treeShape.groups.find((g) => g.head === "Ability 1")?.level === "L1" &&
+        treeShape.groups.find((g) => g.head === "Ability 2")?.level === "L5",
+    JSON.stringify(treeShape.groups.map((g) => ({ h: g.head, lvl: g.level }))),
 );
-const opcodeCombobox = await effectsPanel.locator(".detail .bb-combobox-input").count();
-check("effects: opcode detail field is a searchable combobox", opcodeCombobox >= 1, `count=${opcodeCombobox}`);
+
+// Selecting an effect renders the shared feature-block fragment.
+await page.locator(".eff-tree-effect").first().click();
+await page.locator(".eff-tree .detail .layout-root .field").first().waitFor({ timeout: 3000 });
+const effDetail = await page.evaluate(() => ({
+    fields: document.querySelectorAll(".eff-tree .detail .layout-root .field").length,
+    combobox: document.querySelectorAll(".eff-tree .detail .bb-combobox-input").length,
+    panelTitles: document.querySelectorAll(".eff-tree .detail .layout-root .panel > h3").length,
+}));
+check(
+    "tree: SPL effect detail renders the shared feature-block fragment (wire order, no semantic panel titles)",
+    effDetail.fields > 10 && effDetail.panelTitles === 0,
+    `fields=${effDetail.fields} panelTitles=${effDetail.panelTitles}`,
+);
+check("tree: opcode detail field is a searchable combobox", effDetail.combobox >= 1, `count=${effDetail.combobox}`);
+
+// Selecting an ability header renders the shared SPL ability panels.
+await page.locator(".eff-tree-head-label", { hasText: "Ability 1" }).first().click();
+await page.locator(".eff-tree .detail .layout-root .field").first().waitFor({ timeout: 3000 });
+const abilityPanels = (await page.locator(".eff-tree .detail .layout-root .panel h3").allInnerTexts()).map((t) =>
+    t.toUpperCase(),
+);
+check(
+    "tree: SPL ability detail renders the shared panels (Ability/Casting/Projectile/Appearance)",
+    ["ABILITY", "CASTING", "PROJECTILE", "APPEARANCE"].every((p) => abilityPanels.includes(p)),
+    JSON.stringify(abilityPanels),
+);
+const abilityText = await page.locator(".eff-tree .detail .layout-root").first().innerText();
+check(
+    "tree: reserved (unused) and serializer-managed pointers omitted from the ability detail",
+    !abilityText.includes("Unused") && !abilityText.includes("Feature Blocks"),
+    `hasUnused=${abilityText.includes("Unused")} hasFeatureBlocks=${abilityText.includes("Feature Blocks")}`,
+);
+await page.screenshot({ path: path.join(here, "shot-spl-tree.png"), fullPage: true });
 
 // ---- Regression: casting-free SPL remove-first-effect (dispatch-level) ----
 {
@@ -283,7 +254,9 @@ check("effects: opcode detail field is a searchable combobox", opcodeCombobox >=
         check("regression: casting-free spl open succeeded", false, `type=${regrR.type}`);
     } else {
         const regrSession = regrR.result.sessionId;
-        const regrEffectsNodeId = regrR.result.layout.layout?.sections["Effects"]?.nodeId ?? "";
+        const regrKids = dispatch({ type: "getChildren", sessionId: regrSession, nodeId: null, start: 0, end: 50 });
+        const regrEffectsNodeId =
+            regrKids.type === "children" ? (regrKids.rows.find((r) => r.name === "Effects")?.id ?? "") : "";
         const before = dispatch({
             type: "getChildren",
             sessionId: regrSession,
@@ -317,46 +290,6 @@ check("effects: opcode detail field is a searchable combobox", opcodeCombobox >=
         );
     }
 }
-
-// ---- Screenshots: each tab captured on the tab it names, with a row selected so the detail pane renders.
-// (Regression: both were previously captured while the Effects tab was active, producing duplicate images.)
-await clickTab("Abilities");
-await waitRows(abilitiesPanel, 2);
-await selectRow(abilitiesPanel, 0);
-// A SPL ability renders through the SHARED ability fragment (curated panels parallel to ITM abilities), not a
-// generic auto-form: the detail shows `.layout-root` panels, and the reserved/derived fields are omitted.
-await abilitiesPanel.locator(".detail .layout-root .field").first().waitFor({ timeout: 3000 });
-const splAbilityPanels = (await abilitiesPanel.locator(".detail .layout-root .panel h3").allInnerTexts()).map((t) =>
-    t.toUpperCase(),
-);
-check(
-    "abilities: SPL ability detail renders the shared panels (Ability/Casting/Projectile/Appearance)",
-    ["ABILITY", "CASTING", "PROJECTILE", "APPEARANCE"].every((p) => splAbilityPanels.includes(p)),
-    JSON.stringify(splAbilityPanels),
-);
-const splAbilityDetailText = await abilitiesPanel.locator(".detail .layout-root").first().innerText();
-check(
-    "abilities: reserved (unused) and serializer-managed pointers omitted from the detail",
-    !splAbilityDetailText.includes("Unused") && !splAbilityDetailText.includes("Feature Blocks"),
-    `hasUnused=${splAbilityDetailText.includes("Unused")} hasFeatureBlocks=${splAbilityDetailText.includes("Feature Blocks")}`,
-);
-check(
-    "screenshot: Abilities tab active for shot-spl-abilities",
-    (await activeTabLabel()).includes("Abilities"),
-    await activeTabLabel(),
-);
-await page.screenshot({ path: path.join(here, "shot-spl-abilities.png"), fullPage: true });
-
-await clickTab("Effects");
-await waitRows(effectsPanel, 3);
-await selectRow(effectsPanel, 0);
-await effectsPanel.locator(".detail .layout-root .field").first().waitFor({ timeout: 3000 });
-check(
-    "screenshot: Effects tab active for shot-spl-effects",
-    (await activeTabLabel()).includes("Effects"),
-    await activeTabLabel(),
-);
-await page.screenshot({ path: path.join(here, "shot-spl-effects.png"), fullPage: true });
 
 await browser.close();
 

@@ -72,47 +72,24 @@ export const splLayout: FormatLayout = formatLayoutSchema.parse({
                     ],
                 },
                 {
-                    id: "abilities",
-                    label: "Abilities",
-                    countFrom: "Abilities",
+                    // Abilities + effects as one two-level tree (effects nested under their owning ability;
+                    // casting effects under "Global"). Replaces the former flat Abilities / Effects tabs. SPL
+                    // ability rows show a "Level Required" badge (projectEffectTree reads it; ITM has none).
+                    id: "tree",
+                    label: "Abilities & Effects",
+                    // Combined "abilities/effects" count badge (the model still has both groups, the tree just
+                    // joins them), parallel to the spellbook tab's known/memorized pair.
+                    countFromPair: ["Abilities", "Effects"],
                     rows: [
                         {
                             panels: [
                                 {
-                                    title: "Abilities",
                                     blocks: [
                                         {
-                                            kind: "list",
-                                            sectionKey: "Abilities",
-                                            render: "master-detail",
-                                            canAdd: true,
-                                            canModify: true,
-                                            childAddSection: "Effects",
-                                            detailVariant: splAbilityBodyRows(SPL_ABILITIES_PREFIX),
-                                        },
-                                    ],
-                                },
-                            ],
-                        },
-                    ],
-                },
-                {
-                    id: "effects",
-                    label: "Effects",
-                    countFrom: "Effects",
-                    rows: [
-                        {
-                            panels: [
-                                {
-                                    title: "Effects",
-                                    blocks: [
-                                        {
-                                            kind: "list",
-                                            sectionKey: "Effects",
-                                            render: "master-detail",
-                                            canAdd: true,
-                                            canModify: true,
-                                            detailVariant: featureBlockBodyRows(SPL_EFFECTS_PREFIX),
+                                            kind: "effectTree",
+                                            abilityDetail: splAbilityBodyRows(SPL_ABILITIES_PREFIX),
+                                            effectDetail: featureBlockBodyRows(SPL_EFFECTS_PREFIX),
+                                            childSection: "Effects",
                                         },
                                     ],
                                 },

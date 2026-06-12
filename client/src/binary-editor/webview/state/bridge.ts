@@ -1,4 +1,11 @@
-import type { NodeId, Row, SpellbookEditOp, SpellbookView, StructureOpRequest } from "@bgforge/binary-editor";
+import type {
+    EffectTreeView,
+    NodeId,
+    Row,
+    SpellbookEditOp,
+    SpellbookView,
+    StructureOpRequest,
+} from "@bgforge/binary-editor";
 import type { HostToWebview, WebviewToHost } from "../messages";
 import { WindowCache } from "./window-cache";
 
@@ -17,12 +24,17 @@ interface PendingSpellbook {
     resolve: (v: SpellbookView) => void;
     reject: (e: Error) => void;
 }
+interface PendingEffectTree {
+    resolve: (v: EffectTreeView) => void;
+    reject: (e: Error) => void;
+}
 
 export class Bridge {
     private readonly post: (m: WebviewToHost) => void;
     private nextId = 1;
     private pending = new Map<number, Pending>();
     private pendingSpellbook = new Map<number, PendingSpellbook>();
+    private pendingEffectTree = new Map<number, PendingEffectTree>();
     private cache = new WindowCache();
 
     constructor(post: (m: WebviewToHost) => void) {
@@ -46,6 +58,16 @@ export class Bridge {
         this.post({ type: "requestSpellbook", requestId });
         return new Promise((resolve, reject) => {
             this.pendingSpellbook.set(requestId, { resolve, reject });
+        });
+    }
+
+    /** Fetch the ITM/SPL abilities+effects tree view. Not cached - re-derived from the model each call so a
+     *  request after a mutation reflects current state (the block re-requests on version change). */
+    requestEffectTree(): Promise<EffectTreeView> {
+        const requestId = this.nextId++;
+        this.post({ type: "requestEffectTree", requestId });
+        return new Promise((resolve, reject) => {
+            this.pendingEffectTree.set(requestId, { resolve, reject });
         });
     }
 
@@ -90,6 +112,14 @@ export class Bridge {
                 return true;
             }
         }
+        if (message.type === "effectTree") {
+            const p = this.pendingEffectTree.get(message.requestId);
+            if (p) {
+                this.pendingEffectTree.delete(message.requestId);
+                p.resolve(message.view);
+                return true;
+            }
+        }
         if (message.type === "error" && message.requestId !== undefined) {
             const p = this.pending.get(message.requestId);
             if (p) {
@@ -101,6 +131,12 @@ export class Bridge {
             if (ps) {
                 this.pendingSpellbook.delete(message.requestId);
                 ps.reject(new Error(message.message));
+                return true;
+            }
+            const pe = this.pendingEffectTree.get(message.requestId);
+            if (pe) {
+                this.pendingEffectTree.delete(message.requestId);
+                pe.reject(new Error(message.message));
                 return true;
             }
         }

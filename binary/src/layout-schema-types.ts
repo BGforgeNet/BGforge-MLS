@@ -242,6 +242,28 @@ const rawBlockSchema = z.strictObject({ kind: z.literal("raw") });
  */
 const spellbookBlockSchema = z.strictObject({ kind: z.literal("spellbook") });
 
+/**
+ * ITM/SPL abilities + effects as a two-level tree: a Global (equipping/casting) group plus one group per
+ * ability, each carrying the effects it owns, with a shared detail pane on the right. The host-side
+ * `projectEffectTree` ships the grouped node ids (the webview `EffectTreeBlock` fetches it via
+ * `requestEffectTree`); the per-node detail form is rendered through the same `detailVariant` fragments the
+ * standalone Abilities / Effects lists use, carried here so the generic block can render either a selected
+ * ability or a selected effect. ITM/SPL-specific (the only formats with this ability->effect partition).
+ */
+const effectTreeBlockSchema = z.strictObject({
+    kind: z.literal("effectTree"),
+    /** Fragment for a selected ABILITY node (e.g. `itmAbilityBodyRows`). */
+    abilityDetail: z.array(detailRowSchema).min(1),
+    /** Fragment for a selected EFFECT node (e.g. `featureBlockBodyRows`). */
+    effectDetail: z.array(detailRowSchema).min(1),
+    /** When true, the tree offers structure ops (add ability, owner-scoped add effect, per-entry
+     *  insert/duplicate/move/remove) - parallel to a list block's `canModify`. */
+    canModify: z.boolean().default(true),
+    /** The effects collection name used for the owner-scoped "add effect to this ability" op (op routing
+     *  name, matches `buildAddChildEntryBytes`); e.g. "Effects". */
+    childSection: z.string().min(1),
+});
+
 const layoutBlockSchema = z.discriminatedUnion("kind", [
     fieldsBlockSchema,
     fieldGroupBlockSchema,
@@ -251,6 +273,7 @@ const layoutBlockSchema = z.discriminatedUnion("kind", [
     matrixBlockSchema,
     listBlockSchema,
     spellbookBlockSchema,
+    effectTreeBlockSchema,
     rawBlockSchema,
 ]);
 

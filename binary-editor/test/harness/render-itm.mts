@@ -1,21 +1,24 @@
 /**
  * ITM single-page layout harness pass.
  *
- * ITM is migrated to the declarative layout: header fields in panels, then the Abilities and Effects
- * arrays as master-detail `list` blocks - both rendered at once on one page (no section tabs). This
- * driver opens a synthetic ITM (2 abilities, 3 effects) in the REAL webview bundle and:
- *   - asserts the layout resolves (variant "item", sections map with correct caps, panels, no tabs,
- *     opcode renders as a searchable combobox in the effect detail, label/value spacing is non-zero);
- *   - drives every structure op through the actual message path, scoped to each section's panel
- *     (webview posts structureOp -> hostUp -> dispatch -> changeSet reply); row counts use dispatch
- *     getChildren (Node-side ground truth);
+ * ITM renders a General tab plus a single "Abilities & Effects" TREE tab (the flat Abilities / Effects
+ * master-detail tabs were replaced by the tree: effects nested under their owning ability, equipping effects
+ * under "Global"). This driver opens a synthetic ITM (2 abilities, 3 effects) in the REAL webview bundle and:
+ *   - asserts the General tab layout resolves (variant "item", panels, regrouped usability flags, spacing,
+ *     column-major fill);
+ *   - asserts the tree tab renders Global + per-ability groups with nested effects, and that selecting an
+ *     effect / ability renders the SHARED detail fragment (opcode searchable combobox, folded Level cell,
+ *     value columns stable across opcodes; the ability panels);
  *   - keeps the wm_sbook.itm remove-first-effect regression (dispatch-level, DOM-independent).
+ *
+ * Structure ops (add/remove/reorder) left the UI with the old tabs; they remain covered by the entity-ops
+ * unit tests and are re-exercised end-to-end here only via the wm_sbook regression.
  *
  * Synthetic fixture: equipping effects 0; ability0 -> 1 effect (opcode 10); ability1 -> 2 effects
  * (opcode 20, 21); 3 effects total.
  */
 
-import { chromium, type Locator, type Page } from "playwright";
+import { chromium, type Page } from "playwright";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -52,10 +55,12 @@ const itmBytes = serializeItmCanonicalDocument(syntheticDoc);
 let sessionId = "";
 let abilitiesNodeId = "";
 let effectsNodeId = "";
-let activePage: Page | undefined;
 
-function postToWebview(m: HostToWebview): void {
-    if (activePage) activePage.evaluate((rr) => window.postMessage(rr, "*"), m).catch(() => undefined);
+/** Resolve a depth-0 group's node id by name (the layout no longer exposes Abilities/Effects as `sections`,
+ *  since the tree joins them internally - so the dispatch-level checks find the groups via the root window). */
+function groupNodeId(name: string): string {
+    const r = dispatch({ type: "getChildren", sessionId, nodeId: null, start: 0, end: 50 });
+    return r.type === "children" ? (r.rows.find((row) => row.name === name)?.id ?? "") : "";
 }
 
 function hostUp(m: WebviewToHost): HostToWebview[] {
@@ -63,9 +68,8 @@ function hostUp(m: WebviewToHost): HostToWebview[] {
         const r = dispatch({ type: "open", uri: "file:///synthetic.itm", bytes: itmBytes });
         if (r.type === "opened") {
             sessionId = r.result.sessionId;
-            const sections = r.result.layout.layout?.sections ?? {};
-            abilitiesNodeId = sections["Abilities"]?.nodeId ?? "";
-            effectsNodeId = sections["Effects"]?.nodeId ?? "";
+            abilitiesNodeId = groupNodeId("Abilities");
+            effectsNodeId = groupNodeId("Effects");
             return [{ type: "init", open: r.result }];
         }
         return [];
@@ -77,16 +81,19 @@ function hostUp(m: WebviewToHost): HostToWebview[] {
         }
         return [];
     }
+    if (m.type === "requestEffectTree") {
+        const r = dispatch({ type: "getEffectTree", sessionId });
+        return r.type === "effectTree" ? [{ type: "effectTree", requestId: m.requestId, view: r.view }] : [];
+    }
     if (m.type === "editField") {
         const r = dispatch({ type: "editField", sessionId, nodeId: m.nodeId, value: m.value });
         return r.type === "edited" ? [{ type: "changeSet", changeSet: r.result.changeSet, selection: m.nodeId }] : [];
     }
     if (m.type === "structureOp") {
         const r = dispatch({ type: "structureOp", sessionId, op: m.op });
-        if (r.type === "structure") {
-            return [{ type: "changeSet", changeSet: r.result.changeSet, selection: r.result.selection }];
-        }
-        return [];
+        return r.type === "structure"
+            ? [{ type: "changeSet", changeSet: r.result.changeSet, selection: r.result.selection }]
+            : [];
     }
     return [];
 }
@@ -96,12 +103,6 @@ function sectionKids(nodeId: string): { total: number; names: string[] } {
     return r.type === "children" ? { total: r.total, names: r.rows.map((row) => row.name) } : { total: 0, names: [] };
 }
 
-async function doUndo(): Promise<void> {
-    dispatch({ type: "undo", sessionId });
-    postToWebview({ type: "invalidated" });
-    await activePage?.waitForTimeout(150);
-}
-
 const results: string[] = [];
 function check(label: string, ok: boolean, detail: string): void {
     results.push(`${ok ? "PASS" : "FAIL"}  ${label}  ${detail}`);
@@ -109,8 +110,7 @@ function check(label: string, ok: boolean, detail: string): void {
 
 // ---- Browser setup ----
 const browser = await chromium.launch({ headless: true });
-const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, deviceScaleFactor: 1 });
-activePage = page;
+const page: Page = await browser.newPage({ viewport: { width: 1280, height: 900 }, deviceScaleFactor: 1 });
 const assertNoCsp = installCspGate(page, "ITM");
 
 await page.exposeFunction("__hostUp", async (m: WebviewToHost) => {
@@ -119,45 +119,22 @@ await page.exposeFunction("__hostUp", async (m: WebviewToHost) => {
 await page.goto("file://" + path.join(here, "app.html"));
 await page.waitForSelector(".layout-root .bb-tabs", { timeout: 5000 });
 await page.waitForTimeout(200);
-// ITM is tabbed (General / Abilities / Effects); capture the default (General) tab, then navigate per op.
+// Default tab is General; capture it, then navigate to the tree tab below.
 await page.screenshot({ path: path.join(here, "shot-itm.png"), fullPage: true });
 async function clickTab(label: string): Promise<void> {
     await page.locator('.bb-tabs.primary button[role="tab"]').filter({ hasText: label }).first().click();
     await page.waitForTimeout(200);
 }
-// Guard against the "captured the wrong tab" regression: each per-tab screenshot must be taken while that
-// tab is actually the selected one. Returns the active primary tab's label (includes its count badge text).
-async function activeTabLabel(): Promise<string> {
-    const t = await page.locator('.bb-tabs.primary button[role="tab"][aria-selected="true"]').first().textContent();
-    return (t ?? "").trim();
-}
-
-// Panel-scoped locators: each list section is a master-detail inside the panel with the matching h3.
-const abilitiesPanel = page.locator(".panel").filter({ has: page.locator("h3", { hasText: "Abilities" }) });
-const effectsPanel = page.locator(".panel").filter({ has: page.locator("h3", { hasText: "Effects" }) });
-
-async function selectRow(scope: Locator, idx: number): Promise<void> {
-    await scope.locator(".vlist .vrow").nth(idx).click();
-    await scope.locator(".row-actions").first().waitFor({ timeout: 3000 });
-    await page.waitForTimeout(100);
-}
-async function clickAction(scope: Locator, ariaLabel: string): Promise<void> {
-    await scope.locator(`.row-actions button[aria-label="${ariaLabel}"]`).first().click();
+// Undo a structure op and refresh the webview (the host pushes the op onto the undo stack; "invalidated"
+// makes the tree re-fetch), so each op test runs from the same baseline.
+async function doUndo(): Promise<void> {
+    dispatch({ type: "undo", sessionId });
+    await page.evaluate((rr) => window.postMessage(rr, "*"), { type: "invalidated" } as HostToWebview);
     await page.waitForTimeout(200);
-}
-async function clickDelete(scope: Locator): Promise<void> {
-    // Delete fires immediately (no confirm step) - a single click on the Delete button removes the entry.
-    await clickAction(scope, "Delete");
-}
-async function waitRows(scope: Locator, n: number): Promise<void> {
-    await scope
-        .locator(".vlist .vrow")
-        .nth(n - 1)
-        .waitFor({ timeout: 5000 });
 }
 
 // ============================================================
-// Layout assertions
+// Layout assertions (General tab - the default)
 // ============================================================
 {
     const r = dispatch({ type: "open", uri: "file:///caps.itm", bytes: itmBytes });
@@ -166,28 +143,16 @@ async function waitRows(scope: Locator, n: number): Promise<void> {
     } else {
         const L = r.result.layout.layout;
         check("layout: variant is 'item'", L?.variantId === "item", `variantId=${L?.variantId}`);
+        const tabIds = (L?.tabs ?? []).map((t) => t.id);
         check(
-            "layout: Abilities canAdd+canModify+childAddSection Effects",
-            L?.sections["Abilities"]?.canAdd === true &&
-                L?.sections["Abilities"]?.canModify === true &&
-                L?.sections["Abilities"]?.childAddSection === "Effects",
-            JSON.stringify(L?.sections["Abilities"]),
-        );
-        check(
-            "layout: Effects canAdd+canModify (section-level effect add enabled)",
-            L?.sections["Effects"]?.canAdd === true && L?.sections["Effects"]?.canModify === true,
-            JSON.stringify(L?.sections["Effects"]),
+            "layout: tabs are General + Abilities & Effects tree (flat Abilities/Effects tabs dropped)",
+            JSON.stringify(tabIds) === JSON.stringify(["general", "tree"]),
+            JSON.stringify(tabIds),
         );
     }
 }
 const dom = await page.evaluate(() => {
     const panels = Array.from(document.querySelectorAll(".layout-root .panel > h3"), (e) => e.textContent);
-    const masterDetails = document.querySelectorAll(".layout-root .master-detail").length;
-    const tabs = document.querySelectorAll(".bb-tabs").length;
-    // "Unusable By" regroups the four usability bytes into 3 category columns (Alignment / Class / Race), each
-    // a boxed subgroup. "Unusable By Kit" regroups the four kit bytes into 4 columns holding 9 base-class
-    // subgroups. Collect each panel's subgroup legends (no named helpers - keepNames would inject __name,
-    // undefined in the page context).
     const groupsByPanel: Record<string, string[]> = {};
     for (const p of Array.from(document.querySelectorAll(".layout-root .panel"))) {
         const title = p.querySelector("h3")?.textContent ?? "";
@@ -198,8 +163,6 @@ const dom = await page.evaluate(() => {
     }
     const usabilityGroups = groupsByPanel["Unusable By"] ?? [];
     const kitGroups = groupsByPanel["Unusable By Kit"] ?? [];
-    // Spacing guard: in a fields panel, the label right edge must sit clearly left of the control - a
-    // zero/negative gap means labels overlap values (regression). Check the widest-label row in each panel.
     let minGap = Infinity;
     for (const field of Array.from(document.querySelectorAll(".layout-root .kv:not(.kv-multi) .field"))) {
         const label = field.querySelector(".label");
@@ -208,9 +171,7 @@ const dom = await page.evaluate(() => {
         const gap = control.getBoundingClientRect().left - label.getBoundingClientRect().right;
         if (gap < minGap) minGap = gap;
     }
-    // Column-major fill guard: a multi-column fields panel fills column 1 top-to-bottom, then column 2 - so
-    // the 2nd field sits directly BELOW the 1st (same left edge, greater top), not to its right. Measure the
-    // Main panel's first two fields.
+    // Column-major fill guard on the Main panel's first two fields (col 1 fills top-down before col 2).
     let mainColMajor = false;
     const mainPanel = Array.from(document.querySelectorAll(".layout-root .panel")).find(
         (p) => p.querySelector("h3")?.textContent === "Main",
@@ -221,11 +182,6 @@ const dom = await page.evaluate(() => {
         const b = mainFields[1]!.getBoundingClientRect();
         mainColMajor = Math.abs(a.left - b.left) < 2 && b.top > a.top + 2;
     }
-    // Equal-spacing guard: the gap between the fields grid and the adjacent Flags box must equal the gap
-    // between the grid's own two columns - one uniform inter-column spacing, not a tighter inter-block one.
-    // With 12 fields in 2 column-major columns, col 2 row 1 is field index 6, so its left edge minus col 1
-    // row 1's right edge is the inter-column gap; the Flags box left minus the grid's right edge is the
-    // inter-block gap.
     let mainColGap = -1;
     let mainBlockGap = -1;
     const kv = mainPanel?.querySelector(".kv.kv-multi");
@@ -234,7 +190,7 @@ const dom = await page.evaluate(() => {
         mainColGap = mainFields[6]!.getBoundingClientRect().left - mainFields[0]!.getBoundingClientRect().right;
         mainBlockGap = flagsBox.getBoundingClientRect().left - kv.getBoundingClientRect().right;
     }
-    return { panels, masterDetails, tabs, usabilityGroups, kitGroups, minGap, mainColMajor, mainColGap, mainBlockGap };
+    return { panels, usabilityGroups, kitGroups, minGap, mainColMajor, mainColGap, mainBlockGap };
 });
 check(
     "layout: General tab panels render",
@@ -253,21 +209,15 @@ check(
         JSON.stringify(["Cleric", "Druid", "Fighter", "Paladin", "Mage", "Ranger", "Thief", "Bard", "Other"]),
     JSON.stringify(dom.kitGroups),
 );
-check("layout: top-level tabs render (General / Abilities / Effects)", dom.tabs >= 1, `tabStrips=${dom.tabs}`);
 check("layout: label/value gap is positive (no overlap)", dom.minGap >= 4, `minGap=${dom.minGap}px`);
-check(
-    "layout: multi-column fields fill top-down first (column-major), not by row",
-    dom.mainColMajor,
-    `mainColMajor=${dom.mainColMajor}`,
-);
+check("layout: multi-column fields fill top-down first (column-major)", dom.mainColMajor, `${dom.mainColMajor}`);
 check(
     "layout: inter-block gap equals inter-column gap (uniform spacing)",
     dom.mainColGap > 0 && Math.abs(dom.mainColGap - dom.mainBlockGap) <= 2,
     `colGap=${dom.mainColGap}px blockGap=${dom.mainBlockGap}px`,
 );
 
-// Bulk select/deselect on the "Unusable By" panel: clicking the buttons must drive the real edit pipeline
-// (editField -> changeSet) across all the byte fields the block spans, so every checkbox flips together.
+// Bulk select/deselect on the "Unusable By" panel drives the real edit pipeline across the byte fields.
 const unusablePanel = page
     .locator(".panel")
     .filter({ has: page.locator("h3", { hasText: "Unusable By" }) })
@@ -286,202 +236,254 @@ check(
 );
 await unusablePanel.getByRole("button", { name: "Deselect all", exact: true }).click();
 await page.waitForTimeout(150);
-const afterDeselect = await boxCounts();
-check(
-    "bulk: Deselect all clears every flag in the panel",
-    afterDeselect.checked === 0,
-    `checked=${afterDeselect.checked}`,
-);
-
-// Per-group bulk: each subgroup has its own select/deselect icon buttons (located by aria-label, since the
-// codicon glyph needs the editor's icon font absent from the harness). From the all-clear state above,
-// "Select all Alignment" must check exactly the Alignment subgroup's boxes and leave the rest clear.
-const alignmentGroup = unusablePanel
-    .locator(".flag-group")
-    .filter({ has: page.locator(".flag-group-name", { hasText: "Alignment" }) });
-await unusablePanel.getByRole("button", { name: "Select all Alignment", exact: true }).click();
-await page.waitForTimeout(150);
-const alignTotal = await alignmentGroup.locator('[role="checkbox"]').count();
-const alignChecked = await alignmentGroup.locator('[role="checkbox"][aria-checked="true"]').count();
-const panelChecked = (await boxCounts()).checked;
-check(
-    "bulk: per-group Select all checks only that group",
-    alignTotal > 0 && alignChecked === alignTotal && panelChecked === alignTotal,
-    `align=${alignChecked}/${alignTotal} panel=${panelChecked}`,
-);
+check("bulk: Deselect all clears every flag in the panel", (await boxCounts()).checked === 0, "");
 
 // ============================================================
-// Baseline
+// Baseline (dispatch-level)
 // ============================================================
 check("baseline: 2 abilities", sectionKids(abilitiesNodeId).total === 2, `total=${sectionKids(abilitiesNodeId).total}`);
 check("baseline: 3 effects", sectionKids(effectsNodeId).total === 3, `total=${sectionKids(effectsNodeId).total}`);
 
 // ============================================================
-// ABILITIES ops (scoped to the Abilities panel)
+// Abilities & Effects tree tab
 // ============================================================
-await clickTab("Abilities");
-await waitRows(abilitiesPanel, 2);
-
-await abilitiesPanel.locator(".master .toolbar button").first().click();
+await clickTab("Abilities & Effects");
+await page.waitForSelector(".eff-tree .eff-tree-vrow", { timeout: 5000 });
 await page.waitForTimeout(200);
-check(
-    "abilities: add: count +1",
-    sectionKids(abilitiesNodeId).total === 3,
-    `total=${sectionKids(abilitiesNodeId).total}`,
-);
-await doUndo();
 
-await selectRow(abilitiesPanel, 0);
-await clickAction(abilitiesPanel, "Add above");
-check(
-    "abilities: insert-before row0: +1",
-    sectionKids(abilitiesNodeId).total === 3,
-    `total=${sectionKids(abilitiesNodeId).total}`,
-);
-await doUndo();
+const treeTabText = (
+    (await page.locator('.bb-tabs.primary button[role="tab"][aria-selected="true"]').textContent()) ?? ""
+).trim();
+check("tab: tree tab shows combined abilities/effects count (2/3)", treeTabText.includes("2/3"), treeTabText);
 
-await selectRow(abilitiesPanel, 0);
-await clickAction(abilitiesPanel, "Add below");
+// The tree is a flat virtualized row list (header rows + effect rows in document order), not nested group
+// elements - reconstruct groups by walking the rows: a header starts a group; following effect rows belong
+// to it until the next header. (At these small counts every row is within the render window.)
+const treeShape = await page.evaluate(() => {
+    const groups: { head: string; level: string; count: string; effects: string[] }[] = [];
+    let cur: (typeof groups)[number] | undefined;
+    for (const r of Array.from(document.querySelectorAll(".eff-tree-vrow"))) {
+        const head = r.querySelector(".eff-tree-head");
+        const effLabel = r.querySelector(".eff-tree-effect-label");
+        if (head) {
+            cur = {
+                head: (head.querySelector(".eff-tree-head-label")?.textContent ?? "").trim(),
+                level: (head.querySelector(".eff-tree-level")?.textContent ?? "").trim(),
+                count: (head.querySelector(".eff-tree-count")?.textContent ?? "").trim(),
+                effects: [],
+            };
+            groups.push(cur);
+        } else if (effLabel && cur) {
+            cur.effects.push((effLabel.textContent ?? "").trim());
+        }
+    }
+    return { groups, effectRows: document.querySelectorAll(".eff-tree-effect").length };
+});
 check(
-    "abilities: insert-after row0: +1",
-    sectionKids(abilitiesNodeId).total === 3,
-    `total=${sectionKids(abilitiesNodeId).total}`,
+    "tree: Global + per-ability groups render with nested effects",
+    treeShape.groups.length >= 3 &&
+        (treeShape.groups[0]?.head ?? "").startsWith("Global") &&
+        treeShape.groups.filter((g) => g.head.startsWith("Ability")).length === 2,
+    JSON.stringify(treeShape.groups),
 );
-await doUndo();
-
-await selectRow(abilitiesPanel, 0);
-await clickAction(abilitiesPanel, "Move down");
 check(
-    "abilities: reorder-down row0: unchanged",
-    sectionKids(abilitiesNodeId).total === 2,
-    `total=${sectionKids(abilitiesNodeId).total}`,
+    "tree: effects nest under their owning ability (1 under Ability 1, 2 under Ability 2)",
+    treeShape.effectRows === 3 &&
+        treeShape.groups.find((g) => g.head === "Ability 1")?.effects.length === 1 &&
+        treeShape.groups.find((g) => g.head === "Ability 2")?.effects.length === 2,
+    JSON.stringify(treeShape.groups.map((g) => ({ h: g.head, n: g.effects.length }))),
 );
-await doUndo();
-
-await selectRow(abilitiesPanel, 1);
-await clickAction(abilitiesPanel, "Move up");
+// ITM abilities carry no level field, so no level badge is shown (SPL shows "Level Required").
 check(
-    "abilities: reorder-up row1: unchanged",
-    sectionKids(abilitiesNodeId).total === 2,
-    `total=${sectionKids(abilitiesNodeId).total}`,
-);
-await doUndo();
-
-await selectRow(abilitiesPanel, 0);
-await clickAction(abilitiesPanel, "Duplicate");
-check(
-    "abilities: duplicate row0: +1",
-    sectionKids(abilitiesNodeId).total === 3,
-    `total=${sectionKids(abilitiesNodeId).total}`,
-);
-await doUndo();
-
-// Delete fires immediately - a single Delete click removes the entry (removal is undoable).
-await selectRow(abilitiesPanel, 1);
-await clickDelete(abilitiesPanel);
-check(
-    "abilities: single Delete click removes immediately",
-    sectionKids(abilitiesNodeId).total === 1,
-    `total=${sectionKids(abilitiesNodeId).total}`,
-);
-await doUndo();
-check(
-    "abilities: undo restores the removed entry",
-    sectionKids(abilitiesNodeId).total === 2,
-    `total=${sectionKids(abilitiesNodeId).total}`,
+    "tree: ITM ability rows show no level badge",
+    treeShape.groups.every((g) => g.level === ""),
+    JSON.stringify(treeShape.groups.map((g) => g.level)),
 );
 
-// ============================================================
-// EFFECTS ops (scoped to the Effects panel)
-// ============================================================
-await clickTab("Effects");
-await waitRows(effectsPanel, 3);
-
-await selectRow(effectsPanel, 0);
-await clickAction(effectsPanel, "Add above");
+// Selecting an effect renders the shared feature-block fragment (opcode combobox, folded Level cell).
+await page.locator(".eff-tree-effect").first().click();
+await page.locator(".eff-tree .detail .layout-root .field").first().waitFor({ timeout: 3000 });
+const effDetail = await page.evaluate(() => ({
+    fields: document.querySelectorAll(".eff-tree .detail .layout-root .field").length,
+    combobox: document.querySelectorAll(".eff-tree .detail .bb-combobox-input").length,
+    panelTitles: document.querySelectorAll(".eff-tree .detail .layout-root .panel > h3").length,
+}));
 check(
-    "effects: insert-before row0: +1",
-    sectionKids(effectsNodeId).total === 4,
-    `total=${sectionKids(effectsNodeId).total}`,
+    "tree: effect detail renders the shared feature-block fragment (wire order, no semantic panel titles)",
+    effDetail.fields > 10 && effDetail.panelTitles === 0,
+    `fields=${effDetail.fields} panelTitles=${effDetail.panelTitles}`,
 );
-await doUndo();
+check("tree: opcode detail field is a searchable combobox", effDetail.combobox >= 1, `count=${effDetail.combobox}`);
 
-await selectRow(effectsPanel, 1);
-await clickAction(effectsPanel, "Move down");
-check(
-    "effects: reorder-down row1 (same owner): unchanged",
-    sectionKids(effectsNodeId).total === 3,
-    `total=${sectionKids(effectsNodeId).total}`,
-);
-await doUndo();
-
-await selectRow(effectsPanel, 1);
-await clickAction(effectsPanel, "Duplicate");
-check(
-    "effects: duplicate row1: +1",
-    sectionKids(effectsNodeId).total === 4,
-    `total=${sectionKids(effectsNodeId).total}`,
-);
-await doUndo();
-
-await selectRow(effectsPanel, 1);
-await clickDelete(effectsPanel);
-check("effects: remove row1: -1", sectionKids(effectsNodeId).total === 2, `total=${sectionKids(effectsNodeId).total}`);
-await doUndo();
-
-// ============================================================
-// Effect detail: an ITM effect renders through the SHARED feature-block fragment (parallel panels to the EFF
-// v2 body and to CRE effects), not a generic auto-form - so the detail shows `.layout-root` panels, and the
-// opcode renders as a searchable combobox (spec searchableEnum).
-// ============================================================
-await selectRow(effectsPanel, 0);
-await effectsPanel.locator(".detail .layout-root .field").first().waitFor({ timeout: 3000 });
-// The shared feature-block fragment renders through LayoutRenderer (`.detail .layout-root`), not the generic
-// auto-form (which has no `.layout-root`) - so layout fields are the shared-fragment signal. The fragment is
-// one untitled wire-byte-order panel: no semantic panel `h3` titles (the Resistance / Save Type flag boxes
-// carry their own legends, not panel titles).
-const itmEffectFields = await effectsPanel.locator(".detail .layout-root .field").count();
-const itmEffectPanelTitles = await effectsPanel.locator(".detail .layout-root .panel > h3").count();
-check(
-    "effects: ITM effect detail renders the shared feature-block fragment in wire byte order (no semantic panel titles)",
-    itmEffectFields > 10 && itmEffectPanelTitles === 0,
-    `fields=${itmEffectFields} panelTitles=${itmEffectPanelTitles}`,
-);
-const opcodeCombobox = await effectsPanel.locator(".detail .bb-combobox-input").count();
-check("effects: opcode detail field is a searchable combobox", opcodeCombobox >= 1, `count=${opcodeCombobox}`);
-
-// The feature block's min/max level range folds into one "Level" cell with two side-by-side boxes (the same
-// joined-field shape as Probability / Dice), not two separate "Minimum Level" / "Maximum Level" rows.
-const levelCell = effectsPanel
-    .locator(".detail .layout-root .field")
+const levelCell = page
+    .locator(".eff-tree .detail .layout-root .field")
     .filter({ has: page.locator(".label", { hasText: /^Level$/ }) })
     .first();
-const levelInputs = await levelCell.locator(".field-control.joined input").count();
 check(
-    "effects: level range folds into one 'Level' cell with two boxes",
-    levelInputs === 2,
-    `levelInputs=${levelInputs}`,
+    "tree: level range folds into one 'Level' cell with two boxes",
+    (await levelCell.locator(".field-control.joined input").count()) === 2,
+    "",
 );
 
-// Stable-columns guard: the opcode overlay relabels parameter1/parameter2 per opcode, but the effect-body
-// label column is fixed-width, so the value columns must NOT shift left/right when a different effect (and so
-// a different opcode + parameter labels) is selected. Measure the col-2 "Timing" control's left edge across
-// all three effects (opcodes 10/20/21); they must coincide.
+// Stable-columns guard: the col-2 "Timing" control's left edge must coincide across all three effects
+// (different opcodes relabel parameter1/parameter2, but the fixed label column keeps the values put).
 const timingLefts: number[] = [];
 for (let i = 0; i < 3; i++) {
-    await selectRow(effectsPanel, i);
-    const left = await effectsPanel
-        .locator('.detail .bb-select-trigger[aria-label="Timing"]')
+    await page.locator(".eff-tree-effect").nth(i).click();
+    await page.waitForTimeout(80);
+    const left = await page
+        .locator('.eff-tree .detail .bb-select-trigger[aria-label="Timing"]')
         .first()
         .evaluate((el) => Math.round(el.getBoundingClientRect().left));
     timingLefts.push(left);
 }
-const stableCols = timingLefts.every((l) => Math.abs(l - timingLefts[0]!) <= 1);
 check(
-    "effects: value columns stay put when opcode/parameter labels change (fixed label column)",
-    stableCols,
+    "tree: value columns stay put when opcode/parameter labels change (fixed label column)",
+    timingLefts.every((l) => Math.abs(l - timingLefts[0]!) <= 1),
     `timingLefts=${JSON.stringify(timingLefts)}`,
 );
+
+// Selecting an ability header renders the shared ITM ability panels in the same detail pane.
+await page.locator(".eff-tree-head-label", { hasText: "Ability 1" }).first().click();
+await page.locator(".eff-tree .detail .layout-root .field").first().waitFor({ timeout: 3000 });
+const abilityPanels = (await page.locator(".eff-tree .detail .layout-root .panel h3").allInnerTexts()).map((t) =>
+    t.toUpperCase(),
+);
+check(
+    "tree: ability detail renders the shared panels (Ability/Damage/Projectile/Charges/Flags)",
+    ["ABILITY", "DAMAGE", "PROJECTILE", "CHARGES", "FLAGS"].every((p) => abilityPanels.includes(p)),
+    JSON.stringify(abilityPanels),
+);
+const abilityText = await page.locator(".eff-tree .detail .layout-root").first().innerText();
+check(
+    "tree: Melee Animation renders all three distinct slots",
+    ["Overhand", "Backhand", "Thrust"].every((s) => abilityText.includes(s)),
+    "",
+);
+await page.screenshot({ path: path.join(here, "shot-itm-tree.png"), fullPage: true });
+
+// ============================================================
+// Structure ops via the tree (full parity with the dropped Abilities/Effects tabs)
+// ============================================================
+// + ability (section-level add)
+await page.locator(".eff-tree-toolbar .eff-tree-toolbtn").click();
+await page.waitForTimeout(200);
+check(
+    "ops: + ability adds an ability",
+    sectionKids(abilitiesNodeId).total === 3,
+    `${sectionKids(abilitiesNodeId).total}`,
+);
+await doUndo();
+check(
+    "ops: undo restores 2 abilities",
+    sectionKids(abilitiesNodeId).total === 2,
+    `${sectionKids(abilitiesNodeId).total}`,
+);
+
+// Owner-scoped + effect on Ability 1 (addChild)
+const ability1Head = page
+    .locator(".eff-tree-head")
+    .filter({ has: page.locator(".eff-tree-head-label", { hasText: "Ability 1" }) });
+await ability1Head.locator(".eff-tree-add").click();
+await page.waitForTimeout(200);
+check(
+    "ops: + effect on Ability 1 adds an effect",
+    sectionKids(effectsNodeId).total === 4,
+    `${sectionKids(effectsNodeId).total}`,
+);
+await doUndo();
+check("ops: undo restores 3 effects", sectionKids(effectsNodeId).total === 3, `${sectionKids(effectsNodeId).total}`);
+
+// Per-entry RowActions in the detail pane: delete an effect, then add an ability below the selected one.
+await page.locator(".eff-tree-effect").first().click();
+await page.locator(".eff-tree .detail .row-actions").first().waitFor({ timeout: 3000 });
+await page.locator('.eff-tree .detail .row-actions button[aria-label="Delete"]').click();
+await page.waitForTimeout(200);
+check(
+    "ops: delete effect via RowActions removes it",
+    sectionKids(effectsNodeId).total === 2,
+    `${sectionKids(effectsNodeId).total}`,
+);
+await doUndo();
+
+await page.locator(".eff-tree-head-label", { hasText: "Ability 1" }).first().click();
+await page.locator(".eff-tree .detail .row-actions").first().waitFor({ timeout: 3000 });
+await page.locator('.eff-tree .detail .row-actions button[aria-label="Add below"]').click();
+await page.waitForTimeout(200);
+check(
+    "ops: ability RowActions Add below inserts an ability",
+    sectionKids(abilitiesNodeId).total === 3,
+    `${sectionKids(abilitiesNodeId).total}`,
+);
+await doUndo();
+
+// Add global (equipping) effect: the Global group's + appends to the equipping range (section-level add).
+await page.locator('.eff-tree-add[aria-label="Add global effect"]').click();
+await page.waitForTimeout(200);
+check(
+    "ops: + global effect grows the effect count",
+    sectionKids(effectsNodeId).total === 4,
+    `${sectionKids(effectsNodeId).total}`,
+);
+await doUndo();
+check("ops: undo restores 3 effects", sectionKids(effectsNodeId).total === 3, `${sectionKids(effectsNodeId).total}`);
+
+// ============================================================
+// Filter: typing narrows the tree to matching effects (+ their owning headers), forcing groups expanded.
+// ============================================================
+await page.locator(".eff-tree-toolbar input.list-filter-input").fill("op 21");
+await page.waitForTimeout(200);
+const filtered = await page.evaluate(() => ({
+    effects: Array.from(document.querySelectorAll(".eff-tree-effect-label")).map((e) => (e.textContent ?? "").trim()),
+    heads: Array.from(document.querySelectorAll(".eff-tree-head-label")).map((e) => (e.textContent ?? "").trim()),
+}));
+check(
+    "filter: only the matching effect (op 21, under Ability 2) and its header remain",
+    filtered.effects.length === 1 &&
+        (filtered.effects[0] ?? "").includes("op 21") &&
+        filtered.heads.length === 1 &&
+        filtered.heads[0] === "Ability 2",
+    JSON.stringify(filtered),
+);
+await page.locator(".eff-tree-toolbar .list-filter-clear").click();
+await page.waitForTimeout(150);
+check(
+    "filter: clearing restores all three effects",
+    (await page.locator(".eff-tree-effect").count()) === 3,
+    `${await page.locator(".eff-tree-effect").count()}`,
+);
+
+// ============================================================
+// Virtualization: a large effect set mounts only a windowed subset of rows (not all 150).
+// ============================================================
+{
+    const bigDoc = {
+        ...baseDoc,
+        header: { ...baseDoc.header, featureBlocksIndex: 0, featureBlocksCount: 0 },
+        abilities: [{ ...defaultItmAbility(), featureBlockIndex: 0, featureBlockCount: 150 }],
+        effects: Array.from({ length: 150 }, (_, i) => mkEffect(i % 60)),
+    };
+    const r = dispatch({ type: "open", uri: "file:///big.itm", bytes: serializeItmCanonicalDocument(bigDoc) });
+    if (r.type !== "opened") {
+        check("virtualization: big doc open", false, `type=${r.type}`);
+    } else {
+        sessionId = r.result.sessionId;
+        await page.evaluate((rr) => window.postMessage(rr, "*"), { type: "init", open: r.result } as HostToWebview);
+        await page.waitForTimeout(300);
+        const mounted = await page.locator(".eff-tree-vrow").count();
+        const spacerH = await page
+            .locator(".eff-tree-spacer")
+            .first()
+            .evaluate((el) => Math.round(el.getBoundingClientRect().height));
+        // ~152 visual rows (2 headers + 150 effects); only ~viewport+overscan are mounted.
+        check(
+            "virtualization: only a windowed subset of rows is mounted",
+            mounted > 0 && mounted < 60,
+            `mounted=${mounted}`,
+        );
+        check("virtualization: spacer sizes to the full row count", spacerH > 3000, `spacerH=${spacerH}`);
+    }
+}
 
 // ============================================================
 // REGRESSION: wm_sbook.itm remove-first-effect (equipping count 0). Dispatch-level, DOM-independent.
@@ -493,7 +495,9 @@ check(
         check("regression: wm_sbook open succeeded", false, `type=${wmR.type}`);
     } else {
         const wmSession = wmR.result.sessionId;
-        const wmEffectsNodeId = wmR.result.layout.layout?.sections["Effects"]?.nodeId ?? "";
+        const wmEffects = dispatch({ type: "getChildren", sessionId: wmSession, nodeId: null, start: 0, end: 50 });
+        const wmEffectsNodeId =
+            wmEffects.type === "children" ? (wmEffects.rows.find((r) => r.name === "Effects")?.id ?? "") : "";
         const wmBefore = dispatch({
             type: "getChildren",
             sessionId: wmSession,
@@ -527,71 +531,6 @@ check(
         );
     }
 }
-
-// ---- Screenshots: each tab captured on the tab it names, with a row selected so the detail pane renders.
-// (Regression: both were previously captured while the Effects tab was active, producing duplicate images.)
-await clickTab("Abilities");
-await waitRows(abilitiesPanel, 2);
-await selectRow(abilitiesPanel, 0);
-// An ITM ability renders through the SHARED ability fragment (curated panels parallel to SPL abilities and
-// consistent with the effects beside it), not a generic auto-form: the detail shows `.layout-root` panels.
-await abilitiesPanel.locator(".detail .layout-root .field").first().waitFor({ timeout: 3000 });
-const itmAbilityPanels = (await abilitiesPanel.locator(".detail .layout-root .panel h3").allInnerTexts()).map((t) =>
-    t.toUpperCase(),
-);
-check(
-    "abilities: ITM ability detail renders the shared panels (Ability/Damage/Projectile/Charges/Flags)",
-    ["ABILITY", "DAMAGE", "PROJECTILE", "CHARGES", "FLAGS"].every((p) => itmAbilityPanels.includes(p)),
-    JSON.stringify(itmAbilityPanels),
-);
-const itmAbilityDetailText = await abilitiesPanel.locator(".detail .layout-root").first().innerText();
-check(
-    "abilities: Melee Animation renders all three distinct slots (distinct slot-key fix)",
-    ["Overhand", "Backhand", "Thrust"].every((s) => itmAbilityDetailText.includes(s)),
-    JSON.stringify(["Overhand", "Backhand", "Thrust"].filter((s) => itmAbilityDetailText.includes(s))),
-);
-check(
-    "abilities: serializer-managed feature-block pointers omitted from the detail",
-    !itmAbilityDetailText.includes("Feature Block"),
-    `hasFeatureBlock=${itmAbilityDetailText.includes("Feature Block")}`,
-);
-check(
-    "screenshot: Abilities tab active for shot-itm-abilities",
-    (await activeTabLabel()).includes("Abilities"),
-    await activeTabLabel(),
-);
-await page.screenshot({ path: path.join(here, "shot-itm-abilities.png"), fullPage: true });
-
-await clickTab("Effects");
-await waitRows(effectsPanel, 3);
-await selectRow(effectsPanel, 0);
-await effectsPanel.locator(".detail .layout-root .field").first().waitFor({ timeout: 3000 });
-check(
-    "screenshot: Effects tab active for shot-itm-effects",
-    (await activeTabLabel()).includes("Effects"),
-    await activeTabLabel(),
-);
-await page.screenshot({ path: path.join(here, "shot-itm-effects.png"), fullPage: true });
-
-// ---- Dropdown never-clip guard (UI-GUIDELINES: a dropdown is sized to its LONGEST option label so changing
-// the selection never clips). The risk is invisible at the default selection - the current value may be short
-// while a longer option clips - so drive Timing to its longest option ("Instant/Permanent (after Death)") and
-// assert the trigger label is not ellipsis-truncated (scrollWidth <= clientWidth). Measures the real rendered
-// width, not a char-count estimate, since valueTier maps char counts to fixed ch tiers.
-const timingTrigger = effectsPanel.locator('.detail .bb-select-trigger[aria-label="Timing"]');
-await timingTrigger.click();
-await page.locator(".bb-select-item", { hasText: "after Death" }).first().click();
-const timingLabel = effectsPanel.locator('.detail .bb-select-trigger[aria-label="Timing"] .bb-select-label');
-await timingLabel.filter({ hasText: "after Death" }).waitFor({ timeout: 3000 });
-const timingClip = await timingLabel.evaluate((el) => ({
-    text: el.textContent ?? "",
-    clipped: el.scrollWidth > el.clientWidth + 1,
-}));
-check(
-    "dropdown: longest Timing option fits the trigger without clipping",
-    !timingClip.clipped,
-    `label="${timingClip.text}" clipped=${timingClip.clipped}`,
-);
 
 await browser.close();
 

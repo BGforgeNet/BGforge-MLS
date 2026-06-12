@@ -25,3 +25,5 @@ export { buildDetailFieldMap, detailVariantRefs, detailVariantResolves } from ".
 // internal (the dispatch handler and the structural view are accessed through SpellbookView structurally).
 export type { SpellbookView } from "./spellbook";
 export type { SpellbookEditOp } from "./spellbook-ops";
+// Effect-tree view crossing to the webview (ITM/SPL abilities+effects nesting). The projection is internal.
+export type { EffectTreeView, EffectTreeGroup, EffectTreeEntry } from "./effect-tree";

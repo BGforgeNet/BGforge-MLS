@@ -14,6 +14,7 @@
     import GridBlock from "./blocks/GridBlock.svelte";
     import ListBlock from "./blocks/ListBlock.svelte";
     import SpellbookBlock from "./blocks/SpellbookBlock.svelte";
+    import EffectTreeBlock from "./blocks/EffectTreeBlock.svelte";
     import RawBlock from "./blocks/RawBlock.svelte";
 
     // bridge/version/selection are only needed by `list` blocks (variable-length sections render via the
@@ -124,6 +125,10 @@
                                            {onedit} {byNode} />
                             {:else if block.kind === "spellbook"}
                                 <SpellbookBlock {bridge} {version} {onedit} />
+                            {:else if block.kind === "effectTree"}
+                                <EffectTreeBlock abilityDetail={block.abilityDetail} effectDetail={block.effectDetail}
+                                                 canModify={block.canModify} childSection={block.childSection}
+                                                 {bridge} {version} {selection} {onedit} {byNode} />
                             {:else}
                                 <RawBlock />
                             {/if}
