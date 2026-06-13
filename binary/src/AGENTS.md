@@ -30,8 +30,11 @@ run of plain fields becomes a full-width 2-column panel (the wide L-tier opcode 
 need the full width); each bitfield and each labelled subgroup becomes its own content-width (`fit`) box at its
 byte position; consecutive boxes pack side by side into one wrapping row (ragged box heights are fine). The
 probability pair folds into one labelled cell (a `join`): Probability (`<p2> - <p1>`). EFF v2 adds single-column
-subgroup boxes (Coordinates, Classification, Parameters, Resources, Parent Resource). These foldings / boxes are
-intentional - the label overrides still name the underlying fields in the model.
+subgroup boxes (Save Info, Classification, Parameters, Resources, Coordinates, Parent Resource); a subgroup box
+may also carry a `{ flags }` member that renders as a flag-checkbox table inside the same legend box (EFF v2
+Parent Resource Flags). These foldings / boxes are intentional - the label overrides still name the underlying
+fields in the model. EFF v2 leads its trailing box run with the Resistance/Save Type flag pair side by side
+(matching the v1 feature block) and pulls `timeApplied` to the end of the trailing plain run.
 
 - The 0x1c/0x20 dword pair is dual-purpose: a Maximum/Minimum Level range for most opcodes, Dice Thrown/Dice
   Sides for a few (12/17/18/331/333, 218 when param2=1). It is spec-named `maxLevel`/`minLevel` in the feature

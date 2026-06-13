@@ -92,11 +92,17 @@
                                              fields={layout.fields} {onedit} {byNode} />
                             {:else if block.kind === "group"}
                                 <!-- Boxed, labelled subgroup: a fieldset (flag-group box chrome) wrapping a
-                                     nested fields block. Used to nest a cluster (e.g. CRE Class) in a panel. -->
+                                     nested fields block. Used to nest a cluster (e.g. CRE Class) in a panel.
+                                     An optional `flagsField` renders a flag-checkbox box below the fields,
+                                     inside the SAME legend box (EFF v2 Parent Resource Flags). -->
                                 <fieldset class="flag-group">
                                     <legend>{block.label}</legend>
                                     <FieldsBlock fieldRefs={block.fields} columns={block.columns} joins={block.joins}
                                                  fields={layout.fields} {onedit} {byNode} />
+                                    {#if block.flagsField !== undefined}
+                                        <FlagColumns field={block.flagsField} columns={block.flagsColumns}
+                                                     boxed={false} fields={layout.fields} {onedit} />
+                                    {/if}
                                 </fieldset>
                             {:else if block.kind === "flags"}
                                 <!-- Box the flag group unless it is the sole block of a titled panel (then the

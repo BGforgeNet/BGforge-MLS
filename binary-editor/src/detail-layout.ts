@@ -52,8 +52,13 @@ export function detailVariantRefs(rows: DetailRow[]): FieldRef[] {
     const addBlock = (block: DetailBlock): void => {
         switch (block.kind) {
             case "fields":
+                refs.push(...block.fields);
+                break;
             case "group":
                 refs.push(...block.fields);
+                // A group may carry a flag table inside its box (EFF v2 Parent Resource Flags); its field must
+                // resolve too, else the variant wrongly declines the entry and falls back to the auto-form.
+                if (block.flagsField !== undefined) refs.push(block.flagsField);
                 break;
             case "flags":
                 refs.push(block.field);

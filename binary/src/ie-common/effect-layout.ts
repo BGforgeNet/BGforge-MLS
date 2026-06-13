@@ -28,12 +28,18 @@ export type EffectLayoutField =
     | { readonly flags: string; readonly columns?: number }
     | { readonly group: EffectGroup };
 
+/** A member of an `EffectGroup`: a plain field key, or `{ flags: key, columns? }` for a bitfield that renders
+ *  as a flag-checkbox box INSIDE the group's legend box (e.g. Parent Resource Flags). */
+export type EffectGroupField = string | { readonly flags: string; readonly columns?: number };
+
 /** A labelled boxed subgroup of related fields, rendered as its own content-width box (like a flag box) at its
- *  byte position. `fields` are in byte order; `joins` fold tuples within the group; `columns` lays the group's
- *  rows out in N columns (default 1). Keys are bare (the builder prefixes them). */
+ *  byte position. `fields` are in byte order; a `{ flags }` member renders as a flag-checkbox box inside the
+ *  same legend box (its plain siblings stay a fields block above it). `joins` fold tuples within the group;
+ *  `columns` lays the group's plain rows out in N columns (default 1). Keys are bare (the builder prefixes
+ *  them). */
 export interface EffectGroup {
     readonly label: string;
-    readonly fields: readonly string[];
+    readonly fields: readonly EffectGroupField[];
     readonly joins?: readonly EffectJoin[];
     readonly columns?: number;
 }
@@ -135,16 +141,28 @@ export function effectBodyRows(
             continue;
         }
         flushRun();
-        const block: DetailBlock =
-            "flags" in field
-                ? { kind: "flags", field: k(field.flags), columns: field.columns ?? 2 }
-                : {
-                      kind: "group",
-                      label: field.group.label,
-                      fields: field.group.fields.map((f) => k(f)),
-                      columns: field.group.columns ?? 1,
-                      ...(field.group.joins && { joins: prefixJoins(field.group.joins) }),
-                  };
+        let block: DetailBlock;
+        if ("flags" in field) {
+            block = { kind: "flags", field: k(field.flags), columns: field.columns ?? 2 };
+        } else {
+            // Split a group's plain field keys from an optional `{ flags }` member: the plain keys stay the
+            // group's fields block; the flags member renders as a flag box inside the same legend box.
+            const plainKeys = field.group.fields.filter((f): f is string => typeof f === "string");
+            const flagMember = field.group.fields.find(
+                (f): f is { readonly flags: string; readonly columns?: number } => typeof f !== "string",
+            );
+            block = {
+                kind: "group",
+                label: field.group.label,
+                fields: plainKeys.map((f) => k(f)),
+                columns: field.group.columns ?? 1,
+                ...(field.group.joins && { joins: prefixJoins(field.group.joins) }),
+                ...(flagMember && {
+                    flagsField: k(flagMember.flags),
+                    ...(flagMember.columns !== undefined && { flagsColumns: flagMember.columns }),
+                }),
+            };
+        }
         boxes.push({ fit: true, blocks: [block] });
     }
     flushRun();

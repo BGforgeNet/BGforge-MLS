@@ -3,7 +3,10 @@
  * The same body appears standalone (`eff.body.`) and embedded in a CRE whose `effStructureVersion` is 1
  * (`cre.effects[].v2.`); both render through `effectBodyRows` so an effect looks the same wherever it lives.
  *
- * Fields are listed in on-disk (wire) byte order - the same order as `specs/body.ts`, top to bottom. The two
+ * Fields are listed in on-disk (wire) byte order - the same order as `specs/body.ts`, top to bottom - with a
+ * few sanctioned reorders for clarity (the layout schema permits reordering for clarity): `resistance` /
+ * `saveType` lead the trailing box run as a side-by-side flag pair (matching the v1 feature block), and
+ * `timeApplied` is pulled to the end so it reads with the other trailing per-effect metadata. The two
  * bitfields (`saveType`, `resistance`) are marked `{ flags }` so they render as flag boxes; `effectBodyRows`
  * owns the panel structure. Signature/version magic and reserved padding (`unused*`) are omitted (constants,
  * not user data - the serializer rebuilds them from the model).
@@ -34,15 +37,20 @@ const PARAMETERS_GROUP: EffectGroup = {
 };
 const RESOURCES_GROUP: EffectGroup = { label: "Resources", fields: ["resource2", "resource3"], columns: 1 };
 // The box legend supplies the "Parent Resource" context, so its fields drop that prefix (see label overrides);
-// the resref (`parentResource`, the main field) leads, then its type and flags.
+// the resref (`parentResource`, the main field) leads, then its type, then its flags - rendered as a flag
+// table inside the same legend box (the field carries a flag table; see specs/body.overrides.ts).
 const PARENT_RESOURCE_GROUP: EffectGroup = {
     label: "Parent Resource",
-    fields: ["parentResource", "parentResourceType", "parentResourceFlags"],
+    fields: ["parentResource", "parentResourceType", { flags: "parentResourceFlags" }],
     columns: 1,
 };
 // `school` and `sectype` (effect classification metadata) are non-adjacent in byte order but combine into one
 // "Classification" box, placed at `school`'s position.
 const CLASSIFICATION_GROUP: EffectGroup = { label: "Classification", fields: ["school", "sectype"], columns: 1 };
+// `saveBonus` and `stackingIdTobex` are adjacent in byte order; box them as a single-column "Save Info" pair
+// (consistent with the other trailing subgroup boxes) so they read as a stacked pair rather than two loose
+// plain fields, and so the trailing run is purely boxes that pack side by side.
+const SAVE_INFO_GROUP: EffectGroup = { label: "Save Info", fields: ["saveBonus", "stackingIdTobex"], columns: 1 };
 
 /** EFF v2 body fields in wire byte order; `saveType` / `resistance` carry flag tables, so they render as flag
  *  boxes. */
@@ -59,19 +67,24 @@ const EFF_V2_FIELDS: readonly EffectLayoutField[] = [
     "resource",
     "diceThrown",
     "diceSides",
-    { flags: "saveType" },
-    "saveBonus",
-    "stackingIdTobex",
-    { group: CLASSIFICATION_GROUP },
+    // Resistance (single column) beside the wider Save Type, side by side in one row - the same treatment as the
+    // v1 feature block (FEATURE_BLOCK_FIELDS). Consecutive flag/group boxes pack into one wrapping row, so the
+    // Save Info, Classification, Parameters, Resources, Coordinates and Parent Resource boxes that follow all
+    // share that wrapping row too.
     { flags: "resistance", columns: 1 },
+    { flags: "saveType" },
+    { group: SAVE_INFO_GROUP },
+    { group: CLASSIFICATION_GROUP },
     { group: PARAMETERS_GROUP },
-    "timeApplied",
     { group: RESOURCES_GROUP },
     { group: COORDINATES_GROUP },
     { group: PARENT_RESOURCE_GROUP },
+    // Trailing plain run (a fields block breaks the box wrapping row above). `timeApplied` moves here, to the end,
+    // so it reads with the other trailing per-effect metadata rather than mid-list.
     "projectile",
     "variableName",
     "casterLevel",
+    "timeApplied",
 ];
 
 /** The EFF v2 body rows for any field-ref prefix (standalone `.eff` variant rows or a CRE master-detail

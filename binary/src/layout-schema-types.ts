@@ -68,6 +68,11 @@ const fieldGroupBlockSchema = z.strictObject({
     fields: z.array(fieldRefSchema).min(1),
     columns: z.number().int().positive().optional(),
     joins: z.array(joinSchema).optional(),
+    /** A bitfield rendered as a flag-checkbox box INSIDE this group's legend box, below its plain `fields`
+     *  (e.g. EFF v2 Parent Resource: ResRef/Type as fields, Flags as a flag table). The group keeps one legend
+     *  around the whole thing. `flagsColumns` sets that flag box's checkbox column count (default 2). */
+    flagsField: fieldRefSchema.optional(),
+    flagsColumns: z.number().int().positive().optional(),
 });
 
 /** One flags field rendered as N vertical checkbox columns. */
