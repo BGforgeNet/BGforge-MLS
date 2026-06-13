@@ -103,6 +103,16 @@ describe("the shared EFF v2 fragment: side-by-side flag/group boxes, Parent Reso
         expect(labels).toContain("Parameters");
     });
 
+    it("orders the Coordinates box before the Parameters box", () => {
+        const boxRow = rowWith((b) => b.kind === "group" && b.label === "Coordinates");
+        expect(boxRow).toBeDefined();
+        const labels = boxRow!.panels
+            .flatMap((p) => p.blocks)
+            .filter((b) => b.kind === "group")
+            .map((b) => (b.kind === "group" ? b.label : ""));
+        expect(labels.indexOf("Coordinates")).toBeLessThan(labels.indexOf("Parameters"));
+    });
+
     it("renders Parent Resource flags as a flag table inside the Parent Resource box", () => {
         const pr = rows()
             .flatMap((r) => r.panels)

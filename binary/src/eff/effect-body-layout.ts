@@ -69,15 +69,15 @@ const EFF_V2_FIELDS: readonly EffectLayoutField[] = [
     "diceSides",
     // Resistance (single column) beside the wider Save Type, side by side in one row - the same treatment as the
     // v1 feature block (FEATURE_BLOCK_FIELDS). Consecutive flag/group boxes pack into one wrapping row, so the
-    // Save Info, Classification, Parameters, Resources, Coordinates and Parent Resource boxes that follow all
+    // Save Info, Classification, Coordinates, Resources, Parameters and Parent Resource boxes that follow all
     // share that wrapping row too.
     { flags: "resistance", columns: 1 },
     { flags: "saveType" },
     { group: SAVE_INFO_GROUP },
     { group: CLASSIFICATION_GROUP },
-    { group: PARAMETERS_GROUP },
-    { group: RESOURCES_GROUP },
     { group: COORDINATES_GROUP },
+    { group: RESOURCES_GROUP },
+    { group: PARAMETERS_GROUP },
     { group: PARENT_RESOURCE_GROUP },
     // Trailing plain run (a fields block breaks the box wrapping row above). `timeApplied` moves here, to the end,
     // so it reads with the other trailing per-effect metadata rather than mid-list.
