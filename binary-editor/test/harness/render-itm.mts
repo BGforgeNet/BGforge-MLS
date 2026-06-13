@@ -446,13 +446,13 @@ const abilityPanels = (await page.locator(".eff-tree .detail .layout-root .panel
     t.toUpperCase(),
 );
 check(
-    "tree: ability detail renders the shared panels (Ability/Damage/Projectile/Charges/Flags)",
-    ["ABILITY", "DAMAGE", "PROJECTILE", "CHARGES", "FLAGS"].every((p) => abilityPanels.includes(p)),
+    "tree: ability detail renders the shared panels (Ability/Damage/Animation/Charges/Flags)",
+    ["ABILITY", "DAMAGE", "ANIMATION", "CHARGES", "FLAGS"].every((p) => abilityPanels.includes(p)),
     JSON.stringify(abilityPanels),
 );
 const abilityText = await page.locator(".eff-tree .detail .layout-root").first().innerText();
 check(
-    "tree: Melee Animation renders all three distinct slots",
+    "tree: Melee group renders all three distinct slots",
     ["Overhand", "Backhand", "Thrust"].every((s) => abilityText.includes(s)),
     "",
 );

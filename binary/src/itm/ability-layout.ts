@@ -3,10 +3,11 @@
  * prefix. An ITM ability renders these curated panels (at `itm.abilities[].`) instead of a generic auto-form,
  * so it reads as panels consistent with the effects beside it (the effect fragments do the same). Parallel to
  * the SPL ability fragment (`../spl/ability-layout.ts`): both lead with an "Ability" panel (activation +
- * targeting) and a "Projectile" panel, then each adds the panels its own record needs - ITM is a weapon header
- * (damage dice, THAC0, charges, melee/ammo animation) where SPL is a spell header (casting cost). Same titles
- * and disposition where the records align; extra panels for the fields the other record lacks (see the
- * binary-editor uniform-shared-layout principle: same record -> one fragment; similar record -> parallel one).
+ * targeting), then each adds the panels its own record needs - ITM is a weapon header (damage dice, THAC0,
+ * charges, projectile/melee animation) where SPL is a spell header (casting cost). The ITM "Animation" panel
+ * boxes the projectile parameters + ammo flags ("Projectile") and the melee swing slots ("Melee"); SPL carries
+ * only a single projectile resref, so it has no equivalent (see the binary-editor uniform-shared-layout
+ * principle: same record -> one fragment; similar record -> parallel one).
  *
  * The serializer-managed feature-block pointers (`featureBlockCount`/`featureBlockIndex`) are omitted - they
  * are derived from which effects belong to the ability, not user data; the serializer rebuilds them.
@@ -16,8 +17,8 @@ import type { DetailRow } from "../layout-schema-types";
 
 const refAt = (prefix: string, key: string): string => `${prefix}.${key}`;
 
-/** The ITM ability panels, emitted for any field-ref prefix. The `Melee Animation` group references the three
- *  per-slot keys (Overhand/Backhand/Thrust) the adapter now emits distinctly. */
+/** The ITM ability panels, emitted for any field-ref prefix. The `Melee` group references the three per-slot
+ *  keys (Overhand/Backhand/Thrust) the adapter emits distinctly. */
 export function itmAbilityBodyRows(prefix: string): DetailRow[] {
     const k = (key: string): string => refAt(prefix, key);
     return [
@@ -44,12 +45,16 @@ export function itmAbilityBodyRows(prefix: string): DetailRow[] {
                         { kind: "flags", field: k("identification"), columns: 1 },
                     ],
                 },
+            ],
+        },
+        {
+            panels: [
                 {
                     title: "Damage",
                     blocks: [
                         {
                             kind: "fields",
-                            columns: 2,
+                            columns: 1,
                             fields: [
                                 k("diceThrown"),
                                 k("diceSides"),
@@ -80,28 +85,38 @@ export function itmAbilityBodyRows(prefix: string): DetailRow[] {
                         },
                     ],
                 },
+                {
+                    title: "Charges",
+                    fit: true,
+                    blocks: [{ kind: "fields", fields: [k("maxCharges"), k("depletion")] }],
+                },
             ],
         },
         {
             panels: [
                 {
-                    title: "Projectile",
+                    title: "Animation",
                     stack: true,
                     blocks: [
+                        // The projectile parameters and the ammo-type flags share one "Projectile" box (a
+                        // group holds a flat field list - no nested boxes); column-major fill puts the three
+                        // parameters in column 1 and the three ammo checkboxes in column 2.
                         {
-                            kind: "fields",
+                            kind: "group",
+                            label: "Projectile",
                             columns: 2,
-                            fields: [k("projectileType"), k("projectileAnimation"), k("speed")],
+                            fields: [
+                                k("projectileType"),
+                                k("projectileAnimation"),
+                                k("speed"),
+                                k("isArrow"),
+                                k("isBolt"),
+                                k("isBullet"),
+                            ],
                         },
                         {
                             kind: "group",
-                            label: "Ammo Type",
-                            columns: 3,
-                            fields: [k("isArrow"), k("isBolt"), k("isBullet")],
-                        },
-                        {
-                            kind: "group",
-                            label: "Melee Animation",
+                            label: "Melee",
                             columns: 3,
                             fields: [
                                 k("meleeAnimation.overhand"),
@@ -112,11 +127,6 @@ export function itmAbilityBodyRows(prefix: string): DetailRow[] {
                     ],
                 },
                 {
-                    title: "Charges",
-                    fit: true,
-                    blocks: [{ kind: "fields", fields: [k("maxCharges"), k("depletion")] }],
-                },
-                {
                     title: "Flags",
                     blocks: [{ kind: "flags", field: k("flags"), columns: 1 }],
                 },
@@ -125,8 +135,8 @@ export function itmAbilityBodyRows(prefix: string): DetailRow[] {
     ];
 }
 
-/** Display-label overrides for the ITM ability at a given prefix - drop the group-prefix the "Ammo Type" boxed
- *  legend already states, so the flag labels read short inside their box. */
+/** Display-label overrides for the ITM ability at a given prefix - the ammo-type booleans read as short "Arrow"
+ *  / "Bolt" / "Bullet" rather than "Is Arrow" inside the "Projectile" box. */
 export function itmAbilityBodyLabels(prefix: string): Record<string, string> {
     const k = (key: string): string => refAt(prefix, key);
     return {

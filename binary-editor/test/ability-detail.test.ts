@@ -81,3 +81,65 @@ describe("ITM/SPL abilities render through the shared ability fragment", () => {
         });
     }
 });
+
+describe("ITM ability animation panel groups projectile and melee", () => {
+    const prefix = "itm.abilities[]";
+    const k = (key: string): string => `${prefix}.${key}`;
+
+    // Walk every block of every panel as [panelTitle, block] pairs.
+    function blocks(): Array<readonly [string | undefined, { kind: string; label?: string; fields?: string[] }]> {
+        return itmAbilityBodyRows(prefix).flatMap((row) =>
+            row.panels.flatMap((p) => p.blocks.map((b) => [p.title, b] as const)),
+        );
+    }
+    const groupByLabel = (label: string) => blocks().find(([, b]) => b.kind === "group" && b.label === label)?.[1];
+
+    it("titles the panel 'Animation', not 'Projectile'", () => {
+        const titles = itmAbilityBodyRows(prefix).flatMap((row) => row.panels.map((p) => p.title));
+        expect(titles).toContain("Animation");
+        expect(titles).not.toContain("Projectile");
+    });
+
+    it("wraps the projectile fields and the ammo flags in one 'Projectile' group", () => {
+        const projectile = groupByLabel("Projectile");
+        expect(projectile).toBeDefined();
+        expect(projectile?.fields).toEqual([
+            k("projectileType"),
+            k("projectileAnimation"),
+            k("speed"),
+            k("isArrow"),
+            k("isBolt"),
+            k("isBullet"),
+        ]);
+        // The former standalone "Ammo Type" group is folded into Projectile.
+        expect(groupByLabel("Ammo Type")).toBeUndefined();
+    });
+
+    it("renames the melee group to 'Melee'", () => {
+        expect(groupByLabel("Melee")).toBeDefined();
+        expect(groupByLabel("Melee Animation")).toBeUndefined();
+        expect(groupByLabel("Melee")?.fields).toEqual([
+            k("meleeAnimation.overhand"),
+            k("meleeAnimation.backhand"),
+            k("meleeAnimation.thrust"),
+        ]);
+    });
+});
+
+describe("ITM ability panel row arrangement", () => {
+    const prefix = "itm.abilities[]";
+    const rowTitles = (): Array<Array<string | undefined>> =>
+        itmAbilityBodyRows(prefix).map((row) => row.panels.map((p) => p.title));
+
+    it("lays out three rows: Ability / Damage+Charges / Animation+Flags", () => {
+        expect(rowTitles()).toEqual([["Ability"], ["Damage", "Charges"], ["Animation", "Flags"]]);
+    });
+
+    it("renders the Damage panel as a single column", () => {
+        const damage = itmAbilityBodyRows(prefix)
+            .flatMap((row) => row.panels)
+            .find((p) => p.title === "Damage")!;
+        const fields = damage.blocks.find((b) => b.kind === "fields");
+        expect(fields?.kind === "fields" ? fields.columns : undefined).toBe(1);
+    });
+});
