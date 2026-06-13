@@ -87,6 +87,9 @@ export function defaultCreItem(): CreItem {
     return { item: "", expirationTime: 0, quantity1: 0, quantity2: 0, quantity3: 0, itemFlags: [] };
 }
 
+// CRE v0 effects are the shared 48-byte feature block (`ie-common/specs/effect`), so the default mirrors the
+// ITM/SPL feature-block fields exactly: `resistance`/`saveType` are flags ([] encodes to wire 0); the 0x1c/0x20
+// pair is named maxLevel/minLevel; the trailing dword is the ToBEx stacking id.
 export function defaultCreEffectV1(): CreEffectV1 {
     return {
         opcode: 0,
@@ -94,17 +97,17 @@ export function defaultCreEffectV1(): CreEffectV1 {
         power: 0,
         parameter1: 0,
         parameter2: 0,
-        timingMode: 0,
-        resistance: 0,
+        timing: 0,
+        resistance: [],
         duration: 0,
         probability1: 0,
         probability2: 0,
-        resref: "", // chars(8)
-        diceThrown: 0,
-        diceSides: 0,
-        savingThrowType: 0,
-        savingThrowBonus: 0,
-        unknown: 0,
+        resource: "", // chars(8)
+        maxLevel: 0,
+        minLevel: 0,
+        saveType: [],
+        saveBonus: 0,
+        stackingIdEx: 0,
     };
 }
 

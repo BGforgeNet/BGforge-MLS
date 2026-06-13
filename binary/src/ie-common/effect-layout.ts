@@ -1,9 +1,10 @@
 /**
- * Generic wire-byte-order layout builder shared by every Infinity Engine effect record - the EFF v2 body
- * (264 bytes), the EFF v1 body (48 bytes), and the ITM/SPL feature block (48 bytes). All three render the same
- * way: a dense, untitled layout that lists every user field in on-disk (wire) byte order. The records carry
- * different fields, so each passes its own ordered field list - but the layout is this one builder, not a
- * per-record fragment. See the binary-editor uniform-shared-layout principle.
+ * Generic wire-byte-order layout builder shared by both Infinity Engine effect records - the EFF v2 body
+ * (264 bytes) and the 48-byte feature block (the same record IESDP documents as both the ITM/SPL feature block
+ * and EFF v1, embedded in ITM/SPL and in a CRE's effStructureVersion-0 effects). Both render the same way: a
+ * dense, untitled layout that lists every user field in on-disk (wire) byte order. The records carry different
+ * fields, so each passes its own ordered field list - but the layout is this one builder, not a per-record
+ * fragment. See the binary-editor uniform-shared-layout principle.
  *
  * Compactness: plain fields render in two columns across the full width (the effect's wide L-tier controls -
  * the opcode combobox, timing dropdown, variable name - need a full-width grid). A bitfield or labelled
@@ -18,10 +19,9 @@ import type { DetailBlock, DetailPanel, DetailRow } from "../layout-schema-types
 
 /** An ordered effect field, one of:
  *  - a plain field key;
- *  - `{ flags: key, columns? }` for a bitfield to render as a flag box (only fields that carry a flag table -
- *    e.g. EFF v2 / feature-block `saveType`, `resistance` - are marked; a record whose same-named field is a
- *    plain value, like EFF v1 `resistance`, passes it as a plain key). `columns` sets the checkbox column count
- *    (default 2);
+ *  - `{ flags: key, columns? }` for a bitfield to render as a flag box (fields that carry a flag table -
+ *    `saveType` / `resistance` on both the EFF v2 body and the feature block - are marked). `columns` sets the
+ *    checkbox column count (default 2);
  *  - `{ group }` for a labelled boxed subgroup of related fields (e.g. the EFF v2 caster/target Coordinates). */
 export type EffectLayoutField =
     | string

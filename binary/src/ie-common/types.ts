@@ -74,8 +74,8 @@ export const EffectSaveTypeFlags: Record<number, string> = {
     0x00000010: "Petrify / Polymorph",
     0x00000400: "Ignore primary target (EE)",
     0x00000800: "Ignore secondary target (EE)",
-    0x01000000: "Bypass mirror image (EE/TobEx)",
-    0x02000000: "Ignore difficulty / Limit stacking (EE/ToBEx)",
+    0x01000000: "Bypass mirror image (EE/ToBEx)",
+    0x02000000: "Ignore difficulty (EE) / Limit effect stacking (ToBEx)",
 };
 
 /**

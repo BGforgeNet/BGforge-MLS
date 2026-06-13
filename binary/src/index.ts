@@ -26,13 +26,12 @@ export type { CrossRefRelationship, IndexRefRelationship, SliceRefRelationship }
 export { formatLayoutSchema, variantRows } from "./layout-schema-types";
 // Shared layout fragment: the EFF v2 body, reused by standalone `.eff` and CRE-embedded v2 effects.
 export { effV2BodyLabels, effV2BodyRows } from "./eff/effect-body-layout";
-// Shared layout fragment: the ITM/SPL feature block (parallel to the EFF v2 body, distinct record).
+// Shared layout fragment: the ITM/SPL feature block (48-byte effect), also the CRE effStructureVersion-0 effect
+// (byte-identical record - IESDP documents them as one structure).
 export { featureBlockBodyLabels, featureBlockBodyRows } from "./ie-common/feature-block-layout";
 // Shared layout fragments: the ITM/SPL ability headers (parallel records, curated panels per format).
 export { itmAbilityBodyLabels, itmAbilityBodyRows } from "./itm/ability-layout";
 export { splAbilityBodyLabels, splAbilityBodyRows } from "./spl/ability-layout";
-// Shared layout fragment: the CRE EFF v1 effect body (fallback for effStructureVersion 0, parallel to v2).
-export { creEffectV1BodyLabels, creEffectV1BodyRows } from "./cre/effect-v1-layout";
 // Spellbook editor structural builders: memorize (append to a memorization range) and remove-orphan
 // (drop a memorized spell covered by no range).
 export { buildCreMemorizeBytes, buildCreRemoveOrphanMemorizedBytes } from "./cre/entity-ops";

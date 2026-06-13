@@ -29,12 +29,13 @@
 
 import { formatLayoutSchema, type FormatLayout } from "../layout-schema-types";
 import { effV2BodyLabels, effV2BodyRows } from "./../eff/effect-body-layout";
-import { creEffectV1BodyLabels, creEffectV1BodyRows } from "./effect-v1-layout";
+import { featureBlockBodyLabels, featureBlockBodyRows } from "../ie-common/feature-block-layout";
 
 // CRE embeds an effect record per `effStructureVersion`; v2 effects are byte-identical to a standalone `.eff`,
-// so the Effects master-detail pane renders the SAME shared fragment (at the per-entry `cre.effects[].v2.`
-// prefix) instead of a generic auto-form. v1 effects lack the v2 fields, so the fragment's refs won't all
-// resolve and the editor falls back to the auto-form until a v1 fragment lands.
+// and v0 effects are byte-identical to the ITM/SPL feature block. Both render the SAME shared fragment they use
+// elsewhere (at the per-entry `cre.effects[].v2.` prefix) instead of a generic auto-form: the v2 fragment is
+// primary and the feature-block fragment is the fallback (the v2 fragment's v2-only refs don't resolve against a
+// v0 effect, so the editor cleanly falls back to the feature-block fragment).
 const CRE_EFFECTS_PREFIX = "cre.effects[].v2";
 
 // Per-entry field-ref prefix for an inventory item in the Items master-detail list (the adapter keys each
@@ -145,7 +146,7 @@ const creLabels: Record<string, string> = {
     // Embedded v2 effect labels, shared with the standalone `.eff` layout so the detail pane reads identically.
     ...effV2BodyLabels(CRE_EFFECTS_PREFIX),
     // EFF v1 effect labels (effStructureVersion 0); same prefix, distinct field slugs from v2.
-    ...creEffectV1BodyLabels(CRE_EFFECTS_PREFIX),
+    ...featureBlockBodyLabels(CRE_EFFECTS_PREFIX),
 };
 
 export const creLayout: FormatLayout = formatLayoutSchema.parse({
@@ -689,7 +690,7 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                                             detailVariant: effV2BodyRows(CRE_EFFECTS_PREFIX),
                                             // effStructureVersion 0 embeds the older EFF v1 record (a distinct,
                                             // smaller layout); the v2 fragment declines it and this fallback renders.
-                                            detailVariantFallbacks: [creEffectV1BodyRows(CRE_EFFECTS_PREFIX)],
+                                            detailVariantFallbacks: [featureBlockBodyRows(CRE_EFFECTS_PREFIX)],
                                         },
                                     ],
                                 },

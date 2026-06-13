@@ -2,7 +2,8 @@
  * Infinity Engine CRE v1 parser. The header points at five variable-length
  * sections plus a fixed item-slot block; the effects table's per-record
  * size depends on the header byte at 0x0033 (`effStructureVersion`):
- *   - 0 -> EFF v1 records (0x30 bytes each, local spec)
+ *   - 0 -> the 48-byte feature block (0x30 bytes each) - the SHARED `effectSpec`
+ *          (byte-identical to EFF v1; the same record ITM/SPL embed)
  *   - 1 -> EFF v2 body records (0x108 bytes each, shared via ie-common)
  * Both kinds round-trip byte-identically through the canonical-doc layer.
  */
@@ -30,7 +31,7 @@ import {
     type CreSpellMemInfoData,
 } from "./schemas";
 import { serializeCre } from "./serializer";
-import { creEffectV1SpecAnnotated } from "./specs/effect-v1.overrides";
+import { effectSpecAnnotated } from "../ie-common/specs/effect.overrides";
 import { creHeaderPresentation, creHeaderSpecAnnotated } from "./specs/header.overrides";
 import { creItemSpecAnnotated } from "./specs/item.overrides";
 import { creKnownSpellSpecAnnotated } from "./specs/known-spell.overrides";
@@ -244,7 +245,7 @@ class CreParser implements BinaryParser {
             effectsKind === "v1"
                 ? (effectsRecords as CreEffectV1Data[]).map((e, i) =>
                       walkStruct(
-                          creEffectV1SpecAnnotated,
+                          effectSpecAnnotated,
                           effectV1Presentation,
                           header.effectsOffset + i * effectSize,
                           e,

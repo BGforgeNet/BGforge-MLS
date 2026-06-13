@@ -1,17 +1,18 @@
 /**
- * A CRE whose `effStructureVersion` is 0 embeds the older 48-byte EFF v1 effect record, NOT the EFF v2 body.
- * Those v1 effects must render through their OWN shared fragment (`creEffectV1BodyRows`) - parallel panels to
- * the v2 effect - rather than a generic auto-form. The CRE Effects list declares the v2 fragment as primary
- * and the v1 fragment as a fallback; the detail pane renders the FIRST whose refs all resolve. This test
- * synthesizes a v1 CRE through the real writer/parser round-trip (no v1 fixture exists in the corpus - every
- * vendored CRE is v2) and asserts: the v1 fragment resolves against a v1 effect, and the v2 fragment does NOT
- * (so the fallback is genuinely needed, not redundant).
+ * A CRE whose `effStructureVersion` is 0 embeds the 48-byte EFF v1 effect record. That record is byte-for-byte
+ * the SAME structure as the ITM/SPL feature block (IESDP documents them as one thing - feature_block.yml points
+ * to eff_v1.htm for every field), so CRE v0 effects render through the SAME shared fragment ITM/SPL use
+ * (`featureBlockBodyRows`), not a CRE-local copy. The CRE Effects list declares the EFF v2 fragment as primary
+ * and the feature-block fragment as the fallback; the detail pane renders the FIRST whose refs all resolve. This
+ * test synthesizes a v0 CRE through the real writer/parser round-trip (no v0 fixture exists in the corpus -
+ * every vendored CRE is v2) and asserts the shared fragment resolves, the v2 fragment does not, the parsed
+ * fields use the feature-block names (not the retired CRE-local names), and the bytes round-trip.
  */
 
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { creEffectV1BodyLabels, creEffectV1BodyRows, effV2BodyRows } from "@bgforge/binary";
+import { effV2BodyRows, featureBlockBodyLabels, featureBlockBodyRows } from "@bgforge/binary";
 import { creParser } from "../../binary/src/cre/index";
 import { getCreCanonicalDocument, rebuildCreCanonicalDocument } from "../../binary/src/cre/canonical-reader";
 import { serializeCreCanonicalDocument } from "../../binary/src/cre/canonical-writer";
@@ -21,7 +22,7 @@ import { getChildren } from "../src/window";
 import { getRelationshipModel } from "../src/relationship/registry";
 import { buildDetailFieldMap, collectEntryRows, detailVariantRefs, detailVariantResolves } from "../src/detail-layout";
 
-const PREFIX = "cre.effects[].v2"; // CRE routes BOTH v1 and v2 effects into the v2 namespace (see format-adapter).
+const PREFIX = "cre.effects[].v2"; // CRE routes BOTH effect kinds into one per-entry namespace (see layout-schema).
 const FIXTURE = "../../external/infinity-engine/BGT-WeiDU/bgt/modify/cre/edwin6.cre";
 
 function synthesizeV1CreBytes(): Uint8Array | undefined {
@@ -38,34 +39,57 @@ function synthesizeV1CreBytes(): Uint8Array | undefined {
     return serializeCreCanonicalDocument(v1doc);
 }
 
-describe("CRE v1 effects render through the shared v1 fragment (fallback when v2 doesn't resolve)", () => {
-    it("resolves the v1 fragment against a v1 effect, and the v2 fragment does not", async () => {
+async function v1EffectFieldMap() {
+    const bytes = synthesizeV1CreBytes();
+    if (!bytes) return undefined;
+    const { sessionId } = openSession("file:///v1.cre", bytes);
+    const session = sessionStore.get(sessionId);
+    if (!session) throw new Error("v1 cre session did not open");
+    const { model } = session;
+    const rel = getRelationshipModel("cre");
+    const effectsGroup = model.nodes.find((n) => n.depth === 0 && n.kind === "group" && n.name === "Effects");
+    if (!effectsGroup) throw new Error("no Effects group");
+    const entries = getChildren(model, effectsGroup.id, 0, 1, rel);
+    expect(entries.total).toBeGreaterThan(0);
+    const childRows = await collectEntryRows(entries.rows[0]!.id, (id) =>
+        Promise.resolve(getChildren(model, id, 0, 1000, rel).rows),
+    );
+    return buildDetailFieldMap(childRows, featureBlockBodyLabels(PREFIX));
+}
+
+describe("CRE v0 effects render through the SHARED feature-block fragment (no CRE-local copy)", () => {
+    it("resolves the feature-block fragment against a v0 effect, and the v2 fragment does not", async () => {
+        const map = await v1EffectFieldMap();
+        if (!map) return;
+        const fragment = featureBlockBodyRows(PREFIX);
+        expect(detailVariantRefs(fragment).filter((ref) => !(ref in map))).toEqual([]);
+        expect(detailVariantResolves(fragment, map)).toBe(true);
+        // The v2 fragment must NOT resolve (v2-only fields like school/coordinates are absent), proving the
+        // fallback is necessary and the v2 primary cleanly declines a v0 entry.
+        expect(detailVariantResolves(effV2BodyRows(PREFIX), map)).toBe(false);
+    });
+
+    it("parses v0 effect fields under the feature-block names, not the retired CRE-local names", async () => {
+        const map = await v1EffectFieldMap();
+        if (!map) return;
+        // Unified onto effectSpec: the dual-purpose 0x1c/0x20 pair, the resref, timing, and save fields carry
+        // the shared feature-block keys.
+        for (const key of ["timing", "resource", "maxLevel", "minLevel", "saveType", "saveBonus", "stackingIdEx"]) {
+            expect(map[`${PREFIX}.${key}`]).toBeDefined();
+        }
+        // The retired CRE-local names must be gone.
+        for (const key of ["timingMode", "resref", "diceThrown", "diceSides", "savingThrowType", "unknown"]) {
+            expect(map[`${PREFIX}.${key}`]).toBeUndefined();
+        }
+    });
+
+    it("round-trips a v0 CRE byte-identically", () => {
         const bytes = synthesizeV1CreBytes();
         if (!bytes) return;
-        const { sessionId } = openSession("file:///v1.cre", bytes);
-        const session = sessionStore.get(sessionId);
-        if (!session) throw new Error("v1 cre session did not open");
-        const { model } = session;
-        const rel = getRelationshipModel("cre");
-
-        const effectsGroup = model.nodes.find((n) => n.depth === 0 && n.kind === "group" && n.name === "Effects");
-        if (!effectsGroup) throw new Error("no Effects group");
-        const entries = getChildren(model, effectsGroup.id, 0, 1, rel);
-        expect(entries.total).toBeGreaterThan(0);
-        const firstEntry = entries.rows[0]!;
-
-        const childRows = await collectEntryRows(firstEntry.id, (id) =>
-            Promise.resolve(getChildren(model, id, 0, 1000, rel).rows),
-        );
-        const map = buildDetailFieldMap(childRows, creEffectV1BodyLabels(PREFIX));
-
-        const v1 = creEffectV1BodyRows(PREFIX);
-        const missing = detailVariantRefs(v1).filter((ref) => !(ref in map));
-        expect(missing).toEqual([]);
-        expect(detailVariantResolves(v1, map)).toBe(true);
-
-        // The v2 fragment must NOT resolve against a v1 effect (v2-only fields like `timing`/`saveType` are
-        // absent), proving the fallback is necessary and the v2 primary cleanly declines a v1 entry.
-        expect(detailVariantResolves(effV2BodyRows(PREFIX), map)).toBe(false);
+        const reparsed = creParser.parse(bytes);
+        const doc = getCreCanonicalDocument(reparsed) ?? rebuildCreCanonicalDocument(reparsed);
+        expect(doc).toBeDefined();
+        const out = serializeCreCanonicalDocument(doc!);
+        expect([...out]).toEqual([...bytes]);
     });
 });

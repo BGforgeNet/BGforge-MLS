@@ -3,8 +3,9 @@
  *
  * Three invariants verified:
  *   1. Per-struct property: walkStruct + structFromDisplayFull round-trips each
- *      CRE spec (header, known-spell, spell-mem-info, memorized-spell, item,
- *      effect-v1, effect-v2). This is the primary per-field correctness gate;
+ *      CRE spec (header, known-spell, spell-mem-info, memorized-spell, item, and
+ *      both shared effect specs - the 48-byte feature block and the EFF v2 body).
+ *      This is the primary per-field correctness gate;
  *      a real-data array field zero-filled on rebuild would cause the header
  *      round-trip to fail.
  *   2. Byte round-trip (both effect versions): construct a minimal CRE doc,
@@ -19,7 +20,7 @@ import { creParser } from "../src/cre";
 import { rebuildCreCanonicalDocument } from "../src/cre/canonical-reader";
 import { serializeCreCanonicalDocument } from "../src/cre/canonical-writer";
 import { creCanonicalDocumentSchemaPermissive } from "../src/cre/canonical-schemas";
-import { creEffectV1Spec } from "../src/cre/specs/effect-v1";
+import { effectSpecAnnotated } from "../src/ie-common/specs/effect.overrides";
 import { creHeaderSpecAnnotated } from "../src/cre/specs/header.overrides";
 import { creItemSpecAnnotated } from "../src/cre/specs/item.overrides";
 import { creKnownSpellSpecAnnotated } from "../src/cre/specs/known-spell.overrides";
@@ -112,9 +113,9 @@ function buildMinimalCreDoc(
     };
 }
 
-/** Build a minimal EFF v1 record (all scalars zero, resref ""). */
+/** Build a minimal EFF v1 (48-byte feature-block) record (all scalars zero, resource "", flags []). */
 function buildZeroEffV1(): Record<string, unknown> {
-    return buildZeroSample(creEffectV1Spec as Record<string, FieldSpec>);
+    return buildZeroSample(effectSpecAnnotated as Record<string, FieldSpec>);
 }
 
 /** Build a minimal EFF v2 body record. signature2/version2 carry the EFF magic. */
@@ -174,10 +175,10 @@ describe("CRE per-struct walkStruct -> structFromDisplayFull round-trip", () => 
         expect(structFromDisplayFull(g, creItemSpecAnnotated, {})).toEqual(sample);
     });
 
-    it("creEffectV1Spec: round-trips", () => {
-        const sample = buildSample(creEffectV1Spec as Record<string, FieldSpec>);
-        const g = walkStruct(creEffectV1Spec, {}, 0, sample as never, "Effect 1");
-        expect(structFromDisplayFull(g, creEffectV1Spec, {})).toEqual(sample);
+    it("effectSpec (CRE v0 effects = ITM/SPL feature block): round-trips", () => {
+        const sample = buildSample(effectSpecAnnotated as Record<string, FieldSpec>);
+        const g = walkStruct(effectSpecAnnotated, {}, 0, sample as never, "Effect 1");
+        expect(structFromDisplayFull(g, effectSpecAnnotated, {})).toEqual(sample);
     });
 
     it("effBodySpecAnnotated (CRE v2 effects): non-array fields round-trip; unused7 is zero-filled", () => {

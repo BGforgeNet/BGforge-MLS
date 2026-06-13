@@ -7,7 +7,7 @@ import { createIeCanonicalReader } from "../ie-common/canonical-reader";
 import { parseWithSchemaValidation } from "../schema-validation";
 import { structFromDisplayFull } from "../ie-common/rebuild-ability-effects";
 import { effBodySpecAnnotated } from "../eff/specs/body.overrides";
-import { creEffectV1Spec } from "./specs/effect-v1";
+import { effectSpecAnnotated } from "../ie-common/specs/effect.overrides";
 import { creHeaderSpecAnnotated } from "./specs/header.overrides";
 import { creItemSpecAnnotated } from "./specs/item.overrides";
 import { creKnownSpellSpecAnnotated } from "./specs/known-spell.overrides";
@@ -52,7 +52,8 @@ function getChildGroups(parent: ParsedGroup): ParsedGroup[] {
  *   - Known spells, spell-mem-info, memorized spells, items: each section is
  *     a group of child groups; each child is rebuilt via `structFromDisplayFull`.
  *   - Effects: dispatched on `effStructureVersion` recovered from the header.
- *     Version 0 uses `creEffectV1Spec`; version 1 uses `effBodySpecAnnotated`.
+ *     Version 0 uses the shared `effectSpecAnnotated` (the ITM/SPL feature block);
+ *     version 1 uses `effBodySpecAnnotated`.
  *     Both specs are flat (scalars + chars), so `structFromDisplayFull` handles
  *     them in the scalar+chars path with no array special-cases beyond
  *     `effBodySpecAnnotated.unused7` (15 x u32 padding, zero-filled on rebuild).
@@ -94,7 +95,7 @@ function rebuildCreFromDisplay(result: ParseResult): CreCanonicalDocument {
         effectKind === "v1"
             ? {
                   kind: "v1" as const,
-                  records: getChildGroups(effectsGroup).map((g) => structFromDisplayFull(g, creEffectV1Spec, {})),
+                  records: getChildGroups(effectsGroup).map((g) => structFromDisplayFull(g, effectSpecAnnotated, {})),
               }
             : {
                   kind: "v2" as const,

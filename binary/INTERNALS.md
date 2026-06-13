@@ -120,9 +120,10 @@ binary/src/
 
   cre/                         # Infinity Engine CRE v1 (creatures)
     specs/header.ts            # Hand-written from IESDP cre_v1.htm (0x2D4 bytes; BG / BGEE shape)
-    specs/{known-spell,spell-mem-info,memorized-spell,item,effect-v1}.ts
-                               # Hand-written from IESDP cre_v1.htm sub-record tables; CRE v2
-                               # effects reuse `eff/specs/body.ts` (264-byte body, no eff-file header)
+    specs/{known-spell,spell-mem-info,memorized-spell,item}.ts
+                               # Hand-written from IESDP cre_v1.htm sub-record tables. Effects reuse SHARED specs:
+                               # effStructureVersion 0 = the 48-byte feature block (`ie-common/specs/effect.ts`,
+                               # byte-identical to EFF v1); version 1 = `eff/specs/body.ts` (264-byte EFF v2 body)
     *.overrides.ts             # Enum/flag tables + structural-field role annotations per sub-record
     presentation-schema.ts     # crePresentationSchema (derived) + per-item-slot exact entries + creDomainRanges
     schemas.ts, canonical-{schemas,reader,writer}.ts, canonical.ts,

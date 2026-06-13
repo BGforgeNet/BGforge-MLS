@@ -12,8 +12,12 @@ is _presented_. The _render_ conventions (width tiers, spacing, column-major fil
 A record that appears in more than one format renders through ONE shared layout fragment, never a per-site
 generic auto-form, so it looks identical everywhere. Item and spell ABILITIES use per-format fragments
 (`itmAbilityBodyRows` / `splAbilityBodyRows`). EVERY Infinity Engine effect renders through one shared builder,
-`effectBodyRows` (`ie-common/effect-layout.ts`): the EFF v2 body (264B), EFF v1 body (48B), and ITM/SPL feature
-block (48B).
+`effectBodyRows` (`ie-common/effect-layout.ts`), via two fragments: the EFF v2 body (264B, `effV2BodyRows`) and
+the 48-byte feature block (`featureBlockBodyRows`). The feature block is ONE record - the same 48 bytes IESDP
+documents as both the ITM/SPL feature block and the EFF v1 record (`feature_block.yml` points to `eff_v1.htm`
+for every field) - so ITM effects, SPL effects, AND a CRE's `effStructureVersion`-0 effects all render through
+`featureBlockBodyRows`. Do NOT add a second 48-byte effect spec or fragment; that was a real duplication (a
+CRE-local `creEffectV1Spec`), now collapsed into the shared `effectSpec`.
 
 - **Parallel-not-identical is INTENTIONAL.** Where two records genuinely differ, their fragments share ordering
   and controls where the concepts align, and each adds only the fields its own record needs (an ITM ability has

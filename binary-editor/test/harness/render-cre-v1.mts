@@ -1,12 +1,13 @@
 /**
  * CRE EFF v1 effect-detail harness pass.
  *
- * A CRE whose `effStructureVersion` is 0 embeds the older 48-byte EFF v1 effect record instead of the EFF v2
- * body. The CRE Effects list declares the v2 fragment as primary and the v1 fragment as a fallback; the detail
- * pane must render the FIRST whose refs resolve - so a v1 effect renders the v1 fragment (its byte-order fields
- * including the v1-only Timing Mode / Saving Throw), NOT the auto-form and NOT the v2 fragment. No v1 CRE exists in the
- * corpus (every vendored CRE is v2), so this synthesizes one through the real writer/parser round-trip, loads
- * it in the REAL webview bundle, selects an effect, and asserts the v1 fragment rendered.
+ * A CRE whose `effStructureVersion` is 0 embeds the 48-byte EFF v1 effect record - byte-for-byte the ITM/SPL
+ * feature block, so it renders the SAME shared `featureBlockBodyRows` fragment (flag boxes and all), not a
+ * CRE-local copy. The CRE Effects list declares the EFF v2 fragment as primary and the feature-block fragment
+ * as a fallback; the detail pane renders the FIRST whose refs resolve - so a v0 effect renders the feature-block
+ * fragment (Save Type / Resistance flag boxes, no v2-only fields), NOT the auto-form and NOT the v2 fragment. No
+ * v0 CRE exists in the corpus (every vendored CRE is v2), so this synthesizes one through the real writer/parser
+ * round-trip, loads it in the REAL webview bundle, selects an effect, and asserts the shared fragment rendered.
  */
 
 import { chromium, type Locator } from "playwright";
@@ -114,21 +115,29 @@ await clickTab("Effects");
 await selectRow(effectsPanel, 0);
 await effectsPanel.locator(".detail .layout-root .field").first().waitFor({ timeout: 3000 });
 
-// The shared v1 fragment renders through LayoutRenderer (`.detail .layout-root`), one untitled wire-byte-order
-// panel: layout fields present, and no semantic panel `h3` titles. The v1-vs-v2 discrimination is asserted
-// next (the v1-only Timing Mode / Saving Throw fields).
+// The shared feature-block fragment renders through LayoutRenderer (`.detail .layout-root`), wire-byte-order
+// fields with no semantic panel `h3` titles. The v0-vs-v2 discrimination is asserted next (flag boxes, no v2
+// fields).
 const v1Fields = await effectsPanel.locator(".detail .layout-root .field").count();
 const v1PanelTitles = await effectsPanel.locator(".detail .layout-root .panel > h3").count();
 check(
-    "v1: CRE v1 effect detail renders the shared v1 fragment in wire byte order (no semantic panel titles)",
+    "v0: CRE v0 effect detail renders the shared feature-block fragment in wire byte order (no semantic panel titles)",
     v1Fields > 10 && v1PanelTitles === 0,
     `fields=${v1Fields} panelTitles=${v1PanelTitles}`,
 );
 const detailText = (await effectsPanel.locator(".detail .layout-root").first().innerText()).toLowerCase();
+// The v0 effect is the 48-byte ITM/SPL feature block, so it renders the SHARED featureBlockBodyRows fragment:
+// Save Type / Resistance as flag BOXES (the unification's visible effect - they used to render raw), and it
+// lacks the v2-only fields (school, coordinates), so the v2 fragment cleanly declines and this one renders.
+const flagBoxLegends = (
+    await effectsPanel.locator(".detail .layout-root fieldset.flag-group > legend").allInnerTexts()
+).map((t) => t.toLowerCase());
 check(
-    "v1: the v1-only Timing Mode / Saving Throw fields are shown (not the v2 fragment)",
-    detailText.includes("timing mode") && detailText.includes("saving throw"),
-    `hasTimingMode=${detailText.includes("timing mode")} hasSavingThrow=${detailText.includes("saving throw")}`,
+    "v0: renders the shared feature-block fragment - Save Type / Resistance flag boxes, not the v2 fragment",
+    flagBoxLegends.some((t) => t.includes("save type")) &&
+        flagBoxLegends.some((t) => t.includes("resistance")) &&
+        !detailText.includes("school"),
+    `legends=${JSON.stringify(flagBoxLegends)} school=${detailText.includes("school")}`,
 );
 const opcodeCombobox = await effectsPanel.locator(".detail .bb-combobox-input").count();
 check("v1: opcode detail field is a searchable combobox", opcodeCombobox >= 1, `count=${opcodeCombobox}`);
