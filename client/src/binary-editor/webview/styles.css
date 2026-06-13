@@ -1127,7 +1127,7 @@ input[type="text"]::placeholder {
     /* One uniform inter-column / inter-block spacing: the gap between a multi-column fields grid's own
        columns (.kv-multi) and the gap between sibling blocks in a panel (.panel-blocks, e.g. a fields grid
        next to a flags box) read as the SAME spacing. Driven by one variable so they can't drift apart. */
-    --bb-col-gap: 22px;
+    --bb-col-gap: 33px;
     /* One cap for every virtualized list/tree viewport on a layout page (the master-detail `.master .vlist`
        and the abilities+effects tree `.eff-tree-vlist`), so both use the same vertical space beside the
        taller detail and can't drift apart. Sized to ~2x a 24rem list since a per-entry detail is about that
