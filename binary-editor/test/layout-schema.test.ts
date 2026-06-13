@@ -266,6 +266,7 @@ describe("resolveLayout", () => {
                 node.id === fieldNode.id ? { presentationType: "enum", enumOptions: { "0": "Zero" } } : undefined,
             dependents: () => [],
             constraints: () => [],
+            cascade: () => [],
         };
         const resolved = resolveLayout("pro", layoutFor("pro", "only", key), model, rel)!;
         expect(resolved.fields[key]!.valueType).toBe("enum");

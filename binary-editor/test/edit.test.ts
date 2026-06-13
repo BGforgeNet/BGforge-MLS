@@ -1,13 +1,15 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { openSession, sessionStore } from "../src/session";
+import { openSession, sessionStore, type EditorSession } from "../src/session";
 import { setExpanded } from "../src/model";
 import { buildLayout } from "../src/layout";
 import { editField, invalidateCachedDocument } from "../src/edit";
 import { undo } from "../src/structure-ops";
 import { formatAdapterRegistry, type ParseResult, type ParsedField } from "@bgforge/binary";
 import { openItmSession, firstEffectFields, itmFixturePresent } from "./ie-fixture";
+import { buildModel, creResult, findGroupNodeField } from "./cross-record-fixture";
+import { getRelationshipModel } from "../src/relationship/registry";
 
 const MAP_FIXTURE = path.resolve(__dirname, "../../client/testFixture/maps/arcaves.map");
 
@@ -89,6 +91,62 @@ describe("editField blanket layout refresh", () => {
         // parameter1 has no dependents (asserted above), so only the blanket resend can carry the layout fields.
         const changedIds = new Set(editField(session, f.get("parameter1")!.id, 9).changeSet.changed.map((r) => r.id));
         for (const id of layoutIds) expect(changedIds.has(id), `layout field ${id} missing from changeset`).toBe(true);
+    });
+});
+
+describe("editField CRE item-slot dedupe cascade", () => {
+    // Assigning an item already held by another slot must clear that other slot through the real edit pipeline,
+    // so the editor can never produce a duplicate item-slot assignment. A synthetic CRE model is wrapped in a
+    // session (buildModel sets model.parseResult; the cre adapter declares no projection hooks).
+    function creSession(slots: number[]): EditorSession {
+        const model = buildModel(creResult({ memSpells: 0, items: 2, slots, meminfos: [] }));
+        return {
+            id: "s-cre",
+            uri: "file:///fixture.cre",
+            parserId: "cre",
+            parseOptions: {},
+            model,
+            relationshipModel: getRelationshipModel("cre"),
+            undo: [],
+            redo: [],
+            dirty: false,
+        };
+    }
+    function slotsWith(overrides: Record<number, number>): number[] {
+        const s = Array.from<number>({ length: 40 }).fill(-1);
+        for (const [i, v] of Object.entries(overrides)) s[Number(i)] = v;
+        return s;
+    }
+
+    it("clears the previous slot when an item is assigned to a second slot", () => {
+        // Slot 2 already holds item #0; assigning item #0 to slot 0 must clear slot 2.
+        const session = creSession(slotsWith({ 0: -1, 2: 0 }));
+        const slot0 = findGroupNodeField(session.model, "Item Slots", "Slot 0");
+        const slot2 = findGroupNodeField(session.model, "Item Slots", "Slot 2");
+        editField(session, slot0.id, 0);
+        expect((slot2.source as ParsedField).value).toBe(-1);
+        expect((slot0.source as ParsedField).value).toBe(0);
+    });
+
+    it("a single undo restores both the edited slot and the cleared sibling", () => {
+        const session = creSession(slotsWith({ 0: -1, 2: 0 }));
+        const slot0 = findGroupNodeField(session.model, "Item Slots", "Slot 0");
+        const slot2 = findGroupNodeField(session.model, "Item Slots", "Slot 2");
+        editField(session, slot0.id, 0);
+        expect(session.undo.length).toBe(1);
+        undo(session);
+        const s0 = session.model.nodes.find((n) => n.id === slot0.id)!;
+        const s2 = session.model.nodes.find((n) => n.id === slot2.id)!;
+        expect((s0.source as ParsedField).value).toBe(-1);
+        expect((s2.source as ParsedField).value).toBe(0);
+    });
+
+    it("includes the cleared sibling in the changeset", () => {
+        const session = creSession(slotsWith({ 0: -1, 2: 0 }));
+        const slot0 = findGroupNodeField(session.model, "Item Slots", "Slot 0");
+        const slot2 = findGroupNodeField(session.model, "Item Slots", "Slot 2");
+        const changed = editField(session, slot0.id, 0).changeSet.changed;
+        expect(changed.some((r) => r.id === slot2.id)).toBe(true);
     });
 });
 

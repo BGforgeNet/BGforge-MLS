@@ -30,6 +30,11 @@ export interface IndexRefRelationship {
     readonly refFieldCount?: number;
     /** Emit an info note for targets referenced by no in-range field. */
     readonly orphanInfo?: boolean;
+    /** Each in-range field must reference a DISTINCT target (a CRE item table entry belongs in one inventory
+     *  slot). Drives two behaviors: an info note when a target is referenced by more than one slot (it can only
+     *  arise from a hand-authored / external CRE, never the editor), and an edit-time cascade that clears any
+     *  sibling slot already holding the just-assigned target so the editor never creates a duplicate. */
+    readonly uniqueRef?: boolean;
     /** Canonical field key of a target entry that labels it in a reference dropdown (e.g. the item ResRef).
      *  When set, the editor renders each in-range referring field as a NONE/-1 + indexed-target dropdown
      *  instead of a raw number; omitted leaves the reference a plain numeric field. */

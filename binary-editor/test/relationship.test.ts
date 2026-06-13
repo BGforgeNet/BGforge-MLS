@@ -112,6 +112,7 @@ describe("projectRow overlay mechanism", () => {
         fieldOverride: (_m, node) => (/parameter2/i.test(node.name) ? { label: "Type" } : undefined),
         dependents: () => [],
         constraints: () => [],
+        cascade: () => [],
     };
     const enumModel: RelationshipModel = {
         formatId: "itm",
@@ -121,6 +122,7 @@ describe("projectRow overlay mechanism", () => {
                 : undefined,
         dependents: () => [],
         constraints: () => [],
+        cascade: () => [],
     };
     it("applies a returned fieldOverride label to the row name", () => {
         if (!itmFixturePresent()) return;

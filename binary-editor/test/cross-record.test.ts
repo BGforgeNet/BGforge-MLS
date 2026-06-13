@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { formatAdapterRegistry, type IndexRefRelationship, type SliceRefRelationship } from "@bgforge/binary";
 import { buildModel, creResult, findGroupNode, findGroupNodeField } from "./cross-record-fixture";
 import {
+    crossRefCascade,
+    duplicateIndexRefDiagnostics,
     indexRefDiagnostics,
     indexRefFieldOverride,
     orphanSliceDiagnostics,
@@ -201,6 +203,91 @@ describe("creOrphanItemsConstraint", () => {
     it("no note when there are no items", () => {
         const m = buildModel(creResult({ memSpells: 0, items: 0, slots: [], meminfos: [] }));
         expect(orphanTargetDiagnostics(m, creItemSlotRel)).toHaveLength(0);
+    });
+});
+
+describe("creDuplicateItemSlotConstraint", () => {
+    // The same item table entry assigned to two different inventory slots: the editor cannot create this from
+    // its UI (the cascade clears the previous slot), but a hand-authored / mod-tool CRE may carry it on load,
+    // so it is surfaced as an info note. Driven by the descriptor's `uniqueRef` flag.
+    it("notes an item that two slots both reference (info)", () => {
+        // 2 items; slots 0 and 2 both reference item #0 -> a duplicate assignment.
+        const m = buildModel(
+            creResult({ memSpells: 0, items: 2, slots: fullInventory({ 0: 0, 1: 1, 2: 0 }), meminfos: [] }),
+        );
+        const diags = duplicateIndexRefDiagnostics(m, creItemSlotRel);
+        expect(diags).toHaveLength(1);
+        expect(diags[0]!.severity).toBe("info");
+        expect(diags[0]!.message).toContain("#0");
+        const slots = m.nodes.find((n) => n.kind === "group" && n.name === "Item Slots")!;
+        expect(diags[0]!.nodeId).toBe(slots.id);
+    });
+    it("no note when every slot references a distinct item (or is empty)", () => {
+        const m = buildModel(
+            creResult({ memSpells: 0, items: 2, slots: fullInventory({ 0: 0, 1: 1, 2: -1 }), meminfos: [] }),
+        );
+        expect(duplicateIndexRefDiagnostics(m, creItemSlotRel)).toHaveLength(0);
+    });
+    it("two empty (-1) slots are not a duplicate", () => {
+        const m = buildModel(
+            creResult({ memSpells: 0, items: 1, slots: fullInventory({ 0: -1, 1: -1, 2: 0 }), meminfos: [] }),
+        );
+        expect(duplicateIndexRefDiagnostics(m, creItemSlotRel)).toHaveLength(0);
+    });
+    it("reaches the composed CRE constraints as an info note", () => {
+        const m = buildModel(creResult({ memSpells: 0, items: 2, slots: fullInventory({ 5: 1, 9: 1 }), meminfos: [] }));
+        const diags = getRelationshipModel("cre")!.constraints(m);
+        expect(diags.some((d) => d.severity === "info" && /more than one slot/.test(d.message))).toBe(true);
+    });
+});
+
+describe("creItemSlotDedupeCascade (clear the previous slot on change)", () => {
+    // Assigning an item already held by another slot must clear that other slot, so the UI can never produce a
+    // duplicate. The relationship model returns the sibling-clearing edits; the edit pipeline applies them.
+    it("clears a sibling slot that already holds the edited slot's item", () => {
+        // Slots 0 and 2 both hold item #0; editing slot 0 (still #0) must propose clearing slot 2.
+        const m = buildModel(creResult({ memSpells: 0, items: 2, slots: fullInventory({ 0: 0, 2: 0 }), meminfos: [] }));
+        const slot0 = findGroupNodeField(m, "Item Slots", "Slot 0");
+        const slot2 = findGroupNodeField(m, "Item Slots", "Slot 2");
+        const edits = crossRefCascade(m, slot0, creRels);
+        expect(edits).toEqual([{ nodeId: slot2.id, value: -1 }]);
+    });
+    it("clears every other slot holding the item, not just one", () => {
+        const m = buildModel(
+            creResult({ memSpells: 0, items: 1, slots: fullInventory({ 0: 0, 3: 0, 7: 0 }), meminfos: [] }),
+        );
+        const slot0 = findGroupNodeField(m, "Item Slots", "Slot 0");
+        const ids = crossRefCascade(m, slot0, creRels).map((e) => e.nodeId);
+        expect(ids).toContain(findGroupNodeField(m, "Item Slots", "Slot 3").id);
+        expect(ids).toContain(findGroupNodeField(m, "Item Slots", "Slot 7").id);
+        expect(ids).not.toContain(slot0.id);
+    });
+    it("no cascade when clearing a slot (value -1)", () => {
+        const m = buildModel(
+            creResult({ memSpells: 0, items: 1, slots: fullInventory({ 0: -1, 2: 0 }), meminfos: [] }),
+        );
+        const slot0 = findGroupNodeField(m, "Item Slots", "Slot 0");
+        expect(crossRefCascade(m, slot0, creRels)).toEqual([]);
+    });
+    it("no cascade when the item is unique to this slot", () => {
+        const m = buildModel(creResult({ memSpells: 0, items: 2, slots: fullInventory({ 0: 0, 2: 1 }), meminfos: [] }));
+        const slot0 = findGroupNodeField(m, "Item Slots", "Slot 0");
+        expect(crossRefCascade(m, slot0, creRels)).toEqual([]);
+    });
+    it("trailing selected-weapon slots (38/39) never cascade", () => {
+        // Slot 38 = 1000 (fists) and slot 39 = some ability index; they are not item references, so even a
+        // collision in their raw value must not clear anything.
+        const m = buildModel(
+            creResult({ memSpells: 0, items: 1, slots: fullInventory({ 0: 0, 38: 1000, 39: 1000 }), meminfos: [] }),
+        );
+        const slot38 = findGroupNodeField(m, "Item Slots", "Slot 38");
+        expect(crossRefCascade(m, slot38, creRels)).toEqual([]);
+    });
+    it("the composed CRE relationship model exposes the cascade", () => {
+        const m = buildModel(creResult({ memSpells: 0, items: 1, slots: fullInventory({ 0: 0, 2: 0 }), meminfos: [] }));
+        const slot0 = findGroupNodeField(m, "Item Slots", "Slot 0");
+        const slot2 = findGroupNodeField(m, "Item Slots", "Slot 2");
+        expect(getRelationshipModel("cre")!.cascade(m, slot0)).toEqual([{ nodeId: slot2.id, value: -1 }]);
     });
 });
 

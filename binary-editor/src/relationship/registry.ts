@@ -3,7 +3,7 @@ import type { FlatNode, Model } from "../model";
 import type { Diagnostic, NodeId } from "../types";
 import type { FieldOverride, RelationshipModel } from "./types";
 import { ieEffectsFieldOverride, ieEffectsDependents, ieEffectsProbabilityConstraint } from "./ie-effects";
-import { crossRefDiagnostics, crossRefDependents, crossRefFieldOverride } from "./cross-record";
+import { crossRefDiagnostics, crossRefDependents, crossRefFieldOverride, crossRefCascade } from "./cross-record";
 import { creWeaponFieldOverride, creWeaponDependents } from "./cre-weapons";
 import { spellbookCapacityDiagnostics } from "../spellbook";
 
@@ -49,6 +49,9 @@ function ieModel(
             ...ieEffectsProbabilityConstraint(model),
             ...crossRefDiagnostics(model, rels),
         ],
+        // Uniform across formats: `crossRefCascade` is a no-op unless a relationship is `uniqueRef` (only CRE
+        // Item Slots today), so every IE format can route through it.
+        cascade: (model: Model, node: FlatNode) => crossRefCascade(model, node, rels),
     };
 }
 

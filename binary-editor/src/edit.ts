@@ -46,6 +46,25 @@ export function editField(session: EditorSession, nodeId: NodeId, value: number 
     const field = node.source as ParsedField;
     field.value = value;
     field.rawValue = value;
+
+    // Cascading edits implied by this one (e.g. clearing a sibling inventory slot that held the just-reassigned
+    // item, keeping a `uniqueRef` reference unique). `node` now carries its new value, so the relationship model
+    // reads the duplicates straight off the model. Applied in the same undo step (the snapshot above already
+    // captured the pre-edit state of every field, so one undo restores them all).
+    const rel = session.relationshipModel;
+    const cascadeNodes: (typeof node)[] = [];
+    if (rel) {
+        for (const { nodeId: cid, value: cval } of rel.cascade(session.model, node)) {
+            const ci = session.model.byId.get(cid);
+            const cnode = ci === undefined ? undefined : session.model.nodes[ci];
+            if (cnode?.kind === "field") {
+                (cnode.source as ParsedField).value = cval;
+                (cnode.source as ParsedField).rawValue = cval;
+                cascadeNodes.push(cnode);
+            }
+        }
+    }
+
     invalidateCachedDocument(session.model.parseResult);
     session.dirty = true;
 
@@ -57,8 +76,10 @@ export function editField(session: EditorSession, nodeId: NodeId, value: number 
         formatValid = false;
     }
 
-    const rel = session.relationshipModel;
     const changed = [projectRow(session.model, node, rel)];
+    // Re-project the cascaded siblings (the cleared slots) so the UI reflects them precisely - the blanket
+    // resend below also carries them, but this keeps the changeset explicit about what the cascade touched.
+    for (const cnode of cascadeNodes) changed.push(projectRow(session.model, cnode, rel));
     if (rel) {
         for (const depId of rel.dependents(session.model, node)) {
             const depIdx = session.model.byId.get(depId);

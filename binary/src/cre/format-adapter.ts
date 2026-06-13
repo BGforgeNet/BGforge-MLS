@@ -20,7 +20,8 @@ import {
 /**
  * CRE cross-record relationships:
  *  - Item Slots [0, CRE_ITEM_REF_SLOT_COUNT) index into Items (the trailing selected-weapon slot/ability
- *    entries are not item indices and stay unchecked); orphan items are noted.
+ *    entries are not item indices and stay unchecked); orphan items are noted, and each item belongs in a
+ *    single slot (`uniqueRef`: duplicates noted on load, the previous slot cleared on reassignment).
  *  - Spell Memorization Info entries slice into Memorized Spells; memorized spells covered by no range are
  *    noted (info) and a spell claimed by two ranges is warned (the memorization slices should partition the
  *    memorized-spell table).
@@ -33,6 +34,9 @@ const creCrossRefRelationships: readonly CrossRefRelationship[] = [
         refNoun: "item",
         refFieldCount: CRE_ITEM_REF_SLOT_COUNT,
         orphanInfo: true,
+        // An item table entry belongs in a single inventory slot: note a duplicate on load, and clear the
+        // previous slot when the editor reassigns its item to another slot.
+        uniqueRef: true,
         // The 8-char ResRef (`item` field) names each entry; the editor renders slots as a dropdown of these.
         targetLabelField: "item",
     },

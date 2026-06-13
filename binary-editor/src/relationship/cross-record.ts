@@ -66,6 +66,34 @@ export function orphanTargetDiagnostics(model: Model, rel: IndexRefRelationship)
     ];
 }
 
+/** A target referenced by more than one in-range field. With `uniqueRef` set (CRE Item Slots -> Items, where an
+ *  item table entry belongs in a single inventory slot) that is a duplicate assignment the editor never creates
+ *  - it can only arrive on load from a hand-authored / external CRE - so note it as info. Off when the
+ *  relationship does not require uniqueness (multiple references are legal). */
+export function duplicateIndexRefDiagnostics(model: Model, rel: IndexRefRelationship): Diagnostic[] {
+    if (!rel.uniqueRef) return [];
+    const refGroup = findGroup(model, rel.refGroup);
+    const targetGroup = findGroup(model, rel.targetGroup);
+    if (!refGroup || !targetGroup) return [];
+    const targetLen = childGroups(model, targetGroup).length;
+    const counts = new Map<number, number>();
+    for (const slot of inRangeRefFields(model, rel)) {
+        const v = fieldNumber(slot);
+        if (v !== undefined && v >= 0 && v < targetLen) counts.set(v, (counts.get(v) ?? 0) + 1);
+    }
+    const dups: number[] = [];
+    for (const [v, n] of counts) if (n > 1) dups.push(v);
+    if (dups.length === 0) return [];
+    dups.sort((a, b) => a - b);
+    return [
+        {
+            nodeId: refGroup.id,
+            severity: "info",
+            message: `${dups.length} ${rel.refNoun}(s) assigned to more than one slot: #${dups.join(", #")}.`,
+        },
+    ];
+}
+
 /** The in-range referring fields of an index relationship (CRE slots 0..refFieldCount), in order. The trailing
  *  non-index fields (CRE's selected-weapon slot/ability) are excluded - the same boundary the diagnostic uses. */
 function inRangeRefFields(model: Model, rel: IndexRefRelationship): FlatNode[] {
@@ -254,6 +282,33 @@ export function crossRefDependents(
     return out;
 }
 
+/** Edit-time cascade for a `uniqueRef` index relationship: when `editedNode` is an in-range slot now holding a
+ *  target index, every OTHER in-range slot holding that same index must be cleared (-1) so the reassignment
+ *  leaves the item in a single slot. `editedNode` already carries its new value (the edit pipeline applies it
+ *  before asking for the cascade), so the duplicates are read straight off the model. Empty/negative values and
+ *  non-`uniqueRef` relationships produce no cascade; the trailing selected-weapon slots are out of range and
+ *  excluded automatically by `inRangeRefFields`. */
+export function crossRefCascade(
+    model: Model,
+    editedNode: FlatNode,
+    rels: readonly CrossRefRelationship[],
+): { nodeId: NodeId; value: number }[] {
+    if (editedNode.kind !== "field") return [];
+    const edits: { nodeId: NodeId; value: number }[] = [];
+    for (const rel of rels) {
+        if (rel.kind !== "index" || !rel.uniqueRef) continue;
+        const fields = inRangeRefFields(model, rel);
+        if (!fields.some((f) => f.id === editedNode.id)) continue;
+        const v = fieldNumber(editedNode);
+        if (v === undefined || v < 0) continue; // empty/cleared slot: nothing to dedupe against
+        for (const slot of fields) {
+            if (slot.id === editedNode.id) continue;
+            if (fieldNumber(slot) === v) edits.push({ nodeId: slot.id, value: -1 });
+        }
+    }
+    return edits;
+}
+
 /** Run every relationship in a format's descriptor list and collect its diagnostics. */
 export function crossRefDiagnostics(model: Model, rels: readonly CrossRefRelationship[]): Diagnostic[] {
     const out: Diagnostic[] = [];
@@ -261,6 +316,7 @@ export function crossRefDiagnostics(model: Model, rels: readonly CrossRefRelatio
         if (rel.kind === "index") {
             out.push(...indexRefDiagnostics(model, rel));
             if (rel.orphanInfo) out.push(...orphanTargetDiagnostics(model, rel));
+            if (rel.uniqueRef) out.push(...duplicateIndexRefDiagnostics(model, rel));
         } else {
             out.push(...sliceRefDiagnostics(model, rel));
             if (rel.orphanInfo) out.push(...orphanSliceDiagnostics(model, rel));

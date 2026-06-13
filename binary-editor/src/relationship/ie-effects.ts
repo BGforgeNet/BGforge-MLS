@@ -126,6 +126,8 @@ export const ieEffectsModel: RelationshipModel = {
         }
         return diags;
     },
+    // No cross-record references in the bare effect overlay, so no cascading edits.
+    cascade: () => [],
 };
 
 // Reusable pieces so the registry can recompose the shared opcode/parameter overlay + probability check with
