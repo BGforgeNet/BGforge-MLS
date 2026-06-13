@@ -124,7 +124,7 @@ await page.waitForTimeout(200);
 // the later structure-op steps (which navigate into the Spells / Effects tabs).
 await page.screenshot({ path: path.join(here, "shot-cre.png"), fullPage: true });
 
-// ---- Dropdown tier guard (UI-GUIDELINES: dropdowns size to their longest option, quantized to the S/M/ML/L
+// ---- Dropdown tier guard (binary-editor UI guidelines: dropdowns size to their longest option, quantized to the S/M/ML/L
 // width tiers - mid-length IE IDS dropdowns land on ML, not the wide L, so the column is not over-wide; yet the
 // longest option must still fit). The Identity box's Alignment is a stable ML case: its longest of the nine fixed
 // alignments is "0x32 Chaotic neutral" = 20ch. Assert it renders on the ML tier (24ch, the fixed middle width -

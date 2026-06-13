@@ -1,0 +1,75 @@
+# @bgforge/binary - declarative layout authoring conventions
+
+Applies when authoring the DECLARATIVE LAYOUT for a binary format - the `*/layout-schema.ts` files,
+`ie-common/effect-layout.ts` / `feature-block-layout.ts`, the per-format ability fragments, and the
+presentation schema. **Skip this for parser / codec / spec-data work** - it is only about how a parsed record
+is _presented_. The _render_ conventions (width tiers, spacing, column-major fill) live in
+`client/src/binary-editor/webview/AGENTS.md`; the holistic review brief + fuller rationale in
+`docs/binary-editor-ui-guidelines.md`.
+
+## One shared fragment per record - same record renders identically
+
+A record that appears in more than one format renders through ONE shared layout fragment, never a per-site
+generic auto-form, so it looks identical everywhere. Item and spell ABILITIES use per-format fragments
+(`itmAbilityBodyRows` / `splAbilityBodyRows`). EVERY Infinity Engine effect renders through one shared builder,
+`effectBodyRows` (`ie-common/effect-layout.ts`): the EFF v2 body (264B), EFF v1 body (48B), and ITM/SPL feature
+block (48B).
+
+- **Parallel-not-identical is INTENTIONAL.** Where two records genuinely differ, their fragments share ordering
+  and controls where the concepts align, and each adds only the fields its own record needs (an ITM ability has
+  Damage / Charges panels a SPL ability lacks; SPL has a Casting panel instead). Don't flag as divergence.
+
+## Effect layout = wire byte order, no semantic panel titles
+
+`effectBodyRows` lays fields in on-disk (wire) byte order, matching the spec, with NO semantic panel titles. A
+run of plain fields becomes a full-width 2-column panel (the wide L-tier opcode / timing / variable controls
+need the full width); each bitfield and each labelled subgroup becomes its own content-width (`fit`) box at its
+byte position; consecutive boxes pack side by side into one wrapping row (ragged box heights are fine). Numeric
+tuples fold into one labelled cell (a `join`): Dice (`<thrown>d<sides>`), Probability (`<p2> - <p1>`). EFF v2
+adds single-column subgroup boxes (Coordinates, Classification, Parameters, Resources, Parent Resource). These
+foldings / boxes are intentional - the label overrides still name the underlying fields in the model.
+
+- Records carry different fields, so each passes its own ordered list: the feature block has a level range (no
+  dice); only EFF v2 has coordinates / trailing subgroups; EFF v1's `resistance` / `savingThrowType` are plain
+  values (no flag table), so they are plain fields - faithful, not divergence.
+
+## Stable layout: reserve only the column that is relabeled at runtime
+
+The effect detail's opcode overlay rewrites `parameter1` / `parameter2` labels per opcode ("Statistic
+Modifier", "Slot Amount Modifier", ...) - and ONLY those two fields mutate. So emit `labelReserve` on the
+fields block (see the `fields` block schema) listing exactly those fields, sized to the common longest label.
+The renderer floors just that one column so its value can't jump; every other column hugs its static labels.
+
+- Do NOT reserve a width for static columns (they never change), and do NOT use a single blanket fixed label
+  width across the whole panel - that strands short static labels far from their values.
+
+## Flag boxing: box when sharing a panel, bare when sole
+
+A flag block that SHARES a panel with other blocks gets its own titled inner box (fieldset + legend) so the
+bitfield reads as one set (ITM General Flags in the Identity panel, an effect's Save Type / Resistance beside
+its fields). A flag block that is the SOLE content of a titled panel takes NO inner border and leans on the
+panel's chrome (CRE Flags, SPL Flags). Set the `boxed` prop accordingly (`boxed=false` for sole-in-panel). One
+flag block with an inner border and another without is this share-vs-sole rule, not an inconsistency.
+
+- **Category-grouped flags** (`flagGroups` block): when a field's meaningful groupings cross wire byte
+  boundaries, regroup by SEMANTIC CATEGORY, not storage byte (ITM "Unusable By" -> Alignment / Class / Race;
+  "Unusable By Kit" -> per base class). Each category is its own boxed subgroup; a large category splits into
+  balanced sub-columns. Intentional, not divergence from the per-byte FlagColumns treatment.
+
+## Hex display for type-encoded IDs
+
+Declare hex (not decimal) for a numeric field that packs `(type << 24) | index` - hex makes the type nibble
+legible and stops the master list showing indistinguishable big decimals: MAP `FID` / `PID`, PRO
+Inventory/Head/Male/Female `FRM ID`. A plain index (the PRO header `frmId`) stays decimal.
+
+## Faithful raw bytes; faithful labels
+
+- **Raw bytes verbatim.** Resref / string fields show their stored bytes; a field holding non-printable bytes
+  renders as mojibake (SPL Completion Sound, some EFF Parent Resource). Faithful display is preferred over
+  prettifying; the model round-trips the raw bytes. Consistent across formats, not a per-field codec bug.
+- **Generic indexed labels for game-specific slots.** The format is game-agnostic, so a slot whose name differs
+  across games (CRE proficiencies 9-20) shows "Proficiency N", not one game's guess. Faithful to the format,
+  not an unfinished label.
+- **PRO single-field property panels.** Every PRO object type gets its own titled `<Type> Properties` panel for
+  cross-subtype consistency even when it holds a single field (tile -> Material). The panel is `fit` so it
+  shares the Header row; a lone-field panel is this parallel-subtype rule, not a stranded panel.

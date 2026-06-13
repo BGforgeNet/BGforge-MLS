@@ -135,7 +135,7 @@ function enumLongestLabelChars(row: Row): number {
 export function valueTier(row: Row): SizeTier {
     const kind = controlKind(row);
     // Dropdowns are sized to their LONGEST option label (value-prefixed, as the trigger renders it) so changing
-    // the selection never clips - the UI-GUIDELINES contract. The arrow + padding chrome make the S box too
+    // the selection never clips - the binary-editor UI-guidelines contract (see this dir's AGENTS.md). The arrow + padding chrome make the S box too
     // tight, so a dropdown is floored at M; from there it picks the smallest tier whose box fits its longest
     // option (ML for the common IE IDS dropdowns, L only when an option genuinely runs long - an effect's Timing
     // "Instant/Permanent (after Death)", a CRE Kit name). The searchable combobox (the ~370-entry effect opcode)
