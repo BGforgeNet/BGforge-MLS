@@ -128,6 +128,7 @@
                             {:else if block.kind === "effectTree"}
                                 <EffectTreeBlock abilityDetail={block.abilityDetail} effectDetail={block.effectDetail}
                                                  canModify={block.canModify} childSection={block.childSection}
+                                                 labels={layout.labels}
                                                  {bridge} {version} {selection} {onedit} {byNode} />
                             {:else}
                                 <RawBlock />

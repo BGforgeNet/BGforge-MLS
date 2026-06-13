@@ -26,6 +26,7 @@ export function splAbilityBodyRows(prefix: string): DetailRow[] {
                     blocks: [
                         {
                             kind: "fields",
+                            columns: 2,
                             fields: [k("form"), k("location"), k("target"), k("targetCount"), k("range")],
                         },
                         { kind: "flags", field: k("disposition"), columns: 1 },

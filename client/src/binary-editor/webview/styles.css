@@ -241,7 +241,9 @@ button:disabled {
 }
 .layout-root .master .vlist {
     height: auto;
-    max-height: 24rem;
+    /* Use the vertical space beside the (taller) detail form instead of scrolling early; shared cap with the
+       tree viewport so the two can't diverge (see --bb-list-max-height). `height:auto` still hugs a short list. */
+    max-height: var(--bb-list-max-height, 48rem);
 }
 /* Abilities+effects tree: a single VIRTUALIZED collapsible column on the master side. The whole view is in
    memory; the groups are flattened (respecting collapse + filter) into fixed-height rows and only the rows in
@@ -264,13 +266,30 @@ button:disabled {
 .eff-tree-toolbtn {
     flex: 0 0 auto;
 }
+/* Collapse-all / expand-all icon buttons at the right of the tree toolbar. */
+.eff-tree-iconbtn {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    background: none;
+    border: none;
+    padding: 0.15rem 0.25rem;
+    cursor: pointer;
+    color: inherit;
+    opacity: 0.75;
+}
+.eff-tree-iconbtn:hover {
+    opacity: 1;
+    background: var(--vscode-toolbar-hoverBackground);
+    border-radius: 3px;
+}
 .eff-tree-filter {
     flex: 1 1 auto;
     min-width: 0;
 }
 .eff-tree-vlist {
     overflow-y: auto;
-    max-height: 30rem;
+    max-height: var(--bb-list-max-height, 48rem);
 }
 .eff-tree-spacer {
     position: relative;
@@ -374,11 +393,24 @@ button:disabled {
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.eff-tree-effect:hover,
-.eff-tree-head-label:hover {
+/* Hover highlights the WHOLE row (the head row with its controls, or the full-width effect button), and is
+   suppressed on the already-selected row so hovering a selection does not recolor it. */
+.eff-tree-head:not(.eff-tree-selected):hover,
+.eff-tree-effect:not(.eff-tree-selected):hover {
     background: var(--vscode-list-hoverBackground);
 }
-.eff-tree-selected,
+/* The chevron / label / add inside a head row are <button>s, so the global `button:hover` would give each its
+   OWN highlight on top of the row's. Force them transparent on hover so the parent row's hover/selection
+   background shows through uniformly - the row, not the label, is the hover target. */
+.eff-tree-head-label:hover,
+.eff-tree-chevron:hover,
+.eff-tree-add:hover {
+    background: none;
+}
+/* Effect selection is qualified with `.eff-tree-effect` (specificity 0,2,0) so it beats the global
+   `button:hover` (0,1,1) - otherwise hovering an already-selected effect would swap its selection colour for
+   the button-hover colour. */
+.eff-tree-effect.eff-tree-selected,
 .eff-tree-head.eff-tree-selected {
     background: var(--vscode-list-activeSelectionBackground);
     color: var(--vscode-list-activeSelectionForeground);
@@ -1091,6 +1123,11 @@ input[type="text"]::placeholder {
        columns (.kv-multi) and the gap between sibling blocks in a panel (.panel-blocks, e.g. a fields grid
        next to a flags box) read as the SAME spacing. Driven by one variable so they can't drift apart. */
     --bb-col-gap: 22px;
+    /* One cap for every virtualized list/tree viewport on a layout page (the master-detail `.master .vlist`
+       and the abilities+effects tree `.eff-tree-vlist`), so both use the same vertical space beside the
+       taller detail and can't drift apart. Sized to ~2x a 24rem list since a per-entry detail is about that
+       tall; a shorter list still hugs its rows (height:auto), only a longer one scrolls. */
+    --bb-list-max-height: 48rem;
     display: flex;
     flex-direction: column;
     gap: 10px;

@@ -451,6 +451,18 @@ await doUndo();
 // ============================================================
 await selectRow(effectsPanel, 0);
 await effectsPanel.locator(".detail .layout-root .field").first().waitFor({ timeout: 3000 });
+// The effects list viewport is capped generously (48rem ~= 768px) so it uses the vertical space beside the
+// taller effect detail instead of scrolling at ~17 rows (the former 24rem cap). Measure the real px to guard
+// against the cap silently reverting; > 500 distinguishes the new cap from the old regardless of root font-size.
+const effVlistMax = await effectsPanel
+    .locator(".master .vlist")
+    .first()
+    .evaluate((el) => Math.round(parseFloat(getComputedStyle(el).maxHeight)));
+check(
+    "effects: list viewport cap uses the height beside the detail (> 500px)",
+    effVlistMax > 500,
+    `maxHeight=${effVlistMax}px`,
+);
 // The shared EFF v2 fragment renders through LayoutRenderer (`.detail .layout-root`), not the generic
 // auto-form (which has no `.layout-root`) - so the presence of layout fields is the shared-fragment signal.
 // The fragment is one untitled wire-byte-order panel: no semantic panel `h3` titles (the Save Type / Resistance

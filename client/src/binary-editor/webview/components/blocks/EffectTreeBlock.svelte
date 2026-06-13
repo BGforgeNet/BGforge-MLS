@@ -17,7 +17,7 @@
     import RowActions from "../RowActions.svelte";
     import Icon from "../Icon.svelte";
 
-    const { bridge, version, selection, onedit, byNode, abilityDetail, effectDetail, canModify, childSection }: {
+    const { bridge, version, selection, onedit, byNode, abilityDetail, effectDetail, canModify, childSection, labels }: {
         bridge: Bridge;
         version: number;
         selection: NodeId | undefined;
@@ -27,6 +27,9 @@
         effectDetail: DetailRow[];
         canModify: boolean;
         childSection: string;
+        // Display-label overrides the detail fragments reference (e.g. the ITM ability's shortened "Dice Thrown"
+        // inside the Alternative box, the effect's "Stacking ID (ToBEx)") - the same map the list blocks pass.
+        labels?: Record<string, string>;
     } = $props();
 
     let view = $state<EffectTreeView | undefined>();
@@ -122,6 +125,8 @@
         else next.add(key);
         collapsed = next;
     };
+    const collapseAll = (): void => { collapsed = new Set((view?.groups ?? []).map((g) => g.key)); };
+    const expandAll = (): void => { collapsed = new Set(); };
     const selectAbility = (nodeId: NodeId): void => { selected = { nodeId, kind: "ability" }; };
     const selectEffect = (nodeId: NodeId): void => { selected = { nodeId, kind: "effect" }; };
 
@@ -168,6 +173,12 @@
                     </button>
                 {/if}
             </span>
+            <button class="eff-tree-iconbtn" aria-label="Collapse all" title="Collapse all" onclick={collapseAll}>
+                <Icon name="collapse-all" />
+            </button>
+            <button class="eff-tree-iconbtn" aria-label="Expand all" title="Expand all" onclick={expandAll}>
+                <Icon name="expand-all" />
+            </button>
         </div>
         {#if !view || view.empty}
             <p class="placeholder">No abilities or effects in this record.</p>
@@ -238,7 +249,7 @@
             {#if acts}<RowActions {acts} entryId={selected.nodeId} {bridge} />{/if}
             <ListEntryDetail nodeId={selected.nodeId}
                              detailVariant={selected.kind === "ability" ? abilityDetail : effectDetail}
-                             {bridge} {version} {onedit} {byNode} />
+                             {labels} {bridge} {version} {onedit} {byNode} />
         {:else}
             <p class="placeholder">Select an ability or effect.</p>
         {/if}

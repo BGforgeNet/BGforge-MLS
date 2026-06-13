@@ -28,6 +28,7 @@ export function itmAbilityBodyRows(prefix: string): DetailRow[] {
                     blocks: [
                         {
                             kind: "fields",
+                            columns: 2,
                             fields: [
                                 k("attackType"),
                                 k("location"),
@@ -46,6 +47,7 @@ export function itmAbilityBodyRows(prefix: string): DetailRow[] {
                     blocks: [
                         {
                             kind: "fields",
+                            columns: 2,
                             fields: [
                                 k("diceThrown"),
                                 k("diceSides"),
@@ -78,7 +80,11 @@ export function itmAbilityBodyRows(prefix: string): DetailRow[] {
                     title: "Projectile",
                     stack: true,
                     blocks: [
-                        { kind: "fields", fields: [k("projectileType"), k("projectileAnimation"), k("speed")] },
+                        {
+                            kind: "fields",
+                            columns: 2,
+                            fields: [k("projectileType"), k("projectileAnimation"), k("speed")],
+                        },
                         {
                             kind: "group",
                             label: "Ammo Type",

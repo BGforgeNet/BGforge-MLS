@@ -300,6 +300,24 @@ check(
     JSON.stringify(treeShape.groups.map((g) => g.level)),
 );
 
+// Hover an UNSELECTED ability header (Ability 2; Ability 1 is the default selection): the row gets the hover
+// background, but the label <button> must NOT get its own (global button:hover) highlight - it stays
+// transparent so the row's hover shows through uniformly.
+const ab2Head = page
+    .locator(".eff-tree-head")
+    .filter({ has: page.locator(".eff-tree-head-label", { hasText: "Ability 2" }) });
+await ab2Head.locator(".eff-tree-head-label").hover();
+await page.waitForTimeout(120);
+const hoverColors = await ab2Head.evaluate((head) => ({
+    row: getComputedStyle(head).backgroundColor,
+    label: getComputedStyle(head.querySelector(".eff-tree-head-label")!).backgroundColor,
+}));
+check(
+    "hover: row provides the hover bg and the label button stays transparent",
+    hoverColors.label === "rgba(0, 0, 0, 0)" && hoverColors.row !== "rgba(0, 0, 0, 0)",
+    JSON.stringify(hoverColors),
+);
+
 // Selecting an effect renders the shared feature-block fragment (opcode combobox, folded Level cell).
 await page.locator(".eff-tree-effect").first().click();
 await page.locator(".eff-tree .detail .layout-root .field").first().waitFor({ timeout: 3000 });
@@ -314,6 +332,15 @@ check(
     `fields=${effDetail.fields} panelTitles=${effDetail.panelTitles}`,
 );
 check("tree: opcode detail field is a searchable combobox", effDetail.combobox >= 1, `count=${effDetail.combobox}`);
+
+// Label overrides must reach the detail (the tree passes the layout `labels` map through, as the old tabs did):
+// the feature block's stackingIdEx renders as "Stacking ID (ToBEx)", not the bare humanized "Stacking Id Ex".
+const effText = (await page.locator(".eff-tree .detail .layout-root").first().innerText()).replace(/\s+/g, " ");
+check(
+    "tree: effect detail applies label overrides (Stacking ID (ToBEx))",
+    effText.includes("Stacking ID (ToBEx)") && !effText.includes("Stacking Id Ex"),
+    effText.includes("Stacking ID (ToBEx)") ? "ok" : effText,
+);
 
 const levelCell = page
     .locator(".eff-tree .detail .layout-root .field")
@@ -359,6 +386,11 @@ check(
     "tree: Melee Animation renders all three distinct slots",
     ["Overhand", "Backhand", "Thrust"].every((s) => abilityText.includes(s)),
     "",
+);
+check(
+    "tree: ability detail applies label overrides (ammo reads 'Arrow' not 'Is Arrow')",
+    abilityText.includes("Arrow") && !abilityText.includes("Is Arrow"),
+    abilityText.includes("Is Arrow") ? "labels-not-applied" : "ok",
 );
 await page.screenshot({ path: path.join(here, "shot-itm-tree.png"), fullPage: true });
 
@@ -449,6 +481,22 @@ await page.locator(".eff-tree-toolbar .list-filter-clear").click();
 await page.waitForTimeout(150);
 check(
     "filter: clearing restores all three effects",
+    (await page.locator(".eff-tree-effect").count()) === 3,
+    `${await page.locator(".eff-tree-effect").count()}`,
+);
+
+// Collapse all / expand all: collapsing hides every nested effect row (headers remain); expanding restores them.
+await page.locator('.eff-tree-iconbtn[aria-label="Collapse all"]').click();
+await page.waitForTimeout(150);
+check(
+    "tree: collapse all hides every effect row",
+    (await page.locator(".eff-tree-effect").count()) === 0,
+    `${await page.locator(".eff-tree-effect").count()}`,
+);
+await page.locator('.eff-tree-iconbtn[aria-label="Expand all"]').click();
+await page.waitForTimeout(150);
+check(
+    "tree: expand all restores every effect row",
     (await page.locator(".eff-tree-effect").count()) === 3,
     `${await page.locator(".eff-tree-effect").count()}`,
 );
