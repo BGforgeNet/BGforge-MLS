@@ -8,6 +8,23 @@ import { normKey, fieldNumber as fieldValue } from "./model-helpers";
 
 const PARAM_FIELDS = new Set(["parameter1", "parameter2"]);
 
+// The 0x1c/0x20 dword pair is dual-purpose: most opcodes read it as a Maximum/Minimum Level range (the static
+// label the layout assigns), but these opcodes read it as the effect's own Dice Thrown/Dice Sides. The field is
+// named maxLevel/minLevel in the feature block and diceThrown/diceSides in the EFF v1/v2 body - same field, two
+// spec names - so each slot matches either name. (THROWN = 0x1c, SIDES = 0x20.)
+const DICE_OPCODES = new Set([12, 17, 18, 331, 333]);
+const THROWN_KEYS = new Set(["maxlevel", "dicethrown"]);
+const SIDES_KEYS = new Set(["minlevel", "dicesides"]);
+
+/** Whether the dual-purpose pair beside `node` is read as dice (vs a level range) for the effect's opcode.
+ *  Opcode 218 is the lone conditional case: it reads dice only when parameter2 = 1 (IESDP). */
+function readsDice(model: Model, node: FlatNode): boolean {
+    const opcode = siblingValue(model, node, "opcode");
+    if (opcode === undefined) return false;
+    if (DICE_OPCODES.has(opcode)) return true;
+    return opcode === 218 && siblingValue(model, node, "parameter2") === 1;
+}
+
 function siblingValue(model: Model, node: FlatNode, key: string): number | undefined {
     const sibs = model.childrenByParent.get(node.parentId ?? "") ?? [];
     const matchIdx = sibs.find((i) => {
@@ -37,6 +54,12 @@ export const ieEffectsModel: RelationshipModel = {
                 opcode === undefined ? undefined : availabilitySummary(OpcodeRelationships[opcode]?.availability);
             return desc ? { description: desc } : undefined;
         }
+        if (THROWN_KEYS.has(key) || SIDES_KEYS.has(key)) {
+            // Dice opcodes flip the static Maximum/Minimum Level label to Dice Thrown/Dice Sides; every other
+            // opcode keeps the static level label (no override).
+            if (!readsDice(model, node)) return;
+            return { label: THROWN_KEYS.has(key) ? "Dice Thrown" : "Dice Sides" };
+        }
         if (!PARAM_FIELDS.has(key)) return;
         const opcode = siblingValue(model, node, "opcode");
         if (opcode === undefined) return;
@@ -52,12 +75,22 @@ export const ieEffectsModel: RelationshipModel = {
         return Object.keys(override).length > 0 ? override : undefined;
     },
     dependents(model, editedNode) {
-        if (editedNode.kind !== "field" || normKey(editedNode.name) !== "opcode") return [];
+        if (editedNode.kind !== "field") return [];
+        const editedKey = normKey(editedNode.name);
+        // Opcode rewrites the parameter labels AND the dual-purpose dice/level pair. parameter2 only flips the
+        // pair (opcode 218 reads dice iff parameter2 = 1), so an edit to it re-resolves the pair but not params.
+        const wantParams = editedKey === "opcode";
+        const wantDiceLevel = editedKey === "opcode" || editedKey === "parameter2";
+        if (!wantParams && !wantDiceLevel) return [];
         const sibs = model.childrenByParent.get(editedNode.parentId ?? "") ?? [];
         const out: string[] = [];
         for (const i of sibs) {
             const n = model.nodes[i];
-            if (n && n.kind === "field" && PARAM_FIELDS.has(normKey(n.name))) out.push(n.id);
+            if (!n || n.kind !== "field") continue;
+            const k = normKey(n.name);
+            if ((wantParams && PARAM_FIELDS.has(k)) || (wantDiceLevel && (THROWN_KEYS.has(k) || SIDES_KEYS.has(k)))) {
+                out.push(n.id);
+            }
         }
         return out;
     },

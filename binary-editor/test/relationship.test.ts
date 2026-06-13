@@ -37,6 +37,48 @@ describe("ieEffectsModel.fieldOverride (real ITM display tree)", () => {
     });
 });
 
+describe("ieEffectsModel.fieldOverride dual-purpose dice/level field (real ITM display tree)", () => {
+    // The 0x1c/0x20 dword pair is dual-purpose: Maximum/Minimum Level for most opcodes, but Dice Thrown/Dice
+    // Sides for opcodes 12/17/18/331/333 and 218 (only when parameter2=1). The static label is the level
+    // reading; the overlay flips it to the dice reading for exactly those opcodes.
+    for (const op of [12, 17, 18, 331, 333]) {
+        it(`relabels the field pair Dice Thrown/Dice Sides for dice opcode ${op}`, () => {
+            if (!itmFixturePresent()) return;
+            const session = openItmSession();
+            const f = firstEffectFields(session.model);
+            setRaw(f.get("opcode")!, op);
+            expect(ieEffectsModel.fieldOverride(session.model, f.get("maxlevel")!)?.label).toBe("Dice Thrown");
+            expect(ieEffectsModel.fieldOverride(session.model, f.get("minlevel")!)?.label).toBe("Dice Sides");
+        });
+    }
+    it("leaves the static Maximum/Minimum Level label (no override) for a non-dice opcode", () => {
+        if (!itmFixturePresent()) return;
+        const session = openItmSession();
+        const f = firstEffectFields(session.model);
+        setRaw(f.get("opcode")!, 1); // stat modifier - reads the field pair as the level range
+        expect(ieEffectsModel.fieldOverride(session.model, f.get("maxlevel")!)).toBeUndefined();
+        expect(ieEffectsModel.fieldOverride(session.model, f.get("minlevel")!)).toBeUndefined();
+    });
+    it("opcode 218 reads dice only when parameter2 = 1", () => {
+        if (!itmFixturePresent()) return;
+        const session = openItmSession();
+        const f = firstEffectFields(session.model);
+        setRaw(f.get("opcode")!, 218);
+        setRaw(f.get("parameter2")!, 0);
+        expect(ieEffectsModel.fieldOverride(session.model, f.get("maxlevel")!)).toBeUndefined();
+        setRaw(f.get("parameter2")!, 1);
+        expect(ieEffectsModel.fieldOverride(session.model, f.get("maxlevel")!)?.label).toBe("Dice Thrown");
+    });
+    it("re-resolves the level/dice fields when the opcode or parameter2 changes", () => {
+        if (!itmFixturePresent()) return;
+        const session = openItmSession();
+        const f = firstEffectFields(session.model);
+        const ids = [f.get("maxlevel")!.id, f.get("minlevel")!.id];
+        expect(ieEffectsModel.dependents(session.model, f.get("opcode")!)).toEqual(expect.arrayContaining(ids));
+        expect(ieEffectsModel.dependents(session.model, f.get("parameter2")!)).toEqual(expect.arrayContaining(ids));
+    });
+});
+
 describe("ieEffectsModel.constraints (real ITM display tree)", () => {
     it("flags an empty probability range with a swap quick-fix", () => {
         if (!itmFixturePresent()) return;

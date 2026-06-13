@@ -9,9 +9,9 @@
  * the opcode combobox, timing dropdown, variable name - need a full-width grid). A bitfield or labelled
  * subgroup renders as its own content-width box at its byte position, NOT a full-width band - so it hugs its
  * content instead of stretching across the row, and consecutive boxes (no plain-field run between them) pack
- * side by side into one wrapping row. Numeric tuples that read as one value (dice in `<thrown>d<sides>`
- * notation, the `probability2 - probability1` range) fold into one labelled cell via `joins`. Field runs and
- * box rows alternate in byte order, top to bottom.
+ * side by side into one wrapping row. A numeric tuple that reads as one value (the `probability2 - probability1`
+ * range) folds into one labelled cell via `joins`. Field runs and box rows alternate in byte order, top to
+ * bottom.
  */
 
 import type { DetailBlock, DetailPanel, DetailRow } from "../layout-schema-types";
@@ -48,19 +48,24 @@ export interface EffectJoin {
     readonly separator: string | string[];
 }
 
-/** The effect fields whose label the opcode overlay REWRITES per opcode (parameter1/parameter2 -> "Statistic
- *  Modifier", "Type", ...). Only the column holding one of these needs a reserved label width; every other
- *  column hugs its static label. Keys are bare (matched against the run's bare field keys). */
-const MUTABLE_LABEL_KEYS: ReadonlySet<string> = new Set(["parameter1", "parameter2"]);
+/** Per-field reserved label width (ch) for fields the opcode overlay RELABELS at runtime, so the column holding
+ *  one stops its value jumping as the label changes; every other column hugs its static label. Keys are bare
+ *  (matched against the run's bare field keys). parameter1/parameter2 swap to labels up to "Statistic Modifier"
+ *  (18ch); the dual-purpose 0x1c/0x20 pair swaps between "Maximum Level"/"Minimum Level" (13ch) and "Dice
+ *  Thrown"/"Dice Sides", named maxLevel/minLevel in the feature block and diceThrown/diceSides in the EFF body.
+ *  Each reserved field keeps its own width; the renderer floors a column to the max width among ITS reserved
+ *  fields, so in the EFF run where parameters (col 1) and the dice/level pair (col 2) share a block, col 1
+ *  floors to 18 and col 2 to 13 independently - the pair never inherits the wider parameter reserve. A rarer
+ *  label longer than its width grows that one column rather than shifting the static columns. */
+const MUTABLE_LABEL_RESERVE_CH: Readonly<Record<string, number>> = {
+    parameter1: 18,
+    parameter2: 18,
+    maxLevel: 13,
+    minLevel: 13,
+    diceThrown: 13,
+    diceSides: 13,
+};
 
-/** Reserved minimum label width (ch) for the column that holds a rewritten label. Sized to the common longest
- *  one ("Statistic Modifier", 18ch); a rarer longer label grows that one column rather than wrapping or
- *  shifting the static columns. */
-const EFFECT_LABEL_RESERVE_CH = 18;
-
-/** The dice tuple, shown in dice notation `<thrown>d<sides>` (e.g. 1d6, 2d12), shared by the EFF v1/v2 bodies;
- *  the feature block has no dice. */
-export const DICE_JOIN: EffectJoin = { label: "Dice", fields: ["diceThrown", "diceSides"], separator: "d" };
 /** The probability range, shown low-to-high as `probability2 - probability1`. Present in every effect record. */
 export const PROBABILITY_JOIN: EffectJoin = {
     label: "Probability",
@@ -95,16 +100,21 @@ export function effectBodyRows(
         // A join belongs to this run iff every field it folds sits in it (so a flag splitting the run, as in the
         // feature block, routes each join to the correct side).
         const runJoins = prefixJoins(joins.filter((j) => j.fields.every((f) => runSet.has(f))));
-        // Reserve a label width ONLY for the rewritten fields (parameter1/parameter2) that sit in this run, so
-        // the column holding them stops the value jumping when the opcode relabels them - while the static
-        // columns beside it (Opcode/Target/Power) hug their short labels at `max-content`. A run with no
-        // rewritten field reserves nothing (every column max-content).
-        const reserved = run.filter((key) => MUTABLE_LABEL_KEYS.has(key)).map((key) => k(key));
+        // Reserve a label width ONLY for the runtime-relabeled fields (parameter1/parameter2 and the
+        // dice/level pair) that sit in this run, so the column holding them stops the value jumping when the
+        // opcode relabels them - while the static columns beside it (Opcode/Target/Power) hug their short
+        // labels at `max-content`. The run's reserve is the max over its relabeled fields; a run with none
+        // reserves nothing (every column max-content).
+        const reservedKeys = run.filter((key) => key in MUTABLE_LABEL_RESERVE_CH);
         const block: DetailBlock = {
             kind: "fields",
             columns: 2,
             fields: run.map((key) => k(key)),
-            ...(reserved.length > 0 && { labelReserve: { fields: reserved, ch: EFFECT_LABEL_RESERVE_CH } }),
+            ...(reservedKeys.length > 0 && {
+                labelReserve: {
+                    fields: reservedKeys.map((key) => ({ ref: k(key), ch: MUTABLE_LABEL_RESERVE_CH[key]! })),
+                },
+            }),
             ...(runJoins.length > 0 && { joins: runJoins }),
         };
         rows.push({ panels: [{ blocks: [block] }] });

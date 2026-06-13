@@ -9,13 +9,7 @@
  * not user data - the serializer rebuilds them from the model).
  */
 
-import {
-    DICE_JOIN,
-    effectBodyRows,
-    type EffectGroup,
-    type EffectLayoutField,
-    PROBABILITY_JOIN,
-} from "../ie-common/effect-layout";
+import { effectBodyRows, type EffectGroup, type EffectLayoutField, PROBABILITY_JOIN } from "../ie-common/effect-layout";
 import type { DetailRow } from "../layout-schema-types";
 
 // The two caster/target location points (EFF v2 only - neither the EFF v1 body nor the feature block carries
@@ -83,7 +77,7 @@ const EFF_V2_FIELDS: readonly EffectLayoutField[] = [
 /** The EFF v2 body rows for any field-ref prefix (standalone `.eff` variant rows or a CRE master-detail
  *  `detailVariant`). */
 export function effV2BodyRows(prefix: string): DetailRow[] {
-    return effectBodyRows(prefix, EFF_V2_FIELDS, [PROBABILITY_JOIN, DICE_JOIN]);
+    return effectBodyRows(prefix, EFF_V2_FIELDS, [PROBABILITY_JOIN]);
 }
 
 /** Display-label overrides for the EFF v2 body at a given prefix - expand "Coord", fix "Id"/jargon, and (for
@@ -97,6 +91,11 @@ export function effV2BodyLabels(prefix: string): Record<string, string> {
         [k("targetXCoord")]: "Target X Coordinate",
         [k("targetYCoord")]: "Target Y Coordinate",
         [k("stackingIdTobex")]: "Stacking ID (ToBEx)",
+        // The 0x1c/0x20 pair is spec-named diceThrown/diceSides, but most opcodes read it as a Maximum/Minimum
+        // Level range; that is the default label. The opcode overlay (binary-editor ie-effects) flips it to
+        // "Dice Thrown"/"Dice Sides" for the dice opcodes (12/17/18/331/333, 218 when param2=1).
+        [k("diceThrown")]: "Maximum Level",
+        [k("diceSides")]: "Minimum Level",
         // `sectype` humanizes to the unclear "Sectype"; it is the secondary type (msectype.2da).
         [k("sectype")]: "Secondary Type",
         // Inside the "Parameters" box: abbreviate "Parameter" -> "Param", keep the real field numbers.

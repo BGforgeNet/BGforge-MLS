@@ -14,7 +14,7 @@
  * `unknown` dword is omitted (the serializer rebuilds it from the model).
  */
 
-import { DICE_JOIN, effectBodyRows, PROBABILITY_JOIN, type EffectLayoutField } from "../ie-common/effect-layout";
+import { effectBodyRows, PROBABILITY_JOIN, type EffectLayoutField } from "../ie-common/effect-layout";
 import type { DetailRow } from "../layout-schema-types";
 
 /** EFF v1 body fields in wire byte order. No `{ flags }` entries: v1's `resistance`/`savingThrowType` are plain
@@ -39,7 +39,7 @@ const EFF_V1_FIELDS: readonly EffectLayoutField[] = [
 
 /** The EFF v1 body rows for any field-ref prefix. */
 export function creEffectV1BodyRows(prefix: string): DetailRow[] {
-    return effectBodyRows(prefix, EFF_V1_FIELDS, [PROBABILITY_JOIN, DICE_JOIN]);
+    return effectBodyRows(prefix, EFF_V1_FIELDS, [PROBABILITY_JOIN]);
 }
 
 /** Display-label overrides for the EFF v1 body at a given prefix - name the resref slot "Resource" so it reads
@@ -48,5 +48,10 @@ export function creEffectV1BodyLabels(prefix: string): Record<string, string> {
     const k = (key: string): string => `${prefix}.${key}`;
     return {
         [k("resref")]: "Resource",
+        // The 0x1c/0x20 pair is spec-named diceThrown/diceSides, but most opcodes read it as a Maximum/Minimum
+        // Level range; that is the default label. The opcode overlay (binary-editor ie-effects) flips it to
+        // "Dice Thrown"/"Dice Sides" for the dice opcodes (12/17/18/331/333, 218 when param2=1).
+        [k("diceThrown")]: "Maximum Level",
+        [k("diceSides")]: "Minimum Level",
     };
 }

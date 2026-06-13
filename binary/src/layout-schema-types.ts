@@ -43,12 +43,16 @@ const fieldsBlockSchema = z.strictObject({
     joins: z.array(joinSchema).optional(),
     /** Reserve a minimum label-column width (in `ch`) for ONLY the columns that contain these field refs;
      * every other column's label track stays `max-content` (hugs its static label). Use where a label is
-     * REWRITTEN at runtime (the effect detail relabels parameter1/parameter2 per opcode): the reserve floors
-     * that one column so its value stops jumping as the label changes, while the static columns beside it
-     * (Opcode/Target/Power) no longer inherit the wide track and instead hug their short labels. Sized to the
-     * common longest label for those fields; a rarer longer one grows the column rather than the whole panel. */
+     * REWRITTEN at runtime (the effect detail relabels parameter1/parameter2 and the dice/level pair per
+     * opcode): the reserve floors the holding column so its value stops jumping as the label changes, while the
+     * static columns beside it (Opcode/Target/Power) hug their short labels. Each ref carries its OWN `ch` (sized
+     * to that field's longest possible label), and a column floors to the max `ch` among its reserved fields -
+     * so a column of 13ch level/dice fields does not inherit the 18ch parameter reserve. A rarer label longer
+     * than its `ch` grows that one column rather than the whole panel. */
     labelReserve: z
-        .strictObject({ fields: z.array(fieldRefSchema).min(1), ch: z.number().int().positive() })
+        .strictObject({
+            fields: z.array(z.strictObject({ ref: fieldRefSchema, ch: z.number().int().positive() })).min(1),
+        })
         .optional(),
 });
 

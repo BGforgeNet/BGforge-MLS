@@ -363,14 +363,35 @@ check(
     effText.includes("Stacking ID (ToBEx)") ? "ok" : effText,
 );
 
-const levelCell = page
-    .locator(".eff-tree .detail .layout-root .field")
-    .filter({ has: page.locator(".label", { hasText: /^Level$/ }) })
-    .first();
+// The dual-purpose 0x1c/0x20 pair no longer folds into one "Level" cell. It renders as two standalone fields
+// whose label defaults to the level reading (Maximum/Minimum Level) and is flipped to Dice Thrown/Dice Sides by
+// the opcode overlay for dice opcodes. Assert no joined "Level" cell remains and both standalone fields show.
+const levelDice = await page.evaluate(() => {
+    const fields = Array.from(document.querySelectorAll(".eff-tree .detail .layout-root .field")) as HTMLElement[];
+    let joinedLevel = false;
+    let thrown = "";
+    let sides = "";
+    let thrownStandalone = false;
+    let sidesStandalone = false;
+    for (const f of fields) {
+        const label = (f.querySelector(".label")?.textContent ?? "").trim();
+        const joined = !!f.querySelector(".field-control.joined");
+        if (label === "Level" && joined) joinedLevel = true;
+        if (label === "Maximum Level" || label === "Dice Thrown") {
+            thrown = label;
+            thrownStandalone = !joined;
+        }
+        if (label === "Minimum Level" || label === "Dice Sides") {
+            sides = label;
+            sidesStandalone = !joined;
+        }
+    }
+    return { joinedLevel, ok: thrownStandalone && sidesStandalone, detail: `${thrown} / ${sides}` };
+});
 check(
-    "tree: level range folds into one 'Level' cell with two boxes",
-    (await levelCell.locator(".field-control.joined input").count()) === 2,
-    "",
+    "tree: 0x1c/0x20 pair renders as two standalone fields (no 'Level' fold)",
+    !levelDice.joinedLevel && levelDice.ok,
+    `joinedLevel=${levelDice.joinedLevel} fields=${levelDice.detail}`,
 );
 
 // No-overlap guard at a NARROW pane: the effect feature block is a 2-column grid whose col-1 value holds the

@@ -14,8 +14,9 @@
         // Runs of fields folded into one labelled inline row (see the layout `joins` schema).
         joins?: { label: string; fields: FieldRef[]; separator: string }[];
         // Reserve a minimum label width (ch) for ONLY the columns containing these fields - keeps a rewritten
-        // label's column from jumping while the static columns beside it hug their labels (see schema).
-        labelReserve?: { fields: FieldRef[]; ch: number };
+        // label's column from jumping while the static columns beside it hug their labels (see schema). Each ref
+        // carries its own `ch`; a column floors to the max `ch` among its reserved fields.
+        labelReserve?: { fields: { ref: FieldRef; ch: number }[] };
     } = $props();
 
     // Multi-column list: each column is a (label, value) pair of tracks - `max-content` so the label hugs
@@ -36,13 +37,13 @@
     // reserved (runtime-rewritten) field gets `minmax(<ch>ch,max-content)` - floored so that column's value
     // does not jump as its label changes, while every other column stays tight to its own short labels. Items
     // fill column-major (`grid-auto-flow:column`, `rows` per column), so column c holds renderedRefs[c*rows..].
-    const reserveSet = $derived(new Set(labelReserve?.fields));
+    const reserveByRef = $derived(new Map((labelReserve?.fields ?? []).map((f) => [f.ref, f.ch])));
     const labelTracks = $derived(
-        Array.from({ length: columns ?? 1 }, (_unused, c) =>
-            renderedRefs.slice(c * rows, c * rows + rows).some((ref) => reserveSet.has(ref))
-                ? `minmax(${labelReserve!.ch}ch,max-content)`
-                : "max-content",
-        ),
+        Array.from({ length: columns ?? 1 }, (_unused, c) => {
+            let maxCh = 0;
+            for (const ref of renderedRefs.slice(c * rows, c * rows + rows)) maxCh = Math.max(maxCh, reserveByRef.get(ref) ?? 0);
+            return maxCh > 0 ? `minmax(${maxCh}ch,max-content)` : "max-content";
+        }),
     );
     const style = $derived(
         multi

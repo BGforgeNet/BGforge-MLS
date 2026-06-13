@@ -24,21 +24,30 @@ block (48B).
 `effectBodyRows` lays fields in on-disk (wire) byte order, matching the spec, with NO semantic panel titles. A
 run of plain fields becomes a full-width 2-column panel (the wide L-tier opcode / timing / variable controls
 need the full width); each bitfield and each labelled subgroup becomes its own content-width (`fit`) box at its
-byte position; consecutive boxes pack side by side into one wrapping row (ragged box heights are fine). Numeric
-tuples fold into one labelled cell (a `join`): Dice (`<thrown>d<sides>`), Probability (`<p2> - <p1>`). EFF v2
-adds single-column subgroup boxes (Coordinates, Classification, Parameters, Resources, Parent Resource). These
-foldings / boxes are intentional - the label overrides still name the underlying fields in the model.
+byte position; consecutive boxes pack side by side into one wrapping row (ragged box heights are fine). The
+probability pair folds into one labelled cell (a `join`): Probability (`<p2> - <p1>`). EFF v2 adds single-column
+subgroup boxes (Coordinates, Classification, Parameters, Resources, Parent Resource). These foldings / boxes are
+intentional - the label overrides still name the underlying fields in the model.
 
-- Records carry different fields, so each passes its own ordered list: the feature block has a level range (no
-  dice); only EFF v2 has coordinates / trailing subgroups; EFF v1's `resistance` / `savingThrowType` are plain
-  values (no flag table), so they are plain fields - faithful, not divergence.
+- The 0x1c/0x20 dword pair is dual-purpose: a Maximum/Minimum Level range for most opcodes, Dice Thrown/Dice
+  Sides for a few (12/17/18/331/333, 218 when param2=1). It is spec-named `maxLevel`/`minLevel` in the feature
+  block and `diceThrown`/`diceSides` in the EFF body, but it is ONE field - so it does NOT fold; it renders as
+  two standalone fields whose default label is the level reading, flipped to the dice reading per opcode by the
+  `ie-effects` overlay (just as parameter1/parameter2 are relabeled). Both spec names get a label override to
+  the level default; the overlay owns the dice exception.
+- Records carry different fields, so each passes its own ordered list: only EFF v2 has coordinates / trailing
+  subgroups; EFF v1's `resistance` / `savingThrowType` are plain values (no flag table), so they are plain
+  fields - faithful, not divergence.
 
 ## Stable layout: reserve only the column that is relabeled at runtime
 
-The effect detail's opcode overlay rewrites `parameter1` / `parameter2` labels per opcode ("Statistic
-Modifier", "Slot Amount Modifier", ...) - and ONLY those two fields mutate. So emit `labelReserve` on the
-fields block (see the `fields` block schema) listing exactly those fields, sized to the common longest label.
-The renderer floors just that one column so its value can't jump; every other column hugs its static labels.
+The effect detail's opcode overlay rewrites a few labels per opcode: `parameter1` / `parameter2` ("Statistic
+Modifier", "Slot Amount Modifier", ...) and the dual-purpose 0x1c/0x20 pair (Maximum/Minimum Level <-> Dice
+Thrown/Dice Sides). Those are the ONLY fields that mutate. So emit `labelReserve` on the fields block (see the
+`fields` block schema) listing each relabeled field a run holds with its OWN reserve width (params 18ch, the
+level/dice pair 13ch). The renderer floors each column to the max width among ITS reserved fields - so when
+parameters (col 1) and the level/dice pair (col 2) share a block, col 2 floors to 13 and does not inherit the
+18ch parameter reserve. Every column without a relabeled field hugs its static labels.
 
 - Do NOT reserve a width for static columns (they never change), and do NOT use a single blanket fixed label
   width across the whole panel - that strands short static labels far from their values.
