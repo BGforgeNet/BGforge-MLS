@@ -440,6 +440,48 @@ check(
     abilityText.includes("Arrow") && !abilityText.includes("Is Arrow"),
     abilityText.includes("Is Arrow") ? "labels-not-applied" : "ok",
 );
+
+// Damage dice fold: thrown/sides/bonus collapse into one "Dice" cell shown D&D-style as X d Y + Z (three
+// editable inputs with per-gap separators), matching how effects fold dice - not three separate fields.
+const diceFold = await page.evaluate(() => {
+    const cell = (Array.from(document.querySelectorAll(".eff-tree .detail .field")) as HTMLElement[]).find(
+        (f) => (f.querySelector(".label")?.textContent ?? "").trim() === "Dice",
+    );
+    if (!cell) return { ok: false, detail: "no Dice cell" };
+    const inputs = cell.querySelectorAll(".joined-input input").length;
+    const seps = Array.from(cell.querySelectorAll(".joined-sep"), (s) => s.textContent?.trim());
+    return { ok: inputs === 3 && seps.join(",") === "d,+", detail: `inputs=${inputs} seps=${seps.join("")}` };
+});
+check("tree: ITM damage dice fold into one X d Y + Z cell", diceFold.ok, diceFold.detail);
+
+// Dropdown widths are decoupled from the text-input tiers and sized to each dropdown's OWN longest option
+// (controls.ts dropdownWidth -> dd-{1..5}). The Ammo "Arrow" Yes/No dropdown carries only "0 No"/"1 Yes", so it
+// lands on the tightest dd-1 box; a wordy dropdown like Damage Type takes a far wider box. Assert the class and
+// that the tiny dropdown is materially narrower than the wide one (it used to inherit the same M/L tier width).
+const ddWidths = await page.evaluate(() => {
+    const out: Record<string, { cls: string; w: number } | null> = {};
+    const triggers = Array.from(document.querySelectorAll(".eff-tree .detail .bb-select-trigger")) as HTMLElement[];
+    for (const label of ["Arrow", "Damage Type", "Attack Type"]) {
+        const t = triggers.find((el) => el.getAttribute("aria-label") === label);
+        if (!t) {
+            out[label] = null;
+            continue;
+        }
+        const fc = t.closest(".field-control");
+        const cls = fc ? (Array.from(fc.classList).find((c) => c.startsWith("dd-")) ?? "?") : "?";
+        out[label] = { cls, w: Math.round(t.getBoundingClientRect().width) };
+    }
+    return { arrow: out["Arrow"], damage: out["Damage Type"], attack: out["Attack Type"] };
+});
+check(
+    "tree: tiny Yes/No dropdown lands on dd-1 and is narrower than a wordy one (widths decoupled from text tiers)",
+    ddWidths.arrow?.cls === "dd-1" &&
+        !!ddWidths.damage &&
+        !!ddWidths.attack &&
+        ddWidths.arrow!.w < ddWidths.attack!.w &&
+        ddWidths.attack!.w < ddWidths.damage!.w,
+    JSON.stringify(ddWidths),
+);
 await page.screenshot({ path: path.join(here, "shot-itm-tree.png"), fullPage: true });
 
 // ============================================================

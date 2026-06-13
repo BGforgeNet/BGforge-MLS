@@ -69,10 +69,10 @@ export const itmAbilitySpecAnnotated = {
  * lookup key stay identical - a mismatch would break the round-trip. Mirrors `splAbilityPresentation`.
  *
  * - `thac0Bonus` humanizes to "Thac0 Bonus"; THAC0 is an established acronym, so case it correctly.
- * - `idRequired` is a flags field whose own bit is "ID Required"; humanize gives the group legend "Id Required",
- *   which both mis-cases the acronym and reads as a near-duplicate of the bit under it. Relabel the group to
- *   "Identification" (the field selects an identification requirement) so the legend differs from its bits -
- *   the same fix applied to SPL `friendly` -> "Disposition".
+ * - `idRequired` is the identification-requirement flags field; humanize gives the group legend "Id Required",
+ *   which mis-cases the acronym and reads awkwardly over its "Required" / "Not required" bits. Relabel the
+ *   group to "Identification" (what the field selects) so the legend is clean - the same fix applied to SPL
+ *   `friendly` -> "Disposition".
  */
 export const itmAbilityPresentation = {
     thac0Bonus: { label: "THAC0 Bonus" },

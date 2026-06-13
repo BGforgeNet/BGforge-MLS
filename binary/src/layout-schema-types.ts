@@ -27,11 +27,13 @@ const fieldRefSchema = z.string().min(1);
  * separator between) instead of one row each - e.g. CRE multiclass levels as "Level  1 / 2 / 3". Each join's
  * `fields` must all also appear in the surrounding block's `fields`; the joined row renders at the first
  * member's position and the rest are folded into it. Numeric fields only (the inputs are small number boxes).
+ * `separator` is one string used between every pair, OR an array of (fields.length - 1) strings for per-gap
+ * separators - e.g. `["d", "+"]` over three fields renders dice as `XdY+Z`.
  */
 const joinSchema = z.strictObject({
     label: z.string().min(1),
     fields: z.array(fieldRefSchema).min(2),
-    separator: z.string().default(" / "),
+    separator: z.union([z.string(), z.array(z.string())]).default(" / "),
 });
 
 const fieldsBlockSchema = z.strictObject({

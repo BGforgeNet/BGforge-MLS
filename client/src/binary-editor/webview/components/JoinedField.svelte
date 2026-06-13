@@ -9,18 +9,21 @@
     const { label, fieldRefs, separator = " / ", fields, onedit }: {
         label: string;
         fieldRefs: FieldRef[];
-        separator?: string;
+        // One string between every pair, or an array of per-gap separators (e.g. ["d", "+"] -> XdY+Z).
+        separator?: string | string[];
         fields: Record<FieldRef, Row>;
         onedit: (id: string, v: number | string) => void;
     } = $props();
 
     const rows = $derived(fieldRefs.map((ref) => fields[ref]).filter((r): r is Row => r !== undefined));
+    // Separator before the i-th input (i > 0): index a per-gap array by gap, or repeat a plain string.
+    const sepBefore = (i: number): string => (Array.isArray(separator) ? (separator[i - 1] ?? "") : separator);
 </script>
 <div class="field">
     <span class="label">{label}</span>
     <span class="field-control joined">
         {#each rows as row, i (row.id)}
-            {#if i > 0}<span class="joined-sep">{separator}</span>{/if}
+            {#if i > 0}<span class="joined-sep">{sepBefore(i)}</span>{/if}
             <span class="joined-input"><NumberField {row} onedit={(v) => onedit(row.id, v)} /></span>
         {/each}
     </span>

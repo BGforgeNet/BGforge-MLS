@@ -36,6 +36,9 @@ export function itmAbilityBodyRows(prefix: string): DetailRow[] {
                                 k("targetCount"),
                                 k("range"),
                                 k("useIcon"),
+                                k("primaryType"),
+                                k("secondaryType"),
+                                k("thac0Bonus"),
                             ],
                         },
                         { kind: "flags", field: k("identification"), columns: 1 },
@@ -43,7 +46,6 @@ export function itmAbilityBodyRows(prefix: string): DetailRow[] {
                 },
                 {
                     title: "Damage",
-                    stack: true,
                     blocks: [
                         {
                             kind: "fields",
@@ -52,22 +54,28 @@ export function itmAbilityBodyRows(prefix: string): DetailRow[] {
                                 k("diceThrown"),
                                 k("diceSides"),
                                 k("damageBonus"),
-                                k("damageType"),
-                                k("primaryType"),
-                                k("secondaryType"),
-                                k("thac0Bonus"),
-                            ],
-                        },
-                        {
-                            // Launcher-ammo "alternative" damage; boxed and content-relabeled so the legend states
-                            // "Alternative" once instead of every field repeating it.
-                            kind: "group",
-                            label: "Alternative",
-                            columns: 3,
-                            fields: [
                                 k("alternativeDiceThrown"),
                                 k("alternativeDiceSides"),
                                 k("alternativeDamageBonus"),
+                                k("damageType"),
+                            ],
+                            // Fold each damage roll (dice + bonus) into one D&D-style "XdY+Z" cell; the
+                            // launcher-ammo alternative damage gets its own "Alt. Dice" cell right after.
+                            joins: [
+                                {
+                                    label: "Dice",
+                                    fields: [k("diceThrown"), k("diceSides"), k("damageBonus")],
+                                    separator: ["d", "+"],
+                                },
+                                {
+                                    label: "Alt. Dice",
+                                    fields: [
+                                        k("alternativeDiceThrown"),
+                                        k("alternativeDiceSides"),
+                                        k("alternativeDamageBonus"),
+                                    ],
+                                    separator: ["d", "+"],
+                                },
                             ],
                         },
                     ],
@@ -117,14 +125,11 @@ export function itmAbilityBodyRows(prefix: string): DetailRow[] {
     ];
 }
 
-/** Display-label overrides for the ITM ability at a given prefix - drop the group-prefix a boxed legend already
- *  states ("Alternative", "Ammo Type") so the field labels read short inside their box. */
+/** Display-label overrides for the ITM ability at a given prefix - drop the group-prefix the "Ammo Type" boxed
+ *  legend already states, so the flag labels read short inside their box. */
 export function itmAbilityBodyLabels(prefix: string): Record<string, string> {
     const k = (key: string): string => refAt(prefix, key);
     return {
-        [k("alternativeDiceThrown")]: "Dice Thrown",
-        [k("alternativeDiceSides")]: "Dice Sides",
-        [k("alternativeDamageBonus")]: "Damage Bonus",
         [k("isArrow")]: "Arrow",
         [k("isBolt")]: "Bolt",
         [k("isBullet")]: "Bullet",

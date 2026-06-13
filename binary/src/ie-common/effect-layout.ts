@@ -44,7 +44,8 @@ export interface EffectGroup {
 export interface EffectJoin {
     readonly label: string;
     readonly fields: readonly string[];
-    readonly separator: string;
+    /** One string between every pair, or an array of (fields.length - 1) per-gap separators (e.g. `["d", "+"]`). */
+    readonly separator: string | string[];
 }
 
 /** The effect fields whose label the opcode overlay REWRITES per opcode (parameter1/parameter2 -> "Statistic
@@ -80,7 +81,9 @@ export function effectBodyRows(
     joins: readonly EffectJoin[] = [],
 ): DetailRow[] {
     const k = (key: string): string => `${prefix}.${key}`;
-    const prefixJoins = (js: readonly EffectJoin[]): { label: string; fields: string[]; separator: string }[] =>
+    const prefixJoins = (
+        js: readonly EffectJoin[],
+    ): { label: string; fields: string[]; separator: string | string[] }[] =>
         js.map((j) => ({ label: j.label, fields: j.fields.map((f) => k(f)), separator: j.separator }));
     const rows: DetailRow[] = [];
     let run: string[] = [];

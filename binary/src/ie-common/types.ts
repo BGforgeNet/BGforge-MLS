@@ -165,8 +165,9 @@ export const AbilityTargetType: Record<number, string> = {
     7: "Caster (EE, instant)",
 };
 
-/** Ability `idRequired` (ITM) / `friendly` (SPL) bit flags. */
+/** ITM ability `idRequired` bit flags, shown under the "Identification" group legend (the ITM ability override
+ *  relabels the group). SPL's analogous `friendly` field uses its own `SplAbilityFriendly` map. */
 export const AbilityIdRequiredFlags: Record<number, string> = {
-    0x01: "ID Required",
-    0x02: "Non-ID Required",
+    0x01: "Required",
+    0x02: "Not required",
 };
