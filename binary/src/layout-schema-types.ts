@@ -39,12 +39,15 @@ const fieldsBlockSchema = z.strictObject({
     fields: z.array(fieldRefSchema).min(1),
     columns: z.number().int().positive().optional(),
     joins: z.array(joinSchema).optional(),
-    /** Fixed label-column width, in `ch`. By default the label track is `max-content` - it hugs the widest
-     * current label, which is fine when labels are static. Set this where a label is REWRITTEN at runtime (the
-     * effect detail relabels parameter1/parameter2 per opcode): a fixed track keeps the value columns from
-     * jumping left/right as the label text changes. Sized to the common longest label; a rare longer one wraps
-     * (a local row-height change) rather than shifting the columns. */
-    labelWidthCh: z.number().int().positive().optional(),
+    /** Reserve a minimum label-column width (in `ch`) for ONLY the columns that contain these field refs;
+     * every other column's label track stays `max-content` (hugs its static label). Use where a label is
+     * REWRITTEN at runtime (the effect detail relabels parameter1/parameter2 per opcode): the reserve floors
+     * that one column so its value stops jumping as the label changes, while the static columns beside it
+     * (Opcode/Target/Power) no longer inherit the wide track and instead hug their short labels. Sized to the
+     * common longest label for those fields; a rarer longer one grows the column rather than the whole panel. */
+    labelReserve: z
+        .strictObject({ fields: z.array(fieldRefSchema).min(1), ch: z.number().int().positive() })
+        .optional(),
 });
 
 /**

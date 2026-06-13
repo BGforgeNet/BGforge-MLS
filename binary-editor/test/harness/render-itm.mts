@@ -333,6 +333,27 @@ check(
 );
 check("tree: opcode detail field is a searchable combobox", effDetail.combobox >= 1, `count=${effDetail.combobox}`);
 
+// Per-column label tracks: a static column (Opcode/Target/Power) hugs its short label rather than inheriting a
+// wide fixed track sized for a label that only appears in another column. The reserved label width is scoped to
+// the column holding the rewritten parameter1/parameter2 fields, so a static label like "Opcode" sits close to
+// its value (a small gap), not stranded ~17ch away as it was under the old blanket fixed label column.
+const opcodeGap = await page.evaluate(() => {
+    const field = (
+        Array.from(document.querySelectorAll(".eff-tree .detail .kv.kv-multi .field")) as HTMLElement[]
+    ).find((f) => (f.querySelector(".label")?.textContent ?? "").trim() === "Opcode");
+    if (!field) return -1;
+    const label = field.querySelector(".label") as HTMLElement;
+    const ctrl = field.querySelector(".field-control") as HTMLElement;
+    const range = document.createRange();
+    range.selectNodeContents(label);
+    return Math.round(ctrl.getBoundingClientRect().left - range.getBoundingClientRect().right);
+});
+check(
+    "tree: a static label (Opcode) hugs its value - not padded for another column's wide label",
+    opcodeGap >= 0 && opcodeGap < 60,
+    `opcode label->value gap=${opcodeGap}px`,
+);
+
 // Label overrides must reach the detail (the tree passes the layout `labels` map through, as the old tabs did):
 // the feature block's stackingIdEx renders as "Stacking ID (ToBEx)", not the bare humanized "Stacking Id Ex".
 const effText = (await page.locator(".eff-tree .detail .layout-root").first().innerText()).replace(/\s+/g, " ");
@@ -351,6 +372,33 @@ check(
     (await levelCell.locator(".field-control.joined input").count()) === 2,
     "",
 );
+
+// No-overlap guard at a NARROW pane: the effect feature block is a 2-column grid whose col-1 value holds the
+// wide (tier-l) opcode combobox. In the tree's split detail pane - narrower than a full-page tab - the value
+// track must shrink the control rather than let it keep its tier width and spill over the col-2 label. Measure
+// at a deliberately narrow viewport (the 1280 default has enough slack to hide the bug) that no col-2 label
+// whose row-band intersects the combobox has its left edge under the combobox.
+await page.setViewportSize({ width: 1000, height: 900 });
+await page.waitForTimeout(120);
+const narrowOverlap = await page.evaluate(() => {
+    const combo = document.querySelector(".eff-tree .detail .bb-combobox-input") as HTMLElement | null;
+    if (!combo) return { ok: false, detail: "no combobox" };
+    const cr = combo.getBoundingClientRect();
+    const mid = (cr.top + cr.bottom) / 2;
+    const hits = (
+        Array.from(document.querySelectorAll(".eff-tree .detail .kv.kv-multi .field .label")) as HTMLElement[]
+    )
+        .map((l) => ({ text: l.textContent ?? "", r: l.getBoundingClientRect() }))
+        .filter(({ r }) => r.top <= mid && r.bottom >= mid && r.left > cr.left + 5 && r.left < cr.right);
+    return { ok: hits.length === 0, detail: hits.map((h) => h.text).join(",") || "none" };
+});
+check(
+    "tree: opcode combobox never overlaps a col-2 label in a narrow detail pane",
+    narrowOverlap.ok,
+    narrowOverlap.detail,
+);
+await page.setViewportSize({ width: 1280, height: 900 });
+await page.waitForTimeout(120);
 
 // Stable-columns guard: the col-2 "Timing" control's left edge must coincide across all three effects
 // (different opcodes relabel parameter1/parameter2, but the fixed label column keeps the values put).

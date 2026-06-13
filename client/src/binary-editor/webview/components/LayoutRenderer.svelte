@@ -88,7 +88,7 @@
                         {#each panel.blocks as block, bi (bi)}
                             {#if block.kind === "fields"}
                                 <FieldsBlock fieldRefs={block.fields} columns={block.columns} joins={block.joins}
-                                             labelWidthCh={block.labelWidthCh}
+                                             labelReserve={block.labelReserve}
                                              fields={layout.fields} {onedit} {byNode} />
                             {:else if block.kind === "group"}
                                 <!-- Boxed, labelled subgroup: a fieldset (flag-group box chrome) wrapping a

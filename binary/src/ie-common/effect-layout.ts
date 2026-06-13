@@ -47,10 +47,15 @@ export interface EffectJoin {
     readonly separator: string;
 }
 
-/** Fixed label-column width (ch) for every effect-body fields run. Stops the value columns jumping when the
- *  opcode overlay rewrites the parameter labels; wide enough for the common longest label ("Statistic Modifier"
- *  / "Stacking ID (ToBEx)"), with a rare longer opcode label wrapping rather than reflowing the columns. */
-const EFFECT_LABEL_WIDTH_CH = 17;
+/** The effect fields whose label the opcode overlay REWRITES per opcode (parameter1/parameter2 -> "Statistic
+ *  Modifier", "Type", ...). Only the column holding one of these needs a reserved label width; every other
+ *  column hugs its static label. Keys are bare (matched against the run's bare field keys). */
+const MUTABLE_LABEL_KEYS: ReadonlySet<string> = new Set(["parameter1", "parameter2"]);
+
+/** Reserved minimum label width (ch) for the column that holds a rewritten label. Sized to the common longest
+ *  one ("Statistic Modifier", 18ch); a rarer longer label grows that one column rather than wrapping or
+ *  shifting the static columns. */
+const EFFECT_LABEL_RESERVE_CH = 18;
 
 /** The dice tuple, shown in dice notation `<thrown>d<sides>` (e.g. 1d6, 2d12), shared by the EFF v1/v2 bodies;
  *  the feature block has no dice. */
@@ -87,15 +92,16 @@ export function effectBodyRows(
         // A join belongs to this run iff every field it folds sits in it (so a flag splitting the run, as in the
         // feature block, routes each join to the correct side).
         const runJoins = prefixJoins(joins.filter((j) => j.fields.every((f) => runSet.has(f))));
+        // Reserve a label width ONLY for the rewritten fields (parameter1/parameter2) that sit in this run, so
+        // the column holding them stops the value jumping when the opcode relabels them - while the static
+        // columns beside it (Opcode/Target/Power) hug their short labels at `max-content`. A run with no
+        // rewritten field reserves nothing (every column max-content).
+        const reserved = run.filter((key) => MUTABLE_LABEL_KEYS.has(key)).map((key) => k(key));
         const block: DetailBlock = {
             kind: "fields",
             columns: 2,
             fields: run.map((key) => k(key)),
-            // Fixed label column: the opcode overlay rewrites parameter1/parameter2 labels per opcode, so a
-            // max-content label track would resize - and the value columns jump - on every opcode change. A
-            // fixed width keeps them put. Sized for the common longest effect label; the rare longer opcode
-            // label wraps instead of shifting the columns.
-            labelWidthCh: EFFECT_LABEL_WIDTH_CH,
+            ...(reserved.length > 0 && { labelReserve: { fields: reserved, ch: EFFECT_LABEL_RESERVE_CH } }),
             ...(runJoins.length > 0 && { joins: runJoins }),
         };
         rows.push({ panels: [{ blocks: [block] }] });

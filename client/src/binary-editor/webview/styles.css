@@ -251,7 +251,12 @@ button:disabled {
    .eff-tree-vlist is the lone scroll container (max-height bounds it; the detail flows into the page scroll),
    so there is no nested double-scroll. */
 .eff-tree-master {
-    flex-basis: 18rem;
+    /* min-width:0 so flex-basis actually governs the width: without it the column's min-content (the toolbar -
+       "+ ability" button + filter + icons) silently pins it far wider (~23rem) than the short rows need
+       ("Ability N", "Effect N - op NNN", "Global (Equipping)"), wasting width the detail pane could use. 14rem
+       clears the widest label (Global header floors at ~12rem) and keeps the filter input usable (~10ch). */
+    flex-basis: 14rem;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     overflow: visible;
@@ -1453,23 +1458,22 @@ input[type="text"]::placeholder {
     column-gap: 10px;
     align-items: baseline;
 }
-.layout-root .kv.kv-multi .field .label {
-    min-width: 80px;
-}
-/* Fixed-width label column (kv-fixed-label): the track is a fixed `ch` width (set inline), so a label rewritten
-   at runtime (effect parameter names per opcode) can't resize the column. A label longer than the track wraps
-   within it - a local row-height change - rather than widening the track and shoving the value columns. */
-.layout-root .kv.kv-multi.kv-fixed-label .field .label {
-    min-width: 0;
-    white-space: normal;
-    overflow-wrap: break-word;
-}
+/* No label min-width: the label hugs its text so the label->value gap stays the field's own 10px column-gap,
+   which must read as TIGHTER than the 22px inter-column gap (a value belongs to its own label, not the next
+   column's). A floor here padded short labels (e.g. "Opcode") past the inter-column gap and inverted that
+   grouping. The per-column max-content track still aligns every value within a column. */
 /* Multi-column panels have no fixed control track, so every control is sized to its display-width tier
  * (--val-ch, set by the tier class on .field-control) and left-aligned within its (auto) value track, so
  * columns stay aligned while each box hugs its tier. See the UX rule "Size fields to a small display-width
  * scale". */
 .layout-root .kv.kv-multi .field-control {
     justify-self: start;
+    /* The span is the grid item in the (auto) value track; min-width:0 + max-width:100% let it shrink to the
+       track in a pane too narrow to hold every column at full tier width (e.g. the tree's split detail) instead
+       of staying at its tier width and overflowing into the next column. The control inside is capped at 100%
+       below, so it follows the span down rather than spilling. */
+    min-width: 0;
+    max-width: 100%;
 }
 .layout-root .kv.kv-multi .field-control > input,
 .layout-root .kv.kv-multi .field-control .bb-select-trigger,
@@ -1477,6 +1481,10 @@ input[type="text"]::placeholder {
     width: var(--val-ch, 16ch);
     box-sizing: border-box; /* outer width = --val-ch for every control type (see kv:not(.kv-multi) above) */
     min-width: 0;
+    /* Never exceed the value cell: in a pane too narrow to hold the tier at full width the track collapses, and
+       without this cap the fixed-width control would overflow it and overlap the next column's label. Capping at
+       100% shrinks the control with its track (tier is the max, not a floor), keeping columns aligned. */
+    max-width: 100%;
 }
 /* Inline-list rows (MAP variables) render an editable Field but sit in a flex .vrow, outside the .kv grid, so
    the tier-width rules above don't reach them - without this the input falls back to its intrinsic width and

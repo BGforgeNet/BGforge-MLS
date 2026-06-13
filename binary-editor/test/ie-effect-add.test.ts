@@ -22,11 +22,18 @@ function firstChildId(session: EditorSession, parentId: string): string {
 }
 
 maybe("ITM effect add wiring", () => {
-    it("the layout exposes Effects section-add and an Abilities child-add of Effects", () => {
+    it("the layout's effect tree wires Effects as the ability child-add section", () => {
         const session = openItmSession();
         const layout = buildLayout("itm", session.model, session.relationshipModel).layout!;
-        expect(layout.sections["Effects"]?.canAdd).toBe(true);
-        expect(layout.sections["Abilities"]?.childAddSection).toBe("Effects");
+        // The flat Abilities / Effects list sections were replaced by a single effectTree block (effects nested
+        // under their owning ability). The add wiring moved onto that block: `childSection` is the op-routing
+        // name for an ability's "add effect" (addChild), so it must still name "Effects".
+        const blocks = (layout.tabs ?? []).flatMap((t) =>
+            (t.rows ?? []).flatMap((r) => r.panels.flatMap((p) => p.blocks)),
+        );
+        const tree = blocks.find((b) => b.kind === "effectTree");
+        expect(tree, "ITM layout should expose an effectTree block").toBeDefined();
+        if (tree?.kind === "effectTree") expect(tree.childSection).toBe("Effects");
     });
 
     it("section add on Effects grows the Effects table by one (a global effect)", () => {

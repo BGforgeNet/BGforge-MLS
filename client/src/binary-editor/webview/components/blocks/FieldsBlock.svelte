@@ -5,7 +5,7 @@
     import Field from "../Field.svelte";
     import JoinedField from "../JoinedField.svelte";
 
-    const { fieldRefs, columns, fields, onedit, byNode, joins, labelWidthCh }: {
+    const { fieldRefs, columns, fields, onedit, byNode, joins, labelReserve }: {
         fieldRefs: FieldRef[];
         columns?: number;
         fields: Record<FieldRef, Row>;
@@ -13,8 +13,9 @@
         byNode: Map<string, Diagnostic[]>;
         // Runs of fields folded into one labelled inline row (see the layout `joins` schema).
         joins?: { label: string; fields: FieldRef[]; separator: string }[];
-        // Fixed label-column width (ch) - stable columns where labels are rewritten at runtime (see schema).
-        labelWidthCh?: number;
+        // Reserve a minimum label width (ch) for ONLY the columns containing these fields - keeps a rewritten
+        // label's column from jumping while the static columns beside it hug their labels (see schema).
+        labelReserve?: { fields: FieldRef[]; ch: number };
     } = $props();
 
     // Multi-column list: each column is a (label, value) pair of tracks - `max-content` so the label hugs
@@ -29,18 +30,27 @@
     // reading order runs down each column, matching the flag grids. `grid-auto-flow:column` + a fixed row
     // count drives the placement; the row count is the rendered item count (refs minus folded join members)
     // divided across the columns. The default row flow would instead snake left-to-right across rows.
-    const rendered = $derived(fieldRefs.filter((ref) => !folded.has(ref)).length);
-    const rows = $derived(multi ? Math.ceil(rendered / (columns ?? 1)) : 0);
-    // Label track: fixed `<labelWidthCh>ch` when given (stable columns despite runtime label rewrites), else
-    // `max-content` (hugs the widest current label - fine for static labels).
-    const labelTrack = $derived(labelWidthCh !== undefined ? `${labelWidthCh}ch` : "max-content");
+    const renderedRefs = $derived(fieldRefs.filter((ref) => !folded.has(ref)));
+    const rows = $derived(multi ? Math.ceil(renderedRefs.length / (columns ?? 1)) : 0);
+    // Per-column label track: `max-content` (hugs the column's widest static label), EXCEPT a column holding a
+    // reserved (runtime-rewritten) field gets `minmax(<ch>ch,max-content)` - floored so that column's value
+    // does not jump as its label changes, while every other column stays tight to its own short labels. Items
+    // fill column-major (`grid-auto-flow:column`, `rows` per column), so column c holds renderedRefs[c*rows..].
+    const reserveSet = $derived(new Set(labelReserve?.fields));
+    const labelTracks = $derived(
+        Array.from({ length: columns ?? 1 }, (_unused, c) =>
+            renderedRefs.slice(c * rows, c * rows + rows).some((ref) => reserveSet.has(ref))
+                ? `minmax(${labelReserve!.ch}ch,max-content)`
+                : "max-content",
+        ),
+    );
     const style = $derived(
         multi
-            ? `grid-template-columns:repeat(${columns},${labelTrack} auto);grid-auto-flow:column;grid-template-rows:repeat(${rows},auto)`
+            ? `grid-template-columns:${labelTracks.map((t) => `${t} auto`).join(" ")};grid-auto-flow:column;grid-template-rows:repeat(${rows},auto)`
             : "",
     );
 </script>
-<div class="kv" class:kv-multi={multi} class:kv-fixed-label={labelWidthCh !== undefined} {style}>
+<div class="kv" class:kv-multi={multi} {style}>
     {#each fieldRefs as ref (ref)}
         {@const join = joinByAnchor.get(ref)}
         {#if join}
