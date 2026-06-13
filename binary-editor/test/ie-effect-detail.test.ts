@@ -69,21 +69,24 @@ describe("the shared feature-block fragment: one tight main run, flag boxes grou
     // end - Resistance as a SINGLE column beside Save Type. Shared, so ITM/SPL/CRE all get it.
     const prefix = "itm.effects[]";
 
-    it("keeps opcode out of the reserved-parameter run, and packs the rest in 3 columns", () => {
+    it("packs all scalars into one flat 3-column grid", () => {
         const fieldsBlocks = featureBlockBodyRows(prefix)
             .flatMap((r) => r.panels)
             .flatMap((p) => p.blocks)
             .filter((b) => b.kind === "fields");
-        const fieldsOf = (b: (typeof fieldsBlocks)[number]) => (b.kind === "fields" ? b.fields : []);
-        // Opcode lands in a run WITHOUT parameter1/parameter2 - whose 18ch reserved label column would otherwise
-        // pad the short "Opcode" label past the inter-column gap (the stable-columns guard rejects that).
-        const opcodeBlock = fieldsBlocks.find((b) => fieldsOf(b).includes(`${prefix}.opcode`));
-        expect(opcodeBlock).toBeDefined();
-        expect(fieldsOf(opcodeBlock!)).not.toContain(`${prefix}.parameter1`);
-        expect(fieldsOf(opcodeBlock!)).not.toContain(`${prefix}.parameter2`);
-        // The parameter/value scalars pack into one 3-column main run.
-        const gridBlock = fieldsBlocks.find((b) => fieldsOf(b).includes(`${prefix}.parameter1`));
-        expect(gridBlock?.kind === "fields" ? gridBlock.columns : undefined).toBe(3);
+        expect(fieldsBlocks).toHaveLength(1);
+        const block = fieldsBlocks[0]!;
+        expect(block.kind === "fields" ? block.columns : undefined).toBe(3);
+        const fields = block.kind === "fields" ? block.fields : [];
+        // The one grid carries every scalar (opcode through the stacking id), parameters included.
+        for (const key of ["opcode", "parameter1", "parameter2", "maxLevel", "minLevel", "stackingIdEx"]) {
+            expect(fields).toContain(`${prefix}.${key}`);
+        }
+        // parameter1/parameter2 are ordered AFTER timing/duration so they fall in a different column from opcode
+        // (column-major fill) - otherwise their long relabeled labels would pad the short "Opcode" label. The
+        // render harness verifies opcode hugs; here just pin the order that makes it so.
+        expect(fields.indexOf(`${prefix}.parameter1`)).toBeGreaterThan(fields.indexOf(`${prefix}.timing`));
+        expect(fields.indexOf(`${prefix}.parameter1`)).toBeGreaterThan(fields.indexOf(`${prefix}.duration`));
     });
 
     it("groups Resistance (single column) next to Save Type in one row", () => {

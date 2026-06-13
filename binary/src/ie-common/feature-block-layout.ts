@@ -19,20 +19,26 @@
 import { effectBodyRows, PROBABILITY_JOIN, type EffectLayoutField } from "./effect-layout";
 import type { DetailRow } from "../layout-schema-types";
 
-// The identity fields (opcode + its target/power) lead in one 3-column row, kept SEPARATE from the parameter
-// grid below: opcode's searchable combobox gets full width and the three short labels hug their values, none
-// padded by the reserved parameter-label column they would otherwise share. Wire byte order (0x00, 0x02, 0x03).
-const FEATURE_BLOCK_LEAD_FIELDS: readonly EffectLayoutField[] = ["opcode", "target", "power"];
-
-/** The parameter/value scalars (wire byte order from 0x04) in one tight 3-column main run; `resistance` /
- *  `saveType` (the two flag bitfields) are pulled out of their wire positions (0x0d, 0x24) and grouped at the
- *  END so they sit side by side in one row - Resistance as a single column beside the wider Save Type - instead
- *  of splitting the scalars into three runs. A sanctioned reorder for clarity (scalars keep wire order). */
-const FEATURE_BLOCK_GRID_FIELDS: readonly EffectLayoutField[] = [
-    "parameter1",
-    "parameter2",
+/**
+ * All scalars in ONE flat 3-column grid, then the two flag bitfields grouped together at the end (so they sit
+ * side by side in one row - Resistance as a single column beside the wider Save Type - rather than each claiming
+ * its own band). Order is wire byte order with two sanctioned reorders for clarity (the layout schema permits
+ * reordering for clarity):
+ *   - `parameter1`/`parameter2` sit AFTER timing/duration rather than at their wire position (0x04/0x08). With
+ *     column-major fill they would otherwise share Opcode's column, and their long opcode-relabeled labels
+ *     ("Statistic Modifier", ...) floor that column's label track, padding the short "Opcode" label far from its
+ *     value (the stable-columns guard rejects that). After timing/duration they land in the next column instead,
+ *     so Opcode's column holds only short labels and hugs.
+ *   - `resistance`/`saveType` are pulled out of their wire positions (0x0d/0x24) to the end so they group.
+ */
+const FEATURE_BLOCK_FIELDS: readonly EffectLayoutField[] = [
+    "opcode",
+    "target",
+    "power",
     "timing",
     "duration",
+    "parameter1",
+    "parameter2",
     "probability1",
     "probability2",
     "resource",
@@ -44,17 +50,13 @@ const FEATURE_BLOCK_GRID_FIELDS: readonly EffectLayoutField[] = [
     { flags: "saveType" },
 ];
 
-/** The feature-block rows for any field-ref prefix. An identity lead row (Opcode / Target / Power, 3 columns,
- *  reserve-free so the labels hug and the searchable opcode combobox gets full width), then the parameter/value
- *  scalars in one tight 3-column main run (wire byte order down each column) so the detail fills the width, then
- *  the Resistance and Save Type flag boxes side by side in one row (Resistance single-column beside Save Type).
- *  Only the probability range folds; the 0x1c/0x20 pair (maxLevel/minLevel) renders as two standalone fields,
+/** The feature-block rows for any field-ref prefix. All scalars pack into ONE flat 3-column grid (column-major,
+ *  reading down each column) so the detail fills the width as one area; the Resistance and Save Type flag boxes
+ *  then sit side by side in one row at the end (Resistance single-column beside the wider Save Type). Only the
+ *  probability range folds; the 0x1c/0x20 pair (maxLevel/minLevel) renders as two standalone fields,
  *  opcode-relabeled Level<->Dice at runtime. */
 export function featureBlockBodyRows(prefix: string): DetailRow[] {
-    return [
-        ...effectBodyRows(prefix, FEATURE_BLOCK_LEAD_FIELDS, [], 3),
-        ...effectBodyRows(prefix, FEATURE_BLOCK_GRID_FIELDS, [PROBABILITY_JOIN], 3),
-    ];
+    return effectBodyRows(prefix, FEATURE_BLOCK_FIELDS, [PROBABILITY_JOIN], 3);
 }
 
 /** Display-label overrides for the feature block at a given prefix. `maxLevel`/`minLevel` carry the default
