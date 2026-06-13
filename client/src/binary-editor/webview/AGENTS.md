@@ -9,18 +9,26 @@ intentional so a change doesn't "fix" them.
 
 ## Field width: a small display-width tier scale
 
-Value controls map to one of four fixed widths (S/M/ML/L) by DISPLAY width (characters rendered), not byte
-size. Classified in `state/controls.ts` (`valueTier`); ch widths in the CSS tier classes
-(`.field-control.tier-{s,m,ml,l}` -> `--val-ch`) in `styles.css`.
+Value controls map to a small fixed set of widths by DISPLAY width (characters rendered), not byte size. TEXT
+inputs (number / string / hex) use a four-step S/M/ML/L scale; DROPDOWNS have their own five-step scale
+(below). Classified in `state/controls.ts` (`valueTier` for text inputs, `dropdownWidth` for enums); ch widths
+in the CSS classes (`.field-control.tier-{s,m,ml,l}` and `.field-control.dd-{1..5}` -> `--val-ch`) in
+`styles.css`.
 
-- **S** - small decimals (stats/levels/counts/IDs up to ~6 digits, the common case); **M** - hex, 8-char
-  resref, short dropdowns; **ML** - mid dropdowns (most IE IDS enums) and 13-20 char strings; **L** - long char
-  arrays and long dropdown labels (an effect's Timing, a CRE Kit/Class).
-- Dropdowns size to their LONGEST option (so changing the selection never clips), quantized to the tiers - NOT
-  hugged to the current option. INTENTIONAL: a dropdown often looks roomy next to a short current value, and
-  same-tier dropdowns share one width. Do not "fix" this.
-- A control narrower than its column track leaves empty space to its right. INTENTIONAL fixed-track design, not
-  misalignment, as long as left edges line up.
+- **Text tiers**: **S** - small decimals (stats/levels/counts/IDs up to ~6 digits, the common case); **M** -
+  hex (`0x`+8 digits) and 8-char resref; **ML** - 13-20 char strings (a char[16] MAP filename); **L** - long
+  char arrays. Numbers are only ever S (decimal) or M (hex32); IE strings are mostly resref -> M.
+- **Dropdowns are sized independently**, to their OWN longest option (value-prefixed, as the trigger renders it),
+  quantized to the `dd-1..dd-5` ch scale (10/16/20/25/32ch). Measured per-dropdown via canvas (in ch, so it
+  scales with the theme font; char-counting over-promotes wordy labels and clips hex-prefixed ones). WHY a
+  separate scale: a dropdown often shares a column with a hex/resref input that needs MORE room than any enum
+  option, so inheriting the text tier left every dropdown over-wide; sizing to its own longest option fixes it.
+  The searchable combobox (effect opcode) keeps the widest box (dd-5) for free-text typing.
+- Sized off the LONGEST option (not the current value), so changing the selection never clips, and dropdowns
+  still align with each other (quantized). A dropdown still looks a little roomy next to a SHORT current value -
+  that is the off-the-longest-option contract, not a defect.
+- A control narrower than its column track leaves empty space to its right. INTENTIONAL: the value track is
+  `auto`, so it sizes to the widest control in the column; left edges stay aligned.
 
 ## Keep columns aligned with fixed grid tracks
 

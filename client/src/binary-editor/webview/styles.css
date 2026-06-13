@@ -1434,6 +1434,26 @@ input[type="text"]::placeholder {
 .layout-root .field-control.tier-l {
     --val-ch: 34ch;
 }
+/* Dropdown widths (enums only; see controls.ts dropdownWidth). A dropdown shares its column with hex/resref/
+ * number inputs that need MORE room than enum option labels, so inheriting the text-input tiers above left
+ * every dropdown over-wide. Size a dropdown to its OWN longest option instead, quantized to this small ch scale
+ * so dropdowns still align with each other. Text tiers above are unchanged - only enums use these. The ch
+ * values MUST mirror DROPDOWN_BOX_CH in controls.ts. */
+.layout-root .field-control.dd-1 {
+    --val-ch: 10ch;
+}
+.layout-root .field-control.dd-2 {
+    --val-ch: 16ch;
+}
+.layout-root .field-control.dd-3 {
+    --val-ch: 20ch;
+}
+.layout-root .field-control.dd-4 {
+    --val-ch: 25ch;
+}
+.layout-root .field-control.dd-5 {
+    --val-ch: 32ch;
+}
 .layout-root .kv:not(.kv-multi) .field-control {
     justify-self: start;
 }

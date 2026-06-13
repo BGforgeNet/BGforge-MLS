@@ -8,6 +8,7 @@ import {
     filterOptions,
     parseCustomValue,
     valueTier,
+    dropdownWidth,
 } from "../../../src/binary-editor/webview/state/controls";
 
 const enumRow: Row = {
@@ -122,20 +123,18 @@ describe("valueTier", () => {
         expect(valueTier(stringRow(32))).toBe("l"); // long char array
     });
 
-    it("sizes a plain enum dropdown by its longest option, floored at M and stepping M -> ML -> L", () => {
-        // enumRow longest option "1 Mutant" = 8ch -> within M; floored to M (the arrow chrome makes S too tight).
-        expect(valueTier(enumRow)).toBe("m");
-        // A mid-length option set (longest "11 Half elf werewolf" = 20ch) lands on the ML tier, not the wide L,
-        // so the common IE IDS dropdowns (General/Race/Alignment) no longer sit in a 34ch box.
-        const mid: Row = { ...enumRow, enumOptions: { "0": "Human", "11": "Half elf werewolf" }, rawValue: 0 };
-        expect(valueTier(mid)).toBe("ml");
-        // A genuinely long option (> 20ch) still takes L so its label never clips.
-        const longEnum: Row = { ...enumRow, enumOptions: { "0": "A very long dropdown option label" } };
-        expect(valueTier(longEnum)).toBe("l");
-    });
+    // Enums no longer route through valueTier - they have their own measured `dropdownWidth` (decoupled from
+    // the text tiers). Its bucketing needs real text metrics (canvas), so it is verified in the Playwright
+    // render harnesses (render-itm/render-cre), not here. In jsdom (no 2d context) it fails wide to dd-5.
+});
 
-    it("keeps the searchable combobox (e.g. the effect opcode) at the wide L tier", () => {
-        expect(valueTier({ ...enumRow, searchableEnum: true })).toBe("l");
+describe("dropdownWidth", () => {
+    it("keeps the searchable combobox at the widest box (free-text typing room)", () => {
+        expect(dropdownWidth({ ...enumRow, searchableEnum: true })).toBe("dd-5");
+    });
+    it("fails wide when text metrics are unavailable (jsdom has no 2d canvas context)", () => {
+        // Without a measurable font the width can't be computed, so a dropdown must never clip - it picks dd-5.
+        expect(dropdownWidth(enumRow)).toBe("dd-5");
     });
 });
 

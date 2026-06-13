@@ -124,16 +124,20 @@ await page.waitForTimeout(200);
 // the later structure-op steps (which navigate into the Spells / Effects tabs).
 await page.screenshot({ path: path.join(here, "shot-cre.png"), fullPage: true });
 
-// ---- Dropdown tier guard (binary-editor UI guidelines: dropdowns size to their longest option, quantized to the S/M/ML/L
-// width tiers - mid-length IE IDS dropdowns land on ML, not the wide L, so the column is not over-wide; yet the
-// longest option must still fit). The Identity box's Alignment is a stable ML case: its longest of the nine fixed
-// alignments is "0x32 Chaotic neutral" = 20ch. Assert it renders on the ML tier (24ch, the fixed middle width -
-// NOT the 34ch L box), then drive it to that longest option and assert the trigger label is not ellipsis-clipped
-// (scrollWidth <= clientWidth). ----
+// ---- Dropdown width guard (binary-editor UI guidelines: dropdowns are sized to their OWN longest option on a
+// dedicated dd-{1..5} ch scale, decoupled from the text-input tiers - so a dropdown sharing a column with a
+// hex/resref input is no longer dragged to that input's width). The Identity box's Alignment is a stable mid
+// case: its longest of the nine fixed alignments is "0x32 Chaotic neutral". Assert it lands on dd-4 (NOT the
+// widest dd-5, proving it tightened below the widest bucket), then drive it to that longest option and assert
+// the trigger label is not ellipsis-clipped (scrollWidth <= clientWidth). ----
 {
     const alignFc = page.locator('.field-control:has(.bb-select-trigger[aria-label="Alignment"])').first();
-    const alignTier = await alignFc.evaluate((el) => el.className.replace("field-control", "").trim());
-    check("dropdown: mid-length Alignment lands on the ML tier (not the wide L)", alignTier === "tier-ml", alignTier);
+    const alignClass = await alignFc.evaluate((el) => el.className.replace("field-control", "").trim());
+    check(
+        "dropdown: mid-length Alignment lands on dd-4 (tighter than the widest dd-5)",
+        alignClass === "dd-4",
+        alignClass,
+    );
     const alignTrigger = page.locator('.bb-select-trigger[aria-label="Alignment"]');
     await alignTrigger.click();
     await page.waitForTimeout(150);
@@ -143,7 +147,7 @@ await page.screenshot({ path: path.join(here, "shot-cre.png"), fullPage: true })
         .locator('.bb-select-trigger[aria-label="Alignment"] .bb-select-label')
         .evaluate((el) => ({ text: el.textContent ?? "", clipped: el.scrollWidth > el.clientWidth + 1 }));
     check(
-        "dropdown: longest Alignment option fits the ML trigger without clipping",
+        "dropdown: longest Alignment option fits the dd-4 trigger without clipping",
         !alignClip.clipped,
         JSON.stringify(alignClip),
     );

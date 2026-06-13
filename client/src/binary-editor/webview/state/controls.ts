@@ -104,20 +104,21 @@ export function parseCustomValue(query: string): number | undefined {
     return n;
 }
 
-// ---- value-field width tiers ----
-// Classify a value control into a SMALL fixed set of display-width tiers (S/M/L) keyed to the characters a
-// value RENDERS, not its byte size. The tier maps to a box width in CSS (.field-control.tier-{s,m,l} ->
-// --val-ch); the grid track is fixed so columns stay aligned and the tier only sets the control's width
-// within it. This is the only piece that must live in code: the tier depends on the field's char-array
-// length / hex format / longest dropdown label, none of which a CSS selector can read. It runs once per
-// field render (a few comparisons), not per frame. See the UX rule "Size fields to a small display-width
-// scale". Widths/values themselves are owned by the stylesheet, not here.
+// ---- value-field width tiers (TEXT inputs only) ----
+// Classify a TEXT-input value control (number / string / hex) into a SMALL fixed set of display-width tiers
+// (S/M/ML/L) keyed to the characters a value RENDERS, not its byte size. The tier maps to a box width in CSS
+// (.field-control.tier-{s,m,ml,l} -> --val-ch); the grid track is `auto`, so it sizes to the widest control in
+// the column and columns stay aligned. This is the only piece that must live in code: the tier depends on the
+// field's char-array length / hex format, which a CSS selector can't read.
+//
+// Dropdowns do NOT use this scale - they have their own (`dropdownWidth`). A dropdown often shares a column with
+// a hex/resref input that needs MORE room than any enum option label, so inheriting the text tier left every
+// dropdown over-wide; sizing a dropdown to its own longest option instead is the fix.
 export type SizeTier = "s" | "m" | "ml" | "l";
 
 // Char-count boundaries between tiers (how many characters the value shows). The ch box widths these map to
-// live in styles.css, tuned against the rendered forms. The ML step exists so a mid-length value (most IE IDS
-// dropdowns: General/Race/Alignment, whose longest option is ~13-20 chars) lands on a fixed middle width
-// instead of jumping the whole way to the wide L box and leaving a column of dead space.
+// live in styles.css, tuned against the rendered forms. The ML step exists so a mid-length value (a char[16]
+// MAP filename, ~13-20 chars) lands on a fixed middle width instead of jumping the whole way to the wide L box.
 function tierForChars(n: number): SizeTier {
     if (n <= 6) return "s";
     if (n <= 12) return "m";
@@ -125,30 +126,52 @@ function tierForChars(n: number): SizeTier {
     return "l";
 }
 
-/** Longest dropdown option, in characters, exactly as the trigger renders it: the value-prefixed label from
- *  `enumOptionList` (including the synthetic out-of-range option). Drives the dropdown's width tier off the
- *  WIDEST option, not the current one, so changing the selection never clips. */
-function enumLongestLabelChars(row: Row): number {
-    return enumOptionList(row).reduce((max, o) => Math.max(max, o.label.length), 0);
+export function valueTier(row: Row): SizeTier {
+    // Enums are sized by `dropdownWidth`, not here - this scale is for the text inputs (number / string / hex)
+    // that set their column's grid track. A hex32 packed id is "0x" + 8 digits = 10 chars.
+    if (row.numericFormat === "hex32") return "m";
+    if (controlKind(row) === "string") return tierForChars(row.size ?? 8); // char[N] field: N chars max
+    // Decimal: realistic display width in these formats is <= 7 digits (stats, ids, strrefs, counts, Kit).
+    return "s";
 }
 
-export function valueTier(row: Row): SizeTier {
-    const kind = controlKind(row);
-    // Dropdowns are sized to their LONGEST option label (value-prefixed, as the trigger renders it) so changing
-    // the selection never clips - the binary-editor UI-guidelines contract (see this dir's AGENTS.md). The arrow + padding chrome make the S box too
-    // tight, so a dropdown is floored at M; from there it picks the smallest tier whose box fits its longest
-    // option (ML for the common IE IDS dropdowns, L only when an option genuinely runs long - an effect's Timing
-    // "Instant/Permanent (after Death)", a CRE Kit name). The searchable combobox (the ~370-entry effect opcode)
-    // keeps L regardless - its free-text labels and text-box selection need it.
-    if (kind === "enum") {
-        if (row.searchableEnum === true) return "l";
-        const tier = tierForChars(enumLongestLabelChars(row));
-        return tier === "s" ? "m" : tier;
-    }
-    if (row.numericFormat === "hex32") return "m"; // "0x" + 8 hex digits = 10 chars
-    if (kind === "string") return tierForChars(row.size ?? 8); // char[N] field: N chars max
-    // Decimal: realistic display width in these formats is <= 7 digits (stats, ids, strrefs, counts, Kit).
-    // A number input scrolls if a value is ever wider; a field that routinely shows a large number would
-    // get an explicit wider tier (none needed today).
-    return "s";
+// ---- dropdown widths (enums only) ----
+// A dropdown is sized to its OWN longest option, NOT the text-input tier it shares a column with - quantized to
+// this small ch scale so dropdowns still align with each other. ch values MUST mirror `.field-control.dd-N` in
+// styles.css. Boundaries are the box width in ch; a dropdown picks the smallest box whose text room (box minus
+// trigger chrome) fits its widest option, measured in ch so it scales with the theme font like the tiers.
+export type DropdownWidth = "dd-1" | "dd-2" | "dd-3" | "dd-4" | "dd-5";
+const DROPDOWN_BOX_CH: readonly number[] = [10, 16, 20, 25, 32];
+const DROPDOWN_CLASS: readonly DropdownWidth[] = ["dd-1", "dd-2", "dd-3", "dd-4", "dd-5"];
+// Trigger chrome in ch (padding 0.4rem*2 + gap 0.4rem + arrow ~0.8em + border), subtracted from the box to get
+// usable text room. A small breathing margin keeps the longest option off the arrow.
+const DROPDOWN_CHROME_CH = 4.5;
+
+// One cached canvas; the font is read fresh per measure so a theme-font change is picked up.
+let measureCanvas: HTMLCanvasElement | undefined;
+function dropdownMeasure(): { ch: (text: string) => number } | undefined {
+    if (typeof document === "undefined") return undefined;
+    const canvas = (measureCanvas ??= document.createElement("canvas"));
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return undefined; // no 2d context (e.g. jsdom unit tests) - caller fails wide, never clips
+    // Read the editor font from the layout root (where controls inherit it), falling back to body.
+    const fontEl = document.querySelector(".layout-root") ?? document.body;
+    const cs = getComputedStyle(fontEl);
+    ctx.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize}/${cs.lineHeight} ${cs.fontFamily}`;
+    const zero = ctx.measureText("0").width || 1; // 1ch = advance of "0", matching the CSS ch unit
+    return { ch: (text: string) => ctx.measureText(text).width / zero };
+}
+
+/** Pick a dropdown's width class from its longest option (value-prefixed, as the trigger renders it), measured
+ *  in ch. The searchable combobox keeps the widest box (free-text typing room). If text metrics are
+ *  unavailable (no DOM), fail to the widest box so an option can never clip. */
+export function dropdownWidth(row: Row): DropdownWidth {
+    if (row.searchableEnum === true) return "dd-5";
+    const m = dropdownMeasure();
+    if (!m) return "dd-5";
+    let maxCh = 0;
+    for (const o of enumOptionList(row)) maxCh = Math.max(maxCh, m.ch(o.label));
+    const needed = maxCh + DROPDOWN_CHROME_CH;
+    const idx = DROPDOWN_BOX_CH.findIndex((box) => box >= needed);
+    return idx === -1 ? "dd-5" : DROPDOWN_CLASS[idx]!;
 }
