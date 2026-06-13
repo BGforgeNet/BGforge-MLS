@@ -63,18 +63,40 @@ describe("ITM/SPL effects render through the shared feature-block fragment", () 
     }
 });
 
-describe("the shared feature-block fragment packs its scalar runs tightly", () => {
-    // The 48-byte feature block is a small record; its plain-field runs pack into 3 columns (wire byte order
-    // preserved down each column) so the effect detail fills the width instead of spreading across 2 columns.
-    // Flag boxes (resistance/saveType) stay content-width boxes. Shared, so ITM/SPL/CRE all get it.
-    it("renders every scalar run in 3 columns", () => {
-        const fieldsBlocks = featureBlockBodyRows("itm.effects[]")
+describe("the shared feature-block fragment: one tight main run, flag boxes grouped at the end", () => {
+    // The 48-byte feature block packs ALL its scalars into one 3-column main run (wire byte order down each
+    // column); resistance/saveType are pulled out of their wire positions and grouped together in one row at the
+    // end - Resistance as a SINGLE column beside Save Type. Shared, so ITM/SPL/CRE all get it.
+    const prefix = "itm.effects[]";
+
+    it("keeps opcode out of the reserved-parameter run, and packs the rest in 3 columns", () => {
+        const fieldsBlocks = featureBlockBodyRows(prefix)
             .flatMap((r) => r.panels)
             .flatMap((p) => p.blocks)
             .filter((b) => b.kind === "fields");
-        expect(fieldsBlocks.length).toBeGreaterThan(0);
-        for (const b of fieldsBlocks) {
-            expect(b.kind === "fields" ? b.columns : undefined).toBe(3);
-        }
+        const fieldsOf = (b: (typeof fieldsBlocks)[number]) => (b.kind === "fields" ? b.fields : []);
+        // Opcode lands in a run WITHOUT parameter1/parameter2 - whose 18ch reserved label column would otherwise
+        // pad the short "Opcode" label past the inter-column gap (the stable-columns guard rejects that).
+        const opcodeBlock = fieldsBlocks.find((b) => fieldsOf(b).includes(`${prefix}.opcode`));
+        expect(opcodeBlock).toBeDefined();
+        expect(fieldsOf(opcodeBlock!)).not.toContain(`${prefix}.parameter1`);
+        expect(fieldsOf(opcodeBlock!)).not.toContain(`${prefix}.parameter2`);
+        // The parameter/value scalars pack into one 3-column main run.
+        const gridBlock = fieldsBlocks.find((b) => fieldsOf(b).includes(`${prefix}.parameter1`));
+        expect(gridBlock?.kind === "fields" ? gridBlock.columns : undefined).toBe(3);
+    });
+
+    it("groups Resistance (single column) next to Save Type in one row", () => {
+        const flagRow = featureBlockBodyRows(prefix).find((r) =>
+            r.panels.some((p) => p.blocks.some((b) => b.kind === "flags")),
+        );
+        expect(flagRow).toBeDefined();
+        const flagBlocks = flagRow!.panels.flatMap((p) => p.blocks).filter((b) => b.kind === "flags");
+        expect(flagBlocks.map((b) => (b.kind === "flags" ? b.field : ""))).toEqual([
+            `${prefix}.resistance`,
+            `${prefix}.saveType`,
+        ]);
+        const resistance = flagBlocks.find((b) => b.kind === "flags" && b.field === `${prefix}.resistance`);
+        expect(resistance?.kind === "flags" ? resistance.columns : undefined).toBe(1);
     });
 });
