@@ -5,6 +5,7 @@ import { mapParser, type ParseResult } from "@bgforge/binary";
 import { buildModel } from "../src/model";
 import { buildLayout } from "../src/layout";
 import type { ResolvedLayout } from "../src/types";
+import { itmFixturePresent, openItmSession } from "./ie-fixture";
 
 const MAP_FIXTURE = path.resolve(__dirname, "../../client/testFixture/maps/arcaves.map");
 
@@ -69,6 +70,17 @@ describe("buildLayout: empty list section caps are count-independent", () => {
         expect(lv).toBeDefined();
         expect(lv?.canModify).toBe(true);
         expect(lv?.canAdd).toBe(true);
+    });
+});
+
+describe("buildLayout (itm): dual-purpose header label", () => {
+    // The 0x10 resref slot is "Replacement item" in BG1/BG2/BGEE but the drop sound in PSTEE. The discriminator
+    // is the game, not an in-file field, so no overlay can flip it - a static dual label names both readings
+    // (matching the CRE powerLevelOrXp = "Power Level / XP" precedent). Assert the rendered field name.
+    it("labels the 0x10 resref slot for both readings (Replacement item / drop sound)", () => {
+        if (!itmFixturePresent()) return;
+        const layout = buildLayout("itm", openItmSession().model).layout!;
+        expect(layout.fields["itm.header.replacement"]?.name).toBe("Replacement / Drop Sound");
     });
 });
 

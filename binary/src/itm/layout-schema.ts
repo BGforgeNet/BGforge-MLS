@@ -52,6 +52,10 @@ const kit4 = k("kitUsability4");
 const itmLabels: Record<string, string> = {
     [k("unidentifiedDesc")]: "Unidentified Description",
     [k("identifiedDesc")]: "Identified Description",
+    // The 0x10 resref slot is dual-purpose by game: "Replacement item" in BG1/BG2/BGEE, the drop sound in
+    // PSTEE. The discriminator is the game, not an in-file field, so no overlay can flip it - name both readings
+    // statically (as the CRE header does for `powerLevelOrXp` = "Power Level / XP").
+    [k("replacement")]: "Replacement / Drop Sound",
     [k("loreToId")]: "Lore to ID",
     // These sit under the "Requirements" panel (minimum stat requirements), so the stat labels drop the "min".
     [k("minLevel")]: "Level",
