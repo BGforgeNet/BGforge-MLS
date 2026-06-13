@@ -62,3 +62,19 @@ describe("ITM/SPL effects render through the shared feature-block fragment", () 
         });
     }
 });
+
+describe("the shared feature-block fragment packs its scalar runs tightly", () => {
+    // The 48-byte feature block is a small record; its plain-field runs pack into 3 columns (wire byte order
+    // preserved down each column) so the effect detail fills the width instead of spreading across 2 columns.
+    // Flag boxes (resistance/saveType) stay content-width boxes. Shared, so ITM/SPL/CRE all get it.
+    it("renders every scalar run in 3 columns", () => {
+        const fieldsBlocks = featureBlockBodyRows("itm.effects[]")
+            .flatMap((r) => r.panels)
+            .flatMap((p) => p.blocks)
+            .filter((b) => b.kind === "fields");
+        expect(fieldsBlocks.length).toBeGreaterThan(0);
+        for (const b of fieldsBlocks) {
+            expect(b.kind === "fields" ? b.columns : undefined).toBe(3);
+        }
+    });
+});

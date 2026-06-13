@@ -38,10 +38,12 @@ const FEATURE_BLOCK_FIELDS: readonly EffectLayoutField[] = [
     "stackingIdEx",
 ];
 
-/** The feature-block rows for any field-ref prefix. Only the probability range folds; the 0x1c/0x20 pair
- *  (maxLevel/minLevel) renders as two standalone fields, opcode-relabeled Level<->Dice at runtime. */
+/** The feature-block rows for any field-ref prefix. The small 48-byte record packs its scalar runs into 3
+ *  columns (wire byte order preserved down each column) so the detail fills the width rather than spreading
+ *  across 2; resistance/saveType stay content-width flag boxes. Only the probability range folds; the 0x1c/0x20
+ *  pair (maxLevel/minLevel) renders as two standalone fields, opcode-relabeled Level<->Dice at runtime. */
 export function featureBlockBodyRows(prefix: string): DetailRow[] {
-    return effectBodyRows(prefix, FEATURE_BLOCK_FIELDS, [PROBABILITY_JOIN]);
+    return effectBodyRows(prefix, FEATURE_BLOCK_FIELDS, [PROBABILITY_JOIN], 3);
 }
 
 /** Display-label overrides for the feature block at a given prefix. `maxLevel`/`minLevel` carry the default

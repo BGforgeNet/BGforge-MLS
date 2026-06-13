@@ -84,6 +84,9 @@ export function effectBodyRows(
     prefix: string,
     fields: readonly EffectLayoutField[],
     joins: readonly EffectJoin[] = [],
+    // Plain-field-run column count. The wide EFF v2 body (long variable name, coordinates) keeps 2; the small
+    // 48-byte feature block passes 3 to pack its scalar runs tightly and fill the detail width.
+    columns = 2,
 ): DetailRow[] {
     const k = (key: string): string => `${prefix}.${key}`;
     const prefixJoins = (
@@ -108,7 +111,7 @@ export function effectBodyRows(
         const reservedKeys = run.filter((key) => key in MUTABLE_LABEL_RESERVE_CH);
         const block: DetailBlock = {
             kind: "fields",
-            columns: 2,
+            columns,
             fields: run.map((key) => k(key)),
             ...(reservedKeys.length > 0 && {
                 labelReserve: {
