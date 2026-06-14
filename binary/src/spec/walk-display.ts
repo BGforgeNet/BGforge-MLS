@@ -406,10 +406,12 @@ function scalarFieldFor(
     let displayValue: unknown = value;
     let numericFormat: "hex32" | undefined;
     if (typeof value === "number") {
-        // `hex32` is a true display concern (the stored number rendered in base 16). Signedness is NOT - it
-        // is the codec's job (`i32` reads negative natively), so there is no signed branch here.
+        // `hex32` is a true display concern (the stored number rendered in base 16). The codec keeps the value
+        // signed (`i32` reads negative natively, preserved in `rawValue`); the hex display renders the unsigned
+        // 32-bit pattern via `>>> 0`, so a sentinel like -1 shows `0xffffffff`, not the malformed `0x000000-1`
+        // that `(-1).toString(16)` would pad to.
         if (pres?.format === "hex32") {
-            displayValue = `0x${value.toString(16).padStart(8, "0")}`;
+            displayValue = `0x${(value >>> 0).toString(16).padStart(8, "0")}`;
             numericFormat = "hex32";
         } else if (pres?.unit === "%") displayValue = `${value}%`;
     }

@@ -388,7 +388,10 @@ describe("MAP parser - real maps", () => {
         // PID is a packed dword shown in hex (0x0500000C == 83886092); rawValue keeps the decoded number.
         expect(findFieldByName(firstObject!.fields, "PID").value).toBe("0x0500000c");
         expect(findFieldByName(firstObject!.fields, "PID").rawValue).toBe(83886092);
-        expect(findFieldByName(firstObject!.fields, "SID").value).toBe(-1);
+        // SID is a packed dword shown in hex; the "no script" sentinel -1 renders as the unsigned 32-bit
+        // pattern 0xffffffff (rawValue keeps the signed -1).
+        expect(findFieldByName(firstObject!.fields, "SID").value).toBe("0xffffffff");
+        expect(findFieldByName(firstObject!.fields, "SID").rawValue).toBe(-1);
         expect(findFieldByName(firstObject!.fields, "Field 74").value).toBe(0);
     });
 
