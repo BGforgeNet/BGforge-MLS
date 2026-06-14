@@ -28,3 +28,16 @@ export async function locateEntry(
     const full = await fetchWindow(0, total);
     return { rows: full.rows, index: full.rows.findIndex((r) => r.id === id) };
 }
+
+/**
+ * Fetch the COMPLETE row set of a list node, never a capped window. Reads an initial bounded window (so the
+ * common small case is a single fetch); if the node has more rows than that, refetches the full count. Use for
+ * non-virtualized lists that render every row (a detail form's fields, an object's inventory) so a large node
+ * cannot silently drop entries past a fixed cap.
+ */
+export async function fetchAllRows(fetchWindow: WindowFetch, initialWindow = 1000): Promise<Row[]> {
+    const w = await fetchWindow(0, initialWindow);
+    if (w.total <= w.rows.length) return w.rows;
+    const full = await fetchWindow(0, w.total);
+    return full.rows;
+}

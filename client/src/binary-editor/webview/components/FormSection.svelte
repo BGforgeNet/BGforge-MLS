@@ -2,6 +2,7 @@
     import type { Diagnostic, NodeId, Row } from "@bgforge/binary-editor";
     import type { Bridge } from "../state/bridge";
     import { splitForm } from "../state/form-groups";
+    import { fetchAllRows } from "../state/list-window";
     import Field from "./Field.svelte";
     import FlagColumns from "./blocks/FlagColumns.svelte";
     import Self from "./FormSection.svelte";
@@ -22,8 +23,8 @@
     $effect(() => {
         void version; // dependency: a bump re-fetches after the cache is cleared
         let cancelled = false;
-        // Form groups are small; 1000 covers every real record. A windowed fetch for pathological cases is deferred.
-        bridge.requestChildren(nodeId, 0, 1000).then((w) => { if (!cancelled) rows = w.rows; });
+        // Render-all form: fetch the COMPLETE child set (not a capped window) so a large record never drops fields.
+        fetchAllRows((start, end) => bridge.requestChildren(nodeId, start, end)).then((r) => { if (!cancelled) rows = r; });
         return () => { cancelled = true; };
     });
 

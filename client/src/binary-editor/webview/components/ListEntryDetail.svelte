@@ -11,6 +11,7 @@
     // browser webview bundle. `detail-layout.ts` only type-imports binary, so its graph stays browser-safe.
     import { buildDetailFieldMap, collectEntryRows, detailVariantResolves } from "@bgforge/binary-editor/src/detail-layout";
     import type { Bridge } from "../state/bridge";
+    import { fetchAllRows } from "../state/list-window";
     import LayoutRenderer from "./LayoutRenderer.svelte";
     import FormSection from "./FormSection.svelte";
     import ChildEntryList from "./ChildEntryList.svelte";
@@ -34,12 +35,14 @@
     $effect(() => {
         void version; // a bump re-fetches after the cache is cleared
         let cancelled = false;
-        // Detail entries are small records; 1000 covers every real one (the auto-form uses the same bound).
-        // Flatten nested groups (e.g. an ITM ability's Melee Animation slot array) so a fragment's group block
-        // referencing the slot leaves can resolve them in the per-entry field map.
-        collectEntryRows(nodeId, (id) => bridge.requestChildren(id, 0, 1000).then((w) => w.rows)).then((r) => {
-            if (!cancelled) rows = r;
-        });
+        // Fetch each record's COMPLETE field set (no cap). Flatten nested groups (e.g. an ITM ability's Melee
+        // Animation slot array) so a fragment's group block referencing the slot leaves can resolve them in the
+        // per-entry field map.
+        collectEntryRows(nodeId, (id) => fetchAllRows((start, end) => bridge.requestChildren(id, start, end))).then(
+            (r) => {
+                if (!cancelled) rows = r;
+            },
+        );
         return () => { cancelled = true; };
     });
 
@@ -76,8 +79,8 @@
         if (cl === undefined) return;
         void version;
         let cancelled = false;
-        bridge.requestChildren(nodeId, 0, 1000).then((w) => {
-            if (!cancelled) childCount = w.rows.filter((r) => r.name.startsWith(cl.entryPrefix)).length;
+        fetchAllRows((start, end) => bridge.requestChildren(nodeId, start, end)).then((all) => {
+            if (!cancelled) childCount = all.filter((r) => r.name.startsWith(cl.entryPrefix)).length;
         });
         return () => { cancelled = true; };
     });

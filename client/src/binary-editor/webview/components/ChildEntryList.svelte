@@ -6,6 +6,7 @@
     // the child's 0-based position among the owner's matching entry groups.
     import type { Diagnostic, LayoutChildList, NodeId, Row } from "@bgforge/binary-editor";
     import type { Bridge } from "../state/bridge";
+    import { fetchAllRows } from "../state/list-window";
     import FormSection from "./FormSection.svelte";
     import Icon from "./Icon.svelte";
 
@@ -25,10 +26,10 @@
     $effect(() => {
         void version; // a bump re-fetches after a structure op rebuilds the model
         let cancelled = false;
-        // Inventories are small (a handful of items); 1000 covers every real owner.
-        bridge.requestChildren(ownerId, 0, 1000).then((w) => {
+        // Render-all mini-list: fetch the COMPLETE child set so a large inventory never drops items past a cap.
+        fetchAllRows((start, end) => bridge.requestChildren(ownerId, start, end)).then((all) => {
             if (cancelled) return;
-            entries = w.rows.filter((r) => r.name.startsWith(childList.entryPrefix));
+            entries = all.filter((r) => r.name.startsWith(childList.entryPrefix));
             // Drop a selection whose entry no longer exists (e.g. it was just removed).
             if (selectedId !== undefined && !entries.some((e) => e.id === selectedId)) selectedId = undefined;
         });
