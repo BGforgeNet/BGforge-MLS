@@ -92,9 +92,11 @@ for (const c of CASES) {
     check(`${c.variant}: no section tabs`, dom.tabs === 0, `tabs=${dom.tabs}`);
     check(`${c.variant}: panels render`, dom.panels >= 2, `panels=${dom.panels}`);
     check(`${c.variant}: label/value gap positive`, dom.minGap >= 4, `minGap=${dom.minGap}px`);
+
+    // One screenshot per subtype (the single end-of-loop shot only captured the last case).
+    await page.screenshot({ path: path.join(here, `shot-pro-${c.variant.replace(".", "-")}.png`), fullPage: true });
 }
 
-await page.screenshot({ path: path.join(here, "shot-pro-subtypes.png"), fullPage: true });
 await browser.close();
 
 console.log("\n=== PRO subtype layout harness results ===");

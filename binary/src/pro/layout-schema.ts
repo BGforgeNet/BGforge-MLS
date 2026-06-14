@@ -315,29 +315,43 @@ export const proLayout: FormatLayout = formatLayoutSchema.parse({
             ]),
         ]),
         "item.weapon": itemVariant([
-            fieldsPanel(
-                "Weapon",
-                [
-                    p("weaponStats.animationCode"),
-                    p("weaponStats.damageType"),
-                    p("weaponStats.minDamage"),
-                    p("weaponStats.maxDamage"),
-                    p("weaponStats.minStrength"),
-                    p("weaponStats.maxRange1"),
-                    p("weaponStats.maxRange2"),
-                    p("weaponStats.apCost1"),
-                    p("weaponStats.apCost2"),
-                    p("weaponStats.rounds"),
-                    p("weaponStats.caliber"),
-                    p("weaponStats.ammoPid"),
-                    p("weaponStats.maxAmmo"),
-                    p("weaponStats.projectilePid"),
-                    p("weaponStats.criticalFail"),
-                    p("weaponStats.perk"),
-                    p("weaponStats.soundId"),
+            {
+                title: "Weapon",
+                blocks: [
+                    {
+                        kind: "fields",
+                        columns: 2,
+                        fields: [
+                            p("weaponStats.animationCode"),
+                            p("weaponStats.damageType"),
+                            p("weaponStats.minDamage"),
+                            p("weaponStats.maxDamage"),
+                            p("weaponStats.minStrength"),
+                            p("weaponStats.maxRange1"),
+                            p("weaponStats.maxRange2"),
+                            p("weaponStats.apCost1"),
+                            p("weaponStats.apCost2"),
+                            p("weaponStats.rounds"),
+                            p("weaponStats.caliber"),
+                            p("weaponStats.ammoPid"),
+                            p("weaponStats.maxAmmo"),
+                            p("weaponStats.projectilePid"),
+                            p("weaponStats.criticalFail"),
+                            p("weaponStats.perk"),
+                            p("weaponStats.soundId"),
+                        ],
+                        // Fallout weapons store a flat min/max damage pair (not dice); fold it into one
+                        // "Min - Max" cell, the range analog of the ITM ability's XdY+Z dice join.
+                        joins: [
+                            {
+                                label: "Damage",
+                                fields: [p("weaponStats.minDamage"), p("weaponStats.maxDamage")],
+                                separator: " - ",
+                            },
+                        ],
+                    },
                 ],
-                2,
-            ),
+            },
         ]),
         "item.ammo": itemVariant([
             fieldsPanel(
