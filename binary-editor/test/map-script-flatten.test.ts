@@ -66,4 +66,21 @@ describe("MAP scripts: flat per-type list (extents hidden)", () => {
         // signed-decimal sentinels (e.g. 0xCCCCCCCC rendering as -858993460).
         expect(projectRow(m, owner!).numericFormat).toBe("hex32");
     });
+
+    it("labels the Action Being Used -1 sentinel as 'None' (no skill active), not Unknown", () => {
+        const m = mapModel();
+        const section = nonEmptyScriptSection(m)!;
+        // Find any script whose Action Being Used is the -1 sentinel (the common "no skill" case).
+        const scripts = m.nodes.filter((n) => n.parentId === section.id);
+        let opts: Readonly<Record<string, string>> | undefined;
+        for (const s of scripts) {
+            const f = m.nodes.find((n) => n.parentId === s.id && /Action Being Used/i.test(n.name ?? ""));
+            if (f && projectRow(m, f).rawValue === -1) {
+                opts = projectRow(m, f).enumOptions;
+                break;
+            }
+        }
+        expect(opts, "a script with Action Being Used = -1 exists").toBeDefined();
+        expect(opts!["-1"]).toBe("None");
+    });
 });

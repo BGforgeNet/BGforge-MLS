@@ -47,7 +47,10 @@ export const ScriptProc: Record<number, string> = {
     27: "combat_is_over_p_proc",
 };
 
+// Consumed only by the script slot's `actionBeingUsed` (the skill a script reacts to). -1 is the sentinel for
+// "no skill active" - the overwhelmingly common value on disk - so it is named rather than falling to "Unknown".
 export const Skill: Record<number, string> = {
+    [-1]: "None",
     0: "Small Guns",
     1: "Big Guns",
     2: "Energy Weapons",
