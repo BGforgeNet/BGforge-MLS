@@ -6,9 +6,13 @@
     // When `rows` is provided (filtered mode), VirtualList renders that fixed array directly
     // without fetching its own window. This keeps the virtualized fetch path for large unfiltered
     // lists while letting ListSection supply a pre-filtered array when a query is active.
-    const { parentId, bridge, version, selectedId, onselect, rows: fixedRows }:
+    const { parentId, bridge, version, selectedId, onselect, rows: fixedRows, scrollTo }:
         { parentId: NodeId; bridge: Bridge; version: number; selectedId: NodeId | undefined;
-          onselect: (row: Row, index: number) => void; rows?: Row[] } = $props();
+          onselect: (row: Row, index: number) => void; rows?: Row[];
+          // Token-gated scroll request: when `token` changes (a host-driven selection like a cross-record jump),
+          // scroll `index` into view. Token-gated so the same index re-scrolls on a fresh jump and a plain user
+          // click (which does not bump the token) never yanks the list. */
+          scrollTo?: { index: number; token: number } } = $props();
 
     const rowHeight = 22;
     const overscan = 6;
@@ -18,8 +22,21 @@
     let scrollTop = $state(0);
     let total = $state(0);
     let rowsByIndex = $state<Map<number, Row>>(new Map());
+    // eslint-disable-next-line prefer-const -- bound via bind:this in template
+    let vlistEl = $state<HTMLDivElement>();
 
     const range = $derived(visibleRange({ scrollTop, viewportHeight, rowHeight, overscan, total }));
+
+    // Scroll a host-selected row into view, centred, once per scroll token. Setting scrollTop fires the
+    // onscroll handler, which moves the window so the target row is fetched and highlighted.
+    let lastScrollToken = -1;
+    $effect(() => {
+        const req = scrollTo;
+        const el = vlistEl;
+        if (req === undefined || el === undefined || req.token === lastScrollToken) return;
+        lastScrollToken = req.token;
+        el.scrollTop = Math.max(0, req.index * rowHeight - Math.max(0, (viewportHeight - rowHeight) / 2));
+    });
 
     // A version bump re-fetches the visible window (below) and overwrites those indices in place, rather than
     // emptying the map first. Keeping the existing rows on screen until the fresh ones arrive means an edit or
@@ -46,7 +63,7 @@
     // otherwise the positional name ("Effect 1"). The index is rendered separately as a muted prefix.
     function rowLabel(row: Row): string { return row.summary ?? row.name; }
 </script>
-<div class="vlist"
+<div class="vlist" bind:this={vlistEl}
      bind:clientHeight={viewportHeight} onscroll={(e) => (scrollTop = (e.target as HTMLElement).scrollTop)}>
     <!-- The interpolated style= attributes below are CSP-safe: Svelte compiles a `style="...{expr}..."`
          attribute to element.style.cssText (a CSSOM mutation), which CSP does not govern. Only STATIC

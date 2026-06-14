@@ -29,6 +29,10 @@
     // eslint-disable-next-line prefer-const -- reassigned alongside selected via onselect
     let selectedIndex = $state<number | undefined>();
     let total = $state(0);
+    // Token-gated scroll request handed to the master VirtualList: bumped only when a HOST selection is applied
+    // (a cross-record jump, or a structure op handing back an entry), so the list scrolls that entry into view.
+    // A plain user click does not bump it, so clicking never yanks the list under the user.
+    let scrollTarget = $state<{ index: number; token: number } | undefined>();
     // The last host-provided selection actually applied, tracked by VALUE (not by version). A structure op or
     // field edit hands back a NodeId to keep active; we apply it exactly once, when it changes. Tracking by
     // value (rather than re-applying on every version bump) means an unrelated refresh never wipes a selection
@@ -102,7 +106,12 @@
             if (hostSelection !== undefined && hostSelection !== lastAppliedSelection) {
                 lastAppliedSelection = hostSelection;
                 const i = w.rows.findIndex((r) => r.id === hostSelection);
-                if (i !== -1) { pick(w.rows[i], i); return; }
+                if (i !== -1) {
+                    pick(w.rows[i], i);
+                    // Host selection (e.g. a jump): bring the entry into view in the master list.
+                    scrollTarget = { index: i, token: (scrollTarget?.token ?? 0) + 1 };
+                    return;
+                }
             }
             // No new host selection to apply: keep the user's current pick, refreshing its snapshot/index.
             const cur = selected;
@@ -153,7 +162,7 @@
             {/if}
         {:else}
             <VirtualList parentId={nodeId} {bridge} {version} selectedId={selected?.id}
-                         onselect={(r, idx) => pick(r, idx)} />
+                         scrollTo={scrollTarget} onselect={(r, idx) => pick(r, idx)} />
         {/if}
     </div>
     <div class="detail">
