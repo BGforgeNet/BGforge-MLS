@@ -72,7 +72,8 @@ box; a flag block that is the SOLE content of a titled panel takes no inner bord
 chrome. Don't second-guess that in CSS - the share-vs-sole decision is the schema's (see `binary/src/AGENTS.md`);
 render it as marked.
 
-## Nested-group detail uses a vertical tab strip
+## Nested-group detail uses stacked headed sections
 
-An auto-form detail with sub-groups (e.g. a MAP object's Inventory Header / Object Data) renders them as a
-vertical tab strip; the filled selected tab is the vertical-tab style, not an action button.
+An auto-form detail with sub-groups (e.g. a MAP object's Object Data / Subtype Data) renders each group as its
+own titled section, stacked vertically (`.subgroup` + `<h4>` title) - not a tab strip. The scalar fields sit
+above the sections. (The childList tab - a MAP object's Inventory - is separate; see `ListEntryDetail`.)

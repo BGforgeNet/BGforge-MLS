@@ -1070,30 +1070,6 @@ input[type="text"]::placeholder {
     color: var(--vscode-descriptionForeground);
 }
 
-/* ---- group-tabs-wrap: positions the bb-tabs strip beside (vertical) or above (horizontal) the active content ---- */
-.group-tabs-wrap {
-    margin-top: 0.4rem;
-}
-.group-tabs-wrap.vertical {
-    display: flex;
-    gap: 0;
-}
-.group-tabs-wrap.vertical .bb-tabs {
-    /* The vertical rail sits to the left of the content; no extra margin needed - the rail border provides separation. */
-    flex: 0 0 auto;
-}
-.group-tabs-wrap.vertical .group-tab-content {
-    flex: 1 1 auto;
-    min-width: 0;
-    padding-left: 0.5rem;
-}
-.group-tabs-wrap.horizontal {
-    display: block;
-}
-.group-tabs-wrap.horizontal .group-tab-content {
-    padding-top: 0.4rem;
-}
-
 /* ---- detail-tabs: an object detail split into a "Details" form tab and a childList (inventory) tab ---- */
 .detail-tabs > .bb-tabs {
     margin-bottom: 0.4rem;

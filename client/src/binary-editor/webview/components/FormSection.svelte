@@ -1,22 +1,19 @@
 <script lang="ts">
     import type { Diagnostic, NodeId, Row } from "@bgforge/binary-editor";
     import type { Bridge } from "../state/bridge";
-    import { splitForm, organizeGroups } from "../state/form-groups";
-    import Tabs from "./primitives/Tabs.svelte";
+    import { splitForm } from "../state/form-groups";
     import Field from "./Field.svelte";
     import FlagColumns from "./blocks/FlagColumns.svelte";
     import Self from "./FormSection.svelte";
 
-    // depth: the group-nesting level this FormSection renders. depth=1 is the first level
-    // of groups inside a detail form (a list entry's nested sub-groups) -> vertical tabs.
-    // depth=2 -> horizontal tabs. depth>2 -> always headed sections (hard cap at 2 tab levels).
     // columns: how many columns the scalar-field grid uses. Default 2; a `view: "slots"` group passes its
-    // own slot count (via the group Row's `columns`) so a small fixed slot array sits on one row.
-    const { nodeId, bridge, version, onedit, byNode, depth = 1, columns = 2, hideGroupPrefix }:
+    // own slot count (via the group Row's `columns`) so a small fixed slot array sits on one row. Nested
+    // groups render as stacked headed sections (one titled box each), not a tab strip.
+    const { nodeId, bridge, version, onedit, byNode, columns = 2, hideGroupPrefix }:
         { nodeId: NodeId; bridge: Bridge; version: number;
           onedit: (id: string, v: number | string) => void;
           byNode: Map<string, Diagnostic[]>;
-          depth?: number; columns?: number;
+          columns?: number;
           // Suppress nested groups whose name starts with this prefix (e.g. "Inventory Entry") - they are
           // rendered by a sibling ChildEntryList mini-list instead, so showing them here would duplicate.
           hideGroupPrefix?: string } = $props();
@@ -55,23 +52,6 @@
         return n > 12 ? 4 : n > 6 ? 2 : 1;
     }
 
-    // Hard cap at 2 tab levels: depth > 2 always renders headed sections so nested tabs
-    // never stack more than two deep (vertical then horizontal, then sections).
-    const org = $derived(depth <= 2 ? organizeGroups(groups, depth) : { mode: "sections" as const });
-
-    // Active tab id for the tabs path. Defaults to the first group's id; clamped if the
-    // group list changes (e.g. a different entity is selected and a prior tab is gone).
-    let activeTabId = $state<string>("");
-    $effect(() => {
-        const ids = groups.map((g) => g.id);
-        if (ids.length === 0) {
-            activeTabId = "";
-        } else if (!ids.includes(activeTabId)) {
-            // Clamp: either no active tab or the active tab is no longer in the group list.
-            activeTabId = ids[0]!;
-        }
-        // If the active id is still among the ids, keep it (tab navigation survives re-fetches).
-    });
 </script>
 <div class="form">
     <!-- Top-level scalar fields pack into two label/value columns (same subgrid as multi-column panels) so a
@@ -92,26 +72,10 @@
             {/each}
         </div>
     {/if}
-    {#if org.mode === "tabs"}
-        {@const tabItems = groups.map((g) => ({ id: g.id, label: g.name }))}
-        {@const activeGroup = groups.find((g) => g.id === activeTabId)}
-        <div class="group-tabs-wrap {org.orientation}">
-            <Tabs tabs={tabItems} active={activeTabId} orientation={org.orientation}
-                  ariaLabel="Form groups" onselect={(id) => { activeTabId = id; }} />
-            {#if activeGroup}
-                <div class="group-tab-content">
-                    <Self nodeId={activeGroup.id} {bridge} {version} {onedit} {byNode} depth={depth + 1}
-                          columns={activeGroup.columns ?? 2} />
-                </div>
-            {/if}
+    {#each groups as group (group.id)}
+        <div class="subgroup">
+            <h4 class="subgroup-title">{group.name}</h4>
+            <Self nodeId={group.id} {bridge} {version} {onedit} {byNode} columns={group.columns ?? 2} />
         </div>
-    {:else}
-        {#each groups as group (group.id)}
-            <div class="subgroup">
-                <h4 class="subgroup-title">{group.name}</h4>
-                <Self nodeId={group.id} {bridge} {version} {onedit} {byNode} depth={depth + 1}
-                      columns={group.columns ?? 2} />
-            </div>
-        {/each}
-    {/if}
+    {/each}
 </div>
