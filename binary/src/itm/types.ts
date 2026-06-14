@@ -41,7 +41,8 @@ export const ItmFlags: Readonly<Record<number, string>> = {
 };
 
 /**
- * ITM header `type` (word). Common values from IESDP `itemtype.ids`. Out-of-
+ * ITM header `type` (word). Type codes per IESDP itemtype.2da (absolute codes, not row indices):
+ * https://iesdp.bgforge.net/files/2da/2da_bgee/itemtype.htm Out-of-
  * table values surface as `Unknown (N)` in the editor; the strict canonical
  * gate accepts only enumerated keys.
  */
@@ -94,24 +95,23 @@ export const ItmType: Readonly<Record<number, string>> = {
     49: "Medium shield",
     50: "Notes",
     53: "Small shield",
-    57: "Telescope",
-    58: "Drink",
-    59: "Great sword",
-    60: "Container",
-    61: "Fur / pelt",
-    62: "Leather armor",
-    63: "Studded leather",
-    64: "Chain mail",
-    65: "Splint mail",
-    66: "Half plate",
-    67: "Full plate",
-    68: "Hide armor",
-    69: "Robe",
-    71: "Bastard sword",
-    72: "Scarf",
-    73: "Food",
-    74: "Hat",
-    75: "Gauntlet",
+    55: "Telescope",
+    56: "Drink",
+    57: "Great sword",
+    59: "Fur / pelt",
+    60: "Leather armor",
+    61: "Studded leather",
+    62: "Chain mail",
+    63: "Splint mail",
+    64: "Half plate",
+    65: "Full plate",
+    66: "Hide armor",
+    67: "Robe",
+    69: "Bastard sword",
+    70: "Scarf",
+    71: "Food",
+    72: "Hat",
+    73: "Gauntlet",
 };
 
 /**
@@ -226,7 +226,8 @@ export const ItmKitUsabilityByte4Flags: Readonly<Record<number, string>> = {
 };
 
 /**
- * Required weapon proficiency (IESDP "Header Proficiency"): the proficiency-type code an item needs, not a
+ * Required weapon proficiency (IESDP itm_v1.htm "Header Proficiency" section,
+ * https://iesdp.bgforge.net/file_formats/ie_formats/itm_v1.htm): the proficiency-type code an item needs, not a
  * scalar. Named values 0x59-0x73 plus 0 "None"; the gap below 0x59 is unused and 0x74+ are mod-extensible
  * "Extra Proficiency" slots (PROFICIENCY.IDS), so callers mark the field `enumOpen`.
  */

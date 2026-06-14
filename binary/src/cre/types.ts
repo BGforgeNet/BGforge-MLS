@@ -71,7 +71,7 @@ export const CreCreatureFlags: Readonly<Record<number, string>> = {
     0x00800000: "No tooltip",
 };
 
-/** CRE header `statusFlags` (dword bitmap, 0x0020). Mirrors STATE.IDS. */
+/** CRE header `statusFlags` (dword bitmap, 0x0020). Mirrors STATE.IDS: https://iesdp.bgforge.net/files/ids/bgee/state.htm */
 export const CreStatusFlags: Readonly<Record<number, string>> = {
     0x00000001: "Sleeping",
     0x00000002: "Berserk",
@@ -114,7 +114,7 @@ export const CreEffStructureVersion: Readonly<Record<number, string>> = {
 };
 
 /**
- * CRE header `sex` (byte, 0x0237) - GENDER.IDS from external/infinity-engine/iesdp/files/ids/bgee/gender.htm.
+ * CRE header `sex` (byte, 0x0237) - GENDER.IDS: https://iesdp.bgforge.net/files/ids/bgee/gender.htm
  * `0: "Sexless"` is a curated unset sentinel (GENDER.IDS starts at 1). Names mirror the IDS spelling, including
  * its "Niether" typo. The high EXTRA2-10 filler values (10-18) are omitted; the enum is open, so they surface
  * as "<n> Unknown".
@@ -131,7 +131,7 @@ export const CreSex: Readonly<Record<number, string>> = {
     9: "Summoned demon",
 };
 
-/** CRE header `enemyAlly` (byte, 0x0270) - EA.IDS from external/infinity-engine/iesdp/files/ids/bgee/ea.htm. */
+/** CRE header `enemyAlly` (byte, 0x0270) - EA.IDS: https://iesdp.bgforge.net/files/ids/bgee/ea.htm */
 export const CreEnemyAlly: Readonly<Record<number, string>> = {
     0: "Anyone",
     1: "Inanimate",
@@ -159,7 +159,7 @@ export const CreEnemyAlly: Readonly<Record<number, string>> = {
 
 /**
  * CRE header `general` (byte, 0x0271) - creature GENERAL.IDS values from
- * external/infinity-engine/iesdp/files/ids/bgee/general.htm. `0: "None"` is a curated unset sentinel (in the
+ * https://iesdp.bgforge.net/files/ids/bgee/general.htm `0: "None"` is a curated unset sentinel (in the
  * IDS, 0 is GENERAL_ITEM, an item-only type that never applies to a creature). The item GENERAL.IDS types
  * (101-113 WEAPON/ARMOR/...) are omitted as they are not creature values.
  */
@@ -177,7 +177,7 @@ export const CreGeneral: Readonly<Record<number, string>> = {
 
 /**
  * CRE header `specific` (byte, 0x0274) - SPECIFIC.IDS, from
- * `external/infinity-engine/iesdp/files/ids/bgee/specific.htm` (names humanized to match the sibling tables).
+ * https://iesdp.bgforge.net/files/ids/bgee/specific.htm (names humanized to match the sibling tables).
  * `0: "None"` is a curated sentinel for the common unset value - it is NOT in the BGEE IDS, but mirrors the
  * `0` entries in CreGeneral / CreRace. Open enum: SPECIFIC.IDS varies by game and is mod-extensible, so
  * unlisted values round-trip as `Unknown (N)`.
@@ -198,7 +198,7 @@ export const CreSpecific: Readonly<Record<number, string>> = {
 
 /**
  * CRE header `race` (byte, 0x0272) - playable RACE.IDS values from
- * external/infinity-engine/iesdp/files/ids/bgee/race.htm. `0: "None"` is a curated unset sentinel (RACE.IDS
+ * https://iesdp.bgforge.net/files/ids/bgee/race.htm `0: "None"` is a curated unset sentinel (RACE.IDS
  * starts at 1). RACE.IDS also defines creature-type races (101+, e.g. ANKHEG/TROLL); those are omitted as they
  * are not playable races. The enum is open, so any omitted value renders as "<n> Unknown".
  */
@@ -215,7 +215,7 @@ export const CreRace: Readonly<Record<number, string>> = {
 
 /**
  * CRE header `class` (byte, 0x0273) - single- and multi-class player/NPC values from BGEE CLASS.IDS
- * (external/infinity-engine/iesdp/files/ids/bgee/class.htm). `0: "None"` is a curated unset sentinel (not in the
+ * (https://iesdp.bgforge.net/files/ids/bgee/class.htm). `0: "None"` is a curated unset sentinel (not in the
  * IDS), mirroring CreGeneral/CreRace; `255` is the IDS NO_CLASS. CLASS.IDS also defines creature-type detection
  * classes (101-200, e.g. OGRE_MAGE/TROLL) and script-only "_ALL"/weapon detection values (201-210); those are
  * omitted as they are not player/NPC class-byte values. The enum is open (enumOpen), so any omitted value still
@@ -249,7 +249,7 @@ export const CreClass: Readonly<Record<number, string>> = {
 
 /**
  * CRE header `alignment` (byte, 0x027B) - ALIGNMEN.IDS from
- * external/infinity-engine/iesdp/files/ids/bgee/alignmen.htm. Only the nine concrete alignments a creature
+ * https://iesdp.bgforge.net/files/ids/bgee/alignmen.htm Only the nine concrete alignments a creature
  * stores (plus `0x00` NONE) are listed; the partial-match bitmasks (MASK_GOOD 0x01, MASK_LAWFUL 0x10, etc.) are
  * script-check values, not stored creature alignments, so they are omitted.
  */
@@ -267,7 +267,9 @@ export const CreAlignment: Readonly<Record<number, string>> = {
 };
 
 /**
- * CRE header `kit` (dword, 0x0244) - KIT.IDS values from IESDP cre_v1.htm. Keyed by the dword the LE u32
+ * CRE header `kit` (dword, 0x0244) - KIT.IDS values: https://iesdp.bgforge.net/files/ids/bgee/kit.htm
+ * Labels are the BG2EE in-game kit names; some KIT.IDS identifiers differ (0x4007 = Archer/FERALAN,
+ * 0x4012 = Avenger/BEASTFRIEND). Keyed by the dword the LE u32
  * codec reads, which matches the IESDP "KIT_*" hex directly. Read LITTLE-endian: across the vendored CRE v1
  * corpus the LE read matches KIT.IDS in 151/153 files, including 34 warrior-range kits (0x40xx0000, e.g.
  * True Class is stored `00 00 00 40` -> 0x40000000) that a big-endian read would garble - so IESDP's

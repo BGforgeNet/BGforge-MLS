@@ -111,6 +111,7 @@ export const EffectParentResourceType: Record<number, string> = {
  * ability `primaryType`, and the EFF v2 effect `school` - all reference the same 2DA, so one table serves them.
  * Mod-extensible (up to 256 rows), so callers mark the field `enumOpen`. Number-keyed, so it works for either
  * the u8 (SPL/ITM) or u32 (EFF) wire width.
+ * 2DA reference: https://iesdp.bgforge.net/files/2da/2da_bgee/mschool.htm
  */
 export const Schools: Readonly<Record<number, string>> = {
     0: "None",
@@ -129,6 +130,7 @@ export const Schools: Readonly<Record<number, string>> = {
  * Secondary type (`msectype.2da`). Shared by the SPL header `sectype`, the ITM ability `secondaryType`, and the
  * EFF v2 effect `sectype`. Mod-extensible, so callers mark the field `enumOpen`. Labels humanize the 2DA's
  * CamelCase identifiers.
+ * 2DA reference: https://iesdp.bgforge.net/files/2da/2da_bgee/msectype.htm
  */
 export const SecondaryTypes: Readonly<Record<number, string>> = {
     0: "None",
