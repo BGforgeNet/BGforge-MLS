@@ -127,6 +127,16 @@ export const ObjectFlags: Record<number, string> = {
 };
 
 /**
+ * Per-object data flags (`obj->data.flags`) - distinct from the main object flags bitfield above. fallout2-ce
+ * defines two bits (src/obj_types.h): OBJ_LOCKED / OBJ_JAMMED, which doors and containers read as Locked /
+ * Jammed (DOOR_FLAG_* / CONTAINER_FLAG_* alias the same bits). Other object types leave this 0.
+ */
+export const ObjectDataFlags: Record<number, string> = {
+    0x02000000: "Locked",
+    0x04000000: "Jammed",
+};
+
+/**
  * Item object subtype codes (the resolved `proto->item.type`). Labels the read-only "Sub Type" note and selects
  * the per-subtype trailer layout. Values per fallout2-ce src/proto_types.h (ITEM_TYPE_*).
  */

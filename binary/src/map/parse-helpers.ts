@@ -39,34 +39,9 @@ export function makeGroup(
     return { name, fields, expanded, description };
 }
 
-export function flagsField(
-    name: string,
-    value: number,
-    flagDefs: Record<number, string>,
-    offset: number,
-    size: number,
-): ParsedField {
-    const flags: string[] = [];
-    for (const [bit, flagName] of Object.entries(flagDefs)) {
-        const bitVal = Number(bit);
-        if (bitVal === 0) {
-            if (value === 0) flags.push(flagName);
-        } else if (value & bitVal) {
-            flags.push(flagName);
-        }
-    }
-    const display = flags.length > 0 ? flags.join(", ") : "(none)";
-    return field(name, display, offset, size, "flags", undefined, value);
-}
-
 export function int32Field(name: string, data: Uint8Array, offset: number): ParsedField {
     const view = new DataView(data.buffer, data.byteOffset + offset, 4);
     return field(name, view.getInt32(0, false), offset, 4, "int32");
-}
-
-export function uint32Field(name: string, data: Uint8Array, offset: number): ParsedField {
-    const view = new DataView(data.buffer, data.byteOffset + offset, 4);
-    return field(name, view.getUint32(0, false), offset, 4, "uint32");
 }
 
 export function noteField(name: string, value: string, offset: number): ParsedField {

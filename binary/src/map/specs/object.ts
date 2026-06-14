@@ -1,7 +1,7 @@
 import { i32, u32 } from "typed-binary";
 import type { FieldSpec, SpecData } from "../../spec/types";
 import type { StructPresentation } from "../../spec/presentation";
-import { MapElevation, ObjectFlags, Rotation } from "../types";
+import { MapElevation, ObjectDataFlags, ObjectFlags, Rotation } from "../types";
 
 /**
  * Wire specs for the fixed-size byte chunks of one MAP object record.
@@ -88,6 +88,12 @@ export const inventoryHeaderSpec = {
     inventoryPointer: { codec: i32, role: "reserved" as const },
 } as const satisfies Record<string, FieldSpec>;
 
+// The non-critter object data union begins with `data.flags` (the per-object data flags dword). The item /
+// scenery / misc subtype payload that follows is decoded separately (see parse-objects' subtype trailers).
+export const objectDataSpec = {
+    dataFlags: { codec: u32, flags: ObjectDataFlags },
+} as const satisfies Record<string, FieldSpec>;
+
 export const critterDataSpec = {
     reaction: { codec: i32 },
     damageLastTurn: { codec: i32 },
@@ -110,6 +116,7 @@ export const exitGridSpec = {
 } as const satisfies Record<string, FieldSpec>;
 
 export type ObjectBaseData = SpecData<typeof objectBaseSpec>;
+export type ObjectDataData = SpecData<typeof objectDataSpec>;
 export type InventoryHeaderData = SpecData<typeof inventoryHeaderSpec>;
 export type CritterData = SpecData<typeof critterDataSpec>;
 export type ExitGridData = SpecData<typeof exitGridSpec>;
@@ -128,6 +135,11 @@ export const objectBasePresentation: StructPresentation<ObjectBaseData> = {
     cid: { label: "CID" },
     sid: { label: "SID", format: "hex32" },
     field74: { label: "Field 74" },
+};
+
+// `dataFlags` humanizes to "Data Flags"; the canonical reader/writer key on that field name.
+export const objectDataPresentation: StructPresentation<ObjectDataData> = {
+    dataFlags: { label: "Data Flags" },
 };
 
 // Inventory header keys all humanize cleanly - empty presentation table.

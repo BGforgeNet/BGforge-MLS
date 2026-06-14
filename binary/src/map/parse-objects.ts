@@ -11,7 +11,6 @@ import { resolvePidSubType, type PidResolver } from "../pid-resolver";
 import {
     makeGroup,
     int32Field,
-    uint32Field,
     noteField,
     isExitGridPid,
     objectTypeName,
@@ -27,6 +26,8 @@ import {
 import {
     objectBaseSpec,
     objectBasePresentation,
+    objectDataSpec,
+    objectDataPresentation,
     inventoryHeaderSpec,
     inventoryHeaderPresentation,
     critterDataSpec,
@@ -41,6 +42,7 @@ export interface ParseObjectsOptions {
 }
 
 const objectBaseCodec = toTypedBinarySchema(objectBaseSpec);
+const objectDataCodec = toTypedBinarySchema(objectDataSpec);
 const inventoryHeaderCodec = toTypedBinarySchema(inventoryHeaderSpec);
 const critterDataCodec = toTypedBinarySchema(critterDataSpec);
 const exitGridCodec = toTypedBinarySchema(exitGridSpec);
@@ -295,7 +297,8 @@ function parseObjectAt(
             );
         }
 
-        objectFields.push(makeGroup("Object Data", [uint32Field("Data Flags", data, currentOffset)]));
+        const objData = readSpec(objectDataCodec, data, currentOffset);
+        objectFields.push(walkStruct(objectDataSpec, objectDataPresentation, currentOffset, objData, "Object Data"));
         currentOffset += 4;
 
         if (pidType === PID_TYPE_MISC && isExitGridPid(pid)) {
