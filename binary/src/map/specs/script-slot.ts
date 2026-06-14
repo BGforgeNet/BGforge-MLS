@@ -84,7 +84,9 @@ export const TIMER_SLOT_BYTES = 4 + 4 + 4 + 14 * 4;
  * before digits.
  */
 const COMMON_PRESENTATION = {
-    sid: { label: "SID" },
+    // The script ID is a packed (type<<24 | index) dword; show it in hex so the type byte is legible, the same
+    // treatment object FID/PID get. (walkStruct stamps numericFormat from this spec presentation.)
+    sid: { label: "SID", format: "hex32" },
     nextScriptLinkLegacy: { label: "Next Script Link (legacy)" },
     ownerId: { label: "Owner ID" },
     unknownField0x48: { label: "Unknown Field 0x48" },

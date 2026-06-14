@@ -212,6 +212,52 @@ function projectObjectsSection(
     return out;
 }
 
+/**
+ * Flatten a "<Type> Scripts" section: lift every script slot out of its storage extent into one continuous
+ * "Script N" list (N the global index across all extents), dropping the per-extent paging fields (Extent
+ * Length / Extent Next) and the redundant Script Count (the tab badge surfaces the total). The extent of 16
+ * slots plus its trailing length/next pointers is a file-storage page boundary, not gameplay structure, so it
+ * does not belong in the browse - the same reasoning that lifts per-elevation object arrays in
+ * `projectObjectsSection`. Each slot keeps its TRUE source path ([Section, "Extent e", "Slot s"]) so its
+ * semantic keys (and thus edits + round-trip) are unchanged; only the display label and nesting flatten.
+ * Only called for sections that actually have extents; an empty (count 0) section stays on the normal
+ * projectEntry path where `shouldHideGroup` hides it.
+ */
+function projectScriptsSection(
+    parseResult: ParseResult,
+    section: ParsedGroup,
+    projectEntry: (
+        pr: ParseResult,
+        entry: ParsedField | ParsedGroup,
+        sourceSegments: readonly string[],
+    ) => ProjectedEntry | undefined,
+): ProjectedEntry {
+    const SECTION = section.name;
+    const slotChildren: ProjectedEntry[] = [];
+    let globalIndex = 0;
+    for (const extent of section.fields) {
+        if (!isGroup(extent) || !/^Extent \d+$/.test(extent.name)) continue;
+        for (const slot of extent.fields) {
+            if (!isGroup(slot) || !/^Slot \d+$/.test(slot.name)) continue;
+            // Relabel to the global index for display, and strip the per-slot "Entry N " prefix from each field
+            // label - it was the slot's storage index, now redundant since the entry itself is "Script N". The
+            // semantic key is unaffected: toSemanticFieldKey strips the same "Entry N " prefix when slugifying,
+            // so a field named "SID" or "Entry 7 SID" both key to ...slots[].sid. Keep the original [Extent e,
+            // Slot s] source path so round-trip is unchanged.
+            const relabeled: ParsedGroup = {
+                ...slot,
+                name: `Script ${globalIndex}`,
+                fields: slot.fields.map((f) => ({ ...f, name: f.name.replace(/^Entry \d+ /, "") })),
+            };
+            const projected = projectEntry(parseResult, relabeled, [SECTION, extent.name, slot.name]);
+            if (projected) slotChildren.push(projected);
+            globalIndex++;
+        }
+    }
+    const flat: ParsedGroup = { name: SECTION, fields: slotChildren.map((c) => c.entry) };
+    return { kind: "group", entry: flat, sourceSegments: [SECTION], children: slotChildren };
+}
+
 export const mapFormatAdapter: BinaryFormatAdapter = {
     formatId: "map",
     presentationSchema: mapPresentationSchema,
@@ -273,6 +319,17 @@ export const mapFormatAdapter: BinaryFormatAdapter = {
 
             if (isGroup(entry) && entry.name === "Objects Section") {
                 projectedFields.push(...projectObjectsSection(parseResult, entry, projectEntry));
+                continue;
+            }
+
+            // Flatten a non-empty script section's extents into one "Script N" list. An empty section (no
+            // extents) falls through to projectEntry, where shouldHideGroup hides it.
+            if (
+                isGroup(entry) &&
+                entry.name.endsWith("Scripts") &&
+                entry.fields.some((f) => isGroup(f) && /^Extent \d+$/.test(f.name))
+            ) {
+                projectedFields.push(projectScriptsSection(parseResult, entry, projectEntry));
                 continue;
             }
 
