@@ -87,17 +87,9 @@ const FORMAT_SPECS: Readonly<Record<string, FormatSummarySpec>> = {
             { sectionName: "Spell Memorization Info", fieldName: "Spell Type" },
         ],
     },
-    // MAP object groups already carry their type in the row name (e.g. "Object 0.0
-    // (Scenery)"); the summary adds the proto identity. PID is the per-object "what
-    // is it" field available without an external proto-name resolver. The three
-    // elevation sections are lifted to depth 0 by MAP's projectDisplayRoot.
-    map: {
-        sections: [
-            { sectionName: "Elevation 0 Objects", fieldName: "PID" },
-            { sectionName: "Elevation 1 Objects", fieldName: "PID" },
-            { sectionName: "Elevation 2 Objects", fieldName: "PID" },
-        ],
-    },
+    // MAP object entries use a dedicated composer (objectEntrySummary): PID + type + decoded subtype, beyond
+    // what the single-field table can express. The three elevation sections are lifted to depth 0 by MAP's
+    // projectDisplayRoot.
 };
 
 // ---------------------------------------------------------------------------
@@ -195,13 +187,45 @@ function inventoryEntrySummary(node: FlatNode, model: Model, rel: RelationshipMo
     return segments.length > 0 ? segments.join(" ") : undefined;
 }
 
+/**
+ * MAP elevation-object summary: the object's PID (its proto identity, no external proto-name resolver needed)
+ * plus its type and, for item/scenery objects, the decoded subtype - e.g. "0x0200014d Scenery / Door",
+ * "0x0500000c Misc". The type is the bracketed label in the object group's own name (objectTypeName); the
+ * subtype is the nested read-only "Sub Type" under "Subtype Data" (absent for misc/critter and undecoded
+ * objects, which then read as just PID + type). PID-first keeps the master list left-aligned.
+ */
+function objectEntrySummary(node: FlatNode, model: Model, rel: RelationshipModel | undefined): string | undefined {
+    if (node.kind !== "group" || node.parentId === undefined) return undefined;
+    const parentIdx = model.byId.get(node.parentId);
+    const parent = parentIdx !== undefined ? model.nodes[parentIdx] : undefined;
+    if (!parent || !/^Elevation \d+ Objects$/.test(parent.name ?? "")) return undefined;
+
+    const children = (model.childrenByParent.get(node.id) ?? []).map((i) => model.nodes[i]!);
+    const pidNode = children.find((c) => c?.kind === "field" && c.name === "PID");
+    const pid = pidNode ? projectRow(model, pidNode, rel).displayValue : undefined;
+
+    const type = node.name.match(/\(([^)]+)\)\s*$/)?.[1];
+
+    const subtypeGroup = children.find((c) => c?.kind === "group" && c.name === "Subtype Data");
+    const subTypeNode = subtypeGroup
+        ? (model.childrenByParent.get(subtypeGroup.id) ?? [])
+              .map((i) => model.nodes[i]!)
+              .find((c) => c?.kind === "field" && c.name === "Sub Type")
+        : undefined;
+    const subType = subTypeNode ? projectRow(model, subTypeNode, rel).displayValue : undefined;
+
+    const typeStr = [type, subType].filter((s) => s !== undefined && s !== "").join(" / ");
+    const parts = [pid, typeStr].filter((s): s is string => typeof s === "string" && s.length > 0);
+    return parts.length > 0 ? parts.join(" ") : undefined;
+}
+
 // Pre-built composers, one per format. MAP also composes inventory-entry rows (handled before the table).
 const BASE_COMPOSERS: Readonly<Record<string, SummaryComposer>> = Object.fromEntries(
     Object.entries(FORMAT_SPECS).map(([id, spec]) => [id, makeComposer(spec)]),
 );
 const COMPOSERS: Readonly<Record<string, SummaryComposer>> = {
     ...BASE_COMPOSERS,
-    map: (node, model, rel) => inventoryEntrySummary(node, model, rel) ?? BASE_COMPOSERS.map!(node, model, rel),
+    map: (node, model, rel) => inventoryEntrySummary(node, model, rel) ?? objectEntrySummary(node, model, rel),
 };
 
 /**
