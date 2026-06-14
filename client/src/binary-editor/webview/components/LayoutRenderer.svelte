@@ -4,8 +4,9 @@
     // primitive, with the active tab's rows below. Each row is a set of panels, each panel a stack of blocks.
     // Empty tabs/rows (e.g. a MAP elevation absent from this file) are pruned. Field rows are pre-resolved in
     // `layout.fields`.
-    import type { Diagnostic, LayoutRow, NodeId, ResolvedLayout, ResolvedTab } from "@bgforge/binary-editor";
+    import type { Diagnostic, LayoutRow, NodeId, ResolvedLayout, ResolvedTab, Row } from "@bgforge/binary-editor";
     import type { Bridge } from "../state/bridge";
+    import { provideJump } from "../state/jump-context";
     import Tabs, { type TabItem } from "./primitives/Tabs.svelte";
     import FieldsBlock from "./blocks/FieldsBlock.svelte";
     import FlagColumns from "./blocks/FlagColumns.svelte";
@@ -52,6 +53,33 @@
     function selectSub(id: string): void {
         if (activeTab) activeSubByTab = { ...activeSubByTab, [activeTab.id]: id };
     }
+
+    // Cross-record jump: navigate to a target record by switching to the tab/subtab whose list block holds its
+    // section, then handing the target node to that section as the selection. Scoped to the target section so a
+    // stale id never wipes an unrelated list's selection (see the ListBlock `selection` binding below).
+    let navTarget = $state<{ sectionKey: string; nodeId: NodeId } | undefined>();
+    function listSectionInRows(rows: readonly LayoutRow[] | undefined, sectionKey: string): boolean {
+        return (rows ?? []).some((r) =>
+            r.panels.some((p) => p.blocks.some((b) => b.kind === "list" && b.sectionKey === sectionKey)),
+        );
+    }
+    function locateSection(sectionKey: string): { tabId: string; subId?: string } | undefined {
+        for (const t of layout.tabs ?? []) {
+            if (listSectionInRows(t.rows, sectionKey)) return { tabId: t.id };
+            for (const st of t.tabs ?? []) {
+                if (listSectionInRows(st.rows, sectionKey)) return { tabId: t.id, subId: st.id };
+            }
+        }
+        return undefined;
+    }
+    function navigate(link: NonNullable<Row["link"]>): void {
+        const loc = locateSection(link.sectionKey);
+        if (loc === undefined) return;
+        activeTabId = loc.tabId;
+        if (loc.subId !== undefined) activeSubByTab = { ...activeSubByTab, [loc.tabId]: loc.subId };
+        navTarget = { sectionKey: link.sectionKey, nodeId: link.targetNodeId };
+    }
+    provideJump(navigate);
 
     const visibleTabs = $derived((layout.tabs ?? []).filter((t) => tabHasContent(t)));
     const activeTab = $derived(visibleTabs.find((t) => t.id === activeTabId) ?? visibleTabs[0]);
@@ -134,7 +162,8 @@
                                            render={block.render} detailVariant={block.detailVariant}
                                            detailVariantFallbacks={block.detailVariantFallbacks}
                                            childList={block.childList} labels={layout.labels}
-                                           {bridge} {version} {selection}
+                                           {bridge} {version}
+                                           selection={navTarget?.sectionKey === block.sectionKey ? navTarget.nodeId : selection}
                                            {onedit} {byNode} />
                             {:else if block.kind === "spellbook"}
                                 <SpellbookBlock {bridge} {version} {onedit} />

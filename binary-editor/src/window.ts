@@ -81,6 +81,8 @@ export function projectRow(
             // parameter as a named value. Only "enum" is mapped: a flags overlay would also need
             // flagOptions, which the IE relationship layer does not produce.
             if (ov.presentationType === "enum") base.valueType = "enum";
+            // A cross-record reference field (e.g. MAP script Owner ID -> object) carries its jump target.
+            if (ov.link !== undefined) base.link = ov.link;
         }
     }
     return base;

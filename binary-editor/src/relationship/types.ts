@@ -7,6 +7,10 @@ export interface FieldOverride {
     enumOptions?: Readonly<Record<string, string>>;
     presentationType?: "scalar" | "enum" | "flags";
     editable?: boolean;
+    /** Cross-record jump target: this field references another record, `targetNodeId` is that record's entry
+     *  node, `sectionKey` is its list section (so the view can switch tabs), and `label` describes it. Copied
+     *  onto the Row so the view can render a click-to-navigate affordance. */
+    link?: { targetNodeId: NodeId; sectionKey: string; label: string };
 }
 
 export interface RelationshipModel {

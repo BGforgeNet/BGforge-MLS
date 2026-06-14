@@ -48,6 +48,11 @@ export interface Row {
      *  `cre.effects[].v2.opcode`. Lets a list entry's detail pane build a per-entry `FieldRef -> Row` map and
      *  render through a shared layout fragment; undefined for groups and fields whose key does not resolve. */
     semanticKey?: string;
+    /** Cross-record jump target (from the relationship overlay): the field's value references another record,
+     *  and `targetNodeId` is that record's entry node. `sectionKey` is the target's list section, so the view
+     *  can switch to the tab/subtab holding it; the view renders a clickable affordance showing `label` that
+     *  navigates to it (e.g. a MAP script's Owner ID -> its object; an object's SID -> its script). */
+    link?: { targetNodeId: NodeId; sectionKey: string; label: string };
 }
 
 export interface Diagnostic {

@@ -5,6 +5,7 @@ import type { FieldOverride, RelationshipModel } from "./types";
 import { ieEffectsFieldOverride, ieEffectsDependents, ieEffectsProbabilityConstraint } from "./ie-effects";
 import { crossRefDiagnostics, crossRefDependents, crossRefFieldOverride, crossRefCascade } from "./cross-record";
 import { creWeaponFieldOverride, creWeaponDependents } from "./cre-weapons";
+import { mapLinkFieldOverride } from "./map-links";
 import { spellbookCapacityDiagnostics } from "../spellbook";
 
 /** An optional format-specific overlay composed AHEAD of the generic ones (its override wins; its dependents
@@ -55,8 +56,18 @@ function ieModel(
     };
 }
 
-// MAP is intentionally absent (its cross-record check is a deferred follow-up); it has no relationship model.
+// MAP has no IE-style effect/index relationships; its model exists only to overlay cross-record jump links
+// (script Owner ID -> object, object SID -> script). The consistency-diagnostic check remains a follow-up.
+const mapModel: RelationshipModel = {
+    formatId: "map",
+    fieldOverride: mapLinkFieldOverride,
+    dependents: () => [],
+    constraints: () => [],
+    cascade: () => [],
+};
+
 const registry = new Map<string, RelationshipModel>([
+    ["map", mapModel],
     ["itm", ieModel("itm")],
     ["spl", ieModel("spl")],
     ["eff", ieModel("eff")],

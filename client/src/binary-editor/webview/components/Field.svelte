@@ -6,10 +6,15 @@
     import EnumField from "./controls/EnumField.svelte";
     import FlagsField from "./controls/FlagsField.svelte";
     import Icon from "./Icon.svelte";
+    import { useJump } from "../state/jump-context";
     const { row, onedit, diagnostics = [] }:
         { row: Row; onedit: (nodeId: string, value: number | string) => void;
           diagnostics?: Diagnostic[] } = $props();
     const kind = $derived(controlKind(row));
+    // Cross-record jump: a field whose value references another record (e.g. a MAP script Owner ID -> its
+    // object) carries `row.link`. When a jump handler is provided (MAP), render a click-to-navigate chip
+    // showing the target label; other formats/views have no handler and render nothing.
+    const jump = useJump();
     // Width class on .field-control -> CSS maps it to the control box width (--val-ch) so the box left-aligns
     // in its `auto` grid track (columns stay aligned). Text inputs use the `tier-{s,m,ml,l}` scale; dropdowns
     // use their own `dd-{1..5}` scale (sized to the longest option, decoupled from the text tiers - see
@@ -41,6 +46,12 @@
         {:else if kind === "string"}<StringField {row} onedit={emit} />
         {:else if kind === "enum"}<EnumField {row} onedit={emit} />
         {:else}<FlagsField {row} onedit={emit} />{/if}
+        {#if row.link && jump}
+            {@const link = row.link}
+            <button type="button" class="jump-link" title={`Go to ${link.label}`} onclick={() => jump(link)}>
+                <span class="jump-arrow" aria-hidden="true">-&gt;</span>{link.label}
+            </button>
+        {/if}
         {#if hasDiag}
             <!-- role="img" + aria-label expose the diagnostic message to screen readers; the Icon span
                  itself is aria-hidden so the glyph character is not announced separately. -->

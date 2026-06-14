@@ -453,6 +453,28 @@ button:disabled {
     overflow: auto;
     padding: 0.5rem 0.75rem;
 }
+/* Cross-record jump chip rendered beside a reference field's value (MAP script Owner ID -> object, object
+   SID -> script). A themed text link, not a button-looking control, so it reads as navigation. */
+.jump-link {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.25rem;
+    margin-left: 0.4rem;
+    padding: 0;
+    background: none;
+    border: none;
+    color: var(--vscode-textLink-foreground);
+    cursor: pointer;
+    font: inherit;
+    white-space: nowrap;
+}
+.jump-link:hover {
+    color: var(--vscode-textLink-activeForeground);
+    text-decoration: underline;
+}
+.jump-arrow {
+    opacity: 0.75;
+}
 /* Flag fields in a detail form render full-width below the 2-column scalar grid (their checkbox grid uses
    the whole width and would otherwise strand the scalar columns by their height). Each flag field is a boxed
    FlagColumns group (.layout-root .flag-group), so its bits read as aligned columns rather than a ragged
