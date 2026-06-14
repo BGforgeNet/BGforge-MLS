@@ -118,7 +118,14 @@ function parseExitGridGroup(data: Uint8Array, offset: number): ParsedGroup {
 function parseInventoryHeaderGroup(data: Uint8Array, offset: number): { group: ParsedGroup; inventoryLength: number } {
     const inv = readSpec(inventoryHeaderCodec, data, offset);
     return {
-        group: walkStruct(inventoryHeaderSpec, inventoryHeaderPresentation, offset, inv, "Inventory Header"),
+        // The header is all engine bookkeeping - inventoryLength is recomputed from the item array on save
+        // (derivedCount), capacity and pointer are reserved engine state - so none of it is user-editable, and
+        // the item count is already visible from the inventory list itself. Hide the whole group from the detail
+        // (display-only; the bytes still round-trip and the canonical reader still finds the group by name).
+        group: {
+            ...walkStruct(inventoryHeaderSpec, inventoryHeaderPresentation, offset, inv, "Inventory Header"),
+            hidden: true,
+        },
         inventoryLength: inv.inventoryLength,
     };
 }

@@ -1094,6 +1094,11 @@ input[type="text"]::placeholder {
     padding-top: 0.4rem;
 }
 
+/* ---- detail-tabs: an object detail split into a "Details" form tab and a childList (inventory) tab ---- */
+.detail-tabs > .bb-tabs {
+    margin-bottom: 0.4rem;
+}
+
 /* ---- diagnostics ---- */
 /* The .diag wrapper is role="img" so it is announced as the aria-label by screen readers.
    The icon sits inline next to the control; sizing matches the surrounding text line height. */

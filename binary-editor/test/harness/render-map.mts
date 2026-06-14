@@ -163,9 +163,10 @@ const dom = await page.evaluate(() => {
     }
     return { panels, masterDetails, tabs, stubs, minFieldGap };
 });
-// The Header tab carries the header fields, map flags, and the global/local variable inline lists; the
-// per-elevation object lists live in the Objects tab (checked below), and absent sections leave no panel.
-const expectedPanels = ["Header", "Map Flags", "Global Variables", "Local Variables"];
+// The Header tab carries only the header fields and the map flags; the global/local variable inline lists live
+// in the Variables tab and the per-elevation object lists in the Objects tab (checked below), each with absent
+// sections leaving no panel.
+const expectedPanels = ["Header", "Map Flags"];
 check(
     "layout: Header tab panels render, in order",
     JSON.stringify(dom.panels) === JSON.stringify(expectedPanels),
@@ -191,6 +192,24 @@ check(
 );
 await page.screenshot({ path: path.join(here, "shot-map-objects.png"), fullPage: true });
 
+// The object detail splits into "Details" + "Inventory" tabs; the engine Inventory Header bookkeeping group is
+// hidden, so it must NOT appear as a form sub-tab. Open the Inventory tab to reach the mini-list.
+const detailTabs = objectsMd.locator(".detail .detail-tabs > .bb-tabs").first();
+check(
+    "inventory: detail exposes a 'Details' and 'Inventory' tab",
+    (await detailTabs.locator('button[role="tab"]').filter({ hasText: "Details" }).count()) === 1 &&
+        (await detailTabs.locator('button[role="tab"]').filter({ hasText: "Inventory" }).count()) === 1,
+    "",
+);
+check(
+    "inventory: the engine Inventory Header group is hidden (no such tab)",
+    (await objectsMd.locator('.detail .bb-tabs button[role="tab"]').filter({ hasText: "Inventory Header" }).count()) ===
+        0,
+    "",
+);
+await detailTabs.locator('button[role="tab"]').filter({ hasText: "Inventory" }).first().click();
+await page.waitForTimeout(150);
+
 // Inventory mini-list (interactive): cave6's first object has no inventory, so the list opens on its empty
 // state. Add two items through the "+ add item" button (real addChild dispatch -> changeSet refresh), expand
 // the first item's nested form, and screenshot the populated list with its per-row remove + accordion detail.
@@ -210,6 +229,18 @@ await inventoryList.locator(".child-list-add").click();
 await page.waitForTimeout(150);
 const invRows = await inventoryList.locator(".child-row").count();
 check("inventory: + add item grew the list to two rows", invRows === 2, `rows=${invRows}`);
+const invTabText =
+    (await detailTabs
+        .locator('button[role="tab"]')
+        .filter({ hasText: "Inventory" })
+        .first()
+        .textContent()
+        .catch(() => "")) ?? "";
+check(
+    "inventory: the Inventory tab label tracks the item count, in '(N)' form",
+    invTabText.includes("(2)"),
+    `label="${invTabText.trim()}"`,
+);
 await inventoryList.locator(".child-row .child-row-label").first().click();
 await page.waitForTimeout(200);
 // The row label is the item's identity (PID) + quantity, not the bare "Inventory Entry N" group name.

@@ -32,3 +32,17 @@ describe("MAP hidden engine-internal script fields", () => {
         }
     });
 });
+
+describe("MAP hidden object inventory header", () => {
+    it("flags the Inventory Header group hidden (engine bookkeeping; kept in the model)", () => {
+        const m = buildModel(mapParser.parse(new Uint8Array(fs.readFileSync(FIXTURE))));
+        // Every object carries an Inventory Header (count/capacity/pointer); all three are non-editable engine
+        // state (length recomputed on save, capacity/pointer reserved), so the whole group is hidden from the
+        // detail. The item count is already visible from the inventory list itself.
+        const headers = m.nodes.filter((n) => n.name === "Inventory Header");
+        expect(headers.length, "objects expose an Inventory Header group").toBeGreaterThan(0);
+        for (const node of headers) {
+            expect(projectRow(m, node).hidden, "Inventory Header is flagged hidden").toBe(true);
+        }
+    });
+});

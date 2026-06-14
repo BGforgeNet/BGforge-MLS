@@ -14,6 +14,7 @@
     import LayoutRenderer from "./LayoutRenderer.svelte";
     import FormSection from "./FormSection.svelte";
     import ChildEntryList from "./ChildEntryList.svelte";
+    import Tabs from "./primitives/Tabs.svelte";
 
     const { nodeId, detailVariant, detailVariantFallbacks, childList, labels, bridge, version, onedit, byNode }: {
         nodeId: NodeId;
@@ -60,15 +61,53 @@
         fields: fieldMap,
         sections: {},
     });
+
+    // A childList (e.g. a MAP object's inventory) splits the detail into "Details" + "<childList.title>" tabs
+    // instead of stacking the mini-list below the form. Default to Details; the choice persists across entry
+    // selections (the tabs are the same for every object).
+    // eslint-disable-next-line prefer-const -- reassigned by the Tabs onselect handler in the markup
+    let detailTab = $state<string>("details");
+    // Count for the childList tab label - the owner's direct children matching the entry prefix (same set the
+    // ChildEntryList renders). A small direct fetch, refreshed on the version bump like the other detail fetches.
+    // Formatted inline as "<title> (<n>)" to match the top-level tab count convention (see LayoutRenderer).
+    let childCount = $state(0);
+    $effect(() => {
+        const cl = childList;
+        if (cl === undefined) return;
+        void version;
+        let cancelled = false;
+        bridge.requestChildren(nodeId, 0, 1000).then((w) => {
+            if (!cancelled) childCount = w.rows.filter((r) => r.name.startsWith(cl.entryPrefix)).length;
+        });
+        return () => { cancelled = true; };
+    });
 </script>
-{#if useVariant}
-    <!-- selection/bridge/version are only consumed by `list` blocks, which a detailVariant never contains. -->
-    <LayoutRenderer layout={detailLayout} {onedit} {byNode} {bridge} {version} selection={undefined} />
-{:else}
-    <!-- The auto-form hides the childList's entry groups (e.g. "Inventory Entry N") so they are not rendered
-         twice - the ChildEntryList below presents them as an editable mini master-detail with add/remove. -->
-    <FormSection {nodeId} {bridge} {version} {onedit} {byNode} hideGroupPrefix={childList?.entryPrefix} />
-{/if}
+{#snippet detailsForm()}
+    {#if useVariant}
+        <!-- selection/bridge/version are only consumed by `list` blocks, which a detailVariant never contains. -->
+        <LayoutRenderer layout={detailLayout} {onedit} {byNode} {bridge} {version} selection={undefined} />
+    {:else}
+        <!-- The auto-form hides the childList's entry groups (e.g. "Inventory Entry N") so they are not rendered
+             twice - the childList tab presents them as an editable mini master-detail with add/remove. -->
+        <FormSection {nodeId} {bridge} {version} {onedit} {byNode} hideGroupPrefix={childList?.entryPrefix} />
+    {/if}
+{/snippet}
 {#if childList}
-    <ChildEntryList ownerId={nodeId} {childList} {bridge} {version} {onedit} {byNode} />
+    <div class="detail-tabs">
+        <Tabs
+            tabs={[
+                { id: "details", label: "Details" },
+                { id: "inventory", label: `${childList.title} (${childCount})` },
+            ]}
+            active={detailTab}
+            ariaLabel="Object detail"
+            onselect={(id) => { detailTab = id; }} />
+        {#if detailTab === "inventory"}
+            <ChildEntryList ownerId={nodeId} {childList} {bridge} {version} {onedit} {byNode} />
+        {:else}
+            {@render detailsForm()}
+        {/if}
+    </div>
+{:else}
+    {@render detailsForm()}
 {/if}
