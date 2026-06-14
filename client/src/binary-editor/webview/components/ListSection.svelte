@@ -4,13 +4,15 @@
     import { rowActions, type SectionCaps } from "../state/structure-actions";
     import { filterRows } from "../state/filter";
     import { rememberSelection, recallSelection } from "../state/list-selection-memory";
+    import { locateEntry } from "../state/list-window";
     import VirtualList from "./VirtualList.svelte";
     import ListEntryDetail from "./ListEntryDetail.svelte";
     import RowActions from "./RowActions.svelte";
     import Icon from "./Icon.svelte";
 
-    // Max rows scanned when resolving a post-op host selection back to a list index. Exceeding this silently leaves the
-    // detail pane unselected; safe for ITM abilities/effects (typically <10) but revisit if any list section can exceed it.
+    // Initial bounded window fetched to resolve a selection's index and learn `total`. A target within it
+    // resolves immediately; a target beyond it (a cross-record jump to a deep entry in a large list) triggers a
+    // one-off full fetch via locateEntry, so it still resolves rather than falling back to the first entry.
     const SELECTION_RESOLVE_SCAN_LIMIT = 256;
 
     const { sectionKey, nodeId, caps, bridge, version, selection, onadd, onedit, byNode,
@@ -100,36 +102,49 @@
         void version;
         const hostSelection = selection;
         let cancelled = false;
-        bridge.requestChildren(nodeId, 0, SELECTION_RESOLVE_SCAN_LIMIT).then((w) => {
+        const fetchWindow = (start: number, end: number) => bridge.requestChildren(nodeId, start, end);
+        void (async () => {
+            const w = await fetchWindow(0, SELECTION_RESOLVE_SCAN_LIMIT);
             if (cancelled) return;
             total = w.total;
+
+            // 1. Apply a NEW host-provided selection (a cross-record jump, or a structure op handing back the
+            //    entry to keep active). A jump target can sit beyond the bounded window in a large list, so
+            //    locateEntry fetches the full list to find it rather than falling back to the first entry.
             if (hostSelection !== undefined && hostSelection !== lastAppliedSelection) {
                 lastAppliedSelection = hostSelection;
-                const i = w.rows.findIndex((r) => r.id === hostSelection);
-                if (i !== -1) {
-                    pick(w.rows[i], i);
+                const { rows, index } = await locateEntry(fetchWindow, w.rows, w.total, hostSelection);
+                if (cancelled) return;
+                if (index !== -1) {
+                    pick(rows[index], index);
                     // Host selection (e.g. a jump): bring the entry into view in the master list.
-                    scrollTarget = { index: i, token: (scrollTarget?.token ?? 0) + 1 };
+                    scrollTarget = { index, token: (scrollTarget?.token ?? 0) + 1 };
                     return;
                 }
             }
-            // No new host selection to apply: keep the user's current pick, refreshing its snapshot/index.
+
+            // 2. Otherwise keep the user's current pick, refreshing its snapshot/index in place. A selection
+            //    beyond the window stays put (an edit must not collapse it); only clear it when the whole list is
+            //    within the window and the row is genuinely gone (removed).
             const cur = selected;
             if (cur !== undefined) {
                 const i = w.rows.findIndex((r) => r.id === cur.id);
-                if (i !== -1) { pick(w.rows[i], i); }
-                else { selected = undefined; selectedIndex = undefined; }
-            } else {
-                // Fresh mount or tab switch: nothing is selected yet. Restore this section's remembered entry
-                // (so a tab keeps its prior pick across switches), falling back to the first entry so the detail
-                // pane never opens empty. The remembered id may sit beyond the scan limit on very large lists; it
-                // then falls through to the first entry, the same degradation the scan-limit caveat already notes.
-                const remembered = recallSelection(sectionKey);
-                let i = remembered !== undefined ? w.rows.findIndex((r) => r.id === remembered) : -1;
-                if (i === -1 && w.rows.length > 0) i = 0;
                 if (i !== -1) pick(w.rows[i], i);
+                else if (w.total <= w.rows.length) { selected = undefined; selectedIndex = undefined; }
+                return;
             }
-        });
+
+            // 3. Fresh mount or tab switch: restore this section's remembered entry (resolved even if it sits
+            //    deep), falling back to the first entry so the detail pane never opens empty.
+            const remembered = recallSelection(sectionKey);
+            const found =
+                remembered !== undefined
+                    ? await locateEntry(fetchWindow, w.rows, w.total, remembered)
+                    : { rows: w.rows, index: -1 };
+            if (cancelled) return;
+            if (found.index !== -1) pick(found.rows[found.index], found.index);
+            else if (w.rows.length > 0) pick(w.rows[0], 0);
+        })();
         return () => { cancelled = true; };
     });
 
