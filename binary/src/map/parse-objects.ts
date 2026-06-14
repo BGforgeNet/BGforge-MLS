@@ -34,6 +34,7 @@ import {
     exitGridSpec,
     exitGridPresentation,
 } from "./specs/object";
+import { ItemSubType, ScenerySubType } from "./types";
 
 export interface ParseObjectsOptions {
     pidResolver?: PidResolver;
@@ -352,11 +353,16 @@ function parseObjectAt(
             // even for 0-byte-trailer subtypes (Armor/Container/Drug/Generic) -
             // so the canonical doc can record the subType for reparse without
             // re-running the original filesystem-backed resolver.
+            // Show the resolved subtype as its name (Weapon / Drug / Door / Elevator ...), keyed by item vs
+            // scenery since the codes overlap (0 = Armor or Door). It stays a read-only `note`: `rawValue` keeps
+            // the numeric code (the canonical reader recovers subType from it for reparse) and editing the code
+            // is meaningless - the trailer was already decoded from it.
+            const subTypeTable = pidType === PID_TYPE_ITEM ? ItemSubType : ScenerySubType;
             objectFields.push(
                 makeGroup("Subtype Data", [
                     {
                         name: "Sub Type",
-                        value: subType,
+                        value: subTypeTable[subType] ?? `Type ${subType}`,
                         offset: currentOffset,
                         size: 0,
                         type: "note",

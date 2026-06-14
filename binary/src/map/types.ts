@@ -127,6 +127,33 @@ export const ObjectFlags: Record<number, string> = {
 };
 
 /**
+ * Item object subtype codes (the resolved `proto->item.type`). Labels the read-only "Sub Type" note and selects
+ * the per-subtype trailer layout. Values per fallout2-ce src/proto_types.h (ITEM_TYPE_*).
+ */
+export const ItemSubType: Record<number, string> = {
+    0: "Armor",
+    1: "Container",
+    2: "Drug",
+    3: "Weapon",
+    4: "Ammo",
+    5: "Misc",
+    6: "Key",
+};
+
+/**
+ * Scenery object subtype codes (the resolved `proto->scenery.type`). Values per fallout2-ce src/proto_types.h
+ * (SCENERY_TYPE_*); the two ladder codes read "Ladder Up" / "Ladder Down".
+ */
+export const ScenerySubType: Record<number, string> = {
+    0: "Door",
+    1: "Stairs",
+    2: "Elevator",
+    3: "Ladder Up",
+    4: "Ladder Down",
+    5: "Generic",
+};
+
+/**
  * Predicate: whether tile bytes for `elevation` (0/1/2) are present in the
  * file. Reads the `MapFlags.SkipElevation0Tiles` / `SkipElevation1Tiles` /
  * `SkipElevation2Tiles` named bits - the named projection makes this an
