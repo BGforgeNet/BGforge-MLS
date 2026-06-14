@@ -94,6 +94,21 @@
             </button>
         </div>
     </div>
+    {#if open.warnings.length > 0}
+        <!-- Parse-level warnings (e.g. a partially-decoded MAP whose object/script tail could not be fully
+             decoded). Non-blocking: the editor still renders what DID decode, but the banner makes the partial
+             state explicit instead of silently presenting fewer records. -->
+        <div class="banner warning">
+            <span class="banner-header">
+                <Icon name="warning" /><span class="banner-summary">This file is only partially decoded</span>
+            </span>
+            <ul class="banner-list">
+                {#each open.warnings as w (w)}
+                    <li>{w}</li>
+                {/each}
+            </ul>
+        </div>
+    {/if}
     {#if diagnostics.length > 0}
         <div class="banner {bannerSeverity}">
             <span class="banner-header">

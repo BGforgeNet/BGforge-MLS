@@ -204,6 +204,19 @@ class MapParser implements BinaryParser {
             }
         }
 
+        // A truncation opaque range (object / script data the parser could not safely decode - distinct from
+        // the benign `tiles` / header padding ranges) means the file is only PARTIALLY decoded. Surface it as a
+        // warning so the editor shows a banner instead of silently presenting fewer records.
+        const truncation = opaqueRanges.filter((r) => r.label === "objects-tail" || r.label === "script-section-tail");
+        const warnings = truncation.map((r) => {
+            const noun = r.label === "script-section-tail" ? "Script" : "Object";
+            return (
+                `${noun} data from offset 0x${r.offset.toString(16)} could not be fully decoded and is ` +
+                `preserved unchanged (${r.size} bytes). Some ${noun.toLowerCase()}s are not shown and editing ` +
+                `past this point is unavailable; full decoding requires resolving every referenced PRO subtype.`
+            );
+        });
+
         const result: ParseResult = {
             format: this.id,
             formatName: this.name,
@@ -211,6 +224,7 @@ class MapParser implements BinaryParser {
             root: makeGroup("MAP File", rootFields),
             opaqueRanges: opaqueRanges.length > 0 ? opaqueRanges : undefined,
             errors: errors.length > 0 ? errors : undefined,
+            ...(warnings.length > 0 && { warnings }),
         };
 
         // Lazy canonical document: rebuildMapCanonicalDocument is expensive (Zod validation,
