@@ -105,33 +105,23 @@ export const mapLayout: FormatLayout = formatLayoutSchema.parse({
                                 },
                             ],
                         },
+                    ],
+                },
+                {
+                    id: "variables",
+                    label: "Variables",
+                    tabs: [
                         {
-                            panels: [
-                                {
-                                    title: "Global Variables",
-                                    blocks: [
-                                        {
-                                            kind: "list",
-                                            sectionKey: "Global Variables",
-                                            render: "inline",
-                                            canAdd: true,
-                                            canModify: true,
-                                        },
-                                    ],
-                                },
-                                {
-                                    title: "Local Variables",
-                                    blocks: [
-                                        {
-                                            kind: "list",
-                                            sectionKey: "Local Variables",
-                                            render: "inline",
-                                            canAdd: true,
-                                            canModify: true,
-                                        },
-                                    ],
-                                },
-                            ],
+                            id: "globalVars",
+                            label: "Global",
+                            countFrom: "Global Variables",
+                            rows: [listRow("Global Variables", "inline", true, true)],
+                        },
+                        {
+                            id: "localVars",
+                            label: "Local",
+                            countFrom: "Local Variables",
+                            rows: [listRow("Local Variables", "inline", true, true)],
                         },
                     ],
                 },

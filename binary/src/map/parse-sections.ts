@@ -106,20 +106,19 @@ export function parseVariablesSection(data: Uint8Array, header: MapHeader, error
     const { globalVars, localVars } = parseVariables(data, header, errors);
     const groups: ParsedGroup[] = [];
 
-    if (globalVars.length > 0) {
-        const globalVarFields: ParsedField[] = globalVars.map((val, i) =>
-            field(`Global Var ${i}`, val, HEADER_SIZE + i * 4, 4, "int32"),
-        );
-        groups.push(makeGroup("Global Variables", globalVarFields));
-    }
+    // Always emit both groups, even when empty (count 0). The editor surfaces Global/Local as two fixed
+    // subtabs, so the sections must resolve (an absent group would prune the subtab); an empty group also
+    // gives "+ add" a section to seed the first variable into. Zero-length groups round-trip to zero bytes.
+    const globalVarFields: ParsedField[] = globalVars.map((val, i) =>
+        field(`Global Var ${i}`, val, HEADER_SIZE + i * 4, 4, "int32"),
+    );
+    groups.push(makeGroup("Global Variables", globalVarFields));
 
-    if (localVars.length > 0) {
-        const localOffset = HEADER_SIZE + globalVars.length * 4;
-        const localVarFields: ParsedField[] = localVars.map((val, i) =>
-            field(`Local Var ${i}`, val, localOffset + i * 4, 4, "int32"),
-        );
-        groups.push(makeGroup("Local Variables", localVarFields));
-    }
+    const localOffset = HEADER_SIZE + globalVars.length * 4;
+    const localVarFields: ParsedField[] = localVars.map((val, i) =>
+        field(`Local Var ${i}`, val, localOffset + i * 4, 4, "int32"),
+    );
+    groups.push(makeGroup("Local Variables", localVarFields));
 
     return groups;
 }
