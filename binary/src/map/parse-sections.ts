@@ -47,15 +47,19 @@ export function parseHeaderSection(data: Uint8Array, _errors: string[]): ParsedG
 
     const fields = [...numericGroup.fields];
     fields.splice(1, 0, field("Filename", header.filename, 0x04, 16, "string"));
-    fields.push(
-        field(
+    // Trailing writer-reserved space (44 x i32), no authored meaning - hidden from the detail (the field
+    // carries its own `hidden` flag rather than being matched by display name downstream). Round-trips via the
+    // canonical document. A summary row, not the raw bytes.
+    fields.push({
+        ...field(
             "Padding (field_3C)",
             `(${header.field_3C.length} values)`,
             HEADER_PADDING_OFFSET,
             HEADER_PADDING_SIZE,
             "padding",
         ),
-    );
+        hidden: true,
+    });
     return makeGroup("Header", fields);
 }
 

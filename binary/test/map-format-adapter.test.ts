@@ -4,11 +4,17 @@
  * script slot fields, object section object fields, shouldHideMapField, shouldHideMapGroup.
  */
 
+import fs from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { formatAdapterRegistry } from "../src/format-adapter";
 import { isMapListSection, isMapModifiableArray } from "../src/map/entity-ops";
+import { mapParser } from "../src/map";
+import type { ParsedField, ParsedGroup } from "../src/types";
 
 const adapter = formatAdapterRegistry.get("map")!;
+const DENBUS1 = path.resolve(__dirname, "../../client/testFixture/maps/denbus1.map");
+const isGroup = (f: ParsedField | ParsedGroup): f is ParsedGroup => "fields" in f;
 
 describe("map adapter toSemanticFieldKey", () => {
     it("returns undefined for empty segment list", () => {
@@ -178,31 +184,34 @@ describe("map adapter toSemanticFieldKey", () => {
     });
 });
 
-describe("map adapter shouldHideField", () => {
-    it("hides Padding (field_3C)", () => {
-        const field = { name: "Padding (field_3C)", value: 0, offset: 0, size: 4, type: "int32" as const };
-        expect(adapter.shouldHideField?.(field)).toBe(true);
+// Engine-internal fields are hidden via the field's own `hidden` flag (spec `hidden: true`, or set at
+// construction for hand-built summary rows), NOT by matching display names in the adapter - a display relabel
+// must not silently un-hide a field. Asserted through a real parse so the producer actually stamps the flag.
+describe("map hidden engine fields (flag, not name-matching)", () => {
+    const findNode = (group: ParsedGroup, name: string): ParsedField | ParsedGroup | undefined => {
+        for (const f of group.fields) {
+            if (f.name === name) return f;
+            if (isGroup(f)) {
+                const hit = findNode(f, name);
+                if (hit) return hit;
+            }
+        }
+        return undefined;
+    };
+    const parsed = mapParser.parse(new Uint8Array(fs.readFileSync(DENBUS1)));
+
+    it("hides the header Padding (field_3C) summary row", () => {
+        expect(findNode(parsed.root, "Padding (field_3C)")?.hidden).toBe(true);
     });
 
-    it("hides Field 74", () => {
-        const field = { name: "Field 74", value: 0, offset: 0, size: 4, type: "int32" as const };
-        expect(adapter.shouldHideField?.(field)).toBe(true);
+    it("hides the object Field 74", () => {
+        const node = findNode(parsed.root, "Field 74");
+        expect(node, "denbus1 has decoded objects carrying Field 74").toBeDefined();
+        expect(node?.hidden).toBe(true);
     });
 
-    it("hides Entry N Next Script Link (legacy)", () => {
-        const field = {
-            name: "Entry 0 Next Script Link (legacy)",
-            value: 0,
-            offset: 0,
-            size: 4,
-            type: "int32" as const,
-        };
-        expect(adapter.shouldHideField?.(field)).toBe(true);
-    });
-
-    it("does not hide normal fields", () => {
-        const field = { name: "Version", value: 20, offset: 0, size: 4, type: "uint32" as const };
-        expect(adapter.shouldHideField?.(field)).toBe(false);
+    it("does not hide a normal field (Version)", () => {
+        expect(findNode(parsed.root, "Version")?.hidden).not.toBe(true);
     });
 });
 

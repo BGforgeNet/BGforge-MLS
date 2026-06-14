@@ -40,7 +40,8 @@ export const objectBaseSpec = {
     cid: { codec: i32 },
     lightDistance: { codec: i32 },
     lightIntensity: { codec: i32 },
-    field74: { codec: i32, role: "reserved" as const },
+    // Engine-internal int32 with no authored meaning; hidden from the object detail (round-trips via the doc).
+    field74: { codec: i32, role: "reserved" as const, hidden: true },
     // The object's script reference. The engine binds an object to its script
     // by `sid` alone: scriptGetScript() linearly searches the map's script
     // lists for a slot whose `sid` matches (fallout2-ce src/scripts.cc). `sid`

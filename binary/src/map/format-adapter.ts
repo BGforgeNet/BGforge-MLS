@@ -122,14 +122,6 @@ function isGroup(entry: ParsedField | ParsedGroup): entry is ParsedGroup {
     return "fields" in entry;
 }
 
-function shouldHideMapField(entry: ParsedField): boolean {
-    return (
-        entry.name === "Padding (field_3C)" ||
-        entry.name === "Field 74" ||
-        /^Entry \d+ (Next Script Link \(legacy\)|Unknown Field 0x48|Legacy Field 0x50)$/.test(entry.name)
-    );
-}
-
 /** Receives projected children (after field hiding), not the raw parser group. */
 function shouldHideMapGroup(entry: ParsedGroup): boolean {
     if (!entry.name.endsWith("Scripts")) {
@@ -289,10 +281,6 @@ export const mapFormatAdapter: BinaryFormatAdapter = {
 
     toSemanticFieldKey(segments: readonly string[]): string | undefined {
         return mapSemanticFieldKey(segments);
-    },
-
-    shouldHideField(entry: ParsedField): boolean {
-        return shouldHideMapField(entry);
     },
 
     shouldHideGroup(entry: ParsedGroup): boolean {
