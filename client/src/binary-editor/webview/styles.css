@@ -436,7 +436,10 @@ button:disabled {
 }
 .layout-root .inline-list .vlist {
     height: auto;
-    max-height: 16rem;
+    /* Hug content (height:auto) but, as the sole content of the Variables tab, grow to fill the page height
+       before scrolling - a low fixed cap stranded a long var list in a short scrollbox. Still bounded so the
+       virtual window stays cheap. */
+    max-height: calc(100vh - 13rem);
     /* The inline list's rows are absolutely positioned, so the .vlist has no intrinsic width and the
        content-hugging layout panel would collapse it (and the row text) to a sliver. Give it a definite
        width sized for a "Label  value" int32 row. */
