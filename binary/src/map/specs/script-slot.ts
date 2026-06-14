@@ -88,7 +88,11 @@ const COMMON_PRESENTATION = {
     // treatment object FID/PID get. (walkStruct stamps numericFormat from this spec presentation.)
     sid: { label: "SID", format: "hex32" },
     nextScriptLinkLegacy: { label: "Next Script Link (legacy)" },
-    ownerId: { label: "Owner ID" },
+    // The owner is an object self-id using the same (type<<24 | index) packing as SID/FID/PID, and is commonly
+    // a sentinel on disk (-1 "none", -2, 0xCCCCCCCC uninitialized fill the engine rebinds at load). Show it in
+    // hex so the type byte is legible and the sentinels read as 0xFFFFFFFF / 0xCCCCCCCC rather than confusing
+    // signed decimals (e.g. -858993460). Same i32+hex32 treatment as the object PID.
+    ownerId: { label: "Owner ID", format: "hex32" },
     unknownField0x48: { label: "Unknown Field 0x48" },
     checkMarginHowMuch: { label: "Check Margin (how_much)" },
     legacyField0x50: { label: "Legacy Field 0x50" },

@@ -54,4 +54,16 @@ describe("MAP scripts: flat per-type list (extents hidden)", () => {
         // Packed (type<<24 | index) dword shown in hex, like object FID/PID.
         expect(projectRow(m, sid!).numericFormat).toBe("hex32");
     });
+
+    it("shows the script Owner ID as a hex field (packed object reference / sentinel)", () => {
+        const m = mapModel();
+        const section = nonEmptyScriptSection(m)!;
+        const firstScript = m.nodes.find((n) => n.parentId === section.id)!;
+        const owner = m.nodes.find((n) => n.parentId === firstScript.id && /Owner ID/i.test(n.name ?? ""));
+        expect(owner, "script detail has an Owner ID field").toBeDefined();
+        // The owner is an object self-id using the same (type<<24 | index) packing as SID/FID/PID, and is often
+        // a sentinel (-1 "none", -2, 0xCCCCCCCC uninitialized). Hex shows the type byte and avoids confusing
+        // signed-decimal sentinels (e.g. 0xCCCCCCCC rendering as -858993460).
+        expect(projectRow(m, owner!).numericFormat).toBe("hex32");
+    });
 });
