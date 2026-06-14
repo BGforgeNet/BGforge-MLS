@@ -68,6 +68,31 @@ const itemPropertiesPanel: LayoutPanel = {
     ],
 };
 
+/** Weapon-only Item Properties: the common item fields MINUS the two attack-mode dropdowns, which move into
+ *  the Weapon variant's Primary/Secondary Attack groups (fused with their AP cost + range). Other item
+ *  subtypes keep attack modes here; for a weapon they belong with the attack stats. */
+const weaponItemPropertiesPanel: LayoutPanel = {
+    title: "Item Properties",
+    blocks: [
+        {
+            kind: "fields",
+            columns: 2,
+            fields: [
+                p("itemProperties.subType"),
+                p("itemProperties.material"),
+                p("itemProperties.size"),
+                p("itemProperties.weight"),
+                p("itemProperties.cost"),
+                p("itemProperties.inventoryFrmId"),
+                p("itemProperties.scriptType"),
+                p("itemProperties.scriptId"),
+                p("itemProperties.soundId"),
+            ],
+        },
+        { kind: "flags", field: p("itemProperties.flagsExt") },
+    ],
+};
+
 /** Common scenery properties, shared by every scenery subtype variant. */
 const sceneryPropertiesPanel: LayoutPanel = {
     title: "Scenery Properties",
@@ -314,45 +339,72 @@ export const proLayout: FormatLayout = formatLayoutSchema.parse({
                 p("armorStats.damageThreshold.explosion"),
             ]),
         ]),
-        "item.weapon": itemVariant([
-            {
-                title: "Weapon",
-                blocks: [
-                    {
-                        kind: "fields",
-                        columns: 2,
-                        fields: [
-                            p("weaponStats.animationCode"),
-                            p("weaponStats.damageType"),
-                            p("weaponStats.minDamage"),
-                            p("weaponStats.maxDamage"),
-                            p("weaponStats.minStrength"),
-                            p("weaponStats.maxRange1"),
-                            p("weaponStats.maxRange2"),
-                            p("weaponStats.apCost1"),
-                            p("weaponStats.apCost2"),
-                            p("weaponStats.rounds"),
-                            p("weaponStats.caliber"),
-                            p("weaponStats.ammoPid"),
-                            p("weaponStats.maxAmmo"),
-                            p("weaponStats.projectilePid"),
-                            p("weaponStats.criticalFail"),
-                            p("weaponStats.perk"),
-                            p("weaponStats.soundId"),
-                        ],
-                        // Fallout weapons store a flat min/max damage pair (not dice); fold it into one
-                        // "Min - Max" cell, the range analog of the ITM ability's XdY+Z dice join.
-                        joins: [
-                            {
-                                label: "Damage",
-                                fields: [p("weaponStats.minDamage"), p("weaponStats.maxDamage")],
-                                separator: " - ",
-                            },
-                        ],
-                    },
-                ],
-            },
-        ]),
+        // Weapon uses the trimmed Item Properties panel (attack modes move into the Attack groups below).
+        "item.weapon": variant(
+            [headerPanel, weaponItemPropertiesPanel],
+            [
+                {
+                    title: "Weapon",
+                    blocks: [
+                        {
+                            kind: "fields",
+                            columns: 2,
+                            fields: [
+                                p("weaponStats.animationCode"),
+                                p("weaponStats.damageType"),
+                                p("weaponStats.minDamage"),
+                                p("weaponStats.maxDamage"),
+                                p("weaponStats.minStrength"),
+                                p("weaponStats.rounds"),
+                                p("weaponStats.caliber"),
+                                p("weaponStats.ammoPid"),
+                                p("weaponStats.maxAmmo"),
+                                p("weaponStats.projectilePid"),
+                                p("weaponStats.criticalFail"),
+                                p("weaponStats.perk"),
+                                p("weaponStats.soundId"),
+                            ],
+                            // Fallout weapons store a flat min/max damage pair (not dice); fold it into one
+                            // "Min - Max" cell, the range analog of the ITM ability's XdY+Z dice join.
+                            joins: [
+                                {
+                                    label: "Damage",
+                                    fields: [p("weaponStats.minDamage"), p("weaponStats.maxDamage")],
+                                    separator: " - ",
+                                },
+                            ],
+                        },
+                    ],
+                },
+                // A weapon has two attack modes; each is (mode, AP cost, range). The mode lives in the common
+                // item byte and the AP/range in the weapon struct - fuse each across that parse boundary into
+                // one boxed group so the two modes read as coherent units (fallout2-ce Weapon.maxRange[2] /
+                // movePointCost[2] are indexed by mode: index 0 primary, index 1 secondary).
+                {
+                    title: "Attack",
+                    blocks: [
+                        {
+                            kind: "group",
+                            label: "Primary Attack",
+                            fields: [
+                                p("itemProperties.attackModePrimary"),
+                                p("weaponStats.apCost1"),
+                                p("weaponStats.maxRange1"),
+                            ],
+                        },
+                        {
+                            kind: "group",
+                            label: "Secondary Attack",
+                            fields: [
+                                p("itemProperties.attackModeSecondary"),
+                                p("weaponStats.apCost2"),
+                                p("weaponStats.maxRange2"),
+                            ],
+                        },
+                    ],
+                },
+            ],
+        ),
         "item.ammo": itemVariant([
             fieldsPanel(
                 "Ammo",
