@@ -237,8 +237,15 @@ function projectScriptsSection(
     let globalIndex = 0;
     for (const extent of section.fields) {
         if (!isGroup(extent) || !/^Extent \d+$/.test(extent.name)) continue;
-        for (const slot of extent.fields) {
-            if (!isGroup(slot) || !/^Slot \d+$/.test(slot.name)) continue;
+        // Each extent is padded to 16 physical slots on disk; only the first `Extent Length` are real scripts
+        // (the rest are leftover bytes that round-trip via the canonical document but are NOT scripts). Lift
+        // only the used slots - otherwise the list and the tab count are inflated by the padding. Clamp
+        // defensively (a broken map can store a garbage length).
+        const extentLength = extent.fields.find((f): f is ParsedField => !isGroup(f) && f.name === "Extent Length");
+        const used = Math.max(0, Math.min(16, typeof extentLength?.value === "number" ? extentLength.value : 16));
+        const slots = extent.fields.filter((f): f is ParsedGroup => isGroup(f) && /^Slot \d+$/.test(f.name));
+        for (let i = 0; i < Math.min(used, slots.length); i++) {
+            const slot = slots[i]!;
             // Relabel to the global index for display, and strip the per-slot "Entry N " prefix from each field
             // label - it was the slot's storage index, now redundant since the entry itself is "Script N". The
             // semantic key is unaffected: toSemanticFieldKey strips the same "Entry N " prefix when slugifying,

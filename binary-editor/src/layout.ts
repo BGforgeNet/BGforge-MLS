@@ -93,21 +93,28 @@ export function resolveLayout(
         const value = fields[dw.field]?.rawValue;
         return typeof value === "number" && (value & dw.bitSet) !== 0;
     };
-    const resolveTab = (t: LayoutTab | LayoutSubTab): ResolvedTab => ({
-        id: t.id,
-        label: t.label,
-        ...(t.icon !== undefined && { icon: t.icon }),
-        ...(t.countFrom !== undefined &&
-            sections[t.countFrom] !== undefined && { count: sections[t.countFrom]!.entryCount }),
-        // A two-section "x/y" badge (e.g. the Spells tab's known/memorized totals); the spell tables render as
-        // one joined block, not list sections, so the counts come straight from the depth-0 groups.
-        ...(t.countFromPair !== undefined && {
-            count: `${depth0Groups.get(t.countFromPair[0])?.entryCount ?? 0}/${depth0Groups.get(t.countFromPair[1])?.entryCount ?? 0}`,
-        }),
-        ...(t.rows !== undefined && { rows: t.rows }),
-        ...("tabs" in t && t.tabs !== undefined && { tabs: t.tabs.map((st) => resolveTab(st)) }),
-        ...(isTabDisabled(t) && { disabled: true }),
-    });
+    const resolveTab = (t: LayoutTab | LayoutSubTab): ResolvedTab => {
+        const subtabs = "tabs" in t && t.tabs !== undefined ? t.tabs.map((st) => resolveTab(st)) : undefined;
+        // Own count: a single section's entry count (countFrom), or a "x/y" pair (countFromPair - e.g. the
+        // Spells tab's known/memorized totals, whose tables are one joined block, not list sections).
+        let count: number | string | undefined;
+        if (t.countFrom !== undefined && sections[t.countFrom] !== undefined) count = sections[t.countFrom]!.entryCount;
+        else if (t.countFromPair !== undefined)
+            count = `${depth0Groups.get(t.countFromPair[0])?.entryCount ?? 0}/${depth0Groups.get(t.countFromPair[1])?.entryCount ?? 0}`;
+        // A parent tab with subtabs and no own count shows the SUM of its subtabs' numeric counts (MAP Objects =
+        // elev 0+1+2, Scripts = system+spatial+timer+item) - parity with the per-subtab badges.
+        else if (subtabs !== undefined)
+            count = subtabs.reduce((acc, st) => acc + (typeof st.count === "number" ? st.count : 0), 0);
+        return {
+            id: t.id,
+            label: t.label,
+            ...(t.icon !== undefined && { icon: t.icon }),
+            ...(count !== undefined && { count }),
+            ...(t.rows !== undefined && { rows: t.rows }),
+            ...(subtabs !== undefined && { tabs: subtabs }),
+            ...(isTabDisabled(t) && { disabled: true }),
+        };
+    };
 
     return {
         variantId,
@@ -149,10 +156,17 @@ export function resolveTabCounts(formatId: string, model: Model): Record<string,
     }
     const walk = (tabs: readonly (LayoutTab | LayoutSubTab)[]): void => {
         for (const t of tabs) {
+            // Resolve subtab counts first so a parent can sum them.
+            if ("tabs" in t && t.tabs !== undefined) walk(t.tabs);
             if (t.countFrom !== undefined && depth0.has(t.countFrom)) out[t.id] = depth0.get(t.countFrom)!;
             else if (t.countFromPair !== undefined)
                 out[t.id] = `${depth0.get(t.countFromPair[0]) ?? 0}/${depth0.get(t.countFromPair[1]) ?? 0}`;
-            if ("tabs" in t && t.tabs !== undefined) walk(t.tabs);
+            // Parent tab with subtabs and no own count: sum the subtabs' numeric counts (mirrors resolveTab).
+            else if ("tabs" in t && t.tabs !== undefined)
+                out[t.id] = t.tabs.reduce(
+                    (acc, st) => acc + (typeof out[st.id] === "number" ? (out[st.id] as number) : 0),
+                    0,
+                );
         }
     };
     walk(variant.tabs);
