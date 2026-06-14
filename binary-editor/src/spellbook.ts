@@ -288,10 +288,17 @@ export function projectSpellbook(model: Model): SpellbookView {
 
     // Known spells grouped by (type, level); each group attaches to the FIRST Mem-Info panel of that key, or a
     // synthetic known-only panel when no Mem-Info row carries it.
-    const knownByKey = new Map<string, SpellbookKnown[]>();
+    // Keyed by `${type}:${level}`, but the value carries the numeric pair so the synthetic-panel pass below can
+    // read type/level back without parsing the string key (which would force an unchecked tuple cast).
+    const knownByKey = new Map<string, { type: number; level: number; known: SpellbookKnown[] }>();
     for (const k of known) {
         const key = `${k.type}:${k.level}`;
-        (knownByKey.get(key) ?? knownByKey.set(key, []).get(key)!).push(k.known);
+        let bucket = knownByKey.get(key);
+        if (!bucket) {
+            bucket = { type: k.type, level: k.level, known: [] };
+            knownByKey.set(key, bucket);
+        }
+        bucket.known.push(k.known);
     }
     const knownConsumed = new Set<string>();
 
@@ -320,7 +327,7 @@ export function projectSpellbook(model: Model): SpellbookView {
         // Attach known spells to the first panel of this (type, level) only.
         let attachKnown: SpellbookKnown[] = [];
         if (!knownConsumed.has(key)) {
-            attachKnown = knownByKey.get(key) ?? [];
+            attachKnown = knownByKey.get(key)?.known ?? [];
             knownConsumed.add(key);
         }
         return {
@@ -341,14 +348,13 @@ export function projectSpellbook(model: Model): SpellbookView {
     });
 
     // Synthetic panels for known-only (type, level) keys that no Mem-Info row carries.
-    for (const [key, knownList] of knownByKey) {
+    for (const [key, bucket] of knownByKey) {
         if (knownConsumed.has(key)) continue;
-        const [type, level] = key.split(":").map(Number) as [number, number];
         levels.push({
-            type,
-            level,
+            type: bucket.type,
+            level: bucket.level,
             declaredCount: 0,
-            known: knownList,
+            known: bucket.known,
             slots: [],
             flagged: false,
             flagReasons: [],

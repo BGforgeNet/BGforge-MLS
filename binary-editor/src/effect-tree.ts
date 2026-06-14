@@ -20,7 +20,7 @@ import { childGroups, fieldNumber, fieldsByKey, findGroup, normKey } from "./rel
 /** Per-format range-field keys. Source of truth: `ITM_FIELDS` / `SPL_FIELDS` in `binary/src/{itm,spl}/entity-ops.ts`
  *  (not barrel-exported, so duplicated here as plain strings - keep in sync if those bindings change). Matched
  *  against the model via `normKey`, so capitalization/spacing of the humanized display label does not matter. */
-const RANGE_FIELDS: Readonly<
+export const RANGE_FIELDS: Readonly<
     Record<string, { headerStart: string; headerCount: string; abilityStart: string; abilityCount: string }>
 > = {
     itm: {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { visibleRange, maxVisibleRows } from "../../../src/binary-editor/webview/state/virtual-window";
+import { visibleRange } from "../../../src/binary-editor/webview/state/virtual-window";
 
 const cfg = { rowHeight: 20, viewportHeight: 200, overscan: 3, total: 10000 };
 
@@ -17,7 +17,8 @@ describe("virtual-window", () => {
     });
 
     it("bounds the visible row count independent of total", () => {
-        const bound = maxVisibleRows(cfg.viewportHeight, cfg.rowHeight, cfg.overscan);
+        // Max rows a window can hold: the rows visible in the viewport plus an overscan band on each side.
+        const bound = Math.ceil(cfg.viewportHeight / cfg.rowHeight) + 2 * cfg.overscan;
         for (const total of [0, 5, 100, 10000, 100000]) {
             const r = visibleRange({ ...cfg, total, scrollTop: Math.floor(total / 2) * 20 });
             expect(r.end - r.start).toBeLessThanOrEqual(bound);

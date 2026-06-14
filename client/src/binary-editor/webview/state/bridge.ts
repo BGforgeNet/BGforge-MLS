@@ -7,16 +7,12 @@ import type {
     StructureOpRequest,
 } from "@bgforge/binary-editor";
 import type { HostToWebview, WebviewToHost } from "../messages";
-import { WindowCache } from "./window-cache";
 
 interface Window {
     rows: Row[];
     total: number;
 }
 interface Pending {
-    parentId: NodeId | null;
-    start: number;
-    end: number;
     resolve: (v: Window) => void;
     reject: (e: Error) => void;
 }
@@ -35,19 +31,23 @@ export class Bridge {
     private pending = new Map<number, Pending>();
     private pendingSpellbook = new Map<number, PendingSpellbook>();
     private pendingEffectTree = new Map<number, PendingEffectTree>();
-    private cache = new WindowCache();
+
+    /** Called with an error message that matches no pending request - an edit/structureOp/spellbookEdit failure
+     *  (which carries no requestId) or a stale requestId. Set by the view so the failure surfaces to the user
+     *  instead of being dropped silently. */
+    onUnhandledError?: (message: string) => void;
 
     constructor(post: (m: WebviewToHost) => void) {
         this.post = post;
     }
 
+    /** Fetch a window of child rows. Not cached - re-fetched on every call so a request after a mutation
+     *  reflects current state (components re-request on version change). */
     requestChildren(nodeId: NodeId | null, start: number, end: number): Promise<Window> {
-        const hit = this.cache.get(nodeId, start, end);
-        if (hit) return Promise.resolve(hit);
         const requestId = this.nextId++;
         this.post({ type: "requestChildren", requestId, nodeId, start, end });
         return new Promise((resolve, reject) => {
-            this.pending.set(requestId, { parentId: nodeId, start, end, resolve, reject });
+            this.pending.set(requestId, { resolve, reject });
         });
     }
 
@@ -87,20 +87,13 @@ export class Bridge {
         this.post({ type: "loadJson" });
     }
 
-    /** Clear cached windows after a mutation (edit/add) or model reset (undo/redo/revert). */
-    invalidate(): void {
-        this.cache.clear();
-    }
-
     /** Returns true if the message resolved a pending query (caller skips other handling). */
     handle(message: HostToWebview): boolean {
         if (message.type === "children") {
             const p = this.pending.get(message.requestId);
             if (p) {
                 this.pending.delete(message.requestId);
-                const win = { rows: message.rows, total: message.total };
-                this.cache.put(p.parentId, p.start, p.end, win);
-                p.resolve(win);
+                p.resolve({ rows: message.rows, total: message.total });
                 return true;
             }
         }
@@ -120,25 +113,31 @@ export class Bridge {
                 return true;
             }
         }
-        if (message.type === "error" && message.requestId !== undefined) {
-            const p = this.pending.get(message.requestId);
-            if (p) {
-                this.pending.delete(message.requestId);
-                p.reject(new Error(message.message));
-                return true;
+        if (message.type === "error") {
+            if (message.requestId !== undefined) {
+                const p = this.pending.get(message.requestId);
+                if (p) {
+                    this.pending.delete(message.requestId);
+                    p.reject(new Error(message.message));
+                    return true;
+                }
+                const ps = this.pendingSpellbook.get(message.requestId);
+                if (ps) {
+                    this.pendingSpellbook.delete(message.requestId);
+                    ps.reject(new Error(message.message));
+                    return true;
+                }
+                const pe = this.pendingEffectTree.get(message.requestId);
+                if (pe) {
+                    this.pendingEffectTree.delete(message.requestId);
+                    pe.reject(new Error(message.message));
+                    return true;
+                }
             }
-            const ps = this.pendingSpellbook.get(message.requestId);
-            if (ps) {
-                this.pendingSpellbook.delete(message.requestId);
-                ps.reject(new Error(message.message));
-                return true;
-            }
-            const pe = this.pendingEffectTree.get(message.requestId);
-            if (pe) {
-                this.pendingEffectTree.delete(message.requestId);
-                pe.reject(new Error(message.message));
-                return true;
-            }
+            // No requestId (an edit/structureOp/spellbookEdit failure) or a requestId matching no live request:
+            // there is no promise to reject, so surface it instead of dropping it silently.
+            this.onUnhandledError?.(message.message);
+            return true;
         }
         return false;
     }

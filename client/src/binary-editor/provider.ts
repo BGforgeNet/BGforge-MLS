@@ -52,6 +52,11 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
     /** Open panel-to-document map. */
     private readonly active = new Map<vscode.WebviewPanel, BinaryEditorDocument>();
 
+    /** Debounce window for the advisory validate round-trip, so a burst of rapid edits collapses to one pass. */
+    private static readonly DIAGNOSTICS_DEBOUNCE_MS = 120;
+    /** Pending debounced-validate timer per document (cancelled on the next edit and on document close). */
+    private readonly diagnosticsTimers = new WeakMap<BinaryEditorDocument, ReturnType<typeof setTimeout>>();
+
     private readonly extensionUri: vscode.Uri;
 
     constructor(context: vscode.ExtensionContext) {
@@ -85,6 +90,15 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
         this.active.set(panel, document);
         panel.onDidDispose(() => {
             this.active.delete(panel);
+            // Last panel for this document gone -> cancel any pending debounced validate so it never fires
+            // against a disposed bridge.
+            if (!this.documentIsActive(document)) {
+                const timer = this.diagnosticsTimers.get(document);
+                if (timer) {
+                    clearTimeout(timer);
+                    this.diagnosticsTimers.delete(document);
+                }
+            }
         });
 
         panel.webview.onDidReceiveMessage(async (message: WebviewToHost) => {
@@ -173,7 +187,7 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
                         changeSet: r.result.changeSet,
                         selection: message.nodeId,
                     });
-                    await this.pushDiagnosticsToDocument(document);
+                    this.scheduleDiagnostics(document);
                 }
                 break;
             }
@@ -195,7 +209,7 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
                         changeSet: r.result.changeSet,
                         selection: r.result.selection,
                     });
-                    await this.pushDiagnosticsToDocument(document);
+                    this.scheduleDiagnostics(document);
                 }
                 break;
             }
@@ -216,7 +230,7 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
                         changeSet: r.result.changeSet,
                         selection: r.result.selection,
                     });
-                    await this.pushDiagnosticsToDocument(document);
+                    this.scheduleDiagnostics(document);
                 }
                 break;
             }
@@ -315,6 +329,31 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
         }
     }
 
+    /** Debounce the advisory validate round-trip: a burst of rapid edits collapses to a single validate once
+     *  edits settle, instead of one worker round-trip per edit. One-shot paths (open / revert / loadJson) call
+     *  pushDiagnosticsToDocument directly - they are not bursty and want immediate diagnostics. */
+    private scheduleDiagnostics(document: BinaryEditorDocument): void {
+        const existing = this.diagnosticsTimers.get(document);
+        if (existing) clearTimeout(existing);
+        const timer = setTimeout(() => {
+            this.diagnosticsTimers.delete(document);
+            // The document may have closed while the debounce was pending; skip if no panel still shows it (its
+            // bridge may be disposed). The catch covers a dispose that races the fire.
+            if (!this.documentIsActive(document)) return;
+            void this.pushDiagnosticsToDocument(document).catch(() => {
+                /* worker gone (document closed mid-flight); advisory diagnostics, drop silently */
+            });
+        }, BinaryEditorProvider.DIAGNOSTICS_DEBOUNCE_MS);
+        this.diagnosticsTimers.set(document, timer);
+    }
+
+    private documentIsActive(document: BinaryEditorDocument): boolean {
+        for (const doc of this.active.values()) {
+            if (doc === document) return true;
+        }
+        return false;
+    }
+
     /** After an undo/redo: tell every panel to clear its cache and re-fetch (layout is unchanged, so
      *  selection/tab state in the webview is preserved - no re-init). */
     private refreshDocumentPanels(document: BinaryEditorDocument, changeSet?: ChangeSet): void {
@@ -326,7 +365,7 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
             return;
         }
         this.postToDocumentPanels(document, { type: "invalidated" });
-        void this.pushDiagnosticsToDocument(document);
+        this.scheduleDiagnostics(document);
     }
 
     private async dumpJson(document: BinaryEditorDocument): Promise<void> {

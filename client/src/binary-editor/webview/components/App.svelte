@@ -14,6 +14,9 @@
     let version = $state(0);
     // NodeId the host asks the view to select after the latest edit/structure op (undefined = no change).
     let selection = $state<NodeId | undefined>();
+    // Last operation error that carried no pending request to reject (a failed edit/structure/spellbook op).
+    // Shown in a dismissable banner so the failure is visible; cleared on the next successful change.
+    let opError = $state<string | undefined>();
 
     const byNode = $derived(diagnosticsByNode(diagnostics));
     const summary = $derived(bannerSummary(diagnostics));
@@ -23,18 +26,23 @@
     );
 
     $effect(() => {
+        // Surface a failed op (no pending request carried it) in the dismissable error banner.
+        bridge.onUnhandledError = (message: string) => {
+            opError = message;
+        };
         const onMsg = (event: MessageEvent<HostToWebview>) => {
             const m = event.data;
-            if (bridge.handle(m)) return; // resolved a pending requestChildren
+            if (bridge.handle(m)) return; // resolved a pending request, or surfaced an unmatched error
             if (m.type === "init") {
                 open = m.open;
                 clearSelectionMemory(); // a fresh file load drops any remembered per-section list selections
-                bridge.invalidate();
+                opError = undefined;
                 version++;
             } else if (m.type === "diagnostics") {
                 diagnostics = m.diagnostics;
             } else if (m.type === "changeSet") {
                 diagnostics = m.changeSet.diagnostics;
+                opError = undefined; // a changeSet means the op succeeded - clear any prior failure
                 // Undo/redo refresh via a changeSet with no selection - preserve the current selection then.
                 if (m.selection !== undefined) selection = m.selection;
                 // The layout renderer reads the resolved field snapshot directly, so patch each changed row
@@ -58,15 +66,16 @@
                     };
                     patch(tabs);
                 }
-                bridge.invalidate();
                 version++;
             } else if (m.type === "invalidated") {
-                bridge.invalidate();
                 version++;
             }
         };
         window.addEventListener("message", onMsg);
-        return () => window.removeEventListener("message", onMsg);
+        return () => {
+            window.removeEventListener("message", onMsg);
+            bridge.onUnhandledError = undefined;
+        };
     });
 
     const edit = (id: string, v: number | string) => bridge.editField(id, v);
@@ -107,6 +116,18 @@
                     <li>{w}</li>
                 {/each}
             </ul>
+        </div>
+    {/if}
+    {#if opError}
+        <!-- A failed edit/structure/spellbook op (no pending request carried it). Dismissable, and also cleared
+             automatically by the next successful change. -->
+        <div class="banner error">
+            <span class="banner-header">
+                <Icon name="error" /><span class="banner-summary">{opError}</span>
+                <button class="banner-dismiss" onclick={() => (opError = undefined)} title="Dismiss">
+                    <Icon name="close" />
+                </button>
+            </span>
         </div>
     {/if}
     {#if diagnostics.length > 0}

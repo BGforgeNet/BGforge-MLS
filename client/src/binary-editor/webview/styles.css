@@ -115,6 +115,12 @@ button:disabled {
     border: 1px solid var(--vscode-inputValidation-infoBorder, var(--vscode-editorInfo-foreground, #3794ff));
     color: var(--vscode-inputValidation-infoForeground, var(--vscode-foreground));
 }
+/* Error banner: a failed edit/structure/spellbook op. Uses the theme's error-validation tokens. */
+.banner.error {
+    background: var(--vscode-inputValidation-errorBackground, rgba(190, 17, 28, 0.15));
+    border: 1px solid var(--vscode-inputValidation-errorBorder, var(--vscode-editorError-foreground, #be1100));
+    color: var(--vscode-inputValidation-errorForeground, var(--vscode-foreground));
+}
 /* Row that holds the leading warning icon and the bold summary text, aligned by baseline. */
 .banner-header {
     display: inline-flex;
@@ -128,6 +134,28 @@ button:disabled {
 }
 .banner.info .banner-header .codicon {
     color: var(--vscode-editorInfo-foreground, #3794ff);
+}
+.banner.error .banner-header .codicon {
+    color: var(--vscode-editorError-foreground, #be1100);
+}
+/* The error banner's header spans the full width so the dismiss button can sit at the far right. */
+.banner.error .banner-header {
+    display: flex;
+    width: 100%;
+}
+.banner-dismiss {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    padding: 0 0.15rem;
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    opacity: 0.8;
+}
+.banner-dismiss:hover {
+    opacity: 1;
 }
 .banner-summary {
     font-weight: 600;
@@ -1663,11 +1691,6 @@ input[type="text"]::placeholder {
 }
 .spellbook .sb-counts-sep {
     color: var(--vscode-descriptionForeground);
-}
-.spellbook .sb-mem-count {
-    margin-left: auto;
-    color: var(--vscode-foreground);
-    font-size: 0.85em;
 }
 /* The flagged-level reason + clamp action. Wraps so the (sometimes long) reason text is always fully visible
    inside the card rather than overflowing its right edge; the clamp button flows after the text, wrapping to
