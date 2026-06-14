@@ -40,7 +40,7 @@
     const rowHasContent = (row: LayoutRow): boolean => row.panels.some((p) => panelHasContent(p));
     const tabRows = (tab: ResolvedTab): LayoutRow[] => tab.rows ?? (tab.tabs ?? []).flatMap((st) => st.rows ?? []);
     const tabHasContent = (tab: ResolvedTab): boolean => tabRows(tab).some((r) => rowHasContent(r));
-    const toItem = (t: ResolvedTab): TabItem => ({ id: t.id, label: t.count !== undefined ? `${t.label} (${t.count})` : t.label, icon: t.icon });
+    const toItem = (t: ResolvedTab): TabItem => ({ id: t.id, label: t.count !== undefined ? `${t.label} (${t.count})` : t.label, icon: t.icon, disabled: t.disabled });
 
     // Active top-level tab and (for tabs with subtabs) active subtab. State persists across edits; the
     // find-with-fallback keeps a stale id (e.g. after opening a different file) from breaking rendering.
@@ -55,9 +55,16 @@
 
     const visibleTabs = $derived((layout.tabs ?? []).filter((t) => tabHasContent(t)));
     const activeTab = $derived(visibleTabs.find((t) => t.id === activeTabId) ?? visibleTabs[0]);
-    const visibleSubs = $derived((activeTab?.tabs ?? []).filter((st) => (st.rows ?? []).some((r) => rowHasContent(r))));
+    // A disabled subtab (an absent MAP elevation) stays VISIBLE so it renders greyed out - it is not pruned for
+    // lack of content the way an empty-but-available section is. It can never become the active/body tab.
+    const visibleSubs = $derived(
+        (activeTab?.tabs ?? []).filter((st) => st.disabled || (st.rows ?? []).some((r) => rowHasContent(r))),
+    );
     const activeSub = $derived(
-        activeTab?.tabs ? (visibleSubs.find((st) => st.id === activeSubByTab[activeTab.id]) ?? visibleSubs[0]) : undefined,
+        activeTab?.tabs
+            ? (visibleSubs.find((st) => st.id === activeSubByTab[activeTab.id] && !st.disabled) ??
+              visibleSubs.find((st) => !st.disabled))
+            : undefined,
     );
     const bodyRows = $derived(activeTab?.tabs ? (activeSub?.rows ?? []) : (activeTab?.rows ?? layout.rows ?? []));
 </script>

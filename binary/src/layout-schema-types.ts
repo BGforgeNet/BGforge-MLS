@@ -336,6 +336,10 @@ const layoutSubTabSchema = z.strictObject({
     // Two depth-0 group names whose child counts render as an "x/y" badge (e.g. the Spells tab's joined spell
     // tables, which are not single list sections countFrom can read).
     countFromPair: z.tuple([z.string().min(1), z.string().min(1)]).optional(),
+    // Disable (grey out, non-selectable) this subtab when a header flag bit is set - e.g. a MAP elevation tab
+    // whose SkipElevation bit marks the elevation absent. The predicate reads the resolved value of `field`
+    // (a semantic key) and disables the tab when `(value & bitSet) !== 0`.
+    disabledWhen: z.strictObject({ field: fieldRefSchema, bitSet: z.number().int().positive() }).optional(),
     rows: z.array(layoutRowSchema).min(1),
 });
 

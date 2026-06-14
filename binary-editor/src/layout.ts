@@ -85,6 +85,14 @@ export function resolveLayout(
 
     // Resolve the tab structure for the renderer (count badges come from each `countFrom` section's entry
     // count; omitted when that section is absent from this file). Subtabs nest one level.
+    // A subtab's `disabledWhen` flag predicate: disable when the named field's value has the bit set (e.g. a
+    // MAP elevation tab whose SkipElevation bit marks the elevation absent).
+    const isTabDisabled = (t: LayoutTab | LayoutSubTab): boolean => {
+        const dw = "disabledWhen" in t ? t.disabledWhen : undefined;
+        if (dw === undefined) return false;
+        const value = fields[dw.field]?.rawValue;
+        return typeof value === "number" && (value & dw.bitSet) !== 0;
+    };
     const resolveTab = (t: LayoutTab | LayoutSubTab): ResolvedTab => ({
         id: t.id,
         label: t.label,
@@ -98,6 +106,7 @@ export function resolveLayout(
         }),
         ...(t.rows !== undefined && { rows: t.rows }),
         ...("tabs" in t && t.tabs !== undefined && { tabs: t.tabs.map((st) => resolveTab(st)) }),
+        ...(isTabDisabled(t) && { disabled: true }),
     });
 
     return {

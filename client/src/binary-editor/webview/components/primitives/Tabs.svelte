@@ -20,6 +20,9 @@
         // Optional count badge shown after the label - a number (items in this tab) or a string (e.g. an "x/y"
         // pair). Rendered only when provided, so existing tab usages are unaffected. 0 is shown, not hidden.
         count?: number | string;
+        // Greyed out and non-selectable (e.g. a MAP elevation absent per the header skip-flag). Skipped by
+        // click and by arrow-key navigation.
+        disabled?: boolean;
     }
 
     const {
@@ -49,19 +52,31 @@
         const prev = orientation === "horizontal" ? "ArrowLeft" : "ArrowUp";
         const next = orientation === "horizontal" ? "ArrowRight" : "ArrowDown";
 
+        // Step over disabled tabs so arrow keys never land on a non-selectable tab.
+        const step = (from: number, dir: 1 | -1): number => {
+            for (let i = 1; i <= tabs.length; i++) {
+                const j = (from + dir * i + tabs.length * i) % tabs.length;
+                if (!tabs[j].disabled) return j;
+            }
+            return from;
+        };
+        const firstEnabled = (): number => tabs.findIndex((t) => !t.disabled);
+        const lastEnabled = (): number => tabs.findLastIndex((t) => !t.disabled);
+
         if (event.key === prev) {
-            nextIndex = (activeIndex - 1 + tabs.length) % tabs.length;
+            nextIndex = step(activeIndex, -1);
         } else if (event.key === next) {
-            nextIndex = (activeIndex + 1) % tabs.length;
+            nextIndex = step(activeIndex, 1);
         } else if (event.key === "Home") {
-            nextIndex = 0;
+            nextIndex = firstEnabled();
         } else if (event.key === "End") {
-            nextIndex = tabs.length - 1;
+            nextIndex = lastEnabled();
         } else {
             return;
         }
 
         event.preventDefault();
+        if (nextIndex < 0 || tabs[nextIndex].disabled) return;
         onselect(tabs[nextIndex].id);
         // Move focus to the newly-selected tab. The keydown fires on the container div; currentTarget
         // is that div. querySelectorAll returns buttons in DOM order matching the tabs array order,
@@ -87,9 +102,12 @@
         <button
             role="tab"
             aria-selected={isActive}
-            tabindex={isActive ? 0 : -1}
+            aria-disabled={tab.disabled ? "true" : undefined}
+            tabindex={isActive && !tab.disabled ? 0 : -1}
             class:active={isActive}
-            onclick={() => onselect(tab.id)}
+            class:disabled={tab.disabled}
+            disabled={tab.disabled}
+            onclick={() => !tab.disabled && onselect(tab.id)}
         >
             {#if tab.icon}
                 <Icon name={tab.icon} />

@@ -98,6 +98,9 @@ export interface ResolvedTab {
     count?: number | string; // a single entry count, or an "x/y" pair (e.g. the Spells tab's known/memorized)
     rows?: LayoutRow[];
     tabs?: ResolvedTab[];
+    /** Greyed out and non-selectable - evaluated from the subtab's `disabledWhen` flag predicate (e.g. a MAP
+     *  elevation absent per the header skip-flag). */
+    disabled?: boolean;
 }
 
 /**

@@ -157,6 +157,8 @@ export const mapLayout: FormatLayout = formatLayoutSchema.parse({
                             id: "elev1",
                             label: "Elevation 1",
                             countFrom: "Elevation 1 Objects",
+                            // Absent when the header SkipElevation1Tiles bit (0x4) is set - grey the tab out.
+                            disabledWhen: { field: "map.header.mapFlags", bitSet: 0x4 },
                             rows: [
                                 listRow(
                                     "Elevation 1 Objects",
@@ -171,6 +173,8 @@ export const mapLayout: FormatLayout = formatLayoutSchema.parse({
                             id: "elev2",
                             label: "Elevation 2",
                             countFrom: "Elevation 2 Objects",
+                            // Absent when the header SkipElevation2Tiles bit (0x8) is set - grey the tab out.
+                            disabledWhen: { field: "map.header.mapFlags", bitSet: 0x8 },
                             rows: [
                                 listRow(
                                     "Elevation 2 Objects",

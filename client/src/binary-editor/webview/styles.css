@@ -817,6 +817,17 @@ input[type="text"]::placeholder {
     z-index: 1;
     position: relative;
 }
+/* A disabled tab (e.g. a MAP elevation absent per the header skip-flag): greyed out, non-interactive. */
+.bb-tabs button:disabled,
+.bb-tabs button.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+.bb-tabs button:disabled:hover,
+.bb-tabs button.disabled:hover {
+    color: var(--vscode-descriptionForeground, var(--vscode-foreground));
+    background: transparent;
+}
 /* Optional count badge after a tab label (e.g. items in this tab); a subtle pill using the theme badge tokens. */
 .bb-tabs .bb-tab-count {
     display: inline-flex;
