@@ -66,6 +66,15 @@ describe("PRO drug: stat-major effect matrix", () => {
     });
 });
 
+describe("PRO ammo: damage modifier join", () => {
+    it("folds damageMultiplier/damageDivisor into one 'N / M' cell", () => {
+        const mod = joinsOf(variant("item.ammo")).find((j) => j.label === "Damage Mod");
+        expect(mod, "ammo has a Damage Mod join").toBeDefined();
+        expect(mod!.fields).toEqual(["pro.ammoStats.damageMultiplier", "pro.ammoStats.damageDivisor"]);
+        expect(mod!.separator).toBe(" / ");
+    });
+});
+
 describe("PRO weapon: damage range join", () => {
     it("folds minDamage/maxDamage into a single 'X - Y' damage cell", () => {
         const damage = joinsOf(variant("item.weapon")).find((j) => j.label === "Damage");

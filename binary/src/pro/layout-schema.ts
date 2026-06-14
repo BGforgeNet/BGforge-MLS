@@ -409,18 +409,32 @@ export const proLayout: FormatLayout = formatLayoutSchema.parse({
             ],
         ),
         "item.ammo": itemVariant([
-            fieldsPanel(
-                "Ammo",
-                [
-                    p("ammoStats.caliber"),
-                    p("ammoStats.quantity"),
-                    p("ammoStats.acModifier"),
-                    p("ammoStats.drModifier"),
-                    p("ammoStats.damageMultiplier"),
-                    p("ammoStats.damageDivisor"),
+            {
+                title: "Ammo",
+                blocks: [
+                    {
+                        kind: "fields",
+                        columns: 2,
+                        fields: [
+                            p("ammoStats.caliber"),
+                            p("ammoStats.quantity"),
+                            p("ammoStats.acModifier"),
+                            p("ammoStats.drModifier"),
+                            p("ammoStats.damageMultiplier"),
+                            p("ammoStats.damageDivisor"),
+                        ],
+                        // Ammo scales target damage by multiplier/divisor (fallout2-ce Ammo damageMult/damageDiv);
+                        // fold the pair into one "N / M" cell so it reads as the single fraction it is.
+                        joins: [
+                            {
+                                label: "Damage Mod",
+                                fields: [p("ammoStats.damageMultiplier"), p("ammoStats.damageDivisor")],
+                                separator: " / ",
+                            },
+                        ],
+                    },
                 ],
-                2,
-            ),
+            },
         ]),
         "item.container": itemVariant([
             {
