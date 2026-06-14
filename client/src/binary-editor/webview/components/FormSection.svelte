@@ -46,10 +46,13 @@
 
     // Render a flag field as aligned vertical checkbox columns (the same FlagColumns the layout path uses),
     // not the pack-left FlagsField grid: a many-bit field like an effect's Save Type otherwise wraps raggedly
-    // with no column alignment. Two columns once a field is tall enough to warrant splitting; one tidy column
-    // below that, so a small 2-bit field stays compact rather than stranded across two columns.
+    // with no column alignment. Width scales with the bit count so a tall bitfield stays compact: a large one
+    // (the MAP object's 22 ObjectFlags) gets four columns, a medium one two, and a small field stays in one
+    // tidy column rather than stranded across two. (Auto-form only - layout-driven formats pass their own
+    // `columns`; this heuristic affects just the MAP object / script flag fields.)
     function flagColumns(row: Row): number {
-        return Object.keys(row.flagOptions ?? {}).length > 6 ? 2 : 1;
+        const n = Object.keys(row.flagOptions ?? {}).length;
+        return n > 12 ? 4 : n > 6 ? 2 : 1;
     }
 
     // Hard cap at 2 tab levels: depth > 2 always renders headed sections so nested tabs
