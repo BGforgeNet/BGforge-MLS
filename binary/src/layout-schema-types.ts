@@ -107,7 +107,18 @@ const gridBlockSchema = z.strictObject({
  */
 const matrixBlockSchema = z.strictObject({
     kind: z.literal("matrix"),
-    valueColumns: z.array(z.strictObject({ key: z.string().min(1), label: z.string() })).min(1),
+    // `widthPx` overrides a value column's cell width (default 56px, sized for narrow numeric base/bonus cells).
+    // Set it wider for a column holding a control that needs room - e.g. the PRO drug matrix's affected-stat
+    // dropdown, which clips at 56px.
+    valueColumns: z
+        .array(
+            z.strictObject({
+                key: z.string().min(1),
+                label: z.string(),
+                widthPx: z.number().int().positive().optional(),
+            }),
+        )
+        .min(1),
     groups: z
         .array(
             z.strictObject({

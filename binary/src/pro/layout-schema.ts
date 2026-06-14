@@ -300,6 +300,9 @@ const proLabels: Record<string, string> = {
     [p("stairsProperties.destMap")]: "Destination Map",
     [p("ladderProperties.destTile")]: "Destination Tile",
     [p("ladderProperties.destElevation")]: "Destination Elevation",
+    // Drug delayed-effect onset durations, tied to the matrix's "Delayed 1 / Delayed 2" amount columns.
+    [p("drugStats.delayedEffect1.duration")]: "Delayed 1 After",
+    [p("drugStats.delayedEffect2.duration")]: "Delayed 2 After",
 };
 
 export const proLayout: FormatLayout = formatLayoutSchema.parse({
@@ -428,29 +431,53 @@ export const proLayout: FormatLayout = formatLayoutSchema.parse({
                 ],
             },
         ]),
+        // A drug's effect data is three parallel arrays (fallout2-ce Drug: stats[3], immediateEffect[3],
+        // delayed[2].effect[3]): each affected stat gets an instant amount plus two delayed amounts. Render it
+        // stat-major as one matrix (a row per affected stat) instead of the old phase-major panels that forced
+        // the reader to mentally zip stat0 with amount0. The two onset durations are per-phase, not per-stat, so
+        // they sit in a small Delays panel beside the matrix's Delayed 1 / Delayed 2 columns.
         "item.drug": itemVariant([
-            fieldsPanel("Affected Stats", [
-                p("drugStats.affectedStats.stat0"),
-                p("drugStats.affectedStats.stat1"),
-                p("drugStats.affectedStats.stat2"),
-            ]),
-            fieldsPanel("Instant Effect", [
-                p("drugStats.instantEffect.amount0"),
-                p("drugStats.instantEffect.amount1"),
-                p("drugStats.instantEffect.amount2"),
-            ]),
-            fieldsPanel("Delayed Effect 1", [
-                p("drugStats.delayedEffect1.duration"),
-                p("drugStats.delayedEffect1.amount0"),
-                p("drugStats.delayedEffect1.amount1"),
-                p("drugStats.delayedEffect1.amount2"),
-            ]),
-            fieldsPanel("Delayed Effect 2", [
-                p("drugStats.delayedEffect2.duration"),
-                p("drugStats.delayedEffect2.amount0"),
-                p("drugStats.delayedEffect2.amount1"),
-                p("drugStats.delayedEffect2.amount2"),
-            ]),
+            {
+                title: "Effects",
+                blocks: [
+                    {
+                        kind: "matrix",
+                        columnWidthPx: 440,
+                        valueColumns: [
+                            // The affected-stat column holds a StatType dropdown - widen it past the default 56px
+                            // numeric cell so the option labels do not clip.
+                            { key: "stat", label: "Affected Stat", widthPx: 170 },
+                            { key: "instant", label: "Instant", widthPx: 74 },
+                            { key: "delayed1", label: "Delayed 1", widthPx: 74 },
+                            { key: "delayed2", label: "Delayed 2", widthPx: 74 },
+                        ],
+                        groups: [
+                            {
+                                label: "",
+                                rows: [0, 1, 2].map((i) => ({
+                                    label: "",
+                                    cells: {
+                                        stat: p(`drugStats.affectedStats.stat${i}`),
+                                        instant: p(`drugStats.instantEffect.amount${i}`),
+                                        delayed1: p(`drugStats.delayedEffect1.amount${i}`),
+                                        delayed2: p(`drugStats.delayedEffect2.amount${i}`),
+                                    },
+                                })),
+                            },
+                        ],
+                    },
+                ],
+            },
+            {
+                title: "Delays",
+                fit: true,
+                blocks: [
+                    {
+                        kind: "fields",
+                        fields: [p("drugStats.delayedEffect1.duration"), p("drugStats.delayedEffect2.duration")],
+                    },
+                ],
+            },
             fieldsPanel("Addiction", [
                 p("drugStats.addiction.rate"),
                 p("drugStats.addiction.effect"),

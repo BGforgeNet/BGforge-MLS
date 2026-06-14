@@ -44,6 +44,28 @@ function fieldsOf(v: LayoutVariant): string[] {
     return blocksOf(v).flatMap((b) => (b.kind === "fields" ? b.fields : []));
 }
 
+function matrixOf(v: LayoutVariant) {
+    return blocksOf(v).find((b) => b.kind === "matrix");
+}
+
+describe("PRO drug: stat-major effect matrix", () => {
+    it("pairs each affected stat with its instant + two delayed amounts in one matrix row", () => {
+        const matrix = matrixOf(variant("item.drug"));
+        expect(matrix, "drug has an effect matrix").toBeDefined();
+        if (matrix?.kind !== "matrix") throw new Error("not a matrix");
+
+        expect(matrix.valueColumns.map((c) => c.key)).toEqual(["stat", "instant", "delayed1", "delayed2"]);
+        const rows = matrix.groups.flatMap((g) => g.rows);
+        expect(rows).toHaveLength(3);
+        rows.forEach((r, i) => {
+            expect(r.cells.stat).toBe(`pro.drugStats.affectedStats.stat${i}`);
+            expect(r.cells.instant).toBe(`pro.drugStats.instantEffect.amount${i}`);
+            expect(r.cells.delayed1).toBe(`pro.drugStats.delayedEffect1.amount${i}`);
+            expect(r.cells.delayed2).toBe(`pro.drugStats.delayedEffect2.amount${i}`);
+        });
+    });
+});
+
 describe("PRO weapon: damage range join", () => {
     it("folds minDamage/maxDamage into a single 'X - Y' damage cell", () => {
         const damage = joinsOf(variant("item.weapon")).find((j) => j.label === "Damage");
