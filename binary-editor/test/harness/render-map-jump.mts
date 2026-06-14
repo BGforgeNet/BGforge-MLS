@@ -65,15 +65,6 @@ const fieldHex = (label: string) =>
         const input = field?.querySelector(".hex-input input") as HTMLInputElement | null;
         return input ? input.value : null;
     }, label);
-// Read a named field's plain numeric value (the object ID is a decimal i32 input), or null.
-const fieldNumber = (label: string) =>
-    page.evaluate((lbl) => {
-        const field = Array.from(document.querySelectorAll(".layout-root .field")).find(
-            (f) => f.querySelector(".label")?.textContent?.trim() === lbl,
-        );
-        const input = field?.querySelector('input[type="number"]') as HTMLInputElement | null;
-        return input ? input.value : null;
-    }, label);
 
 // --- Find a script whose SID links to its object. Only object-owned scripts (item/critter) are referenced by
 // an object, so scan each script subtab's first rows until one exposes a SID chip. ---
@@ -114,12 +105,12 @@ if (sidHex !== null) {
     const tabAfter = (await activePrimaryTab()).trim();
     check("the script SID jump switches to the Objects tab", tabAfter.startsWith("Objects"), `active="${tabAfter}"`);
 
-    // The landed object's SID (the script it runs) equals the script's own sid - the shared binding.
-    const objSid = await fieldNumber("SID");
+    // The landed object's SID (the script it runs, now a hex field) equals the script's own sid - the binding.
+    const objSidHex = await fieldHex("SID");
     check(
         "the selected object runs this script (object SID == script SID)",
-        objSid !== null && (parseInt(objSid, 10) | 0) === sidVal,
-        `objSid=${objSid} scriptSid=${sidVal}`,
+        objSidHex !== null && (parseInt(objSidHex, 16) | 0) === sidVal,
+        `objSid=0x${objSidHex} scriptSid=${sidVal}`,
     );
 
     // The jump scrolls the selected entry into view: a .vrow.selected exists in the master list and its box

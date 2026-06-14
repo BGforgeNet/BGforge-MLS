@@ -119,13 +119,14 @@ export type ExitGridData = SpecData<typeof exitGridSpec>;
 // derive from `humanize(fieldName)` and don't need an entry.
 export const objectBasePresentation: StructPresentation<ObjectBaseData> = {
     id: { label: "ID" },
-    // FID and PID are both packed dwords (type<<24 | index); hex makes the type nibble legible and stops the
-    // master list from showing indistinguishable big decimals (e.g. 0x0500000C, not 83886092). CID/SID are
-    // plain signed indices (-1 = none), so they stay decimal/signed - only the packed FID/PID get hex.
+    // FID, PID and SID are all packed dwords (type<<24 | index); hex makes the type nibble legible and stops the
+    // master list from showing indistinguishable big decimals (e.g. 0x0500000C, not 83886092). SID is the
+    // script reference - the same packed sid the script carries - so it reads in hex like the script's own SID.
+    // CID is a plain signed index (-1 = none), so it stays decimal.
     fid: { label: "FID", format: "hex32" },
     pid: { label: "PID", format: "hex32" },
     cid: { label: "CID" },
-    sid: { label: "SID" },
+    sid: { label: "SID", format: "hex32" },
     field74: { label: "Field 74" },
 };
 
