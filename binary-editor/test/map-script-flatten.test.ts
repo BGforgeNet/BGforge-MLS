@@ -32,9 +32,11 @@ describe("MAP scripts: flat per-type list (extents hidden)", () => {
         expect(section, "newr2 has a non-empty script section").toBeDefined();
         const children = m.nodes.filter((n) => n.parentId === section!.id);
         expect(children.length).toBeGreaterThan(0);
+        // Each entry is labelled with its script type so it self-describes out of the subtab context
+        // (e.g. "Item Script 7"), not a bare "Script 7".
         expect(
-            children.every((c) => /^Script \d+$/.test(c.name ?? "")),
-            `script children should all be flat slots: ${children.map((c) => c.name).join(", ")}`,
+            children.every((c) => /^(System|Spatial|Timer|Item) Script \d+$/.test(c.name ?? "")),
+            `script children should be type-labelled flat slots: ${children.map((c) => c.name).join(", ")}`,
         ).toBe(true);
     });
 

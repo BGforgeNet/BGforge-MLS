@@ -225,6 +225,8 @@ function projectScriptsSection(
     ) => ProjectedEntry | undefined,
 ): ProjectedEntry {
     const SECTION = section.name;
+    // "Item Scripts" -> "Item": the per-entry label prefix so each script self-describes its type.
+    const scriptType = SECTION.replace(/ Scripts$/, "");
     const slotChildren: ProjectedEntry[] = [];
     let globalIndex = 0;
     for (const extent of section.fields) {
@@ -238,14 +240,15 @@ function projectScriptsSection(
         const slots = extent.fields.filter((f): f is ParsedGroup => isGroup(f) && /^Slot \d+$/.test(f.name));
         for (let i = 0; i < Math.min(used, slots.length); i++) {
             const slot = slots[i]!;
-            // Relabel to the global index for display, and strip the per-slot "Entry N " prefix from each field
-            // label - it was the slot's storage index, now redundant since the entry itself is "Script N". The
-            // semantic key is unaffected: toSemanticFieldKey strips the same "Entry N " prefix when slugifying,
-            // so a field named "SID" or "Entry 7 SID" both key to ...slots[].sid. Keep the original [Extent e,
-            // Slot s] source path so round-trip is unchanged.
+            // Relabel to "<Type> Script <globalIndex>" (e.g. "Item Script 7") so the entry self-describes its
+            // script type out of the subtab context, and strip the per-slot "Entry N " prefix from each field
+            // label - it was the slot's storage index, now redundant since the entry names itself. The semantic
+            // key is unaffected: toSemanticFieldKey strips the same "Entry N " prefix when slugifying, so a field
+            // named "SID" or "Entry 7 SID" both key to ...slots[].sid. Keep the original [Extent e, Slot s]
+            // source path so round-trip is unchanged.
             const relabeled: ParsedGroup = {
                 ...slot,
-                name: `Script ${globalIndex}`,
+                name: `${scriptType} Script ${globalIndex}`,
                 fields: slot.fields.map((f) => ({ ...f, name: f.name.replace(/^Entry \d+ /, "") })),
             };
             const projected = projectEntry(parseResult, relabeled, [SECTION, extent.name, slot.name]);
