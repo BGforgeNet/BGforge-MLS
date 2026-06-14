@@ -35,7 +35,7 @@ describe("MAP scripts: flat per-type list (extents hidden)", () => {
         // Each entry is labelled with its script type so it self-describes out of the subtab context
         // (e.g. "Item Script 7"), not a bare "Script 7".
         expect(
-            children.every((c) => /^(System|Spatial|Timer|Item) Script \d+$/.test(c.name ?? "")),
+            children.every((c) => /^(System|Spatial|Timer|Item|Critter) Script \d+$/.test(c.name ?? "")),
             `script children should be type-labelled flat slots: ${children.map((c) => c.name).join(", ")}`,
         ).toBe(true);
     });

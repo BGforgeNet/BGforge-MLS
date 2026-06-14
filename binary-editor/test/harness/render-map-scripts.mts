@@ -64,7 +64,7 @@ let selected: Locator | undefined;
 let subLabel = "";
 for (let i = 0; i < subCount; i++) {
     const label = (await subtabs.nth(i).innerText()).trim();
-    if (!["System", "Spatial", "Timer", "Item"].some((s) => label.startsWith(s))) continue;
+    if (!["System", "Spatial", "Timer", "Item", "Critter"].some((s) => label.startsWith(s))) continue;
     await subtabs.nth(i).click();
     await page.waitForTimeout(150);
     const rows = page.locator(".layout-root .vlist .vrow");

@@ -265,12 +265,23 @@ export function parseScripts(
 
         const scriptEntries: (ParsedField | ParsedGroup)[] = [field("Script Count", count, countOffset, 4, "int32")];
 
+        // Label the list by its scripts' actual SID type, not the read index. Fallout maps omit the global
+        // `system` list (system scripts are not map-bound), so the on-disk lists are spatial/timed/item/critter
+        // (types 1-4); labelling by read index would name them system/spatial/timer/item (0-3), one off. Each
+        // list is homogeneous (the engine stores gScriptLists[SID_TYPE(sid)]), so the first slot's type names
+        // the list. An empty list has no slot to read, so fall back to the index+1 mapping (also types 1-4).
+        const listType =
+            count > 0 && currentOffset + 4 <= data.length
+                ? getScriptType(new DataView(data.buffer, data.byteOffset + currentOffset, 4).getUint32(0, false))
+                : scriptType + 1;
+        const listLabel = `${ScriptType[listType] ?? `Type${listType}`} Scripts`;
+
         if (count === 0) {
-            scripts.push(makeGroup(`${ScriptType[scriptType] ?? `Type${scriptType}`} Scripts`, scriptEntries));
+            scripts.push(makeGroup(listLabel, scriptEntries));
             continue;
         }
         if (currentOffset >= data.length) {
-            scripts.push(makeGroup(`${ScriptType[scriptType] ?? `Type${scriptType}`} Scripts`, scriptEntries));
+            scripts.push(makeGroup(listLabel, scriptEntries));
             break;
         }
         const extentCount = Math.ceil(count / 16);
@@ -321,7 +332,7 @@ export function parseScripts(
             scriptEntries.push(makeGroup(`Extent ${extentIndex}`, extentFields));
         }
 
-        scripts.push(makeGroup(`${ScriptType[scriptType] ?? `Type${scriptType}`} Scripts`, scriptEntries));
+        scripts.push(makeGroup(listLabel, scriptEntries));
         if (scriptTypeAborted) break;
     }
 

@@ -181,6 +181,9 @@ export const mapLayout: FormatLayout = formatLayoutSchema.parse({
                 {
                     id: "scripts",
                     label: "Scripts",
+                    // Maps serialize script lists for spatial/timed/item/critter; the global system list is not
+                    // map-bound. A subtab whose list is absent from this file is pruned, so System stays here for
+                    // the rare map that has one without ever showing on those that do not.
                     tabs: [
                         {
                             id: "system",
@@ -205,6 +208,12 @@ export const mapLayout: FormatLayout = formatLayoutSchema.parse({
                             label: "Item",
                             countFrom: "Item Scripts",
                             rows: [listRow("Item Scripts", "master-detail")],
+                        },
+                        {
+                            id: "critter",
+                            label: "Critter",
+                            countFrom: "Critter Scripts",
+                            rows: [listRow("Critter Scripts", "master-detail")],
                         },
                     ],
                 },

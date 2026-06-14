@@ -254,7 +254,13 @@ describe("layout/model sync", () => {
             for (const key of Object.keys(resolved?.sections ?? {})) resolvedSections.add(key);
         }
 
-        const unresolved = [...declared].filter((s) => !resolvedSections.has(s));
+        // Sections the layout declares for completeness that no available fixture exercises. MAP timed scripts
+        // are created by runtime timer events, so authored/RP maps serialize no Timer list - the subtab exists
+        // for the rare map that has one. (System/Spatial/Item/Critter are all covered by the fixtures above.)
+        const ALLOWED_ABSENT: Record<string, readonly string[]> = { map: ["Timer Scripts"] };
+        const unresolved = [...declared]
+            .filter((s) => !resolvedSections.has(s))
+            .filter((s) => !(ALLOWED_ABSENT[format] ?? []).includes(s));
         expect(unresolved, `${format} list-section keys that resolve in no fixture`).toEqual([]);
     });
 });

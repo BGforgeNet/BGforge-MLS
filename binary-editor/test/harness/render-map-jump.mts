@@ -89,7 +89,7 @@ let jumpLabel = "";
 const subtabs = page.locator('.layout-root .bb-tabs button[role="tab"]');
 for (let s = 0; s < (await subtabs.count()) && sidHex === null; s++) {
     const label = (await subtabs.nth(s).innerText()).trim();
-    if (!["System", "Spatial", "Timer", "Item"].some((t) => label.startsWith(t))) continue;
+    if (!["System", "Spatial", "Timer", "Item", "Critter"].some((t) => label.startsWith(t))) continue;
     await subtabs.nth(s).click();
     await page.waitForTimeout(120);
     const rows = page.locator(".layout-root .vlist .vrow");
