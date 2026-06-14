@@ -428,7 +428,7 @@ for (let i = 0; i < 3; i++) {
     await page.locator(".eff-tree-effect").nth(i).click();
     await page.waitForTimeout(80);
     const left = await page
-        .locator('.eff-tree .detail .bb-select-trigger[aria-label="Timing"]')
+        .locator('.eff-tree .detail .bb-combobox-input[aria-label="Timing"]')
         .first()
         .evaluate((el) => Math.round(el.getBoundingClientRect().left));
     timingLefts.push(left);
@@ -481,16 +481,17 @@ check("tree: ITM damage dice fold into one X d Y + Z cell", diceFold.ok, diceFol
 // that the tiny dropdown is materially narrower than the wide one (it used to inherit the same M/L tier width).
 const ddWidths = await page.evaluate(() => {
     const out: Record<string, { cls: string; w: number } | null> = {};
-    const triggers = Array.from(document.querySelectorAll(".eff-tree .detail .bb-select-trigger")) as HTMLElement[];
+    const inputs = Array.from(document.querySelectorAll(".eff-tree .detail .bb-combobox-input")) as HTMLElement[];
     for (const label of ["Arrow", "Damage Type", "Attack Type"]) {
-        const t = triggers.find((el) => el.getAttribute("aria-label") === label);
-        if (!t) {
+        const input = inputs.find((el) => el.getAttribute("aria-label") === label);
+        const box = input?.closest(".bb-combobox") as HTMLElement | null;
+        if (!input || !box) {
             out[label] = null;
             continue;
         }
-        const fc = t.closest(".field-control");
+        const fc = input.closest(".field-control");
         const cls = fc ? (Array.from(fc.classList).find((c) => c.startsWith("dd-")) ?? "?") : "?";
-        out[label] = { cls, w: Math.round(t.getBoundingClientRect().width) };
+        out[label] = { cls, w: Math.round(box.getBoundingClientRect().width) };
     }
     return { arrow: out["Arrow"], damage: out["Damage Type"], attack: out["Attack Type"] };
 });

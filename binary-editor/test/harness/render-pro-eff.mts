@@ -127,6 +127,7 @@ const effDom = await page2.evaluate(() => ({
     panels: Array.from(document.querySelectorAll(".layout-root .panel > h3"), (e) => e.textContent),
     fields: document.querySelectorAll(".layout-root .field").length,
     combobox: document.querySelectorAll(".layout-root .bb-combobox-input").length,
+    chevrons: document.querySelectorAll(".layout-root .bb-combobox-trigger").length,
     selects: document.querySelectorAll(".layout-root .bb-select-trigger").length,
     flagCols: document.querySelectorAll(".layout-root .flag-columns").length,
     tabs: document.querySelectorAll(".bb-tabs").length,
@@ -137,8 +138,19 @@ check(
     JSON.stringify(effDom.panels),
 );
 check("eff: layout fields render (> 20)", effDom.fields > 20, `count=${effDom.fields}`);
-check("eff: opcode renders as a searchable combobox", effDom.combobox >= 1, `count=${effDom.combobox}`);
-check("eff: small enums render as Select (target/timing)", effDom.selects >= 2, `count=${effDom.selects}`);
+// Every enum is a searchable combobox now (opcode + the small enums target/timing/school/...), each with a
+// chevron, and the old Select primitive is gone.
+check(
+    "eff: enums render as searchable comboboxes (opcode + small enums)",
+    effDom.combobox >= 4,
+    `count=${effDom.combobox}`,
+);
+check(
+    "eff: every combobox has a chevron trigger",
+    effDom.chevrons === effDom.combobox,
+    `chevrons=${effDom.chevrons} combobox=${effDom.combobox}`,
+);
+check("eff: no plain Select remains", effDom.selects === 0, `count=${effDom.selects}`);
 check("eff: flags render (saveType + resistance)", effDom.flagCols >= 2, `count=${effDom.flagCols}`);
 check("eff: no section tabs (single page)", effDom.tabs === 0, `count=${effDom.tabs}`);
 

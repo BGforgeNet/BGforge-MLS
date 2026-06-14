@@ -519,14 +519,65 @@ button:disabled {
 /* ---- inputs / selects ---- */
 input[type="text"],
 input[type="number"],
-select,
-.bb-combobox-input {
+select {
     font: inherit;
     color: var(--vscode-input-foreground, var(--vscode-foreground));
     background: var(--vscode-input-background);
     border: 1px solid var(--vscode-input-border, transparent);
     border-radius: 2px;
     padding: 0.2rem 0.4rem;
+}
+/* The combobox is the single enum control: a bordered box holding a borderless text input (the search field)
+ * that FILLS the box, with the chevron overlaid absolutely on the right. The input must span the full box
+ * width because bits-ui anchors the open dropdown-list popup to the input element - if the input were narrower
+ * than the box (e.g. a flex sibling shrunk by the chevron), the list would be offset from the value field by
+ * the chevron width. Right-padding on the input keeps the value text clear of the overlaid chevron. Width is
+ * applied to .bb-combobox (the box) by the field-control tier rules below. */
+.bb-combobox {
+    position: relative;
+    display: inline-block;
+    color: var(--vscode-input-foreground, var(--vscode-foreground));
+    background: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border, transparent);
+    border-radius: 2px;
+}
+.bb-combobox:focus-within {
+    border-color: var(--vscode-focusBorder);
+}
+.bb-combobox-input {
+    font: inherit;
+    color: inherit;
+    background: transparent;
+    border: none;
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0.2rem 1.5rem 0.2rem 0.4rem; /* right pad clears the overlaid chevron */
+}
+.bb-combobox-trigger {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    display: inline-flex;
+    align-items: center;
+    padding: 0 0.4rem;
+    color: var(--vscode-descriptionForeground);
+    pointer-events: none; /* decorative chevron: clicks fall through to the input, which owns opening */
+}
+.bb-combobox-trigger::after {
+    content: "\25BE"; /* down-pointing triangle indicating a dropdown */
+    font-size: 0.8em;
+}
+/* The dropdown list spans at least the value field's width (the anchor is the full-width input), so the list is
+ * never narrower than the closed control. It can still grow wider for a long option. */
+.bb-combobox-content {
+    min-width: var(--bits-combobox-anchor-width);
+    padding: 0; /* the viewport carries the inner padding - it is the rect bits-ui's highlight check measures */
+}
+.bb-combobox-viewport {
+    /* Inset items from the viewport edges so the top item clears bits-ui's strict "fully inside the viewport"
+     * highlight check (nodeRect.top > viewportRect.top etc.), which otherwise never highlights the first match. */
+    padding: 0.2rem;
 }
 input[type="text"]:focus,
 input[type="number"]:focus,
@@ -556,15 +607,14 @@ input[type="text"]::placeholder {
     color: var(--vscode-descriptionForeground);
     cursor: default;
 }
-.layout-root .bb-select-trigger[data-disabled] {
-    opacity: 1;
+/* A read-only enum: strip the box chrome (the input inside is already muted by the rule above) and drop the
+ * chevron, so it reads as plain muted text like the other read-only controls. */
+.layout-root .bb-combobox:has(.bb-combobox-input:disabled) {
     border-color: transparent;
     background: transparent;
-    color: var(--vscode-descriptionForeground);
-    cursor: default;
 }
-.layout-root .bb-select-trigger[data-disabled]::after {
-    content: none; /* no dropdown affordance on a read-only enum */
+.layout-root .bb-combobox:has(.bb-combobox-input:disabled) .bb-combobox-trigger {
+    display: none; /* no dropdown affordance on a read-only enum */
 }
 .layout-root .hex-input.disabled {
     opacity: 1;
@@ -609,66 +659,6 @@ input[type="text"]::placeholder {
 .bb-popup-item[data-disabled] {
     opacity: 0.5;
     cursor: default;
-}
-
-/* ---- bb-select (themed dropdown via the Select primitive wrapper) ----
- * Generic, format-agnostic theming for the headless Select primitive. The primitive sets data-* state
- * attributes (data-state open/closed, data-highlighted, data-selected, data-disabled) which drive the
- * interaction styles below. Floating positioning is applied via CSSOM (not an injected <style> tag),
- * so it stays CSP-safe under the webview's strict nonce policy.
- * Content/item rules are shared via .bb-popup-content and .bb-popup-item above. */
-.bb-select-trigger {
-    appearance: none;
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.4rem;
-    min-width: 8rem;
-    color: var(--vscode-input-foreground, var(--vscode-foreground));
-    background: var(--vscode-input-background);
-    border: 1px solid var(--vscode-input-border, transparent);
-    border-radius: 2px;
-    padding: 0.2rem 0.4rem;
-}
-/* The selected-value label ellipsizes (with a title tooltip on the trigger) rather than hard-cutting when
-   the trigger is narrower than the text - e.g. a long opcode/timing name in a cramped multi-column cell. */
-.bb-select-trigger .bb-select-label {
-    flex: 0 1 auto;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-.bb-select-trigger::after {
-    content: "\25BE"; /* down-pointing triangle indicating a dropdown */
-    color: var(--vscode-descriptionForeground);
-    font-size: 0.8em;
-    flex: 0 0 auto;
-}
-/* In the dense layout, let the trigger shrink to its grid cell so the label ellipsizes (tooltip shows the
-   full value) instead of the 8rem min-width forcing it past a narrow multi-column cell and hard-cutting. */
-.layout-root .field-control .bb-select-trigger {
-    min-width: 0;
-}
-.bb-select-trigger:focus,
-.bb-select-trigger[data-state="open"] {
-    outline: none;
-    border-color: var(--vscode-focusBorder);
-}
-.bb-select-trigger[data-disabled] {
-    opacity: 0.5;
-    cursor: default;
-}
-.bb-select-content {
-    /* Anchor-width: the content panel matches the trigger button width. */
-    min-width: var(--bits-select-anchor-width, 8rem);
-}
-.bb-select-viewport {
-    max-height: 17rem;
-    overflow: auto;
 }
 
 /* ---- bb-menu (themed contextual action menu via the Menu primitive wrapper) ----
@@ -1458,7 +1448,7 @@ input[type="text"]::placeholder {
     justify-self: start;
 }
 .layout-root .kv:not(.kv-multi) .field-control > input,
-.layout-root .kv:not(.kv-multi) .field-control .bb-select-trigger,
+.layout-root .kv:not(.kv-multi) .field-control .bb-combobox,
 .layout-root .kv:not(.kv-multi) .field-control select {
     width: var(--val-ch, 16ch);
     /* border-box so --val-ch is the outer width for the plain input too (it is content-box by default,
@@ -1496,7 +1486,7 @@ input[type="text"]::placeholder {
     max-width: 100%;
 }
 .layout-root .kv.kv-multi .field-control > input,
-.layout-root .kv.kv-multi .field-control .bb-select-trigger,
+.layout-root .kv.kv-multi .field-control .bb-combobox,
 .layout-root .kv.kv-multi .field-control select {
     width: var(--val-ch, 16ch);
     box-sizing: border-box; /* outer width = --val-ch for every control type (see kv:not(.kv-multi) above) */
@@ -1510,7 +1500,7 @@ input[type="text"]::placeholder {
    the tier-width rules above don't reach them - without this the input falls back to its intrinsic width and
    reads ragged next to the tier-sized panels. Same tier var + border-box, so it matches a panel control. */
 .layout-root .vrow.inline .field-control > input,
-.layout-root .vrow.inline .field-control .bb-select-trigger,
+.layout-root .vrow.inline .field-control .bb-combobox,
 .layout-root .vrow.inline .field-control select {
     width: var(--val-ch, 16ch);
     box-sizing: border-box;

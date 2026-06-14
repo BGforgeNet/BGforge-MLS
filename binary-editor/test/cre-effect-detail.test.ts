@@ -48,11 +48,12 @@ describe("CRE embedded v2 effect renders through the shared EFF v2 fragment", ()
         expect(missing).toEqual([]);
         expect(detailVariantResolves(variant, map)).toBe(true);
 
-        // Opcode is the discriminator and must reach the detail as the searchable enum (same control as the
-        // standalone .eff), and the label override must have applied to a renamed field.
+        // Opcode is the discriminator and must reach the detail as an open enum (same control as the standalone
+        // .eff - every enum is a searchable combobox; opcode is `enumOpen` so it also accepts a custom numeric
+        // value), and the label override must have applied to a renamed field.
         const opcode = map[`${EFFECTS_PREFIX}.opcode`];
         expect(opcode?.valueType).toBe("enum");
-        expect(opcode?.searchableEnum).toBe(true);
+        expect(opcode?.enumOpen).toBe(true);
         expect(map[`${EFFECTS_PREFIX}.casterXCoord`]?.name).toBe("Caster X Coordinate");
     });
 });

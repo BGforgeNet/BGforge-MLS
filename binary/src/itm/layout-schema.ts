@@ -15,8 +15,9 @@
  *   - the derived offset/count fields (extendedHeadersOffset/Count, featureBlocksOffset/Index/Count) which
  *     the serializer recomputes and the parser marks non-editable.
  *
- * The Effects detail form renders the ~300-entry opcode as a searchable combobox via the spec's
- * `searchableEnum` flag (it flows through to the FormSection-rendered detail field, not just layout blocks).
+ * The Effects detail form renders the ~300-entry opcode as a searchable combobox (every enum is one); being
+ * `enumOpen` it also accepts a custom numeric value (this flows through to the FormSection-rendered detail
+ * field, not just layout blocks).
  */
 
 import { formatLayoutSchema, type FormatLayout } from "../layout-schema-types";

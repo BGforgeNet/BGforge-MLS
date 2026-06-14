@@ -23,8 +23,9 @@
  * a slot array: the 20 bytes are 40 packed scalar header fields (`cre.header.proficiency<N>Active` /
  * `...Original`) rendered as a 2-column matrix (Active Class / Original Class).
  *
- * The Effects detail form renders the ~300-entry opcode as a searchable combobox via the spec's
- * `searchableEnum` flag (it flows through to the FormSection-rendered detail field, not just layout blocks).
+ * The Effects detail form renders the ~300-entry opcode as a searchable combobox (every enum is one); being
+ * `enumOpen` it also accepts a custom numeric value (this flows through to the FormSection-rendered detail
+ * field, not just layout blocks).
  */
 
 import { formatLayoutSchema, type FormatLayout } from "../layout-schema-types";

@@ -82,16 +82,6 @@ const assertNoCsp = installCspGate(page, "PRIMITIVES");
 
 await page.goto("file://" + htmlPath);
 
-// ---- Exercise Select: click the trigger, wait for the listbox content to appear ----
-await page.waitForSelector(".bb-select-trigger", { timeout: 5000 });
-await page.locator(".bb-select-trigger").click();
-await page.waitForSelector(".bb-select-content", { timeout: 5000 });
-await page.waitForSelector(".bb-select-item", { timeout: 5000 });
-const selectItemCount = await page.locator(".bb-select-item").count();
-// Close Select by pressing Escape before exercising Combobox.
-await page.keyboard.press("Escape");
-await page.waitForTimeout(100);
-
 // ---- Exercise Combobox: type into the input (keydown opens the list), then filter ----
 // bits-ui Combobox opens the listbox on the first keydown (non-modifier key) while closed. Playwright's
 // pressSequentially fires real keydown/keypress/keyup events; fill() only sets the value without events.
@@ -297,7 +287,6 @@ const compactMenuDeleteFiresRemove = (opAfterMenuDelete ?? "").includes('"op":"r
 
 // ---- Verdict ----
 console.log("\n=== Primitives CSP gate ===");
-console.log("Select: rendered trigger + opened content; visible items: " + selectItemCount);
 console.log(
     "Combobox: all items (unfiltered): " + comboboxAllCount + "; after 'fireball' filter: " + comboboxFilteredCount,
 );

@@ -72,11 +72,9 @@ export function composeFlags(current: number, mask: number, set: boolean): numbe
     return next >>> 0;
 }
 
-// The searchable Combobox primitive relies on these two helpers. No enum control uses the combobox today
-// (enums are spec-driven Selects, with bits-ui typeahead, regardless of option count), but the primitive is
-// kept available for a field that explicitly opts into search via the spec - e.g. an IE effect-opcode list
-// with hundreds of options where a plain dropdown is unwieldy. That opt-in would be a spec/presentation
-// flag, never an option-count threshold.
+// Every enum renders through the searchable Combobox primitive, which relies on these two helpers: all
+// dropdowns get substring search and a chevron. An OPEN enum (`enumOpen`, the mod-extensible / advisory
+// tables) additionally accepts a custom numeric value via `parseCustomValue`; a closed enum is pick-only.
 
 /** Case-insensitive substring filter over option labels, for the searchable combobox. Empty or
  * whitespace-only query returns all options unchanged. */
@@ -163,10 +161,10 @@ function dropdownMeasure(): { ch: (text: string) => number } | undefined {
 }
 
 /** Pick a dropdown's width class from its longest option (value-prefixed, as the trigger renders it), measured
- *  in ch. The searchable combobox keeps the widest box (free-text typing room). If text metrics are
- *  unavailable (no DOM), fail to the widest box so an option can never clip. */
+ *  in ch. Sized to the option list (not whether it is searchable - every dropdown is), so a long list like the
+ *  IE opcodes lands on the widest box from its labels alone. If text metrics are unavailable (no DOM), fail to
+ *  the widest box so an option can never clip. */
 export function dropdownWidth(row: Row): DropdownWidth {
-    if (row.searchableEnum === true) return "dd-5";
     const m = dropdownMeasure();
     if (!m) return "dd-5";
     let maxCh = 0;

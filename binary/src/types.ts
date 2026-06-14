@@ -58,8 +58,9 @@ export interface ParsedField {
      */
     enumOptions?: Readonly<Record<string, string>>;
     flagOptions?: Readonly<Record<string, string>>;
-    /** Display hint (from the spec's `searchableEnum`): render this enum as a searchable combobox. */
-    searchableEnum?: boolean;
+    /** Display hint (from the spec's `enumOpen`): the enum table is advisory, not a closed value set, so the
+     *  dropdown lets the user enter a custom numeric value (shown as "N Unknown"). Closed enums omit this. */
+    enumOpen?: boolean;
     /**
      * Numeric display format (from the presentation `format` hint), carried so the editable control can
      * format AND parse the value: `hex32` shows/edits `0x...`. Display-only - `rawValue` stays the stored

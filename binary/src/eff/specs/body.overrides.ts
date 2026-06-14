@@ -36,9 +36,9 @@ export const effBodySpecAnnotated = {
     unused5: { ...effBodySpec.unused5, hidden: true },
     unused6: { ...effBodySpec.unused6, hidden: true },
     unused7: { ...effBodySpec.unused7, hidden: true },
-    // Open enums - mods can extend opcodes and timing modes; strict canonical
-    // mode does not reject unrecognised values. See `ie-common/specs/effect.overrides.ts`.
-    opcode: { ...effBodySpec.opcode, enum: Opcodes, enumOpen: true, searchableEnum: true },
+    // Open enums - the engine accepts any value for opcode/timing (the catalogs are advisory), so strict
+    // canonical mode does not reject unrecognised values. See `ie-common/specs/effect.overrides.ts`.
+    opcode: { ...effBodySpec.opcode, enum: Opcodes, enumOpen: true },
     target: { ...effBodySpec.target, enum: EffectTarget },
     timing: { ...effBodySpec.timing, enum: EffectTiming, enumOpen: true },
     resistance: { ...effBodySpec.resistance, flags: EffectResistanceFlags },

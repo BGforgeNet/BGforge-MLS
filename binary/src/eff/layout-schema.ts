@@ -7,7 +7,8 @@
  * verified against the model). The two signature/version magic fields (header and body) and the reserved
  * padding (`unused1`..`unused7`) are intentionally omitted - they are constants/padding, not user data;
  * leaving them out of the layout does not affect round-trip (the serializer rebuilds from the model). The
- * ~300-entry `opcode` enum renders as a searchable combobox via the spec's `searchableEnum` flag.
+ * ~300-entry `opcode` enum renders as a searchable combobox (every enum does); being `enumOpen` it also
+ * accepts a custom numeric value.
  */
 
 import { formatLayoutSchema, type FormatLayout } from "../layout-schema-types";

@@ -1,7 +1,7 @@
 <script lang="ts">
-    // Showcase for primitives spike: renders Select, Combobox, Checkbox, Menu, and Tabs wrappers so the
-    // Playwright driver can exercise them under the real strict CSP and assert no CSP violation occurs.
-    import Select from "../../../client/src/binary-editor/webview/components/primitives/Select.svelte";
+    // Showcase for primitives spike: renders Combobox, Checkbox, Menu, and Tabs wrappers so the Playwright
+    // driver can exercise them under the real strict CSP and assert no CSP violation occurs. (Every enum is a
+    // Combobox now - the plain Select primitive was retired, so it is no longer showcased.)
     import Combobox from "../../../client/src/binary-editor/webview/components/primitives/Combobox.svelte";
     import Checkbox from "../../../client/src/binary-editor/webview/components/primitives/Checkbox.svelte";
     import Menu from "../../../client/src/binary-editor/webview/components/primitives/Menu.svelte";
@@ -9,14 +9,6 @@
     import RowActions from "../../../client/src/binary-editor/webview/components/RowActions.svelte";
     import { Bridge } from "../../../client/src/binary-editor/webview/state/bridge";
     import type { WebviewToHost } from "../../../client/src/binary-editor/webview/messages";
-
-    const selectOptions = [
-        { value: 0, label: "None" },
-        { value: 1, label: "Fire" },
-        { value: 2, label: "Cold" },
-        { value: 3, label: "Lightning" },
-    ];
-    let selectCurrent = $state(1);
 
     // Large option list (>100 entries) to exercise type-to-search and scrolling. These mirror the shape
     // of IE opcode lists where hundreds of opcodes make a plain dropdown unusable.
@@ -97,10 +89,6 @@
 </script>
 
 <div class="showcase-root">
-    <div class="showcase-section">
-        <div class="showcase-label">Select (plain dropdown)</div>
-        <Select options={selectOptions} value={selectCurrent} ariaLabel="Element" onchange={(v) => (selectCurrent = v)} />
-    </div>
     <div class="showcase-section">
         <div class="showcase-label">Combobox (searchable, 130 options)</div>
         <Combobox

@@ -5,7 +5,8 @@
  * Field refs are the SPL adapter's semantic keys (`spl.header.<camelCase>`, verified against the model).
  * Omitted (round-trip unaffected - serializer rebuilds from the model): signature/version magic, the many
  * reserved `unused*` padding fields, and the serializer-managed offset/count fields. The Effects detail
- * opcode renders as a searchable combobox via the spec's `searchableEnum` flag.
+ * opcode renders as a searchable combobox (every enum does); being `enumOpen` it also accepts a custom
+ * numeric value.
  */
 
 import { formatLayoutSchema, type FormatLayout } from "../layout-schema-types";

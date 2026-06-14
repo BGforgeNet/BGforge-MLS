@@ -60,7 +60,7 @@ export function projectRow(
     if (field.description !== undefined) base.description = field.description;
     if (field.enumOptions !== undefined) base.enumOptions = field.enumOptions;
     if (field.flagOptions !== undefined) base.flagOptions = field.flagOptions;
-    if (field.searchableEnum === true) base.searchableEnum = true;
+    if (field.enumOpen === true) base.enumOpen = true;
     if (field.numericFormat !== undefined) base.numericFormat = field.numericFormat;
     // Semantic key (stable, index-collapsed) lets a list entry's detail pane key its child rows for a shared
     // layout fragment. Computed for fields only; undefined when the format/segments don't resolve to a key.

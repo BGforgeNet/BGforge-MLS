@@ -129,9 +129,6 @@ describe("valueTier", () => {
 });
 
 describe("dropdownWidth", () => {
-    it("keeps the searchable combobox at the widest box (free-text typing room)", () => {
-        expect(dropdownWidth({ ...enumRow, searchableEnum: true })).toBe("dd-5");
-    });
     it("fails wide when text metrics are unavailable (jsdom has no 2d canvas context)", () => {
         // Without a measurable font the width can't be computed, so a dropdown must never clip - it picks dd-5.
         expect(dropdownWidth(enumRow)).toBe("dd-5");

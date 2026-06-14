@@ -53,11 +53,12 @@ describe("ITM/SPL effects render through the shared feature-block fragment", () 
             expect(missing).toEqual([]);
             expect(detailVariantResolves(variant, map)).toBe(true);
 
-            // Opcode reaches the detail as the searchable enum (same control as EFF/CRE), and the level-range
+            // Opcode reaches the detail as an open enum (same control as EFF/CRE - every enum is a searchable
+            // combobox; opcode is `enumOpen` so it also accepts a custom numeric value), and the level-range
             // label override applied.
             const opcode = map[`${prefix}.opcode`];
             expect(opcode?.valueType).toBe("enum");
-            expect(opcode?.searchableEnum).toBe(true);
+            expect(opcode?.enumOpen).toBe(true);
             expect(map[`${prefix}.maxLevel`]?.name).toBe("Maximum Level");
         });
     }

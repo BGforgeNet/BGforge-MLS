@@ -128,28 +128,58 @@ await page.screenshot({ path: path.join(here, "shot-cre.png"), fullPage: true })
 // dedicated dd-{1..5} ch scale, decoupled from the text-input tiers - so a dropdown sharing a column with a
 // hex/resref input is no longer dragged to that input's width). The Identity box's Alignment is a stable mid
 // case: its longest of the nine fixed alignments is "0x32 Chaotic neutral". Assert it lands on dd-4 (NOT the
-// widest dd-5, proving it tightened below the widest bucket), then drive it to that longest option and assert
-// the trigger label is not ellipsis-clipped (scrollWidth <= clientWidth). ----
+// widest dd-5, proving it tightened below the widest bucket), then drive it (via the chevron) to that longest
+// option and assert the combobox input shows it without being horizontally clipped (scrollWidth <= clientWidth).
+// Every enum is now a searchable combobox: the aria-label is on the input, the chevron opens the list. ----
 {
-    const alignFc = page.locator('.field-control:has(.bb-select-trigger[aria-label="Alignment"])').first();
+    const alignFc = page.locator('.field-control:has(.bb-combobox-input[aria-label="Alignment"])').first();
     const alignClass = await alignFc.evaluate((el) => el.className.replace("field-control", "").trim());
     check(
         "dropdown: mid-length Alignment lands on dd-4 (tighter than the widest dd-5)",
         alignClass === "dd-4",
         alignClass,
     );
-    const alignTrigger = page.locator('.bb-select-trigger[aria-label="Alignment"]');
-    await alignTrigger.click();
+    await alignFc.locator(".bb-combobox-input").click(); // focusing the input opens the list (chevron is decorative)
     await page.waitForTimeout(150);
+    // The OPEN list must render real items: a visible row height (a collapsed ~6px row clips the label) and a
+    // non-empty label on every option, with an item highlighted (on open it is the current value's row; after a
+    // filter bits-ui highlights the first match - covered by the primitives probe).
+    const listInfo = await page.evaluate(() => {
+        const items = Array.from(document.querySelectorAll(".bb-popup-item")) as HTMLElement[];
+        return {
+            count: items.length,
+            minH: items.length ? Math.min(...items.map((i) => Math.round(i.getBoundingClientRect().height))) : 0,
+            allLabeled: items.every((i) => (i.textContent ?? "").trim().length > 0),
+            anyHighlighted: items.some((i) => i.hasAttribute("data-highlighted")),
+        };
+    });
+    check(
+        "dropdown: open list renders labeled rows (visible height + text) with a highlighted item",
+        listInfo.count > 0 && listInfo.minH >= 12 && listInfo.allLabeled && listInfo.anyHighlighted,
+        JSON.stringify(listInfo),
+    );
     await page.locator(".bb-popup-item", { hasText: "Chaotic neutral" }).first().click();
     await page.waitForTimeout(150);
-    const alignClip = await page
-        .locator('.bb-select-trigger[aria-label="Alignment"] .bb-select-label')
-        .evaluate((el) => ({ text: el.textContent ?? "", clipped: el.scrollWidth > el.clientWidth + 1 }));
+    const alignClip = await alignFc
+        .locator(".bb-combobox-input")
+        .evaluate((el: HTMLInputElement) => ({ text: el.value, clipped: el.scrollWidth > el.clientWidth + 1 }));
     check(
-        "dropdown: longest Alignment option fits the dd-4 trigger without clipping",
+        "dropdown: longest Alignment option fits the dd-4 combobox without clipping",
         !alignClip.clipped,
         JSON.stringify(alignClip),
+    );
+    // Re-picking the CURRENT value must keep it and close: bits-ui's single-select toggles the selection OFF on a
+    // re-pick (value -> ""), which would blank an enum and leave the list open. "Chaotic neutral" is selected now.
+    await alignFc.locator(".bb-combobox-input").click();
+    await page.waitForTimeout(120);
+    await page.locator(".bb-popup-item", { hasText: "Chaotic neutral" }).first().click();
+    await page.waitForTimeout(120);
+    const rePick = await alignFc.locator(".bb-combobox-input").evaluate((el: HTMLInputElement) => el.value);
+    const rePickOpen = await page.locator(".bb-combobox-content").count();
+    check(
+        "dropdown: re-picking the current value keeps it and closes (no single-select deselect)",
+        rePick.includes("Chaotic neutral") && rePickOpen === 0,
+        JSON.stringify({ rePick, rePickOpen }),
     );
 }
 
@@ -451,7 +481,7 @@ await doUndo();
 // ============================================================
 // Effect detail: a CRE v2 effect renders through the SHARED EFF v2 fragment (the same LayoutRenderer panels
 // a standalone `.eff` uses), not a generic auto-form - so the detail pane shows `.layout-root` panels, and
-// opcode renders as a searchable combobox (spec searchableEnum).
+// opcode renders as a searchable combobox (every enum does; opcode is enumOpen so it also accepts a custom value).
 // ============================================================
 await selectRow(effectsPanel, 0);
 await effectsPanel.locator(".detail .layout-root .field").first().waitFor({ timeout: 3000 });

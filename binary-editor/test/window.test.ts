@@ -149,6 +149,17 @@ function enumFlagResult(): ParseResult {
                             type: "flags",
                             flagOptions: { "0": "Visible", "1": "Dead" },
                         },
+                        {
+                            // Open enum (the spec's `enumOpen` flowed through walk-display): the dropdown
+                            // accepts a custom numeric value, so projection must carry the flag to the Row.
+                            name: "Class",
+                            value: 2,
+                            offset: 2,
+                            size: 1,
+                            type: "enum",
+                            enumOptions: { "0": "None", "1": "Mage", "2": "Fighter" },
+                            enumOpen: true,
+                        },
                     ],
                 },
             ],
@@ -167,6 +178,14 @@ describe("projectRow metadata", () => {
         expect(projectRow(m, flags).flagOptions).toEqual({ "0": "Visible", "1": "Dead" });
         // groups carry none of these
         expect(projectRow(m, stats).enumOptions).toBeUndefined();
+    });
+
+    it("carries enumOpen for an open enum and leaves it unset for a closed one", () => {
+        const m = buildModel(enumFlagResult());
+        const race = m.nodes.find((n) => n.name === "Race")!; // closed enum (no enumOpen)
+        const klass = m.nodes.find((n) => n.name === "Class")!; // open enum
+        expect(projectRow(m, klass).enumOpen).toBe(true);
+        expect(projectRow(m, race).enumOpen).toBeUndefined();
     });
 
     it("falls back to field.value for rawValue when the parser left it unset", () => {
@@ -193,10 +212,10 @@ describe("getChildren", () => {
         const m = buildModel(enumFlagResult()); // enumFlagResult() was added by Task 1
         const stats = m.nodes.find((n) => n.name === "Stats")!;
         const all = getChildren(m, stats.id, 0, 100);
-        expect(all.total).toBe(2);
-        expect(all.rows.map((row) => row.name)).toEqual(["Race", "Flags"]);
+        expect(all.total).toBe(3);
+        expect(all.rows.map((row) => row.name)).toEqual(["Race", "Flags", "Class"]);
         const sliced = getChildren(m, stats.id, 1, 2);
         expect(sliced.rows.map((row) => row.name)).toEqual(["Flags"]);
-        expect(sliced.total).toBe(2);
+        expect(sliced.total).toBe(3);
     });
 });
