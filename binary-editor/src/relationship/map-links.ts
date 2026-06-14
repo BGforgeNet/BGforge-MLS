@@ -1,15 +1,17 @@
 /**
- * MAP cross-record jump links: a script's `Owner ID` references the object that owns it (the object's `id`),
- * and an object's `SID` references the script it runs (the script slot's own `sid`). This overlay resolves
- * those references to the target entry node so the view can render a click-to-navigate affordance.
+ * MAP cross-record jump links, both driven by the authoritative `sid` binding: an object's `SID` field names
+ * the script it runs, and that same value is the script's own `SID`. So the two records are linked by a shared
+ * sid - the object that runs a script is exactly the object whose `SID` equals the script's `SID`.
  *
- * The reverse fields are NOT links: a script's own `SID` is its identity (not a reference), and an object's
- * `ID` is its identity. Only `Owner ID` (always a script field - objects have none) and an object-entry `SID`
- * produce a link.
+ *   - object's SID field  -> the script with that sid (scriptsBySid).
+ *   - script's SID field  -> the object that references it, i.e. whose SID equals this script's sid (objectsBySid).
  *
- * Indices are built once per model and memoized (a heavily-scripted map has thousands of scripts/objects, so
- * rebuilding per field would be quadratic). A mutation produces a fresh Model, which misses the WeakMap and
- * rebuilds.
+ * The script's `Owner ID` (scr_oid) is deliberately NOT used: it is engine runtime state cached at bind time
+ * and is frequently stale or wrong on disk (e.g. Broken Hills' map has Owner IDs pointing at unrelated objects
+ * of the wrong type), whereas the object<->script `sid` reference is authored and reliable.
+ *
+ * Indices are built once per model and memoized (a heavily-scripted map has thousands of records, so rebuilding
+ * per field would be quadratic). A mutation produces a fresh Model, which misses the WeakMap and rebuilds.
  */
 
 import type { ParsedField } from "@bgforge/binary";
@@ -17,7 +19,7 @@ import type { FlatNode, Model } from "../model";
 import type { NodeId } from "../types";
 import type { FieldOverride } from "./types";
 
-/** The stored numeric value of a field node (the i32/u32 behind id/sid/ownerId), or undefined. */
+/** The stored numeric value of a field node (the i32/u32 behind id/sid), or undefined. */
 function numericValue(node: FlatNode): number | undefined {
     if (node.kind !== "field") return undefined;
     const field = node.source as ParsedField;
@@ -33,11 +35,11 @@ interface LinkTarget {
 }
 
 interface MapLinkIndex {
-    /** object `id` value -> object entry node. */
-    objectsById: Map<number, LinkTarget>;
-    /** script `sid` value -> script entry node. */
+    /** object `sid` value -> object entry (the object that runs the script with that sid). */
+    objectsBySid: Map<number, LinkTarget>;
+    /** script `sid` value -> script entry. */
     scriptsBySid: Map<number, LinkTarget>;
-    /** Entry nodes that are objects - used to tell an object `SID` (a link) from a script `SID` (identity). */
+    /** Entry nodes that are objects - used to tell an object `SID` (-> script) from a script `SID` (-> object). */
     objectEntries: Set<NodeId>;
 }
 
@@ -56,7 +58,7 @@ function childFieldValue(model: Model, entry: FlatNode, fieldName: string): numb
 }
 
 function buildIndex(model: Model): MapLinkIndex {
-    const objectsById = new Map<number, LinkTarget>();
+    const objectsBySid = new Map<number, LinkTarget>();
     const scriptsBySid = new Map<number, LinkTarget>();
     const objectEntries = new Set<NodeId>();
 
@@ -71,22 +73,18 @@ function buildIndex(model: Model): MapLinkIndex {
         for (const entryIdx of model.childrenByParent.get(section.id) ?? []) {
             const entry = model.nodes[entryIdx]!;
             if (entry.kind !== "group") continue;
+            const sid = childFieldValue(model, entry, "SID");
+            const target = { nodeId: entry.id, sectionKey: section.name, label: entry.name };
             if (isObjects) {
                 objectEntries.add(entry.id);
-                const id = childFieldValue(model, entry, "ID");
-                // First entry wins: object ids are unique in a well-formed map; a duplicate is malformed.
-                if (id !== undefined && !objectsById.has(id)) {
-                    objectsById.set(id, { nodeId: entry.id, sectionKey: section.name, label: entry.name });
-                }
-            } else {
-                const sid = childFieldValue(model, entry, "SID");
-                if (sid !== undefined && !scriptsBySid.has(sid)) {
-                    scriptsBySid.set(sid, { nodeId: entry.id, sectionKey: section.name, label: entry.name });
-                }
+                // -1 means the object runs no script; first valid sid wins (a well-formed map's refs are unique).
+                if (sid !== undefined && sid !== -1 && !objectsBySid.has(sid)) objectsBySid.set(sid, target);
+            } else if (sid !== undefined && !scriptsBySid.has(sid)) {
+                scriptsBySid.set(sid, target);
             }
         }
     }
-    return { objectsById, scriptsBySid, objectEntries };
+    return { objectsBySid, scriptsBySid, objectEntries };
 }
 
 function getIndex(model: Model): MapLinkIndex {
@@ -98,28 +96,16 @@ function getIndex(model: Model): MapLinkIndex {
     return idx;
 }
 
-/** Resolve a MAP cross-record jump for the script `Owner ID` and object `SID` fields. */
+/** Resolve a MAP cross-record jump for the SID field of a script (-> its object) or an object (-> its script). */
 export function mapLinkFieldOverride(model: Model, node: FlatNode): FieldOverride | undefined {
+    if (node.name !== "SID" || node.parentId === undefined) return undefined;
     const value = numericValue(node);
     if (value === undefined) return undefined;
 
-    // Owner ID is a script field only (objects have none), so the name alone identifies the script->object ref.
-    if (node.name === "Owner ID") {
-        const target = getIndex(model).objectsById.get(value);
-        return target
-            ? { link: { targetNodeId: target.nodeId, sectionKey: target.sectionKey, label: target.label } }
-            : undefined;
-    }
-
-    // SID is ambiguous: an object's SID references its script (a link); a script's own SID is its identity (not).
-    if (node.name === "SID" && node.parentId !== undefined) {
-        const idx = getIndex(model);
-        if (!idx.objectEntries.has(node.parentId)) return undefined;
-        const target = idx.scriptsBySid.get(value);
-        return target
-            ? { link: { targetNodeId: target.nodeId, sectionKey: target.sectionKey, label: target.label } }
-            : undefined;
-    }
-
-    return undefined;
+    const idx = getIndex(model);
+    // An object's SID names the script it runs; a script's SID is its own id, resolving to the object that runs it.
+    const target = idx.objectEntries.has(node.parentId) ? idx.scriptsBySid.get(value) : idx.objectsBySid.get(value);
+    return target
+        ? { link: { targetNodeId: target.nodeId, sectionKey: target.sectionKey, label: target.label } }
+        : undefined;
 }

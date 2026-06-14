@@ -1,28 +1,29 @@
 /**
  * MAP cross-record jump harness pass.
  *
- * Opens a script-bearing map, selects a script whose Owner ID references an object, and clicks the jump chip
- * beside Owner ID. Asserts the view navigates to the Objects tab and selects the object whose ID matches the
- * owner. Then, if that object references a script (SID jump chip present), clicks it and asserts the view
- * navigates back to the Scripts tab - the round trip.
+ * Opens a script-bearing map (with the PRO resolver so its script-owning objects decode), finds a script whose
+ * SID links to the object that runs it, and clicks the SID jump chip. Asserts the view navigates to the Objects
+ * tab, selects the object whose SID equals the script's sid (the authored binding), and scrolls it into view.
  */
 
 import { chromium } from "playwright";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { buildFileDerivedParseOptions } from "@bgforge/binary";
 import { dispatch } from "../../src/index";
 import type { HostToWebview, WebviewToHost } from "../../../client/src/binary-editor/webview/messages";
 import { installCspGate } from "./csp-gate";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const FIXTURE = path.join(here, "../../../client/testFixture/maps/newr2.map");
+const FIXTURE = path.join(here, "../../../client/testFixture/maps/denbus1.map");
 const mapBytes = new Uint8Array(fs.readFileSync(FIXTURE));
+const parseOptions = buildFileDerivedParseOptions(FIXTURE);
 
 let sessionId = "";
 function hostUp(m: WebviewToHost): HostToWebview[] {
     if (m.type === "ready") {
-        const r = dispatch({ type: "open", uri: "file:///newr2.map", bytes: mapBytes });
+        const r = dispatch({ type: "open", uri: "file:///denbus1.map", bytes: mapBytes, options: parseOptions });
         if (r.type === "opened") {
             sessionId = r.result.sessionId;
             return [{ type: "init", open: r.result }];
@@ -74,60 +75,67 @@ const fieldNumber = (label: string) =>
         return input ? input.value : null;
     }, label);
 
-// --- Navigate to a script with an Owner ID jump chip ---
+// --- Find a script whose SID links to its object. Only object-owned scripts (item/critter) are referenced by
+// an object, so scan each script subtab's first rows until one exposes a SID chip. ---
 await page.locator('.bb-tabs.primary button[role="tab"]').filter({ hasText: "Scripts" }).first().click();
 await page.waitForTimeout(150);
-// First script subtab with rows.
-const subtabs = page.locator('.layout-root .bb-tabs button[role="tab"]');
-for (let i = 0; i < (await subtabs.count()); i++) {
-    const label = (await subtabs.nth(i).innerText()).trim();
-    if (!["System", "Spatial", "Timer", "Item"].some((s) => label.startsWith(s))) continue;
-    await subtabs.nth(i).click();
-    await page.waitForTimeout(120);
-    if ((await page.locator(".layout-root .vlist .vrow").count()) > 0) break;
-}
-
-// Find the first script row whose detail exposes an Owner ID jump chip.
-let ownerHex: string | null = null;
-let jumpLabel = "";
-const rows = page.locator(".layout-root .vlist .vrow");
-const rowCount = Math.min(await rows.count(), 20);
-for (let i = 0; i < rowCount; i++) {
-    await rows.nth(i).click();
-    await page.waitForTimeout(80);
-    const ownerField = page
+const sidField = () =>
+    page
         .locator(".layout-root .field")
-        .filter({ has: page.locator('.label:text-is("Owner ID")') })
+        .filter({ has: page.locator('.label:text-is("SID")') })
         .first();
-    const chip = ownerField.locator(".jump-link").first();
-    if ((await chip.count()) > 0) {
-        ownerHex = await fieldHex("Owner ID");
-        jumpLabel = (await chip.innerText()).trim();
-        break;
+let sidHex: string | null = null;
+let jumpLabel = "";
+const subtabs = page.locator('.layout-root .bb-tabs button[role="tab"]');
+for (let s = 0; s < (await subtabs.count()) && sidHex === null; s++) {
+    const label = (await subtabs.nth(s).innerText()).trim();
+    if (!["System", "Spatial", "Timer", "Item"].some((t) => label.startsWith(t))) continue;
+    await subtabs.nth(s).click();
+    await page.waitForTimeout(120);
+    const rows = page.locator(".layout-root .vlist .vrow");
+    const rowCount = Math.min(await rows.count(), 20);
+    for (let i = 0; i < rowCount; i++) {
+        await rows.nth(i).click();
+        await page.waitForTimeout(70);
+        if ((await sidField().locator(".jump-link").count()) > 0) {
+            sidHex = await fieldHex("SID");
+            jumpLabel = (await sidField().locator(".jump-link").first().innerText()).trim();
+            break;
+        }
     }
 }
-check("found a script whose Owner ID has a jump chip", ownerHex !== null, `owner=0x${ownerHex} chip="${jumpLabel}"`);
+check("found a script whose SID links to its object", sidHex !== null, `sid=0x${sidHex} chip="${jumpLabel}"`);
 
-if (ownerHex !== null) {
-    const ownerSigned = parseInt(ownerHex, 16) | 0;
-    // Click the Owner ID jump chip.
-    await page
-        .locator(".layout-root .field")
-        .filter({ has: page.locator('.label:text-is("Owner ID")') })
-        .first()
-        .locator(".jump-link")
-        .first()
-        .click();
+if (sidHex !== null) {
+    const sidVal = parseInt(sidHex, 16) | 0;
+    await sidField().locator(".jump-link").first().click();
     await page.waitForTimeout(200);
 
     const tabAfter = (await activePrimaryTab()).trim();
-    check("Owner ID jump switches to the Objects tab", tabAfter.startsWith("Objects"), `active="${tabAfter}"`);
+    check("the script SID jump switches to the Objects tab", tabAfter.startsWith("Objects"), `active="${tabAfter}"`);
 
-    const objId = await fieldNumber("ID");
+    // The landed object's SID (the script it runs) equals the script's own sid - the shared binding.
+    const objSid = await fieldNumber("SID");
     check(
-        "the selected object's ID matches the script Owner ID",
-        objId !== null && (parseInt(objId, 10) | 0) === ownerSigned,
-        `objId=${objId} ownerSigned=${ownerSigned}`,
+        "the selected object runs this script (object SID == script SID)",
+        objSid !== null && (parseInt(objSid, 10) | 0) === sidVal,
+        `objSid=${objSid} scriptSid=${sidVal}`,
+    );
+
+    // The jump scrolls the selected entry into view: a .vrow.selected exists in the master list and its box
+    // sits within the list viewport.
+    const visible = await page.evaluate(() => {
+        const sel = document.querySelector(".layout-root .master .vlist .vrow.selected");
+        const list = document.querySelector(".layout-root .master .vlist");
+        if (!sel || !list) return { selected: false, inView: false };
+        const s = sel.getBoundingClientRect();
+        const l = list.getBoundingClientRect();
+        return { selected: true, inView: s.top >= l.top - 1 && s.bottom <= l.bottom + 1 };
+    });
+    check(
+        "the jumped-to object row is selected and scrolled into view",
+        visible.selected && visible.inView,
+        JSON.stringify(visible),
     );
 
     await page.screenshot({ path: path.join(here, "shot-map-jump.png"), fullPage: true });

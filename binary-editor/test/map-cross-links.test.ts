@@ -1,9 +1,13 @@
 /**
- * MAP cross-record jump links: a script's Owner ID resolves to its owning object, and an object's SID resolves
- * to the script it runs. The link rides on the Row (via the relationship overlay) so the view can navigate.
+ * MAP cross-record jump links, both driven by the authoritative object<->script `sid` binding: an object's SID
+ * names the script it runs; that same value is the script's own SID. So an object's SID links to its script,
+ * and a script's SID links to the object that runs it (whose SID equals this script's sid).
  *
- * Parsed WITH the PRO resolver (buildFileDerivedParseOptions) so objects decode - the links only resolve when
- * both the objects and scripts are present.
+ * The script's Owner ID (scr_oid) is NOT linked: fallout2-ce sets it from the object at runtime bind time
+ * (scripts.cc: `script->ownerId = object->id` after `scriptGetScript(object->sid, ...)`), so on disk it is
+ * stale/wrong - Broken Hills' map has Owner IDs pointing at unrelated objects of the wrong type.
+ *
+ * Parsed WITH the PRO resolver so objects decode (links only resolve when both records are present).
  */
 
 import fs from "node:fs";
@@ -36,43 +40,51 @@ function sectionNameOf(m: Model, fieldNode: { parentId?: string }): string | und
     const section = entry?.parentId !== undefined ? m.nodes[m.byId.get(entry.parentId)!] : undefined;
     return section?.name;
 }
-
 /** Section name of an ENTRY node: entry -> section. */
 function entrySectionName(m: Model, entry: { parentId?: string }): string | undefined {
     return entry.parentId !== undefined ? m.nodes[m.byId.get(entry.parentId)!]?.name : undefined;
 }
+
+const sidNodeIn = (m: Model, suffix: string) =>
+    m.nodes.find(
+        (n) =>
+            n.name === "SID" &&
+            sectionNameOf(m, n)?.endsWith(suffix) === true &&
+            projectRow(m, n, rel).link !== undefined,
+    );
 
 describe("MAP cross-record jump links", () => {
     it("registers a relationship model for map", () => {
         expect(rel).toBeDefined();
     });
 
-    it("links a script Owner ID to the object whose ID matches", () => {
+    it("links an object's SID to the script it runs (same sid)", () => {
         const m = mapModel();
-        const node = m.nodes.find((n) => n.name === "Owner ID" && projectRow(m, n, rel).link !== undefined);
-        expect(node, "a script with a resolvable Owner ID exists in denbus1").toBeDefined();
-        const row = projectRow(m, node!, rel);
-        const target = m.nodes[m.byId.get(row.link!.targetNodeId)!]!;
-        // The jump target is the object entry whose ID equals the owner id, labelled by the entry name.
-        expect(childRawValue(m, target.id, "ID")).toBe(row.rawValue);
-        expect(row.link!.label).toBe(target.name);
-        expect(entrySectionName(m, target)?.endsWith("Objects")).toBe(true);
-    });
-
-    it("links an object SID to the script whose SID matches", () => {
-        const m = mapModel();
-        const node = m.nodes.find((n) => n.name === "SID" && projectRow(m, n, rel).link !== undefined);
+        const node = sidNodeIn(m, "Objects");
         expect(node, "an object with a resolvable SID exists in denbus1").toBeDefined();
         const row = projectRow(m, node!, rel);
         const target = m.nodes[m.byId.get(row.link!.targetNodeId)!]!;
-        expect(childRawValue(m, target.id, "SID")).toBe(row.rawValue);
         expect(entrySectionName(m, target)?.endsWith("Scripts")).toBe(true);
+        // The linked script's own SID equals the object's SID value (the shared binding key).
+        expect(childRawValue(m, target.id, "SID")).toBe(row.rawValue);
+        expect(row.link!.label).toBe(target.name);
     });
 
-    it("does not link a script's own SID (identity, not a reference)", () => {
+    it("links a script's SID to the object that runs it (object SID equals this script's sid)", () => {
         const m = mapModel();
-        const scriptSid = m.nodes.find((n) => n.name === "SID" && sectionNameOf(m, n)?.endsWith("Scripts") === true);
-        expect(scriptSid, "a script entry SID exists").toBeDefined();
-        expect(projectRow(m, scriptSid!, rel).link).toBeUndefined();
+        const node = sidNodeIn(m, "Scripts");
+        expect(node, "a script referenced by an object exists in denbus1").toBeDefined();
+        const row = projectRow(m, node!, rel);
+        const target = m.nodes[m.byId.get(row.link!.targetNodeId)!]!;
+        expect(entrySectionName(m, target)?.endsWith("Objects")).toBe(true);
+        // The owning object's SID equals this script's sid.
+        expect(childRawValue(m, target.id, "SID")).toBe(row.rawValue);
+    });
+
+    it("does not link a script's Owner ID (engine runtime state, not the authored binding)", () => {
+        const m = mapModel();
+        const owner = m.nodes.find((n) => n.name === "Owner ID");
+        expect(owner, "a script Owner ID field exists").toBeDefined();
+        expect(projectRow(m, owner!, rel).link).toBeUndefined();
     });
 });
