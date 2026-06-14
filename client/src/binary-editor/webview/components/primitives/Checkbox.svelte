@@ -56,5 +56,5 @@
             <span class="bb-checkbox-indicator" aria-hidden="true" data-checked={isChecked}></span>
         {/snippet}
     </Checkbox.Root>
-    <span class="bb-checkbox-text">{label}</span>
+    {#if label}<span class="bb-checkbox-text">{label}</span>{/if}
 </label>

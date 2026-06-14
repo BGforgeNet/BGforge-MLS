@@ -43,7 +43,7 @@
     const flagFieldMap: Record<string, Row> = $derived(Object.fromEntries(flagFields.map((r) => [r.id, r])));
 
     // Render a flag field as aligned vertical checkbox columns (the same FlagColumns the layout path uses),
-    // not the pack-left FlagsField grid: a many-bit field like an effect's Save Type otherwise wraps raggedly
+    // not a pack-left checkbox grid: a many-bit field like an effect's Save Type otherwise wraps raggedly
     // with no column alignment. Width scales with the bit count so a tall bitfield stays compact: a large one
     // (the MAP object's 22 ObjectFlags) gets four columns, a medium one two, and a small field stays in one
     // tidy column rather than stranded across two. (Auto-form only - layout-driven formats pass their own

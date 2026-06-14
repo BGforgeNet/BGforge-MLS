@@ -1,10 +1,7 @@
 <script lang="ts">
     import type { Diagnostic, Row } from "@bgforge/binary-editor";
     import { controlKind, valueTier, dropdownWidth } from "../state/controls";
-    import NumberField from "./controls/NumberField.svelte";
-    import StringField from "./controls/StringField.svelte";
-    import EnumField from "./controls/EnumField.svelte";
-    import FlagsField from "./controls/FlagsField.svelte";
+    import CellControl from "./CellControl.svelte";
     import Icon from "./Icon.svelte";
     import { useJump } from "../state/jump-context";
     const { row, onedit, diagnostics = [] }:
@@ -22,7 +19,6 @@
     const widthClass = $derived(
         kind === "flags" ? "" : kind === "enum" ? dropdownWidth(row) : `tier-${valueTier(row)}`,
     );
-    const emit = (v: number | string) => onedit(row.id, v);
     const hasDiag = $derived(diagnostics.length > 0);
     const diagTitle = $derived(diagnostics.map((d) => d.message).join("; "));
     const firstFix = $derived(diagnostics.find((d) => d.quickFix));
@@ -36,16 +32,13 @@
               : "info",
     );
 </script>
-<div class="field" class:field-flags={kind === "flags"}>
+<div class="field">
     <span class="label" title={row.description ?? ""}>{row.name}</span>
     <!-- The control and its trailing chrome (offset/diagnostic) are wrapped so .field always has exactly
          two children (label + value); the layout path makes .field a 2-column subgrid so labels share a
          max-content column and every control aligns at a uniform width. -->
     <span class="field-control {widthClass}">
-        {#if kind === "number"}<NumberField {row} onedit={emit} />
-        {:else if kind === "string"}<StringField {row} onedit={emit} />
-        {:else if kind === "enum"}<EnumField {row} onedit={emit} />
-        {:else}<FlagsField {row} onedit={emit} />{/if}
+        <CellControl {row} {onedit} />
         {#if row.link && jump}
             {@const link = row.link}
             <button type="button" class="jump-link" title={`Go to ${link.label}`} onclick={() => jump(link)}>

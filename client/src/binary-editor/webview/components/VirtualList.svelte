@@ -63,7 +63,7 @@
     // otherwise the positional name ("Effect 1"). The index is rendered separately as a muted prefix.
     function rowLabel(row: Row): string { return row.summary ?? row.name; }
 </script>
-<div class="vlist" bind:this={vlistEl}
+<div class="vlist" bind:this={vlistEl} style="--vrow-height:{rowHeight}px"
      bind:clientHeight={viewportHeight} onscroll={(e) => (scrollTop = (e.target as HTMLElement).scrollTop)}>
     <!-- The interpolated style= attributes below are CSP-safe: Svelte compiles a `style="...{expr}..."`
          attribute to element.style.cssText (a CSSOM mutation), which CSP does not govern. Only STATIC

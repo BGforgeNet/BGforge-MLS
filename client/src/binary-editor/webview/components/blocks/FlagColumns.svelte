@@ -1,6 +1,6 @@
 <script lang="ts">
     // One flags field rendered as N vertical checkbox columns (the critter Header flags). Reuses the
-    // same decompose/compose helpers as FlagsField so bit semantics match the rest of the editor.
+    // shared decompose/compose helpers (state/controls.ts) so bit semantics match the rest of the editor.
     import type { FieldRef, Row } from "@bgforge/binary-editor";
     import { decomposeFlags, composeFlags } from "../../state/controls";
     import Checkbox from "../primitives/Checkbox.svelte";
