@@ -269,7 +269,10 @@ describe("bin CLI integration", () => {
 
             const { code, stdout, stderr } = run(tmpMap, "--save", "--graceful-map");
             expect(code).toBe(0);
-            expect(stderr).toBe("");
+            // Graceful parsing preserves the undecodable object tail as an opaque range and surfaces it as a
+            // non-fatal warning on stderr (the file is only partially decoded); the save still succeeds.
+            expect(stderr).toContain("Warnings parsing");
+            expect(stderr).toContain("could not be fully decoded and is preserved unchanged");
             expect(stdout).toContain("Saved:");
             expect(fs.existsSync(path.join(tmpDir, "sfsheng-graceful.map.json"))).toBe(true);
         });
@@ -282,7 +285,10 @@ describe("bin CLI integration", () => {
 
             const { code, stdout, stderr } = run(tmpMap, "--save");
             expect(code).toBe(0);
-            expect(stderr).toBe("");
+            // The PRO-dependent object tail is preserved as an opaque range and surfaced as a non-fatal
+            // partial-decode warning on stderr; the strict save still succeeds (exit 0).
+            expect(stderr).toContain("Warnings parsing");
+            expect(stderr).toContain("could not be fully decoded and is preserved unchanged");
             expect(stdout).toContain("Saved:");
 
             const jsonText = fs.readFileSync(path.join(tmpDir, "denbus1.map.json"), "utf-8");
