@@ -176,3 +176,29 @@ describe("buildTreeHtml - cycle detection in computeDepths", () => {
         expect(html).toContain("Node002");
     });
 });
+
+describe("buildTreeHtml - renderNode early return (line 115) via duplicate entry point", () => {
+    it("renders a node-ref link when a node appears twice in entryPoints", () => {
+        // entryPoints lists the same node twice: the first renderNode call renders it,
+        // the second hits rendered.has(node.name)=true and returns a node-ref link.
+        // This is an unlikely but valid data shape (defensive guard for server data
+        // that lists a node as both an initial and a subsequent entry).
+        const data: DialogData = {
+            nodes: [
+                node({
+                    name: "Node001",
+                    replies: [{ msgId: 100, line: 2 }],
+                    options: [],
+                }),
+            ],
+            entryPoints: ["Node001", "Node001"],
+            messages: { "100": "Hello" },
+        };
+        const html = buildTreeHtml(data);
+        // The first rendering appears as a regular node; the second triggers node-ref
+        expect(html).toContain("Node001");
+        expect(html).toContain("Hello");
+        // The back-reference renders a node-link anchor pointing to the rendered node
+        expect(html).toContain("node-link");
+    });
+});

@@ -81,10 +81,10 @@ export default defineConfig({
             // lowered; raising them when a test bump pulls the actual numbers
             // up turns the gate into a ratchet against future regressions.
             thresholds: {
-                lines: 93,
-                functions: 90,
-                branches: 86,
-                statements: 92,
+                lines: 97,
+                functions: 94,
+                branches: 90,
+                statements: 96,
             },
         },
     },

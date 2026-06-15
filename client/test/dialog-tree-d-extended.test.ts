@@ -10,7 +10,7 @@ import { vi, describe, expect, it } from "vitest";
 vi.mock("vscode", () => ({}));
 vi.mock("vscode-languageclient/node", () => ({}));
 
-import { buildDTreeHtml } from "../src/dialog-tree/dialogTree-d";
+import { buildDTreeHtml, getBlockStates } from "../src/dialog-tree/dialogTree-d";
 import type { DDialogData, DDialogBlock, DDialogState } from "../../shared/dialog-types";
 
 function makeState(label: string, file: string, overrides: Partial<DDialogState> = {}): DDialogState {
@@ -266,5 +266,72 @@ describe("buildDTreeHtml - extern/copy_trans transitions inside state", () => {
         const html = buildDTreeHtml(data);
         expect(html).toContain("OTHER");
         expect(html).toContain("codicon-arrow-right");
+    });
+});
+
+describe("buildDTreeHtml - goto transition that expands a child state (shouldExpand=true)", () => {
+    it("renders the target state inline as a child details element when it is reachable only via this transition", () => {
+        // shouldExpand=true requires: (1) targetState exists, (2) not yet rendered,
+        // (3) targetMinDepth === currentDepth + 1 (i.e. depth 2 for a state only
+        // reachable from a depth-1 root state's goto, not directly from the block).
+        // s2 is in data.states but NOT a direct block state (speaker differs from
+        // the block file "ROOT"), so computeDepths only sees it at depth 2 via
+        // the goto from s1.
+        const data: import("../../shared/dialog-types").DDialogData = {
+            blocks: [makeBlock("begin", "ROOT")],
+            states: [
+                // s1: direct block state (speaker === block.file "ROOT")
+                {
+                    label: "s1",
+                    line: 1,
+                    sayText: "Root say",
+                    speaker: "ROOT",
+                    transitions: [{ line: 2, replyText: "Go to s2", target: { kind: "goto", label: "s2" } }],
+                },
+                // s2: NOT a direct block state (speaker differs), only reachable
+                // via s1's goto. Its minDepth is therefore 2, satisfying shouldExpand.
+                {
+                    label: "s2",
+                    line: 3,
+                    sayText: "Child say",
+                    speaker: "OTHER",
+                    transitions: [{ line: 4, target: { kind: "exit" } }],
+                },
+            ],
+            messages: {},
+        };
+        const html = buildDTreeHtml(data);
+        // Both states appear in the output
+        expect(html).toContain("s1");
+        expect(html).toContain("s2");
+        expect(html).toContain("Root say");
+        expect(html).toContain("Child say");
+        // The transition is expanded as a <details> child (shouldExpand=true path)
+        expect(html).toContain("option-detail");
+        expect(html).toContain("Go to s2");
+    });
+});
+
+describe("getBlockStates - interject block matches by blockLabel", () => {
+    it("returns states with matching blockLabel for an interject block", () => {
+        const states: DDialogState[] = [
+            { label: "s1", line: 1, sayText: "Hi", speaker: "PLAYER", transitions: [] },
+            {
+                label: "s2",
+                line: 2,
+                sayText: "Interject",
+                blockLabel: "myinterject",
+                transitions: [],
+            },
+        ];
+        const block: DDialogBlock = {
+            kind: "interject",
+            file: "PLAYER",
+            line: 1,
+            label: "myinterject",
+        };
+        const result = getBlockStates(block, states);
+        expect(result).toHaveLength(1);
+        expect(result[0]?.label).toBe("s2");
     });
 });

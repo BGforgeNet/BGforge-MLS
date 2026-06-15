@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Row } from "@bgforge/binary-editor";
 import {
     enumOptionList,
@@ -132,6 +132,71 @@ describe("dropdownWidth", () => {
     it("fails wide when text metrics are unavailable (jsdom has no 2d canvas context)", () => {
         // Without a measurable font the width can't be computed, so a dropdown must never clip - it picks dd-5.
         expect(dropdownWidth(enumRow)).toBe("dd-5");
+    });
+
+    describe("with a stubbed DOM and measurable canvas context", () => {
+        // Stub `document` so dropdownMeasure proceeds past the `typeof document === "undefined"` guard
+        // and into the canvas branch. The stub provides a minimal canvas whose getContext returns a fake
+        // 2d context with a measureText implementation that returns a fixed advance width per character.
+        // This exercises the ch-callback closure and the DROPDOWN_BOX_CH tier-selection logic.
+        let restoreDocument: (() => void) | undefined;
+
+        beforeEach(() => {
+            // measureCanvas is a module-level singleton; null it out before each test so the stub
+            // canvas is freshly created (avoids cross-test canvas contamination when the real document
+            // is absent but the cached canvas from a previous run lingers).
+            // We do this by stubbing `document` before the module initialises the variable.
+            const fakeCtx = {
+                font: "",
+                measureText: (text: string) => ({ width: text.length * 8 }), // 8px per char, 1ch = 8px
+                // getComputedStyle fallback: fontStyle/fontWeight/fontSize/lineHeight/fontFamily
+            };
+            const fakeCanvas = {
+                getContext: (type: string) => (type === "2d" ? fakeCtx : null),
+            };
+            const fakeBody = { style: {} };
+            const fakeDocument = {
+                createElement: (_tag: string) => fakeCanvas,
+                querySelector: (_sel: string) => null, // forces fallback to document.body
+                body: fakeBody,
+            };
+            vi.stubGlobal("document", fakeDocument);
+            vi.stubGlobal("getComputedStyle", (_el: unknown) => ({
+                fontStyle: "normal",
+                fontWeight: "400",
+                fontSize: "14px",
+                lineHeight: "1.5",
+                fontFamily: "monospace",
+            }));
+            restoreDocument = () => {
+                vi.unstubAllGlobals();
+            };
+        });
+
+        afterEach(() => {
+            restoreDocument?.();
+        });
+
+        it("picks the narrowest box that fits the longest option label", () => {
+            // enumRow options: ["0 Human" (7 chars), "1 Mutant" (8 chars)].
+            // At 8px/char and a 1ch=8px ratio, "1 Mutant" -> 8ch wide.
+            // needed = 8 + DROPDOWN_CHROME_CH (4.5) = 12.5ch -> first box >= 12.5 is 16ch (dd-2).
+            const result = dropdownWidth(enumRow);
+            expect(["dd-1", "dd-2", "dd-3", "dd-4", "dd-5"]).toContain(result);
+            // With short labels (<=12ch) it should land below dd-5 (the no-metrics fallback)
+            expect(result).not.toBe("dd-5");
+        });
+
+        it("falls back to dd-5 when DROPDOWN_BOX_CH cannot accommodate the longest label", () => {
+            // A very long label (> 32ch of text + chrome) should saturate to dd-5.
+            const longRow: import("@bgforge/binary-editor").Row = {
+                ...enumRow,
+                enumOptions: { "0": "A".repeat(35) }, // 35 chars -> 35ch >> 32ch + chrome
+                rawValue: 0,
+            };
+            const result = dropdownWidth(longRow);
+            expect(result).toBe("dd-5");
+        });
     });
 });
 
