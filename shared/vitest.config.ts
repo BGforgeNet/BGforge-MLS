@@ -16,10 +16,10 @@ export default defineConfig({
             // The shared/ tree contains a few small library-style helpers used
             // across packages. Threshold reflects the floor measured today.
             thresholds: {
-                lines: 97,
+                lines: 99,
                 functions: 89,
-                branches: 89,
-                statements: 96,
+                branches: 97,
+                statements: 99,
             },
         },
     },

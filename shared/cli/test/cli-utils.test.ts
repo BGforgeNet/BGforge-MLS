@@ -126,6 +126,22 @@ describe("safeProcess", () => {
         expect(stderrSpy).toHaveBeenCalledWith("fallback.txt:10: issue here");
     });
 
+    it("formats with file only when location has neither line nor column", async () => {
+        const result = await safeProcess("fallback.txt", () => {
+            throw Object.assign(new Error("no position"), { location: { file: "src.txt" } });
+        });
+        expect(result).toBe("error");
+        expect(stderrSpy).toHaveBeenCalledWith("src.txt: no position");
+    });
+
+    it("treats a location object with no usable fields as plain", async () => {
+        const result = await safeProcess("plain.txt", () => {
+            throw Object.assign(new Error("unstructured location"), { location: { irrelevant: true } });
+        });
+        expect(result).toBe("error");
+        expect(stderrSpy).toHaveBeenCalledWith("plain.txt: unstructured location");
+    });
+
     it("treats errors without location as plain", async () => {
         const result = await safeProcess("plain.txt", () => {
             throw new Error("nothing structured");
@@ -222,6 +238,12 @@ describe("parseCliArgs", () => {
         process.argv = ["node", "cli.js", "shared/cli/test/cli-utils.test.ts"];
         const args = parseCliArgs("help");
         expect(args?.mode).toBe("stdout");
+    });
+
+    it("parses save-and-check mode", () => {
+        process.argv = ["node", "cli.js", "shared/cli/test/cli-utils.test.ts", "--save-and-check"];
+        const args = parseCliArgs("help");
+        expect(args?.mode).toBe("save-and-check");
     });
 
     it("parses recursive flag -r", () => {
@@ -412,6 +434,35 @@ describe("runCli", () => {
         });
         expect(init).toHaveBeenCalledOnce();
         expect(processFile).toHaveBeenCalledOnce();
+    });
+
+    it("directory mode: exits 1 with a message when no matching files are found", async () => {
+        const processFile = vi.fn<(f: string, m: OutputMode) => FileResult>();
+        await expect(
+            runCli({
+                args: { target: tmpDir, mode: "save", recursive: true, quiet: false },
+                extensions: [".xyz"],
+                description: "test",
+                processFile,
+            }),
+        ).rejects.toThrow("exit");
+        expect(errorSpy).toHaveBeenCalledWith(`No test files found in ${tmpDir}`);
+        expect(processFile).not.toHaveBeenCalled();
+    });
+
+    it("directory mode: logs the found-count and summary when not quiet", async () => {
+        const processFile = vi
+            .fn<(f: string, m: OutputMode) => FileResult>()
+            .mockReturnValueOnce("changed")
+            .mockReturnValueOnce("unchanged");
+        await runCli({
+            args: { target: tmpDir, mode: "save", recursive: true, quiet: false },
+            extensions: [".txt"],
+            description: "test",
+            processFile,
+        });
+        expect(logSpy).toHaveBeenCalledWith("Found 2 test files");
+        expect(logSpy).toHaveBeenCalledWith("\nSummary: 1 changed, 1 unchanged");
     });
 });
 
