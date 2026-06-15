@@ -17,7 +17,7 @@ export default defineConfig({
             // across packages. Threshold reflects the floor measured today.
             thresholds: {
                 lines: 97,
-                functions: 87,
+                functions: 89,
                 branches: 89,
                 statements: 96,
             },

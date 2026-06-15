@@ -30,9 +30,9 @@ export default defineConfig({
             include: ["binary-editor/src/**/*.ts"],
             // Floors set just below the current measured coverage. Ratchet upward as it grows.
             thresholds: {
-                lines: 90,
-                functions: 86,
-                branches: 75,
+                lines: 91,
+                functions: 87,
+                branches: 76,
                 statements: 86,
             },
         },

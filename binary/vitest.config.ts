@@ -36,10 +36,10 @@ export default defineConfig({
             // CLI integration tests live in a separate vitest project and are
             // not counted here. Ratchet upward as coverage grows.
             thresholds: {
-                lines: 86,
-                functions: 89,
-                branches: 74,
-                statements: 86,
+                lines: 90,
+                functions: 91,
+                branches: 77,
+                statements: 88,
             },
         },
     },

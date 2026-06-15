@@ -19,10 +19,10 @@ export default defineConfig({
             // #4943, #5903). scripts/test.sh also serialises coverage jobs.
             clean: false,
             thresholds: {
-                lines: 90,
-                functions: 90,
-                branches: 80,
-                statements: 90,
+                lines: 100,
+                functions: 100,
+                branches: 88,
+                statements: 100,
             },
         },
     },

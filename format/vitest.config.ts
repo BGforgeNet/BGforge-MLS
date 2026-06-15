@@ -32,8 +32,8 @@ export default defineConfig({
             // docs/architecture.md "Coverage thresholds" for the full layering.
             thresholds: {
                 lines: 27,
-                functions: 17,
-                branches: 12,
+                functions: 20,
+                branches: 13,
                 statements: 27,
             },
         },
