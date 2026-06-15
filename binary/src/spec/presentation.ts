@@ -3,7 +3,7 @@
  *
  * Lives in a separate layer from `FieldSpec` (the data layer): representation
  * concerns (label override, unit hint, hex/decimal display, editable bit) do
- * not affect what the bytes mean. See `tmp/binary-spec-plan.md`.
+ * not affect what the bytes mean.
  */
 export interface FieldPresentation {
     readonly label?: string;

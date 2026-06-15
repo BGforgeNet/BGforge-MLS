@@ -1,21 +1,6 @@
 import type { ISchema } from "typed-binary";
 
 /**
- * Per-field declaration for the data layer of a binary format.
- *
- * One of these per field per struct. Drives every downstream artifact: the
- * typed-binary read/write codec, the zod canonical-document validator, the
- * binary-editor display annotation, and the `DOMAIN_RANGES` clamp/validate
- * table. See `tmp/binary-spec-plan.md` for the architecture.
- */
-/**
- * Exported so the published `@bgforge/binary` `.d.ts` can name types that
- * inferred from `arraySpec(...)` calls in spec modules; not imported from
- * source.
- *
- * @public
- */
-/**
  * Semantic role of a scalar field. Defaults to `"data"` (user-editable game
  * value). Non-`"data"` roles mark fields the user must not hand-edit:
  *
@@ -177,6 +162,14 @@ export interface CharsFieldSpec {
     readonly hidden?: boolean;
 }
 
+/**
+ * Per-field declaration for the data layer of a binary format.
+ *
+ * One of these per field per struct. Drives every downstream artifact: the
+ * typed-binary read/write codec, the zod canonical-document validator, the
+ * binary-editor display annotation, and the `DOMAIN_RANGES` clamp/validate
+ * table.
+ */
 export type FieldSpec = ScalarFieldSpec | ArrayFieldSpec | CharsFieldSpec;
 
 export type StructSpec<T> = { readonly [K in keyof T]: FieldSpec };
