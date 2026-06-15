@@ -67,7 +67,7 @@ describe("getMsgText", () => {
 // ---------------------------------------------------------------------------
 
 describe("getOptionMeta", () => {
-    function makeOption(type: string, msgId: number | string = 100, target = "Node001"): DialogOption {
+    function makeOption(type: DialogOption["type"], msgId: number | string = 100, target = "Node001"): DialogOption {
         return { type, msgId, target, line: 1 };
     }
 

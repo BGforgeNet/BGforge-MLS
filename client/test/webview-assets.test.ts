@@ -24,7 +24,7 @@ beforeEach(() => {
 
 describe("getCachedHtmlAsset", () => {
     it("reads file content from disk on first call", () => {
-        mockReadFileSync.mockReturnValue("<html>template</html>" as unknown as Buffer);
+        mockReadFileSync.mockReturnValue("<html>template</html>");
 
         // Use a unique cache key to avoid cross-test cache hits
         const result = getCachedHtmlAsset("html-test-1", "/ext", "some/path.html");
@@ -33,7 +33,7 @@ describe("getCachedHtmlAsset", () => {
     });
 
     it("returns cached content on second call without reading the file again", () => {
-        mockReadFileSync.mockReturnValue("<html>cached</html>" as unknown as Buffer);
+        mockReadFileSync.mockReturnValue("<html>cached</html>");
 
         getCachedHtmlAsset("html-test-2", "/ext", "some/path2.html");
         getCachedHtmlAsset("html-test-2", "/ext", "some/path2.html");
@@ -43,11 +43,11 @@ describe("getCachedHtmlAsset", () => {
     });
 
     it("re-reads when extension path changes (cache miss on different extensionPath)", () => {
-        mockReadFileSync.mockReturnValue("<html>new-ext</html>" as unknown as Buffer);
+        mockReadFileSync.mockReturnValue("<html>new-ext</html>");
 
         // Same cache key but different extensionPath invalidates the cache
         getCachedHtmlAsset("html-test-3", "/ext-a", "some/path3.html");
-        mockReadFileSync.mockReturnValue("<html>other-ext</html>" as unknown as Buffer);
+        mockReadFileSync.mockReturnValue("<html>other-ext</html>");
         const result = getCachedHtmlAsset("html-test-3", "/ext-b", "some/path3.html");
 
         expect(result).toBe("<html>other-ext</html>");
@@ -57,9 +57,7 @@ describe("getCachedHtmlAsset", () => {
 
 describe("getCachedCssAsset", () => {
     it("concatenates multiple CSS files with newline separator", () => {
-        mockReadFileSync
-            .mockReturnValueOnce("body { color: red; }" as unknown as Buffer)
-            .mockReturnValueOnce(".foo { display: block; }" as unknown as Buffer);
+        mockReadFileSync.mockReturnValueOnce("body { color: red; }").mockReturnValueOnce(".foo { display: block; }");
 
         const result = getCachedCssAsset("css-test-1", "/ext", ["a.css", "b.css"]);
         expect(result).toBe("body { color: red; }\n.foo { display: block; }");
@@ -67,7 +65,7 @@ describe("getCachedCssAsset", () => {
     });
 
     it("returns cached CSS on repeated calls", () => {
-        mockReadFileSync.mockReturnValue(".cached {}" as unknown as Buffer);
+        mockReadFileSync.mockReturnValue(".cached {}");
 
         getCachedCssAsset("css-test-2", "/ext", ["only.css"]);
         const result = getCachedCssAsset("css-test-2", "/ext", ["only.css"]);
@@ -79,7 +77,7 @@ describe("getCachedCssAsset", () => {
 
 describe("getCachedJsAsset", () => {
     it("reads JS file content from disk on first call", () => {
-        mockReadFileSync.mockReturnValue("console.log('hello');" as unknown as Buffer);
+        mockReadFileSync.mockReturnValue("console.log('hello');");
 
         const result = getCachedJsAsset("js-test-1", "/ext", "out/bundle.js");
         expect(result).toBe("console.log('hello');");
@@ -87,7 +85,7 @@ describe("getCachedJsAsset", () => {
     });
 
     it("returns cached JS on repeated calls", () => {
-        mockReadFileSync.mockReturnValue("const x = 1;" as unknown as Buffer);
+        mockReadFileSync.mockReturnValue("const x = 1;");
 
         getCachedJsAsset("js-test-2", "/ext", "out/script.js");
         getCachedJsAsset("js-test-2", "/ext", "out/script.js");

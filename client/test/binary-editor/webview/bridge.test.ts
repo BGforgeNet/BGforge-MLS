@@ -7,7 +7,7 @@ describe("Bridge", () => {
         const sent: { requestId: number }[] = [];
         const bridge = new Bridge((m) => sent.push(m as { requestId: number }));
         const p = bridge.requestChildren("p", 0, 10);
-        bridge.handle({ type: "children", requestId: sent[0].requestId, parentId: "p", rows: [], total: 3 });
+        bridge.handle({ type: "children", requestId: sent[0]!.requestId, parentId: "p", rows: [], total: 3 });
         await expect(p).resolves.toEqual({ rows: [], total: 3 });
     });
 
@@ -15,7 +15,7 @@ describe("Bridge", () => {
         const sent: { requestId: number }[] = [];
         const bridge = new Bridge((m) => sent.push(m as { requestId: number }));
         const p = bridge.requestChildren("p", 0, 10);
-        bridge.handle({ type: "children", requestId: sent[0].requestId, parentId: "p", rows: [], total: 1 });
+        bridge.handle({ type: "children", requestId: sent[0]!.requestId, parentId: "p", rows: [], total: 1 });
         await p;
         void bridge.requestChildren("p", 0, 10);
         expect(sent).toHaveLength(2);
@@ -25,7 +25,7 @@ describe("Bridge", () => {
         const sent: { requestId: number }[] = [];
         const bridge = new Bridge((m) => sent.push(m as { requestId: number }));
         const p = bridge.requestChildren(null, 0, 10);
-        bridge.handle({ type: "error", requestId: sent[0].requestId, message: "boom" });
+        bridge.handle({ type: "error", requestId: sent[0]!.requestId, message: "boom" });
         await expect(p).rejects.toThrow("boom");
     });
 
@@ -62,7 +62,7 @@ describe("Bridge", () => {
         const bridge = new Bridge((m) => sent.push(m as { requestId: number }));
         const p = bridge.requestSpellbook();
         const view: SpellbookView = { types: [], bucket: [], empty: true };
-        expect(bridge.handle({ type: "spellbook", requestId: sent[0].requestId, view })).toBe(true);
+        expect(bridge.handle({ type: "spellbook", requestId: sent[0]!.requestId, view })).toBe(true);
         await expect(p).resolves.toBe(view);
     });
 
@@ -70,7 +70,7 @@ describe("Bridge", () => {
         const sent: { requestId: number }[] = [];
         const bridge = new Bridge((m) => sent.push(m as { requestId: number }));
         const p = bridge.requestSpellbook();
-        expect(bridge.handle({ type: "error", requestId: sent[0].requestId, message: "spell boom" })).toBe(true);
+        expect(bridge.handle({ type: "error", requestId: sent[0]!.requestId, message: "spell boom" })).toBe(true);
         await expect(p).rejects.toThrow("spell boom");
     });
 
@@ -79,7 +79,7 @@ describe("Bridge", () => {
         const bridge = new Bridge((m) => sent.push(m as { requestId: number }));
         const p = bridge.requestEffectTree();
         const view: EffectTreeView = { groups: [], unassigned: [], empty: true, abilityCount: 0, effectCount: 0 };
-        expect(bridge.handle({ type: "effectTree", requestId: sent[0].requestId, view })).toBe(true);
+        expect(bridge.handle({ type: "effectTree", requestId: sent[0]!.requestId, view })).toBe(true);
         await expect(p).resolves.toBe(view);
     });
 
@@ -87,7 +87,7 @@ describe("Bridge", () => {
         const sent: { requestId: number }[] = [];
         const bridge = new Bridge((m) => sent.push(m as { requestId: number }));
         const p = bridge.requestEffectTree();
-        expect(bridge.handle({ type: "error", requestId: sent[0].requestId, message: "tree boom" })).toBe(true);
+        expect(bridge.handle({ type: "error", requestId: sent[0]!.requestId, message: "tree boom" })).toBe(true);
         await expect(p).rejects.toThrow("tree boom");
     });
 

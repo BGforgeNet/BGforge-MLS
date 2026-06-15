@@ -11,6 +11,6 @@
             "@bgforge/binary": ["../binary/src/index.ts"]
         }
     },
-    "include": ["src", "../shared", "../binary/src"],
+    "include": ["src", "test", "../shared", "../binary/src"],
     "exclude": ["node_modules", ".vscode-test"]
 }
