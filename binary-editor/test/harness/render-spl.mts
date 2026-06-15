@@ -134,6 +134,11 @@ async function clickTab(label: string): Promise<void> {
 }
 const dom = await page.evaluate(() => {
     const panels = Array.from(document.querySelectorAll(".layout-root .panel > h3"), (e) => e.textContent);
+    // Exclude-panel subgroup legends (flagGroups): Priests / Mages / Other.
+    const excludeGroups = Array.from(
+        document.querySelectorAll(".layout-root .flag-groups .flag-group-name"),
+        (e) => e.textContent,
+    );
     let minGap = Infinity;
     for (const field of Array.from(document.querySelectorAll(".layout-root .kv:not(.kv-multi) .field"))) {
         const label = field.querySelector(".label");
@@ -142,12 +147,17 @@ const dom = await page.evaluate(() => {
         const gap = control.getBoundingClientRect().left - label.getBoundingClientRect().right;
         if (gap < minGap) minGap = gap;
     }
-    return { panels, minGap };
+    return { panels, excludeGroups, minGap };
 });
 check(
-    "layout: General tab panels render (Spell / Flags / Exclusion)",
-    JSON.stringify(dom.panels) === JSON.stringify(["Spell", "Flags", "Exclusion"]),
+    "layout: General tab panels render (Spell / Flags / Exclude)",
+    JSON.stringify(dom.panels) === JSON.stringify(["Spell", "Flags", "Exclude"]),
     JSON.stringify(dom.panels),
+);
+check(
+    "layout: Exclude panel groups exclusion flags into Priests / Mages / Class subgroups",
+    JSON.stringify(dom.excludeGroups) === JSON.stringify(["Priests", "Mages", "Class"]),
+    JSON.stringify(dom.excludeGroups),
 );
 check("layout: label/value gap is positive (no overlap)", dom.minGap >= 4, `minGap=${dom.minGap}px`);
 

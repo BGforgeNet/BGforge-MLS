@@ -63,10 +63,112 @@ export const splLayout: FormatLayout = formatLayoutSchema.parse({
                                 },
                                 { title: "Flags", blocks: [{ kind: "flags", field: k("flags"), columns: 1 }] },
                                 {
-                                    // 22 exclusion bits: two columns halve the height so the panel doesn't
-                                    // tower over the Spell/Flags panels beside it.
-                                    title: "Exclusion",
-                                    blocks: [{ kind: "flags", field: k("exclusionFlags"), columns: 2 }],
+                                    // Exclusion flags regrouped by who they bar, one subgroup per column: Priests
+                                    // (alignment bits 0-5), Mages (specialist bits 6-14), and Class (the two
+                                    // hybrid-class bits 30-31). The panel title carries "Exclude", so each checkbox
+                                    // drops the redundant prefix (and its subgroup's category word). Display-only -
+                                    // the backing field and its canonical SplExclusionFlags identity are unchanged
+                                    // (labels here override only what the checkbox shows).
+                                    title: "Exclude",
+                                    // Hug the grouped content instead of stretching across the row it wraps onto.
+                                    fit: true,
+                                    blocks: [
+                                        {
+                                            kind: "flagGroups",
+                                            columns: [
+                                                [
+                                                    {
+                                                        label: "Priests",
+                                                        items: [
+                                                            { field: k("exclusionFlags"), mask: 0x1, label: "Chaotic" },
+                                                            { field: k("exclusionFlags"), mask: 0x2, label: "Evil" },
+                                                            { field: k("exclusionFlags"), mask: 0x4, label: "Good" },
+                                                            {
+                                                                field: k("exclusionFlags"),
+                                                                mask: 0x8,
+                                                                label: "GE-Neutral",
+                                                            },
+                                                            { field: k("exclusionFlags"), mask: 0x10, label: "Lawful" },
+                                                            {
+                                                                field: k("exclusionFlags"),
+                                                                mask: 0x20,
+                                                                label: "LC-Neutral",
+                                                            },
+                                                        ],
+                                                    },
+                                                ],
+                                                [
+                                                    {
+                                                        label: "Mages",
+                                                        items: [
+                                                            {
+                                                                field: k("exclusionFlags"),
+                                                                mask: 0x40,
+                                                                label: "Abjurers",
+                                                            },
+                                                            {
+                                                                field: k("exclusionFlags"),
+                                                                mask: 0x80,
+                                                                label: "Conjurers",
+                                                            },
+                                                            {
+                                                                field: k("exclusionFlags"),
+                                                                mask: 0x100,
+                                                                label: "Diviners",
+                                                            },
+                                                            {
+                                                                field: k("exclusionFlags"),
+                                                                mask: 0x200,
+                                                                label: "Enchanters",
+                                                            },
+                                                            {
+                                                                field: k("exclusionFlags"),
+                                                                mask: 0x400,
+                                                                label: "Illusionists",
+                                                            },
+                                                            {
+                                                                field: k("exclusionFlags"),
+                                                                mask: 0x800,
+                                                                label: "Invokers",
+                                                            },
+                                                            {
+                                                                field: k("exclusionFlags"),
+                                                                mask: 0x1000,
+                                                                label: "Necromancers",
+                                                            },
+                                                            {
+                                                                field: k("exclusionFlags"),
+                                                                mask: 0x2000,
+                                                                label: "Transmuters",
+                                                            },
+                                                            {
+                                                                field: k("exclusionFlags"),
+                                                                mask: 0x4000,
+                                                                label: "Generalists (Wild Magic)",
+                                                            },
+                                                        ],
+                                                    },
+                                                ],
+                                                [
+                                                    {
+                                                        label: "Class",
+                                                        items: [
+                                                            {
+                                                                field: k("exclusionFlags"),
+                                                                mask: 0x40000000,
+                                                                label: "Cleric/Paladin",
+                                                            },
+                                                            {
+                                                                field: k("exclusionFlags"),
+                                                                mask: 0x80000000,
+                                                                label: "Druid/Ranger",
+                                                            },
+                                                        ],
+                                                    },
+                                                ],
+                                            ],
+                                        },
+                                    ],
                                 },
                             ],
                         },
