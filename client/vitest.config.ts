@@ -69,6 +69,11 @@ export default defineConfig({
                 // binary-editor/webview/messages.ts is a types-only file with no executable
                 // branches; its surface is exercised transitively via the worker protocol types.
                 "client/src/binary-editor/webview/messages.ts",
+                // Thin wrapper over Svelte's getContext/setContext, which only work during component
+                // initialisation and throw outside one; there is no non-component surface to unit-test
+                // (a harness would only re-assert that Svelte stores and returns the value). Exercised
+                // in-context by the components that provide/consume the jump callback.
+                "client/src/binary-editor/webview/state/jump-context.ts",
             ],
             // Enforced as a real gate: scripts/test.sh runs this config with
             // --coverage, and vitest exits non-zero on threshold breach.

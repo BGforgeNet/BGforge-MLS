@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import type { EffectTreeView, SpellbookView } from "@bgforge/binary-editor";
 import { Bridge } from "../../../src/binary-editor/webview/state/bridge";
 
 describe("Bridge", () => {
@@ -39,18 +40,61 @@ describe("Bridge", () => {
         expect(onErr.mock.calls).toEqual([["edit failed"], ["stale"]]);
     });
 
-    it("posts editField/structureOp/dumpJson/loadJson messages verbatim", () => {
+    it("posts editField/structureOp/spellbookEdit/dumpJson/loadJson messages verbatim", () => {
         const sent: unknown[] = [];
         const bridge = new Bridge((m) => sent.push(m));
         bridge.editField("0/1", 7);
         bridge.structureOp({ op: "add", sectionId: "Global Variables" });
+        bridge.spellbookEdit({ op: "addLevel", spellType: 1, spellLevel: 2 });
         bridge.dumpJson();
         bridge.loadJson();
         expect(sent).toEqual([
             { type: "editField", nodeId: "0/1", value: 7 },
             { type: "structureOp", op: { op: "add", sectionId: "Global Variables" } },
+            { type: "spellbookEdit", op: { op: "addLevel", spellType: 1, spellLevel: 2 } },
             { type: "dumpJson" },
             { type: "loadJson" },
         ]);
+    });
+
+    it("correlates a spellbook response to its requestSpellbook by requestId", async () => {
+        const sent: { requestId: number }[] = [];
+        const bridge = new Bridge((m) => sent.push(m as { requestId: number }));
+        const p = bridge.requestSpellbook();
+        const view: SpellbookView = { types: [], bucket: [], empty: true };
+        expect(bridge.handle({ type: "spellbook", requestId: sent[0].requestId, view })).toBe(true);
+        await expect(p).resolves.toBe(view);
+    });
+
+    it("rejects a pending spellbook request on a matching error", async () => {
+        const sent: { requestId: number }[] = [];
+        const bridge = new Bridge((m) => sent.push(m as { requestId: number }));
+        const p = bridge.requestSpellbook();
+        expect(bridge.handle({ type: "error", requestId: sent[0].requestId, message: "spell boom" })).toBe(true);
+        await expect(p).rejects.toThrow("spell boom");
+    });
+
+    it("correlates an effectTree response to its requestEffectTree by requestId", async () => {
+        const sent: { requestId: number }[] = [];
+        const bridge = new Bridge((m) => sent.push(m as { requestId: number }));
+        const p = bridge.requestEffectTree();
+        const view: EffectTreeView = { groups: [], unassigned: [], empty: true, abilityCount: 0, effectCount: 0 };
+        expect(bridge.handle({ type: "effectTree", requestId: sent[0].requestId, view })).toBe(true);
+        await expect(p).resolves.toBe(view);
+    });
+
+    it("rejects a pending effectTree request on a matching error", async () => {
+        const sent: { requestId: number }[] = [];
+        const bridge = new Bridge((m) => sent.push(m as { requestId: number }));
+        const p = bridge.requestEffectTree();
+        expect(bridge.handle({ type: "error", requestId: sent[0].requestId, message: "tree boom" })).toBe(true);
+        await expect(p).rejects.toThrow("tree boom");
+    });
+
+    it("ignores a response whose type is none the bridge correlates (returns false)", () => {
+        // handle() returns false for any message that resolves no pending query, so the view's own
+        // message dispatch keeps handling it.
+        const bridge = new Bridge(() => {});
+        expect(bridge.handle({ type: "invalidated" })).toBe(false);
     });
 });
