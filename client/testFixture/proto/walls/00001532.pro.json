@@ -16,7 +16,7 @@
         "sections": {
             "wallProperties": {
                 "wallLightFlags": [],
-                "actionFlags": ["bit13"],
+                "actionFlags": ["look"],
                 "scriptType": -1,
                 "scriptId": -1,
                 "materialId": 1

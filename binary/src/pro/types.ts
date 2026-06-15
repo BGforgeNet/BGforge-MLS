@@ -69,7 +69,9 @@ export const FRMType: Record<number, string> = {
     2: "Scenery",
     3: "Walls",
     4: "Tiles",
-    5: "Background",
+    // Art-type indices per sfall Enums.h ObjType/ArtType: 5 = OBJ_TYPE_MISC (was mislabeled "Background";
+    // background art is index 9). 6 = intrface, 7 = inven.
+    5: "Misc",
     6: "Interface",
     7: "Inventory",
 };
@@ -146,8 +148,11 @@ export const WeaponAnimCode: Record<number, string> = {
     4: "Spear",
     5: "Pistol",
     6: "SMG",
-    7: "Rifle",
-    8: "Big Gun",
+    // 7/8 per fallout2-ce art.h WeaponAnimation (the code maps to a critter-art FRM suffix letter):
+    // 7 = SHOTGUN (FRM 'j'), 8 = LASER_RIFLE (FRM 'k'). Was "Rifle"/"Big Gun" - the wrong weapon for those
+    // animation slots (Sledgehammer/Rocket Launcher at 3/10 are kept as informal names for the same animation).
+    7: "Shotgun",
+    8: "Laser Rifle",
     9: "Minigun",
     10: "Rocket Launcher",
     11: "Sfall 11",
@@ -389,6 +394,12 @@ export const HeaderFlags: Record<number, string> = {
     0x80000000: "ShootThru",
 };
 
+// The HIGH 3 bytes of the proto `extendedFlags` dword. item-common reads `flagsExt` as u24 (top 3 bytes) and
+// the attack-mode nibbles as the separate low byte (item-common.ts), and the .pro stores the dword big-endian,
+// so every value here is the real ItemProtoExtendedFlags (fallout2-ce proto_types.h) shifted right 8 bits:
+// BigGun 0x100->0x1, TwoHand 0x200->0x2, Use 0x800->0x8, UseOnSmth 0x1000->0x10, Look 0x2000->0x20,
+// PickUp 0x8000->0x80, Hidden 0x08000000->0x080000. Correct AS SHIFTED - do NOT "unshift" to the raw engine
+// values; that would mismatch the u24 field (CritterFlagsExt below reads the full u32 and keeps raw values).
 export const ItemFlagsExt: Record<number, string> = {
     0x000001: "BigGun",
     0x000002: "TwoHand",
@@ -399,6 +410,11 @@ export const ItemFlagsExt: Record<number, string> = {
     0x080000: "Hidden",
 };
 
+// Wall/scenery read the proto `extendedFlags` dword as wallLightFlags:u16 (HIGH 16 bits) + actionFlags:u16
+// (low 16). The corner bits are the real corner flags >> 16: NorthCorner 0x10000000->0x1000 ...
+// WestCorner 0x80000000->0x8000 (fallout2-ce proto_types.h PROTO_EXT_FLAG_*_CORNER). The N/S (0x0000) vs E/W
+// (0x0800) orientation is per the falloutmods PRO wiki - 0x0800 here is the HIDDEN bit (0x08000000>>16) reused
+// for walls and is not engine-named.
 export const WallLightFlags: Record<number, string> = {
     0x0000: "North/South",
     0x0800: "East/West",
@@ -408,15 +424,23 @@ export const WallLightFlags: Record<number, string> = {
     0x8000: "WestCorner",
 };
 
+// Low 16 bits of the proto `extendedFlags` dword (the actionFlags:u16 half, read AFTER wallLightFlags). These
+// are the real ItemProtoExtendedFlags, NOT shifted - the engine tests `extendedFlags & PROTO_EXT_FLAG_CAN_USE
+// (0x800)` directly (fallout2-ce proto.cc:264, and CAN_USE_ON/LOOK/CAN_TALK_TO/CAN_PICK_UP). The prior table
+// placed these at 0x8-0x80 (an extra 8-bit shift); corroborated by CritterFlagsExt, which reads the full u32
+// and correctly has Look=0x2000 / Can talk to=0x4000. 0x0001 = PROTO_EXT_FLAG_MAGIC_HANDS_GROUND (scenery).
 export const ActionFlags: Record<number, string> = {
-    0x0001: "Kneel",
-    0x0008: "Use",
-    0x0010: "UseOnSmth",
-    0x0020: "Look",
-    0x0040: "Talk",
-    0x0080: "PickUp",
+    0x0001: "Magic hands (ground)",
+    0x0800: "Use",
+    0x1000: "Use on",
+    0x2000: "Look",
+    0x4000: "Talk",
+    0x8000: "Pick up",
 };
 
+// Container proto `openFlags` (full u32). fallout2-ce does not name these bits (the named CONTAINER_FLAG_LOCKED
+// / _JAMMED are runtime OBJECT data flags, not proto openFlags), so these labels are from the falloutmods PRO
+// wiki and are UNVERIFIED against sfall/fallout2-ce.
 export const ContainerFlags: Record<number, string> = {
     0x00000001: "CannotPickUp",
     0x00000008: "MagicHandsGrnd",

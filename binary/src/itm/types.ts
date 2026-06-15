@@ -37,7 +37,7 @@ export const ItmFlags: Readonly<Record<number, string>> = {
     0x00000200: "Cold iron",
     0x00000400: "Stolen",
     0x00000800: "Conversable",
-    0x00001000: "Pulsating",
+    0x00001000: "Fake two-handed (BGEE)",
 };
 
 /**
@@ -315,11 +315,17 @@ export const ItmAbilityDepletion: Readonly<Record<number, string>> = {
 };
 
 /** ITM ability `flags` (dword bitmap). */
+// Bit positions per IESDP itm_v1 Extension Header Flags (itm_v1.htm #ExtHeader_Flags): a Bit(0-7) x Byte(1-4)
+// grid, so a cell at Byte N / bit b is dword bit 8*(N-1)+b. The prior table placed Hostile/Recharge at bits
+// 18/19 (should be 10/11) and labelled bits 24/25 "Bypass armor"/"Keen edge", neither of which is in the spec.
 export const ItmAbilityFlags: Readonly<Record<number, string>> = {
     0x00000001: "Add strength bonus",
     0x00000002: "Breakable",
-    0x00040000: "Hostile",
-    0x00080000: "Recharge after resting",
-    0x01000000: "Bypass armor",
-    0x02000000: "Keen edge",
+    0x00000004: "Damage strength bonus (BGEE split bit 0)",
+    0x00000008: "THAC0 strength bonus (BGEE split bit 0)",
+    0x00000200: "Breaks Sanctuary / Invisibility (EE)",
+    0x00000400: "Hostile",
+    0x00000800: "Recharge after resting",
+    0x02000000: "ToBEx: Toggle backstab",
+    0x04000000: "EE/ToBEx: Cannot target invisible",
 };
