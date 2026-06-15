@@ -7,6 +7,7 @@
  */
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
+import { SyntaxType } from "../../../server/src/weidu-d/syntax-type";
 import {
     normalizeWhitespaceWeidu,
     throwOnParseError,
@@ -25,7 +26,7 @@ interface FormatContext {
 }
 
 function isComment(node: SyntaxNode): boolean {
-    return node.type === "comment" || node.type === "line_comment";
+    return node.type === SyntaxType.Comment || node.type === SyntaxType.LineComment;
 }
 
 function isCopyOrMacro(node: SyntaxNode): boolean {
