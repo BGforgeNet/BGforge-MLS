@@ -73,7 +73,7 @@
         "fallout-update": "./scripts/fallout-update.sh",
         "generate-data": "./scripts/generate-data.sh",
         "syntaxes-to-json": "./scripts/syntaxes-to-json.sh",
-        "update-data": "IE_UPDATE_SKIP_REGEN=1 pnpm ie-update && pnpm fallout-update && pnpm generate-data && pnpm syntaxes-to-json",
+        "update-data": "MLS_SKIP_REGEN=1 pnpm ie-update && MLS_SKIP_REGEN=1 pnpm fallout-update && pnpm generate-data && pnpm syntaxes-to-json",
         "test:scripts": "vitest run --config scripts/vitest.config.ts",
         "lint:scripts": "./scripts/lint-scripts.sh",
         "lint:shell": "./scripts/lint-shell.sh",

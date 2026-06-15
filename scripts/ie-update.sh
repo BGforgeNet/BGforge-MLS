@@ -18,10 +18,10 @@ pnpm exec tsx scripts/ie-update/src/iesdp-update.ts -s "$iesdp_dir" \
     --data-baf "$data_baf"
 
 # Regenerate highlight and convert yaml to json. update-data runs these once at
-# its tail (after fallout-update too), so it sets IE_UPDATE_SKIP_REGEN=1 to skip
-# the duplicate pass here; a standalone `pnpm ie-update` still regenerates so its
-# data lands in the generated highlight/JSON immediately.
-if [ "${IE_UPDATE_SKIP_REGEN:-}" != "1" ]; then
+# its tail (after ie-update and fallout-update), so it sets MLS_SKIP_REGEN=1 to
+# skip the duplicate pass here; a standalone `pnpm ie-update` still regenerates
+# so its data lands in the generated highlight/JSON immediately.
+if [ "${MLS_SKIP_REGEN:-}" != "1" ]; then
     ./scripts/generate-data.sh
     ./scripts/syntaxes-to-json.sh
 fi

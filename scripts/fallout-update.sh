@@ -28,3 +28,12 @@ git checkout "$last_v"
 popd
 
 pnpm exec tsx scripts/fallout-update/src/fallout-update.ts -s "$external" --sfall-file "$sfall_file"
+
+# Regenerate highlight and convert yaml to json. update-data runs these once at
+# its tail (after ie-update and fallout-update), so it sets MLS_SKIP_REGEN=1 to
+# skip the duplicate pass here; a standalone `pnpm fallout-update` still
+# regenerates so its data lands in the generated highlight/JSON immediately.
+if [ "${MLS_SKIP_REGEN:-}" != "1" ]; then
+    ./scripts/generate-data.sh
+    ./scripts/syntaxes-to-json.sh
+fi
