@@ -372,10 +372,14 @@ for compile-time enforcement:
 | ---------------- | :--------: | :---: | :-------: | :--------: | :--------: | :----: | :-----: | :---------------: | :----: | :---: | :-----: | :---------: | :---: |
 | fallout-ssl      |     x      |   x   |     x     |     x      |     x      |   x    |    x    |         x         |   x    | .msg  |    x    |    sslc     |   x   |
 | fallout-worldmap |     x      |   x   |           |            |            |        |         |                   |        |       |         |             |       |
+| infinity-2da     |            |       |           |            |            |   x    |         |                   |        |       |         |             |       |
 | weidu-baf        |     x      |   x   |           |            |            |   x    |         |                   |        | .tra  |    x    |    weidu    |       |
 | weidu-d          |     x      |   x   |           |     x      |     x      |   x    |    x    |         x         |   x    | .tra  |    x    |    weidu    |   x   |
 | weidu-log        |            |       |           |     x      |            |        |         |                   |        |       |         |             |       |
 | weidu-tp2        |     x      |   x   |           |     x      |     x      |   x    |    x    |         x         |   x    | .tra  |    x    |    weidu    |   x   |
+
+`infinity-2da` also provides semantic-token (zebra-grid) highlighting for `.2da` files, a capability the
+matrix above does not track as a column.
 
 ### Transpilers
 
