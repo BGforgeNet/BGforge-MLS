@@ -101,6 +101,12 @@ class FalloutSslProvider
     readonly id = LANG_FALLOUT_SSL;
     readonly indexExtensions = [...EXT_FALLOUT_SSL_ALL];
 
+    // Populated through init() (static symbols) and reloadFileData()/onWatchedFileDeleted()
+    // (per-file, parsed). There is intentionally NO public setter that accepts a pre-built
+    // FileIndex: exposing one purely so tests can inject index state would leak an internal
+    // into the public surface. Unit tests that need a pre-populated index assign this field
+    // directly via a cast, with a rationale comment at the call site - that deliberate, localized
+    // coupling is preferred over a production seam that exists only for tests.
     private fileIndex: FileIndex | undefined;
     private staticSignatures: signature.SigMap | undefined;
     private storedContext: ProviderContext | undefined;

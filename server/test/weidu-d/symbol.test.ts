@@ -134,19 +134,20 @@ END
             expect(symbols[0]!.name).toBe("appended_state");
         });
 
-        it("handles INTERJECT_COPY_TRANS", () => {
+        it("emits no symbols for INTERJECT_COPY_TRANS (label is a cross-file reference, not a local definition)", () => {
+            // Valid INTERJECT_COPY_TRANS: file, target-state label, global var, then a chain body.
             const text = `
-INTERJECT_COPY_TRANS ~DIALOG~ state1
-    IF ~True()~ interjection_state
-        SAY ~Interjection~
-    END
-END
+INTERJECT_COPY_TRANS DIALOG 29 my_global_var
+== speaker IF ~Global("X","GLOBAL",1)~ THEN @1017 END
 `;
             const symbols = getDocumentSymbols(text);
-            // INTERJECT_COPY_TRANS does not produce State AST nodes; the symbol provider
-            // extracts only SyntaxType.State nodes, so this fixture returns 0 symbols.
-            // The test verifies graceful handling without a crash.
-            expect(symbols.length).toBe(0);
+            // An INTERJECT_COPY_TRANS targets a state defined in ANOTHER dialog file; its label
+            // is a cross-file reference (resolved by label-refs.ts), not a state definition in
+            // this file. Document symbols list local definitions only, so an interject-only file
+            // contributes none. This guards against a regression that surfaces interject labels
+            // as local symbols (distinct from the invalid-syntax case below, which never forms a
+            // clean interject node).
+            expect(symbols).toEqual([]);
         });
 
         it("returns empty array for invalid syntax", () => {
