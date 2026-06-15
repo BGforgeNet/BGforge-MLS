@@ -54,9 +54,11 @@ describe("binary-editor UI-guidelines wiring", () => {
 
     it("the pre-move path is referenced nowhere", () => {
         // git grep exits non-zero (no match) when clean; -F = fixed string, over tracked files.
+        // Exclude this guard's own source - it names OLD_PATH as a constant, which would
+        // otherwise match itself.
         let matches = "";
         try {
-            matches = execSync(`git grep -lF "${OLD_PATH}"`, { encoding: "utf8" });
+            matches = execSync(`git grep -lF "${OLD_PATH}" -- . ':!${SELF}'`, { encoding: "utf8" });
         } catch {
             matches = ""; // exit 1 == no matches
         }
