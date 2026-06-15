@@ -39,6 +39,8 @@ describe("ITM canonical snapshot round-trip", () => {
         const result = itmParser.parse(bytes);
         const doc = itmFormatAdapter.rebuildCanonicalDocument(result);
         expect(doc).toBeDefined();
+        // rebuildDocument returns the document from result.document when present.
+        expect(doc).toMatchObject(result.document as object);
     });
 
     test.each<[readonly string[], string | undefined]>([
@@ -76,6 +78,8 @@ describe("SPL canonical snapshot round-trip", () => {
         const result = splParser.parse(bytes);
         const doc = splFormatAdapter.rebuildCanonicalDocument(result);
         expect(doc).toBeDefined();
+        // rebuildDocument returns the document from result.document when present.
+        expect(doc).toMatchObject(result.document as object);
     });
 
     test.each<[readonly string[], string | undefined]>([

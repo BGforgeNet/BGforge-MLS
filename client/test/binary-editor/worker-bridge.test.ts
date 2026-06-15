@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { WorkerBridge, type Port } from "../../src/binary-editor/worker-bridge";
 import { createWorkerHandler, type WorkerRequest, type WorkerResponse } from "../../src/binary-editor/worker-core";
 
@@ -84,12 +84,23 @@ describe("WorkerBridge", () => {
     });
 
     it("clears the timeout once a reply arrives so a resolved request never rejects", async () => {
-        const bridge = new WorkerBridge(fakePort(), { timeoutMs: 20 });
-        const res = await bridge.send({ type: "open", uri: `file://${MAP_FIXTURE}`, bytes: bytes() });
-        expect(res.type).toBe("opened");
-        // Wait past the timeout window: a cleared timer must not fire a late rejection.
-        await new Promise((r) => {
-            setTimeout(r, 40);
-        });
+        vi.useFakeTimers();
+        try {
+            const bridge = new WorkerBridge(fakePort(), { timeoutMs: 20 });
+            // The fakePort delivers via queueMicrotask, which fake timers still
+            // drain through microtask flushing.
+            const pending = bridge.send({ type: "open", uri: `file://${MAP_FIXTURE}`, bytes: bytes() });
+            // Flush microtasks so the port's queued reply resolves the promise.
+            await Promise.resolve();
+            const res = await pending;
+            expect(res.type).toBe("opened");
+            // Advance well past the timeout: if the timer was not cleared, it
+            // would fire and reject the already-resolved promise at this point.
+            vi.advanceTimersByTime(100);
+            // Re-await pending microtasks to surface any late rejection.
+            await Promise.resolve();
+        } finally {
+            vi.useRealTimers();
+        }
     });
 });

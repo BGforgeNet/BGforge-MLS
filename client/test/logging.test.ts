@@ -33,21 +33,19 @@ describe("logging", () => {
     });
 
     describe("conlog before initOutputChannel", () => {
-        it("falls back to console.log for info messages", () => {
-            // Fresh module - no channel registered yet (the conlog tests below
-            // run against a channel; this case must run first to capture the
-            // pre-init fallback path).
+        it("falls back to console.log for info messages", async () => {
+            // vi.resetModules() discards the cached logging module so the next
+            // dynamic import() gets a fresh instance where outputChannel is
+            // undefined - regardless of which other test ran first.
+            // The top-level static bindings (conlog, initOutputChannel, ...) are
+            // unaffected: they were bound at load time to the original instance
+            // and stay valid for the rest of the suite.
+            vi.resetModules();
+            const { conlog: freshConlog } = await import("../src/logging");
             const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
             try {
-                // Use a marker string the channel-attached test can't possibly emit.
-                conlog("pre-init fallback", "info");
-                // The fallback path can only have run if we are in fact pre-init,
-                // which holds in the very first call before initOutputChannel.
-                // Once initOutputChannel runs in a later test, this assertion
-                // would no longer be valid - that's why this test runs first.
-                if (createOutputChannelMock.mock.calls.length === 0) {
-                    expect(consoleSpy).toHaveBeenCalledWith("[client] pre-init fallback");
-                }
+                freshConlog("pre-init fallback", "info");
+                expect(consoleSpy).toHaveBeenCalledWith("[client] pre-init fallback");
             } finally {
                 consoleSpy.mockRestore();
             }

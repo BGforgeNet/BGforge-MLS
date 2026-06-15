@@ -207,55 +207,6 @@ export variable my_export := 0;
         expect(value).toContain("export variable");
     });
 
-    it("should include export variable description in hover", () => {
-        const text = `
-export variable my_export := 0;
-`;
-        const uri = "file:///test.ssl";
-        clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("my_export", text, 1, uri);
-
-        expect(symbol).toBeDefined();
-        const contents = symbol?.hover?.contents;
-        expect(contents).toBeDefined();
-        const value = (contents as { kind: string; value: string }).value;
-        expect(value).toContain("my_export");
-        expect(value).toContain("export variable");
-    });
-
-    it("should include JSDoc @type in variable hover", () => {
-        const text = `
-/** @type int */
-variable my_count := 0;
-`;
-        const uri = "file:///test.ssl";
-        clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("my_count", text, 1, uri);
-
-        expect(symbol).toBeDefined();
-        const contents = symbol?.hover?.contents;
-        expect(contents).toBeDefined();
-        const value = (contents as { kind: string; value: string }).value;
-        expect(value).toContain("my_count");
-        expect(value).toContain("int");
-    });
-
-    it("should include export variable description in hover", () => {
-        const text = `
-export variable my_export := 0;
-`;
-        const uri = "file:///test.ssl";
-        clearAllLocalSymbolsCache();
-        const symbol = lookupLocalSymbol("my_export", text, 1, uri);
-
-        expect(symbol).toBeDefined();
-        const contents = symbol?.hover?.contents;
-        expect(contents).toBeDefined();
-        const value = (contents as { kind: string; value: string }).value;
-        expect(value).toContain("my_export");
-        expect(value).toContain("export variable");
-    });
-
     it("should include JSDoc @type in variable hover", () => {
         const text = `
 /** @type int */

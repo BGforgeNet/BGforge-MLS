@@ -21,6 +21,7 @@ export default defineConfig({
             "shared/vitest.config.ts",
             "transpilers/vitest.config.ts",
             "binary/vitest.config.ts",
+            "binary-editor/vitest.config.ts",
             "format/vitest.config.ts",
             "scripts/vitest.cli.config.ts",
         ],

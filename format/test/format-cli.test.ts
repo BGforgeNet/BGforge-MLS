@@ -4,7 +4,7 @@
  * exit codes, stdout output, and stderr diff reporting.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, afterEach } from "vitest";
 import { execFileSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
@@ -71,11 +71,17 @@ describe("format CLI integration", () => {
     });
 
     describe("check mode", () => {
+        const sampleDir = path.resolve("grammars/weidu-baf/test/samples-expected");
+        let samples: string[];
+
+        beforeAll(() => {
+            samples = fs.readdirSync(sampleDir);
+            if (samples.length === 0) {
+                throw new Error(`Expected formatted BAF samples in ${sampleDir} but directory is empty`);
+            }
+        });
+
         it("exits 0 for already-formatted file", () => {
-            // Use a known formatted sample
-            const sampleDir = path.resolve("grammars/weidu-baf/test/samples-expected");
-            const samples = fs.readdirSync(sampleDir);
-            if (samples.length === 0) return;
             const file = path.join(sampleDir, samples[0]!);
             const { code } = run(file, "--check");
             expect(code).toBe(0);
@@ -115,10 +121,12 @@ describe("format CLI integration", () => {
 
         it("does not rewrite already-formatted file", () => {
             const sampleDir = path.resolve("grammars/weidu-baf/test/samples-expected");
-            const samples = fs.readdirSync(sampleDir);
-            if (samples.length === 0) return;
-            const src = path.join(sampleDir, samples[0]!);
-            const file = path.join(tmpDir, samples[0]!);
+            const allSamples = fs.readdirSync(sampleDir);
+            if (allSamples.length === 0) {
+                throw new Error(`Expected formatted BAF samples in ${sampleDir} but directory is empty`);
+            }
+            const src = path.join(sampleDir, allSamples[0]!);
+            const file = path.join(tmpDir, allSamples[0]!);
             fs.copyFileSync(src, file);
             const { code, stdout } = run(file, "--save");
             expect(code).toBe(0);

@@ -48,6 +48,10 @@ describe("effParser - round-trip on real EFF v2 fixtures", () => {
             const result = effParser.parse(bytes);
             expect(result.opaqueRanges).toBeUndefined();
             expect(result.document).toBeDefined();
+            // The byte-roundtrip above proves the parser produced a valid document;
+            // this pins that the document carries a numeric opcode at the body level.
+            const doc = result.document as { body?: { opcode?: unknown } } | undefined;
+            expect(typeof doc?.body?.opcode).toBe("number");
         });
     }
 });

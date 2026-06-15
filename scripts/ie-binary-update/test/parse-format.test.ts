@@ -39,6 +39,7 @@ describe("loadOffsetItems", () => {
     test("throws when the YAML root is not a sequence", () => {
         const yamlPath = path.join(tmpDir, "bad.yml");
         fs.writeFileSync(yamlPath, "key: value\n", "utf8");
-        expect(() => loadOffsetItems(yamlPath)).toThrow();
+        // assertArray produces "Expected array in <ctx>, got object" for a YAML mapping root.
+        expect(() => loadOffsetItems(yamlPath)).toThrow(/Expected array/);
     });
 });

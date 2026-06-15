@@ -37,7 +37,7 @@ describe("validateActionParam", () => {
     });
 
     it("throws when input is not an object", () => {
-        expect(() => validateActionParam("bad", "ctx")).toThrow();
+        expect(() => validateActionParam("bad", "ctx")).toThrow(/Expected object/);
     });
 });
 
@@ -97,7 +97,7 @@ describe("validateActionItem", () => {
     });
 
     it("throws when input is not an object", () => {
-        expect(() => validateActionItem(42, "ctx")).toThrow();
+        expect(() => validateActionItem(42, "ctx")).toThrow(/Expected object/);
     });
 
     it("throws when params entry is invalid", () => {
@@ -126,7 +126,7 @@ describe("validateIESDPGame", () => {
     });
 
     it("throws when input is not an object", () => {
-        expect(() => validateIESDPGame(null, "ctx")).toThrow();
+        expect(() => validateIESDPGame(null, "ctx")).toThrow(/Expected object/);
     });
 });
 
@@ -219,7 +219,7 @@ describe("validateTypeEntry", () => {
     });
 
     it("throws when input is not an object", () => {
-        expect(() => validateTypeEntry("string", "ctx")).toThrow();
+        expect(() => validateTypeEntry("string", "ctx")).toThrow(/Expected object/);
     });
 });
 
@@ -336,6 +336,8 @@ describe("validateFuncData", () => {
     });
 
     it("throws when int_params is not an array", () => {
-        expect(() => validateFuncData({ name: "f", type: "int", desc: "x", int_params: "bad" }, "ctx")).toThrow();
+        expect(() => validateFuncData({ name: "f", type: "int", desc: "x", int_params: "bad" }, "ctx")).toThrow(
+            /Expected array/,
+        );
     });
 });

@@ -34,9 +34,12 @@ describe("engineProcedureNames", () => {
         expect(engineProcedureNames).not.toContain("my_custom_func");
     });
 
-    it("is a non-empty array", () => {
+    it("is a non-empty array and does not contain arbitrary names", () => {
         expect(Array.isArray(engineProcedureNames)).toBe(true);
         expect(engineProcedureNames.length).toBeGreaterThan(0);
+        // Sanity: a plausible but wrong entry must not appear in the list.
+        expect(engineProcedureNames).not.toContain("main");
+        expect(engineProcedureNames).not.toContain("__init__");
     });
 });
 

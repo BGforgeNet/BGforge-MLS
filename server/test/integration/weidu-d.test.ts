@@ -287,7 +287,8 @@ END
             expect(tree!).not.toBeNull();
 
             const result = formatDocument(tree!.rootNode);
-            expect(result.text).toBeTruthy();
+            expect(result.text.length).toBeGreaterThan(0);
+            expect(result.text).toContain("APPEND");
         });
     });
 

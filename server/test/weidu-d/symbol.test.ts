@@ -143,8 +143,10 @@ INTERJECT_COPY_TRANS ~DIALOG~ state1
 END
 `;
             const symbols = getDocumentSymbols(text);
-            // Should find states in INTERJECT blocks
-            expect(symbols.length).toBeGreaterThanOrEqual(0);
+            // INTERJECT_COPY_TRANS does not produce State AST nodes; the symbol provider
+            // extracts only SyntaxType.State nodes, so this fixture returns 0 symbols.
+            // The test verifies graceful handling without a crash.
+            expect(symbols.length).toBe(0);
         });
 
         it("returns empty array for invalid syntax", () => {

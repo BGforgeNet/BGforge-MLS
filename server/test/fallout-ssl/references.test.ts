@@ -298,8 +298,9 @@ end
 `;
             // cursor on "x" at line 3, character 4 (assignment lvalue - may not be the def location)
             const refs = findReferences(text, { line: 3, character: 4 }, TEST_URI, false);
-            // Should not be empty - refs found even if definition could not be excluded
-            expect(refs.length).toBeGreaterThanOrEqual(0);
+            // x appears 4 times total; cursor is on an assignment lvalue, not the `variable x` declaration.
+            // getLocalDefinition finds the declaration (line 2 char 13) and excludes it, leaving 3 references.
+            expect(refs.length).toBe(3);
         });
     });
 });

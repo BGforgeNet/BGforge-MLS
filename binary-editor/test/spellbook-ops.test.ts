@@ -8,6 +8,7 @@ import { undo, structureOp } from "../src/structure-ops";
 import { editField } from "../src/edit";
 import { serializeSession } from "../src/serialize";
 import { childGroups, fieldsByKey, findGroup, normKey } from "../src/relationship/model-helpers";
+import { creParser } from "../../binary/src/cre/index";
 
 const CRE_FIXTURE = path.resolve(__dirname, "../../external/infinity-engine/BGT-WeiDU/bgt/modify/cre/edwin6.cre");
 const present = fs.existsSync(CRE_FIXTURE);
@@ -38,8 +39,11 @@ maybe("spellbookEdit", () => {
         const added = l1b.slots.find((sl) => sl.resref === "SPWI120")!;
         expect(added).toBeDefined();
         expect(added.flags & 1).toBe(1);
-        // Still serializes, and undo restores the original slot count.
-        expect(() => serializeSession(s)).not.toThrow();
+        // Serializes to bytes that re-parse cleanly (round-trip sanity).
+        const serialized = serializeSession(s);
+        expect(serialized.length).toBeGreaterThan(0);
+        const reparsed = creParser.parse(serialized);
+        expect(reparsed.errors).toBeUndefined();
         undo(s);
         expect(level(view(s), 1, 0)!.slots.length).toBe(before);
     });
@@ -81,9 +85,10 @@ maybe("spellbookEdit", () => {
 
     it("memorize into an empty level (capacity, no entries) works", () => {
         const s = open();
-        // Find a wizard level with capacity but no slots (Edwin has higher empty rows). If none, skip the body.
+        // Edwin has wizard levels at L5-L9 with capacity rows but no memorized entries.
         const empty = wizard(view(s)).levels.find((l) => l.slots.length === 0 && l.ownerNodeId !== undefined);
-        if (!empty) return;
+        expect(empty).toBeDefined();
+        if (!empty) throw new Error("fixture has no empty wizard level with a capacity row");
         spellbookEdit(s, { op: "memorize", ownerNodeId: empty.ownerNodeId!, resref: "SPWI805" });
         const after = wizard(view(s)).levels.find((l) => l.level === empty.level)!;
         expect(after.slots.some((sl) => sl.resref === "SPWI805")).toBe(true);

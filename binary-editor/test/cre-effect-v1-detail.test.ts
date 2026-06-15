@@ -25,6 +25,9 @@ import { buildDetailFieldMap, collectEntryRows, detailVariantRefs, detailVariant
 const PREFIX = "cre.effects[].v2"; // CRE routes BOTH effect kinds into one per-entry namespace (see layout-schema).
 const FIXTURE = "../../external/infinity-engine/BGT-WeiDU/bgt/modify/cre/edwin6.cre";
 
+const fixturePresent = fs.existsSync(path.resolve(__dirname, FIXTURE));
+const maybe = fixturePresent ? describe : describe.skip;
+
 function synthesizeV1CreBytes(): Uint8Array | undefined {
     const fixturePath = path.resolve(__dirname, FIXTURE);
     if (!fs.existsSync(fixturePath)) return undefined;
@@ -57,10 +60,10 @@ async function v1EffectFieldMap() {
     return buildDetailFieldMap(childRows, featureBlockBodyLabels(PREFIX));
 }
 
-describe("CRE v0 effects render through the SHARED feature-block fragment (no CRE-local copy)", () => {
+maybe("CRE v0 effects render through the SHARED feature-block fragment (no CRE-local copy)", () => {
     it("resolves the feature-block fragment against a v0 effect, and the v2 fragment does not", async () => {
         const map = await v1EffectFieldMap();
-        if (!map) return;
+        if (!map) throw new Error("v1EffectFieldMap returned undefined despite fixture being present");
         const fragment = featureBlockBodyRows(PREFIX);
         expect(detailVariantRefs(fragment).filter((ref) => !(ref in map))).toEqual([]);
         expect(detailVariantResolves(fragment, map)).toBe(true);
@@ -71,7 +74,7 @@ describe("CRE v0 effects render through the SHARED feature-block fragment (no CR
 
     it("parses v0 effect fields under the feature-block names, not the retired CRE-local names", async () => {
         const map = await v1EffectFieldMap();
-        if (!map) return;
+        if (!map) throw new Error("v1EffectFieldMap returned undefined despite fixture being present");
         // Unified onto effectSpec: the dual-purpose 0x1c/0x20 pair, the resref, timing, and save fields carry
         // the shared feature-block keys.
         for (const key of ["timing", "resource", "maxLevel", "minLevel", "saveType", "saveBonus", "stackingIdEx"]) {
@@ -85,7 +88,7 @@ describe("CRE v0 effects render through the SHARED feature-block fragment (no CR
 
     it("round-trips a v0 CRE byte-identically", () => {
         const bytes = synthesizeV1CreBytes();
-        if (!bytes) return;
+        if (!bytes) throw new Error("synthesizeV1CreBytes returned undefined despite fixture being present");
         const reparsed = creParser.parse(bytes);
         const doc = getCreCanonicalDocument(reparsed) ?? rebuildCreCanonicalDocument(reparsed);
         expect(doc).toBeDefined();

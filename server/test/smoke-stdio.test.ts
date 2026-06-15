@@ -236,9 +236,28 @@ begin("DIALOG", [start]);
             });
 
             await waitForFile(outputPath);
-            await new Promise((resolve) => {
-                setTimeout(resolve, 200);
-            });
+            // Poll until stdout has been stable (no new bytes) for 100 ms, up to 2 s.
+            // This ensures any trailing log lines emitted after the output file appears are captured
+            // before the negative assertion, without relying on a fixed-duration sleep.
+            await (async () => {
+                const stableMs = 100;
+                const timeoutMs = 2000;
+                const start = Date.now();
+                let lastLen = stdout.length;
+                let stableStart = Date.now();
+                while (Date.now() - start < timeoutMs) {
+                    // eslint-disable-next-line no-await-in-loop
+                    await new Promise((r) => {
+                        setTimeout(r, 20);
+                    });
+                    if (stdout.length !== lastLen) {
+                        lastLen = stdout.length;
+                        stableStart = Date.now();
+                    } else if (Date.now() - stableStart >= stableMs) {
+                        break;
+                    }
+                }
+            })();
 
             expect(stdout, `Unexpected raw stdout during stdio compile. stderr:\n${stderr}`).not.toContain(
                 `Transpiled to ${outputPath}`,

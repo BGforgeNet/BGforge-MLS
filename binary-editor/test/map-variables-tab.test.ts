@@ -46,7 +46,8 @@ describe("MAP Variables tab", () => {
     it("has subtabs ordered [globalVars, localVars]", () => {
         const vars = findVarsTab("arcaves.map");
         expect(vars.tabs).toBeDefined();
-        const subIds = (vars.tabs ?? []).map((t) => t.id);
+        if (!vars.tabs) throw new Error("vars.tabs missing despite toBeDefined assertion");
+        const subIds = vars.tabs.map((t) => t.id);
         expect(subIds).toEqual(["globalVars", "localVars"]);
     });
 

@@ -82,7 +82,8 @@ describe("map object-ops round-trip", () => {
     it("reorder up then down is a byte-identity inverse", () => {
         const pr = parseClean();
         const { elev, count } = elevationWithObjects(pr);
-        if (count < 2) return; // needs >=2 objects to reorder
+        // Fixture must have at least 2 objects to reorder; fail loudly if not.
+        expect(count).toBeGreaterThanOrEqual(2);
         const original = pr.sourceData as Uint8Array;
         const up = buildMapObjectMoveEntryBytes(pr, [`Elevation ${elev} Objects`], 1, "up");
         expect(up).toBeDefined();

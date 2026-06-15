@@ -69,15 +69,22 @@ describe("weidu-d/dialog - sample files", () => {
     });
 
     describe("files with dialog keywords produce blocks and/or states", () => {
-        for (const fileName of sampleFiles) {
+        const dialogFiles = sampleFiles.filter((fileName) => {
             const filePath = path.join(SAMPLES_DIR, fileName);
             const text = fs.readFileSync(filePath, "utf-8");
+            return hasDialogKeywords(text);
+        });
 
-            if (!hasDialogKeywords(text)) {
-                continue;
-            }
+        // At least one sample file must match the dialog keyword filter; if this fails,
+        // the sample directory is empty or all files lost their dialog keywords.
+        it("has at least one sample file with dialog keywords", () => {
+            expect(dialogFiles.length).toBeGreaterThan(0);
+        });
 
+        for (const fileName of dialogFiles) {
             it(`${fileName} produces blocks or states`, () => {
+                const filePath = path.join(SAMPLES_DIR, fileName);
+                const text = fs.readFileSync(filePath, "utf-8");
                 const result = parseDDialog(text);
                 const totalStructure = result.blocks.length + result.states.length;
 
@@ -170,14 +177,20 @@ describe("weidu-d/dialog - sample files", () => {
         });
 
         it("chain states have transitions or connect sequentially", () => {
-            // Each synthetic state should either have explicit transitions
-            // or be connected to the next state via auto-generated GOTO.
-            for (const state of result.states) {
-                // The last state might have an EXIT; intermediate states have GOTOs
-                expect(
-                    state.transitions.length + (state === result.states[result.states.length - 1] ? 0 : 1),
-                ).toBeGreaterThanOrEqual(0);
+            // Each synthetic state that is not the last must carry at least one explicit
+            // transition (GOTO or REPLY). The last state may exit with 0 transitions when
+            // the chain ends with an EXIT action not captured as a transition node.
+            const lastIdx = result.states.length - 1;
+            for (const [i, state] of result.states.entries()) {
+                if (i < lastIdx) {
+                    expect(
+                        state.transitions.length,
+                        `non-last state[${i}] must have transitions`,
+                    ).toBeGreaterThanOrEqual(1);
+                }
             }
+            // The last state has no outgoing transitions (chain ends with EXIT).
+            expect(result.states[lastIdx]!.transitions.length).toBe(0);
         });
     });
 

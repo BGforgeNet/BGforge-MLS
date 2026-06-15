@@ -50,6 +50,8 @@ describe("CRE canonical snapshot round-trip", () => {
         const result = creParser.parse(bytes);
         const doc = creFormatAdapter.rebuildCanonicalDocument(result);
         expect(doc).toBeDefined();
+        // rebuildDocument returns the document from result.document when present.
+        expect(doc).toMatchObject(result.document as object);
     });
 
     test("snapshot JSON shape: effects is a discriminated union with kind + records", () => {

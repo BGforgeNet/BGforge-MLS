@@ -192,6 +192,9 @@ end
             // Result depends on whether grammar parses preprocessor properly
             // Just verify it doesn't crash
             expect(() => renameSymbol(text, position, "ITEM_LIMIT", uri)).not.toThrow();
+            // Result is null when preprocessor nodes are not supported, or a WorkspaceEdit when they are
+            const result = renameSymbol(text, position, "ITEM_LIMIT", uri);
+            expect(result === null || typeof result === "object").toBe(true);
         });
 
         it("only renames the specific symbol, not similarly named ones", () => {

@@ -66,7 +66,7 @@ describe("getWindow", () => {
         const m = model();
         const gv = m.nodes.find((n) => n.name === "Global Variables"); // guard, no `!`
         expect(gv).toBeDefined();
-        if (!gv) return;
+        if (!gv) throw new Error("Global Variables group not found in model");
         setExpanded(m, gv.id, true);
         const rows = getWindow(m, 0, 1000);
         const row = rows.find((r) => r.id === gv.id);
@@ -80,7 +80,7 @@ describe("getWindow", () => {
         const m = model();
         const gv = m.nodes.find((n) => n.name === "Global Variables");
         expect(gv).toBeDefined();
-        if (!gv) return;
+        if (!gv) throw new Error("Global Variables group not found in model");
         setExpanded(m, gv.id, true);
         const rows = getWindow(m, 0, 1000);
         const childIds = new Set(m.nodes.filter((n) => n.parentId === gv.id).map((n) => n.id));
@@ -94,11 +94,11 @@ describe("getWindow", () => {
 
         const lockedGroup = m.nodes.find((n) => n.name === "LockedGroup");
         expect(lockedGroup).toBeDefined();
-        if (!lockedGroup) return;
+        if (!lockedGroup) throw new Error("LockedGroup not found in synthetic model");
 
         const unlockedGroup = m.nodes.find((n) => n.name === "UnlockedGroup");
         expect(unlockedGroup).toBeDefined();
-        if (!unlockedGroup) return;
+        if (!unlockedGroup) throw new Error("UnlockedGroup not found in synthetic model");
 
         // Expand both groups so their child fields appear in the window.
         setExpanded(m, lockedGroup.id, true);
@@ -110,14 +110,14 @@ describe("getWindow", () => {
         const lockedChildIds = new Set(m.nodes.filter((n) => n.parentId === lockedGroup.id).map((n) => n.id));
         const lockedFieldRow = rows.find((r) => lockedChildIds.has(r.id) && r.kind === "field");
         expect(lockedFieldRow).toBeDefined();
-        if (!lockedFieldRow) return;
+        if (!lockedFieldRow) throw new Error("no field row found inside LockedGroup");
         expect(lockedFieldRow.editable).toBe(false);
 
         // Find the field inside the unlocked sibling group - must be editable.
         const unlockedChildIds = new Set(m.nodes.filter((n) => n.parentId === unlockedGroup.id).map((n) => n.id));
         const unlockedFieldRow = rows.find((r) => unlockedChildIds.has(r.id) && r.kind === "field");
         expect(unlockedFieldRow).toBeDefined();
-        if (!unlockedFieldRow) return;
+        if (!unlockedFieldRow) throw new Error("no field row found inside UnlockedGroup");
         expect(unlockedFieldRow.editable).toBe(true);
     });
 });

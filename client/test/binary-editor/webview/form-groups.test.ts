@@ -10,4 +10,22 @@ describe("form-groups", () => {
         expect(r.fields.map((f) => f.id)).toEqual(["a", "b"]);
         expect(r.groups.map((g) => g.id)).toEqual(["g1", "g2"]);
     });
+
+    it("returns empty arrays for empty input", () => {
+        const r = splitForm([]);
+        expect(r.fields).toEqual([]);
+        expect(r.groups).toEqual([]);
+    });
+
+    it("returns only fields when there are no groups", () => {
+        const r = splitForm([field("x"), field("y")]);
+        expect(r.fields.map((f) => f.id)).toEqual(["x", "y"]);
+        expect(r.groups).toEqual([]);
+    });
+
+    it("returns only groups when there are no fields", () => {
+        const r = splitForm([group("g1"), group("g2")]);
+        expect(r.fields).toEqual([]);
+        expect(r.groups.map((g) => g.id)).toEqual(["g1", "g2"]);
+    });
 });

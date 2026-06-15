@@ -81,23 +81,20 @@ describe("@bgforge/transpile public API", () => {
             expect(r.warnings).toStrictEqual(direct.warnings);
         });
 
-        it("throws UnknownTranspileExtensionError for unknown extension", async () => {
+        it("throws UnknownTranspileExtensionError naming the extension and accepted extensions", async () => {
             await expect(transpile("/virtual/foo.xyz", "")).rejects.toMatchObject({
                 name: "UnknownTranspileExtensionError",
-                message: expect.stringContaining(".xyz"),
+                message: expect.stringMatching(/\.xyz/),
             });
-        });
-
-        it("throws an error whose message lists the accepted extensions", async () => {
-            try {
-                await transpile("/virtual/foo.xyz", "");
-                throw new Error("expected throw");
-            } catch (error) {
-                const m = (error as Error).message;
-                expect(m).toMatch(/\.tssl/);
-                expect(m).toMatch(/\.tbaf/);
-                expect(m).toMatch(/\.td/);
-            }
+            await expect(transpile("/virtual/foo.xyz", "")).rejects.toMatchObject({
+                message: expect.stringMatching(/\.tssl/),
+            });
+            await expect(transpile("/virtual/foo.xyz", "")).rejects.toMatchObject({
+                message: expect.stringMatching(/\.tbaf/),
+            });
+            await expect(transpile("/virtual/foo.xyz", "")).rejects.toMatchObject({
+                message: expect.stringMatching(/\.td/),
+            });
         });
     });
 });

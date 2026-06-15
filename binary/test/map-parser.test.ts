@@ -335,7 +335,6 @@ describe("MAP parser - real maps", () => {
         defaultOrientation.rawValue = 6;
         result.document = undefined;
 
-        expect(() => createBinaryJsonSnapshot(result)).not.toThrow();
         const snapshot = JSON.parse(createBinaryJsonSnapshot(result)) as {
             document: { header: { defaultOrientation: number } };
         };

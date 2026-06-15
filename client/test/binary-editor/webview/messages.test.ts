@@ -8,11 +8,23 @@ describe("message contract", () => {
             { type: "requestChildren", requestId: 1, nodeId: null, start: 0, end: 50 },
             { type: "requestChildren", requestId: 2, nodeId: "0/1", start: 0, end: 50 },
             { type: "editField", nodeId: "0/1/2", value: 7 },
-            { type: "structureOp", op: { op: "add", namePath: ["Global Variables"] } },
+            { type: "structureOp", op: { op: "add", sectionId: "0" } },
             { type: "dumpJson" },
             { type: "loadJson" },
         ];
         expect(msgs).toHaveLength(7);
+        expect(msgs.map((m) => m.type)).toEqual([
+            "ready",
+            "requestChildren",
+            "requestChildren",
+            "editField",
+            "structureOp",
+            "dumpJson",
+            "loadJson",
+        ]);
+        // requestChildren with a null nodeId (root) and a string nodeId (child)
+        expect((msgs[1] as { requestId: number }).requestId).toBe(1);
+        expect((msgs[2] as { nodeId: string | null }).nodeId).toBe("0/1");
     });
 
     it("permits the Plan 3 host->webview messages", () => {
@@ -23,7 +35,7 @@ describe("message contract", () => {
                     sessionId: "s1",
                     format: "map",
                     formatName: "MAP",
-                    layout: { formatId: "map", sections: [] },
+                    layout: { formatId: "map" },
                     warnings: [],
                     errors: [],
                     rootWindow: [],
@@ -42,5 +54,18 @@ describe("message contract", () => {
             { type: "error", message: "boom" },
         ];
         expect(msgs).toHaveLength(7);
+        expect(msgs.map((m) => m.type)).toEqual([
+            "init",
+            "children",
+            "changeSet",
+            "changeSet",
+            "invalidated",
+            "diagnostics",
+            "error",
+        ]);
+        // changeSet with selection pin (Plan 5 addition)
+        expect((msgs[3] as { selection?: string }).selection).toBe("0/1");
+        // error message is surfaced
+        expect((msgs[6] as { type: "error"; message: string }).message).toBe("boom");
     });
 });

@@ -45,7 +45,8 @@ describe("dispatch", () => {
         expect(snap.type).toBe("snapshot");
         if (snap.type !== "snapshot") return;
         expect(snap.json.length).toBeGreaterThan(0);
-        expect(() => JSON.parse(snap.json)).not.toThrow();
+        const parsed = JSON.parse(snap.json) as { format?: string };
+        expect(parsed.format).toBe("map");
     });
 
     it("getChildren returns roots for null nodeId and a node's children otherwise", () => {

@@ -20,8 +20,10 @@ describe("@bgforge/transpile bin entry (fgtp)", () => {
         }
     });
 
-    it("exposes a bin entry named fgtp", () => {
-        expect(pkg.bin?.fgtp).toBeTruthy();
+    it("exposes a bin entry named fgtp pointing to the CLI output file", () => {
+        // The bin path must be a non-empty string ending with .js (the bundled output).
+        expect(typeof pkg.bin?.fgtp).toBe("string");
+        expect(pkg.bin?.fgtp).toMatch(/\.js$/);
     });
 
     it("exits 0 with usage banner on --help", () => {

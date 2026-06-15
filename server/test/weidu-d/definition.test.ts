@@ -65,6 +65,9 @@ END
             // This depends on specific grammar support for REPLY transitions
             // Just verify it doesn't crash
             expect(() => getDefinition(text, uri, position)).not.toThrow();
+            // When supported, result is either null (not found) or a location within this file
+            const result = getDefinition(text, uri, position);
+            expect(result === null || result.uri === uri).toBe(true);
         });
 
         it("returns null when cursor is not on a state reference", () => {
@@ -119,6 +122,9 @@ END
             // The grammar may or may not support numeric labels as references
             // Just verify it doesn't crash and returns a sensible result
             expect(() => getDefinition(text, uri, position)).not.toThrow();
+            // Result is null (unsupported) or a location in this file
+            const result = getDefinition(text, uri, position);
+            expect(result === null || result.uri === uri).toBe(true);
         });
 
         it("handles CHAIN syntax without crashing", () => {
@@ -135,6 +141,9 @@ END
             const chainUri = "file:///chain.d";
             // Even if no state references are found, it should not crash
             expect(() => getDefinition(chainText, chainUri, { line: 0, character: 0 })).not.toThrow();
+            // Cursor at line 0 is outside any state reference; result must be null
+            const result = getDefinition(chainText, chainUri, { line: 0, character: 0 });
+            expect(result).toBeNull();
         });
 
         it("returns null when parser not initialized with bad text", () => {

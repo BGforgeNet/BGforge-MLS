@@ -28,7 +28,7 @@ describe("editField", () => {
         const { session, gv } = openAndExpandGlobals();
         const child = session.model.nodes.find((n) => n.parentId === gv.id && n.kind === "field");
         expect(child).toBeDefined();
-        if (!child) return;
+        if (!child) throw new Error("no child field node in Global Variables");
         const result = editField(session, child.id, 42);
         expect(result.changeSet.dirty).toBe(true);
         expect(result.changeSet.formatValid).toBe(true);
@@ -41,7 +41,7 @@ describe("editField", () => {
         const { session, gv } = openAndExpandGlobals();
         const child = session.model.nodes.find((n) => n.parentId === gv.id && n.kind === "field");
         expect(child).toBeDefined();
-        if (!child) return;
+        if (!child) throw new Error("no child field node in Global Variables");
         editField(session, child.id, 7);
         expect(session.undo.length).toBe(1);
     });
@@ -191,12 +191,12 @@ it("undo after a field edit restores the prior value", () => {
     const { session, gv } = openAndExpandGlobals();
     const child = session.model.nodes.find((n) => n.parentId === gv.id && n.kind === "field");
     expect(child).toBeDefined();
-    if (!child) return;
+    if (!child) throw new Error("no child field node in Global Variables");
     const original = (child.source as ParsedField).value;
     editField(session, child.id, 999);
     undo(session);
     const after = session.model.nodes.find((n) => n.id === child.id);
     expect(after).toBeDefined();
-    if (!after) return;
+    if (!after) throw new Error("child node missing from model after undo");
     expect((after.source as ParsedField).value).toBe(original);
 });

@@ -564,14 +564,10 @@ describe("formatDocument throws on structural errors", () => {
         return formatDocument(tree!.rootNode).text;
     }
 
-    it("succeeds for valid code", () => {
-        const input = `BACKUP ~backup~\nBEGIN @1\nCOPY ~src~ ~dst~`;
-        expect(() => format(input)).not.toThrow();
-    });
-
     it("returns text for valid code", () => {
         const input = `BEGIN @1\nCOPY ~src~ ~dst~`;
         const result = format(input);
+        expect(result.length).toBeGreaterThan(0);
         expect(result).toContain("BEGIN @1");
         expect(result).toContain("COPY");
     });

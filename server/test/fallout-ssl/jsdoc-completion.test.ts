@@ -164,7 +164,8 @@ describe("fallout-ssl JSDoc completion", () => {
             const items = getJsdocCompletions(FALLOUT_JSDOC_TYPES, tagPrefix);
             const tags = items.filter((i) => i.kind === CompletionItemKind.Keyword);
             const types = items.filter((i) => i.kind === CompletionItemKind.TypeParameter);
-            expect(tags.length).toBeGreaterThan(0);
+            // ALL_JSDOC_TAG_NAMES = ["arg","deprecated","param","ret","return","returns","type"] -> 7 tags
+            expect(tags.length).toBe(7);
             expect(types.length).toBe(0);
         });
 
@@ -213,7 +214,8 @@ describe("fallout-ssl JSDoc completion", () => {
             const tags = items.filter((i) => i.kind === CompletionItemKind.Keyword);
             const types = items.filter((i) => i.kind === CompletionItemKind.TypeParameter);
             expect(tags.length).toBe(0);
-            expect(types.length).toBeGreaterThan(0);
+            // FALLOUT_JSDOC_TYPE_NAMES has 11 entries
+            expect(types.length).toBe(11);
         });
 
         it("returns all Fallout type names", () => {
@@ -247,13 +249,15 @@ describe("fallout-ssl JSDoc completion", () => {
 
         it("works after @type tag", () => {
             const items = getJsdocCompletions(FALLOUT_JSDOC_TYPES, " * @type ");
-            expect(items.length).toBeGreaterThan(0);
+            // FALLOUT_JSDOC_TYPE_NAMES has 11 entries
+            expect(items.length).toBe(11);
             expect(items.every((i) => i.kind === CompletionItemKind.TypeParameter)).toBe(true);
         });
 
         it("works with opening brace", () => {
             const items = getJsdocCompletions(FALLOUT_JSDOC_TYPES, " * @param {");
-            expect(items.length).toBeGreaterThan(0);
+            // FALLOUT_JSDOC_TYPE_NAMES has 11 entries
+            expect(items.length).toBe(11);
             expect(items.every((i) => i.kind === CompletionItemKind.TypeParameter)).toBe(true);
         });
     });
@@ -289,7 +293,9 @@ describe("fallout-ssl JSDoc completion", () => {
         it("each entry has a detail string", () => {
             for (const [, meta] of FALLOUT_JSDOC_TYPES) {
                 expect(typeof meta.detail).toBe("string");
-                expect(meta.detail.length).toBeGreaterThan(0);
+                // Detail must be a meaningful descriptor, not blank or whitespace-only
+                expect(meta.detail.trim().length).toBeGreaterThan(0);
+                expect(meta.detail).toMatch(/\w+/);
             }
         });
     });

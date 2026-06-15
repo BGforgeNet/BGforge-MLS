@@ -61,7 +61,8 @@ describe("SSL getCompletions excludeUri", () => {
         fileIndex.symbols.updateFile(normalizeUri(headerA), [createSymbol("func_a", headerA)]);
         fileIndex.symbols.updateFile(normalizeUri(headerB), [createSymbol("func_b", headerB)]);
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test-only: inject mock fileIndex
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- no public seam for fileIndex injection;
+        // provider exposes no init/setter that accepts a pre-populated FileIndex, so private access is required here
         (provider as any).fileIndex = fileIndex;
 
         const completions = provider.getCompletions(headerA);
@@ -78,7 +79,8 @@ describe("SSL getCompletions excludeUri", () => {
         fileIndex.loadStatic([createSymbol("builtin_func", null)]);
         fileIndex.symbols.updateFile(normalizeUri(headerA), [createSymbol("func_a", headerA)]);
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test-only: inject mock fileIndex
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- no public seam for fileIndex injection;
+        // provider exposes no init/setter that accepts a pre-populated FileIndex, so private access is required here
         (provider as any).fileIndex = fileIndex;
 
         const completions = provider.getCompletions(headerA);

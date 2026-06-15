@@ -63,8 +63,12 @@ describe("buildMergedRelationships", () => {
         expect(op2?.param2?.enum).toBeUndefined();
     });
 
-    test("the harvest never throws across the full opcode corpus", () => {
-        expect(() => buildMergedRelationships(OPCODES_DIR)).not.toThrow();
+    test("the harvest never throws across the full opcode corpus and returns a non-empty map", () => {
+        const merged = buildMergedRelationships(OPCODES_DIR);
+        // The corpus has entries for at least opcode 0 and 1.
+        expect(merged.size).toBeGreaterThan(1);
+        expect(merged.has(0)).toBe(true);
+        expect(merged.has(1)).toBe(true);
     });
 
     test("emitted module includes enum entries for op0", () => {

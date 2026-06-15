@@ -128,6 +128,10 @@ end
             // Result depends on grammar parsing preprocessor nodes
             // Just verify it doesn't crash
             expect(() => getLocalSignature(text, "ADD", 0)).not.toThrow();
+            // When preprocessor nodes are not parsed, result is null; when supported, it is a SignatureHelp
+            // object with a non-empty signatures array
+            const result = getLocalSignature(text, "ADD", 0);
+            expect(result === null || (Array.isArray(result.signatures) && result.signatures.length > 0)).toBe(true);
         });
 
         it("returns null for constant macro (no params)", () => {

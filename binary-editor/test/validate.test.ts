@@ -63,14 +63,8 @@ function effectSessionWithProbs(prob1: number, prob2: number): EditorSession {
 describe("validate", () => {
     it("returns no diagnostics for a clean map", () => {
         const session = openSessionForFixture();
-        if (!session) return;
+        if (!session) throw new Error("session missing despite openSession succeeding");
         expect(validate(session)).toEqual([]);
-    });
-
-    it("never throws", () => {
-        const session = openSessionForFixture();
-        if (!session) return;
-        expect(() => validate(session)).not.toThrow();
     });
 });
 
@@ -78,10 +72,18 @@ describe("validate - relationship constraints", () => {
     it("surfaces relationship constraints with real node ids when prob1 < prob2", () => {
         // prob1=10 < prob2=40 => empty range, constraint fires
         const session = effectSessionWithProbs(10, 40);
+        // Node ids are positional: "0" = Effect 1 group, "0/3" = probability1, "0/4" = probability2.
+        const prob1NodeId = "0/3";
+        const prob2NodeId = "0/4";
         const diags = validate(session);
-        const d = diags.find((x) => x.nodeId !== "" && x.severity === "warning");
+        const d = diags.find((x) => x.nodeId === prob1NodeId);
         expect(d).toBeDefined();
-        expect(d?.quickFix).toBeDefined();
+        expect(d?.severity).toBe("warning");
+        expect(d?.nodeId).toBe(prob1NodeId);
+        expect(d?.quickFix?.edits).toEqual([
+            { nodeId: prob1NodeId, value: 40 },
+            { nodeId: prob2NodeId, value: 10 },
+        ]);
     });
 
     it("returns no per-field constraint diagnostics for a valid effect (prob1 >= prob2)", () => {
