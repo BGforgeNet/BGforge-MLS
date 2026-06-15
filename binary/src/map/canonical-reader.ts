@@ -245,13 +245,17 @@ function parseMapObject(group: ParsedGroup): z.infer<typeof mapObjectSchema> {
         // decodeScenerySubtypeTrailer in wire order. The first child is a
         // synthetic 0-byte "Sub Type" note carrying the resolved subType so
         // the canonical doc can rebuild a resolver during snapshot reparse;
-        // the remaining children are the actual int32 trailer values.
+        // the remaining children are the actual int32 trailer values. Typed
+        // trailer fields (flags / enum / hex) carry the number in `rawValue`
+        // and a display string in `value`, so prefer `rawValue` here.
         const fields = subtypeData.fields.filter((entry): entry is import("../types").ParsedField => !isGroup(entry));
         const subTypeField = fields.find((f) => f.name === "Sub Type");
         const valueFields = fields.filter((f) => f.name !== "Sub Type");
         object.subtypeData = {
             subType: typeof subTypeField?.rawValue === "number" ? subTypeField.rawValue : -1,
-            values: valueFields.map((entry) => (typeof entry.value === "number" ? entry.value : 0)),
+            values: valueFields.map((entry) =>
+                typeof entry.rawValue === "number" ? entry.rawValue : typeof entry.value === "number" ? entry.value : 0,
+            ),
         };
     }
 

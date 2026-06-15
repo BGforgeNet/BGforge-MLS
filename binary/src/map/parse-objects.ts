@@ -11,6 +11,9 @@ import { resolvePidSubType, type PidResolver } from "../pid-resolver";
 import {
     makeGroup,
     int32Field,
+    hex32Field,
+    flagsField,
+    enumField,
     noteField,
     isExitGridPid,
     objectTypeName,
@@ -35,7 +38,7 @@ import {
     exitGridSpec,
     exitGridPresentation,
 } from "./specs/object";
-import { ItemSubType, ScenerySubType } from "./types";
+import { DoorOpenFlags, ElevatorType, ItemSubType, ScenerySubType } from "./types";
 
 export interface ParseObjectsOptions {
     pidResolver?: PidResolver;
@@ -151,7 +154,7 @@ export function decodeItemSubtypeTrailer(
     switch (subType) {
         case 3: // Weapon
             return {
-                fields: [int32Field("Ammo Quantity", data, offset), int32Field("Ammo Type PID", data, offset + 4)],
+                fields: [int32Field("Ammo Quantity", data, offset), hex32Field("Ammo Type PID", data, offset + 4)],
                 offset: offset + 8,
             };
         case 4: // Ammo
@@ -178,7 +181,7 @@ export function decodeScenerySubtypeTrailer(
 ): { fields: ParsedField[]; offset: number } {
     switch (subType) {
         case 0: // Door
-            return { fields: [int32Field("Open Flags", data, offset)], offset: offset + 4 };
+            return { fields: [flagsField("Open Flags", data, offset, DoorOpenFlags)], offset: offset + 4 };
         case 1: // Stairs
             return {
                 fields: [
@@ -189,7 +192,7 @@ export function decodeScenerySubtypeTrailer(
             };
         case 2: // Elevator
             return {
-                fields: [int32Field("Elevator Type", data, offset), int32Field("Level", data, offset + 4)],
+                fields: [enumField("Elevator Type", data, offset, ElevatorType), int32Field("Level", data, offset + 4)],
                 offset: offset + 8,
             };
         case 3: // Ladder Up

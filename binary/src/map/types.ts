@@ -137,6 +137,49 @@ export const ObjectDataFlags: Record<number, string> = {
 };
 
 /**
+ * Door scenery instance open-flags (`obj->data.scenery.door.openFlags` / `cur_open_flags`) - the per-subtype
+ * trailer dword of a door object, distinct from the object `dataFlags` above. fallout2-ce names three bits:
+ * 0x01 = currently open (proto_instance.cc toggles it on open/close), and DOOR_FLAG_LOCKED / DOOR_FLAG_JAMMGED
+ * (src/obj_types.h) which alias the same 0x02000000 / 0x04000000 values as OBJ_LOCKED / OBJ_JAMMED.
+ */
+export const DoorOpenFlags: Record<number, string> = {
+    0x00000001: "Open",
+    0x02000000: "Locked",
+    0x04000000: "Jammed",
+};
+
+/**
+ * Elevator scenery type (`obj->data.scenery.elevator.type`) - an index into the engine's hardcoded elevator
+ * table. Labels humanized from fallout2-ce src/elevator.h (the `Elevator` enum, values 0-23). Index 14 has no
+ * engine name (`ELEVATOR_14`), so it falls through to the walker's `Unknown (14)` display.
+ */
+export const ElevatorType: Record<number, string> = {
+    0: "Brotherhood of Steel (Main)",
+    1: "Brotherhood of Steel (Surface)",
+    2: "Master (Upper)",
+    3: "Master (Lower)",
+    4: "Military Base (Upper)",
+    5: "Military Base (Lower)",
+    6: "Glow (Upper)",
+    7: "Glow (Lower)",
+    8: "Vault 13",
+    9: "Necropolis",
+    10: "Sierra 1",
+    11: "Sierra 2",
+    12: "Sierra Service",
+    13: "Klamath Toxic Caves",
+    15: "Vault City",
+    16: "Vault 15 (Main)",
+    17: "Vault 15 (Surface)",
+    18: "Navarro (Northern)",
+    19: "Navarro (Center)",
+    20: "Navarro (Lab)",
+    21: "Navarro (Canteen)",
+    22: "San Francisco (Shi Temple)",
+    23: "Redding (Wanamingo Mine)",
+};
+
+/**
  * Item object subtype codes (the resolved `proto->item.type`). Labels the read-only "Sub Type" note and selects
  * the per-subtype trailer layout. Values per fallout2-ce src/proto_types.h (ITEM_TYPE_*).
  */

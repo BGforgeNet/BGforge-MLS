@@ -57,7 +57,11 @@ describe("decodeItemSubtypeTrailer", () => {
         expect(r.fields[0]?.name).toMatch(/Ammo Quantity/i);
         expect(r.fields[0]?.value).toBe(42);
         expect(r.fields[1]?.name).toMatch(/Ammo Type/i);
-        expect(r.fields[1]?.value).toBe(0xa3);
+        // Ammo Type PID is a packed dword, shown in hex; the number lives in rawValue.
+        expect(r.fields[1]?.type).toBe("int32");
+        expect(r.fields[1]?.numericFormat).toBe("hex32");
+        expect(r.fields[1]?.value).toBe("0x000000a3");
+        expect(r.fields[1]?.rawValue).toBe(0xa3);
     });
 
     it("Ammo (subType 4) reads 4 bytes: quantity", () => {
@@ -95,12 +99,15 @@ describe("decodeItemSubtypeTrailer", () => {
 });
 
 describe("decodeScenerySubtypeTrailer", () => {
-    it("Door (subType 0) reads 4 bytes: openFlags", () => {
-        const buf = buildBE([0xf]);
+    it("Door (subType 0) reads 4 bytes: openFlags as a flag table", () => {
+        // Open (0x01) | Locked (0x02000000) | Jammed (0x04000000)
+        const buf = buildBE([0x06000001]);
         const r = decodeScenerySubtypeTrailer(buf, 0, SCENERY_DOOR, MAP_VERSION_FO2);
         expect(r.offset).toBe(4);
         expect(r.fields[0]?.name).toMatch(/Open Flags/i);
-        expect(r.fields[0]?.value).toBe(0xf);
+        expect(r.fields[0]?.type).toBe("flags");
+        expect(r.fields[0]?.value).toBe("Open, Locked, Jammed");
+        expect(r.fields[0]?.rawValue).toBe(0x06000001);
     });
 
     it("Stairs (subType 1) reads 8 bytes: destinationBuiltTile then destinationMap", () => {
@@ -112,12 +119,15 @@ describe("decodeScenerySubtypeTrailer", () => {
         expect(r.fields[1]?.value).toBe(7);
     });
 
-    it("Elevator (subType 2) reads 8 bytes: type then level", () => {
+    it("Elevator (subType 2) reads 8 bytes: type (enum) then level", () => {
         const buf = buildBE([2, 1]);
         const r = decodeScenerySubtypeTrailer(buf, 0, SCENERY_ELEVATOR, MAP_VERSION_FO2);
         expect(r.offset).toBe(8);
         expect(r.fields).toHaveLength(2);
-        expect(r.fields[0]?.value).toBe(2);
+        expect(r.fields[0]?.type).toBe("enum");
+        expect(r.fields[0]?.value).toBe("Master (Upper)");
+        expect(r.fields[0]?.rawValue).toBe(2);
+        // Level stays a plain int.
         expect(r.fields[1]?.value).toBe(1);
     });
 

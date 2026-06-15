@@ -198,6 +198,39 @@ describe("projectRow metadata", () => {
     });
 });
 
+describe("MAP subtype-trailer fields project as typed controls", () => {
+    // denbus1 is the vanilla fixture that surfaces both a door (Open Flags) and a weapon (Ammo Type PID)
+    // in fully-resolved subtype trailers, so it exercises the typed-trailer projection end to end.
+    const DENBUS1 = path.resolve(__dirname, "../../client/testFixture/maps/denbus1.map");
+
+    function denbus1Rows() {
+        const m = buildModel(mapParser.parse(new Uint8Array(fs.readFileSync(DENBUS1))));
+        // Expand every group so the deeply-nested object trailer rows become visible through the
+        // real getWindow path - not projected in isolation via projectRow.
+        for (const n of m.nodes) {
+            if (n.childCount > 0) setExpanded(m, n.id, true);
+        }
+        return getWindow(m, 0, 1_000_000);
+    }
+
+    it("Door 'Open Flags' projects as a flags control carrying the door bit table", () => {
+        const row = denbus1Rows().find((r) => r.name === "Open Flags");
+        expect(row).toBeDefined();
+        expect(row?.valueType).toBe("flags");
+        expect(row?.flagOptions).toEqual({ "1": "Open", "33554432": "Locked", "67108864": "Jammed" });
+    });
+
+    it("'Ammo Type PID' projects as a hex-formatted numeric control", () => {
+        const row = denbus1Rows().find((r) => r.name === "Ammo Type PID");
+        expect(row).toBeDefined();
+        expect(row?.valueType).toBe("int32");
+        expect(row?.numericFormat).toBe("hex32");
+        // displayValue is the 0x-prefixed string; rawValue stays the stored number for editing.
+        expect(row?.displayValue).toMatch(/^0x[0-9a-f]{8}$/);
+        expect(typeof row?.rawValue).toBe("number");
+    });
+});
+
 describe("getChildren", () => {
     it("returns depth-0 roots when parentId is null, with total", () => {
         const m = model(); // MAP fixture helper already defined at the top of this file
