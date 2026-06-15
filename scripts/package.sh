@@ -11,7 +11,7 @@
 #    work for node_modules/ with --no-dependencies, so we add them post-packaging)
 # 5. Restore server/node_modules via pnpm install
 
-set -e
+set -eu -o pipefail
 
 # Workspace package symlinks under server/node_modules (e.g. @bgforge/format ->
 # ../../../format) are captured here before the strip below removes them. pnpm
