@@ -3,7 +3,6 @@
     "compilerOptions": {
         "lib": ["es2022", "DOM", "DOM.Iterable"],
         "outDir": "out",
-        "rootDir": "..",
         "sourceMap": true,
         "allowImportingTsExtensions": true,
         "tsBuildInfoFile": "../tmp/client.tsbuildinfo",

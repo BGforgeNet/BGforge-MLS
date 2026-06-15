@@ -4,7 +4,6 @@
         "lib": ["es2022"],
         "sourceMap": true,
         "allowImportingTsExtensions": true,
-        "rootDir": "..",
         "outDir": "out",
         "tsBuildInfoFile": "../tmp/server.tsbuildinfo",
         "paths": {
