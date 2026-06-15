@@ -10,7 +10,7 @@
 
 import { group, readerAt } from "../ie-common/parse-helpers";
 import { walkStruct } from "../spec/walk-display";
-import { effBodySpecAnnotated } from "../eff/specs/body.overrides";
+import { effBodySpecAnnotated, effBodyPresentation } from "../eff/specs/body.overrides";
 import { bytesEqual } from "../ie-common/types";
 import type { BinaryParser, ParseOptions, ParseResult, ParsedField } from "../types";
 import type { CreCanonicalDocument } from "./canonical-schemas";
@@ -60,7 +60,8 @@ const spellMemInfoPresentation = {} as const;
 const memorizedSpellPresentation = {} as const;
 const itemPresentation = {} as const;
 const effectV1Presentation = {} as const;
-const effectV2Presentation = {} as const;
+// CRE v2 effects embed the same 264-byte EFF body; reuse the EFF body presentation so a CRE-embedded
+// effect renders its fields (e.g. the hex `Special` stacking id) identically to a standalone .eff.
 
 const FORMAT_ID = "cre";
 const FORMAT_NAME = "Infinity Engine CRE v1";
@@ -255,7 +256,7 @@ class CreParser implements BinaryParser {
                 : (effectsRecords as CreEffectV2Data[]).map((e, i) =>
                       walkStruct(
                           effBodySpecAnnotated,
-                          effectV2Presentation,
+                          effBodyPresentation,
                           header.effectsOffset + i * effectSize,
                           e,
                           `Effect ${i + 1}`,

@@ -7,7 +7,8 @@
  */
 
 import { i32 } from "typed-binary";
-import { charsSpec, type FieldSpec } from "../../spec/types";
+import { charsSpec, type FieldSpec, type SpecData } from "../../spec/types";
+import type { StructPresentation } from "../../spec/presentation";
 import {
     EffectParentResourceFlags,
     EffectParentResourceType,
@@ -74,3 +75,11 @@ export const effBodySpecAnnotated = {
     // fixture later shows non-NUL non-ASCII bytes here, revisit.
     variableName: charsSpec(32),
 } satisfies Record<string, FieldSpec>;
+
+// Presentation overrides for the EFF body. `stackingIdTobex` (IESDP eff_v2 "Special", offset 0x48) packs a
+// modder prefix in the high word and a unique id in the low word - IESDP's own example is hex (0x41360001),
+// so decimal (1094123521) hides the structure. Display-only: the codec and wire bytes are unchanged. Shared
+// by the display walk (eff/index.ts) and the path-keyed presentation schema so both render hex.
+export const effBodyPresentation: StructPresentation<SpecData<typeof effBodySpecAnnotated>> = {
+    stackingIdTobex: { format: "hex32" },
+};

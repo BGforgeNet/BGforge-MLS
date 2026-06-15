@@ -164,4 +164,7 @@ export const creHeaderSpecAnnotated = {
 export const creHeaderPresentation: StructPresentation<SpecData<typeof creHeaderSpecAnnotated>> = {
     kit: { format: "hex32" },
     alignment: { format: "hex32" },
+    // Animation ID hex directly names the animation resource (0x6004 -> 6004.INI) and maps to ANIMATE.IDS hex
+    // constants; decimal (24580) is unrecognisable. Display-only - the codec and wire bytes are unchanged.
+    animationId: { format: "hex32" },
 };

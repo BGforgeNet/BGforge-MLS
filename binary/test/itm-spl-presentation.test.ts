@@ -238,4 +238,12 @@ describe("EFF display tree presentation", () => {
         expect(typeof r2?.value).toBe("string");
         expect(typeof r3?.value).toBe("string");
     });
+
+    test("body stacking-id (Special) renders in hex", () => {
+        // The EFF body presentation must apply format:hex32 so the packed (prefix<<16)|id reads legibly.
+        // The same presentation is shared with the CRE-embedded v2 effect walk so both render identically.
+        const special = findField(result.root, "Stacking Id Tobex");
+        expect(special?.numericFormat).toBe("hex32");
+        expect(special?.value).toMatch(/^0x[0-9a-f]{8}$/);
+    });
 });

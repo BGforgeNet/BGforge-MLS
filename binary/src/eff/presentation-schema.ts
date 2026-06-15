@@ -11,13 +11,13 @@ import {
 } from "../presentation-schema-types";
 import { toPresentationEntries } from "../spec/derive-presentation";
 import { toDomainRanges } from "../spec/derive-domain-ranges";
-import { effBodySpecAnnotated } from "./specs/body.overrides";
+import { effBodySpecAnnotated, effBodyPresentation } from "./specs/body.overrides";
 
 export const effPresentationSchema: FormatPresentationSchema = formatPresentationSchema.parse({
     schemaVersion: 1,
     format: "eff",
     exactFields: {
-        ...toPresentationEntries(effBodySpecAnnotated, {}, "eff.body"),
+        ...toPresentationEntries(effBodySpecAnnotated, effBodyPresentation, "eff.body"),
     },
     patternFields: [],
 });

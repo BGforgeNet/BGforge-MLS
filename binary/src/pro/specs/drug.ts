@@ -1,5 +1,5 @@
 import { i32 } from "typed-binary";
-import { StatType } from "../types";
+import { Perk, StatType } from "../types";
 import type { FieldSpec, SpecData } from "../../spec/types";
 import type { StructPresentation } from "../../spec/presentation";
 
@@ -22,7 +22,9 @@ export const drugSpec = {
     amount1Delayed2: { codec: i32 },
     amount2Delayed2: { codec: i32 },
     addictionRate: { codec: i32 },
-    addictionEffect: { codec: i32 },
+    // The addiction perk inflicted on the critter, passed as the `perk` arg to fallout2-ce
+    // `_insert_withdrawal` (item.cc); -1 = none. Open enum - sfall extends the perk list past the named set.
+    addictionEffect: { codec: i32, enum: Perk, enumOpen: true },
     addictionOnset: { codec: i32 },
 } satisfies Record<string, FieldSpec>;
 

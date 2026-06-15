@@ -33,7 +33,7 @@ export const weaponPresentation: StructPresentation<WeaponData> = {
     damageType: { label: "Damage Type" },
     maxRange1: { label: "Max Range 1" },
     maxRange2: { label: "Max Range 2" },
-    projectilePid: { label: "Projectile PID" },
+    projectilePid: { label: "Projectile PID", format: "hex32" },
     minStrength: { label: "Min Strength" },
     apCost1: { label: "AP Cost 1" },
     apCost2: { label: "AP Cost 2" },
@@ -41,7 +41,7 @@ export const weaponPresentation: StructPresentation<WeaponData> = {
     perk: { label: "Perk" },
     rounds: { label: "Rounds" },
     caliber: { label: "Caliber" },
-    ammoPid: { label: "Ammo PID" },
+    ammoPid: { label: "Ammo PID", format: "hex32" },
     maxAmmo: { label: "Max Ammo" },
     soundId: { label: "Sound ID" },
 };
