@@ -121,7 +121,7 @@ vscode-mls/
 +-- binary/                 @bgforge/binary package: parsers library + fgbin CLI bin
 |   +-- src/                    index.ts (library) + cli.ts (fgbin bin) + format adapters
 |   +-- test/                   Library + CLI tests (vitest)
-|   +-- out/                    tsup output
+|   +-- out/                    tsdown output
 |
 +-- binary-editor/          @bgforge/binary-editor package: declarative layout layer (parsed records -> editor blocks)
 |   +-- src/                    layout/model/session/spellbook/cross-record projection consumed by the client webview
@@ -129,7 +129,7 @@ vscode-mls/
 |
 +-- format/                 @bgforge/format package: formatters library + fgfmt CLI bin
 |   +-- src/                    index.ts (library) + cli.ts (fgfmt bin)
-|   +-- out/                    tsup output + WASM files
+|   +-- out/                    tsdown output + WASM files
 |
 +-- shared/                 Pure TypeScript helpers shared across workspaces
 |   +-- cli/                    Shared CLI utilities (used by format, transpile, bin)
@@ -180,9 +180,9 @@ All bundles use **esbuild** (not tsc). The monorepo uses **pnpm workspaces**.
 | TSSL Plugin   | `plugins/tssl-plugin/src/index.ts`                                                         | `node_modules/bgforge-tssl-plugin/index.js` | CJS, standalone                                  |
 | TD Plugin     | `plugins/td-plugin/src/index.ts`                                                           | `node_modules/bgforge-td-plugin/index.js`   | CJS, standalone                                  |
 | Webviews      | `client/src/dialog-tree/dialogTree-webview.ts`, `client/src/binary-editor/webview/main.ts` | `client/out/*.js`                           | Browser context, built as part of `build:client` |
-| Format lib    | `format/src/{index,cli}.ts`                                                                | `format/out/{index,cli}.js`                 | ESM, tsup-bundled; cli.js is the fgfmt bin       |
-| Transpile lib | `transpilers/src/{index,cli}.ts`                                                           | `transpilers/out/{index,cli}.js`            | ESM, tsup-bundled; cli.js is the fgtp bin        |
-| Binary lib    | `binary/src/{index,cli}.ts`                                                                | `binary/out/{index,cli}.js`                 | ESM, tsup-bundled; cli.js is the fgbin bin       |
+| Format lib    | `format/src/{index,cli}.ts`                                                                | `format/out/{index,cli}.js`                 | ESM, tsdown-bundled; cli.js is the fgfmt bin     |
+| Transpile lib | `transpilers/src/{index,cli}.ts`                                                           | `transpilers/out/{index,cli}.js`            | ESM, tsdown-bundled; cli.js is the fgtp bin      |
+| Binary lib    | `binary/src/{index,cli}.ts`                                                                | `binary/out/{index,cli}.js`                 | ESM, tsdown-bundled; cli.js is the fgbin bin     |
 | Grammars      | `grammars/*/grammar.js`                                                                    | `grammars/*/*.wasm` -> `server/out/`        | tree-sitter build --wasm                         |
 | TextMate      | `syntaxes/*.tmLanguage.yml`                                                                | `syntaxes/*.tmLanguage.json`                | YAML -> JSON conversion                          |
 
@@ -194,9 +194,9 @@ pnpm build
   +-> build:client        esbuild client + TS plugins + webview bundles
   +-> build:server        esbuild server + copy WASM to server/out/
   +-> build:test          esbuild E2E test bundles
-  +-> build:transpile     @bgforge/transpile library + fgtp CLI (tsup)
-  +-> build:format        @bgforge/format library + fgfmt CLI (tsup)
-  +-> build:binary        @bgforge/binary library + fgbin CLI (tsup)
+  +-> build:transpile     @bgforge/transpile library + fgtp CLI (tsdown)
+  +-> build:format        @bgforge/format library + fgfmt CLI (tsdown)
+  +-> build:binary        @bgforge/binary library + fgbin CLI (tsdown)
 
 pnpm build:all            Full build: build:grammar + build + build:editors + build:transpile
 pnpm build:dev            Minimal build for F5 development (skips CLIs, linting, tests)
@@ -396,7 +396,7 @@ Source (.tssl/.tbaf/.td)
 
 The four internal packages (`common`, `tssl`, `tbaf`, `td`) stay private. The
 publishable library lives at the `transpilers/` root as `@bgforge/transpile`
-and bundles all four into a single ESM artifact via `tsup`. Internal consumers
+and bundles all four into a single ESM artifact via `tsdown`. Internal consumers
 (LSP server, TS plugins) keep importing the per-language packages directly;
 external consumers use the bundled library. `esbuild-wasm` is the only runtime
 dependency - it cannot be inlined because it detects bundling at load time.
@@ -485,7 +485,7 @@ Reports orphan warnings for TD files.
 fgbin <file.pro|file.map|file.itm|file.spl|file.eff|file.cre|dir> [--save] [--check] [--load] [--graceful-map] [-r] [-q]
 ```
 
-Ships as the `fgbin` bin entry of `@bgforge/binary` (built via tsup to `binary/out/cli.js`).
+Ships as the `fgbin` bin entry of `@bgforge/binary` (built via tsdown to `binary/out/cli.js`).
 
 Parses Fallout `.pro` / `.map` and Infinity Engine `.itm` / `.spl` (v1), `.eff` (v2), and `.cre` (v1) binary files and outputs structured JSON. `--load` writes JSON back using the parser's native extension, and `--graceful-map` allows ambiguous MAP object boundaries to fall back to opaque bytes for corpus and round-trip workflows.
 Snapshots are saved as extension-preserving sidecars such as `file.pro.json`, `file.map.json`, `file.itm.json`, `file.spl.json`, `file.eff.json`, `file.cre.json`.

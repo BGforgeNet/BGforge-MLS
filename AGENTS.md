@@ -86,8 +86,8 @@ pnpm build             # Default repo-wide build: client (+ webviews + TS plugin
 pnpm build:all         # Full build: build + grammars + editor bundles + transpile
 pnpm build:dev         # Minimal build for F5 development (skips CLIs, linting, tests)
 pnpm build:grammar     # Build tree-sitter grammars to WASM
-pnpm build:transpile   # Build transpile library + CLI (tsup, produces out/index.js + out/cli.js)
-pnpm build:format      # Build format library + CLI (tsup, produces out/index.js + out/cli.js)
+pnpm build:transpile   # Build transpile library + CLI (tsdown, produces out/index.js + out/cli.js)
+pnpm build:format      # Build format library + CLI (tsdown, produces out/index.js + out/cli.js)
 pnpm test              # Partial test suite (server only): typecheck, lint, unit + coverage, transpiler samples, CLI, integration, knip
 pnpm test:all          # Full test suite: test + grammars + transpile-external. For cross-subsystem / shared-infra close-out; scope to the affected package otherwise (see Important Rules).
 pnpm test:grammars     # Grammar tests (generate, lint, corpus, highlight, parse, format)
