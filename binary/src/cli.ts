@@ -33,7 +33,9 @@ const EXTENSIONS = parserRegistry.getExtensions().map((ext) => `.${ext}`);
 // Buffer. Caps a malicious or accidentally-truncated file from triggering a
 // multi-GB allocation prior to header validation. Real-world files stay well
 // below these (largest published Fallout MAPs are ~250 KB; ITM/SPL/EFF are
-// in the low KB range; PRO has a 1 KB hard limit enforced inside its parser).
+// in the low KB range; CRE embeds inventory/spell/effect lists so it runs
+// larger but stays in the low tens of KB; PRO has a 1 KB hard limit enforced
+// inside its parser). Every registry extension must have an entry here.
 // Override by editing this map, not by passing a flag - there is no
 // legitimate use case for parsing files at the cap.
 const MAX_FILE_SIZES: Record<string, number> = {
@@ -42,6 +44,7 @@ const MAX_FILE_SIZES: Record<string, number> = {
     itm: 256 * 1024,
     spl: 256 * 1024,
     eff: 64 * 1024,
+    cre: 256 * 1024,
 };
 
 /**
