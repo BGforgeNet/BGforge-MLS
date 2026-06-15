@@ -130,11 +130,20 @@ function parseCompileOutput(text: string, uri: string) {
             if (!matchFile || !matchLine || !matchMsg) continue;
 
             const line = parseInt(matchLine, 10);
+            // sslc reports 1-based lines; LSP lines are 0-based, so the warning's
+            // line is `line - 1`. Underline from the reported column to the end of
+            // that line. offsetAt alone yields a document-wide offset, so convert
+            // the end-of-line offset back into a line-relative character via
+            // positionAt (offsetAt of the next line's start clamps to the document
+            // end for the final line).
+            const lspLine = line - 1;
+            const lineEndOffset = textDocument.offsetAt({ line: lspLine + 1, character: 0 }) - 1;
+            const columnEnd = textDocument.positionAt(lineEndOffset).character;
             warnings.push({
                 uri: pathToUri(resolveMatchFilePath(matchFile, fileDir)),
                 line,
                 columnStart: parseInt(matchCol || "0", 10),
-                columnEnd: textDocument.offsetAt({ line, character: 0 }) - 1,
+                columnEnd,
                 message: matchMsg,
             });
         }

@@ -36,11 +36,23 @@ vi.mock("../../src/lsp-connection", () => ({
         },
     }),
     getDocuments: () => ({
-        get: () => ({
-            offsetAt: () => 100,
-        }),
+        get: () => mockDocument,
     }),
 }));
+
+// A real TextDocument so offsetAt/positionAt compute genuine line-relative
+// positions (the warning-column logic depends on them). Tests that assert
+// columns set their own content via setMockDocument.
+import { TextDocument } from "vscode-languageserver-textdocument";
+let mockDocument: TextDocument = TextDocument.create(
+    "file:///project/test.ssl",
+    "fallout-ssl",
+    1,
+    "line one\nline two\nline three\n",
+);
+function setMockDocument(content: string): void {
+    mockDocument = TextDocument.create("file:///project/test.ssl", "fallout-ssl", 1, content);
+}
 
 const mockSendParseResult = vi.fn();
 vi.mock("../../src/diagnostics", async (importOriginal) => {
@@ -74,6 +86,7 @@ describe("fallout-ssl compiler", () => {
         mockUnlink.mockResolvedValue(undefined);
         mockBuiltinCompiler.mockResolvedValue({ stdout: "", returnCode: 0 });
         mockSendRequest.mockResolvedValue(true);
+        setMockDocument("line one\nline two\nline three\n");
     });
 
     const baseSettings: SSLsettings = {
@@ -309,6 +322,23 @@ describe("fallout-ssl compiler", () => {
                 "file:///project/test.ssl",
                 expect.stringContaining(TMP_SSL_NAME),
             );
+        });
+
+        it("sets warning columnEnd to the end of the warning's line", async () => {
+            // Warning on line 2 (1-based); LSP line 1 is "abcdefghij" (10 chars).
+            setMockDocument("first line\nabcdefghij\n");
+            const warningOutput = "[Warning] <test.ssl>:2:3: Unused variable";
+            mockBuiltinCompiler.mockResolvedValue({ stdout: warningOutput, returnCode: 0 });
+
+            await compile(normalizeUri("file:///project/test.ssl"), baseSettings, false, "code");
+
+            const parseResult = mockSendParseResult.mock.calls[0]![0];
+            expect(parseResult.warnings).toHaveLength(1);
+            const warning = parseResult.warnings[0]!;
+            expect(warning.columnStart).toBe(3);
+            // A real line-relative end character (the line's length), not a
+            // document-wide offset misused as a column.
+            expect(warning.columnEnd).toBe(10);
         });
 
         it("parses error output and includes file/line/col in diagnostics", async () => {
