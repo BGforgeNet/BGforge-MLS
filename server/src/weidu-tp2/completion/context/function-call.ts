@@ -5,7 +5,7 @@
  */
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
-import { SyntaxType } from "../../tree-sitter.d";
+import { SyntaxType } from "../../syntax-type";
 import { stripStringDelimiters } from "../../tree-utils";
 import { ParamSection, CompletionContext, type FuncParamsContext } from "../types";
 import { findBeginEndBoundaries } from "./position";

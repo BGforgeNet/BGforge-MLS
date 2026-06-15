@@ -28,7 +28,7 @@ import {
     buildMacroCompletion,
     buildSignatureHelp,
 } from "./macro-utils";
-import { SyntaxType } from "./tree-sitter.d";
+import { SyntaxType } from "./syntax-type";
 
 // Re-export for existing consumers
 export { makeRange };

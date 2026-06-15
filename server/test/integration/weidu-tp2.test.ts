@@ -18,7 +18,7 @@ import { getFunctionParamHover } from "../../src/weidu-tp2/hover";
 import { getLocalSymbols } from "../../src/weidu-tp2/local-symbols";
 import { formatWeiduTp2 as formatDocument } from "@bgforge/format";
 import { createFoldingRangesProvider } from "../../src/shared/folding-ranges";
-import { SyntaxType } from "../../src/weidu-tp2/tree-sitter.d";
+import { SyntaxType } from "../../src/weidu-tp2/syntax-type";
 import { FileIndex } from "../../src/core/file-index";
 import { loadFixture, loadFixtures, findIdentifierPosition, IE_FIXTURES } from "./test-helpers";
 import { normalizeUri } from "../../src/core/normalized-uri";

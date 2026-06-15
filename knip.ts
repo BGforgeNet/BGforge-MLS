@@ -8,7 +8,7 @@ const config: KnipConfig = {
         // Knip can't trace enum member access (e.g. DeclarationKind.Set) as usage
         enumMembers: "off",
     },
-    // Types reachable only through tsup-emitted .d.ts surfaces (inferred return
+    // Types reachable only through tsdown-emitted .d.ts surfaces (inferred return
     // types of `arraySpec(...)` in spec modules) must be exported for the
     // published `@bgforge/binary` typings to compile, but knip's per-workspace
     // static analysis can't see them used in source. Mark such exports with a
@@ -80,7 +80,7 @@ const config: KnipConfig = {
         transpilers: {
             entry: ["test/**/*.test.ts"],
             // esbuild-wasm is listed as a runtime dependency so the published bundle can
-            // resolve it from node_modules (it refuses to be inlined - see tsup.config.ts).
+            // resolve it from node_modules (it refuses to be inlined - see tsdown.config.ts).
             // Knip sees no TS import within this workspace because the import lives in
             // transpilers/common (a separate workspace); ignoreDependencies suppresses the
             // false-positive "unused dependency" report.

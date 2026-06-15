@@ -5,7 +5,7 @@
 
 import { createIsInsideComment } from "../shared/comment-check";
 import { isInitialized, parseWithCache } from "../../../shared/parsers/weidu-d";
-import { SyntaxType } from "./tree-sitter.d";
+import { SyntaxType } from "./syntax-type";
 
 /** Comment node types in the D grammar. */
 const D_COMMENT_TYPES: ReadonlySet<string> = new Set([SyntaxType.Comment, SyntaxType.LineComment]);

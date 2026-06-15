@@ -58,7 +58,7 @@ import {
     formatInnerPatch,
     formatReplaceBcsBlock,
 } from "./blocks";
-import { SyntaxType } from "../../../server/src/weidu-tp2/tree-sitter.d";
+import { SyntaxType } from "../../../server/src/weidu-tp2/syntax-type";
 import { throwOnParseError } from "@bgforge/format";
 
 // ============================================

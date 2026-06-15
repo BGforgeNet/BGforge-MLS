@@ -9,7 +9,7 @@
 
 import type { Position } from "vscode-languageserver/node";
 import type { Node as SyntaxNode } from "web-tree-sitter";
-import { SyntaxType } from "./tree-sitter.d";
+import { SyntaxType } from "./syntax-type";
 import { containsPosition } from "../core/position-utils";
 
 /** Strip ~ or " delimiters from a string node text. */

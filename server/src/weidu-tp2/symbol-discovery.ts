@@ -7,7 +7,7 @@
 import type { Position } from "vscode-languageserver/node";
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import { ScopeKind, type ScopeKind as ScopeKindValue } from "./scope-kinds";
-import { SyntaxType } from "./tree-sitter.d";
+import { SyntaxType } from "./syntax-type";
 import { FUNCTION_CALL_TYPES, getCallableSymbolAtPosition } from "./callable-symbols";
 import {
     VARIABLE_DECL_TYPES,

@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import type { SyntaxType } from "../../../grammars/weidu-tp2/src/tree-sitter";
+import type { SyntaxType } from "../../../grammars/weidu-tp2/src/syntax-type";
 
 describe("weidu-tp2: generated types", () => {
     it("SyntaxType enum contains expected node types", () => {

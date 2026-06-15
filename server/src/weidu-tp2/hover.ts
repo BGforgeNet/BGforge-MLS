@@ -10,7 +10,7 @@ import { buildParamInfoMap, type Ret } from "../shared/jsdoc";
 import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-tp2";
 import { type FunctionInfo, type VariableInfo, parseHeader } from "./header-parser";
 import type { Symbols } from "../core/symbol-index";
-import { SyntaxType } from "./tree-sitter.d";
+import { SyntaxType } from "./syntax-type";
 import { stripStringDelimiters, looksLikeConstant } from "./tree-utils";
 import { buildWeiduTable, type VarRow, type VarSection } from "../../../shared/tooltip-table";
 import { buildSignatureBlock, buildWeiduHoverContent } from "../../../shared/tooltip-format";

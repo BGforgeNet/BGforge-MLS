@@ -5,7 +5,7 @@
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import { initParser, parseWithCache, isInitialized } from "../../shared/parsers/fallout-ssl";
-import { SyntaxType } from "./fallout-ssl/tree-sitter.d";
+import { SyntaxType } from "./fallout-ssl/syntax-type";
 import type {
     SSLDialogData,
     SSLDialogNode,

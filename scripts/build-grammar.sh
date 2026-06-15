@@ -67,9 +67,9 @@ done
 # in tsconfig.base.json forbids const-enum exports.
 step "Generating type definitions"
 parallel \
-    "types:fallout-ssl" "cd '$ROOT_DIR/grammars/fallout-ssl' && ./node_modules/.bin/dts-tree-sitter . | sed 's/export const enum /export enum /' > src/tree-sitter.d.ts && cp src/tree-sitter.d.ts '$ROOT_DIR/server/src/fallout-ssl/tree-sitter.d.ts'" \
-    "types:weidu-baf"   "cd '$ROOT_DIR/grammars/weidu-baf'   && ./node_modules/.bin/dts-tree-sitter . | sed 's/export const enum /export enum /' > src/tree-sitter.d.ts && cp src/tree-sitter.d.ts '$ROOT_DIR/server/src/weidu-baf/tree-sitter.d.ts'" \
-    "types:weidu-d"     "cd '$ROOT_DIR/grammars/weidu-d'     && ./node_modules/.bin/dts-tree-sitter . | sed 's/export const enum /export enum /' > src/tree-sitter.d.ts && cp src/tree-sitter.d.ts '$ROOT_DIR/server/src/weidu-d/tree-sitter.d.ts'" \
-    "types:weidu-tp2"   "cd '$ROOT_DIR/grammars/weidu-tp2'   && ./node_modules/.bin/dts-tree-sitter . | sed 's/export const enum /export enum /' > src/tree-sitter.d.ts && cp src/tree-sitter.d.ts '$ROOT_DIR/server/src/weidu-tp2/tree-sitter.d.ts'"
+    "types:fallout-ssl" "cd '$ROOT_DIR/grammars/fallout-ssl' && ./node_modules/.bin/dts-tree-sitter . | sed 's/export const enum /export enum /' > src/tree-sitter.d.ts && node '$ROOT_DIR/scripts/split-syntax-type.mjs' src/tree-sitter.d.ts src/syntax-type.ts && cp src/tree-sitter.d.ts src/syntax-type.ts '$ROOT_DIR/server/src/fallout-ssl/'" \
+    "types:weidu-baf"   "cd '$ROOT_DIR/grammars/weidu-baf'   && ./node_modules/.bin/dts-tree-sitter . | sed 's/export const enum /export enum /' > src/tree-sitter.d.ts && node '$ROOT_DIR/scripts/split-syntax-type.mjs' src/tree-sitter.d.ts src/syntax-type.ts && cp src/tree-sitter.d.ts src/syntax-type.ts '$ROOT_DIR/server/src/weidu-baf/'" \
+    "types:weidu-d"     "cd '$ROOT_DIR/grammars/weidu-d'     && ./node_modules/.bin/dts-tree-sitter . | sed 's/export const enum /export enum /' > src/tree-sitter.d.ts && node '$ROOT_DIR/scripts/split-syntax-type.mjs' src/tree-sitter.d.ts src/syntax-type.ts && cp src/tree-sitter.d.ts src/syntax-type.ts '$ROOT_DIR/server/src/weidu-d/'" \
+    "types:weidu-tp2"   "cd '$ROOT_DIR/grammars/weidu-tp2'   && ./node_modules/.bin/dts-tree-sitter . | sed 's/export const enum /export enum /' > src/tree-sitter.d.ts && node '$ROOT_DIR/scripts/split-syntax-type.mjs' src/tree-sitter.d.ts src/syntax-type.ts && cp src/tree-sitter.d.ts src/syntax-type.ts '$ROOT_DIR/server/src/weidu-tp2/'"
 
 timing_summary "Grammar build complete"

@@ -65,7 +65,7 @@ import { getLocalSignature } from "./signature";
 import { parseFile } from "./header-parser";
 import { getLocalSymbols, lookupLocalSymbol, clearLocalSymbolsCache } from "./local-symbols";
 import { getSslCompletionContext, SslCompletionContext, isSslDeclarationSite } from "./completion-context";
-import { SyntaxType } from "./tree-sitter.d";
+import { SyntaxType } from "./syntax-type";
 import { getSemanticTokenSpans } from "./semantic-tokens";
 import type { SemanticTokenSpan } from "../shared/semantic-tokens";
 

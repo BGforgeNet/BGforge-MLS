@@ -1,3 +1,5 @@
+import type { SyntaxType } from "./syntax-type";
+
 export class Parser {
   parse(input: string | Input, oldTree?: Tree, options?: Options): Tree;
   getIncludedRanges(): Range[];
@@ -264,66 +266,7 @@ export interface ErrorNode extends NamedNodeBase {
     hasError: true;
 }
 
-export enum SyntaxType {
-  ERROR = "ERROR",
-  AddStateTrigger = "add_state_trigger",
-  AddTransAction = "add_trans_action",
-  AddTransTrigger = "add_trans_trigger",
-  AlterTrans = "alter_trans",
-  AlterTransChange = "alter_trans_change",
-  AppendAction = "append_action",
-  AtVarRef = "at_var_ref",
-  BeginAction = "begin_action",
-  ChainAction = "chain_action",
-  ChainBranch = "chain_branch",
-  ChainEpilogue = "chain_epilogue",
-  ChainSpeaker = "chain_speaker",
-  ChainText = "chain_text",
-  Comment = "comment",
-  CopyTrans = "copy_trans",
-  DActionWhen = "d_action_when",
-  DoFeature = "do_feature",
-  DoubleString = "double_string",
-  ExitNext = "exit_next",
-  ExtendAction = "extend_action",
-  ExternNext = "extern_next",
-  FlagsFeature = "flags_feature",
-  GotoNext = "goto_next",
-  InterjectAction = "interject_action",
-  InterjectCopyTrans = "interject_copy_trans",
-  JournalFeature = "journal_feature",
-  LineComment = "line_comment",
-  MacroExpansion = "macro_expansion",
-  ReplaceAction = "replace_action",
-  ReplaceActionText = "replace_action_text",
-  ReplaceActionTextProcess = "replace_action_text_process",
-  ReplaceActionTextRegexp = "replace_action_text_regexp",
-  ReplaceSay = "replace_say",
-  ReplaceStateTrigger = "replace_state_trigger",
-  ReplaceTransAction = "replace_trans_action",
-  ReplaceTransTrigger = "replace_trans_trigger",
-  ReplaceTriggerText = "replace_trigger_text",
-  ReplaceTriggerTextRegexp = "replace_trigger_text_regexp",
-  ReplyFeature = "reply_feature",
-  SayText = "say_text",
-  SetWeight = "set_weight",
-  ShortGoto = "short_goto",
-  SourceFile = "source_file",
-  State = "state",
-  String = "string",
-  TildeString = "tilde_string",
-  Transition = "transition",
-  TransitionFull = "transition_full",
-  TransitionShort = "transition_short",
-  DoubleContent = "double_content",
-  Identifier = "identifier",
-  Number = "number",
-  StateLabelAlnum = "state_label_alnum",
-  TildeContent = "tilde_content",
-  TlkRef = "tlk_ref",
-  TraRef = "tra_ref",
-  VariableRef = "variable_ref",
-}
+// SyntaxType is a runtime enum in ./syntax-type (imported as a type above).
 
 export type UnnamedType =
   | "\""

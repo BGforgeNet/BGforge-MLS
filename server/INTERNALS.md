@@ -106,7 +106,8 @@ server/src/
 |   +-- uri-debouncer.ts      # UriDebouncer<K>: per-URI scheduled callback with cancel/dispose
 |
 +-- fallout-ssl/              # Fallout 1/2 scripting
-|   +-- tree-sitter.d.ts      # Generated SyntaxType enum
+|   +-- tree-sitter.d.ts      # Generated node-type declarations (imports SyntaxType)
+|   +-- syntax-type.ts        # Generated runtime SyntaxType enum
 |   +-- provider.ts
 |   +-- compiler.ts           # External / built-in sslc orchestration
 |   +-- header-parser.ts      # .h file parsing
@@ -128,9 +129,11 @@ server/src/
 |
 +-- weidu-baf/                # WeiDU BAF scripts
 |   +-- provider.ts           # Format + compile only; BAF has no named symbols
-|   +-- tree-sitter.d.ts      # Generated SyntaxType enum
+|   +-- tree-sitter.d.ts      # Generated node-type declarations (imports SyntaxType)
+|   +-- syntax-type.ts        # Generated runtime SyntaxType enum
 +-- weidu-d/                  # WeiDU dialog files
-|   +-- tree-sitter.d.ts      # Generated SyntaxType enum
+|   +-- tree-sitter.d.ts      # Generated node-type declarations (imports SyntaxType)
+|   +-- syntax-type.ts        # Generated runtime SyntaxType enum
 |   +-- provider.ts
 |   +-- state-utils.ts        # Dialog-scoped state label utilities (shared by definition, rename, hover)
 |   +-- references.ts         # Find References (single-file + cross-file via ReferencesIndex)
@@ -145,7 +148,8 @@ server/src/
 |   +-- dialog-utils.ts       # Dialog-tree shape helpers
 |   +-- dialog-modify.ts      # Dialog-tree mutators (used by webview-driven edits)
 +-- weidu-tp2/                # WeiDU mod installers
-|   +-- tree-sitter.d.ts      # Generated SyntaxType enum
+|   +-- tree-sitter.d.ts      # Generated node-type declarations (imports SyntaxType)
+|   +-- syntax-type.ts        # Generated runtime SyntaxType enum
 |   +-- provider.ts
 |   +-- references.ts         # Find References (single-file + cross-file via ReferencesIndex)
 |   +-- reference-finder.ts   # Scope-restricted reference finding
@@ -483,11 +487,13 @@ import surface; server installs an LSP-routed logger via `setParserLogger()` at 
 
 ### SyntaxType Enum
 
-Each grammar generates a `tree-sitter.d.ts` file with a `SyntaxType` enum for type-safe node type comparisons:
+Each grammar generates a runtime `syntax-type.ts` (the `SyntaxType` enum) plus a `tree-sitter.d.ts` (node-type
+declarations that import the enum as a type) for type-safe node type comparisons. The enum is a runtime module,
+not a `.d.ts` member, so any bundler (esbuild, Rolldown/tsdown) resolves its values:
 
 ```typescript
 // Generated from grammar - use instead of hardcoded strings
-import { SyntaxType } from "./tree-sitter.d";
+import { SyntaxType } from "./syntax-type";
 
 if (node.type === SyntaxType.State) { ... }  // Good
 if (node.type === "state") { ... }           // Bad - no type checking
@@ -499,7 +505,7 @@ Generate types for a grammar:
 cd grammars/{lang} && pnpm generate:types
 ```
 
-This copies the generated `tree-sitter.d.ts` to `server/src/{lang}/`.
+This copies the generated `tree-sitter.d.ts` and `syntax-type.ts` to `server/src/{lang}/`.
 
 ### Parse Caching
 

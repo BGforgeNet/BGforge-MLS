@@ -1,3 +1,5 @@
+import type { SyntaxType } from "./syntax-type";
+
 export class Parser {
   parse(input: string | Input, oldTree?: Tree, options?: Options): Tree;
   getIncludedRanges(): Range[];
@@ -264,27 +266,7 @@ export interface ErrorNode extends NamedNodeBase {
     hasError: true;
 }
 
-export enum SyntaxType {
-  ERROR = "ERROR",
-  Action = "action",
-  Block = "block",
-  CallExpr = "call_expr",
-  Condition = "condition",
-  IfClause = "if_clause",
-  ObjectRef = "object_ref",
-  OrMarker = "or_marker",
-  Point = "point",
-  Response = "response",
-  SourceFile = "source_file",
-  String = "string",
-  ThenClause = "then_clause",
-  Comment = "comment",
-  Identifier = "identifier",
-  LineComment = "line_comment",
-  Number = "number",
-  TraRef = "tra_ref",
-  VariableRef = "variable_ref",
-}
+// SyntaxType is a runtime enum in ./syntax-type (imported as a type above).
 
 export type UnnamedType =
   | "!"

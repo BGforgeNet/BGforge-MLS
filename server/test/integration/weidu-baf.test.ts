@@ -13,7 +13,7 @@ import { describe, expect, it, beforeAll } from "vitest";
 import { initParser, isInitialized, parseWithCache } from "../../../shared/parsers/weidu-baf";
 import { formatWeiduBaf as formatDocument } from "@bgforge/format";
 import { createFoldingRangesProvider } from "../../src/shared/folding-ranges";
-import { SyntaxType } from "../../src/weidu-baf/tree-sitter.d";
+import { SyntaxType } from "../../src/weidu-baf/syntax-type";
 import { loadFixture, IE_FIXTURES } from "./test-helpers";
 
 const RR_BASE = join(IE_FIXTURES, "rr");

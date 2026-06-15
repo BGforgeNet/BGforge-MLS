@@ -7,7 +7,7 @@
 
 import type { CallableInfo, CallableParam } from "../core/symbol";
 import { weiduTp2DefaultOptions as DEFAULT_OPTIONS } from "@bgforge/format";
-import { SyntaxType } from "./tree-sitter.d";
+import { SyntaxType } from "./syntax-type";
 
 /**
  * Variable assignment node types from the grammar, grouped by snippet pattern.

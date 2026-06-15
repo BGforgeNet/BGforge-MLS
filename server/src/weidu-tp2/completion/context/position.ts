@@ -4,7 +4,7 @@
  */
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
-import { SyntaxType } from "../../tree-sitter.d";
+import { SyntaxType } from "../../syntax-type";
 import { KW_BEGIN, KW_END } from "@bgforge/format";
 
 /**

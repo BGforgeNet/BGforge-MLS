@@ -15,7 +15,7 @@ import {
     type CollectedItem,
     CollectedItemType,
 } from "./types";
-import { SyntaxType } from "../../../server/src/weidu-tp2/tree-sitter.d";
+import { SyntaxType } from "../../../server/src/weidu-tp2/syntax-type";
 import {
     type WeiduToken,
     tokenizeWeidu,

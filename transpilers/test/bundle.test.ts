@@ -1,7 +1,7 @@
 /**
  * Spawn-node smoke test for the published bundle.
  *
- * Imports `../out/index.js` (the tsup output) in a child node process.
+ * Imports `../out/index.js` (the tsdown output) in a child node process.
  * Proves the bundle is self-contained - no missing externals (ts-morph,
  * esbuild-wasm), no broken DTS that tsc would refuse to consume.
  *

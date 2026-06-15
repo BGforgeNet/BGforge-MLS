@@ -24,7 +24,7 @@
     "type": "module",
     "scripts": {
         "build": "tree-sitter generate && tree-sitter build --wasm",
-        "generate:types": "pnpm exec dts-tree-sitter . | sed 's/export const enum /export enum /' > src/tree-sitter.d.ts && cp src/tree-sitter.d.ts ../../server/src/weidu-d/tree-sitter.d.ts",
+        "generate:types": "pnpm exec dts-tree-sitter . | sed 's/export const enum /export enum /' > src/tree-sitter.d.ts && node ../../scripts/split-syntax-type.mjs src/tree-sitter.d.ts src/syntax-type.ts && cp src/tree-sitter.d.ts src/syntax-type.ts ../../server/src/weidu-d/",
         "test": "../../scripts/test-grammar.sh weidu-d",
         "lint": "oxlint grammar.js",
         "playground": "tree-sitter playground"

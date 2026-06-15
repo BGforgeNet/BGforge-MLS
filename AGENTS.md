@@ -12,7 +12,7 @@ Dependabot version-update PRs are intentionally disabled - there is no `.github/
 
 ## Important Rules
 
-- **Use `SyntaxType` enum for tree-sitter node types.** Never hardcode strings like `"action_copy"`. Import from `./tree-sitter.d` and use `SyntaxType.ActionCopy`. The enum is generated from the grammar.
+- **Use `SyntaxType` enum for tree-sitter node types.** Never hardcode strings like `"action_copy"`. Import from `./syntax-type` and use `SyntaxType.ActionCopy`. The enum is generated from the grammar (a runtime `syntax-type.ts` split out of the generated `tree-sitter.d.ts` so any bundler resolves it).
 - **External library packaging:** Libraries imported by transpiler files (iets, folib) must use **named re-exports** (`export { X } from './module'`), not star re-exports (`export * from './module'`). Ambient declarations (`declare function`, `declare const`) must live in `.d.ts` files, not `.ts` files. See folib's `src/index.ts` for the correct pattern.
 - **URI normalization:** All URIs entering the provider system are normalized via `normalizeUri()` from `core/normalized-uri.ts`. The `ProviderRegistry` handles this at the gateway. If you add new URI-accepting methods to the registry, normalize them. If you use URIs as Map/Set keys elsewhere, use `NormalizedUri` branded type.
 - **User-facing messages:** Never call `connection.window.showInformationMessage/showWarningMessage/showErrorMessage` directly in server code. Use `showInfo()`, `showWarning()`, `showError()`, or `showErrorWithActions()` from `user-messages.ts` - they auto-decode `file://` URIs to readable paths. An oxlint rule enforces this.
@@ -150,12 +150,15 @@ For detailed architecture, see:
 
 ### Tree-Sitter Type Generation
 
-The `SyntaxType` enum is generated from each grammar using `@asgerf/dts-tree-sitter`:
+The `SyntaxType` enum is generated from each grammar using `@asgerf/dts-tree-sitter`, then split into a
+runtime `syntax-type.ts` (the enum) and `tree-sitter.d.ts` (the node-type declarations, which import the enum
+as a type). An enum living only in a `.d.ts` is erased at runtime by Rolldown/tsdown; the runtime split lets
+any bundler resolve it. Import the enum from `./syntax-type`.
 
 ```bash
 cd grammars/fallout-ssl && pnpm run generate:types
-# Runs: dts-tree-sitter . > src/tree-sitter.d.ts
-# Copies to: server/src/fallout-ssl/tree-sitter.d.ts
+# Runs dts-tree-sitter, splits the enum into src/syntax-type.ts via scripts/split-syntax-type.mjs,
+# then copies src/tree-sitter.d.ts + src/syntax-type.ts to server/src/fallout-ssl/
 ```
 
 All four LSP grammars have this script. It runs automatically as part of `pnpm build:grammar`. After modifying a grammar's `grammar.js`, rebuild with `pnpm build:grammar` to regenerate WASM files and type definitions.

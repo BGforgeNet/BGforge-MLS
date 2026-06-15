@@ -27,7 +27,7 @@ import {
 } from "./utils";
 import { isInitialized, parseWithCache } from "../../../shared/parsers/fallout-ssl";
 import { findPrecedingDocComment } from "../core/doc-comment";
-import { SyntaxType } from "./tree-sitter.d";
+import { SyntaxType } from "./syntax-type";
 
 // =============================================================================
 // Unified Parse API

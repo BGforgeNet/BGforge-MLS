@@ -22,7 +22,7 @@ import {
 } from "./utils";
 import { findPrecedingDocComment } from "../core/doc-comment";
 import * as jsdoc from "../shared/jsdoc";
-import { SyntaxType } from "./tree-sitter.d";
+import { SyntaxType } from "./syntax-type";
 // Generated from server/data/fallout-ssl-base.yml by generate-data.sh.
 // Inlined by esbuild at bundle time.
 import engineProcDocs from "../../out/fallout-ssl-engine-proc-docs.json";

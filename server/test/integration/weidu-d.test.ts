@@ -15,7 +15,7 @@ import { renameSymbol, prepareRenameSymbol } from "../../src/weidu-d/rename";
 import { getStateLabelHover } from "../../src/weidu-d/hover";
 import { formatWeiduD as formatDocument } from "@bgforge/format";
 import { createFoldingRangesProvider } from "../../src/shared/folding-ranges";
-import { SyntaxType } from "../../src/weidu-d/tree-sitter.d";
+import { SyntaxType } from "../../src/weidu-d/syntax-type";
 import { FileIndex } from "../../src/core/file-index";
 import { parseFile } from "../../src/weidu-d/file-parser";
 import { loadFixture, findIdentifierPosition, IE_FIXTURES } from "./test-helpers";

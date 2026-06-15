@@ -2,7 +2,7 @@ import type { Position } from "vscode-languageserver/node";
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import { FUNCTION_DEF_TYPES } from "./variable-symbols";
 import { ScopeKind } from "./scope-kinds";
-import { SyntaxType } from "./tree-sitter.d";
+import { SyntaxType } from "./syntax-type";
 import { findAncestorOfType, findNodeAtPosition, isSameNode, stripStringDelimiters } from "./tree-utils";
 
 /** Node types for function/macro calls. */

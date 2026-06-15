@@ -17,7 +17,7 @@ import {
     handleComment,
     pushBlankIfGap,
 } from "./utils";
-import { SyntaxType } from "../../../server/src/weidu-tp2/tree-sitter.d";
+import { SyntaxType } from "../../../server/src/weidu-tp2/syntax-type";
 
 // ============================================
 // INNER_ACTION formatting

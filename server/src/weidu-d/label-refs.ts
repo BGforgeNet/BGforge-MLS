@@ -13,7 +13,7 @@
  */
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
-import { SyntaxType } from "./tree-sitter.d";
+import { SyntaxType } from "./syntax-type";
 import { normalizeDialogFile } from "./state-utils";
 
 /**

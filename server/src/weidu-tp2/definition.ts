@@ -12,7 +12,7 @@ import * as path from "path";
 import * as fs from "fs";
 import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-tp2";
 import { pathToUri, uriToPath } from "../uri-utils";
-import { SyntaxType } from "./tree-sitter.d";
+import { SyntaxType } from "./syntax-type";
 import { FUNCTION_CALL_TYPES, getCallableSymbolAtPosition } from "./callable-symbols";
 import { findLocalCallableDefinition } from "./callable-definitions";
 import { findVariableDefinition } from "./variable-symbols";

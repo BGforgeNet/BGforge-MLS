@@ -48,3 +48,4 @@ coverage/
 grammars/*/src/*
 !grammars/*/src/scanner.c
 server/src/weidu-tp2/tree-sitter.d.ts
+server/src/weidu-tp2/syntax-type.ts

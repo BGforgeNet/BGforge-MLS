@@ -216,32 +216,26 @@ separate top-level step - it runs inside `build:client`.
 3. **Externalized .d.ts imports**: Transpiler libraries (ielib, folib) use `.d.ts` for
    engine declarations. esbuild externalizes these; they pass through as bare identifiers.
    Libraries must use named re-exports, not `export *`.
-4. **Library bundlers (tsup)**: `@bgforge/binary`, `@bgforge/format`, and `@bgforge/transpile`
-   bundle via tsup. tsdown - the named successor to tsup, Rolldown-based - was evaluated
-   and rejected for now: the format package imports the runtime `SyntaxType` enum from
-   auto-generated `tree-sitter.d.ts` declaration files (`from "../../../server/src/<lang>/tree-sitter.d"`).
-   esbuild (under tsup) inlines those enum members as the literal string at each use site
-   (`child.type === "value" /* Value */`); Rolldown (under tsdown) follows tsc's strict
-   "`.d.ts` is types-only" rule, so the imported references resolve to placeholder objects
-   at runtime and every `child.type === SyntaxType.X` comparison silently returns false -
-   dropping content during formatting. (Reproducer: Ascension.tp2's
-   `BEGIN @104001 DESIGNATED 0 ... INCLUDE` block collapses to `BEGIN INCLUDE` when the
-   format CLI is built with tsdown.) Switching off tsup requires either making the
-   generated tree-sitter types a runtime `.ts` file (project-wide rename across ~50 import
-   sites plus the `dts-tree-sitter` generation pipeline and gitignore patterns) or
-   hand-maintaining a runtime SyntaxType shim per grammar; neither is justified by tsup's
-   current state alone. Re-evaluated 2026-05-21 against tsdown 0.22.0 / Rolldown 1.0.0:
-   cross-module `const enum` inlining did land (rolldown/rolldown#8796, oxc-project/oxc#20508),
-   but the implementation reads the enum value map from the declaring module's JS scoping,
-   so modules the bundler classifies as `.d.ts` (types-only, erased) never produce a scoping
-   entry and the references stay un-inlined. No tsdown or Rolldown issue tracks the
-   `.d.ts`-only variant specifically, and follow-up regressions on the supported `.ts` path
-   (rolldown/rolldown#9442, #9494) suggest the feature is not yet fully stable even where
-   it does apply. Revisit when Rolldown adds ambient/`.d.ts` const-enum support, when tsup
-   actually breaks, or when one of the source-side refactors lands for an unrelated reason.
-   A third workaround - wiring `rollup-plugin-const-enum` into tsdown's plugin slot to
-   pre-inline via `ts.transpileModule` - would shrink the diff but adds a tsc-driven pre-pass
-   and a new dependency for no current gain.
+4. **Library bundlers (tsdown)**: `@bgforge/binary`, `@bgforge/format`, and `@bgforge/transpile`
+   bundle via tsdown (Rolldown-based, the maintained successor to tsup). Each `tsdown.config.ts`
+   emits ESM `out/index.js` + `out/cli.js` (Rolldown shares code between them via an automatic
+   chunk), `out/index.d.ts` for the library entry only (the CLI is a bin, not an imported
+   module), and a banner re-creating the CJS globals (`createRequire` / `__filename` /
+   `__dirname`) so inlined CJS resolves in the ESM bundle. `fixedExtension: false` keeps the
+   `.js` extension the `type: module` packages expect (it defaults to `.mjs` on node). transpile
+   externalizes `esbuild-wasm` (it refuses to be bundled - it inspects its own `__filename`);
+   format copies the tree-sitter WASM next to the CLI via an `onSuccess` hook.
+
+   Moving off tsup required one source change. The grammars' `SyntaxType` enum used to live only
+   in the generated `tree-sitter.d.ts`, and an enum in a `.d.ts` has no runtime representation:
+   esbuild inlined its members, but Rolldown follows tsc's strict "`.d.ts` is types-only" rule -
+   it erases the enum (so `node.type === SyntaxType.X` resolved against `undefined` and dropped
+   content during formatting) and Rolldown 1.1.x refuses to parse the declaration-only `.d.ts`
+   at all. The type-generation pipeline now splits the enum into a runtime `syntax-type.ts`
+   (`scripts/split-syntax-type.mjs`, wired into each grammar's `generate:types` and
+   `scripts/build-grammar.sh`); the `tree-sitter.d.ts` keeps the node-type declarations and
+   imports the enum as a type. Consumers import the enum value from `./syntax-type`. With the
+   enum a real runtime module, every bundler resolves it.
 
 ### TypeScript configuration
 

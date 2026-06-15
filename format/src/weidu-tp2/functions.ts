@@ -28,7 +28,7 @@ import {
     outputAlignedAssignments,
     pushBlankIfGap,
 } from "./utils";
-import { SyntaxType } from "../../../server/src/weidu-tp2/tree-sitter.d";
+import { SyntaxType } from "../../../server/src/weidu-tp2/syntax-type";
 
 // ============================================
 // Assignment parsing

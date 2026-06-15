@@ -31,7 +31,7 @@ import { resolveSymbolStatic, getStaticCompletions, formatWithValidation } from 
 import { initParser, parseWithCache, isInitialized } from "../../../shared/parsers/weidu-baf";
 import { compile as weiduCompile } from "../weidu-compile";
 import { createFoldingRangesProvider } from "../shared/folding-ranges";
-import { SyntaxType } from "./tree-sitter.d";
+import { SyntaxType } from "./syntax-type";
 
 /** Comment node types in the BAF grammar. */
 const BAF_COMMENT_TYPES: ReadonlySet<string> = new Set([SyntaxType.Comment, SyntaxType.LineComment]);

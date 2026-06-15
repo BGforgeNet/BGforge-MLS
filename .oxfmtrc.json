@@ -26,6 +26,8 @@
         "binary/src/eff/specs/body.ts",
         "server/src/*/tree-sitter.d.ts",
         "grammars/*/src/tree-sitter.d.ts",
+        "server/src/*/syntax-type.ts",
+        "grammars/*/src/syntax-type.ts",
         "themes/vscode-monokai.json",
         "themes/vs-seti-icon-theme.json",
         "themes/bgforge-monokai.json",

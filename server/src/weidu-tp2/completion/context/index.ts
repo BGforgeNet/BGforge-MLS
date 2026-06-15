@@ -8,7 +8,7 @@
  */
 
 import type { Position } from "vscode-languageserver/node";
-import { SyntaxType } from "../../tree-sitter.d";
+import { SyntaxType } from "../../syntax-type";
 import { getUtf8ByteOffset } from "../../../shared/completion-context";
 import { getLinePrefix } from "../../../cursor-utils";
 import { getParser, isInitialized } from "../../../../../shared/parsers/weidu-tp2";

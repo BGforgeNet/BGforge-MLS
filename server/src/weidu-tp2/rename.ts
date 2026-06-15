@@ -17,7 +17,7 @@
 import type { Position, TextEdit, WorkspaceEdit } from "vscode-languageserver/node";
 import { makeRange } from "../core/position-utils";
 import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-tp2";
-import { SyntaxType } from "./tree-sitter.d";
+import { SyntaxType } from "./syntax-type";
 import { getSymbolAtPosition, isRenameableSymbol } from "./symbol-discovery";
 import { findAllReferences } from "./reference-finder";
 

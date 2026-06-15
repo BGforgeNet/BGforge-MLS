@@ -8,7 +8,7 @@ import type { Node as SyntaxNode } from "web-tree-sitter";
 import { makeRange } from "../core/position-utils";
 import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-tp2";
 import { ScopeKind, type ScopeKind as ScopeKindValue } from "./scope-kinds";
-import { SyntaxType } from "./tree-sitter.d";
+import { SyntaxType } from "./syntax-type";
 import {
     findIdentifier,
     findNodeAtPosition,

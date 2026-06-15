@@ -71,7 +71,7 @@ import { getLocalSymbols as extractLocalSymbols, lookupLocalSymbol, clearLocalSy
 import { WEIDU_JSDOC_TYPES } from "../../../shared/weidu-types";
 import { getJsdocCompletions as getSharedJsdocCompletions } from "../shared/jsdoc-completions";
 import { createFoldingRangesProvider } from "../shared/folding-ranges";
-import { SyntaxType } from "./tree-sitter.d";
+import { SyntaxType } from "./syntax-type";
 import { getSemanticTokenSpans } from "./semantic-tokens";
 import { JSDOC_TYPE_TO_TOKEN, type SemanticTokenSpan } from "../shared/semantic-tokens";
 

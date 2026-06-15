@@ -30,10 +30,11 @@ These JSON files are generated from `server/data/*.yml` by `generate-data.sh` bu
 
 ### Generated source
 
-| Pattern                         | What it ignores                                               |
-| ------------------------------- | ------------------------------------------------------------- |
-| `grammars/*/src/`               | Tree-sitter generated C parser sources                        |
-| `server/src/*/tree-sitter.d.ts` | Generated TypeScript types for grammar nodes (all 4 grammars) |
+| Pattern                         | What it ignores                                                              |
+| ------------------------------- | ---------------------------------------------------------------------------- |
+| `grammars/*/src/`               | Tree-sitter generated C parser sources                                       |
+| `server/src/*/tree-sitter.d.ts` | Generated TypeScript types for grammar nodes (all 4 grammars)                |
+| `server/src/*/syntax-type.ts`   | Generated runtime `SyntaxType` enum, split from the `.d.ts` (all 4 grammars) |
 
 ### Third-party and temporary
 

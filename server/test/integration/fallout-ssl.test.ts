@@ -20,7 +20,7 @@ import { createFoldingRangesProvider } from "../../src/shared/folding-ranges";
 import { formatFalloutSsl as formatDocument } from "@bgforge/format";
 import { parseFile } from "../../src/fallout-ssl/header-parser";
 import { FileIndex } from "../../src/core/file-index";
-import { SyntaxType } from "../../src/fallout-ssl/tree-sitter.d";
+import { SyntaxType } from "../../src/fallout-ssl/syntax-type";
 import { loadFixture, loadFixtures, findIdentifierPosition, FALLOUT_FIXTURES } from "./test-helpers";
 import { normalizeUri } from "../../src/core/normalized-uri";
 

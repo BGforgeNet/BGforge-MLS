@@ -1,6 +1,6 @@
 import type { Node } from "web-tree-sitter";
 import { extractProcedures, findMacroDefinition } from "./utils";
-import { SyntaxType } from "./tree-sitter.d";
+import { SyntaxType } from "./syntax-type";
 
 /**
  * Walk ancestors to find the containing procedure node.

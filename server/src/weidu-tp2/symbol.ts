@@ -11,7 +11,7 @@ import { makeRange } from "../core/position-utils";
 import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-tp2";
 import { isFunctionDef } from "@bgforge/format";
 import { looksLikeConstant } from "./tree-utils";
-import { SyntaxType } from "./tree-sitter.d";
+import { SyntaxType } from "./syntax-type";
 
 /** Macro definition types (subset of function defs). */
 const MACRO_DEF_TYPES: ReadonlySet<string> = new Set([SyntaxType.ActionDefineMacro, SyntaxType.ActionDefinePatchMacro]);

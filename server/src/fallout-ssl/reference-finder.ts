@@ -12,7 +12,7 @@ import { ScopeKind, assertNeverScope } from "./scope-kinds";
 import type { SslSymbolScope } from "./symbol-scope";
 import { isLocalToProc, resolveIdentifierDefinitionNode } from "./symbol-definitions";
 import { parseMacroParams } from "./macro-utils";
-import { SyntaxType } from "./tree-sitter.d";
+import { SyntaxType } from "./syntax-type";
 
 /**
  * Check if a Define node has a macro parameter matching the given name.

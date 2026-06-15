@@ -51,7 +51,7 @@ import { initParser, parseWithCache, isInitialized } from "../../../shared/parse
 import { getDocumentSymbols } from "./symbol";
 import { compile as weiduCompile } from "../weidu-compile";
 import { createFoldingRangesProvider } from "../shared/folding-ranges";
-import { SyntaxType } from "./tree-sitter.d";
+import { SyntaxType } from "./syntax-type";
 
 /** D block-level node types for code folding. */
 const D_FOLDABLE_TYPES = new Set([
