@@ -1,10 +1,10 @@
 import type { Connection } from "vscode-languageserver/node";
 import { isHeaderFile } from "../core/location-utils";
 import { normalizeUri } from "../core/normalized-uri";
-import { conlog } from "../logger";
 import { registry } from "../provider-registry";
 import { getServerContext, tryGetServerContext } from "../server-context";
 import { compile, clearDiagnostics } from "../compile";
+import { handleCompileError } from "./compile-error";
 import {
     type MLSsettings,
     defaultSettings,
@@ -15,11 +15,6 @@ import {
 import type { HandlerContext } from "./context";
 
 const documentSettings: Map<string, Thenable<MLSsettings>> = new Map();
-
-/** Log and swallow compile errors for fire-and-forget call sites. */
-function logCompileError(err: unknown) {
-    conlog(`Compilation error: ${err}`);
-}
 
 /**
  * Build the `getDocumentSettings` function used by compile.ts and the
@@ -100,7 +95,7 @@ export function register(ctx: HandlerContext): void {
             // Cancel any pending debounced compile for this URI - save takes priority
             // and must not race with a stale onDidChangeContent compilation.
             ctx.compileDebouncer.cancel(normUri);
-            void compile(uri, langId, false, text).catch(logCompileError);
+            void compile(uri, langId, false, text).catch((error) => handleCompileError(error, false));
         }
     });
 
@@ -132,7 +127,7 @@ export function register(ctx: HandlerContext): void {
         const docSettings = await ctx.getDocumentSettings(uri);
         if (shouldValidateOnChange(docSettings.validate)) {
             ctx.compileDebouncer.schedule(normUri, () => {
-                void compile(uri, langId, false, text).catch(logCompileError);
+                void compile(uri, langId, false, text).catch((error) => handleCompileError(error, false));
             });
         }
     });

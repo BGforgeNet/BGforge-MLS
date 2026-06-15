@@ -13,6 +13,7 @@ import {
     VSCODE_COMMAND_COMPILE,
 } from "../../../shared/protocol";
 import { registry } from "../provider-registry";
+import { handleCompileError } from "./compile-error";
 import type { HandlerContext } from "./context";
 
 /** Dialog preview handler registry. Maps language/extension to parser + translation language. */
@@ -38,11 +39,6 @@ const dialogHandlers = [
         translationLangId: LANG_FALLOUT_SSL,
     },
 ];
-
-/** Log and swallow compile errors for fire-and-forget call sites. */
-function logCompileError(err: unknown) {
-    conlog(`Compilation error: ${err}`);
-}
 
 export function register(ctx: HandlerContext): void {
     ctx.connection.onExecuteCommand(async (params, token) => {
@@ -111,7 +107,7 @@ export function register(ctx: HandlerContext): void {
         const langId = textDoc.languageId;
         const text = textDoc.getText();
 
-        void compile(uri, langId, true, text).catch(logCompileError);
+        void compile(uri, langId, true, text).catch((error) => handleCompileError(error, true));
         // eslint-disable-next-line unicorn/no-useless-undefined -- TS noImplicitReturns flags the implicit-undefined path
         return undefined;
     });
