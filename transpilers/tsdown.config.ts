@@ -19,7 +19,7 @@ export default defineConfig({
     // __filename/path.basename(__dirname) equal "main.js"/"lib". Bundling it breaks
     // that check, so it must stay external and resolve from node_modules with its
     // real filesystem path. It is therefore a runtime dependency in package.json.
-    external: ["esbuild-wasm"],
+    deps: { neverBundle: ["esbuild-wasm"] },
     // ts-morph bundles typescript.js (CJS), which references require/__filename/
     // __dirname at module-evaluation time. Rolldown injects its own `require`/
     // `createRequire` for the inlined CJS, so the banner must NOT redeclare those
