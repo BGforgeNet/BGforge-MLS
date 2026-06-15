@@ -3,14 +3,32 @@
 // preserves byte-exact round-trip for all engines via opaque or generic
 // representations of those overlapping ranges.
 
-import { i16, i8, u16, u32, u8 } from "typed-binary";
+import { i16, i32, i8, u16, u32, u8 } from "typed-binary";
 import { arraySpec, charsSpec, type FieldSpec, type SpecData } from "../../spec/types";
+
+/**
+ * The 20 weapon-proficiency bytes (IESDP cre_v1.htm 0x006e-0x0081), each split into two packed sub-values:
+ * "active class" (bits 0-2) and "original class" (bits 3-5); bits 6-7 are unused. Emits 40 consecutive
+ * fields keyed `proficiency{N}Active` / `proficiency{N}Original` for N in 1..20, each pair sharing one
+ * `packedAs: "proficiency{N}"` u8 wire slot so the byte round-trips byte-identically.
+ */
+function creProficiencyFields(): Record<string, FieldSpec> {
+    const fields: Record<string, FieldSpec> = {};
+    for (let n = 1; n <= 20; n++) {
+        const slot = `proficiency${n}`;
+        fields[`${slot}Active`] = { codec: u8, packedAs: slot, bitRange: [0, 3], domain: { min: 0, max: 7 } };
+        fields[`${slot}Original`] = { codec: u8, packedAs: slot, bitRange: [3, 3], domain: { min: 0, max: 7 } };
+    }
+    return fields;
+}
 
 export const creHeaderSpec = {
     signature: charsSpec(4),
     version: charsSpec(4),
-    longName: { codec: u32 },
-    shortName: { codec: u32 },
+    // Strrefs into dialog.tlk: signed, -1 = "no string". (IESDP/the generator map strref -> i32; CRE is
+    // hand-written here, so the signed codec is set directly.)
+    longName: { codec: i32 },
+    shortName: { codec: i32 },
     creatureFlags: { codec: u32 },
     xpForKilling: { codec: u32 },
     powerLevelOrXp: { codec: u32 },
@@ -66,17 +84,18 @@ export const creHeaderSpec = {
     intoxication: { codec: u8 },
     luck: { codec: u8 },
     /**
-     * Proficiencies. BG1 uses the first nine slots for weapon-group bonuses
-     * (large swords / small swords / bows / spears / blunt / spiked / axe /
-     * missile / large swords secondary). BG2 and EE leave most slots unused
-     * (3-bit primary + 3-bit secondary chunks per weapon-group; the engine
-     * computes them from KIT.IDS / WEAPPROF.2DA at runtime). The fixed-width
-     * 22-byte block round-trips byte-identically regardless.
+     * Weapon proficiencies: 20 bytes (IESDP cre_v1.htm 0x006e-0x0081). BG1 names the first 8 (large swords,
+     * small swords, bows, spears, blunt, spiked, axe, missile); the rest are unused in BG1/BG2 (EE computes
+     * them from KIT.IDS / WEAPPROF.2DA at runtime). Per cre_v1.htm each proficiency BYTE bit-packs two
+     * sub-values: the "active class" proficiency in bits 0-2 and the "original class" proficiency in bits 3-5
+     * (each 0-7); bits 6-7 are unused (read/written as 0). The 20 bytes are split into 40 packed parts below
+     * (two per byte, sharing one `packedAs` wire slot), so the pair round-trips byte-identically.
      */
-    proficiencies: arraySpec({
-        element: { codec: u8 },
-        count: 22,
-    }),
+    ...creProficiencyFields(),
+    // Turn-undead level (paladin/cleric) and the ranger tracking skill (0-100). IESDP cre_v1.htm 0x0082 / 0x0083;
+    // previously absorbed into the 22-byte proficiencies block, now named so the editor can surface them.
+    turnUndeadLevel: { codec: u8 },
+    trackingSkill: { codec: u8 },
     /**
      * 32 bytes. BG1 / BG2 / BGEE: tracking-target resref-like string. PSTEE
      * reinterprets the same range as several distinct fields (thief / mage
@@ -108,10 +127,11 @@ export const creHeaderSpec = {
     racialEnemy: { codec: u8 },
     moraleRecoveryTime: { codec: u16 },
     /**
-     * Kit information. Stored big-endian on the wire per IESDP; the spec
-     * uses the same u32 codec as adjacent dwords (little-endian) so the raw
-     * value differs from the IESDP "KIT_*" hex by a byte-swap. Editors and
-     * tooling that need the named kit should swap bytes before lookup.
+     * Kit information (KIT.IDS). Read as a little-endian u32; the value matches the IESDP "KIT_*" dword
+     * hex directly - the Edwin fixture stores `00 00 80 00` -> 0x00800000 = Conjurer, and Edwin is a
+     * Conjurer, so no byte-swap is needed. The named-kit lookup + dropdown are applied in
+     * `header.overrides.ts` (CreKit). IESDP's "big endian" note does not hold here: the LE read matches
+     * KIT.IDS across the vendored CRE v1 corpus, including 34 warrior-range kits a big-endian read garbles.
      */
     kit: { codec: u32 },
     scriptOverride: charsSpec(8),
@@ -135,8 +155,9 @@ export const creHeaderSpec = {
         count: 5,
     }),
     alignment: { codec: u8 },
-    globalActorEnum: { codec: u16 },
-    localActorEnum: { codec: u16 },
+    // Actor enumeration values, set at runtime; 0xFFFF (-1) is the "unassigned" sentinel, so signed.
+    globalActorEnum: { codec: i16 },
+    localActorEnum: { codec: i16 },
     deathVariable: charsSpec(32),
     knownSpellsOffset: { codec: u32 },
     knownSpellsCount: { codec: u32 },

@@ -38,6 +38,13 @@ export interface IeCanonicalReaderConfig<Doc, Snap extends IeSnapshotEnvelope<Do
     readonly formatLabel: string;
     readonly documentSchemaPermissive: z.ZodType<Doc>;
     readonly snapshotSchemaPermissive: z.ZodType<Snap>;
+    /**
+     * Rebuild the canonical document from a display tree when `result.document`
+     * is absent. Supplied by formats that support display-tree-only saves (ITM,
+     * SPL). If omitted, `rebuildDocument` throws with the original "not
+     * implemented" error so callers that never strip `document` remain unaffected.
+     */
+    readonly rebuildFromDisplay?: (result: ParseResult) => Doc;
 }
 
 export interface IeCanonicalReader<Doc, Snap extends IeSnapshotEnvelope<Doc>> {
@@ -49,7 +56,7 @@ export interface IeCanonicalReader<Doc, Snap extends IeSnapshotEnvelope<Doc>> {
 export function createIeCanonicalReader<Doc, Snap extends IeSnapshotEnvelope<Doc>>(
     config: IeCanonicalReaderConfig<Doc, Snap>,
 ): IeCanonicalReader<Doc, Snap> {
-    const { formatId, formatLabel, documentSchemaPermissive, snapshotSchemaPermissive } = config;
+    const { formatId, formatLabel, documentSchemaPermissive, snapshotSchemaPermissive, rebuildFromDisplay } = config;
 
     const getDocument = (result: ParseResult): Doc | undefined => {
         if (!result.document) return undefined;
@@ -62,12 +69,11 @@ export function createIeCanonicalReader<Doc, Snap extends IeSnapshotEnvelope<Doc
 
     const rebuildDocument = (result: ParseResult): Doc => {
         const doc = getDocument(result);
-        if (!doc) {
-            throw new Error(
-                `${formatLabel} canonical document missing from ParseResult; display-tree-only rebuild is not implemented`,
-            );
-        }
-        return doc;
+        if (doc) return doc;
+        if (rebuildFromDisplay) return rebuildFromDisplay(result);
+        throw new Error(
+            `${formatLabel} canonical document missing from ParseResult; display-tree-only rebuild is not implemented`,
+        );
     };
 
     const createSnapshot = (result: ParseResult): Snap => {

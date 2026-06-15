@@ -1,4 +1,5 @@
 import { u32, i32 } from "typed-binary";
+import { Perk } from "../types";
 import type { FieldSpec, SpecData } from "../../spec/types";
 import type { StructPresentation } from "../../spec/presentation";
 
@@ -18,7 +19,8 @@ export const armorSpec = {
     dtElectrical: { codec: u32 },
     dtEmp: { codec: u32 },
     dtExplosion: { codec: u32 },
-    perk: { codec: u32 },
+    // Granted perk (fallout2-ce Perk enum); signed because -1 = none. Open: sfall can add perks beyond 119.
+    perk: { codec: i32, enum: Perk, enumOpen: true },
     maleFrmId: { codec: i32 },
     femaleFrmId: { codec: i32 },
 } satisfies Record<string, FieldSpec>;
@@ -42,6 +44,7 @@ export const armorPresentation: StructPresentation<ArmorData> = {
     dtEmp: { label: "EMP" },
     dtExplosion: { label: "Explosion" },
     perk: { label: "Perk" },
-    maleFrmId: { label: "Male FRM ID" },
-    femaleFrmId: { label: "Female FRM ID" },
+    // Packed type-encoded FIDs (FRM type in the high byte, e.g. 0x01000096 = type 1); hex like MAP FID/PID.
+    maleFrmId: { label: "Male FRM ID", format: "hex32" },
+    femaleFrmId: { label: "Female FRM ID", format: "hex32" },
 };

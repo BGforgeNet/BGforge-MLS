@@ -1,10 +1,56 @@
 import type { BinaryFormatAdapter } from "../format-adapter";
+import type { CrossRefRelationship } from "../cross-ref-relationship";
 import type { ParseOptions, ParseResult } from "../types";
 import { rebuildCreCanonicalDocument } from "./canonical";
 import { createCanonicalCreJsonSnapshot, loadCanonicalCreJsonSnapshot } from "./json-snapshot";
 import { creCompiledPatternFields, creDomainRanges, crePresentationSchema } from "./presentation-schema";
-import { slugify } from "../snapshot-common";
-import { CRE_GROUP_LABELS } from "./types";
+import { creLayout } from "./layout-schema";
+import { slugify } from "../spec/presentation";
+import { CRE_GROUP_LABELS, CRE_ITEM_REF_SLOT_COUNT } from "./types";
+import {
+    buildCreAddEntryBytes,
+    buildCreDuplicateEntryBytes,
+    buildCreInsertEntryBytes,
+    buildCreMoveEntryBytes,
+    buildCreRemoveEntryBytes,
+    CRE_MEMINFO_FIELDS,
+    isCreRemovableEntry,
+} from "./entity-ops";
+
+/**
+ * CRE cross-record relationships:
+ *  - Item Slots [0, CRE_ITEM_REF_SLOT_COUNT) index into Items (the trailing selected-weapon slot/ability
+ *    entries are not item indices and stay unchecked); orphan items are noted, and each item belongs in a
+ *    single slot (`uniqueRef`: duplicates noted on load, the previous slot cleared on reassignment).
+ *  - Spell Memorization Info entries slice into Memorized Spells; memorized spells covered by no range are
+ *    noted (info) and a spell claimed by two ranges is warned (the memorization slices should partition the
+ *    memorized-spell table).
+ */
+const creCrossRefRelationships: readonly CrossRefRelationship[] = [
+    {
+        kind: "index",
+        refGroup: CRE_GROUP_LABELS.itemSlots,
+        targetGroup: CRE_GROUP_LABELS.items,
+        refNoun: "item",
+        refFieldCount: CRE_ITEM_REF_SLOT_COUNT,
+        orphanInfo: true,
+        // An item table entry belongs in a single inventory slot: note a duplicate on load, and clear the
+        // previous slot when the editor reassigns its item to another slot.
+        uniqueRef: true,
+        // The 8-char ResRef (`item` field) names each entry; the editor renders slots as a dropdown of these.
+        targetLabelField: "item",
+    },
+    {
+        kind: "slice",
+        ownerGroup: CRE_GROUP_LABELS.spellMemInfo,
+        targetGroup: CRE_GROUP_LABELS.memorizedSpells,
+        sliceNoun: "Memorized-spell",
+        fields: CRE_MEMINFO_FIELDS,
+        orphanInfo: true,
+        overlapWarn: true,
+        coverageNoun: "memorization range",
+    },
+];
 
 /**
  * Maps a top-level display-group label to the semantic-key namespace plus
@@ -33,7 +79,14 @@ function creSemanticFieldKey(segments: readonly string[]): string | undefined {
     const route = GROUP_ROUTES[segments[0]!];
     if (route) {
         const fieldName = segments[route.fieldSegment];
-        return fieldName ? `${route.prefix}.${slugify(fieldName)}` : route.prefix;
+        if (!fieldName) return route.prefix;
+        // A header sub-group leaf (a Sound Slots / Object Refs slot) keeps its slot in the key so each slot
+        // gets a distinct key instead of all of them collapsing to the sub-group's key. (Proficiencies are now
+        // flat packed header fields - no slot leaf - so they take the plain `cre.header.<field>` branch below.)
+        const leaf = segments[route.fieldSegment + 1];
+        return leaf
+            ? `${route.prefix}.${slugify(fieldName)}.${slugify(leaf)}`
+            : `${route.prefix}.${slugify(fieldName)}`;
     }
     // Fall-through for nested walkStruct sub-groups (e.g. future packed-field
     // sub-groups). Slugified path keeps presentation lookup routable.
@@ -46,6 +99,10 @@ export const creFormatAdapter: BinaryFormatAdapter = {
     presentationSchema: crePresentationSchema,
     compiledPatternFields: creCompiledPatternFields,
     domainRanges: creDomainRanges,
+    // IE formats cache a rebuildable canonical document (own writable property); clear it on edit.
+    documentCacheStrategy: "clear",
+    layout: creLayout,
+    crossRefRelationships: creCrossRefRelationships,
 
     createJsonSnapshot(parseResult: ParseResult): string {
         return createCanonicalCreJsonSnapshot(parseResult);
@@ -62,5 +119,47 @@ export const creFormatAdapter: BinaryFormatAdapter = {
 
     toSemanticFieldKey(segments: readonly string[]): string | undefined {
         return creSemanticFieldKey(segments);
+    },
+
+    isRemovableEntry(entryPath: readonly string[]): boolean {
+        return isCreRemovableEntry(entryPath);
+    },
+
+    buildAddEntryBytes(parseResult: ParseResult, arrayPath: readonly string[]): Uint8Array | undefined {
+        return buildCreAddEntryBytes(parseResult, arrayPath);
+    },
+
+    buildRemoveEntryBytes(
+        parseResult: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+    ): Uint8Array | undefined {
+        return buildCreRemoveEntryBytes(parseResult, arrayPath, index);
+    },
+
+    buildInsertEntryBytes(
+        parseResult: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+        position: "before" | "after",
+    ): Uint8Array | undefined {
+        return buildCreInsertEntryBytes(parseResult, arrayPath, index, position);
+    },
+
+    buildMoveEntryBytes(
+        parseResult: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+        direction: "up" | "down",
+    ): Uint8Array | undefined {
+        return buildCreMoveEntryBytes(parseResult, arrayPath, index, direction);
+    },
+
+    buildDuplicateEntryBytes(
+        parseResult: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+    ): Uint8Array | undefined {
+        return buildCreDuplicateEntryBytes(parseResult, arrayPath, index);
     },
 };

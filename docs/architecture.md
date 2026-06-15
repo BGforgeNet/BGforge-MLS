@@ -85,7 +85,7 @@ vscode-mls/
 |   |   +-- webview-assets.ts       HTML/CSS/JS asset cache shared by webview panels
 |   |   +-- webview-error.ts        Webview runtime error surfacing (DevTools + output + toast)
 |   |   +-- dialog-tree/            Dialog tree preview (webview panels)
-|   |   +-- editors/                Binary .pro/.map/.itm/.spl/.eff/.cre editor (custom editor; uses @bgforge/binary)
+|   |   +-- binary-editor/          Binary .pro/.map/.itm/.spl/.eff/.cre custom editor (worker thread + Svelte webview; uses @bgforge/binary + @bgforge/binary-editor)
 |   |   +-- test/                   E2E tests (mocha + vscode test runner)
 |   +-- out/                    esbuild output
 |
@@ -121,6 +121,10 @@ vscode-mls/
 |   +-- src/                    index.ts (library) + cli.ts (fgbin bin) + format adapters
 |   +-- test/                   Library + CLI tests (vitest)
 |   +-- out/                    tsup output
+|
++-- binary-editor/          @bgforge/binary-editor package: declarative layout layer (parsed records -> editor blocks)
+|   +-- src/                    layout/model/session/spellbook/cross-record projection consumed by the client webview
+|   +-- test/                   Layout + structure-op tests (vitest) + Playwright render harness (test/harness/, e2e-tier)
 |
 +-- format/                 @bgforge/format package: formatters library + fgfmt CLI bin
 |   +-- src/                    index.ts (library) + cli.ts (fgfmt bin)
@@ -167,18 +171,18 @@ All bundles use **esbuild** (not tsc). The monorepo uses **pnpm workspaces**.
 
 ### Build Targets
 
-| Target        | Input                                                                                        | Output                                      | Notes                                            |
-| ------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------- | ------------------------------------------------ |
-| Client        | `client/src/extension.ts`                                                                    | `client/out/extension.js`                   | CJS, `vscode` external                           |
-| Server        | `server/src/server.ts`                                                                       | `server/out/server.js`                      | CJS, patches `import_meta` for WASM              |
-| TSSL Plugin   | `plugins/tssl-plugin/src/index.ts`                                                           | `node_modules/bgforge-tssl-plugin/index.js` | CJS, standalone                                  |
-| TD Plugin     | `plugins/td-plugin/src/index.ts`                                                             | `node_modules/bgforge-td-plugin/index.js`   | CJS, standalone                                  |
-| Webviews      | `client/src/dialog-tree/dialogTree-webview.ts`, `client/src/editors/binaryEditor-webview.ts` | `client/out/*.js`                           | Browser context, built as part of `build:client` |
-| Format lib    | `format/src/{index,cli}.ts`                                                                  | `format/out/{index,cli}.js`                 | ESM, tsup-bundled; cli.js is the fgfmt bin       |
-| Transpile lib | `transpilers/src/{index,cli}.ts`                                                             | `transpilers/out/{index,cli}.js`            | ESM, tsup-bundled; cli.js is the fgtp bin        |
-| Binary lib    | `binary/src/{index,cli}.ts`                                                                  | `binary/out/{index,cli}.js`                 | ESM, tsup-bundled; cli.js is the fgbin bin       |
-| Grammars      | `grammars/*/grammar.js`                                                                      | `grammars/*/*.wasm` -> `server/out/`        | tree-sitter build --wasm                         |
-| TextMate      | `syntaxes/*.tmLanguage.yml`                                                                  | `syntaxes/*.tmLanguage.json`                | YAML -> JSON conversion                          |
+| Target        | Input                                                                                      | Output                                      | Notes                                            |
+| ------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------- | ------------------------------------------------ |
+| Client        | `client/src/extension.ts`                                                                  | `client/out/extension.js`                   | CJS, `vscode` external                           |
+| Server        | `server/src/server.ts`                                                                     | `server/out/server.js`                      | CJS, patches `import_meta` for WASM              |
+| TSSL Plugin   | `plugins/tssl-plugin/src/index.ts`                                                         | `node_modules/bgforge-tssl-plugin/index.js` | CJS, standalone                                  |
+| TD Plugin     | `plugins/td-plugin/src/index.ts`                                                           | `node_modules/bgforge-td-plugin/index.js`   | CJS, standalone                                  |
+| Webviews      | `client/src/dialog-tree/dialogTree-webview.ts`, `client/src/binary-editor/webview/main.ts` | `client/out/*.js`                           | Browser context, built as part of `build:client` |
+| Format lib    | `format/src/{index,cli}.ts`                                                                | `format/out/{index,cli}.js`                 | ESM, tsup-bundled; cli.js is the fgfmt bin       |
+| Transpile lib | `transpilers/src/{index,cli}.ts`                                                           | `transpilers/out/{index,cli}.js`            | ESM, tsup-bundled; cli.js is the fgtp bin        |
+| Binary lib    | `binary/src/{index,cli}.ts`                                                                | `binary/out/{index,cli}.js`                 | ESM, tsup-bundled; cli.js is the fgbin bin       |
+| Grammars      | `grammars/*/grammar.js`                                                                    | `grammars/*/*.wasm` -> `server/out/`        | tree-sitter build --wasm                         |
+| TextMate      | `syntaxes/*.tmLanguage.yml`                                                                | `syntaxes/*.tmLanguage.json`                | YAML -> JSON conversion                          |
 
 ### Build Pipeline
 
@@ -284,14 +288,31 @@ process, not the extension host.
 
 Two webview-based features, each with a host-side and browser-side module:
 
-| Feature            | Host Module                   | Webview Module            | Trigger                            |
-| ------------------ | ----------------------------- | ------------------------- | ---------------------------------- |
-| Dialog Tree (SSL)  | `dialog-tree/dialogTree.ts`   | `dialogTree-webview.ts`   | Ctrl+Shift+V in SSL                |
-| Dialog Tree (D/TD) | `dialog-tree/dialogTree-d.ts` | `dialogTree-webview.ts`   | Ctrl+Shift+V in D/TD               |
-| Dialog Tree (TSSL) | `dialog-tree/dialogTree.ts`   | `dialogTree-webview.ts`   | Ctrl+Shift+V in TSSL               |
-| Binary Editor      | `editors/binaryEditor.ts`     | `binaryEditor-webview.ts` | Open .pro/.map/.itm/.spl/.eff/.cre |
+| Feature            | Host Module                   | Webview Module                  | Trigger                            |
+| ------------------ | ----------------------------- | ------------------------------- | ---------------------------------- |
+| Dialog Tree (SSL)  | `dialog-tree/dialogTree.ts`   | `dialogTree-webview.ts`         | Ctrl+Shift+V in SSL                |
+| Dialog Tree (D/TD) | `dialog-tree/dialogTree-d.ts` | `dialogTree-webview.ts`         | Ctrl+Shift+V in D/TD               |
+| Dialog Tree (TSSL) | `dialog-tree/dialogTree.ts`   | `dialogTree-webview.ts`         | Ctrl+Shift+V in TSSL               |
+| Binary Editor      | `binary-editor/provider.ts`   | `binary-editor/webview/main.ts` | Open .pro/.map/.itm/.spl/.eff/.cre |
 
 For the binary library internals - spec system, primitives, derivation, format-adapter pattern, adding a new format - see [binary/INTERNALS.md](../binary/INTERNALS.md).
+
+#### Webview CSP: styles need `cspSource`, not a bare nonce
+
+Both webviews lock the inline `<script>` bundle to a per-load CSP nonce (`script-src 'nonce-...'`). Styles are
+different: a webview's `style-src` **must include `{{cspSource}}`**. VS Code wraps the webview in its own CSP layer
+and only honours `style-src` sources it can attribute to the webview origin (`cspSource`); a `style-src 'nonce-...'`
+with no `cspSource` is honoured by raw Chromium - so it passes any headless or standalone render - but is silently
+dropped by the wrapped VS Code webview. The symptom is a fully unstyled panel (default user-agent buttons, no theme
+colors) while the nonce'd script still runs, so the editor looks live but flat. The CSP shapes are pinned by
+`client/test/webview-csp.test.ts` as a regression guard.
+
+- `binary-editor/webview/index.html`: `style-src {{cspSource}}`; `styles.css` and `codicon.css` load as
+  `webview.asWebviewUri()` `<link>` elements (the documented custom-editor pattern). Both `client/src/binary-editor/webview`
+  and `client/out/codicons` are in the panel's `localResourceRoots`. Because codicon.css links directly, its
+  `@font-face` `url("./codicon.ttf")` resolves relative to the stylesheet URI - no font-URL rewrite is needed.
+- `dialog-tree/dialogTree.html`: `style-src {{cspSource}} 'nonce-{{nonce}}'`; codicons via `<link>`, panel CSS inlined
+  as a nonce'd `<style>`. Inlining is fine here only because `cspSource` is also present in `style-src`.
 
 Binary editor design choice:
 
@@ -303,6 +324,15 @@ Binary editor design choice:
 - Canonical rebuild during save and JSON export is strict about output validity. If a parsed PRO or MAP field is outside a supported domain range, the serializer clamps it to the nearest valid value before writing bytes or snapshots.
 - Presentation metadata such as labels, enum/flag option tables, numeric formatting, and editability is defined separately in `binary/src/presentation-schema.ts`, so external tools can consume the canonical data contract without inheriting the editor tree.
 - Presentation lookups are keyed by stable semantic IDs such as `pro.header.objectType` and `map.scripts[].extents[].slots[].flags`. The old escaped tree-path lookup form is no longer part of the contract.
+
+##### Declarative layout layer (render-path branch)
+
+The per-format editor UI can be described by **data** rather than by the parser's group tree. A format's `BinaryFormatAdapter` may carry an optional `layout: FormatLayout` (`binary/src/layout-schema-types.ts`, zod-validated) - a set of variants (chosen by the parse result's `variantId`), each a list of rows of panels, each panel a stack of blocks: `fields` (label+control list), `flags` (one flags field as N checkbox columns), `matrix` (Base|Bonus-style 2D table), `grid` (N-column cells), plus `list`/`raw` (stubs for the follow-up). Fields are referenced by semantic field key (the same `toSemanticFieldKey` keys presentation uses), so the view is decoupled from byte order and parser grouping.
+
+When an adapter declares a `layout` and the parse result reports a matching `variantId`, `binary-editor/buildLayout` returns a `ResolvedLayout` (the variant's rows + a `FieldRef -> Row` map) and the webview renders it via `LayoutRenderer` (`webview/components/LayoutRenderer.svelte` + the per-block components) - a single dense page, no section tabs. Otherwise the legacy depth-0-groups-as-tabs path renders unchanged. The two paths coexist; `App.svelte` branches on `open.layout.layout`.
+
+**PRO critters** are the first format migrated: a critter's ~90 fields render as a single page (Header + flag columns, Demographics, Final, a Stats matrix, a Skills grid) instead of 13 tabs. Other PRO object/sub types and the other formats still use the tabs path until their layout variants are authored. The parser stays a faithful bytes<->model mapping; all grouping/placement is presentation data in `binary/src/pro/layout-schema.ts`.
+
 - MAP JSON snapshots remain fidelity snapshots. Any MAP region the editor intentionally omits from the visible tree, such as tiles or opaque tails, is still carried in the canonical snapshot so JSON round-trips remain byte-preserving.
 - That byte preservation applies to omitted MAP regions and preserved fixed-width source bytes such as filename slots. Once a field is modeled and changed through the canonical document, JSON load/save treats the parsed value as authoritative and rewrites that field in canonical form.
 - MAP snapshots are semantic documents, not field-layout dumps. Regular decoded MAP fields do not persist `offset`, `size`, `valueType`, or `nodeType`; those remain internal codec concerns. Offsets and sizes are only preserved in `opaqueRanges` for undecoded or intentionally omitted byte spans.

@@ -167,7 +167,7 @@ describe("parseFieldValue - enum/flags with string input", () => {
                             { name: "Object Type", value: "Misc (5)", offset: 0, size: 1, type: "enum" },
                             { name: "Object ID", value: 1, offset: 1, size: 3, type: "uint24" },
                             { name: "Text ID", value: 100, offset: 4, size: 4, type: "uint32" },
-                            { name: "FRM Type", value: "Background (5)", offset: 8, size: 1, type: "enum" },
+                            { name: "FRM Type", value: "Misc (5)", offset: 8, size: 1, type: "enum" },
                             { name: "FRM ID", value: 9, offset: 9, size: 3, type: "uint24" },
                             { name: "Light Radius", value: 0, offset: 12, size: 4, type: "uint32" },
                             { name: "Light Intensity", value: 0, offset: 16, size: 4, type: "uint32" },

@@ -38,6 +38,12 @@ export const CRE_EFFECT_V1_SIZE = 0x30;
 export const CRE_EFFECT_V2_SIZE = 0x108;
 export const CRE_ITEM_SLOT_COUNT = 40;
 export const CRE_ITEM_SLOTS_SIZE = CRE_ITEM_SLOT_COUNT * 2;
+/**
+ * Inventory slots [0, CRE_ITEM_REF_SLOT_COUNT) hold item-table indices; the trailing two entries are the
+ * selected-weapon slot index and ability index (see CRE_ITEM_SLOT_LABELS), which are NOT item indices.
+ * The single source of truth shared by the itemSlots relink and the editor's cross-record diagnostics.
+ */
+export const CRE_ITEM_REF_SLOT_COUNT = CRE_ITEM_SLOT_COUNT - 2; // 38
 
 export const CRE_SIGNATURE = [0x43, 0x52, 0x45, 0x20] as const; // 'CRE '
 export const CRE_VERSION_V1 = [0x56, 0x31, 0x2e, 0x30] as const; // 'V1.0'
@@ -65,7 +71,7 @@ export const CreCreatureFlags: Readonly<Record<number, string>> = {
     0x00800000: "No tooltip",
 };
 
-/** CRE header `statusFlags` (dword bitmap, 0x0020). Mirrors STATE.IDS. */
+/** CRE header `statusFlags` (dword bitmap, 0x0020). Mirrors STATE.IDS: https://iesdp.bgforge.net/files/ids/bgee/state.htm */
 export const CreStatusFlags: Readonly<Record<number, string>> = {
     0x00000001: "Sleeping",
     0x00000002: "Berserk",
@@ -107,7 +113,12 @@ export const CreEffStructureVersion: Readonly<Record<number, string>> = {
     1: "Version 2 EFF",
 };
 
-/** CRE header `sex` (byte, 0x0237) - GENDER.IDS. */
+/**
+ * CRE header `sex` (byte, 0x0237) - GENDER.IDS: https://iesdp.bgforge.net/files/ids/bgee/gender.htm
+ * `0: "Sexless"` is a curated unset sentinel (GENDER.IDS starts at 1). Names mirror the IDS spelling, including
+ * its "Niether" typo. The high EXTRA2-10 filler values (10-18) are omitted; the enum is open, so they surface
+ * as "<n> Unknown".
+ */
 export const CreSex: Readonly<Record<number, string>> = {
     0: "Sexless",
     1: "Male",
@@ -115,52 +126,82 @@ export const CreSex: Readonly<Record<number, string>> = {
     3: "Other",
     4: "Niether",
     5: "Both",
+    6: "Summoned",
+    7: "Illusionary",
+    9: "Summoned demon",
 };
 
-/** CRE header `enemyAlly` (byte, 0x0270) - EA.IDS common values. */
+/** CRE header `enemyAlly` (byte, 0x0270) - EA.IDS: https://iesdp.bgforge.net/files/ids/bgee/ea.htm */
 export const CreEnemyAlly: Readonly<Record<number, string>> = {
+    0: "Anyone",
     1: "Inanimate",
-    2: "Player1",
-    3: "Player2",
-    4: "Player3",
-    5: "Player4",
-    6: "Player5",
-    7: "Player6",
-    28: "Familiar",
-    29: "Ally",
-    30: "Controlled",
-    31: "Charmed",
-    32: "Reallycharmed",
-    126: "Goodbutblue",
-    127: "Goodbutred",
+    2: "PC",
+    3: "Familiar",
+    4: "Ally",
+    5: "Controlled",
+    6: "Charmed",
+    7: "Reallycharmed",
+    28: "Goodbutred",
+    29: "Goodbutblue",
+    30: "Goodcutoff",
+    31: "Notgood",
+    126: "Anything",
+    127: "Areaobject",
     128: "Neutral",
-    198: "Evilbutgreen",
-    199: "Evilbutblue",
-    200: "Charmedpc",
-    201: "Evilcutoff",
-    202: "Notgood",
-    203: "Notneutral",
-    204: "Notevil",
-    205: "Anything",
-    206: "Areaobject",
-    254: "Pc_target",
+    198: "Notneutral",
+    199: "Notevil",
+    200: "Evilcutoff",
+    201: "Evilbutgreen",
+    202: "Evilbutblue",
+    254: "Charmed PC",
     255: "Enemy",
 };
 
-/** CRE header `general` (byte, 0x0271) - GENERAL.IDS common values. */
+/**
+ * CRE header `general` (byte, 0x0271) - creature GENERAL.IDS values from
+ * https://iesdp.bgforge.net/files/ids/bgee/general.htm `0: "None"` is a curated unset sentinel (in the
+ * IDS, 0 is GENERAL_ITEM, an item-only type that never applies to a creature). The item GENERAL.IDS types
+ * (101-113 WEAPON/ARMOR/...) are omitted as they are not creature values.
+ */
 export const CreGeneral: Readonly<Record<number, string>> = {
     0: "None",
     1: "Humanoid",
     2: "Animal",
     3: "Dead",
     4: "Undead",
-    5: "Giant Humanoid",
-    6: "Monster",
-    100: "Helmed Horror",
-    255: "Anything",
+    5: "Giant humanoid",
+    6: "Frozen",
+    7: "Plant",
+    255: "Monster",
 };
 
-/** CRE header `race` (byte, 0x0272) - RACE.IDS common values. */
+/**
+ * CRE header `specific` (byte, 0x0274) - SPECIFIC.IDS, from
+ * https://iesdp.bgforge.net/files/ids/bgee/specific.htm (names humanized to match the sibling tables).
+ * `0: "None"` is a curated sentinel for the common unset value - it is NOT in the BGEE IDS, but mirrors the
+ * `0` entries in CreGeneral / CreRace. Open enum: SPECIFIC.IDS varies by game and is mod-extensible, so
+ * unlisted values round-trip as `Unknown (N)`.
+ */
+export const CreSpecific: Readonly<Record<number, string>> = {
+    0: "None",
+    1: "Normal",
+    10: "Cultist",
+    12: "Sharran",
+    64: "Shou monk",
+    65: "Shou flayer",
+    66: "Quadim spider",
+    67: "Culak spider",
+    101: "Magic",
+    102: "No magic",
+    250: "Spirit",
+};
+
+/**
+ * CRE header `race` (byte, 0x0272) - playable RACE.IDS values from
+ * https://iesdp.bgforge.net/files/ids/bgee/race.htm `0: "None"` is a curated unset sentinel (RACE.IDS
+ * starts at 1). RACE.IDS also defines creature-type races (101+, e.g. ANKHEG/TROLL); those are omitted as they
+ * are not playable races. The enum is open, so any omitted value renders as "<n> Unknown".
+ */
 export const CreRace: Readonly<Record<number, string>> = {
     0: "None",
     1: "Human",
@@ -170,15 +211,16 @@ export const CreRace: Readonly<Record<number, string>> = {
     5: "Halfling",
     6: "Gnome",
     7: "Half orc",
-    8: "Goblin",
-    9: "Hobgoblin",
-    10: "Dwarf werewolf",
-    11: "Half elf werewolf",
-    100: "Monster",
-    255: "Anything",
 };
 
-/** CRE header `class` (byte, 0x0273) - CLASS.IDS common values. */
+/**
+ * CRE header `class` (byte, 0x0273) - single- and multi-class player/NPC values from BGEE CLASS.IDS
+ * (https://iesdp.bgforge.net/files/ids/bgee/class.htm). `0: "None"` is a curated unset sentinel (not in the
+ * IDS), mirroring CreGeneral/CreRace; `255` is the IDS NO_CLASS. CLASS.IDS also defines creature-type detection
+ * classes (101-200, e.g. OGRE_MAGE/TROLL) and script-only "_ALL"/weapon detection values (201-210); those are
+ * omitted as they are not player/NPC class-byte values. The enum is open (enumOpen), so any omitted value still
+ * renders as "<n> Unknown".
+ */
 export const CreClass: Readonly<Record<number, string>> = {
     0: "None",
     1: "Mage",
@@ -191,29 +233,28 @@ export const CreClass: Readonly<Record<number, string>> = {
     8: "Fighter cleric",
     9: "Fighter thief",
     10: "Fighter mage thief",
-    11: "Mage thief",
-    12: "Cleric mage",
-    13: "Cleric thief",
-    14: "Fighter druid",
-    15: "Fighter mage cleric",
-    16: "Cleric ranger",
-    17: "Fighter druid mage",
-    18: "Fighter druid cleric",
-    19: "Mage druid",
-    20: "Mage druid cleric",
-    21: "Fighter mage druid",
-    22: "Fighter mage druid cleric",
-    23: "Ranger",
-    24: "Druid",
-    25: "Monk",
-    26: "Sorcerer",
-    27: "Shaman",
-    200: "Innate",
-    255: "Anything",
+    11: "Druid",
+    12: "Ranger",
+    13: "Mage thief",
+    14: "Cleric mage",
+    15: "Cleric thief",
+    16: "Fighter druid",
+    17: "Fighter mage cleric",
+    18: "Cleric ranger",
+    19: "Sorcerer",
+    20: "Monk",
+    21: "Shaman",
+    255: "No class",
 };
 
-/** CRE header `alignment` (byte, 0x027B) - ALIGNMEN.IDS. */
+/**
+ * CRE header `alignment` (byte, 0x027B) - ALIGNMEN.IDS from
+ * https://iesdp.bgforge.net/files/ids/bgee/alignmen.htm Only the nine concrete alignments a creature
+ * stores (plus `0x00` NONE) are listed; the partial-match bitmasks (MASK_GOOD 0x01, MASK_LAWFUL 0x10, etc.) are
+ * script-check values, not stored creature alignments, so they are omitted.
+ */
 export const CreAlignment: Readonly<Record<number, string>> = {
+    0x00: "None",
     0x11: "Lawful good",
     0x12: "Lawful neutral",
     0x13: "Lawful evil",
@@ -223,13 +264,51 @@ export const CreAlignment: Readonly<Record<number, string>> = {
     0x31: "Chaotic good",
     0x32: "Chaotic neutral",
     0x33: "Chaotic evil",
-    0x14: "Lawful",
-    0x24: "True neutral",
-    0x34: "Chaotic",
-    0x41: "Good",
-    0x42: "Mask of neutral",
-    0x43: "Evil",
-    0x44: "Anything",
+};
+
+/**
+ * CRE header `kit` (dword, 0x0244) - KIT.IDS values: https://iesdp.bgforge.net/files/ids/bgee/kit.htm
+ * Labels are the BG2EE in-game kit names; some KIT.IDS identifiers differ (0x4007 = Archer/FERALAN,
+ * 0x4012 = Avenger/BEASTFRIEND). Keyed by the dword the LE u32
+ * codec reads, which matches the IESDP "KIT_*" hex directly. Read LITTLE-endian: across the vendored CRE v1
+ * corpus the LE read matches KIT.IDS in 151/153 files, including 34 warrior-range kits (0x40xx0000, e.g.
+ * True Class is stored `00 00 00 40` -> 0x40000000) that a big-endian read would garble - so IESDP's
+ * "values ... written in big endian style" note does not hold for the files we parse. Open enum: mods add
+ * kits beyond this engine-defined set, so out-of-table values surface as Unknown(N).
+ */
+export const CreKit: Readonly<Record<number, string>> = {
+    0x00000000: "None",
+    0x00004000: "Barbarian",
+    0x40000000: "True class",
+    0x40010000: "Berserker",
+    0x40020000: "Wizard slayer",
+    0x40030000: "Kensai",
+    0x40040000: "Cavalier",
+    0x40050000: "Inquisitor",
+    0x40060000: "Undead hunter",
+    0x40070000: "Archer",
+    0x40080000: "Stalker",
+    0x40090000: "Beast master",
+    0x400a0000: "Assassin",
+    0x400b0000: "Bounty hunter",
+    0x400c0000: "Swashbuckler",
+    0x400d0000: "Blade",
+    0x400e0000: "Jester",
+    0x400f0000: "Skald",
+    0x40100000: "Totemic druid",
+    0x40110000: "Shapeshifter",
+    0x40120000: "Avenger",
+    0x40130000: "Priest of Talos",
+    0x40140000: "Priest of Helm",
+    0x40150000: "Priest of Lathander",
+    0x00400000: "Abjurer",
+    0x00800000: "Conjurer",
+    0x01000000: "Diviner",
+    0x02000000: "Enchanter",
+    0x04000000: "Illusionist",
+    0x08000000: "Invoker",
+    0x10000000: "Necromancer",
+    0x20000000: "Transmuter",
 };
 
 // `gender` (byte, 0x0275) reuses the GENDER.IDS table via `CreSex` directly -
@@ -317,3 +396,16 @@ export const CRE_ITEM_SLOT_LABELS = [
     "Selected weapon",
     "Selected weapon ability",
 ] as const;
+
+/**
+ * Valid values for the "Selected weapon" slot (entry 38). Per IESDP cre_v1.htm: the value is the slots.ids
+ * index minus 35, and the four weapon slots begin at slots.ids index 35 - so 0-3 select Weapon 1-4, and the
+ * special value 1000 means fists (no weapon equipped). A fixed engine enum, not an item-table reference.
+ */
+export const CRE_SELECTED_WEAPON_OPTIONS: Readonly<Record<string, string>> = {
+    "0": "Weapon 1",
+    "1": "Weapon 2",
+    "2": "Weapon 3",
+    "3": "Weapon 4",
+    "1000": "Fist",
+};

@@ -8,6 +8,8 @@
 
 import { type NumericRange, setDomainRangeLookup } from "./binary-format-contract";
 import type { CompiledPatternFieldPresentation, FormatPresentationSchema } from "./presentation-schema-types";
+import type { FormatLayout } from "./layout-schema-types";
+import type { CrossRefRelationship } from "./cross-ref-relationship";
 import type { ParsedField, ParsedGroup, ParseOptions, ParseResult } from "./types";
 
 export type ProjectedEntry =
@@ -43,6 +45,35 @@ export interface BinaryFormatAdapter {
      * canonical-write clamp path. Optional.
      */
     readonly domainRanges?: Readonly<Record<string, NumericRange>>;
+
+    /**
+     * Declarative cross-record relationships (index back-references, owner/slice partitions) keyed on
+     * display-group labels. The single source of truth the editor's advisory cross-record diagnostics
+     * consume, sharing the relink's range-field bindings and slot-exemption counts. Absent for formats
+     * with no structural cross-references (PRO, MAP, EFF).
+     */
+    readonly crossRefRelationships?: readonly CrossRefRelationship[];
+
+    /**
+     * How the editor invalidates this format's cached canonical `document` after a display-tree
+     * mutation (field edit / structure op). Required so a new format must consciously choose rather
+     * than silently inherit a reflection heuristic (review finding #6a):
+     *  - "clear": the format caches a canonical document (own property or lazy getter/setter) that is
+     *    rebuildable from the display tree; the editor sets `parseResult.document = undefined` so the
+     *    next serialize/snapshot rebuilds from the edited tree. All current formats use this.
+     *  - "none": the format keeps no editor-invalidatable cached document, or its document is
+     *    authoritative and must NOT be cleared. The editor leaves `document` untouched.
+     */
+    readonly documentCacheStrategy: "clear" | "none";
+
+    /**
+     * Optional declarative layout. When present, the editor renders this format via the generic
+     * layout renderer (panels/matrix/grid/flag-columns on a single dense page, variant chosen by the
+     * parse result's `variantId`) instead of the legacy depth-0-groups-as-tabs path. Absent => the
+     * format keeps the tabs path. This is presentation-only data (sibling of `presentationSchema`);
+     * keep parser/codec free of it.
+     */
+    readonly layout?: FormatLayout;
 
     // -- Snapshots -------------------------------------------------------------
     createJsonSnapshot(parseResult: ParseResult): string;
@@ -90,38 +121,88 @@ export interface BinaryFormatAdapter {
      */
     buildAddEntryBytes?(parseResult: ParseResult, arrayPath: readonly string[]): Uint8Array | undefined;
     /**
-     * Produce the bytes for `parseResult` with the entry at `entryPath` removed
-     * from its array (tree-segment names, e.g. `["Global Variables", "Global Var 3"]`).
-     * Returns `undefined` if the path is not a known removable entry for this
-     * format.
+     * Produce the bytes for `parseResult` with the entry at ordinal `index` removed
+     * from the array at `arrayPath` (tree-segment section names, e.g. `["Global Variables"]`).
+     * `index` is the entry's 0-based position among its siblings, resolved by the editor
+     * from structural identity (NodeId) - NOT parsed from a display label, so a relabel /
+     * i18n / presentation override cannot misaddress the byte op. Returns `undefined` if
+     * `arrayPath` is not a known mutable array or `index` is out of range for this format.
      */
-    buildRemoveEntryBytes?(parseResult: ParseResult, entryPath: readonly string[]): Uint8Array | undefined;
+    buildRemoveEntryBytes?(
+        parseResult: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+    ): Uint8Array | undefined;
     /**
-     * Insert a new default entry adjacent to the targeted entry. Used by the
-     * Insert before / Insert after editor actions for arrays where slot index
-     * carries identity (e.g. MAP global vars referenced by index from scripts).
+     * Insert a new default entry adjacent to the entry at ordinal `index` in the array
+     * at `arrayPath`. Used by the Insert before / Insert after editor actions for arrays
+     * where slot index carries identity (e.g. MAP global vars referenced by index from
+     * scripts). `index` is the structural ordinal (see `buildRemoveEntryBytes`).
      */
     buildInsertEntryBytes?(
         parseResult: ParseResult,
-        entryPath: readonly string[],
+        arrayPath: readonly string[],
+        index: number,
         position: "before" | "after",
     ): Uint8Array | undefined;
     /**
-     * Swap the targeted entry with its neighbour in the given direction.
-     * Returns undefined when the move is at the array boundary (no-op) or the
-     * path is not a known movable entry.
+     * Swap the entry at ordinal `index` in the array at `arrayPath` with its neighbour in
+     * the given direction. Returns undefined when the move is at the array boundary (no-op)
+     * or `arrayPath`/`index` is not a known movable entry. `index` is the structural ordinal.
      */
     buildMoveEntryBytes?(
         parseResult: ParseResult,
-        entryPath: readonly string[],
+        arrayPath: readonly string[],
+        index: number,
         direction: "up" | "down",
     ): Uint8Array | undefined;
     /**
-     * Lightweight predicate the tree builder can call per group/entry. Decoupled
-     * from the byte-builders above so `buildBinaryEditorTreeState` can decide
-     * UI affordances without doing a full canonical-doc rebuild + serialize.
+     * Duplicate the entry at ordinal `index` in the array at `arrayPath`: copy its data,
+     * insert the copy immediately after it, then apply the per-format relink
+     * (identity-freshening) where the format needs it. Returns undefined if `arrayPath`/`index`
+     * is not a duplicable entry. Fixed-width entries with no slot-unique identity (MAP
+     * variables) copy verbatim. `index` is the structural ordinal.
      */
-    isAddableArray?(arrayPath: readonly string[]): boolean;
+    buildDuplicateEntryBytes?(
+        parseResult: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+    ): Uint8Array | undefined;
+    /**
+     * Add a new default CHILD entry to the parent entry at ordinal `index` in the array at `arrayPath`,
+     * targeting the child collection named `childSection`. Unlike a section-level add, this is owner-scoped:
+     * it reaches a child collection that has no top-level list of its own, or whose first child cannot be
+     * inserted because the parent owns an empty slice. ITM/SPL use it to add an effect to a specific ability
+     * (`arrayPath` = ["Abilities"], `childSection` = "Effects"); the MAP object inventory uses the same shape.
+     * `index` is the structural ordinal (see `buildRemoveEntryBytes`). Returns undefined for an unknown
+     * parent/child pairing or an out-of-range index.
+     */
+    buildAddChildEntryBytes?(
+        parseResult: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+        childSection: string,
+    ): Uint8Array | undefined;
+    /**
+     * Remove the child entry at ordinal `childIndex` from the `childSection` collection owned by the parent
+     * entry at ordinal `index` in the array at `arrayPath` (the counterpart to `buildAddChildEntryBytes`).
+     * Used by the MAP object inventory (`childSection` = "Inventory"): the inventory entries are nested under
+     * an object and interleaved with its fields, so they are addressed by the owning object + the entry's
+     * 0-based position among inventory entries, not by a flat-section ordinal. Returns undefined for an
+     * unknown pairing or an out-of-range index.
+     */
+    buildRemoveChildEntryBytes?(
+        parseResult: ParseResult,
+        arrayPath: readonly string[],
+        index: number,
+        childSection: string,
+        childIndex: number,
+    ): Uint8Array | undefined;
+    /**
+     * Lightweight predicate the byte-builders use to validate a removal target. The list-section
+     * identity and structure-op affordances (canAdd/canModify) are now declared on the layout schema's
+     * `list` block, not derived from the adapter - the adapter holds only data concerns.
+     */
     isRemovableEntry?(entryPath: readonly string[]): boolean;
 }
 

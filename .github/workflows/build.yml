@@ -38,14 +38,15 @@ jobs:
       artifact-subjects: ${{ steps.artifact-hashes.outputs.subjects }}
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
       - name: Verify supply-chain invariants
         run: ./scripts/verify-supply-chain.sh
 
-      - name: Install xvfb (release only)
-        if: startsWith(github.ref, 'refs/tags/')
-        run: sudo apt-get install -y xvfb
+      - name: Install apt packages (xmllint for the XSD tests; xvfb for E2E on release)
+        env:
+          XVFB: ${{ startsWith(github.ref, 'refs/tags/') && 'xvfb' || '' }}
+        run: sudo apt-get install -y libxml2-utils $XVFB
 
       - name: Install pnpm
         uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3

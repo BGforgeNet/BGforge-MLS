@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Binary editor
+
+- The editor is greatly expanded, now supporting the full range of operations, interface composed to reflect underlying structures.
+
 ## 3.8.2
 
 ### WeiDU

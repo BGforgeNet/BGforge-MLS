@@ -73,6 +73,29 @@ describe("PRO parser - good fixtures", () => {
     });
 });
 
+describe("PRO weapon/armor perk decodes as a named enum", () => {
+    // The proto weapon/armor `perk` field is a fallout2-ce Perk value (-1 = none), not a scalar; it must carry
+    // that enum so the editor renders a dropdown. 00000079 is a weapon (subType 3) with perk 59 = Weapon Accurate.
+    function findField(
+        node: { name?: string; type?: string; fields?: unknown[] },
+        name: string,
+    ): { type?: string } | undefined {
+        if (node.name === name && node.type !== undefined) return node;
+        for (const child of (node.fields ?? []) as Array<{ name?: string; type?: string; fields?: unknown[] }>) {
+            const found = findField(child, name);
+            if (found) return found;
+        }
+        return undefined;
+    }
+
+    it("weapon perk is an enum field", () => {
+        const data = new Uint8Array(fs.readFileSync(path.join(FIXTURES, "items", "00000079.pro")));
+        const result = proParser.parse(data) as { root: { fields?: unknown[] } };
+        const perk = findField(result.root, "Perk");
+        expect(perk?.type).toBe("enum");
+    });
+});
+
 describe("PRO parser - error cases", () => {
     it("rejects files that are too small", () => {
         const proPath = path.join(FIXTURES, "bad", "too-small.pro");

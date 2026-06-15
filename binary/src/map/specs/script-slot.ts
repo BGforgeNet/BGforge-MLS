@@ -40,21 +40,27 @@ const COMMON_FIELDS = {
     fixedParam: { codec: i32 },
     actionBeingUsed: { codec: i32, enum: Skill },
     scriptOverrides: { codec: i32 },
-    // Reserved / unknown int32s preserved for round-trip; user shouldn't edit.
-    unknownField0x48: { codec: i32, role: "reserved" as const },
+    // Reserved / unknown int32s preserved for round-trip; user shouldn't edit. field_48 and field_50 are
+    // engine-internal (field_48 is referenced nowhere in fallout2-ce; field_50 is runtime string-lookup
+    // scratch) - not authored data, so they are hidden from the detail (still round-tripped via the doc).
+    unknownField0x48: { codec: i32, role: "reserved" as const, hidden: true },
     checkMarginHowMuch: { codec: i32 },
-    legacyField0x50: { codec: i32, role: "reserved" as const },
+    legacyField0x50: { codec: i32, role: "reserved" as const, hidden: true },
 } as const satisfies Record<string, FieldSpec>;
 
 export const otherSlotSpec = {
     sid: { codec: u32 },
-    nextScriptLinkLegacy: { codec: i32 },
+    // field_4 (scr_next): a legacy linked-list pointer fallout2-ce reads and writes but consumes nowhere.
+    // Engine-internal, not authored map data - locked and hidden (round-trips via the canonical document).
+    nextScriptLinkLegacy: { codec: i32, role: "reserved" as const, hidden: true },
     ...COMMON_FIELDS,
 } as const satisfies Record<string, FieldSpec>;
 
 export const spatialSlotSpec = {
     sid: { codec: u32 },
-    nextScriptLinkLegacy: { codec: i32 },
+    // field_4 (scr_next): a legacy linked-list pointer fallout2-ce reads and writes but consumes nowhere.
+    // Engine-internal, not authored map data - locked and hidden (round-trips via the canonical document).
+    nextScriptLinkLegacy: { codec: i32, role: "reserved" as const, hidden: true },
     builtTile: { codec: i32 },
     spatialRadius: { codec: i32 },
     ...COMMON_FIELDS,
@@ -62,7 +68,9 @@ export const spatialSlotSpec = {
 
 export const timerSlotSpec = {
     sid: { codec: u32 },
-    nextScriptLinkLegacy: { codec: i32 },
+    // field_4 (scr_next): a legacy linked-list pointer fallout2-ce reads and writes but consumes nowhere.
+    // Engine-internal, not authored map data - locked and hidden (round-trips via the canonical document).
+    nextScriptLinkLegacy: { codec: i32, role: "reserved" as const, hidden: true },
     timerTime: { codec: i32 },
     ...COMMON_FIELDS,
 } as const satisfies Record<string, FieldSpec>;
@@ -84,9 +92,15 @@ export const TIMER_SLOT_BYTES = 4 + 4 + 4 + 14 * 4;
  * before digits.
  */
 const COMMON_PRESENTATION = {
-    sid: { label: "SID" },
+    // The script ID is a packed (type<<24 | index) dword; show it in hex so the type byte is legible, the same
+    // treatment object FID/PID get. (walkStruct stamps numericFormat from this spec presentation.)
+    sid: { label: "SID", format: "hex32" },
     nextScriptLinkLegacy: { label: "Next Script Link (legacy)" },
-    ownerId: { label: "Owner ID" },
+    // The owner is an object self-id using the same (type<<24 | index) packing as SID/FID/PID, and is commonly
+    // a sentinel on disk (-1 "none", -2, 0xCCCCCCCC uninitialized fill the engine rebinds at load). Show it in
+    // hex so the type byte is legible and the sentinels read as 0xFFFFFFFF / 0xCCCCCCCC rather than confusing
+    // signed decimals (e.g. -858993460). Same i32+hex32 treatment as the object PID.
+    ownerId: { label: "Owner ID", format: "hex32" },
     unknownField0x48: { label: "Unknown Field 0x48" },
     checkMarginHowMuch: { label: "Check Margin (how_much)" },
     legacyField0x50: { label: "Legacy Field 0x50" },

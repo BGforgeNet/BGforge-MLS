@@ -3,6 +3,7 @@
  */
 
 import type { ParsedField, ParsedFieldType, ParsedGroup } from "../types";
+import { stringifyKeys } from "../presentation-schema-types";
 import { HEADER_SIZE } from "./schemas";
 
 export const MAP_OBJECT_BASE_SIZE = 0x48;
@@ -39,34 +40,75 @@ export function makeGroup(
     return { name, fields, expanded, description };
 }
 
-export function flagsField(
-    name: string,
-    value: number,
-    flagDefs: Record<number, string>,
-    offset: number,
-    size: number,
-): ParsedField {
-    const flags: string[] = [];
-    for (const [bit, flagName] of Object.entries(flagDefs)) {
-        const bitVal = Number(bit);
-        if (bitVal === 0) {
-            if (value === 0) flags.push(flagName);
-        } else if (value & bitVal) {
-            flags.push(flagName);
-        }
-    }
-    const display = flags.length > 0 ? flags.join(", ") : "(none)";
-    return field(name, display, offset, size, "flags", undefined, value);
-}
-
 export function int32Field(name: string, data: Uint8Array, offset: number): ParsedField {
     const view = new DataView(data.buffer, data.byteOffset + offset, 4);
     return field(name, view.getInt32(0, false), offset, 4, "int32");
 }
 
-export function uint32Field(name: string, data: Uint8Array, offset: number): ParsedField {
-    const view = new DataView(data.buffer, data.byteOffset + offset, 4);
-    return field(name, view.getUint32(0, false), offset, 4, "uint32");
+function readInt32(data: Uint8Array, offset: number): number {
+    return new DataView(data.buffer, data.byteOffset + offset, 4).getInt32(0, false);
+}
+
+/**
+ * Big-endian int32 rendered in hex (`0x...`). For packed `(type << 24) | index` dwords (a PID/FID) where the
+ * decimal form is illegible - mirrors the spec walker's `numericFormat: "hex32"` path so a hand-built trailer
+ * field reads identically to a spec-driven one. `rawValue` stays the signed stored number; the round-trip is
+ * byte-identical.
+ */
+export function hex32Field(name: string, data: Uint8Array, offset: number): ParsedField {
+    const value = readInt32(data, offset);
+    const display = `0x${(value >>> 0).toString(16).padStart(8, "0")}`;
+    return { name, value: display, offset, size: 4, type: "int32", rawValue: value, numericFormat: "hex32" };
+}
+
+/**
+ * Big-endian int32 displayed as a flag-checkbox table. `flags` maps each named bit value to its label; unnamed
+ * set bits are preserved in `rawValue` and simply not shown as checkboxes. Mirrors the spec walker's flags path
+ * so a hand-built trailer flag field reads identically to a spec-driven one.
+ */
+export function flagsField(
+    name: string,
+    data: Uint8Array,
+    offset: number,
+    flags: Readonly<Record<number, string>>,
+): ParsedField {
+    const value = readInt32(data, offset);
+    const active = Object.entries(flags)
+        .filter(([bit]) => (value & Number(bit)) !== 0)
+        .map(([, label]) => label);
+    return {
+        name,
+        value: active.length > 0 ? active.join(", ") : "(none)",
+        offset,
+        size: 4,
+        type: "flags",
+        rawValue: value,
+        flagOptions: stringifyKeys(flags),
+    };
+}
+
+/**
+ * Big-endian int32 resolved through a closed enum table. Unrecognized values display as `Unknown (N)` (matching
+ * the spec walker), keeping arbitrary stored numbers round-trippable. Mirrors the spec walker's enum path so a
+ * hand-built trailer enum field reads identically to a spec-driven one.
+ */
+export function enumField(
+    name: string,
+    data: Uint8Array,
+    offset: number,
+    options: Readonly<Record<number, string>>,
+): ParsedField {
+    const value = readInt32(data, offset);
+    const resolved = options[value];
+    return {
+        name,
+        value: resolved ?? `Unknown (${value})`,
+        offset,
+        size: 4,
+        type: "enum",
+        rawValue: value,
+        enumOptions: stringifyKeys(options),
+    };
 }
 
 export function noteField(name: string, value: string, offset: number): ParsedField {

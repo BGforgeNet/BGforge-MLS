@@ -13,6 +13,7 @@ export default defineConfig({
         // pnpm --filter @bgforge/binary build runs, but tests run from source.
         alias: {
             "@bgforge/binary": path.resolve(__dirname, "../binary/src/index.ts"),
+            "@bgforge/binary-editor": path.resolve(__dirname, "../binary-editor/src/index.ts"),
         },
     },
     test: {
@@ -50,14 +51,29 @@ export default defineConfig({
                 "client/src/dialog-tree/shared.ts",
                 // Webview bundle entry points that only run inside the webview context.
                 "client/src/dialog-tree/dialogTree-webview.ts",
-                "client/src/editors/binaryEditor-webview*.ts",
-                "client/src/editors/binaryEditor.ts",
+                "client/src/binary-editor/webview/main.ts",
+                // worker_threads entry: runs only inside a spawned worker. Its behaviour is
+                // covered by the spawned-worker integration test (which bundles it through
+                // esbuild and runs it out of process), not by in-process vitest coverage.
+                "client/src/binary-editor/worker.ts",
+                // Worker-backed binary editor host glue: the provider, document, and command
+                // registration are built entirely around vscode.CustomEditorProvider,
+                // vscode.WebviewPanel, and worker_threads; their behaviour is exercised by the
+                // spawned-worker integration test, not by mocking the vscode runtime.
+                "client/src/binary-editor/provider.ts",
+                "client/src/binary-editor/document.ts",
+                "client/src/binary-editor/register.ts",
                 // Shared webview-context helpers (navigator/globalThis/document); like the
                 // bundle entry points above, they run only inside the webview, not in vitest.
                 "client/src/webview-utils.ts",
-                // editors/binaryEditor-messages.ts is a types-only file with no executable
-                // branches; its surface is exercised transitively via document/tree tests.
-                "client/src/editors/binaryEditor-messages.ts",
+                // binary-editor/webview/messages.ts is a types-only file with no executable
+                // branches; its surface is exercised transitively via the worker protocol types.
+                "client/src/binary-editor/webview/messages.ts",
+                // Thin wrapper over Svelte's getContext/setContext, which only work during component
+                // initialisation and throw outside one; there is no non-component surface to unit-test
+                // (a harness would only re-assert that Svelte stores and returns the value). Exercised
+                // in-context by the components that provide/consume the jump callback.
+                "client/src/binary-editor/webview/state/jump-context.ts",
             ],
             // Enforced as a real gate: scripts/test.sh runs this config with
             // --coverage, and vitest exits non-zero on threshold breach.

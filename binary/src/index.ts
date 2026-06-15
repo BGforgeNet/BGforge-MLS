@@ -20,6 +20,35 @@ export { getSnapshotPath, getOutputPathForJsonSnapshot } from "./json-snapshot-p
 // Format adapters
 export { formatAdapterRegistry } from "./format-adapter";
 export type { BinaryFormatAdapter, ProjectedEntry } from "./format-adapter";
+export type { CrossRefRelationship, IndexRefRelationship, SliceRefRelationship } from "./cross-ref-relationship";
+
+// Declarative layout schema (per-format editor UI as data)
+export { formatLayoutSchema, variantRows } from "./layout-schema-types";
+// Shared layout fragment: the EFF v2 body, reused by standalone `.eff` and CRE-embedded v2 effects.
+export { effV2BodyLabels, effV2BodyRows } from "./eff/effect-body-layout";
+// Shared layout fragment: the ITM/SPL feature block (48-byte effect), also the CRE effStructureVersion-0 effect
+// (byte-identical record - IESDP documents them as one structure).
+export { featureBlockBodyLabels, featureBlockBodyRows } from "./ie-common/feature-block-layout";
+// Shared layout fragments: the ITM/SPL ability headers (parallel records, curated panels per format).
+export { itmAbilityBodyLabels, itmAbilityBodyRows } from "./itm/ability-layout";
+export { splAbilityBodyLabels, splAbilityBodyRows } from "./spl/ability-layout";
+// Spellbook editor structural builders: memorize (append to a memorization range) and remove-orphan
+// (drop a memorized spell covered by no range).
+export { buildCreMemorizeBytes, buildCreRemoveOrphanMemorizedBytes } from "./cre/entity-ops";
+export type {
+    DetailBlock,
+    DetailPanel,
+    DetailRow,
+    FieldRef,
+    FormatLayout,
+    LayoutBlock,
+    LayoutChildList,
+    LayoutPanel,
+    LayoutRow,
+    LayoutSubTab,
+    LayoutTab,
+    LayoutVariant,
+} from "./layout-schema-types";
 
 // Edit policy
 export { findEditableField } from "./field-edit-policy";
@@ -78,6 +107,10 @@ export {
     type FileDerivedParseOptions,
     type FileDerivedDiagnostics,
 } from "./parse-options";
+
+// IE opcode relationship data (param labels, enum tables, engine availability)
+export { OpcodeRelationships } from "./ie-common/opcode-relationships";
+export type { OpcodeRelationship } from "./ie-common/opcode-relationships";
 
 // Side-effect: register the bundled parsers on the registry.
 import { proParser } from "./pro";

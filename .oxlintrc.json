@@ -257,7 +257,7 @@
             // VS Code idiom: a private `_onDidX` EventEmitter exposes its
             // public `.event` as `onDidX`. The pattern is used by `vscode.d.ts`
             // itself; renaming would diverge from the host API style.
-            "files": ["client/src/editors/binaryEditor*.ts"],
+            "files": ["client/src/editors/binaryEditor*.ts", "client/src/binary-editor/**/*.ts"],
             "rules": {
                 "no-underscore-dangle": "off"
             }
@@ -272,10 +272,16 @@
             }
         },
         {
-            // VS Code's `webview.postMessage()` (extension side) and
-            // `acquireVsCodeApi().postMessage()` (webview side) are not the
-            // browser's `window.postMessage`; neither takes a `targetOrigin`.
-            "files": ["client/src/editors/**", "client/src/dialog-tree/**", "client/src/webview-utils.ts"],
+            // VS Code's `webview.postMessage()` (extension side),
+            // `acquireVsCodeApi().postMessage()` (webview side), and
+            // `worker_threads` `parentPort.postMessage()` are not the browser's
+            // `window.postMessage`; none take a `targetOrigin`.
+            "files": [
+                "client/src/editors/**",
+                "client/src/dialog-tree/**",
+                "client/src/webview-utils.ts",
+                "client/src/binary-editor/**"
+            ],
             "rules": {
                 "unicorn/require-post-message-target-origin": "off"
             }
@@ -326,7 +332,40 @@
             "rules": {
                 "unicorn/no-useless-undefined": "off"
             }
+        },
+        {
+            // bits-ui is an accessible headless component primitive library.
+            // All imports must go through webview/components/primitives/ wrappers
+            // so the dependency has one swap point if it is ever replaced.
+            "files": ["client/src/binary-editor/webview/**"],
+            "rules": {
+                "no-restricted-imports": [
+                    "error",
+                    {
+                        "paths": [
+                            {
+                                "name": "bits-ui",
+                                "message": "Import bits-ui only via webview/components/primitives wrappers."
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            // The primitives wrapper directory is the designated single import
+            // point for bits-ui; the restriction above does not apply here.
+            "files": ["client/src/binary-editor/webview/components/primitives/**"],
+            "rules": {
+                "no-restricted-imports": "off"
+            }
         }
     ],
-    "ignorePatterns": ["**/node_modules/**", "**/out/**", "**/*.d.ts", "server/src/user-messages.ts"]
+    "ignorePatterns": [
+        "**/node_modules/**",
+        "**/out/**",
+        "**/*.d.ts",
+        "server/src/user-messages.ts",
+        "binary-editor/test/harness/**"
+    ]
 }

@@ -4,21 +4,28 @@
  * in `../opcodes.ts`.
  */
 
-import type { FieldSpec } from "../../spec/types";
+import type { FieldSpec, SpecData } from "../../spec/types";
+import type { StructPresentation } from "../../spec/presentation";
 import { EffectResistanceFlags, EffectSaveTypeFlags, EffectTarget, EffectTiming } from "../types";
 import { effectSpec } from "./effect";
 import { Opcodes } from "../opcodes";
 
 export const effectSpecAnnotated = {
     ...effectSpec,
-    // Opcodes are open: IESDP catalogs ~370 known ones but mods can introduce
-    // new opcode numbers and the engine accepts any 16-bit value. The lookup
-    // is advisory (display only); strict canonical mode does not reject
-    // unrecognised opcodes.
+    // Opcodes are open: IESDP catalogs ~370 known ones but the engine accepts any 16-bit value, so the lookup
+    // is advisory (display only) and strict canonical mode does not reject unrecognised opcodes. (The engine's
+    // opcode set is fixed - mods do not add new opcodes - but an out-of-range value still round-trips.)
     opcode: { ...effectSpec.opcode, enum: Opcodes, enumOpen: true },
     target: { ...effectSpec.target, enum: EffectTarget },
-    // Timing has gaps (10 + 4096); mods occasionally use other values.
+    // Timing has gaps (10 + 4096); out-of-range values still round-trip, so the enum is advisory.
     timing: { ...effectSpec.timing, enum: EffectTiming, enumOpen: true },
     resistance: { ...effectSpec.resistance, flags: EffectResistanceFlags },
     saveType: { ...effectSpec.saveType, flags: EffectSaveTypeFlags },
 } satisfies Record<string, FieldSpec>;
+
+// Single shared presentation for the feature-block / EFF v1 record. This is the same 48 bytes embedded by
+// ITM, SPL, and CRE (effStructureVersion 0), walked and schema-derived at five sites; declaring the table here
+// (next to the shared spec, mirroring eff `effBodyPresentation`) means a future format/enum override is added
+// once and every consumer renders the record identically, rather than re-declaring `{}` per site and drifting.
+// Empty today - the enum/flag typing lives on the spec above; this carries only `format`/`domain` overrides.
+export const effectPresentation: StructPresentation<SpecData<typeof effectSpecAnnotated>> = {};

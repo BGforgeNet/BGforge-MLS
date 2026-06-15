@@ -5,18 +5,39 @@
  */
 
 import { createIeCanonicalReader } from "../ie-common/canonical-reader";
+import { parseWithSchemaValidation } from "../schema-validation";
+import { rebuildAbilityEffectsDocument } from "../ie-common/rebuild-ability-effects";
+import { itmHeaderSpecAnnotated } from "./specs/header.overrides";
+import { itmAbilityPresentation, itmAbilitySpecAnnotated } from "./specs/ability.overrides";
 import {
     type ItmCanonicalDocument,
     type ItmCanonicalSnapshot,
     itmCanonicalDocumentSchemaPermissive,
     itmCanonicalSnapshotSchemaPermissive,
 } from "./canonical-schemas";
+import type { ParseResult } from "../types";
+
+const itmRebuildConfig = {
+    label: "ITM",
+    headerSpec: itmHeaderSpecAnnotated,
+    abilitySpec: itmAbilitySpecAnnotated,
+    headerPresentation: {},
+    // Must match the parser's ability presentation (itm/index.ts) - the rebuild
+    // looks each field back up by the label the parser wrote.
+    abilityPresentation: itmAbilityPresentation,
+} as const;
+
+function rebuildFromDisplay(result: ParseResult): ItmCanonicalDocument {
+    const raw = rebuildAbilityEffectsDocument(result, itmRebuildConfig);
+    return parseWithSchemaValidation(itmCanonicalDocumentSchemaPermissive, raw, "Invalid ITM canonical document");
+}
 
 const reader = createIeCanonicalReader<ItmCanonicalDocument, ItmCanonicalSnapshot>({
     formatId: "itm",
     formatLabel: "ITM",
     documentSchemaPermissive: itmCanonicalDocumentSchemaPermissive,
     snapshotSchemaPermissive: itmCanonicalSnapshotSchemaPermissive,
+    rebuildFromDisplay,
 });
 
 export const getItmCanonicalDocument = reader.getDocument;

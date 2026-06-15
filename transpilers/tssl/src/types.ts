@@ -74,9 +74,9 @@ export interface SourceSection {
 }
 
 // Route diagnostics to stderr so CLI stdout mode (`fgtp file.tssl`) stays a clean
-// pipe. The LSP server installs a connection-routed logger via setConlog() at
-// startup so messages surface in the client's Output panel instead of stderr;
-// the CLI keeps the default and inherits the stderr separation from stdout.
+// pipe. `setConlog()` lets a host swap this sink (the test suite installs a
+// capturing logger); with no override the sink stays `console.error`, preserving
+// the CLI's stderr/stdout separation.
 type Conlog = (message: string) => void;
 
 let conlogSink: Conlog = console.error;

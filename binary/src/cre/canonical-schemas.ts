@@ -11,7 +11,7 @@ import { z } from "zod";
 import { toZodSchema } from "../spec/derive-zod";
 import { opaqueRangeSchema } from "../shared-schemas";
 import { effBodySpecAnnotated } from "../eff/specs/body.overrides";
-import { creEffectV1Spec } from "./specs/effect-v1";
+import { effectSpecAnnotated } from "../ie-common/specs/effect.overrides";
 import { creHeaderSpecAnnotated } from "./specs/header.overrides";
 import { creItemSpecAnnotated } from "./specs/item.overrides";
 import { creKnownSpellSpecAnnotated } from "./specs/known-spell.overrides";
@@ -39,8 +39,8 @@ const memorizedSpellStrict = toZodSchema(creMemorizedSpellSpecAnnotated, { mode:
 const memorizedSpellPermissive = toZodSchema(creMemorizedSpellSpecAnnotated, { mode: "permissive" });
 const itemStrict = toZodSchema(creItemSpecAnnotated, { mode: "strict" });
 const itemPermissive = toZodSchema(creItemSpecAnnotated, { mode: "permissive" });
-const effectV1Strict = toZodSchema(creEffectV1Spec, { mode: "strict" });
-const effectV1Permissive = toZodSchema(creEffectV1Spec, { mode: "permissive" });
+const effectV1Strict = toZodSchema(effectSpecAnnotated, { mode: "strict" });
+const effectV1Permissive = toZodSchema(effectSpecAnnotated, { mode: "permissive" });
 const effectV2Strict = toZodSchema(effBodySpecAnnotated, { mode: "strict" });
 const effectV2Permissive = toZodSchema(effBodySpecAnnotated, { mode: "permissive" });
 

@@ -11,6 +11,15 @@ esbuild ./client/src/extension.ts \
   --platform=node \
   "$@"
 
+# Binary-editor worker bundle (runs in the extension host via worker_threads).
+esbuild ./client/src/binary-editor/worker.ts \
+  --bundle \
+  --outfile=client/out/binary-editor/worker.js \
+  --external:vscode \
+  --format=cjs \
+  --platform=node \
+  "$@"
+
 # Copy codicons font assets for webview usage
 mkdir -p client/out/codicons
 cp node_modules/@vscode/codicons/dist/codicon.css \

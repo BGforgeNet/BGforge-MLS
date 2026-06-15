@@ -1,0 +1,174 @@
+import {
+    type FormatLayout,
+    type LayoutSubTab,
+    type LayoutTab,
+    formatAdapterRegistry,
+    toSemanticFieldKey,
+    variantRows,
+} from "@bgforge/binary";
+import type { Model } from "./model";
+import { projectRow } from "./window";
+import type { RelationshipModel } from "./relationship/types";
+import type { LayoutDescriptor, LayoutSection, ResolvedLayout, ResolvedTab, Row } from "./types";
+
+/**
+ * Resolve a format's declarative layout for the model's active variant: select the variant the parser
+ * reported (`parseResult.variantId`) and build a `FieldRef -> Row` map by projecting every field node
+ * and keying it by its semantic field key (`toSemanticFieldKey(format, sourceSegments)`) - the same key
+ * the layout schema references. Returns undefined when the parse result reports no variantId or the
+ * reported variant is not in the schema (e.g. an error result with no model), so `buildLayout` returns a
+ * layout-less descriptor. No first-variant fallback: an un-stamped or unrecognised file must never be
+ * forced into an arbitrary variant's layout.
+ *
+ * The whole field set is resolved up front (not just referenced keys): the layout formats are small
+ * and form-only, so this avoids a per-ref lookup pass and keeps the renderer a pure data consumer.
+ */
+export function resolveLayout(
+    formatId: string,
+    layout: FormatLayout,
+    model: Model,
+    rel?: RelationshipModel,
+): ResolvedLayout | undefined {
+    const variantId = model.parseResult.variantId;
+    const variant = variantId === undefined ? undefined : layout.variants[variantId];
+    if (variantId === undefined || !variant) return undefined;
+
+    const fields: Record<string, Row> = {};
+    for (const node of model.nodes) {
+        if (node.kind !== "field") continue;
+        const key = toSemanticFieldKey(formatId, node.sourceSegments);
+        // First write wins: a semantic key is the field's stable identity, and the model lists each
+        // field once, so collisions would only arise from a malformed duplicate - keep the first.
+        if (key !== undefined && !(key in fields)) {
+            // Thread the relationship model so a field overlay (e.g. the CRE item-slot dropdown) reaches
+            // layout/form fields too - not just list-block rows projected via getWindow/getChildren.
+            const row = projectRow(model, node, rel);
+            // Display-label override (layout.labels) is applied here, AFTER identity is computed from the
+            // stable parse name - so renaming for display never changes the semantic key a ref resolves by.
+            const labelOverride = layout.labels?.[key];
+            if (labelOverride !== undefined) row.name = labelOverride;
+            // Read-only fields (variant discriminators) stay visible but non-editable - the controls render
+            // disabled off row.editable, which is the reliable lock (presentation `editable` doesn't reach here).
+            if (layout.readOnlyFields?.includes(key)) row.editable = false;
+            fields[key] = row;
+        }
+    }
+
+    // Sections a `list` block targets, keyed by the depth-0 group name the block names (`sectionKey`).
+    // The node id is resolved from the model; the structure-op caps (canAdd/canModify) are declared on the
+    // block itself - presentation data in the layout schema, no longer derived from adapter predicates. A
+    // block whose section is absent from this file (e.g. a MAP elevation that does not exist) is simply not
+    // added, and the renderer prunes its panel.
+    const depth0Groups = new Map<string, { id: string; entryCount: number }>();
+    for (const node of model.nodes) {
+        if (node.depth === 0 && node.kind === "group")
+            depth0Groups.set(node.name, { id: node.id, entryCount: node.childCount });
+    }
+    const sections: Record<string, LayoutSection> = {};
+    for (const row of variantRows(variant)) {
+        for (const panel of row.panels) {
+            for (const block of panel.blocks) {
+                if (block.kind !== "list") continue;
+                const group = depth0Groups.get(block.sectionKey);
+                if (group !== undefined) {
+                    sections[block.sectionKey] = {
+                        nodeId: group.id,
+                        canAdd: block.canAdd,
+                        canModify: block.canModify,
+                        entryCount: group.entryCount,
+                        ...(block.childAddSection !== undefined && { childAddSection: block.childAddSection }),
+                    };
+                }
+            }
+        }
+    }
+
+    // Resolve the tab structure for the renderer (count badges come from each `countFrom` section's entry
+    // count; omitted when that section is absent from this file). Subtabs nest one level.
+    // A subtab's `disabledWhen` flag predicate: disable when the named field's value has the bit set (e.g. a
+    // MAP elevation tab whose SkipElevation bit marks the elevation absent).
+    const isTabDisabled = (t: LayoutTab | LayoutSubTab): boolean => {
+        const dw = "disabledWhen" in t ? t.disabledWhen : undefined;
+        if (dw === undefined) return false;
+        const value = fields[dw.field]?.rawValue;
+        return typeof value === "number" && (value & dw.bitSet) !== 0;
+    };
+    const resolveTab = (t: LayoutTab | LayoutSubTab): ResolvedTab => {
+        const subtabs = "tabs" in t && t.tabs !== undefined ? t.tabs.map((st) => resolveTab(st)) : undefined;
+        // Own count: a single section's entry count (countFrom), or a "x/y" pair (countFromPair - e.g. the
+        // Spells tab's known/memorized totals, whose tables are one joined block, not list sections).
+        let count: number | string | undefined;
+        if (t.countFrom !== undefined && sections[t.countFrom] !== undefined) count = sections[t.countFrom]!.entryCount;
+        else if (t.countFromPair !== undefined)
+            count = `${depth0Groups.get(t.countFromPair[0])?.entryCount ?? 0}/${depth0Groups.get(t.countFromPair[1])?.entryCount ?? 0}`;
+        // A parent tab with subtabs and no own count shows the SUM of its subtabs' numeric counts (MAP Objects =
+        // elev 0+1+2, Scripts = system+spatial+timer+item) - parity with the per-subtab badges.
+        else if (subtabs !== undefined)
+            count = subtabs.reduce((acc, st) => acc + (typeof st.count === "number" ? st.count : 0), 0);
+        return {
+            id: t.id,
+            label: t.label,
+            ...(t.icon !== undefined && { icon: t.icon }),
+            ...(count !== undefined && { count }),
+            ...(t.rows !== undefined && { rows: t.rows }),
+            ...(subtabs !== undefined && { tabs: subtabs }),
+            ...(isTabDisabled(t) && { disabled: true }),
+        };
+    };
+
+    return {
+        variantId,
+        ...(variant.rows !== undefined && { rows: variant.rows }),
+        ...(variant.tabs !== undefined && { tabs: variant.tabs.map((t) => resolveTab(t)) }),
+        maxContentWidthPx: layout.maxContentWidthPx,
+        fields,
+        sections,
+        ...(layout.labels !== undefined && { labels: layout.labels }),
+    };
+}
+
+/**
+ * Build the editor layout for an open file. Every format ships a declarative layout, so a successfully
+ * parsed file always resolves one; an error result (no model variant) yields a layout-less descriptor and
+ * the webview shows the error banner instead. The legacy depth-0-groups-as-tabs path has been retired.
+ */
+export function buildLayout(formatId: string, model: Model, rel?: RelationshipModel): LayoutDescriptor {
+    const adapter = formatAdapterRegistry.get(formatId);
+    const layout = adapter?.layout ? resolveLayout(formatId, adapter.layout, model, rel) : undefined;
+    return { formatId, layout };
+}
+
+/**
+ * Re-resolve just the tab count badges (id -> count) from the current model - cheap (no field rebuild). Tab
+ * counts derive from depth-0 group child counts, which change on structure ops (add/remove entries) but not on
+ * field edits; the webview patches the live tab labels with these so a count like the Spells "known/memorized"
+ * stays current after editing. Mirrors resolveTab's countFrom / countFromPair logic.
+ */
+export function resolveTabCounts(formatId: string, model: Model): Record<string, number | string> {
+    const out: Record<string, number | string> = {};
+    const variantId = model.parseResult.variantId;
+    const variant =
+        variantId === undefined ? undefined : formatAdapterRegistry.get(formatId)?.layout?.variants[variantId];
+    if (!variant?.tabs) return out;
+    const depth0 = new Map<string, number>();
+    for (const node of model.nodes) {
+        if (node.depth === 0 && node.kind === "group") depth0.set(node.name, node.childCount);
+    }
+    const walk = (tabs: readonly (LayoutTab | LayoutSubTab)[]): void => {
+        for (const t of tabs) {
+            // Resolve subtab counts first so a parent can sum them.
+            if ("tabs" in t && t.tabs !== undefined) walk(t.tabs);
+            if (t.countFrom !== undefined && depth0.has(t.countFrom)) out[t.id] = depth0.get(t.countFrom)!;
+            else if (t.countFromPair !== undefined)
+                out[t.id] = `${depth0.get(t.countFromPair[0]) ?? 0}/${depth0.get(t.countFromPair[1]) ?? 0}`;
+            // Parent tab with subtabs and no own count: sum the subtabs' numeric counts (mirrors resolveTab).
+            else if ("tabs" in t && t.tabs !== undefined)
+                out[t.id] = t.tabs.reduce(
+                    (acc, st) => acc + (typeof out[st.id] === "number" ? (out[st.id] as number) : 0),
+                    0,
+                );
+        }
+    };
+    walk(variant.tabs);
+    return out;
+}

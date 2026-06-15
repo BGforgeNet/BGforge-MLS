@@ -10,11 +10,20 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { OpcodeRelationshipOverrides } from "./opcode-relationships.overrides.ts";
 
 interface OpcodeFrontmatter {
     readonly n: number;
     readonly opname: string;
 }
+
+export interface OpcodeRelationship {
+    param1?: { label?: string; enum?: Readonly<Record<number, string>> };
+    param2?: { label?: string; enum?: Readonly<Record<number, string>> };
+    availability?: Readonly<Record<string, boolean>>;
+}
+
+const ENGINE_KEYS = ["bg1", "bg2", "bgee", "iwd1", "iwd2", "pst", "pstee"] as const;
 
 function parseFrontmatter(text: string): OpcodeFrontmatter | undefined {
     if (!text.startsWith("---")) return undefined;
@@ -58,6 +67,156 @@ export function extractOpcodes(opcodesDir: string): ReadonlyMap<number, string> 
         out.set(fm.n, fm.opname);
     }
     return new Map([...out].sort((a, b) => a[0] - b[0]));
+}
+
+/**
+ * Parses the fuller frontmatter needed for opcode relationship data: `n`, `param1`,
+ * `param2`, and the per-engine availability flags. Returns `undefined` when `n` is
+ * absent so the caller can skip the file.
+ */
+function parseRelationshipFrontmatter(
+    text: string,
+): { n: number; param1?: string; param2?: string; availability?: Readonly<Record<string, boolean>> } | undefined {
+    if (!text.startsWith("---")) return undefined;
+    const end = text.indexOf("\n---", 3);
+    if (end === -1) return undefined;
+    const block = text.slice(4, end);
+
+    let n: number | undefined;
+    let param1: string | undefined;
+    let param2: string | undefined;
+    const availabilityEntries: [string, boolean][] = [];
+
+    for (const line of block.split("\n")) {
+        const colonAt = line.indexOf(":");
+        if (colonAt === -1) continue;
+        const key = line.slice(0, colonAt).trim();
+        const rest = line.slice(colonAt + 1).trim();
+        if (key === "n") {
+            const parsed = Number.parseInt(rest, 10);
+            if (Number.isFinite(parsed)) n = parsed;
+        } else if (key === "param1") {
+            param1 = rest.replace(/^['"]/, "").replace(/['"]$/, "");
+        } else if (key === "param2") {
+            param2 = rest.replace(/^['"]/, "").replace(/['"]$/, "");
+        } else if ((ENGINE_KEYS as readonly string[]).includes(key)) {
+            // Values may have trailing whitespace (e.g. `bgee: 0 `).
+            availabilityEntries.push([key, Number.parseInt(rest, 10) === 1]);
+        }
+    }
+
+    if (n === undefined) return undefined;
+
+    const availability = availabilityEntries.length > 0 ? Object.fromEntries(availabilityEntries) : undefined;
+    return { n, param1, param2, availability };
+}
+
+/** Returns a sorted-by-number map of opcode number -> relationship data. */
+export function extractOpcodeRelationships(opcodesDir: string): ReadonlyMap<number, OpcodeRelationship> {
+    const out = new Map<number, OpcodeRelationship>();
+    if (!fs.existsSync(opcodesDir)) {
+        throw new Error(`Opcodes directory not found: ${opcodesDir}`);
+    }
+    for (const entry of fs.readdirSync(opcodesDir)) {
+        // Only canonical files (opNNN.html), not engine variants (opNNN-bgee.html).
+        if (!/^op\d+\.html$/.test(entry)) continue;
+        const text = fs.readFileSync(path.join(opcodesDir, entry), "utf8");
+        const fm = parseRelationshipFrontmatter(text);
+        if (!fm) continue;
+        const rel: OpcodeRelationship = {};
+        if (fm.param1 !== undefined) rel.param1 = { label: fm.param1 };
+        if (fm.param2 !== undefined) rel.param2 = { label: fm.param2 };
+        if (fm.availability !== undefined) rel.availability = fm.availability;
+        out.set(fm.n, rel);
+    }
+    return new Map([...out].sort((a, b) => a[0] - b[0]));
+}
+
+/**
+ * Merges harvested opcode relationship data with curated overrides. For each opcode
+ * the override wins on a per-field basis: if the override supplies an `enum`, it
+ * replaces any harvested enum; if the override supplies a `label`, it replaces the
+ * harvested label. Fields absent from the override fall back to the harvested value.
+ */
+export function buildMergedRelationships(opcodesDir: string): ReadonlyMap<number, OpcodeRelationship> {
+    const harvested = extractOpcodeRelationships(opcodesDir);
+    const out = new Map<number, OpcodeRelationship>(harvested);
+
+    for (const [n, override] of Object.entries(OpcodeRelationshipOverrides)) {
+        const num = Number(n);
+        const base = out.get(num) ?? {};
+        const merged: OpcodeRelationship = { ...base };
+
+        if (override.param1 !== undefined) {
+            merged.param1 = {
+                label: override.param1.label ?? base.param1?.label,
+                ...(override.param1.enum !== undefined ? { enum: override.param1.enum } : {}),
+            };
+        }
+        if (override.param2 !== undefined) {
+            merged.param2 = {
+                label: override.param2.label ?? base.param2?.label,
+                ...(override.param2.enum !== undefined ? { enum: override.param2.enum } : {}),
+            };
+        }
+        if (override.availability !== undefined) {
+            merged.availability = override.availability;
+        }
+
+        out.set(num, merged);
+    }
+
+    return new Map([...out].sort((a, b) => a[0] - b[0]));
+}
+
+/** Serializes a numeric-keyed string enum to an inline object literal fragment, or returns undefined. */
+function emitEnumLiteral(e: Readonly<Record<number, string>> | undefined): string | undefined {
+    if (e === undefined) return undefined;
+    const entries = Object.entries(e)
+        .map(([k, v]) => `${k}: ${JSON.stringify(v)}`)
+        .join(", ");
+    return `enum: { ${entries} }`;
+}
+
+/** Emit the generated `opcode-relationships.ts` source for the IE-common module. */
+export function emitOpcodeRelationshipsModule(
+    rels: ReadonlyMap<number, OpcodeRelationship>,
+    sourceRel: string,
+): string {
+    const lines: string[] = [
+        `// Auto-generated from IESDP ${sourceRel}. Do not hand-edit.`,
+        "",
+        "export interface OpcodeRelationship {",
+        "    param1?: { label?: string; enum?: Readonly<Record<number, string>> };",
+        "    param2?: { label?: string; enum?: Readonly<Record<number, string>> };",
+        "    availability?: Readonly<Record<string, boolean>>;",
+        "}",
+        "",
+        "export const OpcodeRelationships: Readonly<Record<number, OpcodeRelationship>> = {",
+    ];
+    for (const [n, rel] of rels) {
+        const parts: string[] = [];
+        if (rel.param1 !== undefined) {
+            const label = rel.param1.label !== undefined ? `label: ${JSON.stringify(rel.param1.label)}` : undefined;
+            const enumPart = emitEnumLiteral(rel.param1.enum);
+            parts.push(`param1: { ${[label, enumPart].filter(Boolean).join(", ")} }`);
+        }
+        if (rel.param2 !== undefined) {
+            const label = rel.param2.label !== undefined ? `label: ${JSON.stringify(rel.param2.label)}` : undefined;
+            const enumPart = emitEnumLiteral(rel.param2.enum);
+            parts.push(`param2: { ${[label, enumPart].filter(Boolean).join(", ")} }`);
+        }
+        if (rel.availability !== undefined) {
+            const entries = Object.entries(rel.availability)
+                .map(([k, v]) => `${k}: ${v}`)
+                .join(", ");
+            parts.push(`availability: { ${entries} }`);
+        }
+        lines.push(`    ${n}: { ${parts.join(", ")} },`);
+    }
+    lines.push("};");
+    lines.push("");
+    return lines.join("\n");
 }
 
 /** Emit the generated `opcodes.ts` source for the IE-common module. */

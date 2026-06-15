@@ -3,7 +3,8 @@ import type { ParseOptions, ParseResult } from "../types";
 import { rebuildEffCanonicalDocument } from "./canonical";
 import { createCanonicalEffJsonSnapshot, loadCanonicalEffJsonSnapshot } from "./json-snapshot";
 import { effCompiledPatternFields, effDomainRanges, effPresentationSchema } from "./presentation-schema";
-import { slugify } from "../snapshot-common";
+import { effLayout } from "./layout-schema";
+import { slugify } from "../spec/presentation";
 
 function effSemanticFieldKey(segments: readonly string[]): string | undefined {
     if (segments.length === 0) return undefined;
@@ -23,6 +24,9 @@ export const effFormatAdapter: BinaryFormatAdapter = {
     presentationSchema: effPresentationSchema,
     compiledPatternFields: effCompiledPatternFields,
     domainRanges: effDomainRanges,
+    // IE formats cache a rebuildable canonical document (own writable property); clear it on edit.
+    documentCacheStrategy: "clear",
+    layout: effLayout,
 
     createJsonSnapshot(parseResult: ParseResult): string {
         return createCanonicalEffJsonSnapshot(parseResult);

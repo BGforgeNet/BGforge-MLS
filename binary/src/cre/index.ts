@@ -2,14 +2,15 @@
  * Infinity Engine CRE v1 parser. The header points at five variable-length
  * sections plus a fixed item-slot block; the effects table's per-record
  * size depends on the header byte at 0x0033 (`effStructureVersion`):
- *   - 0 -> EFF v1 records (0x30 bytes each, local spec)
+ *   - 0 -> the 48-byte feature block (0x30 bytes each) - the SHARED `effectSpec`
+ *          (byte-identical to EFF v1; the same record ITM/SPL embed)
  *   - 1 -> EFF v2 body records (0x108 bytes each, shared via ie-common)
  * Both kinds round-trip byte-identically through the canonical-doc layer.
  */
 
 import { group, readerAt } from "../ie-common/parse-helpers";
 import { walkStruct } from "../spec/walk-display";
-import { effBodySpecAnnotated } from "../eff/specs/body.overrides";
+import { effBodySpecAnnotated, effBodyPresentation } from "../eff/specs/body.overrides";
 import { bytesEqual } from "../ie-common/types";
 import type { BinaryParser, ParseOptions, ParseResult, ParsedField } from "../types";
 import type { CreCanonicalDocument } from "./canonical-schemas";
@@ -30,8 +31,8 @@ import {
     type CreSpellMemInfoData,
 } from "./schemas";
 import { serializeCre } from "./serializer";
-import { creEffectV1Spec } from "./specs/effect-v1";
-import { creHeaderSpecAnnotated } from "./specs/header.overrides";
+import { effectPresentation, effectSpecAnnotated } from "../ie-common/specs/effect.overrides";
+import { creHeaderPresentation, creHeaderSpecAnnotated } from "./specs/header.overrides";
 import { creItemSpecAnnotated } from "./specs/item.overrides";
 import { creKnownSpellSpecAnnotated } from "./specs/known-spell.overrides";
 import { creMemorizedSpellSpecAnnotated } from "./specs/memorized-spell.overrides";
@@ -45,6 +46,7 @@ import {
     CRE_ITEM_SLOTS_SIZE,
     CRE_ITEM_SLOT_COUNT,
     CRE_ITEM_SLOT_LABELS,
+    CRE_SELECTED_WEAPON_OPTIONS,
     CRE_KNOWN_SPELL_SIZE,
     CRE_MEMORIZED_SPELL_SIZE,
     CRE_SIGNATURE,
@@ -52,13 +54,14 @@ import {
     CRE_VERSION_V1,
 } from "./types";
 
-const headerPresentation = {} as const;
+const headerPresentation = creHeaderPresentation;
 const knownSpellPresentation = {} as const;
 const spellMemInfoPresentation = {} as const;
 const memorizedSpellPresentation = {} as const;
 const itemPresentation = {} as const;
-const effectV1Presentation = {} as const;
-const effectV2Presentation = {} as const;
+// CRE v0 effects embed the shared 48-byte feature block, CRE v2 effects the 264-byte EFF body; both reuse the
+// records' own shared presentations (`effectPresentation` / `effBodyPresentation`) so a CRE-embedded effect
+// renders its fields (e.g. the hex `Special` stacking id) identically to a standalone ITM/SPL/.eff effect.
 
 const FORMAT_ID = "cre";
 const FORMAT_NAME = "Infinity Engine CRE v1";
@@ -243,8 +246,8 @@ class CreParser implements BinaryParser {
             effectsKind === "v1"
                 ? (effectsRecords as CreEffectV1Data[]).map((e, i) =>
                       walkStruct(
-                          creEffectV1Spec,
-                          effectV1Presentation,
+                          effectSpecAnnotated,
+                          effectPresentation,
                           header.effectsOffset + i * effectSize,
                           e,
                           `Effect ${i + 1}`,
@@ -253,7 +256,7 @@ class CreParser implements BinaryParser {
                 : (effectsRecords as CreEffectV2Data[]).map((e, i) =>
                       walkStruct(
                           effBodySpecAnnotated,
-                          effectV2Presentation,
+                          effBodyPresentation,
                           header.effectsOffset + i * effectSize,
                           e,
                           `Effect ${i + 1}`,
@@ -272,13 +275,25 @@ class CreParser implements BinaryParser {
                 ),
             ),
         );
-        const itemSlotFields: ParsedField[] = itemSlots.map((value, i) => ({
-            name: CRE_ITEM_SLOT_LABELS[i] ?? `Slot ${i}`,
-            offset: header.itemSlotsOffset + i * 2,
-            size: 2,
-            type: "int16" as const,
-            value,
-        }));
+        const itemSlotFields: ParsedField[] = itemSlots.map((value, i) => {
+            const name = CRE_ITEM_SLOT_LABELS[i] ?? `Slot ${i}`;
+            const offset = header.itemSlotsOffset + i * 2;
+            // "Selected weapon" (slot 38) is a fixed engine enum (which weapon slot is active, or fists), so
+            // it is emitted as an enum field - the editor reads field.type/enumOptions to render the dropdown.
+            // The other slots are item-table indices the editor turns into item dropdowns at edit time.
+            if (name === "Selected weapon") {
+                return {
+                    name,
+                    offset,
+                    size: 2,
+                    type: "enum" as const,
+                    value: CRE_SELECTED_WEAPON_OPTIONS[String(value)] ?? `Unknown (${value})`,
+                    rawValue: value,
+                    enumOptions: CRE_SELECTED_WEAPON_OPTIONS,
+                };
+            }
+            return { name, offset, size: 2, type: "int16" as const, value };
+        });
         const itemSlotsGroup = group(CRE_GROUP_LABELS.itemSlots, itemSlotFields);
 
         const document: CreCanonicalDocument =
@@ -305,6 +320,7 @@ class CreParser implements BinaryParser {
         return {
             format: this.id,
             formatName: this.name,
+            variantId: "creature",
             root: group(CRE_GROUP_LABELS.file, [
                 headerGroup,
                 knownSpellsGroup,

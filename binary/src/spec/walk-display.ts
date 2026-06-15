@@ -81,6 +81,70 @@ export function walkGroup<S extends Record<string, FieldSpec>>(
     return out as SpecData<S>;
 }
 
+/**
+ * Inverse of `walkStruct`: rebuild a typed data object from a flat `ParsedGroup`
+ * produced by the display layer. Extends `walkGroup`'s scalar-only contract to
+ * also cover `charsSpec` fields - the display field's `value` is read back as a
+ * string directly (mirroring how `walkStruct` emitted it: trailing spaces trimmed,
+ * interior bytes preserved).
+ *
+ * Array fields are not handled; callers are responsible for iterating the
+ * surrounding group structure for those cases, matching the contract of
+ * `walkGroup`.
+ *
+ * Throws if any spec field's display label is absent from the group.
+ */
+export function structFromDisplay<S extends Record<string, FieldSpec>>(
+    group: ParsedGroup,
+    spec: S,
+    presentation: StructPresentation<SpecData<S>>,
+): SpecData<S> {
+    const byName = new Map<string, ParsedField>();
+    for (const entry of group.fields) {
+        if ("fields" in entry) continue; // sub-groups skipped
+        byName.set(entry.name, entry);
+    }
+    const out: Record<string, unknown> = {};
+    for (const key of Object.keys(spec)) {
+        const fs = spec[key]!;
+        if (isArraySpec(fs)) {
+            throw new Error(
+                `structFromDisplay: array field "${key}" is not supported; iterate the array group at the call site.`,
+            );
+        }
+        const presKey = key as keyof SpecData<S>;
+        const label = presentation[presKey]?.label ?? humanize(key);
+        const found = byName.get(label);
+        if (!found) {
+            throw new Error(
+                `structFromDisplay: field "${key}" expected display label "${label}" but no such field in "${group.name}".`,
+            );
+        }
+        if (isCharsSpec(fs)) {
+            // walkStruct emits the string directly as `value` (trailing spaces
+            // stripped). Read it back as-is; no re-padding needed because the
+            // canonical doc shape for a charsSpec field is the stripped string.
+            out[key] = typeof found.value === "string" ? found.value : String(found.value);
+            continue;
+        }
+        // Scalar field: prefer rawValue (enum/flags fields encode the resolved
+        // name in value and the original number in rawValue).
+        const numeric =
+            typeof found.rawValue === "number"
+                ? found.rawValue
+                : typeof found.value === "number"
+                  ? found.value
+                  : undefined;
+        if (typeof numeric !== "number") {
+            throw new TypeError(
+                `structFromDisplay: field "${key}" (label "${label}") in "${group.name}" had no numeric rawValue/value.`,
+            );
+        }
+        out[key] = fs.flags ? intToFlagArray(fs.flags, numeric, codecByteLength(fs.codec) * 8) : numeric;
+    }
+    return out as SpecData<S>;
+}
+
 interface SubGroupSpec {
     readonly name: string;
     readonly fields: readonly string[];
@@ -223,6 +287,17 @@ function fieldSize<T>(fs: FieldSpec, data: T, key: keyof T & string): number {
     return codecByteLength(fs.codec);
 }
 
+/**
+ * Apply the spec's display-only `hidden` flag to a built display node. The field/group stays in the tree
+ * (so the rebuilder reads it back by label and the byte round-trip is unaffected); the flag only tells the
+ * editor view not to render it. Used for reserved/padding/magic fields (`unused*`, `unknown`, duplicated
+ * signature/version) the user never edits.
+ */
+function withHidden<T extends ParsedField | ParsedGroup>(node: T, fs: FieldSpec): T {
+    if (fs.hidden === true) node.hidden = true;
+    return node;
+}
+
 function fieldFor(
     name: string,
     fs: FieldSpec,
@@ -243,7 +318,7 @@ function fieldFor(
         // verbatim so the display reflects the actual byte content.
         const raw = typeof value === "string" ? value : String(value);
         const trimmed = raw.replace(/ +$/, "");
-        return { name: label, value: trimmed, offset, size, type: "string" };
+        return withHidden({ name: label, value: trimmed, offset, size, type: "string" }, fs);
     }
 
     if (isArraySpec(fs)) {
@@ -259,17 +334,22 @@ function fieldFor(
                 const elementSpec = slotElements?.[i] ?? fs.element;
                 return scalarFieldFor(slotLabel, elementSpec, offset + i * elementSize, elementSize, elementValue);
             });
-            return { name: label, fields: children, expanded: false };
+            // Lay the slots on a single row (capped so a large slot array can't mint an absurdly wide grid;
+            // only small scalar slot groups like Melee Animation actually render in the detail form).
+            return withHidden(
+                { name: label, fields: children, expanded: false, columns: Math.min(children.length, 4) },
+                fs,
+            );
         }
         // Trailing reserves and other byte-array fields are presented as a
         // single "(N values)" summary row rather than N unrolled scalars;
         // the canonical doc carries the full array if a downstream tool
         // needs it.
         const summary = Array.isArray(value) ? `(${value.length} values)` : value;
-        return { name: label, value: summary, offset, size, type: "padding" };
+        return withHidden({ name: label, value: summary, offset, size, type: "padding" }, fs);
     }
 
-    return scalarFieldFor(label, fs, offset, size, value, pres);
+    return withHidden(scalarFieldFor(label, fs, offset, size, value, pres), fs);
 }
 
 function scalarFieldFor(
@@ -290,6 +370,11 @@ function scalarFieldFor(
             type: "enum",
             rawValue: value as number,
             enumOptions: stringifyKeys(fs.enum),
+            ...(fs.enumOpen === true && { enumOpen: true }),
+            // A packed/bitfield enum (e.g. a CRE kit dword) declares `format: "hex32"`; carry it so the value
+            // prefix renders in hex ("0x00800000 Conjurer"). The enum NAME is still the display value - this
+            // only tags how the numeric code is shown, never inferred from the value's magnitude.
+            ...(pres?.format === "hex32" && { numericFormat: "hex32" as const }),
         };
     }
 
@@ -319,9 +404,16 @@ function scalarFieldFor(
 
     const typeName: ParsedFieldType = codecNumericTypeName(fs.codec);
     let displayValue: unknown = value;
+    let numericFormat: "hex32" | undefined;
     if (typeof value === "number") {
-        if (pres?.unit === "%") displayValue = `${value}%`;
-        else if (pres?.format === "hex32") displayValue = `0x${value.toString(16).padStart(8, "0")}`;
+        // `hex32` is a true display concern (the stored number rendered in base 16). The codec keeps the value
+        // signed (`i32` reads negative natively, preserved in `rawValue`); the hex display renders the unsigned
+        // 32-bit pattern via `>>> 0`, so a sentinel like -1 shows `0xffffffff`, not the malformed `0x000000-1`
+        // that `(-1).toString(16)` would pad to.
+        if (pres?.format === "hex32") {
+            displayValue = `0x${(value >>> 0).toString(16).padStart(8, "0")}`;
+            numericFormat = "hex32";
+        } else if (pres?.unit === "%") displayValue = `${value}%`;
     }
     return {
         name: label,
@@ -330,5 +422,6 @@ function scalarFieldFor(
         size,
         type: typeName,
         rawValue: typeof value === "number" ? value : undefined,
+        ...(numericFormat !== undefined && { numericFormat }),
     };
 }

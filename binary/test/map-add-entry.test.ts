@@ -71,7 +71,7 @@ describe("mapFormatAdapter.buildRemoveEntryBytes", () => {
         const originalHeaderCount = before!.header.numGlobalVars;
         const expectedTail = before!.globalVariables.slice(1);
 
-        const nextBytes = mapFormatAdapter.buildRemoveEntryBytes?.(parseResult, ["Global Variables", "Global Var 0"]);
+        const nextBytes = mapFormatAdapter.buildRemoveEntryBytes?.(parseResult, ["Global Variables"], 0);
         expect(nextBytes).toBeInstanceOf(Uint8Array);
 
         const reparsed = mapParser.parse(nextBytes!);
@@ -91,7 +91,7 @@ describe("mapFormatAdapter.buildRemoveEntryBytes", () => {
         expect(before.localVariables.length).toBe(2);
         const originalHeaderCount = before.header.numLocalVars;
 
-        const nextBytes = mapFormatAdapter.buildRemoveEntryBytes?.(seeded, ["Local Variables", "Local Var 0"]);
+        const nextBytes = mapFormatAdapter.buildRemoveEntryBytes?.(seeded, ["Local Variables"], 0);
         expect(nextBytes).toBeInstanceOf(Uint8Array);
 
         const reparsed = mapParser.parse(nextBytes!);
@@ -108,11 +108,7 @@ describe("mapFormatAdapter.buildInsertEntryBytes", () => {
         const originalCount = before.globalVariables.length;
         const originalAt2 = before.globalVariables[2];
 
-        const nextBytes = mapFormatAdapter.buildInsertEntryBytes?.(
-            parseResult,
-            ["Global Variables", "Global Var 2"],
-            "before",
-        );
+        const nextBytes = mapFormatAdapter.buildInsertEntryBytes?.(parseResult, ["Global Variables"], 2, "before");
         expect(nextBytes).toBeInstanceOf(Uint8Array);
 
         const reparsed = mapParser.parse(nextBytes!);
@@ -129,11 +125,7 @@ describe("mapFormatAdapter.buildInsertEntryBytes", () => {
         const originalAt2 = before.globalVariables[2];
         const originalAt3 = before.globalVariables[3];
 
-        const nextBytes = mapFormatAdapter.buildInsertEntryBytes?.(
-            parseResult,
-            ["Global Variables", "Global Var 2"],
-            "after",
-        );
+        const nextBytes = mapFormatAdapter.buildInsertEntryBytes?.(parseResult, ["Global Variables"], 2, "after");
         expect(nextBytes).toBeInstanceOf(Uint8Array);
 
         const reparsed = mapParser.parse(nextBytes!);
@@ -151,11 +143,7 @@ describe("mapFormatAdapter.buildMoveEntryBytes", () => {
         const originalAt2 = before.globalVariables[2];
         const originalAt3 = before.globalVariables[3];
 
-        const nextBytes = mapFormatAdapter.buildMoveEntryBytes?.(
-            parseResult,
-            ["Global Variables", "Global Var 3"],
-            "up",
-        );
+        const nextBytes = mapFormatAdapter.buildMoveEntryBytes?.(parseResult, ["Global Variables"], 3, "up");
         expect(nextBytes).toBeInstanceOf(Uint8Array);
 
         const reparsed = mapParser.parse(nextBytes!);
@@ -171,11 +159,7 @@ describe("mapFormatAdapter.buildMoveEntryBytes", () => {
         const originalAt2 = before.globalVariables[2];
         const originalAt3 = before.globalVariables[3];
 
-        const nextBytes = mapFormatAdapter.buildMoveEntryBytes?.(
-            parseResult,
-            ["Global Variables", "Global Var 2"],
-            "down",
-        );
+        const nextBytes = mapFormatAdapter.buildMoveEntryBytes?.(parseResult, ["Global Variables"], 2, "down");
         expect(nextBytes).toBeInstanceOf(Uint8Array);
 
         const reparsed = mapParser.parse(nextBytes!);
@@ -186,7 +170,7 @@ describe("mapFormatAdapter.buildMoveEntryBytes", () => {
 
     it("move up at index 0 returns undefined (no-op at the boundary)", () => {
         const { parseResult } = loadMap();
-        const result = mapFormatAdapter.buildMoveEntryBytes?.(parseResult, ["Global Variables", "Global Var 0"], "up");
+        const result = mapFormatAdapter.buildMoveEntryBytes?.(parseResult, ["Global Variables"], 0, "up");
         expect(result).toBeUndefined();
     });
 
@@ -194,11 +178,7 @@ describe("mapFormatAdapter.buildMoveEntryBytes", () => {
         const { parseResult } = loadMap();
         const before = parseResult.document as GlobalsDoc;
         const lastIndex = before.globalVariables.length - 1;
-        const result = mapFormatAdapter.buildMoveEntryBytes?.(
-            parseResult,
-            ["Global Variables", `Global Var ${lastIndex}`],
-            "down",
-        );
+        const result = mapFormatAdapter.buildMoveEntryBytes?.(parseResult, ["Global Variables"], lastIndex, "down");
         expect(result).toBeUndefined();
     });
 });
@@ -219,7 +199,7 @@ describe("MAP entity ops with skipMapTiles", () => {
         expect(initialCount).toBeGreaterThanOrEqual(5);
 
         for (let i = 0; i < 5; i++) {
-            const next = mapFormatAdapter.buildRemoveEntryBytes?.(parseResult, ["Global Variables", "Global Var 0"]);
+            const next = mapFormatAdapter.buildRemoveEntryBytes?.(parseResult, ["Global Variables"], 0);
             expect(next, `iteration ${i} produced bytes`).toBeInstanceOf(Uint8Array);
             const reparsed = mapParser.parse(next!, { skipMapTiles: true });
             expect(reparsed.errors, `iteration ${i} reparse errors`).toBeUndefined();

@@ -1,5 +1,5 @@
 import { isArraySpec, isCharsSpec, type StructSpec } from "./types";
-import type { StructPresentation } from "./presentation";
+import { humanize, slugify, type StructPresentation } from "./presentation";
 import { stringifyKeys } from "../presentation-schema-types";
 
 interface PresentationEntry {
@@ -43,24 +43,51 @@ function regexEscape(literal: string): string {
 function emitPresentationEntries<T>(
     spec: StructSpec<T>,
     presentation: StructPresentation<T>,
-    emit: (key: keyof T & string, entry: PresentationEntry) => void,
+    emit: (specKey: string, fieldKey: string, entry: PresentationEntry) => void,
 ): void {
     for (const key of Object.keys(spec) as (keyof T & string)[]) {
         const fs = spec[key];
-        if (isArraySpec(fs) || isCharsSpec(fs)) continue;
+        if (isCharsSpec(fs)) continue;
         const pres = presentation[key];
+        // Key by the slugified display label, not the spec field name: the consumer (resolveFieldPresentation)
+        // is called with the field's semantic key, which the walker builds as slugify(pres.label ?? humanize).
+        // For a default label these coincide; for a custom label (idRequired -> "Identification") they diverge,
+        // and only slugify(label) matches what the consumer looks up.
+        const fieldKey = slugify(pres?.label ?? humanize(key));
+
+        if (isArraySpec(fs)) {
+            // A "slots" array (e.g. ITM usabilityFlags) renders as a subgroup whose children carry per-slot
+            // enum/flags; mirror that as one entry per slot, keyed `${fieldKey}.${slugify(slotLabel)}`. Byte
+            // reserves and slot arrays whose element has no enum/flags emit nothing.
+            if (fs.view === "slots" && fs.slotLabels) {
+                fs.slotLabels.forEach((slotLabel, i) => {
+                    if (slotLabel === undefined) return;
+                    const el = fs.slotElements?.[i] ?? fs.element;
+                    const slotKey = `${fieldKey}.${slugify(slotLabel)}`;
+                    if (el.enum) {
+                        emit(key, slotKey, { presentationType: "enum", enumOptions: stringifyKeys(el.enum) });
+                    } else if (el.flags) {
+                        emit(key, slotKey, { presentationType: "flags", flagOptions: stringifyKeys(el.flags) });
+                    }
+                });
+            }
+            continue;
+        }
 
         if (fs.enum) {
-            emit(key, {
+            emit(key, fieldKey, {
                 ...(pres?.label !== undefined && { label: pres.label }),
                 presentationType: "enum",
                 enumOptions: stringifyKeys(fs.enum),
+                // A packed/bitfield enum (declares `format: "hex32"`) carries the hex format so its value
+                // prefix renders in hex everywhere the schema feeds, matching the walk path.
+                ...(pres?.format === "hex32" && { numericFormat: "hex32" as const }),
             });
             continue;
         }
 
         if (fs.flags) {
-            emit(key, {
+            emit(key, fieldKey, {
                 ...(pres?.label !== undefined && { label: pres.label }),
                 presentationType: "flags",
                 flagOptions: stringifyKeys(fs.flags),
@@ -73,24 +100,35 @@ function emitPresentationEntries<T>(
         if (pres?.editable !== undefined) overrides.editable = pres.editable;
         else if (fs.role !== undefined && fs.role !== "data") overrides.editable = false;
         if (Object.keys(overrides).length > 0) {
-            emit(key, overrides);
+            emit(key, fieldKey, overrides);
         }
     }
 }
 
+/** One walker subgroup: the slugified `name` becomes a path segment for the fields it wraps. */
+export interface PresentationSubGroup {
+    readonly name: string;
+    readonly fields: readonly string[];
+}
+
 /**
- * Derive `presentation-schema.ts` `exactFields` entries from a `StructSpec`
- * and `StructPresentation`. Output keyed by `${prefix}.${fieldName}`.
- * See `emitPresentationEntries` for emit rules.
+ * Derive `presentation-schema.ts` `exactFields` entries from a `StructSpec` and `StructPresentation`. Output
+ * keyed by `${prefix}.${slugify(label)}` so it matches the consumer's semantic key. `subGroups` mirrors the
+ * walker's subgroup nesting (e.g. PRO drug "Affected Stats"): a field listed in a subgroup is keyed
+ * `${prefix}.${slugify(subgroupName)}.${slugify(label)}`. See `emitPresentationEntries` for emit rules.
  */
 export function toPresentationEntries<T>(
     spec: StructSpec<T>,
     presentation: StructPresentation<T>,
     prefix: string,
+    subGroups: readonly PresentationSubGroup[] = [],
 ): Record<string, PresentationEntry> {
+    const groupOf = new Map<string, string>();
+    for (const sg of subGroups) for (const f of sg.fields) groupOf.set(f, slugify(sg.name));
     const out: Record<string, PresentationEntry> = {};
-    emitPresentationEntries(spec, presentation, (key, entry) => {
-        out[`${prefix}.${key}`] = entry;
+    emitPresentationEntries(spec, presentation, (specKey, fieldKey, entry) => {
+        const group = groupOf.get(specKey);
+        out[group ? `${prefix}.${group}.${fieldKey}` : `${prefix}.${fieldKey}`] = entry;
     });
     return out;
 }
@@ -113,8 +151,8 @@ export function toPresentationPatterns<T>(
 ): PatternEntry[] {
     const escapedPath = regexEscape(pathTemplate);
     const out: PatternEntry[] = [];
-    emitPresentationEntries(spec, presentation, (key, entry) => {
-        out.push({ pathPattern: `^${escapedPath}\\.${key}$`, ...entry });
+    emitPresentationEntries(spec, presentation, (_specKey, fieldKey, entry) => {
+        out.push({ pathPattern: `^${escapedPath}\\.${fieldKey}$`, ...entry });
     });
     return out;
 }

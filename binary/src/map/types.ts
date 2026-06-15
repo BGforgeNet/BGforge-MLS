@@ -47,7 +47,10 @@ export const ScriptProc: Record<number, string> = {
     27: "combat_is_over_p_proc",
 };
 
+// Consumed only by the script slot's `actionBeingUsed` (the skill a script reacts to). -1 is the sentinel for
+// "no skill active" - the overwhelmingly common value on disk - so it is named rather than falling to "Unknown".
 export const Skill: Record<number, string> = {
+    [-1]: "None",
     0: "Small Guns",
     1: "Big Guns",
     2: "Energy Weapons",
@@ -121,6 +124,86 @@ export const ObjectFlags: Record<number, string> = {
     0x20000000: "LightThru",
     0x40000000: "Seen",
     0x80000000: "ShootThru",
+};
+
+/**
+ * Per-object data flags (`obj->data.flags`) - distinct from the main object flags bitfield above. fallout2-ce
+ * defines two bits (src/obj_types.h): OBJ_LOCKED / OBJ_JAMMED, which doors and containers read as Locked /
+ * Jammed (DOOR_FLAG_* / CONTAINER_FLAG_* alias the same bits). Other object types leave this 0.
+ */
+export const ObjectDataFlags: Record<number, string> = {
+    0x02000000: "Locked",
+    0x04000000: "Jammed",
+};
+
+/**
+ * Door scenery instance open-flags (`obj->data.scenery.door.openFlags` / `cur_open_flags`) - the per-subtype
+ * trailer dword of a door object, distinct from the object `dataFlags` above. fallout2-ce names three bits:
+ * 0x01 = currently open (proto_instance.cc toggles it on open/close), and DOOR_FLAG_LOCKED / DOOR_FLAG_JAMMGED
+ * (src/obj_types.h) which alias the same 0x02000000 / 0x04000000 values as OBJ_LOCKED / OBJ_JAMMED.
+ */
+export const DoorOpenFlags: Record<number, string> = {
+    0x00000001: "Open",
+    0x02000000: "Locked",
+    0x04000000: "Jammed",
+};
+
+/**
+ * Elevator scenery type (`obj->data.scenery.elevator.type`) - an index into the engine's hardcoded elevator
+ * table. Labels humanized from fallout2-ce src/elevator.h (the `Elevator` enum, values 0-23). Index 14 has no
+ * engine name (`ELEVATOR_14`), so it falls through to the walker's `Unknown (14)` display.
+ */
+export const ElevatorType: Record<number, string> = {
+    0: "Brotherhood of Steel (Main)",
+    1: "Brotherhood of Steel (Surface)",
+    2: "Master (Upper)",
+    3: "Master (Lower)",
+    4: "Military Base (Upper)",
+    5: "Military Base (Lower)",
+    6: "Glow (Upper)",
+    7: "Glow (Lower)",
+    8: "Vault 13",
+    9: "Necropolis",
+    10: "Sierra 1",
+    11: "Sierra 2",
+    12: "Sierra Service",
+    13: "Klamath Toxic Caves",
+    15: "Vault City",
+    16: "Vault 15 (Main)",
+    17: "Vault 15 (Surface)",
+    18: "Navarro (Northern)",
+    19: "Navarro (Center)",
+    20: "Navarro (Lab)",
+    21: "Navarro (Canteen)",
+    22: "San Francisco (Shi Temple)",
+    23: "Redding (Wanamingo Mine)",
+};
+
+/**
+ * Item object subtype codes (the resolved `proto->item.type`). Labels the read-only "Sub Type" note and selects
+ * the per-subtype trailer layout. Values per fallout2-ce src/proto_types.h (ITEM_TYPE_*).
+ */
+export const ItemSubType: Record<number, string> = {
+    0: "Armor",
+    1: "Container",
+    2: "Drug",
+    3: "Weapon",
+    4: "Ammo",
+    5: "Misc",
+    6: "Key",
+};
+
+/**
+ * Scenery object subtype codes (the resolved `proto->scenery.type`). Values per fallout2-ce src/proto_types.h
+ * (SCENERY_TYPE_*); the two ladder codes read "Ladder Up" / "Ladder Down".
+ */
+export const ScenerySubType: Record<number, string> = {
+    0: "Door",
+    1: "Stairs",
+    2: "Elevator",
+    3: "Ladder Up",
+    4: "Ladder Down",
+    5: "Generic",
 };
 
 /**

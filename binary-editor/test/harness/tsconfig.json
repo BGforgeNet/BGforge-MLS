@@ -1,0 +1,17 @@
+{
+    "extends": "../../../tsconfig.base.json",
+    "compilerOptions": {
+        // DOM lib resolves window/document/HTMLElement used inside the in-browser page.evaluate callbacks and in
+        // harness-main.ts (which runs browser-side). The package tsconfig is DOM-less, so the harness is excluded
+        // there and type-checked here instead.
+        "lib": ["es2022", "dom"],
+        "allowImportingTsExtensions": true,
+        "noEmit": true,
+        "tsBuildInfoFile": "../../../tmp/binary-editor-harness.tsbuildinfo",
+        "paths": {
+            "@bgforge/binary": ["../../../binary/src/index.ts"],
+            "@bgforge/binary-editor": ["../../../binary-editor/src/index.ts"]
+        }
+    },
+    "include": ["."]
+}

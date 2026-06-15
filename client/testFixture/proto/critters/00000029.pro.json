@@ -15,7 +15,7 @@
         },
         "sections": {
             "critterStats": {
-                "flagsExt": 24576,
+                "flagsExt": ["canTalkTo", "look"],
                 "scriptType": -1,
                 "scriptId": -1,
                 "headFrmId": -1,

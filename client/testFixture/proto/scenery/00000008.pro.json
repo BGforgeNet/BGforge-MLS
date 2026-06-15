@@ -16,7 +16,7 @@
         "sections": {
             "sceneryProperties": {
                 "wallLightFlags": ["westCorner"],
-                "actionFlags": ["bit11", "bit13"],
+                "actionFlags": ["look", "use"],
                 "scriptType": -1,
                 "scriptId": -1,
                 "subType": 0,

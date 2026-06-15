@@ -13,17 +13,17 @@
 import { createIeAbilityEffectsParser } from "../ie-common/ability-effects-parser";
 import { itmAbilitySchema, itmHeaderSchema } from "./schemas";
 import { itmHeaderSpecAnnotated } from "./specs/header.overrides";
-import { itmAbilitySpecAnnotated } from "./specs/ability.overrides";
+import { itmAbilityPresentation, itmAbilitySpecAnnotated } from "./specs/ability.overrides";
 import { ITM_ABILITY_SIZE, ITM_HEADER_SIZE, ITM_SIGNATURE, ITM_VERSION_V1 } from "./types";
 import { serializeItm } from "./serializer";
 
 /**
- * Empty presentation tables - `humanize(fieldName)` supplies labels in the
- * display tree. Hand-written overrides for flag/enum tables and friendlier
- * labels can be added here when needed without affecting wire round-trip.
+ * Header labels come from `humanize(fieldName)`; ability labels add the shared
+ * `itmAbilityPresentation` overrides (THAC0 casing, Identification group legend).
+ * Both flow through to the display tree without affecting wire round-trip.
  */
 const itmHeaderPresentation = {} as const;
-const abilityPresentation = {} as const;
+const abilityPresentation = itmAbilityPresentation;
 
 export const itmParser = createIeAbilityEffectsParser({
     formatId: "itm",
@@ -37,4 +37,5 @@ export const itmParser = createIeAbilityEffectsParser({
     header: { schema: itmHeaderSchema, spec: itmHeaderSpecAnnotated, presentation: itmHeaderPresentation },
     ability: { schema: itmAbilitySchema, spec: itmAbilitySpecAnnotated, presentation: abilityPresentation },
     serialize: serializeItm,
+    variantId: "item",
 });

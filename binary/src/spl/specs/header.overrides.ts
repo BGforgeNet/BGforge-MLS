@@ -3,6 +3,7 @@
  */
 
 import type { FieldSpec } from "../../spec/types";
+import { Schools, SecondaryTypes } from "../../ie-common/types";
 import { SplCastingGraphics, SplExclusionFlags, SplFlags, SplType } from "../types";
 import { splHeaderSpec } from "./header";
 
@@ -12,6 +13,10 @@ export const splHeaderSpecAnnotated = {
     // Per IESDP, type values 6-65535 behave as Psionic/Bard-song; the engine
     // tolerates out-of-table values, so the lookup is advisory.
     type: { ...splHeaderSpec.type, enum: SplType, enumOpen: true },
+    // Primary type / magic school (mschool.2da). Open because the 2DA is mod-extensible.
+    school: { ...splHeaderSpec.school, enum: Schools, enumOpen: true },
+    // Secondary type (msectype.2da), likewise mod-extensible.
+    sectype: { ...splHeaderSpec.sectype, enum: SecondaryTypes, enumOpen: true },
     exclusionFlags: { ...splHeaderSpec.exclusionFlags, flags: SplExclusionFlags },
     // Casting graphics 0-15 are documented; mods/EE engines occasionally use
     // additional values.
@@ -35,8 +40,12 @@ export const splHeaderSpecAnnotated = {
         role: "derivedOffset" as const,
         derivedFrom: { section: "effects" } as const,
     },
-    castingFeatureBlocksOffset: {
-        ...splHeaderSpec.castingFeatureBlocksOffset,
+    // Renamed from `castingFeatureBlocksOffset` per IESDP (it is, and always was, the casting-range START
+    // INDEX into the flat effects array - see spl/entity-ops.ts - not a byte offset). The role/derivedFrom
+    // are kept exactly as before to preserve round-trip behavior; the `derivedOffset` classification predates
+    // the rename and is a separate cleanup, not changed here.
+    castingFeatureBlocksIndex: {
+        ...splHeaderSpec.castingFeatureBlocksIndex,
         role: "derivedOffset" as const,
         derivedFrom: { section: "castingEffects" } as const,
     },

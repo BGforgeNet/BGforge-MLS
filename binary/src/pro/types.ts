@@ -69,7 +69,9 @@ export const FRMType: Record<number, string> = {
     2: "Scenery",
     3: "Walls",
     4: "Tiles",
-    5: "Background",
+    // Art-type indices per sfall Enums.h ObjType/ArtType: 5 = OBJ_TYPE_MISC (was mislabeled "Background";
+    // background art is index 9). 6 = intrface, 7 = inven.
+    5: "Misc",
     6: "Interface",
     7: "Inventory",
 };
@@ -146,8 +148,11 @@ export const WeaponAnimCode: Record<number, string> = {
     4: "Spear",
     5: "Pistol",
     6: "SMG",
-    7: "Rifle",
-    8: "Big Gun",
+    // 7/8 per fallout2-ce art.h WeaponAnimation (the code maps to a critter-art FRM suffix letter):
+    // 7 = SHOTGUN (FRM 'j'), 8 = LASER_RIFLE (FRM 'k'). Was "Rifle"/"Big Gun" - the wrong weapon for those
+    // animation slots (Sledgehammer/Rocket Launcher at 3/10 are kept as informal names for the same animation).
+    7: "Shotgun",
+    8: "Laser Rifle",
     9: "Minigun",
     10: "Rocket Launcher",
     11: "Sfall 11",
@@ -155,6 +160,171 @@ export const WeaponAnimCode: Record<number, string> = {
     13: "Sfall 13",
     14: "Sfall 14",
     15: "Sfall 15",
+};
+
+// Weapon ammo caliber - values 0x00-0x12 (CALIBER_TYPE_NONE..CALIBER_TYPE_7_62). Names and ordering
+// cross-checked against fallout2-ce `proto_types.h` (CALIBER_TYPE_* enum, COUNT = 19).
+export const Caliber: Record<number, string> = {
+    0: "None",
+    1: "Rocket",
+    2: "Flamethrower Fuel",
+    3: "C Energy Cell",
+    4: "D Energy Cell",
+    5: ".223",
+    6: "5mm",
+    7: ".40 cal",
+    8: "10mm",
+    9: ".44 cal",
+    10: "14mm",
+    11: "12 gauge",
+    12: "9mm",
+    13: "BB",
+    14: ".45 cal",
+    15: "2mm",
+    16: "4.7mm Caseless",
+    17: "NH Needler",
+    18: "7.62",
+};
+
+// Item attack-mode subtype - the per-nibble value of the item-common "Attack modes" byte (primary in the low
+// nibble, secondary in the high nibble). Names and 0-8 ordering are from fallout2-ce `item.cc` `_attack_subtype`
+// (cross-checked against sfall `EngineUtils.cpp` `weapon_types`). 4-bit field, so values 9-15 are unused.
+export const AttackSubType: Record<number, string> = {
+    0: "None",
+    1: "Punch",
+    2: "Kick",
+    3: "Swing",
+    4: "Thrust",
+    5: "Throw",
+    6: "Single",
+    7: "Burst",
+    8: "Continuous",
+};
+
+// Perk granted by a weapon or armor (proto `perk` field; -1 = none). Names and 0..118 ordering are from
+// fallout2-ce `perk_defs.h` (the `Perk` enum); labels are humanized from the enum tokens. Open: sfall registers
+// extra "fake perks" beyond the engine's 119 (`Modules/Perks.cpp`), so callers mark the field `enumOpen`.
+export const Perk: Record<number, string> = {
+    [-1]: "None",
+    0: "Awareness",
+    1: "Bonus HtH Attacks",
+    2: "Bonus HtH Damage",
+    3: "Bonus Move",
+    4: "Bonus Ranged Damage",
+    5: "Bonus Rate of Fire",
+    6: "Earlier Sequence",
+    7: "Faster Healing",
+    8: "More Criticals",
+    9: "Night Vision",
+    10: "Presence",
+    11: "Rad Resistance",
+    12: "Toughness",
+    13: "Strong Back",
+    14: "Sharpshooter",
+    15: "Silent Running",
+    16: "Survivalist",
+    17: "Master Trader",
+    18: "Educated",
+    19: "Healer",
+    20: "Fortune Finder",
+    21: "Better Criticals",
+    22: "Empathy",
+    23: "Slayer",
+    24: "Sniper",
+    25: "Silent Death",
+    26: "Action Boy",
+    27: "Mental Block",
+    28: "Lifegiver",
+    29: "Dodger",
+    30: "Snakeater",
+    31: "Mr Fixit",
+    32: "Medic",
+    33: "Master Thief",
+    34: "Speaker",
+    35: "Heave Ho",
+    36: "Friendly Foe",
+    37: "Pickpocket",
+    38: "Ghost",
+    39: "Cult of Personality",
+    40: "Scrounger",
+    41: "Explorer",
+    42: "Flower Child",
+    43: "Pathfinder",
+    44: "Animal Friend",
+    45: "Scout",
+    46: "Mysterious Stranger",
+    47: "Ranger",
+    48: "Quick Pockets",
+    49: "Smooth Talker",
+    50: "Swift Learner",
+    51: "Tag",
+    52: "Mutate",
+    53: "Nuka Cola Addiction",
+    54: "Buffout Addiction",
+    55: "Mentats Addiction",
+    56: "Psycho Addiction",
+    57: "Radaway Addiction",
+    58: "Weapon Long Range",
+    59: "Weapon Accurate",
+    60: "Weapon Penetrate",
+    61: "Weapon Knockback",
+    62: "Powered Armor",
+    63: "Combat Armor",
+    64: "Weapon Scope Range",
+    65: "Weapon Fast Reload",
+    66: "Weapon Night Sight",
+    67: "Weapon Flameboy",
+    68: "Armor Advanced I",
+    69: "Armor Advanced II",
+    70: "Jet Addiction",
+    71: "Tragic Addiction",
+    72: "Armor Charisma",
+    73: "Gecko Skinning",
+    74: "Dermal Impact Armor",
+    75: "Dermal Impact Assault Enhancement",
+    76: "Phoenix Armor Implants",
+    77: "Phoenix Assault Enhancement",
+    78: "Vault City Inoculations",
+    79: "Adrenaline Rush",
+    80: "Cautious Nature",
+    81: "Comprehension",
+    82: "Demolition Expert",
+    83: "Gambler",
+    84: "Gain Strength",
+    85: "Gain Perception",
+    86: "Gain Endurance",
+    87: "Gain Charisma",
+    88: "Gain Intelligence",
+    89: "Gain Agility",
+    90: "Gain Luck",
+    91: "Harmless",
+    92: "Here and Now",
+    93: "HtH Evade",
+    94: "Kama Sutra Master",
+    95: "Karma Beacon",
+    96: "Light Step",
+    97: "Living Anatomy",
+    98: "Magnetic Personality",
+    99: "Negotiator",
+    100: "Pack Rat",
+    101: "Pyromaniac",
+    102: "Quick Recovery",
+    103: "Salesman",
+    104: "Stonewall",
+    105: "Thief",
+    106: "Weapon Handling",
+    107: "Vault City Training",
+    108: "Alcohol Raised Hit Points",
+    109: "Alcohol Raised Hit Points II",
+    110: "Alcohol Lowered Hit Points",
+    111: "Alcohol Lowered Hit Points II",
+    112: "Autodoc Raised Hit Points",
+    113: "Autodoc Raised Hit Points II",
+    114: "Autodoc Lowered Hit Points",
+    115: "Autodoc Lowered Hit Points II",
+    116: "Expert Excrement Expeditor",
+    117: "Weapon Enhanced Knockout",
+    118: "Jinxed",
 };
 
 // Stats (for drugs) - includes -2 (random) and -1 (none)
@@ -201,7 +371,13 @@ export const StatType: Record<number, string> = {
     37: "Current Rad",
 };
 
-// Flag definitions
+// Flag definitions.
+//
+// The CamelCase flag names here (NoBlock, MultiHex, TransRed, ShootThru, BigGun, ...) are kept verbatim and
+// deliberately NOT humanized to "No Block" / "Multi Hex": these are the canonical token names the Fallout proto
+// format and the modding community use, so they are more recognizable to the user as-is. This is the opposite
+// call from the Infinity Engine MAP flags, whose CamelCase keys (SkipElevation0Tiles) are internal and humanize
+// far better - those carry a presentation-layer `labels` override; these intentionally do not.
 export const HeaderFlags: Record<number, string> = {
     0x00000008: "Flat",
     0x00000010: "NoBlock",
@@ -218,6 +394,12 @@ export const HeaderFlags: Record<number, string> = {
     0x80000000: "ShootThru",
 };
 
+// The HIGH 3 bytes of the proto `extendedFlags` dword. item-common reads `flagsExt` as u24 (top 3 bytes) and
+// the attack-mode nibbles as the separate low byte (item-common.ts), and the .pro stores the dword big-endian,
+// so every value here is the real ItemProtoExtendedFlags (fallout2-ce proto_types.h) shifted right 8 bits:
+// BigGun 0x100->0x1, TwoHand 0x200->0x2, Use 0x800->0x8, UseOnSmth 0x1000->0x10, Look 0x2000->0x20,
+// PickUp 0x8000->0x80, Hidden 0x08000000->0x080000. Correct AS SHIFTED - do NOT "unshift" to the raw engine
+// values; that would mismatch the u24 field (CritterFlagsExt below reads the full u32 and keeps raw values).
 export const ItemFlagsExt: Record<number, string> = {
     0x000001: "BigGun",
     0x000002: "TwoHand",
@@ -228,6 +410,11 @@ export const ItemFlagsExt: Record<number, string> = {
     0x080000: "Hidden",
 };
 
+// Wall/scenery read the proto `extendedFlags` dword as wallLightFlags:u16 (HIGH 16 bits) + actionFlags:u16
+// (low 16). The corner bits are the real corner flags >> 16: NorthCorner 0x10000000->0x1000 ...
+// WestCorner 0x80000000->0x8000 (fallout2-ce proto_types.h PROTO_EXT_FLAG_*_CORNER). The N/S (0x0000) vs E/W
+// (0x0800) orientation is per the falloutmods PRO wiki - 0x0800 here is the HIDDEN bit (0x08000000>>16) reused
+// for walls and is not engine-named.
 export const WallLightFlags: Record<number, string> = {
     0x0000: "North/South",
     0x0800: "East/West",
@@ -237,15 +424,23 @@ export const WallLightFlags: Record<number, string> = {
     0x8000: "WestCorner",
 };
 
+// Low 16 bits of the proto `extendedFlags` dword (the actionFlags:u16 half, read AFTER wallLightFlags). These
+// are the real ItemProtoExtendedFlags, NOT shifted - the engine tests `extendedFlags & PROTO_EXT_FLAG_CAN_USE
+// (0x800)` directly (fallout2-ce proto.cc:264, and CAN_USE_ON/LOOK/CAN_TALK_TO/CAN_PICK_UP). The prior table
+// placed these at 0x8-0x80 (an extra 8-bit shift); corroborated by CritterFlagsExt, which reads the full u32
+// and correctly has Look=0x2000 / Can talk to=0x4000. 0x0001 = PROTO_EXT_FLAG_MAGIC_HANDS_GROUND (scenery).
 export const ActionFlags: Record<number, string> = {
-    0x0001: "Kneel",
-    0x0008: "Use",
-    0x0010: "UseOnSmth",
-    0x0020: "Look",
-    0x0040: "Talk",
-    0x0080: "PickUp",
+    0x0001: "Magic hands (ground)",
+    0x0800: "Use",
+    0x1000: "Use on",
+    0x2000: "Look",
+    0x4000: "Talk",
+    0x8000: "Pick up",
 };
 
+// Container proto `openFlags` (full u32). fallout2-ce does not name these bits (the named CONTAINER_FLAG_LOCKED
+// / _JAMMED are runtime OBJECT data flags, not proto openFlags), so these labels are from the falloutmods PRO
+// wiki and are UNVERIFIED against sfall/fallout2-ce.
 export const ContainerFlags: Record<number, string> = {
     0x00000001: "CannotPickUp",
     0x00000008: "MagicHandsGrnd",
@@ -263,6 +458,23 @@ export const CritterFlags: Record<number, string> = {
     0x00001000: "SpecialDeath",
     0x00002000: "RangeMelee",
     0x00004000: "NoKnock",
+};
+
+/**
+ * Critter proto `flagsExt` (the proto "Flags Ext" / `extendedFlags` action-flag bitfield - distinct from the
+ * common object `flags` and the critter behavior `critterFlags`). Only two bits are defined for critters; the
+ * values are cross-checked against fallout2-ce `ItemProtoExtendedFlags` (`PROTO_EXT_FLAG_LOOK` /
+ * `_CAN_TALK_TO`) and the falloutmods PRO_File_Format wiki.
+ */
+export const CritterFlagsExt: Record<number, string> = {
+    0x00002000: "Look",
+    0x00004000: "Can talk to",
+};
+
+// Critter gender (demographics)
+export const Gender: Record<number, string> = {
+    0: "Male",
+    1: "Female",
 };
 
 // Script types (upper byte of Script ID field)
@@ -302,126 +514,3 @@ export const SCENERY_SUBTYPE_SIZES: Record<number, number> = {
 export const WALL_SIZE = 0x24; // 36 bytes
 export const TILE_SIZE = 0x1c; // 28 bytes
 export const MISC_SIZE = 0x1c; // 28 bytes
-
-// Critter field definitions for data-driven parsing
-// [displayName, dataKey, offset, type, group?]
-export type CritterFieldDef = [string, string, number, "int32" | "uint32" | "percent" | "scriptType" | "scriptId"];
-
-export const CRITTER_PROPERTIES: CritterFieldDef[] = [
-    ["Script Type", "scriptType", 0x1c, "scriptType"],
-    ["Script ID", "scriptId", 0x1d, "scriptId"],
-    ["Head FRM ID", "headFrmId", 0x20, "int32"],
-    ["AI Packet", "aiPacket", 0x24, "uint32"],
-    ["Team Number", "teamNumber", 0x28, "uint32"],
-];
-
-export const CRITTER_BASE_PRIMARY: CritterFieldDef[] = [
-    ["Strength", "strength", 0x30, "int32"],
-    ["Perception", "perception", 0x34, "int32"],
-    ["Endurance", "endurance", 0x38, "int32"],
-    ["Charisma", "charisma", 0x3c, "int32"],
-    ["Intelligence", "intelligence", 0x40, "int32"],
-    ["Agility", "agility", 0x44, "int32"],
-    ["Luck", "luck", 0x48, "int32"],
-];
-
-export const CRITTER_BASE_SECONDARY: CritterFieldDef[] = [
-    ["Hit Points", "hitPoints", 0x4c, "int32"],
-    ["Action Points", "actionPoints", 0x50, "int32"],
-    ["Armor Class", "armorClass", 0x54, "int32"],
-    ["Unarmed Damage", "unarmedDamage", 0x58, "int32"],
-    ["Melee Damage", "meleeDamage", 0x5c, "int32"],
-    ["Carry Weight", "carryWeight", 0x60, "int32"],
-    ["Sequence", "sequence", 0x64, "int32"],
-    ["Healing Rate", "healingRate", 0x68, "int32"],
-    ["Critical Chance", "criticalChance", 0x6c, "int32"],
-    ["Better Criticals", "betterCriticals", 0x70, "int32"],
-];
-
-export const CRITTER_BASE_DT: CritterFieldDef[] = [
-    ["Normal", "dtNormal", 0x74, "int32"],
-    ["Laser", "dtLaser", 0x78, "int32"],
-    ["Fire", "dtFire", 0x7c, "int32"],
-    ["Plasma", "dtPlasma", 0x80, "int32"],
-    ["Electrical", "dtElectrical", 0x84, "int32"],
-    ["EMP", "dtEmp", 0x88, "int32"],
-    ["Explosive", "dtExplosive", 0x8c, "int32"],
-];
-
-export const CRITTER_BASE_DR: CritterFieldDef[] = [
-    ["Normal", "drNormal", 0x90, "percent"],
-    ["Laser", "drLaser", 0x94, "percent"],
-    ["Fire", "drFire", 0x98, "percent"],
-    ["Plasma", "drPlasma", 0x9c, "percent"],
-    ["Electrical", "drElectrical", 0xa0, "percent"],
-    ["EMP", "drEmp", 0xa4, "percent"],
-    ["Explosive", "drExplosive", 0xa8, "percent"],
-    ["Radiation", "drRadiation", 0xac, "percent"],
-    ["Poison", "drPoison", 0xb0, "percent"],
-];
-
-export const CRITTER_BONUS_PRIMARY: CritterFieldDef[] = [
-    ["Strength", "strengthBonus", 0xbc, "int32"],
-    ["Perception", "perceptionBonus", 0xc0, "int32"],
-    ["Endurance", "enduranceBonus", 0xc4, "int32"],
-    ["Charisma", "charismaBonus", 0xc8, "int32"],
-    ["Intelligence", "intelligenceBonus", 0xcc, "int32"],
-    ["Agility", "agilityBonus", 0xd0, "int32"],
-    ["Luck", "luckBonus", 0xd4, "int32"],
-];
-
-export const CRITTER_BONUS_SECONDARY: CritterFieldDef[] = [
-    ["Hit Points", "hitPointsBonus", 0xd8, "int32"],
-    ["Action Points", "actionPointsBonus", 0xdc, "int32"],
-    ["Armor Class", "armorClassBonus", 0xe0, "int32"],
-    ["Unarmed Damage", "unarmedDamageBonus", 0xe4, "int32"],
-    ["Melee Damage", "meleeDamageBonus", 0xe8, "int32"],
-    ["Carry Weight", "carryWeightBonus", 0xec, "int32"],
-    ["Sequence", "sequenceBonus", 0xf0, "int32"],
-    ["Healing Rate", "healingRateBonus", 0xf4, "int32"],
-    ["Critical Chance", "criticalChanceBonus", 0xf8, "int32"],
-    ["Better Criticals", "betterCriticalsBonus", 0xfc, "int32"],
-];
-
-export const CRITTER_BONUS_DT: CritterFieldDef[] = [
-    ["Normal", "dtNormalBonus", 0x100, "int32"],
-    ["Laser", "dtLaserBonus", 0x104, "int32"],
-    ["Fire", "dtFireBonus", 0x108, "int32"],
-    ["Plasma", "dtPlasmaBonus", 0x10c, "int32"],
-    ["Electrical", "dtElectricalBonus", 0x110, "int32"],
-    ["EMP", "dtEmpBonus", 0x114, "int32"],
-    ["Explosive", "dtExplosiveBonus", 0x118, "int32"],
-];
-
-export const CRITTER_BONUS_DR: CritterFieldDef[] = [
-    ["Normal", "drNormalBonus", 0x11c, "int32"],
-    ["Laser", "drLaserBonus", 0x120, "int32"],
-    ["Fire", "drFireBonus", 0x124, "int32"],
-    ["Plasma", "drPlasmaBonus", 0x128, "int32"],
-    ["Electrical", "drElectricalBonus", 0x12c, "int32"],
-    ["EMP", "drEmpBonus", 0x130, "int32"],
-    ["Explosive", "drExplosiveBonus", 0x134, "int32"],
-    ["Radiation", "drRadiationBonus", 0x138, "int32"],
-    ["Poison", "drPoisonBonus", 0x13c, "int32"],
-];
-
-export const CRITTER_SKILLS: CritterFieldDef[] = [
-    ["Small Guns", "skillSmallGuns", 0x148, "int32"],
-    ["Big Guns", "skillBigGuns", 0x14c, "int32"],
-    ["Energy Weapons", "skillEnergyWeapons", 0x150, "int32"],
-    ["Unarmed", "skillUnarmed", 0x154, "int32"],
-    ["Melee", "skillMelee", 0x158, "int32"],
-    ["Throwing", "skillThrowing", 0x15c, "int32"],
-    ["First Aid", "skillFirstAid", 0x160, "int32"],
-    ["Doctor", "skillDoctor", 0x164, "int32"],
-    ["Sneak", "skillSneak", 0x168, "int32"],
-    ["Lockpick", "skillLockpick", 0x16c, "int32"],
-    ["Steal", "skillSteal", 0x170, "int32"],
-    ["Traps", "skillTraps", 0x174, "int32"],
-    ["Science", "skillScience", 0x178, "int32"],
-    ["Repair", "skillRepair", 0x17c, "int32"],
-    ["Speech", "skillSpeech", 0x180, "int32"],
-    ["Barter", "skillBarter", 0x184, "int32"],
-    ["Gambling", "skillGambling", 0x188, "int32"],
-    ["Outdoorsman", "skillOutdoorsman", 0x18c, "int32"],
-];

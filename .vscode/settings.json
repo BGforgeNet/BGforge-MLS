@@ -1,18 +1,21 @@
 {
     "files.exclude": {
-        "out": false // set this to true to hide the "out" folder with the compiled JS files
+        "out": false, // set this to true to hide the "out" folder with the compiled JS files
+        ".dev": true // code-server install + unpacked-extension symlink used by `pnpm dev:web`
     },
     "search.exclude": {
         "out": true, // set this to false to include "out" folder in search results
         "external": true,
-        "tmp": true
+        "tmp": true,
+        ".dev": true
     },
     "files.watcherExclude": {
         "external/**": true,
         "tmp/**": true,
         ".vscode-test/**": true,
         ".reports/**": true,
-        "coverage/**": true
+        "coverage/**": true,
+        ".dev/**": true
     },
     "typescript.tsdk": "./node_modules/typescript/lib",
     "typescript.tsc.autoDetect": "off",

@@ -1,4 +1,5 @@
-import { makeUniqueKey, slugify } from "./snapshot-common";
+import { makeUniqueKey } from "./snapshot-common";
+import { slugify } from "./spec/presentation";
 import type { ParsedField, ParsedGroup } from "./types";
 
 interface GroupBuildInput<Node> {

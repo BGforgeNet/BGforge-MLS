@@ -6,8 +6,8 @@
 
 import { toTypedBinarySchema } from "../spec/derive-typed-binary";
 import { effBodySpecAnnotated } from "../eff/specs/body.overrides";
+import { effectSpecAnnotated } from "../ie-common/specs/effect.overrides";
 import type { SpecData } from "../spec/types";
-import { creEffectV1Spec } from "./specs/effect-v1";
 import { creHeaderSpecAnnotated } from "./specs/header.overrides";
 import { creItemSpecAnnotated } from "./specs/item.overrides";
 import { creKnownSpellSpecAnnotated } from "./specs/known-spell.overrides";
@@ -19,7 +19,9 @@ export const creKnownSpellSchema = toTypedBinarySchema(creKnownSpellSpecAnnotate
 export const creSpellMemInfoSchema = toTypedBinarySchema(creSpellMemInfoSpecAnnotated);
 export const creMemorizedSpellSchema = toTypedBinarySchema(creMemorizedSpellSpecAnnotated);
 export const creItemSchema = toTypedBinarySchema(creItemSpecAnnotated);
-export const creEffectV1Schema = toTypedBinarySchema(creEffectV1Spec);
+// CRE v0 effects are the 48-byte EFF v1 record - byte-for-byte the ITM/SPL feature block (IESDP documents them
+// as one structure), so they share the SAME `effectSpec` rather than a CRE-local copy.
+export const creEffectV1Schema = toTypedBinarySchema(effectSpecAnnotated);
 // CRE v2 effects share the 264-byte EFF v2 body shape with `.eff` files.
 // IESDP: "CRE effect V2 structures omit the 8-byte EFF V2 header", so each
 // record on the wire is exactly the body block. The body spec already
@@ -32,5 +34,5 @@ export type CreKnownSpellData = SpecData<typeof creKnownSpellSpecAnnotated>;
 export type CreSpellMemInfoData = SpecData<typeof creSpellMemInfoSpecAnnotated>;
 export type CreMemorizedSpellData = SpecData<typeof creMemorizedSpellSpecAnnotated>;
 export type CreItemData = SpecData<typeof creItemSpecAnnotated>;
-export type CreEffectV1Data = SpecData<typeof creEffectV1Spec>;
+export type CreEffectV1Data = SpecData<typeof effectSpecAnnotated>;
 export type CreEffectV2Data = SpecData<typeof effBodySpecAnnotated>;

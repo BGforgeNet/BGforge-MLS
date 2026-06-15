@@ -11,7 +11,7 @@ export const miscItemSpec = {
 export type MiscItemData = SpecData<typeof miscItemSpec>;
 
 export const miscItemPresentation: StructPresentation<MiscItemData> = {
-    powerPid: { label: "Power PID" },
+    powerPid: { label: "Power PID", format: "hex32" },
     powerType: { label: "Power Type" },
     charges: { label: "Charges" },
 };

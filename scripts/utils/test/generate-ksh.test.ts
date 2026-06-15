@@ -34,15 +34,6 @@ const BAF_LANG = {
 
 const XSD_URL = "https://raw.githubusercontent.com/KDE/syntax-highlighting/master/data/schema/language.xsd";
 
-function hasXmllint(): boolean {
-    try {
-        execSync("xmllint --version", { stdio: "ignore" });
-        return true;
-    } catch {
-        return false;
-    }
-}
-
 describe("generateKshXml", () => {
     it("produces valid XML structure", () => {
         const xml = generateKshXml(SSL_LANG);
@@ -120,7 +111,7 @@ describe("generateKshXml", () => {
         expect(xml).toContain('extensions="*.tp2;*.tpa;*.tph;*.tpp"');
     });
 
-    it.skipIf(!hasXmllint())("validates against official KDE KSyntaxHighlighting XSD", () => {
+    it("validates against official KDE KSyntaxHighlighting XSD", () => {
         fs.mkdirSync("tmp", { recursive: true });
         const xsdPath = "tmp/language.xsd";
         const xmlPath = "tmp/test-ksh.xml";
@@ -146,7 +137,7 @@ describe("generateKshXml", () => {
         }
     });
 
-    it.skipIf(!hasXmllint())("validates static KSH files against official XSD", () => {
+    it("validates static KSH files against official XSD", () => {
         const staticDir = "editors/kate";
         const staticFiles = fs.readdirSync(staticDir).filter((f) => f.endsWith(".ksh.xml"));
         expect(staticFiles.length).toBeGreaterThan(0);

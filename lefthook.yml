@@ -23,6 +23,10 @@ pre-commit:
       run: pnpm exec tsc --noEmit --project client/tsconfig.json
     typecheck-binary:
       run: pnpm exec tsc --noEmit --project binary/tsconfig.json
+    typecheck-binary-editor:
+      run: pnpm exec tsc --noEmit --project binary-editor/tsconfig.json
+    typecheck-binary-editor-harness:
+      run: pnpm exec tsc --project binary-editor/test/harness/tsconfig.json
     typecheck-format:
       run: pnpm exec tsc --noEmit --project format/tsconfig.json
     typecheck-transpilers:

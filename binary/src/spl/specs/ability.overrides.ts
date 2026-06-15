@@ -13,6 +13,14 @@ export const splAbilitySpecAnnotated = {
     friendly: { ...splAbilitySpec.friendly, flags: SplAbilityFriendly },
     location: { ...splAbilitySpec.location, enum: SplAbilityLocation },
     target: { ...splAbilitySpec.target, enum: AbilityTargetType },
+    // Six reserved slots: real wire bytes that round-trip, but no user-editable data. Hide them from the
+    // ability detail form (the rebuilder reads them back by label, so the byte round-trip is unaffected).
+    unused1: { ...splAbilitySpec.unused1, hidden: true },
+    unused2: { ...splAbilitySpec.unused2, hidden: true },
+    unused3: { ...splAbilitySpec.unused3, hidden: true },
+    unused4: { ...splAbilitySpec.unused4, hidden: true },
+    unused5: { ...splAbilitySpec.unused5, hidden: true },
+    unused6: { ...splAbilitySpec.unused6, hidden: true },
     // Per-ability slice into the global effect table; not user data. Locked
     // for the same reason as the ITM ability counterparts.
     featureBlocksCount: {
@@ -26,3 +34,17 @@ export const splAbilitySpecAnnotated = {
         derivedFrom: { section: "effects" } as const,
     },
 } satisfies Record<string, FieldSpec>;
+
+/**
+ * Ability display-label overrides. The `friendly` flags field humanizes to "Friendly" - the same word as one
+ * of its own two bits (Hostile / Friendly), so the group label reads as a duplicate of a checkbox under it.
+ * Relabel the group to "Disposition" (the field selects a hostile vs friendly disposition). Shared by BOTH the
+ * parser (writes the display label) and the canonical rebuild (looks the field back up by that label), so the
+ * displayed label and the round-trip lookup key stay identical - a mismatch would break the round-trip.
+ *
+ * The six reserved `unused*` slots are hidden from the form (see `splAbilitySpecAnnotated`), so they need no
+ * display labels here - they round-trip via their default humanized label, which parser and rebuild share.
+ */
+export const splAbilityPresentation = {
+    friendly: { label: "Disposition" },
+};

@@ -15,6 +15,7 @@
         "server/data/fallout-ssl-sfall.yml",
         "format/out/**",
         "binary/out/**",
+        "binary/src/ie-common/opcode-relationships.ts",
         "binary/src/ie-common/opcodes.ts",
         "binary/src/ie-common/specs/effect.ts",
         "binary/src/itm/specs/header.ts",
@@ -28,6 +29,7 @@
         "themes/vscode-monokai.json",
         "themes/vs-seti-icon-theme.json",
         "themes/bgforge-monokai.json",
-        "themes/bgforge-icon-theme.json"
+        "themes/bgforge-icon-theme.json",
+        "binary-editor/test/harness/*.html"
     ]
 }

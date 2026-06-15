@@ -55,6 +55,7 @@
 
 import type { ParseOpaqueRange, ParseResult } from "../types";
 import { isArraySpec } from "../spec/types";
+import { applyEntryMutation, type EntryCollection } from "../spec/entity-ops";
 import { getMapCanonicalDocument, rebuildMapCanonicalDocument } from "./canonical-reader";
 import { serializeMapCanonicalDocument } from "./canonical-writer";
 import type { MapCanonicalDocument } from "./canonical-schemas";
@@ -117,6 +118,17 @@ function applyVarSectionUpdate(
     };
 }
 
+/** Build the format-general EntryCollection descriptor for a var section. MAP int32 arrays have no cross-references to relink. */
+function makeVarSectionCollection(section: VarSection): EntryCollection<MapCanonicalDocument, number> {
+    return {
+        read: (doc) => doc[section.arrayKey],
+        write: (doc, next) => applyVarSectionUpdate(doc, section, [...next]),
+        defaultElement: defaultVarValue,
+        addable: varSectionAddable,
+        removable: varSectionRemovable,
+    };
+}
+
 export function buildMapAddEntryBytes(parseResult: ParseResult, arrayPath: readonly string[]): Uint8Array | undefined {
     if (!isMapAddableArray(arrayPath)) return undefined;
     const doc = readDocument(parseResult);
@@ -125,9 +137,14 @@ export function buildMapAddEntryBytes(parseResult: ParseResult, arrayPath: reado
     const section = findVarSectionByArrayName(arrayPath[0]);
     if (!section) return undefined;
 
-    const nextValues = [...doc[section.arrayKey], defaultVarValue()];
+    const collection = makeVarSectionCollection(section);
+    const current = collection.read(doc);
+    const mutation = applyEntryMutation(current, "add", current.length, collection.defaultElement);
+    if (!mutation) return undefined;
+
+    const nextDoc = collection.write(doc, mutation.next);
     return serializeMapCanonicalDocument(
-        applyVarSectionUpdate(doc, section, nextValues),
+        nextDoc,
         shiftOpaqueRangesAfterVarSection(parseResult.opaqueRanges, doc, section, +4),
     );
 }
@@ -166,6 +183,15 @@ function findVarSectionByArrayName(name: string | undefined): VarSection | undef
     return VAR_SECTIONS.find((entry) => entry.arrayName === name);
 }
 
+export function isMapListSection(arrayPath: readonly string[]): boolean {
+    return arrayPath.length === 1 && findVarSectionByArrayName(arrayPath[0]) !== undefined;
+}
+
+// Modifiability is the array-shape capability, independent of how many entries currently exist.
+export function isMapModifiableArray(arrayPath: readonly string[]): boolean {
+    return (varSectionAddable || varSectionRemovable) && isMapListSection(arrayPath);
+}
+
 export function isMapAddableArray(arrayPath: readonly string[]): boolean {
     if (!varSectionAddable || arrayPath.length !== 1) return false;
     return findVarSectionByArrayName(arrayPath[0]) !== undefined;
@@ -187,67 +213,73 @@ function parseEntryIndex(label: string, prefix: string): number | undefined {
 
 export function buildMapRemoveEntryBytes(
     parseResult: ParseResult,
-    entryPath: readonly string[],
+    arrayPath: readonly string[],
+    index: number,
 ): Uint8Array | undefined {
-    if (!isMapRemovableEntry(entryPath)) return undefined;
-    return mutateVarSectionEntry(parseResult, entryPath, (values, index) => [
-        ...values.slice(0, index),
-        ...values.slice(index + 1),
-    ]);
+    return mutateVarSectionEntry(parseResult, arrayPath, index, "remove");
 }
 
 export function buildMapInsertEntryBytes(
     parseResult: ParseResult,
-    entryPath: readonly string[],
+    arrayPath: readonly string[],
+    index: number,
     position: "before" | "after",
 ): Uint8Array | undefined {
-    // An entry can be inserted next to any entry that itself is recognised as
-    // a removable target - the addressing rules are the same.
-    if (!isMapRemovableEntry(entryPath)) return undefined;
-    return mutateVarSectionEntry(parseResult, entryPath, (values, index) => {
-        const insertAt = position === "before" ? index : index + 1;
-        return [...values.slice(0, insertAt), defaultVarValue(), ...values.slice(insertAt)];
-    });
+    return mutateVarSectionEntry(parseResult, arrayPath, index, "insert", position);
 }
 
 export function buildMapMoveEntryBytes(
     parseResult: ParseResult,
-    entryPath: readonly string[],
+    arrayPath: readonly string[],
+    index: number,
     direction: "up" | "down",
 ): Uint8Array | undefined {
-    if (!isMapRemovableEntry(entryPath)) return;
-    return mutateVarSectionEntry(parseResult, entryPath, (values, index) => {
-        const targetIndex = direction === "up" ? index - 1 : index + 1;
-        if (targetIndex < 0 || targetIndex >= values.length) return;
-        const next = [...values];
-        [next[index], next[targetIndex]] = [next[targetIndex]!, next[index]!];
-        return next;
-    });
+    return mutateVarSectionEntry(parseResult, arrayPath, index, "reorder", undefined, direction);
 }
 
 /**
- * Shared boilerplate for entry-targeted var-section mutations: resolves the
- * binding row, runs the mutator on the current values, and re-serialises.
- * The mutator may return `undefined` to abort (e.g., move at the boundary).
+ * Copy the entry at `index` and insert the copy immediately after it.
+ * MAP variables have no slot-unique identity to relink, so the copy is verbatim:
+ * a var is just an int32 value.
+ */
+export function buildMapDuplicateEntryBytes(
+    parseResult: ParseResult,
+    arrayPath: readonly string[],
+    index: number,
+): Uint8Array | undefined {
+    return mutateVarSectionEntry(parseResult, arrayPath, index, "duplicate");
+}
+
+/**
+ * Shared boilerplate for entry-targeted var-section mutations: resolves the var
+ * section from `arrayPath`, calls applyEntryMutation at the structural `index` on
+ * the current values, and re-serialises. Returns undefined when `arrayPath` is not
+ * a removable var section, `index` is out of range, or the op is a boundary no-op.
  */
 function mutateVarSectionEntry(
     parseResult: ParseResult,
-    entryPath: readonly string[],
-    mutate: (values: readonly number[], index: number) => readonly number[] | undefined,
+    arrayPath: readonly string[],
+    index: number,
+    op: "remove" | "insert" | "reorder" | "duplicate",
+    position?: "before" | "after",
+    direction?: "up" | "down",
 ): Uint8Array | undefined {
+    if (!varSectionRemovable || arrayPath.length !== 1) return undefined;
+    const section = findVarSectionByArrayName(arrayPath[0]);
+    if (!section) return undefined;
     const doc = readDocument(parseResult);
     if (!doc) return undefined;
-    const section = findVarSectionByArrayName(entryPath[0])!;
-    const index = parseEntryIndex(entryPath[1]!, section.entryPrefix)!;
-    const current = doc[section.arrayKey];
-    if (index >= current.length) return undefined;
+    const collection = makeVarSectionCollection(section);
+    const current = collection.read(doc);
+    if (index < 0 || index >= current.length) return undefined;
 
-    const nextValues = mutate(current, index);
-    if (!nextValues) return undefined;
+    const mutation = applyEntryMutation(current, op, index, collection.defaultElement, position, direction);
+    if (!mutation) return undefined;
 
-    const delta = (nextValues.length - current.length) * 4;
+    const delta = mutation.delta * 4;
+    const nextDoc = collection.write(doc, mutation.next);
     return serializeMapCanonicalDocument(
-        applyVarSectionUpdate(doc, section, [...nextValues]),
+        nextDoc,
         shiftOpaqueRangesAfterVarSection(parseResult.opaqueRanges, doc, section, delta),
     );
 }

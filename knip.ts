@@ -19,14 +19,15 @@ const config: KnipConfig = {
             entry: [
                 // esbuild entry points (moved from package.json to scripts/*.sh)
                 "src/extension.ts",
-                "src/editors/binaryEditor-webview.ts",
                 "src/dialog-tree/dialogTree-webview.ts",
+                "src/binary-editor/worker.ts",
+                "src/binary-editor/webview/main.ts",
                 // test entry points for @vscode/test-electron
                 "src/test/runTest.ts",
                 "src/test/index.ts",
                 "src/test/*.test.ts",
                 // vitest unit tests (run via client/vitest.config.ts)
-                "test/*.test.ts",
+                "test/**/*.test.ts",
             ],
         },
         server: {
@@ -104,6 +105,14 @@ const config: KnipConfig = {
             // workspace; knip's per-workspace dep tracing doesn't reach across that boundary.
             ignoreDependencies: ["cac", "diff"],
         },
+        "binary-editor": {
+            entry: ["test/**/*.test.ts"],
+            // Bench files invoked explicitly; not reachable from any declared entry point.
+            // Harness files are environment-only (playwright, browser globals) and excluded from
+            // the package typecheck/lint - keep them out of knip's analysis too. test/fixtures holds
+            // fixture data plus standalone generators run via `pnpm exec tsx`, not imported by tests.
+            ignore: ["test/perf/**", "test/harness/**", "test/fixtures/**"],
+        },
     },
     ignore: [
         // tree-sitter grammars, not TypeScript
@@ -122,6 +131,9 @@ const config: KnipConfig = {
         "@vscode/vsce",
         // loaded by remark CLI via --use in package.json scripts, not statically imported
         "remark-validate-links",
+        // imported by scripts/build-webviews.mjs (esbuild JS API build script for webview bundles);
+        // scripts/** is excluded from knip's analysis, so the import is invisible to it.
+        "esbuild-svelte",
     ],
 };
 

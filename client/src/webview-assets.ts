@@ -59,3 +59,18 @@ export function getCachedJsAsset(cacheKey: string, extensionPath: string, relati
 export function generateNonce(): string {
     return randomBytes(16).toString("base64");
 }
+
+/**
+ * Inline a bundled script into an HTML template at the `/* __SCRIPT__ *​/` placeholder and stamp the CSP nonce.
+ *
+ * The script MUST be supplied as a *function* replacement so it is inlined verbatim. A plain string replacement
+ * lets `String.prototype.replace` interpret `$$`/`$&`/`` $` ``/`$'` inside the bundle as special patterns, silently
+ * mutating the inlined code. The minified production bundle contains a `$&` sequence, which expands to the matched
+ * placeholder text - splicing `/* __SCRIPT__ *​/` into the JS, producing a syntax error so the webview script never
+ * parses and the panel renders blank (the original symptom; the un-minified dev bundle lacks `$&` and so masked it).
+ * `$$` (hundreds in Svelte 5 output) collapses to `$`, and `` $` ``/`$'` splice surrounding HTML. Inlining verbatim
+ * removes the hazard. The nonce is base64 (no `$`), so its replaceAll is safe as a plain string.
+ */
+export function inlineWebviewScript(html: string, script: string, nonce: string): string {
+    return html.replace("/* __SCRIPT__ */", () => script).replaceAll("{{nonce}}", nonce);
+}

@@ -30,6 +30,7 @@
         "vscode:prepublish": "./scripts/prepublish.sh",
         "build": "pnpm build:client && pnpm build:server && pnpm build:test && pnpm build:transpile && pnpm build:format && pnpm build:binary",
         "build:dev": "./scripts/build-dev.sh",
+        "dev:web": "./scripts/dev-web.sh",
         "build:all": "pnpm build:grammar && pnpm build && pnpm build:editors",
         "build:ts-plugin": "./scripts/build-ts-plugin.sh tssl-plugin",
         "build:td-plugin": "./scripts/build-ts-plugin.sh td-plugin",
@@ -99,6 +100,7 @@
         "cac": "^7.0.0",
         "diff": "^9.0.0",
         "esbuild": "^0.28.0",
+        "esbuild-svelte": "^0.9.5",
         "jsonc-parser": "^3.3.1",
         "knip": "^6.15.0",
         "mocha": "^11.7.6",
@@ -107,6 +109,7 @@
         "quick-lru": "^7.3.0",
         "remark-cli": "^12.0.1",
         "remark-validate-links": "^13.1.0",
+        "svelte": "^5.56.1",
         "tree-sitter-cli": "0.26.9",
         "tsx": "^4.22.4",
         "typescript": "^5.9.3",
@@ -365,98 +368,9 @@
                 "command": "extension.bgforge.dialogPreview",
                 "title": "BGforge MLS: Dialog Preview",
                 "icon": "$(open-preview)"
-            },
-            {
-                "command": "bgforge.binaryEditor.addEntry",
-                "title": "BGforge: Add entry to selected array",
-                "category": "Binary Editor"
-            },
-            {
-                "command": "bgforge.binaryEditor.removeEntry",
-                "title": "BGforge: Remove selected entry",
-                "category": "Binary Editor"
-            },
-            {
-                "command": "bgforge.binaryEditor.insertEntryBefore",
-                "title": "BGforge: Insert entry before selected",
-                "category": "Binary Editor"
-            },
-            {
-                "command": "bgforge.binaryEditor.insertEntryAfter",
-                "title": "BGforge: Insert entry after selected",
-                "category": "Binary Editor"
-            },
-            {
-                "command": "bgforge.binaryEditor.moveEntryUp",
-                "title": "BGforge: Move selected entry up",
-                "category": "Binary Editor"
-            },
-            {
-                "command": "bgforge.binaryEditor.moveEntryDown",
-                "title": "BGforge: Move selected entry down",
-                "category": "Binary Editor"
             }
         ],
-        "menus": {
-            "commandPalette": [
-                {
-                    "command": "bgforge.binaryEditor.addEntry",
-                    "when": "activeCustomEditorId == 'bgforge.binaryEditor'"
-                },
-                {
-                    "command": "bgforge.binaryEditor.removeEntry",
-                    "when": "activeCustomEditorId == 'bgforge.binaryEditor'"
-                },
-                {
-                    "command": "bgforge.binaryEditor.insertEntryBefore",
-                    "when": "activeCustomEditorId == 'bgforge.binaryEditor'"
-                },
-                {
-                    "command": "bgforge.binaryEditor.insertEntryAfter",
-                    "when": "activeCustomEditorId == 'bgforge.binaryEditor'"
-                },
-                {
-                    "command": "bgforge.binaryEditor.moveEntryUp",
-                    "when": "activeCustomEditorId == 'bgforge.binaryEditor'"
-                },
-                {
-                    "command": "bgforge.binaryEditor.moveEntryDown",
-                    "when": "activeCustomEditorId == 'bgforge.binaryEditor'"
-                }
-            ],
-            "webview/context": [
-                {
-                    "command": "bgforge.binaryEditor.addEntry",
-                    "when": "webviewId == 'bgforge.binaryEditor' && webviewSection == 'binaryEditorAddableArray'",
-                    "group": "binaryEditor.1@1"
-                },
-                {
-                    "command": "bgforge.binaryEditor.insertEntryBefore",
-                    "when": "webviewId == 'bgforge.binaryEditor' && webviewSection == 'binaryEditorRemovableEntry'",
-                    "group": "binaryEditor.1@1"
-                },
-                {
-                    "command": "bgforge.binaryEditor.insertEntryAfter",
-                    "when": "webviewId == 'bgforge.binaryEditor' && webviewSection == 'binaryEditorRemovableEntry'",
-                    "group": "binaryEditor.1@2"
-                },
-                {
-                    "command": "bgforge.binaryEditor.moveEntryUp",
-                    "when": "webviewId == 'bgforge.binaryEditor' && webviewSection == 'binaryEditorRemovableEntry'",
-                    "group": "binaryEditor.2@1"
-                },
-                {
-                    "command": "bgforge.binaryEditor.moveEntryDown",
-                    "when": "webviewId == 'bgforge.binaryEditor' && webviewSection == 'binaryEditorRemovableEntry'",
-                    "group": "binaryEditor.2@2"
-                },
-                {
-                    "command": "bgforge.binaryEditor.removeEntry",
-                    "when": "webviewId == 'bgforge.binaryEditor' && webviewSection == 'binaryEditorRemovableEntry'",
-                    "group": "binaryEditor.3@1"
-                }
-            ]
-        },
+        "menus": {},
         "customEditors": [
             {
                 "viewType": "bgforge.binaryEditor",

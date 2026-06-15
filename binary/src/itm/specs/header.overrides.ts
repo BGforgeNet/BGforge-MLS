@@ -12,7 +12,12 @@ import { arraySpec, type FieldSpec } from "../../spec/types";
 import { u8 } from "typed-binary";
 import {
     ItmFlags,
+    ItmKitUsabilityByte1Flags,
+    ItmKitUsabilityByte2Flags,
+    ItmKitUsabilityByte3Flags,
+    ItmKitUsabilityByte4Flags,
     ItmType,
+    ItmWeaponProficiency,
     ItmUsabilityByte1Flags,
     ItmUsabilityByte2Flags,
     ItmUsabilityByte3Flags,
@@ -43,6 +48,17 @@ export const itmHeaderSpecAnnotated = {
             { codec: u8, flags: ItmUsabilityByte4Flags },
         ],
     }),
+    // The four kit-usability bytes are kit bitfields (IESDP "Header Kit Usability"), not scalar stats; each
+    // carries a distinct kit table. They sit non-contiguously (interleaved with the min-stat bytes), so unlike
+    // usabilityFlags they stay four separate flag fields rather than one slots array. Canonical doc models a
+    // scalar flags field as a string[], like the header `flags` field.
+    kitUsability1: { ...itmHeaderSpec.kitUsability1, flags: ItmKitUsabilityByte1Flags },
+    kitUsability2: { ...itmHeaderSpec.kitUsability2, flags: ItmKitUsabilityByte2Flags },
+    kitUsability3: { ...itmHeaderSpec.kitUsability3, flags: ItmKitUsabilityByte3Flags },
+    kitUsability4: { ...itmHeaderSpec.kitUsability4, flags: ItmKitUsabilityByte4Flags },
+    // Required weapon proficiency (IESDP "Header Proficiency") - a proficiency-type code, not a scalar. Open
+    // because 0x74+ are mod-extensible PROFICIENCY.IDS slots.
+    weaponProficiency: { ...itmHeaderSpec.weaponProficiency, enum: ItmWeaponProficiency, enumOpen: true },
     // Structural pointers into the abilities + effects sections that follow
     // the header. Editing these by hand silently corrupts the file, so the
     // editor renders them as read-only and (eventually) the canonical writer

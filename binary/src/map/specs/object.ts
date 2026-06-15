@@ -1,7 +1,7 @@
 import { i32, u32 } from "typed-binary";
 import type { FieldSpec, SpecData } from "../../spec/types";
 import type { StructPresentation } from "../../spec/presentation";
-import { MapElevation, ObjectFlags, Rotation } from "../types";
+import { MapElevation, ObjectDataFlags, ObjectFlags, Rotation } from "../types";
 
 /**
  * Wire specs for the fixed-size byte chunks of one MAP object record.
@@ -40,12 +40,34 @@ export const objectBaseSpec = {
     cid: { codec: i32 },
     lightDistance: { codec: i32 },
     lightIntensity: { codec: i32 },
-    field74: { codec: i32, role: "reserved" as const },
+    // Engine-internal int32 with no authored meaning; hidden from the object detail (round-trips via the doc).
+    field74: { codec: i32, role: "reserved" as const, hidden: true },
+    // The object's script reference. The engine binds an object to its script
+    // by `sid` alone: scriptGetScript() linearly searches the map's script
+    // lists for a slot whose `sid` matches (fallout2-ce src/scripts.cc). `sid`
+    // is `(scriptType << 24) | id`; -1 means no script.
+    //
+    // Not a validatable cross-record reference either. A non-(-1) `sid` with no
+    // matching script slot is NOT corruption: at map load objectLoadAllInternal
+    // does `if (scriptGetScript(sid) == -1) obj->sid = -1;` - it silently drops
+    // the unresolved sid, no error (fallout2-ce src/object.cc). Objects also get
+    // scripts from their proto via objectSetScriptFromProto at creation,
+    // independent of the map's stored script lists, so a scripted object need
+    // not have a local script slot at all. Verified against the fixture corpus:
+    // unmatched object sids occur only in maps that already fail to fully parse
+    // (objects-tail opaque), i.e. parser artifacts, not real dangling refs. So
+    // do not build a sid-membership cross-record check; it would flag data the
+    // engine treats as routine.
     sid: { codec: i32 },
-    // Index into the global script table. Position-dependent on serialisation
-    // order; not user data. Editor lock currently still flows through
-    // mapPresentationSchema.patternFields.
-    scriptIndex: { codec: i32, role: "derivedIndex" as const, derivedFrom: { table: "scripts" } as const },
+    // NOT a cross-record reference, despite the name. This is an engine runtime
+    // cache, not the link the engine reads - object->script binding is by `sid`
+    // (above), and fallout2-ce marks this field `// TODO: remove` on its Object
+    // struct (src/obj_types.h). It holds a non-positional engine value (e.g.
+    // 511, 750, 1473 in artemple.map, with only a handful of scripts present),
+    // so it is neither an index into nor a count of the script table. Tagged
+    // `reserved`: round-tripped byte-identically, locked in the editor, never
+    // recomputed or validated. Do not build a cross-record check against it.
+    scriptIndex: { codec: i32, role: "reserved" as const },
 } as const satisfies Record<string, FieldSpec>;
 
 export const inventoryHeaderSpec = {
@@ -64,6 +86,12 @@ export const inventoryHeaderSpec = {
     // disk; the editor must not let the user touch them.
     inventoryCapacity: { codec: i32, role: "reserved" as const },
     inventoryPointer: { codec: i32, role: "reserved" as const },
+} as const satisfies Record<string, FieldSpec>;
+
+// The non-critter object data union begins with `data.flags` (the per-object data flags dword). The item /
+// scenery / misc subtype payload that follows is decoded separately (see parse-objects' subtype trailers).
+export const objectDataSpec = {
+    dataFlags: { codec: u32, flags: ObjectDataFlags },
 } as const satisfies Record<string, FieldSpec>;
 
 export const critterDataSpec = {
@@ -88,6 +116,7 @@ export const exitGridSpec = {
 } as const satisfies Record<string, FieldSpec>;
 
 export type ObjectBaseData = SpecData<typeof objectBaseSpec>;
+export type ObjectDataData = SpecData<typeof objectDataSpec>;
 export type InventoryHeaderData = SpecData<typeof inventoryHeaderSpec>;
 export type CritterData = SpecData<typeof critterDataSpec>;
 export type ExitGridData = SpecData<typeof exitGridSpec>;
@@ -97,11 +126,20 @@ export type ExitGridData = SpecData<typeof exitGridSpec>;
 // derive from `humanize(fieldName)` and don't need an entry.
 export const objectBasePresentation: StructPresentation<ObjectBaseData> = {
     id: { label: "ID" },
-    fid: { label: "FID" },
-    pid: { label: "PID" },
+    // FID, PID and SID are all packed dwords (type<<24 | index); hex makes the type nibble legible and stops the
+    // master list from showing indistinguishable big decimals (e.g. 0x0500000C, not 83886092). SID is the
+    // script reference - the same packed sid the script carries - so it reads in hex like the script's own SID.
+    // CID is a plain signed index (-1 = none), so it stays decimal.
+    fid: { label: "FID", format: "hex32" },
+    pid: { label: "PID", format: "hex32" },
     cid: { label: "CID" },
-    sid: { label: "SID" },
+    sid: { label: "SID", format: "hex32" },
     field74: { label: "Field 74" },
+};
+
+// `dataFlags` humanizes to "Data Flags"; the canonical reader/writer key on that field name.
+export const objectDataPresentation: StructPresentation<ObjectDataData> = {
+    dataFlags: { label: "Data Flags" },
 };
 
 // Inventory header keys all humanize cleanly - empty presentation table.

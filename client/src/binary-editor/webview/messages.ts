@@ -1,0 +1,35 @@
+import type {
+    ChangeSet,
+    Diagnostic,
+    EffectTreeView,
+    NodeId,
+    OpenResult,
+    Row,
+    SpellbookEditOp,
+    SpellbookView,
+    StructureOpRequest,
+} from "@bgforge/binary-editor";
+
+/** Messages the webview posts up to the host. */
+export type WebviewToHost =
+    | { type: "ready" }
+    | { type: "requestChildren"; requestId: number; nodeId: NodeId | null; start: number; end: number }
+    | { type: "requestSpellbook"; requestId: number }
+    | { type: "requestEffectTree"; requestId: number }
+    | { type: "editField"; nodeId: NodeId; value: number | string }
+    | { type: "structureOp"; op: StructureOpRequest }
+    | { type: "spellbookEdit"; op: SpellbookEditOp }
+    | { type: "dumpJson" }
+    | { type: "loadJson" }
+    | { type: "runtimeError"; message: string; stack?: string };
+
+/** Messages the host posts down to the webview. */
+export type HostToWebview =
+    | { type: "init"; open: OpenResult }
+    | { type: "children"; requestId: number; parentId: NodeId | null; rows: Row[]; total: number }
+    | { type: "spellbook"; requestId: number; view: SpellbookView }
+    | { type: "effectTree"; requestId: number; view: EffectTreeView }
+    | { type: "changeSet"; changeSet: ChangeSet; selection?: NodeId }
+    | { type: "invalidated" }
+    | { type: "diagnostics"; diagnostics: Diagnostic[] }
+    | { type: "error"; requestId?: number; message: string };

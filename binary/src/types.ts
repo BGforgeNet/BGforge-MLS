@@ -58,6 +58,22 @@ export interface ParsedField {
      */
     enumOptions?: Readonly<Record<string, string>>;
     flagOptions?: Readonly<Record<string, string>>;
+    /** Display hint (from the spec's `enumOpen`): the enum table is advisory, not a closed value set, so the
+     *  dropdown lets the user enter a custom numeric value (shown as "N Unknown"). Closed enums omit this. */
+    enumOpen?: boolean;
+    /**
+     * Numeric display format (from the presentation `format` hint), carried so the editable control can
+     * format AND parse the value: `hex32` shows/edits `0x...`. Display-only - `rawValue` stays the stored
+     * number, so the round-trip is byte-identical. (Signedness is the codec's job, not a display format.)
+     */
+    numericFormat?: "hex32";
+    /**
+     * Display hint (from the spec's `hidden` flag): omit this field from the rendered detail form. The field
+     * stays in the display tree with its value intact, so the byte round-trip is unaffected (the rebuilder
+     * reads it back by label) - only the editor view skips rendering it. Used for reserved/padding/magic
+     * fields (signature/version duplicates, `unused*`, `unknown`) that carry no value the user edits.
+     */
+    hidden?: boolean;
 }
 
 /**
@@ -71,6 +87,13 @@ export interface ParsedGroup {
     /** Whether this group is expanded by default */
     expanded?: boolean;
     /**
+     * Display hint: render this group's scalar fields in N columns instead of the form's default. Set by the
+     * `view: "slots"` walker for a small fixed slot array (e.g. ITM ability Melee Animation's 3 named slots)
+     * so the slots sit on one row rather than wrapping awkwardly in the 2-column detail grid. Presentation
+     * only - it carries no structural meaning.
+     */
+    columns?: number;
+    /**
      * Set when the parser couldn't fully decode this record's wire layout
      * (e.g. a MAP object whose subtype payload is described by an unavailable
      * `.pro` file). The group's already-decoded fields render for inspection,
@@ -82,6 +105,9 @@ export interface ParsedGroup {
      * non-editable.
      */
     editingLocked?: boolean;
+    /** Display hint: omit this group from the rendered detail form (mirrors `ParsedField.hidden`). The group
+     *  stays in the tree for the byte round-trip; only the editor view skips it. */
+    hidden?: boolean;
 }
 
 // ParseDisplayModel + ParseSerializationContext exist only as composition pieces of
@@ -112,6 +138,12 @@ export interface ParseResult extends ParseDisplayModel, ParseSerializationContex
     formatName: string;
     /** Format-specific canonical data model, separate from the editor/display tree */
     document?: BinaryCanonicalDocument;
+    /**
+     * Layout-variant id the parser reports for object/sub-type dispatch (e.g. "critter",
+     * "item.weapon"). Selects the matching variant from the format's declarative `layout`.
+     * Optional: formats without a layout schema leave it unset and use the legacy tabs path.
+     */
+    variantId?: string;
 }
 
 /**

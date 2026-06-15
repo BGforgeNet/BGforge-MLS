@@ -276,7 +276,7 @@ function serializeObjects(bytes: Uint8Array, objects: z.infer<typeof mapObjectsS
     return offset;
 }
 
-function objectsSerializedLength(objects: z.infer<typeof mapObjectsSchema>): number {
+export function objectsSerializedLength(objects: z.infer<typeof mapObjectsSchema>): number {
     let length = 4 + objects.elevations.length * 4;
     for (const elevation of objects.elevations) {
         for (const object of elevation.objects) {
@@ -284,6 +284,21 @@ function objectsSerializedLength(objects: z.infer<typeof mapObjectsSchema>): num
         }
     }
     return length;
+}
+
+/**
+ * Byte offset where the objects section begins: header + variables + tiles +
+ * scripts. Objects are the last real section, so any opaque range at or after
+ * this offset must be shifted by an objects-resize delta before serialize.
+ * Reuses the same per-section length helpers the writer uses for layout.
+ */
+export function mapObjectsSectionStart(document: MapCanonicalDocument): number {
+    return (
+        HEADER_SIZE +
+        (document.globalVariables.length + document.localVariables.length) * 4 +
+        tileSectionLength(document.header) +
+        scriptSectionLength(document.scripts)
+    );
 }
 
 function applyOpaqueRanges(target: Uint8Array, opaqueRanges?: ParseOpaqueRange[]): void {

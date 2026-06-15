@@ -1,0 +1,2011 @@
+/*
+ * Binary-editor webview theme. Targets a refined, native VS Code look (Settings / JSON-editor altitude):
+ * comfortable spacing, clear hierarchy, theme-driven colors. All selectors are generic and class-based,
+ * driven by component structure - no format-specific rules. Variables carry fallbacks where a theme may
+ * omit them (notably the inputValidation/warning family) so nothing renders invisibly.
+ */
+
+/* ---- root / layout (re-themed; layout sizing preserved from the working baseline) ---- */
+html,
+body {
+    height: 100%;
+    margin: 0;
+}
+body {
+    font-family: var(--vscode-font-family, sans-serif);
+    font-size: var(--vscode-font-size, 13px);
+    color: var(--vscode-foreground);
+    background: var(--vscode-editor-background);
+}
+#app {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+}
+
+/* ---- toolbar ---- */
+.toolbar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+/* JSON import/export grouped on the right edge of the toolbar, apart from the left-hand view options. */
+.toolbar-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* ---- toolbar buttons (icon + label, secondary appearance) ---- */
+.toolbar-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+.toolbar-btn-label {
+    font-size: 0.9em;
+    white-space: nowrap;
+}
+
+/* ---- buttons (toolbar / actions): primary by default, secondary variant for low-emphasis controls ---- */
+button {
+    appearance: none;
+    font: inherit;
+    cursor: pointer;
+    border: 1px solid transparent;
+    border-radius: 2px;
+    padding: 0.25rem 0.7rem;
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    line-height: 1.3;
+    white-space: nowrap;
+}
+button:hover {
+    background: var(--vscode-button-hoverBackground, var(--vscode-button-background));
+}
+button:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: -1px;
+}
+
+/* Row actions, quick-fixes, and the section-tab buttons are low-emphasis: render them as secondary. */
+.row-actions-btn,
+.quick-fix {
+    background: var(--vscode-button-secondaryBackground, transparent);
+    color: var(--vscode-button-secondaryForeground, var(--vscode-foreground));
+    border-color: var(--vscode-button-border, transparent);
+}
+.row-actions-btn:hover,
+.quick-fix:hover {
+    background: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground));
+}
+/* Danger variant (Delete): uses the error foreground on hover so intent is obvious. */
+.row-actions-btn-danger {
+    color: var(--vscode-button-secondaryForeground, var(--vscode-foreground));
+}
+.row-actions-btn-danger:hover:not(:disabled) {
+    color: var(--vscode-errorForeground, #f48771);
+    background: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground));
+}
+
+/* ---- diagnostics banner ---- */
+.banner {
+    flex: 0 0 auto;
+    margin: 0.5rem 0.75rem 0;
+    padding: 0.5rem 0.75rem;
+    border-radius: 2px;
+}
+.banner.warning {
+    background: var(--vscode-inputValidation-warningBackground, rgba(204, 167, 0, 0.15));
+    border: 1px solid var(--vscode-inputValidation-warningBorder, var(--vscode-editorWarning-foreground, #cca700));
+    color: var(--vscode-inputValidation-warningForeground, var(--vscode-foreground));
+}
+/* Info banner: orphan/unreferenced notes - informational, not a problem. Uses the theme's info tokens. */
+.banner.info {
+    background: var(--vscode-inputValidation-infoBackground, rgba(0, 122, 204, 0.12));
+    border: 1px solid var(--vscode-inputValidation-infoBorder, var(--vscode-editorInfo-foreground, #3794ff));
+    color: var(--vscode-inputValidation-infoForeground, var(--vscode-foreground));
+}
+/* Error banner: a failed edit/structure/spellbook op. Uses the theme's error-validation tokens. */
+.banner.error {
+    background: var(--vscode-inputValidation-errorBackground, rgba(190, 17, 28, 0.15));
+    border: 1px solid var(--vscode-inputValidation-errorBorder, var(--vscode-editorError-foreground, #be1100));
+    color: var(--vscode-inputValidation-errorForeground, var(--vscode-foreground));
+}
+/* Row that holds the leading warning icon and the bold summary text, aligned by baseline. */
+.banner-header {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+.banner-header .codicon {
+    color: var(--vscode-editorWarning-foreground, #cca700);
+    font-size: 1em;
+    flex-shrink: 0;
+}
+.banner.info .banner-header .codicon {
+    color: var(--vscode-editorInfo-foreground, #3794ff);
+}
+.banner.error .banner-header .codicon {
+    color: var(--vscode-editorError-foreground, #be1100);
+}
+/* The error banner's header spans the full width so the dismiss button can sit at the far right. */
+.banner.error .banner-header {
+    display: flex;
+    width: 100%;
+}
+.banner-dismiss {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    padding: 0 0.15rem;
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    opacity: 0.8;
+}
+.banner-dismiss:hover {
+    opacity: 1;
+}
+.banner-summary {
+    font-weight: 600;
+}
+.banner-list {
+    margin: 0.35rem 0 0;
+    padding-left: 1.2rem;
+    list-style: disc;
+}
+.banner-list li {
+    margin: 0.1rem 0;
+}
+
+/* ---- list filter (master pane, above VirtualList) ---- */
+/* Sits between the optional add-toolbar and the VirtualList. Themed to blend with the input
+   palette so it reads as part of the list surface, not a toolbar. */
+.list-filter {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.3rem 0.5rem;
+    border-bottom: 1px solid var(--vscode-panel-border);
+    background: var(--vscode-input-background);
+}
+.list-filter .codicon {
+    flex: 0 0 auto;
+    font-size: 0.9em;
+    color: var(--vscode-descriptionForeground);
+}
+.list-filter-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    font: inherit;
+    color: var(--vscode-input-foreground, var(--vscode-foreground));
+    background: transparent;
+    border: none;
+    outline: none;
+    padding: 0;
+}
+.list-filter-input::placeholder {
+    color: var(--vscode-input-placeholderForeground, var(--vscode-descriptionForeground));
+}
+.list-filter:focus-within {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: -1px;
+}
+.list-filter-clear {
+    flex: 0 0 auto;
+    appearance: none;
+    font: inherit;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    /* Explicit min-size so the button is always visible even when the codicon font has not loaded. */
+    min-width: 1.2rem;
+    min-height: 1.2rem;
+    padding: 0 0.1rem;
+    color: var(--vscode-descriptionForeground);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 2px;
+    line-height: 1;
+}
+.list-filter-clear:hover {
+    color: var(--vscode-foreground);
+    background: var(--vscode-list-hoverBackground);
+}
+.list-filter-empty {
+    padding: 0.5rem 0.75rem;
+}
+
+/* ---- master / detail split ---- */
+.master-detail {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+}
+.master {
+    flex: 0 0 16rem;
+    min-height: 0;
+    overflow: auto;
+    border-right: 1px solid var(--vscode-panel-border);
+    display: flex;
+    flex-direction: column;
+}
+.master .toolbar {
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+.detail {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
+}
+
+/* Variable-length lists embedded in the dense declarative layout need a bounded, scrollable viewport for the
+   VirtualList: it sizes its render window from the .vlist clientHeight, so without a bound a long list (a MAP
+   elevation has thousands of objects) would render every row. Bound the LIST viewport only (.master .vlist),
+   and let the detail FORM grow to its natural height and flow into the page scroll - so a tall detail (e.g. an
+   ITM ability) shows in full under one page scroll instead of a nested inner scrollbar. align-items:flex-start
+   keeps the short master column hugging the top instead of stretching to the detail's height. The inline-list
+   variant is bounded the same way below. Outside .layout-root (the legacy tabs path), the list fills a
+   flex-bounded body and these rules do not apply. */
+.layout-root .master-detail {
+    align-items: flex-start;
+}
+.layout-root .detail {
+    overflow: visible;
+}
+.layout-root .master .vlist {
+    height: auto;
+    /* Use the vertical space beside the (taller) detail form instead of scrolling early; shared cap with the
+       tree viewport so the two can't diverge (see --bb-list-max-height). `height:auto` still hugs a short list. */
+    max-height: var(--bb-list-max-height, 48rem);
+}
+/* Abilities+effects tree: a single VIRTUALIZED collapsible column on the master side. The whole view is in
+   memory; the groups are flattened (respecting collapse + filter) into fixed-height rows and only the rows in
+   the viewport are mounted (.eff-tree-vrow absolutely positioned over a full-height spacer). The
+   .eff-tree-vlist is the lone scroll container (max-height bounds it; the detail flows into the page scroll),
+   so there is no nested double-scroll. */
+.eff-tree-master {
+    /* min-width:0 so flex-basis actually governs the width: without it the column's min-content (the toolbar -
+       "+ ability" button + filter + icons) silently pins it far wider (~23rem) than the short rows need
+       ("Ability N", "Effect N - op NNN", "Global (Equipping)"), wasting width the detail pane could use. 14rem
+       clears the widest label (Global header floors at ~12rem) and keeps the filter input usable (~10ch). */
+    flex-basis: 14rem;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: visible;
+}
+.eff-tree-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.25rem 0.4rem;
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+.eff-tree-toolbtn {
+    flex: 0 0 auto;
+}
+/* Collapse-all / expand-all icon buttons at the right of the tree toolbar. */
+.eff-tree-iconbtn {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    background: none;
+    border: none;
+    padding: 0.15rem 0.25rem;
+    cursor: pointer;
+    color: inherit;
+    opacity: 0.75;
+}
+.eff-tree-iconbtn:hover {
+    opacity: 1;
+    background: var(--vscode-toolbar-hoverBackground);
+    border-radius: 3px;
+}
+.eff-tree-filter {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+.eff-tree-vlist {
+    overflow-y: auto;
+    max-height: var(--bb-list-max-height, 48rem);
+}
+.eff-tree-spacer {
+    position: relative;
+}
+.eff-tree-vrow {
+    position: absolute;
+    left: 0;
+    right: 0;
+}
+.eff-tree-head {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    height: 100%;
+    padding: 0 0.4rem;
+    font-weight: 600;
+}
+.eff-tree-head.eff-tree-unassigned {
+    color: var(--vscode-editorWarning-foreground);
+}
+.eff-tree-chevron {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    color: inherit;
+    display: flex;
+    align-items: center;
+}
+.eff-tree-head-label {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.eff-tree-global {
+    cursor: default;
+}
+/* Per-ability "add effect" icon button: hidden until the row is hovered/focused so headers stay clean. */
+.eff-tree-add {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    background: none;
+    border: none;
+    padding: 0 0.15rem;
+    margin: 0;
+    cursor: pointer;
+    color: inherit;
+    opacity: 0;
+}
+.eff-tree-head:hover .eff-tree-add,
+.eff-tree-add:focus-visible {
+    opacity: 0.85;
+}
+.eff-tree-add:hover {
+    opacity: 1;
+}
+.eff-tree-level {
+    flex: 0 0 auto;
+    font-weight: 400;
+    font-size: 0.8em;
+    padding: 0 0.3rem;
+    border-radius: 3px;
+    background: var(--vscode-badge-background);
+    color: var(--vscode-badge-foreground);
+}
+.eff-tree-count {
+    flex: 0 0 auto;
+    opacity: 0.7;
+    font-weight: 400;
+    font-size: 0.85em;
+}
+.eff-tree-effect {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    padding: 0 0.4rem 0 1.6rem;
+}
+.eff-tree-effect-label {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+/* Hover highlights the WHOLE row (the head row with its controls, or the full-width effect button), and is
+   suppressed on the already-selected row so hovering a selection does not recolor it. */
+.eff-tree-head:not(.eff-tree-selected):hover,
+.eff-tree-effect:not(.eff-tree-selected):hover {
+    background: var(--vscode-list-hoverBackground);
+}
+/* The chevron / label / add inside a head row are <button>s, so the global `button:hover` would give each its
+   OWN highlight on top of the row's. Force them transparent on hover so the parent row's hover/selection
+   background shows through uniformly - the row, not the label, is the hover target. */
+.eff-tree-head-label:hover,
+.eff-tree-chevron:hover,
+.eff-tree-add:hover {
+    background: none;
+}
+/* Effect selection is qualified with `.eff-tree-effect` (specificity 0,2,0) so it beats the global
+   `button:hover` (0,1,1) - otherwise hovering an already-selected effect would swap its selection colour for
+   the button-hover colour. */
+.eff-tree-effect.eff-tree-selected,
+.eff-tree-head.eff-tree-selected {
+    background: var(--vscode-list-activeSelectionBackground);
+    color: var(--vscode-list-activeSelectionForeground);
+}
+.eff-tree-empty {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    padding: 0 0.4rem 0 1.6rem;
+    opacity: 0.6;
+    font-style: italic;
+}
+
+.layout-root .inline-list {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+.layout-root .inline-list .vlist {
+    height: auto;
+    /* Hug content (height:auto) but, as the sole content of the Variables tab, grow to fill the page height
+       before scrolling - a low fixed cap stranded a long var list in a short scrollbox. Still bounded so the
+       virtual window stays cheap. */
+    max-height: calc(100vh - 13rem);
+    /* The inline list's rows are absolutely positioned, so the .vlist has no intrinsic width and the
+       content-hugging layout panel would collapse it (and the row text) to a sliver. Give it a definite
+       width sized for a "Label  value" int32 row. */
+    width: 20rem;
+}
+
+/* ---- form ---- */
+.form {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    padding: 0.5rem 0.75rem;
+}
+/* Cross-record jump chip rendered beside a reference field's value (MAP script Owner ID -> object, object
+   SID -> script). A themed text link, not a button-looking control, so it reads as navigation. */
+.jump-link {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.25rem;
+    margin-left: 0.4rem;
+    padding: 0;
+    background: none;
+    border: none;
+    color: var(--vscode-textLink-foreground);
+    cursor: pointer;
+    font: inherit;
+    white-space: nowrap;
+}
+.jump-link:hover {
+    color: var(--vscode-textLink-activeForeground);
+    text-decoration: underline;
+}
+.jump-arrow {
+    opacity: 0.75;
+}
+/* Flag fields in a detail form render full-width below the 2-column scalar grid (their checkbox grid uses
+   the whole width and would otherwise strand the scalar columns by their height). Each flag field is a boxed
+   FlagColumns group (.layout-root .flag-group), so its bits read as aligned columns rather than a ragged
+   pack-left wrap - the box/legend styling is shared with the layout path. */
+.form-flags {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+/* ---- field row: stable label width + control, comfortable vertical rhythm for scannable long forms ---- */
+.field {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.2rem 0;
+    min-height: 1.6rem;
+}
+.field .label {
+    flex: 0 0 12rem;
+    color: var(--vscode-foreground);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+/* Wraps the control plus its trailing chrome (diagnostic) so .field has exactly two children
+   (label + value). In the flex tabs path this is the value side; the layout path makes it the subgrid's
+   second column. */
+.field-control {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* Inline "joined" field row: a labelled run of small numeric inputs with a separator between (e.g. CRE Level
+   "1 / 2 / 3", CRE Strength "18 / 100"). The inputs fit up to 3 digits (a u8 max, e.g. the percentile strength
+   bonus); spinners are dropped so the box stays compact. */
+.field-control.joined {
+    flex-wrap: nowrap;
+    gap: 0;
+}
+.field-control.joined .joined-sep {
+    padding: 0 0.3rem;
+    color: var(--vscode-descriptionForeground);
+}
+.field-control.joined .joined-input input[type="number"] {
+    width: 4.5ch;
+    box-sizing: border-box;
+    padding: 0.2rem 0.25rem;
+    text-align: center;
+    appearance: textfield;
+}
+.field-control.joined .joined-input input[type="number"]::-webkit-inner-spin-button,
+.field-control.joined .joined-input input[type="number"]::-webkit-outer-spin-button {
+    appearance: none;
+    margin: 0;
+}
+
+/* ---- inputs / selects ---- */
+input[type="text"],
+input[type="number"],
+select {
+    font: inherit;
+    color: var(--vscode-input-foreground, var(--vscode-foreground));
+    background: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border, transparent);
+    border-radius: 2px;
+    padding: 0.2rem 0.4rem;
+}
+/* The combobox is the single enum control: a bordered box holding a borderless text input (the search field)
+ * that FILLS the box, with the chevron overlaid absolutely on the right. The input must span the full box
+ * width because bits-ui anchors the open dropdown-list popup to the input element - if the input were narrower
+ * than the box (e.g. a flex sibling shrunk by the chevron), the list would be offset from the value field by
+ * the chevron width. Right-padding on the input keeps the value text clear of the overlaid chevron. Width is
+ * applied to .bb-combobox (the box) by the field-control tier rules below. */
+.bb-combobox {
+    position: relative;
+    display: inline-block;
+    color: var(--vscode-input-foreground, var(--vscode-foreground));
+    background: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border, transparent);
+    border-radius: 2px;
+}
+.bb-combobox:focus-within {
+    border-color: var(--vscode-focusBorder);
+}
+.bb-combobox-input {
+    font: inherit;
+    color: inherit;
+    background: transparent;
+    border: none;
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0.2rem 1.5rem 0.2rem 0.4rem; /* right pad clears the overlaid chevron */
+}
+.bb-combobox-trigger {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    display: inline-flex;
+    align-items: center;
+    padding: 0 0.4rem;
+    color: var(--vscode-descriptionForeground);
+    pointer-events: none; /* decorative chevron: clicks fall through to the input, which owns opening */
+}
+.bb-combobox-trigger::after {
+    content: "\25BE"; /* down-pointing triangle indicating a dropdown */
+    font-size: 0.8em;
+}
+/* The dropdown list spans at least the value field's width (the anchor is the full-width input), so the list is
+ * never narrower than the closed control. It can still grow wider for a long option. */
+.bb-combobox-content {
+    min-width: var(--bits-combobox-anchor-width);
+    padding: 0; /* the viewport carries the inner padding - it is the rect bits-ui's highlight check measures */
+}
+.bb-combobox-viewport {
+    /* Inset items from the viewport edges so the top item clears bits-ui's strict "fully inside the viewport"
+     * highlight check (nodeRect.top > viewportRect.top etc.), which otherwise never highlights the first match. */
+    padding: 0.2rem;
+}
+input[type="text"]:focus,
+input[type="number"]:focus,
+select:focus,
+.bb-combobox-input:focus {
+    outline: none;
+    border-color: var(--vscode-focusBorder);
+}
+input:disabled,
+select:disabled {
+    opacity: 0.5;
+}
+input[type="text"]::placeholder {
+    color: var(--vscode-input-placeholderForeground, var(--vscode-descriptionForeground));
+}
+
+/* Read-only (non-editable / derived / locked) controls in the dense layout render as plain muted text -
+ * no input box, no dropdown arrow - rather than a dimmed input, so it is obvious at a glance which fields
+ * are editable (a control with input chrome) vs read-only (#17). Editable controls keep their box + a
+ * focus ring on focus only. */
+.layout-root input:disabled,
+.layout-root select:disabled,
+.layout-root .bb-combobox-input:disabled {
+    opacity: 1;
+    border-color: transparent;
+    background: transparent;
+    color: var(--vscode-descriptionForeground);
+    cursor: default;
+}
+/* A read-only enum: strip the box chrome (the input inside is already muted by the rule above) and drop the
+ * chevron, so it reads as plain muted text like the other read-only controls. */
+.layout-root .bb-combobox:has(.bb-combobox-input:disabled) {
+    border-color: transparent;
+    background: transparent;
+}
+.layout-root .bb-combobox:has(.bb-combobox-input:disabled) .bb-combobox-trigger {
+    display: none; /* no dropdown affordance on a read-only enum */
+}
+.layout-root .hex-input.disabled {
+    opacity: 1;
+    border-color: transparent;
+    background: transparent;
+}
+
+/* ---- bb-popup-* (shared popup surface rules for Select, Combobox, and Menu primitives) ----
+ * Content/item rules that were near-identical across bb-select, bb-combobox, and bb-menu are
+ * consolidated here. Each primitive's Content element carries both the primitive-specific class
+ * (for anchor-width vars and any other primitive-specific overrides) AND .bb-popup-content; each
+ * Item carries .bb-popup-item. Floating positioning is applied via CSSOM, CSP-safe under the strict
+ * nonce policy. bits-ui sets data-highlighted, data-selected, and data-disabled on items. */
+.bb-popup-content {
+    z-index: 50;
+    max-height: 18rem;
+    box-sizing: border-box;
+    color: var(--vscode-input-foreground, var(--vscode-foreground));
+    background: var(--vscode-input-background);
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 2px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.36);
+    padding: 0.2rem;
+}
+.bb-popup-item {
+    box-sizing: border-box;
+    cursor: pointer;
+    padding: 0.2rem 0.5rem;
+    border-radius: 2px;
+    color: var(--vscode-foreground);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.bb-popup-item[data-highlighted] {
+    background: var(--vscode-list-hoverBackground);
+}
+.bb-popup-item[data-selected] {
+    background: var(--vscode-list-activeSelectionBackground);
+    color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground));
+}
+.bb-popup-item[data-disabled] {
+    opacity: 0.5;
+    cursor: default;
+}
+
+/* ---- bb-menu (themed contextual action menu via the Menu primitive wrapper) ----
+ * Generic, format-agnostic theming for the headless DropdownMenu primitive. bits-ui sets
+ * data-highlighted and data-disabled on items; there is no data-selected (menus are not selection
+ * controls). The menu surface uses .bb-popup-content for the shared floating panel rules.
+ * Content/item rules are shared via .bb-popup-content and .bb-popup-item above.
+ * Floating positioning is applied via CSSOM, CSP-safe under the strict nonce policy. */
+.bb-menu-trigger {
+    /* Secondary button: icon-only "more actions" affordance. */
+    appearance: none;
+    font: inherit;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.1rem 0.3rem;
+    background: var(--vscode-button-secondaryBackground, transparent);
+    color: var(--vscode-button-secondaryForeground, var(--vscode-foreground));
+    border: 1px solid var(--vscode-button-border, transparent);
+    border-radius: 2px;
+    line-height: 1;
+}
+.bb-menu-trigger:hover {
+    background: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground));
+}
+.bb-menu-trigger[data-state="open"] {
+    outline: none;
+    border-color: var(--vscode-focusBorder);
+}
+.bb-menu-content {
+    /* Menu panels do not need an anchor-width constraint; they size to their widest item. */
+    min-width: 10rem;
+}
+.bb-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+.bb-menu-item-danger {
+    color: var(--vscode-errorForeground);
+}
+.bb-menu-item-danger[data-highlighted] {
+    /* Keep the highlighted background but keep the danger color. */
+    background: var(--vscode-list-hoverBackground);
+    color: var(--vscode-errorForeground);
+}
+
+/* ---- bb-checkbox (themed boolean control via the Checkbox primitive wrapper) ----
+ * Generic, format-agnostic theming for the headless Checkbox primitive. bits-ui sets data-state="checked"
+ * | "unchecked" | "indeterminate" on the Root button, and data-disabled when the control is disabled.
+ * The checkmark is drawn with a CSS ::after pseudo-element so no icon font is required - the control
+ * renders correctly in both the real webview and the standalone harness. Falls back from the optional
+ * --vscode-checkbox-* vars (not always defined by all VS Code themes) to --vscode-input-* equivalents. */
+.bb-checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: pointer;
+    user-select: none;
+}
+.bb-checkbox-label:has([data-disabled]) {
+    opacity: 0.5;
+    cursor: default;
+}
+.bb-checkbox-root {
+    appearance: none;
+    flex: 0 0 auto;
+    width: 1em;
+    height: 1em;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--vscode-checkbox-background, var(--vscode-input-background));
+    border: 1px solid var(--vscode-checkbox-border, var(--vscode-input-border, #3c3c3c));
+    border-radius: 2px;
+    padding: 0;
+    cursor: pointer;
+    /* Reset the global button styles that override the checkbox look. */
+    color: var(--vscode-checkbox-foreground, var(--vscode-foreground));
+    line-height: 1;
+    white-space: normal;
+}
+.bb-checkbox-root:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: 1px;
+}
+.bb-checkbox-root[data-state="checked"] {
+    background: var(--vscode-checkbox-background, var(--vscode-input-background));
+    border-color: var(--vscode-focusBorder, var(--vscode-checkbox-border, #007fd4));
+}
+.bb-checkbox-root[data-disabled] {
+    cursor: default;
+}
+/* CSS-drawn checkmark inside .bb-checkbox-indicator: a rotated L-shape using ::after. Visible only when the
+ * sibling data-checked attribute is true (set by the Checkbox.svelte children snippet prop). */
+.bb-checkbox-indicator {
+    display: block;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    pointer-events: none;
+}
+.bb-checkbox-indicator[data-checked="true"]::after {
+    content: "";
+    position: absolute;
+    left: 20%;
+    top: 5%;
+    width: 35%;
+    height: 65%;
+    border-right: 2px solid var(--vscode-checkbox-foreground, var(--vscode-foreground));
+    border-bottom: 2px solid var(--vscode-checkbox-foreground, var(--vscode-foreground));
+    transform: rotate(45deg);
+}
+.bb-checkbox-text {
+    font: inherit;
+    color: var(--vscode-foreground);
+}
+
+/* ---- bb-tabs (in-house accessible tablist strip for primitives/Tabs.svelte) ----
+ * Strip-only: no content panel rendering here - the consumer renders the active panel.
+ * Two variants defined here - the visual hierarchy must remain distinct:
+ *   .bb-tabs.primary:    top-level section strip (prominent, full-opacity, focusBorder active accent,
+ *                        heavier padding); used by SectionTabs for file-level section switching.
+ *   .bb-tabs.secondary:  in-form tabs (subdued descriptionForeground default, smaller padding,
+ *                        list-activeSelectionBackground accent, clearly subordinate hierarchy).
+ * Default variant is "secondary" so existing in-form usages are unaffected.
+ * bits-ui data-state="active"/"inactive" on the trigger (set via aria-selected mirror); we key styles
+ * on the .active class and [aria-selected="true"] for maximum portability. */
+.bb-tabs {
+    display: flex;
+    gap: 0;
+}
+.bb-tabs button {
+    appearance: none;
+    font: inherit;
+    cursor: pointer;
+    background: transparent;
+    color: var(--vscode-descriptionForeground, var(--vscode-foreground));
+    border: none;
+    border-radius: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    white-space: nowrap;
+    line-height: 1.3;
+}
+.bb-tabs button:hover {
+    color: var(--vscode-foreground);
+    background: var(--vscode-list-hoverBackground);
+}
+.bb-tabs button:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder, #007fd4);
+    outline-offset: -1px;
+    z-index: 1;
+    position: relative;
+}
+/* A disabled tab (e.g. a MAP elevation absent per the header skip-flag): greyed out, non-interactive. */
+.bb-tabs button:disabled,
+.bb-tabs button.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+.bb-tabs button:disabled:hover,
+.bb-tabs button.disabled:hover {
+    color: var(--vscode-descriptionForeground, var(--vscode-foreground));
+    background: transparent;
+}
+/* Optional count badge after a tab label (e.g. items in this tab); a subtle pill using the theme badge tokens. */
+.bb-tabs .bb-tab-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.5em;
+    padding: 0 5px;
+    border-radius: 8px;
+    font-size: 0.78em;
+    background: var(--vscode-badge-background);
+    color: var(--vscode-badge-foreground);
+}
+/* -- horizontal secondary: pill-underline style (lighter, subdued, subordinate to the primary strip) -- */
+.bb-tabs.horizontal.secondary {
+    flex-direction: row;
+    /* Wrap rather than horizontally scroll when a form has many in-line tabs (same rationale as the
+       primary strip below; row-gap offsets the buttons' -1px margin-bottom). */
+    flex-wrap: wrap;
+    row-gap: 1px;
+    border-bottom: 1px solid var(--vscode-panel-border, #2b2b2b);
+}
+.bb-tabs.horizontal.secondary button {
+    padding: 0.25rem 0.6rem;
+    margin-bottom: -1px; /* overlap the strip border so the active line covers it */
+    border-bottom: 2px solid transparent;
+}
+.bb-tabs.horizontal.secondary button.active,
+.bb-tabs.horizontal.secondary button[aria-selected="true"] {
+    color: var(--vscode-foreground);
+    border-bottom-color: var(--vscode-list-activeSelectionBackground, #094771);
+    /* list-activeSelectionBackground for the active indicator: visually distinct from the primary strip
+       which uses focusBorder. Keeps the two levels clearly separated at a glance. */
+}
+/* -- horizontal primary: top-level section strip (prominent, full-opacity, focusBorder active accent) -- */
+.bb-tabs.horizontal.primary {
+    flex: 0 0 auto; /* stable height in the App column layout between toolbar and content */
+    flex-direction: row;
+    /* Wrap to multiple rows rather than overflowing into a horizontal scroll when a format has many
+       sections (e.g. .pro files). row-gap cancels the buttons' -1px margin-bottom so wrapped rows don't
+       overlap; the active underline still renders per button on whichever row it lands. */
+    flex-wrap: wrap;
+    row-gap: 1px;
+    padding: 0 0.75rem;
+    border-bottom: 1px solid var(--vscode-panel-border, #2b2b2b);
+}
+.bb-tabs.horizontal.primary button {
+    padding: 0.4rem 0.7rem;
+    margin-bottom: -1px; /* overlap the strip's bottom border so the active underline sits on it */
+    border-bottom: 2px solid transparent;
+    opacity: 0.8;
+    color: var(--vscode-foreground);
+}
+.bb-tabs.horizontal.primary button:hover {
+    opacity: 1;
+    background: var(--vscode-list-hoverBackground);
+}
+.bb-tabs.horizontal.primary button.active,
+.bb-tabs.horizontal.primary button[aria-selected="true"] {
+    opacity: 1;
+    border-bottom-color: var(--vscode-focusBorder, #007fd4);
+    color: var(--vscode-foreground);
+}
+/* -- vertical: left-rail style (stacked tabs, left-edge accent marks active) -- */
+.bb-tabs.vertical {
+    flex-direction: column;
+    border-right: 1px solid var(--vscode-panel-border, #2b2b2b);
+    min-width: 8rem;
+}
+.bb-tabs.vertical button {
+    padding: 0.3rem 0.75rem 0.3rem 0.5rem;
+    margin-right: -1px; /* overlap the rail border so the active accent covers it */
+    border-right: 2px solid transparent;
+    text-align: left;
+    width: 100%;
+    justify-content: flex-start;
+}
+.bb-tabs.vertical button.active,
+.bb-tabs.vertical button[aria-selected="true"] {
+    /* A muted selection background plus the focusBorder right-edge accent - NOT the strong solid
+       list-activeSelectionBackground fill, which reads as a filled action button next to the toolbar's blue
+       buttons. This matches the horizontal tabs' border-accent language (active = accent edge, not a fill) so
+       an active vertical tab reads as a selected tab. inactiveSelectionBackground is the VS Code convention for
+       a selected-but-unfocused row, which is exactly this strip's semantic. */
+    background: var(--vscode-list-inactiveSelectionBackground, #37373d);
+    color: var(--vscode-foreground);
+    border-right-color: var(--vscode-focusBorder, #007fd4);
+}
+
+/* ---- virtualized list rows ---- */
+.vlist {
+    height: 100%;
+    overflow: auto; /* moved from inline style on VirtualList/InlineList to avoid CSP inline-style violation */
+}
+.vrow {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    overflow: hidden;
+    cursor: pointer;
+    padding: 0 0.5rem;
+    /* --vrow-height is set by VirtualList from its rowHeight so the two can't drift; 22px is the fallback. */
+    line-height: var(--vrow-height, 22px);
+    color: var(--vscode-foreground);
+}
+.vrow:hover {
+    background: var(--vscode-list-hoverBackground);
+}
+.vrow.selected {
+    background: var(--vscode-list-activeSelectionBackground);
+    color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground));
+}
+.vrow.selected:hover {
+    background: var(--vscode-list-activeSelectionBackground);
+}
+/* Muted positional index - narrow, subdued, stays readable in both normal and selected states. */
+.vrow-index {
+    flex: 0 0 auto;
+    min-width: 1.4rem;
+    text-align: right;
+    font-size: 0.85em;
+    color: var(--vscode-descriptionForeground);
+    opacity: 0.75;
+    font-variant-numeric: tabular-nums;
+}
+.vrow.selected .vrow-index {
+    color: var(--vscode-list-activeSelectionForeground, var(--vscode-descriptionForeground));
+}
+/* Primary label - the summary (opcode name etc.) or positional name fallback; truncates on overflow. */
+.vrow-label {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/* ---- inline list rows (editable in place) ---- */
+.inline-list-toolbar {
+    flex: 0 0 auto;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+.vrow.inline {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0 0.5rem;
+    line-height: normal; /* inline rows are taller (InlineList rowHeight); center via flex, not line-height */
+}
+.vrow.inline .row-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 0.2rem;
+}
+/* In compact (InlineList) rows: keep icon buttons tight; no text label is rendered. */
+.vrow.inline .row-actions-btn {
+    padding: 0.1rem 0.3rem;
+    font-size: 0.9em;
+}
+
+/* ---- row actions (master/detail header) ---- */
+.row-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.5rem 0.75rem;
+}
+/* Icon+label buttons in the non-compact (detail toolbar) layout. */
+.row-actions .row-actions-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.25rem 0.5rem;
+}
+/* Text label alongside the codicon glyph - hidden in compact mode (no .row-actions-label rendered). */
+.row-actions-label {
+    font-size: 0.9em;
+    white-space: nowrap;
+}
+
+/* ---- subgroup (headed section, always visible, no accordion) ----
+   A subgroup is a set of related fields from one sub-struct or fixed slot array (e.g. an ITM ability's
+   Melee Animation Overhand/Backhand/Thrust slots). Box it with the same input-border + inset fill as the
+   detail-form flag groups (.form-flags .field) so a named group of controls reads as one unit instead of a
+   bare heading floating above a row - the "make relationships visible" principle, applied consistently to
+   both flag groups and slot/struct groups. */
+.subgroup {
+    margin: 0.6rem 0 0.25rem;
+    border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+    border-radius: 4px;
+    padding: 5px 10px;
+    background: var(--vscode-editor-background);
+}
+.subgroup-title {
+    /* The box now carries the grouping; the title is a header inside it (no underline, which would double the
+       box's top edge). */
+    margin: 0 0 0.4rem;
+    padding: 0;
+    font-size: 0.95em;
+    font-weight: 600;
+    color: var(--vscode-descriptionForeground);
+}
+
+/* ---- detail-tabs: an object detail split into a "Details" form tab and a childList (inventory) tab ---- */
+.detail-tabs > .bb-tabs {
+    margin-bottom: 0.4rem;
+}
+
+/* ---- diagnostics ---- */
+/* The .diag wrapper is role="img" so it is announced as the aria-label by screen readers.
+   The icon sits inline next to the control; sizing matches the surrounding text line height. */
+.diag {
+    display: inline-flex;
+    align-items: center;
+    cursor: help;
+    /* 1em matches the surrounding font size; line-height: 1 keeps the icon from adding vertical space. */
+    font-size: 1em;
+    line-height: 1;
+}
+.diag.warning {
+    color: var(--vscode-editorWarning-foreground, #cca700);
+}
+.diag.error {
+    color: var(--vscode-editorError-foreground, #f48771);
+}
+.diag.info {
+    color: var(--vscode-editorInfo-foreground, var(--vscode-descriptionForeground));
+}
+/* Quick-fix button: secondary action button with a subtle wrench icon, visually associated with the warning.
+   Padding tightened slightly (vs generic button) so it stays compact within the field row. */
+.quick-fix {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+/* ---- placeholder / error / loading states ---- */
+.placeholder {
+    color: var(--vscode-descriptionForeground);
+    padding: 0.75rem;
+    font-style: italic;
+}
+.error-state {
+    padding: 1rem 1.25rem;
+    color: var(--vscode-errorForeground);
+}
+.error-state h2 {
+    margin: 0 0 0.5rem;
+    font-size: 1.15em;
+    font-weight: 600;
+    color: var(--vscode-errorForeground);
+}
+.error-state p {
+    margin: 0;
+    color: var(--vscode-foreground);
+}
+
+/* ============================================================================
+ * Declarative layout renderer (single dense page; PRO and future migrated formats).
+ * Ported from the approved PRO critter mockup, themed via --vscode-* vars. Provides the panel /
+ * grid / matrix / flag-column STRUCTURE; field cells are real control components that bring their
+ * own input styling. Content hugs maxContentWidthPx and clumps left (no full-pane stretch).
+ * ============================================================================ */
+.layout-root {
+    /* One uniform inter-column / inter-block spacing: the gap between a multi-column fields grid's own
+       columns (.kv-multi) and the gap between sibling blocks in a panel (.panel-blocks, e.g. a fields grid
+       next to a flags box) read as the SAME spacing. Driven by one variable so they can't drift apart. */
+    --bb-col-gap: 33px;
+    /* One cap for every virtualized list/tree viewport on a layout page (the master-detail `.master .vlist`
+       and the abilities+effects tree `.eff-tree-vlist`), so both use the same vertical space beside the
+       taller detail and can't drift apart. Sized to ~2x a 24rem list since a per-entry detail is about that
+       tall; a shorter list still hugs its rows (height:auto), only a longer one scrolls. */
+    --bb-list-max-height: 48rem;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 4px 2px 10px;
+}
+.layout-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: flex-start;
+}
+.layout-root .panel {
+    background: var(--vscode-editorWidget-background);
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 5px;
+    padding: 8px 10px 10px;
+    /* Grow to fill the row: panels share leftover width instead of leaving dead space after the last one,
+       and a panel that would otherwise wrap onto its own row (e.g. CRE Status Flags) shrinks to fit the row
+       (down to its content) rather than dropping to a half-empty new line (#18). flex-basis stays content. */
+    flex: 1 1 auto;
+}
+/* A `fit` panel hugs its content and does NOT grow, so a small panel (a couple of fields/checkboxes) sharing
+   a row with a larger field panel stays compact while the larger panel absorbs the leftover width - instead
+   of a tiny panel stretching across half/all of the row with its content clumped in one corner. */
+.layout-root .panel.panel-fit {
+    flex-grow: 0;
+}
+.layout-root .panel > h3 {
+    margin: 0 0 7px;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--vscode-textLink-foreground);
+    font-weight: 600;
+    border-bottom: 1px solid var(--vscode-panel-border);
+    padding-bottom: 4px;
+}
+.panel-blocks {
+    display: flex;
+    gap: var(--bb-col-gap, 16px);
+    align-items: flex-start;
+}
+/* A stacked panel flows its blocks top-to-bottom (a fields list above a boxed `group` subgroup) instead of
+   the default left-to-right. align-items:stretch so the subgroup box spans the panel width. */
+.panel-blocks.stack {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+}
+/* key/value list: a vertical stack of Field rows (label + control); multi-column variant is set inline. */
+.layout-root .kv {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    align-items: stretch;
+}
+.layout-root .kv.kv-multi {
+    display: grid;
+    gap: 2px var(--bb-col-gap, 22px);
+    align-items: center;
+}
+/* A flag group sharing a panel with other blocks gets its own boxed group (fieldset + legend) so the
+   bitfield reads as one labelled set, matching the detail-form flag boxes. The `.bare` variant (flags that
+   are the sole block of a titled panel) drops the border/legend and leans on the panel chrome as its box. */
+.layout-root .flag-group {
+    /* `input-border` (a control outline, ~#3c3c3c) not `panel-border` (~#2b2b2b): panel-border is tuned to read
+       against the darker page bg, but a flag group sits on the lighter panel interior (editorWidget-background),
+       where panel-border is near-invisible for an isolated box. input-border has the contrast to read there, and
+       semantically it is a box of inputs. The darker editor-background fill backs it up so the well reads even
+       where the 1px edge thins out at render scale. */
+    border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+    border-radius: 4px;
+    margin: 0;
+    padding: 3px 10px 8px;
+    min-inline-size: 0;
+    background: var(--vscode-editor-background);
+}
+.layout-root .flag-group.bare {
+    border: 0;
+    padding: 0;
+    background: none;
+}
+.layout-root .flag-group > legend {
+    padding: 0 4px;
+    margin-left: -4px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--vscode-descriptionForeground);
+}
+/* flag checkbox columns */
+.flag-columns {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+}
+/* Spread the columns across the full panel width (set via the flags block `spread` flag) - for a wide
+   full-width flag panel whose content-width columns would otherwise leave dead space on the right. The
+   fieldset must claim the full panel width (it is a content-width flex child of .panel-blocks otherwise) so
+   the inner row's 100% / space-between has the room to spread into. */
+.layout-root .flag-group.spread {
+    flex: 1 1 auto;
+}
+.flag-columns.spread {
+    width: 100%;
+    justify-content: space-between;
+}
+.flag-columns .gcol {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+/* Category-grouped flags (FlagGroups): columns laid left-to-right, each column stacking one or more boxed
+   subgroups top-to-bottom. Reuses the .flag-group box and .gcol checkbox stack; only the column scaffolding
+   is new. align-items:flex-start so a short subgroup box hugs its content instead of stretching to match a
+   taller sibling column. */
+/* The flagGroups block wrapper: category columns on the left at content width; the optional bulk-select bar
+   fills the free space to their right, so it never pushes the columns down. */
+.flag-groups {
+    display: flex;
+    flex-direction: row;
+    gap: 16px;
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    align-items: stretch;
+}
+/* Panel-level bulk bar: centred (vertically + horizontally) in the leftover width beside the columns. */
+.flag-bulk {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+/* "Select all" / "Deselect all": transparent buttons matching the spellbook .sb-add idiom. */
+.flag-bulk-btn {
+    padding: 6px 18px;
+    border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+    border-radius: 4px;
+    background: transparent;
+    color: var(--vscode-foreground);
+    font-size: 1em;
+    cursor: pointer;
+}
+.flag-bulk-btn:hover {
+    background: var(--vscode-list-hoverBackground);
+}
+/* Per-subgroup select/deselect: tiny icon buttons sitting in the group's legend, after its name. */
+.flag-group-cols .flag-group > legend {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.flag-group-actions {
+    display: inline-flex;
+    /* Enough space that the adjacent select/deselect icons are not easy to misclick (1px read as one target). */
+    gap: 6px;
+}
+.flag-group-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 1px;
+    border: 0;
+    background: transparent;
+    color: var(--vscode-descriptionForeground);
+    cursor: pointer;
+    line-height: 1;
+}
+.flag-group-btn .codicon {
+    font-size: 13px;
+}
+.flag-group-btn:hover {
+    color: var(--vscode-foreground);
+}
+.flag-group-cols {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+}
+.flag-group-col {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+}
+/* stats matrix: N fixed-width column groups, each Base|Bonus */
+.layout-root .matrix {
+    display: grid;
+    justify-content: start;
+    gap: 0 24px;
+}
+.layout-root .matrix .mcol .sub {
+    display: flex;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--vscode-foreground);
+    margin: 2px 0 4px;
+    border-bottom: 1px solid var(--vscode-panel-border);
+    padding-bottom: 2px;
+}
+.layout-root .matrix .mcol .sub .lbl {
+    flex: 1;
+}
+.layout-root .matrix .mcol .sub .bb {
+    color: var(--vscode-descriptionForeground);
+    width: 56px;
+    text-align: center;
+    font-weight: 400;
+}
+.layout-root .matrix .strow {
+    display: flex;
+    align-items: center;
+    padding: 1px 0;
+    /* Clear separation between the label, the Base value, and the Bonus value - at 4px the two value
+       inputs (same background) read as a single merged box. */
+    gap: 10px;
+}
+.layout-root .matrix .strow .nm {
+    flex: 1;
+    color: var(--vscode-foreground);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 6px;
+}
+.layout-root .matrix .strow .c {
+    width: 56px;
+}
+/* skills grid: N columns of label + control, clumped left */
+.layout-root .grid {
+    display: grid;
+    justify-content: start;
+    gap: 4px 40px;
+}
+.layout-root .grid .skill {
+    /* Subgrid spanning this column's (label, control) track pair, so labels share a max-content track and
+       controls align - the same technique .field uses. Replaces a fixed 108px label width that a longer
+       label (e.g. "Selected weapon ability") overflowed, misaligning its control. */
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-column: span 2;
+    column-gap: 10px;
+    align-items: center;
+}
+.layout-root .grid .skill .nm {
+    color: var(--vscode-descriptionForeground);
+    white-space: nowrap;
+}
+.layout-stub {
+    color: var(--vscode-descriptionForeground);
+    font-style: italic;
+    padding: 6px 0;
+}
+
+/* Dense layout sizing (scoped to .layout-root). The single-column fields list (Header / Demographics /
+ * Final) is a 2-column grid: column 1 hugs the widest label (max-content) so labels stay tight; column 2
+ * is `auto`, so it sizes to the widest control in the panel (= the widest display-width tier present) and
+ * every control left-aligns within it. The tier varies a control's right edge; its left edge and the next
+ * column stay fixed, so columns remain aligned. Each .field is a subgrid spanning both columns. */
+.layout-root .field {
+    align-items: baseline;
+}
+.layout-root .kv:not(.kv-multi) {
+    display: grid;
+    grid-template-columns: max-content auto;
+    column-gap: 10px;
+    row-gap: 2px;
+    align-items: baseline;
+}
+.layout-root .kv:not(.kv-multi) .field {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-column: 1 / -1;
+    /* Set the column gap explicitly rather than relying on subgrid gap inheritance: a bare `gap: 0` here
+       zeroed the space between the (max-content) label column and the value, so the WIDEST label in a
+       panel butted right against its value. Match the parent's 10px. */
+    column-gap: 10px;
+    align-items: baseline;
+}
+/* Display-width tier -> control box width. The tier is classified once per field in TS (valueTier - it
+ * depends on char-array length / hex format / longest dropdown label, which CSS can't read); the WIDTHS
+ * live here so the stylesheet owns all dimensions. --val-ch is the BORDER-BOX (outer) width of every control
+ * type, so a tier renders one identical width whether the control is a text input, a dropdown, or the hex
+ * wrapper (a plain input is content-box by default and would otherwise render ~2ch wider than a same-tier
+ * dropdown). ~2ch of the box is input chrome (padding + border), so visible content is roughly S:6 / M:14 /
+ * ML:22 / L:32 chars - small decimals/short strings, hex/8-char resref/dropdowns, mid-length IDS dropdowns,
+ * long char arrays/long labels. */
+.layout-root .field-control.tier-s {
+    --val-ch: 8ch;
+}
+.layout-root .field-control.tier-m {
+    --val-ch: 16ch;
+}
+.layout-root .field-control.tier-ml {
+    --val-ch: 24ch;
+}
+.layout-root .field-control.tier-l {
+    --val-ch: 34ch;
+}
+/* Dropdown widths (enums only; see controls.ts dropdownWidth). A dropdown shares its column with hex/resref/
+ * number inputs that need MORE room than enum option labels, so inheriting the text-input tiers above left
+ * every dropdown over-wide. Size a dropdown to its OWN longest option instead, quantized to this small ch scale
+ * so dropdowns still align with each other. Text tiers above are unchanged - only enums use these. The ch
+ * values MUST mirror DROPDOWN_BOX_CH in controls.ts. */
+.layout-root .field-control.dd-1 {
+    --val-ch: 10ch;
+}
+.layout-root .field-control.dd-2 {
+    --val-ch: 16ch;
+}
+.layout-root .field-control.dd-3 {
+    --val-ch: 20ch;
+}
+.layout-root .field-control.dd-4 {
+    --val-ch: 25ch;
+}
+.layout-root .field-control.dd-5 {
+    --val-ch: 32ch;
+}
+.layout-root .kv:not(.kv-multi) .field-control {
+    justify-self: start;
+}
+.layout-root .kv:not(.kv-multi) .field-control > input,
+.layout-root .kv:not(.kv-multi) .field-control .bb-combobox,
+.layout-root .kv:not(.kv-multi) .field-control select {
+    width: var(--val-ch, 16ch);
+    /* border-box so --val-ch is the outer width for the plain input too (it is content-box by default,
+       unlike the dropdown trigger / hex wrapper / matrix input, which are already border-box) - otherwise a
+       text input renders ~2ch wider than a same-tier dropdown beside it. */
+    box-sizing: border-box;
+    min-width: 0;
+}
+/* Multi-column fields: each column is a (max-content label, auto value) pair, and the Field is a subgrid
+ * spanning its pair, so the label hugs its text (shared per column, so values still align vertically)
+ * instead of the fixed 12rem box that pushed short labels far from their value (#1). The field's own
+ * column-gap is the tight label/value gap; the wider inter-column gap comes from the parent .kv-multi grid. */
+.layout-root .kv.kv-multi .field {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-column: span 2;
+    column-gap: 10px;
+    align-items: baseline;
+}
+/* No label min-width: the label hugs its text so the label->value gap stays the field's own 10px column-gap,
+   which must read as TIGHTER than the 22px inter-column gap (a value belongs to its own label, not the next
+   column's). A floor here padded short labels (e.g. "Opcode") past the inter-column gap and inverted that
+   grouping. The per-column max-content track still aligns every value within a column. */
+/* Multi-column panels have no fixed control track, so every control is sized to its display-width tier
+ * (--val-ch, set by the tier class on .field-control) and left-aligned within its (auto) value track, so
+ * columns stay aligned while each box hugs its tier. See the UX rule "Size fields to a small display-width
+ * scale". */
+.layout-root .kv.kv-multi .field-control {
+    justify-self: start;
+    /* The span is the grid item in the (auto) value track; min-width:0 + max-width:100% let it shrink to the
+       track in a pane too narrow to hold every column at full tier width (e.g. the tree's split detail) instead
+       of staying at its tier width and overflowing into the next column. The control inside is capped at 100%
+       below, so it follows the span down rather than spilling. */
+    min-width: 0;
+    max-width: 100%;
+}
+.layout-root .kv.kv-multi .field-control > input,
+.layout-root .kv.kv-multi .field-control .bb-combobox,
+.layout-root .kv.kv-multi .field-control select {
+    width: var(--val-ch, 16ch);
+    box-sizing: border-box; /* outer width = --val-ch for every control type (see kv:not(.kv-multi) above) */
+    min-width: 0;
+    /* Never exceed the value cell: in a pane too narrow to hold the tier at full width the track collapses, and
+       without this cap the fixed-width control would overflow it and overlap the next column's label. Capping at
+       100% shrinks the control with its track (tier is the max, not a floor), keeping columns aligned. */
+    max-width: 100%;
+}
+/* Inline-list rows (MAP variables) render an editable Field but sit in a flex .vrow, outside the .kv grid, so
+   the tier-width rules above don't reach them - without this the input falls back to its intrinsic width and
+   reads ragged next to the tier-sized panels. Same tier var + border-box, so it matches a panel control. */
+.layout-root .vrow.inline .field-control > input,
+.layout-root .vrow.inline .field-control .bb-combobox,
+.layout-root .vrow.inline .field-control select {
+    width: var(--val-ch, 16ch);
+    box-sizing: border-box;
+    min-width: 0;
+}
+
+/* Hex field (e.g. MAP PID): a static, non-editable "0x" prefix plus a borderless digit input, wrapped so the
+ * pair reads as one control. The wrapper carries the input chrome; the user can only edit the hex digits. */
+.layout-root .hex-input {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.05rem;
+    width: var(--val-ch, 16ch);
+    background: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border, transparent);
+    border-radius: 2px;
+    padding: 0.2rem 0.4rem;
+    box-sizing: border-box;
+}
+.layout-root .hex-input:focus-within {
+    border-color: var(--vscode-focusBorder);
+}
+.layout-root .hex-input.disabled {
+    opacity: 0.6;
+}
+.layout-root .hex-prefix {
+    color: var(--vscode-descriptionForeground);
+    user-select: none;
+    font-family: var(--vscode-editor-font-family, monospace);
+}
+.layout-root .hex-input input.hex-digits {
+    border: none;
+    background: transparent;
+    padding: 0;
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    font-family: var(--vscode-editor-font-family, monospace);
+}
+.layout-root .hex-input input.hex-digits:focus {
+    outline: none;
+}
+.layout-root .matrix .strow .c input {
+    /* border-box + 100% so the input fills its cell exactly instead of overflowing (content-box padding +
+       border made it ~7px wider than the cell, swallowing the strow gap so Base|Bonus read as one box). */
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    text-align: right;
+}
+.layout-root .grid .skill input {
+    width: 52px;
+    min-width: 0;
+}
+/* Hide the native number spinner in the dense layout: it overlaps the right-aligned value in the narrow
+ * stat/field inputs, and values here are typed, not stepped. */
+.layout-root input[type="number"] {
+    appearance: textfield;
+}
+.layout-root input[type="number"]::-webkit-inner-spin-button,
+.layout-root input[type="number"]::-webkit-outer-spin-button {
+    appearance: none;
+    margin: 0;
+}
+
+/* ============================================================================
+ * Unified CRE spellbook (SpellbookBlock): spell-type subtabs over per-level panels, each a Known | Memorized
+ * two-column split. Reuses the panel/flag-group idiom and theme tokens. Inconsistent data surfaces as the
+ * per-level flag note and the trailing Unassigned bucket.
+ * ========================================================================= */
+.spellbook {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+}
+/* Levels flow left-to-right as cards and wrap, so a 9-level mage packs into a few dense rows instead of one
+   tall scroll; each card grows to share the row width (panel idiom) down to a min, capped so two levels do not
+   stretch absurdly wide. */
+/* Uniform-width card grid: fixed-min tracks that grow equally. auto-fill keeps empty trailing tracks, so a
+   partial last row's cards stay the SAME width as every other card instead of a lone trailing card stretching
+   to max-width (the old flex-grow drift). align-items: start so a short card does not stretch to a tall sibling. */
+.spellbook .sb-levels {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 8px;
+    align-items: start;
+}
+/* One level: a bordered well (matching the flag-group box treatment) so each level reads as a distinct unit. */
+.spellbook .sb-level {
+    border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+    border-radius: 4px;
+    background: var(--vscode-editor-background);
+    padding: 6px 10px 8px;
+}
+/* A flagged level (inconsistent range) gets a warning accent edge so the problem reads at a glance. */
+.spellbook .sb-level.sb-flagged {
+    border-color: var(--vscode-inputValidation-warningBorder, var(--vscode-editorWarning-foreground));
+}
+.spellbook .sb-level-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 6px;
+    padding-bottom: 3px;
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+.spellbook .sb-level-name {
+    font-weight: 600;
+    color: var(--vscode-textLink-foreground);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+.spellbook .sb-counts {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.82em;
+    color: var(--vscode-descriptionForeground);
+}
+.spellbook .sb-num-lbl {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.spellbook .sb-num {
+    width: 3.5ch;
+    background: var(--vscode-input-background);
+    color: var(--vscode-input-foreground, var(--vscode-foreground));
+    border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+    border-radius: 3px;
+    padding: 1px 3px;
+    font-size: inherit;
+    font-family: var(--vscode-editor-font-family, monospace);
+    text-align: right;
+    -moz-appearance: textfield;
+}
+.spellbook .sb-num::-webkit-inner-spin-button,
+.spellbook .sb-num::-webkit-outer-spin-button {
+    appearance: none;
+    margin: 0;
+}
+.spellbook .sb-counts-sep {
+    color: var(--vscode-descriptionForeground);
+}
+/* The flagged-level reason + clamp action. Wraps so the (sometimes long) reason text is always fully visible
+   inside the card rather than overflowing its right edge; the clamp button flows after the text, wrapping to
+   its own line on a narrow card. */
+.spellbook .sb-flag-note {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 8px;
+    color: var(--vscode-editorWarning-foreground);
+    font-size: 0.82em;
+    margin-bottom: 6px;
+}
+.spellbook .sb-flag-text {
+    flex: 1 1 200px;
+    min-width: 0;
+}
+/* Known | Memorized split inside a level card: Known hugs its resref column, Memorized takes the rest. Sized
+   to content (not 1fr 1fr) so narrow known/slot lists do not leave a dead gap down the middle of the card. */
+.spellbook .sb-cols {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 28px; /* roomy gutter between the Known and Memorized columns */
+    align-items: start;
+}
+.spellbook .sb-col-head {
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 3px;
+}
+.spellbook .sb-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 1px 0;
+    font-size: 1em;
+}
+.spellbook .sb-slot-name {
+    font-family: var(--vscode-editor-font-family, monospace);
+    min-width: 9ch;
+}
+/* Known column: remove | resref | memorize-arrow. The "+ known" add-row reuses this grid with an empty remove
+   cell, so it lines up under the resrefs (not under the remove button). */
+.spellbook .sb-known-row {
+    display: grid;
+    grid-template-columns: 1.5rem max-content max-content;
+    align-items: center;
+    column-gap: 10px;
+    padding: 1px 0;
+    font-size: 1em;
+}
+/* Memorized column: resref | remove (follows the slot) | flag group. Fixed rem tracks keep the header flag
+   labels aligned over the row controls regardless of each element's own font-size; the first track holds the
+   9ch monospace resref input. */
+.spellbook .sb-mem-row {
+    display: grid;
+    grid-template-columns: 5rem 1.5rem max-content;
+    align-items: center;
+    column-gap: 10px;
+    padding: 1px 0;
+    font-size: 1em;
+}
+/* The Memorized header is ONE row: the column title, an empty cell over the remove button, and the flag labels
+   share the same line (same grid tracks as the rows) so this column's header is the same height as the Known
+   column's single-line header - keeping the two columns' entries aligned row-for-row. */
+.spellbook .sb-mem-headrow {
+    display: grid;
+    grid-template-columns: 5rem 1.5rem max-content;
+    align-items: baseline;
+    column-gap: 10px;
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 3px;
+}
+/* The two flag toggles as a tight group; each flag is a fixed-width cell with its checkbox (rows) or label
+   (header) centered, so "mem"/"dis" sit directly over their checkboxes with little space between them. */
+.spellbook .sb-flags {
+    display: flex;
+    gap: 3px;
+}
+.spellbook .sb-flag {
+    width: 1.7rem;
+    display: flex;
+    justify-content: center;
+}
+/* An editable resref cell (chars[8]); sized to its 8-char content tier, monospace like other resref fields. */
+.spellbook .sb-resref {
+    width: 9ch;
+    background: var(--vscode-input-background);
+    color: var(--vscode-input-foreground, var(--vscode-foreground));
+    border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+    border-radius: 3px;
+    padding: 1px 4px;
+    font-family: var(--vscode-editor-font-family, monospace);
+    font-size: inherit;
+}
+/* Per-row remove (x) and the "+ add"/"+ memorize"/"+ add level" buttons: quiet, text-weight chrome that
+   matches the dense layout; the add buttons sit at the end of their column. */
+.spellbook .sb-x {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1px;
+    border: 0;
+    border-radius: 3px;
+    background: transparent;
+    color: var(--vscode-descriptionForeground);
+    cursor: pointer;
+}
+.spellbook .sb-x:hover:not(:disabled) {
+    background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground));
+    color: var(--vscode-foreground);
+}
+.spellbook .sb-add {
+    margin-top: 3px;
+    padding: 1px 6px;
+    border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+    border-radius: 3px;
+    background: transparent;
+    color: var(--vscode-foreground);
+    font-size: 0.82em;
+    cursor: pointer;
+}
+.spellbook .sb-add:hover:not(:disabled) {
+    background: var(--vscode-list-hoverBackground);
+}
+.spellbook .sb-x:disabled,
+.spellbook .sb-add:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+.spellbook .sb-add-level {
+    align-self: flex-start;
+}
+/* A normalize action (clamp an overrun count, drop an orphan): a small accented button on the warning row. */
+.spellbook .sb-fix {
+    margin-left: 8px;
+    padding: 0 7px;
+    border: 1px solid var(--vscode-inputValidation-warningBorder, var(--vscode-editorWarning-foreground));
+    border-radius: 3px;
+    background: transparent;
+    color: var(--vscode-foreground);
+    font-size: 0.82em;
+    cursor: pointer;
+}
+.spellbook .sb-fix:hover {
+    background: var(--vscode-list-hoverBackground);
+}
+/* The Unassigned bucket: memorized entries not cleanly owned by one level (orphan / contested). */
+.spellbook .sb-bucket {
+    border: 1px solid var(--vscode-inputValidation-warningBorder, var(--vscode-editorWarning-foreground));
+    border-radius: 4px;
+    padding: 6px 10px 8px;
+    background: var(--vscode-editor-background);
+}
+.spellbook .sb-bucket-head {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--vscode-editorWarning-foreground);
+    font-size: 0.82em;
+    margin-bottom: 5px;
+}
+.spellbook .sb-bucket-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 1px 0;
+    font-size: 0.9em;
+}
+.spellbook .sb-bucket-reason {
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.88em;
+}
+/* Quick "memorize this known spell" arrow in the Known column: a compact accent button that copies the known
+   spell into this level's memorized slots (one click vs typing the resref into a new slot). */
+.spellbook .sb-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1px;
+    border: 0;
+    border-radius: 3px;
+    background: transparent;
+    color: var(--vscode-textLink-foreground);
+    cursor: pointer;
+}
+.spellbook .sb-arrow:hover:not(:disabled) {
+    background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground));
+}
+.spellbook .sb-arrow:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+/* An empty (unfilled) effective memorization slot: a faint dashed box sized to the resref column, so the
+   Memorized column visualizes the level's remaining capacity as empty slots. */
+.spellbook .sb-slot-empty {
+    opacity: 0.7;
+}
+.spellbook .sb-empty-box {
+    display: inline-block;
+    width: 9ch;
+    height: 1.5em;
+    border: 1px dashed var(--vscode-input-border, var(--vscode-panel-border));
+    border-radius: 3px;
+}
+/* Divider marking memorized spells beyond effective capacity - allowed by the file format (not an error), so
+   muted rather than alarming. The overflow rows below it are dimmed slightly to read as secondary. */
+.spellbook .sb-overcap-divider {
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.78em;
+    letter-spacing: 0.04em;
+    margin: 4px 0 1px;
+}
+.spellbook .sb-slot-over {
+    opacity: 0.85;
+}
+/* Empty-type hint shown when a type subtab has no levels yet; the "+ add level" button follows it. */
+.spellbook .sb-empty-type {
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.85em;
+    margin: 2px 0 6px;
+}
+/* "Remove row" resolve on a flagged level: a destructive-tinted variant of sb-fix (deletes the whole
+   memorization row and its memorized spells), set apart from the gentler clamp beside it. */
+.spellbook .sb-remove-row {
+    border-color: var(--vscode-inputValidation-errorBorder, var(--vscode-errorForeground));
+    color: var(--vscode-errorForeground);
+}
+
+/* Owner-scoped child mini-list (e.g. a MAP object's nested inventory) rendered inside an entry's detail. An
+   accordion list: rows carry a remove (x) and expand to the entry's full form; the header carries the add. */
+.child-list {
+    margin-top: 0.8rem;
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 4px;
+}
+.child-list-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+.child-list-title {
+    font-size: 0.85em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--vscode-descriptionForeground);
+}
+.child-list-add {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border: none;
+    border-radius: 3px;
+    padding: 3px 8px;
+    font-size: 0.85em;
+    color: var(--vscode-button-foreground);
+    background: var(--vscode-button-background);
+    cursor: pointer;
+}
+.child-list-add:hover {
+    background: var(--vscode-button-hoverBackground, var(--vscode-button-background));
+}
+.child-list-empty {
+    margin: 0;
+    padding: 6px 8px;
+    font-style: italic;
+    color: var(--vscode-descriptionForeground);
+}
+.child-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px 2px 4px;
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+.child-row:last-child {
+    border-bottom: none;
+}
+.child-row:hover {
+    background: var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.04));
+}
+.child-row.selected {
+    background: var(--vscode-list-activeSelectionBackground);
+    color: var(--vscode-list-activeSelectionForeground);
+}
+/* On a selected row the error-red remove glyph can lose contrast against the selection highlight; inherit the
+   selection foreground so it stays legible (the remove intent stays clear from the icon + tooltip). */
+.child-row.selected .child-row-remove {
+    color: var(--vscode-list-activeSelectionForeground);
+}
+.child-row-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: none;
+    color: inherit;
+    text-align: left;
+    padding: 2px 0;
+    cursor: pointer;
+}
+.child-row-label span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.child-row-remove {
+    border: none;
+    background: none;
+    color: var(--vscode-errorForeground);
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 3px;
+}
+.child-row-remove:hover {
+    background: var(--vscode-toolbar-hoverBackground, rgba(255, 255, 255, 0.08));
+}
+/* The expanded entry is a whole nested record (the item-object's own form). Set it apart with an accent left
+   border + inset so the nesting boundary is obvious and the inner fields don't read as a continuation of the
+   outer object's form. */
+.child-row-detail {
+    margin: 0 0 2px 10px;
+    padding: 6px 10px 8px;
+    border-left: 2px solid var(--vscode-focusBorder, var(--vscode-panel-border));
+    background: var(--vscode-editor-background);
+}

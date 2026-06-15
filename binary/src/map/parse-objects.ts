@@ -11,7 +11,9 @@ import { resolvePidSubType, type PidResolver } from "../pid-resolver";
 import {
     makeGroup,
     int32Field,
-    uint32Field,
+    hex32Field,
+    flagsField,
+    enumField,
     noteField,
     isExitGridPid,
     objectTypeName,
@@ -27,6 +29,8 @@ import {
 import {
     objectBaseSpec,
     objectBasePresentation,
+    objectDataSpec,
+    objectDataPresentation,
     inventoryHeaderSpec,
     inventoryHeaderPresentation,
     critterDataSpec,
@@ -34,12 +38,14 @@ import {
     exitGridSpec,
     exitGridPresentation,
 } from "./specs/object";
+import { DoorOpenFlags, ElevatorType, ItemSubType, ScenerySubType } from "./types";
 
 export interface ParseObjectsOptions {
     pidResolver?: PidResolver;
 }
 
 const objectBaseCodec = toTypedBinarySchema(objectBaseSpec);
+const objectDataCodec = toTypedBinarySchema(objectDataSpec);
 const inventoryHeaderCodec = toTypedBinarySchema(inventoryHeaderSpec);
 const critterDataCodec = toTypedBinarySchema(critterDataSpec);
 const exitGridCodec = toTypedBinarySchema(exitGridSpec);
@@ -118,7 +124,14 @@ function parseExitGridGroup(data: Uint8Array, offset: number): ParsedGroup {
 function parseInventoryHeaderGroup(data: Uint8Array, offset: number): { group: ParsedGroup; inventoryLength: number } {
     const inv = readSpec(inventoryHeaderCodec, data, offset);
     return {
-        group: walkStruct(inventoryHeaderSpec, inventoryHeaderPresentation, offset, inv, "Inventory Header"),
+        // The header is all engine bookkeeping - inventoryLength is recomputed from the item array on save
+        // (derivedCount), capacity and pointer are reserved engine state - so none of it is user-editable, and
+        // the item count is already visible from the inventory list itself. Hide the whole group from the detail
+        // (display-only; the bytes still round-trip and the canonical reader still finds the group by name).
+        group: {
+            ...walkStruct(inventoryHeaderSpec, inventoryHeaderPresentation, offset, inv, "Inventory Header"),
+            hidden: true,
+        },
         inventoryLength: inv.inventoryLength,
     };
 }
@@ -141,7 +154,7 @@ export function decodeItemSubtypeTrailer(
     switch (subType) {
         case 3: // Weapon
             return {
-                fields: [int32Field("Ammo Quantity", data, offset), int32Field("Ammo Type PID", data, offset + 4)],
+                fields: [int32Field("Ammo Quantity", data, offset), hex32Field("Ammo Type PID", data, offset + 4)],
                 offset: offset + 8,
             };
         case 4: // Ammo
@@ -168,7 +181,7 @@ export function decodeScenerySubtypeTrailer(
 ): { fields: ParsedField[]; offset: number } {
     switch (subType) {
         case 0: // Door
-            return { fields: [int32Field("Open Flags", data, offset)], offset: offset + 4 };
+            return { fields: [flagsField("Open Flags", data, offset, DoorOpenFlags)], offset: offset + 4 };
         case 1: // Stairs
             return {
                 fields: [
@@ -179,7 +192,7 @@ export function decodeScenerySubtypeTrailer(
             };
         case 2: // Elevator
             return {
-                fields: [int32Field("Elevator Type", data, offset), int32Field("Level", data, offset + 4)],
+                fields: [enumField("Elevator Type", data, offset, ElevatorType), int32Field("Level", data, offset + 4)],
                 offset: offset + 8,
             };
         case 3: // Ladder Up
@@ -287,7 +300,8 @@ function parseObjectAt(
             );
         }
 
-        objectFields.push(makeGroup("Object Data", [uint32Field("Data Flags", data, currentOffset)]));
+        const objData = readSpec(objectDataCodec, data, currentOffset);
+        objectFields.push(walkStruct(objectDataSpec, objectDataPresentation, currentOffset, objData, "Object Data"));
         currentOffset += 4;
 
         if (pidType === PID_TYPE_MISC && isExitGridPid(pid)) {
@@ -345,11 +359,16 @@ function parseObjectAt(
             // even for 0-byte-trailer subtypes (Armor/Container/Drug/Generic) -
             // so the canonical doc can record the subType for reparse without
             // re-running the original filesystem-backed resolver.
+            // Show the resolved subtype as its name (Weapon / Drug / Door / Elevator ...), keyed by item vs
+            // scenery since the codes overlap (0 = Armor or Door). It stays a read-only `note`: `rawValue` keeps
+            // the numeric code (the canonical reader recovers subType from it for reparse) and editing the code
+            // is meaningless - the trailer was already decoded from it.
+            const subTypeTable = pidType === PID_TYPE_ITEM ? ItemSubType : ScenerySubType;
             objectFields.push(
                 makeGroup("Subtype Data", [
                     {
                         name: "Sub Type",
-                        value: subType,
+                        value: subTypeTable[subType] ?? `Type ${subType}`,
                         offset: currentOffset,
                         size: 0,
                         type: "note",

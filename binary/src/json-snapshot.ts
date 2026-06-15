@@ -5,7 +5,8 @@ import { formatAdapterRegistry } from "./format-adapter";
 import { buildParsedTreeNode } from "./parsed-tree-codec";
 import { createFieldKey, toSemanticFieldKey } from "./presentation-schema";
 import type { ParseOpaqueRange, ParsedField, ParsedGroup, ParseOptions, ParseResult } from "./types";
-import { getScalarFieldLookupKey, parseScalarFieldValue, slugify } from "./snapshot-common";
+import { getScalarFieldLookupKey, parseScalarFieldValue } from "./snapshot-common";
+import { slugify } from "./spec/presentation";
 
 const valueSchema = z.union([z.number(), z.string(), z.boolean(), z.null()]);
 const parsedFieldTypeSchema = z.enum([

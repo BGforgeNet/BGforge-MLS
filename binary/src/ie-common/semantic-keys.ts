@@ -7,7 +7,7 @@
  * own mappings in their format-adapter.ts.
  */
 
-import { slugify } from "../snapshot-common";
+import { slugify } from "../spec/presentation";
 
 export function abilityEffectsSemanticFieldKey(
     formatId: string,
@@ -18,13 +18,23 @@ export function abilityEffectsSemanticFieldKey(
     const [first, second, third] = segments;
 
     if (first === headerLabel) {
-        return `${formatId}.header.${slugify(second ?? "")}`;
+        // A header sub-group leaf (e.g. ITM "Usability Flags" -> its four per-byte flag fields) keeps the
+        // leaf in the key so each byte gets a distinct semantic key instead of all collapsing to the group's.
+        return third
+            ? `${formatId}.header.${slugify(second ?? "")}.${slugify(third)}`
+            : `${formatId}.header.${slugify(second ?? "")}`;
     }
-    if (first === "Abilities") {
-        return third ? `${formatId}.abilities[].${slugify(third)}` : `${formatId}.abilities[]`;
-    }
-    if (first === "Effects") {
-        return third ? `${formatId}.effects[].${slugify(third)}` : `${formatId}.effects[]`;
+    if (first === "Abilities" || first === "Effects") {
+        const section = first === "Abilities" ? "abilities" : "effects";
+        if (!third) return `${formatId}.${section}[]`;
+        // Keep every segment past the entry (`third` and any deeper leaf) so a nested slot-array - e.g. the ITM
+        // ability `Melee Animation` group's Overhand/Backhand/Thrust slots - gets a distinct key per slot rather
+        // than all three collapsing to the group's key (which a flat per-entry detail map could not tell apart).
+        const leaf = segments
+            .slice(2)
+            .map((s) => slugify(s))
+            .join(".");
+        return `${formatId}.${section}[].${leaf}`;
     }
     return `${formatId}.${segments.map((s) => slugify(s)).join(".")}`;
 }

@@ -13,6 +13,7 @@ See also: [CONTRIBUTING.md](../CONTRIBUTING.md) | [docs/architecture.md](../docs
 | `pnpm test:e2e`      | E2E tests (requires `pnpm build` first and host Electron libraries)           |
 | `pnpm test:grammars` | Grammar tests (generate, lint, corpus, parse, format)                         |
 | `pnpm package`       | Create VSIX package                                                           |
+| `pnpm dev:web`       | Run the extension in VS Code for the Web (code-server) for fast change review |
 
 ### Excluded from `pnpm build`
 
@@ -29,6 +30,13 @@ See also: [CONTRIBUTING.md](../CONTRIBUTING.md) | [docs/architecture.md](../docs
 
 - **Smoke test** (`test/smoke-stdio.test.ts`) -- requires a built server bundle (`pnpm build:base:server`). Run as part of `pnpm test` instead, which builds the bundle first.
 - **Integration tests** (`test/integration/`) -- require external repos cloned via `pnpm test:external`. Run standalone with `cd server && pnpm test:integration`, or as part of `pnpm test` (which clones repos first).
+
+## VS Code in the browser (`pnpm dev:web`)
+
+`pnpm dev:web` runs the extension in [code-server](https://github.com/coder/code-server) (VS Code in a browser) for fast
+change review, with the repo loaded as an unpacked extension so iterating is just rebuild + reload the window. See
+[dev-web.md](dev-web.md) for launching, the localhost secure-context requirement (the binary editor is a webview), and
+configuration.
 
 ## Temporary Artifacts
 

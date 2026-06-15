@@ -47,15 +47,19 @@ export function parseHeaderSection(data: Uint8Array, _errors: string[]): ParsedG
 
     const fields = [...numericGroup.fields];
     fields.splice(1, 0, field("Filename", header.filename, 0x04, 16, "string"));
-    fields.push(
-        field(
+    // Trailing writer-reserved space (44 x i32), no authored meaning - hidden from the detail (the field
+    // carries its own `hidden` flag rather than being matched by display name downstream). Round-trips via the
+    // canonical document. A summary row, not the raw bytes.
+    fields.push({
+        ...field(
             "Padding (field_3C)",
             `(${header.field_3C.length} values)`,
             HEADER_PADDING_OFFSET,
             HEADER_PADDING_SIZE,
             "padding",
         ),
-    );
+        hidden: true,
+    });
     return makeGroup("Header", fields);
 }
 
@@ -102,20 +106,19 @@ export function parseVariablesSection(data: Uint8Array, header: MapHeader, error
     const { globalVars, localVars } = parseVariables(data, header, errors);
     const groups: ParsedGroup[] = [];
 
-    if (globalVars.length > 0) {
-        const globalVarFields: ParsedField[] = globalVars.map((val, i) =>
-            field(`Global Var ${i}`, val, HEADER_SIZE + i * 4, 4, "int32"),
-        );
-        groups.push(makeGroup("Global Variables", globalVarFields));
-    }
+    // Always emit both groups, even when empty (count 0). The editor surfaces Global/Local as two fixed
+    // subtabs, so the sections must resolve (an absent group would prune the subtab); an empty group also
+    // gives "+ add" a section to seed the first variable into. Zero-length groups round-trip to zero bytes.
+    const globalVarFields: ParsedField[] = globalVars.map((val, i) =>
+        field(`Global Var ${i}`, val, HEADER_SIZE + i * 4, 4, "int32"),
+    );
+    groups.push(makeGroup("Global Variables", globalVarFields));
 
-    if (localVars.length > 0) {
-        const localOffset = HEADER_SIZE + globalVars.length * 4;
-        const localVarFields: ParsedField[] = localVars.map((val, i) =>
-            field(`Local Var ${i}`, val, localOffset + i * 4, 4, "int32"),
-        );
-        groups.push(makeGroup("Local Variables", localVarFields));
-    }
+    const localOffset = HEADER_SIZE + globalVars.length * 4;
+    const localVarFields: ParsedField[] = localVars.map((val, i) =>
+        field(`Local Var ${i}`, val, localOffset + i * 4, 4, "int32"),
+    );
+    groups.push(makeGroup("Local Variables", localVarFields));
 
     return groups;
 }
@@ -262,12 +265,23 @@ export function parseScripts(
 
         const scriptEntries: (ParsedField | ParsedGroup)[] = [field("Script Count", count, countOffset, 4, "int32")];
 
+        // Label the list by its scripts' actual SID type, not the read index. Fallout maps omit the global
+        // `system` list (system scripts are not map-bound), so the on-disk lists are spatial/timed/item/critter
+        // (types 1-4); labelling by read index would name them system/spatial/timer/item (0-3), one off. Each
+        // list is homogeneous (the engine stores gScriptLists[SID_TYPE(sid)]), so the first slot's type names
+        // the list. An empty list has no slot to read, so fall back to the index+1 mapping (also types 1-4).
+        const listType =
+            count > 0 && currentOffset + 4 <= data.length
+                ? getScriptType(new DataView(data.buffer, data.byteOffset + currentOffset, 4).getUint32(0, false))
+                : scriptType + 1;
+        const listLabel = `${ScriptType[listType] ?? `Type${listType}`} Scripts`;
+
         if (count === 0) {
-            scripts.push(makeGroup(`${ScriptType[scriptType] ?? `Type${scriptType}`} Scripts`, scriptEntries));
+            scripts.push(makeGroup(listLabel, scriptEntries));
             continue;
         }
         if (currentOffset >= data.length) {
-            scripts.push(makeGroup(`${ScriptType[scriptType] ?? `Type${scriptType}`} Scripts`, scriptEntries));
+            scripts.push(makeGroup(listLabel, scriptEntries));
             break;
         }
         const extentCount = Math.ceil(count / 16);
@@ -318,7 +332,7 @@ export function parseScripts(
             scriptEntries.push(makeGroup(`Extent ${extentIndex}`, extentFields));
         }
 
-        scripts.push(makeGroup(`${ScriptType[scriptType] ?? `Type${scriptType}`} Scripts`, scriptEntries));
+        scripts.push(makeGroup(listLabel, scriptEntries));
         if (scriptTypeAborted) break;
     }
 

@@ -9,14 +9,13 @@ import { walkStruct } from "../spec/walk-display";
 import { bytesEqual } from "../ie-common/types";
 import type { BinaryParser, ParseOptions, ParseResult } from "../types";
 import { effBodySchema, effHeaderSchema, type EffBodyData, type EffHeaderData } from "./schemas";
-import { effBodySpecAnnotated } from "./specs/body.overrides";
+import { effBodySpecAnnotated, effBodyPresentation } from "./specs/body.overrides";
 import { effHeaderSpec } from "./specs/header";
 import { EFF_HEADER_SIZE, EFF_SIGNATURE, EFF_TOTAL_SIZE, EFF_VERSION_V2 } from "./types";
 import type { EffCanonicalDocument } from "./canonical-schemas";
 import { serializeEff } from "./serializer";
 
 const effHeaderPresentation = {} as const;
-const effBodyPresentation = {} as const;
 
 const FORMAT_ID = "eff";
 const FORMAT_NAME = "Infinity Engine EFF v2";
@@ -64,6 +63,8 @@ class EffParser implements BinaryParser {
         return {
             format: this.id,
             formatName: this.name,
+            // EFF has a single shape; the layout has one "effect" variant the renderer selects on.
+            variantId: "effect",
             root: group("EFF File", [headerGroup, bodyGroup]),
             document,
         };

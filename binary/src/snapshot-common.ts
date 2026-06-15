@@ -2,21 +2,6 @@ import { resolveRawValueFromDisplay } from "./display-lookups";
 import { createFieldKey, toSemanticFieldKey } from "./presentation-schema";
 import type { ParsedField } from "./types";
 
-export function slugify(label: string): string {
-    const normalized = label
-        .replaceAll(/([a-z0-9])([A-Z])/g, "$1 $2")
-        .replaceAll(/[^A-Za-z0-9]+/g, " ")
-        .trim()
-        .toLowerCase();
-
-    if (!normalized) {
-        return "field";
-    }
-
-    const parts = normalized.split(/\s+/);
-    return parts.map((part, index) => (index === 0 ? part : `${part[0]!.toUpperCase()}${part.slice(1)}`)).join("");
-}
-
 export function makeUniqueKey(baseKey: string, usedKeys: Map<string, number>): string {
     const count = usedKeys.get(baseKey) ?? 0;
     usedKeys.set(baseKey, count + 1);

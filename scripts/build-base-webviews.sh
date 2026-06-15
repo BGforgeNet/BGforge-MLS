@@ -2,11 +2,6 @@
 
 set -eu -o pipefail
 
-# Build webview bundles (binary .pro editor, dialog tree preview).
-# Forwards args (--sourcemap, --minify) to esbuild.
-esbuild \
-  ./client/src/editors/binaryEditor-webview.ts \
-  ./client/src/dialog-tree/dialogTree-webview.ts \
-  --outdir=client/out \
-  --bundle \
-  "$@"
+# Build webview bundles (binary editor [Svelte], dialog tree preview) via esbuild's JS API
+# so the esbuild-svelte plugin can run (the CLI cannot load plugins). Forwards --sourcemap/--minify.
+node ./scripts/build-webviews.mjs "$@"
