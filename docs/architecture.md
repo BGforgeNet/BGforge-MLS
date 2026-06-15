@@ -97,7 +97,8 @@ vscode-mls/
 |   |   +-- compile.ts              Compilation dispatch
 |   |   +-- translation.ts          .tra/.msg inlay hints, hover, definition, and find references
 |   |   +-- user-messages.ts        User message wrappers (auto-decode file:// URIs)
-|   |   +-- common.ts               Logging, file utilities
+|   |   +-- logger.ts               Logging (routes through the LSP connection console)
+|   |   +-- path-utils.ts           Filesystem path/containment/glob helpers
 |   |   +-- settings.ts             User settings
 |   |   +-- process-runner.ts       External-compiler spawn with whitelist wrapper parsing
 |   |   +-- handlers/               Per-feature LSP request handlers (HandlerContext shared)
@@ -132,6 +133,7 @@ vscode-mls/
 |
 +-- shared/                 Pure TypeScript helpers shared across workspaces
 |   +-- cli/                    Shared CLI utilities (used by format, transpile, bin)
+|   +-- parsers/                Tree-sitter parser factory/manager + per-language facades + WASM
 |
 +-- plugins/               TypeScript Language Service Plugins
 |   +-- tssl-plugin/           TSSL plugin (TS6133 suppression, engine proc hover)
@@ -263,12 +265,13 @@ activate()
   +-> Start server (server/out/server.js)
 ```
 
-**VSCode engine floor (1.73):** The extension requires VSCode 1.73 or later. The
-binding constraint is `vscode.l10n.t()` in `client/src/indicator.ts`, which was
-introduced in VSCode 1.73 (November 2022). Earlier APIs used by the extension -
-`vscode.CustomEditorProvider` (1.46) and the `semanticTokenTypes` contribution
-point (1.43) - are all satisfied by 1.73. The floor should be raised if a feature
-requiring a later release is added.
+**VSCode engine floor (1.73):** The extension declares `engines.vscode: ^1.73.0`
+(`package.json`). The `vscode.l10n.t()` call that originally set this floor (it
+was introduced in VSCode 1.73, November 2022) has since been removed, so the
+remaining VSCode APIs in use - `vscode.CustomEditorProvider` (1.46) and the
+`semanticTokenTypes` contribution point (1.43) - are satisfied well below the
+declared floor, which is now conservative. Raise it if a feature requiring a
+later release is added.
 
 ### TypeScript Language Service Plugins
 

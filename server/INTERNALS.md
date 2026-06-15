@@ -201,7 +201,8 @@ server/src/
 +-- user-messages.ts          # User-facing message wrappers (auto-decode file:// URIs)
 +-- settings.ts               # User settings
 +-- process-runner.ts         # Compiler-spawn helper (wrapper whitelist, shell-true guards)
-+-- common.ts                 # Logging, file utils
++-- logger.ts                 # Logging (routes through the LSP connection console)
++-- path-utils.ts             # Filesystem path/containment/glob helpers
 ```
 
 Cross-package note: the **root-level `shared/` workspace** (not `server/src/shared/`) owns the
@@ -598,7 +599,7 @@ onDidSave / onDidChangeContent / manual command
 
 **Cleanup**: Both SSL and WeiDU compilation use `try/finally` to ensure tmp files are always deleted, even if the compiler throws. Cleanup errors (e.g., `EPERM`) are logged and swallowed - they must not mask compiler results or cause unhandled rejections. External compiler processes are promisified so callers (e.g., transpile chains TD->D->WeiDU, TBAF->BAF->WeiDU, TSSL->SSL->sslc) correctly await completion. File I/O uses `fs.promises` (async) to avoid blocking the LSP thread. Fire-and-forget compile calls in `server.ts` use `.catch()` to log and swallow rejections.
 
-**Shared compilation infrastructure** (`common.ts`): Both SSL and WeiDU compilers share `runProcess()` (Promise-wrapped `execFile` with logging and optional `AbortSignal`), `addFallbackDiagnostic()` (returns a new `ParseResult` with a line-1 diagnostic appended - does not mutate the input), `reportCompileResult()` (shows interactive success/failure messages based on `ParseResult` - intentionally treats warnings as failures since sslc warnings indicate real issues), `removeTmpFile()` (cleanup with ENOENT tolerance), and `sendParseResult()` (aggregates diagnostics by URI). Output parsing is language-specific: `parseCompileOutput()` in `compiler.ts` (uses extracted `resolveMatchFilePath()` and `execAll()` helpers) and `parseWeiduOutput()` in `weidu-compile.ts`.
+**Shared compilation infrastructure**: Both SSL and WeiDU compilers share `runProcess()` (Promise-wrapped `execFile` with logging and optional `AbortSignal`) and `removeTmpFile()` (cleanup with ENOENT tolerance) from `process-runner.ts`, and `addFallbackDiagnostic()` (returns a new `ParseResult` with a line-1 diagnostic appended - does not mutate the input), `reportCompileResult()` (shows interactive success/failure messages based on `ParseResult` - intentionally treats warnings as failures since sslc warnings indicate real issues), and `sendParseResult()` (aggregates diagnostics by URI) from `diagnostics.ts`. Output parsing is language-specific: `parseCompileOutput()` in `compiler.ts` (uses extracted `resolveMatchFilePath()` and `execAll()` helpers) and `parseWeiduOutput()` in `weidu-compile.ts`.
 
 **Diagnostics**: Compiler output parsed via regex into `ParseResult { errors, warnings }`. `sendParseResult()` aggregates by URI and sends LSP diagnostics. Both compilers always send diagnostics (even on success) to clear stale errors from previous runs. Multi-file error reporting supported (SSL includes can fail in header files). WeiDU deduplicates errors by location since WeiDU emits both `PARSE ERROR` and `ERROR` for the same location. WeiDU error messages include up to 4 detail lines from WeiDU output verbatim. When a compiler fails but output isn't parseable (e.g., binary not found, unexpected output format), both compilers use `addFallbackDiagnostic()` instead of silently clearing diagnostics. WeiDU shows an actionable `showError` when the binary is not found (ENOENT). All transpiler branches (TD, TBAF, TSSL) clear diagnostics before compilation.
 
