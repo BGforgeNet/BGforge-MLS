@@ -32,6 +32,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Generates the tree-sitter.d.ts type declarations the sources import. Unlike the Build
+      # workflow, this job doesn't otherwise build grammars; weidu-tp2's declaration is gitignored,
+      # so without this step Stryker can't resolve it and every importing module fails to compile.
+      - name: Build tree-sitter grammar
+        run: pnpm build:grammar
+
       - name: Run mutation tests
         run: pnpm test:mutation
         continue-on-error: false
