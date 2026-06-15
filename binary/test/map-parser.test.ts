@@ -542,7 +542,15 @@ describe("MAP parser - real maps", () => {
         const result = mapParser.parse(mapData);
 
         expect(result.errors).toBeDefined();
-        expect(result.errors?.some((error) => error.includes("overflow"))).toBe(true);
+        // The ambiguous boundary makes strict parsing misread the script-section
+        // count; it is clamped to the remaining buffer and rejected up front as a
+        // deterministic malformed-script error (rather than spinning extents into
+        // a later per-slot overflow).
+        expect(
+            result.errors?.some(
+                (error) => error.includes("scripts for type") && error.includes("treating as malformed"),
+            ),
+        ).toBe(true);
         expect(result.opaqueRanges?.some((range) => range.label === "objects-tail")).toBe(false);
     });
 });

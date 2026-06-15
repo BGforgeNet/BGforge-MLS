@@ -257,7 +257,20 @@ export function parseScripts(
         const count = view.getInt32(0, false);
         currentOffset += 4;
 
-        if (count < 0) {
+        // A crafted MAP can report any signed int32 script count. Beyond the
+        // negative case, a large positive count would drive extentCount
+        // (= ceil(count / 16)) into the tens of millions and spin the extent
+        // loop before the per-slot bounds check fires. Clamp to what the
+        // remaining buffer can hold - every slot is at least OTHER_SLOT_BYTES,
+        // so that is a safe upper bound - and treat anything larger as
+        // malformed, mirroring clampVarCount for the variable sections.
+        const maxScriptCount = Math.floor((data.length - currentOffset) / OTHER_SLOT_BYTES);
+        if (count < 0 || count > maxScriptCount) {
+            if (count > maxScriptCount) {
+                errors.push(
+                    `Map reports ${count} scripts for type ${scriptType} but only ${maxScriptCount} fit in the remaining buffer; treating as malformed`,
+                );
+            }
             // Count consumed but not pushed: 4 bytes already read are lost.
             overflowStart = countOffset;
             break;
