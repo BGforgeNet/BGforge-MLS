@@ -10,11 +10,11 @@ import {
     compilePatternFields,
     formatPresentationSchema,
 } from "../presentation-schema-types";
-import { effBodySpecAnnotated } from "../eff/specs/body.overrides";
+import { effBodyPresentation, effBodySpecAnnotated } from "../eff/specs/body.overrides";
 import { toPresentationEntries } from "../spec/derive-presentation";
 import { toDomainRanges } from "../spec/derive-domain-ranges";
 import { slugify } from "../spec/presentation";
-import { effectSpecAnnotated } from "../ie-common/specs/effect.overrides";
+import { effectPresentation, effectSpecAnnotated } from "../ie-common/specs/effect.overrides";
 import { creHeaderPresentation, creHeaderSpecAnnotated } from "./specs/header.overrides";
 import { creItemSpecAnnotated } from "./specs/item.overrides";
 import { creKnownSpellSpecAnnotated } from "./specs/known-spell.overrides";
@@ -51,8 +51,8 @@ export const crePresentationSchema: FormatPresentationSchema = formatPresentatio
         ...toPresentationEntries(creSpellMemInfoSpecAnnotated, {}, "cre.spellMemInfo[]"),
         ...toPresentationEntries(creMemorizedSpellSpecAnnotated, {}, "cre.memorizedSpells[]"),
         ...toPresentationEntries(creItemSpecAnnotated, {}, "cre.items[]"),
-        ...toPresentationEntries(effectSpecAnnotated, {}, "cre.effects[].v1"),
-        ...toPresentationEntries(effBodySpecAnnotated, {}, "cre.effects[].v2"),
+        ...toPresentationEntries(effectSpecAnnotated, effectPresentation, "cre.effects[].v1"),
+        ...toPresentationEntries(effBodySpecAnnotated, effBodyPresentation, "cre.effects[].v2"),
         ...itemSlotEntries,
     },
     patternFields: [],

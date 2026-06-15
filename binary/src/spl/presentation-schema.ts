@@ -10,7 +10,7 @@ import {
     compilePatternFields,
     formatPresentationSchema,
 } from "../presentation-schema-types";
-import { effectSpecAnnotated } from "../ie-common/specs/effect.overrides";
+import { effectPresentation, effectSpecAnnotated } from "../ie-common/specs/effect.overrides";
 import { toPresentationEntries } from "../spec/derive-presentation";
 import { toDomainRanges } from "../spec/derive-domain-ranges";
 import { splAbilityPresentation, splAbilitySpecAnnotated } from "./specs/ability.overrides";
@@ -22,7 +22,7 @@ export const splPresentationSchema: FormatPresentationSchema = formatPresentatio
     exactFields: {
         ...toPresentationEntries(splHeaderSpecAnnotated, {}, "spl.header"),
         ...toPresentationEntries(splAbilitySpecAnnotated, splAbilityPresentation, "spl.abilities[]"),
-        ...toPresentationEntries(effectSpecAnnotated, {}, "spl.effects[]"),
+        ...toPresentationEntries(effectSpecAnnotated, effectPresentation, "spl.effects[]"),
     },
     patternFields: [],
 });

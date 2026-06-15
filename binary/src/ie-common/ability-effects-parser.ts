@@ -13,7 +13,7 @@
 
 import { group, readerAt } from "./parse-helpers";
 import { walkStruct } from "../spec/walk-display";
-import { effectSpecAnnotated } from "./specs/effect.overrides";
+import { effectPresentation, effectSpecAnnotated } from "./specs/effect.overrides";
 import { EFFECT_SIZE, bytesEqual } from "./types";
 import { toTypedBinarySchema, type SpecCodec } from "../spec/derive-typed-binary";
 import type { SpecData, StructSpec } from "../spec/types";
@@ -59,9 +59,9 @@ export interface IeAbilityEffectsParserConfig<HeaderData extends IeAbilityEffect
 // this is the same instance each format's `schemas.ts` derives from
 // `effectSpecAnnotated`; building it here keeps the factory self-contained.
 const effectSchema = toTypedBinarySchema(effectSpecAnnotated);
-// Empty presentation tables - `humanize(fieldName)` supplies labels in the
-// display tree. The per-format header/ability presentations are passed in.
-const effectPresentation = {} as const;
+// The shared feature-block/EFF-v1 presentation (`effectPresentation`) is imported so ITM, SPL, and CRE-v0
+// effects render identically; `humanize(fieldName)` supplies labels for fields it does not override. The
+// per-format header/ability presentations are passed in by each caller.
 
 export function createIeAbilityEffectsParser<HeaderData extends IeAbilityEffectsHeader, AbilityData>(
     config: IeAbilityEffectsParserConfig<HeaderData, AbilityData>,

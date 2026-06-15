@@ -31,7 +31,7 @@ import {
     type CreSpellMemInfoData,
 } from "./schemas";
 import { serializeCre } from "./serializer";
-import { effectSpecAnnotated } from "../ie-common/specs/effect.overrides";
+import { effectPresentation, effectSpecAnnotated } from "../ie-common/specs/effect.overrides";
 import { creHeaderPresentation, creHeaderSpecAnnotated } from "./specs/header.overrides";
 import { creItemSpecAnnotated } from "./specs/item.overrides";
 import { creKnownSpellSpecAnnotated } from "./specs/known-spell.overrides";
@@ -59,9 +59,9 @@ const knownSpellPresentation = {} as const;
 const spellMemInfoPresentation = {} as const;
 const memorizedSpellPresentation = {} as const;
 const itemPresentation = {} as const;
-const effectV1Presentation = {} as const;
-// CRE v2 effects embed the same 264-byte EFF body; reuse the EFF body presentation so a CRE-embedded
-// effect renders its fields (e.g. the hex `Special` stacking id) identically to a standalone .eff.
+// CRE v0 effects embed the shared 48-byte feature block, CRE v2 effects the 264-byte EFF body; both reuse the
+// records' own shared presentations (`effectPresentation` / `effBodyPresentation`) so a CRE-embedded effect
+// renders its fields (e.g. the hex `Special` stacking id) identically to a standalone ITM/SPL/.eff effect.
 
 const FORMAT_ID = "cre";
 const FORMAT_NAME = "Infinity Engine CRE v1";
@@ -247,7 +247,7 @@ class CreParser implements BinaryParser {
                 ? (effectsRecords as CreEffectV1Data[]).map((e, i) =>
                       walkStruct(
                           effectSpecAnnotated,
-                          effectV1Presentation,
+                          effectPresentation,
                           header.effectsOffset + i * effectSize,
                           e,
                           `Effect ${i + 1}`,

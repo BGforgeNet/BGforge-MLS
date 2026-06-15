@@ -147,6 +147,8 @@ const TABLE_SOURCES: Record<string, string> = {
     "map.ScriptFlags": "fallout2-ce scripts.h SCRIPT_FLAG_* (anonymous; labels are behavioral readings)",
     "map.ObjectFlags": "fallout2-ce obj_types.h ObjectFlags (sfall ObjectFlag)",
     "map.ObjectDataFlags": "fallout2-ce obj_types.h OBJ_LOCKED/OBJ_JAMMED",
+    "map.DoorOpenFlags": "fallout2-ce obj_types.h DOOR_FLAG_LOCKED/JAMMED + proto_instance.cc 0x01 open bit",
+    "map.ElevatorType": "fallout2-ce elevator.h Elevator enum (values 0-23; 14 unnamed)",
     "map.ItemSubType": "fallout2-ce proto_types.h ITEM_TYPE_*",
     "map.ScenerySubType": "fallout2-ce proto_types.h SCENERY_TYPE_* (direction naming)",
 
