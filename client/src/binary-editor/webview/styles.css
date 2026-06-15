@@ -41,6 +41,18 @@ body {
     gap: 0.5rem;
 }
 
+/* Beta notice on the left of the toolbar - low-emphasis, themed muted text with a themed link. */
+.toolbar-beta {
+    font-size: 0.9em;
+    color: var(--vscode-descriptionForeground);
+}
+.toolbar-beta a {
+    color: var(--vscode-textLink-foreground);
+}
+.toolbar-beta a:hover {
+    color: var(--vscode-textLink-activeForeground);
+}
+
 /* ---- toolbar buttons (icon + label, secondary appearance) ---- */
 .toolbar-btn {
     display: inline-flex;

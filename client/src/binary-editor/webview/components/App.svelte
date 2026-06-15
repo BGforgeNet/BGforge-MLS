@@ -90,8 +90,13 @@
     </div>
 {:else}
     <div class="toolbar">
-        <!-- JSON import/export are pushed to the right (toolbar-actions margin-left:auto) so they sit apart
-             from the left-hand view options. -->
+        <!-- Beta notice sits on the left; JSON import/export are pushed to the right (toolbar-actions
+             margin-left:auto) so they sit apart from it. -->
+        <span class="toolbar-beta">
+            Beta. Report issues to
+            <a href="https://github.com/BGforgeNet/BGforge-MLS/issues" target="_blank" rel="noreferrer"
+               >https://github.com/BGforgeNet/BGforge-MLS/issues</a>
+        </span>
         <div class="toolbar-actions">
             <button class="toolbar-btn" onclick={() => bridge.dumpJson()}
                     title="Export the current file contents as JSON to a new editor tab">
