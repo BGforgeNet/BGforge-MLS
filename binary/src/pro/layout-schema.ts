@@ -6,7 +6,7 @@
  * Every PRO object/sub type has a variant: critter (the worked mockup), the seven item subtypes
  * (weapon/armor/ammo/drug/misc/key/container), the six scenery subtypes (door/stairs/elevator/ladderTop/
  * ladderBottom/generic), and wall/tile/misc. With all variants present the parser never falls back to the
- * legacy tabs path, which lets Phase 7 retire it.
+ * legacy depth-0-groups-as-tabs path (since retired).
  *
  * Field refs are the semantic keys `toSemanticFieldKey("pro", sourceSegments)` produces. The critter parser
  * flattens to one "Critter" group, so its keys are `pro.critter.<field>`; every other type keys its fields

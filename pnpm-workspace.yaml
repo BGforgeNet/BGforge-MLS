@@ -34,6 +34,9 @@ allowBuilds:
 #     prefix/postfix; fixed in 0.2.6).
 #   - qs via typed-rest-client under @vscode/vsce and the Stryker packages
 #     (GHSA-q8mj-m7cp-5q26: qs.stringify DoS; fixed in 6.15.2).
+#   - esbuild via the Stryker vitest-runner -> vitest -> vite chain (GHSA-gv7w-rqvm-qjhr:
+#     RCE through an unverified Deno binary download; GHSA-g7r4-m6w7-qqqr: Windows dev-server
+#     file read; both fixed in 0.28.1). Dev/test toolchain only - never in a shipped artifact.
 # The top-level deps (@vscode/vsce, Stryker) are already at their latest versions,
 # so these are transitive pins, not direct bumps. The former fast-uri and
 # brace-expansion pins were dropped: their upstreams (ajv, minimatch) now resolve
@@ -44,6 +47,7 @@ overrides:
   uuid: ">=14"
   tmp: ">=0.2.6"
   qs: ">=6.15.2"
+  esbuild: ">=0.28.1"
 
 # pnpm 11 enables minimumReleaseAge (24h maturity window) by default. The built-in
 # SSL compiler ships as a GitHub-release tarball (server/package.json

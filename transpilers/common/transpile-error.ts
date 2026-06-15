@@ -18,9 +18,7 @@ export class TranspileError extends Error {
         this.name = "TranspileError";
         this.location = location;
         if (cause !== undefined) {
-            // `cause` is part of the Error standard (ES2022) but older TS lib
-            // typings may not include it; set it manually for cross-runtime compat.
-            (this as unknown as Record<string, unknown>)["cause"] = cause;
+            this.cause = cause;
         }
     }
 

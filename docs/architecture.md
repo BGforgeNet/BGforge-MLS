@@ -85,7 +85,7 @@ vscode-mls/
 |   |   +-- webview-assets.ts       HTML/CSS/JS asset cache shared by webview panels
 |   |   +-- webview-error.ts        Webview runtime error surfacing (DevTools + output + toast)
 |   |   +-- dialog-tree/            Dialog tree preview (webview panels)
-|   |   +-- editors/                Binary .pro/.map/.itm/.spl/.eff/.cre editor (custom editor; uses @bgforge/binary)
+|   |   +-- binary-editor/          Binary .pro/.map/.itm/.spl/.eff/.cre custom editor (worker thread + Svelte webview; uses @bgforge/binary + @bgforge/binary-editor)
 |   |   +-- test/                   E2E tests (mocha + vscode test runner)
 |   +-- out/                    esbuild output
 |
@@ -121,6 +121,10 @@ vscode-mls/
 |   +-- src/                    index.ts (library) + cli.ts (fgbin bin) + format adapters
 |   +-- test/                   Library + CLI tests (vitest)
 |   +-- out/                    tsup output
+|
++-- binary-editor/          @bgforge/binary-editor package: declarative layout layer (parsed records -> editor blocks)
+|   +-- src/                    layout/model/session/spellbook/cross-record projection consumed by the client webview
+|   +-- test/                   Layout + structure-op tests (vitest) + Playwright render harness (test/harness/, e2e-tier)
 |
 +-- format/                 @bgforge/format package: formatters library + fgfmt CLI bin
 |   +-- src/                    index.ts (library) + cli.ts (fgfmt bin)
