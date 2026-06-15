@@ -47,7 +47,7 @@ export default defineConfig({
             // the unit suite touches.
             exclude: ["src/fallout-ssl/provider.ts", "src/weidu-tp2/provider.ts"],
             thresholds: {
-                lines: 90,
+                lines: 91,
                 functions: 96,
                 branches: 80,
                 statements: 90,

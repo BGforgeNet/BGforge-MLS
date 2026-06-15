@@ -18,11 +18,15 @@
  * rather than re-mocked here.
  */
 
-import { describe, expect, it, vi, afterEach } from "vitest";
-import type { Connection, TextDocuments } from "vscode-languageserver/node";
+import { describe, expect, it, vi, afterEach, beforeAll } from "vitest";
+import { MarkupKind, type Connection, type TextDocuments } from "vscode-languageserver/node";
 import type { TextDocument } from "vscode-languageserver-textdocument";
 import { registry } from "../../src/provider-registry";
+import { HoverResult as HoverResultFactory } from "../../src/language-provider";
+import { initServerContext } from "../../src/server-context";
 import type { HandlerContext } from "../../src/handlers/context";
+import type { MLSsettings, ProjectSettings } from "../../src/settings";
+import type { Translation } from "../../src/translation";
 
 import * as completion from "../../src/handlers/completion";
 import * as folding from "../../src/handlers/folding";
@@ -95,6 +99,38 @@ const KNOWN_URI = "file:///known.ssl";
 const UNKNOWN_URI = "file:///missing.ssl";
 const POSITION = { line: 0, character: 0 };
 const TOKEN = { isCancellationRequested: false, onCancellationRequested: () => ({ dispose() {} }) };
+
+/**
+ * Stub translation object satisfying the Translation interface surface used by
+ * hover, definition, references, and inlay-hints handlers. All methods return
+ * null/[] by default; individual tests override with vi.spyOn.
+ */
+function makeTranslationStub(): Translation {
+    return {
+        getHover: vi.fn().mockReturnValue(null),
+        getDefinition: vi.fn().mockReturnValue(null),
+        getReferences: vi.fn().mockResolvedValue(null),
+        getInlayHints: vi.fn().mockReturnValue([]),
+    } as unknown as Translation;
+}
+
+/**
+ * Initialize the module-level server-context barrier once for the handlers
+ * that call getServerContext(). Using the real initServerContext keeps the
+ * test from mocking internals it does not own.
+ */
+let translationStub: Translation;
+
+beforeAll(() => {
+    translationStub = makeTranslationStub();
+    initServerContext({
+        capabilities: { configuration: false, workspaceFolders: false, fileWatching: false },
+        workspaceRoot: undefined,
+        projectSettings: {} as ProjectSettings,
+        settings: { debug: false } as unknown as MLSsettings,
+        translation: translationStub,
+    });
+});
 
 afterEach(() => {
     vi.restoreAllMocks();
@@ -272,5 +308,469 @@ describe("handler delegation to the provider registry", () => {
 
         expect(spy).toHaveBeenCalledWith("fallout-ssl", "text", KNOWN_URI);
         expect(result).toBe(sentinel);
+    });
+});
+
+// --- signature handler -----------------------------------------------------------------------
+
+describe("signature handler", () => {
+    // Text that produces a parseable signature request: cursor after the opening
+    // paren of "myFunc(" so getRequest returns { symbol: "myFunc", parameter: 0 }.
+    const SIG_TEXT = "myFunc(";
+    // Position at the end of the line (character 7 = after the open-paren).
+    const SIG_POS = { line: 0, character: 7 };
+
+    it("returns null when getRequest finds no function call at position", async () => {
+        // Empty text: no open-paren, so getRequest returns undefined.
+        const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc("")]]));
+        signature.register(ctx);
+        const result = await wiredHandler(
+            wired,
+            "onSignatureHelp",
+        )({
+            textDocument: { uri: KNOWN_URI },
+            position: { line: 0, character: 0 },
+        });
+        expect(result).toBeNull();
+    });
+
+    it("delegates to registry.signature when a function call is detected", async () => {
+        const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc(SIG_TEXT)]]));
+        const sentinel = { signatures: [], activeSignature: 0, activeParameter: 0 };
+        const spy = vi.spyOn(registry, "signature").mockReturnValue(sentinel);
+
+        signature.register(ctx);
+        const result = await wiredHandler(
+            wired,
+            "onSignatureHelp",
+        )({
+            textDocument: { uri: KNOWN_URI },
+            position: SIG_POS,
+        });
+
+        // registry.signature receives (langId, text, uri, symbol, paramIndex)
+        expect(spy).toHaveBeenCalledWith("fallout-ssl", SIG_TEXT, KNOWN_URI, "myFunc", 0);
+        expect(result).toBe(sentinel);
+    });
+
+    it("returns the registry result when it is null (no signature data for this symbol)", async () => {
+        const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc(SIG_TEXT)]]));
+        vi.spyOn(registry, "signature").mockReturnValue(null);
+
+        signature.register(ctx);
+        const result = await wiredHandler(
+            wired,
+            "onSignatureHelp",
+        )({
+            textDocument: { uri: KNOWN_URI },
+            position: SIG_POS,
+        });
+        expect(result).toBeNull();
+    });
+});
+
+// --- hover handler ---------------------------------------------------------------------------
+
+describe("hover handler", () => {
+    // A word on line 0 so symbolAtPosition returns a non-empty token.
+    const HOVER_TEXT = "my_proc";
+    const HOVER_POS = { line: 0, character: 3 };
+
+    it("returns undefined when there is no symbol at position (whitespace only)", async () => {
+        const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc("   ")]]));
+        hover.register(ctx);
+        // Position character=0 on a whitespace-only line yields no word token.
+        const result = await wiredHandler(
+            wired,
+            "onHover",
+        )({
+            textDocument: { uri: KNOWN_URI },
+            position: { line: 0, character: 0 },
+        });
+        expect(result).toBeUndefined();
+    });
+
+    it("returns undefined when shouldProvideFeatures is false (comment zone)", async () => {
+        const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc(HOVER_TEXT)]]));
+        vi.spyOn(registry, "shouldProvideFeatures").mockReturnValue(false);
+
+        hover.register(ctx);
+        const result = await wiredHandler(
+            wired,
+            "onHover",
+        )({
+            textDocument: { uri: KNOWN_URI },
+            position: HOVER_POS,
+        });
+        expect(result).toBeUndefined();
+    });
+
+    it("returns translation hover when translation.getHover matches", async () => {
+        const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc(HOVER_TEXT)]]));
+        vi.spyOn(registry, "shouldProvideFeatures").mockReturnValue(true);
+        const translationHover = { contents: { kind: MarkupKind.PlainText, value: "msg #1" } };
+        vi.spyOn(translationStub, "getHover").mockReturnValue(translationHover);
+
+        hover.register(ctx);
+        const result = await wiredHandler(
+            wired,
+            "onHover",
+        )({
+            textDocument: { uri: KNOWN_URI },
+            position: HOVER_POS,
+        });
+        expect(result).toBe(translationHover);
+    });
+
+    it("returns localHover result when provider handles it (handled=true, hover found)", async () => {
+        const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc(HOVER_TEXT)]]));
+        vi.spyOn(registry, "shouldProvideFeatures").mockReturnValue(true);
+        vi.spyOn(translationStub, "getHover").mockReturnValue(null);
+        const localHoverValue = { contents: { kind: MarkupKind.PlainText, value: "local" } };
+        vi.spyOn(registry, "localHover").mockReturnValue(HoverResultFactory.found(localHoverValue));
+
+        hover.register(ctx);
+        const result = await wiredHandler(
+            wired,
+            "onHover",
+        )({
+            textDocument: { uri: KNOWN_URI },
+            position: HOVER_POS,
+        });
+        expect(result).toBe(localHoverValue);
+    });
+
+    it("returns null when localHover is handled but has no content (handled=true, hover=null)", async () => {
+        const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc(HOVER_TEXT)]]));
+        vi.spyOn(registry, "shouldProvideFeatures").mockReturnValue(true);
+        vi.spyOn(translationStub, "getHover").mockReturnValue(null);
+        vi.spyOn(registry, "localHover").mockReturnValue(HoverResultFactory.empty());
+
+        hover.register(ctx);
+        const result = await wiredHandler(
+            wired,
+            "onHover",
+        )({
+            textDocument: { uri: KNOWN_URI },
+            position: HOVER_POS,
+        });
+        // handled=true with hover=null means "block fallthrough, return null"
+        expect(result).toBeNull();
+    });
+
+    it("falls through to registry.hover (data-driven) when localHover is not handled", async () => {
+        const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc(HOVER_TEXT)]]));
+        vi.spyOn(registry, "shouldProvideFeatures").mockReturnValue(true);
+        vi.spyOn(translationStub, "getHover").mockReturnValue(null);
+        vi.spyOn(registry, "localHover").mockReturnValue(HoverResultFactory.notHandled());
+        const dataHover = { contents: { kind: MarkupKind.PlainText, value: "data" } };
+        const dataSpy = vi.spyOn(registry, "hover").mockReturnValue(dataHover);
+
+        hover.register(ctx);
+        const result = await wiredHandler(
+            wired,
+            "onHover",
+        )({
+            textDocument: { uri: KNOWN_URI },
+            position: HOVER_POS,
+        });
+        expect(dataSpy).toHaveBeenCalledWith("fallout-ssl", KNOWN_URI, "my_proc", HOVER_TEXT);
+        expect(result).toBe(dataHover);
+    });
+});
+
+// --- definition handler ----------------------------------------------------------------------
+
+describe("definition handler", () => {
+    const DEF_TEXT = "my_proc";
+    const DEF_POS = { line: 0, character: 3 };
+
+    it("returns undefined when shouldProvideFeatures is false", async () => {
+        const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc(DEF_TEXT)]]));
+        vi.spyOn(registry, "shouldProvideFeatures").mockReturnValue(false);
+
+        definition.register(ctx);
+        const result = await wiredHandler(
+            wired,
+            "onDefinition",
+        )({
+            textDocument: { uri: KNOWN_URI },
+            position: DEF_POS,
+        });
+        expect(result).toBeUndefined();
+    });
+
+    it("returns provider AST-based definition when registry.definition resolves a location", async () => {
+        const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc(DEF_TEXT)]]));
+        vi.spyOn(registry, "shouldProvideFeatures").mockReturnValue(true);
+        const loc = { uri: KNOWN_URI, range: { start: POSITION, end: POSITION } };
+        const provSpy = vi.spyOn(registry, "definition").mockResolvedValue(loc);
+
+        definition.register(ctx);
+        const result = await wiredHandler(
+            wired,
+            "onDefinition",
+        )({
+            textDocument: { uri: KNOWN_URI },
+            position: DEF_POS,
+        });
+        expect(provSpy).toHaveBeenCalledWith("fallout-ssl", DEF_TEXT, DEF_POS, KNOWN_URI);
+        expect(result).toBe(loc);
+    });
+
+    it("returns translation definition when registry.definition is null and translation matches", async () => {
+        const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc(DEF_TEXT)]]));
+        vi.spyOn(registry, "shouldProvideFeatures").mockReturnValue(true);
+        vi.spyOn(registry, "definition").mockResolvedValue(null);
+        const traLoc = { uri: "file:///strings.tra", range: { start: POSITION, end: POSITION } };
+        vi.spyOn(translationStub, "getDefinition").mockReturnValue(traLoc);
+
+        definition.register(ctx);
+        const result = await wiredHandler(
+            wired,
+            "onDefinition",
+        )({
+            textDocument: { uri: KNOWN_URI },
+            position: DEF_POS,
+        });
+        expect(result).toBe(traLoc);
+    });
+
+    it("returns symbolDefinition (data-driven) when provider and translation both return null", async () => {
+        const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc(DEF_TEXT)]]));
+        vi.spyOn(registry, "shouldProvideFeatures").mockReturnValue(true);
+        vi.spyOn(registry, "definition").mockResolvedValue(null);
+        vi.spyOn(translationStub, "getDefinition").mockReturnValue(null);
+        const symLoc = { uri: "file:///header.ssl", range: { start: POSITION, end: POSITION } };
+        const symSpy = vi.spyOn(registry, "symbolDefinition").mockReturnValue(symLoc);
+
+        definition.register(ctx);
+        const result = await wiredHandler(
+            wired,
+            "onDefinition",
+        )({
+            textDocument: { uri: KNOWN_URI },
+            position: DEF_POS,
+        });
+        expect(symSpy).toHaveBeenCalledWith("fallout-ssl", "my_proc");
+        expect(result).toBe(symLoc);
+    });
+
+    it("returns null when no symbol is under the cursor and provider returns null", async () => {
+        // Whitespace-only text -> symbolAtPosition returns "" which is falsy
+        const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc("   ")]]));
+        vi.spyOn(registry, "shouldProvideFeatures").mockReturnValue(true);
+        vi.spyOn(registry, "definition").mockResolvedValue(null);
+
+        definition.register(ctx);
+        const result = await wiredHandler(
+            wired,
+            "onDefinition",
+        )({
+            textDocument: { uri: KNOWN_URI },
+            position: { line: 0, character: 0 },
+        });
+        expect(result).toBeNull();
+    });
+});
+
+// --- references handler ----------------------------------------------------------------------
+
+describe("references handler", () => {
+    const REF_TEXT = "my_proc";
+    const REF_POS = { line: 0, character: 3 };
+    const refParams = (uri: string) => ({
+        textDocument: { uri },
+        position: REF_POS,
+        context: { includeDeclaration: true },
+    });
+
+    it("returns [] when shouldProvideFeatures is false", async () => {
+        const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc(REF_TEXT)]]));
+        vi.spyOn(registry, "shouldProvideFeatures").mockReturnValue(false);
+
+        references.register(ctx);
+        const result = await wiredHandler(wired, "onReferences")(refParams(KNOWN_URI));
+        expect(result).toEqual([]);
+    });
+
+    it("returns provider references when registry.references returns a non-empty list", async () => {
+        const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc(REF_TEXT)]]));
+        vi.spyOn(registry, "shouldProvideFeatures").mockReturnValue(true);
+        const locs = [{ uri: KNOWN_URI, range: { start: POSITION, end: POSITION } }];
+        const refSpy = vi.spyOn(registry, "references").mockReturnValue(locs);
+
+        references.register(ctx);
+        const result = await wiredHandler(wired, "onReferences")(refParams(KNOWN_URI), TOKEN);
+        expect(refSpy).toHaveBeenCalledWith("fallout-ssl", REF_TEXT, REF_POS, KNOWN_URI, true, TOKEN);
+        expect(result).toBe(locs);
+    });
+
+    it("falls through to translation.getReferences when provider returns empty", async () => {
+        const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc(REF_TEXT)]]));
+        vi.spyOn(registry, "shouldProvideFeatures").mockReturnValue(true);
+        vi.spyOn(registry, "references").mockReturnValue([]);
+        const traLocs = [{ uri: "file:///strings.tra", range: { start: POSITION, end: POSITION } }];
+        vi.spyOn(translationStub, "getReferences").mockResolvedValue(traLocs);
+
+        references.register(ctx);
+        const result = await wiredHandler(wired, "onReferences")(refParams(KNOWN_URI), TOKEN);
+        expect(result).toBe(traLocs);
+    });
+
+    it("returns [] when both provider and translation return empty", async () => {
+        const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc(REF_TEXT)]]));
+        vi.spyOn(registry, "shouldProvideFeatures").mockReturnValue(true);
+        vi.spyOn(registry, "references").mockReturnValue([]);
+        vi.spyOn(translationStub, "getReferences").mockResolvedValue([]);
+
+        references.register(ctx);
+        const result = await wiredHandler(wired, "onReferences")(refParams(KNOWN_URI), TOKEN);
+        expect(result).toEqual([]);
+    });
+});
+
+// --- inlay-hints handler ---------------------------------------------------------------------
+
+describe("inlay-hints handler", () => {
+    const INLAY_RANGE = { start: POSITION, end: { line: 1, character: 0 } };
+    const inlayParams = (uri: string) => ({ textDocument: { uri }, range: INLAY_RANGE });
+
+    it("returns provider inlay hints when registry.inlayHints is non-empty", async () => {
+        const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc("text")]]));
+        const hints = [{ position: POSITION, label: "42" }];
+        const spy = vi.spyOn(registry, "inlayHints").mockReturnValue(hints as never);
+
+        inlayHints.register(ctx);
+        const result = await wiredHandler(wired, "inlayHint")(inlayParams(KNOWN_URI));
+        expect(spy).toHaveBeenCalledWith("fallout-ssl", "text", KNOWN_URI, INLAY_RANGE);
+        expect(result).toBe(hints);
+    });
+
+    it("falls through to translation.getInlayHints when provider returns empty", async () => {
+        const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc("text")]]));
+        vi.spyOn(registry, "inlayHints").mockReturnValue([]);
+        const traHints = [{ position: POSITION, label: "@99" }];
+        vi.spyOn(translationStub, "getInlayHints").mockReturnValue(traHints as never);
+
+        inlayHints.register(ctx);
+        const result = await wiredHandler(wired, "inlayHint")(inlayParams(KNOWN_URI));
+        expect(result).toBe(traHints);
+    });
+});
+
+// --- rename handler --------------------------------------------------------------------------
+
+describe("rename handler", () => {
+    const RENAME_TEXT = "my_proc";
+    const RENAME_POS = { line: 0, character: 3 };
+
+    it("prepareRename delegates to registry.prepareRename", async () => {
+        const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc(RENAME_TEXT)]]));
+        const rangeResult = { range: { start: RENAME_POS, end: RENAME_POS }, placeholder: "my_proc" };
+        const spy = vi.spyOn(registry, "prepareRename").mockReturnValue(rangeResult);
+
+        rename.register(ctx);
+        const result = await wiredHandler(
+            wired,
+            "onPrepareRename",
+        )({
+            textDocument: { uri: KNOWN_URI },
+            position: RENAME_POS,
+        });
+        expect(spy).toHaveBeenCalledWith("fallout-ssl", RENAME_TEXT, RENAME_POS);
+        expect(result).toBe(rangeResult);
+    });
+
+    it("onRenameRequest delegates to registry.rename and returns WorkspaceEdit", async () => {
+        const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc(RENAME_TEXT)]]));
+        const workspaceEdit = {
+            documentChanges: [
+                {
+                    textDocument: { uri: KNOWN_URI, version: 1 },
+                    edits: [{ range: { start: RENAME_POS, end: RENAME_POS }, newText: "new_proc" }],
+                },
+            ],
+        };
+        const spy = vi.spyOn(registry, "rename").mockResolvedValue(workspaceEdit as never);
+
+        rename.register(ctx);
+        const result = await wiredHandler(
+            wired,
+            "onRenameRequest",
+        )({
+            textDocument: { uri: KNOWN_URI },
+            position: RENAME_POS,
+            newName: "new_proc",
+        });
+        expect(spy).toHaveBeenCalledWith("fallout-ssl", RENAME_TEXT, RENAME_POS, "new_proc", KNOWN_URI);
+        expect(result).toBe(workspaceEdit);
+    });
+
+    it("onRenameRequest calls renameSuppression.markAffected for each TextDocumentEdit", async () => {
+        const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc(RENAME_TEXT)]]));
+        const secondUri = "file:///other.ssl";
+        const workspaceEdit = {
+            documentChanges: [
+                {
+                    textDocument: { uri: KNOWN_URI, version: 1 },
+                    edits: [{ range: { start: RENAME_POS, end: RENAME_POS }, newText: "x" }],
+                },
+                {
+                    textDocument: { uri: secondUri, version: 2 },
+                    edits: [{ range: { start: RENAME_POS, end: RENAME_POS }, newText: "x" }],
+                },
+            ],
+        };
+        vi.spyOn(registry, "rename").mockResolvedValue(workspaceEdit as never);
+
+        rename.register(ctx);
+        await wiredHandler(
+            wired,
+            "onRenameRequest",
+        )({
+            textDocument: { uri: KNOWN_URI },
+            position: RENAME_POS,
+            newName: "x",
+        });
+
+        // Both URIs should have been passed to markAffected (as a snapshot array)
+        expect(ctx.renameSuppression.markAffected).toHaveBeenCalledOnce();
+        const [affectedUris] = (ctx.renameSuppression.markAffected as ReturnType<typeof vi.fn>).mock.calls[0] as [
+            string[],
+        ];
+        expect(affectedUris).toHaveLength(2);
+    });
+
+    it("onRenameRequest does not call markAffected when registry returns null", async () => {
+        const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc(RENAME_TEXT)]]));
+        vi.spyOn(registry, "rename").mockResolvedValue(null);
+
+        rename.register(ctx);
+        await wiredHandler(
+            wired,
+            "onRenameRequest",
+        )({
+            textDocument: { uri: KNOWN_URI },
+            position: RENAME_POS,
+            newName: "x",
+        });
+        expect(ctx.renameSuppression.markAffected).not.toHaveBeenCalled();
+    });
+
+    it("onRenameRequest does not call markAffected when documentChanges is empty", async () => {
+        const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc(RENAME_TEXT)]]));
+        vi.spyOn(registry, "rename").mockResolvedValue({ documentChanges: [] } as never);
+
+        rename.register(ctx);
+        await wiredHandler(
+            wired,
+            "onRenameRequest",
+        )({
+            textDocument: { uri: KNOWN_URI },
+            position: RENAME_POS,
+            newName: "x",
+        });
+        expect(ctx.renameSuppression.markAffected).not.toHaveBeenCalled();
     });
 });
