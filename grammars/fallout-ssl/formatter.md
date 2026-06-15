@@ -2,7 +2,7 @@
 
 The Fallout SSL formatter preserves code structure while normalizing indentation, whitespace, and comment formatting. It handles both regular code and preprocessor directives.
 
-**Implementation:** [`../../server/src/fallout-ssl/format/core.ts`](../../server/src/fallout-ssl/format/core.ts)
+**Implementation:** [`../../format/src/fallout-ssl/core.ts`](../../format/src/fallout-ssl/core.ts)
 
 > **Note:** When modifying the formatter implementation, update this documentation to reflect any behavior changes.
 

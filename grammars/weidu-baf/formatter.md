@@ -2,7 +2,7 @@
 
 The WeiDU BAF formatter preserves the line-based structure of BAF files while normalizing indentation and comment spacing.
 
-**Implementation:** [`../../server/src/weidu-baf/format/core.ts`](../../server/src/weidu-baf/format/core.ts)
+**Implementation:** [`../../format/src/weidu-baf/core.ts`](../../format/src/weidu-baf/core.ts)
 
 > **Note:** When modifying the formatter implementation, update this documentation to reflect any behavior changes.
 

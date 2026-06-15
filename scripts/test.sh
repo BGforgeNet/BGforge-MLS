@@ -48,6 +48,7 @@ parallel \
     "Typecheck transpilers" "(cd transpilers && pnpm exec tsc --noEmit)" \
     "Oxlint" "pnpm exec oxlint" \
     "Lint scripts" "pnpm lint:scripts" \
+    "Lint md-links" "pnpm lint:md-links" \
     "Format check" "pnpm exec oxfmt --check" \
     "Script tests" "pnpm test:scripts" \
     "Knip" "pnpm knip" \

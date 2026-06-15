@@ -2,7 +2,7 @@
 
 The WeiDU TP2 formatter handles the complex structure of TP2 mod installer files, including components, conditions, patches, and various action types.
 
-**Implementation:** [`../../server/src/weidu-tp2/format/core.ts`](../../server/src/weidu-tp2/format/core.ts)
+**Implementation:** [`../../format/src/weidu-tp2/core.ts`](../../format/src/weidu-tp2/core.ts)
 
 > **Note:** When modifying the formatter implementation, update this documentation to reflect any behavior changes.
 

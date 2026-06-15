@@ -68,7 +68,7 @@
         "format": "node --no-warnings format/out/cli.js",
         "binary": "node binary/out/cli.js",
         "lint": "pnpm exec oxlint && pnpm lint:scripts && pnpm lint:shell && pnpm lint:md-links",
-        "lint:md-links": "pnpm exec remark . --ignore-path .gitignore --use remark-validate-links",
+        "lint:md-links": "pnpm exec remark . --quiet --frail --ignore-path .gitignore --use remark-validate-links",
         "ie-update": "./scripts/ie-update.sh",
         "fallout-update": "./scripts/fallout-update.sh",
         "generate-data": "./scripts/generate-data.sh",

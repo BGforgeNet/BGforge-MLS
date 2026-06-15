@@ -2,7 +2,7 @@
 
 The WeiDU D formatter preserves comments exactly while normalizing code whitespace. It is used by both the LSP server (for format-on-save) and the standalone CLI (`format-cli.js`).
 
-**Implementation:** [`../../server/src/weidu-d/format/core.ts`](../../server/src/weidu-d/format/core.ts)
+**Implementation:** [`../../format/src/weidu-d/core.ts`](../../format/src/weidu-d/core.ts)
 
 > **Note:** When modifying the formatter implementation, update this documentation to reflect any behavior changes.
 
