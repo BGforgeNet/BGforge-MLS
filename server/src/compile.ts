@@ -8,24 +8,22 @@ import * as path from "path";
 import { errorMessage } from "./diagnostics";
 import { conlog } from "./logger";
 import { isDirectory, tmpDir } from "./path-utils";
-import { pathToUri } from "./uri-utils";
+import { pathToUri, uriToPath } from "./uri-utils";
 import { EXT_TBAF, EXT_TD, EXT_TSSL, LANG_FALLOUT_SSL } from "./core/languages";
 import { getConnection } from "./lsp-connection";
 import { showError, showInfo, showWarning } from "./user-messages";
 import { registry } from "./provider-registry";
 import { getDocumentSettings } from "./settings-service";
-import * as tbaf from "../../transpilers/tbaf/src/index";
-import * as td from "../../transpilers/td/src/index";
-import * as tssl from "../../transpilers/tssl/src/index";
+// Consume the public @bgforge/transpile barrel (the transpile functions + the
+// output-path mapping), not the internal per-language/compile modules. This
+// handler owns the file write and the user-facing message, keeping the library a
+// pure source->string transformation. Imported by relative path so esbuild
+// bundles it into the server rather than treating it as an external npm dependency.
+import { tssl, tbaf, td, outputPathFor } from "../../transpilers/src/index";
 import * as weidu from "./weidu-compile";
 import { LSP_COMMAND_COMPILE } from "../../shared/protocol";
-import type { TranspilerEvent } from "../../transpilers/common/transpiler-pipeline";
 
 export const COMMAND_compile = LSP_COMMAND_COMPILE;
-
-function findOutputWrittenEvent(events: readonly TranspilerEvent[] | undefined): TranspilerEvent | undefined {
-    return events?.find((event) => event.code === "output_written");
-}
 
 export function clearDiagnostics(uri: string) {
     // Clear old diagnostics (fire-and-forget notification)
@@ -61,24 +59,24 @@ export async function compile(uri: string, langId: string, interactive = false, 
         if (uri.toLowerCase().endsWith(EXT_TD)) {
             clearDiagnostics(uri);
             try {
-                const { dPath, warnings, events } = await td.compile(uri, text);
+                const filePath = uriToPath(uri);
+                const { output, warnings } = await td(filePath, text);
+                const dPath = outputPathFor(filePath);
+                await fs.promises.writeFile(dPath, output, "utf-8");
                 const dName = path.basename(dPath);
-                const outputEvent = findOutputWrittenEvent(events);
                 if (interactive) {
                     if (warnings.length > 0) {
                         const orphanNames = warnings.map((w) => w.message.match(/^Function "(.+)" /)?.[1] ?? "?");
-                        const baseMessage = outputEvent?.message ?? `Transpiled to ${dName}`;
-                        const msg = `${baseMessage}. Orphan states: ${orphanNames.join(", ")}`;
-                        showWarning(msg);
+                        showWarning(`Transpiled to ${dName}. Orphan states: ${orphanNames.join(", ")}`);
                     } else {
-                        showInfo(outputEvent?.message ?? `Transpiled to ${dName}`);
+                        showInfo(`Transpiled to ${dName}`);
                     }
                 }
-                // Chain D compilation if weidu and game path are configured
+                // Chain D compilation if weidu and game path are configured.
+                // Reuse the in-memory output; it was just written to dPath.
                 if (settings.weidu.path && settings.weidu.gamePath) {
                     const dUri = pathToUri(dPath);
-                    const dText = await fs.promises.readFile(dPath, "utf-8");
-                    await weidu.compile(dUri, settings.weidu, interactive, dText);
+                    await weidu.compile(dUri, settings.weidu, interactive, output);
                 }
             } catch (error) {
                 const msg = errorMessage(error);
@@ -91,17 +89,18 @@ export async function compile(uri: string, langId: string, interactive = false, 
         if (uri.toLowerCase().endsWith(EXT_TBAF)) {
             clearDiagnostics(uri);
             try {
-                const { bafPath, events } = await tbaf.compile(uri, text);
+                const filePath = uriToPath(uri);
+                const output = await tbaf(filePath, text);
+                const bafPath = outputPathFor(filePath);
+                await fs.promises.writeFile(bafPath, output, "utf-8");
                 const bafName = path.basename(bafPath);
-                const outputEvent = findOutputWrittenEvent(events);
                 if (interactive) {
-                    showInfo(outputEvent?.message ?? `Transpiled to ${bafName}`);
+                    showInfo(`Transpiled to ${bafName}`);
                 }
-                // Chain BAF compilation if weidu and game path are configured
+                // Chain BAF compilation if weidu and game path are configured.
                 if (settings.weidu.path && settings.weidu.gamePath) {
                     const bafUri = pathToUri(bafPath);
-                    const bafText = await fs.promises.readFile(bafPath, "utf-8");
-                    await weidu.compile(bafUri, settings.weidu, interactive, bafText);
+                    await weidu.compile(bafUri, settings.weidu, interactive, output);
                 }
             } catch (error) {
                 const msg = errorMessage(error);
@@ -113,16 +112,18 @@ export async function compile(uri: string, langId: string, interactive = false, 
         }
         if (uri.toLowerCase().endsWith(EXT_TSSL)) {
             try {
-                const { sslPath } = await tssl.compile(uri, text);
+                const filePath = uriToPath(uri);
+                const output = await tssl(filePath, text);
+                const sslPath = outputPathFor(filePath);
+                await fs.promises.writeFile(sslPath, output, "utf-8");
                 const sslName = path.basename(sslPath);
                 if (interactive) {
                     showInfo(`Transpiled to ${sslName}`);
                 }
-                // Chain SSL compilation via registry
+                // Chain SSL compilation via registry, reusing the in-memory output.
                 const sslUri = pathToUri(sslPath);
-                const sslText = await fs.promises.readFile(sslPath, "utf-8");
                 clearDiagnostics(sslUri);
-                await registry.compile(LANG_FALLOUT_SSL, sslUri, sslText, interactive);
+                await registry.compile(LANG_FALLOUT_SSL, sslUri, output, interactive);
             } catch (error) {
                 const msg = errorMessage(error);
                 if (interactive) {

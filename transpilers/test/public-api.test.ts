@@ -19,6 +19,8 @@ const REQUIRED_VALUE_EXPORTS = [
     "td",
     // Dispatcher
     "transpile",
+    // Output-path mapping (compile consumers that own file I/O)
+    "outputPathFor",
     // Batch-state helper (TSSL multi-file passes)
     "createBatchState",
     // Error type

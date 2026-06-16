@@ -6,4 +6,4 @@
  * source.
  */
 
-export { EXT_TSSL, EXT_TBAF, EXT_TD } from "../../shared/languages";
+export { EXT_TSSL, EXT_TBAF, EXT_TD, EXT_FALLOUT_SSL, EXT_WEIDU_BAF, EXT_WEIDU_D } from "../../shared/languages";

@@ -6,7 +6,7 @@
  * library at publish time.
  */
 
-import { EXT_TSSL, EXT_TBAF, EXT_TD } from "../common/extensions";
+import { EXT_TSSL, EXT_TBAF, EXT_TD, EXT_FALLOUT_SSL, EXT_WEIDU_BAF, EXT_WEIDU_D } from "../common/extensions";
 import { transpile as tsslImpl } from "../tssl/src/index";
 import { transpile as tbafImpl } from "../tbaf/src/index";
 import { transpile as tdImpl, type TDWarning } from "../td/src/index";
@@ -51,5 +51,20 @@ export async function transpile(filePath: string, source: string): Promise<Trans
         const result = await td(filePath, source);
         return { kind: "td", output: result.output, warnings: result.warnings };
     }
+    throw new UnknownTranspileExtensionError(filePath);
+}
+
+/**
+ * Compute the compiled-output path for a transpiler source file by swapping the
+ * source extension for its target: .tssl -> .ssl, .tbaf -> .baf, .td -> .d.
+ * Throws UnknownTranspileExtensionError for any other extension. The caller owns
+ * writing the file - this only names where it goes, single-sourcing the
+ * source/target extension mapping that compile consumers would otherwise hardcode.
+ */
+export function outputPathFor(filePath: string): string {
+    const lower = filePath.toLowerCase();
+    if (lower.endsWith(EXT_TSSL)) return filePath.slice(0, -EXT_TSSL.length) + EXT_FALLOUT_SSL;
+    if (lower.endsWith(EXT_TBAF)) return filePath.slice(0, -EXT_TBAF.length) + EXT_WEIDU_BAF;
+    if (lower.endsWith(EXT_TD)) return filePath.slice(0, -EXT_TD.length) + EXT_WEIDU_D;
     throw new UnknownTranspileExtensionError(filePath);
 }

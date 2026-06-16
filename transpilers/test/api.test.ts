@@ -12,7 +12,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import { tssl, tbaf, td, transpile } from "../src/index";
+import { tssl, tbaf, td, transpile, outputPathFor, UnknownTranspileExtensionError } from "../src/index";
 import { transpile as tsslDirect } from "../tssl/src/index";
 import { transpile as tbafDirect } from "../tbaf/src/index";
 import { transpile as tdDirect } from "../td/src/index";
@@ -95,6 +95,26 @@ describe("@bgforge/transpile public API", () => {
             await expect(transpile("/virtual/foo.xyz", "")).rejects.toMatchObject({
                 message: expect.stringMatching(/\.td/),
             });
+        });
+    });
+
+    describe("outputPathFor()", () => {
+        // The target extensions are the canonical compiled formats: TSSL -> Fallout
+        // SSL (.ssl), TBAF -> WeiDU BAF (.baf), TD -> WeiDU D (.d).
+        it("maps a .tssl path to its .ssl output path", () => {
+            expect(outputPathFor("/mods/dir/script.tssl")).toBe("/mods/dir/script.ssl");
+        });
+        it("maps a .tbaf path to its .baf output path", () => {
+            expect(outputPathFor("/mods/dir/ai.tbaf")).toBe("/mods/dir/ai.baf");
+        });
+        it("maps a .td path to its .d output path", () => {
+            expect(outputPathFor("/mods/dir/dlg.td")).toBe("/mods/dir/dlg.d");
+        });
+        it("matches the source extension case-insensitively, lowercasing only the target", () => {
+            expect(outputPathFor("/mods/DLG.TD")).toBe("/mods/DLG.d");
+        });
+        it("throws UnknownTranspileExtensionError for an unsupported extension", () => {
+            expect(() => outputPathFor("/mods/foo.xyz")).toThrow(UnknownTranspileExtensionError);
         });
     });
 });
