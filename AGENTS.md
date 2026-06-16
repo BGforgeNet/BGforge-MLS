@@ -67,7 +67,7 @@ themes/                  # Color themes (bgforge-monokai) + icon theme
 language-configurations/ # VSCode language config files (brackets, comments, indentation)
 snippets/                # Code snippets: fallout-ssl.json, weidu-baf.json, weidu-tp2.json
 scripts/                 # Build, test, data generation scripts
-actions/                 # Reusable composite GitHub Actions published from this repo (currently: binary/ - refresh/check JSON snapshots for any format @bgforge/binary supports; format list discovered at runtime via `fgbin --extensions`)
+actions/                 # Reusable composite GitHub Actions published from this repo: binary/ (refresh/check JSON snapshots for any format @bgforge/binary supports), format/ (fgfmt in-place formatting), transpile/ (fgtp source->output regeneration). Each runs the matching CLI over the event's changed files and commits the result back (or verifies it with check: true). _shared/ holds the scripts common to all three
 transpilers/             # Transpiler implementations + user documentation
   common/                # Shared transpiler utilities (not a package)
   tssl/                  # @bgforge/tssl package: TypeScript to Fallout SSL
@@ -204,6 +204,6 @@ See `server/INTERNALS.md` for the full feature matrix and cross-language feature
 | Language configurations | `language-configurations/README.md`                                                                                        |
 | Build scripts           | `scripts/README.md`                                                                                                        |
 | Dev (VS Code web)       | `scripts/dev-web.md`                                                                                                       |
-| Reusable GH Actions     | `actions/binary/README.md`                                                                                                 |
+| Reusable GH Actions     | `actions/README.md` (shared contract) + `actions/{binary,format,transpile}/README.md`                                      |
 | Packaging               | `docs/ignore-files.md`                                                                                                     |
 | Releasing               | `docs/releasing.md`                                                                                                        |

@@ -1,39 +1,39 @@
-name: "Binary JSON snapshots"
-description: "Refresh JSON snapshots for binary files supported by @bgforge/binary (Fallout .pro/.map, Infinity Engine .itm/.spl/.eff/.cre) and commit them back to the branch."
+name: "Transpile sources"
+description: "Transpile TSSL/TBAF/TD sources to Fallout SSL / WeiDU BAF / WeiDU D with @bgforge/transpile (fgtp) and commit the generated files back to the branch."
 author: "BGforge"
 
 inputs:
   paths:
-    description: "Path passed to the binary CLI (single path; recursive scan)."
+    description: "Path passed to the transpile CLI (single path; recursive scan)."
     required: false
     default: "."
   version:
-    description: "npm version specifier for @bgforge/binary."
+    description: "npm version specifier for @bgforge/transpile."
     required: false
     default: "latest"
   commit-message:
-    description: "Commit subject when snapshots change."
+    description: "Commit subject when transpiled output changes."
     required: false
-    default: "chore: update binary JSON snapshots"
+    default: "chore: update transpiled output"
   commit-author-name:
-    description: "git author name for the snapshot commit."
+    description: "git author name for the transpile commit."
     required: false
     default: "github-actions[bot]"
   commit-author-email:
-    description: "git author email for the snapshot commit."
+    description: "git author email for the transpile commit."
     required: false
     default: "41898282+github-actions[bot]@users.noreply.github.com"
   check:
-    description: 'If "true", verify snapshots match the binaries (exit 1 on diff or missing snapshot) and skip commit/push.'
+    description: 'If "true", verify each output is up to date with its source (exit 1 on diff or missing output) and skip commit/push.'
     required: false
     default: "false"
 
 outputs:
   changed:
-    description: "true if snapshot files changed and were committed."
+    description: "true if any transpiled output changed and was committed."
     value: ${{ steps.commit.outputs.changed }}
   changed-files:
-    description: "Newline-separated list of committed snapshot files."
+    description: "Newline-separated list of committed output files."
     value: ${{ steps.commit.outputs.changed-files }}
 
 runs:
@@ -51,13 +51,13 @@ runs:
       with:
         node-version: 22
 
-    - name: Install @bgforge/binary
+    - name: Install @bgforge/transpile
       shell: bash
       env:
         PKG_VERSION: ${{ inputs.version }}
-      run: npm install -g "@bgforge/binary@${PKG_VERSION}"
+      run: npm install -g "@bgforge/transpile@${PKG_VERSION}"
 
-    - name: List changed binary files
+    - name: List changed source files
       id: list
       shell: bash
       env:
@@ -69,10 +69,10 @@ runs:
         HEAD_SHA_PUSH: ${{ github.sha }}
       run: ${{ github.action_path }}/scripts/list-changed.sh
 
-    - name: Run binary CLI (--save by default, --check when check=true)
+    - name: Run transpile CLI (--save by default, --check when check=true)
       shell: bash
       env:
-        CLI: fgbin
+        CLI: fgtp
         CHECK_MODE: ${{ inputs.check }}
         LIST: ${{ steps.list.outputs.list }}
         COUNT: ${{ steps.list.outputs.count }}
@@ -86,5 +86,5 @@ runs:
         COMMIT_MESSAGE: ${{ inputs.commit-message }}
         COMMIT_AUTHOR_NAME: ${{ inputs.commit-author-name }}
         COMMIT_AUTHOR_EMAIL: ${{ inputs.commit-author-email }}
-        EXTENSIONS: ${{ steps.list.outputs.extensions }}
+        LIST: ${{ steps.list.outputs.list }}
       run: ${{ github.action_path }}/scripts/commit-and-push.sh

@@ -14,10 +14,10 @@ The extension is the repository's primary product, so it uses the bare, GitHub-s
 | `binary/vX.Y.Z`         | `publish-library.yml` | Publishes `@bgforge/binary` to npm.                                                                                                                                       |
 | `format/vX.Y.Z`         | `publish-library.yml` | Publishes `@bgforge/format` to npm.                                                                                                                                       |
 | `transpile/vX.Y.Z`      | `publish-library.yml` | Publishes `@bgforge/transpile` to npm.                                                                                                                                    |
-| `actions/binary/vX.Y.Z` | none                  | Immutable release ref for the `actions/binary` reusable Action.                                                                                                           |
-| `actions/binary/v1`     | none                  | Moving major alias, re-pointed to the latest `actions/binary/v1.x`.                                                                                                       |
+| `actions/<name>/vX.Y.Z` | none                  | Immutable release ref for a reusable Action (`<name>` is `binary`, `format`, or `transpile`).                                                                             |
+| `actions/<name>/v1`     | none                  | Moving major alias, re-pointed to the latest `actions/<name>/v1.x`.                                                                                                       |
 
-`build.yml` filters its push trigger to `v[0-9]+.[0-9]+.[0-9]+`, and `publish-library.yml` to the three `<lib>/v...` patterns. Any tag matching neither - including every `actions/binary/*` tag - starts no workflow. An Action needs none: it is consumed directly from its source at the pinned git ref, not built or published.
+`build.yml` filters its push trigger to `v[0-9]+.[0-9]+.[0-9]+`, and `publish-library.yml` to the three `<lib>/v...` patterns. Any tag matching neither - including every `actions/*` tag - starts no workflow. An Action needs none: it is consumed directly from its source at the pinned git ref, not built or published.
 
 ## Releasing the extension (`vX.Y.Z`)
 
@@ -44,19 +44,19 @@ The three library packages version independently of the extension and of each ot
 
 `@bgforge/mls-server` declares a runtime dependency on `@bgforge/format` (`workspace:*`), which is substituted with format's concrete version when the server is published. That version must already be on npm, or a fresh `npm install @bgforge/mls-server` cannot resolve it. So when a `vX.Y.Z` extension release ships a server depending on a bumped format, push the `format/vX.Y.Z` tag first. `publish-server.sh` preflights this and fails fast with a clear message if the format version is missing from npm.
 
-## Releasing the reusable Action (`actions/binary/vX.Y.Z`)
+## Releasing a reusable Action (`actions/<name>/vX.Y.Z`)
 
-The Action is consumed as `uses: BGforgeNet/BGforge-MLS/actions/binary@<ref>`. Releasing it is purely a matter of tags; there is nothing to build or publish.
+The repo publishes three reusable Actions - `actions/binary`, `actions/format`, and `actions/transpile` - each versioned independently. An Action is consumed as `uses: BGforgeNet/BGforge-MLS/actions/<name>@<ref>`. Releasing one is purely a matter of tags; there is nothing to build or publish.
 
-1. Choose the commit to release. It must contain both `actions/binary/` and the current, filtered `build.yml`. A commit from before the trigger was filtered is unsafe: its `build.yml` runs on every tag and would start a full extension release on the Action tag push.
-2. Create the immutable tag and move the major alias to it:
+1. Choose the commit to release. It must contain the `actions/<name>/` directory, the shared `actions/_shared/` directory it sources at runtime, and the current, filtered `build.yml`. A commit from before the trigger was filtered is unsafe: its `build.yml` runs on every tag and would start a full extension release on the Action tag push.
+2. Create the immutable tag and move the major alias to it (example for `binary`; substitute `format` or `transpile`):
    ```
    git tag actions/binary/v1.0.0 <commit>
    git tag -f actions/binary/v1 <commit>
    git push origin actions/binary/v1.0.0
    git push -f origin actions/binary/v1
    ```
-3. Bump the major (`v2`) for breaking changes to the Action interface.
+3. Bump the major (`v2`) for breaking changes to that Action's interface. The three Actions version independently - a bump to one does not move the others.
 
 The workflow that runs for any tag push is read from the tagged commit, not from the default branch - which is why the chosen commit must already carry the filtered `build.yml`.
 

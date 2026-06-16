@@ -1,19 +1,20 @@
 #!/bin/bash
-# Stage refreshed snapshot files, commit them under the configured author, and
-# push. Rebase onto the remote tip only if a concurrent push rejects ours. No-op
-# when nothing changed.
+
+# Stage refreshed JSON snapshots, then commit and push via the shared
+# finalize_commit_and_push (../_shared/lib.sh).
 #
-# Inputs (env):  COMMIT_MESSAGE, COMMIT_AUTHOR_NAME, COMMIT_AUTHOR_EMAIL,
-#                EXTENSIONS (csv list of binary extensions, sourced from the
-#                preceding list-changed step's `extensions` output).
-# Outputs (env): GITHUB_OUTPUT receives `changed=<bool>` and `changed-files=<list>`
+# fgbin writes a <name>.json sidecar whose path differs from the binary's, so the
+# staged unit is found by extension rather than taken from the processed list. The
+# `*.<ext>.json` clause is built from the list-changed step's `extensions` output.
+#
+# Inputs (env): COMMIT_MESSAGE, COMMIT_AUTHOR_NAME, COMMIT_AUTHOR_EMAIL,
+#               EXTENSIONS (csv of binary extensions from the list-changed step).
 set -euo pipefail
+# Sourced at runtime from a path only known then ($GITHUB_ACTION_PATH); lib.sh is
+# linted on its own, so tell shellcheck not to try to follow it here.
+# shellcheck disable=SC1091
+source "${GITHUB_ACTION_PATH}/../_shared/lib.sh"
 
-git config user.name "$COMMIT_AUTHOR_NAME"
-git config user.email "$COMMIT_AUTHOR_EMAIL"
-
-# Build a `*.<ext>.json` find clause from the canonical extension list so the
-# staging step covers the same formats the CLI just refreshed.
 if [[ -z "${EXTENSIONS:-}" ]]; then
     echo "EXTENSIONS env var is empty; expected csv from list-changed step." >&2
     exit 1
@@ -30,31 +31,4 @@ done
 find . -type f \( "${find_names[@]}" \) -print0 \
     | xargs -0 -r git add --
 
-if git diff --cached --quiet; then
-    {
-        echo "changed=false"
-        echo "changed-files="
-    } >> "$GITHUB_OUTPUT"
-    echo "No snapshot changes to commit."
-    exit 0
-fi
-
-files="$(git diff --cached --name-only)"
-{
-    echo "changed=true"
-    echo "changed-files<<__END__"
-    echo "$files"
-    echo "__END__"
-} >> "$GITHUB_OUTPUT"
-
-git commit -m "$COMMIT_MESSAGE"
-
-# Push directly. In the common case the branch has not moved since checkout, so this
-# succeeds with no fetch at all. Only when a concurrent push moved the branch do we
-# rebase onto the remote and retry. The earlier unconditional `git pull --rebase` ran
-# on every invocation and fetched the repo's entire ref namespace (every branch and
-# tag); on a large binary repo that dominated the action's runtime (~2 minutes).
-if ! git push; then
-    git pull --rebase --autostash --no-tags
-    git push
-fi
+finalize_commit_and_push

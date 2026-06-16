@@ -1,12 +1,14 @@
 # Binary JSON snapshots action
 
 Refreshes JSON snapshot files alongside binary game data using
-[`@bgforge/binary`](https://www.npmjs.com/package/@bgforge/binary), and commits them back to the branch that triggered
-the workflow. Use this so changes to binaries land in git history alongside their human-readable JSON form.
+[`@bgforge/binary`](https://www.npmjs.com/package/@bgforge/binary) (the `fgbin` CLI) and commits them back to the
+branch that triggered the workflow. Use this so changes to binaries land in git history alongside their
+human-readable JSON form.
 
-The set of binary formats handled is discovered at runtime from the installed `@bgforge/binary` (`fgbin --extensions`),
-so any format newly registered there is picked up by the action without a matching action release. At the time of
-writing that is `.pro` / `.map` (Fallout) and `.itm` / `.spl` / `.eff` / `.cre` (Infinity Engine).
+The set of binary formats handled is discovered at runtime from the installed `@bgforge/binary`
+(`fgbin --extensions`), so any format newly registered there is picked up by the action without a matching action
+release. At the time of writing that is `.pro` / `.map` (Fallout) and `.itm` / `.spl` / `.eff` / `.cre` (Infinity
+Engine).
 
 ## Usage
 
@@ -39,8 +41,8 @@ jobs:
 
 ### Check mode: validate snapshots without committing
 
-Set `check: true` to verify each binary has a matching, up-to-date snapshot. The action exits non-zero (failing the job)
-on any diff or missing snapshot, and never commits or pushes.
+Set `check: true` to verify each binary has a matching, up-to-date snapshot. The action exits non-zero (failing
+the job) on any diff or missing snapshot, and never commits or pushes.
 
 ```yaml
 name: Validate binary snapshots
@@ -73,8 +75,8 @@ or an immutable exact tag for a fully reproducible action revision:
 ```
 
 `actions/binary/v1` is re-pointed to the latest `actions/binary/v1.x` release; a breaking change bumps the major.
-Pinning the tag fixes the _action code_ only - the `@bgforge/binary` it installs is governed by the `version` input
-(default `latest`), so set `version` too if you need the binary parser pinned as well.
+Pinning the tag fixes the _action code_ only - the `@bgforge/binary` it installs is governed by the `version`
+input (default `latest`), so set `version` too if you need the binary parser pinned as well.
 
 ## Inputs
 
@@ -96,22 +98,25 @@ Pinning the tag fixes the _action code_ only - the `@bgforge/binary` it installs
 
 ## Notes
 
-- In **save mode** the consumer workflow MUST grant `permissions: contents: write` (job-level or workflow-level) so the
-  default `GITHUB_TOKEN` can push. **Check mode** does not push and needs no extra permissions; in that mode the
-  `changed` / `changed-files` outputs are empty.
+- In **save mode** the consumer workflow MUST grant `permissions: contents: write` (job-level or workflow-level)
+  so the default `GITHUB_TOKEN` can push. **Check mode** does not push and needs no extra permissions; in that mode
+  the `changed` / `changed-files` outputs are empty.
 - Pushes made with the default `GITHUB_TOKEN` do not retrigger workflows, so there is no infinite-loop risk.
-- The action exits with an error on `pull_request` events from forks: the token is read-only and the push would fail.
-  Run the action on `push` events to your own branches.
+- The action exits with an error on `pull_request` events from forks: the token is read-only and the push would
+  fail. Run the action on `push` events to your own branches.
 - For `pull_request` triggers within your own repo, your `actions/checkout` step must specify
   `ref: ${{ github.head_ref }}` so the snapshot commit lands on the PR head, not on a detached merge ref.
 - Concurrent pushes to the same branch may cause the rebase-and-push step to fail; wrap the consumer job in a
   `concurrency:` block if your workflow can fire on rapid successive pushes.
-- Only binary files (any extension `@bgforge/binary` recognizes) added or modified in the current event's diff are
-  processed. The action best-effort fetches the base and head SHAs into the local clone, but on events where no usable
-  base SHA is available (new-branch push, manual `workflow_dispatch`, scheduled runs) it falls back to a full recursive
-  scan of `paths`.
+- Only binary files added or modified in the current event's diff are processed. The action best-effort fetches
+  the base and head SHAs into the local clone, but on events where no usable base SHA is available (new-branch
+  push, manual `workflow_dispatch`, scheduled runs) it falls back to a full recursive scan of `paths`.
 
 ## Limitations
 
-- **Deleted binaries leave orphaned snapshots.** Removing a binary does not remove its corresponding `.json` snapshot.
-  Delete the snapshot manually in the same commit.
+- **Deleted binaries leave orphaned snapshots.** Removing a binary does not remove its corresponding `.json`
+  snapshot. Delete the snapshot manually in the same commit.
+
+---
+
+One of the [BGforge MLS reusable actions](../README.md) (`binary`, `format`, `transpile`).
