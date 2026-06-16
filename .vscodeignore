@@ -28,8 +28,8 @@ dist/
 **/*.map
 *.tmbundle
 *.zip
-bgforge-mls-notepadpp-udl*/
-bgforge-mls-kate-ksh*/
+bgforge-mls-notepadpp*/
+bgforge-mls-kate*/
 
 # Dev-only directories
 coverage/

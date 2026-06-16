@@ -6,8 +6,8 @@
 *.zip
 dist/
 syntaxes-to-json.sh.err
-bgforge-mls-notepadpp-udl*/
-bgforge-mls-kate-ksh*/
+bgforge-mls-notepadpp*/
+bgforge-mls-kate*/
 .reports/
 .vscode-test/
 .dev/

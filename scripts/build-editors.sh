@@ -49,7 +49,7 @@ echo "Created $tmbundle_zip"
 
 # -- Kate KSyntaxHighlighting --
 
-ksh_name="bgforge-mls-kate-ksh"
+ksh_name="bgforge-mls-kate"
 ksh_dir="${ksh_name}"
 ksh_zip="dist/${ksh_name}-${version}.zip"
 
@@ -80,7 +80,7 @@ echo "Created $ksh_zip"
 
 # -- Notepad++ UDL --
 
-udl_name="bgforge-mls-notepadpp-udl"
+udl_name="bgforge-mls-notepadpp"
 udl_dir="${udl_name}"
 udl_zip="dist/${udl_name}-${version}.zip"
 

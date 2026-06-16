@@ -22,7 +22,7 @@ Install the [NppLspClient](https://github.com/Ekopalypse/NppLspClient) plugin:
 
 ## File types and syntax highlighting
 
-Download `bgforge-mls-notepadpp-udl-<version>.zip` from the [latest GitHub release](https://github.com/BGforgeNet/BGforge-MLS/releases) and import the UDL files:
+Download `bgforge-mls-notepadpp-<version>.zip` from the [latest GitHub release](https://github.com/BGforgeNet/BGforge-MLS/releases) and import the UDL files:
 
 1. Go to `Language > User Defined Language > Define your language...`
 2. Click `Import...` and select a `.udl.xml` file (e.g., `fallout-ssl.udl.xml`)

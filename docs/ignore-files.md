@@ -57,20 +57,20 @@ Controls what ships in the VSIX extension package. Uses a **blocklist** strategy
 
 ### Excluded: dev infrastructure
 
-| Pattern                                                 | What it excludes                                |
-| ------------------------------------------------------- | ----------------------------------------------- |
-| `.claude/`                                              | AI assistant config                             |
-| `.editorconfig`                                         | Editor config                                   |
-| `.oxlintrc.json`                                        | Linting configuration                           |
-| `.github/`                                              | CI workflows                                    |
-| `.reports/`, `.vscode/`, `.vscode-test/`                | Dev/test directories                            |
-| `CLAUDE.md`, `CONTRIBUTING.md`                          | Dev documentation                               |
-| `knip.ts`, `tsconfig.json`                              | Linting and build config                        |
-| `pnpm-lock.yaml`, `pnpm-workspace.yaml`                 | Package manager files                           |
-| `dist/`                                                 | Build artifact directory (VSIX, editor bundles) |
-| `*.vsix`, `*.tgz`, `*.log`, `**/*.map`                  | Built packages, logs, source maps               |
-| `*.tmbundle`, `*.zip`                                   | Generated bundles (tmbundle, UDL, KSH archives) |
-| `bgforge-mls-notepadpp-udl*/`, `bgforge-mls-kate-ksh*/` | Generated editor asset directories              |
+| Pattern                                         | What it excludes                                |
+| ----------------------------------------------- | ----------------------------------------------- |
+| `.claude/`                                      | AI assistant config                             |
+| `.editorconfig`                                 | Editor config                                   |
+| `.oxlintrc.json`                                | Linting configuration                           |
+| `.github/`                                      | CI workflows                                    |
+| `.reports/`, `.vscode/`, `.vscode-test/`        | Dev/test directories                            |
+| `CLAUDE.md`, `CONTRIBUTING.md`                  | Dev documentation                               |
+| `knip.ts`, `tsconfig.json`                      | Linting and build config                        |
+| `pnpm-lock.yaml`, `pnpm-workspace.yaml`         | Package manager files                           |
+| `dist/`                                         | Build artifact directory (VSIX, editor bundles) |
+| `*.vsix`, `*.tgz`, `*.log`, `**/*.map`          | Built packages, logs, source maps               |
+| `*.tmbundle`, `*.zip`                           | Generated bundles (tmbundle, UDL, KSH archives) |
+| `bgforge-mls-notepadpp*/`, `bgforge-mls-kate*/` | Generated editor asset directories              |
 
 ### Excluded: dev-only directories
 

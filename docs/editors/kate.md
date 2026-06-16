@@ -19,7 +19,7 @@ Requires Kate 25.08+ for settings support. Older versions (21.12+) provide basic
 
 ## Syntax highlighting
 
-Download `bgforge-mls-kate-ksh-<version>.zip` from the [latest GitHub release](https://github.com/BGforgeNet/BGforge-MLS/releases) and extract the `.xml` files to:
+Download `bgforge-mls-kate-<version>.zip` from the [latest GitHub release](https://github.com/BGforgeNet/BGforge-MLS/releases) and extract the `.xml` files to:
 
 - **Linux**: `~/.local/share/org.kde.syntax-highlighting/syntax/`
 - **Windows**: `%USERPROFILE%\AppData\Local\org.kde.syntax-highlighting\syntax\`
@@ -53,7 +53,7 @@ The `highlightingModeRegex` must match the language names from the installed KSy
 Kate draws file icons from the desktop icon theme via XDG MIME types - it has no per-filetype icon setting of its own. The Kate KSH zip (from [Syntax highlighting](#syntax-highlighting) above) includes a `mimetypes/` folder with shared-mime-info definitions and matching icons. Installing them adds the icons for all KDE/XDG apps (Dolphin too), not just Kate. Linux only:
 
 ```bash
-# run from the extracted bgforge-mls-kate-ksh-<version> directory
+# run from the extracted bgforge-mls-kate-<version> directory
 install -Dm644 mimetypes/bgforge-mls.mime.xml ~/.local/share/mime/packages/bgforge-mls.mime.xml
 update-mime-database ~/.local/share/mime
 
