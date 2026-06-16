@@ -7,7 +7,10 @@
 import { uriToPath } from "../uri-utils";
 import { parseDialog, type DialogData } from "../dialog";
 import { isInitialized } from "../../../shared/parsers/fallout-ssl";
-import { transpile } from "../../../transpilers/tssl/src/index";
+// Consume the public @bgforge/transpile surface (the barrel), not the internal
+// per-language modules. Imported by relative path so esbuild bundles it into the
+// server rather than treating it as an external npm dependency.
+import { tssl } from "../../../transpilers/src/index";
 
 /**
  * Transpile TSSL source and parse it into DialogData for dialog tree preview.
@@ -24,6 +27,6 @@ export async function parseTSSLDialog(uri: string, text: string): Promise<Dialog
     }
 
     const filePath = uriToPath(uri);
-    const sslText = await transpile(filePath, text);
+    const sslText = await tssl(filePath, text);
     return parseDialog(sslText);
 }

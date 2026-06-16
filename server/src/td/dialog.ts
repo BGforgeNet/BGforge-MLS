@@ -1,23 +1,18 @@
 /**
  * TD dialog parser for preview.
- * Transpiles TD to D in memory (without writing files), then parses the D output
- * with the existing D parser.
+ * Transpiles TD to D in memory (without writing files) via the public
+ * @bgforge/transpile surface, then parses the D output with the existing D parser.
  */
 
-import { type SourceFile, Project } from "ts-morph";
 import { uriToPath } from "../uri-utils";
-import { extractTraTag } from "../../../transpilers/common/transpiler-utils";
-import { bundle } from "../../../transpilers/common/bundle";
-import { emitD } from "../../../transpilers/td/src/emit";
-import { parse } from "../../../transpilers/td/src/parse";
+// Consume the public @bgforge/transpile surface (the barrel), not the internal
+// bundle/parse/emit modules. td() runs the same bundle -> parse -> emit pipeline
+// and returns the D output. Imported by relative path so esbuild bundles it into
+// the server rather than treating it as an external npm dependency.
+import { td } from "../../../transpilers/src/index";
 import type { DDialogData } from "../../../shared/dialog-types";
 import { parseDDialog } from "../weidu-d/dialog";
 import { isInitialized } from "../../../shared/parsers/weidu-d";
-
-// Reused across calls to avoid re-initializing the TypeScript compiler.
-// The previous source file is removed before creating a new one.
-const project = new Project({ useInMemoryFileSystem: true });
-let prevSourceFile: SourceFile | undefined;
 
 /**
  * Transpile TD source and parse it into DDialogData for dialog tree preview.
@@ -34,27 +29,6 @@ export async function parseTDDialog(uri: string, text: string): Promise<DDialogD
     }
 
     const filePath = uriToPath(uri);
-
-    // Extract @tra tag before bundling (esbuild strips comments).
-    // Required for emitD to produce valid D output that parseDDialog can parse.
-    const traTag = extractTraTag(text);
-
-    // 1. Bundle imports
-    const bundled = await bundle(filePath, text);
-
-    // 2. Parse bundled code with ts-morph (reuse cached project)
-    if (prevSourceFile) {
-        project.removeSourceFile(prevSourceFile);
-    }
-    const sourceFile = project.createSourceFile("bundled.ts", bundled);
-    prevSourceFile = sourceFile;
-
-    // 3. Parse AST to IR
-    const ir = { ...parse(sourceFile), sourceFile: filePath, traTag };
-
-    // 4. Emit D text
-    const dText = emitD(ir);
-
-    // 5. Parse D text with the existing D dialog parser
-    return parseDDialog(dText);
+    const { output } = await td(filePath, text);
+    return parseDDialog(output);
 }

@@ -14,17 +14,18 @@ vi.mock("../src/lsp-connection", () => ({
     }),
 }));
 
-// Mock the TSSL transpiler - it requires esbuild, ts-morph, and file I/O.
-// We return pre-built SSL text so the test focuses on the dialog parsing pipeline.
-vi.mock("../../transpilers/tssl/src/index", () => ({
-    transpile: vi.fn(),
+// Mock the TSSL transpiler at the public-API barrel - it requires esbuild,
+// ts-morph, and file I/O. We return pre-built SSL text so the test focuses on
+// the dialog parsing pipeline.
+vi.mock("../../transpilers/src/index", () => ({
+    tssl: vi.fn(),
 }));
 
 import { parseTSSLDialog } from "../src/tssl/dialog";
 import { initParser } from "../../shared/parsers/fallout-ssl";
-import { transpile } from "../../transpilers/tssl/src/index";
+import { tssl } from "../../transpilers/src/index";
 
-const mockedTranspile = vi.mocked(transpile);
+const mockedTranspile = vi.mocked(tssl);
 
 beforeAll(async () => {
     await initParser();
