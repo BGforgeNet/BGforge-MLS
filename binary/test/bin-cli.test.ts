@@ -258,7 +258,10 @@ describe("bin CLI integration", () => {
 
             const { code, stderr } = run(tmpMap, "--save");
             expect(code).toBe(1);
-            expect(stderr).toContain("overflow");
+            // The misread script-section count is clamped to the remaining
+            // buffer and rejected up front as a deterministic malformed-script
+            // error (rather than the later per-slot overflow it used to hit).
+            expect(stderr).toContain("treating as malformed");
         });
 
         itExternal("allows ambiguous MAP parsing with --graceful-map", () => {
