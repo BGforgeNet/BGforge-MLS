@@ -58,6 +58,36 @@
 			"fontCharacter": "\\E031",
 			"fontColor": "#3d7895"
 		},
+		"fallout-pro": {
+			"iconPath": "./icons/fallout-pro.svg"
+		},
+		"fallout-map": {
+			"iconPath": "./icons/fallout-map.svg"
+		},
+		"infinity-itm": {
+			"iconPath": "./icons/infinity-itm.svg"
+		},
+		"infinity-spl": {
+			"iconPath": "./icons/infinity-spl.svg"
+		},
+		"infinity-eff": {
+			"iconPath": "./icons/infinity-eff.svg"
+		},
+		"infinity-cre": {
+			"iconPath": "./icons/infinity-cre.svg"
+		},
+		"fallout-pro-item": {
+			"iconPath": "./icons/fallout-pro-item.svg"
+		},
+		"fallout-pro-scenery": {
+			"iconPath": "./icons/fallout-pro-scenery.svg"
+		},
+		"fallout-pro-wall": {
+			"iconPath": "./icons/fallout-pro-wall.svg"
+		},
+		"fallout-pro-tile": {
+			"iconPath": "./icons/fallout-pro-tile.svg"
+		},
 		"_R_light": {
 			"fontCharacter": "\\E001",
 			"fontColor": "#498ba7"
@@ -1593,7 +1623,11 @@
 	"file": "_default",
 	"fileExtensions": {
 		"tpp": "weidu-tp2-patch",
-		"map": "fallout-worldmap-txt",
+		"map": "fallout-map",
+		"itm": "infinity-itm",
+		"spl": "infinity-spl",
+		"eff": "infinity-eff",
+		"cre": "infinity-cre",
 		"bsl": "_bsl",
 		"mdo": "_mdo",
 		"cls": "_salesforce",
@@ -1757,7 +1791,13 @@
 		"vue": "_vue",
 		"wasm": "_wasm",
 		"wat": "_wat",
-		"pro": "_prolog",
+		"pro": "fallout-pro",
+		"items/pro": "fallout-pro-item",
+		"critters/pro": "infinity-cre",
+		"scenery/pro": "fallout-pro-scenery",
+		"walls/pro": "fallout-pro-wall",
+		"tiles/pro": "fallout-pro-tile",
+		"misc/pro": "fallout-pro",
 		"zig": "_zig",
 		"jar": "_zip",
 		"zip": "_zip_1",
@@ -2034,7 +2074,11 @@
 	"light": {
 		"file": "_default_light",
 		"fileExtensions": {
-			"map": "fallout-worldmap-txt_light",
+			"map": "fallout-map",
+			"itm": "infinity-itm",
+			"spl": "infinity-spl",
+			"eff": "infinity-eff",
+			"cre": "infinity-cre",
 			"bsl": "_bsl_light",
 			"mdo": "_mdo_light",
 			"cls": "_salesforce_light",
@@ -2199,7 +2243,13 @@
 			"vue": "_vue_light",
 			"wasm": "_wasm_light",
 			"wat": "_wat_light",
-			"pro": "_prolog_light",
+			"pro": "fallout-pro",
+			"items/pro": "fallout-pro-item",
+			"critters/pro": "infinity-cre",
+			"scenery/pro": "fallout-pro-scenery",
+			"walls/pro": "fallout-pro-wall",
+			"tiles/pro": "fallout-pro-tile",
+			"misc/pro": "fallout-pro",
 			"zig": "_zig_light",
 			"jar": "_zip_light",
 			"zip": "_zip_1_light",
