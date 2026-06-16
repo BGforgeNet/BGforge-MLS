@@ -86,7 +86,14 @@ function parseWeiduOutput(text: string) {
                 const message = truncatedDetails.join("\n");
 
                 errors.push({
-                    uri: pathToUri(matchUri),
+                    // Normalize the WeiDU-emitted path to the host separator style
+                    // before building the URI. WeiDU is handed the absolute tmp
+                    // path and echoes it back; on Windows it can emit forward
+                    // slashes where path.join produced backslashes, so the raw
+                    // string would not match the tmpUri that sendParseResult
+                    // remaps onto the source document. path.normalize is a no-op
+                    // on POSIX (pathToFileURL already canonicalizes there).
+                    uri: pathToUri(path.normalize(matchUri)),
                     line: parseInt(matchLine, 10),
                     // WeiDU usually emits 1-based start columns (column 1-10), but sometimes
                     // 0-based (column 0-5) for tokens at the start of a line. Clamp to
