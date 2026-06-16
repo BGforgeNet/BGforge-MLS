@@ -1,5 +1,5 @@
 name: "Binary JSON snapshots"
-description: "Refresh JSON snapshots for binary files supported by @bgforge/binary (Fallout .pro/.map, Infinity Engine .itm/.spl/.eff) and commit them back to the branch."
+description: "Refresh JSON snapshots for binary files supported by @bgforge/binary (Fallout .pro/.map, Infinity Engine .itm/.spl/.eff/.cre) and commit them back to the branch."
 author: "BGforge"
 
 inputs:
