@@ -57,6 +57,23 @@ rm -rf "$ksh_dir" "$ksh_zip"
 pnpm exec tsx scripts/utils/src/generate-ksh.ts --out-dir "$ksh_dir"
 cp editors/kate/*.ksh.xml "$ksh_dir/"
 
+# File icons: shared-mime-info definitions plus matching icons, installed into the
+# XDG MIME database and icon theme (see docs/editors/kate.md). Icons reuse the shared
+# theme assets (single source: themes/icons). BAF/TP2 are raster-only upstream, so they
+# ship no scalable icon here and fall back to the generic file icon.
+mkdir -p "$ksh_dir/mimetypes"
+cp editors/kate/bgforge-mls.mime.xml "$ksh_dir/mimetypes/"
+cp themes/icons/fallout-ssl.svg  "$ksh_dir/mimetypes/application-x-fallout-ssl.svg"
+cp themes/icons/seti-msg-tra.svg "$ksh_dir/mimetypes/application-x-weidu-tra.svg"
+cp themes/icons/seti-msg-tra.svg "$ksh_dir/mimetypes/application-x-fallout-msg.svg"
+cp themes/icons/infinity-2da.svg "$ksh_dir/mimetypes/application-x-infinity-2da.svg"
+cp themes/icons/fallout-pro.svg  "$ksh_dir/mimetypes/application-x-fallout-pro.svg"
+cp themes/icons/fallout-map.svg  "$ksh_dir/mimetypes/application-x-fallout-map.svg"
+cp themes/icons/infinity-itm.svg "$ksh_dir/mimetypes/application-x-infinity-itm.svg"
+cp themes/icons/infinity-spl.svg "$ksh_dir/mimetypes/application-x-infinity-spl.svg"
+cp themes/icons/infinity-eff.svg "$ksh_dir/mimetypes/application-x-infinity-eff.svg"
+cp themes/icons/infinity-cre.svg "$ksh_dir/mimetypes/application-x-infinity-cre.svg"
+
 zip -rq "$ksh_zip" "$ksh_dir"
 rm -rf "$ksh_dir"
 echo "Created $ksh_zip"

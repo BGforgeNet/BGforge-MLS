@@ -5,6 +5,7 @@ Setup guide for using BGforge MLS with Kate (KDE text editor).
 - [Prerequisites](#prerequisites)
 - [Syntax highlighting](#syntax-highlighting)
 - [Language server](#language-server)
+- [File icons](#file-icons)
 - [TypeScript plugins (TSSL/TD)](#typescript-plugins-tssltd)
 - [Settings](#settings)
 
@@ -46,6 +47,27 @@ Add a server in `Settings > Configure Kate > LSP Client > User Server Settings`:
 ```
 
 The `highlightingModeRegex` must match the language names from the installed KSyntaxHighlighting definitions. The `Fallout Worldmap` KSH definition matches `worldmap.txt` by filename. For `scripts.lst`, use `Tools > Highlighting > Fallout scripts.lst` manually since the extension is generic.
+
+## File icons
+
+Kate draws file icons from the desktop icon theme via XDG MIME types - it has no per-filetype icon setting of its own. The Kate KSH zip (from [Syntax highlighting](#syntax-highlighting) above) includes a `mimetypes/` folder with shared-mime-info definitions and matching icons. Installing them adds the icons for all KDE/XDG apps (Dolphin too), not just Kate. Linux only:
+
+```bash
+# run from the extracted bgforge-mls-kate-ksh-<version> directory
+install -Dm644 mimetypes/bgforge-mls.mime.xml ~/.local/share/mime/packages/bgforge-mls.mime.xml
+update-mime-database ~/.local/share/mime
+
+mkdir -p ~/.local/share/icons/hicolor/scalable/mimetypes
+cp mimetypes/application-x-*.svg ~/.local/share/icons/hicolor/scalable/mimetypes/
+gtk-update-icon-cache ~/.local/share/icons/hicolor 2>/dev/null || true
+kbuildsycoca6 2>/dev/null || kbuildsycoca5 2>/dev/null || true
+```
+
+Restart Kate. Notes:
+
+- `.ssl` and other common extensions can collide with MIME types other applications define. If the wrong type wins, raise the glob priority in `bgforge-mls.mime.xml` (`<glob pattern="*.ssl" weight="60"/>`) and re-run `update-mime-database`.
+- `.h` and `.d` are intentionally excluded (they collide with C headers and the D language).
+- WeiDU BAF (`.baf`) and TP2 (`.tp2`) ship no scalable icon (their assets are raster-only) and keep the generic file icon.
 
 ## TypeScript plugins (TSSL/TD)
 

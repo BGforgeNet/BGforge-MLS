@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-fallout-ssl">
+    <comment>Fallout SSL script</comment>
+    <glob pattern="*.ssl"/>
+  </mime-type>
+  <mime-type type="application/x-weidu-baf">
+    <comment>WeiDU BAF script</comment>
+    <glob pattern="*.baf"/>
+  </mime-type>
+  <mime-type type="application/x-weidu-tp2">
+    <comment>WeiDU TP2 installer</comment>
+    <glob pattern="*.tp2"/>
+    <glob pattern="*.tpa"/>
+    <glob pattern="*.tph"/>
+    <glob pattern="*.tpp"/>
+  </mime-type>
+  <mime-type type="application/x-weidu-tra">
+    <comment>WeiDU translation</comment>
+    <glob pattern="*.tra"/>
+  </mime-type>
+  <mime-type type="application/x-fallout-msg">
+    <comment>Fallout message file</comment>
+    <glob pattern="*.msg"/>
+  </mime-type>
+  <mime-type type="application/x-infinity-2da">
+    <comment>Infinity Engine 2DA table</comment>
+    <glob pattern="*.2da"/>
+  </mime-type>
+  <mime-type type="application/x-fallout-pro">
+    <comment>Fallout prototype</comment>
+    <glob pattern="*.pro"/>
+  </mime-type>
+  <mime-type type="application/x-fallout-map">
+    <comment>Fallout map</comment>
+    <glob pattern="*.map"/>
+  </mime-type>
+  <mime-type type="application/x-infinity-itm">
+    <comment>Infinity Engine item</comment>
+    <glob pattern="*.itm"/>
+  </mime-type>
+  <mime-type type="application/x-infinity-spl">
+    <comment>Infinity Engine spell</comment>
+    <glob pattern="*.spl"/>
+  </mime-type>
+  <mime-type type="application/x-infinity-eff">
+    <comment>Infinity Engine effect</comment>
+    <glob pattern="*.eff"/>
+  </mime-type>
+  <mime-type type="application/x-infinity-cre">
+    <comment>Infinity Engine creature</comment>
+    <glob pattern="*.cre"/>
+  </mime-type>
+</mime-info>
