@@ -7,7 +7,7 @@
  */
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
-import { SyntaxType } from "../../../server/src/weidu-baf/syntax-type";
+import { SyntaxType } from "../../../shared/syntax-types/weidu-baf";
 import { throwOnParseError, normalizeComment } from "@bgforge/format";
 import { type FormatResult } from "../format-types";
 

@@ -7,7 +7,7 @@
  */
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
-import { SyntaxType } from "../../../server/src/weidu-d/syntax-type";
+import { SyntaxType } from "../../../shared/syntax-types/weidu-d";
 import {
     normalizeWhitespaceWeidu,
     throwOnParseError,

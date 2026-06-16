@@ -13,7 +13,7 @@ import type { Node as SyntaxNode } from "web-tree-sitter";
 
 import { formatIfStmt, formatWhileStmt, formatForStmt, formatForeachStmt, formatSwitchStmt } from "./control-flow";
 import { formatExpression, formatCallStmt, formatAssignment, formatExpressionStmt } from "./expressions";
-import { SyntaxType } from "../../../server/src/fallout-ssl/syntax-type";
+import { SyntaxType } from "../../../shared/syntax-types/fallout-ssl";
 
 import { throwOnParseError, normalizeComment } from "@bgforge/format";
 import { type FormatOptions, DEFAULT_OPTIONS, type FormatResult } from "../format-types";

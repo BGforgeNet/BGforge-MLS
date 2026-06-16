@@ -236,8 +236,13 @@ separate top-level step - it runs inside `build:client`.
    at all. The type-generation pipeline now splits the enum into a runtime `syntax-type.ts`
    (`scripts/split-syntax-type.mjs`, wired into each grammar's `generate:types` and
    `scripts/build-grammar.sh`); the `tree-sitter.d.ts` keeps the node-type declarations and
-   imports the enum as a type. Consumers import the enum value from `./syntax-type`. With the
-   enum a real runtime module, every bundler resolves it.
+   imports the enum as a type. With the enum a real runtime module, every bundler resolves it.
+
+   The runtime enum's canonical home is `shared/syntax-types/<grammar>.ts`, and
+   `server/src/<grammar>/syntax-type.ts` is a one-line re-export shim of it. This keeps
+   `@bgforge/format` (which needs the enum for its formatters) off `server/` internals: it imports
+   `../../../shared/syntax-types/<grammar>` instead, so `format` no longer forms a source cycle with
+   `server` and typechecks standalone. Server code imports the shim at `./syntax-type` unchanged.
 
 ### TypeScript configuration
 

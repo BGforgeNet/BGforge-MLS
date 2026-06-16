@@ -107,7 +107,7 @@ server/src/
 |
 +-- fallout-ssl/              # Fallout 1/2 scripting
 |   +-- tree-sitter.d.ts      # Generated node-type declarations (imports SyntaxType)
-|   +-- syntax-type.ts        # Generated runtime SyntaxType enum
+|   +-- syntax-type.ts        # Re-export shim of the shared SyntaxType enum
 |   +-- provider.ts
 |   +-- compiler.ts           # External / built-in sslc orchestration
 |   +-- header-parser.ts      # .h file parsing
@@ -130,10 +130,10 @@ server/src/
 +-- weidu-baf/                # WeiDU BAF scripts
 |   +-- provider.ts           # Format + compile only; BAF has no named symbols
 |   +-- tree-sitter.d.ts      # Generated node-type declarations (imports SyntaxType)
-|   +-- syntax-type.ts        # Generated runtime SyntaxType enum
+|   +-- syntax-type.ts        # Re-export shim of the shared SyntaxType enum
 +-- weidu-d/                  # WeiDU dialog files
 |   +-- tree-sitter.d.ts      # Generated node-type declarations (imports SyntaxType)
-|   +-- syntax-type.ts        # Generated runtime SyntaxType enum
+|   +-- syntax-type.ts        # Re-export shim of the shared SyntaxType enum
 |   +-- provider.ts
 |   +-- state-utils.ts        # Dialog-scoped state label utilities (shared by definition, rename, hover)
 |   +-- references.ts         # Find References (single-file + cross-file via ReferencesIndex)
@@ -149,7 +149,7 @@ server/src/
 |   +-- dialog-modify.ts      # Dialog-tree mutators (used by webview-driven edits)
 +-- weidu-tp2/                # WeiDU mod installers
 |   +-- tree-sitter.d.ts      # Generated node-type declarations (imports SyntaxType)
-|   +-- syntax-type.ts        # Generated runtime SyntaxType enum
+|   +-- syntax-type.ts        # Re-export shim of the shared SyntaxType enum
 |   +-- provider.ts
 |   +-- references.ts         # Find References (single-file + cross-file via ReferencesIndex)
 |   +-- reference-finder.ts   # Scope-restricted reference finding
@@ -490,7 +490,12 @@ import surface; server installs an LSP-routed logger via `setParserLogger()` at 
 
 Each grammar generates a runtime `syntax-type.ts` (the `SyntaxType` enum) plus a `tree-sitter.d.ts` (node-type
 declarations that import the enum as a type) for type-safe node type comparisons. The enum is a runtime module,
-not a `.d.ts` member, so any bundler (esbuild, Rolldown/tsdown) resolves its values:
+not a `.d.ts` member, so any bundler (esbuild, Rolldown/tsdown) resolves its values.
+
+The enum's canonical home is `shared/syntax-types/{lang}.ts`; `server/src/{lang}/syntax-type.ts` is a one-line
+re-export shim of it. This lets `@bgforge/format` consume the enum (`../../../shared/syntax-types/{lang}`)
+without importing `server/` internals, which would otherwise form a `format` <-> `server` source cycle. Server
+code imports the shim unchanged:
 
 ```typescript
 // Generated from grammar - use instead of hardcoded strings
@@ -506,7 +511,8 @@ Generate types for a grammar:
 cd grammars/{lang} && pnpm generate:types
 ```
 
-This copies the generated `tree-sitter.d.ts` and `syntax-type.ts` to `server/src/{lang}/`.
+This copies the generated `tree-sitter.d.ts` to `server/src/{lang}/` and `syntax-type.ts` to
+`shared/syntax-types/{lang}.ts`.
 
 ### Parse Caching
 
@@ -752,8 +758,8 @@ Thresholds: 90% lines, 80% branches, 90% functions, 90% statements - enforced by
 
 1. Add language ID to `shared/languages.ts` (and re-export from `server/src/core/languages.ts` if server-internal code needs it)
 2. Create tree-sitter grammar in `grammars/{lang}/`
-3. Add `@asgerf/dts-tree-sitter` devDependency and `generate:types` script to grammar's `package.json`
-4. Run `pnpm generate:types` to create `tree-sitter.d.ts` with `SyntaxType` enum
+3. Add `@asgerf/dts-tree-sitter` devDependency and `generate:types` script to grammar's `package.json` (the script copies `tree-sitter.d.ts` to `server/src/{lang}/` and `syntax-type.ts` to `shared/syntax-types/{lang}.ts`)
+4. Run `pnpm generate:types` to generate `tree-sitter.d.ts` + the `SyntaxType` enum, then add a `server/src/{lang}/syntax-type.ts` re-export shim (`export { SyntaxType } from "../../../shared/syntax-types/{lang}";`)
 5. Run `pnpm build:grammar` to compile WASM
 6. Register the parser in `server.ts` via `parserManager.register(LANG_ID, "tree-sitter-{lang}.wasm", "Name")`
 7. Create `src/{lang}/parser.ts` as a thin re-export from `ParserManager` (see existing parser.ts files)

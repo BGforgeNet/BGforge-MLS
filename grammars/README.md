@@ -62,4 +62,4 @@ All four LSP server grammars (fallout-ssl, weidu-baf, weidu-d, weidu-tp2) genera
 cd grammars/fallout-ssl && pnpm generate:types
 ```
 
-This splits the enum into a runtime `syntax-type.ts` (so any bundler resolves the values - an enum living only in a `.d.ts` is erased by Rolldown/tsdown) and copies both `tree-sitter.d.ts` and `syntax-type.ts` to `server/src/{lang}/` for type-safe AST node comparisons. Runs automatically for all four grammars as part of `pnpm build:grammar`.
+This splits the enum into a runtime `syntax-type.ts` (so any bundler resolves the values - an enum living only in a `.d.ts` is erased by Rolldown/tsdown), copies `tree-sitter.d.ts` to `server/src/{lang}/`, and copies `syntax-type.ts` to `shared/syntax-types/{lang}.ts` (its canonical home, so `@bgforge/format` can import the enum without depending on `server/`). `server/src/{lang}/syntax-type.ts` is a re-export shim of the shared file. Runs automatically for all four grammars as part of `pnpm build:grammar`.

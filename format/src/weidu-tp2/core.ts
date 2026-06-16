@@ -58,7 +58,7 @@ import {
     formatInnerPatch,
     formatReplaceBcsBlock,
 } from "./blocks";
-import { SyntaxType } from "../../../server/src/weidu-tp2/syntax-type";
+import { SyntaxType } from "../../../shared/syntax-types/weidu-tp2";
 import { throwOnParseError } from "@bgforge/format";
 
 // ============================================

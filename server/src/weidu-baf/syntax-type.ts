@@ -1,23 +1,6 @@
-// Runtime SyntaxType enum, generated from the grammar and split out of
-// tree-sitter.d.ts so the values exist at runtime under any bundler.
-export enum SyntaxType {
-  ERROR = "ERROR",
-  Action = "action",
-  Block = "block",
-  CallExpr = "call_expr",
-  Condition = "condition",
-  IfClause = "if_clause",
-  ObjectRef = "object_ref",
-  OrMarker = "or_marker",
-  Point = "point",
-  Response = "response",
-  SourceFile = "source_file",
-  String = "string",
-  ThenClause = "then_clause",
-  Comment = "comment",
-  Identifier = "identifier",
-  LineComment = "line_comment",
-  Number = "number",
-  TraRef = "tra_ref",
-  VariableRef = "variable_ref",
-}
+// Re-export of the generated SyntaxType enum. Its canonical home is
+// shared/syntax-types/weidu-baf.ts so @bgforge/format can consume it without
+// importing server internals (which would form a format <-> server source
+// cycle). Server code keeps importing "./syntax-type" unchanged; the generated
+// tree-sitter.d.ts resolves its `import type { SyntaxType }` through here too.
+export { SyntaxType } from "../../../shared/syntax-types/weidu-baf";

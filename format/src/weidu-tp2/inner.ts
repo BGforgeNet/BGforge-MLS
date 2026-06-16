@@ -17,7 +17,7 @@ import {
     handleComment,
     pushBlankIfGap,
 } from "./utils";
-import { SyntaxType } from "../../../server/src/weidu-tp2/syntax-type";
+import { SyntaxType } from "../../../shared/syntax-types/weidu-tp2";
 
 // ============================================
 // INNER_ACTION formatting

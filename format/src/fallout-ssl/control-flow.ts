@@ -7,7 +7,7 @@ import type { Node as SyntaxNode } from "web-tree-sitter";
 
 import { getCtx, normalizeComment, formatNode, formatBlock } from "./core";
 import { formatExpression } from "./expressions";
-import { SyntaxType } from "../../../server/src/fallout-ssl/syntax-type";
+import { SyntaxType } from "../../../shared/syntax-types/fallout-ssl";
 
 export function formatIfStmt(node: SyntaxNode, depth: number, isElseIf: boolean = false): string {
     const ctx = getCtx();
