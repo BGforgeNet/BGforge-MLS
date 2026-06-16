@@ -10,6 +10,7 @@ Setup guide for using BGforge MLS with Emacs 29+.
 - [Language server](#language-server)
   - [eglot (built-in, Emacs 29+)](#eglot-built-in-emacs-29)
   - [lsp-mode](#lsp-mode)
+- [File icons](#file-icons)
 - [TypeScript plugins (TSSL/TD)](#typescript-plugins-tssltd)
 - [Settings](#settings)
   - [eglot settings](#eglot-settings)
@@ -175,6 +176,35 @@ The tree-sitter modes and basic modes are independent. If using tree-sitter mode
                  fallout-worldmap-txt-mode)
   :server-id 'bgforge-mls))
 ```
+
+## File icons
+
+Icons in `dired`, `treemacs`, the mode line, etc. come from [nerd-icons](https://github.com/rainstormstudio/nerd-icons.el) (or the older `all-the-icons`). Add the BGforge formats to `nerd-icons-extension-icon-alist`:
+
+```elisp
+(with-eval-after-load 'nerd-icons
+  (dolist (entry
+           '(("ssl" nerd-icons-faicon "nf-fa-file_code_o" :face nerd-icons-blue)
+             ("baf" nerd-icons-faicon "nf-fa-file_code_o" :face nerd-icons-blue)
+             ("d"   nerd-icons-faicon "nf-fa-file_code_o" :face nerd-icons-blue)
+             ("tp2" nerd-icons-faicon "nf-fa-file_code_o" :face nerd-icons-blue)
+             ("tpa" nerd-icons-faicon "nf-fa-file_code_o" :face nerd-icons-blue)
+             ("tph" nerd-icons-faicon "nf-fa-file_code_o" :face nerd-icons-blue)
+             ("tpp" nerd-icons-faicon "nf-fa-file_code_o" :face nerd-icons-blue)
+             ("slb" nerd-icons-faicon "nf-fa-file_code_o" :face nerd-icons-blue)
+             ("msg" nerd-icons-faicon "nf-fa-comment"     :face nerd-icons-lblue)
+             ("tra" nerd-icons-faicon "nf-fa-language"    :face nerd-icons-lblue)
+             ("2da" nerd-icons-faicon "nf-fa-file_code_o" :face nerd-icons-green)
+             ("pro" nerd-icons-faicon "nf-fa-cube"        :face nerd-icons-orange)
+             ("map" nerd-icons-faicon "nf-fa-map_o"       :face nerd-icons-orange)
+             ("itm" nerd-icons-faicon "nf-fa-cube"        :face nerd-icons-purple)
+             ("spl" nerd-icons-faicon "nf-fa-cube"        :face nerd-icons-purple)
+             ("eff" nerd-icons-faicon "nf-fa-cube"        :face nerd-icons-purple)
+             ("cre" nerd-icons-faicon "nf-fa-cube"        :face nerd-icons-purple)))
+    (add-to-list 'nerd-icons-extension-icon-alist entry)))
+```
+
+Requires a [Nerd Font](https://www.nerdfonts.com/). Glyph names follow the Nerd Fonts `nf-fa-*` scheme; if a name is unknown in your `nerd-icons` version it signals an error - browse names with `M-x nerd-icons-insert`. `worldmap.txt` has no distinctive extension, so match it by name via `nerd-icons-regexp-icon-alist` if your version provides it. For `all-the-icons`, use the analogous `all-the-icons-extension-icon-alist` with `all-the-icons-faicon` (its glyph names drop the `nf-` prefix).
 
 ## TypeScript plugins (TSSL/TD)
 
