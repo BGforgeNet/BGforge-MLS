@@ -93,7 +93,7 @@
         <!-- Beta notice sits on the left; JSON import/export are pushed to the right (toolbar-actions
              margin-left:auto) so they sit apart from it. -->
         <span class="toolbar-beta">
-            Beta. Report issues to
+            Beta. Send feedback to
             <a href="https://github.com/BGforgeNet/BGforge-MLS/issues" target="_blank" rel="noreferrer"
                >https://github.com/BGforgeNet/BGforge-MLS/issues</a>
         </span>
