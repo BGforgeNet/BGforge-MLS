@@ -8,6 +8,7 @@ Setup guide for using BGforge MLS with Neovim 0.11+.
 - [Tree-sitter highlighting](#tree-sitter-highlighting)
   - [Parser registration](#parser-registration)
   - [Manual query installation](#manual-query-installation)
+- [File icons](#file-icons)
 - [TypeScript plugins (TSSL/TD)](#typescript-plugins-tssltd)
 - [Settings](#settings)
 
@@ -176,6 +177,42 @@ for pair in "fallout-ssl:ssl" "weidu-baf:baf" "weidu-d:weidu_d" "weidu-tp2:weidu
     -o "$NVIM_QUERIES/$lang/highlights.scm"
 done
 ```
+
+## File icons
+
+File-tree icons (`nvim-tree`, `neo-tree`, `mini.files`, ...) come from [nvim-web-devicons](https://github.com/nvim-tree/nvim-web-devicons), keyed by extension and filename. Register the BGforge formats with `override_by_extension` and `override_by_filename`:
+
+```lua
+require("nvim-web-devicons").setup({
+  override_by_extension = {
+    -- scripts (LSP-backed)
+    ssl = { icon = vim.fn.nr2char(0xF1C9), color = "#519aba", name = "FalloutSSL" },
+    baf = { icon = vim.fn.nr2char(0xF1C9), color = "#519aba", name = "WeiduBAF" },
+    d   = { icon = vim.fn.nr2char(0xF1C9), color = "#519aba", name = "WeiduD" },
+    tp2 = { icon = vim.fn.nr2char(0xF1C9), color = "#519aba", name = "WeiduTP2" },
+    tpa = { icon = vim.fn.nr2char(0xF1C9), color = "#519aba", name = "WeiduTP2" },
+    tph = { icon = vim.fn.nr2char(0xF1C9), color = "#519aba", name = "WeiduTP2" },
+    tpp = { icon = vim.fn.nr2char(0xF1C9), color = "#519aba", name = "WeiduTP2" },
+    slb = { icon = vim.fn.nr2char(0xF1C9), color = "#519aba", name = "WeiduSLB" },
+    -- text data
+    msg = { icon = vim.fn.nr2char(0xF075), color = "#498ba7", name = "FalloutMSG" },
+    tra = { icon = vim.fn.nr2char(0xF1AB), color = "#498ba7", name = "WeiduTRA" },
+    ["2da"] = { icon = vim.fn.nr2char(0xF1C9), color = "#8dc149", name = "Infinity2DA" },
+    -- binary records (edited in VS Code; this only sets the file-tree icon)
+    pro = { icon = vim.fn.nr2char(0xF1B2), color = "#cc7833", name = "FalloutPRO" },
+    map = { icon = vim.fn.nr2char(0xF278), color = "#cc7833", name = "FalloutMAP" },
+    itm = { icon = vim.fn.nr2char(0xF1B2), color = "#a074c4", name = "InfinityITM" },
+    spl = { icon = vim.fn.nr2char(0xF1B2), color = "#a074c4", name = "InfinitySPL" },
+    eff = { icon = vim.fn.nr2char(0xF1B2), color = "#a074c4", name = "InfinityEFF" },
+    cre = { icon = vim.fn.nr2char(0xF1B2), color = "#a074c4", name = "InfinityCRE" },
+  },
+  override_by_filename = {
+    ["worldmap.txt"] = { icon = vim.fn.nr2char(0xF278), color = "#498ba7", name = "FalloutWorldmap" },
+  },
+})
+```
+
+Glyphs are written as Nerd Font codepoints (FontAwesome `file_code_o` `0xF1C9`, `comment` `0xF075`, `language` `0xF1AB`, `map_o` `0xF278`, `cube` `0xF1B2`) so the snippet stays plain-text; rendering needs a [Nerd Font](https://www.nerdfonts.com/). Pick other glyphs from the [cheat sheet](https://www.nerdfonts.com/cheat-sheet) - `.2da` reuses the script glyph here, so swap in a table glyph if your font ships one.
 
 ## TypeScript plugins (TSSL/TD)
 
