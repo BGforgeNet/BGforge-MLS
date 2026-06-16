@@ -22,41 +22,8 @@
 		}
 	],
 	"iconDefinitions": {
-		"fallout-ssl": {
-			"iconPath": "./icons/fallout-ssl.svg"
-		},
-		"fallout-msg": {
-			"fontCharacter": "\\E033",
-			"fontColor": "#498ba7"
-		},
-		"weidu-tp2": {
-			"iconPath": "./icons/weidu-tp2.png"
-		},
 		"weidu-tp2-patch": {
 			"iconPath": "./icons/weidu-tp2-patch.png"
-		},
-		"weidu-baf": {
-			"iconPath": "./icons/weidu-baf.png"
-		},
-		"weidu-tra": {
-			"fontCharacter": "\\E033",
-			"fontColor": "#498ba7"
-		},
-		"infinity-2da": {
-			"fontCharacter": "\\E01E",
-			"fontColor": "#8dc149"
-		},
-		"infinity-2da_light": {
-			"fontCharacter": "\\E01E",
-			"fontColor": "#7fae42"
-		},
-		"fallout-worldmap-txt": {
-			"fontCharacter": "\\E031",
-			"fontColor": "#498ba7"
-		},
-		"fallout-worldmap-txt_light": {
-			"fontCharacter": "\\E031",
-			"fontColor": "#3d7895"
 		},
 		"fallout-pro": {
 			"iconPath": "./icons/fallout-pro.svg"
@@ -1978,15 +1945,6 @@
 		"npm-debug.log": "_npm_ignored"
 	},
 	"languageIds": {
-		"fallout-ssl": "fallout-ssl",
-		"fallout-msg": "fallout-msg",
-		"weidu-tp2": "weidu-tp2",
-		"weidu-baf": "weidu-baf",
-		"weidu-tra": "weidu-tra",
-		"weidu-slb": "weidu-baf",
-		"weidu-ssl": "weidu-baf",
-		"infinity-2da": "infinity-2da",
-		"fallout-worldmap-txt": "fallout-worldmap-txt",
 		"bat": "_windows",
 		"clojure": "_clojure",
 		"coffeescript": "_coffee",
@@ -2326,10 +2284,6 @@
 			"ds_store": "_ignored_light"
 		},
 		"languageIds": {
-			"weidu-slb": "weidu-baf",
-			"weidu-ssl": "weidu-baf",
-			"infinity-2da": "infinity-2da_light",
-			"fallout-worldmap-txt": "fallout-worldmap-txt_light",
 			"bat": "_windows_light",
 			"clojure": "_clojure_light",
 			"coffeescript": "_coffee_light",

@@ -205,7 +205,11 @@
                 "extensions": [
                     ".ssl"
                 ],
-                "configuration": "./language-configurations/weidu-ssl.language-configuration.json"
+                "configuration": "./language-configurations/weidu-ssl.language-configuration.json",
+                "icon": {
+                    "light": "./themes/icons/weidu-baf.png",
+                    "dark": "./themes/icons/weidu-baf.png"
+                }
             },
             {
                 "id": "fallout-ssl",
@@ -216,7 +220,11 @@
                     ".ssl",
                     ".h"
                 ],
-                "configuration": "./language-configurations/fallout-ssl.language-configuration.json"
+                "configuration": "./language-configurations/fallout-ssl.language-configuration.json",
+                "icon": {
+                    "light": "./themes/icons/fallout-ssl.svg",
+                    "dark": "./themes/icons/fallout-ssl.svg"
+                }
             },
             {
                 "id": "fallout-ssl-tooltip"
@@ -238,7 +246,11 @@
                 "filenames": [
                     "worldmap.txt"
                 ],
-                "configuration": "./language-configurations/fallout-worldmap-txt.language-configuration.json"
+                "configuration": "./language-configurations/fallout-worldmap-txt.language-configuration.json",
+                "icon": {
+                    "light": "./themes/icons/fallout-worldmap-txt-light.svg",
+                    "dark": "./themes/icons/fallout-worldmap-txt.svg"
+                }
             },
             {
                 "id": "fallout-msg",
@@ -248,7 +260,11 @@
                 "extensions": [
                     ".msg"
                 ],
-                "configuration": "./language-configurations/fallout-msg.language-configuration.json"
+                "configuration": "./language-configurations/fallout-msg.language-configuration.json",
+                "icon": {
+                    "light": "./themes/icons/seti-msg-tra.svg",
+                    "dark": "./themes/icons/seti-msg-tra.svg"
+                }
             },
             {
                 "id": "weidu-tp2",
@@ -261,7 +277,11 @@
                     ".tph",
                     ".tpp"
                 ],
-                "configuration": "./language-configurations/weidu-tp2.language-configuration.json"
+                "configuration": "./language-configurations/weidu-tp2.language-configuration.json",
+                "icon": {
+                    "light": "./themes/icons/weidu-tp2.png",
+                    "dark": "./themes/icons/weidu-tp2.png"
+                }
             },
             {
                 "id": "weidu-tp2-tooltip"
@@ -274,7 +294,11 @@
                 "extensions": [
                     ".baf"
                 ],
-                "configuration": "./language-configurations/weidu-baf.language-configuration.json"
+                "configuration": "./language-configurations/weidu-baf.language-configuration.json",
+                "icon": {
+                    "light": "./themes/icons/weidu-baf.png",
+                    "dark": "./themes/icons/weidu-baf.png"
+                }
             },
             {
                 "id": "weidu-baf-tooltip"
@@ -300,7 +324,11 @@
                 "extensions": [
                     ".slb"
                 ],
-                "configuration": "./language-configurations/weidu-slb.language-configuration.json"
+                "configuration": "./language-configurations/weidu-slb.language-configuration.json",
+                "icon": {
+                    "light": "./themes/icons/weidu-baf.png",
+                    "dark": "./themes/icons/weidu-baf.png"
+                }
             },
             {
                 "id": "weidu-tra",
@@ -310,7 +338,11 @@
                 "extensions": [
                     ".tra"
                 ],
-                "configuration": "./language-configurations/weidu-tra.language-configuration.json"
+                "configuration": "./language-configurations/weidu-tra.language-configuration.json",
+                "icon": {
+                    "light": "./themes/icons/seti-msg-tra.svg",
+                    "dark": "./themes/icons/seti-msg-tra.svg"
+                }
             },
             {
                 "id": "weidu-log",
@@ -338,7 +370,11 @@
                 "extensions": [
                     ".2da"
                 ],
-                "configuration": "./language-configurations/infinity-2da.language-configuration.json"
+                "configuration": "./language-configurations/infinity-2da.language-configuration.json",
+                "icon": {
+                    "light": "./themes/icons/infinity-2da-light.svg",
+                    "dark": "./themes/icons/infinity-2da.svg"
+                }
             }
         ],
         "configurationDefaults": {

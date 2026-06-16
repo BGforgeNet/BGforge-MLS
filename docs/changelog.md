@@ -10,6 +10,7 @@
 
 - Added file icons for the binary formats: Fallout `.pro` and `.map`, and Infinity Engine `.itm`, `.spl`, `.eff`, and `.cre`. Previously `.pro` showed a Prolog icon and the Infinity Engine formats had none.
 - Fallout proto files additionally get a per-type icon based on their `proto/<type>/` folder: item, critter, scenery, wall, tile, and misc. A `.pro` outside the standard layout falls back to the generic crate icon.
+- The text-language file icons (`.ssl`, `.msg`, `.tp2`/`.tpa`/`.tph`/`.tpp`, `.baf`, `.tra`, `.slb`, `.2da`, and `worldmap.txt`) now display under any active file icon theme, not only the bundled bgforge theme.
 
 ## 3.8.2
 
