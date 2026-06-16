@@ -5,7 +5,7 @@ import { openSession, sessionStore, type EditorSession } from "../src/session";
 import { buildModel } from "../src/model";
 import { validate } from "../src/validate";
 import { ieEffectsModel } from "../src/relationship/ie-effects";
-import type { ParseResult } from "@bgforge/binary";
+import { resolveStringCharset, toSemanticFieldKey, type ParsedField, type ParseResult } from "@bgforge/binary";
 
 const MAP_FIXTURE = path.resolve(__dirname, "../../client/testFixture/maps/arcaves.map");
 
@@ -65,6 +65,43 @@ describe("validate", () => {
         const session = openSessionForFixture();
         if (!session) throw new Error("session missing despite openSession succeeding");
         expect(validate(session)).toEqual([]);
+    });
+});
+
+describe("validate - string charset", () => {
+    /** Locate a string field declared with a non-utf8 charset (MAP header Filename
+     *  is the only ascii-printable field today). Found dynamically so the test does
+     *  not hardcode a node id or the segment->key mapping. */
+    function findAsciiStringNode(session: EditorSession) {
+        const format = session.model.parseResult.format;
+        return session.model.nodes.find((n) => {
+            if (n.kind !== "field") return false;
+            const field = n.source as ParsedField;
+            if (field.type !== "string") return false;
+            const key = toSemanticFieldKey(format, n.sourceSegments) ?? "";
+            return resolveStringCharset(format, key, n.name) === "ascii-printable";
+        });
+    }
+
+    it("warns when an ascii-printable string field holds out-of-charset bytes", () => {
+        const session = openSessionForFixture();
+        if (!session) throw new Error("session missing despite openSession succeeding");
+        const node = findAsciiStringNode(session);
+        expect(node, "fixture must contain an ascii-printable string field").toBeDefined();
+        const field = node!.source as ParsedField;
+        const original = field.value as string;
+
+        // The real on-disk filename is valid ASCII, so a clean fixture flags nothing.
+        expect(validate(session).some((d) => d.nodeId === node!.id)).toBe(false);
+
+        // Inject a control char (0x01, < 0x20) at the same length so the snapshot's
+        // byte budget is unaffected and only the charset rule fires.
+        field.value = String.fromCodePoint(0x01) + original.slice(1);
+        const diags = validate(session);
+        const d = diags.find((x) => x.nodeId === node!.id);
+        expect(d).toBeDefined();
+        expect(d?.severity).toBe("warning");
+        expect(d?.message).toContain(node!.name);
     });
 });
 

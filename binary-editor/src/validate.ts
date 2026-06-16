@@ -1,4 +1,10 @@
-import { formatAdapterRegistry } from "@bgforge/binary";
+import {
+    formatAdapterRegistry,
+    isStringAllowedInCharset,
+    resolveStringCharset,
+    toSemanticFieldKey,
+    type ParsedField,
+} from "@bgforge/binary";
 import type { FlatNode, Model } from "./model";
 import type { EditorSession } from "./session";
 import type { Diagnostic, NodeId } from "./types";
@@ -26,9 +32,36 @@ function resolveNodeId(model: Model, errorPath: readonly unknown[]): NodeId {
     return match ? match.id : "";
 }
 
+/** Per-field charset advisories. A `string` field may declare a non-utf8
+ *  `stringCharset` (currently only `ascii-printable`, e.g. MAP header Filename);
+ *  this flags any value holding bytes outside that charset. Emitted as a warning,
+ *  never a hard error: the parser is faithful, so a file opened from disk may
+ *  legitimately already carry such bytes - we advise, we do not block the save. */
+function charsetDiagnostics(model: Model): Diagnostic[] {
+    const format = model.parseResult.format;
+    const diags: Diagnostic[] = [];
+    for (const node of model.nodes) {
+        if (node.kind !== "field") continue;
+        const field = node.source;
+        if ("fields" in field) continue; // group entry; narrows `field` to ParsedField below
+        const value: ParsedField["value"] = field.value;
+        if (field.type !== "string" || typeof value !== "string") continue;
+        const fieldKey = toSemanticFieldKey(format, node.sourceSegments) ?? "";
+        const charset = resolveStringCharset(format, fieldKey, node.name);
+        if (charset === "utf8" || isStringAllowedInCharset(value, charset)) continue;
+        diags.push({
+            nodeId: node.id,
+            severity: "warning",
+            message: `Field "${node.name}" contains characters outside its ${charset} character set.`,
+        });
+    }
+    return diags;
+}
+
 /** Advisory strict-validation pass. Returns the union of:
- *  (a) per-field diagnostics from the relationship model's constraints, and
- *  (b) a snapshot-level diagnostic if the canonical snapshot builder throws.
+ *  (a) per-field diagnostics from the relationship model's constraints,
+ *  (b) per-field charset advisories (see charsetDiagnostics), and
+ *  (c) a snapshot-level diagnostic if the canonical snapshot builder throws.
  *  Constraint diagnostics carry real NodeIds. Snapshot violations use a
  *  best-effort NodeId mapping with a file-level fallback ("") so the result
  *  is never worse than the prior single file-level warning. A clean document
@@ -37,6 +70,7 @@ export function validate(session: EditorSession): Diagnostic[] {
     const diags: Diagnostic[] = session.relationshipModel
         ? [...session.relationshipModel.constraints(session.model)]
         : [];
+    diags.push(...charsetDiagnostics(session.model));
 
     const adapter = formatAdapterRegistry.get(session.parserId);
     if (!adapter) return diags;
