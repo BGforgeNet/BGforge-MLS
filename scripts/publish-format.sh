@@ -20,6 +20,18 @@ cd "$ROOT_DIR"
 source "$SCRIPT_DIR/publish-lib.sh"
 
 if [ "${SKIP_BUILD:-}" != "1" ]; then
+    # format bundles the tree-sitter grammar WASMs (its formatters parse with
+    # tree-sitter), and the format build's postbuild copies them into out/. The
+    # lean publish workflow only runs `pnpm install`, so the WASMs must be built
+    # here first or the postbuild copy fails.
+    echo "=== Building tree-sitter grammars (format bundles their WASM) ==="
+    pnpm build:grammar
+    # build:grammar also regenerates tracked grammar sources/types (tree-sitter
+    # generate + generate:types). With pinned tree-sitter these match what is
+    # committed, but restore tracked files anyway so any regen drift cannot leave
+    # the tree dirty and trip do_publish's clean-tree guard. The gitignored WASM
+    # artifacts it produced are untracked and survive the restore.
+    git checkout -- .
     echo "=== Building @bgforge/format ==="
     pnpm build:format
 fi

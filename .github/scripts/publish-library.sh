@@ -19,9 +19,9 @@ tag_version="${TAG_NAME#*/v}"  # e.g. 0.2.0
 # Map the tag prefix to the package name, its package.json, and its publish script.
 # The allowlist is also the validation: an unrecognized prefix aborts.
 case "$prefix" in
-    binary)    pkgname="@bgforge/binary";    pkgjson="binary/package.json";                script="scripts/publish-binary.sh" ;;
-    format)    pkgname="@bgforge/format";    pkgjson="format/package.json";                script="scripts/publish-format.sh" ;;
-    transpile) pkgname="@bgforge/transpile"; pkgjson="transpilers/package.json";              script="scripts/publish-transpile.sh" ;;
+    binary)    pkgname="@bgforge/binary";    pkgjson="binary/package.json";      script="scripts/publish-binary.sh";    testcfg="binary/vitest.config.ts" ;;
+    format)    pkgname="@bgforge/format";    pkgjson="format/package.json";      script="scripts/publish-format.sh";    testcfg="format/vitest.config.ts" ;;
+    transpile) pkgname="@bgforge/transpile"; pkgjson="transpilers/package.json"; script="scripts/publish-transpile.sh"; testcfg="" ;;
     *)
         echo "::error::unrecognized library tag prefix '$prefix' (expected binary, format, or transpile)." >&2
         exit 1
@@ -38,10 +38,16 @@ fi
 
 echo "Publishing $pkgname@$pkg_version (tag $TAG_NAME)"
 
-# Run the package's own test script as a pre-publish gate. binary and format carry
-# vitest suites; transpile's behavioural coverage lives in the repo-level sample
-# tests, so its package `test` script is a no-op here.
-pnpm --filter "$pkgname" test
+# Run the package's vitest suite as a pre-publish gate FROM THE REPO ROOT. These
+# suites resolve shared fixtures (client/testFixture/, external/) relative to the
+# working directory, so cwd must be the repo root - the same way scripts/test.sh
+# invokes them. `pnpm --filter <pkg> test` would re-root cwd into the package dir
+# and break binary's fixture resolution (its fixtures live at the repo root).
+# transpile has no package vitest suite (its coverage lives in the repo-level
+# sample tests), so its testcfg is empty and the gate is skipped for it.
+if [[ -n "$testcfg" ]]; then
+    pnpm exec vitest run --config "$testcfg"
+fi
 
 # The publish-<pkg>.sh script builds the package and runs `pnpm publish` (adding
 # --provenance under GitHub Actions). It also refuses a dirty working tree.
