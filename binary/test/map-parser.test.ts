@@ -14,6 +14,7 @@ const REAL_MAPS = [
     path.resolve("external/fallout/Fallout2_Restoration_Project/data/maps/newr1.map"),
     path.resolve("external/fallout/Fallout2_Restoration_Project/data/maps/sftanker.map"),
 ] as const;
+const hasExternalMaps = fs.existsSync(path.resolve("external/fallout/Fallout2_Restoration_Project/data/maps"));
 
 const LOCAL_FIXTURE_MAPS = new Set([
     "artemple.map",
@@ -84,7 +85,9 @@ describe("MAP parser - interface", () => {
 });
 
 describe("MAP parser - real maps", () => {
-    it.each([REAL_MAPS[0], REAL_MAPS[1], REAL_MAPS[2], REAL_MAPS[3], REAL_MAPS[4], REAL_MAPS[5]])(
+    it
+        .skipIf(!hasExternalMaps)
+        .each([REAL_MAPS[0], REAL_MAPS[1], REAL_MAPS[2], REAL_MAPS[3], REAL_MAPS[4], REAL_MAPS[5]])(
         "strictly parses %s without errors",
         (mapPath) => {
             const result = mapParser.parse(loadMap(mapPath));
@@ -93,7 +96,7 @@ describe("MAP parser - real maps", () => {
         },
     );
 
-    it.each(REAL_MAPS)("round-trips %s byte-for-byte", (mapPath) => {
+    it.skipIf(!hasExternalMaps).each(REAL_MAPS)("round-trips %s byte-for-byte", (mapPath) => {
         const mapData = loadMap(mapPath);
         const result = mapParser.parse(mapData, { gracefulMapBoundaries: true });
 
@@ -199,7 +202,7 @@ describe("MAP parser - real maps", () => {
         expect(Buffer.from(serialized).equals(Buffer.from(mapData))).toBe(true);
     });
 
-    it("can skip loading tile groups for editor-oriented MAP parsing", () => {
+    it.skipIf(!hasExternalMaps)("can skip loading tile groups for editor-oriented MAP parsing", () => {
         const mapData = loadMap(REAL_MAPS[0]);
         const result = mapParser.parse(mapData, { skipMapTiles: true, gracefulMapBoundaries: true });
 
@@ -218,7 +221,7 @@ describe("MAP parser - real maps", () => {
         expect(Buffer.from(serialized).equals(Buffer.from(mapData))).toBe(true);
     });
 
-    it("preserves skipped tile bytes through JSON snapshots", () => {
+    it.skipIf(!hasExternalMaps)("preserves skipped tile bytes through JSON snapshots", () => {
         const mapData = loadMap(REAL_MAPS[0]);
         const result = mapParser.parse(mapData, { skipMapTiles: true, gracefulMapBoundaries: true });
 
@@ -230,7 +233,7 @@ describe("MAP parser - real maps", () => {
         expect(Buffer.from(serialized).equals(Buffer.from(mapData))).toBe(true);
     });
 
-    it("re-packs tile ids and flags into the original 32-bit word", () => {
+    it.skipIf(!hasExternalMaps)("re-packs tile ids and flags into the original 32-bit word", () => {
         const mapData = loadMap(REAL_MAPS[0]);
         const result = mapParser.parse(mapData, { gracefulMapBoundaries: true });
         const tileGroup = result.root.fields.find((field) => "name" in field && field.name === "Elevation 0 Tiles");
@@ -345,29 +348,35 @@ describe("MAP parser - real maps", () => {
         expect(view.getInt32(0x1c, false)).toBe(5);
     });
 
-    it("parses object section counts and leaves a TODO when subtype resolution is missing", () => {
-        const mapData = loadMap(REAL_MAPS[2]);
-        const result = mapParser.parse(mapData, { gracefulMapBoundaries: true });
-        const objectsSection = result.root.fields.find((field) => "name" in field && field.name === "Objects Section");
+    it.skipIf(!hasExternalMaps)(
+        "parses object section counts and leaves a TODO when subtype resolution is missing",
+        () => {
+            const mapData = loadMap(REAL_MAPS[2]);
+            const result = mapParser.parse(mapData, { gracefulMapBoundaries: true });
+            const objectsSection = result.root.fields.find(
+                (field) => "name" in field && field.name === "Objects Section",
+            );
 
-        expect(objectsSection).toBeDefined();
-        expect("fields" in objectsSection!).toBe(true);
+            expect(objectsSection).toBeDefined();
+            expect("fields" in objectsSection!).toBe(true);
 
-        const objectFields = (objectsSection as { fields: unknown[] }).fields;
-        const totalObjects = findFieldByName(objectFields, "Total Objects");
-        expect(totalObjects.value).toBe(4886);
+            const objectFields = (objectsSection as { fields: unknown[] }).fields;
+            const totalObjects = findFieldByName(objectFields, "Total Objects");
+            expect(totalObjects.value).toBe(4886);
 
-        const elevation0 = objectFields.find(
-            (field) => field && typeof field === "object" && "name" in field && field.name === "Elevation 0 Objects",
-        ) as { fields: unknown[] } | undefined;
-        expect(elevation0).toBeDefined();
-        expect(findFieldByName(elevation0!.fields, "Object Count").value).toBe(4294);
+            const elevation0 = objectFields.find(
+                (field) =>
+                    field && typeof field === "object" && "name" in field && field.name === "Elevation 0 Objects",
+            ) as { fields: unknown[] } | undefined;
+            expect(elevation0).toBeDefined();
+            expect(findFieldByName(elevation0!.fields, "Object Count").value).toBe(4294);
 
-        const todoNote = objectFields.find(
-            (field) => field && typeof field === "object" && "name" in field && field.name === "Truncated",
-        ) as { value: unknown } | undefined;
-        expect(todoNote?.value).toContain("PRO");
-    });
+            const todoNote = objectFields.find(
+                (field) => field && typeof field === "object" && "name" in field && field.name === "Truncated",
+            ) as { value: unknown } | undefined;
+            expect(todoNote?.value).toContain("PRO");
+        },
+    );
 
     it("parses arcaves.map object headers at the correct script boundary", () => {
         const mapData = loadMap(resolveMapPath("arcaves.map"));

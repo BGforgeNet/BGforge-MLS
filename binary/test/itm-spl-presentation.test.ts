@@ -10,6 +10,8 @@ import type { ParsedField, ParsedGroup } from "../src/types";
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
 const ITM_FIXTURE = path.join(REPO_ROOT, "external/infinity-engine/bg2-wildmage/wildmage/wild_spells/itm/wm_sbook.itm");
 const SPL_FIXTURE = path.join(REPO_ROOT, "external/infinity-engine/bg2-wildmage/wildmage/wild_spells/spl/wm_word.spl");
+const hasItmFixture = fs.existsSync(ITM_FIXTURE);
+const hasSplFixture = fs.existsSync(SPL_FIXTURE);
 
 function findFirstEff(): string | undefined {
     const root = path.join(REPO_ROOT, "external/infinity-engine");
@@ -57,30 +59,36 @@ function findGroup(group: ParsedGroup, name: string): ParsedGroup | undefined {
     return undefined;
 }
 
-describe("ITM display tree presentation", () => {
-    const bytes = new Uint8Array(fs.readFileSync(ITM_FIXTURE));
-    const result = itmParser.parse(bytes);
+describe.skipIf(!hasItmFixture)("ITM display tree presentation", () => {
+    function parseItm() {
+        return itmParser.parse(new Uint8Array(fs.readFileSync(ITM_FIXTURE)));
+    }
 
     test("signature renders as ASCII string", () => {
+        const result = parseItm();
         expect(findField(result.root, "Signature")?.value).toBe("ITM ");
     });
 
     test("version renders as ASCII string", () => {
+        const result = parseItm();
         expect(findField(result.root, "Version")?.value).toBe("V1  ");
     });
 
     test("type field resolves to enum name", () => {
         // wm_sbook.itm has type=0 (Books)
+        const result = parseItm();
         expect(findField(result.root, "Type")?.value).toBe("Books");
     });
 
     test("flags field renders as named bits or '(none)'", () => {
+        const result = parseItm();
         const flagsField = findField(result.root, "Flags");
         expect(flagsField?.type).toBe("flags");
         expect(typeof flagsField?.value).toBe("string");
     });
 
     test("header usabilityFlags displays as 4 flag rows with per-byte tables", () => {
+        const result = parseItm();
         const usability = findGroup(result.root, "Usability Flags");
         expect(usability).toBeDefined();
         // Four child rows, one per IESDP byte. Each byte carries its own
@@ -96,6 +104,7 @@ describe("ITM display tree presentation", () => {
         // (they share the array's semantic key), so the walker must
         // propagate each slot's flag table on the ParsedField directly.
         // Without this, the renderer falls back to a read-only span.
+        const result = parseItm();
         const usability = findGroup(result.root, "Usability Flags");
         const byte1 = usability!.fields[0] as ParsedField;
         const byte2 = usability!.fields[1] as ParsedField;
@@ -109,6 +118,7 @@ describe("ITM display tree presentation", () => {
     });
 
     test("ability meleeAnimation displays as a 3-slot group (Overhand / Backhand / Thrust)", () => {
+        const result = parseItm();
         const abilities = findGroup(result.root, "Abilities");
         expect(abilities).toBeDefined();
         const ability1 = findGroup(abilities!, "Ability 1");
@@ -119,6 +129,7 @@ describe("ITM display tree presentation", () => {
     });
 
     test("resref fields surface as strings (Inventory Icon, Description Icon, Ground Icon)", () => {
+        const result = parseItm();
         const inv = findField(result.root, "Inventory Icon");
         expect(typeof inv?.value).toBe("string");
         const desc = findField(result.root, "Description Icon");
@@ -128,21 +139,25 @@ describe("ITM display tree presentation", () => {
     });
 });
 
-describe("SPL display tree presentation", () => {
-    const bytes = new Uint8Array(fs.readFileSync(SPL_FIXTURE));
-    const result = splParser.parse(bytes);
+describe.skipIf(!hasSplFixture)("SPL display tree presentation", () => {
+    function parseSpl() {
+        return splParser.parse(new Uint8Array(fs.readFileSync(SPL_FIXTURE)));
+    }
 
     test("type field resolves to enum name (Wizard)", () => {
+        const result = parseSpl();
         expect(findField(result.root, "Type")?.value).toBe("Wizard");
     });
 
     test("casting graphics resolves to enum name", () => {
+        const result = parseSpl();
         const cg = findField(result.root, "Casting Graphics");
         expect(typeof cg?.value).toBe("string");
         expect(cg?.value).not.toMatch(/^\d+$/);
     });
 
     test("ability target resolves to enum name", () => {
+        const result = parseSpl();
         const abilities = findGroup(result.root, "Abilities");
         expect(abilities).toBeDefined();
         const ability1 = findGroup(abilities!, "Ability 1");
@@ -153,6 +168,7 @@ describe("SPL display tree presentation", () => {
     });
 
     test("effect opcode resolves to opname", () => {
+        const result = parseSpl();
         const effects = findGroup(result.root, "Effects");
         expect(effects).toBeDefined();
         const effect1 = findGroup(effects!, "Effect 1");
@@ -163,6 +179,7 @@ describe("SPL display tree presentation", () => {
     });
 
     test("effect resource surfaces as resref string", () => {
+        const result = parseSpl();
         const effects = findGroup(result.root, "Effects");
         const effect1 = findGroup(effects!, "Effect 1");
         const resource = findField(effect1!, "Resource");
@@ -170,7 +187,7 @@ describe("SPL display tree presentation", () => {
     });
 });
 
-describe("Open enums - unknown values display + round-trip", () => {
+describe.skipIf(!hasItmFixture)("Open enums - unknown values display + round-trip", () => {
     test("unknown effect opcode displays as 'Unknown (N)' and survives canonical round-trip", async () => {
         const { createCanonicalItmJsonSnapshot, loadCanonicalItmJsonSnapshot } =
             await import("../src/itm/json-snapshot");

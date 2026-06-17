@@ -87,6 +87,7 @@ function parseResultFrom(doc: CreCanonicalDocument): ParseResult {
 }
 
 const fixtures = findFixtures(EXTERNAL_ROOT);
+const hasFixtures = fixtures.length > 0;
 
 /** Pick a real fixture doc of the given effect kind to use as a passthrough base. */
 function baseDocOfKind(kind: "v1" | "v2"): CreCanonicalDocument {
@@ -99,16 +100,10 @@ function baseDocOfKind(kind: "v1" | "v2"): CreCanonicalDocument {
     throw new Error(`no ${kind} fixture`);
 }
 
-if (fixtures.length === 0) {
-    describe.skip("cre entity-ops (no fixtures)", () => {
-        it("skipped", () => {});
-    });
-}
-
 // ---------------------------------------------------------------------------
 // Memorization owner+slice ops (spellMemInfo / memorizedSpells), order-agnostic.
 // ---------------------------------------------------------------------------
-describe("CRE memorization owner+slice ops", () => {
+describe.skipIf(!hasFixtures)("CRE memorization owner+slice ops", () => {
     const memSpell = (spell: string) => ({ ...defaultCreMemorizedSpell(), spell });
     const owner = (start: number, count: number, level: number) => ({
         ...defaultCreSpellMemInfo(),
@@ -264,7 +259,7 @@ describe("CRE memorization owner+slice ops", () => {
 // ---------------------------------------------------------------------------
 // Flat lists: known spells + effects (v1/v2 kind-preserving).
 // ---------------------------------------------------------------------------
-describe("CRE flat-list ops (known spells, effects)", () => {
+describe.skipIf(!hasFixtures)("CRE flat-list ops (known spells, effects)", () => {
     function knownBase(): CreCanonicalDocument {
         return {
             ...baseDocOfKind("v1"),
@@ -314,7 +309,7 @@ describe("CRE flat-list ops (known spells, effects)", () => {
 // ---------------------------------------------------------------------------
 // Items <- itemSlots back-reference relink.
 // ---------------------------------------------------------------------------
-describe("CRE items + itemSlots relink", () => {
+describe.skipIf(!hasFixtures)("CRE items + itemSlots relink", () => {
     function itemsBase(slots: Partial<Record<number, number>>): CreCanonicalDocument {
         const itemSlots = Array.from({ length: CRE_ITEM_SLOT_COUNT }, (_, i) => slots[i] ?? -1);
         return {
@@ -408,7 +403,7 @@ describe("CRE adapter predicates", () => {
 // partition consistent. This catches a complete-but-wrong cross-reference that
 // reparse-clean coverage alone would miss.
 // ---------------------------------------------------------------------------
-describe("CRE owner ops preserve cross-reference identity over real fixtures", () => {
+describe.skipIf(!hasFixtures)("CRE owner ops preserve cross-reference identity over real fixtures", () => {
     /** Each owner's slice as a sorted multiset of (level|resref) signatures. */
     function ownerSigs(doc: CreCanonicalDocument): string[][] {
         return doc.spellMemInfo.map((o) => {

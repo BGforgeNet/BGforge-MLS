@@ -17,6 +17,7 @@ import {
 } from "../src/map/object-ops";
 
 const DENBUS1 = path.resolve("external/fallout/Fallout2_Restoration_Project/data/maps/denbus1.map");
+const hasFixture = fs.existsSync(DENBUS1);
 
 function parseDenbus1() {
     const data = new Uint8Array(fs.readFileSync(DENBUS1));
@@ -33,7 +34,7 @@ function parseClean() {
     return mapParser.parse(data, { gracefulMapBoundaries: true });
 }
 
-describe("map writer object-section helpers", () => {
+describe.skipIf(!hasFixture)("map writer object-section helpers", () => {
     it("mapObjectsSectionStart matches the offset where objects begin", () => {
         const pr = parseDenbus1();
         const doc = getMapCanonicalDocument(pr) ?? rebuildMapCanonicalDocument(pr);
@@ -62,7 +63,7 @@ describe("map object-ops predicates", () => {
     });
 });
 
-describe("map object-ops round-trip", () => {
+describe.skipIf(!hasFixture)("map object-ops round-trip", () => {
     it("add then remove is a byte-identity inverse", () => {
         const pr = parseClean();
         const { elev, count } = elevationWithObjects(pr);
@@ -115,7 +116,7 @@ const CLEAN_ROUNDTRIP_MAPS = [
     "external/fallout/Fallout2_Restoration_Project/data/maps/arvill2.map",
 ];
 
-describe("map object-ops add/remove inverse across fixtures", () => {
+describe.skipIf(!hasFixture)("map object-ops add/remove inverse across fixtures", () => {
     it.each(CLEAN_ROUNDTRIP_MAPS)("is byte-identity for %s", (rel) => {
         const data = new Uint8Array(fs.readFileSync(path.resolve(rel)));
         const pr = mapParser.parse(data, { gracefulMapBoundaries: true });
@@ -139,7 +140,7 @@ describe("map object-ops add/remove inverse across fixtures", () => {
     });
 });
 
-describe("map object inventory ops", () => {
+describe.skipIf(!hasFixture)("map object inventory ops", () => {
     const docOf = (pr: ReturnType<typeof mapParser.parse>) =>
         (getMapCanonicalDocument(pr) ?? rebuildMapCanonicalDocument(pr))!;
 
@@ -180,7 +181,7 @@ describe("map object inventory ops", () => {
     });
 });
 
-describe("map object-ops refuse on incomplete decode", () => {
+describe.skipIf(!hasFixture)("map object-ops refuse on incomplete decode", () => {
     it("returns undefined when the objects section keeps an opaque tail", () => {
         const pr = parseDenbus1();
         // denbus1's objects need a PRO resolver to fully decode, so the parser leaves an

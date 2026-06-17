@@ -14,8 +14,10 @@ const splFormatAdapter = formatAdapterRegistry.get("spl")!;
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
 const ITM_FIXTURE = path.join(REPO_ROOT, "external/infinity-engine/bg2-wildmage/wildmage/wild_spells/itm/wm_sbook.itm");
 const SPL_FIXTURE = path.join(REPO_ROOT, "external/infinity-engine/bg2-wildmage/wildmage/wild_spells/spl/wm_word.spl");
+const hasItmFixture = fs.existsSync(ITM_FIXTURE);
+const hasSplFixture = fs.existsSync(SPL_FIXTURE);
 
-describe("ITM canonical snapshot round-trip", () => {
+describe.skipIf(!hasItmFixture)("ITM canonical snapshot round-trip", () => {
     test("createCanonical -> loadCanonical produces byte-identical output", () => {
         const bytes = new Uint8Array(fs.readFileSync(ITM_FIXTURE));
         const result = itmParser.parse(bytes);
@@ -54,7 +56,7 @@ describe("ITM canonical snapshot round-trip", () => {
     });
 });
 
-describe("SPL canonical snapshot round-trip", () => {
+describe.skipIf(!hasSplFixture)("SPL canonical snapshot round-trip", () => {
     test("createCanonical -> loadCanonical produces byte-identical output", () => {
         const bytes = new Uint8Array(fs.readFileSync(SPL_FIXTURE));
         const result = splParser.parse(bytes);

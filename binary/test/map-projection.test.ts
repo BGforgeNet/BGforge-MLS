@@ -11,6 +11,7 @@ import type { ParsedField, ParsedGroup, ParseResult } from "../src/types";
 const mapFormatAdapter = formatAdapterRegistry.get("map")!;
 
 const DENBUS1 = path.resolve("external/fallout/Fallout2_Restoration_Project/data/maps/denbus1.map");
+const hasFixture = fs.existsSync(DENBUS1);
 
 function isGroup(e: ParsedField | ParsedGroup): e is ParsedGroup {
     return "fields" in e;
@@ -33,7 +34,7 @@ function projectChild(entry: ParsedField | ParsedGroup, segs: readonly string[])
 const projectEntry = (_pr: ParseResult, entry: ParsedField | ParsedGroup, segs: readonly string[]): ProjectedEntry =>
     projectChild(entry, segs);
 
-describe("map projectDisplayRoot objects", () => {
+describe.skipIf(!hasFixture)("map projectDisplayRoot objects", () => {
     it("lifts each elevation's objects to a top-level list section and adds a read-only Objects form", () => {
         const data = new Uint8Array(fs.readFileSync(DENBUS1));
         const pr = mapParser.parse(data, { gracefulMapBoundaries: true });

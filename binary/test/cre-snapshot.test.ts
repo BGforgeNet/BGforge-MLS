@@ -16,8 +16,9 @@ const REPO_ROOT = path.resolve(__dirname, "..", "..");
 // fixpack subdirectory ships.
 const CRE_V2_FIXTURE = path.join(REPO_ROOT, "external/infinity-engine/BGT-WeiDU/bgt/base/cre/bpimoen.cre");
 const CRE_V1_FIXTURE = path.join(REPO_ROOT, "external/infinity-engine/BGT-WeiDU/bgt/fixpack/iron15.cre");
+const hasFixture = fs.existsSync(CRE_V2_FIXTURE) && fs.existsSync(CRE_V1_FIXTURE);
 
-describe("CRE canonical snapshot round-trip", () => {
+describe.skipIf(!hasFixture)("CRE canonical snapshot round-trip", () => {
     test("createCanonical -> loadCanonical produces byte-identical output (EFF v2)", () => {
         const bytes = new Uint8Array(fs.readFileSync(CRE_V2_FIXTURE));
         const result = creParser.parse(bytes);

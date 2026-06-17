@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { BufferReader, BufferWriter } from "typed-binary";
 import { armorSchema } from "../src/pro/schemas";
@@ -8,8 +8,9 @@ import { armorSpec } from "../src/pro/specs/armor";
 import { toTypedBinarySchema } from "../src/spec/derive-typed-binary";
 
 const ARMOR_FIXTURE = resolve("external/fallout/Fallout2_Restoration_Project/data/proto/items/00000595.pro");
+const hasFixture = existsSync(ARMOR_FIXTURE);
 
-describe("armorSpec equivalence with handwritten armorSchema", () => {
+describe.skipIf(!hasFixture)("armorSpec equivalence with handwritten armorSchema", () => {
     it("derived schema reads bytes identically to handwritten", () => {
         const bytes = readFileSync(ARMOR_FIXTURE);
         const buf = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);

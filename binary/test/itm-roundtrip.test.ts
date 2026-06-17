@@ -6,6 +6,7 @@ import { itmParser } from "../src/itm";
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
 const WILDMAGE_ROOT = path.join(REPO_ROOT, "external/infinity-engine/bg2-wildmage");
 const FIRST_FIXTURE = path.join(WILDMAGE_ROOT, "wildmage/wild_spells/itm/wm_sbook.itm");
+const hasFixture = fs.existsSync(FIRST_FIXTURE);
 
 function findItmFixtures(root: string): string[] {
     const out: string[] = [];
@@ -23,7 +24,7 @@ function findItmFixtures(root: string): string[] {
     return out.sort();
 }
 
-describe("itmParser - round-trip on real ITM v1 fixtures", () => {
+describe.skipIf(!hasFixture)("itmParser - round-trip on real ITM v1 fixtures", () => {
     test("decoded header has the V1 signature", () => {
         const bytes = new Uint8Array(fs.readFileSync(FIRST_FIXTURE));
         const result = itmParser.parse(bytes);
