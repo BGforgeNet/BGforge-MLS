@@ -14,6 +14,7 @@
 
 ### Fallout SSL
 
+- Updated the built-in SSL compiler (sslc) to the 2026-05-23 build.
 - Fixed: warning diagnostics highlighted a nonsensical range; they now span to the end of the warning's line.
 
 ### WeiDU

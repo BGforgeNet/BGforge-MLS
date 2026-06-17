@@ -54,7 +54,7 @@
         "vitest": "^4.1.8"
     },
     "optionalDependencies": {
-        "sslc-emscripten-noderawfs": "https://github.com/sfall-team/sslc/releases/download/2026-02-07-11-20-26/wasm-emscripten-node-noderawfs.tar.gz"
+        "sslc-emscripten-noderawfs": "https://github.com/sfall-team/sslc/releases/download/2026-05-23-12-48-08/wasm-emscripten-node-noderawfs.tar.gz"
     },
     "engines": {
         "node": ">=20"

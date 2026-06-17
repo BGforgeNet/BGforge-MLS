@@ -300,8 +300,8 @@ importers:
         version: 4.1.8(@types/node@24.12.4)(@vitest/coverage-v8@4.1.8)(vite@8.0.16(@types/node@24.12.4)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0))
     optionalDependencies:
       sslc-emscripten-noderawfs:
-        specifier: https://github.com/sfall-team/sslc/releases/download/2026-02-07-11-20-26/wasm-emscripten-node-noderawfs.tar.gz
-        version: https://github.com/sfall-team/sslc/releases/download/2026-02-07-11-20-26/wasm-emscripten-node-noderawfs.tar.gz
+        specifier: https://github.com/sfall-team/sslc/releases/download/2026-05-23-12-48-08/wasm-emscripten-node-noderawfs.tar.gz
+        version: https://github.com/sfall-team/sslc/releases/download/2026-05-23-12-48-08/wasm-emscripten-node-noderawfs.tar.gz
 
   transpilers:
     dependencies:
@@ -3749,8 +3749,8 @@ packages:
   spdx-license-ids@3.0.23:
     resolution: {integrity: sha512-CWLcCCH7VLu13TgOH+r8p1O/Znwhqv/dbb6lqWy67G+pT1kHmeD/+V36AVb/vq8QMIQwVShJ6Ssl5FPh0fuSdw==}
 
-  sslc-emscripten-noderawfs@https://github.com/sfall-team/sslc/releases/download/2026-02-07-11-20-26/wasm-emscripten-node-noderawfs.tar.gz:
-    resolution: {integrity: sha512-oQEOCRLmCodC1MlcIVAqGyTb3aWLpJ7c9tQm4CF8hrf9feZoxcIvSfwKpkcq0FykigqVGdpFpkbwQBS8yqo28Q==, tarball: https://github.com/sfall-team/sslc/releases/download/2026-02-07-11-20-26/wasm-emscripten-node-noderawfs.tar.gz}
+  sslc-emscripten-noderawfs@https://github.com/sfall-team/sslc/releases/download/2026-05-23-12-48-08/wasm-emscripten-node-noderawfs.tar.gz:
+    resolution: {integrity: sha512-aa9UKOqA3KaUhMihcxo00XvXaOJYCmGHVkEFfEPRKmTofuGK+ikR4GOBAEzQwPqpcxfbfGBp9G/boixZyn+YFA==, tarball: https://github.com/sfall-team/sslc/releases/download/2026-05-23-12-48-08/wasm-emscripten-node-noderawfs.tar.gz}
     version: 1.0.0
     hasBin: true
 
@@ -7769,7 +7769,7 @@ snapshots:
 
   spdx-license-ids@3.0.23: {}
 
-  sslc-emscripten-noderawfs@https://github.com/sfall-team/sslc/releases/download/2026-02-07-11-20-26/wasm-emscripten-node-noderawfs.tar.gz:
+  sslc-emscripten-noderawfs@https://github.com/sfall-team/sslc/releases/download/2026-05-23-12-48-08/wasm-emscripten-node-noderawfs.tar.gz:
     optional: true
 
   stackback@0.0.2: {}
