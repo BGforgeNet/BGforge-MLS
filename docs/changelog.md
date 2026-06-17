@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 3.9.0
 
 ### Binary editor
 
@@ -11,6 +11,22 @@
 - Added file icons for the binary formats: Fallout `.pro` and `.map`, and Infinity Engine `.itm`, `.spl`, `.eff`, and `.cre`. Previously `.pro` showed a Prolog icon and the Infinity Engine formats had none.
 - Fallout proto files additionally get a per-type icon based on their `proto/<type>/` folder: item, critter, scenery, wall, tile, and misc. A `.pro` outside the standard layout falls back to the generic crate icon.
 - The text-language file icons (`.ssl`, `.msg`, `.tp2`/`.tpa`/`.tph`/`.tpp`, `.baf`, `.tra`, `.slb`, `.2da`, and `worldmap.txt`) now display under any active file icon theme, not only the bundled bgforge theme.
+
+### Fallout SSL
+
+- Fixed: warning diagnostics highlighted a nonsensical range; they now span to the end of the warning's line.
+
+### WeiDU
+
+- Fixed: on Windows, compiler diagnostics could be attached to the wrong document (or to none) because of a path-separator mismatch.
+
+### Compilation
+
+- Fixed: a compile command that failed unexpectedly (file I/O, process spawn, or an internal error, as opposed to a normal parse diagnostic) gave no feedback; such failures are now surfaced as an error.
+
+### Editors
+
+- The Kate editor bundle now ships file icons.
 
 ## 3.8.2
 
