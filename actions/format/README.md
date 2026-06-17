@@ -20,7 +20,12 @@ on:
     branches: [main]
     # Trim this list to the file types your repo actually contains.
     paths:
+      # Fallout
       - "**/*.ssl"
+      - "**/*.msg"
+      - "**/scripts.lst"
+
+      # Infinity Engine
       - "**/*.baf"
       - "**/*.d"
       - "**/*.tp2"
@@ -28,9 +33,7 @@ on:
       - "**/*.tpa"
       - "**/*.tpp"
       - "**/*.tra"
-      - "**/*.msg"
       - "**/*.2da"
-      - "**/scripts.lst"
 
 permissions:
   contents: write
@@ -115,7 +118,3 @@ input (default `latest`), so set `version` too if you need the formatter pinned 
 - Only files added or modified in the current event's diff are processed. The action best-effort fetches the base
   and head SHAs into the local clone, but on events where no usable base SHA is available (new-branch push, manual
   `workflow_dispatch`, scheduled runs) it falls back to a full recursive scan of `paths`.
-
----
-
-One of the [BGforge MLS reusable actions](../README.md) (`binary`, `format`, `transpile`).

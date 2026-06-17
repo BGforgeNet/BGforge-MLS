@@ -119,7 +119,3 @@ major. Pinning the tag fixes the _action code_ only - the `@bgforge/transpile` i
 
 - **Deleted sources leave orphaned outputs.** Removing a `.td`/`.tbaf`/`.tssl` source does not remove its
   generated `.d`/`.baf`/`.ssl` file. Delete the output manually in the same commit.
-
----
-
-One of the [BGforge MLS reusable actions](../README.md) (`binary`, `format`, `transpile`).

@@ -11,7 +11,9 @@ Originally a VS Code extension, it now also works with various other editors. Se
 
 - [**Languages**](#languages): Fallout SSL; WeiDU BAF, D, TP2.
 - [**Transpilers**](#transpilers): TSSL, TBAF, TD.
-- [**Other formats**](#other-formats): TRA, MSG, 2DA; Fallout PRO, MAP, worldmap.txt, scripts.lst; weidu.log.
+- [**Other formats**](#other-formats): TRA, MSG, 2DA; Fallout worldmap.txt, scripts.lst; weidu.log.
+- [**Binary formats**](#binary-formats): Fallout PRO, MAP; Infinity ITM, SPL, EFF, CRE.
+- [**GitHub Actions**](#github-actions): format, transpile, convert binaries to JSON and back.
 - [**Installation**](#installation)
 - [**Hotkeys**](#hotkeys)
 - **Screenshots**: [completion](#infinity-engine-highlighting-and-completion), [hover](#fallout-highlighting-and-hovers), [error reporting](#error-reporting), [dialog tree preview](#dialog-tree-preview).
@@ -67,9 +69,13 @@ They bring the TypeScript type system, many TypeScript features, and better tool
 | WeiDU.log            |      ✓       |            |       | tp2  |            |            |
 | Infinity 2DA         |      ✓       |            |       |      |            |     ✓      |
 
-### Binary formats
+## Binary formats
 
-Fallout PRO and MAP files have a built-in [binary editor](#binary-editor) with JSON dump/load support.
+Fallout PRO and MAP files, and Infinity Engine ITM, SPL, EFF, and CRE files, have a built-in [binary editor](#binary-editor) with JSON dump/load support.
+
+## GitHub Actions
+
+[GitHub Actions](actions/README.md) keep generated artifacts in mod repositories up to date: they refresh binary-format JSON snapshots, format Fallout/WeiDU sources, and regenerate transpiler output. The results can be committed or simply verified to match.
 
 ## Installation
 

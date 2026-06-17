@@ -116,7 +116,3 @@ input (default `latest`), so set `version` too if you need the binary parser pin
 
 - **Deleted binaries leave orphaned snapshots.** Removing a binary does not remove its corresponding `.json`
   snapshot. Delete the snapshot manually in the same commit.
-
----
-
-One of the [BGforge MLS reusable actions](../README.md) (`binary`, `format`, `transpile`).
