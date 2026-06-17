@@ -487,12 +487,12 @@ Reports orphan warnings for TD files.
 ### Binary CLI
 
 ```
-fgbin <file.pro|file.map|file.itm|file.spl|file.eff|file.cre|dir> [--save] [--check] [--load] [--graceful-map] [-r] [-q]
+fgbin <file.pro|file.map|file.itm|file.spl|file.eff|file.cre|dir> [--save] [--check] [--load] [--graceful-map] [--proto-dir <dir>] [-r] [-q]
 ```
 
 Ships as the `fgbin` bin entry of `@bgforge/binary` (built via tsdown to `binary/out/cli.js`).
 
-Parses Fallout `.pro` / `.map` and Infinity Engine `.itm` / `.spl` (v1), `.eff` (v2), and `.cre` (v1) binary files and outputs structured JSON. `--load` writes JSON back using the parser's native extension, and `--graceful-map` allows ambiguous MAP object boundaries to fall back to opaque bytes for corpus and round-trip workflows.
+Parses Fallout `.pro` / `.map` and Infinity Engine `.itm` / `.spl` (v1), `.eff` (v2), and `.cre` (v1) binary files and outputs structured JSON. `--load` writes JSON back using the parser's native extension, and `--graceful-map` allows ambiguous MAP object boundaries to fall back to opaque bytes for corpus and round-trip workflows. `--proto-dir <dir>` overrides where MAP decoding scans for object-subtype protos (`<dir>/{items,scenery}`) when a mod's proto tree is not at the default sibling `<mapDir>/../proto/`.
 Snapshots are saved as extension-preserving sidecars such as `file.pro.json`, `file.map.json`, `file.itm.json`, `file.spl.json`, `file.eff.json`, `file.cre.json`.
 
 Snapshot contract:

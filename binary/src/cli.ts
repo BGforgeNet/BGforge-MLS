@@ -53,8 +53,13 @@ const MAX_FILE_SIZES: Record<string, number> = {
  * the CLI's own preference axes (--graceful-map, carried in `baseOptions`)
  * layer on top. Reports proto-load stats to stderr (unless quiet).
  */
-function buildParseOptionsForFile(filePath: string, quiet: boolean, baseOptions: ParseOptions): ParseOptions {
-    const fileDerived = buildFileDerivedParseOptions(filePath);
+function buildParseOptionsForFile(
+    filePath: string,
+    quiet: boolean,
+    baseOptions: ParseOptions,
+    protoDirOverride: string | undefined,
+): ParseOptions {
+    const fileDerived = buildFileDerivedParseOptions(filePath, protoDirOverride);
 
     if (!quiet && fileDerived.diagnostics) {
         const { protoDir, stats } = fileDerived.diagnostics;
@@ -74,6 +79,7 @@ async function processFile(
     mode: OutputMode,
     quiet: boolean,
     baseOptions: ParseOptions,
+    protoDirOverride: string | undefined,
 ): Promise<FileResult> {
     return safeProcess(filePath, () => {
         const ext = path.extname(filePath);
@@ -97,7 +103,10 @@ async function processFile(
         }
 
         const data = fs.readFileSync(filePath);
-        const result = parser.parse(new Uint8Array(data), buildParseOptionsForFile(filePath, quiet, baseOptions));
+        const result = parser.parse(
+            new Uint8Array(data),
+            buildParseOptionsForFile(filePath, quiet, baseOptions, protoDirOverride),
+        );
 
         if (result.errors && result.errors.length > 0) {
             console.error(`Error parsing ${filePath}:`);
@@ -164,13 +173,16 @@ async function processFile(
     });
 }
 
-const HELP = `Usage: fgbin <file.pro|file.map|dir> [--save] [--check] [--load] [-r] [-q]
+const HELP = `Usage: fgbin <file.pro|file.map|dir> [--save] [--check] [--load] [--proto-dir <dir>] [-r] [-q]
   --save    Save parsed JSON alongside the binary file (.pro.json/.map.json)
   --check   Compare parsed output against existing JSON snapshot (exit 1 if diff)
   --load    Load JSON and write binary using the parser's native extension
   --extensions    Print supported file extensions (one per line) and exit
   --graceful-map  Opt into permissive MAP boundary guessing for ambiguous files (default is strict;
                   required again on --load for JSON snapshots created from ambiguous MAP bytes)
+  --proto-dir <dir>  Load MAP proto subtype overrides from <dir>/{items,scenery} instead of the
+                     default sibling <mapDir>/../proto/. Affects MAP inputs only; errors if <dir>
+                     is missing. Other formats (.pro/.itm/...) ignore it.
   -r        Recursively process all supported files in directory
   -q        Quiet mode: suppress summary, only print errors
 
@@ -179,6 +191,8 @@ Examples:
   fgbin proto/ -r --save          # Save JSON snapshots for all files
   fgbin proto/ -r -q --check      # Verify files match snapshots (CI)
   fgbin file.pro.json --load      # Convert JSON back to binary (.pro/.map/etc.)
+  fgbin world.map --proto-dir mods/foo/proto
+                                   # Decode MAP object subtypes against a non-sibling proto/ tree
   fgbin sfsheng.map.json --load --graceful-map
                                    # Reload an ambiguous MAP snapshot saved with --graceful-map`;
 
@@ -227,7 +241,44 @@ function loadJsonToBinary(jsonPath: string, parseOptions: ParseOptions): void {
     console.log(`Wrote: ${outputPath} (${bytes.length} bytes)`);
 }
 
+/**
+ * Pull the binary-specific `--proto-dir <dir>` override out of process.argv
+ * before the shared cac parser runs. Like `--graceful-map` it is binary-only,
+ * so it stays out of `parseCliArgs`; unlike `--graceful-map` it takes a value,
+ * so both tokens must be removed from argv or cac would read the directory as
+ * the positional target. Accepts `--proto-dir <dir>` and `--proto-dir=<dir>`.
+ * Returns the directory, or undefined when not passed.
+ */
+function extractProtoDirOverride(): string | undefined {
+    const argv = process.argv;
+    const eqIndex = argv.findIndex((a) => a.startsWith("--proto-dir="));
+    if (eqIndex !== -1) {
+        const value = argv[eqIndex]!.slice("--proto-dir=".length);
+        argv.splice(eqIndex, 1);
+        return value;
+    }
+    const flagIndex = argv.indexOf("--proto-dir");
+    if (flagIndex === -1) return undefined;
+    const value = argv[flagIndex + 1];
+    if (value === undefined || value.startsWith("-")) {
+        console.error("Error: --proto-dir requires a directory argument");
+        process.exit(1);
+    }
+    argv.splice(flagIndex, 2);
+    return value;
+}
+
 async function main() {
+    // Pull --proto-dir out of argv first so neither the local argv copy below
+    // nor the shared cac parser mistakes its value for the positional target.
+    const protoDirOverride = extractProtoDirOverride();
+    // Explicit intent fails loud: a typo'd path silently falling back to the
+    // bundled vanilla resolver would produce wrong subtypes that look fine.
+    if (protoDirOverride !== undefined && !fs.existsSync(protoDirOverride)) {
+        console.error(`Error: --proto-dir not found: ${protoDirOverride}`);
+        process.exit(1);
+    }
+
     const argv = process.argv.slice(2);
 
     // `--graceful-map` is a binary-specific preference axis, so it stays out of
@@ -268,7 +319,7 @@ async function main() {
         args,
         extensions: EXTENSIONS,
         description: ".pro binary",
-        processFile: (filePath, mode) => processFile(filePath, mode, args.quiet, cliParseOptions),
+        processFile: (filePath, mode) => processFile(filePath, mode, args.quiet, cliParseOptions, protoDirOverride),
     });
 }
 

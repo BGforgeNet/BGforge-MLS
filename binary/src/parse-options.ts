@@ -13,14 +13,19 @@
  * editor call `buildFileDerivedParseOptions(filePath)` and merge their own
  * preferences on top. Adding a new file-derived behavior - e.g. scanning
  * a sibling manifest for proto-search-path overrides - is a single edit
- * here that propagates to every caller.
+ * here that propagates to every caller. The optional `protoDirOverride`
+ * second argument lets a caller (today: the CLI's `--proto-dir`) point the
+ * proto/ scan at an explicit directory rather than the sibling default.
  *
  * Today the only file-derived option is `pidResolver`, auto-loaded from
  * `<mapDir>/../proto/` (the standard Fallout 2 mod tree layout). When the
  * sibling tree exists and contains at least one matching .pro file, the
  * builder layers a filesystem resolver over the bundled vanilla defaults so
  * MAP decoding covers modded pids. Otherwise it returns empty options and
- * `parser.parse` falls back to its own bundled-table default.
+ * `parser.parse` falls back to its own bundled-table default. Callers may pass
+ * an explicit `protoDirOverride` to scan a proto/ tree elsewhere on disk (a mod
+ * whose protos do not sit at the standard sibling path); the override only
+ * affects MAP inputs and keeps the same items/scenery layout expectation.
  */
 
 import * as fs from "fs";
@@ -49,12 +54,15 @@ export interface FileDerivedParseOptions extends Pick<ParseOptions, "pidResolver
  * Build the file-derived axis of ParseOptions for `filePath`. Returns
  * empty options when there is nothing on disk to enrich the parse with.
  */
-export function buildFileDerivedParseOptions(filePath: string): FileDerivedParseOptions {
+export function buildFileDerivedParseOptions(filePath: string, protoDirOverride?: string): FileDerivedParseOptions {
     if (path.extname(filePath).toLowerCase() !== ".map") {
         return {};
     }
 
-    const protoBaseDir = path.resolve(path.dirname(filePath), "..", "proto");
+    const protoBaseDir =
+        protoDirOverride !== undefined
+            ? path.resolve(protoDirOverride)
+            : path.resolve(path.dirname(filePath), "..", "proto");
     if (!fs.existsSync(protoBaseDir)) {
         return {};
     }

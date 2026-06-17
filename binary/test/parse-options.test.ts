@@ -40,6 +40,16 @@ function makeMapDirWithProto(): string {
     return path.join(mapsDir, "fake.map");
 }
 
+/** A proto/ tree away from any map's sibling path, for the override case. */
+function makeOverrideProtoDir(): string {
+    const overrideDir = path.join(tmpDir, "elsewhere", "proto");
+    fs.mkdirSync(path.join(overrideDir, "items"), { recursive: true });
+    fs.mkdirSync(path.join(overrideDir, "scenery"), { recursive: true });
+    fs.copyFileSync(path.join(FIXTURES, "items", "00000031.pro"), path.join(overrideDir, "items", "00000031.pro"));
+    fs.copyFileSync(path.join(FIXTURES, "scenery", "00000008.pro"), path.join(overrideDir, "scenery", "00000008.pro"));
+    return overrideDir;
+}
+
 describe("buildFileDerivedParseOptions", () => {
     it("returns empty options for a non-.map file path", () => {
         const opts = buildFileDerivedParseOptions("/some/where/file.pro");
@@ -95,6 +105,38 @@ describe("buildFileDerivedParseOptions", () => {
         fs.mkdirSync(path.join(protoDir, "items"), { recursive: true });
         // Empty proto/items/ - filesScanned will be 0, no resolver attached.
         const opts = buildFileDerivedParseOptions(path.join(mapsDir, "any.map"));
+        expect(opts.pidResolver).toBeUndefined();
+        expect(opts.diagnostics).toBeUndefined();
+    });
+
+    it("scans an explicit protoDirOverride for a .map with no sibling proto/", () => {
+        const mapsDir = path.join(tmpDir, "maps");
+        fs.mkdirSync(mapsDir);
+        const overrideDir = makeOverrideProtoDir();
+        const opts = buildFileDerivedParseOptions(path.join(mapsDir, "any.map"), overrideDir);
+        expect(opts.pidResolver).toBeDefined();
+        expect(opts.pidResolver!(31)).toBe(4); // override items/00000031.pro -> Ammo
+        expect(opts.diagnostics!.protoDir).toBe(path.resolve(overrideDir));
+    });
+
+    it("scans the override directory, not the sibling, when both exist", () => {
+        const mapPath = makeMapDirWithProto(); // sibling proto/ at <tmpDir>/proto
+        const overrideDir = makeOverrideProtoDir(); // <tmpDir>/elsewhere/proto
+        const opts = buildFileDerivedParseOptions(mapPath, overrideDir);
+        expect(opts.diagnostics!.protoDir).toBe(path.resolve(overrideDir));
+    });
+
+    it("ignores the override for a non-.map file path", () => {
+        const overrideDir = makeOverrideProtoDir();
+        const opts = buildFileDerivedParseOptions("/some/where/file.pro", overrideDir);
+        expect(opts.pidResolver).toBeUndefined();
+        expect(opts.diagnostics).toBeUndefined();
+    });
+
+    it("returns empty options when the override directory does not exist", () => {
+        const mapsDir = path.join(tmpDir, "maps");
+        fs.mkdirSync(mapsDir);
+        const opts = buildFileDerivedParseOptions(path.join(mapsDir, "any.map"), path.join(tmpDir, "nope"));
         expect(opts.pidResolver).toBeUndefined();
         expect(opts.diagnostics).toBeUndefined();
     });

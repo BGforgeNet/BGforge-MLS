@@ -53,7 +53,7 @@ format-adapter registration, and presentation-schema lookups.
 ## `fgbin` CLI
 
 ```
-fgbin <file.pro|file.map|file.itm|file.spl|file.eff|file.cre|dir> [--save] [--check] [--load] [-r] [-q]
+fgbin <file.pro|file.map|file.itm|file.spl|file.eff|file.cre|dir> [--save] [--check] [--load] [--proto-dir <dir>] [-r] [-q]
 ```
 
 - `--save` - write parsed JSON snapshot alongside the binary file
@@ -63,6 +63,9 @@ fgbin <file.pro|file.map|file.itm|file.spl|file.eff|file.cre|dir> [--save] [--ch
   parser's native extension
 - `--graceful-map` - opt into permissive MAP boundary guessing for ambiguous
   files (default is strict)
+- `--proto-dir <dir>` - load MAP object-subtype overrides from
+  `<dir>/{items,scenery}` instead of the default sibling `<mapDir>/../proto/`.
+  Affects MAP inputs only; exits 1 if `<dir>` is missing
 - `-r` - recurse into directories
 - `-q` - quiet mode (suppress summary)
 

@@ -403,17 +403,18 @@ The format-adapter consolidates per-format data (presentation schema, domain ran
 ## CLI
 
 ```
-fgbin <file.pro|file.map|file.itm|file.spl|file.eff|dir> [--save] [--check] [--load] [--graceful-map] [-r] [-q]
+fgbin <file.pro|file.map|file.itm|file.spl|file.eff|dir> [--save] [--check] [--load] [--graceful-map] [--proto-dir <dir>] [-r] [-q]
 ```
 
-| Flag             | Behaviour                                                                                                                    |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `--save`         | Write canonical JSON snapshot beside the binary (`file.pro.json` / `file.map.json`)                                          |
-| `--check`        | Compare bytes against existing snapshot; exit 1 on diff. Used in CI                                                          |
-| `--load`         | Read a snapshot and write binary bytes back using the parser's native extension                                              |
-| `--graceful-map` | Permissive boundary guessing for ambiguous MAP files. Required again on `--load` for snapshots produced from ambiguous bytes |
-| `-r`             | Recurse into directories                                                                                                     |
-| `-q`             | Quiet mode (errors only, no per-file summary)                                                                                |
+| Flag                | Behaviour                                                                                                                                                  |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--save`            | Write canonical JSON snapshot beside the binary (`file.pro.json` / `file.map.json`)                                                                        |
+| `--check`           | Compare bytes against existing snapshot; exit 1 on diff. Used in CI                                                                                        |
+| `--load`            | Read a snapshot and write binary bytes back using the parser's native extension                                                                            |
+| `--graceful-map`    | Permissive boundary guessing for ambiguous MAP files. Required again on `--load` for snapshots produced from ambiguous bytes                               |
+| `--proto-dir <dir>` | Scan `<dir>/{items,scenery}` for MAP object-subtype overrides instead of the default sibling `<mapDir>/../proto/`. MAP-only; exits 1 if `<dir>` is missing |
+| `-r`                | Recurse into directories                                                                                                                                   |
+| `-q`                | Quiet mode (errors only, no per-file summary)                                                                                                              |
 
 CLI tests live in `binary/test/bin-cli.test.ts` and run as `pnpm test:cli`.
 

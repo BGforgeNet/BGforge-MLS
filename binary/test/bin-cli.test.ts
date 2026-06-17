@@ -249,6 +249,63 @@ describe("bin CLI integration", () => {
         });
     });
 
+    describe("--proto-dir override", () => {
+        it("loads proto overrides from an explicit dir for a map with no sibling proto/", () => {
+            // Map sits alone (no sibling proto/); the protos live in an unrelated tree.
+            const mapFile = path.join(tmpDir, "artemple.map");
+            fs.copyFileSync(path.resolve("client/testFixture/maps/artemple.map"), mapFile);
+
+            const overrideProto = path.join(tmpDir, "mod", "proto");
+            fs.mkdirSync(path.join(overrideProto, "items"), { recursive: true });
+            fs.mkdirSync(path.join(overrideProto, "scenery"), { recursive: true });
+            fs.copyFileSync(
+                path.join(FIXTURES, "items", "00000031.pro"),
+                path.join(overrideProto, "items", "00000031.pro"),
+            );
+            fs.copyFileSync(
+                path.join(FIXTURES, "scenery", "00000008.pro"),
+                path.join(overrideProto, "scenery", "00000008.pro"),
+            );
+
+            const { code, stderr } = run(mapFile, "--save", "--proto-dir", overrideProto);
+            expect(code).toBe(0);
+            expect(stderr).toMatch(/proto overrides/i);
+            expect(stderr).toContain(overrideProto); // stats line names the override tree, not the sibling
+        });
+
+        it("accepts the --proto-dir=<dir> form", () => {
+            const mapFile = path.join(tmpDir, "artemple.map");
+            fs.copyFileSync(path.resolve("client/testFixture/maps/artemple.map"), mapFile);
+
+            const overrideProto = path.join(tmpDir, "mod", "proto");
+            fs.mkdirSync(path.join(overrideProto, "items"), { recursive: true });
+            fs.copyFileSync(
+                path.join(FIXTURES, "items", "00000031.pro"),
+                path.join(overrideProto, "items", "00000031.pro"),
+            );
+
+            const { code, stderr } = run(mapFile, "--save", `--proto-dir=${overrideProto}`);
+            expect(code).toBe(0);
+            expect(stderr).toMatch(/proto overrides/i);
+        });
+
+        it("exits 1 when --proto-dir points at a nonexistent directory", () => {
+            const mapFile = path.join(tmpDir, "artemple.map");
+            fs.copyFileSync(path.resolve("client/testFixture/maps/artemple.map"), mapFile);
+            const { code, stderr } = run(mapFile, "--save", "--proto-dir", path.join(tmpDir, "missing"));
+            expect(code).toBe(1);
+            expect(stderr).toContain("--proto-dir not found");
+        });
+
+        it("exits 1 when --proto-dir is given without a directory argument", () => {
+            const mapFile = path.join(tmpDir, "artemple.map");
+            fs.copyFileSync(path.resolve("client/testFixture/maps/artemple.map"), mapFile);
+            const { code, stderr } = run(mapFile, "--proto-dir");
+            expect(code).toBe(1);
+            expect(stderr).toContain("requires a directory argument");
+        });
+    });
+
     describe("error handling", () => {
         itExternal("fails ambiguous MAP parsing by default", () => {
             const mapFile = path.join(RP_MAPS, "sfsheng.map");
