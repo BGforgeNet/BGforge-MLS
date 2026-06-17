@@ -49,8 +49,9 @@ The extension and the libraries release in any order - the server bundles its li
 The three library packages version independently of the extension and of each other. Each library and its bundled CLI (`fgbin`, `fgfmt`, `fgtp`) share one `package.json`, so a library and its CLI always move together. Workspace consumers (`server/`, `client/`) reference the packages via `workspace:*`, so bumping a library version does not require updating dependents.
 
 1. Bump the version in the library's `package.json` (`binary/package.json`, `format/package.json`, or `transpilers/package.json` for `@bgforge/transpile`).
-2. Commit.
-3. Tag `<lib>/vX.Y.Z`, matching the new version exactly, and push the tag.
+2. Add a `## X.Y.Z` section to the library's `CHANGELOG.md` covering its consumer-facing changes since the last tag - the CLI, parser/serializer output, and public API. Editor UI changes belong in the extension changelog (`docs/changelog.md`), not here. Each library's `CHANGELOG.md` is in its `files` allowlist, so it ships in the npm tarball.
+3. Commit.
+4. Tag `<lib>/vX.Y.Z`, matching the new version exactly, and push the tag.
 
 `publish-library.yml` resolves the tag prefix to the package, verifies the tag version matches the package's `package.json`, runs the package's build and tests, then publishes to npm with provenance.
 

@@ -1,6 +1,6 @@
 {
     "name": "@bgforge/format",
-    "version": "0.2.0",
+    "version": "0.1.1",
     "description": "Library for formatting Fallout SSL, WeiDU BAF/D/TP2/TRA, Fallout MSG, Infinity Engine 2DA, and Fallout scripts.lst files",
     "keywords": [
         "fallout",
@@ -27,6 +27,7 @@
         "out/",
         "!out/*.map",
         "README.md",
+        "CHANGELOG.md",
         "LICENSE.txt"
     ],
     "type": "module",

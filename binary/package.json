@@ -28,6 +28,7 @@
         "out/",
         "!out/*.map",
         "README.md",
+        "CHANGELOG.md",
         "LICENSE.txt"
     ],
     "type": "module",
