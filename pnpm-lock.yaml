@@ -7,11 +7,7 @@ settings:
 overrides:
   mocha>diff: '>=8.0.3'
   mocha>serialize-javascript: '>=7.0.5'
-  uuid: '>=14'
-  tmp: '>=0.2.6'
   qs: '>=6.15.2'
-  esbuild: '>=0.28.1'
-  form-data: '>=4.0.6'
 
 importers:
 
@@ -51,7 +47,7 @@ importers:
         specifier: ^9.0.0
         version: 9.0.0
       esbuild:
-        specifier: '>=0.28.1'
+        specifier: ^0.28.0
         version: 0.28.1
       esbuild-svelte:
         specifier: ^0.9.5
@@ -2418,7 +2414,7 @@ packages:
     resolution: {integrity: sha512-16FUSj64aiS28CCxYeK3hVxCyU4PwGBSkeArawAtnWSV7l0Gc+frIOP88MNj8Q7tDAGyEJAHT6OpOvM24BG46w==}
     engines: {node: '>=18'}
     peerDependencies:
-      esbuild: '>=0.28.1'
+      esbuild: '>=0.17.0'
       svelte: '>=4.2.1 <6'
 
   esbuild-wasm@0.28.0:
@@ -4105,7 +4101,7 @@ packages:
     peerDependencies:
       '@types/node': ^20.19.0 || >=22.12.0
       '@vitejs/devtools': ^0.1.18
-      esbuild: '>=0.28.1'
+      esbuild: ^0.27.0 || ^0.28.0
       jiti: '>=1.21.0'
       less: ^4.0.0
       sass: ^1.70.0

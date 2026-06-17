@@ -28,30 +28,22 @@ allowBuilds:
 #   - mocha's bundled diff (GHSA-73rr-hh4g-fpgx: parsePatch/applyPatch DoS; fixed
 #     in 8.0.3) and serialize-javascript (GHSA-5c6j-r48x-rmvq RCE, GHSA-qj8w-gfj5-8c6v
 #     DoS; fixed in 7.0.5).
-#   - msal-node's uuid (GHSA-w5hq-g745-h8pq: missing buffer bounds check; the tree
-#     otherwise pulls uuid 8.3.2).
-#   - tmp via @vscode/vsce (GHSA-ph9p-34f9-6g65: path traversal via unsanitized
-#     prefix/postfix; fixed in 0.2.6).
 #   - qs via typed-rest-client under @vscode/vsce and the Stryker packages
 #     (GHSA-q8mj-m7cp-5q26: qs.stringify DoS; fixed in 6.15.2).
-#   - esbuild via the Stryker vitest-runner -> vitest -> vite chain (GHSA-gv7w-rqvm-qjhr:
-#     RCE through an unverified Deno binary download; GHSA-g7r4-m6w7-qqqr: Windows dev-server
-#     file read; both fixed in 0.28.1). Dev/test toolchain only - never in a shipped artifact.
-#   - form-data via @vscode/vsce (GHSA-hmw2-7cc7-3qxx: CRLF injection through unescaped
-#     multipart field names/filenames; fixed in 4.0.6). VSIX packaging tool only - never
-#     in a shipped artifact, and vsce drives the multipart field names itself.
 # The top-level deps (@vscode/vsce, Stryker) are already at their latest versions,
-# so these are transitive pins, not direct bumps. The former fast-uri and
-# brace-expansion pins were dropped: their upstreams (ajv, minimatch) now resolve
-# to patched versions (3.1.2, 5.0.6) on their own, leaving the overrides redundant.
+# so these are transitive pins, not direct bumps. Overrides are dropped once their
+# upstreams resolve to a patched version on their own (verified by removing the pin,
+# reinstalling, and confirming `pnpm audit` stays clean), leaving the pin redundant.
+# Dropped so far: the former fast-uri and brace-expansion pins (ajv, minimatch now
+# resolve 3.1.2, 5.0.6); the tmp (>=0.2.6, GHSA-ph9p-34f9-6g65), esbuild (>=0.28.1,
+# GHSA-gv7w-rqvm-qjhr / GHSA-g7r4-m6w7-qqqr), and form-data (>=4.0.6,
+# GHSA-hmw2-7cc7-3qxx) pins, all dev/test/packaging-only and now resolving patched
+# naturally through @vscode/vsce and the Stryker -> vitest -> vite chain; and the
+# uuid pin (GHSA-w5hq-g745-h8pq), since msal-node no longer pulls uuid into the tree.
 overrides:
   mocha>diff: ">=8.0.3"
   mocha>serialize-javascript: ">=7.0.5"
-  uuid: ">=14"
-  tmp: ">=0.2.6"
   qs: ">=6.15.2"
-  esbuild: ">=0.28.1"
-  form-data: ">=4.0.6"
 
 # pnpm 11 enables minimumReleaseAge (24h maturity window) by default. The built-in
 # SSL compiler ships as a GitHub-release tarball (server/package.json
