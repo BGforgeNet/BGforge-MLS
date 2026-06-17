@@ -19,6 +19,16 @@ The extension is the repository's primary product, so it uses the bare, GitHub-s
 
 `build.yml` filters its push trigger to `v[0-9]+.[0-9]+.[0-9]+`, and `publish-library.yml` to the three `<lib>/v...` patterns. Any tag matching neither - including every `actions/*` tag - starts no workflow. An Action needs none: it is consumed directly from its source at the pinned git ref, not built or published.
 
+## Pre-release checklist
+
+Walk this before tagging a `vX.Y.Z` extension release. The detailed procedures are in the sections below; this is the preflight that catches what is easy to forget. The VSIX bundles every workspace package, so the extension itself ships regardless of the npm library versions - the items below mostly guard what npm and CLI consumers receive.
+
+- [ ] **Version bumped past the last tag.** `package.json` and `server/package.json` carry the same new version, and it is greater than the most recent `vX.Y.Z` tag - re-tagging the current version is a no-op. Confirm with `node -p "require('./package.json').version"`, `node -p "require('./server/package.json').version"`, and `git tag --list 'v*' --sort=-v:refname | head -1`.
+- [ ] **Changelog finalized.** Rename the `## Unreleased` heading in `docs/changelog.md` to the new version, and confirm every user-facing change since the last tag is listed - features, bug fixes, and behavior changes alike (`git log --oneline <last-tag>..HEAD` for the source set). Implementation-only commits (refactors, tests, CI, build) stay out.
+- [ ] **Independently-versioned libraries checked.** `@bgforge/binary`, `@bgforge/format`, and `@bgforge/transpile` version on their own tags. Their source is bundled into the server bundle and the VSIX, so the extension ships regardless of their npm state and they release in any order; their npm packages and CLIs (`fgbin`, `fgfmt`, `fgtp`) update only when you tag them. If `binary/src`, `format/src`, or `transpilers/src` carries unreleased changes you want on npm (`npm view @bgforge/<pkg> version` vs the `package.json`), bump and tag each (`binary/vX.Y.Z`, `format/vX.Y.Z`, `transpile/vX.Y.Z`) - see _Releasing a library_ below.
+- [ ] **Full gate green.** `pnpm build:all && pnpm test:all` passes (the cross-subsystem close-out gate).
+- [ ] **Commit, tag, push.** Commit the version bump and changelog as `Update changelog, bump version: X.Y.Z`, then tag `vX.Y.Z` and push the tag.
+
 ## Releasing the extension (`vX.Y.Z`)
 
 Root `package.json` and `server/package.json` must carry identical versions; they ship together as the VSIX and the `@bgforge/mls-server` npm package (check the current value with `node -p "require('./package.json').version"`).
@@ -28,7 +38,7 @@ Root `package.json` and `server/package.json` must carry identical versions; the
 3. Commit as `Update changelog, bump version: X.Y.Z`.
 4. Tag `vX.Y.Z` and push the tag.
 
-If this release ships a server that depends on a freshly bumped `@bgforge/format`, release the `format/vX.Y.Z` tag first - see the ordering note below.
+The extension and the libraries release in any order - the server bundles its libraries rather than depending on their npm versions (see _The server and VSIX bundle their libraries_ below).
 
 ## Releasing a library (`binary` / `format` / `transpile`)
 
@@ -40,9 +50,9 @@ The three library packages version independently of the extension and of each ot
 
 `publish-library.yml` resolves the tag prefix to the package, verifies the tag version matches the package's `package.json`, runs the package's build and tests, then publishes to npm with provenance.
 
-### Ordering: format before the server
+### The server and VSIX bundle their libraries (no release ordering)
 
-`@bgforge/mls-server` declares a runtime dependency on `@bgforge/format` (`workspace:*`), which is substituted with format's concrete version when the server is published. That version must already be on npm, or a fresh `npm install @bgforge/mls-server` cannot resolve it. So when a `vX.Y.Z` extension release ships a server depending on a bumped format, push the `format/vX.Y.Z` tag first. `publish-server.sh` preflights this and fails fast with a clear message if the format version is missing from npm.
+Neither the published `@bgforge/mls-server` nor the VSIX declares an `@bgforge/*` package as a runtime dependency. The server bundles `@bgforge/format` and the transpilers into `server/out/server.js`, and the VSIX bundles `@bgforge/binary` and `@bgforge/binary-editor` into the client bundle (esbuild externalizes only `vscode` and `esbuild-wasm`); `@bgforge/format` is a `devDependency` of `server/`, consumed at build time. So a fresh `npm install @bgforge/mls-server` resolves no `@bgforge/*` packages, and the extension and the libraries can release in any order. A library bump is needed only to publish that library's own npm package and CLI for external consumers.
 
 ## Releasing a reusable Action (`actions/<name>/vX.Y.Z`)
 

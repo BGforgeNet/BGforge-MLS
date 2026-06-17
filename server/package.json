@@ -37,7 +37,6 @@
         "bench": "vitest bench --run test/perf"
     },
     "dependencies": {
-        "@bgforge/format": "workspace:*",
         "esbuild-wasm": "^0.28.0",
         "fast-glob": "^3.3.3",
         "p-limit": "^7.3.0",
@@ -49,6 +48,7 @@
         "yaml": "^2.9.0"
     },
     "devDependencies": {
+        "@bgforge/format": "workspace:*",
         "@types/node": "^24.12.2",
         "fast-check": "^4.8.0",
         "vitest": "^4.1.8"

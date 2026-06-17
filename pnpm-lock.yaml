@@ -262,9 +262,6 @@ importers:
 
   server:
     dependencies:
-      '@bgforge/format':
-        specifier: workspace:*
-        version: link:../format
       esbuild-wasm:
         specifier: ^0.28.0
         version: 0.28.0
@@ -293,6 +290,9 @@ importers:
         specifier: ^2.9.0
         version: 2.9.0
     devDependencies:
+      '@bgforge/format':
+        specifier: workspace:*
+        version: link:../format
       '@types/node':
         specifier: ^24.12.2
         version: 24.12.4

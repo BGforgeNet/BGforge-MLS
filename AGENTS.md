@@ -122,7 +122,7 @@ cd grammars/weidu-tp2 && pnpm test   # or any grammars/*/
 
 ## Publishing & Release
 
-Releases are tag-driven via GitHub Actions. `docs/releasing.md` is the canonical reference: the tag scheme (which tag form triggers which workflow), and the per-stream release procedures for the extension, the three libraries, and the reusable Action - including the root/`server` version-identity invariant and the `format`-before-server ordering. Consult it before cutting any release. See `docs/architecture.md` for packaging mechanics.
+Releases are tag-driven via GitHub Actions. `docs/releasing.md` is the canonical reference: the tag scheme (which tag form triggers which workflow), and the per-stream release procedures for the extension, the three libraries, and the reusable Action - including the root/`server` version-identity invariant. The server and VSIX bundle their `@bgforge/*` libraries rather than depending on them at runtime, so the extension and the libraries release in any order. Consult it before cutting any release. See `docs/architecture.md` for packaging mechanics.
 
 **Pinned dependency constraints:**
 
