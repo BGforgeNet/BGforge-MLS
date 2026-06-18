@@ -1,6 +1,7 @@
 <script lang="ts">
     // Flat N-column grid of label + control cells (the critter Skills block). Clumps left.
     import type { FieldRef, Row } from "@bgforge/binary-editor";
+    import { controlWidthClass } from "../../state/controls";
     import CellControl from "../CellControl.svelte";
 
     const { columns, items, fields, onedit }: {
@@ -29,7 +30,9 @@
     {#each cells as cell (cell.row.id)}
         <div class="skill">
             <span class="nm" title={cell.row.description ?? ""}>{cell.row.name}</span>
-            <CellControl row={cell.row} {onedit} />
+            <!-- Wrap in the same sized .field-control Field.svelte uses, so a dropdown in a grid cell is sized
+                 to its longest option instead of falling to the combobox's intrinsic (clipping) width. -->
+            <span class="field-control {controlWidthClass(cell.row)}"><CellControl row={cell.row} {onedit} /></span>
         </div>
     {/each}
 </div>

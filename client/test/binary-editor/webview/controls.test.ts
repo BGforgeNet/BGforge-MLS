@@ -105,9 +105,17 @@ describe("valueTier", () => {
     const numberRow: Row = { ...enumRow, valueType: "uint16", enumOptions: undefined, rawValue: 5, displayValue: "5" };
     const stringRow = (size: number): Row => ({ ...numberRow, valueType: "string", size, displayValue: "x" });
 
-    it("puts plain decimal numbers in the small tier regardless of byte size", () => {
+    it("sizes plain decimal numbers by byte width: 8/16-bit small, 24/32-bit medium", () => {
+        // The small box shows ~6 chars. An 8/16-bit field's max (incl. sign) fits: uint8 "255", int16 "-32768".
+        expect(valueTier({ ...numberRow, valueType: "uint8", size: 1 })).toBe("s");
+        expect(valueTier({ ...numberRow, valueType: "int16", size: 2 })).toBe("s");
+        // A 24/32-bit field can show 8-11 digits (e.g. a strref 536898807, a -2147483648), which overflows the
+        // small box, so it takes the medium box - the same width hex32 (also 32-bit) already uses.
+        expect(valueTier({ ...numberRow, valueType: "uint24", size: 3 })).toBe("m");
+        expect(valueTier({ ...numberRow, valueType: "uint32", size: 4 })).toBe("m");
+        expect(valueTier({ ...numberRow, valueType: "int32", size: 4 })).toBe("m");
+        // Missing size (defensive): falls back to the small box.
         expect(valueTier(numberRow)).toBe("s");
-        expect(valueTier({ ...numberRow, valueType: "uint32", size: 4 })).toBe("s");
     });
 
     it("puts hex-formatted numbers in the medium tier", () => {
@@ -196,6 +204,37 @@ describe("dropdownWidth", () => {
             };
             const result = dropdownWidth(longRow);
             expect(result).toBe("dd-5");
+        });
+
+        // Fit-contract regression pin: a dropdown's chosen box must always have room for its longest option
+        // (box width minus trigger chrome >= the option's measured width), and pick the SMALLEST such box.
+        // This guards the WIDTH LOGIC against a future edit to the box tiers / chrome / boundaries that would
+        // silently start clipping. It does NOT cover whether a renderer APPLIES the class - a dropdown rendered
+        // through a grid/matrix cell (CellControl) carries no width class at all; that render-path defect is
+        // caught by the cross-format clip sweep (binary-editor/test/harness/render-clip-sweep.mts), since the
+        // canvas-metric path here is unavailable in jsdom and the project verifies real bucketing in the harness.
+        it("picks the smallest box that fits the longest option, across the tier range", () => {
+            // Mirror the private scale in state/controls.ts (DROPDOWN_BOX_CH / DROPDOWN_CHROME_CH). Kept in
+            // sync deliberately: if those change in code without updating here, this pin fails - the prompt to
+            // re-confirm nothing clips. Stub metrics are 8px/char with 1ch=8px, so a label of N chars is N ch.
+            const BOX_CH = [10, 16, 20, 25, 32];
+            const CLASS = ["dd-1", "dd-2", "dd-3", "dd-4", "dd-5"] as const;
+            const CHROME_CH = 4.5;
+            const expectedClass = (renderedCh: number): string => {
+                const needed = renderedCh + CHROME_CH;
+                const idx = BOX_CH.findIndex((box) => box >= needed);
+                return idx === -1 ? "dd-5" : CLASS[idx]!;
+            };
+            // enumValueLabel renders a decimal option as "<value> <name>", so value 0 prefixes "0 " (2 chars).
+            for (const name of ["abc", "Lawful good", "0x32 neutral!!", "twentychars__padxx!", "A".repeat(26)]) {
+                const renderedCh = name.length + 2; // "0 " + name, at 1ch/char under the stub
+                const row: import("@bgforge/binary-editor").Row = {
+                    ...enumRow,
+                    enumOptions: { "0": name },
+                    rawValue: 0,
+                };
+                expect(dropdownWidth(row)).toBe(expectedClass(renderedCh));
+            }
         });
     });
 });

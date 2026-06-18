@@ -15,9 +15,12 @@ inputs (number / string / hex) use a four-step S/M/ML/L scale; DROPDOWNS have th
 in the CSS classes (`.field-control.tier-{s,m,ml,l}` and `.field-control.dd-{1..5}` -> `--val-ch`) in
 `styles.css`.
 
-- **Text tiers**: **S** - small decimals (stats/levels/counts/IDs up to ~6 digits, the common case); **M** -
-  hex (`0x`+8 digits) and 8-char resref; **ML** - 13-20 char strings (a char[16] MAP filename); **L** - long
-  char arrays. Numbers are only ever S (decimal) or M (hex32); IE strings are mostly resref -> M.
+- **Text tiers**: **S** - decimals that show up to ~6 digits, i.e. 8/16-bit ints (stats/levels/counts, the
+  common case); **M** - decimals that can show 8-11 digits, i.e. 24/32-bit ints (a strref/XP/gold), plus hex
+  (`0x`+8 digits) and 8-char resref; **ML** - 13-20 char strings (a char[16] MAP filename); **L** - long char
+  arrays. A decimal's max digit count is fixed by its integer range (its byte width), so the tier is sized to
+  that max, never the current value - a value change can't clip; hex32 is always M; IE strings are mostly resref
+  -> M.
 - **Dropdowns are sized independently**, to their OWN longest option (value-prefixed, as the trigger renders it),
   quantized to the `dd-1..dd-5` ch scale (10/16/20/25/32ch). Measured per-dropdown via canvas (in ch, so it
   scales with the theme font; char-counting over-promotes wordy labels and clips hex-prefixed ones). WHY a

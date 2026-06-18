@@ -1590,8 +1590,20 @@ input[type="text"]::placeholder {
     min-width: 0;
     text-align: right;
 }
-.layout-root .grid .skill input {
+/* Numeric/text grid inputs use the fixed compact width; the combobox's own value input is excluded so it
+ * follows its box (sized to --val-ch below) instead of being pinned narrow and clipping its option. */
+.layout-root .grid .skill input:not(.bb-combobox-input) {
     width: 52px;
+    min-width: 0;
+}
+/* Grid dropdowns size to their own longest option via the dd-* class on the wrapping .field-control (the
+ * same sizing the kv field layout uses); without this a grid dropdown fell to the combobox's intrinsic,
+ * too-narrow width and clipped its option labels (e.g. CRE item-slot "0 BGMISC89"). Numeric inputs keep the
+ * fixed compact width above. */
+.layout-root .grid .skill .field-control .bb-combobox,
+.layout-root .grid .skill .field-control select {
+    width: var(--val-ch);
+    box-sizing: border-box;
     min-width: 0;
 }
 /* Hide the native number spinner in the dense layout: it overlaps the right-aligned value in the narrow

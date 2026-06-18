@@ -36,15 +36,24 @@ The drivers are:
 - `render-map.mts` - MAP via the declarative layout; asserts header + flag panel, inline variable lists, the
   per-elevation object lists and present script sections render with no tabs, absent optional sections leave
   no panel, structure ops apply, and the file round-trips byte-identical.
+- `render-clip-sweep.mts` - the cross-format value-control clipping sweep. Opens every format, walks each
+  primary tab (and selects the first list row to sweep detail forms), and runs the `clip-gate.ts` check on each
+  view - failing if any value control clips its text or any dropdown renders without a `dd-*` width class. The
+  one driver that verifies the single "no control clips" invariant across all formats, so a new clip anywhere
+  is caught in one place. IE formats (external corpus) skip when absent; PRO/MAP always run.
 
 Each driver prints per-op `PASS`/`FAIL` lines and an `ALL <FMT> OPS PASS` summary; exits non-zero on any
 failure.
 
-Two shared helpers back the drivers:
+Three shared helpers back the drivers:
 
 - `csp-gate.ts` - `installCspGate(page, label)` registers the Content-Security-Policy violation listeners
   and returns an `assertNoViolations()` that fails the run if any violation was captured. Every driver
   uses it so the CSP gate stays identical across formats.
+- `clip-gate.ts` - `collectClipViolations(page, context)` scans the current view for clipped value inputs
+  (`scrollWidth > clientWidth`) and unsized dropdowns (a `.bb-combobox` with no `dd-*` width class), and
+  `reportClipViolations(all, label)` logs and fails the run on any. Used by `render-clip-sweep.mts`; reusable
+  from any driver to gate a view it renders.
 - `theme-vars.ts` - `THEME_VARS`, the canonical VS Code Dark+ fallback `:root` block defining every
   `--vscode-*` variable `styles.css` consumes. `build.mts` and `render-primitives.mts` import it so adding a
   new variable to `styles.css` only needs one harness update.
@@ -117,6 +126,7 @@ pnpm exec tsx binary-editor/test/harness/render-pro.mts
 pnpm exec tsx binary-editor/test/harness/render-pro-subtypes.mts
 pnpm exec tsx binary-editor/test/harness/render-cre.mts
 pnpm exec tsx binary-editor/test/harness/render-map.mts
+pnpm exec tsx binary-editor/test/harness/render-clip-sweep.mts
 ```
 
 Expected output ends with `ALL OPS PASS` / `ALL ITM OPS PASS` / `ALL SPL OPS PASS` (and the equivalent

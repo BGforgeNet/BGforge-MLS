@@ -129,8 +129,11 @@ export function valueTier(row: Row): SizeTier {
     // that set their column's grid track. A hex32 packed id is "0x" + 8 digits = 10 chars.
     if (row.numericFormat === "hex32") return "m";
     if (controlKind(row) === "string") return tierForChars(row.size ?? 8); // char[N] field: N chars max
-    // Decimal: realistic display width in these formats is <= 7 digits (stats, ids, strrefs, counts, Kit).
-    return "s";
+    // Decimal width follows the integer's BYTE WIDTH, not the current value (size to the type's max so a value
+    // change never clips). The small box shows ~6 chars: an 8/16-bit field (<=6 digits incl. sign) fits, but a
+    // 24/32-bit field can show 8-11 digits and overflows it - so it gets the medium box, the same width hex32
+    // (also a 32-bit value) already uses. (A real CRE/SPL strref or a MAP script int routinely exceeds 6 chars.)
+    return (row.size ?? 0) >= 3 ? "m" : "s";
 }
 
 // ---- dropdown widths (enums only) ----
@@ -172,4 +175,21 @@ export function dropdownWidth(row: Row): DropdownWidth {
     const needed = maxCh + DROPDOWN_CHROME_CH;
     const idx = DROPDOWN_BOX_CH.findIndex((box) => box >= needed);
     return idx === -1 ? "dd-5" : DROPDOWN_CLASS[idx]!;
+}
+
+// ---- the single width-class classifier every renderer applies ----
+/**
+ * The display-width CSS class for a field's value control: dropdowns use the `dd-{1..5}` scale (sized to
+ * their own longest option), text inputs the `tier-{s,m,ml,l}` scale, and flag grids (full-width) get none.
+ *
+ * This is the ONE place that maps a row to its width class, applied by BOTH the field layout (Field.svelte)
+ * and the grid layout (GridBlock.svelte). A control rendered through a path that skips it carries no width
+ * class and clips its value (the bug the harness clip sweep guards against) - so any block that renders a
+ * `CellControl` must wrap it in `field-control {controlWidthClass(row)}`.
+ */
+export function controlWidthClass(row: Row): string {
+    const kind = controlKind(row);
+    if (kind === "flags") return "";
+    if (kind === "enum") return dropdownWidth(row);
+    return `tier-${valueTier(row)}`;
 }

@@ -1,24 +1,20 @@
 <script lang="ts">
     import type { Diagnostic, Row } from "@bgforge/binary-editor";
-    import { controlKind, valueTier, dropdownWidth } from "../state/controls";
+    import { controlWidthClass } from "../state/controls";
     import CellControl from "./CellControl.svelte";
     import Icon from "./Icon.svelte";
     import { useJump } from "../state/jump-context";
     const { row, onedit, diagnostics = [] }:
         { row: Row; onedit: (nodeId: string, value: number | string) => void;
           diagnostics?: Diagnostic[] } = $props();
-    const kind = $derived(controlKind(row));
     // Cross-record jump: a field whose value references another record (e.g. a MAP script Owner ID -> its
     // object) carries `row.link`. When a jump handler is provided (MAP), render a click-to-navigate chip
     // showing the target label; other formats/views have no handler and render nothing.
     const jump = useJump();
     // Width class on .field-control -> CSS maps it to the control box width (--val-ch) so the box left-aligns
-    // in its `auto` grid track (columns stay aligned). Text inputs use the `tier-{s,m,ml,l}` scale; dropdowns
-    // use their own `dd-{1..5}` scale (sized to the longest option, decoupled from the text tiers - see
-    // controls.ts). Flag grids are full-width, not sized, so they get no class.
-    const widthClass = $derived(
-        kind === "flags" ? "" : kind === "enum" ? dropdownWidth(row) : `tier-${valueTier(row)}`,
-    );
+    // in its `auto` grid track (columns stay aligned). Shared with GridBlock via controlWidthClass so every
+    // renderer sizes the same way (see controls.ts).
+    const widthClass = $derived(controlWidthClass(row));
     const hasDiag = $derived(diagnostics.length > 0);
     const diagTitle = $derived(diagnostics.map((d) => d.message).join("; "));
     const firstFix = $derived(diagnostics.find((d) => d.quickFix));
