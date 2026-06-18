@@ -1,7 +1,7 @@
 {
     "name": "bgforge-mls",
     "displayName": "BGforge MLS",
-    "version": "3.9.0",
+    "version": "3.9.1",
     "description": "BGforge multilanguage server",
     "categories": [
         "Programming Languages"

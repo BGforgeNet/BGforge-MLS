@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.9.1
+
+### Binary editor
+
+- Fixed: dropdown values and wide numeric fields were clipped in some views; they now size to fit.
+- CRE sound slots now lay out 20 per column.
+
 ## 3.9.0
 
 ### Binary editor
