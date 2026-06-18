@@ -14,7 +14,12 @@
     "comments": {
       "patterns": [
         {
-          "match": "(.)",
+          "match": "(#|//).*",
+          "name": "comment.line.fallout-msg"
+        },
+        {
+          "begin": "/\\*",
+          "end": "\\*/",
           "name": "comment.block.fallout-msg"
         }
       ]

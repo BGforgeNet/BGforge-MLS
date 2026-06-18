@@ -602,6 +602,11 @@
                     ],
                     "markdownDescription": "When to run validation.\n\n- `manual`: only when you run the compile/validate command explicitly\n- `save`: automatically when a document is saved\n- `type`: automatically while editing\n- `saveAndType`: automatically on both save and edit\n\n**Note:** validation while editing can be disk intensive, as some compilers require files on disk."
                 },
+                "bgforge.diagnostics": {
+                    "type": "boolean",
+                    "default": true,
+                    "markdownDescription": "Report tree-sitter parse errors as diagnostics, shown alongside compiler diagnostics for the languages that have a parser (Fallout SSL/MSG, WeiDU BAF/D/TP2/TRA).\n\nThis catches structural syntax errors instantly and in-memory, so unlike `bgforge.validate` it runs regardless of validation mode and has no disk cost. Compiler diagnostics (which also catch semantic errors) are controlled separately by `bgforge.validate`. Set to `false` to silence the syntax source without disabling compiler validation."
+                },
                 "bgforge.debug": {
                     "type": "boolean",
                     "default": false,

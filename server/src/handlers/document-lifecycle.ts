@@ -3,7 +3,9 @@ import { isHeaderFile } from "../core/location-utils";
 import { normalizeUri } from "../core/normalized-uri";
 import { registry } from "../provider-registry";
 import { getServerContext, tryGetServerContext } from "../server-context";
-import { compile, clearDiagnostics } from "../compile";
+import { compile } from "../compile";
+import { clearAllDiagnostics } from "../diagnostic-store";
+import { updateTreeSitterDiagnostics } from "../tree-sitter-validation";
 import { handleCompileError } from "./compile-error";
 import {
     type MLSsettings,
@@ -91,6 +93,12 @@ export function register(ctx: HandlerContext): void {
         }
 
         const docSettings = await ctx.getDocumentSettings(uri);
+        // Tree-sitter parse errors are gated only by `diagnostics`, not
+        // `validate` - the parse is in-memory, so it refreshes on every save
+        // regardless of validation mode.
+        if (docSettings.diagnostics) {
+            updateTreeSitterDiagnostics(uri, langId, text);
+        }
         if (shouldValidateOnSave(docSettings.validate)) {
             // Cancel any pending debounced compile for this URI - save takes priority
             // and must not race with a stale onDidChangeContent compilation.
@@ -122,9 +130,16 @@ export function register(ctx: HandlerContext): void {
             return;
         }
 
-        clearDiagnostics(uri);
+        // Drop both diagnostic sources so stale marks vanish immediately on edit.
+        clearAllDiagnostics(uri);
 
         const docSettings = await ctx.getDocumentSettings(uri);
+        // Tree-sitter parse is synchronous and cheap (no disk I/O): publish parse
+        // errors on every edit when enabled, independent of `validate`, for instant
+        // feedback ahead of (or instead of) the disk-bound external compiler.
+        if (docSettings.diagnostics) {
+            updateTreeSitterDiagnostics(uri, langId, text);
+        }
         if (shouldValidateOnChange(docSettings.validate)) {
             ctx.compileDebouncer.schedule(normUri, () => {
                 void compile(uri, langId, false, text).catch((error) => handleCompileError(error, false));

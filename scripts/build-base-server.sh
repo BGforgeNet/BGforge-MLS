@@ -20,5 +20,11 @@ esbuild ./server/src/server.ts --bundle --outfile=server/out/server.js \
 # Copy tree-sitter WASM files
 copy_wasm_to server/out
 
+# Diagnostics-only grammars (MSG/TRA): parsed by the server for parse-error
+# diagnostics, but unused by the format CLI - so they ship to server/out only and
+# are not part of the shared copy_wasm_to helper (which also feeds format/out).
+cp grammars/fallout-msg/tree-sitter-fallout_msg.wasm server/out/
+cp grammars/weidu-tra/tree-sitter-weidu_tra.wasm server/out/
+
 # Copy TD runtime declarations (used by the TD TypeScript plugin)
 cp transpilers/td/src/td-runtime.d.ts server/out/

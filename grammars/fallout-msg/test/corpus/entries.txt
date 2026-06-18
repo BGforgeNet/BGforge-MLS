@@ -29,13 +29,46 @@ Entry with audio
 Comment between entries
 ================
 
-This is a comment
+# This is a comment
 {100}{}{Text.}
 
 ---
 
 (source_file
   (comment)
+  (entry
+    (number)
+    (text)))
+
+================
+Line comment styles
+================
+
+# hash comment
+// slash comment
+{100}{}{Text.}
+
+---
+
+(source_file
+  (comment)
+  (comment)
+  (entry
+    (number)
+    (text)))
+
+================
+Block comment
+================
+
+/* block
+   comment */
+{100}{}{Text.}
+
+---
+
+(source_file
+  (block_comment)
   (entry
     (number)
     (text)))

@@ -97,7 +97,7 @@ vi.mock("../src/uri-utils", () => ({
 
 import { conlog } from "../src/logger";
 import { LANG_FALLOUT_SSL } from "../src/core/languages";
-import { compile, clearDiagnostics } from "../src/compile";
+import { compile } from "../src/compile";
 
 describe("compile dispatcher", () => {
     beforeEach(() => {
@@ -105,17 +105,6 @@ describe("compile dispatcher", () => {
         mockRegistryHas.mockReturnValue(false);
         mockRegistryCompile.mockResolvedValue(false);
         mockWriteFile.mockResolvedValue(undefined);
-    });
-
-    describe("clearDiagnostics", () => {
-        it("sends empty diagnostics for the given URI", () => {
-            clearDiagnostics("file:///test.tp2");
-
-            expect(mockSendDiagnostics).toHaveBeenCalledWith({
-                uri: "file:///test.tp2",
-                diagnostics: [],
-            });
-        });
     });
 
     describe("provider routing", () => {

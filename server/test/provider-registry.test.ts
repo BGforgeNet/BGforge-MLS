@@ -89,6 +89,7 @@ describe("ProviderRegistry", () => {
                 gamePath: "",
             },
             validate: "saveAndType",
+            diagnostics: true,
             debug: false,
         },
     };

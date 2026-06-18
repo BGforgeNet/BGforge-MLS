@@ -28,6 +28,10 @@ export interface MLSsettings {
     falloutSSL: SSLsettings;
     weidu: WeiDUsettings;
     validate: ValidationMode;
+    // Tree-sitter parse-error diagnostics. Gated independently of `validate`
+    // because the parse is in-memory and has none of the disk cost `validate`
+    // exists to throttle - so it runs regardless of validation mode.
+    diagnostics: boolean;
     debug: boolean;
 }
 
@@ -45,6 +49,7 @@ export const defaultSettings: MLSsettings = {
     },
     weidu: { path: "weidu", gamePath: "" },
     validate: "saveAndType",
+    diagnostics: true,
     debug: false,
 };
 
@@ -69,6 +74,7 @@ export function normalizeSettings(value: unknown): MLSsettings {
             ...raw.weidu,
         },
         validate: raw.validate ?? defaultSettings.validate,
+        diagnostics: raw.diagnostics ?? defaultSettings.diagnostics,
         debug: raw.debug ?? defaultSettings.debug,
     };
 }

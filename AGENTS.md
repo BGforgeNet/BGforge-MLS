@@ -56,7 +56,7 @@ client/                  # VSCode extension client (LSP client, webviews, binary
 server/                  # LSP server (providers, symbol system, compilation, dialog bridges)
   data/                  # YAML engine definitions (functions, actions, triggers)
 shared/                  # Shared pure TypeScript helpers used by runtime and build-time code
-grammars/                # Tree-sitter grammars (6 dirs: 4 LSP + 2 highlight-only)
+grammars/                # Tree-sitter grammars (6 dirs: 4 LSP + 2 parsed for diagnostics/highlighting only: msg, tra)
 binary/                  # @bgforge/binary package: library + fgbin CLI (Fallout PRO/MAP, Infinity Engine ITM/SPL/EFF/CRE parser)
 binary-editor/           # @bgforge/binary-editor package: declarative layout layer (parsed records -> editor blocks), consumed by the client webview
 format/                  # @bgforge/format package: library + fgfmt CLI (Fallout/WeiDU formatters)

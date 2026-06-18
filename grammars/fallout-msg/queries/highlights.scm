@@ -6,11 +6,12 @@
 ;   entity.name.function.sound.fallout-msg -> @string.special (audio filename)
 ;   string.quoted.fallout-msg              -> @string (message text)
 ;   keyword.control.fallout-msg            -> @punctuation.bracket (braces)
-;   comment.block.fallout-msg              -> @comment
+;   comment.line/comment.block.fallout-msg -> @comment
 
 ; ----- Comments -----
 
 (comment) @comment
+(block_comment) @comment
 
 ; ----- Entry fields -----
 

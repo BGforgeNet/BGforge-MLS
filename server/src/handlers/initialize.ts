@@ -85,6 +85,10 @@ export function register(ctx: HandlerContext): void {
         parserManager.register(LANG_WEIDU_BAF, "tree-sitter-baf.wasm", "BAF");
         parserManager.register(LANG_WEIDU_D, "tree-sitter-weidu_d.wasm", "WeiDU D");
         parserManager.register(LANG_WEIDU_TP2, "tree-sitter-weidu_tp2.wasm", "WeiDU TP2");
+        // MSG/TRA have no full LSP provider - they register a parser solely so
+        // tree-sitter parse errors surface as diagnostics (gated by bgforge.diagnostics).
+        parserManager.register(LANG_FALLOUT_MSG, "tree-sitter-fallout_msg.wasm", "Fallout MSG");
+        parserManager.register(LANG_WEIDU_TRA, "tree-sitter-weidu_tra.wasm", "WeiDU TRA");
         await parserManager.initAll();
 
         // Register and initialize providers

@@ -2,16 +2,16 @@
 
 See also: [CONTRIBUTING.md](../CONTRIBUTING.md) | [docs/architecture.md](../docs/architecture.md) | [scripts/README.md](../scripts/README.md)
 
-Six tree-sitter grammars for the supported languages. Four are used by the LSP server for parsing (formatting, symbols, etc.), two are highlight-only for external editors.
+Six tree-sitter grammars for the supported languages. Four back full LSP providers (formatting, symbols, etc.); the other two (MSG, TRA) have no provider but are parsed by the server to surface parse errors as diagnostics, and provide highlighting for external editors.
 
-| Grammar       | Language                        | Used By                                                  |
-| ------------- | ------------------------------- | -------------------------------------------------------- |
-| `fallout-ssl` | Fallout SSL (.ssl, .h)          | LSP provider (format, symbols, definition, rename, etc.) |
-| `weidu-baf`   | WeiDU BAF (.baf)                | LSP provider (format, folding)                           |
-| `weidu-d`     | WeiDU D (.d)                    | LSP provider (format, symbols, definition, folding)      |
-| `weidu-tp2`   | WeiDU TP2 (.tp2/.tpa/.tph/.tpp) | LSP provider (format, symbols, definition, rename, etc.) |
-| `fallout-msg` | Fallout MSG (.msg)              | Highlighting only (Neovim, Helix, Zed, Emacs)            |
-| `weidu-tra`   | WeiDU TRA (.tra)                | Highlighting only (Neovim, Helix, Zed, Emacs)            |
+| Grammar       | Language                        | Used By                                                                  |
+| ------------- | ------------------------------- | ------------------------------------------------------------------------ |
+| `fallout-ssl` | Fallout SSL (.ssl, .h)          | LSP provider (format, symbols, definition, rename, etc.)                 |
+| `weidu-baf`   | WeiDU BAF (.baf)                | LSP provider (format, folding)                                           |
+| `weidu-d`     | WeiDU D (.d)                    | LSP provider (format, symbols, definition, folding)                      |
+| `weidu-tp2`   | WeiDU TP2 (.tp2/.tpa/.tph/.tpp) | LSP provider (format, symbols, definition, rename, etc.)                 |
+| `fallout-msg` | Fallout MSG (.msg)              | Server parse-error diagnostics; highlighting (Neovim, Helix, Zed, Emacs) |
+| `weidu-tra`   | WeiDU TRA (.tra)                | Server parse-error diagnostics; highlighting (Neovim, Helix, Zed, Emacs) |
 
 ## Building
 
@@ -47,8 +47,10 @@ WASM files are copied to `server/out/` by `scripts/build-base-server.sh` during 
 - `tree-sitter-baf.wasm` -- WeiDU BAF grammar
 - `tree-sitter-weidu_d.wasm` -- WeiDU D grammar
 - `tree-sitter-weidu_tp2.wasm` -- WeiDU TP2 grammar
+- `tree-sitter-fallout_msg.wasm` -- Fallout MSG grammar (parse-error diagnostics)
+- `tree-sitter-weidu_tra.wasm` -- WeiDU TRA grammar (parse-error diagnostics)
 
-The MSG and TRA grammars are not bundled (no LSP provider uses them). They are built for external editors that install tree-sitter grammars natively.
+The MSG and TRA grammars ship to `server/out/` for parse-error diagnostics, but are not copied to the `@bgforge/format` CLI bundle (`format/out/`) since their formatters are string-based, not tree-sitter. They are also built for external editors that install tree-sitter grammars natively.
 
 ## Highlight Queries
 

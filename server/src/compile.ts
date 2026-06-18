@@ -6,11 +6,11 @@
 import * as fs from "fs";
 import * as path from "path";
 import { errorMessage } from "./diagnostics";
+import { clearCompilerDiagnostics } from "./diagnostic-store";
 import { conlog } from "./logger";
 import { isDirectory, tmpDir } from "./path-utils";
 import { pathToUri, uriToPath } from "./uri-utils";
 import { EXT_TBAF, EXT_TD, EXT_TSSL, LANG_FALLOUT_SSL } from "./core/languages";
-import { getConnection } from "./lsp-connection";
 import { showError, showInfo, showWarning } from "./user-messages";
 import { registry } from "./provider-registry";
 import { getDocumentSettings } from "./settings-service";
@@ -24,11 +24,6 @@ import * as weidu from "./weidu-compile";
 import { LSP_COMMAND_COMPILE } from "../../shared/protocol";
 
 export const COMMAND_compile = LSP_COMMAND_COMPILE;
-
-export function clearDiagnostics(uri: string) {
-    // Clear old diagnostics (fire-and-forget notification)
-    void getConnection().sendDiagnostics({ uri: uri, diagnostics: [] });
-}
 
 /**
  * Copies files to tmpdir and parses it there, then send diagnostic to the real file.
@@ -47,7 +42,7 @@ export async function compile(uri: string, langId: string, interactive = false, 
 
     // Try provider first (all standard languages have providers now)
     if (registry.has(langId)) {
-        clearDiagnostics(uri);
+        clearCompilerDiagnostics(uri);
         const handled = await registry.compile(langId, uri, text, interactive);
         if (handled) {
             return;
@@ -57,7 +52,7 @@ export async function compile(uri: string, langId: string, interactive = false, 
     // TypeScript-based transpilers (TBAF, TSSL, TD)
     if (langId === "typescript") {
         if (uri.toLowerCase().endsWith(EXT_TD)) {
-            clearDiagnostics(uri);
+            clearCompilerDiagnostics(uri);
             try {
                 const filePath = uriToPath(uri);
                 const { output, warnings } = await td(filePath, text);
@@ -87,7 +82,7 @@ export async function compile(uri: string, langId: string, interactive = false, 
             return;
         }
         if (uri.toLowerCase().endsWith(EXT_TBAF)) {
-            clearDiagnostics(uri);
+            clearCompilerDiagnostics(uri);
             try {
                 const filePath = uriToPath(uri);
                 const output = await tbaf(filePath, text);
@@ -122,7 +117,7 @@ export async function compile(uri: string, langId: string, interactive = false, 
                 }
                 // Chain SSL compilation via registry, reusing the in-memory output.
                 const sslUri = pathToUri(sslPath);
-                clearDiagnostics(sslUri);
+                clearCompilerDiagnostics(sslUri);
                 await registry.compile(LANG_FALLOUT_SSL, sslUri, output, interactive);
             } catch (error) {
                 const msg = errorMessage(error);

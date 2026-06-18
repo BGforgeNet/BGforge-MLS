@@ -10,7 +10,7 @@
 
 import type { ExecFileException } from "child_process";
 import { type Diagnostic, DiagnosticSeverity } from "vscode-languageserver/node";
-import { getConnection } from "./lsp-connection";
+import { setDiagnostics } from "./diagnostic-store";
 import { showError, showInfo } from "./user-messages";
 
 interface ParseItem {
@@ -71,8 +71,11 @@ export function sendParseResult(parseResult: DiagnosticParseResult, mainUri: str
         addDiagnostic(w, DiagnosticSeverity.Warning);
     }
 
+    // Publish under the "compiler" source so the tree-sitter source's diagnostics
+    // on the same file are preserved. A clean compile produces an empty map here;
+    // the compiler bucket was already cleared before the compile ran.
     for (const [uri, diags] of diagnostics) {
-        void getConnection().sendDiagnostics({ uri, diagnostics: diags });
+        setDiagnostics(uri, "compiler", diags);
     }
 }
 

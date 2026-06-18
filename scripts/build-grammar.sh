@@ -28,11 +28,20 @@ mkdir -p server/out format/out
 
 TREE_SITTER="$ROOT_DIR/node_modules/.bin/tree-sitter"
 
-# Build all 4 grammars sequentially. tree-sitter uses a shared cache under
+# LSP grammars: parsed at runtime, formatted by the @bgforge/format CLI, and the
+# source of generated SyntaxType enums (providers key on their node types).
+LSP_GRAMMARS=(fallout-ssl weidu-baf weidu-d weidu-tp2)
+# Diagnostics-only grammars: parsed at runtime solely to surface parse errors as
+# diagnostics. Their formatters are string-based (not tree-sitter) and no provider
+# keys on their node types, so they ship only to server/out - no format/out copy
+# and no SyntaxType generation.
+DIAG_GRAMMARS=(fallout-msg weidu-tra)
+
+# Build all grammars sequentially. tree-sitter uses a shared cache under
 # ~/.cache/tree-sitter for wasi-sdk, so parallel --wasm builds can race and leave
 # a truncated archive behind.
 step "Building grammar WASMs"
-for dir in fallout-ssl weidu-baf weidu-d weidu-tp2; do
+for dir in "${LSP_GRAMMARS[@]}" "${DIAG_GRAMMARS[@]}"; do
     echo "[$dir]"
     (
         cd "$ROOT_DIR/grammars/$dir"
@@ -41,10 +50,14 @@ for dir in fallout-ssl weidu-baf weidu-d weidu-tp2; do
     )
 done
 
-# Copy WASM files to server and format CLI output directories (sequential - depends on all builds)
-for dir in fallout-ssl weidu-baf weidu-d weidu-tp2; do
+# LSP grammar WASMs go to both the server and the format CLI bundle.
+for dir in "${LSP_GRAMMARS[@]}"; do
     cp "grammars/$dir"/*.wasm server/out/
     cp "grammars/$dir"/*.wasm format/out/
+done
+# Diagnostics-only grammar WASMs are loaded by the server only.
+for dir in "${DIAG_GRAMMARS[@]}"; do
+    cp "grammars/$dir"/*.wasm server/out/
 done
 
 # Copy web-tree-sitter runtime WASM (needed by parser-factory.ts)
