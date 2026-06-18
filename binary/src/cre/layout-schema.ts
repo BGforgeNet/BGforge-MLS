@@ -655,7 +655,8 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                             panels: [
                                 {
                                     title: "Sound Slots",
-                                    blocks: [{ kind: "grid", columns: 6, items: slotKeys("soundSlots", "sound", 100) }],
+                                    // 5 columns x 20 rows (column-major): 100 sound strref slots, 20 per column.
+                                    blocks: [{ kind: "grid", columns: 5, items: slotKeys("soundSlots", "sound", 100) }],
                                 },
                             ],
                         },
