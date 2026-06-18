@@ -516,7 +516,8 @@ Snapshot contract:
 
 ### Tree-Sitter Grammars
 
-Six tree-sitter grammars compiled to WASM (4 LSP + 2 highlight-only for external editors).
+Six tree-sitter grammars compiled to WASM: 4 back full LSP providers, and 2 (MSG, TRA) are
+parsed by the server for parse-error diagnostics and provide highlighting for external editors.
 See [grammars/README.md](../grammars/README.md) for the full list, build commands,
 WASM rationale, and type generation details.
 

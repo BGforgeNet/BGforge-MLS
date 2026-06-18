@@ -40,8 +40,8 @@ export class ReferencesIndex {
      * Look up URIs of all files that reference a symbol name.
      * More efficient than lookup() when only file membership is needed (e.g., rename).
      */
-    lookupUris(symbolName: string): ReadonlySet<string> {
-        const uris = new Set<string>();
+    lookupUris(symbolName: string): ReadonlySet<NormalizedUri> {
+        const uris = new Set<NormalizedUri>();
         for (const [uri, fileRefs] of this.files) {
             if (fileRefs.has(symbolName)) {
                 uris.add(uri);

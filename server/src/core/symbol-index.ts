@@ -574,7 +574,7 @@ export class Symbols {
     /**
      * Check if a symbol is visible in the given context.
      */
-    private isVisibleInContext(symbol: IndexedSymbol, uri: string, context?: QueryContext): boolean {
+    private isVisibleInContext(symbol: IndexedSymbol, uri: NormalizedUri, context?: QueryContext): boolean {
         // Global and workspace symbols are always visible
         if (symbol.scope.level === ScopeLevel.Global || symbol.scope.level === ScopeLevel.Workspace) {
             return true;

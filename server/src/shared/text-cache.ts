@@ -13,6 +13,8 @@
  * the implementation a plain insertion-ordered Map with no reordering on read.
  */
 
+import { type NormalizedUri, normalizeUri } from "../core/normalized-uri";
+
 /** Cache entry with version and parsed data */
 interface CacheEntry<T> {
     version: number;
@@ -29,7 +31,9 @@ const DEFAULT_MAX_SIZE = 50;
  * @typeParam T - The type of parsed data to cache
  */
 export class TextCache<T> {
-    private readonly cache = new Map<string, CacheEntry<T>>();
+    // Keyed by NormalizedUri so a differently-encoded URI for the same file
+    // (Windows `%3A` vs `:`) hits the same entry instead of leaking a duplicate.
+    private readonly cache = new Map<NormalizedUri, CacheEntry<T>>();
     private readonly maxSize: number;
 
     constructor(maxSize: number = DEFAULT_MAX_SIZE) {
@@ -59,8 +63,12 @@ export class TextCache<T> {
             return parse(text, uri);
         }
 
+        // Normalize only the cache key; `parse` still receives the caller's
+        // original URI so any locations it embeds keep the caller's encoding.
+        const key = normalizeUri(uri);
+
         // Check cache
-        const cached = this.cache.get(uri);
+        const cached = this.cache.get(key);
         if (cached && cached.version === version) {
             return cached.data;
         }
@@ -79,13 +87,13 @@ export class TextCache<T> {
             }
         }
 
-        this.cache.set(uri, { version, data });
+        this.cache.set(key, { version, data });
         return data;
     }
 
     /** Clear cache for a specific URI. */
     clear(uri: string): void {
-        this.cache.delete(uri);
+        this.cache.delete(normalizeUri(uri));
     }
 
     /** Clear entire cache. */

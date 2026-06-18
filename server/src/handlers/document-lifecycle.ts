@@ -1,6 +1,6 @@
 import type { Connection } from "vscode-languageserver/node";
 import { isHeaderFile } from "../core/location-utils";
-import { normalizeUri } from "../core/normalized-uri";
+import { type NormalizedUri, normalizeUri } from "../core/normalized-uri";
 import { registry } from "../provider-registry";
 import { getServerContext, tryGetServerContext } from "../server-context";
 import { compile } from "../compile";
@@ -16,7 +16,9 @@ import {
 } from "../settings";
 import type { HandlerContext } from "./context";
 
-const documentSettings: Map<string, Thenable<MLSsettings>> = new Map();
+// Keyed by NormalizedUri so a differently-encoded URI for the same file does not
+// leak a duplicate cache entry (or miss the cached settings on close).
+const documentSettings: Map<NormalizedUri, Thenable<MLSsettings>> = new Map();
 
 /**
  * Build the `getDocumentSettings` function used by compile.ts and the
@@ -30,7 +32,10 @@ export function makeGetDocumentSettings(connection: Connection): (resource: stri
         if (!serverCtx?.capabilities.configuration) {
             return Promise.resolve(serverCtx?.settings ?? defaultSettings);
         }
-        let result = documentSettings.get(resource);
+        // Normalize only the cache key; the `scopeUri` request keeps the
+        // caller's original resource string.
+        const key = normalizeUri(resource);
+        let result = documentSettings.get(key);
         if (!result) {
             result = connection.workspace
                 .getConfiguration({
@@ -38,7 +43,7 @@ export function makeGetDocumentSettings(connection: Connection): (resource: stri
                     section: "bgforge",
                 })
                 .then(normalizeSettings);
-            documentSettings.set(resource, result);
+            documentSettings.set(key, result);
         }
         return result;
     };
@@ -51,7 +56,7 @@ export function clearDocumentSettings(): void {
 
 export function register(ctx: HandlerContext): void {
     ctx.documents.onDidClose((e) => {
-        documentSettings.delete(e.document.uri);
+        documentSettings.delete(normalizeUri(e.document.uri));
         registry.handleDocumentClosed(e.document.languageId, e.document.uri);
     });
 
