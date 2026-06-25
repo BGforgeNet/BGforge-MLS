@@ -85,7 +85,13 @@ export function deleteState(model: DialogModel, state: DialogState): void {
 export function duplicateState(model: DialogModel, state: DialogState): DialogState | null {
     const root = rootOf(model, state);
     if (!root) return null;
-    const copy = structuredClone(state);
+    // Deep-clone via JSON, not structuredClone: in the webview `state` is a Svelte $state
+    // proxy (a nested member of the reactive model), and structuredClone throws
+    // DataCloneError on a proxy. $state.snapshot would unwrap it but is a rune unavailable in
+    // this plain .ts module (shared by the webview and server-side tests). A JSON round-trip
+    // reads cleanly through proxy traps and is faithful for plain DialogState data.
+    // oxlint-disable-next-line unicorn/prefer-structured-clone -- structuredClone throws DataCloneError on the $state proxy; that is the bug being fixed.
+    const copy = JSON.parse(JSON.stringify(state)) as DialogState;
     copy.id = uniqueStateId(model, `${state.id}_copy`);
     delete copy.sourceRange;
     copy.choices = copy.choices.map((c, i) => ({ ...c, id: `${copy.id}#${i}` }));

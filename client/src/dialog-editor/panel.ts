@@ -14,7 +14,7 @@ import { LSP_COMMAND_PARSE_DIALOG, LSP_COMMAND_SAVE_TRA } from "../../../shared/
 import { modelFromD, modelFromSSL, type DialogModel } from "../../../shared/dialog-model";
 import { applyDialogEdits, pendingInserts, verifyDialogEditApplied } from "../../../shared/dialog-d-edit";
 import type { DDialogData, SSLDialogData } from "../../../shared/dialog-types";
-import { generateNonce } from "../webview-assets";
+import { generateNonce, getCachedJsAsset, inlineWebviewScript } from "../webview-assets";
 
 const DIALOG_LANGS = new Set(["fallout-ssl", "weidu-d", "tssl", "td"]);
 
@@ -29,19 +29,27 @@ function toModel(data: unknown): DialogModel | null {
 
 function buildHtml(webview: vscode.Webview, extensionUri: vscode.Uri): string {
     const base = vscode.Uri.joinPath(extensionUri, "client", "out", "dialog-editor", "webview");
-    const jsUri = webview.asWebviewUri(vscode.Uri.joinPath(base, "main.js"));
     const cssUri = webview.asWebviewUri(vscode.Uri.joinPath(base, "main.css"));
     const nonce = generateNonce();
+    // Inline the bundle rather than loading it as an external <script src>. Matches the
+    // binary editor (the one webview proven to render in code-server): code-server's webview
+    // can silently refuse an external script authorised only by a nonce, leaving the panel
+    // blank, whereas an inline nonce'd script loads reliably. CSS stays a <link> via
+    // asWebviewUri + cspSource (the binary editor links its CSS the same way successfully).
+    const js = getCachedJsAsset("dialog-editor", extensionUri.fsPath, "client/out/dialog-editor/webview/main.js");
     // style-src needs 'unsafe-inline' here (not just a nonce) because Svelte Flow
     // positions nodes via runtime inline `transform` styles; the strict nonce-only
     // policy used elsewhere would block them and nodes would stack at the origin.
     const csp =
         `default-src 'none'; img-src ${webview.cspSource} data:; font-src ${webview.cspSource}; ` +
         `style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
-    return `<!doctype html><html lang="en"><head><meta charset="UTF-8" />
+    const html = `<!doctype html><html lang="en"><head><meta charset="UTF-8" />
 <meta http-equiv="Content-Security-Policy" content="${csp}" />
 <link rel="stylesheet" href="${cssUri}" /></head>
-<body><div id="app"></div><script nonce="${nonce}" src="${jsUri}"></script></body></html>`;
+<body><div id="app"></div><script nonce="{{nonce}}">/* __SCRIPT__ */</script></body></html>`;
+    // Function-replacement inlining (never a plain string) so `$&`/`$$` in the minified
+    // bundle are not interpreted as replacement patterns - see inlineWebviewScript.
+    return inlineWebviewScript(html, js, nonce);
 }
 
 export function registerDialogEditor(context: vscode.ExtensionContext, client: LanguageClient): vscode.Disposable {
@@ -54,10 +62,30 @@ export function registerDialogEditor(context: vscode.ExtensionContext, client: L
     async function refresh(): Promise<void> {
         if (!panel || !docUri) return;
         const params: ExecuteCommandParams = { command: LSP_COMMAND_PARSE_DIALOG, arguments: [{ uri: docUri }] };
-        const data = await client.sendRequest(ExecuteCommandRequest.type, params);
+        let data: unknown;
+        try {
+            data = await client.sendRequest(ExecuteCommandRequest.type, params);
+        } catch (error) {
+            // Surface the failure instead of leaving the webview stuck on "Parsing dialog...".
+            const message = error instanceof Error ? error.message : String(error);
+            void panel?.webview.postMessage({ type: "error", message: `Dialog parse request failed: ${message}` });
+            return;
+        }
         if (!panel) return; // disposed while the request was in flight
         const model = toModel(data);
-        if (model) void panel.webview.postMessage({ type: "model", model });
+        if (model) {
+            void panel.webview.postMessage({ type: "model", model });
+        } else {
+            // The server returned nothing usable (no open document, unrecognized language, or a
+            // parse error logged server-side). Tell the webview rather than hang indefinitely.
+            void panel.webview.postMessage({
+                type: "error",
+                message:
+                    data == null
+                        ? "The language server returned no dialog data for this file. Make sure it is a recognized, open dialog file."
+                        : "The parsed dialog data could not be interpreted.",
+            });
+        }
         // Verify a just-saved edit round-tripped faithfully: the server's re-parse of the
         // saved document (`model`) must match what `save` wrote (`pendingVerify`). A mismatch
         // means the serializer produced text that does not reproduce the edit - warn rather

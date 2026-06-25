@@ -23,7 +23,13 @@
     // Working copy the editor mutates. The `model` prop is the host's last-posted state;
     // edits stay local until a save path serializes editModel back (a later phase).
     function cloneModel(m: DialogModel): DialogModel {
-        return structuredClone(m);
+        // `m` is normally a Svelte $state proxy (App.svelte holds the model in reactive
+        // state and passes it as a prop). structuredClone throws DataCloneError on a proxy,
+        // which previously aborted the render and left the panel stuck on "Parsing dialog...".
+        // $state.snapshot unwraps the proxy to a plain deep clone first; the harness passes a
+        // raw object, which snapshots fine too. The cast drops the snapshot's deep-readonly
+        // type - the value is a plain mutable DialogModel that the caller re-wraps as $state.
+        return $state.snapshot(m) as DialogModel;
     }
     let editModel = $state<DialogModel>(cloneModel(model));
 

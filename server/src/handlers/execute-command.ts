@@ -66,6 +66,7 @@ export function register(ctx: HandlerContext): void {
             const uri: string = args.uri;
             const textDoc = ctx.documents.get(uri);
             if (!textDoc) {
+                conlog(`parseDialog: NO open document for ${uri} (not synced to the server)`, "warn");
                 return null;
             }
             try {
@@ -75,6 +76,7 @@ export function register(ctx: HandlerContext): void {
 
                 const handler = dialogHandlers.find((h) => h.match(langId, lowerUri));
                 if (!handler) {
+                    conlog(`parseDialog: NO handler for languageId='${langId}'`, "warn");
                     return null;
                 }
                 const dialogData = await handler.parse(uri, text);
