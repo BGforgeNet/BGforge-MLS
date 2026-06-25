@@ -113933,14 +113933,25 @@ ${component_stack}
   }
   delegate(["click", "contextmenu"]);
 
+  // client/src/dialog-editor/webview/app-messages.ts
+  function reduceDialogView(prev, data) {
+    const msg = data;
+    if (msg?.type === "model" && msg.model) return { model: msg.model, error: null };
+    if (msg?.type === "error" && msg.message) return { model: prev.model, error: msg.message };
+    return prev;
+  }
+  function shouldTimeOut(view) {
+    return !view.model && !view.error;
+  }
+
   // client/src/dialog-editor/webview/App.svelte
   App[FILENAME] = "client/src/dialog-editor/webview/App.svelte";
-  var root42 = add_locations(from_html(`<div class="empty err svelte-3pq7nz"> </div>`), App[FILENAME], [[42, 4]]);
-  var root_114 = add_locations(from_html(`<div class="empty err svelte-3pq7nz">No response from the language server within 8s - the dialog parse did not return. <!> Try reopening the dialog editor, and check the "BGforge MLS" output channel for a parse error.</div>`), App[FILENAME], [[44, 4]]);
-  var root_28 = add_locations(from_html(`<div class="empty svelte-3pq7nz">Parsing dialog...</div>`), App[FILENAME], [[52, 4]]);
+  var root42 = add_locations(from_html(`<div class="empty err svelte-3pq7nz"> </div>`), App[FILENAME], [[41, 4]]);
+  var root_114 = add_locations(from_html(`<div class="empty err svelte-3pq7nz">No response from the language server within 8s - the dialog parse did not return. <!> Try reopening the dialog editor, and check the "BGforge MLS" output channel for a parse error.</div>`), App[FILENAME], [[43, 4]]);
+  var root_28 = add_locations(from_html(`<div class="empty svelte-3pq7nz">Parsing dialog...</div>`), App[FILENAME], [[51, 4]]);
   var $$css11 = {
     hash: "svelte-3pq7nz",
-    code: "\n    .empty.svelte-3pq7nz {\n        color: #9aa0a6;\n        font-size: 12px;\n        padding: 16px;\n    }\n    .empty.err.svelte-3pq7nz {\n        color: #fca5a5;\n        max-width: 480px;\n        line-height: 1.5;\n    }\n\n/*# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiQXBwLnN2ZWx0ZSIsInNvdXJjZXMiOlsiQXBwLnN2ZWx0ZSJdLCJzb3VyY2VzQ29udGVudCI6WyI8c2NyaXB0IGxhbmc9XCJ0c1wiPlxuICAgIGltcG9ydCBEaWFsb2dHcmFwaCBmcm9tIFwiLi9EaWFsb2dHcmFwaC5zdmVsdGVcIjtcbiAgICBpbXBvcnQgdHlwZSB7IERpYWxvZ01vZGVsIH0gZnJvbSBcIi4uLy4uLy4uLy4uL3NoYXJlZC9kaWFsb2ctbW9kZWxcIjtcbiAgICBpbXBvcnQgeyBoYXNIb3N0IH0gZnJvbSBcIi4vaG9zdFwiO1xuXG4gICAgLy8gUHJvZHVjdGlvbiB3ZWJ2aWV3IHJvb3Q6IHRoZSBleHRlbnNpb24gaG9zdCBwb3N0cyBhIERpYWxvZ01vZGVsOyBvbiBlYWNoXG4gICAgLy8gbWVzc2FnZSAoaW5pdGlhbCBsb2FkIGFuZCBsaXZlIGZpbGUgZWRpdHMpIHRoZSBtb2RlbCB1cGRhdGVzIHJlYWN0aXZlbHkgYW5kXG4gICAgLy8gRGlhbG9nR3JhcGggcmUtbGF5cy1vdXQuIFRoZSBoYXJuZXNzIG1vdW50cyBEaWFsb2dHcmFwaCBkaXJlY3RseSBpbnN0ZWFkLlxuICAgIGxldCBtb2RlbCA9ICRzdGF0ZTxEaWFsb2dNb2RlbCB8IG51bGw+KG51bGwpO1xuICAgIGxldCBlcnJvciA9ICRzdGF0ZTxzdHJpbmcgfCBudWxsPihudWxsKTtcbiAgICBsZXQgdGltZWRPdXQgPSAkc3RhdGUoZmFsc2UpO1xuXG4gICAgZnVuY3Rpb24gb25NZXNzYWdlKGU6IE1lc3NhZ2VFdmVudCk6IHZvaWQge1xuICAgICAgICBjb25zdCBtc2cgPSBlLmRhdGEgYXMgeyB0eXBlPzogc3RyaW5nOyBtb2RlbD86IERpYWxvZ01vZGVsOyBtZXNzYWdlPzogc3RyaW5nIH07XG4gICAgICAgIGlmIChtc2c/LnR5cGUgPT09IFwibW9kZWxcIiAmJiBtc2cubW9kZWwpIHtcbiAgICAgICAgICAgIG1vZGVsID0gbXNnLm1vZGVsO1xuICAgICAgICAgICAgZXJyb3IgPSBudWxsO1xuICAgICAgICAgICAgdGltZWRPdXQgPSBmYWxzZTtcbiAgICAgICAgfSBlbHNlIGlmIChtc2c/LnR5cGUgPT09IFwiZXJyb3JcIiAmJiBtc2cubWVzc2FnZSkge1xuICAgICAgICAgICAgZXJyb3IgPSBtc2cubWVzc2FnZTtcbiAgICAgICAgfVxuICAgIH1cblxuICAgICRlZmZlY3QoKCkgPT4ge1xuICAgICAgICB3aW5kb3cuYWRkRXZlbnRMaXN0ZW5lcihcIm1lc3NhZ2VcIiwgb25NZXNzYWdlKTtcbiAgICAgICAgLy8gSWYgbmVpdGhlciBhIG1vZGVsIG5vciBhbiBlcnJvciBhcnJpdmVzLCB0aGUgaG9zdC0+c2VydmVyIHJvdW5kLXRyaXAgc3RhbGxlZFxuICAgICAgICAvLyAob3IgdGhlIFwicmVhZHlcIiBoYW5kc2hha2UgbmV2ZXIgcmVhY2hlZCB0aGUgaG9zdCkuIFN1cmZhY2UgaXQgcmF0aGVyIHRoYW4gc2l0XG4gICAgICAgIC8vIG9uIFwiUGFyc2luZyBkaWFsb2cuLi5cIiBmb3JldmVyLlxuICAgICAgICBjb25zdCB0ID0gc2V0VGltZW91dCgoKSA9PiB7XG4gICAgICAgICAgICBpZiAoIW1vZGVsICYmICFlcnJvcikgdGltZWRPdXQgPSB0cnVlO1xuICAgICAgICB9LCA4MDAwKTtcbiAgICAgICAgcmV0dXJuICgpID0+IHtcbiAgICAgICAgICAgIHdpbmRvdy5yZW1vdmVFdmVudExpc3RlbmVyKFwibWVzc2FnZVwiLCBvbk1lc3NhZ2UpO1xuICAgICAgICAgICAgY2xlYXJUaW1lb3V0KHQpO1xuICAgICAgICB9O1xuICAgIH0pO1xuPC9zY3JpcHQ+XG5cbnsjaWYgbW9kZWx9XG4gICAgPERpYWxvZ0dyYXBoIHttb2RlbH0gLz5cbns6ZWxzZSBpZiBlcnJvcn1cbiAgICA8ZGl2IGNsYXNzPVwiZW1wdHkgZXJyXCI+e2Vycm9yfTwvZGl2PlxuezplbHNlIGlmIHRpbWVkT3V0fVxuICAgIDxkaXYgY2xhc3M9XCJlbXB0eSBlcnJcIj5cbiAgICAgICAgTm8gcmVzcG9uc2UgZnJvbSB0aGUgbGFuZ3VhZ2Ugc2VydmVyIHdpdGhpbiA4cyAtIHRoZSBkaWFsb2cgcGFyc2UgZGlkIG5vdCByZXR1cm4uXG4gICAgICAgIHsjaWYgIWhhc0hvc3QoKX1cbiAgICAgICAgICAgIFRoZSB3ZWJ2aWV3IGNvdWxkIG5vdCBjb25uZWN0IHRvIHRoZSBlZGl0b3IgaG9zdCAoYWNxdWlyZVZzQ29kZUFwaSB1bmF2YWlsYWJsZSkuXG4gICAgICAgIHsvaWZ9XG4gICAgICAgIFRyeSByZW9wZW5pbmcgdGhlIGRpYWxvZyBlZGl0b3IsIGFuZCBjaGVjayB0aGUgXCJCR2ZvcmdlIE1MU1wiIG91dHB1dCBjaGFubmVsIGZvciBhIHBhcnNlIGVycm9yLlxuICAgIDwvZGl2PlxuezplbHNlfVxuICAgIDxkaXYgY2xhc3M9XCJlbXB0eVwiPlBhcnNpbmcgZGlhbG9nLi4uPC9kaXY+XG57L2lmfVxuXG48c3R5bGU+XG4gICAgLmVtcHR5IHtcbiAgICAgICAgY29sb3I6ICM5YWEwYTY7XG4gICAgICAgIGZvbnQtc2l6ZTogMTJweDtcbiAgICAgICAgcGFkZGluZzogMTZweDtcbiAgICB9XG4gICAgLmVtcHR5LmVyciB7XG4gICAgICAgIGNvbG9yOiAjZmNhNWE1O1xuICAgICAgICBtYXgtd2lkdGg6IDQ4MHB4O1xuICAgICAgICBsaW5lLWhlaWdodDogMS41O1xuICAgIH1cbjwvc3R5bGU+XG4iXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IjtBQXVEQSxJQUFJLG9CQUFNLENBQUM7QUFDWCxRQUFRLGNBQWM7QUFDdEIsUUFBUSxlQUFlO0FBQ3ZCLFFBQVEsYUFBYTtBQUNyQjtBQUNBLElBQUksTUFBTSxrQkFBSSxDQUFDO0FBQ2YsUUFBUSxjQUFjO0FBQ3RCLFFBQVEsZ0JBQWdCO0FBQ3hCLFFBQVEsZ0JBQWdCO0FBQ3hCOyJ9 */"
+    code: "\n    .empty.svelte-3pq7nz {\n        color: #9aa0a6;\n        font-size: 12px;\n        padding: 16px;\n    }\n    .empty.err.svelte-3pq7nz {\n        color: #fca5a5;\n        max-width: 480px;\n        line-height: 1.5;\n    }\n\n/*# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiQXBwLnN2ZWx0ZSIsInNvdXJjZXMiOlsiQXBwLnN2ZWx0ZSJdLCJzb3VyY2VzQ29udGVudCI6WyI8c2NyaXB0IGxhbmc9XCJ0c1wiPlxuICAgIGltcG9ydCBEaWFsb2dHcmFwaCBmcm9tIFwiLi9EaWFsb2dHcmFwaC5zdmVsdGVcIjtcbiAgICBpbXBvcnQgdHlwZSB7IERpYWxvZ01vZGVsIH0gZnJvbSBcIi4uLy4uLy4uLy4uL3NoYXJlZC9kaWFsb2ctbW9kZWxcIjtcbiAgICBpbXBvcnQgeyBoYXNIb3N0IH0gZnJvbSBcIi4vaG9zdFwiO1xuICAgIGltcG9ydCB7IHJlZHVjZURpYWxvZ1ZpZXcsIHNob3VsZFRpbWVPdXQgfSBmcm9tIFwiLi9hcHAtbWVzc2FnZXNcIjtcblxuICAgIC8vIFByb2R1Y3Rpb24gd2VidmlldyByb290OiB0aGUgZXh0ZW5zaW9uIGhvc3QgcG9zdHMgYSBEaWFsb2dNb2RlbDsgb24gZWFjaFxuICAgIC8vIG1lc3NhZ2UgKGluaXRpYWwgbG9hZCBhbmQgbGl2ZSBmaWxlIGVkaXRzKSB0aGUgbW9kZWwgdXBkYXRlcyByZWFjdGl2ZWx5IGFuZFxuICAgIC8vIERpYWxvZ0dyYXBoIHJlLWxheXMtb3V0LiBUaGUgaGFybmVzcyBtb3VudHMgRGlhbG9nR3JhcGggZGlyZWN0bHkgaW5zdGVhZC5cbiAgICBsZXQgbW9kZWwgPSAkc3RhdGU8RGlhbG9nTW9kZWwgfCBudWxsPihudWxsKTtcbiAgICBsZXQgZXJyb3IgPSAkc3RhdGU8c3RyaW5nIHwgbnVsbD4obnVsbCk7XG4gICAgbGV0IHRpbWVkT3V0ID0gJHN0YXRlKGZhbHNlKTtcblxuICAgIGZ1bmN0aW9uIG9uTWVzc2FnZShlOiBNZXNzYWdlRXZlbnQpOiB2b2lkIHtcbiAgICAgICAgLy8gQnJhbmNoaW5nIGxvZ2ljIChhbmQgaXRzIHRlc3RzKSBsaXZlcyBpbiBhcHAtbWVzc2FnZXMudHM7IGhlcmUgd2Ugb25seSBhcHBseSB0aGVcbiAgICAgICAgLy8gcmVzdWx0IHRvIHJlYWN0aXZlIHN0YXRlLiBBIGZyZXNoIG1vZGVsIGNsZWFycyBhbnkgc3RhbGUgdGltZW91dC5cbiAgICAgICAgY29uc3QgbmV4dCA9IHJlZHVjZURpYWxvZ1ZpZXcoeyBtb2RlbCwgZXJyb3IgfSwgZS5kYXRhKTtcbiAgICAgICAgbW9kZWwgPSBuZXh0Lm1vZGVsO1xuICAgICAgICBlcnJvciA9IG5leHQuZXJyb3I7XG4gICAgICAgIGlmIChuZXh0Lm1vZGVsKSB0aW1lZE91dCA9IGZhbHNlO1xuICAgIH1cblxuICAgICRlZmZlY3QoKCkgPT4ge1xuICAgICAgICB3aW5kb3cuYWRkRXZlbnRMaXN0ZW5lcihcIm1lc3NhZ2VcIiwgb25NZXNzYWdlKTtcbiAgICAgICAgLy8gSWYgbmVpdGhlciBhIG1vZGVsIG5vciBhbiBlcnJvciBhcnJpdmVzLCB0aGUgaG9zdC0+c2VydmVyIHJvdW5kLXRyaXAgc3RhbGxlZFxuICAgICAgICAvLyAob3IgdGhlIFwicmVhZHlcIiBoYW5kc2hha2UgbmV2ZXIgcmVhY2hlZCB0aGUgaG9zdCkuIFN1cmZhY2UgaXQgcmF0aGVyIHRoYW4gc2l0XG4gICAgICAgIC8vIG9uIFwiUGFyc2luZyBkaWFsb2cuLi5cIiBmb3JldmVyLlxuICAgICAgICBjb25zdCB0ID0gc2V0VGltZW91dCgoKSA9PiB7XG4gICAgICAgICAgICBpZiAoc2hvdWxkVGltZU91dCh7IG1vZGVsLCBlcnJvciB9KSkgdGltZWRPdXQgPSB0cnVlO1xuICAgICAgICB9LCA4MDAwKTtcbiAgICAgICAgcmV0dXJuICgpID0+IHtcbiAgICAgICAgICAgIHdpbmRvdy5yZW1vdmVFdmVudExpc3RlbmVyKFwibWVzc2FnZVwiLCBvbk1lc3NhZ2UpO1xuICAgICAgICAgICAgY2xlYXJUaW1lb3V0KHQpO1xuICAgICAgICB9O1xuICAgIH0pO1xuPC9zY3JpcHQ+XG5cbnsjaWYgbW9kZWx9XG4gICAgPERpYWxvZ0dyYXBoIHttb2RlbH0gLz5cbns6ZWxzZSBpZiBlcnJvcn1cbiAgICA8ZGl2IGNsYXNzPVwiZW1wdHkgZXJyXCI+e2Vycm9yfTwvZGl2PlxuezplbHNlIGlmIHRpbWVkT3V0fVxuICAgIDxkaXYgY2xhc3M9XCJlbXB0eSBlcnJcIj5cbiAgICAgICAgTm8gcmVzcG9uc2UgZnJvbSB0aGUgbGFuZ3VhZ2Ugc2VydmVyIHdpdGhpbiA4cyAtIHRoZSBkaWFsb2cgcGFyc2UgZGlkIG5vdCByZXR1cm4uXG4gICAgICAgIHsjaWYgIWhhc0hvc3QoKX1cbiAgICAgICAgICAgIFRoZSB3ZWJ2aWV3IGNvdWxkIG5vdCBjb25uZWN0IHRvIHRoZSBlZGl0b3IgaG9zdCAoYWNxdWlyZVZzQ29kZUFwaSB1bmF2YWlsYWJsZSkuXG4gICAgICAgIHsvaWZ9XG4gICAgICAgIFRyeSByZW9wZW5pbmcgdGhlIGRpYWxvZyBlZGl0b3IsIGFuZCBjaGVjayB0aGUgXCJCR2ZvcmdlIE1MU1wiIG91dHB1dCBjaGFubmVsIGZvciBhIHBhcnNlIGVycm9yLlxuICAgIDwvZGl2PlxuezplbHNlfVxuICAgIDxkaXYgY2xhc3M9XCJlbXB0eVwiPlBhcnNpbmcgZGlhbG9nLi4uPC9kaXY+XG57L2lmfVxuXG48c3R5bGU+XG4gICAgLmVtcHR5IHtcbiAgICAgICAgY29sb3I6ICM5YWEwYTY7XG4gICAgICAgIGZvbnQtc2l6ZTogMTJweDtcbiAgICAgICAgcGFkZGluZzogMTZweDtcbiAgICB9XG4gICAgLmVtcHR5LmVyciB7XG4gICAgICAgIGNvbG9yOiAjZmNhNWE1O1xuICAgICAgICBtYXgtd2lkdGg6IDQ4MHB4O1xuICAgICAgICBsaW5lLWhlaWdodDogMS41O1xuICAgIH1cbjwvc3R5bGU+XG4iXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IjtBQXNEQSxJQUFJLG9CQUFNLENBQUM7QUFDWCxRQUFRLGNBQWM7QUFDdEIsUUFBUSxlQUFlO0FBQ3ZCLFFBQVEsYUFBYTtBQUNyQjtBQUNBLElBQUksTUFBTSxrQkFBSSxDQUFDO0FBQ2YsUUFBUSxjQUFjO0FBQ3RCLFFBQVEsZ0JBQWdCO0FBQ3hCLFFBQVEsZ0JBQWdCO0FBQ3hCOyJ9 */"
   };
   function App($$anchor, $$props) {
     check_target(new.target);
@@ -113950,20 +113961,16 @@ ${component_stack}
     let error = tag(state(null), "error");
     let timedOut = tag(state(false), "timedOut");
     function onMessage(e) {
-      const msg = e.data;
-      if (strict_equals(msg?.type, "model") && msg.model) {
-        set(model, msg.model, true);
-        set(error, null);
-        set(timedOut, false);
-      } else if (strict_equals(msg?.type, "error") && msg.message) {
-        set(error, msg.message, true);
-      }
+      const next2 = reduceDialogView({ model: get2(model), error: get2(error) }, e.data);
+      set(model, next2.model, true);
+      set(error, next2.error, true);
+      if (next2.model) set(timedOut, false);
     }
     user_effect(() => {
       window.addEventListener("message", onMessage);
       const t = setTimeout(
         () => {
-          if (!get2(model) && !get2(error)) set(timedOut, true);
+          if (shouldTimeOut({ model: get2(model), error: get2(error) })) set(timedOut, true);
         },
         8e3
       );
@@ -113985,7 +113992,7 @@ ${component_stack}
           }),
           "component",
           App,
-          40,
+          39,
           4,
           { componentTag: "DialogGraph" }
         );
@@ -114012,7 +114019,7 @@ ${component_stack}
             }),
             "if",
             App,
-            46,
+            45,
             8
           );
         }
@@ -114033,7 +114040,7 @@ ${component_stack}
         }),
         "if",
         App,
-        39,
+        38,
         0
       );
     }

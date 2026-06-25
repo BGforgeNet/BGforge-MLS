@@ -2,6 +2,7 @@
     import DialogGraph from "./DialogGraph.svelte";
     import type { DialogModel } from "../../../../shared/dialog-model";
     import { hasHost } from "./host";
+    import { reduceDialogView, shouldTimeOut } from "./app-messages";
 
     // Production webview root: the extension host posts a DialogModel; on each
     // message (initial load and live file edits) the model updates reactively and
@@ -11,14 +12,12 @@
     let timedOut = $state(false);
 
     function onMessage(e: MessageEvent): void {
-        const msg = e.data as { type?: string; model?: DialogModel; message?: string };
-        if (msg?.type === "model" && msg.model) {
-            model = msg.model;
-            error = null;
-            timedOut = false;
-        } else if (msg?.type === "error" && msg.message) {
-            error = msg.message;
-        }
+        // Branching logic (and its tests) lives in app-messages.ts; here we only apply the
+        // result to reactive state. A fresh model clears any stale timeout.
+        const next = reduceDialogView({ model, error }, e.data);
+        model = next.model;
+        error = next.error;
+        if (next.model) timedOut = false;
     }
 
     $effect(() => {
@@ -27,7 +26,7 @@
         // (or the "ready" handshake never reached the host). Surface it rather than sit
         // on "Parsing dialog..." forever.
         const t = setTimeout(() => {
-            if (!model && !error) timedOut = true;
+            if (shouldTimeOut({ model, error })) timedOut = true;
         }, 8000);
         return () => {
             window.removeEventListener("message", onMessage);
