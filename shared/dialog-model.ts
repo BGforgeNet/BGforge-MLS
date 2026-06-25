@@ -197,6 +197,16 @@ export function choiceBadges(choice: DialogChoice): DialogBadge[] {
     return orderBadges(present);
 }
 
+/**
+ * Whether a node carries any trust/projection badge - on itself or on a choice. The
+ * spotlight overlay (1B) highlights flagged nodes and dims fully-authored ones, so this
+ * is its per-node predicate. Pure projection over the IR; the renderer reads it, nothing
+ * mutates the model.
+ */
+export function isFlaggedNode(state: DialogState): boolean {
+    return stateBadges(state).length > 0 || state.choices.some((c) => choiceBadges(c).length > 0);
+}
+
 // --- WeiDU D adapter -------------------------------------------------------
 
 function targetFromD(t: DDialogTarget): DialogTarget {

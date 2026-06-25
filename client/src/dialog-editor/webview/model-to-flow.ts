@@ -7,7 +7,7 @@
  * nodes so no edge dangles.
  */
 
-import { resolveText, type DialogModel, type DialogState } from "../../../../shared/dialog-model";
+import { isFlaggedNode, resolveText, type DialogModel, type DialogState } from "../../../../shared/dialog-model";
 import { classifyReachability } from "../../../../shared/dialog-reachability";
 
 export interface FlowNode {
@@ -92,7 +92,10 @@ export function modelToFlow(model: DialogModel): FlowGraph {
                 position: { x: 0, y: 0 },
                 width,
                 height,
-                data: { state: s, messages, reachability: reach.get(s.id) },
+                // `flagged` drives the spotlight overlay: true iff the node carries any
+                // badge (state- or choice-level). Computed here so a toggle just flips a
+                // CSS class - no model-to-flow rebuild on toggle.
+                data: { state: s, messages, reachability: reach.get(s.id), flagged: isFlaggedNode(s) },
             });
 
             s.choices.forEach((c) => {

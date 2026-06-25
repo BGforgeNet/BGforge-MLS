@@ -4,6 +4,7 @@ import { parseDDialog } from "../src/weidu-d/dialog";
 import { parseDialog as parseSSL } from "../src/dialog";
 import {
     choiceBadges,
+    isFlaggedNode,
     modelFromD,
     modelFromSSL,
     stateBadges,
@@ -146,5 +147,34 @@ end
         const model = modelFromSSL(await parseSSL(ssl));
         const n1 = model.roots[0]!.states.find((s) => s.id === "Node001")!;
         expect(choiceBadges(n1.choices[0]!)).toContain("virtual-sink");
+    });
+});
+
+// The spotlight overlay (1B) dims fully-authored nodes and highlights the uncertain ones.
+// `isFlaggedNode` is its pure projection: a node is flagged iff it - or any of its choices -
+// carries a badge.
+describe("dialog spotlight projection (1B): isFlaggedNode", () => {
+    const plainChoice: DialogChoice = { id: "c0", text: "ok", target: { kind: "exit" } };
+
+    it("a fully-authored state with only plain choices is not flagged", () => {
+        const s: DialogState = { id: "s", text: "@1", choices: [plainChoice] };
+        expect(isFlaggedNode(s)).toBe(false);
+    });
+
+    it("flags a state that itself carries a badge (derived / triggered)", () => {
+        expect(isFlaggedNode({ id: "s", text: "@1", choices: [], derivedFrom: "CHAIN" })).toBe(true);
+        expect(isFlaggedNode({ id: "s", text: "@1", choices: [], trigger: "x" })).toBe(true);
+    });
+
+    it("flags a plain state when one of its choices carries a badge", () => {
+        const conditional: DialogChoice = {
+            id: "c1",
+            text: "maybe",
+            condition: "Reputation<5",
+            target: { kind: "exit" },
+        };
+        const unresolved: DialogChoice = { id: "c2", target: { kind: "external", label: "%v%:0", resolved: false } };
+        expect(isFlaggedNode({ id: "s", text: "@1", choices: [plainChoice, conditional] })).toBe(true);
+        expect(isFlaggedNode({ id: "s", text: "@1", choices: [unresolved] })).toBe(true);
     });
 });

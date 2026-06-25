@@ -13,6 +13,7 @@
             messages?: Record<string, string>;
             jumpTo?: { file: string; stateId: string };
             reachability?: Reachability;
+            flagged?: boolean;
         };
         type: string;
     } = $props();
@@ -31,7 +32,7 @@
 
 {#if type === "card" && data.state}
     {@const sb = stateBadges(data.state)}
-    <div class="card" class:derived={data.state.derivedFrom} class:orphan={data.reachability === "orphan"}>
+    <div class="card" class:derived={data.state.derivedFrom} class:orphan={data.reachability === "orphan"} class:flagged={data.flagged}>
         <Handle type="target" position={Position.Left} />
         <div class="hd">
             <span class="who">{headLabel(data.state)}</span>

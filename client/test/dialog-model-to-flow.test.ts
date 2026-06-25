@@ -127,6 +127,34 @@ describe("modelToFlow - real producer output (no dangling edges)", () => {
     });
 });
 
+describe("modelToFlow - spotlight flag", () => {
+    test("tags each card with whether it is flagged (carries a badge)", () => {
+        const model: DialogModel = {
+            format: "weidu-d",
+            editable: true,
+            roots: [
+                {
+                    id: "d",
+                    label: "d",
+                    kind: "dialog",
+                    states: [
+                        {
+                            id: "plain",
+                            speaker: "X",
+                            text: "hi",
+                            choices: [{ id: "plain#0", text: "ok", target: { kind: "exit" } }],
+                        },
+                        { id: "flagged", speaker: "X", text: "hi", trigger: "x", choices: [] },
+                    ],
+                },
+            ],
+        };
+        const { nodes } = modelToFlow(model);
+        expect(nodes.find((n) => n.id === "plain")?.data.flagged).toBe(false);
+        expect(nodes.find((n) => n.id === "flagged")?.data.flagged).toBe(true);
+    });
+});
+
 describe("stateNodeSize", () => {
     test("grows the card height as the resolved text wraps to more lines", () => {
         const state = { id: "s", speaker: "X", text: "t", choices: [] };

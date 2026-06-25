@@ -75,6 +75,29 @@ check(
     `before=${before} after=${after}`,
 );
 
+// Spotlight overlay (1B): toggling it dims fully-authored cards (no badge) while the
+// flagged ones stay fully opaque - the author's "which parts are projections?" lens.
+await page.getByRole("button", { name: "Spotlight" }).click();
+await page.waitForTimeout(250);
+const spot = await page.evaluate(() => {
+    // No named inner functions here: tsx/esbuild keepNames would inject a __name helper
+    // that is undefined in the page context. Inline the opacity read instead.
+    const cards = Array.from(document.querySelectorAll(".card"));
+    const flagged = cards.filter((c) => c.classList.contains("flagged"));
+    const trusted = cards.filter((c) => !c.classList.contains("flagged"));
+    return {
+        flaggedCount: flagged.length,
+        trustedCount: trusted.length,
+        flaggedAllOpaque: flagged.every((c) => parseFloat(getComputedStyle(c).opacity) > 0.9),
+        someTrustedDimmed: trusted.some((c) => parseFloat(getComputedStyle(c).opacity) < 0.5),
+    };
+});
+check(
+    "spotlight dims trusted cards and keeps flagged ones opaque",
+    spot.flaggedCount > 0 && spot.trustedCount > 0 && spot.flaggedAllOpaque && spot.someTrustedDimmed,
+    JSON.stringify(spot),
+);
+
 await page.screenshot({ path: shot });
 
 // Fail-loud error state: a fresh App that receives {type:"error"} shows the message, not a

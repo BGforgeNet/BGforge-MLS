@@ -41,6 +41,10 @@
     let containerH = $state(0);
     let laidOut = $state.raw<FlowNode[]>([]);
     let showSource = $state(false);
+    // Spotlight overlay (1B): dim fully-authored ("trusted") cards so the derived/uncertain
+    // ones stand out. Read-only; just a CSS class flip (each card already carries `flagged`
+    // from model-to-flow), so toggling needs no relayout.
+    let spotlight = $state(false);
 
     // Two views of the same dialog: the node graph (default) and a conversation-flow
     // tree. The toggle swaps the canvas; tabs, the inspector, and the toolbar are
@@ -515,6 +519,14 @@
     <button class="toolbtn" onclick={addState}>+ State</button>
     {#if inGraph}
         <button class="toolbtn" title="Re-run auto-layout" onclick={() => void rebuild({ relayout: true, frame: "entry" })}>Re-layout</button>
+        <button
+            class="toolbtn"
+            class:active={spotlight}
+            title="Spotlight: dim fully-authored states, highlight only the derived/uncertain ones"
+            onclick={() => (spotlight = !spotlight)}
+        >
+            Spotlight
+        </button>
     {/if}
     {#if editModel.format === "weidu-d"}
         <button class="toolbtn" class:active={showSource} onclick={() => (showSource = !showSource)}>Source</button>
@@ -556,7 +568,7 @@
             {/each}
         </div>
     {/if}
-    <div class="flowwrap" bind:clientWidth={containerW} bind:clientHeight={containerH}>
+    <div class="flowwrap" class:spotlight bind:clientWidth={containerW} bind:clientHeight={containerH}>
         {#if viewMode === "graph"}
             <SvelteFlow bind:nodes bind:edges bind:viewport {nodeTypes} {edgeTypes} onnodeclick={onNodeClick} onconnect={onConnect} onreconnect={onReconnect} nodesDraggable>
                 <Background />
@@ -709,6 +721,15 @@
         flex: 1;
         min-height: 0;
         position: relative;
+    }
+    /* Spotlight overlay: dim fully-authored cards so the derived/uncertain ones stand out.
+       `.card` lives in Node.svelte, so reach it with :global; each card carries `.flagged`
+       from model-to-flow when it (or a choice) has any badge. */
+    .flowwrap :global(.card) {
+        transition: opacity 0.15s ease;
+    }
+    .flowwrap.spotlight :global(.card:not(.flagged)) {
+        opacity: 0.28;
     }
     /* Segmented Graph/Tree switch - the current mode is highlighted. */
     .viewseg {
