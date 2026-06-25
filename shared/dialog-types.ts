@@ -26,6 +26,13 @@ export interface SSLDialogReply {
     line: number;
     /** Raw conditional expression text, when the reply is wrapped in `if (...)`. */
     conditional?: string;
+    /**
+     * Set when the message id is not a fixed integer literal: `computed` (a variable
+     * or expression - the displayed line is approximate, the real id is runtime) or
+     * `random` (a `random(...)` call - one of several lines shown at runtime). Absent
+     * for a plain numeric id. Drives the computed/random honesty badges.
+     */
+    msgKind?: "computed" | "random";
 }
 
 export interface SSLDialogOption {
@@ -37,6 +44,8 @@ export interface SSLDialogOption {
     line: number;
     /** Raw conditional expression text, when the option is wrapped in `if (...)`. */
     conditional?: string;
+    /** See `SSLDialogReply.msgKind`: `computed`/`random` when the id is not a fixed literal. */
+    msgKind?: "computed" | "random";
 }
 
 export interface SSLDialogNode {

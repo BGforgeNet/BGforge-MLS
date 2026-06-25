@@ -41,6 +41,13 @@ export interface DialogState {
     speaker?: string;
     /** NPC line - resolved text, or a message ref (`@N` / numeric id) pending inlining. */
     text: string;
+    /**
+     * Set when `text` is a runtime-built message id rather than a fixed literal:
+     * `computed` (a variable/expression) or `random` (a `random(...)` call). Populated
+     * by the SSL adapter; absent for D (which uses resolvable `@N`/`#N` refs). Drives the
+     * computed/random honesty badges.
+     */
+    textKind?: "computed" | "random";
     trigger?: string;
     weight?: number;
     choices: DialogChoice[];
@@ -75,6 +82,8 @@ export interface DialogChoice {
     id: string;
     /** Player reply text or message ref; absent for a direct (call/goto) transition. */
     text?: string;
+    /** As `DialogState.textKind`, for this option's text (SSL-populated). */
+    textKind?: "computed" | "random";
     condition?: string;
     action?: string;
     target: DialogTarget;
@@ -117,6 +126,75 @@ export function targetLabel(t: DialogTarget): string {
         case "external":
             return t.label;
     }
+}
+
+// --- Honest-projection badges (1B) -----------------------------------------
+
+/**
+ * The badge vocabulary, rendered identically for D and SSL. A badge marks a node
+ * the author cannot fully trust as authored/editable source. Derived purely from
+ * IR fields - never guessed. The set is the full vocabulary; `computed`/`random`/
+ * `side-effect`/`virtual-sink` are populated once the SSL parser carries those
+ * signals (later 1B slices), so they appear in the priority table but have no
+ * producer yet.
+ */
+export type DialogBadge =
+    | "derived"
+    | "unresolved-external"
+    | "computed"
+    | "random"
+    | "conditional"
+    | "side-effect"
+    | "virtual-sink";
+
+// Display priority, highest first: the top badge shows inline on the card, the rest
+// move to hover/inspector (see the 1B spec's badge-density decision).
+const BADGE_PRIORITY: readonly DialogBadge[] = [
+    "derived",
+    "unresolved-external",
+    "computed",
+    "random",
+    "conditional",
+    "side-effect",
+    "virtual-sink",
+];
+
+function orderBadges(present: Set<DialogBadge>): DialogBadge[] {
+    return BADGE_PRIORITY.filter((b) => present.has(b));
+}
+
+// Engine sink nodes: Node999 is the exit sink, Node998 the combat sink. A transition
+// into one leaves normal dialogue, so it is badged rather than drawn as a real edge.
+const SINK_NODES: ReadonlySet<string> = new Set(["Node999", "Node998"]);
+
+/** Trust/editability badges for a state, ordered by display priority. */
+export function stateBadges(state: DialogState): DialogBadge[] {
+    const present = new Set<DialogBadge>();
+    if (state.derivedFrom) present.add("derived");
+    if (state.textKind) present.add(state.textKind);
+    if (state.trigger) present.add("conditional");
+    return orderBadges(present);
+}
+
+/**
+ * Trust/editability badges for a single player choice/transition.
+ *
+ * `side-effect` here fires on a D `DO ~...~` action, an unambiguous signal. SSL
+ * node-level side-effects (a `Node` procedure calling `set_global_var`/`give_xp`/etc.)
+ * are NOT yet detected: the SSL function data carries no side-effect flag and is not
+ * plumbed into the dialog parser, so badging them would need a fragile hardcoded list
+ * (under/over-badging a trust feature). Deferred to a follow-up that classifies via the
+ * function data's void-return signal. Until then, SSL nodes are honestly under-badged
+ * for side-effects rather than wrongly badged.
+ */
+export function choiceBadges(choice: DialogChoice): DialogBadge[] {
+    const present = new Set<DialogBadge>();
+    if (choice.target.kind === "external" && !choice.target.resolved) present.add("unresolved-external");
+    if (choice.target.kind === "state" && SINK_NODES.has(choice.target.stateId)) present.add("virtual-sink");
+    if (choice.textKind) present.add(choice.textKind);
+    if (choice.condition) present.add("conditional");
+    if (choice.action) present.add("side-effect");
+    return orderBadges(present);
 }
 
 // --- WeiDU D adapter -------------------------------------------------------
@@ -217,6 +295,7 @@ function stateFromSSL(node: SSLDialogNode): DialogState {
         choices.push({
             id: `${node.name}#opt${i}`,
             text: String(opt.msgId),
+            textKind: opt.msgKind,
             condition: opt.conditional,
             // A message option (empty target) ends the conversation; an option target is a node.
             target: opt.target ? { kind: "state", stateId: opt.target } : { kind: "exit" },
@@ -238,6 +317,7 @@ function stateFromSSL(node: SSLDialogNode): DialogState {
     return {
         id: node.name,
         text: firstReply ? String(firstReply.msgId) : "",
+        textKind: firstReply?.msgKind,
         trigger: firstReply?.conditional,
         choices,
     };

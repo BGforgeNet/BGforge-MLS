@@ -142,6 +142,7 @@ function parseProcedure(proc: SyntaxNode, name: string): SSLDialogNode {
                     msgId: parseArgValue(arg0),
                     line,
                     conditional: enclosingCondition(node),
+                    msgKind: classifyMsgId(arg0),
                 });
             }
 
@@ -155,6 +156,7 @@ function parseProcedure(proc: SyntaxNode, name: string): SSLDialogNode {
                     skill: arg2 ? parseInt(arg2.text, 10) : undefined,
                     line,
                     conditional: enclosingCondition(node),
+                    msgKind: classifyMsgId(arg0),
                 });
             }
 
@@ -166,6 +168,7 @@ function parseProcedure(proc: SyntaxNode, name: string): SSLDialogNode {
                     target: "",
                     line,
                     conditional: enclosingCondition(node),
+                    msgKind: classifyMsgId(arg0),
                 });
             }
         }
@@ -204,6 +207,20 @@ function parseArgValue(node: SyntaxNode): number | string {
         return parseInt(node.text, 10);
     }
     return node.text;
+}
+
+/**
+ * Classify a message-id argument for the honesty badges. A plain numeric literal is a
+ * fixed id (undefined - no badge). A `random(...)` call yields one of several lines at
+ * runtime (`random`). Anything else (a variable, an expression) is `computed` - the
+ * shown line is approximate because the real id is only known at runtime.
+ */
+function classifyMsgId(node: SyntaxNode): "computed" | "random" | undefined {
+    if (node.type === SyntaxType.Number) return undefined;
+    if (node.type === SyntaxType.CallExpr) {
+        return node.childForFieldName("func")?.text === "random" ? "random" : "computed";
+    }
+    return "computed";
 }
 
 /**
