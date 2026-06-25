@@ -1,12 +1,19 @@
 <script lang="ts">
     import { Handle, Position } from "@xyflow/svelte";
     import { choiceBadges, resolveText, stateBadges, type DialogState } from "../../../../shared/dialog-model";
+    import type { Reachability } from "../../../../shared/dialog-reachability";
     import Badge from "./Badge.svelte";
 
     // Custom node component: Svelte Flow selects it by node `type`, so one component
     // covers the card / external-anchor / exit variants by branching on `type`.
     let { data, type }: {
-        data: { state?: DialogState; label?: string; messages?: Record<string, string>; jumpTo?: { file: string; stateId: string } };
+        data: {
+            state?: DialogState;
+            label?: string;
+            messages?: Record<string, string>;
+            jumpTo?: { file: string; stateId: string };
+            reachability?: Reachability;
+        };
         type: string;
     } = $props();
 
@@ -24,13 +31,15 @@
 
 {#if type === "card" && data.state}
     {@const sb = stateBadges(data.state)}
-    <div class="card" class:derived={data.state.derivedFrom}>
+    <div class="card" class:derived={data.state.derivedFrom} class:orphan={data.reachability === "orphan"}>
         <Handle type="target" position={Position.Left} />
         <div class="hd">
             <span class="who">{headLabel(data.state)}</span>
             <!-- For a derived state, show the construct name (CHAIN/...) as the badge label;
                  otherwise the badge's own short text. Full set is on hover. -->
             <Badge badges={sb} label={sb[0] === "derived" ? data.state.derivedFrom : undefined} />
+            {#if data.reachability === "orphan"}<span class="rmark dead" title="Dead: no path reaches this state and nothing outside the file enters it">dead</span>{/if}
+            {#if data.reachability === "external-entry"}<span class="rmark ext" title="Entered from outside this file (e.g. a cross-file EXTERN)">&#8676;</span>{/if}
             {#if data.state.weight != null}<span class="w">W{data.state.weight}</span>{/if}
         </div>
         <div class="bd">
@@ -90,6 +99,26 @@
         border: 1px solid #a21caf;
         border-radius: 3px;
         padding: 0 3px;
+    }
+    /* Reachability markers (1C). `dead` is a prominent warning chip; `ext` (an EXTERN
+       entry) is a quiet glyph - it is informational, not a problem. */
+    .hd .rmark.dead {
+        color: #fca5a5;
+        background: #2a1717;
+        border: 1px solid #b91c1c;
+        border-radius: 3px;
+        padding: 0 3px;
+        font-size: 8px;
+        font-weight: 700;
+    }
+    .hd .rmark.ext {
+        color: #8b96a6;
+        font-size: 10px;
+    }
+    /* A dead-island state: dashed red card so it stands out from live dialogue. */
+    .card.orphan {
+        border-color: #b91c1c;
+        border-style: dashed;
     }
     /* Derived (CHAIN/INTERJECT/EXTEND) states are read-only: a dashed, muted card and a
        construct badge mark them as not directly editable (the badge text, not color

@@ -8,6 +8,7 @@
  */
 
 import { resolveText, type DialogModel, type DialogState } from "../../../../shared/dialog-model";
+import { classifyReachability } from "../../../../shared/dialog-reachability";
 
 export interface FlowNode {
     id: string;
@@ -77,6 +78,9 @@ export function modelToFlow(model: DialogModel): FlowGraph {
     };
 
     const messages = model.messages;
+    // Reachability is a pure projection over the whole model; compute once and tag each
+    // card so the renderer can flag dead states (orphan) and EXTERN entries.
+    const reach = classifyReachability(model);
     for (const root of model.roots) {
         for (const s of root.states) {
             const { width, height } = stateNodeSize(s, resolveText(s.text, messages).length);
@@ -88,7 +92,7 @@ export function modelToFlow(model: DialogModel): FlowGraph {
                 position: { x: 0, y: 0 },
                 width,
                 height,
-                data: { state: s, messages },
+                data: { state: s, messages, reachability: reach.get(s.id) },
             });
 
             s.choices.forEach((c) => {
