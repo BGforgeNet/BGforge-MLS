@@ -2,6 +2,7 @@ import { conlog } from "../logger";
 import { COMMAND_compile, compile } from "../compile";
 import { showInfo, showWarning } from "../user-messages";
 import { parseDialog } from "../dialog";
+import { getSSLSideEffectFunctions } from "../fallout-ssl/side-effects";
 import { parseTDDialog } from "../td/dialog";
 import { parseTSSLDialog } from "../tssl/dialog";
 import { parseDDialog } from "../weidu-d/dialog";
@@ -21,7 +22,7 @@ import type { HandlerContext } from "./context";
 const dialogHandlers = [
     {
         match: (langId: string, _uri: string) => langId === LANG_FALLOUT_SSL,
-        parse: (_uri: string, text: string) => parseDialog(text),
+        parse: (_uri: string, text: string) => parseDialog(text, getSSLSideEffectFunctions()),
         translationLangId: LANG_FALLOUT_SSL,
     },
     {
