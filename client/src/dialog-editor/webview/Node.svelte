@@ -1,6 +1,7 @@
 <script lang="ts">
     import { Handle, Position } from "@xyflow/svelte";
-    import { resolveText, type DialogState } from "../../../../shared/dialog-model";
+    import { choiceBadges, resolveText, stateBadges, type DialogState } from "../../../../shared/dialog-model";
+    import Badge from "./Badge.svelte";
 
     // Custom node component: Svelte Flow selects it by node `type`, so one component
     // covers the card / external-anchor / exit variants by branching on `type`.
@@ -22,19 +23,27 @@
 </script>
 
 {#if type === "card" && data.state}
+    {@const sb = stateBadges(data.state)}
     <div class="card" class:derived={data.state.derivedFrom}>
         <Handle type="target" position={Position.Left} />
         <div class="hd">
             <span class="who">{headLabel(data.state)}</span>
-            {#if data.state.derivedFrom}<span class="badge" title="Read-only: expanded from a {data.state.derivedFrom} block">{data.state.derivedFrom}</span>{/if}
+            <!-- For a derived state, show the construct name (CHAIN/...) as the badge label;
+                 otherwise the badge's own short text. Full set is on hover. -->
+            <Badge badges={sb} label={sb[0] === "derived" ? data.state.derivedFrom : undefined} />
             {#if data.state.weight != null}<span class="w">W{data.state.weight}</span>{/if}
         </div>
         <div class="bd">
-            {resolveText(data.state.text, data.messages) || "(no line)"}{#if data.state.trigger}<span class="cond"> [if]</span>{/if}
+            {resolveText(data.state.text, data.messages) || "(no line)"}
         </div>
         {#each data.state.choices as c (c.id)}
+            {@const cb = choiceBadges(c)}
             <div class="opt">
-                <span class="otext">{c.condition ? "[?] " : ""}{resolveText(c.text, data.messages) || (c.target.kind === "exit" ? "(exit)" : "(continue)")}</span>
+                {#if cb.length}<Badge badges={cb} small />{/if}
+                <span class="otext"
+                    >{resolveText(c.text, data.messages) ||
+                        (c.target.kind === "exit" ? "(exit)" : "(continue)")}</span
+                >
                 <!-- A derived state's transitions can't be rewritten, so its output handles
                      are non-connectable (no drag-to-retarget from a read-only state). -->
                 <Handle type="source" id={c.id} position={Position.Right} isConnectable={!data.state.derivedFrom} />
@@ -94,20 +103,8 @@
     .card.derived .hd {
         color: #9aa0a6;
     }
-    .hd .badge {
-        color: #cbd5e1;
-        background: #374151;
-        border: 1px solid #4b5563;
-        border-radius: 3px;
-        padding: 0 4px;
-        font-size: 8px;
-        letter-spacing: 0.04em;
-    }
     .bd {
         padding: 4px 8px;
-    }
-    .bd .cond {
-        color: #f59e0b;
     }
     .opt {
         position: relative; /* so each row's source Handle (top:50%) centers on the ROW */
