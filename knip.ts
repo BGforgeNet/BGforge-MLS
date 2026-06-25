@@ -22,6 +22,7 @@ const config: KnipConfig = {
                 "src/dialog-tree/dialogTree-webview.ts",
                 "src/binary-editor/worker.ts",
                 "src/binary-editor/webview/main.ts",
+                "src/dialog-editor/webview/main.ts",
                 // test entry points for @vscode/test-electron
                 "src/test/runTest.ts",
                 "src/test/index.ts",
@@ -29,6 +30,10 @@ const config: KnipConfig = {
                 // vitest unit tests (run via client/vitest.config.ts)
                 "test/**/*.test.ts",
             ],
+            // The dialog-editor render harness is environment-only (Playwright + browser
+            // globals), run via `pnpm exec tsx`, not imported by the build or tests - same
+            // treatment as binary-editor/test/harness. Keep it out of knip's analysis.
+            ignore: ["src/dialog-editor/test/harness/**"],
         },
         server: {
             // vitest.mutation.config.ts is referenced from stryker.conf.json

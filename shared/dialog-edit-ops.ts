@@ -85,7 +85,7 @@ export function deleteState(model: DialogModel, state: DialogState): void {
 export function duplicateState(model: DialogModel, state: DialogState): DialogState | null {
     const root = rootOf(model, state);
     if (!root) return null;
-    const copy = JSON.parse(JSON.stringify(state)) as DialogState;
+    const copy = structuredClone(state);
     copy.id = uniqueStateId(model, `${state.id}_copy`);
     delete copy.sourceRange;
     copy.choices = copy.choices.map((c, i) => ({ ...c, id: `${copy.id}#${i}` }));
@@ -105,7 +105,11 @@ export function addState(model: DialogModel, targetRoot?: DialogRoot): DialogSta
 
 /** Append an empty transition to a state (defaults to EXIT). */
 export function addReply(model: DialogModel, state: DialogState): DialogChoice {
-    const choice: DialogChoice = { id: uniqueId(allChoiceIds(model), `${state.id}#reply`), text: "", target: { kind: "exit" } };
+    const choice: DialogChoice = {
+        id: uniqueId(allChoiceIds(model), `${state.id}#reply`),
+        text: "",
+        target: { kind: "exit" },
+    };
     state.choices.push(choice);
     return choice;
 }
@@ -118,7 +122,7 @@ export function removeReply(state: DialogState, choiceId: string): void {
 export function moveReply(state: DialogState, choiceId: string, dir: -1 | 1): void {
     const i = state.choices.findIndex((c) => c.id === choiceId);
     const j = i + dir;
-    if (i < 0 || j < 0 || j >= state.choices.length) return;
+    if (i === -1 || j < 0 || j >= state.choices.length) return;
     const cs = state.choices;
     [cs[i], cs[j]] = [cs[j]!, cs[i]!];
 }

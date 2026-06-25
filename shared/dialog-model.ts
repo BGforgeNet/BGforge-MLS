@@ -7,8 +7,14 @@
  * `docs/superpowers/specs/2026-06-18-dialog-editor-design.md`.
  */
 
-import type { DDialogData, DDialogState, DDialogTarget } from "./dialog-types";
-import type { SSLDialogData, SSLDialogNode, SSLDialogOptionType } from "./dialog-types";
+import type {
+    DDialogData,
+    DDialogState,
+    DDialogTarget,
+    SSLDialogData,
+    SSLDialogNode,
+    SSLDialogOptionType,
+} from "./dialog-types";
 
 export type DialogFormat = "weidu-d" | "fallout-ssl";
 
@@ -98,7 +104,7 @@ export type DialogTarget =
 export function resolveText(text: string | undefined, messages?: Record<string, string>): string {
     if (!text) return text ?? "";
     if (!messages) return text;
-    return text.replace(/@(\d+)/g, (whole, n: string) => messages[n] ?? whole);
+    return text.replaceAll(/@(\d+)/g, (whole, n: string) => messages[n] ?? whole);
 }
 
 /** Human-readable transition target for the inspector and card rows. */

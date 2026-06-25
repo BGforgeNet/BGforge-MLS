@@ -27,12 +27,11 @@ export function modelToD(model: DialogModel): string {
         return "";
     }
 
-    return dialogRoots.map(serializeRoot).join("\n");
+    return dialogRoots.map((root) => serializeRoot(root)).join("\n");
 }
 
 function serializeRoot(root: DialogRoot): string {
-    const lines: string[] = [];
-    lines.push(`APPEND ~${root.label}~`);
+    const lines: string[] = [`APPEND ~${root.label}~`];
     for (const state of root.states) {
         lines.push(...serializeState(state));
     }

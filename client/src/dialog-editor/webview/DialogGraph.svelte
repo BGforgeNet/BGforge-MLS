@@ -23,7 +23,7 @@
     // Working copy the editor mutates. The `model` prop is the host's last-posted state;
     // edits stay local until a save path serializes editModel back (a later phase).
     function cloneModel(m: DialogModel): DialogModel {
-        return JSON.parse(JSON.stringify(m)) as DialogModel;
+        return structuredClone(m);
     }
     let editModel = $state<DialogModel>(cloneModel(model));
 

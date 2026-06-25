@@ -65,7 +65,14 @@ export function modelToFlow(model: DialogModel): FlowGraph {
 
     const ensureSynthetic = (id: string, type: "external" | "exit", label: string): void => {
         if (synthetic.has(id)) return;
-        const n: FlowNode = { id, type, position: { x: 0, y: 0 }, width: type === "exit" ? 70 : 150, height: 36, data: { label } };
+        const n: FlowNode = {
+            id,
+            type,
+            position: { x: 0, y: 0 },
+            width: type === "exit" ? 70 : 150,
+            height: 36,
+            data: { label },
+        };
         synthetic.set(id, n);
     };
 
@@ -75,7 +82,14 @@ export function modelToFlow(model: DialogModel): FlowGraph {
             const { width, height } = stateNodeSize(s, resolveText(s.text, messages).length);
             // messages travels in node data so the card can resolve @N at render time
             // while the raw refs stay on the state (needed for .tra write-back).
-            nodes.push({ id: s.id, type: "card", position: { x: 0, y: 0 }, width, height, data: { state: s, messages } });
+            nodes.push({
+                id: s.id,
+                type: "card",
+                position: { x: 0, y: 0 },
+                width,
+                height,
+                data: { state: s, messages },
+            });
 
             s.choices.forEach((c) => {
                 let targetId: string;

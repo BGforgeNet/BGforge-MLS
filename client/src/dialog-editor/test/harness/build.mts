@@ -27,10 +27,7 @@ const js = fs.readFileSync(path.join(outdir, "harness-main.js"), "utf8");
 fs.rmSync(outdir, { recursive: true, force: true });
 
 // Svelte Flow's base stylesheet (node/edge/handle/viewport rules).
-const flowCss = fs.readFileSync(
-    path.join(repo, "client/node_modules/@xyflow/svelte/dist/style.css"),
-    "utf8",
-);
+const flowCss = fs.readFileSync(path.join(repo, "client/node_modules/@xyflow/svelte/dist/style.css"), "utf8");
 
 const html = `<!doctype html>
 <html lang="en"><head><meta charset="UTF-8" />

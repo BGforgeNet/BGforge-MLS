@@ -1,9 +1,8 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { initParser } from "../../shared/parsers/weidu-d";
 import { parseDDialog } from "../src/weidu-d/dialog";
-import { modelFromD } from "../../shared/dialog-model";
+import { modelFromD, type DialogState } from "../../shared/dialog-model";
 import { applyDialogEdits, pendingInserts, verifyDialogEditApplied } from "../../shared/dialog-d-edit";
-import type { DialogState } from "../../shared/dialog-model";
 
 // ---------------------------------------------------------------------------
 // Test fixture

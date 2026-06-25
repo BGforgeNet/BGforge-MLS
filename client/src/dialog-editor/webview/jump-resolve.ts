@@ -33,7 +33,7 @@ export function resolveJumpTarget(
     // strip the tildes before matching.
     const ci = label.indexOf(":");
     if (ci > 0) {
-        const file = label.slice(0, ci).replace(/^~+|~+$/g, "");
+        const file = label.slice(0, ci).replaceAll(/^~+|~+$/g, "");
         const state = label.slice(ci + 1);
         const rootId = fileToRoot.get(file);
         if (rootId && stateToRoot.get(state) === rootId) return { file: rootId, stateId: state };

@@ -91,8 +91,7 @@ export async function parseDialog(text: string): Promise<SSLDialogData> {
         for (const t of node.callTargets) referenced.add(t);
     }
     for (const [procName, node] of parsed) {
-        const hasContent =
-            node.replies.length > 0 || node.options.length > 0 || node.callTargets.length > 0;
+        const hasContent = node.replies.length > 0 || node.options.length > 0 || node.callTargets.length > 0;
         if (hasContent || referenced.has(procName)) nodes.push(node);
     }
 

@@ -14,7 +14,7 @@
 import * as path from "path";
 
 export function rewriteTraEntries(traText: string, messages: Record<string, string>): string {
-    return traText.replace(
+    return traText.replaceAll(
         /@(\d+)(\s*=\s*~)([^~]*)(~)/g,
         (whole, num: string, sep: string, _old: string, close: string) => {
             const next = messages[num];
