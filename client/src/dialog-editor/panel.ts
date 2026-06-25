@@ -14,7 +14,8 @@ import { LSP_COMMAND_PARSE_DIALOG, LSP_COMMAND_SAVE_TRA } from "../../../shared/
 import { modelFromD, modelFromSSL, type DialogModel } from "../../../shared/dialog-model";
 import { applyDialogEdits, pendingInserts, verifyDialogEditApplied } from "../../../shared/dialog-d-edit";
 import type { DDialogData, SSLDialogData } from "../../../shared/dialog-types";
-import { generateNonce, getCachedJsAsset, inlineWebviewScript } from "../webview-assets";
+import { generateNonce, getCachedJsAsset } from "../webview-assets";
+import { buildDialogWebviewHtml } from "./dialog-webview-html";
 
 const DIALOG_LANGS = new Set(["fallout-ssl", "weidu-d", "tssl", "td"]);
 
@@ -28,28 +29,18 @@ function toModel(data: unknown): DialogModel | null {
 }
 
 function buildHtml(webview: vscode.Webview, extensionUri: vscode.Uri): string {
+    // Resolve the vscode/webview-bound inputs here; the pure HTML assembly (CSP shape +
+    // verbatim inline of the bundle) lives in buildDialogWebviewHtml, which is unit-tested
+    // without the vscode runtime (dialog-panel-html.test.ts).
     const base = vscode.Uri.joinPath(extensionUri, "client", "out", "dialog-editor", "webview");
-    const cssUri = webview.asWebviewUri(vscode.Uri.joinPath(base, "main.css"));
+    const cssUri = webview.asWebviewUri(vscode.Uri.joinPath(base, "main.css")).toString();
     const nonce = generateNonce();
-    // Inline the bundle rather than loading it as an external <script src>. Matches the
-    // binary editor (the one webview proven to render in code-server): code-server's webview
-    // can silently refuse an external script authorised only by a nonce, leaving the panel
-    // blank, whereas an inline nonce'd script loads reliably. CSS stays a <link> via
-    // asWebviewUri + cspSource (the binary editor links its CSS the same way successfully).
-    const js = getCachedJsAsset("dialog-editor", extensionUri.fsPath, "client/out/dialog-editor/webview/main.js");
-    // style-src needs 'unsafe-inline' here (not just a nonce) because Svelte Flow
-    // positions nodes via runtime inline `transform` styles; the strict nonce-only
-    // policy used elsewhere would block them and nodes would stack at the origin.
-    const csp =
-        `default-src 'none'; img-src ${webview.cspSource} data:; font-src ${webview.cspSource}; ` +
-        `style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';`;
-    const html = `<!doctype html><html lang="en"><head><meta charset="UTF-8" />
-<meta http-equiv="Content-Security-Policy" content="${csp}" />
-<link rel="stylesheet" href="${cssUri}" /></head>
-<body><div id="app"></div><script nonce="{{nonce}}">/* __SCRIPT__ */</script></body></html>`;
-    // Function-replacement inlining (never a plain string) so `$&`/`$$` in the minified
-    // bundle are not interpreted as replacement patterns - see inlineWebviewScript.
-    return inlineWebviewScript(html, js, nonce);
+    const scriptBody = getCachedJsAsset(
+        "dialog-editor",
+        extensionUri.fsPath,
+        "client/out/dialog-editor/webview/main.js",
+    );
+    return buildDialogWebviewHtml({ cspSource: webview.cspSource, cssUri, nonce, scriptBody });
 }
 
 export function registerDialogEditor(context: vscode.ExtensionContext, client: LanguageClient): vscode.Disposable {
