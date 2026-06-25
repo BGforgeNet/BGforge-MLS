@@ -35,6 +35,8 @@ export interface SSLDialogOption {
     skill?: number;
     type: SSLDialogOptionType;
     line: number;
+    /** Raw conditional expression text, when the option is wrapped in `if (...)`. */
+    conditional?: string;
 }
 
 export interface SSLDialogNode {
@@ -69,6 +71,12 @@ export interface DDialogTransition {
     trigger?: string;
     action?: string;
     target: DDialogTarget;
+    /**
+     * Byte range of this transition's node in the original source (the whole
+     * `IF ... THEN ...` / `++ ... + ...` construct). Set by the parser; used by the
+     * per-field surgical edit to splice just this transition without reflowing siblings.
+     */
+    range?: { start: number; end: number };
 }
 
 export interface DDialogState {
@@ -77,8 +85,38 @@ export interface DDialogState {
     sayText: string;
     trigger?: string;
     speaker?: string;
+    weight?: number;
     transitions: DDialogTransition[];
     blockLabel?: string;
+    /**
+     * Dialog file that owns this state (the block's target file). Unlike `speaker`,
+     * which CHAIN `== ~file~` lines reassign to the switched actor, this stays the
+     * owning dialog so the editor can group every state under its real dialog root.
+     */
+    blockFile?: string;
+    /**
+     * Byte range of this state's node in the original source text (startIndex
+     * inclusive, endIndex exclusive). Set by the parser; absent on synthetic states
+     * (e.g. CHAIN-flattened) that have no direct single-node representation.
+     * Used by the surgical edit engine to splice changed states back in-place.
+     */
+    range?: { start: number; end: number };
+    /**
+     * Byte ranges of the state's SAY value node and trigger node, for per-field surgical
+     * edits (splice just the changed field, leaving the rest of the state byte-identical).
+     * `sayRange` covers the value after `SAY` (e.g. `@1`); `triggerRange` covers the
+     * trigger string including its `~ ~` delimiters. Set by the parser; absent on synthetic
+     * (derived) states.
+     */
+    sayRange?: { start: number; end: number };
+    triggerRange?: { start: number; end: number };
+    /**
+     * Set when this state was expanded from a higher-level construct (CHAIN, INTERJECT,
+     * EXTEND) rather than authored as a standalone state block. Names the construct, for
+     * display. Such states have no `range`, so the editor treats them as read-only - there
+     * is no source span to splice an edit back into.
+     */
+    derivedFrom?: "CHAIN" | "INTERJECT" | "EXTEND";
 }
 
 /** Structural blocks produce dialog states. Modify blocks patch existing dialogs. */

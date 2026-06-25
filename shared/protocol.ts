@@ -6,6 +6,12 @@
 /** Standard LSP workspace/executeCommand identifiers exposed by the server. */
 export const LSP_COMMAND_COMPILE = "bgforge.compile";
 export const LSP_COMMAND_PARSE_DIALOG = "bgforge.parseDialog";
+/**
+ * Persist edited translation strings to the resolved `.tra`/`.msg` for a dialog.
+ * Argument: `{ uri: string, messages: Record<string, string> }`. The server
+ * resolves the consumer's translation file and rewrites only the changed entries.
+ */
+export const LSP_COMMAND_SAVE_TRA = "bgforge.saveDialogTra";
 
 /**
  * Prefix for per-language workspace-symbol executeCommand IDs.

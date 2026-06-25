@@ -138,6 +138,12 @@ export default grammar({
                     "INTERJECT_COPY_TRANS2",
                     "INTERJECT_COPY_TRANS3",
                     "INTERJECT_COPY_TRANS4",
+                    // I_C_T[2-4] are WeiDU's documented shorthand aliases for the
+                    // INTERJECT_COPY_TRANS[2-4] keywords above (same construct).
+                    "I_C_T",
+                    "I_C_T2",
+                    "I_C_T3",
+                    "I_C_T4",
                 ),
                 optional("SAFE"),
                 field("file", $._filename),
@@ -380,8 +386,10 @@ export default grammar({
         _state_label: ($) => choice($.state_label_alnum, $.identifier, $.variable_ref, $.string),
 
         // Alphanumeric state label (can start with digit, like "4a", "100", "foo")
-        // WeiDU allows # in state labels (e.g., RR#ZA00) but not at start (conflicts with #weight syntax)
-        state_label_alnum: ($) => /[A-Za-z0-9_][A-Za-z0-9_#]*/,
+        // WeiDU allows # in state labels (e.g., RR#ZA00) but not at start (conflicts with #weight syntax).
+        // Dots are valid in labels too (e.g., KHPC1.1, SHRO6.16); `number` is integer-only, so a dotted
+        // run is unambiguously a label here, never a float.
+        state_label_alnum: ($) => /[A-Za-z0-9_][A-Za-z0-9_#.]*/,
 
         // Weight value: #[-]number
         _weight_value: ($) => seq("#", optional("-"), $.number),

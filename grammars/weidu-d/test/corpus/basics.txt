@@ -190,3 +190,46 @@ END
     (alter_trans_change
       (double_string (double_content))
       (string (tilde_string (tilde_content))))))
+
+================================================================================
+I_C_T alias for INTERJECT_COPY_TRANS
+================================================================================
+
+I_C_T ~file~ 9 GlobalName
+== ~file~ IF ~trigger~ THEN @0
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (interject_copy_trans
+    file: (string (tilde_string (tilde_content)))
+    label: (state_label_alnum)
+    global_var: (identifier)
+    (chain_speaker
+      file: (string (tilde_string (tilde_content)))
+      trigger: (string (tilde_string (tilde_content)))
+      (say_text (tra_ref)))
+    (chain_epilogue)))
+
+================================================================================
+Dotted state label (KHPC1.1)
+================================================================================
+
+BEGIN file
+IF ~~ THEN BEGIN KHPC1.1 SAY ~hi~ IF ~~ THEN GOTO KHPC1.1 END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (begin_action
+    file: (identifier)
+    (state
+      trigger: (string (tilde_string))
+      label: (state_label_alnum)
+      say: (say_text (string (tilde_string (tilde_content))))
+      (transition
+        (transition_full
+          trigger: (string (tilde_string))
+          (goto_next
+            label: (state_label_alnum)))))))

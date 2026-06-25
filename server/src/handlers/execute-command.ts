@@ -1,6 +1,6 @@
 import { conlog } from "../logger";
 import { COMMAND_compile, compile } from "../compile";
-import { showInfo } from "../user-messages";
+import { showInfo, showWarning } from "../user-messages";
 import { parseDialog } from "../dialog";
 import { parseTDDialog } from "../td/dialog";
 import { parseTSSLDialog } from "../tssl/dialog";
@@ -9,6 +9,7 @@ import { getServerContext } from "../server-context";
 import { EXT_TD, EXT_TSSL, LANG_FALLOUT_SSL, LANG_TYPESCRIPT, LANG_WEIDU_D } from "../core/languages";
 import {
     LSP_COMMAND_PARSE_DIALOG,
+    LSP_COMMAND_SAVE_TRA,
     LSP_COMMAND_WORKSPACE_SYMBOLS_PREFIX,
     VSCODE_COMMAND_COMPILE,
 } from "../../../shared/protocol";
@@ -87,6 +88,29 @@ export function register(ctx: HandlerContext): void {
                 }
                 return null;
             }
+        }
+
+        // Persist edited @N dialogue strings to the resolved .tra (dialog editor save).
+        if (command === LSP_COMMAND_SAVE_TRA) {
+            const uri: string = args.uri;
+            const messages = args.messages as Record<string, string> | undefined;
+            const textDoc = ctx.documents.get(uri);
+            if (!textDoc || !messages) {
+                return null;
+            }
+            const handler = dialogHandlers.find((h) => h.match(textDoc.languageId, uri.toLowerCase()));
+            const translationLangId = handler?.translationLangId ?? LANG_WEIDU_D;
+            const serverCtx = await getServerContext();
+            const result = serverCtx.translation.writeMessages(uri, textDoc.getText(), translationLangId, messages);
+            // An @N edit rewrites only the active language's .tra. If sibling-language .tra
+            // files exist, they now hold the old text - warn rather than diverge silently.
+            if (result.staleSiblingLanguages.length > 0) {
+                showWarning(
+                    `Saved @N translation edits to the active language only. These other language(s) ` +
+                        `still have the previous text and need updating: ${result.staleSiblingLanguages.join(", ")}.`,
+                );
+            }
+            return { changed: result.changed };
         }
 
         if (command !== COMMAND_compile && command !== VSCODE_COMMAND_COMPILE) {

@@ -137,6 +137,31 @@ export function extractTrigger(stateNode: SyntaxNode): string | undefined {
     return content;
 }
 
+export function extractWeight(stateNode: SyntaxNode): number | undefined {
+    // The grammar's `_weight_value` (`# [-] number`) is a hidden rule, so its tokens
+    // inline as direct children of the state: `WEIGHT`, `#`, optional `-`, `number`.
+    // The `weight` field resolves to the `#` token, not the number, so walk instead.
+    // (`WEIGHT`/`#`/`-` are anonymous tokens with no SyntaxType member.)
+    let sawWeight = false;
+    let negative = false;
+    for (const child of stateNode.children) {
+        if (child.type === "WEIGHT") {
+            sawWeight = true;
+        } else if (!sawWeight) {
+            continue;
+        } else if (child.type === "-") {
+            negative = true;
+        } else if (child.type === SyntaxType.Number) {
+            const value = parseInt(child.text, 10);
+            if (Number.isNaN(value)) return undefined;
+            return negative ? -value : value;
+        } else if (child.type !== "#") {
+            break; // reached the trigger/body without a number: malformed
+        }
+    }
+    return undefined;
+}
+
 export function extractTransitionTrigger(transitionNode: SyntaxNode): string | undefined {
     const triggerNode = transitionNode.childForFieldName("trigger");
     if (!triggerNode) return undefined;

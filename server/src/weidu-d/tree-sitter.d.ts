@@ -307,6 +307,10 @@ export type UnnamedType =
   | "INTERJECT_COPY_TRANS2"
   | "INTERJECT_COPY_TRANS3"
   | "INTERJECT_COPY_TRANS4"
+  | "I_C_T"
+  | "I_C_T2"
+  | "I_C_T3"
+  | "I_C_T4"
   | "JOURNAL"
   | "REPLACE"
   | "REPLACE_ACTION_TEXT"
@@ -422,6 +426,10 @@ export type SyntaxNode =
   | UnnamedNode<"INTERJECT_COPY_TRANS2">
   | UnnamedNode<"INTERJECT_COPY_TRANS3">
   | UnnamedNode<"INTERJECT_COPY_TRANS4">
+  | UnnamedNode<"I_C_T">
+  | UnnamedNode<"I_C_T2">
+  | UnnamedNode<"I_C_T3">
+  | UnnamedNode<"I_C_T4">
   | UnnamedNode<"JOURNAL">
   | UnnamedNode<"REPLACE">
   | UnnamedNode<"REPLACE_ACTION_TEXT">

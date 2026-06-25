@@ -54,26 +54,46 @@ export async function parseDialog(text: string): Promise<SSLDialogData> {
     const nodes: SSLDialogNode[] = [];
     const entryPoints: string[] = [];
 
-    // Find all procedures
+    // First pass: parse every dialog procedure into a map; collect entry points
+    // from talk_p_proc (the single dialog root).
+    const parsed = new Map<string, SSLDialogNode>();
     for (const child of root.children) {
-        if (child.type === SyntaxType.Procedure) {
-            const nameNode = child.childForFieldName("name");
-            if (!nameNode) continue;
+        if (child.type !== SyntaxType.Procedure) continue;
+        const nameNode = child.childForFieldName("name");
+        if (!nameNode) continue;
+        const procName = nameNode.text;
 
-            const procName = nameNode.text;
-
-            // Get entry points from talk_p_proc
-            if (procName === "talk_p_proc") {
-                extractEntryPoints(child, entryPoints);
-                continue;
-            }
-
-            // Parse dialog node
-            const dialogNode = parseProcedure(child, procName);
-            if (dialogNode.replies.length > 0 || dialogNode.options.length > 0 || dialogNode.callTargets.length > 0) {
-                nodes.push(dialogNode);
-            }
+        if (procName === "talk_p_proc") {
+            extractEntryPoints(child, entryPoints);
+            continue;
         }
+        parsed.set(procName, parseProcedure(child, procName));
+    }
+
+    // force_dialog_start(Node*) / start_dialog_at_node(Node*) start a conversation
+    // from outside talk_p_proc (timers, map-enter); treat their targets as entries.
+    walkTree(root, (node) => {
+        if (node.type !== SyntaxType.CallExpr) return;
+        const fn = node.childForFieldName("func")?.text;
+        if (fn !== "force_dialog_start" && fn !== "start_dialog_at_node") return;
+        const arg = getCallArgs(node)[0];
+        if (!arg) return;
+        const name = arg.type === SyntaxType.CallExpr ? arg.childForFieldName("func")?.text : arg.text;
+        if (name && !entryPoints.includes(name)) entryPoints.push(name);
+    });
+
+    // Second pass: include a node if it carries dialog content, OR if another node
+    // routes to it - a side-effect-only target (e.g. a teleport/combat node) must
+    // not be dropped, or its inbound edge would dangle.
+    const referenced = new Set<string>();
+    for (const node of parsed.values()) {
+        for (const opt of node.options) if (opt.target) referenced.add(opt.target);
+        for (const t of node.callTargets) referenced.add(t);
+    }
+    for (const [procName, node] of parsed) {
+        const hasContent =
+            node.replies.length > 0 || node.options.length > 0 || node.callTargets.length > 0;
+        if (hasContent || referenced.has(procName)) nodes.push(node);
     }
 
     return { nodes, entryPoints };
@@ -122,6 +142,7 @@ function parseProcedure(proc: SyntaxNode, name: string): SSLDialogNode {
                 replies.push({
                     msgId: parseArgValue(arg0),
                     line,
+                    conditional: enclosingCondition(node),
                 });
             }
 
@@ -134,6 +155,7 @@ function parseProcedure(proc: SyntaxNode, name: string): SSLDialogNode {
                     target,
                     skill: arg2 ? parseInt(arg2.text, 10) : undefined,
                     line,
+                    conditional: enclosingCondition(node),
                 });
             }
 
@@ -144,6 +166,7 @@ function parseProcedure(proc: SyntaxNode, name: string): SSLDialogNode {
                     msgId: parseArgValue(arg0),
                     target: "",
                     line,
+                    conditional: enclosingCondition(node),
                 });
             }
         }
@@ -154,7 +177,9 @@ function parseProcedure(proc: SyntaxNode, name: string): SSLDialogNode {
             if (target) {
                 const targetName =
                     target.type === SyntaxType.CallExpr ? target.childForFieldName("func")?.text : target.text;
-                if (targetName?.startsWith("Node") && !callTargets.includes(targetName)) {
+                // Keep any resolved call target, not just Node* - `call combat`/`call barter`
+                // are real transitions out of the dialog.
+                if (targetName && !callTargets.includes(targetName)) {
                     callTargets.push(targetName);
                 }
             }
@@ -180,6 +205,22 @@ function parseArgValue(node: SyntaxNode): number | string {
         return parseInt(node.text, 10);
     }
     return node.text;
+}
+
+/**
+ * Walk up from a dialog call to the nearest enclosing `if`, returning its
+ * condition text. The SSL derived graph is read-only and approximate, so a
+ * conditional reply/option must be marked rather than shown as unconditional.
+ */
+function enclosingCondition(node: SyntaxNode): string | undefined {
+    let cur: SyntaxNode | null = node.parent;
+    while (cur) {
+        if (cur.type === SyntaxType.IfStmt) {
+            return cur.childForFieldName("cond")?.text;
+        }
+        cur = cur.parent;
+    }
+    return undefined;
 }
 
 function walkTree(node: SyntaxNode, callback: (_node: SyntaxNode) => void): void {

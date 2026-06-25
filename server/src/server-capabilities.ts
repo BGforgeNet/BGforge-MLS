@@ -2,6 +2,7 @@ import { type ServerCapabilities, TextDocumentSyncKind } from "vscode-languagese
 import { semanticTokensLegend } from "./shared/semantic-tokens";
 import {
     LSP_COMMAND_PARSE_DIALOG,
+    LSP_COMMAND_SAVE_TRA,
     WORKSPACE_SYMBOL_SCOPED_LANGUAGES,
     lspWorkspaceSymbolsCommand,
 } from "../../shared/protocol";
@@ -35,6 +36,7 @@ export function getServerCapabilities(): ServerCapabilities {
             commands: [
                 COMMAND_compile,
                 LSP_COMMAND_PARSE_DIALOG,
+                LSP_COMMAND_SAVE_TRA,
                 ...WORKSPACE_SYMBOL_SCOPED_LANGUAGES.map((lang) => lspWorkspaceSymbolsCommand(lang)),
             ],
         },

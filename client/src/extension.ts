@@ -21,6 +21,7 @@ import {
 import { registerBinaryEditor } from "./binary-editor/register";
 import { registerDialogTree } from "./dialog-tree/dialogTree";
 import { registerDDialogTree } from "./dialog-tree/dialogTree-d";
+import { registerDialogEditor } from "./dialog-editor/panel";
 import { conlog, initOutputChannel, setDebugLogging } from "./logging";
 
 // Initialized in activate(), undefined until then
@@ -131,6 +132,7 @@ export async function activate(context: ExtensionContext) {
 
     const sslDialogPreview = registerDialogTree(context, client);
     const dDialogPreview = registerDDialogTree(context, client);
+    context.subscriptions.push(registerDialogEditor(context, client));
     context.subscriptions.push(
         vscode.commands.registerCommand(cmd_dialogPreview, async () => {
             const document = vscode.window.activeTextEditor?.document;

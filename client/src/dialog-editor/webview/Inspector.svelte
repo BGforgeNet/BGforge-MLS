@@ -1,0 +1,288 @@
+<script lang="ts">
+    import { resolveText, type DialogChoice, type DialogState, type DialogTarget } from "../../../../shared/dialog-model";
+
+    // The edit surface for the selected state. Content fields (SAY, trigger, weight,
+    // reply/condition/action) mutate the passed `state`/`messages` directly - they are
+    // reactive editModel proxies, so the card re-renders without a relayout. Structural
+    // changes (add/remove/reorder reply, retarget, delete/duplicate) go through `actions`
+    // so the host can relayout the graph.
+    let { state, messages, stateIds, actions }: {
+        state: DialogState;
+        messages: Record<string, string> | undefined;
+        stateIds: string[];
+        actions: {
+            rename: (newId: string) => void;
+            addReply: () => void;
+            removeReply: (choiceId: string) => void;
+            moveReply: (choiceId: string, dir: -1 | 1) => void;
+            setTarget: (choiceId: string, target: DialogTarget) => void;
+            deleteState: () => void;
+            duplicateState: () => void;
+        };
+    } = $props();
+
+    // A bare `@N` line is backed by a .tra entry: edit that entry so localization is
+    // preserved (the project decision). A literal line is edited in place.
+    function refOf(text: string | undefined): string | null {
+        const m = /^@(\d+)$/.exec((text ?? "").trim());
+        return m ? m[1]! : null;
+    }
+    function setSay(v: string): void {
+        const ref = refOf(state.text);
+        if (ref !== null && messages) messages[ref] = v;
+        else state.text = v;
+    }
+    function setReply(c: DialogChoice, v: string): void {
+        const ref = refOf(c.text);
+        if (ref !== null && messages) messages[ref] = v;
+        else c.text = v;
+    }
+
+    function targetValue(t: DialogTarget): string {
+        if (t.kind === "state") return `state:${t.stateId}`;
+        if (t.kind === "exit") return "exit";
+        return "ext";
+    }
+    function onTargetChange(c: DialogChoice, value: string): void {
+        if (value === "exit") actions.setTarget(c.id, { kind: "exit" });
+        else if (value.startsWith("state:")) actions.setTarget(c.id, { kind: "state", stateId: value.slice("state:".length) });
+        // "ext" keeps the existing external target; cross-file retargeting is a later phase.
+    }
+
+    function setWeight(v: string): void {
+        const n = Number(v);
+        state.weight = v.trim() === "" || !Number.isFinite(n) ? undefined : n;
+    }
+
+    // A derived state (CHAIN/INTERJECT/EXTEND link) has no standalone source span, so no
+    // edit can be written back - the whole inspector is read-only for it. Editing it would
+    // require rewriting the containing construct, which the surgical save does not do.
+    const readOnly = $derived(Boolean(state.derivedFrom));
+
+    // Grow a textarea to fit its content so nothing hides behind an inner scrollbar. The
+    // action parameter is the current display value: passing it makes `update` re-fit when
+    // the value changes reactively (a new selection, or a live edit), not just on keystroke.
+    function autosize(el: HTMLTextAreaElement) {
+        const fit = (): void => {
+            el.style.height = "auto";
+            el.style.height = `${el.scrollHeight}px`;
+        };
+        fit();
+        el.addEventListener("input", fit);
+        return { update: fit, destroy: () => el.removeEventListener("input", fit) };
+    }
+</script>
+
+<div class="inspector" class:ro={readOnly}>
+    <div class="ih">{state.speaker ?? "NPC"}</div>
+
+    {#if readOnly}
+        <div class="ronote">
+            Read-only - this state is expanded from a <b>{state.derivedFrom}</b> block. It has no
+            standalone source to edit here; change it in the <b>{state.derivedFrom}</b> source directly.
+        </div>
+    {/if}
+
+    <div class="ik">State label{readOnly ? " (read-only)" : " (jump target)"}</div>
+    <input class="iv code" value={state.id} disabled={readOnly} onchange={(e) => actions.rename(e.currentTarget.value)} />
+
+    <div class="ik">NPC line</div>
+    <textarea class="iv" rows="2" use:autosize={resolveText(state.text, messages)} disabled={readOnly} value={resolveText(state.text, messages)} oninput={(e) => setSay(e.currentTarget.value)}></textarea>
+
+    <div class="row2">
+        <div>
+            <div class="ik">Trigger</div>
+            <input class="iv code" disabled={readOnly} value={state.trigger ?? ""} oninput={(e) => (state.trigger = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)} />
+        </div>
+        <div class="wcol">
+            <div class="ik">Weight</div>
+            <input class="iv" type="number" disabled={readOnly} value={state.weight ?? ""} oninput={(e) => setWeight(e.currentTarget.value)} />
+        </div>
+    </div>
+
+    <div class="ik between">
+        <span>Transitions ({state.choices.length})</span>
+        {#if !readOnly}<button class="add" onclick={actions.addReply}>+ reply</button>{/if}
+    </div>
+
+    {#each state.choices as c, i (c.id)}
+        <div class="trow">
+            <div class="trhead">
+                <span class="tnum">#{i + 1}</span>
+                {#if !readOnly}
+                    <span class="trbtns">
+                        <button title="Move up" disabled={i === 0} onclick={() => actions.moveReply(c.id, -1)}>&#9650;</button>
+                        <button title="Move down" disabled={i === state.choices.length - 1} onclick={() => actions.moveReply(c.id, 1)}>&#9660;</button>
+                        <button title="Remove" class="del" onclick={() => actions.removeReply(c.id)}>&#10005;</button>
+                    </span>
+                {/if}
+            </div>
+            <textarea class="iv reply" rows="1" use:autosize={resolveText(c.text, messages)} disabled={readOnly} placeholder="(no reply - NPC continue)" value={resolveText(c.text, messages)} oninput={(e) => setReply(c, e.currentTarget.value)}></textarea>
+            <textarea class="iv code cond" rows="1" use:autosize={c.condition ?? ""} disabled={readOnly} placeholder="condition (IF ~...~)" value={c.condition ?? ""} oninput={(e) => (c.condition = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
+            <textarea class="iv code act" rows="1" use:autosize={c.action ?? ""} disabled={readOnly} placeholder="action (DO ~...~)" value={c.action ?? ""} oninput={(e) => (c.action = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
+            <select class="iv tgt" disabled={readOnly} value={targetValue(c.target)} onchange={(e) => onTargetChange(c, e.currentTarget.value)}>
+                {#if c.target.kind === "external"}
+                    <option value="ext">&#8631; {c.target.label}</option>
+                {/if}
+                <option value="exit">EXIT</option>
+                {#each stateIds as id (id)}
+                    <option value={`state:${id}`}>&#8594; {id}</option>
+                {/each}
+            </select>
+        </div>
+    {/each}
+
+    {#if !readOnly}
+        <div class="stateops">
+            <button onclick={actions.duplicateState}>Duplicate state</button>
+            <button class="del" onclick={actions.deleteState}>Delete state</button>
+        </div>
+    {/if}
+</div>
+
+<style>
+    .inspector {
+        width: 280px;
+        /* Auto-grows to fit content (textareas autosize), so normal states show with no
+           scrollbar. The cap is a last-resort fallback for a pathologically tall state
+           (many transitions): only then does it scroll, instead of running its bottom
+           controls off-screen. border-box so the cap includes padding+border; the 96px
+           leaves room for the panel's top offset (48px in tree mode) plus a bottom gap,
+           in both the graph (top-right Panel) and tree (.tovl.tr) placements. */
+        box-sizing: border-box;
+        max-height: calc(100vh - 96px);
+        overflow-y: auto;
+        background: #21242b;
+        border: 1px solid #3a3f4b;
+        border-radius: 6px;
+        padding: 8px;
+        font-size: 11px;
+        color: #e8eaed;
+    }
+    .ih {
+        color: #22d3ee;
+        font-weight: 700;
+        font-size: 11px;
+        margin-bottom: 6px;
+    }
+    .ronote {
+        background: #2a2620;
+        border: 1px solid #a16207;
+        border-radius: 4px;
+        color: #fbbf24;
+        font-size: 10px;
+        line-height: 1.35;
+        padding: 5px 7px;
+        margin-bottom: 6px;
+    }
+    .ronote b {
+        color: #fcd34d;
+    }
+    .iv:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+    }
+    .ik {
+        color: #9aa0a6;
+        font-size: 9px;
+        text-transform: uppercase;
+        margin-top: 8px;
+        margin-bottom: 2px;
+    }
+    .ik.between {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .iv {
+        width: 100%;
+        box-sizing: border-box;
+        background: #15171c;
+        border: 1px solid #3a3f4b;
+        border-radius: 4px;
+        padding: 3px 6px;
+        color: #e8eaed;
+        font-family: inherit;
+        font-size: 11px;
+    }
+    /* Height is driven by the autosize action so the full value is always visible;
+       disable manual resize and the inner scrollbar that would otherwise appear. */
+    textarea.iv {
+        resize: none;
+        overflow: hidden;
+    }
+    .iv.code {
+        color: #f59e0b;
+        font-family: monospace;
+        font-size: 10px;
+    }
+    .row2 {
+        display: flex;
+        gap: 6px;
+    }
+    .row2 > div {
+        flex: 1;
+    }
+    .row2 .wcol {
+        flex: 0 0 64px;
+    }
+    .trow {
+        border: 1px solid #313846;
+        border-left: 3px solid #a3e635;
+        border-radius: 4px;
+        padding: 4px 6px;
+        margin-top: 4px;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+    }
+    .trhead {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .tnum {
+        color: #9aa0a6;
+        font-size: 9px;
+    }
+    .trbtns button,
+    .add,
+    .stateops button {
+        background: #2b303a;
+        border: 1px solid #3a3f4b;
+        border-radius: 3px;
+        color: #cbd5e1;
+        font-size: 10px;
+        cursor: pointer;
+        padding: 1px 5px;
+    }
+    .trbtns button:disabled {
+        opacity: 0.35;
+        cursor: default;
+    }
+    .iv.reply {
+        color: #bfe66a;
+    }
+    .iv.cond {
+        color: #f59e0b;
+    }
+    .iv.act {
+        color: #c084fc;
+    }
+    .iv.tgt {
+        color: #cbd5e1;
+    }
+    .stateops {
+        display: flex;
+        gap: 6px;
+        margin-top: 10px;
+    }
+    .stateops button {
+        flex: 1;
+        padding: 4px;
+    }
+    .del {
+        color: #fca5a5;
+        border-color: #7f1d1d;
+    }
+</style>

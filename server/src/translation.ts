@@ -20,6 +20,7 @@ import {
 } from "vscode-languageserver/node";
 import { errorMessage } from "./diagnostics";
 import { conlog } from "./logger";
+import { rewriteTraEntries, siblingTraCandidates } from "../../shared/dialog-tra-edit";
 import {
     findFiles,
     isDirectory,
@@ -80,6 +81,17 @@ type TraExt = "msg" | "tra";
 
 /** Languages that contain translation strings (msg/tra files) */
 const languages = TRANSLATION_FILE_LANGUAGES;
+
+/**
+ * Result of `writeMessages`: whether the active `.tra` changed, plus any sibling-language
+ * `.tra` files (a `tra/<language>/` layout) that now hold stale, pre-edit text and need
+ * updating. `staleSiblingLanguages` is the list of those sibling language directory names.
+ */
+export interface WriteMessagesResult {
+    changed: boolean;
+    staleSiblingLanguages: string[];
+}
+const NO_WRITE: WriteMessagesResult = { changed: false, staleSiblingLanguages: [] };
 
 /** Languages that can have translation references */
 const translatableLanguages: ReadonlySet<string> = new Set([...TRA_LANGUAGES, ...MSG_LANGUAGES]);
@@ -363,6 +375,56 @@ export class Translation {
             messages[id] = entry.source;
         }
         return messages;
+    }
+
+    /**
+     * Persist edited message strings to the resolved .tra, rewriting only the
+     * changed entries in place (comments, ordering, formatting, and untouched
+     * entries are preserved). Returns true if the file changed. Used by the dialog
+     * editor's save path; the .tra is the document of record for @N text.
+     */
+    writeMessages(uri: string, text: string, langId: string, messages: Record<string, string>): WriteMessagesResult {
+        if (!this.initialized) return NO_WRITE;
+        const filePath = this.uriToPath(uri);
+        const ext = this.getTraExt(langId, filePath, text);
+        const fileKey = this.resolveTraFileKey(filePath, text, langId);
+        if (!ext || !fileKey) return NO_WRITE;
+        const absPath = this.resolveAbsolutePath(fileKey);
+        if (!absPath) return NO_WRITE;
+        let original: string;
+        try {
+            original = fs.readFileSync(absPath, "utf8");
+        } catch {
+            return NO_WRITE;
+        }
+        const updated = rewriteTraEntries(original, messages);
+        if (updated === original) return NO_WRITE;
+        fs.writeFileSync(absPath, updated);
+        // Refresh the cached entries that getMessages/inlay hints read for this file.
+        this.data.set(fileKey, this.parseEntries(updated, ext));
+        return { changed: true, staleSiblingLanguages: this.staleSiblingLanguages(absPath) };
+    }
+
+    /**
+     * Sibling-language `.tra` files (a `tra/<language>/<file>.tra` layout) that exist on
+     * disk beside the one just written - they still hold the pre-edit text, so the save
+     * path can warn that they diverged. Returns the sibling language directory names.
+     * Empty for a flat / single-language layout (no same-named file in a sibling dir).
+     */
+    private staleSiblingLanguages(absPath: string): string[] {
+        const langParent = path.dirname(path.dirname(absPath));
+        let subdirs: string[];
+        try {
+            subdirs = fs
+                .readdirSync(langParent, { withFileTypes: true })
+                .filter((d) => d.isDirectory())
+                .map((d) => d.name);
+        } catch {
+            return [];
+        }
+        return siblingTraCandidates(absPath, subdirs)
+            .filter((p) => fs.existsSync(p))
+            .map((p) => path.basename(path.dirname(p)));
     }
 
     // =========================================================================
