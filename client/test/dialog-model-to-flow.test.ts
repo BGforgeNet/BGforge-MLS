@@ -7,7 +7,7 @@
 
 import { describe, expect, test } from "vitest";
 import { modelToFlow, stateNodeSize } from "../src/dialog-editor/webview/model-to-flow";
-import type { DialogModel } from "../../shared/dialog-model";
+import { stateBadges, type DialogModel, type DialogState } from "../../shared/dialog-model";
 import { SAMPLE } from "../src/dialog-editor/test/harness/sample-model";
 import { REAL_MODEL } from "../src/dialog-editor/test/harness/real-model";
 
@@ -152,6 +152,30 @@ describe("modelToFlow - spotlight flag", () => {
         const { nodes } = modelToFlow(model);
         expect(nodes.find((n) => n.id === "plain")?.data.flagged).toBe(false);
         expect(nodes.find((n) => n.id === "flagged")?.data.flagged).toBe(true);
+    });
+
+    test("carries an SSL side-effect node's signal to the card the renderer badges", () => {
+        // The card renderer (Node.svelte) reads stateBadges(card.data.state); a side-effect
+        // node must reach the card with enough state for that to include "side-effect", and
+        // be flagged for the spotlight. Guards against data.state being narrowed to a subset.
+        const model: DialogModel = {
+            format: "fallout-ssl",
+            editable: false,
+            roots: [
+                {
+                    id: "d",
+                    label: "d",
+                    kind: "dialog",
+                    states: [{ id: "Node001", text: "100", choices: [], sideEffects: ["set_global_var"] }],
+                },
+            ],
+        };
+        const card = modelToFlow(model).nodes.find((n) => n.id === "Node001")!;
+        expect(card.data.flagged).toBe(true);
+        // FlowNode.data is a loose Record; the card branch sets data.state to the DialogState
+        // (model-to-flow card node), so narrow it to call the same stateBadges Node.svelte renders.
+        const cardState = card.data.state as DialogState;
+        expect(stateBadges(cardState)).toContain("side-effect");
     });
 });
 
