@@ -38,10 +38,22 @@ function isMessageFn(name: string): name is SSLDialogOptionType {
     return MESSAGE_FN_NAMES.has(name);
 }
 
+// Default: no side-effect set supplied -> no detection (honest under-badging, preserving
+// the parser's pre-side-effect behavior for callers that don't pass the set).
+const NO_SIDE_EFFECTS: ReadonlySet<string> = new Set<string>();
+
 /**
- * Parse dialog structure from SSL script text using tree-sitter
+ * Parse dialog structure from SSL script text using tree-sitter.
+ *
+ * `sideEffectFns` is the set of state-mutating builtins (already filtered to exclude
+ * display/debug void fns) used to flag nodes for the side-effect honesty badge; pass the
+ * empty set (the default) to skip side-effect detection. The parser only records which of
+ * these a node calls - it does not own the classification policy.
  */
-export async function parseDialog(text: string): Promise<SSLDialogData> {
+export async function parseDialog(
+    text: string,
+    sideEffectFns: ReadonlySet<string> = NO_SIDE_EFFECTS,
+): Promise<SSLDialogData> {
     if (!isInitialized()) {
         await initParser();
     }
@@ -67,7 +79,7 @@ export async function parseDialog(text: string): Promise<SSLDialogData> {
             extractEntryPoints(child, entryPoints);
             continue;
         }
-        parsed.set(procName, parseProcedure(child, procName));
+        parsed.set(procName, parseProcedure(child, procName, sideEffectFns));
     }
 
     // force_dialog_start(Node*) / start_dialog_at_node(Node*) start a conversation
@@ -118,10 +130,13 @@ function extractEntryPoints(proc: SyntaxNode, entryPoints: string[]): void {
     });
 }
 
-function parseProcedure(proc: SyntaxNode, name: string): SSLDialogNode {
+function parseProcedure(proc: SyntaxNode, name: string, sideEffectFns: ReadonlySet<string>): SSLDialogNode {
     const replies: SSLDialogReply[] = [];
     const options: SSLDialogOption[] = [];
     const callTargets: string[] = [];
+    // Source-ordered, deduplicated side-effect builtins this node calls. Walk order is
+    // top-down, so first-occurrence order is source order.
+    const sideEffects: string[] = [];
 
     walkTree(proc, (node) => {
         if (node.type === SyntaxType.CallExpr) {
@@ -131,6 +146,10 @@ function parseProcedure(proc: SyntaxNode, name: string): SSLDialogNode {
             const funcName = funcNode.text;
             const args = getCallArgs(node);
             const line = node.startPosition.row + 1;
+
+            if (sideEffectFns.has(funcName) && !sideEffects.includes(funcName)) {
+                sideEffects.push(funcName);
+            }
 
             // Reply(msgId)
             const arg0 = args[0];
@@ -194,6 +213,8 @@ function parseProcedure(proc: SyntaxNode, name: string): SSLDialogNode {
         replies,
         options,
         callTargets,
+        // Omit when empty so nodes without detected side-effects stay clean in the IR.
+        ...(sideEffects.length > 0 ? { sideEffects } : {}),
     };
 }
 
