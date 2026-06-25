@@ -74,6 +74,21 @@ export default defineConfig({
                 // (a harness would only re-assert that Svelte stores and returns the value). Exercised
                 // in-context by the components that provide/consume the jump callback.
                 "client/src/binary-editor/webview/state/jump-context.ts",
+                // Dialog editor: the render harness (mounts the real App in Chromium via Playwright,
+                // delivers the model through the real postMessage channel) is e2e-tier and run out of
+                // process, not under in-process vitest. Same category as client/src/test/**.
+                "client/src/dialog-editor/test/**",
+                // Dialog editor panel lifecycle: built entirely around vscode.WebviewPanel,
+                // vscode.workspace, and the LanguageClient request channel - mocking them would recreate
+                // the framework. Its one pure piece (HTML/CSP assembly) is extracted to
+                // dialog-webview-html.ts and unit-tested (dialog-panel-html.test.ts). Mirrors the
+                // binary-editor provider.ts/document.ts/register.ts exclusions.
+                "client/src/dialog-editor/panel.ts",
+                // Webview bundle entry + the acquireVsCodeApi host channel: run only inside the VS Code
+                // webview context, not in vitest. Mirrors binary-editor/webview/main.ts and the webview
+                // host helpers above.
+                "client/src/dialog-editor/webview/main.ts",
+                "client/src/dialog-editor/webview/host.ts",
             ],
             // Enforced as a real gate: scripts/test.sh runs this config with
             // --coverage, and vitest exits non-zero on threshold breach.

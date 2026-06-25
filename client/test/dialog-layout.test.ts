@@ -1,0 +1,61 @@
+/**
+ * Tests for layoutFlow: the elkjs layered layout that assigns node positions for the
+ * graph render. elkjs's bundled build runs inline (no real web worker), so it executes
+ * under node/vitest. Asserts the two contracts that matter for the render: every node
+ * gets a position, and start states (no inbound edge) share the leftmost column.
+ */
+
+import { describe, expect, test } from "vitest";
+import { layoutFlow } from "../src/dialog-editor/webview/layout";
+import type { FlowGraph } from "../src/dialog-editor/webview/model-to-flow";
+
+function card(id: string): FlowGraph["nodes"][number] {
+    return { id, type: "card", position: { x: 0, y: 0 }, width: 200, height: 80, data: {} };
+}
+function edge(id: string, source: string, target: string): FlowGraph["edges"][number] {
+    return { id, source, target, sourceHandle: id, kind: "forward", category: "player", dashed: false };
+}
+
+describe("layoutFlow", () => {
+    test("assigns a position to every node", async () => {
+        const graph: FlowGraph = {
+            nodes: [card("a"), card("b"), card("c")],
+            edges: [edge("a#0", "a", "b"), edge("b#0", "b", "c")],
+        };
+        await layoutFlow(graph);
+        // A laid-out chain spreads out: not every node can remain at the origin.
+        const distinctX = new Set(graph.nodes.map((n) => n.position.x));
+        expect(distinctX.size).toBeGreaterThan(1);
+        for (const n of graph.nodes) {
+            expect(Number.isFinite(n.position.x)).toBe(true);
+            expect(Number.isFinite(n.position.y)).toBe(true);
+        }
+    });
+
+    test("RIGHT layout places successors to the right of their source", async () => {
+        const graph: FlowGraph = {
+            nodes: [card("a"), card("b"), card("c")],
+            edges: [edge("a#0", "a", "b"), edge("b#0", "b", "c")],
+        };
+        await layoutFlow(graph);
+        const x = (id: string) => graph.nodes.find((n) => n.id === id)!.position.x;
+        expect(x("a")).toBeLessThan(x("b"));
+        expect(x("b")).toBeLessThan(x("c"));
+    });
+
+    test("every start state (no inbound edge) lands in the same leftmost column", async () => {
+        // Two independent threads: a->b and c->d. Both starts (a, c) are pinned to layer 0,
+        // so they share the minimum x; the targets sit to their right.
+        const graph: FlowGraph = {
+            nodes: [card("a"), card("b"), card("c"), card("d")],
+            edges: [edge("a#0", "a", "b"), edge("c#0", "c", "d")],
+        };
+        await layoutFlow(graph);
+        const x = (id: string) => graph.nodes.find((n) => n.id === id)!.position.x;
+        const minX = Math.min(...graph.nodes.map((n) => n.position.x));
+        expect(x("a")).toBe(minX);
+        expect(x("c")).toBe(minX);
+        expect(x("b")).toBeGreaterThan(minX);
+        expect(x("d")).toBeGreaterThan(minX);
+    });
+});
