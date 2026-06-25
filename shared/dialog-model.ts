@@ -74,6 +74,13 @@ export interface DialogState {
      * rather than its synthesized id - there is no source span to write an edit back to.
      */
     derivedFrom?: string;
+    /**
+     * Names of state-mutating builtins this node runs beyond showing its line (SSL only;
+     * see `SSLDialogNode.sideEffects`). The D adapter leaves this absent - a D transition's
+     * `DO ~...~` action is carried per-choice in `DialogChoice.action` instead. Drives the
+     * node-level `side-effect` badge.
+     */
+    sideEffects?: string[];
 }
 
 export type DialogReaction = "neutral" | "good" | "bad";
@@ -173,19 +180,18 @@ export function stateBadges(state: DialogState): DialogBadge[] {
     if (state.derivedFrom) present.add("derived");
     if (state.textKind) present.add(state.textKind);
     if (state.trigger) present.add("conditional");
+    if (state.sideEffects?.length) present.add("side-effect");
     return orderBadges(present);
 }
 
 /**
  * Trust/editability badges for a single player choice/transition.
  *
- * `side-effect` here fires on a D `DO ~...~` action, an unambiguous signal. SSL
- * node-level side-effects (a `Node` procedure calling `set_global_var`/`give_xp`/etc.)
- * are NOT yet detected: the SSL function data carries no side-effect flag and is not
- * plumbed into the dialog parser, so badging them would need a fragile hardcoded list
- * (under/over-badging a trust feature). Deferred to a follow-up that classifies via the
- * function data's void-return signal. Until then, SSL nodes are honestly under-badged
- * for side-effects rather than wrongly badged.
+ * `side-effect` here fires on a D `DO ~...~` action, an unambiguous per-choice signal.
+ * SSL side-effects are node-level instead (a `Node` procedure calling `set_global_var`/
+ * `give_xp`/etc.) and ride on `DialogState.sideEffects` via `stateBadges` - classified
+ * from the function data's void-return signal, minus a display/debug allowlist, rather
+ * than a hardcoded list. So SSL contributes no choice-level `side-effect`.
  */
 export function choiceBadges(choice: DialogChoice): DialogBadge[] {
     const present = new Set<DialogBadge>();
@@ -330,6 +336,7 @@ function stateFromSSL(node: SSLDialogNode): DialogState {
         textKind: firstReply?.msgKind,
         trigger: firstReply?.conditional,
         choices,
+        sideEffects: node.sideEffects,
     };
 }
 

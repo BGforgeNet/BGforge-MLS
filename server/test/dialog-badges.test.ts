@@ -11,6 +11,7 @@ import {
     type DialogChoice,
     type DialogState,
 } from "../../shared/dialog-model";
+import type { SSLDialogData } from "../../shared/dialog-types";
 
 // 1B honest-projection badge layer: a single badge vocabulary derived from the IR.
 // This slice covers only the signals the IR already carries (derived, conditional,
@@ -147,6 +148,58 @@ end
         const model = modelFromSSL(await parseSSL(ssl));
         const n1 = model.roots[0]!.states.find((s) => s.id === "Node001")!;
         expect(choiceBadges(n1.choices[0]!)).toContain("virtual-sink");
+    });
+});
+
+// SSL node-level side-effects: a Node procedure that calls a state-mutating void builtin
+// (set_global_var, give_xp, ...) does something the dialog text does not show. The parser
+// records the offending function names on the node; the badge layer flags the state. This
+// covers the IR-field -> badge projection and the adapter copy; the parser's own detection
+// (which void calls count) is covered in ssl-dialog.test.ts against the real producer.
+describe("dialog badges (1B): SSL node-level side-effect", () => {
+    it("badges a state whose node carries side-effect calls", () => {
+        const s: DialogState = { id: "x", text: "@1", choices: [], sideEffects: ["set_global_var"] };
+        expect(stateBadges(s)).toEqual(["side-effect"]);
+    });
+
+    it("orders side-effect after the state's own derived/conditional badges", () => {
+        const s: DialogState = {
+            id: "x",
+            text: "@1",
+            choices: [],
+            trigger: 'Global("g","GLOBAL",1)',
+            sideEffects: ["give_xp"],
+        };
+        expect(stateBadges(s)).toEqual(["conditional", "side-effect"]);
+    });
+
+    it("does not badge a state with an empty or absent side-effect list", () => {
+        expect(stateBadges({ id: "x", text: "@1", choices: [], sideEffects: [] })).toEqual([]);
+        expect(stateBadges({ id: "x", text: "@1", choices: [] })).toEqual([]);
+    });
+
+    it("flags a node with side-effects for the spotlight overlay", () => {
+        expect(isFlaggedNode({ id: "x", text: "@1", choices: [], sideEffects: ["give_xp"] })).toBe(true);
+    });
+
+    it("carries node sideEffects through the real SSL adapter into the state and its badge", () => {
+        const data: SSLDialogData = {
+            nodes: [
+                {
+                    name: "Node001",
+                    line: 1,
+                    replies: [],
+                    options: [],
+                    callTargets: [],
+                    sideEffects: ["set_global_var"],
+                },
+            ],
+            entryPoints: [],
+        };
+        const model = modelFromSSL(data);
+        const st = model.roots[0]!.states.find((s) => s.id === "Node001")!;
+        expect(st.sideEffects).toEqual(["set_global_var"]);
+        expect(stateBadges(st)).toContain("side-effect");
     });
 });
 

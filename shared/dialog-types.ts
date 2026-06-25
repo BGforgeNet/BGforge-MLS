@@ -55,6 +55,15 @@ export interface SSLDialogNode {
     options: SSLDialogOption[];
     /** Direct `call Node*` transitions. */
     callTargets: string[];
+    /**
+     * State-mutating void builtins this node's procedure calls (e.g. `set_global_var`,
+     * `give_xp`) - the node does something the dialog text does not show. Set by the SSL
+     * parser when given the side-effect function set; absent/empty when none are detected
+     * or the set was not supplied. Display/debug void fns (`display_msg`, `float_msg`, ...)
+     * are deliberately excluded upstream so the side-effect badge does not fire on every
+     * node that merely shows text. Drives the `side-effect` honesty badge.
+     */
+    sideEffects?: string[];
 }
 
 export interface SSLDialogData {
