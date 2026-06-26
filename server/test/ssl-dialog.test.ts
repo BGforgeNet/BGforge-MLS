@@ -28,6 +28,28 @@ end
         expect(n2.replies[0]!.conditional).toBeUndefined();
     });
 
+    it("negates the if-condition for an option in the else branch", async () => {
+        const ssl = `
+procedure Node001 begin
+    if (global_var(GVAR_X) == 1) then begin
+        NOption(100, Node002, 4);
+    end else begin
+        NOption(101, Node003, 4);
+    end
+end
+procedure talk_p_proc begin
+    call Node001;
+end
+`;
+        const result = await parseDialog(ssl);
+        const n1 = result.nodes.find((n) => n.name === "Node001")!;
+        const ifOpt = n1.options.find((o) => o.target === "Node002")!;
+        const elseOpt = n1.options.find((o) => o.target === "Node003")!;
+        // The if-branch option keeps the condition; the else-branch option runs on its negation.
+        expect(ifOpt.conditional).toBe("(global_var(GVAR_X) == 1)");
+        expect(elseOpt.conditional).toBe("!(global_var(GVAR_X) == 1)");
+    });
+
     it("keeps non-Node call targets (e.g. combat)", async () => {
         const ssl = `
 procedure Node001 begin

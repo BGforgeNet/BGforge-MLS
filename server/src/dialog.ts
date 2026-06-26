@@ -258,11 +258,25 @@ function classifyMsgId(node: SyntaxNode): "computed" | "random" | undefined {
  * conditional reply/option must be marked rather than shown as unconditional.
  */
 function enclosingCondition(node: SyntaxNode): string | undefined {
+    // Track the child we ascend through so that at an `if` we can tell whether the call sits in
+    // the `then` branch (runs on the condition) or the `else` branch (runs on its negation). The
+    // grammar fields are `cond` / `then` / `else`; an option in the else branch was previously
+    // mislabeled with the bare `cond`.
+    let prev: SyntaxNode = node;
     let cur: SyntaxNode | null = node.parent;
     while (cur) {
         if (cur.type === SyntaxType.IfStmt) {
-            return cur.childForFieldName("cond")?.text;
+            const cond = cur.childForFieldName("cond")?.text;
+            if (cond === undefined) return undefined;
+            const elseBody = cur.childForFieldName("else");
+            // Compare by byte span, not reference: web-tree-sitter returns fresh wrapper objects
+            // for the same node, so `prev === elseBody` is never true. SSL conditions are
+            // parenthesized (`if (X)`), so `!cond` is already well-formed.
+            const inElse =
+                elseBody !== null && prev.startIndex === elseBody.startIndex && prev.endIndex === elseBody.endIndex;
+            return inElse ? `!${cond}` : cond;
         }
+        prev = cur;
         cur = cur.parent;
     }
     return undefined;
