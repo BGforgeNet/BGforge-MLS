@@ -78,6 +78,15 @@
     // A derived state is still fully read-only (its line is owned by the source construct).
     const textRO = $derived(Boolean(state.derivedFrom) || (!editable && !ssl));
 
+    // For SSL a text field is editable only when it is backed by a resolvable @N message
+    // (the .msg line the edit writes to). A textless/continue option or a computed id has no
+    // line to edit, and SSL save only rewrites the .msg - editing it would set an in-memory
+    // literal that silently vanishes on save - so it stays read-only. D persists literal text
+    // via the .d splice, so it has no such gate.
+    function textLocked(text: string | undefined): boolean {
+        return textRO || (ssl && refOf(text) === null);
+    }
+
     // Grow a textarea to fit its content so nothing hides behind an inner scrollbar. The
     // action parameter is the current display value: passing it makes `update` re-fit when
     // the value changes reactively (a new selection, or a live edit), not just on keystroke.
@@ -112,7 +121,7 @@
     <input class="iv code" value={state.id} disabled={readOnly} onchange={(e) => actions.rename(e.currentTarget.value)} />
 
     <div class="ik">{ssl ? "Reply line" : "NPC line"}</div>
-    <textarea class="iv" rows="2" use:autosize={resolveText(state.text, messages)} disabled={textRO} value={resolveText(state.text, messages)} oninput={(e) => setSay(e.currentTarget.value)}></textarea>
+    <textarea class="iv" rows="2" use:autosize={resolveText(state.text, messages)} disabled={textLocked(state.text)} value={resolveText(state.text, messages)} oninput={(e) => setSay(e.currentTarget.value)}></textarea>
 
     {#if ssl}
         <!-- SSL: the node's reply condition (its enclosing `if`) and the state-mutating
@@ -154,7 +163,7 @@
                     </span>
                 {/if}
             </div>
-            <textarea class="iv reply" rows="1" use:autosize={resolveText(c.text, messages)} disabled={textRO} placeholder="(no reply - NPC continue)" value={resolveText(c.text, messages)} oninput={(e) => setReply(c, e.currentTarget.value)}></textarea>
+            <textarea class="iv reply" rows="1" use:autosize={resolveText(c.text, messages)} disabled={textLocked(c.text)} placeholder="(no reply - NPC continue)" value={resolveText(c.text, messages)} oninput={(e) => setReply(c, e.currentTarget.value)}></textarea>
             <textarea class="iv code cond" rows="1" use:autosize={c.condition ?? ""} disabled={readOnly} placeholder={ssl ? "condition" : "condition (IF ~...~)"} value={c.condition ?? ""} oninput={(e) => (c.condition = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
             {#if !ssl}
                 <textarea class="iv code act" rows="1" use:autosize={c.action ?? ""} disabled={readOnly} placeholder="action (DO ~...~)" value={c.action ?? ""} oninput={(e) => (c.action = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
