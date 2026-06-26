@@ -1,15 +1,25 @@
 <script lang="ts">
-    import { resolveText, type DialogChoice, type DialogState, type DialogTarget } from "../../../../shared/dialog-model";
+    import {
+        resolveText,
+        type DialogChoice,
+        type DialogFormat,
+        type DialogState,
+        type DialogTarget,
+    } from "../../../../shared/dialog-model";
 
-    // The edit surface for the selected state. Content fields (SAY, trigger, weight,
-    // reply/condition/action) mutate the passed `state`/`messages` directly - they are
-    // reactive editModel proxies, so the card re-renders without a relayout. Structural
-    // changes (add/remove/reorder reply, retarget, delete/duplicate) go through `actions`
-    // so the host can relayout the graph.
-    let { state, messages, stateIds, actions }: {
+    // The detail panel for the selected state. For an editable format (WeiDU D) it is the
+    // edit surface: content fields (SAY, trigger, weight, reply/condition/action) mutate the
+    // passed `state`/`messages` directly (reactive editModel proxies, so the card re-renders
+    // without a relayout) and structural changes go through `actions`. For a view-only format
+    // (Fallout SSL) it is a read-only, SSL-native presentation - SSL is derived from script
+    // and has no surgical write-back yet, so editing is disabled and the WeiDU vocabulary
+    // (trigger/weight/`DO ~...~`) is replaced or dropped.
+    let { state, messages, stateIds, actions, format, editable }: {
         state: DialogState;
         messages: Record<string, string> | undefined;
         stateIds: string[];
+        format: DialogFormat;
+        editable: boolean;
         actions: {
             rename: (newId: string) => void;
             addReply: () => void;
@@ -54,10 +64,14 @@
         state.weight = v.trim() === "" || !Number.isFinite(n) ? undefined : n;
     }
 
-    // A derived state (CHAIN/INTERJECT/EXTEND link) has no standalone source span, so no
-    // edit can be written back - the whole inspector is read-only for it. Editing it would
-    // require rewriting the containing construct, which the surgical save does not do.
-    const readOnly = $derived(Boolean(state.derivedFrom));
+    // SSL is a full scripting language with no surgical write-back, so its detail panel is
+    // a read-only SSL-native view (Reply / options / msg / side-effects), not the D editor.
+    const ssl = $derived(format === "fallout-ssl");
+
+    // Read-only when the model can't be saved (SSL) or when this is a derived state
+    // (CHAIN/INTERJECT/EXTEND link) with no standalone source span to write back to -
+    // editing it would require rewriting the containing construct, which the save does not do.
+    const readOnly = $derived(!editable || Boolean(state.derivedFrom));
 
     // Grow a textarea to fit its content so nothing hides behind an inner scrollbar. The
     // action parameter is the current display value: passing it makes `update` re-fit when
@@ -76,32 +90,49 @@
 <div class="inspector" class:ro={readOnly}>
     <div class="ih">{state.speaker ?? "NPC"}</div>
 
-    {#if readOnly}
+    {#if state.derivedFrom}
         <div class="ronote">
             Read-only - this state is expanded from a <b>{state.derivedFrom}</b> block. It has no
             standalone source to edit here; change it in the <b>{state.derivedFrom}</b> source directly.
         </div>
+    {:else if ssl}
+        <div class="ronote">
+            Read-only - this is a Fallout SSL dialog node, derived from the script. Edit the
+            <b>.ssl</b> source directly; the graph reflects it.
+        </div>
     {/if}
 
-    <div class="ik">State label{readOnly ? " (read-only)" : " (jump target)"}</div>
+    <div class="ik">{ssl ? "Node" : readOnly ? "State label (read-only)" : "State label (jump target)"}</div>
     <input class="iv code" value={state.id} disabled={readOnly} onchange={(e) => actions.rename(e.currentTarget.value)} />
 
-    <div class="ik">NPC line</div>
+    <div class="ik">{ssl ? "Reply line" : "NPC line"}</div>
     <textarea class="iv" rows="2" use:autosize={resolveText(state.text, messages)} disabled={readOnly} value={resolveText(state.text, messages)} oninput={(e) => setSay(e.currentTarget.value)}></textarea>
 
-    <div class="row2">
-        <div>
-            <div class="ik">Trigger</div>
-            <input class="iv code" disabled={readOnly} value={state.trigger ?? ""} oninput={(e) => (state.trigger = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)} />
+    {#if ssl}
+        <!-- SSL: the node's reply condition (its enclosing `if`) and the state-mutating
+             builtins it calls. Both read-only; "weight" and the per-choice `DO` action are
+             WeiDU D concepts that have no SSL equivalent and are omitted. -->
+        <div class="ik">Condition</div>
+        <input class="iv code" disabled value={state.trigger ?? ""} placeholder="(unconditional)" />
+        {#if state.sideEffects?.length}
+            <div class="ik">Side effects</div>
+            <div class="iv sfx">{state.sideEffects.join(", ")}</div>
+        {/if}
+    {:else}
+        <div class="row2">
+            <div>
+                <div class="ik">Trigger</div>
+                <input class="iv code" disabled={readOnly} value={state.trigger ?? ""} oninput={(e) => (state.trigger = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)} />
+            </div>
+            <div class="wcol">
+                <div class="ik">Weight</div>
+                <input class="iv" type="number" disabled={readOnly} value={state.weight ?? ""} oninput={(e) => setWeight(e.currentTarget.value)} />
+            </div>
         </div>
-        <div class="wcol">
-            <div class="ik">Weight</div>
-            <input class="iv" type="number" disabled={readOnly} value={state.weight ?? ""} oninput={(e) => setWeight(e.currentTarget.value)} />
-        </div>
-    </div>
+    {/if}
 
     <div class="ik between">
-        <span>Transitions ({state.choices.length})</span>
+        <span>{ssl ? "Options" : "Transitions"} ({state.choices.length})</span>
         {#if !readOnly}<button class="add" onclick={actions.addReply}>+ reply</button>{/if}
     </div>
 
@@ -118,8 +149,10 @@
                 {/if}
             </div>
             <textarea class="iv reply" rows="1" use:autosize={resolveText(c.text, messages)} disabled={readOnly} placeholder="(no reply - NPC continue)" value={resolveText(c.text, messages)} oninput={(e) => setReply(c, e.currentTarget.value)}></textarea>
-            <textarea class="iv code cond" rows="1" use:autosize={c.condition ?? ""} disabled={readOnly} placeholder="condition (IF ~...~)" value={c.condition ?? ""} oninput={(e) => (c.condition = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
-            <textarea class="iv code act" rows="1" use:autosize={c.action ?? ""} disabled={readOnly} placeholder="action (DO ~...~)" value={c.action ?? ""} oninput={(e) => (c.action = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
+            <textarea class="iv code cond" rows="1" use:autosize={c.condition ?? ""} disabled={readOnly} placeholder={ssl ? "condition" : "condition (IF ~...~)"} value={c.condition ?? ""} oninput={(e) => (c.condition = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
+            {#if !ssl}
+                <textarea class="iv code act" rows="1" use:autosize={c.action ?? ""} disabled={readOnly} placeholder="action (DO ~...~)" value={c.action ?? ""} oninput={(e) => (c.action = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
+            {/if}
             <select class="iv tgt" disabled={readOnly} value={targetValue(c.target)} onchange={(e) => onTargetChange(c, e.currentTarget.value)}>
                 {#if c.target.kind === "external"}
                     <option value="ext">&#8631; {c.target.label}</option>
@@ -271,6 +304,13 @@
     }
     .iv.tgt {
         color: #cbd5e1;
+    }
+    /* SSL side-effects: teal, matching the side-effect badge. Read-only, so a plain box. */
+    .iv.sfx {
+        color: #22d3ee;
+        font-family: monospace;
+        font-size: 10px;
+        word-break: break-word;
     }
     .stateops {
         display: flex;

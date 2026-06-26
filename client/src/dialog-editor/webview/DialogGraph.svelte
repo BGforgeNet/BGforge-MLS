@@ -552,7 +552,7 @@
 {/snippet}
 
 {#snippet inspectorBox(s: DialogState)}
-    <Inspector state={s} messages={editModel.messages} {stateIds} {actions} />
+    <Inspector state={s} messages={editModel.messages} {stateIds} {actions} format={editModel.format} editable={editModel.editable} />
 {/snippet}
 
 <svelte:window onkeydown={(e) => e.key === "Escape" && ctxMenu && closeContext()} />
