@@ -77,6 +77,57 @@ end
     });
 });
 
+// The dialog graph is rooted at the conversation entries (talk_p_proc + force_dialog_start),
+// not at every procedure that happens to contain a Reply/option. Lifecycle handlers like
+// pickup_p_proc are SSL script procs, not dialog nodes, and must not appear in the graph.
+describe("parseDialog (SSL) node scope", () => {
+    it("excludes a procedure not reachable from a dialog entry (pickup_p_proc)", async () => {
+        const ssl = `
+procedure Node001 begin
+    Reply(100);
+    NOption(101, Node002, 4);
+end
+procedure Node002 begin
+    Reply(200);
+    NMessage(201);
+end
+procedure pickup_p_proc begin
+    Reply(900);
+    NMessage(901);
+end
+procedure talk_p_proc begin
+    call Node001;
+end
+`;
+        const result = await parseDialog(ssl);
+        const names = result.nodes.map((n) => n.name).sort();
+        expect(names).toEqual(["Node001", "Node002"]);
+    });
+
+    it("keeps a force_dialog_start entry and its reachable nodes", async () => {
+        const ssl = `
+procedure Node050 begin
+    Reply(100);
+    NOption(101, Node051, 4);
+end
+procedure Node051 begin
+    NMessage(102);
+end
+procedure pickup_p_proc begin
+    Reply(900);
+end
+procedure map_enter_p_proc begin
+    force_dialog_start(Node050);
+end
+procedure talk_p_proc begin
+end
+`;
+        const result = await parseDialog(ssl);
+        const names = result.nodes.map((n) => n.name).sort();
+        expect(names).toEqual(["Node050", "Node051"]);
+    });
+});
+
 // The side-effect honesty badge needs to know which builtins a node runs beyond showing
 // its line. The parser does not own the policy of WHICH functions count (that is the
 // void-return classification, derived from static data and injected); it just records the

@@ -94,17 +94,25 @@ export async function parseDialog(
         if (name && !entryPoints.includes(name)) entryPoints.push(name);
     });
 
-    // Second pass: include a node if it carries dialog content, OR if another node
-    // routes to it - a side-effect-only target (e.g. a teleport/combat node) must
-    // not be dropped, or its inbound edge would dangle.
-    const referenced = new Set<string>();
-    for (const node of parsed.values()) {
-        for (const opt of node.options) if (opt.target) referenced.add(opt.target);
-        for (const t of node.callTargets) referenced.add(t);
+    // Second pass: include only procedures reachable from a dialog entry point
+    // (talk_p_proc calls + force_dialog_start targets), following option and call
+    // transitions. A procedure that merely contains dialog-shaped calls but sits outside the
+    // conversation graph - an SSL lifecycle handler like pickup_p_proc/look_at_p_proc - is
+    // not a dialog node. Side-effect-only targets are still kept because a node routes to
+    // them (they are reached via an option/call edge, so the inbound edge never dangles).
+    const reachable = new Set<string>();
+    const queue = [...entryPoints];
+    while (queue.length > 0) {
+        const name = queue.shift()!;
+        if (reachable.has(name)) continue;
+        reachable.add(name);
+        const node = parsed.get(name);
+        if (!node) continue;
+        for (const opt of node.options) if (opt.target) queue.push(opt.target);
+        for (const t of node.callTargets) queue.push(t);
     }
     for (const [procName, node] of parsed) {
-        const hasContent = node.replies.length > 0 || node.options.length > 0 || node.callTargets.length > 0;
-        if (hasContent || referenced.has(procName)) nodes.push(node);
+        if (reachable.has(procName)) nodes.push(node);
     }
 
     return { nodes, entryPoints };
