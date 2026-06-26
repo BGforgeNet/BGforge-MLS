@@ -24,6 +24,25 @@ export function rewriteTraEntries(traText: string, messages: Record<string, stri
 }
 
 /**
+ * Surgical rewrite of Fallout `.msg` translation entries (`{id}{sound}{text}`).
+ *
+ * The `.msg` counterpart of `rewriteTraEntries`: replace only the text group of an entry whose
+ * id is in `messages`, preserving the id, the sound field, the brace spacing, and every untouched
+ * byte. The entry grammar matches the parser's (`{(\d+)}\s*{\w*}\s*{([^}]*)}`), so the rewriter
+ * acts on exactly the entries the editor indexed. A `.tra`-format rewriter never matches a `.msg`
+ * line, so the two formats need separate writers - using the wrong one silently no-ops the save.
+ */
+export function rewriteMsgEntries(msgText: string, messages: Record<string, string>): string {
+    return msgText.replaceAll(
+        /({(\d+)}\s*{\w*}\s*{)([^}]*)(})/g,
+        (whole, prefix: string, num: string, _old: string, close: string) => {
+            const next = messages[num];
+            return next === undefined ? whole : `${prefix}${next}${close}`;
+        },
+    );
+}
+
+/**
  * Candidate sibling-language `.tra` paths for a WeiDU `tra/<language>/<file>.tra`
  * layout: the same base file under every OTHER language directory beside the active
  * one. Pure (path math only); the caller filters to those that actually exist on disk.

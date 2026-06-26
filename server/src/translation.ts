@@ -20,7 +20,7 @@ import {
 } from "vscode-languageserver/node";
 import { errorMessage } from "./diagnostics";
 import { conlog } from "./logger";
-import { rewriteTraEntries, siblingTraCandidates } from "../../shared/dialog-tra-edit";
+import { rewriteMsgEntries, rewriteTraEntries, siblingTraCandidates } from "../../shared/dialog-tra-edit";
 import {
     findFiles,
     isDirectory,
@@ -397,7 +397,9 @@ export class Translation {
         } catch {
             return NO_WRITE;
         }
-        const updated = rewriteTraEntries(original, messages);
+        // Each format needs its own rewriter: a .tra is `@N = ~text~`, a .msg is
+        // `{id}{sound}{text}`, and either rewriter is a silent no-op on the other's syntax.
+        const updated = ext === "msg" ? rewriteMsgEntries(original, messages) : rewriteTraEntries(original, messages);
         if (updated === original) return NO_WRITE;
         fs.writeFileSync(absPath, updated);
         // Refresh the cached entries that getMessages/inlay hints read for this file.

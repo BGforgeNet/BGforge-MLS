@@ -1,6 +1,6 @@
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { rewriteTraEntries, siblingTraCandidates } from "../../shared/dialog-tra-edit";
+import { rewriteMsgEntries, rewriteTraEntries, siblingTraCandidates } from "../../shared/dialog-tra-edit";
 
 describe("rewriteTraEntries", () => {
     const TRA = `// Coran's lines
@@ -31,6 +31,38 @@ describe("rewriteTraEntries", () => {
         const tra = `@5 = ~line one\nline two~\n`;
         const out = rewriteTraEntries(tra, { "5": "new single line" });
         expect(out).toBe(`@5 = ~new single line~\n`);
+    });
+});
+
+// Fallout .msg entries are `{id}{sound}{text}`, NOT the WeiDU `@N = ~text~` of a .tra. The two
+// need separate rewriters: rewriteTraEntries never matches a .msg line, so a .msg write silently
+// no-ops if it is used (the bug this fixes).
+describe("rewriteMsgEntries", () => {
+    const MSG = `# Coran's lines
+{0}{}{Original zero.}
+{1}{snd1}{Original one.}
+{2}{}{Keep me.}
+`;
+
+    it("rewrites only the changed entries, preserving id, sound, and everything else byte-for-byte", () => {
+        const out = rewriteMsgEntries(MSG, { "0": "Edited zero.", "1": "Edited one." });
+        expect(out).toContain("{0}{}{Edited zero.}");
+        // The sound field of entry 1 is preserved - only the text group changes.
+        expect(out).toContain("{1}{snd1}{Edited one.}");
+        expect(out).toContain("{2}{}{Keep me.}");
+        expect(out).toContain("# Coran's lines");
+    });
+
+    it("leaves the file unchanged when no message matches an entry", () => {
+        expect(rewriteMsgEntries(MSG, { "99": "nope" })).toBe(MSG);
+    });
+
+    it("rewriting an entry to its current value is a no-op", () => {
+        expect(rewriteMsgEntries(MSG, { "2": "Keep me." })).toBe(MSG);
+    });
+
+    it("handles an empty text value", () => {
+        expect(rewriteMsgEntries(`{5}{}{}\n`, { "5": "now has text" })).toBe(`{5}{}{now has text}\n`);
     });
 });
 

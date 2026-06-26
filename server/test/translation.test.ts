@@ -72,6 +72,24 @@ describe("Translation", () => {
         });
     });
 
+    describe("writeMessages (.msg format)", () => {
+        it("persists a .msg text edit to disk via the format-aware writer", async () => {
+            await translation.init();
+            const uri = `file://${tempDir}/test.tssl`;
+            const text = `/** @tra test.msg */\nconst x = mstr(100);`;
+
+            const result = translation.writeMessages(uri, text, "typescript", { "100": "Edited msg!" });
+
+            // Before the format-aware fix this used the .tra rewriter, which never matches a
+            // {id}{sound}{text} line, so the write silently no-op'd (changed=false, file intact).
+            expect(result.changed).toBe(true);
+            const onDisk = fs.readFileSync(path.join(tempDir, "test.msg"), "utf8");
+            expect(onDisk).toContain("{100}{}{Edited msg!}");
+            // Untouched entries stay byte-for-byte.
+            expect(onDisk).toContain("{101}{}{ Message 101 }");
+        });
+    });
+
     describe("TSSL support (.msg format)", () => {
         it("returns hover for mstr() reference in .tssl file", async () => {
             await translation.init();
