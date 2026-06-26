@@ -80,7 +80,10 @@
     }
     .hd {
         background: #1b2430;
-        padding: 3px 8px;
+        /* Extra left padding so the node name clears the target handle dot, which Svelte
+           Flow centers on the left edge - at 8px the gap was ~2px and the pin tipped over
+           the name's first character on short/badged cards. */
+        padding: 3px 8px 3px 15px;
         color: #22d3ee;
         font-size: 9px;
         font-weight: 700;
@@ -134,12 +137,12 @@
         color: #9aa0a6;
     }
     .bd {
-        padding: 4px 8px;
+        padding: 4px 8px 4px 15px;
     }
     .opt {
         position: relative; /* so each row's source Handle (top:50%) centers on the ROW */
         border-top: 1px solid #313846;
-        padding: 2px 8px;
+        padding: 2px 8px 2px 15px;
         color: #bfe66a;
         font-size: 9px;
         height: 20px;
