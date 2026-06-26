@@ -304,13 +304,24 @@ function reactionFromType(type: SSLDialogOptionType): DialogReaction | undefined
     return REACTION_BY_PREFIX[type.charAt(0)];
 }
 
+/**
+ * An SSL reply/option references a `.msg` line by numeric id. Emit it as the same `@N` ref
+ * the renderer resolves (`resolveText`), so SSL and D share one resolution path - a bare id
+ * rendered as a raw "100". A non-numeric id is a computed/runtime expression (a variable, a
+ * `random(...)` call) with no fixed line, so it stays literal (and carries a computed/random
+ * badge instead).
+ */
+function sslMsgText(msgId: number | string): string {
+    return typeof msgId === "number" ? `@${msgId}` : String(msgId);
+}
+
 function stateFromSSL(node: SSLDialogNode): DialogState {
     const choices: DialogChoice[] = [];
 
     node.options.forEach((opt, i) => {
         choices.push({
             id: `${node.name}#opt${i}`,
-            text: String(opt.msgId),
+            text: sslMsgText(opt.msgId),
             textKind: opt.msgKind,
             condition: opt.conditional,
             // A message option (empty target) ends the conversation; an option target is a node.
@@ -332,7 +343,7 @@ function stateFromSSL(node: SSLDialogNode): DialogState {
     const firstReply = node.replies[0];
     return {
         id: node.name,
-        text: firstReply ? String(firstReply.msgId) : "",
+        text: firstReply ? sslMsgText(firstReply.msgId) : "",
         textKind: firstReply?.msgKind,
         trigger: firstReply?.conditional,
         choices,

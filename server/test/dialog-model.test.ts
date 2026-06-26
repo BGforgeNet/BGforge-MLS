@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { initParser as initWeiduD } from "../../shared/parsers/weidu-d";
 import { parseDDialog } from "../src/weidu-d/dialog";
 import { parseDialog as parseSSL } from "../src/dialog";
-import { modelFromD, modelFromSSL } from "../../shared/dialog-model";
+import { modelFromD, modelFromSSL, resolveText } from "../../shared/dialog-model";
 
 describe("DialogModel adapters (real producer -> IR)", () => {
     beforeAll(async () => {
@@ -57,9 +57,9 @@ end
 
         const states = model.roots[0]!.states;
         const n1 = states.find((s) => s.id === "Node001")!;
-        expect(n1.text).toBe("100");
+        expect(n1.text).toBe("@100");
         expect(n1.choices[0]).toMatchObject({
-            text: "101",
+            text: "@101",
             target: { kind: "state", stateId: "Node002" },
             reaction: "neutral",
             skill: 4,
@@ -69,6 +69,32 @@ end
         const n2 = states.find((s) => s.id === "Node002")!;
         // NMessage(201) is a terminal message -> exit.
         expect(n2.choices.some((c) => c.target.kind === "exit")).toBe(true);
+    });
+
+    it("resolves SSL numeric msgIds to their .msg text via the shared @N ref the renderer reads", async () => {
+        // A node's reply/option text is a .msg line id; the renderer resolves it with the
+        // same resolveText(@N) path D uses. The adapter must emit a resolvable ref, not a
+        // bare number (which rendered as a raw "100"). Computed/expression ids stay literal.
+        const ssl = `
+procedure Node001 begin
+    Reply(100);
+    NOption(101, Node002, 4);
+    NOption(some_var, Node002, 4);
+end
+procedure Node002 begin
+    NMessage(200);
+end
+procedure talk_p_proc begin
+    call Node001;
+end
+`;
+        const model = modelFromSSL(await parseSSL(ssl));
+        const messages = { "100": "Hello there.", "101": "Goodbye.", "200": "The end." };
+        const n1 = model.roots[0]!.states.find((s) => s.id === "Node001")!;
+        expect(resolveText(n1.text, messages)).toBe("Hello there.");
+        expect(resolveText(n1.choices[0]!.text, messages)).toBe("Goodbye.");
+        // A computed id has no numeric .msg line - it stays as the expression text.
+        expect(resolveText(n1.choices[1]!.text, messages)).toBe("some_var");
     });
 
     it("flattens CHAIN bodies and groups same-file chains under one root", () => {
