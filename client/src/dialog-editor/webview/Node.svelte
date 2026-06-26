@@ -41,7 +41,7 @@
                  otherwise the badge's own short text. Full set is on hover. -->
             <Badge badges={sb} label={sb[0] === "derived" ? data.state.derivedFrom : undefined} />
             {#if data.reachability === "orphan"}<span class="rmark dead" title="Dead: no path reaches this state and nothing outside the file enters it">dead</span>{/if}
-            {#if data.reachability === "external-entry"}<span class="rmark ext" title="Entered from outside this file (e.g. a cross-file EXTERN)">&#8676;</span>{/if}
+            {#if data.reachability === "external-entry"}<span class="rmark ext" title="Entered from outside this file (e.g. a cross-file EXTERN)">entry</span>{/if}
             {#if data.state.weight != null}<span class="w">W{data.state.weight}</span>{/if}
         </div>
         <div class="bd">
@@ -106,7 +106,18 @@
         padding: 0 3px;
     }
     /* Reachability markers (1C). `dead` is a prominent warning chip; `ext` (an EXTERN
-       entry) is a quiet glyph - it is informational, not a problem. */
+       entry) is quiet text - both informational, not problems. The width guard is load-
+       bearing: a marker must never grow enough to collapse the node name (the identity).
+       An unstyled exotic glyph once fell back to a 127px-wide tofu and ate the whole header.
+       `min-width: 0` is required for `max-width` to bind: a flex item defaults to
+       `min-width: auto` (its content's min size), which otherwise overrides the cap. */
+    .hd .rmark {
+        flex: 0 1 auto;
+        min-width: 0;
+        max-width: 48px;
+        overflow: hidden;
+        white-space: nowrap;
+    }
     .hd .rmark.dead {
         color: #fca5a5;
         background: #2a1717;
