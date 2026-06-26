@@ -420,9 +420,12 @@
     // selection. The correctness-critical logic (ref-update on rename, redirect on
     // delete, sourceRange handling on duplicate) lives in the tested ops module.
     // A derived state (CHAIN/INTERJECT/EXTEND link) has no source span to splice an edit
-    // back into, so every mutation is rejected here as well as disabled in the inspector -
-    // the guard is the backstop in case a control slips through.
-    const editable = (s: DialogState | null): s is DialogState => s != null && !s.derivedFrom;
+    // back into, and SSL has no structural write-back at all, so every structural mutation
+    // is rejected here as well as disabled in the inspector - the guard is the backstop in
+    // case a control slips through. (Message-text edits are not gated here; they persist for
+    // SSL too, via the .msg.)
+    const editable = (s: DialogState | null): s is DialogState =>
+        s != null && !s.derivedFrom && editModel.editable;
 
     const actions = {
         rename: (newId: string) => {
@@ -513,10 +516,13 @@
         <button class:active={viewMode === "graph"} role="tab" aria-selected={viewMode === "graph"} onclick={() => (viewMode = "graph")}>Graph</button>
         <button class:active={viewMode === "tree"} role="tab" aria-selected={viewMode === "tree"} onclick={() => (viewMode = "tree")}>Tree</button>
     </span>
-    {#if hasHost() && editModel.format === "weidu-d"}
+    {#if hasHost()}
+        <!-- Save persists text for both formats (D structure + .tra; SSL message text -> .msg). -->
         <button class="toolbtn save" onclick={save}>Save</button>
     {/if}
-    <button class="toolbtn" onclick={addState}>+ State</button>
+    {#if editModel.editable}
+        <button class="toolbtn" onclick={addState}>+ State</button>
+    {/if}
     {#if inGraph}
         <button class="toolbtn" title="Re-run auto-layout" onclick={() => void rebuild({ relayout: true, frame: "entry" })}>Re-layout</button>
         <button

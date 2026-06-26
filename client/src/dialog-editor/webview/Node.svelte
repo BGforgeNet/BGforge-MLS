@@ -14,6 +14,7 @@
             jumpTo?: { file: string; stateId: string };
             reachability?: Reachability;
             flagged?: boolean;
+            editable?: boolean;
         };
         type: string;
     } = $props();
@@ -54,9 +55,9 @@
                     >{resolveText(c.text, data.messages) ||
                         (c.target.kind === "exit" ? "(exit)" : "(continue)")}</span
                 >
-                <!-- A derived state's transitions can't be rewritten, so its output handles
-                     are non-connectable (no drag-to-retarget from a read-only state). -->
-                <Handle type="source" id={c.id} position={Position.Right} isConnectable={!data.state.derivedFrom} />
+                <!-- A derived state's transitions can't be rewritten, and SSL structure is
+                     read-only, so those output handles are non-connectable (no drag-to-retarget). -->
+                <Handle type="source" id={c.id} position={Position.Right} isConnectable={!data.state.derivedFrom && data.editable !== false} />
             </div>
         {/each}
     </div>

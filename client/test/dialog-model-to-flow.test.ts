@@ -177,6 +177,19 @@ describe("modelToFlow - spotlight flag", () => {
         const cardState = card.data.state as DialogState;
         expect(stateBadges(cardState)).toContain("side-effect");
     });
+
+    test("carries the model's editability onto each card (drives handle connectability)", () => {
+        // Node.svelte gates drag-to-retarget on data.editable; a view-only (SSL) model must
+        // mark its cards non-editable so structure can't be dragged, an editable (D) model the
+        // opposite. Guards the source of that wiring.
+        const ssl: DialogModel = {
+            format: "fallout-ssl",
+            editable: false,
+            roots: [{ id: "d", label: "d", kind: "dialog", states: [{ id: "N", text: "@1", choices: [] }] }],
+        };
+        expect(modelToFlow(ssl).nodes.find((n) => n.id === "N")?.data.editable).toBe(false);
+        expect(modelToFlow(SAMPLE).nodes.find((n) => n.type === "card")?.data.editable).toBe(true);
+    });
 });
 
 describe("stateNodeSize", () => {

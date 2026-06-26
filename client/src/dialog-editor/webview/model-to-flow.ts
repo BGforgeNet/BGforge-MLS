@@ -95,7 +95,13 @@ export function modelToFlow(model: DialogModel): FlowGraph {
                 // `flagged` drives the spotlight overlay: true iff the node carries any
                 // badge (state- or choice-level). Computed here so a toggle just flips a
                 // CSS class - no model-to-flow rebuild on toggle.
-                data: { state: s, messages, reachability: reach.get(s.id), flagged: isFlaggedNode(s) },
+                data: {
+                    state: s,
+                    messages,
+                    reachability: reach.get(s.id),
+                    flagged: isFlaggedNode(s),
+                    editable: model.editable,
+                },
             });
 
             s.choices.forEach((c) => {

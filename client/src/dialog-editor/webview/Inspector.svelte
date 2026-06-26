@@ -68,10 +68,15 @@
     // a read-only SSL-native view (Reply / options / msg / side-effects), not the D editor.
     const ssl = $derived(format === "fallout-ssl");
 
-    // Read-only when the model can't be saved (SSL) or when this is a derived state
+    // Structure is read-only when the model can't be saved (SSL) or for a derived state
     // (CHAIN/INTERJECT/EXTEND link) with no standalone source span to write back to -
     // editing it would require rewriting the containing construct, which the save does not do.
     const readOnly = $derived(!editable || Boolean(state.derivedFrom));
+
+    // Message text (the NPC line and player replies) persists for both formats - D to the
+    // .tra, SSL to the .msg - so it stays editable even when the structure is read-only (SSL).
+    // A derived state is still fully read-only (its line is owned by the source construct).
+    const textRO = $derived(Boolean(state.derivedFrom) || (!editable && !ssl));
 
     // Grow a textarea to fit its content so nothing hides behind an inner scrollbar. The
     // action parameter is the current display value: passing it makes `update` re-fit when
@@ -97,8 +102,9 @@
         </div>
     {:else if ssl}
         <div class="ronote">
-            Read-only - this is a Fallout SSL dialog node, derived from the script. Edit the
-            <b>.ssl</b> source directly; the graph reflects it.
+            Text edits save to the <b>.msg</b>. The dialog structure (options, targets,
+            conditions) is read-only - it is generated from the script; edit the <b>.ssl</b>
+            source for that.
         </div>
     {/if}
 
@@ -106,7 +112,7 @@
     <input class="iv code" value={state.id} disabled={readOnly} onchange={(e) => actions.rename(e.currentTarget.value)} />
 
     <div class="ik">{ssl ? "Reply line" : "NPC line"}</div>
-    <textarea class="iv" rows="2" use:autosize={resolveText(state.text, messages)} disabled={readOnly} value={resolveText(state.text, messages)} oninput={(e) => setSay(e.currentTarget.value)}></textarea>
+    <textarea class="iv" rows="2" use:autosize={resolveText(state.text, messages)} disabled={textRO} value={resolveText(state.text, messages)} oninput={(e) => setSay(e.currentTarget.value)}></textarea>
 
     {#if ssl}
         <!-- SSL: the node's reply condition (its enclosing `if`) and the state-mutating
@@ -148,7 +154,7 @@
                     </span>
                 {/if}
             </div>
-            <textarea class="iv reply" rows="1" use:autosize={resolveText(c.text, messages)} disabled={readOnly} placeholder="(no reply - NPC continue)" value={resolveText(c.text, messages)} oninput={(e) => setReply(c, e.currentTarget.value)}></textarea>
+            <textarea class="iv reply" rows="1" use:autosize={resolveText(c.text, messages)} disabled={textRO} placeholder="(no reply - NPC continue)" value={resolveText(c.text, messages)} oninput={(e) => setReply(c, e.currentTarget.value)}></textarea>
             <textarea class="iv code cond" rows="1" use:autosize={c.condition ?? ""} disabled={readOnly} placeholder={ssl ? "condition" : "condition (IF ~...~)"} value={c.condition ?? ""} oninput={(e) => (c.condition = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
             {#if !ssl}
                 <textarea class="iv code act" rows="1" use:autosize={c.action ?? ""} disabled={readOnly} placeholder="action (DO ~...~)" value={c.action ?? ""} oninput={(e) => (c.action = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>

@@ -98,32 +98,36 @@ export function registerDialogEditor(context: vscode.ExtensionContext, client: L
     }
 
     /**
-     * Persist edits from the webview back to disk. The .d is edited surgically
-     * (applyDialogEdits splices only the changed states, preserving comments, patch
-     * blocks, CHAIN syntax, and untouched states); @N text edits are written to the
-     * .tra via the server, which owns translation-file resolution. Only WeiDU D is
-     * editable - SSL is view-only.
+     * Persist edits from the webview back to disk. WeiDU D structure is edited surgically
+     * (applyDialogEdits splices only the changed states, preserving comments, patch blocks,
+     * CHAIN syntax, and untouched states). Message-text edits (NPC lines and player replies)
+     * are written to the resolved `.tra` (D) or `.msg` (SSL) via the server, which owns
+     * translation-file resolution. SSL has no code write-back yet, so for SSL only the
+     * message text persists - its dialog structure is view-only.
      */
     async function save(edited: DialogModel): Promise<void> {
-        if (!docUri || edited.format !== "weidu-d") return;
-        const doc = await vscode.workspace.openTextDocument(vscode.Uri.parse(docUri));
-        const text = doc.getText();
-        // Re-parse the on-disk text to recover the ORIGINAL model (before the webview's
-        // edits). applyDialogEdits compares against it so unchanged states keep their exact
-        // bytes (@N refs, ++ shorthand, comments) and deletions are detected. The document
-        // itself is unchanged by webview edits.
-        const params: ExecuteCommandParams = { command: LSP_COMMAND_PARSE_DIALOG, arguments: [{ uri: docUri }] };
-        const data = await client.sendRequest(ExecuteCommandRequest.type, params);
-        const original = toModel(data) ?? undefined;
-        const newText = applyDialogEdits(text, edited, original);
-        if (newText !== text) {
-            const ws = new vscode.WorkspaceEdit();
-            ws.replace(doc.uri, new vscode.Range(doc.positionAt(0), doc.positionAt(text.length)), newText);
-            await vscode.workspace.applyEdit(ws);
-            // The document change triggers a debounced refresh; have it verify this edit
-            // round-tripped (the serializer reproduced exactly what we saved).
-            pendingVerify = edited;
+        if (!docUri) return;
+        if (edited.format === "weidu-d") {
+            const doc = await vscode.workspace.openTextDocument(vscode.Uri.parse(docUri));
+            const text = doc.getText();
+            // Re-parse the on-disk text to recover the ORIGINAL model (before the webview's
+            // edits). applyDialogEdits compares against it so unchanged states keep their exact
+            // bytes (@N refs, ++ shorthand, comments) and deletions are detected. The document
+            // itself is unchanged by webview edits.
+            const params: ExecuteCommandParams = { command: LSP_COMMAND_PARSE_DIALOG, arguments: [{ uri: docUri }] };
+            const data = await client.sendRequest(ExecuteCommandRequest.type, params);
+            const original = toModel(data) ?? undefined;
+            const newText = applyDialogEdits(text, edited, original);
+            if (newText !== text) {
+                const ws = new vscode.WorkspaceEdit();
+                ws.replace(doc.uri, new vscode.Range(doc.positionAt(0), doc.positionAt(text.length)), newText);
+                await vscode.workspace.applyEdit(ws);
+                // The document change triggers a debounced refresh; have it verify this edit
+                // round-tripped (the serializer reproduced exactly what we saved).
+                pendingVerify = edited;
+            }
         }
+        // Message text persists for both formats (D -> .tra, SSL -> .msg).
         if (edited.messages && Object.keys(edited.messages).length > 0) {
             const traParams: ExecuteCommandParams = {
                 command: LSP_COMMAND_SAVE_TRA,
@@ -131,7 +135,7 @@ export function registerDialogEditor(context: vscode.ExtensionContext, client: L
             };
             await client.sendRequest(ExecuteCommandRequest.type, traParams);
         }
-        const added = pendingInserts(edited).length;
+        const added = edited.format === "weidu-d" ? pendingInserts(edited).length : 0;
         void vscode.window.showInformationMessage(`Dialog saved${added ? ` (${added} new state(s) added)` : ""}.`);
     }
 
