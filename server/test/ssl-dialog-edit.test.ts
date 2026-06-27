@@ -118,6 +118,36 @@ procedure talk_p_proc begin call Node001; end
     });
 });
 
+describe("applySSLDialogEdits - delete node", () => {
+    const SRC3 = `procedure Node001 begin
+    NOption(101, Node002, 4);
+    NOption(102, Node003, 4);
+end
+procedure Node002 begin Reply(200); end
+procedure Node003 begin Reply(300); end
+procedure talk_p_proc begin call Node001; end
+`;
+
+    it("deletes a node's procedure and redirects an inbound option to NMessage", async () => {
+        const original = modelFromSSL(await parseDialog(SRC3));
+        const edited = structuredCloneModel(original);
+        // Mirror ops.deleteState: drop Node002's state and redirect inbound options to exit.
+        const root = edited.roots[0]!;
+        root.states = root.states.filter((s) => s.id !== "Node002");
+        for (const s of root.states)
+            for (const c of s.choices) {
+                if (c.target.kind === "state" && c.target.stateId === "Node002") c.target = { kind: "exit" };
+            }
+        const out = applySSLDialogEdits(SRC3, edited, original);
+        expect(out).not.toContain("procedure Node002"); // procedure gone
+        // The option that pointed at Node002 is now a terminal message, keeping its msg id 101.
+        expect(out).toContain("NMessage(101);");
+        expect(out).not.toContain("NOption(101");
+        // The other option is untouched.
+        expect(out).toContain("NOption(102, Node003, 4)");
+    });
+});
+
 describe("verifySSLEditApplied", () => {
     it("confirms a correctly-applied retarget and rejects a save that did not take", async () => {
         const original = modelFromSSL(await parseDialog(SRC));

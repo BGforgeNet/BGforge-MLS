@@ -18,11 +18,6 @@ import type { VerifyResult } from "./dialog-d-edit";
 import { applySplices, type SpliceOp } from "./dialog-splice";
 import { serializeSSLOption } from "./dialog-ssl-serialize";
 
-/** The new target token for an option, or null when it cannot be expressed as a target-Node arg. */
-function targetToken(choice: DialogChoice): string | null {
-    return choice.target.kind === "state" ? choice.target.stateId : null;
-}
-
 /** Options of a state in source order: the choices that carry a `callRange` (call transitions don't). */
 function optionsOf(state: DialogState): DialogChoice[] {
     return state.choices.filter((c) => c.callRange);
@@ -81,14 +76,24 @@ function nodeOps(
         const slot = survivorSlots[i]!;
         const moved = survivorsInEditedOrder[i]!;
         const movedOrig = origById.get(moved.id)!;
-        const base = text.slice(movedOrig.callRange!.start, movedOrig.callRange!.end);
-        const newTarget = targetToken(moved);
-        const oldTarget = text.slice(movedOrig.targetRange!.start, movedOrig.targetRange!.end);
-        let replacement = base;
-        if (newTarget !== null && newTarget !== oldTarget) {
-            const relStart = movedOrig.targetRange!.start - movedOrig.callRange!.start;
-            const relEnd = movedOrig.targetRange!.end - movedOrig.callRange!.start;
-            replacement = base.slice(0, relStart) + newTarget + base.slice(relEnd);
+        const origCall = text.slice(movedOrig.callRange!.start, movedOrig.callRange!.end);
+        let replacement: string;
+        if (moved.target.kind !== "state") {
+            // The option's target node was deleted (the model redirected it to exit): re-serialize the option
+            // as a terminal NMessage, preserving the existing msg id (the first numeric arg of the original
+            // call). serializeSSLOption emits a full statement ending in `;`, but the slot is the call
+            // expression WITHOUT the trailing `;` - trim it so the source's existing `;` after the slot stays.
+            const msgId = Number(/\(\s*(\d+)/.exec(origCall)?.[1] ?? NaN);
+            replacement = Number.isFinite(msgId) ? serializeSSLOption(moved, msgId).replace(/;$/, "") : origCall;
+        } else {
+            const newTarget = moved.target.stateId;
+            const oldTarget = text.slice(movedOrig.targetRange!.start, movedOrig.targetRange!.end);
+            replacement = origCall;
+            if (newTarget !== oldTarget) {
+                const relStart = movedOrig.targetRange!.start - movedOrig.callRange!.start;
+                const relEnd = movedOrig.targetRange!.end - movedOrig.callRange!.start;
+                replacement = origCall.slice(0, relStart) + newTarget + origCall.slice(relEnd);
+            }
         }
         if (replacement !== text.slice(slot.start, slot.end))
             ops.push({ start: slot.start, end: slot.end, replacement });
@@ -134,6 +139,21 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
         if (!orig || !orig.faithful) continue; // gate: only faithful nodes are structurally editable
         ops.push(...nodeOps(originalText, state, orig, orig.insertAnchor));
     }
+
+    // DELETE: an original node missing from the edited model -> remove its whole procedure span (and the
+    // blank line it would leave). Inbound options were redirected to a terminal NMessage by the survivor
+    // logic above (their target changed state -> exit in the edited model). A deleted node's procedure span
+    // never overlaps another node's option slots (procedures are disjoint), and a redirected inbound option
+    // lives in a DIFFERENT surviving node, so this deletion and that slot rewrite cannot overlap.
+    const editedIds = new Set(edited.roots.flatMap((r) => r.states).map((s) => s.id));
+    for (const orig of original.roots.flatMap((r) => r.states)) {
+        if (editedIds.has(orig.id) || !orig.procRange) continue;
+        const start = orig.procRange.start;
+        const nl = originalText.indexOf("\n", orig.procRange.end);
+        const end = nl === -1 ? orig.procRange.end : nl + 1;
+        ops.push({ start, end, replacement: "" });
+    }
+
     return applySplices(originalText, ops);
 }
 
