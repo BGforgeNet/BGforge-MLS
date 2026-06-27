@@ -84,6 +84,13 @@ export interface SSLDialogNode {
      * Set by the parser for every node (the option count can be zero).
      */
     insertAnchor?: { offset: number; indent: string };
+    /** Byte span of the whole `procedure <name> ... end` block (used to delete the node). Set by the parser. */
+    procRange?: { start: number; end: number };
+    /**
+     * `call <target>;` transitions out of this node, with each statement's byte span (used to remove the call
+     * when its target node is deleted). Parallels `callTargets` (names only) but carries the spans. Set by the parser.
+     */
+    callTransitions?: Array<{ name: string; stmtRange: { start: number; end: number } }>;
 }
 
 export interface SSLDialogData {

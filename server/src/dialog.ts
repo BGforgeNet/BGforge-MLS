@@ -79,7 +79,9 @@ export async function parseDialog(
             extractEntryPoints(child, entryPoints);
             continue;
         }
-        parsed.set(procName, parseProcedure(child, procName, sideEffectFns, text));
+        const node = parseProcedure(child, procName, sideEffectFns, text);
+        node.procRange = { start: child.startIndex, end: child.endIndex };
+        parsed.set(procName, node);
     }
 
     // force_dialog_start(Node*) / start_dialog_at_node(Node*) start a conversation
@@ -147,6 +149,8 @@ function parseProcedure(
     const replies: SSLDialogReply[] = [];
     const options: SSLDialogOption[] = [];
     const callTargets: string[] = [];
+    // Parallel to callTargets but carrying each `call <target>;` statement's byte span (for delete).
+    const callTransitions: { name: string; stmtRange: { start: number; end: number } }[] = [];
     // Source-ordered, deduplicated side-effect builtins this node calls. Walk order is
     // top-down, so first-occurrence order is source order.
     const sideEffects: string[] = [];
@@ -218,6 +222,11 @@ function parseProcedure(
                 // are real transitions out of the dialog.
                 if (targetName && !callTargets.includes(targetName)) {
                     callTargets.push(targetName);
+                    // CallStmt span includes the trailing `;` (grammar: call_stmt ends with ";").
+                    callTransitions.push({
+                        name: targetName,
+                        stmtRange: { start: node.startIndex, end: node.endIndex },
+                    });
                 }
             }
         }
@@ -233,6 +242,7 @@ function parseProcedure(
         insertAnchor: nodeInsertAnchor(proc, fullText),
         // Omit when empty so nodes without detected side-effects stay clean in the IR.
         ...(sideEffects.length > 0 ? { sideEffects } : {}),
+        ...(callTransitions.length > 0 ? { callTransitions } : {}),
     };
 }
 

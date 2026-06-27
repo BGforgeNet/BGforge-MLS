@@ -13,6 +13,22 @@ describe("SSL option source ranges", () => {
     });
 });
 
+describe("SSL node procedure range + call-statement range", () => {
+    it("captures the whole procedure span and a call transition's statement span", async () => {
+        const ssl = `procedure Node001 begin\n    call combat;\nend\nprocedure talk_p_proc begin\n  call Node001;\nend\n`;
+        const result = await parseDialog(ssl);
+        const node = result.nodes.find((n) => n.name === "Node001")!;
+        expect(ssl.slice(node.procRange!.start, node.procRange!.end)).toBe(
+            "procedure Node001 begin\n    call combat;\nend",
+        );
+        // The call transition carries the span of its whole `call combat;` statement (for delete).
+        expect(node.callTransitions![0]!.name).toBe("combat");
+        expect(ssl.slice(node.callTransitions![0]!.stmtRange.start, node.callTransitions![0]!.stmtRange.end)).toBe(
+            "call combat;",
+        );
+    });
+});
+
 describe("SSL statement range + insertion anchor", () => {
     it("captures an option's full statement span (call + semicolon) and the node insert anchor", async () => {
         const ssl = `procedure Node001 begin\n    NOption(101, Node002, 4);\nend\nprocedure talk_p_proc begin\n  call Node001;\nend\n`;

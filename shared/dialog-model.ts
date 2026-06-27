@@ -93,6 +93,12 @@ export interface DialogState {
      * plus its line indentation). Set by the SSL adapter; absent for D and synthetic states.
      */
     insertAnchor?: { offset: number; indent: string };
+    /**
+     * SSL only: byte span of the whole `procedure <name> ... end` block (used to delete the node). Set by
+     * the SSL adapter; absent for D and for a NEW node (no source procedure - the "no procRange = pending
+     * insert" marker, mirroring D's absent `sourceRange`).
+     */
+    procRange?: { start: number; end: number };
 }
 
 export type DialogReaction = "neutral" | "good" | "bad";
@@ -123,6 +129,12 @@ export interface DialogChoice {
     targetRange?: { start: number; end: number };
     /** SSL only: byte span of the whole option statement `NOption(...);` incl. `;` (used by remove). */
     stmtRange?: { start: number; end: number };
+    /**
+     * SSL only: byte span of a `call <target>;` transition's whole statement (incl. `;`). Set on a call
+     * choice (one with no `callRange`) by the SSL adapter; used to detect a node reached by a `call` (which
+     * is not safely deletable here) and, in Tier 3b, to remove the call. Absent for option choices and D.
+     */
+    callStmtRange?: { start: number; end: number };
 }
 
 export type DialogTarget =
@@ -362,6 +374,15 @@ function stateFromSSL(node: SSLDialogNode): DialogState {
         });
     });
 
+    // Attach each call statement's byte span to its matching call choice (no callRange), so delete-eligibility
+    // can tell a node reached by a `call` from one reached only by options.
+    node.callTransitions?.forEach((ct) => {
+        const c = choices.find(
+            (ch) => ch.target.kind === "state" && ch.target.stateId === ct.name && ch.callRange === undefined,
+        );
+        if (c) c.callStmtRange = ct.stmtRange;
+    });
+
     // A node can hold several (conditional) Reply lines; show the first as the line,
     // carrying its conditional. TODO(phase-5): surface alternate conditional lines.
     const firstReply = node.replies[0];
@@ -374,6 +395,7 @@ function stateFromSSL(node: SSLDialogNode): DialogState {
         sideEffects: node.sideEffects,
         faithful: node.faithful,
         insertAnchor: node.insertAnchor,
+        procRange: node.procRange,
     };
 }
 
