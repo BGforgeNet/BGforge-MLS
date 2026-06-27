@@ -178,17 +178,18 @@ describe("modelToFlow - spotlight flag", () => {
         expect(stateBadges(cardState)).toContain("side-effect");
     });
 
-    test("carries the model's editability onto each card (drives handle connectability)", () => {
-        // Node.svelte gates drag-to-retarget on data.editable; a view-only (SSL) model must
-        // mark its cards non-editable so structure can't be dragged, an editable (D) model the
-        // opposite. Guards the source of that wiring.
+    test("carries structural editability onto each card (drives handle connectability)", () => {
+        // Node.svelte gates drag-to-retarget on data.structuralEditable; an editable (D) model
+        // marks its cards editable, while a view-only SSL model with no faithful node marks them
+        // non-editable so structure can't be dragged. Guards the source of that wiring (the SSL
+        // faithful/non-faithful split is covered by the dedicated test below).
         const ssl: DialogModel = {
             format: "fallout-ssl",
             editable: false,
             roots: [{ id: "d", label: "d", kind: "dialog", states: [{ id: "N", text: "@1", choices: [] }] }],
         };
-        expect(modelToFlow(ssl).nodes.find((n) => n.id === "N")?.data.editable).toBe(false);
-        expect(modelToFlow(SAMPLE).nodes.find((n) => n.type === "card")?.data.editable).toBe(true);
+        expect(modelToFlow(ssl).nodes.find((n) => n.id === "N")?.data.structuralEditable).toBe(false);
+        expect(modelToFlow(SAMPLE).nodes.find((n) => n.type === "card")?.data.structuralEditable).toBe(true);
     });
 
     test("a faithful SSL node is structurally editable; a non-faithful one is not", () => {
