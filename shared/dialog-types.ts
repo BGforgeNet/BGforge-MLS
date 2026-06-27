@@ -46,6 +46,10 @@ export interface SSLDialogOption {
     conditional?: string;
     /** See `SSLDialogReply.msgKind`: `computed`/`random` when the id is not a fixed literal. */
     msgKind?: "computed" | "random";
+    /** Byte span of the whole option call `NOption(...)` in the source (used by reorder). Set by the parser. */
+    callRange?: { start: number; end: number };
+    /** Byte span of the option's target-Node argument in the source (used by retarget). Set by the parser. */
+    targetRange?: { start: number; end: number };
 }
 
 export interface SSLDialogNode {

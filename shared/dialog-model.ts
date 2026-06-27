@@ -109,6 +109,13 @@ export interface DialogChoice {
      * adapter; used by the per-field surgical edit to splice just this transition.
      */
     sourceRange?: { start: number; end: number };
+    /**
+     * SSL only: byte span of the whole option call `NOption(...)` (used by reorder) and of its
+     * target-Node argument (used by retarget). Set by the SSL adapter; absent for D, which uses
+     * `sourceRange` for its whole-transition span.
+     */
+    callRange?: { start: number; end: number };
+    targetRange?: { start: number; end: number };
 }
 
 export type DialogTarget =
@@ -335,6 +342,8 @@ function stateFromSSL(node: SSLDialogNode): DialogState {
             target: opt.target ? { kind: "state", stateId: opt.target } : { kind: "exit" },
             reaction: reactionFromType(opt.type),
             skill: opt.skill,
+            callRange: opt.callRange,
+            targetRange: opt.targetRange,
         });
     });
 

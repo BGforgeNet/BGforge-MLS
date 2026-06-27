@@ -184,6 +184,8 @@ function parseProcedure(proc: SyntaxNode, name: string, sideEffectFns: ReadonlyS
                     line,
                     conditional: enclosingCondition(node),
                     msgKind: classifyMsgId(arg0),
+                    callRange: { start: node.startIndex, end: node.endIndex },
+                    targetRange: { start: arg1.startIndex, end: arg1.endIndex },
                 });
             }
 
