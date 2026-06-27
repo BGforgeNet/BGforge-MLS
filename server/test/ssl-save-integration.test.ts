@@ -84,3 +84,53 @@ describe("SSL add-node save round-trip", () => {
         expect(reparsed.roots[0]!.states.find((s) => s.id === "Node050")).toBeDefined();
     });
 });
+
+// Tier 3b node-wiring round-trips through the REAL parser: add an entry node, rename a node, and delete a
+// node that is BOTH an entry and call-referenced (exercising the entry-call + inbound-call removal together).
+describe("SSL Tier 3b node-wiring save round-trips", () => {
+    it("add-entry-node save: new node gets a procedure, a talk_p_proc call, and re-parses as an entry", async () => {
+        const SRC = `procedure Node001 begin\n    Reply(100);\nend\nprocedure talk_p_proc begin\n    call Node001;\nend\n`;
+        const MSG = `{100}{}{npc}\n`;
+        const original = modelFromSSL(await parseDialog(SRC));
+        const edited = structuredClone(original);
+        edited.roots[0]!.states.push({ id: "Node050", text: "New entry line", isEntry: true, choices: [] });
+
+        const onDisk = { "100": "npc" };
+        const node = allocateNodeIds(edited, onDisk);
+        const allMessages = { ...onDisk, ...node.newMessages };
+        const newSrc = applySSLDialogEdits(SRC, edited, original);
+        const newMsg = appendMsgEntries(rewriteMsgEntries(MSG, allMessages), allMessages);
+
+        expect(newSrc).toContain("procedure Node050 begin\n    Reply(101);\nend");
+        expect(newMsg).toContain("{101}{}{New entry line}");
+        const reparsed = await parseDialog(newSrc);
+        expect(reparsed.entryPoints).toContain("Node050"); // wired as a real entry
+    });
+
+    it("rename save: re-parses with the new procedure name and references", async () => {
+        const SRC = `procedure Node001 begin\n    NOption(101, Node002, 4);\nend\nprocedure Node002 begin\n    call Node001;\nend\nprocedure talk_p_proc begin call Node001; end\n`;
+        const original = modelFromSSL(await parseDialog(SRC));
+        const edited = structuredClone(original);
+        const n1 = edited.roots[0]!.states.find((s) => s.id === "Node001")!;
+        n1.renamedFrom = "Node001";
+        n1.id = "Node009";
+        const out = applySSLDialogEdits(SRC, edited, original);
+        const reparsed = await parseDialog(out);
+        expect(reparsed.nodes.find((n) => n.name === "Node009")).toBeDefined();
+        expect(reparsed.nodes.find((n) => n.name === "Node001")).toBeUndefined();
+        expect(reparsed.entryPoints).toContain("Node009"); // entry call renamed too
+    });
+
+    it("delete a node that is both an entry and call-referenced: procedure + both calls removed", async () => {
+        const SRC = `procedure Node001 begin\n    call Node002;\nend\nprocedure Node002 begin Reply(200); end\nprocedure talk_p_proc begin\n    call Node001;\n    call Node002;\nend\n`;
+        const original = modelFromSSL(await parseDialog(SRC));
+        const edited = structuredClone(original);
+        edited.roots[0]!.states = edited.roots[0]!.states.filter((s) => s.id !== "Node002");
+        const out = applySSLDialogEdits(SRC, edited, original);
+        expect(out).not.toContain("procedure Node002");
+        expect(out).not.toContain("call Node002;"); // both the intra-node call and the talk_p_proc entry call
+        const reparsed = await parseDialog(out);
+        expect(reparsed.nodes.find((n) => n.name === "Node002")).toBeUndefined();
+        expect(reparsed.entryPoints).toContain("Node001"); // the surviving entry is intact
+    });
+});
