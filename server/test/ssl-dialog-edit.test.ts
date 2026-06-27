@@ -245,6 +245,31 @@ describe("verifySSLEditApplied", () => {
     });
 });
 
+describe("applySSLDialogEdits - entry wiring", () => {
+    const SRC_EW = `procedure Node001 begin\n    Reply(100);\nend\nprocedure talk_p_proc begin\n    call Node001;\nend\n`;
+
+    it("adds a call into talk_p_proc when a node becomes an entry", async () => {
+        const original = modelFromSSL(await parseDialog(SRC_EW));
+        const edited = structuredCloneModel(original);
+        // A new target-less node, marked as an entry.
+        edited.roots[0]!.states.push({ id: "Node050", text: "@500", isEntry: true, choices: [] });
+        const out = applySSLDialogEdits(SRC_EW, edited, original);
+        // Its procedure is spliced (Tier 3a add path) AND a call is added to talk_p_proc.
+        expect(out).toContain("procedure Node050 begin\n    Reply(500);\nend");
+        // Tight: the new call lands inside talk_p_proc's body, after the existing entry call (a loose
+        // wildcard would also pass if it landed in the wrong procedure).
+        expect(out).toContain("procedure talk_p_proc begin\n    call Node001;\n    call Node050;\nend");
+    });
+
+    it("removes a node's call from talk_p_proc when it ceases to be an entry", async () => {
+        const original = modelFromSSL(await parseDialog(SRC_EW));
+        const edited = structuredCloneModel(original);
+        edited.roots[0]!.states.find((s) => s.id === "Node001")!.isEntry = false;
+        const out = applySSLDialogEdits(SRC_EW, edited, original);
+        expect(out).not.toContain("call Node001;");
+    });
+});
+
 describe("modelFromSSL node-wiring projection", () => {
     it("sets isEntry from entryIds, carries nameRange, and exposes entryCalls/anchor", async () => {
         const src = `procedure Node001 begin\n    NOption(101, Node002, 4);\nend\nprocedure Node002 begin Reply(200); end\nprocedure talk_p_proc begin call Node001; end\n`;

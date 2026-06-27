@@ -181,6 +181,42 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
             ops.push({ start: anchor, end: anchor, replacement: blocks.map((b) => `${b}\n`).join("") });
     }
 
+    // ENTRY WIRING: a node that became an entry -> splice `call <id>;` into talk_p_proc after the last
+    // existing body statement; one that ceased being an entry (toggled off OR deleted) -> remove its
+    // `call` statement. Overlap reasoning: entry-call removal spans live inside talk_p_proc, which is
+    // disjoint from every node procedure and from any option slot; the addition is a zero-width splice
+    // at entryCallAnchor (end of talk_p_proc's last body statement). A node that is both deleted AND was
+    // an entry produces two ops: the procedure deletion (in its own procedure) and the entry-call removal
+    // (in talk_p_proc) - the two procedures are disjoint so the ops cannot overlap.
+    const originalEntries = new Set(original.entryIds);
+    const editedById = new Map(edited.roots.flatMap((r) => r.states).map((s) => [s.id, s]));
+    // Removals: an original entry whose edited node is gone or no longer isEntry.
+    for (const ec of original.entryCalls ?? []) {
+        const e = editedById.get(ec.name);
+        if (e && e.isEntry) continue; // still an entry -> keep
+        if (!ec.topLevel) continue; // conditional entry (`if (X) call ...;`) - outside scope of this tier
+        const nl = originalText.indexOf("\n", ec.stmtRange.end);
+        const start = originalText.lastIndexOf("\n", ec.stmtRange.start - 1) + 1;
+        const lead = originalText.slice(start, ec.stmtRange.start);
+        const from = /^[ \t]*$/.test(lead) ? start : ec.stmtRange.start;
+        const to = from === start && nl !== -1 ? nl + 1 : ec.stmtRange.end;
+        ops.push({ start: from, end: to, replacement: "" });
+    }
+    // Additions: an edited node that isEntry but was not an original entry.
+    // entryCallAnchor is undefined when talk_p_proc has an empty body; guard accordingly.
+    const anchorE = original.entryCallAnchor;
+    if (anchorE !== undefined) {
+        const added = [...editedById.values()].filter((s) => s.isEntry && !originalEntries.has(s.id));
+        if (added.length > 0) {
+            const indent = "    ";
+            ops.push({
+                start: anchorE,
+                end: anchorE,
+                replacement: added.map((s) => `\n${indent}call ${s.id};`).join(""),
+            });
+        }
+    }
+
     return applySplices(originalText, ops);
 }
 
