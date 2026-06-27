@@ -59,6 +59,65 @@ procedure talk_p_proc begin call Node001; end
     });
 });
 
+describe("applySSLDialogEdits - add / remove", () => {
+    const SRC2 = `procedure Node001 begin
+    NOption(101, Node002, 4);
+    NOption(102, Node003, 4);
+end
+procedure Node002 begin Reply(200); end
+procedure Node003 begin Reply(300); end
+procedure talk_p_proc begin call Node001; end
+`;
+
+    it("removes an option by splicing its whole statement out", async () => {
+        const original = modelFromSSL(await parseDialog(SRC2));
+        const edited = structuredCloneModel(original);
+        const n1 = edited.roots[0]!.states.find((s) => s.id === "Node001")!;
+        n1.choices = n1.choices.filter((c) => c.id !== "Node001#opt0"); // drop the first option
+        const out = applySSLDialogEdits(SRC2, edited, original);
+        expect(out).not.toContain("NOption(101");
+        // The survivor is intact and no stray blank line is left where the option was.
+        expect(out).toContain("procedure Node001 begin\n    NOption(102, Node003, 4);\nend");
+    });
+
+    it("adds a new option by serializing it at the node's insert anchor", async () => {
+        const original = modelFromSSL(await parseDialog(SRC2));
+        const edited = structuredCloneModel(original);
+        const n1 = edited.roots[0]!.states.find((s) => s.id === "Node001")!;
+        // A new option carries an allocated @id (Task 4 ran), a target, and NO callRange.
+        n1.choices.push({
+            id: "Node001#new0",
+            text: "@500",
+            target: { kind: "state", stateId: "Node002" },
+            skill: 4,
+        });
+        const out = applySSLDialogEdits(SRC2, edited, original);
+        expect(out).toContain("NOption(500, Node002, 4);");
+        // It is inserted after the existing options, before `end`.
+        expect(out.indexOf("NOption(500")).toBeGreaterThan(out.indexOf("NOption(102"));
+        expect(out.indexOf("NOption(500")).toBeLessThan(out.indexOf("\nend"));
+    });
+
+    it("removes the last option and adds one in the same save without overlap", async () => {
+        const original = modelFromSSL(await parseDialog(SRC2));
+        const edited = structuredCloneModel(original);
+        const n1 = edited.roots[0]!.states.find((s) => s.id === "Node001")!;
+        // Drop opt1 (the LAST option, whose statement ends at the node insert anchor) and add a new one.
+        n1.choices = n1.choices.filter((c) => c.id !== "Node001#opt1");
+        n1.choices.push({ id: "Node001#new0", text: "@500", target: { kind: "state", stateId: "Node002" } });
+        const out = applySSLDialogEdits(SRC2, edited, original);
+        expect(out).not.toContain("NOption(102"); // removed
+        // No overlap corruption: Node001 reads cleanly with opt0 + the new option.
+        expect(out).toContain(
+            "procedure Node001 begin\n    NOption(101, Node002, 4);\n    NOption(500, Node002);\nend",
+        );
+        expect(out).toContain("NOption(101, Node002, 4)"); // survivor intact
+        expect(out).toContain("NOption(500, Node002);"); // added, well-formed (no overlap corruption)
+        // The whole talk_p_proc / other procedures are still intact (no byte mangling from an overlap).
+        expect(out).toContain("procedure talk_p_proc begin call Node001; end");
+    });
+});
+
 describe("verifySSLEditApplied", () => {
     it("confirms a correctly-applied retarget and rejects a save that did not take", async () => {
         const original = modelFromSSL(await parseDialog(SRC));

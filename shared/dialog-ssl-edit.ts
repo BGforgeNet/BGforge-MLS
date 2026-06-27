@@ -16,6 +16,7 @@
 import type { DialogChoice, DialogModel, DialogState, DialogTarget } from "./dialog-model";
 import type { VerifyResult } from "./dialog-d-edit";
 import { applySplices, type SpliceOp } from "./dialog-splice";
+import { serializeSSLOption } from "./dialog-ssl-serialize";
 
 /** The new target token for an option, or null when it cannot be expressed as a target-Node arg. */
 function targetToken(choice: DialogChoice): string | null {
@@ -27,39 +28,89 @@ function optionsOf(state: DialogState): DialogChoice[] {
     return state.choices.filter((c) => c.callRange);
 }
 
-/**
- * Build the splice ops for one faithful node. Each original option slot (source order) is refilled
- * with the call text of the option that the edited order places there, with its target substituted
- * if it changed. Returns no ops when the option count changed (add/remove is Tier 2, not Tier 1).
- */
-function nodeOps(text: string, edited: DialogState, orig: DialogState): SpliceOp[] {
-    const origOpts = optionsOf(orig);
-    const editedOpts = optionsOf(edited);
-    if (origOpts.length === 0 || origOpts.length !== editedOpts.length) return [];
+// A NEW option: no source `callRange` (never existed in the .ssl) and an allocated `@<id>` text (the id is
+// assigned at save time, before the splice). Distinct from dialog-ssl-ids.ts's pre-allocation `isNewOption`
+// (literal text); here the id has already been assigned.
+function isNewSSLOption(c: DialogChoice): boolean {
+    return c.callRange === undefined && /^@\d+$/.test((c.text ?? "").trim());
+}
 
+/**
+ * Build the splice ops for one faithful node. Composes three edit kinds, all non-overlapping:
+ * - REMOVE: an original (unconditional) option absent from the edit -> delete its whole statement.
+ * - SURVIVORS: Tier 1 retarget + reorder over options that still exist, by refilling their source slots.
+ * - ADD: a new option (no `callRange`, allocated `@id`) -> serialize and insert at the node anchor.
+ * Bails (returns no ops) if a conditional option is added/removed (would rewrite the `if` wrapper - Tier 3).
+ */
+function nodeOps(
+    text: string,
+    edited: DialogState,
+    orig: DialogState,
+    anchor: { offset: number; indent: string } | undefined,
+): SpliceOp[] {
+    const origOpts = optionsOf(orig); // existing-in-source options (have a callRange), in source order
+    const editedOpts = edited.choices.filter((c) => c.callRange || isNewSSLOption(c));
     const origById = new Map(origOpts.map((c) => [c.id, c]));
+    const editedIds = new Set(editedOpts.map((c) => c.id));
     const ops: SpliceOp[] = [];
 
-    for (let i = 0; i < origOpts.length; i++) {
-        const slot = origOpts[i]!.callRange!;
-        const moved = editedOpts[i]!;
-        const movedOrig = origById.get(moved.id);
-        if (!movedOrig?.callRange || !movedOrig.targetRange) return []; // shape we can't splice safely
+    // Adding/removing a CONDITIONAL option would rewrite its `if` wrapper (Tier 3): bail (no structural write).
+    // On DialogChoice the enclosing-if text is `condition` (the SSL adapter maps SSLDialogOption.conditional ->
+    // DialogChoice.condition).
+    for (const o of origOpts) if (!editedIds.has(o.id) && o.condition) return [];
 
-        // Start from the moved option's original call text, then substitute its target token if the
-        // edit retargeted it. Offsets are taken relative to the moved option's own call span.
-        const base = text.slice(movedOrig.callRange.start, movedOrig.callRange.end);
+    // REMOVE: an original option absent from the edit -> splice its whole statement out, consuming the line's
+    // leading indentation and trailing newline so no stray blank line is left (only when the lead is all
+    // whitespace - otherwise something shares the line and we delete just the statement).
+    for (const o of origOpts) {
+        if (editedIds.has(o.id)) continue;
+        if (!o.stmtRange) return []; // no statement span -> cannot remove safely
+        const lineStart = text.lastIndexOf("\n", o.stmtRange.start - 1) + 1;
+        const lead = text.slice(lineStart, o.stmtRange.start);
+        const start = /^[ \t]*$/.test(lead) ? lineStart : o.stmtRange.start;
+        const nl = text.indexOf("\n", o.stmtRange.end);
+        const end = start === lineStart && nl !== -1 ? nl + 1 : o.stmtRange.end;
+        ops.push({ start, end, replacement: "" });
+    }
+
+    // SURVIVORS (Tier 1 retarget + reorder, restricted to options that still exist): the original
+    // source-ordered slots of surviving options, each refilled with the survivor now at that position.
+    const survivorSlots = origOpts.filter((o) => editedIds.has(o.id)).map((o) => o.callRange!);
+    const survivorsInEditedOrder = editedOpts.filter((c) => origById.has(c.id));
+    for (let i = 0; i < survivorSlots.length; i++) {
+        const slot = survivorSlots[i]!;
+        const moved = survivorsInEditedOrder[i]!;
+        const movedOrig = origById.get(moved.id)!;
+        const base = text.slice(movedOrig.callRange!.start, movedOrig.callRange!.end);
         const newTarget = targetToken(moved);
-        const oldTarget = text.slice(movedOrig.targetRange.start, movedOrig.targetRange.end);
+        const oldTarget = text.slice(movedOrig.targetRange!.start, movedOrig.targetRange!.end);
         let replacement = base;
         if (newTarget !== null && newTarget !== oldTarget) {
-            const relStart = movedOrig.targetRange.start - movedOrig.callRange.start;
-            const relEnd = movedOrig.targetRange.end - movedOrig.callRange.start;
+            const relStart = movedOrig.targetRange!.start - movedOrig.callRange!.start;
+            const relEnd = movedOrig.targetRange!.end - movedOrig.callRange!.start;
             replacement = base.slice(0, relStart) + newTarget + base.slice(relEnd);
         }
+        if (replacement !== text.slice(slot.start, slot.end))
+            ops.push({ start: slot.start, end: slot.end, replacement });
+    }
 
-        const current = text.slice(slot.start, slot.end);
-        if (replacement !== current) ops.push({ start: slot.start, end: slot.end, replacement });
+    // ADD: each new option (no callRange, allocated @id) -> serialize and insert as a zero-width splice.
+    // Anchor after the last SURVIVING option's statement (whose span is never deleted), so the insert can
+    // never land inside a removed option's range; fall back to the parser node anchor only when no option
+    // survives. `indent` is the parser-captured body indentation.
+    const added = editedOpts.filter((c) => isNewSSLOption(c) && !origById.has(c.id));
+    if (added.length > 0) {
+        const survivorEnds = origOpts.filter((o) => editedIds.has(o.id) && o.stmtRange).map((o) => o.stmtRange!.end);
+        const offset = survivorEnds.length > 0 ? Math.max(...survivorEnds) : anchor?.offset;
+        const indent = anchor?.indent ?? "    ";
+        if (offset !== undefined) {
+            const msgIdOf = (c: DialogChoice): number => Number(/^@(\d+)$/.exec((c.text ?? "").trim())?.[1] ?? NaN);
+            const block = added
+                .filter((c) => Number.isFinite(msgIdOf(c)))
+                .map((c) => `\n${indent}${serializeSSLOption(c, msgIdOf(c))}`)
+                .join("");
+            if (block) ops.push({ start: offset, end: offset, replacement: block });
+        }
     }
     return ops;
 }
@@ -81,7 +132,7 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
     for (const state of edited.roots.flatMap((r) => r.states)) {
         const orig = origById.get(state.id);
         if (!orig || !orig.faithful) continue; // gate: only faithful nodes are structurally editable
-        ops.push(...nodeOps(originalText, state, orig));
+        ops.push(...nodeOps(originalText, state, orig, orig.insertAnchor));
     }
     return applySplices(originalText, ops);
 }
