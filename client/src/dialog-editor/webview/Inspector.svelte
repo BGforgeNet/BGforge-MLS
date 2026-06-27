@@ -14,7 +14,7 @@
     // (Fallout SSL) it is a read-only, SSL-native presentation - SSL is derived from script
     // and has no surgical write-back yet, so editing is disabled and the WeiDU vocabulary
     // (trigger/weight/`DO ~...~`) is replaced or dropped.
-    let { state, messages, stateIds, actions, format, editable, structuralEditable, deletable }: {
+    let { state, messages, stateIds, actions, format, editable, structuralEditable, deletable, entryRemovable }: {
         state: DialogState;
         messages: Record<string, string> | undefined;
         stateIds: string[];
@@ -30,6 +30,11 @@
         // reference can be cleaned up on save - see DialogGraph canDelete / eligibleToDelete). Surfaces
         // the SSL Delete button (Tier 3a); D's delete stays in the `!readOnly` ops block below.
         deletable: boolean;
+        // Whether toggling off isEntry is safe for this node. True when the node is NOT currently
+        // an entry (toggling on is always safe), or when its entry call is top-level (can be removed
+        // without orphaning a conditional wrapper). False when the node IS an entry AND its entry call
+        // is non-top-level - disabling the checkbox in that case.
+        entryRemovable: boolean;
         actions: {
             rename: (newId: string) => void;
             addReply: () => void;
@@ -38,6 +43,7 @@
             setTarget: (choiceId: string, target: DialogTarget) => void;
             deleteState: () => void;
             duplicateState: () => void;
+            setEntry: (on: boolean) => void;
         };
     } = $props();
 
@@ -121,8 +127,8 @@
         </div>
     {:else if ssl && structuralEditable}
         <div class="ronote">
-            Text edits save to the <b>.msg</b>. You can <b>retarget</b> and <b>reorder</b> options here -
-            they write back to the <b>.ssl</b>. Other structural changes (add/remove options,
+            Text edits save to the <b>.msg</b>. You can <b>rename</b>, <b>retarget</b>, and <b>reorder</b>
+            options here - they write back to the <b>.ssl</b>. Other structural changes (add/remove options,
             conditions) still need the source.
         </div>
     {:else if ssl}
@@ -134,7 +140,7 @@
     {/if}
 
     <div class="ik">{ssl ? "Node" : readOnly ? "State label (read-only)" : "State label (jump target)"}</div>
-    <input class="iv code" value={state.id} disabled={readOnly} onchange={(e) => actions.rename(e.currentTarget.value)} />
+    <input class="iv code" value={state.id} disabled={!structuralEditable && readOnly} onchange={(e) => actions.rename(e.currentTarget.value)} />
 
     <div class="ik">{ssl ? "Reply line" : "NPC line"}</div>
     <textarea class="iv" rows="2" use:autosize={resolveText(state.text, messages)} disabled={textLocked(state.text)} value={resolveText(state.text, messages)} oninput={(e) => setSay(e.currentTarget.value)}></textarea>
@@ -148,6 +154,18 @@
         {#if state.sideEffects?.length}
             <div class="ik">Side effects</div>
             <div class="iv sfx">{state.sideEffects.join(", ")}</div>
+        {/if}
+        {#if structuralEditable}
+            <div class="ik">Entry</div>
+            <label class="entry-toggle">
+                <input
+                    type="checkbox"
+                    checked={state.isEntry ?? false}
+                    disabled={!entryRemovable}
+                    onchange={(e) => actions.setEntry(e.currentTarget.checked)}
+                />
+                Dialog entry (talk_p_proc)
+            </label>
         {/if}
     {:else}
         <div class="row2">
@@ -351,6 +369,23 @@
     }
     .iv.tgt {
         color: #cbd5e1;
+    }
+    /* SSL entry toggle: inline label + checkbox, matches the inspector's dim-on-disabled tone. */
+    .entry-toggle {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 11px;
+        color: #e8eaed;
+        cursor: pointer;
+    }
+    .entry-toggle input[type="checkbox"]:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+    .entry-toggle:has(input:disabled) {
+        opacity: 0.5;
+        cursor: not-allowed;
     }
     /* SSL side-effects: teal, matching the side-effect badge. Read-only, so a plain box. */
     .iv.sfx {

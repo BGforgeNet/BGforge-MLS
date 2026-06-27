@@ -443,9 +443,18 @@
     const canDelete = (s: DialogState | null): s is DialogState =>
         structEditable(s) && eligibleToDelete(editModel, s.id);
 
+    // Whether the isEntry toggle can be turned OFF for a given state. Toggling ON is always safe
+    // (adds a new entry call). Toggling OFF is only safe when there is a known top-level `talk_p_proc`
+    // entry call to remove. A conditional call (`if (X) call NodeY;`) is non-top-level - the save path
+    // does not rewrite the `if`, so removing the call would orphan it. A node made an entry by
+    // `force_dialog_start`/`start_dialog_at_node` (not a talk_p_proc call) has NO `entryCalls` entry, so
+    // the writer cannot un-wire it either; require `topLevel === true` (a real, removable entry call).
+    const isEntryRemovable = (s: DialogState): boolean =>
+        !s.isEntry || (editModel.entryCalls ?? []).find((ec) => ec.name === s.id)?.topLevel === true;
+
     const actions = {
         rename: (newId: string) => {
-            if (editable(selected) && ops.renameState(editModel, selected, newId)) void rebuild({ frame: "none" });
+            if (structEditable(selected) && ops.renameState(editModel, selected, newId)) void rebuild({ frame: "none" });
         },
         addReply: () => {
             if (!structEditable(selected)) return; // Tier 2 add option: D or faithful SSL
@@ -479,6 +488,11 @@
             if (!copy) return;
             selected = copy;
             void rebuild({ focusId: copy.id });
+        },
+        setEntry: (on: boolean) => {
+            if (!structEditable(selected)) return;
+            selected.isEntry = on;
+            void rebuild({ frame: "none" });
         },
     };
 
@@ -575,7 +589,7 @@
 {/snippet}
 
 {#snippet inspectorBox(s: DialogState)}
-    <Inspector state={s} messages={editModel.messages} {stateIds} {actions} format={editModel.format} editable={editModel.editable} structuralEditable={structEditable(s)} deletable={canDelete(s)} />
+    <Inspector state={s} messages={editModel.messages} {stateIds} {actions} format={editModel.format} editable={editModel.editable} structuralEditable={structEditable(s)} deletable={canDelete(s)} entryRemovable={isEntryRemovable(s)} />
 {/snippet}
 
 <svelte:window onkeydown={(e) => e.key === "Escape" && ctxMenu && closeContext()} />
