@@ -30,6 +30,11 @@ export interface DialogModel {
      * Set by the SSL adapter; absent for D and when the source has no talk_p_proc.
      */
     newProcAnchor?: number;
+    /**
+     * SSL only: ids of the dialog entry nodes (the nodes `talk_p_proc` / `force_dialog_start` reach). Set by
+     * the SSL adapter; used to refuse deleting an entry node (which would orphan the conversation). Absent for D.
+     */
+    entryIds?: string[];
 }
 
 export type DialogRootKind = "dialog" | "patch";
@@ -414,5 +419,6 @@ export function modelFromSSL(data: SSLDialogData): DialogModel {
                 : [],
         messages: data.messages,
         newProcAnchor: data.newProcAnchor,
+        entryIds: data.entryPoints,
     };
 }

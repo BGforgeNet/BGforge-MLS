@@ -179,6 +179,28 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
     return applySplices(originalText, ops);
 }
 
+/**
+ * Whether an SSL node can be safely deleted from the graph (Tier 3a). A node is eligible only when every
+ * inbound reference can be cleaned up by the writer:
+ * - not a dialog entry (`talk_p_proc`/`force_dialog_start` target) - deleting it would orphan the conversation;
+ * - not reached by a `call <node>;` - removing the call is Tier 3b, so refuse rather than dangle it;
+ * - every inbound OPTION lives in a faithful node - only a faithful node's option is rewritten to a terminal
+ *   `NMessage` on delete; an inbound option in a non-faithful (un-rewritten) node would be left dangling.
+ * Non-SSL models defer to their own delete rules (D states are deletable when not derived).
+ */
+export function eligibleToDelete(model: DialogModel, stateId: string): boolean {
+    if (model.format !== "fallout-ssl") return true;
+    if ((model.entryIds ?? []).includes(stateId)) return false;
+    for (const s of model.roots.flatMap((r) => r.states)) {
+        for (const c of s.choices) {
+            if (c.target.kind !== "state" || c.target.stateId !== stateId) continue;
+            if (c.callStmtRange) return false; // reached by a `call` (Tier 3b)
+            if (s.faithful !== true) return false; // inbound option in a node whose source we cannot rewrite
+        }
+    }
+    return true;
+}
+
 /** Stable key for a transition target, so option order/targets can be compared structurally. */
 function targetKey(t: DialogTarget): string {
     if (t.kind === "state") return `state:${t.stateId}`;

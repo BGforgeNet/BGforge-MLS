@@ -14,7 +14,7 @@
     // (Fallout SSL) it is a read-only, SSL-native presentation - SSL is derived from script
     // and has no surgical write-back yet, so editing is disabled and the WeiDU vocabulary
     // (trigger/weight/`DO ~...~`) is replaced or dropped.
-    let { state, messages, stateIds, actions, format, editable, structuralEditable }: {
+    let { state, messages, stateIds, actions, format, editable, structuralEditable, deletable }: {
         state: DialogState;
         messages: Record<string, string> | undefined;
         stateIds: string[];
@@ -25,6 +25,10 @@
         // rest of the D edit surface (rename, add/remove option, condition/action, duplicate/delete)
         // stays read-only - those are D-only or later SSL tiers the save path can't persist yet.
         structuralEditable: boolean;
+        // Whether this node can be deleted (D: any non-derived; faithful SSL: only when every inbound
+        // reference can be cleaned up on save - see DialogGraph canDelete / eligibleToDelete). Surfaces
+        // the SSL Delete button (Tier 3a); D's delete stays in the `!readOnly` ops block below.
+        deletable: boolean;
         actions: {
             rename: (newId: string) => void;
             addReply: () => void;
@@ -203,6 +207,13 @@
     {#if !readOnly}
         <div class="stateops">
             <button onclick={actions.duplicateState}>Duplicate state</button>
+            <button class="del" onclick={actions.deleteState}>Delete state</button>
+        </div>
+    {:else if ssl && deletable}
+        <!-- A faithful, delete-eligible SSL node (Tier 3a): only Delete is offered. Duplicate needs
+             its own splice and stays Tier 3b. The node's procedure is removed and inbound options
+             redirect to a terminal NMessage on save. -->
+        <div class="stateops">
             <button class="del" onclick={actions.deleteState}>Delete state</button>
         </div>
     {/if}

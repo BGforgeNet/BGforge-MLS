@@ -12,6 +12,7 @@
     import { layoutFlow } from "./layout";
     import { modelToD } from "../../../../shared/dialog-d-serialize";
     import * as ops from "../../../../shared/dialog-edit-ops";
+    import { eligibleToDelete } from "../../../../shared/dialog-ssl-edit";
     import { hasHost, postToHost } from "./host";
     import type { DialogModel, DialogState, DialogTarget } from "../../../../shared/dialog-model";
 
@@ -436,6 +437,12 @@
     const structEditable = (s: DialogState | null): s is DialogState =>
         s != null && !s.derivedFrom && (editModel.editable || (editModel.format === "fallout-ssl" && s.faithful === true));
 
+    // Whether a node can be deleted from the graph. A D state: any non-derived state. A faithful SSL node:
+    // only when every inbound reference can be cleaned up on save (eligibleToDelete - not an entry, not
+    // reached by a `call`, no inbound option in a non-faithful node). eligibleToDelete returns true for D.
+    const canDelete = (s: DialogState | null): s is DialogState =>
+        structEditable(s) && eligibleToDelete(editModel, s.id);
+
     const actions = {
         rename: (newId: string) => {
             if (editable(selected) && ops.renameState(editModel, selected, newId)) void rebuild({ frame: "none" });
@@ -461,7 +468,7 @@
             void rebuild({ frame: "none" });
         },
         deleteState: () => {
-            if (!editable(selected)) return;
+            if (!canDelete(selected)) return; // D: any non-derived; SSL: faithful + delete-eligible
             ops.deleteState(editModel, selected);
             selected = null;
             void rebuild({ frame: "none" });
@@ -530,7 +537,7 @@
         <!-- Save persists text for both formats (D structure + .tra; SSL message text -> .msg). -->
         <button class="toolbtn save" onclick={save}>Save</button>
     {/if}
-    {#if editModel.editable}
+    {#if editModel.editable || editModel.format === "fallout-ssl"}
         <button class="toolbtn" onclick={addState}>+ State</button>
     {/if}
     {#if inGraph}
@@ -568,7 +575,7 @@
 {/snippet}
 
 {#snippet inspectorBox(s: DialogState)}
-    <Inspector state={s} messages={editModel.messages} {stateIds} {actions} format={editModel.format} editable={editModel.editable} structuralEditable={structEditable(s)} />
+    <Inspector state={s} messages={editModel.messages} {stateIds} {actions} format={editModel.format} editable={editModel.editable} structuralEditable={structEditable(s)} deletable={canDelete(s)} />
 {/snippet}
 
 <svelte:window onkeydown={(e) => e.key === "Escape" && ctxMenu && closeContext()} />
@@ -637,7 +644,7 @@
                         {:else if ctxMenu.kind === "state"}
                             <button class="ctxitem" role="menuitem" onclick={() => ctxAct("addReply")}>Add reply</button>
                             <button class="ctxitem" role="menuitem" onclick={() => ctxAct("duplicate")}>Duplicate state</button>
-                            <button class="ctxitem del" role="menuitem" onclick={() => ctxAct("delete")}>Delete state</button>
+                            <button class="ctxitem del" role="menuitem" disabled={!canDelete(ctxOwner)} title={canDelete(ctxOwner) ? "" : "This node can't be deleted from the graph (a dialog entry, reached by a call, or referenced from non-editable code) - edit the .ssl source."} onclick={() => ctxAct("delete")}>Delete state</button>
                         {:else if ctxReply && !ctxPickTarget}
                             <button class="ctxitem" role="menuitem" disabled={ctxReply.index === 0} onclick={() => replyAct("up")}>Move up</button>
                             <button class="ctxitem" role="menuitem" disabled={ctxReply.index === ctxReply.count - 1} onclick={() => replyAct("down")}>Move down</button>

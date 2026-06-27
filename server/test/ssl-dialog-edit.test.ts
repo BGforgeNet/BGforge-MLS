@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseDialog } from "../src/dialog";
 import { modelFromSSL, type DialogModel } from "../../shared/dialog-model";
-import { applySSLDialogEdits, verifySSLEditApplied } from "../../shared/dialog-ssl-edit";
+import { applySSLDialogEdits, eligibleToDelete, verifySSLEditApplied } from "../../shared/dialog-ssl-edit";
 
 const structuredCloneModel = (m: DialogModel): DialogModel => structuredClone(m);
 
@@ -169,6 +169,25 @@ describe("applySSLDialogEdits - add node", () => {
         expect(out).toContain("procedure Node050 begin\n    Reply(500);\n    NMessage(501);\nend");
         expect(out).toContain("NOption(101, Node050, 4)"); // inbound option now names the new node
         expect(out.indexOf("procedure Node050")).toBeLessThan(out.indexOf("procedure talk_p_proc"));
+    });
+});
+
+describe("eligibleToDelete", () => {
+    it("allows deleting a node referenced only by options, refuses one reached by a call or entry", async () => {
+        const src = `procedure Node001 begin\n    NOption(101, Node002, 4);\n    call Node003;\nend\nprocedure Node002 begin Reply(200); end\nprocedure Node003 begin Reply(300); end\nprocedure talk_p_proc begin call Node001; end\n`;
+        const model = modelFromSSL(await parseDialog(src));
+        expect(eligibleToDelete(model, "Node002")).toBe(true); // only an option points at it
+        expect(eligibleToDelete(model, "Node003")).toBe(false); // reached by `call Node003`
+        expect(eligibleToDelete(model, "Node001")).toBe(false); // talk_p_proc entry (call Node001)
+    });
+
+    it("refuses a node whose inbound option lives in a non-faithful node (its reference cannot be rewritten)", async () => {
+        // Node001 has a while loop -> non-faithful, so its NOption(101, Node002) is never rewritten by the
+        // splicer. Deleting Node002 would leave a dangling reference, so delete must be refused.
+        const src = `procedure Node001 begin\n    while (local_var(0)) do begin end\n    NOption(101, Node002, 4);\nend\nprocedure Node002 begin Reply(200); end\nprocedure talk_p_proc begin call Node001; end\n`;
+        const model = modelFromSSL(await parseDialog(src));
+        expect(model.roots[0]!.states.find((s) => s.id === "Node001")!.faithful).toBe(false);
+        expect(eligibleToDelete(model, "Node002")).toBe(false);
     });
 });
 
