@@ -13,7 +13,8 @@
  * Because every splice replaces a whole slot, retarget and reorder compose without overlapping.
  */
 
-import type { DialogChoice, DialogModel, DialogState } from "./dialog-model";
+import type { DialogChoice, DialogModel, DialogState, DialogTarget } from "./dialog-model";
+import type { VerifyResult } from "./dialog-d-edit";
 import { applySplices, type SpliceOp } from "./dialog-splice";
 
 /** The new target token for an option, or null when it cannot be expressed as a target-Node arg. */
@@ -83,4 +84,39 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
         ops.push(...nodeOps(originalText, state, orig));
     }
     return applySplices(originalText, ops);
+}
+
+/** Stable key for a transition target, so option order/targets can be compared structurally. */
+function targetKey(t: DialogTarget): string {
+    if (t.kind === "state") return `state:${t.stateId}`;
+    if (t.kind === "external") return `external:${t.label}`;
+    return "exit";
+}
+
+/**
+ * Confirm an SSL structural save landed as intended: every node in `actual` (the re-parse of the
+ * saved `.ssl`) matches its counterpart in `intended` (the model the editor wrote) on the ordered
+ * option targets. Tier 1 only retargets and reorders options, so the ordered target sequence is the
+ * observable; a mismatch means the splice did not take (or corrupted the file) and must be surfaced
+ * rather than reported as a clean save.
+ *
+ * The comparison iterates over `actual`, not `intended`: a retarget can leave a node unreachable, and
+ * the parser prunes unreachable procedures, so an orphaned node legitimately disappears from the
+ * re-parse - that is an expected consequence of the edit, not a failure. Tier 1 splices replace only
+ * option-call spans inside a faithful node, so they can never remove a procedure; a node missing from
+ * `actual` is therefore always an orphan, never lost data. Non-fallout-ssl models are never written
+ * here, so they always verify.
+ */
+export function verifySSLEditApplied(intended: DialogModel, actual: DialogModel): VerifyResult {
+    if (intended.format !== "fallout-ssl") return { ok: true };
+    const intendedById = new Map(intended.roots.flatMap((r) => r.states).map((s) => [s.id, s]));
+    for (const a of actual.roots.flatMap((r) => r.states)) {
+        const s = intendedById.get(a.id);
+        if (!s) return { ok: false, reason: `unexpected node "${a.id}" in the saved file` };
+        const want = s.choices.map((c) => targetKey(c.target)).join("|");
+        const got = a.choices.map((c) => targetKey(c.target)).join("|");
+        if (want !== got)
+            return { ok: false, reason: `node "${a.id}" option targets/order differ from the intended edit` };
+    }
+    return { ok: true };
 }

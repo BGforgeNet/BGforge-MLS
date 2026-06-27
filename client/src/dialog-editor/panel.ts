@@ -13,6 +13,7 @@ import { type LanguageClient, type ExecuteCommandParams, ExecuteCommandRequest }
 import { LSP_COMMAND_PARSE_DIALOG, LSP_COMMAND_SAVE_TRA } from "../../../shared/protocol";
 import { modelFromD, modelFromSSL, type DialogModel } from "../../../shared/dialog-model";
 import { applyDialogEdits, pendingInserts, verifyDialogEditApplied } from "../../../shared/dialog-d-edit";
+import { applySSLDialogEdits, verifySSLEditApplied } from "../../../shared/dialog-ssl-edit";
 import type { DDialogData, SSLDialogData } from "../../../shared/dialog-types";
 import { generateNonce, getCachedJsAsset } from "../webview-assets";
 import { buildDialogWebviewHtml } from "./dialog-webview-html";
@@ -82,11 +83,14 @@ export function registerDialogEditor(context: vscode.ExtensionContext, client: L
         // means the serializer produced text that does not reproduce the edit - warn rather
         // than let a silent corruption stand.
         if (model && pendingVerify) {
-            const verdict = verifyDialogEditApplied(pendingVerify, model);
+            const ssl = pendingVerify.format === "fallout-ssl";
+            const verdict = ssl
+                ? verifySSLEditApplied(pendingVerify, model)
+                : verifyDialogEditApplied(pendingVerify, model);
             pendingVerify = undefined;
             if (!verdict.ok) {
                 void vscode.window.showWarningMessage(
-                    `Dialog save may not have applied cleanly: ${verdict.reason}. Review the .d source.`,
+                    `Dialog save may not have applied cleanly: ${verdict.reason}. Review the ${ssl ? ".ssl" : ".d"} source.`,
                 );
             }
         }
@@ -100,30 +104,37 @@ export function registerDialogEditor(context: vscode.ExtensionContext, client: L
     /**
      * Persist edits from the webview back to disk. WeiDU D structure is edited surgically
      * (applyDialogEdits splices only the changed states, preserving comments, patch blocks,
-     * CHAIN syntax, and untouched states). Message-text edits (NPC lines and player replies)
-     * are written to the resolved `.tra` (D) or `.msg` (SSL) via the server, which owns
-     * translation-file resolution. SSL has no code write-back yet, so for SSL only the
-     * message text persists - its dialog structure is view-only.
+     * CHAIN syntax, and untouched states); faithful SSL nodes get the Tier 1 structural ops
+     * (retarget + reorder) spliced back via applySSLDialogEdits, non-faithful nodes staying
+     * read-only. Message-text edits (NPC lines and player replies) are written to the resolved
+     * `.tra` (D) or `.msg` (SSL) via the server, which owns translation-file resolution.
      */
     async function save(edited: DialogModel): Promise<void> {
         if (!docUri) return;
-        if (edited.format === "weidu-d") {
+        if (edited.format === "weidu-d" || edited.format === "fallout-ssl") {
             const doc = await vscode.workspace.openTextDocument(vscode.Uri.parse(docUri));
             const text = doc.getText();
             // Re-parse the on-disk text to recover the ORIGINAL model (before the webview's
-            // edits). applyDialogEdits compares against it so unchanged states keep their exact
-            // bytes (@N refs, ++ shorthand, comments) and deletions are detected. The document
-            // itself is unchanged by webview edits.
+            // edits). The splicers compare against it so unchanged content keeps its exact bytes
+            // (D: @N refs, ++ shorthand, comments; SSL: everything but the moved/retargeted option
+            // spans). The document itself is unchanged by webview edits.
             const params: ExecuteCommandParams = { command: LSP_COMMAND_PARSE_DIALOG, arguments: [{ uri: docUri }] };
             const data = await client.sendRequest(ExecuteCommandRequest.type, params);
             const original = toModel(data) ?? undefined;
-            const newText = applyDialogEdits(text, edited, original);
+            // SSL needs the original parse to gate on per-node faithfulness; without it, leave the
+            // structure untouched (message text still persists below).
+            const newText =
+                edited.format === "weidu-d"
+                    ? applyDialogEdits(text, edited, original)
+                    : original
+                      ? applySSLDialogEdits(text, edited, original)
+                      : text;
             if (newText !== text) {
                 const ws = new vscode.WorkspaceEdit();
                 ws.replace(doc.uri, new vscode.Range(doc.positionAt(0), doc.positionAt(text.length)), newText);
                 await vscode.workspace.applyEdit(ws);
                 // The document change triggers a debounced refresh; have it verify this edit
-                // round-tripped (the serializer reproduced exactly what we saved).
+                // round-tripped (the saved text re-parses to exactly what we saved).
                 pendingVerify = edited;
             }
         }

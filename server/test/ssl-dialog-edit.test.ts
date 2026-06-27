@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseDialog } from "../src/dialog";
 import { modelFromSSL, type DialogModel } from "../../shared/dialog-model";
-import { applySSLDialogEdits } from "../../shared/dialog-ssl-edit";
+import { applySSLDialogEdits, verifySSLEditApplied } from "../../shared/dialog-ssl-edit";
 
 const structuredCloneModel = (m: DialogModel): DialogModel => structuredClone(m);
 
@@ -56,5 +56,26 @@ procedure talk_p_proc begin call Node001; end
         };
         // Node001 has an else -> non-faithful -> the structural edit is ignored.
         expect(applySSLDialogEdits(src2, edited, original)).toBe(src2);
+    });
+});
+
+describe("verifySSLEditApplied", () => {
+    it("confirms a correctly-applied retarget and rejects a save that did not take", async () => {
+        const original = modelFromSSL(await parseDialog(SRC));
+        const edited = structuredCloneModel(original);
+        edited.roots[0]!.states.find((s) => s.id === "Node001")!.choices[0]!.target = {
+            kind: "state",
+            stateId: "Node003",
+        };
+        const out = applySSLDialogEdits(SRC, edited, original);
+        const actual = modelFromSSL(await parseDialog(out));
+        expect(verifySSLEditApplied(edited, actual)).toEqual({ ok: true });
+
+        // A save that silently did NOT take: the re-parse still matches the unedited source,
+        // whose first option targets Node002, not the intended Node003.
+        const stale = modelFromSSL(await parseDialog(SRC));
+        const verdict = verifySSLEditApplied(edited, stale);
+        expect(verdict.ok).toBe(false);
+        expect(verdict.reason).toContain("Node001");
     });
 });
