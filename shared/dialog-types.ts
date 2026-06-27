@@ -98,6 +98,8 @@ export interface SSLDialogData {
     entryPoints: string[];
     /** Translation messages keyed by index. Populated by the client before rendering; not set by the server. */
     messages?: Record<string, string>;
+    /** Byte offset just before `talk_p_proc` (where a newly-added node's procedure is spliced in). Set by the parser. */
+    newProcAnchor?: number;
 }
 
 // ---------------------------------------------------------------------------

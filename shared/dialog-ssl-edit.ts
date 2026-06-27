@@ -16,7 +16,7 @@
 import type { DialogChoice, DialogModel, DialogState, DialogTarget } from "./dialog-model";
 import type { VerifyResult } from "./dialog-d-edit";
 import { applySplices, type SpliceOp } from "./dialog-splice";
-import { serializeSSLOption } from "./dialog-ssl-serialize";
+import { serializeSSLOption, serializeSSLProcedure } from "./dialog-ssl-serialize";
 
 /** Options of a state in source order: the choices that carry a `callRange` (call transitions don't). */
 function optionsOf(state: DialogState): DialogChoice[] {
@@ -152,6 +152,28 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
         const nl = originalText.indexOf("\n", orig.procRange.end);
         const end = nl === -1 ? orig.procRange.end : nl + 1;
         ops.push({ start, end, replacement: "" });
+    }
+
+    // ADD: a new node (no procRange, not derived) -> serialize its whole procedure and splice it in just
+    // before talk_p_proc, so it sits among the dialog procedures. Its ids are already on the model as `@N`
+    // text (allocated at save), so derive the per-node id map from that text. The inbound option that targets
+    // the new node is rewritten by the survivor logic above (the new node's id is a valid state target).
+    const anchor = edited.newProcAnchor ?? original.newProcAnchor;
+    if (anchor !== undefined) {
+        const idOf = (t: string | undefined): number => Number(/^@(\d+)$/.exec((t ?? "").trim())?.[1] ?? NaN);
+        const blocks: string[] = [];
+        for (const s of edited.roots.flatMap((r) => r.states)) {
+            if (s.procRange || s.derivedFrom) continue; // existing or derived -> not a new node
+            const ids = {
+                reply: Number.isFinite(idOf(s.text)) ? idOf(s.text) : undefined,
+                options: Object.fromEntries(
+                    s.choices.filter((c) => Number.isFinite(idOf(c.text))).map((c) => [c.id, idOf(c.text)]),
+                ),
+            };
+            blocks.push(serializeSSLProcedure(s, ids, "    "));
+        }
+        if (blocks.length > 0)
+            ops.push({ start: anchor, end: anchor, replacement: blocks.map((b) => `${b}\n`).join("") });
     }
 
     return applySplices(originalText, ops);

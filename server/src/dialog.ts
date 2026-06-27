@@ -65,6 +65,9 @@ export async function parseDialog(
 
     const nodes: SSLDialogNode[] = [];
     const entryPoints: string[] = [];
+    // Where a newly-added node's procedure is spliced in: just before talk_p_proc, so it lands among
+    // the dialog procedures rather than after the entry router. Undefined when there is no talk_p_proc.
+    let newProcAnchor: number | undefined;
 
     // First pass: parse every dialog procedure into a map; collect entry points
     // from talk_p_proc (the single dialog root).
@@ -77,6 +80,7 @@ export async function parseDialog(
 
         if (procName === "talk_p_proc") {
             extractEntryPoints(child, entryPoints);
+            newProcAnchor = child.startIndex;
             continue;
         }
         const node = parseProcedure(child, procName, sideEffectFns, text);
@@ -117,7 +121,7 @@ export async function parseDialog(
         if (reachable.has(procName)) nodes.push(node);
     }
 
-    return { nodes, entryPoints };
+    return { nodes, entryPoints, ...(newProcAnchor !== undefined ? { newProcAnchor } : {}) };
 }
 
 function extractEntryPoints(proc: SyntaxNode, entryPoints: string[]): void {

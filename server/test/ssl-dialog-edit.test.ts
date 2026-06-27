@@ -148,6 +148,30 @@ procedure talk_p_proc begin call Node001; end
     });
 });
 
+describe("applySSLDialogEdits - add node", () => {
+    const SRC4 = `procedure Node001 begin\n    NOption(101, Node002, 4);\nend\nprocedure Node002 begin Reply(200); end\nprocedure talk_p_proc begin call Node001; end\n`;
+
+    it("splices a new node's procedure in before talk_p_proc", async () => {
+        const original = modelFromSSL(await parseDialog(SRC4));
+        const edited = structuredCloneModel(original);
+        // A new node (no procRange) with an allocated reply id and one option, plus the inbound option retargeted.
+        edited.roots[0]!.states.push({
+            id: "Node050",
+            text: "@500",
+            choices: [{ id: "Node050#opt0", text: "@501", target: { kind: "exit" } }],
+        });
+        // Retarget Node001's option to the new node (Tier 1 machinery writes the name).
+        edited.roots[0]!.states.find((s) => s.id === "Node001")!.choices[0]!.target = {
+            kind: "state",
+            stateId: "Node050",
+        };
+        const out = applySSLDialogEdits(SRC4, edited, original);
+        expect(out).toContain("procedure Node050 begin\n    Reply(500);\n    NMessage(501);\nend");
+        expect(out).toContain("NOption(101, Node050, 4)"); // inbound option now names the new node
+        expect(out.indexOf("procedure Node050")).toBeLessThan(out.indexOf("procedure talk_p_proc"));
+    });
+});
+
 describe("verifySSLEditApplied", () => {
     it("confirms a correctly-applied retarget and rejects a save that did not take", async () => {
         const original = modelFromSSL(await parseDialog(SRC));

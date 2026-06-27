@@ -25,6 +25,11 @@ export interface DialogModel {
     roots: DialogRoot[];
     /** Resolved message strings keyed by id; populated downstream, not by the adapter. */
     messages?: Record<string, string>;
+    /**
+     * SSL only: byte offset just before `talk_p_proc`, where a newly-added node's procedure is spliced in.
+     * Set by the SSL adapter; absent for D and when the source has no talk_p_proc.
+     */
+    newProcAnchor?: number;
 }
 
 export type DialogRootKind = "dialog" | "patch";
@@ -408,5 +413,6 @@ export function modelFromSSL(data: SSLDialogData): DialogModel {
                 ? [{ id: "dialog", label: "dialog", kind: "dialog", states: data.nodes.map(stateFromSSL) }]
                 : [],
         messages: data.messages,
+        newProcAnchor: data.newProcAnchor,
     };
 }
