@@ -14,7 +14,7 @@ import { LSP_COMMAND_PARSE_DIALOG, LSP_COMMAND_SAVE_TRA } from "../../../shared/
 import { modelFromD, modelFromSSL, type DialogModel } from "../../../shared/dialog-model";
 import { applyDialogEdits, pendingInserts, verifyDialogEditApplied } from "../../../shared/dialog-d-edit";
 import { applySSLDialogEdits, verifySSLEditApplied } from "../../../shared/dialog-ssl-edit";
-import { allocateOptionIds } from "../../../shared/dialog-ssl-ids";
+import { allocateNodeIds, allocateOptionIds } from "../../../shared/dialog-ssl-ids";
 import type { DDialogData, SSLDialogData } from "../../../shared/dialog-types";
 import { generateNonce, getCachedJsAsset } from "../webview-assets";
 import { buildDialogWebviewHtml } from "./dialog-webview-html";
@@ -123,13 +123,16 @@ export function registerDialogEditor(context: vscode.ExtensionContext, client: L
             const params: ExecuteCommandParams = { command: LSP_COMMAND_PARSE_DIALOG, arguments: [{ uri: docUri }] };
             const data = await client.sendRequest(ExecuteCommandRequest.type, params);
             const original = toModel(data) ?? undefined;
-            // Allocate .msg ids for newly-added SSL options from the on-disk message set (the source of
-            // the current max), mutating each new option's text to its @id so the spliced NOption(<id>,...)
-            // and the appended .msg entry agree. New entries merge into edited.messages, which the SAVE_TRA
-            // path writes (rewrite + append). Runs before the splice, which reads the assigned @id.
+            // Allocate .msg ids for newly-added SSL content from the on-disk message set (the source of the
+            // current max), mutating each new reply/option's text to its @id so the spliced SSL and the
+            // appended .msg entries agree. NODE ids first (a new node's reply + its options), then OPTION ids
+            // for any new options added to existing nodes, against the merged set so ids never collide. New
+            // entries merge into edited.messages, which the SAVE_TRA path writes (rewrite + append). Runs
+            // before the splice, which reads the assigned @id.
             if (edited.format === "fallout-ssl" && original) {
-                const created = allocateOptionIds(edited, original.messages ?? {});
-                edited.messages = { ...edited.messages, ...created };
+                const node = allocateNodeIds(edited, original.messages ?? {});
+                const opt = allocateOptionIds(edited, { ...original.messages, ...node.newMessages });
+                edited.messages = { ...edited.messages, ...node.newMessages, ...opt };
             }
             // SSL needs the original parse to gate on per-node faithfulness; without it, leave the
             // structure untouched (message text still persists below).

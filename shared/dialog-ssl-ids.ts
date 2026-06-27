@@ -1,9 +1,15 @@
 import type { DialogModel } from "./dialog-model";
 import type { NodeMsgIds } from "./dialog-ssl-serialize";
 
-/** A new option is one with no source `callRange` (it never existed in the .ssl) and literal text. */
+/**
+ * A new option needing an id: no source `callRange` (it never existed in the .ssl) and literal text that is
+ * not already an `@<id>` ref. Excluding `@N` keeps allocation idempotent and composition-order-safe -
+ * `allocateNodeIds` rewrites a new node's options to `@<id>` first, so `allocateOptionIds` must not re-claim
+ * them - and lets a user reference an existing message by typing `@150` without minting a duplicate id.
+ */
 function isNewOption(choice: { callRange?: unknown; text?: string }): boolean {
-    return choice.callRange === undefined && choice.text !== undefined && choice.text.trim() !== "";
+    const t = (choice.text ?? "").trim();
+    return choice.callRange === undefined && t !== "" && !/^@\d+$/.test(t);
 }
 
 /** The first free `.msg` id: `max(existing numeric id) + 1` (1 when the set is empty/non-numeric). */
