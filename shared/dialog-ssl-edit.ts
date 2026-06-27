@@ -1,5 +1,6 @@
 /**
- * Surgical in-place editor for Fallout SSL dialog source (retarget, reorder, add, remove options).
+ * Surgical in-place editor for Fallout SSL dialog source (retarget/reorder/add/remove options;
+ * add/delete nodes).
  *
  * SSL is a full scripting language, so the graph is only an approximation of a procedure. Only
  * nodes the graph represents *faithfully* (flat dialog calls + single-level `if`, no else/loop/
@@ -10,7 +11,11 @@
  * removal (delete a flat option's whole statement) and insertion (serialize a new `NOption`/
  * `NMessage` whose `.msg` id was allocated at save time - see dialog-ssl-ids.ts - and splice it in
  * after the last surviving option). `nodeOps` composes all four as non-overlapping splices per node.
- * Adding/removing a CONDITIONAL option (inside an `if`) is deferred to Tier 3 and bails out here.
+ * Tier 3a adds whole-node ops in `applySSLDialogEdits`: DELETE removes an absent node's `procedure`
+ * span (its inbound options redirect to a terminal `NMessage` via the survivor logic), and ADD
+ * serializes a new node's `procedure` (see dialog-ssl-serialize.ts) and splices it before `talk_p_proc`.
+ * `eligibleToDelete` gates which nodes the editor may delete. Adding/removing a CONDITIONAL option
+ * (inside an `if`), condition editing, and entry/call-referenced node deletion are deferred to Tier 3b.
  */
 
 import type { DialogChoice, DialogModel, DialogState, DialogTarget } from "./dialog-model";

@@ -21,9 +21,10 @@
         format: DialogFormat;
         editable: boolean;
         // Per-node structural editability. For D it tracks `editable`; for SSL it is true only on
-        // a faithful node, which gains the Tier 1 structural ops (retarget + reorder) while the
-        // rest of the D edit surface (rename, add/remove option, condition/action, duplicate/delete)
-        // stays read-only - those are D-only or later SSL tiers the save path can't persist yet.
+        // a faithful node, which gains the structural ops the save path can persist (retarget, reorder,
+        // add/remove unconditional option). Delete is gated separately by `deletable` below; the rest of
+        // the D edit surface (rename, condition/action, duplicate) stays read-only for SSL - D-only or
+        // later SSL tiers the save path can't persist yet.
         structuralEditable: boolean;
         // Whether this node can be deleted (D: any non-derived; faithful SSL: only when every inbound
         // reference can be cleaned up on save - see DialogGraph canDelete / eligibleToDelete). Surfaces
