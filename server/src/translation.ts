@@ -20,7 +20,12 @@ import {
 } from "vscode-languageserver/node";
 import { errorMessage } from "./diagnostics";
 import { conlog } from "./logger";
-import { rewriteMsgEntries, rewriteTraEntries, siblingTraCandidates } from "../../shared/dialog-tra-edit";
+import {
+    appendMsgEntries,
+    rewriteMsgEntries,
+    rewriteTraEntries,
+    siblingTraCandidates,
+} from "../../shared/dialog-tra-edit";
 import {
     findFiles,
     isDirectory,
@@ -399,7 +404,12 @@ export class Translation {
         }
         // Each format needs its own rewriter: a .tra is `@N = ~text~`, a .msg is
         // `{id}{sound}{text}`, and either rewriter is a silent no-op on the other's syntax.
-        const updated = ext === "msg" ? rewriteMsgEntries(original, messages) : rewriteTraEntries(original, messages);
+        // .msg rewrites existing entries then appends brand-new ones (a newly-added option's text has no
+        // entry yet); .tra only rewrites (new-id allocation for .tra is not a Tier 2 concern).
+        const updated =
+            ext === "msg"
+                ? appendMsgEntries(rewriteMsgEntries(original, messages), messages)
+                : rewriteTraEntries(original, messages);
         if (updated === original) return NO_WRITE;
         fs.writeFileSync(absPath, updated);
         // Refresh the cached entries that getMessages/inlay hints read for this file.

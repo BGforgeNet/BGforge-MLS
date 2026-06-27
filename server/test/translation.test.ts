@@ -88,6 +88,21 @@ describe("Translation", () => {
             // Untouched entries stay byte-for-byte.
             expect(onDisk).toContain("{101}{}{ Message 101 }");
         });
+
+        it("appends a new .msg id while rewriting an existing one", async () => {
+            await translation.init();
+            const uri = `file://${tempDir}/test.tssl`;
+            const text = `/** @tra test.msg */\nconst x = mstr(100);`;
+
+            // 100 already exists (rewrite); 500 is new (append).
+            const result = translation.writeMessages(uri, text, "typescript", { "100": "Edited!", "500": "Brand new" });
+
+            expect(result.changed).toBe(true);
+            const onDisk = fs.readFileSync(path.join(tempDir, "test.msg"), "utf8");
+            expect(onDisk).toContain("{100}{}{Edited!}"); // existing id rewritten
+            expect(onDisk).toContain("{500}{}{Brand new}"); // new id appended
+            expect(onDisk).toContain("{101}{}{ Message 101 }"); // untouched entry intact
+        });
     });
 
     describe("TSSL support (.msg format)", () => {
