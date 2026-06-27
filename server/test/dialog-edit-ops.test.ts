@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { initParser } from "../../shared/parsers/weidu-d";
 import { parseDDialog } from "../src/weidu-d/dialog";
-import { modelFromD } from "../../shared/dialog-model";
+import { modelFromD, type DialogModel } from "../../shared/dialog-model";
 import { applyDialogEdits } from "../../shared/dialog-d-edit";
 import * as ops from "../../shared/dialog-edit-ops";
 
@@ -80,6 +80,26 @@ describe("dialog-edit-ops (pure model transforms)", () => {
         expect(freshAgain?.text).toBe("A new line.");
         expect(state(reparsed, "hello")).toBeDefined();
         expect(state(reparsed, "more")).toBeDefined();
+    });
+
+    it("names a new SSL node NodeNNN (next free), not new_state", () => {
+        const m: DialogModel = {
+            format: "fallout-ssl",
+            editable: false,
+            roots: [
+                {
+                    id: "d",
+                    label: "d",
+                    kind: "dialog",
+                    states: [
+                        { id: "Node001", text: "@1", procRange: { start: 0, end: 1 }, choices: [] },
+                        { id: "Node003", text: "@2", procRange: { start: 2, end: 3 }, choices: [] },
+                    ],
+                },
+            ],
+        };
+        const s = ops.addState(m);
+        expect(s!.id).toBe("Node004"); // max(Node001, Node003) + 1, zero-padded to 3
     });
 
     it("adds/removes/reorders replies and retargets", () => {

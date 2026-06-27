@@ -99,12 +99,23 @@ export function duplicateState(model: DialogModel, state: DialogState): DialogSt
     return copy;
 }
 
+/** Next free `NodeNNN` id for an SSL model: max existing Node<number> + 1, zero-padded to 3 digits. */
+function nextSslNodeId(model: DialogModel): string {
+    const nums = stateIdsOf(model)
+        .map((id) => /^Node(\d+)$/.exec(id)?.[1])
+        .filter((m): m is string => m !== undefined && m !== null)
+        .map((m) => Number.parseInt(m, 10));
+    const next = (nums.length > 0 ? Math.max(...nums) : 0) + 1;
+    return `Node${String(next).padStart(3, "0")}`;
+}
+
 /** Add an empty new state to the first dialog root (no sourceRange: a pending insert). */
 export function addState(model: DialogModel, targetRoot?: DialogRoot): DialogState | null {
     // Add to the caller's chosen root (the active tab) when given; else the first dialog.
     const root = targetRoot ?? model.roots.find((r) => r.kind === "dialog") ?? model.roots[0];
     if (!root) return null;
-    const state: DialogState = { id: uniqueStateId(model, "new_state"), text: "", choices: [] };
+    const id = model.format === "fallout-ssl" ? nextSslNodeId(model) : uniqueStateId(model, "new_state");
+    const state: DialogState = { id, text: "", choices: [] };
     root.states.push(state);
     return state;
 }
