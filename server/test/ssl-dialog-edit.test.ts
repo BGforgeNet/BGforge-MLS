@@ -210,4 +210,37 @@ describe("verifySSLEditApplied", () => {
         expect(verdict.ok).toBe(false);
         expect(verdict.reason).toContain("Node001");
     });
+
+    const SRC_AD = `procedure Node001 begin\n    NOption(101, Node002, 4);\nend\nprocedure Node002 begin Reply(200); end\nprocedure talk_p_proc begin call Node001; end\n`;
+
+    it("verifies a node-add round-trip", async () => {
+        const original = modelFromSSL(await parseDialog(SRC_AD));
+        const edited = structuredCloneModel(original);
+        edited.roots[0]!.states.push({
+            id: "Node050",
+            text: "@500",
+            choices: [{ id: "Node050#opt0", text: "@501", target: { kind: "exit" } }],
+        });
+        edited.roots[0]!.states.find((s) => s.id === "Node001")!.choices[0]!.target = {
+            kind: "state",
+            stateId: "Node050",
+        };
+        const out = applySSLDialogEdits(SRC_AD, edited, original);
+        const actual = modelFromSSL(await parseDialog(out));
+        expect(verifySSLEditApplied(edited, actual).ok).toBe(true);
+    });
+
+    it("verifies a node-delete round-trip (inbound option becomes a terminal)", async () => {
+        const original = modelFromSSL(await parseDialog(SRC_AD));
+        const edited = structuredCloneModel(original);
+        const root = edited.roots[0]!;
+        root.states = root.states.filter((s) => s.id !== "Node002");
+        for (const s of root.states)
+            for (const c of s.choices) {
+                if (c.target.kind === "state" && c.target.stateId === "Node002") c.target = { kind: "exit" };
+            }
+        const out = applySSLDialogEdits(SRC_AD, edited, original);
+        const actual = modelFromSSL(await parseDialog(out));
+        expect(verifySSLEditApplied(edited, actual).ok).toBe(true);
+    });
 });
