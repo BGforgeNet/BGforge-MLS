@@ -86,11 +86,21 @@ export interface SSLDialogNode {
     insertAnchor?: { offset: number; indent: string };
     /** Byte span of the whole `procedure <name> ... end` block (used to delete the node). Set by the parser. */
     procRange?: { start: number; end: number };
+    /** Byte span of the `procedure <name>` identifier token (used to rename the node). Set by the parser. */
+    nameRange?: { start: number; end: number };
     /**
      * `call <target>;` transitions out of this node, with each statement's byte span (used to remove the call
      * when its target node is deleted). Parallels `callTargets` (names only) but carries the spans. Set by the parser.
+     * `targetRange` is the span of the target identifier token (for rename/delete-by-call); absent when the target
+     * is a call_expr rather than a plain identifier. `topLevel` is true when the call_stmt is a direct procedure-body
+     * statement (not nested in an if/block), meaning it can be removed without leaving a dangling conditional.
      */
-    callTransitions?: Array<{ name: string; stmtRange: { start: number; end: number } }>;
+    callTransitions?: Array<{
+        name: string;
+        stmtRange: { start: number; end: number };
+        targetRange?: { start: number; end: number };
+        topLevel: boolean;
+    }>;
 }
 
 export interface SSLDialogData {
@@ -100,6 +110,18 @@ export interface SSLDialogData {
     messages?: Record<string, string>;
     /** Byte offset just before `talk_p_proc` (where a newly-added node's procedure is spliced in). Set by the parser. */
     newProcAnchor?: number;
+    /**
+     * Each `call <entry>;` in talk_p_proc: its whole-statement span, target identifier span, and whether it is a
+     * direct talk_p_proc body statement (safely removable without leaving a dangling conditional). Set by the parser.
+     */
+    entryCalls?: Array<{
+        name: string;
+        stmtRange: { start: number; end: number };
+        targetRange: { start: number; end: number };
+        topLevel: boolean;
+    }>;
+    /** Byte offset where a NEW entry call is spliced into talk_p_proc (end of its last body statement). Set by the parser. */
+    entryCallAnchor?: number;
 }
 
 // ---------------------------------------------------------------------------

@@ -68,6 +68,17 @@ export async function parseDialog(
     // Where a newly-added node's procedure is spliced in: just before talk_p_proc, so it lands among
     // the dialog procedures rather than after the entry router. Undefined when there is no talk_p_proc.
     let newProcAnchor: number | undefined;
+    // Each `call <entry>;` statement in talk_p_proc (for entry add/delete operations).
+    let entryCalls:
+        | Array<{
+              name: string;
+              stmtRange: { start: number; end: number };
+              targetRange: { start: number; end: number };
+              topLevel: boolean;
+          }>
+        | undefined;
+    // Byte offset where a NEW entry call is spliced into talk_p_proc (end of its last body statement).
+    let entryCallAnchor: number | undefined;
 
     // First pass: parse every dialog procedure into a map; collect entry points
     // from talk_p_proc (the single dialog root).
@@ -81,6 +92,8 @@ export async function parseDialog(
         if (procName === "talk_p_proc") {
             extractEntryPoints(child, entryPoints);
             newProcAnchor = child.startIndex;
+            entryCalls = collectEntryCalls(child);
+            entryCallAnchor = entryCallSpliceAnchor(child);
             continue;
         }
         const node = parseProcedure(child, procName, sideEffectFns, text);
@@ -121,7 +134,13 @@ export async function parseDialog(
         if (reachable.has(procName)) nodes.push(node);
     }
 
-    return { nodes, entryPoints, ...(newProcAnchor !== undefined ? { newProcAnchor } : {}) };
+    return {
+        nodes,
+        entryPoints,
+        ...(newProcAnchor !== undefined ? { newProcAnchor } : {}),
+        ...(entryCalls !== undefined ? { entryCalls } : {}),
+        ...(entryCallAnchor !== undefined ? { entryCallAnchor } : {}),
+    };
 }
 
 function extractEntryPoints(proc: SyntaxNode, entryPoints: string[]): void {
@@ -144,6 +163,52 @@ function extractEntryPoints(proc: SyntaxNode, entryPoints: string[]): void {
     });
 }
 
+// Collect all `call <identifier>;` statements in talk_p_proc, with their statement and target spans.
+// Only identifier targets are included (call_expr targets have no plain target token to splice on).
+function collectEntryCalls(talkProc: SyntaxNode): Array<{
+    name: string;
+    stmtRange: { start: number; end: number };
+    targetRange: { start: number; end: number };
+    topLevel: boolean;
+}> {
+    const result: Array<{
+        name: string;
+        stmtRange: { start: number; end: number };
+        targetRange: { start: number; end: number };
+        topLevel: boolean;
+    }> = [];
+    walkTree(talkProc, (node) => {
+        if (node.type !== SyntaxType.CallStmt) return;
+        const target = node.childForFieldName("target");
+        if (!target || target.type !== SyntaxType.Identifier) return;
+        const name = target.text;
+        result.push({
+            name,
+            stmtRange: { start: node.startIndex, end: node.endIndex },
+            targetRange: { start: target.startIndex, end: target.endIndex },
+            topLevel: isDirectBodyChild(talkProc, node),
+        });
+    });
+    return result;
+}
+
+// The byte offset where a NEW entry call is spliced into talk_p_proc: end of its last body statement.
+// Mirrors nodeInsertAnchor's `body.at(-1)` logic but returns only the offset (no indent needed here).
+function entryCallSpliceAnchor(talkProc: SyntaxNode): number | undefined {
+    const body = talkProc.childrenForFieldName("body");
+    const last = body.at(-1);
+    return last?.endIndex;
+}
+
+// Returns true when `node` is a direct child in the `body` field of `proc`.
+// web-tree-sitter returns fresh wrapper objects on every access, so identity comparison (`===`) never works;
+// we match by byte span (startIndex + endIndex) instead.
+function isDirectBodyChild(proc: SyntaxNode, node: SyntaxNode): boolean {
+    return proc
+        .childrenForFieldName("body")
+        .some((s) => s.startIndex === node.startIndex && s.endIndex === node.endIndex);
+}
+
 function parseProcedure(
     proc: SyntaxNode,
     name: string,
@@ -153,8 +218,14 @@ function parseProcedure(
     const replies: SSLDialogReply[] = [];
     const options: SSLDialogOption[] = [];
     const callTargets: string[] = [];
-    // Parallel to callTargets but carrying each `call <target>;` statement's byte span (for delete).
-    const callTransitions: { name: string; stmtRange: { start: number; end: number } }[] = [];
+    // Parallel to callTargets but carrying each `call <target>;` statement's byte span (for delete),
+    // the target identifier span (for rename/delete-by-call), and whether the call is top-level.
+    const callTransitions: Array<{
+        name: string;
+        stmtRange: { start: number; end: number };
+        targetRange?: { start: number; end: number };
+        topLevel: boolean;
+    }> = [];
     // Source-ordered, deduplicated side-effect builtins this node calls. Walk order is
     // top-down, so first-occurrence order is source order.
     const sideEffects: string[] = [];
@@ -226,15 +297,28 @@ function parseProcedure(
                 // are real transitions out of the dialog.
                 if (targetName && !callTargets.includes(targetName)) {
                     callTargets.push(targetName);
+                    // targetRange is only set when the target is a plain identifier (not a call_expr).
+                    const targetRange =
+                        target.type === SyntaxType.Identifier
+                            ? { start: target.startIndex, end: target.endIndex }
+                            : undefined;
+                    // topLevel: this call_stmt is a direct body child of the procedure.
+                    // web-tree-sitter returns fresh wrapper objects, so compare by byte span, not reference.
+                    const topLevel = isDirectBodyChild(proc, node);
                     // CallStmt span includes the trailing `;` (grammar: call_stmt ends with ";").
                     callTransitions.push({
                         name: targetName,
                         stmtRange: { start: node.startIndex, end: node.endIndex },
+                        ...(targetRange !== undefined ? { targetRange } : {}),
+                        topLevel,
                     });
                 }
             }
         }
     });
+
+    const nameNode = proc.childForFieldName("name");
+    const nameRange = nameNode ? { start: nameNode.startIndex, end: nameNode.endIndex } : undefined;
 
     return {
         name,
@@ -247,6 +331,7 @@ function parseProcedure(
         // Omit when empty so nodes without detected side-effects stay clean in the IR.
         ...(sideEffects.length > 0 ? { sideEffects } : {}),
         ...(callTransitions.length > 0 ? { callTransitions } : {}),
+        ...(nameRange !== undefined ? { nameRange } : {}),
     };
 }
 

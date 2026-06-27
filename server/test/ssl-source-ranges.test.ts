@@ -43,3 +43,27 @@ describe("SSL statement range + insertion anchor", () => {
         expect(node.insertAnchor!.indent).toBe("    ");
     });
 });
+
+describe("SSL name + entry-call ranges", () => {
+    it("captures the procedure name token, the talk_p_proc entry-call spans, and call target tokens", async () => {
+        const ssl = `procedure Node001 begin\n    call combat;\nend\nprocedure talk_p_proc begin\n    call Node001;\nend\n`;
+        const data = await parseDialog(ssl);
+        const node = data.nodes.find((n) => n.name === "Node001")!;
+        // The procedure name token (for rename).
+        expect(ssl.slice(node.nameRange!.start, node.nameRange!.end)).toBe("Node001");
+        // The intra-node call's target token (for rename / delete-by-call).
+        expect(
+            ssl.slice(node.callTransitions![0]!.targetRange!.start, node.callTransitions![0]!.targetRange!.end),
+        ).toBe("combat");
+        // talk_p_proc entry calls: the whole `call Node001;` statement and its target token.
+        expect(data.entryCalls).toHaveLength(1);
+        expect(ssl.slice(data.entryCalls![0]!.stmtRange.start, data.entryCalls![0]!.stmtRange.end)).toBe(
+            "call Node001;",
+        );
+        expect(ssl.slice(data.entryCalls![0]!.targetRange.start, data.entryCalls![0]!.targetRange.end)).toBe("Node001");
+        expect(data.entryCalls![0]!.topLevel).toBe(true); // a direct talk_p_proc body statement (safely removable)
+        expect(node.callTransitions![0]!.topLevel).toBe(true); // `call combat;` is a direct Node001 body statement
+        // The splice anchor for a NEW entry call: end of talk_p_proc's last body statement.
+        expect(data.entryCallAnchor).toBe(data.entryCalls![0]!.stmtRange.end);
+    });
+});
