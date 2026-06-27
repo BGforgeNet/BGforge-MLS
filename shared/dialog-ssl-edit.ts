@@ -37,6 +37,21 @@ function isNewSSLOption(c: DialogChoice): boolean {
 }
 
 /**
+ * A splice op that deletes a whole statement, also consuming its line's leading indentation and trailing
+ * newline WHEN the statement is the only non-whitespace content on its line - so removing it leaves no stray
+ * blank line. When something else shares the line, only the statement span itself is removed. Shared by every
+ * statement-removal site (option remove, inbound `call` remove, talk_p_proc entry-call remove).
+ */
+function removeStatementSplice(text: string, stmtRange: { start: number; end: number }): SpliceOp {
+    const lineStart = text.lastIndexOf("\n", stmtRange.start - 1) + 1;
+    const lead = text.slice(lineStart, stmtRange.start);
+    const start = /^[ \t]*$/.test(lead) ? lineStart : stmtRange.start;
+    const nl = text.indexOf("\n", stmtRange.end);
+    const end = start === lineStart && nl !== -1 ? nl + 1 : stmtRange.end;
+    return { start, end, replacement: "" };
+}
+
+/**
  * Build the splice ops for one faithful node. Composes three edit kinds, all non-overlapping:
  * - REMOVE: an original (unconditional) option absent from the edit -> delete its whole statement.
  * - SURVIVORS: Tier 1 retarget + reorder over options that still exist, by refilling their source slots.
@@ -66,12 +81,7 @@ function nodeOps(
     for (const o of origOpts) {
         if (editedIds.has(o.id)) continue;
         if (!o.stmtRange) return []; // no statement span -> cannot remove safely
-        const lineStart = text.lastIndexOf("\n", o.stmtRange.start - 1) + 1;
-        const lead = text.slice(lineStart, o.stmtRange.start);
-        const start = /^[ \t]*$/.test(lead) ? lineStart : o.stmtRange.start;
-        const nl = text.indexOf("\n", o.stmtRange.end);
-        const end = start === lineStart && nl !== -1 ? nl + 1 : o.stmtRange.end;
-        ops.push({ start, end, replacement: "" });
+        ops.push(removeStatementSplice(text, o.stmtRange));
     }
 
     // SURVIVORS (Tier 1 retarget + reorder, restricted to options that still exist): the original
@@ -175,12 +185,7 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
                 if (c.target.kind !== "state" || c.target.stateId !== orig.id) continue;
                 if (!c.callStmtRange) continue; // not a call choice
                 if (c.callTopLevel !== true) continue; // nested call - do not splice (leave to condition editing)
-                const nl = originalText.indexOf("\n", c.callStmtRange.end);
-                const lineStart = originalText.lastIndexOf("\n", c.callStmtRange.start - 1) + 1;
-                const lead = originalText.slice(lineStart, c.callStmtRange.start);
-                const from = /^[ \t]*$/.test(lead) ? lineStart : c.callStmtRange.start;
-                const to = from === lineStart && nl !== -1 ? nl + 1 : c.callStmtRange.end;
-                ops.push({ start: from, end: to, replacement: "" });
+                ops.push(removeStatementSplice(originalText, c.callStmtRange));
             }
         }
     }
@@ -221,12 +226,7 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
         const e = editedById.get(ec.name);
         if (e && e.isEntry) continue; // still an entry -> keep
         if (!ec.topLevel) continue; // conditional entry (`if (X) call ...;`) - outside scope of this tier
-        const nl = originalText.indexOf("\n", ec.stmtRange.end);
-        const start = originalText.lastIndexOf("\n", ec.stmtRange.start - 1) + 1;
-        const lead = originalText.slice(start, ec.stmtRange.start);
-        const from = /^[ \t]*$/.test(lead) ? start : ec.stmtRange.start;
-        const to = from === start && nl !== -1 ? nl + 1 : ec.stmtRange.end;
-        ops.push({ start: from, end: to, replacement: "" });
+        ops.push(removeStatementSplice(originalText, ec.stmtRange));
     }
     // Additions: an edited node that isEntry but was not an original entry.
     // entryCallAnchor is undefined when talk_p_proc has an empty body; guard accordingly.
