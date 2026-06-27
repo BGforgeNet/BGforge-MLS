@@ -14,8 +14,9 @@
  * Tier 3a adds whole-node ops in `applySSLDialogEdits`: DELETE removes an absent node's `procedure`
  * span (its inbound options redirect to a terminal `NMessage` via the survivor logic), and ADD
  * serializes a new node's `procedure` (see dialog-ssl-serialize.ts) and splices it before `talk_p_proc`.
- * `eligibleToDelete` gates which nodes the editor may delete. Adding/removing a CONDITIONAL option
- * (inside an `if`), condition editing, and entry/call-referenced node deletion are deferred to Tier 3b.
+ * `eligibleToDelete` gates which nodes the editor may delete. Tier 3b (this file) adds inbound-call removal
+ * on delete (top-level `call` statements spliced out) and entry/call-referenced node deletion. Adding/removing
+ * a CONDITIONAL option (inside an `if`) and condition editing remain deferred.
  */
 
 import type { DialogChoice, DialogModel, DialogState, DialogTarget } from "./dialog-model";
@@ -159,6 +160,31 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
         ops.push({ start, end, replacement: "" });
     }
 
+    // INBOUND CALL REMOVAL: for each deleted node, remove any inbound `call <node>;` statements inside
+    // other (surviving) nodes. A call choice on a surviving node has `callStmtRange` set and targets the
+    // deleted node. Only splice when `callTopLevel === true` - a call nested in an `if` cannot be removed
+    // without rewriting the `if` body, and `eligibleToDelete` already refuses such nodes; this guard is
+    // defensive so the splicer stays safe if ever called directly. Entry calls inside talk_p_proc for the
+    // same deleted nodes are already handled by the ENTRY WIRING block (a deleted node is absent from
+    // `editedById`, so its entry call is removed there); do NOT duplicate that here.
+    for (const orig of original.roots.flatMap((r) => r.states)) {
+        if (editedIds.has(orig.id)) continue; // node survives -> nothing to do
+        for (const s of original.roots.flatMap((r) => r.states)) {
+            if (!editedIds.has(s.id)) continue; // source node was also deleted -> skip
+            for (const c of s.choices) {
+                if (c.target.kind !== "state" || c.target.stateId !== orig.id) continue;
+                if (!c.callStmtRange) continue; // not a call choice
+                if (c.callTopLevel !== true) continue; // nested call - do not splice (leave to condition editing)
+                const nl = originalText.indexOf("\n", c.callStmtRange.end);
+                const lineStart = originalText.lastIndexOf("\n", c.callStmtRange.start - 1) + 1;
+                const lead = originalText.slice(lineStart, c.callStmtRange.start);
+                const from = /^[ \t]*$/.test(lead) ? lineStart : c.callStmtRange.start;
+                const to = from === lineStart && nl !== -1 ? nl + 1 : c.callStmtRange.end;
+                ops.push({ start: from, end: to, replacement: "" });
+            }
+        }
+    }
+
     // ADD: a new node (no procRange, not derived) -> serialize its whole procedure and splice it in just
     // before talk_p_proc, so it sits among the dialog procedures. Its ids are already on the model as `@N`
     // text (allocated at save), so derive the per-node id map from that text. The inbound option that targets
@@ -221,22 +247,26 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
 }
 
 /**
- * Whether an SSL node can be safely deleted from the graph (Tier 3a). A node is eligible only when every
- * inbound reference can be cleaned up by the writer:
- * - not a dialog entry (`talk_p_proc`/`force_dialog_start` target) - deleting it would orphan the conversation;
- * - not reached by a `call <node>;` - removing the call is Tier 3b, so refuse rather than dangle it;
- * - every inbound OPTION lives in a faithful node - only a faithful node's option is rewritten to a terminal
- *   `NMessage` on delete; an inbound option in a non-faithful (un-rewritten) node would be left dangling.
+ * Whether an SSL node can be safely deleted from the graph. A node is eligible unless an inbound reference
+ * cannot be cleaned up by the writer:
+ * - a conditional entry (a `call` nested in an `if` inside talk_p_proc) cannot be removed without rewriting
+ *   the `if` - defer to condition editing; a top-level entry call IS removable (the writer splices it out);
+ * - an inbound option or call in a non-faithful node cannot be rewritten, so its target would be left dangling;
+ * - an inbound call nested in an `if` (non-top-level) cannot be spliced without rewriting the `if` body.
+ * Top-level entry calls and top-level inbound calls in faithful nodes are both cleanly removable by the writer,
+ * so those cases no longer block deletion (Tier 3b).
  * Non-SSL models defer to their own delete rules (D states are deletable when not derived).
  */
 export function eligibleToDelete(model: DialogModel, stateId: string): boolean {
     if (model.format !== "fallout-ssl") return true;
-    if ((model.entryIds ?? []).includes(stateId)) return false;
+    // A conditional entry (a `call` nested in an `if` inside talk_p_proc) cannot be removed without rewriting
+    // the `if` - defer to condition editing.
+    for (const ec of model.entryCalls ?? []) if (ec.name === stateId && !ec.topLevel) return false;
     for (const s of model.roots.flatMap((r) => r.states)) {
         for (const c of s.choices) {
             if (c.target.kind !== "state" || c.target.stateId !== stateId) continue;
-            if (c.callStmtRange) return false; // reached by a `call` (Tier 3b)
-            if (s.faithful !== true) return false; // inbound option in a node whose source we cannot rewrite
+            if (s.faithful !== true) return false; // inbound option/call in a node whose source we cannot rewrite
+            if (c.callStmtRange && c.callTopLevel !== true) return false; // call nested in an `if` (even if faithful)
         }
     }
     return true;

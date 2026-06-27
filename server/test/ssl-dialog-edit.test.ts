@@ -173,12 +173,12 @@ describe("applySSLDialogEdits - add node", () => {
 });
 
 describe("eligibleToDelete", () => {
-    it("allows deleting a node referenced only by options, refuses one reached by a call or entry", async () => {
+    it("allows deleting a node referenced only by options, or by a top-level call/entry in a faithful node", async () => {
         const src = `procedure Node001 begin\n    NOption(101, Node002, 4);\n    call Node003;\nend\nprocedure Node002 begin Reply(200); end\nprocedure Node003 begin Reply(300); end\nprocedure talk_p_proc begin call Node001; end\n`;
         const model = modelFromSSL(await parseDialog(src));
         expect(eligibleToDelete(model, "Node002")).toBe(true); // only an option points at it
-        expect(eligibleToDelete(model, "Node003")).toBe(false); // reached by `call Node003`
-        expect(eligibleToDelete(model, "Node001")).toBe(false); // talk_p_proc entry (call Node001)
+        expect(eligibleToDelete(model, "Node003")).toBe(true); // reached by a top-level `call` in faithful Node001 - writer removes it
+        expect(eligibleToDelete(model, "Node001")).toBe(true); // top-level entry in talk_p_proc - writer removes it
     });
 
     it("refuses a node whose inbound option lives in a non-faithful node (its reference cannot be rewritten)", async () => {
@@ -267,6 +267,25 @@ describe("applySSLDialogEdits - entry wiring", () => {
         edited.roots[0]!.states.find((s) => s.id === "Node001")!.isEntry = false;
         const out = applySSLDialogEdits(SRC_EW, edited, original);
         expect(out).not.toContain("call Node001;");
+    });
+});
+
+describe("applySSLDialogEdits - delete a call-referenced / entry node", () => {
+    const SRC_DC = `procedure Node001 begin\n    call Node002;\nend\nprocedure Node002 begin Reply(200); end\nprocedure talk_p_proc begin\n    call Node001;\nend\n`;
+
+    it("deletes a call-referenced node, removing its inbound call", async () => {
+        const original = modelFromSSL(await parseDialog(SRC_DC));
+        const edited = structuredCloneModel(original);
+        edited.roots[0]!.states = edited.roots[0]!.states.filter((s) => s.id !== "Node002");
+        const out = applySSLDialogEdits(SRC_DC, edited, original);
+        expect(out).not.toContain("procedure Node002");
+        expect(out).not.toContain("call Node002;"); // inbound call removed, not dangling
+    });
+
+    it("eligibleToDelete now allows an entry / call-referenced node (faithful inbound)", async () => {
+        const model = modelFromSSL(await parseDialog(SRC_DC));
+        expect(eligibleToDelete(model, "Node001")).toBe(true); // entry, but cleanly removable now
+        expect(eligibleToDelete(model, "Node002")).toBe(true); // reached by call in faithful Node001
     });
 });
 
