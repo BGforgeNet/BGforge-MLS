@@ -127,9 +127,9 @@
         </div>
     {:else if ssl && structuralEditable}
         <div class="ronote">
-            Text edits save to the <b>.msg</b>. You can <b>rename</b>, <b>retarget</b>, and <b>reorder</b>
-            options here - they write back to the <b>.ssl</b>. Other structural changes (add/remove options,
-            conditions) still need the source.
+            Text edits save to the <b>.msg</b>. This node's structure - <b>rename</b>, <b>retarget</b>,
+            <b>reorder</b>, add/remove options, entry status - is editable and writes back to the <b>.ssl</b>.
+            Editing <b>conditions</b> (the <b>if</b> wrappers) still needs the source.
         </div>
     {:else if ssl}
         <div class="ronote">

@@ -4,8 +4,9 @@
  * Opens beside the text editor (the document of record). On open and on edits it
  * runs the existing LSP parse command, maps the result into the format-neutral
  * DialogModel via the shared adapters, and posts it to the Svelte Flow webview.
- * On a save message it splices the edits back into the .d surgically and persists
- * @N text edits to the .tra. WeiDU D is editable; SSL is view-only.
+ * On a save message it splices the edits back into the .d / .ssl surgically and persists
+ * @N text edits to the .tra (D) or .msg (SSL). WeiDU D is fully editable; for Fallout SSL the
+ * faithful nodes are structurally editable (the rest stay view-only).
  */
 
 import * as vscode from "vscode";
@@ -105,11 +106,13 @@ export function registerDialogEditor(context: vscode.ExtensionContext, client: L
     /**
      * Persist edits from the webview back to disk. WeiDU D structure is edited surgically
      * (applyDialogEdits splices only the changed states, preserving comments, patch blocks,
-     * CHAIN syntax, and untouched states); faithful SSL nodes get the Tier 1 structural ops
-     * (retarget, reorder, add/remove unconditional options) spliced back via applySSLDialogEdits,
-     * non-faithful nodes staying read-only; a newly-added option allocates a `.msg` id here. Message-
-     * text edits (NPC lines and player replies) are written to the resolved `.tra` (D) or `.msg` (SSL)
-     * via the server, which owns translation-file resolution.
+     * CHAIN syntax, and untouched states); faithful SSL nodes get their structural ops (retarget,
+     * reorder, add/remove unconditional options, add/delete nodes, entry-toggle, rename) spliced
+     * back via applySSLDialogEdits, non-faithful nodes staying read-only; newly-added options/nodes
+     * allocate `.msg` ids here (allocateNodeIds + allocateOptionIds). Message-text edits (NPC lines
+     * and player replies) are written to the resolved `.tra` (D) or `.msg` (SSL) via the server,
+     * which owns translation-file resolution. Editing SSL conditions (`if` wrappers) is not yet
+     * supported - those nodes/edits stay source-only.
      */
     async function save(edited: DialogModel): Promise<void> {
         if (!docUri) return;
