@@ -50,6 +50,8 @@ export interface SSLDialogOption {
     callRange?: { start: number; end: number };
     /** Byte span of the option's target-Node argument in the source (used by retarget). Set by the parser. */
     targetRange?: { start: number; end: number };
+    /** Byte span of the whole option STATEMENT `NOption(...);` incl. the trailing `;` (used by remove). */
+    stmtRange?: { start: number; end: number };
 }
 
 export interface SSLDialogNode {
@@ -76,6 +78,12 @@ export interface SSLDialogNode {
      * not faithful. Set by the SSL parser.
      */
     faithful?: boolean;
+    /**
+     * Where a newly-added option call is spliced in: `offset` is the end of the node's last body
+     * statement, `indent` the leading whitespace of that statement's line, so the inserted call lines up.
+     * Set by the parser for every node (the option count can be zero).
+     */
+    insertAnchor?: { offset: number; indent: string };
 }
 
 export interface SSLDialogData {

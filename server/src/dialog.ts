@@ -79,7 +79,7 @@ export async function parseDialog(
             extractEntryPoints(child, entryPoints);
             continue;
         }
-        parsed.set(procName, parseProcedure(child, procName, sideEffectFns));
+        parsed.set(procName, parseProcedure(child, procName, sideEffectFns, text));
     }
 
     // force_dialog_start(Node*) / start_dialog_at_node(Node*) start a conversation
@@ -138,7 +138,12 @@ function extractEntryPoints(proc: SyntaxNode, entryPoints: string[]): void {
     });
 }
 
-function parseProcedure(proc: SyntaxNode, name: string, sideEffectFns: ReadonlySet<string>): SSLDialogNode {
+function parseProcedure(
+    proc: SyntaxNode,
+    name: string,
+    sideEffectFns: ReadonlySet<string>,
+    fullText: string,
+): SSLDialogNode {
     const replies: SSLDialogReply[] = [];
     const options: SSLDialogOption[] = [];
     const callTargets: string[] = [];
@@ -186,6 +191,7 @@ function parseProcedure(proc: SyntaxNode, name: string, sideEffectFns: ReadonlyS
                     msgKind: classifyMsgId(arg0),
                     callRange: { start: node.startIndex, end: node.endIndex },
                     targetRange: { start: arg1.startIndex, end: arg1.endIndex },
+                    stmtRange: statementRange(node),
                 });
             }
 
@@ -224,9 +230,33 @@ function parseProcedure(proc: SyntaxNode, name: string, sideEffectFns: ReadonlyS
         options,
         callTargets,
         faithful: isFaithfulProcedure(proc),
+        insertAnchor: nodeInsertAnchor(proc, fullText),
         // Omit when empty so nodes without detected side-effects stay clean in the IR.
         ...(sideEffects.length > 0 ? { sideEffects } : {}),
     };
+}
+
+// The whole `NOption(...);` statement span (the call's enclosing expression statement, which includes
+// the trailing `;`). Used to delete an option cleanly. Falls back to the call span when the call is not
+// directly wrapped in an expression statement (defensive; the faithful flat case always has one).
+function statementRange(node: SyntaxNode): { start: number; end: number } {
+    let cur: SyntaxNode | null = node;
+    while (cur) {
+        if (cur.type === SyntaxType.ExpressionStmt) return { start: cur.startIndex, end: cur.endIndex };
+        cur = cur.parent;
+    }
+    return { start: node.startIndex, end: node.endIndex };
+}
+
+// The splice point for a new option call: the end of the procedure's last body statement, plus that
+// statement's line indentation. For an empty body, anchor just after `begin` with a default 4-space indent.
+function nodeInsertAnchor(proc: SyntaxNode, fullText: string): { offset: number; indent: string } {
+    const body = proc.childrenForFieldName("body");
+    const last = body.at(-1);
+    if (!last) return { offset: proc.startIndex, indent: "    " }; // empty body: refined by Tier 3
+    const lineStart = fullText.lastIndexOf("\n", last.startIndex - 1) + 1;
+    const indent = /^[ \t]*/.exec(fullText.slice(lineStart, last.startIndex))?.[0] ?? "    ";
+    return { offset: last.endIndex, indent };
 }
 
 // Recognized dialog calls the graph represents and the (Tier 2+) serializer can reproduce:

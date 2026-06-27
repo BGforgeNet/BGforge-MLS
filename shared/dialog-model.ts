@@ -88,6 +88,11 @@ export interface DialogState {
      * structurally editable when not derived.
      */
     faithful?: boolean;
+    /**
+     * SSL only: where a newly-added option call is spliced in (the end of the node's last body statement,
+     * plus its line indentation). Set by the SSL adapter; absent for D and synthetic states.
+     */
+    insertAnchor?: { offset: number; indent: string };
 }
 
 export type DialogReaction = "neutral" | "good" | "bad";
@@ -116,6 +121,8 @@ export interface DialogChoice {
      */
     callRange?: { start: number; end: number };
     targetRange?: { start: number; end: number };
+    /** SSL only: byte span of the whole option statement `NOption(...);` incl. `;` (used by remove). */
+    stmtRange?: { start: number; end: number };
 }
 
 export type DialogTarget =
@@ -344,6 +351,7 @@ function stateFromSSL(node: SSLDialogNode): DialogState {
             skill: opt.skill,
             callRange: opt.callRange,
             targetRange: opt.targetRange,
+            stmtRange: opt.stmtRange,
         });
     });
 
@@ -365,6 +373,7 @@ function stateFromSSL(node: SSLDialogNode): DialogState {
         choices,
         sideEffects: node.sideEffects,
         faithful: node.faithful,
+        insertAnchor: node.insertAnchor,
     };
 }
 
