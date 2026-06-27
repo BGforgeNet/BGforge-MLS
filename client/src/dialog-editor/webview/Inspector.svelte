@@ -14,12 +14,17 @@
     // (Fallout SSL) it is a read-only, SSL-native presentation - SSL is derived from script
     // and has no surgical write-back yet, so editing is disabled and the WeiDU vocabulary
     // (trigger/weight/`DO ~...~`) is replaced or dropped.
-    let { state, messages, stateIds, actions, format, editable }: {
+    let { state, messages, stateIds, actions, format, editable, structuralEditable }: {
         state: DialogState;
         messages: Record<string, string> | undefined;
         stateIds: string[];
         format: DialogFormat;
         editable: boolean;
+        // Per-node structural editability. For D it tracks `editable`; for SSL it is true only on
+        // a faithful node, which gains the Tier 1 structural ops (retarget + reorder) while the
+        // rest of the D edit surface (rename, add/remove option, condition/action, duplicate/delete)
+        // stays read-only - those are D-only or later SSL tiers the save path can't persist yet.
+        structuralEditable: boolean;
         actions: {
             rename: (newId: string) => void;
             addReply: () => void;
@@ -109,11 +114,17 @@
             Read-only - this state is expanded from a <b>{state.derivedFrom}</b> block. It has no
             standalone source to edit here; change it in the <b>{state.derivedFrom}</b> source directly.
         </div>
+    {:else if ssl && structuralEditable}
+        <div class="ronote">
+            Text edits save to the <b>.msg</b>. You can <b>retarget</b> and <b>reorder</b> options here -
+            they write back to the <b>.ssl</b>. Other structural changes (add/remove options,
+            conditions) still need the source.
+        </div>
     {:else if ssl}
         <div class="ronote">
             Text edits save to the <b>.msg</b>. The dialog structure (options, targets,
-            conditions) is read-only - it is generated from the script; edit the <b>.ssl</b>
-            source for that.
+            conditions) is read-only - this node is not simple enough to edit safely from the graph;
+            edit the <b>.ssl</b> source for that.
         </div>
     {/if}
 
@@ -155,11 +166,18 @@
         <div class="trow">
             <div class="trhead">
                 <span class="tnum">#{i + 1}</span>
-                {#if !readOnly}
+                {#if structuralEditable || !readOnly}
                     <span class="trbtns">
-                        <button title="Move up" disabled={i === 0} onclick={() => actions.moveReply(c.id, -1)}>&#9650;</button>
-                        <button title="Move down" disabled={i === state.choices.length - 1} onclick={() => actions.moveReply(c.id, 1)}>&#9660;</button>
-                        <button title="Remove" class="del" onclick={() => actions.removeReply(c.id)}>&#10005;</button>
+                        <!-- Reorder is a Tier 1 op available to any structurally-editable node (D
+                             or faithful SSL). Remove is a D-only / later-tier op, so it stays
+                             gated on the full edit surface (`!readOnly`). -->
+                        {#if structuralEditable}
+                            <button title="Move up" disabled={i === 0} onclick={() => actions.moveReply(c.id, -1)}>&#9650;</button>
+                            <button title="Move down" disabled={i === state.choices.length - 1} onclick={() => actions.moveReply(c.id, 1)}>&#9660;</button>
+                        {/if}
+                        {#if !readOnly}
+                            <button title="Remove" class="del" onclick={() => actions.removeReply(c.id)}>&#10005;</button>
+                        {/if}
                     </span>
                 {/if}
             </div>
@@ -168,7 +186,8 @@
             {#if !ssl}
                 <textarea class="iv code act" rows="1" use:autosize={c.action ?? ""} disabled={readOnly} placeholder="action (DO ~...~)" value={c.action ?? ""} oninput={(e) => (c.action = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
             {/if}
-            <select class="iv tgt" disabled={readOnly} value={targetValue(c.target)} onchange={(e) => onTargetChange(c, e.currentTarget.value)}>
+            <!-- Retarget is a Tier 1 op: enabled for any structurally-editable node (D or faithful SSL). -->
+            <select class="iv tgt" disabled={!structuralEditable} value={targetValue(c.target)} onchange={(e) => onTargetChange(c, e.currentTarget.value)}>
                 {#if c.target.kind === "external"}
                     <option value="ext">&#8631; {c.target.label}</option>
                 {/if}

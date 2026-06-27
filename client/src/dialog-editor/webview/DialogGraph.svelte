@@ -360,9 +360,11 @@
             initialHeight: n.height,
             data: n.data,
         }));
-        // An edge out of a derived (read-only) state can't be retargeted, so it carries a
-        // `locked` flag the custom edge reads to hide its reconnect anchor.
-        const derivedIds = new Set(editModel.roots.flatMap((r) => r.states).filter((s) => s.derivedFrom).map((s) => s.id));
+        // An edge out of a state that can't be retargeted (derived, or a non-faithful SSL node)
+        // carries a `locked` flag the custom edge reads to hide its reconnect anchor.
+        const lockedSources = new Set(
+            editModel.roots.flatMap((r) => r.states).filter((s) => !structEditable(s)).map((s) => s.id),
+        );
         edges = g.edges.map((e) => ({
             id: e.id,
             type: "reconnectable",
@@ -370,7 +372,7 @@
             target: e.target,
             sourceHandle: e.sourceHandle,
             style: edgeStyle(e),
-            data: { locked: derivedIds.has(e.source) },
+            data: { locked: lockedSources.has(e.source) },
         }));
         if (opts.focusId) focusNode(opts.focusId);
         else if ((opts.frame ?? "entry") === "fit") fitViewport();
@@ -427,6 +429,13 @@
     const editable = (s: DialogState | null): s is DialogState =>
         s != null && !s.derivedFrom && editModel.editable;
 
+    // Per-node structural editability for the Tier 1 SSL ops (retarget + reorder). A D state
+    // tracks the model-level flag; an SSL node is editable only when faithfully representable
+    // (DialogState.faithful), so retarget/reorder write back losslessly via applySSLDialogEdits.
+    // The other ops (rename/add/remove/delete/duplicate) stay on `editable` - D-only / later tiers.
+    const structEditable = (s: DialogState | null): s is DialogState =>
+        s != null && !s.derivedFrom && (editModel.editable || (editModel.format === "fallout-ssl" && s.faithful === true));
+
     const actions = {
         rename: (newId: string) => {
             if (editable(selected) && ops.renameState(editModel, selected, newId)) void rebuild({ frame: "none" });
@@ -442,12 +451,12 @@
             void rebuild({ frame: "none" });
         },
         moveReply: (choiceId: string, dir: -1 | 1) => {
-            if (!editable(selected)) return;
+            if (!structEditable(selected)) return; // Tier 1 reorder: D or faithful SSL
             ops.moveReply(selected, choiceId, dir);
             void rebuild({ frame: "none" });
         },
         setTarget: (choiceId: string, target: DialogTarget) => {
-            if (!editable(selected)) return;
+            if (!structEditable(selected)) return; // Tier 1 retarget: D or faithful SSL
             ops.setChoiceTarget(selected, choiceId, target);
             void rebuild({ frame: "none" });
         },
@@ -488,9 +497,10 @@
     function retargetChoice(choiceId: string, targetNodeId: string): void {
         const states = editModel.roots.flatMap((r) => r.states);
         const owner = states.find((s) => s.choices.some((c) => c.id === choiceId));
-        // A derived state's transitions can't be rewritten (no source span); reject the
-        // canvas gesture just as the inspector and the locked edge anchor do.
-        if (!owner || owner.derivedFrom) return;
+        // Only a structurally-editable node (D, or a faithful SSL node) can be retargeted; reject
+        // the canvas gesture for derived/non-faithful sources just as the inspector and the locked
+        // edge anchor do.
+        if (!structEditable(owner ?? null)) return;
         let target: DialogTarget;
         if (targetNodeId === "exit") target = { kind: "exit" };
         else if (states.some((s) => s.id === targetNodeId)) target = { kind: "state", stateId: targetNodeId };
@@ -558,7 +568,7 @@
 {/snippet}
 
 {#snippet inspectorBox(s: DialogState)}
-    <Inspector state={s} messages={editModel.messages} {stateIds} {actions} format={editModel.format} editable={editModel.editable} />
+    <Inspector state={s} messages={editModel.messages} {stateIds} {actions} format={editModel.format} editable={editModel.editable} structuralEditable={structEditable(s)} />
 {/snippet}
 
 <svelte:window onkeydown={(e) => e.key === "Escape" && ctxMenu && closeContext()} />

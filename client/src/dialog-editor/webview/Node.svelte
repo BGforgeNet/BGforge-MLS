@@ -15,6 +15,8 @@
             reachability?: Reachability;
             flagged?: boolean;
             editable?: boolean;
+            /** Per-node structural editability (D: model-level; SSL: node is faithful). Gates drag-to-retarget. */
+            structuralEditable?: boolean;
         };
         type: string;
     } = $props();
@@ -55,9 +57,10 @@
                     >{resolveText(c.text, data.messages) ||
                         (c.target.kind === "exit" ? "(exit)" : "(continue)")}</span
                 >
-                <!-- A derived state's transitions can't be rewritten, and SSL structure is
-                     read-only, so those output handles are non-connectable (no drag-to-retarget). -->
-                <Handle type="source" id={c.id} position={Position.Right} isConnectable={!data.state.derivedFrom && data.editable !== false} />
+                <!-- A derived state's transitions can't be rewritten, and a non-faithful SSL node's
+                     structure is read-only, so those output handles are non-connectable (no
+                     drag-to-retarget). A faithful SSL node is structurally editable, so it connects. -->
+                <Handle type="source" id={c.id} position={Position.Right} isConnectable={!data.state.derivedFrom && data.structuralEditable !== false} />
             </div>
         {/each}
     </div>

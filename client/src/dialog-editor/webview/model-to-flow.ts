@@ -101,6 +101,9 @@ export function modelToFlow(model: DialogModel): FlowGraph {
                     reachability: reach.get(s.id),
                     flagged: isFlaggedNode(s),
                     editable: model.editable,
+                    // Per-node structural editability: a D state is editable with the model; an SSL
+                    // node is editable only when faithfully representable (see DialogState.faithful).
+                    structuralEditable: model.editable || (model.format === "fallout-ssl" && s.faithful === true),
                 },
             });
 

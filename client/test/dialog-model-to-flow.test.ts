@@ -190,6 +190,18 @@ describe("modelToFlow - spotlight flag", () => {
         expect(modelToFlow(ssl).nodes.find((n) => n.id === "N")?.data.editable).toBe(false);
         expect(modelToFlow(SAMPLE).nodes.find((n) => n.type === "card")?.data.editable).toBe(true);
     });
+
+    test("a faithful SSL node is structurally editable; a non-faithful one is not", () => {
+        // structuralEditable promotes the model-level `editable` to per-node: a view-only SSL
+        // model still lets faithful nodes be edited structurally, while complex ones stay locked.
+        const ssl = (faithful: boolean): DialogModel => ({
+            format: "fallout-ssl",
+            editable: false,
+            roots: [{ id: "d", label: "d", kind: "dialog", states: [{ id: "N", text: "@1", choices: [], faithful }] }],
+        });
+        expect(modelToFlow(ssl(true)).nodes.find((n) => n.id === "N")?.data.structuralEditable).toBe(true);
+        expect(modelToFlow(ssl(false)).nodes.find((n) => n.id === "N")?.data.structuralEditable).toBe(false);
+    });
 });
 
 describe("stateNodeSize", () => {
