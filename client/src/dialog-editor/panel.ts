@@ -14,6 +14,7 @@ import { LSP_COMMAND_PARSE_DIALOG, LSP_COMMAND_SAVE_TRA } from "../../../shared/
 import { modelFromD, modelFromSSL, type DialogModel } from "../../../shared/dialog-model";
 import { applyDialogEdits, pendingInserts, verifyDialogEditApplied } from "../../../shared/dialog-d-edit";
 import { applySSLDialogEdits, verifySSLEditApplied } from "../../../shared/dialog-ssl-edit";
+import { allocateOptionIds } from "../../../shared/dialog-ssl-ids";
 import type { DDialogData, SSLDialogData } from "../../../shared/dialog-types";
 import { generateNonce, getCachedJsAsset } from "../webview-assets";
 import { buildDialogWebviewHtml } from "./dialog-webview-html";
@@ -105,9 +106,10 @@ export function registerDialogEditor(context: vscode.ExtensionContext, client: L
      * Persist edits from the webview back to disk. WeiDU D structure is edited surgically
      * (applyDialogEdits splices only the changed states, preserving comments, patch blocks,
      * CHAIN syntax, and untouched states); faithful SSL nodes get the Tier 1 structural ops
-     * (retarget + reorder) spliced back via applySSLDialogEdits, non-faithful nodes staying
-     * read-only. Message-text edits (NPC lines and player replies) are written to the resolved
-     * `.tra` (D) or `.msg` (SSL) via the server, which owns translation-file resolution.
+     * (retarget, reorder, add/remove unconditional options) spliced back via applySSLDialogEdits,
+     * non-faithful nodes staying read-only; a newly-added option allocates a `.msg` id here. Message-
+     * text edits (NPC lines and player replies) are written to the resolved `.tra` (D) or `.msg` (SSL)
+     * via the server, which owns translation-file resolution.
      */
     async function save(edited: DialogModel): Promise<void> {
         if (!docUri) return;
@@ -121,6 +123,14 @@ export function registerDialogEditor(context: vscode.ExtensionContext, client: L
             const params: ExecuteCommandParams = { command: LSP_COMMAND_PARSE_DIALOG, arguments: [{ uri: docUri }] };
             const data = await client.sendRequest(ExecuteCommandRequest.type, params);
             const original = toModel(data) ?? undefined;
+            // Allocate .msg ids for newly-added SSL options from the on-disk message set (the source of
+            // the current max), mutating each new option's text to its @id so the spliced NOption(<id>,...)
+            // and the appended .msg entry agree. New entries merge into edited.messages, which the SAVE_TRA
+            // path writes (rewrite + append). Runs before the splice, which reads the assigned @id.
+            if (edited.format === "fallout-ssl" && original) {
+                const created = allocateOptionIds(edited, original.messages ?? {});
+                edited.messages = { ...edited.messages, ...created };
+            }
             // SSL needs the original parse to gate on per-node faithfulness; without it, leave the
             // structure untouched (message text still persists below).
             const newText =
