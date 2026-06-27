@@ -221,9 +221,60 @@ function parseProcedure(proc: SyntaxNode, name: string, sideEffectFns: ReadonlyS
         replies,
         options,
         callTargets,
+        faithful: isFaithfulProcedure(proc),
         // Omit when empty so nodes without detected side-effects stay clean in the IR.
         ...(sideEffects.length > 0 ? { sideEffects } : {}),
     };
+}
+
+// Recognized dialog calls the graph represents and the (Tier 2+) serializer can reproduce:
+// Reply / N*Option,G*Option,B*Option (+Low) / N*Message,G*Message,B*Message. A `call Node;`
+// transition is handled separately (it is a CallStmt, not a call expression).
+function isDialogCallExpr(callExpr: SyntaxNode): boolean {
+    const fn = callExpr.childForFieldName("func")?.text;
+    if (!fn) return false;
+    return fn === "Reply" || isOptionFn(fn) || isMessageFn(fn);
+}
+
+/**
+ * Whether a single procedure-body statement is faithfully representable. `allowIf` is true at
+ * the procedure's top level and false inside an `if` body, so a nested `if` is rejected (only
+ * single-level `if` is faithful). Conservative: anything not explicitly allowed is unfaithful.
+ */
+function isFaithfulStatement(stmt: SyntaxNode, allowIf: boolean): boolean {
+    switch (stmt.type) {
+        case SyntaxType.ExpressionStmt: {
+            // An expression statement is faithful only when its expression is a recognized dialog call.
+            const expr = stmt.namedChildren[0];
+            return expr !== null && expr !== undefined && expr.type === SyntaxType.CallExpr && isDialogCallExpr(expr);
+        }
+        case SyntaxType.CallStmt:
+            // `call Node;` / `call combat;` - a dialog transition.
+            return true;
+        case SyntaxType.IfStmt: {
+            if (!allowIf) return false; // nested if -> not faithful
+            if (stmt.childForFieldName("else") !== null) return false; // else -> not faithful
+            const thenBody = stmt.childForFieldName("then");
+            if (!thenBody) return false;
+            return isFaithfulBranch(thenBody);
+        }
+        default:
+            // while/for/foreach/switch/assignment/variable_decl/return/... - not representable.
+            return false;
+    }
+}
+
+// A `then` branch is either a single statement or a `begin ... end` block of statements; every
+// contained statement must itself be faithful, and `if`s inside it are nested (allowIf = false).
+function isFaithfulBranch(branch: SyntaxNode): boolean {
+    if (branch.type === SyntaxType.Block) {
+        return branch.children.filter((c) => c.isNamed).every((c) => isFaithfulStatement(c, false));
+    }
+    return isFaithfulStatement(branch, false);
+}
+
+function isFaithfulProcedure(proc: SyntaxNode): boolean {
+    return proc.childrenForFieldName("body").every((stmt) => isFaithfulStatement(stmt, true));
 }
 
 function getCallArgs(callExpr: SyntaxNode): SyntaxNode[] {

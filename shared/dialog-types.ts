@@ -64,6 +64,14 @@ export interface SSLDialogNode {
      * node that merely shows text. Drives the `side-effect` honesty badge.
      */
     sideEffects?: string[];
+    /**
+     * True when the procedure body is faithfully representable - a flat sequence of recognized
+     * dialog calls plus single-level `if (cond)` wrappers, with no `else`, nested `if`, loop,
+     * assignment, or non-dialog call. Only faithful nodes can be edited structurally and written
+     * back without loss; anything else stays structurally read-only. Conservative: when in doubt,
+     * not faithful. Set by the SSL parser.
+     */
+    faithful?: boolean;
 }
 
 export interface SSLDialogData {

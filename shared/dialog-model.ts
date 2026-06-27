@@ -81,6 +81,13 @@ export interface DialogState {
      * node-level `side-effect` badge.
      */
     sideEffects?: string[];
+    /**
+     * SSL only: true when the node's procedure is faithfully representable, so its structure
+     * can be edited and written back without loss (see `SSLDialogNode.faithful`). The webview
+     * gates per-node structural editing on this. Absent for D, whose states are always
+     * structurally editable when not derived.
+     */
+    faithful?: boolean;
 }
 
 export type DialogReaction = "neutral" | "good" | "bad";
@@ -348,6 +355,7 @@ function stateFromSSL(node: SSLDialogNode): DialogState {
         trigger: firstReply?.conditional,
         choices,
         sideEffects: node.sideEffects,
+        faithful: node.faithful,
     };
 }
 
