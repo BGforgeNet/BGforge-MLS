@@ -159,7 +159,7 @@
 
     <div class="ik between">
         <span>{ssl ? "Options" : "Transitions"} ({state.choices.length})</span>
-        {#if !readOnly}<button class="add" onclick={actions.addReply}>+ reply</button>{/if}
+        {#if structuralEditable}<button class="add" onclick={actions.addReply}>{ssl ? "+ option" : "+ reply"}</button>{/if}
     </div>
 
     {#each state.choices as c, i (c.id)}
@@ -168,14 +168,15 @@
                 <span class="tnum">#{i + 1}</span>
                 {#if structuralEditable || !readOnly}
                     <span class="trbtns">
-                        <!-- Reorder is a Tier 1 op available to any structurally-editable node (D
-                             or faithful SSL). Remove is a D-only / later-tier op, so it stays
-                             gated on the full edit surface (`!readOnly`). -->
+                        <!-- Reorder is available to any structurally-editable node (D or faithful SSL).
+                             Remove is available to D (full edit surface) and to a faithful SSL node's
+                             UNCONDITIONAL options - a conditional SSL option sits in an `if` wrapper the
+                             save path does not rewrite (Tier 3), so it stays read-only. -->
                         {#if structuralEditable}
                             <button title="Move up" disabled={i === 0} onclick={() => actions.moveReply(c.id, -1)}>&#9650;</button>
                             <button title="Move down" disabled={i === state.choices.length - 1} onclick={() => actions.moveReply(c.id, 1)}>&#9660;</button>
                         {/if}
-                        {#if !readOnly}
+                        {#if !readOnly || (ssl && structuralEditable && !c.condition)}
                             <button title="Remove" class="del" onclick={() => actions.removeReply(c.id)}>&#10005;</button>
                         {/if}
                     </span>

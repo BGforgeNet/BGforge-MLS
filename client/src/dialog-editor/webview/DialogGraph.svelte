@@ -441,12 +441,12 @@
             if (editable(selected) && ops.renameState(editModel, selected, newId)) void rebuild({ frame: "none" });
         },
         addReply: () => {
-            if (!editable(selected)) return;
+            if (!structEditable(selected)) return; // Tier 2 add option: D or faithful SSL
             ops.addReply(editModel, selected);
             void rebuild({ frame: "none" });
         },
         removeReply: (choiceId: string) => {
-            if (!editable(selected)) return;
+            if (!structEditable(selected)) return; // Tier 2 remove option: D or faithful SSL
             ops.removeReply(selected, choiceId);
             void rebuild({ frame: "none" });
         },
