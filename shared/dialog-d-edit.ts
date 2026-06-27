@@ -20,13 +20,7 @@
 
 import type { DialogChoice, DialogModel, DialogState, DialogTarget } from "./dialog-model";
 import { serializeChoice, serializeState, serializeTextValue } from "./dialog-d-serialize";
-
-interface SpliceOp {
-    start: number;
-    end: number;
-    /** Replacement text. Empty string removes the span. */
-    replacement: string;
-}
+import { applySplices, type SpliceOp } from "./dialog-splice";
 
 function targetsEqual(a: DialogTarget, b: DialogTarget): boolean {
     if (a.kind !== b.kind) return false;
@@ -235,16 +229,9 @@ export function applyDialogEdits(originalText: string, editedModel: DialogModel,
         ops.push({ start: at, end: at, replacement: block });
     }
 
-    // Apply splice ops from highest start offset to lowest so earlier offsets
-    // remain valid as we modify the string from the end toward the front.
-    ops.sort((a, b) => b.start - a.start);
-
-    let result = originalText;
-    for (const op of ops) {
-        result = result.slice(0, op.start) + op.replacement + result.slice(op.end);
-    }
-
-    return result;
+    // Apply splice ops via the shared core (sorts highest-offset-first so earlier
+    // offsets remain valid as the string is modified from the end toward the front).
+    return applySplices(originalText, ops);
 }
 
 /**
