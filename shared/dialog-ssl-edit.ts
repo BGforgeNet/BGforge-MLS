@@ -309,6 +309,11 @@ export function eligibleToDelete(model: DialogModel, stateId: string): boolean {
     // A conditional entry (a `call` nested in an `if` inside talk_p_proc) cannot be removed without rewriting
     // the `if` - defer to condition editing.
     for (const ec of model.entryCalls ?? []) if (ec.name === stateId && !ec.topLevel) return false;
+    // A `force_dialog_start`/`start_dialog_at_node` entry is in `entryIds` but has NO `entryCalls` entry - the
+    // call lives in a non-dialog procedure (a timer/map-enter handler) the writer cannot reach. Removing the
+    // node's procedure would leave that call dangling, so refuse (the entry toggle gates the same case).
+    if ((model.entryIds ?? []).includes(stateId) && !(model.entryCalls ?? []).some((ec) => ec.name === stateId))
+        return false;
     for (const s of model.roots.flatMap((r) => r.states)) {
         for (const c of s.choices) {
             if (c.target.kind !== "state" || c.target.stateId !== stateId) continue;

@@ -189,6 +189,16 @@ describe("eligibleToDelete", () => {
         expect(model.roots[0]!.states.find((s) => s.id === "Node001")!.faithful).toBe(false);
         expect(eligibleToDelete(model, "Node002")).toBe(false);
     });
+
+    it("refuses a force_dialog_start entry (in entryIds but no removable talk_p_proc call)", async () => {
+        // NodeX is an entry via force_dialog_start (a non-dialog handler), so it is in entryIds but has no
+        // entryCalls span the writer could remove - deleting its procedure would dangle the force_dialog_start.
+        const src = `procedure NodeX begin Reply(100); end\nprocedure map_enter_p_proc begin force_dialog_start(NodeX); end\nprocedure talk_p_proc begin end\n`;
+        const model = modelFromSSL(await parseDialog(src));
+        expect(model.entryIds).toContain("NodeX");
+        expect((model.entryCalls ?? []).some((ec) => ec.name === "NodeX")).toBe(false);
+        expect(eligibleToDelete(model, "NodeX")).toBe(false);
+    });
 });
 
 describe("verifySSLEditApplied", () => {
