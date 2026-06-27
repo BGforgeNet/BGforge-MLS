@@ -35,6 +35,22 @@ export interface DialogModel {
      * the SSL adapter; used to refuse deleting an entry node (which would orphan the conversation). Absent for D.
      */
     entryIds?: string[];
+    /**
+     * SSL only: each `call <entry>;` in talk_p_proc - whole-statement span, target identifier span, and whether
+     * it is a direct talk_p_proc body statement (safely removable without leaving a dangling conditional). Set by
+     * the SSL adapter; absent for D. Shape matches `SSLDialogData.entryCalls` exactly so callers share one type.
+     */
+    entryCalls?: Array<{
+        name: string;
+        stmtRange: { start: number; end: number };
+        targetRange: { start: number; end: number };
+        topLevel: boolean;
+    }>;
+    /**
+     * SSL only: byte offset where a new entry call is spliced into talk_p_proc (end of its last body statement).
+     * Set by the SSL adapter; absent for D and when the source has no talk_p_proc.
+     */
+    entryCallAnchor?: number;
 }
 
 export type DialogRootKind = "dialog" | "patch";
@@ -109,6 +125,22 @@ export interface DialogState {
      * insert" marker, mirroring D's absent `sourceRange`).
      */
     procRange?: { start: number; end: number };
+    /**
+     * SSL only: byte span of the `procedure <name>` identifier token (used to rename the node). Set by the
+     * SSL adapter from `SSLDialogNode.nameRange`; absent for D and for new (not-yet-spliced) nodes.
+     */
+    nameRange?: { start: number; end: number };
+    /**
+     * SSL only: true when this node is a dialog entry point (directly called by talk_p_proc or
+     * force_dialog_start). Set by the SSL adapter from `SSLDialogData.entryPoints`; absent for D.
+     */
+    isEntry?: boolean;
+    /**
+     * Set by `renameState` when an existing node's id changes (later task); read by the SSL splicer to
+     * find the original source procedure name to rewrite. Never set by the adapter - only the rename
+     * operation writes this field. Absent until a rename has occurred.
+     */
+    renamedFrom?: string;
 }
 
 export type DialogReaction = "neutral" | "good" | "bad";
@@ -145,6 +177,20 @@ export interface DialogChoice {
      * is not safely deletable here) and, in Tier 3b, to remove the call. Absent for option choices and D.
      */
     callStmtRange?: { start: number; end: number };
+    /**
+     * SSL only: byte span of the target identifier token in a `call <target>;` statement (used by rename to
+     * rewrite all call sites). Set by the SSL adapter from `SSLDialogNode.callTransitions[].targetRange`;
+     * absent when the call target is a call_expr rather than a plain identifier, and absent for option choices
+     * and D formats.
+     */
+    callTargetRange?: { start: number; end: number };
+    /**
+     * SSL only: true when the `call <target>;` statement is a direct procedure-body statement (not nested
+     * inside an if/block). Set by the SSL adapter from `SSLDialogNode.callTransitions[].topLevel`; a later
+     * task's delete-eligibility check uses this to decide whether the call can be removed safely without
+     * leaving a dangling conditional. Absent for option choices and D formats.
+     */
+    callTopLevel?: boolean;
 }
 
 export type DialogTarget =
@@ -384,13 +430,17 @@ function stateFromSSL(node: SSLDialogNode): DialogState {
         });
     });
 
-    // Attach each call statement's byte span to its matching call choice (no callRange), so delete-eligibility
-    // can tell a node reached by a `call` from one reached only by options.
+    // Attach each call statement's byte spans to its matching call choice (no callRange), so delete-eligibility
+    // can tell a node reached by a `call` from one reached only by options, and rename can rewrite call sites.
     node.callTransitions?.forEach((ct) => {
         const c = choices.find(
             (ch) => ch.target.kind === "state" && ch.target.stateId === ct.name && ch.callRange === undefined,
         );
-        if (c) c.callStmtRange = ct.stmtRange;
+        if (c) {
+            c.callStmtRange = ct.stmtRange;
+            c.callTargetRange = ct.targetRange;
+            c.callTopLevel = ct.topLevel;
+        }
     });
 
     // A node can hold several (conditional) Reply lines; show the first as the line,
@@ -406,19 +456,24 @@ function stateFromSSL(node: SSLDialogNode): DialogState {
         faithful: node.faithful,
         insertAnchor: node.insertAnchor,
         procRange: node.procRange,
+        nameRange: node.nameRange,
     };
 }
 
 export function modelFromSSL(data: SSLDialogData): DialogModel {
+    const states = data.nodes.map(stateFromSSL);
+    // Mark each state as an entry point when its id is in entryPoints (the nodes talk_p_proc calls directly).
+    for (const state of states) {
+        state.isEntry = data.entryPoints.includes(state.id);
+    }
     return {
         format: "fallout-ssl",
         editable: false,
-        roots:
-            data.nodes.length > 0
-                ? [{ id: "dialog", label: "dialog", kind: "dialog", states: data.nodes.map(stateFromSSL) }]
-                : [],
+        roots: states.length > 0 ? [{ id: "dialog", label: "dialog", kind: "dialog", states }] : [],
         messages: data.messages,
         newProcAnchor: data.newProcAnchor,
         entryIds: data.entryPoints,
+        entryCalls: data.entryCalls,
+        entryCallAnchor: data.entryCallAnchor,
     };
 }

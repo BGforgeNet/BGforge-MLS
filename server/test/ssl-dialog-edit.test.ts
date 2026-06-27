@@ -244,3 +244,17 @@ describe("verifySSLEditApplied", () => {
         expect(verifySSLEditApplied(edited, actual).ok).toBe(true);
     });
 });
+
+describe("modelFromSSL node-wiring projection", () => {
+    it("sets isEntry from entryIds, carries nameRange, and exposes entryCalls/anchor", async () => {
+        const src = `procedure Node001 begin\n    NOption(101, Node002, 4);\nend\nprocedure Node002 begin Reply(200); end\nprocedure talk_p_proc begin call Node001; end\n`;
+        const model = modelFromSSL(await parseDialog(src));
+        const n1 = model.roots[0]!.states.find((s) => s.id === "Node001")!;
+        const n2 = model.roots[0]!.states.find((s) => s.id === "Node002")!;
+        expect(n1.isEntry).toBe(true); // talk_p_proc calls Node001
+        expect(n2.isEntry).toBe(false); // reached only by an option
+        expect(n1.nameRange).toBeDefined();
+        expect(model.entryCalls?.[0]?.name).toBe("Node001");
+        expect(model.entryCallAnchor).toBeDefined();
+    });
+});
