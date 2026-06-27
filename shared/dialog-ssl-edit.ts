@@ -1,16 +1,16 @@
 /**
- * Surgical in-place editor for Fallout SSL dialog source (Tier 1: retarget + reorder).
+ * Surgical in-place editor for Fallout SSL dialog source (retarget, reorder, add, remove options).
  *
  * SSL is a full scripting language, so the graph is only an approximation of a procedure. Only
  * nodes the graph represents *faithfully* (flat dialog calls + single-level `if`, no else/loop/
  * nested-if/assignment - see `SSLDialogNode.faithful`) are structurally editable; an edit to a
  * non-faithful node is ignored so we never corrupt control flow the graph never captured.
  *
- * Tier 1 only rearranges or rewrites bytes that already exist - it needs no code generation and no
- * `.msg` id allocation (those are Tier 2). Each faithful node's options occupy fixed byte "slots"
- * (their original `callRange`s, in source order); an edit re-fills each slot with the call text of
- * the option that now belongs there, substituting the target token when an option was retargeted.
- * Because every splice replaces a whole slot, retarget and reorder compose without overlapping.
+ * Tier 1 (retarget + reorder) rearranges/rewrites existing option-call byte spans. Tier 2 adds
+ * removal (delete a flat option's whole statement) and insertion (serialize a new `NOption`/
+ * `NMessage` whose `.msg` id was allocated at save time - see dialog-ssl-ids.ts - and splice it in
+ * after the last surviving option). `nodeOps` composes all four as non-overlapping splices per node.
+ * Adding/removing a CONDITIONAL option (inside an `if`) is deferred to Tier 3 and bails out here.
  */
 
 import type { DialogChoice, DialogModel, DialogState, DialogTarget } from "./dialog-model";
