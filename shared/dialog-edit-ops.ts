@@ -60,6 +60,10 @@ export function renameState(model: DialogModel, state: DialogState, newId: strin
     retargetReferences(model, state.id, (c) => {
         c.target = { kind: "state", stateId: trimmed };
     });
+    // Tag a source-backed node (has nameRange) with its ORIGINAL id so the SSL splicer can rewrite the
+    // procedure name token + references it keys on. The `=== undefined` guard means a second rename keeps
+    // the original source id, not an intermediate one.
+    if (state.nameRange && state.renamedFrom === undefined) state.renamedFrom = state.id;
     state.id = trimmed;
     return true;
 }

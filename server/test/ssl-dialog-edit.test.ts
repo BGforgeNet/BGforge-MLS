@@ -289,6 +289,46 @@ describe("applySSLDialogEdits - delete a call-referenced / entry node", () => {
     });
 });
 
+describe("applySSLDialogEdits - rename node", () => {
+    const SRC_RN = `procedure Node001 begin\n    NOption(101, Node002, 4);\nend\nprocedure Node002 begin\n    call Node001;\nend\nprocedure talk_p_proc begin\n    call Node001;\nend\n`;
+
+    it("renames a node's procedure and every reference (option target, call, entry call)", async () => {
+        const original = modelFromSSL(await parseDialog(SRC_RN));
+        const edited = structuredCloneModel(original);
+        const n1 = edited.roots[0]!.states.find((s) => s.id === "Node001")!;
+        n1.renamedFrom = "Node001"; // what ops.renameState records
+        n1.id = "Node009";
+        // References on the model move with the rename (ops.renameState retargets them); mirror that here.
+        for (const s of edited.roots[0]!.states)
+            for (const c of s.choices)
+                if (c.target.kind === "state" && c.target.stateId === "Node001")
+                    c.target = { kind: "state", stateId: "Node009" };
+        const out = applySSLDialogEdits(SRC_RN, edited, original);
+        expect(out).toContain("procedure Node009 begin");
+        expect(out).not.toContain("procedure Node001 begin");
+        expect(out).toContain("NOption(101, Node002, 4)"); // unrelated option intact
+        expect(out).not.toContain("call Node001;"); // both calls (Node002 + talk_p_proc) renamed
+        expect((out.match(/call Node009;/g) ?? []).length).toBe(2);
+    });
+
+    it("renames a node referenced by a faithful node's option without double-splicing", async () => {
+        const src = `procedure Node001 begin\n    NOption(101, Node002, 4);\nend\nprocedure Node002 begin Reply(200); end\nprocedure talk_p_proc begin call Node001; end\n`;
+        const original = modelFromSSL(await parseDialog(src));
+        const edited = structuredCloneModel(original);
+        const n2 = edited.roots[0]!.states.find((s) => s.id === "Node002")!;
+        n2.renamedFrom = "Node002";
+        n2.id = "Node008";
+        for (const s of edited.roots[0]!.states)
+            for (const c of s.choices)
+                if (c.target.kind === "state" && c.target.stateId === "Node002")
+                    c.target = { kind: "state", stateId: "Node008" };
+        const out = applySSLDialogEdits(src, edited, original);
+        expect(out).toContain("procedure Node008 begin");
+        expect(out).toContain("NOption(101, Node008, 4);"); // inbound option retargeted exactly once (no corruption)
+        expect(out).not.toContain("Node002"); // no stale ref or doubled token
+    });
+});
+
 describe("modelFromSSL node-wiring projection", () => {
     it("sets isEntry from entryIds, carries nameRange, and exposes entryCalls/anchor", async () => {
         const src = `procedure Node001 begin\n    NOption(101, Node002, 4);\nend\nprocedure Node002 begin Reply(200); end\nprocedure talk_p_proc begin call Node001; end\n`;

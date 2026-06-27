@@ -14,9 +14,12 @@
  * Tier 3a adds whole-node ops in `applySSLDialogEdits`: DELETE removes an absent node's `procedure`
  * span (its inbound options redirect to a terminal `NMessage` via the survivor logic), and ADD
  * serializes a new node's `procedure` (see dialog-ssl-serialize.ts) and splices it before `talk_p_proc`.
- * `eligibleToDelete` gates which nodes the editor may delete. Tier 3b (this file) adds inbound-call removal
- * on delete (top-level `call` statements spliced out) and entry/call-referenced node deletion. Adding/removing
- * a CONDITIONAL option (inside an `if`) and condition editing remain deferred.
+ * `eligibleToDelete` gates which nodes the editor may delete. Tier 3b adds: entry wiring (splice a `call
+ * NodeX;` into/out of `talk_p_proc` from a node's `isEntry` flag); inbound-call removal on delete (top-level
+ * `call` statements spliced out) so entry/call-referenced nodes are deletable; and node RENAME (rewrite the
+ * `procedure` name token + every reference - faithful-node option targets via `nodeOps`, calls/non-faithful
+ * option targets/entry calls via the RENAME block, split to avoid double-splicing a span). Adding/removing a
+ * CONDITIONAL option (inside an `if`) and condition editing remain deferred.
  */
 
 import type { DialogChoice, DialogModel, DialogState, DialogTarget } from "./dialog-model";
@@ -150,8 +153,47 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
     }
     const origById = new Map(original.roots.flatMap((r) => r.states).map((s) => [s.id, s]));
     const ops: SpliceOp[] = [];
+
+    // RENAME: an edited node carrying `renamedFrom` is an existing node whose id changed. Rewrite its procedure
+    // name token and the references nodeOps does NOT handle. Exclude it from the delete loop (its old id looks
+    // "missing") and the add loop (its new id has no procRange).
+    const renamedFromOf = new Map<string, string>(); // oldId -> newId
+    for (const s of edited.roots.flatMap((r) => r.states)) {
+        // `renamedFrom !== s.id` skips a no-op rename (renamedFrom set but id unchanged) - nothing to rewrite.
+        if (s.renamedFrom && s.renamedFrom !== s.id) renamedFromOf.set(s.renamedFrom, s.id);
+    }
+    for (const [oldId, newId] of renamedFromOf) {
+        const orig = origById.get(oldId);
+        if (!orig?.nameRange) continue;
+        ops.push({ start: orig.nameRange.start, end: orig.nameRange.end, replacement: newId });
+        // Rewrite ONLY references nodeOps does NOT handle, to avoid double-splicing the same span:
+        //  - call-statement targets (nodeOps only touches OPTION calls, never `call` statements);
+        //  - option targets in NON-faithful nodes (nodeOps skips non-faithful nodes entirely).
+        // An option target in a FAITHFUL node is left to the per-node survivor retarget: renameState already updated
+        // that option's model target to newId, so nodeOps rewrites its targetRange. Rewriting it here too would push
+        // a SECOND op on the identical span -> overlap corruption.
+        for (const s of original.roots.flatMap((r) => r.states)) {
+            for (const c of s.choices) {
+                if (c.target.kind !== "state" || c.target.stateId !== oldId) continue;
+                if (c.callTargetRange) {
+                    ops.push({ start: c.callTargetRange.start, end: c.callTargetRange.end, replacement: newId });
+                } else if (c.targetRange && s.faithful !== true) {
+                    ops.push({ start: c.targetRange.start, end: c.targetRange.end, replacement: newId });
+                }
+                // option target in a faithful node -> handled by nodeOps (do nothing here).
+            }
+        }
+        for (const ec of original.entryCalls ?? []) {
+            if (ec.name === oldId)
+                ops.push({ start: ec.targetRange.start, end: ec.targetRange.end, replacement: newId });
+        }
+    }
+
     for (const state of edited.roots.flatMap((r) => r.states)) {
-        const orig = origById.get(state.id);
+        // A renamed node's id is its NEW id; origById is keyed by ORIGINAL ids, so resolve via renamedFrom.
+        // This lets nodeOps process the renamed node's own options against its original, AND lets a faithful
+        // node referencing the renamed node retarget that option's targetRange to the new id.
+        const orig = origById.get(state.renamedFrom ?? state.id);
         if (!orig || !orig.faithful) continue; // gate: only faithful nodes are structurally editable
         ops.push(...nodeOps(originalText, state, orig, orig.insertAnchor));
     }
@@ -163,7 +205,8 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
     // lives in a DIFFERENT surviving node, so this deletion and that slot rewrite cannot overlap.
     const editedIds = new Set(edited.roots.flatMap((r) => r.states).map((s) => s.id));
     for (const orig of original.roots.flatMap((r) => r.states)) {
-        if (editedIds.has(orig.id) || !orig.procRange) continue;
+        // A renamed-away old id is absent from editedIds but is NOT a deletion (the RENAME block rewrote it).
+        if (editedIds.has(orig.id) || !orig.procRange || renamedFromOf.has(orig.id)) continue;
         const start = orig.procRange.start;
         const nl = originalText.indexOf("\n", orig.procRange.end);
         const end = nl === -1 ? orig.procRange.end : nl + 1;
@@ -178,7 +221,7 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
     // same deleted nodes are already handled by the ENTRY WIRING block (a deleted node is absent from
     // `editedById`, so its entry call is removed there); do NOT duplicate that here.
     for (const orig of original.roots.flatMap((r) => r.states)) {
-        if (editedIds.has(orig.id)) continue; // node survives -> nothing to do
+        if (editedIds.has(orig.id) || renamedFromOf.has(orig.id)) continue; // survives or renamed -> nothing to do
         for (const s of original.roots.flatMap((r) => r.states)) {
             if (!editedIds.has(s.id)) continue; // source node was also deleted -> skip
             for (const c of s.choices) {
@@ -199,7 +242,7 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
         const idOf = (t: string | undefined): number => Number(/^@(\d+)$/.exec((t ?? "").trim())?.[1] ?? NaN);
         const blocks: string[] = [];
         for (const s of edited.roots.flatMap((r) => r.states)) {
-            if (s.procRange || s.derivedFrom) continue; // existing or derived -> not a new node
+            if (s.procRange || s.derivedFrom || s.renamedFrom) continue; // existing, derived, or renamed -> not a new node
             const ids = {
                 reply: Number.isFinite(idOf(s.text)) ? idOf(s.text) : undefined,
                 options: Object.fromEntries(
@@ -223,16 +266,20 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
     const editedById = new Map(edited.roots.flatMap((r) => r.states).map((s) => [s.id, s]));
     // Removals: an original entry whose edited node is gone or no longer isEntry.
     for (const ec of original.entryCalls ?? []) {
+        // A renamed entry's old id is absent from editedById, but its call must NOT be removed - the RENAME block
+        // already rewrote its targetRange (a span inside stmtRange), so a removal here would overlap that op.
+        if (renamedFromOf.has(ec.name)) continue;
         const e = editedById.get(ec.name);
         if (e && e.isEntry) continue; // still an entry -> keep
         if (!ec.topLevel) continue; // conditional entry (`if (X) call ...;`) - outside scope of this tier
         ops.push(removeStatementSplice(originalText, ec.stmtRange));
     }
-    // Additions: an edited node that isEntry but was not an original entry.
-    // entryCallAnchor is undefined when talk_p_proc has an empty body; guard accordingly.
+    // Additions: an edited node that isEntry but was not an original entry. Exclude a renamed node: its new id
+    // is absent from originalEntries (keyed by old ids), but its entry call already exists (RENAME rewrote its
+    // target), so adding one here would duplicate it.
     const anchorE = original.entryCallAnchor;
     if (anchorE !== undefined) {
-        const added = [...editedById.values()].filter((s) => s.isEntry && !originalEntries.has(s.id));
+        const added = [...editedById.values()].filter((s) => s.isEntry && !s.renamedFrom && !originalEntries.has(s.id));
         if (added.length > 0) {
             const indent = "    ";
             ops.push({
