@@ -6,6 +6,7 @@
         type DialogState,
         type DialogTarget,
     } from "../../../../shared/dialog-model";
+    import { msgRef, textFieldLocked } from "./inspector-edit";
 
     // The detail panel for the selected state. For an editable format (WeiDU D) it is the
     // edit surface: content fields (SAY, trigger, weight, reply/condition/action) mutate the
@@ -49,17 +50,13 @@
 
     // A bare `@N` line is backed by a .tra entry: edit that entry so localization is
     // preserved (the project decision). A literal line is edited in place.
-    function refOf(text: string | undefined): string | null {
-        const m = /^@(\d+)$/.exec((text ?? "").trim());
-        return m ? m[1]! : null;
-    }
     function setSay(v: string): void {
-        const ref = refOf(state.text);
+        const ref = msgRef(state.text);
         if (ref !== null && messages) messages[ref] = v;
         else state.text = v;
     }
     function setReply(c: DialogChoice, v: string): void {
-        const ref = refOf(c.text);
+        const ref = msgRef(c.text);
         if (ref !== null && messages) messages[ref] = v;
         else c.text = v;
     }
@@ -94,13 +91,14 @@
     // A derived state is still fully read-only (its line is owned by the source construct).
     const textRO = $derived(Boolean(state.derivedFrom) || (!editable && !ssl));
 
-    // For SSL a text field is editable only when it is backed by a resolvable @N message
-    // (the .msg line the edit writes to). A textless/continue option or a computed id has no
-    // line to edit, and SSL save only rewrites the .msg - editing it would set an in-memory
-    // literal that silently vanishes on save - so it stays read-only. D persists literal text
-    // via the .d splice, so it has no such gate.
+    // For SSL a text field is editable only when it is backed by a RESOLVABLE @N message - an @N
+    // whose .msg line actually loaded into `messages` (the line the edit writes to). A literal, a
+    // computed id, or an @N whose .msg never resolved (translation dir misconfigured / not indexed)
+    // has no line to edit, and SSL save only rewrites the .msg - editing it would set an in-memory
+    // literal that silently vanishes on save - so it stays read-only. D persists literal text via the
+    // .d splice, so it has no such gate. (See ./inspector-edit.ts; unit-tested there.)
     function textLocked(text: string | undefined): boolean {
-        return textRO || (ssl && refOf(text) === null);
+        return textFieldLocked({ text, messages, ssl, textRO });
     }
 
     // Grow a textarea to fit its content so nothing hides behind an inner scrollbar. The
