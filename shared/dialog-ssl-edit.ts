@@ -32,11 +32,14 @@ function optionsOf(state: DialogState): DialogChoice[] {
     return state.choices.filter((c) => c.callRange);
 }
 
-// A NEW option: no source `callRange` (never existed in the .ssl) and an allocated `@<id>` text (the id is
-// assigned at save time, before the splice). Distinct from dialog-ssl-ids.ts's pre-allocation `isNewOption`
-// (literal text); here the id has already been assigned.
+// A NEW option: no source range of ANY kind (never existed in the .ssl) and an allocated `@<id>` text (the id
+// is assigned at save time, before the splice). Distinct from dialog-ssl-ids.ts's pre-allocation `isNewOption`
+// (literal text); here the id has already been assigned. The `stmtRange` check is what separates a freshly-added
+// option from an EXISTING terminal message (`NMessage`/`GMessage`/`BMessage`): a message carries no `callRange`
+// (it has no target node) but the parser records its `stmtRange`, so without this guard an existing message
+// would be misread as new and re-appended (duplicated) on every structural save.
 function isNewSSLOption(c: DialogChoice): boolean {
-    return c.callRange === undefined && /^@\d+$/.test((c.text ?? "").trim());
+    return c.callRange === undefined && c.stmtRange === undefined && /^@\d+$/.test((c.text ?? "").trim());
 }
 
 /**
@@ -166,6 +169,11 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
         const orig = origById.get(oldId);
         if (!orig?.nameRange) continue;
         ops.push({ start: orig.nameRange.start, end: orig.nameRange.end, replacement: newId });
+        // The forward declaration (`procedure <name>;`) carries a second name token; rewrite it too, or the
+        // file keeps an orphan decl for the old name while the renamed procedure is undeclared (sslc rejects
+        // both). Disjoint from nameRange (decl is above the definition). Absent when the proc has no forward decl.
+        if (orig.forwardDeclRange)
+            ops.push({ start: orig.forwardDeclRange.start, end: orig.forwardDeclRange.end, replacement: newId });
         // Rewrite ONLY references nodeOps does NOT handle, to avoid double-splicing the same span:
         //  - call-statement targets (nodeOps only touches OPTION calls, never `call` statements);
         //  - option targets in NON-faithful nodes (nodeOps skips non-faithful nodes entirely).

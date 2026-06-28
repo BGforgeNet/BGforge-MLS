@@ -337,6 +337,59 @@ describe("applySSLDialogEdits - rename node", () => {
         expect(out).toContain("NOption(101, Node008, 4);"); // inbound option retargeted exactly once (no corruption)
         expect(out).not.toContain("Node002"); // no stale ref or doubled token
     });
+
+    it("renames the node's forward declaration, not just its definition", async () => {
+        // Real SSL forward-declares every procedure at the top. A rename must rewrite the forward
+        // decl too, or the file is left with an orphan decl for the old name and the new proc undeclared.
+        const src = `procedure Node001;\nprocedure Node002;\n\nprocedure Node001 begin\n    NOption(101, Node002, 4);\nend\nprocedure Node002 begin\n    Reply(200);\nend\nprocedure talk_p_proc begin\n    call Node001;\nend\n`;
+        const original = modelFromSSL(await parseDialog(src));
+        const edited = structuredCloneModel(original);
+        const n2 = edited.roots[0]!.states.find((s) => s.id === "Node002")!;
+        n2.renamedFrom = "Node002";
+        n2.id = "Node777";
+        for (const s of edited.roots[0]!.states)
+            for (const c of s.choices)
+                if (c.target.kind === "state" && c.target.stateId === "Node002")
+                    c.target = { kind: "state", stateId: "Node777" };
+        const out = applySSLDialogEdits(src, edited, original);
+        expect(out).toContain("procedure Node777;"); // forward declaration renamed
+        expect(out).toContain("procedure Node777 begin"); // definition renamed
+        expect(out).not.toContain("Node002"); // no stale forward decl, target, or definition
+    });
+});
+
+describe("applySSLDialogEdits - terminal message not duplicated", () => {
+    // A node ending in NMessage/GMessage/BMessage is a terminal: the message has a real source statement,
+    // so a structural save must leave it untouched, never re-append it as if it were a newly-added option.
+    const SRC_MSG = `procedure Node001 begin\n    NOption(101, Node002, 4);\nend\nprocedure Node002 begin\n    Reply(200);\n    NMessage(201);\nend\nprocedure Node003 begin Reply(300); end\nprocedure talk_p_proc begin\n    call Node001;\nend\n`;
+
+    it("does not duplicate a node's existing terminal NMessage when another node is edited", async () => {
+        const original = modelFromSSL(await parseDialog(SRC_MSG));
+        const edited = structuredCloneModel(original);
+        // Edit Node001 only; nodeOps still runs over Node002 (which holds the terminal NMessage).
+        edited.roots[0]!.states.find((s) => s.id === "Node001")!.choices[0]!.target = {
+            kind: "state",
+            stateId: "Node003",
+        };
+        const out = applySSLDialogEdits(SRC_MSG, edited, original);
+        expect((out.match(/NMessage\(201\)/g) ?? []).length).toBe(1); // appears exactly once
+        expect(out).toContain("NOption(101, Node003, 4)"); // the actual edit applied
+    });
+
+    it("does not duplicate the terminal NMessage when the holding node is renamed", async () => {
+        const original = modelFromSSL(await parseDialog(SRC_MSG));
+        const edited = structuredCloneModel(original);
+        const n2 = edited.roots[0]!.states.find((s) => s.id === "Node002")!;
+        n2.renamedFrom = "Node002";
+        n2.id = "Node777";
+        for (const s of edited.roots[0]!.states)
+            for (const c of s.choices)
+                if (c.target.kind === "state" && c.target.stateId === "Node002")
+                    c.target = { kind: "state", stateId: "Node777" };
+        const out = applySSLDialogEdits(SRC_MSG, edited, original);
+        expect((out.match(/NMessage\(201\)/g) ?? []).length).toBe(1);
+        expect(out).toContain("procedure Node777 begin");
+    });
 });
 
 describe("modelFromSSL node-wiring projection", () => {

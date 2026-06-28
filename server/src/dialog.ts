@@ -80,6 +80,17 @@ export async function parseDialog(
     // Byte offset where a NEW entry call is spliced into talk_p_proc (end of its last body statement).
     let entryCallAnchor: number | undefined;
 
+    // Forward declarations (`procedure Name;`) carry a name token that a rename must also rewrite, or the
+    // file is left with an orphan decl for the old name and the renamed procedure undeclared. Capture each
+    // decl's name-token span by procedure name (first wins - a redeclaration is invalid SSL anyway).
+    const forwardDeclRanges = new Map<string, { start: number; end: number }>();
+    for (const child of root.children) {
+        if (child.type !== SyntaxType.ProcedureForward) continue;
+        const nameNode = child.childForFieldName("name");
+        if (nameNode && !forwardDeclRanges.has(nameNode.text))
+            forwardDeclRanges.set(nameNode.text, { start: nameNode.startIndex, end: nameNode.endIndex });
+    }
+
     // First pass: parse every dialog procedure into a map; collect entry points
     // from talk_p_proc (the single dialog root).
     const parsed = new Map<string, SSLDialogNode>();
@@ -98,6 +109,8 @@ export async function parseDialog(
         }
         const node = parseProcedure(child, procName, sideEffectFns, text);
         node.procRange = { start: child.startIndex, end: child.endIndex };
+        const fwd = forwardDeclRanges.get(procName);
+        if (fwd) node.forwardDeclRange = fwd;
         parsed.set(procName, node);
     }
 
@@ -283,6 +296,10 @@ function parseProcedure(
                     line,
                     conditional: enclosingCondition(node),
                     msgKind: classifyMsgId(arg0),
+                    // A terminal message is an EXISTING statement: record its span so the editor can tell it
+                    // from a newly-added option (which has no source range). Without this, a structural save
+                    // re-serializes and duplicates it. No callRange/targetRange - a message has no target node.
+                    stmtRange: statementRange(node),
                 });
             }
         }

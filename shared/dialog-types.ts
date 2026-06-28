@@ -89,6 +89,12 @@ export interface SSLDialogNode {
     /** Byte span of the `procedure <name>` identifier token (used to rename the node). Set by the parser. */
     nameRange?: { start: number; end: number };
     /**
+     * Byte span of the name token in this procedure's forward declaration (`procedure <name>;`), when one
+     * exists. Rename rewrites it alongside `nameRange` so the file is not left with a stale forward decl.
+     * Absent when the procedure has no forward declaration. Set by the parser.
+     */
+    forwardDeclRange?: { start: number; end: number };
+    /**
      * `call <target>;` transitions out of this node, with each statement's byte span (used to remove the call
      * when its target node is deleted). Parallels `callTargets` (names only) but carries the spans. Set by the parser.
      * `targetRange` is the span of the target identifier token (for rename/delete-by-call); absent when the target
