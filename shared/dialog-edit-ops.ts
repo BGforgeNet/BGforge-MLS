@@ -96,8 +96,18 @@ export function duplicateState(model: DialogModel, state: DialogState): DialogSt
     // reads cleanly through proxy traps and is faithful for plain DialogState data.
     // oxlint-disable-next-line unicorn/prefer-structured-clone -- structuredClone throws DataCloneError on the $state proxy; that is the bug being fixed.
     const copy = JSON.parse(JSON.stringify(state)) as DialogState;
-    copy.id = uniqueStateId(model, `${state.id}_copy`);
+    const ssl = model.format === "fallout-ssl";
+    copy.id = ssl ? nextSslNodeId(model) : uniqueStateId(model, `${state.id}_copy`);
+    // Strip every source-span marker so the copy is a PENDING-NEW node, spliced in fresh rather than over
+    // the original's bytes. D keys "pending" on the absent sourceRange; SSL on the absent procRange (the
+    // other SSL markers would be stale for a node that isn't in the source yet). The @N text refs on the
+    // state and its choices are intentionally KEPT - the copy shares the original's .msg/.tra strings, the
+    // same way D's duplicate shares them (no new id is allocated at save).
     delete copy.sourceRange;
+    delete copy.procRange;
+    delete copy.nameRange;
+    delete copy.forwardDeclRange;
+    delete copy.insertAnchor;
     copy.choices = copy.choices.map((c, i) => ({ ...c, id: `${copy.id}#${i}` }));
     root.states.push(copy);
     return copy;

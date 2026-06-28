@@ -53,8 +53,10 @@ export function allocateOptionIds(
 /**
  * Allocate ids for every NEW node's reply line and options (mutating their `text` to `@<id>`), returning a
  * per-node id map (for the procedure serializer) and the id->text entries to append to the `.msg`. Ids start at
- * `max(existing numeric id) + 1`. A new node with no reply text gets `reply: undefined`. Existing options on a
- * new node (none in Tier 3a - a new node is built fresh) and textless options are skipped.
+ * `max(existing numeric id) + 1`. A new node with no reply text gets `reply: undefined`. Textless options are
+ * skipped. Allocation is idempotent on `@<id>` text: a reply or option that already carries a ref keeps it and
+ * mints nothing - so a DUPLICATED node (which shares the source node's `@N` strings, like D) reuses those ids
+ * rather than minting bogus new ones, and a re-run never double-allocates.
  */
 export function allocateNodeIds(
     model: DialogModel,
@@ -67,14 +69,14 @@ export function allocateNodeIds(
         for (const state of root.states) {
             if (!isNewNode(state)) continue;
             const nodeIds: NodeMsgIds = { reply: undefined, options: {} };
-            if (state.text.trim() !== "") {
+            if (state.text.trim() !== "" && !/^@\d+$/.test(state.text.trim())) {
                 const id = next++;
                 nodeIds.reply = id;
                 newMessages[String(id)] = state.text;
                 state.text = `@${id}`;
             }
             for (const c of state.choices) {
-                if (c.callRange !== undefined || (c.text ?? "").trim() === "") continue; // existing or textless option
+                if (!isNewOption(c)) continue; // existing (callRange), textless, or already-@N (shared) option
                 const id = next++;
                 nodeIds.options[c.id] = id;
                 newMessages[String(id)] = c.text!;

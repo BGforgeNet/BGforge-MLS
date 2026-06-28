@@ -228,12 +228,13 @@
             <button onclick={actions.duplicateState}>Duplicate state</button>
             <button class="del" onclick={actions.deleteState}>Delete state</button>
         </div>
-    {:else if ssl && deletable}
-        <!-- A faithful, delete-eligible SSL node (Tier 3a): only Delete is offered. Duplicate needs
-             its own splice and stays Tier 3b. The node's procedure is removed and inbound options
-             redirect to a terminal NMessage on save. -->
+    {:else if ssl && structuralEditable}
+        <!-- A faithful SSL node: Duplicate clones the procedure (sharing the source's @N refs, like D) and
+             is always offered. Delete is offered only when every inbound reference can be cleaned up on save
+             (deletable) - its procedure is removed and inbound options redirect to a terminal NMessage. -->
         <div class="stateops">
-            <button class="del" onclick={actions.deleteState}>Delete state</button>
+            <button onclick={actions.duplicateState}>Duplicate state</button>
+            {#if deletable}<button class="del" onclick={actions.deleteState}>Delete state</button>{/if}
         </div>
     {/if}
 </div>

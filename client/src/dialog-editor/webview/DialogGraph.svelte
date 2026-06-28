@@ -483,7 +483,7 @@
             void rebuild({ frame: "none" });
         },
         duplicateState: () => {
-            if (!editable(selected)) return;
+            if (!structEditable(selected)) return; // D, or a faithful SSL node (shares the source @N refs)
             const copy = ops.duplicateState(editModel, selected);
             if (!copy) return;
             selected = copy;
@@ -657,7 +657,7 @@
                             <div class="ctxnote">Read-only ({ctxOwner.derivedFrom})</div>
                         {:else if ctxMenu.kind === "state"}
                             <button class="ctxitem" role="menuitem" onclick={() => ctxAct("addReply")}>Add reply</button>
-                            <button class="ctxitem" role="menuitem" disabled={!editable(ctxOwner)} title={editable(ctxOwner) ? "" : "Duplicate isn't available for Fallout SSL nodes yet - edit the .ssl source."} onclick={() => ctxAct("duplicate")}>Duplicate state</button>
+                            <button class="ctxitem" role="menuitem" disabled={!structEditable(ctxOwner)} title={structEditable(ctxOwner) ? "" : "This node can't be duplicated - only faithful SSL nodes (or WeiDU D states) can be."} onclick={() => ctxAct("duplicate")}>Duplicate state</button>
                             <button class="ctxitem del" role="menuitem" disabled={!canDelete(ctxOwner)} title={canDelete(ctxOwner) ? "" : "This node can't be deleted from the graph (a dialog entry, reached by a call, or referenced from non-editable code) - edit the .ssl source."} onclick={() => ctxAct("delete")}>Delete state</button>
                         {:else if ctxReply && !ctxPickTarget}
                             <button class="ctxitem" role="menuitem" disabled={ctxReply.index === 0} onclick={() => replyAct("up")}>Move up</button>

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { parseDialog } from "../src/dialog";
 import { modelFromSSL, type DialogModel } from "../../shared/dialog-model";
 import { applySSLDialogEdits, eligibleToDelete, verifySSLEditApplied } from "../../shared/dialog-ssl-edit";
+import { duplicateState } from "../../shared/dialog-edit-ops";
+import { allocateNodeIds } from "../../shared/dialog-ssl-ids";
 
 const structuredCloneModel = (m: DialogModel): DialogModel => structuredClone(m);
 
@@ -403,5 +405,41 @@ describe("modelFromSSL node-wiring projection", () => {
         expect(n1.nameRange).toBeDefined();
         expect(model.entryCalls?.[0]?.name).toBe("Node001");
         expect(model.entryCallAnchor).toBeDefined();
+    });
+});
+
+describe("duplicateState - SSL (share refs)", () => {
+    const DUP_SRC = `procedure Node001;\nprocedure Node002;\n\nprocedure Node001 begin\n    Reply(100);\n    NOption(101, Node002, 4);\nend\nprocedure Node002 begin\n    Reply(200);\nend\nprocedure talk_p_proc begin\n    call Node001;\nend\n`;
+
+    it("clones a faithful SSL node as a pending-new node that shares the original's @N refs", async () => {
+        const model = modelFromSSL(await parseDialog(DUP_SRC));
+        const n1 = model.roots[0]!.states.find((s) => s.id === "Node001")!;
+        const copy = duplicateState(model, n1)!;
+        expect(copy).not.toBeNull();
+        expect(copy.id).toBe("Node003"); // nextSslNodeId (max Node### + 1), not "Node001_copy"
+        expect(copy.procRange).toBeUndefined(); // pending-new: no source procedure to splice over
+        expect(copy.text).toBe(n1.text); // shares the reply @N ref (no new id)
+        expect(copy.choices.map((c) => c.text)).toEqual(n1.choices.map((c) => c.text)); // shares option @N refs
+        expect(copy.choices.every((c) => c.id.startsWith("Node003#"))).toBe(true); // choices re-id'd to the copy
+    });
+
+    it("save allocates NO new ids for the duplicate (the refs are shared, not copied)", async () => {
+        const model = modelFromSSL(await parseDialog(DUP_SRC));
+        duplicateState(model, model.roots[0]!.states.find((s) => s.id === "Node001")!);
+        const created = allocateNodeIds(model, {}); // panel.save runs this; an all-@N node yields nothing new
+        expect(created.newMessages).toEqual({});
+    });
+
+    it("splices the duplicated procedure into the .ssl sharing the refs, original intact, re-parseable", async () => {
+        const original = modelFromSSL(await parseDialog(DUP_SRC));
+        const edited = structuredCloneModel(original);
+        duplicateState(edited, edited.roots[0]!.states.find((s) => s.id === "Node001")!);
+        const out = applySSLDialogEdits(DUP_SRC, edited, original);
+        expect(out).toMatch(/procedure Node003 begin/); // new procedure spliced in
+        expect((out.match(/Reply\(100\)/g) ?? []).length).toBe(2); // shared reply ref now in both nodes
+        expect((out.match(/NOption\(101, Node002, 4\)/g) ?? []).length).toBe(2); // shared option ref in both
+        expect((out.match(/procedure Node001 begin/g) ?? []).length).toBe(1); // original untouched
+        const reparsed = modelFromSSL(await parseDialog(out));
+        expect(reparsed.roots[0]!.states.some((s) => s.id === "Node003")).toBe(true);
     });
 });
