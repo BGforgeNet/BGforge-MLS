@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { msgRef, textFieldLocked } from "../src/dialog-editor/webview/inspector-edit";
+import { isPendingChoice, isPendingState, msgRef, textFieldLocked } from "../src/dialog-editor/webview/inspector-edit";
 
 describe("msgRef", () => {
     it("parses a bare @N line to its numeric id", () => {
@@ -42,5 +42,43 @@ describe("textFieldLocked", () => {
 
     it("SSL: a literal (non-@N) field is locked - SSL save only writes resolvable .msg entries", () => {
         expect(textFieldLocked({ text: "raw literal", messages, ssl: true, textRO: false })).toBe(true);
+    });
+
+    it("SSL: a PENDING-NEW field is editable so the user can type its initial text (allocated an @id at save)", () => {
+        // A just-added option/node starts with empty (or literal) text and no .msg entry; locking it would
+        // make add-option / add-node unusable for SSL. textRO still wins.
+        expect(textFieldLocked({ text: "", messages, ssl: true, textRO: false, isNew: true })).toBe(false);
+        expect(textFieldLocked({ text: "typed literal", messages, ssl: true, textRO: false, isNew: true })).toBe(false);
+        expect(textFieldLocked({ text: "", messages, ssl: true, textRO: true, isNew: true })).toBe(true);
+    });
+
+    it("isNew defaults to false - an existing unresolvable @N stays locked", () => {
+        expect(textFieldLocked({ text: "@999", messages, ssl: true, textRO: false })).toBe(true);
+    });
+});
+
+describe("isPendingChoice", () => {
+    it("a choice with no source span of any kind is pending-new", () => {
+        expect(isPendingChoice({ id: "x", text: "", target: { kind: "exit" } })).toBe(true);
+    });
+    it("an existing option (callRange or stmtRange) is not pending", () => {
+        expect(
+            isPendingChoice({ id: "x", text: "@1", target: { kind: "exit" }, callRange: { start: 0, end: 1 } }),
+        ).toBe(false);
+        expect(
+            isPendingChoice({ id: "x", text: "@1", target: { kind: "exit" }, stmtRange: { start: 0, end: 1 } }),
+        ).toBe(false);
+    });
+    it("a call transition (callStmtRange) is not pending", () => {
+        expect(
+            isPendingChoice({ id: "x", target: { kind: "state", stateId: "N" }, callStmtRange: { start: 0, end: 1 } }),
+        ).toBe(false);
+    });
+});
+
+describe("isPendingState", () => {
+    it("a state with no procRange is pending-new; with a procRange it is not", () => {
+        expect(isPendingState({ id: "N", text: "", choices: [] })).toBe(true);
+        expect(isPendingState({ id: "N", text: "", choices: [], procRange: { start: 0, end: 1 } })).toBe(false);
     });
 });

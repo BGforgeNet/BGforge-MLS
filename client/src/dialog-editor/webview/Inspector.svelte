@@ -6,7 +6,7 @@
         type DialogState,
         type DialogTarget,
     } from "../../../../shared/dialog-model";
-    import { msgRef, textFieldLocked } from "./inspector-edit";
+    import { isPendingChoice, isPendingState, msgRef, textFieldLocked } from "./inspector-edit";
 
     // The detail panel for the selected state. For an editable format (WeiDU D) it is the
     // edit surface: content fields (SAY, trigger, weight, reply/condition/action) mutate the
@@ -96,9 +96,11 @@
     // computed id, or an @N whose .msg never resolved (translation dir misconfigured / not indexed)
     // has no line to edit, and SSL save only rewrites the .msg - editing it would set an in-memory
     // literal that silently vanishes on save - so it stays read-only. D persists literal text via the
-    // .d splice, so it has no such gate. (See ./inspector-edit.ts; unit-tested there.)
-    function textLocked(text: string | undefined): boolean {
-        return textFieldLocked({ text, messages, ssl, textRO });
+    // .d splice, so it has no such gate. A just-added (pending) option/node is the exception - it has no
+    // .msg entry yet, so `isNew` keeps it editable for the user to type the initial line. (See
+    // ./inspector-edit.ts; unit-tested there.)
+    function textLocked(text: string | undefined, isNew = false): boolean {
+        return textFieldLocked({ text, messages, ssl, textRO, isNew });
     }
 
     // Grow a textarea to fit its content so nothing hides behind an inner scrollbar. The
@@ -141,7 +143,7 @@
     <input class="iv code" value={state.id} disabled={!structuralEditable && readOnly} onchange={(e) => actions.rename(e.currentTarget.value)} />
 
     <div class="ik">{ssl ? "Reply line" : "NPC line"}</div>
-    <textarea class="iv" rows="2" use:autosize={resolveText(state.text, messages)} disabled={textLocked(state.text)} value={resolveText(state.text, messages)} oninput={(e) => setSay(e.currentTarget.value)}></textarea>
+    <textarea class="iv" rows="2" use:autosize={resolveText(state.text, messages)} disabled={textLocked(state.text, isPendingState(state))} value={resolveText(state.text, messages)} oninput={(e) => setSay(e.currentTarget.value)}></textarea>
 
     {#if ssl}
         <!-- SSL: the node's reply condition (its enclosing `if`) and the state-mutating
@@ -203,7 +205,7 @@
                     </span>
                 {/if}
             </div>
-            <textarea class="iv reply" rows="1" use:autosize={resolveText(c.text, messages)} disabled={textLocked(c.text)} placeholder="(no reply - NPC continue)" value={resolveText(c.text, messages)} oninput={(e) => setReply(c, e.currentTarget.value)}></textarea>
+            <textarea class="iv reply" rows="1" use:autosize={resolveText(c.text, messages)} disabled={textLocked(c.text, isPendingChoice(c))} placeholder="(no reply - NPC continue)" value={resolveText(c.text, messages)} oninput={(e) => setReply(c, e.currentTarget.value)}></textarea>
             <textarea class="iv code cond" rows="1" use:autosize={c.condition ?? ""} disabled={readOnly} placeholder={ssl ? "condition" : "condition (IF ~...~)"} value={c.condition ?? ""} oninput={(e) => (c.condition = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
             {#if !ssl}
                 <textarea class="iv code act" rows="1" use:autosize={c.action ?? ""} disabled={readOnly} placeholder="action (DO ~...~)" value={c.action ?? ""} oninput={(e) => (c.action = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
