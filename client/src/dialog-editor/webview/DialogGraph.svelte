@@ -656,7 +656,7 @@
                         {#if ctxOwner?.derivedFrom}
                             <div class="ctxnote">Read-only ({ctxOwner.derivedFrom})</div>
                         {:else if ctxMenu.kind === "state"}
-                            <button class="ctxitem" role="menuitem" onclick={() => ctxAct("addReply")}>Add reply</button>
+                            <button class="ctxitem" role="menuitem" disabled={!structEditable(ctxOwner)} title={structEditable(ctxOwner) ? "" : "Can't add a reply here - only faithful SSL nodes (or WeiDU D states) are editable."} onclick={() => ctxAct("addReply")}>Add reply</button>
                             <button class="ctxitem" role="menuitem" disabled={!structEditable(ctxOwner)} title={structEditable(ctxOwner) ? "" : "This node can't be duplicated - only faithful SSL nodes (or WeiDU D states) can be."} onclick={() => ctxAct("duplicate")}>Duplicate state</button>
                             <button class="ctxitem del" role="menuitem" disabled={!canDelete(ctxOwner)} title={canDelete(ctxOwner) ? "" : "This node can't be deleted from the graph (a dialog entry, reached by a call, or referenced from non-editable code) - edit the .ssl source."} onclick={() => ctxAct("delete")}>Delete state</button>
                         {:else if ctxReply && !ctxPickTarget}

@@ -148,6 +148,29 @@ end
         const names = result.nodes.map((n) => n.name).sort();
         expect(names).toEqual(["Node050", "Node051"]);
     });
+
+    it("includes an unreachable, non-hook dialog node (a just-added or duplicated orphan)", async () => {
+        const ssl = `
+procedure Node001 begin
+    Reply(100);
+end
+procedure Node050 begin
+    Reply(500);
+    NMessage(501);
+end
+procedure pickup_p_proc begin
+    Reply(900);
+end
+procedure talk_p_proc begin
+    call Node001;
+end
+`;
+        const result = await parseDialog(ssl);
+        // Node050 is unreachable (no inbound ref yet) but is a real dialog node - it has dialog calls and is
+        // not a *_p_proc engine hook - so it stays visible for the user to wire (a just-created or duplicated
+        // node must not vanish). pickup_p_proc (a hook, despite its Reply) is still excluded.
+        expect(result.nodes.map((n) => n.name).sort()).toEqual(["Node001", "Node050"]);
+    });
 });
 
 // The side-effect honesty badge needs to know which builtins a node runs beyond showing

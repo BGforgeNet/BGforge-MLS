@@ -430,6 +430,18 @@ describe("duplicateState - SSL (share refs)", () => {
         expect(created.newMessages).toEqual({});
     });
 
+    it("a duplicated entry node is NOT auto-wired as a second dialog entry", async () => {
+        const original = modelFromSSL(await parseDialog(DUP_SRC));
+        expect(original.roots[0]!.states.find((s) => s.id === "Node001")!.isEntry).toBe(true); // called by talk_p_proc
+        const edited = structuredCloneModel(original);
+        const copy = duplicateState(edited, edited.roots[0]!.states.find((s) => s.id === "Node001")!)!;
+        // The copy is an orphan to wire deliberately (and stays visible - parser keeps unreachable dialog
+        // nodes), never a silent second conversation start.
+        expect(copy.isEntry).toBeFalsy();
+        const out = applySSLDialogEdits(DUP_SRC, edited, original);
+        expect(out).not.toContain("call Node003;"); // talk_p_proc untouched
+    });
+
     it("splices the duplicated procedure into the .ssl sharing the refs, original intact, re-parseable", async () => {
         const original = modelFromSSL(await parseDialog(DUP_SRC));
         const edited = structuredCloneModel(original);

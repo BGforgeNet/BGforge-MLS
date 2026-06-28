@@ -108,6 +108,10 @@ export function duplicateState(model: DialogModel, state: DialogState): DialogSt
     delete copy.nameRange;
     delete copy.forwardDeclRange;
     delete copy.insertAnchor;
+    // A copy is an orphan to wire deliberately, not a silent second conversation entry: don't inherit the
+    // source's entry status (which would auto-splice a `call <copy>;` into talk_p_proc on save). The parser
+    // keeps unreachable dialog nodes visible, so the un-wired copy still shows in the graph.
+    delete copy.isEntry;
     copy.choices = copy.choices.map((c, i) => ({ ...c, id: `${copy.id}#${i}` }));
     root.states.push(copy);
     return copy;

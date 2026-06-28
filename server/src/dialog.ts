@@ -143,8 +143,15 @@ export async function parseDialog(
         for (const opt of node.options) if (opt.target) queue.push(opt.target);
         for (const t of node.callTargets) queue.push(t);
     }
+    // Include a procedure reachable from a dialog entry, OR an unreachable but authored dialog node: one that
+    // has dialog calls (a Reply/option) and is not an engine hook (`*_p_proc`). The latter keeps a just-created
+    // or duplicated node visible before it is wired - an orphan NodeNNN is a dialog node in progress - whereas a
+    // `*_p_proc` lifecycle handler (pickup_p_proc, look_at_p_proc, ...) is never a dialog node even when it
+    // contains a Reply, so it stays excluded.
+    const isHookProc = (name: string): boolean => name.endsWith("_p_proc");
     for (const [procName, node] of parsed) {
-        if (reachable.has(procName)) nodes.push(node);
+        const isOrphanDialogNode = !isHookProc(procName) && (node.replies.length > 0 || node.options.length > 0);
+        if (reachable.has(procName) || isOrphanDialogNode) nodes.push(node);
     }
 
     return {
