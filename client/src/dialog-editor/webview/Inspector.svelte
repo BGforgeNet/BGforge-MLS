@@ -153,8 +153,9 @@
         <div class="ik">Condition</div>
         <!-- Node-reply condition editing is a follow-up: the parser must capture the Reply
              statement span to support wrap/unwrap; the save path and verify must diff the
-             reply condition. Leave disabled until that work is done. -->
-        <input class="iv code" disabled value={state.trigger ?? ""} placeholder="(unconditional)" />
+             reply condition. Disabled until then - the locked styling and tooltip explain why,
+             and the same textarea control as the per-option conditions keeps the two uniform. -->
+        <textarea class="iv code cond locked" rows="1" disabled use:autosize={state.trigger ?? ""} title="Node-level condition editing is not supported yet - edit the .ssl source" placeholder="(unconditional)" value={state.trigger ?? ""}></textarea>
         {#if state.sideEffects?.length}
             <div class="ik">Side effects</div>
             <div class="iv sfx">{state.sideEffects.join(", ")}</div>
