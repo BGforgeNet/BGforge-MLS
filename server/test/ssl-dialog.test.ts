@@ -246,3 +246,49 @@ end
         expect(n1.sideEffects ?? []).toEqual([]);
     });
 });
+
+describe("Tier 3c: condition spans", () => {
+    const src = `procedure talk_p_proc begin
+    call Node001;
+end
+
+procedure Node001 begin
+    Reply(100);
+    NOption(101, Node002, 004);
+    if (local_var(LVAR_x) == 0) then
+        NOption(102, Node003, 004);
+    if (global_var(GVAR_y) == 1) then begin
+        Reply(103);
+        NOption(104, Node004, 004);
+    end
+end`;
+
+    it("captures condRange/ifRange/ifSingleCall for a single-statement if", async () => {
+        const data = await parseDialog(src);
+        const n1 = data.nodes.find((n) => n.name === "Node001")!;
+        const cond = n1.options.find((o) => o.msgId === 102)!;
+        expect(cond.condRange).toBeDefined();
+        expect(src.slice(cond.condRange!.start, cond.condRange!.end)).toBe("(local_var(LVAR_x) == 0)");
+        expect(src.slice(cond.ifRange!.start, cond.ifRange!.end)).toMatch(
+            /^if \(local_var\(LVAR_x\) == 0\) then[\s\S]*NOption\(102, Node003, 004\);$/,
+        );
+        expect(cond.ifSingleCall).toBe(true);
+    });
+
+    it("marks a multi-call (shared) faithful block ifSingleCall=false", async () => {
+        const data = await parseDialog(src);
+        const n1 = data.nodes.find((n) => n.name === "Node001")!;
+        const shared = n1.options.find((o) => o.msgId === 104)!;
+        expect(shared.condRange).toBeDefined();
+        expect(shared.ifSingleCall).toBe(false);
+    });
+
+    it("leaves unconditional options without condition spans", async () => {
+        const data = await parseDialog(src);
+        const n1 = data.nodes.find((n) => n.name === "Node001")!;
+        const flat = n1.options.find((o) => o.msgId === 101)!;
+        expect(flat.condRange).toBeUndefined();
+        expect(flat.ifRange).toBeUndefined();
+        expect(flat.ifSingleCall).toBeUndefined();
+    });
+});

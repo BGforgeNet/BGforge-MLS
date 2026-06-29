@@ -33,6 +33,12 @@ export interface SSLDialogReply {
      * for a plain numeric id. Drives the computed/random honesty badges.
      */
     msgKind?: "computed" | "random";
+    /** Byte span of the enclosing `if` condition expression (the `cond` field, parens included). Set by the parser when conditional. */
+    condRange?: { start: number; end: number };
+    /** Byte span of the whole enclosing `if` statement. Set by the parser when conditional. Drives unwrap. */
+    ifRange?: { start: number; end: number };
+    /** True iff the enclosing `if`'s then-branch holds exactly one dialog call - the only condition-editable shape. Set by the parser. */
+    ifSingleCall?: boolean;
 }
 
 export interface SSLDialogOption {
@@ -52,6 +58,12 @@ export interface SSLDialogOption {
     targetRange?: { start: number; end: number };
     /** Byte span of the whole option STATEMENT `NOption(...);` incl. the trailing `;` (used by remove). */
     stmtRange?: { start: number; end: number };
+    /** Byte span of the enclosing `if` condition expression (the `cond` field, parens included). Set by the parser when conditional. */
+    condRange?: { start: number; end: number };
+    /** Byte span of the whole enclosing `if` statement. Set by the parser when conditional. Drives unwrap. */
+    ifRange?: { start: number; end: number };
+    /** True iff the enclosing `if`'s then-branch holds exactly one dialog call - the only condition-editable shape. Set by the parser. */
+    ifSingleCall?: boolean;
 }
 
 export interface SSLDialogNode {

@@ -269,17 +269,22 @@ function parseProcedure(
             const arg2 = args[2];
 
             if (funcName === "Reply" && arg0) {
+                const ifSpans = enclosingIfSpans(node);
                 replies.push({
                     msgId: parseArgValue(arg0),
                     line,
                     conditional: enclosingCondition(node),
                     msgKind: classifyMsgId(arg0),
+                    ...(ifSpans
+                        ? { condRange: ifSpans.condRange, ifRange: ifSpans.ifRange, ifSingleCall: ifSpans.ifSingleCall }
+                        : {}),
                 });
             }
 
             // NOption, GOption, BOption, and Low variants - narrows funcName.
             if (isOptionFn(funcName) && arg0 && arg1) {
                 const target = arg1.text;
+                const ifSpans = enclosingIfSpans(node);
                 options.push({
                     type: funcName,
                     msgId: parseArgValue(arg0),
@@ -291,11 +296,15 @@ function parseProcedure(
                     callRange: { start: node.startIndex, end: node.endIndex },
                     targetRange: { start: arg1.startIndex, end: arg1.endIndex },
                     stmtRange: statementRange(node),
+                    ...(ifSpans
+                        ? { condRange: ifSpans.condRange, ifRange: ifSpans.ifRange, ifSingleCall: ifSpans.ifSingleCall }
+                        : {}),
                 });
             }
 
             // NMessage, GMessage, BMessage (terminal) - narrows funcName.
             if (isMessageFn(funcName) && arg0) {
+                const ifSpans = enclosingIfSpans(node);
                 options.push({
                     type: funcName,
                     msgId: parseArgValue(arg0),
@@ -307,6 +316,9 @@ function parseProcedure(
                     // from a newly-added option (which has no source range). Without this, a structural save
                     // re-serializes and duplicates it. No callRange/targetRange - a message has no target node.
                     stmtRange: statementRange(node),
+                    ...(ifSpans
+                        ? { condRange: ifSpans.condRange, ifRange: ifSpans.ifRange, ifSingleCall: ifSpans.ifSingleCall }
+                        : {}),
                 });
             }
         }
@@ -486,6 +498,49 @@ function enclosingCondition(node: SyntaxNode): string | undefined {
         cur = cur.parent;
     }
     return undefined;
+}
+
+// Spans of the nearest enclosing single-level `if` whose THEN-branch directly contains this call. Returns
+// undefined when the call is not in a then-branch (e.g. an else branch - non-faithful anyway, not editable).
+// condRange covers the `cond` field node (with its parentheses); ifRange the whole `if` statement; ifSingleCall
+// is true iff the then-branch contains exactly one dialog call/transition (the only condition-editable shape).
+function enclosingIfSpans(
+    node: SyntaxNode,
+):
+    | { condRange: { start: number; end: number }; ifRange: { start: number; end: number }; ifSingleCall: boolean }
+    | undefined {
+    let prev: SyntaxNode = node;
+    let cur: SyntaxNode | null = node.parent;
+    while (cur) {
+        if (cur.type === SyntaxType.IfStmt) {
+            const condNode = cur.childForFieldName("cond");
+            const thenBody = cur.childForFieldName("then");
+            if (!condNode || !thenBody) return undefined;
+            // Compare by byte span - web-tree-sitter returns fresh wrapper objects on each access
+            const inThen = prev.startIndex === thenBody.startIndex && prev.endIndex === thenBody.endIndex;
+            if (!inThen) return undefined; // else branch (or malformed) - not editable
+            return {
+                condRange: { start: condNode.startIndex, end: condNode.endIndex },
+                ifRange: { start: cur.startIndex, end: cur.endIndex },
+                ifSingleCall: countDialogCallsInBranch(thenBody) === 1,
+            };
+        }
+        prev = cur;
+        cur = cur.parent;
+    }
+    return undefined;
+}
+
+// Count dialog-producing statements in an if's then-branch: recognized dialog call exprs
+// (Reply/N*Option/.../N*Message) plus `call <target>;` transitions. Used only to decide single- vs
+// multi-call; nested ifs make a procedure non-faithful, so they never reach a faithful editable branch.
+function countDialogCallsInBranch(branch: SyntaxNode): number {
+    let n = 0;
+    walkTree(branch, (node) => {
+        if (node.type === SyntaxType.CallExpr && isDialogCallExpr(node)) n++;
+        if (node.type === SyntaxType.CallStmt) n++;
+    });
+    return n;
 }
 
 function walkTree(node: SyntaxNode, callback: (_node: SyntaxNode) => void): void {
