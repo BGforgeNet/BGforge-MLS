@@ -129,7 +129,8 @@
         <div class="ronote">
             Text edits save to the <b>.msg</b>. This node's structure - <b>rename</b>, <b>retarget</b>,
             <b>reorder</b>, add/remove options, entry status - is editable and writes back to the <b>.ssl</b>.
-            Editing <b>conditions</b> (the <b>if</b> wrappers) still needs the source.
+            Conditions on single-<b>if</b> options are editable here. A condition shared by several options
+            stays source-only (edit the <b>.ssl</b> directly).
         </div>
     {:else if ssl}
         <div class="ronote">
@@ -150,6 +151,9 @@
              builtins it calls. Both read-only; "weight" and the per-choice `DO` action are
              WeiDU D concepts that have no SSL equivalent and are omitted. -->
         <div class="ik">Condition</div>
+        <!-- Node-reply condition editing is a follow-up: the parser must capture the Reply
+             statement span to support wrap/unwrap; the save path and verify must diff the
+             reply condition. Leave disabled until that work is done. -->
         <input class="iv code" disabled value={state.trigger ?? ""} placeholder="(unconditional)" />
         {#if state.sideEffects?.length}
             <div class="ik">Side effects</div>
@@ -206,7 +210,7 @@
                 {/if}
             </div>
             <textarea class="iv reply" rows="1" use:autosize={resolveText(c.text, messages)} disabled={textLocked(c.text, isPendingChoice(c))} placeholder="(no reply - NPC continue)" value={resolveText(c.text, messages)} oninput={(e) => setReply(c, e.currentTarget.value)}></textarea>
-            <textarea class="iv code cond" rows="1" use:autosize={c.condition ?? ""} disabled={readOnly} placeholder={ssl ? "condition" : "condition (IF ~...~)"} value={c.condition ?? ""} oninput={(e) => (c.condition = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
+            <textarea class="iv code cond" rows="1" use:autosize={c.condition ?? ""} disabled={ssl ? !c.conditionEditable : readOnly} title={ssl && c.conditionEditable === false ? "Condition shared by multiple options - edit the .ssl source" : ""} placeholder={ssl ? "condition" : "condition (IF ~...~)"} value={c.condition ?? ""} oninput={(e) => (c.condition = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
             {#if !ssl}
                 <textarea class="iv code act" rows="1" use:autosize={c.action ?? ""} disabled={readOnly} placeholder="action (DO ~...~)" value={c.action ?? ""} oninput={(e) => (c.action = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
             {/if}
