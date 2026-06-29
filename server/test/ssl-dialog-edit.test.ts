@@ -297,6 +297,15 @@ describe("verifySSLEditApplied", () => {
         const actual = modelWithOptionCondition("Node001", 102, "(x)");
         expect(verifySSLEditApplied(intended, actual).ok).toBe(true);
     });
+
+    it("verify treats a bare condition as matching its serialized parenthesized form", () => {
+        // After a wrap, the intended model carries the user's bare condition while the reparse of the
+        // saved .ssl carries the serializeCond-parenthesized form. Verify must canonicalize parens so it
+        // does not flag this cosmetic difference as a failed save.
+        const intended = modelWithOptionCondition("Node001", 102, "local_var(LVAR_Z) == 5");
+        const actual = modelWithOptionCondition("Node001", 102, "(local_var(LVAR_Z) == 5)");
+        expect(verifySSLEditApplied(intended, actual).ok).toBe(true);
+    });
 });
 
 describe("applySSLDialogEdits - entry wiring", () => {

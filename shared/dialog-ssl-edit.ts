@@ -25,7 +25,12 @@
 import type { DialogChoice, DialogModel, DialogState, DialogTarget } from "./dialog-model";
 import type { VerifyResult } from "./dialog-d-edit";
 import { applySplices, type SpliceOp } from "./dialog-splice";
-import { serializeSSLConditionalOption, serializeSSLOption, serializeSSLProcedure } from "./dialog-ssl-serialize";
+import {
+    serializeCond,
+    serializeSSLConditionalOption,
+    serializeSSLOption,
+    serializeSSLProcedure,
+} from "./dialog-ssl-serialize";
 
 /** Options of a state in source order: the choices that carry a `callRange` (call transitions don't). */
 function optionsOf(state: DialogState): DialogChoice[] {
@@ -439,11 +444,14 @@ export function verifySSLEditApplied(intended: DialogModel, actual: DialogModel)
     for (const a of actual.roots.flatMap((r) => r.states)) {
         const s = intendedById.get(a.id);
         if (!s) return { ok: false, reason: `unexpected node "${a.id}" in the saved file` };
-        // Encode target + condition (whitespace-normalized) per option so a condition that did not
-        // land (edit-text, wrap, unwrap) is caught alongside a mismatched target. An option with no
-        // condition contributes an empty condition segment on both sides, so existing target-only
-        // tests remain unaffected.
-        const key = (c: DialogChoice): string => `${targetKey(c.target)}@${(c.condition ?? "").replaceAll(/\s+/g, "")}`;
+        // Encode target + condition per option so a condition that did not land (edit-text, wrap,
+        // unwrap) is caught alongside a mismatched target. Canonicalize the condition through
+        // serializeCond (the same paren-normalization the writer applies on wrap) then strip
+        // whitespace, so a bare typed condition (`X`) matches its written/reparsed form (`(X)`) and is
+        // not flagged as a failed save. An option with no condition contributes an empty segment on
+        // both sides, so existing target-only tests remain unaffected.
+        const normCond = (c?: string): string => (c && c.trim() !== "" ? serializeCond(c).replaceAll(/\s+/g, "") : "");
+        const key = (c: DialogChoice): string => `${targetKey(c.target)}@${normCond(c.condition)}`;
         const want = s.choices.map(key).join("|");
         const got = a.choices.map(key).join("|");
         if (want !== got)
