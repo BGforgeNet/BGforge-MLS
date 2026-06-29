@@ -210,7 +210,10 @@
                 {/if}
             </div>
             <textarea class="iv reply" rows="1" use:autosize={resolveText(c.text, messages)} disabled={textLocked(c.text, isPendingChoice(c))} placeholder="(no reply - NPC continue)" value={resolveText(c.text, messages)} oninput={(e) => setReply(c, e.currentTarget.value)}></textarea>
-            <textarea class="iv code cond" rows="1" use:autosize={c.condition ?? ""} disabled={ssl ? !c.conditionEditable : readOnly} title={ssl && c.conditionEditable === false ? "Condition shared by multiple options - edit the .ssl source" : ""} placeholder={ssl ? "condition" : "condition (IF ~...~)"} value={c.condition ?? ""} oninput={(e) => (c.condition = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
+            <textarea class="iv code cond" class:locked={ssl && c.conditionEditable === false} rows="1" use:autosize={c.condition ?? ""} disabled={ssl ? !c.conditionEditable : readOnly} title={ssl && c.conditionEditable === false ? "Condition shared by multiple options - edit the .ssl source" : ""} placeholder={ssl ? "condition" : "condition (IF ~...~)"} value={c.condition ?? ""} oninput={(e) => (c.condition = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
+            {#if ssl && c.conditionEditable === false}
+                <div class="condnote">shared by other options - edit in <b>.ssl</b></div>
+            {/if}
             {#if !ssl}
                 <textarea class="iv code act" rows="1" use:autosize={c.action ?? ""} disabled={readOnly} placeholder="action (DO ~...~)" value={c.action ?? ""} oninput={(e) => (c.action = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
             {/if}
@@ -368,6 +371,23 @@
     }
     .iv.cond {
         color: #f59e0b;
+    }
+    /* A read-only SSL condition (a shared if-block, or the node-level one pending write-back):
+       a dashed border plus a caption make the locked state legible on its own - the disabled
+       dimming alone is too subtle on the amber code text, and the hover tooltip is not
+       discoverable (a hover-only cue fails to explain why the field cannot be edited). */
+    .iv.cond.locked {
+        border-style: dashed;
+        border-color: #6b7280;
+    }
+    .condnote {
+        color: #9aa0a6;
+        font-size: 9px;
+        margin-top: 1px;
+        padding-left: 2px;
+    }
+    .condnote b {
+        color: #cbd5e1;
     }
     .iv.act {
         color: #c084fc;
