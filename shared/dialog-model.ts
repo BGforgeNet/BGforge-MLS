@@ -147,6 +147,15 @@ export interface DialogState {
      * operation writes this field. Absent until a rename has occurred.
      */
     renamedFrom?: string;
+    /** SSL only: byte span of the first reply's enclosing `if` condition expression (for edit-text). Set by the SSL adapter. */
+    condRange?: { start: number; end: number };
+    /** SSL only: byte span of the first reply's enclosing `if` statement (for unwrap). Set by the SSL adapter. */
+    ifRange?: { start: number; end: number };
+    /**
+     * SSL only: whether this state's trigger condition may be edited/added/removed from the graph - true when
+     * the first reply is unconditional OR sits in a single-call `if`. Set by the SSL adapter.
+     */
+    conditionEditable?: boolean;
 }
 
 export type DialogReaction = "neutral" | "good" | "bad";
@@ -197,6 +206,16 @@ export interface DialogChoice {
      * leaving a dangling conditional. Absent for option choices and D formats.
      */
     callTopLevel?: boolean;
+    /** SSL only: byte span of the enclosing `if` condition expression (for edit-text). Set by the SSL adapter. */
+    condRange?: { start: number; end: number };
+    /** SSL only: byte span of the whole enclosing `if` statement (for unwrap). Set by the SSL adapter. */
+    ifRange?: { start: number; end: number };
+    /**
+     * SSL only: whether this option's condition may be edited/added/removed from the graph - true when the
+     * option is unconditional OR sits in a single-call `if` (ifSingleCall). A shared `if` block (2+ calls)
+     * is false: its condition stays source-only. Set by the SSL adapter; the inspector gates the field on it.
+     */
+    conditionEditable?: boolean;
 }
 
 export type DialogTarget =
@@ -426,6 +445,9 @@ function stateFromSSL(node: SSLDialogNode): DialogState {
             callRange: opt.callRange,
             targetRange: opt.targetRange,
             stmtRange: opt.stmtRange,
+            condRange: opt.condRange,
+            ifRange: opt.ifRange,
+            conditionEditable: opt.conditional === undefined || opt.ifSingleCall === true,
         });
     });
 
@@ -457,6 +479,10 @@ function stateFromSSL(node: SSLDialogNode): DialogState {
         text: firstReply ? sslMsgText(firstReply.msgId) : "",
         textKind: firstReply?.msgKind,
         trigger: firstReply?.conditional,
+        condRange: firstReply?.condRange,
+        ifRange: firstReply?.ifRange,
+        conditionEditable:
+            firstReply === undefined || firstReply.conditional === undefined || firstReply.ifSingleCall === true,
         choices,
         sideEffects: node.sideEffects,
         faithful: node.faithful,

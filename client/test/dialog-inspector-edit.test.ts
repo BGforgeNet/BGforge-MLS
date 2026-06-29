@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { isPendingChoice, isPendingState, msgRef, textFieldLocked } from "../src/dialog-editor/webview/inspector-edit";
+import { modelFromSSL } from "../../shared/dialog-model";
+import type { SSLDialogData } from "../../shared/dialog-types";
 
 describe("msgRef", () => {
     it("parses a bare @N line to its numeric id", () => {
@@ -81,4 +83,49 @@ describe("isPendingState", () => {
         expect(isPendingState({ id: "N", text: "", choices: [] })).toBe(true);
         expect(isPendingState({ id: "N", text: "", choices: [], procRange: { start: 0, end: 1 } })).toBe(false);
     });
+});
+
+it("derives conditionEditable from ifSingleCall and absence of a condition", () => {
+    const data: SSLDialogData = {
+        entryPoints: ["Node001"],
+        nodes: [
+            {
+                name: "Node001",
+                line: 1,
+                callTargets: [],
+                replies: [],
+                faithful: true,
+                options: [
+                    { type: "NOption", msgId: 101, target: "Node002", line: 2 }, // unconditional
+                    {
+                        type: "NOption",
+                        msgId: 102,
+                        target: "Node003",
+                        line: 3,
+                        conditional: "(x)",
+                        condRange: { start: 0, end: 3 },
+                        ifRange: { start: 0, end: 9 },
+                        ifSingleCall: true,
+                    },
+                    {
+                        type: "NOption",
+                        msgId: 104,
+                        target: "Node004",
+                        line: 4,
+                        conditional: "(y)",
+                        condRange: { start: 10, end: 13 },
+                        ifRange: { start: 10, end: 19 },
+                        ifSingleCall: false,
+                    },
+                ],
+            },
+        ],
+    };
+    const model = modelFromSSL(data);
+    const choices = model.roots[0]!.states[0]!.choices;
+    expect(choices[0]!.conditionEditable).toBe(true); // unconditional
+    expect(choices[1]!.conditionEditable).toBe(true); // single-call if
+    expect(choices[2]!.conditionEditable).toBe(false); // shared block
+    expect(choices[1]!.condRange).toEqual({ start: 0, end: 3 });
+    expect(choices[1]!.ifRange).toEqual({ start: 0, end: 9 });
 });
