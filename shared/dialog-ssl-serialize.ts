@@ -18,6 +18,44 @@ export function serializeSSLOption(choice: DialogChoice, msgId: number): string 
     return `NMessage(${msgId});`;
 }
 
+/**
+ * Normalize a condition expression to exactly one balanced outer-paren layer. SSL conditions must be
+ * parenthesized; conditions captured from the grammar already carry their parens, so this avoids
+ * double-wrapping while also ensuring a bare expression gains them. `"(a) and (b)"` closes depth=0
+ * before the end, so isBalanced returns false and the expression is wrapped.
+ */
+export function serializeCond(cond: string): string {
+    const t = cond.trim();
+    return /^\(.*\)$/s.test(t) && isBalanced(t) ? t : `(${t})`;
+}
+
+function isBalanced(s: string): boolean {
+    let depth = 0;
+    for (let i = 0; i < s.length; i++) {
+        if (s[i] === "(") depth++;
+        else if (s[i] === ")") {
+            depth--;
+            if (depth === 0 && i < s.length - 1) return false; // closed before the end
+        }
+    }
+    return depth === 0;
+}
+
+/**
+ * Emit a NEW conditional option: an `if (<cond>) then` wrapper over a single serialized dialog call,
+ * indented one step (4 spaces) deeper than the `if`. `indent` is the outer indentation level (the
+ * caller prepends it to the `if` line); the inner call sits at `indent + 4 spaces`. Used by the wrap
+ * operation. Reuses `serializeSSLOption` for the inner call.
+ */
+export function serializeSSLConditionalOption(
+    choice: DialogChoice,
+    msgId: number,
+    cond: string,
+    indent: string,
+): string {
+    return `if ${serializeCond(cond)} then\n${indent}    ${serializeSSLOption(choice, msgId)}`;
+}
+
 /** A node's NPC reply line, by allocated msg id. */
 export function serializeSSLReply(msgId: number): string {
     return `Reply(${msgId});`;

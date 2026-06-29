@@ -4,6 +4,7 @@ import { modelFromSSL, type DialogModel } from "../../shared/dialog-model";
 import { applySSLDialogEdits, eligibleToDelete, verifySSLEditApplied } from "../../shared/dialog-ssl-edit";
 import { duplicateState } from "../../shared/dialog-edit-ops";
 import { allocateNodeIds } from "../../shared/dialog-ssl-ids";
+import { serializeCond, serializeSSLConditionalOption } from "../../shared/dialog-ssl-serialize";
 
 const structuredCloneModel = (m: DialogModel): DialogModel => structuredClone(m);
 
@@ -453,5 +454,24 @@ describe("duplicateState - SSL (share refs)", () => {
         expect((out.match(/procedure Node001 begin/g) ?? []).length).toBe(1); // original untouched
         const reparsed = modelFromSSL(await parseDialog(out));
         expect(reparsed.roots[0]!.states.some((s) => s.id === "Node003")).toBe(true);
+    });
+});
+
+describe("serializeCond", () => {
+    it("ensures exactly one paren layer", () => {
+        expect(serializeCond("global_var(X) == 1")).toBe("(global_var(X) == 1)");
+        expect(serializeCond("(global_var(X) == 1)")).toBe("(global_var(X) == 1)");
+    });
+
+    it("wraps a compound expression where parens close before the end", () => {
+        expect(serializeCond("(a) and (b)")).toBe("((a) and (b))");
+    });
+});
+
+describe("serializeSSLConditionalOption", () => {
+    it("serializes a conditional option as an if/then single statement", () => {
+        const choice = { id: "c", text: "@102", target: { kind: "state", stateId: "Node003" }, skill: 4 } as any;
+        const out = serializeSSLConditionalOption(choice, 102, "global_var(GVAR_x) == 1", "    ");
+        expect(out).toBe("if (global_var(GVAR_x) == 1) then\n        NOption(102, Node003, 4);");
     });
 });
