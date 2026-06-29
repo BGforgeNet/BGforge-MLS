@@ -25,7 +25,7 @@
 import type { DialogChoice, DialogModel, DialogState, DialogTarget } from "./dialog-model";
 import type { VerifyResult } from "./dialog-d-edit";
 import { applySplices, type SpliceOp } from "./dialog-splice";
-import { serializeSSLOption, serializeSSLProcedure } from "./dialog-ssl-serialize";
+import { serializeSSLConditionalOption, serializeSSLOption, serializeSSLProcedure } from "./dialog-ssl-serialize";
 
 /** Options of a state in source order: the choices that carry a `callRange` (call transitions don't). */
 function optionsOf(state: DialogState): DialogChoice[] {
@@ -104,7 +104,24 @@ function nodeOps(
             // edit-text: replace the condition expression span only (disjoint from the call's targetRange).
             ops.push({ start: o.condRange.start, end: o.condRange.end, replacement: e.condition! });
         }
-        // wrap / unwrap handled in Tasks 5-6 (they add to wrappedOrUnwrapped).
+        if (!had && has && o.stmtRange) {
+            // wrap: replace the flat statement with `if (<cond>) then\n<indent>    <call>;`, serializing
+            // the inner call from the EDITED choice so a concurrent retarget is subsumed. Exclude from
+            // the survivor slots below to avoid a double-splice on the same stmtRange.
+            const lineStart = text.lastIndexOf("\n", o.stmtRange.start - 1) + 1;
+            const indent = /^[ \t]*/.exec(text.slice(lineStart, o.stmtRange.start))?.[0] ?? "    ";
+            const msgId = Number(
+                /^@(\d+)$/.exec((e.text ?? "").trim())?.[1] ??
+                    /\(\s*(\d+)/.exec(text.slice(o.callRange!.start, o.callRange!.end))?.[1] ??
+                    NaN,
+            );
+            if (Number.isFinite(msgId)) {
+                const wrapped = serializeSSLConditionalOption(e, msgId, e.condition!, indent);
+                ops.push({ start: o.stmtRange.start, end: o.stmtRange.end, replacement: wrapped });
+                wrappedOrUnwrapped.add(e.id);
+            }
+        }
+        // unwrap handled in Task 6 (adds to wrappedOrUnwrapped).
     }
 
     // SURVIVORS (Tier 1 retarget + reorder, restricted to options that still exist): the original

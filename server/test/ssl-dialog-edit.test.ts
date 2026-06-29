@@ -480,6 +480,29 @@ procedure talk_p_proc begin call Node001; end
     });
 });
 
+describe("applySSLDialogEdits - condition wrap", () => {
+    const SRC_WRAP = `procedure Node001 begin
+    NOption(101, Node002, 4);
+end
+procedure Node002 begin Reply(200); end
+procedure talk_p_proc begin call Node001; end
+`;
+
+    it("wraps an unconditional option in a new if when a condition is added", async () => {
+        const original = modelFromSSL(await parseDialog(SRC_WRAP));
+        const edited = structuredCloneModel(original);
+        const n1 = edited.roots[0]!.states.find((s) => s.id === "Node001")!;
+        const opt = n1.choices.find((c) => c.callRange !== undefined)!;
+        expect(opt).toBeDefined();
+        opt.condition = "global_var(GVAR_z) == 2";
+        const out = applySSLDialogEdits(SRC_WRAP, edited, original);
+        expect(out).toContain("if (global_var(GVAR_z) == 2) then");
+        expect(out).toMatch(/if \(global_var\(GVAR_z\) == 2\) then\s*\n\s*NOption\(101, Node002, 4\);/);
+        // must not be duplicated - wrapped option appears exactly once
+        expect(out.match(/NOption\(101,/g)!.length).toBe(1);
+    });
+});
+
 describe("serializeCond", () => {
     it("ensures exactly one paren layer", () => {
         expect(serializeCond("global_var(X) == 1")).toBe("(global_var(X) == 1)");
