@@ -138,35 +138,65 @@ function nodeOps(
         }
     }
 
-    // SURVIVORS (Tier 1 retarget + reorder, restricted to options that still exist): the original
-    // source-ordered slots of surviving options, each refilled with the survivor now at that position.
+    // SURVIVORS (Tier 1 retarget + reorder): split into conditional survivors (pinned to their own
+    // source slot) and flat survivors (may reorder among flat slots).
+    //
+    // A conditional option's `callRange` sits inside an `if` wrapper that does not move with the
+    // call. Including a conditional option in the flat-reorder permutation would strand its wrapper
+    // around a different call (the wrapper stays at its source slot while the call text moves to
+    // a different slot). Pinning the conditional survivor to its own slot prevents this: moving a
+    // conditional option in the graph keeps it at its source position in the .ssl (its condition
+    // stays with it); a cross-boundary reorder of a conditional option is not represented as a
+    // position change in the source. This is the conservative, no-corruption behavior.
+    // Do NOT implement shared-block splitting or any larger reorder rewrite here.
+
+    // Shared logic: compute the text to write into a slot for one surviving option - retarget when
+    // the target changed, or redirect to NMessage when the target node was deleted. Factored to avoid
+    // duplicating the retarget/redirect logic between the pinned-conditional and flat-reorder paths.
+    const survivorReplacement = (moved: DialogChoice, movedOrig: DialogChoice): string => {
+        const origCall = text.slice(movedOrig.callRange!.start, movedOrig.callRange!.end);
+        if (moved.target.kind !== "state") {
+            // The option's target node was deleted (the model redirected it to exit): re-serialize the
+            // option as a terminal NMessage, preserving the existing msg id (the first numeric arg of
+            // the original call). serializeSSLOption emits a full statement ending in `;`, but the slot
+            // is the call expression WITHOUT the trailing `;` - trim it so the existing `;` after the
+            // slot stays.
+            const msgId = Number(/\(\s*(\d+)/.exec(origCall)?.[1] ?? NaN);
+            return Number.isFinite(msgId) ? serializeSSLOption(moved, msgId).replace(/;$/, "") : origCall;
+        }
+        const newTarget = moved.target.stateId;
+        const oldTarget = text.slice(movedOrig.targetRange!.start, movedOrig.targetRange!.end);
+        if (newTarget !== oldTarget) {
+            const relStart = movedOrig.targetRange!.start - movedOrig.callRange!.start;
+            const relEnd = movedOrig.targetRange!.end - movedOrig.callRange!.start;
+            return origCall.slice(0, relStart) + newTarget + origCall.slice(relEnd);
+        }
+        return origCall;
+    };
+
+    // Conditional survivors: pinned - each refills its own callRange slot only, never a different
+    // slot. A conditional option's callRange is inside its if-wrapper; if it participated in the
+    // flat permutation, the wrapper would end up around the wrong call.
+    for (const o of origOpts) {
+        if (!editedIds.has(o.id) || wrappedOrUnwrapped.has(o.id) || o.condition === undefined) continue;
+        const e = editedOpts.find((c) => c.id === o.id)!;
+        const replacement = survivorReplacement(e, o);
+        if (replacement !== text.slice(o.callRange!.start, o.callRange!.end))
+            ops.push({ start: o.callRange!.start, end: o.callRange!.end, replacement });
+    }
+
+    // Flat survivors: may reorder among flat slots (source-order slots refilled in edited order).
     const survivorSlots = origOpts
-        .filter((o) => editedIds.has(o.id) && !wrappedOrUnwrapped.has(o.id))
+        .filter((o) => editedIds.has(o.id) && !wrappedOrUnwrapped.has(o.id) && o.condition === undefined)
         .map((o) => o.callRange!);
-    const survivorsInEditedOrder = editedOpts.filter((c) => origById.has(c.id) && !wrappedOrUnwrapped.has(c.id));
+    const survivorsInEditedOrder = editedOpts.filter(
+        (c) => origById.has(c.id) && !wrappedOrUnwrapped.has(c.id) && origById.get(c.id)!.condition === undefined,
+    );
     for (let i = 0; i < survivorSlots.length; i++) {
         const slot = survivorSlots[i]!;
         const moved = survivorsInEditedOrder[i]!;
         const movedOrig = origById.get(moved.id)!;
-        const origCall = text.slice(movedOrig.callRange!.start, movedOrig.callRange!.end);
-        let replacement: string;
-        if (moved.target.kind !== "state") {
-            // The option's target node was deleted (the model redirected it to exit): re-serialize the option
-            // as a terminal NMessage, preserving the existing msg id (the first numeric arg of the original
-            // call). serializeSSLOption emits a full statement ending in `;`, but the slot is the call
-            // expression WITHOUT the trailing `;` - trim it so the source's existing `;` after the slot stays.
-            const msgId = Number(/\(\s*(\d+)/.exec(origCall)?.[1] ?? NaN);
-            replacement = Number.isFinite(msgId) ? serializeSSLOption(moved, msgId).replace(/;$/, "") : origCall;
-        } else {
-            const newTarget = moved.target.stateId;
-            const oldTarget = text.slice(movedOrig.targetRange!.start, movedOrig.targetRange!.end);
-            replacement = origCall;
-            if (newTarget !== oldTarget) {
-                const relStart = movedOrig.targetRange!.start - movedOrig.callRange!.start;
-                const relEnd = movedOrig.targetRange!.end - movedOrig.callRange!.start;
-                replacement = origCall.slice(0, relStart) + newTarget + origCall.slice(relEnd);
-            }
-        }
+        const replacement = survivorReplacement(moved, movedOrig);
         if (replacement !== text.slice(slot.start, slot.end))
             ops.push({ start: slot.start, end: slot.end, replacement });
     }

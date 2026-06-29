@@ -544,3 +544,58 @@ describe("serializeSSLConditionalOption", () => {
         expect(out).toBe("if (global_var(GVAR_x) == 1) then\n        NOption(102, Node003, 4);");
     });
 });
+
+describe("applySSLDialogEdits - Task 7: compose + conditional reorder", () => {
+    // Fixture: one flat option (101 -> Node002) plus one single-call-if conditional option (102 -> Node003).
+    const SRC_T7 = `procedure Node001 begin
+    NOption(101, Node002, 4);
+    if (local_var(LVAR_x) == 0) then
+        NOption(102, Node003, 4);
+end
+procedure Node002 begin Reply(200); end
+procedure Node003 begin Reply(300); end
+procedure talk_p_proc begin call Node001; end
+`;
+
+    // Test A: compose condition edit-text with target retarget on the same option. The two splices
+    // touch disjoint spans (condRange vs targetRange inside callRange), so this should pass without
+    // any fix - it is a regression guard.
+    it("composes condition edit-text with retarget on the same conditional option", async () => {
+        const original = modelFromSSL(await parseDialog(SRC_T7));
+        const edited = structuredCloneModel(original);
+        const n1 = edited.roots[0]!.states.find((s) => s.id === "Node001")!;
+        const opt = n1.choices.find((c) => c.condition !== undefined)!;
+        expect(opt).toBeDefined();
+        opt.condition = "(local_var(LVAR_x) == 5)";
+        opt.target = { kind: "state", stateId: "Node002" };
+        const out = applySSLDialogEdits(SRC_T7, edited, original);
+        expect(out).toContain("if (local_var(LVAR_x) == 5) then");
+        expect(out).toContain("NOption(102, Node002, 4);");
+    });
+
+    // Test B: reorder so the conditional option (102) appears before the flat option (101) in the
+    // model. The survivor loop should NOT move the conditional option's call text into the flat slot,
+    // because the if-wrapper stays at its source position. Without the fix, the call texts swap and
+    // the if-wrapper ends up around option 101 - option 102 becomes flat (corruption). The fix pins
+    // conditional survivors to their own source slot so the wrapper always wraps its own call.
+    it("does not corrupt a conditional option when reordered among flat options", async () => {
+        const original = modelFromSSL(await parseDialog(SRC_T7));
+        const edited = structuredCloneModel(original);
+        const n1 = edited.roots[0]!.states.find((s) => s.id === "Node001")!;
+        // Move conditional option (102) before flat option (101) in the model, mirroring moveReply.
+        n1.choices.reverse();
+        const out = applySSLDialogEdits(SRC_T7, edited, original);
+        const reparsed = modelFromSSL(await parseDialog(out));
+        const n1r = reparsed.roots[0]!.states.find((s) => s.id === "Node001")!;
+        // Identify each option by its target node (stable across a pure reorder).
+        const opt102 = n1r.choices.find(
+            (c) => c.callRange !== undefined && c.target.kind === "state" && c.target.stateId === "Node003",
+        );
+        const opt101 = n1r.choices.find(
+            (c) => c.callRange !== undefined && c.target.kind === "state" && c.target.stateId === "Node002",
+        );
+        // Each option must keep its own condition: 102 stays conditional, 101 stays unconditional.
+        expect(opt102?.condition).toBeDefined();
+        expect(opt101?.condition).toBeUndefined();
+    });
+});
