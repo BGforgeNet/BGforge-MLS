@@ -121,7 +121,21 @@ function nodeOps(
                 wrappedOrUnwrapped.add(e.id);
             }
         }
-        // unwrap handled in Task 6 (adds to wrappedOrUnwrapped).
+        if (had && !has && o.ifRange) {
+            // unwrap: replace the whole `if` statement with the inner call alone. `ifRange.start` sits
+            // AFTER the line's leading indentation (the statement node's start is post-indent), so the
+            // existing indent before the `if` is preserved in place - the replacement is the bare call
+            // with no leading indent added.
+            const msgId = Number(
+                /^@(\d+)$/.exec((e.text ?? "").trim())?.[1] ??
+                    /\(\s*(\d+)/.exec(text.slice(o.callRange!.start, o.callRange!.end))?.[1] ??
+                    NaN,
+            );
+            if (Number.isFinite(msgId)) {
+                ops.push({ start: o.ifRange.start, end: o.ifRange.end, replacement: serializeSSLOption(e, msgId) });
+                wrappedOrUnwrapped.add(e.id);
+            }
+        }
     }
 
     // SURVIVORS (Tier 1 retarget + reorder, restricted to options that still exist): the original
