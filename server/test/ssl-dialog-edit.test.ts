@@ -457,6 +457,29 @@ describe("duplicateState - SSL (share refs)", () => {
     });
 });
 
+describe("applySSLDialogEdits - condition edit-text", () => {
+    const SRC_COND = `procedure Node001 begin
+    if (local_var(LVAR_x) == 0) then
+        NOption(102, Node002, 4);
+end
+procedure Node002 begin Reply(200); end
+procedure talk_p_proc begin call Node001; end
+`;
+
+    it("edits an existing single-call if condition in place", async () => {
+        const original = modelFromSSL(await parseDialog(SRC_COND));
+        const edited = structuredCloneModel(original);
+        const n1 = edited.roots[0]!.states.find((s) => s.id === "Node001")!;
+        const opt = n1.choices.find((c) => c.condition !== undefined)!;
+        expect(opt).toBeDefined(); // confirm the fixture has a conditional option with condRange
+        opt.condition = "(local_var(LVAR_x) == 1)";
+        const out = applySSLDialogEdits(SRC_COND, edited, original);
+        expect(out).toContain("if (local_var(LVAR_x) == 1) then");
+        expect(out).toContain("NOption(102, Node002, 4)");
+        expect(out).not.toContain("== 0) then");
+    });
+});
+
 describe("serializeCond", () => {
     it("ensures exactly one paren layer", () => {
         expect(serializeCond("global_var(X) == 1")).toBe("(global_var(X) == 1)");

@@ -90,10 +90,29 @@ function nodeOps(
         ops.push(removeStatementSplice(text, o.stmtRange));
     }
 
+    // CONDITION EDITS (Tier 3c). Diff each surviving option's condition; emit splices for edit-text now,
+    // wrap/unwrap in later tasks. `wrappedOrUnwrapped` ids are excluded from the survivor slots below
+    // (their whole statement is rewritten, which would overlap a survivor callRange splice).
+    const wrappedOrUnwrapped = new Set<string>();
+    for (const e of editedOpts) {
+        const o = origById.get(e.id);
+        if (!o) continue; // a new option - not a condition edit
+        if (o.conditionEditable !== true) continue; // shared block - condition is source-only
+        const had = o.condition !== undefined;
+        const has = e.condition !== undefined;
+        if (had && has && e.condition !== o.condition && o.condRange) {
+            // edit-text: replace the condition expression span only (disjoint from the call's targetRange).
+            ops.push({ start: o.condRange.start, end: o.condRange.end, replacement: e.condition! });
+        }
+        // wrap / unwrap handled in Tasks 5-6 (they add to wrappedOrUnwrapped).
+    }
+
     // SURVIVORS (Tier 1 retarget + reorder, restricted to options that still exist): the original
     // source-ordered slots of surviving options, each refilled with the survivor now at that position.
-    const survivorSlots = origOpts.filter((o) => editedIds.has(o.id)).map((o) => o.callRange!);
-    const survivorsInEditedOrder = editedOpts.filter((c) => origById.has(c.id));
+    const survivorSlots = origOpts
+        .filter((o) => editedIds.has(o.id) && !wrappedOrUnwrapped.has(o.id))
+        .map((o) => o.callRange!);
+    const survivorsInEditedOrder = editedOpts.filter((c) => origById.has(c.id) && !wrappedOrUnwrapped.has(c.id));
     for (let i = 0; i < survivorSlots.length; i++) {
         const slot = survivorSlots[i]!;
         const moved = survivorsInEditedOrder[i]!;
