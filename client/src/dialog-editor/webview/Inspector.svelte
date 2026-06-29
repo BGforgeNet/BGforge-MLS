@@ -211,7 +211,7 @@
                 {/if}
             </div>
             <textarea class="iv reply" rows="1" use:autosize={resolveText(c.text, messages)} disabled={textLocked(c.text, isPendingChoice(c))} placeholder="(no reply - NPC continue)" value={resolveText(c.text, messages)} oninput={(e) => setReply(c, e.currentTarget.value)}></textarea>
-            <textarea class="iv code cond" class:locked={ssl && c.conditionEditable === false} rows="1" use:autosize={c.condition ?? ""} disabled={ssl ? !c.conditionEditable : readOnly} title={ssl && c.conditionEditable === false ? "Condition shared by multiple options - edit the .ssl source" : ""} placeholder={ssl ? "condition" : "condition (IF ~...~)"} value={c.condition ?? ""} oninput={(e) => (c.condition = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
+            <textarea class="iv code cond" class:locked={ssl && c.conditionEditable === false} rows="1" use:autosize={c.condition ?? ""} disabled={ssl ? !c.conditionEditable : readOnly} title={ssl && c.conditionEditable === false ? "Condition shared by multiple options - edit the .ssl source" : ""} placeholder={ssl ? "(no condition)" : "condition (IF ~...~)"} value={c.condition ?? ""} oninput={(e) => (c.condition = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
             {#if ssl && c.conditionEditable === false}
                 <div class="condnote">shared by other options - edit in <b>.ssl</b></div>
             {/if}
