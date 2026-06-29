@@ -127,10 +127,10 @@
         </div>
     {:else if ssl && structuralEditable}
         <div class="ronote">
-            Text edits save to the <b>.msg</b>. This node's structure - <b>rename</b>, <b>retarget</b>,
-            <b>reorder</b>, add/remove options, entry status - is editable and writes back to the <b>.ssl</b>.
-            Conditions on single-<b>if</b> options are editable here. A condition shared by several options
-            stays source-only (edit the <b>.ssl</b> directly).
+            Text edits save to the <b>.msg</b>; structure - <b>rename</b>, <b>retarget</b>,
+            <b>reorder</b>, add/remove options, entry status - writes back to the <b>.ssl</b>.
+            A condition is editable here when it belongs to one option; a condition shared by
+            several options is source-only (edit the <b>.ssl</b>).
         </div>
     {:else if ssl}
         <div class="ronote">
