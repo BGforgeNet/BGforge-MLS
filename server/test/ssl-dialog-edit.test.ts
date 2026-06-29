@@ -256,6 +256,47 @@ describe("verifySSLEditApplied", () => {
         const actual = modelFromSSL(await parseDialog(out));
         expect(verifySSLEditApplied(edited, actual).ok).toBe(true);
     });
+
+    // Minimal hand-built model: one node with one option carrying a specific condition.
+    // verifySSLEditApplied only iterates roots/states/choices, so no SSL spans are needed.
+    const modelWithOptionCondition = (nodeId: string, msgId: number, condition: string): DialogModel => ({
+        format: "fallout-ssl",
+        editable: true,
+        roots: [
+            {
+                id: "root",
+                label: "",
+                kind: "dialog",
+                states: [
+                    {
+                        id: nodeId,
+                        text: `@${msgId}`,
+                        choices: [
+                            {
+                                id: `${nodeId}#opt0`,
+                                text: "@999",
+                                target: { kind: "exit" },
+                                condition,
+                            },
+                        ],
+                    },
+                ],
+            },
+        ],
+    });
+
+    it("verify flags a condition that did not land as intended", () => {
+        const intended = modelWithOptionCondition("Node001", 102, "(local_var(LVAR_x) == 1)");
+        const actual = modelWithOptionCondition("Node001", 102, "(local_var(LVAR_x) == 0)"); // stale
+        const res = verifySSLEditApplied(intended, actual);
+        expect(res.ok).toBe(false);
+    });
+
+    it("verify passes when conditions match", () => {
+        const intended = modelWithOptionCondition("Node001", 102, "(x)");
+        const actual = modelWithOptionCondition("Node001", 102, "(x)");
+        expect(verifySSLEditApplied(intended, actual).ok).toBe(true);
+    });
 });
 
 describe("applySSLDialogEdits - entry wiring", () => {

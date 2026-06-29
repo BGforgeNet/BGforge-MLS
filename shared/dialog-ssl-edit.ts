@@ -422,9 +422,9 @@ function targetKey(t: DialogTarget): string {
 /**
  * Confirm an SSL structural save landed as intended: every node in `actual` (the re-parse of the
  * saved `.ssl`) matches its counterpart in `intended` (the model the editor wrote) on the ordered
- * option targets. Tier 1 only retargets and reorders options, so the ordered target sequence is the
- * observable; a mismatch means the splice did not take (or corrupted the file) and must be surfaced
- * rather than reported as a clean save.
+ * option targets AND conditions. Tier 1 retargets and reorders options; Tier 3c wraps/unwraps/edits
+ * condition text - both are observable here. A mismatch means the splice did not take (or corrupted
+ * the file) and must be surfaced rather than reported as a clean save.
  *
  * The comparison iterates over `actual`, not `intended`: a retarget can leave a node unreachable, and
  * the parser prunes unreachable procedures, so an orphaned node legitimately disappears from the
@@ -439,10 +439,15 @@ export function verifySSLEditApplied(intended: DialogModel, actual: DialogModel)
     for (const a of actual.roots.flatMap((r) => r.states)) {
         const s = intendedById.get(a.id);
         if (!s) return { ok: false, reason: `unexpected node "${a.id}" in the saved file` };
-        const want = s.choices.map((c) => targetKey(c.target)).join("|");
-        const got = a.choices.map((c) => targetKey(c.target)).join("|");
+        // Encode target + condition (whitespace-normalized) per option so a condition that did not
+        // land (edit-text, wrap, unwrap) is caught alongside a mismatched target. An option with no
+        // condition contributes an empty condition segment on both sides, so existing target-only
+        // tests remain unaffected.
+        const key = (c: DialogChoice): string => `${targetKey(c.target)}@${(c.condition ?? "").replaceAll(/\s+/g, "")}`;
+        const want = s.choices.map(key).join("|");
+        const got = a.choices.map(key).join("|");
         if (want !== got)
-            return { ok: false, reason: `node "${a.id}" option targets/order differ from the intended edit` };
+            return { ok: false, reason: `node "${a.id}" option targets/conditions differ from the intended edit` };
     }
     return { ok: true };
 }
