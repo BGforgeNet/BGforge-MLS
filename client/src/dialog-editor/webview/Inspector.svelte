@@ -198,14 +198,17 @@
                     <span class="trbtns">
                         <!-- Reorder is available to any structurally-editable node (D or faithful SSL).
                              Remove is available to D (full edit surface) and to a faithful SSL node's
-                             UNCONDITIONAL options - a conditional SSL option sits in an `if` wrapper the
-                             save path does not rewrite (Tier 3), so it stays read-only. -->
+                             UNCONDITIONAL options. A conditional SSL option sits in an `if` wrapper the
+                             save path does not rewrite (Tier 3), so its Remove is shown DISABLED (not
+                             hidden) with a tooltip - the unavailable action stays visible and explained. -->
                         {#if structuralEditable}
                             <button title="Move up" disabled={i === 0} onclick={() => actions.moveReply(c.id, -1)}>&#9650;</button>
                             <button title="Move down" disabled={i === state.choices.length - 1} onclick={() => actions.moveReply(c.id, 1)}>&#9660;</button>
                         {/if}
-                        {#if !readOnly || (ssl && structuralEditable && !c.condition)}
+                        {#if !readOnly}
                             <button title="Remove" class="del" onclick={() => actions.removeReply(c.id)}>&#10005;</button>
+                        {:else if ssl && structuralEditable}
+                            <button title={c.condition ? "Conditional options are removed in the .ssl source" : "Remove"} class="del" disabled={Boolean(c.condition)} onclick={() => actions.removeReply(c.id)}>&#10005;</button>
                         {/if}
                     </span>
                 {/if}
