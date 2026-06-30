@@ -956,3 +956,44 @@ procedure talk_p_proc begin call Node002; end
         expect(verifySSLEditApplied(intended, actual)).toEqual({ ok: true });
     });
 });
+
+describe("bundleNodeOps - bare single-statement branch: no insertAnchor, add is no-op", () => {
+    // A bundle node where the if-branch is a bare single statement (no begin/end) and the else-branch
+    // is a block. The bare branch must get no insertAnchor (adding to it would require begin/end synthesis
+    // the writer does not perform), so the "+ option" button is hidden and the save path emits no splice.
+    const SRC_BARE = `procedure Node002 begin
+    if (local_var(LVAR_0) == 0) then NOption(122, Node915, 4);
+    else begin NOption(124, Node915, 4); NOption(125, Node999, 4); end
+end
+procedure Node915 begin Reply(900); end
+procedure Node999 begin Reply(999); end
+procedure talk_p_proc begin call Node002; end
+`;
+
+    it("bare then-branch has no insertAnchor; block else-branch has one", async () => {
+        const data = await parseDialog(SRC_BARE);
+        const node = data.nodes.find((n) => n.name === "Node002")!;
+        expect(node.bundleFaithful).toBe(true);
+        expect(node.branches).toBeDefined();
+        const ifB = node.branches!.find((b) => b.kind === "if")!;
+        const elseB = node.branches!.find((b) => b.kind === "else")!;
+        expect(ifB.insertAnchor).toBeUndefined(); // bare statement: no block, no insert anchor
+        expect(elseB.insertAnchor).toBeDefined(); // block branch: has insert anchor
+    });
+
+    it("add to a bare then-branch is a no-op; source is preserved byte-exact", async () => {
+        const original = modelFromSSL(await parseDialog(SRC_BARE));
+        const edited = structuredClone(original);
+        const node = edited.roots[0]!.states.find((s) => s.id === "Node002")!;
+        const ifB = node.branches!.find((b) => b.kind === "if")!;
+        // Simulate the editor allocating a new option id and adding it to the bare then-branch.
+        const newId = `${node.id}#new0`;
+        node.choices.push({ id: newId, text: "@999", target: { kind: "state", stateId: "Node999" } });
+        ifB.choiceIds = [...ifB.choiceIds, newId];
+        const out = applySSLDialogEdits(SRC_BARE, edited, original);
+        // Bare branch has no insertAnchor -> add is skipped; source must be byte-exact.
+        expect(out).toBe(SRC_BARE);
+        // No misplaced NOption at procedure scope (the corruption the bug would produce).
+        expect((out.match(/NOption\(999/g) ?? []).length).toBe(0);
+    });
+});

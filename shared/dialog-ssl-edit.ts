@@ -271,6 +271,9 @@ function bundleNodeOps(text: string, edited: DialogState, orig: DialogState): Sp
         }
         // ADD: new options in this branch (id absent from orig) -> serialize flat (the branch wrapper
         // already encloses them) at the branch insert anchor with the branch indent.
+        // A bare single-statement branch has no insertAnchor (buildBranches only sets it for Block bodies):
+        // anchor === undefined -> the guard below is false and add is intentionally a no-op, preventing
+        // out-of-block insertion that would corrupt the procedure's structure.
         const anchor = ob[i]!.insertAnchor;
         const added = editedIds
             .filter((id) => !origById.has(id))

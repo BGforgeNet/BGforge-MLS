@@ -494,11 +494,13 @@ function isBundleFaithfulProcedure(proc: SyntaxNode): boolean {
     return true;
 }
 
-// The splice point for a new option inside a branch body: end of the branch's last statement + that
-// statement's line indent. A single bare-statement branch (`then NOption(...);` with no begin/end) returns
-// that statement's end; the caller synthesizes a block when adding. An empty block anchors just inside it.
+// The splice point for a new option at the end of a branch block (begin...end): end of the last
+// named statement + that statement's line indentation. Only called for block branches; bare
+// single-statement branches carry no insertAnchor - adding to them would require begin/end synthesis,
+// which is not supported this slice, so add is offered only for block branches. An empty block anchors
+// just inside `begin`.
 function branchInsertAnchor(body: SyntaxNode, fullText: string): { offset: number; indent: string } {
-    const stmts = body.type === SyntaxType.Block ? body.children.filter((c) => c.isNamed) : [body];
+    const stmts = body.children.filter((c) => c.isNamed);
     const last = stmts.at(-1);
     if (!last) return { offset: body.startIndex + 1, indent: "        " }; // empty block: just inside `begin`
     const lineStart = fullText.lastIndexOf("\n", last.startIndex - 1) + 1;
@@ -547,14 +549,14 @@ function buildBranches(proc: SyntaxNode, fullText: string): SSLDialogBranch[] {
         };
         if (thenBody) {
             collectBody(ifBranch, thenBody);
-            ifBranch.insertAnchor = branchInsertAnchor(thenBody, fullText);
+            if (thenBody.type === SyntaxType.Block) ifBranch.insertAnchor = branchInsertAnchor(thenBody, fullText);
         }
         branches.push(ifBranch);
         const elseBody = stmt.childForFieldName("else");
         if (elseBody) {
             const elseBranch: SSLDialogBranch = { kind: "else", replyIndices: [], optionIndices: [], opaque: [] };
             collectBody(elseBranch, elseBody);
-            elseBranch.insertAnchor = branchInsertAnchor(elseBody, fullText);
+            if (elseBody.type === SyntaxType.Block) elseBranch.insertAnchor = branchInsertAnchor(elseBody, fullText);
             branches.push(elseBranch);
         }
     }

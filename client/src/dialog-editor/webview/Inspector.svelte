@@ -304,7 +304,7 @@
                 {#each branchChoices(b) as c, bci (c.id)}
                     {@render choiceRow(c, bci, bi, branchChoices(b).length)}
                 {/each}
-                {#if structuralEditable}
+                {#if structuralEditable && b.insertAnchor}
                     <button class="add branchadd" onclick={() => actions.addReplyToBranch(bi)}>+ option</button>
                 {/if}
                 {#if b.opaque.length > 0}
