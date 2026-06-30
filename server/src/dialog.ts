@@ -239,8 +239,8 @@ function parseProcedure(
     const replies: SSLDialogReply[] = [];
     const options: SSLDialogOption[] = [];
     const callTargets: string[] = [];
-    // Parallel to callTargets but carrying each `call <target>;` statement's byte span (for delete),
-    // the target identifier span (for rename/delete-by-call), and whether the call is top-level.
+    // One entry per `call <target>;` statement (NOT deduped, unlike callTargets) carrying its byte span
+    // (for delete), the target identifier span (for rename/delete-by-call), and whether the call is top-level.
     const callTransitions: Array<{
         name: string;
         stmtRange: { start: number; end: number };
@@ -332,13 +332,7 @@ function parseProcedure(
                     target.type === SyntaxType.CallExpr ? target.childForFieldName("func")?.text : target.text;
                 // Keep any resolved call target, not just Node* - `call combat`/`call barter`
                 // are real transitions out of the dialog.
-                // NOTE: deduped by target name. A node called twice via `call X;` in one procedure
-                // records only the first call here, so rename would miss the second. Fixing it needs
-                // model-layer work (one call-choice per call site, not one per target - see
-                // modelFromSSL's callTransitions attach), not just dropping this dedup; deferred as a
-                // very-low-incidence case (duplicate identical calls in one procedure are rare).
-                if (targetName && !callTargets.includes(targetName)) {
-                    callTargets.push(targetName);
+                if (targetName) {
                     // targetRange is only set when the target is a plain identifier (not a call_expr).
                     const targetRange =
                         target.type === SyntaxType.Identifier
@@ -347,13 +341,18 @@ function parseProcedure(
                     // topLevel: this call_stmt is a direct body child of the procedure.
                     // web-tree-sitter returns fresh wrapper objects, so compare by byte span, not reference.
                     const topLevel = isDirectBodyChild(proc, node);
-                    // CallStmt span includes the trailing `;` (grammar: call_stmt ends with ";").
+                    // Record EVERY call site (a node may `call X;` more than once, e.g. one call per
+                    // if-branch). callTransitions carries one entry per site so rename rewrites all of
+                    // them and delete removes all of them; callTargets stays deduped because it drives one
+                    // graph edge / one call-choice per unique target. CallStmt span includes the trailing
+                    // `;` (grammar: call_stmt ends with ";").
                     callTransitions.push({
                         name: targetName,
                         stmtRange: { start: node.startIndex, end: node.endIndex },
                         ...(targetRange !== undefined ? { targetRange } : {}),
                         topLevel,
                     });
+                    if (!callTargets.includes(targetName)) callTargets.push(targetName);
                 }
             }
         }

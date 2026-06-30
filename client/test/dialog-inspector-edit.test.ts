@@ -71,9 +71,13 @@ describe("isPendingChoice", () => {
             isPendingChoice({ id: "x", text: "@1", target: { kind: "exit" }, stmtRange: { start: 0, end: 1 } }),
         ).toBe(false);
     });
-    it("a call transition (callStmtRange) is not pending", () => {
+    it("a call transition (callSites) is not pending", () => {
         expect(
-            isPendingChoice({ id: "x", target: { kind: "state", stateId: "N" }, callStmtRange: { start: 0, end: 1 } }),
+            isPendingChoice({
+                id: "x",
+                target: { kind: "state", stateId: "N" },
+                callSites: [{ stmtRange: { start: 0, end: 1 }, topLevel: true }],
+            }),
         ).toBe(false);
     });
 });

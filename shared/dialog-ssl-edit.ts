@@ -507,8 +507,12 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
         for (const s of original.roots.flatMap((r) => r.states)) {
             for (const c of s.choices) {
                 if (c.target.kind !== "state" || c.target.stateId !== oldId) continue;
-                if (c.callTargetRange) {
-                    ops.push({ start: c.callTargetRange.start, end: c.callTargetRange.end, replacement: newId });
+                if (c.callSites?.length) {
+                    // A call-choice may stand for several `call <oldId>;` statements; rewrite each site's
+                    // target token. A site whose target is a call_expr has no targetRange and is skipped.
+                    for (const site of c.callSites)
+                        if (site.targetRange)
+                            ops.push({ start: site.targetRange.start, end: site.targetRange.end, replacement: newId });
                 } else if (c.targetRange && s.faithful !== true) {
                     ops.push({ start: c.targetRange.start, end: c.targetRange.end, replacement: newId });
                 }
@@ -553,10 +557,11 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
     }
 
     // INBOUND CALL REMOVAL: for each deleted node, remove any inbound `call <node>;` statements inside
-    // other (surviving) nodes. A call choice on a surviving node has `callStmtRange` set and targets the
-    // deleted node. Only splice when `callTopLevel === true` - a call nested in an `if` cannot be removed
-    // without rewriting the `if` body, and `eligibleToDelete` already refuses such nodes; this guard is
-    // defensive so the splicer stays safe if ever called directly. Entry calls inside talk_p_proc for the
+    // other (surviving) nodes. A call choice on a surviving node has `callSites` set and targets the
+    // deleted node - remove every top-level site (a node may call the deleted node more than once). Only
+    // splice a site when `topLevel === true` - a call nested in an `if` cannot be removed without rewriting
+    // the `if` body, and `eligibleToDelete` already refuses such nodes; this guard is defensive so the
+    // splicer stays safe if ever called directly. Entry calls inside talk_p_proc for the
     // same deleted nodes are already handled by the ENTRY WIRING block (a deleted node is absent from
     // `editedById`, so its entry call is removed there); do NOT duplicate that here.
     for (const orig of original.roots.flatMap((r) => r.states)) {
@@ -565,9 +570,11 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
             if (!editedIds.has(s.id)) continue; // source node was also deleted -> skip
             for (const c of s.choices) {
                 if (c.target.kind !== "state" || c.target.stateId !== orig.id) continue;
-                if (!c.callStmtRange) continue; // not a call choice
-                if (c.callTopLevel !== true) continue; // nested call - do not splice (leave to condition editing)
-                ops.push(removeStatementSplice(originalText, c.callStmtRange));
+                if (!c.callSites?.length) continue; // not a call choice
+                for (const site of c.callSites) {
+                    if (site.topLevel !== true) continue; // nested call - do not splice (leave to condition editing)
+                    ops.push(removeStatementSplice(originalText, site.stmtRange));
+                }
             }
         }
     }
@@ -659,7 +666,8 @@ export function eligibleToDelete(model: DialogModel, stateId: string): boolean {
         for (const c of s.choices) {
             if (c.target.kind !== "state" || c.target.stateId !== stateId) continue;
             if (s.faithful !== true) return false; // inbound option/call in a node whose source we cannot rewrite
-            if (c.callStmtRange && c.callTopLevel !== true) return false; // call nested in an `if` (even if faithful)
+            // A call nested in an `if` (even in a faithful node) can't be removed without rewriting the `if`.
+            if (c.callSites?.some((site) => site.topLevel !== true)) return false;
         }
     }
     return true;

@@ -143,11 +143,13 @@ export interface SSLDialogNode {
      */
     forwardDeclRange?: { start: number; end: number };
     /**
-     * `call <target>;` transitions out of this node, with each statement's byte span (used to remove the call
-     * when its target node is deleted). Parallels `callTargets` (names only) but carries the spans. Set by the parser.
-     * `targetRange` is the span of the target identifier token (for rename/delete-by-call); absent when the target
-     * is a call_expr rather than a plain identifier. `topLevel` is true when the call_stmt is a direct procedure-body
-     * statement (not nested in an if/block), meaning it can be removed without leaving a dangling conditional.
+     * One entry per `call <target>;` statement out of this node (NOT deduped - a node may call the same target
+     * more than once, e.g. one call per if-branch), carrying each statement's byte span (used to remove the call
+     * when its target node is deleted). `callTargets` holds the deduped names; this holds the per-site spans.
+     * Set by the parser. `targetRange` is the span of the target identifier token (for rename/delete-by-call);
+     * absent when the target is a call_expr rather than a plain identifier. `topLevel` is true when the call_stmt
+     * is a direct procedure-body statement (not nested in an if/block), so it can be removed without leaving a
+     * dangling conditional.
      */
     callTransitions?: Array<{
         name: string;

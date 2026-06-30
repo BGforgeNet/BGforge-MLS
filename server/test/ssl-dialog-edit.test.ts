@@ -372,6 +372,18 @@ describe("applySSLDialogEdits - delete a call-referenced / entry node", () => {
         expect(out).not.toContain("call Node002;"); // inbound call removed, not dangling
     });
 
+    it("removes ALL inbound call sites when a node called twice is deleted", async () => {
+        // Twin of the rename bug on the delete side: a surviving node calls the deleted node twice.
+        // Both top-level `call <node>;` statements must be spliced out, or one is left dangling.
+        const src = `procedure Node001 begin\n    call Node002;\n    call Node002;\nend\nprocedure Node002 begin Reply(200); end\nprocedure talk_p_proc begin\n    call Node001;\nend\n`;
+        const original = modelFromSSL(await parseDialog(src));
+        const edited = structuredCloneModel(original);
+        edited.roots[0]!.states = edited.roots[0]!.states.filter((s) => s.id !== "Node002");
+        const out = applySSLDialogEdits(src, edited, original);
+        expect(out).not.toContain("procedure Node002");
+        expect(out).not.toContain("call Node002;"); // neither inbound call left dangling
+    });
+
     it("eligibleToDelete now allows an entry / call-referenced node (faithful inbound)", async () => {
         const model = modelFromSSL(await parseDialog(SRC_DC));
         expect(eligibleToDelete(model, "Node001")).toBe(true); // entry, but cleanly removable now
@@ -399,6 +411,26 @@ describe("applySSLDialogEdits - rename node", () => {
         expect(out).toContain("NOption(101, Node002, 4)"); // unrelated option intact
         expect(out).not.toContain("call Node001;"); // both calls (Node002 + talk_p_proc) renamed
         expect((out.match(/call Node009;/g) ?? []).length).toBe(2);
+    });
+
+    it("rewrites EVERY call site when a node is called twice from one procedure", async () => {
+        // A node may `call X;` more than once (e.g. one call per if-branch). callTargets is deduped to a
+        // single graph edge, but rename must still rewrite all call-statement sites - missing the 2nd leaves a
+        // dangling `call OldName;` that sslc rejects. 49 such node-to-node sites exist in the real corpus.
+        const src = `procedure Node001 begin\n    Reply(100);\nend\nprocedure Node002 begin\n    call Node001;\n    call Node001;\nend\nprocedure talk_p_proc begin\n    call Node002;\nend\n`;
+        const original = modelFromSSL(await parseDialog(src));
+        const edited = structuredCloneModel(original);
+        const n1 = edited.roots[0]!.states.find((s) => s.id === "Node001")!;
+        n1.renamedFrom = "Node001";
+        n1.id = "Node009";
+        for (const s of edited.roots[0]!.states)
+            for (const c of s.choices)
+                if (c.target.kind === "state" && c.target.stateId === "Node001")
+                    c.target = { kind: "state", stateId: "Node009" };
+        const out = applySSLDialogEdits(src, edited, original);
+        expect(out).toContain("procedure Node009 begin");
+        expect(out).not.toContain("call Node001;"); // neither of the two call sites is left dangling
+        expect((out.match(/call Node009;/g) ?? []).length).toBe(2); // both rewritten
     });
 
     it("renames a node referenced by a faithful node's option without double-splicing", async () => {

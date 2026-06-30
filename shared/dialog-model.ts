@@ -215,25 +215,21 @@ export interface DialogChoice {
     /** SSL only: byte span of the whole option statement `NOption(...);` incl. `;` (used by remove). */
     stmtRange?: { start: number; end: number };
     /**
-     * SSL only: byte span of a `call <target>;` transition's whole statement (incl. `;`). Set on a call
-     * choice (one with no `callRange`) by the SSL adapter; used to detect a node reached by a `call` (which
-     * is not safely deletable here) and, in Tier 3b, to remove the call. Absent for option choices and D.
+     * SSL only: every `call <target>;` statement this call-choice represents. callTargets is deduped to one
+     * call-choice per unique target, but a node may call the same target several times (e.g. one call per
+     * if-branch), so all the sites are grouped here - rename rewrites every `targetRange` and delete removes
+     * every top-level `stmtRange`. A non-empty list is what marks a choice as a `call` transition (one with
+     * no `callRange`). Each site carries the whole-statement span (incl. `;`, for delete), the target
+     * identifier span (for rename; absent when the target is a call_expr rather than a plain identifier), and
+     * `topLevel` (true when the call is a direct procedure-body statement, so it can be removed without
+     * leaving a dangling conditional). Set by the SSL adapter from `SSLDialogNode.callTransitions`; absent for
+     * option choices and D formats.
      */
-    callStmtRange?: { start: number; end: number };
-    /**
-     * SSL only: byte span of the target identifier token in a `call <target>;` statement (used by rename to
-     * rewrite all call sites). Set by the SSL adapter from `SSLDialogNode.callTransitions[].targetRange`;
-     * absent when the call target is a call_expr rather than a plain identifier, and absent for option choices
-     * and D formats.
-     */
-    callTargetRange?: { start: number; end: number };
-    /**
-     * SSL only: true when the `call <target>;` statement is a direct procedure-body statement (not nested
-     * inside an if/block). Set by the SSL adapter from `SSLDialogNode.callTransitions[].topLevel`; a later
-     * task's delete-eligibility check uses this to decide whether the call can be removed safely without
-     * leaving a dangling conditional. Absent for option choices and D formats.
-     */
-    callTopLevel?: boolean;
+    callSites?: Array<{
+        stmtRange: { start: number; end: number };
+        targetRange?: { start: number; end: number };
+        topLevel: boolean;
+    }>;
     /** SSL only: byte span of the enclosing `if` condition expression (for edit-text). Set by the SSL adapter. */
     condRange?: { start: number; end: number };
     /** SSL only: byte span of the whole enclosing `if` statement (for unwrap). Set by the SSL adapter. */
@@ -471,17 +467,19 @@ function stateFromSSL(node: SSLDialogNode): DialogState {
         });
     });
 
-    // Attach each call statement's byte spans to its matching call choice (no callRange), so delete-eligibility
-    // can tell a node reached by a `call` from one reached only by options, and rename can rewrite call sites.
+    // Group every call site under its matching call-choice (one choice per unique target, no callRange). A node
+    // can call the same target several times; collecting all sites lets delete-eligibility tell a node reached
+    // by a `call` from one reached only by options, and lets rename/delete touch every call statement.
     node.callTransitions?.forEach((ct) => {
         const c = choices.find(
             (ch) => ch.target.kind === "state" && ch.target.stateId === ct.name && ch.callRange === undefined,
         );
-        if (c) {
-            c.callStmtRange = ct.stmtRange;
-            c.callTargetRange = ct.targetRange;
-            c.callTopLevel = ct.topLevel;
-        }
+        if (!c) return;
+        (c.callSites ??= []).push({
+            stmtRange: ct.stmtRange,
+            ...(ct.targetRange ? { targetRange: ct.targetRange } : {}),
+            topLevel: ct.topLevel,
+        });
     });
 
     const branches: DialogBranch[] | undefined = node.branches?.map((b) => ({

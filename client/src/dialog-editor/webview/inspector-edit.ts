@@ -14,11 +14,11 @@ export function msgRef(text: string | undefined): string | null {
 
 /**
  * A choice the user just added (pending insert) - it has no source span of any kind yet: no `callRange`
- * or `stmtRange` (an existing option), and no `callStmtRange` (a `call` transition). Its text field must
+ * or `stmtRange` (an existing option), and no `callSites` (a `call` transition). Its text field must
  * stay editable so the user can type the initial line; `allocateOptionIds` turns it into an `@id` at save.
  */
 export function isPendingChoice(c: DialogChoice): boolean {
-    return c.callRange === undefined && c.stmtRange === undefined && c.callStmtRange === undefined;
+    return c.callRange === undefined && c.stmtRange === undefined && !c.callSites?.length;
 }
 
 /** A state the user just added (pending insert): no source procedure yet (no `procRange`). */

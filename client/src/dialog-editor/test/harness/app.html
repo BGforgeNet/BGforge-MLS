@@ -111878,7 +111878,7 @@ ${component_stack}
     return m ? m[1] : null;
   }
   function isPendingChoice(c) {
-    return c.callRange === void 0 && c.stmtRange === void 0 && c.callStmtRange === void 0;
+    return c.callRange === void 0 && c.stmtRange === void 0 && !c.callSites?.length;
   }
   function isPendingState(s) {
     return s.procRange === void 0;
@@ -114438,7 +114438,7 @@ ${component_stack}
       for (const c of s.choices) {
         if (c.target.kind !== "state" || c.target.stateId !== stateId) continue;
         if (s.faithful !== true) return false;
-        if (c.callStmtRange && c.callTopLevel !== true) return false;
+        if (c.callSites?.some((site) => site.topLevel !== true)) return false;
       }
     }
     return true;
