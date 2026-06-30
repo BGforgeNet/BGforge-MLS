@@ -269,11 +269,8 @@ export function resolveText(text: string | undefined, messages?: Record<string, 
 
 /**
  * The badge vocabulary, rendered identically for D and SSL. A badge marks a node
- * the author cannot fully trust as authored/editable source. Derived purely from
- * IR fields - never guessed. The set is the full vocabulary; `computed`/`random`/
- * `side-effect`/`virtual-sink` are populated once the SSL parser carries those
- * signals (later 1B slices), so they appear in the priority table but have no
- * producer yet.
+ * the author cannot fully trust as authored/editable source. Each is derived purely
+ * from IR fields (see stateBadges/choiceBadges) - never guessed.
  */
 export type DialogBadge =
     | "derived"

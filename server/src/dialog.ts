@@ -332,6 +332,11 @@ function parseProcedure(
                     target.type === SyntaxType.CallExpr ? target.childForFieldName("func")?.text : target.text;
                 // Keep any resolved call target, not just Node* - `call combat`/`call barter`
                 // are real transitions out of the dialog.
+                // NOTE: deduped by target name. A node called twice via `call X;` in one procedure
+                // records only the first call here, so rename would miss the second. Fixing it needs
+                // model-layer work (one call-choice per call site, not one per target - see
+                // modelFromSSL's callTransitions attach), not just dropping this dedup; deferred as a
+                // very-low-incidence case (duplicate identical calls in one procedure are rare).
                 if (targetName && !callTargets.includes(targetName)) {
                     callTargets.push(targetName);
                     // targetRange is only set when the target is a plain identifier (not a call_expr).

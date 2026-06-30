@@ -37,6 +37,12 @@ function optionsOf(state: DialogState): DialogChoice[] {
     return state.choices.filter((c) => c.callRange);
 }
 
+/** Parse an `@N` ref to its numeric msg id, or NaN if the text is not a bare `@N`. */
+function atMsgId(text: string | undefined): number {
+    return Number(/^@(\d+)$/.exec((text ?? "").trim())?.[1] ?? NaN);
+}
+const msgIdOf = (c: DialogChoice): number => atMsgId(c.text);
+
 // A NEW option: no source range of ANY kind (never existed in the .ssl) and an allocated `@<id>` text (the id
 // is assigned at save time, before the splice). Distinct from dialog-ssl-ids.ts's pre-allocation `isNewOption`
 // (literal text); here the id has already been assigned. The `stmtRange` check is what separates a freshly-added
@@ -218,7 +224,6 @@ function nodeOps(
         const offset = survivorEnds.length > 0 ? Math.max(...survivorEnds) : anchor?.offset;
         const indent = anchor?.indent ?? "    ";
         if (offset !== undefined) {
-            const msgIdOf = (c: DialogChoice): number => Number(/^@(\d+)$/.exec((c.text ?? "").trim())?.[1] ?? NaN);
             const block = added
                 .filter((c) => Number.isFinite(msgIdOf(c)))
                 .map((c) => `\n${indent}${serializeSSLOption(c, msgIdOf(c))}`)
@@ -300,7 +305,6 @@ function bundleNodeOps(text: string, edited: DialogState, orig: DialogState): Sp
             .map((id) => editedById.get(id))
             .filter((c): c is DialogChoice => c !== undefined && isNewSSLOption(c));
         if (added.length > 0 && anchor) {
-            const msgIdOf = (c: DialogChoice): number => Number(/^@(\d+)$/.exec((c.text ?? "").trim())?.[1] ?? NaN);
             const block = added
                 .filter((c) => Number.isFinite(msgIdOf(c)))
                 .map((c) => `\n${anchor.indent}${serializeSSLOption(c, msgIdOf(c))}`)
@@ -338,7 +342,6 @@ function branchStructureOps(text: string, edited: DialogState, orig: DialogState
     if (!eb || !ob) return ops;
 
     const indent = "    "; // proc-body indent convention (4 spaces)
-    const msgIdOf = (c: DialogChoice): number => Number(/^@(\d+)$/.exec((c.text ?? "").trim())?.[1] ?? NaN);
 
     // REMOVE: build sets of which original spans survive in the edited branch list.
     // A branch with a stmtRange/elseClauseRange in the edited list is a survivor; one absent is removed.
@@ -575,7 +578,7 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
     // the new node is rewritten by the survivor logic above (the new node's id is a valid state target).
     const anchor = edited.newProcAnchor ?? original.newProcAnchor;
     if (anchor !== undefined) {
-        const idOf = (t: string | undefined): number => Number(/^@(\d+)$/.exec((t ?? "").trim())?.[1] ?? NaN);
+        const idOf = atMsgId;
         const blocks: string[] = [];
         for (const s of edited.roots.flatMap((r) => r.states)) {
             if (s.procRange || s.derivedFrom || s.renamedFrom) continue; // existing, derived, or renamed -> not a new node
