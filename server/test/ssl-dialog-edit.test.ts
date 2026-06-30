@@ -817,3 +817,31 @@ procedure talk_p_proc begin call Node002; end
         expect(out).toContain("if (global_var(GVAR_B) == 5) then"); // second edited
     });
 });
+
+describe("verifySSLEditApplied - bundle branch conditions", () => {
+    const SRC_BC = `procedure Node002 begin
+    if (local_var(LVAR_0) == 0) then begin Reply(120); NOption(122, Node915, 4); end
+    else begin Reply(121); NOption(124, Node915, 4); end
+end
+procedure Node915 begin Reply(900); end
+procedure talk_p_proc begin call Node002; end
+`;
+    it("flags an intended branch-condition edit that did not land", async () => {
+        const original = modelFromSSL(await parseDialog(SRC_BC));
+        const intended = structuredClone(original);
+        intended.roots[0]!.states.find((s) => s.id === "Node002")!.branches!.find((b) => b.kind === "if")!.condition =
+            "(local_var(LVAR_0) == 9)";
+        // actual = the unchanged parse (the edit "did not land")
+        const actual = modelFromSSL(await parseDialog(SRC_BC));
+        expect(verifySSLEditApplied(intended, actual).ok).toBe(false);
+    });
+    it("treats a bare vs parenthesized branch condition as matching", async () => {
+        const original = modelFromSSL(await parseDialog(SRC_BC));
+        const intended = structuredClone(original);
+        // intend the same condition without its outer parens; the canonicalizer must fold them
+        intended.roots[0]!.states.find((s) => s.id === "Node002")!.branches!.find((b) => b.kind === "if")!.condition =
+            "local_var(LVAR_0) == 0";
+        const actual = modelFromSSL(await parseDialog(SRC_BC));
+        expect(verifySSLEditApplied(intended, actual)).toEqual({ ok: true });
+    });
+});
