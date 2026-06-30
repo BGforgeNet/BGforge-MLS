@@ -611,12 +611,14 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
         if (!ec.topLevel) continue; // conditional entry (`if (X) call ...;`) - outside scope of this tier
         ops.push(removeStatementSplice(originalText, ec.stmtRange));
     }
-    // Additions: an edited node that isEntry but was not an original entry. Exclude a renamed node: its new id
-    // is absent from originalEntries (keyed by old ids), but its entry call already exists (RENAME rewrote its
-    // target), so adding one here would duplicate it.
+    // Additions: an edited node that isEntry but had no entry call in the original. `originalEntries` is keyed
+    // by OLD ids, so a renamed node is identified there by `renamedFrom`, not its new id. A renamed node that
+    // WAS an entry is excluded (RENAME already rewrote its existing call - adding one would duplicate it); a
+    // renamed node that became an entry for the first time is NOT excluded - its rename had no call to rewrite,
+    // so it still needs one wired in here.
     const anchorE = original.entryCallAnchor;
     if (anchorE !== undefined) {
-        const added = [...editedById.values()].filter((s) => s.isEntry && !s.renamedFrom && !originalEntries.has(s.id));
+        const added = [...editedById.values()].filter((s) => s.isEntry && !originalEntries.has(s.renamedFrom ?? s.id));
         if (added.length > 0) {
             const indent = "    ";
             ops.push({

@@ -340,6 +340,24 @@ describe("applySSLDialogEdits - entry wiring", () => {
         const out = applySSLDialogEdits(SRC_EW, edited, original);
         expect(out).not.toContain("call Node001;");
     });
+
+    it("adds a call when a node is renamed AND becomes an entry in the same save", async () => {
+        // The combined op: a node that gains entry status for the first time WHILE being renamed.
+        // Its new id has no prior entry call (the rename had nothing to rewrite), so the addition
+        // path must still wire it in - the `!s.renamedFrom` exclusion used to drop it silently.
+        const src = `procedure Node001 begin\n    Reply(100);\nend\nprocedure Node002 begin\n    Reply(200);\nend\nprocedure talk_p_proc begin\n    call Node001;\nend\n`;
+        const original = modelFromSSL(await parseDialog(src));
+        const edited = structuredCloneModel(original);
+        const n2 = edited.roots[0]!.states.find((s) => s.id === "Node002")!;
+        n2.renamedFrom = "Node002";
+        n2.id = "Node077";
+        n2.isEntry = true;
+        const out = applySSLDialogEdits(src, edited, original);
+        expect(out).toContain("procedure Node077 begin");
+        expect(out).not.toContain("procedure Node002 begin");
+        // The new entry call is wired into talk_p_proc after the existing entry call.
+        expect(out).toContain("procedure talk_p_proc begin\n    call Node001;\n    call Node077;\nend");
+    });
 });
 
 describe("applySSLDialogEdits - delete a call-referenced / entry node", () => {
