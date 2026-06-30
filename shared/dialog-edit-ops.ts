@@ -8,7 +8,7 @@
  * except where correctness demands it (see `duplicateState`).
  */
 
-import type { DialogChoice, DialogModel, DialogRoot, DialogState, DialogTarget } from "./dialog-model";
+import type { DialogBranch, DialogChoice, DialogModel, DialogRoot, DialogState, DialogTarget } from "./dialog-model";
 
 export function stateIdsOf(model: DialogModel): string[] {
     return model.roots.flatMap((r) => r.states.map((s) => s.id));
@@ -165,4 +165,56 @@ export function moveReply(state: DialogState, choiceId: string, dir: -1 | 1): vo
 export function setChoiceTarget(state: DialogState, choiceId: string, target: DialogTarget): void {
     const c = state.choices.find((ch) => ch.id === choiceId);
     if (c) c.target = target;
+}
+
+/**
+ * Add a new empty reply inside a specific branch of a bundle node. The new choice
+ * is appended to `state.choices` and its id is appended to `branch.choiceIds`. When
+ * the branch carries a condition the choice inherits it (matching how parsed bundle
+ * options carry their enclosing `if` condition), so the save path can associate the
+ * choice with the right branch without needing to inspect choiceIds at that point.
+ */
+export function addReplyToBranch(model: DialogModel, state: DialogState, branch: DialogBranch): DialogChoice {
+    const choice: DialogChoice = {
+        id: uniqueId(allChoiceIds(model), `${state.id}#reply`),
+        text: "",
+        target: { kind: "exit" },
+    };
+    if (branch.condition !== undefined) choice.condition = branch.condition;
+    state.choices.push(choice);
+    branch.choiceIds.push(choice.id);
+    return choice;
+}
+
+/** Remove a reply from both `state.choices` and `branch.choiceIds`. */
+export function removeReplyFromBranch(state: DialogState, branch: DialogBranch, choiceId: string): void {
+    state.choices = state.choices.filter((c) => c.id !== choiceId);
+    branch.choiceIds = branch.choiceIds.filter((id) => id !== choiceId);
+}
+
+/**
+ * Move a reply up (-1) or down (+1) within its branch. The bound is branch-relative:
+ * a no-op at the branch's first or last position, so the move cannot cross into an
+ * adjacent branch. After swapping in `branch.choiceIds` the same relative order is
+ * mirrored into `state.choices` for this branch's members so the flat list stays
+ * consistent with the branch-level ordering.
+ */
+export function moveReplyInBranch(state: DialogState, branch: DialogBranch, choiceId: string, dir: -1 | 1): void {
+    const bi = branch.choiceIds.indexOf(choiceId);
+    const bj = bi + dir;
+    if (bi === -1 || bj < 0 || bj >= branch.choiceIds.length) return;
+    // Swap within the branch's own id list.
+    [branch.choiceIds[bi], branch.choiceIds[bj]] = [branch.choiceIds[bj]!, branch.choiceIds[bi]!];
+    // Mirror the new branch order into the flat choices array. The branch members occupy
+    // certain flat slots in state.choices; collect those slots, then fill them in the
+    // branch's new order. Capture the mapping before any mutation.
+    const byId = new Map(state.choices.map((c) => [c.id, c]));
+    const branchSet = new Set(branch.choiceIds);
+    const flatSlots: number[] = [];
+    for (let i = 0; i < state.choices.length; i++) {
+        if (branchSet.has(state.choices[i]!.id)) flatSlots.push(i);
+    }
+    for (let k = 0; k < flatSlots.length; k++) {
+        state.choices[flatSlots[k]!] = byId.get(branch.choiceIds[k]!)!;
+    }
 }

@@ -1,7 +1,13 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { initParser } from "../../shared/parsers/weidu-d";
 import { parseDDialog } from "../src/weidu-d/dialog";
-import { modelFromD, type DialogModel } from "../../shared/dialog-model";
+import {
+    modelFromD,
+    type DialogBranch,
+    type DialogChoice,
+    type DialogModel,
+    type DialogState,
+} from "../../shared/dialog-model";
 import { applyDialogEdits } from "../../shared/dialog-d-edit";
 import * as ops from "../../shared/dialog-edit-ops";
 
@@ -114,5 +120,155 @@ describe("dialog-edit-ops (pure model transforms)", () => {
         expect(hello.choices[1]!.id).toBe(`hello#0`);
         ops.removeReply(hello, added.id);
         expect(hello.choices.length).toBe(before);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Branch-aware ops: addReplyToBranch / removeReplyFromBranch / moveReplyInBranch
+// ---------------------------------------------------------------------------
+
+describe("dialog-edit-ops (branch-aware)", () => {
+    /** Build a synthetic bundle model: Node001 has two branches (if/else) with two choices each. */
+    function bundleFixture(): {
+        m: DialogModel;
+        st: DialogState;
+        brA: DialogBranch;
+        brB: DialogBranch;
+    } {
+        const c0: DialogChoice = {
+            id: "Node001#opt0",
+            text: "a0",
+            target: { kind: "exit" },
+            condition: "(EvalUGlobal==0)",
+        };
+        const c1: DialogChoice = {
+            id: "Node001#opt1",
+            text: "a1",
+            target: { kind: "exit" },
+            condition: "(EvalUGlobal==0)",
+        };
+        const c2: DialogChoice = { id: "Node001#opt2", text: "b0", target: { kind: "exit" } };
+        const c3: DialogChoice = { id: "Node001#opt3", text: "b1", target: { kind: "exit" } };
+
+        const brA: DialogBranch = {
+            kind: "if",
+            condition: "(EvalUGlobal==0)",
+            replies: [],
+            choiceIds: ["Node001#opt0", "Node001#opt1"],
+            opaque: [],
+        };
+        const brB: DialogBranch = {
+            kind: "else",
+            replies: [],
+            choiceIds: ["Node001#opt2", "Node001#opt3"],
+            opaque: [],
+        };
+
+        const st: DialogState = {
+            id: "Node001",
+            text: "@1",
+            choices: [c0, c1, c2, c3],
+            branches: [brA, brB],
+        };
+
+        const m: DialogModel = {
+            format: "fallout-ssl",
+            editable: true,
+            roots: [{ id: "d", label: "d", kind: "dialog", states: [st] }],
+        };
+        return { m, st, brA, brB };
+    }
+
+    it("addReplyToBranch appends to branch.choiceIds and state.choices with condition === branch.condition", () => {
+        const { m, st, brA } = bundleFixture();
+        const before = st.choices.length;
+        const added = ops.addReplyToBranch(m, st, brA);
+
+        expect(brA.choiceIds.at(-1)).toBe(added.id);
+        expect(st.choices.at(-1)).toBe(added);
+        expect(st.choices.length).toBe(before + 1);
+        expect(added.condition).toBe(brA.condition);
+    });
+
+    it("addReplyToBranch on an else branch produces a choice without condition", () => {
+        const { m, st, brB } = bundleFixture();
+        const added = ops.addReplyToBranch(m, st, brB);
+
+        expect(brB.choiceIds.at(-1)).toBe(added.id);
+        expect(st.choices.at(-1)).toBe(added);
+        expect(added.condition).toBeUndefined();
+    });
+
+    it("addReplyToBranch allocates a unique id distinct from all existing choice ids", () => {
+        const { m, st, brA } = bundleFixture();
+        const existingIds = new Set(st.choices.map((c) => c.id));
+        const added = ops.addReplyToBranch(m, st, brA);
+
+        expect(existingIds.has(added.id)).toBe(false);
+    });
+
+    it("removeReplyFromBranch drops the choice from both state.choices and branch.choiceIds", () => {
+        const { st, brA } = bundleFixture();
+        const target = brA.choiceIds[0]!;
+        ops.removeReplyFromBranch(st, brA, target);
+
+        expect(st.choices.find((c) => c.id === target)).toBeUndefined();
+        expect(brA.choiceIds.includes(target)).toBe(false);
+        // sibling and other-branch choices untouched
+        expect(brA.choiceIds.length).toBe(1);
+        expect(st.choices.filter((c) => c.id.startsWith("Node001#opt")).length).toBe(3);
+    });
+
+    it("removeReplyFromBranch does not affect the other branch", () => {
+        const { st, brA, brB } = bundleFixture();
+        ops.removeReplyFromBranch(st, brA, brA.choiceIds[0]!);
+
+        expect(brB.choiceIds.length).toBe(2);
+        expect(st.choices.some((c) => c.id === brB.choiceIds[0]!)).toBe(true);
+    });
+
+    it("moveReplyInBranch swaps within branch.choiceIds and mirrors order into state.choices", () => {
+        const { st, brA } = bundleFixture();
+        const [id0, id1] = brA.choiceIds as [string, string];
+
+        ops.moveReplyInBranch(st, brA, id0, 1);
+
+        expect(brA.choiceIds[0]).toBe(id1);
+        expect(brA.choiceIds[1]).toBe(id0);
+        // The flat choices array must reflect the same swap for brA's slots (indices 0 and 1).
+        expect(st.choices[0]!.id).toBe(id1);
+        expect(st.choices[1]!.id).toBe(id0);
+        // brB's choices at indices 2 and 3 must be untouched.
+        expect(st.choices[2]!.id).toBe("Node001#opt2");
+        expect(st.choices[3]!.id).toBe("Node001#opt3");
+    });
+
+    it("moveReplyInBranch is a no-op at the branch's first position (up)", () => {
+        const { st, brA } = bundleFixture();
+        const snapshot = [...brA.choiceIds];
+
+        ops.moveReplyInBranch(st, brA, brA.choiceIds[0]!, -1);
+
+        expect(brA.choiceIds).toEqual(snapshot);
+        expect(st.choices[0]!.id).toBe(snapshot[0]);
+    });
+
+    it("moveReplyInBranch is a no-op at the branch's last position (down)", () => {
+        const { st, brA } = bundleFixture();
+        const snapshot = [...brA.choiceIds];
+
+        ops.moveReplyInBranch(st, brA, brA.choiceIds[1]!, 1);
+
+        expect(brA.choiceIds).toEqual(snapshot);
+        expect(st.choices[1]!.id).toBe(snapshot[1]);
+    });
+
+    it("moveReplyInBranch does not cross into the adjacent branch's choices", () => {
+        const { st, brA, brB } = bundleFixture();
+        // move the last element of brA down - must be no-op (not cross into brB)
+        ops.moveReplyInBranch(st, brA, brA.choiceIds.at(-1)!, 1);
+
+        expect(brA.choiceIds.at(-1)).toBe("Node001#opt1");
+        expect(brB.choiceIds[0]).toBe("Node001#opt2");
     });
 });
