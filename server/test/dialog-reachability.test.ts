@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { initParser as initWeiduD } from "../../shared/parsers/weidu-d";
 import { parseDDialog } from "../src/weidu-d/dialog";
-import { modelFromD } from "../../shared/dialog-model";
+import { modelFromD, type DialogModel } from "../../shared/dialog-model";
 import { classifyReachability } from "../../shared/dialog-reachability";
 
 // 1C reachability lens: honest three-way split (reachable / external-entry / orphan).
@@ -69,5 +69,57 @@ END
         // and neither is reachable from `main`: a genuine dead island.
         expect(r.get("island_a")).toBe("orphan");
         expect(r.get("island_b")).toBe("orphan");
+    });
+
+    it("keeps a self-looping entry reachable (root entry wins over its own inbound edge)", () => {
+        const d = `BEGIN ~test~
+IF ~~ THEN BEGIN main
+  SAY ~loop~
+  IF ~~ THEN REPLY ~again~ GOTO main
+  IF ~~ THEN REPLY ~bye~ EXIT
+END
+END
+`;
+        const r = classifyReachability(modelFromD(parseDDialog(d)));
+        expect(r.get("main")).toBe("reachable");
+    });
+
+    it("flags a self-looping non-entry island as orphan (only inbound is itself)", () => {
+        const d = `BEGIN ~test~
+IF ~~ THEN BEGIN main
+  SAY ~start~
+  IF ~~ THEN REPLY ~bye~ EXIT
+END
+IF ~~ THEN BEGIN loner
+  SAY ~island~
+  IF ~~ THEN REPLY ~self~ GOTO loner
+END
+END
+`;
+        const r = classifyReachability(modelFromD(parseDDialog(d)));
+        expect(r.get("main")).toBe("reachable");
+        expect(r.get("loner")).toBe("orphan");
+    });
+
+    it("classifies a single-state graph (no edges) as reachable", () => {
+        const d = `BEGIN ~test~
+IF ~~ THEN BEGIN main
+  SAY ~only~
+  IF ~~ THEN REPLY ~bye~ EXIT
+END
+END
+`;
+        const r = classifyReachability(modelFromD(parseDDialog(d)));
+        expect(r.size).toBe(1);
+        expect(r.get("main")).toBe("reachable");
+    });
+
+    it("returns an empty classification for a root with no states", () => {
+        const model: DialogModel = {
+            format: "weidu-d",
+            editable: true,
+            roots: [{ id: "d", label: "d", kind: "dialog", states: [] }],
+        };
+        expect(classifyReachability(model).size).toBe(0);
     });
 });

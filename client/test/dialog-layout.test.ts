@@ -58,4 +58,27 @@ describe("layoutFlow", () => {
         expect(x("b")).toBeGreaterThan(minX);
         expect(x("d")).toBeGreaterThan(minX);
     });
+
+    test("assigns a finite position to a single node with no edges", async () => {
+        const graph: FlowGraph = { nodes: [card("solo")], edges: [] };
+        await layoutFlow(graph);
+        expect(Number.isFinite(graph.nodes[0]!.position.x)).toBe(true);
+        expect(Number.isFinite(graph.nodes[0]!.position.y)).toBe(true);
+    });
+
+    test("lays out a cycle (back edge) without hanging, every node finite and distinct", async () => {
+        // a -> b -> a: a back edge. elk's layered algorithm breaks cycles internally; the
+        // contract we depend on is only that it terminates and positions every node finitely.
+        const graph: FlowGraph = {
+            nodes: [card("a"), card("b")],
+            edges: [edge("a#0", "a", "b"), edge("b#0", "b", "a")],
+        };
+        await layoutFlow(graph);
+        for (const n of graph.nodes) {
+            expect(Number.isFinite(n.position.x)).toBe(true);
+            expect(Number.isFinite(n.position.y)).toBe(true);
+        }
+        const x = (id: string) => graph.nodes.find((n) => n.id === id)!.position.x;
+        expect(x("a")).not.toBe(x("b"));
+    });
 });
