@@ -383,10 +383,22 @@ function branchStructureOps(text: string, edited: DialogState, orig: DialogState
             .map((c) => ({ choice: c, msgId: msgIdOf(c) }));
 
         if (b.kind === "if") {
-            // Insert after the last ORIGINAL branch's stmtRange.end (end of the last existing IfStmt).
-            const ends = ob.filter((o) => o.stmtRange).map((o) => o.stmtRange!.end);
-            if (ends.length === 0) continue; // no original branch with a span - nowhere to anchor
-            const insertAt = Math.max(...ends);
+            // Insert after the last SURVIVING original branch's stmtRange.end. Anchoring at a
+            // removed branch's end would produce a splice that technically overlaps the removal
+            // (both touch the same byte range). Filter to originals whose stmtRange.start is in
+            // editedIfStarts (the survivor set the REMOVE pass already built above). If all
+            // originals are removed alongside this add, fall back to the min original
+            // stmtRange.start - a point that precedes any removal and remains inside the
+            // procedure body, safe under right-to-left application.
+            const allOrigIfStmts = ob.filter((o) => o.stmtRange);
+            if (allOrigIfStmts.length === 0) continue; // no original branch with a span - nowhere to anchor
+            const survivingOrigEnds = allOrigIfStmts
+                .filter((o) => editedIfStarts.has(o.stmtRange!.start))
+                .map((o) => o.stmtRange!.end);
+            const insertAt =
+                survivingOrigEnds.length > 0
+                    ? Math.max(...survivingOrigEnds)
+                    : Math.min(...allOrigIfStmts.map((o) => o.stmtRange!.start));
             const block = serializeSSLBranch("if", b.condition, [], options, indent);
             ops.push({ start: insertAt, end: insertAt, replacement: `\n${indent}${block}` });
         } else {

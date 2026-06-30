@@ -124,11 +124,11 @@
         return { update: fit, destroy: () => el.removeEventListener("input", fit) };
     }
 
-    // Inline condition input for adding a new if-branch. Cannot use `$state("")` here:
-    // the Svelte 5 compiler sees the local `state` prop binding and misidentifies
-    // `$state(...)` as a store subscription rather than the rune, leaving the variable
-    // non-reactive and breaking the `disabled` check and programmatic clear. A writable
-    // store avoids the naming collision while providing the same two-way reactive binding.
+    // Inline condition input for adding a new if-branch. A plain `$state("")` local here
+    // produced two build warnings in this component: the compiler flagged the ambiguity between
+    // the `state` prop binding and the `$state` rune (a `$`-prefixed local named after a prop
+    // is treated as a store subscription), leaving the variable non-reactive. A writable store
+    // avoids those warnings while providing the same two-way reactive binding.
     const newBranchCond = writable("");
 
     // Resolve a branch's choice ids to their DialogChoice objects, preserving source order.

@@ -1309,6 +1309,81 @@ procedure talk_p_proc begin call Node002; end
     });
 });
 
+describe("branchStructureOps - remove last if branch and add a new sibling if in one save", () => {
+    // Two sibling if branches: the first has set_local_var (opaque, cannot be removed by the writer),
+    // the second has only a dialog option (no opaque, removable). In a single save, REMOVE the last
+    // branch (LVAR_1) AND ADD a new pending-new if branch. The ADD anchor must land at the SURVIVING
+    // original's stmtRange.end, not the removed branch's end - the edge the fix guards.
+    const SRC_RIF_COMBINED = `procedure Node002 begin
+    if (local_var(LVAR_0) == 0) then begin
+        set_local_var(LVAR_0, 1);
+        NOption(122, Node915, 4);
+    end
+    if (local_var(LVAR_1) == 1) then begin
+        NOption(301, Node999, 4);
+    end
+end
+procedure Node915 begin Reply(900); end
+procedure Node999 begin Reply(999); end
+procedure talk_p_proc begin call Node002; end
+`;
+
+    it("removes the last if branch and adds a new sibling if in one save, anchor at surviving branch", async () => {
+        const original = modelFromSSL(await parseDialog(SRC_RIF_COMBINED));
+        const edited = structuredClone(original);
+        const node = edited.roots[0]!.states.find((s) => s.id === "Node002")!;
+        expect(node.bundleFaithful).toBe(true);
+
+        // Remove the last branch (LVAR_1 == 1, no opaque).
+        const removedBranch = node.branches!.find((b) => b.kind === "if" && b.condition?.includes("LVAR_1"))!;
+        const removedIds = new Set(removedBranch.choiceIds);
+        node.branches = node.branches!.filter((b) => b !== removedBranch);
+        node.choices = node.choices.filter((c) => !removedIds.has(c.id));
+
+        // Add a new pending-new if branch with its own option.
+        const newOptId = "Node002#new0";
+        node.choices.push({
+            id: newOptId,
+            text: "@401",
+            target: { kind: "state" as const, stateId: "Node999" },
+            condition: "(local_var(LVAR_2) == 2)",
+        });
+        node.branches!.push({
+            kind: "if",
+            condition: "(local_var(LVAR_2) == 2)",
+            choiceIds: [newOptId],
+            replies: [],
+            opaque: [],
+        });
+
+        const out = applySSLDialogEdits(SRC_RIF_COMBINED, edited, original);
+
+        // Removed branch is gone.
+        expect(out).not.toContain("local_var(LVAR_1)");
+        expect(out).not.toContain("NOption(301");
+
+        // New branch is present with its option.
+        expect(out).toContain("if (local_var(LVAR_2) == 2) then begin");
+        expect(out).toContain("NOption(401, Node999)");
+
+        // New branch appears AFTER the surviving branch (correct anchor placement).
+        const iLVAR0 = out.indexOf("if (local_var(LVAR_0)");
+        const iLVAR2 = out.indexOf("if (local_var(LVAR_2)");
+        expect(iLVAR0).toBeGreaterThan(-1);
+        expect(iLVAR2).toBeGreaterThan(iLVAR0);
+
+        // Surviving branch is byte-exact (set_local_var side-effect intact).
+        expect(out).toContain("if (local_var(LVAR_0) == 0) then begin");
+        expect(out).toContain("set_local_var(LVAR_0, 1)");
+        expect(out).toContain("NOption(122, Node915, 4)");
+
+        // Round-trip: re-parses as bundleFaithful and verifySSLEditApplied passes.
+        const actual = modelFromSSL(await parseDialog(out));
+        expect(actual.roots[0]!.states.find((s) => s.id === "Node002")!.bundleFaithful).toBe(true);
+        expect(verifySSLEditApplied(edited, actual)).toEqual({ ok: true });
+    });
+});
+
 describe("bundleNodeOps + branchConditionOps - span-identity matching (Task 7)", () => {
     // Two sibling if branches: the first has no opaque (removable via branchStructureOps) and
     // the second carries set_local_var (making the node bundleFaithful; not removable). A save
