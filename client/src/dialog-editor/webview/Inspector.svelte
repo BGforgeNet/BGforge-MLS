@@ -134,9 +134,9 @@
         </div>
     {:else if ssl && structuralEditable && state.branches}
         <div class="ronote">
-            Text edits save to the <b>.msg</b>; <b>retarget</b> and entry status write back to the
-            <b>.ssl</b>. This node branches on a condition (the sections below); its conditions,
-            side-effects, and option structure are source-only - edit the <b>.ssl</b> for those.
+            Text edits save to the <b>.msg</b>; each branch's <b>condition</b>, option <b>retarget</b>,
+            and entry status write back to the <b>.ssl</b>. Side-effects and option structure inside a
+            branch are source-only - edit the <b>.ssl</b> for those.
         </div>
     {:else if ssl && structuralEditable}
         <div class="ronote">
@@ -267,7 +267,20 @@
     {#if state.branches}
         {#each state.branches as b, bi (bi)}
             <div class="branch">
-                <div class="branchhead">{b.kind === "else" ? "otherwise" : `shown when ${b.condition ?? ""}`}</div>
+                {#if b.kind === "else"}
+                    <div class="branchhead">otherwise</div>
+                {:else}
+                    <div class="branchhead">
+                        <span class="branchlabel">shown when</span>
+                        <input
+                            class="iv code branchcond"
+                            value={b.condition ?? ""}
+                            disabled={!structuralEditable}
+                            placeholder="(condition)"
+                            oninput={(e) => (b.condition = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}
+                        />
+                    </div>
+                {/if}
                 {#if b.replies.length > 0}
                     <div class="ik branchnpc">NPC</div>
                     {#each b.replies as r}
@@ -506,6 +519,20 @@
         font-weight: 600;
         font-style: italic;
         margin: 2px 0 4px;
+        display: flex;
+        align-items: center;
+    }
+    .branchlabel {
+        color: #b9c0c8;
+        font-size: 10px;
+        font-style: italic;
+        margin-right: 4px;
+    }
+    .branchcond {
+        width: auto;
+        min-width: 60%;
+        font-size: 10px;
+        padding: 1px 4px;
     }
     .branchnpc {
         margin-top: 2px;
