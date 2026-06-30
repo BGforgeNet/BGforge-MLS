@@ -334,4 +334,13 @@ procedure talk_p_proc begin call Node002; end
         );
         expect(data.nodes.find((n) => n.name === "Node001")!.branches).toBeUndefined();
     });
+    it("captures each if-branch condition span (conditionRange), none for else", async () => {
+        const data = await parseDialog(SRC);
+        const n = data.nodes.find((x) => x.name === "Node002")!;
+        const [ifB, elseB] = n.branches!;
+        expect(ifB!.conditionRange).toBeDefined();
+        expect(SRC.slice(ifB!.conditionRange!.start, ifB!.conditionRange!.end)).toBe("(local_var(LVAR_0) == 0)");
+        expect(ifB!.conditionRange).toEqual({ start: expect.any(Number), end: expect.any(Number) });
+        expect(elseB!.conditionRange).toBeUndefined();
+    });
 });

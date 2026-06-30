@@ -523,11 +523,12 @@ function buildBranches(proc: SyntaxNode, fullText: string): SSLDialogBranch[] {
 
     for (const stmt of proc.childrenForFieldName("body")) {
         // Bundle-faithful guarantees every top-level statement is an IfStmt.
-        const cond = stmt.childForFieldName("cond")?.text;
+        const condNode = stmt.childForFieldName("cond");
         const thenBody = stmt.childForFieldName("then");
         const ifBranch: SSLDialogBranch = {
             kind: "if",
-            condition: cond,
+            condition: condNode?.text,
+            ...(condNode ? { conditionRange: { start: condNode.startIndex, end: condNode.endIndex } } : {}),
             replyIndices: [],
             optionIndices: [],
             opaque: [],

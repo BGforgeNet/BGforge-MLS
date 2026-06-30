@@ -75,6 +75,8 @@ export interface SSLDialogOption {
 export interface SSLDialogBranch {
     kind: "if" | "else";
     condition?: string;
+    /** Byte span of the `if` condition expression (parens included), for editing. Absent for an `else` branch. */
+    conditionRange?: { start: number; end: number };
     replyIndices: number[];
     optionIndices: number[];
     opaque: { text: string; textRange: { start: number; end: number } }[];
