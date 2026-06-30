@@ -46,6 +46,9 @@
             deleteState: () => void;
             duplicateState: () => void;
             setEntry: (on: boolean) => void;
+            addReplyToBranch: (branchIndex: number) => void;
+            removeReplyInBranch: (branchIndex: number, choiceId: string) => void;
+            moveReplyInBranch: (branchIndex: number, choiceId: string, dir: -1 | 1) => void;
         };
     } = $props();
 
@@ -135,8 +138,8 @@
     {:else if ssl && structuralEditable && state.branches}
         <div class="ronote">
             Text edits save to the <b>.msg</b>; each branch's <b>condition</b>, option <b>retarget</b>,
-            and entry status write back to the <b>.ssl</b>. Side-effects and option structure inside a
-            branch are source-only - edit the <b>.ssl</b> for those.
+            <b>add/remove/reorder</b> options, and entry status write back to the <b>.ssl</b>.
+            Branch side-effects are source-only - edit the <b>.ssl</b> for those.
         </div>
     {:else if ssl && structuralEditable}
         <div class="ronote">
@@ -209,31 +212,42 @@
 
     <div class="ik between">
         <span>{ssl ? "Options" : "Transitions"} ({state.choices.length})</span>
-        <!-- Add-option is suppressed for bundle nodes: adding an option to a branch is a later slice
-             (which branch is ambiguous), so it is not offered here - edit the .ssl source instead. -->
+        <!-- The node-level add-option button is suppressed for bundle nodes: each branch has its own
+             per-branch "+ option" button below (which branch is unambiguous there). -->
         {#if structuralEditable && !state.branches}<button class="add" onclick={actions.addReply}>{ssl ? "+ option" : "+ reply"}</button>{/if}
     </div>
 
-    {#snippet choiceRow(c, i)}
+    {#snippet choiceRow(c, i, bi, branchLen)}
         <div class="trow">
             <div class="trhead">
                 <span class="tnum">#{i + 1}</span>
                 {#if structuralEditable || !readOnly}
                     <span class="trbtns">
-                        <!-- Reorder is available to any structurally-editable node (D or faithful SSL).
-                             Remove is available to D (full edit surface) and to a faithful SSL node's
-                             UNCONDITIONAL options. A conditional SSL option sits in an `if` wrapper the
-                             save path does not rewrite (Tier 3), so its Remove is shown DISABLED (not
-                             hidden) with a tooltip - the unavailable action stays visible and explained.
-                             Both are suppressed inside bundle branches (within-branch structure is Tier 3b). -->
-                        {#if structuralEditable && !state.branches}
-                            <button title="Move up" disabled={i === 0} onclick={() => actions.moveReply(c.id, -1)}>&#9650;</button>
-                            <button title="Move down" disabled={i === state.choices.length - 1} onclick={() => actions.moveReply(c.id, 1)}>&#9660;</button>
-                        {/if}
-                        {#if !readOnly}
-                            <button title="Remove" class="del" onclick={() => actions.removeReply(c.id)}>&#10005;</button>
-                        {:else if ssl && structuralEditable && !state.branches}
-                            <button title={c.condition ? "Conditional options are removed in the .ssl source" : "Remove"} class="del" disabled={Boolean(c.condition)} onclick={() => actions.removeReply(c.id)}>&#10005;</button>
+                        {#if bi !== undefined}
+                            <!-- Branch-scoped controls: move bounds are branch-relative so the option
+                                 cannot cross into an adjacent branch. Remove is unconditional at the
+                                 branch level (branch conditions live at the branch head, not per-option). -->
+                            {#if structuralEditable}
+                                <button title="Move up" disabled={i === 0} onclick={() => actions.moveReplyInBranch(bi, c.id, -1)}>&#9650;</button>
+                                <button title="Move down" disabled={branchLen === undefined || i >= branchLen - 1} onclick={() => actions.moveReplyInBranch(bi, c.id, 1)}>&#9660;</button>
+                                <button title="Remove" class="del" onclick={() => actions.removeReplyInBranch(bi, c.id)}>&#10005;</button>
+                            {/if}
+                        {:else}
+                            <!-- Flat-path controls (D or faithful non-bundle SSL): unchanged. -->
+                            <!-- Reorder is available to any structurally-editable node (D or faithful SSL).
+                                 Remove is available to D (full edit surface) and to a faithful SSL node's
+                                 UNCONDITIONAL options. A conditional SSL option sits in an `if` wrapper the
+                                 save path does not rewrite (Tier 3), so its Remove is shown DISABLED (not
+                                 hidden) with a tooltip - the unavailable action stays visible and explained. -->
+                            {#if structuralEditable && !state.branches}
+                                <button title="Move up" disabled={i === 0} onclick={() => actions.moveReply(c.id, -1)}>&#9650;</button>
+                                <button title="Move down" disabled={i === state.choices.length - 1} onclick={() => actions.moveReply(c.id, 1)}>&#9660;</button>
+                            {/if}
+                            {#if !readOnly}
+                                <button title="Remove" class="del" onclick={() => actions.removeReply(c.id)}>&#10005;</button>
+                            {:else if ssl && structuralEditable && !state.branches}
+                                <button title={c.condition ? "Conditional options are removed in the .ssl source" : "Remove"} class="del" disabled={Boolean(c.condition)} onclick={() => actions.removeReply(c.id)}>&#10005;</button>
+                            {/if}
                         {/if}
                     </span>
                 {/if}
@@ -287,9 +301,12 @@
                         <div class="branchreply">{resolveText(r.text, messages) || "(no line)"}</div>
                     {/each}
                 {/if}
-                {#each branchChoices(b) as c (c.id)}
-                    {@render choiceRow(c, state.choices.indexOf(c))}
+                {#each branchChoices(b) as c, bci (c.id)}
+                    {@render choiceRow(c, bci, bi, branchChoices(b).length)}
                 {/each}
+                {#if structuralEditable}
+                    <button class="add branchadd" onclick={() => actions.addReplyToBranch(bi)}>+ option</button>
+                {/if}
                 {#if b.opaque.length > 0}
                     <details class="logic"><summary>logic ({b.opaque.length})</summary>
                         {#each b.opaque as line}<pre class="logicline">{line}</pre>{/each}
@@ -555,5 +572,9 @@
         color: #c08;
         font-family: var(--vscode-editor-font-family, monospace);
         white-space: pre-wrap;
+    }
+    /* "+ option" button inside a branch - a little top margin to separate from the last choice row. */
+    .branchadd {
+        margin-top: 5px;
     }
 </style>

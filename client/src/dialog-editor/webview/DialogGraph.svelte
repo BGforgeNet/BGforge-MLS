@@ -496,6 +496,27 @@
             selected.isEntry = on;
             void rebuild({ frame: "none" });
         },
+        addReplyToBranch: (branchIndex: number) => {
+            if (!structEditable(selected)) return; // Tier 3b: bundle SSL branch-scoped add
+            const branch = selected.branches?.[branchIndex];
+            if (!branch) return;
+            ops.addReplyToBranch(editModel, selected, branch);
+            void rebuild({ frame: "none" });
+        },
+        removeReplyInBranch: (branchIndex: number, choiceId: string) => {
+            if (!structEditable(selected)) return; // Tier 3b: bundle SSL branch-scoped remove
+            const branch = selected.branches?.[branchIndex];
+            if (!branch) return;
+            ops.removeReplyFromBranch(selected, branch, choiceId);
+            void rebuild({ frame: "none" });
+        },
+        moveReplyInBranch: (branchIndex: number, choiceId: string, dir: -1 | 1) => {
+            if (!structEditable(selected)) return; // Tier 3b: bundle SSL branch-scoped reorder
+            const branch = selected.branches?.[branchIndex];
+            if (!branch) return;
+            ops.moveReplyInBranch(selected, branch, choiceId, dir);
+            void rebuild({ frame: "none" });
+        },
     };
 
     function addState(): void {
