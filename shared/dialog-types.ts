@@ -80,6 +80,13 @@ export interface SSLDialogBranch {
     /** Splice point for a NEW option inside this branch body: end of the branch's last statement + that
      * line's indent. For an empty branch, just inside the block. Set by the parser. */
     insertAnchor?: { offset: number; indent: string };
+    /** Byte span of the whole `if` statement (for deleting a sibling/sole if). Set on `if` branches. */
+    stmtRange?: { start: number; end: number };
+    /** Byte span from the `else` keyword through the else-block `end` (for deleting just the else). Set on `else` branches. */
+    elseClauseRange?: { start: number; end: number };
+    /** Offset right after the then-block's closing `end` (thenBody.endIndex), where ` else begin...end` is appended.
+     * Set on `if` branches with a block then-body. */
+    thenBlockEnd?: number;
     replyIndices: number[];
     optionIndices: number[];
     opaque: { text: string; textRange: { start: number; end: number } }[];

@@ -355,4 +355,37 @@ procedure talk_p_proc begin call Node002; end
         expect(afterAnchor.trimStart().startsWith("end")).toBe(true); // anchor is just before the branch `end`
         expect(elseB!.insertAnchor).toBeDefined();
     });
+    it("captures whole-branch spans: stmtRange (if), elseClauseRange (else), thenBlockEnd (if/else)", async () => {
+        const data = await parseDialog(SRC);
+        const n = data.nodes.find((x) => x.name === "Node002")!;
+        const [ifB, elseB] = n.branches!;
+        // stmtRange covers the whole `if (...) then begin ... end else begin ... end` IfStmt.
+        expect(ifB!.stmtRange).toBeDefined();
+        expect(SRC.slice(ifB!.stmtRange!.start, ifB!.stmtRange!.start + 3)).toBe("if ");
+        // thenBlockEnd = thenBody.endIndex: offset right after the then-block's closing `end`.
+        // For the if/else SRC fixture the next non-space after thenBlockEnd is `else`.
+        expect(ifB!.thenBlockEnd).toBeDefined();
+        expect(SRC.slice(ifB!.thenBlockEnd!).trimStart().startsWith("else")).toBe(true);
+        // elseClauseRange starts at the `else` keyword and ends at the else-block `end`.
+        expect(elseB!.elseClauseRange).toBeDefined();
+        expect(SRC.slice(elseB!.elseClauseRange!.start).trimStart().startsWith("else")).toBe(true);
+        expect(SRC.slice(elseB!.elseClauseRange!.end - 3, elseB!.elseClauseRange!.end)).toBe("end");
+    });
+    it("thenBlockEnd on a single-if (no else): offset right after the then-block end", async () => {
+        const SINGLE_IF = `procedure NodeSingle begin
+    if (global_var(GVAR_X) == 0) then begin
+        set_global_var(GVAR_DONE, 1);
+        Reply(100);
+    end
+end
+procedure talk_p_proc begin call NodeSingle; end
+`;
+        const data = await parseDialog(SINGLE_IF);
+        const n = data.nodes.find((x) => x.name === "NodeSingle")!;
+        const [ifB] = n.branches!;
+        expect(ifB!.thenBlockEnd).toBeDefined();
+        // For a single-if the then-block end coincides with the statement end; the next non-space
+        // after thenBlockEnd is the procedure's closing `end`.
+        expect(SINGLE_IF.slice(ifB!.thenBlockEnd!).trimStart().startsWith("end")).toBe(true);
+    });
 });

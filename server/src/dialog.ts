@@ -543,13 +543,19 @@ function buildBranches(proc: SyntaxNode, fullText: string): SSLDialogBranch[] {
             kind: "if",
             condition: condNode?.text,
             ...(condNode ? { conditionRange: { start: condNode.startIndex, end: condNode.endIndex } } : {}),
+            stmtRange: { start: stmt.startIndex, end: stmt.endIndex },
             replyIndices: [],
             optionIndices: [],
             opaque: [],
         };
         if (thenBody) {
             collectBody(ifBranch, thenBody);
-            if (thenBody.type === SyntaxType.Block) ifBranch.insertAnchor = branchInsertAnchor(thenBody, fullText);
+            if (thenBody.type === SyntaxType.Block) {
+                ifBranch.insertAnchor = branchInsertAnchor(thenBody, fullText);
+                // thenBody.endIndex is right after the then-block's closing `end`; this is where
+                // ` else begin...end` is appended when adding a new else clause to this if.
+                ifBranch.thenBlockEnd = thenBody.endIndex;
+            }
         }
         branches.push(ifBranch);
         const elseBody = stmt.childForFieldName("else");
@@ -557,6 +563,10 @@ function buildBranches(proc: SyntaxNode, fullText: string): SSLDialogBranch[] {
             const elseBranch: SSLDialogBranch = { kind: "else", replyIndices: [], optionIndices: [], opaque: [] };
             collectBody(elseBranch, elseBody);
             if (elseBody.type === SyntaxType.Block) elseBranch.insertAnchor = branchInsertAnchor(elseBody, fullText);
+            // Locate the `else` keyword: first occurrence after the then-block end (or statement start
+            // as a fallback when thenBody is absent, which cannot happen in valid SSL but is defensive).
+            const elseKw = fullText.indexOf("else", thenBody ? thenBody.endIndex : stmt.startIndex);
+            elseBranch.elseClauseRange = { start: elseKw, end: elseBody.endIndex };
             branches.push(elseBranch);
         }
     }
