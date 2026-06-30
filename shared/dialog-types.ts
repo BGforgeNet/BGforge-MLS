@@ -77,6 +77,9 @@ export interface SSLDialogBranch {
     condition?: string;
     /** Byte span of the `if` condition expression (parens included), for editing. Absent for an `else` branch. */
     conditionRange?: { start: number; end: number };
+    /** Splice point for a NEW option inside this branch body: end of the branch's last statement + that
+     * line's indent. For an empty branch, just inside the block. Set by the parser. */
+    insertAnchor?: { offset: number; indent: string };
     replyIndices: number[];
     optionIndices: number[];
     opaque: { text: string; textRange: { start: number; end: number } }[];

@@ -494,6 +494,18 @@ function isBundleFaithfulProcedure(proc: SyntaxNode): boolean {
     return true;
 }
 
+// The splice point for a new option inside a branch body: end of the branch's last statement + that
+// statement's line indent. A single bare-statement branch (`then NOption(...);` with no begin/end) returns
+// that statement's end; the caller synthesizes a block when adding. An empty block anchors just inside it.
+function branchInsertAnchor(body: SyntaxNode, fullText: string): { offset: number; indent: string } {
+    const stmts = body.type === SyntaxType.Block ? body.children.filter((c) => c.isNamed) : [body];
+    const last = stmts.at(-1);
+    if (!last) return { offset: body.startIndex + 1, indent: "        " }; // empty block: just inside `begin`
+    const lineStart = fullText.lastIndexOf("\n", last.startIndex - 1) + 1;
+    const indent = /^[ \t]*/.exec(fullText.slice(lineStart, last.startIndex))?.[0] ?? "        ";
+    return { offset: last.endIndex, indent };
+}
+
 // Group a bundle-faithful procedure's body into ordered branches. The proc body is only top-level `if`s
 // (Task 1 gate), so each yields an "if" branch (its then-body) and, when present, an "else" branch. Dialog
 // calls are matched to the flat replies/options arrays by source order: both this walk and parseProcedure's
@@ -533,12 +545,16 @@ function buildBranches(proc: SyntaxNode, fullText: string): SSLDialogBranch[] {
             optionIndices: [],
             opaque: [],
         };
-        if (thenBody) collectBody(ifBranch, thenBody);
+        if (thenBody) {
+            collectBody(ifBranch, thenBody);
+            ifBranch.insertAnchor = branchInsertAnchor(thenBody, fullText);
+        }
         branches.push(ifBranch);
         const elseBody = stmt.childForFieldName("else");
         if (elseBody) {
             const elseBranch: SSLDialogBranch = { kind: "else", replyIndices: [], optionIndices: [], opaque: [] };
             collectBody(elseBranch, elseBody);
+            elseBranch.insertAnchor = branchInsertAnchor(elseBody, fullText);
             branches.push(elseBranch);
         }
     }

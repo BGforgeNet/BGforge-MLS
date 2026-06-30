@@ -343,4 +343,16 @@ procedure talk_p_proc begin call Node002; end
         expect(ifB!.conditionRange).toEqual({ start: expect.any(Number), end: expect.any(Number) });
         expect(elseB!.conditionRange).toBeUndefined();
     });
+    it("captures a per-branch insert anchor at the end of each branch body", async () => {
+        const data = await parseDialog(SRC);
+        const n = data.nodes.find((x) => x.name === "Node002")!;
+        const [ifB, elseB] = n.branches!;
+        // The if-branch's last body statement is NOption(123, Node999, 4); the anchor offset is its end,
+        // which must sit before the branch's closing `end`.
+        expect(ifB!.insertAnchor).toBeDefined();
+        expect(ifB!.insertAnchor!.indent).toMatch(/^\s+$/);
+        const afterAnchor = SRC.slice(ifB!.insertAnchor!.offset);
+        expect(afterAnchor.trimStart().startsWith("end")).toBe(true); // anchor is just before the branch `end`
+        expect(elseB!.insertAnchor).toBeDefined();
+    });
 });
