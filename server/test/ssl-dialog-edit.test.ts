@@ -643,6 +643,12 @@ procedure talk_p_proc begin call Node002; end
         expect(ifB.conditionRange).toBeDefined();
         expect(elseB.conditionRange).toBeUndefined();
     });
+
+    it("threads each branch insertAnchor onto the model", async () => {
+        const model = modelFromSSL(await parseDialog(BUNDLE_SRC));
+        const s = model.roots[0]!.states.find((x) => x.id === "Node002")!;
+        for (const b of s.branches!) expect(b.insertAnchor).toBeDefined();
+    });
 });
 
 describe("applySSLDialogEdits - Task 7: compose + conditional reorder", () => {

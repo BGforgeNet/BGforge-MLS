@@ -73,6 +73,8 @@ export interface DialogBranch {
     condition?: string;
     /** SSL only: byte span of the `if` condition (parens included), for editing. Absent for `else`. Set by the adapter. */
     conditionRange?: { start: number; end: number };
+    /** SSL only: splice point for a new option inside this branch body. Set by the adapter. */
+    insertAnchor?: { offset: number; indent: string };
     replies: { text: string; textKind?: "computed" | "random" }[];
     choiceIds: string[];
     opaque: string[];
@@ -495,6 +497,7 @@ function stateFromSSL(node: SSLDialogNode): DialogState {
         kind: b.kind,
         condition: b.condition,
         ...(b.conditionRange ? { conditionRange: b.conditionRange } : {}),
+        ...(b.insertAnchor ? { insertAnchor: b.insertAnchor } : {}),
         replies: b.replyIndices.map((ri) => {
             const r = node.replies[ri]!;
             return { text: sslMsgText(r.msgId), textKind: r.msgKind };
