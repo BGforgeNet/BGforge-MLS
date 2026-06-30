@@ -763,3 +763,57 @@ procedure talk_p_proc begin call Node002; end
         expect(applySSLDialogEdits(SRC_FLOOR, edited, original)).toBe(SRC_FLOOR);
     });
 });
+
+describe("applySSLDialogEdits - bundle branch condition edit", () => {
+    const SRC_BC = `procedure Node002 begin
+    if (local_var(LVAR_0) == 0) then begin
+        set_local_var(LVAR_0,1);
+        Reply(120);
+        NOption(122, Node915, 4);
+    end
+    else begin
+        Reply(121);
+        NOption(124, Node915, 4);
+    end
+end
+procedure Node915 begin Reply(900); end
+procedure talk_p_proc begin call Node002; end
+`;
+    it("edits an if-branch condition in place, leaving else/options/side-effects byte-exact", async () => {
+        const original = modelFromSSL(await parseDialog(SRC_BC));
+        const edited = structuredClone(original);
+        const ifB = edited.roots[0]!.states.find((s) => s.id === "Node002")!.branches!.find((b) => b.kind === "if")!;
+        ifB.condition = "(local_var(LVAR_0) == 2)";
+        const out = applySSLDialogEdits(SRC_BC, edited, original);
+        expect(out).toContain("if (local_var(LVAR_0) == 2) then");
+        expect(out).not.toContain("== 0) then");
+        expect(out).toContain("set_local_var(LVAR_0,1);"); // side-effect intact
+        expect(out).toContain("NOption(122, Node915, 4)"); // option intact
+        expect(out).toContain("else begin"); // skeleton intact
+    });
+
+    // Two consecutive ifs (no else); a side-effect in the first branch makes the node non-faithful
+    // but still bundle-faithful - so branches is populated for both ifs.
+    const SRC_TWO_IF = `procedure Node002 begin
+    if (global_var(GVAR_A) == 1) then begin
+        set_local_var(LVAR_0, 1);
+        NOption(101, Node915, 4);
+    end
+    if (global_var(GVAR_B) == 1) then begin
+        NOption(102, Node915, 4);
+    end
+end
+procedure Node915 begin Reply(900); end
+procedure talk_p_proc begin call Node002; end
+`;
+    it("edits each sibling if-condition independently", async () => {
+        const original = modelFromSSL(await parseDialog(SRC_TWO_IF));
+        const edited = structuredClone(original);
+        const ifs = edited.roots[0]!.states.find((s) => s.id === "Node002")!.branches!.filter((b) => b.kind === "if");
+        expect(ifs).toHaveLength(2);
+        ifs[1]!.condition = "(global_var(GVAR_B) == 5)";
+        const out = applySSLDialogEdits(SRC_TWO_IF, edited, original);
+        expect(out).toContain("if (global_var(GVAR_A) == 1) then"); // first untouched
+        expect(out).toContain("if (global_var(GVAR_B) == 5) then"); // second edited
+    });
+});

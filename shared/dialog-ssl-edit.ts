@@ -227,6 +227,26 @@ function nodeOps(
     return ops;
 }
 
+// Diff each `if` branch's condition against the original and emit a raw span replacement into its
+// conditionRange (parens-inclusive). Mirrors the per-option edit-text splice; the `else` branch has no
+// condition and is skipped. Branches are index-aligned (the adapter rebuilds them in source order), and
+// condition spans are disjoint from option/call spans and from each other, so these splices never overlap.
+function branchConditionOps(_text: string, edited: DialogState, orig: DialogState): SpliceOp[] {
+    const ops: SpliceOp[] = [];
+    const eb = edited.branches;
+    const ob = orig.branches;
+    if (!eb || !ob) return ops;
+    for (let i = 0; i < eb.length && i < ob.length; i++) {
+        const e = eb[i]!;
+        const o = ob[i]!;
+        if (o.kind !== "if" || !o.conditionRange) continue;
+        if (e.condition !== undefined && e.condition !== o.condition) {
+            ops.push({ start: o.conditionRange.start, end: o.conditionRange.end, replacement: e.condition });
+        }
+    }
+    return ops;
+}
+
 /**
  * Write SSL structural edits (retarget, reorder) back to the `.ssl` source. Diffs `edited` against
  * `original` (matched by state id), builds byte splices from the captured option ranges, and applies
@@ -292,6 +312,7 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
         // (rewrites its own callRange/targetRange slot only, never the if/else wrapper or side-effects).
         if (!orig || !(orig.faithful || orig.bundleFaithful)) continue;
         ops.push(...nodeOps(originalText, state, orig, orig.insertAnchor));
+        ops.push(...branchConditionOps(originalText, state, orig));
     }
 
     // DELETE: an original node missing from the edited model -> remove its whole procedure span (and the
