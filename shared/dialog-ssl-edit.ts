@@ -63,6 +63,32 @@ function removeStatementSplice(text: string, stmtRange: { start: number; end: nu
 }
 
 /**
+ * Compute the text to write into a slot for one surviving option: retarget when the target changed,
+ * or redirect to NMessage when the target node was deleted. Lifted from `nodeOps` so `bundleNodeOps`
+ * can share the same retarget/redirect logic without duplication.
+ */
+function survivorReplacement(text: string, moved: DialogChoice, movedOrig: DialogChoice): string {
+    const origCall = text.slice(movedOrig.callRange!.start, movedOrig.callRange!.end);
+    if (moved.target.kind !== "state") {
+        // The option's target node was deleted (the model redirected it to exit): re-serialize the
+        // option as a terminal NMessage, preserving the existing msg id (the first numeric arg of
+        // the original call). serializeSSLOption emits a full statement ending in `;`, but the slot
+        // is the call expression WITHOUT the trailing `;` - trim it so the existing `;` after the
+        // slot stays.
+        const msgId = Number(/\(\s*(\d+)/.exec(origCall)?.[1] ?? NaN);
+        return Number.isFinite(msgId) ? serializeSSLOption(moved, msgId).replace(/;$/, "") : origCall;
+    }
+    const newTarget = moved.target.stateId;
+    const oldTarget = text.slice(movedOrig.targetRange!.start, movedOrig.targetRange!.end);
+    if (newTarget !== oldTarget) {
+        const relStart = movedOrig.targetRange!.start - movedOrig.callRange!.start;
+        const relEnd = movedOrig.targetRange!.end - movedOrig.callRange!.start;
+        return origCall.slice(0, relStart) + newTarget + origCall.slice(relEnd);
+    }
+    return origCall;
+}
+
+/**
  * Build the splice ops for one faithful node. Composes three edit kinds, all non-overlapping:
  * - REMOVE: an original (unconditional) option absent from the edit -> delete its whole statement.
  * - SURVIVORS: Tier 1 retarget + reorder over options that still exist, by refilling their source slots.
@@ -155,37 +181,13 @@ function nodeOps(
     // position change in the source. This is the conservative, no-corruption behavior.
     // Do NOT implement shared-block splitting or any larger reorder rewrite here.
 
-    // Shared logic: compute the text to write into a slot for one surviving option - retarget when
-    // the target changed, or redirect to NMessage when the target node was deleted. Factored to avoid
-    // duplicating the retarget/redirect logic between the pinned-conditional and flat-reorder paths.
-    const survivorReplacement = (moved: DialogChoice, movedOrig: DialogChoice): string => {
-        const origCall = text.slice(movedOrig.callRange!.start, movedOrig.callRange!.end);
-        if (moved.target.kind !== "state") {
-            // The option's target node was deleted (the model redirected it to exit): re-serialize the
-            // option as a terminal NMessage, preserving the existing msg id (the first numeric arg of
-            // the original call). serializeSSLOption emits a full statement ending in `;`, but the slot
-            // is the call expression WITHOUT the trailing `;` - trim it so the existing `;` after the
-            // slot stays.
-            const msgId = Number(/\(\s*(\d+)/.exec(origCall)?.[1] ?? NaN);
-            return Number.isFinite(msgId) ? serializeSSLOption(moved, msgId).replace(/;$/, "") : origCall;
-        }
-        const newTarget = moved.target.stateId;
-        const oldTarget = text.slice(movedOrig.targetRange!.start, movedOrig.targetRange!.end);
-        if (newTarget !== oldTarget) {
-            const relStart = movedOrig.targetRange!.start - movedOrig.callRange!.start;
-            const relEnd = movedOrig.targetRange!.end - movedOrig.callRange!.start;
-            return origCall.slice(0, relStart) + newTarget + origCall.slice(relEnd);
-        }
-        return origCall;
-    };
-
     // Conditional survivors: pinned - each refills its own callRange slot only, never a different
     // slot. A conditional option's callRange is inside its if-wrapper; if it participated in the
     // flat permutation, the wrapper would end up around the wrong call.
     for (const o of origOpts) {
         if (!editedIds.has(o.id) || wrappedOrUnwrapped.has(o.id) || o.condition === undefined) continue;
         const e = editedOpts.find((c) => c.id === o.id)!;
-        const replacement = survivorReplacement(e, o);
+        const replacement = survivorReplacement(text, e, o);
         if (replacement !== text.slice(o.callRange!.start, o.callRange!.end))
             ops.push({ start: o.callRange!.start, end: o.callRange!.end, replacement });
     }
@@ -201,7 +203,7 @@ function nodeOps(
         const slot = survivorSlots[i]!;
         const moved = survivorsInEditedOrder[i]!;
         const movedOrig = origById.get(moved.id)!;
-        const replacement = survivorReplacement(moved, movedOrig);
+        const replacement = survivorReplacement(text, moved, movedOrig);
         if (replacement !== text.slice(slot.start, slot.end))
             ops.push({ start: slot.start, end: slot.end, replacement });
     }
@@ -223,6 +225,51 @@ function nodeOps(
                 .join("");
             if (block) ops.push({ start: offset, end: offset, replacement: block });
         }
+    }
+    return ops;
+}
+
+// Bundle-node option edits, branch-scoped. Every option in a branch shares the branch's single
+// `if (cond) then begin ... end` wrapper, so within one branch body remove/reorder/retarget/add are the
+// same safe operations nodeOps performs for a flat node - no per-option `if` is touched. Each branch body
+// is disjoint from the others and from the condition headers, so the splices never overlap. Cross-branch
+// moves are out of scope: an option is processed only against the branch it originally belonged to.
+function bundleNodeOps(text: string, edited: DialogState, orig: DialogState): SpliceOp[] {
+    const ops: SpliceOp[] = [];
+    const ob = orig.branches ?? [];
+    const eb = edited.branches ?? [];
+    const editedById = new Map(edited.choices.map((c) => [c.id, c]));
+    const origById = new Map(orig.choices.map((c) => [c.id, c]));
+
+    for (let i = 0; i < ob.length && i < eb.length; i++) {
+        const origIds = ob[i]!.choiceIds;
+        const editedIds = eb[i]!.choiceIds;
+        const keptOrig = origIds.filter((id) => editedIds.includes(id)); // survivors, source order
+
+        // REMOVE: an original option no longer in this branch -> splice its whole statement out.
+        for (const id of origIds) {
+            if (editedIds.includes(id)) continue;
+            const o = origById.get(id);
+            if (!o?.stmtRange) return []; // cannot remove safely -> no write
+            ops.push(removeStatementSplice(text, o.stmtRange));
+        }
+
+        // RETARGET / REORDER: refill this branch's callRange slots (source order) with the kept options in
+        // EDITED order. Within one branch body the wrapper does not move, so reorder is safe.
+        // Options in a bundle-faithful branch always have a callRange (they are parsed NOption/NMessage calls),
+        // so the non-null assertion is safe. Skip any entry that somehow lacks one rather than crashing.
+        const slots = keptOrig
+            .map((id) => origById.get(id)!.callRange)
+            .filter((r): r is NonNullable<typeof r> => r != null);
+        const keptEditedOrder = editedIds.filter((id) => origById.has(id));
+        for (let k = 0; k < slots.length && k < keptEditedOrder.length; k++) {
+            const moved = editedById.get(keptEditedOrder[k]!)!;
+            const movedOrig = origById.get(keptEditedOrder[k]!)!;
+            const replacement = survivorReplacement(text, moved, movedOrig);
+            if (replacement !== text.slice(slots[k]!.start, slots[k]!.end))
+                ops.push({ start: slots[k]!.start, end: slots[k]!.end, replacement });
+        }
+        // ADD is added in Task 5.
     }
     return ops;
 }
@@ -307,11 +354,13 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
         // This lets nodeOps process the renamed node's own options against its original, AND lets a faithful
         // node referencing the renamed node retarget that option's targetRange to the new id.
         const orig = origById.get(state.renamedFrom ?? state.id);
-        // Gate: structurally editable nodes only - plain-faithful or single-level if/else bundles. A bundle
-        // option carries a condition, so nodeOps routes it through the pinned-conditional retarget path
-        // (rewrites its own callRange/targetRange slot only, never the if/else wrapper or side-effects).
+        // Gate: structurally editable nodes only - plain-faithful or single-level if/else bundles.
         if (!orig || !(orig.faithful || orig.bundleFaithful)) continue;
-        ops.push(...nodeOps(originalText, state, orig, orig.insertAnchor));
+        if (orig.bundleFaithful) {
+            ops.push(...bundleNodeOps(originalText, state, orig));
+        } else {
+            ops.push(...nodeOps(originalText, state, orig, orig.insertAnchor));
+        }
         ops.push(...branchConditionOps(originalText, state, orig));
     }
 

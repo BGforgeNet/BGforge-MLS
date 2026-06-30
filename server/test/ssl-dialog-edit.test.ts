@@ -824,6 +824,49 @@ procedure talk_p_proc begin call Node002; end
     });
 });
 
+describe("bundleNodeOps - within-branch remove", () => {
+    const SRC_BR = `procedure Node002 begin
+    if (local_var(LVAR_0) == 0) then begin
+        set_local_var(LVAR_0,1);
+        Reply(120);
+        NOption(122, Node915, 4);
+        NOption(123, Node999, 4);
+    end
+    else begin
+        Reply(121);
+        NOption(124, Node915, 4);
+    end
+end
+procedure Node915 begin Reply(900); end
+procedure Node999 begin Reply(999); end
+procedure talk_p_proc begin call Node002; end
+`;
+    it("removes one option from the then-branch, leaving the rest of the branch + else + side-effect byte-exact", async () => {
+        const original = modelFromSSL(await parseDialog(SRC_BR));
+        const edited = structuredClone(original);
+        const node = edited.roots[0]!.states.find((s) => s.id === "Node002")!;
+        // Drop the then-branch option NOption(123, Node999): remove it from both choices and its branch.
+        const ifBranch = node.branches!.find((b) => b.kind === "if")!;
+        const tgt = node.choices.find(
+            (c) =>
+                c.target.kind === "state" &&
+                c.target.stateId === "Node999" &&
+                c.condition &&
+                !c.condition.startsWith("!"),
+        )!;
+        node.choices = node.choices.filter((c) => c.id !== tgt.id);
+        ifBranch.choiceIds = ifBranch.choiceIds.filter((id) => id !== tgt.id);
+        const out = applySSLDialogEdits(SRC_BR, edited, original);
+        expect(out).not.toContain("NOption(123, Node999, 4)"); // removed
+        expect(out).toContain("NOption(122, Node915, 4)"); // kept (then-branch)
+        expect(out).toContain("NOption(124, Node915, 4)"); // kept (else-branch)
+        expect(out).toContain("set_local_var(LVAR_0,1);"); // side-effect byte-exact
+        expect(out).toContain("else begin");
+        const actual = modelFromSSL(await parseDialog(out));
+        expect(verifySSLEditApplied(edited, actual)).toEqual({ ok: true });
+    });
+});
+
 describe("verifySSLEditApplied - bundle branch conditions", () => {
     const SRC_BC = `procedure Node002 begin
     if (local_var(LVAR_0) == 0) then begin Reply(120); NOption(122, Node915, 4); end
