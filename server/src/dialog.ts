@@ -356,13 +356,16 @@ function parseProcedure(
     const nameNode = proc.childForFieldName("name");
     const nameRange = nameNode ? { start: nameNode.startIndex, end: nameNode.endIndex } : undefined;
 
+    const faithful = isFaithfulProcedure(proc);
     return {
         name,
         line: proc.startPosition.row + 1,
         replies,
         options,
         callTargets,
-        faithful: isFaithfulProcedure(proc),
+        faithful,
+        // Mutually exclusive with faithful: only claim nodes the plain-faithful gate rejects.
+        ...(!faithful && isBundleFaithfulProcedure(proc) ? { bundleFaithful: true } : {}),
         insertAnchor: nodeInsertAnchor(proc, fullText),
         // Omit when empty so nodes without detected side-effects stay clean in the IR.
         ...(sideEffects.length > 0 ? { sideEffects } : {}),
@@ -442,6 +445,50 @@ function isFaithfulBranch(branch: SyntaxNode): boolean {
 
 function isFaithfulProcedure(proc: SyntaxNode): boolean {
     return proc.childrenForFieldName("body").every((stmt) => isFaithfulStatement(stmt, true));
+}
+
+// A non-dialog statement the bundle editor keeps byte-exact without modeling it: an assignment, or an
+// expression statement whose call is NOT a recognized dialog call (a side-effect builtin like set_local_var).
+// No control flow - if/while/for/switch/return make the node non-bundle.
+function isPreservableSimpleStatement(stmt: SyntaxNode): boolean {
+    if (stmt.type === SyntaxType.Assignment) return true;
+    if (stmt.type === SyntaxType.ExpressionStmt) {
+        const expr = stmt.namedChildren[0];
+        return expr !== null && expr !== undefined && expr.type === SyntaxType.CallExpr && !isDialogCallExpr(expr);
+    }
+    return false;
+}
+
+// A statement usable as dialog inside a bundle branch: a recognized dialog call or a `call Node;` transition.
+function isBundleDialogStatement(stmt: SyntaxNode): boolean {
+    if (stmt.type === SyntaxType.ExpressionStmt) {
+        const expr = stmt.namedChildren[0];
+        return expr !== null && expr !== undefined && expr.type === SyntaxType.CallExpr && isDialogCallExpr(expr);
+    }
+    return stmt.type === SyntaxType.CallStmt;
+}
+
+// A bundle branch body (a `begin ... end` block or a single statement): every statement is either a dialog
+// statement or a preservable simple statement. No nested `if` (an IfStmt is neither) -> rejects else-if too.
+function isBundleBranch(branch: SyntaxNode): boolean {
+    const stmts = branch.type === SyntaxType.Block ? branch.children.filter((c) => c.isNamed) : [branch];
+    return stmts.every((s) => isBundleDialogStatement(s) || isPreservableSimpleStatement(s));
+}
+
+// A node is bundle-faithful when its body is one or more top-level single-level `if`s (optionally with one
+// `else`) whose branches are bundle branches. Slice 1 requires the body to be ONLY ifs (no top-level flat
+// dialog calls or assignments mixed in - deferred). Caller sets the flag only when the node is not plain-faithful.
+function isBundleFaithfulProcedure(proc: SyntaxNode): boolean {
+    const body = proc.childrenForFieldName("body");
+    if (body.length === 0) return false;
+    for (const stmt of body) {
+        if (stmt.type !== SyntaxType.IfStmt) return false;
+        const thenBody = stmt.childForFieldName("then");
+        if (!thenBody || !isBundleBranch(thenBody)) return false;
+        const elseBody = stmt.childForFieldName("else");
+        if (elseBody && !isBundleBranch(elseBody)) return false;
+    }
+    return true;
 }
 
 function getCallArgs(callExpr: SyntaxNode): SyntaxNode[] {

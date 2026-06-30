@@ -91,6 +91,14 @@ export interface SSLDialogNode {
      */
     faithful?: boolean;
     /**
+     * True when the node is NOT plain-faithful but IS a single-level `if/else` bundle: its body is only
+     * top-level single-level `if`s whose branches hold dialog calls/transitions plus preservable simple
+     * statements (assignments, side-effect calls), with no nested `if`, `else if`, or loop. Such nodes
+     * support in-place edits (retarget, text) with their conditions and side-effects preserved byte-exact.
+     * Mutually exclusive with `faithful`. Set by the SSL parser.
+     */
+    bundleFaithful?: boolean;
+    /**
      * Where a newly-added option call is spliced in: `offset` is the end of the node's last body
      * statement, `indent` the leading whitespace of that statement's line, so the inserted call lines up.
      * Set by the parser for every node (the option count can be zero).
