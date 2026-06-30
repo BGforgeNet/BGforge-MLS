@@ -398,11 +398,14 @@
         /* Auto-grows to fit content (textareas autosize), so normal states show with no
            scrollbar. The cap is a last-resort fallback for a pathologically tall state
            (many transitions): only then does it scroll, instead of running its bottom
-           controls off-screen. border-box so the cap includes padding+border; the 96px
-           leaves room for the panel's top offset (48px in tree mode) plus a bottom gap,
-           in both the graph (top-right Panel) and tree (.tovl.tr) placements. */
+           controls off-screen. border-box so the cap includes padding+border. The 220px
+           reserve = the panel's top offset (~41px graph / 48px tree) + the bottom-right
+           svelte-flow minimap band (~152px widget + 15px margin) + a ~12px gap, so a tall
+           node's inspector (top-right Panel) never grows down into the minimap. Tree mode
+           has no minimap and so over-reserves slightly, but only a pathological state ever
+           reaches the cap there, and it scrolls rather than losing content. */
         box-sizing: border-box;
-        max-height: calc(100vh - 96px);
+        max-height: calc(100vh - 220px);
         overflow-y: auto;
         background: #21242b;
         border: 1px solid #3a3f4b;
