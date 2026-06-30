@@ -22,11 +22,12 @@
  * CONDITIONAL option (inside an `if`) and condition editing remain deferred.
  */
 
-import type { DialogChoice, DialogModel, DialogState, DialogTarget } from "./dialog-model";
+import type { DialogBranch, DialogChoice, DialogModel, DialogState, DialogTarget } from "./dialog-model";
 import type { VerifyResult } from "./dialog-d-edit";
 import { applySplices, type SpliceOp } from "./dialog-splice";
 import {
     serializeCond,
+    serializeSSLBranch,
     serializeSSLConditionalOption,
     serializeSSLOption,
     serializeSSLProcedure,
@@ -291,6 +292,75 @@ function bundleNodeOps(text: string, edited: DialogState, orig: DialogState): Sp
     return ops;
 }
 
+/**
+ * Structural ADD ops for bundle branches: serialize and insert a PENDING-NEW branch (one with no
+ * `stmtRange` and no `elseClauseRange` - a survivor carries its original spans; addBranch/addElse
+ * creates branches with none) into the source text.
+ *
+ * - A new `kind:"if"` branch: serialized via `serializeSSLBranch` and inserted as `\n${indent}<block>`
+ *   at the max `stmtRange.end` over the ORIGINAL branches (after the last existing if statement).
+ * - A new `kind:"else"` branch: ` else begin...end` injected at the preceding surviving if branch's
+ *   `thenBlockEnd` (right after the then-block's closing `end`).
+ *
+ * ADD is pure insertion; no existing branch byte is touched. The splice is disjoint from every survivor
+ * span. Option msgIds are resolved from each new option's `@<id>` text (allocated at save time).
+ *
+ * TODO(task-6): REMOVE ops (delete absent original branches) are the next task - see task-6-brief.
+ */
+function branchStructureOps(_text: string, edited: DialogState, orig: DialogState): SpliceOp[] {
+    const ops: SpliceOp[] = [];
+    const eb = edited.branches;
+    const ob = orig.branches;
+    if (!eb || !ob) return ops;
+
+    const indent = "    "; // proc-body indent convention (4 spaces)
+    const msgIdOf = (c: DialogChoice): number => Number(/^@(\d+)$/.exec((c.text ?? "").trim())?.[1] ?? NaN);
+
+    for (const b of eb) {
+        // A PENDING-NEW branch has no stmtRange (for if kind) and no elseClauseRange (for else kind).
+        // Survivors carry both spans from the original parse; skip them.
+        if (b.stmtRange !== undefined || b.elseClauseRange !== undefined) continue;
+
+        // Resolve the options for this new branch from the edited choices, keeping only new SSL options
+        // (no callRange/stmtRange, allocated @id text) with a valid numeric id.
+        const options = b.choiceIds
+            .map((id) => edited.choices.find((c) => c.id === id))
+            .filter((c): c is DialogChoice => c !== undefined && isNewSSLOption(c) && Number.isFinite(msgIdOf(c)))
+            .map((c) => ({ choice: c, msgId: msgIdOf(c) }));
+
+        if (b.kind === "if") {
+            // Insert after the last ORIGINAL branch's stmtRange.end (end of the last existing IfStmt).
+            const ends = ob.filter((o) => o.stmtRange).map((o) => o.stmtRange!.end);
+            if (ends.length === 0) continue; // no original branch with a span - nowhere to anchor
+            const insertAt = Math.max(...ends);
+            const block = serializeSSLBranch("if", b.condition, [], options, indent);
+            ops.push({ start: insertAt, end: insertAt, replacement: `\n${indent}${block}` });
+        } else {
+            // kind: "else" - inject at the preceding surviving if branch's thenBlockEnd.
+            // Scan backwards in edited.branches from this else to find the nearest surviving if (one
+            // with stmtRange set, since it was cloned from orig). Then locate that if in orig by its
+            // stmtRange.start to read the thenBlockEnd offset the adapter recorded.
+            const editedIdx = eb.indexOf(b);
+            let precedingIf: DialogBranch | undefined;
+            for (let j = editedIdx - 1; j >= 0; j--) {
+                const b2 = eb[j]!;
+                if (b2.kind === "if" && b2.stmtRange !== undefined) {
+                    precedingIf = b2;
+                    break;
+                }
+            }
+            if (!precedingIf) continue;
+            const origIf = ob.find((o) => o.kind === "if" && o.stmtRange?.start === precedingIf.stmtRange!.start);
+            const thenBlockEnd = origIf?.thenBlockEnd;
+            if (thenBlockEnd === undefined) continue; // bare then-branch has no thenBlockEnd -> skip
+            const block = serializeSSLBranch("else", undefined, [], options, indent);
+            ops.push({ start: thenBlockEnd, end: thenBlockEnd, replacement: `\n${indent}${block}` });
+        }
+    }
+
+    return ops;
+}
+
 // Diff each `if` branch's condition against the original and emit a raw span replacement into its
 // conditionRange (parens-inclusive). Mirrors the per-option edit-text splice; the `else` branch has no
 // condition and is skipped. Branches are index-aligned (the adapter rebuilds them in source order), and
@@ -379,6 +449,7 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
             ops.push(...nodeOps(originalText, state, orig, orig.insertAnchor));
         }
         ops.push(...branchConditionOps(originalText, state, orig));
+        ops.push(...branchStructureOps(originalText, state, orig));
     }
 
     // DELETE: an original node missing from the edited model -> remove its whole procedure span (and the

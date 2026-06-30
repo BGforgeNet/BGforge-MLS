@@ -1007,3 +1007,110 @@ procedure talk_p_proc begin call Node002; end
         expect((out.match(/NOption\(999/g) ?? []).length).toBe(0);
     });
 });
+
+describe("branchStructureOps - add sibling if / add else (Task 5)", () => {
+    // A single-if procedure with no else is parsed as `faithful` (not `bundleFaithful`) when its branch
+    // contains only dialog calls. To get a bundleFaithful node we need a side-effect statement inside the
+    // branch (making the whole procedure non-faithful but bundle-faithful). The set_local_var provides that.
+    const SRC_SIF = `procedure Node002 begin
+    if (local_var(LVAR_0) == 0) then begin
+        set_local_var(LVAR_0, 1);
+        NOption(122, Node915, 4);
+    end
+end
+procedure Node915 begin Reply(900); end
+procedure Node999 begin Reply(999); end
+procedure talk_p_proc begin call Node002; end
+`;
+
+    it("adds a sibling if branch after the last original branch", async () => {
+        const original = modelFromSSL(await parseDialog(SRC_SIF));
+        const edited = structuredClone(original);
+        const node = edited.roots[0]!.states.find((s) => s.id === "Node002")!;
+        // New option and new sibling if branch (no stmtRange -> PENDING-NEW).
+        // Condition on the choice matches the branch condition so verifySSLEditApplied sees
+        // the same condition in both intended and reparsed models.
+        const newOptId = "Node002#new0";
+        node.choices.push({
+            id: newOptId,
+            text: "@301",
+            target: { kind: "state" as const, stateId: "Node999" },
+            condition: "(local_var(LVAR_1) == 1)",
+        });
+        node.branches!.push({
+            kind: "if",
+            condition: "(local_var(LVAR_1) == 1)",
+            choiceIds: [newOptId],
+            replies: [],
+            opaque: [],
+        });
+        const out = applySSLDialogEdits(SRC_SIF, edited, original);
+        // New if block is present.
+        expect(out).toContain("if (local_var(LVAR_1) == 1) then begin");
+        expect(out).toContain("NOption(301, Node999)");
+        // New if appears AFTER the existing if.
+        const i0 = out.indexOf("if (local_var(LVAR_0)");
+        const i1 = out.indexOf("if (local_var(LVAR_1)");
+        expect(i1).toBeGreaterThan(i0);
+        // Original if block is byte-exact (present and unchanged).
+        expect(out).toContain("if (local_var(LVAR_0) == 0) then begin");
+        expect(out).toContain("NOption(122, Node915, 4)");
+        // Re-parses as a bundle-faithful node.
+        const reparsed = modelFromSSL(await parseDialog(out));
+        expect(reparsed.roots[0]!.states.find((s) => s.id === "Node002")!.bundleFaithful).toBe(true);
+        expect(verifySSLEditApplied(edited, reparsed)).toEqual({ ok: true });
+    });
+
+    it("adds an else branch after the then-block, original if byte-exact", async () => {
+        const original = modelFromSSL(await parseDialog(SRC_SIF));
+        const edited = structuredClone(original);
+        const node = edited.roots[0]!.states.find((s) => s.id === "Node002")!;
+        // New option and new else branch (no elseClauseRange -> PENDING-NEW).
+        const newOptId = "Node002#new0";
+        node.choices.push({
+            id: newOptId,
+            text: "@301",
+            target: { kind: "state" as const, stateId: "Node999" },
+        });
+        node.branches!.push({
+            kind: "else",
+            choiceIds: [newOptId],
+            replies: [],
+            opaque: [],
+        });
+        const out = applySSLDialogEdits(SRC_SIF, edited, original);
+        // Else block appears in the output.
+        expect(out).toContain("else begin");
+        expect(out).toContain("NOption(301, Node999)");
+        // The else is injected after the then-block end - the else `end` appears before the proc `end`.
+        const iElse = out.indexOf("else begin");
+        const iEnd = out.lastIndexOf("\nend\n");
+        expect(iElse).toBeGreaterThan(0);
+        expect(iElse).toBeLessThan(iEnd);
+        // Original if is byte-exact in the output.
+        expect(out).toContain("if (local_var(LVAR_0) == 0) then begin");
+        expect(out).toContain("NOption(122, Node915, 4)");
+        // Round-trip: re-parses as bundle-faithful.
+        const reparsed = modelFromSSL(await parseDialog(out));
+        expect(reparsed.roots[0]!.states.find((s) => s.id === "Node002")!.bundleFaithful).toBe(true);
+    });
+
+    it("empty added else branch serializes as begin end and re-parses bundle-faithful", async () => {
+        const original = modelFromSSL(await parseDialog(SRC_SIF));
+        const edited = structuredClone(original);
+        const node = edited.roots[0]!.states.find((s) => s.id === "Node002")!;
+        // New else branch with no options (empty body).
+        node.branches!.push({
+            kind: "else",
+            choiceIds: [],
+            replies: [],
+            opaque: [],
+        });
+        const out = applySSLDialogEdits(SRC_SIF, edited, original);
+        // Empty else block injected.
+        expect(out).toContain("else begin");
+        // Re-parses as bundle-faithful (empty block is valid).
+        const reparsed = modelFromSSL(await parseDialog(out));
+        expect(reparsed.roots[0]!.states.find((s) => s.id === "Node002")!.bundleFaithful).toBe(true);
+    });
+});
