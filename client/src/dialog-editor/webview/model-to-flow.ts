@@ -102,7 +102,7 @@ export function modelToFlow(model: DialogModel): FlowGraph {
                     flagged: isFlaggedNode(s),
                     // Per-node structural editability (drives handle connectability + the inspector's
                     // Tier 1 controls): a D state is editable with the model; an SSL node is editable
-                    // only when faithfully representable (see DialogState.faithful).
+                    // only when faithfully representable (see DialogState.faithful / bundleFaithful).
                     structuralEditable:
                         model.editable ||
                         (model.format === "fallout-ssl" && (s.faithful === true || s.bundleFaithful === true)),

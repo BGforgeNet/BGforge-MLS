@@ -1,6 +1,7 @@
 <script lang="ts">
     import {
         resolveText,
+        type DialogBranch,
         type DialogChoice,
         type DialogFormat,
         type DialogState,
@@ -115,6 +116,12 @@
         el.addEventListener("input", fit);
         return { update: fit, destroy: () => el.removeEventListener("input", fit) };
     }
+
+    // Resolve a branch's choice ids to their DialogChoice objects, preserving source order.
+    function branchChoices(b: DialogBranch): DialogChoice[] {
+        const byId = new Map(state.choices.map((c) => [c.id, c]));
+        return b.choiceIds.map((id) => byId.get(id)).filter((c): c is DialogChoice => c !== undefined);
+    }
 </script>
 
 <div class="inspector" class:ro={readOnly}>
@@ -190,7 +197,7 @@
         {#if structuralEditable}<button class="add" onclick={actions.addReply}>{ssl ? "+ option" : "+ reply"}</button>{/if}
     </div>
 
-    {#each state.choices as c, i (c.id)}
+    {#snippet choiceRow(c, i)}
         <div class="trow">
             <div class="trhead">
                 <span class="tnum">#{i + 1}</span>
@@ -200,14 +207,15 @@
                              Remove is available to D (full edit surface) and to a faithful SSL node's
                              UNCONDITIONAL options. A conditional SSL option sits in an `if` wrapper the
                              save path does not rewrite (Tier 3), so its Remove is shown DISABLED (not
-                             hidden) with a tooltip - the unavailable action stays visible and explained. -->
-                        {#if structuralEditable}
+                             hidden) with a tooltip - the unavailable action stays visible and explained.
+                             Both are suppressed inside bundle branches (within-branch structure is Tier 3b). -->
+                        {#if structuralEditable && !state.branches}
                             <button title="Move up" disabled={i === 0} onclick={() => actions.moveReply(c.id, -1)}>&#9650;</button>
                             <button title="Move down" disabled={i === state.choices.length - 1} onclick={() => actions.moveReply(c.id, 1)}>&#9660;</button>
                         {/if}
                         {#if !readOnly}
                             <button title="Remove" class="del" onclick={() => actions.removeReply(c.id)}>&#10005;</button>
-                        {:else if ssl && structuralEditable}
+                        {:else if ssl && structuralEditable && !state.branches}
                             <button title={c.condition ? "Conditional options are removed in the .ssl source" : "Remove"} class="del" disabled={Boolean(c.condition)} onclick={() => actions.removeReply(c.id)}>&#10005;</button>
                         {/if}
                     </span>
@@ -221,7 +229,7 @@
             {#if !ssl}
                 <textarea class="iv code act" rows="1" use:autosize={c.action ?? ""} disabled={readOnly} placeholder="action (DO ~...~)" value={c.action ?? ""} oninput={(e) => (c.action = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
             {/if}
-            <!-- Retarget is a Tier 1 op: enabled for any structurally-editable node (D or faithful SSL). -->
+            <!-- Retarget is enabled for any structurally-editable node (D, faithful SSL, or bundle SSL). -->
             <select class="iv tgt" disabled={!structuralEditable} value={targetValue(c.target)} onchange={(e) => onTargetChange(c, e.currentTarget.value)}>
                 {#if c.target.kind === "external"}
                     <option value="ext">&#8631; {c.target.label}</option>
@@ -232,7 +240,30 @@
                 {/each}
             </select>
         </div>
-    {/each}
+    {/snippet}
+
+    {#if state.branches}
+        {#each state.branches as b, bi (bi)}
+            <div class="branch">
+                <div class="branchhead">{b.kind === "else" ? "otherwise" : `shown when ${b.condition ?? ""}`}</div>
+                {#each b.replies as r}
+                    <div class="branchreply">{resolveText(r.text, messages) || "(no line)"}</div>
+                {/each}
+                {#each branchChoices(b) as c (c.id)}
+                    {@render choiceRow(c, state.choices.indexOf(c))}
+                {/each}
+                {#if b.opaque.length > 0}
+                    <details class="logic"><summary>logic ({b.opaque.length})</summary>
+                        {#each b.opaque as line}<pre class="logicline">{line}</pre>{/each}
+                    </details>
+                {/if}
+            </div>
+        {/each}
+    {:else}
+        {#each state.choices as c, i (c.id)}
+            {@render choiceRow(c, i)}
+        {/each}
+    {/if}
 
     {#if !readOnly}
         <div class="stateops">
@@ -435,5 +466,35 @@
     .del {
         color: #fca5a5;
         border-color: #7f1d1d;
+    }
+    .branch {
+        border-left: 2px solid #3a3f44;
+        margin: 6px 0 6px 2px;
+        padding-left: 6px;
+    }
+    .branchhead {
+        color: #9aa0a6;
+        font-size: 10px;
+        font-style: italic;
+        margin: 2px 0;
+    }
+    .branchreply {
+        color: #cbd5e1;
+        font-size: 11px;
+        margin: 1px 0;
+    }
+    .logic {
+        color: #9aa0a6;
+        font-size: 10px;
+        margin-top: 2px;
+    }
+    .logic summary {
+        cursor: pointer;
+    }
+    .logicline {
+        margin: 1px 0;
+        color: #c08;
+        font-family: var(--vscode-editor-font-family, monospace);
+        white-space: pre-wrap;
     }
 </style>
