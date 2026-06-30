@@ -132,6 +132,12 @@
             Read-only - this state is expanded from a <b>{state.derivedFrom}</b> block. It has no
             standalone source to edit here; change it in the <b>{state.derivedFrom}</b> source directly.
         </div>
+    {:else if ssl && structuralEditable && state.branches}
+        <div class="ronote">
+            Text edits save to the <b>.msg</b>; <b>retarget</b> and entry status write back to the
+            <b>.ssl</b>. This node branches on a condition (the sections below); its conditions,
+            side-effects, and option structure are source-only - edit the <b>.ssl</b> for those.
+        </div>
     {:else if ssl && structuralEditable}
         <div class="ronote">
             Text edits save to the <b>.msg</b>; structure - <b>rename</b>, <b>retarget</b>,
@@ -150,22 +156,31 @@
     <div class="ik">{ssl ? "Node" : readOnly ? "State label (read-only)" : "State label (jump target)"}</div>
     <input class="iv code" value={state.id} disabled={!structuralEditable && readOnly} onchange={(e) => actions.rename(e.currentTarget.value)} />
 
-    <div class="ik">{ssl ? "Reply line" : "NPC line"}</div>
-    <textarea class="iv" rows="2" use:autosize={resolveText(state.text, messages)} disabled={textLocked(state.text, isPendingState(state))} value={resolveText(state.text, messages)} oninput={(e) => setSay(e.currentTarget.value)}></textarea>
+    {#if !state.branches}
+        <!-- A bundle node shows its NPC line per branch below ("shown when ..." sections); the node-level
+             reply field would duplicate it (and only the first branch's line), so omit it for bundle nodes. -->
+        <div class="ik">{ssl ? "Reply line" : "NPC line"}</div>
+        <textarea class="iv" rows="2" use:autosize={resolveText(state.text, messages)} disabled={textLocked(state.text, isPendingState(state))} value={resolveText(state.text, messages)} oninput={(e) => setSay(e.currentTarget.value)}></textarea>
+    {/if}
 
     {#if ssl}
         <!-- SSL: the node's reply condition (its enclosing `if`) and the state-mutating
              builtins it calls. Both read-only; "weight" and the per-choice `DO` action are
              WeiDU D concepts that have no SSL equivalent and are omitted. -->
-        <div class="ik">Condition</div>
-        <!-- Node-reply condition editing is a follow-up: the parser must capture the Reply
-             statement span to support wrap/unwrap; the save path and verify must diff the
-             reply condition. Disabled until then - the locked styling and tooltip explain why,
-             and the same textarea control as the per-option conditions keeps the two uniform. -->
-        <textarea class="iv code cond locked" rows="1" disabled use:autosize={state.trigger ?? ""} title="Node-level condition editing is not supported yet - edit the .ssl source" placeholder="(unconditional)" value={state.trigger ?? ""}></textarea>
-        {#if state.sideEffects?.length}
-            <div class="ik">Side effects</div>
-            <div class="iv sfx">{state.sideEffects.join(", ")}</div>
+        {#if !state.branches}
+            <!-- For a bundle node the condition is shown per branch ("shown when ...") and side-effects in
+                 each branch's logic drawer; the node-level fields would duplicate (first branch only), so
+                 omit them for bundle nodes. -->
+            <div class="ik">Condition</div>
+            <!-- Node-reply condition editing is a follow-up: the parser must capture the Reply
+                 statement span to support wrap/unwrap; the save path and verify must diff the
+                 reply condition. Disabled until then - the locked styling and tooltip explain why,
+                 and the same textarea control as the per-option conditions keeps the two uniform. -->
+            <textarea class="iv code cond locked" rows="1" disabled use:autosize={state.trigger ?? ""} title="Node-level condition editing is not supported yet - edit the .ssl source" placeholder="(unconditional)" value={state.trigger ?? ""}></textarea>
+            {#if state.sideEffects?.length}
+                <div class="ik">Side effects</div>
+                <div class="iv sfx">{state.sideEffects.join(", ")}</div>
+            {/if}
         {/if}
         {#if structuralEditable}
             <div class="ik">Entry</div>
@@ -194,7 +209,9 @@
 
     <div class="ik between">
         <span>{ssl ? "Options" : "Transitions"} ({state.choices.length})</span>
-        {#if structuralEditable}<button class="add" onclick={actions.addReply}>{ssl ? "+ option" : "+ reply"}</button>{/if}
+        <!-- Add-option is suppressed for bundle nodes: adding an option to a branch is a later slice
+             (which branch is ambiguous), so it is not offered here - edit the .ssl source instead. -->
+        {#if structuralEditable && !state.branches}<button class="add" onclick={actions.addReply}>{ssl ? "+ option" : "+ reply"}</button>{/if}
     </div>
 
     {#snippet choiceRow(c, i)}
@@ -251,9 +268,12 @@
         {#each state.branches as b, bi (bi)}
             <div class="branch">
                 <div class="branchhead">{b.kind === "else" ? "otherwise" : `shown when ${b.condition ?? ""}`}</div>
-                {#each b.replies as r}
-                    <div class="branchreply">{resolveText(r.text, messages) || "(no line)"}</div>
-                {/each}
+                {#if b.replies.length > 0}
+                    <div class="ik branchnpc">NPC</div>
+                    {#each b.replies as r}
+                        <div class="branchreply">{resolveText(r.text, messages) || "(no line)"}</div>
+                    {/each}
+                {/if}
                 {#each branchChoices(b) as c (c.id)}
                     {@render choiceRow(c, state.choices.indexOf(c))}
                 {/each}
@@ -473,20 +493,27 @@
         border-color: #7f1d1d;
     }
     .branch {
-        border-left: 2px solid #3a3f44;
-        margin: 6px 0 6px 2px;
-        padding-left: 6px;
+        border: 1px solid #3a3f44;
+        border-left: 3px solid #5a6270;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.02);
+        margin: 8px 0;
+        padding: 4px 7px 7px;
     }
     .branchhead {
-        color: #9aa0a6;
+        color: #b9c0c8;
         font-size: 10px;
+        font-weight: 600;
         font-style: italic;
-        margin: 2px 0;
+        margin: 2px 0 4px;
+    }
+    .branchnpc {
+        margin-top: 2px;
     }
     .branchreply {
         color: #cbd5e1;
         font-size: 11px;
-        margin: 1px 0;
+        margin: 1px 0 4px;
     }
     .logic {
         color: #9aa0a6;
