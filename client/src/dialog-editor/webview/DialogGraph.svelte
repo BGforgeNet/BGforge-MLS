@@ -517,6 +517,23 @@
             ops.moveReplyInBranch(selected, branch, choiceId, dir);
             void rebuild({ frame: "none" });
         },
+        addBranch: (condition: string) => {
+            if (!structEditable(selected)) return; // Tier 3c: append a new if-branch to a bundle node
+            ops.addBranch(selected, condition);
+            void rebuild({ frame: "none" });
+        },
+        addElse: () => {
+            if (!structEditable(selected)) return; // Tier 3c: append an else-branch to a single-if bundle
+            ops.addElse(selected); // no-op if precondition not met (handled inside the op)
+            void rebuild({ frame: "none" });
+        },
+        removeBranch: (branchIndex: number) => {
+            if (!structEditable(selected)) return; // Tier 3c: remove a branch from a bundle node
+            const branch = selected.branches?.[branchIndex];
+            if (!branch) return;
+            ops.removeBranch(selected, branchIndex);
+            void rebuild({ frame: "none" });
+        },
     };
 
     function addState(): void {

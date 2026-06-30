@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { writable } from "svelte/store";
     import {
         resolveText,
         type DialogBranch,
@@ -49,6 +50,9 @@
             addReplyToBranch: (branchIndex: number) => void;
             removeReplyInBranch: (branchIndex: number, choiceId: string) => void;
             moveReplyInBranch: (branchIndex: number, choiceId: string, dir: -1 | 1) => void;
+            addBranch: (condition: string) => void;
+            addElse: () => void;
+            removeBranch: (branchIndex: number) => void;
         };
     } = $props();
 
@@ -119,6 +123,13 @@
         el.addEventListener("input", fit);
         return { update: fit, destroy: () => el.removeEventListener("input", fit) };
     }
+
+    // Inline condition input for adding a new if-branch. Cannot use `$state("")` here:
+    // the Svelte 5 compiler sees the local `state` prop binding and misidentifies
+    // `$state(...)` as a store subscription rather than the rune, leaving the variable
+    // non-reactive and breaking the `disabled` check and programmatic clear. A writable
+    // store avoids the naming collision while providing the same two-way reactive binding.
+    const newBranchCond = writable("");
 
     // Resolve a branch's choice ids to their DialogChoice objects, preserving source order.
     function branchChoices(b: DialogBranch): DialogChoice[] {
@@ -282,7 +293,21 @@
         {#each state.branches as b, bi (bi)}
             <div class="branch">
                 {#if b.kind === "else"}
-                    <div class="branchhead">otherwise</div>
+                    <div class="branchhead">
+                        <span>otherwise</span>
+                        {#if structuralEditable}
+                            <!-- Side-effect branches cannot be removed from the graph; the
+                                 save path would have no way to cleanly splice out the opaque
+                                 statements. Show the button disabled with an explanation so
+                                 the unavailable action is visible and explained, not hidden. -->
+                            <button
+                                class="branchremove"
+                                disabled={b.opaque.length > 0}
+                                title={b.opaque.length > 0 ? "This branch runs side-effects; remove it in the .ssl source" : "Remove branch"}
+                                onclick={() => actions.removeBranch(bi)}
+                            >&#10005;</button>
+                        {/if}
+                    </div>
                 {:else}
                     <div class="branchhead">
                         <span class="branchlabel">shown when</span>
@@ -293,6 +318,14 @@
                             placeholder="(condition)"
                             oninput={(e) => (b.condition = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}
                         />
+                        {#if structuralEditable}
+                            <button
+                                class="branchremove"
+                                disabled={b.opaque.length > 0}
+                                title={b.opaque.length > 0 ? "This branch runs side-effects; remove it in the .ssl source" : "Remove branch"}
+                                onclick={() => actions.removeBranch(bi)}
+                            >&#10005;</button>
+                        {/if}
                     </div>
                 {/if}
                 {#if b.replies.length > 0}
@@ -314,6 +347,28 @@
                 {/if}
             </div>
         {/each}
+        {#if structuralEditable}
+            <!-- Add a new if-branch: the condition is required (an if without a condition
+                 is not valid SSL). The button is disabled until a non-empty condition is typed.
+                 $newBranchCond is a writable store - see the declaration comment above. -->
+            <div class="branchadd-row">
+                <input
+                    class="iv code branchcond"
+                    bind:value={$newBranchCond}
+                    placeholder="condition for new if branch"
+                />
+                <button
+                    class="add"
+                    disabled={$newBranchCond.trim() === ""}
+                    onclick={() => { actions.addBranch($newBranchCond.trim()); newBranchCond.set(""); }}
+                >+ if</button>
+            </div>
+            <!-- Add an else-branch only when there is exactly one if-branch and no else yet.
+                 The op enforces the same precondition; the button visibility keeps the UI consistent. -->
+            {#if state.branches.length === 1 && state.branches[0]?.kind === "if"}
+                <button class="add branchadd" onclick={actions.addElse}>+ else</button>
+            {/if}
+        {/if}
     {:else}
         {#each state.choices as c, i (c.id)}
             {@render choiceRow(c, i)}
@@ -576,5 +631,38 @@
     /* "+ option" button inside a branch - a little top margin to separate from the last choice row. */
     .branchadd {
         margin-top: 5px;
+    }
+    /* Remove-branch button: compact destructive action pinned to the right of the branch head.
+       Disabled (not hidden) when the branch has side-effects that cannot be spliced out safely. */
+    .branchremove {
+        background: #2b303a;
+        border: 1px solid #7f1d1d;
+        border-radius: 3px;
+        color: #fca5a5;
+        font-size: 9px;
+        cursor: pointer;
+        padding: 1px 5px;
+        flex-shrink: 0;
+        margin-left: auto;
+    }
+    .branchremove:disabled {
+        opacity: 0.35;
+        cursor: default;
+    }
+    /* Row that holds the new-branch condition input and the "+ if" button side by side. */
+    .branchadd-row {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-top: 6px;
+    }
+    .branchadd-row input {
+        flex: 1;
+        min-width: 0;
+    }
+    /* Dim the "+ if" button when no condition has been typed yet. */
+    .add:disabled {
+        opacity: 0.35;
+        cursor: default;
     }
 </style>
