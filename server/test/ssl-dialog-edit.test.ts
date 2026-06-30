@@ -867,6 +867,33 @@ procedure talk_p_proc begin call Node002; end
     });
 });
 
+describe("bundleNodeOps - within-branch reorder", () => {
+    it("reorders two options within the then-branch", async () => {
+        const SRC_RE = `procedure Node002 begin
+    if (local_var(LVAR_0) == 0) then begin
+        NOption(122, Node915, 4);
+        NOption(123, Node999, 4);
+    end
+    else begin NOption(124, Node915, 4); end
+end
+procedure Node915 begin Reply(900); end
+procedure Node999 begin Reply(999); end
+procedure talk_p_proc begin call Node002; end
+`;
+        const original = modelFromSSL(await parseDialog(SRC_RE));
+        const edited = structuredClone(original);
+        const node = edited.roots[0]!.states.find((s) => s.id === "Node002")!;
+        const ifB = node.branches!.find((b) => b.kind === "if")!;
+        ifB.choiceIds = [ifB.choiceIds[1]!, ifB.choiceIds[0]!]; // swap the two then-branch options
+        const out = applySSLDialogEdits(SRC_RE, edited, original);
+        const i122 = out.indexOf("NOption(122");
+        const i123 = out.indexOf("NOption(123");
+        expect(i123).toBeGreaterThan(-1);
+        expect(i123).toBeLessThan(i122); // 123 now precedes 122 in the then-branch
+        expect(out).toContain("NOption(124, Node915, 4)"); // else untouched
+    });
+});
+
 describe("verifySSLEditApplied - bundle branch conditions", () => {
     const SRC_BC = `procedure Node002 begin
     if (local_var(LVAR_0) == 0) then begin Reply(120); NOption(122, Node915, 4); end
