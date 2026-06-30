@@ -269,7 +269,21 @@ function bundleNodeOps(text: string, edited: DialogState, orig: DialogState): Sp
             if (replacement !== text.slice(slots[k]!.start, slots[k]!.end))
                 ops.push({ start: slots[k]!.start, end: slots[k]!.end, replacement });
         }
-        // ADD is added in Task 5.
+        // ADD: new options in this branch (id absent from orig) -> serialize flat (the branch wrapper
+        // already encloses them) at the branch insert anchor with the branch indent.
+        const anchor = ob[i]!.insertAnchor;
+        const added = editedIds
+            .filter((id) => !origById.has(id))
+            .map((id) => editedById.get(id))
+            .filter((c): c is DialogChoice => c !== undefined && isNewSSLOption(c));
+        if (added.length > 0 && anchor) {
+            const msgIdOf = (c: DialogChoice): number => Number(/^@(\d+)$/.exec((c.text ?? "").trim())?.[1] ?? NaN);
+            const block = added
+                .filter((c) => Number.isFinite(msgIdOf(c)))
+                .map((c) => `\n${anchor.indent}${serializeSSLOption(c, msgIdOf(c))}`)
+                .join("");
+            if (block) ops.push({ start: anchor.offset, end: anchor.offset, replacement: block });
+        }
     }
     return ops;
 }
