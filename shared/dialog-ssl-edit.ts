@@ -235,6 +235,11 @@ function nodeOps(
 // same safe operations nodeOps performs for a flat node - no per-option `if` is touched. Each branch body
 // is disjoint from the others and from the condition headers, so the splices never overlap. Cross-branch
 // moves are out of scope: an option is processed only against the branch it originally belonged to.
+//
+// Each edited branch is matched to its original by span identity (stmtRange.start for `if` branches,
+// elseClauseRange.start for `else` branches), not positional index. A survivor carries these spans from
+// the original parse; a pending-new branch (no span) is skipped here and handled by branchStructureOps.
+// This prevents a branch add/remove from shifting the index and mis-aligning the option-level ops.
 function bundleNodeOps(text: string, edited: DialogState, orig: DialogState): SpliceOp[] {
     const ops: SpliceOp[] = [];
     const ob = orig.branches ?? [];
@@ -242,9 +247,24 @@ function bundleNodeOps(text: string, edited: DialogState, orig: DialogState): Sp
     const editedById = new Map(edited.choices.map((c) => [c.id, c]));
     const origById = new Map(orig.choices.map((c) => [c.id, c]));
 
-    for (let i = 0; i < ob.length && i < eb.length; i++) {
-        const origIds = ob[i]!.choiceIds;
-        const editedIds = eb[i]!.choiceIds;
+    // Build lookups keyed by the original branch's identity span start, so a survivor in `eb`
+    // (which carries the same span from the parse) resolves to its original regardless of position.
+    const origByIfStart = new Map(ob.filter((b) => b.stmtRange).map((b) => [b.stmtRange!.start, b]));
+    const origByElseStart = new Map(ob.filter((b) => b.elseClauseRange).map((b) => [b.elseClauseRange!.start, b]));
+
+    for (const ebranch of eb) {
+        let obranch: DialogBranch | undefined;
+        if (ebranch.stmtRange !== undefined) {
+            obranch = origByIfStart.get(ebranch.stmtRange.start);
+        } else if (ebranch.elseClauseRange !== undefined) {
+            obranch = origByElseStart.get(ebranch.elseClauseRange.start);
+        } else {
+            continue; // pending-new branch: handled by branchStructureOps
+        }
+        if (!obranch) continue;
+
+        const origIds = obranch.choiceIds;
+        const editedIds = ebranch.choiceIds;
         const keptOrig = origIds.filter((id) => editedIds.includes(id)); // survivors, source order
 
         // REMOVE: an original option no longer in this branch -> splice its whole statement out.
@@ -275,7 +295,7 @@ function bundleNodeOps(text: string, edited: DialogState, orig: DialogState): Sp
         // A bare single-statement branch has no insertAnchor (buildBranches only sets it for Block bodies):
         // anchor === undefined -> the guard below is false and add is intentionally a no-op, preventing
         // out-of-block insertion that would corrupt the procedure's structure.
-        const anchor = ob[i]!.insertAnchor;
+        const anchor = obranch.insertAnchor;
         const added = editedIds
             .filter((id) => !origById.has(id))
             .map((id) => editedById.get(id))
@@ -395,18 +415,35 @@ function branchStructureOps(text: string, edited: DialogState, orig: DialogState
     return ops;
 }
 
-// Diff each `if` branch's condition against the original and emit a raw span replacement into its
-// conditionRange (parens-inclusive). Mirrors the per-option edit-text splice; the `else` branch has no
-// condition and is skipped. Branches are index-aligned (the adapter rebuilds them in source order), and
-// condition spans are disjoint from option/call spans and from each other, so these splices never overlap.
+// Diff each surviving `if` branch's condition against the original and emit a raw span replacement
+// into its conditionRange (parens-inclusive). The `else` branch has no condition and is skipped.
+// Each edited branch is matched to its original by span identity (stmtRange.start for `if`,
+// elseClauseRange.start for `else`), not positional index, so a branch add/remove cannot shift
+// the index and mis-splice a surviving branch's new condition onto the removed branch's old span.
+// Condition spans are disjoint from option/call spans and from each other, so these splices never
+// overlap with one another - but they WOULD overlap with branchStructureOps' whole-branch delete
+// if the positional zip paired a surviving branch against a removed original branch. Span-identity
+// matching prevents that pairing.
 function branchConditionOps(_text: string, edited: DialogState, orig: DialogState): SpliceOp[] {
     const ops: SpliceOp[] = [];
     const eb = edited.branches;
     const ob = orig.branches;
     if (!eb || !ob) return ops;
-    for (let i = 0; i < eb.length && i < ob.length; i++) {
-        const e = eb[i]!;
-        const o = ob[i]!;
+
+    // Build lookups keyed by the original branch's identity span start.
+    const origByIfStart = new Map(ob.filter((b) => b.stmtRange).map((b) => [b.stmtRange!.start, b]));
+    const origByElseStart = new Map(ob.filter((b) => b.elseClauseRange).map((b) => [b.elseClauseRange!.start, b]));
+
+    for (const e of eb) {
+        let o: DialogBranch | undefined;
+        if (e.stmtRange !== undefined) {
+            o = origByIfStart.get(e.stmtRange.start);
+        } else if (e.elseClauseRange !== undefined) {
+            o = origByElseStart.get(e.elseClauseRange.start);
+        } else {
+            continue; // pending-new branch: handled by branchStructureOps
+        }
+        if (!o) continue;
         if (o.kind !== "if" || !o.conditionRange) continue;
         if (e.condition !== undefined && e.condition !== o.condition) {
             ops.push({ start: o.conditionRange.start, end: o.conditionRange.end, replacement: e.condition });

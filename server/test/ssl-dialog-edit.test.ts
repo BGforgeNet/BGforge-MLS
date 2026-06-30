@@ -1226,3 +1226,63 @@ procedure talk_p_proc begin call Node002; end
         expect(out).toBe(SRC_SIF_LOCAL);
     });
 });
+
+describe("bundleNodeOps + branchConditionOps - span-identity matching (Task 7)", () => {
+    // Two sibling if branches: the first has no opaque (removable via branchStructureOps) and
+    // the second carries set_local_var (making the node bundleFaithful; not removable). A save
+    // that removes the first branch AND edits the surviving second branch's condition must not
+    // mis-splice the new condition onto the removed branch's old conditionRange.
+    const SRC_T7B = `procedure Node002 begin
+    if (global_var(GVAR_A) == 1) then begin
+        NOption(101, Node915, 4);
+    end
+    if (global_var(GVAR_B) == 1) then begin
+        set_local_var(LVAR_0, 1);
+        NOption(102, Node999, 4);
+    end
+end
+procedure Node915 begin Reply(900); end
+procedure Node999 begin Reply(999); end
+procedure talk_p_proc begin call Node002; end
+`;
+
+    it("removes the first branch and edits the surviving branch's condition without mis-splice", async () => {
+        const original = modelFromSSL(await parseDialog(SRC_T7B));
+        const edited = structuredClone(original);
+        const node = edited.roots[0]!.states.find((s) => s.id === "Node002")!;
+        expect(node.bundleFaithful).toBe(true); // fixture sanity check
+
+        // Remove the first branch (GVAR_A, no opaque -> branchStructureOps can delete it).
+        const removedBranch = node.branches!.find((b) => b.kind === "if" && b.condition?.includes("GVAR_A"))!;
+        const removedIds = new Set(removedBranch.choiceIds);
+        node.branches = node.branches!.filter((b) => b !== removedBranch);
+        node.choices = node.choices.filter((c) => !removedIds.has(c.id));
+
+        // Edit the surviving second branch's condition AND the corresponding choice conditions,
+        // mirroring the real editor's ops (applyBranchConditionEdit updates both).
+        const survivingBranch = node.branches!.find((b) => b.kind === "if" && b.condition?.includes("GVAR_B"))!;
+        survivingBranch.condition = "(global_var(GVAR_B) == 5)";
+        for (const id of survivingBranch.choiceIds) {
+            const ch = node.choices.find((c) => c.id === id);
+            if (ch) ch.condition = "(global_var(GVAR_B) == 5)";
+        }
+
+        const out = applySSLDialogEdits(SRC_T7B, edited, original);
+
+        // The first branch must be gone.
+        expect(out).not.toContain("global_var(GVAR_A)");
+        expect(out).not.toContain("NOption(101");
+
+        // The surviving branch's condition must be the NEW value, landed on ITS OWN span.
+        expect(out).toContain("global_var(GVAR_B) == 5");
+        expect(out).not.toContain("global_var(GVAR_B) == 1");
+
+        // The surviving branch's option and side-effect must be intact.
+        expect(out).toContain("NOption(102, Node999, 4)");
+        expect(out).toContain("set_local_var(LVAR_0, 1)");
+
+        // Round-trip: re-parse and verify both the condition edit and absence of the removed branch.
+        const actual = modelFromSSL(await parseDialog(out));
+        expect(verifySSLEditApplied(edited, actual)).toEqual({ ok: true });
+    });
+});
