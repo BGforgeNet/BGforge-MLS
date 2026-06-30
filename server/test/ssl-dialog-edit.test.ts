@@ -967,6 +967,88 @@ procedure talk_p_proc begin call Node002; end
     });
 });
 
+describe("verifySSLEditApplied - branch add/remove (kind-aware fold)", () => {
+    // Single-if, no else; a side-effect keeps the node bundleFaithful.
+    const SRC_SIF = `procedure Node002 begin
+    if (local_var(LVAR_0) == 0) then begin
+        set_local_var(LVAR_0, 1);
+        NOption(122, Node915, 4);
+    end
+end
+procedure Node915 begin Reply(900); end
+procedure Node999 begin Reply(999); end
+procedure talk_p_proc begin call Node002; end
+`;
+    // Two sibling ifs; a side-effect in the first keeps it bundleFaithful.
+    const SRC_RIF = `procedure Node002 begin
+    if (local_var(LVAR_0) == 0) then begin
+        set_local_var(LVAR_0, 1);
+        NOption(122, Node915, 4);
+    end
+    if (local_var(LVAR_1) == 1) then begin
+        NOption(301, Node999, 4);
+    end
+end
+procedure Node915 begin Reply(900); end
+procedure Node999 begin Reply(999); end
+procedure talk_p_proc begin call Node002; end
+`;
+
+    it("verifies ok after a sibling-if add lands (branch-add round-trip)", async () => {
+        const original = modelFromSSL(await parseDialog(SRC_SIF));
+        const edited = structuredClone(original);
+        const node = edited.roots[0]!.states.find((s) => s.id === "Node002")!;
+        const newOptId = "Node002#new0";
+        node.choices.push({
+            id: newOptId,
+            text: "@301",
+            target: { kind: "state" as const, stateId: "Node999" },
+            condition: "(local_var(LVAR_1) == 1)",
+        });
+        node.branches!.push({
+            kind: "if",
+            condition: "(local_var(LVAR_1) == 1)",
+            choiceIds: [newOptId],
+            replies: [],
+            opaque: [],
+        });
+        const out = applySSLDialogEdits(SRC_SIF, edited, original);
+        const actual = modelFromSSL(await parseDialog(out));
+        expect(verifySSLEditApplied(edited, actual)).toEqual({ ok: true });
+    });
+
+    it("verifies ok after a sibling-if remove lands (branch-remove round-trip)", async () => {
+        const original = modelFromSSL(await parseDialog(SRC_RIF));
+        const edited = structuredClone(original);
+        const node = edited.roots[0]!.states.find((s) => s.id === "Node002")!;
+        const removedBranch = node.branches!.find((b) => b.kind === "if" && b.condition?.includes("LVAR_1"))!;
+        const removedIds = new Set(removedBranch.choiceIds);
+        node.branches = node.branches!.filter((b) => b !== removedBranch);
+        node.choices = node.choices.filter((c) => !removedIds.has(c.id));
+        const out = applySSLDialogEdits(SRC_RIF, edited, original);
+        const actual = modelFromSSL(await parseDialog(out));
+        expect(verifySSLEditApplied(edited, actual)).toEqual({ ok: true });
+    });
+
+    it("flags an intended else-add that did not land (actual = unchanged parse)", async () => {
+        // Empty else branch added to intended - no new choices, so the choices-level check does
+        // not trigger. Only branchKey differs (intended: if+else, actual: if only). This is the
+        // case the current filter-to-if fold misses, making it the RED case for this task.
+        const original = modelFromSSL(await parseDialog(SRC_SIF));
+        const intended = structuredClone(original);
+        const node = intended.roots[0]!.states.find((s) => s.id === "Node002")!;
+        node.branches!.push({
+            kind: "else",
+            choiceIds: [],
+            replies: [],
+            opaque: [],
+        });
+        // actual = unchanged parse (the else add did NOT land)
+        const actual = modelFromSSL(await parseDialog(SRC_SIF));
+        expect(verifySSLEditApplied(intended, actual).ok).toBe(false);
+    });
+});
+
 describe("bundleNodeOps - bare single-statement branch: no insertAnchor, add is no-op", () => {
     // A bundle node where the if-branch is a bare single statement (no begin/end) and the else-branch
     // is a block. The bare branch must get no insertAnchor (adding to it would require begin/end synthesis

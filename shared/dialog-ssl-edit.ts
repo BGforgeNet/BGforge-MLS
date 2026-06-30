@@ -689,10 +689,7 @@ export function verifySSLEditApplied(intended: DialogModel, actual: DialogModel)
         if (want !== got)
             return { ok: false, reason: `node "${a.id}" option targets/conditions differ from the intended edit` };
         const branchKey = (st: DialogState): string =>
-            (st.branches ?? [])
-                .filter((b) => b.kind === "if")
-                .map((b) => normCond(b.condition))
-                .join("|");
+            (st.branches ?? []).map((b) => `${b.kind}:${b.kind === "if" ? normCond(b.condition) : ""}`).join("|");
         if (branchKey(s) !== branchKey(a))
             return { ok: false, reason: `node "${a.id}" branch conditions differ from the intended edit` };
     }
