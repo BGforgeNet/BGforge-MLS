@@ -193,6 +193,55 @@ export function removeReplyFromBranch(state: DialogState, branch: DialogBranch, 
 }
 
 /**
+ * Append a pending-new `kind:"if"` branch to a bundle state. No span fields are set
+ * (stmtRange/elseClauseRange/thenBlockEnd/insertAnchor/conditionRange all absent),
+ * which signals to the save path that this branch is new and must be emitted from
+ * scratch rather than spliced over an existing byte range.
+ */
+export function addBranch(state: DialogState, condition: string): DialogBranch {
+    if (!state.branches) state.branches = [];
+    const branch: DialogBranch = {
+        kind: "if",
+        condition,
+        replies: [],
+        choiceIds: [],
+        opaque: [],
+    };
+    state.branches.push(branch);
+    return branch;
+}
+
+/**
+ * Append a pending-new `kind:"else"` branch only when the state has exactly one
+ * `kind:"if"` branch and no existing `else`. Returns the new branch, or null if the
+ * precondition is not met (already has an else, multiple branches, or no branches).
+ */
+export function addElse(state: DialogState): DialogBranch | null {
+    if (!state.branches || state.branches.length !== 1 || state.branches[0]!.kind !== "if") return null;
+    const branch: DialogBranch = {
+        kind: "else",
+        replies: [],
+        choiceIds: [],
+        opaque: [],
+    };
+    state.branches.push(branch);
+    return branch;
+}
+
+/**
+ * Remove `state.branches[branchIndex]` and purge that branch's options from
+ * `state.choices` (by matching ids in `branch.choiceIds`).
+ */
+export function removeBranch(state: DialogState, branchIndex: number): void {
+    if (!state.branches) return;
+    const branch = state.branches[branchIndex];
+    if (!branch) return;
+    const removed = new Set(branch.choiceIds);
+    state.branches.splice(branchIndex, 1);
+    state.choices = state.choices.filter((c) => !removed.has(c.id));
+}
+
+/**
  * Move a reply up (-1) or down (+1) within its branch. The bound is branch-relative:
  * a no-op at the branch's first or last position, so the move cannot cross into an
  * adjacent branch. After swapping in `branch.choiceIds` the same relative order is

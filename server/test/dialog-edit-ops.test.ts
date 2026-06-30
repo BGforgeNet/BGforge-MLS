@@ -272,3 +272,185 @@ describe("dialog-edit-ops (branch-aware)", () => {
         expect(brB.choiceIds[0]).toBe("Node001#opt2");
     });
 });
+
+// ---------------------------------------------------------------------------
+// Branch structural ops: addBranch / addElse / removeBranch
+// ---------------------------------------------------------------------------
+
+describe("dialog-edit-ops (branch structural)", () => {
+    /** Single-if bundle: Node001 with one `if` branch holding two choices. */
+    function singleIfFixture(): { m: DialogModel; st: DialogState; brA: DialogBranch } {
+        const c0: DialogChoice = {
+            id: "Node001#opt0",
+            text: "a0",
+            target: { kind: "exit" },
+            condition: "(EvalUGlobal==0)",
+        };
+        const c1: DialogChoice = {
+            id: "Node001#opt1",
+            text: "a1",
+            target: { kind: "exit" },
+            condition: "(EvalUGlobal==0)",
+        };
+        const brA: DialogBranch = {
+            kind: "if",
+            condition: "(EvalUGlobal==0)",
+            replies: [],
+            choiceIds: ["Node001#opt0", "Node001#opt1"],
+            opaque: [],
+            stmtRange: { start: 10, end: 100 },
+            conditionRange: { start: 13, end: 30 },
+        };
+        const st: DialogState = {
+            id: "Node001",
+            text: "@1",
+            choices: [c0, c1],
+            branches: [brA],
+        };
+        const m: DialogModel = {
+            format: "fallout-ssl",
+            editable: true,
+            roots: [{ id: "d", label: "d", kind: "dialog", states: [st] }],
+        };
+        return { m, st, brA };
+    }
+
+    /** Two-branch if/else bundle. */
+    function ifElseFixture(): { m: DialogModel; st: DialogState; brA: DialogBranch; brB: DialogBranch } {
+        const c0: DialogChoice = { id: "Node001#opt0", text: "a0", target: { kind: "exit" } };
+        const c1: DialogChoice = { id: "Node001#opt1", text: "b0", target: { kind: "exit" } };
+        const brA: DialogBranch = {
+            kind: "if",
+            condition: "(EvalUGlobal==0)",
+            replies: [],
+            choiceIds: ["Node001#opt0"],
+            opaque: [],
+            stmtRange: { start: 10, end: 100 },
+        };
+        const brB: DialogBranch = {
+            kind: "else",
+            replies: [],
+            choiceIds: ["Node001#opt1"],
+            opaque: [],
+            elseClauseRange: { start: 50, end: 100 },
+        };
+        const st: DialogState = {
+            id: "Node001",
+            text: "@1",
+            choices: [c0, c1],
+            branches: [brA, brB],
+        };
+        const m: DialogModel = {
+            format: "fallout-ssl",
+            editable: true,
+            roots: [{ id: "d", label: "d", kind: "dialog", states: [st] }],
+        };
+        return { m, st, brA, brB };
+    }
+
+    it("addBranch appends a pending-new if branch with the given condition", () => {
+        const { st } = singleIfFixture();
+        const before = st.branches!.length;
+        const br = ops.addBranch(st, "(EvalUGlobal==1)");
+
+        expect(st.branches!.length).toBe(before + 1);
+        expect(st.branches!.at(-1)).toBe(br);
+        expect(br.kind).toBe("if");
+        expect(br.condition).toBe("(EvalUGlobal==1)");
+        expect(br.choiceIds).toEqual([]);
+        expect(br.replies).toEqual([]);
+        expect(br.opaque).toEqual([]);
+    });
+
+    it("addBranch produces a pending-new branch: no span fields present", () => {
+        const { st } = singleIfFixture();
+        const br = ops.addBranch(st, "(EvalUGlobal==1)");
+
+        expect(br.stmtRange).toBeUndefined();
+        expect(br.elseClauseRange).toBeUndefined();
+        expect(br.thenBlockEnd).toBeUndefined();
+        expect(br.insertAnchor).toBeUndefined();
+        expect(br.conditionRange).toBeUndefined();
+    });
+
+    it("addBranch initialises branches to [] if state.branches is undefined", () => {
+        const st: DialogState = { id: "Node002", text: "@2", choices: [] };
+        ops.addBranch(st, "(x==1)");
+        expect(st.branches).toBeDefined();
+        expect(st.branches!.length).toBe(1);
+    });
+
+    it("addElse appends a pending-new else branch on a single-if node", () => {
+        const { st } = singleIfFixture();
+        const br = ops.addElse(st);
+
+        expect(br).not.toBeNull();
+        expect(br!.kind).toBe("else");
+        expect(br!.condition).toBeUndefined();
+        expect(br!.choiceIds).toEqual([]);
+        expect(br!.replies).toEqual([]);
+        expect(br!.opaque).toEqual([]);
+        expect(st.branches!.at(-1)).toBe(br);
+    });
+
+    it("addElse returns null and does not modify branches when node already has an else", () => {
+        const { st } = ifElseFixture();
+        const before = st.branches!.length;
+        const result = ops.addElse(st);
+
+        expect(result).toBeNull();
+        expect(st.branches!.length).toBe(before);
+    });
+
+    it("addElse returns null when branches is undefined (no if branch)", () => {
+        const st: DialogState = { id: "Node003", text: "@3", choices: [] };
+        expect(ops.addElse(st)).toBeNull();
+    });
+
+    it("addElse returns null when there are multiple branches (not a single if)", () => {
+        const { st } = singleIfFixture();
+        // Add a second if branch without an else - more than one branch -> no else allowed
+        ops.addBranch(st, "(EvalUGlobal==2)");
+        const result = ops.addElse(st);
+        expect(result).toBeNull();
+    });
+
+    it("addElse produces a pending-new branch: no span fields", () => {
+        const { st } = singleIfFixture();
+        const br = ops.addElse(st)!;
+
+        expect(br.stmtRange).toBeUndefined();
+        expect(br.elseClauseRange).toBeUndefined();
+        expect(br.thenBlockEnd).toBeUndefined();
+        expect(br.insertAnchor).toBeUndefined();
+        expect(br.conditionRange).toBeUndefined();
+    });
+
+    it("removeBranch drops the branch from state.branches", () => {
+        const { st } = ifElseFixture();
+        const before = st.branches!.length;
+        ops.removeBranch(st, 0);
+
+        expect(st.branches!.length).toBe(before - 1);
+        expect(st.branches!.every((b) => b.kind !== "if")).toBe(true);
+    });
+
+    it("removeBranch removes the branch's choiceIds from state.choices", () => {
+        const { st } = ifElseFixture();
+        // brA has Node001#opt0, brB has Node001#opt1
+        ops.removeBranch(st, 0);
+
+        expect(st.choices.find((c) => c.id === "Node001#opt0")).toBeUndefined();
+        expect(st.choices.find((c) => c.id === "Node001#opt1")).toBeDefined();
+    });
+
+    it("removeBranch on the else branch removes its choices and leaves if branch intact", () => {
+        const { st } = ifElseFixture();
+        ops.removeBranch(st, 1);
+
+        expect(st.branches!.length).toBe(1);
+        expect(st.branches![0]!.kind).toBe("if");
+        expect(st.choices.find((c) => c.id === "Node001#opt0")).toBeDefined();
+        expect(st.choices.find((c) => c.id === "Node001#opt1")).toBeUndefined();
+    });
+});
