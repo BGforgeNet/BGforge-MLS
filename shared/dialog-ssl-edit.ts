@@ -23,8 +23,7 @@
  */
 
 import type { DialogBranch, DialogChoice, DialogModel, DialogState, DialogTarget } from "./dialog-model";
-import type { VerifyResult } from "./dialog-d-edit";
-import { applySplices, type SpliceOp } from "./dialog-splice";
+import { applySplices, type SpliceOp, type VerifyResult } from "./dialog-splice";
 import {
     serializeCond,
     serializeSSLBranch,

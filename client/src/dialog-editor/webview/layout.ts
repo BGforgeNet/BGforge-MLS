@@ -10,7 +10,7 @@ import type { FlowGraph } from "./model-to-flow";
 
 const elk = new ELK();
 
-export async function layoutFlow(graph: FlowGraph, direction: "RIGHT" | "DOWN" = "RIGHT"): Promise<void> {
+export async function layoutFlow(graph: FlowGraph): Promise<void> {
     // A starting state is a card no transition points at (no inbound edge) - the entry
     // point of a conversation thread. Pin every one to elk's first layer so they share a
     // single aligned left column. Component separation packs each component's layering
@@ -45,7 +45,7 @@ export async function layoutFlow(graph: FlowGraph, direction: "RIGHT" | "DOWN" =
         id: "root",
         layoutOptions: {
             "elk.algorithm": "layered",
-            "elk.direction": direction,
+            "elk.direction": "RIGHT",
             "elk.spacing.nodeNode": "40",
             "elk.layered.spacing.nodeNodeBetweenLayers": "90",
             "elk.spacing.componentComponent": "60",

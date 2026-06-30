@@ -265,18 +265,6 @@ export function resolveText(text: string | undefined, messages?: Record<string, 
     return text.replaceAll(/@(\d+)/g, (whole, n: string) => messages[n] ?? whole);
 }
 
-/** Human-readable transition target for the inspector and card rows. */
-export function targetLabel(t: DialogTarget): string {
-    switch (t.kind) {
-        case "state":
-            return t.stateId;
-        case "exit":
-            return "EXIT";
-        case "external":
-            return t.label;
-    }
-}
-
 // --- Honest-projection badges (1B) -----------------------------------------
 
 /**

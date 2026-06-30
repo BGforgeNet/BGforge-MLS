@@ -20,7 +20,7 @@
 
 import type { DialogChoice, DialogModel, DialogState, DialogTarget } from "./dialog-model";
 import { serializeChoice, serializeState, serializeTextValue } from "./dialog-d-serialize";
-import { applySplices, type SpliceOp } from "./dialog-splice";
+import { applySplices, type SpliceOp, type VerifyResult } from "./dialog-splice";
 
 function targetsEqual(a: DialogTarget, b: DialogTarget): boolean {
     if (a.kind !== b.kind) return false;
@@ -243,12 +243,6 @@ export function pendingInserts(editedModel: DialogModel): DialogState[] {
     // Exclude derived states (CHAIN/INTERJECT/EXTEND): they have no sourceRange but are not
     // new - they belong to a preserved construct and must never be re-emitted as inserts.
     return editedModel.roots.flatMap((r) => r.states).filter((s) => !s.sourceRange && !s.derivedFrom);
-}
-
-export interface VerifyResult {
-    ok: boolean;
-    /** Human-readable reason when `ok` is false (names the first diverging state). */
-    reason?: string;
 }
 
 function dialogStatesOf(model: DialogModel): DialogState[] {
