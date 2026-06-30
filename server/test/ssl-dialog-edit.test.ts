@@ -44,8 +44,17 @@ describe("applySSLDialogEdits", () => {
     });
 
     it("refuses a structural edit to a non-faithful node (returns the source unchanged)", async () => {
+        // This fixture has a then-branch with a nested if inside it.
+        // isFaithfulProcedure: false (has an else).
+        // isBundleFaithfulProcedure: false (isBundleBranch rejects a nested IfStmt in the then-body).
+        // -> Node001 is neither faithful nor bundle-faithful; structural edits are ignored.
         const src2 = `procedure Node001 begin
-    if (global_var(GVAR_X) == 1) then NOption(101, Node002, 4) else NOption(102, Node003, 4);
+    if (global_var(GVAR_X) == 1) then begin
+        if (local_var(LVAR_Y) == 0) then NOption(101, Node002, 4);
+    end
+    else begin
+        NOption(102, Node003, 4);
+    end
 end
 procedure Node002 begin Reply(200); end
 procedure Node003 begin Reply(300); end
@@ -57,7 +66,7 @@ procedure talk_p_proc begin call Node001; end
             kind: "state",
             stateId: "Node003",
         };
-        // Node001 has an else -> non-faithful -> the structural edit is ignored.
+        // Node001 is neither faithful nor bundle-faithful -> the structural edit is ignored.
         expect(applySSLDialogEdits(src2, edited, original)).toBe(src2);
     });
 });
@@ -679,5 +688,40 @@ procedure talk_p_proc begin call Node001; end
         // Each option must keep its own condition: 102 stays conditional, 101 stays unconditional.
         expect(opt102?.condition).toBeDefined();
         expect(opt101?.condition).toBeUndefined();
+    });
+});
+
+describe("bundle node in-place retarget", () => {
+    const SRC_BUNDLE = `procedure Node002 begin
+    if (local_var(LVAR_0) == 0) then begin
+        set_local_var(LVAR_0,1);
+        Reply(120);
+        NOption(122, Node915, 4);
+    end
+    else begin
+        Reply(121);
+        NOption(124, Node915, 4);
+    end
+end
+procedure Node915 begin Reply(900); end
+procedure Node999 begin Reply(999); end
+procedure talk_p_proc begin call Node002; end
+`;
+    it("retargets an else-branch option in place, preserving the condition skeleton and side-effect byte-exact", async () => {
+        const original = modelFromSSL(await parseDialog(SRC_BUNDLE));
+        const edited = structuredClone(original);
+        const node = edited.roots[0]!.states.find((s) => s.id === "Node002")!;
+        // The else-branch option (NOption 124 -> Node915) retargeted to Node999.
+        const elseOpt = node.choices.find(
+            (c) => c.target.kind === "state" && c.target.stateId === "Node915" && c.condition?.startsWith("!"),
+        )!;
+        elseOpt.target = { kind: "state", stateId: "Node999" };
+        const out = applySSLDialogEdits(SRC_BUNDLE, edited, original);
+        expect(out).toContain("NOption(124, Node999, 4)"); // retargeted
+        expect(out).toContain("NOption(122, Node915, 4)"); // then-branch option untouched
+        expect(out).toContain("set_local_var(LVAR_0,1);"); // side-effect byte-exact
+        expect(out).toContain("else begin"); // if/else skeleton intact
+        const actual = modelFromSSL(await parseDialog(out));
+        expect(verifySSLEditApplied(edited, actual)).toEqual({ ok: true });
     });
 });

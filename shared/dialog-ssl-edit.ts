@@ -287,7 +287,10 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
         // This lets nodeOps process the renamed node's own options against its original, AND lets a faithful
         // node referencing the renamed node retarget that option's targetRange to the new id.
         const orig = origById.get(state.renamedFrom ?? state.id);
-        if (!orig || !orig.faithful) continue; // gate: only faithful nodes are structurally editable
+        // Gate: structurally editable nodes only - plain-faithful or single-level if/else bundles. A bundle
+        // option carries a condition, so nodeOps routes it through the pinned-conditional retarget path
+        // (rewrites its own callRange/targetRange slot only, never the if/else wrapper or side-effects).
+        if (!orig || !(orig.faithful || orig.bundleFaithful)) continue;
         ops.push(...nodeOps(originalText, state, orig, orig.insertAnchor));
     }
 

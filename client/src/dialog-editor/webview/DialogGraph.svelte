@@ -435,7 +435,9 @@
     // (DialogState.faithful), so retarget/reorder write back losslessly via applySSLDialogEdits.
     // The other ops (rename/add/remove/delete/duplicate) stay on `editable` - D-only / later tiers.
     const structEditable = (s: DialogState | null): s is DialogState =>
-        s != null && !s.derivedFrom && (editModel.editable || (editModel.format === "fallout-ssl" && s.faithful === true));
+        s != null &&
+        !s.derivedFrom &&
+        (editModel.editable || (editModel.format === "fallout-ssl" && (s.faithful === true || s.bundleFaithful === true)));
 
     // Whether a node can be deleted from the graph. A D state: any non-derived state. A faithful SSL node:
     // only when every inbound reference can be cleaned up on save (eligibleToDelete - not an entry, not
