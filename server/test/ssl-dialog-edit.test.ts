@@ -1114,3 +1114,115 @@ procedure talk_p_proc begin call Node002; end
         expect(reparsed.roots[0]!.states.find((s) => s.id === "Node002")!.bundleFaithful).toBe(true);
     });
 });
+
+describe("branchStructureOps - remove sibling if / remove else (Task 6)", () => {
+    // Two sibling if branches: the first has a set_local_var (opaque) making the procedure
+    // bundleFaithful; the second has only a dialog call (no side-effects) and is the one removed.
+    const SRC_RIF = `procedure Node002 begin
+    if (local_var(LVAR_0) == 0) then begin
+        set_local_var(LVAR_0, 1);
+        NOption(122, Node915, 4);
+    end
+    if (local_var(LVAR_1) == 1) then begin
+        NOption(301, Node999, 4);
+    end
+end
+procedure Node915 begin Reply(900); end
+procedure Node999 begin Reply(999); end
+procedure talk_p_proc begin call Node002; end
+`;
+
+    // If-else procedure: the if branch carries set_local_var (opaque) to keep the node bundleFaithful
+    // both before and after else removal. The else block has only a dialog call (no side-effects).
+    const SRC_RE = `procedure Node002 begin
+    if (local_var(LVAR_0) == 0) then begin
+        set_local_var(LVAR_0, 1);
+        NOption(122, Node915, 4);
+    end
+    else begin
+        NOption(124, Node915, 4);
+    end
+end
+procedure Node915 begin Reply(900); end
+procedure talk_p_proc begin call Node002; end
+`;
+
+    it("removes a sibling if branch (no side-effects): other branch and its options are byte-exact", async () => {
+        const original = modelFromSSL(await parseDialog(SRC_RIF));
+        const edited = structuredClone(original);
+        const node = edited.roots[0]!.states.find((s) => s.id === "Node002")!;
+        // Remove the SECOND if branch (local_var(LVAR_1) == 1) from edited.
+        const removedBranch = node.branches!.find((b) => b.kind === "if" && b.condition?.includes("LVAR_1"))!;
+        const removedIds = new Set(removedBranch.choiceIds);
+        node.branches = node.branches!.filter((b) => b !== removedBranch);
+        node.choices = node.choices.filter((c) => !removedIds.has(c.id));
+        const out = applySSLDialogEdits(SRC_RIF, edited, original);
+        // The removed branch is gone.
+        expect(out).not.toContain("local_var(LVAR_1)");
+        expect(out).not.toContain("NOption(301");
+        // The surviving branch is byte-exact.
+        expect(out).toContain("if (local_var(LVAR_0) == 0) then begin");
+        expect(out).toContain("set_local_var(LVAR_0, 1)");
+        expect(out).toContain("NOption(122, Node915, 4)");
+        // No blank lines introduced by the removal.
+        expect(out).not.toMatch(/\n\n\n/);
+        // Re-parses as bundleFaithful with one branch.
+        const reparsed = modelFromSSL(await parseDialog(out));
+        const reparsedNode = reparsed.roots[0]!.states.find((s) => s.id === "Node002")!;
+        expect(reparsedNode.bundleFaithful).toBe(true);
+        expect(reparsedNode.branches).toHaveLength(1);
+        expect(verifySSLEditApplied(edited, reparsed)).toEqual({ ok: true });
+    });
+
+    it("removes an else branch: the if block is byte-exact, else is gone", async () => {
+        const original = modelFromSSL(await parseDialog(SRC_RE));
+        const edited = structuredClone(original);
+        const node = edited.roots[0]!.states.find((s) => s.id === "Node002")!;
+        // Remove the else branch from edited.
+        const elseBranch = node.branches!.find((b) => b.kind === "else")!;
+        const removedIds = new Set(elseBranch.choiceIds);
+        node.branches = node.branches!.filter((b) => b.kind !== "else");
+        node.choices = node.choices.filter((c) => !removedIds.has(c.id));
+        const out = applySSLDialogEdits(SRC_RE, edited, original);
+        // The else clause is gone.
+        expect(out).not.toContain("else");
+        expect(out).not.toContain("NOption(124");
+        // The if block is byte-exact (including the side-effect set_local_var).
+        expect(out).toContain("if (local_var(LVAR_0) == 0) then begin");
+        expect(out).toContain("set_local_var(LVAR_0, 1)");
+        expect(out).toContain("NOption(122, Node915, 4)");
+        // The set_local_var in the if branch keeps the node bundleFaithful after else removal.
+        const reparsed = modelFromSSL(await parseDialog(out));
+        const reparsedNode = reparsed.roots[0]!.states.find((s) => s.id === "Node002")!;
+        expect(reparsedNode.bundleFaithful).toBe(true);
+        expect(reparsedNode.branches).toHaveLength(1);
+        expect(reparsedNode.branches![0]!.kind).toBe("if");
+        expect(verifySSLEditApplied(edited, reparsed)).toEqual({ ok: true });
+    });
+
+    it("refuses to remove a branch that carries opaque (side-effect) statements: source is byte-exact", async () => {
+        // SRC_SIF (from the add-tests above) has one if branch with set_local_var -> opaque.length == 1.
+        // Attempting to remove it must produce a no-op (the writer backstop for the UI's refuse).
+        const SRC_SIF_LOCAL = `procedure Node002 begin
+    if (local_var(LVAR_0) == 0) then begin
+        set_local_var(LVAR_0, 1);
+        NOption(122, Node915, 4);
+    end
+end
+procedure Node915 begin Reply(900); end
+procedure Node999 begin Reply(999); end
+procedure talk_p_proc begin call Node002; end
+`;
+        const original = modelFromSSL(await parseDialog(SRC_SIF_LOCAL));
+        const edited = structuredClone(original);
+        const node = edited.roots[0]!.states.find((s) => s.id === "Node002")!;
+        // Remove the only if branch from edited (simulating user deleting it).
+        const removedBranch = node.branches![0]!;
+        const removedIds = new Set(removedBranch.choiceIds);
+        node.branches = [];
+        node.choices = node.choices.filter((c) => !removedIds.has(c.id));
+        const out = applySSLDialogEdits(SRC_SIF_LOCAL, edited, original);
+        // Writer refuses: branch has opaque statements -> source unchanged.
+        expect(out).toBe(SRC_SIF_LOCAL);
+    });
+});

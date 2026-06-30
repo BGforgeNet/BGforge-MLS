@@ -293,21 +293,26 @@ function bundleNodeOps(text: string, edited: DialogState, orig: DialogState): Sp
 }
 
 /**
- * Structural ADD ops for bundle branches: serialize and insert a PENDING-NEW branch (one with no
- * `stmtRange` and no `elseClauseRange` - a survivor carries its original spans; addBranch/addElse
- * creates branches with none) into the source text.
+ * Structural ADD/REMOVE ops for bundle branches.
  *
- * - A new `kind:"if"` branch: serialized via `serializeSSLBranch` and inserted as `\n${indent}<block>`
- *   at the max `stmtRange.end` over the ORIGINAL branches (after the last existing if statement).
- * - A new `kind:"else"` branch: ` else begin...end` injected at the preceding surviving if branch's
- *   `thenBlockEnd` (right after the then-block's closing `end`).
+ * REMOVE: an original branch absent from `edited.branches` (matched by span identity -
+ * `stmtRange.start` for `if` branches, `elseClauseRange.start` for `else` branches) is deleted.
+ * - `kind:"if"`: `removeStatementSplice` over `stmtRange` (deletes the whole `if` statement,
+ *   consuming leading indentation and trailing newline so no blank line is left).
+ * - `kind:"else"`: deletes `elseClauseRange` plus the whitespace immediately before the `else`
+ *   keyword, so `... end else begin...end` collapses to `... end`.
+ * - SIDE-EFFECT GUARD: a branch whose `opaque.length > 0` (carries preserved non-dialog statements
+ *   like `set_local_var`) emits NO op - the writer backstop matching the UI's refuse-to-delete.
  *
- * ADD is pure insertion; no existing branch byte is touched. The splice is disjoint from every survivor
- * span. Option msgIds are resolved from each new option's `@<id>` text (allocated at save time).
+ * ADD: a PENDING-NEW branch (no `stmtRange` and no `elseClauseRange`) is serialized and inserted.
+ * - A new `kind:"if"`: inserted after the last original branch's `stmtRange.end`.
+ * - A new `kind:"else"`: injected at the preceding surviving if branch's `thenBlockEnd`.
  *
- * TODO(task-6): REMOVE ops (delete absent original branches) are the next task - see task-6-brief.
+ * REMOVE ops are disjoint from ADD ops (removed branches and new branches occupy different byte
+ * regions) and from `bundleNodeOps` ops (which touch option call spans inside surviving branches
+ * only; a removed branch's span is entirely distinct from every survivor's option spans).
  */
-function branchStructureOps(_text: string, edited: DialogState, orig: DialogState): SpliceOp[] {
+function branchStructureOps(text: string, edited: DialogState, orig: DialogState): SpliceOp[] {
     const ops: SpliceOp[] = [];
     const eb = edited.branches;
     const ob = orig.branches;
@@ -315,6 +320,35 @@ function branchStructureOps(_text: string, edited: DialogState, orig: DialogStat
 
     const indent = "    "; // proc-body indent convention (4 spaces)
     const msgIdOf = (c: DialogChoice): number => Number(/^@(\d+)$/.exec((c.text ?? "").trim())?.[1] ?? NaN);
+
+    // REMOVE: build sets of which original spans survive in the edited branch list.
+    // A branch with a stmtRange/elseClauseRange in the edited list is a survivor; one absent is removed.
+    const editedIfStarts = new Set(eb.filter((b) => b.stmtRange).map((b) => b.stmtRange!.start));
+    const editedElseStarts = new Set(eb.filter((b) => b.elseClauseRange).map((b) => b.elseClauseRange!.start));
+
+    for (const o of ob) {
+        if (o.kind === "if") {
+            if (!o.stmtRange) continue; // no source span -> nothing to delete
+            if (editedIfStarts.has(o.stmtRange.start)) continue; // survivor
+            // SIDE-EFFECT GUARD: if the branch carries preserved opaque statements (set_local_var, etc.),
+            // emit no op - refuse rather than silently dropping logic the editor never modeled.
+            if (o.opaque.length > 0) continue;
+            ops.push(removeStatementSplice(text, o.stmtRange));
+        } else {
+            // kind: "else"
+            if (!o.elseClauseRange) continue; // no source span -> nothing to delete
+            if (editedElseStarts.has(o.elseClauseRange.start)) continue; // survivor
+            // SIDE-EFFECT GUARD
+            if (o.opaque.length > 0) continue;
+            // Delete the elseClauseRange AND the whitespace immediately before the `else` keyword,
+            // so `... end else begin...end` becomes `... end` and multi-line else consumes its
+            // leading newline+indent without leaving a blank line.
+            const elseStart = o.elseClauseRange.start;
+            let wsStart = elseStart;
+            while (wsStart > 0 && /[ \t\n\r]/.test(text[wsStart - 1]!)) wsStart--;
+            ops.push({ start: wsStart, end: o.elseClauseRange.end, replacement: "" });
+        }
+    }
 
     for (const b of eb) {
         // A PENDING-NEW branch has no stmtRange (for if kind) and no elseClauseRange (for else kind).
