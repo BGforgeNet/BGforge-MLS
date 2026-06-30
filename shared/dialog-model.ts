@@ -62,6 +62,20 @@ export interface DialogRoot {
     states: DialogState[];
 }
 
+/**
+ * A light-grouped branch of a bundle node, for render. `kind` "if" carries the `condition` text (parens
+ * included) shown as a faint chip; "else" has none. `replies` are the branch's NPC lines (resolved text).
+ * `choiceIds` reference this state's flat `choices` (the player options in this branch). `opaque` holds the
+ * preserved non-dialog statement texts shown in the collapsed logic drawer. Set by the SSL adapter.
+ */
+export interface DialogBranch {
+    kind: "if" | "else";
+    condition?: string;
+    replies: { text: string; textKind?: "computed" | "random" }[];
+    choiceIds: string[];
+    opaque: string[];
+}
+
 export interface DialogState {
     id: string;
     speaker?: string;
@@ -156,6 +170,10 @@ export interface DialogState {
      * the first reply is unconditional OR sits in a single-call `if`. Set by the SSL adapter.
      */
     conditionEditable?: boolean;
+    /** SSL only: true when this node is a single-level if/else bundle (see SSLDialogNode.bundleFaithful). */
+    bundleFaithful?: boolean;
+    /** SSL only: ordered branches for light-grouped render; absent on non-bundle nodes. Set by the SSL adapter. */
+    branches?: DialogBranch[];
 }
 
 export type DialogReaction = "neutral" | "good" | "bad";
@@ -471,6 +489,19 @@ function stateFromSSL(node: SSLDialogNode): DialogState {
         }
     });
 
+    const branches: DialogBranch[] | undefined = node.branches?.map((b) => ({
+        kind: b.kind,
+        condition: b.condition,
+        replies: b.replyIndices.map((ri) => {
+            const r = node.replies[ri]!;
+            return { text: sslMsgText(r.msgId), textKind: r.msgKind };
+        }),
+        // The option choice id stateFromSSL assigns is `${node.name}#opt${index-in-node.options}`, and the
+        // branch optionIndices index node.options in source order - so these line up exactly.
+        choiceIds: b.optionIndices.map((oi) => `${node.name}#opt${oi}`),
+        opaque: b.opaque.map((o) => o.text),
+    }));
+
     // A node can hold several (conditional) Reply lines; show the first as the line,
     // carrying its conditional. TODO(phase-5): surface alternate conditional lines.
     const firstReply = node.replies[0];
@@ -486,6 +517,8 @@ function stateFromSSL(node: SSLDialogNode): DialogState {
         choices,
         sideEffects: node.sideEffects,
         faithful: node.faithful,
+        bundleFaithful: node.bundleFaithful,
+        ...(branches ? { branches } : {}),
         insertAnchor: node.insertAnchor,
         procRange: node.procRange,
         nameRange: node.nameRange,

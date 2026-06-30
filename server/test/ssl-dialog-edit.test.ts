@@ -595,6 +595,38 @@ describe("serializeSSLConditionalOption", () => {
     });
 });
 
+describe("bundle node model mapping", () => {
+    const BUNDLE_SRC = `procedure Node002 begin
+    if (local_var(LVAR_0) == 0) then begin
+        set_local_var(LVAR_0,1);
+        Reply(120);
+        NOption(122, Node915, 4);
+    end
+    else begin
+        Reply(121);
+        NOption(124, Node915, 4);
+    end
+end
+procedure talk_p_proc begin call Node002; end
+`;
+    it("carries branches and bundleFaithful onto the state, keeping the flat choices union", async () => {
+        const model = modelFromSSL(await parseDialog(BUNDLE_SRC));
+        const s = model.roots[0]!.states.find((x) => x.id === "Node002")!;
+        expect(s.bundleFaithful).toBe(true);
+        expect(s.branches).toBeDefined();
+        const [ifB, elseB] = s.branches!;
+        expect(ifB!.kind).toBe("if");
+        expect(ifB!.condition).toBe("(local_var(LVAR_0) == 0)");
+        expect(ifB!.opaque).toEqual(["set_local_var(LVAR_0,1);"]);
+        // Every choiceId resolves to a real flat choice.
+        const ids = new Set(s.choices.map((c) => c.id));
+        for (const b of s.branches!) for (const cid of b.choiceIds) expect(ids.has(cid)).toBe(true);
+        expect(elseB!.kind).toBe("else");
+        // Flat choices still hold both options (graph edges unchanged).
+        expect(s.choices.filter((c) => c.target.kind === "state").length).toBe(2);
+    });
+});
+
 describe("applySSLDialogEdits - Task 7: compose + conditional reorder", () => {
     // Fixture: one flat option (101 -> Node002) plus one single-call-if conditional option (102 -> Node003).
     const SRC_T7 = `procedure Node001 begin
