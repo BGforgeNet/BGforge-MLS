@@ -634,6 +634,15 @@ procedure talk_p_proc begin call Node002; end
         // Flat choices still hold both options (graph edges unchanged).
         expect(s.choices.filter((c) => c.target.kind === "state").length).toBe(2);
     });
+
+    it("threads each if-branch conditionRange onto the model", async () => {
+        const model = modelFromSSL(await parseDialog(BUNDLE_SRC));
+        const s = model.roots[0]!.states.find((x) => x.id === "Node002")!;
+        const ifB = s.branches!.find((b) => b.kind === "if")!;
+        const elseB = s.branches!.find((b) => b.kind === "else")!;
+        expect(ifB.conditionRange).toBeDefined();
+        expect(elseB.conditionRange).toBeUndefined();
+    });
 });
 
 describe("applySSLDialogEdits - Task 7: compose + conditional reorder", () => {

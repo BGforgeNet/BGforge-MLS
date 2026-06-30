@@ -71,6 +71,8 @@ export interface DialogRoot {
 export interface DialogBranch {
     kind: "if" | "else";
     condition?: string;
+    /** SSL only: byte span of the `if` condition (parens included), for editing. Absent for `else`. Set by the adapter. */
+    conditionRange?: { start: number; end: number };
     replies: { text: string; textKind?: "computed" | "random" }[];
     choiceIds: string[];
     opaque: string[];
@@ -492,6 +494,7 @@ function stateFromSSL(node: SSLDialogNode): DialogState {
     const branches: DialogBranch[] | undefined = node.branches?.map((b) => ({
         kind: b.kind,
         condition: b.condition,
+        ...(b.conditionRange ? { conditionRange: b.conditionRange } : {}),
         replies: b.replyIndices.map((ri) => {
             const r = node.replies[ri]!;
             return { text: sslMsgText(r.msgId), textKind: r.msgKind };
