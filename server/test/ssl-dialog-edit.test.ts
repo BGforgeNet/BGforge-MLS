@@ -725,3 +725,32 @@ procedure talk_p_proc begin call Node002; end
         expect(verifySSLEditApplied(edited, actual)).toEqual({ ok: true });
     });
 });
+
+describe("read-only floor stays put", () => {
+    // A node with a nested `if` inside a then-begin block: not faithful (nested structure),
+    // not bundle-faithful (nested if inside the branch body). The read-only gate must block
+    // any structural edit on it - retarget returns the source byte-exact.
+    const SRC_FLOOR = `procedure Node002 begin
+    if (global_var(GVAR_X) == 1) then begin
+        if (global_var(GVAR_Y) == 1) then Reply(1);
+        NOption(2, Node915, 4);
+    end
+end
+procedure Node915 begin Reply(900); end
+procedure Node999 begin Reply(999); end
+procedure talk_p_proc begin call Node002; end
+`;
+    it("a nested-if node is neither faithful nor bundle-faithful and retarget leaves source unchanged", async () => {
+        const data = await parseDialog(SRC_FLOOR);
+        const n = data.nodes.find((x) => x.name === "Node002")!;
+        expect(n.faithful).not.toBe(true);
+        expect(n.bundleFaithful).toBeUndefined();
+        const original = modelFromSSL(data);
+        const edited = structuredClone(original);
+        const opt = edited.roots[0]!.states.find((s) => s.id === "Node002")!.choices.find(
+            (c) => c.target.kind === "state",
+        )!;
+        opt.target = { kind: "state", stateId: "Node999" };
+        expect(applySSLDialogEdits(SRC_FLOOR, edited, original)).toBe(SRC_FLOOR);
+    });
+});
