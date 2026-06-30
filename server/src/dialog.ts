@@ -7,6 +7,7 @@ import type { Node as SyntaxNode } from "web-tree-sitter";
 import { initParser, parseWithCache, isInitialized } from "../../shared/parsers/fallout-ssl";
 import { SyntaxType } from "./fallout-ssl/syntax-type";
 import type {
+    SSLDialogBranch,
     SSLDialogData,
     SSLDialogNode,
     SSLDialogOption,
@@ -365,7 +366,9 @@ function parseProcedure(
         callTargets,
         faithful,
         // Mutually exclusive with faithful: only claim nodes the plain-faithful gate rejects.
-        ...(!faithful && isBundleFaithfulProcedure(proc) ? { bundleFaithful: true } : {}),
+        ...(!faithful && isBundleFaithfulProcedure(proc)
+            ? { bundleFaithful: true as const, branches: buildBranches(proc, fullText) }
+            : {}),
         insertAnchor: nodeInsertAnchor(proc, fullText),
         // Omit when empty so nodes without detected side-effects stay clean in the IR.
         ...(sideEffects.length > 0 ? { sideEffects } : {}),
@@ -489,6 +492,56 @@ function isBundleFaithfulProcedure(proc: SyntaxNode): boolean {
         if (elseBody && !isBundleBranch(elseBody)) return false;
     }
     return true;
+}
+
+// Group a bundle-faithful procedure's body into ordered branches. The proc body is only top-level `if`s
+// (Task 1 gate), so each yields an "if" branch (its then-body) and, when present, an "else" branch. Dialog
+// calls are matched to the flat replies/options arrays by source order: both this walk and parseProcedure's
+// walkTree are preorder, so the Nth Reply call -> replies[N], the Nth option/message call -> options[N].
+// Non-dialog statements become opaque items (text + span) preserved on save.
+function buildBranches(proc: SyntaxNode, fullText: string): SSLDialogBranch[] {
+    const branches: SSLDialogBranch[] = [];
+    let replyIdx = 0;
+    let optIdx = 0;
+
+    const collectBody = (branch: SSLDialogBranch, body: SyntaxNode): void => {
+        const stmts = body.type === SyntaxType.Block ? body.children.filter((c) => c.isNamed) : [body];
+        for (const stmt of stmts) {
+            const expr = stmt.type === SyntaxType.ExpressionStmt ? stmt.namedChildren[0] : undefined;
+            if (expr && expr.type === SyntaxType.CallExpr && isDialogCallExpr(expr)) {
+                const fn = expr.childForFieldName("func")?.text;
+                if (fn === "Reply") branch.replyIndices.push(replyIdx++);
+                else branch.optionIndices.push(optIdx++);
+            } else {
+                branch.opaque.push({
+                    text: fullText.slice(stmt.startIndex, stmt.endIndex),
+                    textRange: { start: stmt.startIndex, end: stmt.endIndex },
+                });
+            }
+        }
+    };
+
+    for (const stmt of proc.childrenForFieldName("body")) {
+        // Bundle-faithful guarantees every top-level statement is an IfStmt.
+        const cond = stmt.childForFieldName("cond")?.text;
+        const thenBody = stmt.childForFieldName("then");
+        const ifBranch: SSLDialogBranch = {
+            kind: "if",
+            condition: cond,
+            replyIndices: [],
+            optionIndices: [],
+            opaque: [],
+        };
+        if (thenBody) collectBody(ifBranch, thenBody);
+        branches.push(ifBranch);
+        const elseBody = stmt.childForFieldName("else");
+        if (elseBody) {
+            const elseBranch: SSLDialogBranch = { kind: "else", replyIndices: [], optionIndices: [], opaque: [] };
+            collectBody(elseBranch, elseBody);
+            branches.push(elseBranch);
+        }
+    }
+    return branches;
 }
 
 function getCallArgs(callExpr: SyntaxNode): SyntaxNode[] {

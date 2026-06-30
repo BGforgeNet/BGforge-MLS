@@ -292,3 +292,46 @@ end`;
         expect(flat.ifSingleCall).toBeUndefined();
     });
 });
+
+describe("bundle branch grouping", () => {
+    const SRC = `procedure Node002 begin
+    if (local_var(LVAR_0) == 0) then begin
+        set_local_var(LVAR_0,1);
+        Reply(120);
+        NOption(122, Node915, 4);
+        NOption(123, Node999, 4);
+    end
+    else begin
+        Reply(121);
+        NOption(124, Node915, 4);
+        NOption(125, Node999, 4);
+    end
+end
+procedure talk_p_proc begin call Node002; end
+`;
+    it("groups replies/options into if and else branches with the condition and opaque side-effects", async () => {
+        const data = await parseDialog(SRC);
+        const n = data.nodes.find((x) => x.name === "Node002")!;
+        expect(n.branches).toBeDefined();
+        const [ifB, elseB] = n.branches!;
+        expect(ifB!.kind).toBe("if");
+        expect(ifB!.condition).toBe("(local_var(LVAR_0) == 0)");
+        expect(ifB!.replyIndices.map((i) => n.replies[i]!.msgId)).toEqual([120]);
+        expect(ifB!.optionIndices.map((i) => n.options[i]!.msgId)).toEqual([122, 123]);
+        expect(ifB!.opaque).toHaveLength(1);
+        expect(SRC.slice(ifB!.opaque[0]!.textRange.start, ifB!.opaque[0]!.textRange.end)).toBe(
+            "set_local_var(LVAR_0,1);",
+        );
+        expect(ifB!.opaque[0]!.text).toBe("set_local_var(LVAR_0,1);");
+        expect(elseB!.kind).toBe("else");
+        expect(elseB!.condition).toBeUndefined();
+        expect(elseB!.optionIndices.map((i) => n.options[i]!.msgId)).toEqual([124, 125]);
+        expect(elseB!.opaque).toHaveLength(0);
+    });
+    it("does not attach branches to a plain faithful node", async () => {
+        const data = await parseDialog(
+            `procedure Node001 begin Reply(1); NOption(2, Node002, 4); end\nprocedure talk_p_proc begin call Node001; end\n`,
+        );
+        expect(data.nodes.find((n) => n.name === "Node001")!.branches).toBeUndefined();
+    });
+});

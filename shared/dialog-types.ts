@@ -66,6 +66,20 @@ export interface SSLDialogOption {
     ifSingleCall?: boolean;
 }
 
+/**
+ * One branch of a bundle node's top-level `if`/`else`. `kind` is "if" (a `then` branch, with its
+ * `condition` text including the parentheses) or "else" (no condition). `replyIndices`/`optionIndices`
+ * index into the owning `SSLDialogNode.replies`/`options` (source order). `opaque` holds the branch's
+ * non-dialog statements (side-effects) to preserve byte-exact: their source text and span.
+ */
+export interface SSLDialogBranch {
+    kind: "if" | "else";
+    condition?: string;
+    replyIndices: number[];
+    optionIndices: number[];
+    opaque: { text: string; textRange: { start: number; end: number } }[];
+}
+
 export interface SSLDialogNode {
     name: string;
     line: number;
@@ -98,6 +112,8 @@ export interface SSLDialogNode {
      * Mutually exclusive with `faithful`. Set by the SSL parser.
      */
     bundleFaithful?: boolean;
+    /** Ordered branches of a bundle node's `if`/`else`. Set by the parser only when `bundleFaithful`. */
+    branches?: SSLDialogBranch[];
     /**
      * Where a newly-added option call is spliced in: `offset` is the end of the node's last body
      * statement, `indent` the leading whitespace of that statement's line, so the inserted call lines up.
