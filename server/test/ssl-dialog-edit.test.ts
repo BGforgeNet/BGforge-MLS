@@ -649,6 +649,16 @@ procedure talk_p_proc begin call Node002; end
         const s = model.roots[0]!.states.find((x) => x.id === "Node002")!;
         for (const b of s.branches!) expect(b.insertAnchor).toBeDefined();
     });
+
+    it("threads whole-branch spans onto the model", async () => {
+        const model = modelFromSSL(await parseDialog(BUNDLE_SRC));
+        const s = model.roots[0]!.states.find((x) => x.id === "Node002")!;
+        const ifB = s.branches!.find((b) => b.kind === "if")!;
+        const elseB = s.branches!.find((b) => b.kind === "else")!;
+        expect(ifB.stmtRange).toBeDefined();
+        expect(ifB.thenBlockEnd).toBeDefined();
+        expect(elseB.elseClauseRange).toBeDefined();
+    });
 });
 
 describe("applySSLDialogEdits - Task 7: compose + conditional reorder", () => {

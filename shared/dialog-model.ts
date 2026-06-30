@@ -75,6 +75,12 @@ export interface DialogBranch {
     conditionRange?: { start: number; end: number };
     /** SSL only: splice point for a new option inside this branch body. Set by the adapter. */
     insertAnchor?: { offset: number; indent: string };
+    /** SSL only: byte span of the whole `if` statement (for deleting a sibling/sole if). Set on `if` branches by the adapter. */
+    stmtRange?: { start: number; end: number };
+    /** SSL only: byte span from the `else` keyword through the else-block `end` (for deleting just the else). Set on `else` branches by the adapter. */
+    elseClauseRange?: { start: number; end: number };
+    /** SSL only: offset right after the then-block's closing `end`, where ` else begin...end` is appended. Set on `if` branches with a block then-body by the adapter. */
+    thenBlockEnd?: number;
     replies: { text: string; textKind?: "computed" | "random" }[];
     choiceIds: string[];
     opaque: string[];
@@ -498,6 +504,9 @@ function stateFromSSL(node: SSLDialogNode): DialogState {
         condition: b.condition,
         ...(b.conditionRange ? { conditionRange: b.conditionRange } : {}),
         ...(b.insertAnchor ? { insertAnchor: b.insertAnchor } : {}),
+        ...(b.stmtRange ? { stmtRange: b.stmtRange } : {}),
+        ...(b.elseClauseRange ? { elseClauseRange: b.elseClauseRange } : {}),
+        ...(b.thenBlockEnd !== undefined ? { thenBlockEnd: b.thenBlockEnd } : {}),
         replies: b.replyIndices.map((ri) => {
             const r = node.replies[ri]!;
             return { text: sslMsgText(r.msgId), textKind: r.msgKind };
