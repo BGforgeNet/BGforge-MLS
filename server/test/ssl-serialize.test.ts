@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { serializeSSLOption, serializeSSLProcedure, serializeSSLReply } from "../../shared/dialog-ssl-serialize";
+import {
+    serializeSSLBranch,
+    serializeSSLOption,
+    serializeSSLProcedure,
+    serializeSSLReply,
+} from "../../shared/dialog-ssl-serialize";
 import type { DialogChoice, DialogState } from "../../shared/dialog-model";
 
 describe("serializeSSLOption", () => {
@@ -46,5 +51,22 @@ describe("serializeSSLProcedure", () => {
         expect(serializeSSLProcedure(state, { reply: undefined, options: {} }, "    ")).toBe(
             "procedure Node051 begin\nend",
         );
+    });
+});
+
+describe("serializeSSLBranch", () => {
+    it("emits an if-branch with one option at indent+4 spaces, closed by indent+end", () => {
+        const c: DialogChoice = { id: "x", text: "@200", target: { kind: "state", stateId: "Node9" }, skill: 4 };
+        expect(serializeSSLBranch("if", "(a == 1)", [], [{ choice: c, msgId: 200 }], "    ")).toBe(
+            "if (a == 1) then begin\n        NOption(200, Node9, 4);\n    end",
+        );
+    });
+
+    it("emits begin then indent+end with no body lines when replies and options are both empty", () => {
+        expect(serializeSSLBranch("if", "(a == 1)", [], [], "    ")).toBe("if (a == 1) then begin\n    end");
+    });
+
+    it("emits else begin without a condition for an else-branch", () => {
+        expect(serializeSSLBranch("else", undefined, [], [], "    ")).toBe("else begin\n    end");
     });
 });

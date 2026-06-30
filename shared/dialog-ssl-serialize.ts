@@ -61,6 +61,29 @@ export function serializeSSLReply(msgId: number): string {
     return `Reply(${msgId});`;
 }
 
+/**
+ * Emit a NEW `if`/`else` bundle branch block. For an `if` branch the header is
+ * `if <serializeCond(cond)> then begin`; for an `else` branch it is `else begin` (condition
+ * unused). The body is reply line(s) then option lines, each indented at `indent + 4 spaces`,
+ * joined with `\n`. An empty body (no replies, no options) yields `... begin\n${indent}end`.
+ * The closing `end` is always at column `indent`. The returned string does not start with `indent`
+ * itself - the caller prepends that.
+ */
+export function serializeSSLBranch(
+    kind: "if" | "else",
+    cond: string | undefined,
+    replyMsgIds: number[],
+    options: { choice: DialogChoice; msgId: number }[],
+    indent: string,
+): string {
+    const header = kind === "if" ? `if ${serializeCond(cond!)} then begin` : `else begin`;
+    const innerIndent = `${indent}    `;
+    const lines: string[] = [];
+    for (const id of replyMsgIds) lines.push(`${innerIndent}${serializeSSLReply(id)}`);
+    for (const { choice, msgId } of options) lines.push(`${innerIndent}${serializeSSLOption(choice, msgId)}`);
+    return `${header}\n${lines.join("\n")}${lines.length > 0 ? "\n" : ""}${indent}end`;
+}
+
 /** Msg ids for a new node: its reply line (when it has text) and each option keyed by choice id. */
 export interface NodeMsgIds {
     reply: number | undefined;
