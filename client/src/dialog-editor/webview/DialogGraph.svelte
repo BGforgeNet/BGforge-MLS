@@ -1022,6 +1022,8 @@
     }
     .lg.continue {
         border-color: #64748b;
+        /* Continue edges render dashed in the graph; show that in the key so the style is documented. */
+        border-left-style: dashed;
     }
     .lg.exit {
         border-color: #ef4444;

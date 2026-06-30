@@ -1,5 +1,6 @@
 <script lang="ts">
-    import type { ConversationTree, ConvState, ConvReply } from "./conversation-tree";
+    import type { ConversationTree, ConvState, ConvReply, ConvBranch } from "./conversation-tree";
+    import Badge from "./Badge.svelte";
 
     // Conversation-flow tree (built by conversation-tree.ts). Renders states and
     // their player replies as a nested outline; clicking a state selects it for the
@@ -43,6 +44,7 @@
 </div>
 
 {#snippet stateBlock(st: ConvState, depth: number)}
+    {@const hasChildren = st.replies.length > 0 || (st.branches?.length ?? 0) > 0}
     <div
         class="st"
         class:derived={st.derivedFrom}
@@ -56,7 +58,7 @@
         oncontextmenu={(e) => (e.preventDefault(), onContext(st.id, e.clientX, e.clientY))}
         onkeydown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onSelect(st.id))}
     >
-        {#if st.replies.length > 0}
+        {#if hasChildren}
             <button
                 class="caret"
                 class:closed={collapsed.has(st.id)}
@@ -67,22 +69,45 @@
             <span class="caret leafdot">&bull;</span>
         {/if}
         <span class="who">{st.speaker}</span>
-        {#if st.derivedFrom}<span class="badge" title="Read-only: expanded from a {st.derivedFrom} block">{st.derivedFrom}</span>{/if}
+        {#if st.derivedFrom}<Badge badges={["derived"]} label={st.derivedFrom} small />{/if}
         {#if st.trigger}<span class="cond" title={st.trigger}>[if]</span>{/if}
-        <span class="line" title={st.text}>{st.text || "(no line)"}</span>
+        <!-- A bundle node's line lives per-branch (below); only a flat node shows its line here. -->
+        {#if !st.branches}<span class="line" title={st.text}>{st.text || "(no line)"}</span>{/if}
     </div>
     {#if !collapsed.has(st.id)}
-        {#each st.replies as r, i (r.id)}
-            {@render replyRow(r, depth, st.id, i, st.replies.length)}
-        {/each}
+        {#if st.branches}
+            {#each st.branches as b, bi (bi)}
+                {@render branchBlock(b, depth, st.id)}
+            {/each}
+        {:else}
+            {#each st.replies as r, i (r.id)}
+                {@render replyRow(r, depth, st.id, i, st.replies.length, false)}
+            {/each}
+        {/if}
     {/if}
 {/snippet}
 
-{#snippet replyRow(r: ConvReply, depth: number, ownerId: string, index: number, count: number)}
+{#snippet branchBlock(b: ConvBranch, depth: number, ownerId: string)}
+    <div class="branchhdr" style="--lvl:{depth * 2 + 1}">
+        <span class="bwhen">{b.kind === "if" ? "shown when" : "otherwise"}</span>
+        {#if b.kind === "if"}<span class="bcond" title={b.condition}>{b.condition}</span>{/if}
+    </div>
+    <div class="brep" style="--lvl:{depth * 2 + 1}">
+        <span class="who">NPC</span>
+        <span class="line" title={b.npc}>{b.npc || "(no line)"}</span>
+    </div>
+    {#each b.replies as r, i (r.id)}
+        {@render replyRow(r, depth, ownerId, i, b.replies.length, true)}
+    {/each}
+{/snippet}
+
+{#snippet replyRow(r: ConvReply, depth: number, ownerId: string, index: number, count: number, branchReadonly: boolean)}
     <div
         class="rep"
         style="--lvl:{depth * 2 + 1}"
-        oncontextmenu={(e) => (e.preventDefault(), onReplyContext(ownerId, r.id, index, count, e.clientX, e.clientY))}
+        oncontextmenu={branchReadonly
+            ? undefined
+            : (e) => (e.preventDefault(), onReplyContext(ownerId, r.id, index, count, e.clientX, e.clientY))}
     >
         <span class="rmark">&#8627;</span>
         <span class="rtext" class:silent={!r.hasText} title={r.hasText ? r.text : undefined}>{r.hasText ? r.text || "(empty reply)" : "(continue)"}</span>
@@ -188,14 +213,34 @@
         text-overflow: ellipsis;
         white-space: nowrap;
     }
-    .badge {
-        color: #cbd5e1;
-        background: #374151;
-        border: 1px solid #4b5563;
-        border-radius: 3px;
-        padding: 0 4px;
-        font-size: 8px;
-        letter-spacing: 0.04em;
+    /* Bundle (if/else) branch grouping: a faint "shown when ... / otherwise" header above
+       each branch's own NPC line and replies, mirroring the inspector's light grouping. */
+    .branchhdr {
+        padding-left: calc(var(--lvl) * 14px + 8px);
+        font-size: 9px;
+        font-style: italic;
+        line-height: 1.6;
+        display: flex;
+        gap: 5px;
+        align-items: baseline;
+    }
+    .bwhen {
+        color: #8b93a1;
+    }
+    .bcond {
+        color: #f59e0b;
+        font-family: var(--vscode-editor-font-family, monospace);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .brep {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+        padding: 2px 6px;
+        padding-left: calc(var(--lvl) * 14px + 8px);
+        line-height: 1.4;
     }
     .rmark {
         color: #475569;

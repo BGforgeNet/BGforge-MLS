@@ -291,6 +291,7 @@
 
     {#if state.branches}
         {#each state.branches as b, bi (bi)}
+            {@const bcs = branchChoices(b)}
             <div class="branch">
                 {#if b.kind === "else"}
                     <div class="branchhead">
@@ -334,14 +335,14 @@
                         <div class="branchreply">{resolveText(r.text, messages) || "(no line)"}</div>
                     {/each}
                 {/if}
-                {#each branchChoices(b) as c, bci (c.id)}
-                    {@render choiceRow(c, bci, bi, branchChoices(b).length)}
+                {#each bcs as c, bci (c.id)}
+                    {@render choiceRow(c, bci, bi, bcs.length)}
                 {/each}
                 {#if structuralEditable && b.insertAnchor}
                     <button class="add branchadd" onclick={() => actions.addReplyToBranch(bi)}>+ option</button>
                 {/if}
                 {#if b.opaque.length > 0}
-                    <details class="logic"><summary>logic ({b.opaque.length})</summary>
+                    <details class="logic"><summary>side effects ({b.opaque.length})</summary>
                         {#each b.opaque as line}<pre class="logicline">{line}</pre>{/each}
                     </details>
                 {/if}

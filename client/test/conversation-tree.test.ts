@@ -168,4 +168,45 @@ describe("buildConversationTree", () => {
     it("returns no roots for an empty dialog", () => {
         expect(buildConversationTree(root([]), undefined, noJump).roots).toHaveLength(0);
     });
+
+    it("represents a bundle (if/else) node as branches, each with its own NPC line and replies", () => {
+        const r = root([
+            st(
+                "Hub",
+                "@10", // the if-branch line; the else line must NOT be lost
+                [
+                    ch("Hub#opt0", { kind: "state", stateId: "A" }, { text: "ask", condition: "X==0" }),
+                    ch("Hub#opt1", { kind: "exit" }, { text: "leave", condition: "!(X==0)" }),
+                ],
+                {
+                    branches: [
+                        {
+                            kind: "if",
+                            condition: "X==0",
+                            replies: [{ text: "@10" }],
+                            choiceIds: ["Hub#opt0"],
+                            opaque: [],
+                        },
+                        { kind: "else", replies: [{ text: "@20" }], choiceIds: ["Hub#opt1"], opaque: [] },
+                    ],
+                },
+            ),
+            st("A", "@30", [ch("A#0", { kind: "exit" })]),
+        ]);
+        const messages = { "10": "First-time line", "20": "Later line", "30": "A line" };
+        const hub = buildConversationTree(r, messages, noJump).roots[0]!;
+        expect(hub.branches).toHaveLength(2);
+        expect(hub.branches![0]!.kind).toBe("if");
+        expect(hub.branches![0]!.condition).toBe("X==0");
+        expect(hub.branches![0]!.npc).toBe("First-time line");
+        expect(hub.branches![0]!.replies.map((rp) => rp.id)).toEqual(["Hub#opt0"]);
+        expect(hub.branches![1]!.kind).toBe("else");
+        expect(hub.branches![1]!.npc).toBe("Later line"); // the else NPC line is preserved, not dropped
+        expect(hub.branches![1]!.replies.map((rp) => rp.id)).toEqual(["Hub#opt1"]);
+        // Replies live per branch, so the flat list is empty (no double-expansion).
+        expect(hub.replies).toHaveLength(0);
+        // A branch option still expands its target sub-tree.
+        const aTarget = hub.branches![0]!.replies[0]!.target as Extract<ConvTarget, { kind: "state" }>;
+        expect(aTarget.node.id).toBe("A");
+    });
 });
