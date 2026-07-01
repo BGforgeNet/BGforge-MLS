@@ -628,6 +628,10 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
     // WAS an entry is excluded (RENAME already rewrote its existing call - adding one would duplicate it); a
     // renamed node that became an entry for the first time is NOT excluded - its rename had no call to rewrite,
     // so it still needs one wired in here.
+    // NOTE: the graph no longer exposes a "make entry" gesture (talk_p_proc dispatch is source-controlled), and
+    // isEntry is otherwise only set by the parser, so in practice `added` is empty today. The branch is kept
+    // (rather than deleted) because it is the correct write for isEntry, and the removal branch above is still
+    // live: deleting an entry node must strip its talk_p_proc call.
     const anchorE = original.entryCallAnchor;
     if (anchorE !== undefined) {
         const added = [...editedById.values()].filter((s) => s.isEntry && !originalEntries.has(s.renamedFrom ?? s.id));

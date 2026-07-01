@@ -98,10 +98,6 @@
     let showIssues = $state(false);
     // A delete that would silently redirect inbound transitions to EXIT waits on this confirmation.
     let confirmDelete = $state<{ state: DialogState; refCount: number } | null>(null);
-    // State ids that were dialog entries in the loaded model. A node made an entry THIS session (not
-    // in this set) can be un-toggled freely - the save simply adds no call, so nothing is orphaned.
-    // Only an ORIGINAL entry needs the removable-call gate below. Snapshotted on each model load.
-    let originalEntryIds = $state<Set<string>>(new Set());
 
     // Inline validation: a dangling GOTO (target state no longer exists) and duplicate
     // labels are the errors that break a saved .d; surface them as you edit.
@@ -403,7 +399,6 @@
         const src = model;
         untrack(() => {
             editModel = cloneModel(src);
-            originalEntryIds = new Set(src.roots.flatMap((r) => r.states).filter((s) => s.isEntry).map((s) => s.id));
             tabPos.clear();
             renderedFile = "";
             activeFile = editModel.roots.find((r) => r.states.length > 0)?.id ?? "";
@@ -489,20 +484,6 @@
     const canDelete = (s: DialogState | null): s is DialogState =>
         structEditable(s) && eligibleToDelete(editModel, s.id);
 
-    // Whether the isEntry toggle can be turned OFF for a given state. Toggling ON is always safe
-    // (adds a new entry call). Toggling OFF is only safe when there is a known top-level `talk_p_proc`
-    // entry call to remove. A conditional call (`if (X) call NodeY;`) is non-top-level - the save path
-    // does not rewrite the `if`, so removing the call would orphan it. A node made an entry by
-    // `force_dialog_start`/`start_dialog_at_node` (not a talk_p_proc call) has NO `entryCalls` entry, so
-    // the writer cannot un-wire it either; require `topLevel === true` (a real, removable entry call).
-    const isEntryRemovable = (s: DialogState): boolean =>
-        !s.isEntry ||
-        // Made an entry THIS session (not an entry in the loaded model): unset just clears the pending
-        // flag - the save adds no call, so there is nothing to orphan. Fixes the one-way-toggle strand
-        // where a node you just marked as an entry could not be un-marked until save + re-parse.
-        !originalEntryIds.has(s.id) ||
-        (editModel.entryCalls ?? []).find((ec) => ec.name === s.id)?.topLevel === true;
-
     // Actually remove the state (after the confirm modal, or directly when there are no inbound refs).
     function performDelete(s: DialogState): void {
         ops.deleteState(editModel, s);
@@ -557,11 +538,6 @@
             if (!copy) return;
             selected = copy;
             void rebuild({ focusId: copy.id });
-        },
-        setEntry: (on: boolean) => {
-            if (!structEditable(selected)) return;
-            selected.isEntry = on;
-            void rebuild({ frame: "none" });
         },
         addReplyToBranch: (branchIndex: number) => {
             if (!structEditable(selected)) return; // Tier 3b: bundle SSL branch-scoped add
@@ -708,7 +684,7 @@
 {/snippet}
 
 {#snippet inspectorBox(s: DialogState)}
-    <Inspector state={s} messages={editModel.messages} {stateIds} {actions} format={editModel.format} editable={editModel.editable} structuralEditable={structEditable(s)} deletable={canDelete(s)} entryRemovable={isEntryRemovable(s)} />
+    <Inspector state={s} messages={editModel.messages} {stateIds} {actions} format={editModel.format} editable={editModel.editable} structuralEditable={structEditable(s)} deletable={canDelete(s)} />
 {/snippet}
 
 <svelte:window onkeydown={onWindowKeydown} />

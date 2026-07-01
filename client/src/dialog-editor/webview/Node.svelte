@@ -55,6 +55,7 @@
             <Badge badges={sb} label={sb[0] === "derived" ? data.state.derivedFrom : undefined} />
             {#if data.reachability === "orphan"}<span class="rmark dead" title="Dead: no path reaches this state and nothing outside the file enters it">dead</span>{/if}
             {#if data.reachability === "external-entry"}<span class="rmark ext" title="Entered from outside this file (e.g. a cross-file EXTERN)">entry</span>{/if}
+            {#if data.state.isEntry}<span class="rmark start" title="Conversation start node: reached from talk_p_proc. Read-only - edit the .ssl to change the dialog's entry wiring.">start</span>{/if}
             {#if data.state.weight != null}<span class="w">W{data.state.weight}</span>{/if}
         </div>
         <div class="bd">
@@ -147,6 +148,17 @@
     .hd .rmark.ext {
         color: #8b96a6;
         font-size: 10px;
+    }
+    /* Conversation start node (reached from talk_p_proc). Read-only marker: green chip, distinct
+       from the red `dead` and grey `ext` marks. Entry wiring is source-controlled - no toggle here. */
+    .hd .rmark.start {
+        color: #86efac;
+        background: #16281b;
+        border: 1px solid #22c55e;
+        border-radius: 3px;
+        padding: 0 3px;
+        font-size: 8px;
+        font-weight: 700;
     }
     /* A dead-island state: dashed red card so it stands out from live dialogue. */
     .card.orphan {
