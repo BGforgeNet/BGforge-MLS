@@ -21,6 +21,11 @@
     const nodeTypes = { card: Node, external: Node, exit: Node };
     const edgeTypes = { reconnectable: ReconnectEdge };
 
+    // Below this canvas width the minimap is hidden: it would sit atop the bottom-left zoom
+    // controls, and a minimap of a canvas this small is not useful. The live editor shares the
+    // VS Code window (ViewColumn.Beside), so a narrow canvas is the common case, not an edge one.
+    const MINIMAP_MIN_W = 320;
+
     // Working copy the editor mutates. The `model` prop is the host's last-posted state;
     // edits stay local until a save path serializes editModel back (a later phase).
     function cloneModel(m: DialogModel): DialogModel {
@@ -40,6 +45,11 @@
     let viewport = $state({ x: 0, y: 0, zoom: 1 });
     let containerW = $state(0);
     let containerH = $state(0);
+    // Cap the floating top-left toolbar to the canvas width (minus the svelte-flow panel's ~15px inset
+    // each side) so it wraps DOWN within the canvas instead of overflowing right into the docked rail.
+    // A percentage max-width can't do this - the absolutely-positioned panel sizes to its content, not
+    // the canvas. Floored so an unmeasured (0) width doesn't yield a negative cap.
+    const graphbarMax = $derived(Math.max(containerW - 30, 80));
     let laidOut = $state.raw<FlowNode[]>([]);
     let showSource = $state(false);
     // Spotlight overlay (1B): dim fully-authored ("trusted") cards so the derived/uncertain
@@ -645,6 +655,7 @@
             {/each}
         </div>
     {/if}
+    <div class="body">
     <div class="flowwrap" class:spotlight bind:clientWidth={containerW} bind:clientHeight={containerH}>
         {#if viewMode === "graph"}
             <SvelteFlow bind:nodes bind:edges bind:viewport {nodeTypes} {edgeTypes} onnodeclick={onNodeClick} onconnect={onConnect} onreconnect={onReconnect} nodesDraggable>
@@ -656,13 +667,15 @@
                         </svg>
                     </ControlButton>
                 </Controls>
-                <MiniMap pannable zoomable bgColor="#15171c" maskColor="rgba(10, 12, 16, 0.7)" nodeColor="#3b82f6" nodeStrokeColor="#60a5fa" />
+                {#if containerW >= MINIMAP_MIN_W}
+                    <MiniMap pannable zoomable bgColor="#15171c" maskColor="rgba(10, 12, 16, 0.7)" nodeColor="#3b82f6" nodeStrokeColor="#60a5fa" />
+                {/if}
                 <!-- Toolbar + legend share ONE top-left flex-wrap container so they can never collide: a
                      separate top-center legend was overwritten by the variable-width toolbar (Source/Issues
-                     buttons hidden behind it). Capped to leave the top-right inspector's column clear; wraps
-                     downward within its own panel at narrow widths instead of reaching a sibling. -->
+                     buttons hidden behind it). Capped to the canvas width (graphbarMax) so it wraps DOWN
+                     within the canvas at narrow widths instead of overflowing into the docked rail. -->
                 <Panel position="top-left">
-                    <div class="graphbar">
+                    <div class="graphbar" style="max-width: {graphbarMax}px">
                         {@render toolbar(true)}
                         <div class="legend">
                             <span class="lg player">player reply</span>
@@ -672,15 +685,6 @@
                         </div>
                     </div>
                 </Panel>
-                {#if showSource}
-                    <Panel position="bottom-left">{@render sourceBox()}</Panel>
-                {/if}
-                {#if showIssues}
-                    <Panel position="bottom-center">{@render issuesBox()}</Panel>
-                {/if}
-                {#if selected}
-                    <Panel position="top-right">{@render inspectorBox(selected)}</Panel>
-                {/if}
             </SvelteFlow>
         {:else}
             <div class="treewrap">
@@ -721,17 +725,21 @@
                         {/if}
                     </div>
                 {/if}
-                {#if showSource}
-                    <div class="tovl bl">{@render sourceBox()}</div>
-                {/if}
-                {#if showIssues}
-                    <div class="tovl bc">{@render issuesBox()}</div>
-                {/if}
-                {#if selected}
-                    <div class="tovl tr">{@render inspectorBox(selected)}</div>
-                {/if}
             </div>
         {/if}
+    </div>
+    <!-- Shared docked rail (both graph and tree modes): the inspector, D source, and issues panels
+         dock here beside the canvas instead of floating over it. Floating panels collided with the
+         canvas chrome (minimap, zoom controls, one another) at the narrow width the live webview runs
+         at (it shares the VS Code window). Docking them out of the canvas removes the whole collision
+         class and unifies the two view modes' auxiliary panels, which previously duplicated this. -->
+    {#if selected || showSource || showIssues}
+        <aside class="siderail">
+            {#if selected}{@render inspectorBox(selected)}{/if}
+            {#if showSource}{@render sourceBox()}{/if}
+            {#if showIssues}{@render issuesBox()}{/if}
+        </aside>
+    {/if}
     </div>
 </div>
 
@@ -800,10 +808,34 @@
         background: #1d4ed8;
         color: #fff;
     }
-    .flowwrap {
+    /* Row holding the canvas and the docked side rail. */
+    .body {
         flex: 1;
         min-height: 0;
+        display: flex;
+        flex-direction: row;
+    }
+    /* Canvas column: the graph/tree fills this; the docked rail sits beside it. */
+    .flowwrap {
+        flex: 1 1 0;
+        min-width: 0;
+        min-height: 0;
         position: relative;
+    }
+    /* Docked auxiliary panels (inspector / source / issues), beside the canvas rather than floating
+       over it. Capped so the canvas keeps at least half at the narrow widths the webview runs at;
+       scrolls vertically when the stacked panels are tall. */
+    .siderail {
+        flex: 0 0 auto;
+        width: min(340px, 50%);
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 8px;
+        overflow-y: auto;
+        background: #191c21;
+        border-left: 1px solid #2b303a;
     }
     /* Spotlight overlay: dim fully-authored cards so the derived/uncertain ones stand out.
        `.card` lives in Node.svelte, so reach it with :global; each card carries `.flagged`
@@ -850,6 +882,11 @@
     .treetoolbar {
         flex: 0 0 auto;
         display: flex;
+        /* Wrap like the graph's .graphbar: on a narrow canvas a non-wrapping row shrinks its items,
+           and the .viewseg (overflow:hidden) then clips its own Graph/Tree buttons to nothing -
+           stranding the user in Tree view. Wrapping keeps every control visible and within the canvas
+           column, so it never crowds the docked rail. */
+        flex-wrap: wrap;
         align-items: center;
         gap: 4px;
         padding: 6px 8px;
@@ -929,24 +966,6 @@
         font-size: 11px;
         padding: 5px 10px;
     }
-    /* Float the shared panels over the tree, matching the graph's panel placement. */
-    .tovl {
-        position: absolute;
-        z-index: 5;
-    }
-    .tovl.tr {
-        top: 48px;
-        right: 10px;
-    }
-    .tovl.bl {
-        bottom: 10px;
-        left: 10px;
-    }
-    .tovl.bc {
-        bottom: 10px;
-        left: 50%;
-        transform: translateX(-50%);
-    }
     .toolbtn {
         background: #2b303a;
         border: 1px solid #3a3f4b;
@@ -1009,19 +1028,22 @@
         opacity: 1;
         box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35);
     }
-    /* Toolbar + legend in one row that wraps within itself. max-width reserves the top-right inspector's
-       column (~280px + margins) so a wrapped toolbar grows DOWN inside its own panel, never sideways into
-       the inspector. */
+    /* Toolbar + legend in one row that wraps within itself. Capped to the canvas width so a wrapped
+       toolbar grows DOWN inside its own panel, never past the canvas edge. The inspector no longer
+       floats top-right (it docks in `.siderail`), so no extra column needs reserving here. */
     .graphbar {
         display: flex;
         flex-wrap: wrap;
         gap: 6px;
         align-items: center;
-        max-width: calc(100vw - 320px);
+        max-width: 100%;
     }
     .legend {
         display: flex;
-        gap: 10px;
+        /* Wrap the key entries so a narrow canvas doesn't clip "exit"/"extern" under the rail edge -
+           they are a fixed vocabulary, so they must all stay legible rather than hard-cut. */
+        flex-wrap: wrap;
+        gap: 4px 10px;
         background: #21242b;
         border: 1px solid #3a3f4b;
         border-radius: 6px;
@@ -1048,8 +1070,9 @@
         border-color: #f59e0b;
     }
     .issues {
-        max-width: 60vw;
-        max-height: 22vh;
+        width: 100%;
+        box-sizing: border-box;
+        max-height: 30vh;
         overflow: auto;
         background: #21242b;
         border: 1px solid #3a3f4b;
@@ -1067,13 +1090,11 @@
         padding: 1px 0;
     }
     .dsource {
-        width: 420px;
+        width: 100%;
+        box-sizing: border-box;
         max-height: 40vh;
         overflow: auto;
-        /* Sit ABOVE the fixed bottom-left zoom Controls (svelte-flow default position) rather than over them:
-           this bottom-left panel otherwise covers the controls. Lifted, not shifted right - shifting right
-           would push it into the centered Issues panel. Bottom inset > the controls' height + margin. */
-        margin: 0 0 120px 0;
+        margin: 0;
         background: #15171c;
         border: 1px solid #3a3f4b;
         border-radius: 6px;
