@@ -14,7 +14,6 @@
     import * as ops from "../../../../shared/dialog-edit-ops";
     import { eligibleToDelete } from "../../../../shared/dialog-ssl-edit";
     import { hasHost, postToHost } from "./host";
-    import { isSaveShortcut } from "./keyboard";
     import type { DialogModel, DialogState, DialogTarget } from "../../../../shared/dialog-model";
 
     let { model }: { model: DialogModel } = $props();
@@ -27,8 +26,8 @@
     // VS Code window (ViewColumn.Beside), so a narrow canvas is the common case, not an edge one.
     const MINIMAP_MIN_W = 320;
 
-    // Working copy the editor mutates. The `model` prop is the host's last-posted state;
-    // edits stay local until a save path serializes editModel back (a later phase).
+    // Working copy the editor mutates. The `model` prop is the host's last-posted state; the
+    // debounced emit effect below posts editModel back to the host as it changes.
     function cloneModel(m: DialogModel): DialogModel {
         // `m` is normally a Svelte $state proxy (App.svelte holds the model in reactive
         // state and passes it as a prop). structuredClone throws DataCloneError on a proxy,
@@ -411,7 +410,33 @@
             selected = null;
             confirmDelete = null;
             void rebuild({ relayout: true });
+            suppressEmit = true;
         });
+    });
+
+    // Debounce window for coalescing an edit burst (rapid keystrokes in one field) into a single host edit.
+    const EMIT_DEBOUNCE_MS = 250;
+
+    // suppressEmit is a PLAIN (non-reactive) flag - see the emit-design note. The reset effect sets it true
+    // before replacing editModel from a host {type:"model"} message so the emit effect's next run does not
+    // echo the host's own model back.
+    let suppressEmit = true;
+
+    // Emit every user edit to the host (production only). A single effect deep-reads editModel via
+    // $state.snapshot, so ANY mutation - structural op OR inline inspector field edit - re-runs it. The host
+    // splices the model into the live document as one WorkspaceEdit (one native undo step) and side-writes
+    // message text to .tra. $state.snapshot yields a plain clone safe for the postMessage boundary (a raw
+    // $state proxy throws DataCloneError). The effect-cleanup clears the pending timer, giving both the
+    // debounce (prior timer cancelled before each re-run) and teardown safety (no post after unmount).
+    $effect(() => {
+        const snapshot = $state.snapshot(editModel); // deep-read: tracks every nested field
+        if (!hasHost()) return; // standalone harness: no host to post to
+        if (suppressEmit) {
+            suppressEmit = false;
+            return;
+        }
+        const timer = setTimeout(() => postToHost({ type: "edit", model: snapshot }), EMIT_DEBOUNCE_MS);
+        return () => clearTimeout(timer);
     });
 
     // Switch to a dialog file's tab, optionally framing a target state on arrival.
@@ -585,19 +610,9 @@
         void rebuild({ focusId: s.id });
     }
 
-    // Post the edited model to the host, which surgically splices it back into the
-    // .d (and persists @N text edits to the .tra). $state.snapshot yields a plain
-    // clone safe for the structured-clone postMessage boundary.
-    function save(): void {
-        postToHost({ type: "save", model: $state.snapshot(editModel) });
-    }
-
-    // Window keydown: Escape dismisses the tree context menu; Ctrl/Cmd+S saves through the host,
-    // matching the toolbar Save button. This panel is a WebviewPanel, not a CustomEditor, so VS
-    // Code's own Ctrl+S does not reach the underlying .d/.ssl document from here - without this the
-    // shortcut would be a dead key (or trigger the browser's save-page dialog). No-op with no host.
-    // A text edit is in progress when focus is in an input/textarea/select (or contenteditable) - in
-    // the docked inspector, the source box, etc. Backspace/Delete there edits text, never a node.
+    // Window keydown: Escape dismisses the tree context menu. A text edit is in progress when focus is
+    // in an input/textarea/select (or contenteditable) - in the docked inspector, the source box, etc.
+    // Backspace/Delete there edits text, never a node.
     function isEditableTarget(t: EventTarget | null): boolean {
         const el = t as HTMLElement | null;
         const tag = el?.tagName;
@@ -607,11 +622,6 @@
     function onWindowKeydown(e: KeyboardEvent): void {
         if (e.key === "Escape" && ctxMenu) {
             closeContext();
-            return;
-        }
-        if (isSaveShortcut(e) && hasHost()) {
-            e.preventDefault();
-            save();
             return;
         }
         // Delete/Backspace removes the selected state through the guarded path (confirm + inbound-ref
@@ -660,10 +670,6 @@
         <button class:active={viewMode === "graph"} role="tab" aria-selected={viewMode === "graph"} onclick={() => (viewMode = "graph")}>Graph</button>
         <button class:active={viewMode === "tree"} role="tab" aria-selected={viewMode === "tree"} onclick={() => (viewMode = "tree")}>Tree</button>
     </span>
-    {#if hasHost()}
-        <!-- Save persists text for both formats (D structure + .tra; SSL message text -> .msg). -->
-        <button class="toolbtn save" onclick={save}>Save</button>
-    {/if}
     {#if editModel.editable || editModel.format === "fallout-ssl"}
         <button class="toolbtn" onclick={addState}>+ State</button>
     {/if}
@@ -1101,11 +1107,6 @@
     .toolbtn.warn {
         color: #fca5a5;
         border-color: #7f1d1d;
-    }
-    .toolbtn.save {
-        background: #166534;
-        border-color: #22c55e;
-        color: #dcfce7;
     }
     /* Svelte Flow ships a light theme (white controls/minimap); theme its chrome to
        the dark editor palette so the controls and minimap aren't blank-white boxes. */
