@@ -14,6 +14,8 @@
             jumpTo?: { file: string; stateId: string };
             reachability?: Reachability;
             flagged?: boolean;
+            /** This node's text (line or a reply) shares a .msg/.tra ref with another node. */
+            sharedText?: boolean;
             editable?: boolean;
             /** Per-node structural editability (D: model-level; SSL: node is faithful). Gates drag-to-retarget. */
             structuralEditable?: boolean;
@@ -56,6 +58,7 @@
             {#if data.reachability === "orphan"}<span class="rmark dead" title="Dead: no path reaches this state and nothing outside the file enters it">dead</span>{/if}
             {#if data.reachability === "external-entry"}<span class="rmark ext" title="Entered from outside this file (e.g. a cross-file EXTERN)">entry</span>{/if}
             {#if data.state.isEntry}<span class="rmark start" title="Conversation start node: reached from talk_p_proc. Read-only - edit the .ssl to change the dialog's entry wiring.">start</span>{/if}
+            {#if data.sharedText}<span class="rmark shared" title="Shared text: this node's line or a reply uses the same .msg/.tra entry as another node - editing it here changes the other node too.">shared</span>{/if}
             {#if data.state.weight != null}<span class="w">W{data.state.weight}</span>{/if}
         </div>
         <div class="bd">
@@ -155,6 +158,16 @@
         color: #86efac;
         background: #16281b;
         border: 1px solid #22c55e;
+        border-radius: 3px;
+        padding: 0 3px;
+        font-size: 8px;
+        font-weight: 700;
+    }
+    /* Shared-text coupling marker: amber, "editing this text also changes another node". */
+    .hd .rmark.shared {
+        color: #fcd34d;
+        background: #2c2610;
+        border: 1px solid #b4801f;
         border-radius: 3px;
         padding: 0 3px;
         font-size: 8px;

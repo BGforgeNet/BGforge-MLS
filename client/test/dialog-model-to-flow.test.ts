@@ -205,6 +205,35 @@ describe("modelToFlow - spotlight flag", () => {
     });
 });
 
+describe("modelToFlow - shared-text coupling", () => {
+    test("flags every state that shares a @N ref (line or option) with another state", () => {
+        const model: DialogModel = {
+            format: "fallout-ssl",
+            editable: false,
+            roots: [
+                {
+                    id: "d",
+                    label: "d",
+                    kind: "dialog",
+                    states: [
+                        { id: "A", text: "@100", choices: [] },
+                        { id: "B", text: "@100", choices: [] }, // shares its line @100 with A
+                        { id: "C", text: "@200", choices: [{ id: "C#0", text: "@300", target: { kind: "exit" } }] },
+                        { id: "D", text: "@400", choices: [{ id: "D#0", text: "@300", target: { kind: "exit" } }] }, // shares option @300 with C
+                        { id: "E", text: "@500", choices: [] }, // fully unique
+                    ],
+                },
+            ],
+        };
+        const byId = Object.fromEntries(
+            modelToFlow(model)
+                .nodes.filter((n) => n.type === "card")
+                .map((n) => [n.id, n.data.sharedText]),
+        );
+        expect(byId).toEqual({ A: true, B: true, C: true, D: true, E: false });
+    });
+});
+
 describe("stateNodeSize", () => {
     test("grows the card height as the resolved text wraps to more lines", () => {
         const state = { id: "s", speaker: "X", text: "t", choices: [] };

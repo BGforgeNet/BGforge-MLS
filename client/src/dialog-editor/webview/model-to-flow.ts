@@ -9,6 +9,32 @@
 
 import { isFlaggedNode, resolveText, type DialogModel, type DialogState } from "../../../../shared/dialog-model";
 import { classifyReachability } from "../../../../shared/dialog-reachability";
+import { msgRef } from "./inspector-edit";
+
+/** The distinct `@N` message refs a state uses across its own line and its options. */
+function stateRefs(s: DialogState): string[] {
+    const refs = new Set<string>();
+    const line = msgRef(s.text);
+    if (line) refs.add(line);
+    for (const c of s.choices) {
+        const r = msgRef(c.text);
+        if (r) refs.add(r);
+    }
+    return [...refs];
+}
+
+/**
+ * States that share a `@N` ref with at least one OTHER state - editing such text (line or reply) here
+ * rewrites the one shared `.msg`/`.tra` entry and changes every state that uses it. Duplicating a node
+ * keeps the original's refs, so both the copy and the original land in this set; an authored shared ref
+ * does too. Pure projection over the model; the renderer marks these nodes so the coupling is not silent.
+ */
+function sharedTextStates(model: DialogModel): (s: DialogState) => boolean {
+    const refUsers = new Map<string, number>();
+    for (const root of model.roots)
+        for (const s of root.states) for (const r of stateRefs(s)) refUsers.set(r, (refUsers.get(r) ?? 0) + 1);
+    return (s: DialogState) => stateRefs(s).some((r) => (refUsers.get(r) ?? 0) > 1);
+}
 
 export interface FlowNode {
     id: string;
@@ -81,6 +107,7 @@ export function modelToFlow(model: DialogModel): FlowGraph {
     // Reachability is a pure projection over the whole model; compute once and tag each
     // card so the renderer can flag dead states (orphan) and EXTERN entries.
     const reach = classifyReachability(model);
+    const isShared = sharedTextStates(model);
     for (const root of model.roots) {
         for (const s of root.states) {
             const { width, height } = stateNodeSize(s, resolveText(s.text, messages).length);
@@ -100,6 +127,9 @@ export function modelToFlow(model: DialogModel): FlowGraph {
                     messages,
                     reachability: reach.get(s.id),
                     flagged: isFlaggedNode(s),
+                    // True when this node's line or a reply shares a .msg/.tra ref with another node
+                    // (e.g. a duplicated node) - editing the text here also changes the other node.
+                    sharedText: isShared(s),
                     // Per-node structural editability (drives handle connectability + the inspector's
                     // Tier 1 controls): a D state is editable with the model; an SSL node is editable
                     // only when faithfully representable (see DialogState.faithful / bundleFaithful).
