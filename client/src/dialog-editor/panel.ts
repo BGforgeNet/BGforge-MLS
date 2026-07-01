@@ -1,24 +1,27 @@
 /**
- * Dialog editor webview panel host.
+ * Dialog editor: a CustomTextEditorProvider bound to the .d / .ssl source document.
  *
- * Opens beside the text editor (the document of record). On open and on edits it
- * runs the existing LSP parse command, maps the result into the format-neutral
- * DialogModel via the shared adapters, and posts it to the Svelte Flow webview.
- * On a save message it splices the edits back into the .d / .ssl surgically and persists
- * @N text edits to the .tra (D) or .msg (SSL). WeiDU D is fully editable; for Fallout SSL the
- * faithful nodes are structurally editable (the rest stay view-only).
+ * Opens beside (or instead of) the text editor over the same document, so VS Code owns
+ * dirty tracking, undo/redo, and save. On open (and on "ready" from the webview) it runs
+ * the existing LSP parse command, maps the result into the format-neutral DialogModel via
+ * the shared adapters, and posts it to the Svelte Flow webview. On an edit message it
+ * splices the change back into the LIVE document via a WorkspaceEdit and persists @N text
+ * edits to the .tra (D) or .msg (SSL) via a debounced write-through. WeiDU D is fully
+ * editable; for Fallout SSL the faithful nodes are structurally editable (the rest stay
+ * view-only).
  */
 
 import * as vscode from "vscode";
 import { type LanguageClient, type ExecuteCommandParams, ExecuteCommandRequest } from "vscode-languageclient/node";
 import { LSP_COMMAND_PARSE_DIALOG, LSP_COMMAND_SAVE_TRA } from "../../../shared/protocol";
 import { modelFromD, modelFromSSL, type DialogModel } from "../../../shared/dialog-model";
-import { applyDialogEdits, pendingInserts, verifyDialogEditApplied } from "../../../shared/dialog-d-edit";
-import { applySSLDialogEdits, verifySSLEditApplied } from "../../../shared/dialog-ssl-edit";
-import { allocateNodeIds, allocateOptionIds } from "../../../shared/dialog-ssl-ids";
+import { verifyDialogEditApplied } from "../../../shared/dialog-d-edit";
+import { verifySSLEditApplied } from "../../../shared/dialog-ssl-edit";
 import type { DDialogData, SSLDialogData } from "../../../shared/dialog-types";
 import { generateNonce, getCachedJsAsset } from "../webview-assets";
 import { buildDialogWebviewHtml } from "./dialog-webview-html";
+import { computeDialogSourceEdit } from "./dialog-source-edit";
+import { EchoGuard } from "./edit-origin";
 
 const DIALOG_LANGS = new Set(["fallout-ssl", "weidu-d", "tssl", "td"]);
 
@@ -46,32 +49,90 @@ function buildHtml(webview: vscode.Webview, extensionUri: vscode.Uri): string {
     return buildDialogWebviewHtml({ cspSource: webview.cspSource, cssUri, nonce, scriptBody });
 }
 
-export function registerDialogEditor(context: vscode.ExtensionContext, client: LanguageClient): vscode.Disposable {
-    let panel: vscode.WebviewPanel | undefined;
-    let docUri: string | undefined;
-    let refreshTimer: ReturnType<typeof setTimeout> | undefined;
-    /** The model just written by `save`, awaiting verification against the next re-parse. */
-    let pendingVerify: DialogModel | undefined;
+/** Per-open-panel session state: the echo guard, latest model (for the .tra flush), and the debounce timer. */
+interface Session {
+    guard: EchoGuard;
+    latest: DialogModel | undefined;
+    traTimer: ReturnType<typeof setTimeout> | undefined;
+    /** The model just applied via `applyEdit`, awaiting verification against the next re-parse. */
+    pendingVerify: DialogModel | undefined;
+}
 
-    async function refresh(): Promise<void> {
-        if (!panel || !docUri) return;
-        const params: ExecuteCommandParams = { command: LSP_COMMAND_PARSE_DIALOG, arguments: [{ uri: docUri }] };
+class DialogEditorProvider implements vscode.CustomTextEditorProvider {
+    private readonly sessions = new WeakMap<vscode.WebviewPanel, Session>();
+    private readonly context: vscode.ExtensionContext;
+    private readonly client: LanguageClient;
+
+    constructor(context: vscode.ExtensionContext, client: LanguageClient) {
+        this.context = context;
+        this.client = client;
+    }
+
+    async resolveCustomTextEditor(
+        document: vscode.TextDocument,
+        panel: vscode.WebviewPanel,
+        _token: vscode.CancellationToken,
+    ): Promise<void> {
+        panel.webview.options = {
+            enableScripts: true,
+            localResourceRoots: [vscode.Uri.joinPath(this.context.extensionUri, "client", "out")],
+        };
+        panel.webview.html = buildHtml(panel.webview, this.context.extensionUri);
+        const session: Session = {
+            guard: new EchoGuard(),
+            latest: undefined,
+            traTimer: undefined,
+            pendingVerify: undefined,
+        };
+        this.sessions.set(panel, session);
+
+        panel.webview.onDidReceiveMessage((msg: { type?: string; model?: DialogModel }) => {
+            if (msg?.type === "ready") void this.postModel(document, panel);
+            // "save" is the transitional message name: the webview currently emits a whole-model
+            // "save" from its Save button; a later change moves it to per-action "edit" emission
+            // and removes the button. Both route to the same live-document splice until then.
+            else if ((msg?.type === "edit" || msg?.type === "save") && msg.model)
+                void this.applyEdit(document, panel, msg.model);
+        });
+
+        const changeSub = vscode.workspace.onDidChangeTextDocument((e) => {
+            if (e.document.uri.toString() !== document.uri.toString()) return;
+            // Self-originated (our own WorkspaceEdit) -> the guard consumes it and we do not re-project, so the
+            // webview keeps its in-progress selection. An external text edit re-projects the graph.
+            if (this.sessions.get(panel)?.guard.shouldReproject()) void this.postModel(document, panel);
+        });
+        const saveSub = vscode.workspace.onDidSaveTextDocument((doc) => {
+            if (doc.uri.toString() === document.uri.toString()) void this.flushTra(document, panel);
+        });
+        panel.onDidDispose(() => {
+            const s = this.sessions.get(panel);
+            if (s?.traTimer) clearTimeout(s.traTimer);
+            changeSub.dispose();
+            saveSub.dispose();
+            this.sessions.delete(panel);
+        });
+    }
+
+    /** Parse the bound document and post the model (or an error) to the webview. */
+    private async postModel(document: vscode.TextDocument, panel: vscode.WebviewPanel): Promise<void> {
+        const params: ExecuteCommandParams = {
+            command: LSP_COMMAND_PARSE_DIALOG,
+            arguments: [{ uri: document.uri.toString() }],
+        };
         let data: unknown;
         try {
-            data = await client.sendRequest(ExecuteCommandRequest.type, params);
+            data = await this.client.sendRequest(ExecuteCommandRequest.type, params);
         } catch (error) {
-            // Surface the failure instead of leaving the webview stuck on "Parsing dialog...".
             const message = error instanceof Error ? error.message : String(error);
-            void panel?.webview.postMessage({ type: "error", message: `Dialog parse request failed: ${message}` });
+            void panel.webview.postMessage({ type: "error", message: `Dialog parse request failed: ${message}` });
             return;
         }
-        if (!panel) return; // disposed while the request was in flight
         const model = toModel(data);
+        const session = this.sessions.get(panel);
+        if (session) session.latest = model ?? undefined;
         if (model) {
             void panel.webview.postMessage({ type: "model", model });
         } else {
-            // The server returned nothing usable (no open document, unrecognized language, or a
-            // parse error logged server-side). Tell the webview rather than hang indefinitely.
             void panel.webview.postMessage({
                 type: "error",
                 message:
@@ -80,130 +141,111 @@ export function registerDialogEditor(context: vscode.ExtensionContext, client: L
                         : "The parsed dialog data could not be interpreted.",
             });
         }
-        // Verify a just-saved edit round-tripped faithfully: the server's re-parse of the
-        // saved document (`model`) must match what `save` wrote (`pendingVerify`). A mismatch
-        // means the serializer produced text that does not reproduce the edit - warn rather
-        // than let a silent corruption stand.
-        if (model && pendingVerify) {
-            const ssl = pendingVerify.format === "fallout-ssl";
+        // Verify a just-applied structural edit round-tripped faithfully.
+        if (model && session?.pendingVerify) {
+            const ssl = session.pendingVerify.format === "fallout-ssl";
             const verdict = ssl
-                ? verifySSLEditApplied(pendingVerify, model)
-                : verifyDialogEditApplied(pendingVerify, model);
-            pendingVerify = undefined;
+                ? verifySSLEditApplied(session.pendingVerify, model)
+                : verifyDialogEditApplied(session.pendingVerify, model);
+            session.pendingVerify = undefined;
             if (!verdict.ok) {
                 void vscode.window.showWarningMessage(
-                    `Dialog save may not have applied cleanly: ${verdict.reason}. Review the ${ssl ? ".ssl" : ".d"} source.`,
+                    `Dialog edit may not have applied cleanly: ${verdict.reason}. Review the ${ssl ? ".ssl" : ".d"} source.`,
                 );
             }
         }
     }
 
-    function scheduleRefresh(): void {
-        if (refreshTimer) clearTimeout(refreshTimer);
-        refreshTimer = setTimeout(() => void refresh(), 300);
-    }
-
     /**
-     * Persist edits from the webview back to disk. WeiDU D structure is edited surgically
-     * (applyDialogEdits splices only the changed states, preserving comments, patch blocks,
-     * CHAIN syntax, and untouched states); faithful SSL nodes get their structural ops (retarget,
-     * reorder, add/remove unconditional options, add/delete nodes, entry-toggle, rename) spliced
-     * back via applySSLDialogEdits, non-faithful nodes staying read-only; newly-added options/nodes
-     * allocate `.msg` ids here (allocateNodeIds + allocateOptionIds). Message-text edits (NPC lines
-     * and player replies) are written to the resolved `.tra` (D) or `.msg` (SSL) via the server,
-     * which owns translation-file resolution. Editing SSL conditions (`if` wrappers) is not yet
-     * supported - those nodes/edits stay source-only.
+     * Apply one webview action to the LIVE document as a single full-range WorkspaceEdit (one edit == one native
+     * undo step). Message text is a side-write: it is not stored in the source for D/SSL, so a text-only action
+     * produces no source edit - it is persisted to .tra on a short debounce (write-through) and again on native
+     * save. Accepted non-atomicity (per the design spec): a structural edit dirties the source (not yet on disk)
+     * while its companion text write-through has already landed in .tra; a discard-on-close can leave an orphan
+     * .tra entry. This is the lower-risk text class the spec accepts giving up native undo on.
      */
-    async function save(edited: DialogModel): Promise<void> {
-        if (!docUri) return;
+    private async applyEdit(
+        document: vscode.TextDocument,
+        panel: vscode.WebviewPanel,
+        edited: DialogModel,
+    ): Promise<void> {
+        const session = this.sessions.get(panel);
+        if (!session) return;
         if (edited.format === "weidu-d" || edited.format === "fallout-ssl") {
-            const doc = await vscode.workspace.openTextDocument(vscode.Uri.parse(docUri));
-            const text = doc.getText();
-            // Re-parse the on-disk text to recover the ORIGINAL model (before the webview's
-            // edits). The splicers compare against it so unchanged content keeps its exact bytes
-            // (D: @N refs, ++ shorthand, comments; SSL: everything but the moved/retargeted option
-            // spans). The document itself is unchanged by webview edits.
-            const params: ExecuteCommandParams = { command: LSP_COMMAND_PARSE_DIALOG, arguments: [{ uri: docUri }] };
-            const data = await client.sendRequest(ExecuteCommandRequest.type, params);
-            const original = toModel(data) ?? undefined;
-            // Allocate .msg ids for newly-added SSL content from the on-disk message set (the source of the
-            // current max), mutating each new reply/option's text to its @id so the spliced SSL and the
-            // appended .msg entries agree. NODE ids first (a new node's reply + its options), then OPTION ids
-            // for any new options added to existing nodes, against the merged set so ids never collide. New
-            // entries merge into edited.messages, which the SAVE_TRA path writes (rewrite + append). Runs
-            // before the splice, which reads the assigned @id.
-            if (edited.format === "fallout-ssl" && original) {
-                const node = allocateNodeIds(edited, original.messages ?? {});
-                const opt = allocateOptionIds(edited, { ...original.messages, ...node.newMessages });
-                edited.messages = { ...edited.messages, ...node.newMessages, ...opt };
-            }
-            // SSL needs the original parse to gate on per-node faithfulness; without it, leave the
-            // structure untouched (message text still persists below).
-            const newText =
-                edited.format === "weidu-d"
-                    ? applyDialogEdits(text, edited, original)
-                    : original
-                      ? applySSLDialogEdits(text, edited, original)
-                      : text;
-            if (newText !== text) {
+            const text = document.getText();
+            const original = toModel(
+                await this.client.sendRequest(ExecuteCommandRequest.type, {
+                    command: LSP_COMMAND_PARSE_DIALOG,
+                    arguments: [{ uri: document.uri.toString() }],
+                } as ExecuteCommandParams),
+            );
+            const { newText, messages } = computeDialogSourceEdit(text, edited, original);
+            edited.messages = messages;
+            if (newText !== null) {
                 const ws = new vscode.WorkspaceEdit();
-                ws.replace(doc.uri, new vscode.Range(doc.positionAt(0), doc.positionAt(text.length)), newText);
+                ws.replace(
+                    document.uri,
+                    new vscode.Range(document.positionAt(0), document.positionAt(text.length)),
+                    newText,
+                );
+                session.guard.markSelfEdit();
                 await vscode.workspace.applyEdit(ws);
-                // The document change triggers a debounced refresh; have it verify this edit
-                // round-tripped (the saved text re-parses to exactly what we saved).
-                pendingVerify = edited;
+                session.pendingVerify = edited;
             }
         }
-        // Message text persists for both formats (D -> .tra, SSL -> .msg).
-        if (edited.messages && Object.keys(edited.messages).length > 0) {
-            const traParams: ExecuteCommandParams = {
-                command: LSP_COMMAND_SAVE_TRA,
-                arguments: [{ uri: docUri, messages: edited.messages }],
-            };
-            await client.sendRequest(ExecuteCommandRequest.type, traParams);
-        }
-        const added = edited.format === "weidu-d" ? pendingInserts(edited).length : 0;
-        void vscode.window.showInformationMessage(`Dialog saved${added ? ` (${added} new state(s) added)` : ""}.`);
+        session.latest = edited;
+        this.scheduleTraFlush(document, panel);
     }
 
-    const open = vscode.commands.registerCommand("extension.bgforge.dialogEditor", () => {
-        const editor = vscode.window.activeTextEditor;
-        if (!editor || !DIALOG_LANGS.has(editor.document.languageId)) {
+    /** Debounced .tra write-through so rapid message edits collapse to one flush. */
+    private scheduleTraFlush(document: vscode.TextDocument, panel: vscode.WebviewPanel): void {
+        const session = this.sessions.get(panel);
+        if (!session) return;
+        if (session.traTimer) clearTimeout(session.traTimer);
+        session.traTimer = setTimeout(() => void this.flushTra(document, panel), 400);
+    }
+
+    /** Persist message text to the resolved .tra/.msg via the server. A failure surfaces (fail loud). */
+    private async flushTra(document: vscode.TextDocument, panel: vscode.WebviewPanel): Promise<void> {
+        const session = this.sessions.get(panel);
+        if (!session) return;
+        if (session.traTimer) {
+            clearTimeout(session.traTimer);
+            session.traTimer = undefined;
+        }
+        const messages = session.latest?.messages;
+        if (!messages || Object.keys(messages).length === 0) return;
+        try {
+            await this.client.sendRequest(ExecuteCommandRequest.type, {
+                command: LSP_COMMAND_SAVE_TRA,
+                arguments: [{ uri: document.uri.toString(), messages }],
+            } as ExecuteCommandParams);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Saving dialog message text failed: ${message}`);
+        }
+    }
+}
+
+export function registerDialogEditor(context: vscode.ExtensionContext, client: LanguageClient): vscode.Disposable {
+    const provider = new DialogEditorProvider(context, client);
+    const editor = vscode.window.registerCustomEditorProvider("bgforge.dialogEditor", provider, {
+        webviewOptions: { retainContextWhenHidden: true },
+        supportsMultipleEditorsPerDocument: false,
+    });
+    // Keep the command + Ctrl+Shift+V: open the active dialog file in the custom editor beside the source.
+    const open = vscode.commands.registerCommand("extension.bgforge.dialogEditor", async () => {
+        const active = vscode.window.activeTextEditor;
+        if (!active || !DIALOG_LANGS.has(active.document.languageId)) {
             void vscode.window.showInformationMessage("Open a dialog file (.d / .ssl / .td / .tssl) first.");
             return;
         }
-        docUri = editor.document.uri.toString();
-
-        if (panel) {
-            panel.reveal(vscode.ViewColumn.Beside);
-            void refresh();
-            return;
-        }
-
-        panel = vscode.window.createWebviewPanel("bgforge.dialogEditor", "Dialog Editor", vscode.ViewColumn.Beside, {
-            enableScripts: true,
-            retainContextWhenHidden: true,
-            localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, "client", "out")],
-        });
-        panel.webview.html = buildHtml(panel.webview, context.extensionUri);
-
-        // The webview posts {type:"ready"} once mounted; send the model then.
-        panel.webview.onDidReceiveMessage((msg: { type?: string; model?: DialogModel }) => {
-            if (msg?.type === "ready") void refresh();
-            else if (msg?.type === "save" && msg.model) void save(msg.model);
-        });
-        panel.onDidDispose(() => {
-            panel = undefined;
-            if (refreshTimer) clearTimeout(refreshTimer);
-        });
+        await vscode.commands.executeCommand(
+            "vscode.openWith",
+            active.document.uri,
+            "bgforge.dialogEditor",
+            vscode.ViewColumn.Beside,
+        );
     });
-
-    const onSave = vscode.workspace.onDidSaveTextDocument((doc) => {
-        if (doc.uri.toString() === docUri) scheduleRefresh();
-    });
-    const onChange = vscode.workspace.onDidChangeTextDocument((e) => {
-        if (e.document.uri.toString() === docUri) scheduleRefresh();
-    });
-
-    return vscode.Disposable.from(open, onSave, onChange, { dispose: () => panel?.dispose() });
+    return vscode.Disposable.from(editor, open);
 }
