@@ -13,6 +13,7 @@ import { fileURLToPath } from "node:url";
 import { dispatch } from "../../src/index";
 import type { HostToWebview, WebviewToHost } from "../../../client/src/binary-editor/webview/messages";
 import { installCspGate } from "./csp-gate";
+import { shotPath } from "./out-dir";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURE = path.join(here, "../../../client/testFixture/maps/arcaves.map");
@@ -72,7 +73,7 @@ if (banner) {
     );
 }
 
-await page.screenshot({ path: path.join(here, "shot-map-banner.png"), fullPage: false });
+await page.screenshot({ path: shotPath("shot-map-banner.png"), fullPage: false });
 await browser.close();
 
 console.log("\n=== MAP banner harness results ===");

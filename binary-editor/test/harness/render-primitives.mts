@@ -28,6 +28,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { installCspGate } from "./csp-gate";
+import { shotPath } from "./out-dir";
 import { THEME_VARS } from "./theme-vars";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -223,7 +224,7 @@ await page.locator(".bb-menu-item", { hasText: "Delete" }).click();
 await page.waitForTimeout(150);
 const opAfterMenuDelete = await page.locator("#rowactions-last-op").getAttribute("data-value");
 
-await page.screenshot({ path: path.join(here, "shot-primitives.png") });
+await page.screenshot({ path: shotPath("shot-primitives.png") });
 
 // Diagnostic: enumerate elements carrying a style attribute and any injected <style> tags.
 const diag = await page.evaluate(() => {
@@ -425,4 +426,4 @@ if (!tabsVArrowWorks) {
 }
 assertNoCsp();
 console.log("\nPRIMITIVES CSP OK");
-console.log("screenshot: " + path.join(here, "shot-primitives.png"));
+console.log("screenshot: " + shotPath("shot-primitives.png"));

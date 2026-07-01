@@ -15,6 +15,7 @@ import { fileURLToPath } from "node:url";
 import { dispatch } from "../../src/index";
 import type { HostToWebview, WebviewToHost } from "../../../client/src/binary-editor/webview/messages";
 import { installCspGate } from "./csp-gate";
+import { shotPath } from "./out-dir";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURE = path.join(here, "../../../client/testFixture/maps/arcaves.map");
@@ -92,7 +93,7 @@ const rows = page.locator(".layout-root .vlist .vrow");
 const rowCount = await rows.count();
 check("Global subtab shows variable list rows (>0)", rowCount > 0, `rows=${rowCount}`);
 
-await page.screenshot({ path: path.join(here, "shot-map-vars.png"), fullPage: true });
+await page.screenshot({ path: shotPath("shot-map-vars.png"), fullPage: true });
 
 await browser.close();
 console.log("\n=== MAP variables tab harness results ===");

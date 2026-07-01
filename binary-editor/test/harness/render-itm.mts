@@ -25,6 +25,7 @@ import { fileURLToPath } from "node:url";
 import { dispatch } from "../../src/index";
 import type { HostToWebview, WebviewToHost } from "../../../client/src/binary-editor/webview/messages";
 import { installCspGate } from "./csp-gate";
+import { shotPath } from "./out-dir";
 import { itmParser } from "../../../binary/src/itm/index";
 import { getItmCanonicalDocument, rebuildItmCanonicalDocument } from "../../../binary/src/itm/canonical-reader";
 import { serializeItmCanonicalDocument } from "../../../binary/src/itm/canonical-writer";
@@ -120,7 +121,7 @@ await page.goto("file://" + path.join(here, "app.html"));
 await page.waitForSelector(".layout-root .bb-tabs", { timeout: 5000 });
 await page.waitForTimeout(200);
 // Default tab is General; capture it, then navigate to the tree tab below.
-await page.screenshot({ path: path.join(here, "shot-itm.png"), fullPage: true });
+await page.screenshot({ path: shotPath("shot-itm.png"), fullPage: true });
 async function clickTab(label: string): Promise<void> {
     await page.locator('.bb-tabs.primary button[role="tab"]').filter({ hasText: label }).first().click();
     await page.waitForTimeout(200);
@@ -504,7 +505,7 @@ check(
         ddWidths.attack!.w < ddWidths.damage!.w,
     JSON.stringify(ddWidths),
 );
-await page.screenshot({ path: path.join(here, "shot-itm-tree.png"), fullPage: true });
+await page.screenshot({ path: shotPath("shot-itm-tree.png"), fullPage: true });
 
 // ============================================================
 // Structure ops via the tree (full parity with the dropped Abilities/Effects tabs)

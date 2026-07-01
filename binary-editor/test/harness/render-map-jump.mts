@@ -14,6 +14,7 @@ import { buildFileDerivedParseOptions } from "@bgforge/binary";
 import { dispatch } from "../../src/index";
 import type { HostToWebview, WebviewToHost } from "../../../client/src/binary-editor/webview/messages";
 import { installCspGate } from "./csp-gate";
+import { shotPath } from "./out-dir";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURE = path.join(here, "../../../client/testFixture/maps/denbus1.map");
@@ -129,7 +130,7 @@ if (sidHex !== null) {
         JSON.stringify(visible),
     );
 
-    await page.screenshot({ path: path.join(here, "shot-map-jump.png"), fullPage: true });
+    await page.screenshot({ path: shotPath("shot-map-jump.png"), fullPage: true });
 }
 // The reverse direction (object SID -> script) uses the identical navigate() primitive with the script
 // section key; the link resolution both ways is covered by binary-editor/test/map-cross-links.test.ts.

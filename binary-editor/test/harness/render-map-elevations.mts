@@ -13,6 +13,7 @@ import { fileURLToPath } from "node:url";
 import { dispatch } from "../../src/index";
 import type { HostToWebview, WebviewToHost } from "../../../client/src/binary-editor/webview/messages";
 import { installCspGate } from "./csp-gate";
+import { shotPath } from "./out-dir";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURE = path.join(here, "../../../client/testFixture/maps/artemple.map");
@@ -76,7 +77,7 @@ check(
     JSON.stringify(byLabel("Elevation 2")),
 );
 
-await page.screenshot({ path: path.join(here, "shot-map-elevations.png"), fullPage: true });
+await page.screenshot({ path: shotPath("shot-map-elevations.png"), fullPage: true });
 await browser.close();
 
 console.log("\n=== MAP elevation-tab harness results ===");

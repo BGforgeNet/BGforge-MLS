@@ -28,6 +28,7 @@ import { fileURLToPath } from "node:url";
 import { dispatch } from "../../src/index";
 import type { HostToWebview, WebviewToHost } from "../../../client/src/binary-editor/webview/messages";
 import { installCspGate } from "./csp-gate";
+import { shotPath } from "./out-dir";
 import { creParser } from "../../../binary/src/cre/index";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -122,7 +123,7 @@ await page.waitForSelector(".layout-root .bb-tabs", { timeout: 5000 });
 await page.waitForTimeout(200);
 // CRE is tabbed; capture the default (General) tab immediately so the screenshot exists regardless of
 // the later structure-op steps (which navigate into the Spells / Effects tabs).
-await page.screenshot({ path: path.join(here, "shot-cre.png"), fullPage: true });
+await page.screenshot({ path: shotPath("shot-cre.png"), fullPage: true });
 
 // ---- Dropdown width guard (binary-editor UI guidelines: dropdowns are sized to their OWN longest option on a
 // dedicated dd-{1..5} ch scale, decoupled from the text-input tiers - so a dropdown sharing a column with a
@@ -357,7 +358,7 @@ const memorizedTotal = (): number => {
 // ============================================================
 await clickTab("Spells");
 await page.waitForSelector(".spellbook", { timeout: 3000 });
-await page.screenshot({ path: path.join(here, "shot-cre-spells.png"), fullPage: true });
+await page.screenshot({ path: shotPath("shot-cre-spells.png"), fullPage: true });
 const spellbookTypeTabs = await page.locator(".spellbook .bb-tabs button[role='tab']").allInnerTexts();
 check(
     "spells: spellbook renders a spell-type subtab (Wizard for the mage fixture)",
@@ -545,7 +546,7 @@ check(
 await clickTab("Effects");
 await selectRow(effectsPanel, 0);
 await effectsPanel.locator(".detail .layout-root .field").first().waitFor({ timeout: 3000 });
-await page.screenshot({ path: path.join(here, "shot-cre-effects.png"), fullPage: true });
+await page.screenshot({ path: shotPath("shot-cre-effects.png"), fullPage: true });
 
 await browser.close();
 

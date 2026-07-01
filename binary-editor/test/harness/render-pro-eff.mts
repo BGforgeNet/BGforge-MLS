@@ -23,6 +23,7 @@ import { fileURLToPath } from "node:url";
 import { dispatch } from "../../src/index";
 import type { WebviewToHost, HostToWebview } from "../../../client/src/binary-editor/webview/messages";
 import { installCspGate } from "./csp-gate";
+import { shotPath } from "./out-dir";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, "../../..");
@@ -99,7 +100,7 @@ const proDom = await page.evaluate(() => ({
 check("pro: layout fields render (> 0)", proDom.fields > 0, `count=${proDom.fields}`);
 check("pro: no section tabs (single page)", proDom.tabs === 0, `count=${proDom.tabs}`);
 
-await page.screenshot({ path: path.join(here, "shot-pro.png") });
+await page.screenshot({ path: shotPath("shot-pro.png") });
 
 // ---- EFF pass: reload the same page with a fresh hostUp binding pointing at effOpen ----
 // We need to rebind __hostUp before navigating. The easiest way in Playwright is to expose a new page,
@@ -154,7 +155,7 @@ check("eff: no plain Select remains", effDom.selects === 0, `count=${effDom.sele
 check("eff: flags render (saveType + resistance)", effDom.flagCols >= 2, `count=${effDom.flagCols}`);
 check("eff: no section tabs (single page)", effDom.tabs === 0, `count=${effDom.tabs}`);
 
-await page2.screenshot({ path: path.join(here, "shot-eff.png") });
+await page2.screenshot({ path: shotPath("shot-eff.png") });
 
 await browser.close();
 

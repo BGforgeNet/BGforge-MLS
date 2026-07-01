@@ -18,6 +18,7 @@ import { fileURLToPath } from "node:url";
 import { dispatch } from "../../src/index";
 import type { HostToWebview, WebviewToHost } from "../../../client/src/binary-editor/webview/messages";
 import { installCspGate } from "./csp-gate";
+import { shotPath } from "./out-dir";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const PROTO = path.join(here, "../../../external/fallout/Fallout2_Restoration_Project/data/proto");
@@ -94,7 +95,7 @@ for (const c of CASES) {
     check(`${c.variant}: label/value gap positive`, dom.minGap >= 4, `minGap=${dom.minGap}px`);
 
     // One screenshot per subtype (the single end-of-loop shot only captured the last case).
-    await page.screenshot({ path: path.join(here, `shot-pro-${c.variant.replace(".", "-")}.png`), fullPage: true });
+    await page.screenshot({ path: shotPath(`shot-pro-${c.variant.replace(".", "-")}.png`), fullPage: true });
 }
 
 await browser.close();

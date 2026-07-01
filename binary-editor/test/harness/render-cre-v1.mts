@@ -17,6 +17,7 @@ import { fileURLToPath } from "node:url";
 import { dispatch } from "../../src/index";
 import type { HostToWebview, WebviewToHost } from "../../../client/src/binary-editor/webview/messages";
 import { installCspGate } from "./csp-gate";
+import { shotPath } from "./out-dir";
 import { creParser } from "../../../binary/src/cre/index";
 import { getCreCanonicalDocument, rebuildCreCanonicalDocument } from "../../../binary/src/cre/canonical-reader";
 import { serializeCreCanonicalDocument } from "../../../binary/src/cre/canonical-writer";
@@ -142,7 +143,7 @@ check(
 const opcodeCombobox = await effectsPanel.locator(".detail .bb-combobox-input").count();
 check("v1: opcode detail field is a searchable combobox", opcodeCombobox >= 1, `count=${opcodeCombobox}`);
 
-await page.screenshot({ path: path.join(here, "shot-cre-effects-v1.png"), fullPage: true });
+await page.screenshot({ path: shotPath("shot-cre-effects-v1.png"), fullPage: true });
 
 await browser.close();
 

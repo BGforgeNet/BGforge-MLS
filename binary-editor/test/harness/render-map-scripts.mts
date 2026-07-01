@@ -14,6 +14,7 @@ import { fileURLToPath } from "node:url";
 import { dispatch } from "../../src/index";
 import type { HostToWebview, WebviewToHost } from "../../../client/src/binary-editor/webview/messages";
 import { installCspGate } from "./csp-gate";
+import { shotPath } from "./out-dir";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURE = path.join(here, "../../../client/testFixture/maps/newr2.map");
@@ -116,7 +117,7 @@ if (selected) {
     );
     check("extent paging fields are hidden", extentLabels === 0, `count=${extentLabels}`);
 
-    await page.screenshot({ path: path.join(here, "shot-map-scripts.png"), fullPage: true });
+    await page.screenshot({ path: shotPath("shot-map-scripts.png"), fullPage: true });
 }
 
 await browser.close();

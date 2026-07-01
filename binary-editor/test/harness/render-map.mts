@@ -27,6 +27,7 @@ import { fileURLToPath } from "node:url";
 import { dispatch } from "../../src/index";
 import type { HostToWebview, WebviewToHost } from "../../../client/src/binary-editor/webview/messages";
 import { installCspGate } from "./csp-gate";
+import { shotPath } from "./out-dir";
 import { mapParser } from "../../../binary/src/map/index";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -118,7 +119,7 @@ check(
     (await activeTabLabel()).includes("Header"),
     await activeTabLabel(),
 );
-await page.screenshot({ path: path.join(here, "shot-map.png"), fullPage: true });
+await page.screenshot({ path: shotPath("shot-map.png"), fullPage: true });
 
 // ============================================================
 // Layout assertions
@@ -190,7 +191,7 @@ check(
     (await activeTabLabel()).includes("Objects"),
     await activeTabLabel(),
 );
-await page.screenshot({ path: path.join(here, "shot-map-objects.png"), fullPage: true });
+await page.screenshot({ path: shotPath("shot-map-objects.png"), fullPage: true });
 
 // The object detail splits into "Details" + "Inventory" tabs; the engine Inventory Header bookkeeping group is
 // hidden, so it must NOT appear as a form sub-tab. Open the Inventory tab to reach the mini-list.
@@ -255,7 +256,7 @@ check(
     (await inventoryList.locator(".child-row-detail .form").count()) >= 1,
     "",
 );
-await page.screenshot({ path: path.join(here, "shot-map-inventory.png"), fullPage: true });
+await page.screenshot({ path: shotPath("shot-map-inventory.png"), fullPage: true });
 
 // ============================================================
 // Baseline + structure ops (dispatch-level; the interactive DOM path is covered by ITM/CRE)

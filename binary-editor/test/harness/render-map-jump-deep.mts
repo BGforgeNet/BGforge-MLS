@@ -18,6 +18,7 @@ import { dispatch } from "../../src/index";
 import type { FlatNode } from "../../src/model";
 import type { HostToWebview, WebviewToHost } from "../../../client/src/binary-editor/webview/messages";
 import { installCspGate } from "./csp-gate";
+import { shotPath } from "./out-dir";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURE = path.join(here, "../../../client/testFixture/maps/denbus1.map");
@@ -148,7 +149,7 @@ check(
     landedSid !== null && (parseInt(landedSid, 16) | 0) === (deep.objSid | 0),
     `landed=0x${landedSid} expected=0x${objSidHex} targetIdx=${deep.objIndex}`,
 );
-await page.screenshot({ path: path.join(here, "shot-map-jump-deep.png"), fullPage: true });
+await page.screenshot({ path: shotPath("shot-map-jump-deep.png"), fullPage: true });
 
 await browser.close();
 console.log("\n=== MAP deep-jump harness results ===");

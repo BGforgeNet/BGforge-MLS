@@ -18,6 +18,7 @@ import { fileURLToPath } from "node:url";
 import { dispatch } from "../../src/index";
 import type { WebviewToHost, HostToWebview } from "../../../client/src/binary-editor/webview/messages";
 import { installCspGate } from "./csp-gate";
+import { shotPath } from "./out-dir";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, "../../..");
@@ -154,7 +155,7 @@ if (!target) {
     );
 }
 
-await page.screenshot({ path: path.join(here, "shot-pro-critter.png") });
+await page.screenshot({ path: shotPath("shot-pro-critter.png") });
 await browser.close();
 
 console.log("\n=== PRO critter harness results ===");
