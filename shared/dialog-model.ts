@@ -207,6 +207,11 @@ export interface DialogChoice {
     action?: string;
     target: DialogTarget;
     reaction?: DialogReaction;
+    /**
+     * SSL only: true when the option is a low-INT variant (`NLowOption`/`GLowOption`/`BLowOption`),
+     * shown only to a low-intelligence PC. Set by the SSL adapter; absent for D and for non-Low options.
+     */
+    lowIq?: boolean;
     /** SSL skill/IQ gate level, when present. */
     skill?: number;
     /**
@@ -446,6 +451,9 @@ function stateFromSSL(node: SSLDialogNode): DialogState {
             // A message option (empty target) ends the conversation; an option target is a node.
             target: opt.target ? { kind: "state", stateId: opt.target } : { kind: "exit" },
             reaction: reactionFromType(opt.type),
+            // The `Low` in NLowOption/GLowOption/BLowOption marks a low-INT-only variant; reactionFromType
+            // reads only the first letter, so carry the low-IQ dimension separately or it is lost.
+            lowIq: opt.type.includes("Low") || undefined,
             skill: opt.skill,
             callRange: opt.callRange,
             targetRange: opt.targetRange,

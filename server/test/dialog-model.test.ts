@@ -71,6 +71,34 @@ end
         expect(n2.choices.some((c) => c.target.kind === "exit")).toBe(true);
     });
 
+    it("carries the reaction prefix (G/N/B) and the low-INT variant onto each option", async () => {
+        const ssl = `
+procedure Node001 begin
+    Reply(100);
+    GOption(101, Node002, 4);
+    BOption(102, Node002, 4);
+    NLowOption(103, Node002);
+end
+procedure Node002 begin
+    Reply(200);
+    NMessage(201);
+end
+procedure talk_p_proc begin
+    call Node001;
+end
+`;
+        const model = modelFromSSL(await parseSSL(ssl));
+        const n1 = model.roots[0]!.states.find((s) => s.id === "Node001")!;
+        const byText = (t: string) => n1.choices.find((c) => c.text === t)!;
+        // GOption -> good, BOption -> bad; neither is low-INT.
+        expect(byText("@101")).toMatchObject({ reaction: "good" });
+        expect(byText("@101").lowIq).toBeUndefined();
+        expect(byText("@102")).toMatchObject({ reaction: "bad" });
+        expect(byText("@102").lowIq).toBeUndefined();
+        // NLowOption -> neutral reaction AND the low-INT flag (the dimension reactionFromType drops).
+        expect(byText("@103")).toMatchObject({ reaction: "neutral", lowIq: true });
+    });
+
     it("resolves SSL numeric msgIds to their .msg text via the shared @N ref the renderer reads", async () => {
         // A node's reply/option text is a .msg line id; the renderer resolves it with the
         // same resolveText(@N) path D uses. The adapter must emit a resolvable ref, not a
