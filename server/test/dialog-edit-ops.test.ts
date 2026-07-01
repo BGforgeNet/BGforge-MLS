@@ -51,6 +51,13 @@ describe("dialog-edit-ops (pure model transforms)", () => {
         expect(state(m, "hello").choices[0]!.target).toEqual({ kind: "exit" });
     });
 
+    it("counts inbound GOTOs so a delete can warn before redirecting them to EXIT", () => {
+        const m = model();
+        // `hello`'s first reply does GOTO more; nothing points at `hello`.
+        expect(ops.countInboundGotos(m, "more")).toBe(1);
+        expect(ops.countInboundGotos(m, "hello")).toBe(0);
+    });
+
     it("duplicates a state with a fresh id and NO sourceRange (so save cannot clobber the original)", () => {
         const m = model();
         const original = state(m, "hello");

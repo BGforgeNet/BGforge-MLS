@@ -165,6 +165,38 @@ for (const width of [300, 520, 900]) {
     );
 }
 
+// Delete confirmation: deleting a referenced state used to SILENTLY redirect its inbound
+// transitions to EXIT. Selecting a referenced state and deleting must now pop a confirm naming the
+// redirect, cancel must keep the node, and only confirm removes it.
+await page.goto("file://" + appHtml);
+await page.setViewportSize({ width: 1000, height: 700 });
+await page.evaluate((model) => window.postMessage({ type: "model", model }, "*"), REAL_MODEL);
+await page.waitForSelector(".svelte-flow__node", { timeout: 10_000 });
+const beforeDel = await page.locator(".svelte-flow__node").count();
+await page.locator(".svelte-flow__node", { hasText: "returnBriel" }).first().click();
+await page.getByRole("button", { name: "Delete state" }).click();
+const confirmMsg = (await page.locator(".confirm .confirmmsg").textContent()) ?? "";
+check(
+    "deleting a referenced state confirms and names the EXIT redirect",
+    (await page.locator(".confirm").isVisible()) && /redirected to\s+EXIT/i.test(confirmMsg),
+    JSON.stringify(confirmMsg.trim().slice(0, 120)),
+);
+await page.locator(".confirm .toolbtn:not(.confirmdel)").click(); // Cancel
+const afterCancel = await page.locator(".svelte-flow__node").count();
+await page.locator(".svelte-flow__node", { hasText: "returnBriel" }).first().click();
+await page.getByRole("button", { name: "Delete state" }).click();
+await page.locator(".confirm .confirmdel").click(); // confirm Delete
+await page.waitForTimeout(300);
+const afterDel = await page.locator(".svelte-flow__node").count();
+const returnBrielGone = (await page.locator(".svelte-flow__node", { hasText: "returnBriel" }).count()) === 0;
+check(
+    "cancel keeps the graph; confirm removes the state",
+    // Cancel is a no-op; confirm removes returnBriel (and may prune a now-orphaned external stub too,
+    // so assert the graph shrank and the target node itself is gone rather than an exact delta).
+    afterCancel === beforeDel && afterDel < beforeDel && returnBrielGone,
+    `before=${beforeDel} afterCancel=${afterCancel} afterDel=${afterDel} gone=${returnBrielGone}`,
+);
+
 // Fail-loud error state: a fresh App that receives {type:"error"} shows the message, not a
 // perpetual spinner.
 await page.goto("file://" + appHtml);

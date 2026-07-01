@@ -198,7 +198,12 @@
         {/if}
         {#if structuralEditable}
             <div class="ik">Entry</div>
-            <label class="entry-toggle">
+            <label
+                class="entry-toggle"
+                title={entryRemovable
+                    ? ""
+                    : "This node is a dialog entry wired by force_dialog_start or a conditional call, which the graph cannot safely remove - edit the .ssl source to change its entry status."}
+            >
                 <input
                     type="checkbox"
                     checked={state.isEntry ?? false}

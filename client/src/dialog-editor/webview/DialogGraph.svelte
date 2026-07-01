@@ -97,6 +97,12 @@
     // recomputes as edits mutate editModel (a save path will post this to the host).
     const sourceText = $derived(showSource && editModel.format === "weidu-d" ? modelToD(editModel) : "");
     let showIssues = $state(false);
+    // A delete that would silently redirect inbound transitions to EXIT waits on this confirmation.
+    let confirmDelete = $state<{ state: DialogState; refCount: number } | null>(null);
+    // State ids that were dialog entries in the loaded model. A node made an entry THIS session (not
+    // in this set) can be un-toggled freely - the save simply adds no call, so nothing is orphaned.
+    // Only an ORIGINAL entry needs the removable-call gate below. Snapshotted on each model load.
+    let originalEntryIds = $state<Set<string>>(new Set());
 
     // Inline validation: a dangling GOTO (target state no longer exists) and duplicate
     // labels are the errors that break a saved .d; surface them as you edit.
@@ -398,10 +404,12 @@
         const src = model;
         untrack(() => {
             editModel = cloneModel(src);
+            originalEntryIds = new Set(src.roots.flatMap((r) => r.states).filter((s) => s.isEntry).map((s) => s.id));
             tabPos.clear();
             renderedFile = "";
             activeFile = editModel.roots.find((r) => r.states.length > 0)?.id ?? "";
             selected = null;
+            confirmDelete = null;
             void rebuild({ relayout: true });
         });
     });
@@ -463,7 +471,20 @@
     // `force_dialog_start`/`start_dialog_at_node` (not a talk_p_proc call) has NO `entryCalls` entry, so
     // the writer cannot un-wire it either; require `topLevel === true` (a real, removable entry call).
     const isEntryRemovable = (s: DialogState): boolean =>
-        !s.isEntry || (editModel.entryCalls ?? []).find((ec) => ec.name === s.id)?.topLevel === true;
+        !s.isEntry ||
+        // Made an entry THIS session (not an entry in the loaded model): unset just clears the pending
+        // flag - the save adds no call, so there is nothing to orphan. Fixes the one-way-toggle strand
+        // where a node you just marked as an entry could not be un-marked until save + re-parse.
+        !originalEntryIds.has(s.id) ||
+        (editModel.entryCalls ?? []).find((ec) => ec.name === s.id)?.topLevel === true;
+
+    // Actually remove the state (after the confirm modal, or directly when there are no inbound refs).
+    function performDelete(s: DialogState): void {
+        ops.deleteState(editModel, s);
+        selected = null;
+        confirmDelete = null;
+        void rebuild({ frame: "none" });
+    }
 
     const actions = {
         rename: (newId: string) => {
@@ -491,9 +512,14 @@
         },
         deleteState: () => {
             if (!canDelete(selected)) return; // D: any non-derived; SSL: faithful + delete-eligible
-            ops.deleteState(editModel, selected);
-            selected = null;
-            void rebuild({ frame: "none" });
+            // Warn before deleting if inbound transitions would be silently redirected to EXIT - the
+            // surprising side-effect a modder hit. With no inbound refs, delete straight away.
+            const refs = ops.countInboundGotos(editModel, selected.id);
+            if (refs > 0) {
+                confirmDelete = { state: selected, refCount: refs };
+                return;
+            }
+            performDelete(selected);
         },
         duplicateState: () => {
             if (!structEditable(selected)) return; // D, or a faithful SSL node (shares the source @N refs)
@@ -757,6 +783,20 @@
         </aside>
     {/if}
     </div>
+    {#if confirmDelete}
+        <div class="modalback" role="presentation" onclick={() => (confirmDelete = null)}></div>
+        <div class="confirm" role="alertdialog" aria-modal="true" aria-label="Confirm delete">
+            <div class="confirmmsg">
+                Delete <b>{confirmDelete.state.id}</b>? {confirmDelete.refCount}
+                transition{confirmDelete.refCount === 1 ? "" : "s"} pointing here will be redirected to
+                <b>EXIT</b>.
+            </div>
+            <div class="confirmbtns">
+                <button class="toolbtn" onclick={() => (confirmDelete = null)}>Cancel</button>
+                <button class="toolbtn confirmdel" onclick={() => { if (confirmDelete) performDelete(confirmDelete.state); }}>Delete</button>
+            </div>
+        </div>
+    {/if}
 </div>
 
 <style>
@@ -981,6 +1021,44 @@
         color: #fbbf24;
         font-size: 11px;
         padding: 5px 10px;
+    }
+    /* Confirm modal for a delete that would silently redirect inbound transitions to EXIT. */
+    .modalback {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.45);
+        z-index: 60;
+    }
+    .confirm {
+        position: fixed;
+        z-index: 61;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        max-width: 320px;
+        background: #21242b;
+        border: 1px solid #3a3f4b;
+        border-radius: 8px;
+        padding: 14px;
+        box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+        color: #e8eaed;
+        font-size: 12px;
+    }
+    .confirmmsg {
+        line-height: 1.45;
+        margin-bottom: 12px;
+    }
+    .confirmmsg b {
+        color: #fcd34d;
+    }
+    .confirmbtns {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+    }
+    .confirmdel {
+        color: #fca5a5;
+        border-color: #7f1d1d;
     }
     .toolbtn {
         background: #2b303a;

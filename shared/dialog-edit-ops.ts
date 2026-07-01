@@ -35,6 +35,17 @@ function allChoiceIds(model: DialogModel): Set<string> {
     return ids;
 }
 
+/**
+ * How many transitions across the model point at `stateId` via GOTO. `deleteState` silently
+ * redirects all of them to EXIT (a dangling GOTO would fail to compile), so the editor warns
+ * before deleting when this is non-zero - the redirect is the surprising side-effect a modder hit.
+ */
+export function countInboundGotos(model: DialogModel, stateId: string): number {
+    let n = 0;
+    retargetReferences(model, stateId, () => n++);
+    return n;
+}
+
 /** Apply to every transition whose GOTO target is `oldId`, across all states. */
 function retargetReferences(model: DialogModel, oldId: string, apply: (c: DialogChoice) => void): void {
     for (const r of model.roots) {
