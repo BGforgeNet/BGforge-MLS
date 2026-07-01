@@ -133,7 +133,9 @@
 </script>
 
 <div class="inspector" class:ro={readOnly}>
-    <div class="ih">{state.speaker ?? "NPC"}</div>
+    <!-- SSL nodes carry no speaker, so fall back to the node id (as the cards do) rather than a
+         meaningless "NPC" title; WeiDU D shows its real speaker name. -->
+    <div class="ih">{state.speaker ?? state.id}</div>
 
     {#if state.derivedFrom}
         <div class="ronote">
