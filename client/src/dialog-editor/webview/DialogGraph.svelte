@@ -166,6 +166,16 @@
         else fitViewport();
     }
 
+    // Switching to the Tree view unmounts SvelteFlow (the `{#if viewMode}` block); switching back
+    // remounts it with its internal viewport reset to the origin, which drops the entry node under the
+    // top-left toolbar Panel. Re-frame the entry once the remount has settled (rAF, so the flow exists
+    // and containerW/H are measured) so the first card never sits beneath the toolbar.
+    $effect(() => {
+        if (viewMode !== "graph") return;
+        const raf = requestAnimationFrame(() => focusEntry());
+        return () => cancelAnimationFrame(raf);
+    });
+
     // Resolve each external stub to the tab + state it represents, if that destination is
     // one of our dialog files, and stamp it on the node as `jumpTo` so a click can switch
     // tabs. A stub whose destination is a dialog this .d does not touch stays a dead stub.
