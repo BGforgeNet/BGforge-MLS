@@ -45,11 +45,6 @@
             title: "Performs a side-effect (changes game state).",
             cls: "b-fx",
         },
-        "virtual-sink": {
-            text: "sink",
-            title: "Targets an engine exit/combat sink (Node999/Node998).",
-            cls: "b-sink",
-        },
     };
 
     const primary = $derived(badges[0]);
@@ -112,11 +107,5 @@
         color: #5eead4;
         background: #142a28;
         border-color: #0d9488;
-    }
-    /* virtual sink = red, "leaves dialogue". */
-    .b-sink {
-        color: #fca5a5;
-        background: #2a1717;
-        border-color: #b91c1c;
     }
 </style>

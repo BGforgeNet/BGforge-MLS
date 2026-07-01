@@ -277,14 +277,7 @@ export function resolveText(text: string | undefined, messages?: Record<string, 
  * the author cannot fully trust as authored/editable source. Each is derived purely
  * from IR fields (see stateBadges/choiceBadges) - never guessed.
  */
-export type DialogBadge =
-    | "derived"
-    | "unresolved-external"
-    | "computed"
-    | "random"
-    | "conditional"
-    | "side-effect"
-    | "virtual-sink";
+export type DialogBadge = "derived" | "unresolved-external" | "computed" | "random" | "conditional" | "side-effect";
 
 // Display priority, highest first: the top badge shows inline on the card, the rest
 // move to hover/inspector (see the 1B spec's badge-density decision).
@@ -295,16 +288,11 @@ const BADGE_PRIORITY: readonly DialogBadge[] = [
     "random",
     "conditional",
     "side-effect",
-    "virtual-sink",
 ];
 
 function orderBadges(present: Set<DialogBadge>): DialogBadge[] {
     return BADGE_PRIORITY.filter((b) => present.has(b));
 }
-
-// Engine sink nodes: Node999 is the exit sink, Node998 the combat sink. A transition
-// into one leaves normal dialogue, so it is badged rather than drawn as a real edge.
-const SINK_NODES: ReadonlySet<string> = new Set(["Node999", "Node998"]);
 
 /** Trust/editability badges for a state, ordered by display priority. */
 export function stateBadges(state: DialogState): DialogBadge[] {
@@ -328,7 +316,6 @@ export function stateBadges(state: DialogState): DialogBadge[] {
 export function choiceBadges(choice: DialogChoice): DialogBadge[] {
     const present = new Set<DialogBadge>();
     if (choice.target.kind === "external" && !choice.target.resolved) present.add("unresolved-external");
-    if (choice.target.kind === "state" && SINK_NODES.has(choice.target.stateId)) present.add("virtual-sink");
     if (choice.textKind) present.add(choice.textKind);
     if (choice.condition) present.add("conditional");
     if (choice.action) present.add("side-effect");
