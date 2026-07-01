@@ -136,7 +136,9 @@
         {:else}
             <span class="caret leafdot">&bull;</span>
         {/if}
-        <span class="who">{st.speaker}</span>
+        <!-- WeiDU D shows the speaker name; SSL has none, so show the node id (as the cards do) instead of a
+             meaningless "NPC" on every line. -->
+        <span class="who">{st.speaker ?? st.id}</span>
         {#if st.derivedFrom}<Badge badges={["derived"]} label={st.derivedFrom} small />{/if}
         {#if st.trigger}<span class="cond" title={st.trigger}>[if]</span>{/if}
         <!-- A bundle node's line lives per-branch (below); only a flat node shows its line here. -->
@@ -161,7 +163,6 @@
         {#if b.kind === "if"}<span class="bcond" title={b.condition}>{b.condition}</span>{/if}
     </div>
     <div class="brep" style="--lvl:{depth * 2 + 1}">
-        <span class="who">NPC</span>
         <span class="line" title={b.npc}>{b.npc || "(no line)"}</span>
     </div>
     {#each b.replies as r, i (r.id)}

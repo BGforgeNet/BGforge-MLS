@@ -159,10 +159,10 @@ describe("buildConversationTree", () => {
         expect((bRoot.replies[0]!.target as { kind: string }).kind).toBe("state");
     });
 
-    it("falls back to a generic speaker when the state has none", () => {
+    it("leaves speaker absent when the state has none (SSL); the view falls back to the node id", () => {
         const s: DialogState = { id: "A", text: "hi", choices: [] };
         const { roots } = buildConversationTree(root([s]), undefined, noJump);
-        expect(roots[0]!.speaker).toBe("NPC");
+        expect(roots[0]!.speaker).toBeUndefined();
     });
 
     it("returns no roots for an empty dialog", () => {

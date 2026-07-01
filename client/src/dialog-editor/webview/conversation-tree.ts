@@ -52,7 +52,8 @@ export interface ConvBranch {
 
 export interface ConvState {
     id: string;
-    speaker: string;
+    /** Speaker name (WeiDU D). Absent for SSL, which has no speaker - the row then shows no generic "NPC" label. */
+    speaker?: string;
     /** Resolved NPC line. */
     text: string;
     trigger?: string;
@@ -140,7 +141,7 @@ export function buildConversationTree(
         }
         return {
             id: s.id,
-            speaker: s.speaker ?? "NPC",
+            speaker: s.speaker,
             text: resolveText(s.text, messages),
             trigger: s.trigger,
             derivedFrom: s.derivedFrom,
