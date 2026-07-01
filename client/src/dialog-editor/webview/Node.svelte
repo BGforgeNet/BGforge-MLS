@@ -25,11 +25,14 @@
     // id is editor-synthesized (e.g. "DYEDCON4_2"). Showing that fabricated id is
     // misleading (searching the .d for it finds nothing), so label it by speaker + the
     // message ref instead (e.g. "%DYNAHEIR_BANTER% @109"), and badge the construct.
+    // SSL states carry no speaker (it is always the NPC), so a "NPC - " prefix is pure noise on
+    // every card - show just the node id, which is the real, source-addressable identifier. WeiDU D
+    // states carry a real character name in `speaker`, which IS meaningful, so keep it there.
     function headLabel(state: DialogState): string {
-        if (!state.derivedFrom) return `${state.speaker ?? "NPC"} - ${state.id}`;
+        if (!state.derivedFrom) return state.speaker ? `${state.speaker} - ${state.id}` : state.id;
         const m = /^@(\d+)$/.exec((state.text ?? "").trim());
         const ref = m ? `@${m[1]}` : state.id;
-        return `${state.speaker ?? "NPC"} ${ref}`;
+        return state.speaker ? `${state.speaker} ${ref}` : ref;
     }
 </script>
 
