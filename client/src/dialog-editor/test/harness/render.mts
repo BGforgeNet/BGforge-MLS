@@ -20,11 +20,15 @@
 import { chromium } from "playwright";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { mkdirSync } from "node:fs";
 import { REAL_MODEL } from "./real-model";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const appHtml = path.join(here, "app.html");
-const shot = process.argv[2] ?? path.join(here, "shot.png");
+// Runtime artefacts go under the repo-level tmp/, never the source tree (project convention).
+const outDir = path.resolve(here, "../../../../../tmp");
+mkdirSync(outDir, { recursive: true });
+const shot = process.argv[2] ?? path.join(outDir, "dialog-harness-shot.png");
 
 const results: string[] = [];
 function check(label: string, ok: boolean, detail = ""): void {

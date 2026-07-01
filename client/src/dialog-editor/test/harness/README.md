@@ -24,7 +24,7 @@ direct `DialogGraph` mount: the point of the harness is to exercise what product
 # Rebuild app.html after any webview/Svelte change (bundles harness-main -> App):
 pnpm exec tsx client/src/dialog-editor/test/harness/build.mts
 # Drive the production path (posts the model, asserts render + a Duplicate edit + the
-# error state; fails on any uncaught page error or CSP violation; writes shot.png):
+# error state; fails on any uncaught page error or CSP violation; writes the screenshot to repo tmp/):
 pnpm exec tsx client/src/dialog-editor/test/harness/render.mts [out.png]
 ```
 
