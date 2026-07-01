@@ -197,6 +197,25 @@ check(
     `before=${beforeDel} afterCancel=${afterCancel} afterDel=${afterDel} gone=${returnBrielGone}`,
 );
 
+// Keyboard delete goes through the SAME guarded path: svelte-flow's built-in delete key is disabled
+// (deleteKey={null}), so selecting a referenced node and pressing Backspace must pop the confirm, not
+// silently drop the node and leave dangling GOTOs (the live-review bug).
+await page.goto("file://" + appHtml);
+await page.setViewportSize({ width: 1000, height: 700 });
+await page.evaluate((model) => window.postMessage({ type: "model", model }, "*"), REAL_MODEL);
+await page.waitForSelector(".svelte-flow__node", { timeout: 10_000 });
+const beforeKbd = await page.locator(".svelte-flow__node").count();
+await page.locator(".svelte-flow__node", { hasText: "returnBriel" }).first().click();
+await page.keyboard.press("Backspace");
+await page.waitForTimeout(150);
+const kbdConfirm = await page.locator(".confirm").isVisible();
+const afterKbdNoConfirm = await page.locator(".svelte-flow__node").count();
+check(
+    "Backspace on a selected referenced node confirms (does not silently delete)",
+    kbdConfirm && afterKbdNoConfirm === beforeKbd,
+    `confirm=${kbdConfirm} before=${beforeKbd} after=${afterKbdNoConfirm}`,
+);
+
 // Fail-loud error state: a fresh App that receives {type:"error"} shows the message, not a
 // perpetual spinner.
 await page.goto("file://" + appHtml);

@@ -11,6 +11,7 @@ bgforge-mls-kate*/
 .reports/
 .vscode-test/
 .dev/
+.playwright-mcp/
 
 client/node_modules
 client/out

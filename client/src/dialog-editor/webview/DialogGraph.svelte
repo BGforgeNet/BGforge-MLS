@@ -486,6 +486,21 @@
         void rebuild({ frame: "none" });
     }
 
+    // Single gate for a delete request from ANY path - the inspector Delete button, the tree context
+    // menu, or the Delete/Backspace key. Rejects non-deletable nodes, confirms first when inbound
+    // transitions would be redirected to EXIT, else deletes. svelte-flow's built-in delete key is
+    // disabled (deleteKey={null}) so it cannot bypass this and drop a flow node while leaving the
+    // model's GOTOs dangling.
+    function requestDeleteState(s: DialogState | null): void {
+        if (!canDelete(s)) return; // D: any non-derived; SSL: faithful + delete-eligible
+        const refs = ops.countInboundGotos(editModel, s.id);
+        if (refs > 0) {
+            confirmDelete = { state: s, refCount: refs };
+            return;
+        }
+        performDelete(s);
+    }
+
     const actions = {
         rename: (newId: string) => {
             if (structEditable(selected) && ops.renameState(editModel, selected, newId)) void rebuild({ frame: "none" });
@@ -510,17 +525,7 @@
             ops.setChoiceTarget(selected, choiceId, target);
             void rebuild({ frame: "none" });
         },
-        deleteState: () => {
-            if (!canDelete(selected)) return; // D: any non-derived; SSL: faithful + delete-eligible
-            // Warn before deleting if inbound transitions would be silently redirected to EXIT - the
-            // surprising side-effect a modder hit. With no inbound refs, delete straight away.
-            const refs = ops.countInboundGotos(editModel, selected.id);
-            if (refs > 0) {
-                confirmDelete = { state: selected, refCount: refs };
-                return;
-            }
-            performDelete(selected);
-        },
+        deleteState: () => requestDeleteState(selected),
         duplicateState: () => {
             if (!structEditable(selected)) return; // D, or a faithful SSL node (shares the source @N refs)
             const copy = ops.duplicateState(editModel, selected);
@@ -591,6 +596,14 @@
     // matching the toolbar Save button. This panel is a WebviewPanel, not a CustomEditor, so VS
     // Code's own Ctrl+S does not reach the underlying .d/.ssl document from here - without this the
     // shortcut would be a dead key (or trigger the browser's save-page dialog). No-op with no host.
+    // A text edit is in progress when focus is in an input/textarea/select (or contenteditable) - in
+    // the docked inspector, the source box, etc. Backspace/Delete there edits text, never a node.
+    function isEditableTarget(t: EventTarget | null): boolean {
+        const el = t as HTMLElement | null;
+        const tag = el?.tagName;
+        return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || el?.isContentEditable === true;
+    }
+
     function onWindowKeydown(e: KeyboardEvent): void {
         if (e.key === "Escape" && ctxMenu) {
             closeContext();
@@ -599,6 +612,14 @@
         if (isSaveShortcut(e) && hasHost()) {
             e.preventDefault();
             save();
+            return;
+        }
+        // Delete/Backspace removes the selected state through the guarded path (confirm + inbound-ref
+        // redirect), not svelte-flow's built-in delete (disabled below). Skipped while typing in a
+        // field, and while the confirm modal is already open.
+        if ((e.key === "Delete" || e.key === "Backspace") && selected && !confirmDelete && !isEditableTarget(e.target)) {
+            e.preventDefault();
+            requestDeleteState(selected);
         }
     }
 
@@ -700,7 +721,10 @@
     <div class="body">
     <div class="flowwrap" class:spotlight bind:clientWidth={containerW} bind:clientHeight={containerH}>
         {#if viewMode === "graph"}
-            <SvelteFlow bind:nodes bind:edges bind:viewport {nodeTypes} {edgeTypes} onnodeclick={onNodeClick} onconnect={onConnect} onreconnect={onReconnect} nodesDraggable>
+            <!-- deleteKey={null}: svelte-flow's built-in delete would drop the flow node/edge without
+                 touching the model, leaving dangling GOTOs; node deletion goes through requestDeleteState
+                 (Delete/Backspace in onWindowKeydown) so it is confirmed and redirects inbound refs. -->
+            <SvelteFlow bind:nodes bind:edges bind:viewport {nodeTypes} {edgeTypes} deleteKey={null} onnodeclick={onNodeClick} onconnect={onConnect} onreconnect={onReconnect} nodesDraggable>
                 <Background />
                 <Controls showFitView={false}>
                     <ControlButton onclick={fitViewport} title="Fit view" aria-label="Fit view">
