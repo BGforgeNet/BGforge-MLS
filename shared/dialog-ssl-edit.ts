@@ -554,6 +554,9 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
         const nl = originalText.indexOf("\n", orig.procRange.end);
         const end = nl === -1 ? orig.procRange.end : nl + 1;
         ops.push({ start, end, replacement: "" });
+        // Also splice out the node's forward declaration (`procedure <name>;`), or the file keeps an orphan
+        // decl with no definition (disjoint from the body span above, so the two removals never overlap).
+        if (orig.forwardDeclStmtRange) ops.push(removeStatementSplice(originalText, orig.forwardDeclStmtRange));
     }
 
     // INBOUND CALL REMOVAL: for each deleted node, remove any inbound `call <node>;` statements inside

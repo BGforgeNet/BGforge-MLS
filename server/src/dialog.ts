@@ -85,11 +85,16 @@ export async function parseDialog(
     // file is left with an orphan decl for the old name and the renamed procedure undeclared. Capture each
     // decl's name-token span by procedure name (first wins - a redeclaration is invalid SSL anyway).
     const forwardDeclRanges = new Map<string, { start: number; end: number }>();
+    // Full `procedure Name;` statement span (not just the name token) so a node DELETE can splice the whole
+    // forward declaration out - removing only the name token would leave a broken `procedure ;`.
+    const forwardDeclStmtRanges = new Map<string, { start: number; end: number }>();
     for (const child of root.children) {
         if (child.type !== SyntaxType.ProcedureForward) continue;
         const nameNode = child.childForFieldName("name");
-        if (nameNode && !forwardDeclRanges.has(nameNode.text))
+        if (nameNode && !forwardDeclRanges.has(nameNode.text)) {
             forwardDeclRanges.set(nameNode.text, { start: nameNode.startIndex, end: nameNode.endIndex });
+            forwardDeclStmtRanges.set(nameNode.text, { start: child.startIndex, end: child.endIndex });
+        }
     }
 
     // First pass: parse every dialog procedure into a map; collect entry points
@@ -112,6 +117,8 @@ export async function parseDialog(
         node.procRange = { start: child.startIndex, end: child.endIndex };
         const fwd = forwardDeclRanges.get(procName);
         if (fwd) node.forwardDeclRange = fwd;
+        const fwdStmt = forwardDeclStmtRanges.get(procName);
+        if (fwdStmt) node.forwardDeclStmtRange = fwdStmt;
         parsed.set(procName, node);
     }
 

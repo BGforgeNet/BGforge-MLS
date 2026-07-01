@@ -143,6 +143,12 @@ export interface SSLDialogNode {
      */
     forwardDeclRange?: { start: number; end: number };
     /**
+     * Byte span of the WHOLE forward-declaration statement (`procedure <name>;`), when one exists. A node
+     * DELETE splices this out so the file is not left with an orphan declaration for the removed procedure.
+     * Distinct from `forwardDeclRange` (name token only, for rename). Set by the parser.
+     */
+    forwardDeclStmtRange?: { start: number; end: number };
+    /**
      * One entry per `call <target>;` statement out of this node (NOT deduped - a node may call the same target
      * more than once, e.g. one call per if-branch), carrying each statement's byte span (used to remove the call
      * when its target node is deleted). `callTargets` holds the deduped names; this holds the per-site spans.

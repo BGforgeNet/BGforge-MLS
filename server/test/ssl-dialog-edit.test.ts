@@ -158,6 +158,39 @@ procedure talk_p_proc begin call Node001; end
         // The other option is untouched.
         expect(out).toContain("NOption(102, Node003, 4)");
     });
+
+    it("removes the forward declaration too when a node is deleted (no orphan decl)", async () => {
+        // Real SSL forward-declares every procedure at the top. Deleting a node must remove its
+        // forward declaration as well, or the file keeps an orphan `procedure NodeX;` with no
+        // definition (harmless-to-compile-error depending on sslc). SRC3 above has no forward
+        // decls, so it could not catch this; this fixture mirrors real SSL.
+        const src = `procedure Node001;
+procedure Node002;
+procedure Node003;
+procedure talk_p_proc begin call Node001; end
+procedure Node001 begin
+    NOption(101, Node002, 4);
+    NOption(102, Node003, 4);
+end
+procedure Node002 begin Reply(200); end
+procedure Node003 begin Reply(300); end
+`;
+        const original = modelFromSSL(await parseDialog(src));
+        const edited = structuredCloneModel(original);
+        const root = edited.roots[0]!;
+        root.states = root.states.filter((s) => s.id !== "Node002");
+        for (const s of root.states)
+            for (const c of s.choices)
+                if (c.target.kind === "state" && c.target.stateId === "Node002") c.target = { kind: "exit" };
+        const out = applySSLDialogEdits(src, edited, original);
+        // The delete must leave NO residue of Node002 - definition, forward declaration, or reference.
+        expect(out).not.toContain("procedure Node002 begin"); // definition gone
+        expect(out).not.toContain("procedure Node002;"); // forward declaration gone (the bug)
+        expect(out).not.toMatch(/\bNode002\b/); // zero dangling symbols anywhere
+        // Survivors intact.
+        expect(out).toContain("procedure Node003;");
+        expect(out).toContain("NOption(102, Node003, 4)");
+    });
 });
 
 describe("applySSLDialogEdits - add node", () => {

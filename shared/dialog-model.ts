@@ -161,6 +161,12 @@ export interface DialogState {
      */
     forwardDeclRange?: { start: number; end: number };
     /**
+     * SSL only: byte span of the WHOLE forward-declaration statement (`procedure <name>;`). A node DELETE
+     * splices it out so the file is not left with an orphan declaration. Set by the SSL adapter from
+     * `SSLDialogNode.forwardDeclStmtRange`; absent for D, new nodes, and procedures with no forward decl.
+     */
+    forwardDeclStmtRange?: { start: number; end: number };
+    /**
      * SSL only: true when this node is a dialog entry point (directly called by talk_p_proc or
      * force_dialog_start). Set by the SSL adapter from `SSLDialogData.entryPoints`; absent for D.
      */
@@ -521,6 +527,7 @@ function stateFromSSL(node: SSLDialogNode): DialogState {
         procRange: node.procRange,
         nameRange: node.nameRange,
         forwardDeclRange: node.forwardDeclRange,
+        forwardDeclStmtRange: node.forwardDeclStmtRange,
     };
 }
 
