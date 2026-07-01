@@ -15,8 +15,7 @@ import type { SSLDialogData } from "../../shared/dialog-types";
 
 // 1B honest-projection badge layer: a single badge vocabulary derived from the IR.
 // This slice covers only the signals the IR already carries (derived, conditional,
-// unresolved-external); computed/random/side-effect/virtual-sink need parser work and
-// land in later slices.
+// unresolved-external); computed/random/side-effect need parser work and land in later slices.
 describe("dialog honest-projection badges (1B): available signals", () => {
     it("badges a derived (CHAIN/INTERJECT/EXTEND) state as read-only derived", () => {
         const s: DialogState = { id: "x", text: "@1", choices: [], derivedFrom: "CHAIN" };
@@ -118,7 +117,7 @@ end
     });
 });
 
-describe("dialog badges (1B): side-effect (D action) and virtual-sink", () => {
+describe("dialog badges (1B): side-effect (D action)", () => {
     beforeAll(async () => {
         await initWeiduD();
     });
@@ -134,20 +133,6 @@ END
         const model = modelFromD(parseDDialog(d));
         const st = model.roots.find((r) => r.kind === "dialog")!.states.find((x) => x.id === "s")!;
         expect(choiceBadges(st.choices[0]!)).toContain("side-effect");
-    });
-
-    it("badges a choice targeting an engine sink node (Node999/Node998) as virtual-sink", async () => {
-        const ssl = `
-procedure Node001 begin
-    NOption(100, Node999, 4);
-end
-procedure talk_p_proc begin
-    call Node001;
-end
-`;
-        const model = modelFromSSL(await parseSSL(ssl));
-        const n1 = model.roots[0]!.states.find((s) => s.id === "Node001")!;
-        expect(choiceBadges(n1.choices[0]!)).toContain("virtual-sink");
     });
 });
 
