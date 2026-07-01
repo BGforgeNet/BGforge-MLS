@@ -35,9 +35,71 @@
     $effect(() => {
         if (selectedId) reveal(selectedId);
     });
+
+    // Roving-tabindex keyboard navigation (WAI-ARIA tree pattern): exactly one state row is in the tab
+    // order at a time; arrows move focus between rows and expand/collapse. Before this, each row was a
+    // focusable div wrapping a focusable caret button (two tab stops per row, inconsistent) and the
+    // arrow keys did nothing. Defaults the roving target to the selection, else the first root.
+    let treeFocusId = $state<string>();
+    $effect(() => {
+        if (!treeFocusId || !treeEl?.querySelector(`[data-sid="${CSS.escape(treeFocusId)}"]`)) {
+            treeFocusId = selectedId ?? tree.roots[0]?.id;
+        }
+    });
+
+    // Visible state rows in DOM (top-to-bottom) order, for ArrowUp/Down movement.
+    function visibleRows(): HTMLElement[] {
+        return treeEl ? [...treeEl.querySelectorAll<HTMLElement>('[role="treeitem"]')] : [];
+    }
+    function focusRow(id: string): void {
+        treeFocusId = id;
+        treeEl?.querySelector<HTMLElement>(`[data-sid="${CSS.escape(id)}"]`)?.focus();
+    }
+    function focusRel(id: string, dir: 1 | -1): void {
+        const rows = visibleRows();
+        const i = rows.findIndex((r) => r.dataset.sid === id);
+        const next = rows[i + dir];
+        if (next?.dataset.sid) focusRow(next.dataset.sid);
+    }
+    function onRowKeydown(e: KeyboardEvent, st: ConvState): void {
+        const hasKids = st.replies.length > 0 || (st.branches?.length ?? 0) > 0;
+        const open = !collapsed.has(st.id);
+        switch (e.key) {
+            case "Enter":
+            case " ":
+                e.preventDefault();
+                onSelect(st.id);
+                break;
+            case "ArrowDown":
+                e.preventDefault();
+                focusRel(st.id, 1);
+                break;
+            case "ArrowUp":
+                e.preventDefault();
+                focusRel(st.id, -1);
+                break;
+            case "ArrowRight":
+                // Collapsed with children: expand. Already open: move into the first child row.
+                if (hasKids && !open) {
+                    e.preventDefault();
+                    onToggle(st.id);
+                } else if (hasKids) {
+                    e.preventDefault();
+                    focusRel(st.id, 1);
+                }
+                break;
+            case "ArrowLeft":
+                // Open with children: collapse. (Parent navigation is left to ArrowUp.)
+                if (hasKids && open) {
+                    e.preventDefault();
+                    onToggle(st.id);
+                }
+                break;
+        }
+    }
 </script>
 
-<div class="tree" bind:this={treeEl}>
+<div class="tree" role="tree" aria-label="Conversation tree" bind:this={treeEl}>
     {#each tree.roots as st (st.id)}
         {@render stateBlock(st, 0)}
     {/each}
@@ -52,17 +114,23 @@
         class:sel={st.id === selectedId}
         style="--lvl:{depth * 2}"
         data-sid={st.id}
-        role="button"
-        tabindex="0"
+        role="treeitem"
+        aria-level={depth + 1}
+        aria-selected={st.id === selectedId}
+        aria-expanded={hasChildren ? !collapsed.has(st.id) : undefined}
+        tabindex={st.id === treeFocusId ? 0 : -1}
         onclick={() => onSelect(st.id)}
+        onfocus={() => (treeFocusId = st.id)}
         oncontextmenu={(e) => (e.preventDefault(), onContext(st.id, e.clientX, e.clientY))}
-        onkeydown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onSelect(st.id))}
+        onkeydown={(e) => onRowKeydown(e, st)}
     >
         {#if hasChildren}
             <button
                 class="caret"
                 class:closed={collapsed.has(st.id)}
                 title={collapsed.has(st.id) ? "Expand" : "Collapse"}
+                tabindex={-1}
+                aria-hidden="true"
                 onclick={(e) => (e.stopPropagation(), onToggle(st.id))}>&#9656;</button
             >
         {:else}

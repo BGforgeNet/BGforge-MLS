@@ -216,6 +216,38 @@ check(
     `confirm=${kbdConfirm} before=${beforeKbd} after=${afterKbdNoConfirm}`,
 );
 
+// Tree-view keyboard a11y: state rows are treeitems with roving tabindex; the expand caret is out of
+// the tab order (one focusable per row, not two), and ArrowDown roves focus between rows. Before this,
+// each row was a focusable div wrapping a focusable caret button and the arrow keys did nothing.
+await page.goto("file://" + appHtml);
+await page.setViewportSize({ width: 900, height: 700 });
+await page.evaluate((model) => window.postMessage({ type: "model", model }, "*"), REAL_MODEL);
+await page.waitForSelector(".svelte-flow__node", { timeout: 10_000 });
+await page.getByRole("tab", { name: "Tree" }).click();
+await page.waitForSelector('[role="treeitem"]', { timeout: 5000 });
+const treeA11y = await page.evaluate(() => ({
+    trees: document.querySelectorAll('[role="tree"]').length,
+    items: document.querySelectorAll('[role="treeitem"]').length,
+    // Carets must be out of the tab order so each row is a single tab stop.
+    tabbableCarets: Array.from(document.querySelectorAll(".caret")).filter((c) => (c as HTMLElement).tabIndex >= 0)
+        .length,
+}));
+const firstItem = page.locator('[role="treeitem"]').first();
+await firstItem.focus();
+const firstSid = await firstItem.getAttribute("data-sid");
+await page.keyboard.press("ArrowDown");
+await page.waitForTimeout(80);
+const focusedSid = await page.evaluate(() => (document.activeElement as HTMLElement | null)?.getAttribute("data-sid"));
+check(
+    "tree has tree/treeitem roles, no tabbable carets, and ArrowDown roves focus",
+    treeA11y.trees === 1 &&
+        treeA11y.items > 1 &&
+        treeA11y.tabbableCarets === 0 &&
+        !!focusedSid &&
+        focusedSid !== firstSid,
+    JSON.stringify({ ...treeA11y, firstSid, focusedSid }),
+);
+
 // Fail-loud error state: a fresh App that receives {type:"error"} shows the message, not a
 // perpetual spinner.
 await page.goto("file://" + appHtml);
