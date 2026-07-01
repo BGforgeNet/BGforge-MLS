@@ -246,7 +246,7 @@ export function registerDialogEditor(context: vscode.ExtensionContext, client: L
             "vscode.openWith",
             active.document.uri,
             "bgforge.dialogEditor",
-            vscode.ViewColumn.Beside,
+            vscode.ViewColumn.Active,
         );
     });
     return vscode.Disposable.from(editor, open);
