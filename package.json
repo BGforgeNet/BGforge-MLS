@@ -407,7 +407,7 @@
             },
             {
                 "command": "extension.bgforge.dialogEditor",
-                "title": "BGforge MLS: Dialog Editor (preview)",
+                "title": "BGforge MLS: Dialog Editor",
                 "icon": "$(type-hierarchy)"
             }
         ],
