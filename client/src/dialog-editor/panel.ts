@@ -83,11 +83,9 @@ class DialogEditorProvider implements vscode.CustomTextEditorProvider {
 
         panel.webview.onDidReceiveMessage((msg: { type?: string; model?: DialogModel }) => {
             if (msg?.type === "ready") void this.postModel(document, panel);
-            // "save" is the transitional message name: the webview currently emits a whole-model
-            // "save" from its Save button; a later change moves it to per-action "edit" emission
-            // and removes the button. Both route to the same live-document splice until then.
-            else if ((msg?.type === "edit" || msg?.type === "save") && msg.model)
-                void this.applyEdit(document, panel, msg.model);
+            // The webview emits one "edit" (the whole model) per user action; each applies to the live
+            // document as a single WorkspaceEdit (one native undo step).
+            else if (msg?.type === "edit" && msg.model) void this.applyEdit(document, panel, msg.model);
         });
 
         const changeSub = vscode.workspace.onDidChangeTextDocument((e) => {
