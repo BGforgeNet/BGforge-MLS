@@ -18,13 +18,16 @@ import type {
 
 export type DialogFormat = "weidu-d" | "fallout-ssl";
 
+/** Resolved translation-string entries keyed by id (the .msg/.tra id space both formats share). */
+export type DialogMessages = Record<string, string>;
+
 export interface DialogModel {
     format: DialogFormat;
     /** Whether this format's adapter can serialize edits back (D yes, SSL view-only in v1). */
     editable: boolean;
     roots: DialogRoot[];
     /** Resolved message strings keyed by id; populated downstream, not by the adapter. */
-    messages?: Record<string, string>;
+    messages?: DialogMessages;
     /**
      * SSL only: byte offset just before `talk_p_proc`, where a newly-added node's procedure is spliced in.
      * Set by the SSL adapter; absent for D and when the source has no talk_p_proc.

@@ -180,6 +180,9 @@ class DialogEditorProvider implements vscode.CustomTextEditorProvider {
                 if (!applied) {
                     session.guard.unmarkSelfEdit();
                     void vscode.window.showErrorMessage("Dialog edit could not be applied to the document.");
+                    // The webview model is now ahead of the (unchanged) document; the next successful edit
+                    // re-splices the full model against the live text, so the divergence self-heals. The
+                    // toast above makes the failed edit visible in the meantime.
                     return;
                 }
                 // Faithfulness of the round-trip is covered by unit tests (computeDialogSourceEdit's own

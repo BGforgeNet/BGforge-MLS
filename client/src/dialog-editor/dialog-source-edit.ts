@@ -1,10 +1,7 @@
 import { applyDialogEdits } from "../../../shared/dialog-d-edit";
 import { applySSLDialogEdits } from "../../../shared/dialog-ssl-edit";
 import { allocateNodeIds, allocateOptionIds } from "../../../shared/dialog-ssl-ids";
-import type { DialogModel } from "../../../shared/dialog-model";
-
-/** Resolved translation-string entries keyed by id (the .msg/.tra id space both formats share). */
-export type DialogMessages = Record<string, string>;
+import type { DialogMessages, DialogModel } from "../../../shared/dialog-model";
 
 export interface DialogSourceEdit {
     /** Spliced source text, or null when the structure is unchanged (no source WorkspaceEdit needed). */
