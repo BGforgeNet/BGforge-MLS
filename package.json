@@ -437,6 +437,19 @@
                     }
                 ],
                 "priority": "default"
+            },
+            {
+                "viewType": "bgforge.dialogEditor",
+                "displayName": "BGforge Dialog Editor",
+                "selector": [
+                    {
+                        "filenamePattern": "*.d"
+                    },
+                    {
+                        "filenamePattern": "*.ssl"
+                    }
+                ],
+                "priority": "option"
             }
         ],
         "grammars": [
