@@ -22,4 +22,19 @@ describe("EchoGuard", () => {
         expect(g.shouldReproject()).toBe(false);
         expect(g.shouldReproject()).toBe(true);
     });
+
+    it("unmarkSelfEdit rolls back a markSelfEdit that never got its change event", () => {
+        const g = new EchoGuard();
+        g.markSelfEdit();
+        g.unmarkSelfEdit();
+        expect(g.shouldReproject()).toBe(true); // mark rolled back - no pending self-edit left to suppress it
+    });
+
+    it("unmarkSelfEdit on a zero counter is a safe no-op", () => {
+        const g = new EchoGuard();
+        g.unmarkSelfEdit(); // must not go negative
+        g.markSelfEdit();
+        expect(g.shouldReproject()).toBe(false); // exactly one self-edit is suppressed
+        expect(g.shouldReproject()).toBe(true);
+    });
 });

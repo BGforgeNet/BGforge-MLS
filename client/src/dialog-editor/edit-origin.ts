@@ -21,4 +21,9 @@ export class EchoGuard {
         }
         return true;
     }
+
+    /** Roll back a markSelfEdit() when the WorkspaceEdit it guarded was rejected (no change event will fire). */
+    unmarkSelfEdit(): void {
+        if (this.pendingSelfEdits > 0) this.pendingSelfEdits--;
+    }
 }

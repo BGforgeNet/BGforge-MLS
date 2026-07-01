@@ -15,8 +15,6 @@ import * as vscode from "vscode";
 import { type LanguageClient, type ExecuteCommandParams, ExecuteCommandRequest } from "vscode-languageclient/node";
 import { LSP_COMMAND_PARSE_DIALOG, LSP_COMMAND_SAVE_TRA } from "../../../shared/protocol";
 import { modelFromD, modelFromSSL, type DialogModel } from "../../../shared/dialog-model";
-import { verifyDialogEditApplied } from "../../../shared/dialog-d-edit";
-import { verifySSLEditApplied } from "../../../shared/dialog-ssl-edit";
 import type { DDialogData, SSLDialogData } from "../../../shared/dialog-types";
 import { generateNonce, getCachedJsAsset } from "../webview-assets";
 import { buildDialogWebviewHtml } from "./dialog-webview-html";
@@ -54,8 +52,6 @@ interface Session {
     guard: EchoGuard;
     latest: DialogModel | undefined;
     traTimer: ReturnType<typeof setTimeout> | undefined;
-    /** The model just applied via `applyEdit`, awaiting verification against the next re-parse. */
-    pendingVerify: DialogModel | undefined;
 }
 
 class DialogEditorProvider implements vscode.CustomTextEditorProvider {
@@ -82,7 +78,6 @@ class DialogEditorProvider implements vscode.CustomTextEditorProvider {
             guard: new EchoGuard(),
             latest: undefined,
             traTimer: undefined,
-            pendingVerify: undefined,
         };
         this.sessions.set(panel, session);
 
@@ -141,19 +136,6 @@ class DialogEditorProvider implements vscode.CustomTextEditorProvider {
                         : "The parsed dialog data could not be interpreted.",
             });
         }
-        // Verify a just-applied structural edit round-tripped faithfully.
-        if (model && session?.pendingVerify) {
-            const ssl = session.pendingVerify.format === "fallout-ssl";
-            const verdict = ssl
-                ? verifySSLEditApplied(session.pendingVerify, model)
-                : verifyDialogEditApplied(session.pendingVerify, model);
-            session.pendingVerify = undefined;
-            if (!verdict.ok) {
-                void vscode.window.showWarningMessage(
-                    `Dialog edit may not have applied cleanly: ${verdict.reason}. Review the ${ssl ? ".ssl" : ".d"} source.`,
-                );
-            }
-        }
     }
 
     /**
@@ -173,12 +155,19 @@ class DialogEditorProvider implements vscode.CustomTextEditorProvider {
         if (!session) return;
         if (edited.format === "weidu-d" || edited.format === "fallout-ssl") {
             const text = document.getText();
-            const original = toModel(
-                await this.client.sendRequest(ExecuteCommandRequest.type, {
+            let data: unknown;
+            try {
+                const params: ExecuteCommandParams = {
                     command: LSP_COMMAND_PARSE_DIALOG,
                     arguments: [{ uri: document.uri.toString() }],
-                } as ExecuteCommandParams),
-            );
+                };
+                data = await this.client.sendRequest(ExecuteCommandRequest.type, params);
+            } catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                void vscode.window.showErrorMessage(`Dialog edit failed: ${message}`);
+                return;
+            }
+            const original = toModel(data);
             const { newText, messages } = computeDialogSourceEdit(text, edited, original);
             edited.messages = messages;
             if (newText !== null) {
@@ -189,8 +178,19 @@ class DialogEditorProvider implements vscode.CustomTextEditorProvider {
                     newText,
                 );
                 session.guard.markSelfEdit();
-                await vscode.workspace.applyEdit(ws);
-                session.pendingVerify = edited;
+                const applied = await vscode.workspace.applyEdit(ws);
+                if (!applied) {
+                    session.guard.unmarkSelfEdit();
+                    void vscode.window.showErrorMessage("Dialog edit could not be applied to the document.");
+                    return;
+                }
+                // Faithfulness of the round-trip is covered by unit tests (computeDialogSourceEdit's own
+                // suite, plus the verifySSLEditApplied/verifyDialogEditApplied unit tests) and by live
+                // verification. A runtime cross-check used to live here, but it rode on the
+                // onDidChangeTextDocument re-projection that the echo guard now intentionally suppresses
+                // for self-originated edits - so it could never observe this edit's result - and a
+                // still-pending check would instead misfire against the next external edit's re-parse (a
+                // different model).
             }
         }
         session.latest = edited;
@@ -216,10 +216,11 @@ class DialogEditorProvider implements vscode.CustomTextEditorProvider {
         const messages = session.latest?.messages;
         if (!messages || Object.keys(messages).length === 0) return;
         try {
-            await this.client.sendRequest(ExecuteCommandRequest.type, {
+            const params: ExecuteCommandParams = {
                 command: LSP_COMMAND_SAVE_TRA,
                 arguments: [{ uri: document.uri.toString(), messages }],
-            } as ExecuteCommandParams);
+            };
+            await this.client.sendRequest(ExecuteCommandRequest.type, params);
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             void vscode.window.showErrorMessage(`Saving dialog message text failed: ${message}`);
