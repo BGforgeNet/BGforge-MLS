@@ -5,6 +5,7 @@
         type DialogBranch,
         type DialogChoice,
         type DialogFormat,
+        type DialogReaction,
         type DialogState,
         type DialogTarget,
     } from "../../../../shared/dialog-model";
@@ -39,6 +40,8 @@
             removeReply: (choiceId: string) => void;
             moveReply: (choiceId: string, dir: -1 | 1) => void;
             setTarget: (choiceId: string, target: DialogTarget) => void;
+            setReaction: (choiceId: string, reaction: DialogReaction) => void;
+            setLowIq: (choiceId: string, on: boolean) => void;
             deleteState: () => void;
             duplicateState: () => void;
             addReplyToBranch: (branchIndex: number) => void;
@@ -72,6 +75,12 @@
         if (value === "exit") actions.setTarget(c.id, { kind: "exit" });
         else if (value.startsWith("state:")) actions.setTarget(c.id, { kind: "state", stateId: value.slice("state:".length) });
         // "ext" keeps the existing external target; cross-file retargeting is a later phase.
+    }
+
+    // Narrow the <select>'s raw string value to DialogReaction (rather than casting) - an
+    // out-of-vocabulary value (should not occur; the <option>s are fixed) is a silent no-op.
+    function onReactionChange(c: DialogChoice, value: string): void {
+        if (value === "good" || value === "neutral" || value === "bad") actions.setReaction(c.id, value);
     }
 
     function setWeight(v: string): void {
@@ -270,6 +279,24 @@
                     <option value={`state:${id}`}>&#8594; {id}</option>
                 {/each}
             </select>
+            {#if ssl && c.reaction !== undefined}
+                <!-- SSL only: reaction (N/G/B) and the low-INT variant are both carried in the
+                     option's source macro name (NOption/GLowOption/...; dialog-ssl-serialize.ts) -
+                     editing either rewrites that macro call in place on save. Not shown for D,
+                     which has no reaction/low-INT concept. -->
+                <div class="rctrow">
+                    <span class="rctlbl">Reaction</span>
+                    <select class="iv rct" disabled={!structuralEditable} value={c.reaction} onchange={(e) => onReactionChange(c, e.currentTarget.value)}>
+                        <option value="good">Good</option>
+                        <option value="neutral">Neutral</option>
+                        <option value="bad">Bad</option>
+                    </select>
+                    <label class="lowlbl">
+                        <input type="checkbox" checked={Boolean(c.lowIq)} disabled={!structuralEditable} onchange={(e) => actions.setLowIq(c.id, e.currentTarget.checked)} />
+                        Low INT
+                    </label>
+                </div>
+            {/if}
         </div>
     {/snippet}
 
@@ -520,6 +547,37 @@
     }
     .iv.tgt {
         color: #cbd5e1;
+    }
+    /* Reaction (N/G/B) + low-INT toggle: one compact row, checkbox pinned to the right
+       edge (matches .branchremove's margin-left: auto). */
+    .rctrow {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 4px;
+        flex-wrap: wrap;
+    }
+    .rctlbl {
+        color: #9aa0a6;
+        font-size: 9px;
+        text-transform: uppercase;
+    }
+    .iv.rct {
+        width: auto;
+        padding: 2px 4px;
+        color: #cbd5e1;
+    }
+    .lowlbl {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        color: #cbd5e1;
+        font-size: 10px;
+        cursor: pointer;
+        margin-left: auto;
+    }
+    .lowlbl input {
+        margin: 0;
     }
     /* SSL side-effects: teal, matching the side-effect badge. Read-only, so a plain box. */
     .iv.sfx {

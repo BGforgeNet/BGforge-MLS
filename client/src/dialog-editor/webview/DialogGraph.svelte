@@ -14,7 +14,7 @@
     import * as ops from "../../../../shared/dialog-edit-ops";
     import { eligibleToDelete } from "../../../../shared/dialog-ssl-edit";
     import { hasHost, postToHost } from "./host";
-    import type { DialogModel, DialogState, DialogTarget } from "../../../../shared/dialog-model";
+    import type { DialogModel, DialogReaction, DialogState, DialogTarget } from "../../../../shared/dialog-model";
 
     let { model }: { model: DialogModel } = $props();
 
@@ -529,6 +529,16 @@
         setTarget: (choiceId: string, target: DialogTarget) => {
             if (!structEditable(selected)) return; // Tier 1 retarget: D or faithful SSL
             ops.setChoiceTarget(selected, choiceId, target);
+            void rebuild({ frame: "none" });
+        },
+        setReaction: (choiceId: string, reaction: DialogReaction) => {
+            if (!structEditable(selected)) return; // SSL only: reaction (N/G/B) macro rewrite
+            ops.setChoiceReaction(selected, choiceId, reaction);
+            void rebuild({ frame: "none" });
+        },
+        setLowIq: (choiceId: string, on: boolean) => {
+            if (!structEditable(selected)) return; // SSL only: low-INT variant (arg-count) rewrite
+            ops.setChoiceLowIq(selected, choiceId, on);
             void rebuild({ frame: "none" });
         },
         deleteState: () => requestDeleteState(selected),

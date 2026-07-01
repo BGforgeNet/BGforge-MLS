@@ -170,7 +170,7 @@ describe("computeDialogSourceEdit - fallout-ssl id allocation", () => {
         // The new node's procedure is spliced in with its allocated reply id (201: first free after 101/200).
         expect(result.newText).toContain("procedure Node050 begin\n    Reply(201);\nend");
         // The new option is spliced into Node001 with its allocated id (202), after the surviving option.
-        expect(result.newText).toContain("NOption(101, Node002, 4);\n    NOption(202, Node050);");
+        expect(result.newText).toContain("NOption(101, Node002, 4);\n    NOption(202, Node050, 0);");
 
         // Both newly-allocated ids merged into messages, alongside the pre-existing ones.
         expect(result.messages).toEqual({

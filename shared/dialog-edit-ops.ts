@@ -8,7 +8,15 @@
  * except where correctness demands it (see `duplicateState`).
  */
 
-import type { DialogBranch, DialogChoice, DialogModel, DialogRoot, DialogState, DialogTarget } from "./dialog-model";
+import type {
+    DialogBranch,
+    DialogChoice,
+    DialogModel,
+    DialogReaction,
+    DialogRoot,
+    DialogState,
+    DialogTarget,
+} from "./dialog-model";
 
 export function stateIdsOf(model: DialogModel): string[] {
     return model.roots.flatMap((r) => r.states.map((s) => s.id));
@@ -176,6 +184,21 @@ export function moveReply(state: DialogState, choiceId: string, dir: -1 | 1): vo
 export function setChoiceTarget(state: DialogState, choiceId: string, target: DialogTarget): void {
     const c = state.choices.find((ch) => ch.id === choiceId);
     if (c) c.target = target;
+}
+
+/** SSL only: change an option's reaction (N/G/B) in place. The SSL splicer (dialog-ssl-edit.ts) picks
+ * this up as a macro-name rewrite on save. */
+export function setChoiceReaction(state: DialogState, choiceId: string, reaction: DialogReaction): void {
+    const c = state.choices.find((ch) => ch.id === choiceId);
+    if (c) c.reaction = reaction;
+}
+
+/** SSL only: toggle an option's low-INT variant (`*LowOption`) in place. Stored as `true`/`undefined`
+ * (never a literal `false`), matching the SSL adapter's own convention for this field (see
+ * `stateFromSSL` in dialog-model.ts) so an unset/off option looks identical either way. */
+export function setChoiceLowIq(state: DialogState, choiceId: string, lowIq: boolean): void {
+    const c = state.choices.find((ch) => ch.id === choiceId);
+    if (c) c.lowIq = lowIq || undefined;
 }
 
 /**

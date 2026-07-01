@@ -35,9 +35,10 @@ procedure talk_p_proc begin call Node001; end
         const newSrc = applySSLDialogEdits(SRC, edited, original);
         const newMsg = appendMsgEntries(rewriteMsgEntries(MSG, allMessages), allMessages); // == writeMessages(.msg)
 
-        // Id is max(100,101,200)+1 = 201; the .ssl gets a bare-number NOption, the .msg gets the text.
+        // Id is max(100,101,200)+1 = 201; the .ssl gets a bare-number NOption (skill defaults to 0 -
+        // no INT gate - since the new option carries none), the .msg gets the text.
         expect(created).toEqual({ "201": "Brand new option" });
-        expect(newSrc).toContain("NOption(201, Node002);");
+        expect(newSrc).toContain("NOption(201, Node002, 0);");
         expect(newMsg).toContain("{201}{}{Brand new option}");
 
         // The written .ssl re-parses and Node001 now has two real options.

@@ -71,6 +71,99 @@ procedure talk_p_proc begin call Node001; end
     });
 });
 
+describe("applySSLDialogEdits - reaction / low-INT variant", () => {
+    it("rewrites the macro's reaction prefix, preserving args (msg id, target, skill) byte-exact", async () => {
+        const original = modelFromSSL(await parseDialog(SRC));
+        const edited = structuredCloneModel(original);
+        edited.roots[0]!.states.find((s) => s.id === "Node001")!.choices[0]!.reaction = "good";
+        const out = applySSLDialogEdits(SRC, edited, original);
+        expect(out).toContain("GOption(101, Node002, 4)");
+        expect(out).toContain("NOption(102, Node003, 4)"); // the other option untouched
+        expect(out).not.toContain("NOption(101"); // the macro name actually changed, not just appended-to
+
+        const reparsed = modelFromSSL(await parseDialog(out));
+        const opt = reparsed.roots[0]!.states.find((s) => s.id === "Node001")!.choices[0]!;
+        expect(opt.reaction).toBe("good");
+        expect(opt.skill).toBe(4);
+        expect(verifySSLEditApplied(edited, reparsed)).toEqual({ ok: true });
+    });
+
+    it("toggles low-INT ON: drops the IQ arg (Low is 2-arg, IQ hardcoded to the engine's LOW_IQ)", async () => {
+        const original = modelFromSSL(await parseDialog(SRC));
+        const edited = structuredCloneModel(original);
+        edited.roots[0]!.states.find((s) => s.id === "Node001")!.choices[0]!.lowIq = true;
+        const out = applySSLDialogEdits(SRC, edited, original);
+        expect(out).toContain("NLowOption(101, Node002)");
+        expect(out).not.toContain("NLowOption(101, Node002, 4)"); // arg dropped, not merely appended-to
+
+        const reparsed = modelFromSSL(await parseDialog(out));
+        const opt = reparsed.roots[0]!.states.find((s) => s.id === "Node001")!.choices[0]!;
+        expect(opt.lowIq).toBe(true);
+        expect(opt.reaction).toBe("neutral");
+        expect(verifySSLEditApplied(edited, reparsed)).toEqual({ ok: true });
+    });
+
+    it("toggles low-INT OFF: inserts the existing skill (or 0 when absent) as the IQ arg", async () => {
+        const SRC_LOW = `procedure Node001 begin
+    NLowOption(101, Node002);
+end
+procedure Node002 begin Reply(200); end
+procedure talk_p_proc begin call Node001; end
+`;
+        const original = modelFromSSL(await parseDialog(SRC_LOW));
+        const edited = structuredCloneModel(original);
+        const opt = edited.roots[0]!.states.find((s) => s.id === "Node001")!.choices[0]!;
+        expect(opt.skill).toBeUndefined(); // NLowOption carries no explicit skill arg to preserve
+        opt.lowIq = false;
+        const out = applySSLDialogEdits(SRC_LOW, edited, original);
+        expect(out).toContain("NOption(101, Node002, 0)");
+
+        const reparsed = modelFromSSL(await parseDialog(out));
+        const reOpt = reparsed.roots[0]!.states.find((s) => s.id === "Node001")!.choices[0]!;
+        expect(reOpt.lowIq).toBeUndefined();
+        expect(reOpt.skill).toBe(0);
+        expect(verifySSLEditApplied(edited, reparsed)).toEqual({ ok: true });
+    });
+
+    it("applies a reaction change and a low-INT toggle together (e.g. N -> GLow) in one save", async () => {
+        const original = modelFromSSL(await parseDialog(SRC));
+        const edited = structuredCloneModel(original);
+        const opt = edited.roots[0]!.states.find((s) => s.id === "Node001")!.choices[0]!;
+        opt.reaction = "good";
+        opt.lowIq = true;
+        const out = applySSLDialogEdits(SRC, edited, original);
+        expect(out).toContain("GLowOption(101, Node002)");
+
+        const reparsed = modelFromSSL(await parseDialog(out));
+        const reOpt = reparsed.roots[0]!.states.find((s) => s.id === "Node001")!.choices[0]!;
+        expect(reOpt.reaction).toBe("good");
+        expect(reOpt.lowIq).toBe(true);
+        expect(verifySSLEditApplied(edited, reparsed)).toEqual({ ok: true });
+    });
+
+    it("keeps the enclosing if-condition intact when only the reaction changes on a conditional option", async () => {
+        const SRC_COND = `procedure Node001 begin
+    if (global_var(GVAR_X) == 1) then NOption(101, Node002, 4);
+end
+procedure Node002 begin Reply(200); end
+procedure talk_p_proc begin call Node001; end
+`;
+        const original = modelFromSSL(await parseDialog(SRC_COND));
+        const edited = structuredCloneModel(original);
+        const opt = edited.roots[0]!.states.find((s) => s.id === "Node001")!.choices[0]!;
+        expect(opt.condition).toContain("GVAR_X");
+        opt.reaction = "bad";
+        const out = applySSLDialogEdits(SRC_COND, edited, original);
+        expect(out).toContain("if (global_var(GVAR_X) == 1) then BOption(101, Node002, 4);");
+
+        const reparsed = modelFromSSL(await parseDialog(out));
+        const reOpt = reparsed.roots[0]!.states.find((s) => s.id === "Node001")!.choices[0]!;
+        expect(reOpt.reaction).toBe("bad");
+        expect(reOpt.condition).toContain("GVAR_X");
+        expect(verifySSLEditApplied(edited, reparsed)).toEqual({ ok: true });
+    });
+});
+
 describe("applySSLDialogEdits - add / remove", () => {
     const SRC2 = `procedure Node001 begin
     NOption(101, Node002, 4);
@@ -121,10 +214,10 @@ procedure talk_p_proc begin call Node001; end
         expect(out).not.toContain("NOption(102"); // removed
         // No overlap corruption: Node001 reads cleanly with opt0 + the new option.
         expect(out).toContain(
-            "procedure Node001 begin\n    NOption(101, Node002, 4);\n    NOption(500, Node002);\nend",
+            "procedure Node001 begin\n    NOption(101, Node002, 4);\n    NOption(500, Node002, 0);\nend",
         );
         expect(out).toContain("NOption(101, Node002, 4)"); // survivor intact
-        expect(out).toContain("NOption(500, Node002);"); // added, well-formed (no overlap corruption)
+        expect(out).toContain("NOption(500, Node002, 0);"); // added, well-formed (no overlap corruption)
         // The whole talk_p_proc / other procedures are still intact (no byte mangling from an overlap).
         expect(out).toContain("procedure talk_p_proc begin call Node001; end");
     });
@@ -1212,7 +1305,7 @@ procedure talk_p_proc begin call Node002; end
         const out = applySSLDialogEdits(SRC_SIF, edited, original);
         // New if block is present.
         expect(out).toContain("if (local_var(LVAR_1) == 1) then begin");
-        expect(out).toContain("NOption(301, Node999)");
+        expect(out).toContain("NOption(301, Node999, 0)");
         // New if appears AFTER the existing if.
         const i0 = out.indexOf("if (local_var(LVAR_0)");
         const i1 = out.indexOf("if (local_var(LVAR_1)");
@@ -1246,7 +1339,7 @@ procedure talk_p_proc begin call Node002; end
         const out = applySSLDialogEdits(SRC_SIF, edited, original);
         // Else block appears in the output.
         expect(out).toContain("else begin");
-        expect(out).toContain("NOption(301, Node999)");
+        expect(out).toContain("NOption(301, Node999, 0)");
         // The else is injected after the then-block end - the else `end` appears before the proc `end`.
         const iElse = out.indexOf("else begin");
         const iEnd = out.lastIndexOf("\nend\n");
@@ -1447,7 +1540,7 @@ procedure talk_p_proc begin call Node002; end
 
         // New branch is present with its option.
         expect(out).toContain("if (local_var(LVAR_2) == 2) then begin");
-        expect(out).toContain("NOption(401, Node999)");
+        expect(out).toContain("NOption(401, Node999, 0)");
 
         // New branch appears AFTER the surviving branch (correct anchor placement).
         const iLVAR0 = out.indexOf("if (local_var(LVAR_0)");

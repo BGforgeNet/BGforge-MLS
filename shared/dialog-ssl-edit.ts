@@ -20,6 +20,12 @@
  * `procedure` name token + every reference - faithful-node option targets via `nodeOps`, calls/non-faithful
  * option targets/entry calls via the RENAME block, split to avoid double-splicing a span). Adding/removing a
  * CONDITIONAL option (inside an `if`) and condition editing remain deferred.
+ *
+ * Reaction (N/G/B) and low-INT variant edits rewrite a surviving option's macro call in place, sharing
+ * `survivorReplacement` with retarget so all three compose in one save: a reaction-only change swaps just
+ * the macro-name token (leaving the msg-id/target/skill args byte-exact); a low-INT toggle rebuilds the
+ * whole call (the Low/non-Low forms differ in arg count - see `serializeSSLOptionCall`), preserving the
+ * msg-id argument's exact source text via `splitCallArgs`.
  */
 
 import type { DialogBranch, DialogChoice, DialogModel, DialogState, DialogTarget } from "./dialog-model";
@@ -29,7 +35,9 @@ import {
     serializeSSLBranch,
     serializeSSLConditionalOption,
     serializeSSLOption,
+    serializeSSLOptionCall,
     serializeSSLProcedure,
+    sslOptionMacro,
 } from "./dialog-ssl-serialize";
 
 /** Options of a state in source order: the choices that carry a `callRange` (call transitions don't). */
@@ -68,10 +76,42 @@ function removeStatementSplice(text: string, stmtRange: { start: number; end: nu
     return { start, end, replacement: "" };
 }
 
+/** The identifier token at the very start of a call span (its macro name, e.g. "NOption"). */
+function macroNameOf(callText: string): string {
+    return /^[A-Za-z_][A-Za-z0-9_]*/.exec(callText)?.[0] ?? "";
+}
+
+/**
+ * Split a call expression's parenthesized argument list into top-level argument texts, respecting
+ * nested parens - so a `random(1, 2, 3)` msg-id argument is not split on its own internal commas.
+ * `call` is a callRange slice, e.g. `NOption(101, Node002, 4)`. Returns `[]` if `call` has no parens.
+ */
+function splitCallArgs(call: string): string[] {
+    const open = call.indexOf("(");
+    const close = call.lastIndexOf(")");
+    if (open === -1 || close === -1 || close <= open) return [];
+    const inner = call.slice(open + 1, close);
+    const args: string[] = [];
+    let depth = 0;
+    let start = 0;
+    for (let i = 0; i < inner.length; i++) {
+        const ch = inner[i];
+        if (ch === "(") depth++;
+        else if (ch === ")") depth--;
+        else if (ch === "," && depth === 0) {
+            args.push(inner.slice(start, i).trim());
+            start = i + 1;
+        }
+    }
+    args.push(inner.slice(start).trim());
+    return args;
+}
+
 /**
  * Compute the text to write into a slot for one surviving option: retarget when the target changed,
- * or redirect to NMessage when the target node was deleted. Lifted from `nodeOps` so `bundleNodeOps`
- * can share the same retarget/redirect logic without duplication.
+ * redirect to NMessage when the target node was deleted, and rewrite the reaction (N/G/B) and/or the
+ * low-INT variant when either changed vs the original. Lifted from `nodeOps` so `bundleNodeOps` can
+ * share the same logic without duplication.
  */
 function survivorReplacement(text: string, moved: DialogChoice, movedOrig: DialogChoice): string {
     const origCall = text.slice(movedOrig.callRange!.start, movedOrig.callRange!.end);
@@ -86,12 +126,33 @@ function survivorReplacement(text: string, moved: DialogChoice, movedOrig: Dialo
     }
     const newTarget = moved.target.stateId;
     const oldTarget = text.slice(movedOrig.targetRange!.start, movedOrig.targetRange!.end);
+    const lowChanged = Boolean(moved.lowIq) !== Boolean(movedOrig.lowIq);
+
+    if (lowChanged) {
+        // The Low/non-Low forms differ in arg count (2-arg vs 3-arg), so a token-level patch can't
+        // express the change - rebuild the whole call. splitCallArgs preserves the msg-id argument's
+        // exact source text (not just its numeric value) so a computed/random msgId expression
+        // round-trips untouched; only the macro name and arg list are rewritten.
+        const msgIdText = splitCallArgs(origCall)[0];
+        return msgIdText !== undefined ? serializeSSLOptionCall(moved, msgIdText, newTarget) : origCall;
+    }
+
+    // Arg count is unchanged here: patch the target (if retargeted) and/or the macro name (if the
+    // reaction changed) as independent, order-safe token replacements, in "current string" coordinates
+    // so a target replacement (interior) and a macro replacement (prefix) never invalidate each
+    // other's offsets - never touching the msg-id/skill args, so an untouched expression there (a
+    // computed msgId, a non-decimal skill literal) survives byte-exact.
+    let call = origCall;
     if (newTarget !== oldTarget) {
         const relStart = movedOrig.targetRange!.start - movedOrig.callRange!.start;
         const relEnd = movedOrig.targetRange!.end - movedOrig.callRange!.start;
-        return origCall.slice(0, relStart) + newTarget + origCall.slice(relEnd);
+        call = call.slice(0, relStart) + newTarget + call.slice(relEnd);
     }
-    return origCall;
+    if ((moved.reaction ?? "neutral") !== (movedOrig.reaction ?? "neutral")) {
+        const macro = macroNameOf(call);
+        if (macro) call = `${sslOptionMacro(moved)}${call.slice(macro.length)}`;
+    }
+    return call;
 }
 
 /**
@@ -707,14 +768,17 @@ export function verifySSLEditApplied(intended: DialogModel, actual: DialogModel)
     for (const a of actual.roots.flatMap((r) => r.states)) {
         const s = intendedById.get(a.id);
         if (!s) return { ok: false, reason: `unexpected node "${a.id}" in the saved file` };
-        // Encode target + condition per option so a condition that did not land (edit-text, wrap,
-        // unwrap) is caught alongside a mismatched target. Canonicalize the condition through
-        // serializeCond (the same paren-normalization the writer applies on wrap) then strip
-        // whitespace, so a bare typed condition (`X`) matches its written/reparsed form (`(X)`) and is
-        // not flagged as a failed save. An option with no condition contributes an empty segment on
-        // both sides, so existing target-only tests remain unaffected.
+        // Encode target + condition + reaction + low-INT per option so a condition that did not land
+        // (edit-text, wrap, unwrap) or a reaction/lowIq rewrite that silently failed is caught
+        // alongside a mismatched target. Canonicalize the condition through serializeCond (the same
+        // paren-normalization the writer applies on wrap) then strip whitespace, so a bare typed
+        // condition (`X`) matches its written/reparsed form (`(X)`) and is not flagged as a failed
+        // save. An option with no condition contributes an empty segment on both sides, so existing
+        // target-only tests remain unaffected; reaction defaults to "neutral" and lowIq to "std" the
+        // same way the model does, so an untouched option's key is unaffected by this extension.
         const normCond = (c?: string): string => (c && c.trim() !== "" ? serializeCond(c).replaceAll(/\s+/g, "") : "");
-        const key = (c: DialogChoice): string => `${targetKey(c.target)}@${normCond(c.condition)}`;
+        const key = (c: DialogChoice): string =>
+            `${targetKey(c.target)}@${normCond(c.condition)}@${c.reaction ?? "neutral"}@${c.lowIq ? "low" : "std"}`;
         const want = s.choices.map(key).join("|");
         const got = a.choices.map(key).join("|");
         if (want !== got)

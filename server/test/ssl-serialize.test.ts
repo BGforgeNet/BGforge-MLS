@@ -13,9 +13,38 @@ describe("serializeSSLOption", () => {
         expect(serializeSSLOption(c, 102)).toBe("NOption(102, Node002, 4);");
     });
 
-    it("omits the skill argument when absent", () => {
+    it("defaults the skill argument to 0 (no INT gate) when absent - non-Low is always 3-arg", () => {
         const c: DialogChoice = { id: "x", text: "@102", target: { kind: "state", stateId: "Node002" } };
-        expect(serializeSSLOption(c, 102)).toBe("NOption(102, Node002);");
+        expect(serializeSSLOption(c, 102)).toBe("NOption(102, Node002, 0);");
+    });
+
+    it("emits the reaction prefix from choice.reaction (default neutral)", () => {
+        const good: DialogChoice = {
+            id: "x",
+            text: "@102",
+            target: { kind: "state", stateId: "Node002" },
+            reaction: "good",
+        };
+        const bad: DialogChoice = {
+            id: "x",
+            text: "@102",
+            target: { kind: "state", stateId: "Node002" },
+            reaction: "bad",
+        };
+        expect(serializeSSLOption(good, 102)).toBe("GOption(102, Node002, 0);");
+        expect(serializeSSLOption(bad, 102)).toBe("BOption(102, Node002, 0);");
+    });
+
+    it("emits the 2-arg Low form (no skill arg) when lowIq is set", () => {
+        const c: DialogChoice = {
+            id: "x",
+            text: "@102",
+            target: { kind: "state", stateId: "Node002" },
+            reaction: "good",
+            lowIq: true,
+            skill: 4, // ignored for the Low form - the engine hardcodes LOW_IQ, there is no arg slot for it
+        };
+        expect(serializeSSLOption(c, 102)).toBe("GLowOption(102, Node002);");
     });
 
     it("serializes an exit option as a terminal NMessage(<id>);", () => {

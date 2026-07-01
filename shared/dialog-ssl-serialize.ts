@@ -1,19 +1,45 @@
-import type { DialogChoice, DialogState } from "./dialog-model";
+import type { DialogChoice, DialogReaction, DialogState } from "./dialog-model";
+
+const REACTION_PREFIX: Record<DialogReaction, string> = { good: "G", neutral: "N", bad: "B" };
+
+/**
+ * The SSL macro name for a dialog-option choice: the reaction prefix (default neutral) plus `Low` when
+ * the choice is the low-INT variant. Shared by `serializeSSLOptionCall` (below) and the write-back
+ * splicer's in-place reaction/lowIq rewrite (`dialog-ssl-edit.ts`), so the macro-name rule lives once.
+ */
+export function sslOptionMacro(choice: DialogChoice): string {
+    return `${REACTION_PREFIX[choice.reaction ?? "neutral"]}${choice.lowIq ? "Low" : ""}Option`;
+}
+
+/**
+ * Emit the bare call expression (no trailing `;`) for a dialog option targeting a node. The engine's
+ * `*LowOption` macros are 2-arg (`NLowOption(msg, target)`) - the IQ gate is hardcoded to the engine's
+ * LOW_IQ constant, so there is no explicit third arg; the non-Low macros are always 3-arg
+ * (`NOption(msg, target, skill)`, `skill` 0 meaning no INT gate). `msgIdText` is the already-formatted
+ * msg-id argument text - a bare number for a newly-serialized option, or the original source expression
+ * preserved verbatim by the write-back splicer, so a computed/`random(...)` msgId round-trips intact.
+ */
+export function serializeSSLOptionCall(choice: DialogChoice, msgIdText: string, target: string): string {
+    const macro = sslOptionMacro(choice);
+    return choice.lowIq
+        ? `${macro}(${msgIdText}, ${target})`
+        : `${macro}(${msgIdText}, ${target}, ${choice.skill ?? 0})`;
+}
 
 /**
  * Emit the SSL source for a NEW dialog option, given its already-allocated `.msg` id. A node target becomes
- * `NOption(<id>, <Node>, <skill?>);`; an exit/terminal becomes `NMessage(<id>);`. The msg arg is the bare
- * numeric id (the `.ssl` references ids by number; `@N` is only the model's display form). Tier 2 emits the
- * neutral `N*` variant only - G/B/Low variants and `Reply` lines are not generated. The serializer emits a
- * canonical single statement; surrounding whitespace/indentation is the caller's (the insertion splice).
+ * `<Macro>(<id>, <Node>[, <skill>]);` (see `serializeSSLOptionCall`); an exit/terminal becomes `NMessage(<id>);`.
+ * The msg arg is the bare numeric id (the `.ssl` references ids by number; `@N` is only the model's display
+ * form). The serializer emits a canonical single statement; surrounding whitespace/indentation is the
+ * caller's (the insertion splice).
  *
- * An external-target option is not a Tier 2 add case (you cannot add a cross-file option from the graph), so
- * any non-state target is treated as a terminal `NMessage`.
+ * An external-target option is not an add case (you cannot add a cross-file option from the graph), so
+ * any non-state target is treated as a terminal `NMessage` - reaction is not modeled for terminal messages,
+ * so this always emits the neutral `NMessage` regardless of `choice.reaction`.
  */
 export function serializeSSLOption(choice: DialogChoice, msgId: number): string {
     if (choice.target.kind === "state") {
-        const skill = choice.skill !== undefined ? `, ${choice.skill}` : "";
-        return `NOption(${msgId}, ${choice.target.stateId}${skill});`;
+        return `${serializeSSLOptionCall(choice, String(msgId), choice.target.stateId)};`;
     }
     return `NMessage(${msgId});`;
 }
