@@ -14,6 +14,7 @@
     import * as ops from "../../../../shared/dialog-edit-ops";
     import { eligibleToDelete } from "../../../../shared/dialog-ssl-edit";
     import { hasHost, postToHost } from "./host";
+    import { isSaveShortcut } from "./keyboard";
     import type { DialogModel, DialogState, DialogTarget } from "../../../../shared/dialog-model";
 
     let { model }: { model: DialogModel } = $props();
@@ -560,6 +561,21 @@
         postToHost({ type: "save", model: $state.snapshot(editModel) });
     }
 
+    // Window keydown: Escape dismisses the tree context menu; Ctrl/Cmd+S saves through the host,
+    // matching the toolbar Save button. This panel is a WebviewPanel, not a CustomEditor, so VS
+    // Code's own Ctrl+S does not reach the underlying .d/.ssl document from here - without this the
+    // shortcut would be a dead key (or trigger the browser's save-page dialog). No-op with no host.
+    function onWindowKeydown(e: KeyboardEvent): void {
+        if (e.key === "Escape" && ctxMenu) {
+            closeContext();
+            return;
+        }
+        if (isSaveShortcut(e) && hasHost()) {
+            e.preventDefault();
+            save();
+        }
+    }
+
     // Point the transition with `choiceId` at the node `targetNodeId` (a state, or the
     // shared EXIT node). Dropping on a synthetic external stub is ignored - cross-file
     // EXTERN retargeting goes through the inspector dropdown. Shared by the two canvas
@@ -642,7 +658,7 @@
     <Inspector state={s} messages={editModel.messages} {stateIds} {actions} format={editModel.format} editable={editModel.editable} structuralEditable={structEditable(s)} deletable={canDelete(s)} entryRemovable={isEntryRemovable(s)} />
 {/snippet}
 
-<svelte:window onkeydown={(e) => e.key === "Escape" && ctxMenu && closeContext()} />
+<svelte:window onkeydown={onWindowKeydown} />
 
 <div class="dialog-graph">
     {#if tabs.length > 1}
