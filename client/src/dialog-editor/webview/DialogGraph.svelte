@@ -657,13 +657,19 @@
                     </ControlButton>
                 </Controls>
                 <MiniMap pannable zoomable bgColor="#15171c" maskColor="rgba(10, 12, 16, 0.7)" nodeColor="#3b82f6" nodeStrokeColor="#60a5fa" />
-                <Panel position="top-left">{@render toolbar(true)}</Panel>
-                <Panel position="top-center">
-                    <div class="legend">
-                        <span class="lg player">player reply</span>
-                        <span class="lg continue">continue</span>
-                        <span class="lg exit">exit</span>
-                        <span class="lg external">extern</span>
+                <!-- Toolbar + legend share ONE top-left flex-wrap container so they can never collide: a
+                     separate top-center legend was overwritten by the variable-width toolbar (Source/Issues
+                     buttons hidden behind it). Capped to leave the top-right inspector's column clear; wraps
+                     downward within its own panel at narrow widths instead of reaching a sibling. -->
+                <Panel position="top-left">
+                    <div class="graphbar">
+                        {@render toolbar(true)}
+                        <div class="legend">
+                            <span class="lg player">player reply</span>
+                            <span class="lg continue">continue</span>
+                            <span class="lg exit">exit</span>
+                            <span class="lg external">extern</span>
+                        </div>
                     </div>
                 </Panel>
                 {#if showSource}
@@ -1003,6 +1009,16 @@
         opacity: 1;
         box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35);
     }
+    /* Toolbar + legend in one row that wraps within itself. max-width reserves the top-right inspector's
+       column (~280px + margins) so a wrapped toolbar grows DOWN inside its own panel, never sideways into
+       the inspector. */
+    .graphbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+        max-width: calc(100vw - 320px);
+    }
     .legend {
         display: flex;
         gap: 10px;
@@ -1054,7 +1070,10 @@
         width: 420px;
         max-height: 40vh;
         overflow: auto;
-        margin: 0;
+        /* Sit ABOVE the fixed bottom-left zoom Controls (svelte-flow default position) rather than over them:
+           this bottom-left panel otherwise covers the controls. Lifted, not shifted right - shifting right
+           would push it into the centered Issues panel. Bottom inset > the controls' height + margin. */
+        margin: 0 0 120px 0;
         background: #15171c;
         border: 1px solid #3a3f4b;
         border-radius: 6px;
