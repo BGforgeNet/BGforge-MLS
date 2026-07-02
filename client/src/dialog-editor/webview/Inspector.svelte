@@ -217,12 +217,9 @@
         </div>
     {/if}
 
-    <div class="ik between">
-        <span>Options ({state.choices.length})</span>
-        <!-- The node-level add-option button is suppressed for bundle nodes: each branch has its own
-             per-branch "+ option" button below (which branch is unambiguous there). -->
-        {#if structuralEditable && !state.branches}<button class="add" onclick={actions.addReply}>+ option</button>{/if}
-    </div>
+    <!-- Add lives as a trailing "+" at the END of the options list (below), so adding reads as "append to
+         this list". Each option row carries its own delete (the row's x). Bundle nodes add per branch. -->
+    <div class="ik">Options ({state.choices.length})</div>
 
     {#snippet choiceRow(c, i, bi, branchLen)}
         <div class="trow">
@@ -388,6 +385,9 @@
         {#each state.choices as c, i (c.id)}
             {@render choiceRow(c, i)}
         {/each}
+        {#if structuralEditable}
+            <button class="add addrow" onclick={actions.addReply} title="Add an option">+</button>
+        {/if}
     {/if}
 
     {#if !readOnly}
@@ -521,6 +521,15 @@
     .trbtns button:disabled {
         opacity: 0.35;
         cursor: default;
+    }
+    /* Trailing "+" that appends an option to the end of the list - full-width and dashed so it reads as an
+       add affordance at the bottom of the list rather than another option row. */
+    .addrow {
+        width: 100%;
+        margin-top: 4px;
+        border-style: dashed;
+        font-size: 12px;
+        line-height: 1.4;
     }
     /* NPC line = blue (blue-300), matching the graph card and tree; player option text = neutral grey
        (slate-300), overridden to green/red by the per-option reaction chip. */
