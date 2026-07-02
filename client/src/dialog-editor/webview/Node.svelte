@@ -52,7 +52,7 @@
             {#if data.reachability === "orphan"}<span class="rmark dead" title="Dead: no path reaches this state and nothing outside the file enters it">dead</span>{/if}
             {#if data.reachability === "external-entry"}<span class="rmark ext" title="Entered from outside this file (e.g. a cross-file EXTERN)">entry</span>{/if}
             {#if data.state.isEntry}<span class="rmark start" title="Conversation start node: reached from talk_p_proc. Read-only - edit the .ssl to change the dialog's entry wiring.">start</span>{/if}
-            {#if data.sharedText}<span class="rmark shared" title="Shared text: this node's line or a reply uses the same .msg/.tra entry as another node - editing it here changes the other node too.">shared</span>{/if}
+            {#if data.sharedText}<span class="rmark shared" title="Shared text: this state's line or an option uses the same .msg/.tra entry as another state - editing it here changes the other one too.">shared</span>{/if}
             {#if data.state.weight != null}<span class="w">W{data.state.weight}</span>{/if}
         </div>
         <div class="bd">

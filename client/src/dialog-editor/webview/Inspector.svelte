@@ -172,13 +172,13 @@
         </div>
     {/if}
 
-    <div class="ik">{ssl ? "Node" : readOnly ? "State label (read-only)" : "State label (jump target)"}</div>
+    <div class="ik">{ssl ? "State" : readOnly ? "State label (read-only)" : "State label (jump target)"}</div>
     <input class="iv code" value={state.id} disabled={!structuralEditable && readOnly} onchange={(e) => actions.rename(e.currentTarget.value)} />
 
     {#if !state.branches}
         <!-- A bundle node shows its NPC line per branch below ("shown when ..." sections); the node-level
              reply field would duplicate it (and only the first branch's line), so omit it for bundle nodes. -->
-        <div class="ik">{ssl ? "Reply line" : "NPC line"}</div>
+        <div class="ik">NPC line</div>
         <textarea class="iv" rows="2" use:autosize={resolveText(state.text, messages)} disabled={textLocked(state.text, isPendingState(state))} value={resolveText(state.text, messages)} oninput={(e) => setSay(e.currentTarget.value)}></textarea>
     {/if}
 
@@ -215,10 +215,10 @@
     {/if}
 
     <div class="ik between">
-        <span>{ssl ? "Options" : "Transitions"} ({state.choices.length})</span>
+        <span>Options ({state.choices.length})</span>
         <!-- The node-level add-option button is suppressed for bundle nodes: each branch has its own
              per-branch "+ option" button below (which branch is unambiguous there). -->
-        {#if structuralEditable && !state.branches}<button class="add" onclick={actions.addReply}>{ssl ? "+ option" : "+ reply"}</button>{/if}
+        {#if structuralEditable && !state.branches}<button class="add" onclick={actions.addReply}>+ option</button>{/if}
     </div>
 
     {#snippet choiceRow(c, i, bi, branchLen)}
@@ -256,7 +256,7 @@
                     </span>
                 {/if}
             </div>
-            <textarea class="iv reply" rows="1" use:autosize={resolveText(c.text, messages)} disabled={textLocked(c.text, isPendingChoice(c))} placeholder="(no reply - NPC continue)" value={resolveText(c.text, messages)} oninput={(e) => setReply(c, e.currentTarget.value)}></textarea>
+            <textarea class="iv reply" rows="1" use:autosize={resolveText(c.text, messages)} disabled={textLocked(c.text, isPendingChoice(c))} placeholder="(no option text - continue)" value={resolveText(c.text, messages)} oninput={(e) => setReply(c, e.currentTarget.value)}></textarea>
             <!-- Inside a bundle branch the condition is already shown once at the branch head
                  ("shown when ..."), so the per-option condition field is omitted to avoid a
                  redundant disabled control on every row. Flat-path render is unchanged. -->
