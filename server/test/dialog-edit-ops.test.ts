@@ -460,4 +460,56 @@ describe("dialog-edit-ops (branch structural)", () => {
         expect(st.choices.find((c) => c.id === "Node001#opt0")).toBeDefined();
         expect(st.choices.find((c) => c.id === "Node001#opt1")).toBeUndefined();
     });
+
+    describe("applyReconcile", () => {
+        function reconcileModel(): DialogModel {
+            return {
+                format: "fallout-ssl",
+                editable: false,
+                messages: { "100": "npc" },
+                roots: [
+                    {
+                        id: "dialog",
+                        label: "dialog",
+                        kind: "dialog",
+                        states: [
+                            {
+                                id: "Node001",
+                                text: "@100",
+                                choices: [{ id: "Node001#reply", text: "typed literal", target: { kind: "exit" } }],
+                            },
+                            { id: "Node050", text: "new node line", choices: [] },
+                        ],
+                    },
+                ],
+            };
+        }
+
+        it("stamps a committed option's @N text and merges its .msg entry", () => {
+            const m = reconcileModel();
+            ops.applyReconcile(m, { "Node001#reply": "@201" }, { "201": "typed literal" });
+            const c = m.roots[0]!.states[0]!.choices[0]!;
+            expect(c.text).toBe("@201");
+            expect(c.committed).toBe(true);
+            expect(m.messages).toEqual({ "100": "npc", "201": "typed literal" });
+            // The untouched node stays pending (no committed flag).
+            expect(m.roots[0]!.states[1]!.committed).toBeUndefined();
+        });
+
+        it("stamps a committed new node's reply @N and merges .msg", () => {
+            const m = reconcileModel();
+            ops.applyReconcile(m, { Node050: "@202" }, { "202": "new node line" });
+            const s = m.roots[0]!.states[1]!;
+            expect(s.text).toBe("@202");
+            expect(s.committed).toBe(true);
+            expect(m.messages?.["202"]).toBe("new node line");
+        });
+
+        it("is a no-op on empty allocations (still merges messages)", () => {
+            const m = reconcileModel();
+            ops.applyReconcile(m, {}, { "300": "extra" });
+            expect(m.roots[0]!.states[0]!.choices[0]!.committed).toBeUndefined();
+            expect(m.messages?.["300"]).toBe("extra");
+        });
+    });
 });

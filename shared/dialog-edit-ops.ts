@@ -22,6 +22,48 @@ export function stateIdsOf(model: DialogModel): string[] {
     return model.roots.flatMap((r) => r.states.map((s) => s.id));
 }
 
+/**
+ * Reconcile pending items the host just committed to the source, in place on the webview's working copy.
+ *
+ * After a structural self-edit the host splices new options/nodes and allocates their `@N` ids, but the
+ * webview copy still holds them as PENDING (literal text, no source span) because the echo guard suppresses
+ * the re-project that would give them a real span - it must, to keep the user's selection and in-progress
+ * text. Left stale, the NEXT save re-splices them: the re-parse cannot match a pending choice (id
+ * `Node#reply`) to the option it already became (id `Node#optN`), so it re-adds it and duplicates the option.
+ *
+ * This stamps each committed item's allocated `@N` text and marks it `committed` (so the splicer treats it as
+ * existing, not new) and merges the allocated `.msg` text into `model.messages` (so the field resolves and
+ * stays editable instead of showing a raw `@N`). It mutates in place and touches nothing else, so selection,
+ * node positions, and any text the user is still typing survive. `allocations` maps an item id (option choice
+ * id or new-node state id) to its `@N` text; `messages` is the id->text to merge.
+ */
+export function applyReconcile(
+    model: DialogModel,
+    allocations: Record<string, string>,
+    messages: Record<string, string> | undefined,
+): void {
+    if (messages && Object.keys(messages).length > 0) {
+        model.messages = { ...model.messages, ...messages };
+    }
+    if (Object.keys(allocations).length === 0) return;
+    for (const root of model.roots) {
+        for (const state of root.states) {
+            const sAlloc = allocations[state.id];
+            if (sAlloc !== undefined) {
+                state.text = sAlloc;
+                state.committed = true;
+            }
+            for (const c of state.choices) {
+                const cAlloc = allocations[c.id];
+                if (cAlloc !== undefined) {
+                    c.text = cAlloc;
+                    c.committed = true;
+                }
+            }
+        }
+    }
+}
+
 function rootOf(model: DialogModel, state: DialogState): DialogModel["roots"][number] | undefined {
     return model.roots.find((r) => r.states.includes(state));
 }

@@ -444,6 +444,26 @@
         return () => clearTimeout(timer);
     });
 
+    // Reconcile message from the host (production only). After the host commits a just-added option/node to the
+    // source it allocates the item's `@N` id but the echo guard suppresses the re-project that would give it a
+    // real source span (to keep selection/in-progress text). This message carries the allocated ids + .msg text
+    // so we mark those pending items committed IN PLACE - which stops the next save re-splicing (duplicating)
+    // them - without dropping selection or the text being typed. suppressEmit keeps this host-driven mutation
+    // from echoing straight back as an edit. The body reads no reactive state, so the listener registers once.
+    $effect(() => {
+        function onReconcile(e: MessageEvent): void {
+            const d = e.data as
+                | { type?: string; allocations?: Record<string, string>; messages?: Record<string, string> }
+                | null;
+            if (d?.type !== "reconcile" || !d.allocations) return;
+            suppressEmit = true;
+            ops.applyReconcile(editModel, d.allocations, d.messages);
+            void rebuild({ frame: "none" });
+        }
+        window.addEventListener("message", onReconcile);
+        return () => window.removeEventListener("message", onReconcile);
+    });
+
     // Switch to a dialog file's tab, optionally framing a target state on arrival.
     function switchTab(fileId: string, focusId?: string): void {
         if (fileId === activeFile) {

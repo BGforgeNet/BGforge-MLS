@@ -18,12 +18,14 @@ export function msgRef(text: string | undefined): string | null {
  * stay editable so the user can type the initial line; `allocateOptionIds` turns it into an `@id` at save.
  */
 export function isPendingChoice(c: DialogChoice): boolean {
-    return c.callRange === undefined && c.stmtRange === undefined && !c.callSites?.length;
+    // A `committed` option was already spliced to source and now carries a resolvable `@N` (the reconcile
+    // merged its .msg text), so it is no longer pending - it locks/unlocks like any existing `@N` option.
+    return !c.committed && c.callRange === undefined && c.stmtRange === undefined && !c.callSites?.length;
 }
 
 /** A state the user just added (pending insert): no source procedure yet (no `procRange`). */
 export function isPendingState(s: DialogState): boolean {
-    return s.procRange === undefined;
+    return !s.committed && s.procRange === undefined;
 }
 
 /**

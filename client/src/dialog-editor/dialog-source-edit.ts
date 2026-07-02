@@ -8,6 +8,19 @@ export interface DialogSourceEdit {
     newText: string | null;
     /** The edited model's messages with any newly-allocated ids merged in (for the .tra side-write). */
     messages: DialogMessages;
+    /**
+     * Item-id -> allocated `@N` text for each PENDING item (option choice or new node) that this edit just
+     * committed to the source. Empty unless `newText` is non-null (nothing was spliced otherwise). The host
+     * posts this back to the webview so it can mark those items `committed` and stop treating them as pending
+     * new content - without which the next save re-splices them and duplicates the option. See panel.ts /
+     * dialog-edit-ops.ts `applyReconcile`.
+     */
+    allocations: Record<string, string>;
+}
+
+/** A pending item that was just given an `@N` id: no source span of its own, but an `@N` text now. */
+function isBareRef(text: string | undefined): boolean {
+    return /^@\d+$/.test((text ?? "").trim());
 }
 
 /**
@@ -38,5 +51,23 @@ export function computeDialogSourceEdit(
             : original
               ? applySSLDialogEdits(text, edited, original)
               : text;
-    return { newText: spliced !== text ? spliced : null, messages };
+    const newText = spliced !== text ? spliced : null;
+    // When something was spliced, report the pending items that just gained an `@N` id so the webview can mark
+    // them committed. A pending item is one still lacking a source span (option: no callRange/stmtRange; node:
+    // no procRange) but carrying an `@N` text after allocation above. Existing options carry a stmtRange, so
+    // they are excluded. Empty when nothing was spliced (no new content to reconcile).
+    const allocations: Record<string, string> = {};
+    if (newText !== null) {
+        for (const state of edited.roots.flatMap((r) => r.states)) {
+            if (state.procRange === undefined && !state.derivedFrom && isBareRef(state.text)) {
+                allocations[state.id] = state.text;
+            }
+            for (const c of state.choices) {
+                if (c.callRange === undefined && c.stmtRange === undefined && isBareRef(c.text)) {
+                    allocations[c.id] = c.text!;
+                }
+            }
+        }
+    }
+    return { newText, messages, allocations };
 }

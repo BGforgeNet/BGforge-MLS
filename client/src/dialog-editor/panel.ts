@@ -90,6 +90,12 @@ class DialogEditorProvider implements vscode.CustomTextEditorProvider {
 
         const changeSub = vscode.workspace.onDidChangeTextDocument((e) => {
             if (e.document.uri.toString() !== document.uri.toString()) return;
+            // A metadata-only notification (dirty-flag flip, etc.) carries no content changes and is never a
+            // text edit to re-project for. Skip it BEFORE the guard: a single applyEdit fires TWO change events
+            // - the real one (>=1 content change) plus an empty follow-up - and consulting the guard on the
+            // empty one consumes a phantom "external edit" it never marked, firing a spurious re-project that
+            // closes the inspector mid-add and surfaces the raw `@N` before its .msg text has landed.
+            if (e.contentChanges.length === 0) return;
             // Self-originated (our own WorkspaceEdit) -> the guard consumes it and we do not re-project, so the
             // webview keeps its in-progress selection. An external text edit re-projects the graph.
             if (this.sessions.get(panel)?.guard.shouldReproject()) void this.postModel(document, panel);
@@ -166,7 +172,7 @@ class DialogEditorProvider implements vscode.CustomTextEditorProvider {
                 return;
             }
             const original = toModel(data);
-            const { newText, messages } = computeDialogSourceEdit(text, edited, original);
+            const { newText, messages, allocations } = computeDialogSourceEdit(text, edited, original);
             edited.messages = messages;
             if (newText !== null) {
                 const ws = new vscode.WorkspaceEdit();
@@ -184,6 +190,14 @@ class DialogEditorProvider implements vscode.CustomTextEditorProvider {
                     // re-splices the full model against the live text, so the divergence self-heals. The
                     // toast above makes the failed edit visible in the meantime.
                     return;
+                }
+                // Reconcile the webview's still-pending new items with what we just committed. The echo guard
+                // (correctly) suppresses the re-project that would give a freshly-added option its real source
+                // span, so without this the webview keeps treating it as pending and the NEXT save re-splices
+                // it (duplicating the option). This targeted message stamps each item's allocated `@N` and its
+                // .msg text in place - no re-project, so selection and any in-progress text survive.
+                if (Object.keys(allocations).length > 0) {
+                    void panel.webview.postMessage({ type: "reconcile", allocations, messages });
                 }
                 // Faithfulness of the round-trip is covered by unit tests (computeDialogSourceEdit's own
                 // suite, plus the verifySSLEditApplied/verifyDialogEditApplied unit tests) and by live

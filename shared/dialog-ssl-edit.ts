@@ -58,7 +58,12 @@ const msgIdOf = (c: DialogChoice): number => atMsgId(c.text);
 // (it has no target node) but the parser records its `stmtRange`, so without this guard an existing message
 // would be misread as new and re-appended (duplicated) on every structural save.
 function isNewSSLOption(c: DialogChoice): boolean {
-    return c.callRange === undefined && c.stmtRange === undefined && /^@\d+$/.test((c.text ?? "").trim());
+    // `committed` marks an option the host already spliced on a prior save (the webview's working copy still
+    // lacks a callRange for it - the guard suppresses the re-project that would give it one). Excluding it here
+    // is what stops a still-pending, already-committed option being re-added (duplicated) on every later save.
+    return (
+        !c.committed && c.callRange === undefined && c.stmtRange === undefined && /^@\d+$/.test((c.text ?? "").trim())
+    );
 }
 
 /**
@@ -652,7 +657,9 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
         const idOf = atMsgId;
         const blocks: string[] = [];
         for (const s of edited.roots.flatMap((r) => r.states)) {
-            if (s.procRange || s.derivedFrom || s.renamedFrom) continue; // existing, derived, or renamed -> not a new node
+            // `committed` marks a node already spliced on a prior save (still without a procRange in the
+            // webview copy); excluding it stops its procedure being re-emitted (duplicated) on later saves.
+            if (s.procRange || s.derivedFrom || s.renamedFrom || s.committed) continue; // existing/derived/renamed/committed -> not a new node
             const ids = {
                 reply: Number.isFinite(idOf(s.text)) ? idOf(s.text) : undefined,
                 options: Object.fromEntries(
