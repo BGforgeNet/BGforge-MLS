@@ -182,14 +182,18 @@
     .card.derived .hd {
         color: #9aa0a6;
     }
+    /* NPC line = blue (blue-300); player options = neutral grey (slate-300) by default, overridden to
+       green/red by reaction below. NPC and player lines must never share a colour (they are the two
+       sides of the conversation), and green/red stay reserved for good/bad options. */
     .bd {
         padding: 4px 8px 4px 15px;
+        color: #93c5fd;
     }
     .opt {
         position: relative; /* so each row's source Handle (top:50%) centers on the ROW */
         border-top: 1px solid #313846;
         padding: 2px 8px 2px 15px;
-        color: #bfe66a;
+        color: #cbd5e1;
         font-size: 9px;
         height: 20px;
         box-sizing: border-box;
@@ -198,7 +202,8 @@
         gap: 4px;
     }
     /* Reaction text color reinforces the letter chip (never color alone). Good = green, bad = red,
-       neutral = quiet grey. D transitions carry no reaction, so they keep the default reply green. */
+       neutral = quiet grey - the same grey as the default, so a D transition (no reaction) reads
+       identically to an SSL neutral option. */
     .opt.r-good .otext {
         color: #86efac;
     }

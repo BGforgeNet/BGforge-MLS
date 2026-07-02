@@ -179,7 +179,7 @@
         <!-- A bundle node shows its NPC line per branch below ("shown when ..." sections); the node-level
              reply field would duplicate it (and only the first branch's line), so omit it for bundle nodes. -->
         <div class="ik">NPC line</div>
-        <textarea class="iv" rows="2" use:autosize={resolveText(state.text, messages)} disabled={textLocked(state.text, isPendingState(state))} value={resolveText(state.text, messages)} oninput={(e) => setSay(e.currentTarget.value)}></textarea>
+        <textarea class="iv npc" rows="2" use:autosize={resolveText(state.text, messages)} disabled={textLocked(state.text, isPendingState(state))} value={resolveText(state.text, messages)} oninput={(e) => setSay(e.currentTarget.value)}></textarea>
     {/if}
 
     {#if ssl}
@@ -487,7 +487,7 @@
     }
     .trow {
         border: 1px solid #313846;
-        border-left: 3px solid #a3e635;
+        border-left: 3px solid #64748b;
         border-radius: 4px;
         padding: 4px 6px;
         margin-top: 4px;
@@ -519,8 +519,13 @@
         opacity: 0.35;
         cursor: default;
     }
+    /* NPC line = blue (blue-300), matching the graph card and tree; player option text = neutral grey
+       (slate-300), overridden to green/red by the per-option reaction chip. */
+    .iv.npc {
+        color: #93c5fd;
+    }
     .iv.reply {
-        color: #bfe66a;
+        color: #cbd5e1;
     }
     .iv.cond {
         color: #f59e0b;

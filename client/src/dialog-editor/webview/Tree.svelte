@@ -279,7 +279,7 @@
         white-space: nowrap;
     }
     .line {
-        color: #e8eaed;
+        color: #93c5fd;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -317,7 +317,7 @@
         color: #475569;
     }
     .rtext {
-        color: #bfe66a;
+        color: #cbd5e1;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
