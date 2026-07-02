@@ -45,11 +45,6 @@
     let viewport = $state({ x: 0, y: 0, zoom: 1 });
     let containerW = $state(0);
     let containerH = $state(0);
-    // Cap the floating top-left toolbar to the canvas width (minus the svelte-flow panel's ~15px inset
-    // each side) so it wraps DOWN within the canvas instead of overflowing right into the docked rail.
-    // A percentage max-width can't do this - the absolutely-positioned panel sizes to its content, not
-    // the canvas. Floored so an unmeasured (0) width doesn't yield a negative cap.
-    const graphbarMax = $derived(Math.max(containerW - 30, 80));
     let laidOut = $state.raw<FlowNode[]>([]);
     let showSource = $state(false);
     // Spotlight overlay (1B): dim fully-authored ("trusted") cards so the derived/uncertain
@@ -60,7 +55,7 @@
     // Two views of the same dialog: the node graph (default) and a conversation-flow
     // tree. The toggle swaps the canvas; tabs, the inspector, and the toolbar are
     // shared. The tree is built per active tab, same scoping as the graph.
-    let viewMode = $state<"graph" | "tree">("graph");
+    let viewMode = $state<"graph" | "tree">("tree");
 
     // One tab per destination dialog file (a root with states). Each tab renders only its
     // own file's states; a transition to another file shows as an external stub that jumps
@@ -250,21 +245,34 @@
     const ctxOwner = $derived(ctxMenu ? findState(ctxMenu.stateId) : null);
     const ctxReply = $derived(ctxMenu?.kind === "reply" ? ctxMenu : null);
 
-    // Clamp so the menu (or its taller target-picker page) never opens off-screen.
-    const clampX = (x: number): number => Math.max(8, Math.min(x, window.innerWidth - 180));
-    const clampY = (y: number): number => Math.max(8, Math.min(y, window.innerHeight - 300));
+    // Open at the raw cursor position; `clampToViewport` (below) nudges the menu back on-screen using its
+    // MEASURED size after render. The old fixed 300px bottom reservation pushed even the short 3-item state
+    // menu well above the cursor for any right-click in the lower part of the viewport.
     function openContext(stateId: string, x: number, y: number): void {
         ctxPickTarget = false;
-        ctxMenu = { kind: "state", x: clampX(x), y: clampY(y), stateId };
+        ctxMenu = { kind: "state", x, y, stateId };
     }
     function openReplyContext(stateId: string, choiceId: string, index: number, count: number, x: number, y: number): void {
         ctxPickTarget = false;
-        ctxMenu = { kind: "reply", x: clampX(x), y: clampY(y), stateId, choiceId, index, count };
+        ctxMenu = { kind: "reply", x, y, stateId, choiceId, index, count };
     }
     const closeContext = (): void => {
         ctxMenu = null;
         ctxPickTarget = false;
     };
+    // Svelte action: place the context menu at (x, y), then clamp it back inside the viewport using its
+    // ACTUAL measured size, so neither the short state menu nor the tall target-picker page opens
+    // off-screen. Re-runs when the coords or the target-picker sub-page change (the two pages differ in
+    // height). Writes to the element's style directly (not to $state), so there is no update loop.
+    function clampToViewport(el: HTMLElement, _coords: [number, number, boolean]) {
+        const place = ([x, y]: [number, number, boolean]): void => {
+            const r = el.getBoundingClientRect();
+            el.style.left = `${Math.max(8, Math.min(x, window.innerWidth - r.width - 8))}px`;
+            el.style.top = `${Math.max(8, Math.min(y, window.innerHeight - r.height - 8))}px`;
+        };
+        place(_coords);
+        return { update: place };
+    }
     function ctxAct(kind: "addReply" | "duplicate" | "delete"): void {
         const st = ctxMenu ? findState(ctxMenu.stateId) : null;
         closeContext();
@@ -745,6 +753,17 @@
             {/each}
         </div>
     {/if}
+    <!-- One docked toolbar header shared by BOTH views. Previously the graph floated its toolbar over the
+         canvas (a svelte-flow Panel, zero layout height) while the tree docked a header that consumed
+         height - so switching views made the canvas jump. A single docked header keeps the height constant. -->
+    <div class="dialogtoolbar">
+        {@render toolbar(viewMode === "graph")}
+        {#if viewMode === "tree"}
+            <span class="tbsep"></span>
+            <button class="toolbtn" title="Expand every state" onclick={expandAll}>Expand all</button>
+            <button class="toolbtn" title="Collapse every state" onclick={collapseAll}>Collapse all</button>
+        {/if}
+    </div>
     <div class="body">
     <div class="flowwrap" class:spotlight bind:clientWidth={containerW} bind:clientHeight={containerH}>
         {#if viewMode === "graph"}
@@ -763,30 +782,21 @@
                 {#if containerW >= MINIMAP_MIN_W}
                     <MiniMap pannable zoomable bgColor="#15171c" maskColor="rgba(10, 12, 16, 0.7)" nodeColor="#3b82f6" nodeStrokeColor="#60a5fa" />
                 {/if}
-                <!-- Toolbar + legend share ONE top-left flex-wrap container so they can never collide: a
-                     separate top-center legend was overwritten by the variable-width toolbar (Source/Issues
-                     buttons hidden behind it). Capped to the canvas width (graphbarMax) so it wraps DOWN
-                     within the canvas at narrow widths instead of overflowing into the docked rail. -->
+                <!-- Legend only: the shared toolbar is now a docked header above the canvas, so this
+                     top-left corner is free. Controls dock bottom-left and the MiniMap bottom-right, so
+                     the legend cannot collide with either. "extern" is a WeiDU-D concept; on Fallout SSL a
+                     target not in the file is a dangling reference, not a cross-file EXTERN, so relabel it. -->
                 <Panel position="top-left">
-                    <div class="graphbar" style="max-width: {graphbarMax}px">
-                        {@render toolbar(true)}
-                        <div class="legend">
-                            <span class="lg player">player reply</span>
-                            <span class="lg continue">continue</span>
-                            <span class="lg exit">exit</span>
-                            <span class="lg external">extern</span>
-                        </div>
+                    <div class="legend">
+                        <span class="lg player">player reply</span>
+                        <span class="lg continue">continue</span>
+                        <span class="lg exit">exit</span>
+                        <span class="lg external">{editModel.format === "fallout-ssl" ? "unresolved" : "extern"}</span>
                     </div>
                 </Panel>
             </SvelteFlow>
         {:else}
             <div class="treewrap">
-                <div class="treetoolbar">
-                    {@render toolbar(false)}
-                    <span class="tbsep"></span>
-                    <button class="toolbtn" title="Expand every state" onclick={expandAll}>Expand all</button>
-                    <button class="toolbtn" title="Collapse every state" onclick={collapseAll}>Collapse all</button>
-                </div>
                 <div class="treescroll">
                     {#if treeData.roots.length === 0}
                         <div class="treeempty">No states in this dialog file.</div>
@@ -795,7 +805,7 @@
                 </div>
                 {#if ctxMenu}
                     <div class="ctxbackdrop" role="presentation" onclick={closeContext} oncontextmenu={(e) => (e.preventDefault(), closeContext())}></div>
-                    <div class="ctxmenu" style="left:{ctxMenu.x}px; top:{ctxMenu.y}px" role="menu">
+                    <div class="ctxmenu" use:clampToViewport={[ctxMenu.x, ctxMenu.y, ctxPickTarget]} role="menu">
                         {#if ctxOwner?.derivedFrom}
                             <div class="ctxnote">Read-only ({ctxOwner.derivedFrom})</div>
                         {:else if ctxMenu.kind === "state"}
@@ -986,13 +996,12 @@
         flex-direction: column;
         background: #191c21;
     }
-    .treetoolbar {
+    /* Shared docked toolbar header for BOTH graph and tree views (see the markup comment). Wraps on a
+       narrow canvas: a non-wrapping row shrinks its items and the .viewseg (overflow:hidden) then clips
+       its own Graph/Tree buttons to nothing - stranding the user; wrapping keeps every control visible. */
+    .dialogtoolbar {
         flex: 0 0 auto;
         display: flex;
-        /* Wrap like the graph's .graphbar: on a narrow canvas a non-wrapping row shrinks its items,
-           and the .viewseg (overflow:hidden) then clips its own Graph/Tree buttons to nothing -
-           stranding the user in Tree view. Wrapping keeps every control visible and within the canvas
-           column, so it never crowds the docked rail. */
         flex-wrap: wrap;
         align-items: center;
         gap: 4px;
@@ -1167,16 +1176,6 @@
     :global(.dlg-reconnect-anchor:hover) {
         opacity: 1;
         box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35);
-    }
-    /* Toolbar + legend in one row that wraps within itself. Capped to the canvas width so a wrapped
-       toolbar grows DOWN inside its own panel, never past the canvas edge. The inspector no longer
-       floats top-right (it docks in `.siderail`), so no extra column needs reserving here. */
-    .graphbar {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        align-items: center;
-        max-width: 100%;
     }
     .legend {
         display: flex;
