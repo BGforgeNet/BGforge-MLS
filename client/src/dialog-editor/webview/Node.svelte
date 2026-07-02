@@ -1,8 +1,9 @@
 <script lang="ts">
     import { Handle, Position } from "@xyflow/svelte";
-    import { choiceBadges, resolveText, stateBadges, type DialogReaction, type DialogState } from "../../../../shared/dialog-model";
+    import { choiceBadges, resolveText, stateBadges, type DialogState } from "../../../../shared/dialog-model";
     import type { Reachability } from "../../../../shared/dialog-reachability";
     import Badge from "./Badge.svelte";
+    import ReactionChip from "./ReactionChip.svelte";
 
     // Custom node component: Svelte Flow selects it by node `type`, so one component
     // covers the card / external-anchor / exit variants by branching on `type`.
@@ -37,13 +38,6 @@
         return state.speaker ? `${state.speaker} ${ref}` : ref;
     }
 
-    // An SSL option's reaction (from the NOption/GOption/BOption macro prefix) as a colored letter chip.
-    // The letter carries the meaning so color is never the sole cue. Absent for D transitions (no reaction).
-    function reaction(r: DialogReaction): { letter: string; title: string; cls: string } {
-        if (r === "good") return { letter: "G", title: "Good reaction (GOption)", cls: "rx-good" };
-        if (r === "bad") return { letter: "B", title: "Bad reaction (BOption)", cls: "rx-bad" };
-        return { letter: "N", title: "Neutral reaction (NOption)", cls: "rx-neutral" };
-    }
 </script>
 
 {#if type === "card" && data.state}
@@ -66,10 +60,8 @@
         </div>
         {#each data.state.choices as c (c.id)}
             {@const cb = choiceBadges(c)}
-            {@const rx = c.reaction ? reaction(c.reaction) : null}
             <div class="opt" class:r-good={c.reaction === "good"} class:r-bad={c.reaction === "bad"} class:r-neutral={c.reaction === "neutral"}>
-                {#if rx}<span class="rx {rx.cls}" title={rx.title}>{rx.letter}</span>{/if}
-                {#if c.lowIq}<span class="iq" title="Low-INT only: shown to a low-intelligence PC (a *LowOption macro)">INT-</span>{/if}
+                <ReactionChip reaction={c.reaction} lowIq={c.lowIq} />
                 {#if cb.length}<Badge badges={cb} small />{/if}
                 <span class="otext"
                     >{resolveText(c.text, data.messages) ||
@@ -215,40 +207,6 @@
     }
     .opt.r-neutral .otext {
         color: #cbd5e1;
-    }
-    .rx {
-        flex: 0 0 auto;
-        border-radius: 3px;
-        border: 1px solid;
-        padding: 0 3px;
-        font-size: 8px;
-        font-weight: 700;
-    }
-    .rx-good {
-        color: #86efac;
-        background: #16281b;
-        border-color: #22c55e;
-    }
-    .rx-neutral {
-        color: #cbd5e1;
-        background: #2b303a;
-        border-color: #4b5563;
-    }
-    .rx-bad {
-        color: #fca5a5;
-        background: #2a1717;
-        border-color: #b91c1c;
-    }
-    /* Low-INT-only option marker: purple, distinct from every reaction color. */
-    .iq {
-        flex: 0 0 auto;
-        color: #d8b4fe;
-        background: #241730;
-        border: 1px solid #7e22ce;
-        border-radius: 3px;
-        padding: 0 3px;
-        font-size: 8px;
-        font-weight: 700;
     }
     /* One clipped preview line per reply; the full text is editable in the inspector. */
     .opt .otext {

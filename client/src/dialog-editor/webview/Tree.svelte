@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { ConversationTree, ConvState, ConvReply, ConvBranch } from "./conversation-tree";
     import Badge from "./Badge.svelte";
+    import ReactionChip from "./ReactionChip.svelte";
 
     // Conversation-flow tree (built by conversation-tree.ts). Renders states and
     // their player replies as a nested outline; clicking a state selects it for the
@@ -179,7 +180,8 @@
             : (e) => (e.preventDefault(), onReplyContext(ownerId, r.id, index, count, e.clientX, e.clientY))}
     >
         <span class="rmark">&#8627;</span>
-        <span class="rtext" class:silent={!r.hasText} title={r.hasText ? r.text : undefined}>{r.hasText ? r.text || "(empty reply)" : "(continue)"}</span>
+        <ReactionChip reaction={r.reaction} lowIq={r.lowIq} />
+        <span class="rtext" class:silent={!r.hasText} class:r-good={r.hasText && r.reaction === "good"} class:r-bad={r.hasText && r.reaction === "bad"} class:r-neutral={r.hasText && r.reaction === "neutral"} title={r.hasText ? r.text : undefined}>{r.hasText ? r.text || "(empty reply)" : "(continue)"}</span>
         {#if r.condition}<span class="rcond" title={r.condition}>[if]</span>{/if}
         {#if r.action}<span class="ract" title={r.action}>[do]</span>{/if}
         {@render leaf(r)}
@@ -323,6 +325,17 @@
     .rtext.silent {
         color: #64748b;
         font-style: italic;
+    }
+    /* Reaction text color mirrors the graph card (good green, bad red, neutral quiet) so the same
+       reply reads the same way in both views. `.silent` (a continue, no reaction) still wins above. */
+    .rtext.r-good {
+        color: #86efac;
+    }
+    .rtext.r-bad {
+        color: #fca5a5;
+    }
+    .rtext.r-neutral {
+        color: #cbd5e1;
     }
     .cond,
     .rcond {

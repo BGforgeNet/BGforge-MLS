@@ -15,7 +15,7 @@
  * jump resolution is injected so this module stays decoupled from the editor's
  * root maps (and stays trivially testable).
  */
-import { resolveText, type DialogChoice, type DialogRoot } from "../../../../shared/dialog-model";
+import { resolveText, type DialogChoice, type DialogReaction, type DialogRoot } from "../../../../shared/dialog-model";
 import type { JumpTarget } from "./jump-resolve";
 
 export type ConvTarget =
@@ -36,6 +36,9 @@ export interface ConvReply {
     hasText: boolean;
     condition?: string;
     action?: string;
+    /** SSL option reaction (G/N/B) and low-INT variant, for the same chip the graph card shows. */
+    reaction?: DialogReaction;
+    lowIq?: boolean;
     target: ConvTarget;
 }
 
@@ -111,6 +114,8 @@ export function buildConversationTree(
         hasText: Boolean(c.text),
         condition: c.condition,
         action: c.action,
+        reaction: c.reaction,
+        lowIq: c.lowIq,
         target: buildTarget(c),
     });
 
