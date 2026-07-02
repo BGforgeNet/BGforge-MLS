@@ -130,6 +130,13 @@ class DialogEditorProvider implements vscode.CustomTextEditorProvider {
         const session = this.sessions.get(panel);
         if (session) session.latest = model ?? undefined;
         if (model) {
+            // The adapter does not know the file name; supply it here (from the document URI) so the webview
+            // can label states by speaker - the base name is the NPC for SSL and a fallback speaker for D.
+            model.sourceName =
+                document.uri.path
+                    .split("/")
+                    .pop()
+                    ?.replace(/\.[^.]+$/, "") || undefined;
             void panel.webview.postMessage({ type: "model", model });
         } else {
             void panel.webview.postMessage({

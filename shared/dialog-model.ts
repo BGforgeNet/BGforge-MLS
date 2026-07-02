@@ -25,6 +25,13 @@ export interface DialogModel {
     format: DialogFormat;
     /** Whether this format's adapter can serialize edits back (D yes, SSL view-only in v1). */
     editable: boolean;
+    /**
+     * Dialog file base name (no extension), e.g. `tribec7` for `tribec7.ssl`. Set by the host from the
+     * document URI, not the adapter. Used as the speaker label for Fallout SSL (one script is one NPC, so
+     * the file name IS the speaker) and as a fallback speaker for a D state that carries none. See
+     * `stateHeadLabel`.
+     */
+    sourceName?: string;
     roots: DialogRoot[];
     /** Resolved message strings keyed by id; populated downstream, not by the adapter. */
     messages?: DialogMessages;
@@ -287,6 +294,22 @@ export function resolveText(text: string | undefined, messages?: Record<string, 
     if (!text) return text ?? "";
     if (!messages) return text;
     return text.replaceAll(/@(\d+)/g, (whole, n: string) => messages[n] ?? whole);
+}
+
+/**
+ * Header label for a state, shown identically on the graph card, the tree row, and the inspector title.
+ * "<speaker> - <id>" when a speaker is known, else just the id. The speaker is the state's own `speaker`
+ * (a WeiDU D character name) when present, else the dialog file's base name (`sourceName`): a Fallout SSL
+ * script is one NPC, so the file name IS the speaker there, and a D state with no explicit speaker falls
+ * back to it too. A derived state (CHAIN/INTERJECT/EXTEND) keeps the "<speaker> <@ref>" form because its
+ * synthesized id is not source-addressable (searching the file for it finds nothing).
+ */
+export function stateHeadLabel(state: DialogState, sourceName?: string): string {
+    const speaker = state.speaker ?? sourceName;
+    if (!state.derivedFrom) return speaker ? `${speaker} - ${state.id}` : state.id;
+    const m = /^@(\d+)$/.exec((state.text ?? "").trim());
+    const ref = m ? `@${m[1]}` : state.id;
+    return speaker ? `${speaker} ${ref}` : ref;
 }
 
 // --- Honest-projection badges (1B) -----------------------------------------

@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { initParser as initWeiduD } from "../../shared/parsers/weidu-d";
 import { parseDDialog } from "../src/weidu-d/dialog";
 import { parseDialog as parseSSL } from "../src/dialog";
-import { modelFromD, modelFromSSL, resolveText } from "../../shared/dialog-model";
+import { modelFromD, modelFromSSL, resolveText, stateHeadLabel, type DialogState } from "../../shared/dialog-model";
 
 describe("DialogModel adapters (real producer -> IR)", () => {
     beforeAll(async () => {
@@ -191,5 +191,28 @@ END
         expect(coranj.states.map((s) => s.id)).toEqual(["c_hello", "c_more"]);
         const brielb = dialogRoots.find((r) => r.label === "brielb")!;
         expect(brielb.states.map((s) => s.id)).toEqual(["b_hello"]);
+    });
+});
+
+describe("stateHeadLabel", () => {
+    const st = (over: Partial<DialogState>): DialogState => ({ id: "Node001", text: "", choices: [], ...over });
+
+    it("falls back to the file base name as speaker when the state has none (SSL: one script = one NPC)", () => {
+        // The whole point of the fallback: an SSL state carries no speaker, so without sourceName the label
+        // is a bare id; with it, the NPC (the file) is named.
+        expect(stateHeadLabel(st({ id: "Node001" }), "tribec7")).toBe("tribec7 - Node001");
+        expect(stateHeadLabel(st({ id: "Node001" }))).toBe("Node001"); // no sourceName (e.g. harness) -> bare id
+    });
+
+    it("prefers the state's own speaker over the file base name (WeiDU D character)", () => {
+        expect(stateHeadLabel(st({ id: "VISK1", speaker: "Viconia" }), "x#viconia")).toBe("Viconia - VISK1");
+        // D state with no speaker still falls back to the file name rather than showing a bare id.
+        expect(stateHeadLabel(st({ id: "VISK1" }), "x#viconia")).toBe("x#viconia - VISK1");
+    });
+
+    it("keeps the speaker + @ref form for a derived state (its synthesized id is not source-addressable)", () => {
+        expect(stateHeadLabel(st({ id: "DYN_2", text: "@109", derivedFrom: "CHAIN", speaker: "Dynaheir" }))).toBe(
+            "Dynaheir @109",
+        );
     });
 });

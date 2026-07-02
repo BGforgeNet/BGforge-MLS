@@ -2,6 +2,7 @@
     import { writable } from "svelte/store";
     import {
         resolveText,
+        stateHeadLabel,
         type DialogBranch,
         type DialogChoice,
         type DialogFormat,
@@ -18,10 +19,12 @@
     // (Fallout SSL) it is a read-only, SSL-native presentation - SSL is derived from script
     // and has no surgical write-back yet, so editing is disabled and the WeiDU vocabulary
     // (trigger/weight/`DO ~...~`) is replaced or dropped.
-    let { state, messages, stateIds, actions, format, editable, structuralEditable, deletable }: {
+    let { state, messages, stateIds, actions, format, editable, structuralEditable, deletable, sourceName }: {
         state: DialogState;
         messages: Record<string, string> | undefined;
         stateIds: string[];
+        /** Dialog file base name -> speaker fallback for the title (see stateHeadLabel). */
+        sourceName: string | undefined;
         format: DialogFormat;
         editable: boolean;
         // Per-node structural editability. For D it tracks `editable`; for SSL it is true only on
@@ -144,7 +147,7 @@
 <div class="inspector" class:ro={readOnly}>
     <!-- SSL nodes carry no speaker, so fall back to the node id (as the cards do) rather than a
          meaningless "NPC" title; WeiDU D shows its real speaker name. -->
-    <div class="ih">{state.speaker ?? state.id}</div>
+    <div class="ih">{stateHeadLabel(state, sourceName)}</div>
 
     {#if state.derivedFrom}
         <div class="ronote">

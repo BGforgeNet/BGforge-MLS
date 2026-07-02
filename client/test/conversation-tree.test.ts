@@ -159,10 +159,10 @@ describe("buildConversationTree", () => {
         expect((bRoot.replies[0]!.target as { kind: string }).kind).toBe("state");
     });
 
-    it("leaves speaker absent when the state has none (SSL); the view falls back to the node id", () => {
+    it("labels an SSL state (no speaker) by the file base name when given, else the bare id", () => {
         const s: DialogState = { id: "A", text: "hi", choices: [] };
-        const { roots } = buildConversationTree(root([s]), undefined, noJump);
-        expect(roots[0]!.speaker).toBeUndefined();
+        expect(buildConversationTree(root([s]), undefined, noJump, "tribec7").roots[0]!.headLabel).toBe("tribec7 - A");
+        expect(buildConversationTree(root([s]), undefined, noJump).roots[0]!.headLabel).toBe("A");
     });
 
     it("returns no roots for an empty dialog", () => {

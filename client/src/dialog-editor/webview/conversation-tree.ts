@@ -15,7 +15,13 @@
  * jump resolution is injected so this module stays decoupled from the editor's
  * root maps (and stays trivially testable).
  */
-import { resolveText, type DialogChoice, type DialogReaction, type DialogRoot } from "../../../../shared/dialog-model";
+import {
+    resolveText,
+    stateHeadLabel,
+    type DialogChoice,
+    type DialogReaction,
+    type DialogRoot,
+} from "../../../../shared/dialog-model";
 import type { JumpTarget } from "./jump-resolve";
 
 export type ConvTarget =
@@ -55,8 +61,9 @@ export interface ConvBranch {
 
 export interface ConvState {
     id: string;
-    /** Speaker name (WeiDU D). Absent for SSL, which has no speaker - the row then shows no generic "NPC" label. */
-    speaker?: string;
+    /** Header label shown on the row: "<speaker> - <id>" (or just the id). Same helper the graph card and
+        inspector use, so the three surfaces read identically. See stateHeadLabel. */
+    headLabel: string;
     /** Resolved NPC line. */
     text: string;
     trigger?: string;
@@ -81,6 +88,7 @@ export function buildConversationTree(
     root: DialogRoot,
     messages: Record<string, string> | undefined,
     resolveJump: ResolveJump,
+    sourceName?: string,
 ): ConversationTree {
     const byId = new Map(root.states.map((s) => [s.id, s]));
 
@@ -146,7 +154,7 @@ export function buildConversationTree(
         }
         return {
             id: s.id,
-            speaker: s.speaker,
+            headLabel: stateHeadLabel(s, sourceName),
             text: resolveText(s.text, messages),
             trigger: s.trigger,
             derivedFrom: s.derivedFrom,

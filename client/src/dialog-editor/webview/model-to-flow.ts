@@ -124,6 +124,8 @@ export function modelToFlow(model: DialogModel): FlowGraph {
                 // CSS class - no model-to-flow rebuild on toggle.
                 data: {
                     state: s,
+                    // File base name -> speaker fallback for the card header (see stateHeadLabel).
+                    sourceName: model.sourceName,
                     messages,
                     reachability: reach.get(s.id),
                     flagged: isFlaggedNode(s),

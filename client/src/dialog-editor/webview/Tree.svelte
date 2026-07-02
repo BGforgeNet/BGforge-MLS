@@ -139,7 +139,7 @@
         {/if}
         <!-- WeiDU D shows the speaker name; SSL has none, so show the node id (as the cards do) instead of a
              meaningless "NPC" on every line. -->
-        <span class="who">{st.speaker ?? st.id}</span>
+        <span class="who">{st.headLabel}</span>
         {#if st.derivedFrom}<Badge badges={["derived"]} label={st.derivedFrom} small />{/if}
         {#if st.trigger}<span class="cond" title={st.trigger}>[if]</span>{/if}
         <!-- A bundle node's line lives per-branch (below); only a flat node shows its line here. -->

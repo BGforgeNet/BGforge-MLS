@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Handle, Position } from "@xyflow/svelte";
-    import { choiceBadges, resolveText, stateBadges, type DialogState } from "../../../../shared/dialog-model";
+    import { choiceBadges, resolveText, stateBadges, stateHeadLabel, type DialogState } from "../../../../shared/dialog-model";
     import type { Reachability } from "../../../../shared/dialog-reachability";
     import Badge from "./Badge.svelte";
     import ReactionChip from "./ReactionChip.svelte";
@@ -10,6 +10,8 @@
     let { data, type }: {
         data: {
             state?: DialogState;
+            /** Dialog file base name -> speaker fallback for the header (see stateHeadLabel). */
+            sourceName?: string;
             label?: string;
             messages?: Record<string, string>;
             jumpTo?: { file: string; stateId: string };
@@ -24,20 +26,6 @@
         type: string;
     } = $props();
 
-    // A derived state (CHAIN/INTERJECT/EXTEND link) has no source label of its own - its
-    // id is editor-synthesized (e.g. "DYEDCON4_2"). Showing that fabricated id is
-    // misleading (searching the .d for it finds nothing), so label it by speaker + the
-    // message ref instead (e.g. "%DYNAHEIR_BANTER% @109"), and badge the construct.
-    // SSL states carry no speaker (it is always the NPC), so a "NPC - " prefix is pure noise on
-    // every card - show just the node id, which is the real, source-addressable identifier. WeiDU D
-    // states carry a real character name in `speaker`, which IS meaningful, so keep it there.
-    function headLabel(state: DialogState): string {
-        if (!state.derivedFrom) return state.speaker ? `${state.speaker} - ${state.id}` : state.id;
-        const m = /^@(\d+)$/.exec((state.text ?? "").trim());
-        const ref = m ? `@${m[1]}` : state.id;
-        return state.speaker ? `${state.speaker} ${ref}` : ref;
-    }
-
 </script>
 
 {#if type === "card" && data.state}
@@ -45,7 +33,7 @@
     <div class="card" class:derived={data.state.derivedFrom} class:orphan={data.reachability === "orphan"} class:flagged={data.flagged}>
         <Handle type="target" position={Position.Left} />
         <div class="hd">
-            <span class="who">{headLabel(data.state)}</span>
+            <span class="who">{stateHeadLabel(data.state, data.sourceName)}</span>
             <!-- For a derived state, show the construct name (CHAIN/...) as the badge label;
                  otherwise the badge's own short text. Full set is on hover. -->
             <Badge badges={sb} label={sb[0] === "derived" ? data.state.derivedFrom : undefined} />
