@@ -12,7 +12,7 @@
     import { layoutFlow } from "./layout";
     import { modelToD } from "../../../../shared/dialog-d-serialize";
     import * as ops from "../../../../shared/dialog-edit-ops";
-    import { eligibleToDelete } from "../../../../shared/dialog-ssl-edit";
+    import { eligibleToDelete, isLocalNewSSLNode } from "../../../../shared/dialog-ssl-edit";
     import { hasHost, postToHost } from "./host";
     import type { DialogModel, DialogReaction, DialogState, DialogTarget } from "../../../../shared/dialog-model";
 
@@ -503,10 +503,15 @@
     // tracks the model-level flag; an SSL node is editable only when faithfully representable
     // (DialogState.faithful), so retarget/reorder write back losslessly via applySSLDialogEdits.
     // The other ops (rename/add/remove/delete/duplicate) stay on `editable` - D-only / later tiers.
+    // A locally-added SSL node (isLocalNewSSLNode) is editable immediately: it has no `faithful` flag yet
+    // (only the parser sets that, on the next save round-trip), but we created it, so it is safe to edit,
+    // delete, and add options to. Without this a freshly-added node stays greyed out until a save.
     const structEditable = (s: DialogState | null): s is DialogState =>
         s != null &&
         !s.derivedFrom &&
-        (editModel.editable || (editModel.format === "fallout-ssl" && (s.faithful === true || s.bundleFaithful === true)));
+        (editModel.editable ||
+            (editModel.format === "fallout-ssl" &&
+                (s.faithful === true || s.bundleFaithful === true || isLocalNewSSLNode(s))));
 
     // Whether a node can be deleted from the graph. A D state: any non-derived state. A faithful SSL node:
     // only when every inbound reference can be cleaned up on save (eligibleToDelete - not an entry, not

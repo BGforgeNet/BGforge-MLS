@@ -178,13 +178,23 @@ export function duplicateState(model: DialogModel, state: DialogState): DialogSt
     return copy;
 }
 
-/** Next free `NodeNNN` id for an SSL model: max existing Node<number> + 1, zero-padded to 3 digits. */
+/** Node numbers reserved for the SSL dialog sinks: 999 (end-dialog) and 998 (combat/hostile). Never
+ * hand these out to a new node, and never count them toward the next-free id. */
+const RESERVED_SSL_NODE_NUMS = new Set([998, 999]);
+
+/**
+ * Next free `NodeNNN` id for an SSL model: the smallest number above every real (non-reserved) node,
+ * zero-padded to 3 digits. The reserved sink range is excluded both from the max AND as an allocation
+ * target, so a dialog that defines `Node999` no longer pushes new ids straight to `Node1000`.
+ */
 function nextSslNodeId(model: DialogModel): string {
     const nums = stateIdsOf(model)
         .map((id) => /^Node(\d+)$/.exec(id)?.[1])
         .filter((m): m is string => m !== undefined && m !== null)
-        .map((m) => Number.parseInt(m, 10));
-    const next = (nums.length > 0 ? Math.max(...nums) : 0) + 1;
+        .map((m) => Number.parseInt(m, 10))
+        .filter((n) => !RESERVED_SSL_NODE_NUMS.has(n));
+    let next = (nums.length > 0 ? Math.max(...nums) : 0) + 1;
+    while (RESERVED_SSL_NODE_NUMS.has(next)) next++;
     return `Node${String(next).padStart(3, "0")}`;
 }
 

@@ -67,6 +67,18 @@ function isNewSSLOption(c: DialogChoice): boolean {
 }
 
 /**
+ * An SSL node the editor created locally: no source procedure (`procRange`) yet, and not a derived
+ * (CHAIN/INTERJECT) view or a renamed existing node. Such a node is fully known and safely editable by
+ * construction, so the webview treats it as structurally editable immediately - before any save round-trip
+ * gives it a `faithful` flag (only the parser sets that). It is also the node the ADD-node splicer serializes
+ * into the file, gated additionally on `!committed` there so a node already spliced on a prior save is not
+ * re-emitted; this predicate deliberately still accepts a committed node, which remains ours to edit.
+ */
+export function isLocalNewSSLNode(s: DialogState): boolean {
+    return !s.procRange && !s.derivedFrom && !s.renamedFrom;
+}
+
+/**
  * A splice op that deletes a whole statement, also consuming its line's leading indentation and trailing
  * newline WHEN the statement is the only non-whitespace content on its line - so removing it leaves no stray
  * blank line. When something else shares the line, only the statement span itself is removed. Shared by every
@@ -659,7 +671,7 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
         for (const s of edited.roots.flatMap((r) => r.states)) {
             // `committed` marks a node already spliced on a prior save (still without a procRange in the
             // webview copy); excluding it stops its procedure being re-emitted (duplicated) on later saves.
-            if (s.procRange || s.derivedFrom || s.renamedFrom || s.committed) continue; // existing/derived/renamed/committed -> not a new node
+            if (!isLocalNewSSLNode(s) || s.committed) continue; // existing/derived/renamed/committed -> not a new node to splice
             const ids = {
                 reply: Number.isFinite(idOf(s.text)) ? idOf(s.text) : undefined,
                 options: Object.fromEntries(

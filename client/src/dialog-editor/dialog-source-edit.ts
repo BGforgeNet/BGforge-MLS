@@ -52,18 +52,20 @@ export function computeDialogSourceEdit(
               ? applySSLDialogEdits(text, edited, original)
               : text;
     const newText = spliced !== text ? spliced : null;
-    // When something was spliced, report the pending items that just gained an `@N` id so the webview can mark
-    // them committed. A pending item is one still lacking a source span (option: no callRange/stmtRange; node:
-    // no procRange) but carrying an `@N` text after allocation above. Existing options carry a stmtRange, so
-    // they are excluded. Empty when nothing was spliced (no new content to reconcile).
+    // When something was spliced, report the pending items THIS edit just gave an `@N` id so the webview can
+    // mark them committed. A pending item is one still lacking a source span (option: no callRange/stmtRange;
+    // node: no procRange) but carrying an `@N` text after allocation above. Existing options carry a stmtRange,
+    // so they are excluded; already-`committed` items were reconciled by a PRIOR edit and are excluded too -
+    // otherwise a save that splices a NEW item alongside them (e.g. adding a second option to a just-created
+    // node) would re-report the earlier ones every time. Empty when nothing was spliced.
     const allocations: Record<string, string> = {};
     if (newText !== null) {
         for (const state of edited.roots.flatMap((r) => r.states)) {
-            if (state.procRange === undefined && !state.derivedFrom && isBareRef(state.text)) {
+            if (state.procRange === undefined && !state.derivedFrom && !state.committed && isBareRef(state.text)) {
                 allocations[state.id] = state.text;
             }
             for (const c of state.choices) {
-                if (c.callRange === undefined && c.stmtRange === undefined && isBareRef(c.text)) {
+                if (c.callRange === undefined && c.stmtRange === undefined && !c.committed && isBareRef(c.text)) {
                     allocations[c.id] = c.text!;
                 }
             }

@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { parseDialog } from "../src/dialog";
 import { modelFromSSL, type DialogModel } from "../../shared/dialog-model";
-import { applySSLDialogEdits, eligibleToDelete, verifySSLEditApplied } from "../../shared/dialog-ssl-edit";
+import {
+    applySSLDialogEdits,
+    eligibleToDelete,
+    isLocalNewSSLNode,
+    verifySSLEditApplied,
+} from "../../shared/dialog-ssl-edit";
 import { duplicateState } from "../../shared/dialog-edit-ops";
 import { allocateNodeIds } from "../../shared/dialog-ssl-ids";
 import { serializeCond, serializeSSLConditionalOption } from "../../shared/dialog-ssl-serialize";
@@ -336,6 +341,29 @@ describe("eligibleToDelete", () => {
         expect(model.entryIds).toContain("NodeX");
         expect((model.entryCalls ?? []).some((ec) => ec.name === "NodeX")).toBe(false);
         expect(eligibleToDelete(model, "NodeX")).toBe(false);
+    });
+});
+
+describe("isLocalNewSSLNode", () => {
+    it("classifies a freshly-added node (no source span) as locally-new, so the editor may edit it at once", () => {
+        // The reported bug: a new node has no `faithful` flag (only the parser sets it), so structEditable
+        // greyed out delete/duplicate/add-option until a save round-trip. A node we created ourselves is
+        // fully known and safely editable by construction - this predicate is what unblocks it.
+        expect(isLocalNewSSLNode({ id: "Node050", text: "", choices: [] })).toBe(true);
+    });
+
+    it("still counts a committed new node (spliced once, no procRange yet) as locally-new and editable", () => {
+        // `committed` suppresses RE-splicing on the next save; it does not make the node uneditable - it is
+        // still ours to edit and delete before any re-parse gives it a real procRange.
+        expect(isLocalNewSSLNode({ id: "Node050", text: "@1", choices: [], committed: true })).toBe(true);
+    });
+
+    it("rejects a parsed node (has a procRange), a derived node, and a renamed node", () => {
+        expect(isLocalNewSSLNode({ id: "Node001", text: "@1", choices: [], procRange: { start: 0, end: 1 } })).toBe(
+            false,
+        );
+        expect(isLocalNewSSLNode({ id: "L", text: "", choices: [], derivedFrom: "Node001" })).toBe(false);
+        expect(isLocalNewSSLNode({ id: "Node002", text: "", choices: [], renamedFrom: "Node001" })).toBe(false);
     });
 });
 

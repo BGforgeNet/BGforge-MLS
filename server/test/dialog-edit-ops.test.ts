@@ -115,6 +115,45 @@ describe("dialog-edit-ops (pure model transforms)", () => {
         expect(s!.id).toBe("Node004"); // max(Node001, Node003) + 1, zero-padded to 3
     });
 
+    it("skips the reserved Node998/Node999 sink range when naming a new SSL node", () => {
+        // Node999 (end-dialog) and Node998 (combat/hostile) are reserved sinks. Counting them toward the max
+        // hands out Node1000 even though low ids are free (the reported bug). A new node must take the next
+        // free id among the real (non-reserved) nodes.
+        const m: DialogModel = {
+            format: "fallout-ssl",
+            editable: false,
+            roots: [
+                {
+                    id: "d",
+                    label: "d",
+                    kind: "dialog",
+                    states: [
+                        { id: "Node001", text: "@1", procRange: { start: 0, end: 1 }, choices: [] },
+                        { id: "Node003", text: "@2", procRange: { start: 2, end: 3 }, choices: [] },
+                        { id: "Node999", text: "@3", procRange: { start: 4, end: 5 }, choices: [] },
+                    ],
+                },
+            ],
+        };
+        expect(ops.addState(m)!.id).toBe("Node004"); // Node999 ignored -> Node004, not Node1000
+    });
+
+    it("never allocates a reserved id: after Node997 the next node jumps past 998/999 to Node1000", () => {
+        const m: DialogModel = {
+            format: "fallout-ssl",
+            editable: false,
+            roots: [
+                {
+                    id: "d",
+                    label: "d",
+                    kind: "dialog",
+                    states: [{ id: "Node997", text: "@1", procRange: { start: 0, end: 1 }, choices: [] }],
+                },
+            ],
+        };
+        expect(ops.addState(m)!.id).toBe("Node1000"); // 998 and 999 are reserved, so skip past them
+    });
+
     it("adds/removes/reorders replies and retargets", () => {
         const m = model();
         const hello = state(m, "hello");
