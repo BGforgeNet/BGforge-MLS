@@ -169,7 +169,7 @@
     // jump resolver the graph stubs use.
     const treeData = $derived(
         activeRoot
-            ? buildConversationTree(activeRoot, editModel.messages, (label) => resolveJumpTarget(label, stateToRoot, fileToRoot), editModel.sourceName)
+            ? buildConversationTree(activeRoot, editModel.messages, (label) => resolveJumpTarget(label, stateToRoot, fileToRoot))
             : { roots: [] },
     );
 

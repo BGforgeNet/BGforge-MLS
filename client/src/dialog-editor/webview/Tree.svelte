@@ -137,9 +137,12 @@
         {:else}
             <span class="caret leafdot">&bull;</span>
         {/if}
-        <!-- WeiDU D shows the speaker name; SSL has none, so show the node id (as the cards do) instead of a
-             meaningless "NPC" on every line. -->
-        <span class="who">{st.headLabel}</span>
+        <!-- WeiDU D shows the real speaker name (a character; it varies across a multi-speaker dialog).
+             The id is the source-addressable handle (jump/rename), useful but secondary to reading the
+             conversation, so show it small and dimmed. SSL has no speaker (one script = one NPC), and the
+             file name would just repeat on every row, so SSL rows show only the dimmed id. -->
+        {#if st.speaker}<span class="who">{st.speaker}</span>{/if}
+        <span class="sid" title="State id (jump/rename target)">{st.id}</span>
         {#if st.derivedFrom}<Badge badges={["derived"]} label={st.derivedFrom} small />{/if}
         {#if st.trigger}<span class="cond" title={st.trigger}>[if]</span>{/if}
         <!-- A bundle node's line lives per-branch (below); only a flat node shows its line here. -->
@@ -276,6 +279,13 @@
         color: #22d3ee;
         font-weight: 700;
         font-size: 10px;
+        white-space: nowrap;
+    }
+    /* The state id: a secondary, addressable handle (jump/rename). Dimmed and small so it does not compete
+       with the conversation line, which is what the tree is for reading. */
+    .sid {
+        color: #64748b;
+        font-size: 9px;
         white-space: nowrap;
     }
     .line {

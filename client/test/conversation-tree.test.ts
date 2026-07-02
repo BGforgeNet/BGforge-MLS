@@ -159,10 +159,13 @@ describe("buildConversationTree", () => {
         expect((bRoot.replies[0]!.target as { kind: string }).kind).toBe("state");
     });
 
-    it("labels an SSL state (no speaker) by the file base name when given, else the bare id", () => {
-        const s: DialogState = { id: "A", text: "hi", choices: [] };
-        expect(buildConversationTree(root([s]), undefined, noJump, "tribec7").roots[0]!.headLabel).toBe("tribec7 - A");
-        expect(buildConversationTree(root([s]), undefined, noJump).roots[0]!.headLabel).toBe("A");
+    it("carries the real speaker (D) but not the SSL file-name fallback; the id is always present (shown dimmed)", () => {
+        const ssl: DialogState = { id: "Node001", text: "hi", choices: [] };
+        const sslRow = buildConversationTree(root([ssl]), undefined, noJump).roots[0]!;
+        expect(sslRow.speaker).toBeUndefined(); // SSL: no speaker -> tree shows only the dimmed id
+        expect(sslRow.id).toBe("Node001");
+        const d: DialogState = { id: "VISK1", speaker: "Viconia", text: "hi", choices: [] };
+        expect(buildConversationTree(root([d]), undefined, noJump).roots[0]!.speaker).toBe("Viconia");
     });
 
     it("returns no roots for an empty dialog", () => {
