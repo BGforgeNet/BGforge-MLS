@@ -451,11 +451,6 @@
         margin-top: 8px;
         margin-bottom: 2px;
     }
-    .ik.between {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
     .iv {
         width: 100%;
         box-sizing: border-box;

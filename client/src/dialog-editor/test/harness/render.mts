@@ -48,6 +48,17 @@ page.on("console", (m) => {
     if (/Content Security Policy/i.test(t) || /Refused to/i.test(t)) cspViolations.push(t);
 });
 
+// The default view is now Tree; most assertions below drive the node graph, so this posts the model and
+// then switches to the Graph tab. A fresh page.goto() resets to the Tree default, so every reload block
+// that needs the graph calls showGraph() after posting.
+async function postModel(): Promise<void> {
+    await page.evaluate((model) => window.postMessage({ type: "model", model }, "*"), REAL_MODEL);
+}
+async function showGraph(): Promise<void> {
+    await page.getByRole("tab", { name: "Graph" }).click();
+    await page.waitForSelector(".svelte-flow__node", { timeout: 10_000 });
+}
+
 await page.goto("file://" + appHtml);
 
 // Before any message arrives, App shows the loading state (not an error, not a graph).
@@ -56,12 +67,17 @@ check("initial state is the loading placeholder", /Parsing dialog/i.test(loading
 
 // Deliver the model through the real channel App listens on. App wraps it in $state and
 // hands the proxy to DialogGraph.cloneModel ($state.snapshot) - the path that crashed.
-await page.evaluate((model) => window.postMessage({ type: "model", model }, "*"), REAL_MODEL);
-await page.waitForSelector(".svelte-flow__node", { timeout: 10_000 });
-const nodeCount = await page.locator(".svelte-flow__node").count();
-check("model posted via postMessage renders the graph", nodeCount > 0, `nodes=${nodeCount}`);
+await postModel();
+// Default view is Tree: the model first renders the tree outline.
+await page.waitForSelector('[role="treeitem"]', { timeout: 10_000 });
+const treeItems = await page.locator('[role="treeitem"]').count();
+check("model posted via postMessage renders the default (tree) view", treeItems > 0, `items=${treeItems}`);
 const afterModelText = (await page.locator("#app").textContent()) ?? "";
 check("loading placeholder is gone once the model renders", !/Parsing dialog/i.test(afterModelText));
+// Switch to Graph for the node-graph assertions below.
+await showGraph();
+const nodeCount = await page.locator(".svelte-flow__node").count();
+check("switching to Graph renders the node graph", nodeCount > 0, `nodes=${nodeCount}`);
 
 // Exercise a structural edit that deep-clones a $state proxy: select a card, Duplicate it.
 // duplicateState uses JSON.parse(JSON.stringify(...)) precisely because structuredClone
@@ -114,8 +130,8 @@ await page.screenshot({ path: shot });
 async function measureCollisionsAt(width: number): Promise<string[]> {
     await page.setViewportSize({ width, height: 700 });
     await page.goto("file://" + appHtml); // fresh load so earlier interactions don't bleed in
-    await page.evaluate((model) => window.postMessage({ type: "model", model }, "*"), REAL_MODEL);
-    await page.waitForSelector(".svelte-flow__node", { timeout: 10_000 });
+    await postModel();
+    await showGraph();
     await page.locator(".svelte-flow__node").first().click({ force: true }); // show the inspector
     for (const name of ["Source", "Issues"]) {
         const b = page.getByRole("button", { name: new RegExp("^" + name) });
@@ -128,7 +144,7 @@ async function measureCollisionsAt(width: number): Promise<string[]> {
     return page.evaluate(() => {
         // Inline only (no named fns): tsx/esbuild keepNames would inject an undefined __name in the page.
         const sels = [
-            ".graphbar", // toolbar + legend
+            ".dialogtoolbar", // shared docked toolbar header
             ".inspector",
             ".svelte-flow__minimap",
             ".svelte-flow__controls",
@@ -170,8 +186,8 @@ for (const width of [300, 520, 900]) {
 // redirect, cancel must keep the node, and only confirm removes it.
 await page.goto("file://" + appHtml);
 await page.setViewportSize({ width: 1000, height: 700 });
-await page.evaluate((model) => window.postMessage({ type: "model", model }, "*"), REAL_MODEL);
-await page.waitForSelector(".svelte-flow__node", { timeout: 10_000 });
+await postModel();
+await showGraph();
 const beforeDel = await page.locator(".svelte-flow__node").count();
 await page.locator(".svelte-flow__node", { hasText: "returnBriel" }).first().click();
 await page.getByRole("button", { name: "Delete state" }).click();
@@ -202,8 +218,8 @@ check(
 // silently drop the node and leave dangling GOTOs (the live-review bug).
 await page.goto("file://" + appHtml);
 await page.setViewportSize({ width: 1000, height: 700 });
-await page.evaluate((model) => window.postMessage({ type: "model", model }, "*"), REAL_MODEL);
-await page.waitForSelector(".svelte-flow__node", { timeout: 10_000 });
+await postModel();
+await showGraph();
 const beforeKbd = await page.locator(".svelte-flow__node").count();
 await page.locator(".svelte-flow__node", { hasText: "returnBriel" }).first().click();
 await page.keyboard.press("Backspace");
@@ -221,10 +237,9 @@ check(
 // each row was a focusable div wrapping a focusable caret button and the arrow keys did nothing.
 await page.goto("file://" + appHtml);
 await page.setViewportSize({ width: 900, height: 700 });
-await page.evaluate((model) => window.postMessage({ type: "model", model }, "*"), REAL_MODEL);
-await page.waitForSelector(".svelte-flow__node", { timeout: 10_000 });
-await page.getByRole("tab", { name: "Tree" }).click();
-await page.waitForSelector('[role="treeitem"]', { timeout: 5000 });
+await postModel();
+// Tree is the default view now, so no tab switch is needed.
+await page.waitForSelector('[role="treeitem"]', { timeout: 10_000 });
 const treeA11y = await page.evaluate(() => ({
     trees: document.querySelectorAll('[role="tree"]').length,
     items: document.querySelectorAll('[role="treeitem"]').length,
