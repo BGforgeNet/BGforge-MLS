@@ -8,6 +8,7 @@
     import Tree from "./Tree.svelte";
     import { modelToFlow, type FlowNode, type FlowEdge } from "./model-to-flow";
     import { buildConversationTree, type ConvState } from "./conversation-tree";
+    import { dialogIssues } from "./dialog-issues";
     import { resolveJumpTarget } from "./jump-resolve";
     import { layoutFlow } from "./layout";
     import { modelToD } from "../../../../shared/dialog-d-serialize";
@@ -94,30 +95,10 @@
     // A delete that would silently redirect inbound transitions to EXIT waits on this confirmation.
     let confirmDelete = $state<{ state: DialogState; refCount: number } | null>(null);
 
-    // Inline validation: a dangling GOTO (target state no longer exists) and duplicate
-    // labels are the errors that break a saved .d; surface them as you edit.
-    const issues = $derived.by(() => {
-        const out: string[] = [];
-        const seen = new Set<string>();
-        const dups = new Set<string>();
-        for (const r of editModel.roots) {
-            for (const s of r.states) {
-                if (seen.has(s.id)) dups.add(s.id);
-                seen.add(s.id);
-            }
-        }
-        for (const d of dups) out.push(`Duplicate state label: ${d}`);
-        for (const r of editModel.roots) {
-            for (const s of r.states) {
-                for (const c of s.choices) {
-                    if (c.target.kind === "state" && !seen.has(c.target.stateId)) {
-                        out.push(`${s.id}: transition points to missing state "${c.target.stateId}"`);
-                    }
-                }
-            }
-        }
-        return out;
-    });
+    // Inline validation surfaced in the Issues panel: a dangling GOTO (target state no longer exists) and
+    // duplicate labels are the errors that break a saved .d. Pure and tested in dialog-issues.ts (the
+    // per-root scoping and derived-state exclusion are the parts that regress into false positives).
+    const issues = $derived(dialogIssues(editModel));
 
     /**
      * Frame the whole laid-out graph from elk's coordinates and our known node sizes.
