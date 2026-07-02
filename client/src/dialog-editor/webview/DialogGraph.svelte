@@ -9,6 +9,7 @@
     import { modelToFlow, type FlowNode, type FlowEdge } from "./model-to-flow";
     import { buildConversationTree, type ConvState } from "./conversation-tree";
     import { dialogIssues } from "./dialog-issues";
+    import { findStateInRoots } from "./state-lookup";
     import { resolveJumpTarget } from "./jump-resolve";
     import { layoutFlow } from "./layout";
     import { modelToD } from "../../../../shared/dialog-d-serialize";
@@ -200,12 +201,12 @@
         treeCollapsed = new Set(allTreeStateIds());
     };
 
+    // Resolve within the ACTIVE root first: state ids are not unique across roots (a D file's several DLGs
+    // reuse labels), and a first-match-across-all-roots lookup returned the wrong instance for a duplicated
+    // id - so "Set target" acted on a state that did not own the choice (target silently unchanged) and
+    // selection jumped to the wrong state. See state-lookup.ts.
     function findState(stateId: string): DialogState | null {
-        for (const r of editModel.roots) {
-            const s = r.states.find((x) => x.id === stateId);
-            if (s) return s;
-        }
-        return null;
+        return findStateInRoots(editModel.roots, activeFile, stateId);
     }
     // Tree-row click: select the state for the shared Inspector.
     function selectTreeState(stateId: string): void {
