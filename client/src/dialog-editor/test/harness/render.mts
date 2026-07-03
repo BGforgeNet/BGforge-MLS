@@ -263,6 +263,58 @@ check(
     JSON.stringify({ ...treeA11y, firstSid, focusedSid }),
 );
 
+// Tree inline add/remove option: the "+ option" row appends a player option to an editable state,
+// and the per-row hover "x" removes one - both through the production path (App -> $state proxy ->
+// DialogGraph.addReplyToState/removeReplyFromState -> the shared ops -> rebuild). REAL_MODEL is a D
+// dialogue, so every non-derived state is structurally editable and every option's "x" is enabled.
+await page.goto("file://" + appHtml);
+await page.setViewportSize({ width: 640, height: 800 });
+await postModel();
+await page.waitForSelector('[role="treeitem"]', { timeout: 10_000 });
+const repsBefore = await page.locator(".rep").count();
+await page.locator(".addbtn").first().click(); // "+ option" on the first editable state
+await page.waitForTimeout(200);
+const repsAfterAdd = await page.locator(".rep").count();
+check(
+    'tree "+ option" appends a player option (add through the production path)',
+    repsAfterAdd === repsBefore + 1,
+    `before=${repsBefore} afterAdd=${repsAfterAdd}`,
+);
+// Remove: hover a reply row to reveal its "x", then click it.
+const firstRep = page.locator(".rep").first();
+await firstRep.hover();
+await firstRep.locator(".delopt:not([disabled])").click();
+await page.waitForTimeout(200);
+const repsAfterRemove = await page.locator(".rep").count();
+check(
+    'tree hover "x" removes a player option (remove through the production path)',
+    repsAfterRemove === repsAfterAdd - 1,
+    `afterAdd=${repsAfterAdd} afterRemove=${repsAfterRemove}`,
+);
+
+// Tree option selection: clicking an option's text (a <button>) selects that individual option - it
+// highlights the tree row (.rep.repsel), docks the Inspector for its owner state, highlights the matching
+// option row there (.trow.choicesel), and focuses that option's text field for immediate editing. Drives
+// the full production path (App -> $state proxy -> DialogGraph.selectReplyInTree -> Inspector effect).
+await page.goto("file://" + appHtml);
+await page.setViewportSize({ width: 900, height: 800 });
+await postModel();
+await page.waitForSelector('[role="treeitem"]', { timeout: 10_000 });
+// Pick an option that has editable text (a D reply with a real line) so the focus assertion is meaningful.
+const optBtn = page.locator(".rtextbtn").first();
+await optBtn.click();
+await page.waitForTimeout(200);
+const selState = await page.evaluate(() => ({
+    treeSel: document.querySelectorAll(".rep.repsel").length,
+    inspectorSel: document.querySelectorAll(".trow.choicesel").length,
+    focusedIsReply: (document.activeElement as HTMLElement | null)?.classList.contains("reply") ?? false,
+}));
+check(
+    "clicking an option selects it: tree row + inspector row highlight and its field focuses",
+    selState.treeSel === 1 && selState.inspectorSel === 1 && selState.focusedIsReply,
+    JSON.stringify(selState),
+);
+
 // Fail-loud error state: a fresh App that receives {type:"error"} shows the message, not a
 // perpetual spinner.
 await page.goto("file://" + appHtml);

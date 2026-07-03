@@ -7,13 +7,24 @@
     // their player replies as a nested outline; clicking a state selects it for the
     // shared Inspector, clicking a cross-file leaf jumps to that dialog's tab, and
     // clicking a "shown elsewhere" ref selects the expanded copy.
-    let { tree, selectedId, collapsed, onSelect, onToggle, onJump, onContext, onReplyContext }: {
+    let { tree, selectedId, selectedChoiceId, collapsed, editableStateIds, ssl, onSelect, onSelectReply, onToggle, onJump, onContext, onReplyContext, onAddReply, onRemoveReply }: {
         tree: ConversationTree;
         selectedId?: string | null;
+        /** The individually-selected option's choice id (within the selected state), or null when a whole
+            state is selected. Highlights that option row. */
+        selectedChoiceId?: string | null;
         /** Ids of collapsed states (default expanded). Owned by the parent so the
             toolbar's expand-all / collapse-all can drive it. */
         collapsed: Set<string>;
+        /** Ids of structurally-editable states (D, or a faithful non-derived SSL node). Only these
+            get the inline add ("+") and remove ("x") affordances on their flat option list. */
+        editableStateIds: Set<string>;
+        /** True for a Fallout SSL dialogue: a conditional option's remove is shown disabled, because
+            the save path does not rewrite its `if` wrapper (mirrors the inspector). */
+        ssl: boolean;
         onSelect: (stateId: string) => void;
+        /** Select an individual option: highlights it and focuses it in the docked Inspector. */
+        onSelectReply: (stateId: string, choiceId: string) => void;
         onToggle: (stateId: string) => void;
         onJump: (file: string, stateId: string) => void;
         /** Right-click on a state row, at viewport coords - opens the parent's menu. */
@@ -21,6 +32,10 @@
         /** Right-click on a reply row: owner state id, choice id, its index and the
             owner's reply count (for move-up/down bounds), and viewport coords. */
         onReplyContext: (stateId: string, choiceId: string, index: number, count: number, x: number, y: number) => void;
+        /** Inline "+": append an option to the state's flat option list. */
+        onAddReply: (stateId: string) => void;
+        /** Inline "x": remove an option from the state's flat option list. */
+        onRemoveReply: (stateId: string, choiceId: string) => void;
     } = $props();
 
     let treeEl: HTMLDivElement | undefined = $state();
@@ -157,6 +172,14 @@
             {#each st.replies as r, i (r.id)}
                 {@render replyRow(r, depth, st.id, i, st.replies.length, false)}
             {/each}
+            <!-- Trailing "+" that appends an option to this state's list (editable states only). Shown even
+                 with zero replies, so a dead-end line can gain its first player option. Indented to the reply
+                 column so it reads as "append to this list". -->
+            {#if editableStateIds.has(st.id)}
+                <div class="addopt" style="--lvl:{depth * 2 + 1}">
+                    <button class="addbtn" title="Add an option" onclick={(e) => (e.stopPropagation(), onAddReply(st.id))}>+ option</button>
+                </div>
+            {/if}
         {/if}
     {/if}
 {/snippet}
@@ -177,6 +200,7 @@
 {#snippet replyRow(r: ConvReply, depth: number, ownerId: string, index: number, count: number, branchReadonly: boolean)}
     <div
         class="rep"
+        class:repsel={ownerId === selectedId && r.id === selectedChoiceId}
         style="--lvl:{depth * 2 + 1}"
         oncontextmenu={branchReadonly
             ? undefined
@@ -184,10 +208,36 @@
     >
         <span class="rmark">&#8627;</span>
         <ReactionChip reaction={r.reaction} lowIq={r.lowIq} />
-        <span class="rtext" class:silent={!r.hasText} class:r-good={r.hasText && r.reaction === "good"} class:r-bad={r.hasText && r.reaction === "bad"} class:r-neutral={r.hasText && r.reaction === "neutral"} title={r.hasText ? r.text : undefined}>{r.hasText ? r.text || "(empty option)" : "(continue)"}</span>
+        <!-- The option text is the selection affordance: on a flat (non-branch) option it is a <button>
+             that selects the option (highlights it here and focuses its field in the docked Inspector); a
+             read-only bundle-branch option stays a plain <span>. svelte:element keeps one styled element for
+             both and only wires onclick for the button, so a span never carries a dangling click handler. -->
+        <svelte:element
+            this={branchReadonly ? "span" : "button"}
+            role={branchReadonly ? undefined : "button"}
+            class="rtext"
+            class:rtextbtn={!branchReadonly}
+            class:silent={!r.hasText}
+            class:r-good={r.hasText && r.reaction === "good"}
+            class:r-bad={r.hasText && r.reaction === "bad"}
+            class:r-neutral={r.hasText && r.reaction === "neutral"}
+            title={r.hasText ? r.text : undefined}
+            onclick={branchReadonly ? undefined : () => onSelectReply(ownerId, r.id)}
+        >{r.hasText ? r.text || "(empty option)" : "(continue)"}</svelte:element>
         {#if r.condition}<span class="rcond" title={r.condition}>[if]</span>{/if}
         {#if r.action}<span class="ract" title={r.action}>[do]</span>{/if}
         {@render leaf(r)}
+        <!-- Inline remove (hover-revealed) on an editable state's flat option. A conditional SSL option is
+             shown disabled with a tooltip - its `if` wrapper is not rewritten on save (mirrors the inspector). -->
+        {#if !branchReadonly && editableStateIds.has(ownerId)}
+            {@const blocked = ssl && Boolean(r.condition)}
+            <button
+                class="delopt"
+                title={blocked ? "Conditional options are removed in the .ssl source" : "Remove option"}
+                disabled={blocked}
+                onclick={(e) => (e.stopPropagation(), onRemoveReply(ownerId, r.id))}>&#10005;</button
+            >
+        {/if}
     </div>
     {#if r.target.kind === "state"}
         {@render stateBlock(r.target.node, depth + 1)}
@@ -255,6 +305,13 @@
     }
     .rep {
         padding-left: calc(var(--lvl) * 14px + 8px);
+    }
+    /* Selected option row: same fill as a selected state (.st.sel) plus an inset left accent, so it reads
+       as selected without an outer border that would shift the row. */
+    .rep.repsel {
+        background: #1f2a44;
+        border-radius: 4px;
+        box-shadow: inset 2px 0 0 #3b82f6;
     }
     .caret {
         background: none;
@@ -332,6 +389,28 @@
         text-overflow: ellipsis;
         white-space: nowrap;
     }
+    /* The flat-option text rendered as a <button>: reset to read as text while staying a real, focusable,
+       keyboard-operable selection target. min-width:0 lets it shrink and ellipsize inside the flex row. */
+    .rtextbtn {
+        background: none;
+        border: none;
+        padding: 0;
+        margin: 0;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+        min-width: 0;
+        max-width: 100%;
+    }
+    .rtextbtn:hover {
+        text-decoration: underline;
+        text-underline-offset: 2px;
+    }
+    .rtextbtn:focus-visible {
+        outline: 1px solid #3b82f6;
+        outline-offset: 1px;
+        border-radius: 2px;
+    }
     .rtext.silent {
         color: #64748b;
         font-style: italic;
@@ -387,5 +466,53 @@
     button.lf.ref:hover,
     button.lf.jump:hover {
         filter: brightness(1.2);
+    }
+    /* Trailing "+ option" row: dashed, muted, reading as an append affordance at the end of a state's
+       option list rather than another option. Mirrors the inspector's dashed add row at tree scale. */
+    .addopt {
+        padding: 1px 6px;
+        /* Indent to the same reply column as this state's options (matches .rep) so the "+ option"
+           reads as "append to THIS list" rather than an ambiguous top-level add. */
+        padding-left: calc(var(--lvl) * 14px + 8px);
+    }
+    .addbtn {
+        background: none;
+        border: 1px dashed #3a4152;
+        border-radius: 4px;
+        color: #64748b;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 10px;
+        line-height: 1.4;
+        padding: 0 8px;
+    }
+    .addbtn:hover {
+        border-color: #4b5563;
+        color: #93a2b8;
+        background: #20242c;
+    }
+    /* Inline remove: hidden until the option row is hovered (or the button is focused for keyboard use),
+       pushed to the far right of the row. Disabled (conditional SSL option) reads dim and non-interactive. */
+    .delopt {
+        margin-left: auto;
+        background: none;
+        border: none;
+        color: #b45; /* muted red, quiet until hover */
+        cursor: pointer;
+        font-size: 11px;
+        line-height: 1;
+        padding: 0 2px;
+        visibility: hidden;
+    }
+    .rep:hover .delopt,
+    .delopt:focus-visible {
+        visibility: visible;
+    }
+    .delopt:hover:not(:disabled) {
+        color: #fca5a5;
+    }
+    .delopt:disabled {
+        color: #6b7280;
+        cursor: default;
     }
 </style>

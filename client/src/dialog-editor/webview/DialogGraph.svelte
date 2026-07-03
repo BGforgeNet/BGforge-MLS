@@ -52,6 +52,11 @@
     let nodes = $state.raw<unknown[]>([]);
     let edges = $state.raw<unknown[]>([]);
     let selected = $state<DialogState | null>(null);
+    // The individually-selected option within `selected`, when the user clicks an option row in the tree
+    // (null when a whole state is selected). Highlights that option in the tree and drives the docked
+    // Inspector to scroll to + focus its edit field. Only meaningful alongside `selected`; cleared on any
+    // state-level selection so it never mis-highlights an option of a different state.
+    let selectedChoiceId = $state<string | null>(null);
     let viewport = $state({ x: 0, y: 0, zoom: 1 });
     let containerW = $state(0);
     let containerH = $state(0);
@@ -221,10 +226,22 @@
     function findState(stateId: string): DialogState | null {
         return findStateInRoots(editModel.roots, activeFile, stateId);
     }
-    // Tree-row click: select the state for the shared Inspector.
+    // Tree-row click: select the state for the shared Inspector. Clears any option selection - selecting
+    // the whole state is a state-level action.
     function selectTreeState(stateId: string): void {
         const s = findState(stateId);
-        if (s) selected = s;
+        if (s) {
+            selected = s;
+            selectedChoiceId = null;
+        }
+    }
+    // Tree option-row click: select the option (and its owner state) so the tree highlights it and the
+    // docked Inspector scrolls to + focuses its edit field.
+    function selectReplyInTree(stateId: string, choiceId: string): void {
+        const s = findState(stateId);
+        if (!s) return;
+        selected = s;
+        selectedChoiceId = choiceId;
     }
 
     // Select a state, switching to its tab first if it lives in another dialog (a caller can be cross-root).
@@ -440,6 +457,7 @@
             renderedFile = "";
             activeFile = editModel.roots.find((r) => r.states.length > 0)?.id ?? "";
             selected = null;
+            selectedChoiceId = null;
             confirmDelete = null;
             void rebuild({ relayout: true });
             suppressEmit = true;
@@ -499,6 +517,7 @@
         }
         activeFile = fileId;
         selected = null;
+        selectedChoiceId = null;
         treeCollapsed = new Set();
         void rebuild(focusId ? { focusId } : { frame: "entry" });
     }
@@ -512,6 +531,7 @@
             return;
         }
         selected = event.node.data?.state ?? null;
+        selectedChoiceId = null;
     }
 
     // Thin wrappers over the pure edit ops (shared/dialog-edit-ops.ts): each runs the
@@ -545,6 +565,31 @@
     // reached by a `call`, no inbound option in a non-faithful node). eligibleToDelete returns true for D.
     const canDelete = (s: DialogState | null): s is DialogState =>
         structEditable(s) && eligibleToDelete(editModel, s.id);
+
+    // Ids of the active root's structurally-editable states, for the tree's inline add/remove-option
+    // affordances (the "+" row and the per-option hover "x"). Same derivation the graph uses for
+    // `lockedSources`, scoped to the active root because the tree renders one root at a time.
+    const editableTreeStateIds = $derived(
+        new Set((activeRoot?.states ?? []).filter((s) => structEditable(s)).map((s) => s.id)),
+    );
+
+    // Tree inline "+": add an option to a state addressed by id (the row need not be the current
+    // selection). Mirrors ctxAct("addReply") - select the owner, then reuse the shared op.
+    function addReplyToState(stateId: string): void {
+        const st = findState(stateId);
+        if (!structEditable(st)) return;
+        selected = st;
+        actions.addReply();
+    }
+    // Tree inline "x": remove an option from a state addressed by id. Mirrors replyAct("remove").
+    // The tree gates a conditional SSL option's "x" as disabled (matching the inspector), so this
+    // is only reached for a removable option.
+    function removeReplyFromState(stateId: string, choiceId: string): void {
+        const st = findState(stateId);
+        if (!structEditable(st)) return;
+        selected = st;
+        actions.removeReply(choiceId);
+    }
 
     // Actually remove the state (after the confirm modal, or directly when there are no inbound refs).
     function performDelete(s: DialogState): void {
@@ -756,7 +801,7 @@
 {/snippet}
 
 {#snippet inspectorBox(s: DialogState)}
-    <Inspector state={s} messages={editModel.messages} {stateIds} {actions} format={editModel.format} sourceName={editModel.sourceName} editable={editModel.editable} structuralEditable={structEditable(s)} deletable={canDelete(s)} callers={callerRows} onNavigate={navigateToState} />
+    <Inspector state={s} messages={editModel.messages} {stateIds} {actions} format={editModel.format} sourceName={editModel.sourceName} editable={editModel.editable} structuralEditable={structEditable(s)} deletable={canDelete(s)} callers={callerRows} {selectedChoiceId} onNavigate={navigateToState} />
 {/snippet}
 
 <svelte:window onkeydown={onWindowKeydown} />
@@ -830,7 +875,7 @@
                     {#if treeData.roots.length === 0}
                         <div class="treeempty">No states in this dialog file.</div>
                     {/if}
-                    <Tree tree={treeData} selectedId={selected?.id} collapsed={treeCollapsed} onSelect={selectTreeState} onToggle={toggleTreeNode} onJump={treeJump} onContext={openContext} onReplyContext={openReplyContext} />
+                    <Tree tree={treeData} selectedId={selected?.id} selectedChoiceId={selectedChoiceId} collapsed={treeCollapsed} editableStateIds={editableTreeStateIds} ssl={editModel.format === "fallout-ssl"} onSelect={selectTreeState} onSelectReply={selectReplyInTree} onToggle={toggleTreeNode} onJump={treeJump} onContext={openContext} onReplyContext={openReplyContext} onAddReply={addReplyToState} onRemoveReply={removeReplyFromState} />
                 </div>
                 {#if ctxMenu}
                     <div class="ctxbackdrop" role="presentation" onclick={closeContext} oncontextmenu={(e) => (e.preventDefault(), closeContext())}></div>

@@ -20,10 +20,13 @@
     // (Fallout SSL) it is a read-only, SSL-native presentation - SSL is derived from script
     // and has no surgical write-back yet, so editing is disabled and the WeiDU vocabulary
     // (trigger/weight/`DO ~...~`) is replaced or dropped.
-    let { state, messages, stateIds, actions, format, editable, structuralEditable, deletable, sourceName, callers, onNavigate }: {
+    let { state, messages, stateIds, actions, format, editable, structuralEditable, deletable, sourceName, callers, selectedChoiceId, onNavigate }: {
         state: DialogState;
         messages: Record<string, string> | undefined;
         stateIds: string[];
+        /** When the user selects an individual option in the tree, its choice id - this panel scrolls to
+            and focuses that option's field. Null when a whole state is selected. */
+        selectedChoiceId?: string | null;
         /** Dialog file base name -> speaker fallback for the title (see stateHeadLabel). */
         sourceName: string | undefined;
         /** Inbound references to this state (who reaches it), resolved to display rows. */
@@ -147,6 +150,24 @@
         const byId = new Map(state.choices.map((c) => [c.id, c]));
         return b.choiceIds.map((id) => byId.get(id)).filter((c): c is DialogChoice => c !== undefined);
     }
+
+    // When an option is selected in the tree, scroll its row into view here and focus its text field so the
+    // user can edit immediately (a locked field - a non-resolvable SSL @N, or a read-only node - can't be
+    // focused, so we only scroll it into view). Keyed on `selectedChoiceId` so it fires on each new option
+    // pick, not on every keystroke. The row is found via `document` scoped to `.inspector` rather than a
+    // bind:this ref for two reasons: a `$state` ref miscompiles to a store auto-subscription here (this
+    // component has a `state` prop that shadows the rune - store_invalid_shape at runtime, the same reason
+    // the branch input above uses `writable`), and a plain-`let` bind:this ref trips oxlint no-unassigned-vars
+    // (it can't see the template assignment). Exactly one `.inspector` is mounted at a time (the shared
+    // siderail), so the query is unambiguous.
+    $effect(() => {
+        if (!selectedChoiceId) return;
+        const row = document.querySelector(`.inspector .trow[data-cid="${CSS.escape(selectedChoiceId)}"]`);
+        if (!row) return;
+        row.scrollIntoView({ block: "nearest" });
+        const ta = row.querySelector<HTMLTextAreaElement>("textarea.reply");
+        if (ta && !ta.disabled) ta.focus();
+    });
 </script>
 
 <div class="inspector" class:ro={readOnly}>
@@ -227,7 +248,10 @@
     <div class="ik">Options ({state.choices.length})</div>
 
     {#snippet choiceRow(c, i, bi, branchLen)}
-        <div class="trow">
+        <!-- data-cid + choicesel drive the tree's option selection: picking an option in the tree scrolls
+             this row into view, highlights it, and focuses its text field. Only flat options (bi undefined)
+             are selectable from the tree; branch options stay read-only there. -->
+        <div class="trow" data-cid={c.id} class:choicesel={bi === undefined && c.id === selectedChoiceId}>
             <div class="trhead">
                 <span class="tnum">#{i + 1}</span>
                 {#if structuralEditable || !readOnly}
@@ -516,6 +540,12 @@
         display: flex;
         flex-direction: column;
         gap: 3px;
+    }
+    /* The option selected from the tree: blue left accent + faint fill, matching the tree row's blue
+       selection, so the same option reads as selected in both panels. */
+    .trow.choicesel {
+        border-left-color: #3b82f6;
+        background: #18202f;
     }
     .trhead {
         display: flex;
