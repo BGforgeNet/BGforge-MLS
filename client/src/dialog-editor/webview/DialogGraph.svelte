@@ -10,6 +10,7 @@
     import { buildConversationTree, type ConvState } from "./conversation-tree";
     import { dialogIssues } from "./dialog-issues";
     import { distinctStateIds, findStateInRoots } from "./state-lookup";
+    import { unresolvedRefCount } from "./translation-status";
     import { findCallers, type CallerRow } from "./find-callers";
     import { resolveJumpTarget } from "./jump-resolve";
     import { layoutFlow } from "./layout";
@@ -98,6 +99,9 @@
     // state label (two CHAIN blocks sharing a terminal label), and a keyed {#each} over the raw
     // ids would raise svelte's each_key_duplicate; a jump target is a label, so distinct is correct.
     const stateIds = $derived(distinctStateIds(activeRoot?.states ?? []));
+    // How many @N refs failed to resolve to real text (the tra/msg path isn't found). Drives the banner
+    // below - otherwise a misconfigured translation dir silently renders every line as its raw @N ref.
+    const unresolvedRefs = $derived(unresolvedRefCount(editModel));
     // Live serialization of the edited model back to WeiDU D. Only D is serializable;
     // recomputes as edits mutate editModel (a save path will post this to the host).
     const sourceText = $derived(showSource && editModel.format === "weidu-d" ? modelToD(editModel) : "");
@@ -779,6 +783,16 @@
             <button class="toolbtn" title="Collapse every state" onclick={collapseAll}>Collapse all</button>
         {/if}
     </div>
+    {#if unresolvedRefs > 0}
+        <!-- Make a silent resolution failure legible: without a resolvable tra/msg path, getMessages returns
+             nothing and every line renders as its raw @N. Tell the author how to point the path rather than
+             leaving the whole conversation unreadable with no explanation. -->
+        <div class="untra" role="status">
+            <b>{unresolvedRefs}</b> message ref{unresolvedRefs === 1 ? "" : "s"} show as <code>@N</code> - translations aren't resolved.
+            Point the tra path in <b>.bgforge.yml</b> (<code>translation.directory</code>, e.g. <code>tra/english</code>)
+            or add a <code>@tra&nbsp;~path~</code> line to the file.
+        </div>
+    {/if}
     <div class="body">
     <div class="flowwrap" class:spotlight bind:clientWidth={containerW} bind:clientHeight={containerH}>
         {#if viewMode === "graph"}
@@ -1023,6 +1037,27 @@
         padding: 6px 8px;
         background: #15171c;
         border-bottom: 1px solid #2b303a;
+    }
+    /* Unresolved-translations banner: a full-width amber notice below the toolbar, matching the
+       inspector's .ronote palette. Makes a silent tra/msg-resolution failure legible and actionable. */
+    .untra {
+        flex: 0 0 auto;
+        background: #2a2620;
+        border-bottom: 1px solid #a16207;
+        color: #fbbf24;
+        font-size: 11px;
+        line-height: 1.4;
+        padding: 5px 9px;
+    }
+    .untra b {
+        color: #fcd34d;
+    }
+    .untra code {
+        font-family: var(--vscode-editor-font-family, monospace);
+        color: #e8eaed;
+        background: #15171c;
+        border-radius: 3px;
+        padding: 0 3px;
     }
     .tbsep {
         width: 1px;
