@@ -601,6 +601,13 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
             if (ec.name === oldId)
                 ops.push({ start: ec.targetRange.start, end: ec.targetRange.end, replacement: newId });
         }
+        // Out-of-band entries (`force_dialog_start`/`start_dialog_at_node` in timers/map-enter handlers) live
+        // outside talk_p_proc and have no model choice, so only the captured target span rewrites them. Their
+        // spans are disjoint from every node procedure and from talk_p_proc's entry calls, so no op overlaps.
+        for (const ob of original.outOfBandCalls ?? []) {
+            if (ob.name === oldId)
+                ops.push({ start: ob.targetRange.start, end: ob.targetRange.end, replacement: newId });
+        }
     }
 
     for (const state of edited.roots.flatMap((r) => r.states)) {

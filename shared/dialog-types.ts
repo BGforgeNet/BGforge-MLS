@@ -184,6 +184,12 @@ export interface SSLDialogData {
     }>;
     /** Byte offset where a NEW entry call is spliced into talk_p_proc (end of its last body statement). Set by the parser. */
     entryCallAnchor?: number;
+    /**
+     * Each `force_dialog_start(Node)` / `start_dialog_at_node(Node)` call reached from outside talk_p_proc (timers,
+     * map-enter handlers), with the target-identifier span. A node rename rewrites these so the out-of-band entry
+     * does not dangle at the old name. Only plain-identifier targets are captured. Set by the parser.
+     */
+    outOfBandCalls?: Array<{ name: string; targetRange: { start: number; end: number } }>;
 }
 
 // ---------------------------------------------------------------------------

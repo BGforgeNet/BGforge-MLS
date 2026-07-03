@@ -8,14 +8,15 @@
  * except where correctness demands it (see `duplicateState`).
  */
 
-import type {
-    DialogBranch,
-    DialogChoice,
-    DialogModel,
-    DialogReaction,
-    DialogRoot,
-    DialogState,
-    DialogTarget,
+import {
+    type DialogBranch,
+    type DialogChoice,
+    type DialogModel,
+    type DialogReaction,
+    type DialogRoot,
+    type DialogState,
+    type DialogTarget,
+    rewriteSameFileExternRef,
 } from "./dialog-model";
 
 export function stateIdsOf(model: DialogModel): string[] {
@@ -121,6 +122,23 @@ export function renameState(model: DialogModel, state: DialogState, newId: strin
     retargetReferences(model, state.id, (c) => {
         c.target = { kind: "state", stateId: trimmed };
     });
+    // WeiDU D only: a state can also be reached from another dialogue in the SAME .d file via
+    // `EXTERN ~thisResref~ <id>`, stored as an opaque `external` target (retargetReferences only moves GOTO
+    // "state" targets). Rewrite its state part too, or the cross-dialogue reference dangles at the old id on
+    // save. The "file:state" encoding is D-specific (targetFromD), so this is gated to weidu-d models; a
+    // genuinely cross-FILE EXTERN is inherently unresolvable by a single-file editor and is left untouched.
+    if (model.format === "weidu-d") {
+        const file = rootOf(model, state)?.label;
+        if (file !== undefined) {
+            for (const r of model.roots)
+                for (const s of r.states)
+                    for (const c of s.choices) {
+                        if (c.target.kind !== "external") continue;
+                        const rewritten = rewriteSameFileExternRef(c.target.label, file, state.id, trimmed);
+                        if (rewritten !== null) c.target = { ...c.target, label: rewritten };
+                    }
+        }
+    }
     // Tag a source-backed node (has nameRange) with its ORIGINAL id so the SSL splicer can rewrite the
     // procedure name token + references it keys on. The `=== undefined` guard means a second rename keeps
     // the original source id, not an intermediate one.

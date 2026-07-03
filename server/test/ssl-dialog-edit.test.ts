@@ -7,7 +7,7 @@ import {
     isLocalNewSSLNode,
     verifySSLEditApplied,
 } from "../../shared/dialog-ssl-edit";
-import { duplicateState } from "../../shared/dialog-edit-ops";
+import { duplicateState, renameState } from "../../shared/dialog-edit-ops";
 import { allocateNodeIds } from "../../shared/dialog-ssl-ids";
 import { serializeCond, serializeSSLConditionalOption } from "../../shared/dialog-ssl-serialize";
 
@@ -602,6 +602,36 @@ describe("applySSLDialogEdits - rename node", () => {
         expect(out).toContain("procedure Node008 begin");
         expect(out).toContain("NOption(101, Node008, 4);"); // inbound option retargeted exactly once (no corruption)
         expect(out).not.toContain("Node002"); // no stale ref or doubled token
+    });
+
+    it("rewrites an out-of-band start_dialog_at_node target when its node is renamed", async () => {
+        // A node can be entered from outside talk_p_proc via start_dialog_at_node(Node)/force_dialog_start(Node)
+        // in a timer or map-enter handler. Renaming that node must rewrite the out-of-band call's argument, or
+        // the saved file has a dangling reference to the old name (58 corpus files use this pattern).
+        const src = `procedure Node001 begin\n    Reply(100);\nend\nprocedure map_enter_p_proc begin\n    start_dialog_at_node(Node001);\nend\nprocedure talk_p_proc begin\n    call Node001;\nend\n`;
+        const original = modelFromSSL(await parseDialog(src));
+        const edited = structuredCloneModel(original);
+        const n1 = edited.roots[0]!.states.find((s) => s.id === "Node001")!;
+        renameState(edited, n1, "Node009");
+        const out = applySSLDialogEdits(src, edited, original);
+        expect(out).toContain("start_dialog_at_node(Node009)"); // out-of-band call rewritten
+        expect(out).toContain("procedure Node009 begin"); // definition renamed
+        expect(out).not.toContain("Node001"); // no dangling reference anywhere
+        // Re-parse yields zero dangling entry points: every entry resolves to a parsed node.
+        const reparsed = await parseDialog(out);
+        const nodeNames = new Set(reparsed.nodes.map((n) => n.name));
+        for (const ep of reparsed.entryPoints) expect(nodeNames.has(ep)).toBe(true);
+    });
+
+    it("rewrites an out-of-band force_dialog_start target when its node is renamed", async () => {
+        const src = `procedure Node001 begin\n    Reply(100);\nend\nprocedure timed_event_p_proc begin\n    force_dialog_start(Node001);\nend\nprocedure talk_p_proc begin\n    call Node001;\nend\n`;
+        const original = modelFromSSL(await parseDialog(src));
+        const edited = structuredCloneModel(original);
+        const n1 = edited.roots[0]!.states.find((s) => s.id === "Node001")!;
+        renameState(edited, n1, "Node042");
+        const out = applySSLDialogEdits(src, edited, original);
+        expect(out).toContain("force_dialog_start(Node042)");
+        expect(out).not.toContain("Node001");
     });
 
     it("renames the node's forward declaration, not just its definition", async () => {

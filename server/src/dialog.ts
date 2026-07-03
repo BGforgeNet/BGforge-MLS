@@ -80,6 +80,10 @@ export async function parseDialog(
         | undefined;
     // Byte offset where a NEW entry call is spliced into talk_p_proc (end of its last body statement).
     let entryCallAnchor: number | undefined;
+    // Each `force_dialog_start(Node)` / `start_dialog_at_node(Node)` call reached from OUTSIDE talk_p_proc
+    // (timers, map-enter handlers). Only the target-identifier span is captured (a call_expr target has no plain
+    // token to splice) so a node rename can rewrite the argument, or the saved file dangles at the old name.
+    const outOfBandCalls: Array<{ name: string; targetRange: { start: number; end: number } }> = [];
 
     // Forward declarations (`procedure Name;`) carry a name token that a rename must also rewrite, or the
     // file is left with an orphan decl for the old name and the renamed procedure undeclared. Capture each
@@ -131,7 +135,13 @@ export async function parseDialog(
         const arg = getCallArgs(node)[0];
         if (!arg) return;
         const name = arg.type === SyntaxType.CallExpr ? arg.childForFieldName("func")?.text : arg.text;
-        if (name && !entryPoints.includes(name)) entryPoints.push(name);
+        if (!name) return;
+        if (!entryPoints.includes(name)) entryPoints.push(name);
+        // Capture the plain-identifier target span so a rename can rewrite it. A call_expr arg has no single
+        // target token to splice, so it is left name-only (as before) - it cannot be a renamable node id anyway.
+        if (arg.type !== SyntaxType.CallExpr) {
+            outOfBandCalls.push({ name, targetRange: { start: arg.startIndex, end: arg.endIndex } });
+        }
     });
 
     // Second pass: include only procedures reachable from a dialog entry point
@@ -168,6 +178,7 @@ export async function parseDialog(
         ...(newProcAnchor !== undefined ? { newProcAnchor } : {}),
         ...(entryCalls !== undefined ? { entryCalls } : {}),
         ...(entryCallAnchor !== undefined ? { entryCallAnchor } : {}),
+        ...(outOfBandCalls.length > 0 ? { outOfBandCalls } : {}),
     };
 }
 

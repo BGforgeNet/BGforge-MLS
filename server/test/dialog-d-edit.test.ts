@@ -3,6 +3,7 @@ import { initParser } from "../../shared/parsers/weidu-d";
 import { parseDDialog } from "../src/weidu-d/dialog";
 import { modelFromD, type DialogState } from "../../shared/dialog-model";
 import { applyDialogEdits, pendingInserts, verifyDialogEditApplied } from "../../shared/dialog-d-edit";
+import { renameState } from "../../shared/dialog-edit-ops";
 
 // ---------------------------------------------------------------------------
 // Test fixture
@@ -469,5 +470,69 @@ END
         expect(choice.condition).toBe('Global("g","GLOBAL",1)');
         expect(choice.text).toBe("@2");
         expect(choice.target).toEqual({ kind: "state", stateId: "s" });
+    });
+});
+
+describe("applyDialogEdits - rename across same-file EXTERN", () => {
+    beforeAll(async () => {
+        await initParser();
+    });
+
+    // One .d file can define several dialogues (multiple BEGIN blocks). A transition in one dialogue reaches a
+    // state in ANOTHER dialogue of the SAME file via `EXTERN ~otherResref~ label`. Renaming that target state must
+    // rewrite the EXTERN's label too, or the saved file dangles at the old name (a WeiDU compile error).
+    const CROSS = `BEGIN ~first~
+IF ~~ THEN BEGIN intro
+  SAY ~Hello from first.~
+  IF ~~ THEN REPLY ~Go deeper.~ EXTERN ~second~ deep
+END
+END
+
+BEGIN ~second~
+IF ~~ THEN BEGIN deep
+  SAY ~Hello from second.~
+  IF ~~ THEN REPLY ~Bye.~ EXIT
+END
+END
+`;
+
+    it("rewrites a same-file EXTERN reference when its target state is renamed", () => {
+        const original = modelFromD(parseDDialog(CROSS));
+        const edited = modelFromD(parseDDialog(CROSS));
+        const secondRoot = edited.roots.find((r) => r.label === "second")!;
+        const deep = secondRoot.states.find((s) => s.id === "deep")!;
+        renameState(edited, deep, "deep_renamed");
+        const out = applyDialogEdits(CROSS, edited, original);
+        expect(out).toContain("BEGIN deep_renamed"); // definition renamed
+        expect(out).toContain("EXTERN ~second~ deep_renamed"); // cross-dialogue reference rewritten
+        expect(out).not.toMatch(/EXTERN ~second~ deep\b/); // no dangling reference to the old name
+    });
+
+    // COPY_TRANS is the sibling of EXTERN: it copies transitions from another dialogue's state and is stored on
+    // the same opaque `external` target. Renaming the referenced state must rewrite it too.
+    const CROSS_CT = `BEGIN ~first~
+IF ~~ THEN BEGIN intro
+  SAY ~Hello from first.~
+  IF ~~ THEN COPY_TRANS ~second~ deep
+END
+END
+
+BEGIN ~second~
+IF ~~ THEN BEGIN deep
+  SAY ~Hello from second.~
+  IF ~~ THEN REPLY ~Bye.~ EXIT
+END
+END
+`;
+
+    it("rewrites a same-file COPY_TRANS reference when its target state is renamed", () => {
+        const original = modelFromD(parseDDialog(CROSS_CT));
+        const edited = modelFromD(parseDDialog(CROSS_CT));
+        const deep = edited.roots.find((r) => r.label === "second")!.states.find((s) => s.id === "deep")!;
+        renameState(edited, deep, "deep_renamed");
+        const out = applyDialogEdits(CROSS_CT, edited, original);
+        expect(out).toContain("BEGIN deep_renamed");
+        expect(out).toContain("COPY_TRANS ~second~ deep_renamed");
+        expect(out).not.toMatch(/COPY_TRANS ~second~ deep\b/);
     });
 });

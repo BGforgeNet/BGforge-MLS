@@ -61,6 +61,12 @@ export interface DialogModel {
      * Set by the SSL adapter; absent for D and when the source has no talk_p_proc.
      */
     entryCallAnchor?: number;
+    /**
+     * SSL only: each `force_dialog_start(Node)` / `start_dialog_at_node(Node)` call reached from outside talk_p_proc,
+     * with the target-identifier span. The SSL splicer rewrites these on rename so an out-of-band entry does not
+     * dangle at the old name. Set by the SSL adapter from `SSLDialogData.outOfBandCalls`; absent for D.
+     */
+    outOfBandCalls?: Array<{ name: string; targetRange: { start: number; end: number } }>;
 }
 
 export type DialogRootKind = "dialog" | "patch";
@@ -390,6 +396,25 @@ function targetFromD(t: DDialogTarget): DialogTarget {
     }
 }
 
+/**
+ * Same-file EXTERN/COPY_TRANS references live on an `external` target as an opaque label - `targetFromD` encodes
+ * them "file:state" (or "COPY_TRANS file:state"). When a state is renamed, a reference to it from ANOTHER dialogue
+ * in the SAME .d file (`EXTERN ~thisResref~ <id>`) must have its state part rewritten, or the saved file dangles
+ * at the old name. Returns the rewritten label, or null when the target does not reference `oldId` in `file`.
+ * The file part (its tilde delimiters and spelling) is preserved; only the state identifier is swapped. Files are
+ * matched after tilde-stripping so a genuinely cross-file EXTERN that merely shares the state name is left alone.
+ */
+export function rewriteSameFileExternRef(label: string, file: string, oldId: string, newId: string): string | null {
+    const prefix = label.startsWith("COPY_TRANS ") ? "COPY_TRANS " : "";
+    const rest = label.slice(prefix.length);
+    const colon = rest.indexOf(":");
+    if (colon === -1) return null;
+    const refFile = rest.slice(0, colon).replaceAll("~", "");
+    const refState = rest.slice(colon + 1);
+    if (refState !== oldId || refFile !== file.replaceAll("~", "")) return null;
+    return `${prefix}${rest.slice(0, colon)}:${newId}`;
+}
+
 function stateFromD(s: DDialogState): DialogState {
     return {
         id: s.label,
@@ -581,5 +606,6 @@ export function modelFromSSL(data: SSLDialogData): DialogModel {
         entryIds: data.entryPoints,
         entryCalls: data.entryCalls,
         entryCallAnchor: data.entryCallAnchor,
+        outOfBandCalls: data.outOfBandCalls,
     };
 }
