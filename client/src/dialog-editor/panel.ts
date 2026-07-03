@@ -20,6 +20,7 @@ import { generateNonce, getCachedJsAsset } from "../webview-assets";
 import { buildDialogWebviewHtml } from "./dialog-webview-html";
 import { computeDialogSourceEdit } from "./dialog-source-edit";
 import { EchoGuard } from "./edit-origin";
+import { SerialQueue } from "./serial-queue";
 
 const DIALOG_LANGS = new Set(["fallout-ssl", "weidu-d", "tssl", "td"]);
 
@@ -47,11 +48,13 @@ function buildHtml(webview: vscode.Webview, extensionUri: vscode.Uri): string {
     return buildDialogWebviewHtml({ cspSource: webview.cspSource, cssUri, nonce, scriptBody });
 }
 
-/** Per-open-panel session state: the echo guard, latest model (for the .tra flush), and the debounce timer. */
+/** Per-open-panel session state: the echo guard, latest model (for the .tra flush), the debounce timer, and
+ *  the serial edit queue that keeps back-to-back webview edits from racing the same document. */
 interface Session {
     guard: EchoGuard;
     latest: DialogModel | undefined;
     traTimer: ReturnType<typeof setTimeout> | undefined;
+    edits: SerialQueue;
 }
 
 class DialogEditorProvider implements vscode.CustomTextEditorProvider {
@@ -78,14 +81,26 @@ class DialogEditorProvider implements vscode.CustomTextEditorProvider {
             guard: new EchoGuard(),
             latest: undefined,
             traTimer: undefined,
+            edits: new SerialQueue(),
         };
         this.sessions.set(panel, session);
 
         panel.webview.onDidReceiveMessage((msg: { type?: string; model?: DialogModel }) => {
             if (msg?.type === "ready") void this.postModel(document, panel);
             // The webview emits one "edit" (the whole model) per user action; each applies to the live
-            // document as a single WorkspaceEdit (one native undo step).
-            else if (msg?.type === "edit" && msg.model) void this.applyEdit(document, panel, msg.model);
+            // document as a single WorkspaceEdit (one native undo step). Serialize them through the session
+            // queue: two edits fired back-to-back would otherwise run applyEdit concurrently and their
+            // WorkspaceEdits race the document (VS Code rejects the second, "applySplices: overlapping ops").
+            else if (msg?.type === "edit" && msg.model) {
+                const model = msg.model;
+                session.edits.enqueue(
+                    () => this.applyEdit(document, panel, model),
+                    (error) => {
+                        const message = error instanceof Error ? error.message : String(error);
+                        void vscode.window.showErrorMessage(`Dialog edit failed: ${message}`);
+                    },
+                );
+            }
         });
 
         const changeSub = vscode.workspace.onDidChangeTextDocument((e) => {
