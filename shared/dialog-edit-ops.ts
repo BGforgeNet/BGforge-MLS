@@ -122,10 +122,13 @@ function retargetReferences(root: DialogRoot, oldId: string, apply: (c: DialogCh
 export function renameState(model: DialogModel, state: DialogState, newId: string): boolean {
     const trimmed = newId.trim();
     if (!trimmed || trimmed === state.id) return false;
-    const taken = new Set(stateIdsOf(model));
-    taken.delete(state.id);
-    if (taken.has(trimmed)) return false;
     const root = rootOf(model, state);
+    // Uniqueness is per-dialogue (per root): one .d file may define a state label once in each of several
+    // dialogues, so only a collision WITHIN this state's own dialogue is a real conflict. SSL has a single
+    // "dialog" root, so this stays file-wide there. (A state not in any root has no siblings to collide with.)
+    const siblings = new Set((root?.states ?? []).map((s) => s.id));
+    siblings.delete(state.id);
+    if (siblings.has(trimmed)) return false;
     // Move GOTO references within the SAME dialogue only (a GOTO resolves per-dialogue); if the state is somehow
     // not in any root, there are no in-model references to move.
     if (root) {

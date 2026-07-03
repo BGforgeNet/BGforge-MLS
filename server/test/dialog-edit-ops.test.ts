@@ -94,6 +94,19 @@ END
         expect(ops.countInboundGotos(m, inRoot(m, "first", "shared"))).toBe(1); // only first's `a`
     });
 
+    it("renameState allows a label already used in ANOTHER dialogue (per-dialogue uniqueness)", () => {
+        const m = crossModel();
+        expect(ops.renameState(m, inRoot(m, "first", "a"), "b")).toBe(true); // "b" exists only in `second`
+        expect(inRoot(m, "first", "b")).toBeDefined(); // first now owns its own "b"
+        expect(inRoot(m, "second", "b")).toBeDefined(); // second's "b" is untouched
+    });
+
+    it("renameState still rejects a label already used in the SAME dialogue", () => {
+        const m = crossModel();
+        expect(ops.renameState(m, inRoot(m, "first", "a"), "shared")).toBe(false); // `shared` is in `first`
+        expect(inRoot(m, "first", "a").id).toBe("a"); // unchanged
+    });
+
     it("duplicates a state with a fresh id and NO sourceRange (so save cannot clobber the original)", () => {
         const m = model();
         const original = state(m, "hello");
