@@ -114334,10 +114334,10 @@ ${component_stack}
   function renameState(model, state2, newId2) {
     const trimmed = newId2.trim();
     if (!trimmed || trimmed === state2.id) return false;
-    const taken = new Set(stateIdsOf(model));
-    taken.delete(state2.id);
-    if (taken.has(trimmed)) return false;
     const root44 = rootOf(model, state2);
+    const siblings = new Set((root44?.states ?? []).map((s) => s.id));
+    siblings.delete(state2.id);
+    if (siblings.has(trimmed)) return false;
     if (root44) {
       retargetReferences(root44, state2.id, (c) => {
         c.target = { kind: "state", stateId: trimmed };
