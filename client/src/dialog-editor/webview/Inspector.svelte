@@ -11,6 +11,7 @@
         type DialogTarget,
     } from "../../../../shared/dialog-model";
     import { isPendingChoice, isPendingState, msgRef, textFieldLocked } from "./inspector-edit";
+    import type { CallerRow } from "./find-callers";
 
     // The detail panel for the selected state. For an editable format (WeiDU D) it is the
     // edit surface: content fields (SAY, trigger, weight, reply/condition/action) mutate the
@@ -19,12 +20,16 @@
     // (Fallout SSL) it is a read-only, SSL-native presentation - SSL is derived from script
     // and has no surgical write-back yet, so editing is disabled and the WeiDU vocabulary
     // (trigger/weight/`DO ~...~`) is replaced or dropped.
-    let { state, messages, stateIds, actions, format, editable, structuralEditable, deletable, sourceName }: {
+    let { state, messages, stateIds, actions, format, editable, structuralEditable, deletable, sourceName, callers, onNavigate }: {
         state: DialogState;
         messages: Record<string, string> | undefined;
         stateIds: string[];
         /** Dialog file base name -> speaker fallback for the title (see stateHeadLabel). */
         sourceName: string | undefined;
+        /** Inbound references to this state (who reaches it), resolved to display rows. */
+        callers: CallerRow[];
+        /** Select a state (a caller) - switches tab first if it lives in another dialog. */
+        onNavigate: (stateId: string) => void;
         format: DialogFormat;
         editable: boolean;
         // Per-node structural editability. For D it tracks `editable`; for SSL it is true only on
@@ -390,6 +395,25 @@
         {/if}
     {/if}
 
+    <!-- Reverse references (find-callers): what reaches this state - the cross-reference a modder needs
+         before editing or renaming a node, which the raw-text workflow does with a project grep. Option/call
+         rows navigate to the referencing state; the entry rows are informational. An empty list means the
+         node is an orphan (nothing reaches it). -->
+    <div class="ik">Referenced by ({callers.length})</div>
+    {#if callers.length === 0}
+        <div class="refnote">Nothing in this file reaches this state (an orphan / unreachable node).</div>
+    {:else}
+        <div class="refs">
+            {#each callers as ref, i (i)}
+                {#if ref.fromStateId}
+                    <button class="ref" title="Go to {ref.fromStateId}" onclick={() => onNavigate(ref.fromStateId!)}>{ref.label}</button>
+                {:else}
+                    <div class="ref static" title="Reached from outside the dialog procedures">{ref.label}</div>
+                {/if}
+            {/each}
+        </div>
+    {/if}
+
     {#if !readOnly}
         <div class="stateops">
             <button onclick={actions.duplicateState}>Duplicate state</button>
@@ -525,6 +549,44 @@
         border-style: dashed;
         font-size: 12px;
         line-height: 1.4;
+    }
+    /* Reverse-reference rows (find-callers). A referencing option/call is a clickable row that navigates to
+       it; an entry row is static. Neutral grey accent for a normal ref, amber for an external entry. */
+    .refnote {
+        color: #9aa0a6;
+        font-size: 10px;
+        font-style: italic;
+        padding: 2px 0;
+    }
+    .refs {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+    .ref {
+        display: block;
+        width: 100%;
+        text-align: left;
+        background: #21242b;
+        border: 1px solid #2b303a;
+        border-left: 3px solid #64748b;
+        border-radius: 3px;
+        color: #cbd5e1;
+        font-size: 10px;
+        padding: 3px 6px;
+        cursor: pointer;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .ref:hover {
+        border-color: #3b82f6;
+        color: #fff;
+    }
+    .ref.static {
+        cursor: default;
+        color: #9aa0a6;
+        border-left-color: #f59e0b;
     }
     /* NPC line = blue (blue-300), matching the graph card and tree; player option text = neutral grey
        (slate-300), overridden to green/red by the per-option reaction chip. */

@@ -10,13 +10,20 @@
     import { buildConversationTree, type ConvState } from "./conversation-tree";
     import { dialogIssues } from "./dialog-issues";
     import { findStateInRoots } from "./state-lookup";
+    import { findCallers, type CallerRow } from "./find-callers";
     import { resolveJumpTarget } from "./jump-resolve";
     import { layoutFlow } from "./layout";
     import { modelToD } from "../../../../shared/dialog-d-serialize";
     import * as ops from "../../../../shared/dialog-edit-ops";
     import { eligibleToDelete, isLocalNewSSLNode } from "../../../../shared/dialog-ssl-edit";
     import { hasHost, postToHost } from "./host";
-    import type { DialogModel, DialogReaction, DialogState, DialogTarget } from "../../../../shared/dialog-model";
+    import {
+        resolveText,
+        type DialogModel,
+        type DialogReaction,
+        type DialogState,
+        type DialogTarget,
+    } from "../../../../shared/dialog-model";
 
     let { model }: { model: DialogModel } = $props();
 
@@ -213,6 +220,30 @@
         const s = findState(stateId);
         if (s) selected = s;
     }
+
+    // Select a state, switching to its tab first if it lives in another dialog (a caller can be cross-root).
+    function navigateToState(stateId: string): void {
+        const rootId = stateToRoot.get(stateId);
+        if (rootId && rootId !== activeFile) switchTab(rootId, stateId);
+        selectTreeState(stateId);
+    }
+
+    // "Referenced by": inbound references to the selected state, resolved to display rows (who reaches this
+    // node - options, calls, the talk_p_proc entry, or an external force_dialog_start entry). Choice ids are
+    // globally unique, so the referencing option's text is looked up across all states.
+    const callerRows = $derived.by((): CallerRow[] => {
+        if (!selected) return [];
+        const allChoices = editModel.roots.flatMap((r) => r.states).flatMap((s) => s.choices);
+        return findCallers(editModel, selected.id).map((c): CallerRow => {
+            if (c.kind === "entry") return { kind: c.kind, label: "talk_p_proc (dialog entry)" };
+            if (c.kind === "external-entry")
+                return { kind: c.kind, label: "force_dialog_start / start_dialog_at_node" };
+            const choice = allChoices.find((ch) => ch.id === c.choiceId);
+            const text = choice ? resolveText(choice.text, editModel.messages) : "";
+            const verb = c.kind === "call" ? "call" : "option";
+            return { kind: c.kind, fromStateId: c.fromStateId, label: `${c.fromStateId} (${verb})${text ? ": " + text : ""}` };
+        });
+    });
 
     // Right-click context menu in the tree: structural actions without the
     // select-then-inspector round-trip. A state row offers state actions; a reply row
@@ -719,7 +750,7 @@
 {/snippet}
 
 {#snippet inspectorBox(s: DialogState)}
-    <Inspector state={s} messages={editModel.messages} {stateIds} {actions} format={editModel.format} sourceName={editModel.sourceName} editable={editModel.editable} structuralEditable={structEditable(s)} deletable={canDelete(s)} />
+    <Inspector state={s} messages={editModel.messages} {stateIds} {actions} format={editModel.format} sourceName={editModel.sourceName} editable={editModel.editable} structuralEditable={structEditable(s)} deletable={canDelete(s)} callers={callerRows} onNavigate={navigateToState} />
 {/snippet}
 
 <svelte:window onkeydown={onWindowKeydown} />
