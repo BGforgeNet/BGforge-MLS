@@ -56,6 +56,44 @@ describe("modelToFlow - cards and edges", () => {
     });
 });
 
+describe("modelToFlow - duplicate state ids (shared CHAIN label)", () => {
+    test("collapses states sharing an id to one card so svelte-flow node and edge keys stay unique", () => {
+        // A WeiDU D root can carry the same state label twice - two CHAIN blocks whose terminal state is
+        // `VISK1` (x#viconia.d, lines 372 & 383). Emitting a card per raw state hands svelte-flow two nodes
+        // with id "VISK1"; its internal keyed {#each} then throws each_key_duplicate and the graph render
+        // crashes. One card per DISTINCT id keeps node (and edge) keys unique - matching the tree, which
+        // already merges these states.
+        const model: DialogModel = {
+            format: "weidu-d",
+            editable: true,
+            roots: [
+                {
+                    id: "d",
+                    label: "d",
+                    kind: "dialog",
+                    states: [
+                        {
+                            id: "Talk",
+                            text: "hi",
+                            choices: [{ id: "Talk#0", text: "go", target: { kind: "state", stateId: "VISK1" } }],
+                        },
+                        { id: "VISK1", text: "one", choices: [{ id: "VISK1#0", target: { kind: "exit" } }] },
+                        { id: "VISK1", text: "two", choices: [{ id: "VISK1#0", target: { kind: "exit" } }] },
+                    ],
+                },
+            ],
+        };
+        const { nodes, edges } = modelToFlow(model);
+        const nodeIds = nodes.map((n) => n.id);
+        expect(new Set(nodeIds).size).toBe(nodeIds.length); // unique node keys: no each_key_duplicate
+        expect(nodeIds.filter((id) => id === "VISK1")).toHaveLength(1);
+        const edgeIds = edges.map((e) => e.id);
+        expect(new Set(edgeIds).size).toBe(edgeIds.length); // and unique edge keys
+        // The edge into VISK1 still resolves to the (single) VISK1 card - no dangling.
+        expect(edges.find((e) => e.id === "Talk#0")?.target).toBe("VISK1");
+    });
+});
+
 describe("modelToFlow - synthetic terminals and stubs", () => {
     test("an exit choice points at a single shared 'exit' node", () => {
         const { nodes, edges } = modelToFlow(SAMPLE);

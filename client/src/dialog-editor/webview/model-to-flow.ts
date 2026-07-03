@@ -108,8 +108,16 @@ export function modelToFlow(model: DialogModel): FlowGraph {
     // card so the renderer can flag dead states (orphan) and EXTERN entries.
     const reach = classifyReachability(model);
     const isShared = sharedTextStates(model);
+    // A root can carry the same state label twice - two CHAIN blocks whose terminal state shares a label
+    // (VISK1 in x#viconia.d). Svelte Flow keys nodes (and edges) by id, so a second card/edge with a
+    // repeated id throws each_key_duplicate and crashes the whole graph render. Emit one card per DISTINCT
+    // id (and skip the duplicate's edges), matching the tree, which already merges these states. Deeper
+    // faithful representation of a doubly-defined label is a separate concern (routing-layer work).
+    const emittedCardIds = new Set<string>();
     for (const root of model.roots) {
         for (const s of root.states) {
+            if (emittedCardIds.has(s.id)) continue;
+            emittedCardIds.add(s.id);
             const { width, height } = stateNodeSize(s, resolveText(s.text, messages).length);
             // messages travels in node data so the card can resolve @N at render time
             // while the raw refs stay on the state (needed for .tra write-back).

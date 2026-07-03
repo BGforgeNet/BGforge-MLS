@@ -9,7 +9,7 @@
     import { modelToFlow, type FlowNode, type FlowEdge } from "./model-to-flow";
     import { buildConversationTree, type ConvState } from "./conversation-tree";
     import { dialogIssues } from "./dialog-issues";
-    import { findStateInRoots } from "./state-lookup";
+    import { distinctStateIds, findStateInRoots } from "./state-lookup";
     import { findCallers, type CallerRow } from "./find-callers";
     import { resolveJumpTarget } from "./jump-resolve";
     import { layoutFlow } from "./layout";
@@ -94,8 +94,10 @@
     let renderedFile = "";
 
     // Target dropdown offers same-file states only - a GOTO (kind:state) is within one
-    // dialog; cross-file links are EXTERN and handled separately.
-    const stateIds = $derived(activeRoot?.states.map((s) => s.id) ?? []);
+    // dialog; cross-file links are EXTERN and handled separately. Deduped: a root can repeat a
+    // state label (two CHAIN blocks sharing a terminal label), and a keyed {#each} over the raw
+    // ids would raise svelte's each_key_duplicate; a jump target is a label, so distinct is correct.
+    const stateIds = $derived(distinctStateIds(activeRoot?.states ?? []));
     // Live serialization of the edited model back to WeiDU D. Only D is serializable;
     // recomputes as edits mutate editModel (a save path will post this to the host).
     const sourceText = $derived(showSource && editModel.format === "weidu-d" ? modelToD(editModel) : "");

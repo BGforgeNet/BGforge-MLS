@@ -25,3 +25,16 @@ export function findStateInRoots(
     }
     return null;
 }
+
+/**
+ * Distinct state ids of one root, first-occurrence order preserved.
+ *
+ * A root can carry the same state label more than once (two CHAIN blocks with the same terminal label; see
+ * the duplicate-id note above). The GOTO-target dropdown renders these ids as a keyed `{#each}`, so a raw
+ * `states.map(s => s.id)` with a repeat produces a duplicate Svelte key (svelte.dev/e/each_key_duplicate) and
+ * a render error. A jump target is addressed by label, so listing each distinct label once is both correct
+ * and what the dropdown needs.
+ */
+export function distinctStateIds(states: DialogState[]): string[] {
+    return [...new Set(states.map((s) => s.id))];
+}
