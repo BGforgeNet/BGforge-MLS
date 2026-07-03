@@ -54,8 +54,44 @@ describe("dialog-edit-ops (pure model transforms)", () => {
     it("counts inbound GOTOs so a delete can warn before redirecting them to EXIT", () => {
         const m = model();
         // `hello`'s first reply does GOTO more; nothing points at `hello`.
-        expect(ops.countInboundGotos(m, "more")).toBe(1);
-        expect(ops.countInboundGotos(m, "hello")).toBe(0);
+        expect(ops.countInboundGotos(m, state(m, "more"))).toBe(1);
+        expect(ops.countInboundGotos(m, state(m, "hello"))).toBe(0);
+    });
+
+    // A GOTO resolves WITHIN one dialogue (BEGIN block / resref). When two dialogues in the same .d file each
+    // define a same-named state and each GOTOs its own copy, an edit to one dialogue's state must not touch the
+    // other's identically-named state or its GOTO.
+    const CROSS_GOTO = `BEGIN ~first~
+IF ~~ THEN BEGIN a SAY ~A1~ IF ~~ THEN REPLY ~go~ GOTO shared END
+IF ~~ THEN BEGIN shared SAY ~First shared~ IF ~~ THEN EXIT END
+END
+
+BEGIN ~second~
+IF ~~ THEN BEGIN b SAY ~B1~ IF ~~ THEN REPLY ~go~ GOTO shared END
+IF ~~ THEN BEGIN shared SAY ~Second shared~ IF ~~ THEN EXIT END
+END
+`;
+    const crossModel = () => modelFromD(parseDDialog(CROSS_GOTO));
+    const inRoot = (m: DialogModel, label: string, id: string) =>
+        m.roots.find((r) => r.label === label)!.states.find((s) => s.id === id)!;
+
+    it("renameState moves only same-dialogue GOTOs, not a same-named state in another dialogue", () => {
+        const m = crossModel();
+        ops.renameState(m, inRoot(m, "first", "shared"), "shared_x");
+        expect(inRoot(m, "first", "a").choices[0]!.target).toEqual({ kind: "state", stateId: "shared_x" });
+        expect(inRoot(m, "second", "b").choices[0]!.target).toEqual({ kind: "state", stateId: "shared" });
+    });
+
+    it("deleteState redirects only same-dialogue inbound GOTOs to EXIT", () => {
+        const m = crossModel();
+        ops.deleteState(m, inRoot(m, "first", "shared"));
+        expect(inRoot(m, "first", "a").choices[0]!.target).toEqual({ kind: "exit" });
+        expect(inRoot(m, "second", "b").choices[0]!.target).toEqual({ kind: "state", stateId: "shared" });
+    });
+
+    it("countInboundGotos counts only same-dialogue inbound GOTOs", () => {
+        const m = crossModel();
+        expect(ops.countInboundGotos(m, inRoot(m, "first", "shared"))).toBe(1); // only first's `a`
     });
 
     it("duplicates a state with a fresh id and NO sourceRange (so save cannot clobber the original)", () => {

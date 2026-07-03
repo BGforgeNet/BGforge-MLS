@@ -87,23 +87,29 @@ function allChoiceIds(model: DialogModel): Set<string> {
 }
 
 /**
- * How many transitions across the model point at `stateId` via GOTO. `deleteState` silently
- * redirects all of them to EXIT (a dangling GOTO would fail to compile), so the editor warns
- * before deleting when this is non-zero - the redirect is the surprising side-effect a modder hit.
+ * How many transitions point at `state` via GOTO. `deleteState` silently redirects all of them to EXIT (a
+ * dangling GOTO would fail to compile), so the editor warns before deleting when this is non-zero - the redirect
+ * is the surprising side-effect a modder hit. Counts only same-dialogue GOTOs (see `retargetReferences`).
  */
-export function countInboundGotos(model: DialogModel, stateId: string): number {
+export function countInboundGotos(model: DialogModel, state: DialogState): number {
+    const root = rootOf(model, state);
+    if (!root) return 0;
     let n = 0;
-    retargetReferences(model, stateId, () => n++);
+    retargetReferences(root, state.id, () => n++);
     return n;
 }
 
-/** Apply to every transition whose GOTO target is `oldId`, across all states. */
-function retargetReferences(model: DialogModel, oldId: string, apply: (c: DialogChoice) => void): void {
-    for (const r of model.roots) {
-        for (const s of r.states) {
-            for (const c of s.choices) {
-                if (c.target.kind === "state" && c.target.stateId === oldId) apply(c);
-            }
+/**
+ * Apply to every transition whose GOTO target is `oldId`, among states in `root` only. A GOTO (`state` target)
+ * resolves WITHIN one dialogue (BEGIN block / resref = one root), so a same-named state in another dialogue of the
+ * same .d file is NOT a reference to this one - scoping to `root` avoids corrupting that unrelated state's GOTOs.
+ * For SSL (a single "dialog" root) this is the whole model. Cross-dialogue EXTERN/COPY_TRANS refs are `external`
+ * targets, handled separately in `renameState`.
+ */
+function retargetReferences(root: DialogRoot, oldId: string, apply: (c: DialogChoice) => void): void {
+    for (const s of root.states) {
+        for (const c of s.choices) {
+            if (c.target.kind === "state" && c.target.stateId === oldId) apply(c);
         }
     }
 }
@@ -119,25 +125,30 @@ export function renameState(model: DialogModel, state: DialogState, newId: strin
     const taken = new Set(stateIdsOf(model));
     taken.delete(state.id);
     if (taken.has(trimmed)) return false;
-    retargetReferences(model, state.id, (c) => {
-        c.target = { kind: "state", stateId: trimmed };
-    });
-    // WeiDU D only: a state can also be reached from another dialogue in the SAME .d file via
+    const root = rootOf(model, state);
+    // Move GOTO references within the SAME dialogue only (a GOTO resolves per-dialogue); if the state is somehow
+    // not in any root, there are no in-model references to move.
+    if (root) {
+        retargetReferences(root, state.id, (c) => {
+            c.target = { kind: "state", stateId: trimmed };
+        });
+    }
+    // WeiDU D only: a state can also be reached from ANOTHER dialogue in the SAME .d file via
     // `EXTERN ~thisResref~ <id>`, stored as an opaque `external` target (retargetReferences only moves GOTO
-    // "state" targets). Rewrite its state part too, or the cross-dialogue reference dangles at the old id on
-    // save. The "file:state" encoding is D-specific (targetFromD), so this is gated to weidu-d models; a
-    // genuinely cross-FILE EXTERN is inherently unresolvable by a single-file editor and is left untouched.
-    if (model.format === "weidu-d") {
-        const file = rootOf(model, state)?.label;
-        if (file !== undefined) {
-            for (const r of model.roots)
-                for (const s of r.states)
-                    for (const c of s.choices) {
-                        if (c.target.kind !== "external") continue;
-                        const rewritten = rewriteSameFileExternRef(c.target.label, file, state.id, trimmed);
-                        if (rewritten !== null) c.target = { ...c.target, label: rewritten };
-                    }
-        }
+    // "state" targets, and only within this state's own dialogue). Rewrite its state part too, or the
+    // cross-dialogue reference dangles at the old id on save. This scan spans ALL roots (the reference lives in a
+    // different dialogue) but matches on the referenced file, so only same-file refs are touched. The "file:state"
+    // encoding is D-specific (targetFromD), so this is gated to weidu-d; a genuinely cross-FILE EXTERN is
+    // inherently unresolvable by a single-file editor and is left untouched.
+    if (model.format === "weidu-d" && root !== undefined) {
+        const file = root.label;
+        for (const r of model.roots)
+            for (const s of r.states)
+                for (const c of s.choices) {
+                    if (c.target.kind !== "external") continue;
+                    const rewritten = rewriteSameFileExternRef(c.target.label, file, state.id, trimmed);
+                    if (rewritten !== null) c.target = { ...c.target, label: rewritten };
+                }
     }
     // Tag a source-backed node (has nameRange) with its ORIGINAL id so the SSL splicer can rewrite the
     // procedure name token + references it keys on. The `=== undefined` guard means a second rename keeps
@@ -152,11 +163,14 @@ export function renameState(model: DialogModel, state: DialogState, newId: strin
  * has no dangling target (a dangling GOTO is a WeiDU compile error).
  */
 export function deleteState(model: DialogModel, state: DialogState): void {
-    retargetReferences(model, state.id, (c) => {
+    const root = rootOf(model, state);
+    if (!root) return; // not in the model - nothing to delete or redirect
+    // Redirect inbound GOTOs within the SAME dialogue only (a GOTO resolves per-dialogue); a same-named state in
+    // another dialogue keeps its own inbound GOTOs.
+    retargetReferences(root, state.id, (c) => {
         c.target = { kind: "exit" };
     });
-    const root = rootOf(model, state);
-    if (root) root.states = root.states.filter((s) => s !== state);
+    root.states = root.states.filter((s) => s !== state);
 }
 
 /**

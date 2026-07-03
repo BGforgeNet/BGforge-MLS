@@ -561,7 +561,7 @@
     // model's GOTOs dangling.
     function requestDeleteState(s: DialogState | null): void {
         if (!canDelete(s)) return; // D: any non-derived; SSL: faithful + delete-eligible
-        const refs = ops.countInboundGotos(editModel, s.id);
+        const refs = ops.countInboundGotos(editModel, s);
         if (refs > 0) {
             confirmDelete = { state: s, refCount: refs };
             return;
