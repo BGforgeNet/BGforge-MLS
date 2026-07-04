@@ -610,6 +610,12 @@
     const editableTreeStateIds = $derived(
         new Set((activeRoot?.states ?? []).filter((s) => structEditable(s)).map((s) => s.id)),
     );
+    // Ids of states that can be deleted right now (canDelete: structurally editable AND every inbound
+    // reference can be cleaned up on save). Drives whether the tree's inline "-" is enabled vs shown
+    // disabled with an explanatory tooltip.
+    const deletableTreeStateIds = $derived(
+        new Set((activeRoot?.states ?? []).filter((s) => canDelete(s)).map((s) => s.id)),
+    );
 
     // Append an option to a state and reproject. Shared by the tree "+ option" and the graph/inspector
     // "Add option" so there is one add path; returns the new choice so the caller can act on it.
@@ -637,6 +643,29 @@
         if (!structEditable(st)) return;
         selected = st;
         actions.removeReply(choiceId);
+    }
+    // Tree inline node "+": grow the conversation from a state - add a new NPC state and an option here that
+    // leads to it, then drop into inline edit on that new option's text. The new child is empty; its own line
+    // is edited by selecting it (inspector NPC field). Composed from the same ops the toolbar/graph use.
+    function addChildNode(stateId: string): void {
+        const st = findState(stateId);
+        if (!structEditable(st)) return;
+        const child = ops.addState(editModel, activeRoot ?? undefined);
+        if (!child) return;
+        const c = ops.addReply(editModel, st);
+        ops.setChoiceTarget(st, c.id, { kind: "state", stateId: child.id });
+        selected = st;
+        selectedChoiceId = c.id;
+        editingChoiceId = c.id; // type the option text that leads to the new node
+        void rebuild({ frame: "none" });
+    }
+    // Tree inline node "-": delete a state addressed by id, through the same guarded path as the inspector
+    // Delete / Backspace (requestDeleteState confirms when inbound transitions would be redirected to EXIT).
+    function deleteStateFromTree(stateId: string): void {
+        const st = findState(stateId);
+        if (!canDelete(st)) return;
+        selected = st;
+        requestDeleteState(st);
     }
 
     // Actually remove the state (after the confirm modal, or directly when there are no inbound refs).
@@ -922,7 +951,7 @@
                     {#if treeData.roots.length === 0}
                         <div class="treeempty">No states in this dialog file.</div>
                     {/if}
-                    <Tree tree={treeData} selectedId={selected?.id} selectedChoiceId={selectedChoiceId} editingChoiceId={editingChoiceId} collapsed={treeCollapsed} editableStateIds={editableTreeStateIds} ssl={editModel.format === "fallout-ssl"} onSelect={selectTreeState} onSelectReply={selectReplyInTree} onBeginEditReply={beginEditReply} onCommitEditReply={commitEditReply} onCancelEditReply={cancelEditReply} onToggle={toggleTreeNode} onJump={treeJump} onContext={openContext} onReplyContext={openReplyContext} onAddReply={addReplyToState} onRemoveReply={removeReplyFromState} />
+                    <Tree tree={treeData} selectedId={selected?.id} selectedChoiceId={selectedChoiceId} editingChoiceId={editingChoiceId} collapsed={treeCollapsed} editableStateIds={editableTreeStateIds} deletableStateIds={deletableTreeStateIds} ssl={editModel.format === "fallout-ssl"} onSelect={selectTreeState} onSelectReply={selectReplyInTree} onBeginEditReply={beginEditReply} onCommitEditReply={commitEditReply} onCancelEditReply={cancelEditReply} onToggle={toggleTreeNode} onJump={treeJump} onContext={openContext} onReplyContext={openReplyContext} onAddReply={addReplyToState} onRemoveReply={removeReplyFromState} onAddChildNode={addChildNode} onDeleteState={deleteStateFromTree} />
                 </div>
                 {#if ctxMenu}
                     <div class="ctxbackdrop" role="presentation" onclick={closeContext} oncontextmenu={(e) => (e.preventDefault(), closeContext())}></div>

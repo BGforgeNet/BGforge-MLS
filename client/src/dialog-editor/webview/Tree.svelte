@@ -7,7 +7,7 @@
     // their player replies as a nested outline; clicking a state selects it for the
     // shared Inspector, clicking a cross-file leaf jumps to that dialog's tab, and
     // clicking a "shown elsewhere" ref selects the expanded copy.
-    let { tree, selectedId, selectedChoiceId, editingChoiceId, collapsed, editableStateIds, ssl, onSelect, onSelectReply, onBeginEditReply, onCommitEditReply, onCancelEditReply, onToggle, onJump, onContext, onReplyContext, onAddReply, onRemoveReply }: {
+    let { tree, selectedId, selectedChoiceId, editingChoiceId, collapsed, editableStateIds, deletableStateIds, ssl, onSelect, onSelectReply, onBeginEditReply, onCommitEditReply, onCancelEditReply, onToggle, onJump, onContext, onReplyContext, onAddReply, onRemoveReply, onAddChildNode, onDeleteState }: {
         tree: ConversationTree;
         selectedId?: string | null;
         /** The individually-selected option's choice id (within the selected state), or null when a whole
@@ -19,8 +19,11 @@
             toolbar's expand-all / collapse-all can drive it. */
         collapsed: Set<string>;
         /** Ids of structurally-editable states (D, or a faithful non-derived SSL node). Only these
-            get the inline add ("+") and remove ("x") affordances on their flat option list. */
+            get the inline option add ("+")/remove ("x") and the node add-child ("+")/delete ("-"). */
         editableStateIds: Set<string>;
+        /** Ids of states that can be deleted now (no un-cleanable inbound refs). The node "-" is enabled
+            for these and shown disabled (with a tooltip) for other editable states. */
+        deletableStateIds: Set<string>;
         /** True for a Fallout SSL dialogue: a conditional option's remove is shown disabled, because
             the save path does not rewrite its `if` wrapper (mirrors the inspector). */
         ssl: boolean;
@@ -44,6 +47,10 @@
         onAddReply: (stateId: string) => void;
         /** Inline "x": remove an option from the state's flat option list. */
         onRemoveReply: (stateId: string, choiceId: string) => void;
+        /** Node "+": add a connected child state (new option here -> new NPC state). */
+        onAddChildNode: (stateId: string) => void;
+        /** Node "-": delete this state (guarded/confirmed by the parent). */
+        onDeleteState: (stateId: string) => void;
     } = $props();
 
     let treeEl: HTMLDivElement | undefined = $state();
@@ -206,6 +213,32 @@
         {#if st.trigger}<span class="cond" title={st.trigger}>[if]</span>{/if}
         <!-- A bundle node's line lives per-branch (below); only a flat node shows its line here. -->
         {#if !st.branches}<span class="line" title={st.text}>{st.text || "(no line)"}</span>{/if}
+        <!-- Node add/delete (hover-revealed) on an editable state: "+" grows a connected child node, "-"
+             deletes this state. Delete is shown disabled with a tooltip when the state can't be removed
+             (a dialog entry, reached by a call, or referenced from non-editable code). -->
+        {#if editableStateIds.has(st.id)}
+            {@const canDel = deletableStateIds.has(st.id)}
+            <span class="nodeops">
+                <!-- Add-child grows a flat option, so (like the tree's "+ option") it is offered only on
+                     non-bundle states; a bundle node's options live in its if/else branches. Delete applies
+                     to any editable state. -->
+                {#if !st.branches}
+                    <button
+                        class="nodebtn addnode"
+                        title="Add a follow-up node (a new option leading to a new state)"
+                        onclick={(e) => (e.stopPropagation(), onAddChildNode(st.id))}>+</button
+                    >
+                {/if}
+                <button
+                    class="nodebtn delnode"
+                    title={canDel
+                        ? "Delete this state"
+                        : "This state can't be deleted (a dialog entry, reached by a call, or referenced from non-editable code)"}
+                    disabled={!canDel}
+                    onclick={(e) => (e.stopPropagation(), onDeleteState(st.id))}>-</button
+                >
+            </span>
+        {/if}
     </div>
     {#if !collapsed.has(st.id)}
         {#if st.branches}
@@ -587,6 +620,42 @@
         color: #fca5a5;
     }
     .delopt:disabled {
+        color: #6b7280;
+        cursor: default;
+    }
+    /* Node add-child ("+") / delete ("-"): hover-revealed at the right of a state row, mirroring the
+       option "x". Pushed right by margin-left:auto; the pair sits together. */
+    .nodeops {
+        margin-left: auto;
+        display: inline-flex;
+        gap: 2px;
+        visibility: hidden;
+    }
+    .st:hover .nodeops,
+    .nodeops:focus-within {
+        visibility: visible;
+    }
+    .nodebtn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 12px;
+        line-height: 1;
+        padding: 0 3px;
+    }
+    .addnode {
+        color: #86efac; /* green: additive */
+    }
+    .addnode:hover {
+        color: #bbf7d0;
+    }
+    .delnode {
+        color: #b45; /* muted red, matches the option remove */
+    }
+    .delnode:hover:not(:disabled) {
+        color: #fca5a5;
+    }
+    .delnode:disabled {
         color: #6b7280;
         cursor: default;
     }

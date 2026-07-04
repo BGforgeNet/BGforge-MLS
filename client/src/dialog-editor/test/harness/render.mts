@@ -350,6 +350,51 @@ check(
     JSON.stringify(addEdit),
 );
 
+// Node inline "+": clicking a state row's node-add grows a connected child - a new state (one more
+// treeitem) plus a new option here that leads to it, dropping into inline edit on that option's text.
+await page.goto("file://" + appHtml);
+await postModel();
+await page.waitForSelector('[role="treeitem"]', { timeout: 10_000 });
+const statesBeforeAdd = await page.locator('[role="treeitem"]').count();
+const firstRow = page.locator(".st").first();
+await firstRow.hover();
+await firstRow.locator(".addnode").click();
+await page.waitForTimeout(250);
+const nodeAdd = await page.evaluate(() => ({
+    states: document.querySelectorAll('[role="treeitem"]').length,
+    editing: document.activeElement?.classList.contains("rtextedit") ?? false,
+}));
+check(
+    'node "+" adds a connected child state and opens the new option for editing',
+    nodeAdd.states === statesBeforeAdd + 1 && nodeAdd.editing,
+    JSON.stringify({ before: statesBeforeAdd, ...nodeAdd }),
+);
+
+// Node inline "-": clicking an enabled delete on a state row goes through the guarded delete path - a
+// state with inbound transitions pops the redirect-to-EXIT confirm rather than silently dropping refs.
+await page.goto("file://" + appHtml);
+await postModel();
+await page.waitForSelector('[role="treeitem"]', { timeout: 10_000 });
+const statesBeforeDel = await page.locator('[role="treeitem"]').count();
+const rowWithDel = page
+    .locator(".st")
+    .filter({ has: page.locator(".delnode:not([disabled])") })
+    .first();
+await rowWithDel.hover();
+await rowWithDel.locator(".delnode:not([disabled])").click();
+await page.waitForTimeout(200);
+// A referenced state pops the redirect-to-EXIT confirm; an unreferenced one is removed straight away.
+// Either proves the guarded delete path is wired from the tree.
+const delOutcome = await page.evaluate(() => ({
+    confirm: !!document.querySelector(".confirm"),
+    states: document.querySelectorAll('[role="treeitem"]').length,
+}));
+check(
+    'node "-" routes through the guarded delete (confirm on inbound refs, else immediate)',
+    delOutcome.confirm || delOutcome.states < statesBeforeDel,
+    JSON.stringify({ before: statesBeforeDel, ...delOutcome }),
+);
+
 // Fail-loud error state: a fresh App that receives {type:"error"} shows the message, not a
 // perpetual spinner.
 await page.goto("file://" + appHtml);
