@@ -223,7 +223,10 @@ const RESERVED_SSL_NODE_NUMS = new Set([998, 999]);
  * target, so a dialog that defines `Node999` no longer pushes new ids straight to `Node1000`.
  */
 function nextSslNodeId(model: DialogModel): string {
-    const nums = stateIdsOf(model)
+    // Union the projected node ids with EVERY existing procedure name (existingProcNames): an empty or
+    // side-effect-only `NodeNNN` proc is a real name to dodge even though the model does not carry it as a node,
+    // or a new node would collide and the splice/scaffold would emit a duplicate `procedure`.
+    const nums = [...stateIdsOf(model), ...(model.existingProcNames ?? [])]
         .map((id) => /^Node(\d+)$/.exec(id)?.[1])
         .filter((m): m is string => m !== undefined && m !== null)
         .map((m) => Number.parseInt(m, 10))
@@ -233,14 +236,35 @@ function nextSslNodeId(model: DialogModel): string {
     return `Node${String(next).padStart(3, "0")}`;
 }
 
-/** Add an empty new state to the first dialog root (no sourceRange: a pending insert). */
-export function addState(model: DialogModel, targetRoot?: DialogRoot): DialogState | null {
+/**
+ * Add an empty new state to the first dialog root (no sourceRange: a pending insert).
+ *
+ * Bootstrap: a dialog started from scratch (an SSL file with no `talk_p_proc`, a D file with no dialog
+ * block) parses to zero roots, so there is no root to add the first node to. Rather than refuse - the old
+ * `return null` left the `+ State` button a silent no-op on a blank file - mint the dialog root here and let
+ * the write-back paths scaffold the source skeleton on save (SSL: a `talk_p_proc` router plus Node998/Node999
+ * support nodes via applySSLDialogEdits; D: a `BEGIN` block via applyDialogEdits). The root label seeds the D
+ * `BEGIN` resref; "dialog" mirrors the SSL adapter's own single-root label (dialog-model.ts).
+ */
+export function addState(model: DialogModel, targetRoot?: DialogRoot): DialogState {
     // Add to the caller's chosen root (the active tab) when given; else the first dialog.
     const root = targetRoot ?? model.roots.find((r) => r.kind === "dialog") ?? model.roots[0];
-    if (!root) return null;
+    const bootstrap = !root;
     const id = model.format === "fallout-ssl" ? nextSslNodeId(model) : uniqueStateId(model, "new_state");
     const state: DialogState = { id, text: "", choices: [] };
-    root.states.push(state);
+    // On SSL bootstrap the first node IS the conversation entry: the scaffolded talk_p_proc must `call` it or
+    // the dialog is unreachable. Flag it so applySSLDialogEdits wires the router; the parser re-derives isEntry
+    // from that written call on the next reparse, after which this transient flag no longer matters.
+    if (bootstrap && model.format === "fallout-ssl") state.isEntry = true;
+    if (root) {
+        root.states.push(state);
+    } else {
+        // Bootstrap: mint the root already containing the state and push it in ONE mutation. Pushing an empty
+        // root and then pushing the state into it separately fails on a reactive host (Svelte $state): the first
+        // push recomputes the view with zero states, and the second push - into the pre-proxy `root` reference -
+        // bypasses the proxy, so the view never re-renders with the node. A single fully-formed push is observed.
+        model.roots.push({ id: "dialog", label: model.sourceName ?? "dialog", kind: "dialog", states: [state] });
+    }
     return state;
 }
 

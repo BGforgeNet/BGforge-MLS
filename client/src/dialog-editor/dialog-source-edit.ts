@@ -52,16 +52,21 @@ export function computeDialogSourceEdit(
               ? applySSLDialogEdits(text, edited, original)
               : text;
     const newText = spliced !== text ? spliced : null;
-    // When something was spliced, report the pending items THIS edit just gave an `@N` id so the webview can
-    // mark them committed. A pending item is one still lacking a source span (option: no callRange/stmtRange;
-    // node: no procRange) but carrying an `@N` text after allocation above. Existing options carry a stmtRange,
-    // so they are excluded; already-`committed` items were reconciled by a PRIOR edit and are excluded too -
-    // otherwise a save that splices a NEW item alongside them (e.g. adding a second option to a just-created
-    // node) would re-report the earlier ones every time. Empty when nothing was spliced.
+    // When something was spliced, report the pending items THIS edit just spliced so the webview can mark them
+    // committed. A pending item lacks a source span (option: no callRange/stmtRange; node: no procRange) and is
+    // not yet committed. Already-`committed` items were reconciled by a PRIOR edit and are excluded - otherwise a
+    // save that splices a NEW item alongside them (e.g. a second option on a just-created node) would re-report
+    // the earlier ones every time. Empty when nothing was spliced.
+    //
+    // A NODE is reported even when its reply text is empty ("" rather than a bare `@N`): a from-scratch scaffold
+    // emits an EMPTY entry node, and if it is not committed here it is re-emitted (a DUPLICATE `procedure`) on
+    // every later save. It reports "" (commit-only - no `.msg` entry, which travels in `messages`, not here);
+    // its reply, once typed, splices into the now-committed procedure. An OPTION still needs its `@N` (a terminal
+    // option carries no source span, so the id is the only thing that distinguishes a committed one from new).
     const allocations: Record<string, string> = {};
     if (newText !== null) {
         for (const state of edited.roots.flatMap((r) => r.states)) {
-            if (state.procRange === undefined && !state.derivedFrom && !state.committed && isBareRef(state.text)) {
+            if (state.procRange === undefined && !state.derivedFrom && !state.committed) {
                 allocations[state.id] = state.text;
             }
             for (const c of state.choices) {

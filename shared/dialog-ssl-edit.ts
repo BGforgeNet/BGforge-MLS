@@ -28,15 +28,26 @@
  * msg-id argument's exact source text via `splitCallArgs`.
  */
 
-import type { DialogBranch, DialogChoice, DialogModel, DialogState, DialogTarget } from "./dialog-model";
+import {
+    sslTerminalKind,
+    type DialogBranch,
+    type DialogChoice,
+    type DialogModel,
+    type DialogState,
+    type DialogTarget,
+} from "./dialog-model";
 import { applySplices, type SpliceOp, type VerifyResult } from "./dialog-splice";
 import {
+    type NodeMsgIds,
     serializeCond,
     serializeSSLBranch,
     serializeSSLConditionalOption,
+    serializeSSLDialogScaffold,
     serializeSSLOption,
     serializeSSLOptionCall,
     serializeSSLProcedure,
+    serializeSSLReply,
+    serializeSupportProcedure,
     sslOptionMacro,
 } from "./dialog-ssl-serialize";
 
@@ -50,6 +61,20 @@ function atMsgId(text: string | undefined): number {
     return Number(/^@(\d+)$/.exec((text ?? "").trim())?.[1] ?? NaN);
 }
 const msgIdOf = (c: DialogChoice): number => atMsgId(c.text);
+
+/**
+ * The reply + per-option msg ids of a NEW node, read off the `@N` text the save path allocated (see
+ * dialog-source-edit.ts). An empty-text reply and any option still lacking an id are omitted. Shared by
+ * the ADD-node splice and the from-scratch scaffold so the id-derivation rule lives once.
+ */
+function newNodeMsgIds(s: DialogState): NodeMsgIds {
+    return {
+        reply: Number.isFinite(atMsgId(s.text)) ? atMsgId(s.text) : undefined,
+        options: Object.fromEntries(
+            s.choices.filter((c) => Number.isFinite(atMsgId(c.text))).map((c) => [c.id, atMsgId(c.text)]),
+        ),
+    };
+}
 
 // A NEW option: no source range of ANY kind (never existed in the .ssl) and an allocated `@<id>` text (the id
 // is assigned at save time, before the splice). Distinct from dialog-ssl-ids.ts's pre-allocation `isNewOption`
@@ -310,6 +335,23 @@ function nodeOps(
         }
     }
     return ops;
+}
+
+/**
+ * Splice the node's OWN reply (NPC line) into an existing procedure when the edit ADDED one the source lacks.
+ * A from-scratch scaffold emits an empty entry node; typing its NPC line allocates an `@N`, and once the node is
+ * committed (no longer re-emitted whole) the `Reply(@N);` must be spliced into the existing procedure or the line
+ * is dropped. Only the ADD case is handled here: a reply-text CHANGE where both sides already have a reply is a
+ * `.msg` edit (the `@N` ref is unchanged), and REMOVING a reply is not a graph gesture. Inserted at the node's
+ * body anchor, before options (the parser sets the anchor to the empty body for a reply-less procedure). Bails if
+ * the node has no anchor (no editable body position captured).
+ */
+function replyOps(edited: DialogState, orig: DialogState): SpliceOp[] {
+    const id = atMsgId(edited.text);
+    if (!Number.isFinite(id) || orig.text.trim() !== "") return []; // no reply to add, or one already exists
+    const anchor = orig.insertAnchor;
+    if (!anchor) return [];
+    return [{ start: anchor.offset, end: anchor.offset, replacement: `\n${anchor.indent}${serializeSSLReply(id)}` }];
 }
 
 // Bundle-node option edits, branch-scoped. Every option in a branch shares the branch's single
@@ -621,6 +663,9 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
             ops.push(...bundleNodeOps(originalText, state, orig));
         } else {
             ops.push(...nodeOps(originalText, state, orig, orig.insertAnchor));
+            // Add the node's own reply (NPC line) when the edit introduced one the procedure lacks - the
+            // from-scratch scaffold path, where the entry node was emitted empty then given a line.
+            ops.push(...replyOps(state, orig));
         }
         ops.push(...branchConditionOps(originalText, state, orig));
         ops.push(...branchStructureOps(originalText, state, orig));
@@ -672,23 +717,60 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
     // text (allocated at save), so derive the per-node id map from that text. The inbound option that targets
     // the new node is rewritten by the survivor logic above (the new node's id is a valid state target).
     const anchor = edited.newProcAnchor ?? original.newProcAnchor;
+    // The new nodes to emit (both branches below): local, never-spliced additions. `committed` marks a node
+    // already spliced on a prior save (still without a procRange in the webview copy); excluding it stops its
+    // procedure being re-emitted (duplicated) on later saves.
+    const newNodes = edited.roots.flatMap((r) => r.states).filter((s) => isLocalNewSSLNode(s) && !s.committed); // existing/derived/renamed/committed are not new nodes
     if (anchor !== undefined) {
-        const idOf = atMsgId;
-        const blocks: string[] = [];
-        for (const s of edited.roots.flatMap((r) => r.states)) {
-            // `committed` marks a node already spliced on a prior save (still without a procRange in the
-            // webview copy); excluding it stops its procedure being re-emitted (duplicated) on later saves.
-            if (!isLocalNewSSLNode(s) || s.committed) continue; // existing/derived/renamed/committed -> not a new node to splice
-            const ids = {
-                reply: Number.isFinite(idOf(s.text)) ? idOf(s.text) : undefined,
-                options: Object.fromEntries(
-                    s.choices.filter((c) => Number.isFinite(idOf(c.text))).map((c) => [c.id, idOf(c.text)]),
-                ),
-            };
-            blocks.push(serializeSSLProcedure(s, ids, "    "));
-        }
+        const blocks = newNodes.map((s) => serializeSSLProcedure(s, newNodeMsgIds(s), "    "));
         if (blocks.length > 0)
             ops.push({ start: anchor, end: anchor, replacement: blocks.map((b) => `${b}\n`).join("") });
+    } else if (newNodes.length > 0) {
+        // SCAFFOLD (from scratch): no `talk_p_proc`, so the ADD branch has no anchor. Emit the whole dialog
+        // skeleton at EOF - forward decls, a talk_p_proc router calling the entry node(s), each new node's
+        // procedure, and the Node998/Node999 support nodes. Mutually exclusive with the ADD branch (that runs
+        // only when an anchor exists), so a node is never emitted twice, and the ENTRY WIRING below is a no-op
+        // from scratch (entryCallAnchor is also undefined) - the router the scaffold writes IS the entry wiring.
+        const procedures = newNodes.map((s) => serializeSSLProcedure(s, newNodeMsgIds(s), "    "));
+        const entryIds = newNodes.filter((s) => s.isEntry).map((s) => s.id);
+        // Emit a support node only if the file does not already declare or define it (matches both the forward
+        // decl `procedure Node998;` and the definition `procedure Node998 begin`), so an existing Node998/Node999
+        // is left byte-for-byte untouched.
+        const emitSupport = ["Node998", "Node999"].filter(
+            (id) => !new RegExp(String.raw`\bprocedure\s+${id}\b`).test(originalText),
+        );
+        const scaffold = serializeSSLDialogScaffold(
+            entryIds,
+            newNodes.map((s) => s.id),
+            procedures,
+            emitSupport,
+        );
+        // Separate the skeleton from any existing script body: nothing for an empty file, one newline when the
+        // file already ends in one, else a blank line. Trailing newline so the saved file ends clean.
+        const sep = originalText.length === 0 ? "" : originalText.endsWith("\n") ? "\n" : "\n\n";
+        ops.push({ start: originalText.length, end: originalText.length, replacement: `${sep}${scaffold}\n` });
+    }
+
+    // ENSURE REFERENCED SUPPORT NODES EXIST: the Combat picker retargets an option to Node998 (and an option
+    // may target Node999); the `NOption(msg, Node998)` dangles unless that procedure exists. When talk_p_proc is
+    // already present (anchor defined, so the scaffold branch did not run and did not emit the pair), emit any
+    // reserved terminal an edited option targets that the source lacks, with its default body, among the dialog
+    // procedures at `anchor` - matching where a new node's procedure lands (see ADD above; same forward-decl
+    // posture). No-op from scratch (the scaffold already emitted the conventional pair).
+    if (anchor !== undefined) {
+        const referenced = new Set<string>();
+        for (const s of edited.roots.flatMap((r) => r.states))
+            for (const c of s.choices)
+                if (c.target.kind === "state" && sslTerminalKind(c.target.stateId)) referenced.add(c.target.stateId);
+        const missing = [...referenced].filter(
+            (id) => !new RegExp(String.raw`\bprocedure\s+${id}\b`).test(originalText),
+        );
+        if (missing.length > 0)
+            ops.push({
+                start: anchor,
+                end: anchor,
+                replacement: missing.map((id) => `${serializeSupportProcedure(id)}\n`).join(""),
+            });
     }
 
     // ENTRY WIRING: a node that became an entry -> splice `call <id>;` into talk_p_proc after the last

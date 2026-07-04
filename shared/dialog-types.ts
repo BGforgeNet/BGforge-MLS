@@ -190,6 +190,13 @@ export interface SSLDialogData {
      * does not dangle at the old name. Only plain-identifier targets are captured. Set by the parser.
      */
     outOfBandCalls?: Array<{ name: string; targetRange: { start: number; end: number } }>;
+    /**
+     * Every `procedure` name defined in the file (except `talk_p_proc`), whether or not it projects to a dialog
+     * node. The model only carries projected nodes, but new-node id allocation (`nextSslNodeId`) must avoid ALL
+     * existing procedures - an empty or side-effect-only `NodeNNN` proc is unprojected yet a real name to dodge,
+     * or the scaffold/add-node splice would emit a duplicate `procedure`. Set by the parser.
+     */
+    procNames?: string[];
 }
 
 // ---------------------------------------------------------------------------

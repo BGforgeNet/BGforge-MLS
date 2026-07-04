@@ -225,8 +225,20 @@ export function applyDialogEdits(originalText: string, editedModel: DialogModel,
             if (s.sourceRange) anchor = Math.max(anchor, s.sourceRange.end);
         }
         const at = anchor >= 0 ? anchor : originalText.length;
-        const block = fresh.map((s) => "\n" + serializeState(s).join("\n")).join("");
-        ops.push({ start: at, end: at, replacement: block });
+        // Bootstrap: a from-scratch .d file (no dialog block anywhere - the graph's `+ State` minted the first
+        // state) has nowhere for the new states to live. When appending at EOF AND the source declares no
+        // dialog block (no top-level BEGIN), wrap them in a `BEGIN ~resref~` so they form a valid dialog file
+        // rather than orphan state blocks. The resref is the dialog file name (sourceName), the WeiDU convention.
+        const needsBlock = anchor < 0 && !/^[ \t]*BEGIN\b/m.test(originalText);
+        if (needsBlock) {
+            const resref = editedModel.sourceName || root.label || "new_dialog";
+            const lead = originalText.length === 0 || originalText.endsWith("\n") ? "" : "\n";
+            const states = fresh.map((s) => serializeState(s).join("\n")).join("\n\n");
+            ops.push({ start: at, end: at, replacement: `${lead}BEGIN ~${resref}~\n\n${states}\n` });
+        } else {
+            const block = fresh.map((s) => "\n" + serializeState(s).join("\n")).join("");
+            ops.push({ start: at, end: at, replacement: block });
+        }
     }
 
     // Apply splice ops via the shared core (sorts highest-offset-first so earlier

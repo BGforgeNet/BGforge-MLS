@@ -175,6 +175,9 @@ export async function parseDialog(
     return {
         nodes,
         entryPoints,
+        // All defined procedure names (talk_p_proc is skipped above), so new-node allocation avoids every
+        // existing name, not only the projected dialog nodes.
+        procNames: [...parsed.keys()],
         ...(newProcAnchor !== undefined ? { newProcAnchor } : {}),
         ...(entryCalls !== undefined ? { entryCalls } : {}),
         ...(entryCallAnchor !== undefined ? { entryCallAnchor } : {}),
@@ -416,10 +419,16 @@ function statementRange(node: SyntaxNode): { start: number; end: number } {
 function nodeInsertAnchor(proc: SyntaxNode, fullText: string): { offset: number; indent: string } {
     const body = proc.childrenForFieldName("body");
     const last = body.at(-1);
-    if (!last) return { offset: proc.startIndex, indent: "    " }; // empty body: refined by Tier 3
-    const lineStart = fullText.lastIndexOf("\n", last.startIndex - 1) + 1;
-    const indent = /^[ \t]*/.exec(fullText.slice(lineStart, last.startIndex))?.[0] ?? "    ";
-    return { offset: last.endIndex, indent };
+    if (last) {
+        const lineStart = fullText.lastIndexOf("\n", last.startIndex - 1) + 1;
+        const indent = /^[ \t]*/.exec(fullText.slice(lineStart, last.startIndex))?.[0] ?? "    ";
+        return { offset: last.endIndex, indent };
+    }
+    // Empty body (e.g. a from-scratch scaffold's `procedure Node001 begin\nend`): anchor just AFTER the `begin`
+    // keyword so a first statement lands INSIDE the procedure. `proc.startIndex` (the old value) sits before
+    // `procedure`, which splices a body statement out ahead of the declaration and corrupts the file.
+    const begin = proc.children.find((c) => c.type === "begin");
+    return { offset: begin ? begin.endIndex : proc.startIndex, indent: "    " };
 }
 
 // Recognized dialog calls the graph represents and the (Tier 2+) serializer can reproduce:

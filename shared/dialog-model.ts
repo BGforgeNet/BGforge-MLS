@@ -67,6 +67,13 @@ export interface DialogModel {
      * dangle at the old name. Set by the SSL adapter from `SSLDialogData.outOfBandCalls`; absent for D.
      */
     outOfBandCalls?: Array<{ name: string; targetRange: { start: number; end: number } }>;
+    /**
+     * SSL only: every `procedure` name in the file (projected as a dialog node or not). New-node id allocation
+     * (`nextSslNodeId`) unions this with the projected node ids so a freshly-minted `NodeNNN` never collides with
+     * an existing procedure - including an empty/side-effect-only one the model does not carry. Set by the SSL
+     * adapter from `SSLDialogData.procNames`; absent for D.
+     */
+    existingProcNames?: string[];
 }
 
 export type DialogRootKind = "dialog" | "patch";
@@ -287,6 +294,26 @@ export type DialogTarget =
     | { kind: "state"; stateId: string }
     | { kind: "external"; label: string; resolved: boolean }
     | { kind: "exit" };
+
+/**
+ * Fallout SSL convention (SSL only): the reserved support nodes are terminal targets, not conversation nodes.
+ * `Node999` is the end/leave node (an option that reaches it ends the dialog - rendered as **Exit**); `Node998`
+ * is the combat node (rendered as **Combat**). The dialog editor presents an option targeting either as a
+ * terminal chip and does NOT draw the node itself, while keeping the faithful `state -> Node99x` target on the
+ * model so the source `call`/option round-trips unchanged (a presentation convention, not a model rewrite - see
+ * the data/presentation boundary). The chip carries the underlying id as a tooltip. Numeric siblings of
+ * `RESERVED_SSL_NODE_NUMS` in dialog-edit-ops.ts (998/999), kept as string ids here for the presentation layer.
+ */
+export const SSL_TERMINAL_NODES: Record<string, "exit" | "combat"> = { Node999: "exit", Node998: "combat" };
+
+/**
+ * The terminal kind for an SSL state id, or undefined if it is a normal node. Uses `Object.hasOwn` rather than
+ * a bare index so a state whose id collides with an `Object.prototype` member (`"toString"`, `"constructor"`)
+ * is not mis-read as a terminal. Callers still gate on `format === "fallout-ssl"` - this is an SSL convention.
+ */
+export function sslTerminalKind(id: string): "exit" | "combat" | undefined {
+    return Object.hasOwn(SSL_TERMINAL_NODES, id) ? SSL_TERMINAL_NODES[id] : undefined;
+}
 
 // --- Display helpers (used by the webview renderer) ------------------------
 
@@ -607,5 +634,6 @@ export function modelFromSSL(data: SSLDialogData): DialogModel {
         entryCalls: data.entryCalls,
         entryCallAnchor: data.entryCallAnchor,
         outOfBandCalls: data.outOfBandCalls,
+        existingProcNames: data.procNames,
     };
 }

@@ -203,6 +203,36 @@ END
         expect(ops.addState(m)!.id).toBe("Node1000"); // 998 and 999 are reserved, so skip past them
     });
 
+    it("bootstraps the first dialog root from scratch (SSL entry node; D root labelled by sourceName)", () => {
+        // A dialog started from scratch parses to zero roots; addState must mint the first root rather than
+        // no-op, so the `+ State` button works on a blank file. SSL flags the first node as the entry (the
+        // scaffolded talk_p_proc must call it); D has no entry concept and seeds the BEGIN resref from sourceName.
+        const ssl: DialogModel = { format: "fallout-ssl", editable: false, sourceName: "myscript", roots: [] };
+        const s = ops.addState(ssl);
+        expect(ssl.roots).toHaveLength(1);
+        expect(ssl.roots[0]!.kind).toBe("dialog");
+        expect(s.id).toBe("Node001");
+        expect(s.isEntry).toBe(true);
+
+        const d: DialogModel = { format: "weidu-d", editable: true, sourceName: "mydlg", roots: [] };
+        const ds = ops.addState(d);
+        expect(d.roots).toHaveLength(1);
+        expect(d.roots[0]!.label).toBe("mydlg");
+        expect(ds.isEntry).toBeUndefined();
+    });
+
+    it("scaffolds a BEGIN block for a from-scratch .d file, re-parseable", () => {
+        const m: DialogModel = { format: "weidu-d", editable: true, sourceName: "mydlg", roots: [] };
+        const s = ops.addState(m);
+        s.text = "A brand new line.";
+        s.choices.push({ id: `${s.id}#0`, text: "ok", target: { kind: "exit" } });
+        const out = applyDialogEdits("", m);
+        expect(out).toContain("BEGIN ~mydlg~"); // wraps the states so they form a valid dialog file
+        const reparsed = modelFromD(parseDDialog(out));
+        const again = reparsed.roots.flatMap((r) => r.states).find((st) => st.id === s.id);
+        expect(again?.text).toBe("A brand new line.");
+    });
+
     it("adds/removes/reorders replies and retargets", () => {
         const m = model();
         const hello = state(m, "hello");
