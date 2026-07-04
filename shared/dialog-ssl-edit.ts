@@ -216,6 +216,19 @@ function nodeOps(
     const editedIds = new Set(editedOpts.map((c) => c.id));
     const ops: SpliceOp[] = [];
 
+    // TERMINAL -> NODE flip: a source terminal message (NMessage, a `stmtRange` but no `callRange`) retargeted to
+    // a node. It is invisible to the logic below (origOpts/editedOpts are callRange-based), so the survivor
+    // rewrite - which only edits an existing call's target token - can't turn it into an NOption. Replace the
+    // whole statement with the node-call form. (The reverse, node -> exit, already works: a node option carries a
+    // callRange, so survivorReplacement serializes its edited exit target to an NMessage in place.) A conditional
+    // terminal is left to Tier 3. `stmtRange` spans the whole statement incl. its `;`, matching serializeSSLOption.
+    for (const c of edited.choices) {
+        if (!c.stmtRange || c.callRange || c.condition || c.target.kind !== "state") continue;
+        const msgId = atMsgId(c.text);
+        if (Number.isFinite(msgId))
+            ops.push({ start: c.stmtRange.start, end: c.stmtRange.end, replacement: serializeSSLOption(c, msgId) });
+    }
+
     // Adding/removing a CONDITIONAL option would rewrite its `if` wrapper (Tier 3): bail (no structural write).
     // On DialogChoice the enclosing-if text is `condition` (the SSL adapter maps SSLDialogOption.conditional ->
     // DialogChoice.condition).

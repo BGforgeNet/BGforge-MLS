@@ -202,6 +202,47 @@ describe("SSL from-scratch dialog scaffold", () => {
         expect(again.choices.some((c) => c.target.kind === "state" && c.target.stateId === "Node998")).toBe(true);
     });
 
+    it("retargets a terminal (exit) option to a node: NMessage becomes NOption", async () => {
+        // A new option defaults to EXIT -> NMessage(id) (no target). Retargeting it to a node (e.g. Combat, or
+        // any state) must rewrite the whole statement into NOption(id, Node, skill) - the in-place survivor
+        // rewrite only edits an existing call's target token and can't add one, so this was previously a no-op.
+        const SRC =
+            "procedure Node001 begin\n    Reply(100);\n    NMessage(101);\nend\n" +
+            "procedure Node002 begin\n    Reply(200);\nend\n" +
+            "procedure talk_p_proc begin call Node001; end\n";
+        const original = modelFromSSL(await parseDialog(SRC));
+        const edited = structuredClone(original);
+        const n1 = edited.roots[0]!.states.find((s) => s.id === "Node001")!;
+        const term = n1.choices.find((c) => c.target.kind === "exit")!;
+        setChoiceTarget(n1, term.id, { kind: "state", stateId: "Node002" });
+
+        const out = applySSLDialogEdits(SRC, edited, original);
+        expect(out).toContain("NOption(101, Node002, 0)"); // NMessage rewritten to a node-targeting NOption
+        expect(out).not.toContain("NMessage(101)"); // the old terminal is gone
+        const reparsed = modelFromSSL(await parseDialog(out));
+        const again = reparsed.roots.flatMap((r) => r.states).find((s) => s.id === "Node001")!;
+        expect(again.choices.some((c) => c.target.kind === "state" && c.target.stateId === "Node002")).toBe(true);
+    });
+
+    it("retargets a node option to exit: NOption becomes NMessage (reverse flip)", async () => {
+        const SRC =
+            "procedure Node001 begin\n    Reply(100);\n    NOption(101, Node002, 4);\nend\n" +
+            "procedure Node002 begin\n    Reply(200);\nend\n" +
+            "procedure talk_p_proc begin call Node001; end\n";
+        const original = modelFromSSL(await parseDialog(SRC));
+        const edited = structuredClone(original);
+        const n1 = edited.roots[0]!.states.find((s) => s.id === "Node001")!;
+        const opt = n1.choices.find((c) => c.target.kind === "state" && c.target.stateId === "Node002")!;
+        setChoiceTarget(n1, opt.id, { kind: "exit" });
+
+        const out = applySSLDialogEdits(SRC, edited, original);
+        expect(out).toContain("NMessage(101)"); // node option rewritten to a terminal message
+        expect(out).not.toContain("NOption(101"); // the old node call is gone
+        const reparsed = modelFromSSL(await parseDialog(out));
+        const again = reparsed.roots.flatMap((r) => r.states).find((s) => s.id === "Node001")!;
+        expect(again.choices.some((c) => c.id === opt.id && c.target.kind === "exit")).toBe(true);
+    });
+
     it("scaffold then edit the entry node: procedure is NOT duplicated, and the reply lands", async () => {
         // The reconcile-gap regression: a from-scratch scaffold emits an EMPTY entry node (no @N yet), so the
         // reconcile never marked it committed and every SUBSEQUENT edit re-emitted the whole procedure ->
