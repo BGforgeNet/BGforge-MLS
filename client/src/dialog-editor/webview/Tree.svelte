@@ -7,12 +7,14 @@
     // their player replies as a nested outline; clicking a state selects it for the
     // shared Inspector, clicking a cross-file leaf jumps to that dialog's tab, and
     // clicking a "shown elsewhere" ref selects the expanded copy.
-    let { tree, selectedId, selectedChoiceId, collapsed, editableStateIds, ssl, onSelect, onSelectReply, onToggle, onJump, onContext, onReplyContext, onAddReply, onRemoveReply }: {
+    let { tree, selectedId, selectedChoiceId, editingChoiceId, collapsed, editableStateIds, ssl, onSelect, onSelectReply, onBeginEditReply, onCommitEditReply, onCancelEditReply, onToggle, onJump, onContext, onReplyContext, onAddReply, onRemoveReply }: {
         tree: ConversationTree;
         selectedId?: string | null;
         /** The individually-selected option's choice id (within the selected state), or null when a whole
             state is selected. Highlights that option row. */
         selectedChoiceId?: string | null;
+        /** The option currently being edited inline (its text renders as an input), or null. */
+        editingChoiceId?: string | null;
         /** Ids of collapsed states (default expanded). Owned by the parent so the
             toolbar's expand-all / collapse-all can drive it. */
         collapsed: Set<string>;
@@ -23,8 +25,14 @@
             the save path does not rewrite its `if` wrapper (mirrors the inspector). */
         ssl: boolean;
         onSelect: (stateId: string) => void;
-        /** Select an individual option: highlights it and focuses it in the docked Inspector. */
+        /** Select an individual option: highlights it and reveals it in the docked Inspector. */
         onSelectReply: (stateId: string, choiceId: string) => void;
+        /** Enter inline text edit on an option (double-click / Enter / F2). */
+        onBeginEditReply: (stateId: string, choiceId: string) => void;
+        /** Commit an inline edit with the new text. */
+        onCommitEditReply: (stateId: string, choiceId: string, value: string) => void;
+        /** Abandon an inline edit (Escape). */
+        onCancelEditReply: () => void;
         onToggle: (stateId: string) => void;
         onJump: (file: string, stateId: string) => void;
         /** Right-click on a state row, at viewport coords - opens the parent's menu. */
@@ -111,6 +119,42 @@
                     onToggle(st.id);
                 }
                 break;
+        }
+    }
+
+    // Inline option-text editing. The edited option renders an <input>; Enter and blur commit, Escape
+    // cancels. Enter/Escape route THROUGH blur (they call the input's blur()), so there is exactly one
+    // commit/cancel path and no Enter-then-blur double fire. `escaped` carries the Escape intent across to
+    // the blur handler; only one option edits at a time (editingChoiceId is single), so one flag suffices.
+    let escaped = false;
+    function autofocusSelect(el: HTMLInputElement) {
+        el.focus();
+        el.select();
+    }
+    function onEditKeydown(e: KeyboardEvent & { currentTarget: HTMLInputElement }): void {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            e.currentTarget.blur();
+        } else if (e.key === "Escape") {
+            e.preventDefault();
+            escaped = true;
+            e.currentTarget.blur();
+        }
+    }
+    function onEditBlur(stateId: string, choiceId: string, e: FocusEvent & { currentTarget: HTMLInputElement }): void {
+        if (escaped) {
+            escaped = false;
+            onCancelEditReply();
+            return;
+        }
+        onCommitEditReply(stateId, choiceId, e.currentTarget.value);
+    }
+    // Begin edit on double-click, or Enter/F2 while the option's text button is focused. A non-editable
+    // option (locked SSL @N, read-only node) has no inline input, so the gesture is a no-op there.
+    function onReplyTextKeydown(e: KeyboardEvent, ownerId: string, r: ConvReply): void {
+        if (r.textEditable && (e.key === "F2" || e.key === "Enter")) {
+            e.preventDefault();
+            onBeginEditReply(ownerId, r.id);
         }
     }
 </script>
@@ -208,22 +252,38 @@
     >
         <span class="rmark">&#8627;</span>
         <ReactionChip reaction={r.reaction} lowIq={r.lowIq} />
-        <!-- The option text is the selection affordance: on a flat (non-branch) option it is a <button>
-             that selects the option (highlights it here and focuses its field in the docked Inspector); a
-             read-only bundle-branch option stays a plain <span>. svelte:element keeps one styled element for
-             both and only wires onclick for the button, so a span never carries a dangling click handler. -->
-        <svelte:element
-            this={branchReadonly ? "span" : "button"}
-            role={branchReadonly ? undefined : "button"}
-            class="rtext"
-            class:rtextbtn={!branchReadonly}
-            class:silent={!r.hasText}
-            class:r-good={r.hasText && r.reaction === "good"}
-            class:r-bad={r.hasText && r.reaction === "bad"}
-            class:r-neutral={r.hasText && r.reaction === "neutral"}
-            title={r.hasText ? r.text : undefined}
-            onclick={branchReadonly ? undefined : () => onSelectReply(ownerId, r.id)}
-        >{r.hasText ? r.text || "(empty option)" : "(continue)"}</svelte:element>
+        {#if !branchReadonly && r.id === editingChoiceId && r.textEditable}
+            <!-- Inline edit: the option's text as an input. Enter/blur commit, Escape cancels (both routed
+                 through blur). Prefilled with the resolved line; a just-added option starts empty. -->
+            <input
+                class="rtext rtextedit"
+                aria-label="Option text"
+                use:autofocusSelect
+                value={r.text}
+                placeholder="(option text)"
+                onkeydown={onEditKeydown}
+                onblur={(e) => onEditBlur(ownerId, r.id, e)}
+            />
+        {:else}
+            <!-- The option text is the selection/edit affordance: on a flat (non-branch) option it is a
+                 <button> - single click selects it (highlight + inspector), double-click / Enter / F2 enters
+                 inline edit; a read-only bundle-branch option stays a plain <span>. svelte:element keeps one
+                 styled element for both and only wires the handlers for the button. -->
+            <svelte:element
+                this={branchReadonly ? "span" : "button"}
+                role={branchReadonly ? undefined : "button"}
+                class="rtext"
+                class:rtextbtn={!branchReadonly}
+                class:silent={!r.hasText}
+                class:r-good={r.hasText && r.reaction === "good"}
+                class:r-bad={r.hasText && r.reaction === "bad"}
+                class:r-neutral={r.hasText && r.reaction === "neutral"}
+                title={r.hasText ? r.text : undefined}
+                onclick={branchReadonly ? undefined : () => onSelectReply(ownerId, r.id)}
+                ondblclick={branchReadonly ? undefined : () => r.textEditable && onBeginEditReply(ownerId, r.id)}
+                onkeydown={branchReadonly ? undefined : (e) => onReplyTextKeydown(e, ownerId, r)}
+            >{r.hasText ? r.text || "(empty option)" : "(continue)"}</svelte:element>
+        {/if}
         {#if r.condition}<span class="rcond" title={r.condition}>[if]</span>{/if}
         {#if r.action}<span class="ract" title={r.action}>[do]</span>{/if}
         {@render leaf(r)}
@@ -410,6 +470,21 @@
         outline: 1px solid #3b82f6;
         outline-offset: 1px;
         border-radius: 2px;
+    }
+    /* Inline edit input: fills the option-text slot, blue-bordered to signal active editing. Negative
+       vertical margin keeps the row height unchanged when the button swaps to the input. */
+    .rtextedit {
+        flex: 1 1 auto;
+        min-width: 0;
+        max-width: 420px;
+        margin: -1px 0;
+        padding: 0 4px;
+        font: inherit;
+        color: #e8eaed;
+        background: #0f1420;
+        border: 1px solid #3b82f6;
+        border-radius: 3px;
+        outline: none;
     }
     .rtext.silent {
         color: #64748b;

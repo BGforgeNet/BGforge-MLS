@@ -8,6 +8,7 @@
     import Tree from "./Tree.svelte";
     import { modelToFlow, type FlowNode, type FlowEdge } from "./model-to-flow";
     import { buildConversationTree, type ConvState } from "./conversation-tree";
+    import { msgRef } from "./inspector-edit";
     import { dialogIssues } from "./dialog-issues";
     import { distinctStateIds, findStateInRoots } from "./state-lookup";
     import { unresolvedRefCount } from "./translation-status";
@@ -57,6 +58,9 @@
     // Inspector to scroll to + focus its edit field. Only meaningful alongside `selected`; cleared on any
     // state-level selection so it never mis-highlights an option of a different state.
     let selectedChoiceId = $state<string | null>(null);
+    // The option currently being edited inline in the tree (its text is an input), or null. Set by a
+    // double-click / Enter / F2 in the tree, and by adding a new option (which drops straight into edit).
+    let editingChoiceId = $state<string | null>(null);
     let viewport = $state({ x: 0, y: 0, zoom: 1 });
     let containerW = $state(0);
     let containerH = $state(0);
@@ -188,7 +192,10 @@
     // jump resolver the graph stubs use.
     const treeData = $derived(
         activeRoot
-            ? buildConversationTree(activeRoot, editModel.messages, (label) => resolveJumpTarget(label, stateToRoot, fileToRoot))
+            ? buildConversationTree(activeRoot, editModel.messages, (label) => resolveJumpTarget(label, stateToRoot, fileToRoot), {
+                  ssl: editModel.format === "fallout-ssl",
+                  editable: editModel.editable,
+              })
             : { roots: [] },
     );
 
@@ -226,22 +233,50 @@
     function findState(stateId: string): DialogState | null {
         return findStateInRoots(editModel.roots, activeFile, stateId);
     }
-    // Tree-row click: select the state for the shared Inspector. Clears any option selection - selecting
-    // the whole state is a state-level action.
+    // Tree-row click: select the state for the shared Inspector. Clears any option selection/edit -
+    // selecting the whole state is a state-level action.
     function selectTreeState(stateId: string): void {
         const s = findState(stateId);
         if (s) {
             selected = s;
             selectedChoiceId = null;
+            editingChoiceId = null;
         }
     }
     // Tree option-row click: select the option (and its owner state) so the tree highlights it and the
-    // docked Inspector scrolls to + focuses its edit field.
+    // docked Inspector scrolls to + highlights its field. Single-click does not enter inline edit - that is
+    // a double-click / Enter / F2 (beginEditReply).
     function selectReplyInTree(stateId: string, choiceId: string): void {
         const s = findState(stateId);
         if (!s) return;
         selected = s;
         selectedChoiceId = choiceId;
+        editingChoiceId = null;
+    }
+    // Tree option double-click / Enter / F2: enter inline edit on the option's text.
+    function beginEditReply(stateId: string, choiceId: string): void {
+        const s = findState(stateId);
+        if (!s) return;
+        selected = s;
+        selectedChoiceId = choiceId;
+        editingChoiceId = choiceId;
+    }
+    // Commit an inline edit: write the new text back the same way the inspector does (a resolvable @N line
+    // updates its .msg/.tra entry; anything else - a literal, or a just-added option - updates the choice's
+    // own text, allocated an @id at save). Then leave edit mode and reproject.
+    function commitEditReply(stateId: string, choiceId: string, value: string): void {
+        const s = findState(stateId);
+        const c = s?.choices.find((ch) => ch.id === choiceId);
+        editingChoiceId = null;
+        if (!c) return;
+        const ref = msgRef(c.text);
+        if (ref !== null && editModel.messages) editModel.messages[ref] = value;
+        else c.text = value;
+        void rebuild({ frame: "none" });
+    }
+    // Abandon an inline edit (Escape) - discard the draft, leave edit mode, keep the option selected.
+    function cancelEditReply(): void {
+        editingChoiceId = null;
     }
 
     // Select a state, switching to its tab first if it lives in another dialog (a caller can be cross-root).
@@ -458,6 +493,7 @@
             activeFile = editModel.roots.find((r) => r.states.length > 0)?.id ?? "";
             selected = null;
             selectedChoiceId = null;
+            editingChoiceId = null;
             confirmDelete = null;
             void rebuild({ relayout: true });
             suppressEmit = true;
@@ -518,6 +554,7 @@
         activeFile = fileId;
         selected = null;
         selectedChoiceId = null;
+        editingChoiceId = null;
         treeCollapsed = new Set();
         void rebuild(focusId ? { focusId } : { frame: "entry" });
     }
@@ -532,6 +569,7 @@
         }
         selected = event.node.data?.state ?? null;
         selectedChoiceId = null;
+        editingChoiceId = null;
     }
 
     // Thin wrappers over the pure edit ops (shared/dialog-edit-ops.ts): each runs the
@@ -573,13 +611,23 @@
         new Set((activeRoot?.states ?? []).filter((s) => structEditable(s)).map((s) => s.id)),
     );
 
-    // Tree inline "+": add an option to a state addressed by id (the row need not be the current
-    // selection). Mirrors ctxAct("addReply") - select the owner, then reuse the shared op.
+    // Append an option to a state and reproject. Shared by the tree "+ option" and the graph/inspector
+    // "Add option" so there is one add path; returns the new choice so the caller can act on it.
+    function appendReply(st: DialogState): DialogChoice {
+        const c = ops.addReply(editModel, st);
+        void rebuild({ frame: "none" });
+        return c;
+    }
+    // Tree inline "+ option": add an option to a state addressed by id (the row need not be the current
+    // selection) and drop straight into inline edit on the new (empty) option's text - a just-added option
+    // is always text-editable (pending), so this is safe for D and SSL alike.
     function addReplyToState(stateId: string): void {
         const st = findState(stateId);
         if (!structEditable(st)) return;
         selected = st;
-        actions.addReply();
+        const c = appendReply(st);
+        selectedChoiceId = c.id;
+        editingChoiceId = c.id;
     }
     // Tree inline "x": remove an option from a state addressed by id. Mirrors replyAct("remove").
     // The tree gates a conditional SSL option's "x" as disabled (matching the inspector), so this
@@ -620,8 +668,7 @@
         },
         addReply: () => {
             if (!structEditable(selected)) return; // Tier 2 add option: D or faithful SSL
-            ops.addReply(editModel, selected);
-            void rebuild({ frame: "none" });
+            appendReply(selected);
         },
         removeReply: (choiceId: string) => {
             if (!structEditable(selected)) return; // Tier 2 remove option: D or faithful SSL
@@ -875,7 +922,7 @@
                     {#if treeData.roots.length === 0}
                         <div class="treeempty">No states in this dialog file.</div>
                     {/if}
-                    <Tree tree={treeData} selectedId={selected?.id} selectedChoiceId={selectedChoiceId} collapsed={treeCollapsed} editableStateIds={editableTreeStateIds} ssl={editModel.format === "fallout-ssl"} onSelect={selectTreeState} onSelectReply={selectReplyInTree} onToggle={toggleTreeNode} onJump={treeJump} onContext={openContext} onReplyContext={openReplyContext} onAddReply={addReplyToState} onRemoveReply={removeReplyFromState} />
+                    <Tree tree={treeData} selectedId={selected?.id} selectedChoiceId={selectedChoiceId} editingChoiceId={editingChoiceId} collapsed={treeCollapsed} editableStateIds={editableTreeStateIds} ssl={editModel.format === "fallout-ssl"} onSelect={selectTreeState} onSelectReply={selectReplyInTree} onBeginEditReply={beginEditReply} onCommitEditReply={commitEditReply} onCancelEditReply={cancelEditReply} onToggle={toggleTreeNode} onJump={treeJump} onContext={openContext} onReplyContext={openReplyContext} onAddReply={addReplyToState} onRemoveReply={removeReplyFromState} />
                 </div>
                 {#if ctxMenu}
                     <div class="ctxbackdrop" role="presentation" onclick={closeContext} oncontextmenu={(e) => (e.preventDefault(), closeContext())}></div>

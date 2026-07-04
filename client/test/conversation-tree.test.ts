@@ -128,6 +128,46 @@ describe("buildConversationTree", () => {
         expect(roots[0]!.replies[0]!.text).toBe("");
     });
 
+    // textEditable drives whether the tree offers inline text editing on an option; it mirrors the
+    // inspector's textFieldLocked gate (SSL @N resolvability, read-only/derived states, pending-new).
+    it("marks a D literal option's text as editable", () => {
+        const r = root([st("A", "a", [ch("A#0", { kind: "exit" }, { text: "hi" })])]);
+        const { roots } = buildConversationTree(r, undefined, noJump, { ssl: false, editable: true });
+        expect(roots[0]!.replies[0]!.textEditable).toBe(true);
+    });
+
+    it("locks option text on a derived (read-only) state", () => {
+        const r = root([st("A", "a", [ch("A#0", { kind: "exit" }, { text: "hi" })], { derivedFrom: "CHAIN" })]);
+        const { roots } = buildConversationTree(r, undefined, noJump, { ssl: false, editable: true });
+        expect(roots[0]!.replies[0]!.textEditable).toBe(false);
+    });
+
+    it("locks option text in a view-only (non-editable) D file", () => {
+        const r = root([st("A", "a", [ch("A#0", { kind: "exit" }, { text: "hi" })])]);
+        const { roots } = buildConversationTree(r, undefined, noJump, { ssl: false, editable: false });
+        expect(roots[0]!.replies[0]!.textEditable).toBe(false);
+    });
+
+    it("SSL: an option backed by a resolvable @N is editable; a non-resolvable one is locked", () => {
+        const r = root([
+            st("A", "a", [
+                // committed: these are existing (not pending-new) options, so the @N-resolvability gate
+                // applies rather than the pending-new exemption.
+                ch("A#0", { kind: "exit" }, { text: "@10", committed: true }), // resolves in messages
+                ch("A#1", { kind: "exit" }, { text: "@99", committed: true }), // no .msg entry - nowhere to write
+            ]),
+        ]);
+        const { roots } = buildConversationTree(r, { "10": "Hi" }, noJump, { ssl: true, editable: false });
+        expect(roots[0]!.replies[0]!.textEditable).toBe(true);
+        expect(roots[0]!.replies[1]!.textEditable).toBe(false);
+    });
+
+    it("SSL: a just-added (pending) option is editable even before it has an @N", () => {
+        const r = root([st("A", "a", [ch("A#0", { kind: "exit" }, { text: "" })])]);
+        const { roots } = buildConversationTree(r, {}, noJump, { ssl: true, editable: false });
+        expect(roots[0]!.replies[0]!.textEditable).toBe(true);
+    });
+
     it("passes through condition, action, trigger, and derivedFrom", () => {
         const r = root([
             st("A", "a", [ch("A#0", { kind: "exit" }, { condition: "IF x", action: "DO y" })], {

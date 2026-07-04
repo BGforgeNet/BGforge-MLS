@@ -151,22 +151,18 @@
         return b.choiceIds.map((id) => byId.get(id)).filter((c): c is DialogChoice => c !== undefined);
     }
 
-    // When an option is selected in the tree, scroll its row into view here and focus its text field so the
-    // user can edit immediately (a locked field - a non-resolvable SSL @N, or a read-only node - can't be
-    // focused, so we only scroll it into view). Keyed on `selectedChoiceId` so it fires on each new option
-    // pick, not on every keystroke. The row is found via `document` scoped to `.inspector` rather than a
-    // bind:this ref for two reasons: a `$state` ref miscompiles to a store auto-subscription here (this
-    // component has a `state` prop that shadows the rune - store_invalid_shape at runtime, the same reason
-    // the branch input above uses `writable`), and a plain-`let` bind:this ref trips oxlint no-unassigned-vars
-    // (it can't see the template assignment). Exactly one `.inspector` is mounted at a time (the shared
-    // siderail), so the query is unambiguous.
+    // When an option is selected in the tree, scroll its row into view here and highlight it (the highlight
+    // is the `.choicesel` class on the row). Editing itself happens inline in the tree now, so this no longer
+    // steals focus into the panel - it only reveals the matching row. Keyed on `selectedChoiceId` so it fires
+    // on each new option pick. The row is found via `document` scoped to `.inspector` rather than a bind:this
+    // ref for two reasons: a `$state` ref miscompiles to a store auto-subscription here (this component has a
+    // `state` prop that shadows the rune - store_invalid_shape at runtime, the same reason the branch input
+    // above uses `writable`), and a plain-`let` bind:this ref trips oxlint no-unassigned-vars (it can't see
+    // the template assignment). Exactly one `.inspector` is mounted at a time (the shared siderail), so the
+    // query is unambiguous.
     $effect(() => {
         if (!selectedChoiceId) return;
-        const row = document.querySelector(`.inspector .trow[data-cid="${CSS.escape(selectedChoiceId)}"]`);
-        if (!row) return;
-        row.scrollIntoView({ block: "nearest" });
-        const ta = row.querySelector<HTMLTextAreaElement>("textarea.reply");
-        if (ta && !ta.disabled) ta.focus();
+        document.querySelector(`.inspector .trow[data-cid="${CSS.escape(selectedChoiceId)}"]`)?.scrollIntoView({ block: "nearest" });
     });
 </script>
 

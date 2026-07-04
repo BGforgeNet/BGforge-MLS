@@ -293,26 +293,61 @@ check(
 );
 
 // Tree option selection: clicking an option's text (a <button>) selects that individual option - it
-// highlights the tree row (.rep.repsel), docks the Inspector for its owner state, highlights the matching
-// option row there (.trow.choicesel), and focuses that option's text field for immediate editing. Drives
-// the full production path (App -> $state proxy -> DialogGraph.selectReplyInTree -> Inspector effect).
+// highlights the tree row (.rep.repsel), docks the Inspector for its owner state, and highlights the
+// matching option row there (.trow.choicesel). Drives the full production path (App -> $state proxy ->
+// DialogGraph.selectReplyInTree -> Inspector effect).
 await page.goto("file://" + appHtml);
 await page.setViewportSize({ width: 900, height: 800 });
 await postModel();
 await page.waitForSelector('[role="treeitem"]', { timeout: 10_000 });
-// Pick an option that has editable text (a D reply with a real line) so the focus assertion is meaningful.
 const optBtn = page.locator(".rtextbtn").first();
 await optBtn.click();
 await page.waitForTimeout(200);
 const selState = await page.evaluate(() => ({
     treeSel: document.querySelectorAll(".rep.repsel").length,
     inspectorSel: document.querySelectorAll(".trow.choicesel").length,
-    focusedIsReply: (document.activeElement as HTMLElement | null)?.classList.contains("reply") ?? false,
 }));
 check(
-    "clicking an option selects it: tree row + inspector row highlight and its field focuses",
-    selState.treeSel === 1 && selState.inspectorSel === 1 && selState.focusedIsReply,
+    "clicking an option selects it: tree row + inspector row both highlight",
+    selState.treeSel === 1 && selState.inspectorSel === 1,
     JSON.stringify(selState),
+);
+
+// Inline text editing: double-click an option's text -> an input appears, focused; type + Enter commits
+// the new text (through DialogGraph.commitEditReply -> the .msg/.tra or choice.text write-back + reproject).
+const editBtn = page.locator(".rtextbtn").first();
+const oldText = (await editBtn.textContent())?.trim() ?? "";
+await editBtn.dblclick();
+await page.waitForTimeout(150);
+const inputAppeared = await page.locator(".rtextedit").count();
+const inputFocused = await page.evaluate(() => document.activeElement?.classList.contains("rtextedit") ?? false);
+await page.locator(".rtextedit").first().fill("EDITED INLINE");
+await page.keyboard.press("Enter");
+await page.waitForTimeout(200);
+const newText = (await page.locator(".rtextbtn").first().textContent())?.trim() ?? "";
+check(
+    "double-click edits an option inline and Enter commits the new text",
+    inputAppeared === 1 && inputFocused && newText === "EDITED INLINE" && newText !== oldText,
+    JSON.stringify({ inputAppeared, inputFocused, oldText, newText }),
+);
+
+// Adding an option drops straight into inline edit: click "+ option" -> a focused input appears for the
+// new (empty) option, no extra gesture needed.
+await page.goto("file://" + appHtml);
+await postModel();
+await page.waitForSelector('[role="treeitem"]', { timeout: 10_000 });
+const repsBeforeAdd = await page.locator(".rep").count();
+await page.locator(".addbtn").first().click();
+await page.waitForTimeout(200);
+const addEdit = await page.evaluate(() => ({
+    reps: document.querySelectorAll(".rep").length,
+    inputs: document.querySelectorAll(".rtextedit").length,
+    focused: document.activeElement?.classList.contains("rtextedit") ?? false,
+}));
+check(
+    "a newly added option opens directly in an inline text input",
+    addEdit.reps === repsBeforeAdd + 1 && addEdit.inputs === 1 && addEdit.focused,
+    JSON.stringify(addEdit),
 );
 
 // Fail-loud error state: a fresh App that receives {type:"error"} shows the message, not a

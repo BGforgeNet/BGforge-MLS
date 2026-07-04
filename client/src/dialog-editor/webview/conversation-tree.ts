@@ -16,6 +16,7 @@
  * root maps (and stays trivially testable).
  */
 import { resolveText, type DialogChoice, type DialogReaction, type DialogRoot } from "../../../../shared/dialog-model";
+import { isPendingChoice, textFieldLocked } from "./inspector-edit";
 import type { JumpTarget } from "./jump-resolve";
 
 export type ConvTarget =
@@ -39,6 +40,9 @@ export interface ConvReply {
     /** SSL option reaction (G/N/B) and low-INT variant, for the same chip the graph card shows. */
     reaction?: DialogReaction;
     lowIq?: boolean;
+    /** Whether this option's text can be edited inline in the tree - the same gate the inspector's text
+        field uses (textFieldLocked): false for a locked SSL @N or a read-only/derived node. */
+    textEditable: boolean;
     target: ConvTarget;
 }
 
@@ -83,7 +87,13 @@ export function buildConversationTree(
     root: DialogRoot,
     messages: Record<string, string> | undefined,
     resolveJump: ResolveJump,
+    // Edit-gating context for each reply's `textEditable`, mirroring the inspector's textFieldLocked inputs.
+    // Optional (defaults to an editable D file) so the pure-projection tests can stay 3-arg; the editor
+    // always passes real values. Destructured with per-key defaults rather than an object-literal default
+    // param (which oxlint's no-object-as-default-parameter rightly flags - a shared mutable default).
+    opts?: { ssl: boolean; editable: boolean },
 ): ConversationTree {
+    const { ssl = false, editable = true } = opts ?? {};
     const byId = new Map(root.states.map((s) => [s.id, s]));
 
     // A state is an entry if no same-file transition targets it.
@@ -110,7 +120,7 @@ export function buildConversationTree(
         return { kind: "state", node: expand(byId.get(stateId)!.id) };
     };
 
-    const buildReply = (c: DialogChoice): ConvReply => ({
+    const buildReply = (c: DialogChoice, textRO: boolean): ConvReply => ({
         id: c.id,
         text: resolveText(c.text, messages),
         hasText: Boolean(c.text),
@@ -118,12 +128,17 @@ export function buildConversationTree(
         action: c.action,
         reaction: c.reaction,
         lowIq: c.lowIq,
+        textEditable: !textFieldLocked({ text: c.text, messages, ssl, textRO, isNew: isPendingChoice(c) }),
         target: buildTarget(c),
     });
 
     function expand(id: string): ConvState {
         const s = byId.get(id)!;
         shown.add(id);
+        // Whether this state's text fields are read-only (mirrors the inspector's `textRO`): a derived
+        // state is fully read-only; a non-editable non-SSL file (view-only D) is too. SSL text persists to
+        // the .msg, so it stays editable subject to the per-@N resolvability gate inside textFieldLocked.
+        const textRO = Boolean(s.derivedFrom) || (!editable && !ssl);
         // A bundle (if/else) node groups its replies per branch, each with its own NPC line. Build the
         // branch structure instead of the flat choice list so the tree mirrors the graph/inspector
         // (otherwise the else branch's NPC line and the per-branch grouping are lost). Each choice is
@@ -141,10 +156,10 @@ export function buildConversationTree(
                 replies: b.choiceIds
                     .map((cid) => choiceById.get(cid))
                     .filter((c): c is DialogChoice => c !== undefined)
-                    .map((c) => buildReply(c)),
+                    .map((c) => buildReply(c, textRO)),
             }));
         } else {
-            replies = s.choices.map((c) => buildReply(c));
+            replies = s.choices.map((c) => buildReply(c, textRO));
         }
         return {
             id: s.id,
