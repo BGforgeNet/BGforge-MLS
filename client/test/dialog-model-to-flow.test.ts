@@ -281,3 +281,46 @@ describe("stateNodeSize", () => {
         expect(manyLines.width).toBe(oneLine.width); // width is fixed; only height tracks text
     });
 });
+
+// SSL convention (graph consumer): Node998/Node999 are not drawn as cards - an option targeting them routes
+// to a Combat/Exit synthetic terminal instead (mirrors the tree). The combat terminal carries the Node998 id
+// as a tooltip; the exit terminal is shared with plain exits so it does not.
+describe("modelToFlow - Node998/Node999 as Combat/Exit terminals (SSL)", () => {
+    const sslModel: DialogModel = {
+        format: "fallout-ssl",
+        editable: false,
+        roots: [
+            {
+                id: "d",
+                label: "d",
+                kind: "dialog",
+                states: [
+                    {
+                        id: "Node001",
+                        text: "@1",
+                        faithful: true,
+                        procRange: { start: 0, end: 1 },
+                        choices: [
+                            { id: "Node001#0", text: "@2", target: { kind: "state", stateId: "Node999" } },
+                            { id: "Node001#1", text: "@3", target: { kind: "state", stateId: "Node998" } },
+                        ],
+                    },
+                    { id: "Node998", text: "", procRange: { start: 2, end: 3 }, choices: [] },
+                    { id: "Node999", text: "", procRange: { start: 4, end: 5 }, choices: [] },
+                ],
+            },
+        ],
+    };
+
+    test("draws no card for the support nodes; routes their edges to combat/exit terminals", () => {
+        const { nodes, edges } = modelToFlow(sslModel);
+        expect(nodes.filter((n) => n.type === "card").map((n) => n.id)).toEqual(["Node001"]);
+        expect(nodes.find((n) => n.type === "exit")).toBeDefined();
+        const combat = nodes.find((n) => n.type === "combat");
+        expect(combat).toBeDefined();
+        expect(combat!.data.title).toBe("Node998"); // tooltip reveals the underlying support node
+
+        expect(edges.find((e) => e.id === "Node001#0")).toMatchObject({ target: "exit", category: "exit" });
+        expect(edges.find((e) => e.id === "Node001#1")).toMatchObject({ target: "combat", category: "combat" });
+    });
+});

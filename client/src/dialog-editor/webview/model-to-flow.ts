@@ -7,7 +7,13 @@
  * nodes so no edge dangles.
  */
 
-import { isFlaggedNode, resolveText, type DialogModel, type DialogState } from "../../../../shared/dialog-model";
+import {
+    isFlaggedNode,
+    resolveText,
+    sslTerminalKind,
+    type DialogModel,
+    type DialogState,
+} from "../../../../shared/dialog-model";
 import { classifyReachability } from "../../../../shared/dialog-reachability";
 import { msgRef } from "./inspector-edit";
 
@@ -38,14 +44,14 @@ function sharedTextStates(model: DialogModel): (s: DialogState) => boolean {
 
 export interface FlowNode {
     id: string;
-    type: "card" | "external" | "exit";
+    type: "card" | "external" | "exit" | "combat";
     position: { x: number; y: number };
     width: number;
     height: number;
     data: Record<string, unknown>;
 }
 
-export type EdgeCategory = "player" | "continue" | "exit" | "external";
+export type EdgeCategory = "player" | "continue" | "exit" | "combat" | "external";
 
 export interface FlowEdge {
     id: string;
@@ -84,21 +90,26 @@ export function modelToFlow(model: DialogModel): FlowGraph {
     const nodes: FlowNode[] = [];
     const edges: FlowEdge[] = [];
     const stateIds = new Set<string>();
-    const synthetic = new Map<string, FlowNode>(); // dedup external/exit nodes by id
+    const synthetic = new Map<string, FlowNode>(); // dedup external/exit/combat nodes by id
+
+    // SSL convention: Node998/Node999 are terminal Combat/Exit targets, not drawn cards (SSL_TERMINAL_NODES).
+    // Skip their cards and route an option targeting them to the matching terminal instead (mirrors the tree).
+    const isSSL = model.format === "fallout-ssl";
+    const terminalKindOf = (id: string): "exit" | "combat" | undefined => (isSSL ? sslTerminalKind(id) : undefined);
 
     for (const root of model.roots) {
-        for (const s of root.states) stateIds.add(s.id);
+        for (const s of root.states) if (!terminalKindOf(s.id)) stateIds.add(s.id);
     }
 
-    const ensureSynthetic = (id: string, type: "external" | "exit", label: string): void => {
+    const ensureSynthetic = (id: string, type: "external" | "exit" | "combat", label: string, title?: string): void => {
         if (synthetic.has(id)) return;
         const n: FlowNode = {
             id,
             type,
             position: { x: 0, y: 0 },
-            width: type === "exit" ? 70 : 150,
+            width: type === "external" ? 150 : type === "combat" ? 90 : 70,
             height: 36,
-            data: { label },
+            data: { label, ...(title ? { title } : {}) },
         };
         synthetic.set(id, n);
     };
@@ -116,6 +127,9 @@ export function modelToFlow(model: DialogModel): FlowGraph {
     const emittedCardIds = new Set<string>();
     for (const root of model.roots) {
         for (const s of root.states) {
+            // A reserved terminal node (SSL Node998/Node999) is never drawn as a card - it renders only as the
+            // Combat/Exit terminal that options route to (below).
+            if (terminalKindOf(s.id)) continue;
             if (emittedCardIds.has(s.id)) continue;
             emittedCardIds.add(s.id);
             const { width, height } = stateNodeSize(s, resolveText(s.text, messages).length);
@@ -150,8 +164,18 @@ export function modelToFlow(model: DialogModel): FlowGraph {
             });
 
             s.choices.forEach((c) => {
+                // SSL Node998/Node999 targets route to the Combat/Exit terminal, not a card. The exit terminal
+                // is shared with plain `{kind:"exit"}` options, so it carries no id tooltip; combat is only ever
+                // Node998, so it does (mirrors the tree's per-chip tooltip where it can be precise).
+                const terminal = c.target.kind === "state" ? terminalKindOf(c.target.stateId) : undefined;
                 let targetId: string;
-                if (c.target.kind === "state") {
+                if (terminal === "exit") {
+                    targetId = "exit";
+                    ensureSynthetic("exit", "exit", "EXIT");
+                } else if (terminal === "combat") {
+                    targetId = "combat";
+                    ensureSynthetic("combat", "combat", "COMBAT", "Node998");
+                } else if (c.target.kind === "state") {
                     targetId = c.target.stateId;
                     // A goto/call to a state not present in this file - keep the edge from dangling.
                     if (!stateIds.has(targetId)) {
@@ -166,13 +190,15 @@ export function modelToFlow(model: DialogModel): FlowGraph {
                     ensureSynthetic("exit", "exit", "EXIT");
                 }
                 const category: EdgeCategory =
-                    c.target.kind === "exit"
-                        ? "exit"
-                        : c.target.kind === "external"
-                          ? "external"
-                          : c.text
-                            ? "player"
-                            : "continue";
+                    terminal === "combat"
+                        ? "combat"
+                        : terminal === "exit" || c.target.kind === "exit"
+                          ? "exit"
+                          : c.target.kind === "external"
+                            ? "external"
+                            : c.text
+                              ? "player"
+                              : "continue";
                 edges.push({
                     id: c.id,
                     source: s.id,

@@ -13,6 +13,8 @@
             /** Dialog file base name -> speaker fallback for the header (see stateHeadLabel). */
             sourceName?: string;
             label?: string;
+            /** Tooltip for a synthetic terminal - the underlying SSL support node id (Node998/Node999). */
+            title?: string;
             messages?: Record<string, string>;
             jumpTo?: { file: string; stateId: string };
             reachability?: Reachability;
@@ -66,8 +68,12 @@
     <div class="ext" class:jump={data.jumpTo} title={data.jumpTo ? "Open in its dialog tab" : data.label}>
         <Handle type="target" position={Position.Left} />&#8631; {data.label}{#if data.jumpTo}<span class="jhint"> &#8599;</span>{/if}
     </div>
+{:else if type === "combat"}
+    <!-- SSL Node998 terminal: an option that starts combat. Presented as a terminal, not a drawn node; the
+         tooltip reveals the underlying support node (data.title = "Node998"). -->
+    <div class="combat" title={data.title}><Handle type="target" position={Position.Left} />COMBAT</div>
 {:else}
-    <div class="exit"><Handle type="target" position={Position.Left} />EXIT</div>
+    <div class="exit" title={data.title}><Handle type="target" position={Position.Left} />EXIT</div>
 {/if}
 
 <style>
@@ -233,6 +239,18 @@
         background: #241c1c;
         border: 1px solid #7f1d1d;
         color: #fca5a5;
+        border-radius: 8px;
+        font-size: 10px;
+        font-weight: 600;
+        padding: 6px 8px;
+        text-align: center;
+    }
+    /* SSL Node998 combat terminal: same danger palette as exit, filled deeper red to read as the stronger action. */
+    .combat {
+        width: 90px;
+        background: #3b1515;
+        border: 1px solid #b91c1c;
+        color: #fecaca;
         border-radius: 8px;
         font-size: 10px;
         font-weight: 600;

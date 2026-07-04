@@ -21,6 +21,7 @@
     import { hasHost, postToHost } from "./host";
     import {
         resolveText,
+        sslTerminalKind,
         type DialogModel,
         type DialogReaction,
         type DialogState,
@@ -29,7 +30,7 @@
 
     let { model }: { model: DialogModel } = $props();
 
-    const nodeTypes = { card: Node, external: Node, exit: Node };
+    const nodeTypes = { card: Node, external: Node, exit: Node, combat: Node };
     const edgeTypes = { reconnectable: ReconnectEdge };
 
     // Below this canvas width the minimap is hidden: it would sit atop the bottom-left zoom
@@ -107,7 +108,12 @@
     // dialog; cross-file links are EXTERN and handled separately. Deduped: a root can repeat a
     // state label (two CHAIN blocks sharing a terminal label), and a keyed {#each} over the raw
     // ids would raise svelte's each_key_duplicate; a jump target is a label, so distinct is correct.
-    const stateIds = $derived(distinctStateIds(activeRoot?.states ?? []));
+    // Target-picker id list. On SSL the reserved terminals (Node998/Node999) are presented as the Combat/Exit
+    // picker entries, not raw ids, so drop them here (they would otherwise appear as `-> Node998` in the menus).
+    const isSSL = $derived(editModel.format === "fallout-ssl");
+    const stateIds = $derived(
+        distinctStateIds(activeRoot?.states ?? []).filter((id) => !isSSL || !sslTerminalKind(id)),
+    );
     // How many @N refs failed to resolve to real text (the tra/msg path isn't found). Drives the banner
     // below - otherwise a misconfigured translation dir silently renders every line as its raw @N ref.
     const unresolvedRefs = $derived(unresolvedRefCount(editModel));
@@ -382,13 +388,15 @@
         const color =
             e.kind === "back"
                 ? "#f59e0b"
-                : e.category === "exit"
-                  ? "#ef4444"
-                  : e.category === "external"
-                    ? "#f59e0b"
-                    : e.category === "player"
-                      ? "#a3e635"
-                      : "#64748b";
+                : e.category === "combat"
+                  ? "#b91c1c"
+                  : e.category === "exit"
+                    ? "#ef4444"
+                    : e.category === "external"
+                      ? "#f59e0b"
+                      : e.category === "player"
+                        ? "#a3e635"
+                        : "#64748b";
         const dash = e.dashed || e.kind === "back" ? ";stroke-dasharray:5 4" : "";
         return `stroke:${color}${dash}`;
     }
@@ -651,7 +659,6 @@
         const st = findState(stateId);
         if (!structEditable(st)) return;
         const child = ops.addState(editModel, activeRoot ?? undefined);
-        if (!child) return;
         const c = ops.addReply(editModel, st);
         ops.setChoiceTarget(st, c.id, { kind: "state", stateId: child.id });
         selected = st;
@@ -774,7 +781,6 @@
 
     function addState(): void {
         const s = ops.addState(editModel, activeRoot ?? undefined);
-        if (!s) return;
         selected = s;
         void rebuild({ focusId: s.id });
     }
@@ -816,6 +822,10 @@
         if (!structEditable(owner ?? null)) return;
         let target: DialogTarget;
         if (targetNodeId === "exit") target = { kind: "exit" };
+        // The Combat terminal (SSL Node998) is a synthetic node, not a model state; map a drop on it back to a
+        // faithful `state -> Node998` target so it serializes as a `call Node998` the parser round-trips.
+        // `isSSL`-gated: the combat terminal only exists on an SSL graph, so a D graph can never reach this.
+        else if (isSSL && targetNodeId === "combat") target = { kind: "state", stateId: "Node998" };
         else if (states.some((s) => s.id === targetNodeId)) target = { kind: "state", stateId: targetNodeId };
         else return;
         ops.setChoiceTarget(owner, choiceId, target);
@@ -971,6 +981,11 @@
                             <button class="ctxitem back" role="menuitem" onclick={() => (ctxPickTarget = false)}>&#8592; Set target</button>
                             <div class="ctxlist">
                                 <button class="ctxitem" role="menuitem" onclick={() => setReplyTarget({ kind: "exit" })}>EXIT</button>
+                                <!-- SSL convention: Combat is the Node998 target (the save ensures that procedure
+                                     exists). Exit above stays the plain terminal (NMessage), always valid. -->
+                                {#if isSSL}
+                                    <button class="ctxitem" role="menuitem" onclick={() => setReplyTarget({ kind: "state", stateId: "Node998" })}>COMBAT</button>
+                                {/if}
                                 {#each stateIds as id (id)}
                                     <button class="ctxitem" role="menuitem" onclick={() => setReplyTarget({ kind: "state", stateId: id })}>&#8594; {id}</button>
                                 {/each}

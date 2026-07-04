@@ -253,3 +253,35 @@ describe("buildConversationTree", () => {
         expect(aTarget.node.id).toBe("A");
     });
 });
+
+// SSL convention: Node999 is the end/leave node (Exit), Node998 the combat node. The tree presents an option
+// targeting them as a terminal chip - not a link to a drawn node - and carries the underlying id as a tooltip.
+// The model target stays state->Node99x (round-trips), so this is a pure presentation fold, SSL-only.
+describe("buildConversationTree - Node998/Node999 as Combat/Exit terminals (SSL)", () => {
+    it("folds a Node999 target to Exit and a Node998 target to Combat, each with its id tooltip, and draws neither node", () => {
+        const r = root([
+            st("Node001", "Hello.", [
+                ch("Node001#0", { kind: "state", stateId: "Node999" }, { text: "Leave." }),
+                ch("Node001#1", { kind: "state", stateId: "Node998" }, { text: "Attack!" }),
+            ]),
+            st("Node998", "", []),
+            st("Node999", "", []),
+        ]);
+        const { roots } = buildConversationTree(r, undefined, noJump, { ssl: true, editable: false });
+        // Only the real node is drawn; the two support nodes are terminals, not conversation nodes.
+        expect(roots.map((n) => n.id)).toEqual(["Node001"]);
+        expect(roots[0]!.replies[0]!.target).toEqual({ kind: "exit", nodeId: "Node999" });
+        expect(roots[0]!.replies[1]!.target).toEqual({ kind: "combat", nodeId: "Node998" });
+    });
+
+    it("leaves a Node999 target a normal state link for non-SSL formats (the convention is SSL-only)", () => {
+        const r = root([
+            st("A", "Hello.", [ch("A#0", { kind: "state", stateId: "Node999" }, { text: "Leave." })]),
+            st("Node999", "end", []),
+        ]);
+        const { roots } = buildConversationTree(r, undefined, noJump, { ssl: false, editable: true });
+        const t = roots[0]!.replies[0]!.target;
+        expect(t.kind).toBe("state");
+        expect((t as Extract<ConvTarget, { kind: "state" }>).node.id).toBe("Node999");
+    });
+});

@@ -339,7 +339,11 @@
 
 {#snippet leaf(r: ConvReply)}
     {#if r.target.kind === "exit"}
-        <span class="lf exit">EXIT</span>
+        {@const t = r.target}
+        <span class="lf exit" title={t.nodeId}>EXIT</span>
+    {:else if r.target.kind === "combat"}
+        {@const t = r.target}
+        <span class="lf combat" title={t.nodeId}>COMBAT</span>
     {:else if r.target.kind === "ref"}
         <button class="lf ref" title="Shown elsewhere - jump to it" onclick={() => (onSelect((r.target as { stateId: string }).stateId), reveal((r.target as { stateId: string }).stateId))}>
             &#8631; {(r.target as { stateId: string }).stateId}
@@ -552,6 +556,11 @@
     .lf.exit {
         color: #fca5a5;
         border: 1px solid #7f1d1d;
+    }
+    .lf.combat {
+        color: #fecaca;
+        border: 1px solid #b91c1c;
+        background: #3b1515;
     }
     span.lf.ext {
         color: #fbbf24;

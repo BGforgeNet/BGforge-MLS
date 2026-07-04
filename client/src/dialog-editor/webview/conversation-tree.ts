@@ -15,7 +15,13 @@
  * jump resolution is injected so this module stays decoupled from the editor's
  * root maps (and stays trivially testable).
  */
-import { resolveText, type DialogChoice, type DialogReaction, type DialogRoot } from "../../../../shared/dialog-model";
+import {
+    resolveText,
+    sslTerminalKind,
+    type DialogChoice,
+    type DialogReaction,
+    type DialogRoot,
+} from "../../../../shared/dialog-model";
 import { isPendingChoice, textFieldLocked } from "./inspector-edit";
 import type { JumpTarget } from "./jump-resolve";
 
@@ -24,7 +30,10 @@ export type ConvTarget =
     | { kind: "state"; node: ConvState }
     /** A same-file state already expanded elsewhere: a link back to it. */
     | { kind: "ref"; stateId: string }
-    | { kind: "exit" }
+    /** Terminal exit. `nodeId` is set (SSL) when this is an option reaching the Node999 end node, shown as a tooltip. */
+    | { kind: "exit"; nodeId?: string }
+    /** Terminal combat (SSL Node998); `nodeId` (always "Node998") is shown as a tooltip. */
+    | { kind: "combat"; nodeId: string }
     /** Cross-file target; `jump` is set when it resolves to another tab. */
     | { kind: "external"; label: string; jump?: JumpTarget };
 
@@ -94,11 +103,15 @@ export function buildConversationTree(
     opts?: { ssl: boolean; editable: boolean },
 ): ConversationTree {
     const { ssl = false, editable = true } = opts ?? {};
-    const byId = new Map(root.states.map((s) => [s.id, s]));
+    // SSL convention: Node998/Node999 are terminal Combat/Exit targets, not drawn conversation nodes
+    // (SSL_TERMINAL_NODES). Exclude them from the states the tree draws; buildTarget maps an option targeting
+    // them to a terminal chip instead. Non-SSL formats keep every state.
+    const drawn = ssl ? root.states.filter((s) => !sslTerminalKind(s.id)) : root.states;
+    const byId = new Map(drawn.map((s) => [s.id, s]));
 
     // A state is an entry if no same-file transition targets it.
     const targeted = new Set<string>();
-    for (const s of root.states) {
+    for (const s of drawn) {
         for (const c of s.choices) {
             if (c.target.kind === "state" && byId.has(c.target.stateId)) targeted.add(c.target.stateId);
         }
@@ -107,6 +120,14 @@ export function buildConversationTree(
     const shown = new Set<string>();
 
     const buildTarget = (c: DialogChoice): ConvTarget => {
+        if (c.target.kind === "state" && ssl) {
+            // Map a target to a reserved support node to its terminal chip (Node999 -> Exit, Node998 -> Combat),
+            // carrying the underlying id as a tooltip. Checked before the byId lookup below (the support node is
+            // not in `byId`, so it would otherwise fall through to the cross-file "external" branch).
+            const terminal = sslTerminalKind(c.target.stateId);
+            if (terminal === "exit") return { kind: "exit", nodeId: c.target.stateId };
+            if (terminal === "combat") return { kind: "combat", nodeId: c.target.stateId };
+        }
         if (c.target.kind === "exit") return { kind: "exit" };
         if (c.target.kind === "external")
             return { kind: "external", label: c.target.label, jump: resolveJump(c.target.label) };
@@ -177,7 +198,7 @@ export function buildConversationTree(
     // Entries first, in source order, then any state not yet reached (states only
     // inside a cycle, or otherwise unreachable from an entry) so every state of the
     // file appears exactly once - parity with the graph, which shows them all.
-    for (const s of root.states) if (!targeted.has(s.id) && !shown.has(s.id)) roots.push(expand(s.id));
-    for (const s of root.states) if (!shown.has(s.id)) roots.push(expand(s.id));
+    for (const s of drawn) if (!targeted.has(s.id) && !shown.has(s.id)) roots.push(expand(s.id));
+    for (const s of drawn) if (!shown.has(s.id)) roots.push(expand(s.id));
     return { roots };
 }

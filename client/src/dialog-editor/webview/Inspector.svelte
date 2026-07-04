@@ -2,6 +2,7 @@
     import { writable } from "svelte/store";
     import {
         resolveText,
+        sslTerminalKind,
         stateHeadLabel,
         type DialogBranch,
         type DialogChoice,
@@ -78,12 +79,24 @@
     }
 
     function targetValue(t: DialogTarget): string {
-        if (t.kind === "state") return `state:${t.stateId}`;
+        if (t.kind === "state") {
+            // SSL: a Node998/Node999 target is presented as the Combat/Exit picker value, not a raw state id
+            // (matching how the tree/graph render it), so the <select> shows COMBAT/EXIT selected.
+            if (ssl) {
+                const term = sslTerminalKind(t.stateId);
+                if (term) return term; // "exit" | "combat"
+            }
+            return `state:${t.stateId}`;
+        }
         if (t.kind === "exit") return "exit";
         return "ext";
     }
     function onTargetChange(c: DialogChoice, value: string): void {
         if (value === "exit") actions.setTarget(c.id, { kind: "exit" });
+        // SSL Combat is the Node998 target (the save ensures the procedure exists); Exit stays the plain
+        // terminal (NMessage), always valid without a support node. `ssl`-gated so a D dialog can never map to
+        // Combat even if "combat" reached here (its <option> is SSL-only; this is the matching guard).
+        else if (ssl && value === "combat") actions.setTarget(c.id, { kind: "state", stateId: "Node998" });
         else if (value.startsWith("state:")) actions.setTarget(c.id, { kind: "state", stateId: value.slice("state:".length) });
         // "ext" keeps the existing external target; cross-file retargeting is a later phase.
     }
@@ -300,6 +313,7 @@
                     <option value="ext">&#8631; {c.target.label}</option>
                 {/if}
                 <option value="exit">EXIT</option>
+                {#if ssl}<option value="combat">COMBAT</option>{/if}
                 {#each stateIds as id (id)}
                     <option value={`state:${id}`}>&#8594; {id}</option>
                 {/each}
