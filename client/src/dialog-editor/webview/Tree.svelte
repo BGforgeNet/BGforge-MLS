@@ -506,9 +506,10 @@
 {/snippet}
 
 {#snippet branchBlock(b: ConvBranch, depth: number, ownerId: string)}
+    <!-- Compact group gate: a short [if] chip (condition in the hover tooltip) / [else], the same marker the
+         flat option/state rows use - not the full condition spelled out inline. Keeps the tree dense. -->
     <div class="branchhdr" style="--lvl:{depth * 2 + 1}">
-        <span class="bwhen">{b.kind === "if" ? "shown when" : "otherwise"}</span>
-        {#if b.kind === "if"}<span class="bcond" title={b.condition}>{b.condition}</span>{/if}
+        {#if b.kind === "if"}<span class="cond" title={b.condition}>[if]</span>{:else}<span class="belse">[else]</span>{/if}
     </div>
     <div class="brep" style="--lvl:{depth * 2 + 1}">
         <span class="line" use:clipTitle={{ label: ownerId, text: b.npc }}>{b.npc || "(no line)"}</span>
@@ -519,7 +520,7 @@
 {/snippet}
 
 <!-- Recursive render for a `structured` node (arbitrarily nested if/else). Each group shows its condition
-     ONCE at its own indent level ("shown when ..." / "otherwise") and its body nests one level in, so an
+     ONCE at its own indent level (a compact [if] chip / [else]) and its body nests one level in, so an
      option's full gate is read from the groups it sits under - the fix for the flat projection that smeared
      conjoined conditions onto every option and silently dropped outer gates (dialog-nested-flatten-bug-class).
      Structure is read-only this slice: option rows are inert (branchReadonly), matching the bundle branch. -->
@@ -533,13 +534,12 @@
             {@render replyRow(it.reply, depth, ownerId, i, block.length, true)}
         {:else if it.kind === "group"}
             <div class="branchhdr" style="--lvl:{depth * 2 + 1}">
-                <span class="bwhen">shown when</span>
-                <span class="bcond" title={it.condition}>{it.condition}</span>
+                <span class="cond" title={it.condition}>[if]</span>
             </div>
             {@render convBlock(it.thenBlock, depth + 1, ownerId)}
             {#if it.elseBlock}
                 <div class="branchhdr" style="--lvl:{depth * 2 + 1}">
-                    <span class="bwhen">otherwise</span>
+                    <span class="belse">[else]</span>
                 </div>
                 {@render convBlock(it.elseBlock, depth + 1, ownerId)}
             {/if}
@@ -786,26 +786,20 @@
         border-radius: 3px;
         outline: none;
     }
-    /* Bundle (if/else) branch grouping: a faint "shown when ... / otherwise" header above
-       each branch's own NPC line and replies, mirroring the inspector's light grouping. */
+    /* Bundle/structured (if/else) branch grouping: a compact [if]/[else] gate chip above each branch's own
+       NPC line and replies. The chip reuses the flat option/state `.cond` [if] style so every condition
+       marker looks identical; the full condition is in the chip's hover tooltip (and the inspector). */
     .branchhdr {
         padding-left: calc(var(--lvl) * 14px + 8px);
-        font-size: 9px;
-        font-style: italic;
         line-height: 1.6;
         display: flex;
         gap: 5px;
         align-items: baseline;
     }
-    .bwhen {
+    /* else branch gate: neutral grey (it is the negation/fallback, not a condition to read). */
+    .belse {
         color: #8b93a1;
-    }
-    .bcond {
-        color: #f59e0b;
-        font-family: var(--vscode-editor-font-family, monospace);
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        font-size: 9px;
     }
     .brep {
         display: flex;
