@@ -252,22 +252,31 @@ await firstItem.click();
 const firstSid = await firstItem.getAttribute("data-sid");
 await page.keyboard.press("ArrowDown");
 await page.waitForTimeout(80);
-// The row ArrowDown lands on must be BOTH focused and selected (aria-selected), proving selection follows.
+// Navigation interleaves state rows and selectable options in DOM order, so ArrowDown off the first state
+// lands on either its first option (an .rtextbtn, carrying data-choice) or - if it has none - the next
+// state row. Either way the landing target must be BOTH focused and selected, proving selection follows:
+// a state row reads aria-selected="true"; a selected option's row carries the .repsel class.
 const down = await page.evaluate(() => {
     const a = document.activeElement as HTMLElement | null;
-    return { sid: a?.getAttribute("data-sid"), selected: a?.getAttribute("aria-selected") };
+    if (!a) return { key: null as string | null, selected: false };
+    const isState = a.getAttribute("role") === "treeitem";
+    const selected = isState
+        ? a.getAttribute("aria-selected") === "true"
+        : (a.closest(".rep")?.classList.contains("repsel") ?? false);
+    return { key: a.getAttribute("data-sid") ?? a.getAttribute("data-choice"), selected };
 });
 await page.keyboard.press("ArrowUp");
 await page.waitForTimeout(80);
+// ArrowUp steps back to the first state row (data-sid === firstSid).
 const upSid = await page.evaluate(() => (document.activeElement as HTMLElement | null)?.getAttribute("data-sid"));
 check(
-    "tree roles + no tabbable carets; ArrowUp/Down move selection between rows",
+    "tree roles + no tabbable carets; ArrowUp/Down move selection across rows and options",
     treeA11y.trees === 1 &&
         treeA11y.items > 1 &&
         treeA11y.tabbableCarets === 0 &&
-        !!down.sid &&
-        down.sid !== firstSid &&
-        down.selected === "true" &&
+        !!down.key &&
+        down.key !== firstSid &&
+        down.selected &&
         upSid === firstSid,
     JSON.stringify({ ...treeA11y, firstSid, ...down, upSid }),
 );
@@ -284,6 +293,39 @@ check(
     "ArrowLeft collapses and ArrowRight expands the focused row",
     expInit === "true" && expCollapsed === "false" && expReExpanded === "true",
     JSON.stringify({ expInit, expCollapsed, expReExpanded }),
+);
+
+// Clip-aware line tooltips: a conversation line (NPC line, option text) exposes its full text as a hover
+// title ONLY when it is actually clipped - a line that fits shows no title (it would just echo the visible
+// text). Drive a narrow viewport so long lines clip and short ones ("(no line)", "(continue)") fit, then
+// assert both directions across every rendered line: fits => no title, clipped => title.
+await page.goto("file://" + appHtml);
+await page.setViewportSize({ width: 360, height: 800 });
+await postModel();
+await page.waitForSelector(".tree .line", { timeout: 10_000 });
+await page.waitForTimeout(150); // let each line's ResizeObserver run its initial clipped-or-not sync
+const tips = await page.evaluate(() => {
+    const lines = [...document.querySelectorAll<HTMLElement>(".tree .line, .tree .rtext")];
+    let fitNoTitle = 0;
+    let fitWithTitle = 0;
+    let clipWithTitle = 0;
+    let clipNoTitle = 0;
+    for (const el of lines) {
+        const clipped = el.scrollWidth > el.clientWidth;
+        const hasTitle = el.hasAttribute("title");
+        if (clipped) hasTitle ? clipWithTitle++ : clipNoTitle++;
+        else hasTitle ? fitWithTitle++ : fitNoTitle++;
+    }
+    return { total: lines.length, fitNoTitle, fitWithTitle, clipWithTitle, clipNoTitle };
+});
+check(
+    "line tooltips appear only when the text is clipped",
+    tips.total > 0 &&
+        tips.fitWithTitle === 0 &&
+        tips.clipNoTitle === 0 &&
+        tips.fitNoTitle > 0 &&
+        tips.clipWithTitle > 0,
+    JSON.stringify(tips),
 );
 
 // Tree inline add/remove option: the "+ option" row appends a player option to an editable state,

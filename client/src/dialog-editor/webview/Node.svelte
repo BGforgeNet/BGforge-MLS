@@ -3,7 +3,7 @@
     import { choiceBadges, resolveText, stateBadges, stateHeadLabel, type DialogState } from "../../../../shared/dialog-model";
     import type { Reachability } from "../../../../shared/dialog-reachability";
     import Badge from "./Badge.svelte";
-    import ReactionChip from "./ReactionChip.svelte";
+    import LowIntChip from "./LowIntChip.svelte";
 
     // Custom node component: Svelte Flow selects it by node `type`, so one component
     // covers the card / external-anchor / exit variants by branching on `type`.
@@ -51,7 +51,7 @@
         {#each data.state.choices as c (c.id)}
             {@const cb = choiceBadges(c)}
             <div class="opt" class:r-good={c.reaction === "good"} class:r-bad={c.reaction === "bad"} class:r-neutral={c.reaction === "neutral"}>
-                <ReactionChip reaction={c.reaction} lowIq={c.lowIq} />
+                <LowIntChip lowIq={c.lowIq} />
                 {#if cb.length}<Badge badges={cb} small />{/if}
                 <span class="otext"
                     >{resolveText(c.text, data.messages) ||
@@ -195,9 +195,9 @@
         align-items: center;
         gap: 4px;
     }
-    /* Reaction text color reinforces the letter chip (never color alone). Good = green, bad = red,
-       neutral = quiet grey - the same grey as the default, so a D transition (no reaction) reads
-       identically to an SSL neutral option. */
+    /* Reaction is carried by the option text color (there is no longer a letter chip): good = green,
+       bad = red, neutral = quiet grey - the same grey as the default, so a D transition (no reaction)
+       reads identically to an SSL neutral option. */
     .opt.r-good .otext {
         color: #86efac;
     }

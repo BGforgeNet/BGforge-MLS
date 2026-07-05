@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { ConversationTree, ConvState, ConvReply, ConvBranch } from "./conversation-tree";
     import Badge from "./Badge.svelte";
-    import ReactionChip from "./ReactionChip.svelte";
+    import LowIntChip from "./LowIntChip.svelte";
 
     // Conversation-flow tree (built by conversation-tree.ts). Renders states and
     // their player replies as a nested outline; clicking a state selects it for the
@@ -76,9 +76,10 @@
     });
 
     // Roving-tabindex keyboard navigation (WAI-ARIA tree pattern): exactly one state row is in the tab
-    // order at a time; ArrowUp/Down move selection between visible rows and ArrowLeft/Right expand/collapse
-    // (see onRowKeydown). Before this, each row was a focusable div wrapping a focusable caret button (two
-    // tab stops per row, inconsistent). Defaults the roving target to the selection, else the first root.
+    // order at a time. ArrowUp/Down move selection between visible rows - state rows AND selectable options
+    // alike (see onRowKeydown / onReplyTextKeydown) - and ArrowLeft/Right expand/collapse a state. Before
+    // this, each row was a focusable div wrapping a focusable caret button (two tab stops per row,
+    // inconsistent). Defaults the roving target to the selection, else the first root.
     let treeFocusId = $state<string>();
     $effect(() => {
         if (!treeFocusId || !treeEl?.querySelector(`[data-sid="${CSS.escape(treeFocusId)}"]`)) {
@@ -86,24 +87,32 @@
         }
     });
 
-    // Visible state rows in DOM (top-to-bottom) order, for ArrowUp/Down movement.
-    function visibleRows(): HTMLElement[] {
-        return treeEl ? [...treeEl.querySelectorAll<HTMLElement>('[role="treeitem"]')] : [];
+    // Visible navigation targets in DOM (top-to-bottom) order, for ArrowUp/Down movement. A target is either
+    // a state row ([role=treeitem], carries data-sid) or a selectable flat option (its .rtextbtn text button,
+    // carrying data-owner + data-choice); a read-only bundle-branch option is a plain span and so not a
+    // target. Both kinds are focusable and interleave exactly as they read on screen - Down off a state steps
+    // into its first option, Down off the last option steps to the next state. Collapsed rows' children are
+    // absent from the DOM, so this naturally walks only what is on screen.
+    function navTargets(): HTMLElement[] {
+        return treeEl ? [...treeEl.querySelectorAll<HTMLElement>('[role="treeitem"], .rtextbtn')] : [];
     }
-    function focusRow(id: string): void {
-        treeFocusId = id;
-        treeEl?.querySelector<HTMLElement>(`[data-sid="${CSS.escape(id)}"]`)?.focus();
+    // Move SELECTION (not just focus) to a target: focus it and select it so the docked inspector follows the
+    // keyboard, matching a click. A state row selects via onSelect; an option button via onSelectReply.
+    function selectNav(el: HTMLElement): void {
+        const { sid, owner, choice } = el.dataset;
+        if (owner && choice) onSelectReply(owner, choice);
+        else if (sid) onSelect(sid);
     }
-    // ArrowUp/Down move SELECTION (not just focus) to the previous/next visible row: focus it and select it
-    // so the docked inspector follows the keyboard, matching a click. Collapsed rows' children are absent from
-    // the DOM, so visibleRows() naturally skips them - navigation walks only what is on screen.
-    function moveSelect(id: string, dir: 1 | -1): void {
-        const rows = visibleRows();
-        const i = rows.findIndex((r) => r.dataset.sid === id);
+    // ArrowUp/Down step to the previous/next target and select it. .focus() scrolls the target into view, so
+    // the arrows move focus instead of scrolling the panel (the browser default when focus sits on a control
+    // - e.g. an option's text button - that does not itself handle the arrows).
+    function moveNav(current: HTMLElement, dir: 1 | -1): void {
+        const rows = navTargets();
+        const i = rows.indexOf(current);
         const next = rows[i + dir];
-        if (next?.dataset.sid) {
-            focusRow(next.dataset.sid);
-            onSelect(next.dataset.sid);
+        if (next) {
+            next.focus();
+            selectNav(next);
         }
     }
     function onRowKeydown(e: KeyboardEvent, st: ConvState): void {
@@ -126,11 +135,11 @@
                 break;
             case "ArrowDown":
                 e.preventDefault();
-                moveSelect(st.id, 1);
+                moveNav(e.currentTarget as HTMLElement, 1);
                 break;
             case "ArrowUp":
                 e.preventDefault();
-                moveSelect(st.id, -1);
+                moveNav(e.currentTarget as HTMLElement, -1);
                 break;
             case "ArrowRight":
                 // Expand a collapsed row with children.
@@ -147,6 +156,31 @@
                 }
                 break;
         }
+    }
+
+    // Show a line's full text as a hover tooltip ONLY when it is actually clipped (rendered width exceeds
+    // the box). A line that fits needs no tooltip - it would just echo the visible text. Re-checks on resize,
+    // since whether it overflows depends on the available width. Applied to the ellipsised conversation lines
+    // (NPC line, option text); the short marker chips ([if]/[do], ids, leaf labels) keep their always-on
+    // tooltips, because those DO reveal information the visible glyph hides.
+    function clipTitle(el: HTMLElement, text: string | undefined) {
+        let current = text;
+        function sync(): void {
+            if (current && el.scrollWidth > el.clientWidth) el.title = current;
+            else el.removeAttribute("title");
+        }
+        const ro = new ResizeObserver(sync);
+        ro.observe(el);
+        sync();
+        return {
+            update(next: string | undefined): void {
+                current = next;
+                sync();
+            },
+            destroy(): void {
+                ro.disconnect();
+            },
+        };
     }
 
     // Inline option-text editing. The edited option renders an <input>; Enter and blur commit, Escape
@@ -189,7 +223,13 @@
     // Begin edit on double-click, or Enter/F2 while the option's text button is focused. A non-editable
     // option (locked SSL @N, read-only node) has no inline input, so the gesture is a no-op there.
     function onReplyTextKeydown(e: KeyboardEvent, ownerId: string, r: ConvReply): void {
-        if (r.textEditable && (e.key === "F2" || e.key === "Enter")) {
+        if (e.key === "ArrowDown") {
+            e.preventDefault();
+            moveNav(e.currentTarget as HTMLElement, 1);
+        } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            moveNav(e.currentTarget as HTMLElement, -1);
+        } else if (r.textEditable && (e.key === "F2" || e.key === "Enter")) {
             e.preventDefault();
             onBeginEditReply(ownerId, r.id);
         }
@@ -279,13 +319,13 @@
                      not also fire. -->
                 <button
                     class="line linebtn"
-                    title={st.text}
+                    use:clipTitle={st.text}
                     onclick={(e) => (e.stopPropagation(), onSelect(st.id))}
                     ondblclick={(e) => (e.stopPropagation(), onBeginEditState(st.id))}
                     onkeydown={(e) => onLineKeydown(e, st.id)}
                 >{st.text || "(no line)"}</button>
             {:else}
-                <span class="line" title={st.text}>{st.text || "(no line)"}</span>
+                <span class="line" use:clipTitle={st.text}>{st.text || "(no line)"}</span>
             {/if}
         {/if}
         <!-- Node add/delete (hover-revealed) on an editable state: "+" grows a connected child node, "-"
@@ -342,7 +382,7 @@
         {#if b.kind === "if"}<span class="bcond" title={b.condition}>{b.condition}</span>{/if}
     </div>
     <div class="brep" style="--lvl:{depth * 2 + 1}">
-        <span class="line" title={b.npc}>{b.npc || "(no line)"}</span>
+        <span class="line" use:clipTitle={b.npc}>{b.npc || "(no line)"}</span>
     </div>
     {#each b.replies as r, i (r.id)}
         {@render replyRow(r, depth, ownerId, i, b.replies.length, true)}
@@ -359,7 +399,7 @@
             : (e) => (e.preventDefault(), onReplyContext(ownerId, r.id, index, count, e.clientX, e.clientY))}
     >
         <span class="rmark">&#8627;</span>
-        <ReactionChip reaction={r.reaction} lowIq={r.lowIq} />
+        <LowIntChip lowIq={r.lowIq} />
         {#if !branchReadonly && r.id === editingChoiceId && r.textEditable}
             <!-- Inline edit: the option's text as an input. Enter/blur commit, Escape cancels (both routed
                  through blur). Prefilled with the resolved line; a just-added option starts empty. -->
@@ -386,7 +426,9 @@
                 class:r-good={r.hasText && r.reaction === "good"}
                 class:r-bad={r.hasText && r.reaction === "bad"}
                 class:r-neutral={r.hasText && r.reaction === "neutral"}
-                title={r.hasText ? r.text : undefined}
+                data-owner={branchReadonly ? undefined : ownerId}
+                data-choice={branchReadonly ? undefined : r.id}
+                use:clipTitle={r.hasText ? r.text : undefined}
                 onclick={branchReadonly ? undefined : () => onSelectReply(ownerId, r.id)}
                 ondblclick={branchReadonly ? undefined : () => r.textEditable && onBeginEditReply(ownerId, r.id)}
                 onkeydown={branchReadonly ? undefined : (e) => onReplyTextKeydown(e, ownerId, r)}
