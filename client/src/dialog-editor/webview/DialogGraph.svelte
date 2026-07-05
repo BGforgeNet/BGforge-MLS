@@ -971,6 +971,20 @@
             <a href="https://github.com/BGforgeNet/BGforge-MLS/issues" target="_blank" rel="noreferrer"
                >https://github.com/BGforgeNet/BGforge-MLS/issues</a>
         </span>
+        {#if viewMode === "tree"}
+            <!-- Tree keyboard reference. The bindings themselves live per row in Tree.svelte
+                 (onRowKeydown / onReplyRowKeydown) and window-wide for Delete; this strip only surfaces
+                 them. Tree view only - they are outline-specific (arrows move between rows, G takes the
+                 highlighted transition), so showing them over the graph canvas would mislead. -->
+            <span class="keyhints">
+                <span><kbd>Up</kbd>/<kbd>Down</kbd> move</span>
+                <span><kbd>Left</kbd>/<kbd>Right</kbd> fold</span>
+                <span><kbd>Enter</kbd>/<kbd>E</kbd> edit</span>
+                <span><kbd>G</kbd> go to target</span>
+                <span><kbd>F4</kbd> source</span>
+                <span><kbd>Del</kbd> delete</span>
+            </span>
+        {/if}
         {@render toolbar(viewMode === "graph")}
         {#if viewMode === "tree"}
             <span class="tbsep"></span>
@@ -1198,6 +1212,8 @@
         border: 1px solid #3a3f4b;
         border-radius: 4px;
         overflow: hidden;
+        /* Push the view controls to the right of the toolbar, past the left-aligned beta notice + key hints. */
+        margin-left: auto;
         margin-right: 6px;
         vertical-align: middle;
     }
@@ -1238,10 +1254,10 @@
         background: #15171c;
         border-bottom: 1px solid #2b303a;
     }
-    /* Beta notice on the left of the toolbar - low-emphasis muted text with a themed link. margin-right:auto
-       pushes the view controls to the right, mirroring the binary editor's toolbar-beta/toolbar-actions split. */
+    /* Beta notice + keyboard reference sit on the left of the toolbar (low-emphasis muted text); the view
+       controls push to the right via .viewseg margin-left:auto (below), mirroring the binary editor's
+       toolbar-beta/toolbar-actions split. */
     .dlgbeta {
-        margin-right: auto;
         font-size: 11px;
         color: #9aa0a6;
     }
@@ -1250,6 +1266,29 @@
     }
     .dlgbeta a:hover {
         color: #93c5fd;
+    }
+    /* Tree keyboard reference: muted key -> action pairs, each pair a nowrap unit so a key and its label
+       never split across a wrap. Themed <kbd> chips matching the toolbar palette. */
+    .keyhints {
+        display: inline-flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 3px 10px;
+        font-size: 11px;
+        color: #9aa0a6;
+    }
+    .keyhints > span {
+        white-space: nowrap;
+    }
+    .keyhints kbd {
+        font-family: var(--vscode-editor-font-family, monospace);
+        font-size: 10px;
+        color: #c5c8ce;
+        background: #21242b;
+        border: 1px solid #3a3f4b;
+        border-radius: 3px;
+        padding: 0 4px;
+        margin: 0 1px;
     }
     /* Unresolved-translations banner: a full-width amber notice below the toolbar, matching the
        inspector's .ronote palette. Makes a silent tra/msg-resolution failure legible and actionable. */
