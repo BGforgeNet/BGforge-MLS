@@ -320,7 +320,9 @@
     // Enter/F2/E begin inline edit (Enter falls back to select when the option is not editable - a locked
     // SSL @N / read-only node has no inline input); G takes the transition (go to the target, like clicking
     // its link); ArrowUp/Down move to the neighbouring row. Double-click also edits (see the row markup).
-    function onReplyRowKeydown(e: KeyboardEvent, ownerId: string, r: ConvReply): void {
+    // `readonly` (a bundle/structured branch option) is still selectable and navigable, but its text is not
+    // inline-editable here, so Enter/F2/E select rather than begin an edit.
+    function onReplyRowKeydown(e: KeyboardEvent, ownerId: string, r: ConvReply, readonly: boolean): void {
         switch (e.key) {
             case " ":
                 e.preventDefault();
@@ -331,7 +333,7 @@
             case "e":
             case "E":
                 e.preventDefault();
-                if (r.textEditable) onBeginEditReply(ownerId, r.id);
+                if (!readonly && r.textEditable) onBeginEditReply(ownerId, r.id);
                 else if (e.key === "Enter") onSelectReply(ownerId, r.id);
                 break;
             case "g":
@@ -543,26 +545,26 @@
     <!-- The whole option row is the selection/focus/nav unit (mirroring a state row): a click anywhere on it
          selects the option, double-click / F2 edits its text, ArrowUp/Down move to the neighbouring row. It
          is a treeitem so it can hold the inner controls (target jump, remove) without a nested-button clash.
-         A read-only bundle-branch option row is inert - no role/tabindex/handlers - and its text is a plain
-         span. The inner controls (leaf jump, remove, the edit input) stop click/keydown from bubbling so they
-         act on themselves, not the row. -->
+         A bundle/structured (branchReadonly) option is SELECTABLE and navigable like any other - so it can be
+         inspected - but structurally read-only: `branchReadonly` gates only its edit affordances (inline text
+         edit, the context menu, the remove button), not selection/nav. The inner controls (leaf jump, remove,
+         the edit input) stop click/keydown from bubbling so they act on themselves, not the row. -->
     <!-- svelte-ignore a11y_no_noninteractive_tabindex -- roving tabindex on a treeitem IS the WAI-ARIA tree
          pattern (same as the state rows); Svelte's heuristic wrongly treats treeitem as non-interactive. -->
     <div
-        class="rep"
-        class:reprow={!branchReadonly}
+        class="rep reprow"
         class:repsel={ownerId === selectedId && r.id === selectedChoiceId}
         style="--lvl:{depth * 2 + 1}"
-        data-owner={branchReadonly ? undefined : ownerId}
-        data-choice={branchReadonly ? undefined : r.id}
-        role={branchReadonly ? undefined : "treeitem"}
-        aria-level={branchReadonly ? undefined : depth + 2}
-        aria-selected={branchReadonly ? undefined : ownerId === selectedId && r.id === selectedChoiceId}
-        tabindex={branchReadonly ? undefined : r.id === treeFocusId ? 0 : -1}
-        onclick={branchReadonly ? undefined : () => onSelectReply(ownerId, r.id)}
+        data-owner={ownerId}
+        data-choice={r.id}
+        role="treeitem"
+        aria-level={depth + 2}
+        aria-selected={ownerId === selectedId && r.id === selectedChoiceId}
+        tabindex={r.id === treeFocusId ? 0 : -1}
+        onclick={() => onSelectReply(ownerId, r.id)}
         ondblclick={branchReadonly ? undefined : () => r.textEditable && onBeginEditReply(ownerId, r.id)}
-        onfocus={branchReadonly ? undefined : () => (treeFocusId = r.id)}
-        onkeydown={branchReadonly ? undefined : (e) => onReplyRowKeydown(e, ownerId, r)}
+        onfocus={() => (treeFocusId = r.id)}
+        onkeydown={(e) => onReplyRowKeydown(e, ownerId, r, branchReadonly)}
         oncontextmenu={branchReadonly
             ? undefined
             : (e) => (e.preventDefault(), onReplyContext(ownerId, r.id, index, count, e.clientX, e.clientY))}
