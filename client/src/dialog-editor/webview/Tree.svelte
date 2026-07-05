@@ -414,6 +414,9 @@
              not shown inline; the id is the row's hover tooltip (title={st.id}) instead. -->
         {#if st.speaker}<span class="who">{st.speaker}</span>{/if}
         {#if st.derivedFrom}<Badge badges={["derived"]} label={st.derivedFrom} small />{/if}
+        <!-- Loud "structure simplified" warning for an approximate node: its flat render is lossy, so the row
+             must say so rather than pass as a normal node (dialog-nested-flatten-bug-class, decision 3). -->
+        {#if st.approximate}<Badge badges={["approximate"]} small />{/if}
         <!-- A structured (block) node shows its gating per-group below (each condition once at its level), so
              the flat node-level trigger [if] is suppressed here to avoid duplicating the first group's header. -->
         {#if st.trigger && !st.block}<span class="cond" title={st.trigger}>[if]</span>{/if}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseDialog } from "../src/dialog";
-import { modelFromSSL } from "../../shared/dialog-model";
+import { modelFromSSL, stateBadges } from "../../shared/dialog-model";
 import type { SSLDialogGroup } from "../../shared/dialog-types";
 
 // A node whose body mixes nested `if`s (a group inside a group), an `else` branch with its own reply line,
@@ -149,5 +149,10 @@ procedure talk_p_proc begin call Node001; end
         expect(n1.structured).toBeUndefined();
         expect(n1.bundleFaithful).toBeUndefined();
         expect(n1.block).toBeUndefined();
+
+        // The lossy approximation must be surfaced as a loud "approximate" badge (decision 3: not silent).
+        const state = modelFromSSL(result).roots[0]!.states.find((s) => s.id === "Node001")!;
+        expect(state.approximate).toBe(true);
+        expect(stateBadges(state)).toContain("approximate");
     });
 });

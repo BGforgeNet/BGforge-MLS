@@ -393,4 +393,17 @@ describe("buildConversationTree - Node998/Node999 as Combat/Exit terminals (SSL)
         // Every choice is expanded exactly once through the block (no flat replies duplicating them).
         expect(n1.replies).toHaveLength(0);
     });
+
+    // An approximate node (control flow the block can't model) renders flat but must carry the flag through
+    // to ConvState so the tree shows the loud "approx" warning badge (dialog-nested-flatten-bug-class dec. 3).
+    it("carries the approximate flag onto ConvState", () => {
+        const r = root([st("A", "@1", [ch("A#0", { kind: "exit" }, { text: "@2" })], { approximate: true })]);
+        const { roots } = buildConversationTree(r, undefined, noJump, { ssl: true, editable: false });
+        expect(roots[0]!.approximate).toBe(true);
+        // A normal node does not get the flag.
+        const r2 = root([st("B", "@1", [ch("B#0", { kind: "exit" })])]);
+        expect(
+            buildConversationTree(r2, undefined, noJump, { ssl: true, editable: false }).roots[0]!.approximate,
+        ).toBeUndefined();
+    });
 });

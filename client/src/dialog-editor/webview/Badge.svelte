@@ -20,6 +20,11 @@
             title: "Read-only: expanded from a CHAIN/INTERJECT/EXTEND block (no source span to edit).",
             cls: "b-derived",
         },
+        approximate: {
+            text: "approx",
+            title: "Structure simplified - this node has control flow (loop/switch) the editor can't fully model, so the shown tree is approximate and incomplete. Read the .ssl source for the full logic.",
+            cls: "b-approx",
+        },
         "unresolved-external": {
             text: "ext?",
             title: "Edge leaves this file to an unresolved target (e.g. a %var% filename).",
@@ -83,6 +88,12 @@
         color: #cbd5e1;
         background: #374151;
         border-color: #4b5563;
+    }
+    /* approximate = red, "caution: the shown structure is incomplete" - the strongest honesty warning. */
+    .b-approx {
+        color: #fca5a5;
+        background: #3a1c1c;
+        border-color: #b91c1c;
     }
     /* unresolved external = amber, "edge leaves the known world". */
     .b-ext {

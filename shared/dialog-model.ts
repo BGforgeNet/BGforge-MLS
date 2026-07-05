@@ -374,12 +374,22 @@ export function stateHeadLabel(state: DialogState, sourceName?: string): string 
  * the author cannot fully trust as authored/editable source. Each is derived purely
  * from IR fields (see stateBadges/choiceBadges) - never guessed.
  */
-export type DialogBadge = "derived" | "unresolved-external" | "computed" | "random" | "conditional" | "side-effect";
+export type DialogBadge =
+    | "derived"
+    | "approximate"
+    | "unresolved-external"
+    | "computed"
+    | "random"
+    | "conditional"
+    | "side-effect";
 
 // Display priority, highest first: the top badge shows inline on the card, the rest
 // move to hover/inspector (see the 1B spec's badge-density decision).
 const BADGE_PRIORITY: readonly DialogBadge[] = [
     "derived",
+    // `approximate` ranks high: it warns the whole shown tree is a lossy simplification of this node, which
+    // subsumes the finer per-item badges below it (a reader must see it before trusting anything in the node).
+    "approximate",
     "unresolved-external",
     "computed",
     "random",
@@ -395,6 +405,7 @@ function orderBadges(present: Set<DialogBadge>): DialogBadge[] {
 export function stateBadges(state: DialogState): DialogBadge[] {
     const present = new Set<DialogBadge>();
     if (state.derivedFrom) present.add("derived");
+    if (state.approximate) present.add("approximate");
     if (state.textKind) present.add(state.textKind);
     if (state.trigger) present.add("conditional");
     if (state.sideEffects?.length) present.add("side-effect");

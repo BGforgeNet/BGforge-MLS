@@ -95,6 +95,9 @@ export interface ConvState {
     trigger?: string;
     /** Set for a CHAIN/INTERJECT/EXTEND-derived (read-only) state. */
     derivedFrom?: string;
+    /** Set for an SSL `approximate` node: its flat render is a lossy simplification (control flow the block
+        model can't represent), so the row carries an "approx" warning badge. */
+    approximate?: boolean;
     /** Flat replies; empty when `branches` is set (a bundle node groups its replies per branch). */
     replies: ConvReply[];
     /** Set for an SSL if/else bundle node: each branch carries its own NPC line + replies, so the
@@ -244,6 +247,7 @@ export function buildConversationTree(
             text: resolveText(s.text, messages),
             trigger: s.trigger,
             derivedFrom: s.derivedFrom,
+            ...(s.approximate ? { approximate: true } : {}),
             replies,
             ...(branches ? { branches } : {}),
             ...(block ? { block } : {}),

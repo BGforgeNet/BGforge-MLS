@@ -225,6 +225,14 @@
             A condition is editable here when it belongs to one option; a condition shared by
             several options is source-only (edit the <b>.ssl</b>).
         </div>
+    {:else if ssl && state.approximate}
+        <!-- Approximate node: the shown tree is not just read-only, it is LOSSY - control flow the editor can't
+             model (loop/switch) means only the first line + a flattened option list are shown. Say so loudly. -->
+        <div class="ronote">
+            <b>Approximate view.</b> This node uses control flow (a loop or switch) the editor can't fully
+            model, so the tree shown is a simplification - not everything here is represented. Read the
+            <b>.ssl</b> source for the full logic. Text edits still save to the <b>.msg</b>.
+        </div>
     {:else if ssl}
         <div class="ronote">
             Text edits save to the <b>.msg</b>. The dialog structure (options, targets,
