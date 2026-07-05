@@ -1,6 +1,6 @@
 <script lang="ts">
     import { tick } from "svelte";
-    import type { ConversationTree, ConvState, ConvReply, ConvBranch } from "./conversation-tree";
+    import type { ConversationTree, ConvState, ConvReply, ConvBranch, ConvBlock } from "./conversation-tree";
     import Badge from "./Badge.svelte";
     import LowIntChip from "./LowIntChip.svelte";
 
@@ -375,7 +375,7 @@
 </div>
 
 {#snippet stateBlock(st: ConvState, depth: number)}
-    {@const hasChildren = st.replies.length > 0 || (st.branches?.length ?? 0) > 0}
+    {@const hasChildren = st.replies.length > 0 || (st.branches?.length ?? 0) > 0 || (st.block?.length ?? 0) > 0}
     <!-- When an individual option of this state is selected (selectedChoiceId set), the option row carries the
          selection highlight (.rep.repsel) and the Inspector focuses that option - so the owner node is NOT
          highlighted here: only the option reads as selected. The node lights up only for a whole-state select. -->
@@ -414,14 +414,16 @@
              not shown inline; the id is the row's hover tooltip (title={st.id}) instead. -->
         {#if st.speaker}<span class="who">{st.speaker}</span>{/if}
         {#if st.derivedFrom}<Badge badges={["derived"]} label={st.derivedFrom} small />{/if}
-        {#if st.trigger}<span class="cond" title={st.trigger}>[if]</span>{/if}
+        <!-- A structured (block) node shows its gating per-group below (each condition once at its level), so
+             the flat node-level trigger [if] is suppressed here to avoid duplicating the first group's header. -->
+        {#if st.trigger && !st.block}<span class="cond" title={st.trigger}>[if]</span>{/if}
         <!-- A bundle node's line lives per-branch (below); only a flat node shows its line here. That flat
              line is inline-editable (double-click it, or F2 on the row) when its text is editable - mirroring
              option text: it swaps to an <input> while editing (Enter/blur commit, Escape cancels). A locked
              line (unresolvable SSL @N, or a read-only/derived node) stays a plain, non-editing span. The
              input's own click/dblclick/keydown are stopped from bubbling so cursor placement, word-select, and
              typing (Space especially) act on the field, not the row (select / F2 / arrow-nav). -->
-        {#if !st.branches}
+        {#if !st.branches && !st.block}
             {#if st.id === editingStateId && st.textEditable}
                 <input
                     class="line lineedit"
@@ -457,9 +459,9 @@
             {@const canDel = deletableStateIds.has(st.id)}
             <span class="nodeops">
                 <!-- Add-child grows a flat option, so (like the tree's "+ option") it is offered only on
-                     non-bundle states; a bundle node's options live in its if/else branches. Delete applies
-                     to any editable state. -->
-                {#if !st.branches}
+                     non-bundle, non-structured states; a bundle/structured node's options live in its
+                     if/else branches (read-only structure this slice). Delete applies to any editable state. -->
+                {#if !st.branches && !st.block}
                     <button
                         class="nodebtn addnode"
                         title="Add a follow-up node (a new option leading to a new state)"
@@ -478,7 +480,9 @@
         {/if}
     </div>
     {#if !collapsed.has(st.id)}
-        {#if st.branches}
+        {#if st.block}
+            {@render convBlock(st.block, depth, st.id)}
+        {:else if st.branches}
             {#each st.branches as b, bi (bi)}
                 {@render branchBlock(b, depth, st.id)}
             {/each}
@@ -508,6 +512,35 @@
     </div>
     {#each b.replies as r, i (r.id)}
         {@render replyRow(r, depth, ownerId, i, b.replies.length, true)}
+    {/each}
+{/snippet}
+
+<!-- Recursive render for a `structured` node (arbitrarily nested if/else). Each group shows its condition
+     ONCE at its own indent level ("shown when ..." / "otherwise") and its body nests one level in, so an
+     option's full gate is read from the groups it sits under - the fix for the flat projection that smeared
+     conjoined conditions onto every option and silently dropped outer gates (dialog-nested-flatten-bug-class).
+     Structure is read-only this slice: option rows are inert (branchReadonly), matching the bundle branch. -->
+{#snippet convBlock(block: ConvBlock, depth: number, ownerId: string)}
+    {#each block as it, i (i)}
+        {#if it.kind === "line"}
+            <div class="brep" style="--lvl:{depth * 2 + 1}">
+                <span class="line" use:clipTitle={{ label: ownerId, text: it.npc }}>{it.npc || "(no line)"}</span>
+            </div>
+        {:else if it.kind === "reply"}
+            {@render replyRow(it.reply, depth, ownerId, i, block.length, true)}
+        {:else if it.kind === "group"}
+            <div class="branchhdr" style="--lvl:{depth * 2 + 1}">
+                <span class="bwhen">shown when</span>
+                <span class="bcond" title={it.condition}>{it.condition}</span>
+            </div>
+            {@render convBlock(it.thenBlock, depth + 1, ownerId)}
+            {#if it.elseBlock}
+                <div class="branchhdr" style="--lvl:{depth * 2 + 1}">
+                    <span class="bwhen">otherwise</span>
+                </div>
+                {@render convBlock(it.elseBlock, depth + 1, ownerId)}
+            {/if}
+        {/if}
     {/each}
 {/snippet}
 
@@ -544,8 +577,10 @@
         <!-- Condition gate sits to the LEFT of the option text (matching the state row's trigger [if], which
              precedes the NPC line): the [if] reads as a precondition on the option before you read the text.
              The action [do] stays to the RIGHT of the text - it fires when the option is chosen, so it reads
-             in flow order (text -> [do] -> target). -->
-        {#if r.condition}<span class="rcond" title={r.condition}>[if]</span>{/if}
+             in flow order (text -> [do] -> target). Suppressed inside a branch/group render (branchReadonly):
+             the enclosing "shown when ..." header already carries the condition, so a per-option [if] there
+             just duplicates it (for a structured node it would repeat the whole conjoined gate on every row). -->
+        {#if r.condition && !branchReadonly}<span class="rcond" title={r.condition}>[if]</span>{/if}
         {#if !branchReadonly && r.id === editingChoiceId && r.textEditable}
             <!-- Inline edit: the option's text as an input. Enter/blur commit, Escape cancels (both routed
                  through blur). Its click/dblclick/keydown are stopped so cursor placement, word-select and

@@ -325,9 +325,13 @@
                  redundant disabled control on every row. Flat-path render is unchanged. -->
             {#if !state.branches}
                 {#if labeled}<div class="ik">Condition</div>{/if}
-                <textarea class="iv code cond" class:locked={ssl && c.conditionEditable === false} rows="1" use:autosize={c.condition ?? ""} disabled={ssl ? !c.conditionEditable : readOnly} title={ssl && c.conditionEditable === false ? "Condition shared by multiple options - edit the .ssl source" : ""} placeholder={ssl ? "(no condition)" : "condition (IF ~...~)"} value={c.condition ?? ""} oninput={(e) => (c.condition = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
+                <!-- Read-only reason differs: a structured/approximate node's whole structure is read-only
+                     (a nested/composite gate cannot round-trip), so the condition shown is the full conjoined
+                     path; a faithful node's condition is read-only only when a multi-call `if` block shares it
+                     across options. Word each accurately. -->
+                <textarea class="iv code cond" class:locked={ssl && c.conditionEditable === false} rows="1" use:autosize={c.condition ?? ""} disabled={ssl ? !c.conditionEditable : readOnly} title={ssl && c.conditionEditable === false ? (state.structured || state.approximate ? "This node's structure is read-only - edit the .ssl source" : "Condition shared by multiple options - edit the .ssl source") : ""} placeholder={ssl ? "(no condition)" : "condition (IF ~...~)"} value={c.condition ?? ""} oninput={(e) => (c.condition = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
                 {#if ssl && c.conditionEditable === false}
-                    <div class="condnote">shared by other options - edit in <b>.ssl</b></div>
+                    <div class="condnote">{state.structured || state.approximate ? "read-only" : "shared by other options"} - edit in <b>.ssl</b></div>
                 {/if}
             {/if}
             {#if !ssl && !state.branches}

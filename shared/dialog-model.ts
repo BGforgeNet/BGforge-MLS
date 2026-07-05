@@ -11,6 +11,7 @@ import type {
     DDialogData,
     DDialogState,
     DDialogTarget,
+    SSLDialogBlock,
     SSLDialogData,
     SSLDialogNode,
     SSLDialogOptionType,
@@ -108,6 +109,21 @@ export interface DialogBranch {
     choiceIds: string[];
     opaque: string[];
 }
+
+/**
+ * One item in a recursive dialog block (the `structured` tier - see `SSLDialogBlock`). The adapter resolves
+ * the SSL block's index references into this presentation-ready form: `line` carries the NPC line text,
+ * `choice` references a `DialogState.choices` entry by id (both options and `call` transitions become choices),
+ * `group` is a nested `if`/`else`. `opaque` (side-effect statements) is preserved for completeness but the tree
+ * does not render it (side-effects surface via the node-level badge). Recursive via `group`.
+ */
+export type DialogBlockItem =
+    | { kind: "line"; text: string; textKind?: "computed" | "random" }
+    | { kind: "choice"; choiceId: string }
+    | { kind: "opaque"; text: string }
+    | { kind: "group"; condition: string; thenBlock: DialogBlock; elseBlock?: DialogBlock };
+
+export type DialogBlock = DialogBlockItem[];
 
 export interface DialogState {
     id: string;
@@ -213,6 +229,12 @@ export interface DialogState {
     bundleFaithful?: boolean;
     /** SSL only: ordered branches for light-grouped render; absent on non-bundle nodes. Set by the SSL adapter. */
     branches?: DialogBranch[];
+    /** SSL only: true when this node renders as a recursive block (see SSLDialogNode.structured). Read-only structure. */
+    structured?: boolean;
+    /** SSL only: recursive block mirroring the procedure body; set by the adapter only when `structured`. */
+    block?: DialogBlock;
+    /** SSL only: true when the flat projection is an approximation (see SSLDialogNode.approximate). Drives an "approximate - see source" signal. */
+    approximate?: boolean;
     /**
      * Webview-only, transient: as `DialogChoice.committed`, for a just-added NODE. Marks a pending new node
      * (still without a `procRange`) as already spliced into the source so the next save does not re-emit its
@@ -528,8 +550,52 @@ function sslMsgText(msgId: number | string): string {
     return typeof msgId === "number" ? `@${msgId}` : String(msgId);
 }
 
+/**
+ * Resolve a structured node's SSL block (index references) into the presentation-ready DialogBlock the tree
+ * renders: `line` -> the reply's display text, `choice`/`transition` -> the DialogChoice id stateFromSSL
+ * assigns (options are `#opt<index-in-options>`; a `call` transition is `#call<index-in-callTargets>`, deduped),
+ * `group` recurses. `opaque` carries the preserved statement text (the tree ignores it; kept for completeness).
+ */
+function blockFromSSL(node: SSLDialogNode, block: SSLDialogBlock): DialogBlock {
+    return block.map((it): DialogBlockItem => {
+        switch (it.kind) {
+            case "line": {
+                const r = node.replies[it.replyIndex]!;
+                return { kind: "line", text: sslMsgText(r.msgId), ...(r.msgKind ? { textKind: r.msgKind } : {}) };
+            }
+            case "choice":
+                return { kind: "choice", choiceId: `${node.name}#opt${it.optionIndex}` };
+            case "transition": {
+                // The block indexes callTransitions (per-site, not deduped); the call-choice id uses the deduped
+                // callTargets index. Resolve the site's target name to that choice.
+                const name = node.callTransitions?.[it.transitionIndex]?.name;
+                return { kind: "choice", choiceId: `${node.name}#call${name ? node.callTargets.indexOf(name) : -1}` };
+            }
+            case "opaque":
+                return { kind: "opaque", text: it.text };
+            case "group":
+                return {
+                    kind: "group",
+                    condition: it.condition,
+                    thenBlock: blockFromSSL(node, it.thenBlock),
+                    ...(it.elseBlock ? { elseBlock: blockFromSSL(node, it.elseBlock) } : {}),
+                };
+            default: {
+                // Exhaustive: SSLDialogBlockItem's kinds are all handled above. The `never` binding turns a
+                // future unhandled kind into a compile error, and the throw satisfies array-callback-return.
+                const unhandled: never = it;
+                throw new Error(`unhandled block item: ${JSON.stringify(unhandled)}`);
+            }
+        }
+    });
+}
+
 function stateFromSSL(node: SSLDialogNode): DialogState {
     const choices: DialogChoice[] = [];
+    // A structured or approximate node is structurally READ-ONLY this slice (a nested/composite gate cannot
+    // round-trip to a single `if` wrapper - see dialog-nested-flatten-bug-class). Force every condition
+    // non-editable regardless of the per-option ifSingleCall, so the inspector shows source-only conditions.
+    const readOnlyStructure = node.structured === true || node.approximate === true;
 
     node.options.forEach((opt, i) => {
         choices.push({
@@ -549,7 +615,7 @@ function stateFromSSL(node: SSLDialogNode): DialogState {
             stmtRange: opt.stmtRange,
             condRange: opt.condRange,
             ifRange: opt.ifRange,
-            conditionEditable: opt.conditional === undefined || opt.ifSingleCall === true,
+            conditionEditable: readOnlyStructure ? false : opt.conditional === undefined || opt.ifSingleCall === true,
         });
     });
 
@@ -603,13 +669,16 @@ function stateFromSSL(node: SSLDialogNode): DialogState {
         trigger: firstReply?.conditional,
         condRange: firstReply?.condRange,
         ifRange: firstReply?.ifRange,
-        conditionEditable:
-            firstReply === undefined || firstReply.conditional === undefined || firstReply.ifSingleCall === true,
+        conditionEditable: readOnlyStructure
+            ? false
+            : firstReply === undefined || firstReply.conditional === undefined || firstReply.ifSingleCall === true,
         choices,
         sideEffects: node.sideEffects,
         faithful: node.faithful,
         bundleFaithful: node.bundleFaithful,
         ...(branches ? { branches } : {}),
+        ...(node.structured ? { structured: true, block: blockFromSSL(node, node.block ?? []) } : {}),
+        ...(node.approximate ? { approximate: true } : {}),
         insertAnchor: node.insertAnchor,
         procRange: node.procRange,
         nameRange: node.nameRange,

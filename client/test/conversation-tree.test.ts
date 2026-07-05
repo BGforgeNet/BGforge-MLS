@@ -322,4 +322,75 @@ describe("buildConversationTree - Node998/Node999 as Combat/Exit terminals (SSL)
         expect(t.kind).toBe("state");
         expect((t as Extract<ConvTarget, { kind: "state" }>).node.id).toBe("Node999");
     });
+
+    // A `structured` SSL node (arbitrarily nested if/else): the builder mirrors the source nesting as a
+    // recursive ConvBlock, with each condition shown once at its own group level and the else line preserved -
+    // instead of the flat projection that dropped outer gates (dialog-nested-flatten-bug-class).
+    it("builds a recursive ConvBlock from a structured node's block", () => {
+        const r = root([
+            st(
+                "N1",
+                "@1",
+                [
+                    ch("N1#opt0", { kind: "state", stateId: "B" }, { text: "@10", condition: "(OUTER)" }),
+                    ch("N1#opt1", { kind: "state", stateId: "C" }, { text: "@11", condition: "(OUTER) and (INNER)" }),
+                    ch("N1#opt2", { kind: "state", stateId: "D" }, { text: "@12", condition: "!(OUTER)" }),
+                    ch("N1#opt3", { kind: "exit" }, { text: "@13" }),
+                ],
+                {
+                    structured: true,
+                    block: [
+                        {
+                            kind: "group",
+                            condition: "(OUTER)",
+                            thenBlock: [
+                                { kind: "line", text: "@100" },
+                                { kind: "choice", choiceId: "N1#opt0" },
+                                {
+                                    kind: "group",
+                                    condition: "(INNER)",
+                                    thenBlock: [{ kind: "choice", choiceId: "N1#opt1" }],
+                                },
+                            ],
+                            elseBlock: [
+                                { kind: "line", text: "@200" },
+                                { kind: "choice", choiceId: "N1#opt2" },
+                            ],
+                        },
+                        { kind: "choice", choiceId: "N1#opt3" },
+                    ],
+                },
+            ),
+            st("B", "@2", []),
+            st("C", "@3", []),
+            st("D", "@4", []),
+        ]);
+        const { roots } = buildConversationTree(r, undefined, noJump, { ssl: true, editable: false });
+        const n1 = roots.find((s) => s.id === "N1")!;
+        const block = n1.block!;
+        expect(block).toBeDefined();
+
+        // Top level: the if/else group, then the unconditional trailing option.
+        const group = block[0] as Extract<(typeof block)[number], { kind: "group" }>;
+        expect(group.kind).toBe("group");
+        expect(group.condition).toBe("(OUTER)");
+        expect(block[1]).toMatchObject({ kind: "reply" });
+
+        // then-branch: its own NPC line, an option, and a NESTED group (each condition once at its level).
+        expect(group.thenBlock[0]).toMatchObject({ kind: "line", npc: "@100" });
+        const inner = group.thenBlock.find((item) => item.kind === "group") as Extract<
+            (typeof group.thenBlock)[number],
+            { kind: "group" }
+        >;
+        expect(inner.condition).toBe("(INNER)");
+        expect(inner.thenBlock).toHaveLength(1);
+        expect(inner.thenBlock[0]).toMatchObject({ kind: "reply" });
+
+        // else-branch carries its OWN NPC line (the flat projection dropped it - symptom 3).
+        expect(group.elseBlock).toBeDefined();
+        expect(group.elseBlock![0]).toMatchObject({ kind: "line", npc: "@200" });
+
+        // Every choice is expanded exactly once through the block (no flat replies duplicating them).
+        expect(n1.replies).toHaveLength(0);
+    });
 });

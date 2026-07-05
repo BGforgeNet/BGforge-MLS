@@ -92,6 +92,36 @@ export interface SSLDialogBranch {
     opaque: { text: string; textRange: { start: number; end: number } }[];
 }
 
+/**
+ * One item in a recursive dialog block (the `structured` tier). The block mirrors the procedure's
+ * statement nesting faithfully, unlike the flat `replies`/`options` projection which collapses it.
+ * Leaf items reference the owning node's flat arrays by source-order index (so the block carries
+ * STRUCTURE while the flat arrays carry the per-item DATA - one source of truth, no duplication):
+ * `line` -> `replies[replyIndex]`, `choice` -> `options[optionIndex]`, `transition` ->
+ * `callTransitions[transitionIndex]`. `opaque` is a preserved non-dialog statement (side-effect /
+ * assignment). `group` is a nested `if`/`else` whose branches are themselves blocks (recursion).
+ */
+export type SSLDialogBlockItem =
+    | { kind: "line"; replyIndex: number }
+    | { kind: "choice"; optionIndex: number }
+    | { kind: "transition"; transitionIndex: number }
+    | { kind: "opaque"; text: string; textRange: { start: number; end: number } }
+    | SSLDialogGroup;
+
+/** A nested `if (cond) then <block> [else <block>]` inside a structured node's body. */
+export interface SSLDialogGroup {
+    kind: "group";
+    /** The `if` condition text, parentheses included. */
+    condition: string;
+    /** Byte span of the condition expression (parens included). Retained for parity with bundle branches; the
+     * structured tier is display-only this slice, so it is informational rather than an edit anchor. */
+    conditionRange?: { start: number; end: number };
+    thenBlock: SSLDialogBlockItem[];
+    elseBlock?: SSLDialogBlockItem[];
+}
+
+export type SSLDialogBlock = SSLDialogBlockItem[];
+
 export interface SSLDialogNode {
     name: string;
     line: number;
@@ -126,6 +156,25 @@ export interface SSLDialogNode {
     bundleFaithful?: boolean;
     /** Ordered branches of a bundle node's `if`/`else`. Set by the parser only when `bundleFaithful`. */
     branches?: SSLDialogBranch[];
+    /**
+     * True when the node is NOT plain- or bundle-faithful but its body IS representable as a recursive block:
+     * a mix of dialog calls, `call` transitions, preservable simple statements, and arbitrarily nested `if`/
+     * `else` groups, with no loop/switch/return-branching. Such nodes are rendered faithfully (nested groups,
+     * each condition shown once at its level) but are structurally READ-ONLY this slice - a nested condition
+     * cannot round-trip to a single `if` wrapper. Mutually exclusive with `faithful`/`bundleFaithful`. Set by
+     * the parser. See memory `dialog-nested-flatten-bug-class`.
+     */
+    structured?: boolean;
+    /** The recursive block mirroring the procedure body. Set by the parser only when `structured`. */
+    block?: SSLDialogBlock;
+    /**
+     * True when the node is none of faithful/bundleFaithful/structured - its body has control flow the block
+     * model cannot represent (loop, switch, computed branching), so the flat `replies`/`options` projection is
+     * an APPROXIMATION (only the first reply line is shown; conditions are the conjoined enclosing-`if` path but
+     * non-`if` gating is invisible). Drives an "approximate - see source" signal so the flattening is loud, not
+     * silent. Set by the parser.
+     */
+    approximate?: boolean;
     /**
      * Where a newly-added option call is spliced in: `offset` is the end of the node's last body
      * statement, `indent` the leading whitespace of that statement's line, so the inserted call lines up.

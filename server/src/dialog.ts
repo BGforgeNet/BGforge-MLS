@@ -7,8 +7,11 @@ import type { Node as SyntaxNode } from "web-tree-sitter";
 import { initParser, parseWithCache, isInitialized } from "../../shared/parsers/fallout-ssl";
 import { SyntaxType } from "./fallout-ssl/syntax-type";
 import type {
+    SSLDialogBlock,
+    SSLDialogBlockItem,
     SSLDialogBranch,
     SSLDialogData,
+    SSLDialogGroup,
     SSLDialogNode,
     SSLDialogOption,
     SSLDialogOptionType,
@@ -383,6 +386,12 @@ function parseProcedure(
     const nameRange = nameNode ? { start: nameNode.startIndex, end: nameNode.endIndex } : undefined;
 
     const faithful = isFaithfulProcedure(proc);
+    // Tiers are mutually exclusive, checked most-faithful first: faithful (flat, editable) > bundle (single-
+    // level if/else, editable) > structured (arbitrarily nested, display-only) > approximate (control flow the
+    // block cannot model - the flat projection is lossy, so flag it loud). See dialog-nested-flatten-bug-class.
+    const bundle = !faithful && isBundleFaithfulProcedure(proc);
+    const structured = !faithful && !bundle && isStructuredProcedure(proc);
+    const approximate = !faithful && !bundle && !structured;
     return {
         name,
         line: proc.startPosition.row + 1,
@@ -390,10 +399,14 @@ function parseProcedure(
         options,
         callTargets,
         faithful,
-        // Mutually exclusive with faithful: only claim nodes the plain-faithful gate rejects.
-        ...(!faithful && isBundleFaithfulProcedure(proc)
-            ? { bundleFaithful: true as const, branches: buildBranches(proc, fullText) }
+        ...(bundle ? { bundleFaithful: true as const, branches: buildBranches(proc, fullText) } : {}),
+        ...(structured
+            ? {
+                  structured: true as const,
+                  block: buildBlock(proc.childrenForFieldName("body"), fullText, { reply: 0, opt: 0, trans: 0 }),
+              }
             : {}),
+        ...(approximate ? { approximate: true as const } : {}),
         insertAnchor: nodeInsertAnchor(proc, fullText),
         // Omit when empty so nodes without detected side-effects stay clean in the IR.
         ...(sideEffects.length > 0 ? { sideEffects } : {}),
@@ -525,6 +538,91 @@ function isBundleFaithfulProcedure(proc: SyntaxNode): boolean {
     return true;
 }
 
+// A statement representable in the recursive block model: a dialog call/transition, a preservable simple
+// statement (assignment / side-effect call), or an `if`/`else` whose branches are themselves representable
+// (RECURSIVE - unlike the bundle gate, which rejects any nested `if`). No loop/switch/return-branching.
+function isStructuredStatement(stmt: SyntaxNode): boolean {
+    if (isBundleDialogStatement(stmt)) return true;
+    if (isPreservableSimpleStatement(stmt)) return true;
+    if (stmt.type === SyntaxType.IfStmt) {
+        const thenBody = stmt.childForFieldName("then");
+        if (!thenBody || !isStructuredBranch(thenBody)) return false;
+        const elseBody = stmt.childForFieldName("else");
+        if (elseBody && !isStructuredBranch(elseBody)) return false;
+        return true;
+    }
+    return false;
+}
+
+// A branch body (a `begin...end` block or a single statement) is structured when every statement is.
+function isStructuredBranch(branch: SyntaxNode): boolean {
+    const stmts = branch.type === SyntaxType.Block ? branch.children.filter((c) => c.isNamed) : [branch];
+    return stmts.every((s) => isStructuredStatement(s));
+}
+
+// A node is structured when its whole body is representable as a recursive block (arbitrarily nested `if`/
+// `else` plus interleaved dialog calls and simple statements). Caller sets the flag only when the node is
+// neither plain- nor bundle-faithful, so the tiers stay mutually exclusive.
+function isStructuredProcedure(proc: SyntaxNode): boolean {
+    const body = proc.childrenForFieldName("body");
+    if (body.length === 0) return false;
+    return body.every((s) => isStructuredStatement(s));
+}
+
+// Build the recursive block for a structured node. Leaf items reference the flat replies/options/
+// callTransitions arrays by source-order index; `counters` advances in the SAME preorder the flat walk
+// (parseProcedure's walkTree) uses - top-level statements in order, each group's `then` before its `else` -
+// so the Nth Reply here indexes replies[N], the Nth option/message options[N], the Nth `call` transition
+// callTransitions[N]. Non-dialog statements become opaque items (preserved text + span).
+function buildBlock(
+    stmts: SyntaxNode[],
+    fullText: string,
+    counters: { reply: number; opt: number; trans: number },
+): SSLDialogBlock {
+    const items: SSLDialogBlockItem[] = [];
+    for (const stmt of stmts) {
+        if (stmt.type === SyntaxType.IfStmt) {
+            const condNode = stmt.childForFieldName("cond");
+            const thenBody = stmt.childForFieldName("then");
+            const elseBody = stmt.childForFieldName("else");
+            const group: SSLDialogGroup = {
+                kind: "group",
+                condition: condNode?.text ?? "",
+                ...(condNode ? { conditionRange: { start: condNode.startIndex, end: condNode.endIndex } } : {}),
+                thenBlock: thenBody ? buildBlock(branchStmts(thenBody), fullText, counters) : [],
+                ...(elseBody ? { elseBlock: buildBlock(branchStmts(elseBody), fullText, counters) } : {}),
+            };
+            items.push(group);
+            continue;
+        }
+        const expr = stmt.type === SyntaxType.ExpressionStmt ? stmt.namedChildren[0] : undefined;
+        if (expr && expr.type === SyntaxType.CallExpr && isDialogCallExpr(expr)) {
+            // Reply -> line (replies[]); every other recognized dialog call (N/G/B Option + Low, N/G/B Message)
+            // -> choice (options[], where the flat walk also puts messages).
+            const fn = expr.childForFieldName("func")?.text;
+            if (fn === "Reply") items.push({ kind: "line", replyIndex: counters.reply++ });
+            else items.push({ kind: "choice", optionIndex: counters.opt++ });
+            continue;
+        }
+        if (stmt.type === SyntaxType.CallStmt) {
+            items.push({ kind: "transition", transitionIndex: counters.trans++ });
+            continue;
+        }
+        // A preservable simple statement (assignment / side-effect call) the block keeps byte-exact.
+        items.push({
+            kind: "opaque",
+            text: fullText.slice(stmt.startIndex, stmt.endIndex),
+            textRange: { start: stmt.startIndex, end: stmt.endIndex },
+        });
+    }
+    return items;
+}
+
+// A branch body's statement list: the named children of a `begin...end` block, or the single bare statement.
+function branchStmts(branch: SyntaxNode): SyntaxNode[] {
+    return branch.type === SyntaxType.Block ? branch.children.filter((c) => c.isNamed) : [branch];
+}
+
 // The splice point for a new option at the end of a branch block (begin...end): end of the last
 // named statement + that statement's line indentation. Only called for block branches; bare
 // single-statement branches carry no insertAnchor - adding to them would require begin/end synthesis,
@@ -631,33 +729,40 @@ function classifyMsgId(node: SyntaxNode): "computed" | "random" | undefined {
 }
 
 /**
- * Walk up from a dialog call to the nearest enclosing `if`, returning its
- * condition text. The SSL derived graph is read-only and approximate, so a
- * conditional reply/option must be marked rather than shown as unconditional.
+ * Walk up from a dialog call to the procedure body, conjoining EVERY enclosing `if` condition (not just
+ * the nearest one). A doubly-nested option is gated by all its ancestors, so returning only the innermost
+ * silently drops the outer gates and misrepresents the option (see memory `dialog-nested-flatten-bug-class`,
+ * symptom 1). The parts are joined outermost-first with ` and `; an `else`-branch level is negated. This
+ * feeds the flat projection (graph edge badge, inspector detail); the tree's structured render instead shows
+ * each condition once at its own nesting level. For a single-level `if` (the faithful/bundle tiers) the result
+ * is that one condition unchanged, so those tiers' round-trip is byte-identical.
  */
 function enclosingCondition(node: SyntaxNode): string | undefined {
-    // Track the child we ascend through so that at an `if` we can tell whether the call sits in
-    // the `then` branch (runs on the condition) or the `else` branch (runs on its negation). The
-    // grammar fields are `cond` / `then` / `else`; an option in the else branch was previously
-    // mislabeled with the bare `cond`.
+    // Track the child we ascend through so that at an `if` we can tell whether the call sits in the `then`
+    // branch (runs on the condition) or the `else` branch (runs on its negation). Collect innermost-first.
+    const parts: string[] = [];
     let prev: SyntaxNode = node;
     let cur: SyntaxNode | null = node.parent;
     while (cur) {
         if (cur.type === SyntaxType.IfStmt) {
             const cond = cur.childForFieldName("cond")?.text;
-            if (cond === undefined) return undefined;
-            const elseBody = cur.childForFieldName("else");
-            // Compare by byte span, not reference: web-tree-sitter returns fresh wrapper objects
-            // for the same node, so `prev === elseBody` is never true. SSL conditions are
-            // parenthesized (`if (X)`), so `!cond` is already well-formed.
-            const inElse =
-                elseBody !== null && prev.startIndex === elseBody.startIndex && prev.endIndex === elseBody.endIndex;
-            return inElse ? `!${cond}` : cond;
+            if (cond !== undefined) {
+                const elseBody = cur.childForFieldName("else");
+                // Compare by byte span, not reference: web-tree-sitter returns fresh wrapper objects for the
+                // same node, so `prev === elseBody` is never true. SSL conditions are parenthesized (`if (X)`),
+                // so `!cond` is already well-formed.
+                const inElse =
+                    elseBody !== null && prev.startIndex === elseBody.startIndex && prev.endIndex === elseBody.endIndex;
+                parts.push(inElse ? `!${cond}` : cond);
+            }
         }
         prev = cur;
         cur = cur.parent;
     }
-    return undefined;
+    if (parts.length === 0) return undefined;
+    // parts are innermost-first; present outermost-first so the composite gate reads top-down.
+    parts.reverse();
+    return parts.length === 1 ? parts[0] : parts.join(" and ");
 }
 
 // Spans of the nearest enclosing single-level `if` whose THEN-branch directly contains this call. Returns
@@ -671,24 +776,34 @@ function enclosingIfSpans(
     | undefined {
     let prev: SyntaxNode = node;
     let cur: SyntaxNode | null = node.parent;
+    let inner:
+        | { condRange: { start: number; end: number }; ifRange: { start: number; end: number }; ifSingleCall: boolean }
+        | undefined;
     while (cur) {
         if (cur.type === SyntaxType.IfStmt) {
+            // A SECOND enclosing `if` above the innermost one: the call is multi-level nested. Its real gate is
+            // the conjunction of both levels, which cannot round-trip to a single `if` wrapper, so it is NOT
+            // condition-editable. Returning the inner span here (the old behavior) let a nested single-call `if`
+            // slip through as editable - editing it rewrote only the inner condition, silently keeping the outer
+            // gate (memory `dialog-nested-flatten-bug-class`, symptom 2). Bail to read-only instead.
+            if (inner) return undefined;
             const condNode = cur.childForFieldName("cond");
             const thenBody = cur.childForFieldName("then");
             if (!condNode || !thenBody) return undefined;
             // Compare by byte span - web-tree-sitter returns fresh wrapper objects on each access
             const inThen = prev.startIndex === thenBody.startIndex && prev.endIndex === thenBody.endIndex;
             if (!inThen) return undefined; // else branch (or malformed) - not editable
-            return {
+            inner = {
                 condRange: { start: condNode.startIndex, end: condNode.endIndex },
                 ifRange: { start: cur.startIndex, end: cur.endIndex },
                 ifSingleCall: countDialogCallsInBranch(thenBody) === 1,
             };
+            // Keep walking to detect an outer `if` (multi-level); return the inner span only if none is found.
         }
         prev = cur;
         cur = cur.parent;
     }
-    return undefined;
+    return inner;
 }
 
 // Count dialog-producing statements in an if's then-branch: recognized dialog call exprs

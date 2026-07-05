@@ -18,6 +18,7 @@
 import {
     resolveText,
     sslTerminalKind,
+    type DialogBlock,
     type DialogChoice,
     type DialogReaction,
     type DialogRoot,
@@ -58,6 +59,20 @@ export interface ConvReply {
     sourceOffset?: number;
 }
 
+/**
+ * One item in a recursive conversation block (the `structured` tier - see `DialogBlock`). Unlike the flat
+ * `replies`/`branches`, a block mirrors the source `if`/`else` nesting: a `line` is an NPC reply line for its
+ * scope, a `reply` is a player option/transition row, a `group` is a nested condition shown once at its own
+ * level (the reader composes an option's full gate from the groups above it). Opaque side-effect statements
+ * are dropped from the tree (surfaced via the node's side-effect badge). Recursive via `group`.
+ */
+export type ConvBlockItem =
+    | { kind: "line"; npc: string; npcHasText: boolean }
+    | { kind: "reply"; reply: ConvReply }
+    | { kind: "group"; condition: string; thenBlock: ConvBlock; elseBlock?: ConvBlock };
+
+export type ConvBlock = ConvBlockItem[];
+
 /** One condition-branch of a bundle (if/else) state: its own NPC line and the replies it shows. */
 export interface ConvBranch {
     kind: "if" | "else";
@@ -85,6 +100,9 @@ export interface ConvState {
     /** Set for an SSL if/else bundle node: each branch carries its own NPC line + replies, so the
         tree reflects the branch structure instead of flattening to the if-branch line + all options. */
     branches?: ConvBranch[];
+    /** Set for an SSL `structured` node (arbitrarily nested if/else): the recursive block the tree renders
+        instead of the flat replies, so each condition shows once at its own nesting level. Read-only. */
+    block?: ConvBlock;
     /** True for a top-level state (no incoming same-file transition). */
     isEntry: boolean;
     /** Whether this state's NPC line can be edited inline in the tree - the same gate the inspector's NPC
@@ -176,9 +194,36 @@ export function buildConversationTree(
         // (otherwise the else branch's NPC line and the per-branch grouping are lost). Each choice is
         // expanded exactly once - through the branch path here, never also as a flat reply - so a
         // target is not double-marked "shown".
+        // A `structured` node (arbitrarily nested if/else) renders as a recursive block instead: build it from
+        // the model's block, resolving each choice reference to a ConvReply. Like the branch path, every choice
+        // is expanded exactly once here (source order, depth-first, then before else), never also as a flat
+        // reply, so a target is not double-marked "shown".
         let replies: ConvReply[] = [];
         let branches: ConvBranch[] | undefined;
-        if (s.branches && s.branches.length > 0) {
+        let block: ConvBlock | undefined;
+        if (s.block && s.block.length > 0) {
+            const choiceById = new Map(s.choices.map((c) => [c.id, c]));
+            const buildBlk = (blk: DialogBlock): ConvBlock =>
+                blk.flatMap((it): ConvBlockItem[] => {
+                    if (it.kind === "line")
+                        return [{ kind: "line", npc: resolveText(it.text, messages), npcHasText: Boolean(it.text) }];
+                    if (it.kind === "choice") {
+                        const c = choiceById.get(it.choiceId);
+                        return c ? [{ kind: "reply", reply: buildReply(c, textRO) }] : [];
+                    }
+                    if (it.kind === "group")
+                        return [
+                            {
+                                kind: "group",
+                                condition: it.condition,
+                                thenBlock: buildBlk(it.thenBlock),
+                                ...(it.elseBlock ? { elseBlock: buildBlk(it.elseBlock) } : {}),
+                            },
+                        ];
+                    return []; // opaque - not rendered in the tree (surfaced via the side-effect badge)
+                });
+            block = buildBlk(s.block);
+        } else if (s.branches && s.branches.length > 0) {
             const choiceById = new Map(s.choices.map((c) => [c.id, c]));
             branches = s.branches.map((b) => ({
                 kind: b.kind,
@@ -201,6 +246,7 @@ export function buildConversationTree(
             derivedFrom: s.derivedFrom,
             replies,
             ...(branches ? { branches } : {}),
+            ...(block ? { block } : {}),
             isEntry: !targeted.has(s.id),
             textEditable: !textFieldLocked({ text: s.text, messages, ssl, textRO, isNew: isPendingState(s) }),
             sourceOffset: s.procRange?.start ?? s.sourceRange?.start,
