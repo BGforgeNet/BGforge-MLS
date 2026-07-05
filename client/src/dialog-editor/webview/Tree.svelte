@@ -213,16 +213,19 @@
 
 {#snippet stateBlock(st: ConvState, depth: number)}
     {@const hasChildren = st.replies.length > 0 || (st.branches?.length ?? 0) > 0}
+    <!-- When an individual option of this state is selected (selectedChoiceId set), the option row carries the
+         selection highlight (.rep.repsel) and the Inspector focuses that option - so the owner node is NOT
+         highlighted here: only the option reads as selected. The node lights up only for a whole-state select. -->
     <div
         class="st"
         class:derived={st.derivedFrom}
         class:entry={st.isEntry}
-        class:sel={st.id === selectedId}
+        class:sel={st.id === selectedId && !selectedChoiceId}
         style="--lvl:{depth * 2}"
         data-sid={st.id}
         role="treeitem"
         aria-level={depth + 1}
-        aria-selected={st.id === selectedId}
+        aria-selected={st.id === selectedId && !selectedChoiceId}
         aria-expanded={hasChildren ? !collapsed.has(st.id) : undefined}
         tabindex={st.id === treeFocusId ? 0 : -1}
         onclick={() => onSelect(st.id)}

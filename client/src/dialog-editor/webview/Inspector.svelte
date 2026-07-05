@@ -21,7 +21,7 @@
     // (Fallout SSL) it is a read-only, SSL-native presentation - SSL is derived from script
     // and has no surgical write-back yet, so editing is disabled and the WeiDU vocabulary
     // (trigger/weight/`DO ~...~`) is replaced or dropped.
-    let { state, messages, stateIds, actions, format, editable, structuralEditable, deletable, sourceName, callers, selectedChoiceId, onNavigate }: {
+    let { state, messages, stateIds, actions, format, editable, structuralEditable, deletable, sourceName, callers, selectedChoiceId, onNavigate, onFocusOwnerState }: {
         state: DialogState;
         messages: Record<string, string> | undefined;
         stateIds: string[];
@@ -34,6 +34,8 @@
         callers: CallerRow[];
         /** Select a state (a caller) - switches tab first if it lives in another dialog. */
         onNavigate: (stateId: string) => void;
+        /** Leave the focused-option view and re-select the whole owner state (the breadcrumb's state crumb). */
+        onFocusOwnerState: () => void;
         format: DialogFormat;
         editable: boolean;
         // Per-node structural editability. For D it tracks `editable`; for SSL it is true only on
@@ -126,6 +128,16 @@
     // A derived state is still fully read-only (its line is owned by the source construct).
     const textRO = $derived(Boolean(state.derivedFrom) || (!editable && !ssl));
 
+    // When the user selects an individual option in the tree, the Inspector FOCUSES that option: a breadcrumb
+    // back to the owner state, then just that option's fields (rendered by the shared choiceRow snippet in
+    // `labeled` mode) instead of the whole-state editor. Only flat options are tree-selectable (branch options
+    // are read-only there), so this is scoped to a non-bundle state; `selectedChoiceId` then always names one
+    // of `state.choices`. If the id doesn't resolve (e.g. stale after a delete), fall back to the full view.
+    const focusedChoice = $derived(
+        !state.branches && selectedChoiceId ? state.choices.find((c) => c.id === selectedChoiceId) : undefined,
+    );
+    const focusedIndex = $derived(focusedChoice ? state.choices.findIndex((c) => c.id === selectedChoiceId) : -1);
+
     // For SSL a text field is editable only when it is backed by a RESOLVABLE @N message - an @N
     // whose .msg line actually loaded into `messages` (the line the edit writes to). A literal, a
     // computed id, or an @N whose .msg never resolved (translation dir misconfigured / not indexed)
@@ -180,6 +192,17 @@
 </script>
 
 <div class="inspector" class:ro={readOnly}>
+    {#if focusedChoice}
+        <!-- Focused-option view: a breadcrumb back to the owner state, then just this option's fields
+             (rendered by the shared choiceRow snippet in `labeled` mode, below - so its edit-gating stays
+             the single source of truth). The state crumb clears the option focus and returns to the
+             whole-state editor. -->
+        <div class="ih crumbs">
+            <button class="crumb" title="Back to the whole state" onclick={onFocusOwnerState}>{stateHeadLabel(state, sourceName)}</button>
+            <span class="crumbsep">&#8250;</span>
+            <span class="crumbcur">option #{focusedIndex + 1}</span>
+        </div>
+    {:else}
     <!-- SSL nodes carry no speaker, so fall back to the node id (as the cards do) rather than a
          meaningless "NPC" title; WeiDU D shows its real speaker name. -->
     <div class="ih">{stateHeadLabel(state, sourceName)}</div>
@@ -255,8 +278,9 @@
     <!-- Add lives as a trailing "+" at the END of the options list (below), so adding reads as "append to
          this list". Each option row carries its own delete (the row's x). Bundle nodes add per branch. -->
     <div class="ik">Options ({state.choices.length})</div>
+    {/if}
 
-    {#snippet choiceRow(c, i, bi, branchLen)}
+    {#snippet choiceRow(c, i, bi, branchLen, labeled)}
         <!-- data-cid + choicesel drive the tree's option selection: picking an option in the tree scrolls
              this row into view, highlights it, and focuses its text field. Only flat options (bi undefined)
              are selectable from the tree; branch options stay read-only there. -->
@@ -294,20 +318,24 @@
                     </span>
                 {/if}
             </div>
+            {#if labeled}<div class="ik">Option text</div>{/if}
             <textarea class="iv reply" rows="1" use:autosize={resolveText(c.text, messages)} disabled={textLocked(c.text, isPendingChoice(c))} placeholder="(no option text - continue)" value={resolveText(c.text, messages)} oninput={(e) => setReply(c, e.currentTarget.value)}></textarea>
             <!-- Inside a bundle branch the condition is already shown once at the branch head
                  ("shown when ..."), so the per-option condition field is omitted to avoid a
                  redundant disabled control on every row. Flat-path render is unchanged. -->
             {#if !state.branches}
+                {#if labeled}<div class="ik">Condition</div>{/if}
                 <textarea class="iv code cond" class:locked={ssl && c.conditionEditable === false} rows="1" use:autosize={c.condition ?? ""} disabled={ssl ? !c.conditionEditable : readOnly} title={ssl && c.conditionEditable === false ? "Condition shared by multiple options - edit the .ssl source" : ""} placeholder={ssl ? "(no condition)" : "condition (IF ~...~)"} value={c.condition ?? ""} oninput={(e) => (c.condition = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
                 {#if ssl && c.conditionEditable === false}
                     <div class="condnote">shared by other options - edit in <b>.ssl</b></div>
                 {/if}
             {/if}
             {#if !ssl && !state.branches}
+                {#if labeled}<div class="ik">Action</div>{/if}
                 <textarea class="iv code act" rows="1" use:autosize={c.action ?? ""} disabled={readOnly} placeholder="action (DO ~...~)" value={c.action ?? ""} oninput={(e) => (c.action = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
             {/if}
             <!-- Retarget is enabled for any structurally-editable node (D, faithful SSL, or bundle SSL). -->
+            {#if labeled}<div class="ik">Target</div>{/if}
             <select class="iv tgt" disabled={!structuralEditable} value={targetValue(c.target)} onchange={(e) => onTargetChange(c, e.currentTarget.value)}>
                 {#if c.target.kind === "external"}
                     <option value="ext">&#8631; {c.target.label}</option>
@@ -339,7 +367,9 @@
         </div>
     {/snippet}
 
-    {#if state.branches}
+    {#if focusedChoice}
+        {@render choiceRow(focusedChoice, focusedIndex, undefined, undefined, true)}
+    {:else if state.branches}
         {#each state.branches as b, bi (bi)}
             {@const bcs = branchChoices(b)}
             <div class="branch">
@@ -433,6 +463,7 @@
          before editing or renaming a node, which the raw-text workflow does with a project grep. Option/call
          rows navigate to the referencing state; the entry rows are informational. An empty list means the
          node is an orphan (nothing reaches it). -->
+    {#if !focusedChoice}
     <div class="ik">Referenced by ({callers.length})</div>
     {#if callers.length === 0}
         <div class="refnote">Nothing in this file reaches this state (an orphan / unreachable node).</div>
@@ -462,6 +493,7 @@
             {#if deletable}<button class="del" onclick={actions.deleteState}>Delete state</button>{/if}
         </div>
     {/if}
+    {/if}
 </div>
 
 <style>
@@ -484,6 +516,33 @@
         font-weight: 700;
         font-size: 11px;
         margin-bottom: 6px;
+    }
+    /* Breadcrumb header for the focused-option view: the owner-state crumb (a button that returns to the
+       whole-state editor) + a separator + the current option. The crumb reuses the .ih cyan heading. */
+    .crumbs {
+        display: flex;
+        align-items: baseline;
+        gap: 5px;
+    }
+    .crumb {
+        background: none;
+        border: none;
+        padding: 0;
+        font: inherit;
+        font-weight: 700;
+        color: #22d3ee;
+        cursor: pointer;
+    }
+    .crumb:hover {
+        text-decoration: underline;
+        text-underline-offset: 2px;
+    }
+    .crumbsep {
+        color: #64748b;
+    }
+    .crumbcur {
+        color: #9aa0a6;
+        font-weight: 600;
     }
     .ronote {
         background: #2a2620;

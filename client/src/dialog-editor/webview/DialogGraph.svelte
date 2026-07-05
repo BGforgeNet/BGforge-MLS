@@ -265,6 +265,11 @@
         editingChoiceId = null;
         editingStateId = null;
     }
+    // Breadcrumb "back to state" from the focused-option Inspector: drop the option focus but keep the state
+    // selected, so the Inspector falls back to the whole-state editor.
+    function focusOwnerState(): void {
+        selectedChoiceId = null;
+    }
     // Tree option double-click / Enter / F2: enter inline edit on the option's text.
     function beginEditReply(stateId: string, choiceId: string): void {
         const s = findState(stateId);
@@ -926,7 +931,7 @@
 {/snippet}
 
 {#snippet inspectorBox(s: DialogState)}
-    <Inspector state={s} messages={editModel.messages} {stateIds} {actions} format={editModel.format} sourceName={editModel.sourceName} editable={editModel.editable} structuralEditable={structEditable(s)} deletable={canDelete(s)} callers={callerRows} {selectedChoiceId} onNavigate={navigateToState} />
+    <Inspector state={s} messages={editModel.messages} {stateIds} {actions} format={editModel.format} sourceName={editModel.sourceName} editable={editModel.editable} structuralEditable={structEditable(s)} deletable={canDelete(s)} callers={callerRows} {selectedChoiceId} onNavigate={navigateToState} onFocusOwnerState={focusOwnerState} />
 {/snippet}
 
 <svelte:window onkeydown={onWindowKeydown} />

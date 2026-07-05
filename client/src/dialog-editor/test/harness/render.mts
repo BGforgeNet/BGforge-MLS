@@ -336,6 +336,43 @@ check(
     JSON.stringify(selState),
 );
 
+// Focused-option Inspector (dedicated option panel): selecting an option collapses the docked Inspector to a
+// breadcrumb ("<state> > option #N") + just that option's fields. The whole-state chrome (NPC line, sibling
+// options, Referenced-by, state ops) is hidden - so exactly one option row and no NPC-line field remain.
+await page.waitForSelector(".inspector .crumbs", { timeout: 5_000 });
+const focused = await page.evaluate(() => ({
+    crumbs: document.querySelectorAll(".inspector .crumbs").length,
+    crumbText: document.querySelector(".inspector .crumbcur")?.textContent?.trim() ?? "",
+    npc: document.querySelectorAll(".inspector .iv.npc").length,
+    rows: document.querySelectorAll(".inspector .trow").length,
+    // Only the option highlights: the owner node is NOT highlighted (.st.sel) while an option is selected.
+    nodeSel: document.querySelectorAll(".st.sel").length,
+}));
+await page.screenshot({ path: path.join(outDir, "dlg-focused-panel.png") });
+check(
+    "selecting an option focuses the Inspector on it: breadcrumb shown, whole-state chrome hidden, node not highlighted",
+    focused.crumbs === 1 &&
+        focused.crumbText.startsWith("option #") &&
+        focused.npc === 0 &&
+        focused.rows === 1 &&
+        focused.nodeSel === 0,
+    JSON.stringify(focused),
+);
+// The breadcrumb's state crumb returns to the whole-state editor (NPC line back, breadcrumb gone, node
+// highlight restored).
+await page.locator(".inspector .crumb").click();
+await page.waitForTimeout(150);
+const restored = await page.evaluate(() => ({
+    crumbs: document.querySelectorAll(".inspector .crumbs").length,
+    npc: document.querySelectorAll(".inspector .iv.npc").length,
+    nodeSel: document.querySelectorAll(".st.sel").length,
+}));
+check(
+    "the breadcrumb state crumb returns to the whole-state editor and re-highlights the node",
+    restored.crumbs === 0 && restored.npc === 1 && restored.nodeSel === 1,
+    JSON.stringify(restored),
+);
+
 // Inline text editing: double-click an option's text -> an input appears, focused; type + Enter commits
 // the new text (through DialogGraph.commitEditReply -> the .msg/.tra or choice.text write-back + reproject).
 const editBtn = page.locator(".rtextbtn").first();
