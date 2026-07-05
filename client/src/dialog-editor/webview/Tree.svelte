@@ -7,7 +7,7 @@
     // their player replies as a nested outline; clicking a state selects it for the
     // shared Inspector, clicking a cross-file leaf jumps to that dialog's tab, and
     // clicking a "shown elsewhere" ref selects the expanded copy.
-    let { tree, selectedId, selectedChoiceId, editingChoiceId, collapsed, editableStateIds, deletableStateIds, ssl, onSelect, onSelectReply, onBeginEditReply, onCommitEditReply, onCancelEditReply, onToggle, onJump, onContext, onReplyContext, onAddReply, onRemoveReply, onAddChildNode, onDeleteState }: {
+    let { tree, selectedId, selectedChoiceId, editingChoiceId, editingStateId, collapsed, editableStateIds, deletableStateIds, ssl, onSelect, onSelectReply, onBeginEditReply, onCommitEditReply, onCancelEditReply, onBeginEditState, onCommitEditState, onCancelEditState, onToggle, onJump, onContext, onReplyContext, onAddReply, onRemoveReply, onAddChildNode, onDeleteState }: {
         tree: ConversationTree;
         selectedId?: string | null;
         /** The individually-selected option's choice id (within the selected state), or null when a whole
@@ -15,6 +15,8 @@
         selectedChoiceId?: string | null;
         /** The option currently being edited inline (its text renders as an input), or null. */
         editingChoiceId?: string | null;
+        /** The state whose NPC line is being edited inline (its line renders as an input), or null. */
+        editingStateId?: string | null;
         /** Ids of collapsed states (default expanded). Owned by the parent so the
             toolbar's expand-all / collapse-all can drive it. */
         collapsed: Set<string>;
@@ -36,6 +38,12 @@
         onCommitEditReply: (stateId: string, choiceId: string, value: string) => void;
         /** Abandon an inline edit (Escape). */
         onCancelEditReply: () => void;
+        /** Enter inline edit on a state's NPC line (double-click the line / F2 on the row). */
+        onBeginEditState: (stateId: string) => void;
+        /** Commit an inline NPC-line edit with the new text. */
+        onCommitEditState: (stateId: string, value: string) => void;
+        /** Abandon an inline NPC-line edit (Escape). */
+        onCancelEditState: () => void;
         onToggle: (stateId: string) => void;
         onJump: (file: string, stateId: string) => void;
         /** Right-click on a state row, at viewport coords - opens the parent's menu. */
@@ -68,9 +76,9 @@
     });
 
     // Roving-tabindex keyboard navigation (WAI-ARIA tree pattern): exactly one state row is in the tab
-    // order at a time; arrows move focus between rows and expand/collapse. Before this, each row was a
-    // focusable div wrapping a focusable caret button (two tab stops per row, inconsistent) and the
-    // arrow keys did nothing. Defaults the roving target to the selection, else the first root.
+    // order at a time; ArrowUp/Down move selection between visible rows and ArrowLeft/Right expand/collapse
+    // (see onRowKeydown). Before this, each row was a focusable div wrapping a focusable caret button (two
+    // tab stops per row, inconsistent). Defaults the roving target to the selection, else the first root.
     let treeFocusId = $state<string>();
     $effect(() => {
         if (!treeFocusId || !treeEl?.querySelector(`[data-sid="${CSS.escape(treeFocusId)}"]`)) {
@@ -86,11 +94,17 @@
         treeFocusId = id;
         treeEl?.querySelector<HTMLElement>(`[data-sid="${CSS.escape(id)}"]`)?.focus();
     }
-    function focusRel(id: string, dir: 1 | -1): void {
+    // ArrowUp/Down move SELECTION (not just focus) to the previous/next visible row: focus it and select it
+    // so the docked inspector follows the keyboard, matching a click. Collapsed rows' children are absent from
+    // the DOM, so visibleRows() naturally skips them - navigation walks only what is on screen.
+    function moveSelect(id: string, dir: 1 | -1): void {
         const rows = visibleRows();
         const i = rows.findIndex((r) => r.dataset.sid === id);
         const next = rows[i + dir];
-        if (next?.dataset.sid) focusRow(next.dataset.sid);
+        if (next?.dataset.sid) {
+            focusRow(next.dataset.sid);
+            onSelect(next.dataset.sid);
+        }
     }
     function onRowKeydown(e: KeyboardEvent, st: ConvState): void {
         const hasKids = st.replies.length > 0 || (st.branches?.length ?? 0) > 0;
@@ -101,26 +115,32 @@
                 e.preventDefault();
                 onSelect(st.id);
                 break;
+            case "F2":
+                // Edit this state's NPC line inline (parity with double-clicking the line). Only a flat,
+                // text-editable state has an inline-editable line; a bundle node (line lives per-branch) or a
+                // locked node has none, so the key is a no-op there.
+                if (!st.branches && st.textEditable) {
+                    e.preventDefault();
+                    onBeginEditState(st.id);
+                }
+                break;
             case "ArrowDown":
                 e.preventDefault();
-                focusRel(st.id, 1);
+                moveSelect(st.id, 1);
                 break;
             case "ArrowUp":
                 e.preventDefault();
-                focusRel(st.id, -1);
+                moveSelect(st.id, -1);
                 break;
             case "ArrowRight":
-                // Collapsed with children: expand. Already open: move into the first child row.
+                // Expand a collapsed row with children.
                 if (hasKids && !open) {
                     e.preventDefault();
                     onToggle(st.id);
-                } else if (hasKids) {
-                    e.preventDefault();
-                    focusRel(st.id, 1);
                 }
                 break;
             case "ArrowLeft":
-                // Open with children: collapse. (Parent navigation is left to ArrowUp.)
+                // Collapse an open row with children.
                 if (hasKids && open) {
                     e.preventDefault();
                     onToggle(st.id);
@@ -156,12 +176,31 @@
         }
         onCommitEditReply(stateId, choiceId, e.currentTarget.value);
     }
+    // NPC-line inline edit blur - the state counterpart of onEditBlur. Shares onEditKeydown and the single
+    // `escaped` flag (only one inline edit, state OR option, is ever active at once).
+    function onStateEditBlur(stateId: string, e: FocusEvent & { currentTarget: HTMLInputElement }): void {
+        if (escaped) {
+            escaped = false;
+            onCancelEditState();
+            return;
+        }
+        onCommitEditState(stateId, e.currentTarget.value);
+    }
     // Begin edit on double-click, or Enter/F2 while the option's text button is focused. A non-editable
     // option (locked SSL @N, read-only node) has no inline input, so the gesture is a no-op there.
     function onReplyTextKeydown(e: KeyboardEvent, ownerId: string, r: ConvReply): void {
         if (r.textEditable && (e.key === "F2" || e.key === "Enter")) {
             e.preventDefault();
             onBeginEditReply(ownerId, r.id);
+        }
+    }
+    // Enter/F2 on the focused NPC-line button begins inline edit (the button only renders when editable).
+    // stopPropagation keeps the row's own keydown (Enter=select, F2=edit) from double-firing.
+    function onLineKeydown(e: KeyboardEvent, stateId: string): void {
+        if (e.key === "F2" || e.key === "Enter") {
+            e.preventDefault();
+            e.stopPropagation();
+            onBeginEditState(stateId);
         }
     }
 </script>
@@ -211,8 +250,41 @@
         <span class="sid" title="State id (jump/rename target)">{st.id}</span>
         {#if st.derivedFrom}<Badge badges={["derived"]} label={st.derivedFrom} small />{/if}
         {#if st.trigger}<span class="cond" title={st.trigger}>[if]</span>{/if}
-        <!-- A bundle node's line lives per-branch (below); only a flat node shows its line here. -->
-        {#if !st.branches}<span class="line" title={st.text}>{st.text || "(no line)"}</span>{/if}
+        <!-- A bundle node's line lives per-branch (below); only a flat node shows its line here. That flat
+             line is inline-editable (double-click it, or F2 on the row) when its text is editable - mirroring
+             option text: it swaps to an <input> while editing (Enter/blur commit, Escape cancels). A locked
+             line (unresolvable SSL @N, or a read-only/derived node) stays a plain, non-editing span. The
+             input's own click/dblclick/keydown are stopped from bubbling so cursor placement, word-select, and
+             typing (Space especially) act on the field, not the row (select / F2 / arrow-nav). -->
+        {#if !st.branches}
+            {#if st.id === editingStateId && st.textEditable}
+                <input
+                    class="line lineedit"
+                    aria-label="NPC line"
+                    use:autofocusSelect
+                    value={st.text}
+                    placeholder="(NPC line)"
+                    onclick={(e) => e.stopPropagation()}
+                    ondblclick={(e) => e.stopPropagation()}
+                    onkeydown={(e) => (e.stopPropagation(), onEditKeydown(e))}
+                    onblur={(e) => onStateEditBlur(st.id, e)}
+                />
+            {:else if st.textEditable}
+                <!-- Editable line: a <button> (like the option text) so it is a real, keyboard-operable edit
+                     target - click selects the state (bubbling stopped to avoid a double-select), double-click
+                     or Enter/F2 begins inline edit. Its keydown is stopped so the row's Enter=select / F2 do
+                     not also fire. -->
+                <button
+                    class="line linebtn"
+                    title={st.text}
+                    onclick={(e) => (e.stopPropagation(), onSelect(st.id))}
+                    ondblclick={(e) => (e.stopPropagation(), onBeginEditState(st.id))}
+                    onkeydown={(e) => onLineKeydown(e, st.id)}
+                >{st.text || "(no line)"}</button>
+            {:else}
+                <span class="line" title={st.text}>{st.text || "(no line)"}</span>
+            {/if}
+        {/if}
         <!-- Node add/delete (hover-revealed) on an editable state: "+" grows a connected child node, "-"
              deletes this state. Delete is shown disabled with a tooltip when the state can't be removed
              (a dialog entry, reached by a call, or referenced from non-editable code). -->
@@ -447,6 +519,44 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+    }
+    /* Editable NPC line rendered as a <button> (mirrors the option text's .rtextbtn): reset to read as the
+       plain line while staying a focusable, keyboard-operable edit target. Keeps .line's blue text + ellipsis. */
+    .line.linebtn {
+        background: none;
+        border: none;
+        padding: 0;
+        margin: 0;
+        font: inherit;
+        color: #93c5fd;
+        text-align: left;
+        cursor: pointer;
+        min-width: 0;
+        max-width: 100%;
+    }
+    .line.linebtn:hover {
+        text-decoration: underline;
+        text-underline-offset: 2px;
+    }
+    .line.linebtn:focus-visible {
+        outline: 1px solid #3b82f6;
+        outline-offset: 1px;
+        border-radius: 2px;
+    }
+    /* Inline NPC-line edit input: fills the line slot, blue-bordered to signal active editing (mirrors the
+       option edit's .rtextedit). Overrides .line's dimmed blue text and ellipsis clipping. */
+    .line.lineedit {
+        flex: 1 1 auto;
+        min-width: 0;
+        max-width: 420px;
+        margin: -1px 0;
+        padding: 0 4px;
+        font: inherit;
+        color: #e8eaed;
+        background: #0f1420;
+        border: 1px solid #3b82f6;
+        border-radius: 3px;
+        outline: none;
     }
     /* Bundle (if/else) branch grouping: a faint "shown when ... / otherwise" header above
        each branch's own NPC line and replies, mirroring the inspector's light grouping. */

@@ -232,9 +232,9 @@ check(
     `confirm=${kbdConfirm} before=${beforeKbd} after=${afterKbdNoConfirm}`,
 );
 
-// Tree-view keyboard a11y: state rows are treeitems with roving tabindex; the expand caret is out of
-// the tab order (one focusable per row, not two), and ArrowDown roves focus between rows. Before this,
-// each row was a focusable div wrapping a focusable caret button and the arrow keys did nothing.
+// Tree keyboard navigation: state rows are treeitems with roving tabindex (the expand caret is out of the
+// tab order - one focusable per row, not two). ArrowUp/Down move SELECTION between visible rows (focus AND
+// select, so the docked inspector follows the keyboard); ArrowLeft/Right collapse/expand the focused row.
 await page.goto("file://" + appHtml);
 await page.setViewportSize({ width: 900, height: 700 });
 await postModel();
@@ -248,19 +248,42 @@ const treeA11y = await page.evaluate(() => ({
         .length,
 }));
 const firstItem = page.locator('[role="treeitem"]').first();
-await firstItem.focus();
+await firstItem.click();
 const firstSid = await firstItem.getAttribute("data-sid");
 await page.keyboard.press("ArrowDown");
 await page.waitForTimeout(80);
-const focusedSid = await page.evaluate(() => (document.activeElement as HTMLElement | null)?.getAttribute("data-sid"));
+// The row ArrowDown lands on must be BOTH focused and selected (aria-selected), proving selection follows.
+const down = await page.evaluate(() => {
+    const a = document.activeElement as HTMLElement | null;
+    return { sid: a?.getAttribute("data-sid"), selected: a?.getAttribute("aria-selected") };
+});
+await page.keyboard.press("ArrowUp");
+await page.waitForTimeout(80);
+const upSid = await page.evaluate(() => (document.activeElement as HTMLElement | null)?.getAttribute("data-sid"));
 check(
-    "tree has tree/treeitem roles, no tabbable carets, and ArrowDown roves focus",
+    "tree roles + no tabbable carets; ArrowUp/Down move selection between rows",
     treeA11y.trees === 1 &&
         treeA11y.items > 1 &&
         treeA11y.tabbableCarets === 0 &&
-        !!focusedSid &&
-        focusedSid !== firstSid,
-    JSON.stringify({ ...treeA11y, firstSid, focusedSid }),
+        !!down.sid &&
+        down.sid !== firstSid &&
+        down.selected === "true" &&
+        upSid === firstSid,
+    JSON.stringify({ ...treeA11y, firstSid, ...down, upSid }),
+);
+// ArrowLeft collapses the focused parent row; ArrowRight re-expands it (first state has children).
+await firstItem.focus();
+const expInit = await firstItem.getAttribute("aria-expanded");
+await page.keyboard.press("ArrowLeft");
+await page.waitForTimeout(120);
+const expCollapsed = await firstItem.getAttribute("aria-expanded");
+await page.keyboard.press("ArrowRight");
+await page.waitForTimeout(120);
+const expReExpanded = await firstItem.getAttribute("aria-expanded");
+check(
+    "ArrowLeft collapses and ArrowRight expands the focused row",
+    expInit === "true" && expCollapsed === "false" && expReExpanded === "true",
+    JSON.stringify({ expInit, expCollapsed, expReExpanded }),
 );
 
 // Tree inline add/remove option: the "+ option" row appends a player option to an editable state,
@@ -329,6 +352,34 @@ check(
     "double-click edits an option inline and Enter commits the new text",
     inputAppeared === 1 && inputFocused && newText === "EDITED INLINE" && newText !== oldText,
     JSON.stringify({ inputAppeared, inputFocused, oldText, newText }),
+);
+
+// Inline NPC-line editing: a state's NPC line is a <button> (like the option text) when editable;
+// double-click it -> a focused input; type + Enter commits (through DialogGraph.commitEditState -> the
+// .msg/.tra or state.text write-back + reproject). Select the owning row first so the docked inspector's
+// one-time appearance doesn't reflow the tree mid-double-click (a synthetic-driver artifact; F2 is the
+// reflow-immune keyboard path).
+await page.goto("file://" + appHtml);
+await page.setViewportSize({ width: 900, height: 800 });
+await postModel();
+await page.waitForSelector('[role="treeitem"]', { timeout: 10_000 });
+await page.locator('[role="treeitem"]').first().click();
+await page.waitForTimeout(150);
+const npcBtn = page.locator('[role="treeitem"]').first().locator(".linebtn").first();
+const npcOld = (await npcBtn.textContent())?.trim() ?? "";
+await npcBtn.dblclick();
+await page.waitForTimeout(150);
+const npcInput = await page.locator(".lineedit").count();
+const npcFocused = await page.evaluate(() => document.activeElement?.classList.contains("lineedit") ?? false);
+await page.locator(".lineedit").first().fill("NPC EDITED INLINE");
+await page.keyboard.press("Enter");
+await page.waitForTimeout(200);
+const npcNew =
+    (await page.locator('[role="treeitem"]').first().locator(".linebtn").first().textContent())?.trim() ?? "";
+check(
+    "double-click edits a state's NPC line inline and Enter commits the new text",
+    npcInput === 1 && npcFocused && npcNew === "NPC EDITED INLINE" && npcNew !== npcOld,
+    JSON.stringify({ npcInput, npcFocused, npcOld, npcNew }),
 );
 
 // Adding an option drops straight into inline edit: click "+ option" -> a focused input appears for the

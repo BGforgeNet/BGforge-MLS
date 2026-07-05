@@ -22,7 +22,7 @@ import {
     type DialogReaction,
     type DialogRoot,
 } from "../../../../shared/dialog-model";
-import { isPendingChoice, textFieldLocked } from "./inspector-edit";
+import { isPendingChoice, isPendingState, textFieldLocked } from "./inspector-edit";
 import type { JumpTarget } from "./jump-resolve";
 
 export type ConvTarget =
@@ -84,6 +84,10 @@ export interface ConvState {
     branches?: ConvBranch[];
     /** True for a top-level state (no incoming same-file transition). */
     isEntry: boolean;
+    /** Whether this state's NPC line can be edited inline in the tree - the same gate the inspector's NPC
+        field uses (textFieldLocked over the state's own text): false for a locked SSL @N or a read-only/
+        derived node. Mirrors ConvReply.textEditable for the option text. */
+    textEditable: boolean;
 }
 
 export interface ConversationTree {
@@ -191,6 +195,7 @@ export function buildConversationTree(
             replies,
             ...(branches ? { branches } : {}),
             isEntry: !targeted.has(s.id),
+            textEditable: !textFieldLocked({ text: s.text, messages, ssl, textRO, isNew: isPendingState(s) }),
         };
     }
 

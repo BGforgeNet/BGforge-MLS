@@ -168,6 +168,44 @@ describe("buildConversationTree", () => {
         expect(roots[0]!.replies[0]!.textEditable).toBe(true);
     });
 
+    // ConvState.textEditable mirrors ConvReply.textEditable for the NPC line: it applies the inspector's
+    // textFieldLocked gate to the state's OWN text, driving inline NPC-line editing in the tree.
+    it("marks a D literal NPC line as editable", () => {
+        const r = root([st("A", "hi", [])]);
+        const { roots } = buildConversationTree(r, undefined, noJump, { ssl: false, editable: true });
+        expect(roots[0]!.textEditable).toBe(true);
+    });
+
+    it("locks the NPC line on a derived (read-only) state", () => {
+        const r = root([st("A", "hi", [], { derivedFrom: "CHAIN" })]);
+        const { roots } = buildConversationTree(r, undefined, noJump, { ssl: false, editable: true });
+        expect(roots[0]!.textEditable).toBe(false);
+    });
+
+    it("locks the NPC line in a view-only (non-editable) D file", () => {
+        const r = root([st("A", "hi", [])]);
+        const { roots } = buildConversationTree(r, undefined, noJump, { ssl: false, editable: false });
+        expect(roots[0]!.textEditable).toBe(false);
+    });
+
+    it("SSL: an NPC line backed by a resolvable @N is editable; a non-resolvable one is locked", () => {
+        const r = root([
+            // committed: existing (not pending-new) states, so the @N-resolvability gate applies.
+            st("Node001", "@10", [], { committed: true }), // resolves in messages
+            st("Node002", "@99", [], { committed: true }), // no .msg entry - nowhere to write
+        ]);
+        const { roots } = buildConversationTree(r, { "10": "Hi" }, noJump, { ssl: true, editable: false });
+        const byId = new Map(roots.map((n) => [n.id, n]));
+        expect(byId.get("Node001")!.textEditable).toBe(true);
+        expect(byId.get("Node002")!.textEditable).toBe(false);
+    });
+
+    it("SSL: a just-added (pending) state's NPC line is editable even before it has an @N", () => {
+        const r = root([st("A", "", [])]);
+        const { roots } = buildConversationTree(r, {}, noJump, { ssl: true, editable: false });
+        expect(roots[0]!.textEditable).toBe(true);
+    });
+
     it("passes through condition, action, trigger, and derivedFrom", () => {
         const r = root([
             st("A", "a", [ch("A#0", { kind: "exit" }, { condition: "IF x", action: "DO y" })], {

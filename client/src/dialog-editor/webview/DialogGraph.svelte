@@ -62,6 +62,10 @@
     // The option currently being edited inline in the tree (its text is an input), or null. Set by a
     // double-click / Enter / F2 in the tree, and by adding a new option (which drops straight into edit).
     let editingChoiceId = $state<string | null>(null);
+    // The state whose NPC line is being edited inline in the tree (its line renders as an input), or null.
+    // Set by double-clicking the line / F2 on the row. Mirrors editingChoiceId for the option text; only one
+    // of the two is ever set at a time (beginning either edit clears the other).
+    let editingStateId = $state<string | null>(null);
     let viewport = $state({ x: 0, y: 0, zoom: 1 });
     let containerW = $state(0);
     let containerH = $state(0);
@@ -247,6 +251,7 @@
             selected = s;
             selectedChoiceId = null;
             editingChoiceId = null;
+            editingStateId = null;
         }
     }
     // Tree option-row click: select the option (and its owner state) so the tree highlights it and the
@@ -258,6 +263,7 @@
         selected = s;
         selectedChoiceId = choiceId;
         editingChoiceId = null;
+        editingStateId = null;
     }
     // Tree option double-click / Enter / F2: enter inline edit on the option's text.
     function beginEditReply(stateId: string, choiceId: string): void {
@@ -266,6 +272,7 @@
         selected = s;
         selectedChoiceId = choiceId;
         editingChoiceId = choiceId;
+        editingStateId = null;
     }
     // Commit an inline edit: write the new text back the same way the inspector does (a resolvable @N line
     // updates its .msg/.tra entry; anything else - a literal, or a just-added option - updates the choice's
@@ -283,6 +290,33 @@
     // Abandon an inline edit (Escape) - discard the draft, leave edit mode, keep the option selected.
     function cancelEditReply(): void {
         editingChoiceId = null;
+    }
+
+    // Tree NPC-line double-click / F2: enter inline edit on the state's NPC line. Selects the state (so the
+    // inspector follows) and clears any option edit - only one inline edit runs at a time.
+    function beginEditState(stateId: string): void {
+        const s = findState(stateId);
+        if (!s) return;
+        selected = s;
+        selectedChoiceId = null;
+        editingChoiceId = null;
+        editingStateId = stateId;
+    }
+    // Commit an inline NPC-line edit: write the new text back the same way the inspector's NPC field does (a
+    // resolvable @N line updates its .msg/.tra entry; a literal - or a just-added state - updates the state's
+    // own text, allocated an @id at save). Mirrors commitEditReply. Then leave edit mode and reproject.
+    function commitEditState(stateId: string, value: string): void {
+        const s = findState(stateId);
+        editingStateId = null;
+        if (!s) return;
+        const ref = msgRef(s.text);
+        if (ref !== null && editModel.messages) editModel.messages[ref] = value;
+        else s.text = value;
+        void rebuild({ frame: "none" });
+    }
+    // Abandon an inline NPC-line edit (Escape) - discard the draft, keep the state selected.
+    function cancelEditState(): void {
+        editingStateId = null;
     }
 
     // Select a state, switching to its tab first if it lives in another dialog (a caller can be cross-root).
@@ -502,6 +536,7 @@
             selected = null;
             selectedChoiceId = null;
             editingChoiceId = null;
+            editingStateId = null;
             confirmDelete = null;
             void rebuild({ relayout: true });
             suppressEmit = true;
@@ -563,6 +598,7 @@
         selected = null;
         selectedChoiceId = null;
         editingChoiceId = null;
+        editingStateId = null;
         treeCollapsed = new Set();
         void rebuild(focusId ? { focusId } : { frame: "entry" });
     }
@@ -578,6 +614,7 @@
         selected = event.node.data?.state ?? null;
         selectedChoiceId = null;
         editingChoiceId = null;
+        editingStateId = null;
     }
 
     // Thin wrappers over the pure edit ops (shared/dialog-edit-ops.ts): each runs the
@@ -642,6 +679,7 @@
         const c = appendReply(st);
         selectedChoiceId = c.id;
         editingChoiceId = c.id;
+        editingStateId = null;
     }
     // Tree inline "x": remove an option from a state addressed by id. Mirrors replyAct("remove").
     // The tree gates a conditional SSL option's "x" as disabled (matching the inspector), so this
@@ -664,6 +702,7 @@
         selected = st;
         selectedChoiceId = c.id;
         editingChoiceId = c.id; // type the option text that leads to the new node
+        editingStateId = null;
         void rebuild({ frame: "none" });
     }
     // Tree inline node "-": delete a state addressed by id, through the same guarded path as the inspector
@@ -846,8 +885,8 @@
 
 {#snippet toolbar(inGraph: boolean)}
     <span class="viewseg" role="tablist" aria-label="View mode">
-        <button class:active={viewMode === "graph"} role="tab" aria-selected={viewMode === "graph"} onclick={() => (viewMode = "graph")}>Graph</button>
         <button class:active={viewMode === "tree"} role="tab" aria-selected={viewMode === "tree"} onclick={() => (viewMode = "tree")}>Tree</button>
+        <button class:active={viewMode === "graph"} role="tab" aria-selected={viewMode === "graph"} onclick={() => (viewMode = "graph")}>Graph</button>
     </span>
     {#if editModel.editable || editModel.format === "fallout-ssl"}
         <button class="toolbtn" onclick={addState}>+ State</button>
@@ -961,7 +1000,7 @@
                     {#if treeData.roots.length === 0}
                         <div class="treeempty">No states in this dialog file.</div>
                     {/if}
-                    <Tree tree={treeData} selectedId={selected?.id} selectedChoiceId={selectedChoiceId} editingChoiceId={editingChoiceId} collapsed={treeCollapsed} editableStateIds={editableTreeStateIds} deletableStateIds={deletableTreeStateIds} ssl={editModel.format === "fallout-ssl"} onSelect={selectTreeState} onSelectReply={selectReplyInTree} onBeginEditReply={beginEditReply} onCommitEditReply={commitEditReply} onCancelEditReply={cancelEditReply} onToggle={toggleTreeNode} onJump={treeJump} onContext={openContext} onReplyContext={openReplyContext} onAddReply={addReplyToState} onRemoveReply={removeReplyFromState} onAddChildNode={addChildNode} onDeleteState={deleteStateFromTree} />
+                    <Tree tree={treeData} selectedId={selected?.id} selectedChoiceId={selectedChoiceId} editingChoiceId={editingChoiceId} editingStateId={editingStateId} collapsed={treeCollapsed} editableStateIds={editableTreeStateIds} deletableStateIds={deletableTreeStateIds} ssl={editModel.format === "fallout-ssl"} onSelect={selectTreeState} onSelectReply={selectReplyInTree} onBeginEditReply={beginEditReply} onCommitEditReply={commitEditReply} onCancelEditReply={cancelEditReply} onBeginEditState={beginEditState} onCommitEditState={commitEditState} onCancelEditState={cancelEditState} onToggle={toggleTreeNode} onJump={treeJump} onContext={openContext} onReplyContext={openReplyContext} onAddReply={addReplyToState} onRemoveReply={removeReplyFromState} onAddChildNode={addChildNode} onDeleteState={deleteStateFromTree} />
                 </div>
                 {#if ctxMenu}
                     <div class="ctxbackdrop" role="presentation" onclick={closeContext} oncontextmenu={(e) => (e.preventDefault(), closeContext())}></div>
