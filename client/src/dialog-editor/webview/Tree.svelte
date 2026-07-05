@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { tick } from "svelte";
     import type { ConversationTree, ConvState, ConvReply, ConvBranch } from "./conversation-tree";
     import Badge from "./Badge.svelte";
     import LowIntChip from "./LowIntChip.svelte";
@@ -7,7 +8,7 @@
     // their player replies as a nested outline; clicking a state selects it for the
     // shared Inspector, clicking a cross-file leaf jumps to that dialog's tab, and
     // clicking a "shown elsewhere" ref selects the expanded copy.
-    let { tree, selectedId, selectedChoiceId, editingChoiceId, editingStateId, collapsed, editableStateIds, deletableStateIds, ssl, onSelect, onSelectReply, onBeginEditReply, onCommitEditReply, onCancelEditReply, onBeginEditState, onCommitEditState, onCancelEditState, onToggle, onJump, onContext, onReplyContext, onAddReply, onRemoveReply, onAddChildNode, onDeleteState }: {
+    let { tree, selectedId, selectedChoiceId, editingChoiceId, editingStateId, collapsed, editableStateIds, deletableStateIds, ssl, onSelect, onSelectReply, onBeginEditReply, onCommitEditReply, onCancelEditReply, onBeginEditState, onCommitEditState, onCancelEditState, onToggle, onExpand, onGoToSource, onJump, onContext, onReplyContext, onAddReply, onRemoveReply, onAddChildNode, onDeleteState }: {
         tree: ConversationTree;
         selectedId?: string | null;
         /** The individually-selected option's choice id (within the selected state), or null when a whole
@@ -45,6 +46,10 @@
         /** Abandon an inline NPC-line edit (Escape). */
         onCancelEditState: () => void;
         onToggle: (stateId: string) => void;
+        /** Un-collapse the given states so a reveal target inside a collapsed branch becomes visible. */
+        onExpand: (stateIds: string[]) => void;
+        /** Go to the source line for a byte offset (F4) - opens the .ssl/.d text editor at that position. */
+        onGoToSource: (sourceOffset: number) => void;
         onJump: (file: string, stateId: string) => void;
         /** Right-click on a state row, at viewport coords - opens the parent's menu. */
         onContext: (stateId: string, x: number, y: number) => void;
@@ -63,10 +68,42 @@
 
     let treeEl: HTMLDivElement | undefined = $state();
 
-    // Scroll a state's row into view (a ref/jump may target a node far elsewhere in the
-    // tree). No-op if the row is inside a collapsed branch and so not in the DOM.
+    // Ancestor state ids on the path to a target's first (expanded) occurrence in the tree, or null if it is
+    // not an expanded node here (only a ref, or cross-file). Walks the conversation nesting - flat replies
+    // and branch replies alike - so reveal() can un-collapse exactly the branches hiding the target.
+    function ancestorsOf(targetId: string): string[] | null {
+        const childrenOf = (s: ConvState): ConvState[] => {
+            const kids: ConvState[] = [];
+            if (s.branches) for (const b of s.branches) for (const r of b.replies) if (r.target.kind === "state") kids.push(r.target.node);
+            for (const r of s.replies) if (r.target.kind === "state") kids.push(r.target.node);
+            return kids;
+        };
+        const find = (s: ConvState, acc: string[]): string[] | null => {
+            if (s.id === targetId) return acc;
+            const next = [...acc, s.id];
+            for (const k of childrenOf(s)) {
+                const p = find(k, next);
+                if (p) return p;
+            }
+            return null;
+        };
+        for (const root of tree.roots) {
+            const p = find(root, []);
+            if (p) return p;
+        }
+        return null;
+    }
+    // Scroll a state's row into view (a ref/jump may target a node far elsewhere in the tree). If the target
+    // sits inside a collapsed branch it is absent from the DOM, so first un-collapse its ancestors (via the
+    // parent) and scroll after the re-render - otherwise a "shown elsewhere" jump silently does nothing.
     function reveal(id: string): void {
-        treeEl?.querySelector(`[data-sid="${CSS.escape(id)}"]`)?.scrollIntoView({ block: "nearest" });
+        const collapsedAncestors = ancestorsOf(id)?.filter((a) => collapsed.has(a)) ?? [];
+        if (collapsedAncestors.length > 0) {
+            onExpand(collapsedAncestors);
+            void tick().then(() => treeEl?.querySelector(`[data-sid="${CSS.escape(id)}"]`)?.scrollIntoView({ block: "nearest" }));
+        } else {
+            treeEl?.querySelector(`[data-sid="${CSS.escape(id)}"]`)?.scrollIntoView({ block: "nearest" });
+        }
     }
     // Reveal whatever is selected whenever selection changes: covers clicking a ref
     // leaf, a cross-file jump landing on a freshly-rendered tab, and selection driven
@@ -75,29 +112,28 @@
         if (selectedId) reveal(selectedId);
     });
 
-    // Roving-tabindex keyboard navigation (WAI-ARIA tree pattern): exactly one state row is in the tab
-    // order at a time. ArrowUp/Down move selection between visible rows - state rows AND selectable options
-    // alike (see onRowKeydown / onReplyTextKeydown) - and ArrowLeft/Right expand/collapse a state. Before
-    // this, each row was a focusable div wrapping a focusable caret button (two tab stops per row,
-    // inconsistent). Defaults the roving target to the selection, else the first root.
+    // Roving-tabindex keyboard navigation (WAI-ARIA tree pattern): exactly one row - a state row OR a
+    // selectable option row - is in the tab order at a time. ArrowUp/Down move selection between visible rows
+    // (see onRowKeydown / onReplyRowKeydown), ArrowLeft/Right expand/collapse a state. `treeFocusId` holds the
+    // roving row's id, which is a state's data-sid or an option's data-choice (disjoint id spaces). Defaults
+    // to the selection, else the first root.
     let treeFocusId = $state<string>();
     $effect(() => {
-        if (!treeFocusId || !treeEl?.querySelector(`[data-sid="${CSS.escape(treeFocusId)}"]`)) {
+        if (!treeFocusId || !treeEl?.querySelector(`[data-sid="${CSS.escape(treeFocusId)}"], [data-choice="${CSS.escape(treeFocusId)}"]`)) {
             treeFocusId = selectedId ?? tree.roots[0]?.id;
         }
     });
 
-    // Visible navigation targets in DOM (top-to-bottom) order, for ArrowUp/Down movement. A target is either
-    // a state row ([role=treeitem], carries data-sid) or a selectable flat option (its .rtextbtn text button,
-    // carrying data-owner + data-choice); a read-only bundle-branch option is a plain span and so not a
-    // target. Both kinds are focusable and interleave exactly as they read on screen - Down off a state steps
-    // into its first option, Down off the last option steps to the next state. Collapsed rows' children are
-    // absent from the DOM, so this naturally walks only what is on screen.
+    // Visible navigation targets in DOM (top-to-bottom) order, for ArrowUp/Down movement. Both state rows
+    // (data-sid) and selectable option rows (data-owner + data-choice) are `[role=treeitem]`; a read-only
+    // bundle-branch option row has no role and so is skipped. They interleave exactly as they read on screen
+    // - Down off a state steps into its first option, Down off the last option steps to the next state.
+    // Collapsed rows' children are absent from the DOM, so this naturally walks only what is on screen.
     function navTargets(): HTMLElement[] {
-        return treeEl ? [...treeEl.querySelectorAll<HTMLElement>('[role="treeitem"], .rtextbtn')] : [];
+        return treeEl ? [...treeEl.querySelectorAll<HTMLElement>('[role="treeitem"]')] : [];
     }
     // Move SELECTION (not just focus) to a target: focus it and select it so the docked inspector follows the
-    // keyboard, matching a click. A state row selects via onSelect; an option button via onSelectReply.
+    // keyboard, matching a click. A state row selects via onSelect; an option row via onSelectReply.
     function selectNav(el: HTMLElement): void {
         const { sid, owner, choice } = el.dataset;
         if (owner && choice) onSelectReply(owner, choice);
@@ -119,18 +155,31 @@
         const hasKids = st.replies.length > 0 || (st.branches?.length ?? 0) > 0;
         const open = !collapsed.has(st.id);
         switch (e.key) {
-            case "Enter":
             case " ":
                 e.preventDefault();
                 onSelect(st.id);
                 break;
+            case "Enter":
             case "F2":
-                // Edit this state's NPC line inline (parity with double-clicking the line). Only a flat,
-                // text-editable state has an inline-editable line; a bundle node (line lives per-branch) or a
-                // locked node has none, so the key is a no-op there.
+            case "e":
+            case "E":
+                // Enter/F2/E edit this state's NPC line inline (parity with double-clicking the line). Only a
+                // flat, text-editable state has an inline-editable line; a bundle node (line lives per-branch)
+                // or a locked node has none, so Enter falls back to select there and F2/E are a no-op.
                 if (!st.branches && st.textEditable) {
                     e.preventDefault();
                     onBeginEditState(st.id);
+                } else if (e.key === "Enter") {
+                    e.preventDefault();
+                    onSelect(st.id);
+                }
+                break;
+            case "F4":
+                // Go to this state's source line in the .ssl/.d text editor. Absent for a synthetic/derived
+                // or pending-new state (no source span) - then a no-op.
+                if (st.sourceOffset != null) {
+                    e.preventDefault();
+                    onGoToSource(st.sourceOffset);
                 }
                 break;
             case "ArrowDown":
@@ -158,22 +207,25 @@
         }
     }
 
-    // Show a line's full text as a hover tooltip ONLY when it is actually clipped (rendered width exceeds
-    // the box). A line that fits needs no tooltip - it would just echo the visible text. Re-checks on resize,
-    // since whether it overflows depends on the available width. Applied to the ellipsised conversation lines
-    // (NPC line, option text); the short marker chips ([if]/[do], ids, leaf labels) keep their always-on
-    // tooltips, because those DO reveal information the visible glyph hides.
-    function clipTitle(el: HTMLElement, text: string | undefined) {
-        let current = text;
+    // Hover tooltip for a conversation line. `label` (the state id, e.g. NodeXXX) is ALWAYS shown - it is the
+    // id we dropped from the inline row, surfaced here on the text the writer hovers. `text` (the full line)
+    // is appended ONLY when the line is actually clipped (rendered width exceeds the box) - a line that fits
+    // would just echo the visible text. Re-checks on resize, since clipping depends on the available width.
+    // Option text passes no label (an option has no NodeXXX), so it stays label-less: tooltip only when clipped.
+    function clipTitle(el: HTMLElement, param: { text?: string; label?: string }) {
+        let current = param;
         function sync(): void {
-            if (current && el.scrollWidth > el.clientWidth) el.title = current;
+            const { text, label } = current;
+            const clipped = el.scrollWidth > el.clientWidth;
+            const parts = [label, clipped && text ? text : undefined].filter(Boolean);
+            if (parts.length > 0) el.title = parts.join(" - ");
             else el.removeAttribute("title");
         }
         const ro = new ResizeObserver(sync);
         ro.observe(el);
         sync();
         return {
-            update(next: string | undefined): void {
+            update(next: { text?: string; label?: string }): void {
                 current = next;
                 sync();
             },
@@ -188,6 +240,27 @@
     // commit/cancel path and no Enter-then-blur double fire. `escaped` carries the Escape intent across to
     // the blur handler; only one option edits at a time (editingChoiceId is single), so one flag suffices.
     let escaped = false;
+    // Set when the edit ends via Enter/Escape (a keyboard commit) rather than a click-away blur: it tells
+    // the blur handler to hand focus back to the just-edited row/option so Up/Down keep working. A
+    // click-away commit leaves focus wherever the pointer put it.
+    let keyboardCommit = false;
+    // After a keyboard-committed inline edit, the input blurs to <body> and the arrow keys stop working
+    // (nothing focused handles them). Once the edit's input unmounts (editingChoiceId/editingStateId cleared
+    // by the parent), return focus to that option's button / state row so keyboard nav resumes where it left.
+    let refocusChoiceId = $state<string>();
+    let refocusStateId = $state<string>();
+    $effect(() => {
+        if (refocusChoiceId != null && editingChoiceId == null) {
+            const id = refocusChoiceId;
+            refocusChoiceId = undefined;
+            treeEl?.querySelector<HTMLElement>(`.rep[data-choice="${CSS.escape(id)}"]`)?.focus();
+        }
+        if (refocusStateId != null && editingStateId == null) {
+            const id = refocusStateId;
+            refocusStateId = undefined;
+            treeEl?.querySelector<HTMLElement>(`[data-sid="${CSS.escape(id)}"]`)?.focus();
+        }
+    });
     function autofocusSelect(el: HTMLInputElement) {
         el.focus();
         el.select();
@@ -195,49 +268,99 @@
     function onEditKeydown(e: KeyboardEvent & { currentTarget: HTMLInputElement }): void {
         if (e.key === "Enter") {
             e.preventDefault();
+            keyboardCommit = true;
             e.currentTarget.blur();
         } else if (e.key === "Escape") {
             e.preventDefault();
             escaped = true;
+            keyboardCommit = true;
             e.currentTarget.blur();
         }
     }
     function onEditBlur(stateId: string, choiceId: string, e: FocusEvent & { currentTarget: HTMLInputElement }): void {
+        const refocus = keyboardCommit;
+        keyboardCommit = false;
         if (escaped) {
             escaped = false;
             onCancelEditReply();
-            return;
+        } else {
+            onCommitEditReply(stateId, choiceId, e.currentTarget.value);
         }
-        onCommitEditReply(stateId, choiceId, e.currentTarget.value);
+        if (refocus) refocusChoiceId = choiceId;
     }
     // NPC-line inline edit blur - the state counterpart of onEditBlur. Shares onEditKeydown and the single
-    // `escaped` flag (only one inline edit, state OR option, is ever active at once).
+    // `escaped`/`keyboardCommit` flags (only one inline edit, state OR option, is ever active at once).
     function onStateEditBlur(stateId: string, e: FocusEvent & { currentTarget: HTMLInputElement }): void {
+        const refocus = keyboardCommit;
+        keyboardCommit = false;
         if (escaped) {
             escaped = false;
             onCancelEditState();
-            return;
+        } else {
+            onCommitEditState(stateId, e.currentTarget.value);
         }
-        onCommitEditState(stateId, e.currentTarget.value);
+        if (refocus) refocusStateId = stateId;
     }
-    // Begin edit on double-click, or Enter/F2 while the option's text button is focused. A non-editable
-    // option (locked SSL @N, read-only node) has no inline input, so the gesture is a no-op there.
-    function onReplyTextKeydown(e: KeyboardEvent, ownerId: string, r: ConvReply): void {
-        if (e.key === "ArrowDown") {
-            e.preventDefault();
-            moveNav(e.currentTarget as HTMLElement, 1);
-        } else if (e.key === "ArrowUp") {
-            e.preventDefault();
-            moveNav(e.currentTarget as HTMLElement, -1);
-        } else if (r.textEditable && (e.key === "F2" || e.key === "Enter")) {
-            e.preventDefault();
-            onBeginEditReply(ownerId, r.id);
+    // "Take" an option's transition: go to its destination state, the same as clicking the option's target
+    // link. A nested/ref state selects and reveals (reveal un-collapses its branch); a cross-file target jumps
+    // to that dialog tab. A terminal (exit/combat) has no destination, so it is a no-op.
+    function takeTransition(r: ConvReply): void {
+        const t = r.target;
+        if (t.kind === "state") {
+            onSelect(t.node.id);
+            reveal(t.node.id);
+        } else if (t.kind === "ref") {
+            onSelect(t.stateId);
+            reveal(t.stateId);
+        } else if (t.kind === "external" && t.jump) {
+            onJump(t.jump.file, t.jump.stateId);
         }
     }
-    // Enter/F2 on the focused NPC-line button begins inline edit (the button only renders when editable).
-    // stopPropagation keeps the row's own keydown (Enter=select, F2=edit) from double-firing.
+    // Keyboard on a focused option ROW, mirroring onRowKeydown for states: Space selects the option;
+    // Enter/F2/E begin inline edit (Enter falls back to select when the option is not editable - a locked
+    // SSL @N / read-only node has no inline input); G takes the transition (go to the target, like clicking
+    // its link); ArrowUp/Down move to the neighbouring row. Double-click also edits (see the row markup).
+    function onReplyRowKeydown(e: KeyboardEvent, ownerId: string, r: ConvReply): void {
+        switch (e.key) {
+            case " ":
+                e.preventDefault();
+                onSelectReply(ownerId, r.id);
+                break;
+            case "Enter":
+            case "F2":
+            case "e":
+            case "E":
+                e.preventDefault();
+                if (r.textEditable) onBeginEditReply(ownerId, r.id);
+                else if (e.key === "Enter") onSelectReply(ownerId, r.id);
+                break;
+            case "g":
+            case "G":
+                e.preventDefault();
+                takeTransition(r);
+                break;
+            case "F4":
+                // Go to this option's source statement in the .ssl/.d text editor. Absent for a pending
+                // option (no source span yet) - then a no-op.
+                if (r.sourceOffset != null) {
+                    e.preventDefault();
+                    onGoToSource(r.sourceOffset);
+                }
+                break;
+            case "ArrowDown":
+                e.preventDefault();
+                moveNav(e.currentTarget as HTMLElement, 1);
+                break;
+            case "ArrowUp":
+                e.preventDefault();
+                moveNav(e.currentTarget as HTMLElement, -1);
+                break;
+        }
+    }
+    // Enter/F2/E on the focused NPC-line button begins inline edit (the button only renders when editable).
+    // stopPropagation keeps the row's own keydown (Enter=select, F2/E=edit) from double-firing.
     function onLineKeydown(e: KeyboardEvent, stateId: string): void {
-        if (e.key === "F2" || e.key === "Enter") {
+        if (e.key === "F2" || e.key === "Enter" || e.key === "e" || e.key === "E") {
             e.preventDefault();
             e.stopPropagation();
             onBeginEditState(stateId);
@@ -286,11 +409,10 @@
             <span class="caret leafdot">&bull;</span>
         {/if}
         <!-- WeiDU D shows the real speaker name (a character; it varies across a multi-speaker dialog).
-             The id is the source-addressable handle (jump/rename), useful but secondary to reading the
-             conversation, so show it small and dimmed. SSL has no speaker (one script = one NPC), and the
-             file name would just repeat on every row, so SSL rows show only the dimmed id. -->
+             The state id is the source-addressable handle (jump/rename) but secondary to reading the
+             conversation - and for SSL it is a noisy auto-generated NodeXXX repeated on every row - so it is
+             not shown inline; the id is the row's hover tooltip (title={st.id}) instead. -->
         {#if st.speaker}<span class="who">{st.speaker}</span>{/if}
-        <span class="sid" title="State id (jump/rename target)">{st.id}</span>
         {#if st.derivedFrom}<Badge badges={["derived"]} label={st.derivedFrom} small />{/if}
         {#if st.trigger}<span class="cond" title={st.trigger}>[if]</span>{/if}
         <!-- A bundle node's line lives per-branch (below); only a flat node shows its line here. That flat
@@ -319,13 +441,13 @@
                      not also fire. -->
                 <button
                     class="line linebtn"
-                    use:clipTitle={st.text}
+                    use:clipTitle={{ label: st.id, text: st.text }}
                     onclick={(e) => (e.stopPropagation(), onSelect(st.id))}
                     ondblclick={(e) => (e.stopPropagation(), onBeginEditState(st.id))}
                     onkeydown={(e) => onLineKeydown(e, st.id)}
                 >{st.text || "(no line)"}</button>
             {:else}
-                <span class="line" use:clipTitle={st.text}>{st.text || "(no line)"}</span>
+                <span class="line" use:clipTitle={{ label: st.id, text: st.text }}>{st.text || "(no line)"}</span>
             {/if}
         {/if}
         <!-- Node add/delete (hover-revealed) on an editable state: "+" grows a connected child node, "-"
@@ -382,7 +504,7 @@
         {#if b.kind === "if"}<span class="bcond" title={b.condition}>{b.condition}</span>{/if}
     </div>
     <div class="brep" style="--lvl:{depth * 2 + 1}">
-        <span class="line" use:clipTitle={b.npc}>{b.npc || "(no line)"}</span>
+        <span class="line" use:clipTitle={{ label: ownerId, text: b.npc }}>{b.npc || "(no line)"}</span>
     </div>
     {#each b.replies as r, i (r.id)}
         {@render replyRow(r, depth, ownerId, i, b.replies.length, true)}
@@ -390,10 +512,29 @@
 {/snippet}
 
 {#snippet replyRow(r: ConvReply, depth: number, ownerId: string, index: number, count: number, branchReadonly: boolean)}
+    <!-- The whole option row is the selection/focus/nav unit (mirroring a state row): a click anywhere on it
+         selects the option, double-click / F2 edits its text, ArrowUp/Down move to the neighbouring row. It
+         is a treeitem so it can hold the inner controls (target jump, remove) without a nested-button clash.
+         A read-only bundle-branch option row is inert - no role/tabindex/handlers - and its text is a plain
+         span. The inner controls (leaf jump, remove, the edit input) stop click/keydown from bubbling so they
+         act on themselves, not the row. -->
+    <!-- svelte-ignore a11y_no_noninteractive_tabindex -- roving tabindex on a treeitem IS the WAI-ARIA tree
+         pattern (same as the state rows); Svelte's heuristic wrongly treats treeitem as non-interactive. -->
     <div
         class="rep"
+        class:reprow={!branchReadonly}
         class:repsel={ownerId === selectedId && r.id === selectedChoiceId}
         style="--lvl:{depth * 2 + 1}"
+        data-owner={branchReadonly ? undefined : ownerId}
+        data-choice={branchReadonly ? undefined : r.id}
+        role={branchReadonly ? undefined : "treeitem"}
+        aria-level={branchReadonly ? undefined : depth + 2}
+        aria-selected={branchReadonly ? undefined : ownerId === selectedId && r.id === selectedChoiceId}
+        tabindex={branchReadonly ? undefined : r.id === treeFocusId ? 0 : -1}
+        onclick={branchReadonly ? undefined : () => onSelectReply(ownerId, r.id)}
+        ondblclick={branchReadonly ? undefined : () => r.textEditable && onBeginEditReply(ownerId, r.id)}
+        onfocus={branchReadonly ? undefined : () => (treeFocusId = r.id)}
+        onkeydown={branchReadonly ? undefined : (e) => onReplyRowKeydown(e, ownerId, r)}
         oncontextmenu={branchReadonly
             ? undefined
             : (e) => (e.preventDefault(), onReplyContext(ownerId, r.id, index, count, e.clientX, e.clientY))}
@@ -402,37 +543,30 @@
         <LowIntChip lowIq={r.lowIq} />
         {#if !branchReadonly && r.id === editingChoiceId && r.textEditable}
             <!-- Inline edit: the option's text as an input. Enter/blur commit, Escape cancels (both routed
-                 through blur). Prefilled with the resolved line; a just-added option starts empty. -->
+                 through blur). Its click/dblclick/keydown are stopped so cursor placement, word-select and
+                 typing (arrows, Space) act on the field, not the row's select / edit / nav. -->
             <input
                 class="rtext rtextedit"
                 aria-label="Option text"
                 use:autofocusSelect
                 value={r.text}
                 placeholder="(option text)"
-                onkeydown={onEditKeydown}
+                onclick={(e) => e.stopPropagation()}
+                ondblclick={(e) => e.stopPropagation()}
+                onkeydown={(e) => (e.stopPropagation(), onEditKeydown(e))}
                 onblur={(e) => onEditBlur(ownerId, r.id, e)}
             />
         {:else}
-            <!-- The option text is the selection/edit affordance: on a flat (non-branch) option it is a
-                 <button> - single click selects it (highlight + inspector), double-click / Enter / F2 enters
-                 inline edit; a read-only bundle-branch option stays a plain <span>. svelte:element keeps one
-                 styled element for both and only wires the handlers for the button. -->
-            <svelte:element
-                this={branchReadonly ? "span" : "button"}
-                role={branchReadonly ? undefined : "button"}
+            <!-- Static option text: the row owns click-to-select and dblclick/F2-to-edit, so this is a plain
+                 span carrying the reaction colour and the clip-aware tooltip. -->
+            <span
                 class="rtext"
-                class:rtextbtn={!branchReadonly}
                 class:silent={!r.hasText}
                 class:r-good={r.hasText && r.reaction === "good"}
                 class:r-bad={r.hasText && r.reaction === "bad"}
                 class:r-neutral={r.hasText && r.reaction === "neutral"}
-                data-owner={branchReadonly ? undefined : ownerId}
-                data-choice={branchReadonly ? undefined : r.id}
-                use:clipTitle={r.hasText ? r.text : undefined}
-                onclick={branchReadonly ? undefined : () => onSelectReply(ownerId, r.id)}
-                ondblclick={branchReadonly ? undefined : () => r.textEditable && onBeginEditReply(ownerId, r.id)}
-                onkeydown={branchReadonly ? undefined : (e) => onReplyTextKeydown(e, ownerId, r)}
-            >{r.hasText ? r.text || "(empty option)" : "(continue)"}</svelte:element>
+                use:clipTitle={{ text: r.hasText ? r.text : undefined }}
+            >{r.hasText ? r.text || "(empty option)" : "(continue)"}</span>
         {/if}
         {#if r.condition}<span class="rcond" title={r.condition}>[if]</span>{/if}
         {#if r.action}<span class="ract" title={r.action}>[do]</span>{/if}
@@ -462,13 +596,13 @@
         {@const t = r.target}
         <span class="lf combat" title={t.nodeId}>COMBAT</span>
     {:else if r.target.kind === "ref"}
-        <button class="lf ref" title="Shown elsewhere - jump to it" onclick={() => (onSelect((r.target as { stateId: string }).stateId), reveal((r.target as { stateId: string }).stateId))}>
+        <button class="lf ref" title="Shown elsewhere - jump to it" onclick={(e) => (e.stopPropagation(), onSelect((r.target as { stateId: string }).stateId), reveal((r.target as { stateId: string }).stateId))}>
             &#8631; {(r.target as { stateId: string }).stateId}
         </button>
     {:else if r.target.kind === "external"}
         {@const t = r.target}
         {#if t.jump}
-            <button class="lf jump" title="Open in its dialog tab" onclick={() => onJump(t.jump!.file, t.jump!.stateId)}>&#8599; {t.label}</button>
+            <button class="lf jump" title="Open in its dialog tab" onclick={(e) => (e.stopPropagation(), onJump(t.jump!.file, t.jump!.stateId))}>&#8599; {t.label}</button>
         {:else}
             <span class="lf ext" title={t.label}>&#8599; {t.label}</span>
         {/if}
@@ -520,6 +654,20 @@
     .rep {
         padding-left: calc(var(--lvl) * 14px + 8px);
     }
+    /* A selectable option row (not a read-only bundle-branch row) is clickable and keyboard-focusable like a
+       state row: pointer cursor, a hover fill, and a focus ring. Placed before .repsel so the selected fill
+       wins over hover (source order, matching .st:hover / .st.sel). */
+    .reprow {
+        cursor: pointer;
+    }
+    .reprow:hover {
+        background: #20242c;
+    }
+    .reprow:focus-visible {
+        outline: 1px solid #3b82f6;
+        outline-offset: -1px;
+        border-radius: 4px;
+    }
     /* Selected option row: same fill as a selected state (.st.sel) plus an inset left accent, so it reads
        as selected without an outer border that would shift the row. */
     .rep.repsel {
@@ -552,20 +700,13 @@
         font-size: 10px;
         white-space: nowrap;
     }
-    /* The state id: a secondary, addressable handle (jump/rename). Dimmed and small so it does not compete
-       with the conversation line, which is what the tree is for reading. */
-    .sid {
-        color: #64748b;
-        font-size: 9px;
-        white-space: nowrap;
-    }
     .line {
         color: #93c5fd;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
     }
-    /* Editable NPC line rendered as a <button> (mirrors the option text's .rtextbtn): reset to read as the
+    /* Editable NPC line rendered as a <button>: reset to read as the
        plain line while staying a focusable, keyboard-operable edit target. Keeps .line's blue text + ellipsis. */
     .line.linebtn {
         background: none;
@@ -635,36 +776,17 @@
     .rmark {
         color: #475569;
     }
+    /* Option text. min-width:0 lets it shrink and ellipsize inside the flex row; the row itself (.reprow) is
+       the focusable selection target now, not this span. */
     .rtext {
         color: #cbd5e1;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-    }
-    /* The flat-option text rendered as a <button>: reset to read as text while staying a real, focusable,
-       keyboard-operable selection target. min-width:0 lets it shrink and ellipsize inside the flex row. */
-    .rtextbtn {
-        background: none;
-        border: none;
-        padding: 0;
-        margin: 0;
-        font: inherit;
-        text-align: left;
-        cursor: pointer;
         min-width: 0;
-        max-width: 100%;
-    }
-    .rtextbtn:hover {
-        text-decoration: underline;
-        text-underline-offset: 2px;
-    }
-    .rtextbtn:focus-visible {
-        outline: 1px solid #3b82f6;
-        outline-offset: 1px;
-        border-radius: 2px;
     }
     /* Inline edit input: fills the option-text slot, blue-bordered to signal active editing. Negative
-       vertical margin keeps the row height unchanged when the button swaps to the input. */
+       vertical margin keeps the row height unchanged when the text swaps to the input. */
     .rtextedit {
         flex: 1 1 auto;
         min-width: 0;
@@ -763,10 +885,10 @@
         color: #93a2b8;
         background: #20242c;
     }
-    /* Inline remove: hidden until the option row is hovered (or the button is focused for keyboard use),
-       pushed to the far right of the row. Disabled (conditional SSL option) reads dim and non-interactive. */
+    /* Inline remove: hidden until the option row is hovered (or the button is focused for keyboard use). Sits
+       inline at the end of the row's content (left-aligned, right after the target), not pushed to the far
+       right. Disabled (conditional SSL option) reads dim and non-interactive. */
     .delopt {
-        margin-left: auto;
         background: none;
         border: none;
         color: #b45; /* muted red, quiet until hover */

@@ -219,6 +219,19 @@
         else next.add(id);
         treeCollapsed = next;
     }
+    // Un-collapse the given states so a reveal target (a jump/ref/graph selection) that sits inside a
+    // collapsed branch actually renders and can be scrolled to. Reassigns the set (reactive) only if it changed.
+    function expandTreeStates(ids: string[]): void {
+        const next = new Set(treeCollapsed);
+        let changed = false;
+        for (const id of ids) if (next.delete(id)) changed = true;
+        if (changed) treeCollapsed = next;
+    }
+    // Go to source (F4): ask the host to open the .ssl/.d text editor at this byte offset. The host owns the
+    // document and the byte->position conversion (see panel.ts revealSource).
+    function goToSource(sourceOffset: number): void {
+        postToHost({ type: "revealSource", offset: sourceOffset });
+    }
     // Every collapsible state in the current tree (each ConvState appears once).
     function allTreeStateIds(): string[] {
         const ids: string[] = [];
@@ -965,7 +978,7 @@
         <div class="untra" role="status">
             <b>{unresolvedRefs}</b> message ref{unresolvedRefs === 1 ? "" : "s"} show as <code>@N</code> - translations aren't resolved.
             Point the tra path in <b>.bgforge.yml</b> (<code>translation.directory</code>, e.g. <code>tra/english</code>)
-            or add a <code>@tra&nbsp;~path~</code> line to the file.
+            or add a <code>/**&nbsp;@tra&nbsp;name.{isSSL ? "msg" : "tra"}&nbsp;*/</code> comment as the source file's first line.
         </div>
     {/if}
     <div class="body">
@@ -1005,7 +1018,7 @@
                     {#if treeData.roots.length === 0}
                         <div class="treeempty">No states in this dialog file.</div>
                     {/if}
-                    <Tree tree={treeData} selectedId={selected?.id} selectedChoiceId={selectedChoiceId} editingChoiceId={editingChoiceId} editingStateId={editingStateId} collapsed={treeCollapsed} editableStateIds={editableTreeStateIds} deletableStateIds={deletableTreeStateIds} ssl={editModel.format === "fallout-ssl"} onSelect={selectTreeState} onSelectReply={selectReplyInTree} onBeginEditReply={beginEditReply} onCommitEditReply={commitEditReply} onCancelEditReply={cancelEditReply} onBeginEditState={beginEditState} onCommitEditState={commitEditState} onCancelEditState={cancelEditState} onToggle={toggleTreeNode} onJump={treeJump} onContext={openContext} onReplyContext={openReplyContext} onAddReply={addReplyToState} onRemoveReply={removeReplyFromState} onAddChildNode={addChildNode} onDeleteState={deleteStateFromTree} />
+                    <Tree tree={treeData} selectedId={selected?.id} selectedChoiceId={selectedChoiceId} editingChoiceId={editingChoiceId} editingStateId={editingStateId} collapsed={treeCollapsed} editableStateIds={editableTreeStateIds} deletableStateIds={deletableTreeStateIds} ssl={editModel.format === "fallout-ssl"} onSelect={selectTreeState} onSelectReply={selectReplyInTree} onBeginEditReply={beginEditReply} onCommitEditReply={commitEditReply} onCancelEditReply={cancelEditReply} onBeginEditState={beginEditState} onCommitEditState={commitEditState} onCancelEditState={cancelEditState} onToggle={toggleTreeNode} onExpand={expandTreeStates} onGoToSource={goToSource} onJump={treeJump} onContext={openContext} onReplyContext={openReplyContext} onAddReply={addReplyToState} onRemoveReply={removeReplyFromState} onAddChildNode={addChildNode} onDeleteState={deleteStateFromTree} />
                 </div>
                 {#if ctxMenu}
                     <div class="ctxbackdrop" role="presentation" onclick={closeContext} oncontextmenu={(e) => (e.preventDefault(), closeContext())}></div>

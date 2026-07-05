@@ -53,6 +53,9 @@ export interface ConvReply {
         field uses (textFieldLocked): false for a locked SSL @N or a read-only/derived node. */
     textEditable: boolean;
     target: ConvTarget;
+    /** Byte offset of this option's statement in the source (SSL `callRange`/`stmtRange`, or the first call
+        site for a `call` transition), for "go to source". Absent for a pending/synthetic option. */
+    sourceOffset?: number;
 }
 
 /** One condition-branch of a bundle (if/else) state: its own NPC line and the replies it shows. */
@@ -88,6 +91,9 @@ export interface ConvState {
         field uses (textFieldLocked over the state's own text): false for a locked SSL @N or a read-only/
         derived node. Mirrors ConvReply.textEditable for the option text. */
     textEditable: boolean;
+    /** Byte offset of this state's source (SSL `procRange`, or D `sourceRange`), for "go to source".
+        Absent for a synthetic/derived state or a pending new node with no source span. */
+    sourceOffset?: number;
 }
 
 export interface ConversationTree {
@@ -155,6 +161,7 @@ export function buildConversationTree(
         lowIq: c.lowIq,
         textEditable: !textFieldLocked({ text: c.text, messages, ssl, textRO, isNew: isPendingChoice(c) }),
         target: buildTarget(c),
+        sourceOffset: c.callRange?.start ?? c.stmtRange?.start ?? c.callSites?.[0]?.stmtRange.start,
     });
 
     function expand(id: string): ConvState {
@@ -196,6 +203,7 @@ export function buildConversationTree(
             ...(branches ? { branches } : {}),
             isEntry: !targeted.has(s.id),
             textEditable: !textFieldLocked({ text: s.text, messages, ssl, textRO, isNew: isPendingState(s) }),
+            sourceOffset: s.procRange?.start ?? s.sourceRange?.start,
         };
     }
 

@@ -253,7 +253,7 @@ const firstSid = await firstItem.getAttribute("data-sid");
 await page.keyboard.press("ArrowDown");
 await page.waitForTimeout(80);
 // Navigation interleaves state rows and selectable options in DOM order, so ArrowDown off the first state
-// lands on either its first option (an .rtextbtn, carrying data-choice) or - if it has none - the next
+// lands on either its first option (a .rep row, carrying data-choice) or - if it has none - the next
 // state row. Either way the landing target must be BOTH focused and selected, proving selection follows:
 // a state row reads aria-selected="true"; a selected option's row carries the .repsel class.
 const down = await page.evaluate(() => {
@@ -295,37 +295,67 @@ check(
     JSON.stringify({ expInit, expCollapsed, expReExpanded }),
 );
 
-// Clip-aware line tooltips: a conversation line (NPC line, option text) exposes its full text as a hover
-// title ONLY when it is actually clipped - a line that fits shows no title (it would just echo the visible
-// text). Drive a narrow viewport so long lines clip and short ones ("(no line)", "(continue)") fit, then
-// assert both directions across every rendered line: fits => no title, clipped => title.
+// Tooltips. Option text (.rtext) shows a title ONLY when clipped - a fitting option would just echo the
+// visible text. A conversation line (.line) ALWAYS carries the state id (the NodeXXX dropped from the inline
+// row) as its title, with the full text appended when the line is clipped. Drive a narrow viewport so long
+// text clips and short text ("(no line)"/"(continue)") fits.
 await page.goto("file://" + appHtml);
 await page.setViewportSize({ width: 360, height: 800 });
 await postModel();
 await page.waitForSelector(".tree .line", { timeout: 10_000 });
 await page.waitForTimeout(150); // let each line's ResizeObserver run its initial clipped-or-not sync
 const tips = await page.evaluate(() => {
-    const lines = [...document.querySelectorAll<HTMLElement>(".tree .line, .tree .rtext")];
+    const opts = [...document.querySelectorAll<HTMLElement>(".tree .rtext")];
     let fitNoTitle = 0;
     let fitWithTitle = 0;
     let clipWithTitle = 0;
     let clipNoTitle = 0;
-    for (const el of lines) {
+    for (const el of opts) {
         const clipped = el.scrollWidth > el.clientWidth;
         const hasTitle = el.hasAttribute("title");
         if (clipped) hasTitle ? clipWithTitle++ : clipNoTitle++;
         else hasTitle ? fitWithTitle++ : fitNoTitle++;
     }
-    return { total: lines.length, fitNoTitle, fitWithTitle, clipWithTitle, clipNoTitle };
+    const lines = [...document.querySelectorAll<HTMLElement>(".tree .line")];
+    return {
+        optTotal: opts.length,
+        fitNoTitle,
+        fitWithTitle,
+        clipWithTitle,
+        clipNoTitle,
+        lineCount: lines.length,
+        linesAllTitled: lines.length > 0 && lines.every((el) => el.hasAttribute("title")),
+    };
 });
 check(
-    "line tooltips appear only when the text is clipped",
-    tips.total > 0 &&
+    "option tooltips appear only when clipped; every conversation line carries a tooltip (the id)",
+    tips.optTotal > 0 &&
         tips.fitWithTitle === 0 &&
         tips.clipNoTitle === 0 &&
         tips.fitNoTitle > 0 &&
-        tips.clipWithTitle > 0,
+        tips.clipWithTitle > 0 &&
+        tips.linesAllTitled,
     JSON.stringify(tips),
+);
+
+// State id is no longer an inline "NodeXXX" label, nor a row-wide tooltip: no .sid spans, the row carries no
+// title, and each state's conversation line exposes the id as its tooltip (title starts with the data-sid).
+const sidCheck = await page.evaluate(() => {
+    const row = [...document.querySelectorAll<HTMLElement>(".tree .st[data-sid]")].find((r) =>
+        r.querySelector(".line"),
+    );
+    const line = row?.querySelector<HTMLElement>(".line");
+    return {
+        sidSpans: document.querySelectorAll(".tree .sid").length,
+        rowHasNoTitle: !!row && !row.hasAttribute("title"),
+        lineTitleStartsWithId:
+            !!line && (line.getAttribute("title") ?? "").startsWith(row!.getAttribute("data-sid") ?? "\0"),
+    };
+});
+check(
+    "state id is the line's tooltip (starts with the id), not an inline label or row-wide tooltip",
+    sidCheck.sidSpans === 0 && sidCheck.rowHasNoTitle && sidCheck.lineTitleStartsWithId,
+    JSON.stringify(sidCheck),
 );
 
 // Tree inline add/remove option: the "+ option" row appends a player option to an editable state,
@@ -357,16 +387,16 @@ check(
     `afterAdd=${repsAfterAdd} afterRemove=${repsAfterRemove}`,
 );
 
-// Tree option selection: clicking an option's text (a <button>) selects that individual option - it
-// highlights the tree row (.rep.repsel), docks the Inspector for its owner state, and highlights the
-// matching option row there (.trow.choicesel). Drives the full production path (App -> $state proxy ->
-// DialogGraph.selectReplyInTree -> Inspector effect).
+// Tree option selection: clicking anywhere on an option row (the whole .rep row is the selection target)
+// selects that individual option - it highlights the tree row (.rep.repsel), docks the Inspector for its
+// owner state, and highlights the matching option row there (.trow.choicesel). Drives the full production
+// path (App -> $state proxy -> DialogGraph.selectReplyInTree -> Inspector effect).
 await page.goto("file://" + appHtml);
 await page.setViewportSize({ width: 900, height: 800 });
 await postModel();
 await page.waitForSelector('[role="treeitem"]', { timeout: 10_000 });
-const optBtn = page.locator(".rtextbtn").first();
-await optBtn.click();
+const optRow = page.locator(".rep[data-choice]").first();
+await optRow.click();
 await page.waitForTimeout(200);
 const selState = await page.evaluate(() => ({
     treeSel: document.querySelectorAll(".rep.repsel").length,
@@ -415,22 +445,40 @@ check(
     JSON.stringify(restored),
 );
 
-// Inline text editing: double-click an option's text -> an input appears, focused; type + Enter commits
-// the new text (through DialogGraph.commitEditReply -> the .msg/.tra or choice.text write-back + reproject).
-const editBtn = page.locator(".rtextbtn").first();
-const oldText = (await editBtn.textContent())?.trim() ?? "";
-await editBtn.dblclick();
+// Inline text editing: double-click an option row -> an input appears, focused; type + Enter commits the
+// new text (through DialogGraph.commitEditReply -> the .msg/.tra or choice.text write-back + reproject).
+const editRow = page.locator(".rep[data-choice]").first();
+const oldText = (await editRow.locator(".rtext").textContent())?.trim() ?? "";
+await editRow.dblclick();
 await page.waitForTimeout(150);
 const inputAppeared = await page.locator(".rtextedit").count();
 const inputFocused = await page.evaluate(() => document.activeElement?.classList.contains("rtextedit") ?? false);
 await page.locator(".rtextedit").first().fill("EDITED INLINE");
 await page.keyboard.press("Enter");
 await page.waitForTimeout(200);
-const newText = (await page.locator(".rtextbtn").first().textContent())?.trim() ?? "";
+const newText = (await page.locator(".rep[data-choice]").first().locator(".rtext").textContent())?.trim() ?? "";
 check(
     "double-click edits an option inline and Enter commits the new text",
     inputAppeared === 1 && inputFocused && newText === "EDITED INLINE" && newText !== oldText,
     JSON.stringify({ inputAppeared, inputFocused, oldText, newText }),
+);
+
+// After the inline edit commits (Enter), focus returns to the just-edited option row so the arrows keep
+// working - the pre-fix regression was that the input blurred to <body> and Up/Down stopped. ArrowDown must
+// now move focus/selection to a neighbouring row (a treeitem), not scroll.
+await page.keyboard.press("ArrowDown");
+await page.waitForTimeout(100);
+const afterEditNav = await page.evaluate(() => {
+    const a = document.activeElement as HTMLElement | null;
+    return {
+        key: a?.getAttribute("data-sid") ?? a?.getAttribute("data-choice") ?? null,
+        isRow: a?.getAttribute("role") === "treeitem",
+    };
+});
+check(
+    "after an inline edit commits, arrow keys still navigate (focus restored to the edited row)",
+    !!afterEditNav.key && afterEditNav.isRow,
+    JSON.stringify(afterEditNav),
 );
 
 // Inline NPC-line editing: a state's NPC line is a <button> (like the option text) when editable;
@@ -485,13 +533,15 @@ check(
 await page.goto("file://" + appHtml);
 await postModel();
 await page.waitForSelector('[role="treeitem"]', { timeout: 10_000 });
-const statesBeforeAdd = await page.locator('[role="treeitem"]').count();
+const statesBeforeAdd = await page.locator(".st").count();
 const firstRow = page.locator(".st").first();
 await firstRow.hover();
 await firstRow.locator(".addnode").click();
 await page.waitForTimeout(250);
 const nodeAdd = await page.evaluate(() => ({
-    states: document.querySelectorAll('[role="treeitem"]').length,
+    // Count state rows (.st) specifically - option rows are also [role=treeitem] now, so a plain treeitem
+    // count would jump by 2 (the new child state AND the new option leading to it).
+    states: document.querySelectorAll(".st").length,
     editing: document.activeElement?.classList.contains("rtextedit") ?? false,
 }));
 check(
@@ -505,7 +555,7 @@ check(
 await page.goto("file://" + appHtml);
 await postModel();
 await page.waitForSelector('[role="treeitem"]', { timeout: 10_000 });
-const statesBeforeDel = await page.locator('[role="treeitem"]').count();
+const statesBeforeDel = await page.locator(".st").count();
 const rowWithDel = page
     .locator(".st")
     .filter({ has: page.locator(".delnode:not([disabled])") })
@@ -517,7 +567,7 @@ await page.waitForTimeout(200);
 // Either proves the guarded delete path is wired from the tree.
 const delOutcome = await page.evaluate(() => ({
     confirm: !!document.querySelector(".confirm"),
-    states: document.querySelectorAll('[role="treeitem"]').length,
+    states: document.querySelectorAll(".st").length,
 }));
 check(
     'node "-" routes through the guarded delete (confirm on inbound refs, else immediate)',

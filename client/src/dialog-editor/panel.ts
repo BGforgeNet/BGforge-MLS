@@ -85,8 +85,12 @@ class DialogEditorProvider implements vscode.CustomTextEditorProvider {
         };
         this.sessions.set(panel, session);
 
-        panel.webview.onDidReceiveMessage((msg: { type?: string; model?: DialogModel }) => {
+        panel.webview.onDidReceiveMessage((msg: { type?: string; model?: DialogModel; offset?: number }) => {
             if (msg?.type === "ready") void this.postModel(document, panel);
+            // "Go to source" (F4 in the tree): open the text editor at the state's/option's byte offset.
+            else if (msg?.type === "revealSource" && typeof msg.offset === "number") {
+                void this.revealSource(document, msg.offset);
+            }
             // The webview emits one "edit" (the whole model) per user action; each applies to the live
             // document as a single WorkspaceEdit (one native undo step). Serialize them through the session
             // queue: two edits fired back-to-back would otherwise run applyEdit concurrently and their
@@ -162,6 +166,25 @@ class DialogEditorProvider implements vscode.CustomTextEditorProvider {
                         : "The parsed dialog data could not be interpreted.",
             });
         }
+    }
+
+    /**
+     * "Go to source" (F4 from the tree): open the .ssl/.d text editor beside the dialog editor, with the caret
+     * on the state's/option's source line. Tree-sitter ranges are UTF-8 BYTE offsets while `positionAt` wants a
+     * UTF-16 CHAR offset, so convert through the document's own text (offsets land on token boundaries, so the
+     * byte prefix never splits a character).
+     */
+    private async revealSource(document: vscode.TextDocument, byteOffset: number): Promise<void> {
+        const text = document.getText();
+        const charOffset = Buffer.from(text, "utf8").subarray(0, byteOffset).toString("utf8").length;
+        const pos = document.positionAt(charOffset);
+        const range = new vscode.Range(pos, pos);
+        const editor = await vscode.window.showTextDocument(document, {
+            viewColumn: vscode.ViewColumn.Beside,
+            preview: false,
+            selection: range,
+        });
+        editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
     }
 
     /**
