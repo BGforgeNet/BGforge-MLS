@@ -245,7 +245,7 @@
     <input class="iv code" value={state.id} disabled={!structuralEditable && readOnly} onchange={(e) => actions.rename(e.currentTarget.value)} />
 
     {#if !state.branches}
-        <!-- A bundle node shows its NPC line per branch below ("shown when ..." sections); the node-level
+        <!-- A bundle node shows its NPC line per branch below ([if] sections); the node-level
              reply field would duplicate it (and only the first branch's line), so omit it for bundle nodes. -->
         <div class="ik">NPC line</div>
         <textarea class="iv npc" rows="2" use:autosize={resolveText(state.text, messages)} disabled={textLocked(state.text, isPendingState(state))} value={resolveText(state.text, messages)} oninput={(e) => setSay(e.currentTarget.value)}></textarea>
@@ -256,7 +256,7 @@
              builtins it calls. Both read-only; "weight" and the per-choice `DO` action are
              WeiDU D concepts that have no SSL equivalent and are omitted. -->
         {#if !state.branches}
-            <!-- For a bundle node the condition is shown per branch ("shown when ...") and side-effects in
+            <!-- For a bundle node the condition is shown per branch (the [if] head) and side-effects in
                  each branch's logic drawer; the node-level fields would duplicate (first branch only), so
                  omit them for bundle nodes. -->
             <div class="ik">Condition</div>
@@ -329,7 +329,7 @@
             {#if labeled}<div class="ik">Option text</div>{/if}
             <textarea class="iv reply" rows="1" use:autosize={resolveText(c.text, messages)} disabled={textLocked(c.text, isPendingChoice(c))} placeholder="(no option text - continue)" value={resolveText(c.text, messages)} oninput={(e) => setReply(c, e.currentTarget.value)}></textarea>
             <!-- Inside a bundle branch the condition is already shown once at the branch head
-                 ("shown when ..."), so the per-option condition field is omitted to avoid a
+                 (the [if] chip), so the per-option condition field is omitted to avoid a
                  redundant disabled control on every row. Flat-path render is unchanged. -->
             {#if !state.branches}
                 {#if labeled}<div class="ik">Condition</div>{/if}
@@ -387,7 +387,7 @@
             <div class="branch">
                 {#if b.kind === "else"}
                     <div class="branchhead">
-                        <span>otherwise</span>
+                        <span class="branchlabel">[else]</span>
                         {#if structuralEditable}
                             <!-- Side-effect branches cannot be removed from the graph; the
                                  save path would have no way to cleanly splice out the opaque
@@ -403,7 +403,7 @@
                     </div>
                 {:else}
                     <div class="branchhead">
-                        <span class="branchlabel">shown when</span>
+                        <span class="branchlabel">[if]</span>
                         <input
                             class="iv code branchcond"
                             value={b.condition ?? ""}

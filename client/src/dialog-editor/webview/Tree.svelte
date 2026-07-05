@@ -586,7 +586,7 @@
              precedes the NPC line): the [if] reads as a precondition on the option before you read the text.
              The action [do] stays to the RIGHT of the text - it fires when the option is chosen, so it reads
              in flow order (text -> [do] -> target). Suppressed inside a branch/group render (branchReadonly):
-             the enclosing "shown when ..." header already carries the condition, so a per-option [if] there
+             the enclosing [if] header already carries the condition, so a per-option [if] there
              just duplicates it (for a structured node it would repeat the whole conjoined gate on every row). -->
         {#if r.condition && !branchReadonly}<span class="rcond" title={r.condition}>[if]</span>{/if}
         {#if !branchReadonly && r.id === editingChoiceId && r.textEditable}
