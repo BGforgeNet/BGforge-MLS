@@ -964,32 +964,40 @@
          canvas (a svelte-flow Panel, zero layout height) while the tree docked a header that consumed
          height - so switching views made the canvas jump. A single docked header keeps the height constant. -->
     <div class="dialogtoolbar">
-        <!-- Beta notice on the left (margin-right:auto pushes the view controls to the right), matching the
-             binary editor's toolbar-beta so the two editors read the same way. -->
-        <span class="dlgbeta">
-            Beta. Send feedback to
-            <a href="https://github.com/BGforgeNet/BGforge-MLS/issues" target="_blank" rel="noreferrer"
-               >https://github.com/BGforgeNet/BGforge-MLS/issues</a>
-        </span>
+        <!-- Three stacked rows: (1) beta/feedback, (2) buttons, (3) hotkeys - each its own line so the
+             groups never intermix when the toolbar wraps. -->
+        <!-- Row 1: beta / feedback notice, matching the binary editor's toolbar-beta. -->
+        <div class="tbrow">
+            <span class="dlgbeta">
+                Beta. Send feedback to
+                <a href="https://github.com/BGforgeNet/BGforge-MLS/issues" target="_blank" rel="noreferrer"
+                   >https://github.com/BGforgeNet/BGforge-MLS/issues</a>
+            </span>
+        </div>
+        <!-- Row 2: buttons - the view switch + actions (tree adds Expand/Collapse all). -->
+        <div class="tbrow">
+            {@render toolbar(viewMode === "graph")}
+            {#if viewMode === "tree"}
+                <span class="tbsep"></span>
+                <button class="toolbtn" title="Expand every state" onclick={expandAll}>Expand all</button>
+                <button class="toolbtn" title="Collapse every state" onclick={collapseAll}>Collapse all</button>
+            {/if}
+        </div>
         {#if viewMode === "tree"}
-            <!-- Tree keyboard reference. The bindings themselves live per row in Tree.svelte
+            <!-- Row 3: tree keyboard reference. The bindings themselves live per row in Tree.svelte
                  (onRowKeydown / onReplyRowKeydown) and window-wide for Delete; this strip only surfaces
                  them. Tree view only - they are outline-specific (arrows move between rows, G takes the
                  highlighted transition), so showing them over the graph canvas would mislead. -->
-            <span class="keyhints">
-                <span><kbd>Up</kbd>/<kbd>Down</kbd> move</span>
-                <span><kbd>Left</kbd>/<kbd>Right</kbd> fold</span>
-                <span><kbd>Enter</kbd>/<kbd>E</kbd> edit</span>
-                <span><kbd>G</kbd> go to target</span>
-                <span><kbd>F4</kbd> source</span>
-                <span><kbd>Del</kbd> delete</span>
-            </span>
-        {/if}
-        {@render toolbar(viewMode === "graph")}
-        {#if viewMode === "tree"}
-            <span class="tbsep"></span>
-            <button class="toolbtn" title="Expand every state" onclick={expandAll}>Expand all</button>
-            <button class="toolbtn" title="Collapse every state" onclick={collapseAll}>Collapse all</button>
+            <div class="tbrow">
+                <span class="keyhints">
+                    <span><kbd>Up</kbd>/<kbd>Down</kbd> move</span>
+                    <span><kbd>Left</kbd>/<kbd>Right</kbd> fold</span>
+                    <span><kbd>Enter</kbd>/<kbd>E</kbd> edit</span>
+                    <span><kbd>G</kbd> go to target</span>
+                    <span><kbd>F4</kbd> source</span>
+                    <span><kbd>Del</kbd> delete</span>
+                </span>
+            </div>
         {/if}
     </div>
     {#if unresolvedRefs > 0}
@@ -1212,8 +1220,7 @@
         border: 1px solid #3a3f4b;
         border-radius: 4px;
         overflow: hidden;
-        /* Push the view controls to the right of the toolbar, past the left-aligned beta notice + key hints. */
-        margin-left: auto;
+        /* A little extra separation from the actions that follow it on the buttons row. */
         margin-right: 6px;
         vertical-align: middle;
     }
@@ -1241,22 +1248,28 @@
         flex-direction: column;
         background: #191c21;
     }
-    /* Shared docked toolbar header for BOTH graph and tree views (see the markup comment). Wraps on a
-       narrow canvas: a non-wrapping row shrinks its items and the .viewseg (overflow:hidden) then clips
-       its own Graph/Tree buttons to nothing - stranding the user; wrapping keeps every control visible. */
+    /* Shared docked toolbar header for BOTH graph and tree views (see the markup comment). Three stacked
+       rows: feedback, buttons, hotkeys - each on its own line. Each row wraps internally on a narrow canvas
+       so every control stays visible (a non-wrapping row would let .viewseg's overflow:hidden clip its own
+       Graph/Tree buttons to nothing). */
     .dialogtoolbar {
         flex: 0 0 auto;
         display: flex;
-        flex-wrap: wrap;
-        align-items: center;
+        flex-direction: column;
+        align-items: stretch;
         gap: 4px;
         padding: 6px 8px;
         background: #15171c;
         border-bottom: 1px solid #2b303a;
     }
-    /* Beta notice + keyboard reference sit on the left of the toolbar (low-emphasis muted text); the view
-       controls push to the right via .viewseg margin-left:auto (below), mirroring the binary editor's
-       toolbar-beta/toolbar-actions split. */
+    /* One horizontal line of the toolbar (feedback / buttons / hotkeys); wraps internally when too narrow. */
+    .tbrow {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px;
+    }
+    /* Beta notice - low-emphasis muted text on its own row. */
     .dlgbeta {
         font-size: 11px;
         color: #9aa0a6;
