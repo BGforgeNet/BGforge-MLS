@@ -541,6 +541,11 @@
     >
         <span class="rmark">&#8627;</span>
         <LowIntChip lowIq={r.lowIq} />
+        <!-- Condition gate sits to the LEFT of the option text (matching the state row's trigger [if], which
+             precedes the NPC line): the [if] reads as a precondition on the option before you read the text.
+             The action [do] stays to the RIGHT of the text - it fires when the option is chosen, so it reads
+             in flow order (text -> [do] -> target). -->
+        {#if r.condition}<span class="rcond" title={r.condition}>[if]</span>{/if}
         {#if !branchReadonly && r.id === editingChoiceId && r.textEditable}
             <!-- Inline edit: the option's text as an input. Enter/blur commit, Escape cancels (both routed
                  through blur). Its click/dblclick/keydown are stopped so cursor placement, word-select and
@@ -568,7 +573,6 @@
                 use:clipTitle={{ text: r.hasText ? r.text : undefined }}
             >{r.hasText ? r.text || "(empty option)" : "(continue)"}</span>
         {/if}
-        {#if r.condition}<span class="rcond" title={r.condition}>[if]</span>{/if}
         {#if r.action}<span class="ract" title={r.action}>[do]</span>{/if}
         {@render leaf(r)}
         <!-- Inline remove (hover-revealed) on an editable state's flat option. A conditional SSL option is
