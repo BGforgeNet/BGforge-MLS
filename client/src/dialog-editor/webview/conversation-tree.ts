@@ -228,16 +228,23 @@ export function buildConversationTree(
             block = buildBlk(s.block);
         } else if (s.branches && s.branches.length > 0) {
             const choiceById = new Map(s.choices.map((c) => [c.id, c]));
-            branches = s.branches.map((b) => ({
-                kind: b.kind,
-                condition: b.condition,
-                npc: resolveText(b.replies[0]?.text, messages),
-                npcHasText: Boolean(b.replies[0]?.text),
-                replies: b.choiceIds
-                    .map((cid) => choiceById.get(cid))
-                    .filter((c): c is DialogChoice => c !== undefined)
-                    .map((c) => buildReply(c, textRO)),
-            }));
+            // An `else` branch runs on the negation of its matching `if` (the immediately preceding branch, per
+            // the parser's if-then-else emission order). Carry that inverted condition so the tree renders it as
+            // a normal `[if] not(...)` gate instead of a bare, context-free `[else]`. SSL negation is `not (...)`
+            // (these branches are SSL-only). The `if` condition is already parenthesized, so `not (X)` is valid.
+            branches = s.branches.map((b, i) => {
+                const ifCond = b.kind === "else" ? s.branches![i - 1]?.condition : b.condition;
+                return {
+                    kind: b.kind,
+                    condition: b.kind === "else" && ifCond ? `not ${ifCond}` : b.condition,
+                    npc: resolveText(b.replies[0]?.text, messages),
+                    npcHasText: Boolean(b.replies[0]?.text),
+                    replies: b.choiceIds
+                        .map((cid) => choiceById.get(cid))
+                        .filter((c): c is DialogChoice => c !== undefined)
+                        .map((c) => buildReply(c, textRO)),
+                };
+            });
         } else {
             replies = s.choices.map((c) => buildReply(c, textRO));
         }

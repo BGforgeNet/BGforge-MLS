@@ -972,7 +972,7 @@ procedure talk_p_proc begin call Node002; end
         const node = edited.roots[0]!.states.find((s) => s.id === "Node002")!;
         // The else-branch option (NOption 124 -> Node915) retargeted to Node999.
         const elseOpt = node.choices.find(
-            (c) => c.target.kind === "state" && c.target.stateId === "Node915" && c.condition?.startsWith("!"),
+            (c) => c.target.kind === "state" && c.target.stateId === "Node915" && c.condition?.startsWith("not "),
         )!;
         elseOpt.target = { kind: "state", stateId: "Node999" };
         const out = applySSLDialogEdits(SRC_BUNDLE, edited, original);
@@ -1096,7 +1096,7 @@ procedure talk_p_proc begin call Node002; end
                 c.target.kind === "state" &&
                 c.target.stateId === "Node999" &&
                 c.condition &&
-                !c.condition.startsWith("!"),
+                !c.condition.startsWith("not "),
         )!;
         node.choices = node.choices.filter((c) => c.id !== tgt.id);
         ifBranch.choiceIds = ifBranch.choiceIds.filter((id) => id !== tgt.id);

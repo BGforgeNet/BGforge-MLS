@@ -506,10 +506,12 @@
 {/snippet}
 
 {#snippet branchBlock(b: ConvBranch, depth: number, ownerId: string)}
-    <!-- Compact group gate: a short [if] chip (condition in the hover tooltip) / [else], the same marker the
-         flat option/state rows use - not the full condition spelled out inline. Keeps the tree dense. -->
+    <!-- Compact group gate: a short [if] chip, the same marker the flat option/state rows use, with the
+         condition in the hover tooltip - not spelled out inline. The else branch carries the inverted
+         condition (`not (...)`, set by conversation-tree), so it reads as [if] not(...) rather than a bare
+         context-free [else]. Keeps the tree dense. -->
     <div class="branchhdr" style="--lvl:{depth * 2 + 1}">
-        {#if b.kind === "if"}<span class="cond" title={b.condition}>[if]</span>{:else}<span class="belse">[else]</span>{/if}
+        <span class="cond" title={b.condition}>[if]</span>
     </div>
     <div class="brep" style="--lvl:{depth * 2 + 1}">
         <span class="line" use:clipTitle={{ label: ownerId, text: b.npc }}>{b.npc || "(no line)"}</span>
@@ -538,8 +540,11 @@
             </div>
             {@render convBlock(it.thenBlock, depth + 1, ownerId)}
             {#if it.elseBlock}
+                <!-- The else branch runs on the negation of the if, so show it as [if] with the inverted
+                     condition rather than a bare, context-free [else]. SSL negation is `not (...)` (these
+                     headers are SSL-only - branches/block come only from the SSL adapter). -->
                 <div class="branchhdr" style="--lvl:{depth * 2 + 1}">
-                    <span class="belse">[else]</span>
+                    <span class="cond" title={`not ${it.condition}`}>[if]</span>
                 </div>
                 {@render convBlock(it.elseBlock, depth + 1, ownerId)}
             {/if}
@@ -795,11 +800,6 @@
         display: flex;
         gap: 5px;
         align-items: baseline;
-    }
-    /* else branch gate: neutral grey (it is the negation/fallback, not a condition to read). */
-    .belse {
-        color: #8b93a1;
-        font-size: 9px;
     }
     .brep {
         display: flex;

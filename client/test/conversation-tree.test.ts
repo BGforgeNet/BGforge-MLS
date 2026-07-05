@@ -334,7 +334,7 @@ describe("buildConversationTree - Node998/Node999 as Combat/Exit terminals (SSL)
                 [
                     ch("N1#opt0", { kind: "state", stateId: "B" }, { text: "@10", condition: "(OUTER)" }),
                     ch("N1#opt1", { kind: "state", stateId: "C" }, { text: "@11", condition: "(OUTER) and (INNER)" }),
-                    ch("N1#opt2", { kind: "state", stateId: "D" }, { text: "@12", condition: "!(OUTER)" }),
+                    ch("N1#opt2", { kind: "state", stateId: "D" }, { text: "@12", condition: "not (OUTER)" }),
                     ch("N1#opt3", { kind: "exit" }, { text: "@13" }),
                 ],
                 {

@@ -749,11 +749,11 @@ function enclosingCondition(node: SyntaxNode): string | undefined {
             if (cond !== undefined) {
                 const elseBody = cur.childForFieldName("else");
                 // Compare by byte span, not reference: web-tree-sitter returns fresh wrapper objects for the
-                // same node, so `prev === elseBody` is never true. SSL conditions are parenthesized (`if (X)`),
-                // so `!cond` is already well-formed.
+                // same node, so `prev === elseBody` is never true. SSL negation is `not (...)` (not the C/D `!`),
+                // and SSL conditions are already parenthesized (`if (X)`), so `not (X)` is well-formed.
                 const inElse =
                     elseBody !== null && prev.startIndex === elseBody.startIndex && prev.endIndex === elseBody.endIndex;
-                parts.push(inElse ? `!${cond}` : cond);
+                parts.push(inElse ? `not ${cond}` : cond);
             }
         }
         prev = cur;

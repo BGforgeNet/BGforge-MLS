@@ -47,7 +47,7 @@ end
         const elseOpt = n1.options.find((o) => o.target === "Node003")!;
         // The if-branch option keeps the condition; the else-branch option runs on its negation.
         expect(ifOpt.conditional).toBe("(global_var(GVAR_X) == 1)");
-        expect(elseOpt.conditional).toBe("!(global_var(GVAR_X) == 1)");
+        expect(elseOpt.conditional).toBe("not (global_var(GVAR_X) == 1)");
     });
 
     it("keeps non-Node call targets (e.g. combat)", async () => {

@@ -59,7 +59,7 @@ describe("parseDialog (SSL) structured tier", () => {
         expect(opt209.conditional).toBeUndefined();
         // An else-branch option negates the outer condition.
         const opt202 = n1.options.find((o) => o.msgId === 202)!;
-        expect(opt202.conditional).toBe("!(local_var(LVAR_Herebefore) == 1)");
+        expect(opt202.conditional).toBe("not (local_var(LVAR_Herebefore) == 1)");
     });
 
     it("marks a multi-level-nested option NOT condition-editable (symptom 2)", async () => {
