@@ -506,13 +506,9 @@
 {/snippet}
 
 {#snippet branchBlock(b: ConvBranch, depth: number, ownerId: string)}
-    <!-- Compact group gate: a short [if] chip, the same marker the flat option/state rows use, with the
-         condition in the hover tooltip - not spelled out inline. The else branch carries the inverted
-         condition (`not (...)`, set by conversation-tree), so it reads as [if] not(...) rather than a bare
-         context-free [else]. Keeps the tree dense. -->
-    <div class="branchhdr" style="--lvl:{depth * 2 + 1}">
-        <span class="cond" title={b.condition}>[if]</span>
-    </div>
+    <!-- No group-header line: each branch renders its NPC line and its option rows, and every option carries
+         its own [if] chip (the branch condition - `not (...)` for the else - in the tooltip) on its own row.
+         The condition lives on the options it gates, not a separate header. -->
     <div class="brep" style="--lvl:{depth * 2 + 1}">
         <span class="line" use:clipTitle={{ label: ownerId, text: b.npc }}>{b.npc || "(no line)"}</span>
     </div>
@@ -521,11 +517,11 @@
     {/each}
 {/snippet}
 
-<!-- Recursive render for a `structured` node (arbitrarily nested if/else). Each group shows its condition
-     ONCE at its own indent level (a compact [if] chip / [else]) and its body nests one level in, so an
-     option's full gate is read from the groups it sits under - the fix for the flat projection that smeared
-     conjoined conditions onto every option and silently dropped outer gates (dialog-nested-flatten-bug-class).
-     Structure is read-only this slice: option rows are inert (branchReadonly), matching the bundle branch. -->
+<!-- Recursive render for a `structured` node (arbitrarily nested if/else). The gate is NOT a separate header
+     line: each option carries its own `[if]` chip (the full conjoined condition, incl. `not (...)` for an else
+     branch, in the tooltip) on its own row - see replyRow. So a group renders its branches inline (NPC line +
+     option rows) with no header; the condition lives on the options it gates. This keeps the else NPC line
+     (unlike a fully flat projection, which drops it - dialog-nested-flatten-bug-class). Read-only this slice. -->
 {#snippet convBlock(block: ConvBlock, depth: number, ownerId: string)}
     {#each block as it, i (i)}
         {#if it.kind === "line"}
@@ -535,18 +531,9 @@
         {:else if it.kind === "reply"}
             {@render replyRow(it.reply, depth, ownerId, i, block.length, true)}
         {:else if it.kind === "group"}
-            <div class="branchhdr" style="--lvl:{depth * 2 + 1}">
-                <span class="cond" title={it.condition}>[if]</span>
-            </div>
-            {@render convBlock(it.thenBlock, depth + 1, ownerId)}
+            {@render convBlock(it.thenBlock, depth, ownerId)}
             {#if it.elseBlock}
-                <!-- The else branch runs on the negation of the if, so show it as [if] with the inverted
-                     condition rather than a bare, context-free [else]. SSL negation is `not (...)` (these
-                     headers are SSL-only - branches/block come only from the SSL adapter). -->
-                <div class="branchhdr" style="--lvl:{depth * 2 + 1}">
-                    <span class="cond" title={`not ${it.condition}`}>[if]</span>
-                </div>
-                {@render convBlock(it.elseBlock, depth + 1, ownerId)}
+                {@render convBlock(it.elseBlock, depth, ownerId)}
             {/if}
         {/if}
     {/each}
@@ -585,10 +572,10 @@
         <!-- Condition gate sits to the LEFT of the option text (matching the state row's trigger [if], which
              precedes the NPC line): the [if] reads as a precondition on the option before you read the text.
              The action [do] stays to the RIGHT of the text - it fires when the option is chosen, so it reads
-             in flow order (text -> [do] -> target). Suppressed inside a branch/group render (branchReadonly):
-             the enclosing [if] header already carries the condition, so a per-option [if] there
-             just duplicates it (for a structured node it would repeat the whole conjoined gate on every row). -->
-        {#if r.condition && !branchReadonly}<span class="rcond" title={r.condition}>[if]</span>{/if}
+             in flow order (text -> [do] -> target). Shown on EVERY conditional option (flat, bundle branch, or
+             structured group alike): the gate lives on the option's own row, not a separate header line, with
+             the full conjoined condition (incl. `not (...)` for an else branch) in the tooltip. -->
+        {#if r.condition}<span class="rcond" title={r.condition}>[if]</span>{/if}
         {#if !branchReadonly && r.id === editingChoiceId && r.textEditable}
             <!-- Inline edit: the option's text as an input. Enter/blur commit, Escape cancels (both routed
                  through blur). Its click/dblclick/keydown are stopped so cursor placement, word-select and
@@ -790,16 +777,6 @@
         border: 1px solid #3b82f6;
         border-radius: 3px;
         outline: none;
-    }
-    /* Bundle/structured (if/else) branch grouping: a compact [if]/[else] gate chip above each branch's own
-       NPC line and replies. The chip reuses the flat option/state `.cond` [if] style so every condition
-       marker looks identical; the full condition is in the chip's hover tooltip (and the inspector). */
-    .branchhdr {
-        padding-left: calc(var(--lvl) * 14px + 8px);
-        line-height: 1.6;
-        display: flex;
-        gap: 5px;
-        align-items: baseline;
     }
     .brep {
         display: flex;
