@@ -422,13 +422,13 @@
         <!-- A structured (block) node shows its gating per-group below (each condition once at its level), so
              the flat node-level trigger [if] is suppressed here to avoid duplicating the first group's header. -->
         {#if st.trigger && !st.block}<span class="cond" title={st.trigger}>[if]</span>{/if}
-        <!-- A bundle node's line lives per-branch (below); only a flat node shows its line here. That flat
-             line is inline-editable (double-click it, or F2 on the row) when its text is editable - mirroring
-             option text: it swaps to an <input> while editing (Enter/blur commit, Escape cancels). A locked
-             line (unresolvable SSL @N, or a read-only/derived node) stays a plain, non-editing span. The
-             input's own click/dblclick/keydown are stopped from bubbling so cursor placement, word-select, and
-             typing (Space especially) act on the field, not the row (select / F2 / arrow-nav). -->
-        {#if !st.branches && !st.block}
+        <!-- The node's opening NPC line sits on the state row itself: a flat node's line, or a structured
+             node whose block begins with a top-level (unconditional) Reply - that line then renders here rather
+             than as a stray row below an empty state row (the block render skips it). A bundle node, or a
+             structured node whose first line is inside a branch, has no top-level line, so nothing shows here
+             and the line renders per-branch below. The line is inline-editable (double-click, or F2 on the row)
+             when its text is editable; a locked line (unresolvable SSL @N, read-only/derived) is a plain span. -->
+        {#if !st.branches && (!st.block || st.block[0]?.kind === "line")}
             {#if st.id === editingStateId && st.textEditable}
                 <input
                     class="line lineedit"
@@ -486,7 +486,8 @@
     </div>
     {#if !collapsed.has(st.id)}
         {#if st.block}
-            {@render convBlock(st.block, depth, st.id)}
+            <!-- When the block opens with a top-level line, it is shown on the state row above, so skip it here. -->
+            {@render convBlock(st.block[0]?.kind === "line" ? st.block.slice(1) : st.block, depth, st.id)}
         {:else if st.branches}
             {#each st.branches as b, bi (bi)}
                 {@render branchBlock(b, depth, st.id)}
