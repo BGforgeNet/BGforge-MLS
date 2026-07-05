@@ -964,6 +964,13 @@
          canvas (a svelte-flow Panel, zero layout height) while the tree docked a header that consumed
          height - so switching views made the canvas jump. A single docked header keeps the height constant. -->
     <div class="dialogtoolbar">
+        <!-- Beta notice on the left (margin-right:auto pushes the view controls to the right), matching the
+             binary editor's toolbar-beta so the two editors read the same way. -->
+        <span class="dlgbeta">
+            Beta. Send feedback to
+            <a href="https://github.com/BGforgeNet/BGforge-MLS/issues" target="_blank" rel="noreferrer"
+               >https://github.com/BGforgeNet/BGforge-MLS/issues</a>
+        </span>
         {@render toolbar(viewMode === "graph")}
         {#if viewMode === "tree"}
             <span class="tbsep"></span>
@@ -1230,6 +1237,19 @@
         padding: 6px 8px;
         background: #15171c;
         border-bottom: 1px solid #2b303a;
+    }
+    /* Beta notice on the left of the toolbar - low-emphasis muted text with a themed link. margin-right:auto
+       pushes the view controls to the right, mirroring the binary editor's toolbar-beta/toolbar-actions split. */
+    .dlgbeta {
+        margin-right: auto;
+        font-size: 11px;
+        color: #9aa0a6;
+    }
+    .dlgbeta a {
+        color: #60a5fa;
+    }
+    .dlgbeta a:hover {
+        color: #93c5fd;
     }
     /* Unresolved-translations banner: a full-width amber notice below the toolbar, matching the
        inspector's .ronote palette. Makes a silent tra/msg-resolution failure legible and actionable. */
