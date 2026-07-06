@@ -275,6 +275,23 @@ function parseProcedure(
     // top-down, so first-occurrence order is source order.
     const sideEffects: string[] = [];
 
+    // The state's own gate: the enclosing `if`s of the first `Reply` (whatever becomes `state.trigger`). Options
+    // scope their displayed condition to their own state by subtracting these, so a state-wide `if` shown on the
+    // state row is not re-shown on every child option. Pre-scanned so it is known before any option is processed
+    // (a Reply usually precedes options, but the walk order is not relied upon).
+    let firstReplyNode: SyntaxNode | undefined;
+    walkTree(proc, (node) => {
+        if (firstReplyNode) return;
+        if (
+            node.type === SyntaxType.CallExpr &&
+            node.childForFieldName("func")?.text === "Reply" &&
+            getCallArgs(node)[0]
+        ) {
+            firstReplyNode = node;
+        }
+    });
+    const stateGate = firstReplyNode ? enclosingIfKeys(firstReplyNode) : undefined;
+
     walkTree(proc, (node) => {
         if (node.type === SyntaxType.CallExpr) {
             const funcNode = node.childForFieldName("func");
@@ -301,7 +318,7 @@ function parseProcedure(
                     conditional: enclosingCondition(node),
                     msgKind: classifyMsgId(arg0),
                     ...(ifSpans
-                        ? { condRange: ifSpans.condRange, ifRange: ifSpans.ifRange, ifSingleCall: ifSpans.ifSingleCall }
+                        ? { condRange: ifSpans.condRange, ifRange: ifSpans.ifRange, ifPure: ifSpans.ifPure }
                         : {}),
                 });
             }
@@ -317,12 +334,13 @@ function parseProcedure(
                     skill: arg2 ? parseInt(arg2.text, 10) : undefined,
                     line,
                     conditional: enclosingCondition(node),
+                    scopedConditional: enclosingCondition(node, stateGate),
                     msgKind: classifyMsgId(arg0),
                     callRange: { start: node.startIndex, end: node.endIndex },
                     targetRange: { start: arg1.startIndex, end: arg1.endIndex },
                     stmtRange: statementRange(node),
                     ...(ifSpans
-                        ? { condRange: ifSpans.condRange, ifRange: ifSpans.ifRange, ifSingleCall: ifSpans.ifSingleCall }
+                        ? { condRange: ifSpans.condRange, ifRange: ifSpans.ifRange, ifPure: ifSpans.ifPure }
                         : {}),
                 });
             }
@@ -336,13 +354,14 @@ function parseProcedure(
                     target: "",
                     line,
                     conditional: enclosingCondition(node),
+                    scopedConditional: enclosingCondition(node, stateGate),
                     msgKind: classifyMsgId(arg0),
                     // A terminal message is an EXISTING statement: record its span so the editor can tell it
                     // from a newly-added option (which has no source range). Without this, a structural save
                     // re-serializes and duplicates it. No callRange/targetRange - a message has no target node.
                     stmtRange: statementRange(node),
                     ...(ifSpans
-                        ? { condRange: ifSpans.condRange, ifRange: ifSpans.ifRange, ifSingleCall: ifSpans.ifSingleCall }
+                        ? { condRange: ifSpans.condRange, ifRange: ifSpans.ifRange, ifPure: ifSpans.ifPure }
                         : {}),
                 });
             }
@@ -736,15 +755,19 @@ function classifyMsgId(node: SyntaxNode): "computed" | "random" | undefined {
  * feeds the flat projection (graph edge badge, inspector detail); the tree's structured render instead shows
  * each condition once at its own nesting level. For a single-level `if` (the faithful/bundle tiers) the result
  * is that one condition unchanged, so those tiers' round-trip is byte-identical.
+ *
+ * When `skip` is given, `if`s whose byte-span key is in it are omitted - used to scope an option's condition to
+ * its own state by dropping the state-level gate (the enclosing `if`s the state's first Reply also sits under,
+ * already shown as the state trigger), so that gate is not re-shown on every child option.
  */
-function enclosingCondition(node: SyntaxNode): string | undefined {
+function enclosingCondition(node: SyntaxNode, skip?: ReadonlySet<string>): string | undefined {
     // Track the child we ascend through so that at an `if` we can tell whether the call sits in the `then`
     // branch (runs on the condition) or the `else` branch (runs on its negation). Collect innermost-first.
     const parts: string[] = [];
     let prev: SyntaxNode = node;
     let cur: SyntaxNode | null = node.parent;
     while (cur) {
-        if (cur.type === SyntaxType.IfStmt) {
+        if (cur.type === SyntaxType.IfStmt && !skip?.has(`${cur.startIndex}:${cur.endIndex}`)) {
             const cond = cur.childForFieldName("cond")?.text;
             if (cond !== undefined) {
                 const elseBody = cur.childForFieldName("else");
@@ -765,19 +788,31 @@ function enclosingCondition(node: SyntaxNode): string | undefined {
     return parts.length === 1 ? parts[0] : parts.join(" and ");
 }
 
+// Byte-span keys of every enclosing `if` statement of `node`, up to the procedure body. Identifies the exact
+// `if` nodes so a caller can subtract a state-level gate from an option's condition by node identity (robust
+// against two different `if`s sharing the same condition text - see `enclosingCondition`'s `skip`).
+function enclosingIfKeys(node: SyntaxNode): ReadonlySet<string> {
+    const keys = new Set<string>();
+    let cur: SyntaxNode | null = node.parent;
+    while (cur) {
+        if (cur.type === SyntaxType.IfStmt) keys.add(`${cur.startIndex}:${cur.endIndex}`);
+        cur = cur.parent;
+    }
+    return keys;
+}
+
 // Spans of the nearest enclosing single-level `if` whose THEN-branch directly contains this call. Returns
 // undefined when the call is not in a then-branch (e.g. an else branch - non-faithful anyway, not editable).
-// condRange covers the `cond` field node (with its parentheses); ifRange the whole `if` statement; ifSingleCall
-// is true iff the then-branch contains exactly one dialog call/transition (the only condition-editable shape).
+// condRange covers the `cond` field node (with its parentheses); ifRange the whole `if` statement; ifPure is
+// true iff the then-branch holds this option ALONE (a single statement) - the only condition-editable shape,
+// because editing a gate shared with a Reply, sibling option, or side-effect would re-time those too.
 function enclosingIfSpans(
     node: SyntaxNode,
-):
-    | { condRange: { start: number; end: number }; ifRange: { start: number; end: number }; ifSingleCall: boolean }
-    | undefined {
+): { condRange: { start: number; end: number }; ifRange: { start: number; end: number }; ifPure: boolean } | undefined {
     let prev: SyntaxNode = node;
     let cur: SyntaxNode | null = node.parent;
     let inner:
-        | { condRange: { start: number; end: number }; ifRange: { start: number; end: number }; ifSingleCall: boolean }
+        | { condRange: { start: number; end: number }; ifRange: { start: number; end: number }; ifPure: boolean }
         | undefined;
     while (cur) {
         if (cur.type === SyntaxType.IfStmt) {
@@ -796,7 +831,7 @@ function enclosingIfSpans(
             inner = {
                 condRange: { start: condNode.startIndex, end: condNode.endIndex },
                 ifRange: { start: cur.startIndex, end: cur.endIndex },
-                ifSingleCall: countDialogCallsInBranch(thenBody) === 1,
+                ifPure: branchStatementCount(thenBody) === 1,
             };
             // Keep walking to detect an outer `if` (multi-level); return the inner span only if none is found.
         }
@@ -806,16 +841,17 @@ function enclosingIfSpans(
     return inner;
 }
 
-// Count dialog-producing statements in an if's then-branch: recognized dialog call exprs
-// (Reply/N*Option/.../N*Message) plus `call <target>;` transitions. Used only to decide single- vs
-// multi-call; nested ifs make a procedure non-faithful, so they never reach a faithful editable branch.
-function countDialogCallsInBranch(branch: SyntaxNode): number {
-    let n = 0;
-    walkTree(branch, (node) => {
-        if (node.type === SyntaxType.CallExpr && isDialogCallExpr(node)) n++;
-        if (node.type === SyntaxType.CallStmt) n++;
-    });
-    return n;
+// Number of source statements directly in an if's then-branch. A condition is editable only when its `if`
+// gates its option ALONE - the branch holds exactly ONE statement, that option - so editing the condition
+// affects nothing else. A Reply line, a sibling option, or a side-effect call sharing the branch makes it >1
+// (impure): editing the gate would silently re-time the other statements too. A begin...end block lists its
+// statements as named children; a bare single-statement then-body IS the statement. Comments don't count.
+function branchStatementCount(branch: SyntaxNode): number {
+    if (branch.type === SyntaxType.Block) {
+        return branch.namedChildren.filter((c) => c.type !== SyntaxType.Comment && c.type !== SyntaxType.LineComment)
+            .length;
+    }
+    return 1;
 }
 
 function walkTree(node: SyntaxNode, callback: (_node: SyntaxNode) => void): void {

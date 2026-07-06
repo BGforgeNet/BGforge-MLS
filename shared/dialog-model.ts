@@ -298,8 +298,9 @@ export interface DialogChoice {
     ifRange?: { start: number; end: number };
     /**
      * SSL only: whether this option's condition may be edited/added/removed from the graph - true when the
-     * option is unconditional OR sits in a single-call `if` (ifSingleCall). A shared `if` block (2+ calls)
-     * is false: its condition stays source-only. Set by the SSL adapter; the inspector gates the field on it.
+     * option is unconditional OR sits in a PURE `if` that gates it alone (`ifPure`: the then-branch holds only
+     * this option). A gate shared with a Reply, sibling option, or side-effect is false - editing it would
+     * re-time those too, so its condition stays source-only. Set by the SSL adapter; the inspector gates on it.
      */
     conditionEditable?: boolean;
     /**
@@ -605,7 +606,7 @@ function stateFromSSL(node: SSLDialogNode): DialogState {
     const choices: DialogChoice[] = [];
     // A structured or approximate node is structurally READ-ONLY this slice (a nested/composite gate cannot
     // round-trip to a single `if` wrapper - see dialog-nested-flatten-bug-class). Force every condition
-    // non-editable regardless of the per-option ifSingleCall, so the inspector shows source-only conditions.
+    // non-editable regardless of the per-option ifPure, so the inspector shows source-only conditions.
     const readOnlyStructure = node.structured === true || node.approximate === true;
 
     node.options.forEach((opt, i) => {
@@ -613,7 +614,9 @@ function stateFromSSL(node: SSLDialogNode): DialogState {
             id: `${node.name}#opt${i}`,
             text: sslMsgText(opt.msgId),
             textKind: opt.msgKind,
-            condition: opt.conditional,
+            // Display the state-scoped condition (own `if`s only) so the state's gate is not re-shown on each
+            // child option; edit-gating below still keys off the raw full `conditional`.
+            condition: opt.scopedConditional,
             // A message option (empty target) ends the conversation; an option target is a node.
             target: opt.target ? { kind: "state", stateId: opt.target } : { kind: "exit" },
             reaction: reactionFromType(opt.type),
@@ -626,7 +629,7 @@ function stateFromSSL(node: SSLDialogNode): DialogState {
             stmtRange: opt.stmtRange,
             condRange: opt.condRange,
             ifRange: opt.ifRange,
-            conditionEditable: readOnlyStructure ? false : opt.conditional === undefined || opt.ifSingleCall === true,
+            conditionEditable: readOnlyStructure ? false : opt.conditional === undefined || opt.ifPure === true,
         });
     });
 
@@ -682,7 +685,7 @@ function stateFromSSL(node: SSLDialogNode): DialogState {
         ifRange: firstReply?.ifRange,
         conditionEditable: readOnlyStructure
             ? false
-            : firstReply === undefined || firstReply.conditional === undefined || firstReply.ifSingleCall === true,
+            : firstReply === undefined || firstReply.conditional === undefined || firstReply.ifPure === true,
         choices,
         sideEffects: node.sideEffects,
         faithful: node.faithful,

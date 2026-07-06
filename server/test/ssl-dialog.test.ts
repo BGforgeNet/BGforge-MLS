@@ -261,9 +261,13 @@ procedure Node001 begin
         Reply(103);
         NOption(104, Node004, 004);
     end
+    if (local_var(LVAR_w) == 2) then begin
+        set_global_var(GVAR_w, 1);
+        NOption(106, Node005, 004);
+    end
 end`;
 
-    it("captures condRange/ifRange/ifSingleCall for a single-statement if", async () => {
+    it("captures condRange/ifRange/ifPure for a single-statement if (gates the option alone)", async () => {
         const data = await parseDialog(src);
         const n1 = data.nodes.find((n) => n.name === "Node001")!;
         const cond = n1.options.find((o) => o.msgId === 102)!;
@@ -272,15 +276,25 @@ end`;
         expect(src.slice(cond.ifRange!.start, cond.ifRange!.end)).toMatch(
             /^if \(local_var\(LVAR_x\) == 0\) then[\s\S]*NOption\(102, Node003, 004\);$/,
         );
-        expect(cond.ifSingleCall).toBe(true);
+        expect(cond.ifPure).toBe(true);
     });
 
-    it("marks a multi-call (shared) faithful block ifSingleCall=false", async () => {
+    it("marks a gate shared with a Reply line impure (ifPure=false)", async () => {
         const data = await parseDialog(src);
         const n1 = data.nodes.find((n) => n.name === "Node001")!;
         const shared = n1.options.find((o) => o.msgId === 104)!;
         expect(shared.condRange).toBeDefined();
-        expect(shared.ifSingleCall).toBe(false);
+        expect(shared.ifPure).toBe(false);
+    });
+
+    it("marks a gate shared with a SIDE-EFFECT impure - the option is the only dialog call, but editing the gate would re-time the side-effect", async () => {
+        const data = await parseDialog(src);
+        const n1 = data.nodes.find((n) => n.name === "Node001")!;
+        const sfx = n1.options.find((o) => o.msgId === 106)!;
+        // Only one DIALOG call in the branch, but a set_global_var shares the `if` - purity counts statements,
+        // not dialog calls, so this is NOT condition-editable.
+        expect(sfx.condRange).toBeDefined();
+        expect(sfx.ifPure).toBe(false);
     });
 
     it("leaves unconditional options without condition spans", async () => {
@@ -289,7 +303,7 @@ end`;
         const flat = n1.options.find((o) => o.msgId === 101)!;
         expect(flat.condRange).toBeUndefined();
         expect(flat.ifRange).toBeUndefined();
-        expect(flat.ifSingleCall).toBeUndefined();
+        expect(flat.ifPure).toBeUndefined();
     });
 });
 

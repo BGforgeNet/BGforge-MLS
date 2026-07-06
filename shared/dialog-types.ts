@@ -37,8 +37,9 @@ export interface SSLDialogReply {
     condRange?: { start: number; end: number };
     /** Byte span of the whole enclosing `if` statement. Set by the parser when conditional. Drives unwrap. */
     ifRange?: { start: number; end: number };
-    /** True iff the enclosing `if`'s then-branch holds exactly one dialog call - the only condition-editable shape. Set by the parser. */
-    ifSingleCall?: boolean;
+    /** True iff the enclosing `if` gates this reply ALONE - its then-branch holds exactly one statement (this
+     * reply), so editing the condition affects nothing else. The only condition-editable shape. Set by the parser. */
+    ifPure?: boolean;
 }
 
 export interface SSLDialogOption {
@@ -48,8 +49,14 @@ export interface SSLDialogOption {
     skill?: number;
     type: SSLDialogOptionType;
     line: number;
-    /** Raw conditional expression text, when the option is wrapped in `if (...)`. */
+    /** Raw conditional expression text - EVERY enclosing `if` up to the procedure body, conjoined. Drives
+     * edit-gating (`conditional === undefined` means unconditional) and the conditional badge. */
     conditional?: string;
+    /** Display condition scoped to the option's own state: `conditional` minus the enclosing `if`s that also
+     * gate the state (the ones that become `state.trigger` via the first Reply). Undefined when the option's
+     * only gate IS the state gate. Used for the tree's `[if]` chip so the state's condition is not re-shown on
+     * every child option. See `dialog-nested-flatten-bug-class`. */
+    scopedConditional?: string;
     /** See `SSLDialogReply.msgKind`: `computed`/`random` when the id is not a fixed literal. */
     msgKind?: "computed" | "random";
     /** Byte span of the whole option call `NOption(...)` in the source (used by reorder). Set by the parser. */
@@ -62,8 +69,9 @@ export interface SSLDialogOption {
     condRange?: { start: number; end: number };
     /** Byte span of the whole enclosing `if` statement. Set by the parser when conditional. Drives unwrap. */
     ifRange?: { start: number; end: number };
-    /** True iff the enclosing `if`'s then-branch holds exactly one dialog call - the only condition-editable shape. Set by the parser. */
-    ifSingleCall?: boolean;
+    /** True iff the enclosing `if` gates this option ALONE - its then-branch holds exactly one statement (this
+     * option), so editing the condition affects nothing else. The only condition-editable shape. Set by the parser. */
+    ifPure?: boolean;
 }
 
 /**

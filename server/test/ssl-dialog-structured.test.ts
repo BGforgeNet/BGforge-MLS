@@ -99,10 +99,16 @@ describe("parseDialog (SSL) structured tier", () => {
         expect(state.approximate).toBeUndefined();
         // Every option is structurally read-only (a nested/composite gate cannot round-trip to one `if`).
         expect(state.choices.every((c) => c.conditionEditable === false)).toBe(true);
-        // The nested option's condition is the full conjoined gate (outer AND inner), not just the inner.
+        // The state's own gate (the first Reply's enclosing `if`) is shown on the state, not re-shown on each
+        // child option: the displayed option condition is scoped to the state, so it carries the option's OWN
+        // inner gate but NOT the state-wide Herebefore gate.
+        expect(state.trigger).toContain("LVAR_Herebefore");
         const opt700 = state.choices.find((c) => c.condition?.includes("GVAR_ABBEY_GRAVES"))!;
-        expect(opt700.condition).toContain("LVAR_Herebefore");
         expect(opt700.condition).toContain("GVAR_ABBEY_GRAVES");
+        expect(opt700.condition).not.toContain("LVAR_Herebefore");
+        // A sibling option gated ONLY by the state-wide `if` has no own condition left after scoping.
+        const opt301 = state.choices.find((c) => c.id.endsWith("opt0"))!;
+        expect(opt301.condition).toBeUndefined();
     });
 
     it("conjoins three levels of nesting (corpus dialogs nest 3-4 deep)", async () => {

@@ -3,6 +3,7 @@
     import type { ConversationTree, ConvState, ConvReply, ConvBranch, ConvBlock } from "./conversation-tree";
     import Badge from "./Badge.svelte";
     import LowIntChip from "./LowIntChip.svelte";
+    import { optionRemoveLockReason } from "./inspector-edit";
 
     // Conversation-flow tree (built by conversation-tree.ts). Renders states and
     // their player replies as a nested outline; clicking a state selects it for the
@@ -483,7 +484,7 @@
                     class="nodebtn delnode"
                     title={canDel
                         ? "Delete this state"
-                        : "This state can't be deleted (a dialog entry, reached by a call, or referenced from non-editable code)"}
+                        : "This state can't be deleted here - it's a dialog entry, reached by a call, or referenced from non-editable code. Remove it in the .ssl source."}
                     disabled={!canDel}
                     onclick={(e) => (e.stopPropagation(), onDeleteState(st.id))}>-</button
                 >
@@ -624,7 +625,7 @@
             {@const blocked = ssl && Boolean(r.condition)}
             <button
                 class="delopt"
-                title={blocked ? "Conditional options are removed in the .ssl source" : "Remove option"}
+                title={blocked ? optionRemoveLockReason() : "Remove option"}
                 disabled={blocked}
                 onclick={(e) => (e.stopPropagation(), onRemoveReply(ownerId, r.id))}>&#10005;</button
             >

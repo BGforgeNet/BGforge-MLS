@@ -11,7 +11,17 @@
         type DialogState,
         type DialogTarget,
     } from "../../../../shared/dialog-model";
-    import { isPendingChoice, isPendingState, msgRef, textFieldLocked } from "./inspector-edit";
+    import {
+        conditionLockReason,
+        isPendingChoice,
+        isPendingState,
+        msgRef,
+        optionRemoveLockReason,
+        stateReadOnlyReason,
+        structuralLockReason,
+        textFieldLocked,
+        textLockReason,
+    } from "./inspector-edit";
     import type { CallerRow } from "./find-callers";
 
     // The detail panel for the selected state. For an editable format (WeiDU D) it is the
@@ -128,6 +138,11 @@
     // A derived state is still fully read-only (its line is owned by the source construct).
     const textRO = $derived(Boolean(state.derivedFrom) || (!editable && !ssl));
 
+    // Concrete, actionable reasons for the disabled controls, computed once per state (see inspector-edit.ts).
+    // Every disabled control binds its `title` to the matching reason so a locked field always explains why.
+    const structReason = $derived(structuralLockReason(state, ssl, editable));
+    const roReason = $derived(stateReadOnlyReason(state.derivedFrom));
+
     // When the user selects an individual option in the tree, the Inspector FOCUSES that option: a breadcrumb
     // back to the owner state, then just that option's fields (rendered by the shared choiceRow snippet in
     // `labeled` mode) instead of the whole-state editor. Only flat options are tree-selectable (branch options
@@ -242,13 +257,13 @@
     {/if}
 
     <div class="ik">{ssl ? "State" : readOnly ? "State label (read-only)" : "State label (jump target)"}</div>
-    <input class="iv code" value={state.id} disabled={!structuralEditable && readOnly} onchange={(e) => actions.rename(e.currentTarget.value)} />
+    <input class="iv code" value={state.id} disabled={!structuralEditable && readOnly} title={!structuralEditable && readOnly ? structReason : ""} onchange={(e) => actions.rename(e.currentTarget.value)} />
 
     {#if !state.branches}
         <!-- A bundle node shows its NPC line per branch below ([if] sections); the node-level
              reply field would duplicate it (and only the first branch's line), so omit it for bundle nodes. -->
         <div class="ik">NPC line</div>
-        <textarea class="iv npc" rows="2" use:autosize={resolveText(state.text, messages)} disabled={textLocked(state.text, isPendingState(state))} value={resolveText(state.text, messages)} oninput={(e) => setSay(e.currentTarget.value)}></textarea>
+        <textarea class="iv npc" rows="2" use:autosize={resolveText(state.text, messages)} disabled={textLocked(state.text, isPendingState(state))} title={textLockReason({ text: state.text, messages, ssl, textRO, isNew: isPendingState(state), derivedFrom: state.derivedFrom })} value={resolveText(state.text, messages)} oninput={(e) => setSay(e.currentTarget.value)}></textarea>
     {/if}
 
     {#if ssl}
@@ -274,11 +289,11 @@
         <div class="row2">
             <div>
                 <div class="ik">Trigger</div>
-                <input class="iv code" disabled={readOnly} value={state.trigger ?? ""} oninput={(e) => (state.trigger = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)} />
+                <input class="iv code" disabled={readOnly} title={readOnly ? roReason : ""} value={state.trigger ?? ""} oninput={(e) => (state.trigger = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)} />
             </div>
             <div class="wcol">
                 <div class="ik">Weight</div>
-                <input class="iv" type="number" disabled={readOnly} value={state.weight ?? ""} oninput={(e) => setWeight(e.currentTarget.value)} />
+                <input class="iv" type="number" disabled={readOnly} title={readOnly ? roReason : ""} value={state.weight ?? ""} oninput={(e) => setWeight(e.currentTarget.value)} />
             </div>
         </div>
     {/if}
@@ -302,8 +317,8 @@
                                  cannot cross into an adjacent branch. Remove is unconditional at the
                                  branch level (branch conditions live at the branch head, not per-option). -->
                             {#if structuralEditable}
-                                <button title="Move up" disabled={i === 0} onclick={() => actions.moveReplyInBranch(bi, c.id, -1)}>&#9650;</button>
-                                <button title="Move down" disabled={branchLen === undefined || i >= branchLen - 1} onclick={() => actions.moveReplyInBranch(bi, c.id, 1)}>&#9660;</button>
+                                <button title={i === 0 ? "Already first in this branch" : "Move up"} disabled={i === 0} onclick={() => actions.moveReplyInBranch(bi, c.id, -1)}>&#9650;</button>
+                                <button title={branchLen === undefined || i >= branchLen - 1 ? "Already last in this branch" : "Move down"} disabled={branchLen === undefined || i >= branchLen - 1} onclick={() => actions.moveReplyInBranch(bi, c.id, 1)}>&#9660;</button>
                                 <button title="Remove" class="del" onclick={() => actions.removeReplyInBranch(bi, c.id)}>&#10005;</button>
                             {/if}
                         {:else}
@@ -314,20 +329,20 @@
                                  save path does not rewrite (Tier 3), so its Remove is shown DISABLED (not
                                  hidden) with a tooltip - the unavailable action stays visible and explained. -->
                             {#if structuralEditable && !state.branches}
-                                <button title="Move up" disabled={i === 0} onclick={() => actions.moveReply(c.id, -1)}>&#9650;</button>
-                                <button title="Move down" disabled={i === state.choices.length - 1} onclick={() => actions.moveReply(c.id, 1)}>&#9660;</button>
+                                <button title={i === 0 ? "Already the first option" : "Move up"} disabled={i === 0} onclick={() => actions.moveReply(c.id, -1)}>&#9650;</button>
+                                <button title={i === state.choices.length - 1 ? "Already the last option" : "Move down"} disabled={i === state.choices.length - 1} onclick={() => actions.moveReply(c.id, 1)}>&#9660;</button>
                             {/if}
                             {#if !readOnly}
                                 <button title="Remove" class="del" onclick={() => actions.removeReply(c.id)}>&#10005;</button>
                             {:else if ssl && structuralEditable && !state.branches}
-                                <button title={c.condition ? "Conditional options are removed in the .ssl source" : "Remove"} class="del" disabled={Boolean(c.condition)} onclick={() => actions.removeReply(c.id)}>&#10005;</button>
+                                <button title={c.condition ? optionRemoveLockReason() : "Remove"} class="del" disabled={Boolean(c.condition)} onclick={() => actions.removeReply(c.id)}>&#10005;</button>
                             {/if}
                         {/if}
                     </span>
                 {/if}
             </div>
             {#if labeled}<div class="ik">Option text</div>{/if}
-            <textarea class="iv reply" rows="1" use:autosize={resolveText(c.text, messages)} disabled={textLocked(c.text, isPendingChoice(c))} placeholder="(no option text - continue)" value={resolveText(c.text, messages)} oninput={(e) => setReply(c, e.currentTarget.value)}></textarea>
+            <textarea class="iv reply" rows="1" use:autosize={resolveText(c.text, messages)} disabled={textLocked(c.text, isPendingChoice(c))} title={textLockReason({ text: c.text, messages, ssl, textRO, isNew: isPendingChoice(c), derivedFrom: state.derivedFrom })} placeholder="(no option text - continue)" value={resolveText(c.text, messages)} oninput={(e) => setReply(c, e.currentTarget.value)}></textarea>
             <!-- Inside a bundle branch the condition is already shown once at the branch head
                  (the [if] chip), so the per-option condition field is omitted to avoid a
                  redundant disabled control on every row. Flat-path render is unchanged. -->
@@ -337,7 +352,7 @@
                      (a nested/composite gate cannot round-trip), so the condition shown is the full conjoined
                      path; a faithful node's condition is read-only only when a multi-call `if` block shares it
                      across options. Word each accurately. -->
-                <textarea class="iv code cond" class:locked={ssl && c.conditionEditable === false} rows="1" use:autosize={c.condition ?? ""} disabled={ssl ? !c.conditionEditable : readOnly} title={ssl && c.conditionEditable === false ? (state.structured || state.approximate ? "This node's structure is read-only - edit the .ssl source" : "Condition shared by multiple options - edit the .ssl source") : ""} placeholder={ssl ? "(no condition)" : "condition (IF ~...~)"} value={c.condition ?? ""} oninput={(e) => (c.condition = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
+                <textarea class="iv code cond" class:locked={ssl && c.conditionEditable === false} rows="1" use:autosize={c.condition ?? ""} disabled={ssl ? !c.conditionEditable : readOnly} title={(ssl ? !c.conditionEditable : readOnly) ? conditionLockReason(state, c, ssl, editable) : ""} placeholder={ssl ? "(no condition)" : "condition (IF ~...~)"} value={c.condition ?? ""} oninput={(e) => (c.condition = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
                 <!-- Per-option note only for the BUNDLE shared-condition case (there is no banner for it). For a
                      structured/approximate node the top-of-panel banner already says the whole structure is
                      read-only, so repeating it on all N option cards is just clutter - the dashed field carries
@@ -348,11 +363,11 @@
             {/if}
             {#if !ssl && !state.branches}
                 {#if labeled}<div class="ik">Action</div>{/if}
-                <textarea class="iv code act" rows="1" use:autosize={c.action ?? ""} disabled={readOnly} placeholder="action (DO ~...~)" value={c.action ?? ""} oninput={(e) => (c.action = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
+                <textarea class="iv code act" rows="1" use:autosize={c.action ?? ""} disabled={readOnly} title={readOnly ? roReason : ""} placeholder="action (DO ~...~)" value={c.action ?? ""} oninput={(e) => (c.action = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
             {/if}
             <!-- Retarget is enabled for any structurally-editable node (D, faithful SSL, or bundle SSL). -->
             {#if labeled}<div class="ik">Target</div>{/if}
-            <select class="iv tgt" disabled={!structuralEditable} value={targetValue(c.target)} onchange={(e) => onTargetChange(c, e.currentTarget.value)}>
+            <select class="iv tgt" disabled={!structuralEditable} title={!structuralEditable ? structReason : ""} value={targetValue(c.target)} onchange={(e) => onTargetChange(c, e.currentTarget.value)}>
                 {#if c.target.kind === "external"}
                     <option value="ext">&#8631; {c.target.label}</option>
                 {/if}
@@ -369,13 +384,13 @@
                      which has no reaction/low-INT concept. -->
                 <div class="rctrow">
                     <span class="rctlbl">Reaction</span>
-                    <select class="iv rct" disabled={!structuralEditable} value={c.reaction} onchange={(e) => onReactionChange(c, e.currentTarget.value)}>
+                    <select class="iv rct" disabled={!structuralEditable} title={!structuralEditable ? structReason : ""} value={c.reaction} onchange={(e) => onReactionChange(c, e.currentTarget.value)}>
                         <option value="good">Good</option>
                         <option value="neutral">Neutral</option>
                         <option value="bad">Bad</option>
                     </select>
                     <label class="lowlbl">
-                        <input type="checkbox" checked={Boolean(c.lowIq)} disabled={!structuralEditable} onchange={(e) => actions.setLowIq(c.id, e.currentTarget.checked)} />
+                        <input type="checkbox" checked={Boolean(c.lowIq)} disabled={!structuralEditable} title={!structuralEditable ? structReason : ""} onchange={(e) => actions.setLowIq(c.id, e.currentTarget.checked)} />
                         Low INT
                     </label>
                 </div>
@@ -412,6 +427,7 @@
                             class="iv code branchcond"
                             value={b.condition ?? ""}
                             disabled={!structuralEditable}
+                            title={!structuralEditable ? structReason : ""}
                             placeholder="(condition)"
                             oninput={(e) => (b.condition = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}
                         />
@@ -457,6 +473,7 @@
                 <button
                     class="add"
                     disabled={$newBranchCond.trim() === ""}
+                    title={$newBranchCond.trim() === "" ? "Type a condition for the new if-branch first (an if without a condition isn't valid SSL)." : "Add if-branch"}
                     onclick={() => { actions.addBranch($newBranchCond.trim()); newBranchCond.set(""); }}
                 >+ if</button>
             </div>

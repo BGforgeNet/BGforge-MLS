@@ -970,9 +970,12 @@ procedure talk_p_proc begin call Node002; end
         const original = modelFromSSL(await parseDialog(SRC_BUNDLE));
         const edited = structuredClone(original);
         const node = edited.roots[0]!.states.find((s) => s.id === "Node002")!;
-        // The else-branch option (NOption 124 -> Node915) retargeted to Node999.
+        // The else-branch option (NOption 124 -> Node915) retargeted to Node999. Select it structurally via the
+        // else branch's choiceIds - the per-option condition is now scoped to the state (empty for a bundle
+        // branch option, since the branch head carries the gate), so it can no longer disambiguate branches.
+        const elseBranch = node.branches!.find((b) => b.kind === "else")!;
         const elseOpt = node.choices.find(
-            (c) => c.target.kind === "state" && c.target.stateId === "Node915" && c.condition?.startsWith("not "),
+            (c) => elseBranch.choiceIds.includes(c.id) && c.target.kind === "state" && c.target.stateId === "Node915",
         )!;
         elseOpt.target = { kind: "state", stateId: "Node999" };
         const out = applySSLDialogEdits(SRC_BUNDLE, edited, original);
@@ -1089,14 +1092,12 @@ procedure talk_p_proc begin call Node002; end
         const original = modelFromSSL(await parseDialog(SRC_BR));
         const edited = structuredClone(original);
         const node = edited.roots[0]!.states.find((s) => s.id === "Node002")!;
-        // Drop the then-branch option NOption(123, Node999): remove it from both choices and its branch.
+        // Drop the then-branch option NOption(123, Node999): remove it from both choices and its branch. Select
+        // it structurally via the if branch's choiceIds - the per-option condition is now scoped to the state
+        // (empty for a bundle branch option) and can no longer disambiguate the then branch from the else.
         const ifBranch = node.branches!.find((b) => b.kind === "if")!;
         const tgt = node.choices.find(
-            (c) =>
-                c.target.kind === "state" &&
-                c.target.stateId === "Node999" &&
-                c.condition &&
-                !c.condition.startsWith("not "),
+            (c) => ifBranch.choiceIds.includes(c.id) && c.target.kind === "state" && c.target.stateId === "Node999",
         )!;
         node.choices = node.choices.filter((c) => c.id !== tgt.id);
         ifBranch.choiceIds = ifBranch.choiceIds.filter((id) => id !== tgt.id);
