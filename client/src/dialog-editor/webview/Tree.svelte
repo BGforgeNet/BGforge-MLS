@@ -419,9 +419,9 @@
         <!-- Loud "structure simplified" warning for an approximate node: its flat render is lossy, so the row
              must say so rather than pass as a normal node (dialog-nested-flatten-bug-class, decision 3). -->
         {#if st.approximate}<Badge badges={["approximate"]} small />{/if}
-        <!-- A structured (block) node shows its gating per-group below (each condition once at its level), so
-             the flat node-level trigger [if] is suppressed here to avoid duplicating the first group's header. -->
-        {#if st.trigger && !st.block}<span class="cond" title={st.trigger}>[if]</span>{/if}
+        <!-- A structured (block) or bundle node carries its gating on the branch lines/options below, so the
+             flat node-level trigger [if] is suppressed here to avoid duplicating the first branch's marker. -->
+        {#if st.trigger && !st.block && !st.branches}<span class="cond" title={st.trigger}>[if]</span>{/if}
         <!-- The node's opening NPC line sits on the state row itself: a flat node's line, or a structured
              node whose block begins with a top-level (unconditional) Reply - that line then renders here rather
              than as a stray row below an empty state row (the block render skips it). A bundle node, or a
@@ -456,6 +456,12 @@
             {:else}
                 <span class="line" use:clipTitle={{ label: st.id, text: st.text }}>{st.text || "(no line)"}</span>
             {/if}
+        {:else}
+            <!-- A bundle/structured node whose opening line lives inside a branch (no unconditional top-level
+                 line) has nothing to show here; render a muted "(no line)" placeholder so the state row is not
+                 an empty bar (a selected node would otherwise highlight a blank row - the branch lines follow
+                 below, each carrying its own [if] gate). -->
+            <span class="line noline" use:clipTitle={{ label: st.id, text: "" }}>(no line)</span>
         {/if}
         <!-- Node add/delete (hover-revealed) on an editable state: "+" grows a connected child node, "-"
              deletes this state. Delete is shown disabled with a tooltip when the state can't be removed
@@ -513,6 +519,7 @@
          its own [if] chip (the branch condition - `not (...)` for the else - in the tooltip) on its own row.
          The condition lives on the options it gates, not a separate header. -->
     <div class="brep" style="--lvl:{depth * 2 + 1}">
+        {#if b.condition}<span class="cond" title={b.condition}>[if]</span>{/if}
         <span class="line" use:clipTitle={{ label: ownerId, text: b.npc }}>{b.npc || "(no line)"}</span>
     </div>
     {#each b.replies as r, i (r.id)}
@@ -529,6 +536,9 @@
     {#each block as it, i (i)}
         {#if it.kind === "line"}
             <div class="brep" style="--lvl:{depth * 2 + 1}">
+                <!-- A branch's opening NPC line carries the branch's [if] gate (else = `not (...)`), so an
+                     if-branch line reads differently from an else-branch line. Unconditional lines have none. -->
+                {#if it.condition}<span class="cond" title={it.condition}>[if]</span>{/if}
                 <span class="line" use:clipTitle={{ label: ownerId, text: it.npc }}>{it.npc || "(no line)"}</span>
             </div>
         {:else if it.kind === "reply"}
@@ -742,6 +752,12 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+    }
+    /* Placeholder for a node with no NPC line of its own (its lines live per-branch): muted, italic - reads as
+       "nothing here" rather than a real line, and gives the state row something to highlight when selected. */
+    .line.noline {
+        color: #5b6472;
+        font-style: italic;
     }
     /* Editable NPC line rendered as a <button>: reset to read as the
        plain line while staying a focusable, keyboard-operable edit target. Keeps .line's blue text + ellipsis. */

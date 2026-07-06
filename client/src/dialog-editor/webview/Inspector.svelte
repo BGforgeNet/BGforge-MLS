@@ -338,8 +338,12 @@
                      path; a faithful node's condition is read-only only when a multi-call `if` block shares it
                      across options. Word each accurately. -->
                 <textarea class="iv code cond" class:locked={ssl && c.conditionEditable === false} rows="1" use:autosize={c.condition ?? ""} disabled={ssl ? !c.conditionEditable : readOnly} title={ssl && c.conditionEditable === false ? (state.structured || state.approximate ? "This node's structure is read-only - edit the .ssl source" : "Condition shared by multiple options - edit the .ssl source") : ""} placeholder={ssl ? "(no condition)" : "condition (IF ~...~)"} value={c.condition ?? ""} oninput={(e) => (c.condition = e.currentTarget.value.trim() === "" ? undefined : e.currentTarget.value)}></textarea>
-                {#if ssl && c.conditionEditable === false}
-                    <div class="condnote">{state.structured || state.approximate ? "read-only" : "shared by other options"} - edit in <b>.ssl</b></div>
+                <!-- Per-option note only for the BUNDLE shared-condition case (there is no banner for it). For a
+                     structured/approximate node the top-of-panel banner already says the whole structure is
+                     read-only, so repeating it on all N option cards is just clutter - the dashed field carries
+                     the signal, the banner the explanation. -->
+                {#if ssl && c.conditionEditable === false && !state.structured && !state.approximate}
+                    <div class="condnote">shared by other options - edit in <b>.ssl</b></div>
                 {/if}
             {/if}
             {#if !ssl && !state.branches}
@@ -569,9 +573,14 @@
     .ronote b {
         color: #fcd34d;
     }
+    /* Disabled fields (read-only SSL: target dropdown, reaction, state id, ...) get the same dashed border as
+       the locked condition field below - the 0.55 dimming alone is too subtle to read as "not editable" (a
+       disabled <select> otherwise looks like an active dropdown, chevron and all). */
     .iv:disabled {
         opacity: 0.55;
         cursor: not-allowed;
+        border-style: dashed;
+        border-color: #6b7280;
     }
     .ik {
         color: #9aa0a6;

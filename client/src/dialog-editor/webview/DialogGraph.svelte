@@ -1286,8 +1286,8 @@
         display: inline-flex;
         flex-wrap: wrap;
         align-items: center;
-        gap: 3px 10px;
-        font-size: 11px;
+        gap: 2px 8px;
+        font-size: 10px;
         color: #9aa0a6;
     }
     .keyhints > span {
@@ -1295,7 +1295,7 @@
     }
     .keyhints kbd {
         font-family: var(--vscode-editor-font-family, monospace);
-        font-size: 10px;
+        font-size: 9px;
         color: #c5c8ce;
         background: #21242b;
         border: 1px solid #3a3f4b;

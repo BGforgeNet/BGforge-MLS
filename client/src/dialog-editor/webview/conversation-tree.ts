@@ -67,7 +67,7 @@ export interface ConvReply {
  * are dropped from the tree (surfaced via the node's side-effect badge). Recursive via `group`.
  */
 export type ConvBlockItem =
-    | { kind: "line"; npc: string; npcHasText: boolean }
+    | { kind: "line"; npc: string; npcHasText: boolean; condition?: string }
     | { kind: "reply"; reply: ConvReply }
     | { kind: "group"; condition: string; thenBlock: ConvBlock; elseBlock?: ConvBlock };
 
@@ -214,15 +214,19 @@ export function buildConversationTree(
                         const c = choiceById.get(it.choiceId);
                         return c ? [{ kind: "reply", reply: buildReply(c, textRO) }] : [];
                     }
-                    if (it.kind === "group")
+                    if (it.kind === "group") {
+                        const thenBlock = buildBlk(it.thenBlock);
+                        const elseBlock = it.elseBlock ? buildBlk(it.elseBlock) : undefined;
+                        // Mark each branch's OPENING NPC line with its gate so a conditional line reads as an
+                        // [if] (the else's negated `not (...)`) - the same marker the options use, so the reader
+                        // can tell an if-branch line from an else-branch line without a separate if/else tag.
+                        if (thenBlock[0]?.kind === "line") thenBlock[0] = { ...thenBlock[0], condition: it.condition };
+                        if (elseBlock?.[0]?.kind === "line")
+                            elseBlock[0] = { ...elseBlock[0], condition: `not ${it.condition}` };
                         return [
-                            {
-                                kind: "group",
-                                condition: it.condition,
-                                thenBlock: buildBlk(it.thenBlock),
-                                ...(it.elseBlock ? { elseBlock: buildBlk(it.elseBlock) } : {}),
-                            },
+                            { kind: "group", condition: it.condition, thenBlock, ...(elseBlock ? { elseBlock } : {}) },
                         ];
+                    }
                     return []; // opaque - not rendered in the tree (surfaced via the side-effect badge)
                 });
             block = buildBlk(s.block);
