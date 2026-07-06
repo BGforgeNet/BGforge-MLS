@@ -115,8 +115,8 @@ describe("Tree.svelte row selectability (SSR)", () => {
         const elseLine = "So you have returned to us."; // stand-in for the resolved @200 text
         const thenLine = "Welcome back, wanderer.";
         // A structured node exactly like absamuel.ssl Node001: a top-level if/else group whose else branch's
-        // opening line is the (conditional) NPC line. block[0] is a `group`, so the state row shows "(no line)"
-        // and the whole block renders through convBlock - the path where the else line used to be inert.
+        // opening line is the (conditional) NPC line. block[0] is a `group`, so the state row shows the "if /
+        // else" fork hint and the whole block renders through convBlock - the path where the else line was inert.
         const tree: ConversationTree = {
             roots: [
                 {

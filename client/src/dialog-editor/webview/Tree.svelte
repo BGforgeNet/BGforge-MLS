@@ -537,11 +537,11 @@
                 <span class="line" use:clipTitle={{ label: st.id, text: st.text }}>{st.text || "(no line)"}</span>
             {/if}
         {:else}
-            <!-- A bundle/structured node whose opening line lives inside a branch (no unconditional top-level
-                 line) has nothing to show here; render a muted "(no line)" placeholder so the state row is not
-                 an empty bar (a selected node would otherwise highlight a blank row - the branch lines follow
-                 below, each carrying its own [if] gate). -->
-            <span class="line noline" use:clipTitle={{ label: st.id, text: "" }}>(no line)</span>
+            <!-- A bundle/structured node has no unconditional opening line - its lines live per branch. Rather
+                 than a confusing "(no line)" on the node row, mark it as a fork: the node id (shown above) is the
+                 header, and the branch lines below - each with its [if]/[else] gate - ARE the node's two forms.
+                 A muted "if / else" hint keeps the row from reading as an empty bar. -->
+            <span class="line forkhint">if / else</span>
         {/if}
         <!-- Node add/delete (hover-revealed) on an editable state: "+" grows a connected child node, "-"
              deletes this state. Delete is shown disabled with a tooltip when the state can't be removed
@@ -886,6 +886,13 @@
     .line.noline {
         color: #5b6472;
         font-style: italic;
+    }
+    /* Fork hint on an if/else node's row: it has no single line - its two branch lines below (each [if]/[else]
+       gated) are its forms. Muted + italic so it reads as a structural marker, not dialogue. */
+    .line.forkhint {
+        color: #5b6472;
+        font-style: italic;
+        font-size: 10px;
     }
     /* Editable NPC line rendered as a <button>: reset to read as the
        plain line while staying a focusable, keyboard-operable edit target. Keeps .line's blue text + ellipsis. */
