@@ -4,6 +4,7 @@
         resolveText,
         sslTerminalKind,
         stateHeadLabel,
+        type DialogBlock,
         type DialogBranch,
         type DialogChoice,
         type DialogFormat,
@@ -31,13 +32,16 @@
     // (Fallout SSL) it is a read-only, SSL-native presentation - SSL is derived from script
     // and has no surgical write-back yet, so editing is disabled and the WeiDU vocabulary
     // (trigger/weight/`DO ~...~`) is replaced or dropped.
-    let { state, messages, stateIds, actions, format, editable, structuralEditable, deletable, sourceName, callers, selectedChoiceId, onNavigate, onFocusOwnerState }: {
+    let { state, messages, stateIds, actions, format, editable, structuralEditable, deletable, sourceName, callers, selectedChoiceId, highlightedBranchKey, onNavigate, onFocusOwnerState }: {
         state: DialogState;
         messages: Record<string, string> | undefined;
         stateIds: string[];
         /** When the user selects an individual option in the tree, its choice id - this panel scrolls to
             and focuses that option's field. Null when a whole state is selected. */
         selectedChoiceId?: string | null;
+        /** The tree's highlighted if/else branch key (set by clicking a branch line), or null. For a
+            structured node the matching branch section is tinted and scrolled into view. */
+        highlightedBranchKey?: string | null;
         /** Dialog file base name -> speaker fallback for the title (see stateHeadLabel). */
         sourceName: string | undefined;
         /** Inbound references to this state (who reaches it), resolved to display rows. */
@@ -191,6 +195,55 @@
         return b.choiceIds.map((id) => byId.get(id)).filter((c): c is DialogChoice => c !== undefined);
     }
 
+    type InspectorSection = { key: string; kind: "if" | "else" | "always"; condition?: string; npc?: string; choices: DialogChoice[] };
+    // A STRUCTURED node's recursive block, flattened into read-only inspector sections: one per TOP-LEVEL if/else
+    // branch (choices gated by that branch, nested ones flattened but keeping their own condition), plus an
+    // "(always)" section for unconditional top-level options. The section keys match the tree's branch keys
+    // (conversation-tree stampBranchKeys), so `highlightedBranchKey` tints the section for the clicked branch.
+    const inspectorBranches = $derived.by((): InspectorSection[] => {
+        const block = state.block;
+        if (!block) return [];
+        const byId = new Map(state.choices.map((c) => [c.id, c]));
+        const collect = (b: DialogBlock): DialogChoice[] =>
+            b.flatMap((it) => {
+                if (it.kind === "choice") return byId.get(it.choiceId) ? [byId.get(it.choiceId)!] : [];
+                if (it.kind === "group") return [...collect(it.thenBlock), ...(it.elseBlock ? collect(it.elseBlock) : [])];
+                return [];
+            });
+        const firstLine = (b: DialogBlock): string | undefined => {
+            const l = b.find((it) => it.kind === "line");
+            return l ? resolveText(l.text, messages) : undefined;
+        };
+        const sections: InspectorSection[] = [];
+        const always: DialogChoice[] = [];
+        let gi = 0;
+        for (const it of block) {
+            if (it.kind === "choice") {
+                const c = byId.get(it.choiceId);
+                if (c) always.push(c);
+            } else if (it.kind === "group") {
+                sections.push({ key: `${state.id}#${gi}if`, kind: "if", condition: it.condition, npc: firstLine(it.thenBlock), choices: collect(it.thenBlock) });
+                if (it.elseBlock)
+                    sections.push({ key: `${state.id}#${gi}else`, kind: "else", condition: `not ${it.condition}`, npc: firstLine(it.elseBlock), choices: collect(it.elseBlock) });
+                gi++;
+            }
+        }
+        if (always.length > 0) sections.push({ key: "", kind: "always", choices: always });
+        return sections;
+    });
+    // A section is highlighted when the clicked branch key falls within it (starts with the section's key), so
+    // clicking a nested branch tints its containing top-level section. The "(always)" section (key "") never tints.
+    function sectionHl(key: string): boolean {
+        return Boolean(key && highlightedBranchKey && highlightedBranchKey.startsWith(key));
+    }
+    // Short target label for a read-only branch option (mirrors the tree's arrow chips).
+    function targetLabel(t: DialogTarget): string {
+        if (t.kind === "exit") return "EXIT";
+        if (t.kind === "state") return t.stateId;
+        if (t.kind === "external") return t.label;
+        return "?";
+    }
+
     // When an option is selected in the tree, scroll its row into view here and highlight it (the highlight
     // is the `.choicesel` class on the row). Editing itself happens inline in the tree now, so this no longer
     // steals focus into the panel - it only reveals the matching row. Keyed on `selectedChoiceId` so it fires
@@ -203,6 +256,14 @@
     $effect(() => {
         if (!selectedChoiceId) return;
         document.querySelector(`.inspector .trow[data-cid="${CSS.escape(selectedChoiceId)}"]`)?.scrollIntoView({ block: "nearest" });
+    });
+    // Scroll the clicked branch's section into view (mirrors the option scroll above). Keyed on
+    // highlightedBranchKey so it fires each time a different branch line is clicked.
+    $effect(() => {
+        if (!highlightedBranchKey) return;
+        document
+            .querySelector(`.inspector .binspbranch[data-bkey="${CSS.escape(highlightedBranchKey)}"]`)
+            ?.scrollIntoView({ block: "nearest" });
     });
 </script>
 
@@ -259,9 +320,9 @@
     <div class="ik">{ssl ? "State" : readOnly ? "State label (read-only)" : "State label (jump target)"}</div>
     <input class="iv code" value={state.id} disabled={!structuralEditable && readOnly} title={!structuralEditable && readOnly ? structReason : ""} onchange={(e) => actions.rename(e.currentTarget.value)} />
 
-    {#if !state.branches}
-        <!-- A bundle node shows its NPC line per branch below ([if] sections); the node-level
-             reply field would duplicate it (and only the first branch's line), so omit it for bundle nodes. -->
+    {#if !state.branches && !state.block}
+        <!-- A bundle/structured node shows its NPC line per branch below ([if]/[else] sections); the node-level
+             reply field would duplicate it (and only the first branch's line), so omit it for branch nodes. -->
         <div class="ik">NPC line</div>
         <textarea class="iv npc" rows="2" use:autosize={resolveText(state.text, messages)} disabled={textLocked(state.text, isPendingState(state))} title={textLockReason({ text: state.text, messages, ssl, textRO, isNew: isPendingState(state), derivedFrom: state.derivedFrom })} value={resolveText(state.text, messages)} oninput={(e) => setSay(e.currentTarget.value)}></textarea>
     {/if}
@@ -270,10 +331,10 @@
         <!-- SSL: the node's reply condition (its enclosing `if`) and the state-mutating
              builtins it calls. Both read-only; "weight" and the per-choice `DO` action are
              WeiDU D concepts that have no SSL equivalent and are omitted. -->
-        {#if !state.branches}
-            <!-- For a bundle node the condition is shown per branch (the [if] head) and side-effects in
-                 each branch's logic drawer; the node-level fields would duplicate (first branch only), so
-                 omit them for bundle nodes. -->
+        {#if !state.branches && !state.block}
+            <!-- For a bundle/structured node the condition is shown per branch (the [if]/[else] head) and
+                 side-effects in each branch; the node-level fields would duplicate (first branch only), so
+                 omit them for branch nodes. -->
             <div class="ik">Condition</div>
             <!-- Node-reply condition editing is a follow-up: the parser must capture the Reply
                  statement span to support wrap/unwrap; the save path and verify must diff the
@@ -483,6 +544,27 @@
                 <button class="add branchadd" onclick={actions.addElse}>+ else</button>
             {/if}
         {/if}
+    {:else if ssl && state.block}
+        <!-- Structured (read-only) node: options grouped into read-only [if]/[else] branch sections mirroring
+             the tree's fork. The section for the branch clicked in the tree (highlightedBranchKey) is tinted and
+             scrolled into view. Each option shows its text, target, and full condition - editing the structure
+             means editing the .ssl (the top-of-panel banner says so). -->
+        {#each inspectorBranches as br (br.key)}
+            <div class="branch binspbranch" class:branchhl={sectionHl(br.key)} data-bkey={br.key}>
+                <div class="branchhead">
+                    <span class="branchlabel">{br.kind === "else" ? "[else]" : br.kind === "if" ? "[if]" : "(always)"}</span>
+                    {#if br.condition}<span class="iv code binspcond">{br.condition}</span>{/if}
+                </div>
+                {#if br.npc}<div class="branchreply">{br.npc}</div>{/if}
+                {#each br.choices as c (c.id)}
+                    <div class="binsprow">
+                        <span class="binsptext">{resolveText(c.text, messages) || "(continue)"}</span>
+                        <span class="binsptgt">&#8594; {targetLabel(c.target)}</span>
+                        {#if c.condition}<div class="iv code binspocond">{c.condition}</div>{/if}
+                    </div>
+                {/each}
+            </div>
+        {/each}
     {:else}
         {#each state.choices as c, i (c.id)}
             {@render choiceRow(c, i)}
@@ -846,6 +928,46 @@
         color: #cbd5e1;
         font-size: 11px;
         margin: 1px 0 4px;
+    }
+    /* Read-only branch sections for a STRUCTURED node (inspectorBranches): reuse .branch chrome; the section
+       for the branch clicked in the tree (highlightedBranchKey) gets a blue accent + tint so it matches the
+       tree's branch highlight. */
+    .binspbranch.branchhl {
+        border-left-color: #60a5fa;
+        background: rgba(59, 130, 246, 0.1);
+    }
+    .binspcond {
+        width: auto;
+        min-width: 55%;
+        font-size: 10px;
+        padding: 1px 4px;
+        color: #cbd5e1;
+    }
+    .binsprow {
+        display: flex;
+        align-items: baseline;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 3px 0;
+        padding-left: 6px;
+        border-left: 1px solid #2b303a;
+    }
+    .binsptext {
+        color: #d1d5db;
+        font-size: 11px;
+    }
+    .binsptgt {
+        color: #93c5fd;
+        font-size: 10px;
+        white-space: nowrap;
+    }
+    .binspocond {
+        flex-basis: 100%;
+        width: auto;
+        font-size: 9px;
+        color: #7c8798;
+        padding: 0 4px;
+        margin-left: 6px;
     }
     .logic {
         color: #9aa0a6;
