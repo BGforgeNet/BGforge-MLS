@@ -206,3 +206,44 @@ describe("Tree.svelte row selectability (SSR)", () => {
         expect(inSelectableButton(html, elseLine)).toBe(true);
     });
 });
+
+// PARITY GUARD: a branch option's STRUCTURE is read-only, but its .msg/.tra text is editable - which the
+// Inspector's focused-option view allows. The tree must gate inline TEXT edit on `textEditable` ALONE, never on
+// branch-ness. The bug this guards: the tree layered a coarse `branchReadonly` flag OVER `textEditable`, so a
+// branch option was editable in the Inspector but not inline. If a surface re-introduces an override that
+// contradicts the shared text gate, this turns red.
+describe("Tree.svelte branch-option inline-edit parity (SSR)", () => {
+    const branchNode = (textEditable: boolean): ConversationTree => ({
+        roots: [
+            {
+                id: "Node001",
+                text: "",
+                replies: [],
+                isEntry: true,
+                textEditable: false,
+                branches: [
+                    {
+                        kind: "else",
+                        condition: "not (x)",
+                        npc: "So you have returned.",
+                        npcHasText: true,
+                        replies: [
+                            { id: "Node001#opt1", text: "@202", hasText: true, textEditable, target: { kind: "exit" } },
+                        ],
+                    },
+                ],
+            },
+        ],
+    });
+
+    it("an editable branch option renders the inline edit input in edit mode (matches the Inspector)", () => {
+        const html = renderTree(branchNode(true), { editingChoiceId: "Node001#opt1" });
+        expect(html).toMatch(/<input[^>]*class="rtext rtextedit/); // editable text -> input, not a static span
+    });
+
+    it("a locked branch option stays a static span even in edit mode (text genuinely not editable)", () => {
+        const html = renderTree(branchNode(false), { editingChoiceId: "Node001#opt1" });
+        expect(html).not.toMatch(/rtextedit/); // not editable -> no inline input
+        expect(html).toContain("@202"); // shown as static text
+    });
+});

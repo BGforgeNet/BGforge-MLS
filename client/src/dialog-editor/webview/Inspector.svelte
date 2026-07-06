@@ -24,6 +24,7 @@
         textLockReason,
     } from "./inspector-edit";
     import type { CallerRow } from "./find-callers";
+    import { autosize } from "./autosize";
 
     // The detail panel for the selected state. For an editable format (WeiDU D) it is the
     // edit surface: content fields (SAY, trigger, weight, reply/condition/action) mutate the
@@ -169,21 +170,6 @@
         return textFieldLocked({ text, messages, ssl, textRO, isNew });
     }
 
-    // Grow a textarea to fit its content so nothing hides behind an inner scrollbar. The
-    // action parameter is the current display value: passing it makes `update` re-fit when
-    // the value changes reactively (a new selection, or a live edit), not just on keystroke.
-    function autosize(el: HTMLTextAreaElement) {
-        const fit = (): void => {
-            el.style.height = "auto";
-            el.style.height = `${el.scrollHeight}px`;
-        };
-        fit();
-        el.addEventListener("input", fit);
-        // On a reactive VALUE change (e.g. selecting a different option), Svelte may run this action `update`
-        // BEFORE it writes the new `value` to the element, so fitting synchronously measures the STALE text and
-        // the height lags one selection behind. Defer to a microtask so the fit runs after the DOM value settles.
-        return { update: () => queueMicrotask(fit), destroy: () => el.removeEventListener("input", fit) };
-    }
 
     // Inline condition input for adding a new if-branch. A plain `$state("")` local here
     // produced two build warnings in this component: the compiler flagged the ambiguity between
