@@ -285,3 +285,35 @@ describe("SSL from-scratch dialog scaffold", () => {
         expect(out).toContain("procedure Node998 begin"); // the missing one is still scaffolded
     });
 });
+
+// A new node's procedure must be spliced onto its OWN line - never concatenated onto the preceding procedure's
+// `end` as `endprocedure <name>`, which lexes as a single identifier and drops the node on re-parse (observed
+// live: rename a node + save, then add a node + save -> `endprocedure FreshGreeting`, and the node vanishes).
+// The add-splice inserts at `newProcAnchor`; the webview model's byte offsets are not re-projected between
+// saves, so a length-changing prior edit can leave a STALE anchor whose preceding byte is a non-newline.
+describe("SSL add-node splice keeps a separating newline", () => {
+    const SRC = `procedure Node001 begin\n    Reply(200);\n    NOption(201, Node999, 4);\nend\nprocedure talk_p_proc begin\n    call Node001;\nend\n`;
+
+    it("prepends a newline when a stale anchor abuts a preceding `end` (no `endprocedure`)", async () => {
+        const original = modelFromSSL(await parseDialog(SRC));
+        const editModel = structuredClone(original);
+        // Simulate a stale/abutting anchor: point newProcAnchor just past Node001's `end` (a non-newline byte),
+        // as a length-changing prior edit in the same webview session would leave it.
+        const abut = SRC.indexOf("end") + 3;
+        expect(SRC[abut - 1]).toBe("d"); // precondition: the anchor abuts a non-newline
+        editModel.newProcAnchor = abut;
+        const fresh = addState(editModel, editModel.roots[0], "NewNode");
+        fresh.text = "A new line."; // computeDialogSourceEdit allocates its @id, so the node has real content
+        addReply(editModel, fresh).text = "Bye";
+
+        // The real webview->host entry (allocates @ids, then splices). Support node Node999 (referenced but
+        // undefined) is ALSO scaffolded at the same anchor - both splices must keep the separating newline.
+        const out = computeDialogSourceEdit(SRC, editModel, original).newText!;
+        expect(out).not.toContain("endprocedure"); // never `end` glued to `procedure`
+        expect(out).toMatch(/\nprocedure NewNode\b/); // spliced on its own line
+        expect(out).toMatch(/\nprocedure Node999\b/); // the scaffolded support node too
+        // The file still tokenizes: NewNode is a real, re-parseable procedure (not swallowed into `endprocedure`).
+        const reparsed = await parseDialog(out);
+        expect(reparsed.nodes.map((n) => n.name)).toContain("NewNode");
+    });
+});

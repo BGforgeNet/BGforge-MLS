@@ -338,23 +338,29 @@ check(
     JSON.stringify(tips),
 );
 
-// State id is no longer an inline "NodeXXX" label, nor a row-wide tooltip: no .sid spans, the row carries no
-// title, and each state's conversation line exposes the id as its tooltip (title starts with the data-sid).
+// The state id is shown inline as a dimmed `.nodeid` handle (restored so the writer can see/rename nodes), AND
+// each state's conversation line still exposes the id in its tooltip (title starts with the data-sid) - the
+// option tooltips depend on that. There is no row-wide title and no legacy `.sid` label.
 const sidCheck = await page.evaluate(() => {
     const row = [...document.querySelectorAll<HTMLElement>(".tree .st[data-sid]")].find((r) =>
         r.querySelector(".line"),
     );
     const line = row?.querySelector<HTMLElement>(".line");
+    const nodeid = row?.querySelector<HTMLElement>(".nodeid");
     return {
-        sidSpans: document.querySelectorAll(".tree .sid").length,
+        legacySidSpans: document.querySelectorAll(".tree .sid").length,
+        nodeIdShownInline: (nodeid?.textContent ?? "") === (row?.getAttribute("data-sid") ?? "\0"),
         rowHasNoTitle: !!row && !row.hasAttribute("title"),
         lineTitleStartsWithId:
             !!line && (line.getAttribute("title") ?? "").startsWith(row!.getAttribute("data-sid") ?? "\0"),
     };
 });
 check(
-    "state id is the line's tooltip (starts with the id), not an inline label or row-wide tooltip",
-    sidCheck.sidSpans === 0 && sidCheck.rowHasNoTitle && sidCheck.lineTitleStartsWithId,
+    "state id shows inline as a .nodeid handle AND remains the line's tooltip prefix (no legacy .sid, no row title)",
+    sidCheck.legacySidSpans === 0 &&
+        sidCheck.nodeIdShownInline &&
+        sidCheck.rowHasNoTitle &&
+        sidCheck.lineTitleStartsWithId,
     JSON.stringify(sidCheck),
 );
 

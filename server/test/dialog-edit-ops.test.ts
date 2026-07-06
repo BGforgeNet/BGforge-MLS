@@ -246,6 +246,64 @@ END
         ops.removeReply(hello, added.id);
         expect(hello.choices.length).toBe(before);
     });
+
+    // Manual node naming ("Auto node names" off): suggestStateId + newStateIdError + addState(id).
+    const sslModel = (ids: string[], procNames?: string[]): DialogModel => ({
+        format: "fallout-ssl",
+        editable: false,
+        existingProcNames: procNames,
+        roots: [
+            {
+                id: "d",
+                label: "d",
+                kind: "dialog",
+                states: ids.map((id, i) => ({ id, text: "@1", procRange: { start: i, end: i + 1 }, choices: [] })),
+            },
+        ],
+    });
+
+    it("suggestStateId returns the next auto id without mutating the model", () => {
+        const m = sslModel(["Node001"]);
+        expect(ops.suggestStateId(m)).toBe("Node002");
+        expect(m.roots[0]!.states).toHaveLength(1); // pure - offered a suggestion, added nothing
+    });
+
+    it("addState uses an explicit (validated) id when given, else auto-assigns", () => {
+        const m = sslModel(["Node001"]);
+        expect(ops.addState(m, undefined, "GreetAgain").id).toBe("GreetAgain");
+        expect(m.roots[0]!.states.at(-1)!.id).toBe("GreetAgain");
+        expect(ops.addState(m).id).toBe("Node002"); // omitted id still auto-assigns
+    });
+
+    describe("newStateIdError", () => {
+        it("rejects an empty / whitespace name", () => {
+            expect(ops.newStateIdError(sslModel(["Node001"]), "   ")).toMatch(/Enter a node name/);
+        });
+        it("SSL: rejects a non-identifier name (space, leading digit)", () => {
+            expect(ops.newStateIdError(sslModel(["Node001"]), "has space")).toMatch(/procedure identifier/);
+            expect(ops.newStateIdError(sslModel(["Node001"]), "2bad")).toMatch(/procedure identifier/);
+        });
+        it("SSL: rejects the reserved sink ids (998 combat, 999 end)", () => {
+            expect(ops.newStateIdError(sslModel(["Node001"]), "Node998")).toMatch(/reserved/);
+            expect(ops.newStateIdError(sslModel(["Node001"]), "Node999")).toMatch(/reserved/);
+        });
+        it("SSL: rejects a duplicate of a state OR an existing procedure name", () => {
+            expect(ops.newStateIdError(sslModel(["Node001", "Node002"]), "Node002")).toMatch(/already used/);
+            expect(ops.newStateIdError(sslModel(["Node001"], ["helper_proc"]), "helper_proc")).toMatch(/already used/);
+        });
+        it("SSL: accepts a fresh valid identifier", () => {
+            expect(ops.newStateIdError(sslModel(["Node001"]), "GreetAgain")).toBeNull();
+        });
+        it("D: enforces only uniqueness (no SSL identifier rule), matching renameState's D scope", () => {
+            const d: DialogModel = {
+                format: "weidu-d",
+                editable: true,
+                roots: [{ id: "r", label: "r", kind: "dialog", states: [{ id: "start", text: "", choices: [] }] }],
+            };
+            expect(ops.newStateIdError(d, "greet_again")).toBeNull();
+            expect(ops.newStateIdError(d, "start")).toMatch(/already used/);
+        });
+    });
 });
 
 // ---------------------------------------------------------------------------

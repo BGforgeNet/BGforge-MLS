@@ -736,8 +736,20 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
     const newNodes = edited.roots.flatMap((r) => r.states).filter((s) => isLocalNewSSLNode(s) && !s.committed); // existing/derived/renamed/committed are not new nodes
     if (anchor !== undefined) {
         const blocks = newNodes.map((s) => serializeSSLProcedure(s, newNodeMsgIds(s), "    "));
-        if (blocks.length > 0)
-            ops.push({ start: anchor, end: anchor, replacement: blocks.map((b) => `${b}\n`).join("") });
+        if (blocks.length > 0) {
+            // Guarantee the spliced procedure starts on its own line. `newProcAnchor` normally sits at the start
+            // of `procedure talk_p_proc` (preceded by a newline), but the webview model can carry a STALE anchor
+            // between saves (its byte offsets are not re-projected until reconcile), so a length-changing prior
+            // edit - e.g. a rename - can leave the char before the anchor mid-token (a preceding `end`). Inserting
+            // there yields `endprocedure <name>`, which lexes as one identifier and drops the node on re-parse.
+            // Prepend a newline whenever the preceding char is not already one.
+            const needsLeadingNL = anchor > 0 && originalText[anchor - 1] !== "\n";
+            ops.push({
+                start: anchor,
+                end: anchor,
+                replacement: (needsLeadingNL ? "\n" : "") + blocks.map((b) => `${b}\n`).join(""),
+            });
+        }
     } else if (newNodes.length > 0) {
         // SCAFFOLD (from scratch): no `talk_p_proc`, so the ADD branch has no anchor. Emit the whole dialog
         // skeleton at EOF - forward decls, a talk_p_proc router calling the entry node(s), each new node's
@@ -778,12 +790,17 @@ export function applySSLDialogEdits(originalText: string, edited: DialogModel, o
         const missing = [...referenced].filter(
             (id) => !new RegExp(String.raw`\bprocedure\s+${id}\b`).test(originalText),
         );
-        if (missing.length > 0)
+        if (missing.length > 0) {
+            // Same own-line guarantee as the ADD branch: a stale/abutting anchor must not glue the scaffolded
+            // support procedure onto a preceding `end` (`endprocedure Node999`), which would drop it on re-parse.
+            const needsLeadingNL = anchor > 0 && originalText[anchor - 1] !== "\n";
             ops.push({
                 start: anchor,
                 end: anchor,
-                replacement: missing.map((id) => `${serializeSupportProcedure(id)}\n`).join(""),
+                replacement:
+                    (needsLeadingNL ? "\n" : "") + missing.map((id) => `${serializeSupportProcedure(id)}\n`).join(""),
             });
+        }
     }
 
     // ENTRY WIRING: a node that became an entry -> splice `call <id>;` into talk_p_proc after the last

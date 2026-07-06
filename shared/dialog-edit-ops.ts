@@ -236,8 +236,51 @@ function nextSslNodeId(model: DialogModel): string {
     return `Node${String(next).padStart(3, "0")}`;
 }
 
+/** Resolve the root a new state would be added to: the caller's chosen root (active tab), else the first
+ *  dialog root, else the first root. Undefined on a blank file (bootstrap - no roots yet). */
+function resolveTargetRoot(model: DialogModel, targetRoot?: DialogRoot): DialogRoot | undefined {
+    return targetRoot ?? model.roots.find((r) => r.kind === "dialog") ?? model.roots[0];
+}
+
 /**
- * Add an empty new state to the first dialog root (no sourceRange: a pending insert).
+ * The id `addState` would auto-assign for a new node. Offered as the pre-filled suggestion when the editor
+ * prompts for a manual node name (the "Auto node names" toggle is off). Pure: does not mutate the model.
+ */
+export function suggestStateId(model: DialogModel): string {
+    return model.format === "fallout-ssl" ? nextSslNodeId(model) : uniqueStateId(model, "new_state");
+}
+
+/**
+ * Validate a user-entered name for a NEW node, returning a human-readable reason it is rejected, or null when
+ * acceptable. Backs the manual-name prompt. Rules: non-empty; unique within the target dialogue (and, for SSL,
+ * not colliding with an existing procedure name or a reserved sink); for SSL also a valid procedure identifier
+ * (letters/digits/underscore, not starting with a digit) since the name becomes a `procedure <name>` token on
+ * save. Uniqueness is per-dialogue for the same reason `renameState` scopes it there (see that function).
+ */
+export function newStateIdError(model: DialogModel, id: string, targetRoot?: DialogRoot): string | null {
+    const trimmed = id.trim();
+    if (!trimmed) return "Enter a node name.";
+    const ssl = model.format === "fallout-ssl";
+    if (ssl) {
+        if (!/^[A-Za-z_]\w*$/.test(trimmed))
+            return "SSL node names must be a procedure identifier: letters, digits, and underscores, not starting with a digit.";
+        const num = /^Node(\d+)$/.exec(trimmed)?.[1];
+        if (num !== undefined && RESERVED_SSL_NODE_NUMS.has(Number.parseInt(num, 10)))
+            return `Node${num} is reserved (998 = combat, 999 = end dialog).`;
+    }
+    const root = resolveTargetRoot(model, targetRoot);
+    const taken = new Set<string>([
+        ...(root?.states ?? []).map((s) => s.id),
+        ...(ssl ? (model.existingProcNames ?? []) : []),
+    ]);
+    if (taken.has(trimmed)) return `"${trimmed}" is already used in this dialogue.`;
+    return null;
+}
+
+/**
+ * Add an empty new state to the first dialog root (no sourceRange: a pending insert). `id`, when given, is the
+ * caller's chosen (already-validated via `newStateIdError`) node name - the "Auto node names" toggle off path;
+ * omitted, the id is auto-assigned via `suggestStateId`.
  *
  * Bootstrap: a dialog started from scratch (an SSL file with no `talk_p_proc`, a D file with no dialog
  * block) parses to zero roots, so there is no root to add the first node to. Rather than refuse - the old
@@ -246,12 +289,12 @@ function nextSslNodeId(model: DialogModel): string {
  * support nodes via applySSLDialogEdits; D: a `BEGIN` block via applyDialogEdits). The root label seeds the D
  * `BEGIN` resref; "dialog" mirrors the SSL adapter's own single-root label (dialog-model.ts).
  */
-export function addState(model: DialogModel, targetRoot?: DialogRoot): DialogState {
+export function addState(model: DialogModel, targetRoot?: DialogRoot, id?: string): DialogState {
     // Add to the caller's chosen root (the active tab) when given; else the first dialog.
-    const root = targetRoot ?? model.roots.find((r) => r.kind === "dialog") ?? model.roots[0];
+    const root = resolveTargetRoot(model, targetRoot);
     const bootstrap = !root;
-    const id = model.format === "fallout-ssl" ? nextSslNodeId(model) : uniqueStateId(model, "new_state");
-    const state: DialogState = { id, text: "", choices: [] };
+    const stateId = id ?? suggestStateId(model);
+    const state: DialogState = { id: stateId, text: "", choices: [] };
     // On SSL bootstrap the first node IS the conversation entry: the scaffolded talk_p_proc must `call` it or
     // the dialog is unreachable. Flag it so applySSLDialogEdits wires the router; the parser re-derives isEntry
     // from that written call on the next reparse, after which this transient flag no longer matters.

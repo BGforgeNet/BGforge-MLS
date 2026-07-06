@@ -9,7 +9,7 @@
     // their player replies as a nested outline; clicking a state selects it for the
     // shared Inspector, clicking a cross-file leaf jumps to that dialog's tab, and
     // clicking a "shown elsewhere" ref selects the expanded copy.
-    let { tree, selectedId, selectedChoiceId, editingChoiceId, editingStateId, collapsed, editableStateIds, deletableStateIds, ssl, onSelect, onSelectReply, onBeginEditReply, onCommitEditReply, onCancelEditReply, onBeginEditState, onCommitEditState, onCancelEditState, onToggle, onExpand, onGoToSource, onJump, onContext, onReplyContext, onAddReply, onRemoveReply, onAddChildNode, onDeleteState }: {
+    let { tree, selectedId, selectedChoiceId, editingChoiceId, editingStateId, renamingStateId, collapsed, editableStateIds, deletableStateIds, ssl, onSelect, onSelectReply, onBeginEditReply, onCommitEditReply, onCancelEditReply, onBeginEditState, onCommitEditState, onCancelEditState, onBeginRenameState, onCommitRenameState, onCancelRenameState, onToggle, onExpand, onGoToSource, onJump, onContext, onReplyContext, onAddReply, onRemoveReply, onAddChildNode, onDeleteState }: {
         tree: ConversationTree;
         selectedId?: string | null;
         /** The individually-selected option's choice id (within the selected state), or null when a whole
@@ -19,6 +19,9 @@
         editingChoiceId?: string | null;
         /** The state whose NPC line is being edited inline (its line renders as an input), or null. */
         editingStateId?: string | null;
+        /** The state whose node id is being renamed inline (its id label renders as an input), or null.
+            Mutually exclusive with editingStateId/editingChoiceId - only one inline edit runs at a time. */
+        renamingStateId?: string | null;
         /** Ids of collapsed states (default expanded). Owned by the parent so the
             toolbar's expand-all / collapse-all can drive it. */
         collapsed: Set<string>;
@@ -46,6 +49,13 @@
         onCommitEditState: (stateId: string, value: string) => void;
         /** Abandon an inline NPC-line edit (Escape). */
         onCancelEditState: () => void;
+        /** Begin an inline node-id rename (F2 / double-click the id). Offered only for a structurally-editable
+            state; a no-op elsewhere (the parent gates it). */
+        onBeginRenameState: (stateId: string) => void;
+        /** Commit an inline rename with the new id. */
+        onCommitRenameState: (stateId: string, value: string) => void;
+        /** Abandon an inline rename (Escape). */
+        onCancelRenameState: () => void;
         onToggle: (stateId: string) => void;
         /** Un-collapse the given states so a reveal target inside a collapsed branch becomes visible. */
         onExpand: (stateIds: string[]) => void;
@@ -118,11 +128,25 @@
     // (see onRowKeydown / onReplyRowKeydown), ArrowLeft/Right expand/collapse a state. `treeFocusId` holds the
     // roving row's id, which is a state's data-sid or an option's data-choice (disjoint id spaces). Defaults
     // to the selection, else the first root.
-    let treeFocusId = $state<string>();
+    // DERIVED from the selection so focus and selection never decouple: the single roving-tabindex row is
+    // always the selected one (an option's choice id when an option is selected, else the state, else the first
+    // root). Previously this was independent state that drifted when a click landed on an inner button (which
+    // stole focus from its row) - so selection said A while the tab stop stayed on B.
+    const treeFocusId = $derived(selectedChoiceId ?? selectedId ?? tree.roots[0]?.id);
+    // Focus follows selection: whenever the selection changes (a click - including on an inner button that would
+    // otherwise keep focus to itself - or a jump/arrow move), move DOM focus onto the selected row so keyboard
+    // nav resumes there. Skipped while an inline edit/rename owns focus (its input must keep it); the effect only
+    // re-runs on a selection change, so it never steals focus from the docked inspector while you type there.
     $effect(() => {
-        if (!treeFocusId || !treeEl?.querySelector(`[data-sid="${CSS.escape(treeFocusId)}"], [data-choice="${CSS.escape(treeFocusId)}"]`)) {
-            treeFocusId = selectedId ?? tree.roots[0]?.id;
-        }
+        if (editingChoiceId || editingStateId || renamingStateId) return;
+        const sel = selectedChoiceId
+            ? `[data-choice="${CSS.escape(selectedChoiceId)}"]`
+            : selectedId
+              ? `[data-sid="${CSS.escape(selectedId)}"]`
+              : null;
+        if (!sel) return;
+        const el = treeEl?.querySelector<HTMLElement>(sel);
+        if (el && el !== el.ownerDocument.activeElement) el.focus();
     });
 
     // Visible navigation targets in DOM (top-to-bottom) order, for ArrowUp/Down movement. Both state rows
@@ -160,13 +184,21 @@
                 e.preventDefault();
                 onSelect(st.id);
                 break;
-            case "Enter":
             case "F2":
+                // F2 renames the NODE (its NodeXXX/id), the file-explorer convention - NOT the NPC line (that
+                // stays on Enter/E and double-click). Offered only for a structurally-editable state; a no-op
+                // on a read-only/derived node (the parent gates onBeginRenameState the same way).
+                if (editableStateIds.has(st.id)) {
+                    e.preventDefault();
+                    onBeginRenameState(st.id);
+                }
+                break;
+            case "Enter":
             case "e":
             case "E":
-                // Enter/F2/E edit this state's NPC line inline (parity with double-clicking the line). Only a
+                // Enter/E edit this state's NPC line inline (parity with double-clicking the line). Only a
                 // flat, text-editable state has an inline-editable line; a bundle node (line lives per-branch)
-                // or a locked node has none, so Enter falls back to select there and F2/E are a no-op.
+                // or a locked node has none, so Enter falls back to select there and E is a no-op.
                 if (!st.branches && st.textEditable) {
                     e.preventDefault();
                     onBeginEditState(st.id);
@@ -256,7 +288,9 @@
             refocusChoiceId = undefined;
             treeEl?.querySelector<HTMLElement>(`.rep[data-choice="${CSS.escape(id)}"]`)?.focus();
         }
-        if (refocusStateId != null && editingStateId == null) {
+        // Wait for BOTH inline-state edits to clear (NPC-line edit AND rename) before refocusing the row - only
+        // one is ever active, so this returns focus once whichever finished unmounts its input.
+        if (refocusStateId != null && editingStateId == null && renamingStateId == null) {
             const id = refocusStateId;
             refocusStateId = undefined;
             treeEl?.querySelector<HTMLElement>(`[data-sid="${CSS.escape(id)}"]`)?.focus();
@@ -299,6 +333,20 @@
             onCancelEditState();
         } else {
             onCommitEditState(stateId, e.currentTarget.value);
+        }
+        if (refocus) refocusStateId = stateId;
+    }
+    // Node-id rename inline edit blur - mirrors onStateEditBlur but commits the new id (not line text). Shares
+    // onEditKeydown and the single escaped/keyboardCommit flags (rename is mutually exclusive with the text
+    // edits). On a keyboard commit, refocus the row through the same refocusStateId path.
+    function onRenameBlur(stateId: string, e: FocusEvent & { currentTarget: HTMLInputElement }): void {
+        const refocus = keyboardCommit;
+        keyboardCommit = false;
+        if (escaped) {
+            escaped = false;
+            onCancelRenameState();
+        } else {
+            onCommitRenameState(stateId, e.currentTarget.value);
         }
         if (refocus) refocusStateId = stateId;
     }
@@ -360,10 +408,17 @@
                 break;
         }
     }
-    // Enter/F2/E on the focused NPC-line button begins inline edit (the button only renders when editable).
-    // stopPropagation keeps the row's own keydown (Enter=select, F2/E=edit) from double-firing.
+    // Keydown on the focused NPC-line button: Enter/E begin the line edit (the button only renders when the line
+    // is editable); F2 renames the NODE instead (parity with the row handler, so focus on the line and focus on
+    // the row behave the same). stopPropagation keeps the row's own keydown from double-firing.
     function onLineKeydown(e: KeyboardEvent, stateId: string): void {
-        if (e.key === "F2" || e.key === "Enter" || e.key === "e" || e.key === "E") {
+        if (e.key === "F2") {
+            if (editableStateIds.has(stateId)) {
+                e.preventDefault();
+                e.stopPropagation();
+                onBeginRenameState(stateId);
+            }
+        } else if (e.key === "Enter" || e.key === "e" || e.key === "E") {
             e.preventDefault();
             e.stopPropagation();
             onBeginEditState(stateId);
@@ -395,7 +450,6 @@
         aria-expanded={hasChildren ? !collapsed.has(st.id) : undefined}
         tabindex={st.id === treeFocusId ? 0 : -1}
         onclick={() => onSelect(st.id)}
-        onfocus={() => (treeFocusId = st.id)}
         oncontextmenu={(e) => (e.preventDefault(), onContext(st.id, e.clientX, e.clientY))}
         onkeydown={(e) => onRowKeydown(e, st)}
     >
@@ -411,10 +465,35 @@
         {:else}
             <span class="caret leafdot">&bull;</span>
         {/if}
-        <!-- WeiDU D shows the real speaker name (a character; it varies across a multi-speaker dialog).
-             The state id is the source-addressable handle (jump/rename) but secondary to reading the
-             conversation - and for SSL it is a noisy auto-generated NodeXXX repeated on every row - so it is
-             not shown inline; the id is the row's hover tooltip (title={st.id}) instead. -->
+        <!-- The node id (NodeXXX / D state id) is shown inline as the row's identity handle: the writer sees
+             which node they are on and can rename it here. Dimmed + monospace so it stays secondary to the
+             dialogue text (it repeats down an SSL tree). On a structurally-editable node it is a button - F2 or
+             double-click begins an inline rename, swapping it for an input; a read-only/derived node shows a
+             plain label. -->
+        {#if st.id === renamingStateId}
+            <input
+                class="nodeid nameedit"
+                aria-label="Node name"
+                use:autofocusSelect
+                value={st.id}
+                onclick={(e) => e.stopPropagation()}
+                ondblclick={(e) => e.stopPropagation()}
+                onkeydown={(e) => (e.stopPropagation(), onEditKeydown(e))}
+                onblur={(e) => onRenameBlur(st.id, e)}
+            />
+        {:else if editableStateIds.has(st.id)}
+            <button
+                class="nodeid nodeidbtn"
+                tabindex={-1}
+                title="Rename node (F2)"
+                onclick={(e) => (e.stopPropagation(), onSelect(st.id))}
+                ondblclick={(e) => (e.stopPropagation(), onBeginRenameState(st.id))}>{st.id}</button
+            >
+        {:else}
+            <span class="nodeid">{st.id}</span>
+        {/if}
+        <!-- WeiDU D also shows the real speaker name (a character; it varies across a multi-speaker dialog),
+             after the id. SSL has no per-node speaker, so only the id shows there. -->
         {#if st.speaker}<span class="who">{st.speaker}</span>{/if}
         {#if st.derivedFrom}<Badge badges={["derived"]} label={st.derivedFrom} small />{/if}
         <!-- Loud "structure simplified" warning for an approximate node: its flat render is lossy, so the row
@@ -521,7 +600,12 @@
          The condition lives on the options it gates, not a separate header. -->
     <div class="brep" style="--lvl:{depth * 2 + 1}">
         {#if b.condition}<span class="cond" title={b.condition}>[if]</span>{/if}
-        <span class="line" use:clipTitle={{ label: ownerId, text: b.npc }}>{b.npc || "(no line)"}</span>
+        <!-- A branch's NPC line selects its OWNER STATE on click (a bundle/structured node's structure is
+             read-only, so there is no per-line edit - selecting reveals the node in the Inspector). Rendered
+             as a <button> so it is a real, keyboard-operable select target, matching the state row's own line
+             (linebtn) and the option rows: without this the conditional NPC lines were the ONLY tree rows with
+             no selection wiring, so an else-branch line like `Reply(200)` could not be selected at all. -->
+        <button class="line linebtn" use:clipTitle={{ label: ownerId, text: b.npc }} onclick={(e) => (e.stopPropagation(), onSelect(ownerId))}>{b.npc || "(no line)"}</button>
     </div>
     {#each b.replies as r, i (r.id)}
         {@render replyRow(r, depth, ownerId, i, b.replies.length, true)}
@@ -540,7 +624,11 @@
                 <!-- A branch's opening NPC line carries the branch's [if] gate (else = `not (...)`), so an
                      if-branch line reads differently from an else-branch line. Unconditional lines have none. -->
                 {#if it.condition}<span class="cond" title={it.condition}>[if]</span>{/if}
-                <span class="line" use:clipTitle={{ label: ownerId, text: it.npc }}>{it.npc || "(no line)"}</span>
+                <!-- Selects the OWNER STATE on click, same as the branchBlock line above: a structured node's
+                     structure is read-only, so a nested NPC line (e.g. an else-branch `Reply(200)`) is a select
+                     target, not an edit target. A <button> keeps it keyboard-operable and consistent with the
+                     state row's line and the option rows - the tier that previously had no selection wiring. -->
+                <button class="line linebtn" use:clipTitle={{ label: ownerId, text: it.npc }} onclick={(e) => (e.stopPropagation(), onSelect(ownerId))}>{it.npc || "(no line)"}</button>
             </div>
         {:else if it.kind === "reply"}
             {@render replyRow(it.reply, depth, ownerId, i, block.length, true)}
@@ -575,7 +663,6 @@
         tabindex={r.id === treeFocusId ? 0 : -1}
         onclick={() => onSelectReply(ownerId, r.id)}
         ondblclick={branchReadonly ? undefined : () => r.textEditable && onBeginEditReply(ownerId, r.id)}
-        onfocus={() => (treeFocusId = r.id)}
         onkeydown={(e) => onReplyRowKeydown(e, ownerId, r, branchReadonly)}
         oncontextmenu={branchReadonly
             ? undefined
@@ -747,6 +834,46 @@
         font-weight: 700;
         font-size: 10px;
         white-space: nowrap;
+    }
+    /* Node id (NodeXXX / D state id): dimmed monospace so it reads as a secondary identity handle, not primary
+       dialogue text. Repeats down the tree, so it must stay visually quiet - muted like the "(no line)"
+       placeholder, not the brighter dialogue blue. */
+    .nodeid {
+        color: #5b6472;
+        font-family: var(--vscode-editor-font-family, monospace);
+        font-size: 10px;
+        white-space: nowrap;
+        flex: 0 0 auto;
+    }
+    /* Editable node id rendered as a <button>: reset to read as the plain dimmed label while staying a
+       double-click rename target (F2 renames via the row/line handlers). */
+    .nodeid.nodeidbtn {
+        background: none;
+        border: none;
+        padding: 0;
+        margin: 0;
+        font: inherit;
+        color: inherit;
+        cursor: pointer;
+    }
+    .nodeid.nodeidbtn:hover {
+        color: #93a4bd;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+    }
+    /* Inline rename input: fills the id slot, blue-bordered to signal active editing (mirrors the NPC-line
+       edit's .lineedit). Monospace like the label it replaces. */
+    .nodeid.nameedit {
+        font-family: var(--vscode-editor-font-family, monospace);
+        font-size: 10px;
+        color: #e5e7eb;
+        background: #0b1220;
+        border: 1px solid #3b82f6;
+        border-radius: 2px;
+        padding: 0 3px;
+        margin: -1px 0;
+        min-width: 60px;
+        max-width: 200px;
     }
     .line {
         color: #93c5fd;

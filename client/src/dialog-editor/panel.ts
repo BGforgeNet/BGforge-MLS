@@ -85,27 +85,35 @@ class DialogEditorProvider implements vscode.CustomTextEditorProvider {
         };
         this.sessions.set(panel, session);
 
-        panel.webview.onDidReceiveMessage((msg: { type?: string; model?: DialogModel; offset?: number }) => {
-            if (msg?.type === "ready") void this.postModel(document, panel);
-            // "Go to source" (F4 in the tree): open the text editor at the state's/option's byte offset.
-            else if (msg?.type === "revealSource" && typeof msg.offset === "number") {
-                void this.revealSource(document, msg.offset);
-            }
-            // The webview emits one "edit" (the whole model) per user action; each applies to the live
-            // document as a single WorkspaceEdit (one native undo step). Serialize them through the session
-            // queue: two edits fired back-to-back would otherwise run applyEdit concurrently and their
-            // WorkspaceEdits race the document (VS Code rejects the second, "applySplices: overlapping ops").
-            else if (msg?.type === "edit" && msg.model) {
-                const model = msg.model;
-                session.edits.enqueue(
-                    () => this.applyEdit(document, panel, model),
-                    (error) => {
-                        const message = error instanceof Error ? error.message : String(error);
-                        void vscode.window.showErrorMessage(`Dialog edit failed: ${message}`);
-                    },
-                );
-            }
-        });
+        panel.webview.onDidReceiveMessage(
+            (msg: { type?: string; model?: DialogModel; offset?: number; text?: string; level?: string }) => {
+                if (msg?.type === "ready") void this.postModel(document, panel);
+                // "Go to source" (F4 in the tree): open the text editor at the state's/option's byte offset.
+                else if (msg?.type === "revealSource" && typeof msg.offset === "number") {
+                    void this.revealSource(document, msg.offset);
+                }
+                // A user-facing notice from the webview (e.g. Del pressed on a non-deletable node): surface it
+                // as a VS Code notification so a blocked action explains itself instead of silently doing nothing.
+                else if (msg?.type === "notify" && typeof msg.text === "string") {
+                    if (msg.level === "warn") void vscode.window.showWarningMessage(msg.text);
+                    else void vscode.window.showInformationMessage(msg.text);
+                }
+                // The webview emits one "edit" (the whole model) per user action; each applies to the live
+                // document as a single WorkspaceEdit (one native undo step). Serialize them through the session
+                // queue: two edits fired back-to-back would otherwise run applyEdit concurrently and their
+                // WorkspaceEdits race the document (VS Code rejects the second, "applySplices: overlapping ops").
+                else if (msg?.type === "edit" && msg.model) {
+                    const model = msg.model;
+                    session.edits.enqueue(
+                        () => this.applyEdit(document, panel, model),
+                        (error) => {
+                            const message = error instanceof Error ? error.message : String(error);
+                            void vscode.window.showErrorMessage(`Dialog edit failed: ${message}`);
+                        },
+                    );
+                }
+            },
+        );
 
         const changeSub = vscode.workspace.onDidChangeTextDocument((e) => {
             if (e.document.uri.toString() !== document.uri.toString()) return;
@@ -169,18 +177,25 @@ class DialogEditorProvider implements vscode.CustomTextEditorProvider {
     }
 
     /**
-     * "Go to source" (F4 from the tree): open the .ssl/.d text editor beside the dialog editor, with the caret
-     * on the state's/option's source line. Tree-sitter ranges are UTF-8 BYTE offsets while `positionAt` wants a
-     * UTF-16 CHAR offset, so convert through the document's own text (offsets land on token boundaries, so the
-     * byte prefix never splits a character).
+     * "Go to source" (F4 from the tree): reveal the .ssl/.d text editor with the caret on the state's/option's
+     * source line. If the document is already open in a text editor, reveal THAT one in place (never spawn a
+     * fresh tab each time); otherwise open it in the active column full-width, not split beside the dialog
+     * editor. Tree-sitter ranges are UTF-8 BYTE offsets while `positionAt` wants a UTF-16 CHAR offset, so
+     * convert through the document's own text (offsets land on token boundaries, so the byte prefix never
+     * splits a character).
      */
     private async revealSource(document: vscode.TextDocument, byteOffset: number): Promise<void> {
         const text = document.getText();
         const charOffset = Buffer.from(text, "utf8").subarray(0, byteOffset).toString("utf8").length;
         const pos = document.positionAt(charOffset);
         const range = new vscode.Range(pos, pos);
+        const uri = document.uri.toString();
+        // Prefer an existing text editor for this document (in whatever column it already lives); else the
+        // active column (full width). ViewColumn.Beside is intentionally avoided - it split a new pane and
+        // opened a duplicate tab on every F4.
+        const existing = vscode.window.visibleTextEditors.find((e) => e.document.uri.toString() === uri);
         const editor = await vscode.window.showTextDocument(document, {
-            viewColumn: vscode.ViewColumn.Beside,
+            viewColumn: existing?.viewColumn ?? vscode.ViewColumn.Active,
             preview: false,
             selection: range,
         });

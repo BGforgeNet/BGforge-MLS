@@ -66,6 +66,17 @@
     // Set by double-clicking the line / F2 on the row. Mirrors editingChoiceId for the option text; only one
     // of the two is ever set at a time (beginning either edit clears the other).
     let editingStateId = $state<string | null>(null);
+    // The state whose node id is being renamed inline in the tree (its id label renders as an input), or null.
+    // Set by F2 / double-clicking the id. Mutually exclusive with editingStateId/editingChoiceId (beginning a
+    // rename clears the text edits and vice-versa) - only one inline edit runs at a time.
+    let renamingStateId = $state<string | null>(null);
+    // "Auto node names" toggle (default on): keep auto-assigning NodeXXX / new_state ids when adding a node.
+    // Off routes node creation through a prompt for the name (nameModal below).
+    let autoNodeNames = $state(true);
+    // Open manual-name prompt for a pending node creation (toggle off). `kind` selects which creation to run on
+    // confirm: a bare "+ State", or an "add child" that also wires an option from `parentId` to the new node.
+    // `value` is the editable name (pre-filled with the suggested id), `error` the current validation message.
+    let nameModal = $state<{ kind: "state" | "child"; parentId?: string; value: string; error: string } | null>(null);
     let viewport = $state({ x: 0, y: 0, zoom: 1 });
     let containerW = $state(0);
     let containerH = $state(0);
@@ -265,6 +276,7 @@
             selectedChoiceId = null;
             editingChoiceId = null;
             editingStateId = null;
+            renamingStateId = null;
         }
     }
     // Tree option-row click: select the option (and its owner state) so the tree highlights it and the
@@ -277,6 +289,7 @@
         selectedChoiceId = choiceId;
         editingChoiceId = null;
         editingStateId = null;
+        renamingStateId = null;
     }
     // Breadcrumb "back to state" from the focused-option Inspector: drop the option focus but keep the state
     // selected, so the Inspector falls back to the whole-state editor.
@@ -291,6 +304,7 @@
         selectedChoiceId = choiceId;
         editingChoiceId = choiceId;
         editingStateId = null;
+        renamingStateId = null;
     }
     // Commit an inline edit: write the new text back the same way the inspector does (a resolvable @N line
     // updates its .msg/.tra entry; anything else - a literal, or a just-added option - updates the choice's
@@ -310,8 +324,9 @@
         editingChoiceId = null;
     }
 
-    // Tree NPC-line double-click / F2: enter inline edit on the state's NPC line. Selects the state (so the
-    // inspector follows) and clears any option edit - only one inline edit runs at a time.
+    // Tree NPC-line double-click / Enter / E: enter inline edit on the state's NPC line. Selects the state (so
+    // the inspector follows) and clears any option edit / rename - only one inline edit runs at a time. (F2 is
+    // node rename, not line edit - see beginRenameState.)
     function beginEditState(stateId: string): void {
         const s = findState(stateId);
         if (!s) return;
@@ -319,6 +334,7 @@
         selectedChoiceId = null;
         editingChoiceId = null;
         editingStateId = stateId;
+        renamingStateId = null;
     }
     // Commit an inline NPC-line edit: write the new text back the same way the inspector's NPC field does (a
     // resolvable @N line updates its .msg/.tra entry; a literal - or a just-added state - updates the state's
@@ -335,6 +351,34 @@
     // Abandon an inline NPC-line edit (Escape) - discard the draft, keep the state selected.
     function cancelEditState(): void {
         editingStateId = null;
+    }
+
+    // Tree F2 / id double-click: begin an inline node-id rename. Selects the state (so the inspector follows)
+    // and clears any text edit - only one inline edit runs at a time. Gated on structEditable, matching the
+    // inspector's rename field and the tree's own F2 gate (a read-only/derived node cannot be renamed).
+    function beginRenameState(stateId: string): void {
+        const s = findState(stateId);
+        if (!structEditable(s)) return;
+        selected = s;
+        selectedChoiceId = null;
+        editingChoiceId = null;
+        editingStateId = null;
+        renamingStateId = stateId;
+    }
+    // Commit an inline rename: renameState moves the label and every GOTO/EXTERN reference with it (see the op).
+    // A rejected id (empty, unchanged, or a duplicate) leaves the model as-is and the row reverts to the old id
+    // on reproject. Leave rename mode and reproject either way.
+    function commitRenameState(stateId: string, value: string): void {
+        const s = findState(stateId);
+        renamingStateId = null;
+        if (s && ops.renameState(editModel, s, value)) {
+            selected = s; // keep the just-renamed node selected (its id changed)
+            void rebuild({ frame: "none" });
+        }
+    }
+    // Abandon an inline rename (Escape) - discard the draft, keep the state selected under its current id.
+    function cancelRenameState(): void {
+        renamingStateId = null;
     }
 
     // Select a state, switching to its tab first if it lives in another dialog (a caller can be cross-root).
@@ -708,13 +752,14 @@
         selected = st;
         actions.removeReply(choiceId);
     }
-    // Tree inline node "+": grow the conversation from a state - add a new NPC state and an option here that
-    // leads to it, then drop into inline edit on that new option's text. The new child is empty; its own line
-    // is edited by selecting it (inspector NPC field). Composed from the same ops the toolbar/graph use.
-    function addChildNode(stateId: string): void {
-        const st = findState(stateId);
+    // Grow the conversation from a state - add a new NPC state and an option here that leads to it, then drop
+    // into inline edit on that new option's text. The new child is empty; its own line is edited by selecting it
+    // (inspector NPC field). Composed from the same ops the toolbar/graph use. `id` is the chosen node name
+    // (manual-name path) or undefined to auto-assign.
+    function createChildNode(parentId: string, id?: string): void {
+        const st = findState(parentId);
         if (!structEditable(st)) return;
-        const child = ops.addState(editModel, activeRoot ?? undefined);
+        const child = ops.addState(editModel, activeRoot ?? undefined, id);
         const c = ops.addReply(editModel, st);
         ops.setChoiceTarget(st, c.id, { kind: "state", stateId: child.id });
         selected = st;
@@ -722,6 +767,14 @@
         editingChoiceId = c.id; // type the option text that leads to the new node
         editingStateId = null;
         void rebuild({ frame: "none" });
+    }
+    // Tree inline node "+": add a child node. With "Auto node names" on, create straight away; off, prompt for
+    // the name first (nameModal), then createChildNode runs on confirm.
+    function addChildNode(stateId: string): void {
+        const st = findState(stateId);
+        if (!structEditable(st)) return;
+        if (autoNodeNames) createChildNode(stateId);
+        else nameModal = { kind: "child", parentId: stateId, value: ops.suggestStateId(editModel), error: "" };
     }
     // Tree inline node "-": delete a state addressed by id, through the same guarded path as the inspector
     // Delete / Backspace (requestDeleteState confirms when inbound transitions would be redirected to EXIT).
@@ -746,7 +799,19 @@
     // disabled (deleteKey={null}) so it cannot bypass this and drop a flow node while leaving the
     // model's GOTOs dangling.
     function requestDeleteState(s: DialogState | null): void {
-        if (!canDelete(s)) return; // D: any non-derived; SSL: faithful + delete-eligible
+        if (!s) return; // nothing selected - Del is a no-op
+        if (!canDelete(s)) {
+            // The tree/inspector delete affordances are already disabled for a non-deletable node, but the Del
+            // KEY still reaches here - so explain why instead of doing nothing (a silent no-op reads as "Del is
+            // broken"; the reported "Del doesn't work" was pressing it on the entry node).
+            if (hasHost())
+                postToHost({
+                    type: "notify",
+                    level: "warn",
+                    text: `"${s.id}" can't be deleted from the graph - it's a dialog entry, reached by a call, or referenced from non-editable code. Remove it in the ${editModel.format === "fallout-ssl" ? ".ssl" : ".d"} source.`,
+                });
+            return;
+        }
         const refs = ops.countInboundGotos(editModel, s);
         if (refs > 0) {
             confirmDelete = { state: s, refCount: refs };
@@ -836,10 +901,40 @@
         },
     };
 
-    function addState(): void {
-        const s = ops.addState(editModel, activeRoot ?? undefined);
+    function createState(id?: string): void {
+        const s = ops.addState(editModel, activeRoot ?? undefined, id);
         selected = s;
         void rebuild({ focusId: s.id });
+    }
+    // Toolbar "+ State": create a node. "Auto node names" on -> create straight away with an auto id; off ->
+    // prompt for the name first (nameModal), then createState runs on confirm.
+    function addState(): void {
+        if (autoNodeNames) createState();
+        else nameModal = { kind: "state", value: ops.suggestStateId(editModel), error: "" };
+    }
+    // Confirm the manual-name prompt: validate the entered name and, on success, run the pending creation with
+    // it. A rejected name keeps the modal open with the reason. `newStateIdError` centralizes the rules (unique,
+    // and for SSL a valid procedure identifier not colliding with a reserved sink).
+    function confirmNameModal(): void {
+        if (!nameModal) return;
+        const err = ops.newStateIdError(editModel, nameModal.value, activeRoot ?? undefined);
+        if (err) {
+            nameModal.error = err;
+            return;
+        }
+        const m = nameModal;
+        const id = m.value.trim();
+        nameModal = null;
+        if (m.kind === "state") createState(id);
+        else if (m.parentId) createChildNode(m.parentId, id);
+    }
+    function cancelNameModal(): void {
+        nameModal = null;
+    }
+    // Focus + select the name input when the prompt opens (svelte action on mount).
+    function focusSelectModal(el: HTMLInputElement): void {
+        el.focus();
+        el.select();
     }
 
     // Window keydown: Escape dismisses the tree context menu. A text edit is in progress when focus is
@@ -964,35 +1059,44 @@
          canvas (a svelte-flow Panel, zero layout height) while the tree docked a header that consumed
          height - so switching views made the canvas jump. A single docked header keeps the height constant. -->
     <div class="dialogtoolbar">
-        <!-- Three stacked rows: (1) beta/feedback, (2) buttons, (3) hotkeys - each its own line so the
-             groups never intermix when the toolbar wraps. -->
-        <!-- Row 1: beta / feedback notice, matching the binary editor's toolbar-beta. -->
-        <div class="tbrow">
-            <span class="dlgbeta">
-                Beta. Send feedback to
-                <a href="https://github.com/BGforgeNet/BGforge-MLS/issues" target="_blank" rel="noreferrer"
-                   >https://github.com/BGforgeNet/BGforge-MLS/issues</a>
-            </span>
-        </div>
-        <!-- Row 2: buttons - the view switch + actions (tree adds Expand/Collapse all). -->
-        <div class="tbrow">
-            {@render toolbar(viewMode === "graph")}
-            {#if viewMode === "tree"}
-                <span class="tbsep"></span>
-                <button class="toolbtn" title="Expand every state" onclick={expandAll}>Expand all</button>
-                <button class="toolbtn" title="Collapse every state" onclick={collapseAll}>Collapse all</button>
-            {/if}
+        <!-- Left column: (1) beta/feedback, (2) the button row. The keyboard reference is a full-height panel
+             docked on the RIGHT (tree view only), so it no longer consumes a third stacked row. -->
+        <div class="tbleft">
+            <!-- Row 1: beta / feedback notice, matching the binary editor's toolbar-beta. -->
+            <div class="tbrow tbbeta">
+                <span class="dlgbeta">
+                    Beta. Send feedback to
+                    <a href="https://github.com/BGforgeNet/BGforge-MLS/issues" target="_blank" rel="noreferrer"
+                       >https://github.com/BGforgeNet/BGforge-MLS/issues</a>
+                </span>
+            </div>
+            <!-- Row 2: buttons - the view switch + actions (tree adds Expand/Collapse all), then the
+                 "Auto node names" toggle at the END of the list. -->
+            <div class="tbrow">
+                {@render toolbar(viewMode === "graph")}
+                {#if viewMode === "tree"}
+                    <span class="tbsep"></span>
+                    <button class="toolbtn" title="Expand every state" onclick={expandAll}>Expand all</button>
+                    <button class="toolbtn" title="Collapse every state" onclick={collapseAll}>Collapse all</button>
+                {/if}
+                {#if editModel.editable || editModel.format === "fallout-ssl"}
+                    <label class="tbtoggle" title="On: new nodes get an auto-assigned name (SSL NodeXXX / D new_state). Off: you're prompted for the name each time.">
+                        <input type="checkbox" bind:checked={autoNodeNames} />
+                        Auto node names
+                    </label>
+                {/if}
+            </div>
         </div>
         {#if viewMode === "tree"}
-            <!-- Row 3: tree keyboard reference. The bindings themselves live per row in Tree.svelte
-                 (onRowKeydown / onReplyRowKeydown) and window-wide for Delete; this strip only surfaces
-                 them. Tree view only - they are outline-specific (arrows move between rows, G takes the
-                 highlighted transition), so showing them over the graph canvas would mislead. -->
-            <div class="tbrow">
+            <!-- Tree keyboard reference: a full-height panel on the RIGHT (the bindings live per row in
+                 Tree.svelte / window-wide for Delete; this only surfaces them). Tree view only - they are
+                 outline-specific, so showing them over the graph canvas would mislead. -->
+            <div class="tbright">
                 <span class="keyhints">
                     <span><kbd>Up</kbd>/<kbd>Down</kbd> move</span>
                     <span><kbd>Left</kbd>/<kbd>Right</kbd> fold</span>
-                    <span><kbd>Enter</kbd>/<kbd>E</kbd> edit</span>
+                    <span><kbd>Enter</kbd>/<kbd>E</kbd> edit line</span>
+                    <span><kbd>F2</kbd> rename node</span>
                     <span><kbd>G</kbd> go to target</span>
                     <span><kbd>F4</kbd> source</span>
                     <span><kbd>Del</kbd> delete</span>
@@ -1047,7 +1151,7 @@
                     {#if treeData.roots.length === 0}
                         <div class="treeempty">No states in this dialog file.</div>
                     {/if}
-                    <Tree tree={treeData} selectedId={selected?.id} selectedChoiceId={selectedChoiceId} editingChoiceId={editingChoiceId} editingStateId={editingStateId} collapsed={treeCollapsed} editableStateIds={editableTreeStateIds} deletableStateIds={deletableTreeStateIds} ssl={editModel.format === "fallout-ssl"} onSelect={selectTreeState} onSelectReply={selectReplyInTree} onBeginEditReply={beginEditReply} onCommitEditReply={commitEditReply} onCancelEditReply={cancelEditReply} onBeginEditState={beginEditState} onCommitEditState={commitEditState} onCancelEditState={cancelEditState} onToggle={toggleTreeNode} onExpand={expandTreeStates} onGoToSource={goToSource} onJump={treeJump} onContext={openContext} onReplyContext={openReplyContext} onAddReply={addReplyToState} onRemoveReply={removeReplyFromState} onAddChildNode={addChildNode} onDeleteState={deleteStateFromTree} />
+                    <Tree tree={treeData} selectedId={selected?.id} selectedChoiceId={selectedChoiceId} editingChoiceId={editingChoiceId} editingStateId={editingStateId} renamingStateId={renamingStateId} collapsed={treeCollapsed} editableStateIds={editableTreeStateIds} deletableStateIds={deletableTreeStateIds} ssl={editModel.format === "fallout-ssl"} onSelect={selectTreeState} onSelectReply={selectReplyInTree} onBeginEditReply={beginEditReply} onCommitEditReply={commitEditReply} onCancelEditReply={cancelEditReply} onBeginEditState={beginEditState} onCommitEditState={commitEditState} onCancelEditState={cancelEditState} onBeginRenameState={beginRenameState} onCommitRenameState={commitRenameState} onCancelRenameState={cancelRenameState} onToggle={toggleTreeNode} onExpand={expandTreeStates} onGoToSource={goToSource} onJump={treeJump} onContext={openContext} onReplyContext={openReplyContext} onAddReply={addReplyToState} onRemoveReply={removeReplyFromState} onAddChildNode={addChildNode} onDeleteState={deleteStateFromTree} />
                 </div>
                 {#if ctxMenu}
                     <div class="ctxbackdrop" role="presentation" onclick={closeContext} oncontextmenu={(e) => (e.preventDefault(), closeContext())}></div>
@@ -1106,6 +1210,32 @@
             <div class="confirmbtns">
                 <button class="toolbtn" onclick={() => (confirmDelete = null)}>Cancel</button>
                 <button class="toolbtn confirmdel" onclick={() => { if (confirmDelete) performDelete(confirmDelete.state); }}>Delete</button>
+            </div>
+        </div>
+    {/if}
+    {#if nameModal}
+        <!-- Manual node-name prompt (shown only when "Auto node names" is off). Enter confirms, Escape/backdrop
+             cancels; an invalid name keeps the prompt open with the reason (newStateIdError). -->
+        <div class="modalback" role="presentation" onclick={cancelNameModal}></div>
+        <div class="confirm" role="dialog" aria-modal="true" aria-label="Name the new node">
+            <div class="confirmmsg">
+                <label class="namelbl" for="new-node-name">New node name</label>
+                <input
+                    id="new-node-name"
+                    class="nameinput"
+                    use:focusSelectModal
+                    bind:value={nameModal.value}
+                    oninput={() => { if (nameModal) nameModal.error = ""; }}
+                    onkeydown={(e) => {
+                        if (e.key === "Enter") { e.preventDefault(); confirmNameModal(); }
+                        else if (e.key === "Escape") { e.preventDefault(); cancelNameModal(); }
+                    }}
+                />
+                {#if nameModal.error}<div class="nameerr" role="alert">{nameModal.error}</div>{/if}
+            </div>
+            <div class="confirmbtns">
+                <button class="toolbtn" onclick={cancelNameModal}>Cancel</button>
+                <button class="toolbtn confirmok" onclick={confirmNameModal}>Create</button>
             </div>
         </div>
     {/if}
@@ -1255,19 +1385,40 @@
     .dialogtoolbar {
         flex: 0 0 auto;
         display: flex;
-        flex-direction: column;
+        flex-direction: row;
         align-items: stretch;
-        gap: 4px;
+        gap: 16px;
         padding: 6px 8px;
         background: #15171c;
         border-bottom: 1px solid #2b303a;
     }
-    /* One horizontal line of the toolbar (feedback / buttons / hotkeys); wraps internally when too narrow. */
+    /* Left column: beta notice above the button row. */
+    .tbleft {
+        flex: 1 1 auto;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    /* Extra breathing room between the beta notice and the buttons below it. */
+    .tbbeta {
+        margin-bottom: 6px;
+    }
+    /* One horizontal line of the toolbar (feedback / buttons); wraps internally when too narrow. */
     .tbrow {
         display: flex;
         flex-wrap: wrap;
         align-items: center;
         gap: 4px;
+    }
+    /* Keyboard reference docked on the right, occupying the toolbar's full height (align-items: stretch on the
+       parent), vertically centered and right-aligned. */
+    .tbright {
+        flex: 0 0 auto;
+        display: flex;
+        align-items: center;
+        border-left: 1px solid #2b303a;
+        padding-left: 12px;
     }
     /* Beta notice - low-emphasis muted text on its own row. */
     .dlgbeta {
@@ -1280,13 +1431,15 @@
     .dlgbeta a:hover {
         color: #93c5fd;
     }
-    /* Tree keyboard reference: muted key -> action pairs, each pair a nowrap unit so a key and its label
-       never split across a wrap. Themed <kbd> chips matching the toolbar palette. */
+    /* Tree keyboard reference: muted key -> action pairs stacked vertically so the panel fills the toolbar's
+       full height on the right. Each pair is a nowrap unit so a key and its label never split. Themed <kbd>
+       chips matching the toolbar palette. */
     .keyhints {
-        display: inline-flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 2px 8px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: flex-start;
+        gap: 2px;
         font-size: 10px;
         color: #9aa0a6;
     }
@@ -1329,6 +1482,20 @@
         align-self: stretch;
         background: #3a3f4b;
         margin: 2px 4px;
+    }
+    /* "Auto node names" toggle: a checkbox label sitting beside the toolbar buttons. */
+    .tbtoggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 12px;
+        color: #cdd3dd;
+        cursor: pointer;
+        margin-right: 4px;
+        white-space: nowrap;
+    }
+    .tbtoggle input {
+        cursor: pointer;
     }
     .treescroll {
         flex: 1;
@@ -1434,6 +1601,32 @@
     .confirmdel {
         color: #fca5a5;
         border-color: #7f1d1d;
+    }
+    .confirmok {
+        color: #a7f3d0;
+        border-color: #14532d;
+    }
+    /* Name-prompt input + validation error (manual node naming). */
+    .namelbl {
+        display: block;
+        margin-bottom: 6px;
+        color: #b6bdc9;
+    }
+    .nameinput {
+        width: 100%;
+        box-sizing: border-box;
+        font-family: var(--vscode-editor-font-family, monospace);
+        font-size: 12px;
+        color: #e5e7eb;
+        background: #0b1220;
+        border: 1px solid #3b82f6;
+        border-radius: 4px;
+        padding: 5px 7px;
+    }
+    .nameerr {
+        margin-top: 8px;
+        color: #fca5a5;
+        line-height: 1.4;
     }
     .toolbtn {
         background: #2b303a;
