@@ -401,6 +401,25 @@ describe("buildConversationTree - Node998/Node999 as Combat/Exit terminals (SSL)
 
         // Every choice is expanded exactly once through the block (no flat replies duplicating them).
         expect(n1.replies).toHaveLength(0);
+
+        // Branch keys drive the tree's branch highlight: each row carries the key of the innermost branch it
+        // sits in, a nested branch's key STARTS WITH its parent's, and a top-level (unbranched) row is unkeyed.
+        const thenLine = group.thenBlock[0] as { branchKey?: string };
+        const elseLine = group.elseBlock![0] as { branchKey?: string };
+        expect(thenLine.branchKey).toBe("N1#0if");
+        expect(elseLine.branchKey).toBe("N1#0else");
+        // opt2 sits directly in the else branch; opt1 sits in a nested if UNDER the then branch.
+        const elseOpt = group.elseBlock!.find((item) => item.kind === "reply")! as { reply: { branchKey?: string } };
+        expect(elseOpt.reply.branchKey).toBe("N1#0else");
+        const nestedGroup = group.thenBlock.find((item) => item.kind === "group")! as {
+            thenBlock: { kind: string; reply?: { branchKey?: string } }[];
+        };
+        const nestedOpt = nestedGroup.thenBlock.find((item) => item.kind === "reply")!;
+        expect(nestedOpt.reply!.branchKey).toBe("N1#0if.0if");
+        expect(nestedOpt.reply!.branchKey!.startsWith("N1#0if")).toBe(true); // covered by highlighting the then branch
+        // The unconditional trailing option (block[1]) is not in any branch -> unkeyed, so a branch highlight
+        // never covers it.
+        expect((block[1] as { reply: { branchKey?: string } }).reply.branchKey).toBeUndefined();
     });
 
     // An approximate node (control flow the block can't model) renders flat but must carry the flag through

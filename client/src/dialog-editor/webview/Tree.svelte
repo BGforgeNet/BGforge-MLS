@@ -9,9 +9,12 @@
     // their player replies as a nested outline; clicking a state selects it for the
     // shared Inspector, clicking a cross-file leaf jumps to that dialog's tab, and
     // clicking a "shown elsewhere" ref selects the expanded copy.
-    let { tree, selectedId, selectedChoiceId, editingChoiceId, editingStateId, renamingStateId, collapsed, editableStateIds, deletableStateIds, ssl, onSelect, onSelectReply, onBeginEditReply, onCommitEditReply, onCancelEditReply, onBeginEditState, onCommitEditState, onCancelEditState, onBeginRenameState, onCommitRenameState, onCancelRenameState, onToggle, onExpand, onGoToSource, onJump, onContext, onReplyContext, onAddReply, onRemoveReply, onAddChildNode, onDeleteState }: {
+    let { tree, selectedId, selectedChoiceId, editingChoiceId, editingStateId, renamingStateId, highlightedBranchKey, collapsed, editableStateIds, deletableStateIds, ssl, onSelect, onSelectReply, onSelectBranch, onBeginEditReply, onCommitEditReply, onCancelEditReply, onBeginEditState, onCommitEditState, onCancelEditState, onBeginRenameState, onCommitRenameState, onCancelRenameState, onToggle, onExpand, onGoToSource, onJump, onContext, onReplyContext, onAddReply, onRemoveReply, onAddChildNode, onDeleteState }: {
         tree: ConversationTree;
         selectedId?: string | null;
+        /** The key of the currently highlighted if/else branch (set by clicking a branch line), or null. Every
+            row whose branchKey starts with this key renders highlighted. */
+        highlightedBranchKey?: string | null;
         /** The individually-selected option's choice id (within the selected state), or null when a whole
             state is selected. Highlights that option row. */
         selectedChoiceId?: string | null;
@@ -37,6 +40,10 @@
         onSelect: (stateId: string) => void;
         /** Select an individual option: highlights it and reveals it in the docked Inspector. */
         onSelectReply: (stateId: string, choiceId: string) => void;
+        /** Click a branch line: select the owner state AND highlight that branch (its line + options) in the
+            tree. `branchKey` is the branch's path key (undefined for a top-level unconditional line, which then
+            just selects the state with no branch highlight). */
+        onSelectBranch: (stateId: string, branchKey: string | undefined) => void;
         /** Enter inline text edit on an option (double-click / Enter / F2). */
         onBeginEditReply: (stateId: string, choiceId: string) => void;
         /** Commit an inline edit with the new text. */
@@ -78,6 +85,12 @@
     } = $props();
 
     let treeEl: HTMLDivElement | undefined = $state();
+
+    // A row belongs to the highlighted branch when its branchKey starts with the clicked branch's key - so an
+    // outer branch's highlight also covers every row of its nested sub-branches (keys are `parent...child`).
+    function inBranch(key: string | undefined): boolean {
+        return Boolean(highlightedBranchKey && key && key.startsWith(highlightedBranchKey));
+    }
 
     // Ancestor state ids on the path to a target's first (expanded) occurrence in the tree, or null if it is
     // not an expanded node here (only a ref, or cross-file). Walks the conversation nesting - flat replies
@@ -598,14 +611,13 @@
     <!-- No group-header line: each branch renders its NPC line and its option rows, and every option carries
          its own [if] chip (the branch condition - `not (...)` for the else - in the tooltip) on its own row.
          The condition lives on the options it gates, not a separate header. -->
-    <div class="brep" style="--lvl:{depth * 2 + 1}">
+    <div class="brep" class:branchhl={inBranch(b.branchKey)} style="--lvl:{depth * 2 + 1}">
         {#if b.condition}<span class="cond" title={b.condition}>{b.kind === "else" ? "[else]" : "[if]"}</span>{/if}
-        <!-- A branch's NPC line selects its OWNER STATE on click (a bundle/structured node's structure is
-             read-only, so there is no per-line edit - selecting reveals the node in the Inspector). Rendered
-             as a <button> so it is a real, keyboard-operable select target, matching the state row's own line
-             (linebtn) and the option rows: without this the conditional NPC lines were the ONLY tree rows with
-             no selection wiring, so an else-branch line like `Reply(200)` could not be selected at all. -->
-        <button class="line linebtn" use:clipTitle={{ label: ownerId, text: b.npc }} onclick={(e) => (e.stopPropagation(), onSelect(ownerId))}>{b.npc || "(no line)"}</button>
+        <!-- Clicking a branch's NPC line selects the owner state AND highlights this branch (its line + options)
+             in the tree - a bundle/structured node's structure is read-only, so the line is a select/inspect
+             target, not an edit target. Rendered as a <button> so it is a real, keyboard-operable target,
+             matching the state row's own line (linebtn) and the option rows. -->
+        <button class="line linebtn" use:clipTitle={{ label: ownerId, text: b.npc }} onclick={(e) => (e.stopPropagation(), onSelectBranch(ownerId, b.branchKey))}>{b.npc || "(no line)"}</button>
     </div>
     {#each b.replies as r, i (r.id)}
         {@render replyRow(r, depth, ownerId, i, b.replies.length, true)}
@@ -620,15 +632,13 @@
 {#snippet convBlock(block: ConvBlock, depth: number, ownerId: string)}
     {#each block as it, i (i)}
         {#if it.kind === "line"}
-            <div class="brep" style="--lvl:{depth * 2 + 1}">
+            <div class="brep" class:branchhl={inBranch(it.branchKey)} style="--lvl:{depth * 2 + 1}">
                 <!-- A branch's opening NPC line carries its gate: the if-branch reads [if], the else-branch reads
                      [else] (it.isElse), both with the full condition in the tooltip. Unconditional lines have none. -->
                 {#if it.condition}<span class="cond" title={it.condition}>{it.isElse ? "[else]" : "[if]"}</span>{/if}
-                <!-- Selects the OWNER STATE on click, same as the branchBlock line above: a structured node's
-                     structure is read-only, so a nested NPC line (e.g. an else-branch `Reply(200)`) is a select
-                     target, not an edit target. A <button> keeps it keyboard-operable and consistent with the
-                     state row's line and the option rows - the tier that previously had no selection wiring. -->
-                <button class="line linebtn" use:clipTitle={{ label: ownerId, text: it.npc }} onclick={(e) => (e.stopPropagation(), onSelect(ownerId))}>{it.npc || "(no line)"}</button>
+                <!-- Clicking selects the owner state AND highlights this branch (same as branchBlock above). A
+                     top-level unconditional line has no branchKey, so it just selects the state (no highlight). -->
+                <button class="line linebtn" use:clipTitle={{ label: ownerId, text: it.npc }} onclick={(e) => (e.stopPropagation(), onSelectBranch(ownerId, it.branchKey))}>{it.npc || "(no line)"}</button>
             </div>
         {:else if it.kind === "reply"}
             {@render replyRow(it.reply, depth, ownerId, i, block.length, true)}
@@ -654,6 +664,7 @@
     <div
         class="rep reprow"
         class:repsel={ownerId === selectedId && r.id === selectedChoiceId}
+        class:branchhl={inBranch(r.branchKey)}
         style="--lvl:{depth * 2 + 1}"
         data-owner={ownerId}
         data-choice={r.id}
@@ -805,6 +816,16 @@
     }
     /* Selected option row: same fill as a selected state (.st.sel) plus an inset left accent, so it reads
        as selected without an outer border that would shift the row. */
+    /* Highlighted if/else branch: clicking a branch line accents that branch's whole run - its opening line
+       and every option under it (nested sub-branches included) - with a faint tint and a left bar, so the
+       picked branch reads as a group. Placed BEFORE .repsel so a selected option's stronger fill wins on its
+       own row. */
+    .brep.branchhl,
+    .rep.branchhl {
+        background: rgba(59, 130, 246, 0.1);
+        border-radius: 4px;
+        box-shadow: inset 2px 0 0 rgba(96, 165, 250, 0.7);
+    }
     .rep.repsel {
         background: #1f2a44;
         border-radius: 4px;

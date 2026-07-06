@@ -70,6 +70,9 @@
     // Set by F2 / double-clicking the id. Mutually exclusive with editingStateId/editingChoiceId (beginning a
     // rename clears the text edits and vice-versa) - only one inline edit runs at a time.
     let renamingStateId = $state<string | null>(null);
+    // The if/else branch highlighted in the tree, set by clicking a branch line (its path key), or null. Purely
+    // a tree highlight - selection stays at the node level. Cleared whenever a different node/option is selected.
+    let highlightedBranchKey = $state<string | null>(null);
     // "Auto node names" toggle (default on): keep auto-assigning NodeXXX / new_state ids when adding a node.
     // Off routes node creation through a prompt for the name (nameModal below).
     let autoNodeNames = $state(true);
@@ -277,7 +280,15 @@
             editingChoiceId = null;
             editingStateId = null;
             renamingStateId = null;
+            highlightedBranchKey = null;
         }
+    }
+    // Tree branch-line click: select the owner state (so the inspector follows) AND highlight that branch's run
+    // in the tree. A top-level unconditional line passes no key - it just selects the state, clearing any
+    // branch highlight.
+    function selectBranchInTree(stateId: string, branchKey: string | undefined): void {
+        selectTreeState(stateId);
+        highlightedBranchKey = branchKey ?? null;
     }
     // Tree option-row click: select the option (and its owner state) so the tree highlights it and the
     // docked Inspector scrolls to + highlights its field. Single-click does not enter inline edit - that is
@@ -290,6 +301,7 @@
         editingChoiceId = null;
         editingStateId = null;
         renamingStateId = null;
+        highlightedBranchKey = null;
     }
     // Breadcrumb "back to state" from the focused-option Inspector: drop the option focus but keep the state
     // selected, so the Inspector falls back to the whole-state editor.
@@ -1151,7 +1163,7 @@
                     {#if treeData.roots.length === 0}
                         <div class="treeempty">No states in this dialog file.</div>
                     {/if}
-                    <Tree tree={treeData} selectedId={selected?.id} selectedChoiceId={selectedChoiceId} editingChoiceId={editingChoiceId} editingStateId={editingStateId} renamingStateId={renamingStateId} collapsed={treeCollapsed} editableStateIds={editableTreeStateIds} deletableStateIds={deletableTreeStateIds} ssl={editModel.format === "fallout-ssl"} onSelect={selectTreeState} onSelectReply={selectReplyInTree} onBeginEditReply={beginEditReply} onCommitEditReply={commitEditReply} onCancelEditReply={cancelEditReply} onBeginEditState={beginEditState} onCommitEditState={commitEditState} onCancelEditState={cancelEditState} onBeginRenameState={beginRenameState} onCommitRenameState={commitRenameState} onCancelRenameState={cancelRenameState} onToggle={toggleTreeNode} onExpand={expandTreeStates} onGoToSource={goToSource} onJump={treeJump} onContext={openContext} onReplyContext={openReplyContext} onAddReply={addReplyToState} onRemoveReply={removeReplyFromState} onAddChildNode={addChildNode} onDeleteState={deleteStateFromTree} />
+                    <Tree tree={treeData} selectedId={selected?.id} selectedChoiceId={selectedChoiceId} editingChoiceId={editingChoiceId} editingStateId={editingStateId} renamingStateId={renamingStateId} highlightedBranchKey={highlightedBranchKey} collapsed={treeCollapsed} editableStateIds={editableTreeStateIds} deletableStateIds={deletableTreeStateIds} ssl={editModel.format === "fallout-ssl"} onSelect={selectTreeState} onSelectReply={selectReplyInTree} onSelectBranch={selectBranchInTree} onBeginEditReply={beginEditReply} onCommitEditReply={commitEditReply} onCancelEditReply={cancelEditReply} onBeginEditState={beginEditState} onCommitEditState={commitEditState} onCancelEditState={cancelEditState} onBeginRenameState={beginRenameState} onCommitRenameState={commitRenameState} onCancelRenameState={cancelRenameState} onToggle={toggleTreeNode} onExpand={expandTreeStates} onGoToSource={goToSource} onJump={treeJump} onContext={openContext} onReplyContext={openReplyContext} onAddReply={addReplyToState} onRemoveReply={removeReplyFromState} onAddChildNode={addChildNode} onDeleteState={deleteStateFromTree} />
                 </div>
                 {#if ctxMenu}
                     <div class="ctxbackdrop" role="presentation" onclick={closeContext} oncontextmenu={(e) => (e.preventDefault(), closeContext())}></div>

@@ -57,6 +57,10 @@ export interface ConvReply {
     /** Byte offset of this option's statement in the source (SSL `callRange`/`stmtRange`, or the first call
         site for a `call` transition), for "go to source". Absent for a pending/synthetic option. */
     sourceOffset?: number;
+    /** Path key of the branch this option sits in (set for options inside an if/else node - see
+        stampBranchKeys). Drives the tree's branch highlight: clicking a branch line highlights every row whose
+        branchKey starts with the clicked branch's key. Absent for a flat (unbranched) node's options. */
+    branchKey?: string;
 }
 
 /**
@@ -69,7 +73,9 @@ export interface ConvReply {
 export type ConvBlockItem =
     // `isElse` marks a branch's OPENING line that runs on the negation of its `if` (the else branch), so the
     // tree can label it `[else]` rather than `[if]`; `condition` still carries the full `not (...)` for the tooltip.
-    | { kind: "line"; npc: string; npcHasText: boolean; condition?: string; isElse?: boolean }
+    // `branchKey` is the path key of the branch this line/reply belongs to (see stampBranchKeys) - clicking a
+    // branch line highlights every row whose branchKey is under (starts with) that key.
+    | { kind: "line"; npc: string; npcHasText: boolean; condition?: string; isElse?: boolean; branchKey?: string }
     | { kind: "reply"; reply: ConvReply }
     | { kind: "group"; condition: string; thenBlock: ConvBlock; elseBlock?: ConvBlock };
 
@@ -84,6 +90,8 @@ export interface ConvBranch {
     npc: string;
     npcHasText: boolean;
     replies: ConvReply[];
+    /** Path key identifying this branch, for the tree's branch highlight (see stampBranchKeys). */
+    branchKey?: string;
 }
 
 export interface ConvState {
@@ -124,6 +132,31 @@ export interface ConversationTree {
 }
 
 export type ResolveJump = (label: string) => JumpTarget | undefined;
+
+/**
+ * Stamp a branch path key onto every line/reply of a structured node's block, so the tree can highlight a
+ * whole branch on click. Rows at the node's top level (not inside any if/else) stay unkeyed. Each group's
+ * then/else block gets a distinct key (`<base>#Nif` / `<base>#Nelse`, nested as `...if.Melse`), and rows inherit
+ * the key of the innermost branch they sit in. Because a nested branch's key STARTS WITH its parent's, a
+ * prefix-match on the clicked key highlights the branch AND everything nested under it. Ids never contain
+ * `#`/`.`, so the prefix test cannot cross between sibling branches.
+ */
+function stampBranchKeys(block: ConvBlock, base: string, branch?: string): void {
+    let gi = 0;
+    for (const it of block) {
+        if (branch) {
+            if (it.kind === "line") it.branchKey = branch;
+            else if (it.kind === "reply") it.reply.branchKey = branch;
+        }
+        if (it.kind === "group") {
+            const thenKey = branch ? `${branch}.${gi}if` : `${base}#${gi}if`;
+            const elseKey = branch ? `${branch}.${gi}else` : `${base}#${gi}else`;
+            stampBranchKeys(it.thenBlock, base, thenKey);
+            if (it.elseBlock) stampBranchKeys(it.elseBlock, base, elseKey);
+            gi++;
+        }
+    }
+}
 
 export function buildConversationTree(
     root: DialogRoot,
@@ -231,6 +264,7 @@ export function buildConversationTree(
                     return []; // opaque - not rendered in the tree (surfaced via the side-effect badge)
                 });
             block = buildBlk(s.block);
+            stampBranchKeys(block, s.id);
         } else if (s.branches && s.branches.length > 0) {
             const choiceById = new Map(s.choices.map((c) => [c.id, c]));
             // An `else` branch runs on the negation of its matching `if` (the immediately preceding branch, per
@@ -239,15 +273,17 @@ export function buildConversationTree(
             // (these branches are SSL-only). The `if` condition is already parenthesized, so `not (X)` is valid.
             branches = s.branches.map((b, i) => {
                 const ifCond = b.kind === "else" ? s.branches![i - 1]?.condition : b.condition;
+                const branchKey = `${s.id}#branch${i}`;
                 return {
                     kind: b.kind,
                     condition: b.kind === "else" && ifCond ? `not ${ifCond}` : b.condition,
                     npc: resolveText(b.replies[0]?.text, messages),
                     npcHasText: Boolean(b.replies[0]?.text),
+                    branchKey,
                     replies: b.choiceIds
                         .map((cid) => choiceById.get(cid))
                         .filter((c): c is DialogChoice => c !== undefined)
-                        .map((c) => buildReply(c, textRO)),
+                        .map((c) => ({ ...buildReply(c, textRO), branchKey })),
                 };
             });
         } else {
