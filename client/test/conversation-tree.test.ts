@@ -386,9 +386,18 @@ describe("buildConversationTree - Node998/Node999 as Combat/Exit terminals (SSL)
         expect(inner.thenBlock).toHaveLength(1);
         expect(inner.thenBlock[0]).toMatchObject({ kind: "reply" });
 
-        // else-branch carries its OWN NPC line (the flat projection dropped it - symptom 3).
+        // else-branch carries its OWN NPC line (the flat projection dropped it - symptom 3), tagged `isElse`
+        // (so the tree labels it `[else]`, not `[if]`) with the negated condition in its tooltip. The if-branch
+        // line is NOT tagged.
         expect(group.elseBlock).toBeDefined();
-        expect(group.elseBlock![0]).toMatchObject({ kind: "line", npc: "@200" });
+        expect(group.elseBlock![0]).toMatchObject({
+            kind: "line",
+            npc: "@200",
+            isElse: true,
+            condition: "not (OUTER)",
+        });
+        expect(group.thenBlock[0]).toMatchObject({ kind: "line", npc: "@100" });
+        expect((group.thenBlock[0] as { isElse?: boolean }).isElse).toBeUndefined();
 
         // Every choice is expanded exactly once through the block (no flat replies duplicating them).
         expect(n1.replies).toHaveLength(0);

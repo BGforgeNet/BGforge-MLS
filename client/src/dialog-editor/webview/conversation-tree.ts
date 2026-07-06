@@ -67,7 +67,9 @@ export interface ConvReply {
  * are dropped from the tree (surfaced via the node's side-effect badge). Recursive via `group`.
  */
 export type ConvBlockItem =
-    | { kind: "line"; npc: string; npcHasText: boolean; condition?: string }
+    // `isElse` marks a branch's OPENING line that runs on the negation of its `if` (the else branch), so the
+    // tree can label it `[else]` rather than `[if]`; `condition` still carries the full `not (...)` for the tooltip.
+    | { kind: "line"; npc: string; npcHasText: boolean; condition?: string; isElse?: boolean }
     | { kind: "reply"; reply: ConvReply }
     | { kind: "group"; condition: string; thenBlock: ConvBlock; elseBlock?: ConvBlock };
 
@@ -217,12 +219,11 @@ export function buildConversationTree(
                     if (it.kind === "group") {
                         const thenBlock = buildBlk(it.thenBlock);
                         const elseBlock = it.elseBlock ? buildBlk(it.elseBlock) : undefined;
-                        // Mark each branch's OPENING NPC line with its gate so a conditional line reads as an
-                        // [if] (the else's negated `not (...)`) - the same marker the options use, so the reader
-                        // can tell an if-branch line from an else-branch line without a separate if/else tag.
+                        // Mark each branch's OPENING NPC line with its gate: the if-branch line reads `[if]`, the
+                        // else-branch line reads `[else]` (isElse), both carrying the full condition in the tooltip.
                         if (thenBlock[0]?.kind === "line") thenBlock[0] = { ...thenBlock[0], condition: it.condition };
                         if (elseBlock?.[0]?.kind === "line")
-                            elseBlock[0] = { ...elseBlock[0], condition: `not ${it.condition}` };
+                            elseBlock[0] = { ...elseBlock[0], condition: `not ${it.condition}`, isElse: true };
                         return [
                             { kind: "group", condition: it.condition, thenBlock, ...(elseBlock ? { elseBlock } : {}) },
                         ];

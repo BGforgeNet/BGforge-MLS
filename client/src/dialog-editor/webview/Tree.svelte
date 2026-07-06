@@ -599,7 +599,7 @@
          its own [if] chip (the branch condition - `not (...)` for the else - in the tooltip) on its own row.
          The condition lives on the options it gates, not a separate header. -->
     <div class="brep" style="--lvl:{depth * 2 + 1}">
-        {#if b.condition}<span class="cond" title={b.condition}>[if]</span>{/if}
+        {#if b.condition}<span class="cond" title={b.condition}>{b.kind === "else" ? "[else]" : "[if]"}</span>{/if}
         <!-- A branch's NPC line selects its OWNER STATE on click (a bundle/structured node's structure is
              read-only, so there is no per-line edit - selecting reveals the node in the Inspector). Rendered
              as a <button> so it is a real, keyboard-operable select target, matching the state row's own line
@@ -621,9 +621,9 @@
     {#each block as it, i (i)}
         {#if it.kind === "line"}
             <div class="brep" style="--lvl:{depth * 2 + 1}">
-                <!-- A branch's opening NPC line carries the branch's [if] gate (else = `not (...)`), so an
-                     if-branch line reads differently from an else-branch line. Unconditional lines have none. -->
-                {#if it.condition}<span class="cond" title={it.condition}>[if]</span>{/if}
+                <!-- A branch's opening NPC line carries its gate: the if-branch reads [if], the else-branch reads
+                     [else] (it.isElse), both with the full condition in the tooltip. Unconditional lines have none. -->
+                {#if it.condition}<span class="cond" title={it.condition}>{it.isElse ? "[else]" : "[if]"}</span>{/if}
                 <!-- Selects the OWNER STATE on click, same as the branchBlock line above: a structured node's
                      structure is read-only, so a nested NPC line (e.g. an else-branch `Reply(200)`) is a select
                      target, not an edit target. A <button> keeps it keyboard-operable and consistent with the
