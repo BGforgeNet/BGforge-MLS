@@ -382,9 +382,10 @@
     // Enter/F2/E begin inline edit (Enter falls back to select when the option is not editable - a locked
     // SSL @N / read-only node has no inline input); G takes the transition (go to the target, like clicking
     // its link); ArrowUp/Down move to the neighbouring row. Double-click also edits (see the row markup).
-    // `readonly` (a bundle/structured branch option) is still selectable and navigable, but its text is not
-    // inline-editable here, so Enter/F2/E select rather than begin an edit.
-    function onReplyRowKeydown(e: KeyboardEvent, ownerId: string, r: ConvReply, readonly: boolean): void {
+    // A branch option's STRUCTURE is read-only, but its .msg text is editable (matching the inspector), so
+    // Enter/F2/E begin an inline text edit whenever the text is editable (r.textEditable) - branch or flat alike;
+    // a locked @N / read-only-derived line has no editable text, so Enter falls back to select.
+    function onReplyRowKeydown(e: KeyboardEvent, ownerId: string, r: ConvReply): void {
         switch (e.key) {
             case " ":
                 e.preventDefault();
@@ -395,7 +396,7 @@
             case "e":
             case "E":
                 e.preventDefault();
-                if (!readonly && r.textEditable) onBeginEditReply(ownerId, r.id);
+                if (r.textEditable) onBeginEditReply(ownerId, r.id);
                 else if (e.key === "Enter") onSelectReply(ownerId, r.id);
                 break;
             case "g":
@@ -673,8 +674,8 @@
         aria-selected={ownerId === selectedId && r.id === selectedChoiceId}
         tabindex={r.id === treeFocusId ? 0 : -1}
         onclick={() => onSelectReply(ownerId, r.id)}
-        ondblclick={branchReadonly ? undefined : () => r.textEditable && onBeginEditReply(ownerId, r.id)}
-        onkeydown={(e) => onReplyRowKeydown(e, ownerId, r, branchReadonly)}
+        ondblclick={() => r.textEditable && onBeginEditReply(ownerId, r.id)}
+        onkeydown={(e) => onReplyRowKeydown(e, ownerId, r)}
         oncontextmenu={branchReadonly
             ? undefined
             : (e) => (e.preventDefault(), onReplyContext(ownerId, r.id, index, count, e.clientX, e.clientY))}
@@ -688,7 +689,7 @@
              structured group alike): the gate lives on the option's own row, not a separate header line, with
              the full conjoined condition (incl. `not (...)` for an else branch) in the tooltip. -->
         {#if r.condition}<span class="rcond" title={r.condition}>[if]</span>{/if}
-        {#if !branchReadonly && r.id === editingChoiceId && r.textEditable}
+        {#if r.id === editingChoiceId && r.textEditable}
             <!-- Inline edit: the option's text as an input. Enter/blur commit, Escape cancels (both routed
                  through blur). Its click/dblclick/keydown are stopped so cursor placement, word-select and
                  typing (arrows, Space) act on the field, not the row's select / edit / nav. -->

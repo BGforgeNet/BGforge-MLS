@@ -179,7 +179,10 @@
         };
         fit();
         el.addEventListener("input", fit);
-        return { update: fit, destroy: () => el.removeEventListener("input", fit) };
+        // On a reactive VALUE change (e.g. selecting a different option), Svelte may run this action `update`
+        // BEFORE it writes the new `value` to the element, so fitting synchronously measures the STALE text and
+        // the height lags one selection behind. Defer to a microtask so the fit runs after the DOM value settles.
+        return { update: () => queueMicrotask(fit), destroy: () => el.removeEventListener("input", fit) };
     }
 
     // Inline condition input for adding a new if-branch. A plain `$state("")` local here
