@@ -775,6 +775,12 @@
         {:else}
             <span class="lf ext" title={t.label}>&#8599; {t.label}</span>
         {/if}
+    {:else if r.target.kind === "state"}
+        <!-- First-expansion target: its node renders inline right below, so this row would otherwise show no
+             target at all. Always label the destination (matching exit/ref/external and the inspector's
+             `-> id`), clickable to select + scroll to that node. -->
+        {@const t = r.target}
+        <button class="lf tgt" title="Leads to {t.node.id} (shown below)" onclick={(e) => (e.stopPropagation(), onSelect(t.node.id), reveal(t.node.id))}>&#8594; {t.node.id}</button>
     {/if}
 {/snippet}
 
@@ -1081,6 +1087,15 @@
     button.lf.ref {
         color: #93c5fd;
         border: 1px solid #1e3a5f;
+    }
+    /* First-expansion target label: muted (the destination node is expanded right below, so this is an
+       orientation aid, not the primary way to reach it - keep it quieter than a ref/jump leaf). */
+    button.lf.tgt {
+        color: #7c8698;
+        border: 1px solid #2b303a;
+    }
+    button.lf.tgt:hover {
+        color: #aab6c8;
     }
     button.lf.jump {
         color: #fcd34d;

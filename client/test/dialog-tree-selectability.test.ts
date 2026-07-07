@@ -307,3 +307,40 @@ describe("Tree.svelte find-bar highlight (SSR)", () => {
         expect(stateCls).not.toContain("searchhit");
     });
 });
+
+describe("Tree.svelte inline-target label (SSR)", () => {
+    // An option whose target is a first-expansion state (its node renders inline below) must STILL show a
+    // target label at the end of the row - the `leaf` snippet originally had no `state` case, so these rows
+    // showed no destination at all. A revert (dropping the state branch) turns this red.
+    it("labels an option whose target expands inline with an arrow + the target node id", () => {
+        const child: ConversationTree["roots"][number] = {
+            id: "Node002",
+            text: "child line",
+            replies: [],
+            isEntry: false,
+            textEditable: true,
+        };
+        const tree: ConversationTree = {
+            roots: [
+                {
+                    id: "Node001",
+                    text: "hi",
+                    replies: [
+                        {
+                            id: "Node001#opt0",
+                            text: "go on",
+                            hasText: true,
+                            textEditable: true,
+                            target: { kind: "state", node: child },
+                        },
+                    ],
+                    isEntry: true,
+                    textEditable: true,
+                },
+            ],
+        };
+        const html = renderTree(tree);
+        // The muted target-label class + the destination id both render on the option row.
+        expect(html).toMatch(/class="lf tgt[^"]*"[^>]*>[^<]*Node002/);
+    });
+});

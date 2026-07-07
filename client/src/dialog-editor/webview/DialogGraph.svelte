@@ -895,7 +895,13 @@
         },
         addReply: () => {
             if (!structEditable(selected)) return; // Tier 2 add option: D or faithful SSL
-            appendReply(selected);
+            // Select + drop into edit on the new option, same as the tree's inline "+ option"
+            // (addReplyToState) - so adding via the inspector "+" or the context menu also auto-selects the new
+            // option instead of leaving the parent node selected.
+            const c = appendReply(selected);
+            selectedChoiceId = c.id;
+            editingChoiceId = c.id;
+            editingStateId = null;
         },
         removeReply: (choiceId: string) => {
             if (!structEditable(selected)) return; // Tier 2 remove option: D or faithful SSL
