@@ -4,12 +4,25 @@
  * has no unit-test seam).
  */
 
-import type { DialogChoice, DialogState } from "../../../../shared/dialog-model";
+import type { DialogChoice, DialogMessages, DialogState } from "../../../../shared/dialog-model";
 
 /** Parse a bare `@N` line to its numeric id, or null for a literal / non-`@N` text. */
 export function msgRef(text: string | undefined): string | null {
     const m = /^@(\d+)$/.exec((text ?? "").trim());
     return m ? m[1]! : null;
+}
+
+/**
+ * The single text write-back path for every display line - the tree's inline NPC/option edits and the
+ * Inspector's NPC/option fields alike. A resolvable `@N` line writes the new text to its `.msg`/`.tra` entry
+ * (localization preserved - the project decision); anything else (a literal, or a just-added item still
+ * pending its `@id`) updates the value's own `text` field in place. `target` is the DialogState or
+ * DialogChoice that owns the text. (Was copy-pasted at four sites - see coding.md *Share, don't duplicate*.)
+ */
+export function writeText(target: { text: string }, messages: DialogMessages | undefined, value: string): void {
+    const ref = msgRef(target.text);
+    if (ref !== null && messages) messages[ref] = value;
+    else target.text = value;
 }
 
 /**

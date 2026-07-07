@@ -35,6 +35,8 @@ Prereqs are environmental, not repo deps: Playwright + a Chromium browser on `PA
 - `harness-main.ts` - mounts `App.svelte` (the production root).
 - `build.mts` - bundles it to `app.html` with a production-shaped CSP.
 - `render.mts` - the production-path driver (assertions + screenshot).
+- `render-search.mts` - the tree find-bar driver (find-as-you-type, navigation, node-id dim guard).
+- `edit-behavior.mts` - the selection/add/edit driver (the unified `select()` primitive + shared add/remove paths).
 - `sample-model.ts` - a small hand-built `DialogModel` (also used by the unit tests).
 - `real-model.ts` - frozen output of `modelFromD` on a real `.d` fixture; regenerate with
   `gen-real-model.ts` when the fixture or adapter changes.

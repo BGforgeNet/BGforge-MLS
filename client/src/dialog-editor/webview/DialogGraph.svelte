@@ -9,7 +9,7 @@
     import { modelToFlow, type FlowNode, type FlowEdge } from "./model-to-flow";
     import { buildConversationTree, type ConvState } from "./conversation-tree";
     import { collectMatches } from "./tree-search";
-    import { msgRef } from "./inspector-edit";
+    import { writeText } from "./inspector-edit";
     import { dialogIssues } from "./dialog-issues";
     import { distinctStateIds, findStateInRoots } from "./state-lookup";
     import { unresolvedRefCount } from "./translation-status";
@@ -74,6 +74,26 @@
     // The if/else branch highlighted in the tree, set by clicking a branch line (its path key), or null. Purely
     // a tree highlight - selection stays at the node level. Cleared whenever a different node/option is selected.
     let highlightedBranchKey = $state<string | null>(null);
+    // The editor's selection is ONE state plus at most one mutually-exclusive UI sub-mode. `select` is the
+    // single setter that writes the whole tuple (`selected` + the five flags above) coherently, so no entry
+    // point hand-resets a subset - the co-varying-state-one-setter rule (architecture.md). Modelled as a
+    // discriminated union so an impossible combination (editing an option AND renaming the node) can't be
+    // expressed. Adding a sub-mode is a one-line change here, not an edit spread across every selection site.
+    type Selection =
+        | { on: "state"; state: DialogState | null } // whole state selected (or nothing, on state: null)
+        | { on: "option"; state: DialogState; choiceId: string } // an option row selected
+        | { on: "option-edit"; state: DialogState; choiceId: string } // an option's text in inline edit
+        | { on: "line-edit"; state: DialogState } // the NPC line in inline edit
+        | { on: "rename"; state: DialogState } // the node id in inline rename
+        | { on: "branch"; state: DialogState; branchKey: string | undefined }; // an if/else branch highlighted
+    function select(sel: Selection): void {
+        selected = sel.state;
+        selectedChoiceId = sel.on === "option" || sel.on === "option-edit" ? sel.choiceId : null;
+        editingChoiceId = sel.on === "option-edit" ? sel.choiceId : null;
+        editingStateId = sel.on === "line-edit" ? sel.state.id : null;
+        renamingStateId = sel.on === "rename" ? sel.state.id : null;
+        highlightedBranchKey = sel.on === "branch" ? (sel.branchKey ?? null) : null;
+    }
     // "Auto node names" toggle (default on): keep auto-assigning NodeXXX / new_state ids when adding a node.
     // Off routes node creation through a prompt for the name (nameModal below).
     let autoNodeNames = $state(true);
@@ -327,70 +347,51 @@
     function findState(stateId: string): DialogState | null {
         return findStateInRoots(editModel.roots, activeFile, stateId);
     }
-    // Tree-row click: select the state for the shared Inspector. Clears any option selection/edit -
+    // Tree-row click: select the state for the shared Inspector. `select` clears any option selection/edit -
     // selecting the whole state is a state-level action.
     function selectTreeState(stateId: string): void {
         const s = findState(stateId);
-        if (s) {
-            selected = s;
-            selectedChoiceId = null;
-            editingChoiceId = null;
-            editingStateId = null;
-            renamingStateId = null;
-            highlightedBranchKey = null;
-        }
+        if (s) select({ on: "state", state: s });
     }
     // Tree branch-line click: select the owner state (so the inspector follows) AND highlight that branch's run
-    // in the tree. A top-level unconditional line passes no key - it just selects the state, clearing any
-    // branch highlight.
+    // in the tree. A top-level unconditional line passes no key - it just selects the state (no branch highlight).
     function selectBranchInTree(stateId: string, branchKey: string | undefined): void {
-        selectTreeState(stateId);
-        highlightedBranchKey = branchKey ?? null;
+        const s = findState(stateId);
+        if (s) select({ on: "branch", state: s, branchKey });
     }
     // Tree option-row click: select the option (and its owner state) so the tree highlights it and the
     // docked Inspector scrolls to + highlights its field. Single-click does not enter inline edit - that is
     // a double-click / Enter / F2 (beginEditReply).
     function selectReplyInTree(stateId: string, choiceId: string): void {
         const s = findState(stateId);
-        if (!s) return;
-        selected = s;
-        selectedChoiceId = choiceId;
-        editingChoiceId = null;
-        editingStateId = null;
-        renamingStateId = null;
-        highlightedBranchKey = null;
+        if (s) select({ on: "option", state: s, choiceId });
     }
     // Breadcrumb "back to state" from the focused-option Inspector: drop the option focus but keep the state
     // selected, so the Inspector falls back to the whole-state editor.
     function focusOwnerState(): void {
-        selectedChoiceId = null;
+        if (selected) select({ on: "state", state: selected });
     }
     // Tree option double-click / Enter / F2: enter inline edit on the option's text.
     function beginEditReply(stateId: string, choiceId: string): void {
         const s = findState(stateId);
-        if (!s) return;
-        selected = s;
-        selectedChoiceId = choiceId;
-        editingChoiceId = choiceId;
-        editingStateId = null;
-        renamingStateId = null;
+        if (s) select({ on: "option-edit", state: s, choiceId });
     }
-    // Commit an inline edit: write the new text back the same way the inspector does (a resolvable @N line
-    // updates its .msg/.tra entry; anything else - a literal, or a just-added option - updates the choice's
-    // own text, allocated an @id at save). Then leave edit mode and reproject.
+    // Commit an inline edit via writeText (a resolvable @N line updates its .msg/.tra entry; anything else - a
+    // literal, or a just-added option - updates the choice's own text, allocated an @id at save). Then leave
+    // edit mode (option stays selected) and reproject.
     function commitEditReply(stateId: string, choiceId: string, value: string): void {
         const s = findState(stateId);
         const c = s?.choices.find((ch) => ch.id === choiceId);
-        editingChoiceId = null;
+        if (!s) return;
+        select(c ? { on: "option", state: s, choiceId } : { on: "state", state: s });
         if (!c) return;
-        const ref = msgRef(c.text);
-        if (ref !== null && editModel.messages) editModel.messages[ref] = value;
-        else c.text = value;
+        writeText(c, editModel.messages, value);
         void rebuild({ frame: "none" });
     }
     // Abandon an inline edit (Escape) - discard the draft, leave edit mode, keep the option selected.
     function cancelEditReply(): void {
-        editingChoiceId = null;
+        if (selected)
+            select(selectedChoiceId ? { on: "option", state: selected, choiceId: selectedChoiceId } : { on: "state", state: selected });
     }
 
     // Tree NPC-line double-click / Enter / E: enter inline edit on the state's NPC line. Selects the state (so
@@ -398,28 +399,21 @@
     // node rename, not line edit - see beginRenameState.)
     function beginEditState(stateId: string): void {
         const s = findState(stateId);
-        if (!s) return;
-        selected = s;
-        selectedChoiceId = null;
-        editingChoiceId = null;
-        editingStateId = stateId;
-        renamingStateId = null;
+        if (s) select({ on: "line-edit", state: s });
     }
-    // Commit an inline NPC-line edit: write the new text back the same way the inspector's NPC field does (a
-    // resolvable @N line updates its .msg/.tra entry; a literal - or a just-added state - updates the state's
-    // own text, allocated an @id at save). Mirrors commitEditReply. Then leave edit mode and reproject.
+    // Commit an inline NPC-line edit via writeText (a resolvable @N line updates its .msg/.tra entry; a literal
+    // - or a just-added state - updates the state's own text, allocated an @id at save). Mirrors
+    // commitEditReply. Then leave edit mode (state stays selected) and reproject.
     function commitEditState(stateId: string, value: string): void {
         const s = findState(stateId);
-        editingStateId = null;
         if (!s) return;
-        const ref = msgRef(s.text);
-        if (ref !== null && editModel.messages) editModel.messages[ref] = value;
-        else s.text = value;
+        select({ on: "state", state: s });
+        writeText(s, editModel.messages, value);
         void rebuild({ frame: "none" });
     }
     // Abandon an inline NPC-line edit (Escape) - discard the draft, keep the state selected.
     function cancelEditState(): void {
-        editingStateId = null;
+        if (selected) select({ on: "state", state: selected });
     }
 
     // Tree F2 / id double-click: begin an inline node-id rename. Selects the state (so the inspector follows)
@@ -427,27 +421,23 @@
     // inspector's rename field and the tree's own F2 gate (a read-only/derived node cannot be renamed).
     function beginRenameState(stateId: string): void {
         const s = findState(stateId);
-        if (!structEditable(s)) return;
-        selected = s;
-        selectedChoiceId = null;
-        editingChoiceId = null;
-        editingStateId = null;
-        renamingStateId = stateId;
+        if (structEditable(s)) select({ on: "rename", state: s });
     }
     // Commit an inline rename: renameState moves the label and every GOTO/EXTERN reference with it (see the op).
     // A rejected id (empty, unchanged, or a duplicate) leaves the model as-is and the row reverts to the old id
-    // on reproject. Leave rename mode and reproject either way.
+    // on reproject. Leave rename mode either way (the renamed - or unchanged - node stays selected).
     function commitRenameState(stateId: string, value: string): void {
         const s = findState(stateId);
-        renamingStateId = null;
         if (s && ops.renameState(editModel, s, value)) {
-            selected = s; // keep the just-renamed node selected (its id changed)
+            select({ on: "state", state: s }); // keep the just-renamed node selected (its id changed)
             void rebuild({ frame: "none" });
+        } else if (selected) {
+            select({ on: "state", state: selected }); // rejected: leave rename mode, keep the current selection
         }
     }
     // Abandon an inline rename (Escape) - discard the draft, keep the state selected under its current id.
     function cancelRenameState(): void {
-        renamingStateId = null;
+        if (selected) select({ on: "state", state: selected });
     }
 
     // Select a state, switching to its tab first if it lives in another dialog (a caller can be cross-root).
@@ -519,7 +509,7 @@
         const st = ctxMenu ? findState(ctxMenu.stateId) : null;
         closeContext();
         if (!st || st.derivedFrom) return;
-        selected = st;
+        select({ on: "state", state: st });
         if (kind === "addReply") actions.addReply();
         else if (kind === "duplicate") actions.duplicateState();
         else actions.deleteState();
@@ -530,7 +520,7 @@
         closeContext();
         const st = findState(stateId);
         if (!st || st.derivedFrom) return;
-        selected = st;
+        select({ on: "state", state: st });
         if (kind === "remove") actions.removeReply(choiceId);
         else actions.moveReply(choiceId, kind === "up" ? -1 : 1);
     }
@@ -540,7 +530,7 @@
         closeContext();
         const st = findState(stateId);
         if (!st || st.derivedFrom) return;
-        selected = st;
+        select({ on: "state", state: st });
         actions.setTarget(choiceId, target);
     }
     // Tree cross-file leaf: switch to the destination tab and select the target there.
@@ -664,10 +654,7 @@
             tabPos.clear();
             renderedFile = "";
             activeFile = editModel.roots.find((r) => r.states.length > 0)?.id ?? "";
-            selected = null;
-            selectedChoiceId = null;
-            editingChoiceId = null;
-            editingStateId = null;
+            select({ on: "state", state: null });
             confirmDelete = null;
             void rebuild({ relayout: true });
             suppressEmit = true;
@@ -726,10 +713,7 @@
             return;
         }
         activeFile = fileId;
-        selected = null;
-        selectedChoiceId = null;
-        editingChoiceId = null;
-        editingStateId = null;
+        select({ on: "state", state: null });
         treeCollapsed = new Set();
         void rebuild(focusId ? { focusId } : { frame: "entry" });
     }
@@ -742,10 +726,9 @@
             switchTab(jump.file, jump.stateId);
             return;
         }
-        selected = event.node.data?.state ?? null;
-        selectedChoiceId = null;
-        editingChoiceId = null;
-        editingStateId = null;
+        // Graph card click routes through the same `select` as a tree click - so it clears the rename mode and
+        // branch highlight a tree action may have left set, not just the option/line-edit flags it used to.
+        select({ on: "state", state: event.node.data?.state ?? null });
     }
 
     // Thin wrappers over the pure edit ops (shared/dialog-edit-ops.ts): each runs the
@@ -793,48 +776,50 @@
         new Set((activeRoot?.states ?? []).filter((s) => canDelete(s)).map((s) => s.id)),
     );
 
-    // Append an option to a state and reproject. Shared by the tree "+ option" and the graph/inspector
-    // "Add option" so there is one add path; returns the new choice so the caller can act on it.
+    // Append an option to a state and reproject. Returns the new choice so the caller can select/edit it.
     function appendReply(st: DialogState): DialogChoice {
         const c = ops.addReply(editModel, st);
         void rebuild({ frame: "none" });
         return c;
     }
+    // The ONE "add a flat option, then select + edit it" path - shared by the tree "+ option", the inspector
+    // "+", and the context-menu "Add option", so every surface behaves identically (share-don't-duplicate).
+    // A just-added option is always text-editable (pending), so dropping into edit is safe for D and SSL alike.
+    function addOptionAndEdit(st: DialogState): void {
+        const c = appendReply(st);
+        select({ on: "option-edit", state: st, choiceId: c.id });
+    }
+    // The ONE "remove an option" path. If the removed option was the selected one, fall selection back to its
+    // owner state so no stale choiceId lingers (a removed option cannot stay selected).
+    function removeOption(st: DialogState, choiceId: string): void {
+        ops.removeReply(st, choiceId);
+        if (selectedChoiceId === choiceId) select({ on: "state", state: st });
+        void rebuild({ frame: "none" });
+    }
     // Tree inline "+ option": add an option to a state addressed by id (the row need not be the current
-    // selection) and drop straight into inline edit on the new (empty) option's text - a just-added option
-    // is always text-editable (pending), so this is safe for D and SSL alike.
+    // selection), through the shared add path.
     function addReplyToState(stateId: string): void {
         const st = findState(stateId);
-        if (!structEditable(st)) return;
-        selected = st;
-        const c = appendReply(st);
-        selectedChoiceId = c.id;
-        editingChoiceId = c.id;
-        editingStateId = null;
+        if (structEditable(st)) addOptionAndEdit(st);
     }
-    // Tree inline "x": remove an option from a state addressed by id. Mirrors replyAct("remove").
-    // The tree gates a conditional SSL option's "x" as disabled (matching the inspector), so this
-    // is only reached for a removable option.
+    // Tree inline "x": remove an option from a state addressed by id, through the shared remove path. The tree
+    // gates a conditional SSL option's "x" as disabled (matching the inspector), so this is only reached for a
+    // removable option.
     function removeReplyFromState(stateId: string, choiceId: string): void {
         const st = findState(stateId);
-        if (!structEditable(st)) return;
-        selected = st;
-        actions.removeReply(choiceId);
+        if (structEditable(st)) removeOption(st, choiceId);
     }
-    // Grow the conversation from a state - add a new NPC state and an option here that leads to it, then drop
-    // into inline edit on that new option's text. The new child is empty; its own line is edited by selecting it
-    // (inspector NPC field). Composed from the same ops the toolbar/graph use. `id` is the chosen node name
-    // (manual-name path) or undefined to auto-assign.
+    // Grow the conversation from a state - add a new NPC child state and an option here that leads to it, then
+    // SELECT THE NEW STATE (so the inspector shows it, ready for its line), matching the toolbar "+ State". The
+    // connecting option starts empty and is edited by selecting it. `id` is the chosen node name (manual-name
+    // path) or undefined to auto-assign.
     function createChildNode(parentId: string, id?: string): void {
         const st = findState(parentId);
         if (!structEditable(st)) return;
         const child = ops.addState(editModel, activeRoot ?? undefined, id);
         const c = ops.addReply(editModel, st);
         ops.setChoiceTarget(st, c.id, { kind: "state", stateId: child.id });
-        selected = st;
-        selectedChoiceId = c.id;
-        editingChoiceId = c.id; // type the option text that leads to the new node
-        editingStateId = null;
+        select({ on: "state", state: child });
         void rebuild({ frame: "none" });
     }
     // Tree inline node "+": add a child node. With "Auto node names" on, create straight away; off, prompt for
@@ -850,14 +835,14 @@
     function deleteStateFromTree(stateId: string): void {
         const st = findState(stateId);
         if (!canDelete(st)) return;
-        selected = st;
+        select({ on: "state", state: st });
         requestDeleteState(st);
     }
 
     // Actually remove the state (after the confirm modal, or directly when there are no inbound refs).
     function performDelete(s: DialogState): void {
         ops.deleteState(editModel, s);
-        selected = null;
+        select({ on: "state", state: null });
         confirmDelete = null;
         void rebuild({ frame: "none" });
     }
@@ -894,19 +879,10 @@
             if (structEditable(selected) && ops.renameState(editModel, selected, newId)) void rebuild({ frame: "none" });
         },
         addReply: () => {
-            if (!structEditable(selected)) return; // Tier 2 add option: D or faithful SSL
-            // Select + drop into edit on the new option, same as the tree's inline "+ option"
-            // (addReplyToState) - so adding via the inspector "+" or the context menu also auto-selects the new
-            // option instead of leaving the parent node selected.
-            const c = appendReply(selected);
-            selectedChoiceId = c.id;
-            editingChoiceId = c.id;
-            editingStateId = null;
+            if (structEditable(selected)) addOptionAndEdit(selected); // Tier 2 add option: D or faithful SSL
         },
         removeReply: (choiceId: string) => {
-            if (!structEditable(selected)) return; // Tier 2 remove option: D or faithful SSL
-            ops.removeReply(selected, choiceId);
-            void rebuild({ frame: "none" });
+            if (structEditable(selected)) removeOption(selected, choiceId); // Tier 2 remove option: D or faithful SSL
         },
         moveReply: (choiceId: string, dir: -1 | 1) => {
             if (!structEditable(selected)) return; // Tier 1 reorder: D or faithful SSL
@@ -933,14 +909,16 @@
             if (!structEditable(selected)) return; // D, or a faithful SSL node (shares the source @N refs)
             const copy = ops.duplicateState(editModel, selected);
             if (!copy) return;
-            selected = copy;
+            select({ on: "state", state: copy });
             void rebuild({ focusId: copy.id });
         },
         addReplyToBranch: (branchIndex: number) => {
             if (!structEditable(selected)) return; // Tier 3b: bundle SSL branch-scoped add
             const branch = selected.branches?.[branchIndex];
             if (!branch) return;
-            ops.addReplyToBranch(editModel, selected, branch);
+            // Select + edit the new branch option, same as the flat add path (addOptionAndEdit).
+            const c = ops.addReplyToBranch(editModel, selected, branch);
+            select({ on: "option-edit", state: selected, choiceId: c.id });
             void rebuild({ frame: "none" });
         },
         removeReplyInBranch: (branchIndex: number, choiceId: string) => {
@@ -948,6 +926,7 @@
             const branch = selected.branches?.[branchIndex];
             if (!branch) return;
             ops.removeReplyFromBranch(selected, branch, choiceId);
+            if (selectedChoiceId === choiceId) select({ on: "state", state: selected }); // drop stale option selection
             void rebuild({ frame: "none" });
         },
         moveReplyInBranch: (branchIndex: number, choiceId: string, dir: -1 | 1) => {
@@ -978,7 +957,7 @@
 
     function createState(id?: string): void {
         const s = ops.addState(editModel, activeRoot ?? undefined, id);
-        selected = s;
+        select({ on: "state", state: s });
         void rebuild({ focusId: s.id });
     }
     // Toolbar "+ State": create a node. "Auto node names" on -> create straight away with an auto id; off ->

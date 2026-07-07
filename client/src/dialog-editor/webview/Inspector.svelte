@@ -16,12 +16,12 @@
         conditionLockReason,
         isPendingChoice,
         isPendingState,
-        msgRef,
         optionRemoveLockReason,
         stateReadOnlyReason,
         structuralLockReason,
         textFieldLocked,
         textLockReason,
+        writeText,
     } from "./inspector-edit";
     import type { CallerRow } from "./find-callers";
     import { autosize } from "./autosize";
@@ -85,14 +85,10 @@
     // A bare `@N` line is backed by a .tra entry: edit that entry so localization is
     // preserved (the project decision). A literal line is edited in place.
     function setSay(v: string): void {
-        const ref = msgRef(state.text);
-        if (ref !== null && messages) messages[ref] = v;
-        else state.text = v;
+        writeText(state, messages, v);
     }
     function setReply(c: DialogChoice, v: string): void {
-        const ref = msgRef(c.text);
-        if (ref !== null && messages) messages[ref] = v;
-        else c.text = v;
+        writeText(c, messages, v);
     }
 
     function targetValue(t: DialogTarget): string {
