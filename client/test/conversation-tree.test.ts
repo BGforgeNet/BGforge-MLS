@@ -250,6 +250,39 @@ describe("buildConversationTree", () => {
         expect(buildConversationTree(root([]), undefined, noJump).roots).toHaveLength(0);
     });
 
+    // Go-to-source (F4): the option row carries the byte offset of its source statement. SSL options carry
+    // callRange/stmtRange/callSite spans; a WeiDU D option carries only `sourceRange`. Both must resolve, and a
+    // pending (just-added) option - which has no span yet - stays undefined so F4 is a no-op on it.
+    describe("option sourceOffset (go to source)", () => {
+        const offsetOf = (choice: DialogChoice): number | undefined =>
+            buildConversationTree(root([st("A", "@0", [choice])]), undefined, noJump).roots[0]!.replies[0]!
+                .sourceOffset;
+
+        it("resolves a WeiDU D option from its sourceRange (the SSL span fields are absent for D)", () => {
+            expect(offsetOf(ch("A#0", { kind: "exit" }, { sourceRange: { start: 128, end: 160 } }))).toBe(128);
+        });
+        it("prefers the SSL callRange over sourceRange when both somehow exist", () => {
+            const c = ch(
+                "A#opt0",
+                { kind: "exit" },
+                { callRange: { start: 40, end: 70 }, sourceRange: { start: 128, end: 160 } },
+            );
+            expect(offsetOf(c)).toBe(40);
+        });
+        it("falls back through stmtRange then the first call site", () => {
+            expect(offsetOf(ch("A#opt0", { kind: "exit" }, { stmtRange: { start: 55, end: 80 } }))).toBe(55);
+            const call = ch(
+                "A#call0",
+                { kind: "state", stateId: "B" },
+                { callSites: [{ stmtRange: { start: 12, end: 30 }, topLevel: true }] },
+            );
+            expect(offsetOf(call)).toBe(12);
+        });
+        it("is undefined for a pending (just-added) option with no source span yet", () => {
+            expect(offsetOf(ch("A#reply", { kind: "exit" }, { text: "@5" }))).toBeUndefined();
+        });
+    });
+
     it("represents a bundle (if/else) node as branches, each with its own NPC line and replies", () => {
         const r = root([
             st(

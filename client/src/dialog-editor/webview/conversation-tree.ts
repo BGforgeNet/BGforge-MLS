@@ -55,7 +55,8 @@ export interface ConvReply {
     textEditable: boolean;
     target: ConvTarget;
     /** Byte offset of this option's statement in the source (SSL `callRange`/`stmtRange`, or the first call
-        site for a `call` transition), for "go to source". Absent for a pending/synthetic option. */
+        site for a `call` transition; WeiDU D `sourceRange`), for "go to source". Absent for a pending/synthetic
+        option. */
     sourceOffset?: number;
     /** Path key of the branch this option sits in (set for options inside an if/else node - see
         stampBranchKeys). Drives the tree's branch highlight: clicking a branch line highlights every row whose
@@ -217,7 +218,11 @@ export function buildConversationTree(
         lowIq: c.lowIq,
         textEditable: !textFieldLocked({ text: c.text, messages, ssl, textRO, isNew: isPendingChoice(c) }),
         target: buildTarget(c),
-        sourceOffset: c.callRange?.start ?? c.stmtRange?.start ?? c.callSites?.[0]?.stmtRange.start,
+        // SSL spans first (callRange/stmtRange/callSite); WeiDU D carries its whole-transition span in
+        // `sourceRange` (the SSL fields are absent for D), so F4 resolves on a D option too - parity with the
+        // state case below, which already falls back to `sourceRange`.
+        sourceOffset:
+            c.callRange?.start ?? c.stmtRange?.start ?? c.callSites?.[0]?.stmtRange.start ?? c.sourceRange?.start,
     });
 
     function expand(id: string): ConvState {
