@@ -1,13 +1,14 @@
 <script lang="ts">
     import { SvelteFlow, Background, Controls, ControlButton, MiniMap, Panel } from "@xyflow/svelte";
     import "@xyflow/svelte/dist/style.css";
-    import { untrack } from "svelte";
+    import { tick, untrack } from "svelte";
     import Node from "./Node.svelte";
     import Inspector from "./Inspector.svelte";
     import ReconnectEdge from "./ReconnectEdge.svelte";
     import Tree from "./Tree.svelte";
     import { modelToFlow, type FlowNode, type FlowEdge } from "./model-to-flow";
     import { buildConversationTree, type ConvState } from "./conversation-tree";
+    import { collectMatches } from "./tree-search";
     import { msgRef } from "./inspector-edit";
     import { dialogIssues } from "./dialog-issues";
     import { distinctStateIds, findStateInRoots } from "./state-lookup";
@@ -262,6 +263,62 @@
     const collapseAll = (): void => {
         treeCollapsed = new Set(allTreeStateIds());
     };
+
+    // ---- Find in tree ----------------------------------------------------------------------------------
+    // An always-visible find-bar over the active tab's outline (tree view): highlight every row whose visible
+    // text (or node id) matches the query, and step through the matches with Enter / Shift+Enter (wrapping). It
+    // drives the same select + reveal path a click uses, so a match auto-expands its collapsed ancestors and
+    // scrolls into view, and selection stays coupled to the current match (never decoupled).
+    let searchQuery = $state("");
+    let searchIndex = $state(0);
+    let searchInput: HTMLInputElement | undefined = $state();
+    // True only while the find input holds keyboard focus. Gates Tree's focus-follows-selection: while the user
+    // is typing/navigating in the box, find-as-you-type must not yank focus onto each match's row (that drops
+    // characters); when focus is in the tree instead, selection focuses its row normally.
+    let searchInputFocused = $state(false);
+    // Matches recompute on every model edit or query change (treeData is derived), so a match always points at
+    // a live row. Empty when the query is blank (collectMatches returns []).
+    const searchMatches = $derived(collectMatches(treeData, searchQuery));
+    // Row keys to highlight (all matches) and the current match's key (emphasized). The key namespaces don't
+    // collide - see tree-search.ts.
+    const searchHits = $derived(new Set(searchMatches.map((m) => m.key)));
+    const currentMatchKey = $derived(searchMatches[searchIndex]?.key ?? null);
+
+    // Select + reveal the i-th match, reusing the tree's own selection handlers (which scroll it into view and
+    // un-collapse its ancestors). An out-of-range index (no matches) is a no-op.
+    function goToMatch(i: number): void {
+        const m = searchMatches[i];
+        if (!m) return;
+        searchIndex = i;
+        if (m.choiceId) selectReplyInTree(m.stateId, m.choiceId);
+        else if (m.branchKey) selectBranchInTree(m.stateId, m.branchKey);
+        else selectTreeState(m.stateId);
+    }
+    const nextMatch = (): void => {
+        if (searchMatches.length > 0) goToMatch((searchIndex + 1) % searchMatches.length);
+    };
+    const prevMatch = (): void => {
+        if (searchMatches.length > 0) goToMatch((searchIndex - 1 + searchMatches.length) % searchMatches.length);
+    };
+    // Find-as-you-type: `searchQuery` is already updated by bind:value, so reset to the first match and jump to
+    // it (reading searchMatches recomputes the derived for the new query). A blank query clears matches without
+    // moving selection.
+    function onQueryChanged(): void {
+        searchIndex = 0;
+        if (searchMatches.length > 0) goToMatch(0);
+    }
+    function focusSearch(): void {
+        // Ctrl+F jumps to the always-visible find box and selects any existing query for quick replace.
+        void tick().then(() => {
+            searchInput?.focus();
+            searchInput?.select();
+        });
+    }
+    function clearSearch(): void {
+        searchQuery = "";
+        searchIndex = 0;
+        searchInput?.blur(); // hand focus back to the tree
+    }
 
     // Resolve within the ACTIVE root first: state ids are not unique across roots (a D file's several DLGs
     // reuse labels), and a first-match-across-all-roots lookup returned the wrong instance for a duplicated
@@ -963,6 +1020,13 @@
             closeContext();
             return;
         }
+        // Ctrl/Cmd+F focuses the always-visible tree find-bar (tree view only - the graph has no scrollable
+        // outline to search). Allowed while focus is in a field so it works from anywhere.
+        if ((e.ctrlKey || e.metaKey) && (e.key === "f" || e.key === "F") && viewMode === "tree") {
+            e.preventDefault();
+            focusSearch();
+            return;
+        }
         // Delete/Backspace removes the selected state through the guarded path (confirm + inbound-ref
         // redirect), not svelte-flow's built-in delete (disabled below). Skipped while typing in a
         // field, and while the confirm modal is already open.
@@ -1098,6 +1162,48 @@
                     </label>
                 {/if}
             </div>
+            {#if viewMode === "tree"}
+                <!-- Row 3: always-visible find-bar. Non-destructive - it highlights matches and steps through
+                     them, never filtering the outline. Enter / Shift+Enter walk matches (wrapping); Escape clears. -->
+                <div class="tbrow tbfind">
+                    <!-- bind:value is the correct two-way idiom here; while the input holds focus, Tree's
+                         focus-follows-selection effect is gated by searchActive (searchInputFocused) so
+                         find-as-you-type doesn't yank focus onto each match and drop characters. -->
+                    <input
+                        class="findinput"
+                        type="text"
+                        placeholder="Find node, line, or option text"
+                        aria-label="Find in dialogue"
+                        bind:this={searchInput}
+                        bind:value={searchQuery}
+                        oninput={onQueryChanged}
+                        onfocus={() => (searchInputFocused = true)}
+                        onblur={() => (searchInputFocused = false)}
+                        onkeydown={(e) => {
+                            if (e.key === "Enter") {
+                                e.preventDefault();
+                                if (e.shiftKey) prevMatch();
+                                else nextMatch();
+                            } else if (e.key === "Escape") {
+                                e.preventDefault();
+                                clearSearch();
+                            }
+                        }}
+                    />
+                    <span class="findcount" role="status">
+                        {#if searchQuery.trim() === ""}
+                            &nbsp;
+                        {:else if searchMatches.length === 0}
+                            No matches
+                        {:else}
+                            {searchIndex + 1}/{searchMatches.length}
+                        {/if}
+                    </span>
+                    <button class="toolbtn findnav" title="Previous match (Shift+Enter)" aria-label="Previous match" onclick={prevMatch} disabled={searchMatches.length === 0}>&lt;</button>
+                    <button class="toolbtn findnav" title="Next match (Enter)" aria-label="Next match" onclick={nextMatch} disabled={searchMatches.length === 0}>&gt;</button>
+                    <button class="toolbtn findnav" title="Clear search (Escape)" aria-label="Clear search" onclick={clearSearch} disabled={searchQuery === ""}>x</button>
+                </div>
+            {/if}
         </div>
         {#if viewMode === "tree"}
             <!-- Tree keyboard reference: a full-height panel on the RIGHT (the bindings live per row in
@@ -1111,6 +1217,7 @@
                     <span><kbd>F2</kbd> rename node</span>
                     <span><kbd>G</kbd> go to target</span>
                     <span><kbd>F4</kbd> source</span>
+                    <span><kbd>Ctrl+F</kbd> find</span>
                     <span><kbd>Del</kbd> delete</span>
                 </span>
             </div>
@@ -1163,7 +1270,7 @@
                     {#if treeData.roots.length === 0}
                         <div class="treeempty">No states in this dialog file.</div>
                     {/if}
-                    <Tree tree={treeData} selectedId={selected?.id} selectedChoiceId={selectedChoiceId} editingChoiceId={editingChoiceId} editingStateId={editingStateId} renamingStateId={renamingStateId} highlightedBranchKey={highlightedBranchKey} collapsed={treeCollapsed} editableStateIds={editableTreeStateIds} deletableStateIds={deletableTreeStateIds} ssl={editModel.format === "fallout-ssl"} onSelect={selectTreeState} onSelectReply={selectReplyInTree} onSelectBranch={selectBranchInTree} onBeginEditReply={beginEditReply} onCommitEditReply={commitEditReply} onCancelEditReply={cancelEditReply} onBeginEditState={beginEditState} onCommitEditState={commitEditState} onCancelEditState={cancelEditState} onBeginRenameState={beginRenameState} onCommitRenameState={commitRenameState} onCancelRenameState={cancelRenameState} onToggle={toggleTreeNode} onExpand={expandTreeStates} onGoToSource={goToSource} onJump={treeJump} onContext={openContext} onReplyContext={openReplyContext} onAddReply={addReplyToState} onRemoveReply={removeReplyFromState} onAddChildNode={addChildNode} onDeleteState={deleteStateFromTree} />
+                    <Tree tree={treeData} selectedId={selected?.id} selectedChoiceId={selectedChoiceId} editingChoiceId={editingChoiceId} editingStateId={editingStateId} renamingStateId={renamingStateId} highlightedBranchKey={highlightedBranchKey} searchHits={searchHits} currentMatchKey={currentMatchKey} searchActive={searchInputFocused} collapsed={treeCollapsed} editableStateIds={editableTreeStateIds} deletableStateIds={deletableTreeStateIds} ssl={editModel.format === "fallout-ssl"} onSelect={selectTreeState} onSelectReply={selectReplyInTree} onSelectBranch={selectBranchInTree} onBeginEditReply={beginEditReply} onCommitEditReply={commitEditReply} onCancelEditReply={cancelEditReply} onBeginEditState={beginEditState} onCommitEditState={commitEditState} onCancelEditState={cancelEditState} onBeginRenameState={beginRenameState} onCommitRenameState={commitRenameState} onCancelRenameState={cancelRenameState} onToggle={toggleTreeNode} onExpand={expandTreeStates} onGoToSource={goToSource} onJump={treeJump} onContext={openContext} onReplyContext={openReplyContext} onAddReply={addReplyToState} onRemoveReply={removeReplyFromState} onAddChildNode={addChildNode} onDeleteState={deleteStateFromTree} />
                 </div>
                 {#if ctxMenu}
                     <div class="ctxbackdrop" role="presentation" onclick={closeContext} oncontextmenu={(e) => (e.preventDefault(), closeContext())}></div>
@@ -1423,6 +1530,39 @@
         align-items: center;
         gap: 4px;
     }
+    /* Find-bar row: text input + match count + prev/next/close, styled to sit under the button row. */
+    .tbfind {
+        margin-top: 4px;
+    }
+    .findinput {
+        background: #15171c;
+        border: 1px solid #3a3f4b;
+        border-radius: 4px;
+        color: #e8eaed;
+        font-size: 12px;
+        padding: 4px 8px;
+        min-width: 220px;
+    }
+    .findinput:focus {
+        outline: none;
+        border-color: #3b82f6;
+    }
+    /* Match position "3/12" (or "No matches"), fixed-ish width so the nav buttons don't jitter as it changes. */
+    .findcount {
+        font-size: 11px;
+        color: #9aa0a6;
+        min-width: 62px;
+        text-align: center;
+    }
+    /* Compact square nav buttons (<, >, x) - a denser variant of .toolbtn. */
+    .findnav {
+        padding: 4px 8px;
+        margin-right: 0;
+    }
+    .findnav:disabled {
+        opacity: 0.45;
+        cursor: default;
+    }
     /* Keyboard reference docked on the right, occupying the toolbar's full height (align-items: stretch on the
        parent), vertically centered and right-aligned. */
     .tbright {
@@ -1443,15 +1583,16 @@
     .dlgbeta a:hover {
         color: #93c5fd;
     }
-    /* Tree keyboard reference: muted key -> action pairs stacked vertically so the panel fills the toolbar's
-       full height on the right. Each pair is a nowrap unit so a key and its label never split. Themed <kbd>
-       chips matching the toolbar palette. */
+    /* Tree keyboard reference: muted key -> action pairs laid out in a grid that fills 4 rows then flows into a
+       new column (>=2 columns), so the panel stays short instead of one tall single-column stack. Each pair is
+       a nowrap unit so a key and its label never split. Themed <kbd> chips matching the toolbar palette. */
     .keyhints {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: flex-start;
-        gap: 2px;
+        display: grid;
+        grid-auto-flow: column;
+        grid-template-rows: repeat(4, auto);
+        align-content: center;
+        justify-content: start;
+        gap: 2px 14px;
         font-size: 10px;
         color: #9aa0a6;
     }

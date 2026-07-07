@@ -9,7 +9,7 @@
     // their player replies as a nested outline; clicking a state selects it for the
     // shared Inspector, clicking a cross-file leaf jumps to that dialog's tab, and
     // clicking a "shown elsewhere" ref selects the expanded copy.
-    let { tree, selectedId, selectedChoiceId, editingChoiceId, editingStateId, renamingStateId, highlightedBranchKey, collapsed, editableStateIds, deletableStateIds, ssl, onSelect, onSelectReply, onSelectBranch, onBeginEditReply, onCommitEditReply, onCancelEditReply, onBeginEditState, onCommitEditState, onCancelEditState, onBeginRenameState, onCommitRenameState, onCancelRenameState, onToggle, onExpand, onGoToSource, onJump, onContext, onReplyContext, onAddReply, onRemoveReply, onAddChildNode, onDeleteState }: {
+    let { tree, selectedId, selectedChoiceId, editingChoiceId, editingStateId, renamingStateId, highlightedBranchKey, collapsed, editableStateIds, deletableStateIds, ssl, onSelect, onSelectReply, onSelectBranch, onBeginEditReply, onCommitEditReply, onCancelEditReply, onBeginEditState, onCommitEditState, onCancelEditState, onBeginRenameState, onCommitRenameState, onCancelRenameState, onToggle, onExpand, onGoToSource, onJump, onContext, onReplyContext, onAddReply, onRemoveReply, onAddChildNode, onDeleteState, searchHits, currentMatchKey, searchActive }: {
         tree: ConversationTree;
         selectedId?: string | null;
         /** The key of the currently highlighted if/else branch (set by clicking a branch line), or null. Every
@@ -82,9 +82,27 @@
         onAddChildNode: (stateId: string) => void;
         /** Node "-": delete this state (guarded/confirmed by the parent). */
         onDeleteState: (stateId: string) => void;
+        /** Find-bar: row keys (state id | choice id | branch key) of all current search matches, highlighted.
+            Undefined/empty when the find-bar is closed. See tree-search.ts for why the key namespaces don't collide. */
+        searchHits?: Set<string>;
+        /** Find-bar: the key of the currently-focused match, emphasized above the other hits. */
+        currentMatchKey?: string | null;
+        /** True while the find-bar is open. The find input owns keyboard focus (the user types + navigates
+            matches there), so the focus-follows-selection effect must NOT steal focus onto each match's row -
+            that would drop every character after the first as find-as-you-type moves the selection. */
+        searchActive?: boolean;
     } = $props();
 
     let treeEl: HTMLDivElement | undefined = $state();
+
+    // Search-highlight helpers: a row is a hit when its key is in searchHits; the current match is emphasized.
+    // Keyed by state id (node/flat-line rows), choice id (option rows), or branch key (branch-line rows).
+    function isHit(key: string | undefined): boolean {
+        return Boolean(key && searchHits?.has(key));
+    }
+    function isCurrent(key: string | undefined): boolean {
+        return Boolean(key && currentMatchKey === key);
+    }
 
     // A row belongs to the highlighted branch when its branchKey starts with the clicked branch's key - so an
     // outer branch's highlight also covers every row of its nested sub-branches (keys are `parent...child`).
@@ -151,7 +169,7 @@
     // nav resumes there. Skipped while an inline edit/rename owns focus (its input must keep it); the effect only
     // re-runs on a selection change, so it never steals focus from the docked inspector while you type there.
     $effect(() => {
-        if (editingChoiceId || editingStateId || renamingStateId) return;
+        if (searchActive || editingChoiceId || editingStateId || renamingStateId) return;
         const sel = selectedChoiceId
             ? `[data-choice="${CSS.escape(selectedChoiceId)}"]`
             : selectedId
@@ -456,6 +474,8 @@
         class:derived={st.derivedFrom}
         class:entry={st.isEntry}
         class:sel={st.id === selectedId && !selectedChoiceId}
+        class:searchhit={isHit(st.id)}
+        class:searchcurrent={isCurrent(st.id)}
         style="--lvl:{depth * 2}"
         data-sid={st.id}
         role="treeitem"
@@ -612,7 +632,7 @@
     <!-- No group-header line: each branch renders its NPC line and its option rows, and every option carries
          its own [if] chip (the branch condition - `not (...)` for the else - in the tooltip) on its own row.
          The condition lives on the options it gates, not a separate header. -->
-    <div class="brep" class:branchhl={inBranch(b.branchKey)} style="--lvl:{depth * 2 + 1}">
+    <div class="brep" class:branchhl={inBranch(b.branchKey)} class:searchhit={isHit(b.branchKey)} class:searchcurrent={isCurrent(b.branchKey)} style="--lvl:{depth * 2 + 1}">
         {#if b.condition}<span class="cond" title={b.condition}>{b.kind === "else" ? "[else]" : "[if]"}</span>{/if}
         <!-- Clicking a branch's NPC line selects the owner state AND highlights this branch (its line + options)
              in the tree - a bundle/structured node's structure is read-only, so the line is a select/inspect
@@ -633,7 +653,7 @@
 {#snippet convBlock(block: ConvBlock, depth: number, ownerId: string)}
     {#each block as it, i (i)}
         {#if it.kind === "line"}
-            <div class="brep" class:branchhl={inBranch(it.branchKey)} style="--lvl:{depth * 2 + 1}">
+            <div class="brep" class:branchhl={inBranch(it.branchKey)} class:searchhit={isHit(it.branchKey)} class:searchcurrent={isCurrent(it.branchKey)} style="--lvl:{depth * 2 + 1}">
                 <!-- A branch's opening NPC line carries its gate: the if-branch reads [if], the else-branch reads
                      [else] (it.isElse), both with the full condition in the tooltip. Unconditional lines have none. -->
                 {#if it.condition}<span class="cond" title={it.condition}>{it.isElse ? "[else]" : "[if]"}</span>{/if}
@@ -666,6 +686,8 @@
         class="rep reprow"
         class:repsel={ownerId === selectedId && r.id === selectedChoiceId}
         class:branchhl={inBranch(r.branchKey)}
+        class:searchhit={isHit(r.id)}
+        class:searchcurrent={isCurrent(r.id)}
         style="--lvl:{depth * 2 + 1}"
         data-owner={ownerId}
         data-choice={r.id}
@@ -831,6 +853,23 @@
         background: #1f2a44;
         border-radius: 4px;
         box-shadow: inset 2px 0 0 #3b82f6;
+    }
+    /* Find-bar matches: every hit gets a faint amber wash, and the current match adds a solid amber outline
+       (a deliberately different hue from the blue selection/branch highlight, so a find result never reads as
+       a normal selection). Placed after the selection/branch rules so the current match's find colour wins
+       over its selection fill; the outline is a separate property, so it composes with any box-shadow accent. */
+    .st.searchhit,
+    .rep.searchhit,
+    .brep.searchhit {
+        background: rgba(250, 204, 21, 0.14);
+        border-radius: 4px;
+    }
+    .st.searchcurrent,
+    .rep.searchcurrent,
+    .brep.searchcurrent {
+        outline: 1px solid #facc15;
+        outline-offset: -1px;
+        border-radius: 4px;
     }
     .caret {
         background: none;

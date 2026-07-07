@@ -247,3 +247,63 @@ describe("Tree.svelte branch-option inline-edit parity (SSR)", () => {
         expect(html).toContain("@202"); // shown as static text
     });
 });
+
+// Class attribute of the element whose opening tag contains `needle` (e.g. a data-sid / data-choice attr).
+// Svelte SSR folds `class:foo={cond}` into the element's `class="..."`, so the search-highlight classes land
+// here when the row's key is in searchHits / equals currentMatchKey.
+function classAttrOfTagWith(html: string, needle: string): string {
+    const idx = html.indexOf(needle);
+    if (idx === -1) return "";
+    const tagStart = html.lastIndexOf("<", idx);
+    const tagEnd = html.indexOf(">", idx);
+    const tag = html.slice(tagStart, tagEnd);
+    const m = tag.match(/class="([^"]*)"/);
+    return m?.[1] ?? "";
+}
+
+describe("Tree.svelte find-bar highlight (SSR)", () => {
+    // A flat entry node with one player option - covers the two most common match rows (state + option).
+    const flat: ConversationTree = {
+        roots: [
+            {
+                id: "Node001",
+                text: "The guard eyes you.",
+                replies: [
+                    {
+                        id: "Node001#opt0",
+                        text: "Who are you?",
+                        hasText: true,
+                        textEditable: true,
+                        target: { kind: "exit" },
+                    },
+                ],
+                isEntry: true,
+                textEditable: true,
+            },
+        ],
+    };
+
+    it("adds no highlight class when the find-bar is closed (no searchHits)", () => {
+        const html = renderTree(flat);
+        expect(html).not.toContain("searchhit");
+        expect(html).not.toContain("searchcurrent");
+    });
+
+    it("marks a matched state row with searchhit, and the current match with searchcurrent", () => {
+        const html = renderTree(flat, { searchHits: new Set(["Node001"]), currentMatchKey: "Node001" });
+        const cls = classAttrOfTagWith(html, 'data-sid="Node001"');
+        expect(cls).toContain("searchhit");
+        expect(cls).toContain("searchcurrent");
+    });
+
+    it("marks a matched option row (not its owner state) with searchhit", () => {
+        const html = renderTree(flat, { searchHits: new Set(["Node001#opt0"]), currentMatchKey: "Node001#opt0" });
+        // The option row carries the highlight...
+        const optCls = classAttrOfTagWith(html, 'data-choice="Node001#opt0"');
+        expect(optCls).toContain("searchhit");
+        expect(optCls).toContain("searchcurrent");
+        // ...and its owner state row does not (a match on the option must not light up the whole node).
+        const stateCls = classAttrOfTagWith(html, 'data-sid="Node001"');
+        expect(stateCls).not.toContain("searchhit");
+    });
+});
