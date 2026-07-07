@@ -534,8 +534,10 @@ check(
     JSON.stringify(addEdit),
 );
 
-// Node inline "+": clicking a state row's node-add grows a connected child - a new state (one more
-// treeitem) plus a new option here that leads to it, dropping into inline edit on that option's text.
+// Node inline "+": clicking a state row's node-add grows a connected child - a new state (one more .st row)
+// plus a new option here that leads to it - and SELECTS THE NEW STATE (ready for its NPC line), matching the
+// toolbar "+ State". It does NOT drop into inline edit: the just-added child is what you select, not the
+// connecting option (finding E; the render-path counterpart of edit-behavior.mts's selection check).
 await page.goto("file://" + appHtml);
 await postModel();
 await page.waitForSelector('[role="treeitem"]', { timeout: 10_000 });
@@ -548,11 +550,12 @@ const nodeAdd = await page.evaluate(() => ({
     // Count state rows (.st) specifically - option rows are also [role=treeitem] now, so a plain treeitem
     // count would jump by 2 (the new child state AND the new option leading to it).
     states: document.querySelectorAll(".st").length,
-    editing: document.activeElement?.classList.contains("rtextedit") ?? false,
+    stateSelected: document.querySelectorAll(".st.sel").length,
+    editing: document.querySelectorAll(".rtext.rtextedit, input.rtextedit").length,
 }));
 check(
-    'node "+" adds a connected child state and opens the new option for editing',
-    nodeAdd.states === statesBeforeAdd + 1 && nodeAdd.editing,
+    'node "+" adds a connected child state and selects the new state (no inline edit)',
+    nodeAdd.states === statesBeforeAdd + 1 && nodeAdd.stateSelected === 1 && nodeAdd.editing === 0,
     JSON.stringify({ before: statesBeforeAdd, ...nodeAdd }),
 );
 

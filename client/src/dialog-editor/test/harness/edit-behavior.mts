@@ -115,6 +115,23 @@ if (await input.count()) {
     check("inline option-text edit persists (writeText)", false, "no edit input appeared");
 }
 
+// An external text-side edit (host re-posts the SAME file's model through the `model` prop) is adopted IN PLACE
+// and KEEPS the selection on its node - it no longer resets selection to null. Simulate it: select a state, then
+// re-post the same model, and assert the state stays selected. (This is the reset effect's new same-file branch,
+// the routing the live self-edit adopt shares.)
+await fresh();
+await page.locator(".st[data-sid]").nth(1).click();
+await page.waitForTimeout(150);
+const beforeRepost = await page.evaluate(() => document.querySelector(".st.sel")?.getAttribute("data-sid") ?? null);
+await page.evaluate((m) => window.postMessage({ type: "model", model: m }, "*"), REAL_MODEL);
+await page.waitForTimeout(300);
+const afterRepost = await page.evaluate(() => document.querySelector(".st.sel")?.getAttribute("data-sid") ?? null);
+check(
+    "an external same-file re-post keeps the selection on its node (not reset to null)",
+    beforeRepost !== null && afterRepost === beforeRepost,
+    `selected ${beforeRepost} -> ${afterRepost}`,
+);
+
 await browser.close();
 if (errs.length) {
     console.log("\nPAGE ERRORS:");

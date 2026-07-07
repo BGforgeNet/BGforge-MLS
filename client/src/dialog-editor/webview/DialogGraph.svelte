@@ -11,7 +11,7 @@
     import { collectMatches } from "./tree-search";
     import { writeText } from "./inspector-edit";
     import { dialogIssues } from "./dialog-issues";
-    import { distinctStateIds, findStateInRoots } from "./state-lookup";
+    import { distinctStateIds, findStateInRoots, remapChoiceId } from "./state-lookup";
     import { unresolvedRefCount } from "./translation-status";
     import { findCallers, type CallerRow } from "./find-callers";
     import { resolveJumpTarget } from "./jump-resolve";
@@ -23,6 +23,7 @@
     import {
         resolveText,
         sslTerminalKind,
+        type DialogMessages,
         type DialogModel,
         type DialogReaction,
         type DialogState,
@@ -644,12 +645,60 @@
         else if ((opts.frame ?? "entry") === "entry") focusEntry();
     }
 
-    // Reset the working copy when the host posts a new model (new file / external edit).
-    // Also performs the initial load (effects run on mount).
-    // untrack keeps the rebuild's editModel reads from making this re-run on every edit.
+    // Re-select the same logical target after adopting a freshly-parsed model in place: the state by id, and its
+    // option by id - remapped through `allocations` for a just-added option, whose id changes across the parse
+    // (see remapChoiceId). Falls back to a whole-state selection (or nothing) when the target is gone from the
+    // new parse (e.g. deleted in the source). Only reached with no inline edit open (adoptModel gates on that),
+    // so the rename/line-edit sub-modes never need restoring here.
+    function reselectAfterAdopt(
+        keep: { id: string; choiceId: string | null; branchKey: string | null } | null,
+        allocations: Record<string, string> | undefined,
+    ): void {
+        if (!keep) return select({ on: "state", state: null });
+        const s = findState(keep.id);
+        if (!s) return select({ on: "state", state: null }); // the selected node vanished from the source
+        if (keep.choiceId !== null) {
+            const cid = remapChoiceId(keep.choiceId, s, allocations);
+            return select(cid !== null ? { on: "option", state: s, choiceId: cid } : { on: "state", state: s });
+        }
+        if (keep.branchKey !== null) return select({ on: "branch", state: s, branchKey: keep.branchKey });
+        select({ on: "state", state: s });
+    }
+
+    // Adopt an authoritative parsed model IN PLACE for the current file: replace the working copy with it but
+    // keep the selection on its logical target (by identity) and the tab's laid-out positions. This is the
+    // "faithful tree" path shared by a self-edit's re-parse (via the listener below) and an external text-side
+    // edit to the same file. `messages` merges any freshly-allocated .msg text the debounced .tra flush has not
+    // written yet, so a just-typed line renders as text, not a raw `@N`. Building the merged model before the
+    // single `editModel =` assignment keeps the emit effect to one (suppressed) run.
+    function adoptModel(next: DialogModel, allocations?: Record<string, string>, messages?: DialogMessages): void {
+        const keep = selected ? { id: selected.id, choiceId: selectedChoiceId, branchKey: highlightedBranchKey } : null;
+        const merged = cloneModel(next);
+        if (messages && Object.keys(messages).length > 0) merged.messages = { ...merged.messages, ...messages };
+        suppressEmit = true;
+        editModel = merged;
+        if (!editModel.roots.some((r) => r.id === activeFile)) {
+            activeFile = editModel.roots.find((r) => r.states.length > 0)?.id ?? "";
+        }
+        reselectAfterAdopt(keep, allocations);
+        void rebuild({ frame: "none" });
+    }
+
+    // The host posts a model on the initial load, a new file, and every external text-side edit (App.svelte
+    // routes those through the `model` prop). A DIFFERENT file (or the very first load, before anything is laid
+    // out) does a full reset + relayout; the SAME file is an external edit we adopt in place, keeping selection
+    // on its node so the tree stays a faithful view without losing the user's place. (A self-edit's re-parse is
+    // `reparse:true` and handled by the listener below, not here.) untrack keeps the rebuild's editModel reads
+    // from re-running this on every edit.
     $effect(() => {
         const src = model;
         untrack(() => {
+            const sameFile = renderedFile !== "" && src.sourceName === editModel.sourceName;
+            if (sameFile) {
+                adoptModel(src);
+                return;
+            }
+            suppressEmit = true;
             editModel = cloneModel(src);
             tabPos.clear();
             renderedFile = "";
@@ -657,17 +706,20 @@
             select({ on: "state", state: null });
             confirmDelete = null;
             void rebuild({ relayout: true });
-            suppressEmit = true;
         });
     });
 
     // Debounce window for coalescing an edit burst (rapid keystrokes in one field) into a single host edit.
     const EMIT_DEBOUNCE_MS = 250;
 
-    // suppressEmit is a PLAIN (non-reactive) flag - see the emit-design note. The reset effect sets it true
-    // before replacing editModel from a host {type:"model"} message so the emit effect's next run does not
-    // echo the host's own model back.
+    // suppressEmit is a PLAIN (non-reactive) flag - see the emit-design note. The reset effect / adoptModel set
+    // it true before replacing editModel from a host model message so the emit effect's next run does not echo
+    // the host's own model back.
     let suppressEmit = true;
+    // Monotonic id stamped on each emitted edit and echoed back on the host's re-parse. The re-parse listener
+    // applies only the re-parse for the LATEST emit (seq === localSeq); an older one would clobber a newer
+    // optimistic edit the user has already made. Plain (non-reactive): it drives no rendering.
+    let localSeq = 0;
 
     // Emit every user edit to the host (production only). A single effect deep-reads editModel via
     // $state.snapshot, so ANY mutation - structural op OR inline inspector field edit - re-runs it. The host
@@ -682,28 +734,47 @@
             suppressEmit = false;
             return;
         }
-        const timer = setTimeout(() => postToHost({ type: "edit", model: snapshot }), EMIT_DEBOUNCE_MS);
+        const timer = setTimeout(() => postToHost({ type: "edit", model: snapshot, seq: ++localSeq }), EMIT_DEBOUNCE_MS);
         return () => clearTimeout(timer);
     });
 
-    // Reconcile message from the host (production only). After the host commits a just-added option/node to the
-    // source it allocates the item's `@N` id but the echo guard suppresses the re-project that would give it a
-    // real source span (to keep selection/in-progress text). This message carries the allocated ids + .msg text
-    // so we mark those pending items committed IN PLACE - which stops the next save re-splicing (duplicating)
-    // them - without dropping selection or the text being typed. suppressEmit keeps this host-driven mutation
-    // from echoing straight back as an edit. The body reads no reactive state, so the listener registers once.
+    // Re-parse message from the host (production only): after it splices a self-edit into the source, the host
+    // posts the faithful parse (`reparse:true`) so the tree becomes a pure view of source - real spans (F4
+    // resolves), canonical ids. Two cases:
+    //  - NO inline edit open -> adopt the parse wholesale (adoptModel), remapping the just-added option's
+    //    selection through the allocated `@N`.
+    //  - an inline edit IS open -> the user is mid-typing; adopting would re-seed the input and lose the draft.
+    //    So keep the optimistic copy and only stamp the allocated `@N` in place (applyReconcile) - which stops
+    //    the next save re-splicing/duplicating the pending item - and adopt the faithful parse once the edit
+    //    closes (its commit re-emits, and that re-parse arrives with no edit open).
+    // A stale re-parse (seq behind the latest emit) is dropped: a newer optimistic edit already supersedes it.
+    // suppressEmit keeps either host-driven mutation from echoing back as an edit. The body reads no reactive
+    // state at registration, so the listener registers once.
     $effect(() => {
-        function onReconcile(e: MessageEvent): void {
+        function onReparse(e: MessageEvent): void {
             const d = e.data as
-                | { type?: string; allocations?: Record<string, string>; messages?: Record<string, string> }
+                | {
+                      type?: string;
+                      reparse?: boolean;
+                      model?: DialogModel;
+                      seq?: number;
+                      allocations?: Record<string, string>;
+                      messages?: Record<string, string>;
+                  }
                 | null;
-            if (d?.type !== "reconcile" || !d.allocations) return;
-            suppressEmit = true;
-            ops.applyReconcile(editModel, d.allocations, d.messages);
-            void rebuild({ frame: "none" });
+            if (d?.type !== "model" || !d.reparse || !d.model) return;
+            if (d.seq !== localSeq) return; // stale: a newer optimistic edit already superseded this parse
+            const editing = editingChoiceId !== null || editingStateId !== null || renamingStateId !== null;
+            if (editing) {
+                suppressEmit = true;
+                ops.applyReconcile(editModel, d.allocations ?? {}, d.messages);
+                void rebuild({ frame: "none" });
+            } else {
+                adoptModel(d.model, d.allocations, d.messages);
+            }
         }
-        window.addEventListener("message", onReconcile);
-        return () => window.removeEventListener("message", onReconcile);
+        window.addEventListener("message", onReparse);
+        return () => window.removeEventListener("message", onReparse);
     });
 
     // Switch to a dialog file's tab, optionally framing a target state on arrival.

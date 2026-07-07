@@ -14,7 +14,7 @@
 import * as vscode from "vscode";
 import { type LanguageClient, type ExecuteCommandParams, ExecuteCommandRequest } from "vscode-languageclient/node";
 import { LSP_COMMAND_PARSE_DIALOG, LSP_COMMAND_SAVE_TRA } from "../../../shared/protocol";
-import { modelFromD, modelFromSSL, type DialogModel } from "../../../shared/dialog-model";
+import { modelFromD, modelFromSSL, type DialogMessages, type DialogModel } from "../../../shared/dialog-model";
 import type { DDialogData, SSLDialogData } from "../../../shared/dialog-types";
 import { generateNonce, getCachedJsAsset } from "../webview-assets";
 import { buildDialogWebviewHtml } from "./dialog-webview-html";
@@ -86,7 +86,14 @@ class DialogEditorProvider implements vscode.CustomTextEditorProvider {
         this.sessions.set(panel, session);
 
         panel.webview.onDidReceiveMessage(
-            (msg: { type?: string; model?: DialogModel; offset?: number; text?: string; level?: string }) => {
+            (msg: {
+                type?: string;
+                model?: DialogModel;
+                offset?: number;
+                text?: string;
+                level?: string;
+                seq?: number;
+            }) => {
                 if (msg?.type === "ready") void this.postModel(document, panel);
                 // "Go to source" (F4 in the tree): open the text editor at the state's/option's byte offset.
                 else if (msg?.type === "revealSource" && typeof msg.offset === "number") {
@@ -104,8 +111,9 @@ class DialogEditorProvider implements vscode.CustomTextEditorProvider {
                 // WorkspaceEdits race the document (VS Code rejects the second, "applySplices: overlapping ops").
                 else if (msg?.type === "edit" && msg.model) {
                     const model = msg.model;
+                    const seq = msg.seq ?? 0;
                     session.edits.enqueue(
-                        () => this.applyEdit(document, panel, model),
+                        () => this.applyEdit(document, panel, model, seq),
                         (error) => {
                             const message = error instanceof Error ? error.message : String(error);
                             void vscode.window.showErrorMessage(`Dialog edit failed: ${message}`);
@@ -123,8 +131,10 @@ class DialogEditorProvider implements vscode.CustomTextEditorProvider {
             // empty one consumes a phantom "external edit" it never marked, firing a spurious re-project that
             // closes the inspector mid-add and surfaces the raw `@N` before its .msg text has landed.
             if (e.contentChanges.length === 0) return;
-            // Self-originated (our own WorkspaceEdit) -> the guard consumes it and we do not re-project, so the
-            // webview keeps its in-progress selection. An external text edit re-projects the graph.
+            // Self-originated (our own WorkspaceEdit) -> the guard consumes it here; applyEdit already posts the
+            // authoritative re-parse (with the seq/allocations the webview needs to remap selection), so a second
+            // re-project from this handler would be a redundant duplicate. An external text edit (someone typing
+            // in a "Reopen with Text" split) re-projects the graph so the tree stays a faithful view of source.
             if (this.sessions.get(panel)?.guard.shouldReproject()) void this.postModel(document, panel);
         });
         const saveSub = vscode.workspace.onDidSaveTextDocument((doc) => {
@@ -139,8 +149,22 @@ class DialogEditorProvider implements vscode.CustomTextEditorProvider {
         });
     }
 
-    /** Parse the bound document and post the model (or an error) to the webview. */
-    private async postModel(document: vscode.TextDocument, panel: vscode.WebviewPanel): Promise<void> {
+    /**
+     * Parse the bound document and post the model (or an error) to the webview. Two callers:
+     *  - the initial load and an external text-side edit (no `reparse` opts) -> a plain `{type:"model"}` the
+     *    webview adopts as the authoritative view (App.svelte's reduceDialogView -> the model prop);
+     *  - `applyEdit`, right after it splices a self-edit (`reparse` opts set) -> the SAME faithful parse, but
+     *    tagged `reparse:true` and carrying the `seq` of the edit that produced it plus the pending items'
+     *    allocated `@N` ids and their not-yet-flushed .msg text. The webview keys off those to remap a
+     *    just-added option's selection (its id changes across the parse) and to render freshly-typed text
+     *    before the debounced .tra flush lands. App.svelte ignores a `reparse:true` post; DialogGraph's own
+     *    listener handles it so it can preserve selection / an in-progress inline edit instead of resetting.
+     */
+    private async postModel(
+        document: vscode.TextDocument,
+        panel: vscode.WebviewPanel,
+        reparse?: { seq: number; allocations: Record<string, string>; messages: DialogMessages },
+    ): Promise<void> {
         const params: ExecuteCommandParams = {
             command: LSP_COMMAND_PARSE_DIALOG,
             arguments: [{ uri: document.uri.toString() }],
@@ -164,7 +188,18 @@ class DialogEditorProvider implements vscode.CustomTextEditorProvider {
                     .split("/")
                     .pop()
                     ?.replace(/\.[^.]+$/, "") || undefined;
-            void panel.webview.postMessage({ type: "model", model });
+            void panel.webview.postMessage(
+                reparse
+                    ? {
+                          type: "model",
+                          reparse: true,
+                          model,
+                          seq: reparse.seq,
+                          allocations: reparse.allocations,
+                          messages: reparse.messages,
+                      }
+                    : { type: "model", model },
+            );
         } else {
             void panel.webview.postMessage({
                 type: "error",
@@ -214,6 +249,7 @@ class DialogEditorProvider implements vscode.CustomTextEditorProvider {
         document: vscode.TextDocument,
         panel: vscode.WebviewPanel,
         edited: DialogModel,
+        seq: number,
     ): Promise<void> {
         const session = this.sessions.get(panel);
         if (!session) return;
@@ -251,21 +287,14 @@ class DialogEditorProvider implements vscode.CustomTextEditorProvider {
                     // toast above makes the failed edit visible in the meantime.
                     return;
                 }
-                // Reconcile the webview's still-pending new items with what we just committed. The echo guard
-                // (correctly) suppresses the re-project that would give a freshly-added option its real source
-                // span, so without this the webview keeps treating it as pending and the NEXT save re-splices
-                // it (duplicating the option). This targeted message stamps each item's allocated `@N` and its
-                // .msg text in place - no re-project, so selection and any in-progress text survive.
-                if (Object.keys(allocations).length > 0) {
-                    void panel.webview.postMessage({ type: "reconcile", allocations, messages });
-                }
-                // Faithfulness of the round-trip is covered by unit tests (computeDialogSourceEdit's own
-                // suite, plus the verifySSLEditApplied/verifyDialogEditApplied unit tests) and by live
-                // verification. A runtime cross-check used to live here, but it rode on the
-                // onDidChangeTextDocument re-projection that the echo guard now intentionally suppresses
-                // for self-originated edits - so it could never observe this edit's result - and a
-                // still-pending check would instead misfire against the next external edit's re-parse (a
-                // different model).
+                // Post the faithful re-parse of the just-spliced document so the webview adopts it (real source
+                // spans -> F4 resolves; the tree stays a pure view of source). The `seq` lets the webview drop a
+                // stale re-parse that a newer optimistic edit has already superseded; `allocations`/`messages`
+                // let it remap a just-added option's selection (its id changes across the parse) and render the
+                // freshly-typed text before the debounced .tra flush. While the user is mid inline-edit the
+                // webview keeps its draft and only stamps the `@N` in place from these same fields (see
+                // DialogGraph's re-parse listener) - the enriched post serves both cases.
+                await this.postModel(document, panel, { seq, allocations, messages });
             }
         }
         session.latest = edited;

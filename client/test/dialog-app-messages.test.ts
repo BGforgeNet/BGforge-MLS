@@ -31,6 +31,14 @@ describe("reduceDialogView", () => {
         expect(afterModel).toEqual({ model: MODEL, error: null });
     });
 
+    test("a self-edit re-parse post (reparse:true) is left for DialogGraph, not routed through the prop", () => {
+        // The host tags a self-edit's faithful parse `reparse:true`; the root must ignore it so it does not
+        // reset the view - DialogGraph adopts it directly, preserving selection / an in-progress inline edit.
+        const prev: DialogView = { model: MODEL, error: null };
+        const other = { format: "weidu-d", editable: true, roots: [{ id: "x" }] } as unknown as DialogModel;
+        expect(reduceDialogView(prev, { type: "model", reparse: true, model: other, seq: 1 })).toEqual(prev);
+    });
+
     test.each([
         ["no type", {}],
         ["unknown type", { type: "ready" }],

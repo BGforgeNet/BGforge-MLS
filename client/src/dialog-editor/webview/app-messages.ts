@@ -18,8 +18,12 @@ export interface DialogView {
 
 /** Next view-state for an incoming `window.message` payload; unchanged on anything unrecognized. */
 export function reduceDialogView(prev: DialogView, data: unknown): DialogView {
-    const msg = data as { type?: string; model?: DialogModel; message?: string } | null;
-    if (msg?.type === "model" && msg.model) return { model: msg.model, error: null };
+    const msg = data as { type?: string; reparse?: boolean; model?: DialogModel; message?: string } | null;
+    // A `reparse:true` post is the host adopting a self-edit's faithful parse: DialogGraph handles it directly
+    // (it must preserve the current selection / an in-progress inline edit), so the root must NOT route it
+    // through the model prop - that would reset the view. Only a plain `{type:"model"}` (initial load / external
+    // text-side edit) updates the root's model.
+    if (msg?.type === "model" && msg.model && !msg.reparse) return { model: msg.model, error: null };
     if (msg?.type === "error" && msg.message) return { model: prev.model, error: msg.message };
     return prev;
 }

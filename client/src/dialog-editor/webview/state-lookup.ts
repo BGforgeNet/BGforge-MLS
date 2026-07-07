@@ -38,3 +38,25 @@ export function findStateInRoots(
 export function distinctStateIds(states: DialogState[]): string[] {
     return [...new Set(states.map((s) => s.id))];
 }
+
+/**
+ * Re-resolve a previously-selected option's id against a freshly-parsed state, for the "adopt the faithful
+ * re-parse but keep the selection" path (DialogGraph.adoptModel).
+ *
+ * An EXISTING option keeps its positional id across the parse, so it resolves directly. A JUST-ADDED option
+ * does not: the webview names it `<node>#reply` while pending, but once spliced and re-parsed it becomes the
+ * positional `<node>#opt<N>` the parser assigns - a different string. The host reports each such item's
+ * allocated `@N` text in `allocations` (keyed by the OLD pending id), so we match the pending option to its
+ * re-parsed self by that `@N`. Returns null when neither resolves (e.g. the option was removed in the source),
+ * so the caller can fall back to a whole-state selection.
+ */
+export function remapChoiceId(
+    keptChoiceId: string,
+    state: DialogState,
+    allocations: Record<string, string> | undefined,
+): string | null {
+    if (state.choices.some((c) => c.id === keptChoiceId)) return keptChoiceId;
+    const ref = allocations?.[keptChoiceId];
+    if (ref === undefined) return null;
+    return state.choices.find((c) => c.text === ref)?.id ?? null;
+}

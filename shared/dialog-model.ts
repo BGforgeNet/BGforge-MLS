@@ -238,7 +238,8 @@ export interface DialogState {
     /**
      * Webview-only, transient: as `DialogChoice.committed`, for a just-added NODE. Marks a pending new node
      * (still without a `procRange`) as already spliced into the source so the next save does not re-emit its
-     * procedure. Set only by the host reconcile path (dialog-edit-ops.ts `applyReconcile`), never by the adapter.
+     * procedure. Set only by `applyReconcile` (dialog-edit-ops.ts), which the webview runs on the host's
+     * re-parse ONLY while an inline edit is open; never by the adapter.
      */
     committed?: boolean;
 }
@@ -304,11 +305,12 @@ export interface DialogChoice {
      */
     conditionEditable?: boolean;
     /**
-     * Webview-only, transient: set by the host's reconcile message after a just-added option was spliced into
-     * the source and allocated its `@N` id. It marks a PENDING choice (still without a `callRange`/`stmtRange`
-     * in the webview's working copy) as already committed to source, so the next save does not re-splice it as
-     * new (which duplicates the option). Never set by the parser/adapter and never present on a re-projected
-     * model - the re-parse gives the option a real source span instead. See dialog-edit-ops.ts `applyReconcile`.
+     * Webview-only, transient: set by `applyReconcile` (dialog-edit-ops.ts) after a just-added option was
+     * spliced into the source and allocated its `@N` id. The webview runs it on the host's re-parse ONLY while
+     * an inline edit is open (it keeps the draft instead of adopting the parse); it marks a PENDING choice
+     * (still without a `callRange`/`stmtRange` in the working copy) as already committed to source, so the next
+     * save does not re-splice it as new (which duplicates the option). Never set by the parser/adapter and never
+     * present on an adopted parse - adopting gives the option a real source span instead.
      */
     committed?: boolean;
 }
