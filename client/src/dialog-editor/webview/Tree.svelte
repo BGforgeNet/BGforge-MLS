@@ -906,15 +906,17 @@
         white-space: nowrap;
         flex: 0 0 auto;
     }
-    /* Editable node id rendered as a <button>: reset to read as the plain dimmed label while staying a
-       double-click rename target (F2 renames via the row/line handlers). */
+    /* Editable node id rendered as a <button>: reset the button chrome to read as the plain dimmed label while
+       staying a double-click rename target (F2 renames via the row/line handlers). Set the dim colour
+       EXPLICITLY (matching .nodeid) - `color: inherit` here would pull the row's bright text colour and win on
+       specificity, leaving every editable node id undimmed. */
     .nodeid.nodeidbtn {
         background: none;
         border: none;
         padding: 0;
         margin: 0;
         font: inherit;
-        color: inherit;
+        color: #5b6472;
         cursor: pointer;
     }
     .nodeid.nodeidbtn:hover {

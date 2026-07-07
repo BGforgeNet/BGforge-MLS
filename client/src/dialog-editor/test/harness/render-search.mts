@@ -142,6 +142,19 @@ await page.waitForTimeout(150);
 const revealedVisible = await page.locator(".searchcurrent").first().isVisible();
 check("navigating to a match inside a collapsed subtree reveals it (row is in the DOM and visible)", revealedVisible);
 
+// --- 6. Tree-render invariant: node ids stay DIMMED, incl. the editable <button> variant -----------------
+// A CSS-specificity regression left `.nodeid.nodeidbtn { color: inherit }` pulling the row's bright text, so
+// every editable node id rendered undimmed. SSR can't compute styles, so this needs the browser; the D model
+// renders editable nodes (nodeidbtn buttons). Assert the computed colour is the dim #5b6472 = rgb(91,100,114).
+const idColors = await page.evaluate(() =>
+    [...document.querySelectorAll(".nodeid")].slice(0, 5).map((el) => getComputedStyle(el).color),
+);
+check(
+    "node ids are dimmed (editable button variant included)",
+    idColors.length > 0 && idColors.every((c) => c === "rgb(91, 100, 114)"),
+    `colors=${JSON.stringify(idColors)}`,
+);
+
 await browser.close();
 
 // --- Report ----------------------------------------------------------------------------------------------
