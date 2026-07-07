@@ -1083,6 +1083,17 @@
             focusSearch();
             return;
         }
+        // F4 in the GRAPH view goes to the selected node's source, mirroring the Tree view (whose own rows
+        // handle F4). Gated to graph mode so it never double-fires with a tree row's F4 - that bubbles to the
+        // window too (the row only preventDefaults, it doesn't stop propagation). A synthetic/derived node has
+        // no span, so the offset is absent and this is a no-op. Uses the same state span the tree row does
+        // (SSL `procRange`, else D `sourceRange`).
+        if (e.key === "F4" && viewMode === "graph" && selected && !isEditableTarget(e.target)) {
+            e.preventDefault();
+            const offset = selected.procRange?.start ?? selected.sourceRange?.start;
+            if (offset != null) goToSource(offset);
+            return;
+        }
         // Delete/Backspace removes the selected state through the guarded path (confirm + inbound-ref
         // redirect), not svelte-flow's built-in delete (disabled below). Skipped while typing in a
         // field, and while the confirm modal is already open.
