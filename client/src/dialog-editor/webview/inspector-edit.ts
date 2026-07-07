@@ -26,19 +26,29 @@ export function writeText(target: { text: string }, messages: DialogMessages | u
 }
 
 /**
- * A choice the user just added (pending insert) - it has no source span of any kind yet: no `callRange`
- * or `stmtRange` (an existing option), and no `callSites` (a `call` transition). Its text field must
- * stay editable so the user can type the initial line; `allocateOptionIds` turns it into an `@id` at save.
+ * A choice the user just added (pending insert) - it has no source span of any kind yet: no SSL `callRange`
+ * or `stmtRange` (an existing option), no `callSites` (a `call` transition), and no WeiDU D `sourceRange`
+ * (an existing D option). Its text field must stay editable so the user can type the initial line;
+ * `allocateOptionIds` turns it into an `@id` at save.
  */
 export function isPendingChoice(c: DialogChoice): boolean {
     // A `committed` option was already spliced to source and now carries a resolvable `@N` (the reconcile
     // merged its .msg text), so it is no longer pending - it locks/unlocks like any existing `@N` option.
-    return !c.committed && c.callRange === undefined && c.stmtRange === undefined && !c.callSites?.length;
+    // `sourceRange` is D's span (the SSL fields are always absent for D): without it an existing D option
+    // would read as pending, which is harmless today (textFieldLocked short-circuits for D) but a trap for any
+    // future consumer - so gate on it too.
+    return (
+        !c.committed &&
+        c.callRange === undefined &&
+        c.stmtRange === undefined &&
+        !c.callSites?.length &&
+        c.sourceRange === undefined
+    );
 }
 
-/** A state the user just added (pending insert): no source procedure yet (no `procRange`). */
+/** A state the user just added (pending insert): no source span yet - neither SSL `procRange` nor D `sourceRange`. */
 export function isPendingState(s: DialogState): boolean {
-    return !s.committed && s.procRange === undefined;
+    return !s.committed && s.procRange === undefined && s.sourceRange === undefined;
 }
 
 /**

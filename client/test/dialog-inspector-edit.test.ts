@@ -90,12 +90,22 @@ describe("isPendingChoice", () => {
             }),
         ).toBe(false);
     });
+    it("an existing WeiDU D option (sourceRange, no SSL spans) is not pending", () => {
+        // Without the sourceRange gate this reads as pending (D never sets the SSL span fields), which is a
+        // latent trap for any consumer other than the D-short-circuiting textFieldLocked.
+        expect(
+            isPendingChoice({ id: "x", text: "@1", target: { kind: "exit" }, sourceRange: { start: 0, end: 1 } }),
+        ).toBe(false);
+    });
 });
 
 describe("isPendingState", () => {
-    it("a state with no procRange is pending-new; with a procRange it is not", () => {
+    it("a state with no source span is pending-new; with a procRange (SSL) it is not", () => {
         expect(isPendingState({ id: "N", text: "", choices: [] })).toBe(true);
         expect(isPendingState({ id: "N", text: "", choices: [], procRange: { start: 0, end: 1 } })).toBe(false);
+    });
+    it("an existing WeiDU D state (sourceRange, no procRange) is not pending", () => {
+        expect(isPendingState({ id: "N", text: "", choices: [], sourceRange: { start: 0, end: 1 } })).toBe(false);
     });
 });
 
