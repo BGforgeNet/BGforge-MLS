@@ -71,3 +71,36 @@ describe("applyTDDialogEdits - remove option", () => {
         expect(weaponBody).toContain("say(tra(22));");
     });
 });
+
+describe("applyTDDialogEdits - add option", () => {
+    it("serializes a new reply(tra(N)); goTo(target); after the last surviving option, inside the function", () => {
+        const original = tdModel(botsmith);
+        const edited = structuredClone(original);
+        const node = edited.roots.flatMap((r) => r.states).find((s) => s.id === "g_weapon")!;
+        // A pending-new option (no source span, already @N-allocated) targeting g_armor.
+        node.choices.push({ id: "g_weapon#new0", text: "@25", target: { kind: "state", stateId: "g_armor" } });
+        const out = applyTDDialogEdits(botsmith, edited, original);
+        const weaponBody = out.slice(out.indexOf("function g_weapon()"), out.indexOf("function g_armor()"));
+        expect(weaponBody).toContain("reply(tra(25));");
+        expect(weaponBody).toContain("goTo(g_armor);");
+        // It lands after the existing options (which stay), still inside g_weapon's body.
+        expect(weaponBody.indexOf("reply(tra(25))")).toBeGreaterThan(weaponBody.indexOf("reply(tra(6))"));
+        expect(weaponBody).toContain("reply(tra(10));");
+        // g_item_type is untouched (byte-identical outside g_weapon's body).
+        const itemType = out.slice(out.indexOf("function g_item_type()"), out.indexOf("function g_weapon()"));
+        expect(itemType).toBe(
+            botsmith.slice(botsmith.indexOf("function g_item_type()"), botsmith.indexOf("function g_weapon()")),
+        );
+    });
+
+    it("serializes a terminal exit() option", () => {
+        const original = tdModel(botsmith);
+        const edited = structuredClone(original);
+        const node = edited.roots.flatMap((r) => r.states).find((s) => s.id === "g_armor")!;
+        node.choices.push({ id: "g_armor#new0", text: "@26", target: { kind: "exit" } });
+        const out = applyTDDialogEdits(botsmith, edited, original);
+        const armorBody = out.slice(out.indexOf("function g_armor()"), out.indexOf("function g_trinket()"));
+        expect(armorBody).toContain("reply(tra(26));");
+        expect(armorBody).toContain("exit();");
+    });
+});
